@@ -181,8 +181,8 @@ body {
 
 /* ========== SIDEBAR ========== */
 .sidebar {
-    width: 240px;
-    min-width: 240px;
+    width: 260px;
+    min-width: 260px;
     background: var(--surface);
     border-radius: var(--radius-lg);
     padding: 28px 20px;
@@ -218,7 +218,105 @@ body {
     letter-spacing: -0.3px;
 }
 
-.sidebar-menu { flex: 1; }
+.sidebar-menu { flex: 1; overflow-y: auto; padding-right: 4px; }
+
+.menu-group {
+    margin-bottom: 6px;
+}
+
+.menu-group-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+}
+
+.menu-group-toggle:hover {
+    background: #F5F6FA;
+}
+
+.menu-chevron {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+}
+
+.menu-group.open .menu-chevron {
+    transform: rotate(180deg);
+}
+
+.menu-subitems {
+    display: none;
+    padding: 2px 0 6px 10px;
+}
+
+.menu-group.open .menu-subitems {
+    display: block;
+}
+
+.menu-sub-item {
+    display: block;
+    padding: 9px 12px 9px 14px;
+    margin-bottom: 2px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    border-left: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.menu-sub-item:hover {
+    background: #F5F6FA;
+    color: var(--text);
+}
+
+.menu-sub-item.active {
+    background: var(--purple-light);
+    color: var(--purple);
+    font-weight: 600;
+    border-left-color: var(--purple);
+}
+
+[data-theme="dark"] .menu-group-toggle:hover,
+[data-theme="dark"] .menu-sub-item:hover {
+    background: #2a2d3e;
+}
+
+.inline-flag {
+    width: 18px;
+    height: 12px;
+    vertical-align: -2px;
+    margin-right: 6px;
+}
+
+.placeholder-card {
+    text-align: center;
+    padding: 56px 32px;
+}
+
+.placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
 
 .menu-item {
     display: flex;

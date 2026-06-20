@@ -2,15 +2,28 @@
 
 const TAB_TITLES = {
     dashboard: 'Bosh sahifa',
-    timetable: 'Timetable',
+    timetable: 'Dars jadvali',
     'main-attendance': 'Asosiy ustozlar davomati',
     'assistant-attendance': 'Yordamchi ustoz davomati',
     'teacher-cabinet': 'Ustozlarga kabinet',
-    salary: 'Ustozlar maoshi hisob-kitobi',
-    students: "O'quvchilar ma'lumotlari",
-    payments: "To'lovlar va qarzdorliklar",
-    leads: 'Organik lidlar'
+    salary: 'Ustozlar maoshi',
+    students: "O'quvchilar",
+    payments: "To'lovlar",
+    leads: "Sotuv bo'limi",
+    placeholder: 'Bo\'lim'
 };
+
+const PLACEHOLDER_TITLES = {
+    curriculum: "O'quv rejasi",
+    'sales-salary': 'Sotuv menejerlari maoshi',
+    'other-salary': 'Boshqa maoshlar',
+    'hr-employees': "Xodimlar ro'yxati",
+    'hr-guides': "Yo'riqnomalar",
+    'hr-contracts': 'Shartnomalar',
+    'mobile-videos': 'Videodarslar'
+};
+
+let _tabContext = { subject: null, placeholder: null };
 
 function initUserUI(currentUser) {
     const initials = currentUser.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -85,10 +98,32 @@ function startLeadsPolling() {
     }, 30000);
 }
 
-function switchTab(tab) {
-    document.querySelectorAll('.menu-item').forEach(m => {
-        m.classList.toggle('active', m.dataset.tab === tab);
+function isMenuItemActive(el, tab, ctx) {
+    if (el.dataset.tab !== tab) return false;
+    if (tab === 'placeholder') return el.dataset.placeholder === ctx.placeholder;
+    if (el.dataset.subject) return el.dataset.subject === (ctx.subject || '');
+    if (ctx.subject && ['leads', 'students', 'timetable'].includes(tab)) return false;
+    return true;
+}
+
+function updateSidebarActiveState(tab, ctx) {
+    document.querySelectorAll('.menu-item, .menu-sub-item').forEach(el => {
+        el.classList.toggle('active', isMenuItemActive(el, tab, ctx));
     });
+    document.querySelectorAll('.menu-group').forEach(group => {
+        const hasActive = group.querySelector('.menu-sub-item.active');
+        if (hasActive) group.classList.add('open');
+    });
+}
+
+function switchTab(tab, ctx = {}) {
+    _tabContext = {
+        subject: ctx.subject || null,
+        placeholder: ctx.placeholder || null
+    };
+
+    updateSidebarActiveState(tab, _tabContext);
+
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     const el = document.getElementById(`tab-${tab}`);
     if (el) el.classList.add('active');
@@ -96,18 +131,34 @@ function switchTab(tab) {
     renderTab(tab);
 }
 
-// Tab navigatsiya
-document.querySelectorAll('.menu-item').forEach(item => {
-    item.addEventListener('click', e => {
-        e.preventDefault();
-        switchTab(item.dataset.tab);
+function initSidebarMenu() {
+    document.querySelectorAll('.menu-group-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const group = btn.closest('.menu-group');
+            const isOpen = group.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
     });
-});
+
+    document.querySelectorAll('.menu-item, .menu-sub-item').forEach(item => {
+        item.addEventListener('click', e => {
+            e.preventDefault();
+            switchTab(item.dataset.tab, {
+                subject: item.dataset.subject || null,
+                placeholder: item.dataset.placeholder || null
+            });
+        });
+    });
+}
+
+initSidebarMenu();
 
 document.querySelectorAll('[data-goto]').forEach(link => {
     link.addEventListener('click', e => {
         e.preventDefault();
-        switchTab(link.dataset.goto);
+        switchTab(link.dataset.goto, {
+            subject: link.dataset.subject || null
+        });
     });
 });
 
@@ -122,8 +173,16 @@ function renderTab(tab) {
         case 'students': renderStudents(); break;
         case 'payments': renderPayments(); break;
         case 'leads': renderLeads(); break;
+        case 'placeholder': renderPlaceholder(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+}
+
+function renderPlaceholder() {
+    const key = _tabContext.placeholder || 'curriculum';
+    const title = PLACEHOLDER_TITLES[key] || 'Bo\'lim';
+    document.getElementById('placeholderTitle').textContent = title;
+    document.getElementById('placeholderHeading').textContent = title;
 }
 
 // --- Modal ---
@@ -292,11 +351,23 @@ function initTimetableControls() {
 
 function renderTimetable() {
     initTimetableControls();
+    const subject = _tabContext.subject;
+    const titleEl = document.getElementById('timetablePageTitle');
+    if (titleEl) {
+        titleEl.textContent = subject
+            ? `Dars jadvali — ${SUBJECTS[subject]?.label || subject} (probniy)`
+            : 'Dars jadvali — Probniy darslar';
+    }
+
     const date = document.getElementById('ttDate').value;
     const view = document.getElementById('ttView').value;
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
+    let teachers = getItem(STORAGE_KEYS.teachers, []);
+    let students = getItem(STORAGE_KEYS.students, []);
+    if (subject) {
+        teachers = teachers.filter(t => (t.subject || 'english') === subject);
+        students = students.filter(s => (s.subject || 'english') === subject);
+    }
     const salesManagers = getItem(STORAGE_KEYS.salesManagers, []);
-    const students = getItem(STORAGE_KEYS.students, []);
     const timetable = getItem(STORAGE_KEYS.timetable, {});
     const slots = generateTimeSlots().filter((_, i) => i % 2 === 0);
 
@@ -826,7 +897,18 @@ function renderSalaryContent() {
 
 // --- O'quvchilar ---
 function renderStudents() {
-    const students = getItem(STORAGE_KEYS.students, []);
+    const subject = _tabContext.subject;
+    const titleEl = document.getElementById('studentsPageTitle');
+    if (titleEl) {
+        titleEl.textContent = subject
+            ? `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`
+            : "O'quvchilar ma'lumotlari";
+    }
+
+    let students = getItem(STORAGE_KEYS.students, []);
+    if (subject) {
+        students = students.filter(s => (s.subject || 'english') === subject);
+    }
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const tbody = document.getElementById('studentsBody');
     tbody.innerHTML = students.map((s, i) => {
@@ -977,6 +1059,29 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
 
 // --- Organik lidlar ---
 function renderLeads() {
+    const subject = _tabContext.subject;
+    const titleEl = document.getElementById('leadsPageTitle');
+    const enCard = document.getElementById('leadsCardEnglish');
+    const ruCard = document.getElementById('leadsCardRussian');
+    const grid = document.getElementById('leadsGrid');
+
+    if (subject === 'english') {
+        if (titleEl) titleEl.textContent = "Sotuv bo'limi — Ingliz tili kursi";
+        if (enCard) enCard.style.display = '';
+        if (ruCard) ruCard.style.display = 'none';
+        if (grid) grid.classList.remove('grid-2');
+    } else if (subject === 'russian') {
+        if (titleEl) titleEl.textContent = "Sotuv bo'limi — Rus tili kursi";
+        if (enCard) enCard.style.display = 'none';
+        if (ruCard) ruCard.style.display = '';
+        if (grid) grid.classList.remove('grid-2');
+    } else {
+        if (titleEl) titleEl.textContent = "Sotuv bo'limi — organik lidlar";
+        if (enCard) enCard.style.display = '';
+        if (ruCard) ruCard.style.display = '';
+        if (grid) grid.classList.add('grid-2');
+    }
+
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     renderLeadTable('leadsEnglish', leads.english, 'english');
     renderLeadTable('leadsRussian', leads.russian, 'russian');
