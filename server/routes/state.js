@@ -1,0 +1,38 @@
+const express = require('express');
+const { getFullState, patchState } = require('../db');
+const { authRequired } = require('../middleware/auth');
+
+const router = express.Router();
+
+router.get('/', authRequired, (req, res) => {
+    try {
+        res.json(getFullState());
+    } catch (err) {
+        console.error('GET /api/state', err);
+        res.status(500).json({ error: 'Ma\'lumotlarni yuklashda xatolik' });
+    }
+});
+
+router.patch('/', authRequired, (req, res) => {
+    try {
+        const body = req.body || {};
+        const allowed = [
+            'teachers', 'students', 'salesManagers', 'timetable',
+            'mainAttendance', 'assistantAttendance', 'payments', 'leads'
+        ];
+        const partial = {};
+        allowed.forEach(key => {
+            if (body[key] !== undefined) partial[key] = body[key];
+        });
+        if (!Object.keys(partial).length) {
+            return res.status(400).json({ error: 'Yangilash uchun ma\'lumot yuborilmadi' });
+        }
+        patchState(partial);
+        res.json({ ok: true, state: getFullState() });
+    } catch (err) {
+        console.error('PATCH /api/state', err);
+        res.status(500).json({ error: 'Saqlashda xatolik' });
+    }
+});
+
+module.exports = router;

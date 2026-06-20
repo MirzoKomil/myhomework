@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myhomework.uz — Admin Panel</title>
+    <link rel="icon" href="images/myhomework-logo.png" type="image/png">
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="images/myhomework-logo.png" alt="Homework" class="brand-logo">
+            </div>
+            <nav class="sidebar-menu" id="sidebarMenu">
+                <a href="#" class="menu-item active" data-tab="dashboard">
+                    <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+                    <span class="label">Bosh sahifa</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="timetable">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    <span class="label">Timetable</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="main-attendance">
+                    <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    <span class="label">Asosiy davomat</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="assistant-attendance">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    <span class="label">Yordamchi davomat</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="teacher-cabinet">
+                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span class="label">Ustoz kabineti</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="salary">
+                    <svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    <span class="label">Ustozlar maoshi</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="students">
+                    <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5"/></svg>
+                    <span class="label">O'quvchilar</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="payments">
+                    <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+                    <span class="label">To'lovlar</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="leads">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    <span class="label">Organik lidlar</span>
+                </a>
+            </nav>
+            <div class="upgrade-card">
+                <p>Pro versiyaga o'ting va barcha imkoniyatlardan foydalaning</p>
+                <button class="btn-upgrade">Upgrade →</button>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <div class="main-area">
+            <header class="top-header">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input type="text" placeholder="Qidirish.." id="globalSearch">
+                </div>
+                <div class="header-actions">
+                    <div class="live-badge"><span class="live-dot"></span> Live</div>
+                    <button class="icon-btn" id="themeToggle" type="button" title="Tungi rejim">
+                        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    </button>
+                    <div class="notif-wrap">
+                        <button class="icon-btn" id="notifToggle" type="button" title="Bildirishnomalar">
+                            <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+                            <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+                        </button>
+                        <div class="notif-panel" id="notifPanel">
+                            <div class="notif-panel-header">
+                                <h4>Bildirishnomalar</h4>
+                                <button type="button" class="notif-mark-all" id="notifMarkAll">Barchasini o'qildi</button>
+                            </div>
+                            <div class="notif-list" id="notifList"></div>
+                        </div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar" title="Profil"></div>
+                </div>
+            </header>
+
+            <div class="content-layout">
+                <div class="content-main">
+                    <!-- Bosh sahifa -->
+                    <section id="tab-dashboard" class="tab-content active">
+                        <div class="welcome-banner">
+                            <div class="welcome-text">
+                                <h2 id="welcomeName">Xush kelibsiz!</h2>
+                                <p>Myhomework.uz admin paneliga xush kelibsiz. Bugungi darslar va statistikani kuzating.</p>
+                                <a href="#" class="welcome-link" data-goto="main-attendance">DAVOMATGA O'TISH →</a>
+                                <div class="banner-dots">
+                                    <span class="active"></span><span></span><span></span>
+                                </div>
+                            </div>
+                            <div class="banner-emoji">📖</div>
+                        </div>
+
+                        <div class="grid-3" style="margin-bottom:24px">
+                            <div class="stat-card">
+                                <div class="stat-icon purple">👨‍🎓</div>
+                                <div class="stat-info">
+                                    <div class="stat-label">O'quvchilar</div>
+                                    <div class="stat-value" id="statStudents">0</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon blue">👩‍🏫</div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Ustozlar</div>
+                                    <div class="stat-value" id="statTeachers">0</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon green">📞</div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Organik lidlar</div>
+                                    <div class="stat-value" id="statLeads">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-header">
+                            <h3>Ustozlar</h3>
+                            <a href="#" class="view-all" data-goto="teacher-cabinet">BARCHASINI KO'RISH</a>
+                        </div>
+                        <div class="course-cards" id="teacherCourseCards"></div>
+
+                        <div class="card">
+                            <div class="section-header">
+                                <h3>Mening jadvalim</h3>
+                                <a href="#" class="view-all" data-goto="timetable">BARCHASINI KO'RISH</a>
+                            </div>
+                            <div id="miniSchedule"></div>
+                        </div>
+
+                        <div class="card">
+                            <h3 style="margin-bottom:16px;font-size:17px;font-weight:700">Maosh KPI tizimi</h3>
+                            <div class="grid-3">
+                                <div class="mini-card"><strong>15 daqiqa</strong><br><span style="color:var(--purple);font-weight:700">75,000 so'm/oy</span><br><small class="text-muted">To'liq darslar soniga bo'linadi</small></div>
+                                <div class="mini-card"><strong>30 daqiqa</strong><br><span style="color:var(--purple);font-weight:700">150,000 so'm/oy</span><br><small class="text-muted">To'liq darslar soniga bo'linadi</small></div>
+                                <div class="mini-card"><strong>60 daqiqa</strong><br><span style="color:var(--purple);font-weight:700">300,000 so'm/oy</span><br><small class="text-muted">To'liq darslar soniga bo'linadi</small></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Timetable -->
+                    <section id="tab-timetable" class="tab-content">
+                        <div class="page-title-bar">
+                            <h1>Timetable — Probniy darslar</h1>
+                            <p id="headerDate"></p>
+                        </div>
+                        <div class="info-banner info-banner-blue">
+                            <strong>ℹ️ Probniy (bepul) darslar</strong> — bu bo'lim sinov darslari jadvali. Ustozlar probniy darslar uchun <strong>maosh olmaydi</strong>. Maosh faqat <em>Asosiy davomat</em> va <em>Yordamchi davomat</em> bo'limlaridagi o'tilgan darslar bo'yicha KPI tizimida hisoblanadi.
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Probniy dars jadvali</h3>
+                                <div class="toolbar">
+                                    <input type="date" id="ttDate" class="form-control-sm">
+                                    <select id="ttView" class="form-control-sm"><option value="individual">Individual</option></select>
+                                </div>
+                            </div>
+                            <div class="table-responsive" id="timetableContainer"></div>
+                        </div>
+                    </section>
+
+                    <!-- Asosiy davomat -->
+                    <section id="tab-main-attendance" class="tab-content">
+                        <div class="page-title-bar"><h1>Asosiy ustozlar davomati</h1><p>O'quvchilarning keldi-ketdi — asosiy o'qituvchi tomonidan belgilanadi</p></div>
+                        <div class="info-banner">
+                            Dars kunlari kalendarga qarab avtomatik belgilanadi (haftasiga 3 kun). <strong>Har bir o'quvchi alohida hisoblanadi:</strong> 1 o'quvchidan oyiga max 75,000 so'm (15 daq), ko'p o'quvchi = yig'indi. Belgilangan kunda o'quvchi kelgan bo'lsa, o'sha dars uning hisobiga qo'shiladi.
+                        </div>
+                        <div class="card">
+                            <div class="subject-tabs" id="mainAttSubjectTabs">
+                                <button type="button" class="subject-tab active" data-subject="english">🇬🇧 Ingliz tili</button>
+                                <button type="button" class="subject-tab" data-subject="russian">🇷🇺 Rus tili</button>
+                            </div>
+                            <div class="card-header">
+                                <h3 id="mainAttTitle">Ingliz tili — oylik davomat</h3>
+                                <div class="toolbar">
+                                    <select id="mainAttTeacher" class="form-control-sm"></select>
+                                    <select id="mainAttPattern" class="form-control-sm" title="Dars kunlari">
+                                        <option value="mwf">Dush, Chor, Jum</option>
+                                        <option value="tts">Sesh, Pay, Shan</option>
+                                    </select>
+                                    <select id="mainAttDuration" class="form-control-sm">
+                                        <option value="15">15 daq — 75,000/oy</option>
+                                        <option value="30">30 daq — 150,000/oy</option>
+                                        <option value="60">60 daq — 300,000/oy</option>
+                                    </select>
+                                    <input type="month" id="mainAttMonth" class="form-control-sm">
+                                </div>
+                            </div>
+                            <div id="mainAttSummary" class="kpi-summary"></div>
+                            <div class="table-responsive" id="mainAttendanceContainer"></div>
+                        </div>
+                    </section>
+
+                    <!-- Yordamchi davomat -->
+                    <section id="tab-assistant-attendance" class="tab-content">
+                        <div class="page-title-bar"><h1>Yordamchi ustoz davomati</h1><p>Yordamchi o'qituvchi o'tgan darslarda o'quvchi davomati</p></div>
+                        <div class="info-banner">
+                            Yordamchi ustoz o'z darslarida o'quvchi kelishini belgilaydi. KPI maosh hisobi asosiy davomat bilan bir xil — qancha dars o'tilsa, shuncha pul.
+                        </div>
+                        <div class="card">
+                            <div class="subject-tabs" id="asstAttSubjectTabs">
+                                <button type="button" class="subject-tab active" data-subject="english">🇬🇧 Ingliz tili</button>
+                                <button type="button" class="subject-tab" data-subject="russian">🇷🇺 Rus tili</button>
+                            </div>
+                            <div class="card-header">
+                                <h3 id="asstAttTitle">Ingliz tili — oylik davomat</h3>
+                                <div class="toolbar">
+                                    <select id="asstAttTeacher" class="form-control-sm"></select>
+                                    <select id="asstAttPattern" class="form-control-sm">
+                                        <option value="mwf">Dush, Chor, Jum</option>
+                                        <option value="tts">Sesh, Pay, Shan</option>
+                                    </select>
+                                    <select id="asstAttDuration" class="form-control-sm">
+                                        <option value="15">15 daq — 75,000/oy</option>
+                                        <option value="30">30 daq — 150,000/oy</option>
+                                        <option value="60">60 daq — 300,000/oy</option>
+                                    </select>
+                                    <input type="month" id="asstAttMonth" class="form-control-sm">
+                                    <button class="btn-primary-sm" id="addAsstTeacher">+ Ustoz qo'shish</button>
+                                </div>
+                            </div>
+                            <div id="asstAttSummary" class="kpi-summary"></div>
+                            <div class="table-responsive" id="assistantAttendanceContainer"></div>
+                        </div>
+                    </section>
+
+                    <!-- Ustoz kabineti -->
+                    <section id="tab-teacher-cabinet" class="tab-content">
+                        <div class="page-title-bar"><h1>Ustozlarga kabinet</h1></div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Ustoz profili</h3>
+                                <select id="cabinetTeacher" class="form-control-sm"></select>
+                            </div>
+                            <div id="teacherCabinetContent"></div>
+                        </div>
+                    </section>
+
+                    <!-- Maosh -->
+                    <section id="tab-salary" class="tab-content">
+                        <div class="page-title-bar"><h1>Ustozlar maoshi — KPI tizimi</h1><p>Davomat bo'yicha: to'liq oy = bazaviy maosh, har bir dars alohida hisoblanadi</p></div>
+                        <div class="info-banner info-banner-purple">
+                            <strong>KPI qoidasi:</strong> Platforma kalendarga qarab oy ichida nechta dars bo'lishini avtomatik hisoblaydi (masalan, 13 ta). Bazaviy maosh (75,000 / 150,000 / 300,000) shu songa bo'linadi. Qancha dars o'tilsa — shuncha pul. <em>Timetable (probniy) darslari hisobga olinmaydi.</em>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Oylik KPI hisob-kitobi</h3>
+                                <div class="toolbar">
+                                    <select id="salaryTeacher" class="form-control-sm"></select>
+                                    <input type="month" id="salaryMonth" class="form-control-sm">
+                                </div>
+                            </div>
+                            <div id="salaryMonthInfo" class="kpi-summary"></div>
+                            <div id="salaryContent"></div>
+                        </div>
+                    </section>
+
+                    <!-- O'quvchilar -->
+                    <section id="tab-students" class="tab-content">
+                        <div class="page-title-bar"><h1>O'quvchilar ma'lumotlari</h1></div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Ro'yxat</h3>
+                                <button class="btn-primary-sm" id="addStudentBtn">+ O'quvchi qo'shish</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead><tr><th>№</th><th>Ism familiya</th><th>Telefon</th><th>Fan</th><th>Guruh</th><th>Ustoz</th><th>Amallar</th></tr></thead>
+                                    <tbody id="studentsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- To'lovlar -->
+                    <section id="tab-payments" class="tab-content">
+                        <div class="page-title-bar"><h1>To'lovlar va qarzdorliklar</h1></div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Platforma, kitob, qarz</h3>
+                                <button class="btn-primary-sm" id="addPaymentBtn">+ To'lov qo'shish</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead><tr><th>O'quvchi</th><th>Platforma</th><th>Kitob</th><th>To'lov</th><th>Qarz</th><th>Sana</th><th>Amallar</th></tr></thead>
+                                    <tbody id="paymentsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Lidlar -->
+                    <section id="tab-leads" class="tab-content">
+                        <div class="page-title-bar"><h1>Organik lidlar</h1><p class="text-muted">Domwork → Rus tili · Homework → Ingliz tili</p></div>
+                        <div class="grid-2">
+                            <div class="card">
+                                <div class="card-header"><h3>🇬🇧 Ingliz tili</h3><button class="btn-primary-sm" data-lead-lang="english">+ Lid</button></div>
+                                <div class="table-responsive">
+                                    <table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Manba</th><th>Sana</th><th></th></tr></thead><tbody id="leadsEnglish"></tbody></table>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header"><h3>🇷🇺 Rus tili</h3><button class="btn-primary-sm" data-lead-lang="russian">+ Lid</button></div>
+                                <div class="table-responsive">
+                                    <table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Manba</th><th>Sana</th><th></th></tr></thead><tbody id="leadsRussian"></tbody></table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right panel widgets -->
+                <aside class="right-panel" id="rightPanel">
+                    <div class="widget">
+                        <div class="widget-title" id="calMonthTitle">Kalendar</div>
+                        <div class="cal-week" id="calWeek"></div>
+                    </div>
+                    <div class="widget">
+                        <div class="widget-title">O'sish ko'rsatkichi</div>
+                        <div class="growth-ring">
+                            <div class="ring-chart">
+                                <svg width="80" height="80" viewBox="0 0 80 80">
+                                    <circle cx="40" cy="40" r="34" fill="none" stroke="#F0F2F8" stroke-width="8"/>
+                                    <circle cx="40" cy="40" r="34" fill="none" stroke="#7B61FF" stroke-width="8"
+                                        stroke-dasharray="213.6" stroke-dashoffset="81" stroke-linecap="round"/>
+                                </svg>
+                                <div class="ring-value" id="growthPct">62%</div>
+                            </div>
+                            <div class="growth-info">
+                                <h4>O'quvchilar o'sishi</h4>
+                                <p>Bu oy nisbatan</p>
+                                <div class="growth-trend">↑ +12% o'sdi</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="widget">
+                        <div class="widget-title">Vazifalar progressi</div>
+                        <div id="hwProgress"></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter"></div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

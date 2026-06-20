@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myhomework.uz - Ro'yxatdan o'tish</title>
+    <link rel="icon" href="images/myhomework-logo.png" type="image/png">
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="auth-body">
+    <button class="auth-theme-btn icon-btn" id="themeToggle" type="button" title="Tungi rejim">
+        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </button>
+    <div class="auth-container">
+        <div class="auth-brand">
+            <img src="images/myhomework-logo.png" alt="Homework" class="auth-logo-img">
+        </div>
+        <p class="subtitle">Admin panelga ro'yxatdan o'tish (1.0 Zero to 1)</p>
+
+        <div id="registerError" class="alert-danger" style="display: none;"></div>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="regName">To'liq ismingiz (F.I.O)</label>
+                <input type="text" id="regName" required placeholder="Ism va familiyangizni kiriting">
+            </div>
+            <div class="form-group">
+                <label for="regEmail">Elektron pochta / Login</label>
+                <input type="text" id="regEmail" required placeholder="Login yoki email kiriting">
+            </div>
+            <div class="form-group">
+                <label for="regRole">Rol</label>
+                <select id="regRole" class="form-select">
+                    <option value="admin">Admin</option>
+                    <option value="teacher">Ustoz</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="regPassword">Parol</label>
+                <input type="password" id="regPassword" required placeholder="Kamida 6 ta belgi" minlength="6">
+            </div>
+            <div class="form-group">
+                <label for="regConfirm">Parolni tasdiqlang</label>
+                <input type="password" id="regConfirm" required placeholder="Parolni qayta kiriting" minlength="6">
+            </div>
+            <button type="submit" class="btn-auth">Ro'yxatdan o'tish</button>
+        </form>
+
+        <p class="auth-footer">Profilingiz bormi? <a href="login.html">Tizimga kirish</a></p>
+    </div>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

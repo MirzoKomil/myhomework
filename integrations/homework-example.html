@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Homework — lid integratsiyasi namunasi</title>
+</head>
+<body>
+    <h2>Homework ro'yxatdan o'tish (namuna)</h2>
+    <form id="signupForm">
+        <input id="name" placeholder="Ism" required>
+        <input id="phone" placeholder="Telefon" required>
+        <button type="submit">Yuborish</button>
+    </form>
+
+    <script src="mh-lead-webhook.js"></script>
+    <script>
+        MyhomeworkLeads.configure({
+            apiUrl: 'https://SIZNING-DOMENINGIZ.uz/api/leads',
+            secret: 'LEADS_WEBHOOK_SECRET',
+            source: 'homework'
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+
+            try {
+                await MyhomeworkLeads.sendLead({
+                    name,
+                    phone,
+                    externalId: 'homework_' + Date.now()
+                });
+                alert('Muvaffaqiyatli!');
+            } catch (err) {
+                console.error('Lid yuborilmadi:', err.message);
+            }
+        });
+    </script>
+</body>
+</html>
