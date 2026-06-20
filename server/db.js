@@ -1,4 +1,3 @@
-const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
@@ -9,7 +8,17 @@ const DB_PATH = path.join(DATA_DIR, 'myhomework.db');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const db = new DatabaseSync(DB_PATH);
+function createDatabase(dbPath) {
+    try {
+        const Database = require('better-sqlite3');
+        return new Database(dbPath);
+    } catch {
+        const { DatabaseSync } = require('node:sqlite');
+        return new DatabaseSync(dbPath);
+    }
+}
+
+const db = createDatabase(DB_PATH);
 
 function initSchema() {
     db.exec(`
@@ -293,6 +302,10 @@ function rowToPayment(r) {
 }
 
 function runTransaction(fn) {
+    if (typeof db.transaction === 'function') {
+        db.transaction(fn)();
+        return;
+    }
     db.exec('BEGIN');
     try {
         fn();
