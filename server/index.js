@@ -46,7 +46,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Server xatoligi' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Myhomework.uz server: http://localhost:${PORT}`);
-    console.log(`API health: http://localhost:${PORT}/api/health`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Myhomework.uz server: port ${PORT}`);
+    console.log(`API health: /api/health`);
 });
