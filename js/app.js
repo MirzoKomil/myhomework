@@ -20,7 +20,8 @@ const PLACEHOLDER_TITLES = {
     'hr-employees': "Xodimlar ro'yxati",
     'hr-guides': "Yo'riqnomalar",
     'hr-contracts': 'Shartnomalar',
-    'mobile-videos': 'Videodarslar'
+    'mobile-videos': 'Videodarslar',
+    settings: 'Sozlamalar'
 };
 
 let _tabContext = { subject: null, placeholder: null };
@@ -111,8 +112,7 @@ function updateSidebarActiveState(tab, ctx) {
         el.classList.toggle('active', isMenuItemActive(el, tab, ctx));
     });
     document.querySelectorAll('.menu-group').forEach(group => {
-        const hasActive = group.querySelector('.menu-sub-item.active');
-        if (hasActive) group.classList.add('open');
+        if (group.querySelector('.menu-sub-item.active')) group.classList.add('open');
     });
 }
 
@@ -132,14 +132,6 @@ function switchTab(tab, ctx = {}) {
 }
 
 function initSidebarMenu() {
-    document.querySelectorAll('.menu-group-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const group = btn.closest('.menu-group');
-            const isOpen = group.classList.toggle('open');
-            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        });
-    });
-
     document.querySelectorAll('.menu-item, .menu-sub-item').forEach(item => {
         item.addEventListener('click', e => {
             e.preventDefault();
