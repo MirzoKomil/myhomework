@@ -1319,6 +1319,13 @@ body {
 .modal-body { padding: 24px; }
 .modal-footer { padding: 0 24px 24px; display: flex; justify-content: flex-end; gap: 10px; }
 
+/* Mobile sidebar controls — desktopda yashirin */
+.sidebar-backdrop,
+.sidebar-toggle,
+.sidebar-close {
+    display: none;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 1200px) {
     .right-panel { display: none; }
@@ -1326,27 +1333,240 @@ body {
 }
 
 @media (max-width: 900px) {
-    .app-shell { flex-direction: column; padding: 8px; }
-    .sidebar {
-        width: 100%;
-        min-width: unset;
-        height: auto;
-        position: static;
-        padding: 16px;
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(26, 29, 46, 0.45);
+        z-index: 300;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.25s ease, visibility 0.25s ease;
     }
-    .sidebar-menu {
+
+    .sidebar-backdrop.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .sidebar-toggle,
+    .sidebar-close {
         display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
+        flex-shrink: 0;
     }
-    .menu-item { font-size: 12px; padding: 8px 10px; margin-bottom: 0; }
-    .menu-item span.label { display: none; }
+
+    body.sidebar-open {
+        overflow: hidden;
+    }
+
+    .app-shell {
+        flex-direction: column;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(300px, 88vw);
+        min-width: unset;
+        height: 100vh;
+        height: 100dvh;
+        z-index: 400;
+        border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+        padding: 20px 16px;
+        transform: translateX(-105%);
+        transition: transform 0.28s ease;
+        box-shadow: 0 8px 40px rgba(26, 29, 46, 0.18);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-brand {
+        position: relative;
+        margin-bottom: 24px;
+        padding: 4px 40px 0 0;
+    }
+
+    .sidebar-close {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .sidebar-menu {
+        display: block;
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+        padding-right: 4px;
+    }
+
+    .menu-item span.label {
+        display: inline;
+    }
+
+    .menu-group {
+        width: 100%;
+    }
+
+    .main-area {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .top-header {
+        padding: 12px 14px;
+        gap: 10px;
+        flex-wrap: nowrap;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .search-box input {
+        padding: 10px 12px 10px 40px;
+        font-size: 13px;
+    }
+
+    .header-actions {
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
     .grid-2, .grid-3, .course-cards { grid-template-columns: 1fr; }
     .welcome-banner { flex-direction: column; text-align: center; }
     .banner-emoji { font-size: 48px; margin-top: 16px; }
-    .top-header { flex-wrap: wrap; }
-    .search-box { max-width: 100%; }
     .notif-panel { width: calc(100vw - 32px); right: -8px; }
+
+    .page-title-bar h1 {
+        font-size: 20px;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    .page-title-bar p {
+        font-size: 12px;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .card {
+        padding: 18px 16px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .toolbar {
+        width: 100%;
+    }
+
+    .form-control-sm {
+        min-width: 0;
+    }
+
+    .subject-tabs {
+        flex-wrap: wrap;
+    }
+
+    .section-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .info-banner {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-shell {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .top-header {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .live-badge {
+        display: none;
+    }
+
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+    }
+
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 12px;
+        border-radius: 12px;
+    }
+
+    .page-title-bar h1 {
+        font-size: 18px;
+    }
+
+    .card {
+        padding: 14px 12px;
+        border-radius: var(--radius-sm);
+    }
+
+    .card-header h3 {
+        font-size: 15px;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar .form-control-sm,
+    .toolbar .btn-primary-sm,
+    .toolbar select,
+    .toolbar input {
+        width: 100%;
+    }
+
+    .subject-tab {
+        flex: 1;
+        justify-content: center;
+        min-width: 0;
+    }
+
+    .welcome-banner {
+        padding: 20px 16px;
+    }
+
+    .welcome-text h2 {
+        font-size: 20px;
+    }
+
+    .stat-card {
+        padding: 14px;
+    }
+
+    .modal {
+        width: calc(100vw - 24px);
+        margin: 12px;
+    }
 }
 
 /* ========== NOTIFICATIONS ========== */

@@ -10,10 +10,14 @@
 </head>
 <body>
     <div class="app-shell">
+        <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
                 <img src="images/myhomework-logo.png" alt="Homework" class="brand-logo">
+                <button type="button" class="icon-btn sidebar-close" id="sidebarClose" aria-label="Menyuni yopish">
+                    <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
             </div>
             <nav class="sidebar-menu" id="sidebarMenu">
                 <a href="#" class="menu-item active" data-tab="dashboard">
@@ -157,6 +161,9 @@
         <!-- Main -->
         <div class="main-area">
             <header class="top-header">
+                <button type="button" class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Menyu" aria-expanded="false" aria-controls="sidebar">
+                    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
                 <div class="search-box">
                     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                     <input type="text" placeholder="Qidirish.." id="globalSearch">
