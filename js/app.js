@@ -132,6 +132,14 @@ function switchTab(tab, ctx = {}) {
 }
 
 function initSidebarMenu() {
+    document.querySelectorAll('.menu-group-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const group = btn.closest('.menu-group');
+            const isOpen = group.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    });
+
     document.querySelectorAll('.menu-item, .menu-sub-item').forEach(item => {
         item.addEventListener('click', e => {
             e.preventDefault();

@@ -236,23 +236,30 @@ body {
     margin-bottom: 2px;
 }
 
-.menu-group-label {
+.menu-group-toggle {
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
+    border: none;
+    background: transparent;
     border-radius: var(--radius-sm);
     font-size: 14px;
     font-weight: 500;
+    font-family: inherit;
     color: var(--text-muted);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
     margin-bottom: 4px;
 }
 
-.menu-group-label .label {
+.menu-group-toggle .label {
     flex: 1;
 }
 
-.menu-group-label > svg {
+.menu-group-toggle > svg {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
@@ -261,9 +268,18 @@ body {
     stroke-width: 1.8;
 }
 
+.menu-group-toggle:hover {
+    background: #F5F6FA;
+    color: var(--text);
+}
+
 .menu-subitems {
-    display: block;
+    display: none;
     padding: 0 0 4px 8px;
+}
+
+.menu-group.open .menu-subitems {
+    display: block;
 }
 
 .menu-sub-item {
@@ -323,12 +339,9 @@ body {
     border-radius: 0 4px 4px 0;
 }
 
+[data-theme="dark"] .menu-group-toggle:hover,
 [data-theme="dark"] .menu-sub-item:hover {
     background: #2a2d3e;
-}
-
-.menu-group {
-    margin-bottom: 2px;
 }
 
 .inline-flag {
