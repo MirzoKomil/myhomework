@@ -19,7 +19,7 @@ function resolveSource(body, req) {
     return { value: 'Organik' };
 }
 
-router.post('/', webhookSecretRequired, (req, res) => {
+router.post('/', webhookSecretRequired, async (req, res) => {
     try {
         const body = req.body || {};
         const name = body.name || body.fullName || body.ism;
@@ -36,7 +36,7 @@ router.post('/', webhookSecretRequired, (req, res) => {
             return res.status(400).json({ error: sourceResult.error });
         }
 
-        const result = insertLead({
+        const result = await insertLead({
             name: name.trim(),
             phone: String(phone).trim(),
             language,
@@ -56,9 +56,9 @@ router.post('/', webhookSecretRequired, (req, res) => {
     }
 });
 
-router.get('/', authRequired, (req, res) => {
+router.get('/', authRequired, async (req, res) => {
     try {
-        res.json(getLeads());
+        res.json(await getLeads());
     } catch (err) {
         console.error('GET /api/leads', err);
         res.status(500).json({ error: 'Lidlarni yuklashda xatolik' });
