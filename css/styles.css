@@ -1119,6 +1119,10 @@ body {
 
 .subject-tab {
     flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     padding: 12px 16px;
     border: 1.5px solid var(--border);
     background: var(--bg);
@@ -1129,6 +1133,15 @@ body {
     color: var(--text-muted);
     cursor: pointer;
     transition: all 0.2s;
+}
+
+.subject-flag {
+    width: 22px;
+    height: 15px;
+    border-radius: 3px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .subject-tab:hover {
