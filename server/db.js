@@ -1,25 +1,27 @@
-const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('crypto');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const DB_PATH = path.join(DATA_DIR, 'myhomework.db');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+async function query(text, params) {
+    const client = await pool.connect();
+    try {
+        return await client.query(text, params);
+    } finally {
+        client.release();
+    }
+}
 
-const db = new DatabaseSync(DB_PATH);
-
-function initSchema() {
-    db.exec(`
+async function initSchema() {
+    await query(`
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'admin',
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TIMESTAMPTZ DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS teachers (
@@ -92,24 +94,31 @@ function initSchema() {
             language TEXT NOT NULL,
             date TEXT,
             external_id TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TIMESTAMPTZ DEFAULT NOW()
         );
     `);
-    migrateLeadsSchema();
+    await migrateLeadsSchema();
 }
 
-function migrateLeadsSchema() {
-    const cols = db.prepare('PRAGMA table_info(leads)').all();
-    const names = new Set(cols.map(c => c.name));
+async function migrateLeadsSchema() {
+    const res = await query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'leads'
+    `);
+    const names = new Set(res.rows.map(r => r.column_name));
     if (!names.has('external_id')) {
-        db.exec('ALTER TABLE leads ADD COLUMN external_id TEXT');
+        await query('ALTER TABLE leads ADD COLUMN external_id TEXT');
     }
     if (!names.has('created_at')) {
-        db.exec("ALTER TABLE leads ADD COLUMN created_at TEXT DEFAULT (datetime('now'))");
+        await query('ALTER TABLE leads ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW()');
     }
-    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_source_external ON leads(source, external_id) WHERE external_id IS NOT NULL');
-    db.prepare("UPDATE leads SET language = 'russian' WHERE LOWER(source) LIKE '%domwork%'").run();
-    db.prepare("UPDATE leads SET language = 'english' WHERE LOWER(source) LIKE '%homework%'").run();
+    await query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_source_external
+        ON leads(source, external_id)
+        WHERE external_id IS NOT NULL
+    `);
+    await query("UPDATE leads SET language = 'russian' WHERE LOWER(source) LIKE '%domwork%'");
+    await query("UPDATE leads SET language = 'english' WHERE LOWER(source) LIKE '%homework%'");
 }
 
 function normalizeLeadLanguage(val) {
@@ -146,10 +155,10 @@ function rowToLead(r) {
     };
 }
 
-function getLeads() {
-    const leadRows = db.prepare('SELECT * FROM leads ORDER BY datetime(created_at) DESC, date DESC').all();
+async function getLeads() {
+    const res = await query('SELECT * FROM leads ORDER BY created_at DESC, date DESC');
     const leads = { english: [], russian: [] };
-    leadRows.forEach(r => {
+    res.rows.forEach(r => {
         const item = rowToLead(r);
         if (r.language === 'russian') leads.russian.push(item);
         else leads.english.push(item);
@@ -157,21 +166,25 @@ function getLeads() {
     return leads;
 }
 
-function insertLead({ name, phone, language, source, externalId, date }) {
+async function insertLead({ name, phone, language, source, externalId, date }) {
     const src = normalizeLeadSource(source);
     const lang = languageForSource(src, language);
     const extId = externalId ? String(externalId) : null;
 
     if (extId) {
-        const existing = db.prepare('SELECT id FROM leads WHERE source = ? AND external_id = ?').get(src, extId);
-        if (existing) return { id: existing.id, duplicate: true };
+        const existing = await query(
+            'SELECT id FROM leads WHERE source = $1 AND external_id = $2',
+            [src, extId]
+        );
+        if (existing.rows.length > 0) return { id: existing.rows[0].id, duplicate: true };
     }
 
     const id = randomUUID();
     const dateStr = date || new Date().toLocaleDateString('uz-UZ');
-    db.prepare(
-        'INSERT INTO leads (id, name, phone, source, language, date, external_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(id, name, phone || '', src, lang, dateStr, extId);
+    await query(
+        'INSERT INTO leads (id, name, phone, source, language, date, external_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [id, name, phone || '', src, lang, dateStr, extId]
+    );
 
     return {
         id,
@@ -180,14 +193,15 @@ function insertLead({ name, phone, language, source, externalId, date }) {
     };
 }
 
-function seedIfEmpty() {
-    const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
-    if (userCount > 0) return;
+async function seedIfEmpty() {
+    const res = await query('SELECT COUNT(*) AS c FROM users');
+    if (parseInt(res.rows[0].c, 10) > 0) return;
 
     const hash = bcrypt.hashSync('123456', 10);
-    db.prepare(
-        'INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)'
-    ).run(randomUUID(), 'Asosiy Admin', 'admin', hash, 'admin');
+    await query(
+        'INSERT INTO users (id, name, email, password_hash, role) VALUES ($1, $2, $3, $4, $5)',
+        [randomUUID(), 'Asosiy Admin', 'admin', hash, 'admin']
+    );
 
     const teachers = [
         ['t1', 'Saida Rustamaliyeva', 'asosiy', 'english', '', 'mwf', 15],
@@ -196,29 +210,33 @@ function seedIfEmpty() {
         ['t4', 'Yordamchi (Ingliz)', 'yordamchi', 'english', '', 'tts', 15],
         ['t5', 'Yordamchi (Rus)', 'yordamchi', 'russian', '', 'mwf', 15]
     ];
-    const insTeacher = db.prepare(
-        'INSERT INTO teachers (id, name, type, subject, phone, schedule_pattern, lesson_duration) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    );
-    teachers.forEach(t => insTeacher.run(...t));
+    for (const t of teachers) {
+        await query(
+            'INSERT INTO teachers (id, name, type, subject, phone, schedule_pattern, lesson_duration) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            t
+        );
+    }
 
-    db.prepare('INSERT INTO sales_managers (id, name) VALUES (?, ?)').run('sm1', 'Sotuv menejeri 1');
-    db.prepare('INSERT INTO sales_managers (id, name) VALUES (?, ?)').run('sm2', 'Sotuv menejeri 2');
+    await query('INSERT INTO sales_managers (id, name) VALUES ($1, $2)', ['sm1', 'Sotuv menejeri 1']);
+    await query('INSERT INTO sales_managers (id, name) VALUES ($1, $2)', ['sm2', 'Sotuv menejeri 2']);
 
     const students = [
         ['s1', 'Eliboy', '93978310191', 'English', 'english', 't2', null],
         ['s2', 'Umar', '93697373263', 'English', 'english', 't2', null],
         ['s3', 'Aziz', '901234567', 'Russian', 'russian', 't3', null]
     ];
-    const insStudent = db.prepare(
-        'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    );
-    students.forEach(s => insStudent.run(...s));
+    for (const s of students) {
+        await query(
+            'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            s
+        );
+    }
 }
 
-function buildAttendanceObject(table) {
-    const rows = db.prepare(`SELECT att_key, student_id, day FROM ${table} WHERE present = 1`).all();
+async function buildAttendanceObject(table) {
+    const res = await query(`SELECT att_key, student_id, day FROM ${table} WHERE present = 1`);
     const out = {};
-    rows.forEach(r => {
+    res.rows.forEach(r => {
         if (!out[r.att_key]) out[r.att_key] = {};
         if (!out[r.att_key][r.student_id]) out[r.att_key][r.student_id] = {};
         out[r.att_key][r.student_id][r.day] = 1;
@@ -226,13 +244,22 @@ function buildAttendanceObject(table) {
     return out;
 }
 
-function getFullState() {
-    const teachers = db.prepare('SELECT * FROM teachers ORDER BY name').all().map(rowToTeacher);
-    const salesManagers = db.prepare('SELECT * FROM sales_managers').all().map(r => ({ id: r.id, name: r.name }));
-    const students = db.prepare('SELECT * FROM students ORDER BY name').all().map(rowToStudent);
-    const timetableRows = db.prepare('SELECT * FROM timetable').all();
+async function getFullState() {
+    const [teachersRes, smRes, studentsRes, timetableRes, paymentsRes, leads] = await Promise.all([
+        query('SELECT * FROM teachers ORDER BY name'),
+        query('SELECT * FROM sales_managers'),
+        query('SELECT * FROM students ORDER BY name'),
+        query('SELECT * FROM timetable'),
+        query('SELECT * FROM payments ORDER BY date DESC'),
+        getLeads()
+    ]);
+
+    const teachers = teachersRes.rows.map(rowToTeacher);
+    const salesManagers = smRes.rows.map(r => ({ id: r.id, name: r.name }));
+    const students = studentsRes.rows.map(rowToStudent);
+
     const timetable = {};
-    timetableRows.forEach(r => {
+    timetableRes.rows.forEach(r => {
         timetable[r.slot_key] = {
             teacherId: r.teacher_id || '',
             salesManagerId: r.sales_manager_id || '',
@@ -241,16 +268,21 @@ function getFullState() {
             isProbniy: true
         };
     });
-    const payments = db.prepare('SELECT * FROM payments ORDER BY date DESC').all().map(rowToPayment);
-    const leads = getLeads();
+
+    const payments = paymentsRes.rows.map(rowToPayment);
+
+    const [mainAttendance, assistantAttendance] = await Promise.all([
+        buildAttendanceObject('main_attendance'),
+        buildAttendanceObject('assistant_attendance')
+    ]);
 
     return {
         teachers,
         salesManagers,
         students,
         timetable,
-        mainAttendance: buildAttendanceObject('main_attendance'),
-        assistantAttendance: buildAttendanceObject('assistant_attendance'),
+        mainAttendance,
+        assistantAttendance,
         payments,
         leads
     };
@@ -292,137 +324,146 @@ function rowToPayment(r) {
     };
 }
 
-function runTransaction(fn) {
-    db.exec('BEGIN');
+async function runTransaction(fn) {
+    const client = await pool.connect();
     try {
-        fn();
-        db.exec('COMMIT');
+        await client.query('BEGIN');
+        await fn(client);
+        await client.query('COMMIT');
     } catch (e) {
-        db.exec('ROLLBACK');
+        await client.query('ROLLBACK');
         throw e;
+    } finally {
+        client.release();
     }
 }
 
-function saveTeachers(teachers) {
-    runTransaction(() => {
-        db.prepare('DELETE FROM teachers').run();
-        const ins = db.prepare(
-            'INSERT INTO teachers (id, name, type, subject, phone, schedule_pattern, lesson_duration) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        teachers.forEach(t => ins.run(
-            t.id, t.name, t.type, t.subject || 'english', t.phone || '',
-            t.schedulePattern || 'mwf', t.lessonDuration || 15
-        ));
-    });
-}
-
-function saveStudents(students) {
-    runTransaction(() => {
-        db.prepare('DELETE FROM students').run();
-        const ins = db.prepare(
-            'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        students.forEach(s => ins.run(
-            s.id, s.name, s.phone || '', s.group || '', s.subject || 'english',
-            s.teacherId || null, s.assistantTeacherId || null
-        ));
-    });
-}
-
-function saveSalesManagers(list) {
-    runTransaction(() => {
-        db.prepare('DELETE FROM sales_managers').run();
-        const ins = db.prepare('INSERT INTO sales_managers (id, name) VALUES (?, ?)');
-        list.forEach(s => ins.run(s.id, s.name));
-    });
-}
-
-function saveTimetable(timetable) {
-    runTransaction(() => {
-        db.prepare('DELETE FROM timetable').run();
-        const ins = db.prepare(
-            'INSERT INTO timetable (slot_key, date, time, view_key, teacher_id, sales_manager_id, student_id, completed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        Object.entries(timetable || {}).forEach(([key, e]) => {
-            const parts = key.split('_');
-            ins.run(
-                key,
-                parts[0] || '',
-                parts[1] || '',
-                parts[2] || 'all',
-                e.teacherId || null,
-                e.salesManagerId || null,
-                e.studentId || null,
-                e.completed ? 1 : 0
+async function saveTeachers(teachers) {
+    await runTransaction(async (client) => {
+        await client.query('DELETE FROM teachers');
+        for (const t of teachers) {
+            await client.query(
+                'INSERT INTO teachers (id, name, type, subject, phone, schedule_pattern, lesson_duration) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [t.id, t.name, t.type, t.subject || 'english', t.phone || '', t.schedulePattern || 'mwf', t.lessonDuration || 15]
             );
-        });
+        }
     });
 }
 
-function saveAttendanceTable(tableName, data) {
-    runTransaction(() => {
-        db.prepare(`DELETE FROM ${tableName}`).run();
-        const ins = db.prepare(`INSERT INTO ${tableName} (att_key, student_id, day, present) VALUES (?, ?, ?, 1)`);
-        Object.entries(data || {}).forEach(([attKey, students]) => {
-            Object.entries(students || {}).forEach(([studentId, days]) => {
-                Object.entries(days || {}).forEach(([day, val]) => {
-                    if (val) ins.run(attKey, studentId, parseInt(day, 10));
-                });
-            });
-        });
+async function saveStudents(students) {
+    await runTransaction(async (client) => {
+        await client.query('DELETE FROM students');
+        for (const s of students) {
+            await client.query(
+                'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [s.id, s.name, s.phone || '', s.group || '', s.subject || 'english', s.teacherId || null, s.assistantTeacherId || null]
+            );
+        }
     });
 }
 
-function savePayments(payments) {
-    runTransaction(() => {
-        db.prepare('DELETE FROM payments').run();
-        const ins = db.prepare(
-            'INSERT INTO payments (id, student_id, platform, book, paid, debt, date) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        payments.forEach(p => ins.run(
-            p.id, p.studentId, p.platform || 0, p.book || 0, p.paid || 0, p.debt || 0, p.date || ''
-        ));
+async function saveSalesManagers(list) {
+    await runTransaction(async (client) => {
+        await client.query('DELETE FROM sales_managers');
+        for (const s of list) {
+            await client.query('INSERT INTO sales_managers (id, name) VALUES ($1, $2)', [s.id, s.name]);
+        }
     });
 }
 
-function saveLeads(leads) {
-    runTransaction(() => {
-        db.prepare('DELETE FROM leads').run();
-        const ins = db.prepare(
-            'INSERT INTO leads (id, name, phone, source, language, date) VALUES (?, ?, ?, ?, ?, ?)'
-        );
-        ['english', 'russian'].forEach(lang => {
-            (leads[lang] || []).forEach(l => ins.run(
-                l.id, l.name, l.phone || '', l.source || 'Organik', lang, l.date || ''
-            ));
-        });
+async function saveTimetable(timetable) {
+    await runTransaction(async (client) => {
+        await client.query('DELETE FROM timetable');
+        for (const [key, e] of Object.entries(timetable || {})) {
+            const parts = key.split('_');
+            await client.query(
+                'INSERT INTO timetable (slot_key, date, time, view_key, teacher_id, sales_manager_id, student_id, completed) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                [
+                    key,
+                    parts[0] || '',
+                    parts[1] || '',
+                    parts[2] || 'all',
+                    e.teacherId || null,
+                    e.salesManagerId || null,
+                    e.studentId || null,
+                    e.completed ? 1 : 0
+                ]
+            );
+        }
     });
 }
 
-function patchState(partial) {
-    if (partial.teachers) saveTeachers(partial.teachers);
-    if (partial.students) saveStudents(partial.students);
-    if (partial.salesManagers) saveSalesManagers(partial.salesManagers);
-    if (partial.timetable) saveTimetable(partial.timetable);
-    if (partial.mainAttendance) saveAttendanceTable('main_attendance', partial.mainAttendance);
-    if (partial.assistantAttendance) saveAttendanceTable('assistant_attendance', partial.assistantAttendance);
-    if (partial.payments) savePayments(partial.payments);
-    if (partial.leads) saveLeads(partial.leads);
+async function saveAttendanceTable(tableName, data) {
+    await runTransaction(async (client) => {
+        await client.query(`DELETE FROM ${tableName}`);
+        for (const [attKey, students] of Object.entries(data || {})) {
+            for (const [studentId, days] of Object.entries(students || {})) {
+                for (const [day, val] of Object.entries(days || {})) {
+                    if (val) {
+                        await client.query(
+                            `INSERT INTO ${tableName} (att_key, student_id, day, present) VALUES ($1, $2, $3, 1)`,
+                            [attKey, studentId, parseInt(day, 10)]
+                        );
+                    }
+                }
+            }
+        }
+    });
 }
 
-function findUserByEmail(email) {
-    return db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+async function savePayments(payments) {
+    await runTransaction(async (client) => {
+        await client.query('DELETE FROM payments');
+        for (const p of payments) {
+            await client.query(
+                'INSERT INTO payments (id, student_id, platform, book, paid, debt, date) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [p.id, p.studentId, p.platform || 0, p.book || 0, p.paid || 0, p.debt || 0, p.date || '']
+            );
+        }
+    });
 }
 
-function findUserById(id) {
-    return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+async function saveLeads(leads) {
+    await runTransaction(async (client) => {
+        await client.query('DELETE FROM leads');
+        for (const lang of ['english', 'russian']) {
+            for (const l of (leads[lang] || [])) {
+                await client.query(
+                    'INSERT INTO leads (id, name, phone, source, language, date) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [l.id, l.name, l.phone || '', l.source || 'Organik', lang, l.date || '']
+                );
+            }
+        }
+    });
 }
 
-function createUser({ name, email, passwordHash, role }) {
+async function patchState(partial) {
+    if (partial.teachers) await saveTeachers(partial.teachers);
+    if (partial.students) await saveStudents(partial.students);
+    if (partial.salesManagers) await saveSalesManagers(partial.salesManagers);
+    if (partial.timetable) await saveTimetable(partial.timetable);
+    if (partial.mainAttendance) await saveAttendanceTable('main_attendance', partial.mainAttendance);
+    if (partial.assistantAttendance) await saveAttendanceTable('assistant_attendance', partial.assistantAttendance);
+    if (partial.payments) await savePayments(partial.payments);
+    if (partial.leads) await saveLeads(partial.leads);
+}
+
+async function findUserByEmail(email) {
+    const res = await query('SELECT * FROM users WHERE email = $1', [email]);
+    return res.rows[0] || null;
+}
+
+async function findUserById(id) {
+    const res = await query('SELECT * FROM users WHERE id = $1', [id]);
+    return res.rows[0] || null;
+}
+
+async function createUser({ name, email, passwordHash, role }) {
     const id = randomUUID();
-    db.prepare(
-        'INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)'
-    ).run(id, name, email, passwordHash, role || 'admin');
+    await query(
+        'INSERT INTO users (id, name, email, password_hash, role) VALUES ($1, $2, $3, $4, $5)',
+        [id, name, email, passwordHash, role || 'admin']
+    );
     return findUserById(id);
 }
 
@@ -430,11 +471,18 @@ function publicUser(user) {
     return { id: user.id, name: user.name, email: user.email, role: user.role };
 }
 
-initSchema();
-seedIfEmpty();
+async function init() {
+    await initSchema();
+    await seedIfEmpty();
+}
+
+init().catch(err => {
+    console.error('Database initialization failed:', err);
+    process.exit(1);
+});
 
 module.exports = {
-    db,
+    pool,
     getFullState,
     getLeads,
     insertLead,
