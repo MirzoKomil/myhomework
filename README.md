@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Myhomework.uz — Admin Panel
 
-## Getting Started
+Ta'lim markazi boshqaruv paneli: ustozlar, o'quvchilar, davomat, maosh (KPI), timetable, to'lovlar va organik lidlar.
 
-First, run the development server:
+## Ishga tushirish
 
 ```bash
+npm install
+cp .env.example .env
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Brauzer: [http://localhost:3000/login.html](http://localhost:3000/login.html)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Standart login:** `admin` / `123456` (productionda o'zgartiring)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Texnologiyalar
 
-## Learn More
+- Frontend: HTML, CSS, JavaScript
+- Backend: Express.js + SQLite
+- Auth: JWT
 
-To learn more about Next.js, take a look at the following resources:
+## API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Endpoint | Tavsif |
+|----------|--------|
+| `GET /api/health` | Server holati |
+| `POST /api/auth/login` | Kirish |
+| `GET /api/state` | Barcha ma'lumotlar |
+| `PATCH /api/state` | Ma'lumotlarni saqlash |
+| `POST /api/leads` | Domwork/Homework lid webhook |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Lidlar
 
-## Deploy on Vercel
+- **Domwork** → Rus tili
+- **Homework** → Ingliz tili
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Integratsiya: `integrations/mh-lead-webhook.js`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment
+
+```
+PORT=3000
+JWT_SECRET=...
+LEADS_WEBHOOK_SECRET=...
+```
