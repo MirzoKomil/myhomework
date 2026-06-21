@@ -9,12 +9,25 @@ const TAB_TITLES = {
     salary: 'Ustozlar maoshi',
     students: "O'quvchilar",
     payments: "To'lovlar",
-    leads: "Sotuv bo'limi",
+    sales: "Sotuv bo'limi",
+    marketing: "Marketing bo'limi",
     placeholder: 'Bo\'lim'
+};
+
+const SALES_SECTIONS = {
+    leads: 'Lidlar',
+    'book-roadmap': 'Kitob roadmap',
+    rating: 'Reyting',
+    'sales-stats': 'Statistika',
+    scripts: 'Scrikptlar'
 };
 
 const PLACEHOLDER_TITLES = {
     curriculum: "O'quv rejasi",
+    'book-roadmap': 'Kitob roadmap',
+    rating: 'Reyting',
+    'sales-stats': 'Statistika',
+    scripts: 'Scrikptlar',
     'sales-salary': 'Sotuv menejerlari maoshi',
     'other-salary': 'Boshqa maoshlar',
     'hr-employees': "Xodimlar ro'yxati",
@@ -24,7 +37,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads' };
 
 function initUserUI(currentUser) {
     const initials = currentUser.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -89,7 +102,7 @@ function startLeadsPolling() {
             const newCount = leads.english.length + leads.russian.length;
             if (newCount > prevCount) {
                 if (typeof syncNotifications === 'function') syncNotifications();
-                if (document.getElementById('tab-leads')?.classList.contains('active')) renderLeads();
+                if (document.getElementById('tab-sales')?.classList.contains('active')) renderSales();
                 if (document.getElementById('tab-dashboard')?.classList.contains('active')) renderDashboard();
                 if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
             }
@@ -117,9 +130,15 @@ function updateSidebarActiveState(tab, ctx) {
 }
 
 function switchTab(tab, ctx = {}) {
+    if (tab === 'leads') {
+        tab = 'sales';
+        ctx.salesSection = ctx.salesSection || 'leads';
+    }
+
     _tabContext = {
         subject: ctx.subject || null,
-        placeholder: ctx.placeholder || null
+        placeholder: ctx.placeholder || null,
+        salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null)
     };
 
     updateSidebarActiveState(tab, _tabContext);
@@ -129,6 +148,28 @@ function switchTab(tab, ctx = {}) {
     if (el) el.classList.add('active');
     document.getElementById('rightPanel').classList.toggle('hidden', tab !== 'dashboard');
     renderTab(tab);
+}
+
+function switchSalesSection(section) {
+    _tabContext.salesSection = section;
+    document.querySelectorAll('.section-nav-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.salesSection === section);
+    });
+    document.querySelectorAll('.sales-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.salesPanel === section);
+    });
+    const leadsFiltersBar = document.getElementById('leadsFiltersBar');
+    const addLeadBtn = document.getElementById('addLeadBtn');
+    if (leadsFiltersBar) leadsFiltersBar.hidden = section !== 'leads';
+    if (addLeadBtn) addLeadBtn.hidden = section !== 'leads';
+    syncLeadsLangTabs();
+    if (section === 'leads') renderLeads();
+}
+
+function syncLeadsLangTabs() {
+    document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.leadLangFilter === _leadsLangFilter);
+    });
 }
 
 function initSidebarMenu() {
@@ -143,10 +184,22 @@ function initSidebarMenu() {
     document.querySelectorAll('.menu-item, .menu-sub-item').forEach(item => {
         item.addEventListener('click', e => {
             e.preventDefault();
-            switchTab(item.dataset.tab, {
+            const tab = item.dataset.tab;
+            switchTab(tab, {
                 subject: item.dataset.subject || null,
-                placeholder: item.dataset.placeholder || null
+                placeholder: item.dataset.placeholder || null,
+                salesSection: tab === 'sales' ? 'leads' : null
             });
+        });
+    });
+
+    document.querySelectorAll('[data-sales-section]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!document.getElementById('tab-sales')?.classList.contains('active')) {
+                switchTab('sales', { salesSection: btn.dataset.salesSection });
+            } else {
+                switchSalesSection(btn.dataset.salesSection);
+            }
         });
     });
 }
@@ -220,7 +273,8 @@ function renderTab(tab) {
         case 'salary': renderSalary(); break;
         case 'students': renderStudents(); break;
         case 'payments': renderPayments(); break;
-        case 'leads': renderLeads(); break;
+        case 'sales': renderSales(); break;
+        case 'marketing': break;
         case 'placeholder': renderPlaceholder(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
@@ -234,7 +288,10 @@ function renderPlaceholder() {
 }
 
 // --- Modal ---
-function openModal(title, bodyHtml, footerHtml) {
+function openModal(title, bodyHtml, footerHtml, options = {}) {
+    const overlay = document.getElementById('modalOverlay');
+    const modal = overlay?.querySelector('.modal');
+    if (modal) modal.classList.toggle('modal--wide', !!options.wide);
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalBody').innerHTML = bodyHtml;
     document.getElementById('modalFooter').innerHTML = footerHtml || '';
@@ -242,7 +299,10 @@ function openModal(title, bodyHtml, footerHtml) {
 }
 
 function closeModal() {
-    document.getElementById('modalOverlay').style.display = 'none';
+    const overlay = document.getElementById('modalOverlay');
+    const modal = overlay?.querySelector('.modal');
+    if (modal) modal.classList.remove('modal--wide');
+    if (overlay) overlay.style.display = 'none';
 }
 
 document.getElementById('modalClose').addEventListener('click', closeModal);
@@ -1105,87 +1165,1759 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
     };
 });
 
-// --- Organik lidlar ---
-function renderLeads() {
-    const subject = _tabContext.subject;
-    const titleEl = document.getElementById('leadsPageTitle');
-    const enCard = document.getElementById('leadsCardEnglish');
-    const ruCard = document.getElementById('leadsCardRussian');
-    const grid = document.getElementById('leadsGrid');
+// --- Sotuv bo'limi ---
+function renderSales() {
+    syncLeadsLangTabs();
+    switchSalesSection(_tabContext.salesSection || 'leads');
+}
 
-    if (subject === 'english') {
-        if (titleEl) titleEl.textContent = "Sotuv bo'limi — Ingliz tili kursi";
-        if (enCard) enCard.style.display = '';
-        if (ruCard) ruCard.style.display = 'none';
-        if (grid) grid.classList.remove('grid-2');
-    } else if (subject === 'russian') {
-        if (titleEl) titleEl.textContent = "Sotuv bo'limi — Rus tili kursi";
-        if (enCard) enCard.style.display = 'none';
-        if (ruCard) ruCard.style.display = '';
-        if (grid) grid.classList.remove('grid-2');
-    } else {
-        if (titleEl) titleEl.textContent = "Sotuv bo'limi — organik lidlar";
-        if (enCard) enCard.style.display = '';
-        if (ruCard) ruCard.style.display = '';
-        if (grid) grid.classList.add('grid-2');
+const LEAD_COLUMNS_HIDDEN_BY_DEFAULT = new Set(['muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
+const LEADS_COLUMN_VISIBILITY_KEY = 'mh_leads_column_visibility';
+const LEADS_LANG_FILTER_KEY = 'mh_leads_lang_filter';
+
+const LEAD_CONTACT_FAIL_REASONS = [
+    { id: 'no-answer', label: 'Javob bermadi' },
+    { id: 'busy', label: 'Band bo\'ldi' },
+    { id: 'phone-off', label: 'Telefoni o\'chiq' },
+    { id: 'call-later', label: 'Keyinroq gaplashishni so\'radi' }
+];
+
+function needsContactFailPrompt(fromStatus, toStatus) {
+    return fromStatus === 'yangi-lidlar' && toStatus === 'boglanishga-urinilmoqda';
+}
+
+function moveLeadToStatus(lang, leadId, toStatus, extra = {}) {
+    updateLeadInStorage(lang, leadId, l => ({ ...l, status: toStatus, ...extra }));
+    renderLeads();
+}
+
+function openContactFailModal(lang, leadId, toStatus) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const options = LEAD_CONTACT_FAIL_REASONS.map(r => `
+        <label class="lead-reason-option">
+            <input type="radio" name="contactFailReason" value="${r.id}" data-reason-radio>
+            <span>${escapeHtml(r.label)}</span>
+        </label>`).join('');
+
+    openModal(
+        'Lid bilan nima uchun bog\'lana olmadingiz?',
+        `<p class="lead-reason-subtitle">Qo'ng'iroq qilindi, lekin:</p>
+         <div class="lead-reason-list">${options}</div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelContactFail">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmContactFail">Saqlash va ko'chirish</button>`
+    );
+
+    document.getElementById('cancelContactFail').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    const confirmBtn = document.getElementById('confirmContactFail');
+    if (!confirmBtn) return;
+
+    confirmBtn.onclick = () => {
+        const modalBody = document.getElementById('modalBody');
+        const selected = modalBody?.querySelector('[data-reason-radio]:checked');
+        if (!selected) {
+            alert('Bitta variant tanlang');
+            return;
+        }
+        const reason = LEAD_CONTACT_FAIL_REASONS.find(r => r.id === selected.value);
+        if (!reason) return;
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return {
+                ...base,
+                status: toStatus,
+                comments: [...base.comments, createLeadComment({
+                    type: 'contact-fail',
+                    text: `Qo'ng'iroq qilindi, lekin: ${reason.label}`,
+                    reason: reason.label,
+                    author
+                })]
+            };
+        });
+
+        if (!updated) {
+            alert('Lid topilmadi');
+            return;
+        }
+
+        closeModal();
+        renderLeads();
+    };
+}
+
+const LEAD_LANGUAGE_LEVELS = [
+    { id: 'zero', label: '0 dan boshlamoqchi' },
+    { id: 'beginner', label: 'Boshlang\'ich darajada biladi' },
+    { id: 'intermediate', label: 'O\'rta darajada biladi' },
+    { id: 'advanced', label: 'Yuqori darajada biladi' }
+];
+
+const LEAD_APPLICANTS = [
+    { id: 'self', label: 'O\'zi qoldirgan' },
+    { id: 'parent', label: 'Ota-onasi qoldirgan' }
+];
+
+const LEAD_GENDERS = [
+    { id: 'female', label: 'Ayol' },
+    { id: 'male', label: 'Erkak' }
+];
+
+const LEAD_UZ_REGIONS = [
+    { id: 'toshkent-sh', label: 'Toshkent shahri' },
+    { id: 'andijon', label: 'Andijon viloyati' },
+    { id: 'buxoro', label: 'Buxoro viloyati' },
+    { id: 'fargona', label: 'Farg\'ona viloyati' },
+    { id: 'jizzax', label: 'Jizzax viloyati' },
+    { id: 'xorazm', label: 'Xorazm viloyati' },
+    { id: 'namangan', label: 'Namangan viloyati' },
+    { id: 'navoiy', label: 'Navoiy viloyati' },
+    { id: 'qashqadaryo', label: 'Qashqadaryo viloyati' },
+    { id: 'samarqand', label: 'Samarqand viloyati' },
+    { id: 'sirdaryo', label: 'Sirdaryo viloyati' },
+    { id: 'surxondaryo', label: 'Surxondaryo viloyati' },
+    { id: 'toshkent-v', label: 'Toshkent viloyati' },
+    { id: 'qoraqalpogiston', label: 'Qoraqalpog\'iston Respublikasi' }
+];
+
+const LEAD_FOREIGN_COUNTRIES = [
+    { id: 'ru', label: 'Rossiya' },
+    { id: 'kz', label: 'Qozog\'iston' },
+    { id: 'kg', label: 'Qirg\'iziston' },
+    { id: 'tj', label: 'Tojikiston' },
+    { id: 'tm', label: 'Turkmaniston' },
+    { id: 'tr', label: 'Turkiya' },
+    { id: 'ae', label: 'BAA' },
+    { id: 'us', label: 'AQSh' },
+    { id: 'de', label: 'Germaniya' },
+    { id: 'kr', label: 'Koreya' },
+    { id: 'cn', label: 'Xitoy' },
+    { id: 'other', label: 'Boshqa davlat' }
+];
+
+const LEAD_LEARNING_GOALS = [
+    { id: 'ielts', label: 'IELTS' },
+    { id: 'cefr', label: 'CEFR' },
+    { id: 'speaking', label: 'Erkin gaplashish' },
+    { id: 'career', label: 'Ish va karyera' },
+    { id: 'work-abroad', label: 'Xorijda ishlash' },
+    { id: 'study-abroad', label: 'Xorijda o\'qish' },
+    { id: 'university', label: 'Universitet / Magistratura' },
+    { id: 'travel', label: 'Sayohat' },
+    { id: 'business', label: 'Biznes' },
+    { id: 'freelance', label: 'Freelancer / IT' },
+    { id: 'media', label: 'Film va kitoblar' },
+    { id: 'school', label: 'Maktab / Universitet darslari' },
+    { id: 'parenting', label: 'Farzand tarbiyasi' },
+    { id: 'self-growth', label: 'O\'zini rivojlantirish' },
+    { id: 'other', label: 'Boshqa' }
+];
+
+function needsConnectedSurveyPrompt(toStatus) {
+    return toStatus === 'boglanildi';
+}
+
+function needsInfoProvidedPrompt(fromStatus, toStatus) {
+    return toStatus === 'malumot-berildi';
+}
+
+function needsConnectedSurveyBeforeInfo(fromStatus, lead) {
+    if (fromStatus === 'boglanildi') return false;
+    return !lead?.connectedSurvey;
+}
+
+function openMalumotBerildiFlow(lang, leadId, fromStatus) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    if (needsConnectedSurveyBeforeInfo(fromStatus, lead)) {
+        openConnectedSurveyModal(lang, leadId, 'malumot-berildi', { chainTo: 'malumot-berildi' });
+        return;
     }
 
-    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    renderLeadTable('leadsEnglish', leads.english, 'english');
-    renderLeadTable('leadsRussian', leads.russian, 'russian');
+    openInfoProvidedModal(lang, leadId);
 }
 
-function leadSourceLabel(source) {
-    const s = (source || '').toLowerCase();
-    if (s.includes('domwork')) return '<span class="lead-badge lead-badge-domwork">Domwork</span>';
-    if (s.includes('homework')) return '<span class="lead-badge lead-badge-homework">Homework</span>';
-    return source || 'Organik';
+function needsDecisionPrompt(fromStatus, toStatus) {
+    return toStatus === 'qaror-jarayonida';
 }
 
-function renderLeadTable(tbodyId, items, lang) {
-    const tbody = document.getElementById(tbodyId);
-    tbody.innerHTML = items.map(l => `<tr>
-        <td>${l.name}</td><td>${l.phone}</td><td>${leadSourceLabel(l.source)}</td><td>${l.date}</td>
-        <td><button class="btn-danger-sm" data-delete-lead="${lang}" data-lead-id="${l.id}">×</button></td>
-    </tr>`).join('') || '<tr><td colspan="5" class="text-muted">Lidlar yo\'q</td></tr>';
+function needsConnectedSurveyBeforeDecision(fromStatus, lead) {
+    if (fromStatus === 'boglanildi' || fromStatus === 'malumot-berildi') return false;
+    return !lead?.connectedSurvey;
+}
 
-    tbody.querySelectorAll('[data-delete-lead]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-            const langKey = btn.dataset.deleteLead;
-            leads[langKey] = leads[langKey].filter(l => l.id !== btn.dataset.leadId);
-            setItem(STORAGE_KEYS.leads, leads);
-            renderLeads();
+function needsInfoProvidedBeforeDecision(fromStatus, lead) {
+    if (fromStatus === 'malumot-berildi') return false;
+    return !lead?.infoProvidedSurvey;
+}
+
+function openQarorJarayonidaFlow(lang, leadId, fromStatus) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const from = fromStatus || normalizeLeadStatus(lead.status);
+
+    if (needsConnectedSurveyBeforeDecision(from, lead)) {
+        openConnectedSurveyModal(lang, leadId, 'qaror-jarayonida', { chainTo: 'qaror-jarayonida' });
+        return;
+    }
+    if (needsInfoProvidedBeforeDecision(from, lead)) {
+        openInfoProvidedModal(lang, leadId, { chainTo: 'qaror-jarayonida' });
+        return;
+    }
+    openDecisionProcessModal(lang, leadId);
+}
+
+function needsPaymentPrompt(fromStatus, toStatus) {
+    return toStatus === 'tolov-jarayonida';
+}
+
+function getLeadColumnIndex(status) {
+    const id = normalizeLeadStatus(status);
+    const idx = LEAD_COLUMNS.findIndex(c => c.id === id);
+    return idx >= 0 ? idx : 0;
+}
+
+function getPendingSurveyStepsBeforePayment(fromStatus) {
+    const fromIdx = getLeadColumnIndex(fromStatus);
+    const paymentIdx = getLeadColumnIndex('tolov-jarayonida');
+    const steps = [];
+
+    for (const col of LEAD_COLUMNS) {
+        const idx = getLeadColumnIndex(col.id);
+        if (idx <= fromIdx || idx >= paymentIdx) continue;
+        if (col.id === 'sinov-darsida') continue;
+        if (col.id === 'boglanildi') steps.push('connected');
+        else if (col.id === 'malumot-berildi') steps.push('info');
+        else if (col.id === 'qaror-jarayonida') steps.push('decision');
+    }
+    return steps;
+}
+
+function getNextSurveyStepBeforePayment(fromStatus, lead) {
+    for (const step of getPendingSurveyStepsBeforePayment(fromStatus)) {
+        if (step === 'connected' && lead.connectedSurvey) continue;
+        if (step === 'info' && lead.infoProvidedSurvey) continue;
+        if (step === 'decision' && lead.decisionSurvey) continue;
+        return step;
+    }
+    return 'payment';
+}
+
+function openTolovJarayonidaFlow(lang, leadId, fromStatus) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const from = normalizeLeadStatus(fromStatus || lead.status);
+    const next = getNextSurveyStepBeforePayment(from, lead);
+
+    if (next === 'connected') {
+        openConnectedSurveyModal(lang, leadId, 'tolov-jarayonida', { chainTo: 'tolov-jarayonida' });
+        return;
+    }
+    if (next === 'info') {
+        openInfoProvidedModal(lang, leadId, { chainTo: 'tolov-jarayonida' });
+        return;
+    }
+    if (next === 'decision') {
+        openDecisionProcessModal(lang, leadId, { chainTo: 'tolov-jarayonida' });
+        return;
+    }
+    openPaymentProcessModal(lang, leadId);
+}
+
+function renderSurveyRadioGroup(name, options) {
+    return `<div class="lead-survey-options">${options.map(o => `
+        <label class="lead-reason-option">
+            <input type="radio" name="${name}" value="${escapeHtml(o.id)}" data-survey-field="${name}">
+            <span>${escapeHtml(o.label)}</span>
+        </label>`).join('')}</div>`;
+}
+
+function renderSurveyCarousel(name, options) {
+    const items = options.map(o => `
+        <label class="lead-carousel-item">
+            <input type="radio" name="${name}" value="${escapeHtml(o.id)}" data-survey-field="${name}">
+            <span>${escapeHtml(o.label)}</span>
+        </label>`).join('');
+    return `<div class="lead-carousel" data-carousel="${name}">
+        <button type="button" class="lead-carousel-nav lead-carousel-prev" aria-label="Oldingi">‹</button>
+        <div class="lead-carousel-viewport">
+            <div class="lead-carousel-track">${items}</div>
+        </div>
+        <button type="button" class="lead-carousel-nav lead-carousel-next" aria-label="Keyingi">›</button>
+    </div>`;
+}
+
+function initSurveyCarousels(root) {
+    root.querySelectorAll('.lead-carousel').forEach(carousel => {
+        const viewport = carousel.querySelector('.lead-carousel-viewport');
+        const item = carousel.querySelector('.lead-carousel-item');
+        const step = () => (item ? item.offsetWidth + 10 : 150);
+        carousel.querySelector('.lead-carousel-prev')?.addEventListener('click', () => {
+            viewport.scrollBy({ left: -step(), behavior: 'smooth' });
+        });
+        carousel.querySelector('.lead-carousel-next')?.addEventListener('click', () => {
+            viewport.scrollBy({ left: step(), behavior: 'smooth' });
+        });
+        carousel.querySelectorAll('.lead-carousel-item input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                carousel.querySelectorAll('.lead-carousel-item').forEach(el => el.classList.remove('is-selected'));
+                radio.closest('.lead-carousel-item')?.classList.add('is-selected');
+            });
         });
     });
 }
 
-document.querySelectorAll('[data-lead-lang]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const lang = btn.dataset.leadLang;
-        const title = lang === 'english' ? 'Ingliz tili — yangi lid' : 'Rus tili — yangi lid';
-        openModal(title,
-            `<div class="form-group"><label>Ism</label><input id="mLeadName" class="form-control"></div>
-             <div class="form-group"><label>Telefon</label><input id="mLeadPhone" class="form-control"></div>
-             <div class="form-group"><label>Manba</label><input id="mLeadSource" class="form-control" value="Organik"></div>`,
-            `<button class="btn-primary-sm" id="saveLead">Saqlash</button>`
-        );
-        document.getElementById('saveLead').onclick = () => {
-            const name = document.getElementById('mLeadName').value.trim();
-            if (!name) return;
-            const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-            leads[lang].push({
-                id: 'l' + Date.now(),
-                name,
-                phone: document.getElementById('mLeadPhone').value.trim(),
-                source: document.getElementById('mLeadSource').value.trim(),
-                date: new Date().toLocaleDateString('uz-UZ')
+function getSurveyOptionLabel(options, id) {
+    return options.find(o => o.id === id)?.label || '';
+}
+
+function collectConnectedSurveyData(modalBody) {
+    const getRadio = name => modalBody.querySelector(`[data-survey-field="${name}"]:checked`);
+
+    const languageLevel = getRadio('languageLevel');
+    const applicant = getRadio('applicant');
+    const gender = getRadio('gender');
+    const learningGoal = getRadio('learningGoal');
+    const ageInput = modalBody.querySelector('#leadSurveyAge');
+    const residenceType = getRadio('residenceType');
+
+    if (!languageLevel) return { error: 'Til darajasini tanlang' };
+    if (!applicant) return { error: 'Ariza kim tomonidan qoldirilganini tanlang' };
+    if (!ageInput) return { error: 'Yoshni tanlang' };
+    if (!gender) return { error: 'Jinsini tanlang' };
+    if (!residenceType) return { error: 'Hudud turini tanlang' };
+    if (!learningGoal) return { error: 'O\'rganish maqsadini tanlang' };
+
+    let residenceLabel = '';
+    const survey = {
+        languageLevel: languageLevel.value,
+        languageLevelLabel: getSurveyOptionLabel(LEAD_LANGUAGE_LEVELS, languageLevel.value),
+        applicant: applicant.value,
+        applicantLabel: getSurveyOptionLabel(LEAD_APPLICANTS, applicant.value),
+        age: Number(ageInput.value),
+        gender: gender.value,
+        genderLabel: getSurveyOptionLabel(LEAD_GENDERS, gender.value),
+        residenceType: residenceType.value,
+        learningGoal: learningGoal.value,
+        learningGoalLabel: getSurveyOptionLabel(LEAD_LEARNING_GOALS, learningGoal.value)
+    };
+
+    if (residenceType.value === 'uz') {
+        const region = getRadio('uzRegion');
+        if (!region) return { error: 'Viloyatni tanlang' };
+        survey.region = region.value;
+        survey.regionLabel = getSurveyOptionLabel(LEAD_UZ_REGIONS, region.value);
+        residenceLabel = survey.regionLabel;
+    } else {
+        const country = getRadio('foreignCountry');
+        if (!country) return { error: 'Davlatni tanlang' };
+        survey.country = country.value;
+        survey.countryLabel = getSurveyOptionLabel(LEAD_FOREIGN_COUNTRIES, country.value);
+        residenceLabel = survey.countryLabel;
+    }
+
+    survey.residenceLabel = residenceLabel;
+    return { data: survey };
+}
+
+function formatConnectedSurveyComment(survey) {
+    return [
+        'Bog\'lanildi — anketa:',
+        `• Til darajasi: ${survey.languageLevelLabel}`,
+        `• Ariza: ${survey.applicantLabel}`,
+        `• Yoshi: ${survey.age}`,
+        `• Jinsi: ${survey.genderLabel}`,
+        `• Hudud: ${survey.residenceLabel}`,
+        `• Maqsad: ${survey.learningGoalLabel}`
+    ].join('\n');
+}
+
+function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
+    const { chainTo = null } = options;
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const bodyHtml = `<div class="lead-survey">
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Til darajasi</h4>
+            ${renderSurveyRadioGroup('languageLevel', LEAD_LANGUAGE_LEVELS)}
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">O'qish uchun arizani kim qoldirgan</h4>
+            ${renderSurveyRadioGroup('applicant', LEAD_APPLICANTS)}
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Yoshi</h4>
+            <div class="lead-age-slider">
+                <div class="lead-age-slider-head">
+                    <span class="lead-age-slider-label">Yosh</span>
+                    <output id="leadSurveyAgeValue" class="lead-age-value" for="leadSurveyAge">20</output>
+                </div>
+                <input type="range" id="leadSurveyAge" class="lead-age-range" min="7" max="70" value="20" step="1">
+                <div class="lead-age-marks"><span>7</span><span>70</span></div>
+            </div>
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Jinsi</h4>
+            ${renderSurveyRadioGroup('gender', LEAD_GENDERS)}
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Qaysi hududda istiqomat qiladi</h4>
+            <div class="lead-survey-options lead-survey-options--compact">
+                <label class="lead-reason-option">
+                    <input type="radio" name="residenceType" value="uz" data-survey-field="residenceType" checked>
+                    <span>O'zbekiston hududi</span>
+                </label>
+                <label class="lead-reason-option">
+                    <input type="radio" name="residenceType" value="foreign" data-survey-field="residenceType">
+                    <span>Boshqa davlat</span>
+                </label>
+            </div>
+            <div id="surveyRegionBlock" class="lead-survey-carousel-block">
+                ${renderSurveyCarousel('uzRegion', LEAD_UZ_REGIONS)}
+            </div>
+            <div id="surveyCountryBlock" class="lead-survey-carousel-block" hidden>
+                <p class="lead-survey-sub">Davlatlar</p>
+                ${renderSurveyCarousel('foreignCountry', LEAD_FOREIGN_COUNTRIES)}
+            </div>
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">O'rganish maqsadi</h4>
+            ${renderSurveyCarousel('learningGoal', LEAD_LEARNING_GOALS)}
+        </section>
+    </div>`;
+
+    openModal(
+        `${escapeHtml(lead.name)} — ${chainTo ? "Bog'lanildi (anketa)" : "Bog'lanildi"}`,
+        bodyHtml,
+        `<button type="button" class="btn-danger-sm" id="cancelConnectedSurvey">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmConnectedSurvey">${chainTo ? 'Keyingi bosqich' : "Saqlash va ko'chirish"}</button>`,
+        { wide: true }
+    );
+
+    const modalBody = document.getElementById('modalBody');
+    const ageInput = modalBody.querySelector('#leadSurveyAge');
+    const ageOutput = modalBody.querySelector('#leadSurveyAgeValue');
+    const syncAgeSlider = () => {
+        if (!ageInput) return;
+        const min = Number(ageInput.min) || 7;
+        const max = Number(ageInput.max) || 70;
+        const val = Number(ageInput.value);
+        const pct = ((val - min) / (max - min)) * 100;
+        ageInput.style.setProperty('--age-pct', `${pct}%`);
+        if (ageOutput) ageOutput.textContent = String(val);
+    };
+    ageInput?.addEventListener('input', syncAgeSlider);
+    syncAgeSlider();
+
+    modalBody.querySelectorAll('[data-survey-field="residenceType"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const isUz = modalBody.querySelector('[data-survey-field="residenceType"][value="uz"]')?.checked;
+            const regionBlock = modalBody.querySelector('#surveyRegionBlock');
+            const countryBlock = modalBody.querySelector('#surveyCountryBlock');
+            if (regionBlock) regionBlock.hidden = !isUz;
+            if (countryBlock) countryBlock.hidden = isUz;
+        });
+    });
+
+    initSurveyCarousels(modalBody);
+
+    document.getElementById('cancelConnectedSurvey').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    document.getElementById('confirmConnectedSurvey').onclick = () => {
+        const result = collectConnectedSurveyData(modalBody);
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const survey = result.data;
+        const commentText = formatConnectedSurveyComment(survey);
+
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            const next = {
+                ...base,
+                connectedSurvey: survey,
+                comments: [...base.comments, createLeadComment({
+                    type: 'connected-survey',
+                    text: commentText,
+                    author
+                })]
+            };
+            if (!chainTo) {
+                next.status = toStatus;
+            }
+            return next;
+        });
+
+        if (!updated) {
+            alert('Lid topilmadi');
+            return;
+        }
+
+        closeModal();
+        if (chainTo === 'malumot-berildi') {
+            openInfoProvidedModal(lang, leadId);
+            return;
+        }
+        if (chainTo === 'qaror-jarayonida') {
+            openQarorJarayonidaFlow(lang, leadId);
+            return;
+        }
+        if (chainTo === 'tolov-jarayonida') {
+            const current = getLeadById(lang, leadId);
+            openTolovJarayonidaFlow(lang, leadId, current?.status);
+            return;
+        }
+        renderLeads();
+    };
+}
+
+const LEAD_INFO_PROVIDED_QUESTIONS = [
+    { id: 'platform', label: 'Platforma tushuntirildimi?' },
+    { id: 'price', label: 'Narx aytildimi?' },
+    { id: 'format', label: 'Format (online ekani) aytildimi?' },
+    { id: 'terms', label: 'Natija, kafolat va muddat, shartnoma haqida aytildimi?' },
+    { id: 'trial', label: 'Sinov darsi taklif qilindimi?' }
+];
+
+function renderInfoProvidedQuestions() {
+    return LEAD_INFO_PROVIDED_QUESTIONS.map(q => `
+        <div class="lead-info-question">
+            <p class="lead-info-question-text">${escapeHtml(q.label)}</p>
+            <div class="lead-info-yesno">
+                <label class="lead-reason-option lead-reason-option--inline">
+                    <input type="radio" name="info_${q.id}" value="yes" data-info-field="${q.id}">
+                    <span>Ha</span>
+                </label>
+                <label class="lead-reason-option lead-reason-option--inline">
+                    <input type="radio" name="info_${q.id}" value="no" data-info-field="${q.id}">
+                    <span>Yo'q</span>
+                </label>
+            </div>
+        </div>`).join('');
+}
+
+function collectInfoProvidedData(modalBody) {
+    const answers = {};
+
+    for (const q of LEAD_INFO_PROVIDED_QUESTIONS) {
+        const selected = modalBody.querySelector(`[data-info-field="${q.id}"]:checked`);
+        if (!selected) {
+            return { error: `"${q.label}" savoliga javob bering` };
+        }
+        answers[q.id] = selected.value;
+    }
+
+    const hasNo = LEAD_INFO_PROVIDED_QUESTIONS.some(q => answers[q.id] === 'no');
+    if (hasNo) {
+        return {
+            error: 'Barcha bandlar uchun «Ha» javobi kerak. Ma\'lumot berildi ustuniga ko\'chirish mumkin emas.'
+        };
+    }
+
+    return {
+        data: LEAD_INFO_PROVIDED_QUESTIONS.map(q => ({
+            id: q.id,
+            label: q.label,
+            answer: answers[q.id],
+            answerLabel: 'Ha'
+        }))
+    };
+}
+
+function formatInfoProvidedComment(answers) {
+    const lines = answers.map(a => `• ${a.label} Ha`);
+    return ['Ma\'lumot berildi — tekshiruv:', ...lines].join('\n');
+}
+
+function openInfoProvidedModal(lang, leadId, options = {}) {
+    const { chainTo = null } = options;
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const bodyHtml = `<div class="lead-survey lead-survey--info">
+        ${renderInfoProvidedQuestions()}
+    </div>`;
+
+    openModal(
+        `${escapeHtml(lead.name)} — Ma'lumot berildi`,
+        bodyHtml,
+        `<button type="button" class="btn-danger-sm" id="cancelInfoProvided">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmInfoProvided">${chainTo ? 'Keyingi bosqich' : "Saqlash va ko'chirish"}</button>`,
+        { wide: true }
+    );
+
+    document.getElementById('cancelInfoProvided').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    document.getElementById('confirmInfoProvided').onclick = () => {
+        const modalBody = document.getElementById('modalBody');
+        const result = collectInfoProvidedData(modalBody);
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const answers = result.data;
+        const commentText = formatInfoProvidedComment(answers);
+
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            const next = {
+                ...base,
+                infoProvidedSurvey: answers,
+                comments: [...base.comments, createLeadComment({
+                    type: 'info-provided',
+                    text: commentText,
+                    author
+                })]
+            };
+            if (!chainTo) {
+                next.status = 'malumot-berildi';
+            }
+            return next;
+        });
+
+        if (!updated) {
+            alert('Lid topilmadi');
+            return;
+        }
+
+        closeModal();
+        if (chainTo === 'qaror-jarayonida') {
+            openDecisionProcessModal(lang, leadId);
+            return;
+        }
+        if (chainTo === 'tolov-jarayonida') {
+            const current = getLeadById(lang, leadId);
+            openTolovJarayonidaFlow(lang, leadId, current?.status);
+            return;
+        }
+        renderLeads();
+    };
+}
+
+const LEAD_DECISION_REASONS = [
+    { id: 'price-compare', label: 'Narxni solishtiryapti' },
+    { id: 'parents', label: 'Ota-ona bilan maslahat' },
+    { id: 'time', label: 'Vaqti mos emas' },
+    { id: 'schedule', label: 'Ish jadvali noaniq' },
+    { id: 'other', label: 'Boshqa' }
+];
+
+function openDecisionProcessModal(lang, leadId, options = {}) {
+    const { chainTo = null } = options;
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const optionsHtml = LEAD_DECISION_REASONS.map(r => `
+        <label class="lead-reason-option">
+            <input type="radio" name="decisionReason" value="${r.id}" data-decision-radio>
+            <span>${escapeHtml(r.label)}</span>
+        </label>`).join('');
+
+    openModal(
+        `${escapeHtml(lead.name)} — Qaror jarayonida`,
+        `<h4 class="lead-survey-title" style="margin:0 0 8px">Mijoz nega o'ylab ko'ryapti</h4>
+         <p class="lead-reason-subtitle">Sababini ko'rsating:</p>
+         <div class="lead-reason-list">${optionsHtml}</div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelDecisionProcess">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmDecisionProcess">${chainTo ? 'Keyingi bosqich' : "Saqlash va ko'chirish"}</button>`
+    );
+
+    document.getElementById('cancelDecisionProcess').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    document.getElementById('confirmDecisionProcess').onclick = () => {
+        const modalBody = document.getElementById('modalBody');
+        const selected = modalBody?.querySelector('[data-decision-radio]:checked');
+        if (!selected) {
+            alert('Sababni tanlang');
+            return;
+        }
+        const reason = LEAD_DECISION_REASONS.find(r => r.id === selected.value);
+        if (!reason) return;
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const commentText = `Qaror jarayonida — sabab:\n• ${reason.label}`;
+
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            const next = {
+                ...base,
+                decisionSurvey: { reason: reason.id, reasonLabel: reason.label },
+                comments: [...base.comments, createLeadComment({
+                    type: 'decision-process',
+                    text: commentText,
+                    reason: reason.label,
+                    author
+                })]
+            };
+            if (!chainTo) {
+                next.status = 'qaror-jarayonida';
+            }
+            return next;
+        });
+
+        if (!updated) {
+            alert('Lid topilmadi');
+            return;
+        }
+
+        closeModal();
+        if (chainTo === 'tolov-jarayonida') {
+            openPaymentProcessModal(lang, leadId);
+            return;
+        }
+        renderLeads();
+    };
+}
+
+const LEAD_PAYMENT_TYPES = [
+    { id: 'full', label: 'To\'liq to\'lov' },
+    { id: 'partial', label: 'Qisman to\'lov' },
+    { id: 'debtor', label: 'Qarzdor (keyin to\'laydi)' },
+    { id: 'installment', label: 'Nasiya (hamkor orqali)' }
+];
+
+const LEAD_INSTALLMENT_PARTNERS = [
+    { id: 'paylater', label: 'Paylater' },
+    { id: 'uzum', label: 'Uzum Nasiya' },
+    { id: 'other', label: 'Boshqa' }
+];
+
+const LEAD_TARIFFS = [
+    { id: '15', label: '15 daqiqalik' },
+    { id: '30', label: '30 daqiqalik' },
+    { id: '60', label: '60 daqiqalik' }
+];
+
+const LEAD_TARIFF_AMOUNTS = {
+    '15': [
+        { id: '1497000', label: '1,497,000' },
+        { id: '1200000', label: '1,200,000' }
+    ],
+    '30': [
+        { id: '1999000', label: '1,999,000' },
+        { id: '1499000', label: '1,499,000' }
+    ],
+    '60': [
+        { id: '5999000', label: '5,999,000' },
+        { id: '4500000', label: '4,500,000' },
+        { id: '3000000-month', label: '3,000,000 (individual oyiga)' },
+        { id: '2000000-month-discount', label: '2,000,000 (individual oyiga chegirma bilan)' }
+    ]
+};
+
+function renderPaymentRadioGroup(name, options) {
+    return `<div class="lead-survey-options">${options.map(o => `
+        <label class="lead-reason-option">
+            <input type="radio" name="${name}" value="${escapeHtml(o.id)}" data-payment-field="${name}">
+            <span>${escapeHtml(o.label)}</span>
+        </label>`).join('')}</div>`;
+}
+
+function renderPaymentAmountOptions(tariffId) {
+    const amounts = LEAD_TARIFF_AMOUNTS[tariffId];
+    if (!amounts?.length) {
+        return '<p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>';
+    }
+    return amounts.map(a => `
+        <label class="lead-reason-option">
+            <input type="radio" name="paymentAmount" value="${escapeHtml(a.id)}" data-payment-field="amount">
+            <span>${escapeHtml(a.label)}</span>
+        </label>`).join('');
+}
+
+function initPaymentSurveyForm(modalBody) {
+    const partnerBlock = modalBody.querySelector('#installmentPartnerBlock');
+    const amountContainer = modalBody.querySelector('#paymentAmountOptions');
+
+    const syncPartnerVisibility = () => {
+        const installment = modalBody.querySelector('[data-payment-field="paymentType"][value="installment"]')?.checked;
+        if (!partnerBlock) return;
+        partnerBlock.hidden = !installment;
+        partnerBlock.style.display = installment ? '' : 'none';
+        if (!installment) {
+            partnerBlock.querySelectorAll('[data-payment-field="installmentPartner"]').forEach(r => {
+                r.checked = false;
             });
-            setItem(STORAGE_KEYS.leads, leads);
+        }
+    };
+
+    const syncAmountOptions = () => {
+        const tariff = modalBody.querySelector('[data-payment-field="tariff"]:checked');
+        if (!amountContainer) return;
+        amountContainer.innerHTML = tariff
+            ? renderPaymentAmountOptions(tariff.value)
+            : '<p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>';
+    };
+
+    modalBody.querySelectorAll('[data-payment-field="paymentType"]').forEach(radio => {
+        radio.addEventListener('change', syncPartnerVisibility);
+    });
+    modalBody.querySelectorAll('[data-payment-field="tariff"]').forEach(radio => {
+        radio.addEventListener('change', syncAmountOptions);
+    });
+    syncPartnerVisibility();
+}
+
+function collectPaymentSurveyData(modalBody) {
+    const getRadio = name => modalBody.querySelector(`[data-payment-field="${name}"]:checked`);
+
+    const paymentType = getRadio('paymentType');
+    const tariff = getRadio('tariff');
+    const amount = getRadio('amount');
+
+    if (!paymentType) return { error: 'To\'lov turini tanlang' };
+    if (!tariff) return { error: 'Tarifni tanlang' };
+    if (!amount) return { error: 'Summani tanlang' };
+
+    let installmentPartner = null;
+    let installmentPartnerLabel = '';
+
+    if (paymentType.value === 'installment') {
+        installmentPartner = getRadio('installmentPartner');
+        if (!installmentPartner) return { error: 'Nasiya hamkorini tanlang' };
+        installmentPartnerLabel = getSurveyOptionLabel(LEAD_INSTALLMENT_PARTNERS, installmentPartner.value);
+    }
+
+    const tariffLabel = getSurveyOptionLabel(LEAD_TARIFFS, tariff.value);
+    const amountLabel = LEAD_TARIFF_AMOUNTS[tariff.value]?.find(a => a.id === amount.value)?.label || amount.value;
+    const paymentTypeLabel = getSurveyOptionLabel(LEAD_PAYMENT_TYPES, paymentType.value);
+
+    return {
+        data: {
+            paymentType: paymentType.value,
+            paymentTypeLabel,
+            installmentPartner: installmentPartner?.value || null,
+            installmentPartnerLabel,
+            tariff: tariff.value,
+            tariffLabel,
+            amount: amount.value,
+            amountLabel
+        }
+    };
+}
+
+function formatPaymentSurveyComment(survey) {
+    const lines = [
+        `• To'lov turi: ${survey.paymentTypeLabel}`,
+        `• Tarif: ${survey.tariffLabel}`,
+        `• Summa: ${survey.amountLabel}`
+    ];
+    if (survey.installmentPartnerLabel) {
+        lines.splice(1, 0, `• Nasiya hamkori: ${survey.installmentPartnerLabel}`);
+    }
+    return ['To\'lov jarayonida — anketa:', ...lines].join('\n');
+}
+
+function openPaymentProcessModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const bodyHtml = `<div class="lead-survey">
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">To'lov turi</h4>
+            ${renderPaymentRadioGroup('paymentType', LEAD_PAYMENT_TYPES)}
+        </section>
+        <section id="installmentPartnerBlock" class="lead-survey-section" hidden>
+            <h4 class="lead-survey-title">Nasiya hamkori</h4>
+            ${renderPaymentRadioGroup('installmentPartner', LEAD_INSTALLMENT_PARTNERS)}
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Tarif</h4>
+            ${renderPaymentRadioGroup('tariff', LEAD_TARIFFS)}
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Summa</h4>
+            <div id="paymentAmountOptions" class="lead-survey-options">
+                <p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>
+            </div>
+        </section>
+    </div>`;
+
+    openModal(
+        `${escapeHtml(lead.name)} — To'lov jarayonida`,
+        bodyHtml,
+        `<button type="button" class="btn-danger-sm" id="cancelPaymentProcess">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmPaymentProcess">Saqlash va ko'chirish</button>`,
+        { wide: true }
+    );
+
+    const modalBody = document.getElementById('modalBody');
+    initPaymentSurveyForm(modalBody);
+
+    document.getElementById('cancelPaymentProcess').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    document.getElementById('confirmPaymentProcess').onclick = () => {
+        const result = collectPaymentSurveyData(modalBody);
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const survey = result.data;
+        const commentText = formatPaymentSurveyComment(survey);
+
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return {
+                ...base,
+                status: 'tolov-jarayonida',
+                paymentSurvey: survey,
+                comments: [...base.comments, createLeadComment({
+                    type: 'payment-process',
+                    text: commentText,
+                    author
+                })]
+            };
+        });
+
+        if (!updated) {
+            alert('Lid topilmadi');
+            return;
+        }
+
+        closeModal();
+        renderLeads();
+    };
+}
+
+const LEAD_COLUMNS = [
+    { id: 'yangi-lidlar', label: 'Yangi lidlar', bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
+    { id: 'boglanishga-urinilmoqda', label: "Bog'lanishga urinilmoqda", bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
+    { id: 'boglanildi', label: "Bog'lanildi", bg: '#ECFEFF', border: '#67E8F9', headerBg: 'rgba(6,182,212,0.12)', title: '#0E7490', count: '#0891B2' },
+    { id: 'malumot-berildi', label: "Ma'lumot berildi", bg: '#EEF2FF', border: '#A5B4FC', headerBg: 'rgba(79,70,229,0.12)', title: '#3730A3', count: '#4F46E5' },
+    { id: 'qaror-jarayonida', label: 'Qaror jarayonida', bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)', title: '#C2410C', count: '#EA580C' },
+    { id: 'sinov-darsida', label: 'Sinov darsida', bg: '#F0FDF4', border: '#86EFAC', headerBg: 'rgba(22,163,74,0.12)', title: '#166534', count: '#16A34A' },
+    { id: 'tolov-jarayonida', label: "To'lov jarayonida", bg: '#FFFBEB', border: '#FCD34D', headerBg: 'rgba(217,119,6,0.12)', title: '#B45309', count: '#D97706' },
+    { id: 'tolov-yopildi', label: "To'lov yopildi", bg: '#ECFDF5', border: '#6EE7B7', headerBg: 'rgba(5,150,105,0.12)', title: '#047857', count: '#059669' },
+    { id: 'muvaffaqiyatsiz-sotuv', label: 'Muvaffaqiyatsiz sotuv', bg: '#FEF2F2', border: '#FCA5A5', headerBg: 'rgba(220,38,38,0.12)', title: '#B91C1C', count: '#DC2626' },
+    { id: 'sifatsiz-lidlar', label: 'Sifatsiz lidlar', bg: '#F8FAFC', border: '#CBD5E1', headerBg: 'rgba(100,116,139,0.12)', title: '#475569', count: '#64748B' }
+];
+
+const LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));
+
+function normalizeLeadStatus(status) {
+    if (!status || status === 'new') return 'yangi-lidlar';
+    if (status === 'organic' || status === 'target') return 'yangi-lidlar';
+    return LEAD_STATUS_IDS.has(status) ? status : 'yangi-lidlar';
+}
+
+function leadKindLabel(lead) {
+    return getLeadKind(lead) === 'target' ? 'Target' : 'Organik';
+}
+
+let _leadsLangFilter = (() => {
+    try {
+        const saved = localStorage.getItem(LEADS_LANG_FILTER_KEY);
+        return saved === 'russian' ? 'russian' : 'english';
+    } catch {
+        return 'english';
+    }
+})();
+let _leadsManagerFilter = 'all';
+
+function getDefaultVisibleColumnIds() {
+    return LEAD_COLUMNS
+        .filter(col => !LEAD_COLUMNS_HIDDEN_BY_DEFAULT.has(col.id))
+        .map(col => col.id);
+}
+
+function loadVisibleColumnIds() {
+    try {
+        const raw = localStorage.getItem(LEADS_COLUMN_VISIBILITY_KEY);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+            return LEAD_COLUMNS.filter(col => saved[col.id] === true).map(col => col.id);
+        }
+    } catch {
+        /* default */
+    }
+    return getDefaultVisibleColumnIds();
+}
+
+let _leadsVisibleColumns = new Set(loadVisibleColumnIds());
+
+function saveVisibleColumns() {
+    const payload = {};
+    LEAD_COLUMNS.forEach(col => {
+        payload[col.id] = _leadsVisibleColumns.has(col.id);
+    });
+    localStorage.setItem(LEADS_COLUMN_VISIBILITY_KEY, JSON.stringify(payload));
+}
+
+function getVisibleLeadColumns() {
+    return LEAD_COLUMNS.filter(col => _leadsVisibleColumns.has(col.id));
+}
+
+function closeLeadsColumnsDropdown() {
+    const dropdown = document.getElementById('leadsColumnsDropdown');
+    const btn = document.getElementById('leadsColumnsFilterBtn');
+    if (dropdown) dropdown.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function isDefaultColumnVisibility() {
+    const defaultIds = getDefaultVisibleColumnIds();
+    if (_leadsVisibleColumns.size !== defaultIds.length) return false;
+    return defaultIds.every(id => _leadsVisibleColumns.has(id));
+}
+
+function updateManagerFilterDisplay() {
+    const select = document.getElementById('leadsManagerFilter');
+    const display = document.getElementById('leadsManagerFilterDisplay');
+    if (!select || !display) return;
+    if (_leadsManagerFilter === 'all') {
+        display.textContent = 'Sotuv menejerlari';
+        display.classList.remove('is-selected');
+        return;
+    }
+    const opt = select.options[select.selectedIndex];
+    display.textContent = opt ? opt.textContent : 'Sotuv menejerlari';
+    display.classList.add('is-selected');
+}
+
+function renderLeadsManagerFilter() {
+    const select = document.getElementById('leadsManagerFilter');
+    if (!select) return;
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const current = _leadsManagerFilter;
+    select.innerHTML = `<option value="all">Barcha menejerlar</option>
+        <option value="unassigned">Biriktirilmagan</option>
+        ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}`;
+    select.value = current;
+    updateManagerFilterDisplay();
+}
+
+function renderLeadsColumnsFilter() {
+    initLeadsColumnsFilter();
+    syncLeadsColumnsCheckboxes();
+    updateLeadsColumnsFilterLabel();
+}
+
+function updateLeadsColumnsFilterLabel() {
+    const valueEl = document.getElementById('leadsColumnsFilterValue');
+    if (!valueEl) return;
+    if (isDefaultColumnVisibility()) {
+        valueEl.textContent = 'Ustunlar filtri';
+        valueEl.classList.remove('is-selected');
+        return;
+    }
+    const visibleCount = _leadsVisibleColumns.size;
+    valueEl.textContent = visibleCount === LEAD_COLUMNS.length
+        ? 'Barcha ustunlar'
+        : `${visibleCount} ta ustun`;
+    valueEl.classList.add('is-selected');
+}
+
+function syncLeadsColumnsCheckboxes() {
+    const dropdown = document.getElementById('leadsColumnsDropdown');
+    if (!dropdown) return;
+    dropdown.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.checked = _leadsVisibleColumns.has(input.value);
+    });
+}
+
+function initLeadsColumnsFilter() {
+    const dropdown = document.getElementById('leadsColumnsDropdown');
+    if (!dropdown || dropdown.dataset.ready === '1') return;
+    dropdown.dataset.ready = '1';
+
+    dropdown.innerHTML = LEAD_COLUMNS.map(col => {
+        const checked = _leadsVisibleColumns.has(col.id);
+        const isHiddenByDefault = LEAD_COLUMNS_HIDDEN_BY_DEFAULT.has(col.id);
+        return `<label class="leads-column-option${isHiddenByDefault ? ' leads-column-option--optional' : ''}">
+            <input type="checkbox" value="${col.id}" ${checked ? 'checked' : ''}>
+            <span>${escapeHtml(col.label)}</span>
+        </label>`;
+    }).join('');
+
+    dropdown.addEventListener('change', e => {
+        const input = e.target;
+        if (input.type !== 'checkbox') return;
+        if (input.checked) _leadsVisibleColumns.add(input.value);
+        else _leadsVisibleColumns.delete(input.value);
+        saveVisibleColumns();
+        updateLeadsColumnsFilterLabel();
+        renderLeads();
+    });
+
+    dropdown.addEventListener('click', e => e.stopPropagation());
+}
+
+function filterLeadsByManager(leads) {
+    if (_leadsManagerFilter === 'all') return leads;
+    if (_leadsManagerFilter === 'unassigned') return leads.filter(l => !l.managerId);
+    return leads.filter(l => l.managerId === _leadsManagerFilter);
+}
+
+function getSalesManagerName(managerId) {
+    if (!managerId) return '';
+    const manager = getItem(STORAGE_KEYS.salesManagers, []).find(m => m.id === managerId);
+    return manager?.name || '';
+}
+
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function leadInitials(name) {
+    return String(name || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(w => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || '?';
+}
+
+function getLeadKind(lead) {
+    if (lead.leadType === 'target') return 'target';
+    const s = (lead.source || '').toLowerCase();
+    if (s.includes('target') || s.includes('reklama') || s.includes('ads')) return 'target';
+    return 'organic';
+}
+
+function formatLeadTime(lead) {
+    if (lead.createdAt) {
+        const d = new Date(lead.createdAt);
+        if (!Number.isNaN(d.getTime())) {
+            const now = new Date();
+            const sameDay = d.toDateString() === now.toDateString();
+            const time = d.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+            return sameDay ? `Bugun ${time}` : d.toLocaleDateString('uz-UZ');
+        }
+    }
+    return lead.date || '—';
+}
+
+function leadSourceName(source) {
+    const s = (source || '').toLowerCase();
+    if (s.includes('domwork')) return 'Domwork';
+    if (s.includes('homework')) return 'Homework';
+    if (s.includes('target') || s.includes('reklama')) return 'Target';
+    return source || 'Organik';
+}
+
+function normalizeLeadExtras(lead) {
+    let comments = Array.isArray(lead.comments) ? [...lead.comments] : [];
+    const legacyReasons = Array.isArray(lead.contactFailReasons)
+        ? lead.contactFailReasons.filter(Boolean)
+        : [];
+    if (legacyReasons.length) {
+        const reason = legacyReasons[0];
+        const alreadyMigrated = comments.some(c =>
+            c.type === 'contact-fail' && (c.reason === reason || c.text?.includes(reason))
+        );
+        if (!alreadyMigrated) {
+            comments.push({
+                id: 'cf-' + (lead.contactFailAt || Date.now()),
+                type: 'contact-fail',
+                text: `Qo'ng'iroq qilindi, lekin: ${reason}`,
+                reason,
+                author: 'Admin',
+                createdAt: lead.contactFailAt || new Date().toISOString()
+            });
+        }
+    }
+    comments.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    const attachments = Array.isArray(lead.attachments) ? lead.attachments : [];
+    const managerPhoto = lead.managerPhoto || attachments[0] || null;
+    const { contactFailReasons, contactFailAt, ...rest } = lead;
+    return {
+        ...rest,
+        phone2: lead.phone2 || '',
+        managerId: lead.managerId || '',
+        comments,
+        managerPhoto,
+        attachments: managerPhoto ? [managerPhoto] : []
+    };
+}
+
+function closeLeadCardMenus() {
+    document.querySelectorAll('.lead-card-menu-dropdown').forEach(el => {
+        el.hidden = true;
+    });
+}
+
+function toggleLeadCardMenu(btn) {
+    const menu = btn.closest('.lead-card-menu-wrap')?.querySelector('.lead-card-menu-dropdown');
+    if (!menu) return;
+    const willOpen = menu.hidden;
+    closeLeadCardMenus();
+    menu.hidden = !willOpen;
+}
+
+function getLeadById(lang, leadId) {
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const lead = (leads[lang] || []).find(l => l.id === leadId);
+    return lead ? normalizeLeadExtras(lead) : null;
+}
+
+function updateLeadInStorage(lang, leadId, updater) {
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const list = leads[lang] || [];
+    const idx = list.findIndex(l => l.id === leadId);
+    if (idx === -1) return null;
+    list[idx] = normalizeLeadExtras(updater({ ...list[idx] }));
+    leads[lang] = list;
+    setItem(STORAGE_KEYS.leads, leads);
+    return list[idx];
+}
+
+function formatCommentTime(ts) {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('uz-UZ', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function createLeadComment({ text, author, type, reason }) {
+    return {
+        id: 'c' + Date.now(),
+        text,
+        author: author || 'Admin',
+        type: type || 'manual',
+        reason: reason || null,
+        createdAt: new Date().toISOString()
+    };
+}
+
+function renderLeadCommentItem(c) {
+    const isContactFail = c.type === 'contact-fail';
+    const isConnectedSurvey = c.type === 'connected-survey';
+    const isInfoProvided = c.type === 'info-provided';
+    const isDecisionProcess = c.type === 'decision-process';
+    const isPaymentProcess = c.type === 'payment-process';
+    let badge = '';
+    if (isContactFail) badge = '<span class="lead-comment-badge">Bog\'lanish sababi</span>';
+    if (isConnectedSurvey) badge = '<span class="lead-comment-badge lead-comment-badge--survey">Anketa</span>';
+    if (isInfoProvided) badge = '<span class="lead-comment-badge lead-comment-badge--info">Ma\'lumot</span>';
+    if (isDecisionProcess) badge = '<span class="lead-comment-badge lead-comment-badge--decision">Qaror</span>';
+    if (isPaymentProcess) badge = '<span class="lead-comment-badge lead-comment-badge--payment">To\'lov</span>';
+    const bodyText = c.text || (isContactFail && c.reason ? `Qo'ng'iroq qilindi, lekin: ${c.reason}` : '');
+    const itemClass = isContactFail
+        ? ' lead-comment-item--contact-fail'
+        : (isConnectedSurvey ? ' lead-comment-item--survey'
+            : (isInfoProvided ? ' lead-comment-item--info'
+                : (isDecisionProcess ? ' lead-comment-item--decision'
+                    : (isPaymentProcess ? ' lead-comment-item--payment' : ''))));
+
+    return `<div class="lead-comment-item${itemClass}">
+        <div class="lead-comment-meta">
+            <div class="lead-comment-meta-main">
+                <strong>${escapeHtml(c.author || 'Admin')}</strong>
+                ${badge}
+            </div>
+            <time class="lead-comment-time" datetime="${escapeHtml(c.createdAt || '')}">${escapeHtml(formatCommentTime(c.createdAt))}</time>
+        </div>
+        <p class="lead-comment-text">${escapeHtml(bodyText)}</p>
+    </div>`;
+}
+
+function formatFileSize(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderLeadCard(lead, langKey) {
+    const normalized = normalizeLeadExtras(lead);
+    const phone = normalized.phone || '—';
+    const phone2 = normalized.phone2 || '—';
+    const commentCount = normalized.comments.length;
+    const hasManagerPhoto = Boolean(normalized.managerPhoto);
+
+    return `<article class="lead-card" draggable="true" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
+        <div class="lead-card-top">
+            <div class="lead-card-title-wrap">
+                <h4 class="lead-card-name">${escapeHtml(normalized.name)}</h4>
+                <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
+            </div>
+            <div class="lead-card-top-actions">
+                <button type="button" class="lead-card-notify" data-lead-notify="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Bildirishnomalar" aria-label="Bildirishnomalar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+                </button>
+                <div class="lead-card-menu-wrap">
+                    <button type="button" class="lead-card-menu-btn" data-lead-menu-toggle="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Boshqa amallar" aria-label="Boshqa amallar" aria-haspopup="true">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+                    </button>
+                    <div class="lead-card-menu-dropdown" hidden>
+                        <button type="button" class="lead-card-menu-item" data-lead-menu-manager="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Menejer biriktirish</button>
+                        <button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-lead-menu-delete="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Lidni o'chirish</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="lead-card-contacts">
+            <div class="lead-card-contact">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                <span>${escapeHtml(phone)}</span>
+            </div>
+            <div class="lead-card-contact">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                <span>${escapeHtml(phone2)}</span>
+            </div>
+        </div>
+        <div class="lead-card-footer">
+            <div class="lead-card-actions">
+                <button type="button" class="lead-card-action" data-lead-manager-photo="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Menejer rasmi">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>${hasManagerPhoto ? 1 : 0}</span>
+                </button>
+                <button type="button" class="lead-card-action" data-lead-comments="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Izohlar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    <span>${commentCount}</span>
+                </button>
+            </div>
+            <span class="lead-card-kind">${escapeHtml(leadKindLabel(normalized))}</span>
+        </div>
+    </article>`;
+}
+
+function openLeadNotifyModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    openModal(`${escapeHtml(lead.name)} — bildirishnomalar`,
+        `<p class="text-muted lead-empty-hint">Bu lid uchun bildirishnomalar tez orada qo'shiladi.</p>`,
+        ''
+    );
+}
+
+function openLeadCommentsModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const user = getCurrentUser();
+    const author = user?.name || 'Admin';
+
+    const listHtml = lead.comments.length
+        ? lead.comments.map(renderLeadCommentItem).join('')
+        : '<p class="text-muted lead-empty-hint">Hozircha izoh yo\'q</p>';
+
+    openModal(`${escapeHtml(lead.name)} — izohlar`,
+        `<div class="lead-comments-list">${listHtml}</div>
+         <div class="form-group" style="margin-top:16px;margin-bottom:0">
+            <label>Yangi izoh</label>
+            <textarea id="mLeadCommentText" class="form-control" rows="3" placeholder="Izoh yozing..."></textarea>
+         </div>`,
+        `<button type="button" class="btn-primary-sm" id="saveLeadComment">Izoh qo'shish</button>`
+    );
+
+    document.getElementById('saveLeadComment').onclick = () => {
+        const text = document.getElementById('mLeadCommentText').value.trim();
+        if (!text) return;
+        updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return {
+                ...base,
+                comments: [...base.comments, createLeadComment({ text, author, type: 'manual' })]
+            };
+        });
+        closeModal();
+        renderLeads();
+    };
+}
+
+function openLeadManagerPhotoModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const photo = lead.managerPhoto;
+    const previewHtml = photo?.dataUrl
+        ? `<div class="lead-manager-preview">
+            <img src="${photo.dataUrl}" alt="Menejer rasmi" class="lead-manager-preview-img">
+            <button type="button" class="btn-danger-sm" id="removeLeadManagerPhoto">Rasmni o'chirish</button>
+           </div>`
+        : '<p class="text-muted lead-empty-hint">Hozircha menejer rasmi biriktirilmagan</p>';
+
+    openModal(`${escapeHtml(lead.name)} — menejer rasmi`,
+        `<div class="lead-manager-photo-block">${previewHtml}</div>
+         <div class="form-group" style="margin-top:16px;margin-bottom:0">
+            <label>Menejer rasmini yuklash</label>
+            <input type="file" id="mLeadManagerPhotoFile" class="form-control" accept="image/*">
+            <small class="text-muted">Maksimal hajm: 2 MB. Faqat bitta rasm.</small>
+         </div>`,
+        `<button type="button" class="btn-primary-sm" id="saveLeadManagerPhoto">Rasmni saqlash</button>`
+    );
+
+    document.getElementById('removeLeadManagerPhoto')?.addEventListener('click', () => {
+        updateLeadInStorage(lang, leadId, l => ({
+            ...l,
+            managerPhoto: null,
+            attachments: []
+        }));
+        closeModal();
+        renderLeads();
+    });
+
+    document.getElementById('saveLeadManagerPhoto').onclick = () => {
+        const input = document.getElementById('mLeadManagerPhotoFile');
+        const file = input?.files?.[0];
+        if (!file) {
+            alert('Rasm tanlang');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('Faqat rasm faylini tanlang');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Rasm 2 MB dan katta bo\'lmasligi kerak');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const photoData = {
+                id: 'mp' + Date.now(),
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                dataUrl: reader.result,
+                createdAt: new Date().toISOString()
+            };
+            updateLeadInStorage(lang, leadId, l => ({
+                ...l,
+                managerPhoto: photoData,
+                attachments: [photoData]
+            }));
             closeModal();
             renderLeads();
         };
+        reader.readAsDataURL(file);
+    };
+}
+
+function renderLeads() {
+    const board = document.getElementById('leadsKanban');
+    if (!board) return;
+
+    document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.leadLangFilter === _leadsLangFilter);
     });
+
+    renderLeadsManagerFilter();
+    renderLeadsColumnsFilter();
+
+    const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const tagged = filterLeadsByManager(
+        (leadsData[lang] || []).map(l => ({ ...l, _lang: lang }))
+    );
+
+    const visibleColumns = getVisibleLeadColumns();
+
+    if (!visibleColumns.length) {
+        board.innerHTML = '<div class="lead-column-empty leads-kanban-empty">Kamida bitta ustunni tanlang</div>';
+        return;
+    }
+
+    board.innerHTML = visibleColumns.map(col => {
+        const items = tagged.filter(l => normalizeLeadStatus(l.status) === col.id);
+        const cards = items.length
+            ? items.map(l => renderLeadCard(l, l._lang)).join('')
+            : '<div class="lead-column-empty">Lidlar yo\'q</div>';
+
+        return `<div class="lead-column" data-status="${col.id}" style="background:${col.bg};border-color:${col.border}">
+            <div class="lead-column-header" style="background:${col.headerBg}">
+                <h3 class="lead-column-title" style="color:${col.title}">${col.label}</h3>
+                <span class="lead-column-count" style="color:${col.count}">${items.length}</span>
+            </div>
+            <div class="lead-column-cards" data-drop-status="${col.id}">${cards}</div>
+        </div>`;
+    }).join('');
+
+    initLeadDragDrop(board);
+
+    board.querySelectorAll('[data-lead-notify]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openLeadNotifyModal(btn.dataset.leadNotify, btn.dataset.leadId);
+        });
+    });
+
+    board.querySelectorAll('[data-lead-menu-toggle]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleLeadCardMenu(btn);
+        });
+    });
+
+    board.querySelectorAll('.lead-card-menu-dropdown').forEach(menu => {
+        menu.addEventListener('click', e => e.stopPropagation());
+    });
+
+    board.querySelectorAll('[data-lead-menu-delete]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeLeadCardMenus();
+            if (!confirm('Lidni o\'chirishni xohlaysizmi?')) return;
+            const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+            const langKey = btn.dataset.leadMenuDelete;
+            leads[langKey] = (leads[langKey] || []).filter(l => l.id !== btn.dataset.leadId);
+            setItem(STORAGE_KEYS.leads, leads);
+            renderLeads();
+        });
+    });
+
+    board.querySelectorAll('[data-lead-menu-manager]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeLeadCardMenus();
+            openAssignManagerModal(btn.dataset.leadMenuManager, btn.dataset.leadId);
+        });
+    });
+
+    board.querySelectorAll('[data-lead-comments]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openLeadCommentsModal(btn.dataset.leadComments, btn.dataset.leadId);
+        });
+    });
+
+    board.querySelectorAll('[data-lead-manager-photo]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openLeadManagerPhotoModal(btn.dataset.leadManagerPhoto, btn.dataset.leadId);
+        });
+    });
+}
+
+function initLeadDragDrop(board) {
+    board.querySelectorAll('.lead-card').forEach(card => {
+        card.addEventListener('dragstart', e => {
+            const lead = getLeadById(card.dataset.leadLang, card.dataset.leadId);
+            const fromStatus = card.closest('.lead-column')?.dataset.status
+                || normalizeLeadStatus(lead?.status);
+            e.dataTransfer.setData('application/json', JSON.stringify({
+                id: card.dataset.leadId,
+                lang: card.dataset.leadLang,
+                fromStatus
+            }));
+            card.classList.add('lead-card--dragging');
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('lead-card--dragging');
+            board.querySelectorAll('.lead-column-cards').forEach(z => z.classList.remove('drag-over'));
+        });
+    });
+
+    board.querySelectorAll('.lead-column-cards').forEach(zone => {
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', e => {
+            if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+        });
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            let payload;
+            try {
+                payload = JSON.parse(e.dataTransfer.getData('application/json'));
+            } catch {
+                return;
+            }
+            const toStatus = zone.dataset.dropStatus;
+            if (!payload?.id || !payload?.lang || !toStatus) return;
+
+            const fromStatus = payload.fromStatus || '';
+            if (fromStatus === toStatus) return;
+
+            if (needsContactFailPrompt(fromStatus, toStatus)) {
+                openContactFailModal(payload.lang, payload.id, toStatus);
+                return;
+            }
+
+            if (needsConnectedSurveyPrompt(toStatus)) {
+                openConnectedSurveyModal(payload.lang, payload.id, toStatus);
+                return;
+            }
+
+            if (needsInfoProvidedPrompt(fromStatus, toStatus)) {
+                openMalumotBerildiFlow(payload.lang, payload.id, fromStatus);
+                return;
+            }
+
+            if (needsDecisionPrompt(fromStatus, toStatus)) {
+                openQarorJarayonidaFlow(payload.lang, payload.id, fromStatus);
+                return;
+            }
+
+            if (needsPaymentPrompt(fromStatus, toStatus)) {
+                openTolovJarayonidaFlow(payload.lang, payload.id, fromStatus);
+                return;
+            }
+
+            moveLeadToStatus(payload.lang, payload.id, toStatus);
+        });
+    });
+}
+
+function openAssignManagerModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const options = `<option value="">— Biriktirilmagan —</option>
+        ${managers.map(m => `<option value="${escapeHtml(m.id)}"${lead.managerId === m.id ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
+
+    openModal(`${escapeHtml(lead.name)} — menejer`,
+        `<div class="form-group" style="margin-bottom:0">
+            <label>Sotuv menejeri</label>
+            <select id="mLeadManagerId" class="form-select">${options}</select>
+         </div>`,
+        `<button type="button" class="btn-primary-sm" id="saveLeadManager">Saqlash</button>`
+    );
+
+    document.getElementById('saveLeadManager').onclick = () => {
+        const managerId = document.getElementById('mLeadManagerId').value;
+        updateLeadInStorage(lang, leadId, l => ({
+            ...l,
+            managerId: managerId || ''
+        }));
+        closeModal();
+        renderLeads();
+    };
+}
+
+function openAddLeadModal() {
+    const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const managerOptions = `<option value="">— Biriktirilmagan —</option>
+        ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}`;
+
+    openModal("Yangi lid qo'shish",
+        `<div class="form-group"><label>Ism-familiya</label><input id="mLeadName" class="form-control" placeholder="Masalan: Ali Valiyev"></div>
+         <div class="form-group"><label>Telefon</label><input id="mLeadPhone" class="form-control" placeholder="+998 90 123 45 67"></div>
+         <div class="form-group"><label>2-telefon</label><input id="mLeadPhone2" class="form-control" placeholder="+998 91 234 56 78"></div>
+         <div class="form-group"><label>Sotuv menejeri</label>
+            <select id="mLeadManagerId" class="form-select">${managerOptions}</select>
+         </div>
+         <div class="form-group"><label>Til</label>
+            <select id="mLeadLang" class="form-select">
+                <option value="english"${defaultLang === 'english' ? ' selected' : ''}>Ingliz tili</option>
+                <option value="russian"${defaultLang === 'russian' ? ' selected' : ''}>Rus tili</option>
+            </select>
+         </div>
+         <div class="form-group"><label>Lid turi</label>
+            <select id="mLeadType" class="form-select">
+                <option value="organic">Organik</option>
+                <option value="target">Target (reklama)</option>
+            </select>
+         </div>
+         <div class="form-group"><label>Manba</label><input id="mLeadSource" class="form-control" value="Organik"></div>`,
+        `<button class="btn-primary-sm" id="saveLead">Saqlash</button>`
+    );
+
+    document.getElementById('saveLead').onclick = () => {
+        const name = document.getElementById('mLeadName').value.trim();
+        if (!name) return;
+        const lang = document.getElementById('mLeadLang').value;
+        const leadType = document.getElementById('mLeadType').value;
+        const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+        leads[lang] = leads[lang] || [];
+        leads[lang].push({
+            id: 'l' + Date.now(),
+            name,
+            phone: document.getElementById('mLeadPhone').value.trim(),
+            phone2: document.getElementById('mLeadPhone2').value.trim(),
+            managerId: document.getElementById('mLeadManagerId').value || '',
+            source: document.getElementById('mLeadSource').value.trim() || 'Organik',
+            leadType,
+            status: 'yangi-lidlar',
+            comments: [],
+            managerPhoto: null,
+            attachments: [],
+            date: new Date().toLocaleDateString('uz-UZ')
+        });
+        setItem(STORAGE_KEYS.leads, leads);
+        closeModal();
+        renderLeads();
+    };
+}
+
+const addLeadBtn = document.getElementById('addLeadBtn');
+if (addLeadBtn) addLeadBtn.addEventListener('click', openAddLeadModal);
+
+const leadsManagerFilter = document.getElementById('leadsManagerFilter');
+if (leadsManagerFilter) {
+    leadsManagerFilter.addEventListener('change', () => {
+        _leadsManagerFilter = leadsManagerFilter.value;
+        updateManagerFilterDisplay();
+        renderLeads();
+    });
+}
+
+const leadsColumnsFilterBtn = document.getElementById('leadsColumnsFilterBtn');
+if (leadsColumnsFilterBtn) {
+    leadsColumnsFilterBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('leadsColumnsDropdown');
+        if (!dropdown) return;
+        const willOpen = dropdown.hidden;
+        closeLeadsColumnsDropdown();
+        closeLeadCardMenus();
+        dropdown.hidden = !willOpen;
+        leadsColumnsFilterBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+}
+
+document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        _leadsLangFilter = btn.dataset.leadLangFilter;
+        try {
+            localStorage.setItem(LEADS_LANG_FILTER_KEY, _leadsLangFilter);
+        } catch { /* ignore */ }
+        syncLeadsLangTabs();
+        if (_tabContext.salesSection === 'leads') renderLeads();
+    });
+});
+
+document.addEventListener('click', () => {
+    closeLeadCardMenus();
+    closeLeadsColumnsDropdown();
 });
 
 bootApp();

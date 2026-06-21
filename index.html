@@ -25,20 +25,15 @@
                     <span class="label">Bosh sahifa</span>
                 </a>
 
-                <div class="menu-group open">
-                    <button type="button" class="menu-group-toggle" aria-expanded="true">
-                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        <span class="label">Sotuv bo'limi</span>
-                    </button>
-                    <div class="menu-subitems">
-                        <a href="#" class="menu-sub-item" data-tab="leads" data-subject="english">
-                            <img src="images/flags/gb.svg" alt="" class="menu-flag"> Ingliz tili kursi
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="leads" data-subject="russian">
-                            <img src="images/flags/ru.svg" alt="" class="menu-flag"> Rus tili kursi
-                        </a>
-                    </div>
-                </div>
+                <a href="#" class="menu-item" data-tab="sales">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    <span class="label">Sotuv bo'limi</span>
+                </a>
+
+                <a href="#" class="menu-item" data-tab="marketing">
+                    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-5 4 3 6-8"/></svg>
+                    <span class="label">Marketing bo'limi</span>
+                </a>
 
                 <div class="menu-group">
                     <button type="button" class="menu-group-toggle" aria-expanded="false">
@@ -379,6 +374,16 @@
                         </div>
                     </section>
 
+                    <!-- Marketing bo'limi -->
+                    <section id="tab-marketing" class="tab-content">
+                        <div class="page-title-bar"><h1>Marketing bo'limi</h1></div>
+                        <div class="card placeholder-card">
+                            <div class="placeholder-icon">📣</div>
+                            <h3>Marketing bo'limi</h3>
+                            <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda. Keyingi versiyada to'liq funksionallik qo'shiladi.</p>
+                        </div>
+                    </section>
+
                     <!-- O'quvchilar -->
                     <section id="tab-students" class="tab-content">
                         <div class="page-title-bar"><h1 id="studentsPageTitle">O'quvchilar ma'lumotlari</h1></div>
@@ -413,26 +418,90 @@
                         </div>
                     </section>
 
-                    <!-- Lidlar -->
-                    <section id="tab-leads" class="tab-content">
-                        <div class="page-title-bar"><h1 id="leadsPageTitle">Sotuv bo'limi — organik lidlar</h1><p class="text-muted">Domwork → Rus tili · Homework → Ingliz tili</p></div>
-                        <div class="grid-2" id="leadsGrid">
-                            <div class="card" id="leadsCardEnglish">
-                                <div class="card-header"><h3><img src="images/flags/gb.svg" alt="" class="subject-flag inline-flag"> Ingliz tili</h3><button class="btn-primary-sm" data-lead-lang="english">+ Lid</button></div>
-                                <div class="table-responsive">
-                                    <table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Manba</th><th>Sana</th><th></th></tr></thead><tbody id="leadsEnglish"></tbody></table>
+                    <!-- Sotuv bo'limi -->
+                    <section id="tab-sales" class="tab-content">
+                        <div class="sales-pinned">
+                            <div class="sales-header-layout">
+                                <nav class="section-nav sales-header-nav" id="salesSectionNav" aria-label="Sotuv bo'limi">
+                                    <button type="button" class="section-nav-item active" data-sales-section="leads">Lidlar</button>
+                                    <button type="button" class="section-nav-item" data-sales-section="book-roadmap">Kitob roadmap</button>
+                                    <button type="button" class="section-nav-item" data-sales-section="rating">Reyting</button>
+                                    <button type="button" class="section-nav-item" data-sales-section="sales-stats">Statistika</button>
+                                    <button type="button" class="section-nav-item" data-sales-section="scripts">Scrikptlar</button>
+                                </nav>
+                                <div class="sales-header-lang" id="salesLangActions">
+                                    <div class="leads-lang-tabs" id="leadsLangTabs">
+                                        <button type="button" class="subject-tab active" data-lead-lang-filter="english">
+                                            <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
+                                        </button>
+                                        <button type="button" class="subject-tab" data-lead-lang-filter="russian">
+                                            <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="card" id="leadsCardRussian">
-                                <div class="card-header"><h3><img src="images/flags/ru.svg" alt="" class="subject-flag inline-flag"> Rus tili</h3><button class="btn-primary-sm" data-lead-lang="russian">+ Lid</button></div>
-                                <div class="table-responsive">
-                                    <table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Manba</th><th>Sana</th><th></th></tr></thead><tbody id="leadsRussian"></tbody></table>
+                                <div class="leads-filters-bar" id="leadsFiltersBar">
+                                    <div class="leads-filter-box leads-filter-box--select">
+                                        <span class="leads-filter-display" id="leadsManagerFilterDisplay">Sotuv menejerlari</span>
+                                        <select id="leadsManagerFilter" class="leads-filter-select-overlay" aria-label="Sotuv menejerlari">
+                                            <option value="all">Barcha menejerlar</option>
+                                        </select>
+                                    </div>
+                                    <div class="leads-filter-box leads-columns-filter-wrap">
+                                        <div class="leads-columns-filter">
+                                            <button type="button" class="leads-filter-trigger" id="leadsColumnsFilterBtn" aria-haspopup="true" aria-expanded="false">
+                                                <span class="leads-filter-display" id="leadsColumnsFilterValue">Ustunlar filtri</span>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                                            </button>
+                                            <div class="leads-columns-dropdown" id="leadsColumnsDropdown" hidden></div>
+                                        </div>
+                                    </div>
                                 </div>
+                                <button type="button" class="btn-primary-sm leads-add-btn" id="addLeadBtn">+ Lid qo'shish</button>
                             </div>
                         </div>
-                    </section>
 
-                    <!-- Placeholder bo'limlar -->
+                        <div class="sales-body">
+                        <div class="sales-panel active" data-sales-panel="leads">
+                            <div class="leads-kanban" id="leadsKanban"></div>
+                        </div>
+
+                        <div class="sales-panel" data-sales-panel="book-roadmap">
+                            <div class="page-title-bar"><h1>Kitob roadmap</h1></div>
+                            <div class="card placeholder-card">
+                                <div class="placeholder-icon">🚧</div>
+                                <h3>Tez orada</h3>
+                                <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda.</p>
+                            </div>
+                        </div>
+
+                        <div class="sales-panel" data-sales-panel="rating">
+                            <div class="page-title-bar"><h1>Reyting</h1></div>
+                            <div class="card placeholder-card">
+                                <div class="placeholder-icon">🚧</div>
+                                <h3>Tez orada</h3>
+                                <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda.</p>
+                            </div>
+                        </div>
+
+                        <div class="sales-panel" data-sales-panel="sales-stats">
+                            <div class="page-title-bar"><h1>Statistika</h1></div>
+                            <div class="card placeholder-card">
+                                <div class="placeholder-icon">🚧</div>
+                                <h3>Tez orada</h3>
+                                <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda.</p>
+                            </div>
+                        </div>
+
+                        <div class="sales-panel" data-sales-panel="scripts">
+                            <div class="page-title-bar"><h1>Scrikptlar</h1></div>
+                            <div class="card placeholder-card">
+                                <div class="placeholder-icon">🚧</div>
+                                <h3>Tez orada</h3>
+                                <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda.</p>
+                            </div>
+                        </div>
+                        </div>
+                    </section>
                     <section id="tab-placeholder" class="tab-content">
                         <div class="page-title-bar"><h1 id="placeholderTitle">Bo'lim</h1></div>
                         <div class="card placeholder-card">

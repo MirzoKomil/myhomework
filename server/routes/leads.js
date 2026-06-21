@@ -39,10 +39,13 @@ router.post('/', webhookSecretRequired, (req, res) => {
         const result = insertLead({
             name: name.trim(),
             phone: String(phone).trim(),
+            email: String(body.email || body.mail || '').trim(),
             language,
             source: sourceResult.value,
             externalId,
-            date: body.date
+            date: body.date,
+            status: body.status,
+            leadType: body.leadType || body.lead_type || body.type
         });
 
         if (result.duplicate) {

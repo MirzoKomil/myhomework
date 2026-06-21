@@ -83,7 +83,7 @@ function syncNotifications() {
             type: 'success',
             title: 'Domwork lidlar',
             message: `${domworkCount} ta lid Domwork saytidan`,
-            tab: 'leads',
+            tab: 'sales',
             time: Date.now()
         });
     }
@@ -93,7 +93,7 @@ function syncNotifications() {
             type: 'success',
             title: 'Homework lidlar',
             message: `${homeworkCount} ta lid Homework saytidan`,
-            tab: 'leads',
+            tab: 'sales',
             time: Date.now()
         });
     }
@@ -103,7 +103,7 @@ function syncNotifications() {
             type: 'success',
             title: 'Organik lidlar',
             message: `Jami ${totalLeads} ta lid (${leads.english.length} ingliz, ${leads.russian.length} rus)`,
-            tab: 'leads',
+            tab: 'sales',
             time: Date.now()
         });
     }
@@ -184,7 +184,7 @@ function renderNotificationPanel() {
             markNotificationRead(item.dataset.notifId);
             const tab = item.dataset.notifTab;
             if (tab && typeof switchTab === 'function') {
-                switchTab(tab);
+                switchTab(tab, tab === 'sales' ? { salesSection: 'leads' } : {});
                 closeNotificationPanel();
             }
         });

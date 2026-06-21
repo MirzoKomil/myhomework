@@ -97,10 +97,15 @@ function initSchema() {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             phone TEXT DEFAULT '',
+            email TEXT DEFAULT '',
             source TEXT DEFAULT 'Organik',
             language TEXT NOT NULL,
             date TEXT,
             external_id TEXT,
+            status TEXT DEFAULT 'new',
+            lead_type TEXT DEFAULT 'organic',
+            comments TEXT DEFAULT '[]',
+            attachments TEXT DEFAULT '[]',
             created_at TEXT DEFAULT (datetime('now'))
         );
     `);
@@ -115,6 +120,27 @@ function migrateLeadsSchema() {
     }
     if (!names.has('created_at')) {
         db.exec("ALTER TABLE leads ADD COLUMN created_at TEXT DEFAULT (datetime('now'))");
+    }
+    if (!names.has('email')) {
+        db.exec("ALTER TABLE leads ADD COLUMN email TEXT DEFAULT ''");
+    }
+    if (!names.has('status')) {
+        db.exec("ALTER TABLE leads ADD COLUMN status TEXT DEFAULT 'new'");
+    }
+    if (!names.has('lead_type')) {
+        db.exec("ALTER TABLE leads ADD COLUMN lead_type TEXT DEFAULT 'organic'");
+    }
+    if (!names.has('comments')) {
+        db.exec("ALTER TABLE leads ADD COLUMN comments TEXT DEFAULT '[]'");
+    }
+    if (!names.has('attachments')) {
+        db.exec("ALTER TABLE leads ADD COLUMN attachments TEXT DEFAULT '[]'");
+    }
+    if (!names.has('phone2')) {
+        db.exec("ALTER TABLE leads ADD COLUMN phone2 TEXT DEFAULT ''");
+    }
+    if (!names.has('manager_id')) {
+        db.exec("ALTER TABLE leads ADD COLUMN manager_id TEXT DEFAULT ''");
     }
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_source_external ON leads(source, external_id) WHERE external_id IS NOT NULL');
     db.prepare("UPDATE leads SET language = 'russian' WHERE LOWER(source) LIKE '%domwork%'").run();
@@ -143,13 +169,33 @@ function normalizeLeadSource(val) {
     return val;
 }
 
+function parseJsonArray(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try {
+        const parsed = JSON.parse(val);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
 function rowToLead(r) {
+    const attachments = parseJsonArray(r.attachments);
     return {
         id: r.id,
         name: r.name,
         phone: r.phone || '',
+        phone2: r.phone2 || '',
+        email: r.email || '',
+        managerId: r.manager_id || '',
         source: r.source || 'Organik',
         date: r.date || '',
+        status: r.status || 'new',
+        leadType: r.lead_type || 'organic',
+        comments: parseJsonArray(r.comments),
+        attachments,
+        managerPhoto: attachments[0] || null,
         externalId: r.external_id || null,
         createdAt: r.created_at || null
     };
@@ -166,10 +212,12 @@ function getLeads() {
     return leads;
 }
 
-function insertLead({ name, phone, language, source, externalId, date }) {
+function insertLead({ name, phone, email, language, source, externalId, date, status, leadType }) {
     const src = normalizeLeadSource(source);
     const lang = languageForSource(src, language);
     const extId = externalId ? String(externalId) : null;
+    const leadTypeNorm = String(leadType || '').toLowerCase() === 'target' ? 'target' : 'organic';
+    const statusNorm = status || 'yangi-lidlar';
 
     if (extId) {
         const existing = db.prepare('SELECT id FROM leads WHERE source = ? AND external_id = ?').get(src, extId);
@@ -179,13 +227,16 @@ function insertLead({ name, phone, language, source, externalId, date }) {
     const id = randomUUID();
     const dateStr = date || new Date().toLocaleDateString('uz-UZ');
     db.prepare(
-        'INSERT INTO leads (id, name, phone, source, language, date, external_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(id, name, phone || '', src, lang, dateStr, extId);
+        'INSERT INTO leads (id, name, phone, email, source, language, date, external_id, status, lead_type, comments, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, name, phone || '', email || '', src, lang, dateStr, extId, statusNorm, leadTypeNorm, '[]', '[]');
 
     return {
         id,
         duplicate: false,
-        lead: { id, name, phone: phone || '', source: src, language: lang, date: dateStr, externalId: extId }
+        lead: {
+            id, name, phone: phone || '', email: email || '', source: src, language: lang,
+            date: dateStr, externalId: extId, status: statusNorm, leadType: leadTypeNorm
+        }
     };
 }
 
@@ -402,12 +453,19 @@ function saveLeads(leads) {
     runTransaction(() => {
         db.prepare('DELETE FROM leads').run();
         const ins = db.prepare(
-            'INSERT INTO leads (id, name, phone, source, language, date) VALUES (?, ?, ?, ?, ?, ?)'
+            'INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type, comments, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         ['english', 'russian'].forEach(lang => {
-            (leads[lang] || []).forEach(l => ins.run(
-                l.id, l.name, l.phone || '', l.source || 'Organik', lang, l.date || ''
-            ));
+            (leads[lang] || []).forEach(l => {
+                const photo = l.managerPhoto || (l.attachments && l.attachments[0]) || null;
+                const attachments = photo ? [photo] : [];
+                ins.run(
+                    l.id, l.name, l.phone || '', l.phone2 || '', l.email || '', l.managerId || '',
+                    l.source || 'Organik', lang, l.date || '',
+                    l.externalId || null, l.status || 'yangi-lidlar', l.leadType === 'target' ? 'target' : 'organic',
+                    JSON.stringify(l.comments || []), JSON.stringify(attachments)
+                );
+            });
         });
     });
 }
