@@ -30,6 +30,11 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
     background: var(--bg);
@@ -1684,6 +1689,7 @@ body {
 
     body.sidebar-open {
         overflow: hidden;
+        touch-action: none;
     }
 
     .app-shell {
@@ -1745,6 +1751,22 @@ body {
     .main-area {
         width: 100%;
         min-width: 0;
+        height: calc(100dvh - 16px);
+    }
+
+    .content-layout {
+        gap: 10px;
+        min-height: 0;
+    }
+
+    .tab-content.active {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding-bottom: 8px;
+    }
+
+    .page-title-bar {
+        margin-bottom: 14px;
     }
 
     .top-header {
@@ -1893,6 +1915,25 @@ body {
     .modal {
         width: calc(100vw - 24px);
         margin: 12px;
+        max-height: calc(100dvh - 24px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal--wide {
+        max-width: calc(100vw - 24px);
+    }
+
+    .modal-body {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .modal-footer {
+        flex-shrink: 0;
+        flex-wrap: wrap;
     }
 }
 
@@ -3049,7 +3090,7 @@ textarea.form-control {
 
 @media (max-width: 900px) {
     .main-area {
-        height: calc(100vh - 16px);
+        height: calc(100dvh - 16px);
         min-height: 0;
         overflow: hidden;
     }
@@ -3064,15 +3105,25 @@ textarea.form-control {
         overflow: hidden;
     }
 
+    .sales-panel[data-sales-panel="leads"].active {
+        min-height: 0;
+    }
+
     .leads-kanban {
-        overflow: auto;
+        overflow-x: auto;
+        overflow-y: hidden;
         flex: 1 1 0;
         min-height: 0;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+        gap: 12px;
+        padding-bottom: 16px;
     }
 
     .sales-header-layout {
         grid-template-columns: 1fr;
         grid-template-rows: auto auto auto auto;
+        gap: 8px;
     }
 
     .sales-header-nav,
@@ -3094,16 +3145,34 @@ textarea.form-control {
 
     .sales-header-lang .subject-tab {
         flex: 1;
+        min-width: 0;
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+
+    .leads-filters-bar {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .leads-filter-box,
     .leads-columns-filter-wrap {
         max-width: none;
         flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .leads-columns-dropdown {
+        left: 0;
+        right: 0;
+        min-width: 0;
+        max-height: min(50vh, 320px);
     }
 
     .leads-add-btn {
         width: 100%;
+        justify-content: center;
     }
 
     .leads-lang-tabs {
@@ -3116,7 +3185,211 @@ textarea.form-control {
     }
 
     .lead-column {
-        flex: 0 0 260px;
-        min-width: 240px;
+        flex: 0 0 min(280px, 86vw);
+        min-width: min(260px, 84vw);
+        scroll-snap-align: start;
     }
+
+    .table {
+        font-size: 13px;
+    }
+
+    .table th,
+    .table td {
+        padding: 10px 8px;
+    }
+
+    .attendance-table {
+        font-size: 11px;
+    }
+
+    .attendance-table .sticky-col-2 {
+        min-width: 96px;
+        max-width: 110px;
+        font-size: 11px;
+    }
+
+    .timetable-table {
+        font-size: 12px;
+    }
+
+    .placeholder-card {
+        padding: 28px 20px;
+    }
+}
+
+/* Kichik telefonlar — modallar, anketalar, header */
+@media (max-width: 600px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        max-height: min(92dvh, 720px);
+    }
+
+    .modal--wide {
+        max-width: 100%;
+    }
+
+    .modal-header {
+        padding: 18px 16px;
+    }
+
+    .modal-header h3 {
+        font-size: 16px;
+        line-height: 1.35;
+        padding-right: 8px;
+    }
+
+    .modal-body {
+        padding: 16px;
+    }
+
+    .modal-footer {
+        padding: 0 16px max(16px, env(safe-area-inset-bottom));
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .modal-footer .btn-primary-sm,
+    .modal-footer .btn-danger-sm {
+        width: 100%;
+        text-align: center;
+        padding: 12px 16px;
+        min-height: 44px;
+    }
+
+    .lead-survey {
+        max-height: none;
+        gap: 14px;
+    }
+
+    .lead-survey-options--compact {
+        grid-template-columns: 1fr;
+    }
+
+    .lead-carousel {
+        grid-template-columns: 36px 1fr 36px;
+        gap: 6px;
+    }
+
+    .lead-carousel-nav {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+    }
+
+    .lead-carousel-item {
+        min-width: 118px;
+        max-width: 150px;
+        padding: 10px 12px;
+    }
+
+    .lead-carousel-item span {
+        font-size: 12px;
+    }
+
+    .lead-age-range::-webkit-slider-thumb {
+        width: 26px;
+        height: 26px;
+    }
+
+    .lead-reason-option {
+        padding: 12px;
+        min-height: 44px;
+        align-items: center;
+    }
+
+    .section-nav-item {
+        padding: 12px 10px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-shell {
+        padding: max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom));
+    }
+
+    .main-area {
+        height: calc(100dvh - 12px);
+    }
+
+    .search-box input {
+        font-size: 16px;
+    }
+
+    .lead-column {
+        flex: 0 0 88vw;
+        min-width: 84vw;
+    }
+
+    .lead-card {
+        padding: 12px;
+    }
+
+    .lead-card-name {
+        font-size: 13px;
+    }
+
+    .auth-container {
+        padding: 32px 20px;
+        border-radius: var(--radius);
+    }
+
+    .auth-logo-img {
+        height: 64px;
+    }
+
+    .notif-panel {
+        width: calc(100vw - 20px);
+        right: -4px;
+        max-height: min(70dvh, 480px);
+    }
+
+    .grid-3 {
+        gap: 10px;
+    }
+
+    .stat-value {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 380px) {
+    .live-badge {
+        display: none;
+    }
+
+    .search-box {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+
+    .sales-header-nav .section-nav-item {
+        padding: 10px 8px;
+        font-size: 11px;
+    }
+
+    .subject-tab .subject-flag,
+    .menu-flag {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+body.modal-open {
+    overflow: hidden;
+    touch-action: none;
 }

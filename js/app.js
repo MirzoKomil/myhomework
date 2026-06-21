@@ -296,6 +296,7 @@ function openModal(title, bodyHtml, footerHtml, options = {}) {
     document.getElementById('modalBody').innerHTML = bodyHtml;
     document.getElementById('modalFooter').innerHTML = footerHtml || '';
     document.getElementById('modalOverlay').style.display = 'flex';
+    document.body.classList.add('modal-open');
 }
 
 function closeModal() {
@@ -303,6 +304,7 @@ function closeModal() {
     const modal = overlay?.querySelector('.modal');
     if (modal) modal.classList.remove('modal--wide');
     if (overlay) overlay.style.display = 'none';
+    document.body.classList.remove('modal-open');
 }
 
 document.getElementById('modalClose').addEventListener('click', closeModal);
