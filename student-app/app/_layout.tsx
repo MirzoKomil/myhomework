@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { theme } from '@/constants/theme';
+import { WEB_FONT_BASE } from '@/constants/webFonts';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -24,15 +25,26 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+const nativeFonts = {
+  ...Ionicons.font,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+};
+
+const webFonts = {
+  PlusJakartaSans_400Regular: `${WEB_FONT_BASE}/plus-jakarta-400.ttf`,
+  PlusJakartaSans_500Medium: `${WEB_FONT_BASE}/plus-jakarta-500.ttf`,
+  PlusJakartaSans_600SemiBold: `${WEB_FONT_BASE}/plus-jakarta-600.ttf`,
+  PlusJakartaSans_700Bold: `${WEB_FONT_BASE}/plus-jakarta-700.ttf`,
+  PlusJakartaSans_800ExtraBold: `${WEB_FONT_BASE}/plus-jakarta-800.ttf`,
+  ionicons: `${WEB_FONT_BASE}/ionicons.ttf`,
+};
+
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    ...Ionicons.font,
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
-  });
+  const [loaded, error] = useFonts(Platform.OS === 'web' ? webFonts : nativeFonts);
 
   useEffect(() => {
     if (error) throw error;

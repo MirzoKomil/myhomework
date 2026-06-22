@@ -312,9 +312,8 @@ function renderPlaceholder() {
 
 function renderStudentApp() {
     const frame = document.getElementById('studentAppFrame');
-    if (!frame || frame.dataset.loaded === '1') return;
-    frame.src = '/student/';
-    frame.dataset.loaded = '1';
+    if (!frame) return;
+    frame.src = `/student/?v=${Date.now()}`;
 }
 
 // --- Profile ---

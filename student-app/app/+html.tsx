@@ -1,8 +1,9 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { ReactNode } from 'react';
 
-import { WEB_APP_MAX_WIDTH } from '@/constants/web';
 import { theme } from '@/constants/theme';
+import { WEB_APP_MAX_WIDTH } from '@/constants/web';
+import { webFontFaces } from '@/constants/webFonts';
 
 export default function Root({ children }: { children: ReactNode }) {
   return (
@@ -23,9 +24,12 @@ export default function Root({ children }: { children: ReactNode }) {
         <meta name="description" content="O'quv markaz o'quvchilari uchun mobil veb ilova" />
         <link rel="manifest" href="/student/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/student/assets/images/icon.png" />
+        <link rel="preload" href="/student/fonts/plus-jakarta-400.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+        <link rel="preload" href="/student/fonts/ionicons.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
 
         <ScrollViewStyleReset />
 
+        <style dangerouslySetInnerHTML={{ __html: webFontFaces }} />
         <style dangerouslySetInnerHTML={{ __html: mobileAppStyles }} />
       </head>
       <body>{children}</body>
@@ -45,7 +49,7 @@ body {
   min-height: 100dvh;
   background: linear-gradient(160deg, #dfe4f0 0%, #c8d0e4 100%);
   color: ${theme.colors.text};
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'PlusJakartaSans_400Regular', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   overflow-x: hidden;
   display: flex;
   justify-content: center;
@@ -81,7 +85,17 @@ input,
 textarea,
 button,
 select {
-  font: inherit;
+  font-family: 'PlusJakartaSans_400Regular', system-ui, sans-serif;
+}
+
+/* Ionicons — vector icon glyphs */
+.r-lrvibr,
+[style*="font-family: ionicons"],
+[style*="font-family:ionicons"] {
+  font-family: 'ionicons' !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
