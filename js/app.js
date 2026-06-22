@@ -1193,11 +1193,12 @@ function moveLeadToStatus(lang, leadId, toStatus, extra = {}) {
     renderLeads();
 }
 
-function openContactFailModal(lang, leadId, toStatus) {
+function openContactFailModal(lang, leadId, toStatus, options = {}) {
+    const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
-    const options = LEAD_CONTACT_FAIL_REASONS.map(r => `
+    const reasonOptions = LEAD_CONTACT_FAIL_REASONS.map(r => `
         <label class="lead-reason-option">
             <input type="radio" name="contactFailReason" value="${r.id}" data-reason-radio>
             <span>${escapeHtml(r.label)}</span>
@@ -1206,9 +1207,9 @@ function openContactFailModal(lang, leadId, toStatus) {
     openModal(
         'Lid bilan nima uchun bog\'lana olmadingiz?',
         `<p class="lead-reason-subtitle">Qo'ng'iroq qilindi, lekin:</p>
-         <div class="lead-reason-list">${options}</div>`,
+         <div class="lead-reason-list">${reasonOptions}</div>`,
         `<button type="button" class="btn-danger-sm" id="cancelContactFail">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="confirmContactFail">Saqlash va ko'chirish</button>`
+         <button type="button" class="btn-primary-sm" id="confirmContactFail">${chainTo ? 'Keyingi bosqich' : "Saqlash va ko'chirish"}</button>`
     );
 
     document.getElementById('cancelContactFail').onclick = () => {
@@ -1233,9 +1234,8 @@ function openContactFailModal(lang, leadId, toStatus) {
         const author = user?.name || 'Admin';
         const updated = updateLeadInStorage(lang, leadId, l => {
             const base = normalizeLeadExtras(l);
-            return {
+            const next = {
                 ...base,
-                status: toStatus,
                 comments: [...base.comments, createLeadComment({
                     type: 'contact-fail',
                     text: `Qo'ng'iroq qilindi, lekin: ${reason.label}`,
@@ -1243,6 +1243,10 @@ function openContactFailModal(lang, leadId, toStatus) {
                     author
                 })]
             };
+            if (!chainTo) {
+                next.status = toStatus;
+            }
+            return next;
         });
 
         if (!updated) {
@@ -1251,6 +1255,11 @@ function openContactFailModal(lang, leadId, toStatus) {
         }
 
         closeModal();
+        if (chainTo === 'tolov-yopildi') {
+            const current = getLeadById(lang, leadId);
+            openTolovYopildiFlow(lang, leadId, current?.status);
+            return;
+        }
         renderLeads();
     };
 }
@@ -1432,6 +1441,64 @@ function openTolovJarayonidaFlow(lang, leadId, fromStatus) {
         return;
     }
     openPaymentProcessModal(lang, leadId);
+}
+
+const PAYMENT_CLOSED_SKIP_COLUMNS = new Set([
+    'qaror-jarayonida',
+    'sinov-darsida',
+    'tolov-jarayonida'
+]);
+
+function leadHasContactFailSurvey(lead) {
+    return Array.isArray(lead?.comments)
+        && lead.comments.some(c => c.type === 'contact-fail');
+}
+
+function getPendingSurveyStepsBeforePaymentClosed(fromStatus) {
+    const fromIdx = getLeadColumnIndex(fromStatus);
+    const closedIdx = getLeadColumnIndex('tolov-yopildi');
+    const steps = [];
+
+    for (const col of LEAD_COLUMNS) {
+        const idx = getLeadColumnIndex(col.id);
+        if (idx <= fromIdx || idx >= closedIdx) continue;
+        if (PAYMENT_CLOSED_SKIP_COLUMNS.has(col.id)) continue;
+        if (col.id === 'boglanishga-urinilmoqda') steps.push('contact-fail');
+        else if (col.id === 'boglanildi') steps.push('connected');
+        else if (col.id === 'malumot-berildi') steps.push('info');
+    }
+    return steps;
+}
+
+function getNextSurveyStepBeforePaymentClosed(fromStatus, lead) {
+    for (const step of getPendingSurveyStepsBeforePaymentClosed(fromStatus)) {
+        if (step === 'contact-fail' && leadHasContactFailSurvey(lead)) continue;
+        if (step === 'connected' && lead.connectedSurvey) continue;
+        if (step === 'info' && lead.infoProvidedSurvey) continue;
+        return step;
+    }
+    return 'payment-closed';
+}
+
+function openTolovYopildiFlow(lang, leadId, fromStatus) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const from = normalizeLeadStatus(fromStatus || lead.status);
+    const next = getNextSurveyStepBeforePaymentClosed(from, lead);
+
+    if (next === 'contact-fail') {
+        openContactFailModal(lang, leadId, 'boglanishga-urinilmoqda', { chainTo: 'tolov-yopildi' });
+        return;
+    }
+    if (next === 'connected') {
+        openConnectedSurveyModal(lang, leadId, 'tolov-yopildi', { chainTo: 'tolov-yopildi' });
+        return;
+    }
+    if (next === 'info') {
+        openInfoProvidedModal(lang, leadId, { chainTo: 'tolov-yopildi' });
+        return;
+    }
+    openPaymentClosedModal(lang, leadId);
 }
 
 function renderSurveyRadioGroup(name, options) {
@@ -1685,6 +1752,11 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
             openTolovJarayonidaFlow(lang, leadId, current?.status);
             return;
         }
+        if (chainTo === 'tolov-yopildi') {
+            const current = getLeadById(lang, leadId);
+            openTolovYopildiFlow(lang, leadId, current?.status);
+            return;
+        }
         renderLeads();
     };
 }
@@ -1812,6 +1884,11 @@ function openInfoProvidedModal(lang, leadId, options = {}) {
         if (chainTo === 'tolov-jarayonida') {
             const current = getLeadById(lang, leadId);
             openTolovJarayonidaFlow(lang, leadId, current?.status);
+            return;
+        }
+        if (chainTo === 'tolov-yopildi') {
+            const current = getLeadById(lang, leadId);
+            openTolovYopildiFlow(lang, leadId, current?.status);
             return;
         }
         renderLeads();
@@ -2526,6 +2603,240 @@ function openPaymentProcessModal(lang, leadId) {
     };
 }
 
+function needsPaymentClosedPrompt(fromStatus, toStatus) {
+    return toStatus === 'tolov-yopildi';
+}
+
+function leadHasPaymentDebt(paymentSurvey) {
+    return paymentSurvey?.paymentType === 'partial'
+        && Number.isFinite(paymentSurvey.debtAmount)
+        && paymentSurvey.debtAmount > 0;
+}
+
+function leadHasInstallmentPayment(paymentSurvey) {
+    return paymentSurvey?.paymentType === 'installment';
+}
+
+function getPaymentClosedDebtLabel(paymentSurvey) {
+    if (paymentSurvey.debtAmountLabel) return `${paymentSurvey.debtAmountLabel} so'm`;
+    if (Number.isFinite(paymentSurvey.debtAmount)) return `${formatUzMoney(paymentSurvey.debtAmount)} so'm`;
+    return '';
+}
+
+function getPaymentClosedInstallmentLabel(paymentSurvey) {
+    if (paymentSurvey.amountLabel) return paymentSurvey.amountLabel;
+    if (Number.isFinite(paymentSurvey.totalAmount)) return formatUzMoney(paymentSurvey.totalAmount);
+    return '';
+}
+
+function renderCloseSurveyYesNo(name, label) {
+    return `<div class="lead-info-question">
+        <p class="lead-info-question-text">${escapeHtml(label)}</p>
+        <div class="lead-info-yesno">
+            <label class="lead-reason-option lead-reason-option--inline">
+                <input type="radio" name="${name}" value="yes" data-close-field="${name}">
+                <span>Ha</span>
+            </label>
+            <label class="lead-reason-option lead-reason-option--inline">
+                <input type="radio" name="${name}" value="no" data-close-field="${name}">
+                <span>Yo'q</span>
+            </label>
+        </div>
+    </div>`;
+}
+
+function renderCloseSurveyDateField(id, label, fieldName) {
+    return `<div class="lead-survey-field" data-close-date-wrap="${fieldName}">
+        <label for="${id}">${escapeHtml(label)}</label>
+        <input type="date" id="${id}" class="form-control" data-close-field="${fieldName}" value="${todayIsoDate()}">
+    </div>`;
+}
+
+function initPaymentClosedSurveyForm(modalBody) {
+    const syncInstallmentDate = () => {
+        const received = modalBody.querySelector('[data-close-field="installmentReceived"]:checked');
+        const wrap = modalBody.querySelector('[data-close-date-wrap="installmentReceivedDate"]');
+        if (!wrap) return;
+        const show = received?.value === 'yes';
+        wrap.hidden = !show;
+        wrap.style.display = show ? '' : 'none';
+        if (!show) {
+            const input = modalBody.querySelector('#paymentClosedInstallmentDate');
+            if (input) input.value = '';
+        } else {
+            const input = modalBody.querySelector('#paymentClosedInstallmentDate');
+            if (input && !input.value) input.value = todayIsoDate();
+        }
+    };
+
+    modalBody.querySelectorAll('[data-close-field="installmentReceived"]').forEach(radio => {
+        radio.addEventListener('change', syncInstallmentDate);
+    });
+
+    syncInstallmentDate();
+}
+
+function collectPaymentClosedSurveyData(modalBody, paymentSurvey) {
+    const getRadio = name => modalBody.querySelector(`[data-close-field="${name}"]:checked`);
+    const getDate = name => modalBody.querySelector(`[data-close-field="${name}"]`)?.value || '';
+
+    const closedDate = getDate('closedDate');
+    if (!closedDate) return { error: 'Yopilgan sanani kiriting' };
+
+    const hasDebt = leadHasPaymentDebt(paymentSurvey);
+    const hasInstallment = leadHasInstallmentPayment(paymentSurvey);
+
+    let debtPaid = null;
+    let debtPaidLabel = '';
+    let debtPaidDate = null;
+    let debtPaidDateLabel = '';
+    let installmentReceived = null;
+    let installmentReceivedLabel = '';
+    let installmentReceivedDate = null;
+    let installmentReceivedDateLabel = '';
+
+    if (hasDebt) {
+        const debtPaidRadio = getRadio('debtPaid');
+        if (!debtPaidRadio) {
+            const debtLabel = getPaymentClosedDebtLabel(paymentSurvey);
+            return { error: `«${debtLabel} summa to'landimi?» savoliga javob bering` };
+        }
+        debtPaid = debtPaidRadio.value;
+        debtPaidLabel = debtPaid === 'yes' ? 'Ha' : 'Yo\'q';
+        debtPaidDate = getDate('debtPaidDate');
+        if (!debtPaidDate) return { error: 'Qarzdorlik summasi to\'langan sanani kiriting' };
+        debtPaidDateLabel = formatUzDate(debtPaidDate);
+    }
+
+    if (hasInstallment) {
+        const receivedRadio = getRadio('installmentReceived');
+        if (!receivedRadio) {
+            const amountLabel = getPaymentClosedInstallmentLabel(paymentSurvey);
+            return { error: `«${amountLabel} summa to'lovi tushdimi?» savoliga javob bering` };
+        }
+        installmentReceived = receivedRadio.value;
+        installmentReceivedLabel = installmentReceived === 'yes' ? 'Ha' : 'Yo\'q';
+        if (installmentReceived === 'yes') {
+            installmentReceivedDate = getDate('installmentReceivedDate');
+            if (!installmentReceivedDate) return { error: 'To\'lov tushgan sanani kiriting' };
+            installmentReceivedDateLabel = formatUzDate(installmentReceivedDate);
+        }
+    }
+
+    return {
+        data: {
+            closedDate,
+            closedDateLabel: formatUzDate(closedDate),
+            hasDebt,
+            debtAmount: hasDebt ? paymentSurvey.debtAmount : null,
+            debtAmountLabel: hasDebt ? getPaymentClosedDebtLabel(paymentSurvey) : '',
+            debtPaid,
+            debtPaidLabel,
+            debtPaidDate,
+            debtPaidDateLabel,
+            hasInstallment,
+            installmentAmountLabel: hasInstallment ? getPaymentClosedInstallmentLabel(paymentSurvey) : '',
+            installmentReceived,
+            installmentReceivedLabel,
+            installmentReceivedDate,
+            installmentReceivedDateLabel
+        }
+    };
+}
+
+function formatPaymentClosedSurveyComment(survey) {
+    const lines = [`• Qachon yopildi: ${survey.closedDateLabel}`];
+    if (survey.hasDebt) {
+        lines.push(`• ${survey.debtAmountLabel} summa to'landimi: ${survey.debtPaidLabel}`);
+        if (survey.debtPaidDateLabel) {
+            lines.push(`• ${survey.debtAmountLabel} qarzdorlik summasi qachon to'landi: ${survey.debtPaidDateLabel}`);
+        }
+    }
+    if (survey.hasInstallment) {
+        lines.push(`• ${survey.installmentAmountLabel} summa to'lovi tushdimi: ${survey.installmentReceivedLabel}`);
+        if (survey.installmentReceived === 'yes' && survey.installmentReceivedDateLabel) {
+            lines.push(`• Qachon tushdi: ${survey.installmentReceivedDateLabel}`);
+        }
+    }
+    return ['To\'lov yopildi — so\'rovnoma:', ...lines].join('\n');
+}
+
+function openPaymentClosedModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const paymentSurvey = lead.paymentSurvey || null;
+    const hasDebt = leadHasPaymentDebt(paymentSurvey);
+    const hasInstallment = leadHasInstallmentPayment(paymentSurvey);
+    const debtLabel = hasDebt ? getPaymentClosedDebtLabel(paymentSurvey) : '';
+    const installmentLabel = hasInstallment ? getPaymentClosedInstallmentLabel(paymentSurvey) : '';
+
+    const bodyHtml = `<div class="lead-survey lead-survey--info">
+        ${renderCloseSurveyDateField('paymentClosedDate', 'Qachon yopildi?', 'closedDate')}
+        ${hasDebt ? `
+        <section class="lead-survey-section">
+            ${renderCloseSurveyYesNo('debtPaid', `${debtLabel} summa to'landimi?`)}
+            ${renderCloseSurveyDateField('paymentClosedDebtDate', `${debtLabel} qarzdorlik summasi qachon to'landi?`, 'debtPaidDate')}
+        </section>` : ''}
+        ${hasInstallment ? `
+        <section class="lead-survey-section">
+            ${renderCloseSurveyYesNo('installmentReceived', `${installmentLabel} summa to'lovi tushdimi?`)}
+            ${renderCloseSurveyDateField('paymentClosedInstallmentDate', 'Qachon tushdi?', 'installmentReceivedDate')}
+        </section>` : ''}
+    </div>`;
+
+    openModal(
+        `${escapeHtml(lead.name)} — To'lov yopildi`,
+        bodyHtml,
+        `<button type="button" class="btn-danger-sm" id="cancelPaymentClosed">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmPaymentClosed">Saqlash va ko'chirish</button>`,
+        { wide: true }
+    );
+
+    const modalBody = document.getElementById('modalBody');
+    initPaymentClosedSurveyForm(modalBody);
+
+    document.getElementById('cancelPaymentClosed').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    document.getElementById('confirmPaymentClosed').onclick = () => {
+        const result = collectPaymentClosedSurveyData(modalBody, paymentSurvey);
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const survey = result.data;
+        const commentText = formatPaymentClosedSurveyComment(survey);
+
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return {
+                ...base,
+                status: 'tolov-yopildi',
+                paymentClosedSurvey: survey,
+                comments: [...base.comments, createLeadComment({
+                    type: 'payment-closed',
+                    text: commentText,
+                    author
+                })]
+            };
+        });
+
+        if (!updated) {
+            alert('Lid topilmadi');
+            return;
+        }
+
+        closeModal();
+        renderLeads();
+    };
+}
+
 const LEAD_COLUMNS = [
     { id: 'yangi-lidlar', label: 'Yangi lidlar', bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
     { id: 'boglanishga-urinilmoqda', label: "Bog'lanishga urinilmoqda", bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
@@ -3206,6 +3517,11 @@ function initLeadDragDrop(board) {
 
             if (needsPaymentPrompt(fromStatus, toStatus)) {
                 openTolovJarayonidaFlow(payload.lang, payload.id, fromStatus);
+                return;
+            }
+
+            if (needsPaymentClosedPrompt(fromStatus, toStatus)) {
+                openTolovYopildiFlow(payload.lang, payload.id, fromStatus);
                 return;
             }
 
