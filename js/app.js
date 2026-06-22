@@ -1953,9 +1953,45 @@ function renderPaymentAmountOptions(tariffId) {
         </label>`).join('');
 }
 
+function parsePaymentAmountNumber(amountId) {
+    const match = String(amountId || '').match(/^(\d+)/);
+    return match ? Number(match[1]) : 0;
+}
+
+function parseMoneyInput(val) {
+    const n = Number(String(val || '').replace(/\s/g, '').replace(/,/g, ''));
+    return Number.isFinite(n) ? n : NaN;
+}
+
+function formatUzMoney(n) {
+    return Number(n).toLocaleString('uz-UZ');
+}
+
+function todayIsoDate() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysIsoDate(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+}
+
+function formatUzDate(iso) {
+    if (!iso) return '';
+    const [y, m, day] = iso.split('-');
+    if (!y || !m || !day) return iso;
+    return `${day}.${m}.${y}`;
+}
+
 function initPaymentSurveyForm(modalBody) {
     const partnerBlock = modalBody.querySelector('#installmentPartnerBlock');
+    const partialBlock = modalBody.querySelector('#partialPaymentBlock');
     const amountContainer = modalBody.querySelector('#paymentAmountOptions');
+    const paidInput = modalBody.querySelector('#paymentPaidAmount');
+    const debtOutput = modalBody.querySelector('#paymentDebtAmount');
+    const lastPaymentInput = modalBody.querySelector('#paymentLastPaymentDate');
+    const nextPaymentInput = modalBody.querySelector('#paymentNextPaymentDate');
 
     const syncPartnerVisibility = () => {
         const installment = modalBody.querySelector('[data-payment-field="paymentType"][value="installment"]')?.checked;
@@ -1969,21 +2005,83 @@ function initPaymentSurveyForm(modalBody) {
         }
     };
 
+    const syncPartialVisibility = () => {
+        const isPartial = modalBody.querySelector('[data-payment-field="paymentType"][value="partial"]')?.checked;
+        if (!partialBlock) return;
+        partialBlock.hidden = !isPartial;
+        partialBlock.style.display = isPartial ? '' : 'none';
+        if (!isPartial && paidInput) {
+            paidInput.value = '';
+            if (debtOutput) debtOutput.textContent = '—';
+            if (lastPaymentInput) lastPaymentInput.value = '';
+            if (nextPaymentInput) nextPaymentInput.value = '';
+        } else {
+            if (lastPaymentInput && !lastPaymentInput.value) {
+                lastPaymentInput.value = todayIsoDate();
+            }
+            if (nextPaymentInput && !nextPaymentInput.value) {
+                nextPaymentInput.value = addDaysIsoDate(10);
+            }
+            syncPartialDebt();
+        }
+    };
+
+    const syncPartialDebt = () => {
+        if (!debtOutput) return;
+        const isPartial = modalBody.querySelector('[data-payment-field="paymentType"][value="partial"]')?.checked;
+        if (!isPartial) {
+            debtOutput.textContent = '—';
+            return;
+        }
+        const total = getSelectedPaymentTotal(modalBody);
+        const paid = parseMoneyInput(paidInput?.value);
+        if (total == null) {
+            debtOutput.textContent = 'Avval summani tanlang';
+            return;
+        }
+        if (!paidInput?.value?.trim()) {
+            debtOutput.textContent = '—';
+            return;
+        }
+        if (!Number.isFinite(paid)) {
+            debtOutput.textContent = 'Noto\'g\'ri summa';
+            return;
+        }
+        const debt = Math.max(0, total - paid);
+        debtOutput.textContent = `${formatUzMoney(debt)} so'm`;
+    };
+
     const syncAmountOptions = () => {
         const tariff = modalBody.querySelector('[data-payment-field="tariff"]:checked');
         if (!amountContainer) return;
         amountContainer.innerHTML = tariff
             ? renderPaymentAmountOptions(tariff.value)
             : '<p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>';
+        amountContainer.querySelectorAll('[data-payment-field="amount"]').forEach(radio => {
+            radio.addEventListener('change', syncPartialDebt);
+        });
+        syncPartialDebt();
     };
 
     modalBody.querySelectorAll('[data-payment-field="paymentType"]').forEach(radio => {
-        radio.addEventListener('change', syncPartnerVisibility);
+        radio.addEventListener('change', () => {
+            syncPartnerVisibility();
+            syncPartialVisibility();
+        });
     });
     modalBody.querySelectorAll('[data-payment-field="tariff"]').forEach(radio => {
         radio.addEventListener('change', syncAmountOptions);
     });
+    paidInput?.addEventListener('input', syncPartialDebt);
+
     syncPartnerVisibility();
+    syncPartialVisibility();
+}
+
+function getSelectedPaymentTotal(modalBody) {
+    const amount = modalBody.querySelector('[data-payment-field="amount"]:checked');
+    if (!amount) return null;
+    return parsePaymentAmountNumber(amount.value);
 }
 
 function collectPaymentSurveyData(modalBody) {
@@ -2009,6 +2107,35 @@ function collectPaymentSurveyData(modalBody) {
     const tariffLabel = getSurveyOptionLabel(LEAD_TARIFFS, tariff.value);
     const amountLabel = LEAD_TARIFF_AMOUNTS[tariff.value]?.find(a => a.id === amount.value)?.label || amount.value;
     const paymentTypeLabel = getSurveyOptionLabel(LEAD_PAYMENT_TYPES, paymentType.value);
+    const totalAmount = parsePaymentAmountNumber(amount.value);
+
+    let paidAmount = null;
+    let paidAmountLabel = '';
+    let debtAmount = null;
+    let debtAmountLabel = '';
+    let lastPaymentDate = null;
+    let nextPaymentDate = null;
+
+    if (paymentType.value === 'partial') {
+        const paidRaw = modalBody.querySelector('#paymentPaidAmount')?.value?.trim();
+        if (!paidRaw) return { error: 'Qancha to\'laganini kiriting' };
+        const paid = parseMoneyInput(paidRaw);
+        if (!Number.isFinite(paid) || paid <= 0) {
+            return { error: 'To\'langan summa noto\'g\'ri' };
+        }
+        if (paid > totalAmount) {
+            return { error: 'To\'langan summa umumiy summadan katta bo\'lmasligi kerak' };
+        }
+        paidAmount = paid;
+        paidAmountLabel = formatUzMoney(paid);
+        debtAmount = totalAmount - paid;
+        debtAmountLabel = formatUzMoney(debtAmount);
+
+        lastPaymentDate = modalBody.querySelector('#paymentLastPaymentDate')?.value || '';
+        nextPaymentDate = modalBody.querySelector('#paymentNextPaymentDate')?.value || '';
+        if (!lastPaymentDate) return { error: 'Oxirgi to\'lov sanasini kiriting' };
+        if (!nextPaymentDate) return { error: 'Keyingi to\'lov sanasini kiriting' };
+    }
 
     return {
         data: {
@@ -2019,7 +2146,16 @@ function collectPaymentSurveyData(modalBody) {
             tariff: tariff.value,
             tariffLabel,
             amount: amount.value,
-            amountLabel
+            amountLabel,
+            totalAmount,
+            paidAmount,
+            paidAmountLabel,
+            debtAmount,
+            debtAmountLabel,
+            lastPaymentDate,
+            lastPaymentDateLabel: lastPaymentDate ? formatUzDate(lastPaymentDate) : '',
+            nextPaymentDate,
+            nextPaymentDateLabel: nextPaymentDate ? formatUzDate(nextPaymentDate) : ''
         }
     };
 }
@@ -2033,12 +2169,270 @@ function formatPaymentSurveyComment(survey) {
     if (survey.installmentPartnerLabel) {
         lines.splice(1, 0, `• Nasiya hamkori: ${survey.installmentPartnerLabel}`);
     }
-    return ['To\'lov jarayonida — anketa:', ...lines].join('\n');
+    if (survey.paymentType === 'partial' && survey.paidAmountLabel) {
+        lines.push(`• To'langan: ${survey.paidAmountLabel} so'm`);
+        lines.push(`• Qarzdorlik: ${survey.debtAmountLabel} so'm`);
+        if (survey.lastPaymentDateLabel) {
+            lines.push(`• Qachon to'ladi: ${survey.lastPaymentDateLabel}`);
+        }
+        if (survey.nextPaymentDateLabel) {
+            lines.push(`• Keyingi to'lov: ${survey.nextPaymentDateLabel}`);
+        }
+    }
+    return ['To\'lov jarayonida — to\'lov:', ...lines].join('\n');
+}
+
+const LEAD_COURSE_LEVELS = [
+    { id: 'zero', label: '0 dan' },
+    { id: 'beginner', label: 'Boshlang\'ich' },
+    { id: 'intermediate', label: 'O\'rta' },
+    { id: 'advanced', label: 'Yuqori' }
+];
+
+const LEAD_CONTRACT_TYPES = [
+    { id: 'partial', label: 'Qisman to\'lov bo\'yicha shartnoma tuzildi' },
+    { id: 'full', label: 'To\'liq to\'lov bo\'yicha shartnoma tuzildi' }
+];
+
+function renderSurveyYesNo(name, label) {
+    return `<div class="lead-info-question">
+        <p class="lead-info-question-text">${escapeHtml(label)}</p>
+        <div class="lead-info-yesno">
+            <label class="lead-reason-option lead-reason-option--inline">
+                <input type="radio" name="${name}" value="yes" data-onboard-field="${name}">
+                <span>Ha</span>
+            </label>
+            <label class="lead-reason-option lead-reason-option--inline">
+                <input type="radio" name="${name}" value="no" data-onboard-field="${name}">
+                <span>Yo'q</span>
+            </label>
+        </div>
+    </div>`;
+}
+
+function renderOnboardTeacherOptions(teachers, emptyLabel) {
+    const opts = `<option value="">${escapeHtml(emptyLabel)}</option>` +
+        teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+    return opts;
+}
+
+function initPaymentOnboardingForm(modalBody) {
+    const contractNumberBlock = modalBody.querySelector('#onboardContractNumberBlock');
+    const syncContractNumber = () => {
+        const selected = modalBody.querySelector('[data-onboard-field="contractType"]:checked');
+        if (!contractNumberBlock) return;
+        const show = !!selected;
+        contractNumberBlock.hidden = !show;
+        contractNumberBlock.style.display = show ? '' : 'none';
+        if (!show) {
+            const input = modalBody.querySelector('#onboardContractNumber');
+            if (input) input.value = '';
+        }
+    };
+    modalBody.querySelectorAll('[data-onboard-field="contractType"]').forEach(radio => {
+        radio.addEventListener('change', syncContractNumber);
+    });
+    syncContractNumber();
+}
+
+function collectPaymentOnboardingData(modalBody) {
+    const getRadio = name => modalBody.querySelector(`[data-onboard-field="${name}"]:checked`);
+    const getVal = id => modalBody.querySelector(`#${id}`)?.value?.trim() || '';
+
+    const becomeStudent = getRadio('becomeStudent');
+    const platformConnected = getRadio('platformConnected');
+    const contractType = getRadio('contractType');
+
+    if (!becomeStudent) return { error: '«O\'quvchiga aylansinmi?» savoliga javob bering' };
+    if (!platformConnected) return { error: '«Platforma ulab berildimi?» savoliga javob bering' };
+    if (!contractType) return { error: 'Shartnoma turini tanlang' };
+
+    const contractNumber = getVal('onboardContractNumber');
+    if (!contractNumber) return { error: 'Shartnoma raqamini kiriting' };
+
+    const studentFullName = getVal('onboardStudentName');
+    if (!studentFullName) return { error: 'O\'quvchi ism va familiyasini kiriting' };
+
+    const courseLevel = getRadio('courseLevel');
+    if (!courseLevel) return { error: 'Kurs darajasini tanlang' };
+
+    const bookAddress = getVal('onboardBookAddress');
+    if (!bookAddress) return { error: 'Kitob yetkazib berish manzilini kiriting' };
+
+    const teacherId = getVal('onboardTeacherId');
+    if (!teacherId) return { error: 'O\'qituvchini tanlang' };
+
+    const firstLessonDate = getVal('onboardFirstLessonDate');
+    if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang' };
+
+    const teachers = getItem(STORAGE_KEYS.teachers, []);
+    const assistantTeacherId = getVal('onboardAssistantTeacherId');
+    const contractLabel = getSurveyOptionLabel(LEAD_CONTRACT_TYPES, contractType.value);
+    const courseLevelLabel = getSurveyOptionLabel(LEAD_COURSE_LEVELS, courseLevel.value);
+    const teacherName = teachers.find(t => t.id === teacherId)?.name || '';
+    const assistantName = assistantTeacherId
+        ? (teachers.find(t => t.id === assistantTeacherId)?.name || '')
+        : '';
+
+    return {
+        data: {
+            becomeStudent: becomeStudent.value,
+            becomeStudentLabel: becomeStudent.value === 'yes' ? 'Ha' : 'Yo\'q',
+            platformConnected: platformConnected.value,
+            platformConnectedLabel: platformConnected.value === 'yes' ? 'Ha' : 'Yo\'q',
+            contractType: contractType.value,
+            contractTypeLabel: contractLabel,
+            contractNumber,
+            studentFullName,
+            courseLevel: courseLevel.value,
+            courseLevelLabel,
+            bookAddress,
+            teacherId,
+            teacherName,
+            assistantTeacherId: assistantTeacherId || null,
+            assistantTeacherName: assistantName,
+            firstLessonDate
+        }
+    };
+}
+
+function formatPaymentOnboardingComment(data) {
+    const lines = [
+        `• O'quvchiga aylansinmi: ${data.becomeStudentLabel}`,
+        `• Platforma ulab berildi: ${data.platformConnectedLabel}`,
+        `• Shartnoma: ${data.contractTypeLabel} (№ ${data.contractNumber})`,
+        '— Kitob yetkazib berish:',
+        `• O'quvchi: ${data.studentFullName}`,
+        `• Kurs darajasi: ${data.courseLevelLabel}`,
+        `• Manzil: ${data.bookAddress}`,
+        `• O'qituvchi: ${data.teacherName}`,
+        `• Yordamchi: ${data.assistantTeacherName || '—'}`,
+        `• Ilk dars sanasi: ${data.firstLessonDate}`
+    ];
+    return ['To\'lov jarayonida — o\'quvchi:', ...lines].join('\n');
+}
+
+function openPaymentOnboardingModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const subject = lang === 'russian' ? 'russian' : 'english';
+    const asosiyTeachers = filterTeachersByTypeAndSubject('asosiy', subject);
+    const yordamchiTeachers = filterTeachersByTypeAndSubject('yordamchi', subject);
+    const defaultName = lead.name || '';
+
+    const bodyHtml = `<div class="lead-survey lead-survey--onboard">
+        ${renderSurveyYesNo('becomeStudent', "O'quvchiga aylansinmi?")}
+        ${renderSurveyYesNo('platformConnected', "O'quvchiga platforma ulab berildimi?")}
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">O'quvchi bilan shartnoma tuzildimi?</h4>
+            ${renderPaymentRadioGroup('contractType', LEAD_CONTRACT_TYPES).replace(/data-payment-field/g, 'data-onboard-field')}
+            <div id="onboardContractNumberBlock" class="lead-survey-field lead-contract-number-block" hidden>
+                <label for="onboardContractNumber">Shartnoma raqami</label>
+                <input type="text" id="onboardContractNumber" class="form-control" placeholder="Shartnoma raqamini kiriting">
+            </div>
+        </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Kitob yetkazib berish bo'yicha</h4>
+            <div class="lead-survey-field">
+                <label for="onboardStudentName">O'quvchi ism va familiyasi</label>
+                <input type="text" id="onboardStudentName" class="form-control" value="${escapeHtml(defaultName)}" placeholder="Ism familiya">
+            </div>
+            <div class="lead-survey-field">
+                <span class="lead-survey-label">Kurs darajasi</span>
+                <div class="lead-survey-options lead-survey-options--compact lead-survey-options--levels">
+                    ${LEAD_COURSE_LEVELS.map(l => `
+                        <label class="lead-reason-option">
+                            <input type="radio" name="courseLevel" value="${escapeHtml(l.id)}" data-onboard-field="courseLevel">
+                            <span>${escapeHtml(l.label)}</span>
+                        </label>`).join('')}
+                </div>
+            </div>
+            <div class="lead-survey-field">
+                <label for="onboardBookAddress">Kitob yetkazib berilishdagi aniq manzil</label>
+                <textarea id="onboardBookAddress" class="form-control" rows="2" placeholder="Manzil"></textarea>
+            </div>
+        </section>
+        <section class="lead-survey-section">
+            <div class="lead-survey-field">
+                <label for="onboardTeacherId">O'qituvchi kim</label>
+                <select id="onboardTeacherId" class="form-select">
+                    ${renderOnboardTeacherOptions(asosiyTeachers, "O'qituvchi biriktirilsin")}
+                </select>
+            </div>
+            <div class="lead-survey-field">
+                <label for="onboardAssistantTeacherId">Yordamchi o'qituvchi</label>
+                <select id="onboardAssistantTeacherId" class="form-select">
+                    ${renderOnboardTeacherOptions(yordamchiTeachers, 'Yordamchi o\'qituvchi biriktirilsin')}
+                </select>
+            </div>
+            <div class="lead-survey-field">
+                <label for="onboardFirstLessonDate">Ilk dars boshlash sanasi</label>
+                <input type="date" id="onboardFirstLessonDate" class="form-control">
+            </div>
+        </section>
+    </div>`;
+
+    openModal(
+        `${escapeHtml(lead.name)} — O'quvchi ma'lumotlari`,
+        bodyHtml,
+        `<button type="button" class="btn-danger-sm" id="cancelPaymentOnboarding">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmPaymentOnboarding">Saqlash va ko'chirish</button>`,
+        { wide: true }
+    );
+
+    const modalBody = document.getElementById('modalBody');
+    initPaymentOnboardingForm(modalBody);
+
+    document.getElementById('cancelPaymentOnboarding').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    document.getElementById('confirmPaymentOnboarding').onclick = () => {
+        const result = collectPaymentOnboardingData(modalBody);
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const onboarding = result.data;
+        const commentText = formatPaymentOnboardingComment(onboarding);
+
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return {
+                ...base,
+                status: 'tolov-jarayonida',
+                paymentOnboarding: onboarding,
+                comments: [...base.comments, createLeadComment({
+                    type: 'payment-onboarding',
+                    text: commentText,
+                    author
+                })]
+            };
+        });
+
+        if (!updated) {
+            alert('Lid topilmadi');
+            return;
+        }
+
+        closeModal();
+        renderLeads();
+    };
 }
 
 function openPaymentProcessModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+
+    if (lead.paymentSurvey) {
+        openPaymentOnboardingModal(lang, leadId);
+        return;
+    }
 
     const bodyHtml = `<div class="lead-survey">
         <section class="lead-survey-section">
@@ -2059,13 +2453,33 @@ function openPaymentProcessModal(lang, leadId) {
                 <p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>
             </div>
         </section>
+        <section id="partialPaymentBlock" class="lead-survey-section" hidden>
+            <h4 class="lead-survey-title">Qisman to'lov tafsilotlari</h4>
+            <div class="lead-survey-field">
+                <label for="paymentPaidAmount">Qancha to'ladi</label>
+                <input type="text" id="paymentPaidAmount" class="form-control" inputmode="numeric" placeholder="Masalan: 500 000">
+            </div>
+            <div class="lead-survey-field">
+                <span class="lead-survey-label">Qarzdorligi</span>
+                <output id="paymentDebtAmount" class="lead-payment-debt" for="paymentPaidAmount">—</output>
+                <p class="lead-survey-hint">Tarif summasidan to'langan summa ayiriladi</p>
+            </div>
+            <div class="lead-survey-field">
+                <label for="paymentLastPaymentDate">Qachon to'ladi</label>
+                <input type="date" id="paymentLastPaymentDate" class="form-control">
+            </div>
+            <div class="lead-survey-field">
+                <label for="paymentNextPaymentDate">Keyingi to'lovni qachon amalga oshiradi</label>
+                <input type="date" id="paymentNextPaymentDate" class="form-control">
+            </div>
+        </section>
     </div>`;
 
     openModal(
         `${escapeHtml(lead.name)} — To'lov jarayonida`,
         bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentProcess">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="confirmPaymentProcess">Saqlash va ko'chirish</button>`,
+         <button type="button" class="btn-primary-sm" id="confirmPaymentProcess">Keyingi bosqich</button>`,
         { wide: true }
     );
 
@@ -2093,7 +2507,6 @@ function openPaymentProcessModal(lang, leadId) {
             const base = normalizeLeadExtras(l);
             return {
                 ...base,
-                status: 'tolov-jarayonida',
                 paymentSurvey: survey,
                 comments: [...base.comments, createLeadComment({
                     type: 'payment-process',
@@ -2109,7 +2522,7 @@ function openPaymentProcessModal(lang, leadId) {
         }
 
         closeModal();
-        renderLeads();
+        openPaymentOnboardingModal(lang, leadId);
     };
 }
 
@@ -2431,19 +2844,22 @@ function renderLeadCommentItem(c) {
     const isInfoProvided = c.type === 'info-provided';
     const isDecisionProcess = c.type === 'decision-process';
     const isPaymentProcess = c.type === 'payment-process';
+    const isPaymentOnboarding = c.type === 'payment-onboarding';
     let badge = '';
     if (isContactFail) badge = '<span class="lead-comment-badge">Bog\'lanish sababi</span>';
     if (isConnectedSurvey) badge = '<span class="lead-comment-badge lead-comment-badge--survey">Anketa</span>';
     if (isInfoProvided) badge = '<span class="lead-comment-badge lead-comment-badge--info">Ma\'lumot</span>';
     if (isDecisionProcess) badge = '<span class="lead-comment-badge lead-comment-badge--decision">Qaror</span>';
     if (isPaymentProcess) badge = '<span class="lead-comment-badge lead-comment-badge--payment">To\'lov</span>';
+    if (isPaymentOnboarding) badge = '<span class="lead-comment-badge lead-comment-badge--onboard">O\'quvchi</span>';
     const bodyText = c.text || (isContactFail && c.reason ? `Qo'ng'iroq qilindi, lekin: ${c.reason}` : '');
     const itemClass = isContactFail
         ? ' lead-comment-item--contact-fail'
         : (isConnectedSurvey ? ' lead-comment-item--survey'
             : (isInfoProvided ? ' lead-comment-item--info'
                 : (isDecisionProcess ? ' lead-comment-item--decision'
-                    : (isPaymentProcess ? ' lead-comment-item--payment' : ''))));
+                    : (isPaymentProcess ? ' lead-comment-item--payment'
+                        : (isPaymentOnboarding ? ' lead-comment-item--onboard' : '')))));
 
     return `<div class="lead-comment-item${itemClass}">
         <div class="lead-comment-meta">
