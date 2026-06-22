@@ -2293,7 +2293,166 @@ function renderOnboardTeacherOptions(teachers, emptyLabel) {
     return opts;
 }
 
-function initPaymentOnboardingForm(modalBody) {
+function getTeacherLessonDays(teacher) {
+    const pattern = SCHEDULE_PATTERNS[teacher?.schedulePattern || 'mwf'] || SCHEDULE_PATTERNS.mwf;
+    return pattern.days;
+}
+
+function weeklyLessonSlotKey(dayOfWeek, time) {
+    return `${dayOfWeek}_${time}`;
+}
+
+function parseTimetableSlotKey(key) {
+    const match = String(key).match(/^(\d{4}-\d{2}-\d{2})_(\d{2}:\d{2})_(.+)$/);
+    if (!match) return null;
+    const [, dateStr, time, teacherId] = match;
+    const date = new Date(`${dateStr}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    return { dateStr, time, teacherId, dayOfWeek: date.getDay() };
+}
+
+function getTeacherBusyWeeklySlots(teacherId) {
+    const busy = new Map();
+    const students = getItem(STORAGE_KEYS.students, []);
+    students.forEach(s => {
+        if (s.teacherId !== teacherId || s.lessonDayOfWeek == null || !s.lessonTime) return;
+        busy.set(weeklyLessonSlotKey(s.lessonDayOfWeek, s.lessonTime), {
+            label: s.name || 'O\'quvchi',
+            source: 'student'
+        });
+    });
+
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    [...(leads.english || []), ...(leads.russian || [])].forEach(lead => {
+        const onboarding = lead.paymentOnboarding;
+        if (!onboarding || onboarding.teacherId !== teacherId) return;
+        if (onboarding.lessonDayOfWeek == null || !onboarding.lessonTime) return;
+        busy.set(weeklyLessonSlotKey(onboarding.lessonDayOfWeek, onboarding.lessonTime), {
+            label: lead.name || 'Lid',
+            source: 'lead'
+        });
+    });
+
+    const studentNames = Object.fromEntries(students.map(s => [s.id, s.name || '']));
+    const timetable = getItem(STORAGE_KEYS.timetable, {});
+    Object.entries(timetable).forEach(([key, entry]) => {
+        if (!entry?.studentId) return;
+        const parsed = parseTimetableSlotKey(key);
+        if (!parsed || parsed.teacherId !== teacherId) return;
+        if (!parsed.dayOfWeek) return;
+        const label = studentNames[entry.studentId] || 'Probniy dars';
+        busy.set(weeklyLessonSlotKey(parsed.dayOfWeek, parsed.time), {
+            label,
+            source: 'timetable'
+        });
+    });
+
+    return busy;
+}
+
+function getOnboardScheduleTimeSlots(teacher) {
+    const duration = teacher?.lessonDuration || 15;
+    const step = duration >= 60 ? 4 : duration >= 30 ? 2 : 1;
+    return generateTimeSlots().filter((_, i) => i % step === 0);
+}
+
+function renderOnboardTeacherSchedulePicker(modalBody, teacherId) {
+    const container = modalBody.querySelector('#onboardSchedulePicker');
+    const selectedEl = modalBody.querySelector('#onboardScheduleSelected');
+    if (!container) return;
+
+    const teachers = getItem(STORAGE_KEYS.teachers, []);
+    const teacher = teachers.find(t => t.id === teacherId);
+    if (!teacher) {
+        container.innerHTML = '<p class="text-muted lead-empty-hint">O\'qituvchi topilmadi</p>';
+        return;
+    }
+
+    const lessonDays = getTeacherLessonDays(teacher);
+    const busyMap = getTeacherBusyWeeklySlots(teacherId);
+    const times = getOnboardScheduleTimeSlots(teacher);
+    const patternLabel = SCHEDULE_PATTERNS[teacher.schedulePattern || 'mwf']?.label || '';
+
+    let html = `<p class="lead-survey-sub">${escapeHtml(teacher.name)} — ${escapeHtml(patternLabel)}</p>`;
+    html += `<div class="onboard-schedule-legend">
+        <span class="onboard-schedule-legend-item onboard-schedule-legend-item--free">Bo'sh</span>
+        <span class="onboard-schedule-legend-item onboard-schedule-legend-item--busy">Band</span>
+        <span class="onboard-schedule-legend-item onboard-schedule-legend-item--picked">Tanlangan</span>
+    </div>`;
+    html += `<div class="onboard-schedule-grid" style="--osd-cols:${lessonDays.length}">`;
+    html += '<div class="onboard-schedule-corner"></div>';
+    lessonDays.forEach(dow => {
+        html += `<div class="onboard-schedule-day">${escapeHtml(DAYS_UZ[dow - 1] || '')}</div>`;
+    });
+
+    times.forEach(time => {
+        html += `<div class="onboard-schedule-time">${time}</div>`;
+        lessonDays.forEach(dow => {
+            const key = weeklyLessonSlotKey(dow, time);
+            const busy = busyMap.get(key);
+            if (busy) {
+                const title = busy.label ? `Band: ${busy.label}` : 'Band';
+                html += `<div class="onboard-schedule-cell onboard-schedule-cell--busy" title="${escapeHtml(title)}">Band</div>`;
+            } else {
+                html += `<div class="onboard-schedule-cell onboard-schedule-cell--free" data-onboard-schedule-slot data-day="${dow}" data-time="${time}" tabindex="0" role="button" title="Bo'sh vaqt">Bo'sh</div>`;
+            }
+        });
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    const pickCell = cell => {
+        container.querySelectorAll('.onboard-schedule-cell--picked').forEach(c => {
+            c.classList.remove('onboard-schedule-cell--picked');
+            c.classList.add('onboard-schedule-cell--free');
+            c.textContent = 'Bo\'sh';
+        });
+        cell.classList.remove('onboard-schedule-cell--free');
+        cell.classList.add('onboard-schedule-cell--picked');
+        cell.textContent = 'Tanlandi';
+        const dow = parseInt(cell.dataset.day, 10);
+        const time = cell.dataset.time;
+        modalBody.dataset.onboardScheduleDay = String(dow);
+        modalBody.dataset.onboardScheduleTime = time;
+        if (selectedEl) {
+            selectedEl.textContent = `Tanlangan: ${DAYS_UZ[dow - 1] || ''}, ${time}`;
+        }
+    };
+
+    container.querySelectorAll('[data-onboard-schedule-slot]').forEach(cell => {
+        const activate = () => pickCell(cell);
+        cell.addEventListener('click', activate);
+        cell.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+            }
+        });
+    });
+
+    const savedDay = modalBody.dataset.onboardScheduleDay;
+    const savedTime = modalBody.dataset.onboardScheduleTime;
+    if (savedDay && savedTime) {
+        const savedCell = container.querySelector(`[data-day="${savedDay}"][data-time="${savedTime}"]`);
+        if (savedCell) pickCell(savedCell);
+        else if (selectedEl) selectedEl.textContent = '';
+    } else if (selectedEl) {
+        selectedEl.textContent = '';
+    }
+}
+
+function initPaymentOnboardingForm(modalBody, options = {}) {
+    const { lead = null } = options;
+    const existing = lead?.paymentOnboarding;
+    if (existing?.teacherId) {
+        const teacherSel = modalBody.querySelector('#onboardTeacherId');
+        if (teacherSel) teacherSel.value = existing.teacherId;
+    }
+    if (existing?.lessonDayOfWeek != null && existing.lessonTime) {
+        modalBody.dataset.onboardScheduleDay = String(existing.lessonDayOfWeek);
+        modalBody.dataset.onboardScheduleTime = existing.lessonTime;
+    }
+
     const contractNumberBlock = modalBody.querySelector('#onboardContractNumberBlock');
     const syncContractNumber = () => {
         const selected = modalBody.querySelector('[data-onboard-field="contractType"]:checked');
@@ -2310,6 +2469,33 @@ function initPaymentOnboardingForm(modalBody) {
         radio.addEventListener('change', syncContractNumber);
     });
     syncContractNumber();
+
+    const teacherSel = modalBody.querySelector('#onboardTeacherId');
+    const scheduleBlock = modalBody.querySelector('#onboardScheduleBlock');
+    const syncTeacherSchedule = () => {
+        const teacherId = teacherSel?.value || '';
+        if (!teacherId || !scheduleBlock) {
+            if (scheduleBlock) {
+                scheduleBlock.hidden = true;
+                scheduleBlock.style.display = 'none';
+            }
+            delete modalBody.dataset.onboardScheduleDay;
+            delete modalBody.dataset.onboardScheduleTime;
+            const selectedEl = modalBody.querySelector('#onboardScheduleSelected');
+            if (selectedEl) selectedEl.textContent = '';
+            return;
+        }
+        scheduleBlock.hidden = false;
+        scheduleBlock.style.display = '';
+        renderOnboardTeacherSchedulePicker(modalBody, teacherId);
+    };
+
+    teacherSel?.addEventListener('change', () => {
+        delete modalBody.dataset.onboardScheduleDay;
+        delete modalBody.dataset.onboardScheduleTime;
+        syncTeacherSchedule();
+    });
+    syncTeacherSchedule();
 }
 
 function collectPaymentOnboardingData(modalBody) {
@@ -2338,6 +2524,14 @@ function collectPaymentOnboardingData(modalBody) {
 
     const teacherId = getVal('onboardTeacherId');
     if (!teacherId) return { error: 'O\'qituvchini tanlang' };
+
+    const lessonDayOfWeekRaw = modalBody.dataset.onboardScheduleDay;
+    const lessonTime = modalBody.dataset.onboardScheduleTime || '';
+    if (!lessonDayOfWeekRaw || !lessonTime) {
+        return { error: 'Dars kunini va soatini jadvaldan tanlang' };
+    }
+    const lessonDayOfWeek = parseInt(lessonDayOfWeekRaw, 10);
+    const lessonDayLabel = DAYS_UZ[lessonDayOfWeek - 1] || '';
 
     const firstLessonDate = getVal('onboardFirstLessonDate');
     if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang' };
@@ -2368,6 +2562,10 @@ function collectPaymentOnboardingData(modalBody) {
             teacherName,
             assistantTeacherId: assistantTeacherId || null,
             assistantTeacherName: assistantName,
+            lessonDayOfWeek,
+            lessonDayLabel,
+            lessonTime,
+            lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
             firstLessonDate
         }
     };
@@ -2383,6 +2581,7 @@ function formatPaymentOnboardingComment(data) {
         `• Kurs darajasi: ${data.courseLevelLabel}`,
         `• Manzil: ${data.bookAddress}`,
         `• O'qituvchi: ${data.teacherName}`,
+        `• Dars jadvali: ${data.lessonScheduleLabel}`,
         `• Yordamchi: ${data.assistantTeacherName || '—'}`,
         `• Ilk dars sanasi: ${data.firstLessonDate}`
     ];
@@ -2432,10 +2631,16 @@ function openPaymentOnboardingModal(lang, leadId) {
         </section>
         <section class="lead-survey-section">
             <div class="lead-survey-field">
-                <label for="onboardTeacherId">O'qituvchi kim</label>
+                <label for="onboardTeacherId">Asosiy ustoz</label>
                 <select id="onboardTeacherId" class="form-select">
-                    ${renderOnboardTeacherOptions(asosiyTeachers, "O'qituvchi biriktirilsin")}
+                    ${renderOnboardTeacherOptions(asosiyTeachers, "Asosiy ustozni tanlang")}
                 </select>
+            </div>
+            <div id="onboardScheduleBlock" class="lead-survey-field" hidden>
+                <span class="lead-survey-label">Dars kunlari va soati</span>
+                <p class="lead-survey-hint">O'qituvchining band va bo'sh vaqtlarini ko'rib, bo'sh slotdan tanlang.</p>
+                <div id="onboardSchedulePicker" class="onboard-schedule-picker"></div>
+                <output id="onboardScheduleSelected" class="onboard-schedule-selected" for="onboardSchedulePicker"></output>
             </div>
             <div class="lead-survey-field">
                 <label for="onboardAssistantTeacherId">Yordamchi o'qituvchi</label>
@@ -2459,7 +2664,7 @@ function openPaymentOnboardingModal(lang, leadId) {
     );
 
     const modalBody = document.getElementById('modalBody');
-    initPaymentOnboardingForm(modalBody);
+    initPaymentOnboardingForm(modalBody, { lead });
 
     document.getElementById('cancelPaymentOnboarding').onclick = () => {
         closeModal();

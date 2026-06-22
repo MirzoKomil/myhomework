@@ -3102,6 +3102,128 @@ body {
     min-height: 44px;
 }
 
+.onboard-schedule-picker {
+    overflow-x: auto;
+    margin-top: 4px;
+}
+
+.onboard-schedule-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.onboard-schedule-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.onboard-schedule-legend-item::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+
+.onboard-schedule-legend-item--free::before {
+    background: #ECFDF5;
+    border-color: #6EE7B7;
+}
+
+.onboard-schedule-legend-item--busy::before {
+    background: #FEF2F2;
+    border-color: #FCA5A5;
+}
+
+.onboard-schedule-legend-item--picked::before {
+    background: #EEF2FF;
+    border-color: #818CF8;
+}
+
+.onboard-schedule-grid {
+    display: grid;
+    grid-template-columns: 52px repeat(var(--osd-cols, 3), minmax(72px, 1fr));
+    gap: 4px;
+    min-width: 280px;
+    font-size: 11px;
+}
+
+.onboard-schedule-corner {
+    min-height: 1px;
+}
+
+.onboard-schedule-day {
+    text-align: center;
+    font-weight: 700;
+    color: var(--purple);
+    padding: 6px 4px;
+    background: #FAFBFD;
+    border-radius: 8px;
+}
+
+.onboard-schedule-time {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.onboard-schedule-cell {
+    min-height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 10px;
+    border: 1px solid transparent;
+    user-select: none;
+}
+
+.onboard-schedule-cell--free {
+    background: #ECFDF5;
+    border-color: #A7F3D0;
+    color: #047857;
+    cursor: pointer;
+}
+
+.onboard-schedule-cell--free:hover {
+    background: #D1FAE5;
+    border-color: #34D399;
+}
+
+.onboard-schedule-cell--busy {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #B91C1C;
+    cursor: not-allowed;
+}
+
+.onboard-schedule-cell--picked {
+    background: #EEF2FF;
+    border-color: #818CF8;
+    color: #3730A3;
+    cursor: pointer;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.onboard-schedule-selected {
+    display: block;
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--purple);
+}
+
 .lead-survey--info {
     gap: 14px;
 }
