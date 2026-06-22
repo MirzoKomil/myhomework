@@ -22,9 +22,13 @@ npm install
 npm start
 ```
 
-- **Android:** `npm run android` (emulyator yoki qurilma)
+- **Mobil veb ilova (tavsiya):** `npm run web` — brauzerda telefon ko'rinishida ochiladi
+- **Production build:** `npm run build:web` — `dist/` papkasiga statik sayt yig'iladi
+- **Server orqali:** loyiha ildizida `npm run student:build`, keyin `npm run dev` → `http://localhost:3000/student`
+- **Android emulyator:** `npm run android`
 - **iOS (MacBook):** `npm run ios`
-- **Telefonda:** Expo Go ilovasida QR kodni skanerlang
+
+Telefonda "Uygulamaga qo'shish" (PWA) orqali asosiy ekranga qo'shish mumkin.
 
 ## Navigatsiya tuzilmasi
 
@@ -61,4 +65,3 @@ Ranglar va tipografiya `myhomework.uz` admin panelidan olingan (`constants/theme
 2. Haqiqiy video player (`expo-av`)
 3. AI chat — OpenAI/backend proxy
 4. Push bildirishnomalar
-5. EAS Build — production APK/IPA

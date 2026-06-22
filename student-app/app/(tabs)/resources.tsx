@@ -7,7 +7,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 
 const resources = [
-  { icon: 'book' as const, title: 'Grammatika qo'llanma', count: '24 mavzu', color: theme.colors.blue, bg: theme.colors.blueLight },
+  { icon: 'book' as const, title: "Grammatika qo'llanma", count: '24 mavzu', color: theme.colors.blue, bg: theme.colors.blueLight },
   { icon: 'headset' as const, title: 'Podkastlar', count: '48 ta', color: theme.colors.pink, bg: theme.colors.pinkBg },
   { icon: 'film' as const, title: 'Video materiallar', count: '36 ta', color: theme.colors.purple, bg: theme.colors.purpleLight },
   { icon: 'document' as const, title: 'PDF resurslar', count: '15 ta', color: theme.colors.warning, bg: theme.colors.warningBg },

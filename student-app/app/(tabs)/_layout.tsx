@@ -4,9 +4,12 @@ import { Platform, StyleSheet } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { theme } from '@/constants/theme';
+import { WEB_APP_MAX_WIDTH } from '@/constants/web';
 import { useColorScheme } from '@/components/useColorScheme';
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
+
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 88 : Platform.OS === 'web' ? 72 : 68;
 
 function TabIcon({ name, color, focused }: { name: TabIconName; color: string; focused: boolean }) {
   return (
@@ -30,7 +33,8 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.tabIconDefault,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, Platform.OS === 'web' && styles.tabBarWeb],
+        sceneStyle: Platform.OS === 'web' ? styles.sceneWeb : undefined,
       }}>
       <Tabs.Screen
         name="index"
@@ -71,10 +75,25 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderTopColor: theme.colors.border,
     borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 88 : 68,
+    height: TAB_BAR_HEIGHT,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'web' ? 14 : 12,
     ...theme.shadow.card,
+  },
+  tabBarWeb: {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    width: '100%',
+    maxWidth: WEB_APP_MAX_WIDTH,
+    zIndex: 100,
+  },
+  sceneWeb: {
+    paddingBottom: TAB_BAR_HEIGHT,
+    minHeight: '100dvh',
   },
   activeIcon: {
     transform: [{ scale: 1.05 }],

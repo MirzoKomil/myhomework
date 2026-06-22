@@ -22,6 +22,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);
 
+const studentWebDist = path.join(ROOT, 'student-app', 'dist');
+app.use('/student', express.static(studentWebDist, {
+    extensions: ['html'],
+    index: 'index.html',
+    redirect: false
+}));
+app.get(['/student', '/student/*'], (req, res, next) => {
+    if (path.extname(req.path)) return next();
+    res.sendFile(path.join(studentWebDist, 'index.html'), err => {
+        if (err) res.status(404).send('O\'quvchi ilovasi topilmadi. Avval `npm run student:build` ishga tushiring.');
+    });
+});
+
 app.use(express.static(ROOT, {
     index: false,
     extensions: ['html']

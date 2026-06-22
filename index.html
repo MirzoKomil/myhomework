@@ -132,15 +132,15 @@
                     </div>
                 </div>
 
-                <div class="menu-group">
-                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                <div class="menu-group" data-menu-group="mobile-app">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false" data-open-tab="student-app">
                         <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
                         <span class="label">Mobil ilova</span>
                     </button>
                     <div class="menu-subitems">
-                        <a href="#" class="menu-sub-item" data-tab="placeholder" data-placeholder="mobile-videos">
-                            <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
-                            Videodarslar
+                        <a href="#" class="menu-sub-item" data-tab="student-app">
+                            <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+                            O'quvchi ilovasi
                         </a>
                     </div>
                 </div>
@@ -252,21 +252,34 @@
                     <!-- Timetable -->
                     <section id="tab-timetable" class="tab-content">
                         <div class="page-title-bar">
-                            <h1 id="timetablePageTitle">Dars jadvali — Probniy darslar</h1>
-                            <p id="headerDate"></p>
-                        </div>
-                        <div class="info-banner info-banner-blue">
-                            <strong>ℹ️ Probniy (bepul) darslar</strong> — bu bo'lim sinov darslari jadvali. Ustozlar probniy darslar uchun <strong>maosh olmaydi</strong>. Maosh faqat <em>Asosiy davomat</em> va <em>Yordamchi davomat</em> bo'limlaridagi o'tilgan darslar bo'yicha KPI tizimida hisoblanadi.
+                            <h1 id="timetablePageTitle">Dars jadvali</h1>
+                            <p>Haftalik dars jadvali — o'qituvchilar va o'quvchi ID lari. Sotuv bo'limidagi vaqt tanlash shu jadval asosida ishlaydi.</p>
                         </div>
                         <div class="card">
                             <div class="card-header">
-                                <h3>Probniy dars jadvali</h3>
-                                <div class="toolbar">
-                                    <input type="date" id="ttDate" class="form-control-sm">
-                                    <select id="ttView" class="form-control-sm"><option value="individual">Individual</option></select>
+                                <h3>Haftalik jadval</h3>
+                                <div class="toolbar tt-toolbar">
+                                    <select id="ttLang" class="form-control-sm" title="Til">
+                                        <option value="">Barcha tillar</option>
+                                        <option value="english">🇬🇧 Ingliz tili</option>
+                                        <option value="russian">🇷🇺 Rus tili</option>
+                                    </select>
+                                    <select id="ttPattern" class="form-control-sm" title="Kun guruhi">
+                                        <option value="mwf">Dush · Chor · Jum</option>
+                                        <option value="tts">Sesh · Pay · Shan</option>
+                                    </select>
+                                    <select id="ttTeacher" class="form-control-sm" title="Ustoz">
+                                        <option value="all">Barcha ustozlar</option>
+                                    </select>
+                                    <select id="ttDay" class="form-control-sm" title="Kun" hidden></select>
                                 </div>
                             </div>
-                            <div class="table-responsive" id="timetableContainer"></div>
+                            <div class="tt-legend">
+                                <span class="tt-legend-item tt-legend-free">Bo'sh</span>
+                                <span class="tt-legend-item tt-legend-busy">Band (o'quvchi ID)</span>
+                                <span class="tt-legend-item tt-legend-lead">Lid (band)</span>
+                            </div>
+                            <div class="table-responsive tt-grid-wrap" id="timetableContainer"></div>
                         </div>
                     </section>
 
@@ -508,6 +521,16 @@
                             <div class="placeholder-icon">🚧</div>
                             <h3 id="placeholderHeading">Tez orada</h3>
                             <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda. Keyingi versiyada to'liq funksionallik qo'shiladi.</p>
+                        </div>
+                    </section>
+
+                    <section id="tab-student-app" class="tab-content">
+                        <div class="page-title-bar student-app-title-bar">
+                            <h1>O'quvchi ilovasi</h1>
+                            <a href="/student/" target="_blank" rel="noopener" class="btn-primary-sm student-app-open-link">Yangi oynada ochish</a>
+                        </div>
+                        <div class="student-app-frame-wrap">
+                            <iframe id="studentAppFrame" class="student-app-frame" src="about:blank" title="O'quvchi ilovasi (PWA)" loading="lazy"></iframe>
                         </div>
                     </section>
 

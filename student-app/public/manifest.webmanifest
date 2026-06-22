@@ -1,0 +1,20 @@
+{
+  "name": "Myhomework — O'quvchi",
+  "short_name": "Myhomework",
+  "description": "O'quv markaz o'quvchilari uchun mobil veb ilova",
+  "start_url": "/student/",
+  "scope": "/student/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0F2F8",
+  "theme_color": "#7B61FF",
+  "lang": "uz",
+  "icons": [
+    {
+      "src": "/student/assets/images/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -303,3 +303,12 @@ function updateTeacher(id, fields) {
         setItem(STORAGE_KEYS.teachers, teachers);
     }
 }
+
+function updateStudent(id, fields) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const idx = students.findIndex(s => s.id === id);
+    if (idx >= 0) {
+        students[idx] = { ...students[idx], ...fields };
+        setItem(STORAGE_KEYS.students, students);
+    }
+}

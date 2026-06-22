@@ -8,9 +8,12 @@
     "scheme": "studentapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "uz.myhomework.student"
     },
     "android": {
+      "package": "uz.myhomework.student",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#7B61FF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -22,7 +25,13 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Myhomework — O'quvchi",
+      "shortName": "Myhomework",
+      "themeColor": "#7B61FF",
+      "backgroundColor": "#F0F2F8",
+      "display": "standalone",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",
@@ -36,7 +45,8 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/student"
     }
   }
 }

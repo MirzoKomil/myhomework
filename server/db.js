@@ -111,6 +111,22 @@ function initSchema() {
     `);
     migrateLeadsSchema();
     migrateUsersSchema();
+    migrateStudentsSchema();
+}
+
+function migrateStudentsSchema() {
+    const cols = db.prepare('PRAGMA table_info(students)').all();
+    const names = new Set(cols.map(c => c.name));
+    const additions = [
+        ['lesson_day_of_week', 'INTEGER'],
+        ['lesson_time', "TEXT DEFAULT ''"],
+        ['lesson_duration', 'INTEGER DEFAULT 15']
+    ];
+    for (const [col, def] of additions) {
+        if (!names.has(col)) {
+            db.exec(`ALTER TABLE students ADD COLUMN ${col} ${def}`);
+        }
+    }
 }
 
 function migrateUsersSchema() {
@@ -282,12 +298,12 @@ function seedIfEmpty() {
     db.prepare('INSERT INTO sales_managers (id, name) VALUES (?, ?)').run('sm2', 'Sotuv menejeri 2');
 
     const students = [
-        ['s1', 'Eliboy', '93978310191', 'English', 'english', 't2', null],
-        ['s2', 'Umar', '93697373263', 'English', 'english', 't2', null],
-        ['s3', 'Aziz', '901234567', 'Russian', 'russian', 't3', null]
+        ['s1', 'Eliboy', '93978310191', 'English', 'english', 't2', null, 2, '10:00', 15],
+        ['s2', 'Umar', '93697373263', 'English', 'english', 't2', null, 4, '11:00', 30],
+        ['s3', 'Aziz', '901234567', 'Russian', 'russian', 't3', null, 1, '09:00', 30]
     ];
     const insStudent = db.prepare(
-        'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     students.forEach(s => insStudent.run(...s));
 }
@@ -353,7 +369,10 @@ function rowToStudent(r) {
         group: r.group_name || '',
         subject: r.subject,
         teacherId: r.teacher_id || null,
-        assistantTeacherId: r.assistant_teacher_id || null
+        assistantTeacherId: r.assistant_teacher_id || null,
+        lessonDayOfWeek: r.lesson_day_of_week != null ? r.lesson_day_of_week : null,
+        lessonTime: r.lesson_time || '',
+        lessonDuration: r.lesson_duration || 15
     };
 }
 
@@ -401,11 +420,14 @@ function saveStudents(students) {
     runTransaction(() => {
         db.prepare('DELETE FROM students').run();
         const ins = db.prepare(
-            'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         students.forEach(s => ins.run(
             s.id, s.name, s.phone || '', s.group || '', s.subject || 'english',
-            s.teacherId || null, s.assistantTeacherId || null
+            s.teacherId || null, s.assistantTeacherId || null,
+            s.lessonDayOfWeek != null ? s.lessonDayOfWeek : null,
+            s.lessonTime || '',
+            s.lessonDuration || 15
         ));
     });
 }

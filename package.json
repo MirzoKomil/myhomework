@@ -8,7 +8,9 @@
   "scripts": {
     "dev": "node server/index.js",
     "start": "node server/index.js",
-    "share": "node scripts/tunnel.js"
+    "share": "node scripts/tunnel.js",
+    "student:web": "npm run web --prefix student-app",
+    "student:build": "npm run build:web --prefix student-app"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
