@@ -110,6 +110,23 @@ function initSchema() {
         );
     `);
     migrateLeadsSchema();
+    migrateUsersSchema();
+}
+
+function migrateUsersSchema() {
+    const cols = db.prepare('PRAGMA table_info(users)').all();
+    const names = new Set(cols.map(c => c.name));
+    const additions = [
+        ['phone', "TEXT DEFAULT ''"],
+        ['bio', "TEXT DEFAULT ''"],
+        ['location', "TEXT DEFAULT ''"],
+        ['avatar', "TEXT DEFAULT ''"]
+    ];
+    for (const [col, def] of additions) {
+        if (!names.has(col)) {
+            db.exec(`ALTER TABLE users ADD COLUMN ${col} ${def}`);
+        }
+    }
 }
 
 function migrateLeadsSchema() {
@@ -497,8 +514,38 @@ function createUser({ name, email, passwordHash, role }) {
     return findUserById(id);
 }
 
+function updateUser(id, fields) {
+    const allowed = ['name', 'email', 'phone', 'bio', 'location', 'avatar'];
+    const updates = [];
+    const values = [];
+    for (const key of allowed) {
+        if (fields[key] !== undefined) {
+            updates.push(`${key} = ?`);
+            values.push(fields[key]);
+        }
+    }
+    if (fields.passwordHash !== undefined) {
+        updates.push('password_hash = ?');
+        values.push(fields.passwordHash);
+    }
+    if (!updates.length) return findUserById(id);
+    values.push(id);
+    db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+    return findUserById(id);
+}
+
 function publicUser(user) {
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        avatar: user.avatar || '',
+        createdAt: user.created_at || ''
+    };
 }
 
 initSchema();
@@ -513,5 +560,6 @@ module.exports = {
     findUserByEmail,
     findUserById,
     createUser,
+    updateUser,
     publicUser
 };

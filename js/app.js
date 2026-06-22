@@ -11,6 +11,7 @@ const TAB_TITLES = {
     payments: "To'lovlar",
     sales: "Sotuv bo'limi",
     marketing: "Marketing bo'limi",
+    profile: 'Mening profilim',
     placeholder: 'Bo\'lim'
 };
 
@@ -38,10 +39,30 @@ const PLACEHOLDER_TITLES = {
 };
 
 let _tabContext = { subject: null, placeholder: null, salesSection: 'leads' };
+let _profileSection = 'edit';
+let _profileUser = null;
+let _profileEditing = {};
+
+const ROLE_LABELS = { admin: 'Administrator', teacher: 'Ustoz' };
+
+const PROFILE_NOTIF_KEY = 'mh_profile_notif_prefs';
+
+function getUserInitials(name) {
+    return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+}
+
+function syncHeaderAvatar(user) {
+    const el = document.getElementById('userAvatar');
+    if (!el || !user) return;
+    if (user.avatar) {
+        el.innerHTML = `<img src="${user.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    } else {
+        el.textContent = getUserInitials(user.name);
+    }
+}
 
 function initUserUI(currentUser) {
-    const initials = currentUser.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    document.getElementById('userAvatar').textContent = initials;
+    syncHeaderAvatar(currentUser);
     document.getElementById('welcomeName').textContent = `Xush kelibsiz, ${currentUser.name.split(' ')[0]}!`;
 
     const headerDateEl = document.getElementById('headerDate');
@@ -52,10 +73,7 @@ function initUserUI(currentUser) {
     }
 
     document.getElementById('userAvatar').addEventListener('click', () => {
-        if (confirm('Tizimdan chiqasizmi?')) {
-            setCurrentUser(null);
-            window.location.href = 'login.html';
-        }
+        switchTab('profile');
     });
 }
 
@@ -147,6 +165,7 @@ function switchTab(tab, ctx = {}) {
     const el = document.getElementById(`tab-${tab}`);
     if (el) el.classList.add('active');
     document.getElementById('rightPanel').classList.toggle('hidden', tab !== 'dashboard');
+    if (tab === 'profile') _profileEditing = {};
     renderTab(tab);
 }
 
@@ -275,6 +294,7 @@ function renderTab(tab) {
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
         case 'marketing': break;
+        case 'profile': renderProfile(); break;
         case 'placeholder': renderPlaceholder(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
@@ -286,6 +306,438 @@ function renderPlaceholder() {
     document.getElementById('placeholderTitle').textContent = title;
     document.getElementById('placeholderHeading').textContent = title;
 }
+
+// --- Profile ---
+function getProfileNotifPrefs() {
+    try {
+        const raw = localStorage.getItem(PROFILE_NOTIF_KEY);
+        return raw ? JSON.parse(raw) : { email: true, leads: true, payments: true, homework: false };
+    } catch {
+        return { email: true, leads: true, payments: true, homework: false };
+    }
+}
+
+function saveProfileNotifPrefs(prefs) {
+    localStorage.setItem(PROFILE_NOTIF_KEY, JSON.stringify(prefs));
+}
+
+function calcProfileCompletion(user) {
+    const checks = [
+        { key: 'account', label: 'Akkaunt yaratildi', weight: 10, done: true },
+        { key: 'photo', label: 'Rasm yuklash', weight: 10, done: !!user.avatar },
+        { key: 'personal', label: 'Shaxsiy ma\'lumotlar', weight: 20, done: !!(user.name && user.email) },
+        { key: 'phone', label: 'Telefon raqami', weight: 15, done: !!user.phone },
+        { key: 'location', label: 'Manzil', weight: 20, done: !!user.location },
+        { key: 'bio', label: 'Bio', weight: 15, done: !!user.bio },
+        { key: 'notif', label: 'Bildirishnomalar', weight: 10, done: true }
+    ];
+    const total = checks.reduce((s, c) => s + (c.done ? c.weight : 0), 0);
+    return { checks, total };
+}
+
+function renderProfileCompletionWidget(user) {
+    const { checks, total } = calcProfileCompletion(user);
+    const circumference = 2 * Math.PI * 38;
+    const offset = circumference - (total / 100) * circumference;
+    const listHtml = checks.map(c => `
+        <li class="${c.done ? 'done' : ''}">
+            <span class="profile-check-icon ${c.done ? 'done' : 'todo'}">${c.done ? '✓' : '○'}</span>
+            <span>${c.label}</span>
+            <span class="check-pct">${c.done ? c.weight + '%' : '+' + c.weight + '%'}</span>
+        </li>`).join('');
+    return `
+        <aside class="profile-completion-card">
+            <h3>Profilni to'ldiring</h3>
+            <div class="profile-ring">
+                <div class="ring-chart">
+                    <svg width="100" height="100" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#F0F2F8" stroke-width="10"/>
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#7B61FF" stroke-width="10"
+                            stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+                    </svg>
+                    <div class="ring-value">${total}%</div>
+                </div>
+            </div>
+            <ul class="profile-checklist">${listHtml}</ul>
+        </aside>`;
+}
+
+function profileCardHeader(title, fieldKey) {
+    const editing = _profileEditing[fieldKey];
+    if (editing) {
+        return `<div class="profile-card-header">
+            <h3>${title}</h3>
+            <button type="button" class="profile-edit-btn" data-profile-cancel="${fieldKey}">Bekor qilish</button>
+        </div>`;
+    }
+    return `<div class="profile-card-header">
+        <h3>${title}</h3>
+        <button type="button" class="profile-edit-btn" data-profile-edit="${fieldKey}">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Tahrirlash
+        </button>
+    </div>`;
+}
+
+function renderProfileEditSection(user) {
+    const personalEditing = _profileEditing.personal;
+    const locationEditing = _profileEditing.location;
+    const bioEditing = _profileEditing.bio;
+
+    const avatarContent = user.avatar
+        ? `<img src="${user.avatar}" alt="">`
+        : getUserInitials(user.name);
+
+    const personalBody = personalEditing ? `
+        <div class="profile-field-form">
+            <div class="form-group" style="flex:1;min-width:180px">
+                <label>Ism familiya</label>
+                <input type="text" id="profileName" class="form-control" value="${escapeHtml(user.name)}">
+            </div>
+            <div class="form-group" style="flex:1;min-width:180px">
+                <label>Email</label>
+                <input type="email" id="profileEmail" class="form-control" value="${escapeHtml(user.email)}">
+            </div>
+            <div class="form-group" style="flex:1;min-width:180px">
+                <label>Telefon</label>
+                <input type="tel" id="profilePhone" class="form-control" value="${escapeHtml(user.phone || '')}" placeholder="+998 90 123 45 67">
+            </div>
+            <div class="profile-save-row" style="width:100%">
+                <button type="button" class="btn-primary-sm" data-profile-save="personal">Saqlash</button>
+            </div>
+        </div>` : `
+        <div class="profile-info-grid">
+            <div class="profile-info-item"><label>Ism familiya</label><span>${escapeHtml(user.name)}</span></div>
+            <div class="profile-info-item"><label>Email</label><span>${escapeHtml(user.email)}</span></div>
+            <div class="profile-info-item"><label>Telefon</label><span>${user.phone ? escapeHtml(user.phone) : '<span class="text-muted">Kiritilmagan</span>'}</span></div>
+        </div>
+        <div class="profile-info-grid" style="margin-top:16px">
+            <div class="profile-info-item"><label>Rol</label><span class="role-badge">${ROLE_LABELS[user.role] || user.role}</span></div>
+            <div class="profile-info-item"><label>Ro'yxatdan o'tgan</label><span>${user.createdAt ? new Date(user.createdAt).toLocaleDateString('uz-UZ') : '—'}</span></div>
+        </div>`;
+
+    const locationBody = locationEditing ? `
+        <div class="profile-field-form">
+            <div class="form-group" style="flex:1">
+                <label>Shahar / viloyat</label>
+                <input type="text" id="profileLocation" class="form-control" value="${escapeHtml(user.location || '')}" placeholder="Masalan: Toshkent">
+            </div>
+            <div class="profile-save-row">
+                <button type="button" class="btn-primary-sm" data-profile-save="location">Saqlash</button>
+            </div>
+        </div>` : `
+        <p style="font-size:15px;font-weight:600;color:var(--text)">${user.location ? escapeHtml(user.location) : '<span class="text-muted">Manzil kiritilmagan</span>'}</p>`;
+
+    const bioBody = bioEditing ? `
+        <div class="profile-field-form" style="flex-direction:column">
+            <div class="form-group" style="width:100%">
+                <label>Bio</label>
+                <textarea id="profileBio" class="form-control" placeholder="O'zingiz haqingizda qisqacha yozing...">${escapeHtml(user.bio || '')}</textarea>
+            </div>
+            <div class="profile-save-row">
+                <button type="button" class="btn-primary-sm" data-profile-save="bio">Saqlash</button>
+            </div>
+        </div>` : `
+        <p style="font-size:14px;line-height:1.7;color:var(--text-muted)">${user.bio ? escapeHtml(user.bio).replace(/\n/g, '<br>') : 'Bio hali yozilmagan. O\'zingiz haqingizda qisqacha ma\'lumot qo\'shing.'}</p>`;
+
+    return `
+        <div class="profile-header-bar">
+            <h1>Profilni tahrirlash</h1>
+            <p>Shaxsiy ma'lumotlaringizni yangilang va profilingizni to'ldiring</p>
+        </div>
+        <div class="profile-grid">
+            <div class="profile-cards">
+                <div class="profile-card">
+                    <div class="profile-avatar-section">
+                        <div class="profile-avatar-large" id="profileAvatarPreview">${avatarContent}</div>
+                        <div class="profile-avatar-actions">
+                            <h4>Yangi rasm yuklash</h4>
+                            <input type="file" id="profileAvatarInput" accept="image/jpeg,image/png,image/webp" hidden>
+                            <button type="button" class="btn-primary-sm" id="profileAvatarBtn">Rasm tanlash</button>
+                            ${user.avatar ? '<button type="button" class="btn-danger-sm" id="profileAvatarRemove" style="margin-left:8px">O\'chirish</button>' : ''}
+                            <p>Kamida 400×400 px tavsiya etiladi. JPG, PNG yoki WebP formatlari qabul qilinadi.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-card">
+                    ${profileCardHeader('Shaxsiy ma\'lumotlar', 'personal')}
+                    ${personalBody}
+                </div>
+                <div class="profile-card">
+                    ${profileCardHeader('Manzil', 'location')}
+                    ${locationBody}
+                </div>
+                <div class="profile-card">
+                    ${profileCardHeader('Bio', 'bio')}
+                    ${bioBody}
+                </div>
+            </div>
+            ${renderProfileCompletionWidget(user)}
+        </div>`;
+}
+
+function renderProfileSecuritySection() {
+    return `
+        <div class="profile-header-bar">
+            <h1>Parolni o'zgartirish</h1>
+            <p>Hisobingiz xavfsizligi uchun vaqti-vaqti bilan parolni yangilang</p>
+        </div>
+        <div class="profile-cards" style="max-width:520px">
+            <div class="profile-card">
+                <div class="form-group">
+                    <label>Joriy parol</label>
+                    <input type="password" id="profileCurrentPwd" class="form-control" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <label>Yangi parol</label>
+                    <input type="password" id="profileNewPwd" class="form-control" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>Yangi parolni tasdiqlang</label>
+                    <input type="password" id="profileConfirmPwd" class="form-control" autocomplete="new-password">
+                </div>
+                <button type="button" class="btn-primary-sm" id="profileChangePwdBtn">Parolni yangilash</button>
+            </div>
+        </div>`;
+}
+
+function renderProfileNotificationsSection() {
+    const prefs = getProfileNotifPrefs();
+    const rows = [
+        { key: 'email', title: 'Email bildirishnomalar', desc: 'Muhim yangiliklar email orqali yuboriladi' },
+        { key: 'leads', title: 'Yangi lidlar', desc: 'Yangi organik lid kelganda xabar berish' },
+        { key: 'payments', title: "To'lovlar", desc: "To'lov va qarzdorlik haqida ogohlantirish" },
+        { key: 'homework', title: 'Uy vazifalari', desc: "O'quvchilar uy vazifasi topshirganda" }
+    ];
+    const rowsHtml = rows.map(r => `
+        <div class="profile-toggle-row">
+            <div class="profile-toggle-info">
+                <h4>${r.title}</h4>
+                <p>${r.desc}</p>
+            </div>
+            <label class="profile-toggle">
+                <input type="checkbox" data-notif-pref="${r.key}" ${prefs[r.key] ? 'checked' : ''}>
+                <span class="profile-toggle-slider"></span>
+            </label>
+        </div>`).join('');
+    return `
+        <div class="profile-header-bar">
+            <h1>Bildirishnomalar</h1>
+            <p>Qaysi hodisalar haqida xabar olishni tanlang</p>
+        </div>
+        <div class="profile-cards" style="max-width:560px">
+            <div class="profile-card">${rowsHtml}</div>
+        </div>`;
+}
+
+function renderProfileSessionsSection() {
+    const ua = navigator.userAgent;
+    const browser = ua.includes('Chrome') ? 'Chrome' : ua.includes('Firefox') ? 'Firefox' : ua.includes('Safari') ? 'Safari' : 'Brauzer';
+    const platform = navigator.platform || 'Noma\'lum';
+    return `
+        <div class="profile-header-bar">
+            <h1>Faol sessiyalar</h1>
+            <p>Hisobingizga ulangan qurilmalar</p>
+        </div>
+        <div class="profile-cards" style="max-width:560px">
+            <div class="profile-card">
+                <div class="profile-session-item">
+                    <div class="profile-session-icon">💻</div>
+                    <div class="profile-session-info">
+                        <strong>${browser} — ${platform}</strong>
+                        <span>Hozirgi sessiya · ${new Date().toLocaleString('uz-UZ')}</span>
+                    </div>
+                    <span class="profile-session-badge">Faol</span>
+                </div>
+            </div>
+        </div>`;
+}
+
+function bindProfileEvents() {
+    const body = document.getElementById('profileBody');
+    if (!body) return;
+
+    body.querySelectorAll('[data-profile-edit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _profileEditing[btn.dataset.profileEdit] = true;
+            renderProfileBody();
+        });
+    });
+
+    body.querySelectorAll('[data-profile-cancel]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            delete _profileEditing[btn.dataset.profileCancel];
+            renderProfileBody();
+        });
+    });
+
+    body.querySelectorAll('[data-profile-save]').forEach(btn => {
+        btn.addEventListener('click', () => saveProfileField(btn.dataset.profileSave));
+    });
+
+    const avatarBtn = document.getElementById('profileAvatarBtn');
+    const avatarInput = document.getElementById('profileAvatarInput');
+    if (avatarBtn && avatarInput) {
+        avatarBtn.addEventListener('click', () => avatarInput.click());
+        avatarInput.addEventListener('change', handleProfileAvatarUpload);
+    }
+
+    const removeBtn = document.getElementById('profileAvatarRemove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', async () => {
+            try {
+                _profileUser = await apiUpdateProfile({ avatar: '' });
+                setCurrentUser(_profileUser);
+                syncHeaderAvatar(_profileUser);
+                renderProfileBody();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+    }
+
+    body.querySelectorAll('[data-notif-pref]').forEach(input => {
+        input.addEventListener('change', () => {
+            const prefs = getProfileNotifPrefs();
+            prefs[input.dataset.notifPref] = input.checked;
+            saveProfileNotifPrefs(prefs);
+        });
+    });
+
+    const pwdBtn = document.getElementById('profileChangePwdBtn');
+    if (pwdBtn) {
+        pwdBtn.addEventListener('click', handleProfilePasswordChange);
+    }
+}
+
+async function saveProfileField(field) {
+    const user = _profileUser || getCurrentUser();
+    const payload = {};
+    if (field === 'personal') {
+        payload.name = document.getElementById('profileName')?.value.trim();
+        payload.email = document.getElementById('profileEmail')?.value.trim();
+        payload.phone = document.getElementById('profilePhone')?.value.trim();
+        if (!payload.name || !payload.email) {
+            alert('Ism va email to\'ldirilishi shart');
+            return;
+        }
+    } else if (field === 'location') {
+        payload.location = document.getElementById('profileLocation')?.value.trim();
+    } else if (field === 'bio') {
+        payload.bio = document.getElementById('profileBio')?.value.trim();
+    }
+    try {
+        _profileUser = await apiUpdateProfile(payload);
+        setCurrentUser(_profileUser);
+        syncHeaderAvatar(_profileUser);
+        document.getElementById('welcomeName').textContent = `Xush kelibsiz, ${_profileUser.name.split(' ')[0]}!`;
+        delete _profileEditing[field];
+        renderProfileBody();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function handleProfileAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+        alert('Rasm hajmi 2 MB dan oshmasligi kerak');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+        try {
+            _profileUser = await apiUpdateProfile({ avatar: reader.result });
+            setCurrentUser(_profileUser);
+            syncHeaderAvatar(_profileUser);
+            renderProfileBody();
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+async function handleProfilePasswordChange() {
+    const current = document.getElementById('profileCurrentPwd')?.value;
+    const next = document.getElementById('profileNewPwd')?.value;
+    const confirm = document.getElementById('profileConfirmPwd')?.value;
+    if (!current || !next) {
+        alert('Barcha maydonlarni to\'ldiring');
+        return;
+    }
+    if (next !== confirm) {
+        alert('Yangi parollar mos kelmadi');
+        return;
+    }
+    if (next.length < 6) {
+        alert('Parol kamida 6 ta belgidan iborat bo\'lishi kerak');
+        return;
+    }
+    try {
+        await apiChangePassword(current, next);
+        alert('Parol muvaffaqiyatli yangilandi');
+        document.getElementById('profileCurrentPwd').value = '';
+        document.getElementById('profileNewPwd').value = '';
+        document.getElementById('profileConfirmPwd').value = '';
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function renderProfileBody() {
+    const body = document.getElementById('profileBody');
+    if (!body) return;
+    const user = _profileUser || getCurrentUser();
+    if (!user) return;
+
+    let html = '';
+    switch (_profileSection) {
+        case 'edit': html = renderProfileEditSection(user); break;
+        case 'security': html = renderProfileSecuritySection(); break;
+        case 'notifications': html = renderProfileNotificationsSection(); break;
+        case 'sessions': html = renderProfileSessionsSection(); break;
+        default: html = renderProfileEditSection(user);
+    }
+    body.innerHTML = html;
+    bindProfileEvents();
+}
+
+function switchProfileSection(section) {
+    _profileSection = section;
+    _profileEditing = {};
+    document.querySelectorAll('[data-profile-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.profileSection === section);
+    });
+    renderProfileBody();
+}
+
+async function renderProfile() {
+    try {
+        _profileUser = await apiMe();
+    } catch {
+        _profileUser = getCurrentUser();
+    }
+    switchProfileSection(_profileSection);
+}
+
+function initProfileNav() {
+    document.querySelectorAll('[data-profile-section]').forEach(btn => {
+        btn.addEventListener('click', () => switchProfileSection(btn.dataset.profileSection));
+    });
+    const logoutBtn = document.getElementById('profileLogoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('Tizimdan chiqasizmi?')) {
+                setCurrentUser(null);
+                window.location.href = 'login.html';
+            }
+        });
+    }
+}
+
+initProfileNav();
 
 // --- Modal ---
 function openModal(title, bodyHtml, footerHtml, options = {}) {
@@ -1440,6 +1892,135 @@ function openTolovJarayonidaFlow(lang, leadId, fromStatus) {
         openDecisionProcessModal(lang, leadId, { chainTo: 'tolov-jarayonida' });
         return;
     }
+    beginTolovJarayonidaPaymentFlow(lang, leadId);
+}
+
+const LEAD_SERIAL_COUNTER_KEY = 'mh_leadSerialCounter';
+
+function parseLeadSerialCode(code) {
+    const m = String(code || '').match(/^([A-Z]{2})(\d{3})$/);
+    if (!m) return null;
+    return { letters: m[1], num: parseInt(m[2], 10) };
+}
+
+function incrementLeadSerialLetters(letters) {
+    let a = letters.charCodeAt(0) - 65;
+    let b = letters.charCodeAt(1) - 65;
+    b += 1;
+    if (b > 25) {
+        b = 0;
+        a += 1;
+    }
+    if (a > 25) {
+        a = 0;
+        b = 0;
+    }
+    return String.fromCharCode(65 + a) + String.fromCharCode(65 + b);
+}
+
+function formatLeadSerialCode(letters, num) {
+    return letters + String(num).padStart(3, '0');
+}
+
+function compareLeadSerialCodes(a, b) {
+    const pa = parseLeadSerialCode(a);
+    const pb = parseLeadSerialCode(b);
+    if (!pa || !pb) return 0;
+    if (pa.letters !== pb.letters) return pa.letters.localeCompare(pb.letters);
+    return pa.num - pb.num;
+}
+
+function getMaxExistingLeadSerial() {
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    let max = null;
+    [...(leads.english || []), ...(leads.russian || [])].forEach(lead => {
+        if (!lead.serialCode) return;
+        if (!max || compareLeadSerialCodes(lead.serialCode, max) > 0) max = lead.serialCode;
+    });
+    return max;
+}
+
+function syncLeadSerialCounterFromExisting() {
+    const max = getMaxExistingLeadSerial();
+    if (!max) return;
+    try {
+        const stored = localStorage.getItem(LEAD_SERIAL_COUNTER_KEY);
+        if (!stored || compareLeadSerialCodes(max, stored) > 0) {
+            localStorage.setItem(LEAD_SERIAL_COUNTER_KEY, max);
+        }
+    } catch { /* ignore */ }
+}
+
+function generateNextLeadSerial() {
+    syncLeadSerialCounterFromExisting();
+    let letters = 'AA';
+    let num = 0;
+    try {
+        const parsed = parseLeadSerialCode(localStorage.getItem(LEAD_SERIAL_COUNTER_KEY));
+        if (parsed) {
+            letters = parsed.letters;
+            num = parsed.num;
+        }
+    } catch { /* ignore */ }
+
+    num += 1;
+    if (num > 999) {
+        num = 1;
+        letters = incrementLeadSerialLetters(letters);
+    }
+    const code = formatLeadSerialCode(letters, num);
+    try {
+        localStorage.setItem(LEAD_SERIAL_COUNTER_KEY, code);
+    } catch { /* ignore */ }
+    return code;
+}
+
+function backfillMissingLeadSerials() {
+    syncLeadSerialCounterFromExisting();
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    let changed = false;
+    ['english', 'russian'].forEach(lang => {
+        (leads[lang] || []).forEach((lead, idx) => {
+            if (normalizeLeadStatus(lead.status) === 'tolov-jarayonida' && !lead.serialCode) {
+                leads[lang][idx] = { ...lead, serialCode: generateNextLeadSerial() };
+                changed = true;
+            }
+        });
+    });
+    if (changed) setItem(STORAGE_KEYS.leads, leads);
+}
+
+function leadHasTeacherSchedule(lead) {
+    const onboarding = lead?.paymentOnboarding;
+    return Boolean(
+        onboarding?.teacherId
+        && onboarding.lessonDayOfWeek != null
+        && onboarding.lessonTime
+    );
+}
+
+function ensureLeadPaymentStatus(lang, leadId, scheduleData = null) {
+    updateLeadInStorage(lang, leadId, l => {
+        const next = {
+            ...l,
+            status: 'tolov-jarayonida',
+            serialCode: l.serialCode || generateNextLeadSerial()
+        };
+        if (scheduleData) {
+            next.paymentOnboarding = { ...(l.paymentOnboarding || {}), ...scheduleData };
+        }
+        return next;
+    });
+    renderLeads();
+}
+
+function beginTolovJarayonidaPaymentFlow(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    if (!leadHasTeacherSchedule(lead)) {
+        openPaymentTeacherScheduleModal(lang, leadId);
+        return;
+    }
     openPaymentProcessModal(lang, leadId);
 }
 
@@ -1967,7 +2548,7 @@ function openDecisionProcessModal(lang, leadId, options = {}) {
 
         closeModal();
         if (chainTo === 'tolov-jarayonida') {
-            openPaymentProcessModal(lang, leadId);
+            openPaymentTeacherScheduleModal(lang, leadId);
             return;
         }
         renderLeads();
@@ -2441,7 +3022,7 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId) {
     }
 }
 
-function initPaymentOnboardingForm(modalBody, options = {}) {
+function wireTeacherSchedulePicker(modalBody, options = {}) {
     const { lead = null } = options;
     const existing = lead?.paymentOnboarding;
     if (existing?.teacherId) {
@@ -2452,23 +3033,6 @@ function initPaymentOnboardingForm(modalBody, options = {}) {
         modalBody.dataset.onboardScheduleDay = String(existing.lessonDayOfWeek);
         modalBody.dataset.onboardScheduleTime = existing.lessonTime;
     }
-
-    const contractNumberBlock = modalBody.querySelector('#onboardContractNumberBlock');
-    const syncContractNumber = () => {
-        const selected = modalBody.querySelector('[data-onboard-field="contractType"]:checked');
-        if (!contractNumberBlock) return;
-        const show = !!selected;
-        contractNumberBlock.hidden = !show;
-        contractNumberBlock.style.display = show ? '' : 'none';
-        if (!show) {
-            const input = modalBody.querySelector('#onboardContractNumber');
-            if (input) input.value = '';
-        }
-    };
-    modalBody.querySelectorAll('[data-onboard-field="contractType"]').forEach(radio => {
-        radio.addEventListener('change', syncContractNumber);
-    });
-    syncContractNumber();
 
     const teacherSel = modalBody.querySelector('#onboardTeacherId');
     const scheduleBlock = modalBody.querySelector('#onboardScheduleBlock');
@@ -2496,6 +3060,118 @@ function initPaymentOnboardingForm(modalBody, options = {}) {
         syncTeacherSchedule();
     });
     syncTeacherSchedule();
+}
+
+function collectTeacherScheduleData(modalBody) {
+    const teacherId = modalBody.querySelector('#onboardTeacherId')?.value?.trim() || '';
+    if (!teacherId) return { error: 'Asosiy ustozni tanlang' };
+
+    const lessonDayOfWeekRaw = modalBody.dataset.onboardScheduleDay;
+    const lessonTime = modalBody.dataset.onboardScheduleTime || '';
+    if (!lessonDayOfWeekRaw || !lessonTime) {
+        return { error: 'Dars kunini va soatini jadvaldan tanlang' };
+    }
+
+    const lessonDayOfWeek = parseInt(lessonDayOfWeekRaw, 10);
+    const lessonDayLabel = DAYS_UZ[lessonDayOfWeek - 1] || '';
+    const teachers = getItem(STORAGE_KEYS.teachers, []);
+    const teacherName = teachers.find(t => t.id === teacherId)?.name || '';
+
+    return {
+        data: {
+            teacherId,
+            teacherName,
+            lessonDayOfWeek,
+            lessonDayLabel,
+            lessonTime,
+            lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`
+        }
+    };
+}
+
+function renderTeacherScheduleSection(asosiyTeachers) {
+    return `<section class="lead-survey-section">
+        <div class="lead-survey-field">
+            <label for="onboardTeacherId">Asosiy ustoz</label>
+            <select id="onboardTeacherId" class="form-select">
+                ${renderOnboardTeacherOptions(asosiyTeachers, "Asosiy ustozni tanlang")}
+            </select>
+        </div>
+        <div id="onboardScheduleBlock" class="lead-survey-field" hidden>
+            <span class="lead-survey-label">Dars kunlari va soati</span>
+            <p class="lead-survey-hint">O'qituvchining band va bo'sh vaqtlarini ko'rib, bo'sh slotdan tanlang.</p>
+            <div id="onboardSchedulePicker" class="onboard-schedule-picker"></div>
+            <output id="onboardScheduleSelected" class="onboard-schedule-selected" for="onboardSchedulePicker"></output>
+        </div>
+    </section>`;
+}
+
+function openPaymentTeacherScheduleModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    if (leadHasTeacherSchedule(lead)) {
+        ensureLeadPaymentStatus(lang, leadId);
+        openPaymentProcessModal(lang, leadId);
+        return;
+    }
+
+    const subject = lang === 'russian' ? 'russian' : 'english';
+    const asosiyTeachers = filterTeachersByTypeAndSubject('asosiy', subject);
+
+    const bodyHtml = `<div class="lead-survey lead-survey--schedule">
+        ${renderTeacherScheduleSection(asosiyTeachers)}
+    </div>`;
+
+    openModal(
+        `${escapeHtml(lead.name)} — Dars jadvali`,
+        bodyHtml,
+        `<button type="button" class="btn-danger-sm" id="cancelPaymentTeacherSchedule">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmPaymentTeacherSchedule">Keyingi bosqich</button>`,
+        { wide: true }
+    );
+
+    const modalBody = document.getElementById('modalBody');
+    wireTeacherSchedulePicker(modalBody, { lead });
+
+    document.getElementById('cancelPaymentTeacherSchedule').onclick = () => {
+        closeModal();
+        renderLeads();
+    };
+
+    document.getElementById('confirmPaymentTeacherSchedule').onclick = () => {
+        const result = collectTeacherScheduleData(modalBody);
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
+        ensureLeadPaymentStatus(lang, leadId, result.data);
+        closeModal();
+        openPaymentProcessModal(lang, leadId);
+    };
+}
+
+function initPaymentOnboardingForm(modalBody, options = {}) {
+    const { lead = null } = options;
+    wireTeacherSchedulePicker(modalBody, { lead });
+
+    const contractNumberBlock = modalBody.querySelector('#onboardContractNumberBlock');
+    const syncContractNumber = () => {
+        const selected = modalBody.querySelector('[data-onboard-field="contractType"]:checked');
+        if (!contractNumberBlock) return;
+        const show = !!selected;
+        contractNumberBlock.hidden = !show;
+        contractNumberBlock.style.display = show ? '' : 'none';
+        if (!show) {
+            const input = modalBody.querySelector('#onboardContractNumber');
+            if (input) input.value = '';
+        }
+    };
+    modalBody.querySelectorAll('[data-onboard-field="contractType"]').forEach(radio => {
+        radio.addEventListener('change', syncContractNumber);
+    });
+    syncContractNumber();
 }
 
 function collectPaymentOnboardingData(modalBody) {
@@ -2630,18 +3306,7 @@ function openPaymentOnboardingModal(lang, leadId) {
             </div>
         </section>
         <section class="lead-survey-section">
-            <div class="lead-survey-field">
-                <label for="onboardTeacherId">Asosiy ustoz</label>
-                <select id="onboardTeacherId" class="form-select">
-                    ${renderOnboardTeacherOptions(asosiyTeachers, "Asosiy ustozni tanlang")}
-                </select>
-            </div>
-            <div id="onboardScheduleBlock" class="lead-survey-field" hidden>
-                <span class="lead-survey-label">Dars kunlari va soati</span>
-                <p class="lead-survey-hint">O'qituvchining band va bo'sh vaqtlarini ko'rib, bo'sh slotdan tanlang.</p>
-                <div id="onboardSchedulePicker" class="onboard-schedule-picker"></div>
-                <output id="onboardScheduleSelected" class="onboard-schedule-selected" for="onboardSchedulePicker"></output>
-            </div>
+            ${renderTeacherScheduleSection(asosiyTeachers)}
             <div class="lead-survey-field">
                 <label for="onboardAssistantTeacherId">Yordamchi o'qituvchi</label>
                 <select id="onboardAssistantTeacherId" class="form-select">
@@ -2688,7 +3353,8 @@ function openPaymentOnboardingModal(lang, leadId) {
             return {
                 ...base,
                 status: 'tolov-jarayonida',
-                paymentOnboarding: onboarding,
+                serialCode: base.serialCode || generateNextLeadSerial(),
+                paymentOnboarding: { ...(base.paymentOnboarding || {}), ...onboarding },
                 comments: [...base.comments, createLeadComment({
                     type: 'payment-onboarding',
                     text: commentText,
@@ -2710,6 +3376,11 @@ function openPaymentOnboardingModal(lang, leadId) {
 function openPaymentProcessModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+
+    if (!leadHasTeacherSchedule(lead)) {
+        openPaymentTeacherScheduleModal(lang, leadId);
+        return;
+    }
 
     if (lead.paymentSurvey) {
         openPaymentOnboardingModal(lang, leadId);
@@ -3402,12 +4073,19 @@ function renderLeadCard(lead, langKey) {
     const phone2 = normalized.phone2 || '—';
     const commentCount = normalized.comments.length;
     const hasManagerPhoto = Boolean(normalized.managerPhoto);
+    const showSerial = normalizeLeadStatus(normalized.status) === 'tolov-jarayonida' && normalized.serialCode;
+    const serialHtml = showSerial
+        ? `<span class="lead-card-serial">#${escapeHtml(normalized.serialCode)}</span>`
+        : '';
 
     return `<article class="lead-card" draggable="true" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
         <div class="lead-card-top">
             <div class="lead-card-title-wrap">
                 <h4 class="lead-card-name">${escapeHtml(normalized.name)}</h4>
-                <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
+                <div class="lead-card-meta">
+                    <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
+                    ${serialHtml}
+                </div>
             </div>
             <div class="lead-card-top-actions">
                 <button type="button" class="lead-card-notify" data-lead-notify="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Bildirishnomalar" aria-label="Bildirishnomalar">
@@ -3566,6 +4244,8 @@ function openLeadManagerPhotoModal(lang, leadId) {
 function renderLeads() {
     const board = document.getElementById('leadsKanban');
     if (!board) return;
+
+    backfillMissingLeadSerials();
 
     document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.leadLangFilter === _leadsLangFilter);

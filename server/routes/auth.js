@@ -2,7 +2,9 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const {
     findUserByEmail,
+    findUserById,
     createUser,
+    updateUser,
     publicUser
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
@@ -43,10 +45,53 @@ router.post('/login', (req, res) => {
 });
 
 router.get('/me', authRequired, (req, res) => {
-    const { findUserById } = require('../db');
     const user = findUserById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
     res.json({ user: publicUser(user) });
+});
+
+router.patch('/me', authRequired, (req, res) => {
+    const { name, email, phone, bio, location, avatar } = req.body || {};
+    const user = findUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+
+    const fields = {};
+    if (name !== undefined) {
+        if (!String(name).trim()) return res.status(400).json({ error: 'Ism bo\'sh bo\'lmasligi kerak' });
+        fields.name = String(name).trim();
+    }
+    if (email !== undefined) {
+        const trimmed = String(email).trim();
+        if (!trimmed) return res.status(400).json({ error: 'Email bo\'sh bo\'lmasligi kerak' });
+        const existing = findUserByEmail(trimmed);
+        if (existing && existing.id !== user.id) {
+            return res.status(409).json({ error: 'Bu email allaqachon band' });
+        }
+        fields.email = trimmed;
+    }
+    if (phone !== undefined) fields.phone = String(phone).trim();
+    if (bio !== undefined) fields.bio = String(bio).trim();
+    if (location !== undefined) fields.location = String(location).trim();
+    if (avatar !== undefined) fields.avatar = String(avatar);
+
+    const updated = updateUser(user.id, fields);
+    res.json({ user: publicUser(updated) });
+});
+
+router.post('/change-password', authRequired, (req, res) => {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Joriy va yangi parol kiriting' });
+    }
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'Yangi parol kamida 6 ta belgidan iborat bo\'lishi kerak' });
+    }
+    const user = findUserById(req.user.id);
+    if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+        return res.status(401).json({ error: 'Joriy parol noto\'g\'ri' });
+    }
+    updateUser(user.id, { passwordHash: bcrypt.hashSync(newPassword, 10) });
+    res.json({ ok: true });
 });
 
 module.exports = router;

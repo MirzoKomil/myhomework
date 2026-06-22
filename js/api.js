@@ -70,3 +70,25 @@ async function apiFetchLeads() {
 async function apiHealth() {
     return apiFetch('/api/health');
 }
+
+async function apiMe() {
+    const data = await apiFetch('/api/auth/me');
+    if (data.user) setSession(getToken(), data.user);
+    return data.user;
+}
+
+async function apiUpdateProfile(payload) {
+    const data = await apiFetch('/api/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+    });
+    if (data.user) setSession(getToken(), data.user);
+    return data.user;
+}
+
+async function apiChangePassword(currentPassword, newPassword) {
+    return apiFetch('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword })
+    });
+}
