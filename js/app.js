@@ -1046,7 +1046,7 @@ function collectWeeklyScheduleEntries(filters) {
             dayOfWeek: s.lessonDayOfWeek,
             time: s.lessonTime,
             duration: s.lessonDuration || teacher.lessonDuration || 15,
-            source: 'student'
+            source: s.source === 'lead' ? 'lead' : 'student'
         });
     });
 
@@ -1298,7 +1298,8 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
             lessonDayOfWeek: onboarding.lessonDayOfWeek,
             lessonTime: onboarding.lessonTime,
             lessonDuration: onboarding.lessonDuration || 15,
-            assistantTeacherId: onboarding.assistantTeacherId || null
+            assistantTeacherId: onboarding.assistantTeacherId || null,
+            source: 'lead'
         });
         return existing.id;
     }
@@ -1315,7 +1316,8 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         assistantTeacherId: onboarding.assistantTeacherId || null,
         lessonDayOfWeek: onboarding.lessonDayOfWeek,
         lessonTime: onboarding.lessonTime,
-        lessonDuration: duration
+        lessonDuration: duration,
+        source: 'lead'
     });
     setItem(STORAGE_KEYS.students, students);
     return id;
