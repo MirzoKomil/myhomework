@@ -908,6 +908,7 @@ function getLessonSlotSpan(duration) {
 }
 
 function getTimetableCellClass(entry) {
+    if (entry.source === 'trial') return 'tt-cell tt-cell--trial';
     if (entry.source === 'lead') return 'tt-cell tt-cell--lead';
     const d = Number(entry.duration) || 15;
     if (d >= 60) return 'tt-cell tt-cell--d60';
@@ -918,7 +919,8 @@ function getTimetableCellClass(entry) {
 function isTimetableStudentCell(cell) {
     return !!cell.dataset.student
         && !cell.classList.contains('tt-cell--free')
-        && !cell.classList.contains('tt-cell--lead');
+        && !cell.classList.contains('tt-cell--lead')
+        && !cell.classList.contains('tt-cell--trial');
 }
 
 function markWeeklySlotBusy(busy, dayOfWeek, time, duration, meta) {
@@ -983,8 +985,9 @@ function initTimetableControls() {
     const patternEl = document.getElementById('ttPattern');
     const teacherEl = document.getElementById('ttTeacher');
     const dayEl = document.getElementById('ttDay');
+    const btnEdit = document.getElementById('btnEditTeacherSchedule');
 
-    if (!patternEl || !teacherEl) return;
+    if (!teacherEl) return;
 
     initSubjectTabs('ttSubjectTabs', () => {
         _ttFilters = getTimetableFilters();
@@ -999,7 +1002,6 @@ function initTimetableControls() {
     if (filters.lang) {
         teachers = teachers.filter(t => (t.subject || 'english') === filters.lang);
     }
-    teachers = teachers.filter(t => (t.schedulePattern || 'mwf') === pattern);
 
     const savedTeacher = teacherEl.value;
     teacherEl.innerHTML = '<option value="all">Barcha ustozlar</option>' +
@@ -1012,8 +1014,8 @@ function initTimetableControls() {
         dayEl.hidden = true;
     }
 
-    if (!patternEl.dataset.bound) {
-        patternEl.dataset.bound = '1';
+    if (!teacherEl.dataset.bound) {
+        teacherEl.dataset.bound = '1';
         [patternEl, teacherEl, dayEl].filter(Boolean).forEach(el => {
             el.addEventListener('change', () => {
                 _ttFilters = getTimetableFilters();
@@ -1021,6 +1023,11 @@ function initTimetableControls() {
                 renderTimetable();
             });
         });
+        if (btnEdit) {
+            btnEdit.addEventListener('click', () => {
+                openTeacherWorkScheduleModal(teacherEl.value === 'all' ? null : teacherEl.value);
+            });
+        }
     }
 }
 
@@ -1037,15 +1044,18 @@ function collectWeeklyScheduleEntries(filters) {
         if ((teacher.schedulePattern || 'mwf') !== filters.pattern) return;
         if (filters.lang && (s.subject || 'english') !== filters.lang) return;
         if (filters.teacherId !== 'all' && s.teacherId !== filters.teacherId) return;
-        entries.push({
-            studentId: s.id,
-            studentName: s.name,
-            teacherId: s.teacherId,
-            teacherName: teacher.name,
-            dayOfWeek: s.lessonDayOfWeek,
-            time: s.lessonTime,
-            duration: s.lessonDuration || teacher.lessonDuration || 15,
-            source: s.source === 'lead' ? 'lead' : 'student'
+        const daysList = [1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [Number(s.lessonDayOfWeek)];
+        daysList.forEach(dow => {
+            entries.push({
+                studentId: s.id,
+                studentName: s.name,
+                teacherId: s.teacherId,
+                teacherName: teacher.name,
+                dayOfWeek: dow,
+                time: s.lessonTime,
+                duration: s.lessonDuration || teacher.lessonDuration || 15,
+                source: s.source === 'lead' ? 'lead' : 'student'
+            });
         });
     });
 
@@ -1060,15 +1070,25 @@ function collectWeeklyScheduleEntries(filters) {
         if (filters.lang && lang !== filters.lang) return;
         if (filters.teacherId !== 'all' && ob.teacherId !== filters.teacherId) return;
         const duration = getLeadLessonDuration(lead, teacher);
-        entries.push({
-            studentId: lead.serialCode || lead.id?.slice(0, 6) || 'LID',
-            studentName: lead.name,
-            teacherId: ob.teacherId,
-            teacherName: teacher.name,
-            dayOfWeek: ob.lessonDayOfWeek,
-            time: ob.lessonTime,
-            duration,
-            source: 'lead'
+        let daysList = [1, 3, 5].includes(Number(ob.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(ob.lessonDayOfWeek)) ? [2, 4, 6] : [Number(ob.lessonDayOfWeek)];
+        if (ob.isTrial && ob.trialDaysCount) {
+            const idx = daysList.indexOf(Number(ob.lessonDayOfWeek));
+            if (idx >= 0) {
+                const reordered = daysList.slice(idx).concat(daysList.slice(0, idx));
+                daysList = reordered.slice(0, ob.trialDaysCount);
+            }
+        }
+        daysList.forEach(dow => {
+            entries.push({
+                studentId: lead.serialCode || lead.id?.slice(0, 6) || 'LID',
+                studentName: lead.name,
+                teacherId: ob.teacherId,
+                teacherName: teacher.name,
+                dayOfWeek: dow,
+                time: ob.lessonTime,
+                duration,
+                source: ob.isTrial ? 'trial' : 'lead'
+            });
         });
     });
 
@@ -1097,6 +1117,7 @@ function renderTimetableTeacherGrid(teacher, entries, pattern) {
     const days = [1, 2, 3, 4, 5, 6, 7];
     const times = generateTimeSlots();
     const { map, covered } = buildScheduleCellMap(entries.filter(e => e.teacherId === teacher.id));
+    const workSlots = teacher.workSlots ? new Set(teacher.workSlots) : null;
 
     let html = `<table class="table tt-week-table"><thead><tr><th class="tt-time-col">Vaqt</th>`;
     days.forEach(dow => {
@@ -1119,8 +1140,14 @@ function renderTimetableTeacherGrid(teacher, entries, pattern) {
                     <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
                 </td>`;
             } else {
+                const key = `${dow}_${time}`;
+                const isOff = workSlots && !workSlots.has(key);
                 const isSunday = dow === 7;
-                html += `<td class="tt-cell tt-cell--free${isSunday ? ' tt-cell--sunday' : ''}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Bo'sh — bosing"></td>`;
+                if (isOff) {
+                    html += `<td class="tt-cell tt-cell--off" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Ishlashi belgilanmagan"></td>`;
+                } else {
+                    html += `<td class="tt-cell tt-cell--free${isSunday ? ' tt-cell--sunday' : ''}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Bo'sh — bosing"></td>`;
+                }
             }
         });
         html += '</tr>';
@@ -1258,7 +1285,7 @@ function renderTimetable() {
 
     let teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
     if (filters.lang) teachers = teachers.filter(t => (t.subject || 'english') === filters.lang);
-    teachers = teachers.filter(t => (t.schedulePattern || 'mwf') === filters.pattern);
+    teachers = teachers.filter(t => (t.schedulePattern || 'mwf') === pattern);
 
     const entries = collectWeeklyScheduleEntries(filters);
     const container = document.getElementById('timetableContainer');
@@ -2201,6 +2228,73 @@ function getNextSurveyStepBeforePayment(fromStatus, lead) {
         return step;
     }
     return 'payment';
+}
+
+function needsTrialLessonPrompt(fromStatus, toStatus) {
+    return toStatus === 'sinov-darsida';
+}
+
+function openTrialLessonFlow(lang, leadId, fromStatus) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const teachers = filterTeachersByTypeAndSubject('asosiy', lead.subject || 'english');
+    const teacherOptions = `<option value="">— Tanlang —</option>` +
+        teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+
+    openModal(`Sinov darsi — ${escapeHtml(lead.name)}`,
+        `<div class="form-group">
+            <label>O'qituvchi</label>
+            <select id="onboardTeacherId" class="form-control">${teacherOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Sinov darsi kunlari soni</label>
+            <select id="trialDaysCount" class="form-control">
+                <option value="1">1 kun</option>
+                <option value="2">2 kun</option>
+                <option value="3">3 kun</option>
+            </select>
+        </div>
+        <div id="onboardScheduleBlock" style="display:none;margin-top:16px;">
+            <p class="lead-survey-sub">Bo'sh jadvallar</p>
+            <div id="onboardSchedulePicker" class="onboard-schedule-container" tabindex="0"></div>
+            <p id="onboardScheduleSelected" class="onboard-schedule-selected"></p>
+        </div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelTrialFlow">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmTrialFlow">Saqlash</button>`
+    );
+
+    document.getElementById('cancelTrialFlow').onclick = () => { closeModal(); renderLeads(); };
+
+    const modalBody = document.getElementById('modalBody');
+    wireTeacherSchedulePicker(modalBody, { lead });
+
+    document.getElementById('confirmTrialFlow').onclick = () => {
+        const teacherId = document.getElementById('onboardTeacherId').value;
+        const count = parseInt(document.getElementById('trialDaysCount').value, 10);
+        const day = modalBody.dataset.onboardScheduleDay;
+        const time = modalBody.dataset.onboardScheduleTime;
+
+        if (!teacherId || !day || !time) {
+            alert("O'qituvchi, kun va vaqt tanlang!");
+            return;
+        }
+
+        const onboarding = lead.paymentOnboarding || {};
+        onboarding.teacherId = teacherId;
+        onboarding.lessonDayOfWeek = parseInt(day, 10);
+        onboarding.lessonTime = time;
+        onboarding.trialDaysCount = count;
+        onboarding.isTrial = true;
+
+        updateLeadInStorage(lang, leadId, l => ({
+            ...l,
+            status: 'sinov-darsida',
+            paymentOnboarding: onboarding
+        }));
+
+        closeModal();
+        renderLeads();
+    };
 }
 
 function openTolovJarayonidaFlow(lang, leadId, fromStatus) {
@@ -3230,11 +3324,14 @@ function getTeacherBusyWeeklySlots(teacherId, excludeStudentId = null) {
         if (excludeStudentId && s.id === excludeStudentId) return;
         const teacher = teachers.find(t => t.id === teacherId);
         const duration = s.lessonDuration || teacher?.lessonDuration || 15;
-        markWeeklySlotBusy(busy, s.lessonDayOfWeek, s.lessonTime, duration, {
-            label: s.name || 'O\'quvchi',
-            studentId: s.id,
-            source: 'student',
-            duration
+        const daysList = [1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [Number(s.lessonDayOfWeek)];
+        daysList.forEach(dow => {
+            markWeeklySlotBusy(busy, dow, s.lessonTime, duration, {
+                label: s.name || 'O\'quvchi',
+                studentId: s.id,
+                source: 'student',
+                duration
+            });
         });
     });
 
@@ -3245,11 +3342,21 @@ function getTeacherBusyWeeklySlots(teacherId, excludeStudentId = null) {
         if (onboarding.lessonDayOfWeek == null || !onboarding.lessonTime) return;
         const teacher = teachers.find(t => t.id === teacherId);
         const duration = getLeadLessonDuration(lead, teacher);
-        markWeeklySlotBusy(busy, onboarding.lessonDayOfWeek, onboarding.lessonTime, duration, {
-            label: lead.name || 'Lid',
-            studentId: lead.serialCode || 'LID',
-            source: 'lead',
-            duration
+        let daysList = [1, 3, 5].includes(Number(onboarding.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(onboarding.lessonDayOfWeek)) ? [2, 4, 6] : [Number(onboarding.lessonDayOfWeek)];
+        if (onboarding.isTrial && onboarding.trialDaysCount) {
+            const idx = daysList.indexOf(Number(onboarding.lessonDayOfWeek));
+            if (idx >= 0) {
+                const reordered = daysList.slice(idx).concat(daysList.slice(0, idx));
+                daysList = reordered.slice(0, onboarding.trialDaysCount);
+            }
+        }
+        daysList.forEach(dow => {
+            markWeeklySlotBusy(busy, dow, onboarding.lessonTime, duration, {
+                label: lead.name || 'Lid',
+                studentId: lead.serialCode || 'LID',
+                source: onboarding.isTrial ? 'trial' : 'lead',
+                duration
+            });
         });
     });
 
@@ -4746,6 +4853,11 @@ function initLeadDragDrop(board) {
                 return;
             }
 
+            if (needsTrialLessonPrompt(fromStatus, toStatus)) {
+                openTrialLessonFlow(payload.lang, payload.id, fromStatus);
+                return;
+            }
+
             if (needsConnectedSurveyPrompt(toStatus)) {
                 openConnectedSurveyModal(payload.lang, payload.id, toStatus);
                 return;
@@ -4774,6 +4886,125 @@ function initLeadDragDrop(board) {
             moveLeadToStatus(payload.lang, payload.id, toStatus);
         });
     });
+}
+
+function openTeacherWorkScheduleModal(initialTeacherId) {
+    const teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
+    const options = `<option value="">— Tanlang —</option>` +
+        teachers.map(t => `<option value="${t.id}" ${t.id === initialTeacherId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
+
+    openModal("Ustoz ish jadvalini sozlash",
+        `<div class="form-group">
+            <label>O'qituvchi</label>
+            <select id="workScheduleTeacher" class="form-control">${options}</select>
+        </div>
+        <div id="workScheduleGridContainer"></div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelWorkSchedule">Yopish</button>
+         <button type="button" class="btn-primary-sm" id="saveWorkSchedule">Saqlash</button>`
+    );
+
+    document.getElementById('cancelWorkSchedule').onclick = () => closeModal();
+
+    let currentWorkSlots = null;
+    let selectedTeacherId = initialTeacherId;
+
+    const renderGrid = () => {
+        const container = document.getElementById('workScheduleGridContainer');
+        if (!selectedTeacherId) {
+            container.innerHTML = `<p class="text-muted">Ustozni tanlang...</p>`;
+            return;
+        }
+
+        const teacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === selectedTeacherId);
+        if (!teacher) return;
+
+        const times = generateTimeSlots();
+        const days = [1, 2, 3, 4, 5, 6, 7];
+
+        if (!currentWorkSlots) {
+            currentWorkSlots = teacher.workSlots ? new Set(teacher.workSlots) : new Set(times.flatMap(t => days.map(d => `${d}_${t}`)));
+        }
+
+        let html = `<div style="display:flex;gap:12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#fff;border:1px solid #ccc;display:inline-block;"></span> Ish vaqti (Oq)</div>
+            <div style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#E2E8F0;border:1px solid #CBD5E1;display:inline-block;"></span> Belgilanmagan (Och kulrang)</div>
+        </div>`;
+        html += `<div class="table-responsive" style="max-height:60vh;overflow-y:auto;"><table class="table tt-week-table" style="user-select:none;margin-bottom:0;">`;
+        html += `<thead><tr><th class="tt-time-col" style="top:0;">Vaqt</th>`;
+        days.forEach(d => {
+            html += `<th style="top:0;${d === 7 ? 'color:#DC2626;' : ''}">${DAYS_UZ[d - 1]}</th>`;
+        });
+        html += `</tr></thead><tbody>`;
+
+        times.forEach(time => {
+            html += `<tr><td class="tt-time-col">${time}</td>`;
+            days.forEach(d => {
+                const key = `${d}_${time}`;
+                const isWork = currentWorkSlots.has(key);
+                html += `<td class="ws-cell" data-key="${key}" style="border:1px solid var(--border);cursor:pointer;background:${isWork ? 'var(--surface)' : '#E2E8F0'}; transition: 0.1s;"></td>`;
+            });
+            html += `</tr>`;
+        });
+        html += `</tbody></table></div>`;
+        container.innerHTML = html;
+
+        let isDragging = false;
+        let dragMode = null;
+
+        const cells = container.querySelectorAll('.ws-cell');
+        cells.forEach(cell => {
+            cell.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                const key = cell.dataset.key;
+                dragMode = !currentWorkSlots.has(key);
+                toggleCell(cell, key, dragMode);
+            });
+            cell.addEventListener('mouseenter', (e) => {
+                if (isDragging) toggleCell(cell, cell.dataset.key, dragMode);
+            });
+        });
+
+        const releaseDrag = () => { isDragging = false; };
+        document.addEventListener('mouseup', releaseDrag);
+
+        container.dataset.bound = '1';
+        container.cleanup = () => document.removeEventListener('mouseup', releaseDrag);
+
+        function toggleCell(cell, key, isWork) {
+            if (isWork) {
+                currentWorkSlots.add(key);
+                cell.style.background = 'var(--surface)';
+            } else {
+                currentWorkSlots.delete(key);
+                cell.style.background = '#E2E8F0';
+            }
+        }
+    };
+
+    const selectEl = document.getElementById('workScheduleTeacher');
+    selectEl.addEventListener('change', () => {
+        selectedTeacherId = selectEl.value;
+        currentWorkSlots = null;
+        renderGrid();
+    });
+
+    document.getElementById('saveWorkSchedule').onclick = () => {
+        const container = document.getElementById('workScheduleGridContainer');
+        if (container?.cleanup) container.cleanup();
+
+        if (!selectedTeacherId) return;
+        updateTeacher(selectedTeacherId, { workSlots: Array.from(currentWorkSlots || []) });
+        closeModal();
+        renderTimetable();
+    };
+
+    const cleanupModal = () => {
+        const container = document.getElementById('workScheduleGridContainer');
+        if (container?.cleanup) container.cleanup();
+    };
+    document.getElementById('cancelWorkSchedule').addEventListener('click', cleanupModal);
+
+    renderGrid();
 }
 
 function openAssignManagerModal(lang, leadId) {
