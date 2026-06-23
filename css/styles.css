@@ -1435,15 +1435,37 @@ body {
 .tt-row:nth-child(even) { background: #FAFBFD; }
 
 /* Haftalik dars jadvali */
-.tt-toolbar { flex-wrap: wrap; gap: 8px; }
+.tt-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.tt-card-header { flex-wrap: wrap; gap: 12px; }
+.tt-toolbar .tt-subject-tabs {
+    padding: 0;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+.tt-toolbar .tt-subject-tabs .subject-tab {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    font-size: 12px;
+    min-width: 0;
+    white-space: nowrap;
+}
 .tt-legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 24px 12px; }
 .tt-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
 .tt-legend-item::before { content: ''; width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); }
 .tt-legend-free::before { background: #F8FAFC; }
-.tt-legend-busy::before { background: #FEE2E2; border-color: #FECACA; }
-.tt-legend-lead::before { background: #FEF3C7; border-color: #FCD34D; }
+.tt-legend-lead::before { background: #1A1D2E; border-color: #374151; }
+.tt-legend-d15::before { background: #FEF3C7; border-color: #FCD34D; }
+.tt-legend-d30::before { background: #D1FAE5; border-color: #6EE7B7; }
+.tt-legend-d60::before { background: #E0F2FE; border-color: #7DD3FC; }
 .tt-grid-wrap { padding: 0 16px 16px; max-height: 70vh; overflow: auto; }
 .tt-grid-header { padding: 12px 8px; font-size: 14px; color: var(--text-muted); }
+.tt-teacher-block { margin-bottom: 20px; }
+.tt-teacher-block-title { margin: 0 0 10px 8px; font-size: 15px; font-weight: 700; color: var(--text); }
+.tt-teacher-divider { height: 1px; background: var(--border); margin: 8px 0 20px; }
 .tt-week-table, .tt-teacher-table { font-size: 12px; border-collapse: separate; border-spacing: 2px; }
 .tt-week-table th, .tt-teacher-table th { text-align: center; font-size: 12px; padding: 10px 8px; background: #FAFBFD; border-radius: 8px; position: sticky; top: 0; z-index: 2; }
 .tt-time-col, .tt-teacher-col { position: sticky; left: 0; z-index: 3; background: var(--surface) !important; min-width: 100px; text-align: left !important; font-weight: 700; box-shadow: 2px 0 6px rgba(0,0,0,0.04); }
@@ -1451,14 +1473,21 @@ body {
 .tt-cell { min-width: 72px; min-height: 36px; text-align: center; vertical-align: middle; border-radius: 8px; padding: 6px 4px; border: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
 .tt-cell--free { background: #F8FAFC; }
 .tt-cell--free:hover { background: #ECFDF5; border-color: #6EE7B7; }
-.tt-cell--busy { background: #FEE2E2; border-color: #FECACA; color: #991B1B; }
-.tt-cell--busy:hover { background: #FECACA; }
-.tt-cell--lead { background: #FEF3C7; border-color: #FCD34D; color: #92400E; }
+.tt-cell--lead { background: #1A1D2E; border-color: #374151; color: #fff; }
+.tt-cell--lead:hover { background: #2D3148; }
+.tt-cell--d15 { background: #FEF3C7; border-color: #FCD34D; color: #92400E; }
+.tt-cell--d15:hover { background: #FDE68A; }
+.tt-cell--d30 { background: #D1FAE5; border-color: #6EE7B7; color: #065F46; }
+.tt-cell--d30:hover { background: #A7F3D0; }
+.tt-cell--d60 { background: #E0F2FE; border-color: #7DD3FC; color: #0369A1; }
+.tt-cell--d60:hover { background: #BAE6FD; }
 .tt-cell-id { display: block; font-weight: 800; font-size: 12px; }
 .tt-cell-name { display: block; font-size: 10px; font-weight: 500; opacity: 0.85; margin-top: 2px; }
 [data-theme="dark"] .tt-cell--free { background: rgba(255,255,255,0.04); }
-[data-theme="dark"] .tt-cell--busy { background: rgba(239,68,68,0.15); }
-[data-theme="dark"] .tt-cell--lead { background: rgba(245,158,11,0.15); }
+[data-theme="dark"] .tt-cell--lead { background: #0F1117; color: #F3F4F6; }
+[data-theme="dark"] .tt-cell--d15 { background: rgba(245,158,11,0.2); color: #FDE68A; }
+[data-theme="dark"] .tt-cell--d30 { background: rgba(16,185,129,0.18); color: #A7F3D0; }
+[data-theme="dark"] .tt-cell--d60 { background: rgba(56,189,248,0.18); color: #BAE6FD; }
 
 .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .checkbox-label input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--purple); }

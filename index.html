@@ -50,20 +50,10 @@
                     </div>
                 </div>
 
-                <div class="menu-group">
-                    <button type="button" class="menu-group-toggle" aria-expanded="false">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                        <span class="label">Dars jadvali</span>
-                    </button>
-                    <div class="menu-subitems">
-                        <a href="#" class="menu-sub-item" data-tab="timetable" data-subject="english">
-                            <img src="images/flags/gb.svg" alt="" class="menu-flag"> Ingliz tili
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="timetable" data-subject="russian">
-                            <img src="images/flags/ru.svg" alt="" class="menu-flag"> Rus tili
-                        </a>
-                    </div>
-                </div>
+                <a href="#" class="menu-item" data-tab="timetable">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    <span class="label">Dars jadvali</span>
+                </a>
 
                 <div class="menu-group">
                     <button type="button" class="menu-group-toggle" aria-expanded="false">
@@ -256,14 +246,17 @@
                             <p>Haftalik dars jadvali — o'qituvchilar va o'quvchi ID lari. Sotuv bo'limidagi vaqt tanlash shu jadval asosida ishlaydi.</p>
                         </div>
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header tt-card-header">
                                 <h3>Haftalik jadval</h3>
                                 <div class="toolbar tt-toolbar">
-                                    <select id="ttLang" class="form-control-sm" title="Til">
-                                        <option value="">Barcha tillar</option>
-                                        <option value="english">🇬🇧 Ingliz tili</option>
-                                        <option value="russian">🇷🇺 Rus tili</option>
-                                    </select>
+                                    <div class="subject-tabs tt-subject-tabs" id="ttSubjectTabs">
+                                        <button type="button" class="subject-tab active" data-subject="english">
+                                            <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
+                                        </button>
+                                        <button type="button" class="subject-tab" data-subject="russian">
+                                            <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
+                                        </button>
+                                    </div>
                                     <select id="ttPattern" class="form-control-sm" title="Kun guruhi">
                                         <option value="mwf">Dush · Chor · Jum</option>
                                         <option value="tts">Sesh · Pay · Shan</option>
@@ -276,8 +269,10 @@
                             </div>
                             <div class="tt-legend">
                                 <span class="tt-legend-item tt-legend-free">Bo'sh</span>
-                                <span class="tt-legend-item tt-legend-busy">Band (o'quvchi ID)</span>
-                                <span class="tt-legend-item tt-legend-lead">Lid (band)</span>
+                                <span class="tt-legend-item tt-legend-lead">Lid (sotuv)</span>
+                                <span class="tt-legend-item tt-legend-d15">15 daqiqa</span>
+                                <span class="tt-legend-item tt-legend-d30">30 daqiqa</span>
+                                <span class="tt-legend-item tt-legend-d60">60 daqiqa</span>
                             </div>
                             <div class="table-responsive tt-grid-wrap" id="timetableContainer"></div>
                         </div>

@@ -898,13 +898,27 @@ function renderHwProgress(students) {
 }
 
 // --- Timetable (haftalik jadval) ---
-let _ttFilters = { lang: '', pattern: 'mwf', teacherId: 'all', dayOfWeek: null };
+let _ttFilters = { lang: 'english', pattern: 'mwf', teacherId: 'all', dayOfWeek: null };
 
 function getLessonSlotSpan(duration) {
     const d = Number(duration) || 15;
     if (d >= 60) return 4;
     if (d >= 30) return 2;
     return 1;
+}
+
+function getTimetableCellClass(entry) {
+    if (entry.source === 'lead') return 'tt-cell tt-cell--lead';
+    const d = Number(entry.duration) || 15;
+    if (d >= 60) return 'tt-cell tt-cell--d60';
+    if (d >= 30) return 'tt-cell tt-cell--d30';
+    return 'tt-cell tt-cell--d15';
+}
+
+function isTimetableStudentCell(cell) {
+    return !!cell.dataset.student
+        && !cell.classList.contains('tt-cell--free')
+        && !cell.classList.contains('tt-cell--lead');
 }
 
 function markWeeklySlotBusy(busy, dayOfWeek, time, duration, meta) {
@@ -954,13 +968,11 @@ function getLeadLessonDuration(lead, teacher) {
 }
 
 function getTimetableFilters() {
-    const langEl = document.getElementById('ttLang');
     const patternEl = document.getElementById('ttPattern');
     const teacherEl = document.getElementById('ttTeacher');
     const dayEl = document.getElementById('ttDay');
-    const sidebarSubject = _tabContext.subject || '';
     return {
-        lang: langEl?.value || sidebarSubject || _ttFilters.lang || '',
+        lang: getSelectedSubject('ttSubjectTabs'),
         pattern: patternEl?.value || _ttFilters.pattern || 'mwf',
         teacherId: teacherEl?.value || _ttFilters.teacherId || 'all',
         dayOfWeek: dayEl?.value ? parseInt(dayEl.value, 10) : (_ttFilters.dayOfWeek || null)
@@ -968,16 +980,20 @@ function getTimetableFilters() {
 }
 
 function initTimetableControls() {
-    const langEl = document.getElementById('ttLang');
     const patternEl = document.getElementById('ttPattern');
     const teacherEl = document.getElementById('ttTeacher');
     const dayEl = document.getElementById('ttDay');
 
     if (!patternEl || !teacherEl) return;
 
+    initSubjectTabs('ttSubjectTabs', () => {
+        _ttFilters = getTimetableFilters();
+        initTimetableControls();
+        renderTimetable();
+    });
+
     const filters = getTimetableFilters();
     const pattern = filters.pattern;
-    const patternDays = SCHEDULE_PATTERNS[pattern]?.days || SCHEDULE_PATTERNS.mwf.days;
 
     let teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
     if (filters.lang) {
@@ -993,27 +1009,13 @@ function initTimetableControls() {
     }
 
     if (dayEl) {
-        const savedDay = dayEl.value;
-        dayEl.innerHTML = patternDays.map(dow =>
-            `<option value="${dow}">${escapeHtml(DAYS_UZ[dow - 1] || '')}</option>`
-        ).join('');
-        if (savedDay && patternDays.includes(parseInt(savedDay, 10))) {
-            dayEl.value = savedDay;
-        } else {
-            dayEl.value = String(patternDays[0]);
-        }
-        dayEl.hidden = teacherEl.value !== 'all';
-    }
-
-    if (langEl && _tabContext.subject && !langEl.dataset.userPicked) {
-        langEl.value = _tabContext.subject;
+        dayEl.hidden = true;
     }
 
     if (!patternEl.dataset.bound) {
         patternEl.dataset.bound = '1';
-        [langEl, patternEl, teacherEl, dayEl].filter(Boolean).forEach(el => {
+        [patternEl, teacherEl, dayEl].filter(Boolean).forEach(el => {
             el.addEventListener('change', () => {
-                if (el === langEl) langEl.dataset.userPicked = '1';
                 _ttFilters = getTimetableFilters();
                 if (el === patternEl || el === teacherEl) initTimetableControls();
                 renderTimetable();
@@ -1036,7 +1038,6 @@ function collectWeeklyScheduleEntries(filters) {
         if ((teacher.schedulePattern || 'mwf') !== filters.pattern) return;
         if (filters.lang && (s.subject || 'english') !== filters.lang) return;
         if (filters.teacherId !== 'all' && s.teacherId !== filters.teacherId) return;
-        if (filters.teacherId === 'all' && filters.dayOfWeek && s.lessonDayOfWeek !== filters.dayOfWeek) return;
         entries.push({
             studentId: s.id,
             studentName: s.name,
@@ -1060,7 +1061,6 @@ function collectWeeklyScheduleEntries(filters) {
         const lang = lead._lang || lead.language || 'english';
         if (filters.lang && lang !== filters.lang) return;
         if (filters.teacherId !== 'all' && ob.teacherId !== filters.teacherId) return;
-        if (filters.teacherId === 'all' && filters.dayOfWeek && ob.lessonDayOfWeek !== filters.dayOfWeek) return;
         const duration = getLeadLessonDuration(lead, teacher);
         entries.push({
             studentId: lead.serialCode || lead.id?.slice(0, 6) || 'LID',
@@ -1114,7 +1114,7 @@ function renderTimetableTeacherGrid(teacher, entries, pattern) {
             const entry = map.get(cellKey);
             if (entry) {
                 const span = getLessonSlotSpan(entry.duration);
-                const cls = entry.source === 'lead' ? 'tt-cell tt-cell--lead' : 'tt-cell tt-cell--busy';
+                const cls = getTimetableCellClass(entry);
                 html += `<td class="${cls}" rowspan="${span}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" data-student="${escapeHtml(entry.studentId)}" title="${escapeHtml(entry.studentName)}">
                     <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
                     <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
@@ -1130,48 +1130,15 @@ function renderTimetableTeacherGrid(teacher, entries, pattern) {
     return html;
 }
 
-function renderTimetableAllTeachersGrid(teachers, entries, dayOfWeek) {
-    const times = generateTimeSlots();
-    const dayEntries = entries.filter(e => e.dayOfWeek === dayOfWeek);
-    const map = new Map();
-    const covered = new Set();
-
-    dayEntries.forEach(entry => {
-        const key = `${entry.teacherId}_${entry.time}`;
-        map.set(key, entry);
-        const startIdx = times.indexOf(entry.time);
-        const span = getLessonSlotSpan(entry.duration);
-        for (let i = 1; i < span; i++) {
-            covered.add(`${entry.teacherId}_${times[startIdx + i]}`);
-        }
+function renderTimetableAllTeachersWeek(teachers, entries, pattern) {
+    let html = '';
+    teachers.forEach((teacher, index) => {
+        if (index > 0) html += '<div class="tt-teacher-divider"></div>';
+        html += `<div class="tt-teacher-block">
+            <h4 class="tt-teacher-block-title">${escapeHtml(teacher.name)}</h4>`;
+        html += renderTimetableTeacherGrid(teacher, entries, pattern);
+        html += '</div>';
     });
-
-    let html = '<table class="table tt-teacher-table"><thead><tr><th class="tt-teacher-col">Ustoz</th>';
-    times.forEach(time => {
-        html += `<th class="tt-time-head">${time}</th>`;
-    });
-    html += '</tr></thead><tbody>';
-
-    teachers.forEach(teacher => {
-        html += `<tr><td class="tt-teacher-col"><strong>${escapeHtml(teacher.name)}</strong></td>`;
-        times.forEach(time => {
-            const cellKey = `${teacher.id}_${time}`;
-            if (covered.has(cellKey)) return;
-            const entry = map.get(cellKey);
-            if (entry) {
-                const span = getLessonSlotSpan(entry.duration);
-                const cls = entry.source === 'lead' ? 'tt-cell tt-cell--lead' : 'tt-cell tt-cell--busy';
-                html += `<td class="${cls}" colspan="${span}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dayOfWeek}" data-time="${time}" data-student="${escapeHtml(entry.studentId)}" title="${escapeHtml(entry.studentName)}">
-                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
-                </td>`;
-            } else {
-                html += `<td class="tt-cell tt-cell--free" data-tt-cell data-teacher="${teacher.id}" data-dow="${dayOfWeek}" data-time="${time}"></td>`;
-            }
-        });
-        html += '</tr>';
-    });
-
-    html += '</tbody></table>';
     return html;
 }
 
@@ -1271,7 +1238,7 @@ function wireTimetableCells() {
             const studentId = cell.dataset.student;
             if (cell.classList.contains('tt-cell--free')) {
                 openTimetableAssignModal(teacherId, dayOfWeek, time);
-            } else if (studentId && cell.classList.contains('tt-cell--busy')) {
+            } else if (isTimetableStudentCell(cell)) {
                 openTimetableEditModal(teacherId, dayOfWeek, time, studentId);
             }
         });
@@ -1286,9 +1253,7 @@ function renderTimetable() {
     const titleEl = document.getElementById('timetablePageTitle');
     const patternLabel = SCHEDULE_PATTERNS[filters.pattern]?.label || '';
     if (titleEl) {
-        titleEl.textContent = filters.lang
-            ? `Dars jadvali — ${SUBJECTS[filters.lang]?.label || filters.lang}`
-            : 'Dars jadvali';
+        titleEl.textContent = `Dars jadvali — ${SUBJECTS[filters.lang]?.label || filters.lang || 'Ingliz tili'}`;
     }
 
     let teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
@@ -1314,9 +1279,8 @@ function renderTimetable() {
         html = `<div class="tt-grid-header"><strong>${escapeHtml(teacher.name)}</strong> · ${escapeHtml(patternLabel)}</div>`;
         html += renderTimetableTeacherGrid(teacher, entries, filters.pattern);
     } else {
-        const dayOfWeek = filters.dayOfWeek || SCHEDULE_PATTERNS[filters.pattern].days[0];
-        html = `<div class="tt-grid-header"><strong>${escapeHtml(DAYS_UZ[dayOfWeek - 1] || '')}</strong> · ${escapeHtml(patternLabel)} · barcha ustozlar</div>`;
-        html += renderTimetableAllTeachersGrid(teachers, entries, dayOfWeek);
+        html = `<div class="tt-grid-header"><strong>Barcha ustozlar</strong> · ${escapeHtml(patternLabel)}</div>`;
+        html += renderTimetableAllTeachersWeek(teachers, entries, filters.pattern);
     }
 
     container.innerHTML = html;
