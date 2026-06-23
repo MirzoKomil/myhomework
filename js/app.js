@@ -852,10 +852,10 @@ function renderCalendarWidget() {
     if (!container) return;
 
     const now = new Date();
-    const monthNames = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
+    const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
     if (title) title.textContent = monthNames[now.getMonth()] + ' ' + now.getFullYear();
 
-    const dayNames = ['Yak','Dush','Sesh','Chor','Pay','Jum','Shan'];
+    const dayNames = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan'];
     const start = new Date(now);
     start.setDate(now.getDate() - now.getDay());
 
@@ -866,7 +866,7 @@ function renderCalendarWidget() {
         const isToday = d.toDateString() === now.toDateString();
         html += `<div class="cal-day ${isToday ? 'active' : ''}">
             <div class="day-name">${dayNames[i]}</div>
-            <div class="day-num">${String(d.getDate()).padStart(2,'0')}</div>
+            <div class="day-num">${String(d.getDate()).padStart(2, '0')}</div>
         </div>`;
     }
     container.innerHTML = html;
@@ -888,7 +888,7 @@ function renderHwProgress(students) {
 
     container.innerHTML = tasks.map(t => {
         const filled = Math.round(t.pct / 33);
-        const segs = [0,1,2].map(i => {
+        const segs = [0, 1, 2].map(i => {
             if (i < filled) return '<div class="hw-seg filled"></div>';
             if (i === filled && t.pct % 33 > 0) return '<div class="hw-seg partial"></div>';
             return '<div class="hw-seg"></div>';
@@ -1032,7 +1032,6 @@ function collectWeeklyScheduleEntries(filters) {
 
     students.forEach(s => {
         if (s.lessonDayOfWeek == null || !s.lessonTime) return;
-        if (!patternDays.includes(s.lessonDayOfWeek)) return;
         const teacher = teachers.find(t => t.id === s.teacherId);
         if (!teacher) return;
         if ((teacher.schedulePattern || 'mwf') !== filters.pattern) return;
@@ -1054,7 +1053,6 @@ function collectWeeklyScheduleEntries(filters) {
     [...(leads.english || []), ...(leads.russian || [])].forEach(lead => {
         const ob = lead.paymentOnboarding;
         if (!ob || ob.lessonDayOfWeek == null || !ob.lessonTime) return;
-        if (!patternDays.includes(ob.lessonDayOfWeek)) return;
         const teacher = teachers.find(t => t.id === ob.teacherId);
         if (!teacher) return;
         if ((teacher.schedulePattern || 'mwf') !== filters.pattern) return;
@@ -1096,13 +1094,14 @@ function buildScheduleCellMap(entries) {
 }
 
 function renderTimetableTeacherGrid(teacher, entries, pattern) {
-    const days = SCHEDULE_PATTERNS[pattern]?.days || [];
+    const days = [1, 2, 3, 4, 5, 6, 7];
     const times = generateTimeSlots();
     const { map, covered } = buildScheduleCellMap(entries.filter(e => e.teacherId === teacher.id));
 
     let html = `<table class="table tt-week-table"><thead><tr><th class="tt-time-col">Vaqt</th>`;
     days.forEach(dow => {
-        html += `<th>${escapeHtml(DAYS_UZ[dow - 1] || '')}</th>`;
+        const isSunday = dow === 7;
+        html += `<th${isSunday ? ' style="color:#DC2626"' : ''}>${escapeHtml(DAYS_UZ[dow - 1] || '')}</th>`;
     });
     html += '</tr></thead><tbody>';
 
@@ -1120,7 +1119,8 @@ function renderTimetableTeacherGrid(teacher, entries, pattern) {
                     <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
                 </td>`;
             } else {
-                html += `<td class="tt-cell tt-cell--free" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Bo'sh — bosing"></td>`;
+                const isSunday = dow === 7;
+                html += `<td class="tt-cell tt-cell--free${isSunday ? ' tt-cell--sunday' : ''}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Bo'sh — bosing"></td>`;
             }
         });
         html += '</tr>';
@@ -1730,7 +1730,7 @@ function renderSalaryContent() {
     const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
     const asstAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
 
-    const monthNames = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
+    const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
     document.getElementById('salaryMonthInfo').innerHTML = `
         <div class="kpi-stat"><div class="kpi-num">${monthNames[month - 1]} ${year}</div><div class="kpi-lbl">Hisobot oyi</div></div>
         <div class="kpi-stat"><div class="kpi-num" style="font-size:14px">Davomat asosida</div><div class="kpi-lbl">Timetable (probniy) hisobga olinmaydi</div></div>

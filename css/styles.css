@@ -1468,9 +1468,11 @@ body {
 .tt-teacher-divider { height: 1px; background: var(--border); margin: 8px 0 20px; }
 .tt-week-table, .tt-teacher-table { font-size: 12px; border-collapse: separate; border-spacing: 2px; }
 .tt-week-table th, .tt-teacher-table th { text-align: center; font-size: 12px; padding: 10px 8px; background: #FAFBFD; border-radius: 8px; position: sticky; top: 0; z-index: 2; }
-.tt-time-col, .tt-teacher-col { position: sticky; left: 0; z-index: 3; background: var(--surface) !important; min-width: 100px; text-align: left !important; font-weight: 700; box-shadow: 2px 0 6px rgba(0,0,0,0.04); }
-.tt-time-head { min-width: 52px; font-size: 10px !important; padding: 6px 4px !important; }
+.tt-time-col, .tt-teacher-col { position: sticky; left: 0; z-index: 3; background: var(--surface) !important; min-width: 60px; text-align: left !important; font-weight: 700; box-shadow: 2px 0 6px rgba(0,0,0,0.04); }
+.tt-time-head { min-width: 40px; font-size: 10px !important; padding: 6px 4px !important; }
 .tt-cell { min-width: 72px; min-height: 36px; text-align: center; vertical-align: middle; border-radius: 8px; padding: 6px 4px; border: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+.tt-cell--sunday { background: #fdfdfd; }
+.tt-cell--sunday:hover { background: #ECFDF5; border-color: #6EE7B7; }
 .tt-cell--free { background: #F8FAFC; }
 .tt-cell--free:hover { background: #ECFDF5; border-color: #6EE7B7; }
 .tt-cell--lead { background: #1A1D2E; border-color: #374151; color: #fff; }
