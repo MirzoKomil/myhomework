@@ -13,7 +13,8 @@ const TAB_TITLES = {
     marketing: "Marketing bo'limi",
     profile: 'Mening profilim',
     placeholder: 'Bo\'lim',
-    'student-app': 'O\'quvchi ilovasi'
+    'student-app': 'O\'quvchi ilovasi',
+    'hr-employees': 'Xodimlar'
 };
 
 const SALES_SECTIONS = {
@@ -299,6 +300,7 @@ function renderTab(tab) {
         case 'profile': renderProfile(); break;
         case 'placeholder': renderPlaceholder(); break;
         case 'student-app': renderStudentApp(); break;
+        case 'hr-employees': renderHrEmployees(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -5130,5 +5132,212 @@ document.addEventListener('click', () => {
     closeLeadCardMenus();
     closeLeadsColumnsDropdown();
 });
+
+// =========== HR EMPLOYEES ===========
+const HR_EMPLOYEES_KEY = 'mh_hr_employees';
+let _hrRoleFilter = 'all';
+
+const HR_ROLE_MAP = {
+    'rop': 'ROP',
+    'sotuv-menejeri': 'Sotuv menejeri',
+    'oqituvchi': "O'qituvchi",
+    'yordamchi': "Yordamchi o'qituvchi"
+};
+
+const HR_DEPARTMENTS = ['Sotuv', 'Akademik', 'Marketing', 'HR', 'IT'];
+
+function getHrEmployees() {
+    try {
+        const raw = localStorage.getItem(HR_EMPLOYEES_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
+function saveHrEmployees(list) {
+    localStorage.setItem(HR_EMPLOYEES_KEY, JSON.stringify(list));
+}
+
+function seedHrEmployees() {
+    const existing = getHrEmployees();
+    if (existing && existing.length) return existing;
+    const seed = [
+        { id: 'hr1', name: 'Alisher Karimov', role: 'rop', phone: '+998 90 111 22 33', email: 'alisher@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-05-15' },
+        { id: 'hr2', name: 'Dilnoza Rashidova', role: 'sotuv-menejeri', phone: '+998 91 222 33 44', email: 'dilnoza@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-08-20' },
+        { id: 'hr3', name: 'Bobur Toshmatov', role: 'sotuv-menejeri', phone: '+998 93 333 44 55', email: 'bobur@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-01-10' },
+        { id: 'hr4', name: 'Nodira Saidova', role: 'oqituvchi', phone: '+998 94 444 55 66', email: 'nodira@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-02-01' },
+        { id: 'hr5', name: 'Sardor Umarov', role: 'oqituvchi', phone: '+998 95 555 66 77', email: 'sardor@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-09-15' },
+        { id: 'hr6', name: 'Zulfiya Abdullayeva', role: 'oqituvchi', phone: '+998 97 666 77 88', email: 'zulfiya@myhomework.uz', department: 'Akademik', status: 'inactive', joinDate: '2024-03-01' },
+        { id: 'hr7', name: 'Javohir Nazarov', role: 'yordamchi', phone: '+998 90 777 88 99', email: 'javohir@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-06-01' },
+        { id: 'hr8', name: 'Madina Xolmatova', role: 'yordamchi', phone: '+998 91 888 99 00', email: 'madina@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-07-15' },
+        { id: 'hr9', name: 'Sherzod Mirzayev', role: 'rop', phone: '+998 93 999 00 11', email: 'sherzod@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2022-11-20' },
+        { id: 'hr10', name: 'Kamola Ergasheva', role: 'sotuv-menejeri', phone: '+998 94 000 11 22', email: 'kamola@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-02-14' }
+    ];
+    saveHrEmployees(seed);
+    return seed;
+}
+
+function renderHrEmployeeCard(emp) {
+    const initials = getUserInitials(emp.name);
+    const roleLabel = HR_ROLE_MAP[emp.role] || emp.role;
+    const isActive = emp.status === 'active';
+    const statusLabel = isActive ? 'ACTIVE' : 'INACTIVE';
+    const statusClass = isActive ? '' : ' inactive';
+    const joinFormatted = emp.joinDate ? new Date(emp.joinDate).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+    return `<div class="employee-card" data-emp-id="${emp.id}">
+        <button class="employee-card-actions" title="Amallar" data-emp-menu="${emp.id}">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+        </button>
+        <div class="employee-avatar-placeholder">${escapeHtml(initials)}</div>
+        <div class="employee-name">${escapeHtml(emp.name)}</div>
+        <div class="employee-role">${escapeHtml(roleLabel)}</div>
+        <span class="employee-status${statusClass}">${statusLabel}</span>
+        <div class="employee-contact">
+            <div class="employee-contact-item">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+                ${escapeHtml(emp.email || '—')}
+            </div>
+            <div class="employee-contact-item">
+                <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                ${escapeHtml(emp.phone || '—')}
+            </div>
+        </div>
+        <div class="employee-footer">
+            <div class="employee-footer-row">
+                <span class="employee-footer-label">Bo'lim</span>
+                <span class="employee-footer-value">${escapeHtml(emp.department || '—')}</span>
+            </div>
+            <div class="employee-footer-row">
+                <span class="employee-footer-label">Qo'shilgan sana</span>
+                <span class="employee-footer-value">${joinFormatted}</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderHrEmployees() {
+    const employees = seedHrEmployees();
+    const filtered = _hrRoleFilter === 'all' ? employees : employees.filter(e => e.role === _hrRoleFilter);
+    const grid = document.getElementById('hrEmployeesGrid');
+    if (!grid) return;
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div class="card placeholder-card" style="grid-column:1/-1">
+            <div class="placeholder-icon">👤</div>
+            <h3>Xodim topilmadi</h3>
+            <p class="text-muted">Tanlangan filtr bo'yicha xodimlar mavjud emas.</p>
+        </div>`;
+    } else {
+        grid.innerHTML = filtered.map(e => renderHrEmployeeCard(e)).join('');
+    }
+
+    // Bind card action menus (delete)
+    grid.querySelectorAll('[data-emp-menu]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const empId = btn.dataset.empMenu;
+            if (confirm("Bu xodimni o'chirasizmi?")) {
+                deleteHrEmployee(empId);
+            }
+        });
+    });
+}
+
+function deleteHrEmployee(id) {
+    let employees = getHrEmployees() || [];
+    employees = employees.filter(e => e.id !== id);
+    saveHrEmployees(employees);
+    renderHrEmployees();
+}
+
+function openAddEmployeeModal() {
+    const roleOptions = Object.entries(HR_ROLE_MAP).map(([k, v]) =>
+        `<option value="${k}">${escapeHtml(v)}</option>`
+    ).join('');
+    const deptOptions = HR_DEPARTMENTS.map(d =>
+        `<option value="${d}">${escapeHtml(d)}</option>`
+    ).join('');
+
+    openModal("Yangi xodim qo'shish",
+        `<div class="form-group">
+            <label>Ism familiya</label>
+            <input type="text" id="empName" class="form-control" placeholder="Ism familiyani kiriting">
+        </div>
+        <div class="form-group">
+            <label>Lavozim (rol)</label>
+            <select id="empRole" class="form-control">${roleOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Telefon raqam</label>
+            <input type="tel" id="empPhone" class="form-control" placeholder="+998 90 123 45 67">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="empEmail" class="form-control" placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+            <label>Bo'lim</label>
+            <select id="empDepartment" class="form-control">${deptOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Holati</label>
+            <select id="empStatus" class="form-control">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+        </div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelAddEmployee">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveAddEmployee">Saqlash</button>`
+    );
+
+    document.getElementById('cancelAddEmployee').onclick = () => closeModal();
+    document.getElementById('saveAddEmployee').onclick = () => {
+        const name = document.getElementById('empName').value.trim();
+        const role = document.getElementById('empRole').value;
+        const phone = document.getElementById('empPhone').value.trim();
+        const email = document.getElementById('empEmail').value.trim();
+        const department = document.getElementById('empDepartment').value;
+        const status = document.getElementById('empStatus').value;
+
+        if (!name) { alert('Ism familiya kiritilishi shart'); return; }
+
+        const employees = getHrEmployees() || [];
+        employees.push({
+            id: 'hr' + Date.now(),
+            name,
+            role,
+            phone,
+            email,
+            department,
+            status,
+            joinDate: new Date().toISOString().slice(0, 10)
+        });
+        saveHrEmployees(employees);
+        closeModal();
+        renderHrEmployees();
+    };
+}
+
+// HR role filter tab binding
+function initHrEmployeeTabs() {
+    const tabsContainer = document.getElementById('hrRoleTabs');
+    if (!tabsContainer) return;
+    tabsContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-role]');
+        if (!btn) return;
+        _hrRoleFilter = btn.dataset.role;
+        tabsContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderHrEmployees();
+    });
+}
+
+function initHrAddButton() {
+    const btn = document.getElementById('btnOpenAddEmployee');
+    if (btn) btn.addEventListener('click', () => openAddEmployeeModal());
+}
+
+initHrEmployeeTabs();
+initHrAddButton();
 
 bootApp();

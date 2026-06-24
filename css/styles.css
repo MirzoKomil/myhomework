@@ -4723,3 +4723,157 @@ body.modal-open {
         grid-template-columns: 1fr;
     }
 }
+
+/* ========== HR EMPLOYEES ========== */
+.employees-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.employee-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    border: 1px solid transparent;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.employee-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(123, 97, 255, 0.1);
+}
+
+.employee-card-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: 50%;
+}
+
+.employee-card-actions:hover {
+    background: var(--bg);
+}
+
+.employee-card-actions svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.employee-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 12px;
+    border: 3px solid var(--purple-light);
+    background: var(--bg);
+}
+
+.employee-avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 12px;
+    border: 3px solid var(--purple-light);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--purple);
+}
+
+.employee-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.employee-role {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+}
+
+.employee-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 12px;
+    background: var(--success-bg);
+    color: var(--success);
+    margin-bottom: 20px;
+}
+
+.employee-status.inactive {
+    background: #F1F5F9;
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .employee-status.inactive {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.employee-contact {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 0;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.employee-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.employee-contact-item svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--text-muted);
+    fill: none;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+
+.employee-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.employee-footer-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.employee-footer-label {
+    color: var(--text-muted);
+}
+
+.employee-footer-value {
+    color: var(--text);
+    font-weight: 600;
+}
