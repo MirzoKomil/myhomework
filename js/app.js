@@ -1287,7 +1287,7 @@ function renderTimetable() {
 
     let teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
     if (filters.lang) teachers = teachers.filter(t => (t.subject || 'english') === filters.lang);
-    teachers = teachers.filter(t => (t.schedulePattern || 'mwf') === pattern);
+    teachers = teachers.filter(t => (t.schedulePattern || 'mwf') === filters.pattern);
 
     const entries = collectWeeklyScheduleEntries(filters);
     const container = document.getElementById('timetableContainer');
