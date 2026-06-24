@@ -619,6 +619,19 @@
 
                         <div class="sales-body">
                             <div class="sales-panel active" data-sales-panel="leads">
+                                <div class="bulk-actions-bar" id="bulkActionsBar"
+                                    style="display: none; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; align-items: center; gap: 12px;">
+                                    <span id="bulkSelectedCount"
+                                        style="font-weight: 600; font-size: 14px; color: var(--text);">0 ta lid
+                                        tanlandi</span>
+                                    <select id="bulkManagerSelect" class="form-control-sm" style="min-width: 200px;">
+                                        <option value="">— Menejerni tanlang —</option>
+                                    </select>
+                                    <button class="btn-primary-sm" id="bulkAssignBtn">Biriktirish</button>
+                                    <button class="btn-outline-sm" id="bulkCancelBtn"
+                                        style="border:1px solid var(--border); background:var(--surface); padding: 5px 12px; border-radius:6px; cursor:pointer; color: var(--text);">Bekor
+                                        qilish</button>
+                                </div>
                                 <div class="leads-kanban" id="leadsKanban"></div>
                             </div>
 

@@ -4545,8 +4545,14 @@ function renderLeadCard(lead, langKey) {
         ? `<span class="lead-card-serial">#${escapeHtml(normalized.serialCode)}</span>`
         : '';
 
+    const showCheckbox = normalizeLeadStatus(normalized.status) === 'yangi-lidlar' && !normalized.managerId;
+    const checkboxHtml = showCheckbox
+        ? `<input type="checkbox" class="lead-bulk-checkbox" data-id="${escapeHtml(normalized.id)}" data-lang="${langKey}" aria-label="Belgilash">`
+        : '';
+
     return `<article class="lead-card" draggable="true" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
         <div class="lead-card-top">
+            ${checkboxHtml}
             <div class="lead-card-title-wrap">
                 <h4 class="lead-card-name">${escapeHtml(normalized.name)}</h4>
                 <div class="lead-card-meta">
@@ -4768,6 +4774,56 @@ function renderLeads() {
     board.querySelectorAll('.lead-card-menu-dropdown').forEach(menu => {
         menu.addEventListener('click', e => e.stopPropagation());
     });
+
+    const bulkChecks = board.querySelectorAll('.lead-bulk-checkbox');
+    const bulkBar = document.getElementById('bulkActionsBar');
+    const bulkCount = document.getElementById('bulkSelectedCount');
+    const bulkSelect = document.getElementById('bulkManagerSelect');
+    const bulkAssignBtn = document.getElementById('bulkAssignBtn');
+    const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+
+    if (bulkBar && bulkChecks.length) {
+        const updateBulkBar = () => {
+            const checked = Array.from(bulkChecks).filter(cb => cb.checked);
+            if (checked.length > 0) {
+                bulkBar.style.display = 'flex';
+                bulkCount.textContent = `${checked.length} ta lid tanlandi`;
+                if (!bulkSelect.dataset.populated) {
+                    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+                    bulkSelect.innerHTML = '<option value="">— Menejerni tanlang —</option>' + managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
+                    bulkSelect.dataset.populated = '1';
+                }
+            } else {
+                bulkBar.style.display = 'none';
+            }
+        };
+
+        bulkChecks.forEach(cb => cb.addEventListener('change', updateBulkBar));
+
+        bulkCancelBtn.onclick = () => {
+            bulkChecks.forEach(cb => cb.checked = false);
+            updateBulkBar();
+        };
+
+        bulkAssignBtn.onclick = () => {
+            const managerId = bulkSelect.value;
+            if (!managerId) return showNotification('Xatolik', 'Menejerni tanlang', 'error');
+            const checked = Array.from(bulkChecks).filter(cb => cb.checked);
+            let updated = false;
+            checked.forEach(cb => {
+                const lang = cb.dataset.lang;
+                const id = cb.dataset.id;
+                updateLeadInStorage(lang, id, l => ({ ...l, managerId }));
+                updated = true;
+            });
+            if (updated) {
+                renderLeads();
+                showNotification('Muvaffaqiyatli', `${checked.length} ta lid biriktirildi`, 'success');
+            }
+        };
+    } else if (bulkBar) {
+        bulkBar.style.display = 'none';
+    }
 
     board.querySelectorAll('[data-lead-menu-delete]').forEach(btn => {
         btn.addEventListener('click', e => {
@@ -5056,8 +5112,7 @@ function openAddLeadModal() {
                 <option value="organic">Organik</option>
                 <option value="target">Target (reklama)</option>
             </select>
-         </div>
-         <div class="form-group"><label>Manba</label><input id="mLeadSource" class="form-control" value="Organik"></div>`,
+         </div>`,
         `<button class="btn-primary-sm" id="saveLead">Saqlash</button>`
     );
 
@@ -5066,6 +5121,8 @@ function openAddLeadModal() {
         if (!name) return;
         const lang = document.getElementById('mLeadLang').value;
         const leadType = document.getElementById('mLeadType').value;
+        const sourceLabel = leadType === 'organic' ? 'Organik' : 'Target (reklama)';
+
         const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         leads[lang] = leads[lang] || [];
         leads[lang].push({
@@ -5074,7 +5131,7 @@ function openAddLeadModal() {
             phone: document.getElementById('mLeadPhone').value.trim(),
             phone2: document.getElementById('mLeadPhone2').value.trim(),
             managerId: document.getElementById('mLeadManagerId').value || '',
-            source: document.getElementById('mLeadSource').value.trim() || 'Organik',
+            source: sourceLabel,
             leadType,
             status: 'yangi-lidlar',
             comments: [],

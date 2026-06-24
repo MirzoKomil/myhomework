@@ -2953,6 +2953,14 @@ body {
     margin-bottom: 12px;
 }
 
+.lead-bulk-checkbox {
+    margin-top: 4px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
 .lead-card-title-wrap {
     flex: 1;
     min-width: 0;
