@@ -1043,7 +1043,6 @@ function collectWeeklyScheduleEntries(filters) {
         if (s.lessonDayOfWeek == null || !s.lessonTime) return;
         const teacher = teachers.find(t => t.id === s.teacherId);
         if (!teacher) return;
-        if ((teacher.schedulePattern || 'mwf') !== filters.pattern) return;
         if (filters.lang && (s.subject || 'english') !== filters.lang) return;
         if (filters.teacherId !== 'all' && s.teacherId !== filters.teacherId) return;
         const daysList = [1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [Number(s.lessonDayOfWeek)];
@@ -1067,7 +1066,6 @@ function collectWeeklyScheduleEntries(filters) {
         if (!ob || ob.lessonDayOfWeek == null || !ob.lessonTime) return;
         const teacher = teachers.find(t => t.id === ob.teacherId);
         if (!teacher) return;
-        if ((teacher.schedulePattern || 'mwf') !== filters.pattern) return;
         const lang = lead._lang || lead.language || 'english';
         if (filters.lang && lang !== filters.lang) return;
         if (filters.teacherId !== 'all' && ob.teacherId !== filters.teacherId) return;
@@ -1115,8 +1113,8 @@ function buildScheduleCellMap(entries) {
     return { map, covered };
 }
 
-function renderTimetableTeacherGrid(teacher, entries, pattern) {
-    const days = SCHEDULE_PATTERNS[pattern]?.days || [];
+function renderTimetableTeacherGrid(teacher, entries) {
+    const days = [1, 2, 3, 4, 5, 6];
     const times = generateTimeSlots();
     const { map, covered } = buildScheduleCellMap(entries.filter(e => e.teacherId === teacher.id));
     const workSlots = teacher.workSlots ? new Set(teacher.workSlots) : null;
@@ -1159,13 +1157,13 @@ function renderTimetableTeacherGrid(teacher, entries, pattern) {
     return html;
 }
 
-function renderTimetableAllTeachersWeek(teachers, entries, pattern) {
+function renderTimetableAllTeachersWeek(teachers, entries) {
     let html = '';
     teachers.forEach((teacher, index) => {
         if (index > 0) html += '<div class="tt-teacher-divider"></div>';
         html += `<div class="tt-teacher-block">
             <h4 class="tt-teacher-block-title">${escapeHtml(teacher.name)}</h4>`;
-        html += renderTimetableTeacherGrid(teacher, entries, pattern);
+        html += renderTimetableTeacherGrid(teacher, entries);
         html += '</div>';
     });
     return html;
@@ -1287,7 +1285,6 @@ function renderTimetable() {
 
     let teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
     if (filters.lang) teachers = teachers.filter(t => (t.subject || 'english') === filters.lang);
-    teachers = teachers.filter(t => (t.schedulePattern || 'mwf') === filters.pattern);
 
     const entries = collectWeeklyScheduleEntries(filters);
     const container = document.getElementById('timetableContainer');
