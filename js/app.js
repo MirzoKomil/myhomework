@@ -77,6 +77,44 @@ function initUserUI(currentUser) {
     document.getElementById('userAvatar').addEventListener('click', () => {
         switchTab('profile');
     });
+
+    applyRoleBasedAccess(currentUser);
+}
+
+function applyRoleBasedAccess(user) {
+    const role = user.role;
+    const allLinks = document.querySelectorAll('.sidebar-nav .nav-item');
+    allLinks.forEach(link => {
+        link.style.display = 'none';
+    });
+
+    const showTabs = (tabs) => {
+        tabs.forEach(tab => {
+            const el = document.querySelector(`.sidebar-nav .nav-item[data-tab="${tab}"]`);
+            if (el) el.style.display = 'flex';
+        });
+    };
+
+    let allowedTabs = [];
+    if (role === 'admin') {
+        allowedTabs = ['dashboard', 'sales', 'finance', 'students', 'timetable', 'main-attendance', 'assistant-attendance', 'teacher-cabinet', 'marketing', 'hr', 'settings', 'profile'];
+    } else if (role === 'sales_manager') {
+        allowedTabs = ['dashboard', 'sales', 'profile'];
+    } else if (role === 'teacher') {
+        allowedTabs = ['dashboard', 'students', 'timetable', 'teacher-cabinet', 'profile'];
+    } else {
+        // fallback
+        allowedTabs = ['dashboard', 'profile'];
+    }
+
+    showTabs(allowedTabs);
+
+    // Dastlab qaysi tab ochilishini belgilash
+    if (role === 'sales_manager') {
+        setTimeout(() => switchTab('sales'), 100);
+    } else if (role === 'teacher') {
+        setTimeout(() => switchTab('teacher-cabinet'), 100);
+    }
 }
 
 async function bootApp() {

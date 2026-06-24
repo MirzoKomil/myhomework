@@ -1,63 +1,85 @@
-// Myhomework.uz — autentifikatsiya (API)
+// Myhomework.uz — avtorizatsiya va rol tanlash
+document.addEventListener('DOMContentLoaded', () => {
+    const loginRole = document.getElementById('loginRole');
+    const loginProfile = document.getElementById('loginProfile');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginForm = document.getElementById('loginForm');
+    const errorMessage = document.getElementById('errorMessage');
 
-const registerForm = document.getElementById('registerForm');
-if (registerForm) {
-    registerForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const name = document.getElementById('regName').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const password = document.getElementById('regPassword').value;
-        const confirm = document.getElementById('regConfirm')?.value;
-        const role = document.getElementById('regRole')?.value || 'admin';
-        const errorDiv = document.getElementById('registerError');
-        const btn = registerForm.querySelector('button[type="submit"]');
+    if (!loginRole) return; // Faqat login sahifasida ishlashi uchun
 
-        if (password.length < 6) {
-            showError(errorDiv, 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak.');
+    let availableProfiles = [];
+
+    loginRole.addEventListener('change', () => {
+        const role = loginRole.value;
+        loginProfile.innerHTML = '<option value="">— Tanlang —</option>';
+        availableProfiles = [];
+        errorMessage.style.display = 'none';
+
+        if (!role) {
+            loginProfile.disabled = true;
+            loginBtn.disabled = true;
             return;
         }
-        if (confirm !== undefined && password !== confirm) {
-            showError(errorDiv, 'Parollar mos kelmadi.');
-            return;
+
+        // xodimlarni LocalStorage dan o'qish
+        const hrEmps = JSON.parse(localStorage.getItem('mh_hr_employees') || '[]');
+        const teachers = JSON.parse(localStorage.getItem('mh_teachers') || '[]');
+
+        if (role === 'Admin') {
+            availableProfiles = [{ id: 'admin', name: 'Asosiy Admin', role: 'admin' }];
+        } else if (role === 'Sotuv menejeri') {
+            availableProfiles = hrEmps.filter(e => e.role === 'Sotuv menejeri' || e.role === 'sotuv_menejeri');
+        } else if (role === "O'qituvchi") {
+            availableProfiles = teachers.map(t => ({ id: t.id, name: t.name, role: 'teacher' }));
+            const hrTeachers = hrEmps.filter(e => e.role === "O'qituvchi" || e.role === "Yordamchi o'qituvchi");
+            availableProfiles = [...availableProfiles, ...hrTeachers.map(t => ({ id: t.id, name: t.name, role: 'teacher' }))];
         }
 
-        btn.disabled = true;
-        btn.textContent = 'Kutilmoqda...';
-        try {
-            await apiRegister({ name, email, password, role });
-            alert('Muvaffaqiyatli ro\'yxatdan o\'tdingiz! Endi tizimga kiring.');
-            window.location.href = 'login.html';
-        } catch (err) {
-            showError(errorDiv, err.message);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Ro\'yxatdan o\'tish';
+        if (availableProfiles.length === 0) {
+            loginProfile.innerHTML = `<option value="">Bu rolga mos foydalanuvchilar yo'q</option>`;
+            loginProfile.disabled = true;
+            loginBtn.disabled = true;
+        } else {
+            loginProfile.disabled = false;
+            availableProfiles.forEach(p => {
+                loginProfile.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
         }
     });
-}
 
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', async function(e) {
+    loginProfile.addEventListener('change', () => {
+        loginBtn.disabled = !loginProfile.value;
+    });
+
+    loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        const errorDiv = document.getElementById('errorMessage');
-        const btn = loginForm.querySelector('button[type="submit"]');
+        const roleStr = loginRole.value;
+        const profileId = loginProfile.value;
 
-        btn.disabled = true;
-        btn.textContent = 'Kirish...';
-        try {
-            await apiLogin(email, password);
-            window.location.href = 'index.html';
-        } catch (err) {
-            showError(errorDiv, err.message || 'Xato! Login yoki parol noto\'g\'ri.');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Kirish';
-        }
+        if (!roleStr || !profileId) return;
+
+        const profile = availableProfiles.find(p => p.id === profileId);
+        if (!profile) return;
+
+        // Backend mocksiz: LocalStorage'ga yozamiz
+        const user = {
+            id: profile.id,
+            name: profile.name,
+            role: roleStr,
+            token: 'mock-token-' + Date.now()
+        };
+
+        if (roleStr === "O'qituvchi") user.role = 'teacher';
+        if (roleStr === 'Sotuv menejeri') user.role = 'sales_manager';
+        if (roleStr === 'Admin') user.role = 'admin';
+
+        localStorage.setItem('mh_currentUser', JSON.stringify(user));
+        localStorage.setItem('mh_token', user.token);
+
+        window.location.href = 'index.html';
     });
-}
+});
 
 function showError(el, msg) {
     if (!el) { alert(msg); return; }

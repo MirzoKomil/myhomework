@@ -11,7 +11,8 @@ const STORAGE_KEYS = {
     assistantAttendance: 'mh_assistantAttendance',
     salary: 'mh_salary',
     payments: 'mh_payments',
-    leads: 'mh_leads'
+    leads: 'mh_leads',
+    hrEmployees: 'mh_hr_employees'
 };
 
 const CACHE_KEY_MAP = {
@@ -22,7 +23,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.mainAttendance]: 'mainAttendance',
     [STORAGE_KEYS.assistantAttendance]: 'assistantAttendance',
     [STORAGE_KEYS.payments]: 'payments',
-    [STORAGE_KEYS.leads]: 'leads'
+    [STORAGE_KEYS.leads]: 'leads',
+    [STORAGE_KEYS.hrEmployees]: 'hrEmployees'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(
@@ -51,6 +53,12 @@ const SUBJECTS = {
 };
 
 function getItem(key, fallback) {
+    if (key === STORAGE_KEYS.salesManagers) {
+        const hremps = getItem(STORAGE_KEYS.hrEmployees, []);
+        const merged = hremps.filter(e => e.role === 'Sotuv menejeri' || e.role === 'sotuv_menejeri');
+        return merged.length > 0 ? merged : fallback || [];
+    }
+
     const cacheKey = CACHE_KEY_MAP[key];
     if (cacheKey && _cache[cacheKey] !== undefined) return _cache[cacheKey];
     if (key === STORAGE_KEYS.currentUser) {
@@ -109,6 +117,7 @@ async function initStorage() {
         _apiReady = true;
         migrateTeachers();
         migrateStudents();
+        migrateSalesManagersHREmployees();
     } catch (err) {
         console.error('API ulanmadi:', err.message);
         _apiReady = false;
@@ -150,6 +159,30 @@ function requireAuth() {
         return null;
     }
     return user;
+}
+
+function migrateSalesManagersHREmployees() {
+    const sm = window.localStorage.getItem(STORAGE_KEYS.salesManagers);
+    if (!sm) return;
+    try {
+        const parsedSM = JSON.parse(sm);
+        if (Array.isArray(parsedSM) && parsedSM.length > 0) {
+            let hr = getItem(STORAGE_KEYS.hrEmployees, []);
+            for (const sp of parsedSM) {
+                if (!hr.find(h => h.id === sp.id)) {
+                    hr.push({
+                        ...sp,
+                        role: 'Sotuv menejeri',
+                        status: 'Kompaniyada',
+                        joinedDate: new Date().toLocaleDateString('uz-UZ'),
+                        phone: ''
+                    });
+                }
+            }
+            setItem(STORAGE_KEYS.hrEmployees, hr);
+        }
+        window.localStorage.removeItem(STORAGE_KEYS.salesManagers);
+    } catch (e) { }
 }
 
 function formatMoney(amount) {

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="uz">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -8,9 +9,12 @@
     <script src="js/theme.js"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body class="auth-body">
     <button class="auth-theme-btn icon-btn" id="themeToggle" type="button" title="Tungi rejim">
-        <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
     </button>
     <div class="auth-container">
         <div class="auth-brand">
@@ -22,19 +26,30 @@
 
         <form id="loginForm">
             <div class="form-group">
-                <label for="loginEmail">Login / Email</label>
-                <input type="text" id="loginEmail" required placeholder="Loginingizni kiriting">
+                <label for="loginRole">Rolingiz</label>
+                <select id="loginRole" class="form-control" required>
+                    <option value="">— Tanlang —</option>
+                    <option value="Admin">Admin (ROP)</option>
+                    <option value="Sotuv menejeri">Sotuv menejeri</option>
+                    <option value="O'qituvchi">O'qituvchi / Yordamchi o'qituvchi</option>
+                </select>
             </div>
             <div class="form-group">
-                <label for="loginPassword">Parol</label>
-                <input type="password" id="loginPassword" required placeholder="Parolingizni kiriting">
+                <label for="loginProfile">Ismingiz</label>
+                <select id="loginProfile" class="form-control" required disabled>
+                    <option value="">— Avval rolni tanlang —</option>
+                </select>
             </div>
-            <button type="submit" class="btn-auth">Kirish</button>
+            <button type="submit" class="btn-auth" id="loginBtn" disabled>Kirish</button>
         </form>
 
-        <p class="auth-footer">Yangi foydalanuvchimisiz? <a href="register.html">Ro'yxatdan o'tish</a></p>
+        <p class="auth-footer" style="margin-top: 16px;">
+            Yangi xodimmisiz? Aloqa uchun: <strong>admin@myhomework.uz</strong>
+        </p>
     </div>
+    <script src="js/storage.js"></script>
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
 </body>
+
 </html>
