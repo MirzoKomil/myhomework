@@ -4545,10 +4545,7 @@ function renderLeadCard(lead, langKey) {
         ? `<span class="lead-card-serial">#${escapeHtml(normalized.serialCode)}</span>`
         : '';
 
-    const showCheckbox = normalizeLeadStatus(normalized.status) === 'yangi-lidlar' && !normalized.managerId;
-    const checkboxHtml = showCheckbox
-        ? `<input type="checkbox" class="lead-bulk-checkbox" data-id="${escapeHtml(normalized.id)}" data-lang="${langKey}" aria-label="Belgilash">`
-        : '';
+    const checkboxHtml = `<input type="checkbox" class="lead-bulk-checkbox" data-id="${escapeHtml(normalized.id)}" data-lang="${langKey}" aria-label="Belgilash">`;
 
     return `<article class="lead-card" draggable="true" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
         <div class="lead-card-top">
