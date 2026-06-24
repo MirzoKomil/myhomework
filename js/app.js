@@ -1116,7 +1116,7 @@ function buildScheduleCellMap(entries) {
 }
 
 function renderTimetableTeacherGrid(teacher, entries, pattern) {
-    const days = [1, 2, 3, 4, 5, 6, 7];
+    const days = SCHEDULE_PATTERNS[pattern]?.days || [];
     const times = generateTimeSlots();
     const { map, covered } = buildScheduleCellMap(entries.filter(e => e.teacherId === teacher.id));
     const workSlots = teacher.workSlots ? new Set(teacher.workSlots) : null;
@@ -4921,7 +4921,7 @@ function openTeacherWorkScheduleModal(initialTeacherId) {
         if (!teacher) return;
 
         const times = generateTimeSlots();
-        const days = [1, 2, 3, 4, 5, 6, 7];
+        const days = [1, 2, 3, 4, 5, 6];
 
         if (!currentWorkSlots) {
             currentWorkSlots = teacher.workSlots ? new Set(teacher.workSlots) : new Set(times.flatMap(t => days.map(d => `${d}_${t}`)));
@@ -4934,7 +4934,7 @@ function openTeacherWorkScheduleModal(initialTeacherId) {
         html += `<div class="table-responsive" style="max-height:60vh;overflow-y:auto;"><table class="table tt-week-table" style="user-select:none;margin-bottom:0;">`;
         html += `<thead><tr><th class="tt-time-col" style="top:0;">Vaqt</th>`;
         days.forEach(d => {
-            html += `<th style="top:0;${d === 7 ? 'color:#DC2626;' : ''}">${DAYS_UZ[d - 1]}</th>`;
+            html += `<th style="top:0;">${DAYS_UZ[d - 1]}</th>`;
         });
         html += `</tr></thead><tbody>`;
 
@@ -5332,12 +5332,12 @@ function initHrEmployeeTabs() {
     });
 }
 
-function initHrAddButton() {
-    const btn = document.getElementById('btnOpenAddEmployee');
-    if (btn) btn.addEventListener('click', () => openAddEmployeeModal());
-}
+document.addEventListener('click', (e) => {
+    if (e.target.closest('#btnOpenAddEmployee')) {
+        openAddEmployeeModal();
+    }
+});
 
 initHrEmployeeTabs();
-initHrAddButton();
 
 bootApp();
