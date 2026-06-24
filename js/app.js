@@ -5250,19 +5250,34 @@ function seedHrEmployees() {
     const existing = getHrEmployees();
     if (existing && existing.length) return existing;
     const seed = [
-        { id: 'hr1', name: 'Alisher Karimov', role: 'rop', phone: '+998 90 111 22 33', email: 'alisher@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-05-15' },
-        { id: 'hr2', name: 'Dilnoza Rashidova', role: 'sotuv-menejeri', phone: '+998 91 222 33 44', email: 'dilnoza@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-08-20' },
-        { id: 'hr3', name: 'Bobur Toshmatov', role: 'sotuv-menejeri', phone: '+998 93 333 44 55', email: 'bobur@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-01-10' },
-        { id: 'hr4', name: 'Nodira Saidova', role: 'oqituvchi', phone: '+998 94 444 55 66', email: 'nodira@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-02-01' },
-        { id: 'hr5', name: 'Sardor Umarov', role: 'oqituvchi', phone: '+998 95 555 66 77', email: 'sardor@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-09-15' },
-        { id: 'hr6', name: 'Zulfiya Abdullayeva', role: 'oqituvchi', phone: '+998 97 666 77 88', email: 'zulfiya@myhomework.uz', department: 'Akademik', status: 'inactive', joinDate: '2024-03-01' },
-        { id: 'hr7', name: 'Javohir Nazarov', role: 'yordamchi', phone: '+998 90 777 88 99', email: 'javohir@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-06-01' },
-        { id: 'hr8', name: 'Madina Xolmatova', role: 'yordamchi', phone: '+998 91 888 99 00', email: 'madina@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-07-15' },
-        { id: 'hr9', name: 'Sherzod Mirzayev', role: 'rop', phone: '+998 93 999 00 11', email: 'sherzod@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2022-11-20' },
-        { id: 'hr10', name: 'Kamola Ergasheva', role: 'sotuv-menejeri', phone: '+998 94 000 11 22', email: 'kamola@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-02-14' }
+        { id: 'hr1', name: 'Alisher Karimov', role: 'rop', phone: '+998 90 111 22 33', email: 'alisher@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-05-15', login: 'alisher', password: '1234' },
+        { id: 'hr2', name: 'Dilnoza Rashidova', role: 'sotuv-menejeri', phone: '+998 91 222 33 44', email: 'dilnoza@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-08-20', login: 'dilnoza', password: '1234' },
+        { id: 'hr3', name: 'Bobur Toshmatov', role: 'sotuv-menejeri', phone: '+998 93 333 44 55', email: 'bobur@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-01-10', login: 'bobur', password: '1234' },
+        { id: 'hr4', name: 'Nodira Saidova', role: 'oqituvchi', phone: '+998 94 444 55 66', email: 'nodira@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-02-01', login: 'nodira', password: '1234' },
+        { id: 'hr5', name: 'Sardor Umarov', role: 'oqituvchi', phone: '+998 95 555 66 77', email: 'sardor@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-09-15', login: 'sardor', password: '1234' },
+        { id: 'hr6', name: 'Zulfiya Abdullayeva', role: 'oqituvchi', phone: '+998 97 666 77 88', email: 'zulfiya@myhomework.uz', department: 'Akademik', status: 'inactive', joinDate: '2024-03-01', login: 'zulfiya', password: '1234' },
+        { id: 'hr7', name: 'Javohir Nazarov', role: 'yordamchi', phone: '+998 90 777 88 99', email: 'javohir@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-06-01', login: 'javohir', password: '1234' },
+        { id: 'hr8', name: 'Madina Xolmatova', role: 'yordamchi', phone: '+998 91 888 99 00', email: 'madina@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-07-15', login: 'madina', password: '1234' },
+        { id: 'hr9', name: 'Sherzod Mirzayev', role: 'rop', phone: '+998 93 999 00 11', email: 'sherzod@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2022-11-20', login: 'sherzod', password: '1234' },
+        { id: 'hr10', name: 'Kamola Ergasheva', role: 'sotuv-menejeri', phone: '+998 94 000 11 22', email: 'kamola@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-02-14', login: 'kamola', password: '1234' }
     ];
     saveHrEmployees(seed);
     return seed;
+}
+
+// Eski xodimlarga login/parol qo'shish (migration)
+function migrateHrCredentials() {
+    const emps = getHrEmployees();
+    if (!emps || !emps.length) return;
+    let changed = false;
+    emps.forEach(e => {
+        if (!e.login) {
+            e.login = e.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+            e.password = '1234';
+            changed = true;
+        }
+    });
+    if (changed) saveHrEmployees(emps);
 }
 
 function renderHrEmployeeCard(emp) {
@@ -5306,6 +5321,7 @@ function renderHrEmployeeCard(emp) {
 
 function renderHrEmployees() {
     const employees = seedHrEmployees();
+    migrateHrCredentials();
     const filtered = _hrRoleFilter === 'all' ? employees : employees.filter(e => e.role === _hrRoleFilter);
     const grid = document.getElementById('hrEmployeesGrid');
     if (!grid) return;
@@ -5368,6 +5384,16 @@ function openAddEmployeeModal() {
             <label>Bo'lim</label>
             <select id="empDepartment" class="form-control">${deptOptions}</select>
         </div>
+        <hr style="margin:12px 0;border-color:var(--border)">
+        <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Kirish ma'lumotlari (Login / Parol)</p>
+        <div class="form-group">
+            <label>Login</label>
+            <input type="text" id="empLogin" class="form-control" placeholder="masalan: alisher.k" autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label>Parol</label>
+            <input type="text" id="empPassword" class="form-control" placeholder="Kamida 4 ta belgi" autocomplete="off">
+        </div>
         <div class="form-group">
             <label>Holati</label>
             <select id="empStatus" class="form-control">
@@ -5387,10 +5413,21 @@ function openAddEmployeeModal() {
         const email = document.getElementById('empEmail').value.trim();
         const department = document.getElementById('empDepartment').value;
         const status = document.getElementById('empStatus').value;
+        const login = document.getElementById('empLogin').value.trim();
+        const password = document.getElementById('empPassword').value.trim();
 
         if (!name) { alert('Ism familiya kiritilishi shart'); return; }
+        if (!login) { alert('Login kiritilishi shart'); return; }
+        if (password.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
 
         const employees = getHrEmployees() || [];
+
+        // Login takrorlanmasligini tekshirish
+        if (employees.find(e => e.login === login)) {
+            alert('Bu login allaqachon mavjud. Boshqa login tanlang.');
+            return;
+        }
+
         employees.push({
             id: 'hr' + Date.now(),
             name,
@@ -5399,6 +5436,8 @@ function openAddEmployeeModal() {
             email,
             department,
             status,
+            login,
+            password,
             joinDate: new Date().toISOString().slice(0, 10)
         });
         saveHrEmployees(employees);

@@ -26,29 +26,22 @@
 
         <form id="loginForm">
             <div class="form-group">
-                <label for="loginRole">Rolingiz</label>
-                <select id="loginRole" class="form-control" required>
-                    <option value="">— Tanlang —</option>
-                    <option value="Admin">Admin (ROP)</option>
-                    <option value="Sotuv menejeri">Sotuv menejeri</option>
-                    <option value="O'qituvchi">O'qituvchi / Yordamchi o'qituvchi</option>
-                </select>
+                <label for="loginUsername">Login</label>
+                <input type="text" id="loginUsername" required placeholder="Loginingizni kiriting"
+                    autocomplete="username">
             </div>
             <div class="form-group">
-                <label for="loginProfile">Ismingiz</label>
-                <select id="loginProfile" class="form-control" required disabled>
-                    <option value="">— Avval rolni tanlang —</option>
-                </select>
+                <label for="loginPassword">Parol</label>
+                <input type="password" id="loginPassword" required placeholder="Parolingizni kiriting"
+                    autocomplete="current-password">
             </div>
-            <button type="submit" class="btn-auth" id="loginBtn" disabled>Kirish</button>
+            <button type="submit" class="btn-auth" id="loginBtn">Kirish</button>
         </form>
 
         <p class="auth-footer" style="margin-top: 16px;">
-            Yangi xodimmisiz? Aloqa uchun: <strong>admin@myhomework.uz</strong>
+            Kirish ma'lumotlaringiz yo'qmi? <strong>Admin bilan bog'laning</strong>
         </p>
     </div>
-    <script src="js/storage.js"></script>
-    <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
 </body>
 
