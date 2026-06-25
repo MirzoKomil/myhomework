@@ -1078,9 +1078,10 @@ function renderDashboard() {
     const students = getItem(STORAGE_KEYS.students, []);
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const organicLeads = [...(leads.english || []), ...(leads.russian || [])].filter(l => (l.leadType || 'organic') === 'organic').length;
     document.getElementById('statStudents').textContent = students.length;
     document.getElementById('statTeachers').textContent = teachers.length;
-    document.getElementById('statLeads').textContent = leads.english.length + leads.russian.length;
+    document.getElementById('statLeads').textContent = organicLeads;
 
     renderTeacherCards(teachers, students);
     renderMiniSchedule();
