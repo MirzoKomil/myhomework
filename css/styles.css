@@ -333,13 +333,15 @@ body {
     color: var(--text);
 }
 
-.menu-sub-item.active {
+.menu-sub-item.active,
+.menu-sub-item--active {
     background: var(--purple-light);
     color: var(--purple);
     font-weight: 500;
 }
 
-.menu-sub-item.active::before {
+.menu-sub-item.active::before,
+.menu-sub-item--active::before {
     content: '';
     position: absolute;
     left: 0;
@@ -349,6 +351,17 @@ body {
     height: 22px;
     background: var(--purple);
     border-radius: 0 4px 4px 0;
+}
+
+.lang-sidebar-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border: none;
+    background: none;
 }
 
 [data-theme="dark"] .menu-group-toggle:hover,

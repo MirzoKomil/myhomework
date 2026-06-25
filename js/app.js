@@ -90,9 +90,9 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analytics-overview', 'analytics-sales', 'settings'],
-    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'settings'],
-    employee:      ['student-app', 'settings']
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analytics-overview', 'analytics-sales'],
+    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
+    employee:      ['student-app']
 };
 
 function applyRoleBasedAccess(user) {
@@ -303,6 +303,25 @@ function initSidebarMenu() {
             }
         });
     });
+
+    // Sozlamalar sidebar — til tugmalari
+    function updateSidebarLangActive(lang) {
+        document.querySelectorAll('.lang-sidebar-btn').forEach(b => {
+            b.classList.toggle('menu-sub-item--active', b.dataset.lang === lang);
+        });
+    }
+
+    document.querySelectorAll('.lang-sidebar-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            const lang = btn.dataset.lang;
+            setUiLang(lang);
+            updateSidebarLangActive(lang);
+            showNotification('', `✓ ${LANG_LABELS[lang] || lang} tili tanlandi`, 'success');
+        });
+    });
+
+    updateSidebarLangActive(localStorage.getItem('mh_ui_lang') || 'uz');
 }
 
 initSidebarMenu();
@@ -376,7 +395,7 @@ function renderTab(tab) {
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
         case 'marketing': break;
-        case 'settings': renderSettings(); break;
+        case 'settings': break;
         case 'analytics-overview':
         case 'analytics-sales':
         case 'analytics-teachers': break;
