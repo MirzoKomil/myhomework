@@ -2076,6 +2076,7 @@ body {
     color: var(--text-muted);
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .subject-flag {
@@ -3239,6 +3240,10 @@ body {
     color: var(--purple);
 }
 
+.lead-card-action--active {
+    color: var(--purple);
+}
+
 .lead-card-action svg {
     width: 14px;
     height: 14px;
@@ -3436,6 +3441,21 @@ body {
     font-weight: 600;
     color: var(--text);
     margin-bottom: 12px;
+}
+
+.failed-sale-group {
+    margin-bottom: 16px;
+}
+.failed-sale-group:last-child {
+    margin-bottom: 0;
+}
+.failed-sale-group-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
 }
 
 .lead-reason-list {

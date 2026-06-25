@@ -2335,6 +2335,108 @@ const LEAD_CONTACT_FAIL_REASONS = [
     { id: 'call-later', label: 'Keyinroq gaplashishni so\'radi' }
 ];
 
+const FAILED_SALE_REASON_GROUPS = [
+    {
+        id: 'boglanildi',
+        label: 'Bog\'lanildi bosqichida',
+        reasons: [
+            { id: 'no-pickup-6', label: 'Telefonini ko\'tarmadi (6+ urinishdan so\'ng)' },
+            { id: 'wrong-number', label: 'Noto\'g\'ri raqam ekan' },
+            { id: 'no-response-6', label: 'Javob bermadi (6+ urinishdan so\'ng)' },
+        ]
+    },
+    {
+        id: 'malumot-berildi',
+        label: 'Ma\'lumot berildi dan keyin',
+        reasons: [
+            { id: 'price-expensive', label: 'Narx qimmat' },
+            { id: 'parents-refused', label: 'Ota-onasi ruxsat bermadi' },
+            { id: 'family-refused', label: 'Uydagi boshqalar ruxsat bermadi' },
+            { id: 'time-mismatch', label: 'Vaqti mos emas' },
+            { id: 'chose-online', label: 'Boshqa onlayn maktabni tanladi' },
+            { id: 'chose-offline', label: 'Oflayn o\'quv markazni tanladi' },
+        ]
+    },
+    {
+        id: 'sinov-darsidan',
+        label: 'Sinov darsidan keyin',
+        reasons: [
+            { id: 'no-result', label: 'Kutilgan natijani ko\'rmadi' },
+            { id: 'teacher-mismatch', label: 'O\'qituvchi mos kelmadi' },
+            { id: 'format-disliked', label: 'Format yoqmadi' },
+            { id: 'schedule-changed', label: 'O\'qish vaqti rejalarini o\'zgartirib oldi' },
+            { id: 'later', label: 'Keyinroq o\'qimoqchiligini aytdi' },
+        ]
+    },
+    {
+        id: 'qaror-tolov',
+        label: 'Qaror jarayonida va To\'lov jarayonida bosqichida',
+        reasons: [
+            { id: 'no-money', label: 'Pul yo\'q / kechiktirdi' },
+            { id: 'debt-unpaid', label: 'Qarzdorlik yopilmadi' },
+            { id: 'installment-refused', label: 'Nasiya savdoni rad etildi' },
+        ]
+    },
+];
+
+function needsFailedSalePrompt(fromStatus, toStatus) {
+    return toStatus === 'muvaffaqiyatsiz-sotuv';
+}
+
+function openMuvaffaqiyatsizSotuvFlow(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const groupsHtml = FAILED_SALE_REASON_GROUPS.map(g => `
+        <div class="failed-sale-group">
+            <p class="failed-sale-group-label">${escapeHtml(g.label)}:</p>
+            <div class="lead-reason-list">
+                ${g.reasons.map(r => `
+                <label class="lead-reason-option">
+                    <input type="radio" name="failedSaleReason" value="${r.id}" data-reason-radio data-group="${g.id}">
+                    <span>${escapeHtml(r.label)}</span>
+                </label>`).join('')}
+            </div>
+        </div>`).join('');
+
+    openModal(
+        'Muvaffaqiyatsiz sotuv sababi',
+        `<p class="lead-reason-subtitle">Nima sababdan sotuv amalga oshmadi?</p>${groupsHtml}`,
+        `<button type="button" class="btn-danger-sm" id="cancelFailedSale">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmFailedSale">Saqlash va ko\'chirish</button>`
+    );
+
+    document.getElementById('cancelFailedSale').onclick = () => { closeModal(); renderLeads(); };
+
+    document.getElementById('confirmFailedSale').onclick = () => {
+        const modalBody = document.getElementById('modalBody');
+        const selected = modalBody?.querySelector('[data-reason-radio]:checked');
+        if (!selected) { alert('Bitta sabab tanlang'); return; }
+
+        const groupId = selected.dataset.group;
+        const group = FAILED_SALE_REASON_GROUPS.find(g => g.id === groupId);
+        const reason = group?.reasons.find(r => r.id === selected.value);
+        if (!reason) return;
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const updated = updateLeadInStorage(lang, leadId, l => ({
+            ...normalizeLeadExtras(l),
+            status: 'muvaffaqiyatsiz-sotuv',
+            failedSaleReason: { groupId, reasonId: reason.id, label: reason.label },
+            comments: [...normalizeLeadExtras(l).comments, createLeadComment({
+                type: 'failed-sale',
+                text: `Muvaffaqiyatsiz sotuv: ${reason.label}`,
+                reason: reason.label,
+                author
+            })]
+        }));
+        if (!updated) { alert('Lid topilmadi'); return; }
+        closeModal();
+        renderLeads();
+    };
+}
+
 function needsContactFailPrompt(fromStatus, toStatus) {
     return fromStatus === 'yangi-lidlar' && toStatus === 'boglanishga-urinilmoqda';
 }
@@ -5628,6 +5730,11 @@ function initLeadDragDrop(board) {
                 return;
             }
 
+            if (needsFailedSalePrompt(fromStatus, toStatus)) {
+                openMuvaffaqiyatsizSotuvFlow(payload.lang, payload.id);
+                return;
+            }
+
             moveLeadToStatus(payload.lang, payload.id, toStatus);
         });
     });
@@ -6164,19 +6271,39 @@ function autoSyncLeadToBookRoadmap(lang, lead) {
     const items = getItem(STORAGE_KEYS.bookRoadmap, []);
     const alreadyExists = items.some(i => i.leadRef && i.leadRef.id === lead.id && i.leadRef.lang === lang);
     if (alreadyExists) return;
+
+    // Copy existing lead comments + add a summary note with lead data
+    const leadComments = Array.isArray(lead.comments) ? lead.comments : [];
+    const summaryLines = [];
+    if (lead.source) summaryLines.push(`Manba: ${lead.source}`);
+    if (lead.connectedSurvey) {
+        const s = lead.connectedSurvey;
+        if (s.languageLevel) summaryLines.push(`Til darajasi: ${s.languageLevel}`);
+        if (s.learningGoal) summaryLines.push(`Maqsad: ${s.learningGoal}`);
+        if (s.region) summaryLines.push(`Hudud: ${s.region}`);
+    }
+    const user = getCurrentUser();
+    const author = user?.name || 'Admin';
+    const syncComment = createLeadComment({
+        type: 'sync',
+        text: `Liddan avtomatik qo'shildi (To'lov jarayonida)${summaryLines.length ? '\n' + summaryLines.join(' · ') : ''}`,
+        author
+    });
+
     const newEntry = {
         id: crypto.randomUUID(),
         leadRef: { lang, id: lead.id },
         name: lead.name || lead.fullName || '',
         studentId: lead.studentId || '',
         phone: lead.phone || '',
-        region: lead.region || '',
+        region: lead.region || (lead.connectedSurvey?.region ? '' : ''),
         managerId: lead.managerId || '',
+        managerPhoto: lead.managerPhoto || null,
         kind: lead.leadType === 'target' ? 'target' : 'organik',
         date: new Date().toLocaleDateString('uz-UZ'),
         status: 'yangi-oquvchi',
         lang,
-        comments: [],
+        comments: [...leadComments, syncComment],
     };
     items.unshift(newEntry);
     setItem(STORAGE_KEYS.bookRoadmap, items);
@@ -6354,6 +6481,7 @@ function renderBookRoadmapCard(item) {
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
     const manager = managers.find(m => m.id === item.managerId);
     const commentCount = item.comments?.length || 0;
+    const hasManagerPhoto = Boolean(item.managerPhoto);
 
     const currentStatus = normalizeBrStatus(item.status);
     const nextColId = getBrNextColumnId(currentStatus);
@@ -6377,6 +6505,10 @@ function renderBookRoadmapCard(item) {
         ? `<span class="lead-badge" style="background:#F0F9FF;color:#0369A1;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:4px">${item.lang === 'russian' ? 'Rus' : 'Ingliz'}</span>`
         : '';
 
+    const studentIdBadge = item.studentId
+        ? `<span class="lead-badge" style="background:#F0FDF4;color:#15803D;font-size:10px;padding:1px 6px;border-radius:4px">ID: ${escapeHtml(item.studentId)}</span>`
+        : '';
+
     return `<article class="lead-card" draggable="true" data-br-id="${escapeHtml(item.id)}">
         <div class="lead-card-top">
             <div class="lead-card-title-wrap">
@@ -6384,9 +6516,13 @@ function renderBookRoadmapCard(item) {
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(item.date || '')}</span>
                     ${langBadge}
+                    ${studentIdBadge}
                 </div>
             </div>
             <div class="lead-card-top-actions">
+                <button type="button" class="lead-card-notify" data-br-notify="${item.id}" title="Bildirishnomalar" aria-label="Bildirishnomalar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+                </button>
                 ${nextBtn}
                 <div class="lead-card-menu-wrap">
                     <button type="button" class="lead-card-menu-btn" data-br-menu-toggle="${item.id}" title="Boshqa amallar" aria-haspopup="true">
@@ -6419,11 +6555,14 @@ function renderBookRoadmapCard(item) {
         </div>
         <div class="lead-card-footer">
             <div class="lead-card-actions">
+                <button type="button" class="lead-card-action${hasManagerPhoto ? ' lead-card-action--active' : ''}" data-br-manager-photo="${item.id}" title="Menejer rasmi">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>${hasManagerPhoto ? 1 : 0}</span>
+                </button>
                 <button type="button" class="lead-card-action" data-br-comment="${item.id}" title="Izohlar">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                     <span>${commentCount}</span>
                 </button>
-                ${item.studentId ? `<span style="font-size:11px;color:var(--text-muted)">ID: ${escapeHtml(item.studentId)}</span>` : ''}
             </div>
             <span class="lead-card-kind">${item.kind === 'target' ? 'Target' : 'Organik'}${manager ? ` · ${escapeHtml(manager.name)}` : ''}</span>
         </div>
@@ -6604,6 +6743,41 @@ function openBrCommentModal(id) {
     };
 }
 
+function openBrManagerPhotoModal(id) {
+    const item = getBrById(id);
+    if (!item) return;
+
+    const existing = item.managerPhoto || null;
+    openModal(`Menejer rasmi — ${escapeHtml(item.name)}`,
+        `<div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+            ${existing
+                ? `<img src="${escapeHtml(existing)}" style="max-width:180px;max-height:180px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">`
+                : '<p style="color:var(--text-muted);font-size:13px">Rasm yuklanmagan</p>'}
+            <input type="file" id="brManagerPhotoInput" accept="image/*" style="font-size:13px">
+        </div>`,
+        `<button class="btn-danger-sm" id="brManagerPhotoRemove" ${!existing ? 'disabled' : ''}>O'chirish</button>
+         <button class="btn-primary-sm" id="brManagerPhotoSave">Saqlash</button>`
+    );
+
+    document.getElementById('brManagerPhotoRemove').onclick = () => {
+        updateBrInStorage(id, i => ({ ...i, managerPhoto: null }));
+        renderBookRoadmap();
+        closeModal();
+    };
+
+    document.getElementById('brManagerPhotoSave').onclick = () => {
+        const file = document.getElementById('brManagerPhotoInput').files[0];
+        if (!file) { closeModal(); return; }
+        const reader = new FileReader();
+        reader.onload = ev => {
+            updateBrInStorage(id, i => ({ ...i, managerPhoto: ev.target.result }));
+            renderBookRoadmap();
+            closeModal();
+        };
+        reader.readAsDataURL(file);
+    };
+}
+
 // Book Roadmap event delegation
 document.addEventListener('click', (e) => {
     // Menu toggle
@@ -6652,6 +6826,20 @@ document.addEventListener('click', (e) => {
     if (editBtn) {
         const id = editBtn.dataset.brEdit;
         openBookRoadmapModal(getBrById(id));
+        return;
+    }
+
+    // Notify (opens comment modal to show history)
+    const notifyBtn = e.target.closest('[data-br-notify]');
+    if (notifyBtn) {
+        openBrCommentModal(notifyBtn.dataset.brNotify);
+        return;
+    }
+
+    // Manager photo
+    const managerPhotoBtn = e.target.closest('[data-br-manager-photo]');
+    if (managerPhotoBtn) {
+        openBrManagerPhotoModal(managerPhotoBtn.dataset.brManagerPhoto);
         return;
     }
 
