@@ -321,10 +321,11 @@ function initSidebarMenu() {
     document.querySelectorAll('.lang-sidebar-btn').forEach(btn => {
         btn.addEventListener('click', e => {
             e.preventDefault();
+            e.stopPropagation();
             const lang = btn.dataset.lang;
             setUiLang(lang);
             updateSidebarLangActive(lang);
-            showNotification('', `✓ ${LANG_LABELS[lang] || lang} tili tanlandi`, 'success');
+            showMiniToast(`✓ ${LANG_LABELS[lang] || lang} tili tanlandi`);
         });
     });
 
@@ -457,6 +458,20 @@ function calcProfileCompletion(user) {
 
 const LANG_KEY = 'mh_ui_lang';
 const LANG_LABELS = { uz: "O'zbekcha", ru: 'Русский', en: 'English' };
+
+function showMiniToast(msg, durationMs = 2000) {
+    let el = document.getElementById('miniToast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'miniToast';
+        el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#f8fafc;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.25);pointer-events:none;transition:opacity .2s';
+        document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.opacity = '0'; }, durationMs);
+}
 
 function getUiLang() {
     return localStorage.getItem(LANG_KEY) || 'uz';
