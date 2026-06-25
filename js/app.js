@@ -911,24 +911,29 @@ function compressAvatarImage(file, maxSize = 400, quality = 0.82) {
 async function handleProfileAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-        showNotification('Xatolik', 'Rasm hajmi 10 MB dan oshmasligi kerak', 'error');
+    if (file.size > 20 * 1024 * 1024) {
+        showNotification('Xatolik', 'Rasm hajmi 20 MB dan oshmasligi kerak', 'error');
         return;
     }
     const preview = document.getElementById('profileAvatarPreview');
-    if (preview) preview.innerHTML = '<span style="font-size:12px;color:#888">Yuklanmoqda...</span>';
+    if (preview) preview.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%">
+            <div class="spinner" style="width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin 0.7s linear infinite"></div>
+            <span style="font-size:12px;color:#888">Yuklanmoqda...</span>
+        </div>`;
+    e.target.value = '';
     try {
         const dataUrl = await compressAvatarImage(file);
-        _profileUser = await apiUpdateProfile({ avatar: dataUrl });
-        setCurrentUser(_profileUser);
-        syncHeaderAvatar(_profileUser);
+        const { user } = await apiUploadAvatar(dataUrl);
+        _profileUser = user;
+        setCurrentUser(user);
+        syncHeaderAvatar(user);
         renderProfileBody();
         showNotification('Muvaffaqiyatli', 'Profil rasmi yangilandi', 'success');
     } catch (err) {
         showNotification('Xatolik', err.message || 'Rasm yuklanmadi', 'error');
         renderProfileBody();
     }
-    e.target.value = '';
 }
 
 async function handleProfilePasswordChange() {

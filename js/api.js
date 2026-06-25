@@ -21,19 +21,36 @@ async function apiFetch(path, options = {}) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const res = await fetch(path, { ...options, headers });
-    let data = {};
+    const timeoutMs = options.timeout || 15000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let res;
     try {
-        data = await res.json();
-    } catch {
-        data = {};
+        res = await fetch(path, { ...options, headers, signal: controller.signal });
+    } catch (e) {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') throw new Error('So\'rov vaqti tugadi. Internet aloqasini tekshiring.');
+        throw e;
     }
+    clearTimeout(timer);
+
+    let data = {};
+    try { data = await res.json(); } catch { data = {}; }
     if (!res.ok) {
         const err = new Error(data.error || `HTTP ${res.status}`);
         err.status = res.status;
         throw err;
     }
     return data;
+}
+
+async function apiUploadAvatar(dataUrl) {
+    return apiFetch('/api/auth/avatar', {
+        method: 'POST',
+        body: JSON.stringify({ dataUrl }),
+        timeout: 30000
+    });
 }
 
 async function apiLogin(email, password) {

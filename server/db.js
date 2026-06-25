@@ -706,6 +706,7 @@ seedIfEmpty();
 
 module.exports = {
     db,
+    DATA_DIR,
     getFullState,
     getLeads,
     insertLead,

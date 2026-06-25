@@ -1,5 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const path = require('path');
+const fs = require('fs');
 const {
     findUserByEmail,
     findUserById,
@@ -11,7 +13,8 @@ const {
     getSessionById,
     deleteSession,
     deleteSessionByJti,
-    deleteOtherSessions
+    deleteOtherSessions,
+    DATA_DIR
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
 
@@ -176,6 +179,37 @@ router.delete('/sessions/:id', authRequired, (req, res) => {
 router.post('/logout', authRequired, (req, res) => {
     if (req.user.jti) deleteSessionByJti(req.user.jti);
     res.json({ ok: true });
+});
+
+// ── Avatar fayl yuklash ──────────────────────────────────────────────────────
+
+const AVATAR_DIR = path.join(DATA_DIR, 'avatars');
+
+router.post('/avatar', authRequired, (req, res) => {
+    const { dataUrl } = req.body || {};
+    if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Yaroqsiz rasm formati' });
+    }
+    const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    if (buffer.length > 1024 * 1024) {
+        return res.status(413).json({ error: 'Rasm hajmi 1 MB dan oshmasin' });
+    }
+    if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+    const filename = `${req.user.id}.jpg`;
+    fs.writeFileSync(path.join(AVATAR_DIR, filename), buffer);
+    const url = `/api/auth/avatar/${req.user.id}?t=${Date.now()}`;
+    updateUser(req.user.id, { avatar: url });
+    const updated = findUserById(req.user.id);
+    res.json({ url, user: publicUser(updated) });
+});
+
+router.get('/avatar/:userId', (req, res) => {
+    const filePath = path.join(AVATAR_DIR, `${req.params.userId}.jpg`);
+    if (!fs.existsSync(filePath)) return res.status(404).send('Not found');
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(filePath);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
