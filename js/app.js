@@ -2384,6 +2384,65 @@ function needsFailedSalePrompt(fromStatus, toStatus) {
     return toStatus === 'muvaffaqiyatsiz-sotuv';
 }
 
+const SIFATSIZ_LID_REASONS = [
+    { id: 'wrong-phone',    label: 'Noto\'g\'ri telefon raqami (mavjud emas)' },
+    { id: 'duplicate',      label: 'Dublikat lid (bir odam bir necha marta qolgan)' },
+    { id: 'fake',           label: 'Hazil yoki soxta murojaat' },
+    { id: 'spam',           label: 'Spam / Bot' },
+    { id: 'wrong-service',  label: 'Noto\'g\'ri xizmat bo\'yicha murojaat' },
+    { id: 'age-mismatch',   label: 'Yosh talablarga umuman mos kelmaydi' },
+];
+
+function needsSifatsizLidPrompt(fromStatus, toStatus) {
+    return toStatus === 'sifatsiz-lidlar';
+}
+
+function openSifatsizLidFlow(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const reasonOptions = SIFATSIZ_LID_REASONS.map(r => `
+        <label class="lead-reason-option">
+            <input type="radio" name="sifatsizReason" value="${r.id}" data-reason-radio>
+            <span>${escapeHtml(r.label)}</span>
+        </label>`).join('');
+
+    openModal(
+        'Sifatsiz lid',
+        `<p class="lead-reason-subtitle">Ushbu lidni nima uchun sifatsiz deb hisoblaysiz?</p>
+         <div class="lead-reason-list">${reasonOptions}</div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelSifatsiz">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmSifatsiz">Saqlash va ko'chirish</button>`
+    );
+
+    document.getElementById('cancelSifatsiz').onclick = () => { closeModal(); renderLeads(); };
+
+    document.getElementById('confirmSifatsiz').onclick = () => {
+        const modalBody = document.getElementById('modalBody');
+        const selected = modalBody?.querySelector('[data-reason-radio]:checked');
+        if (!selected) { alert('Bitta sabab tanlang'); return; }
+
+        const reason = SIFATSIZ_LID_REASONS.find(r => r.id === selected.value);
+        if (!reason) return;
+
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        updateLeadInStorage(lang, leadId, l => ({
+            ...normalizeLeadExtras(l),
+            status: 'sifatsiz-lidlar',
+            sifatsizReason: { reasonId: reason.id, label: reason.label },
+            comments: [...normalizeLeadExtras(l).comments, createLeadComment({
+                type: 'sifatsiz-lid',
+                text: `Sifatsiz lid: ${reason.label}`,
+                reason: reason.label,
+                author
+            })]
+        }));
+        closeModal();
+        renderLeads();
+    };
+}
+
 function openMuvaffaqiyatsizSotuvFlow(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
@@ -5733,6 +5792,11 @@ function initLeadDragDrop(board) {
 
             if (needsFailedSalePrompt(fromStatus, toStatus)) {
                 openMuvaffaqiyatsizSotuvFlow(payload.lang, payload.id);
+                return;
+            }
+
+            if (needsSifatsizLidPrompt(fromStatus, toStatus)) {
+                openSifatsizLidFlow(payload.lang, payload.id);
                 return;
             }
 
