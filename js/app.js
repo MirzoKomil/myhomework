@@ -61,12 +61,14 @@ function syncHeaderAvatar(user) {
     const el = document.getElementById('userAvatar');
     if (!el || !user) return;
     if (user.avatar) {
-        // XSS himoyasi: innerHTML o'rniga DOM API ishlatiladi
         el.innerHTML = '';
         const img = document.createElement('img');
         img.alt = '';
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:12px';
-        img.src = user.avatar; // DOM API avtomatik sanitizatsiya qiladi
+        img.onerror = () => {
+            el.textContent = getUserInitials(user.name);
+        };
+        img.src = user.avatar;
         el.appendChild(img);
     } else {
         el.textContent = getUserInitials(user.name);
@@ -735,9 +737,9 @@ function renderProfileSalarySection(user) {
             <div class="sal-col sal-col--right">
 
                 <div class="sal-profile-card">
-                    <div class="sal-profile-avatar">
+                    <div class="sal-profile-avatar" id="salProfileAvatar">
                         ${user.avatar
-                            ? `<img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(user.name)}">`
+                            ? `<img id="salProfileAvatarImg" alt="${escapeHtml(user.name)}">`
                             : `<span>${escapeHtml(initials)}</span>`}
                     </div>
                     <div class="sal-profile-info">
@@ -819,8 +821,9 @@ function renderProfileEditSection(user) {
     const bioEditing = _profileEditing.bio;
     const docsEditing = _profileEditing.documents;
 
+    // Avatar placeholder — src ni keyinroq DOM API orqali o'rnatamiz (escaping muammosidan himoya)
     const avatarContent = user.avatar
-        ? `<img src="${escapeHtml(user.avatar)}" alt="">`
+        ? `<img id="profileAvatarImg" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
         : getUserInitials(user.name);
 
     const personalBody = personalEditing ? `
@@ -1134,6 +1137,26 @@ function bindProfileEvents() {
     const body = document.getElementById('profileBody');
     if (!body) return;
 
+    // Avatar img src ni DOM API orqali o'rnatamiz (innerHTML escaping muammosidan himoya)
+    const _u = _profileUser || getCurrentUser();
+    const avatarImg = document.getElementById('profileAvatarImg');
+    if (avatarImg && _u?.avatar) {
+        avatarImg.onerror = () => {
+            const preview = document.getElementById('profileAvatarPreview');
+            if (preview) preview.innerHTML = getUserInitials(_u.name);
+            apiUpdateProfile({ avatar: '' }).catch(() => {});
+        };
+        avatarImg.src = _u.avatar;
+    }
+    const salAvatarImg = document.getElementById('salProfileAvatarImg');
+    if (salAvatarImg && _u?.avatar) {
+        salAvatarImg.onerror = () => {
+            const wrap = document.getElementById('salProfileAvatar');
+            if (wrap) wrap.innerHTML = `<span>${getUserInitials(_u.name)}</span>`;
+        };
+        salAvatarImg.src = _u.avatar;
+    }
+
     body.querySelectorAll('[data-profile-section-go]').forEach(btn => {
         btn.addEventListener('click', () => switchProfileSection(btn.dataset.profileSectionGo));
     });
@@ -1275,24 +1298,52 @@ async function handleProfileAvatarUpload(e) {
         showNotification('Xatolik', 'Rasm hajmi 20 MB dan oshmasligi kerak', 'error');
         return;
     }
-    const preview = document.getElementById('profileAvatarPreview');
-    if (preview) preview.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%">
-            <div class="spinner" style="width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin 0.7s linear infinite"></div>
-            <span style="font-size:12px;color:#888">Yuklanmoqda...</span>
-        </div>`;
     e.target.value = '';
+    let dataUrl;
     try {
-        const dataUrl = await compressAvatarImage(file);
-        const { user } = await apiUploadAvatar(dataUrl);
+        dataUrl = await compressAvatarImage(file);
+    } catch (err) {
+        showNotification('Xatolik', err.message || 'Rasm o\'qishda xatolik', 'error');
+        return;
+    }
+
+    // Darhol preview ko'rsatamiz (server javobini kutmasdan)
+    const preview = document.getElementById('profileAvatarPreview');
+    if (preview) {
+        preview.innerHTML = '';
+        const previewImg = document.createElement('img');
+        previewImg.alt = '';
+        previewImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+        previewImg.src = dataUrl;
+        preview.appendChild(previewImg);
+    }
+
+    try {
+        const result = await apiUploadAvatar(dataUrl);
+        const user = result?.user;
+        if (!user) throw new Error('Server javobida foydalanuvchi ma\'lumoti yo\'q');
+
+        // Agar server avatarini qaytarmasa — lokal data URL ishlatamiz
+        if (!user.avatar) user.avatar = dataUrl;
+
         _profileUser = user;
         setCurrentUser(user);
         syncHeaderAvatar(user);
         renderProfileBody();
         showNotification('Muvaffaqiyatli', 'Profil rasmi yangilandi', 'success');
     } catch (err) {
-        showNotification('Xatolik', err.message || 'Rasm yuklanmadi', 'error');
-        renderProfileBody();
+        // Server xatoligi bo'lsa ham, lokal data URL ni saqlaymiz (offline fallback)
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            currentUser.avatar = dataUrl;
+            setCurrentUser(currentUser);
+            syncHeaderAvatar(currentUser);
+            if (_profileUser) {
+                _profileUser.avatar = dataUrl;
+                renderProfileBody();
+            }
+        }
+        showNotification('Xatolik', err.message || 'Server bilan ulanishda xatolik', 'error');
     }
 }
 

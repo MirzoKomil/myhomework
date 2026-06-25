@@ -181,6 +181,23 @@ router.get('/avatar/:userId', (req, res) => {
     // Faqat UUID formatiga ruxsat (path traversal himoyasi)
     const safeId = req.params.userId.replace(/[^a-zA-Z0-9\-]/g, '');
     if (!safeId || safeId.length > 64) return res.status(400).send('Invalid');
+
+    // Avval DB dan avatarni olamiz (Railway da fayl tizimi yo'qoladi)
+    try {
+        const user = await findUserById(safeId);
+        if (user?.avatar?.startsWith('data:image/')) {
+            const matches = user.avatar.match(/^data:image\/(\w+);base64,(.+)$/);
+            if (matches) {
+                const mimeType = `image/${matches[1]}`;
+                const buffer = Buffer.from(matches[2], 'base64');
+                res.setHeader('Content-Type', mimeType);
+                res.setHeader('Cache-Control', 'public, max-age=3600');
+                return res.send(buffer);
+            }
+        }
+    } catch { /* file fallback ga o'tamiz */ }
+
+    // Fallback: eski fayl tizimidan (lokal dev uchun)
     const filePath = path.join(AVATAR_DIR, `${safeId}.jpg`);
     if (!filePath.startsWith(AVATAR_DIR)) return res.status(403).send('Ruxsat yo\'q');
     if (!fs.existsSync(filePath)) return res.status(404).send('Not found');
