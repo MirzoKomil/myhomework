@@ -6542,9 +6542,21 @@ function renderHrEmployeeCard(emp) {
     const joinFormatted = emp.joinDate ? new Date(emp.joinDate).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
     return `<div class="employee-card" data-emp-id="${emp.id}">
-        <button class="employee-card-actions" title="Amallar" data-emp-menu="${emp.id}">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
-        </button>
+        <div class="emp-menu-wrap">
+            <button class="employee-card-actions" title="Amallar" data-emp-menu="${emp.id}">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+            </button>
+            <div class="emp-menu-dropdown" id="empMenu_${emp.id}" hidden>
+                <button class="emp-menu-item" data-emp-edit="${emp.id}">
+                    <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Tahrirlash
+                </button>
+                <button class="emp-menu-item emp-menu-item--danger" data-emp-delete="${emp.id}">
+                    <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    O'chirish
+                </button>
+            </div>
+        </div>
         <div class="employee-avatar-placeholder">${escapeHtml(initials)}</div>
         <div class="employee-name">${escapeHtml(emp.name)}</div>
         <div class="employee-role">${escapeHtml(roleLabel)}</div>
@@ -6589,16 +6601,41 @@ function renderHrEmployees() {
         grid.innerHTML = filtered.map(e => renderHrEmployeeCard(e)).join('');
     }
 
-    // Bind card action menus (delete)
+    // 3-dot toggle
     grid.querySelectorAll('[data-emp-menu]').forEach(btn => {
         btn.addEventListener('click', e => {
             e.stopPropagation();
-            const empId = btn.dataset.empMenu;
-            if (confirm("Bu xodimni o'chirasizmi?")) {
-                deleteHrEmployee(empId);
-            }
+            const dropdown = document.getElementById(`empMenu_${btn.dataset.empMenu}`);
+            const isHidden = dropdown.hidden;
+            closeEmpMenus();
+            dropdown.hidden = !isHidden;
         });
     });
+
+    // Edit
+    grid.querySelectorAll('[data-emp-edit]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeEmpMenus();
+            openEditEmployeeModal(btn.dataset.empEdit);
+        });
+    });
+
+    // Delete
+    grid.querySelectorAll('[data-emp-delete]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeEmpMenus();
+            confirmDeleteEmployee(btn.dataset.empDelete);
+        });
+    });
+
+    // Outside click closes menus
+    document.addEventListener('click', closeEmpMenus);
+}
+
+function closeEmpMenus() {
+    document.querySelectorAll('.emp-menu-dropdown').forEach(d => { d.hidden = true; });
 }
 
 function deleteHrEmployee(id) {
@@ -6606,6 +6643,153 @@ function deleteHrEmployee(id) {
     employees = employees.filter(e => e.id !== id);
     saveHrEmployees(employees);
     renderHrEmployees();
+}
+
+function confirmDeleteEmployee(empId) {
+    const employees = getHrEmployees() || [];
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+    openModal(
+        "Xodimni o'chirish",
+        `<div style="text-align:center;padding:16px 0">
+            <div style="font-size:48px;margin-bottom:12px">🗑️</div>
+            <p style="font-size:15px;color:var(--text);margin-bottom:6px">
+                <strong>${escapeHtml(emp.name)}</strong> ni o'chirasizmi?
+            </p>
+            <p style="font-size:13px;color:var(--text-muted)">Bu amalni ortga qaytarib bo'lmaydi.</p>
+        </div>`,
+        `<button type="button" class="btn-ghost" id="cancelEmpDelete">Bekor qilish</button>
+         <button type="button" class="btn-danger-sm" id="confirmEmpDelete" style="background:#dc2626;color:#fff;padding:8px 18px;font-size:13px">Ha, o'chirish</button>`,
+        { wide: false }
+    );
+    document.getElementById('cancelEmpDelete').onclick = () => closeModal();
+    document.getElementById('confirmEmpDelete').onclick = () => {
+        deleteHrEmployee(empId);
+        closeModal();
+        showMiniToast(`${emp.name} o'chirildi`);
+    };
+}
+
+function openEditEmployeeModal(empId) {
+    const employees = getHrEmployees() || [];
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+
+    const roleOptions = Object.entries(HR_ROLE_MAP).map(([k, v]) =>
+        `<option value="${k}"${emp.role === k ? ' selected' : ''}>${escapeHtml(v)}</option>`
+    ).join('');
+    const deptOptions = HR_DEPARTMENTS.map(d =>
+        `<option value="${d}"${emp.department === d ? ' selected' : ''}>${escapeHtml(d)}</option>`
+    ).join('');
+
+    openModal("Xodimni tahrirlash",
+        `<div style="display:flex;gap:10px">
+            <div class="form-group" style="flex:1">
+                <label>Ism <span style="color:var(--danger)">*</span></label>
+                <input type="text" id="editEmpFirstName" class="form-control" value="${escapeHtml(emp.firstName || emp.name.split(' ')[0] || '')}" placeholder="Ism">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label>Familiya <span style="color:var(--danger)">*</span></label>
+                <input type="text" id="editEmpLastName" class="form-control" value="${escapeHtml(emp.lastName || emp.name.split(' ').slice(1).join(' ') || '')}" placeholder="Familiya">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Jinsi</label>
+            <select id="editEmpGender" class="form-control">
+                <option value="">— Tanlang —</option>
+                <option value="erkak"${emp.gender === 'erkak' ? ' selected' : ''}>Erkak</option>
+                <option value="ayol"${emp.gender === 'ayol' ? ' selected' : ''}>Ayol</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:10px">
+            <div class="form-group" style="flex:1">
+                <label>Tug'ilgan sana</label>
+                <input type="date" id="editEmpBirthDate" class="form-control" value="${escapeHtml(emp.birthDate || '')}">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label>Faoliyat boshlagan</label>
+                <input type="date" id="editEmpStartDate" class="form-control" value="${escapeHtml(emp.startDate || emp.joinDate || '')}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Lavozim (rol) <span style="color:var(--danger)">*</span></label>
+            <select id="editEmpRole" class="form-control">${roleOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Telefon raqam</label>
+            <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="editEmpEmail" class="form-control" value="${escapeHtml(emp.email || '')}" placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+            <label>Bo'lim</label>
+            <select id="editEmpDepartment" class="form-control">${deptOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Holati</label>
+            <select id="editEmpStatus" class="form-control">
+                <option value="active"${emp.status === 'active' ? ' selected' : ''}>Active</option>
+                <option value="inactive"${emp.status !== 'active' ? ' selected' : ''}>Inactive</option>
+            </select>
+        </div>
+        <hr style="margin:12px 0;border-color:var(--border)">
+        <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Parolni yangilash (ixtiyoriy)</p>
+        <div class="form-group">
+            <label>Yangi parol</label>
+            <div class="input-password-wrap">
+                <input type="password" id="editEmpPassword" class="form-control" placeholder="Bo'sh qoldirsangiz o'zgarmaydi" autocomplete="off">
+                <button type="button" class="input-eye-btn" id="editEmpPasswordEye" tabindex="-1" aria-label="Parolni ko'rsat">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+        </div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelEditEmployee">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveEditEmployee">Saqlash</button>`,
+        { wide: false }
+    );
+
+    document.getElementById('editEmpPasswordEye').addEventListener('click', () => {
+        const inp = document.getElementById('editEmpPassword');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+
+    document.getElementById('cancelEditEmployee').onclick = () => closeModal();
+
+    document.getElementById('saveEditEmployee').onclick = () => {
+        const firstName = document.getElementById('editEmpFirstName').value.trim();
+        const lastName = document.getElementById('editEmpLastName').value.trim();
+        if (!firstName) { alert('Ism kiritilishi shart'); return; }
+        if (!lastName) { alert('Familiya kiritilishi shart'); return; }
+
+        const newPassword = document.getElementById('editEmpPassword').value.trim();
+        if (newPassword && newPassword.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
+
+        const updated = {
+            ...emp,
+            firstName,
+            lastName,
+            name: `${firstName} ${lastName}`,
+            gender: document.getElementById('editEmpGender').value,
+            birthDate: document.getElementById('editEmpBirthDate').value,
+            startDate: document.getElementById('editEmpStartDate').value,
+            role: document.getElementById('editEmpRole').value,
+            phone: document.getElementById('editEmpPhone').value.trim(),
+            email: document.getElementById('editEmpEmail').value.trim(),
+            department: document.getElementById('editEmpDepartment').value,
+            status: document.getElementById('editEmpStatus').value,
+        };
+        if (newPassword) updated.password = newPassword;
+
+        const allEmps = getHrEmployees() || [];
+        const idx = allEmps.findIndex(e => e.id === empId);
+        if (idx !== -1) allEmps[idx] = updated;
+        saveHrEmployees(allEmps);
+        closeModal();
+        renderHrEmployees();
+        showMiniToast(`${updated.name} ma'lumotlari saqlandi`);
+    };
 }
 
 function openAddEmployeeModal() {
