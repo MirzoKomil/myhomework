@@ -1,6 +1,18 @@
 // Myhomework.uz — avtorizatsiya
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Parol ko'z (show/hide) tugmasi
+    const eyeBtn = document.getElementById('toggleLoginPassword');
+    if (eyeBtn) {
+        eyeBtn.addEventListener('click', () => {
+            const input = document.getElementById('loginPassword');
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            document.getElementById('eyeIconOpen').style.display = isPassword ? 'none' : '';
+            document.getElementById('eyeIconClosed').style.display = isPassword ? '' : 'none';
+        });
+    }
+
     const loginForm = document.getElementById('loginForm');
     const errorMessage = document.getElementById('errorMessage');
     if (!loginForm) return;

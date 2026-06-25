@@ -165,13 +165,22 @@ async function initSchema() {
         CREATE TABLE IF NOT EXISTS hr_employees (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
+            first_name TEXT DEFAULT '',
+            last_name TEXT DEFAULT '',
             role TEXT NOT NULL DEFAULT 'employee',
             login TEXT DEFAULT '',
             phone TEXT DEFAULT '',
             email TEXT DEFAULT '',
             department TEXT DEFAULT '',
             status TEXT DEFAULT 'active',
-            join_date TEXT DEFAULT ''
+            join_date TEXT DEFAULT '',
+            gender TEXT DEFAULT '',
+            birth_date TEXT DEFAULT '',
+            start_date TEXT DEFAULT '',
+            card_number TEXT DEFAULT '',
+            passport_series TEXT DEFAULT '',
+            pinfl TEXT DEFAULT '',
+            address TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS book_roadmap (
@@ -200,6 +209,17 @@ async function initSchema() {
     // Migration: book_roadmap jadvaliga yangi ustunlar qo'shish
     await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
     await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS lead_ref TEXT DEFAULT NULL`).catch(() => {});
+
+    // Migration: hr_employees jadvaliga yangi ustunlar qo'shish
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS first_name TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS last_name TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS birth_date TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS start_date TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS card_number TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS passport_series TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS pinfl TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS address TEXT DEFAULT ''`).catch(() => {});
 }
 
 // ── Seed & migrate ───────────────────────────────────────────────────────────
@@ -366,9 +386,15 @@ async function saveBookRoadmap(client, items) {
 async function getHrEmployeesData() {
     const rows = await q('SELECT * FROM hr_employees ORDER BY name');
     return rows.map(r => ({
-        id: r.id, name: r.name, role: r.role, login: r.login || '',
+        id: r.id, name: r.name,
+        firstName: r.first_name || '', lastName: r.last_name || '',
+        role: r.role, login: r.login || '',
         phone: r.phone || '', email: r.email || '',
-        department: r.department || '', status: r.status || 'active', joinDate: r.join_date || ''
+        department: r.department || '', status: r.status || 'active',
+        joinDate: r.join_date || '', gender: r.gender || '',
+        birthDate: r.birth_date || '', startDate: r.start_date || '',
+        cardNumber: r.card_number || '', passportSeries: r.passport_series || '',
+        pinfl: r.pinfl || '', address: r.address || ''
     }));
 }
 
@@ -496,9 +522,16 @@ async function saveHrEmployeesData(client, employees) {
     await client.query('DELETE FROM hr_employees');
     for (const e of (employees || [])) {
         await client.query(
-            'INSERT INTO hr_employees (id, name, role, login, phone, email, department, status, join_date) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-            [e.id, e.name, e.role || 'employee', e.login || '',
-             e.phone || '', e.email || '', e.department || '', e.status || 'active', e.joinDate || '']
+            `INSERT INTO hr_employees
+                (id, name, first_name, last_name, role, login, phone, email,
+                 department, status, join_date, gender, birth_date, start_date,
+                 card_number, passport_series, pinfl, address)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+            [e.id, e.name, e.firstName || '', e.lastName || '',
+             e.role || 'employee', e.login || '', e.phone || '', e.email || '',
+             e.department || '', e.status || 'active', e.joinDate || '',
+             e.gender || '', e.birthDate || '', e.startDate || '',
+             e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '']
         );
     }
 }

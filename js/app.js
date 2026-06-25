@@ -195,6 +195,39 @@ async function bootApp() {
     renderDashboard();
     renderCalendarWidget();
     startLeadsPolling();
+
+    // Xodim shaxsiy hujjatlarini to'ldirishi haqida eslatma
+    if (currentUser.role !== 'admin') {
+        const emps = getHrEmployees() || [];
+        const emp = emps.find(e => e.login === currentUser.email || e.phone === currentUser.phone);
+        if (emp && (!emp.cardNumber || !emp.passportSeries || !emp.pinfl || !emp.address)) {
+            showProfileDocsBanner();
+        }
+    }
+}
+
+function showProfileDocsBanner() {
+    if (document.getElementById('profileDocsBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'profileDocsBanner';
+    banner.className = 'profile-docs-toast';
+    banner.innerHTML = `
+        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Shaxsiy hujjatlaringizni to'ldiring: plastik karta, passport, JSHSHIR, manzil</span>
+        <button type="button" id="profileDocsBannerGoBtn">To'ldirish</button>
+        <button type="button" id="profileDocsBannerClose" aria-label="Yopish">&times;</button>`;
+    document.body.appendChild(banner);
+    document.getElementById('profileDocsBannerClose').onclick = () => banner.remove();
+    document.getElementById('profileDocsBannerGoBtn').onclick = () => {
+        banner.remove();
+        // Profile sahifasiga o'tish
+        const profileItem = document.querySelector('[data-tab="profile"]');
+        if (profileItem) profileItem.click();
+        setTimeout(() => {
+            const docsCard = document.querySelector('[data-profile-edit="documents"]');
+            if (docsCard) docsCard.click();
+        }, 400);
+    };
 }
 
 let _leadsPollTimer = null;
@@ -569,6 +602,7 @@ function renderProfileEditSection(user) {
     const personalEditing = _profileEditing.personal;
     const locationEditing = _profileEditing.location;
     const bioEditing = _profileEditing.bio;
+    const docsEditing = _profileEditing.documents;
 
     const avatarContent = user.avatar
         ? `<img src="${escapeHtml(user.avatar)}" alt="">`
@@ -626,6 +660,56 @@ function renderProfileEditSection(user) {
         </div>` : `
         <p style="font-size:14px;line-height:1.7;color:var(--text-muted)">${user.bio ? escapeHtml(user.bio).replace(/\n/g, '<br>') : 'Bio hali yozilmagan. O\'zingiz haqingizda qisqacha ma\'lumot qo\'shing.'}</p>`;
 
+    // Shaxsiy hujjatlar (admin bo'lmagan xodimlar uchun)
+    const empRecord = user.role !== 'admin' ? (() => {
+        const emps = getHrEmployees() || [];
+        return emps.find(e => e.login === user.email || e.phone === user.phone || e.id === user.hrId) || null;
+    })() : null;
+
+    const docsCard = empRecord ? (() => {
+        const incomplete = !empRecord.cardNumber || !empRecord.passportSeries || !empRecord.pinfl || !empRecord.address;
+        if (docsEditing) {
+            return `<div class="profile-card">
+                ${profileCardHeader('Shaxsiy hujjatlar', 'documents')}
+                <div class="profile-field-form" style="flex-direction:column;gap:10px">
+                    <div class="form-group" style="width:100%">
+                        <label>Plastik karta raqami</label>
+                        <input type="text" id="docCardNumber" class="form-control" value="${escapeHtml(empRecord.cardNumber || '')}" placeholder="0000 0000 0000 0000" maxlength="19">
+                    </div>
+                    <div style="display:flex;gap:10px">
+                        <div class="form-group" style="flex:1">
+                            <label>Passport seriyasi</label>
+                            <input type="text" id="docPassportSeries" class="form-control" value="${escapeHtml(empRecord.passportSeries || '')}" placeholder="AA1234567" maxlength="9">
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <label>JSHSHIR (PINFL)</label>
+                            <input type="text" id="docPinfl" class="form-control" value="${escapeHtml(empRecord.pinfl || '')}" placeholder="14 xonali raqam" maxlength="14">
+                        </div>
+                    </div>
+                    <div class="form-group" style="width:100%">
+                        <label>Yashash manzili</label>
+                        <input type="text" id="docAddress" class="form-control" value="${escapeHtml(empRecord.address || '')}" placeholder="Viloyat, tuman, ko'cha, uy">
+                    </div>
+                    <div class="profile-save-row" style="width:100%">
+                        <button type="button" class="btn-danger-sm" data-profile-cancel="documents">Bekor qilish</button>
+                        <button type="button" class="btn-primary-sm" data-profile-save="documents">Saqlash</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+        const val = v => v ? `<span>${escapeHtml(v)}</span>` : `<span class="text-muted">Kiritilmagan</span>`;
+        return `<div class="profile-card">
+            ${profileCardHeader('Shaxsiy hujjatlar', 'documents')}
+            ${incomplete ? `<div class="profile-docs-banner"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Ba'zi ma'lumotlar to'ldirilmagan</div>` : ''}
+            <div class="profile-info-grid">
+                <div class="profile-info-item"><label>Plastik karta</label>${val(empRecord.cardNumber)}</div>
+                <div class="profile-info-item"><label>Passport seriyasi</label>${val(empRecord.passportSeries)}</div>
+                <div class="profile-info-item"><label>JSHSHIR (PINFL)</label>${val(empRecord.pinfl)}</div>
+                <div class="profile-info-item profile-info-item--full"><label>Yashash manzili</label>${val(empRecord.address)}</div>
+            </div>
+        </div>`;
+    })() : '';
+
     return `
         <div class="profile-header-bar">
             <h1>Profilni tahrirlash</h1>
@@ -657,6 +741,7 @@ function renderProfileEditSection(user) {
                     ${profileCardHeader('Bio', 'bio')}
                     ${bioBody}
                 </div>
+                ${docsCard}
             </div>
             ${renderProfileCompletionWidget(user)}
         </div>`;
@@ -885,6 +970,15 @@ function bindProfileEvents() {
     if (pwdBtn) {
         pwdBtn.addEventListener('click', handleProfilePasswordChange);
     }
+
+    // Karta raqami avtomatik formatlash: xxxx xxxx xxxx xxxx
+    const cardInput = document.getElementById('docCardNumber');
+    if (cardInput) {
+        cardInput.addEventListener('input', () => {
+            let v = cardInput.value.replace(/\D/g, '').slice(0, 16);
+            cardInput.value = v.match(/.{1,4}/g)?.join(' ') || v;
+        });
+    }
 }
 
 async function saveProfileField(field) {
@@ -902,6 +996,22 @@ async function saveProfileField(field) {
         payload.location = document.getElementById('profileLocation')?.value.trim();
     } else if (field === 'bio') {
         payload.bio = document.getElementById('profileBio')?.value.trim();
+    } else if (field === 'documents') {
+        const user2 = _profileUser || getCurrentUser();
+        const emps = getHrEmployees() || [];
+        const idx = emps.findIndex(e => e.login === user2.email || e.phone === user2.phone || e.id === user2.hrId);
+        if (idx === -1) { alert('Xodim topilmadi'); return; }
+        emps[idx] = {
+            ...emps[idx],
+            cardNumber: document.getElementById('docCardNumber')?.value.trim() || emps[idx].cardNumber,
+            passportSeries: document.getElementById('docPassportSeries')?.value.trim() || emps[idx].passportSeries,
+            pinfl: document.getElementById('docPinfl')?.value.trim() || emps[idx].pinfl,
+            address: document.getElementById('docAddress')?.value.trim() || emps[idx].address
+        };
+        saveHrEmployees(emps);
+        delete _profileEditing[field];
+        renderProfileBody();
+        return;
     }
     try {
         _profileUser = await apiUpdateProfile(payload);
@@ -4158,8 +4268,14 @@ function collectPaymentOnboardingData(modalBody) {
     const contractNumber = getVal('onboardContractNumber');
     if (!contractNumber) return { error: 'Shartnoma raqamini kiriting' };
 
-    const studentFullName = getVal('onboardStudentName');
-    if (!studentFullName) return { error: 'O\'quvchi ism va familiyasini kiriting' };
+    const studentFirstName = getVal('onboardStudentFirstName');
+    const studentLastName = getVal('onboardStudentLastName');
+    if (!studentFirstName) return { error: 'O\'quvchi ismi kiritilishi shart' };
+    if (!studentLastName) return { error: 'O\'quvchi familiyasi kiritilishi shart' };
+    const studentFullName = `${studentFirstName} ${studentLastName}`.trim();
+
+    const genderRadio = getRadio('gender');
+    if (!genderRadio) return { error: 'Jinsi tanlanishi shart' };
 
     const courseLevel = getRadio('courseLevel');
     if (!courseLevel) return { error: 'Kurs darajasini tanlang' };
@@ -4200,6 +4316,10 @@ function collectPaymentOnboardingData(modalBody) {
             contractTypeLabel: contractLabel,
             contractNumber,
             studentFullName,
+            studentFirstName,
+            studentLastName,
+            gender: genderRadio.value,
+            genderLabel: genderRadio.value === 'erkak' ? 'Erkak' : 'Ayol',
             courseLevel: courseLevel.value,
             courseLevelLabel,
             bookAddress,
@@ -4255,9 +4375,28 @@ function openPaymentOnboardingModal(lang, leadId) {
         </section>
         <section class="lead-survey-section">
             <h4 class="lead-survey-title">Kitob yetkazib berish bo'yicha</h4>
+            <div style="display:flex;gap:10px">
+                <div class="lead-survey-field" style="flex:1">
+                    <label for="onboardStudentFirstName">Ism <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="onboardStudentFirstName" class="form-control" value="${escapeHtml(defaultName.split(' ')[0] || '')}" placeholder="Ism">
+                </div>
+                <div class="lead-survey-field" style="flex:1">
+                    <label for="onboardStudentLastName">Familiya <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="onboardStudentLastName" class="form-control" value="${escapeHtml(defaultName.split(' ').slice(1).join(' ') || '')}" placeholder="Familiya">
+                </div>
+            </div>
             <div class="lead-survey-field">
-                <label for="onboardStudentName">O'quvchi ism va familiyasi</label>
-                <input type="text" id="onboardStudentName" class="form-control" value="${escapeHtml(defaultName)}" placeholder="Ism familiya">
+                <label>Jinsi <span style="color:var(--danger)">*</span></label>
+                <div class="lead-survey-options" style="flex-direction:row;gap:10px">
+                    <label class="lead-reason-option lead-reason-option--inline">
+                        <input type="radio" name="onboardGender" value="erkak" data-onboard-field="gender">
+                        <span>Erkak</span>
+                    </label>
+                    <label class="lead-reason-option lead-reason-option--inline">
+                        <input type="radio" name="onboardGender" value="ayol" data-onboard-field="gender">
+                        <span>Ayol</span>
+                    </label>
+                </div>
             </div>
             <div class="lead-survey-field">
                 <span class="lead-survey-label">Kurs darajasi</span>
@@ -6219,16 +6358,40 @@ function openAddEmployeeModal() {
     ).join('');
 
     openModal("Yangi xodim qo'shish",
-        `<div class="form-group">
-            <label>Ism familiya</label>
-            <input type="text" id="empName" class="form-control" placeholder="Ism familiyani kiriting">
+        `<div style="display:flex;gap:10px">
+            <div class="form-group" style="flex:1">
+                <label>Ism <span style="color:var(--danger)">*</span></label>
+                <input type="text" id="empFirstName" class="form-control" placeholder="Ism">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label>Familiya <span style="color:var(--danger)">*</span></label>
+                <input type="text" id="empLastName" class="form-control" placeholder="Familiya">
+            </div>
         </div>
         <div class="form-group">
-            <label>Lavozim (rol)</label>
+            <label>Jinsi <span style="color:var(--danger)">*</span></label>
+            <select id="empGender" class="form-control">
+                <option value="">— Tanlang —</option>
+                <option value="erkak">Erkak</option>
+                <option value="ayol">Ayol</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:10px">
+            <div class="form-group" style="flex:1">
+                <label>Tug'ilgan sana <span style="color:var(--danger)">*</span></label>
+                <input type="date" id="empBirthDate" class="form-control">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label>Faoliyat boshlagan sana <span style="color:var(--danger)">*</span></label>
+                <input type="date" id="empStartDate" class="form-control" value="${new Date().toISOString().slice(0,10)}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Lavozim (rol) <span style="color:var(--danger)">*</span></label>
             <select id="empRole" class="form-control">${roleOptions}</select>
         </div>
         <div class="form-group">
-            <label>Telefon raqam</label>
+            <label>Telefon raqam <span style="color:var(--danger)">*</span></label>
             <input type="tel" id="empPhone" class="form-control" placeholder="+998 90 123 45 67">
         </div>
         <div class="form-group">
@@ -6240,14 +6403,19 @@ function openAddEmployeeModal() {
             <select id="empDepartment" class="form-control">${deptOptions}</select>
         </div>
         <hr style="margin:12px 0;border-color:var(--border)">
-        <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Kirish ma'lumotlari (Login / Parol)</p>
+        <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Kirish ma'lumotlari</p>
         <div class="form-group">
-            <label>Login</label>
-            <input type="text" id="empLogin" class="form-control" placeholder="masalan: alisher.k" autocomplete="off">
+            <label>Login (avtomatik — telefon raqami)</label>
+            <input type="text" id="empLogin" class="form-control" placeholder="+998901234567" autocomplete="off">
         </div>
         <div class="form-group">
-            <label>Parol</label>
-            <input type="text" id="empPassword" class="form-control" placeholder="Kamida 4 ta belgi" autocomplete="off">
+            <label>Parol <span style="color:var(--danger)">*</span></label>
+            <div class="input-password-wrap">
+                <input type="password" id="empPassword" class="form-control" placeholder="Kamida 4 ta belgi" autocomplete="off">
+                <button type="button" class="input-eye-btn" id="empPasswordEye" tabindex="-1" aria-label="Parolni ko'rsat">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
         </div>
         <div class="form-group">
             <label>Holati</label>
@@ -6257,40 +6425,64 @@ function openAddEmployeeModal() {
             </select>
         </div>`,
         `<button type="button" class="btn-danger-sm" id="cancelAddEmployee">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="saveAddEmployee">Saqlash</button>`
+         <button type="button" class="btn-primary-sm" id="saveAddEmployee">Saqlash</button>`,
+        { wide: false }
     );
 
+    // Login = tel raqam avtomatik
+    document.getElementById('empPhone').addEventListener('input', () => {
+        const phone = document.getElementById('empPhone').value.trim();
+        const loginEl = document.getElementById('empLogin');
+        loginEl.value = phone.replace(/\s/g, '');
+    });
+
+    // Parol ko'z tugmasi
+    document.getElementById('empPasswordEye').addEventListener('click', () => {
+        const inp = document.getElementById('empPassword');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
+
     document.getElementById('saveAddEmployee').onclick = async () => {
-        const name = document.getElementById('empName').value.trim();
+        const firstName = document.getElementById('empFirstName').value.trim();
+        const lastName = document.getElementById('empLastName').value.trim();
+        const gender = document.getElementById('empGender').value;
+        const birthDate = document.getElementById('empBirthDate').value;
+        const startDate = document.getElementById('empStartDate').value;
         const role = document.getElementById('empRole').value;
         const phone = document.getElementById('empPhone').value.trim();
         const email = document.getElementById('empEmail').value.trim();
         const department = document.getElementById('empDepartment').value;
         const status = document.getElementById('empStatus').value;
-        const login = document.getElementById('empLogin').value.trim();
+        const login = document.getElementById('empLogin').value.trim() || phone.replace(/\s/g, '');
         const password = document.getElementById('empPassword').value.trim();
 
-        if (!name) { alert('Ism familiya kiritilishi shart'); return; }
+        if (!firstName) { alert('Ism kiritilishi shart'); return; }
+        if (!lastName) { alert('Familiya kiritilishi shart'); return; }
+        if (!gender) { alert('Jinsi tanlanishi shart'); return; }
+        if (!birthDate) { alert('Tug\'ilgan sana kiritilishi shart'); return; }
+        if (!startDate) { alert('Faoliyat boshlagan sana kiritilishi shart'); return; }
+        if (!phone) { alert('Telefon raqam kiritilishi shart'); return; }
         if (!login) { alert('Login kiritilishi shart'); return; }
         if (password.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
 
         const employees = getHrEmployees() || [];
-
         if (employees.find(e => e.login === login)) {
-            alert('Bu login allaqachon mavjud. Boshqa login tanlang.');
+            alert('Bu login (telefon raqami) allaqachon mavjud.');
             return;
         }
 
+        const name = `${firstName} ${lastName}`;
         const newEmp = {
             id: 'hr' + Date.now(),
-            name, role, phone, email, department, status, login, password,
-            joinDate: new Date().toISOString().slice(0, 10)
+            name, firstName, lastName, gender, birthDate, startDate,
+            role, phone, email, department, status, login, password,
+            joinDate: startDate || new Date().toISOString().slice(0, 10)
         };
         employees.push(newEmp);
         saveHrEmployees(employees);
 
-        // Server user account yaratish (login orqali kirish uchun)
         const hrUserRole = role === 'rop' ? 'admin'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
             : (role === 'oqituvchi' || role === 'yordamchi') ? 'teacher'
