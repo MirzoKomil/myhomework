@@ -49,6 +49,9 @@ router.post('/create-user', authRequired, (req, res) => {
     const userRole = validRoles.includes(role) ? role : 'employee';
     const existing = findUserByEmail(login.trim());
     if (existing) {
+        if (existing.email === 'admin' && existing.role === 'admin') {
+            return res.status(403).json({ error: 'Asosiy admin akkauntini bu yo\'l bilan o\'zgartirib bo\'lmaydi' });
+        }
         updateUser(existing.id, {
             name: name.trim(),
             passwordHash: bcrypt.hashSync(String(password), 10),

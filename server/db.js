@@ -289,10 +289,13 @@ function insertLead({ name, phone, email, language, source, externalId, date, st
 function migrateAdminPassword() {
     const admin = db.prepare("SELECT * FROM users WHERE email = 'admin'").get();
     if (!admin) return;
-    if (bcrypt.compareSync('123456', admin.password_hash)) {
+    const targetPassword = process.env.ADMIN_INIT_PASSWORD || 'admin123';
+    const needsMigrate = bcrypt.compareSync('123456', admin.password_hash);
+    const forceReset = !!process.env.ADMIN_INIT_PASSWORD && !bcrypt.compareSync(targetPassword, admin.password_hash);
+    if (needsMigrate || forceReset) {
         db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
-            .run(bcrypt.hashSync('admin123', 10), admin.id);
-        console.log('[Migration] Admin paroli admin123 ga yangilandi');
+            .run(bcrypt.hashSync(targetPassword, 10), admin.id);
+        console.log(`[Migration] Admin paroli yangilandi`);
     }
 }
 
