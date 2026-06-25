@@ -5080,3 +5080,223 @@ body.modal-open {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* =====================================================
+   RESPONSIVE — yangi o'zgarishlar uchun mobil moslash
+   ===================================================== */
+
+/* ---------- 900px ---------- */
+@media (max-width: 900px) {
+    /* Book Roadmap paneli leads paneli kabi scroll qilsin */
+    .sales-panel[data-sales-panel="book-roadmap"].active {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    /* BR kanban ham leads-kanban kabi ishlash uchun */
+    .sales-panel[data-sales-panel="book-roadmap"].active .leads-kanban {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    /* Section nav — 7 ta tab bor, kichroq padding */
+    .section-nav-item {
+        padding: 12px 10px;
+        font-size: 13px;
+    }
+
+    /* Lead card menu dropdown — karta ichida qolib ketmasin */
+    .lead-card-menu-dropdown {
+        min-width: 185px;
+    }
+
+    /* Card touch targetlari */
+    .lead-card-notify,
+    .lead-card-menu-btn {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* ---------- 600px ---------- */
+@media (max-width: 600px) {
+    /* Section nav — kichikroq */
+    .section-nav-item {
+        padding: 12px 8px;
+        font-size: 12px;
+    }
+
+    /* Lead card 3-dot dropdown — ekranning pastidan chiqsin (bottom sheet) */
+    .lead-card-menu-wrap {
+        position: static;
+    }
+
+    .lead-card-menu-dropdown {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        min-width: 100%;
+        width: 100%;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        border-bottom: none;
+        padding: 8px 8px max(12px, env(safe-area-inset-bottom));
+        box-shadow: 0 -4px 32px rgba(26, 29, 46, 0.18);
+        z-index: 200;
+        max-height: 70dvh;
+        overflow-y: auto;
+    }
+
+    /* Submenu ham pastga ochilsin, kenglik to'liq */
+    .lead-card-menu-submenu {
+        position: static;
+        left: auto;
+        top: auto;
+        min-width: 0;
+        width: 100%;
+        box-shadow: none;
+        border: none;
+        border-top: 1px solid var(--border);
+        border-radius: 0;
+        padding: 4px 0;
+        max-height: none;
+    }
+
+    /* Menu item touch-friendly */
+    .lead-card-menu-item {
+        padding: 14px 14px;
+        font-size: 14px;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+    }
+
+    .lead-card-menu-item--submenu {
+        justify-content: space-between;
+    }
+
+    /* Notify + menu btn — 44px touch target */
+    .lead-card-notify,
+    .lead-card-menu-btn {
+        width: 38px;
+        height: 38px;
+    }
+
+    /* Lead card footer — joyida qolsin */
+    .lead-card-footer {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .lead-card-actions {
+        gap: 6px;
+    }
+
+    .lead-card-action {
+        min-height: 36px;
+        min-width: 44px;
+        padding: 6px 10px;
+    }
+
+    /* Muvaffaqiyatsiz sotuv modal guruhlari */
+    .failed-sale-group {
+        margin-bottom: 12px;
+    }
+
+    .failed-sale-group-label {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+
+    /* Lead reason option — touch friendly */
+    .lead-reason-option {
+        min-height: 48px;
+        padding: 12px 14px;
+    }
+
+    /* Modal body ko'proq joy */
+    .modal-body {
+        max-height: calc(70dvh - 110px);
+        overflow-y: auto;
+    }
+}
+
+/* ---------- 480px ---------- */
+@media (max-width: 480px) {
+    /* Section nav eng kichik */
+    .section-nav-item {
+        padding: 10px 7px;
+        font-size: 11px;
+    }
+
+    /* Lead card compact */
+    .lead-card {
+        padding: 10px 12px;
+    }
+
+    .lead-card-top {
+        gap: 6px;
+    }
+
+    .lead-card-name {
+        font-size: 13px;
+    }
+
+    .lead-card-time {
+        font-size: 11px;
+    }
+
+    .lead-card-serial {
+        font-size: 10px;
+        padding: 1px 5px;
+    }
+
+    .lead-card-contact {
+        font-size: 12px;
+    }
+
+    /* Lead card footer — o'quvchi ID badge */
+    .lead-badge {
+        font-size: 9px;
+        padding: 1px 5px;
+    }
+
+    /* Menu dropdown item */
+    .lead-card-menu-item {
+        font-size: 14px;
+        padding: 14px 12px;
+    }
+
+    /* Sotuv rejasi, Qarzdorlar placeholder */
+    .placeholder-card {
+        padding: 24px 16px;
+    }
+
+    /* Failed sale groups spacing */
+    .failed-sale-group {
+        margin-bottom: 8px;
+    }
+}
+
+/* ---------- 380px ---------- */
+@media (max-width: 380px) {
+    .section-nav-item {
+        padding: 10px 6px;
+        font-size: 10px;
+    }
+
+    .lead-card-notify,
+    .lead-card-menu-btn {
+        width: 34px;
+        height: 34px;
+    }
+
+    .lead-card-notify svg,
+    .lead-card-menu-btn svg {
+        width: 15px;
+        height: 15px;
+    }
+}
