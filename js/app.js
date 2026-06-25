@@ -81,39 +81,66 @@ function initUserUI(currentUser) {
     applyRoleBasedAccess(currentUser);
 }
 
+// Rol asosida sidebar elementlarini ko'rsatish/yashirish
+// null = hamma ko'rinadi (to'liq ruxsat)
+const ROLE_TABS = {
+    admin:         null,
+    rop:           null,
+    boshliq:       null,
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable'],
+    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
+    employee:      ['student-app']
+};
+
 function applyRoleBasedAccess(user) {
     const role = user.role;
-    const allLinks = document.querySelectorAll('.sidebar-nav .nav-item');
-    allLinks.forEach(link => {
-        link.style.display = 'none';
-    });
+    const allowed = ROLE_TABS[role] ?? ROLE_TABS.employee;
 
-    const showTabs = (tabs) => {
-        tabs.forEach(tab => {
-            const el = document.querySelector(`.sidebar-nav .nav-item[data-tab="${tab}"]`);
-            if (el) el.style.display = 'flex';
+    // Sidebar: barcha menu item va guruhlarni olish
+    const sidebar = document.getElementById('sidebarMenu');
+    if (!sidebar) return;
+
+    if (allowed === null) {
+        // Admin — hamma narsa ko'rinadi
+        sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
+            el.style.display = '';
         });
-    };
-
-    let allowedTabs = [];
-    if (role === 'admin') {
-        allowedTabs = ['dashboard', 'sales', 'finance', 'students', 'timetable', 'main-attendance', 'assistant-attendance', 'teacher-cabinet', 'marketing', 'hr', 'settings', 'profile'];
-    } else if (role === 'sales_manager') {
-        allowedTabs = ['dashboard', 'sales', 'profile'];
-    } else if (role === 'teacher') {
-        allowedTabs = ['dashboard', 'students', 'timetable', 'teacher-cabinet', 'profile'];
-    } else {
-        // fallback
-        allowedTabs = ['dashboard', 'profile'];
+        return;
     }
 
-    showTabs(allowedTabs);
+    const allowedSet = new Set(allowed);
 
-    // Dastlab qaysi tab ochilishini belgilash
+    // Barcha elementlarni yashir
+    sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // Ruxsat etilgan to'g'ridan-to'g'ri .menu-item larni ko'rsat
+    sidebar.querySelectorAll('.menu-item').forEach(el => {
+        if (allowedSet.has(el.dataset.tab)) el.style.display = '';
+    });
+
+    // Ruxsat etilgan .menu-sub-item va ularning guruhlari
+    sidebar.querySelectorAll('.menu-sub-item').forEach(el => {
+        if (!allowedSet.has(el.dataset.tab)) return;
+        el.style.display = '';
+        const group = el.closest('.menu-group');
+        if (group) {
+            group.style.display = '';
+            group.classList.add('open');
+            const toggle = group.querySelector('.menu-group-toggle');
+            if (toggle) toggle.setAttribute('aria-expanded', 'true');
+        }
+    });
+
+    // Boshlang'ich tab (rol bo'yicha)
     if (role === 'sales_manager') {
-        setTimeout(() => switchTab('sales'), 100);
+        setTimeout(() => switchTab('sales'), 50);
     } else if (role === 'teacher') {
-        setTimeout(() => switchTab('teacher-cabinet'), 100);
+        setTimeout(() => switchTab('timetable'), 50);
+    } else {
+        // employee yoki noma'lum rol — mobil ilovaga o'tkazish
+        setTimeout(() => switchTab('student-app'), 50);
     }
 }
 
@@ -140,6 +167,18 @@ async function bootApp() {
             <a href="login.html" class="btn-primary-sm" style="display:inline-block;margin-top:16px;text-decoration:none">Login sahifasi</a>
         </div>`;
         return;
+    }
+
+    // O'qituvchi uchun bog'liq teacher ID ni aniqlash
+    if (currentUser.role === 'teacher' && !currentUser.linkedTeacherId) {
+        const teachers = getItem(STORAGE_KEYS.teachers, []);
+        const linked = teachers.find(t =>
+            t.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+        );
+        if (linked) {
+            currentUser.linkedTeacherId = linked.id;
+            setCurrentUser(currentUser);
+        }
     }
 
     initUserUI(currentUser);
@@ -1043,9 +1082,22 @@ function initTimetableControls() {
         teachers = teachers.filter(t => (t.subject || 'english') === filters.lang);
     }
 
-    const savedTeacher = teacherEl.value;
-    teacherEl.innerHTML = '<option value="all">Barcha ustozlar</option>' +
-        teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    const currentUser = getCurrentUser();
+    const isTeacherRole = currentUser?.role === 'teacher';
+    const linkedTeacherId = currentUser?.linkedTeacherId;
+
+    const savedTeacher = isTeacherRole && linkedTeacherId ? linkedTeacherId : teacherEl.value;
+    if (isTeacherRole) {
+        // O'qituvchi faqat o'zining jadvalini ko'radi — filtrni yashir
+        teacherEl.innerHTML = teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+        const teacherWrap = teacherEl.closest('.form-group') || teacherEl.parentElement;
+        if (teacherWrap) teacherWrap.style.display = 'none';
+    } else {
+        teacherEl.innerHTML = '<option value="all">Barcha ustozlar</option>' +
+            teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+        const teacherWrap = teacherEl.closest('.form-group') || teacherEl.parentElement;
+        if (teacherWrap) teacherWrap.style.display = '';
+    }
     if (savedTeacher && [...teacherEl.options].some(o => o.value === savedTeacher)) {
         teacherEl.value = savedTeacher;
     }
@@ -1465,12 +1517,19 @@ function initMainAttControls() {
     const month = document.getElementById('mainAttMonth');
     if (!month.value) month.value = getMonthKey(new Date());
 
-    const prev = sel.value;
+    const currentUser = getCurrentUser();
+    const isTeacherRole = currentUser?.role === 'teacher';
+    const linkedTeacherId = currentUser?.linkedTeacherId;
+
+    const prev = isTeacherRole && linkedTeacherId ? linkedTeacherId : sel.value;
     sel.innerHTML = teachers.length
         ? teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
         : '<option value="">— Ustoz yo\'q —</option>';
     if (prev && teachers.some(t => t.id === prev)) sel.value = prev;
     else if (teachers.length) sel.value = teachers[0].id;
+
+    const selWrap = sel.closest('.form-group') || sel.parentElement;
+    if (selWrap) selWrap.style.display = isTeacherRole ? 'none' : '';
 
     sel.onchange = renderMainAttendance;
     month.onchange = renderMainAttendance;
@@ -1714,11 +1773,31 @@ document.getElementById('addAsstTeacher').addEventListener('click', () => {
 
 // --- Ustozlarga kabinet ---
 function renderTeacherCabinet() {
+    const currentUser = getCurrentUser();
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const sel = document.getElementById('cabinetTeacher');
+    if (!sel) return;
+
+    const selWrap = sel.closest('.form-group') || sel.parentElement;
+
+    if (currentUser?.role === 'teacher') {
+        // O'qituvchi faqat o'zini ko'radi
+        const tid = currentUser.linkedTeacherId;
+        if (selWrap) selWrap.style.display = 'none';
+        if (tid) {
+            renderTeacherCabinetContent(tid);
+        } else {
+            document.getElementById('teacherCabinetContent').innerHTML =
+                '<p class="text-muted" style="padding:24px">Siz hali ustoz sifatida tizimga biriktirilmadingiz. Admin bilan bog\'laning.</p>';
+        }
+        return;
+    }
+
+    // Admin / boshqa rollar: barcha ustozlar
+    if (selWrap) selWrap.style.display = '';
     sel.innerHTML = teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
     sel.onchange = () => renderTeacherCabinetContent(sel.value);
-    if (teachers.length) renderTeacherCabinetContent(teachers[0].id);
+    if (teachers.length) renderTeacherCabinetContent(sel.value || teachers[0].id);
 }
 
 function renderTeacherCabinetContent(teacherId) {
@@ -1853,6 +1932,7 @@ function renderSalaryContent() {
 // --- O'quvchilar ---
 function renderStudents() {
     const subject = _tabContext.subject;
+    const currentUser = getCurrentUser();
     const titleEl = document.getElementById('studentsPageTitle');
     if (titleEl) {
         titleEl.textContent = subject
@@ -1863,6 +1943,11 @@ function renderStudents() {
     let students = getItem(STORAGE_KEYS.students, []);
     if (subject) {
         students = students.filter(s => (s.subject || 'english') === subject);
+    }
+    // O'qituvchi faqat o'z o'quvchilarini ko'radi
+    if (currentUser?.role === 'teacher' && currentUser?.linkedTeacherId) {
+        const tid = currentUser.linkedTeacherId;
+        students = students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid);
     }
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const tbody = document.getElementById('studentsBody');
