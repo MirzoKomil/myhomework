@@ -6092,7 +6092,17 @@ function renderLeads() {
             if (!lead) return;
             const from = normalizeLeadStatus(lead.status);
             if (from === toStatus) return;
-            moveLeadToColumn(lang, leadId, toStatus, from);
+
+            if (needsContactFailPrompt(from, toStatus)) { openContactFailModal(lang, leadId, toStatus); return; }
+            if (needsTrialLessonPrompt(from, toStatus)) { openTrialLessonFlow(lang, leadId, from); return; }
+            if (needsConnectedSurveyPrompt(toStatus)) { openConnectedSurveyModal(lang, leadId, toStatus); return; }
+            if (needsInfoProvidedPrompt(from, toStatus)) { openMalumotBerildiFlow(lang, leadId, from); return; }
+            if (needsDecisionPrompt(from, toStatus)) { openQarorJarayonidaFlow(lang, leadId, from); return; }
+            if (needsPaymentPrompt(from, toStatus)) { openTolovJarayonidaFlow(lang, leadId, from); return; }
+            if (needsPaymentClosedPrompt(from, toStatus)) { openTolovYopildiFlow(lang, leadId, from); return; }
+            if (needsFailedSalePrompt(from, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId); return; }
+            if (needsSifatsizLidPrompt(from, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
+            moveLeadToStatus(lang, leadId, toStatus);
         });
     });
 
@@ -6463,6 +6473,8 @@ const HR_ROLE_MAP = {
     'rop': 'ROP',
     'sotuv-menejeri': 'Sotuv menejeri',
     'oqituvchi': "O'qituvchi",
+    'ingliz-oqituvchi': "Ingliz tili o'qituvchi",
+    'rus-oqituvchi': "Rus tili o'qituvchi",
     'yordamchi': "Yordamchi o'qituvchi"
 };
 
