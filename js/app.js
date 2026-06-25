@@ -11,10 +11,13 @@ const TAB_TITLES = {
     payments: "To'lovlar",
     sales: "Sotuv bo'limi",
     marketing: "Marketing bo'limi",
-    profile: 'Mening profilim',
+    profile: 'Sozlamalar',
     placeholder: 'Bo\'lim',
     'student-app': 'O\'quvchi ilovasi',
-    'hr-employees': 'Xodimlar'
+    'hr-employees': 'Xodimlar',
+    'analytics-overview': 'Umumiy ko\'rsatkichlar',
+    'analytics-sales': 'Sotuv analitikasi',
+    'analytics-teachers': 'Ustozlar samaradorligi'
 };
 
 const SALES_SECTIONS = {
@@ -86,7 +89,7 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable'],
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analytics-overview', 'analytics-sales'],
     teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
     employee:      ['student-app']
 };
@@ -371,6 +374,9 @@ function renderTab(tab) {
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
         case 'marketing': break;
+        case 'analytics-overview':
+        case 'analytics-sales':
+        case 'analytics-teachers': break;
         case 'profile': renderProfile(); break;
         case 'placeholder': renderPlaceholder(); break;
         case 'student-app': renderStudentApp(); break;

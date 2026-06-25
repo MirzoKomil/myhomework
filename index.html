@@ -179,6 +179,38 @@
                     </div>
                 </div>
 
+                <div class="menu-group">
+                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M18 20V10M12 20V4M6 20v-6" />
+                        </svg>
+                        <span class="label">Analitika</span>
+                    </button>
+                    <div class="menu-subitems">
+                        <a href="#" class="menu-sub-item" data-tab="analytics-overview">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 3v18h18" />
+                                <path d="M7 16l4-5 4 3 6-8" />
+                            </svg>
+                            Umumiy ko'rsatkichlar
+                        </a>
+                        <a href="#" class="menu-sub-item" data-tab="analytics-sales">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                            </svg>
+                            Sotuv analitikasi
+                        </a>
+                        <a href="#" class="menu-sub-item" data-tab="analytics-teachers">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                            </svg>
+                            Ustozlar samaradorligi
+                        </a>
+                    </div>
+                </div>
+
                 <div class="menu-group" data-menu-group="mobile-app">
                     <button type="button" class="menu-group-toggle" aria-expanded="false" data-open-tab="student-app">
                         <svg viewBox="0 0 24 24">
@@ -204,7 +236,7 @@
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                     </svg>
-                    <span class="label">Mening profilim</span>
+                    <span class="label">Sozlamalar</span>
                 </a>
             </div>
         </aside>
@@ -728,7 +760,35 @@
                         </div>
                     </section>
 
-                    <!-- Mening profilim -->
+                    <!-- Analitika -->
+                    <section id="tab-analytics-overview" class="tab-content">
+                        <div class="page-title-bar">
+                            <h1>Umumiy ko'rsatkichlar</h1>
+                        </div>
+                        <div id="analyticsOverviewContent" class="analytics-content">
+                            <p class="text-muted" style="padding:32px;text-align:center">Analitika bo'limi ishlab chiqilmoqda...</p>
+                        </div>
+                    </section>
+
+                    <section id="tab-analytics-sales" class="tab-content">
+                        <div class="page-title-bar">
+                            <h1>Sotuv analitikasi</h1>
+                        </div>
+                        <div id="analyticsSalesContent" class="analytics-content">
+                            <p class="text-muted" style="padding:32px;text-align:center">Sotuv analitikasi bo'limi ishlab chiqilmoqda...</p>
+                        </div>
+                    </section>
+
+                    <section id="tab-analytics-teachers" class="tab-content">
+                        <div class="page-title-bar">
+                            <h1>Ustozlar samaradorligi</h1>
+                        </div>
+                        <div id="analyticsTeachersContent" class="analytics-content">
+                            <p class="text-muted" style="padding:32px;text-align:center">Ustozlar samaradorligi analitikasi ishlab chiqilmoqda...</p>
+                        </div>
+                    </section>
+
+                    <!-- Sozlamalar (Mening profilim) -->
                     <section id="tab-profile" class="tab-content">
                         <div class="profile-page" id="profilePage">
                             <div class="profile-page-inner">
