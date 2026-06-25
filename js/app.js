@@ -5010,7 +5010,23 @@ function renderLeadCard(lead, langKey) {
         ? `<span class="lead-card-serial">#${escapeHtml(normalized.serialCode)}</span>`
         : '';
 
-    const checkboxHtml = `<input type="checkbox" class="lead-bulk-checkbox" data-id="${escapeHtml(normalized.id)}" data-lang="${langKey}" aria-label="Belgilash">`;
+    const _cu = getCurrentUser();
+    const _isAdminOrRop = _cu && (FULL_ACCESS_ROLES.has(_cu.role));
+    const _isSalesManager = _cu?.role === 'sales_manager';
+
+    const checkboxHtml = _isAdminOrRop
+        ? `<input type="checkbox" class="lead-bulk-checkbox" data-id="${escapeHtml(normalized.id)}" data-lang="${langKey}" aria-label="Belgilash">`
+        : '';
+
+    // "Boshqa bosqichga o'tkazish" submenu items
+    const moveItems = LEAD_COLUMNS.map(col => {
+        const isDanger = col.id === 'muvaffaqiyatsiz-sotuv' || col.id === 'sifatsiz-lidlar';
+        return `<button type="button" class="lead-card-menu-item${isDanger ? ' lead-card-menu-item--danger' : ''}" data-lead-menu-move="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" data-move-to="${escapeHtml(col.id)}">${escapeHtml(col.label)}</button>`;
+    }).join('');
+
+    const deleteItem = !_isSalesManager
+        ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-lead-menu-delete="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Lidni o'chirish</button>`
+        : '';
 
     return `<article class="lead-card" draggable="true" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
         <div class="lead-card-top">
@@ -5032,7 +5048,16 @@ function renderLeadCard(lead, langKey) {
                     </button>
                     <div class="lead-card-menu-dropdown" hidden>
                         <button type="button" class="lead-card-menu-item" data-lead-menu-manager="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Menejer biriktirish</button>
-                        <button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-lead-menu-delete="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Lidni o'chirish</button>
+                        <div class="lead-card-menu-submenu-wrap">
+                            <button type="button" class="lead-card-menu-item lead-card-menu-item--submenu" data-lead-menu-move-toggle>
+                                Boshqa bosqichga o'tkazish
+                                <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                            </button>
+                            <div class="lead-card-menu-submenu" hidden>
+                                ${moveItems}
+                            </div>
+                        </div>
+                        ${deleteItem}
                     </div>
                 </div>
             </div>
@@ -5305,6 +5330,31 @@ function renderLeads() {
             e.stopPropagation();
             closeLeadCardMenus();
             openAssignManagerModal(btn.dataset.leadMenuManager, btn.dataset.leadId);
+        });
+    });
+
+    // Boshqa bosqichga o'tkazish — submenu toggle
+    board.querySelectorAll('[data-lead-menu-move-toggle]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const sub = btn.closest('.lead-card-menu-submenu-wrap')?.querySelector('.lead-card-menu-submenu');
+            if (sub) { sub.hidden = !sub.hidden; }
+        });
+    });
+
+    // Boshqa bosqichga o'tkazish — ustun tanlanganda
+    board.querySelectorAll('[data-lead-menu-move]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeLeadCardMenus();
+            const lang = btn.dataset.leadMenuMove;
+            const leadId = btn.dataset.leadId;
+            const toStatus = btn.dataset.moveTo;
+            const lead = getLeadById(lang, leadId);
+            if (!lead) return;
+            const from = normalizeLeadStatus(lead.status);
+            if (from === toStatus) return;
+            moveLeadToColumn(lang, leadId, toStatus, from);
         });
     });
 
@@ -5608,7 +5658,13 @@ function openAddLeadModal() {
 }
 
 const addLeadBtn = document.getElementById('addLeadBtn');
-if (addLeadBtn) addLeadBtn.addEventListener('click', openAddLeadModal);
+if (addLeadBtn) {
+    addLeadBtn.addEventListener('click', openAddLeadModal);
+    const _cuLead = getCurrentUser();
+    if (_cuLead && !FULL_ACCESS_ROLES.has(_cuLead.role)) {
+        addLeadBtn.style.display = 'none';
+    }
+}
 
 const leadsManagerFilter = document.getElementById('leadsManagerFilter');
 if (leadsManagerFilter) {

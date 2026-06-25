@@ -3087,6 +3087,41 @@ body {
     background: var(--danger-bg);
 }
 
+/* Lead card submenu (Boshqa bosqichga o'tkazish) */
+.lead-card-menu-submenu-wrap {
+    position: relative;
+}
+.lead-card-menu-item--submenu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.lead-card-menu-item--submenu svg {
+    flex-shrink: 0;
+    stroke: currentColor;
+}
+.lead-card-menu-submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    min-width: 210px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+    z-index: 1100;
+    padding: 4px 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+@media (max-width: 600px) {
+    .lead-card-menu-submenu {
+        left: 0;
+        top: 100%;
+    }
+}
+
 .lead-card-name {
     font-size: 14px;
     font-weight: 700;
