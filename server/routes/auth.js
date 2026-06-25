@@ -164,16 +164,13 @@ router.post('/avatar', authRequired, async (req, res) => {
         const { dataUrl } = req.body || {};
         if (!dataUrl || !dataUrl.startsWith('data:image/'))
             return res.status(400).json({ error: 'Yaroqsiz rasm formati' });
-        const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-        if (buffer.length > 1024 * 1024)
-            return res.status(413).json({ error: 'Rasm hajmi 1 MB dan oshmasin' });
-        if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
-        fs.writeFileSync(path.join(AVATAR_DIR, `${req.user.id}.jpg`), buffer);
-        const url = `/api/auth/avatar/${req.user.id}?t=${Date.now()}`;
-        await updateUser(req.user.id, { avatar: url });
+        // Uzunlik tekshiruvi: ~2MB base64 → ~1.5MB rasm
+        if (dataUrl.length > 2 * 1024 * 1024)
+            return res.status(413).json({ error: 'Rasm hajmi katta. Kichikroq rasm tanlang.' });
+        // Railway da fayl tizimi yo'qoladi — data URL ni DB ga saqlaymiz
+        await updateUser(req.user.id, { avatar: dataUrl });
         const updated = await findUserById(req.user.id);
-        res.json({ url, user: publicUser(updated) });
+        res.json({ url: dataUrl, user: publicUser(updated) });
     } catch (err) {
         console.error('POST /avatar', err);
         res.status(500).json({ error: 'Server xatoligi' });

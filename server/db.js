@@ -402,7 +402,9 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
-        q('SELECT * FROM sales_managers'),
+        q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
+           FROM sales_managers sm
+           LEFT JOIN users u ON LOWER(TRIM(u.name)) = LOWER(TRIM(sm.name))`),
         q('SELECT * FROM students ORDER BY name'),
         q('SELECT * FROM timetable'),
         q('SELECT * FROM payments ORDER BY date DESC'),
@@ -421,7 +423,7 @@ async function getFullState() {
     });
     return {
         teachers: teacherRows.map(rowToTeacher),
-        salesManagers: smRows.map(r => ({ id: r.id, name: r.name })),
+        salesManagers: smRows.map(r => ({ id: r.id, name: r.name, avatar: r.avatar || '' })),
         students: studentRows.map(rowToStudent),
         timetable,
         mainAttendance: mainAtt,

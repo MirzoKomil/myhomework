@@ -5484,6 +5484,19 @@ function renderLeadCard(lead, langKey) {
     const phone2 = normalized.phone2 || '—';
     const commentCount = normalized.comments.length;
     const hasManagerPhoto = Boolean(normalized.managerPhoto);
+
+    // Menejer profil rasmi
+    const _managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const _manager = _managers.find(m => m.id === normalized.managerId);
+    const _managerAvatar = _manager?.avatar || '';
+    const _managerInitials = _manager
+        ? _manager.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+        : '';
+    const managerAvatarHtml = _managerAvatar
+        ? `<img src="${escapeHtml(_managerAvatar)}" alt="${escapeHtml(_manager?.name || '')}" class="lead-mgr-avatar-img">`
+        : _managerInitials
+        ? `<span class="lead-mgr-avatar-initials">${escapeHtml(_managerInitials)}</span>`
+        : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
     const showSerial = normalizeLeadStatus(normalized.status) === 'tolov-jarayonida' && normalized.serialCode;
     const serialHtml = showSerial
         ? `<span class="lead-card-serial">#${escapeHtml(normalized.serialCode)}</span>`
@@ -5553,9 +5566,8 @@ function renderLeadCard(lead, langKey) {
         </div>
         <div class="lead-card-footer">
             <div class="lead-card-actions">
-                <button type="button" class="lead-card-action" data-lead-manager-photo="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Menejer rasmi">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <span>${hasManagerPhoto ? 1 : 0}</span>
+                <button type="button" class="lead-card-action lead-card-action--mgr${_manager ? ' lead-card-action--active' : ''}" data-lead-manager-photo="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="${escapeHtml(_manager?.name || 'Menejer biriktirilmagan')}">
+                    <span class="lead-mgr-avatar">${managerAvatarHtml}</span>
                 </button>
                 <button type="button" class="lead-card-action" data-lead-comments="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Izohlar">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -5615,69 +5627,45 @@ function openLeadManagerPhotoModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
-    const photo = lead.managerPhoto;
-    const previewHtml = photo?.dataUrl
-        ? `<div class="lead-manager-preview">
-            <img src="${photo.dataUrl}" alt="Menejer rasmi" class="lead-manager-preview-img">
-            <button type="button" class="btn-danger-sm" id="removeLeadManagerPhoto">Rasmni o'chirish</button>
-           </div>`
-        : '<p class="text-muted lead-empty-hint">Hozircha menejer rasmi biriktirilmagan</p>';
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const manager = managers.find(m => m.id === lead.managerId);
 
-    openModal(`${escapeHtml(lead.name)} — menejer rasmi`,
-        `<div class="lead-manager-photo-block">${previewHtml}</div>
-         <div class="form-group" style="margin-top:16px;margin-bottom:0">
-            <label>Menejer rasmini yuklash</label>
-            <input type="file" id="mLeadManagerPhotoFile" class="form-control" accept="image/*">
-            <small class="text-muted">Maksimal hajm: 2 MB. Faqat bitta rasm.</small>
-         </div>`,
-        `<button type="button" class="btn-primary-sm" id="saveLeadManagerPhoto">Rasmni saqlash</button>`
-    );
-
-    document.getElementById('removeLeadManagerPhoto')?.addEventListener('click', () => {
-        updateLeadInStorage(lang, leadId, l => ({
-            ...l,
-            managerPhoto: null,
-            attachments: []
-        }));
-        closeModal();
-        renderLeads();
-    });
-
-    document.getElementById('saveLeadManagerPhoto').onclick = () => {
-        const input = document.getElementById('mLeadManagerPhotoFile');
-        const file = input?.files?.[0];
-        if (!file) {
-            alert('Rasm tanlang');
-            return;
-        }
-        if (!file.type.startsWith('image/')) {
-            alert('Faqat rasm faylini tanlang');
-            return;
-        }
-        if (file.size > 2 * 1024 * 1024) {
-            alert('Rasm 2 MB dan katta bo\'lmasligi kerak');
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = () => {
-            const photoData = {
-                id: 'mp' + Date.now(),
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                dataUrl: reader.result,
-                createdAt: new Date().toISOString()
-            };
-            updateLeadInStorage(lang, leadId, l => ({
-                ...l,
-                managerPhoto: photoData,
-                attachments: [photoData]
-            }));
-            closeModal();
-            renderLeads();
-        };
-        reader.readAsDataURL(file);
-    };
+    if (manager && manager.avatar) {
+        // Menejer profil rasmi mavjud — uni ko'rsatamiz
+        openModal(`${escapeHtml(lead.name)} — menejer`,
+            `<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0">
+                <img src="${escapeHtml(manager.avatar)}" alt="${escapeHtml(manager.name)}"
+                     style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--purple)">
+                <div style="text-align:center">
+                    <div style="font-size:16px;font-weight:700;color:var(--text)">${escapeHtml(manager.name)}</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Sotuv menejeri</div>
+                </div>
+            </div>`,
+            `<button type="button" class="btn-primary-sm" id="mgrPhotoCloseBtn">Yopish</button>`
+        );
+        document.getElementById('mgrPhotoCloseBtn').onclick = closeModal;
+    } else if (manager) {
+        // Menejer bor, lekin rasmi yo'q
+        const initials = manager.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        openModal(`${escapeHtml(lead.name)} — menejer`,
+            `<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0">
+                <div style="width:80px;height:80px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--purple)">${escapeHtml(initials)}</div>
+                <div style="text-align:center">
+                    <div style="font-size:16px;font-weight:700;color:var(--text)">${escapeHtml(manager.name)}</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Profil rasmi yo'q. Menejer o'z profilidan rasm qo'yishi kerak.</div>
+                </div>
+            </div>`,
+            `<button type="button" class="btn-primary-sm" id="mgrPhotoCloseBtn">Yopish</button>`
+        );
+        document.getElementById('mgrPhotoCloseBtn').onclick = closeModal;
+    } else {
+        // Menejer biriktirilmagan
+        openModal(`${escapeHtml(lead.name)} — menejer`,
+            `<p class="text-muted lead-empty-hint" style="text-align:center;padding:16px">Bu lidga menejer hali biriktirilmagan</p>`,
+            `<button type="button" class="btn-primary-sm" id="mgrPhotoCloseBtn">Yopish</button>`
+        );
+        document.getElementById('mgrPhotoCloseBtn').onclick = closeModal;
+    }
 }
 
 function renderLeads() {
@@ -6741,6 +6729,16 @@ function renderBookRoadmapCard(item) {
     const commentCount = item.comments?.length || 0;
     const hasManagerPhoto = Boolean(item.managerPhoto);
 
+    const _brMgrAvatar = manager?.avatar || '';
+    const _brMgrInitials = manager
+        ? manager.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+        : '';
+    const brManagerAvatarHtml = _brMgrAvatar
+        ? `<img src="${escapeHtml(_brMgrAvatar)}" alt="${escapeHtml(manager?.name || '')}" class="lead-mgr-avatar-img">`
+        : _brMgrInitials
+        ? `<span class="lead-mgr-avatar-initials">${escapeHtml(_brMgrInitials)}</span>`
+        : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
     const checkboxHtml = _isAdminOrRop
         ? `<input type="checkbox" class="lead-bulk-checkbox" data-br-bulk-id="${escapeHtml(item.id)}" aria-label="Belgilash">`
         : '';
@@ -6803,9 +6801,8 @@ function renderBookRoadmapCard(item) {
         </div>
         <div class="lead-card-footer">
             <div class="lead-card-actions">
-                <button type="button" class="lead-card-action${hasManagerPhoto ? ' lead-card-action--active' : ''}" data-br-manager-photo="${item.id}" title="Menejer rasmi">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <span>${hasManagerPhoto ? 1 : 0}</span>
+                <button type="button" class="lead-card-action lead-card-action--mgr${manager ? ' lead-card-action--active' : ''}" data-br-manager-photo="${item.id}" title="${escapeHtml(manager?.name || 'Menejer biriktirilmagan')}">
+                    <span class="lead-mgr-avatar">${brManagerAvatarHtml}</span>
                 </button>
                 <button type="button" class="lead-card-action" data-br-comment="${item.id}" title="Izohlar">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -6995,35 +6992,40 @@ function openBrManagerPhotoModal(id) {
     const item = getBrById(id);
     if (!item) return;
 
-    const existing = item.managerPhoto || null;
-    openModal(`Menejer rasmi — ${escapeHtml(item.name)}`,
-        `<div style="display:flex;flex-direction:column;gap:12px;align-items:center">
-            ${existing
-                ? `<img src="${escapeHtml(existing)}" style="max-width:180px;max-height:180px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">`
-                : '<p style="color:var(--text-muted);font-size:13px">Rasm yuklanmagan</p>'}
-            <input type="file" id="brManagerPhotoInput" accept="image/*" style="font-size:13px">
-        </div>`,
-        `<button class="btn-danger-sm" id="brManagerPhotoRemove" ${!existing ? 'disabled' : ''}>O'chirish</button>
-         <button class="btn-primary-sm" id="brManagerPhotoSave">Saqlash</button>`
-    );
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const manager = managers.find(m => m.id === item.managerId);
 
-    document.getElementById('brManagerPhotoRemove').onclick = () => {
-        updateBrInStorage(id, i => ({ ...i, managerPhoto: null }));
-        renderBookRoadmap();
-        closeModal();
-    };
-
-    document.getElementById('brManagerPhotoSave').onclick = () => {
-        const file = document.getElementById('brManagerPhotoInput').files[0];
-        if (!file) { closeModal(); return; }
-        const reader = new FileReader();
-        reader.onload = ev => {
-            updateBrInStorage(id, i => ({ ...i, managerPhoto: ev.target.result }));
-            renderBookRoadmap();
-            closeModal();
-        };
-        reader.readAsDataURL(file);
-    };
+    if (manager && manager.avatar) {
+        openModal(`${escapeHtml(item.name)} — menejer`,
+            `<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0">
+                <img src="${escapeHtml(manager.avatar)}" alt="${escapeHtml(manager.name)}"
+                     style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--purple)">
+                <div style="text-align:center">
+                    <div style="font-size:16px;font-weight:700;color:var(--text)">${escapeHtml(manager.name)}</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Sotuv menejeri</div>
+                </div>
+            </div>`,
+            `<button type="button" class="btn-primary-sm" id="brMgrCloseBtn">Yopish</button>`
+        );
+    } else if (manager) {
+        const initials = manager.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        openModal(`${escapeHtml(item.name)} — menejer`,
+            `<div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0">
+                <div style="width:80px;height:80px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--purple)">${escapeHtml(initials)}</div>
+                <div style="text-align:center">
+                    <div style="font-size:16px;font-weight:700;color:var(--text)">${escapeHtml(manager.name)}</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Profil rasmi yo'q</div>
+                </div>
+            </div>`,
+            `<button type="button" class="btn-primary-sm" id="brMgrCloseBtn">Yopish</button>`
+        );
+    } else {
+        openModal(`${escapeHtml(item.name)} — menejer`,
+            `<p class="text-muted lead-empty-hint" style="text-align:center;padding:16px">Menejer biriktirilmagan</p>`,
+            `<button type="button" class="btn-primary-sm" id="brMgrCloseBtn">Yopish</button>`
+        );
+    }
+    document.getElementById('brMgrCloseBtn').onclick = closeModal;
 }
 
 // Book Roadmap event delegation
