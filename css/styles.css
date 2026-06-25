@@ -6016,3 +6016,258 @@ body.modal-open {
         height: 15px;
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE — barcha bo'limlar uchun
+   Breakpoints: 900px (tablet), 600px (kichik telefon), 480px, 380px
+══════════════════════════════════════════════════════════════════ */
+
+/* ─── 900px ─── */
+@media (max-width: 900px) {
+
+    /* Dashboard stat cards */
+    .grid-2, .grid-3 { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .course-cards    { grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Stat cards */
+    .stat-icon { width: 44px; height: 44px; font-size: 20px; border-radius: 12px; }
+    .stat-info .stat-value { font-size: 22px; }
+    .stat-info .stat-label { font-size: 12px; }
+
+    /* Welcome banner */
+    .welcome-banner { padding: 20px 20px; }
+    .welcome-text h2 { font-size: 20px; }
+
+    /* Calendar widget */
+    .calendar-widget { overflow-x: auto; }
+
+    /* Teacher / Student cards */
+    .employees-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+
+    /* Timetable */
+    .timetable-table, .tt-week-table {
+        font-size: 11px;
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .timetable-table thead, .timetable-table tbody,
+    .tt-week-table thead, .tt-week-table tbody { display: table; width: 100%; }
+
+    /* Payments table */
+    table { font-size: 13px; }
+    th, td { padding: 10px 8px; }
+
+    /* HR page */
+    .employees-grid { gap: 12px; }
+
+    /* Profile */
+    .profile-page-inner { gap: 12px; }
+
+    /* Modal: wider on tablet */
+    .modal { max-width: calc(100vw - 32px); }
+}
+
+/* ─── 600px ─── */
+@media (max-width: 600px) {
+
+    /* App shell */
+    .app-shell { padding: 0; gap: 0; }
+    .main-area {
+        height: 100dvh;
+        border-radius: 0;
+        gap: 0;
+    }
+
+    /* Top header */
+    .top-header {
+        border-radius: 0;
+        padding: 10px 12px;
+        gap: 8px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+    .search-box { display: none; }
+    .live-badge { display: none; }
+
+    /* Content layout */
+    .content-layout { border-radius: 0; gap: 0; }
+    .content-main { border-radius: 0; }
+    .tab-content.active { border-radius: 0; padding: 12px 10px 80px; }
+    #tab-sales.tab-content.active { padding-bottom: 0; }
+
+    /* Dashboard grids */
+    .grid-2 { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-3 { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .course-cards { grid-template-columns: 1fr; gap: 8px; }
+
+    /* Stat cards compact */
+    .stat-card { padding: 14px 12px; gap: 10px; border-radius: 14px; }
+    .stat-icon { width: 40px; height: 40px; font-size: 18px; border-radius: 10px; }
+    .stat-info .stat-value { font-size: 20px; }
+    .stat-info .stat-label { font-size: 11px; }
+
+    /* Welcome banner */
+    .welcome-banner { flex-direction: column; padding: 16px; border-radius: 16px; }
+    .welcome-text h2 { font-size: 18px; }
+    .banner-emoji { margin: 0 auto; }
+
+    /* Cards */
+    .card { padding: 14px 12px; border-radius: 14px; }
+    .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .card-header h3 { font-size: 15px; }
+
+    /* Page title */
+    .page-title-bar { padding: 0 0 10px; }
+    .page-title-bar h1 { font-size: 18px; }
+    .page-title-bar p { font-size: 12px; }
+
+    /* Section nav — horizontal scroll */
+    .section-nav { gap: 2px; }
+    .section-nav-item { padding: 10px 8px; font-size: 11px; white-space: nowrap; }
+
+    /* Toolbar */
+    .toolbar { flex-direction: column; gap: 8px; }
+    .toolbar > * { width: 100%; }
+    .toolbar .btn-primary-sm,
+    .toolbar .btn-danger-sm { width: 100%; justify-content: center; }
+
+    /* Timetable */
+    .timetable-table { font-size: 10px; min-width: 500px; }
+    .timetable-table th,
+    .timetable-table td { padding: 6px 4px; }
+    .timetable-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Data tables — block layout for horizontal scroll */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.table, .attendance-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        min-width: 0;
+        width: 100%;
+        font-size: 12px;
+    }
+    table.table thead, table.table tbody,
+    .attendance-table thead, .attendance-table tbody { display: table; width: 100%; }
+    th, td { padding: 8px 6px; }
+
+    /* HR employees grid */
+    .employees-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .employee-card { padding: 16px 12px; }
+    .employee-avatar { width: 56px; height: 56px; font-size: 20px; }
+
+    /* Profile nav */
+    .profile-nav { gap: 4px; padding: 8px 10px; }
+    .profile-nav-item { padding: 8px 10px; font-size: 12px; }
+    .profile-nav-item svg { width: 14px; height: 14px; }
+
+    /* Profile cards */
+    .profile-card { padding: 16px; border-radius: 14px; }
+    .profile-info-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .profile-avatar-section { flex-direction: column; gap: 12px; }
+    .profile-avatar-large { width: 80px; height: 80px; font-size: 28px; }
+
+    /* Salary page */
+    .sal-grid { grid-template-columns: 1fr; }
+    .sal-col--right { display: flex; }
+    .sal-card-inner { height: 170px; }
+    .sal-card-number { font-size: 14px; letter-spacing: .1em; }
+    .sal-stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .sal-stat-card { padding: 12px 10px; gap: 8px; }
+
+    /* Modal — full screen on phone */
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+    .modal {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        max-height: 92dvh;
+    }
+    .modal--wide {
+        max-width: 100%;
+        height: auto;
+        max-height: 92dvh;
+    }
+    .modal-header { padding: 16px 16px 12px; }
+    .modal-body { padding: 0 16px; }
+    .modal-footer { padding: 12px 16px max(16px, env(safe-area-inset-bottom)); }
+
+    /* Form controls */
+    .form-group label { font-size: 12px; }
+    .form-control { font-size: 14px; padding: 10px 12px; }
+    input[type="date"].form-control { font-size: 13px; }
+
+    /* HR employee add modal */
+    .form-group { margin-bottom: 10px; }
+}
+
+/* ─── 480px ─── */
+@media (max-width: 480px) {
+
+    /* App shell tighter */
+    .top-header { padding: 8px 10px; }
+
+    /* Grids all single column */
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+
+    /* Dashboard stat cards 2-col */
+    .stat-card { padding: 12px 10px; gap: 8px; }
+    .stat-icon { width: 36px; height: 36px; font-size: 16px; }
+    .stat-info .stat-value { font-size: 18px; }
+
+    /* HR employees single column */
+    .employees-grid { grid-template-columns: 1fr; }
+
+    /* Profile info grid single column */
+    .profile-info-grid { grid-template-columns: 1fr; }
+
+    /* Salary page */
+    .sal-stats-row { grid-template-columns: 1fr; gap: 8px; }
+    .sal-card-inner { height: 160px; }
+    .sal-card-number { font-size: 13px; letter-spacing: .08em; }
+    .sal-card-field-val { font-size: 11px; }
+
+    /* Employee card compact */
+    .employee-card { padding: 14px 10px; gap: 8px; }
+    .employee-avatar { width: 48px; height: 48px; font-size: 18px; border-radius: 14px; }
+
+    /* Section nav even smaller */
+    .section-nav-item { padding: 9px 6px; font-size: 10px; }
+
+    /* Lead card even more compact */
+    .lead-card { padding: 10px; }
+    .lead-card-name { font-size: 12px; }
+
+    /* Modal */
+    .modal { max-height: 94dvh; }
+    .modal-header h2 { font-size: 15px; }
+}
+
+/* ─── 380px ─── */
+@media (max-width: 380px) {
+    /* Stat values */
+    .stat-info .stat-value { font-size: 16px; }
+
+    /* Section nav minimum */
+    .section-nav-item { padding: 8px 5px; font-size: 9px; letter-spacing: 0; }
+
+    /* Profile nav */
+    .profile-nav-item { padding: 7px 8px; font-size: 11px; }
+
+    /* Top header */
+    .top-header { padding: 8px; gap: 6px; }
+    .icon-btn { width: 32px; height: 32px; }
+    .user-avatar { width: 32px; height: 32px; font-size: 11px; }
+
+    /* Salary card */
+    .sal-card-inner { height: 150px; }
+    .sal-card-number { font-size: 12px; }
+    .sal-header-title { font-size: 18px; }
+}
