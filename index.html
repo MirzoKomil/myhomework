@@ -621,7 +621,7 @@
                                     <button type="button" class="section-nav-item active"
                                         data-sales-section="leads">Lidlar</button>
                                     <button type="button" class="section-nav-item"
-                                        data-sales-section="book-roadmap">Kitob roadmap</button>
+                                        data-sales-section="book-roadmap">Kitob yetkazish</button>
                                     <button type="button" class="section-nav-item"
                                         data-sales-section="rating">Reyting</button>
                                     <button type="button" class="section-nav-item"
@@ -663,8 +663,30 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="leads-filters-bar" id="bookRoadmapFiltersBar" hidden>
+                                    <div class="leads-filter-box leads-filter-box--select">
+                                        <span class="leads-filter-display" id="brManagerFilterDisplay">Sotuv menejerlari</span>
+                                        <select id="brManagerFilter" class="leads-filter-select-overlay"
+                                            aria-label="Sotuv menejerlari">
+                                            <option value="all">Barcha menejerlar</option>
+                                        </select>
+                                    </div>
+                                    <div class="leads-filter-box leads-columns-filter-wrap">
+                                        <div class="leads-columns-filter">
+                                            <button type="button" class="leads-filter-trigger"
+                                                id="brColumnsFilterBtn" aria-haspopup="true" aria-expanded="false">
+                                                <span class="leads-filter-display" id="brColumnsFilterValue">Ustunlar filtri</span>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M6 9l6 6 6-6" />
+                                                </svg>
+                                            </button>
+                                            <div class="leads-columns-dropdown" id="brColumnsDropdown" hidden></div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <button type="button" class="btn-primary-sm leads-add-btn" id="addLeadBtn">+ Lid
                                     qo'shish</button>
+                                <button type="button" class="btn-primary-sm leads-add-btn" id="addBookRoadmapHeaderBtn" hidden>+ Yangi yozuv</button>
                             </div>
                         </div>
 
@@ -687,10 +709,6 @@
                             </div>
 
                             <div class="sales-panel" data-sales-panel="book-roadmap">
-                                <div class="page-title-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-                                    <h1 style="margin:0">Kitob Roadmap</h1>
-                                    <button type="button" class="btn-primary-sm" id="addBookRoadmapBtn">+ Yangi yozuv</button>
-                                </div>
                                 <div class="leads-kanban" id="bookRoadmapKanban"></div>
                             </div>
 

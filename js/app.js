@@ -23,7 +23,7 @@ const TAB_TITLES = {
 
 const SALES_SECTIONS = {
     leads: 'Lidlar',
-    'book-roadmap': 'Kitob roadmap',
+    'book-roadmap': 'Kitob yetkazish',
     rating: 'Reyting',
     'sales-stats': 'Statistika',
     scripts: 'Scrikptlar'
@@ -31,7 +31,7 @@ const SALES_SECTIONS = {
 
 const PLACEHOLDER_TITLES = {
     curriculum: "O'quv rejasi",
-    'book-roadmap': 'Kitob roadmap',
+    'book-roadmap': 'Kitob yetkazish',
     rating: 'Reyting',
     'sales-stats': 'Statistika',
     scripts: 'Scrikptlar',
@@ -268,8 +268,12 @@ function switchSalesSection(section) {
     });
     const leadsFiltersBar = document.getElementById('leadsFiltersBar');
     const addLeadBtn = document.getElementById('addLeadBtn');
+    const bookRoadmapFiltersBar = document.getElementById('bookRoadmapFiltersBar');
+    const addBookRoadmapHeaderBtn = document.getElementById('addBookRoadmapHeaderBtn');
     if (leadsFiltersBar) leadsFiltersBar.hidden = section !== 'leads';
     if (addLeadBtn) addLeadBtn.hidden = section !== 'leads';
+    if (bookRoadmapFiltersBar) bookRoadmapFiltersBar.hidden = section !== 'book-roadmap';
+    if (addBookRoadmapHeaderBtn) addBookRoadmapHeaderBtn.hidden = section !== 'book-roadmap';
     syncLeadsLangTabs();
     if (section === 'leads') renderLeads();
     if (section === 'book-roadmap') renderBookRoadmap();
@@ -5097,9 +5101,14 @@ function updateLeadInStorage(lang, leadId, updater) {
     const list = leads[lang] || [];
     const idx = list.findIndex(l => l.id === leadId);
     if (idx === -1) return null;
+    const oldStatus = normalizeLeadStatus(list[idx].status);
     list[idx] = normalizeLeadExtras(updater({ ...list[idx] }));
     leads[lang] = list;
     setItem(STORAGE_KEYS.leads, leads);
+    const newStatus = normalizeLeadStatus(list[idx].status);
+    if (newStatus === 'tolov-jarayonida' && oldStatus !== 'tolov-jarayonida') {
+        autoSyncLeadToBookRoadmap(lang, list[idx]);
+    }
     return list[idx];
 }
 
@@ -5866,12 +5875,14 @@ document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         } catch { /* ignore */ }
         syncLeadsLangTabs();
         if (_tabContext.salesSection === 'leads') renderLeads();
+        if (_tabContext.salesSection === 'book-roadmap') renderBookRoadmap();
     });
 });
 
 document.addEventListener('click', () => {
     closeLeadCardMenus();
     closeLeadsColumnsDropdown();
+    closeBrColumnsDropdown();
 });
 
 // =========== HR EMPLOYEES ===========
@@ -6146,8 +6157,140 @@ document.addEventListener('click', (e) => {
 initHrEmployeeTabs();
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// KITOB ROADMAP
+// KITOB YETKAZISH
 // ═══════════════════════════════════════════════════════════════════════════════
+
+function autoSyncLeadToBookRoadmap(lang, lead) {
+    const items = getItem(STORAGE_KEYS.bookRoadmap, []);
+    const alreadyExists = items.some(i => i.leadRef && i.leadRef.id === lead.id && i.leadRef.lang === lang);
+    if (alreadyExists) return;
+    const newEntry = {
+        id: crypto.randomUUID(),
+        leadRef: { lang, id: lead.id },
+        name: lead.name || lead.fullName || '',
+        studentId: lead.studentId || '',
+        phone: lead.phone || '',
+        region: lead.region || '',
+        managerId: lead.managerId || '',
+        kind: lead.leadType === 'target' ? 'target' : 'organik',
+        date: new Date().toLocaleDateString('uz-UZ'),
+        status: 'yangi-oquvchi',
+        lang,
+        comments: [],
+    };
+    items.unshift(newEntry);
+    setItem(STORAGE_KEYS.bookRoadmap, items);
+}
+
+const BR_COLUMN_VISIBILITY_KEY = 'mh_br_column_visibility';
+
+let _brManagerFilter = 'all';
+let _brVisibleColumns;
+
+function getDefaultBrVisibleColumnIds() {
+    return BOOK_ROADMAP_COLUMNS.map(col => col.id);
+}
+
+function loadBrVisibleColumns() {
+    try {
+        const raw = localStorage.getItem(BR_COLUMN_VISIBILITY_KEY);
+        const saved = raw ? JSON.parse(raw) : null;
+        if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+            return BOOK_ROADMAP_COLUMNS.filter(col => saved[col.id] === true).map(col => col.id);
+        }
+    } catch { /* default */ }
+    return getDefaultBrVisibleColumnIds();
+}
+
+function saveBrVisibleColumns() {
+    const payload = {};
+    BOOK_ROADMAP_COLUMNS.forEach(col => {
+        payload[col.id] = _brVisibleColumns.has(col.id);
+    });
+    localStorage.setItem(BR_COLUMN_VISIBILITY_KEY, JSON.stringify(payload));
+}
+
+function getVisibleBrColumns() {
+    return BOOK_ROADMAP_COLUMNS.filter(col => _brVisibleColumns.has(col.id));
+}
+
+function updateBrManagerFilterDisplay() {
+    const select = document.getElementById('brManagerFilter');
+    const display = document.getElementById('brManagerFilterDisplay');
+    if (!select || !display) return;
+    if (_brManagerFilter === 'all') {
+        display.textContent = 'Sotuv menejerlari';
+        display.classList.remove('is-selected');
+        return;
+    }
+    const opt = select.options[select.selectedIndex];
+    display.textContent = opt ? opt.textContent : 'Sotuv menejerlari';
+    display.classList.add('is-selected');
+}
+
+function renderBrManagerFilter() {
+    const select = document.getElementById('brManagerFilter');
+    if (!select) return;
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const current = _brManagerFilter;
+    select.innerHTML = `<option value="all">Barcha menejerlar</option>
+        <option value="unassigned">Biriktirilmagan</option>
+        ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}`;
+    select.value = current;
+    updateBrManagerFilterDisplay();
+}
+
+function updateBrColumnsFilterLabel() {
+    const valueEl = document.getElementById('brColumnsFilterValue');
+    if (!valueEl) return;
+    const allIds = getDefaultBrVisibleColumnIds();
+    if (_brVisibleColumns.size === allIds.length && allIds.every(id => _brVisibleColumns.has(id))) {
+        valueEl.textContent = 'Ustunlar filtri';
+        valueEl.classList.remove('is-selected');
+        return;
+    }
+    valueEl.textContent = `${_brVisibleColumns.size} ta ustun`;
+    valueEl.classList.add('is-selected');
+}
+
+function initBrColumnsFilter() {
+    const dropdown = document.getElementById('brColumnsDropdown');
+    if (!dropdown || dropdown.dataset.ready === '1') return;
+    dropdown.dataset.ready = '1';
+
+    dropdown.innerHTML = BOOK_ROADMAP_COLUMNS.map(col => {
+        const checked = _brVisibleColumns.has(col.id);
+        return `<label class="leads-column-option">
+            <input type="checkbox" value="${col.id}" ${checked ? 'checked' : ''}>
+            <span>${escapeHtml(col.label)}</span>
+        </label>`;
+    }).join('');
+
+    dropdown.addEventListener('change', e => {
+        const input = e.target;
+        if (input.type !== 'checkbox') return;
+        if (input.checked) _brVisibleColumns.add(input.value);
+        else _brVisibleColumns.delete(input.value);
+        saveBrVisibleColumns();
+        updateBrColumnsFilterLabel();
+        renderBookRoadmap();
+    });
+
+    dropdown.addEventListener('click', e => e.stopPropagation());
+}
+
+function closeBrColumnsDropdown() {
+    const dropdown = document.getElementById('brColumnsDropdown');
+    const btn = document.getElementById('brColumnsFilterBtn');
+    if (dropdown) dropdown.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function filterBrByManager(items) {
+    if (_brManagerFilter === 'all') return items;
+    if (_brManagerFilter === 'unassigned') return items.filter(i => !i.managerId);
+    return items.filter(i => i.managerId === _brManagerFilter);
+}
 
 const BOOK_ROADMAP_COLUMNS = [
     { id: 'yangi-oquvchi',        label: "Yangi o'quvchi",        bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
@@ -6159,6 +6302,8 @@ const BOOK_ROADMAP_COLUMNS = [
 ];
 
 const BR_STATUS_IDS = new Set(BOOK_ROADMAP_COLUMNS.map(c => c.id));
+
+_brVisibleColumns = new Set(loadBrVisibleColumns());
 
 function normalizeBrStatus(s) {
     return BR_STATUS_IDS.has(s) ? s : 'yangi-oquvchi';
@@ -6232,19 +6377,36 @@ function renderBookRoadmapCard(item) {
 function renderBookRoadmap() {
     const kanban = document.getElementById('bookRoadmapKanban');
     if (!kanban) return;
-    const items = getItem(STORAGE_KEYS.bookRoadmap, []);
 
-    kanban.innerHTML = BOOK_ROADMAP_COLUMNS.map(col => {
+    renderBrManagerFilter();
+    initBrColumnsFilter();
+    updateBrColumnsFilterLabel();
+
+    let items = getItem(STORAGE_KEYS.bookRoadmap, []);
+
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    items = items.filter(i => !i.lang || i.lang === lang);
+
+    items = filterBrByManager(items);
+
+    const visibleColumns = getVisibleBrColumns();
+
+    if (!visibleColumns.length) {
+        kanban.innerHTML = '<div class="lead-column-empty leads-kanban-empty">Kamida bitta ustunni tanlang</div>';
+        return;
+    }
+
+    kanban.innerHTML = visibleColumns.map(col => {
         const colItems = items.filter(i => normalizeBrStatus(i.status) === col.id);
-        return `<div class="kanban-column" data-br-col="${col.id}"
-            style="background:${col.bg};border:1.5px solid ${col.border};border-radius:12px;min-width:220px;flex:1;display:flex;flex-direction:column;overflow:hidden">
-            <div class="kanban-column-header" style="padding:10px 14px 8px;background:${col.headerBg};border-bottom:1px solid ${col.border}">
-                <span style="font-weight:700;font-size:13px;color:${col.title}">${escapeHtml(col.label)}</span>
-                <span style="font-size:12px;color:${col.count};font-weight:600;margin-left:6px">${colItems.length}</span>
+        const cards = colItems.length
+            ? colItems.map(i => renderBookRoadmapCard(i)).join('')
+            : '<div class="lead-column-empty">Yozuvlar yo\'q</div>';
+        return `<div class="lead-column" data-br-col="${col.id}" style="background:${col.bg};border-color:${col.border}">
+            <div class="lead-column-header" style="background:${col.headerBg}">
+                <h3 class="lead-column-title" style="color:${col.title}">${escapeHtml(col.label)}</h3>
+                <span class="lead-column-count" style="color:${col.count}">${colItems.length}</span>
             </div>
-            <div class="kanban-cards" style="padding:8px;display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto">
-                ${colItems.map(i => renderBookRoadmapCard(i)).join('')}
-            </div>
+            <div class="lead-column-cards">${cards}</div>
         </div>`;
     }).join('');
 }
@@ -6277,7 +6439,7 @@ function openBookRoadmapModal(existing = null) {
         `<option value="${c.id}"${c.id === (d.status || 'yangi-oquvchi') ? ' selected' : ''}>${escapeHtml(c.label)}</option>`
     ).join('');
 
-    openModal(`${isEdit ? 'Tahrirlash' : 'Yangi yozuv'} — Kitob Roadmap`, `
+    openModal(`${isEdit ? 'Tahrirlash' : 'Yangi yozuv'} — Kitob yetkazish`, `
         <div style="display:flex;flex-direction:column;gap:12px">
             <div class="form-group">
                 <label>Ism Familya *</label>
@@ -6438,8 +6600,8 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    // Add new button
-    if (e.target.closest('#addBookRoadmapBtn')) {
+    // Add new button (header btn)
+    if (e.target.closest('#addBookRoadmapHeaderBtn')) {
         openBookRoadmapModal();
         return;
     }
@@ -6449,5 +6611,28 @@ document.addEventListener('click', (e) => {
         document.querySelectorAll('#bookRoadmapKanban .lead-card-menu-dropdown').forEach(d => d.hidden = true);
     }
 });
+
+// Book Roadmap filter handlers
+document.addEventListener('change', e => {
+    if (e.target.id === 'brManagerFilter') {
+        _brManagerFilter = e.target.value;
+        updateBrManagerFilterDisplay();
+        renderBookRoadmap();
+    }
+});
+
+const brColumnsFilterBtn = document.getElementById('brColumnsFilterBtn');
+if (brColumnsFilterBtn) {
+    brColumnsFilterBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('brColumnsDropdown');
+        if (!dropdown) return;
+        const willOpen = dropdown.hidden;
+        closeBrColumnsDropdown();
+        closeLeadCardMenus();
+        dropdown.hidden = !willOpen;
+        brColumnsFilterBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+}
 
 bootApp();
