@@ -3,9 +3,13 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('crypto');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const DB_PATH = path.join(DATA_DIR, 'myhomework.db');
+// DB_PATH env o'zgaruvchisi orqali loyiha papkasidan tashqarida saqlash mumkin
+// Misol: DB_PATH=/var/lib/myhomework/myhomework.db
+const DB_PATH = process.env.DB_PATH
+    ? path.resolve(process.env.DB_PATH)
+    : path.join(__dirname, '..', 'data', 'myhomework.db');
 
+const DATA_DIR = path.dirname(DB_PATH);
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function createDatabase(dbPath) {
