@@ -81,12 +81,11 @@ function initUserUI(currentUser) {
     applyRoleBasedAccess(currentUser);
 }
 
-// Rol asosida sidebar elementlarini ko'rsatish/yashirish
-// null = hamma ko'rinadi (to'liq ruxsat)
+// To'liq ruxsatli rollar (sidebar cheklovsiz)
+const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
+
+// Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    admin:         null,
-    rop:           null,
-    boshliq:       null,
     sales_manager: ['dashboard', 'sales', 'students', 'timetable'],
     teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
     employee:      ['student-app']
@@ -94,20 +93,18 @@ const ROLE_TABS = {
 
 function applyRoleBasedAccess(user) {
     const role = user.role;
-    const allowed = ROLE_TABS[role] ?? ROLE_TABS.employee;
-
-    // Sidebar: barcha menu item va guruhlarni olish
     const sidebar = document.getElementById('sidebarMenu');
     if (!sidebar) return;
 
-    if (allowed === null) {
-        // Admin — hamma narsa ko'rinadi
+    if (FULL_ACCESS_ROLES.has(role)) {
+        // Admin / ROP / Boshliq — hamma narsa ko'rinadi, dashboard qoladi
         sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
             el.style.display = '';
         });
         return;
     }
 
+    const allowed = ROLE_TABS[role] ?? ROLE_TABS.employee;
     const allowedSet = new Set(allowed);
 
     // Barcha elementlarni yashir
@@ -120,7 +117,7 @@ function applyRoleBasedAccess(user) {
         if (allowedSet.has(el.dataset.tab)) el.style.display = '';
     });
 
-    // Ruxsat etilgan .menu-sub-item va ularning guruhlari
+    // Ruxsat etilgan .menu-sub-item va ularning guruhlarini ko'rsat
     sidebar.querySelectorAll('.menu-sub-item').forEach(el => {
         if (!allowedSet.has(el.dataset.tab)) return;
         el.style.display = '';
