@@ -11,7 +11,8 @@ const TAB_TITLES = {
     payments: "To'lovlar",
     sales: "Sotuv bo'limi",
     marketing: "Marketing bo'limi",
-    profile: 'Sozlamalar',
+    settings: 'Sozlamalar',
+    profile: 'Profil',
     placeholder: 'Bo\'lim',
     'student-app': 'O\'quvchi ilovasi',
     'hr-employees': 'Xodimlar',
@@ -89,9 +90,9 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analytics-overview', 'analytics-sales'],
-    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
-    employee:      ['student-app']
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analytics-overview', 'analytics-sales', 'settings'],
+    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'settings'],
+    employee:      ['student-app', 'settings']
 };
 
 function applyRoleBasedAccess(user) {
@@ -374,6 +375,7 @@ function renderTab(tab) {
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
         case 'marketing': break;
+        case 'settings': renderSettings(); break;
         case 'analytics-overview':
         case 'analytics-sales':
         case 'analytics-teachers': break;
@@ -424,6 +426,15 @@ function calcProfileCompletion(user) {
     ];
     const total = checks.reduce((s, c) => s + (c.done ? c.weight : 0), 0);
     return { checks, total };
+}
+
+function renderSettings() {
+    // "Profilni ochish" tugmasi — avatar kabi profile tabiga o'tadi
+    const btn = document.getElementById('goToProfileFromSettings');
+    if (btn && !btn.dataset.bound) {
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', () => switchTab('profile'));
+    }
 }
 
 function renderProfileCompletionWidget(user) {
