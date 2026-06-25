@@ -685,27 +685,118 @@ function renderProfileNotificationsSection() {
         </div>`;
 }
 
+function parseSessionDevice(ua) {
+    if (!ua) return { label: 'Noma\'lum qurilma', icon: '💻' };
+    const s = ua.toLowerCase();
+    const isMobile = /iphone|android.*mobile|mobile/i.test(ua);
+    const isTablet = /ipad|android(?!.*mobile)/i.test(ua);
+    let os = 'Noma\'lum OS';
+    if (/windows/i.test(ua)) os = 'Windows';
+    else if (/iphone/i.test(ua)) os = 'iPhone';
+    else if (/ipad/i.test(ua)) os = 'iPad';
+    else if (/mac os x|macos/i.test(ua)) os = 'macOS';
+    else if (/android/i.test(ua)) os = 'Android';
+    else if (/linux/i.test(ua)) os = 'Linux';
+    let browser = 'Brauzer';
+    if (/edg\//i.test(ua)) browser = 'Edge';
+    else if (/opr\//i.test(ua)) browser = 'Opera';
+    else if (/chrome/i.test(ua)) browser = 'Chrome';
+    else if (/firefox/i.test(ua)) browser = 'Firefox';
+    else if (/safari/i.test(ua)) browser = 'Safari';
+    const icon = isMobile || isTablet ? '📱' : '💻';
+    return { label: `${browser} — ${os}`, icon };
+}
+
 function renderProfileSessionsSection() {
-    const ua = navigator.userAgent;
-    const browser = ua.includes('Chrome') ? 'Chrome' : ua.includes('Firefox') ? 'Firefox' : ua.includes('Safari') ? 'Safari' : 'Brauzer';
-    const platform = navigator.platform || 'Noma\'lum';
     return `
         <div class="profile-header-bar">
             <h1>Faol sessiyalar</h1>
             <p>Hisobingizga ulangan qurilmalar</p>
         </div>
-        <div class="profile-cards" style="max-width:560px">
-            <div class="profile-card">
-                <div class="profile-session-item">
-                    <div class="profile-session-icon">💻</div>
-                    <div class="profile-session-info">
-                        <strong>${browser} — ${platform}</strong>
-                        <span>Hozirgi sessiya · ${new Date().toLocaleString('uz-UZ')}</span>
-                    </div>
-                    <span class="profile-session-badge">Faol</span>
-                </div>
+        <div id="sessionsListWrap">
+            <div class="profile-cards" style="max-width:600px">
+                <div class="profile-card" style="text-align:center;padding:24px;color:#888">Yuklanmoqda...</div>
             </div>
         </div>`;
+}
+
+async function loadAndRenderSessions() {
+    const wrap = document.getElementById('sessionsListWrap');
+    if (!wrap) return;
+    try {
+        const { sessions } = await apiGetSessions();
+        if (!sessions.length) {
+            wrap.innerHTML = '<div class="profile-cards" style="max-width:600px"><div class="profile-card" style="padding:24px;color:#888">Faol sessiyalar topilmadi</div></div>';
+            return;
+        }
+        const othersCount = sessions.filter(s => !s.isCurrent).length;
+        wrap.innerHTML = `
+            <div class="profile-cards" style="max-width:600px">
+                ${sessions.map(s => {
+                    const dev = parseSessionDevice(s.userAgent);
+                    const lastSeen = s.lastSeen ? new Date(s.lastSeen).toLocaleString('uz-UZ') : '—';
+                    const created = s.createdAt ? new Date(s.createdAt).toLocaleString('uz-UZ') : '—';
+                    return `
+                    <div class="profile-card profile-session-card" data-session-id="${escapeHtml(s.id)}">
+                        <div class="profile-session-item">
+                            <div class="profile-session-icon">${dev.icon}</div>
+                            <div class="profile-session-info">
+                                <strong>${escapeHtml(dev.label)}</strong>
+                                <span>Kirdi: ${created}</span>
+                                <span>Oxirgi faollik: ${lastSeen}</span>
+                                ${s.ip ? `<span>IP: ${escapeHtml(s.ip)}</span>` : ''}
+                            </div>
+                            ${s.isCurrent
+                                ? '<span class="profile-session-badge">Joriy</span>'
+                                : `<button type="button" class="btn-danger-sm session-terminate-btn" data-session-id="${escapeHtml(s.id)}">Tugatish</button>`
+                            }
+                        </div>
+                    </div>`;
+                }).join('')}
+                ${othersCount > 1 ? `
+                <div style="margin-top:8px">
+                    <button type="button" class="btn-danger-sm" id="terminateAllOthersBtn">Boshqa barcha sessiyalarni tugatish (${othersCount} ta)</button>
+                </div>` : ''}
+            </div>`;
+
+        wrap.querySelectorAll('.session-terminate-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.textContent = '...';
+                try {
+                    await apiDeleteSession(btn.dataset.sessionId);
+                    btn.closest('.profile-session-card').remove();
+                    showNotification('Muvaffaqiyatli', 'Sessiya tugatildi', 'success');
+                    const remaining = wrap.querySelectorAll('.session-terminate-btn').length;
+                    if (remaining <= 1) {
+                        const allBtn = document.getElementById('terminateAllOthersBtn');
+                        if (allBtn) allBtn.remove();
+                    }
+                } catch (err) {
+                    showNotification('Xatolik', err.message, 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Tugatish';
+                }
+            });
+        });
+
+        const allBtn = document.getElementById('terminateAllOthersBtn');
+        if (allBtn) {
+            allBtn.addEventListener('click', async () => {
+                allBtn.disabled = true;
+                try {
+                    await apiDeleteOtherSessions();
+                    showNotification('Muvaffaqiyatli', 'Boshqa sessiyalar tugatildi', 'success');
+                    await loadAndRenderSessions();
+                } catch (err) {
+                    showNotification('Xatolik', err.message, 'error');
+                    allBtn.disabled = false;
+                }
+            });
+        }
+    } catch (err) {
+        wrap.innerHTML = `<div class="profile-cards" style="max-width:600px"><div class="profile-card" style="padding:24px;color:var(--danger)">${escapeHtml(err.message)}</div></div>`;
+    }
 }
 
 function bindProfileEvents() {
@@ -883,6 +974,7 @@ function renderProfileBody() {
     }
     body.innerHTML = html;
     bindProfileEvents();
+    if (_profileSection === 'sessions') loadAndRenderSessions();
 }
 
 function switchProfileSection(section) {
@@ -909,9 +1001,9 @@ function initProfileNav() {
     });
     const logoutBtn = document.getElementById('profileLogoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+        logoutBtn.addEventListener('click', async () => {
             if (confirm('Tizimdan chiqasizmi?')) {
-                setCurrentUser(null);
+                await apiLogout();
                 window.location.href = 'login.html';
             }
         });

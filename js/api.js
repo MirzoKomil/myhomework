@@ -99,3 +99,20 @@ async function apiCreateHrUser(data) {
         body: JSON.stringify(data)
     });
 }
+
+async function apiGetSessions() {
+    return apiFetch('/api/auth/sessions');
+}
+
+async function apiDeleteSession(id) {
+    return apiFetch(`/api/auth/sessions/${id}`, { method: 'DELETE' });
+}
+
+async function apiDeleteOtherSessions() {
+    return apiFetch('/api/auth/sessions/others', { method: 'DELETE' });
+}
+
+async function apiLogout() {
+    try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    clearSession();
+}

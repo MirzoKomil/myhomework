@@ -124,11 +124,22 @@ function initSchema() {
             attachments TEXT DEFAULT '[]',
             created_at TEXT DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            jti TEXT UNIQUE NOT NULL,
+            user_agent TEXT DEFAULT '',
+            ip TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now')),
+            last_seen TEXT DEFAULT (datetime('now'))
+        );
     `);
     migrateLeadsSchema();
     migrateUsersSchema();
     migrateStudentsSchema();
     migrateHrEmployeesSchema();
+    cleanExpiredSessions();
 }
 
 function migrateStudentsSchema() {
@@ -646,6 +657,50 @@ function publicUser(user) {
     };
 }
 
+// ── Sessions ────────────────────────────────────────────────────────────────
+
+function createSession({ userId, jti, userAgent, ip }) {
+    db.prepare(
+        'INSERT INTO sessions (id, user_id, jti, user_agent, ip) VALUES (?, ?, ?, ?, ?)'
+    ).run(randomUUID(), userId, jti, userAgent || '', ip || '');
+}
+
+function findSessionByJti(jti) {
+    if (!jti) return null;
+    return db.prepare('SELECT * FROM sessions WHERE jti = ?').get(jti) || null;
+}
+
+function getSessionById(id) {
+    return db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) || null;
+}
+
+function getSessionsByUserId(userId) {
+    return db.prepare('SELECT * FROM sessions WHERE user_id = ? ORDER BY last_seen DESC').all(userId);
+}
+
+function touchSession(jti) {
+    db.prepare("UPDATE sessions SET last_seen = datetime('now') WHERE jti = ?").run(jti);
+}
+
+function deleteSession(id) {
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
+}
+
+function deleteSessionByJti(jti) {
+    db.prepare('DELETE FROM sessions WHERE jti = ?').run(jti);
+}
+
+function deleteOtherSessions(userId, currentJti) {
+    db.prepare('DELETE FROM sessions WHERE user_id = ? AND jti != ?').run(userId, currentJti);
+}
+
+// 7 kundan eski sessiyalarni tozalash
+function cleanExpiredSessions() {
+    db.prepare("DELETE FROM sessions WHERE datetime(created_at) < datetime('now', '-7 days')").run();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 initSchema();
 seedIfEmpty();
 
@@ -661,5 +716,13 @@ module.exports = {
     updateUser,
     publicUser,
     getHrEmployeesData,
-    saveHrEmployeesData
+    saveHrEmployeesData,
+    createSession,
+    findSessionByJti,
+    getSessionById,
+    getSessionsByUserId,
+    touchSession,
+    deleteSession,
+    deleteSessionByJti,
+    deleteOtherSessions
 };

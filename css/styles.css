@@ -4740,8 +4740,14 @@ body.modal-open {
 }
 
 .profile-session-info span {
+    display: block;
     font-size: 12px;
     color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.profile-session-card {
+    margin-bottom: 8px;
 }
 
 .profile-session-badge {

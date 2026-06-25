@@ -5,7 +5,13 @@ const {
     findUserById,
     createUser,
     updateUser,
-    publicUser
+    publicUser,
+    createSession,
+    getSessionsByUserId,
+    getSessionById,
+    deleteSession,
+    deleteSessionByJti,
+    deleteOtherSessions
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
 
@@ -77,7 +83,10 @@ router.post('/login', (req, res) => {
     if (!user || !bcrypt.compareSync(password, user.password_hash)) {
         return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri' });
     }
-    const token = signToken(user);
+    const { token, jti } = signToken(user);
+    const userAgent = req.headers['user-agent'] || '';
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
+    createSession({ userId: user.id, jti, userAgent, ip });
     res.json({ token, user: publicUser(user) });
 });
 
@@ -130,5 +139,45 @@ router.post('/change-password', authRequired, (req, res) => {
     updateUser(user.id, { passwordHash: bcrypt.hashSync(newPassword, 10) });
     res.json({ ok: true });
 });
+
+// ── Sessiyalar ───────────────────────────────────────────────────────────────
+
+router.get('/sessions', authRequired, (req, res) => {
+    const rows = getSessionsByUserId(req.user.id);
+    const sessions = rows.map(s => ({
+        id: s.id,
+        userAgent: s.user_agent,
+        ip: s.ip,
+        createdAt: s.created_at,
+        lastSeen: s.last_seen,
+        isCurrent: s.jti === req.user.jti
+    }));
+    res.json({ sessions });
+});
+
+router.delete('/sessions/others', authRequired, (req, res) => {
+    if (!req.user.jti) return res.status(400).json({ error: 'Joriy token eski formatda' });
+    deleteOtherSessions(req.user.id, req.user.jti);
+    res.json({ ok: true });
+});
+
+router.delete('/sessions/:id', authRequired, (req, res) => {
+    const session = getSessionById(req.params.id);
+    if (!session || session.user_id !== req.user.id) {
+        return res.status(404).json({ error: 'Sessiya topilmadi' });
+    }
+    if (session.jti === req.user.jti) {
+        return res.status(400).json({ error: 'Joriy sessiyani bu yo\'l bilan o\'chirib bo\'lmaydi. Chiqish tugmasini ishlating.' });
+    }
+    deleteSession(req.params.id);
+    res.json({ ok: true });
+});
+
+router.post('/logout', authRequired, (req, res) => {
+    if (req.user.jti) deleteSessionByJti(req.user.jti);
+    res.json({ ok: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 module.exports = router;
