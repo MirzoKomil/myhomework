@@ -4757,6 +4757,545 @@ body.modal-open {
     font-family: inherit;
 }
 
+/* ══════════════════════════════════════════════════
+   MENING MAOSHIM — Salary Page
+══════════════════════════════════════════════════ */
+
+.sal-page {
+    padding: 0;
+    max-width: 1200px;
+}
+
+.sal-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 28px;
+}
+
+.sal-header-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+}
+
+.sal-header-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 4px 0 0;
+}
+
+.sal-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px 240px;
+    gap: 20px;
+    align-items: start;
+}
+
+.sal-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ── Stat cards ── */
+.sal-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.sal-stat-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 18px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border);
+}
+
+.sal-stat-card--earn { border-left: 4px solid #7c3aed; }
+.sal-stat-card--total { border-left: 4px solid #10b981; }
+
+.sal-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sal-stat-card--earn .sal-stat-icon { background: #ede9fe; color: #7c3aed; }
+.sal-stat-card--total .sal-stat-icon { background: #d1fae5; color: #059669; }
+
+[data-theme="dark"] .sal-stat-card--earn .sal-stat-icon { background: rgba(124,58,237,.2); }
+[data-theme="dark"] .sal-stat-card--total .sal-stat-icon { background: rgba(16,185,129,.15); }
+
+.sal-stat-icon svg { width: 18px; height: 18px; stroke: currentColor; }
+
+.sal-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 4px;
+}
+
+.sal-stat-value {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+/* ── Chart card ── */
+.sal-chart-card,
+.sal-history-card,
+.sal-card-info-card,
+.sal-balance-card,
+.sal-profile-card,
+.sal-notice-card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border);
+}
+
+.sal-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.sal-chart-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.sal-chart-period {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+}
+
+.sal-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 100px;
+    padding: 0 4px;
+}
+
+.sal-chart-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+    cursor: default;
+}
+
+.sal-chart-bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    background: linear-gradient(180deg, #c4b5fd 0%, #ddd6fe 100%);
+    transition: height 0.4s ease;
+    min-height: 4px;
+}
+
+.sal-chart-bar--current {
+    background: linear-gradient(180deg, #7c3aed 0%, #a78bfa 100%);
+    box-shadow: 0 4px 12px rgba(124,58,237,.35);
+}
+
+.sal-chart-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* ── History ── */
+.sal-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sal-history-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.sal-history-row:last-child { border-bottom: none; }
+
+.sal-history-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.sal-history-dot--paid { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
+.sal-history-dot--pending { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.2); }
+.sal-history-dot--cancelled { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.2); }
+
+.sal-history-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.sal-history-month {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.sal-history-status {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.sal-history-amount {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* ══ PLASTIC CARD ══ */
+.sal-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 4px;
+}
+
+.sal-card-3d {
+    perspective: 1000px;
+    cursor: default;
+}
+
+.sal-card-inner {
+    width: 100%;
+    height: 195px;
+    border-radius: 20px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s ease;
+}
+
+.sal-card-3d:hover .sal-card-inner {
+    transform: rotateY(8deg) rotateX(4deg);
+}
+
+.sal-card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    backface-visibility: hidden;
+    overflow: hidden;
+}
+
+.sal-card-front {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 40%, #ec4899 100%);
+    box-shadow: 0 20px 60px rgba(124,58,237,.45), 0 8px 20px rgba(0,0,0,.2);
+    color: #fff;
+}
+
+/* Shimmer effect */
+.sal-card-shimmer {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.12) 50%, transparent 60%);
+    background-size: 200% 100%;
+    animation: cardShimmer 3s ease-in-out infinite;
+}
+
+@keyframes cardShimmer {
+    0%   { background-position: 200% 0; }
+    50%  { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.sal-card-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Chip */
+.sal-card-chip {
+    width: 38px;
+    height: 28px;
+    background: linear-gradient(135deg, #fde68a 0%, #f59e0b 50%, #fbbf24 100%);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.sal-chip-lines {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to bottom, transparent 30%, rgba(0,0,0,.12) 30%, rgba(0,0,0,.12) 33%, transparent 33%),
+        linear-gradient(to right,  transparent 40%, rgba(0,0,0,.12) 40%, rgba(0,0,0,.12) 43%, transparent 43%);
+}
+
+.sal-card-wave { width: 36px; opacity: .7; }
+
+.sal-card-number {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    color: rgba(255,255,255,.95);
+    text-shadow: 0 1px 3px rgba(0,0,0,.2);
+    font-family: 'Courier New', monospace;
+}
+
+.sal-card-bottom-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+}
+
+.sal-card-field-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: rgba(255,255,255,.65);
+    margin-bottom: 3px;
+}
+
+.sal-card-field-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255,255,255,.95);
+    letter-spacing: .04em;
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sal-card-logo {
+    margin-left: auto;
+    width: 44px;
+    flex-shrink: 0;
+}
+
+/* Card info */
+.sal-card-info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.sal-card-info-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.sal-card-info-warn {
+    font-size: 11px;
+    font-weight: 600;
+    color: #f59e0b;
+    background: #fef3c7;
+    padding: 3px 8px;
+    border-radius: 8px;
+}
+
+[data-theme="dark"] .sal-card-info-warn { background: rgba(245,158,11,.15); }
+
+.sal-card-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.sal-card-info-item label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 4px;
+}
+
+.sal-card-info-item span {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* ── Right col ── */
+.sal-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: default;
+}
+
+.sal-profile-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--purple-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--purple);
+    flex-shrink: 0;
+}
+
+.sal-profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sal-profile-info { flex: 1; }
+
+.sal-profile-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.sal-profile-role {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.sal-profile-chevron {
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+}
+
+.sal-balance-card {
+    text-align: center;
+    padding: 28px 20px;
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border: 1px solid #ddd6fe;
+}
+
+[data-theme="dark"] .sal-balance-card {
+    background: linear-gradient(135deg, rgba(124,58,237,.15) 0%, rgba(139,92,246,.1) 100%);
+    border-color: rgba(124,58,237,.25);
+}
+
+.sal-balance-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 10px;
+}
+
+.sal-balance-amount {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1.1;
+}
+
+.sal-balance-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.sal-notice-card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: #fff8e1;
+    border-color: #ffe082;
+}
+
+[data-theme="dark"] .sal-notice-card {
+    background: rgba(245,158,11,.08);
+    border-color: rgba(245,158,11,.25);
+}
+
+.sal-notice-icon {
+    width: 36px;
+    height: 36px;
+    background: #fef3c7;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #d97706;
+}
+
+[data-theme="dark"] .sal-notice-icon { background: rgba(245,158,11,.15); }
+
+.sal-notice-icon svg { width: 18px; height: 18px; stroke: currentColor; }
+
+.sal-notice-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.sal-notice-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+    .sal-grid { grid-template-columns: 1fr 280px; }
+    .sal-col--right { display: none; }
+}
+
+@media (max-width: 720px) {
+    .sal-grid { grid-template-columns: 1fr; }
+    .sal-col--mid, .sal-col--right { display: flex; }
+    .sal-card-number { font-size: 14px; letter-spacing: .12em; }
+}
+
+/* ══════════════════════════════════════════════════
+   END SALARY SECTION
+══════════════════════════════════════════════════ */
+
 .profile-completion-card {
     background: var(--surface);
     border-radius: var(--radius-lg);

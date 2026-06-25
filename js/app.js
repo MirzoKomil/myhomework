@@ -554,6 +554,221 @@ function renderSettings() {
     });
 }
 
+function renderProfileSalarySection(user) {
+    const emps = getHrEmployees() || [];
+    const emp = emps.find(e => e.login === user.email || e.phone === user.phone) || {};
+
+    // Karta raqami formatlash
+    const rawCard = (emp.cardNumber || '').replace(/\s/g, '');
+    const maskedCard = rawCard.length >= 4
+        ? '**** **** **** ' + rawCard.slice(-4)
+        : '•••• •••• •••• ••••';
+    const displayCard = rawCard.length >= 4
+        ? (rawCard.match(/.{1,4}/g)?.join(' ') || rawCard)
+        : null;
+
+    // Ismning bosh harflari avatar uchun
+    const initials = user.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    const cardName = (emp.firstName && emp.lastName)
+        ? `${emp.firstName} ${emp.lastName}`.toUpperCase()
+        : user.name.toUpperCase();
+
+    // Salary ma'lumotlari (HR dan)
+    const salary = emp.salary || null;
+    const salaryAmount = salary?.current || 0;
+    const fmtUZS = n => n.toLocaleString('uz-UZ') + ' so\'m';
+
+    // Oxirgi 6 oy tarixi
+    const now = new Date();
+    const history = salary?.history || [];
+    const months = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Des'];
+    const last6 = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const record = history.find(h => h.month === key);
+        return { label: months[d.getMonth()], key, amount: record?.amount || 0, status: record?.status || 'pending', paidAt: record?.paidAt || null };
+    });
+    const maxAmount = Math.max(...last6.map(m => m.amount), salaryAmount, 1);
+
+    const chartBars = last6.map((m, i) => {
+        const h = Math.round((m.amount / maxAmount) * 100);
+        const isLast = i === 5;
+        return `<div class="sal-chart-bar-wrap" title="${m.label}: ${fmtUZS(m.amount)}">
+            <div class="sal-chart-bar${isLast ? ' sal-chart-bar--current' : ''}" style="height:${h || 4}%"></div>
+            <span class="sal-chart-label">${m.label}</span>
+        </div>`;
+    }).join('');
+
+    const historyRows = last6.slice().reverse().map(m => `
+        <div class="sal-history-row">
+            <div class="sal-history-dot sal-history-dot--${m.status}"></div>
+            <div class="sal-history-info">
+                <span class="sal-history-month">${m.label} ${m.key?.slice(0,4) || ''}</span>
+                <span class="sal-history-status">${m.status === 'paid' ? 'To\'langan' : m.status === 'pending' ? 'Kutilmoqda' : 'Bekor'}</span>
+            </div>
+            <span class="sal-history-amount">${m.amount ? fmtUZS(m.amount) : '—'}</span>
+        </div>`).join('');
+
+    return `
+    <div class="sal-page">
+        <div class="sal-header">
+            <div>
+                <h1 class="sal-header-title">Mening maoshim</h1>
+                <p class="sal-header-sub">Xush kelibsiz, ${escapeHtml(user.name.split(' ')[0])} 👋</p>
+            </div>
+        </div>
+
+        <div class="sal-grid">
+
+            <!-- Chap ustun: statistika -->
+            <div class="sal-col sal-col--left">
+
+                <div class="sal-stats-row">
+                    <div class="sal-stat-card sal-stat-card--earn">
+                        <div class="sal-stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                        </div>
+                        <div>
+                            <div class="sal-stat-label">Joriy maosh</div>
+                            <div class="sal-stat-value">${salaryAmount ? fmtUZS(salaryAmount) : '—'}</div>
+                        </div>
+                    </div>
+                    <div class="sal-stat-card sal-stat-card--total">
+                        <div class="sal-stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                        </div>
+                        <div>
+                            <div class="sal-stat-label">Yil davomida</div>
+                            <div class="sal-stat-value">${fmtUZS(history.filter(h=>h.status==='paid').reduce((s,h)=>s+h.amount,0))}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sal-chart-card">
+                    <div class="sal-chart-header">
+                        <h3>Maosh statistikasi</h3>
+                        <span class="sal-chart-period">Oxirgi 6 oy</span>
+                    </div>
+                    <div class="sal-chart">
+                        ${chartBars}
+                    </div>
+                </div>
+
+                <div class="sal-history-card">
+                    <div class="sal-chart-header">
+                        <h3>To'lov tarixi</h3>
+                    </div>
+                    <div class="sal-history-list">
+                        ${historyRows || '<p class="text-muted" style="padding:16px;text-align:center;font-size:13px">To\'lov tarixi yo\'q</p>'}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- O'rta ustun: karta -->
+            <div class="sal-col sal-col--mid">
+
+                <div class="sal-section-title">Mening kartam</div>
+
+                <div class="sal-card-3d">
+                    <div class="sal-card-inner">
+                        <!-- Old yuz -->
+                        <div class="sal-card-face sal-card-front">
+                            <div class="sal-card-top-row">
+                                <div class="sal-card-chip">
+                                    <div class="sal-chip-lines"></div>
+                                </div>
+                                <svg class="sal-card-wave" viewBox="0 0 40 30" fill="none">
+                                    <path d="M5 15 Q10 5 15 15 Q20 25 25 15 Q30 5 35 15" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none"/>
+                                </svg>
+                            </div>
+                            <div class="sal-card-number">${displayCard ? escapeHtml(displayCard) : '•••• •••• •••• ••••'}</div>
+                            <div class="sal-card-bottom-row">
+                                <div>
+                                    <div class="sal-card-field-label">Karta egasi</div>
+                                    <div class="sal-card-field-val">${escapeHtml(cardName.slice(0,22))}</div>
+                                </div>
+                                <div>
+                                    <div class="sal-card-field-label">Muddati</div>
+                                    <div class="sal-card-field-val">••/••</div>
+                                </div>
+                                <svg class="sal-card-logo" viewBox="0 0 50 30" fill="none">
+                                    <circle cx="18" cy="15" r="13" fill="rgba(255,255,255,0.25)"/>
+                                    <circle cx="32" cy="15" r="13" fill="rgba(255,255,255,0.15)"/>
+                                </svg>
+                            </div>
+                            <div class="sal-card-shimmer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Karta ma'lumotlari -->
+                <div class="sal-card-info-card">
+                    <div class="sal-card-info-header">
+                        <h3>Karta ma'lumotlari</h3>
+                        ${emp.cardNumber ? '' : `<span class="sal-card-info-warn">To'ldirilmagan</span>`}
+                    </div>
+                    <div class="sal-card-info-grid">
+                        <div class="sal-card-info-item">
+                            <label>Karta raqami</label>
+                            <span>${emp.cardNumber ? escapeHtml(maskedCard) : '<span class="text-muted">Kiritilmagan</span>'}</span>
+                        </div>
+                        <div class="sal-card-info-item">
+                            <label>Karta egasi</label>
+                            <span>${escapeHtml(cardName)}</span>
+                        </div>
+                        <div class="sal-card-info-item">
+                            <label>Passport seriyasi</label>
+                            <span>${emp.passportSeries ? escapeHtml(emp.passportSeries) : '<span class="text-muted">Kiritilmagan</span>'}</span>
+                        </div>
+                        <div class="sal-card-info-item">
+                            <label>JSHSHIR (PINFL)</label>
+                            <span>${emp.pinfl ? escapeHtml(emp.pinfl) : '<span class="text-muted">Kiritilmagan</span>'}</span>
+                        </div>
+                    </div>
+                    ${!emp.cardNumber ? `<button type="button" class="btn-primary-sm" style="margin-top:12px;width:100%" data-profile-section-go="edit">Ma'lumotlarni to'ldirish</button>` : ''}
+                </div>
+
+            </div>
+
+            <!-- O'ng ustun: profil + umumiy -->
+            <div class="sal-col sal-col--right">
+
+                <div class="sal-profile-card">
+                    <div class="sal-profile-avatar">
+                        ${user.avatar
+                            ? `<img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(user.name)}">`
+                            : `<span>${escapeHtml(initials)}</span>`}
+                    </div>
+                    <div class="sal-profile-info">
+                        <div class="sal-profile-name">${escapeHtml(user.name)}</div>
+                        <div class="sal-profile-role">${ROLE_LABELS[user.role] || user.role}</div>
+                    </div>
+                    <svg class="sal-profile-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+
+                <div class="sal-balance-card">
+                    <div class="sal-balance-label">Yillik jami maosh</div>
+                    <div class="sal-balance-amount">${fmtUZS(history.filter(h=>h.status==='paid').reduce((s,h)=>s+h.amount,0))}</div>
+                    ${salaryAmount ? `<div class="sal-balance-sub">Joriy: ${fmtUZS(salaryAmount)} / oy</div>` : ''}
+                </div>
+
+                <div class="sal-notice-card">
+                    <div class="sal-notice-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <div>
+                        <div class="sal-notice-title">Maosh ma'lumotlari</div>
+                        <div class="sal-notice-text">Maosh miqdori va to'lov tarixi admin tomonidan kiritiladi. Savollar bo'lsa HR bilan bog'laning.</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>`;
+}
+
 function renderProfileCompletionWidget(user) {
     const { checks, total } = calcProfileCompletion(user);
     const circumference = 2 * Math.PI * 38;
@@ -919,6 +1134,10 @@ function bindProfileEvents() {
     const body = document.getElementById('profileBody');
     if (!body) return;
 
+    body.querySelectorAll('[data-profile-section-go]').forEach(btn => {
+        btn.addEventListener('click', () => switchProfileSection(btn.dataset.profileSectionGo));
+    });
+
     body.querySelectorAll('[data-profile-edit]').forEach(btn => {
         btn.addEventListener('click', () => {
             _profileEditing[btn.dataset.profileEdit] = true;
@@ -1113,6 +1332,7 @@ function renderProfileBody() {
     let html = '';
     switch (_profileSection) {
         case 'edit': html = renderProfileEditSection(user); break;
+        case 'salary': html = renderProfileSalarySection(user); break;
         case 'security': html = renderProfileSecuritySection(); break;
         case 'notifications': html = renderProfileNotificationsSection(); break;
         case 'sessions': html = renderProfileSessionsSection(); break;
