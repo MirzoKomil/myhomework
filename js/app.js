@@ -6292,6 +6292,38 @@ function filterBrByManager(items) {
     return items.filter(i => i.managerId === _brManagerFilter);
 }
 
+function initBrDragDrop(kanban) {
+    kanban.querySelectorAll('.lead-card[data-br-id]').forEach(card => {
+        card.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', card.dataset.brId);
+            card.classList.add('lead-card--dragging');
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('lead-card--dragging');
+            kanban.querySelectorAll('.lead-column-cards').forEach(z => z.classList.remove('drag-over'));
+        });
+    });
+
+    kanban.querySelectorAll('.lead-column-cards[data-br-drop-col]').forEach(zone => {
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', e => {
+            if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+        });
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const id = e.dataTransfer.getData('text/plain');
+            const toStatus = zone.dataset.brDropCol;
+            if (!id || !toStatus) return;
+            updateBrInStorage(id, item => ({ ...item, status: toStatus }));
+            renderBookRoadmap();
+        });
+    });
+}
+
 const BOOK_ROADMAP_COLUMNS = [
     { id: 'yangi-oquvchi',        label: "Yangi o'quvchi",        bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
     { id: 'manzil-olindi',        label: 'Manzil olindi',          bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
@@ -6309,13 +6341,29 @@ function normalizeBrStatus(s) {
     return BR_STATUS_IDS.has(s) ? s : 'yangi-oquvchi';
 }
 
+function getBrNextColumnId(currentStatus) {
+    const idx = BOOK_ROADMAP_COLUMNS.findIndex(c => c.id === currentStatus);
+    if (idx === -1 || idx >= BOOK_ROADMAP_COLUMNS.length - 1) return null;
+    return BOOK_ROADMAP_COLUMNS[idx + 1].id;
+}
+
 function renderBookRoadmapCard(item) {
     const _cu = getCurrentUser();
-    const _isAdminOrRop = _cu && FULL_ACCESS_ROLES.has(_cu.role);
     const _isSalesManager = _cu?.role === 'sales_manager';
 
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
     const manager = managers.find(m => m.id === item.managerId);
+    const commentCount = item.comments?.length || 0;
+
+    const currentStatus = normalizeBrStatus(item.status);
+    const nextColId = getBrNextColumnId(currentStatus);
+    const nextCol = nextColId ? BOOK_ROADMAP_COLUMNS.find(c => c.id === nextColId) : null;
+
+    const nextBtn = nextCol
+        ? `<button type="button" class="lead-card-notify" data-br-next="${item.id}" data-br-next-status="${nextColId}" title="Keyingi: ${escapeHtml(nextCol.label)}" aria-label="Keyingi bosqich">
+               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+           </button>`
+        : '';
 
     const moveItems = BOOK_ROADMAP_COLUMNS.map(col =>
         `<button type="button" class="lead-card-menu-item" data-br-move="${item.id}" data-br-status="${col.id}">${escapeHtml(col.label)}</button>`
@@ -6325,16 +6373,21 @@ function renderBookRoadmapCard(item) {
         ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-br-delete="${item.id}">Yozuvni o'chirish</button>`
         : '';
 
-    return `<article class="lead-card" data-br-id="${escapeHtml(item.id)}">
+    const langBadge = item.lang
+        ? `<span class="lead-badge" style="background:#F0F9FF;color:#0369A1;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:4px">${item.lang === 'russian' ? 'Rus' : 'Ingliz'}</span>`
+        : '';
+
+    return `<article class="lead-card" draggable="true" data-br-id="${escapeHtml(item.id)}">
         <div class="lead-card-top">
             <div class="lead-card-title-wrap">
                 <h4 class="lead-card-name">${escapeHtml(item.name)}</h4>
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(item.date || '')}</span>
-                    <span class="lead-badge" style="background:${item.kind === 'target' ? '#FEF3C7' : '#ECFDF5'};color:${item.kind === 'target' ? '#B45309' : '#047857'};font-size:10px;padding:1px 6px;border-radius:4px;margin-left:4px">${item.kind === 'target' ? 'Target' : 'Organik'}</span>
+                    ${langBadge}
                 </div>
             </div>
             <div class="lead-card-top-actions">
+                ${nextBtn}
                 <div class="lead-card-menu-wrap">
                     <button type="button" class="lead-card-menu-btn" data-br-menu-toggle="${item.id}" title="Boshqa amallar" aria-haspopup="true">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
@@ -6359,18 +6412,21 @@ function renderBookRoadmapCard(item) {
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                 <span>${escapeHtml(item.phone || '—')}</span>
             </div>
-            ${item.region ? `<div class="lead-card-contact">
+            <div class="lead-card-contact">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                <span>${escapeHtml(item.region)}</span>
-            </div>` : ''}
+                <span>${escapeHtml(item.region || '—')}</span>
+            </div>
         </div>
-        ${item.studentId || manager ? `<div class="lead-card-footer" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--text-muted)">
-            ${item.studentId ? `<span>ID: ${escapeHtml(item.studentId)}</span>` : ''}
-            ${manager ? `<span>• ${escapeHtml(manager.name)}</span>` : ''}
-        </div>` : ''}
-        ${item.comments?.length ? `<div class="lead-card-footer" style="margin-top:6px;font-size:11px;color:var(--text-muted)">
-            💬 ${item.comments.length} ta izoh
-        </div>` : ''}
+        <div class="lead-card-footer">
+            <div class="lead-card-actions">
+                <button type="button" class="lead-card-action" data-br-comment="${item.id}" title="Izohlar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    <span>${commentCount}</span>
+                </button>
+                ${item.studentId ? `<span style="font-size:11px;color:var(--text-muted)">ID: ${escapeHtml(item.studentId)}</span>` : ''}
+            </div>
+            <span class="lead-card-kind">${item.kind === 'target' ? 'Target' : 'Organik'}${manager ? ` · ${escapeHtml(manager.name)}` : ''}</span>
+        </div>
     </article>`;
 }
 
@@ -6385,7 +6441,7 @@ function renderBookRoadmap() {
     let items = getItem(STORAGE_KEYS.bookRoadmap, []);
 
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    items = items.filter(i => !i.lang || i.lang === lang);
+    items = items.filter(i => i.lang === lang);
 
     items = filterBrByManager(items);
 
@@ -6406,9 +6462,11 @@ function renderBookRoadmap() {
                 <h3 class="lead-column-title" style="color:${col.title}">${escapeHtml(col.label)}</h3>
                 <span class="lead-column-count" style="color:${col.count}">${colItems.length}</span>
             </div>
-            <div class="lead-column-cards">${cards}</div>
+            <div class="lead-column-cards" data-br-drop-col="${col.id}">${cards}</div>
         </div>`;
     }).join('');
+
+    initBrDragDrop(kanban);
 }
 
 function saveBrAndRender(items) {
@@ -6430,7 +6488,8 @@ function updateBrInStorage(id, updater) {
 function openBookRoadmapModal(existing = null) {
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
     const isEdit = !!existing;
-    const d = existing || { name: '', studentId: '', phone: '', region: '', managerId: '', kind: 'organik', date: new Date().toLocaleDateString('uz-UZ'), status: 'yangi-oquvchi' };
+    const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const d = existing || { name: '', studentId: '', phone: '', region: '', managerId: '', kind: 'organik', date: new Date().toLocaleDateString('uz-UZ'), status: 'yangi-oquvchi', lang: defaultLang };
 
     const managerOptions = `<option value="">— Menejerni tanlang —</option>` +
         managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === d.managerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
@@ -6438,6 +6497,8 @@ function openBookRoadmapModal(existing = null) {
     const statusOptions = BOOK_ROADMAP_COLUMNS.map(c =>
         `<option value="${c.id}"${c.id === (d.status || 'yangi-oquvchi') ? ' selected' : ''}>${escapeHtml(c.label)}</option>`
     ).join('');
+
+    const dLang = d.lang || defaultLang;
 
     openModal(`${isEdit ? 'Tahrirlash' : 'Yangi yozuv'} — Kitob yetkazish`, `
         <div style="display:flex;flex-direction:column;gap:12px">
@@ -6463,7 +6524,7 @@ function openBookRoadmapModal(existing = null) {
                 <label>Viloyat, tuman</label>
                 <input type="text" id="brRegion" class="form-control" value="${escapeHtml(d.region || '')}" placeholder="Toshkent, Yunusobod">
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
                 <div class="form-group">
                     <label>Sotuv menejeri</label>
                     <select id="brManager" class="form-control">${managerOptions}</select>
@@ -6473,6 +6534,13 @@ function openBookRoadmapModal(existing = null) {
                     <select id="brKind" class="form-control">
                         <option value="organik"${d.kind !== 'target' ? ' selected' : ''}>Organik</option>
                         <option value="target"${d.kind === 'target' ? ' selected' : ''}>Target</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Til</label>
+                    <select id="brLang" class="form-control">
+                        <option value="english"${dLang !== 'russian' ? ' selected' : ''}>Ingliz tili</option>
+                        <option value="russian"${dLang === 'russian' ? ' selected' : ''}>Rus tili</option>
                     </select>
                 </div>
             </div>
@@ -6488,6 +6556,7 @@ function openBookRoadmapModal(existing = null) {
         if (!name) { alert("Ism familya kiritilishi shart"); return; }
         const data = {
             id: existing?.id || crypto.randomUUID(),
+            leadRef: existing?.leadRef || null,
             name,
             studentId: document.getElementById('brStudentId').value.trim(),
             date: document.getElementById('brDate').value.trim(),
@@ -6495,6 +6564,7 @@ function openBookRoadmapModal(existing = null) {
             region: document.getElementById('brRegion').value.trim(),
             managerId: document.getElementById('brManager').value,
             kind: document.getElementById('brKind').value,
+            lang: document.getElementById('brLang').value,
             status: document.getElementById('brStatus').value,
             comments: existing?.comments || [],
         };
@@ -6554,6 +6624,16 @@ document.addEventListener('click', (e) => {
     if (moveToggle) {
         const submenu = moveToggle.closest('.lead-card-menu-submenu-wrap')?.querySelector('.lead-card-menu-submenu');
         if (submenu) submenu.hidden = !submenu.hidden;
+        return;
+    }
+
+    // Next column button
+    const nextBtn = e.target.closest('[data-br-next]');
+    if (nextBtn) {
+        const id = nextBtn.dataset.brNext;
+        const status = nextBtn.dataset.brNextStatus;
+        updateBrInStorage(id, item => ({ ...item, status }));
+        renderBookRoadmap();
         return;
     }
 
