@@ -270,6 +270,7 @@ function switchSalesSection(section) {
     if (addLeadBtn) addLeadBtn.hidden = section !== 'leads';
     syncLeadsLangTabs();
     if (section === 'leads') renderLeads();
+    if (section === 'book-roadmap') renderBookRoadmap();
 }
 
 function syncLeadsLangTabs() {
@@ -6123,5 +6124,310 @@ document.addEventListener('click', (e) => {
 });
 
 initHrEmployeeTabs();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KITOB ROADMAP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const BOOK_ROADMAP_COLUMNS = [
+    { id: 'yangi-oquvchi',        label: "Yangi o'quvchi",        bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
+    { id: 'manzil-olindi',        label: 'Manzil olindi',          bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
+    { id: 'pochtaga-tayyorlandi', label: 'Pochtaga tayyorlandi',   bg: '#ECFEFF', border: '#67E8F9', headerBg: 'rgba(6,182,212,0.12)',  title: '#0E7490', count: '#0891B2' },
+    { id: 'pochtaga-topshirildi', label: 'Pochtaga topshirildi',   bg: '#EEF2FF', border: '#A5B4FC', headerBg: 'rgba(79,70,229,0.12)',  title: '#3730A3', count: '#4F46E5' },
+    { id: 'pochta-yetib-bordi',   label: 'Pochta yetib bordi',     bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)',  title: '#C2410C', count: '#EA580C' },
+    { id: 'mijoz-qabul-qildi',    label: 'Mijoz qabul qilib oldi', bg: '#ECFDF5', border: '#6EE7B7', headerBg: 'rgba(5,150,105,0.12)',  title: '#047857', count: '#059669' },
+];
+
+const BR_STATUS_IDS = new Set(BOOK_ROADMAP_COLUMNS.map(c => c.id));
+
+function normalizeBrStatus(s) {
+    return BR_STATUS_IDS.has(s) ? s : 'yangi-oquvchi';
+}
+
+function renderBookRoadmapCard(item) {
+    const _cu = getCurrentUser();
+    const _isAdminOrRop = _cu && FULL_ACCESS_ROLES.has(_cu.role);
+    const _isSalesManager = _cu?.role === 'sales_manager';
+
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const manager = managers.find(m => m.id === item.managerId);
+
+    const moveItems = BOOK_ROADMAP_COLUMNS.map(col =>
+        `<button type="button" class="lead-card-menu-item" data-br-move="${item.id}" data-br-status="${col.id}">${escapeHtml(col.label)}</button>`
+    ).join('');
+
+    const deleteItem = !_isSalesManager
+        ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-br-delete="${item.id}">Yozuvni o'chirish</button>`
+        : '';
+
+    return `<article class="lead-card" data-br-id="${escapeHtml(item.id)}">
+        <div class="lead-card-top">
+            <div class="lead-card-title-wrap">
+                <h4 class="lead-card-name">${escapeHtml(item.name)}</h4>
+                <div class="lead-card-meta">
+                    <span class="lead-card-time">${escapeHtml(item.date || '')}</span>
+                    <span class="lead-badge" style="background:${item.kind === 'target' ? '#FEF3C7' : '#ECFDF5'};color:${item.kind === 'target' ? '#B45309' : '#047857'};font-size:10px;padding:1px 6px;border-radius:4px;margin-left:4px">${item.kind === 'target' ? 'Target' : 'Organik'}</span>
+                </div>
+            </div>
+            <div class="lead-card-top-actions">
+                <div class="lead-card-menu-wrap">
+                    <button type="button" class="lead-card-menu-btn" data-br-menu-toggle="${item.id}" title="Boshqa amallar" aria-haspopup="true">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+                    </button>
+                    <div class="lead-card-menu-dropdown" hidden>
+                        <button type="button" class="lead-card-menu-item" data-br-edit="${item.id}">Tahrirlash</button>
+                        <div class="lead-card-menu-submenu-wrap">
+                            <button type="button" class="lead-card-menu-item lead-card-menu-item--submenu" data-br-move-toggle>
+                                Boshqa bosqichga o'tkazish
+                                <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                            </button>
+                            <div class="lead-card-menu-submenu" hidden>${moveItems}</div>
+                        </div>
+                        <button type="button" class="lead-card-menu-item" data-br-comment="${item.id}">Izoh qo'shish</button>
+                        ${deleteItem}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="lead-card-contacts">
+            <div class="lead-card-contact">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                <span>${escapeHtml(item.phone || '—')}</span>
+            </div>
+            ${item.region ? `<div class="lead-card-contact">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>${escapeHtml(item.region)}</span>
+            </div>` : ''}
+        </div>
+        ${item.studentId || manager ? `<div class="lead-card-footer" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--text-muted)">
+            ${item.studentId ? `<span>ID: ${escapeHtml(item.studentId)}</span>` : ''}
+            ${manager ? `<span>• ${escapeHtml(manager.name)}</span>` : ''}
+        </div>` : ''}
+        ${item.comments?.length ? `<div class="lead-card-footer" style="margin-top:6px;font-size:11px;color:var(--text-muted)">
+            💬 ${item.comments.length} ta izoh
+        </div>` : ''}
+    </article>`;
+}
+
+function renderBookRoadmap() {
+    const kanban = document.getElementById('bookRoadmapKanban');
+    if (!kanban) return;
+    const items = getItem(STORAGE_KEYS.bookRoadmap, []);
+
+    kanban.innerHTML = BOOK_ROADMAP_COLUMNS.map(col => {
+        const colItems = items.filter(i => normalizeBrStatus(i.status) === col.id);
+        return `<div class="kanban-column" data-br-col="${col.id}"
+            style="background:${col.bg};border:1.5px solid ${col.border};border-radius:12px;min-width:220px;flex:1;display:flex;flex-direction:column;overflow:hidden">
+            <div class="kanban-column-header" style="padding:10px 14px 8px;background:${col.headerBg};border-bottom:1px solid ${col.border}">
+                <span style="font-weight:700;font-size:13px;color:${col.title}">${escapeHtml(col.label)}</span>
+                <span style="font-size:12px;color:${col.count};font-weight:600;margin-left:6px">${colItems.length}</span>
+            </div>
+            <div class="kanban-cards" style="padding:8px;display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto">
+                ${colItems.map(i => renderBookRoadmapCard(i)).join('')}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function saveBrAndRender(items) {
+    setItem(STORAGE_KEYS.bookRoadmap, items);
+    renderBookRoadmap();
+}
+
+function getBrById(id) {
+    return getItem(STORAGE_KEYS.bookRoadmap, []).find(i => i.id === id) || null;
+}
+
+function updateBrInStorage(id, updater) {
+    const items = getItem(STORAGE_KEYS.bookRoadmap, []);
+    const idx = items.findIndex(i => i.id === id);
+    if (idx !== -1) items[idx] = updater(items[idx]);
+    setItem(STORAGE_KEYS.bookRoadmap, items);
+}
+
+function openBookRoadmapModal(existing = null) {
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const isEdit = !!existing;
+    const d = existing || { name: '', studentId: '', phone: '', region: '', managerId: '', kind: 'organik', date: new Date().toLocaleDateString('uz-UZ'), status: 'yangi-oquvchi' };
+
+    const managerOptions = `<option value="">— Menejerni tanlang —</option>` +
+        managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === d.managerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
+
+    const statusOptions = BOOK_ROADMAP_COLUMNS.map(c =>
+        `<option value="${c.id}"${c.id === (d.status || 'yangi-oquvchi') ? ' selected' : ''}>${escapeHtml(c.label)}</option>`
+    ).join('');
+
+    openModal(`${isEdit ? 'Tahrirlash' : 'Yangi yozuv'} — Kitob Roadmap`, `
+        <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="form-group">
+                <label>Ism Familya *</label>
+                <input type="text" id="brName" class="form-control" value="${escapeHtml(d.name)}" placeholder="To'liq ism">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group">
+                    <label>Student ID</label>
+                    <input type="text" id="brStudentId" class="form-control" value="${escapeHtml(d.studentId || '')}" placeholder="ID raqam">
+                </div>
+                <div class="form-group">
+                    <label>Sana</label>
+                    <input type="text" id="brDate" class="form-control" value="${escapeHtml(d.date || '')}" placeholder="kk.oo.yyyy">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Telefon raqam</label>
+                <input type="text" id="brPhone" class="form-control" value="${escapeHtml(d.phone || '')}" placeholder="+998 90 000 00 00">
+            </div>
+            <div class="form-group">
+                <label>Viloyat, tuman</label>
+                <input type="text" id="brRegion" class="form-control" value="${escapeHtml(d.region || '')}" placeholder="Toshkent, Yunusobod">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group">
+                    <label>Sotuv menejeri</label>
+                    <select id="brManager" class="form-control">${managerOptions}</select>
+                </div>
+                <div class="form-group">
+                    <label>Organik / Target</label>
+                    <select id="brKind" class="form-control">
+                        <option value="organik"${d.kind !== 'target' ? ' selected' : ''}>Organik</option>
+                        <option value="target"${d.kind === 'target' ? ' selected' : ''}>Target</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Bosqich</label>
+                <select id="brStatus" class="form-control">${statusOptions}</select>
+            </div>
+        </div>
+    `, `<button class="btn-primary" id="brSaveBtn">${isEdit ? 'Saqlash' : "Qo'shish"}</button>`);
+
+    document.getElementById('brSaveBtn').onclick = () => {
+        const name = document.getElementById('brName').value.trim();
+        if (!name) { alert("Ism familya kiritilishi shart"); return; }
+        const data = {
+            id: existing?.id || crypto.randomUUID(),
+            name,
+            studentId: document.getElementById('brStudentId').value.trim(),
+            date: document.getElementById('brDate').value.trim(),
+            phone: document.getElementById('brPhone').value.trim(),
+            region: document.getElementById('brRegion').value.trim(),
+            managerId: document.getElementById('brManager').value,
+            kind: document.getElementById('brKind').value,
+            status: document.getElementById('brStatus').value,
+            comments: existing?.comments || [],
+        };
+        const items = getItem(STORAGE_KEYS.bookRoadmap, []);
+        if (isEdit) {
+            const idx = items.findIndex(i => i.id === data.id);
+            if (idx !== -1) items[idx] = data;
+        } else {
+            items.unshift(data);
+        }
+        saveBrAndRender(items);
+        closeModal();
+    };
+}
+
+function openBrCommentModal(id) {
+    const item = getBrById(id);
+    if (!item) return;
+    openModal(`Izoh — ${escapeHtml(item.name)}`, `
+        <div style="display:flex;flex-direction:column;gap:10px">
+            ${item.comments?.length ? `<div style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+                ${item.comments.map(c => `<div style="background:var(--surface-2,#f4f4f5);padding:8px 10px;border-radius:6px;font-size:13px">${escapeHtml(c.text)}<span style="color:var(--text-muted);font-size:11px;float:right">${escapeHtml(c.date || '')}</span></div>`).join('')}
+            </div>` : '<p style="color:var(--text-muted);font-size:13px">Izohlar yo\'q</p>'}
+            <textarea id="brCommentText" class="form-control" rows="3" placeholder="Izoh yozing..."></textarea>
+        </div>
+    `, `<button class="btn-primary" id="brCommentSaveBtn">Qo'shish</button>`);
+
+    document.getElementById('brCommentSaveBtn').onclick = () => {
+        const text = document.getElementById('brCommentText').value.trim();
+        if (!text) return;
+        updateBrInStorage(id, item => ({
+            ...item,
+            comments: [...(item.comments || []), { text, date: new Date().toLocaleDateString('uz-UZ') }]
+        }));
+        renderBookRoadmap();
+        closeModal();
+    };
+}
+
+// Book Roadmap event delegation
+document.addEventListener('click', (e) => {
+    // Menu toggle
+    const menuToggle = e.target.closest('[data-br-menu-toggle]');
+    if (menuToggle) {
+        const id = menuToggle.dataset.brMenuToggle;
+        const wrap = menuToggle.closest('.lead-card-menu-wrap');
+        const dropdown = wrap?.querySelector('.lead-card-menu-dropdown');
+        if (!dropdown) return;
+        const isOpen = !dropdown.hidden;
+        document.querySelectorAll('#bookRoadmapKanban .lead-card-menu-dropdown').forEach(d => d.hidden = true);
+        dropdown.hidden = isOpen;
+        return;
+    }
+
+    // Submenu toggle (move)
+    const moveToggle = e.target.closest('[data-br-move-toggle]');
+    if (moveToggle) {
+        const submenu = moveToggle.closest('.lead-card-menu-submenu-wrap')?.querySelector('.lead-card-menu-submenu');
+        if (submenu) submenu.hidden = !submenu.hidden;
+        return;
+    }
+
+    // Move to status
+    const moveBtn = e.target.closest('[data-br-move]');
+    if (moveBtn) {
+        const id = moveBtn.dataset.brMove;
+        const status = moveBtn.dataset.brStatus;
+        updateBrInStorage(id, item => ({ ...item, status }));
+        renderBookRoadmap();
+        return;
+    }
+
+    // Edit
+    const editBtn = e.target.closest('[data-br-edit]');
+    if (editBtn) {
+        const id = editBtn.dataset.brEdit;
+        openBookRoadmapModal(getBrById(id));
+        return;
+    }
+
+    // Comment
+    const commentBtn = e.target.closest('[data-br-comment]');
+    if (commentBtn) {
+        openBrCommentModal(commentBtn.dataset.brComment);
+        return;
+    }
+
+    // Delete
+    const deleteBtn = e.target.closest('[data-br-delete]');
+    if (deleteBtn) {
+        const id = deleteBtn.dataset.brDelete;
+        const item = getBrById(id);
+        if (!item) return;
+        openModal("O'chirishni tasdiqlang",
+            `<p><b>${escapeHtml(item.name)}</b> yozuvini o'chirmoqchimisiz?</p>`,
+            `<button class="btn-danger" id="brConfirmDelete">O'chirish</button>`
+        );
+        document.getElementById('brConfirmDelete').onclick = () => {
+            const items = getItem(STORAGE_KEYS.bookRoadmap, []).filter(i => i.id !== id);
+            saveBrAndRender(items);
+            closeModal();
+        };
+        return;
+    }
+
+    // Add new button
+    if (e.target.closest('#addBookRoadmapBtn')) {
+        openBookRoadmapModal();
+        return;
+    }
+
+    // Close dropdowns on outside click
+    if (!e.target.closest('.lead-card-menu-wrap')) {
+        document.querySelectorAll('#bookRoadmapKanban .lead-card-menu-dropdown').forEach(d => d.hidden = true);
+    }
+});
 
 bootApp();

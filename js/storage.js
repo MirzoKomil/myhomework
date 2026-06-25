@@ -12,7 +12,8 @@ const STORAGE_KEYS = {
     salary: 'mh_salary',
     payments: 'mh_payments',
     leads: 'mh_leads',
-    hrEmployees: 'mh_hr_employees'
+    hrEmployees: 'mh_hr_employees',
+    bookRoadmap: 'mh_book_roadmap'
 };
 
 const CACHE_KEY_MAP = {
@@ -24,7 +25,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.assistantAttendance]: 'assistantAttendance',
     [STORAGE_KEYS.payments]: 'payments',
     [STORAGE_KEYS.leads]: 'leads',
-    [STORAGE_KEYS.hrEmployees]: 'hrEmployees'
+    [STORAGE_KEYS.hrEmployees]: 'hrEmployees',
+    [STORAGE_KEYS.bookRoadmap]: 'bookRoadmap'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(

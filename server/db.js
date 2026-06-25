@@ -173,6 +173,20 @@ async function initSchema() {
             status TEXT DEFAULT 'active',
             join_date TEXT DEFAULT ''
         );
+
+        CREATE TABLE IF NOT EXISTS book_roadmap (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            student_id TEXT DEFAULT '',
+            phone TEXT DEFAULT '',
+            region TEXT DEFAULT '',
+            manager_id TEXT DEFAULT '',
+            kind TEXT DEFAULT 'organik',
+            status TEXT DEFAULT 'yangi-oquvchi',
+            date TEXT DEFAULT '',
+            comments TEXT DEFAULT '[]',
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
     `);
 
     await pool.query(`
@@ -309,6 +323,35 @@ async function getLeads() {
     return leads;
 }
 
+function rowToBookRoadmap(r) {
+    return {
+        id: r.id, name: r.name, studentId: r.student_id || '',
+        phone: r.phone || '', region: r.region || '',
+        managerId: r.manager_id || '', kind: r.kind || 'organik',
+        status: r.status || 'yangi-oquvchi', date: r.date || '',
+        comments: parseJsonArray(r.comments), createdAt: r.created_at || null
+    };
+}
+
+async function getBookRoadmap() {
+    const rows = await q('SELECT * FROM book_roadmap ORDER BY created_at DESC');
+    return rows.map(rowToBookRoadmap);
+}
+
+async function saveBookRoadmap(client, items) {
+    await client.query('DELETE FROM book_roadmap');
+    for (const r of items) {
+        await client.query(
+            `INSERT INTO book_roadmap (id, name, student_id, phone, region, manager_id, kind, status, date, comments)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            [r.id, r.name || '', r.studentId || '', r.phone || '',
+             r.region || '', r.managerId || '', r.kind || 'organik',
+             r.status || 'yangi-oquvchi', r.date || '',
+             JSON.stringify(r.comments || [])]
+        );
+    }
+}
+
 async function getHrEmployeesData() {
     const rows = await q('SELECT * FROM hr_employees ORDER BY name');
     return rows.map(r => ({
@@ -320,7 +363,7 @@ async function getHrEmployeesData() {
 
 async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
-        mainAtt, assistAtt, leads, hrEmployees] = await Promise.all([
+        mainAtt, assistAtt, leads, hrEmployees, bookRoadmap] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q('SELECT * FROM sales_managers'),
         q('SELECT * FROM students ORDER BY name'),
@@ -329,7 +372,8 @@ async function getFullState() {
         buildAttendanceObject('main_attendance'),
         buildAttendanceObject('assistant_attendance'),
         getLeads(),
-        getHrEmployeesData()
+        getHrEmployeesData(),
+        getBookRoadmap()
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -346,7 +390,7 @@ async function getFullState() {
         mainAttendance: mainAtt,
         assistantAttendance: assistAtt,
         payments: paymentRows.map(rowToPayment),
-        leads, hrEmployees
+        leads, hrEmployees, bookRoadmap
     };
 }
 
@@ -459,6 +503,7 @@ async function patchState(partial) {
         if (partial.payments)           await savePayments(client, partial.payments);
         if (partial.leads)              await saveLeads(client, partial.leads);
         if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees);
+        if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap);
     });
 }
 
