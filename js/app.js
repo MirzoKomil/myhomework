@@ -61,7 +61,13 @@ function syncHeaderAvatar(user) {
     const el = document.getElementById('userAvatar');
     if (!el || !user) return;
     if (user.avatar) {
-        el.innerHTML = `<img src="${user.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+        // XSS himoyasi: innerHTML o'rniga DOM API ishlatiladi
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.alt = '';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:12px';
+        img.src = user.avatar; // DOM API avtomatik sanitizatsiya qiladi
+        el.appendChild(img);
     } else {
         el.textContent = getUserInitials(user.name);
     }
@@ -540,7 +546,7 @@ function renderProfileEditSection(user) {
     const bioEditing = _profileEditing.bio;
 
     const avatarContent = user.avatar
-        ? `<img src="${user.avatar}" alt="">`
+        ? `<img src="${escapeHtml(user.avatar)}" alt="">`
         : getUserInitials(user.name);
 
     const personalBody = personalEditing ? `

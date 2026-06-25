@@ -11,23 +11,9 @@ const { signToken, authRequired } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/register', async (req, res) => {
-    try {
-        const { name, email, password, role } = req.body || {};
-        if (!name?.trim() || !email?.trim() || !password)
-            return res.status(400).json({ error: 'Barcha maydonlar to\'ldirilishi shart' });
-        if (password.length < 6)
-            return res.status(400).json({ error: 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak' });
-        if (await findUserByEmail(email.trim()))
-            return res.status(409).json({ error: 'Bu login allaqachon ro\'yxatdan olingan' });
-        const validRoles = ['admin', 'teacher', 'sales_manager', 'employee'];
-        const userRole = validRoles.includes(role) ? role : 'employee';
-        const user = await createUser({ name: name.trim(), email: email.trim(), passwordHash: bcrypt.hashSync(password, 10), role: userRole });
-        res.status(201).json({ user: publicUser(user) });
-    } catch (err) {
-        console.error('POST /register', err);
-        res.status(500).json({ error: 'Server xatoligi' });
-    }
+// Ochiq ro'yxatdan o'tish o'chirilgan — faqat /create-user orqali (admin tomonidan)
+router.post('/register', (req, res) => {
+    res.status(403).json({ error: 'Ro\'yxatdan o\'tish yopilgan. Admin bilan bog\'laning.' });
 });
 
 router.post('/create-user', authRequired, async (req, res) => {
@@ -195,7 +181,11 @@ router.post('/avatar', authRequired, async (req, res) => {
 });
 
 router.get('/avatar/:userId', (req, res) => {
-    const filePath = path.join(AVATAR_DIR, `${req.params.userId}.jpg`);
+    // Faqat UUID formatiga ruxsat (path traversal himoyasi)
+    const safeId = req.params.userId.replace(/[^a-zA-Z0-9\-]/g, '');
+    if (!safeId || safeId.length > 64) return res.status(400).send('Invalid');
+    const filePath = path.join(AVATAR_DIR, `${safeId}.jpg`);
+    if (!filePath.startsWith(AVATAR_DIR)) return res.status(403).send('Ruxsat yo\'q');
     if (!fs.existsSync(filePath)) return res.status(404).send('Not found');
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=3600');
