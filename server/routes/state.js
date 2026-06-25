@@ -18,7 +18,8 @@ router.patch('/', authRequired, async (req, res) => {
         const body = req.body || {};
         const allowed = [
             'teachers', 'students', 'salesManagers', 'timetable',
-            'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees'
+            'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees',
+            'bookRoadmap'
         ];
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

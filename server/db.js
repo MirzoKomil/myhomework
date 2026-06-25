@@ -184,6 +184,8 @@ async function initSchema() {
             kind TEXT DEFAULT 'organik',
             status TEXT DEFAULT 'yangi-oquvchi',
             date TEXT DEFAULT '',
+            lang TEXT DEFAULT 'english',
+            lead_ref TEXT DEFAULT NULL,
             comments TEXT DEFAULT '[]',
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
@@ -193,7 +195,11 @@ async function initSchema() {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_source_external
         ON leads(source, external_id)
         WHERE external_id IS NOT NULL
-    `).catch(() => {}); // index allaqachon bo'lsa e'tibor berma
+    `).catch(() => {});
+
+    // Migration: book_roadmap jadvaliga yangi ustunlar qo'shish
+    await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
+    await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS lead_ref TEXT DEFAULT NULL`).catch(() => {});
 }
 
 // ── Seed & migrate ───────────────────────────────────────────────────────────
@@ -324,11 +330,14 @@ async function getLeads() {
 }
 
 function rowToBookRoadmap(r) {
+    let leadRef = null;
+    try { leadRef = r.lead_ref ? JSON.parse(r.lead_ref) : null; } catch { leadRef = null; }
     return {
         id: r.id, name: r.name, studentId: r.student_id || '',
         phone: r.phone || '', region: r.region || '',
         managerId: r.manager_id || '', kind: r.kind || 'organik',
         status: r.status || 'yangi-oquvchi', date: r.date || '',
+        lang: r.lang || 'english', leadRef,
         comments: parseJsonArray(r.comments), createdAt: r.created_at || null
     };
 }
@@ -342,11 +351,13 @@ async function saveBookRoadmap(client, items) {
     await client.query('DELETE FROM book_roadmap');
     for (const r of items) {
         await client.query(
-            `INSERT INTO book_roadmap (id, name, student_id, phone, region, manager_id, kind, status, date, comments)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            `INSERT INTO book_roadmap (id, name, student_id, phone, region, manager_id, kind, status, date, lang, lead_ref, comments)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
             [r.id, r.name || '', r.studentId || '', r.phone || '',
              r.region || '', r.managerId || '', r.kind || 'organik',
              r.status || 'yangi-oquvchi', r.date || '',
+             r.lang || 'english',
+             r.leadRef ? JSON.stringify(r.leadRef) : null,
              JSON.stringify(r.comments || [])]
         );
     }
