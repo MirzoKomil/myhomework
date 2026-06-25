@@ -92,3 +92,10 @@ async function apiChangePassword(currentPassword, newPassword) {
         body: JSON.stringify({ currentPassword, newPassword })
     });
 }
+
+async function apiCreateHrUser(data) {
+    return apiFetch('/api/auth/create-user', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+}

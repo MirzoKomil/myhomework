@@ -22,13 +22,47 @@ router.post('/register', (req, res) => {
     if (findUserByEmail(email.trim())) {
         return res.status(409).json({ error: 'Bu login allaqachon ro\'yxatdan olingan' });
     }
+    const validRoles = ['admin', 'teacher', 'sales_manager', 'employee'];
+    const userRole = validRoles.includes(role) ? role : 'employee';
     const user = createUser({
         name: name.trim(),
         email: email.trim(),
         passwordHash: bcrypt.hashSync(password, 10),
-        role: role === 'teacher' ? 'teacher' : 'admin'
+        role: userRole
     });
     res.status(201).json({ user: publicUser(user) });
+});
+
+// Admin tomonidan HR xodimlar uchun user yaratish/yangilash
+router.post('/create-user', authRequired, (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Faqat admin foydalanuvchi yarata oladi' });
+    }
+    const { name, login, password, role } = req.body || {};
+    if (!name?.trim() || !login?.trim() || !password) {
+        return res.status(400).json({ error: 'Ism, login va parol talab qilinadi' });
+    }
+    if (String(password).length < 4) {
+        return res.status(400).json({ error: 'Parol kamida 4 ta belgidan iborat bo\'lishi kerak' });
+    }
+    const validRoles = ['admin', 'teacher', 'sales_manager', 'employee'];
+    const userRole = validRoles.includes(role) ? role : 'employee';
+    const existing = findUserByEmail(login.trim());
+    if (existing) {
+        updateUser(existing.id, {
+            name: name.trim(),
+            passwordHash: bcrypt.hashSync(String(password), 10),
+            role: userRole
+        });
+        return res.json({ ok: true, user: publicUser(findUserById(existing.id)) });
+    }
+    const user = createUser({
+        name: name.trim(),
+        email: login.trim(),
+        passwordHash: bcrypt.hashSync(String(password), 10),
+        role: userRole
+    });
+    res.status(201).json({ ok: true, user: publicUser(user) });
 });
 
 router.post('/login', (req, res) => {

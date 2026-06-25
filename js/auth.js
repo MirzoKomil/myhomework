@@ -1,86 +1,37 @@
-// Myhomework.uz — avtorizatsiya (login/parol orqali)
-
-const HR_EMPLOYEES_KEY = 'mh_hr_employees';
-
-// Admin uchun default hisob (har doim mavjud)
-const ADMIN_ACCOUNT = {
-    id: 'admin',
-    name: 'Asosiy Admin',
-    role: 'admin',
-    login: 'admin',
-    password: 'admin123'
-};
+// Myhomework.uz — avtorizatsiya
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const errorMessage = document.getElementById('errorMessage');
-
     if (!loginForm) return;
 
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
-
         if (!username || !password) return;
 
         errorMessage.style.display = 'none';
+        const btn = document.getElementById('loginBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Kirish...'; }
 
-        // 1) Admin tekshirish
-        if (username === ADMIN_ACCOUNT.login && password === ADMIN_ACCOUNT.password) {
-            const user = {
-                id: ADMIN_ACCOUNT.id,
-                name: ADMIN_ACCOUNT.name,
-                role: 'admin',
-                token: 'mock-token-' + Date.now()
-            };
-            localStorage.setItem('mh_currentUser', JSON.stringify(user));
-            localStorage.setItem('mh_token', user.token);
-            window.location.href = 'index.html';
-            return;
-        }
-
-        // 2) HR xodimlar orasidan qidirish
-        let hrEmps = [];
         try {
-            hrEmps = JSON.parse(localStorage.getItem(HR_EMPLOYEES_KEY) || '[]');
-        } catch { hrEmps = []; }
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: username, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Login yoki parol noto'g'ri!");
 
-        const emp = hrEmps.find(e => e.login === username && e.password === password);
-
-        if (!emp) {
-            showError(errorMessage, 'Login yoki parol noto\'g\'ri!');
-            return;
+            localStorage.setItem('mh_token', data.token);
+            localStorage.setItem('mh_currentUser', JSON.stringify(data.user));
+            window.location.href = 'index.html';
+        } catch (err) {
+            showError(errorMessage, err.message || 'Xatolik yuz berdi');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Kirish'; }
         }
-
-        if (emp.status === 'inactive') {
-            showError(errorMessage, 'Sizning hisobingiz faol emas. Admin bilan bog\'laning.');
-            return;
-        }
-
-        // Rolni aniqlash
-        let userRole = 'employee';
-        const role = emp.role;
-        if (role === 'rop' || role === 'Admin') {
-            userRole = 'admin';
-        } else if (role === 'sotuv-menejeri' || role === 'Sotuv menejeri' || role === 'sotuv_menejeri') {
-            userRole = 'sales_manager';
-        } else if (role === 'oqituvchi' || role === "O'qituvchi") {
-            userRole = 'teacher';
-        } else if (role === 'yordamchi' || role === "Yordamchi o'qituvchi") {
-            userRole = 'teacher';
-        }
-
-        const user = {
-            id: emp.id,
-            name: emp.name,
-            role: userRole,
-            token: 'mock-token-' + Date.now()
-        };
-
-        localStorage.setItem('mh_currentUser', JSON.stringify(user));
-        localStorage.setItem('mh_token', user.token);
-        window.location.href = 'index.html';
     });
 });
 

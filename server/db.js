@@ -22,6 +22,18 @@ const db = createDatabase(DB_PATH);
 
 function initSchema() {
     db.exec(`
+        CREATE TABLE IF NOT EXISTS hr_employees (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'employee',
+            login TEXT DEFAULT '',
+            phone TEXT DEFAULT '',
+            email TEXT DEFAULT '',
+            department TEXT DEFAULT '',
+            status TEXT DEFAULT 'active',
+            join_date TEXT DEFAULT ''
+        );
+
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -112,6 +124,7 @@ function initSchema() {
     migrateLeadsSchema();
     migrateUsersSchema();
     migrateStudentsSchema();
+    migrateHrEmployeesSchema();
 }
 
 function migrateStudentsSchema() {
@@ -273,11 +286,33 @@ function insertLead({ name, phone, email, language, source, externalId, date, st
     };
 }
 
+function migrateAdminPassword() {
+    const admin = db.prepare("SELECT * FROM users WHERE email = 'admin'").get();
+    if (!admin) return;
+    if (bcrypt.compareSync('123456', admin.password_hash)) {
+        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+            .run(bcrypt.hashSync('admin123', 10), admin.id);
+        console.log('[Migration] Admin paroli admin123 ga yangilandi');
+    }
+}
+
+function migrateHrEmployeesSchema() {
+    const cols = db.prepare('PRAGMA table_info(hr_employees)').all();
+    const names = new Set(cols.map(c => c.name));
+    if (!names.has('login')) {
+        db.exec("ALTER TABLE hr_employees ADD COLUMN login TEXT DEFAULT ''");
+    }
+}
+
 function seedIfEmpty() {
     const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
-    if (userCount > 0) return;
+    if (userCount > 0) {
+        migrateAdminPassword();
+        migrateHrEmployeesSchema();
+        return;
+    }
 
-    const hash = bcrypt.hashSync('123456', 10);
+    const hash = bcrypt.hashSync('admin123', 10);
     db.prepare(
         'INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)'
     ).run(randomUUID(), 'Asosiy Admin', 'admin', hash, 'admin');
@@ -319,6 +354,37 @@ function buildAttendanceObject(table) {
     return out;
 }
 
+function getHrEmployeesData() {
+    try {
+        return db.prepare('SELECT * FROM hr_employees ORDER BY name').all().map(r => ({
+            id: r.id,
+            name: r.name,
+            role: r.role,
+            login: r.login || '',
+            phone: r.phone || '',
+            email: r.email || '',
+            department: r.department || '',
+            status: r.status || 'active',
+            joinDate: r.join_date || ''
+        }));
+    } catch { return []; }
+}
+
+function saveHrEmployeesData(employees) {
+    migrateHrEmployeesSchema();
+    runTransaction(() => {
+        db.prepare('DELETE FROM hr_employees').run();
+        const ins = db.prepare(
+            'INSERT INTO hr_employees (id, name, role, login, phone, email, department, status, join_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        );
+        (employees || []).forEach(e => ins.run(
+            e.id, e.name, e.role || 'employee', e.login || '',
+            e.phone || '', e.email || '', e.department || '',
+            e.status || 'active', e.joinDate || ''
+        ));
+    });
+}
+
 function getFullState() {
     const teachers = db.prepare('SELECT * FROM teachers ORDER BY name').all().map(rowToTeacher);
     const salesManagers = db.prepare('SELECT * FROM sales_managers').all().map(r => ({ id: r.id, name: r.name }));
@@ -336,6 +402,7 @@ function getFullState() {
     });
     const payments = db.prepare('SELECT * FROM payments ORDER BY date DESC').all().map(rowToPayment);
     const leads = getLeads();
+    const hrEmployees = getHrEmployeesData();
 
     return {
         teachers,
@@ -345,7 +412,8 @@ function getFullState() {
         mainAttendance: buildAttendanceObject('main_attendance'),
         assistantAttendance: buildAttendanceObject('assistant_attendance'),
         payments,
-        leads
+        leads,
+        hrEmployees
     };
 }
 
@@ -518,6 +586,7 @@ function patchState(partial) {
     if (partial.assistantAttendance) saveAttendanceTable('assistant_attendance', partial.assistantAttendance);
     if (partial.payments) savePayments(partial.payments);
     if (partial.leads) saveLeads(partial.leads);
+    if (partial.hrEmployees) saveHrEmployeesData(partial.hrEmployees);
 }
 
 function findUserByEmail(email) {
@@ -537,7 +606,7 @@ function createUser({ name, email, passwordHash, role }) {
 }
 
 function updateUser(id, fields) {
-    const allowed = ['name', 'email', 'phone', 'bio', 'location', 'avatar'];
+    const allowed = ['name', 'email', 'phone', 'bio', 'location', 'avatar', 'role'];
     const updates = [];
     const values = [];
     for (const key of allowed) {
@@ -583,5 +652,7 @@ module.exports = {
     findUserById,
     createUser,
     updateUser,
-    publicUser
+    publicUser,
+    getHrEmployeesData,
+    saveHrEmployeesData
 };

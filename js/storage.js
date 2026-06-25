@@ -55,7 +55,11 @@ const SUBJECTS = {
 function getItem(key, fallback) {
     if (key === STORAGE_KEYS.salesManagers) {
         const hremps = getItem(STORAGE_KEYS.hrEmployees, []);
-        const merged = hremps.filter(e => e.role === 'Sotuv menejeri' || e.role === 'sotuv_menejeri');
+        const merged = hremps.filter(e =>
+            e.role === 'Sotuv menejeri' ||
+            e.role === 'sotuv_menejeri' ||
+            e.role === 'sotuv-menejeri'
+        );
         return merged.length > 0 ? merged : fallback || [];
     }
 

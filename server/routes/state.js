@@ -18,7 +18,7 @@ router.patch('/', authRequired, (req, res) => {
         const body = req.body || {};
         const allowed = [
             'teachers', 'students', 'salesManagers', 'timetable',
-            'mainAttendance', 'assistantAttendance', 'payments', 'leads'
+            'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees'
         ];
         const partial = {};
         allowed.forEach(key => {

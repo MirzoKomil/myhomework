@@ -5236,6 +5236,10 @@ const HR_ROLE_MAP = {
 const HR_DEPARTMENTS = ['Sotuv', 'Akademik', 'Marketing', 'HR', 'IT'];
 
 function getHrEmployees() {
+    // Server cache ustunlik (initStorage dan keyin to'ldiriladi)
+    const fromServer = getItem(STORAGE_KEYS.hrEmployees, undefined);
+    if (fromServer !== undefined) return fromServer;
+    // localStorage ga fallback (migration uchun)
     try {
         const raw = localStorage.getItem(HR_EMPLOYEES_KEY);
         return raw ? JSON.parse(raw) : null;
@@ -5243,12 +5247,28 @@ function getHrEmployees() {
 }
 
 function saveHrEmployees(list) {
+    // Serverga saqlash (parolsiz — xavfsizlik)
+    const forServer = list.map(({ password, ...rest }) => rest);
+    setItem(STORAGE_KEYS.hrEmployees, forServer);
+    // localStorage ga ham yozamiz (migration support)
     localStorage.setItem(HR_EMPLOYEES_KEY, JSON.stringify(list));
 }
 
 function seedHrEmployees() {
     const existing = getHrEmployees();
-    if (existing && existing.length) return existing;
+    if (existing && existing.length > 0) return existing;
+    // Agar server bo'sh bo'lsa, localStorage dan migratsiya
+    if (Array.isArray(existing)) {
+        try {
+            const lsRaw = localStorage.getItem(HR_EMPLOYEES_KEY);
+            const lsData = lsRaw ? JSON.parse(lsRaw) : null;
+            if (lsData && lsData.length > 0) {
+                saveHrEmployees(lsData);
+                return lsData;
+            }
+        } catch {}
+    }
+    // Default seed
     const seed = [
         { id: 'hr1', name: 'Alisher Karimov', role: 'rop', phone: '+998 90 111 22 33', email: 'alisher@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-05-15', login: 'alisher', password: '1234' },
         { id: 'hr2', name: 'Dilnoza Rashidova', role: 'sotuv-menejeri', phone: '+998 91 222 33 44', email: 'dilnoza@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-08-20', login: 'dilnoza', password: '1234' },
@@ -5406,7 +5426,7 @@ function openAddEmployeeModal() {
     );
 
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
-    document.getElementById('saveAddEmployee').onclick = () => {
+    document.getElementById('saveAddEmployee').onclick = async () => {
         const name = document.getElementById('empName').value.trim();
         const role = document.getElementById('empRole').value;
         const phone = document.getElementById('empPhone').value.trim();
@@ -5422,25 +5442,30 @@ function openAddEmployeeModal() {
 
         const employees = getHrEmployees() || [];
 
-        // Login takrorlanmasligini tekshirish
         if (employees.find(e => e.login === login)) {
             alert('Bu login allaqachon mavjud. Boshqa login tanlang.');
             return;
         }
 
-        employees.push({
+        const newEmp = {
             id: 'hr' + Date.now(),
-            name,
-            role,
-            phone,
-            email,
-            department,
-            status,
-            login,
-            password,
+            name, role, phone, email, department, status, login, password,
             joinDate: new Date().toISOString().slice(0, 10)
-        });
+        };
+        employees.push(newEmp);
         saveHrEmployees(employees);
+
+        // Server user account yaratish (login orqali kirish uchun)
+        const hrUserRole = role === 'rop' ? 'admin'
+            : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
+            : (role === 'oqituvchi' || role === 'yordamchi') ? 'teacher'
+            : 'employee';
+        try {
+            await apiCreateHrUser({ name, login, password, role: hrUserRole });
+        } catch (err) {
+            console.warn('Server user yaratishda xatolik:', err.message);
+        }
+
         closeModal();
         renderHrEmployees();
     };
