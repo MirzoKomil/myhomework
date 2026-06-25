@@ -177,7 +177,7 @@ router.post('/avatar', authRequired, async (req, res) => {
     }
 });
 
-router.get('/avatar/:userId', (req, res) => {
+router.get('/avatar/:userId', async (req, res) => {
     // Faqat UUID formatiga ruxsat (path traversal himoyasi)
     const safeId = req.params.userId.replace(/[^a-zA-Z0-9\-]/g, '');
     if (!safeId || safeId.length > 64) return res.status(400).send('Invalid');
