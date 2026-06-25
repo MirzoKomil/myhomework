@@ -182,6 +182,7 @@ async function bootApp() {
         }
     }
 
+    setUiLang(getUiLang());
     initUserUI(currentUser);
     renderDashboard();
     renderCalendarWidget();
@@ -428,13 +429,46 @@ function calcProfileCompletion(user) {
     return { checks, total };
 }
 
+const LANG_KEY = 'mh_ui_lang';
+const LANG_LABELS = { uz: "O'zbekcha", ru: 'Русский', en: 'English' };
+
+function getUiLang() {
+    return localStorage.getItem(LANG_KEY) || 'uz';
+}
+
+function setUiLang(lang) {
+    localStorage.setItem(LANG_KEY, lang);
+    document.documentElement.lang = lang === 'ru' ? 'ru' : lang === 'en' ? 'en' : 'uz';
+}
+
 function renderSettings() {
-    // "Profilni ochish" tugmasi — avatar kabi profile tabiga o'tadi
-    const btn = document.getElementById('goToProfileFromSettings');
-    if (btn && !btn.dataset.bound) {
-        btn.dataset.bound = '1';
-        btn.addEventListener('click', () => switchTab('profile'));
-    }
+    const current = getUiLang();
+    const container = document.getElementById('langOptions');
+    const msg = document.getElementById('langSavedMsg');
+    if (!container) return;
+
+    container.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('lang-btn--active', btn.dataset.lang === current);
+    });
+
+    if (container.dataset.bound) return;
+    container.dataset.bound = '1';
+
+    container.addEventListener('click', e => {
+        const btn = e.target.closest('.lang-btn');
+        if (!btn) return;
+        const lang = btn.dataset.lang;
+        setUiLang(lang);
+        container.querySelectorAll('.lang-btn').forEach(b => {
+            b.classList.toggle('lang-btn--active', b.dataset.lang === lang);
+        });
+        if (msg) {
+            msg.textContent = `✓ ${LANG_LABELS[lang] || lang} tili tanlandi`;
+            msg.classList.add('lang-saved-msg--visible');
+            clearTimeout(msg._t);
+            msg._t = setTimeout(() => msg.classList.remove('lang-saved-msg--visible'), 2500);
+        }
+    });
 }
 
 function renderProfileCompletionWidget(user) {
