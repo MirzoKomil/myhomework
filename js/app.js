@@ -4230,40 +4230,113 @@ function formatPaymentClosedSurveyComment(survey) {
     return ['To\'lov yopildi — so\'rovnoma:', ...lines].join('\n');
 }
 
+function renderCloseSurveyRadioGroup(name, options) {
+    return `<div class="lead-survey-options">${options.map(o => `
+        <label class="lead-reason-option">
+            <input type="radio" name="${name}" value="${escapeHtml(o.id)}" data-close-field="${name}">
+            <span>${escapeHtml(o.label)}</span>
+        </label>`).join('')}</div>`;
+}
+
 function openPaymentClosedModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
-    const paymentSurvey = lead.paymentSurvey || null;
-    const hasDebt = leadHasPaymentDebt(paymentSurvey);
-    const hasInstallment = leadHasInstallmentPayment(paymentSurvey);
-    const debtLabel = hasDebt ? getPaymentClosedDebtLabel(paymentSurvey) : '';
-    const installmentLabel = hasInstallment ? getPaymentClosedInstallmentLabel(paymentSurvey) : '';
+    const ps = lead.paymentSurvey || null;
+    const hasDebt = leadHasPaymentDebt(ps);
+    const hasInstallment = leadHasInstallmentPayment(ps);
+    const hasDebtor = ps?.paymentType === 'debtor';
+    const debtLabel = hasDebt ? getPaymentClosedDebtLabel(ps) : '';
+    const installmentLabel = hasInstallment ? getPaymentClosedInstallmentLabel(ps) : '';
+
+    let contextHtml = '';
+    if (ps) {
+        const rows = [
+            ps.paymentTypeLabel ? `<div class="pcs-row"><span>To'lov turi:</span><strong>${escapeHtml(ps.paymentTypeLabel)}</strong></div>` : '',
+            ps.tariffLabel ? `<div class="pcs-row"><span>Tarif:</span><strong>${escapeHtml(ps.tariffLabel)}</strong></div>` : '',
+            ps.amountLabel ? `<div class="pcs-row"><span>Summa:</span><strong>${escapeHtml(ps.amountLabel)}</strong></div>` : '',
+            hasDebt && debtLabel ? `<div class="pcs-row pcs-row--debt"><span>Qarz miqdori:</span><strong>${escapeHtml(debtLabel)}</strong></div>` : '',
+            ps.installmentPartnerLabel ? `<div class="pcs-row"><span>Nasiya hamkori:</span><strong>${escapeHtml(ps.installmentPartnerLabel)}</strong></div>` : ''
+        ].filter(Boolean).join('');
+        if (rows) contextHtml = `<div class="pcs-context">${rows}</div>`;
+    }
+
+    const debtSection = hasDebt ? `
+    <section class="lead-survey-section">
+        <h4 class="lead-survey-title">Avvalgi qarz: ${escapeHtml(debtLabel)}</h4>
+        <div class="lead-info-question">
+            <p class="lead-info-question-text">Qarz haqiqatdan yopilganmi?</p>
+            <div class="lead-info-yesno">
+                <label class="lead-reason-option lead-reason-option--inline"><input type="radio" name="debtCleared" value="yes" data-close-field="debtCleared"><span>Ha</span></label>
+                <label class="lead-reason-option lead-reason-option--inline"><input type="radio" name="debtCleared" value="no" data-close-field="debtCleared"><span>Yo'q</span></label>
+            </div>
+        </div>
+        <div id="debtClearMethodBlock" hidden style="display:none">
+            <div class="lead-info-question">
+                <p class="lead-info-question-text">Qanday usulda yopildi?</p>
+                ${renderCloseSurveyRadioGroup('debtClearMethod', [
+                    { id: 'full', label: "To'liq to'lab berildi" },
+                    { id: 'installment', label: "Nasiya hamkor orqali yopildi" }
+                ])}
+            </div>
+            <div id="debtClearPartnerBlock" hidden style="display:none">
+                <div class="lead-info-question">
+                    <p class="lead-info-question-text">Qaysi nasiya hamkor orqali?</p>
+                    ${renderCloseSurveyRadioGroup('debtClearPartner', LEAD_INSTALLMENT_PARTNERS)}
+                </div>
+                ${renderCloseSurveyDateField('debtClearPartnerDate', 'Qarzlar yopilgan sana', 'debtClearDate')}
+            </div>
+        </div>
+    </section>` : '';
+
+    const debtorSection = hasDebtor ? `
+    <section class="lead-survey-section">
+        <h4 class="lead-survey-title">Qarzdor — umumiy summa: ${escapeHtml(ps?.amountLabel || '')}</h4>
+        <div class="lead-info-question">
+            <p class="lead-info-question-text">To'lov amalga oshirilganmi?</p>
+            <div class="lead-info-yesno">
+                <label class="lead-reason-option lead-reason-option--inline"><input type="radio" name="debtorPaid" value="yes" data-close-field="debtorPaid"><span>Ha</span></label>
+                <label class="lead-reason-option lead-reason-option--inline"><input type="radio" name="debtorPaid" value="no" data-close-field="debtorPaid"><span>Yo'q</span></label>
+            </div>
+        </div>
+        <div id="debtorPaidBlock" hidden style="display:none">
+            ${renderCloseSurveyDateField('debtorPaidDate', "To'lov tushgan sana", 'debtorPaidDate')}
+        </div>
+    </section>` : '';
+
+    const installmentSection = hasInstallment ? `
+    <section class="lead-survey-section">
+        <h4 class="lead-survey-title">Nasiya hamkor: ${escapeHtml(ps?.installmentPartnerLabel || '')} — ${escapeHtml(installmentLabel)}</h4>
+        <div class="lead-info-question">
+            <p class="lead-info-question-text">Nasiya hamkordan to'lov tushganmi?</p>
+            <div class="lead-info-yesno">
+                <label class="lead-reason-option lead-reason-option--inline"><input type="radio" name="installmentReceived" value="yes" data-close-field="installmentReceived"><span>Ha</span></label>
+                <label class="lead-reason-option lead-reason-option--inline"><input type="radio" name="installmentReceived" value="no" data-close-field="installmentReceived"><span>Yo'q</span></label>
+            </div>
+        </div>
+        <div id="installmentReceivedDateBlock" hidden style="display:none">
+            ${renderCloseSurveyDateField('instReceivedDate', 'Qachon tushdi?', 'installmentReceivedDate')}
+        </div>
+    </section>` : '';
 
     const bodyHtml = `<div class="lead-survey lead-survey--info">
-        ${renderCloseSurveyDateField('paymentClosedDate', 'Qachon yopildi?', 'closedDate')}
-        ${hasDebt ? `
-        <section class="lead-survey-section">
-            ${renderCloseSurveyYesNo('debtPaid', `${debtLabel} summa to'landimi?`)}
-            ${renderCloseSurveyDateField('paymentClosedDebtDate', `${debtLabel} qarzdorlik summasi qachon to'landi?`, 'debtPaidDate')}
-        </section>` : ''}
-        ${hasInstallment ? `
-        <section class="lead-survey-section">
-            ${renderCloseSurveyYesNo('installmentReceived', `${installmentLabel} summa to'lovi tushdimi?`)}
-            ${renderCloseSurveyDateField('paymentClosedInstallmentDate', 'Qachon tushdi?', 'installmentReceivedDate')}
-        </section>` : ''}
+        ${contextHtml}
+        ${renderCloseSurveyDateField('paymentClosedDate', "To'lov yopilgan sana", 'closedDate')}
+        ${debtSection}
+        ${debtorSection}
+        ${installmentSection}
     </div>`;
 
     openModal(
         `${escapeHtml(lead.name)} — To'lov yopildi`,
         bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentClosed">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="confirmPaymentClosed">Saqlash va ko'chirish</button>`,
+         <button type="button" class="btn-primary-sm" id="confirmPaymentClosed">Keyingi: Dars jadvali →</button>`,
         { wide: true }
     );
 
     const modalBody = document.getElementById('modalBody');
-    initPaymentClosedSurveyForm(modalBody);
+    initEnhancedPaymentClosedForm(modalBody);
 
     document.getElementById('cancelPaymentClosed').onclick = () => {
         closeModal();
@@ -4271,39 +4344,260 @@ function openPaymentClosedModal(lang, leadId) {
     };
 
     document.getElementById('confirmPaymentClosed').onclick = () => {
-        const result = collectPaymentClosedSurveyData(modalBody, paymentSurvey);
-        if (result.error) {
-            alert(result.error);
-            return;
+        const result = collectEnhancedPaymentClosedData(modalBody, ps, { hasDebt, hasInstallment, hasDebtor });
+        if (result.error) { alert(result.error); return; }
+        closeModal();
+        openClosedScheduleModal(lang, leadId, result.data);
+    };
+}
+
+function initEnhancedPaymentClosedForm(modalBody) {
+    const show = (id, visible) => {
+        const el = modalBody.querySelector(`#${id}`);
+        if (!el) return;
+        el.hidden = !visible;
+        el.style.display = visible ? '' : 'none';
+        if (!visible) el.querySelectorAll('input').forEach(i => { i.checked = false; i.value = ''; });
+    };
+
+    const syncDebtCleared = () => {
+        const v = modalBody.querySelector('[data-close-field="debtCleared"]:checked')?.value;
+        show('debtClearMethodBlock', v === 'yes');
+        if (v !== 'yes') show('debtClearPartnerBlock', false);
+    };
+    const syncDebtMethod = () => {
+        const v = modalBody.querySelector('[data-close-field="debtClearMethod"]:checked')?.value;
+        show('debtClearPartnerBlock', v === 'installment');
+    };
+    const syncInstallmentReceived = () => {
+        const v = modalBody.querySelector('[data-close-field="installmentReceived"]:checked')?.value;
+        show('installmentReceivedDateBlock', v === 'yes');
+    };
+    const syncDebtorPaid = () => {
+        const v = modalBody.querySelector('[data-close-field="debtorPaid"]:checked')?.value;
+        show('debtorPaidBlock', v === 'yes');
+    };
+
+    modalBody.querySelectorAll('[data-close-field="debtCleared"]').forEach(r => r.addEventListener('change', syncDebtCleared));
+    modalBody.querySelectorAll('[data-close-field="debtClearMethod"]').forEach(r => r.addEventListener('change', syncDebtMethod));
+    modalBody.querySelectorAll('[data-close-field="installmentReceived"]').forEach(r => r.addEventListener('change', syncInstallmentReceived));
+    modalBody.querySelectorAll('[data-close-field="debtorPaid"]').forEach(r => r.addEventListener('change', syncDebtorPaid));
+}
+
+function collectEnhancedPaymentClosedData(modalBody, ps, flags = {}) {
+    const getRadio = name => modalBody.querySelector(`[data-close-field="${name}"]:checked`);
+    const getDate = id => modalBody.querySelector(`#${id}`)?.value || '';
+
+    const closedDate = getDate('paymentClosedDate');
+    if (!closedDate) return { error: "Yopilgan sanani kiriting" };
+
+    const data = {
+        closedDate,
+        closedDateLabel: formatUzDate(closedDate),
+        paymentType: ps?.paymentType || null,
+        paymentTypeLabel: ps?.paymentTypeLabel || '',
+        tariff: ps?.tariff || null,
+        tariffLabel: ps?.tariffLabel || '',
+        amount: ps?.amount || null,
+        amountLabel: ps?.amountLabel || ''
+    };
+
+    if (flags.hasDebt) {
+        const debtCleared = getRadio('debtCleared');
+        if (!debtCleared) return { error: "Qarz yopilganmi? savoliga javob bering" };
+        data.debtCleared = debtCleared.value;
+        data.debtClearedLabel = debtCleared.value === 'yes' ? 'Ha' : "Yo'q";
+        data.debtAmount = ps?.debtAmount || null;
+        data.debtAmountLabel = ps ? getPaymentClosedDebtLabel(ps) : '';
+
+        if (debtCleared.value === 'yes') {
+            const method = getRadio('debtClearMethod');
+            if (!method) return { error: "Qarz qanday usulda yopildi?" };
+            data.debtClearMethod = method.value;
+            data.debtClearMethodLabel = method.value === 'full' ? "To'liq to'lab berildi" : "Nasiya hamkor orqali";
+
+            if (method.value === 'installment') {
+                const partner = getRadio('debtClearPartner');
+                if (!partner) return { error: "Nasiya hamkorini tanlang" };
+                const clearDate = getDate('debtClearPartnerDate');
+                if (!clearDate) return { error: "Qarz yopilgan sanani kiriting" };
+                data.debtClearPartner = partner.value;
+                data.debtClearPartnerLabel = LEAD_INSTALLMENT_PARTNERS.find(p => p.id === partner.value)?.label || partner.value;
+                data.debtClearDate = clearDate;
+                data.debtClearDateLabel = formatUzDate(clearDate);
+            }
         }
+    }
 
-        const user = getCurrentUser();
-        const author = user?.name || 'Admin';
-        const survey = result.data;
-        const commentText = formatPaymentClosedSurveyComment(survey);
-
-        const updated = updateLeadInStorage(lang, leadId, l => {
-            const base = normalizeLeadExtras(l);
-            return {
-                ...base,
-                status: 'tolov-yopildi',
-                paymentClosedSurvey: survey,
-                comments: [...base.comments, createLeadComment({
-                    type: 'payment-closed',
-                    text: commentText,
-                    author
-                })]
-            };
-        });
-
-        if (!updated) {
-            alert('Lid topilmadi');
-            return;
+    if (flags.hasDebtor) {
+        const debtorPaid = getRadio('debtorPaid');
+        if (!debtorPaid) return { error: "To'lov amalga oshirilganmi? savoliga javob bering" };
+        data.debtorPaid = debtorPaid.value;
+        data.debtorPaidLabel = debtorPaid.value === 'yes' ? 'Ha' : "Yo'q";
+        if (debtorPaid.value === 'yes') {
+            const d = getDate('debtorPaidDate');
+            if (!d) return { error: "To'lov tushgan sanani kiriting" };
+            data.debtorPaidDate = d;
+            data.debtorPaidDateLabel = formatUzDate(d);
         }
+    }
 
+    if (flags.hasInstallment) {
+        const received = getRadio('installmentReceived');
+        if (!received) return { error: "Nasiya hamkordan to'lov tushganmi? savoliga javob bering" };
+        data.installmentReceived = received.value;
+        data.installmentReceivedLabel = received.value === 'yes' ? 'Ha' : "Yo'q";
+        data.installmentPartner = ps?.installmentPartner || null;
+        data.installmentPartnerLabel = ps?.installmentPartnerLabel || '';
+        if (received.value === 'yes') {
+            const d = getDate('instReceivedDate');
+            if (!d) return { error: "To'lov tushgan sanani kiriting" };
+            data.installmentReceivedDate = d;
+            data.installmentReceivedDateLabel = formatUzDate(d);
+        }
+    }
+
+    return { data };
+}
+
+function openClosedScheduleModal(lang, leadId, closedSurveyData) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    if (leadHasTeacherSchedule(lead)) {
+        finalizePaymentClosed(lang, leadId, closedSurveyData, lead.paymentOnboarding);
+        return;
+    }
+
+    const subject = lang === 'russian' ? 'russian' : 'english';
+    const asosiyTeachers = filterTeachersByTypeAndSubject('asosiy', subject);
+
+    const bodyHtml = `<div class="lead-survey lead-survey--schedule">
+        <p class="lead-survey-hint" style="margin-bottom:12px">
+            O'quvchini asosiy ustoz dars jadvaliga qo'shing.
+            Ustoz jadvalining <strong>Dushanba-Chorshanba-Juma</strong> yoki <strong>Seshanba-Payshanba-Shanba</strong> kunlaridan mos bo'sh vaqtni tanlang.
+        </p>
+        ${renderTeacherScheduleSection(asosiyTeachers)}
+    </div>`;
+
+    openModal(
+        `${escapeHtml(lead.name)} — Dars jadvali biriktirish`,
+        bodyHtml,
+        `<button type="button" class="btn-danger-sm" id="cancelClosedSchedule">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmClosedSchedule">Saqlash va ko'chirish</button>`,
+        { wide: true }
+    );
+
+    const modalBody = document.getElementById('modalBody');
+    wireTeacherSchedulePicker(modalBody, { lead });
+
+    document.getElementById('cancelClosedSchedule').onclick = () => {
         closeModal();
         renderLeads();
     };
+
+    document.getElementById('confirmClosedSchedule').onclick = () => {
+        const result = collectTeacherScheduleData(modalBody);
+        if (result.error) { alert(result.error); return; }
+        closeModal();
+        finalizePaymentClosed(lang, leadId, closedSurveyData, result.data);
+    };
+}
+
+function finalizePaymentClosed(lang, leadId, closedSurveyData, scheduleData) {
+    const user = getCurrentUser();
+    const author = user?.name || 'Admin';
+    const commentText = formatEnhancedPaymentClosedComment(closedSurveyData, scheduleData);
+
+    const updated = updateLeadInStorage(lang, leadId, l => {
+        const base = normalizeLeadExtras(l);
+        const onboarding = scheduleData
+            ? { ...(base.paymentOnboarding || {}), ...scheduleData }
+            : base.paymentOnboarding || {};
+        return {
+            ...base,
+            status: 'tolov-yopildi',
+            paymentClosedSurvey: closedSurveyData,
+            paymentOnboarding: onboarding,
+            comments: [...base.comments, createLeadComment({
+                type: 'payment-closed',
+                text: commentText,
+                author
+            })]
+        };
+    });
+
+    if (!updated) { alert('Lid topilmadi'); return; }
+
+    const leadAfter = getLeadById(lang, leadId);
+    if (leadAfter && scheduleData?.teacherId) {
+        promoteStudentFromClosed(lang, leadAfter, scheduleData);
+    } else if (leadAfter?.paymentOnboarding?.becomeStudent === 'yes') {
+        promoteStudentFromOnboarding(lang, leadAfter.paymentOnboarding, leadAfter);
+    }
+
+    renderLeads();
+    if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
+}
+
+function promoteStudentFromClosed(lang, lead, scheduleData) {
+    if (!scheduleData?.teacherId || scheduleData.lessonDayOfWeek == null || !scheduleData.lessonTime) return;
+    const students = getItem(STORAGE_KEYS.students, []);
+    const existing = students.find(s => s.name === lead.name && s.teacherId === scheduleData.teacherId);
+    const ps = lead.paymentSurvey;
+    const duration = ps?.tariff ? parseInt(ps.tariff, 10) : 15;
+    if (existing) {
+        updateStudent(existing.id, {
+            lessonDayOfWeek: scheduleData.lessonDayOfWeek,
+            lessonTime: scheduleData.lessonTime,
+            lessonDuration: duration,
+            source: 'lead-closed'
+        });
+        return existing.id;
+    }
+    const id = 's' + Date.now();
+    students.push({
+        id,
+        name: lead.name,
+        phone: lead.phone || '',
+        group: '',
+        subject: lang === 'russian' ? 'russian' : 'english',
+        teacherId: scheduleData.teacherId,
+        assistantTeacherId: null,
+        lessonDayOfWeek: scheduleData.lessonDayOfWeek,
+        lessonTime: scheduleData.lessonTime,
+        lessonDuration: duration,
+        source: 'lead-closed'
+    });
+    setItem(STORAGE_KEYS.students, students);
+    return id;
+}
+
+function formatEnhancedPaymentClosedComment(closedSurvey, scheduleData) {
+    const lines = [`• Yopilgan sana: ${closedSurvey.closedDateLabel || ''}`];
+    if (closedSurvey.debtCleared !== undefined) {
+        lines.push(`• Qarz yopilganmi: ${closedSurvey.debtClearedLabel}`);
+        if (closedSurvey.debtCleared === 'yes') {
+            lines.push(`• Yopilish usuli: ${closedSurvey.debtClearMethodLabel || ''}`);
+            if (closedSurvey.debtClearPartnerLabel) {
+                lines.push(`• Nasiya hamkori: ${closedSurvey.debtClearPartnerLabel}`);
+                lines.push(`• Yopilgan sana: ${closedSurvey.debtClearDateLabel || ''}`);
+            }
+        }
+    }
+    if (closedSurvey.debtorPaid !== undefined) {
+        lines.push(`• To'lov amalga oshirilganmi: ${closedSurvey.debtorPaidLabel}`);
+        if (closedSurvey.debtorPaidDateLabel) lines.push(`• To'lov sanasi: ${closedSurvey.debtorPaidDateLabel}`);
+    }
+    if (closedSurvey.installmentReceived !== undefined) {
+        lines.push(`• Nasiya to'lovi tushganmi: ${closedSurvey.installmentReceivedLabel}`);
+        if (closedSurvey.installmentReceivedDateLabel) lines.push(`• Tushgan sana: ${closedSurvey.installmentReceivedDateLabel}`);
+    }
+    if (scheduleData?.teacherName) {
+        lines.push(`• Ustoz: ${scheduleData.teacherName}`);
+        lines.push(`• Dars vaqti: ${scheduleData.lessonScheduleLabel || ''}`);
+    }
+    return ["To'lov yopildi — so'rovnoma:", ...lines].join('\n');
 }
 
 const LEAD_COLUMNS = [
