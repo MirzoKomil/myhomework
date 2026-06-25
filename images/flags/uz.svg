@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20">
+  <!-- Ko'k chiziq -->
+  <rect width="30" height="6.67" fill="#1EB5E5"/>
+  <!-- Oq chiziq -->
+  <rect y="6.67" width="30" height="6.67" fill="#FFFFFF"/>
+  <!-- Yashil chiziq -->
+  <rect y="13.33" width="30" height="6.67" fill="#3BB64E"/>
+  <!-- Ko'k va oq o'rtasidagi ingichka qizil chiziqlar -->
+  <rect y="6.27" width="30" height="0.4" fill="#E8112D"/>
+  <rect y="13.33" width="30" height="0.4" fill="#E8112D"/>
+  <!-- Yarim oy -->
+  <circle cx="6.5" cy="3.33" r="2.3" fill="#FFFFFF"/>
+  <circle cx="7.3" cy="3.33" r="1.85" fill="#1EB5E5"/>
+  <!-- Yulduzlar (12 ta kichik) -->
+  <g fill="#FFFFFF" font-size="1.4" text-anchor="middle">
+    <text x="10.2" y="2.1">★</text>
+    <text x="11.8" y="2.1">★</text>
+    <text x="13.4" y="2.1">★</text>
+    <text x="10.2" y="3.8">★</text>
+    <text x="11.8" y="3.8">★</text>
+    <text x="13.4" y="3.8">★</text>
+    <text x="10.2" y="5.5">★</text>
+    <text x="11.8" y="5.5">★</text>
+    <text x="13.4" y="5.5">★</text>
+    <text x="10.2" y="0.4">★</text>
+    <text x="11.8" y="0.4">★</text>
+    <text x="13.4" y="0.4">★</text>
+  </g>
+</svg>

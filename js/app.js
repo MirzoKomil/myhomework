@@ -117,8 +117,9 @@ function applyRoleBasedAccess(user) {
     const allowed = ROLE_TABS[role] ?? ROLE_TABS.employee;
     const allowedSet = new Set(allowed);
 
-    // Barcha elementlarni yashir
+    // Barcha elementlarni yashir (Sozlamalar guruhi bundan mustasno)
     sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
+        if (el.id === 'settingsLangGroup' || el.closest('#settingsLangGroup')) return;
         el.style.display = 'none';
     });
 
@@ -129,6 +130,7 @@ function applyRoleBasedAccess(user) {
 
     // Ruxsat etilgan .menu-sub-item va ularning guruhlarini ko'rsat
     sidebar.querySelectorAll('.menu-sub-item').forEach(el => {
+        if (el.classList.contains('lang-sidebar-btn')) return; // Sozlamalar har doim ko'rinadi
         if (!allowedSet.has(el.dataset.tab)) return;
         el.style.display = '';
         const group = el.closest('.menu-group');
@@ -290,9 +292,11 @@ function initSidebarMenu() {
     });
 
     document.querySelectorAll('.menu-item, .menu-sub-item').forEach(item => {
+        if (item.classList.contains('lang-sidebar-btn')) return;
         item.addEventListener('click', e => {
             e.preventDefault();
             const tab = item.dataset.tab;
+            if (!tab) return;
             switchTab(tab, {
                 subject: item.dataset.subject || null,
                 placeholder: item.dataset.placeholder || null,
@@ -374,6 +378,7 @@ function initMobileSidebar() {
     });
 
     document.querySelectorAll('.menu-item, .menu-sub-item').forEach(item => {
+        if (item.classList.contains('lang-sidebar-btn')) return;
         item.addEventListener('click', () => {
             if (mq.matches) closeSidebar();
         });
