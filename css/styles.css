@@ -2127,6 +2127,9 @@ body {
     width: 100%;
     max-width: 480px;
     box-shadow: 0 24px 48px rgba(26, 29, 46, 0.2);
+    max-height: calc(100dvh - 48px);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal--wide {
@@ -2135,6 +2138,10 @@ body {
 
 .modal-body {
     padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-header {
@@ -2143,6 +2150,7 @@ body {
     align-items: center;
     padding: 22px 24px;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -2169,6 +2177,7 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 /* Mobile sidebar controls — desktopda yashirin */
@@ -2457,19 +2466,10 @@ body {
         width: calc(100vw - 24px);
         margin: 12px;
         max-height: calc(100dvh - 24px);
-        display: flex;
-        flex-direction: column;
     }
 
     .modal--wide {
         max-width: calc(100vw - 24px);
-    }
-
-    .modal-body {
-        overflow-y: auto;
-        flex: 1;
-        min-height: 0;
-        -webkit-overflow-scrolling: touch;
     }
 
     .modal-footer {
