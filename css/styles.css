@@ -959,6 +959,57 @@ body {
 
 .page-title-bar {
     margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.page-title-bar > div { flex: 1; min-width: 0; }
+
+.hr-lang-filter {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.hr-lang-filter .subject-tab {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px;
+    font-size: 13px;
+}
+
+.emp-lang-sub {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.emp-lang-sub label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 7px 14px;
+    transition: border-color .15s, background .15s;
+}
+
+.emp-lang-sub input[type="radio"] { display: none; }
+
+.emp-lang-sub label:has(input:checked) {
+    border-color: var(--primary);
+    background: var(--purple-light);
+    color: var(--primary);
 }
 
 .page-title-bar h1 {

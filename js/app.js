@@ -6468,6 +6468,7 @@ document.addEventListener('click', () => {
 // =========== HR EMPLOYEES ===========
 const HR_EMPLOYEES_KEY = 'mh_hr_employees';
 let _hrRoleFilter = 'all';
+let _hrLangFilter = 'all'; // 'all' | 'ingliz' | 'rus'
 
 const HR_ROLE_MAP = {
     'rop': 'ROP',
@@ -6477,6 +6478,48 @@ const HR_ROLE_MAP = {
     'rus-oqituvchi': "Rus tili o'qituvchi",
     'yordamchi': "Yordamchi o'qituvchi"
 };
+
+// Modal dropdown uchun (ingliz/rus — separate sub-field orqali belgilanadi)
+const HR_ROLE_MAP_MODAL = {
+    'rop': 'ROP',
+    'sotuv-menejeri': 'Sotuv menejeri',
+    'oqituvchi': "O'qituvchi",
+    'yordamchi': "Yordamchi o'qituvchi"
+};
+
+function teacherLangHtml(selected = '') {
+    return `<div class="form-group" id="empTeacherLangWrap" style="display:none">
+        <label>Til yo'nalishi</label>
+        <div class="emp-lang-sub">
+            <label>
+                <input type="radio" name="empTeacherLang" value="ingliz" ${selected === 'ingliz' ? 'checked' : ''}>
+                <img src="images/flags/gb.svg" alt="" class="subject-flag" style="margin-right:4px"> Ingliz tili
+            </label>
+            <label>
+                <input type="radio" name="empTeacherLang" value="rus" ${selected === 'rus' ? 'checked' : ''}>
+                <img src="images/flags/ru.svg" alt="" class="subject-flag" style="margin-right:4px"> Rus tili
+            </label>
+        </div>
+    </div>`;
+}
+
+function bindTeacherLangToggle(roleSelectId) {
+    const roleEl = document.getElementById(roleSelectId);
+    const wrap = document.getElementById('empTeacherLangWrap');
+    if (!roleEl || !wrap) return;
+    const toggle = () => {
+        wrap.style.display = roleEl.value === 'oqituvchi' ? '' : 'none';
+    };
+    roleEl.addEventListener('change', toggle);
+    toggle();
+}
+
+function resolveTeacherRole(baseRole) {
+    if (baseRole !== 'oqituvchi') return baseRole;
+    const checked = document.querySelector('input[name="empTeacherLang"]:checked');
+    if (!checked) return 'oqituvchi';
+    return checked.value === 'ingliz' ? 'ingliz-oqituvchi' : 'rus-oqituvchi';
+}
 
 const HR_DEPARTMENTS = ['Sotuv', 'Akademik', 'Marketing', 'HR', 'IT'];
 
@@ -6596,10 +6639,22 @@ function renderHrEmployeeCard(emp) {
     </div>`;
 }
 
+const TEACHER_ROLES = ['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi'];
+
+function getHrFiltered(employees) {
+    // Language filter (faqat o'qituvchilar uchun)
+    if (_hrLangFilter === 'ingliz') return employees.filter(e => e.role === 'ingliz-oqituvchi');
+    if (_hrLangFilter === 'rus')    return employees.filter(e => e.role === 'rus-oqituvchi');
+    // Role filter
+    if (_hrRoleFilter === 'all')        return employees;
+    if (_hrRoleFilter === 'oqituvchi')  return employees.filter(e => TEACHER_ROLES.includes(e.role));
+    return employees.filter(e => e.role === _hrRoleFilter);
+}
+
 function renderHrEmployees() {
     const employees = seedHrEmployees();
     migrateHrCredentials();
-    const filtered = _hrRoleFilter === 'all' ? employees : employees.filter(e => e.role === _hrRoleFilter);
+    const filtered = getHrFiltered(employees);
     const grid = document.getElementById('hrEmployeesGrid');
     if (!grid) return;
 
@@ -6687,8 +6742,13 @@ function openEditEmployeeModal(empId) {
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
 
-    const roleOptions = Object.entries(HR_ROLE_MAP).map(([k, v]) =>
-        `<option value="${k}"${emp.role === k ? ' selected' : ''}>${escapeHtml(v)}</option>`
+    // ingliz/rus-oqituvchi → display as 'oqituvchi' in dropdown
+    const isTeacherLang = emp.role === 'ingliz-oqituvchi' || emp.role === 'rus-oqituvchi';
+    const displayRole = isTeacherLang ? 'oqituvchi' : emp.role;
+    const preselectedLang = emp.role === 'ingliz-oqituvchi' ? 'ingliz' : emp.role === 'rus-oqituvchi' ? 'rus' : '';
+
+    const roleOptions = Object.entries(HR_ROLE_MAP_MODAL).map(([k, v]) =>
+        `<option value="${k}"${displayRole === k ? ' selected' : ''}>${escapeHtml(v)}</option>`
     ).join('');
     const deptOptions = HR_DEPARTMENTS.map(d =>
         `<option value="${d}"${emp.department === d ? ' selected' : ''}>${escapeHtml(d)}</option>`
@@ -6727,6 +6787,7 @@ function openEditEmployeeModal(empId) {
             <label>Lavozim (rol) <span style="color:var(--danger)">*</span></label>
             <select id="editEmpRole" class="form-control">${roleOptions}</select>
         </div>
+        ${teacherLangHtml(preselectedLang)}
         <div class="form-group">
             <label>Telefon raqam</label>
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
@@ -6767,6 +6828,9 @@ function openEditEmployeeModal(empId) {
         inp.type = inp.type === 'password' ? 'text' : 'password';
     });
 
+    // Til sub-field toggle
+    bindTeacherLangToggle('editEmpRole');
+
     document.getElementById('cancelEditEmployee').onclick = () => closeModal();
 
     document.getElementById('saveEditEmployee').onclick = () => {
@@ -6786,7 +6850,7 @@ function openEditEmployeeModal(empId) {
             gender: document.getElementById('editEmpGender').value,
             birthDate: document.getElementById('editEmpBirthDate').value,
             startDate: document.getElementById('editEmpStartDate').value,
-            role: document.getElementById('editEmpRole').value,
+            role: resolveTeacherRole(document.getElementById('editEmpRole').value),
             phone: document.getElementById('editEmpPhone').value.trim(),
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
@@ -6805,7 +6869,7 @@ function openEditEmployeeModal(empId) {
 }
 
 function openAddEmployeeModal() {
-    const roleOptions = Object.entries(HR_ROLE_MAP).map(([k, v]) =>
+    const roleOptions = Object.entries(HR_ROLE_MAP_MODAL).map(([k, v]) =>
         `<option value="${k}">${escapeHtml(v)}</option>`
     ).join('');
     const deptOptions = HR_DEPARTMENTS.map(d =>
@@ -6845,6 +6909,7 @@ function openAddEmployeeModal() {
             <label>Lavozim (rol) <span style="color:var(--danger)">*</span></label>
             <select id="empRole" class="form-control">${roleOptions}</select>
         </div>
+        ${teacherLangHtml()}
         <div class="form-group">
             <label>Telefon raqam <span style="color:var(--danger)">*</span></label>
             <input type="tel" id="empPhone" class="form-control" placeholder="+998 90 123 45 67">
@@ -6897,6 +6962,9 @@ function openAddEmployeeModal() {
         inp.type = inp.type === 'password' ? 'text' : 'password';
     });
 
+    // Til sub-field toggle
+    bindTeacherLangToggle('empRole');
+
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
 
     document.getElementById('saveAddEmployee').onclick = async () => {
@@ -6905,7 +6973,7 @@ function openAddEmployeeModal() {
         const gender = document.getElementById('empGender').value;
         const birthDate = document.getElementById('empBirthDate').value;
         const startDate = document.getElementById('empStartDate').value;
-        const role = document.getElementById('empRole').value;
+        const role = resolveTeacherRole(document.getElementById('empRole').value);
         const phone = document.getElementById('empPhone').value.trim();
         const email = document.getElementById('empEmail').value.trim();
         const department = document.getElementById('empDepartment').value;
@@ -6955,16 +7023,47 @@ function openAddEmployeeModal() {
 
 // HR role filter tab binding
 function initHrEmployeeTabs() {
+    // Role filter
     const tabsContainer = document.getElementById('hrRoleTabs');
-    if (!tabsContainer) return;
-    tabsContainer.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-role]');
-        if (!btn) return;
-        _hrRoleFilter = btn.dataset.role;
-        tabsContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderHrEmployees();
-    });
+    if (tabsContainer) {
+        tabsContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-role]');
+            if (!btn) return;
+            _hrRoleFilter = btn.dataset.role;
+            // Lang filter ni reset qilmaymiz — u mustaqil
+            tabsContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderHrEmployees();
+        });
+    }
+
+    // Language filter (faqat o'qituvchilar uchun)
+    const langContainer = document.getElementById('hrLangFilter');
+    if (langContainer) {
+        langContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-hr-lang]');
+            if (!btn) return;
+            _hrLangFilter = btn.dataset.hrLang;
+            langContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Role filterda "O'qituvchi" ni active qilish (til filtri ishlayotganda)
+            const roleTabs = document.getElementById('hrRoleTabs');
+            if (roleTabs) {
+                if (_hrLangFilter !== 'all') {
+                    roleTabs.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+                    _hrRoleFilter = 'oqituvchi';
+                    const teacherTab = roleTabs.querySelector('[data-role="oqituvchi"]');
+                    if (teacherTab) teacherTab.classList.add('active');
+                } else {
+                    roleTabs.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+                    _hrRoleFilter = 'all';
+                    const allTab = roleTabs.querySelector('[data-role="all"]');
+                    if (allTab) allTab.classList.add('active');
+                }
+            }
+            renderHrEmployees();
+        });
+    }
 }
 
 document.addEventListener('click', (e) => {

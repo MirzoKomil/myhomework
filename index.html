@@ -787,8 +787,19 @@
                     <!-- HR Xodimlar -->
                     <section id="tab-hr-employees" class="tab-content">
                         <div class="page-title-bar">
-                            <h1>Xodimlar</h1>
-                            <p>HR bo'limidagi barcha ishchi xodimlar ruyxati</p>
+                            <div>
+                                <h1>Xodimlar</h1>
+                                <p>HR bo'limidagi barcha ishchi xodimlar ruyxati</p>
+                            </div>
+                            <div class="hr-lang-filter" id="hrLangFilter">
+                                <button type="button" class="subject-tab active" data-hr-lang="all">Barchasi</button>
+                                <button type="button" class="subject-tab" data-hr-lang="ingliz">
+                                    <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
+                                </button>
+                                <button type="button" class="subject-tab" data-hr-lang="rus">
+                                    <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
+                                </button>
+                            </div>
                         </div>
                         <div class="card bg-transparent" style="padding:0; box-shadow:none; background:transparent">
                             <div class="card-header hr-employees-header"
@@ -798,12 +809,6 @@
                                     <button type="button" class="subject-tab" data-role="rop">ROP</button>
                                     <button type="button" class="subject-tab" data-role="sotuv-menejeri">Sotuv menejeri</button>
                                     <button type="button" class="subject-tab" data-role="oqituvchi">O'qituvchi</button>
-                                    <button type="button" class="subject-tab" data-role="ingliz-oqituvchi">
-                                        <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
-                                    </button>
-                                    <button type="button" class="subject-tab" data-role="rus-oqituvchi">
-                                        <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
-                                    </button>
                                     <button type="button" class="subject-tab" data-role="yordamchi">Yordamchi o'qituvchi</button>
                                 </div>
                                 <button class="btn-primary-sm" id="btnOpenAddEmployee">+ Xodim qo'shish</button>
