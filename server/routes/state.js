@@ -4,16 +4,16 @@ const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authRequired, (req, res) => {
+router.get('/', authRequired, async (req, res) => {
     try {
-        res.json(getFullState());
+        res.json(await getFullState());
     } catch (err) {
         console.error('GET /api/state', err);
         res.status(500).json({ error: 'Ma\'lumotlarni yuklashda xatolik' });
     }
 });
 
-router.patch('/', authRequired, (req, res) => {
+router.patch('/', authRequired, async (req, res) => {
     try {
         const body = req.body || {};
         const allowed = [
@@ -21,14 +21,11 @@ router.patch('/', authRequired, (req, res) => {
             'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees'
         ];
         const partial = {};
-        allowed.forEach(key => {
-            if (body[key] !== undefined) partial[key] = body[key];
-        });
-        if (!Object.keys(partial).length) {
+        allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });
+        if (!Object.keys(partial).length)
             return res.status(400).json({ error: 'Yangilash uchun ma\'lumot yuborilmadi' });
-        }
-        patchState(partial);
-        res.json({ ok: true, state: getFullState() });
+        await patchState(partial);
+        res.json({ ok: true, state: await getFullState() });
     } catch (err) {
         console.error('PATCH /api/state', err);
         res.status(500).json({ error: 'Saqlashda xatolik' });

@@ -59,7 +59,14 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Server xatoligi' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Myhomework.uz server: port ${PORT}`);
-    console.log(`API health: /api/health`);
+const { init } = require('./db');
+
+init().then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Myhomework.uz server: port ${PORT}`);
+        console.log(`API health: /api/health`);
+    });
+}).catch(err => {
+    console.error('Server ishga tushmadi:', err.message);
+    process.exit(1);
 });
