@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, '..');
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '6mb' }));
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'Myhomework.uz API', version: '1.0.0' });

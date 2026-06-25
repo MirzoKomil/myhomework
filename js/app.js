@@ -793,25 +793,51 @@ async function saveProfileField(field) {
     }
 }
 
-function handleProfileAvatarUpload(e) {
+function compressAvatarImage(file, maxSize = 400, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+        if (!file.type.startsWith('image/')) return reject(new Error('Faqat rasm fayllari qabul qilinadi'));
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Faylni o\'qishda xatolik'));
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Rasm formatini o\'qib bo\'lmadi'));
+            img.onload = () => {
+                const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+                const w = Math.round(img.width * ratio);
+                const h = Math.round(img.height * ratio);
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function handleProfileAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-        alert('Rasm hajmi 2 MB dan oshmasligi kerak');
+    if (file.size > 10 * 1024 * 1024) {
+        showNotification('Xatolik', 'Rasm hajmi 10 MB dan oshmasligi kerak', 'error');
         return;
     }
-    const reader = new FileReader();
-    reader.onload = async () => {
-        try {
-            _profileUser = await apiUpdateProfile({ avatar: reader.result });
-            setCurrentUser(_profileUser);
-            syncHeaderAvatar(_profileUser);
-            renderProfileBody();
-        } catch (err) {
-            alert(err.message);
-        }
-    };
-    reader.readAsDataURL(file);
+    const preview = document.getElementById('profileAvatarPreview');
+    if (preview) preview.innerHTML = '<span style="font-size:12px;color:#888">Yuklanmoqda...</span>';
+    try {
+        const dataUrl = await compressAvatarImage(file);
+        _profileUser = await apiUpdateProfile({ avatar: dataUrl });
+        setCurrentUser(_profileUser);
+        syncHeaderAvatar(_profileUser);
+        renderProfileBody();
+        showNotification('Muvaffaqiyatli', 'Profil rasmi yangilandi', 'success');
+    } catch (err) {
+        showNotification('Xatolik', err.message || 'Rasm yuklanmadi', 'error');
+        renderProfileBody();
+    }
+    e.target.value = '';
 }
 
 async function handleProfilePasswordChange() {
