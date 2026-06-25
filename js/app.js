@@ -6477,6 +6477,7 @@ function getBrNextColumnId(currentStatus) {
 
 function renderBookRoadmapCard(item) {
     const _cu = getCurrentUser();
+    const _isAdminOrRop = _cu && FULL_ACCESS_ROLES.has(_cu.role);
     const _isSalesManager = _cu?.role === 'sales_manager';
 
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
@@ -6484,14 +6485,12 @@ function renderBookRoadmapCard(item) {
     const commentCount = item.comments?.length || 0;
     const hasManagerPhoto = Boolean(item.managerPhoto);
 
-    const currentStatus = normalizeBrStatus(item.status);
-    const nextColId = getBrNextColumnId(currentStatus);
-    const nextCol = nextColId ? BOOK_ROADMAP_COLUMNS.find(c => c.id === nextColId) : null;
+    const checkboxHtml = _isAdminOrRop
+        ? `<input type="checkbox" class="lead-bulk-checkbox" data-br-bulk-id="${escapeHtml(item.id)}" aria-label="Belgilash">`
+        : '';
 
-    const nextBtn = nextCol
-        ? `<button type="button" class="lead-card-notify" data-br-next="${item.id}" data-br-next-status="${nextColId}" title="Keyingi: ${escapeHtml(nextCol.label)}" aria-label="Keyingi bosqich">
-               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-           </button>`
+    const studentIdBadge = item.studentId
+        ? `<span class="lead-card-serial">#${escapeHtml(item.studentId)}</span>`
         : '';
 
     const moveItems = BOOK_ROADMAP_COLUMNS.map(col =>
@@ -6502,21 +6501,15 @@ function renderBookRoadmapCard(item) {
         ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-br-delete="${item.id}">Yozuvni o'chirish</button>`
         : '';
 
-    const langBadge = item.lang
-        ? `<span class="lead-badge" style="background:#F0F9FF;color:#0369A1;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:4px">${item.lang === 'russian' ? 'Rus' : 'Ingliz'}</span>`
-        : '';
-
-    const studentIdBadge = item.studentId
-        ? `<span class="lead-badge" style="background:#F0FDF4;color:#15803D;font-size:10px;padding:1px 6px;border-radius:4px">ID: ${escapeHtml(item.studentId)}</span>`
-        : '';
+    const phoneSvg = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>`;
 
     return `<article class="lead-card" draggable="true" data-br-id="${escapeHtml(item.id)}">
         <div class="lead-card-top">
+            ${checkboxHtml}
             <div class="lead-card-title-wrap">
                 <h4 class="lead-card-name">${escapeHtml(item.name)}</h4>
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(item.date || '')}</span>
-                    ${langBadge}
                     ${studentIdBadge}
                 </div>
             </div>
@@ -6524,9 +6517,8 @@ function renderBookRoadmapCard(item) {
                 <button type="button" class="lead-card-notify" data-br-notify="${item.id}" title="Bildirishnomalar" aria-label="Bildirishnomalar">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                 </button>
-                ${nextBtn}
                 <div class="lead-card-menu-wrap">
-                    <button type="button" class="lead-card-menu-btn" data-br-menu-toggle="${item.id}" title="Boshqa amallar" aria-haspopup="true">
+                    <button type="button" class="lead-card-menu-btn" data-br-menu-toggle="${item.id}" title="Boshqa amallar" aria-label="Boshqa amallar" aria-haspopup="true">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
                     </button>
                     <div class="lead-card-menu-dropdown" hidden>
@@ -6538,7 +6530,6 @@ function renderBookRoadmapCard(item) {
                             </button>
                             <div class="lead-card-menu-submenu" hidden>${moveItems}</div>
                         </div>
-                        <button type="button" class="lead-card-menu-item" data-br-comment="${item.id}">Izoh qo'shish</button>
                         ${deleteItem}
                     </div>
                 </div>
@@ -6546,11 +6537,11 @@ function renderBookRoadmapCard(item) {
         </div>
         <div class="lead-card-contacts">
             <div class="lead-card-contact">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                ${phoneSvg}
                 <span>${escapeHtml(item.phone || '—')}</span>
             </div>
             <div class="lead-card-contact">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${phoneSvg}
                 <span>${escapeHtml(item.region || '—')}</span>
             </div>
         </div>
