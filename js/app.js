@@ -6712,7 +6712,11 @@ function renderHrEmployeeCard(emp) {
                 </button>
             </div>
         </div>
-        <div class="employee-avatar-placeholder">${escapeHtml(initials)}</div>
+        <div class="employee-avatar-placeholder" ${emp.avatar ? `data-emp-avatar="${escapeHtml(emp.id)}"` : ''}>
+            ${emp.avatar
+                ? `<img class="employee-avatar-img" alt="${escapeHtml(emp.name)}">`
+                : `<span>${escapeHtml(initials)}</span>`}
+        </div>
         <div class="employee-name">${escapeHtml(emp.name)}</div>
         <div class="employee-role">${escapeHtml(roleLabel)}</div>
         <span class="employee-status${statusClass}">${statusLabel}</span>
@@ -6766,6 +6770,11 @@ function renderHrEmployees() {
         </div>`;
     } else {
         grid.innerHTML = filtered.map(e => renderHrEmployeeCard(e)).join('');
+        filtered.forEach(e => {
+            if (!e.avatar) return;
+            const img = grid.querySelector(`[data-emp-avatar="${CSS.escape(e.id)}"] img.employee-avatar-img`);
+            if (img) img.src = e.avatar;
+        });
     }
 
     // 3-dot toggle

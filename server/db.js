@@ -385,9 +385,19 @@ async function saveBookRoadmap(client, items) {
 }
 
 async function getHrEmployeesData() {
-    const rows = await q('SELECT * FROM hr_employees ORDER BY name');
+    const rows = await q(`
+        SELECT he.*,
+               COALESCE(
+                   (SELECT u.avatar FROM users u
+                    WHERE LOWER(TRIM(u.email)) = LOWER(TRIM(he.login))
+                    LIMIT 1),
+               '') AS avatar
+        FROM hr_employees he
+        ORDER BY he.name
+    `);
     return rows.map(r => ({
         id: r.id, name: r.name,
+        avatar: r.avatar || '',
         firstName: r.first_name || '', lastName: r.last_name || '',
         role: r.role, login: r.login || '',
         phone: r.phone || '', email: r.email || '',
