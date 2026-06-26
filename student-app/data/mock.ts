@@ -7,12 +7,26 @@ export type Course = {
   lessonsDone: number;
 };
 
+export type LessonType = 'grammar' | 'speaking' | 'bonus';
+
+export type MilestoneBadge = {
+  icon: 'gift-outline' | 'trophy-outline' | 'rocket-outline';
+  label: string;
+  sub: string;
+  bg: string;
+  iconColor: string;
+};
+
 export type LessonNode = {
   id: string;
   title: string;
+  subtitle: string;
+  type: LessonType;
   progress: number;
   locked: boolean;
   side: 'left' | 'right';
+  stars: number;
+  milestone?: MilestoneBadge;
 };
 
 export type LessonActivity = {
@@ -24,34 +38,191 @@ export type LessonActivity = {
   locked: boolean;
 };
 
+const grammarTopics: [string, string][] = [
+  ['First Words', 'Asosiy so\'zlar'],
+  ['Numbers & Colors', 'Sonlar va ranglar'],
+  ['Family & Home', 'Oila va uy'],
+  ['Present Simple', 'Hozirgi oddiy zamon'],
+  ['Adjectives', 'Sifatlar'],
+  ['Articles', 'Artikllar'],
+  ['Past Simple', 'O\'tgan oddiy zamon'],
+  ['Prepositions', 'Predloglar va olmoshlar'],
+  ['Plural Forms', 'Ko\'plik shakli'],
+  ['Future Simple', 'Kelasi oddiy zamon'],
+  ['Comparatives', 'Qiyosiy daraja'],
+  ['Superlatives', 'Orttirma daraja'],
+  ['Present Continuous', 'Hozirgi davom zamoni'],
+  ['Modal Verbs: Can', 'Modal fe\'llar: Can/Could'],
+  ['Conditionals I', '1-tur shartli gaplar'],
+  ['Past Continuous', 'O\'tgan davom zamoni'],
+  ['Phrasal Verbs I', 'Frazeologik fe\'llar I'],
+  ['Question Forms', 'So\'roq gaplar'],
+  ['Present Perfect', 'Hozirgi-o\'tgan zamon'],
+  ['Relative Clauses', 'Aniqlovchi ergash gaplar'],
+  ['Passive Voice', 'Passiv qurilma'],
+  ['Past Perfect', 'O\'tgan-o\'tgan zamon'],
+  ['Reported Speech', 'Bilvosita nutq'],
+  ['Gerunds & Infinitives', 'Gerund va infinitiv'],
+  ['Modal Verbs: Should', 'Modal fe\'llar: Should/Must'],
+  ['Connectors & Linkers', 'Bog\'lovchi so\'zlar'],
+  ['Emphasis & Cleft', 'Urg\'u va ajratma gaplar'],
+  ['Conditionals II', '2-tur shartli gaplar'],
+  ['Wishes & Regrets', 'Orzu va pushaymonlik'],
+  ['Causative Verbs', 'Sabab fe\'llari'],
+  ['Mixed Conditionals', 'Aralash shartli gaplar'],
+  ['Inversion', 'Inversiya'],
+  ['Phrasal Verbs II', 'Frazeologik fe\'llar II'],
+  ['Academic Writing', 'Akademik yozuv'],
+  ['Complex Noun Phrases', 'Murakkab ot birikmalari'],
+  ['Advanced Vocabulary', 'Yuqori daraja lug\'at'],
+  ['Revision Grammar I', 'Grammatika takrori I'],
+  ['Revision Grammar II', 'Grammatika takrori II'],
+  ['Final Grammar Review', 'Yakuniy grammatika'],
+];
+
+const speakingTopics: [string, string][] = [
+  ['Introduce Yourself', 'O\'zingizni tanishtiring'],
+  ['Coffee Talk', 'Kundalik suhbatlar'],
+  ['Daily Routine', 'Kun tartibi'],
+  ['Food & Drinks', 'Taom va ichimliklar'],
+  ['Shopping Talk', 'Xarid qilish'],
+  ['Asking Directions', 'Yo\'l so\'rash'],
+  ['Transport Talk', 'Transport haqida'],
+  ['Weather & Seasons', 'Ob-havo va fasllar'],
+  ['At the Doctor', 'Shifokorga borish'],
+  ['Job Interview', 'Ish suhbati'],
+  ['At the Office', 'Ofisda muloqot'],
+  ['School & Study', 'Ta\'lim va o\'qish'],
+  ['Emotions & Feelings', 'His-tuyg\'ular'],
+  ['Sharing Opinions', 'Fikr bildirish'],
+  ['Handling Disagreements', 'Bahslashish usullari'],
+  ['At the Airport', 'Aeroportda'],
+  ['Hotel Booking', 'Mehmonxona'],
+  ['Travel Experiences', 'Sayohat tajribalari'],
+  ['Hobbies & Interests', 'Qiziqishlar va hobbies'],
+  ['Music & Arts', 'Musiqa va san\'at'],
+  ['Sports & Fitness', 'Sport va jismoniy tarbiya'],
+  ['Social Media Life', 'Ijtimoiy tarmoqlar'],
+  ['Tech Innovations', 'Texnologik yangiliklar'],
+  ['Online Services', 'Onlayn xizmatlar'],
+  ['Healthy Living', 'Sog\'lom turmush tarzi'],
+  ['Mental Wellness', 'Ruhiy salomatlik'],
+  ['Gym & Exercise', 'Sporzal va mashqlar'],
+  ['Environment Issues', 'Atrof-muhit muammolari'],
+  ['Animals & Wildlife', 'Hayvonlar va yovvoyi tabiat'],
+  ['Climate Change', 'Iqlim o\'zgarishi'],
+  ['Business Pitching', 'Biznes taqdimoti'],
+  ['Money & Finance', 'Pul va moliya'],
+  ['Negotiation Skills', 'Muzokaralar'],
+  ['Public Speaking', 'Ommaviy nutq'],
+  ['Academic Debates', 'Akademik munozara'],
+  ['Critical Thinking', 'Tanqidiy fikrlash'],
+  ['Fluency Builder', 'Nutq ravonligi'],
+  ['Final Presentation', 'Yakuniy taqdimot'],
+  ['Graduation Speech', 'Bitirish nutqi'],
+];
+
+const bonusTopics: [string, string][] = [
+  ['Weekly Quest 1', 'Haftalik musobaqa 1'],
+  ['Weekly Quest 2', 'Haftalik musobaqa 2'],
+  ['Weekly Quest 3', 'Haftalik musobaqa 3'],
+  ['Weekly Quest 4', 'Haftalik musobaqa 4'],
+  ['Weekly Quest 5', 'Haftalik musobaqa 5'],
+  ['Weekly Quest 6', 'Haftalik musobaqa 6'],
+  ['Weekly Quest 7', 'Haftalik musobaqa 7'],
+  ['Weekly Quest 8', 'Haftalik musobaqa 8'],
+  ['Weekly Quest 9', 'Haftalik musobaqa 9'],
+  ['Weekly Quest 10', 'Haftalik musobaqa 10'],
+  ['Weekly Quest 11', 'Haftalik musobaqa 11'],
+  ['Grand Challenge', 'Yakuniy grand musobaqa'],
+];
+
+const MILESTONES: Record<number, MilestoneBadge> = {
+  7: { icon: 'gift-outline', label: 'Reward', sub: '10 dars', bg: '#D1FAE5', iconColor: '#059669' },
+  21: { icon: 'trophy-outline', label: 'Challenge', sub: '30 dars', bg: '#EDE9FE', iconColor: '#7B61FF' },
+  35: { icon: 'rocket-outline', label: 'Boost', sub: '50 dars', bg: '#FEF3C7', iconColor: '#D97706' },
+};
+
+function generateRoadmapLessons(): LessonNode[] {
+  const lessons: LessonNode[] = [];
+  let gIdx = 0;
+  let sIdx = 0;
+  let bIdx = 0;
+
+  for (let i = 0; i < 90; i++) {
+    const weekPos = i % 7;
+    const lessonNum = i + 1;
+
+    let type: LessonType;
+    let title: string;
+    let subtitle: string;
+
+    if (weekPos === 6) {
+      type = 'bonus';
+      const t = bonusTopics[bIdx % bonusTopics.length];
+      bIdx++;
+      [title, subtitle] = t;
+    } else if (weekPos % 2 === 0) {
+      type = 'grammar';
+      const t = grammarTopics[gIdx % grammarTopics.length];
+      gIdx++;
+      [title, subtitle] = t;
+    } else {
+      type = 'speaking';
+      const t = speakingTopics[sIdx % speakingTopics.length];
+      sIdx++;
+      [title, subtitle] = t;
+    }
+
+    let progress = 0;
+    let locked = false;
+
+    if (lessonNum === 1) { progress = 67; }
+    else if (lessonNum === 2) { progress = 33; }
+    else if (lessonNum === 3) { progress = 0; }
+    else { locked = true; }
+
+    const stars = progress === 0 ? 0 : Math.min(5, Math.ceil(progress / 20));
+    const milestone = MILESTONES[lessonNum];
+
+    lessons.push({
+      id: String(lessonNum),
+      title,
+      subtitle,
+      type,
+      progress,
+      locked,
+      side: i % 2 === 0 ? 'left' : 'right',
+      stars,
+      milestone,
+    });
+  }
+
+  return lessons;
+}
+
 export const courses: Course[] = [
   {
     id: 'elementary-1',
     title: 'Elementary 1',
     level: 'A1',
     progress: 24,
-    lessonsTotal: 12,
-    lessonsDone: 3,
+    lessonsTotal: 90,
+    lessonsDone: 22,
   },
   {
     id: 'elementary-2',
     title: 'Elementary 2',
     level: 'A2',
     progress: 0,
-    lessonsTotal: 14,
+    lessonsTotal: 90,
     lessonsDone: 0,
   },
 ];
 
 export const roadmapLessons: Record<string, LessonNode[]> = {
-  'elementary-1': [
-    { id: '1', title: 'Dars 1', progress: 67, locked: false, side: 'left' },
-    { id: '2', title: 'Dars 2', progress: 33, locked: false, side: 'right' },
-    { id: '3', title: 'Dars 3', progress: 0, locked: false, side: 'left' },
-    { id: '4', title: 'Dars 4', progress: 0, locked: true, side: 'right' },
-    { id: '5', title: 'Dars 5', progress: 0, locked: true, side: 'left' },
-    { id: '6', title: 'Dars 6', progress: 0, locked: true, side: 'right' },
-  ],
+  'elementary-1': generateRoadmapLessons(),
+  'elementary-2': [],
 };
 
 export const lessonActivities: Record<string, LessonActivity[]> = {
