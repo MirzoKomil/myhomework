@@ -3125,6 +3125,72 @@ function getLeadColumnIndex(status) {
     return idx >= 0 ? idx : 0;
 }
 
+// ── Tashlab ketilgan ustunlar so'rovnomasi (cascade) ─────────────────────────
+// Qoidalar:
+//  - Faqat oldinga harakatda ishlaydi (fromIdx < toIdx)
+//  - boglanildi / malumot-berildi / qaror-jarayonida oraliqda qolsa — ularning
+//    so'rovnomalari ketma-ket ko'rsatiladi
+//  - qaror-jarayonida so'rovnomasi FAQAT shu ustun oraliqda qolganda chiqadi
+//    (ya'ni manzil ustuni qaror-jarayonidadan KEYIN bo'lsa); boshqa hollarda chiqmaydi
+// Foydalanish: startMvCascade → continueMvCascade (har bir so'rovnoma tasdiqlanganida)
+//              → dispatchLeadTargetFlow (hammasi tugagach manzilga yo'naltiradi)
+
+const SURVEY_CASCADE_TARGETS = new Set([
+    'sinov-darsida', 'tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar'
+]);
+
+let _mvCascade = null; // { lang, leadId, fromStatus, finalStatus }
+
+function getSkippedSurveySteps(fromStatus, toStatus, lead) {
+    const fromIdx = getLeadColumnIndex(fromStatus);
+    const toIdx   = getLeadColumnIndex(toStatus);
+    if (toIdx <= fromIdx) return [];
+    const steps = [];
+    for (const col of LEAD_COLUMNS) {
+        const idx = getLeadColumnIndex(col.id);
+        if (idx <= fromIdx || idx >= toIdx) continue;
+        if (col.id === 'boglanildi'      && !lead?.connectedSurvey)    steps.push('connected');
+        else if (col.id === 'malumot-berildi'  && !lead?.infoProvidedSurvey) steps.push('info');
+        else if (col.id === 'qaror-jarayonida' && !lead?.decisionSurvey)     steps.push('decision');
+    }
+    return steps;
+}
+
+function startMvCascade(lang, leadId, fromStatus, finalStatus) {
+    _mvCascade = { lang, leadId, fromStatus, finalStatus };
+    continueMvCascade();
+}
+
+function continueMvCascade() {
+    if (!_mvCascade) return;
+    const { lang, leadId, fromStatus, finalStatus } = _mvCascade;
+    const lead = getLeadById(lang, leadId);
+    if (!lead) { _mvCascade = null; return; }
+
+    const steps = getSkippedSurveySteps(fromStatus, finalStatus, lead);
+    if (!steps.length) {
+        _mvCascade = null;
+        dispatchLeadTargetFlow(lang, leadId, fromStatus, finalStatus);
+        return;
+    }
+    const next = steps[0];
+    if (next === 'connected') {
+        openConnectedSurveyModal(lang, leadId, finalStatus, { chainTo: '__cascade__' });
+    } else if (next === 'info') {
+        openInfoProvidedModal(lang, leadId, { chainTo: '__cascade__' });
+    } else if (next === 'decision') {
+        openDecisionProcessModal(lang, leadId, { chainTo: '__cascade__' });
+    }
+}
+
+function dispatchLeadTargetFlow(lang, leadId, fromStatus, toStatus) {
+    if (toStatus === 'sinov-darsida') { openTrialLessonFlow(lang, leadId, fromStatus); return; }
+    if (toStatus === 'tolov-yopildi') { openPaymentClosedModal(lang, leadId); return; }
+    if (needsFailedSalePrompt(fromStatus, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus); return; }
+    if (needsSifatsizLidPrompt(fromStatus, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
+    moveLeadToStatus(lang, leadId, toStatus);
+}
+
 function getPendingSurveyStepsBeforePayment(fromStatus) {
     const fromIdx = getLeadColumnIndex(fromStatus);
     const paymentIdx = getLeadColumnIndex('tolov-jarayonida');
@@ -3664,6 +3730,7 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
         }
 
         closeModal();
+        if (chainTo === '__cascade__') { continueMvCascade(); return; }
         if (chainTo === 'malumot-berildi') {
             openInfoProvidedModal(lang, leadId);
             return;
@@ -3802,6 +3869,7 @@ function openInfoProvidedModal(lang, leadId, options = {}) {
         }
 
         closeModal();
+        if (chainTo === '__cascade__') { continueMvCascade(); return; }
         if (chainTo === 'qaror-jarayonida') {
             openDecisionProcessModal(lang, leadId);
             return;
@@ -3891,6 +3959,7 @@ function openDecisionProcessModal(lang, leadId, options = {}) {
         }
 
         closeModal();
+        if (chainTo === '__cascade__') { continueMvCascade(); return; }
         if (chainTo === 'tolov-jarayonida') {
             openPaymentTeacherScheduleModal(lang, leadId);
             return;
@@ -6157,6 +6226,10 @@ function renderLeads() {
             if (from === toStatus) return;
 
             if (needsContactFailPrompt(from, toStatus)) { openContactFailModal(lang, leadId, toStatus); return; }
+            if (SURVEY_CASCADE_TARGETS.has(toStatus)) {
+                const _sk = getSkippedSurveySteps(from, toStatus, lead);
+                if (_sk.length) { startMvCascade(lang, leadId, from, toStatus); return; }
+            }
             if (needsTrialLessonPrompt(from, toStatus)) { openTrialLessonFlow(lang, leadId, from); return; }
             if (needsConnectedSurveyPrompt(toStatus)) { openConnectedSurveyModal(lang, leadId, toStatus); return; }
             if (needsInfoProvidedPrompt(from, toStatus)) { openMalumotBerildiFlow(lang, leadId, from); return; }
@@ -6229,6 +6302,12 @@ function initLeadDragDrop(board) {
             if (needsContactFailPrompt(fromStatus, toStatus)) {
                 openContactFailModal(payload.lang, payload.id, toStatus);
                 return;
+            }
+
+            if (SURVEY_CASCADE_TARGETS.has(toStatus)) {
+                const _ddLead = getLeadById(payload.lang, payload.id);
+                const _sk = getSkippedSurveySteps(fromStatus, toStatus, _ddLead);
+                if (_sk.length) { startMvCascade(payload.lang, payload.id, fromStatus, toStatus); return; }
             }
 
             if (needsTrialLessonPrompt(fromStatus, toStatus)) {
