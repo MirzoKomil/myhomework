@@ -192,6 +192,18 @@ async function bootApp() {
         }
     }
 
+    // Sotuv menejeri uchun bog'liq manager ID ni aniqlash
+    if (currentUser.role === 'sales_manager' && !currentUser.linkedManagerId) {
+        const managers = getItem(STORAGE_KEYS.salesManagers, []);
+        const linked = managers.find(m =>
+            m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+        );
+        if (linked) {
+            currentUser.linkedManagerId = linked.id;
+            setCurrentUser(currentUser);
+        }
+    }
+
     setUiLang(getUiLang());
     initUserUI(currentUser);
     renderDashboard();
@@ -5488,6 +5500,15 @@ function updateManagerFilterDisplay() {
 function renderLeadsManagerFilter() {
     const select = document.getElementById('leadsManagerFilter');
     if (!select) return;
+    const user = getCurrentUser();
+    if (user && user.role === 'sales_manager') {
+        const filterBox = select.closest('.leads-filter-box');
+        if (filterBox) filterBox.style.display = 'none';
+        if (_leadsManagerFilter === 'all') {
+            _leadsManagerFilter = user.linkedManagerId || 'unassigned';
+        }
+        return;
+    }
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
     const current = _leadsManagerFilter;
     select.innerHTML = `<option value="all">Barcha menejerlar</option>
@@ -7169,6 +7190,15 @@ function updateBrManagerFilterDisplay() {
 function renderBrManagerFilter() {
     const select = document.getElementById('brManagerFilter');
     if (!select) return;
+    const user = getCurrentUser();
+    if (user && user.role === 'sales_manager') {
+        const filterBox = select.closest('.leads-filter-box');
+        if (filterBox) filterBox.style.display = 'none';
+        if (_brManagerFilter === 'all') {
+            _brManagerFilter = user.linkedManagerId || 'unassigned';
+        }
+        return;
+    }
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
     const current = _brManagerFilter;
     select.innerHTML = `<option value="all">Barcha menejerlar</option>
