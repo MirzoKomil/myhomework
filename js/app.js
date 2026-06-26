@@ -5813,6 +5813,10 @@ function renderLeadCard(lead, langKey) {
         ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-lead-menu-delete="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Lidni o'chirish</button>`
         : '';
 
+    const assignManagerItem = !_isSalesManager
+        ? `<button type="button" class="lead-card-menu-item" data-lead-menu-manager="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Menejer biriktirish</button>`
+        : '';
+
     return `<article class="lead-card" draggable="true" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
         <div class="lead-card-top">
             ${checkboxHtml}
@@ -5832,7 +5836,7 @@ function renderLeadCard(lead, langKey) {
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
                     </button>
                     <div class="lead-card-menu-dropdown" hidden>
-                        <button type="button" class="lead-card-menu-item" data-lead-menu-manager="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Menejer biriktirish</button>
+                        ${assignManagerItem}
                         <div class="lead-card-menu-submenu-wrap">
                             <button type="button" class="lead-card-menu-item lead-card-menu-item--submenu" data-lead-menu-move-toggle>
                                 Boshqa bosqichga o'tkazish
@@ -5968,10 +5972,13 @@ function renderLeads() {
     backfillMissingLeadSerials();
 
     const _cuRender = getCurrentUser();
-    if (_cuRender && _cuRender.role === 'sales_manager') {
+    const _isSalesManagerRender = _cuRender && _cuRender.role === 'sales_manager';
+    if (_isSalesManagerRender) {
         _leadsLangFilter = _cuRender.linkedManagerLang || 'english';
         const langTabsEl = document.getElementById('leadsLangTabs');
         if (langTabsEl) langTabsEl.style.display = 'none';
+        const bulkBarEl = document.getElementById('bulkActionsBar');
+        if (bulkBarEl) bulkBarEl.style.display = 'none';
     } else {
         const langTabsEl = document.getElementById('leadsLangTabs');
         if (langTabsEl) langTabsEl.style.display = '';
@@ -6395,16 +6402,19 @@ function openAssignManagerModal(lang, leadId) {
 
 function openAddLeadModal() {
     const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const _cuModal = getCurrentUser();
+    const _isSmModal = _cuModal && _cuModal.role === 'sales_manager';
     const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
     const managers = allManagers.filter(m => (m.lang || 'english') === defaultLang);
+    const autoManagerId = _isSmModal ? (_cuModal.linkedManagerId || '') : '';
     const managerOptions = `<option value="">— Biriktirilmagan —</option>
-        ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}`;
+        ${managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === autoManagerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
 
     openModal("Yangi lid qo'shish",
         `<div class="form-group"><label>Ism-familiya</label><input id="mLeadName" class="form-control" placeholder="Masalan: Ali Valiyev"></div>
          <div class="form-group"><label>Telefon</label><input id="mLeadPhone" class="form-control" placeholder="+998 90 123 45 67"></div>
          <div class="form-group"><label>2-telefon</label><input id="mLeadPhone2" class="form-control" placeholder="+998 91 234 56 78"></div>
-         <div class="form-group"><label>Sotuv menejeri</label>
+         <div class="form-group" ${_isSmModal ? 'style="display:none"' : ''}><label>Sotuv menejeri</label>
             <select id="mLeadManagerId" class="form-select">${managerOptions}</select>
          </div>
          <div class="form-group"><label>Til</label>
@@ -7527,9 +7537,12 @@ function openBookRoadmapModal(existing = null) {
     const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const d = existing || { name: '', studentId: '', phone: '', region: '', managerId: '', kind: 'organik', date: new Date().toLocaleDateString('uz-UZ'), status: 'yangi-oquvchi', lang: defaultLang };
     const managers = allManagers.filter(m => (m.lang || 'english') === defaultLang);
+    const _cuBr = getCurrentUser();
+    const _isSmBr = _cuBr && _cuBr.role === 'sales_manager';
+    const brAutoManagerId = _isSmBr ? (_cuBr.linkedManagerId || '') : d.managerId;
 
     const managerOptions = `<option value="">— Menejerni tanlang —</option>` +
-        managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === d.managerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
+        managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === brAutoManagerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
 
     const statusOptions = BOOK_ROADMAP_COLUMNS.map(c =>
         `<option value="${c.id}"${c.id === (d.status || 'yangi-oquvchi') ? ' selected' : ''}>${escapeHtml(c.label)}</option>`
@@ -7562,7 +7575,7 @@ function openBookRoadmapModal(existing = null) {
                 <input type="text" id="brRegion" class="form-control" value="${escapeHtml(d.region || '')}" placeholder="Toshkent, Yunusobod">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-                <div class="form-group">
+                <div class="form-group" ${_isSmBr ? 'style="display:none"' : ''}>
                     <label>Sotuv menejeri</label>
                     <select id="brManager" class="form-control">${managerOptions}</select>
                 </div>
@@ -7599,7 +7612,7 @@ function openBookRoadmapModal(existing = null) {
             date: document.getElementById('brDate').value.trim(),
             phone: document.getElementById('brPhone').value.trim(),
             region: document.getElementById('brRegion').value.trim(),
-            managerId: document.getElementById('brManager').value,
+            managerId: _isSmBr ? brAutoManagerId : document.getElementById('brManager').value,
             kind: document.getElementById('brKind').value,
             lang: document.getElementById('brLang').value,
             status: document.getElementById('brStatus').value,
