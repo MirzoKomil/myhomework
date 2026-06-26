@@ -2778,6 +2778,18 @@ function needsFailedSalePrompt(fromStatus, toStatus) {
     return toStatus === 'muvaffaqiyatsiz-sotuv';
 }
 
+// Qaysi ustundan ko'chirilsa — shu guruhning savollari ko'rsatiladi
+const FAILED_SALE_FROM_COLUMN_MAP = {
+    'yangi-lidlar':            ['boglanildi'],
+    'boglanishga-urinilmoqda': ['boglanildi'],
+    'boglanildi':              ['boglanildi'],
+    'malumot-berildi':         ['malumot-berildi'],
+    'sinov-darsida':           ['sinov-darsidan'],
+    'qaror-jarayonida':        ['qaror-tolov'],
+    'tolov-jarayonida':        ['qaror-tolov'],
+    'tolov-yopildi':           ['qaror-tolov'],
+};
+
 const SIFATSIZ_LID_REASONS = [
     { id: 'wrong-phone',    label: 'Noto\'g\'ri telefon raqami (mavjud emas)' },
     { id: 'duplicate',      label: 'Dublikat lid (bir odam bir necha marta qolgan)' },
@@ -2837,11 +2849,21 @@ function openSifatsizLidFlow(lang, leadId) {
     };
 }
 
-function openMuvaffaqiyatsizSotuvFlow(lang, leadId) {
+function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
-    const groupsHtml = FAILED_SALE_REASON_GROUPS.map(g => `
+    const allowedGroupIds = FAILED_SALE_FROM_COLUMN_MAP[fromStatus] || null;
+    const groups = allowedGroupIds
+        ? FAILED_SALE_REASON_GROUPS.filter(g => allowedGroupIds.includes(g.id))
+        : FAILED_SALE_REASON_GROUPS;
+
+    const colLabel = LEAD_COLUMNS.find(c => c.id === fromStatus)?.label || '';
+    const subtitle = colLabel
+        ? `"${colLabel}" bosqichidan ko'chirilmoqda. Sabab nima?`
+        : 'Nima sababdan sotuv amalga oshmadi?';
+
+    const groupsHtml = groups.map(g => `
         <div class="failed-sale-group">
             <p class="failed-sale-group-label">${escapeHtml(g.label)}:</p>
             <div class="lead-reason-list">
@@ -2855,7 +2877,7 @@ function openMuvaffaqiyatsizSotuvFlow(lang, leadId) {
 
     openModal(
         'Muvaffaqiyatsiz sotuv sababi',
-        `<p class="lead-reason-subtitle">Nima sababdan sotuv amalga oshmadi?</p>${groupsHtml}`,
+        `<p class="lead-reason-subtitle">${escapeHtml(subtitle)}</p>${groupsHtml}`,
         `<button type="button" class="btn-danger-sm" id="cancelFailedSale">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="confirmFailedSale">Saqlash va ko\'chirish</button>`
     );
@@ -6141,7 +6163,7 @@ function renderLeads() {
             if (needsDecisionPrompt(from, toStatus)) { openQarorJarayonidaFlow(lang, leadId, from); return; }
             if (needsPaymentPrompt(from, toStatus)) { openTolovJarayonidaFlow(lang, leadId, from); return; }
             if (needsPaymentClosedPrompt(from, toStatus)) { openTolovYopildiFlow(lang, leadId, from); return; }
-            if (needsFailedSalePrompt(from, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId); return; }
+            if (needsFailedSalePrompt(from, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, from); return; }
             if (needsSifatsizLidPrompt(from, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
             moveLeadToStatus(lang, leadId, toStatus);
         });
@@ -6240,7 +6262,7 @@ function initLeadDragDrop(board) {
             }
 
             if (needsFailedSalePrompt(fromStatus, toStatus)) {
-                openMuvaffaqiyatsizSotuvFlow(payload.lang, payload.id);
+                openMuvaffaqiyatsizSotuvFlow(payload.lang, payload.id, fromStatus);
                 return;
             }
 
