@@ -3128,10 +3128,9 @@ function getLeadColumnIndex(status) {
 // ── Tashlab ketilgan ustunlar so'rovnomasi (cascade) ─────────────────────────
 // Qoidalar:
 //  - Faqat oldinga harakatda ishlaydi (fromIdx < toIdx)
-//  - boglanildi / malumot-berildi / qaror-jarayonida oraliqda qolsa — ularning
-//    so'rovnomalari ketma-ket ko'rsatiladi
-//  - qaror-jarayonida so'rovnomasi FAQAT shu ustun oraliqda qolganda chiqadi
-//    (ya'ni manzil ustuni qaror-jarayonidadan KEYIN bo'lsa); boshqa hollarda chiqmaydi
+//  - boglanildi / malumot-berildi oraliqda qolsa — ularning so'rovnomalari chiqadi
+//  - qaror-jarayonida so'rovnomasi bu cascade orqali CHIQMAYDI —
+//    faqat lid TO'G'RIDAN-TO'G'RI qaror-jarayonida ustuniga ko'chirilganda chiqadi
 // Foydalanish: startMvCascade → continueMvCascade (har bir so'rovnoma tasdiqlanganida)
 //              → dispatchLeadTargetFlow (hammasi tugagach manzilga yo'naltiradi)
 
@@ -3149,9 +3148,8 @@ function getSkippedSurveySteps(fromStatus, toStatus, lead) {
     for (const col of LEAD_COLUMNS) {
         const idx = getLeadColumnIndex(col.id);
         if (idx <= fromIdx || idx >= toIdx) continue;
-        if (col.id === 'boglanildi'      && !lead?.connectedSurvey)    steps.push('connected');
-        else if (col.id === 'malumot-berildi'  && !lead?.infoProvidedSurvey) steps.push('info');
-        else if (col.id === 'qaror-jarayonida' && !lead?.decisionSurvey)     steps.push('decision');
+        if (col.id === 'boglanildi'     && !lead?.connectedSurvey)    steps.push('connected');
+        else if (col.id === 'malumot-berildi' && !lead?.infoProvidedSurvey) steps.push('info');
     }
     return steps;
 }
