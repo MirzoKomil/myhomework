@@ -192,14 +192,15 @@ async function bootApp() {
         }
     }
 
-    // Sotuv menejeri uchun bog'liq manager ID ni aniqlash
-    if (currentUser.role === 'sales_manager' && !currentUser.linkedManagerId) {
+    // Sotuv menejeri uchun bog'liq manager ID va til yo'nalishini aniqlash
+    if (currentUser.role === 'sales_manager' && (!currentUser.linkedManagerId || !currentUser.linkedManagerLang)) {
         const managers = getItem(STORAGE_KEYS.salesManagers, []);
         const linked = managers.find(m =>
             m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
         );
         if (linked) {
             currentUser.linkedManagerId = linked.id;
+            currentUser.linkedManagerLang = linked.lang || 'english';
             setCurrentUser(currentUser);
         }
     }
@@ -5966,6 +5967,16 @@ function renderLeads() {
 
     backfillMissingLeadSerials();
 
+    const _cuRender = getCurrentUser();
+    if (_cuRender && _cuRender.role === 'sales_manager') {
+        _leadsLangFilter = _cuRender.linkedManagerLang || 'english';
+        const langTabsEl = document.getElementById('leadsLangTabs');
+        if (langTabsEl) langTabsEl.style.display = 'none';
+    } else {
+        const langTabsEl = document.getElementById('leadsLangTabs');
+        if (langTabsEl) langTabsEl.style.display = '';
+    }
+
     document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.leadLangFilter === _leadsLangFilter);
     });
@@ -6035,7 +6046,9 @@ function renderLeads() {
                 bulkBar.style.display = 'flex';
                 bulkCount.textContent = `${checked.length} ta lid tanlandi`;
                 if (!bulkSelect.dataset.populated) {
-                    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+                    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
+                    const bulkLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+                    const managers = allManagers.filter(m => (m.lang || 'english') === bulkLang);
                     bulkSelect.innerHTML = '<option value="">— Menejerni tanlang —</option>' + managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
                     bulkSelect.dataset.populated = '1';
                 }
@@ -6356,7 +6369,8 @@ function openTeacherWorkScheduleModal(initialTeacherId) {
 function openAssignManagerModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
-    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
+    const managers = allManagers.filter(m => (m.lang || 'english') === lang);
     const options = `<option value="">— Biriktirilmagan —</option>
         ${managers.map(m => `<option value="${escapeHtml(m.id)}"${lead.managerId === m.id ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
 
@@ -6381,7 +6395,8 @@ function openAssignManagerModal(lang, leadId) {
 
 function openAddLeadModal() {
     const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
+    const managers = allManagers.filter(m => (m.lang || 'english') === defaultLang);
     const managerOptions = `<option value="">— Biriktirilmagan —</option>
         ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}`;
 
@@ -6540,6 +6555,38 @@ function resolveTeacherRole(baseRole) {
     const checked = document.querySelector('input[name="empTeacherLang"]:checked');
     if (!checked) return 'oqituvchi';
     return checked.value === 'ingliz' ? 'ingliz-oqituvchi' : 'rus-oqituvchi';
+}
+
+function managerLangHtml(selected = 'english') {
+    return `<div class="form-group" id="empManagerLangWrap" style="display:none">
+        <label>Til yo'nalishi (sotuv bo'limi)</label>
+        <div class="emp-lang-sub">
+            <label>
+                <input type="radio" name="empManagerLang" value="english" ${selected !== 'russian' ? 'checked' : ''}>
+                Ingliz tili
+            </label>
+            <label>
+                <input type="radio" name="empManagerLang" value="russian" ${selected === 'russian' ? 'checked' : ''}>
+                Rus tili
+            </label>
+        </div>
+    </div>`;
+}
+
+function bindManagerLangToggle(roleSelectId) {
+    const roleEl = document.getElementById(roleSelectId);
+    const wrap = document.getElementById('empManagerLangWrap');
+    if (!roleEl || !wrap) return;
+    const toggle = () => {
+        wrap.style.display = roleEl.value === 'sotuv-menejeri' ? '' : 'none';
+    };
+    roleEl.addEventListener('change', toggle);
+    toggle();
+}
+
+function resolveManagerLang() {
+    const checked = document.querySelector('input[name="empManagerLang"]:checked');
+    return (checked && checked.value === 'russian') ? 'russian' : 'english';
 }
 
 const HR_DEPARTMENTS = ['Sotuv', 'Akademik', 'Marketing', 'HR', 'IT'];
@@ -6809,6 +6856,7 @@ function openEditEmployeeModal(empId) {
             <select id="editEmpRole" class="form-control">${roleOptions}</select>
         </div>
         ${teacherLangHtml(preselectedLang)}
+        ${managerLangHtml(emp.lang || 'english')}
         <div class="form-group">
             <label>Telefon raqam</label>
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
@@ -6851,6 +6899,7 @@ function openEditEmployeeModal(empId) {
 
     // Til sub-field toggle
     bindTeacherLangToggle('editEmpRole');
+    bindManagerLangToggle('editEmpRole');
 
     document.getElementById('cancelEditEmployee').onclick = () => closeModal();
 
@@ -6863,6 +6912,8 @@ function openEditEmployeeModal(empId) {
         const newPassword = document.getElementById('editEmpPassword').value.trim();
         if (newPassword && newPassword.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
 
+        const resolvedRole = resolveTeacherRole(document.getElementById('editEmpRole').value);
+        const isMgrEdit = resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri';
         const updated = {
             ...emp,
             firstName,
@@ -6871,11 +6922,12 @@ function openEditEmployeeModal(empId) {
             gender: document.getElementById('editEmpGender').value,
             birthDate: document.getElementById('editEmpBirthDate').value,
             startDate: document.getElementById('editEmpStartDate').value,
-            role: resolveTeacherRole(document.getElementById('editEmpRole').value),
+            role: resolvedRole,
             phone: document.getElementById('editEmpPhone').value.trim(),
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
+            lang: isMgrEdit ? resolveManagerLang() : (emp.lang || 'english'),
         };
         if (newPassword) updated.password = newPassword;
 
@@ -6931,6 +6983,7 @@ function openAddEmployeeModal() {
             <select id="empRole" class="form-control">${roleOptions}</select>
         </div>
         ${teacherLangHtml()}
+        ${managerLangHtml()}
         <div class="form-group">
             <label>Telefon raqam <span style="color:var(--danger)">*</span></label>
             <input type="tel" id="empPhone" class="form-control" placeholder="+998 90 123 45 67">
@@ -6985,6 +7038,7 @@ function openAddEmployeeModal() {
 
     // Til sub-field toggle
     bindTeacherLangToggle('empRole');
+    bindManagerLangToggle('empRole');
 
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
 
@@ -7018,11 +7072,13 @@ function openAddEmployeeModal() {
         }
 
         const name = `${firstName} ${lastName}`;
+        const isMgr = role === 'sotuv-menejeri' || role === 'sotuv_menejeri';
         const newEmp = {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
             role, phone, email, department, status, login, password,
-            joinDate: startDate || new Date().toISOString().slice(0, 10)
+            joinDate: startDate || new Date().toISOString().slice(0, 10),
+            lang: isMgr ? resolveManagerLang() : 'english'
         };
         employees.push(newEmp);
         saveHrEmployees(employees);
@@ -7466,10 +7522,11 @@ function updateBrInStorage(id, updater) {
 }
 
 function openBookRoadmapModal(existing = null) {
-    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
     const isEdit = !!existing;
     const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const d = existing || { name: '', studentId: '', phone: '', region: '', managerId: '', kind: 'organik', date: new Date().toLocaleDateString('uz-UZ'), status: 'yangi-oquvchi', lang: defaultLang };
+    const managers = allManagers.filter(m => (m.lang || 'english') === defaultLang);
 
     const managerOptions = `<option value="">— Menejerni tanlang —</option>` +
         managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === d.managerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
