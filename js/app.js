@@ -5288,6 +5288,18 @@ function openPaymentClosedModal(lang, leadId) {
     const bodyHtml = `<div class="lead-survey lead-survey--info">
         ${contextHtml}
         ${renderCloseSurveyDateField('paymentClosedDate', "To'lov yopilgan sana", 'closedDate')}
+        <section class="lead-survey-section">
+            <div class="form-group" style="margin-bottom:12px">
+                <label style="font-weight:600">To'lov qilingan summa (so'm)</label>
+                <input type="number" id="pcActualAmount" class="form-control" min="0" placeholder="Masalan: 500000" style="margin-top:6px">
+            </div>
+            <div class="lead-info-question" style="margin-top:4px">
+                <label class="lead-reason-option" style="align-items:center;gap:10px;cursor:pointer">
+                    <input type="checkbox" id="pcNoDebtConfirm" style="width:18px;height:18px;cursor:pointer">
+                    <span style="font-size:14px;font-weight:500">O'quvchi haqiqatdan ham qarzdor emas</span>
+                </label>
+            </div>
+        </section>
         ${debtSection}
         ${debtorSection}
         ${installmentSection}
@@ -5358,9 +5370,19 @@ function collectEnhancedPaymentClosedData(modalBody, ps, flags = {}) {
     const closedDate = getDate('paymentClosedDate');
     if (!closedDate) return { error: "Yopilgan sanani kiriting" };
 
+    // 9-ish: to'lov miqdori va qarzdor emas tasdiqlov
+    const actualAmountRaw = modalBody.querySelector('#pcActualAmount')?.value?.trim() || '';
+    const actualAmount = actualAmountRaw ? parseInt(actualAmountRaw, 10) : null;
+    if (!actualAmountRaw) return { error: "To'lov qilingan summani kiriting" };
+    const noDebtConfirmed = modalBody.querySelector('#pcNoDebtConfirm')?.checked;
+    if (!noDebtConfirmed) return { error: "O'quvchi qarzdor emasligini tasdiqlang" };
+
     const data = {
         closedDate,
         closedDateLabel: formatUzDate(closedDate),
+        actualAmount,
+        actualAmountLabel: actualAmount ? formatMoney(actualAmount) : '',
+        noDebtConfirmed: true,
         paymentType: ps?.paymentType || null,
         paymentTypeLabel: ps?.paymentTypeLabel || '',
         tariff: ps?.tariff || null,
