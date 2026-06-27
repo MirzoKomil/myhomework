@@ -47,23 +47,13 @@
                     <span class="label">Marketing bo'limi</span>
                 </a>
 
-                <div class="menu-group">
-                    <button type="button" class="menu-group-toggle" aria-expanded="false">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                            <path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5" />
-                        </svg>
-                        <span class="label">O'quvchilar</span>
-                    </button>
-                    <div class="menu-subitems">
-                        <a href="#" class="menu-sub-item" data-tab="students" data-subject="english">
-                            <img src="images/flags/gb.svg" alt="" class="menu-flag"> Ingliz tili
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="students" data-subject="russian">
-                            <img src="images/flags/ru.svg" alt="" class="menu-flag"> Rus tili
-                        </a>
-                    </div>
-                </div>
+                <a href="#" class="menu-item" data-tab="students">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                        <path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5" />
+                    </svg>
+                    <span class="label">O'quvchilar</span>
+                </a>
 
                 <a href="#" class="menu-item" data-tab="timetable">
                     <svg viewBox="0 0 24 24">
@@ -556,12 +546,12 @@
 
                     <!-- O'quvchilar -->
                     <section id="tab-students" class="tab-content">
-                        <div class="page-title-bar">
-                            <h1 id="studentsPageTitle">O'quvchilar ma'lumotlari</h1>
-                        </div>
-                        <div class="subject-tabs" id="studentsSubjectTabs" style="margin-bottom:16px">
-                            <button type="button" class="subject-tab active" data-subject="english">🇬🇧 Ingliz tili</button>
-                            <button type="button" class="subject-tab" data-subject="russian">🇷🇺 Rus tili</button>
+                        <div class="page-title-bar" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                            <h1 id="studentsPageTitle">O'quvchilar</h1>
+                            <div class="subject-tabs" id="studentsSubjectTabs" style="margin:0">
+                                <button type="button" class="subject-tab active" data-subject="english">🇬🇧 Ingliz tili</button>
+                                <button type="button" class="subject-tab" data-subject="russian">🇷🇺 Rus tili</button>
+                            </div>
                         </div>
                         <div class="card">
                             <div class="card-header">

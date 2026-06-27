@@ -285,7 +285,8 @@ function isMenuItemActive(el, tab, ctx) {
     if (el.dataset.tab !== tab) return false;
     if (tab === 'placeholder') return el.dataset.placeholder === ctx.placeholder;
     if (el.dataset.subject) return el.dataset.subject === (ctx.subject || '');
-    if (ctx.subject && ['leads', 'students', 'timetable'].includes(tab)) return false;
+    // students endi sidebar sub-itemsiz — tab active bo'lsa, menuItem ham active
+    if (ctx.subject && ['leads', 'timetable'].includes(tab)) return false;
     return true;
 }
 
