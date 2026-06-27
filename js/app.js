@@ -3498,7 +3498,6 @@ function beginTolovJarayonidaPaymentFlow(lang, leadId) {
 }
 
 const PAYMENT_CLOSED_SKIP_COLUMNS = new Set([
-    'qaror-jarayonida',
     'sinov-darsida',
     'tolov-jarayonida'
 ]);
@@ -3520,6 +3519,7 @@ function getPendingSurveyStepsBeforePaymentClosed(fromStatus) {
         if (col.id === 'boglanishga-urinilmoqda') steps.push('contact-fail');
         else if (col.id === 'boglanildi') steps.push('connected');
         else if (col.id === 'malumot-berildi') steps.push('info');
+        else if (col.id === 'qaror-jarayonida') steps.push('decision');
     }
     return steps;
 }
@@ -3529,6 +3529,7 @@ function getNextSurveyStepBeforePaymentClosed(fromStatus, lead) {
         if (step === 'contact-fail' && leadHasContactFailSurvey(lead)) continue;
         if (step === 'connected' && lead.connectedSurvey) continue;
         if (step === 'info' && lead.infoProvidedSurvey) continue;
+        if (step === 'decision' && lead.decisionSurvey) continue;
         return step;
     }
     return 'payment-closed';
@@ -3550,6 +3551,23 @@ function openTolovYopildiFlow(lang, leadId, fromStatus) {
     }
     if (next === 'info') {
         openInfoProvidedModal(lang, leadId, { chainTo: 'tolov-yopildi' });
+        return;
+    }
+    if (next === 'decision') {
+        openDecisionProcessModal(lang, leadId, { chainTo: 'tolov-yopildi' });
+        return;
+    }
+    // To'lov bosqichlari: ustoz, tarif, shartnoma
+    if (!leadHasTeacherSchedule(lead)) {
+        openPaymentTeacherScheduleModal(lang, leadId, { chainTo: 'tolov-yopildi' });
+        return;
+    }
+    if (!lead.paymentSurvey) {
+        openPaymentProcessModal(lang, leadId, { chainTo: 'tolov-yopildi' });
+        return;
+    }
+    if (!lead.paymentOnboarding) {
+        openPaymentOnboardingModal(lang, leadId, { chainTo: 'tolov-yopildi' });
         return;
     }
     openPaymentClosedModal(lang, leadId);
@@ -4025,6 +4043,10 @@ function openDecisionProcessModal(lang, leadId, options = {}) {
         if (chainTo === '__cascade__') { continueMvCascade(); return; }
         if (chainTo === 'tolov-jarayonida') {
             openPaymentTeacherScheduleModal(lang, leadId);
+            return;
+        }
+        if (chainTo === 'tolov-yopildi') {
+            openTolovYopildiFlow(lang, leadId, 'qaror-jarayonida');
             return;
         }
         renderLeads();
@@ -4631,13 +4653,14 @@ function saveLeadTeacherSchedule(lang, leadId, scheduleData) {
     }));
 }
 
-function openPaymentTeacherScheduleModal(lang, leadId) {
+function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
+    const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
     if (leadHasTeacherSchedule(lead)) {
         // Status ni BU YERDA o'zgartirmaymiz — openPaymentOnboardingModal tasdiqlanganda o'zgaradi
-        openPaymentProcessModal(lang, leadId);
+        openPaymentProcessModal(lang, leadId, { chainTo });
         return;
     }
 
@@ -4674,7 +4697,7 @@ function openPaymentTeacherScheduleModal(lang, leadId) {
         // 8-ish: statusni o'zgartirmasdan faqat jadval ma'lumotini saqlaymiz
         saveLeadTeacherSchedule(lang, leadId, result.data);
         closeModal();
-        openPaymentProcessModal(lang, leadId);
+        openPaymentProcessModal(lang, leadId, { chainTo });
     };
 }
 
@@ -4800,7 +4823,8 @@ function formatPaymentOnboardingComment(data) {
     return ['To\'lov jarayonida — o\'quvchi:', ...lines].join('\n');
 }
 
-function openPaymentOnboardingModal(lang, leadId) {
+function openPaymentOnboardingModal(lang, leadId, options = {}) {
+    const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
@@ -4879,7 +4903,7 @@ function openPaymentOnboardingModal(lang, leadId) {
         `${escapeHtml(lead.name)} — O'quvchi ma'lumotlari`,
         bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentOnboarding">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="confirmPaymentOnboarding">Saqlash va ko'chirish</button>`,
+         <button type="button" class="btn-primary-sm" id="confirmPaymentOnboarding">${chainTo === 'tolov-yopildi' ? 'Keyingi bosqich' : "Saqlash va ko'chirish"}</button>`,
         { wide: true }
     );
 
@@ -4927,22 +4951,27 @@ function openPaymentOnboardingModal(lang, leadId) {
         promoteStudentFromOnboarding(lang, onboarding, leadAfter);
 
         closeModal();
-        renderLeads();
-        if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
+        if (chainTo === 'tolov-yopildi') {
+            openPaymentClosedModal(lang, leadId);
+        } else {
+            renderLeads();
+            if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
+        }
     };
 }
 
-function openPaymentProcessModal(lang, leadId) {
+function openPaymentProcessModal(lang, leadId, options = {}) {
+    const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
     if (!leadHasTeacherSchedule(lead)) {
-        openPaymentTeacherScheduleModal(lang, leadId);
+        openPaymentTeacherScheduleModal(lang, leadId, { chainTo });
         return;
     }
 
     if (lead.paymentSurvey) {
-        openPaymentOnboardingModal(lang, leadId);
+        openPaymentOnboardingModal(lang, leadId, { chainTo });
         return;
     }
 
@@ -5034,7 +5063,7 @@ function openPaymentProcessModal(lang, leadId) {
         }
 
         closeModal();
-        openPaymentOnboardingModal(lang, leadId);
+        openPaymentOnboardingModal(lang, leadId, { chainTo });
     };
 }
 
