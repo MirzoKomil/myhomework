@@ -53,6 +53,14 @@ async function apiUploadAvatar(dataUrl) {
     });
 }
 
+async function apiUploadAvatarForUser(userLogin, dataUrl) {
+    return apiFetch(`/api/auth/avatar-for/${encodeURIComponent(userLogin)}`, {
+        method: 'POST',
+        body: JSON.stringify({ dataUrl }),
+        timeout: 30000
+    });
+}
+
 async function apiLogin(email, password) {
     const data = await apiFetch('/api/auth/login', {
         method: 'POST',

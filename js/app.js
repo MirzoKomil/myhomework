@@ -6772,9 +6772,10 @@ function renderHrEmployeeCard(emp) {
     const statusLabel = isActive ? 'ACTIVE' : 'INACTIVE';
     const statusClass = isActive ? '' : ' inactive';
     const joinFormatted = emp.joinDate ? new Date(emp.joinDate).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    const isAdmin = getCurrentUser()?.role === 'admin';
 
     return `<div class="employee-card" data-emp-id="${emp.id}">
-        <div class="emp-menu-wrap">
+        ${isAdmin ? `<div class="emp-menu-wrap">
             <button class="employee-card-actions" title="Amallar" data-emp-menu="${emp.id}">
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
             </button>
@@ -6788,7 +6789,7 @@ function renderHrEmployeeCard(emp) {
                     O'chirish
                 </button>
             </div>
-        </div>
+        </div>` : ''}
         <div class="employee-avatar-placeholder" ${emp.avatar ? `data-emp-avatar="${escapeHtml(emp.id)}"` : ''}>
             ${emp.avatar
                 ? `<img class="employee-avatar-img" alt="${escapeHtml(emp.name)}">`
@@ -6838,6 +6839,11 @@ function renderHrEmployees() {
     const filtered = getHrFiltered(employees);
     const grid = document.getElementById('hrEmployeesGrid');
     if (!grid) return;
+
+    // Faqat admin xodim qo'sha va tahrirlashi mumkin
+    const _isAdminHr = getCurrentUser()?.role === 'admin';
+    const addBtn = document.getElementById('btnOpenAddEmployee');
+    if (addBtn) addBtn.style.display = _isAdminHr ? '' : 'none';
 
     if (filtered.length === 0) {
         grid.innerHTML = `<div class="card placeholder-card" style="grid-column:1/-1">
@@ -6940,8 +6946,30 @@ function openEditEmployeeModal(empId) {
         `<option value="${d}"${emp.department === d ? ' selected' : ''}>${escapeHtml(d)}</option>`
     ).join('');
 
+    const _canEditEmp = getCurrentUser()?.role === 'admin';
+    if (!_canEditEmp) return;
+
+    const _empInitials = getUserInitials(emp.name);
+    const _avatarPreviewHtml = `
+        <div class="form-group emp-avatar-upload-group">
+            <label>Profil rasmi</label>
+            <div style="display:flex;align-items:center;gap:14px;margin-top:4px">
+                <div class="emp-edit-avatar-wrap" id="empEditAvatarWrap">
+                    ${emp.avatar
+                        ? `<img class="emp-edit-avatar-img" id="empEditAvatarImg" alt="">`
+                        : `<span class="emp-edit-avatar-initials">${escapeHtml(_empInitials)}</span>`}
+                </div>
+                <div>
+                    <input type="file" id="empEditAvatarInput" accept="image/*" style="display:none">
+                    <button type="button" class="btn-secondary-sm" id="empEditAvatarBtn">Rasm yuklash</button>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:4px">JPG, PNG · max 20 MB</p>
+                </div>
+            </div>
+        </div>`;
+
     openModal("Xodimni tahrirlash",
-        `<div style="display:flex;gap:10px">
+        `${_avatarPreviewHtml}
+        <div style="display:flex;gap:10px">
             <div class="form-group" style="flex:1">
                 <label>Ism <span style="color:var(--danger)">*</span></label>
                 <input type="text" id="editEmpFirstName" class="form-control" value="${escapeHtml(emp.firstName || emp.name.split(' ')[0] || '')}" placeholder="Ism">
@@ -7019,9 +7047,38 @@ function openEditEmployeeModal(empId) {
     bindTeacherLangToggle('editEmpRole');
     bindManagerLangToggle('editEmpRole');
 
+    // Avatar preview (agar mavjud bo'lsa, DOM orqali src o'rnatamiz)
+    if (emp.avatar) {
+        const existingImg = document.getElementById('empEditAvatarImg');
+        if (existingImg) existingImg.src = emp.avatar;
+    }
+
+    // Avatar yuklash tugmasi
+    let _pendingAvatarDataUrl = null;
+    document.getElementById('empEditAvatarBtn').onclick = () => {
+        document.getElementById('empEditAvatarInput').click();
+    };
+    document.getElementById('empEditAvatarInput').onchange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) { alert('Rasm hajmi 20 MB dan oshmasligi kerak'); return; }
+        e.target.value = '';
+        try {
+            const dataUrl = await compressAvatarImage(file);
+            _pendingAvatarDataUrl = dataUrl;
+            const wrap = document.getElementById('empEditAvatarWrap');
+            if (wrap) {
+                wrap.innerHTML = `<img class="emp-edit-avatar-img" alt="">`;
+                wrap.querySelector('img').src = dataUrl;
+            }
+        } catch (err) {
+            alert(err.message || 'Rasm o\'qishda xatolik');
+        }
+    };
+
     document.getElementById('cancelEditEmployee').onclick = () => closeModal();
 
-    document.getElementById('saveEditEmployee').onclick = () => {
+    document.getElementById('saveEditEmployee').onclick = async () => {
         const firstName = document.getElementById('editEmpFirstName').value.trim();
         const lastName = document.getElementById('editEmpLastName').value.trim();
         if (!firstName) { alert('Ism kiritilishi shart'); return; }
@@ -7048,6 +7105,18 @@ function openEditEmployeeModal(empId) {
             lang: isMgrEdit ? resolveManagerLang() : (emp.lang || 'english'),
         };
         if (newPassword) updated.password = newPassword;
+
+        const saveBtn = document.getElementById('saveEditEmployee');
+        if (saveBtn) saveBtn.disabled = true;
+
+        // Avatar yuklash (agar yangi rasm tanlangan bo'lsa)
+        if (_pendingAvatarDataUrl && emp.login) {
+            try {
+                await apiUploadAvatarForUser(emp.login, _pendingAvatarDataUrl);
+            } catch (err) {
+                console.warn('Avatar yuklashda xatolik:', err.message);
+            }
+        }
 
         const allEmps = getHrEmployees() || [];
         const idx = allEmps.findIndex(e => e.id === empId);
@@ -7263,6 +7332,7 @@ function initHrEmployeeTabs() {
 
 document.addEventListener('click', (e) => {
     if (e.target.closest('#btnOpenAddEmployee')) {
+        if (getCurrentUser()?.role !== 'admin') return;
         openAddEmployeeModal();
     }
 });

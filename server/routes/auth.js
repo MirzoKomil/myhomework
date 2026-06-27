@@ -159,6 +159,26 @@ router.post('/logout', authRequired, async (req, res) => {
 
 const AVATAR_DIR = path.join(DATA_DIR, 'avatars');
 
+router.post('/avatar-for/:userLogin', authRequired, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin')
+            return res.status(403).json({ error: 'Faqat admin boshqa foydalanuvchiga rasm o\'rnatishi mumkin' });
+        const { dataUrl } = req.body || {};
+        if (!dataUrl || !dataUrl.startsWith('data:image/'))
+            return res.status(400).json({ error: 'Yaroqsiz rasm formati' });
+        if (dataUrl.length > 2 * 1024 * 1024)
+            return res.status(413).json({ error: 'Rasm hajmi katta. Kichikroq rasm tanlang.' });
+        const login = decodeURIComponent(req.params.userLogin);
+        const target = await findUserByEmail(login);
+        if (!target) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+        await updateUser(target.id, { avatar: dataUrl });
+        res.json({ ok: true, url: dataUrl });
+    } catch (err) {
+        console.error('POST /avatar-for', err);
+        res.status(500).json({ error: 'Server xatoligi' });
+    }
+});
+
 router.post('/avatar', authRequired, async (req, res) => {
     try {
         const { dataUrl } = req.body || {};
