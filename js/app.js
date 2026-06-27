@@ -113,6 +113,13 @@ function applyRoleBasedAccess(user) {
         sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
             el.style.display = '';
         });
+        // 16-ish: ROP uchun Akademik bo'lim va Moliya yashiriladi
+        if (role === 'rop') {
+            const akademik = document.getElementById('menuGroupAkademik');
+            const moliya = document.getElementById('menuGroupMoliya');
+            if (akademik) akademik.style.display = 'none';
+            if (moliya) moliya.style.display = 'none';
+        }
         return;
     }
 
@@ -203,6 +210,19 @@ async function bootApp() {
             currentUser.linkedManagerLang = linked.lang || 'english';
             setCurrentUser(currentUser);
         }
+    }
+
+    // 14-ish: ROP uchun bog'liq til yo'nalishini aniqlash
+    if (currentUser.role === 'rop' && !currentUser.linkedRopLang) {
+        const managers = getItem(STORAGE_KEYS.salesManagers, []);
+        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+        const linked = managers.find(m =>
+            m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+        ) || hrEmployees.find(e =>
+            e.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+        );
+        currentUser.linkedRopLang = linked?.lang || linked?.language || 'english';
+        setCurrentUser(currentUser);
     }
 
     setUiLang(getUiLang());
@@ -5993,7 +6013,8 @@ function renderLeadCard(lead, langKey) {
         return `<button type="button" class="lead-card-menu-item${isDanger ? ' lead-card-menu-item--danger' : ''}" data-lead-menu-move="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" data-move-to="${escapeHtml(col.id)}">${escapeHtml(col.label)}</button>`;
     }).join('');
 
-    const deleteItem = !_isSalesManager
+    // 15-ish: ROP ham lidni o'chira olmaydi
+    const deleteItem = (!_isSalesManager && _cu?.role !== 'rop')
         ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-lead-menu-delete="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Lidni o'chirish</button>`
         : '';
 
@@ -6179,8 +6200,10 @@ function renderLeads() {
 
     const _cuRender = getCurrentUser();
     const _isSalesManagerRender = _cuRender && _cuRender.role === 'sales_manager';
-    if (_isSalesManagerRender) {
-        _leadsLangFilter = _cuRender.linkedManagerLang || 'english';
+    const _isRopRender = _cuRender && _cuRender.role === 'rop';
+    if (_isSalesManagerRender || _isRopRender) {
+        // 14-ish: ROP / sotuv menejeri faqat o'z tiliga tegishli lidlarni ko'radi
+        _leadsLangFilter = _cuRender.linkedManagerLang || _cuRender.linkedRopLang || 'english';
         const langTabsEl = document.getElementById('leadsLangTabs');
         if (langTabsEl) langTabsEl.style.display = 'none';
         const bulkBarEl = document.getElementById('bulkActionsBar');
