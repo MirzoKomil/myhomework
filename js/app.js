@@ -5884,11 +5884,20 @@ function getLeadById(lang, leadId) {
     return lead ? normalizeLeadExtras(lead) : null;
 }
 
+function syncLeadManagerToBookRoadmap(lang, leadId, managerId) {
+    const items = getItem(STORAGE_KEYS.bookRoadmap, []);
+    const idx = items.findIndex(i => i.leadRef && i.leadRef.id === leadId && i.leadRef.lang === lang);
+    if (idx === -1) return;
+    items[idx] = { ...items[idx], managerId: managerId || '' };
+    setItem(STORAGE_KEYS.bookRoadmap, items);
+}
+
 function updateLeadInStorage(lang, leadId, updater) {
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const list = leads[lang] || [];
     const idx = list.findIndex(l => l.id === leadId);
     if (idx === -1) return null;
+    const prevManagerId = list[idx].managerId;
     const oldStatus = normalizeLeadStatus(list[idx].status);
     list[idx] = normalizeLeadExtras(updater({ ...list[idx] }));
     leads[lang] = list;
@@ -5897,6 +5906,10 @@ function updateLeadInStorage(lang, leadId, updater) {
     if (newStatus === 'tolov-jarayonida' && oldStatus !== 'tolov-jarayonida') {
         autoSyncLeadToBookRoadmap(lang, list[idx]);
         autoAddLeadAsStudent(lang, list[idx]); // 7-ish
+    }
+    // Menejeri o'zgarganda book roadmap'ni ham yangilash
+    if (list[idx].managerId !== prevManagerId) {
+        syncLeadManagerToBookRoadmap(lang, leadId, list[idx].managerId);
     }
     return list[idx];
 }
