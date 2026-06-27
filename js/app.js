@@ -1731,10 +1731,8 @@ function initTimetableControls() {
     const filters = getTimetableFilters();
     const pattern = filters.pattern;
 
-    let teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
-    if (filters.lang) {
-        teachers = teachers.filter(t => (t.subject || 'english') === filters.lang);
-    }
+    // 5-ish: HR xodimlar (ingliz/rus-oqituvchi) bilan integratsiya + til filtri
+    const teachers = filterTeachersByTypeAndSubject('asosiy', filters.lang || 'english');
 
     const currentUser = getCurrentUser();
     const isTeacherRole = currentUser?.role === 'teacher';
@@ -2027,8 +2025,8 @@ function renderTimetable() {
         titleEl.textContent = `Dars jadvali — ${SUBJECTS[filters.lang]?.label || filters.lang || 'Ingliz tili'}`;
     }
 
-    let teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
-    if (filters.lang) teachers = teachers.filter(t => (t.subject || 'english') === filters.lang);
+    // 5-ish: HR xodimlar bilan integratsiya + til filtri
+    const teachers = filterTeachersByTypeAndSubject('asosiy', filters.lang || 'english');
 
     const entries = collectWeeklyScheduleEntries(filters);
     const container = document.getElementById('timetableContainer');
@@ -3287,7 +3285,8 @@ function needsTrialLessonPrompt(fromStatus, toStatus) {
 function openTrialLessonFlow(lang, leadId, fromStatus) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
-    const teachers = filterTeachersByTypeAndSubject('asosiy', lead.subject || 'english');
+    // 5-ish: lang parametridan foydalanish (lead.language bilan bir xil, lekin ishonchli)
+    const teachers = filterTeachersByTypeAndSubject('asosiy', lang || lead.language || 'english');
     const teacherOptions = `<option value="">— Tanlang —</option>` +
         teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
 
@@ -6505,7 +6504,9 @@ function initLeadDragDrop(board) {
 }
 
 function openTeacherWorkScheduleModal(initialTeacherId) {
-    const teachers = getItem(STORAGE_KEYS.teachers, []).filter(t => t.type === 'asosiy');
+    // 5-ish: HR xodimlar + til filtri (joriy tabContext'dan)
+    const _wsSubject = _tabContext?.subject || 'english';
+    const teachers = filterTeachersByTypeAndSubject('asosiy', _wsSubject);
     const options = `<option value="">— Tanlang —</option>` +
         teachers.map(t => `<option value="${t.id}" ${t.id === initialTeacherId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
 
@@ -6531,7 +6532,7 @@ function openTeacherWorkScheduleModal(initialTeacherId) {
             return;
         }
 
-        const teacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === selectedTeacherId);
+        const teacher = filterTeachersByTypeAndSubject('asosiy', _wsSubject).find(t => t.id === selectedTeacherId);
         if (!teacher) return;
 
         const times = generateTimeSlots();
