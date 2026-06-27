@@ -588,7 +588,7 @@ function normalizeLeadSource(val) {
     return val;
 }
 
-async function insertLead({ name, phone, email, language, source, externalId, date, status, leadType }) {
+async function insertLead({ name, phone, email, language, source, externalId, date, status, leadType, contactTime }) {
     const src = normalizeLeadSource(source);
     const lang = languageForSource(src, language);
     const extId = externalId ? String(externalId) : null;
@@ -602,9 +602,23 @@ async function insertLead({ name, phone, email, language, source, externalId, da
 
     const id = randomUUID();
     const dateStr = date || new Date().toLocaleDateString('uz-UZ');
+
+    // 3-ish: Bog'lanish uchun qulay vaqt — dastlabki izoh sifatida
+    const initialComments = [];
+    if (contactTime) {
+        initialComments.push({
+            id: randomUUID(),
+            type: 'contact-time',
+            text: `Bog'lanish uchun qulay vaqt: ${contactTime}`,
+            author: 'Tizim',
+            ts: Date.now(),
+            date: dateStr
+        });
+    }
+
     await pool.query(
         'INSERT INTO leads (id, name, phone, email, source, language, date, external_id, status, lead_type, comments, attachments) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
-        [id, name, phone || '', email || '', src, lang, dateStr, extId, statusNorm, leadTypeNorm, '[]', '[]']
+        [id, name, phone || '', email || '', src, lang, dateStr, extId, statusNorm, leadTypeNorm, JSON.stringify(initialComments), '[]']
     );
     return { id, duplicate: false, lead: { id, name, phone: phone || '', email: email || '', source: src, language: lang, date: dateStr, externalId: extId, status: statusNorm, leadType: leadTypeNorm } };
 }

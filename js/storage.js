@@ -248,9 +248,29 @@ function getSubjectLabel(key) {
 }
 
 function filterTeachersByTypeAndSubject(type, subject) {
-    return getItem(STORAGE_KEYS.teachers, []).filter(t =>
+    const stored = getItem(STORAGE_KEYS.teachers, []).filter(t =>
         t.type === type && (t.subject || 'english') === subject
     );
+
+    // 5-ish: HR bo'limidagi ustozlarni ham qo'shamiz
+    if (type === 'asosiy') {
+        const hrRole = subject === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi';
+        const hrTeachers = getItem(STORAGE_KEYS.hrEmployees, [])
+            .filter(e => e.role === hrRole && e.status !== 'inactive')
+            .map(e => ({
+                id: e.id,
+                name: e.name,
+                type: 'asosiy',
+                subject,
+                phone: e.phone || '',
+                login: e.login || '',
+                _fromHr: true
+            }));
+        const storedIds = new Set(stored.map(t => t.id));
+        return [...stored, ...hrTeachers.filter(t => !storedIds.has(t.id))];
+    }
+
+    return stored;
 }
 
 function getLessonDaysInMonth(year, month, patternKey) {

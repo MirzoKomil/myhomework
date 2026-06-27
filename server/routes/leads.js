@@ -10,7 +10,16 @@ const ALLOWED_SOURCES = new Set(['domwork', 'homework', 'organik']);
 function resolveSource(body, req) {
     const fromBody = (body.source || '').toLowerCase().trim();
     const fromHeader = (req.headers['x-lead-source'] || '').toLowerCase().trim();
-    const raw = fromBody || fromHeader || 'organik';
+
+    // 2-ish: domain (Referer/Origin) dan avtomatik aniqlash
+    const referer = (
+        req.headers['referer'] || req.headers['referrer'] || req.headers['origin'] || ''
+    ).toLowerCase();
+    let fromReferer = '';
+    if (referer.includes('domwork.uz')) fromReferer = 'domwork';
+    else if (referer.includes('homeworkuz.uz') || referer.includes('homework.uz')) fromReferer = 'homework';
+
+    const raw = fromBody || fromHeader || fromReferer || 'organik';
     if (!ALLOWED_SOURCES.has(raw)) return { error: 'Manba domwork, homework yoki organik bo\'lishi kerak' };
     if (raw === 'domwork') return { value: 'Domwork' };
     if (raw === 'homework') return { value: 'Homework' };
@@ -27,12 +36,20 @@ router.post('/', webhookSecretRequired, async (req, res) => {
         if (!name?.trim()) return res.status(400).json({ error: 'Ism kiritilishi shart' });
         const sourceResult = resolveSource(body, req);
         if (sourceResult.error) return res.status(400).json({ error: sourceResult.error });
+
+        // 3-ish: Bog'lanish uchun qulay vaqt
+        const contactTime = String(
+            body.contactTime || body.contact_time || body.qulay_vaqt ||
+            body.preferredTime || body.preferred_time || ''
+        ).trim();
+
         const result = await insertLead({
             name: name.trim(), phone: String(phone).trim(),
             email: String(body.email || body.mail || '').trim(),
             language, source: sourceResult.value, externalId,
             date: body.date, status: body.status,
-            leadType: body.leadType || body.lead_type || body.type
+            leadType: body.leadType || body.lead_type || body.type,
+            contactTime
         });
         if (result.duplicate) return res.status(200).json({ ok: true, id: result.id, duplicate: true });
         res.status(201).json({ ok: true, id: result.id, lead: result.lead });

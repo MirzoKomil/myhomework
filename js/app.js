@@ -2546,30 +2546,42 @@ function renderSalaryContent() {
 }
 
 // --- O'quvchilar ---
+function getStudentsSelectedSubject() {
+    return getSelectedSubject('studentsSubjectTabs') || _tabContext.subject || 'english';
+}
+
+function initStudentsSubjectTabs() {
+    const tabsEl = document.getElementById('studentsSubjectTabs');
+    if (!tabsEl || tabsEl.dataset.bound) return;
+    tabsEl.dataset.bound = '1';
+    initSubjectTabs('studentsSubjectTabs', renderStudents);
+}
+
 function renderStudents() {
-    const subject = _tabContext.subject;
+    initStudentsSubjectTabs();
+    const subject = getStudentsSelectedSubject();
     const currentUser = getCurrentUser();
     const titleEl = document.getElementById('studentsPageTitle');
     if (titleEl) {
-        titleEl.textContent = subject
-            ? `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`
-            : "O'quvchilar ma'lumotlari";
+        titleEl.textContent = `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`;
     }
 
     let students = getItem(STORAGE_KEYS.students, []);
-    if (subject) {
-        students = students.filter(s => (s.subject || 'english') === subject);
-    }
+    students = students.filter(s => (s.subject || 'english') === subject);
     // O'qituvchi faqat o'z o'quvchilarini ko'radi
     if (currentUser?.role === 'teacher' && currentUser?.linkedTeacherId) {
         const tid = currentUser.linkedTeacherId;
         students = students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid);
     }
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
+    const allTeachers = [
+        ...getItem(STORAGE_KEYS.teachers, []),
+        ...getItem(STORAGE_KEYS.hrEmployees, [])
+            .filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
+    ];
     const tbody = document.getElementById('studentsBody');
     tbody.innerHTML = students.map((s, i) => {
-        const teacher = teachers.find(t => t.id === s.teacherId);
-        const asst = teachers.find(t => t.id === s.assistantTeacherId);
+        const teacher = allTeachers.find(t => t.id === s.teacherId);
+        const asst = allTeachers.find(t => t.id === s.assistantTeacherId);
         return `<tr>
             <td>${i + 1}</td>
             <td>${s.name}</td>
@@ -2608,6 +2620,7 @@ function fillStudentTeacherOptions(subject) {
 }
 
 document.getElementById('addStudentBtn').addEventListener('click', () => {
+    const _defaultSubject = getStudentsSelectedSubject();
     openModal("O'quvchi qo'shish",
         `<div class="form-group"><label>Ism familiya</label><input id="mStName" class="form-control"></div>
          <div class="form-group"><label>Telefon</label><input id="mStPhone" class="form-control"></div>
@@ -2626,7 +2639,8 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
          </div>`,
         `<button class="btn-primary-sm" id="saveStudent">Saqlash</button>`
     );
-    fillStudentTeacherOptions('english');
+    document.getElementById('mStSubject').value = _defaultSubject;
+    fillStudentTeacherOptions(_defaultSubject);
     document.getElementById('mStSubject').addEventListener('change', e => {
         fillStudentTeacherOptions(e.target.value);
     });
@@ -5791,8 +5805,35 @@ function updateLeadInStorage(lang, leadId, updater) {
     const newStatus = normalizeLeadStatus(list[idx].status);
     if (newStatus === 'tolov-jarayonida' && oldStatus !== 'tolov-jarayonida') {
         autoSyncLeadToBookRoadmap(lang, list[idx]);
+        autoAddLeadAsStudent(lang, list[idx]); // 7-ish
     }
     return list[idx];
+}
+
+// 7-ish: lid tolov-jarayonida ga o'tganda o'quvchilar ro'yxatiga avtomatik qo'shish
+function autoAddLeadAsStudent(lang, lead) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const alreadyExists = students.some(s =>
+        (s.leadRef && s.leadRef.id === lead.id) ||
+        (s.phone && s.phone === lead.phone && s.name === lead.name)
+    );
+    if (alreadyExists) return;
+
+    const subject = lead.language || lang || 'english';
+    const teacherId = lead.paymentOnboarding?.teacherId || '';
+
+    students.unshift({
+        id: 's' + Date.now(),
+        leadRef: { lang, id: lead.id },
+        name: lead.name || '',
+        phone: lead.phone || '',
+        group: '',
+        subject,
+        teacherId,
+        assistantTeacherId: null,
+        source: 'lead'
+    });
+    setItem(STORAGE_KEYS.students, students);
 }
 
 function formatCommentTime(ts) {
@@ -5959,10 +6000,32 @@ function renderLeadCard(lead, langKey) {
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                     <span>${commentCount}</span>
                 </button>
+                <button type="button" class="lead-card-action lead-card-action--rec" data-lead-recording="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Zapis — suhbatlar yozib olinadi">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                </button>
             </div>
             <span class="lead-card-kind">${escapeHtml(leadKindLabel(normalized))}</span>
         </div>
     </article>`;
+}
+
+// 4-ish: Zapis modali (faqat o'qish)
+function openLeadRecordingModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    openModal(`${escapeHtml(lead.name)} — Zapis`,
+        `<div class="lead-recording-notice">
+            <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <p class="lead-recording-notice-text">Suhbatlaringiz yozib olinadi</p>
+        </div>
+        <p class="text-muted lead-empty-hint" style="margin-top:12px">Hozircha zapis mavjud emas</p>`,
+        ''
+    );
 }
 
 function openLeadNotifyModal(lang, leadId) {
@@ -6244,6 +6307,14 @@ function renderLeads() {
         btn.addEventListener('click', e => {
             e.stopPropagation();
             openLeadCommentsModal(btn.dataset.leadComments, btn.dataset.leadId);
+        });
+    });
+
+    // 4-ish: zapis ikonkasi
+    board.querySelectorAll('[data-lead-recording]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openLeadRecordingModal(btn.dataset.leadRecording, btn.dataset.leadId);
         });
     });
 
