@@ -1684,6 +1684,28 @@ function initTimetableControls() {
 
     if (!teacherEl) return;
 
+    // 12-ish: sotuv menejeri / o'qituvchi uchun til tabini cheklaymiz
+    const _cuTt = getCurrentUser();
+    const ttTabsEl = document.getElementById('ttSubjectTabs');
+    if (ttTabsEl) {
+        const restrictLang = _cuTt?.role === 'sales_manager'
+            ? (_cuTt.linkedManagerLang || 'english')
+            : _cuTt?.role === 'teacher'
+            ? (() => {
+                const linked = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === _cuTt.linkedTeacherId);
+                return linked?.subject || 'english';
+            })()
+            : null;
+        if (restrictLang) {
+            ttTabsEl.style.display = 'none';
+            ttTabsEl.querySelectorAll('.subject-tab').forEach(b => {
+                b.classList.toggle('active', b.dataset.subject === restrictLang);
+            });
+        } else {
+            ttTabsEl.style.display = '';
+        }
+    }
+
     initSubjectTabs('ttSubjectTabs', () => {
         _ttFilters = getTimetableFilters();
         initTimetableControls();
@@ -2558,20 +2580,33 @@ function initStudentsSubjectTabs() {
 }
 
 function renderStudents() {
-    initStudentsSubjectTabs();
-    const subject = getStudentsSelectedSubject();
     const currentUser = getCurrentUser();
+    const isSalesManager = currentUser?.role === 'sales_manager';
+
+    // 11-ish: sotuv menejeri uchun til tabini yashiramiz
+    const tabsEl = document.getElementById('studentsSubjectTabs');
+    if (tabsEl) tabsEl.style.display = isSalesManager ? 'none' : '';
+
+    initStudentsSubjectTabs();
+    const currentUser2 = currentUser;
     const titleEl = document.getElementById('studentsPageTitle');
-    if (titleEl) {
-        titleEl.textContent = `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`;
-    }
 
     let students = getItem(STORAGE_KEYS.students, []);
-    students = students.filter(s => (s.subject || 'english') === subject);
-    // O'qituvchi faqat o'z o'quvchilarini ko'radi
-    if (currentUser?.role === 'teacher' && currentUser?.linkedTeacherId) {
-        const tid = currentUser.linkedTeacherId;
-        students = students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid);
+
+    if (isSalesManager) {
+        // 11-ish: faqat o'z lidlaridan konvertatsiya qilgan o'quvchilarni ko'radi
+        const managerId = currentUser?.linkedManagerId || '';
+        students = students.filter(s => s.managerId && s.managerId === managerId);
+        if (titleEl) titleEl.textContent = "Mening o'quvchilarim";
+    } else {
+        const subject = getStudentsSelectedSubject();
+        students = students.filter(s => (s.subject || 'english') === subject);
+        if (titleEl) titleEl.textContent = `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`;
+        // O'qituvchi faqat o'z o'quvchilarini ko'radi
+        if (currentUser2?.role === 'teacher' && currentUser2?.linkedTeacherId) {
+            const tid = currentUser2.linkedTeacherId;
+            students = students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid);
+        }
     }
     const allTeachers = [
         ...getItem(STORAGE_KEYS.teachers, []),
@@ -4572,12 +4607,20 @@ function renderTeacherScheduleSection(asosiyTeachers) {
     </section>`;
 }
 
+// 8-ish: faqat jadval ma'lumotini saqlaydi — statusni o'zgartirmaydi
+function saveLeadTeacherSchedule(lang, leadId, scheduleData) {
+    updateLeadInStorage(lang, leadId, l => ({
+        ...l,
+        paymentOnboarding: { ...(l.paymentOnboarding || {}), ...scheduleData }
+    }));
+}
+
 function openPaymentTeacherScheduleModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
     if (leadHasTeacherSchedule(lead)) {
-        ensureLeadPaymentStatus(lang, leadId);
+        // Status ni BU YERDA o'zgartirmaymiz — openPaymentOnboardingModal tasdiqlanganda o'zgaradi
         openPaymentProcessModal(lang, leadId);
         return;
     }
@@ -4612,7 +4655,8 @@ function openPaymentTeacherScheduleModal(lang, leadId) {
             return;
         }
 
-        ensureLeadPaymentStatus(lang, leadId, result.data);
+        // 8-ish: statusni o'zgartirmasdan faqat jadval ma'lumotini saqlaymiz
+        saveLeadTeacherSchedule(lang, leadId, result.data);
         closeModal();
         openPaymentProcessModal(lang, leadId);
     };
@@ -5237,7 +5281,7 @@ function openPaymentClosedModal(lang, leadId) {
         `${escapeHtml(lead.name)} — To'lov yopildi`,
         bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentClosed">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="confirmPaymentClosed">Keyingi: Dars jadvali →</button>`,
+         <button type="button" class="btn-primary-sm" id="confirmPaymentClosed">Saqlash va yopish</button>`,
         { wide: true }
     );
 
@@ -5249,11 +5293,12 @@ function openPaymentClosedModal(lang, leadId) {
         renderLeads();
     };
 
+    // 9-ish: ustoz so'ralmaydi — mavjud paymentOnboarding bilan to'g'ridan-to'g'ri yakunlaymiz
     document.getElementById('confirmPaymentClosed').onclick = () => {
         const result = collectEnhancedPaymentClosedData(modalBody, ps, { hasDebt, hasInstallment, hasDebtor });
         if (result.error) { alert(result.error); return; }
         closeModal();
-        openClosedScheduleModal(lang, leadId, result.data);
+        finalizePaymentClosed(lang, leadId, result.data, lead.paymentOnboarding || null);
     };
 }
 
@@ -5613,12 +5658,20 @@ function renderLeadsManagerFilter() {
         }
         return;
     }
-    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    // 13-ish: joriy til bo'yicha menejerlari filtrlash
+    const _allMgrs = getItem(STORAGE_KEYS.salesManagers, []);
+    const _ttLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const managers = _allMgrs.filter(m => (m.lang || 'english') === _ttLang);
     const current = _leadsManagerFilter;
     select.innerHTML = `<option value="all">Barcha menejerlar</option>
         <option value="unassigned">Biriktirilmagan</option>
         ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}`;
-    select.value = current;
+    if (current !== 'all' && current !== 'unassigned' && !managers.some(m => m.id === current)) {
+        _leadsManagerFilter = 'all';
+        select.value = 'all';
+    } else {
+        select.value = current;
+    }
     updateManagerFilterDisplay();
 }
 
@@ -5831,7 +5884,8 @@ function autoAddLeadAsStudent(lang, lead) {
         subject,
         teacherId,
         assistantTeacherId: null,
-        source: 'lead'
+        source: 'lead',
+        managerId: lead.managerId || ''  // 11-ish uchun
     });
     setItem(STORAGE_KEYS.students, students);
 }
@@ -7667,6 +7721,8 @@ function renderBookRoadmapCard(item) {
         : '';
 
     const phoneSvg = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>`;
+    // 10-ish: manzil uchun alohida ikonka
+    const locationSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
 
     return `<article class="lead-card" draggable="true" data-br-id="${escapeHtml(item.id)}">
         <div class="lead-card-top">
@@ -7706,8 +7762,8 @@ function renderBookRoadmapCard(item) {
                 <span>${escapeHtml(item.phone || '—')}</span>
             </div>
             <div class="lead-card-contact">
-                ${phoneSvg}
-                <span>${escapeHtml(item.region || '—')}</span>
+                ${locationSvg}
+                <span>${escapeHtml(item.region || item.address || '—')}</span>
             </div>
         </div>
         <div class="lead-card-footer">
@@ -7720,7 +7776,7 @@ function renderBookRoadmapCard(item) {
                     <span>${commentCount}</span>
                 </button>
             </div>
-            <span class="lead-card-kind">${item.kind === 'target' ? 'Target' : 'Organik'}${manager ? ` · ${escapeHtml(manager.name)}` : ''}</span>
+            <span class="lead-card-kind">${item.kind === 'target' ? 'Target' : 'Organik'}</span>
         </div>
     </article>`;
 }
