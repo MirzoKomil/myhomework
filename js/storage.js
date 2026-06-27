@@ -124,6 +124,7 @@ async function initStorage() {
         migrateTeachers();
         migrateStudents();
         migrateSalesManagersHREmployees();
+        cleanOrphanTeachers();
     } catch (err) {
         console.error('API ulanmadi:', err.message);
         _apiReady = false;
@@ -221,6 +222,18 @@ function migrateTeachers() {
         }
     });
     if (changed) setItem(STORAGE_KEYS.teachers, teachers);
+}
+
+// HR da yo'q eski ustoz yozuvlarini teachers jadvalidan o'chiradi
+function cleanOrphanTeachers() {
+    const teachers = getItem(STORAGE_KEYS.teachers, null);
+    if (!teachers || !teachers.length) return;
+    const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const hrIds = new Set(hrEmployees.map(e => e.id));
+    const cleaned = teachers.filter(t => hrIds.has(t.id));
+    if (cleaned.length < teachers.length) {
+        setItem(STORAGE_KEYS.teachers, cleaned);
+    }
 }
 
 function migrateStudents() {
