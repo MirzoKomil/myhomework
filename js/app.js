@@ -3247,7 +3247,7 @@ function continueMvCascade() {
 
 function dispatchLeadTargetFlow(lang, leadId, fromStatus, toStatus) {
     if (toStatus === 'sinov-darsida') { openTrialLessonFlow(lang, leadId, fromStatus); return; }
-    if (toStatus === 'tolov-yopildi') { openPaymentClosedModal(lang, leadId); return; }
+    if (toStatus === 'tolov-yopildi') { openTolovYopildiFlow(lang, leadId, fromStatus); return; }
     if (needsFailedSalePrompt(fromStatus, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus); return; }
     if (needsSifatsizLidPrompt(fromStatus, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
     moveLeadToStatus(lang, leadId, toStatus);
@@ -3566,7 +3566,7 @@ function openTolovYopildiFlow(lang, leadId, fromStatus) {
         openPaymentProcessModal(lang, leadId, { chainTo: 'tolov-yopildi' });
         return;
     }
-    if (!lead.paymentOnboarding) {
+    if (!lead.paymentOnboarding?.becomeStudent) {
         openPaymentOnboardingModal(lang, leadId, { chainTo: 'tolov-yopildi' });
         return;
     }
