@@ -7475,22 +7475,41 @@ function openAddEmployeeModal() {
 
 // HR role filter tab binding
 function initHrEmployeeTabs() {
-    // Role filter
     const tabsContainer = document.getElementById('hrRoleTabs');
+    const langContainer = document.getElementById('hrLangFilter');
+
+    function setLangFilterVisible(show) {
+        if (!langContainer) return;
+        langContainer.hidden = !show;
+        langContainer.style.display = show ? '' : 'none';
+    }
+
+    // Role filter
     if (tabsContainer) {
         tabsContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-role]');
             if (!btn) return;
             _hrRoleFilter = btn.dataset.role;
-            // Lang filter ni reset qilmaymiz — u mustaqil
             tabsContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+
+            if (_hrRoleFilter === 'oqituvchi') {
+                // O'qituvchi tanlanganda til filtri ko'rinadi, default: Ingliz
+                _hrLangFilter = 'ingliz';
+                setLangFilterVisible(true);
+                if (langContainer) {
+                    langContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
+                    langContainer.querySelector('[data-hr-lang="ingliz"]')?.classList.add('active');
+                }
+            } else {
+                _hrLangFilter = 'all';
+                setLangFilterVisible(false);
+            }
             renderHrEmployees();
         });
     }
 
-    // Language filter (faqat o'qituvchilar uchun)
-    const langContainer = document.getElementById('hrLangFilter');
+    // Language filter
     if (langContainer) {
         langContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-hr-lang]');
@@ -7498,21 +7517,6 @@ function initHrEmployeeTabs() {
             _hrLangFilter = btn.dataset.hrLang;
             langContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            // Role filterda "O'qituvchi" ni active qilish (til filtri ishlayotganda)
-            const roleTabs = document.getElementById('hrRoleTabs');
-            if (roleTabs) {
-                if (_hrLangFilter !== 'all') {
-                    roleTabs.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
-                    _hrRoleFilter = 'oqituvchi';
-                    const teacherTab = roleTabs.querySelector('[data-role="oqituvchi"]');
-                    if (teacherTab) teacherTab.classList.add('active');
-                } else {
-                    roleTabs.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
-                    _hrRoleFilter = 'all';
-                    const allTab = roleTabs.querySelector('[data-role="all"]');
-                    if (allTab) allTab.classList.add('active');
-                }
-            }
             renderHrEmployees();
         });
     }

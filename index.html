@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260628b">
+    <link rel="stylesheet" href="css/styles.css?v=20260628c">
 </head>
 
 <body>
@@ -785,27 +785,29 @@
                                 <h1>Xodimlar</h1>
                                 <p>HR bo'limidagi barcha ishchi xodimlar ruyxati</p>
                             </div>
-                            <div class="hr-lang-filter" id="hrLangFilter">
-                                <button type="button" class="subject-tab active" data-hr-lang="all">Barchasi</button>
-                                <button type="button" class="subject-tab" data-hr-lang="ingliz">
-                                    <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
-                                </button>
-                                <button type="button" class="subject-tab" data-hr-lang="rus">
-                                    <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
-                                </button>
-                            </div>
                         </div>
                         <div class="card bg-transparent" style="padding:0; box-shadow:none; background:transparent">
                             <div class="card-header hr-employees-header"
-                                style="background:var(--surface); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow-card); margin-bottom:20px;">
-                                <div class="subject-tabs role-filters" id="hrRoleTabs" style="margin-bottom:0">
-                                    <button type="button" class="subject-tab active" data-role="all">Barchasi</button>
-                                    <button type="button" class="subject-tab" data-role="rop">ROP</button>
-                                    <button type="button" class="subject-tab" data-role="sotuv-menejeri">Sotuv menejeri</button>
-                                    <button type="button" class="subject-tab" data-role="oqituvchi">O'qituvchi</button>
-                                    <button type="button" class="subject-tab" data-role="yordamchi">Yordamchi o'qituvchi</button>
+                                style="background:var(--surface); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow-card); margin-bottom:20px; flex-direction:column; align-items:stretch; gap:12px;">
+                                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                                    <div class="subject-tabs role-filters" id="hrRoleTabs" style="margin-bottom:0;flex:1;padding:0">
+                                        <button type="button" class="subject-tab active" data-role="all">Barchasi</button>
+                                        <button type="button" class="subject-tab" data-role="rop">ROP</button>
+                                        <button type="button" class="subject-tab" data-role="sotuv-menejeri">Sotuv menejeri</button>
+                                        <button type="button" class="subject-tab" data-role="oqituvchi">O'qituvchi</button>
+                                        <button type="button" class="subject-tab" data-role="yordamchi">Yordamchi o'qituvchi</button>
+                                    </div>
+                                    <button class="btn-primary-sm" id="btnOpenAddEmployee">+ Xodim qo'shish</button>
                                 </div>
-                                <button class="btn-primary-sm" id="btnOpenAddEmployee">+ Xodim qo'shish</button>
+                                <div class="hr-lang-filter" id="hrLangFilter" hidden style="display:none">
+                                    <span style="font-size:12px;color:var(--text-muted);font-weight:500;white-space:nowrap;margin-right:4px">Til:</span>
+                                    <button type="button" class="subject-tab active" data-hr-lang="ingliz">
+                                        <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
+                                    </button>
+                                    <button type="button" class="subject-tab" data-hr-lang="rus">
+                                        <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
+                                    </button>
+                                </div>
                             </div>
                             <div class="employees-grid" id="hrEmployeesGrid"></div>
                         </div>
@@ -990,10 +992,10 @@
         </div>
     </div>
 
-    <script src="js/api.js?v=20260628b"></script>
-    <script src="js/storage.js?v=20260628b"></script>
-    <script src="js/notifications.js?v=20260628b"></script>
-    <script src="js/app.js?v=20260628b"></script>
+    <script src="js/api.js?v=20260628c"></script>
+    <script src="js/storage.js?v=20260628c"></script>
+    <script src="js/notifications.js?v=20260628c"></script>
+    <script src="js/app.js?v=20260628c"></script>
 </body>
 
 </html>
