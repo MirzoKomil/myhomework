@@ -252,22 +252,25 @@ function filterTeachersByTypeAndSubject(type, subject) {
         t.type === type && (t.subject || 'english') === subject
     );
 
-    // 5-ish: HR bo'limidagi ustozlarni ham qo'shamiz
+    // Faqat "Xodimlar ro'yxati"da bor ustozlarni ko'rsatamiz
     if (type === 'asosiy') {
         const hrRole = subject === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi';
-        const hrTeachers = getItem(STORAGE_KEYS.hrEmployees, [])
-            .filter(e => e.role === hrRole && e.status !== 'inactive')
-            .map(e => ({
-                id: e.id,
-                name: e.name,
-                type: 'asosiy',
-                subject,
-                phone: e.phone || '',
-                login: e.login || '',
-                _fromHr: true
-            }));
-        const storedIds = new Set(stored.map(t => t.id));
-        return [...stored, ...hrTeachers.filter(t => !storedIds.has(t.id))];
+        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, [])
+            .filter(e => e.role === hrRole && e.status !== 'inactive');
+        const hrIds = new Set(hrEmployees.map(e => e.id));
+        // Stored ustozlardan faqat HR da bor bo'lganlarini olish
+        const storedInHr = stored.filter(t => hrIds.has(t.id));
+        const storedIds = new Set(storedInHr.map(t => t.id));
+        const hrTeachers = hrEmployees.map(e => ({
+            id: e.id,
+            name: e.name,
+            type: 'asosiy',
+            subject,
+            phone: e.phone || '',
+            login: e.login || '',
+            _fromHr: true
+        }));
+        return [...storedInHr, ...hrTeachers.filter(t => !storedIds.has(t.id))];
     }
 
     return stored;
