@@ -231,14 +231,8 @@ async function bootApp() {
     renderCalendarWidget();
     startLeadsPolling();
 
-    // Xodim shaxsiy hujjatlarini to'ldirishi haqida eslatma
-    if (currentUser.role !== 'admin') {
-        const emps = getHrEmployees() || [];
-        const emp = emps.find(e => e.login === currentUser.email || e.phone === currentUser.phone);
-        if (emp && (!emp.cardNumber || !emp.passportSeries || !emp.pinfl || !emp.address)) {
-            showProfileDocsBanner();
-        }
-    }
+    // Hujjatlar banneri faqat adminga ko'rsatiladi (xodimlar o'zi tahrirlayolmaydi)
+    // (removed non-admin banner)
 }
 
 function showProfileDocsBanner() {
@@ -832,6 +826,7 @@ function renderProfileCompletionWidget(user) {
 }
 
 function profileCardHeader(title, fieldKey) {
+    const _isAdminProfile = getCurrentUser()?.role === 'admin';
     const editing = _profileEditing[fieldKey];
     if (editing) {
         return `<div class="profile-card-header">
@@ -839,16 +834,17 @@ function profileCardHeader(title, fieldKey) {
             <button type="button" class="profile-edit-btn" data-profile-cancel="${fieldKey}">Bekor qilish</button>
         </div>`;
     }
-    return `<div class="profile-card-header">
-        <h3>${title}</h3>
+    // Faqat admin tahrirlash tugmasini ko'radi
+    const editBtn = _isAdminProfile ? `
         <button type="button" class="profile-edit-btn" data-profile-edit="${fieldKey}">
             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Tahrirlash
-        </button>
-    </div>`;
+        </button>` : '';
+    return `<div class="profile-card-header"><h3>${title}</h3>${editBtn}</div>`;
 }
 
 function renderProfileEditSection(user) {
+    const _isAdminProfileEdit = getCurrentUser()?.role === 'admin';
     const personalEditing = _profileEditing.personal;
     const locationEditing = _profileEditing.location;
     const bioEditing = _profileEditing.bio;
@@ -963,21 +959,21 @@ function renderProfileEditSection(user) {
 
     return `
         <div class="profile-header-bar">
-            <h1>Profilni tahrirlash</h1>
-            <p>Shaxsiy ma'lumotlaringizni yangilang va profilingizni to'ldiring</p>
+            <h1>${_isAdminProfileEdit ? 'Profilni tahrirlash' : 'Mening profilim'}</h1>
+            <p>${_isAdminProfileEdit ? 'Shaxsiy ma\'lumotlaringizni yangilang va profilingizni to\'ldiring' : 'Shaxsiy ma\'lumotlaringizni ko\'ring'}</p>
         </div>
         <div class="profile-grid">
             <div class="profile-cards">
                 <div class="profile-card">
                     <div class="profile-avatar-section">
                         <div class="profile-avatar-large" id="profileAvatarPreview">${avatarContent}</div>
-                        <div class="profile-avatar-actions">
+                        ${_isAdminProfileEdit ? `<div class="profile-avatar-actions">
                             <h4>Yangi rasm yuklash</h4>
                             <input type="file" id="profileAvatarInput" accept="image/jpeg,image/png,image/webp" hidden>
                             <button type="button" class="btn-primary-sm" id="profileAvatarBtn">Rasm tanlash</button>
                             ${user.avatar ? '<button type="button" class="btn-danger-sm" id="profileAvatarRemove" style="margin-left:8px">O\'chirish</button>' : ''}
                             <p>Kamida 400×400 px tavsiya etiladi. JPG, PNG yoki WebP formatlari qabul qilinadi.</p>
-                        </div>
+                        </div>` : ''}
                     </div>
                 </div>
                 <div class="profile-card">
