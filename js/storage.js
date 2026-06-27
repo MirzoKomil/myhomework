@@ -258,13 +258,30 @@ function filterTeachersByTypeAndSubject(type, subject) {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, [])
             .filter(e => e.role === hrRole && e.status !== 'inactive');
         const hrIds = new Set(hrEmployees.map(e => e.id));
-        // Stored ustozlardan faqat HR da bor bo'lganlarini olish
         const storedInHr = stored.filter(t => hrIds.has(t.id));
         const storedIds = new Set(storedInHr.map(t => t.id));
         const hrTeachers = hrEmployees.map(e => ({
             id: e.id,
             name: e.name,
             type: 'asosiy',
+            subject,
+            phone: e.phone || '',
+            login: e.login || '',
+            _fromHr: true
+        }));
+        return [...storedInHr, ...hrTeachers.filter(t => !storedIds.has(t.id))];
+    }
+
+    if (type === 'yordamchi') {
+        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, [])
+            .filter(e => e.role === 'yordamchi' && e.status !== 'inactive');
+        const hrIds = new Set(hrEmployees.map(e => e.id));
+        const storedInHr = stored.filter(t => hrIds.has(t.id));
+        const storedIds = new Set(storedInHr.map(t => t.id));
+        const hrTeachers = hrEmployees.map(e => ({
+            id: e.id,
+            name: e.name,
+            type: 'yordamchi',
             subject,
             phone: e.phone || '',
             login: e.login || '',
