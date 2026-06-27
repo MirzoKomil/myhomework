@@ -6364,6 +6364,8 @@ function renderLeads() {
             if (from === toStatus) return;
 
             if (needsContactFailPrompt(from, toStatus)) { openContactFailModal(lang, leadId, toStatus); return; }
+            // Sifatsiz lid cascade'dan oldin tekshiriladi — cascade survey ko'rsatilmasin
+            if (needsSifatsizLidPrompt(from, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
             if (SURVEY_CASCADE_TARGETS.has(toStatus)) {
                 const _sk = getSkippedSurveySteps(from, toStatus, lead);
                 if (_sk.length) { startMvCascade(lang, leadId, from, toStatus); return; }
@@ -6375,7 +6377,6 @@ function renderLeads() {
             if (needsPaymentPrompt(from, toStatus)) { openTolovJarayonidaFlow(lang, leadId, from); return; }
             if (needsPaymentClosedPrompt(from, toStatus)) { openTolovYopildiFlow(lang, leadId, from); return; }
             if (needsFailedSalePrompt(from, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, from); return; }
-            if (needsSifatsizLidPrompt(from, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
             moveLeadToStatus(lang, leadId, toStatus);
         });
     });
@@ -6447,6 +6448,12 @@ function initLeadDragDrop(board) {
 
             if (needsContactFailPrompt(fromStatus, toStatus)) {
                 openContactFailModal(payload.lang, payload.id, toStatus);
+                return;
+            }
+
+            // Sifatsiz lid cascade'dan oldin tekshiriladi — cascade survey ko'rsatilmasin
+            if (needsSifatsizLidPrompt(fromStatus, toStatus)) {
+                openSifatsizLidFlow(payload.lang, payload.id);
                 return;
             }
 
