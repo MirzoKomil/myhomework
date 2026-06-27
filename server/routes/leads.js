@@ -32,10 +32,18 @@ router.post('/', webhookSecretRequired, async (req, res) => {
         const name = body.name || body.fullName || body.ism;
         const phone = body.phone || body.tel || body.telefon || '';
         const externalId = body.externalId || body.external_id || body.id || null;
-        const language = body.language || body.lang || body.til || body.subject;
         if (!name?.trim()) return res.status(400).json({ error: 'Ism kiritilishi shart' });
         const sourceResult = resolveSource(body, req);
         if (sourceResult.error) return res.status(400).json({ error: sourceResult.error });
+
+        // 2-ish: Domen orqali til aniqlash (source='Organik' bo'lsa ham ishlaydi)
+        // Referer/Origin header source fieldidan USTUN turadi
+        const referer = (
+            req.headers['referer'] || req.headers['referrer'] || req.headers['origin'] || ''
+        ).toLowerCase();
+        let language = body.language || body.lang || body.til || body.subject || null;
+        if (referer.includes('domwork.uz')) language = 'russian';
+        else if (referer.includes('homeworkuz.uz') || referer.includes('homework.uz')) language = 'english';
 
         // 3-ish: Bog'lanish uchun qulay vaqt
         const contactTime = String(
