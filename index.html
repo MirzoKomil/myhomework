@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260629f">
+    <link rel="stylesheet" href="css/styles.css?v=20260629g">
 </head>
 
 <body>
@@ -554,21 +554,37 @@
                             </div>
                         </div>
                         <div class="card">
-                            <div class="card-header">
-                                <h3>Ro'yxat</h3>
+                            <div class="students-toolbar">
+                                <div class="students-toolbar-left">
+                                    <div class="students-search-wrap">
+                                        <svg viewBox="0 0 24 24" class="students-search-icon"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+                                        <input type="text" id="studentsSearch" class="students-search-input" placeholder="Ism, telefon yoki ID bo'yicha qidirish...">
+                                    </div>
+                                    <span id="studentsTotalLabel" class="students-total-label"></span>
+                                </div>
                                 <button class="btn-primary-sm" id="addStudentBtn">+ O'quvchi qo'shish</button>
                             </div>
                             <div class="table-responsive">
-                                <table class="table">
+                                <table class="table students-table">
                                     <thead>
                                         <tr>
+                                            <th style="width:36px"><input type="checkbox" id="studentsCheckAll" class="student-check-input"></th>
                                             <th>№</th>
                                             <th>Ism familiya</th>
+                                            <th>ID</th>
                                             <th>Telefon</th>
-                                            <th>Fan</th>
-                                            <th>Guruh</th>
-                                            <th>Ustoz</th>
-                                            <th>Amallar</th>
+                                            <th>Yoshi</th>
+                                            <th>Jinsi</th>
+                                            <th>Viloyat</th>
+                                            <th>Dars boshlagan</th>
+                                            <th>Ustozi</th>
+                                            <th>Yordamchi</th>
+                                            <th>Sotuv menejeri</th>
+                                            <th>Kurs tugash</th>
+                                            <th>Darslar</th>
+                                            <th>Baho</th>
+                                            <th>Holati</th>
+                                            <th style="width:60px">Amallar</th>
                                         </tr>
                                     </thead>
                                     <tbody id="studentsBody"></tbody>
@@ -992,10 +1008,10 @@
         </div>
     </div>
 
-    <script src="js/api.js?v=20260629f"></script>
-    <script src="js/storage.js?v=20260629f"></script>
-    <script src="js/notifications.js?v=20260629f"></script>
-    <script src="js/app.js?v=20260629f"></script>
+    <script src="js/api.js?v=20260629g"></script>
+    <script src="js/storage.js?v=20260629g"></script>
+    <script src="js/notifications.js?v=20260629g"></script>
+    <script src="js/app.js?v=20260629g"></script>
 </body>
 
 </html>

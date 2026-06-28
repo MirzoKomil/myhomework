@@ -2096,6 +2096,7 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         lessonDayOfWeek: onboarding.lessonDayOfWeek,
         lessonTime: onboarding.lessonTime,
         lessonDuration: duration,
+        startDate: new Date().toISOString().slice(0, 10),
         source: 'lead',
         managerId: lead?.managerId || '',
         leadRef: lead?.id ? { lang, id: lead.id } : undefined
@@ -2610,20 +2611,17 @@ function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
 
-    // 11-ish: sotuv menejeri uchun til tabini va qo'shish tugmasini yashiramiz
     const tabsEl = document.getElementById('studentsSubjectTabs');
     if (tabsEl) tabsEl.hidden = isSalesManager;
     const addStudentBtnEl = document.getElementById('addStudentBtn');
     if (addStudentBtnEl) addStudentBtnEl.hidden = isSalesManager;
 
     initStudentsSubjectTabs();
-    const currentUser2 = currentUser;
     const titleEl = document.getElementById('studentsPageTitle');
 
     let students = getItem(STORAGE_KEYS.students, []);
 
     if (isSalesManager) {
-        // 11-ish: faqat o'z lidlaridan konvertatsiya qilgan o'quvchilarni ko'radi
         const managerId = currentUser?.linkedManagerId || '';
         const allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         const managerLeadIds = new Set([
@@ -2639,105 +2637,312 @@ function renderStudents() {
         const subject = getStudentsSelectedSubject();
         students = students.filter(s => (s.subject || 'english') === subject);
         if (titleEl) titleEl.textContent = `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`;
-        // O'qituvchi faqat o'z o'quvchilarini ko'radi
-        if (currentUser2?.role === 'teacher' && currentUser2?.linkedTeacherId) {
-            const tid = currentUser2.linkedTeacherId;
+        if (currentUser?.role === 'teacher' && currentUser?.linkedTeacherId) {
+            const tid = currentUser.linkedTeacherId;
             students = students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid);
         }
     }
+
+    // Search filter
+    const searchVal = (document.getElementById('studentsSearch')?.value || '').trim().toLowerCase();
+    if (searchVal) {
+        students = students.filter(s =>
+            (s.name || '').toLowerCase().includes(searchVal) ||
+            (s.phone || '').toLowerCase().includes(searchVal) ||
+            (s.id || '').toLowerCase().includes(searchVal)
+        );
+    }
+
     const allTeachers = [
         ...getItem(STORAGE_KEYS.teachers, []),
         ...getItem(STORAGE_KEYS.hrEmployees, [])
             .filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
     ];
+    const allManagers = getItem(STORAGE_KEYS.hrEmployees, [])
+        .filter(e => e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri');
+    const payments = getItem(STORAGE_KEYS.payments, []);
+
+    const totalLabel = document.getElementById('studentsTotalLabel');
+    if (totalLabel) totalLabel.textContent = `Jami: ${students.length} ta`;
+
     const tbody = document.getElementById('studentsBody');
+    if (!tbody) return;
+
     tbody.innerHTML = students.map((s, i) => {
         const teacher = allTeachers.find(t => t.id === s.teacherId);
         const asst = allTeachers.find(t => t.id === s.assistantTeacherId);
-        return `<tr>
-            <td>${i + 1}</td>
-            <td>${s.name}</td>
-            <td>${s.phone || '—'}</td>
-            <td>${getSubjectLabel(s.subject || 'english')}</td>
-            <td>${s.group || '—'}</td>
-            <td>${teacher?.name || '—'}${asst ? '<br><small>Yordamchi: ' + asst.name + '</small>' : ''}</td>
-            <td><button class="btn-danger-sm" data-delete-student="${s.id}">O'chirish</button></td>
-        </tr>`;
-    }).join('') || '<tr><td colspan="7" class="text-muted">O\'quvchilar yo\'q</td></tr>';
+        const manager = allManagers.find(m => m.id === s.managerId);
 
-    document.querySelectorAll('[data-delete-student]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!confirm('O\'chirishni tasdiqlaysizmi?')) return;
-            const id = btn.dataset.deleteStudent;
-            setItem(STORAGE_KEYS.students, getItem(STORAGE_KEYS.students, []).filter(s => s.id !== id));
-            renderStudents();
+        const ageStr = s.age ? String(s.age) : calculateAge(s.birthDate);
+        const startDate = s.startDate || '';
+        const endDate = addCourseDays(startDate, 90);
+        const attended = countStudentAttendance(s.id, s.teacherId);
+
+        const studentPayments = payments.filter(p => p.studentId === s.id);
+        const totalDebt = studentPayments.reduce((sum, p) => sum + (p.debt || 0), 0);
+        const statusHtml = studentPayments.length === 0
+            ? `<span class="badge" style="background:#f3f4f6;color:#6b7280">—</span>`
+            : totalDebt > 0
+                ? `<span class="badge badge-danger">Qarzdor</span>`
+                : `<span class="badge badge-success">To'liq to'lagan</span>`;
+
+        const initials = (s.name || '—').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+        const genderLabel = s.gender === 'erkak' ? 'Erkak' : s.gender === 'ayol' ? 'Ayol' : '—';
+
+        return `<tr data-student-row="${escapeHtml(s.id)}">
+            <td><input type="checkbox" class="student-check-input student-check" data-id="${escapeHtml(s.id)}"></td>
+            <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:8px;min-width:120px">
+                    <div class="student-avatar-mini">${escapeHtml(initials)}</div>
+                    <span style="font-weight:500">${escapeHtml(s.name || '—')}</span>
+                </div>
+            </td>
+            <td><span class="student-id-badge">#${escapeHtml(String(s.id).slice(-6))}</span></td>
+            <td>${escapeHtml(s.phone || '—')}</td>
+            <td>${escapeHtml(ageStr)}</td>
+            <td>${escapeHtml(genderLabel)}</td>
+            <td>${escapeHtml(s.region || '—')}</td>
+            <td>${startDate ? formatDateShort(startDate) : '—'}</td>
+            <td style="white-space:nowrap">${escapeHtml(teacher?.name || '—')}</td>
+            <td style="white-space:nowrap">${escapeHtml(asst?.name || '—')}</td>
+            <td style="white-space:nowrap">${escapeHtml(manager?.name || '—')}</td>
+            <td>${escapeHtml(endDate)}</td>
+            <td style="text-align:center">${attended || '—'}</td>
+            <td style="text-align:center">${s.grade ? escapeHtml(String(s.grade)) : '—'}</td>
+            <td>${statusHtml}</td>
+            <td>
+                <div style="position:relative;display:inline-block">
+                    <button type="button" class="student-menu-btn" data-smid="${escapeHtml(s.id)}" title="Amallar">
+                        <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--text-muted)">O'quvchilar yo'q</td></tr>`;
+
+    // Bind 3-dot menus
+    tbody.querySelectorAll('.student-menu-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            document.querySelectorAll('.student-dropdown').forEach(d => d.remove());
+            const sid = btn.dataset.smid;
+            const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === sid);
+            if (!student) return;
+            const phoneHref = (student.phone || '').replace(/\s/g, '');
+            const menu = document.createElement('div');
+            menu.className = 'student-dropdown';
+            menu.innerHTML = `
+                <a href="tel:${escapeHtml(phoneHref)}" class="student-dropdown-item">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11.5a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .91h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.36-1.36a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg>
+                    Telefon qilish
+                </a>
+                <a href="sms:${escapeHtml(phoneHref)}" class="student-dropdown-item">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    SMS jo'natish
+                </a>
+                <button type="button" class="student-dropdown-item" data-edit-student="${escapeHtml(sid)}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Tahrirlash
+                </button>
+                <button type="button" class="student-dropdown-item student-dropdown-item--danger" data-del-student="${escapeHtml(sid)}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    O'chirish
+                </button>`;
+            btn.parentElement.appendChild(menu);
+
+            menu.querySelector('[data-edit-student]')?.addEventListener('click', () => {
+                menu.remove();
+                openEditStudentModal(sid);
+            });
+            menu.querySelector('[data-del-student]')?.addEventListener('click', () => {
+                menu.remove();
+                if (!confirm("O'quvchini o'chirasizmi?")) return;
+                setItem(STORAGE_KEYS.students, getItem(STORAGE_KEYS.students, []).filter(s => s.id !== sid));
+                renderStudents();
+            });
+
+            setTimeout(() => {
+                document.addEventListener('click', () => menu.remove(), { once: true });
+            }, 0);
         });
     });
+
+    // Check-all
+    const checkAll = document.getElementById('studentsCheckAll');
+    if (checkAll) {
+        checkAll.onchange = () => {
+            tbody.querySelectorAll('.student-check').forEach(c => { c.checked = checkAll.checked; });
+        };
+    }
+
+    // Search bind (once)
+    const searchEl = document.getElementById('studentsSearch');
+    if (searchEl && !searchEl.dataset.bound) {
+        searchEl.dataset.bound = '1';
+        searchEl.addEventListener('input', () => renderStudents());
+    }
 }
 
-function fillStudentTeacherOptions(subject) {
+function fillStudentTeacherOptions(subject, suffix) {
+    const sfx = suffix || '';
     const asosiy = filterTeachersByTypeAndSubject('asosiy', subject);
     const yordamchi = filterTeachersByTypeAndSubject('yordamchi', subject);
-    const tSel = document.getElementById('mStTeacher');
-    const aSel = document.getElementById('mStAsstTeacher');
+    const tSel = document.getElementById('mStTeacher' + sfx);
+    const aSel = document.getElementById('mStAsstTeacher' + sfx);
     if (tSel) {
         tSel.innerHTML = asosiy.length
-            ? asosiy.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+            ? asosiy.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('')
             : '<option value="">— Ustoz yo\'q —</option>';
     }
     if (aSel) {
         aSel.innerHTML = '<option value="">— Tanlanmagan —</option>' +
-            yordamchi.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            yordamchi.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
     }
+}
+
+function studentFormHtml(sfx, defaults) {
+    const d = defaults || {};
+    return `
+    <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:2">
+            <label>Ism familiya <span style="color:var(--danger)">*</span></label>
+            <input id="mStName${sfx}" class="form-control" value="${escapeHtml(d.name || '')}">
+        </div>
+        <div class="form-group" style="flex:1">
+            <label>Yoshi</label>
+            <input type="number" id="mStAge${sfx}" class="form-control" min="3" max="99" value="${escapeHtml(String(d.age || ''))}">
+        </div>
+    </div>
+    <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:1">
+            <label>Telefon raqam</label>
+            <input id="mStPhone${sfx}" class="form-control" value="${escapeHtml(d.phone || '')}" placeholder="+998 90 123 45 67">
+        </div>
+        <div class="form-group" style="flex:1">
+            <label>Jinsi</label>
+            <select id="mStGender${sfx}" class="form-control">
+                <option value="">— Tanlang —</option>
+                <option value="erkak"${d.gender === 'erkak' ? ' selected' : ''}>Erkak</option>
+                <option value="ayol"${d.gender === 'ayol' ? ' selected' : ''}>Ayol</option>
+            </select>
+        </div>
+    </div>
+    <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:1">
+            <label>Viloyat / Davlat</label>
+            <input id="mStRegion${sfx}" class="form-control" value="${escapeHtml(d.region || '')}" placeholder="Toshkent, Samarqand...">
+        </div>
+        <div class="form-group" style="flex:1">
+            <label>Dars boshlagan sana</label>
+            <input type="date" id="mStStartDate${sfx}" class="form-control" value="${escapeHtml(d.startDate || '')}">
+        </div>
+    </div>
+    <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:1">
+            <label>Fan <span style="color:var(--danger)">*</span></label>
+            <select id="mStSubject${sfx}" class="form-control">
+                <option value="english"${(d.subject !== 'russian') ? ' selected' : ''}>🇬🇧 Ingliz tili</option>
+                <option value="russian"${d.subject === 'russian' ? ' selected' : ''}>🇷🇺 Rus tili</option>
+            </select>
+        </div>
+        <div class="form-group" style="flex:1">
+            <label>Baho</label>
+            <input type="number" id="mStGrade${sfx}" class="form-control" min="0" max="100" value="${escapeHtml(String(d.grade || ''))}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Asosiy ustoz <span style="color:var(--danger)">*</span></label>
+        <select id="mStTeacher${sfx}" class="form-control"></select>
+    </div>
+    <div class="form-group">
+        <label>Yordamchi ustoz (ixtiyoriy)</label>
+        <select id="mStAsstTeacher${sfx}" class="form-control"></select>
+    </div>`;
 }
 
 document.getElementById('addStudentBtn').addEventListener('click', () => {
     const _defaultSubject = getStudentsSelectedSubject();
-    openModal("O'quvchi qo'shish",
-        `<div class="form-group"><label>Ism familiya</label><input id="mStName" class="form-control"></div>
-         <div class="form-group"><label>Telefon</label><input id="mStPhone" class="form-control"></div>
-         <div class="form-group"><label>Fan</label>
-            <select id="mStSubject" class="form-select">
-                <option value="english">🇬🇧 Ingliz tili</option>
-                <option value="russian">🇷🇺 Rus tili</option>
-            </select>
-         </div>
-         <div class="form-group"><label>Guruh</label><input id="mStGroup" class="form-control"></div>
-         <div class="form-group"><label>Asosiy ustoz</label>
-            <select id="mStTeacher" class="form-select"></select>
-         </div>
-         <div class="form-group"><label>Yordamchi ustoz (ixtiyoriy)</label>
-            <select id="mStAsstTeacher" class="form-select"></select>
-         </div>`,
-        `<button class="btn-primary-sm" id="saveStudent">Saqlash</button>`
+    openModal("O'quvchi qo'shish", studentFormHtml('', { subject: _defaultSubject }),
+        `<button type="button" class="btn-ghost" id="cancelAddStudent">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveStudent">Saqlash</button>`,
+        { wide: false }
     );
-    document.getElementById('mStSubject').value = _defaultSubject;
-    fillStudentTeacherOptions(_defaultSubject);
+    fillStudentTeacherOptions(_defaultSubject, '');
     document.getElementById('mStSubject').addEventListener('change', e => {
-        fillStudentTeacherOptions(e.target.value);
+        fillStudentTeacherOptions(e.target.value, '');
     });
+    document.getElementById('cancelAddStudent').onclick = () => closeModal();
     document.getElementById('saveStudent').onclick = () => {
         const name = document.getElementById('mStName').value.trim();
-        if (!name) return;
+        if (!name) { alert('Ism familiya kiritilishi shart'); return; }
         const teacherId = document.getElementById('mStTeacher').value;
-        if (!teacherId) { alert('Asosiy ustozni tanlang.'); return; }
+        if (!teacherId) { alert('Asosiy ustozni tanlang'); return; }
         const students = getItem(STORAGE_KEYS.students, []);
-        const asstId = document.getElementById('mStAsstTeacher').value;
-        const subject = document.getElementById('mStSubject').value;
         students.push({
             id: 's' + Date.now(),
             name,
             phone: document.getElementById('mStPhone').value.trim(),
-            group: document.getElementById('mStGroup').value.trim(),
-            subject,
+            age: parseInt(document.getElementById('mStAge').value) || null,
+            gender: document.getElementById('mStGender').value,
+            region: document.getElementById('mStRegion').value.trim(),
+            startDate: document.getElementById('mStStartDate').value,
+            grade: parseFloat(document.getElementById('mStGrade').value) || null,
+            subject: document.getElementById('mStSubject').value,
             teacherId,
-            assistantTeacherId: asstId || null
+            assistantTeacherId: document.getElementById('mStAsstTeacher').value || null,
+            source: 'manual'
         });
         setItem(STORAGE_KEYS.students, students);
         closeModal();
         renderStudents();
     };
 });
+
+function openEditStudentModal(studentId) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const s = students.find(st => st.id === studentId);
+    if (!s) return;
+    openModal("O'quvchini tahrirlash", studentFormHtml('E', s),
+        `<button type="button" class="btn-ghost" id="cancelEditStudent">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveEditStudent">Saqlash</button>`,
+        { wide: false }
+    );
+    fillStudentTeacherOptions(s.subject || 'english', 'E');
+    const tSel = document.getElementById('mStTeacherE');
+    if (tSel && s.teacherId) tSel.value = s.teacherId;
+    const aSel = document.getElementById('mStAsstTeacherE');
+    if (aSel && s.assistantTeacherId) aSel.value = s.assistantTeacherId;
+    document.getElementById('mStSubjectE').addEventListener('change', e => {
+        fillStudentTeacherOptions(e.target.value, 'E');
+    });
+    document.getElementById('cancelEditStudent').onclick = () => closeModal();
+    document.getElementById('saveEditStudent').onclick = () => {
+        const name = document.getElementById('mStNameE').value.trim();
+        if (!name) { alert('Ism familiya kiritilishi shart'); return; }
+        const teacherId = document.getElementById('mStTeacherE').value;
+        if (!teacherId) { alert('Asosiy ustozni tanlang'); return; }
+        const updated = {
+            ...s,
+            name,
+            phone: document.getElementById('mStPhoneE').value.trim(),
+            age: parseInt(document.getElementById('mStAgeE').value) || null,
+            gender: document.getElementById('mStGenderE').value,
+            region: document.getElementById('mStRegionE').value.trim(),
+            startDate: document.getElementById('mStStartDateE').value,
+            grade: parseFloat(document.getElementById('mStGradeE').value) || null,
+            subject: document.getElementById('mStSubjectE').value,
+            teacherId,
+            assistantTeacherId: document.getElementById('mStAsstTeacherE').value || null,
+        };
+        const allStudents = getItem(STORAGE_KEYS.students, []);
+        const idx = allStudents.findIndex(st => st.id === studentId);
+        if (idx !== -1) allStudents[idx] = updated;
+        setItem(STORAGE_KEYS.students, allStudents);
+        closeModal();
+        renderStudents();
+    };
+}
 
 // --- To'lovlar ---
 function renderPayments() {
@@ -5607,6 +5812,7 @@ function promoteStudentFromClosed(lang, lead, scheduleData) {
         lessonDayOfWeek: scheduleData.lessonDayOfWeek,
         lessonTime: scheduleData.lessonTime,
         lessonDuration: duration,
+        startDate: new Date().toISOString().slice(0, 10),
         source: 'lead-closed',
         managerId: lead?.managerId || '',
         leadRef: lead?.id ? { lang, id: lead.id } : undefined
@@ -5852,6 +6058,44 @@ function escapeHtml(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+}
+
+function calculateAge(birthDate) {
+    if (!birthDate) return '—';
+    const b = new Date(birthDate);
+    if (isNaN(b.getTime())) return '—';
+    const now = new Date();
+    let age = now.getFullYear() - b.getFullYear();
+    const m = now.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+    return age > 0 ? String(age) : '—';
+}
+
+function countStudentAttendance(studentId, teacherId) {
+    if (!teacherId) return 0;
+    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    let count = 0;
+    Object.entries(mainAtt).forEach(([key, block]) => {
+        if (!key.endsWith('_' + teacherId)) return;
+        const studentBlock = block[studentId] || {};
+        count += Object.values(studentBlock).filter(Boolean).length;
+    });
+    return count;
+}
+
+function addCourseDays(startDateStr, days) {
+    if (!startDateStr) return '—';
+    const d = new Date(startDateStr);
+    if (isNaN(d.getTime())) return '—';
+    d.setDate(d.getDate() + days);
+    return formatDateShort(d.toISOString().slice(0, 10));
 }
 
 function leadInitials(name) {
