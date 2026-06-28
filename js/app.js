@@ -2086,7 +2086,9 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         lessonDayOfWeek: onboarding.lessonDayOfWeek,
         lessonTime: onboarding.lessonTime,
         lessonDuration: duration,
-        source: 'lead'
+        source: 'lead',
+        managerId: lead?.managerId || '',
+        leadRef: lead?.id ? { lang, id: lead.id } : undefined
     });
     setItem(STORAGE_KEYS.students, students);
     return id;
@@ -2598,9 +2600,11 @@ function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
 
-    // 11-ish: sotuv menejeri uchun til tabini yashiramiz
+    // 11-ish: sotuv menejeri uchun til tabini va qo'shish tugmasini yashiramiz
     const tabsEl = document.getElementById('studentsSubjectTabs');
-    if (tabsEl) tabsEl.style.display = isSalesManager ? 'none' : '';
+    if (tabsEl) tabsEl.hidden = isSalesManager;
+    const addStudentBtnEl = document.getElementById('addStudentBtn');
+    if (addStudentBtnEl) addStudentBtnEl.hidden = isSalesManager;
 
     initStudentsSubjectTabs();
     const currentUser2 = currentUser;
@@ -2611,7 +2615,15 @@ function renderStudents() {
     if (isSalesManager) {
         // 11-ish: faqat o'z lidlaridan konvertatsiya qilgan o'quvchilarni ko'radi
         const managerId = currentUser?.linkedManagerId || '';
-        students = students.filter(s => s.managerId && s.managerId === managerId);
+        const allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+        const managerLeadIds = new Set([
+            ...(allLeads.english || []).filter(l => l.managerId === managerId).map(l => l.id),
+            ...(allLeads.russian || []).filter(l => l.managerId === managerId).map(l => l.id)
+        ]);
+        students = students.filter(s =>
+            (s.managerId && s.managerId === managerId) ||
+            (s.leadRef && managerLeadIds.has(s.leadRef.id))
+        );
         if (titleEl) titleEl.textContent = "Mening o'quvchilarim";
     } else {
         const subject = getStudentsSelectedSubject();
@@ -5585,7 +5597,9 @@ function promoteStudentFromClosed(lang, lead, scheduleData) {
         lessonDayOfWeek: scheduleData.lessonDayOfWeek,
         lessonTime: scheduleData.lessonTime,
         lessonDuration: duration,
-        source: 'lead-closed'
+        source: 'lead-closed',
+        managerId: lead?.managerId || '',
+        leadRef: lead?.id ? { lang, id: lead.id } : undefined
     });
     setItem(STORAGE_KEYS.students, students);
     return id;
