@@ -3044,7 +3044,63 @@ function renderSdpAttendance(s) {
 function renderSdpPlatform(s) {
     const stats = s.mobileStats || {};
     const pct = stats.progress || 0;
+
+    // Sessions list
+    const sessions = stats.sessions || [];
+    const lastLogin = stats.lastLogin || null;
+
+    function deviceIcon(type) {
+        if (!type) return '📱';
+        const t = type.toLowerCase();
+        if (t.includes('ios') || t.includes('iphone') || t.includes('ipad')) return '🍎';
+        if (t.includes('android')) return '🤖';
+        if (t.includes('web') || t.includes('chrome') || t.includes('firefox') || t.includes('safari')) return '🌐';
+        return '📱';
+    }
+
+    const sessionsHtml = sessions.length
+        ? `<table class="sdp-table">
+            <thead><tr><th>Qurilma</th><th>OS / Brauzer</th><th>IP</th><th>Kirgan vaqt</th><th>Holati</th></tr></thead>
+            <tbody>${sessions.map(ses => `
+                <tr>
+                    <td style="white-space:nowrap">${deviceIcon(ses.deviceType)} ${escapeHtml(ses.deviceName || ses.deviceType || '—')}</td>
+                    <td>${escapeHtml(ses.os || ses.browser || '—')}</td>
+                    <td style="font-family:monospace;font-size:12px">${escapeHtml(ses.ip || '—')}</td>
+                    <td style="white-space:nowrap">${ses.loginAt ? formatDateShort(ses.loginAt.slice(0,10)) + ' ' + (ses.loginAt.slice(11,16)||'') : '—'}</td>
+                    <td>${ses.active
+                        ? '<span class="badge badge-success" style="font-size:11px">Faol</span>'
+                        : '<span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:11px">Tugagan</span>'}</td>
+                </tr>`).join('')}
+            </tbody>
+           </table>`
+        : `<div class="sdp-empty" style="padding:16px">Sessiya ma'lumotlari mavjud emas.<br><small style="color:var(--text-muted)">Mobil ilova integratsiyasi ulangach avtomatik to'ldiriladi.</small></div>`;
+
     return `
+    <div class="sdp-section">
+        <p class="sdp-section-title">So'nggi faollik</p>
+        <div class="sdp-info-grid" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="sdp-info-item">
+                <div class="sdp-info-label">Oxirgi kirish</div>
+                <div class="sdp-info-value" style="font-size:12px">
+                    ${lastLogin
+                        ? formatDateShort(lastLogin.slice(0,10)) + '<br><span style="color:var(--text-muted)">' + (lastLogin.slice(11,16)||'') + '</span>'
+                        : '—'}
+                </div>
+            </div>
+            <div class="sdp-info-item">
+                <div class="sdp-info-label">Faol sessiyalar</div>
+                <div class="sdp-info-value">${sessions.filter(se=>se.active).length || '—'}</div>
+            </div>
+            <div class="sdp-info-item">
+                <div class="sdp-info-label">Jami sessiyalar</div>
+                <div class="sdp-info-value">${sessions.length || '—'}</div>
+            </div>
+        </div>
+    </div>
+    <div class="sdp-section">
+        <p class="sdp-section-title">Qurilmalar va sessiyalar</p>
+        ${sessionsHtml}
+    </div>
     <div class="sdp-section">
         <p class="sdp-section-title">Kurs progressi</p>
         <div style="margin-bottom:16px">
@@ -3065,7 +3121,7 @@ function renderSdpPlatform(s) {
             </div>
             <div class="sdp-stat-card">
                 <div class="sdp-stat-value">${stats.wordsLearned ?? '—'}</div>
-                <div class="sdp-stat-label">Yodlagan so'zlari</div>
+                <div class="sdp-stat-label">Yodlagan so'zlar</div>
             </div>
             <div class="sdp-stat-card">
                 <div class="sdp-stat-value">${stats.grammarRules ?? '—'}</div>
@@ -3091,7 +3147,7 @@ function renderSdpPlatform(s) {
             ? `<table class="sdp-table"><thead><tr><th>Sana</th><th>Harakat</th><th>Ball</th></tr></thead><tbody>
                 ${stats.activities.map(a=>`<tr><td>${escapeHtml(a.date||'')}</td><td>${escapeHtml(a.action||'')}</td><td>${escapeHtml(String(a.points||''))}</td></tr>`).join('')}
                </tbody></table>`
-            : `<div class="sdp-empty" style="padding:20px">Platforma ma'lumotlari mavjud emas.<br><small style="color:var(--text-muted)">Mobil ilova integratsiyasi ulangach avtomatik to'ldiriladi.</small></div>`}
+            : `<div class="sdp-empty" style="padding:16px">Harakatlar tarixi mavjud emas.</div>`}
     </div>`;
 }
 
