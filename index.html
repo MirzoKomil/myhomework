@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260629g">
+    <link rel="stylesheet" href="css/styles.css?v=20260629h">
 </head>
 
 <body>
@@ -996,6 +996,26 @@
     <!-- Toast elements -->
     <div id="saveErrorToast" class="save-error-toast" style="display:none"></div>
 
+    <!-- Student Detail Panel -->
+    <div id="studentDetailOverlay" class="sdp-overlay" style="display:none" aria-hidden="true"></div>
+    <div id="studentDetailPanel" class="sdp-panel" aria-hidden="true">
+        <div class="sdp-header">
+            <button type="button" class="sdp-close-btn" id="sdpCloseBtn" aria-label="Yopish">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <div class="sdp-header-info" id="sdpHeaderInfo"></div>
+            <div class="sdp-header-actions" id="sdpHeaderActions"></div>
+        </div>
+        <div class="sdp-tabs" id="sdpTabs">
+            <button type="button" class="sdp-tab active" data-sdp-tab="profile">Profil</button>
+            <button type="button" class="sdp-tab" data-sdp-tab="payments">To'lovlar</button>
+            <button type="button" class="sdp-tab" data-sdp-tab="attendance">Davomat</button>
+            <button type="button" class="sdp-tab" data-sdp-tab="platform">Platforma</button>
+            <button type="button" class="sdp-tab" data-sdp-tab="sales">Sotuv tarixi</button>
+        </div>
+        <div class="sdp-body" id="sdpBody"></div>
+    </div>
+
     <!-- Modal -->
     <div class="modal-overlay" id="modalOverlay" style="display:none">
         <div class="modal">
@@ -1008,10 +1028,10 @@
         </div>
     </div>
 
-    <script src="js/api.js?v=20260629g"></script>
-    <script src="js/storage.js?v=20260629g"></script>
-    <script src="js/notifications.js?v=20260629g"></script>
-    <script src="js/app.js?v=20260629g"></script>
+    <script src="js/api.js?v=20260629h"></script>
+    <script src="js/storage.js?v=20260629h"></script>
+    <script src="js/notifications.js?v=20260629h"></script>
+    <script src="js/app.js?v=20260629h"></script>
 </body>
 
 </html>

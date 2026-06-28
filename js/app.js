@@ -2721,6 +2721,15 @@ function renderStudents() {
         </tr>`;
     }).join('') || `<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--text-muted)">O'quvchilar yo'q</td></tr>`;
 
+    // Ism ustiga bosib detail panel ochish
+    tbody.querySelectorAll('[data-student-row]').forEach(row => {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', e => {
+            if (e.target.closest('.student-menu-btn') || e.target.closest('.student-dropdown') || e.target.type === 'checkbox') return;
+            openStudentDetail(row.dataset.studentRow);
+        });
+    });
+
     // Bind 3-dot menus
     tbody.querySelectorAll('.student-menu-btn').forEach(btn => {
         btn.addEventListener('click', e => {
@@ -2782,6 +2791,446 @@ function renderStudents() {
         searchEl.dataset.bound = '1';
         searchEl.addEventListener('input', () => renderStudents());
     }
+}
+
+// ===== Student Detail Panel =====
+function openStudentDetail(studentId) {
+    const panel = document.getElementById('studentDetailPanel');
+    const overlay = document.getElementById('studentDetailOverlay');
+    if (!panel || !overlay) return;
+
+    _sdpCurrentId = studentId;
+    _sdpCurrentTab = 'profile';
+
+    overlay.style.display = 'block';
+    panel.style.display = 'flex';
+    requestAnimationFrame(() => panel.classList.add('sdp-open'));
+
+    renderSdpHeader(studentId);
+    renderSdpTab('profile', studentId);
+
+    document.getElementById('sdpCloseBtn').onclick = closeStudentDetail;
+    overlay.onclick = closeStudentDetail;
+
+    const tabsEl = document.getElementById('sdpTabs');
+    tabsEl.querySelectorAll('.sdp-tab').forEach(btn => {
+        btn.onclick = () => {
+            tabsEl.querySelectorAll('.sdp-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderSdpTab(btn.dataset.sdpTab, _sdpCurrentId);
+        };
+    });
+}
+
+let _sdpCurrentId = null;
+let _sdpCurrentTab = 'profile';
+
+function closeStudentDetail() {
+    const panel = document.getElementById('studentDetailPanel');
+    const overlay = document.getElementById('studentDetailOverlay');
+    panel?.classList.remove('sdp-open');
+    setTimeout(() => {
+        if (panel) panel.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
+    }, 300);
+}
+
+function renderSdpHeader(studentId) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const s = students.find(st => st.id === studentId);
+    if (!s) return;
+
+    const initials = (s.name || '').split(' ').map(w => w[0] || '').join('').slice(0,2).toUpperCase();
+    const frozenBadge = s.frozen ? `<span class="sdp-frozen-badge">❄️ Muzlatilgan</span>` : '';
+    const subjectLabel = s.subject === 'russian' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili';
+
+    document.getElementById('sdpHeaderInfo').innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px">
+            <div class="sdp-avatar">${escapeHtml(initials)}</div>
+            <div>
+                <p class="sdp-name">${escapeHtml(s.name || '—')}${frozenBadge}</p>
+                <p class="sdp-meta">${subjectLabel} · ${escapeHtml(s.phone || '—')}</p>
+            </div>
+        </div>`;
+
+    document.getElementById('sdpHeaderActions').innerHTML = `
+        <button type="button" class="sdp-action-btn" id="sdpBtnTeacher">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            Ustoz almashtirish
+        </button>
+        <button type="button" class="sdp-action-btn" id="sdpBtnSchedule">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Jadval o'zgartirish
+        </button>
+        <button type="button" class="sdp-action-btn ${s.frozen ? 'sdp-action-btn--unfreeze' : 'sdp-action-btn--freeze'}" id="sdpBtnFreeze">
+            ${s.frozen
+                ? '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V2M4.93 4.93l14.14 14.14M2 12h20M4.93 19.07l14.14-14.14"/></svg> Muzlatishni bekor qilish'
+                : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V2M4.93 4.93l14.14 14.14M2 12h20M4.93 19.07l14.14-14.14"/></svg> Muzlatish'}
+        </button>`;
+
+    document.getElementById('sdpBtnTeacher').onclick = () => openSdpTransferTeacher(s);
+    document.getElementById('sdpBtnSchedule').onclick = () => openSdpChangeSchedule(s);
+    document.getElementById('sdpBtnFreeze').onclick = () => {
+        const allStudents = getItem(STORAGE_KEYS.students, []);
+        const idx = allStudents.findIndex(st => st.id === studentId);
+        if (idx !== -1) {
+            allStudents[idx].frozen = !allStudents[idx].frozen;
+            setItem(STORAGE_KEYS.students, allStudents);
+            renderSdpHeader(studentId);
+            showMiniToast(allStudents[idx].frozen ? "O'quvchi muzlatildi" : "Muzlatish bekor qilindi");
+        }
+    };
+}
+
+function renderSdpTab(tab, studentId) {
+    const body = document.getElementById('sdpBody');
+    if (!body) return;
+    const students = getItem(STORAGE_KEYS.students, []);
+    const s = students.find(st => st.id === studentId);
+    if (!s) return;
+
+    if (tab === 'profile') body.innerHTML = renderSdpProfile(s);
+    else if (tab === 'payments') body.innerHTML = renderSdpPayments(s);
+    else if (tab === 'attendance') body.innerHTML = renderSdpAttendance(s);
+    else if (tab === 'platform') body.innerHTML = renderSdpPlatform(s);
+    else if (tab === 'sales') body.innerHTML = renderSdpSales(s);
+}
+
+function renderSdpProfile(s) {
+    const allTeachers = [
+        ...getItem(STORAGE_KEYS.teachers, []),
+        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
+    ];
+    const allManagers = getItem(STORAGE_KEYS.hrEmployees, [])
+        .filter(e => e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri');
+    const teacher = allTeachers.find(t => t.id === s.teacherId);
+    const asst = allTeachers.find(t => t.id === s.assistantTeacherId);
+    const manager = allManagers.find(m => m.id === s.managerId);
+    const endDate = addCourseDays(s.startDate, 90);
+    const attended = countStudentAttendance(s.id, s.teacherId);
+
+    const payments = getItem(STORAGE_KEYS.payments, []).filter(p => p.studentId === s.id);
+    const totalDebt = payments.reduce((sum, p) => sum + (p.debt || 0), 0);
+    const statusHtml = payments.length === 0
+        ? `<span class="badge" style="background:#f3f4f6;color:#6b7280">—</span>`
+        : totalDebt > 0
+            ? `<span class="badge badge-danger">Qarzdor: ${formatMoney(totalDebt)}</span>`
+            : `<span class="badge badge-success">To'liq to'lagan</span>`;
+
+    const genderLabel = s.gender === 'erkak' ? 'Erkak' : s.gender === 'ayol' ? 'Ayol' : '—';
+    const frozenStatus = s.frozen
+        ? '<span class="sdp-frozen-badge">❄️ Muzlatilgan</span>'
+        : '<span class="badge badge-success">Faol</span>';
+
+    return `
+    <div class="sdp-section">
+        <p class="sdp-section-title">Asosiy ma'lumotlar</p>
+        <div class="sdp-info-grid">
+            <div class="sdp-info-item"><div class="sdp-info-label">Ism familiya</div><div class="sdp-info-value">${escapeHtml(s.name||'—')}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Telefon</div><div class="sdp-info-value">${escapeHtml(s.phone||'—')}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Yoshi</div><div class="sdp-info-value">${escapeHtml(s.age ? String(s.age) : calculateAge(s.birthDate))}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Jinsi</div><div class="sdp-info-value">${escapeHtml(genderLabel)}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Viloyat</div><div class="sdp-info-value">${escapeHtml(s.region||'—')}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Fan</div><div class="sdp-info-value">${s.subject==='russian'?'🇷🇺 Rus tili':'🇬🇧 Ingliz tili'}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Dars boshlagan</div><div class="sdp-info-value">${s.startDate ? formatDateShort(s.startDate) : '—'}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Kurs tugash</div><div class="sdp-info-value">${escapeHtml(endDate)}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Holati</div><div class="sdp-info-value">${frozenStatus}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">To'lov holati</div><div class="sdp-info-value">${statusHtml}</div></div>
+        </div>
+    </div>
+    <div class="sdp-section">
+        <p class="sdp-section-title">O'quv jarayoni</p>
+        <div class="sdp-info-grid">
+            <div class="sdp-info-item"><div class="sdp-info-label">Asosiy ustoz</div><div class="sdp-info-value">${escapeHtml(teacher?.name||'—')}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Yordamchi ustoz</div><div class="sdp-info-value">${escapeHtml(asst?.name||'—')}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Sotuv menejeri</div><div class="sdp-info-value">${escapeHtml(manager?.name||'—')}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Kurs darajasi</div><div class="sdp-info-value">${escapeHtml(s.group||'—')}</div></div>
+            ${s.lessonDayOfWeek != null ? `<div class="sdp-info-item"><div class="sdp-info-label">Dars kuni</div><div class="sdp-info-value">${escapeHtml(s.lessonDayOfWeek === 0 ? 'Dushanba, Chorshanba, Juma' : 'Seshanba, Payshanba, Shanba')}</div></div>` : ''}
+            ${s.lessonTime ? `<div class="sdp-info-item"><div class="sdp-info-label">Dars vaqti</div><div class="sdp-info-value">${escapeHtml(s.lessonTime)}</div></div>` : ''}
+        </div>
+    </div>
+    <div class="sdp-section">
+        <p class="sdp-section-title">Statistika</p>
+        <div class="sdp-stat-grid">
+            <div class="sdp-stat-card"><div class="sdp-stat-value">${attended||0}</div><div class="sdp-stat-label">Kelgan darslar</div></div>
+            <div class="sdp-stat-card"><div class="sdp-stat-value">${s.grade||'—'}</div><div class="sdp-stat-label">Baho</div></div>
+            <div class="sdp-stat-card"><div class="sdp-stat-value">${payments.length}</div><div class="sdp-stat-label">To'lovlar soni</div></div>
+        </div>
+    </div>`;
+}
+
+function renderSdpPayments(s) {
+    const payments = getItem(STORAGE_KEYS.payments, []).filter(p => p.studentId === s.id);
+    if (!payments.length) return `<div class="sdp-empty">To'lovlar tarixi yo'q</div>`;
+    const rows = payments.map(p => `
+        <tr>
+            <td>${p.date ? formatDateShort(p.date) : '—'}</td>
+            <td>${formatMoney(p.platform||0)}</td>
+            <td>${formatMoney(p.book||0)}</td>
+            <td>${formatMoney(p.paid||0)}</td>
+            <td><span class="badge ${p.debt>0?'badge-danger':'badge-success'}">${formatMoney(p.debt||0)}</span></td>
+        </tr>`).join('');
+    const total = payments.reduce((sum,p)=>sum+(p.paid||0),0);
+    const debt = payments.reduce((sum,p)=>sum+(p.debt||0),0);
+    return `
+    <div class="sdp-section">
+        <div class="sdp-stat-grid" style="grid-template-columns:1fr 1fr">
+            <div class="sdp-stat-card"><div class="sdp-stat-value" style="font-size:16px">${formatMoney(total)}</div><div class="sdp-stat-label">Jami to'langan</div></div>
+            <div class="sdp-stat-card"><div class="sdp-stat-value" style="font-size:16px;color:${debt>0?'var(--danger)':'#22c55e'}">${formatMoney(debt)}</div><div class="sdp-stat-label">Qarz</div></div>
+        </div>
+    </div>
+    <div class="sdp-section">
+        <p class="sdp-section-title">To'lovlar tarixi</p>
+        <table class="sdp-table">
+            <thead><tr><th>Sana</th><th>Platforma</th><th>Kitob</th><th>To'langan</th><th>Qarz</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
+}
+
+function renderSdpAttendance(s) {
+    const allTeachers = [
+        ...getItem(STORAGE_KEYS.teachers, []),
+        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
+    ];
+    const teacher = allTeachers.find(t => t.id === s.teacherId);
+    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    const monthKeys = Object.keys(mainAtt)
+        .filter(k => k.endsWith('_' + s.teacherId))
+        .sort().reverse().slice(0, 6);
+
+    if (!monthKeys.length) return `<div class="sdp-empty">Davomat ma'lumotlari yo'q</div>`;
+
+    const sections = monthKeys.map(key => {
+        const monthVal = key.replace('_' + s.teacherId, '');
+        const [year, month] = monthVal.split('-').map(Number);
+        const block = mainAtt[key] || {};
+        const studentAtt = block[s.id] || {};
+        const daysInMonth = new Date(year, month, 0).getDate();
+        let present = 0, absent = 0;
+
+        const days = Array.from({length: daysInMonth}, (_, i) => i+1).map(d => {
+            const attended = !!studentAtt[d];
+            const recorded = studentAtt[d] !== undefined;
+            if (recorded && attended) present++;
+            if (recorded && !attended) absent++;
+            return recorded
+                ? `<div class="sdp-att-day ${attended?'sdp-att-day--present':'sdp-att-day--absent'}" title="${d}-kuni">${d}</div>`
+                : `<div class="sdp-att-day" title="${d}-kuni">${d}</div>`;
+        }).join('');
+
+        const monthName = new Date(year, month-1, 1).toLocaleString('uz-UZ', {month:'long',year:'numeric'});
+        return `<div class="sdp-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <p class="sdp-section-title" style="margin:0">${escapeHtml(monthName)}</p>
+                <span style="font-size:12px;color:var(--text-muted)">✅ ${present} · ❌ ${absent}</span>
+            </div>
+            <div class="sdp-att-grid">${days}</div>
+        </div>`;
+    }).join('');
+
+    const totalAttended = countStudentAttendance(s.id, s.teacherId);
+    return `
+    <div class="sdp-section">
+        <div class="sdp-stat-grid" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="sdp-stat-card"><div class="sdp-stat-value">${totalAttended}</div><div class="sdp-stat-label">Jami kelgan</div></div>
+            <div class="sdp-stat-card"><div class="sdp-stat-value">${escapeHtml(teacher?.name||'—')}</div><div class="sdp-stat-label">Ustoz</div></div>
+            <div class="sdp-stat-card"><div class="sdp-stat-value">${s.lessonTime||'—'}</div><div class="sdp-stat-label">Vaqt</div></div>
+        </div>
+    </div>
+    ${sections}`;
+}
+
+function renderSdpPlatform(s) {
+    const stats = s.mobileStats || {};
+    const pct = stats.progress || 0;
+    return `
+    <div class="sdp-section">
+        <p class="sdp-section-title">Kurs progressi</p>
+        <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <span>Umumiy progress</span><strong>${pct}%</strong>
+            </div>
+            <div class="sdp-progress-bar-wrap">
+                <div class="sdp-progress-bar" style="width:${pct}%"></div>
+            </div>
+        </div>
+    </div>
+    <div class="sdp-section">
+        <p class="sdp-section-title">Platforma statistikasi</p>
+        <div class="sdp-stat-grid">
+            <div class="sdp-stat-card">
+                <div class="sdp-stat-value">${stats.leaderboard ? '#' + stats.leaderboard : '—'}</div>
+                <div class="sdp-stat-label">Leaderboard o'rni</div>
+            </div>
+            <div class="sdp-stat-card">
+                <div class="sdp-stat-value">${stats.wordsLearned ?? '—'}</div>
+                <div class="sdp-stat-label">Yodlagan so'zlari</div>
+            </div>
+            <div class="sdp-stat-card">
+                <div class="sdp-stat-value">${stats.grammarRules ?? '—'}</div>
+                <div class="sdp-stat-label">Grammatik qoidalar</div>
+            </div>
+            <div class="sdp-stat-card">
+                <div class="sdp-stat-value">${stats.coins ?? '—'}</div>
+                <div class="sdp-stat-label">Coinlar</div>
+            </div>
+            <div class="sdp-stat-card">
+                <div class="sdp-stat-value">${stats.hoursSpent ?? '—'}</div>
+                <div class="sdp-stat-label">Sarflangan soat</div>
+            </div>
+            <div class="sdp-stat-card">
+                <div class="sdp-stat-value">${stats.grade ?? '—'}</div>
+                <div class="sdp-stat-label">Platforma bahosi</div>
+            </div>
+        </div>
+    </div>
+    <div class="sdp-section">
+        <p class="sdp-section-title">So'nggi harakatlar</p>
+        ${stats.activities?.length
+            ? `<table class="sdp-table"><thead><tr><th>Sana</th><th>Harakat</th><th>Ball</th></tr></thead><tbody>
+                ${stats.activities.map(a=>`<tr><td>${escapeHtml(a.date||'')}</td><td>${escapeHtml(a.action||'')}</td><td>${escapeHtml(String(a.points||''))}</td></tr>`).join('')}
+               </tbody></table>`
+            : `<div class="sdp-empty" style="padding:20px">Platforma ma'lumotlari mavjud emas.<br><small style="color:var(--text-muted)">Mobil ilova integratsiyasi ulangach avtomatik to'ldiriladi.</small></div>`}
+    </div>`;
+}
+
+function renderSdpSales(s) {
+    if (!s.leadRef) return `<div class="sdp-empty">Sotuv ma'lumotlari yo'q</div>`;
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const lang = s.leadRef.lang || s.subject || 'english';
+    const lead = (leads[lang] || []).find(l => l.id === s.leadRef.id);
+    if (!lead) return `<div class="sdp-empty">Lid ma'lumoti topilmadi</div>`;
+
+    const LEAD_STATUS_LABELS = {
+        'yangi-lidlar': 'Yangi lid',
+        'boglanishga-urinilmoqda': 'Bog\'lanishga urinilmoqda',
+        'boglanildi': 'Bog\'lanildi',
+        'malumot-berildi': 'Ma\'lumot berildi',
+        'qaror-jarayonida': 'Qaror jarayonida',
+        'qaror-tolov': 'Qaror/To\'lov',
+        'sinov-darsida': 'Sinov darsida',
+        'tolov-jarayonida': 'To\'lov jarayonida',
+        'tolov-yopildi': 'To\'lov yopildi',
+        'muvaffaqiyatsiz-sotuv': 'Muvaffaqiyatsiz sotuv',
+        'sifatsiz-lidlar': 'Sifatsiz lid'
+    };
+
+    const allSteps = [
+        'yangi-lidlar','boglanishga-urinilmoqda','boglanildi','malumot-berildi',
+        'qaror-jarayonida','qaror-tolov','sinov-darsida','tolov-jarayonida','tolov-yopildi'
+    ];
+    const currentIdx = allSteps.indexOf(lead.status);
+
+    const steps = allSteps.map((step, i) => {
+        const done = i <= currentIdx;
+        const current = i === currentIdx;
+        return `<div class="sdp-lead-step">
+            <div class="sdp-lead-dot ${done ? 'sdp-lead-dot--closed' : ''}" style="${!done ? 'background:var(--border)' : ''}"></div>
+            <div>
+                <div style="font-size:13px;font-weight:${current?'700':'500'};color:${done?'var(--text)':'var(--text-muted)'}">${escapeHtml(LEAD_STATUS_LABELS[step]||step)}</div>
+                ${current ? `<div style="font-size:11px;color:var(--primary);margin-top:2px">Joriy holat</div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    const allManagers = getItem(STORAGE_KEYS.hrEmployees, [])
+        .filter(e => e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri');
+    const mgr = allManagers.find(m => m.id === lead.managerId);
+
+    return `
+    <div class="sdp-section">
+        <p class="sdp-section-title">Lid ma'lumotlari</p>
+        <div class="sdp-info-grid">
+            <div class="sdp-info-item"><div class="sdp-info-label">Lid raqami</div><div class="sdp-info-value">#${escapeHtml(lead.serialNumber||lead.id)}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Joriy holat</div><div class="sdp-info-value">${escapeHtml(LEAD_STATUS_LABELS[lead.status]||lead.status)}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Sotuv menejeri</div><div class="sdp-info-value">${escapeHtml(mgr?.name||'—')}</div></div>
+            <div class="sdp-info-item"><div class="sdp-info-label">Manba</div><div class="sdp-info-value">${escapeHtml(lead.source||'—')}</div></div>
+        </div>
+    </div>
+    <div class="sdp-section">
+        <p class="sdp-section-title">Sotuv bosqichlari</p>
+        <div>${steps}</div>
+    </div>
+    ${lead.paymentSurvey ? `
+    <div class="sdp-section">
+        <p class="sdp-section-title">To'lov shartnomasi</p>
+        <div class="sdp-info-grid">
+            ${lead.paymentSurvey.contractNumber ? `<div class="sdp-info-item"><div class="sdp-info-label">Shartnoma raqami</div><div class="sdp-info-value">${escapeHtml(lead.paymentSurvey.contractNumber)}</div></div>` : ''}
+            ${lead.paymentSurvey.amount ? `<div class="sdp-info-item"><div class="sdp-info-label">To'lov miqdori</div><div class="sdp-info-value">${formatMoney(lead.paymentSurvey.amount)}</div></div>` : ''}
+            ${lead.paymentSurvey.tariff ? `<div class="sdp-info-item"><div class="sdp-info-label">Tarif (daqiqa)</div><div class="sdp-info-value">${escapeHtml(String(lead.paymentSurvey.tariff))} daq.</div></div>` : ''}
+        </div>
+    </div>` : ''}`;
+}
+
+function openSdpTransferTeacher(s) {
+    const subject = s.subject || 'english';
+    const asosiy = filterTeachersByTypeAndSubject('asosiy', subject);
+    const options = asosiy.map(t =>
+        `<option value="${escapeHtml(t.id)}"${t.id===s.teacherId?' selected':''}>${escapeHtml(t.name)}</option>`
+    ).join('');
+    openModal("Ustoz almashtirish",
+        `<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${escapeHtml(s.name)} — yangi ustozni tanlang:</p>
+         <div class="form-group">
+            <label>Asosiy ustoz</label>
+            <select id="sdpNewTeacher" class="form-control">${options}</select>
+         </div>`,
+        `<button type="button" class="btn-ghost" id="sdpCancelTeacher">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="sdpSaveTeacher">Saqlash</button>`,
+        { wide: false }
+    );
+    document.getElementById('sdpCancelTeacher').onclick = () => closeModal();
+    document.getElementById('sdpSaveTeacher').onclick = () => {
+        const newTeacherId = document.getElementById('sdpNewTeacher').value;
+        if (!newTeacherId) return;
+        updateStudent(s.id, { teacherId: newTeacherId });
+        closeModal();
+        renderSdpHeader(s.id);
+        renderSdpTab('profile', s.id);
+        renderStudents();
+        showMiniToast("Ustoz almashtirildi");
+    };
+}
+
+function openSdpChangeSchedule(s) {
+    const TIME_SLOTS = [];
+    for (let h = 8; h <= 22; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            TIME_SLOTS.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+        }
+    }
+    const timeOpts = TIME_SLOTS.map(t =>
+        `<option value="${t}"${s.lessonTime===t?' selected':''}>${t}</option>`
+    ).join('');
+    openModal("Jadval o'zgartirish",
+        `<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${escapeHtml(s.name)} — dars vaqtini o'zgartirish:</p>
+         <div class="form-group">
+            <label>Dars kuni</label>
+            <select id="sdpNewDay" class="form-control">
+                <option value="0"${(s.lessonDayOfWeek===0||s.lessonDayOfWeek==null)?' selected':''}>Dushanba, Chorshanba, Juma</option>
+                <option value="1"${s.lessonDayOfWeek===1?' selected':''}>Seshanba, Payshanba, Shanba</option>
+            </select>
+         </div>
+         <div class="form-group">
+            <label>Dars vaqti</label>
+            <select id="sdpNewTime" class="form-control">${timeOpts}</select>
+         </div>`,
+        `<button type="button" class="btn-ghost" id="sdpCancelSchedule">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="sdpSaveSchedule">Saqlash</button>`,
+        { wide: false }
+    );
+    document.getElementById('sdpCancelSchedule').onclick = () => closeModal();
+    document.getElementById('sdpSaveSchedule').onclick = () => {
+        const newDay = parseInt(document.getElementById('sdpNewDay').value);
+        const newTime = document.getElementById('sdpNewTime').value;
+        updateStudent(s.id, { lessonDayOfWeek: newDay, lessonTime: newTime });
+        closeModal();
+        renderSdpHeader(s.id);
+        renderSdpTab('profile', s.id);
+        renderStudents();
+        if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
+        showMiniToast("Jadval yangilandi");
+    };
 }
 
 function fillStudentTeacherOptions(subject, suffix) {
