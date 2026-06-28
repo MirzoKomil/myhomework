@@ -3838,105 +3838,159 @@ function renderTpRating() {
 }
 
 // --- Darslik ---
+// Darslik sub-tab ro'yxati
+const TB_SECTIONS = [
+    { id: 'kurs-rejasi',   label: 'Kurs rejasi',                 icon: '📋' },
+    { id: 'sinov-darsi',   label: 'Sinov darsi materiallari',    icon: '🎯' },
+    { id: 'platforma',     label: 'Platformadagi dars materiallari', icon: '📱' },
+    { id: 'jonli-dars',    label: 'Jonli dars materiallari',     icon: '🎥' },
+    { id: 'qoshimcha',     label: "Qo'shimcha materiallar",      icon: '📎' },
+];
+
+let _tpTextbookSection = 'kurs-rejasi';
+
 function renderTpTextbook() {
     const container = document.getElementById('tpTextbook');
     if (!container) return;
+
+    const tabButtons = TB_SECTIONS.map(s =>
+        `<button type="button" class="tp-tb-tab${_tpTextbookSection === s.id ? ' active' : ''}" data-tb-sec="${s.id}">
+            <span class="tp-tb-tab-icon">${s.icon}</span>
+            <span>${s.label}</span>
+        </button>`
+    ).join('');
+
+    container.innerHTML = `
+    <div class="tp-tb-sidebar">
+        <div class="tp-tb-sidebar-title">Bo'limlar</div>
+        ${tabButtons}
+    </div>
+    <div class="tp-tb-body" id="tpTbBody"></div>`;
+
+    container.querySelectorAll('[data-tb-sec]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _tpTextbookSection = btn.dataset.tbSec;
+            container.querySelectorAll('[data-tb-sec]').forEach(b => b.classList.toggle('active', b.dataset.tbSec === _tpTextbookSection));
+            renderTpTextbookSection(_tpTextbookSection);
+        });
+    });
+
+    renderTpTextbookSection(_tpTextbookSection);
+}
+
+function renderTpTextbookSection(secId) {
+    const body = document.getElementById('tpTbBody');
+    if (!body) return;
+    const sec = TB_SECTIONS.find(s => s.id === secId) || TB_SECTIONS[0];
     const mc = getMobileContent();
-    const textbooks = (mc.documents || []).filter(d => d.type === 'textbook' || d.category === 'textbook');
-    const allDocs = mc.documents || [];
+    const docs = (mc.documents || []).filter(d => d.tbSection === secId);
 
-    const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
-
-    const cards = allDocs.length ? allDocs.map((d, i) => {
-        const catLabel = MOBILE_CATS.find(c=>c.id===d.category)?.label || d.category || '';
+    const cards = docs.length ? docs.map(d => {
         const sizeLabel = d.fileSize > 0 ? (d.fileSize > 1048576 ? (d.fileSize/1048576).toFixed(1)+' MB' : (d.fileSize/1024).toFixed(0)+' KB') : '';
+        const isYt = ytVideoId(d.fileUrl);
+        const thumb = isYt ? `<img src="https://img.youtube.com/vi/${isYt}/mqdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:28px">${sec.icon}</div>`;
         return `<div class="mac-content-card">
-            <div class="mac-content-thumb" style="background:var(--bg-secondary,#f3f4f6);display:flex;align-items:center;justify-content:center;font-size:32px">📚</div>
+            <div class="mac-content-thumb">${thumb}</div>
             <div class="mac-content-info">
                 <div class="mac-content-title">${escapeHtml(d.title)}</div>
-                <div class="mac-content-meta">${escapeHtml(catLabel)} ${sizeLabel?'· '+sizeLabel:''} · ${escapeHtml(d.createdAt||'')}</div>
-                ${d.description?`<div class="mac-content-desc">${escapeHtml(d.description)}</div>`:''}
+                <div class="mac-content-meta">${sizeLabel ? sizeLabel + ' · ' : ''}${escapeHtml(d.createdAt||'')}</div>
+                ${d.description ? `<div class="mac-content-desc">${escapeHtml(d.description)}</div>` : ''}
                 <a href="${escapeHtml(d.fileUrl)}" target="_blank" rel="noopener" class="mac-content-link">Ochish / Yuklab olish →</a>
             </div>
             <div class="mac-content-actions">
                 <button type="button" class="btn-danger-sm" data-tp-del-doc="${escapeHtml(d.id)}">O'chirish</button>
             </div>
         </div>`;
-    }).join('') : `<div class="mac-empty">Hali darsliklar qo'shilmagan</div>`;
+    }).join('') : `<div class="mac-empty">${sec.icon} ${sec.label} uchun hali material qo'shilmagan</div>`;
 
-    container.innerHTML = `
-    <div style="padding:20px">
+    body.innerHTML = `
+    <div style="padding:20px;overflow-y:auto;flex:1">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2>Darsliklar (${allDocs.length} ta)</h2>
+            <h2 style="font-size:16px;font-weight:700">${sec.icon} ${sec.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted)">(${docs.length} ta)</span></h2>
             <div style="display:flex;gap:8px">
-                <button type="button" class="btn-secondary-sm" id="tpAddDocLink">+ Havola</button>
-                <button type="button" class="btn-primary-sm" id="tpAddDocFile">📁 Fayl yuklash</button>
+                <button type="button" class="btn-secondary-sm" id="tpTbAddLink">+ Havola / YouTube</button>
+                <button type="button" class="btn-primary-sm" id="tpTbAddFile">📁 Fayl yuklash</button>
             </div>
         </div>
         <div class="mac-content-list">${cards}</div>
     </div>`;
 
-    document.getElementById('tpAddDocFile')?.addEventListener('click', () => {
-        openModal('Darslik yuklash',
-            `<div class="form-group"><label>Sarlavha *</label><input id="tpDTitle" class="form-control"></div>
-             <div class="form-group"><label>Fayl *</label><input type="file" id="tpDFile" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.epub"><small style="color:var(--text-muted)">Max 50 MB</small></div>
-             <div class="form-group"><label>Kategoriya</label><select id="tpDCat" class="form-control">${catOptions}</select></div>
-             <div class="form-group"><label>Tavsif</label><textarea id="tpDDesc" class="form-control" rows="2"></textarea></div>`,
-            `<button type="button" class="btn-ghost" id="cancelTpDoc">Bekor</button>
-             <button type="button" class="btn-primary-sm" id="saveTpDoc">Yuklash</button>`,
+    // Fayl yuklash
+    body.querySelector('#tpTbAddFile')?.addEventListener('click', () => {
+        openModal(`${sec.icon} ${sec.label} — fayl yuklash`,
+            `<div class="form-group"><label>Sarlavha <span style="color:var(--danger)">*</span></label><input id="tpTbTitle" class="form-control" placeholder="Material nomi"></div>
+             <div class="form-group"><label>Fayl <span style="color:var(--danger)">*</span></label><input type="file" id="tpTbFile" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.epub,.mp4,.mp3,.zip"><small style="color:var(--text-muted)">Maksimal 50 MB</small></div>
+             <div class="form-group"><label>Tavsif</label><textarea id="tpTbDesc" class="form-control" rows="2" placeholder="Qisqacha izoh..."></textarea></div>`,
+            `<button type="button" class="btn-ghost" id="cancelTbFile">Bekor qilish</button>
+             <button type="button" class="btn-primary-sm" id="saveTbFile">Yuklash</button>`,
             { wide: false }
         );
-        document.getElementById('cancelTpDoc').onclick = () => closeModal();
-        document.getElementById('saveTpDoc').onclick = async () => {
-            const title = document.getElementById('tpDTitle').value.trim();
-            const file = document.getElementById('tpDFile').files?.[0];
-            if (!title || !file) { alert('Sarlavha va fayl kerak'); return; }
-            const btn = document.getElementById('saveTpDoc');
+        document.getElementById('cancelTbFile').onclick = () => closeModal();
+        document.getElementById('saveTbFile').onclick = async () => {
+            const title = document.getElementById('tpTbTitle').value.trim();
+            const file = document.getElementById('tpTbFile').files?.[0];
+            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
+            if (!file) { alert('Fayl tanlanishi shart'); return; }
+            const btn = document.getElementById('saveTbFile');
             btn.disabled = true; btn.textContent = 'Yuklanmoqda...';
             try {
                 const res = await apiUploadFile(file);
                 const mc2 = getMobileContent();
                 mc2.documents = mc2.documents || [];
-                mc2.documents.push({ id: 'd'+Date.now(), title, fileUrl: res.url, fileName: res.fileName, fileSize: res.fileSize, type: 'textbook', category: document.getElementById('tpDCat').value, description: document.getElementById('tpDDesc').value.trim(), createdAt: new Date().toISOString().slice(0,10) });
+                mc2.documents.push({
+                    id: 'd' + Date.now(), title,
+                    fileUrl: res.url, fileName: res.fileName, fileSize: res.fileSize,
+                    type: 'textbook', tbSection: secId,
+                    description: document.getElementById('tpTbDesc').value.trim(),
+                    createdAt: new Date().toISOString().slice(0, 10)
+                });
                 saveMobileContent(mc2);
-                closeModal(); renderTpTextbook(); showMiniToast('Darslik yuklandi');
-            } catch(e) { alert('Xatolik: '+e.message); btn.disabled=false; btn.textContent='Yuklash'; }
+                closeModal(); renderTpTextbookSection(secId); showMiniToast('Material yuklandi');
+            } catch(e) { alert('Xatolik: ' + e.message); btn.disabled = false; btn.textContent = 'Yuklash'; }
         };
     });
 
-    document.getElementById('tpAddDocLink')?.addEventListener('click', () => {
-        openModal('Havola qo\'shish',
-            `<div class="form-group"><label>Sarlavha *</label><input id="tpLTitle" class="form-control"></div>
-             <div class="form-group"><label>URL *</label><input id="tpLUrl" class="form-control" placeholder="https://..."></div>
-             <div class="form-group"><label>Kategoriya</label><select id="tpLCat" class="form-control">${catOptions}</select></div>
-             <div class="form-group"><label>Tavsif</label><textarea id="tpLDesc" class="form-control" rows="2"></textarea></div>`,
-            `<button type="button" class="btn-ghost" id="cancelTpLink">Bekor</button>
-             <button type="button" class="btn-primary-sm" id="saveTpLink">Qo'shish</button>`,
+    // Havola / YouTube qo'shish
+    body.querySelector('#tpTbAddLink')?.addEventListener('click', () => {
+        openModal(`${sec.icon} ${sec.label} — havola qo'shish`,
+            `<div class="form-group"><label>Sarlavha <span style="color:var(--danger)">*</span></label><input id="tpTbLTitle" class="form-control" placeholder="Material nomi"></div>
+             <div class="form-group"><label>URL yoki YouTube havolasi <span style="color:var(--danger)">*</span></label><input id="tpTbLUrl" class="form-control" placeholder="https://youtu.be/... yoki https://drive.google.com/..."></div>
+             <div class="form-group"><label>Tavsif</label><textarea id="tpTbLDesc" class="form-control" rows="2" placeholder="Qisqacha izoh..."></textarea></div>`,
+            `<button type="button" class="btn-ghost" id="cancelTbLink">Bekor qilish</button>
+             <button type="button" class="btn-primary-sm" id="saveTbLink">Qo'shish</button>`,
             { wide: false }
         );
-        document.getElementById('cancelTpLink').onclick = () => closeModal();
-        document.getElementById('saveTpLink').onclick = () => {
-            const title = document.getElementById('tpLTitle').value.trim();
-            const url = document.getElementById('tpLUrl').value.trim();
-            if (!title || !url) { alert('Sarlavha va havola kerak'); return; }
+        document.getElementById('cancelTbLink').onclick = () => closeModal();
+        document.getElementById('saveTbLink').onclick = () => {
+            const title = document.getElementById('tpTbLTitle').value.trim();
+            const url = document.getElementById('tpTbLUrl').value.trim();
+            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
+            if (!url) { alert('Havola kiritilishi shart'); return; }
             const mc2 = getMobileContent();
             mc2.documents = mc2.documents || [];
-            mc2.documents.push({ id: 'd'+Date.now(), title, fileUrl: url, fileName: title, fileSize: 0, type: 'textbook', category: document.getElementById('tpLCat').value, description: document.getElementById('tpLDesc').value.trim(), createdAt: new Date().toISOString().slice(0,10) });
+            mc2.documents.push({
+                id: 'd' + Date.now(), title,
+                fileUrl: url, fileName: title, fileSize: 0,
+                type: 'textbook', tbSection: secId,
+                description: document.getElementById('tpTbLDesc').value.trim(),
+                createdAt: new Date().toISOString().slice(0, 10)
+            });
             saveMobileContent(mc2);
-            closeModal(); renderTpTextbook(); showMiniToast('Havola qo\'shildi');
+            closeModal(); renderTpTextbookSection(secId); showMiniToast("Havola qo'shildi");
         };
     });
 
-    container.querySelectorAll('[data-tp-del-doc]').forEach(btn => {
+    // O'chirish
+    body.querySelectorAll('[data-tp-del-doc]').forEach(btn => {
         btn.addEventListener('click', () => {
-            if (!confirm("O'chirasizmi?")) return;
+            if (!confirm("Materialni o'chirasizmi?")) return;
             const id = btn.dataset.tpDelDoc;
             const mc2 = getMobileContent();
             const doc = mc2.documents.find(d => d.id === id);
             mc2.documents = mc2.documents.filter(d => d.id !== id);
             saveMobileContent(mc2);
-            if (doc?.fileUrl?.startsWith('/uploads/')) apiDeleteUpload(doc.fileUrl.split('/uploads/')[1]).catch(()=>{});
-            renderTpTextbook(); showMiniToast("O'chirildi");
+            if (doc?.fileUrl?.startsWith('/uploads/')) apiDeleteUpload(doc.fileUrl.split('/uploads/')[1]).catch(() => {});
+            renderTpTextbookSection(secId); showMiniToast("O'chirildi");
         });
     });
 }
