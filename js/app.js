@@ -5749,10 +5749,22 @@ function renderLeadsManagerFilter() {
         }
         return;
     }
-    // 13-ish: joriy til bo'yicha menejerlari filtrlash
+    // 13-ish: joriy til bo'yicha menejerlarni filtrlash
+    // m.lang maydoni bo'lmasa — lidlar orqali tilni aniqlaymiz
     const _allMgrs = getItem(STORAGE_KEYS.salesManagers, []);
     const _ttLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    const managers = _allMgrs.filter(m => (m.lang || 'english') === _ttLang);
+    const _allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const _enMgrIds = new Set((_allLeads.english || []).map(l => l.managerId).filter(Boolean));
+    const _ruMgrIds = new Set((_allLeads.russian || []).map(l => l.managerId).filter(Boolean));
+    const managers = _allMgrs.filter(m => {
+        const explicitLang = m.lang || null;
+        if (explicitLang) return explicitLang === _ttLang;
+        const inEn = _enMgrIds.has(m.id);
+        const inRu = _ruMgrIds.has(m.id);
+        if (!inEn && !inRu) return _ttLang === 'english'; // yangi menejerlarga default
+        if (inEn && inRu) return true; // ikkala tilda lidi bor — har ikkalasida ko'rinadigan
+        return inRu ? _ttLang === 'russian' : _ttLang === 'english';
+    });
     const current = _leadsManagerFilter;
     select.innerHTML = `<option value="all">Barcha menejerlar</option>
         <option value="unassigned">Biriktirilmagan</option>
