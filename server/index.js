@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const stateRoutes = require('./routes/state');
 const leadsRoutes = require('./routes/leads');
+const { router: uploadsRouter, UPLOADS_DIR } = require('./routes/uploads');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -88,8 +89,18 @@ app.use('/api', apiLimit);
 app.use('/api/auth', authRoutes);
 app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/upload', uploadsRouter);
 
 // ── Static files ──────────────────────────────────────────────────────────────
+
+// ── Uploaded files ────────────────────────────────────────────────────────────
+app.use('/uploads', express.static(UPLOADS_DIR, {
+    setHeaders: (res, filePath) => {
+        // PDF va boshqa hujjatlar brauzerda ko'rinsin (yuklanmasin)
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+    }
+}));
 
 const studentWebDist = path.join(ROOT, 'student-app', 'dist');
 app.use('/student', express.static(studentWebDist, {

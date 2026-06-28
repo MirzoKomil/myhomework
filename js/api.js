@@ -141,3 +141,23 @@ async function apiLogout() {
     try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch {}
     clearSession();
 }
+
+async function apiUploadFile(file) {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+        body: formData
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Yuklash xatoligi' }));
+        throw new Error(err.error || 'Yuklash xatoligi');
+    }
+    return res.json();
+}
+
+async function apiDeleteUpload(filename) {
+    return apiFetch('/api/upload/' + encodeURIComponent(filename), { method: 'DELETE' });
+}

@@ -503,9 +503,352 @@ function renderPlaceholder() {
 }
 
 function renderStudentApp() {
-    const frame = document.getElementById('studentAppFrame');
-    if (!frame) return;
-    frame.src = `/student/?v=${Date.now()}`;
+    const cu = getCurrentUser();
+    const isAdmin = cu && (cu.role === 'admin' || cu.role === 'rop' || cu.role === 'boshliq');
+
+    const frameWrap = document.getElementById('tab-student-app');
+    if (!frameWrap) return;
+
+    if (isAdmin) {
+        renderMobileContentAdmin(frameWrap);
+    } else {
+        const frame = document.getElementById('studentAppFrame');
+        if (frame) frame.src = `/student/?v=${Date.now()}`;
+    }
+}
+
+// ===== Mobil ilova admin panel =====
+const MOBILE_CATS = [
+    { id: 'grammar', label: 'Grammatika' },
+    { id: 'vocabulary', label: "Lug'at" },
+    { id: 'listening', label: 'Tinglash' },
+    { id: 'speaking', label: 'Gapirish' },
+    { id: 'reading', label: "O'qish" },
+    { id: 'writing', label: 'Yozish' },
+    { id: 'tests', label: 'Testlar' },
+    { id: 'other', label: 'Boshqa' },
+];
+
+function getMobileContent() {
+    return getItem(STORAGE_KEYS.mobileContent, { videos: [], documents: [] });
+}
+
+function saveMobileContent(data) {
+    setItem(STORAGE_KEYS.mobileContent, data);
+}
+
+function ytVideoId(url) {
+    if (!url) return null;
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
+}
+
+function renderMobileContentAdmin(container) {
+    const titleBar = container.querySelector('.page-title-bar');
+    if (titleBar) titleBar.innerHTML = `<h1>Mobil ilova — Kontent boshqaruvi</h1>`;
+
+    let frameWrap = container.querySelector('.student-app-frame-wrap');
+    if (!frameWrap) {
+        frameWrap = container.querySelector('.student-app-frame-wrap') || (() => {
+            const d = document.createElement('div');
+            container.appendChild(d);
+            return d;
+        })();
+    }
+
+    frameWrap.innerHTML = `
+    <div class="mac-tabs" id="mobileAdminTabs" style="padding:0 20px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;gap:0">
+        <button type="button" class="mac-tab-btn mac-tab-active" data-mac-tab="videos">🎬 Videodarslar</button>
+        <button type="button" class="mac-tab-btn" data-mac-tab="pdfs">📄 PDF va hujjatlar</button>
+        <button type="button" class="mac-tab-btn" data-mac-tab="presentations">📊 Prezentatsiyalar</button>
+        <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
+    </div>
+    <div id="mobileAdminContent" style="padding:20px;overflow-y:auto;flex:1"></div>`;
+
+    frameWrap.style.cssText = 'display:flex;flex-direction:column;height:calc(100vh - 120px);overflow:hidden';
+
+    frameWrap.querySelectorAll('.mac-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            frameWrap.querySelectorAll('.mac-tab-btn').forEach(b => b.classList.remove('mac-tab-active'));
+            btn.classList.add('mac-tab-active');
+            renderMobileAdminTab(btn.dataset.macTab);
+        });
+    });
+
+    renderMobileAdminTab('videos');
+}
+
+function renderMobileAdminTab(tab) {
+    const container = document.getElementById('mobileAdminContent');
+    if (!container) return;
+    const content = getMobileContent();
+
+    if (tab === 'videos') {
+        renderMobileVideosTab(container, content);
+    } else {
+        const typeMap = {
+            pdfs: { label: 'PDF va hujjatlar', accept: '.pdf,.doc,.docx,.txt', icon: '📄', types: ['pdf','doc','docx','txt'] },
+            presentations: { label: 'Prezentatsiyalar', accept: '.ppt,.pptx,.key', icon: '📊', types: ['ppt','pptx','key'] },
+            textbooks: { label: 'Darsliklar', accept: '.pdf,.epub,.doc,.docx', icon: '📚', types: ['pdf','epub','doc','docx','textbook'] },
+        };
+        renderMobileDocsTab(container, content, tab, typeMap[tab]);
+    }
+}
+
+function renderMobileVideosTab(container, content) {
+    const videos = content.videos || [];
+    const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+    const cards = videos.length ? videos.map((v, i) => {
+        const vid = ytVideoId(v.youtubeUrl);
+        const thumb = vid ? `https://img.youtube.com/vi/${vid}/mqdefault.jpg` : null;
+        const catLabel = MOBILE_CATS.find(c => c.id === v.category)?.label || v.category || '';
+        return `<div class="mac-content-card" data-content-id="${escapeHtml(v.id)}">
+            <div class="mac-content-thumb">
+                ${thumb ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:32px">🎬</div>'}
+            </div>
+            <div class="mac-content-info">
+                <div class="mac-content-title">${escapeHtml(v.title)}</div>
+                <div class="mac-content-meta">${escapeHtml(catLabel)} · ${escapeHtml(v.createdAt||'')}</div>
+                ${v.description ? `<div class="mac-content-desc">${escapeHtml(v.description)}</div>` : ''}
+                <a href="${escapeHtml(v.youtubeUrl)}" target="_blank" rel="noopener" class="mac-content-link">YouTube'da ochish →</a>
+            </div>
+            <div class="mac-content-actions">
+                <button type="button" class="btn-danger-sm" data-delete-video="${i}">O'chirish</button>
+            </div>
+        </div>`;
+    }).join('') : `<div class="mac-empty">Hali videodarslar qo'shilmagan</div>`;
+
+    container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:14px;color:var(--text-muted)">Jami: ${videos.length} ta video</div>
+        <button type="button" class="btn-primary-sm" id="addVideoBtn">+ YouTube video qo'shish</button>
+    </div>
+    <div class="mac-content-list">${cards}</div>`;
+
+    document.getElementById('addVideoBtn')?.addEventListener('click', () => {
+        openModal("YouTube video qo'shish",
+            `<div class="form-group">
+                <label>Video sarlavhasi <span style="color:var(--danger)">*</span></label>
+                <input id="macVTitle" class="form-control" placeholder="Lesson 1 — Present Simple">
+             </div>
+             <div class="form-group">
+                <label>YouTube havolasi <span style="color:var(--danger)">*</span></label>
+                <input id="macVUrl" class="form-control" placeholder="https://youtu.be/...">
+             </div>
+             <div class="form-group">
+                <label>Kategoriya</label>
+                <select id="macVCat" class="form-control">${catOptions}</select>
+             </div>
+             <div class="form-group">
+                <label>Tavsif (ixtiyoriy)</label>
+                <textarea id="macVDesc" class="form-control" rows="2" placeholder="Qisqacha tavsif..."></textarea>
+             </div>`,
+            `<button type="button" class="btn-ghost" id="cancelAddVideo">Bekor qilish</button>
+             <button type="button" class="btn-primary-sm" id="saveAddVideo">Qo'shish</button>`,
+            { wide: false }
+        );
+        document.getElementById('cancelAddVideo').onclick = () => closeModal();
+        document.getElementById('saveAddVideo').onclick = () => {
+            const title = document.getElementById('macVTitle').value.trim();
+            const url = document.getElementById('macVUrl').value.trim();
+            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
+            if (!url) { alert('YouTube havolasi kiritilishi shart'); return; }
+            if (!ytVideoId(url)) { alert("Noto'g'ri YouTube havolasi. Misol: https://youtu.be/ABC123"); return; }
+            const mc = getMobileContent();
+            mc.videos = mc.videos || [];
+            mc.videos.push({
+                id: 'v' + Date.now(),
+                title,
+                youtubeUrl: url,
+                category: document.getElementById('macVCat').value,
+                description: document.getElementById('macVDesc').value.trim(),
+                createdAt: new Date().toISOString().slice(0, 10),
+            });
+            saveMobileContent(mc);
+            closeModal();
+            renderMobileAdminTab('videos');
+            showMiniToast('Video qo\'shildi');
+        };
+    });
+
+    container.querySelectorAll('[data-delete-video]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!confirm("Videoni o'chirasizmi?")) return;
+            const idx = parseInt(btn.dataset.deleteVideo);
+            const mc = getMobileContent();
+            mc.videos.splice(idx, 1);
+            saveMobileContent(mc);
+            renderMobileAdminTab('videos');
+            showMiniToast("Video o'chirildi");
+        });
+    });
+}
+
+function renderMobileDocsTab(container, content, tab, meta) {
+    const docs = (content.documents || []).filter(d => {
+        if (tab === 'pdfs') return ['pdf','doc','docx','txt'].includes(d.type);
+        if (tab === 'presentations') return ['ppt','pptx','key'].includes(d.type);
+        if (tab === 'textbooks') return d.category === 'textbook' || d.type === 'textbook';
+        return true;
+    });
+    const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+    const cards = docs.length ? docs.map(d => {
+        const sizeLabel = d.fileSize ? (d.fileSize > 1048576 ? (d.fileSize/1048576).toFixed(1)+' MB' : (d.fileSize/1024).toFixed(0)+' KB') : '';
+        const catLabel = MOBILE_CATS.find(c => c.id === d.category)?.label || d.category || '';
+        const isUrl = d.fileUrl && !d.fileUrl.startsWith('/uploads/');
+        return `<div class="mac-content-card">
+            <div class="mac-content-thumb" style="background:var(--bg-secondary,#f3f4f6);display:flex;align-items:center;justify-content:center;font-size:36px">${meta.icon}</div>
+            <div class="mac-content-info">
+                <div class="mac-content-title">${escapeHtml(d.title)}</div>
+                <div class="mac-content-meta">${escapeHtml(catLabel)} · ${escapeHtml(d.fileName||'')} ${sizeLabel ? '· '+sizeLabel : ''} · ${escapeHtml(d.createdAt||'')}</div>
+                ${d.description ? `<div class="mac-content-desc">${escapeHtml(d.description)}</div>` : ''}
+                <a href="${escapeHtml(d.fileUrl)}" target="_blank" rel="noopener" class="mac-content-link">Ko'rish / Yuklab olish →</a>
+            </div>
+            <div class="mac-content-actions">
+                <button type="button" class="btn-danger-sm" data-delete-doc="${escapeHtml(d.id)}">O'chirish</button>
+            </div>
+        </div>`;
+    }).join('') : `<div class="mac-empty">Hali hujjatlar qo'shilmagan</div>`;
+
+    container.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:14px;color:var(--text-muted)">Jami: ${docs.length} ta hujjat</div>
+        <div style="display:flex;gap:8px">
+            <button type="button" class="btn-secondary-sm" id="addDocLinkBtn">+ Havola qo'shish</button>
+            <button type="button" class="btn-primary-sm" id="addDocFileBtn">${meta.icon} Fayl yuklash</button>
+        </div>
+    </div>
+    <div class="mac-content-list">${cards}</div>`;
+
+    // Fayl yuklash
+    document.getElementById('addDocFileBtn')?.addEventListener('click', () => {
+        openModal(`${meta.label} yuklash`,
+            `<div class="form-group">
+                <label>Sarlavha <span style="color:var(--danger)">*</span></label>
+                <input id="macDTitle" class="form-control" placeholder="${meta.label} sarlavhasi">
+             </div>
+             <div class="form-group">
+                <label>Fayl <span style="color:var(--danger)">*</span></label>
+                <input type="file" id="macDFile" class="form-control" accept="${meta.accept}">
+                <small style="color:var(--text-muted)">Maksimal hajm: 50 MB</small>
+             </div>
+             <div class="form-group">
+                <label>Kategoriya</label>
+                <select id="macDCat" class="form-control">${catOptions}</select>
+             </div>
+             <div class="form-group">
+                <label>Tavsif (ixtiyoriy)</label>
+                <textarea id="macDDesc" class="form-control" rows="2"></textarea>
+             </div>`,
+            `<button type="button" class="btn-ghost" id="cancelDocFile">Bekor qilish</button>
+             <button type="button" class="btn-primary-sm" id="saveDocFile">Yuklash</button>`,
+            { wide: false }
+        );
+        document.getElementById('cancelDocFile').onclick = () => closeModal();
+        document.getElementById('saveDocFile').onclick = async () => {
+            const title = document.getElementById('macDTitle').value.trim();
+            const file = document.getElementById('macDFile').files?.[0];
+            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
+            if (!file) { alert('Fayl tanlanishi shart'); return; }
+            const saveBtn = document.getElementById('saveDocFile');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Yuklanmoqda...';
+            try {
+                const result = await apiUploadFile(file);
+                const ext = (result.fileName || '').split('.').pop()?.toLowerCase() || 'file';
+                const mc = getMobileContent();
+                mc.documents = mc.documents || [];
+                mc.documents.push({
+                    id: 'd' + Date.now(),
+                    title,
+                    fileUrl: result.url,
+                    fileName: result.fileName,
+                    fileSize: result.fileSize,
+                    type: tab === 'textbooks' ? 'textbook' : ext,
+                    category: document.getElementById('macDCat').value,
+                    description: document.getElementById('macDDesc').value.trim(),
+                    createdAt: new Date().toISOString().slice(0, 10),
+                });
+                saveMobileContent(mc);
+                closeModal();
+                renderMobileAdminTab(tab);
+                showMiniToast('Hujjat yuklandi');
+            } catch (err) {
+                alert('Xatolik: ' + err.message);
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Yuklash';
+            }
+        };
+    });
+
+    // Havola qo'shish
+    document.getElementById('addDocLinkBtn')?.addEventListener('click', () => {
+        openModal(`Havola qo'shish`,
+            `<div class="form-group">
+                <label>Sarlavha <span style="color:var(--danger)">*</span></label>
+                <input id="macLTitle" class="form-control" placeholder="Hujjat sarlavhasi">
+             </div>
+             <div class="form-group">
+                <label>URL havola <span style="color:var(--danger)">*</span></label>
+                <input id="macLUrl" class="form-control" placeholder="https://drive.google.com/...">
+             </div>
+             <div class="form-group">
+                <label>Kategoriya</label>
+                <select id="macLCat" class="form-control">${catOptions}</select>
+             </div>
+             <div class="form-group">
+                <label>Tavsif (ixtiyoriy)</label>
+                <textarea id="macLDesc" class="form-control" rows="2"></textarea>
+             </div>`,
+            `<button type="button" class="btn-ghost" id="cancelDocLink">Bekor qilish</button>
+             <button type="button" class="btn-primary-sm" id="saveDocLink">Qo'shish</button>`,
+            { wide: false }
+        );
+        document.getElementById('cancelDocLink').onclick = () => closeModal();
+        document.getElementById('saveDocLink').onclick = () => {
+            const title = document.getElementById('macLTitle').value.trim();
+            const url = document.getElementById('macLUrl').value.trim();
+            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
+            if (!url) { alert('Havola kiritilishi shart'); return; }
+            const mc = getMobileContent();
+            mc.documents = mc.documents || [];
+            mc.documents.push({
+                id: 'd' + Date.now(),
+                title,
+                fileUrl: url,
+                fileName: title,
+                fileSize: 0,
+                type: tab === 'textbooks' ? 'textbook' : 'link',
+                category: document.getElementById('macLCat').value,
+                description: document.getElementById('macLDesc').value.trim(),
+                createdAt: new Date().toISOString().slice(0, 10),
+            });
+            saveMobileContent(mc);
+            closeModal();
+            renderMobileAdminTab(tab);
+            showMiniToast('Havola qo\'shildi');
+        };
+    });
+
+    // O'chirish
+    container.querySelectorAll('[data-delete-doc]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!confirm("Hujjatni o'chirasizmi?")) return;
+            const id = btn.dataset.deleteDoc;
+            const mc = getMobileContent();
+            const doc = mc.documents.find(d => d.id === id);
+            mc.documents = mc.documents.filter(d => d.id !== id);
+            saveMobileContent(mc);
+            if (doc?.fileUrl?.startsWith('/uploads/')) {
+                const filename = doc.fileUrl.split('/uploads/')[1];
+                apiDeleteUpload(filename).catch(() => {});
+            }
+            renderMobileAdminTab(tab);
+            showMiniToast("Hujjat o'chirildi");
+        });
+    });
 }
 
 // --- Profile ---
