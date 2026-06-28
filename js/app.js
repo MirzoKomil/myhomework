@@ -220,17 +220,17 @@ async function bootApp() {
         }
     }
 
-    // 14-ish: ROP uchun bog'liq til yo'nalishini aniqlash
-    if (currentUser.role === 'rop' && !currentUser.linkedRopLang) {
-        const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    // 14-ish: ROP uchun til yo'nalishini HR xodim yozuvidan aniqlash
+    if (currentUser.role === 'rop') {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
-        const linked = managers.find(m =>
-            m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
-        ) || hrEmployees.find(e =>
+        const linked = hrEmployees.find(e =>
             e.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
         );
-        currentUser.linkedRopLang = linked?.lang || linked?.language || 'english';
-        setCurrentUser(currentUser);
+        const detectedLang = linked?.lang || 'english';
+        if (currentUser.linkedRopLang !== detectedLang) {
+            currentUser.linkedRopLang = detectedLang;
+            setCurrentUser(currentUser);
+        }
     }
 
     setUiLang(getUiLang());
@@ -6935,6 +6935,22 @@ function managerLangHtml(selected = 'english') {
     </div>`;
 }
 
+function ropLangHtml(selected = 'english') {
+    return `<div class="form-group" id="empRopLangWrap" style="display:none">
+        <label>Til yo'nalishi (ROP)</label>
+        <div class="emp-lang-sub">
+            <label>
+                <input type="radio" name="empRopLang" value="english" ${selected !== 'russian' ? 'checked' : ''}>
+                Ingliz tili
+            </label>
+            <label>
+                <input type="radio" name="empRopLang" value="russian" ${selected === 'russian' ? 'checked' : ''}>
+                Rus tili
+            </label>
+        </div>
+    </div>`;
+}
+
 function bindManagerLangToggle(roleSelectId) {
     const roleEl = document.getElementById(roleSelectId);
     const wrap = document.getElementById('empManagerLangWrap');
@@ -6946,8 +6962,24 @@ function bindManagerLangToggle(roleSelectId) {
     toggle();
 }
 
+function bindRopLangToggle(roleSelectId) {
+    const roleEl = document.getElementById(roleSelectId);
+    const wrap = document.getElementById('empRopLangWrap');
+    if (!roleEl || !wrap) return;
+    const toggle = () => {
+        wrap.style.display = roleEl.value === 'rop' ? '' : 'none';
+    };
+    roleEl.addEventListener('change', toggle);
+    toggle();
+}
+
 function resolveManagerLang() {
     const checked = document.querySelector('input[name="empManagerLang"]:checked');
+    return (checked && checked.value === 'russian') ? 'russian' : 'english';
+}
+
+function resolveRopLang() {
+    const checked = document.querySelector('input[name="empRopLang"]:checked');
     return (checked && checked.value === 'russian') ? 'russian' : 'english';
 }
 
@@ -7256,6 +7288,7 @@ function openEditEmployeeModal(empId) {
         </div>
         ${teacherLangHtml(preselectedLang)}
         ${managerLangHtml(emp.lang || 'english')}
+        ${ropLangHtml(emp.lang || 'english')}
         <div class="form-group">
             <label>Telefon raqam</label>
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
@@ -7299,6 +7332,7 @@ function openEditEmployeeModal(empId) {
     // Til sub-field toggle
     bindTeacherLangToggle('editEmpRole');
     bindManagerLangToggle('editEmpRole');
+    bindRopLangToggle('editEmpRole');
 
     // Avatar preview (agar mavjud bo'lsa, DOM orqali src o'rnatamiz)
     if (emp.avatar) {
@@ -7342,6 +7376,7 @@ function openEditEmployeeModal(empId) {
 
         const resolvedRole = resolveTeacherRole(document.getElementById('editEmpRole').value);
         const isMgrEdit = resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri';
+        const isRopEdit = resolvedRole === 'rop';
         const updated = {
             ...emp,
             firstName,
@@ -7355,7 +7390,7 @@ function openEditEmployeeModal(empId) {
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
-            lang: isMgrEdit ? resolveManagerLang() : (emp.lang || 'english'),
+            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : (emp.lang || 'english'),
         };
         if (newPassword) updated.password = newPassword;
 
@@ -7424,6 +7459,7 @@ function openAddEmployeeModal() {
         </div>
         ${teacherLangHtml()}
         ${managerLangHtml()}
+        ${ropLangHtml()}
         <div class="form-group">
             <label>Telefon raqam <span style="color:var(--danger)">*</span></label>
             <input type="tel" id="empPhone" class="form-control" placeholder="+998 90 123 45 67">
@@ -7479,6 +7515,7 @@ function openAddEmployeeModal() {
     // Til sub-field toggle
     bindTeacherLangToggle('empRole');
     bindManagerLangToggle('empRole');
+    bindRopLangToggle('empRole');
 
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
 
@@ -7513,12 +7550,13 @@ function openAddEmployeeModal() {
 
         const name = `${firstName} ${lastName}`;
         const isMgr = role === 'sotuv-menejeri' || role === 'sotuv_menejeri';
+        const isRop = role === 'rop';
         const newEmp = {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
             role, phone, email, department, status, login, password,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
-            lang: isMgr ? resolveManagerLang() : 'english'
+            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : 'english'
         };
         employees.push(newEmp);
         saveHrEmployees(employees);
