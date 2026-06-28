@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260629j">
+    <link rel="stylesheet" href="css/styles.css?v=20260629k">
 </head>
 
 <body>
@@ -37,6 +37,15 @@
                         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                     </svg>
                     <span class="label">Sotuv bo'limi</span>
+                </a>
+
+                <a href="#" class="menu-item" data-tab="teachers-section">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    <span class="label">O'qituvchilar bo'limi</span>
                 </a>
 
                 <a href="#" class="menu-item" data-tab="marketing">
@@ -528,6 +537,29 @@
                             </div>
                             <div id="salaryMonthInfo" class="kpi-summary"></div>
                             <div id="salaryContent"></div>
+                        </div>
+                    </section>
+
+                    <!-- O'qituvchilar bo'limi -->
+                    <section id="tab-teachers-section" class="tab-content">
+                        <div class="sales-pinned">
+                            <div class="sales-header-layout">
+                                <nav class="section-nav sales-header-nav" id="teachersSectionNav" aria-label="O'qituvchilar bo'limi">
+                                    <button type="button" class="section-nav-item active" data-teachers-section="attendance">Davomat</button>
+                                    <button type="button" class="section-nav-item" data-teachers-section="trial">Sinov darsi</button>
+                                    <button type="button" class="section-nav-item" data-teachers-section="rating">Reyting</button>
+                                    <button type="button" class="section-nav-item" data-teachers-section="textbook">Darslik</button>
+                                    <button type="button" class="section-nav-item" data-teachers-section="whiteboard">Elektron doska</button>
+                                </nav>
+                                <div style="display:flex;align-items:center;gap:10px" id="teachersHeaderActions"></div>
+                            </div>
+                        </div>
+                        <div class="sales-content-area">
+                            <div class="sales-panel active" data-teachers-panel="attendance" id="tpAttendance"></div>
+                            <div class="sales-panel" data-teachers-panel="trial" id="tpTrial"></div>
+                            <div class="sales-panel" data-teachers-panel="rating" id="tpRating"></div>
+                            <div class="sales-panel" data-teachers-panel="textbook" id="tpTextbook"></div>
+                            <div class="sales-panel" data-teachers-panel="whiteboard" id="tpWhiteboard"></div>
                         </div>
                     </section>
 
@@ -1028,10 +1060,10 @@
         </div>
     </div>
 
-    <script src="js/api.js?v=20260629j"></script>
-    <script src="js/storage.js?v=20260629j"></script>
-    <script src="js/notifications.js?v=20260629j"></script>
-    <script src="js/app.js?v=20260629j"></script>
+    <script src="js/api.js?v=20260629k"></script>
+    <script src="js/storage.js?v=20260629k"></script>
+    <script src="js/notifications.js?v=20260629k"></script>
+    <script src="js/app.js?v=20260629k"></script>
 </body>
 
 </html>

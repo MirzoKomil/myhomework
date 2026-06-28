@@ -316,7 +316,8 @@ function switchTab(tab, ctx = {}) {
     _tabContext = {
         subject: ctx.subject || null,
         placeholder: ctx.placeholder || null,
-        salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null)
+        salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null),
+        teachersSection: tab === 'teachers-section' ? (ctx.teachersSection || 'attendance') : (ctx.teachersSection || null)
     };
 
     updateSidebarActiveState(tab, _tabContext);
@@ -386,6 +387,16 @@ function initSidebarMenu() {
                 switchTab('sales', { salesSection: btn.dataset.salesSection });
             } else {
                 switchSalesSection(btn.dataset.salesSection);
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-teachers-section]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!document.getElementById('tab-teachers-section')?.classList.contains('active')) {
+                switchTab('teachers-section', { teachersSection: btn.dataset.teachersSection });
+            } else {
+                switchTeachersSection(btn.dataset.teachersSection);
             }
         });
     });
@@ -490,6 +501,7 @@ function renderTab(tab) {
         case 'profile': renderProfile(); break;
         case 'placeholder': renderPlaceholder(); break;
         case 'student-app': renderStudentApp(); break;
+        case 'teachers-section': renderTeachersSection(); break;
         case 'hr-employees': renderHrEmployees(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
@@ -3630,6 +3642,444 @@ function openSdpChangeSchedule(s) {
         if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
         showMiniToast("Jadval yangilandi");
     };
+}
+
+// ===== O'qituvchilar bo'limi =====
+
+function renderTeachersSection() {
+    const sec = _tabContext.teachersSection || 'attendance';
+    switchTeachersSection(sec);
+}
+
+function switchTeachersSection(section) {
+    _tabContext.teachersSection = section;
+    document.querySelectorAll('[data-teachers-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.teachersSection === section);
+    });
+    document.querySelectorAll('[data-teachers-panel]').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.teachersPanel === section);
+    });
+    if (section === 'attendance') renderTpAttendance();
+    else if (section === 'trial') renderTpTrial();
+    else if (section === 'rating') renderTpRating();
+    else if (section === 'textbook') renderTpTextbook();
+    else if (section === 'whiteboard') renderTpWhiteboard();
+}
+
+function getAllTeachersForSection() {
+    const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+    return hrEmployees.filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi');
+}
+
+// --- Davomat ---
+function renderTpAttendance() {
+    const container = document.getElementById('tpAttendance');
+    if (!container) return;
+    const teachers = getAllTeachersForSection();
+    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    const students = getItem(STORAGE_KEYS.students, []);
+    const now = new Date();
+    const monthVal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    const rows = teachers.map(t => {
+        const subjectLabel = t.role === 'rus-oqituvchi' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili';
+        const attKey = `${monthVal}_${t.id}`;
+        const block = mainAtt[attKey] || {};
+        const myStudents = students.filter(s => s.teacherId === t.id || s.assistantTeacherId === t.id);
+        const totalLessons = Object.values(block).reduce((sum, days) => {
+            return sum + Object.values(days || {}).filter(Boolean).length;
+        }, 0);
+        const attendRate = myStudents.length > 0
+            ? Math.round(totalLessons / Math.max(myStudents.length, 1))
+            : 0;
+        return `<tr>
+            <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div class="student-avatar-mini">${escapeHtml((t.name||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase())}</div>
+                    <span style="font-weight:500">${escapeHtml(t.name||'—')}</span>
+                </div>
+            </td>
+            <td>${escapeHtml(subjectLabel)}</td>
+            <td style="text-align:center">${myStudents.length}</td>
+            <td style="text-align:center">${attendRate}</td>
+            <td>
+                <button type="button" class="btn-secondary-sm" data-tp-att-teacher="${escapeHtml(t.id)}">Ko'rish</button>
+            </td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">O'qituvchilar yo'q</td></tr>`;
+
+    container.innerHTML = `
+    <div style="padding:20px">
+        <div class="page-title-bar" style="margin-bottom:16px"><h2>Davomat — ${monthVal}</h2></div>
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr>
+                        <th>Ustoz</th><th>Til</th><th>O'quvchilar</th><th>Bu oy darslar</th><th>Batafsil</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+
+    container.querySelectorAll('[data-tp-att-teacher]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchTab('main-attendance');
+        });
+    });
+}
+
+// --- Sinov darsi ---
+function renderTpTrial() {
+    const container = document.getElementById('tpTrial');
+    if (!container) return;
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const allLeads = [...(leads.english||[]).map(l=>({...l,_lang:'english'})), ...(leads.russian||[]).map(l=>({...l,_lang:'russian'}))];
+    const trialLeads = allLeads.filter(l => l.status === 'sinov-darsida');
+    const teachers = getAllTeachersForSection();
+
+    const rows = trialLeads.map(l => {
+        const tId = l.trialLesson?.teacherId || l.paymentOnboarding?.teacherId || '';
+        const teacher = teachers.find(t => t.id === tId);
+        const trialDate = l.trialLesson?.date || l.trialLesson?.time || '';
+        return `<tr>
+            <td style="font-weight:500">${escapeHtml(l.name||'—')}</td>
+            <td>${escapeHtml(l.phone||'—')}</td>
+            <td>${l._lang === 'russian' ? '🇷🇺 Rus' : '🇬🇧 Ingliz'}</td>
+            <td>${escapeHtml(teacher?.name||'—')}</td>
+            <td>${escapeHtml(trialDate||'—')}</td>
+            <td><span class="badge" style="background:#fef3c7;color:#92400e">Sinov darsida</span></td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Hozirda sinov darsida o'quvchi yo'q</td></tr>`;
+
+    container.innerHTML = `
+    <div style="padding:20px">
+        <div class="page-title-bar" style="margin-bottom:16px">
+            <h2>Sinov darsi</h2>
+            <span style="font-size:13px;color:var(--text-muted)">Jami: ${trialLeads.length} ta</span>
+        </div>
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr>
+                        <th>Ism</th><th>Telefon</th><th>Til</th><th>Ustoz</th><th>Vaqt</th><th>Holat</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+// --- Reyting ---
+function renderTpRating() {
+    const container = document.getElementById('tpRating');
+    if (!container) return;
+    const teachers = getAllTeachersForSection().filter(t => t.role !== 'yordamchi');
+    const students = getItem(STORAGE_KEYS.students, []);
+    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    const now = new Date();
+    const monthVal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    const stats = teachers.map(t => {
+        const myStudents = students.filter(s => s.teacherId === t.id);
+        const attKey = `${monthVal}_${t.id}`;
+        const block = mainAtt[attKey] || {};
+        let totalPresent = 0, totalRecorded = 0;
+        myStudents.forEach(s => {
+            const sa = block[s.id] || {};
+            Object.values(sa).forEach(v => { totalRecorded++; if (v) totalPresent++; });
+        });
+        const attRate = totalRecorded > 0 ? Math.round((totalPresent / totalRecorded) * 100) : 0;
+        const avgGrade = myStudents.filter(s=>s.grade).reduce((sum,s,_,arr)=>sum+parseFloat(s.grade||0)/arr.length, 0);
+        return { t, myStudents, attRate, avgGrade: avgGrade.toFixed(1) };
+    }).sort((a, b) => b.attRate - a.attRate);
+
+    const rows = stats.map((s, i) => {
+        const subjectLabel = s.t.role === 'rus-oqituvchi' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili';
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+        return `<tr>
+            <td style="font-size:18px;width:40px">${medal}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div class="student-avatar-mini">${escapeHtml((s.t.name||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase())}</div>
+                    <span style="font-weight:600">${escapeHtml(s.t.name||'—')}</span>
+                </div>
+            </td>
+            <td>${subjectLabel}</td>
+            <td style="text-align:center">${s.myStudents.length}</td>
+            <td style="text-align:center">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div style="flex:1;background:var(--border);border-radius:99px;height:6px">
+                        <div style="width:${s.attRate}%;height:100%;border-radius:99px;background:${s.attRate>=80?'#22c55e':s.attRate>=60?'#f59e0b':'#ef4444'}"></div>
+                    </div>
+                    <span style="font-size:12px;font-weight:600;min-width:36px">${s.attRate}%</span>
+                </div>
+            </td>
+            <td style="text-align:center">${parseFloat(s.avgGrade) > 0 ? s.avgGrade : '—'}</td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">O'qituvchilar yo'q</td></tr>`;
+
+    container.innerHTML = `
+    <div style="padding:20px">
+        <div class="page-title-bar" style="margin-bottom:16px"><h2>O'qituvchilar reytingi — ${monthVal}</h2></div>
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr>
+                        <th>#</th><th>Ustoz</th><th>Til</th><th>O'quvchilar</th><th>Davomat %</th><th>O'rt. baho</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+// --- Darslik ---
+function renderTpTextbook() {
+    const container = document.getElementById('tpTextbook');
+    if (!container) return;
+    const mc = getMobileContent();
+    const textbooks = (mc.documents || []).filter(d => d.type === 'textbook' || d.category === 'textbook');
+    const allDocs = mc.documents || [];
+
+    const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+
+    const cards = allDocs.length ? allDocs.map((d, i) => {
+        const catLabel = MOBILE_CATS.find(c=>c.id===d.category)?.label || d.category || '';
+        const sizeLabel = d.fileSize > 0 ? (d.fileSize > 1048576 ? (d.fileSize/1048576).toFixed(1)+' MB' : (d.fileSize/1024).toFixed(0)+' KB') : '';
+        return `<div class="mac-content-card">
+            <div class="mac-content-thumb" style="background:var(--bg-secondary,#f3f4f6);display:flex;align-items:center;justify-content:center;font-size:32px">📚</div>
+            <div class="mac-content-info">
+                <div class="mac-content-title">${escapeHtml(d.title)}</div>
+                <div class="mac-content-meta">${escapeHtml(catLabel)} ${sizeLabel?'· '+sizeLabel:''} · ${escapeHtml(d.createdAt||'')}</div>
+                ${d.description?`<div class="mac-content-desc">${escapeHtml(d.description)}</div>`:''}
+                <a href="${escapeHtml(d.fileUrl)}" target="_blank" rel="noopener" class="mac-content-link">Ochish / Yuklab olish →</a>
+            </div>
+            <div class="mac-content-actions">
+                <button type="button" class="btn-danger-sm" data-tp-del-doc="${escapeHtml(d.id)}">O'chirish</button>
+            </div>
+        </div>`;
+    }).join('') : `<div class="mac-empty">Hali darsliklar qo'shilmagan</div>`;
+
+    container.innerHTML = `
+    <div style="padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2>Darsliklar (${allDocs.length} ta)</h2>
+            <div style="display:flex;gap:8px">
+                <button type="button" class="btn-secondary-sm" id="tpAddDocLink">+ Havola</button>
+                <button type="button" class="btn-primary-sm" id="tpAddDocFile">📁 Fayl yuklash</button>
+            </div>
+        </div>
+        <div class="mac-content-list">${cards}</div>
+    </div>`;
+
+    document.getElementById('tpAddDocFile')?.addEventListener('click', () => {
+        openModal('Darslik yuklash',
+            `<div class="form-group"><label>Sarlavha *</label><input id="tpDTitle" class="form-control"></div>
+             <div class="form-group"><label>Fayl *</label><input type="file" id="tpDFile" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.epub"><small style="color:var(--text-muted)">Max 50 MB</small></div>
+             <div class="form-group"><label>Kategoriya</label><select id="tpDCat" class="form-control">${catOptions}</select></div>
+             <div class="form-group"><label>Tavsif</label><textarea id="tpDDesc" class="form-control" rows="2"></textarea></div>`,
+            `<button type="button" class="btn-ghost" id="cancelTpDoc">Bekor</button>
+             <button type="button" class="btn-primary-sm" id="saveTpDoc">Yuklash</button>`,
+            { wide: false }
+        );
+        document.getElementById('cancelTpDoc').onclick = () => closeModal();
+        document.getElementById('saveTpDoc').onclick = async () => {
+            const title = document.getElementById('tpDTitle').value.trim();
+            const file = document.getElementById('tpDFile').files?.[0];
+            if (!title || !file) { alert('Sarlavha va fayl kerak'); return; }
+            const btn = document.getElementById('saveTpDoc');
+            btn.disabled = true; btn.textContent = 'Yuklanmoqda...';
+            try {
+                const res = await apiUploadFile(file);
+                const mc2 = getMobileContent();
+                mc2.documents = mc2.documents || [];
+                mc2.documents.push({ id: 'd'+Date.now(), title, fileUrl: res.url, fileName: res.fileName, fileSize: res.fileSize, type: 'textbook', category: document.getElementById('tpDCat').value, description: document.getElementById('tpDDesc').value.trim(), createdAt: new Date().toISOString().slice(0,10) });
+                saveMobileContent(mc2);
+                closeModal(); renderTpTextbook(); showMiniToast('Darslik yuklandi');
+            } catch(e) { alert('Xatolik: '+e.message); btn.disabled=false; btn.textContent='Yuklash'; }
+        };
+    });
+
+    document.getElementById('tpAddDocLink')?.addEventListener('click', () => {
+        openModal('Havola qo\'shish',
+            `<div class="form-group"><label>Sarlavha *</label><input id="tpLTitle" class="form-control"></div>
+             <div class="form-group"><label>URL *</label><input id="tpLUrl" class="form-control" placeholder="https://..."></div>
+             <div class="form-group"><label>Kategoriya</label><select id="tpLCat" class="form-control">${catOptions}</select></div>
+             <div class="form-group"><label>Tavsif</label><textarea id="tpLDesc" class="form-control" rows="2"></textarea></div>`,
+            `<button type="button" class="btn-ghost" id="cancelTpLink">Bekor</button>
+             <button type="button" class="btn-primary-sm" id="saveTpLink">Qo'shish</button>`,
+            { wide: false }
+        );
+        document.getElementById('cancelTpLink').onclick = () => closeModal();
+        document.getElementById('saveTpLink').onclick = () => {
+            const title = document.getElementById('tpLTitle').value.trim();
+            const url = document.getElementById('tpLUrl').value.trim();
+            if (!title || !url) { alert('Sarlavha va havola kerak'); return; }
+            const mc2 = getMobileContent();
+            mc2.documents = mc2.documents || [];
+            mc2.documents.push({ id: 'd'+Date.now(), title, fileUrl: url, fileName: title, fileSize: 0, type: 'textbook', category: document.getElementById('tpLCat').value, description: document.getElementById('tpLDesc').value.trim(), createdAt: new Date().toISOString().slice(0,10) });
+            saveMobileContent(mc2);
+            closeModal(); renderTpTextbook(); showMiniToast('Havola qo\'shildi');
+        };
+    });
+
+    container.querySelectorAll('[data-tp-del-doc]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!confirm("O'chirasizmi?")) return;
+            const id = btn.dataset.tpDelDoc;
+            const mc2 = getMobileContent();
+            const doc = mc2.documents.find(d => d.id === id);
+            mc2.documents = mc2.documents.filter(d => d.id !== id);
+            saveMobileContent(mc2);
+            if (doc?.fileUrl?.startsWith('/uploads/')) apiDeleteUpload(doc.fileUrl.split('/uploads/')[1]).catch(()=>{});
+            renderTpTextbook(); showMiniToast("O'chirildi");
+        });
+    });
+}
+
+// --- Elektron doska ---
+function renderTpWhiteboard() {
+    const container = document.getElementById('tpWhiteboard');
+    if (!container) return;
+
+    container.innerHTML = `
+    <div style="padding:20px">
+        <div class="page-title-bar" style="margin-bottom:16px"><h2>Elektron doska</h2></div>
+        <div class="card" style="padding:20px">
+            <div id="wbToolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+                <button type="button" class="wb-tool-btn active" data-wb-tool="pen" title="Qalam">✏️</button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="eraser" title="O'chirish">🧹</button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="line" title="Chiziq">📏</button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="rect" title="To'rtburchak">⬜</button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="circle" title="Doira">⭕</button>
+                <div style="width:1px;height:28px;background:var(--border)"></div>
+                <input type="color" id="wbColor" value="#1e293b" title="Rang" style="width:32px;height:32px;border:none;cursor:pointer;border-radius:4px">
+                <select id="wbSize" title="Qalinlik" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+                    <option value="2">Ingichka</option>
+                    <option value="4" selected>O'rta</option>
+                    <option value="8">Qalin</option>
+                    <option value="14">Juda qalin</option>
+                </select>
+                <div style="width:1px;height:28px;background:var(--border)"></div>
+                <button type="button" class="btn-secondary-sm" id="wbUndo">↩ Orqaga</button>
+                <button type="button" class="btn-secondary-sm" id="wbClear">🗑 Tozalash</button>
+                <button type="button" class="btn-primary-sm" id="wbSave">💾 Saqlash (PNG)</button>
+            </div>
+            <canvas id="wbCanvas" style="border:1px solid var(--border);border-radius:10px;cursor:crosshair;display:block;width:100%;touch-action:none" height="500"></canvas>
+        </div>
+    </div>`;
+
+    initWhiteboard();
+}
+
+function initWhiteboard() {
+    const canvas = document.getElementById('wbCanvas');
+    if (!canvas) return;
+    canvas.width = canvas.offsetWidth || 900;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    let tool = 'pen', color = '#1e293b', size = 4;
+    let drawing = false, startX = 0, startY = 0;
+    let snapshot = null;
+    const history = [];
+
+    function saveHistory() {
+        history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        if (history.length > 30) history.shift();
+    }
+
+    function getPos(e) {
+        const r = canvas.getBoundingClientRect();
+        const touch = e.touches?.[0] || e;
+        return {
+            x: (touch.clientX - r.left) * (canvas.width / r.width),
+            y: (touch.clientY - r.top) * (canvas.height / r.height)
+        };
+    }
+
+    function startDraw(e) {
+        e.preventDefault();
+        drawing = true;
+        const p = getPos(e);
+        startX = p.x; startY = p.y;
+        saveHistory();
+        snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        if (tool === 'pen' || tool === 'eraser') {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+        }
+    }
+
+    function draw(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = getPos(e);
+        ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
+        ctx.lineWidth = tool === 'eraser' ? size * 4 : size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (tool === 'pen' || tool === 'eraser') {
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+        } else {
+            ctx.putImageData(snapshot, 0, 0);
+            ctx.beginPath();
+            if (tool === 'line') {
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            } else if (tool === 'rect') {
+                ctx.strokeRect(startX, startY, p.x - startX, p.y - startY);
+            } else if (tool === 'circle') {
+                const rx = (p.x - startX) / 2, ry = (p.y - startY) / 2;
+                ctx.ellipse(startX + rx, startY + ry, Math.abs(rx), Math.abs(ry), 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+    }
+
+    function stopDraw(e) { drawing = false; }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+
+    document.querySelectorAll('.wb-tool-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            tool = btn.dataset.wbTool;
+        });
+    });
+    document.getElementById('wbColor').addEventListener('input', e => { color = e.target.value; });
+    document.getElementById('wbSize').addEventListener('change', e => { size = parseInt(e.target.value); });
+    document.getElementById('wbUndo').addEventListener('click', () => {
+        if (history.length) ctx.putImageData(history.pop(), 0, 0);
+    });
+    document.getElementById('wbClear').addEventListener('click', () => {
+        if (!confirm("Doskani tozalaysizmi?")) return;
+        saveHistory();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+    document.getElementById('wbSave').addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `doska-${new Date().toISOString().slice(0,10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
 }
 
 function fillStudentTeacherOptions(subject, suffix) {

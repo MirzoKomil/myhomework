@@ -6571,6 +6571,16 @@ body.modal-open {
 .mac-content-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 .mac-empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 14px; }
 
+/* Elektron doska */
+.wb-tool-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card-bg,#fff);
+    font-size: 16px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: background .15s;
+}
+.wb-tool-btn.active { background: var(--primary); border-color: var(--primary); }
+.wb-tool-btn:hover:not(.active) { background: var(--bg-hover, #f3f4f6); }
+
 /* ===== Student Detail Panel ===== */
 .sdp-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.4);
