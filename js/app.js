@@ -207,7 +207,15 @@ async function bootApp() {
         );
         if (linked) {
             currentUser.linkedManagerId = linked.id;
-            currentUser.linkedManagerLang = linked.lang || 'english';
+            // linked.lang bo'lmasa, lidlar orqali tilni aniqlaymiz
+            let lang = linked.lang || null;
+            if (!lang) {
+                const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+                const hasRu = (leads.russian || []).some(l => l.managerId === linked.id);
+                const hasEn = (leads.english || []).some(l => l.managerId === linked.id);
+                lang = hasRu && !hasEn ? 'russian' : 'english';
+            }
+            currentUser.linkedManagerLang = lang;
             setCurrentUser(currentUser);
         }
     }
@@ -1714,11 +1722,13 @@ function initTimetableControls() {
             })()
             : null;
         if (restrictLang) {
+            ttTabsEl.hidden = true;
             ttTabsEl.style.display = 'none';
             ttTabsEl.querySelectorAll('.subject-tab').forEach(b => {
                 b.classList.toggle('active', b.dataset.subject === restrictLang);
             });
         } else {
+            ttTabsEl.hidden = false;
             ttTabsEl.style.display = '';
         }
     }
