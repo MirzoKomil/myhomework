@@ -606,7 +606,7 @@ function switchMobileSubSection(sub) {
 function renderMobileEditPanel() {
     const panel = document.getElementById('mobileEditPanel');
     if (!panel) return;
-    const showTabs = _mobileSubSection === 'dars';
+    const showTabs = _mobileSubSection === 'dars' || _mobileSubSection === 'resurslar';
 
     if (!panel.dataset.initialized) {
         panel.dataset.initialized = '1';
