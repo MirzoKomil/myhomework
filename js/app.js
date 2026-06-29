@@ -3476,6 +3476,8 @@ function renderStudents() {
 
     let students = getItem(STORAGE_KEYS.students, []);
 
+    const subject = isSalesManager ? 'english' : getStudentsSelectedSubject();
+
     if (isSalesManager) {
         const managerId = currentUser?.linkedManagerId || '';
         const allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
@@ -3489,7 +3491,6 @@ function renderStudents() {
         );
         if (titleEl) titleEl.textContent = "Mening o'quvchilarim";
     } else {
-        const subject = getStudentsSelectedSubject();
         students = students.filter(s => (s.subject || 'english') === subject);
         if (titleEl) titleEl.textContent = `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`;
         if (currentUser?.role === 'teacher' && currentUser?.linkedTeacherId) {
@@ -3508,51 +3509,74 @@ function renderStudents() {
         );
     }
 
+    // Til bo'yicha filtrlangan ustozlar va menejerlar
     const allTeachers = [
-        ...getItem(STORAGE_KEYS.teachers, []),
-        ...getItem(STORAGE_KEYS.hrEmployees, [])
-            .filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
+        ...getItem(STORAGE_KEYS.teachers, []).filter(t => (t.subject || 'english') === subject),
+        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
+            (subject === 'english' && e.role === 'ingliz-oqituvchi') ||
+            (subject === 'russian' && e.role === 'rus-oqituvchi')
+        )
     ];
-    const allManagers = getItem(STORAGE_KEYS.hrEmployees, [])
-        .filter(e => e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri');
+    const allManagers = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
+        (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri') &&
+        (e.lang || 'english') === subject
+    );
 
-    // Filtr selectlarni populate qilish (bir marta)
+    // Filtr selectlar: handler bir marta, optionlar har render da til bo'yicha qayta yoziladi
     const teacherSel = document.getElementById('studentsTeacherFilter');
-    if (teacherSel && !teacherSel.dataset.populated) {
-        teacherSel.dataset.populated = '1';
+    if (teacherSel) {
+        if (!teacherSel.dataset.handlerBound) {
+            teacherSel.dataset.handlerBound = '1';
+            teacherSel.addEventListener('change', () => {
+                _studentsTeacherFilter = teacherSel.value;
+                const disp = document.getElementById('studentsTeacherFilterDisplay');
+                if (disp) disp.textContent = teacherSel.value === 'all'
+                    ? "Ustozlar bo'yicha"
+                    : teacherSel.options[teacherSel.selectedIndex]?.text || "Ustozlar bo'yicha";
+                renderStudents();
+            });
+        }
+        teacherSel.innerHTML = `<option value="all">Barcha ustozlar</option>`;
         allTeachers.forEach(t => {
             const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = t.name;
+            opt.value = t.id; opt.textContent = t.name;
             teacherSel.appendChild(opt);
         });
-        teacherSel.addEventListener('change', () => {
-            _studentsTeacherFilter = teacherSel.value;
-            const disp = document.getElementById('studentsTeacherFilterDisplay');
-            if (disp) disp.textContent = teacherSel.value === 'all'
-                ? "Ustozlar bo'yicha"
-                : allTeachers.find(t => t.id === teacherSel.value)?.name || "Ustozlar bo'yicha";
-            renderStudents();
-        });
+        if (!allTeachers.some(t => t.id === _studentsTeacherFilter)) _studentsTeacherFilter = 'all';
+        teacherSel.value = _studentsTeacherFilter;
+        const tDisp = document.getElementById('studentsTeacherFilterDisplay');
+        if (tDisp) tDisp.textContent = _studentsTeacherFilter === 'all'
+            ? "Ustozlar bo'yicha"
+            : allTeachers.find(t => t.id === _studentsTeacherFilter)?.name || "Ustozlar bo'yicha";
     }
+
     const managerSel = document.getElementById('studentsManagerFilter');
-    if (managerSel && !managerSel.dataset.populated) {
-        managerSel.dataset.populated = '1';
+    if (managerSel) {
+        if (!managerSel.dataset.handlerBound) {
+            managerSel.dataset.handlerBound = '1';
+            managerSel.addEventListener('change', () => {
+                _studentsManagerFilter = managerSel.value;
+                const disp = document.getElementById('studentsManagerFilterDisplay');
+                if (disp) disp.textContent = managerSel.value === 'all'
+                    ? "Sotuv menejerlari bo'yicha"
+                    : managerSel.options[managerSel.selectedIndex]?.text || "Sotuv menejerlari bo'yicha";
+                renderStudents();
+            });
+        }
+        managerSel.innerHTML = `<option value="all">Barcha menejerlar</option>`;
         allManagers.forEach(m => {
             const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.textContent = m.name;
+            opt.value = m.id; opt.textContent = m.name;
             managerSel.appendChild(opt);
         });
-        managerSel.addEventListener('change', () => {
-            _studentsManagerFilter = managerSel.value;
-            const disp = document.getElementById('studentsManagerFilterDisplay');
-            if (disp) disp.textContent = managerSel.value === 'all'
-                ? "Sotuv menejerlari bo'yicha"
-                : allManagers.find(m => m.id === managerSel.value)?.name || "Sotuv menejerlari bo'yicha";
-            renderStudents();
-        });
+        if (!allManagers.some(m => m.id === _studentsManagerFilter)) _studentsManagerFilter = 'all';
+        managerSel.value = _studentsManagerFilter;
+        const mDisp = document.getElementById('studentsManagerFilterDisplay');
+        if (mDisp) mDisp.textContent = _studentsManagerFilter === 'all'
+            ? "Sotuv menejerlari bo'yicha"
+            : allManagers.find(m => m.id === _studentsManagerFilter)?.name || "Sotuv menejerlari bo'yicha";
     }
+
     const durationSel = document.getElementById('studentsDurationFilter');
     if (durationSel && !durationSel.dataset.bound) {
         durationSel.dataset.bound = '1';
@@ -3566,7 +3590,7 @@ function renderStudents() {
         });
     }
 
-    // Ustozlar va menejerlar bo'yicha filtrlash
+    // Ustozlar, menejerlar va tarif bo'yicha filtrlash
     if (_studentsTeacherFilter !== 'all') {
         students = students.filter(s => s.teacherId === _studentsTeacherFilter || s.assistantTeacherId === _studentsTeacherFilter);
     }
