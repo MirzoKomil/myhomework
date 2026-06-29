@@ -46,6 +46,9 @@ const PLACEHOLDER_TITLES = {
 };
 
 let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol' };
+let _studentsTeacherFilter = 'all';
+let _studentsManagerFilter = 'all';
+let _studentsDurationFilter = 'all';
 let _profileSection = 'edit';
 let _profileUser = null;
 let _profileEditing = {};
@@ -3438,6 +3441,69 @@ function renderStudents() {
     ];
     const allManagers = getItem(STORAGE_KEYS.hrEmployees, [])
         .filter(e => e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri');
+
+    // Filtr selectlarni populate qilish (bir marta)
+    const teacherSel = document.getElementById('studentsTeacherFilter');
+    if (teacherSel && !teacherSel.dataset.populated) {
+        teacherSel.dataset.populated = '1';
+        allTeachers.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            teacherSel.appendChild(opt);
+        });
+        teacherSel.addEventListener('change', () => {
+            _studentsTeacherFilter = teacherSel.value;
+            const disp = document.getElementById('studentsTeacherFilterDisplay');
+            if (disp) disp.textContent = teacherSel.value === 'all'
+                ? "Ustozlar bo'yicha"
+                : allTeachers.find(t => t.id === teacherSel.value)?.name || "Ustozlar bo'yicha";
+            renderStudents();
+        });
+    }
+    const managerSel = document.getElementById('studentsManagerFilter');
+    if (managerSel && !managerSel.dataset.populated) {
+        managerSel.dataset.populated = '1';
+        allManagers.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.name;
+            managerSel.appendChild(opt);
+        });
+        managerSel.addEventListener('change', () => {
+            _studentsManagerFilter = managerSel.value;
+            const disp = document.getElementById('studentsManagerFilterDisplay');
+            if (disp) disp.textContent = managerSel.value === 'all'
+                ? "Sotuv menejerlari bo'yicha"
+                : allManagers.find(m => m.id === managerSel.value)?.name || "Sotuv menejerlari bo'yicha";
+            renderStudents();
+        });
+    }
+    const durationSel = document.getElementById('studentsDurationFilter');
+    if (durationSel && !durationSel.dataset.bound) {
+        durationSel.dataset.bound = '1';
+        durationSel.addEventListener('change', () => {
+            _studentsDurationFilter = durationSel.value;
+            const disp = document.getElementById('studentsDurationFilterDisplay');
+            if (disp) disp.textContent = durationSel.value === 'all'
+                ? "Tariflari bo'yicha"
+                : `${durationSel.value} daqiqa`;
+            renderStudents();
+        });
+    }
+
+    // Ustozlar va menejerlar bo'yicha filtrlash
+    if (_studentsTeacherFilter !== 'all') {
+        students = students.filter(s => s.teacherId === _studentsTeacherFilter || s.assistantTeacherId === _studentsTeacherFilter);
+    }
+    if (_studentsManagerFilter !== 'all') {
+        students = students.filter(s => s.managerId === _studentsManagerFilter);
+    }
+    if (_studentsDurationFilter !== 'all') {
+        const dur = parseInt(_studentsDurationFilter);
+        students = students.filter(s => (s.lessonDuration || 15) === dur);
+    }
+
     const payments = getItem(STORAGE_KEYS.payments, []);
 
     const totalLabel = document.getElementById('studentsTotalLabel');
