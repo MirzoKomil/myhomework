@@ -517,6 +517,7 @@ function renderPlaceholder() {
 
 // ===== Mobil ilova =====
 let _mobileSection = 'edit';
+let _mobileSubSection = 'asosiy';
 let _mobileLang = 'english';
 
 function renderStudentApp() {
@@ -560,6 +561,15 @@ function renderStudentApp() {
         b.classList.toggle('active', b.dataset.mobileLang === _mobileLang)
     );
 
+    document.querySelectorAll('[data-mobile-sub]').forEach(btn => {
+        if (btn.dataset.msubBound) return;
+        btn.dataset.msubBound = '1';
+        btn.addEventListener('click', () => switchMobileSubSection(btn.dataset.mobileSub));
+    });
+    document.querySelectorAll('[data-mobile-sub]').forEach(b =>
+        b.classList.toggle('active', b.dataset.mobileSub === _mobileSubSection)
+    );
+
     switchMobileSection(_mobileSection);
 }
 
@@ -571,12 +581,24 @@ function switchMobileSection(section) {
     document.querySelectorAll('[data-mobile-panel]').forEach(panel =>
         panel.classList.toggle('active', panel.dataset.mobilePanel === section)
     );
+    const subHeader = document.getElementById('mobileSubHeader');
+    if (subHeader) subHeader.style.display = section === 'edit' ? '' : 'none';
     if (section === 'edit') renderMobileEditPanel();
     else if (section === 'stats') renderMobileStatsPanel();
     else if (section === 'view') {
         const frame = document.getElementById('studentAppFrame');
         if (frame && frame.src === 'about:blank') frame.src = `/student/?v=${Date.now()}`;
     }
+}
+
+function switchMobileSubSection(sub) {
+    _mobileSubSection = sub;
+    document.querySelectorAll('[data-mobile-sub]').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.mobileSub === sub)
+    );
+    const panel = document.getElementById('mobileEditPanel');
+    const activeTab = panel?.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
+    renderMobileAdminTab(activeTab);
 }
 
 function renderMobileEditPanel() {
@@ -710,7 +732,9 @@ function renderMobileAdminTab(tab) {
 }
 
 function renderMobileVideosTab(container, content) {
-    const videos = (content.videos || []).filter(v => (v.lang || 'english') === _mobileLang);
+    const videos = (content.videos || []).filter(v =>
+        (v.lang || 'english') === _mobileLang && (v.section || 'asosiy') === _mobileSubSection
+    );
     const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
 
     const cards = videos.length ? videos.map((v, i) => {
@@ -774,6 +798,7 @@ function renderMobileVideosTab(container, content) {
             mc.videos.push({
                 id: 'v' + Date.now(),
                 lang: _mobileLang,
+                section: _mobileSubSection,
                 title,
                 youtubeUrl: url,
                 category: document.getElementById('macVCat').value,
@@ -803,6 +828,7 @@ function renderMobileVideosTab(container, content) {
 function renderMobileDocsTab(container, content, tab, meta) {
     const docs = (content.documents || []).filter(d => {
         if ((d.lang || 'english') !== _mobileLang) return false;
+        if ((d.section || 'asosiy') !== _mobileSubSection) return false;
         if (tab === 'pdfs') return ['pdf','doc','docx','txt'].includes(d.type);
         if (tab === 'presentations') return ['ppt','pptx','key'].includes(d.type);
         if (tab === 'textbooks') return d.category === 'textbook' || d.type === 'textbook';
@@ -879,6 +905,7 @@ function renderMobileDocsTab(container, content, tab, meta) {
                 mc.documents.push({
                     id: 'd' + Date.now(),
                     lang: _mobileLang,
+                    section: _mobileSubSection,
                     title,
                     fileUrl: result.url,
                     fileName: result.fileName,
@@ -934,6 +961,7 @@ function renderMobileDocsTab(container, content, tab, meta) {
             mc.documents.push({
                 id: 'd' + Date.now(),
                 lang: _mobileLang,
+                section: _mobileSubSection,
                 title,
                 fileUrl: url,
                 fileName: title,
