@@ -517,6 +517,7 @@ function renderPlaceholder() {
 
 // ===== Mobil ilova =====
 let _mobileSection = 'edit';
+let _mobileLang = 'english';
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -543,6 +544,21 @@ function renderStudentApp() {
         btn.dataset.mobBound = '1';
         btn.addEventListener('click', () => switchMobileSection(btn.dataset.mobileSection));
     });
+
+    document.querySelectorAll('[data-mobile-lang]').forEach(btn => {
+        if (btn.dataset.mlBound) return;
+        btn.dataset.mlBound = '1';
+        btn.addEventListener('click', () => {
+            _mobileLang = btn.dataset.mobileLang;
+            document.querySelectorAll('[data-mobile-lang]').forEach(b =>
+                b.classList.toggle('active', b.dataset.mobileLang === _mobileLang)
+            );
+            switchMobileSection(_mobileSection);
+        });
+    });
+    document.querySelectorAll('[data-mobile-lang]').forEach(b =>
+        b.classList.toggle('active', b.dataset.mobileLang === _mobileLang)
+    );
 
     switchMobileSection(_mobileSection);
 }
@@ -599,15 +615,15 @@ function renderMobileStatsPanel() {
     const panel = document.getElementById('mobileStatsPanel');
     if (!panel) return;
     const content = getMobileContent();
-    const videos = content.videos || [];
-    const docs = content.documents || [];
+    const videos = (content.videos || []).filter(v => (v.lang || 'english') === _mobileLang);
+    const docs = (content.documents || []).filter(d => (d.lang || 'english') === _mobileLang);
     const pdfs = docs.filter(d => ['pdf','doc','docx','txt'].includes(d.type));
     const presentations = docs.filter(d => ['ppt','pptx','key'].includes(d.type));
     const textbooks = docs.filter(d => d.category === 'textbook' || d.type === 'textbook');
 
     panel.innerHTML = `
     <div style="padding:20px">
-        <div class="page-title-bar" style="margin-bottom:20px"><h2>Mobil ilova statistikasi</h2></div>
+        <div class="page-title-bar" style="margin-bottom:20px"><h2>Mobil ilova statistikasi — ${_mobileLang === 'russian' ? 'Rus tili' : 'Ingliz tili'}</h2></div>
         <div class="grid-3" style="margin-bottom:24px">
             <div class="stat-card">
                 <div class="stat-icon blue">🎬</div>
@@ -694,7 +710,7 @@ function renderMobileAdminTab(tab) {
 }
 
 function renderMobileVideosTab(container, content) {
-    const videos = content.videos || [];
+    const videos = (content.videos || []).filter(v => (v.lang || 'english') === _mobileLang);
     const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
 
     const cards = videos.length ? videos.map((v, i) => {
@@ -757,6 +773,7 @@ function renderMobileVideosTab(container, content) {
             mc.videos = mc.videos || [];
             mc.videos.push({
                 id: 'v' + Date.now(),
+                lang: _mobileLang,
                 title,
                 youtubeUrl: url,
                 category: document.getElementById('macVCat').value,
@@ -785,6 +802,7 @@ function renderMobileVideosTab(container, content) {
 
 function renderMobileDocsTab(container, content, tab, meta) {
     const docs = (content.documents || []).filter(d => {
+        if ((d.lang || 'english') !== _mobileLang) return false;
         if (tab === 'pdfs') return ['pdf','doc','docx','txt'].includes(d.type);
         if (tab === 'presentations') return ['ppt','pptx','key'].includes(d.type);
         if (tab === 'textbooks') return d.category === 'textbook' || d.type === 'textbook';
@@ -860,6 +878,7 @@ function renderMobileDocsTab(container, content, tab, meta) {
                 mc.documents = mc.documents || [];
                 mc.documents.push({
                     id: 'd' + Date.now(),
+                    lang: _mobileLang,
                     title,
                     fileUrl: result.url,
                     fileName: result.fileName,
@@ -914,6 +933,7 @@ function renderMobileDocsTab(container, content, tab, meta) {
             mc.documents = mc.documents || [];
             mc.documents.push({
                 id: 'd' + Date.now(),
+                lang: _mobileLang,
                 title,
                 fileUrl: url,
                 fileName: title,
