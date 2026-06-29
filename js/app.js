@@ -596,41 +596,95 @@ function switchMobileSubSection(sub) {
     document.querySelectorAll('[data-mobile-sub]').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.mobileSub === sub)
     );
-    const panel = document.getElementById('mobileEditPanel');
-    const activeTab = panel?.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
-    renderMobileAdminTab(activeTab);
+    renderMobileEditPanel();
 }
 
 function renderMobileEditPanel() {
     const panel = document.getElementById('mobileEditPanel');
     if (!panel) return;
-    if (panel.dataset.initialized) {
-        // Allaqachon render qilingan — joriy tabni yangilash
-        const activeTab = panel.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
-        renderMobileAdminTab(activeTab);
-        return;
-    }
-    panel.dataset.initialized = '1';
-    panel.style.cssText = 'display:flex;flex-direction:column;height:calc(100vh - 180px);overflow:hidden';
+    const showTabs = _mobileSubSection === 'dars';
 
-    panel.innerHTML = `
-    <div class="mac-tabs" id="mobileAdminTabs" style="padding:0 20px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;gap:0">
-        <button type="button" class="mac-tab-btn mac-tab-active" data-mac-tab="videos">🎬 Videodarslar</button>
-        <button type="button" class="mac-tab-btn" data-mac-tab="pdfs">📄 PDF va hujjatlar</button>
-        <button type="button" class="mac-tab-btn" data-mac-tab="presentations">📊 Prezentatsiyalar</button>
-        <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
-    </div>
-    <div id="mobileAdminContent" style="padding:20px;overflow-y:auto;flex:1"></div>`;
+    if (!panel.dataset.initialized) {
+        panel.dataset.initialized = '1';
+        panel.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
+        panel.innerHTML = `
+        <div id="mobileContentTabsRow" style="display:none;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--border)">
+            <div class="mac-tabs" id="mobileAdminTabs" style="display:flex;gap:0">
+                <button type="button" class="mac-tab-btn mac-tab-active" data-mac-tab="videos">🎬 Videodarslar</button>
+                <button type="button" class="mac-tab-btn" data-mac-tab="pdfs">📄 PDF va hujjatlar</button>
+                <button type="button" class="mac-tab-btn" data-mac-tab="presentations">📊 Prezentatsiyalar</button>
+                <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
+            </div>
+            <div style="padding:0 20px;flex-shrink:0">
+                <button type="button" class="btn-primary-sm" id="mobileAddVideoHeaderBtn">+ YouTube video qo'shish</button>
+            </div>
+        </div>
+        <div id="mobileAdminContent" style="padding:20px;overflow-y:auto;flex:1"></div>`;
 
-    panel.querySelectorAll('.mac-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            panel.querySelectorAll('.mac-tab-btn').forEach(b => b.classList.remove('mac-tab-active'));
-            btn.classList.add('mac-tab-active');
-            renderMobileAdminTab(btn.dataset.macTab);
+        panel.querySelectorAll('.mac-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                panel.querySelectorAll('.mac-tab-btn').forEach(b => b.classList.remove('mac-tab-active'));
+                btn.classList.add('mac-tab-active');
+                renderMobileAdminTab(btn.dataset.macTab);
+            });
         });
-    });
+        document.getElementById('mobileAddVideoHeaderBtn')?.addEventListener('click', _openMobileAddVideoModal);
+    }
 
-    renderMobileAdminTab('videos');
+    const tabsRow = document.getElementById('mobileContentTabsRow');
+    if (tabsRow) tabsRow.style.display = showTabs ? 'flex' : 'none';
+
+    const activeTab = panel.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
+    renderMobileAdminTab(showTabs ? activeTab : null);
+}
+
+function _openMobileAddVideoModal() {
+    const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+    openModal("YouTube video qo'shish",
+        `<div class="form-group">
+            <label>Video sarlavhasi <span style="color:var(--danger)">*</span></label>
+            <input id="macVTitle" class="form-control" placeholder="Lesson 1 — Present Simple">
+         </div>
+         <div class="form-group">
+            <label>YouTube havolasi <span style="color:var(--danger)">*</span></label>
+            <input id="macVUrl" class="form-control" placeholder="https://youtu.be/...">
+         </div>
+         <div class="form-group">
+            <label>Kategoriya</label>
+            <select id="macVCat" class="form-control">${catOptions}</select>
+         </div>
+         <div class="form-group">
+            <label>Tavsif (ixtiyoriy)</label>
+            <textarea id="macVDesc" class="form-control" rows="2" placeholder="Qisqacha tavsif..."></textarea>
+         </div>`,
+        `<button type="button" class="btn-ghost" id="cancelAddVideo">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveAddVideo">Qo'shish</button>`,
+        { wide: false }
+    );
+    document.getElementById('cancelAddVideo').onclick = () => closeModal();
+    document.getElementById('saveAddVideo').onclick = () => {
+        const title = document.getElementById('macVTitle').value.trim();
+        const url = document.getElementById('macVUrl').value.trim();
+        if (!title) { alert('Sarlavha kiritilishi shart'); return; }
+        if (!url) { alert('YouTube havolasi kiritilishi shart'); return; }
+        if (!ytVideoId(url)) { alert("Noto'g'ri YouTube havolasi. Misol: https://youtu.be/ABC123"); return; }
+        const mc = getMobileContent();
+        mc.videos = mc.videos || [];
+        mc.videos.push({
+            id: 'v' + Date.now(),
+            lang: _mobileLang,
+            section: _mobileSubSection,
+            title,
+            youtubeUrl: url,
+            category: document.getElementById('macVCat').value,
+            description: document.getElementById('macVDesc').value.trim(),
+            createdAt: new Date().toISOString().slice(0, 10),
+        });
+        saveMobileContent(mc);
+        closeModal();
+        renderMobileAdminTab('videos');
+        showMiniToast("Video qo'shildi");
+    };
 }
 
 function renderMobileStatsPanel() {
@@ -717,6 +771,10 @@ function ytVideoId(url) {
 function renderMobileAdminTab(tab) {
     const container = document.getElementById('mobileAdminContent');
     if (!container) return;
+    if (!tab) {
+        container.innerHTML = `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Bu bo'lim uchun kontent qo'shish imkoniyati tez orada</div>`;
+        return;
+    }
     const content = getMobileContent();
 
     if (tab === 'videos') {
@@ -735,7 +793,6 @@ function renderMobileVideosTab(container, content) {
     const videos = (content.videos || []).filter(v =>
         (v.lang || 'english') === _mobileLang && (v.section || 'asosiy') === _mobileSubSection
     );
-    const catOptions = MOBILE_CATS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
 
     const cards = videos.length ? videos.map((v, i) => {
         const vid = ytVideoId(v.youtubeUrl);
@@ -758,59 +815,10 @@ function renderMobileVideosTab(container, content) {
     }).join('') : `<div class="mac-empty">Hali videodarslar qo'shilmagan</div>`;
 
     container.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="margin-bottom:16px">
         <div style="font-size:14px;color:var(--text-muted)">Jami: ${videos.length} ta video</div>
-        <button type="button" class="btn-primary-sm" id="addVideoBtn">+ YouTube video qo'shish</button>
     </div>
     <div class="mac-content-list">${cards}</div>`;
-
-    document.getElementById('addVideoBtn')?.addEventListener('click', () => {
-        openModal("YouTube video qo'shish",
-            `<div class="form-group">
-                <label>Video sarlavhasi <span style="color:var(--danger)">*</span></label>
-                <input id="macVTitle" class="form-control" placeholder="Lesson 1 — Present Simple">
-             </div>
-             <div class="form-group">
-                <label>YouTube havolasi <span style="color:var(--danger)">*</span></label>
-                <input id="macVUrl" class="form-control" placeholder="https://youtu.be/...">
-             </div>
-             <div class="form-group">
-                <label>Kategoriya</label>
-                <select id="macVCat" class="form-control">${catOptions}</select>
-             </div>
-             <div class="form-group">
-                <label>Tavsif (ixtiyoriy)</label>
-                <textarea id="macVDesc" class="form-control" rows="2" placeholder="Qisqacha tavsif..."></textarea>
-             </div>`,
-            `<button type="button" class="btn-ghost" id="cancelAddVideo">Bekor qilish</button>
-             <button type="button" class="btn-primary-sm" id="saveAddVideo">Qo'shish</button>`,
-            { wide: false }
-        );
-        document.getElementById('cancelAddVideo').onclick = () => closeModal();
-        document.getElementById('saveAddVideo').onclick = () => {
-            const title = document.getElementById('macVTitle').value.trim();
-            const url = document.getElementById('macVUrl').value.trim();
-            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
-            if (!url) { alert('YouTube havolasi kiritilishi shart'); return; }
-            if (!ytVideoId(url)) { alert("Noto'g'ri YouTube havolasi. Misol: https://youtu.be/ABC123"); return; }
-            const mc = getMobileContent();
-            mc.videos = mc.videos || [];
-            mc.videos.push({
-                id: 'v' + Date.now(),
-                lang: _mobileLang,
-                section: _mobileSubSection,
-                title,
-                youtubeUrl: url,
-                category: document.getElementById('macVCat').value,
-                description: document.getElementById('macVDesc').value.trim(),
-                createdAt: new Date().toISOString().slice(0, 10),
-            });
-            saveMobileContent(mc);
-            closeModal();
-            renderMobileAdminTab('videos');
-            showMiniToast('Video qo\'shildi');
-        };
-    });
 
     container.querySelectorAll('[data-delete-video]').forEach(btn => {
         btn.addEventListener('click', () => {
