@@ -666,6 +666,31 @@ body {
     overflow: hidden;
 }
 
+#tab-students.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.students-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.students-panel.active {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.students-panel[data-students-panel="faol"].active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 .student-app-title-bar {
     display: flex;
     align-items: center;

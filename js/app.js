@@ -45,7 +45,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null, salesSection: 'leads' };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol' };
 let _profileSection = 'edit';
 let _profileUser = null;
 let _profileEditing = {};
@@ -318,7 +318,8 @@ function switchTab(tab, ctx = {}) {
         subject: ctx.subject || null,
         placeholder: ctx.placeholder || null,
         salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null),
-        teachersSection: tab === 'teachers-section' ? (ctx.teachersSection || 'attendance') : (ctx.teachersSection || null)
+        teachersSection: tab === 'teachers-section' ? (ctx.teachersSection || 'attendance') : (ctx.teachersSection || null),
+        studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol')
     };
 
     updateSidebarActiveState(tab, _tabContext);
@@ -350,6 +351,21 @@ function switchSalesSection(section) {
     syncLeadsLangTabs();
     if (section === 'leads') renderLeads();
     if (section === 'book-roadmap') renderBookRoadmap();
+}
+
+function switchStudentsSection(section) {
+    _tabContext.studentsSection = section;
+    document.querySelectorAll('[data-students-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.studentsSection === section);
+    });
+    document.querySelectorAll('[data-students-panel]').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.studentsPanel === section);
+    });
+    const langTabs = document.getElementById('studentsSubjectTabs');
+    if (langTabs) langTabs.style.display = section === 'faol' ? '' : 'none';
+    const addBtn = document.getElementById('addStudentBtn');
+    if (addBtn) addBtn.style.display = section === 'faol' ? '' : 'none';
+    if (section === 'faol') renderStudents();
 }
 
 function syncLeadsLangTabs() {
@@ -3351,6 +3367,27 @@ function initStudentsSubjectTabs() {
 function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
+
+    // Nav tugmalarini bir marta bind qilish
+    const nav = document.getElementById('studentsSectionNav');
+    if (nav && !nav.dataset.bound) {
+        nav.dataset.bound = '1';
+        nav.querySelectorAll('[data-students-section]').forEach(btn => {
+            btn.addEventListener('click', () => switchStudentsSection(btn.dataset.studentsSection));
+        });
+    }
+
+    // Faol panel holatini sinxronlashtirish
+    const activeSection = _tabContext.studentsSection || 'faol';
+    document.querySelectorAll('[data-students-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.studentsSection === activeSection);
+    });
+    document.querySelectorAll('[data-students-panel]').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.studentsPanel === activeSection);
+    });
+
+    // Faol bo'lim "faol" bo'lmasa, faqat panel almashtirish
+    if (activeSection !== 'faol') return;
 
     const tabsEl = document.getElementById('studentsSubjectTabs');
     if (tabsEl) tabsEl.hidden = isSalesManager;

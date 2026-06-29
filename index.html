@@ -552,15 +552,26 @@
 
                     <!-- O'quvchilar -->
                     <section id="tab-students" class="tab-content">
-                        <div class="page-title-bar" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-                            <h1 id="studentsPageTitle">O'quvchilar</h1>
-                            <div class="subject-tabs" id="studentsSubjectTabs" style="margin:0">
-                                <button type="button" class="subject-tab active" data-subject="english">🇬🇧 Ingliz tili</button>
-                                <button type="button" class="subject-tab" data-subject="russian">🇷🇺 Rus tili</button>
+                        <div class="sales-pinned">
+                            <div class="sales-header-layout">
+                                <nav class="section-nav sales-header-nav" id="studentsSectionNav" aria-label="O'quvchilar bo'limi">
+                                    <button type="button" class="section-nav-item active" data-students-section="faol">Faol o'quvchilar</button>
+                                    <button type="button" class="section-nav-item" data-students-section="muzlatilgan">Muzlatilganlar</button>
+                                    <button type="button" class="section-nav-item" data-students-section="tark-etgan">Tark etganlar</button>
+                                    <button type="button" class="section-nav-item" data-students-section="tamomlaganlar">Tamomlaganlar</button>
+                                    <button type="button" class="section-nav-item" data-students-section="qarzdorlar">Qarzdorlar</button>
+                                </nav>
+                                <div class="sales-header-lang">
+                                    <div class="leads-lang-tabs" id="studentsSubjectTabs" style="margin:0">
+                                        <button type="button" class="subject-tab active" data-subject="english">🇬🇧 Ingliz tili</button>
+                                        <button type="button" class="subject-tab" data-subject="russian">🇷🇺 Rus tili</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="card">
-                            <div class="students-toolbar">
+                        <!-- Faol o'quvchilar -->
+                        <div class="students-panel active" data-students-panel="faol">
+                            <div class="students-toolbar" style="flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)">
                                 <div class="students-toolbar-left">
                                     <div class="students-search-wrap">
                                         <svg viewBox="0 0 24 24" class="students-search-icon"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
@@ -570,7 +581,7 @@
                                 </div>
                                 <button class="btn-primary-sm" id="addStudentBtn">+ O'quvchi qo'shish</button>
                             </div>
-                            <div class="table-responsive">
+                            <div class="table-responsive" style="flex:1;overflow:auto">
                                 <table class="table students-table">
                                     <thead>
                                         <tr>
@@ -596,6 +607,22 @@
                                     <tbody id="studentsBody"></tbody>
                                 </table>
                             </div>
+                        </div>
+                        <!-- Muzlatilganlar -->
+                        <div class="students-panel" data-students-panel="muzlatilgan">
+                            <div class="mac-empty" style="padding:80px 0;text-align:center;color:var(--text-muted)">Bu bo'lim tez orada qo'shiladi</div>
+                        </div>
+                        <!-- Tark etganlar -->
+                        <div class="students-panel" data-students-panel="tark-etgan">
+                            <div class="mac-empty" style="padding:80px 0;text-align:center;color:var(--text-muted)">Bu bo'lim tez orada qo'shiladi</div>
+                        </div>
+                        <!-- Tamomlaganlar -->
+                        <div class="students-panel" data-students-panel="tamomlaganlar">
+                            <div class="mac-empty" style="padding:80px 0;text-align:center;color:var(--text-muted)">Bu bo'lim tez orada qo'shiladi</div>
+                        </div>
+                        <!-- Qarzdorlar -->
+                        <div class="students-panel" data-students-panel="qarzdorlar">
+                            <div class="mac-empty" style="padding:80px 0;text-align:center;color:var(--text-muted)">Bu bo'lim tez orada qo'shiladi</div>
                         </div>
                     </section>
 
