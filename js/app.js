@@ -634,7 +634,10 @@ function renderMobileEditPanel() {
                 renderMobileAdminTab(btn.dataset.macTab);
             });
         });
-        document.getElementById('mobileAddVideoHeaderBtn')?.addEventListener('click', _openMobileAddVideoModal);
+        document.getElementById('mobileAddVideoHeaderBtn')?.addEventListener('click', () => {
+            if (_mobileSubSection === 'dars') _openCreateCourseModal();
+            else _openMobileAddVideoModal();
+        });
     }
 
     const tabsRow = document.getElementById('mobileContentTabsRow');
@@ -651,6 +654,35 @@ function renderMobileEditPanel() {
 
     const activeTab = panel.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
     renderMobileAdminTab(showMacTabs ? activeTab : (showRow ? 'videos' : null));
+}
+
+function _openCreateCourseModal() {
+    openModal('Kurs yaratish',
+        `<div class="form-group">
+            <label>Kurs nomi <span style="color:var(--danger)">*</span></label>
+            <input id="courseNameInput" class="form-control" placeholder="Masalan: Present Simple kursi" autofocus>
+         </div>`,
+        `<button type="button" class="btn-ghost" id="cancelCourse">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveCourse">Yaratish</button>`,
+        { wide: false }
+    );
+    document.getElementById('cancelCourse').onclick = () => closeModal();
+    document.getElementById('saveCourse').onclick = () => {
+        const name = document.getElementById('courseNameInput').value.trim();
+        if (!name) { alert('Kurs nomi kiritilishi shart'); return; }
+        const mc = getMobileContent();
+        mc.courses = mc.courses || [];
+        mc.courses.push({
+            id: 'c' + Date.now(),
+            lang: _mobileLang,
+            section: _mobileSubSection,
+            name,
+            createdAt: new Date().toISOString().slice(0, 10),
+        });
+        saveMobileContent(mc);
+        closeModal();
+        showMiniToast("Kurs yaratildi");
+    };
 }
 
 function _openMobileAddVideoModal() {
