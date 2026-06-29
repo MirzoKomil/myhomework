@@ -369,6 +369,80 @@ function switchStudentsSection(section) {
     const addBtn = document.getElementById('addStudentBtn');
     if (addBtn) addBtn.style.display = section === 'faol' ? '' : 'none';
     if (section === 'faol') renderStudents();
+    if (section === 'muzlatilgan') renderFrozenStudents();
+}
+
+function renderFrozenStudents() {
+    const container = document.getElementById('studentsPanel-muzlatilgan');
+    if (!container) return;
+
+    const allStudents = getItem(STORAGE_KEYS.students, []);
+    const frozen = allStudents.filter(s => s.frozen);
+    const allTeachers = [
+        ...getItem(STORAGE_KEYS.teachers, []),
+        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
+    ];
+
+    if (!frozen.length) {
+        container.innerHTML = `<div class="mac-empty" style="padding:80px 0;text-align:center;color:var(--text-muted)">Muzlatilgan o'quvchilar yo'q</div>`;
+        return;
+    }
+
+    container.innerHTML = `
+    <div class="students-toolbar" style="flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)">
+        <div class="students-toolbar-left">
+            <span style="font-size:13px;font-weight:600;color:var(--text-muted)">Jami: ${frozen.length} ta muzlatilgan o'quvchi</span>
+        </div>
+    </div>
+    <div style="flex:1;overflow:auto">
+        <table class="table students-table">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Ism familiya</th>
+                    <th>Telefon</th>
+                    <th>Ustozi</th>
+                    <th style="width:140px">Amal</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${frozen.map((s, i) => {
+                    const teacher = allTeachers.find(t => t.id === s.teacherId);
+                    const initials = (s.name || '—').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+                    return `<tr>
+                        <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div class="student-avatar-mini">${escapeHtml(initials)}</div>
+                                <span style="font-weight:500">${escapeHtml(s.name || '—')}</span>
+                            </div>
+                        </td>
+                        <td>${escapeHtml(s.phone || '—')}</td>
+                        <td>${escapeHtml(teacher?.name || '—')}</td>
+                        <td>
+                            <button type="button" class="btn-primary-sm" data-unfreeze="${escapeHtml(s.id)}" style="font-size:12px;padding:4px 12px">
+                                ❄️ Muzlatishni bekor qilish
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+    </div>`;
+
+    container.querySelectorAll('[data-unfreeze]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sid = btn.dataset.unfreeze;
+            const students = getItem(STORAGE_KEYS.students, []);
+            const idx = students.findIndex(s => s.id === sid);
+            if (idx !== -1) {
+                students[idx].frozen = false;
+                setItem(STORAGE_KEYS.students, students);
+                showMiniToast("Muzlatish bekor qilindi");
+                renderFrozenStudents();
+            }
+        });
+    });
 }
 
 function syncLeadsLangTabs() {
@@ -3721,7 +3795,9 @@ function renderSdpHeader(studentId) {
             allStudents[idx].frozen = !allStudents[idx].frozen;
             setItem(STORAGE_KEYS.students, allStudents);
             renderSdpHeader(studentId);
-            showMiniToast(allStudents[idx].frozen ? "O'quvchi muzlatildi" : "Muzlatish bekor qilindi");
+            const nowFrozen = allStudents[idx].frozen;
+            showMiniToast(nowFrozen ? "O'quvchi muzlatildi" : "Muzlatish bekor qilindi");
+            if (nowFrozen) switchStudentsSection('muzlatilgan');
         }
     };
 }
