@@ -520,6 +520,7 @@ let _mobileSection = 'edit';
 let _mobileSubSection = 'asosiy';
 let _mobileLang = 'english';
 let _activeCourseId = null;
+let _activeLessonId = null;
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -599,6 +600,7 @@ function switchMobileSection(section) {
 function switchMobileSubSection(sub) {
     _mobileSubSection = sub;
     _activeCourseId = null;
+    _activeLessonId = null;
     document.querySelectorAll('[data-mobile-sub]').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.mobileSub === sub)
     );
@@ -612,6 +614,7 @@ function renderMobileEditPanel() {
     const showMacTabs = _mobileSubSection === 'resurslar';
     const btnLabel    = _mobileSubSection !== 'dars'
         ? "+ YouTube video qo'shish"
+        : _activeLessonId ? 'Mavzu qo\'shish'
         : _activeCourseId ? 'Dars yaratish' : 'Kurs yaratish';
 
     if (!panel.dataset.initialized) {
@@ -664,12 +667,29 @@ function renderMobileEditPanel() {
     renderMobileAdminTab(showMacTabs ? activeTab : (showRow ? 'videos' : null));
 }
 
+function renderMobileLessonDetailTab(container, course, lesson) {
+    container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <button type="button" id="backToLessons" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--purple);background:none;border:none;cursor:pointer;padding:0">
+            ← Darslar
+        </button>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${escapeHtml(course.name)}</div>
+    <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:24px">${escapeHtml(lesson.name)}</div>
+    <div class="mac-empty">Dars tarkibi tez orada qo'shiladi</div>`;
+
+    document.getElementById('backToLessons')?.addEventListener('click', () => {
+        _activeLessonId = null;
+        renderMobileEditPanel();
+    });
+}
+
 function renderMobileCourseDetailTab(container, course) {
     const mc = getMobileContent();
     const lessons = (mc.lessons || []).filter(l => l.courseId === course.id);
 
     const items = lessons.length ? lessons.map((l, i) => `
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div data-lesson-id="${escapeHtml(l.id)}" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;cursor:pointer;transition:box-shadow 0.15s">
             <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
                 <span style="font-size:18px;flex-shrink:0">🎓</span>
                 <span style="font-weight:600;font-size:14px;color:var(--text);word-break:break-word">${escapeHtml(l.name)}</span>
@@ -691,7 +711,16 @@ function renderMobileCourseDetailTab(container, course) {
 
     document.getElementById('backToCourses')?.addEventListener('click', () => {
         _activeCourseId = null;
+        _activeLessonId = null;
         renderMobileEditPanel();
+    });
+
+    container.querySelectorAll('[data-lesson-id]').forEach(card => {
+        card.addEventListener('click', e => {
+            if (e.target.closest('button')) return;
+            _activeLessonId = card.dataset.lessonId;
+            renderMobileEditPanel();
+        });
     });
 
     container.querySelectorAll('[data-demo-lesson]').forEach(btn => {
@@ -945,8 +974,14 @@ function renderMobileAdminTab(tab) {
         if (_activeCourseId) {
             const mc0 = getMobileContent();
             const course = (mc0.courses || []).find(c => c.id === _activeCourseId);
-            if (course) renderMobileCourseDetailTab(container, course);
-            else { _activeCourseId = null; renderMobileCoursesTab(container); }
+            if (!course) { _activeCourseId = null; _activeLessonId = null; renderMobileCoursesTab(container); return; }
+            if (_activeLessonId) {
+                const lesson = (mc0.lessons || []).find(l => l.id === _activeLessonId);
+                if (lesson) renderMobileLessonDetailTab(container, course, lesson);
+                else { _activeLessonId = null; renderMobileCourseDetailTab(container, course); }
+            } else {
+                renderMobileCourseDetailTab(container, course);
+            }
         } else {
             renderMobileCoursesTab(container);
         }
