@@ -638,7 +638,10 @@ function renderMobileEditPanel() {
     }
 
     const tabsRow = document.getElementById('mobileContentTabsRow');
-    if (tabsRow) tabsRow.style.display = showRow ? 'flex' : 'none';
+    if (tabsRow) {
+        tabsRow.style.display = showRow ? 'flex' : 'none';
+        tabsRow.style.justifyContent = showMacTabs ? 'space-between' : 'flex-end';
+    }
 
     const macTabsEl = document.getElementById('mobileAdminTabs');
     if (macTabsEl) macTabsEl.style.display = showMacTabs ? 'flex' : 'none';
