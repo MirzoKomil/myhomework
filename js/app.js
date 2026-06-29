@@ -669,12 +669,16 @@ function renderMobileCourseDetailTab(container, course) {
     const lessons = (mc.lessons || []).filter(l => l.courseId === course.id);
 
     const items = lessons.length ? lessons.map((l, i) => `
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-            <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:18px">🎓</span>
-                <span style="font-weight:600;font-size:14px;color:var(--text)">${escapeHtml(l.name)}</span>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+                <span style="font-size:18px;flex-shrink:0">🎓</span>
+                <span style="font-weight:600;font-size:14px;color:var(--text);word-break:break-word">${escapeHtml(l.name)}</span>
             </div>
-            <button type="button" class="btn-danger-sm" data-delete-lesson="${i}">O'chirish</button>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                <button type="button" data-demo-lesson="${i}" style="padding:5px 12px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid ${l.isDemo ? 'var(--purple,#7c3aed)' : 'var(--border)'};background:${l.isDemo ? 'var(--purple,#7c3aed)' : 'transparent'};color:${l.isDemo ? '#fff' : 'var(--text)'};cursor:pointer">Demo</button>
+                <button type="button" data-activate-lesson="${i}" style="padding:5px 12px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid ${l.isActive ? '#16a34a' : 'var(--border)'};background:${l.isActive ? '#16a34a' : 'transparent'};color:${l.isActive ? '#fff' : 'var(--text)'};cursor:pointer">${l.isActive ? 'Faol' : 'Faollashtirish'}</button>
+                <button type="button" class="btn-danger-sm" data-delete-lesson="${i}">O'chirish</button>
+            </div>
         </div>
     `).join('') : `<div class="mac-empty">Hali darslar yaratilmagan</div>`;
 
@@ -690,12 +694,42 @@ function renderMobileCourseDetailTab(container, course) {
         renderMobileEditPanel();
     });
 
+    container.querySelectorAll('[data-demo-lesson]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const i = parseInt(btn.dataset.demoLesson);
+            const mc2 = getMobileContent();
+            const lesson = (mc2.lessons || []).filter(l => l.courseId === course.id)[i];
+            if (!lesson) return;
+            lesson.isDemo = !lesson.isDemo;
+            saveMobileContent(mc2);
+            renderMobileCourseDetailTab(container, course);
+            showMiniToast(lesson.isDemo ? 'Demo belgilandi' : 'Demo olib tashlandi');
+        });
+    });
+
+    container.querySelectorAll('[data-activate-lesson]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const i = parseInt(btn.dataset.activateLesson);
+            const mc2 = getMobileContent();
+            const lesson = (mc2.lessons || []).filter(l => l.courseId === course.id)[i];
+            if (!lesson) return;
+            lesson.isActive = !lesson.isActive;
+            saveMobileContent(mc2);
+            renderMobileCourseDetailTab(container, course);
+            showMiniToast(lesson.isActive ? 'Dars faollashtirildi' : 'Dars o\'chirildi');
+        });
+    });
+
     container.querySelectorAll('[data-delete-lesson]').forEach(btn => {
         btn.addEventListener('click', () => {
             if (!confirm("Darsni o'chirasizmi?")) return;
-            const idx = parseInt(btn.dataset.deleteLesson);
+            const i = parseInt(btn.dataset.deleteLesson);
             const mc2 = getMobileContent();
-            mc2.lessons.splice(idx, 1);
+            const filtered = (mc2.lessons || []).filter(l => l.courseId === course.id);
+            const target = filtered[i];
+            if (!target) return;
+            const globalIdx = mc2.lessons.indexOf(target);
+            mc2.lessons.splice(globalIdx, 1);
             saveMobileContent(mc2);
             renderMobileCourseDetailTab(container, course);
             showMiniToast("Dars o'chirildi");
