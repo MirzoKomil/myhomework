@@ -3673,61 +3673,319 @@ function getAllTeachersForSection() {
 }
 
 // --- Davomat ---
+let _tpAttType = 'main';
+let _tpAttState = {
+    main:      { subject: 'english', teacherId: '', month: '' },
+    assistant: { subject: 'english', teacherId: '', month: '' }
+};
+
 function renderTpAttendance() {
     const container = document.getElementById('tpAttendance');
     if (!container) return;
-    const teachers = getAllTeachersForSection();
-    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
-    const students = getItem(STORAGE_KEYS.students, []);
-    const now = new Date();
-    const monthVal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-
-    const rows = teachers.map(t => {
-        const subjectLabel = t.role === 'rus-oqituvchi' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili';
-        const attKey = `${monthVal}_${t.id}`;
-        const block = mainAtt[attKey] || {};
-        const myStudents = students.filter(s => s.teacherId === t.id || s.assistantTeacherId === t.id);
-        const totalLessons = Object.values(block).reduce((sum, days) => {
-            return sum + Object.values(days || {}).filter(Boolean).length;
-        }, 0);
-        const attendRate = myStudents.length > 0
-            ? Math.round(totalLessons / Math.max(myStudents.length, 1))
-            : 0;
-        return `<tr>
-            <td>
-                <div style="display:flex;align-items:center;gap:8px">
-                    <div class="student-avatar-mini">${escapeHtml((t.name||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase())}</div>
-                    <span style="font-weight:500">${escapeHtml(t.name||'—')}</span>
-                </div>
-            </td>
-            <td>${escapeHtml(subjectLabel)}</td>
-            <td style="text-align:center">${myStudents.length}</td>
-            <td style="text-align:center">${attendRate}</td>
-            <td>
-                <button type="button" class="btn-secondary-sm" data-tp-att-teacher="${escapeHtml(t.id)}">Ko'rish</button>
-            </td>
-        </tr>`;
-    }).join('') || `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-muted)">O'qituvchilar yo'q</td></tr>`;
 
     container.innerHTML = `
     <div style="padding:20px">
-        <div class="page-title-bar" style="margin-bottom:16px"><h2>Davomat — ${monthVal}</h2></div>
-        <div class="card">
-            <div class="table-responsive">
-                <table class="table">
-                    <thead><tr>
-                        <th>Ustoz</th><th>Til</th><th>O'quvchilar</th><th>Bu oy darslar</th><th>Batafsil</th>
-                    </tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+            <h2 style="margin:0;font-size:20px;font-weight:700">Davomat</h2>
+            <div class="subject-tabs" style="padding:0;margin:0">
+                <button type="button" class="subject-tab${_tpAttType === 'main' ? ' active' : ''}" data-tp-att-type="main">Asosiy Ustoz</button>
+                <button type="button" class="subject-tab${_tpAttType === 'assistant' ? ' active' : ''}" data-tp-att-type="assistant">Yordamchi Ustoz</button>
             </div>
         </div>
+        <div id="tpAttContentWrap"></div>
     </div>`;
 
-    container.querySelectorAll('[data-tp-att-teacher]').forEach(btn => {
+    container.querySelectorAll('[data-tp-att-type]').forEach(btn => {
         btn.addEventListener('click', () => {
-            switchTab('main-attendance');
+            _tpAttType = btn.dataset.tpAttType;
+            container.querySelectorAll('[data-tp-att-type]').forEach(b =>
+                b.classList.toggle('active', b.dataset.tpAttType === _tpAttType)
+            );
+            _renderTpAttContentWrap();
         });
+    });
+
+    _renderTpAttContentWrap();
+}
+
+function _renderTpAttContentWrap() {
+    const wrap = document.getElementById('tpAttContentWrap');
+    if (!wrap) return;
+    if (_tpAttType === 'main') _renderTpMainAtt(wrap);
+    else _renderTpAsstAtt(wrap);
+}
+
+// ---- Asosiy Ustoz davomati ----
+function _renderTpMainAtt(wrap) {
+    const st = _tpAttState.main;
+    if (!st.month) st.month = getMonthKey(new Date());
+    const subject = st.subject || 'english';
+    const teachers = filterTeachersByTypeAndSubject('asosiy', subject);
+    if (!st.teacherId && teachers.length) st.teacherId = teachers[0].id;
+    const subjectLabel = subject === 'english' ? '🇬🇧 Ingliz tili' : '🇷🇺 Rus tili';
+
+    wrap.innerHTML = `
+    <div class="card">
+        <div class="subject-tabs" style="padding:0">
+            <button type="button" class="subject-tab${subject === 'english' ? ' active' : ''}" data-tpmain-subj="english">
+                <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
+            </button>
+            <button type="button" class="subject-tab${subject === 'russian' ? ' active' : ''}" data-tpmain-subj="russian">
+                <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
+            </button>
+        </div>
+        <div class="card-header">
+            <h3>${subjectLabel} — oylik davomat</h3>
+            <div class="toolbar">
+                <select id="tpMainTeacher" class="form-control-sm">
+                    ${teachers.length
+                        ? teachers.map(t => `<option value="${escapeHtml(t.id)}"${t.id === st.teacherId ? ' selected' : ''}>${escapeHtml(t.name)}</option>`).join('')
+                        : "<option value=''>— Ustoz yo'q —</option>"}
+                </select>
+                <select id="tpMainPattern" class="form-control-sm">
+                    <option value="mwf">Dush, Chor, Jum</option>
+                    <option value="tts">Sesh, Pay, Shan</option>
+                </select>
+                <select id="tpMainDuration" class="form-control-sm">
+                    <option value="15">15 daq — 75,000/oy</option>
+                    <option value="30">30 daq — 150,000/oy</option>
+                    <option value="60">60 daq — 300,000/oy</option>
+                </select>
+                <input type="month" id="tpMainMonth" class="form-control-sm" value="${st.month}">
+            </div>
+        </div>
+        <div id="tpMainKpi" class="kpi-summary"></div>
+        <div class="table-responsive" id="tpMainTable"></div>
+    </div>`;
+
+    wrap.querySelectorAll('[data-tpmain-subj]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _tpAttState.main.subject = btn.dataset.tpmainSubj;
+            _tpAttState.main.teacherId = '';
+            _renderTpMainAtt(wrap);
+        });
+    });
+
+    document.getElementById('tpMainTeacher')?.addEventListener('change', e => {
+        _tpAttState.main.teacherId = e.target.value;
+        _renderTpMainTable();
+    });
+    document.getElementById('tpMainMonth')?.addEventListener('change', e => {
+        _tpAttState.main.month = e.target.value;
+        _renderTpMainTable();
+    });
+
+    _renderTpMainTable();
+}
+
+function _renderTpMainTable() {
+    const st = _tpAttState.main;
+    const teacherId = document.getElementById('tpMainTeacher')?.value || st.teacherId;
+    const monthVal  = document.getElementById('tpMainMonth')?.value  || st.month;
+    const patternSel  = document.getElementById('tpMainPattern');
+    const durationSel = document.getElementById('tpMainDuration');
+    const container   = document.getElementById('tpMainTable');
+    const subject     = st.subject || 'english';
+
+    if (!container) return;
+    if (!teacherId) {
+        container.innerHTML = `<p class="text-muted" style="padding:16px">Bu fan bo'yicha asosiy ustozlar yo'q.</p>`;
+        const kpiEl = document.getElementById('tpMainKpi');
+        if (kpiEl) kpiEl.innerHTML = '';
+        return;
+    }
+
+    const teacher = syncTeacherSettings(teacherId, patternSel, durationSel, _renderTpMainTable);
+    if (!teacher) return;
+
+    const [year, month] = monthVal.split('-').map(Number);
+    const days       = getDaysInMonth(year, month);
+    const pattern    = teacher.schedulePattern || 'mwf';
+    const lessonDays = getLessonDaysInMonth(year, month, pattern);
+    const students   = getItem(STORAGE_KEYS.students, []).filter(s =>
+        s.teacherId === teacherId && (s.subject || 'english') === subject
+    );
+    const attendance = getItem(STORAGE_KEYS.mainAttendance, {});
+    const attKey = `${monthVal}_${teacherId}`;
+    if (!attendance[attKey]) attendance[attKey] = {};
+
+    let html = '<table class="table attendance-table"><thead><tr>';
+    html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
+    for (let d = 1; d <= days; d++) {
+        const il = isLessonDay(year, month, d, pattern);
+        html += `<th class="att-day${il ? ' lesson-day-col' : ''}" title="${il ? 'Dars kuni' : ''}">${d}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+    if (!students.length) {
+        html += `<tr><td colspan="${days + 4}" class="text-muted" style="padding:16px">Bu ustozga biriktirilgan o'quvchilar yo'q.</td></tr>`;
+    }
+    students.forEach((s, i) => {
+        if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name)}</td><td>${escapeHtml(s.phone || '—')}</td><td class="tp-main-lc" data-student="${s.id}">0</td>`;
+        for (let d = 1; d <= days; d++) {
+            const marked = attendance[attKey][s.id][d];
+            const il = isLessonDay(year, month, d, pattern);
+            html += `<td class="att-cell${il ? ' lesson-day-col' : ''}${marked ? ' att-present' : ''}"><input type="checkbox" class="tp-main-chk" data-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${!il ? 'disabled' : ''}></td>`;
+        }
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    setItem(STORAGE_KEYS.mainAttendance, attendance);
+    container.innerHTML = html;
+    renderKpiSummary('tpMainKpi', calculateKpiSalary(teacher, monthVal, attendance, students), teacher.name);
+
+    container.querySelectorAll('.tp-main-chk').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const att = getItem(STORAGE_KEYS.mainAttendance, {});
+            const k = cb.dataset.key, sid = cb.dataset.student, day = cb.dataset.day;
+            if (!att[k]) att[k] = {};
+            if (!att[k][sid]) att[k][sid] = {};
+            if (cb.checked) att[k][sid][day] = 1; else delete att[k][sid][day];
+            setItem(STORAGE_KEYS.mainAttendance, att);
+            _renderTpMainTable();
+        });
+    });
+    container.querySelectorAll('.tp-main-lc').forEach(cell => {
+        const att = getItem(STORAGE_KEYS.mainAttendance, {})[attKey]?.[cell.dataset.student] || {};
+        cell.textContent = lessonDays.filter(d => att[d]).length;
+    });
+}
+
+// ---- Yordamchi Ustoz davomati ----
+function _renderTpAsstAtt(wrap) {
+    const st = _tpAttState.assistant;
+    if (!st.month) st.month = getMonthKey(new Date());
+    const subject = st.subject || 'english';
+    const teachers = filterTeachersByTypeAndSubject('yordamchi', subject);
+    if (!st.teacherId && teachers.length) st.teacherId = teachers[0].id;
+    const subjectLabel = subject === 'english' ? '🇬🇧 Ingliz tili' : '🇷🇺 Rus tili';
+
+    wrap.innerHTML = `
+    <div class="card">
+        <div class="subject-tabs" style="padding:0">
+            <button type="button" class="subject-tab${subject === 'english' ? ' active' : ''}" data-tpasst-subj="english">
+                <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
+            </button>
+            <button type="button" class="subject-tab${subject === 'russian' ? ' active' : ''}" data-tpasst-subj="russian">
+                <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
+            </button>
+        </div>
+        <div class="card-header">
+            <h3>${subjectLabel} — oylik davomat</h3>
+            <div class="toolbar">
+                <select id="tpAsstTeacher" class="form-control-sm">
+                    ${teachers.length
+                        ? teachers.map(t => `<option value="${escapeHtml(t.id)}"${t.id === st.teacherId ? ' selected' : ''}>${escapeHtml(t.name)}</option>`).join('')
+                        : "<option value=''>— Ustoz yo'q —</option>"}
+                </select>
+                <select id="tpAsstPattern" class="form-control-sm">
+                    <option value="mwf">Dush, Chor, Jum</option>
+                    <option value="tts">Sesh, Pay, Shan</option>
+                </select>
+                <select id="tpAsstDuration" class="form-control-sm">
+                    <option value="15">15 daq — 75,000/oy</option>
+                    <option value="30">30 daq — 150,000/oy</option>
+                    <option value="60">60 daq — 300,000/oy</option>
+                </select>
+                <input type="month" id="tpAsstMonth" class="form-control-sm" value="${st.month}">
+            </div>
+        </div>
+        <div id="tpAsstKpi" class="kpi-summary"></div>
+        <div class="table-responsive" id="tpAsstTable"></div>
+    </div>`;
+
+    wrap.querySelectorAll('[data-tpasst-subj]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _tpAttState.assistant.subject = btn.dataset.tpasstSubj;
+            _tpAttState.assistant.teacherId = '';
+            _renderTpAsstAtt(wrap);
+        });
+    });
+
+    document.getElementById('tpAsstTeacher')?.addEventListener('change', e => {
+        _tpAttState.assistant.teacherId = e.target.value;
+        _renderTpAsstTable();
+    });
+    document.getElementById('tpAsstMonth')?.addEventListener('change', e => {
+        _tpAttState.assistant.month = e.target.value;
+        _renderTpAsstTable();
+    });
+
+    _renderTpAsstTable();
+}
+
+function _renderTpAsstTable() {
+    const st = _tpAttState.assistant;
+    const teacherId  = document.getElementById('tpAsstTeacher')?.value || st.teacherId;
+    const monthVal   = document.getElementById('tpAsstMonth')?.value   || st.month;
+    const patternSel  = document.getElementById('tpAsstPattern');
+    const durationSel = document.getElementById('tpAsstDuration');
+    const container   = document.getElementById('tpAsstTable');
+    const subject     = st.subject || 'english';
+
+    if (!container) return;
+    if (!teacherId) {
+        container.innerHTML = `<p class="text-muted" style="padding:16px">Bu fan bo'yicha yordamchi ustozlar yo'q.</p>`;
+        const kpiEl = document.getElementById('tpAsstKpi');
+        if (kpiEl) kpiEl.innerHTML = '';
+        return;
+    }
+
+    const teacher = syncTeacherSettings(teacherId, patternSel, durationSel, _renderTpAsstTable);
+    if (!teacher) return;
+
+    const [year, month] = monthVal.split('-').map(Number);
+    const days       = getDaysInMonth(year, month);
+    const pattern    = teacher.schedulePattern || 'mwf';
+    const lessonDays = getLessonDaysInMonth(year, month, pattern);
+    const students   = getItem(STORAGE_KEYS.students, []).filter(s =>
+        s.assistantTeacherId === teacherId && (s.subject || 'english') === subject
+    );
+    const attendance = getItem(STORAGE_KEYS.assistantAttendance, {});
+    const attKey = `${monthVal}_${teacherId}`;
+    if (!attendance[attKey]) attendance[attKey] = {};
+
+    let html = '<table class="table attendance-table"><thead><tr>';
+    html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
+    for (let d = 1; d <= days; d++) {
+        const il = isLessonDay(year, month, d, pattern);
+        html += `<th class="att-day${il ? ' lesson-day-col' : ''}">${d}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+    if (!students.length) {
+        html += `<tr><td colspan="${days + 4}" class="text-muted" style="padding:16px">Bu yordamchi ustozga biriktirilgan o'quvchilar yo'q.</td></tr>`;
+    }
+    students.forEach((s, i) => {
+        if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name)}</td><td>${escapeHtml(s.phone || '—')}</td><td class="tp-asst-lc" data-student="${s.id}">0</td>`;
+        for (let d = 1; d <= days; d++) {
+            const marked = attendance[attKey][s.id][d];
+            const il = isLessonDay(year, month, d, pattern);
+            html += `<td class="att-cell${il ? ' lesson-day-col' : ''}${marked ? ' att-present' : ''}"><input type="checkbox" class="tp-asst-chk" data-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${!il ? 'disabled' : ''}></td>`;
+        }
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    setItem(STORAGE_KEYS.assistantAttendance, attendance);
+    container.innerHTML = html;
+    renderKpiSummary('tpAsstKpi', calculateKpiSalary(teacher, monthVal, attendance, students), teacher.name);
+
+    container.querySelectorAll('.tp-asst-chk').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const att = getItem(STORAGE_KEYS.assistantAttendance, {});
+            const k = cb.dataset.key, sid = cb.dataset.student, day = cb.dataset.day;
+            if (!att[k]) att[k] = {};
+            if (!att[k][sid]) att[k][sid] = {};
+            if (cb.checked) att[k][sid][day] = 1; else delete att[k][sid][day];
+            setItem(STORAGE_KEYS.assistantAttendance, att);
+            _renderTpAsstTable();
+        });
+    });
+    container.querySelectorAll('.tp-asst-lc').forEach(cell => {
+        const att = getItem(STORAGE_KEYS.assistantAttendance, {})[attKey]?.[cell.dataset.student] || {};
+        cell.textContent = lessonDays.filter(d => att[d]).length;
     });
 }
 
