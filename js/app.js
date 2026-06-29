@@ -3647,7 +3647,28 @@ function openSdpChangeSchedule(s) {
 
 // ===== O'qituvchilar bo'limi =====
 
+let _teachersLang = 'english';
+
 function renderTeachersSection() {
+    // Til filtri tugmalarini bir marta bog'lash
+    document.querySelectorAll('[data-teachers-lang]').forEach(btn => {
+        if (btn.dataset.tlBound) return;
+        btn.dataset.tlBound = '1';
+        btn.addEventListener('click', () => {
+            _teachersLang = btn.dataset.teachersLang;
+            document.querySelectorAll('[data-teachers-lang]').forEach(b =>
+                b.classList.toggle('active', b.dataset.teachersLang === _teachersLang)
+            );
+            // O'qituvchi tanlamasi reset bo'lsin
+            _tpAttState.main.teacherId = '';
+            _tpAttState.assistant.teacherId = '';
+            switchTeachersSection(_tabContext.teachersSection || 'attendance');
+        });
+    });
+    // Joriy til bilan sinxronlashtirish
+    document.querySelectorAll('[data-teachers-lang]').forEach(b =>
+        b.classList.toggle('active', b.dataset.teachersLang === _teachersLang)
+    );
     const sec = _tabContext.teachersSection || 'attendance';
     switchTeachersSection(sec);
 }
@@ -3719,23 +3740,15 @@ function _renderTpAttContentWrap() {
 function _renderTpMainAtt(wrap) {
     const st = _tpAttState.main;
     if (!st.month) st.month = getMonthKey(new Date());
-    const subject = st.subject || 'english';
+    const subject = _teachersLang;
     const teachers = filterTeachersByTypeAndSubject('asosiy', subject);
     if (!st.teacherId && teachers.length) st.teacherId = teachers[0].id;
     const subjectLabel = subject === 'english' ? '🇬🇧 Ingliz tili' : '🇷🇺 Rus tili';
 
     wrap.innerHTML = `
     <div class="card">
-        <div class="subject-tabs" style="padding:0">
-            <button type="button" class="subject-tab${subject === 'english' ? ' active' : ''}" data-tpmain-subj="english">
-                <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
-            </button>
-            <button type="button" class="subject-tab${subject === 'russian' ? ' active' : ''}" data-tpmain-subj="russian">
-                <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
-            </button>
-        </div>
         <div class="card-header">
-            <h3>${subjectLabel} — oylik davomat</h3>
+            <h3>${subjectLabel} — asosiy ustoz oylik davomati</h3>
             <div class="toolbar">
                 <select id="tpMainTeacher" class="form-control-sm">
                     ${teachers.length
@@ -3758,14 +3771,6 @@ function _renderTpMainAtt(wrap) {
         <div class="table-responsive" id="tpMainTable"></div>
     </div>`;
 
-    wrap.querySelectorAll('[data-tpmain-subj]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            _tpAttState.main.subject = btn.dataset.tpmainSubj;
-            _tpAttState.main.teacherId = '';
-            _renderTpMainAtt(wrap);
-        });
-    });
-
     document.getElementById('tpMainTeacher')?.addEventListener('change', e => {
         _tpAttState.main.teacherId = e.target.value;
         _renderTpMainTable();
@@ -3785,7 +3790,7 @@ function _renderTpMainTable() {
     const patternSel  = document.getElementById('tpMainPattern');
     const durationSel = document.getElementById('tpMainDuration');
     const container   = document.getElementById('tpMainTable');
-    const subject     = st.subject || 'english';
+    const subject     = _teachersLang;
 
     if (!container) return;
     if (!teacherId) {
@@ -3856,23 +3861,15 @@ function _renderTpMainTable() {
 function _renderTpAsstAtt(wrap) {
     const st = _tpAttState.assistant;
     if (!st.month) st.month = getMonthKey(new Date());
-    const subject = st.subject || 'english';
+    const subject = _teachersLang;
     const teachers = filterTeachersByTypeAndSubject('yordamchi', subject);
     if (!st.teacherId && teachers.length) st.teacherId = teachers[0].id;
     const subjectLabel = subject === 'english' ? '🇬🇧 Ingliz tili' : '🇷🇺 Rus tili';
 
     wrap.innerHTML = `
     <div class="card">
-        <div class="subject-tabs" style="padding:0">
-            <button type="button" class="subject-tab${subject === 'english' ? ' active' : ''}" data-tpasst-subj="english">
-                <img src="images/flags/gb.svg" alt="" class="subject-flag"> Ingliz tili
-            </button>
-            <button type="button" class="subject-tab${subject === 'russian' ? ' active' : ''}" data-tpasst-subj="russian">
-                <img src="images/flags/ru.svg" alt="" class="subject-flag"> Rus tili
-            </button>
-        </div>
         <div class="card-header">
-            <h3>${subjectLabel} — oylik davomat</h3>
+            <h3>${subjectLabel} — yordamchi ustoz oylik davomati</h3>
             <div class="toolbar">
                 <select id="tpAsstTeacher" class="form-control-sm">
                     ${teachers.length
@@ -3895,14 +3892,6 @@ function _renderTpAsstAtt(wrap) {
         <div class="table-responsive" id="tpAsstTable"></div>
     </div>`;
 
-    wrap.querySelectorAll('[data-tpasst-subj]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            _tpAttState.assistant.subject = btn.dataset.tpasstSubj;
-            _tpAttState.assistant.teacherId = '';
-            _renderTpAsstAtt(wrap);
-        });
-    });
-
     document.getElementById('tpAsstTeacher')?.addEventListener('change', e => {
         _tpAttState.assistant.teacherId = e.target.value;
         _renderTpAsstTable();
@@ -3922,7 +3911,7 @@ function _renderTpAsstTable() {
     const patternSel  = document.getElementById('tpAsstPattern');
     const durationSel = document.getElementById('tpAsstDuration');
     const container   = document.getElementById('tpAsstTable');
-    const subject     = st.subject || 'english';
+    const subject     = _teachersLang;
 
     if (!container) return;
     if (!teacherId) {
@@ -3995,7 +3984,7 @@ function renderTpTrial() {
     if (!container) return;
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const allLeads = [...(leads.english||[]).map(l=>({...l,_lang:'english'})), ...(leads.russian||[]).map(l=>({...l,_lang:'russian'}))];
-    const trialLeads = allLeads.filter(l => l.status === 'sinov-darsida');
+    const trialLeads = allLeads.filter(l => l.status === 'sinov-darsida' && l._lang === _teachersLang);
     const teachers = getAllTeachersForSection();
 
     const rows = trialLeads.map(l => {
@@ -4035,7 +4024,8 @@ function renderTpTrial() {
 function renderTpRating() {
     const container = document.getElementById('tpRating');
     if (!container) return;
-    const teachers = getAllTeachersForSection().filter(t => t.role !== 'yordamchi');
+    const hrRole = _teachersLang === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi';
+    const teachers = getAllTeachersForSection().filter(t => t.role === hrRole);
     const students = getItem(STORAGE_KEYS.students, []);
     const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
     const now = new Date();
