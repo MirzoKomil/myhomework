@@ -583,6 +583,10 @@ function switchMobileSection(section) {
     );
     const subHeader = document.getElementById('mobileSubHeader');
     if (subHeader) subHeader.style.display = section === 'edit' ? '' : 'none';
+    const openBtn = document.getElementById('mobileOpenAppBtn');
+    const langTabs = document.getElementById('mobileLangTabs');
+    if (openBtn) openBtn.style.display = section === 'view' ? '' : 'none';
+    if (langTabs) langTabs.style.display = section === 'view' ? 'none' : '';
     if (section === 'edit') renderMobileEditPanel();
     else if (section === 'stats') renderMobileStatsPanel();
     else if (section === 'view') {
@@ -699,7 +703,6 @@ function renderMobileStatsPanel() {
 
     panel.innerHTML = `
     <div style="padding:20px">
-        <div class="page-title-bar" style="margin-bottom:20px"><h2>Mobil ilova statistikasi — ${_mobileLang === 'russian' ? 'Rus tili' : 'Ingliz tili'}</h2></div>
         <div class="grid-3" style="margin-bottom:24px">
             <div class="stat-card">
                 <div class="stat-icon blue">🎬</div>
