@@ -610,7 +610,7 @@ function renderMobileEditPanel() {
 
     if (!panel.dataset.initialized) {
         panel.dataset.initialized = '1';
-        panel.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
+        panel.style.cssText = 'flex-direction:column;overflow:hidden';
         panel.innerHTML = `
         <div id="mobileContentTabsRow" style="display:none;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--border)">
             <div class="mac-tabs" id="mobileAdminTabs" style="display:flex;gap:0">
