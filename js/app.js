@@ -606,7 +606,9 @@ function switchMobileSubSection(sub) {
 function renderMobileEditPanel() {
     const panel = document.getElementById('mobileEditPanel');
     if (!panel) return;
-    const showTabs = _mobileSubSection === 'dars' || _mobileSubSection === 'resurslar';
+    const showRow    = _mobileSubSection === 'dars' || _mobileSubSection === 'resurslar';
+    const showMacTabs = _mobileSubSection === 'resurslar';
+    const btnLabel   = _mobileSubSection === 'dars' ? 'Kurs yaratish' : "+ YouTube video qo'shish";
 
     if (!panel.dataset.initialized) {
         panel.dataset.initialized = '1';
@@ -620,7 +622,7 @@ function renderMobileEditPanel() {
                 <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
             </div>
             <div style="padding:0 20px;flex-shrink:0">
-                <button type="button" class="btn-primary-sm" id="mobileAddVideoHeaderBtn">+ YouTube video qo'shish</button>
+                <button type="button" class="btn-primary-sm" id="mobileAddVideoHeaderBtn"></button>
             </div>
         </div>
         <div id="mobileAdminContent" style="padding:20px;overflow-y:auto;flex:1"></div>`;
@@ -636,10 +638,16 @@ function renderMobileEditPanel() {
     }
 
     const tabsRow = document.getElementById('mobileContentTabsRow');
-    if (tabsRow) tabsRow.style.display = showTabs ? 'flex' : 'none';
+    if (tabsRow) tabsRow.style.display = showRow ? 'flex' : 'none';
+
+    const macTabsEl = document.getElementById('mobileAdminTabs');
+    if (macTabsEl) macTabsEl.style.display = showMacTabs ? 'flex' : 'none';
+
+    const addBtn = document.getElementById('mobileAddVideoHeaderBtn');
+    if (addBtn) addBtn.textContent = btnLabel;
 
     const activeTab = panel.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
-    renderMobileAdminTab(showTabs ? activeTab : null);
+    renderMobileAdminTab(showMacTabs ? activeTab : (showRow ? 'videos' : null));
 }
 
 function _openMobileAddVideoModal() {
@@ -817,11 +825,7 @@ function renderMobileVideosTab(container, content) {
         </div>`;
     }).join('') : `<div class="mac-empty">Hali videodarslar qo'shilmagan</div>`;
 
-    container.innerHTML = `
-    <div style="margin-bottom:16px">
-        <div style="font-size:14px;color:var(--text-muted)">Jami: ${videos.length} ta video</div>
-    </div>
-    <div class="mac-content-list">${cards}</div>`;
+    container.innerHTML = `<div class="mac-content-list">${cards}</div>`;
 
     container.querySelectorAll('[data-delete-video]').forEach(btn => {
         btn.addEventListener('click', () => {
