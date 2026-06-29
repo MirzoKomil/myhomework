@@ -198,6 +198,11 @@ async function initSchema() {
             comments TEXT DEFAULT '[]',
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        CREATE TABLE IF NOT EXISTS mobile_content (
+            singleton INTEGER PRIMARY KEY DEFAULT 1,
+            data JSONB NOT NULL DEFAULT '{"videos":[],"documents":[],"courses":[],"lessons":[]}'
+        );
     `);
 
     await pool.query(`
@@ -221,6 +226,12 @@ async function initSchema() {
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS pinfl TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS address TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
+
+    // Boshlang'ich mobile_content qatori
+    await pool.query(
+        `INSERT INTO mobile_content (singleton, data) VALUES (1, $1) ON CONFLICT (singleton) DO NOTHING`,
+        [JSON.stringify({ videos: [], documents: [], courses: [], lessons: [] })]
+    );
 }
 
 // ── Seed & migrate ───────────────────────────────────────────────────────────
@@ -410,9 +421,22 @@ async function getHrEmployeesData() {
     }));
 }
 
+async function getMobileContentData() {
+    const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
+    return row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
+}
+
+async function saveMobileContentData(client, data) {
+    await client.query(
+        `INSERT INTO mobile_content (singleton, data) VALUES (1, $1)
+         ON CONFLICT (singleton) DO UPDATE SET data = EXCLUDED.data`,
+        [JSON.stringify(data)]
+    );
+}
+
 async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
-        mainAtt, assistAtt, leads, hrEmployees, bookRoadmap] = await Promise.all([
+        mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -424,7 +448,8 @@ async function getFullState() {
         buildAttendanceObject('assistant_attendance'),
         getLeads(),
         getHrEmployeesData(),
-        getBookRoadmap()
+        getBookRoadmap(),
+        getMobileContentData()
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -441,7 +466,7 @@ async function getFullState() {
         mainAttendance: mainAtt,
         assistantAttendance: assistAtt,
         payments: paymentRows.map(rowToPayment),
-        leads, hrEmployees, bookRoadmap
+        leads, hrEmployees, bookRoadmap, mobileContent
     };
 }
 
@@ -563,6 +588,7 @@ async function patchState(partial) {
         if (partial.leads)              await saveLeads(client, partial.leads);
         if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees);
         if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap);
+        if (partial.mobileContent)      await saveMobileContentData(client, partial.mobileContent);
     });
 }
 
