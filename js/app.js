@@ -439,7 +439,7 @@ function renderFrozenStudents() {
                 students[idx].frozen = false;
                 setItem(STORAGE_KEYS.students, students);
                 showMiniToast("Muzlatish bekor qilindi");
-                renderFrozenStudents();
+                switchStudentsSection('faol');
             }
         });
     });
@@ -3499,6 +3499,9 @@ function renderStudents() {
         }
     }
 
+    // Muzlatilgan o'quvchilarni Faol ro'yxatdan chiqarish
+    students = students.filter(s => !s.frozen);
+
     // Search filter
     const searchVal = (document.getElementById('studentsSearch')?.value || '').trim().toLowerCase();
     if (searchVal) {
@@ -3822,6 +3825,7 @@ function renderSdpHeader(studentId) {
             const nowFrozen = allStudents[idx].frozen;
             showMiniToast(nowFrozen ? "O'quvchi muzlatildi" : "Muzlatish bekor qilindi");
             if (nowFrozen) switchStudentsSection('muzlatilgan');
+            else switchStudentsSection('faol');
         }
     };
 }
