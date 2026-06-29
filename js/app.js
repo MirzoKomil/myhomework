@@ -515,22 +515,142 @@ function renderPlaceholder() {
     document.getElementById('placeholderHeading').textContent = title;
 }
 
+// ===== Mobil ilova =====
+let _mobileSection = 'edit';
+
 function renderStudentApp() {
     const cu = getCurrentUser();
     const isAdmin = cu && (cu.role === 'admin' || cu.role === 'rop' || cu.role === 'boshliq');
 
-    const frameWrap = document.getElementById('tab-student-app');
-    if (!frameWrap) return;
-
-    if (isAdmin) {
-        renderMobileContentAdmin(frameWrap);
-    } else {
+    if (!isAdmin) {
+        // Employee: faqat iframe ko'rsatiladi, nav yashiriladi
+        const header = document.getElementById('mobileAppHeader');
+        if (header) header.style.display = 'none';
+        document.querySelectorAll('[data-mobile-panel]').forEach(p => p.classList.remove('active'));
+        const viewPanel = document.getElementById('mobileViewPanel');
+        if (viewPanel) viewPanel.classList.add('active');
         const frame = document.getElementById('studentAppFrame');
-        if (frame) frame.src = `/student/?v=${Date.now()}`;
+        if (frame && frame.src === 'about:blank') frame.src = `/student/?v=${Date.now()}`;
+        return;
+    }
+
+    // Admin: 3 bo'limli panel
+    const header = document.getElementById('mobileAppHeader');
+    if (header) header.style.display = '';
+
+    document.querySelectorAll('[data-mobile-section]').forEach(btn => {
+        if (btn.dataset.mobBound) return;
+        btn.dataset.mobBound = '1';
+        btn.addEventListener('click', () => switchMobileSection(btn.dataset.mobileSection));
+    });
+
+    switchMobileSection(_mobileSection);
+}
+
+function switchMobileSection(section) {
+    _mobileSection = section;
+    document.querySelectorAll('[data-mobile-section]').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.mobileSection === section)
+    );
+    document.querySelectorAll('[data-mobile-panel]').forEach(panel =>
+        panel.classList.toggle('active', panel.dataset.mobilePanel === section)
+    );
+    if (section === 'edit') renderMobileEditPanel();
+    else if (section === 'stats') renderMobileStatsPanel();
+    else if (section === 'view') {
+        const frame = document.getElementById('studentAppFrame');
+        if (frame && frame.src === 'about:blank') frame.src = `/student/?v=${Date.now()}`;
     }
 }
 
-// ===== Mobil ilova admin panel =====
+function renderMobileEditPanel() {
+    const panel = document.getElementById('mobileEditPanel');
+    if (!panel) return;
+    if (panel.dataset.initialized) {
+        // Allaqachon render qilingan — joriy tabni yangilash
+        const activeTab = panel.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
+        renderMobileAdminTab(activeTab);
+        return;
+    }
+    panel.dataset.initialized = '1';
+    panel.style.cssText = 'display:flex;flex-direction:column;height:calc(100vh - 180px);overflow:hidden';
+
+    panel.innerHTML = `
+    <div class="mac-tabs" id="mobileAdminTabs" style="padding:0 20px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;gap:0">
+        <button type="button" class="mac-tab-btn mac-tab-active" data-mac-tab="videos">🎬 Videodarslar</button>
+        <button type="button" class="mac-tab-btn" data-mac-tab="pdfs">📄 PDF va hujjatlar</button>
+        <button type="button" class="mac-tab-btn" data-mac-tab="presentations">📊 Prezentatsiyalar</button>
+        <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
+    </div>
+    <div id="mobileAdminContent" style="padding:20px;overflow-y:auto;flex:1"></div>`;
+
+    panel.querySelectorAll('.mac-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            panel.querySelectorAll('.mac-tab-btn').forEach(b => b.classList.remove('mac-tab-active'));
+            btn.classList.add('mac-tab-active');
+            renderMobileAdminTab(btn.dataset.macTab);
+        });
+    });
+
+    renderMobileAdminTab('videos');
+}
+
+function renderMobileStatsPanel() {
+    const panel = document.getElementById('mobileStatsPanel');
+    if (!panel) return;
+    const content = getMobileContent();
+    const videos = content.videos || [];
+    const docs = content.documents || [];
+    const pdfs = docs.filter(d => ['pdf','doc','docx','txt'].includes(d.type));
+    const presentations = docs.filter(d => ['ppt','pptx','key'].includes(d.type));
+    const textbooks = docs.filter(d => d.category === 'textbook' || d.type === 'textbook');
+
+    panel.innerHTML = `
+    <div style="padding:20px">
+        <div class="page-title-bar" style="margin-bottom:20px"><h2>Mobil ilova statistikasi</h2></div>
+        <div class="grid-3" style="margin-bottom:24px">
+            <div class="stat-card">
+                <div class="stat-icon blue">🎬</div>
+                <div class="stat-info">
+                    <div class="stat-label">Videodarslar</div>
+                    <div class="stat-value">${videos.length}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">📄</div>
+                <div class="stat-info">
+                    <div class="stat-label">PDF va hujjatlar</div>
+                    <div class="stat-value">${pdfs.length}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">📚</div>
+                <div class="stat-info">
+                    <div class="stat-label">Darsliklar</div>
+                    <div class="stat-value">${textbooks.length}</div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h3 style="margin-bottom:16px;font-size:16px;font-weight:700">Kontent taqsimoti</h3>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Tur</th><th>Soni</th></tr></thead>
+                    <tbody>
+                        <tr><td>🎬 Videodarslar</td><td><strong>${videos.length}</strong></td></tr>
+                        <tr><td>📄 PDF va hujjatlar</td><td><strong>${pdfs.length}</strong></td></tr>
+                        <tr><td>📊 Prezentatsiyalar</td><td><strong>${presentations.length}</strong></td></tr>
+                        <tr><td>📚 Darsliklar</td><td><strong>${textbooks.length}</strong></td></tr>
+                        <tr style="font-weight:700;border-top:2px solid var(--border)">
+                            <td>Jami</td><td>${videos.length + docs.length}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
 const MOBILE_CATS = [
     { id: 'grammar', label: 'Grammatika' },
     { id: 'vocabulary', label: "Lug'at" },
@@ -554,41 +674,6 @@ function ytVideoId(url) {
     if (!url) return null;
     const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
     return m ? m[1] : null;
-}
-
-function renderMobileContentAdmin(container) {
-    const titleBar = container.querySelector('.page-title-bar');
-    if (titleBar) titleBar.innerHTML = `<h1>Mobil ilova — Kontent boshqaruvi</h1>`;
-
-    let frameWrap = container.querySelector('.student-app-frame-wrap');
-    if (!frameWrap) {
-        frameWrap = container.querySelector('.student-app-frame-wrap') || (() => {
-            const d = document.createElement('div');
-            container.appendChild(d);
-            return d;
-        })();
-    }
-
-    frameWrap.innerHTML = `
-    <div class="mac-tabs" id="mobileAdminTabs" style="padding:0 20px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;gap:0">
-        <button type="button" class="mac-tab-btn mac-tab-active" data-mac-tab="videos">🎬 Videodarslar</button>
-        <button type="button" class="mac-tab-btn" data-mac-tab="pdfs">📄 PDF va hujjatlar</button>
-        <button type="button" class="mac-tab-btn" data-mac-tab="presentations">📊 Prezentatsiyalar</button>
-        <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
-    </div>
-    <div id="mobileAdminContent" style="padding:20px;overflow-y:auto;flex:1"></div>`;
-
-    frameWrap.style.cssText = 'display:flex;flex-direction:column;height:calc(100vh - 120px);overflow:hidden';
-
-    frameWrap.querySelectorAll('.mac-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            frameWrap.querySelectorAll('.mac-tab-btn').forEach(b => b.classList.remove('mac-tab-active'));
-            btn.classList.add('mac-tab-active');
-            renderMobileAdminTab(btn.dataset.macTab);
-        });
-    });
-
-    renderMobileAdminTab('videos');
 }
 
 function renderMobileAdminTab(tab) {
