@@ -681,6 +681,8 @@ function _openCreateCourseModal() {
         });
         saveMobileContent(mc);
         closeModal();
+        const cont = document.getElementById('mobileAdminContent');
+        if (cont) renderMobileCoursesTab(cont);
         showMiniToast("Kurs yaratildi");
     };
 }
@@ -818,11 +820,20 @@ function renderMobileAdminTab(tab) {
     const container = document.getElementById('mobileAdminContent');
     if (!container) return;
     if (!tab) {
+        container.style.overflow = '';
+        container.style.padding = '0';
         container.innerHTML = `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Bu bo'lim uchun kontent qo'shish imkoniyati tez orada</div>`;
         return;
     }
-    const content = getMobileContent();
+    container.style.overflow = 'auto';
+    container.style.padding = '20px';
 
+    if (_mobileSubSection === 'dars') {
+        renderMobileCoursesTab(container);
+        return;
+    }
+
+    const content = getMobileContent();
     if (tab === 'videos') {
         renderMobileVideosTab(container, content);
     } else {
@@ -833,6 +844,34 @@ function renderMobileAdminTab(tab) {
         };
         renderMobileDocsTab(container, content, tab, typeMap[tab]);
     }
+}
+
+function renderMobileCoursesTab(container) {
+    const mc = getMobileContent();
+    const courses = (mc.courses || []).filter(c => (c.lang || 'english') === _mobileLang);
+
+    const cards = courses.length ? courses.map((c, i) => `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+            <div style="font-size:36px;line-height:1">📚</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text);text-align:center;line-height:1.4;word-break:break-word">${escapeHtml(c.name)}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${escapeHtml(c.createdAt || '')}</div>
+            <button type="button" class="btn-danger-sm" data-delete-course="${i}" style="margin-top:6px;width:100%">O'chirish</button>
+        </div>
+    `).join('') : `<div class="mac-empty">Hali kurslar yaratilmagan</div>`;
+
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px">${cards}</div>`;
+
+    container.querySelectorAll('[data-delete-course]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!confirm("Kursni o'chirasizmi?")) return;
+            const idx = parseInt(btn.dataset.deleteCourse);
+            const mc2 = getMobileContent();
+            mc2.courses.splice(idx, 1);
+            saveMobileContent(mc2);
+            renderMobileCoursesTab(container);
+            showMiniToast("Kurs o'chirildi");
+        });
+    });
 }
 
 function renderMobileVideosTab(container, content) {
