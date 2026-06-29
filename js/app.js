@@ -772,22 +772,9 @@ function renderMobileAdminTab(tab) {
     const container = document.getElementById('mobileAdminContent');
     if (!container) return;
     if (!tab) {
-        container.style.overflow = 'hidden';
-        container.style.padding = '0';
-        container.innerHTML = `
-        <div style="display:flex;flex-direction:column;height:100%;padding:16px 20px 0">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0">
-                <h2 style="font-size:16px;font-weight:700;color:var(--text)">O'quvchi ilovasi</h2>
-                <a href="/student/" target="_blank" rel="noopener" class="btn-primary-sm">Yangi oynada ochish</a>
-            </div>
-            <div style="flex:1;overflow:hidden;border-radius:8px;border:1px solid var(--border)">
-                <iframe src="/student/?v=${Date.now()}" style="width:100%;height:100%;border:none;display:block" title="O'quvchi ilovasi"></iframe>
-            </div>
-        </div>`;
+        container.innerHTML = `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Bu bo'lim uchun kontent qo'shish imkoniyati tez orada</div>`;
         return;
     }
-    container.style.overflow = 'auto';
-    container.style.padding = '20px';
     const content = getMobileContent();
 
     if (tab === 'videos') {
