@@ -18,7 +18,8 @@ const TAB_TITLES = {
     'hr-employees': 'Xodimlar',
     'analytics-overview': 'Umumiy ko\'rsatkichlar',
     'analytics-sales': 'Sotuv analitikasi',
-    'analytics-teachers': 'Ustozlar samaradorligi'
+    'analytics-teachers': 'Ustozlar samaradorligi',
+    'teachers-section': "Akademik bo'lim"
 };
 
 const SALES_SECTIONS = {
@@ -115,7 +116,7 @@ function applyRoleBasedAccess(user) {
         });
         // 16-ish: ROP uchun Akademik bo'lim va Moliya yashiriladi
         if (role === 'rop') {
-            const akademik = document.getElementById('menuGroupAkademik');
+            const akademik = document.getElementById('menuItemAkademik');
             const moliya = document.getElementById('menuGroupMoliya');
             if (akademik) akademik.style.display = 'none';
             if (moliya) moliya.style.display = 'none';
