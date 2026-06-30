@@ -5761,6 +5761,17 @@ function renderMarketingTargetPanel() {
 }
 
 // --- Moliya Bo'limi ---
+let _financeLang = 'english';
+const FINANCE_LANG_PANELS = new Set(['maoshlar', 'kpi']);
+
+function applyFinanceLang() {
+    const panel = document.querySelector('.finance-panel.active');
+    if (!panel) return;
+    panel.querySelectorAll('[data-finance-lang-content]').forEach(el => {
+        el.style.display = el.dataset.financeLangContent === _financeLang ? '' : 'none';
+    });
+}
+
 function switchFinanceSection(section) {
     _tabContext.financeSection = section;
     document.querySelectorAll('[data-finance-section]').forEach(btn => {
@@ -5769,6 +5780,9 @@ function switchFinanceSection(section) {
     document.querySelectorAll('.finance-panel').forEach(panel => {
         panel.classList.toggle('active', panel.dataset.financePanel === section);
     });
+    const langFilter = document.getElementById('financeLangFilter');
+    if (langFilter) langFilter.style.display = FINANCE_LANG_PANELS.has(section) ? '' : 'none';
+    applyFinanceLang();
 }
 
 function renderFinance() {
@@ -5777,6 +5791,20 @@ function renderFinance() {
         btn.dataset.financeBound = '1';
         btn.addEventListener('click', () => switchFinanceSection(btn.dataset.financeSection));
     });
+    document.querySelectorAll('[data-finance-lang]').forEach(btn => {
+        if (btn.dataset.financeLangBound) return;
+        btn.dataset.financeLangBound = '1';
+        btn.addEventListener('click', () => {
+            _financeLang = btn.dataset.financeLang;
+            document.querySelectorAll('[data-finance-lang]').forEach(b =>
+                b.classList.toggle('active', b.dataset.financeLang === _financeLang)
+            );
+            applyFinanceLang();
+        });
+    });
+    document.querySelectorAll('[data-finance-lang]').forEach(b =>
+        b.classList.toggle('active', b.dataset.financeLang === _financeLang)
+    );
     switchFinanceSection(_tabContext.financeSection || 'tolovlar');
 }
 
