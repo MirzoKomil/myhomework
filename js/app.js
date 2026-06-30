@@ -47,6 +47,7 @@ const PLACEHOLDER_TITLES = {
 
 let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target' };
 let _marketingLang = 'english';
+let _targetMonth = 'feb';
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
 let _studentsDurationFilter = 'all';
@@ -5575,6 +5576,182 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
     };
 });
 
+// --- Marketing: Target Monitoringi ---
+const TARGET_MONTHS = [
+    { id: 'feb', label: 'Fevral 2026' },
+    { id: 'mar', label: 'Mart 2026' },
+    { id: 'apr', label: 'Aprel 2026' },
+    { id: 'may', label: 'May 2026' },
+    { id: 'jun', label: 'Iyun 2026' },
+];
+
+const TARGET_DATA = {
+    feb: {
+        reklama: {
+            budget:    { plan: null, fakt: 1251.30 },
+            lidSoni:   { plan: 3600, fakt: 1265,  pct: 35.1 },
+            lidNarxi:  { plan: null, fakt: 0.99 },
+            kvalLid:   { plan: 2340, fakt: 0,     pct: 0 },
+            kvalNarxi: { plan: null, fakt: 0 },
+            lidKval:   { plan: 65,   fakt: 0 },
+        },
+        xodimlar: [
+            { name: 'Vazira Gafurova',       kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Nilufar Xaitboyeva',    kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Rayhona Abduhalilova',  kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Muyassar Shodmonaliyeva',kval:0,sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Saida Rustamaliyeva',   kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Oydinoy Isaqova',       kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Sardor Boboqulov',      kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Xusniddin Xusanov',     kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Nurillo Hakimov',       kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: 'Mohizoda Bahodirova',   kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+            { name: "Ra'no Xusnitdinova",    kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
+        ],
+    },
+    mar: {
+        reklama: {
+            budget:    { plan: null, fakt: 306.67 },
+            lidSoni:   { plan: 3600, fakt: 271,  pct: 7.5 },
+            lidNarxi:  { plan: null, fakt: 1.13 },
+            kvalLid:   { plan: 2340, fakt: 99,   pct: 4.2 },
+            kvalNarxi: { plan: null, fakt: 3.10 },
+            lidKval:   { plan: 65,   fakt: 36.5 },
+        },
+        xodimlar: [
+            { name: 'Mohizoda Bahodirova',   kval:12, sinov:2, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+            { name: 'Oydinoy Isaqova',       kval:15, sinov:3, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+            { name: 'Saida Rustamaliyeva',   kval:25, sinov:6, sotuv:2, summa:98.2, kvalPct:8.0, avgChek:49.1 },
+            { name: 'Nurillo Hakimov',       kval:29, sinov:5, sotuv:2, summa:61,   kvalPct:6.9, avgChek:30.5 },
+            { name: 'Mohlaroy Musayeva',     kval:18, sinov:5, sotuv:1, summa:40.8, kvalPct:5.6, avgChek:40.8 },
+            { name: 'Xojiakbar Mamasodiqov', kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+            { name: 'Ruslan Halimov',        kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+            { name: 'Sardor Boboqulov',      kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+            { name: 'Xusniddin Xusanov',     kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+            { name: "Ra'no Xusnitdinova",    kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+            { name: 'Vazira Gafurova',       kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
+        ],
+    },
+    apr: { reklama: { budget:{plan:null,fakt:0}, lidSoni:{plan:3600,fakt:0,pct:0}, lidNarxi:{plan:null,fakt:0}, kvalLid:{plan:2340,fakt:0,pct:0}, kvalNarxi:{plan:null,fakt:0}, lidKval:{plan:65,fakt:0} }, xodimlar: [] },
+    may: { reklama: { budget:{plan:null,fakt:0}, lidSoni:{plan:3600,fakt:0,pct:0}, lidNarxi:{plan:null,fakt:0}, kvalLid:{plan:2340,fakt:0,pct:0}, kvalNarxi:{plan:null,fakt:0}, lidKval:{plan:65,fakt:0} }, xodimlar: [] },
+    jun: { reklama: { budget:{plan:null,fakt:0}, lidSoni:{plan:3600,fakt:0,pct:0}, lidNarxi:{plan:null,fakt:0}, kvalLid:{plan:2340,fakt:0,pct:0}, kvalNarxi:{plan:null,fakt:0}, lidKval:{plan:65,fakt:0} }, xodimlar: [] },
+};
+
+function renderMarketingTargetPanel() {
+    const el = document.getElementById('marketingPanel-target');
+    if (!el) return;
+
+    const data = TARGET_DATA[_targetMonth] || TARGET_DATA.feb;
+    const r = data.reklama;
+    const lang = _marketingLang === 'russian' ? 'Rus' : 'Ingliz';
+
+    function pctColor(pct) {
+        if (!pct) return '';
+        if (pct >= 90) return 'color:#10b981';
+        if (pct >= 60) return 'color:#f59e0b';
+        return 'color:#ef4444';
+    }
+
+    function fmtPct(v) { return v ? (v * 1).toFixed(1) + '%' : '—'; }
+    function fmtNum(v) { return (v || v === 0) && v !== null ? v : '—'; }
+    function fmtUSD(v) { return v ? '$' + (+v).toFixed(2) : '—'; }
+    function fmtMln(v) { return v ? v + ' M' : '—'; }
+
+    const progressBar = (pct) => {
+        const p = Math.min(pct || 0, 100);
+        const color = p >= 90 ? '#10b981' : p >= 60 ? '#f59e0b' : '#ef4444';
+        return `<div class="tm-progress"><div class="tm-progress-fill" style="width:${p}%;background:${color}"></div></div>`;
+    };
+
+    // Month tabs
+    const tabsHtml = TARGET_MONTHS.map(m =>
+        `<button type="button" class="tm-month-tab${_targetMonth === m.id ? ' active' : ''}" data-tm-month="${m.id}">${m.label}</button>`
+    ).join('');
+
+    // Reklama KPI cards
+    const reklamaCards = [
+        { label: 'Budget (USD)', plan: r.budget.plan ? '$'+r.budget.plan : '—', fakt: fmtUSD(r.budget.fakt), pct: null, icon: '💰' },
+        { label: 'Lid soni', plan: r.lidSoni.plan || '—', fakt: r.lidSoni.fakt || '—', pct: r.lidSoni.pct, icon: '📋' },
+        { label: 'Lid narxi', plan: '—', fakt: fmtUSD(r.lidNarxi.fakt), pct: null, icon: '💵' },
+        { label: 'Kval. lid soni', plan: r.kvalLid.plan || '—', fakt: r.kvalLid.fakt || '—', pct: r.kvalLid.pct, icon: '✅' },
+        { label: 'Kval. lid narxi', plan: '—', fakt: fmtUSD(r.kvalNarxi.fakt), pct: null, icon: '🏷️' },
+        { label: 'Lid → Kval lid %', plan: r.lidKval.plan + '%', fakt: r.lidKval.fakt ? r.lidKval.fakt.toFixed(1)+'%' : '—', pct: r.lidKval.fakt && r.lidKval.plan ? (r.lidKval.fakt/r.lidKval.plan*100) : null, icon: '📊' },
+    ].map(c => {
+        const pc = c.pct ? c.pct.toFixed(1) : null;
+        const barHtml = c.pct ? progressBar(c.pct) : '';
+        const pctHtml = pc ? `<span class="tm-kpi-pct" style="${pctColor(c.pct)}">${pc}%</span>` : '';
+        return `<div class="tm-kpi-card">
+            <div class="tm-kpi-icon">${c.icon}</div>
+            <div class="tm-kpi-label">${c.label}</div>
+            <div class="tm-kpi-row">
+                <div class="tm-kpi-val"><span class="tm-kpi-sublabel">Plan</span><span class="tm-kpi-num">${c.plan}</span></div>
+                <div class="tm-kpi-val"><span class="tm-kpi-sublabel">Fakt</span><span class="tm-kpi-num tm-kpi-num--fakt">${c.fakt}</span></div>
+                ${pctHtml}
+            </div>
+            ${barHtml}
+        </div>`;
+    }).join('');
+
+    // Salesperson table
+    const hasData = data.xodimlar.length > 0;
+    const tableHtml = hasData ? `
+        <div class="tm-table-wrap">
+            <table class="tm-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" class="tm-th-name">Xodim (${lang} tili)</th>
+                        <th colspan="2">Kval. lid soni</th>
+                        <th colspan="2">Sinov darsi</th>
+                        <th colspan="2">Sotuvlar soni</th>
+                        <th colspan="2">Sotuvlar summasi (M)</th>
+                        <th colspan="2">Kval→Sotuv %</th>
+                        <th colspan="2">O'rtacha chek (M)</th>
+                    </tr>
+                    <tr>
+                        <th>Plan</th><th>Fakt</th>
+                        <th>Plan</th><th>Fakt</th>
+                        <th>Plan</th><th>Fakt</th>
+                        <th>Plan</th><th>Fakt</th>
+                        <th>Plan</th><th>Fakt</th>
+                        <th>Plan</th><th>Fakt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.xodimlar.map((x, i) => {
+                        const highlight = x.sotuv > 0 ? 'tm-tr-active' : '';
+                        return `<tr class="${highlight}">
+                            <td class="tm-td-name">${i+1}. ${x.name}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kval>0?' tm-td-has':''}"> ${x.kval||'—'}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.summa>0?' tm-td-has':''}"> ${x.summa||'—'}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.avgChek>0?' tm-td-has':''}"> ${x.avgChek||'—'}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>` : `<div class="mac-empty" style="padding:40px 0"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:14px;color:var(--text-muted)">Bu oy uchun ma'lumot yo'q</div></div>`;
+
+    el.innerHTML = `
+        <div class="tm-wrap">
+            <div class="tm-months">${tabsHtml}</div>
+
+            <div class="tm-section-title">📣 Reklama ko'rsatkichlari</div>
+            <div class="tm-kpi-grid">${reklamaCards}</div>
+
+            <div class="tm-section-title">👥 Xodimlar natijalari</div>
+            ${tableHtml}
+        </div>`;
+
+    el.querySelectorAll('[data-tm-month]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _targetMonth = btn.dataset.tmMonth;
+            renderMarketingTargetPanel();
+        });
+    });
+}
+
 // --- Sotuv bo'limi ---
 function switchMarketingSection(section) {
     _tabContext.marketingSection = section;
@@ -5606,6 +5783,7 @@ function renderMarketing() {
         b.classList.toggle('active', b.dataset.marketingLang === _marketingLang)
     );
     switchMarketingSection(_tabContext.marketingSection || 'target');
+    renderMarketingTargetPanel();
 }
 
 function renderSales() {
