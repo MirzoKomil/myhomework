@@ -614,6 +614,7 @@ let _mobileSubSection = 'asosiy';
 let _mobileLang = 'english';
 let _activeCourseId = null;
 let _activeLessonId = null;
+let _activeModuleId = null;
 let _expandedLessonIds = new Set();
 
 function renderStudentApp() {
@@ -695,6 +696,7 @@ function switchMobileSubSection(sub) {
     _mobileSubSection = sub;
     _activeCourseId = null;
     _activeLessonId = null;
+    _activeModuleId = null;
     document.querySelectorAll('[data-mobile-sub]').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.mobileSub === sub)
     );
@@ -761,6 +763,187 @@ function renderMobileEditPanel() {
     renderMobileAdminTab(showMacTabs ? activeTab : (showRow ? 'videos' : null));
 }
 
+function renderMobileModuleDetailTab(container, course, mod) {
+    const mc = getMobileContent();
+    const lesson = (mc.lessons || []).find(l => l.id === mod.lessonId);
+    const contents = (mc.moduleContents || []).filter(c => c.moduleId === mod.id);
+
+    function typeIcon(type) {
+        return { video: '🎬', pdf: '📄', word: '📝', image: '🖼️', text: '✏️' }[type] || '📁';
+    }
+    function typeName(type) {
+        return { video: 'YouTube video', pdf: 'PDF fayl', word: 'Word hujjat', image: 'Rasm', text: 'Matn' }[type] || 'Fayl';
+    }
+
+    function contentCardHTML(c, i) {
+        if (c.type === 'text') {
+            return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:20px">✏️</span>
+                    <span style="font-weight:600;font-size:13px;color:var(--text)">Matn</span>
+                    <button type="button" data-del-content="${i}" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600">O'chirish</button>
+                </div>
+                <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.6;background:var(--bg,#f9fafb);border-radius:8px;padding:10px 12px">${escapeHtml(c.text || '')}</div>
+            </div>`;
+        }
+        const isVideo = c.type === 'video';
+        const ytId = isVideo ? ytVideoId(c.url || '') : null;
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+            ${ytId ? `<div style="position:relative;padding-top:56.25%;background:#000;border-radius:10px 10px 0 0;overflow:hidden"><iframe src="https://www.youtube.com/embed/${ytId}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allowfullscreen loading="lazy"></iframe></div>` : ''}
+            <div style="padding:12px 14px;display:flex;align-items:center;gap:10px">
+                ${!ytId ? `<span style="font-size:22px">${typeIcon(c.type)}</span>` : ''}
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.name || typeName(c.type))}</div>
+                    ${c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" style="font-size:11px;color:var(--purple,#7c3aed);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">${escapeHtml(c.url)}</a>` : ''}
+                </div>
+                <button type="button" data-del-content="${i}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;flex-shrink:0">O'chirish</button>
+            </div>
+        </div>`;
+    }
+
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
+    container.innerHTML = `
+    <div style="flex-shrink:0;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <button type="button" id="backModToCourse" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Kurslar
+        </button>
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--border)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span style="font-size:12px;color:var(--text-muted)">${escapeHtml(lesson?.name || '')}</span>
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--border)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span style="font-size:12px;font-weight:600;color:var(--text)">${escapeHtml(mod.name)}</span>
+    </div>
+
+    <div id="modContentList" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
+        ${contents.length ? contents.map((c, i) => contentCardHTML(c, i)).join('') : `<div class="mac-empty" style="padding:50px 0;text-align:center;color:var(--text-muted)">Hali kontent qo'shilmagan</div>`}
+    </div>
+
+    <div style="flex-shrink:0;border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;background:var(--surface)">
+        <button type="button" id="addVideoBtn" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text);cursor:pointer">🎬 YouTube video</button>
+        <button type="button" id="addPdfBtn" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text);cursor:pointer">📄 PDF</button>
+        <button type="button" id="addWordBtn" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text);cursor:pointer">📝 Word</button>
+        <button type="button" id="addImgBtn" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text);cursor:pointer">🖼️ Rasm</button>
+        <button type="button" id="addTextBtn" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text);cursor:pointer">✏️ Matn</button>
+    </div>`;
+
+    document.getElementById('backModToCourse').addEventListener('click', () => {
+        _activeModuleId = null;
+        renderMobileEditPanel();
+    });
+
+    // Delete content
+    container.querySelectorAll('[data-del-content]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!confirm("O'chirasizmi?")) return;
+            const i = parseInt(btn.dataset.delContent);
+            const mc2 = getMobileContent();
+            const modConts = (mc2.moduleContents || []).filter(c => c.moduleId === mod.id);
+            const target = modConts[i];
+            if (target) {
+                const gi = mc2.moduleContents.indexOf(target);
+                mc2.moduleContents.splice(gi, 1);
+                saveMobileContent(mc2);
+            }
+            renderMobileModuleDetailTab(container, course, mod);
+        });
+    });
+
+    function addContent(type, extraFields = {}) {
+        const mc2 = getMobileContent();
+        mc2.moduleContents = mc2.moduleContents || [];
+        mc2.moduleContents.push({ id: 'mc' + Date.now(), moduleId: mod.id, type, createdAt: new Date().toISOString().slice(0, 10), ...extraFields });
+        saveMobileContent(mc2);
+        renderMobileModuleDetailTab(container, course, mod);
+    }
+
+    // YouTube video
+    document.getElementById('addVideoBtn').addEventListener('click', () => {
+        openModal('YouTube video qo\'shish',
+            `<div class="form-group"><label>Video nomi</label><input id="mcVidName" class="form-control" placeholder="Masalan: Kirish darsi"></div>
+             <div class="form-group"><label>YouTube URL <span style="color:var(--danger)">*</span></label><input id="mcVidUrl" class="form-control" placeholder="https://youtube.com/watch?v=..."></div>`,
+            `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor</button><button type="button" class="btn-primary-sm" id="saveVid">Qo'shish</button>`,
+            { wide: false }
+        );
+        document.getElementById('saveVid').onclick = () => {
+            const url = document.getElementById('mcVidUrl').value.trim();
+            if (!url) { alert('URL kiritilishi shart'); return; }
+            const name = document.getElementById('mcVidName').value.trim() || 'Video';
+            closeModal();
+            addContent('video', { name, url });
+            showMiniToast('Video qo\'shildi');
+        };
+    });
+
+    // PDF
+    document.getElementById('addPdfBtn').addEventListener('click', () => {
+        openModal('PDF fayl qo\'shish',
+            `<div class="form-group"><label>Fayl nomi</label><input id="mcPdfName" class="form-control" placeholder="Masalan: 1-dars materiallar.pdf"></div>
+             <div class="form-group"><label>PDF URL yoki havola <span style="color:var(--danger)">*</span></label><input id="mcPdfUrl" class="form-control" placeholder="https://..."></div>`,
+            `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor</button><button type="button" class="btn-primary-sm" id="savePdf">Qo'shish</button>`,
+            { wide: false }
+        );
+        document.getElementById('savePdf').onclick = () => {
+            const url = document.getElementById('mcPdfUrl').value.trim();
+            if (!url) { alert('URL kiritilishi shart'); return; }
+            const name = document.getElementById('mcPdfName').value.trim() || 'PDF fayl';
+            closeModal();
+            addContent('pdf', { name, url });
+            showMiniToast('PDF qo\'shildi');
+        };
+    });
+
+    // Word
+    document.getElementById('addWordBtn').addEventListener('click', () => {
+        openModal('Word hujjat qo\'shish',
+            `<div class="form-group"><label>Hujjat nomi</label><input id="mcWordName" class="form-control" placeholder="Masalan: Topshiriq.docx"></div>
+             <div class="form-group"><label>URL yoki havola <span style="color:var(--danger)">*</span></label><input id="mcWordUrl" class="form-control" placeholder="https://..."></div>`,
+            `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor</button><button type="button" class="btn-primary-sm" id="saveWord">Qo'shish</button>`,
+            { wide: false }
+        );
+        document.getElementById('saveWord').onclick = () => {
+            const url = document.getElementById('mcWordUrl').value.trim();
+            if (!url) { alert('URL kiritilishi shart'); return; }
+            const name = document.getElementById('mcWordName').value.trim() || 'Word hujjat';
+            closeModal();
+            addContent('word', { name, url });
+            showMiniToast('Word hujjat qo\'shildi');
+        };
+    });
+
+    // Rasm
+    document.getElementById('addImgBtn').addEventListener('click', () => {
+        openModal('Rasm qo\'shish',
+            `<div class="form-group"><label>Rasm nomi</label><input id="mcImgName" class="form-control" placeholder="Masalan: Jadval rasmi"></div>
+             <div class="form-group"><label>Rasm URL <span style="color:var(--danger)">*</span></label><input id="mcImgUrl" class="form-control" placeholder="https://..."></div>`,
+            `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor</button><button type="button" class="btn-primary-sm" id="saveImg">Qo'shish</button>`,
+            { wide: false }
+        );
+        document.getElementById('saveImg').onclick = () => {
+            const url = document.getElementById('mcImgUrl').value.trim();
+            if (!url) { alert('URL kiritilishi shart'); return; }
+            const name = document.getElementById('mcImgName').value.trim() || 'Rasm';
+            closeModal();
+            addContent('image', { name, url });
+            showMiniToast('Rasm qo\'shildi');
+        };
+    });
+
+    // Matn
+    document.getElementById('addTextBtn').addEventListener('click', () => {
+        openModal('Matn qo\'shish',
+            `<div class="form-group"><label>Matn <span style="color:var(--danger)">*</span></label><textarea id="mcTextVal" class="form-control" rows="6" placeholder="Dars matni..."></textarea></div>`,
+            `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor</button><button type="button" class="btn-primary-sm" id="saveText">Qo'shish</button>`,
+            { wide: true }
+        );
+        document.getElementById('saveText').onclick = () => {
+            const text = document.getElementById('mcTextVal').value.trim();
+            if (!text) { alert('Matn kiritilishi shart'); return; }
+            closeModal();
+            addContent('text', { name: 'Matn', text });
+            showMiniToast('Matn qo\'shildi');
+        };
+    });
+}
+
 function renderMobileLessonDetailTab(container, course, lesson) {
     container.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
@@ -822,19 +1005,22 @@ function renderMobileCourseDetailTab(container, course) {
 
         const modulesHTML = expanded ? `
         <div style="border-top:1px solid var(--border)">
-            ${mods.length ? mods.map((m, mi) => `
-            <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border,#e5e7eb)">
+            ${mods.length ? mods.map((m, mi) => {
+                const typeIcon = m.type === 'video' ? '🎬' : m.type === 'pdf' ? '📄' : m.type === 'text' ? '📝' : '📁';
+                const contents = (allModules._contents || []);
+                return `
+            <div data-open-module="${escapeHtml(m.id)}" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
                 <span style="font-size:12px;color:var(--text-muted);min-width:24px;text-align:right;flex-shrink:0">#${mi + 1}</span>
-                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
-                    <span style="color:var(--text-muted)">${iconSvg(16)}</span>
-                    ${m.type === 'video' ? `<span style="position:absolute;bottom:2px;left:2px;background:#1e1e1e;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px">${m.duration || ''}</span>` : ''}
+                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">
+                    ${typeIcon}
                 </div>
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(m.name)}</div>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.status === 'draft' ? 'Qoralama' : 'E\'lon qilindi'} • ${escapeHtml(m.createdAt || '')}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.status === 'draft' ? 'Qoralama' : "E'lon qilindi"} • ${escapeHtml(m.createdAt || '')}</div>
                 </div>
                 ${iconBtn(`data-preview-mod="${escapeHtml(m.id)}"`, eyeSvg(), '#16a34a')}
-            </div>`).join('') : `<div style="padding:20px;text-align:center;font-size:13px;color:var(--text-muted)">Hali modullar yo'q. <button type="button" data-add-mod="${escapeHtml(l.id)}" style="background:none;border:none;color:var(--purple,#7c3aed);font-weight:600;cursor:pointer;font-size:13px">+ Modul qo'shish</button></div>`}
+            </div>`;
+            }).join('') : `<div style="padding:20px;text-align:center;font-size:13px;color:var(--text-muted)">Hali modullar yo'q. <button type="button" data-add-mod="${escapeHtml(l.id)}" style="background:none;border:none;color:var(--purple,#7c3aed);font-weight:600;cursor:pointer;font-size:13px">+ Modul qo'shish</button></div>`}
         </div>` : '';
 
         return `
@@ -894,6 +1080,7 @@ function renderMobileCourseDetailTab(container, course) {
         const menuBtn = e.target.closest('[data-lesson-menu]');
         const addMod = e.target.closest('[data-add-mod]');
         const previewLesson = e.target.closest('[data-preview-lesson]');
+        const openMod = e.target.closest('[data-open-module]');
 
         if (menuBtn) {
             e.stopPropagation();
@@ -907,6 +1094,12 @@ function renderMobileCourseDetailTab(container, course) {
         }
         if (previewLesson) {
             e.stopPropagation();
+            return;
+        }
+        if (openMod) {
+            e.stopPropagation();
+            _activeModuleId = openMod.dataset.openModule;
+            renderMobileEditPanel();
             return;
         }
         if (toggle) {
@@ -1215,7 +1408,14 @@ const MOBILE_CATS = [
 ];
 
 function getMobileContent() {
-    return getItem(STORAGE_KEYS.mobileContent, { videos: [], documents: [] });
+    const mc = getItem(STORAGE_KEYS.mobileContent, {});
+    mc.videos = mc.videos || [];
+    mc.documents = mc.documents || [];
+    mc.courses = mc.courses || [];
+    mc.lessons = mc.lessons || [];
+    mc.modules = mc.modules || [];
+    mc.moduleContents = mc.moduleContents || [];
+    return mc;
 }
 
 function saveMobileContent(data) {
@@ -1244,11 +1444,11 @@ function renderMobileAdminTab(tab) {
         if (_activeCourseId) {
             const mc0 = getMobileContent();
             const course = (mc0.courses || []).find(c => c.id === _activeCourseId);
-            if (!course) { _activeCourseId = null; _activeLessonId = null; renderMobileCoursesTab(container); return; }
-            if (_activeLessonId) {
-                const lesson = (mc0.lessons || []).find(l => l.id === _activeLessonId);
-                if (lesson) renderMobileLessonDetailTab(container, course, lesson);
-                else { _activeLessonId = null; renderMobileCourseDetailTab(container, course); }
+            if (!course) { _activeCourseId = null; _activeLessonId = null; _activeModuleId = null; renderMobileCoursesTab(container); return; }
+            if (_activeModuleId) {
+                const mod = (mc0.modules || []).find(m => m.id === _activeModuleId);
+                if (mod) renderMobileModuleDetailTab(container, course, mod);
+                else { _activeModuleId = null; renderMobileCourseDetailTab(container, course); }
             } else {
                 renderMobileCourseDetailTab(container, course);
             }

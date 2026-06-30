@@ -230,7 +230,7 @@ async function initSchema() {
     // Boshlang'ich mobile_content qatori
     await pool.query(
         `INSERT INTO mobile_content (singleton, data) VALUES (1, $1) ON CONFLICT (singleton) DO NOTHING`,
-        [JSON.stringify({ videos: [], documents: [], courses: [], lessons: [] })]
+        [JSON.stringify({ videos: [], documents: [], courses: [], lessons: [], modules: [], moduleContents: [] })]
     );
 }
 
