@@ -46,6 +46,7 @@ const PLACEHOLDER_TITLES = {
 };
 
 let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target' };
+let _marketingLang = 'english';
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
 let _studentsDurationFilter = 'all';
@@ -5591,6 +5592,19 @@ function renderMarketing() {
         btn.dataset.mktBound = '1';
         btn.addEventListener('click', () => switchMarketingSection(btn.dataset.marketingSection));
     });
+    document.querySelectorAll('[data-marketing-lang]').forEach(btn => {
+        if (btn.dataset.mktLangBound) return;
+        btn.dataset.mktLangBound = '1';
+        btn.addEventListener('click', () => {
+            _marketingLang = btn.dataset.marketingLang;
+            document.querySelectorAll('[data-marketing-lang]').forEach(b =>
+                b.classList.toggle('active', b.dataset.marketingLang === _marketingLang)
+            );
+        });
+    });
+    document.querySelectorAll('[data-marketing-lang]').forEach(b =>
+        b.classList.toggle('active', b.dataset.marketingLang === _marketingLang)
+    );
     switchMarketingSection(_tabContext.marketingSection || 'target');
 }
 
