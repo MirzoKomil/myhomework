@@ -1,8 +1,19 @@
 const express = require('express');
-const { getFullState, patchState } = require('../db');
+const { getFullState, patchState, getMobileContentData } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Public endpoint — student app uchun, auth talab qilmaydi
+router.get('/mobile-content', async (req, res) => {
+    try {
+        const mc = await getMobileContentData();
+        res.json(mc);
+    } catch (err) {
+        console.error('GET /api/state/mobile-content', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
 
 router.get('/', authRequired, async (req, res) => {
     try {

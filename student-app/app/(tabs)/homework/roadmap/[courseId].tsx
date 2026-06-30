@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { courses, roadmapLessons, LessonNode, LessonType } from '@/data/mock';
+import { LessonNode, LessonType } from '@/data/mock';
+import { fetchMobileContent, AdminCourse } from '@/services/contentApi';
 
 // ─── Type config ────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
@@ -216,9 +218,46 @@ function LessonRow({ lesson, isActive }: { lesson: LessonNode; isActive: boolean
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function RoadmapScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
-  const course = courses.find((c) => c.id === courseId) ?? courses[0];
-  const lessons = roadmapLessons[course.id] ?? [];
-  const activeIndex = lessons.findIndex((l) => !l.locked && l.progress > 0 && l.progress < 100);
+  const [course, setCourse] = useState<AdminCourse | null>(null);
+  const [lessons, setLessons] = useState<LessonNode[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMobileContent().then((mc) => {
+      const c = mc.courses.find((x) => x.id === courseId) ?? mc.courses[0] ?? null;
+      setCourse(c);
+      if (c) {
+        const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
+        const mapped: LessonNode[] = adminLessons.map((l, i) => ({
+          id: l.id,
+          title: l.name,
+          subtitle: l.isDemo ? 'Demo dars' : l.isPaid ? 'Pullik' : '',
+          type: 'grammar' as LessonType,
+          progress: 0,
+          locked: !l.isActive,
+          side: i % 2 === 0 ? 'left' : 'right',
+          stars: 0,
+        }));
+        setLessons(mapped);
+      }
+    }).finally(() => setLoading(false));
+  }, [courseId]);
+
+  const activeIndex = lessons.findIndex((l) => !l.locked && l.progress < 100);
+  const total = lessons.length;
+  const done = lessons.filter((l) => !l.locked && l.progress === 100).length;
+
+  if (loading) {
+    return (
+      <SafeAreaView style={ss.safe} edges={['top']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const courseTitle = course?.name ?? 'Kurs';
 
   return (
     <SafeAreaView style={ss.safe} edges={['top']}>
@@ -229,18 +268,14 @@ export default function RoadmapScreen() {
         </Pressable>
 
         <View style={ss.headerTitle}>
-          <Text style={ss.headerTitleText}>{course.title}</Text>
+          <Text style={ss.headerTitleText}>{courseTitle}</Text>
           <Ionicons name="chevron-down" size={16} color={theme.colors.text} />
         </View>
 
         <View style={ss.headerRight}>
           <View style={ss.statPill}>
             <Ionicons name="star" size={14} color="#F59E0B" />
-            <Text style={ss.statPillText}>120</Text>
-          </View>
-          <View style={[ss.statPill, ss.statPillGold]}>
-            <Text style={ss.statPillCoin}>$</Text>
-            <Text style={ss.statPillText}>250</Text>
+            <Text style={ss.statPillText}>0</Text>
           </View>
         </View>
       </View>
@@ -253,39 +288,34 @@ export default function RoadmapScreen() {
           end={{ x: 1, y: 1 }}
           style={ss.banner}
         >
-          {/* Stars decoration */}
           <Text style={[ss.bannerStar, { top: 16, left: 100, fontSize: 10 }]}>✦</Text>
           <Text style={[ss.bannerStar, { top: 40, left: 160, fontSize: 7 }]}>✦</Text>
           <Text style={[ss.bannerStar, { top: 28, right: 130, fontSize: 8 }]}>✦</Text>
 
           <View style={ss.bannerLeft}>
             <Text style={ss.bannerLabel}>Umumiy progress</Text>
-            <Text style={ss.bannerPercent}>{course.progress}%</Text>
+            <Text style={ss.bannerPercent}>0%</Text>
 
-            {/* Progress bar with bubble */}
             <View style={ss.bannerBarWrap}>
-              {/* Floating bubble above indicator */}
               <View style={ss.bannerBubbleRow}>
-                <View style={{ flex: course.progress, alignItems: 'flex-end' }}>
+                <View style={{ flex: 1, alignItems: 'flex-start' }}>
                   <View style={ss.bannerBubble}>
-                    <Text style={ss.bannerBubbleText}>{course.progress}</Text>
+                    <Text style={ss.bannerBubbleText}>0</Text>
                   </View>
                 </View>
-                <View style={{ flex: 100 - course.progress }} />
+                <View style={{ flex: 99 }} />
               </View>
-              {/* Bar */}
               <View style={ss.bannerTrack}>
-                <View style={[ss.bannerFill, { width: `${course.progress}%` }]} />
-                <View style={[ss.bannerDot, { left: `${course.progress}%`, marginLeft: -6 }]} />
+                <View style={[ss.bannerFill, { width: '0%' }]} />
+                <View style={[ss.bannerDot, { left: '0%', marginLeft: -6 }]} />
               </View>
             </View>
 
             <Text style={ss.bannerCount}>
-              {course.lessonsDone} / {course.lessonsTotal} dars
+              {done} / {total} dars
             </Text>
           </View>
 
-          {/* Rocket */}
           <View style={ss.bannerRocket}>
             <Text style={ss.rocketEmoji}>🚀</Text>
             <View style={ss.rocketGlow} />
@@ -333,8 +363,8 @@ export default function RoadmapScreen() {
           <View style={ss.finalMilestone}>
             <View style={ss.finalMilestoneCircle}>
               <Text style={ss.finalMilestoneFlag}>🏁</Text>
-              <Text style={ss.finalMilestoneNum}>90</Text>
-              <Text style={ss.finalMilestoneSub}>Dars 90</Text>
+              <Text style={ss.finalMilestoneNum}>{total}</Text>
+              <Text style={ss.finalMilestoneSub}>Dars {total}</Text>
             </View>
           </View>
         </View>
