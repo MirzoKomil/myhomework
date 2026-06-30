@@ -45,7 +45,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol' };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target' };
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
 let _studentsDurationFilter = 'all';
@@ -587,7 +587,7 @@ function renderTab(tab) {
         case 'students': renderStudents(); break;
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
-        case 'marketing': break;
+        case 'marketing': renderMarketing(); break;
         case 'settings': break;
         case 'analytics-overview':
         case 'analytics-sales':
@@ -5575,6 +5575,25 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
 });
 
 // --- Sotuv bo'limi ---
+function switchMarketingSection(section) {
+    _tabContext.marketingSection = section;
+    document.querySelectorAll('[data-marketing-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.marketingSection === section);
+    });
+    document.querySelectorAll('.marketing-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.marketingPanel === section);
+    });
+}
+
+function renderMarketing() {
+    document.querySelectorAll('[data-marketing-section]').forEach(btn => {
+        if (btn.dataset.mktBound) return;
+        btn.dataset.mktBound = '1';
+        btn.addEventListener('click', () => switchMarketingSection(btn.dataset.marketingSection));
+    });
+    switchMarketingSection(_tabContext.marketingSection || 'target');
+}
+
 function renderSales() {
     syncLeadsLangTabs();
     switchSalesSection(_tabContext.salesSection || 'leads');

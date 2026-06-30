@@ -691,6 +691,24 @@ body {
     overflow: hidden;
 }
 
+#tab-marketing.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.marketing-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.marketing-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
 .student-app-title-bar {
     display: flex;
     align-items: center;

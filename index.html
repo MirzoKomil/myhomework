@@ -539,14 +539,44 @@
 
                     <!-- Marketing bo'limi -->
                     <section id="tab-marketing" class="tab-content">
-                        <div class="page-title-bar">
-                            <h1>Marketing bo'limi</h1>
+                        <div class="sales-pinned">
+                            <div class="sales-header-layout">
+                                <nav class="section-nav sales-header-nav" id="marketingSectionNav" aria-label="Marketing bo'limi">
+                                    <button type="button" class="section-nav-item active" data-marketing-section="target">Target Monitoringi</button>
+                                    <button type="button" class="section-nav-item" data-marketing-section="content-plan">Kontent reja</button>
+                                    <button type="button" class="section-nav-item" data-marketing-section="competitors">Raqobatchilar tahlili</button>
+                                    <button type="button" class="section-nav-item" data-marketing-section="marketing-stats">Statistika</button>
+                                </nav>
+                            </div>
                         </div>
-                        <div class="card placeholder-card">
-                            <div class="placeholder-icon">📣</div>
-                            <h3>Marketing bo'limi</h3>
-                            <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda. Keyingi versiyada to'liq
-                                funksionallik qo'shiladi.</p>
+
+                        <div class="marketing-panel active" data-marketing-panel="target" id="marketingPanel-target">
+                            <div class="mac-empty" style="padding:60px 0">
+                                <div style="font-size:40px;margin-bottom:12px">🎯</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Target Monitoringi</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+                        <div class="marketing-panel" data-marketing-panel="content-plan" id="marketingPanel-content-plan">
+                            <div class="mac-empty" style="padding:60px 0">
+                                <div style="font-size:40px;margin-bottom:12px">📅</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Kontent reja</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+                        <div class="marketing-panel" data-marketing-panel="competitors" id="marketingPanel-competitors">
+                            <div class="mac-empty" style="padding:60px 0">
+                                <div style="font-size:40px;margin-bottom:12px">🔍</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Raqobatchilar tahlili</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+                        <div class="marketing-panel" data-marketing-panel="marketing-stats" id="marketingPanel-marketing-stats">
+                            <div class="mac-empty" style="padding:60px 0">
+                                <div style="font-size:40px;margin-bottom:12px">📊</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Statistika</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
                         </div>
                     </section>
 
