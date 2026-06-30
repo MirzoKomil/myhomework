@@ -709,6 +709,25 @@ body {
     flex-direction: column;
 }
 
+/* HR Bo'limi */
+#tab-hr.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.hr-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.hr-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
 /* Target Monitoringi */
 .tm-wrap {
     padding: 20px;

@@ -15,6 +15,7 @@ const TAB_TITLES = {
     profile: 'Profil',
     placeholder: 'Bo\'lim',
     'student-app': 'O\'quvchi ilovasi',
+    'hr': "HR Bo'limi",
     'hr-employees': 'Xodimlar',
     'analytics-overview': 'Umumiy ko\'rsatkichlar',
     'analytics-sales': 'Sotuv analitikasi',
@@ -45,7 +46,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target' };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar' };
 let _marketingLang = 'english';
 let _targetMonth = 'feb';
 let _studentsTeacherFilter = 'all';
@@ -106,7 +107,8 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 const ROLE_TABS = {
     sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analytics-overview', 'analytics-sales'],
     teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
-    employee:      ['student-app']
+    employee:      ['student-app'],
+    hr:            ['dashboard', 'hr']
 };
 
 function applyRoleBasedAccess(user) {
@@ -324,7 +326,9 @@ function switchTab(tab, ctx = {}) {
         placeholder: ctx.placeholder || null,
         salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null),
         teachersSection: tab === 'teachers-section' ? (ctx.teachersSection || 'attendance') : (ctx.teachersSection || null),
-        studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol')
+        studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol'),
+        hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
+        marketingSection: _tabContext.marketingSection || 'target'
     };
 
     updateSidebarActiveState(tab, _tabContext);
@@ -599,6 +603,7 @@ function renderTab(tab) {
         case 'student-app': renderStudentApp(); break;
         case 'teachers-section': renderTeachersSection(); break;
         case 'hr-employees': renderHrEmployees(); break;
+        case 'hr': renderHr(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -5750,6 +5755,27 @@ function renderMarketingTargetPanel() {
             renderMarketingTargetPanel();
         });
     });
+}
+
+// --- HR Bo'limi ---
+function switchHrSection(section) {
+    _tabContext.hrSection = section;
+    document.querySelectorAll('[data-hr-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.hrSection === section);
+    });
+    document.querySelectorAll('.hr-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.hrPanel === section);
+    });
+    if (section === 'xodimlar') renderHrEmployees();
+}
+
+function renderHr() {
+    document.querySelectorAll('[data-hr-section]').forEach(btn => {
+        if (btn.dataset.hrBound) return;
+        btn.dataset.hrBound = '1';
+        btn.addEventListener('click', () => switchHrSection(btn.dataset.hrSection));
+    });
+    switchHrSection(_tabContext.hrSection || 'xodimlar');
 }
 
 // --- Sotuv bo'limi ---
