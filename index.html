@@ -71,44 +71,12 @@
                     <span class="label">Akademik bo'lim</span>
                 </a>
 
-                <div class="menu-group" id="menuGroupMoliya">
-                    <button type="button" class="menu-group-toggle" aria-expanded="false">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-                        </svg>
-                        <span class="label">Moliya</span>
-                    </button>
-                    <div class="menu-subitems">
-                        <a href="#" class="menu-sub-item" data-tab="payments">
-                            <svg viewBox="0 0 24 24">
-                                <rect x="1" y="4" width="22" height="16" rx="2" />
-                                <path d="M1 10h22" />
-                            </svg>
-                            To'lovlar
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="placeholder" data-placeholder="sales-salary">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                                <circle cx="8.5" cy="7" r="4" />
-                                <path d="M20 8v6M23 11h-6" />
-                            </svg>
-                            Sotuv menejerlari maoshi
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="salary">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-                            </svg>
-                            Ustozlar maoshi
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="placeholder" data-placeholder="other-salary">
-                            <svg viewBox="0 0 24 24">
-                                <rect x="2" y="5" width="20" height="14" rx="2" />
-                                <path d="M2 10h20" />
-                            </svg>
-                            Boshqa maoshlar
-                        </a>
-                    </div>
-                </div>
+                <a href="#" class="menu-item" id="menuItemMoliya" data-tab="finance">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                    </svg>
+                    <span class="label">Moliya</span>
+                </a>
 
                 <a href="#" class="menu-item" data-tab="hr">
                     <svg viewBox="0 0 24 24">
@@ -854,6 +822,166 @@
                     </section>
 
                     <!-- HR Bo'limi -->
+                    <!-- Moliya bo'limi -->
+                    <section id="tab-finance" class="tab-content">
+                        <div class="sales-pinned">
+                            <div class="sales-header-layout">
+                                <nav class="section-nav sales-header-nav" id="financeSectionNav" aria-label="Moliya Bo'limi">
+                                    <button type="button" class="section-nav-item active" data-finance-section="tolovlar">To'lovlar</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="maoshlar">Maoshlar</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="kpi">KPI</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="cashflow">Cash Flow</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="moliyaviy-reja">Moliyaviy reja</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="xarajatlar">Xarajatlar</button>
+                                </nav>
+                            </div>
+                        </div>
+
+                        <!-- To'lovlar -->
+                        <div class="finance-panel active" data-finance-panel="tolovlar" id="financePanel-tolovlar">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">💳</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">To'lovlar</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+
+                        <!-- Maoshlar -->
+                        <div class="finance-panel" data-finance-panel="maoshlar" id="financePanel-maoshlar">
+                            <div class="page-title-bar" style="padding-top:20px">
+                                <h1>Maoshlar</h1>
+                            </div>
+                            <div class="grid-2" style="gap:16px">
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">🧑‍💼</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Sotuv menejeri</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">👩‍🏫</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Asosiy ustoz</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">🧑‍🏫</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Yordamchi ustoz</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">📊</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">ROP</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">💼</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Boshqa maoshlar</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI -->
+                        <div class="finance-panel" data-finance-panel="kpi" id="financePanel-kpi">
+                            <div class="page-title-bar" style="padding-top:20px">
+                                <h1>KPI</h1>
+                            </div>
+                            <div class="grid-2" style="gap:16px">
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">🧑‍💼</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Sotuv menejeri</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">👩‍🏫</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Asosiy ustoz</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">🧑‍🏫</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Yordamchi ustoz</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">📊</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">ROP</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding:24px">
+                                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                                        <span style="font-size:22px">💼</span>
+                                        <h3 style="font-size:15px;font-weight:700;margin:0">Boshqa maoshlar</h3>
+                                    </div>
+                                    <div class="mac-empty" style="padding:30px 0">
+                                        <div style="font-size:13px;color:var(--text-muted)">Tez orada to'ldiriladi</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cash Flow -->
+                        <div class="finance-panel" data-finance-panel="cashflow" id="financePanel-cashflow">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">📈</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Cash Flow</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+
+                        <!-- Moliyaviy reja -->
+                        <div class="finance-panel" data-finance-panel="moliyaviy-reja" id="financePanel-moliyaviy-reja">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">📋</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Moliyaviy reja</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+
+                        <!-- Xarajatlar -->
+                        <div class="finance-panel" data-finance-panel="xarajatlar" id="financePanel-xarajatlar">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">💸</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Xarajatlar</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+                    </section>
+
                     <section id="tab-hr" class="tab-content">
                         <div class="sales-pinned">
                             <div class="sales-header-layout">

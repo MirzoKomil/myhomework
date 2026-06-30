@@ -728,6 +728,18 @@ body {
     flex-direction: column;
 }
 
+.finance-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.finance-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
 /* Target Monitoringi */
 .tm-wrap {
     padding: 20px;

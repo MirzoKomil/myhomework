@@ -16,6 +16,7 @@ const TAB_TITLES = {
     placeholder: 'Bo\'lim',
     'student-app': 'O\'quvchi ilovasi',
     'hr': "HR Bo'limi",
+    'finance': "Moliya",
     'hr-employees': 'Xodimlar',
     'analytics-overview': 'Umumiy ko\'rsatkichlar',
     'analytics-sales': 'Sotuv analitikasi',
@@ -46,7 +47,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar' };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar' };
 let _marketingLang = 'english';
 let _targetMonth = 'feb';
 let _studentsTeacherFilter = 'all';
@@ -328,6 +329,7 @@ function switchTab(tab, ctx = {}) {
         teachersSection: tab === 'teachers-section' ? (ctx.teachersSection || 'attendance') : (ctx.teachersSection || null),
         studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol'),
         hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
+        financeSection: tab === 'finance' ? (ctx.financeSection || 'tolovlar') : (_tabContext.financeSection || 'tolovlar'),
         marketingSection: _tabContext.marketingSection || 'target'
     };
 
@@ -604,6 +606,7 @@ function renderTab(tab) {
         case 'teachers-section': renderTeachersSection(); break;
         case 'hr-employees': renderHrEmployees(); break;
         case 'hr': renderHr(); break;
+        case 'finance': renderFinance(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -5755,6 +5758,26 @@ function renderMarketingTargetPanel() {
             renderMarketingTargetPanel();
         });
     });
+}
+
+// --- Moliya Bo'limi ---
+function switchFinanceSection(section) {
+    _tabContext.financeSection = section;
+    document.querySelectorAll('[data-finance-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.financeSection === section);
+    });
+    document.querySelectorAll('.finance-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.financePanel === section);
+    });
+}
+
+function renderFinance() {
+    document.querySelectorAll('[data-finance-section]').forEach(btn => {
+        if (btn.dataset.financeBound) return;
+        btn.dataset.financeBound = '1';
+        btn.addEventListener('click', () => switchFinanceSection(btn.dataset.financeSection));
+    });
+    switchFinanceSection(_tabContext.financeSection || 'tolovlar');
 }
 
 // --- HR Bo'limi ---
