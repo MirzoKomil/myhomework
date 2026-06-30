@@ -5762,7 +5762,6 @@ function renderMarketingTargetPanel() {
 
 // --- Moliya Bo'limi ---
 let _financeLang = 'english';
-const FINANCE_LANG_PANELS = new Set(['maoshlar', 'kpi']);
 
 function applyFinanceLang() {
     const panel = document.querySelector('.finance-panel.active');
@@ -5780,8 +5779,6 @@ function switchFinanceSection(section) {
     document.querySelectorAll('.finance-panel').forEach(panel => {
         panel.classList.toggle('active', panel.dataset.financePanel === section);
     });
-    const langFilter = document.getElementById('financeLangFilter');
-    if (langFilter) langFilter.style.display = FINANCE_LANG_PANELS.has(section) ? '' : 'none';
     applyFinanceLang();
 }
 
@@ -5809,6 +5806,8 @@ function renderFinance() {
 }
 
 // --- HR Bo'limi ---
+let _hrPinnedLang = 'ingliz';
+
 function switchHrSection(section) {
     _tabContext.hrSection = section;
     document.querySelectorAll('[data-hr-section]').forEach(btn => {
@@ -5826,6 +5825,19 @@ function renderHr() {
         btn.dataset.hrBound = '1';
         btn.addEventListener('click', () => switchHrSection(btn.dataset.hrSection));
     });
+    document.querySelectorAll('[data-hr-pinned-lang]').forEach(btn => {
+        if (btn.dataset.hrPinnedBound) return;
+        btn.dataset.hrPinnedBound = '1';
+        btn.addEventListener('click', () => {
+            _hrPinnedLang = btn.dataset.hrPinnedLang;
+            document.querySelectorAll('[data-hr-pinned-lang]').forEach(b =>
+                b.classList.toggle('active', b.dataset.hrPinnedLang === _hrPinnedLang)
+            );
+        });
+    });
+    document.querySelectorAll('[data-hr-pinned-lang]').forEach(b =>
+        b.classList.toggle('active', b.dataset.hrPinnedLang === _hrPinnedLang)
+    );
     switchHrSection(_tabContext.hrSection || 'xodimlar');
 }
 
