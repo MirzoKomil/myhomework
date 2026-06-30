@@ -614,6 +614,7 @@ let _mobileSubSection = 'asosiy';
 let _mobileLang = 'english';
 let _activeCourseId = null;
 let _activeLessonId = null;
+let _expandedLessonIds = new Set();
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -780,83 +781,259 @@ function renderMobileLessonDetailTab(container, course, lesson) {
 function renderMobileCourseDetailTab(container, course) {
     const mc = getMobileContent();
     const lessons = (mc.lessons || []).filter(l => l.courseId === course.id);
+    const allModules = mc.modules || [];
 
-    const items = lessons.length ? lessons.map((l, i) => `
-        <div data-lesson-id="${escapeHtml(l.id)}" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;cursor:pointer;transition:box-shadow 0.15s">
-            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-                <span style="font-size:18px;flex-shrink:0">🎓</span>
-                <span style="font-weight:600;font-size:14px;color:var(--text);word-break:break-word">${escapeHtml(l.name)}</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-                <button type="button" data-demo-lesson="${i}" style="padding:5px 12px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid ${l.isDemo ? 'var(--purple,#7c3aed)' : 'var(--border)'};background:${l.isDemo ? 'var(--purple,#7c3aed)' : 'transparent'};color:${l.isDemo ? '#fff' : 'var(--text)'};cursor:pointer">Demo</button>
-                <button type="button" data-activate-lesson="${i}" style="padding:5px 12px;font-size:12px;font-weight:600;border-radius:6px;border:1px solid ${l.isActive ? '#16a34a' : 'var(--border)'};background:${l.isActive ? '#16a34a' : 'transparent'};color:${l.isActive ? '#fff' : 'var(--text)'};cursor:pointer">${l.isActive ? 'Faol' : 'Faollashtirish'}</button>
-                <button type="button" class="btn-danger-sm" data-delete-lesson="${i}">O'chirish</button>
-            </div>
-        </div>
-    `).join('') : `<div class="mac-empty">Hali darslar yaratilmagan</div>`;
+    function iconSvg(size) {
+        return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>`;
+    }
+    function eyeSvg() {
+        return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    }
+    function chevronSvg(up) {
+        return up
+            ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>`
+            : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
+    }
+    function dotsSvg() {
+        return `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>`;
+    }
+    function plusBoxSvg() {
+        return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>`;
+    }
 
+    const iconBtn = (attrs, svgContent, color) =>
+        `<button type="button" ${attrs} style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:${color || 'var(--text-muted)'};transition:background 0.12s" onmouseover="this.style.background='var(--bg-secondary,#f3f4f6)'" onmouseout="this.style.background='transparent'">${svgContent}</button>`;
+
+    function lessonHTML(l) {
+        const expanded = _expandedLessonIds.has(l.id);
+        const mods = allModules.filter(m => m.lessonId === l.id);
+        const modCount = mods.length;
+        const dateLabel = l.createdAt ? `E'lon qilindi • Dan ${l.createdAt}` : '';
+
+        const badges = [
+            l.isDemo ? `<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Demo</span>` : '',
+            l.isPaid ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Pullik</span>` : '',
+            l.isActive ? `<span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Faol</span>` : '',
+        ].filter(Boolean).join('');
+
+        const countBadge = modCount
+            ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${modCount}</span>`
+            : '';
+
+        const modulesHTML = expanded ? `
+        <div style="border-top:1px solid var(--border)">
+            ${mods.length ? mods.map((m, mi) => `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border,#e5e7eb)">
+                <span style="font-size:12px;color:var(--text-muted);min-width:24px;text-align:right;flex-shrink:0">#${mi + 1}</span>
+                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+                    <span style="color:var(--text-muted)">${iconSvg(16)}</span>
+                    ${m.type === 'video' ? `<span style="position:absolute;bottom:2px;left:2px;background:#1e1e1e;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px">${m.duration || ''}</span>` : ''}
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(m.name)}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.status === 'draft' ? 'Qoralama' : 'E\'lon qilindi'} • ${escapeHtml(m.createdAt || '')}</div>
+                </div>
+                ${iconBtn(`data-preview-mod="${escapeHtml(m.id)}"`, eyeSvg(), '#16a34a')}
+            </div>`).join('') : `<div style="padding:20px;text-align:center;font-size:13px;color:var(--text-muted)">Hali modullar yo'q. <button type="button" data-add-mod="${escapeHtml(l.id)}" style="background:none;border:none;color:var(--purple,#7c3aed);font-weight:600;cursor:pointer;font-size:13px">+ Modul qo'shish</button></div>`}
+        </div>` : '';
+
+        return `
+        <div data-lesson-card="${escapeHtml(l.id)}" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+            <div data-toggle-lesson="${escapeHtml(l.id)}" style="padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none">
+                <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--purple,#7c3aed) 0%,#a855f7 100%);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff">
+                    ${iconSvg(18)}
+                </div>
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        ${badges}
+                        <span style="font-weight:700;font-size:14px;color:var(--text)">${escapeHtml(l.name)}</span>
+                        ${countBadge}
+                    </div>
+                    ${dateLabel ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">${escapeHtml(dateLabel)}</div>` : ''}
+                </div>
+                <div style="display:flex;align-items:center;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
+                    ${iconBtn(`data-lesson-menu="${escapeHtml(l.id)}"`, dotsSvg(), '')}
+                    ${iconBtn(`data-add-mod="${escapeHtml(l.id)}"`, plusBoxSvg(), 'var(--purple,#7c3aed)')}
+                    ${iconBtn(`data-preview-lesson="${escapeHtml(l.id)}"`, eyeSvg(), '#16a34a')}
+                </div>
+                <div style="color:var(--text-muted);flex-shrink:0;pointer-events:none">${chevronSvg(expanded)}</div>
+            </div>
+            ${modulesHTML}
+        </div>`;
+    }
+
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
     container.innerHTML = `
-    <button type="button" id="backToCourses" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:18px;font-size:13px;font-weight:600;color:var(--purple);background:none;border:none;cursor:pointer;padding:0">
-        ← Kurslar
-    </button>
-    <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:20px">${escapeHtml(course.name)}</div>
-    <div style="display:flex;flex-direction:column;gap:10px">${items}</div>`;
+    <div style="flex-shrink:0;padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface)">
+        <button type="button" id="backToCourses" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px" onmouseover="this.style.background='var(--bg-secondary,#f3f4f6)'" onmouseout="this.style.background='none'">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Kurslar
+        </button>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--border)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(course.name)}</span>
+    </div>
+    <div id="courseAccordion" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+        ${lessons.length ? lessons.map(l => lessonHTML(l)).join('') : `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Hali darslar yaratilmagan</div>`}
+    </div>
+    <button type="button" id="addLessonBtn" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-top:2px dashed var(--border);background:var(--surface);font-weight:700;font-size:14px;color:var(--purple,#7c3aed);border-left:none;border-right:none;border-bottom:none;cursor:pointer;width:100%;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background='var(--surface)'">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 6H3M3 12h5M3 18h5"/><path d="M13 12h8M17 8v8"/></svg>
+        Dars qo'shish
+    </button>`;
 
-    document.getElementById('backToCourses')?.addEventListener('click', () => {
+    document.getElementById('backToCourses').addEventListener('click', () => {
         _activeCourseId = null;
         _activeLessonId = null;
         renderMobileEditPanel();
     });
 
-    container.querySelectorAll('[data-lesson-id]').forEach(card => {
-        card.addEventListener('click', e => {
-            if (e.target.closest('button')) return;
-            _activeLessonId = card.dataset.lessonId;
-            renderMobileEditPanel();
-        });
-    });
+    document.getElementById('addLessonBtn').addEventListener('click', () => _openCreateLessonModal());
 
-    container.querySelectorAll('[data-demo-lesson]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const i = parseInt(btn.dataset.demoLesson);
-            const mc2 = getMobileContent();
-            const lesson = (mc2.lessons || []).filter(l => l.courseId === course.id)[i];
-            if (!lesson) return;
-            lesson.isDemo = !lesson.isDemo;
+    const accordion = document.getElementById('courseAccordion');
+    accordion.addEventListener('click', e => {
+        const toggle = e.target.closest('[data-toggle-lesson]');
+        const menuBtn = e.target.closest('[data-lesson-menu]');
+        const addMod = e.target.closest('[data-add-mod]');
+        const previewLesson = e.target.closest('[data-preview-lesson]');
+
+        if (menuBtn) {
+            e.stopPropagation();
+            _openLessonContextMenu(menuBtn, menuBtn.dataset.lessonMenu, course, container);
+            return;
+        }
+        if (addMod) {
+            e.stopPropagation();
+            _openAddModuleModal(addMod.dataset.addMod);
+            return;
+        }
+        if (previewLesson) {
+            e.stopPropagation();
+            return;
+        }
+        if (toggle) {
+            const lid = toggle.dataset.toggleLesson;
+            if (_expandedLessonIds.has(lid)) _expandedLessonIds.delete(lid);
+            else _expandedLessonIds.add(lid);
+            renderMobileCourseDetailTab(container, course);
+        }
+    });
+}
+
+function _openLessonContextMenu(anchor, lessonId, course, container) {
+    document.querySelectorAll('.lesson-ctx-menu').forEach(m => m.remove());
+    const mc = getMobileContent();
+    const lessons = (mc.lessons || []).filter(l => l.courseId === course.id);
+    const idx = lessons.findIndex(l => l.id === lessonId);
+    const lesson = lessons[idx];
+    if (!lesson) return;
+
+    const menu = document.createElement('div');
+    menu.className = 'lesson-ctx-menu';
+    menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.14);z-index:9999;min-width:200px;padding:6px 0;font-size:13px';
+
+    const menuItem = (icon, label, action, danger) =>
+        `<button type="button" data-action="${action}" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${danger ? '#ef4444' : 'var(--text)'};text-align:left" onmouseover="this.style.background='var(--bg-secondary,#f3f4f6)'" onmouseout="this.style.background='none'">${icon}<span>${label}</span></button>`;
+
+    menu.innerHTML = [
+        menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`, 'Tahrirlash', 'edit'),
+        menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`, lesson.isPaid ? 'Bepul qilish' : 'Pullik qilish', 'toggle-paid'),
+        menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`, 'Nusxalash', 'copy'),
+        idx > 0 ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`, "Yuqoriga ko'chirish", 'move-up') : '',
+        idx < lessons.length - 1 ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>`, "Pastga ko'chirish", 'move-down') : '',
+        `<div style="border-top:1px solid var(--border);margin:4px 0"></div>`,
+        menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>`, 'O\'chirish', 'delete', true),
+    ].join('');
+
+    const rect = anchor.getBoundingClientRect();
+    document.body.appendChild(menu);
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let top = rect.bottom + 4, left = rect.right - mw;
+    if (top + mh > window.innerHeight) top = rect.top - mh - 4;
+    if (left < 8) left = 8;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+
+    menu.addEventListener('click', e => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        menu.remove();
+        const action = btn.dataset.action;
+        const mc2 = getMobileContent();
+        const allLessons = mc2.lessons || [];
+        const gIdx = allLessons.findIndex(l => l.id === lessonId);
+        if (gIdx === -1) return;
+
+        if (action === 'edit') {
+            openModal('Darsni tahrirlash',
+                `<div class="form-group"><label>Dars nomi</label><input id="editLessonName" class="form-control" value="${escapeHtml(allLessons[gIdx].name)}"></div>`,
+                `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor</button><button type="button" class="btn-primary-sm" id="saveEditLesson">Saqlash</button>`,
+                { wide: false }
+            );
+            document.getElementById('saveEditLesson').onclick = () => {
+                const n = document.getElementById('editLessonName').value.trim();
+                if (!n) return;
+                mc2.lessons[gIdx].name = n;
+                saveMobileContent(mc2);
+                closeModal();
+                renderMobileCourseDetailTab(container, course);
+            };
+        } else if (action === 'toggle-paid') {
+            mc2.lessons[gIdx].isPaid = !mc2.lessons[gIdx].isPaid;
             saveMobileContent(mc2);
             renderMobileCourseDetailTab(container, course);
-            showMiniToast(lesson.isDemo ? 'Demo belgilandi' : 'Demo olib tashlandi');
-        });
-    });
-
-    container.querySelectorAll('[data-activate-lesson]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const i = parseInt(btn.dataset.activateLesson);
-            const mc2 = getMobileContent();
-            const lesson = (mc2.lessons || []).filter(l => l.courseId === course.id)[i];
-            if (!lesson) return;
-            lesson.isActive = !lesson.isActive;
+            showMiniToast(mc2.lessons[gIdx].isPaid ? 'Pullik qilindi' : 'Bepul qilindi');
+        } else if (action === 'copy') {
+            const copy = { ...allLessons[gIdx], id: 'l' + Date.now(), name: allLessons[gIdx].name + ' (nusxa)', createdAt: new Date().toISOString().slice(0, 10) };
+            mc2.lessons.splice(gIdx + 1, 0, copy);
             saveMobileContent(mc2);
             renderMobileCourseDetailTab(container, course);
-            showMiniToast(lesson.isActive ? 'Dars faollashtirildi' : 'Dars o\'chirildi');
-        });
-    });
-
-    container.querySelectorAll('[data-delete-lesson]').forEach(btn => {
-        btn.addEventListener('click', () => {
+            showMiniToast('Nusxa yaratildi');
+        } else if (action === 'move-up') {
+            [mc2.lessons[gIdx - 1], mc2.lessons[gIdx]] = [mc2.lessons[gIdx], mc2.lessons[gIdx - 1]];
+            saveMobileContent(mc2);
+            renderMobileCourseDetailTab(container, course);
+        } else if (action === 'move-down') {
+            [mc2.lessons[gIdx], mc2.lessons[gIdx + 1]] = [mc2.lessons[gIdx + 1], mc2.lessons[gIdx]];
+            saveMobileContent(mc2);
+            renderMobileCourseDetailTab(container, course);
+        } else if (action === 'delete') {
             if (!confirm("Darsni o'chirasizmi?")) return;
-            const i = parseInt(btn.dataset.deleteLesson);
-            const mc2 = getMobileContent();
-            const filtered = (mc2.lessons || []).filter(l => l.courseId === course.id);
-            const target = filtered[i];
-            if (!target) return;
-            const globalIdx = mc2.lessons.indexOf(target);
-            mc2.lessons.splice(globalIdx, 1);
+            mc2.lessons.splice(gIdx, 1);
             saveMobileContent(mc2);
             renderMobileCourseDetailTab(container, course);
             showMiniToast("Dars o'chirildi");
-        });
+        }
     });
+
+    setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
+}
+
+function _openAddModuleModal(lessonId) {
+    openModal('Modul qo\'shish',
+        `<div class="form-group"><label>Modul nomi <span style="color:var(--danger)">*</span></label><input id="modNameInput" class="form-control" placeholder="Masalan: Grammatika: Alifbo" autofocus></div>
+         <div class="form-group"><label>Turi</label><select id="modTypeInput" class="form-control"><option value="video">Video</option><option value="text">Matn</option><option value="quiz">Test</option></select></div>`,
+        `<button type="button" class="btn-ghost" id="cancelMod">Bekor qilish</button><button type="button" class="btn-primary-sm" id="saveMod">Qo'shish</button>`,
+        { wide: false }
+    );
+    document.getElementById('cancelMod').onclick = () => closeModal();
+    document.getElementById('saveMod').onclick = () => {
+        const name = document.getElementById('modNameInput').value.trim();
+        if (!name) { alert('Modul nomi kiritilishi shart'); return; }
+        const type = document.getElementById('modTypeInput').value;
+        const mc = getMobileContent();
+        mc.modules = mc.modules || [];
+        mc.modules.push({ id: 'm' + Date.now(), lessonId, name, type, status: 'published', createdAt: new Date().toISOString().slice(0, 10) });
+        saveMobileContent(mc);
+        closeModal();
+        const cont = document.getElementById('mobileAdminContent');
+        const lesson = (mc.lessons || []).find(l => l.id === lessonId);
+        const courseId = lesson?.courseId;
+        const course2 = (mc.courses || []).find(c => c.id === courseId);
+        if (cont && course2) {
+            _expandedLessonIds.add(lessonId);
+            renderMobileCourseDetailTab(cont, course2);
+        }
+        showMiniToast('Modul qo\'shildi');
+    };
 }
 
 function _openCreateLessonModal() {
