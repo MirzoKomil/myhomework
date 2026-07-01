@@ -6073,7 +6073,13 @@ function renderSalesFunnel() {
     <div class="card" style="padding:28px 24px;margin-bottom:16px">
         <h3 style="font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 24px">Voronka</h3>
         <div class="sales-funnel">
-            ${stagesData.map((s, i) => `
+            ${[...stagesData].reverse().map((s, i, arr) => {
+                const isBottom = i === arr.length - 1; // yangi-lidlar
+                const stageBelow = arr[i + 1]; // pastdagi bosqich (kengrog'i)
+                const convUp = stageBelow && stageBelow.cumulative > 0
+                    ? Math.round((s.cumulative / stageBelow.cumulative) * 100) : 0;
+                const convColor = convUp >= 70 ? '#16a34a' : convUp >= 40 ? '#d97706' : '#dc2626';
+                return `
             <div class="funnel-row">
                 <div class="funnel-label-left">
                     <span class="funnel-count">${s.cumulative}</span>
@@ -6085,14 +6091,13 @@ function renderSalesFunnel() {
                     </div>
                 </div>
                 <div class="funnel-label-right">
-                    ${i === 0
+                    ${isBottom
                         ? `<span class="funnel-conv" style="color:#3b82f6">Kirish nuqtasi</span>`
-                        : `<span class="funnel-conv" style="color:${(s.dropPct || 0) > 60 ? '#dc2626' : (s.dropPct || 0) > 30 ? '#d97706' : '#16a34a'}">
-                               ↓ ${s.dropPct}% tushdi
-                           </span>`}
-                    <span style="font-size:11px;color:var(--text-muted);margin-left:6px">(${s.convRate}%)</span>
+                        : `<span class="funnel-conv" style="color:${convColor}">↑ ${convUp}% o'tdi</span>`}
+                    <span style="font-size:11px;color:var(--text-muted);margin-left:6px">(${s.convRate}% jami)</span>
                 </div>
-            </div>`).join('')}
+            </div>`;
+            }).join('')}
         </div>
     </div>
 
@@ -6108,7 +6113,12 @@ function renderSalesFunnel() {
                 </tr>
             </thead>
             <tbody>
-                ${stagesData.map((s, i) => `
+                ${[...stagesData].reverse().map((s, i, arr) => {
+                    const isBottom = i === arr.length - 1;
+                    const stageBelow = arr[i + 1];
+                    const convUp = stageBelow && stageBelow.cumulative > 0
+                        ? Math.round((s.cumulative / stageBelow.cumulative) * 100) : 0;
+                    return `
                 <tr>
                     <td>
                         <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
@@ -6117,10 +6127,11 @@ function renderSalesFunnel() {
                     <td style="text-align:right;font-weight:700">${s.count}</td>
                     <td style="text-align:right">${s.cumulative}</td>
                     <td style="text-align:right;font-weight:600;color:${s.color}">${s.convRate}%</td>
-                    <td style="text-align:right;color:${i === 0 ? 'var(--text-muted)' : (s.dropPct || 0) > 50 ? '#dc2626' : '#d97706'}">
-                        ${i === 0 ? '—' : (s.dropPct + '%')}
+                    <td style="text-align:right;color:${isBottom ? 'var(--text-muted)' : convUp >= 70 ? '#16a34a' : '#d97706'}">
+                        ${isBottom ? '—' : convUp + '%'}
                     </td>
-                </tr>`).join('')}
+                </tr>`;
+                }).join('')}
             </tbody>
         </table>
     </div>`;
