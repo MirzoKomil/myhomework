@@ -6018,37 +6018,26 @@ function buildFunnelSVG(stagesData) {
             : (stagesData[i - 1].cumulative > 0
                 ? Math.round((s.cumulative / stagesData[i - 1].cumulative) * 100)
                 : 0);
-        const convArrow = convPrev !== null
-            ? ` ↓ ${convPrev}%`
-            : '';
 
-        let label = '';
-        const lblName = s.label;
-        const lblStats = `${s.cumulative} ta${convArrow}`;
+        // Connector line from funnel edge to label area
+        const connX1 = (cx + wMid / 2 + 2).toFixed(1);
+        const connX2 = (cx + topW / 2 + 10).toFixed(1);
+        const rX = (cx + topW / 2 + 18).toFixed(1);
 
-        if (wMid > 220) {
-            // Wide: name + stats both inside
-            label = `
-            <text x="${cx}" y="${midY - 8}" text-anchor="middle" fill="white" font-size="13" font-weight="700" font-family="Inter,system-ui,sans-serif" paint-order="stroke" stroke="rgba(0,0,0,0.15)" stroke-width="3">${lblName}</text>
-            <text x="${cx}" y="${midY + 10}" text-anchor="middle" fill="rgba(255,255,255,0.92)" font-size="12" font-family="Inter,system-ui,sans-serif">${lblStats}</text>`;
-        } else if (wMid > 120) {
-            // Medium: abbreviated inside, full label outside right
-            const rX = (cx + wTop / 2 + 14).toFixed(1);
-            label = `
-            <text x="${cx}" y="${midY + 4}" text-anchor="middle" fill="white" font-size="12" font-weight="700" font-family="Inter,system-ui,sans-serif">${s.cumulative} ta</text>
-            <line x1="${(cx + wMid / 2 + 2).toFixed(1)}" y1="${midY}" x2="${(cx + wTop / 2 + 10).toFixed(1)}" y2="${midY}" stroke="${s.color}" stroke-width="1.5" opacity="0.7"/>
-            <circle cx="${(cx + wTop / 2 + 10).toFixed(1)}" cy="${midY}" r="2.5" fill="${s.color}"/>
-            <text x="${rX}" y="${midY - 5}" fill="#1e293b" font-size="11" font-weight="700" font-family="Inter,system-ui,sans-serif">${lblName}</text>
-            <text x="${rX}" y="${midY + 9}" fill="#64748b" font-size="10" font-family="Inter,system-ui,sans-serif">${lblStats}</text>`;
-        } else {
-            // Narrow: everything outside right
-            const rX = (cx + wTop / 2 + 14).toFixed(1);
-            label = `
-            <line x1="${(cx + wMid / 2 + 2).toFixed(1)}" y1="${midY}" x2="${(cx + wTop / 2 + 10).toFixed(1)}" y2="${midY}" stroke="${s.color}" stroke-width="1.5" opacity="0.7"/>
-            <circle cx="${(cx + wTop / 2 + 10).toFixed(1)}" cy="${midY}" r="2.5" fill="${s.color}"/>
-            <text x="${rX}" y="${midY - 5}" fill="#1e293b" font-size="11" font-weight="700" font-family="Inter,system-ui,sans-serif">${lblName} · ${s.cumulative} ta</text>
-            <text x="${rX}" y="${midY + 9}" fill="#64748b" font-size="10" font-family="Inter,system-ui,sans-serif">${convArrow ? convPrev + '% o\'tdi' : 'Kirish'}</text>`;
-        }
+        const convText = convPrev !== null
+            ? `↓ ${convPrev}% o'tdi`
+            : 'Kirish nuqtasi';
+        const convColor = convPrev === null ? '#3b82f6'
+            : convPrev >= 70 ? '#16a34a'
+            : convPrev >= 40 ? '#d97706' : '#dc2626';
+
+        // Inside: only count number
+        const label = `
+            <text x="${cx}" y="${midY + 5}" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,system-ui,sans-serif" paint-order="stroke" stroke="rgba(0,0,0,0.18)" stroke-width="3">${s.cumulative}</text>
+            <line x1="${connX1}" y1="${midY}" x2="${connX2}" y2="${midY}" stroke="${s.color}" stroke-width="1.5" opacity="0.7"/>
+            <circle cx="${connX2}" cy="${midY}" r="3" fill="${s.color}"/>
+            <text x="${rX}" y="${midY - 6}" fill="#1e293b" font-size="12" font-weight="700" font-family="Inter,system-ui,sans-serif">${s.label}</text>
+            <text x="${rX}" y="${midY + 9}" fill="${convColor}" font-size="11" font-weight="600" font-family="Inter,system-ui,sans-serif">${convText}</text>`;
 
         return poly + label;
     }).join('\n');
