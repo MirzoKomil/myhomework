@@ -4128,13 +4128,11 @@ function renderStudents() {
 // ===== Student Detail Panel =====
 function openStudentDetail(studentId) {
     const panel = document.getElementById('studentDetailPanel');
-    const overlay = document.getElementById('studentDetailOverlay');
-    if (!panel || !overlay) return;
+    if (!panel) return;
 
     _sdpCurrentId = studentId;
     _sdpCurrentTab = 'profile';
 
-    overlay.style.display = 'block';
     panel.style.display = 'flex';
     requestAnimationFrame(() => panel.classList.add('sdp-open'));
 
@@ -4142,7 +4140,6 @@ function openStudentDetail(studentId) {
     renderSdpTab('profile', studentId);
 
     document.getElementById('sdpCloseBtn').onclick = closeStudentDetail;
-    overlay.onclick = closeStudentDetail;
 
     const tabsEl = document.getElementById('sdpTabs');
     tabsEl.querySelectorAll('.sdp-tab').forEach(btn => {
@@ -4159,12 +4156,8 @@ let _sdpCurrentTab = 'profile';
 
 function closeStudentDetail() {
     const panel = document.getElementById('studentDetailPanel');
-    const overlay = document.getElementById('studentDetailOverlay');
     panel?.classList.remove('sdp-open');
-    setTimeout(() => {
-        if (panel) panel.style.display = 'none';
-        if (overlay) overlay.style.display = 'none';
-    }, 300);
+    setTimeout(() => { if (panel) panel.style.display = 'none'; }, 250);
 }
 
 function renderSdpHeader(studentId) {
@@ -4224,11 +4217,13 @@ function renderSdpTab(tab, studentId) {
     const s = students.find(st => st.id === studentId);
     if (!s) return;
 
-    if (tab === 'profile') body.innerHTML = renderSdpProfile(s);
-    else if (tab === 'payments') body.innerHTML = renderSdpPayments(s);
-    else if (tab === 'attendance') body.innerHTML = renderSdpAttendance(s);
-    else if (tab === 'platform') body.innerHTML = renderSdpPlatform(s);
-    else if (tab === 'sales') body.innerHTML = renderSdpSales(s);
+    let html = '';
+    if (tab === 'profile') html = renderSdpProfile(s);
+    else if (tab === 'payments') html = renderSdpPayments(s);
+    else if (tab === 'attendance') html = renderSdpAttendance(s);
+    else if (tab === 'platform') html = renderSdpPlatform(s);
+    else if (tab === 'sales') html = renderSdpSales(s);
+    body.innerHTML = `<div class="sdp-body-inner">${html}</div>`;
 }
 
 function renderSdpProfile(s) {
