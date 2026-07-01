@@ -5975,7 +5975,6 @@ function renderSales() {
 
 // ===== Sales Funnel (Voronka) =====
 let _salesFunnelMgr = 'all';
-let _salesFunnelLang = 'all'; // 'all' | 'english' | 'russian'
 
 const FUNNEL_STAGES = [
     { id: 'yangi-lidlar',             label: 'Yangi lidlar',             color: '#3B82F6' },
@@ -6058,19 +6057,16 @@ function renderSalesFunnel() {
     if (!panel) return;
 
     const allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const engLeads = (allLeads.english || []).map(l => ({ ...l, _lang: 'english' }));
-    const rusLeads = (allLeads.russian || []).map(l => ({ ...l, _lang: 'russian' }));
-    const langFiltered = _salesFunnelLang === 'english' ? engLeads
-        : _salesFunnelLang === 'russian' ? rusLeads
-        : [...engLeads, ...rusLeads];
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const langLeads = (allLeads[lang] || []);
 
     const allManagers = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
         e.role === 'Sotuv menejeri' || e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri'
     );
 
     const filteredLeads = _salesFunnelMgr === 'all'
-        ? langFiltered
-        : langFiltered.filter(l => l.managerId === _salesFunnelMgr);
+        ? langLeads
+        : langLeads.filter(l => l.managerId === _salesFunnelMgr);
 
     // Count per stage (current exact status)
     const stageCounts = FUNNEL_STAGES.map(s => ({
@@ -6100,55 +6096,22 @@ function renderSalesFunnel() {
         `<option value="${escapeHtml(m.id)}" ${m.id === _salesFunnelMgr ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
     ).join('');
 
-    const langLabel = _salesFunnelLang === 'english' ? 'Ingliz tili lidlari'
-        : _salesFunnelLang === 'russian' ? 'Rus tili lidlari'
-        : 'Barcha lidlar';
+    const langLabel = lang === 'russian' ? 'Rus tili' : 'Ingliz tili';
 
     panel.innerHTML = `
     <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
         <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div class="sales-header-lang" style="margin:0">
-                <button class="lang-btn${_salesFunnelLang === 'all' ? ' active' : ''}" data-funnel-lang="all">Barchasi</button>
-                <button class="lang-btn${_salesFunnelLang === 'english' ? ' active' : ''}" data-funnel-lang="english">Ingliz tili</button>
-                <button class="lang-btn${_salesFunnelLang === 'russian' ? ' active' : ''}" data-funnel-lang="russian">Rus tili</button>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px">
-                <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">Menejer:</label>
-                <select id="funnelMgrSelect" class="form-control-sm" style="min-width:170px">
-                    <option value="all" ${_salesFunnelMgr === 'all' ? 'selected' : ''}>Barcha menejerlar</option>
-                    ${mgrOptions}
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid-3" style="margin-bottom:24px">
-        <div class="stat-card">
-            <div class="stat-icon blue" style="font-size:20px">🎯</div>
-            <div class="stat-info">
-                <div class="stat-label">Jami lidlar</div>
-                <div class="stat-value">${filteredLeads.length}</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon green" style="font-size:20px">✅</div>
-            <div class="stat-info">
-                <div class="stat-label">To'lov yopildi</div>
-                <div class="stat-value">${converted}</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon purple" style="font-size:20px">📈</div>
-            <div class="stat-info">
-                <div class="stat-label">Umumiy konversiya</div>
-                <div class="stat-value">${convRate}%</div>
-            </div>
+        <div style="display:flex;align-items:center;gap:6px">
+            <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">Menejer:</label>
+            <select id="funnelMgrSelect" class="form-control-sm" style="min-width:170px">
+                <option value="all" ${_salesFunnelMgr === 'all' ? 'selected' : ''}>Barcha menejerlar</option>
+                ${mgrOptions}
+            </select>
         </div>
     </div>
 
     <div class="card" style="padding:32px 24px 28px;margin-bottom:16px">
-        <h3 style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 28px;text-align:center">Sotuv voronkasi — ${langLabel} — ${filteredLeads.length} ta lid</h3>
+        <h3 style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 28px;text-align:center">${langLabel} lidlari — jami ${filteredLeads.length} ta · konversiya ${convRate}%</h3>
         ${buildFunnelSVG(stagesData)}
     </div>
 
@@ -6192,13 +6155,6 @@ function renderSalesFunnel() {
     document.getElementById('funnelMgrSelect')?.addEventListener('change', e => {
         _salesFunnelMgr = e.target.value;
         renderSalesFunnel();
-    });
-
-    document.querySelectorAll('[data-funnel-lang]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            _salesFunnelLang = btn.dataset.funnelLang;
-            renderSalesFunnel();
-        });
     });
 }
 
@@ -10290,6 +10246,7 @@ document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         syncLeadsLangTabs();
         if (_tabContext.salesSection === 'leads') renderLeads();
         if (_tabContext.salesSection === 'book-roadmap') renderBookRoadmap();
+        if (_tabContext.salesSection === 'sales-stats') renderSalesFunnel();
     });
 });
 
