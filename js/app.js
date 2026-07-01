@@ -362,6 +362,7 @@ function switchSalesSection(section) {
     syncLeadsLangTabs();
     if (section === 'leads') renderLeads();
     if (section === 'book-roadmap') renderBookRoadmap();
+    if (section === 'sales-stats') renderSalesFunnel();
 }
 
 function switchStudentsSection(section) {
@@ -5970,6 +5971,164 @@ function renderMarketing() {
 function renderSales() {
     syncLeadsLangTabs();
     switchSalesSection(_tabContext.salesSection || 'leads');
+}
+
+// ===== Sales Funnel (Voronka) =====
+let _salesFunnelMgr = 'all';
+
+const FUNNEL_STAGES = [
+    { id: 'yangi-lidlar',             label: 'Yangi lidlar',             color: '#3B82F6' },
+    { id: 'boglanishga-urinilmoqda',  label: "Bog'lanishga urinilmoqda", color: '#7C3AED' },
+    { id: 'boglanildi',               label: "Bog'lanildi",              color: '#0891B2' },
+    { id: 'malumot-berildi',          label: "Ma'lumot berildi",         color: '#4F46E5' },
+    { id: 'qaror-jarayonida',         label: 'Qaror jarayonida',         color: '#EA580C' },
+    { id: 'sinov-darsida',            label: 'Sinov darsida',            color: '#16A34A' },
+    { id: 'tolov-jarayonida',         label: "To'lov jarayonida",        color: '#D97706' },
+    { id: 'tolov-yopildi',            label: "To'lov yopildi",           color: '#059669' },
+];
+
+function renderSalesFunnel() {
+    const panel = document.querySelector('[data-sales-panel="sales-stats"]');
+    if (!panel) return;
+
+    const allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const allLeadsList = [...(allLeads.english || []), ...(allLeads.russian || [])];
+
+    const allManagers = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
+        e.role === 'Sotuv menejeri' || e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri'
+    );
+
+    const filteredLeads = _salesFunnelMgr === 'all'
+        ? allLeadsList
+        : allLeadsList.filter(l => l.managerId === _salesFunnelMgr);
+
+    // Count per stage (exact current status)
+    const stageCounts = FUNNEL_STAGES.map(s => ({
+        ...s,
+        count: filteredLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length
+    }));
+
+    // Cumulative from bottom up: stage i = leads at stage i OR any later stage
+    const cum = new Array(FUNNEL_STAGES.length).fill(0);
+    let running = 0;
+    for (let i = stageCounts.length - 1; i >= 0; i--) {
+        running += stageCounts[i].count;
+        cum[i] = running;
+    }
+
+    const maxCum = cum[0] || 1;
+
+    const stagesData = FUNNEL_STAGES.map((s, i) => ({
+        ...s,
+        count: stageCounts[i].count,
+        cumulative: cum[i],
+        widthPct: Math.max(12, Math.round((cum[i] / maxCum) * 100)),
+        convRate: i === 0 ? 100 : (cum[0] > 0 ? Math.round((cum[i] / cum[0]) * 100) : 0),
+        dropPct: i === 0 ? null : (cum[i - 1] > 0 ? Math.round(((cum[i - 1] - cum[i]) / cum[i - 1]) * 100) : 0)
+    }));
+
+    const converted = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi').length;
+    const convRate = filteredLeads.length > 0 ? ((converted / filteredLeads.length) * 100).toFixed(1) : '0.0';
+
+    const mgrOptions = allManagers.map(m =>
+        `<option value="${escapeHtml(m.id)}" ${m.id === _salesFunnelMgr ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
+    ).join('');
+
+    panel.innerHTML = `
+    <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
+        <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">Menejer:</label>
+            <select id="funnelMgrSelect" class="form-control-sm" style="min-width:170px">
+                <option value="all" ${_salesFunnelMgr === 'all' ? 'selected' : ''}>Barcha menejerlar</option>
+                ${mgrOptions}
+            </select>
+        </div>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:24px">
+        <div class="stat-card">
+            <div class="stat-icon blue" style="font-size:20px">🎯</div>
+            <div class="stat-info">
+                <div class="stat-label">Jami lidlar</div>
+                <div class="stat-value">${filteredLeads.length}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green" style="font-size:20px">✅</div>
+            <div class="stat-info">
+                <div class="stat-label">To'lov yopildi</div>
+                <div class="stat-value">${converted}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple" style="font-size:20px">📈</div>
+            <div class="stat-info">
+                <div class="stat-label">Umumiy konversiya</div>
+                <div class="stat-value">${convRate}%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="padding:28px 24px;margin-bottom:16px">
+        <h3 style="font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 24px">Voronka</h3>
+        <div class="sales-funnel">
+            ${stagesData.map((s, i) => `
+            <div class="funnel-row">
+                <div class="funnel-label-left">
+                    <span class="funnel-count">${s.cumulative}</span>
+                    <span class="funnel-name">${escapeHtml(s.label)}</span>
+                </div>
+                <div class="funnel-bar-wrap">
+                    <div class="funnel-bar" style="width:${s.widthPct}%;background:${s.color}20;border:2px solid ${s.color}55">
+                        <span class="funnel-bar-label" style="color:${s.color}">${s.count} ta</span>
+                    </div>
+                </div>
+                <div class="funnel-label-right">
+                    ${i === 0
+                        ? `<span class="funnel-conv" style="color:#3b82f6">Kirish nuqtasi</span>`
+                        : `<span class="funnel-conv" style="color:${(s.dropPct || 0) > 60 ? '#dc2626' : (s.dropPct || 0) > 30 ? '#d97706' : '#16a34a'}">
+                               ↓ ${s.dropPct}% tushdi
+                           </span>`}
+                    <span style="font-size:11px;color:var(--text-muted);margin-left:6px">(${s.convRate}%)</span>
+                </div>
+            </div>`).join('')}
+        </div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+        <table class="sdp-table">
+            <thead>
+                <tr>
+                    <th>Bosqich</th>
+                    <th style="text-align:right">Shu bosqichda</th>
+                    <th style="text-align:right">Kumulyativ</th>
+                    <th style="text-align:right">Konversiya</th>
+                    <th style="text-align:right">Tushish</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${stagesData.map((s, i) => `
+                <tr>
+                    <td>
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
+                        ${escapeHtml(s.label)}
+                    </td>
+                    <td style="text-align:right;font-weight:700">${s.count}</td>
+                    <td style="text-align:right">${s.cumulative}</td>
+                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.convRate}%</td>
+                    <td style="text-align:right;color:${i === 0 ? 'var(--text-muted)' : (s.dropPct || 0) > 50 ? '#dc2626' : '#d97706'}">
+                        ${i === 0 ? '—' : (s.dropPct + '%')}
+                    </td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+    </div>`;
+
+    document.getElementById('funnelMgrSelect')?.addEventListener('change', e => {
+        _salesFunnelMgr = e.target.value;
+        renderSalesFunnel();
+    });
 }
 
 const LEAD_COLUMNS_HIDDEN_BY_DEFAULT = new Set(['muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
