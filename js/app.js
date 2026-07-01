@@ -5987,6 +5987,82 @@ const FUNNEL_STAGES = [
     { id: 'tolov-yopildi',            label: "To'lov yopildi",           color: '#059669' },
 ];
 
+function buildFunnelSVG(stagesData) {
+    const VW = 640;       // viewBox width
+    const cx = 290;       // funnel center x
+    const topW = 520;     // widest part (Yangi lidlar)
+    const botW = 44;      // narrowest part (To'lov yopildi)
+    const segH = 54;      // height per segment
+    const gap = 3;        // gap between segments
+    const n = stagesData.length;
+    const H = n * segH + (n - 1) * gap;
+    const range = topW - botW;
+
+    const segments = stagesData.map((s, i) => {
+        const wTop = topW - range * (i / n);
+        const wBot = topW - range * ((i + 1) / n);
+        const wMid = (wTop + wBot) / 2;
+        const y1 = i * (segH + gap);
+        const y2 = y1 + segH;
+        const midY = y1 + segH / 2;
+
+        const x1L = (cx - wTop / 2).toFixed(1);
+        const x1R = (cx + wTop / 2).toFixed(1);
+        const x2L = (cx - wBot / 2).toFixed(1);
+        const x2R = (cx + wBot / 2).toFixed(1);
+
+        const poly = `<polygon points="${x1L},${y1} ${x1R},${y1} ${x2R},${y2} ${x2L},${y2}" fill="${s.color}" rx="4"/>`;
+
+        // Conversion from previous stage
+        const convPrev = i === 0 ? null
+            : (stagesData[i - 1].cumulative > 0
+                ? Math.round((s.cumulative / stagesData[i - 1].cumulative) * 100)
+                : 0);
+        const convArrow = convPrev !== null
+            ? ` ↓ ${convPrev}%`
+            : '';
+
+        let label = '';
+        const lblName = s.label;
+        const lblStats = `${s.cumulative} ta${convArrow}`;
+
+        if (wMid > 220) {
+            // Wide: name + stats both inside
+            label = `
+            <text x="${cx}" y="${midY - 8}" text-anchor="middle" fill="white" font-size="13" font-weight="700" font-family="Inter,system-ui,sans-serif" paint-order="stroke" stroke="rgba(0,0,0,0.15)" stroke-width="3">${lblName}</text>
+            <text x="${cx}" y="${midY + 10}" text-anchor="middle" fill="rgba(255,255,255,0.92)" font-size="12" font-family="Inter,system-ui,sans-serif">${lblStats}</text>`;
+        } else if (wMid > 120) {
+            // Medium: abbreviated inside, full label outside right
+            const rX = (cx + wTop / 2 + 14).toFixed(1);
+            label = `
+            <text x="${cx}" y="${midY + 4}" text-anchor="middle" fill="white" font-size="12" font-weight="700" font-family="Inter,system-ui,sans-serif">${s.cumulative} ta</text>
+            <line x1="${(cx + wMid / 2 + 2).toFixed(1)}" y1="${midY}" x2="${(cx + wTop / 2 + 10).toFixed(1)}" y2="${midY}" stroke="${s.color}" stroke-width="1.5" opacity="0.7"/>
+            <circle cx="${(cx + wTop / 2 + 10).toFixed(1)}" cy="${midY}" r="2.5" fill="${s.color}"/>
+            <text x="${rX}" y="${midY - 5}" fill="#1e293b" font-size="11" font-weight="700" font-family="Inter,system-ui,sans-serif">${lblName}</text>
+            <text x="${rX}" y="${midY + 9}" fill="#64748b" font-size="10" font-family="Inter,system-ui,sans-serif">${lblStats}</text>`;
+        } else {
+            // Narrow: everything outside right
+            const rX = (cx + wTop / 2 + 14).toFixed(1);
+            label = `
+            <line x1="${(cx + wMid / 2 + 2).toFixed(1)}" y1="${midY}" x2="${(cx + wTop / 2 + 10).toFixed(1)}" y2="${midY}" stroke="${s.color}" stroke-width="1.5" opacity="0.7"/>
+            <circle cx="${(cx + wTop / 2 + 10).toFixed(1)}" cy="${midY}" r="2.5" fill="${s.color}"/>
+            <text x="${rX}" y="${midY - 5}" fill="#1e293b" font-size="11" font-weight="700" font-family="Inter,system-ui,sans-serif">${lblName} · ${s.cumulative} ta</text>
+            <text x="${rX}" y="${midY + 9}" fill="#64748b" font-size="10" font-family="Inter,system-ui,sans-serif">${convArrow ? convPrev + '% o\'tdi' : 'Kirish'}</text>`;
+        }
+
+        return poly + label;
+    }).join('\n');
+
+    return `<svg viewBox="0 0 ${VW} ${H}" width="100%" style="display:block;overflow:visible;max-width:640px;margin:0 auto">
+        <defs>
+            <filter id="fShadow" x="-5%" y="-5%" width="110%" height="110%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.12"/>
+            </filter>
+        </defs>
+        <g filter="url(#fShadow)">${segments}</g>
+    </svg>`;
+}
+
 function renderSalesFunnel() {
     const panel = document.querySelector('[data-sales-panel="sales-stats"]');
     if (!panel) return;
@@ -6002,13 +6078,13 @@ function renderSalesFunnel() {
         ? allLeadsList
         : allLeadsList.filter(l => l.managerId === _salesFunnelMgr);
 
-    // Count per stage (exact current status)
+    // Count per stage (current exact status)
     const stageCounts = FUNNEL_STAGES.map(s => ({
         ...s,
         count: filteredLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length
     }));
 
-    // Cumulative from bottom up: stage i = leads at stage i OR any later stage
+    // Cumulative: stage i = leads at stage i + all later stages
     const cum = new Array(FUNNEL_STAGES.length).fill(0);
     let running = 0;
     for (let i = stageCounts.length - 1; i >= 0; i--) {
@@ -6016,15 +6092,11 @@ function renderSalesFunnel() {
         cum[i] = running;
     }
 
-    const maxCum = cum[0] || 1;
-
     const stagesData = FUNNEL_STAGES.map((s, i) => ({
         ...s,
         count: stageCounts[i].count,
         cumulative: cum[i],
-        widthPct: Math.max(12, Math.round((cum[i] / maxCum) * 100)),
-        convRate: i === 0 ? 100 : (cum[0] > 0 ? Math.round((cum[i] / cum[0]) * 100) : 0),
-        dropPct: i === 0 ? null : (cum[i - 1] > 0 ? Math.round(((cum[i - 1] - cum[i]) / cum[i - 1]) * 100) : 0)
+        convRate: i === 0 ? 100 : (cum[0] > 0 ? Math.round((cum[i] / cum[0]) * 100) : 0)
     }));
 
     const converted = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi').length;
@@ -6070,65 +6142,41 @@ function renderSalesFunnel() {
         </div>
     </div>
 
-    <div class="card" style="padding:28px 24px;margin-bottom:16px">
-        <h3 style="font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 24px">Voronka</h3>
-        <div class="sales-funnel">
-            ${[...stagesData].reverse().map((s, i, arr) => {
-                const isBottom = i === arr.length - 1; // yangi-lidlar
-                const stageBelow = arr[i + 1]; // pastdagi bosqich (kengrog'i)
-                const convUp = stageBelow && stageBelow.cumulative > 0
-                    ? Math.round((s.cumulative / stageBelow.cumulative) * 100) : 0;
-                const convColor = convUp >= 70 ? '#16a34a' : convUp >= 40 ? '#d97706' : '#dc2626';
-                return `
-            <div class="funnel-row">
-                <div class="funnel-label-left">
-                    <span class="funnel-count">${s.cumulative}</span>
-                    <span class="funnel-name">${escapeHtml(s.label)}</span>
-                </div>
-                <div class="funnel-bar-wrap">
-                    <div class="funnel-bar" style="width:${s.widthPct}%;background:${s.color}20;border:2px solid ${s.color}55">
-                        <span class="funnel-bar-label" style="color:${s.color}">${s.count} ta</span>
-                    </div>
-                </div>
-                <div class="funnel-label-right">
-                    ${isBottom
-                        ? `<span class="funnel-conv" style="color:#3b82f6">Kirish nuqtasi</span>`
-                        : `<span class="funnel-conv" style="color:${convColor}">↑ ${convUp}% o'tdi</span>`}
-                    <span style="font-size:11px;color:var(--text-muted);margin-left:6px">(${s.convRate}% jami)</span>
-                </div>
-            </div>`;
-            }).join('')}
-        </div>
+    <div class="card" style="padding:32px 24px 28px;margin-bottom:16px">
+        <h3 style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 28px;text-align:center">Sotuv voronkasi — ${filteredLeads.length} ta lid</h3>
+        ${buildFunnelSVG(stagesData)}
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
         <table class="sdp-table">
             <thead>
                 <tr>
+                    <th>#</th>
                     <th>Bosqich</th>
                     <th style="text-align:right">Shu bosqichda</th>
                     <th style="text-align:right">Kumulyativ</th>
-                    <th style="text-align:right">Konversiya</th>
-                    <th style="text-align:right">Tushish</th>
+                    <th style="text-align:right">Jami konversiya</th>
+                    <th style="text-align:right">Bosqich konversiyasi</th>
                 </tr>
             </thead>
             <tbody>
-                ${[...stagesData].reverse().map((s, i, arr) => {
-                    const isBottom = i === arr.length - 1;
-                    const stageBelow = arr[i + 1];
-                    const convUp = stageBelow && stageBelow.cumulative > 0
-                        ? Math.round((s.cumulative / stageBelow.cumulative) * 100) : 0;
+                ${stagesData.map((s, i) => {
+                    const prevCum = i === 0 ? null : stagesData[i - 1].cumulative;
+                    const stepConv = prevCum
+                        ? Math.round((s.cumulative / prevCum) * 100) : null;
+                    const stepColor = stepConv === null ? '' : stepConv >= 70 ? '#16a34a' : stepConv >= 40 ? '#d97706' : '#dc2626';
                     return `
                 <tr>
+                    <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
                     <td>
                         <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
-                        ${escapeHtml(s.label)}
+                        <strong>${escapeHtml(s.label)}</strong>
                     </td>
                     <td style="text-align:right;font-weight:700">${s.count}</td>
                     <td style="text-align:right">${s.cumulative}</td>
                     <td style="text-align:right;font-weight:600;color:${s.color}">${s.convRate}%</td>
-                    <td style="text-align:right;color:${isBottom ? 'var(--text-muted)' : convUp >= 70 ? '#16a34a' : '#d97706'}">
-                        ${isBottom ? '—' : convUp + '%'}
+                    <td style="text-align:right;font-weight:600;color:${stepColor}">
+                        ${stepConv === null ? '<span style="color:var(--text-muted)">Kirish</span>' : stepConv + '%'}
                     </td>
                 </tr>`;
                 }).join('')}
