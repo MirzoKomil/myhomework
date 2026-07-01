@@ -4086,6 +4086,10 @@ function renderStudents() {
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Tahrirlash
                 </button>
+                <button type="button" class="student-dropdown-item" data-platform-student="${escapeHtml(sid)}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    Platformaga qo'shish
+                </button>
                 <button type="button" class="student-dropdown-item student-dropdown-item--danger" data-del-student="${escapeHtml(sid)}">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     O'chirish
@@ -4095,6 +4099,10 @@ function renderStudents() {
             menu.querySelector('[data-edit-student]')?.addEventListener('click', () => {
                 menu.remove();
                 openEditStudentModal(sid);
+            });
+            menu.querySelector('[data-platform-student]')?.addEventListener('click', () => {
+                menu.remove();
+                openAddToPlatformModal(sid);
             });
             menu.querySelector('[data-del-student]')?.addEventListener('click', () => {
                 menu.remove();
@@ -4158,6 +4166,63 @@ function closeStudentDetail() {
     const panel = document.getElementById('studentDetailPanel');
     panel?.classList.remove('sdp-open');
     setTimeout(() => { if (panel) panel.style.display = 'none'; }, 250);
+}
+
+function openAddToPlatformModal(sid) {
+    const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === sid);
+    if (!student) return;
+
+    const mc = getItem(STORAGE_KEYS.mobileContent, {});
+    const courses = mc.courses || [];
+
+    if (courses.length === 0) {
+        openModal(
+            "Platformaga qo'shish",
+            `<div style="text-align:center;padding:24px 0">
+                <div style="font-size:36px;margin-bottom:10px">📚</div>
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px">Kurslar mavjud emas</div>
+                <div style="font-size:13px;color:var(--text-muted)">Avval "Mobil ilova" bo'limida kurs yarating</div>
+            </div>`,
+            `<button class="btn-secondary" onclick="closeModal()">Yopish</button>`
+        );
+        return;
+    }
+
+    const currentCourseId = student.platformCourseId || '';
+    const currentCourse = courses.find(c => c.id === currentCourseId);
+    const currentLabel = currentCourse
+        ? `<div style="margin-bottom:14px;padding:10px 14px;background:var(--bg);border-radius:8px;font-size:13px;border:1px solid var(--border)">
+               <span style="color:var(--text-muted)">Hozirgi kurs:</span>
+               <strong style="margin-left:4px">${escapeHtml(currentCourse.name)}</strong>
+           </div>` : '';
+
+    const coursesOptions = courses.map(c =>
+        `<option value="${escapeHtml(c.id)}" ${c.id === currentCourseId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+    ).join('');
+
+    openModal(
+        "Platformaga qo'shish",
+        `<div>
+            <div style="margin-bottom:14px;font-size:13px;color:var(--text-muted)">
+                O'quvchi: <strong style="color:var(--text)">${escapeHtml(student.name || '—')}</strong>
+            </div>
+            ${currentLabel}
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px">Kursni tanlang</label>
+            <select id="platformCourseSelect" class="form-control">
+                <option value="">— Kurs tanlanmagan —</option>
+                ${coursesOptions}
+            </select>
+        </div>`,
+        `<button class="btn-secondary" onclick="closeModal()">Bekor qilish</button>
+         <button class="btn-primary" id="confirmAddToPlatform">Saqlash</button>`
+    );
+
+    document.getElementById('confirmAddToPlatform').onclick = () => {
+        const selected = document.getElementById('platformCourseSelect').value || null;
+        updateStudent(sid, { platformCourseId: selected });
+        closeModal();
+        if (_sdpCurrentId === sid) renderSdpTab('platform', sid);
+    };
 }
 
 function renderSdpHeader(studentId) {
@@ -4372,6 +4437,37 @@ function renderSdpAttendance(s) {
 }
 
 function renderSdpPlatform(s) {
+    const mc = getItem(STORAGE_KEYS.mobileContent, {});
+    const courses = mc.courses || [];
+    const assignedCourse = courses.find(c => c.id === s.platformCourseId);
+    const lessonCount = assignedCourse
+        ? (mc.lessons || []).filter(l => l.courseId === assignedCourse.id).length
+        : 0;
+
+    const courseSection = assignedCourse
+        ? `<div class="sdp-section">
+               <p class="sdp-section-title">Ulangan kurs</p>
+               <div class="sdp-info-item" style="display:flex;align-items:center;gap:14px;padding:16px 18px">
+                   <span style="font-size:32px">📚</span>
+                   <div style="flex:1;min-width:0">
+                       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px">${escapeHtml(assignedCourse.name)}</div>
+                       <div style="font-size:12px;color:var(--text-muted)">${lessonCount} ta dars</div>
+                   </div>
+                   <button type="button" class="btn-secondary-sm" onclick="openAddToPlatformModal('${escapeHtml(s.id)}')">Kursni o'zgartirish</button>
+               </div>
+           </div>`
+        : `<div class="sdp-section">
+               <p class="sdp-section-title">Ulangan kurs</p>
+               <div style="display:flex;align-items:center;gap:14px;padding:18px;background:var(--bg);border-radius:10px;border:1.5px dashed var(--border)">
+                   <span style="font-size:28px">📚</span>
+                   <div style="flex:1">
+                       <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">Kurs ulanmagan</div>
+                       <div style="font-size:12px;color:var(--text-muted)">O'quvchiga kurs biriktiring</div>
+                   </div>
+                   <button type="button" class="btn-primary-sm" onclick="openAddToPlatformModal('${escapeHtml(s.id)}')">+ Kurs ulash</button>
+               </div>
+           </div>`;
+
     const stats = s.mobileStats || {};
     const pct = stats.progress || 0;
 
@@ -4406,6 +4502,7 @@ function renderSdpPlatform(s) {
         : `<div class="sdp-empty" style="padding:16px">Sessiya ma'lumotlari mavjud emas.<br><small style="color:var(--text-muted)">Mobil ilova integratsiyasi ulangach avtomatik to'ldiriladi.</small></div>`;
 
     return `
+    ${courseSection}
     <div class="sdp-section">
         <p class="sdp-section-title">So'nggi faollik</p>
         <div class="sdp-info-grid" style="grid-template-columns:1fr 1fr 1fr">
