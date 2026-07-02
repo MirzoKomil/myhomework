@@ -203,6 +203,11 @@ async function initSchema() {
             singleton INTEGER PRIMARY KEY DEFAULT 1,
             data JSONB NOT NULL DEFAULT '{"videos":[],"documents":[],"courses":[],"lessons":[]}'
         );
+
+        CREATE TABLE IF NOT EXISTS json_data (
+            key TEXT PRIMARY KEY,
+            data JSONB NOT NULL DEFAULT '[]'
+        );
     `);
 
     await pool.query(`
@@ -226,6 +231,10 @@ async function initSchema() {
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS pinfl TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS address TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
+
+    // Migration: leads va students jadvallariga extra_data qo'shish
+    await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
 
     // Boshlang'ich mobile_content qatori
     await pool.query(
@@ -302,7 +311,14 @@ function rowToTeacher(r) {
 }
 
 function rowToStudent(r) {
+    let extra = {};
+    try {
+        if (r.extra_data) {
+            extra = typeof r.extra_data === 'object' ? r.extra_data : JSON.parse(r.extra_data);
+        }
+    } catch {}
     return {
+        ...extra,
         id: r.id, name: r.name, phone: r.phone || '', group: r.group_name || '',
         subject: r.subject, teacherId: r.teacher_id || null,
         assistantTeacherId: r.assistant_teacher_id || null,
@@ -326,7 +342,14 @@ function parseJsonArray(val) {
 
 function rowToLead(r) {
     const attachments = parseJsonArray(r.attachments);
+    let extra = {};
+    try {
+        if (r.extra_data) {
+            extra = typeof r.extra_data === 'object' ? r.extra_data : JSON.parse(r.extra_data);
+        }
+    } catch {}
     return {
+        ...extra,
         id: r.id, name: r.name, phone: r.phone || '', phone2: r.phone2 || '',
         email: r.email || '', managerId: r.manager_id || '',
         source: r.source || 'Organik', date: r.date || '',
@@ -436,7 +459,8 @@ async function saveMobileContentData(client, data) {
 
 async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
-        mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent] = await Promise.all([
+        mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
+        scripts, bonusHistory, bonusData] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -449,7 +473,10 @@ async function getFullState() {
         getLeads(),
         getHrEmployeesData(),
         getBookRoadmap(),
-        getMobileContentData()
+        getMobileContentData(),
+        getJsonData('scripts'),
+        getJsonData('bonusHistory'),
+        getJsonData('bonusData'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -466,7 +493,8 @@ async function getFullState() {
         mainAttendance: mainAtt,
         assistantAttendance: assistAtt,
         payments: paymentRows.map(rowToPayment),
-        leads, hrEmployees, bookRoadmap, mobileContent
+        leads, hrEmployees, bookRoadmap, mobileContent,
+        scripts, bonusHistory, bonusData
     };
 }
 
@@ -485,12 +513,16 @@ async function saveTeachers(client, teachers) {
 async function saveStudents(client, students) {
     await client.query('DELETE FROM students');
     for (const s of students) {
+        const { id, name, phone, group, subject, teacherId, assistantTeacherId,
+                lessonDayOfWeek, lessonTime, lessonDuration, ...extra } = s;
         await client.query(
-            'INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-            [s.id, s.name, s.phone || '', s.group || '', s.subject || 'english',
+            `INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration, extra_data)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+            [s.id, s.name || '', s.phone || '', s.group || '', s.subject || 'english',
              s.teacherId || null, s.assistantTeacherId || null,
              s.lessonDayOfWeek != null ? s.lessonDayOfWeek : null,
-             s.lessonTime || '', s.lessonDuration || 15]
+             s.lessonTime || '', s.lessonDuration || 15,
+             JSON.stringify(extra)]
         );
     }
 }
@@ -545,13 +577,19 @@ async function saveLeads(client, leads) {
     for (const lang of ['english', 'russian']) {
         for (const l of (leads[lang] || [])) {
             const photo = l.managerPhoto || (l.attachments && l.attachments[0]) || null;
-            const attachments = photo ? [photo] : [];
+            const attachmentsArr = photo ? [photo] : [];
+            const { id, name, phone, phone2, email, managerId, source, date,
+                    externalId, status, leadType, comments, managerPhoto,
+                    attachments, createdAt, ...extra } = l;
             await client.query(
-                'INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type, comments, attachments) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
-                [l.id, l.name, l.phone || '', l.phone2 || '', l.email || '', l.managerId || '',
-                 l.source || 'Organik', lang, l.date || '', l.externalId || null,
-                 l.status || 'yangi-lidlar', l.leadType === 'target' ? 'target' : 'organic',
-                 JSON.stringify(l.comments || []), JSON.stringify(attachments)]
+                `INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type, comments, attachments, extra_data)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+                [l.id, l.name || '', l.phone || '', l.phone2 || '', l.email || '',
+                 l.managerId || '', l.source || 'Organik', lang, l.date || '',
+                 l.externalId || null, l.status || 'yangi-lidlar',
+                 l.leadType === 'target' ? 'target' : 'organic',
+                 JSON.stringify(l.comments || []), JSON.stringify(attachmentsArr),
+                 JSON.stringify(extra)]
             );
         }
     }
@@ -576,6 +614,19 @@ async function saveHrEmployeesData(client, employees) {
     }
 }
 
+async function getJsonData(key) {
+    const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
+    if (!row) return key === 'bonusData' ? {} : [];
+    return row.data;
+}
+
+async function saveJsonData(client, key, data) {
+    await client.query(
+        `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
+        [key, JSON.stringify(data)]
+    );
+}
+
 async function patchState(partial) {
     await tx(async (client) => {
         if (partial.teachers)           await saveTeachers(client, partial.teachers);
@@ -589,6 +640,9 @@ async function patchState(partial) {
         if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees);
         if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap);
         if (partial.mobileContent)      await saveMobileContentData(client, partial.mobileContent);
+        if (partial.scripts !== undefined)     await saveJsonData(client, 'scripts', partial.scripts);
+        if (partial.bonusHistory !== undefined) await saveJsonData(client, 'bonusHistory', partial.bonusHistory);
+        if (partial.bonusData !== undefined)   await saveJsonData(client, 'bonusData', partial.bonusData);
     });
 }
 
@@ -758,7 +812,7 @@ module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, insertLead, patchState,
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
-    getHrEmployeesData,
+    getHrEmployeesData, getMobileContentData,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init
