@@ -11996,6 +11996,12 @@ function renderRating() {
         };
     });
 
+    const addBonusBtn = panel.querySelector('#ratingAddBonusBtn');
+    if (addBonusBtn) {
+        addBonusBtn.style.display = _ratingSection === 'bonus-history' ? '' : 'none';
+        addBonusBtn.onclick = openAddBonusHistoryModal;
+    }
+
     const sections = { leaderboard: 'ratingLeaderboard', bonuslar: 'ratingBonusList', 'bonus-history': 'ratingBonusHistory' };
     Object.entries(sections).forEach(([key, id]) => {
         const el = document.getElementById(id);
@@ -12238,10 +12244,10 @@ function renderBonusHistorySection() {
         if (!h.date) return true;
         const d = new Date(h.date);
         const now = new Date();
-        if (_bonusHistoryPeriod === 'kunlik') {
+        if (_ratingPeriod === 'kunlik') {
             return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
         }
-        if (_bonusHistoryPeriod === 'haftalik') {
+        if (_ratingPeriod === 'haftalik') {
             const ws = new Date(now);
             ws.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
             ws.setHours(0, 0, 0, 0);
@@ -12262,16 +12268,8 @@ function renderBonusHistorySection() {
     ];
 
     el.innerHTML = `
-    <div class="page-title-bar" style="flex-wrap:wrap;gap:10px">
+    <div class="page-title-bar">
         <div><h1>Bonus olganlar</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Kim qaysi bonusni oldi</p></div>
-        <div style="display:flex;align-items:center;gap:8px">
-            <div class="sales-header-lang" style="margin:0">
-                <button class="lang-btn${_bonusHistoryPeriod === 'kunlik' ? ' active' : ''}" data-bh-period="kunlik">Kunlik</button>
-                <button class="lang-btn${_bonusHistoryPeriod === 'haftalik' ? ' active' : ''}" data-bh-period="haftalik">Haftalik</button>
-                <button class="lang-btn${_bonusHistoryPeriod === 'oylik' ? ' active' : ''}" data-bh-period="oylik">Oylik</button>
-            </div>
-            <button class="btn btn-primary" id="addBonusHistoryBtn">+ Bonus belgilash</button>
-        </div>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
@@ -12309,10 +12307,6 @@ function renderBonusHistorySection() {
         </div>`}
     </div>`;
 
-    el.querySelectorAll('[data-bh-period]').forEach(btn => {
-        btn.onclick = () => { _bonusHistoryPeriod = btn.dataset.bhPeriod; renderBonusHistorySection(); };
-    });
-
     el.querySelectorAll('[data-delete-bh]').forEach(btn => {
         btn.onclick = () => {
             const id = btn.dataset.deleteBh;
@@ -12323,60 +12317,63 @@ function renderBonusHistorySection() {
         };
     });
 
-    const addBtn = el.querySelector('#addBonusHistoryBtn');
-    if (addBtn) {
-        addBtn.onclick = () => {
-            const today = new Date().toISOString().slice(0, 10);
-            const bonusOpts = [
-                '<optgroup label="Kunlik">',
-                ...DAILY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
-                '</optgroup><optgroup label="Haftalik">',
-                ...WEEKLY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
-                '</optgroup><optgroup label="Oylik">',
-                ...MONTHLY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
-                '</optgroup><optgroup label="O\'rinli">',
-                ...RANK_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.prize} (${b.label})</option>`),
-                '</optgroup>',
-            ].join('');
+}
 
-            openModal("Bonus belgilash", `
-                <div style="display:flex;flex-direction:column;gap:14px">
-                    <div>
-                        <label class="form-label">Menejer *</label>
-                        <select id="bhMgr" class="form-control">${mgrOptions}</select>
-                    </div>
-                    <div>
-                        <label class="form-label">Bonus *</label>
-                        <select id="bhBonus" class="form-control">${bonusOpts}</select>
-                    </div>
-                    <div>
-                        <label class="form-label">Sana</label>
-                        <input id="bhDate" type="date" class="form-control" value="${today}">
-                    </div>
-                    <div>
-                        <label class="form-label">Izoh (ixtiyoriy)</label>
-                        <input id="bhNote" class="form-control" placeholder="Qo'shimcha ma'lumot...">
-                    </div>
-                </div>`,
-                `<button class="btn btn-secondary" id="bhCancel">Bekor</button>
-                 <button class="btn btn-primary" id="bhSave">Saqlash</button>`
-            );
+function openAddBonusHistoryModal() {
+    const managers = getSalesManagers();
+    const mgrOptions = managers.map(m =>
+        `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
+    ).join('');
 
-            document.getElementById('bhCancel').onclick = closeModal;
-            document.getElementById('bhSave').onclick = () => {
-                const managerId = document.getElementById('bhMgr')?.value;
-                const bonusId = document.getElementById('bhBonus')?.value;
-                const date = document.getElementById('bhDate')?.value || today;
-                const note = document.getElementById('bhNote')?.value || '';
-                if (!managerId || !bonusId) { alert('Menejer va bonusni tanlang'); return; }
-                const hist = getItem(STORAGE_KEYS.bonusHistory, []);
-                hist.unshift({ id: 'bh_' + Date.now(), managerId, bonusId, date, note });
-                setItem(STORAGE_KEYS.bonusHistory, hist);
-                closeModal();
-                renderBonusHistorySection();
-            };
-        };
-    }
+    const today = new Date().toISOString().slice(0, 10);
+    const bonusOpts = [
+        '<optgroup label="Kunlik">',
+        ...DAILY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
+        '</optgroup><optgroup label="Haftalik">',
+        ...WEEKLY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
+        '</optgroup><optgroup label="Oylik">',
+        ...MONTHLY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
+        '</optgroup><optgroup label="O\'rinli">',
+        ...RANK_BONUSES.map(b => `<option value="${b.id}">${b.icon || ''} ${b.prize || b.label}</option>`),
+        '</optgroup>',
+    ].join('');
+
+    openModal('Bonus belgilash', `
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+                <label class="form-label">Menejer *</label>
+                <select id="bhMgr" class="form-control">${mgrOptions}</select>
+            </div>
+            <div>
+                <label class="form-label">Bonus *</label>
+                <select id="bhBonus" class="form-control">${bonusOpts}</select>
+            </div>
+            <div>
+                <label class="form-label">Sana</label>
+                <input id="bhDate" type="date" class="form-control" value="${today}">
+            </div>
+            <div>
+                <label class="form-label">Izoh (ixtiyoriy)</label>
+                <input id="bhNote" class="form-control" placeholder="Qo'shimcha ma'lumot...">
+            </div>
+        </div>`,
+        `<button class="btn btn-secondary" id="bhCancel">Bekor</button>
+         <button class="btn btn-primary" id="bhSave">Saqlash</button>`
+    );
+
+    document.getElementById('bhCancel').onclick = closeModal;
+    document.getElementById('bhSave').onclick = () => {
+        const managerId = document.getElementById('bhMgr')?.value;
+        const bonusId = document.getElementById('bhBonus')?.value;
+        const date = document.getElementById('bhDate')?.value || today;
+        const note = document.getElementById('bhNote')?.value || '';
+        if (!managerId || !bonusId) { alert('Menejer va bonusni tanlang'); return; }
+        const hist = getItem(STORAGE_KEYS.bonusHistory, []);
+        hist.unshift({ id: 'bh_' + Date.now(), managerId, bonusId, date, note });
+        setItem(STORAGE_KEYS.bonusHistory, hist);
+        closeModal();
+        renderBonusHistorySection();
+    };
 }
 
 bootApp();
