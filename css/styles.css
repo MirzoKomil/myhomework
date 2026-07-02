@@ -7331,44 +7331,74 @@ body.modal-open {
     margin-bottom: 8px;
 }
 
-/* Bonus card with shimmer */
+/* Bonus card with shimmer & 3D tilt */
 .bonus-card {
-    border-radius: 16px;
+    border-radius: 18px;
     padding: 22px 18px 18px;
-    background: linear-gradient(135deg, var(--bc, #6366f1) 0%, color-mix(in srgb, var(--bc, #6366f1) 60%, #000) 100%);
+    background: linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--bc, #6366f1) 80%, #fff) 0%,
+        var(--bc, #6366f1) 40%,
+        color-mix(in srgb, var(--bc, #6366f1) 55%, #000) 100%
+    );
     position: relative;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-height: 140px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.1);
-    cursor: default;
+    min-height: 148px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.18);
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,.14);
+    will-change: transform;
+    user-select: none;
 }
 .bonus-card-shine {
     position: absolute;
     inset: 0;
     background: linear-gradient(
-        105deg,
-        transparent 20%,
-        rgba(255,255,255,.35) 40%,
-        rgba(255,255,255,.6) 50%,
-        rgba(255,255,255,.35) 60%,
+        115deg,
+        transparent 15%,
+        rgba(255,255,255,.12) 30%,
+        rgba(255,255,255,.55) 48%,
+        rgba(255,255,255,.12) 66%,
         transparent 80%
     );
-    background-size: 200% 100%;
-    animation: bonusShimmer 3s ease-in-out infinite;
+    background-size: 220% 100%;
+    animation: bonusShimmer 3.5s ease-in-out infinite;
     pointer-events: none;
+    border-radius: inherit;
 }
 @keyframes bonusShimmer {
-    0%   { background-position: 200% 0; }
-    50%  { background-position: -100% 0; }
-    100% { background-position: 200% 0; }
+    0%   { background-position: 220% 0; }
+    50%  { background-position: -120% 0; }
+    100% { background-position: 220% 0; }
 }
-.bonus-card-icon { font-size: 28px; }
-.bonus-card-label { font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.2); }
-.bonus-card-prize { font-size: 22px; font-weight: 900; color: #fff; }
-.bonus-card-cond  { font-size: 11px; color: rgba(255,255,255,.78); line-height: 1.5; margin-top: auto; }
+.bonus-card-edit-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 8px;
+    padding: 5px 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    backdrop-filter: blur(6px);
+    transition: background .15s, border-color .15s;
+    z-index: 3;
+}
+.bonus-card-edit-btn:hover { background: rgba(255,255,255,.38); border-color: rgba(255,255,255,.5); }
+.bonus-card-icon { font-size: 30px; line-height: 1; }
+.bonus-card-label { font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.22); }
+.bonus-card-prize { font-size: 23px; font-weight: 900; color: #fff; letter-spacing: -.3px; }
+.bonus-card-cond  { font-size: 11px; color: rgba(255,255,255,.76); line-height: 1.5; margin-top: auto; }
+.bd-row { display: flex; gap: 10px; align-items: flex-start; }
+.bd-key { font-size: 12px; font-weight: 700; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; min-width: 120px; }
+.bd-val { font-size: 13px; color: var(--text); line-height: 1.5; }
 
 @media(max-width:900px) { .rating-podium { grid-template-columns: 1fr; } }
 @media(max-width:600px) { .bonus-cards-grid { grid-template-columns: repeat(2,1fr); } }

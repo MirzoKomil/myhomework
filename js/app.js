@@ -12208,45 +12208,94 @@ function renderLeaderboardSection() {
     if (viewMarralar) viewMarralar.onclick = () => { _ratingView = 'marralar'; renderLeaderboardSection(); };
 }
 
+function _allBonusList() {
+    return [
+        ...DAILY_BONUSES.map(b => ({ ...b, category: 'kunlik' })),
+        ...WEEKLY_BONUSES.map(b => ({ ...b, category: 'haftalik' })),
+        ...MONTHLY_BONUSES.map(b => ({ ...b, category: 'oylik' })),
+        ...RANK_BONUSES.map(b => ({ ...b, category: 'orinli' })),
+    ];
+}
+
+function getMergedBonus(base) {
+    const stored = getItem(STORAGE_KEYS.bonusData, {});
+    const ov = stored[base.id] || {};
+    return { ...base, ...ov };
+}
+
+function _buildBonusCard(base, isAdmin) {
+    const b = getMergedBonus(base);
+    const editBtn = isAdmin ? `
+        <button class="bonus-card-edit-btn" data-bonus-edit="${escapeHtml(base.id)}" title="Tahrirlash">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>` : '';
+    const prizeLine = b.prize ? `<div class="bonus-card-prize">${escapeHtml(b.prize)}</div>` : '';
+    return `
+    <div class="bonus-card bonus-card--shimmer bonus-card--3d" style="--bc:${escapeHtml(b.color || '#6366f1')}" data-bonus-id="${escapeHtml(base.id)}">
+        <div class="bonus-card-shine"></div>
+        ${editBtn}
+        <div class="bonus-card-icon">${escapeHtml(b.icon || '🎁')}</div>
+        <div class="bonus-card-label">${escapeHtml(b.label || '')}</div>
+        ${prizeLine}
+        <div class="bonus-card-cond">${escapeHtml(b.desc || '')}</div>
+    </div>`;
+}
+
+function _attach3DTilt(container) {
+    container.querySelectorAll('.bonus-card--3d').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transition = 'transform .08s linear, box-shadow .08s linear';
+        });
+        card.addEventListener('mousemove', e => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+            const rotY = ((x - cx) / cx) * 14;
+            const rotX = -((y - cy) / cy) * 10;
+            card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(8px) scale(1.03)`;
+            card.style.boxShadow = `${-rotY * 0.7}px ${rotX * 0.7 + 14}px 40px rgba(0,0,0,.38), 0 2px 8px rgba(0,0,0,.15)`;
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transition = 'transform .55s cubic-bezier(.23,1,.32,1), box-shadow .55s cubic-bezier(.23,1,.32,1)';
+            card.style.transform = '';
+            card.style.boxShadow = '';
+        });
+        card.addEventListener('click', e => {
+            if (e.target.closest('.bonus-card-edit-btn')) return;
+            const bonusId = card.dataset.bonusId;
+            const base = _allBonusList().find(b => b.id === bonusId);
+            if (base) openBonusDetail(base);
+        });
+        const editBtn = card.querySelector('.bonus-card-edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const bonusId = card.dataset.bonusId;
+                const base = _allBonusList().find(b => b.id === bonusId);
+                if (base) openBonusEditModal(base);
+            });
+        }
+    });
+}
+
 function renderBonusListSection() {
     const el = document.getElementById('ratingBonusList');
     if (!el) return;
 
-    const rankBonusCards = RANK_BONUSES.map(b => `
-        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
-            <div class="bonus-card-shine"></div>
-            <div class="bonus-card-icon">${b.icon}</div>
-            <div class="bonus-card-label">${b.label}</div>
-            <div class="bonus-card-prize">${b.prize}</div>
-            <div class="bonus-card-cond">Oylik rejaning ${b.pct}%+ bajargan bo'lishi kerak<br>${fmtMoney(b.threshold)} dan yuqori</div>
-        </div>`).join('');
+    const isAdmin = getCurrentUser()?.role === 'admin';
 
-    const dailyCards = DAILY_BONUSES.map(b => `
-        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
-            <div class="bonus-card-shine"></div>
-            <div class="bonus-card-icon">${b.icon}</div>
-            <div class="bonus-card-label">${b.label}</div>
-            <div class="bonus-card-cond">${b.desc}</div>
-        </div>`).join('');
-
-    const weeklyCards = WEEKLY_BONUSES.map(b => `
-        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
-            <div class="bonus-card-shine"></div>
-            <div class="bonus-card-icon">${b.icon}</div>
-            <div class="bonus-card-label">${b.label}</div>
-            <div class="bonus-card-cond">${b.desc}</div>
-        </div>`).join('');
-
-    const monthlyCards = MONTHLY_BONUSES.map(b => `
-        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
-            <div class="bonus-card-shine"></div>
-            <div class="bonus-card-icon">${b.icon}</div>
-            <div class="bonus-card-label">${b.label}</div>
-            <div class="bonus-card-cond">${b.desc}</div>
-        </div>`).join('');
+    const dailyCards   = DAILY_BONUSES.map(b => _buildBonusCard(b, isAdmin)).join('');
+    const weeklyCards  = WEEKLY_BONUSES.map(b => _buildBonusCard(b, isAdmin)).join('');
+    const monthlyCards = MONTHLY_BONUSES.map(b => _buildBonusCard(b, isAdmin)).join('');
+    const rankCards    = RANK_BONUSES.map(b => {
+        const merged = getMergedBonus(b);
+        return _buildBonusCard({ ...b, desc: merged.desc || `Oylik rejaning ${b.pct}%+ · ${fmtMoney(b.threshold)} dan yuqori` }, isAdmin);
+    }).join('');
 
     el.innerHTML = `
-    <div class="page-title-bar"><div><h1>Bonuslar ro'yxati</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Barcha mavjud mukofotlar</p></div></div>
+    <div class="page-title-bar"><div><h1>Bonuslar ro'yxati</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Barcha mavjud mukofotlar · kartani bosib batafsil ko'ring</p></div></div>
 
     <h2 style="font-size:15px;font-weight:800;margin:0 0 12px;color:var(--text)">🏅 Hamma erishishi mumkin bo'lgan mukofotlar</h2>
 
@@ -12265,7 +12314,138 @@ function renderBonusListSection() {
 
     <h2 style="font-size:15px;font-weight:800;margin:0 0 12px;color:var(--text)">🏆 O'rinli mukofotlar</h2>
     <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px">Oylik reja kamida 110% bajarilganda va o'sha oyning eng yuqori sotuvchisi bo'linganda beriladi</p>
-    <div class="bonus-cards-grid">${rankBonusCards}</div>`;
+    <div class="bonus-cards-grid">${rankCards}</div>`;
+
+    _attach3DTilt(el);
+}
+
+function openBonusDetail(base) {
+    const b = getMergedBonus(base);
+    const catLabel = { kunlik: 'Kunlik', haftalik: 'Haftalik', oylik: 'Oylik', orinli: "O'rinli" }[b.category] || '';
+
+    let condRows = '';
+    if (Number.isFinite(b.threshold)) {
+        condRows += `<div class="bd-row"><span class="bd-key">Sotuv chegarasi:</span><span class="bd-val">${fmtMoney(b.threshold)} dan yuqori</span></div>`;
+    }
+    if (b.rank) {
+        condRows += `<div class="bd-row"><span class="bd-key">Shart:</span><span class="bd-val">Haftalik reyting — ${b.rank}-o'rin</span></div>`;
+    }
+    if (b.pct) {
+        condRows += `<div class="bd-row"><span class="bd-key">Reja foizi:</span><span class="bd-val">Kamida ${b.pct}%</span></div>`;
+    }
+    const whenMap = {
+        kunlik: "Har kunlik sotuv natijasiga qarab beriladi",
+        haftalik: "Haftalik reyting yakunida e'lon qilinadi",
+        oylik: "Oy oxiridagi jami sotuv asosida beriladi",
+        orinli: "Oy yakunida top 3 ta sotuvchi o'rtasida"
+    };
+    const whenRow = whenMap[b.category] ? `<div class="bd-row"><span class="bd-key">Qachon:</span><span class="bd-val">${whenMap[b.category]}</span></div>` : '';
+
+    const imageHtml = b.image ? `<div style="text-align:center;margin-bottom:20px"><img src="${escapeHtml(b.image)}" style="max-width:100%;border-radius:12px;max-height:220px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,.15)"></div>` : '';
+
+    const extraHtml = b.extraInfo ? `
+        <div style="margin-top:16px;padding:14px 16px;background:var(--bg-secondary,#f8f9fa);border-radius:12px;border-left:3px solid ${escapeHtml(b.color || '#6366f1')}">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px">Admin izohi</div>
+            <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text)">${escapeHtml(b.extraInfo)}</div>
+        </div>` : '';
+
+    const headerGrad = `linear-gradient(135deg, ${escapeHtml(b.color || '#6366f1')} 0%, color-mix(in srgb, ${escapeHtml(b.color || '#6366f1')} 55%, #000) 100%)`;
+
+    openModal('', `
+    <div style="background:${headerGrad};border-radius:14px;padding:28px 24px 24px;margin:-20px -20px 20px;text-align:center;color:#fff">
+        <div style="font-size:56px;line-height:1;margin-bottom:10px">${escapeHtml(b.icon || '🎁')}</div>
+        <div style="font-size:21px;font-weight:800;margin:0 0 4px">${escapeHtml(b.label || '')}</div>
+        ${b.prize ? `<div style="font-size:28px;font-weight:900;letter-spacing:-.5px;margin:6px 0">${escapeHtml(b.prize)}</div>` : ''}
+        <div style="font-size:12px;opacity:.75;margin-top:4px;text-transform:uppercase;letter-spacing:.06em">${catLabel} bonus</div>
+    </div>
+    ${imageHtml}
+    <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="bd-row"><span class="bd-key">Tavsif:</span><span class="bd-val">${escapeHtml(b.desc || '')}</span></div>
+        ${condRows}
+        ${whenRow}
+        ${extraHtml}
+    </div>`,
+    `<button class="btn-primary-sm" id="bdClose">Yopish</button>`);
+    document.getElementById('bdClose').onclick = closeModal;
+}
+
+function openBonusEditModal(base) {
+    const b = getMergedBonus(base);
+    const hasImg = !!b.image;
+
+    openModal(`Bonusni tahrirlash — ${escapeHtml(b.label || '')}`, `
+    <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:12px;align-items:flex-end">
+            <div style="flex:0 0 80px">
+                <label class="form-label">Ikonka (emoji)</label>
+                <input id="beIcon" class="form-control" style="font-size:22px;text-align:center;padding:8px" value="${escapeHtml(b.icon || '')}">
+            </div>
+            <div style="flex:1">
+                <label class="form-label">Nomi *</label>
+                <input id="beLabel" class="form-control" value="${escapeHtml(b.label || '')}">
+            </div>
+        </div>
+        <div>
+            <label class="form-label">Qisqa tavsif (kartada ko'rinadi)</label>
+            <input id="beDesc" class="form-control" value="${escapeHtml(b.desc || '')}">
+        </div>
+        <div>
+            <label class="form-label">Batafsil ma'lumot / Admin izohi</label>
+            <textarea id="beExtra" class="form-control" rows="4" style="resize:vertical;min-height:80px">${escapeHtml(b.extraInfo || '')}</textarea>
+        </div>
+        <div>
+            <label class="form-label">Rasm (detail modalda ko'rinadi)</label>
+            <input id="beImageFile" type="file" accept="image/*" class="form-control" style="padding:6px">
+            ${hasImg ? `<div style="margin-top:8px;display:flex;align-items:center;gap:10px"><img src="${escapeHtml(b.image)}" style="height:52px;border-radius:8px;object-fit:cover"><button type="button" class="btn-ghost" style="font-size:12px;padding:4px 10px" id="beRemoveImg">Rasmni o'chirish</button></div>` : ''}
+            <div id="beImgPreview"></div>
+        </div>
+    </div>`,
+    `<button class="btn-ghost" id="beCancel">Bekor qilish</button>
+     <button class="btn-primary-sm" id="beSave">Saqlash</button>`);
+
+    document.getElementById('beRemoveImg')?.addEventListener('click', () => {
+        const stored = getItem(STORAGE_KEYS.bonusData, {});
+        stored[base.id] = { ...(stored[base.id] || {}), image: null };
+        setItem(STORAGE_KEYS.bonusData, stored);
+        openBonusEditModal(base);
+    });
+
+    document.getElementById('beImageFile')?.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const prev = document.getElementById('beImgPreview');
+            if (prev) prev.innerHTML = `<img src="${escapeHtml(ev.target.result)}" style="max-width:100%;max-height:110px;border-radius:8px;margin-top:8px;object-fit:contain">`;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('beCancel').onclick = closeModal;
+    document.getElementById('beSave').onclick = () => {
+        const icon = document.getElementById('beIcon')?.value.trim() || base.icon;
+        const label = document.getElementById('beLabel')?.value.trim();
+        if (!label) { alert('Nom kiritilishi shart'); return; }
+        const desc = document.getElementById('beDesc')?.value.trim();
+        const extraInfo = document.getElementById('beExtra')?.value.trim();
+        const fileInput = document.getElementById('beImageFile');
+
+        const persist = (imageData) => {
+            const stored = getItem(STORAGE_KEYS.bonusData, {});
+            stored[base.id] = { ...(stored[base.id] || {}), icon, label, desc, extraInfo, ...(imageData !== undefined ? { image: imageData } : {}) };
+            setItem(STORAGE_KEYS.bonusData, stored);
+            closeModal();
+            renderBonusListSection();
+        };
+
+        if (fileInput?.files?.[0]) {
+            const reader = new FileReader();
+            reader.onload = ev => persist(ev.target.result);
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
+            persist(undefined);
+        }
+    };
 }
 
 function renderBonusHistorySection() {

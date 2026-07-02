@@ -16,7 +16,8 @@ const STORAGE_KEYS = {
     bookRoadmap: 'mh_book_roadmap',
     mobileContent: 'mh_mobile_content',
     scripts: 'mh_scripts',
-    bonusHistory: 'mh_bonus_history'
+    bonusHistory: 'mh_bonus_history',
+    bonusData: 'mh_bonus_data'
 };
 
 const CACHE_KEY_MAP = {
@@ -32,7 +33,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.bookRoadmap]: 'bookRoadmap',
     [STORAGE_KEYS.mobileContent]: 'mobileContent',
     [STORAGE_KEYS.scripts]: 'scripts',
-    [STORAGE_KEYS.bonusHistory]: 'bonusHistory'
+    [STORAGE_KEYS.bonusHistory]: 'bonusHistory',
+    [STORAGE_KEYS.bonusData]: 'bonusData'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(
