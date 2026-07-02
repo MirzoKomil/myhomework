@@ -7176,11 +7176,22 @@ body.modal-open {
 /* ===== Reyting / Leaderboard ===== */
 .rating-main-tabs {
     display: flex;
-    gap: 4px;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
     padding: 16px 0 0;
     border-bottom: 2px solid var(--border);
     margin-bottom: 24px;
     flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.rating-main-tabs-left {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+}
+.rating-main-tabs #ratingPeriodFilter {
+    margin-bottom: 4px;
 }
 .rating-main-tab {
     padding: 9px 18px;

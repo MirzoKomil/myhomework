@@ -11986,6 +11986,16 @@ function renderRating() {
         };
     });
 
+    panel.querySelectorAll('[data-rating-period]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.ratingPeriod === _ratingPeriod);
+        btn.onclick = () => {
+            _ratingPeriod = btn.dataset.ratingPeriod;
+            panel.querySelectorAll('[data-rating-period]').forEach(b => b.classList.toggle('active', b.dataset.ratingPeriod === _ratingPeriod));
+            if (_ratingSection === 'leaderboard') renderLeaderboardSection();
+            if (_ratingSection === 'bonus-history') renderBonusHistorySection();
+        };
+    });
+
     const sections = { leaderboard: 'ratingLeaderboard', bonuslar: 'ratingBonusList', 'bonus-history': 'ratingBonusHistory' };
     Object.entries(sections).forEach(([key, id]) => {
         const el = document.getElementById(id);
@@ -12144,21 +12154,13 @@ function renderLeaderboardSection() {
     }
 
     el.innerHTML = `
-    <div class="page-title-bar" style="flex-wrap:wrap;gap:10px">
-        <div><h1>Leaderboard</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Sotuv menejerlarining natijalari</p></div>
-        <div class="sales-header-lang" style="margin:0">
-            <button class="lang-btn${_ratingPeriod === 'kunlik' ? ' active' : ''}" data-rating-period="kunlik">Kunlik</button>
-            <button class="lang-btn${_ratingPeriod === 'haftalik' ? ' active' : ''}" data-rating-period="haftalik">Haftalik</button>
-            <button class="lang-btn${_ratingPeriod === 'oylik' ? ' active' : ''}" data-rating-period="oylik">Oylik</button>
-        </div>
+    <div class="page-title-bar">
+        <div><h1>Leaderboard</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Sotuv menejerlarining natijalari · ${periodLabel}</p></div>
     </div>
     ${podiumHTML}
     ${viewToggleHTML}
     ${mainContent}`;
 
-    el.querySelectorAll('[data-rating-period]').forEach(btn => {
-        btn.onclick = () => { _ratingPeriod = btn.dataset.ratingPeriod; renderLeaderboardSection(); };
-    });
     const viewNormal = el.querySelector('#ratingViewNormal');
     const viewMarralar = el.querySelector('#ratingViewMarralar');
     if (viewNormal) viewNormal.onclick = () => { _ratingView = 'normal'; renderLeaderboardSection(); };

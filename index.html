@@ -755,9 +755,16 @@
 
                             <div class="sales-panel" data-sales-panel="rating">
                                 <div class="rating-main-tabs">
-                                    <button class="rating-main-tab active" data-rating-main="leaderboard">🏆 Leaderboard</button>
-                                    <button class="rating-main-tab" data-rating-main="bonuslar">🎁 Bonuslar ro'yxati</button>
-                                    <button class="rating-main-tab" data-rating-main="bonus-history">📋 Bonus olganlar</button>
+                                    <div class="rating-main-tabs-left">
+                                        <button class="rating-main-tab active" data-rating-main="leaderboard">🏆 Leaderboard</button>
+                                        <button class="rating-main-tab" data-rating-main="bonuslar">🎁 Bonuslar ro'yxati</button>
+                                        <button class="rating-main-tab" data-rating-main="bonus-history">📋 Bonus olganlar</button>
+                                    </div>
+                                    <div class="sales-header-lang" id="ratingPeriodFilter" style="margin:0">
+                                        <button class="lang-btn active" data-rating-period="kunlik">Kunlik</button>
+                                        <button class="lang-btn" data-rating-period="haftalik">Haftalik</button>
+                                        <button class="lang-btn" data-rating-period="oylik">Oylik</button>
+                                    </div>
                                 </div>
                                 <div id="ratingLeaderboard" class="rating-section"></div>
                                 <div id="ratingBonusList" class="rating-section" style="display:none"></div>
