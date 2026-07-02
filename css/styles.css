@@ -7172,3 +7172,183 @@ body.modal-open {
 
 @media(max-width:900px) { .scripts-grid { grid-template-columns: repeat(2,1fr); } }
 @media(max-width:600px) { .scripts-grid { grid-template-columns: 1fr; } }
+
+/* ===== Reyting / Leaderboard ===== */
+.rating-main-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 16px 0 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 24px;
+    flex-shrink: 0;
+}
+.rating-main-tab {
+    padding: 9px 18px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    border-radius: 6px 6px 0 0;
+    transition: color .15s, border-color .15s, background .15s;
+}
+.rating-main-tab:hover { background: var(--bg-secondary); color: var(--text); }
+.rating-main-tab.active { color: var(--primary, #6366f1); border-bottom-color: var(--primary, #6366f1); }
+
+.rating-section { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* Podium */
+.rating-podium {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.rating-podium-card {
+    border-radius: 16px;
+    padding: 20px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.1);
+    position: relative;
+    overflow: hidden;
+}
+.rating-podium-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.18) 0%, transparent 60%);
+    pointer-events: none;
+}
+.rating-podium-rank { font-size: 28px; }
+.rating-podium-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.3);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid rgba(255,255,255,.5);
+}
+.rating-podium-name { font-size: 14px; font-weight: 800; color: #fff; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,.2); }
+.rating-podium-sales { font-size: 13px; color: rgba(255,255,255,.85); font-weight: 600; }
+.rating-podium-prog-wrap { width: 100%; height: 6px; background: rgba(255,255,255,.3); border-radius: 3px; overflow: hidden; }
+.rating-podium-prog-bar { height: 100%; background: rgba(255,255,255,.8); border-radius: 3px; }
+.rating-podium-pct { font-size: 11px; color: rgba(255,255,255,.75); }
+
+/* View toggle */
+.rating-view-toggle {
+    display: inline-flex;
+    gap: 4px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 4px;
+}
+.rating-view-btn {
+    padding: 7px 16px;
+    border: none;
+    background: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.rating-view-btn.active { background: #fff; color: var(--primary, #6366f1); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+/* Avatar */
+.rating-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Marra pills */
+.marra-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    font-size: 12px;
+}
+.marra-pill.reached { font-weight: 600; }
+
+/* Bonus period label */
+.bonus-period-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 12px;
+}
+.bonus-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+/* Bonus card with shimmer */
+.bonus-card {
+    border-radius: 16px;
+    padding: 22px 18px 18px;
+    background: linear-gradient(135deg, var(--bc, #6366f1) 0%, color-mix(in srgb, var(--bc, #6366f1) 60%, #000) 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 140px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.1);
+    cursor: default;
+}
+.bonus-card-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 20%,
+        rgba(255,255,255,.35) 40%,
+        rgba(255,255,255,.6) 50%,
+        rgba(255,255,255,.35) 60%,
+        transparent 80%
+    );
+    background-size: 200% 100%;
+    animation: bonusShimmer 3s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes bonusShimmer {
+    0%   { background-position: 200% 0; }
+    50%  { background-position: -100% 0; }
+    100% { background-position: 200% 0; }
+}
+.bonus-card-icon { font-size: 28px; }
+.bonus-card-label { font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.2); }
+.bonus-card-prize { font-size: 22px; font-weight: 900; color: #fff; }
+.bonus-card-cond  { font-size: 11px; color: rgba(255,255,255,.78); line-height: 1.5; margin-top: auto; }
+
+@media(max-width:900px) { .rating-podium { grid-template-columns: 1fr; } }
+@media(max-width:600px) { .bonus-cards-grid { grid-template-columns: repeat(2,1fr); } }

@@ -364,6 +364,7 @@ function switchSalesSection(section) {
     if (section === 'book-roadmap') renderBookRoadmap();
     if (section === 'sales-stats') renderSalesFunnel();
     if (section === 'scripts') renderScripts();
+    if (section === 'rating') renderRating();
 }
 
 function switchStudentsSection(section) {
@@ -5973,6 +5974,12 @@ function renderSales() {
     syncLeadsLangTabs();
     switchSalesSection(_tabContext.salesSection || 'leads');
 }
+
+// ===== Reyting =====
+let _ratingSection = 'leaderboard';
+let _ratingPeriod = 'oylik';
+let _ratingView = 'normal';
+let _bonusHistoryPeriod = 'oylik';
 
 // ===== Sales Funnel (Voronka) =====
 let _salesFunnelMgr = 'all';
@@ -11889,6 +11896,485 @@ function deleteScript(id) {
     setItem(STORAGE_KEYS.scripts, scripts);
     if (_currentScriptId === id) closeScriptArticle();
     renderScripts();
+}
+
+// ===== Reyting / Leaderboard =====
+
+const MONTHLY_TARGET = 33_000_000;
+const AVG_CHECK = 1_500_000;
+const DAILY_TARGET = 1_375_000;
+const WEEKLY_TARGET = DAILY_TARGET * 5;
+
+const DAILY_BONUSES = [
+    { id: 'obed',    label: 'Obed',            threshold: 1_800_000, icon: '🍽️', color: '#f97316', desc: '1,800,000 so\'mdan yuqori sotuv' },
+    { id: 'obed30',  label: 'Obed + 30,000',   threshold: 2_500_000, icon: '🍽️', color: '#ea580c', desc: '2,500,000 so\'mdan yuqori sotuv' },
+    { id: 'obed60',  label: 'Obed + 60,000',   threshold: 3_000_000, icon: '🍽️', color: '#dc2626', desc: '3,000,000 so\'mdan yuqori sotuv' },
+];
+const WEEKLY_BONUSES = [
+    { id: 'kitob',    label: 'Kitob',           rank: 1, icon: '📚', color: '#8b5cf6', desc: 'Haftalik 1-o\'rin' },
+    { id: 'kino',     label: 'Kinoga chipta',   rank: 2, icon: '🎬', color: '#6366f1', desc: 'Haftalik 2-o\'rin' },
+    { id: 'restoran', label: 'Restoranga chek', rank: 3, icon: '🍷', color: '#0891b2', desc: 'Haftalik 3-o\'rin' },
+];
+const MONTHLY_BONUSES = [
+    { id: 'iphone',  label: 'iPhone 17 Pro',            threshold: 120_000_000, icon: '📱', color: '#6366f1', desc: '120,000,000 so\'mdan yuqori sotuv' },
+    { id: 'macbook', label: 'MacBook',                  threshold: 160_000_000, icon: '💻', color: '#8b5cf6', desc: '160,000,000 so\'mdan yuqori sotuv' },
+    { id: 'pul2000', label: '$2,000 Pul mukofoti',      threshold: 220_000_000, icon: '💰', color: '#059669', desc: '220,000,000 so\'mdan yuqori sotuv' },
+    { id: 'umra',    label: '2 kishilik Umra + $500',   threshold: 300_000_000, icon: '🕋', color: '#d97706', desc: '300,000,000 so\'mdan yuqori sotuv' },
+];
+const RANK_BONUSES = [
+    { id: 'rank1', label: '1-o\'rin', prize: '$200', threshold: 37_950_000, pct: 115, icon: '🥇', color: '#f59e0b' },
+    { id: 'rank2', label: '2-o\'rin', prize: '$100', threshold: 36_300_000, pct: 110, icon: '🥈', color: '#94a3b8' },
+    { id: 'rank3', label: '3-o\'rin', prize: '$50',  threshold: 36_300_000, pct: 110, icon: '🥉', color: '#cd7f32' },
+];
+
+function getSalesManagers() {
+    return getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
+        e.role === 'Sotuv menejeri' || e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri'
+    );
+}
+
+function getManagerSalesForPeriod(managerId, period) {
+    const now = new Date();
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const allLeads = [...(leads.english || []), ...(leads.russian || [])];
+    const closed = allLeads.filter(l => {
+        if (normalizeLeadStatus(l.status) !== 'tolov-yopildi') return false;
+        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        return true;
+    });
+    const inPeriod = closed.filter(l => {
+        if (!l.date) return period === 'oylik';
+        const d = new Date(l.date);
+        if (isNaN(d.getTime())) return false;
+        if (period === 'kunlik') {
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+        }
+        if (period === 'haftalik') {
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+            weekStart.setHours(0, 0, 0, 0);
+            return d >= weekStart && d <= now;
+        }
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+    return inPeriod.length * AVG_CHECK;
+}
+
+function getPeriodTarget(period) {
+    if (period === 'kunlik') return DAILY_TARGET;
+    if (period === 'haftalik') return WEEKLY_TARGET;
+    return MONTHLY_TARGET;
+}
+
+function fmtMoney(n) {
+    return new Intl.NumberFormat('uz-UZ').format(n) + " so'm";
+}
+
+function managerInitials(name) {
+    return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function renderRating() {
+    const panel = document.querySelector('[data-sales-panel="rating"]');
+    if (!panel) return;
+
+    panel.querySelectorAll('.rating-main-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.ratingMain === _ratingSection);
+        btn.onclick = () => {
+            _ratingSection = btn.dataset.ratingMain;
+            renderRating();
+        };
+    });
+
+    const sections = { leaderboard: 'ratingLeaderboard', bonuslar: 'ratingBonusList', 'bonus-history': 'ratingBonusHistory' };
+    Object.entries(sections).forEach(([key, id]) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = key === _ratingSection ? '' : 'none';
+    });
+
+    if (_ratingSection === 'leaderboard') renderLeaderboardSection();
+    if (_ratingSection === 'bonuslar') renderBonusListSection();
+    if (_ratingSection === 'bonus-history') renderBonusHistorySection();
+}
+
+function renderLeaderboardSection() {
+    const el = document.getElementById('ratingLeaderboard');
+    if (!el) return;
+
+    const managers = getSalesManagers();
+    const target = getPeriodTarget(_ratingPeriod);
+
+    const ranked = managers.map(m => ({
+        ...m,
+        sales: getManagerSalesForPeriod(m.id, _ratingPeriod),
+    })).sort((a, b) => b.sales - a.sales);
+
+    const periodLabel = _ratingPeriod === 'kunlik' ? 'Kunlik' : _ratingPeriod === 'haftalik' ? 'Haftalik' : 'Oylik';
+
+    const podiumColors = [
+        'linear-gradient(135deg,#f59e0b,#fbbf24)',
+        'linear-gradient(135deg,#94a3b8,#cbd5e1)',
+        'linear-gradient(135deg,#cd7f32,#d97706)',
+    ];
+    const podiumMedals = ['🥇', '🥈', '🥉'];
+
+    const top3 = ranked.slice(0, 3);
+    const podiumHTML = top3.length ? `
+    <div class="rating-podium">
+        ${top3.map((m, i) => {
+            const pct = Math.min(100, target > 0 ? Math.round((m.sales / target) * 100) : 0);
+            return `<div class="rating-podium-card" style="background:${podiumColors[i] || '#6366f1'}">
+                <div class="rating-podium-rank">${podiumMedals[i]}</div>
+                <div class="rating-podium-avatar">${managerInitials(m.name)}</div>
+                <div class="rating-podium-name">${escapeHtml(m.name)}</div>
+                <div class="rating-podium-sales">${fmtMoney(m.sales)}</div>
+                <div class="rating-podium-prog-wrap">
+                    <div class="rating-podium-prog-bar" style="width:${pct}%"></div>
+                </div>
+                <div class="rating-podium-pct">${pct}% maqsad</div>
+            </div>`;
+        }).join('')}
+    </div>` : '';
+
+    const viewToggleHTML = `
+    <div class="rating-view-toggle">
+        <button class="rating-view-btn${_ratingView === 'normal' ? ' active' : ''}" id="ratingViewNormal">📊 Natijalar</button>
+        <button class="rating-view-btn${_ratingView === 'marralar' ? ' active' : ''}" id="ratingViewMarralar">🎯 Marralar</button>
+    </div>`;
+
+    let mainContent = '';
+    if (_ratingView === 'normal') {
+        mainContent = `
+        <div class="card" style="padding:0;overflow:hidden;margin-top:20px">
+            <table class="sdp-table">
+                <thead>
+                    <tr>
+                        <th style="width:48px">#</th>
+                        <th>Menejer</th>
+                        <th style="text-align:right">Bajarildi</th>
+                        <th style="text-align:right">Reja</th>
+                        <th style="text-align:right">Daromad (10%)</th>
+                        <th style="min-width:140px">Rejaga yetish</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${ranked.length ? ranked.map((m, i) => {
+                        const pct = Math.min(100, target > 0 ? Math.round((m.sales / target) * 100) : 0);
+                        const commission = Math.round(m.sales * 0.1);
+                        const medal = i < 3 ? podiumMedals[i] : `<span style="color:var(--text-muted);font-weight:700">${i + 1}</span>`;
+                        const barColor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#6366f1' : pct >= 40 ? '#d97706' : '#ef4444';
+                        return `<tr>
+                            <td style="text-align:center;font-size:18px">${medal}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <div class="rating-avatar">${managerInitials(m.name)}</div>
+                                    <strong>${escapeHtml(m.name)}</strong>
+                                </div>
+                            </td>
+                            <td style="text-align:right;font-weight:700;color:#6366f1">${fmtMoney(m.sales)}</td>
+                            <td style="text-align:right;color:var(--text-muted)">${fmtMoney(target)}</td>
+                            <td style="text-align:right;color:#16a34a;font-weight:600">${fmtMoney(commission)}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+                                        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s"></div>
+                                    </div>
+                                    <span style="font-size:12px;font-weight:700;color:${barColor};white-space:nowrap">${pct}%</span>
+                                </div>
+                            </td>
+                        </tr>`;
+                    }).join('') : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">Menejerlar topilmadi</td></tr>`}
+                </tbody>
+            </table>
+        </div>`;
+    } else {
+        // Marralar view
+        const bonusesToShow = _ratingPeriod === 'kunlik' ? DAILY_BONUSES
+            : _ratingPeriod === 'haftalik' ? WEEKLY_BONUSES
+            : MONTHLY_BONUSES;
+
+        mainContent = `
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:12px">
+            ${ranked.length ? ranked.map((m, i) => {
+                const medal = i < 3 ? podiumMedals[i] : `${i + 1}`;
+                let marraHTML = '';
+                if (_ratingPeriod === 'kunlik') {
+                    marraHTML = DAILY_BONUSES.map(b => {
+                        const reached = m.sales >= b.threshold;
+                        return `<div class="marra-pill${reached ? ' reached' : ''}" style="border-color:${b.color}20;background:${reached ? b.color + '18' : ''}">
+                            <span>${b.icon}</span>
+                            <span style="font-size:12px;font-weight:600;color:${reached ? b.color : 'var(--text-muted)'}">${b.label}</span>
+                            <span style="font-size:11px;color:${reached ? '#16a34a' : 'var(--text-muted)'}">${reached ? '✅' : fmtMoney(b.threshold - m.sales) + ' qoldi'}</span>
+                        </div>`;
+                    }).join('');
+                } else if (_ratingPeriod === 'haftalik') {
+                    marraHTML = WEEKLY_BONUSES.map(b => {
+                        const reached = i + 1 === b.rank;
+                        return `<div class="marra-pill${reached ? ' reached' : ''}" style="border-color:${b.color}20;background:${reached ? b.color + '18' : ''}">
+                            <span>${b.icon}</span>
+                            <span style="font-size:12px;font-weight:600;color:${reached ? b.color : 'var(--text-muted)'}">${b.label}</span>
+                            <span style="font-size:11px;color:${reached ? '#16a34a' : 'var(--text-muted)'}">${reached ? '✅ Qo\'lga kiritdi' : `${b.rank}-o'rin kerak`}</span>
+                        </div>`;
+                    }).join('');
+                } else {
+                    marraHTML = MONTHLY_BONUSES.map(b => {
+                        const reached = m.sales >= b.threshold;
+                        const pct = Math.min(100, Math.round((m.sales / b.threshold) * 100));
+                        return `<div class="marra-pill${reached ? ' reached' : ''}" style="border-color:${b.color}20;background:${reached ? b.color + '18' : ''}">
+                            <span>${b.icon}</span>
+                            <span style="font-size:12px;font-weight:600;color:${reached ? b.color : 'var(--text-muted)'}">${b.label}</span>
+                            <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+                                <div style="width:${pct}%;height:100%;background:${b.color};border-radius:3px"></div>
+                            </div>
+                            <span style="font-size:11px;color:${reached ? '#16a34a' : 'var(--text-muted)'};white-space:nowrap">${reached ? '✅' : pct + '%'}</span>
+                        </div>`;
+                    }).join('');
+                }
+                return `<div class="card" style="padding:14px 18px">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+                        <span style="font-size:18px">${medal}</span>
+                        <div class="rating-avatar">${managerInitials(m.name)}</div>
+                        <strong>${escapeHtml(m.name)}</strong>
+                        <span style="margin-left:auto;font-weight:700;color:#6366f1">${fmtMoney(m.sales)}</span>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">${marraHTML}</div>
+                </div>`;
+            }).join('') : `<div style="text-align:center;padding:40px;color:var(--text-muted)">Menejerlar topilmadi</div>`}
+        </div>`;
+    }
+
+    el.innerHTML = `
+    <div class="page-title-bar" style="flex-wrap:wrap;gap:10px">
+        <div><h1>Leaderboard</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Sotuv menejerlarining natijalari</p></div>
+        <div class="sales-header-lang" style="margin:0">
+            <button class="lang-btn${_ratingPeriod === 'kunlik' ? ' active' : ''}" data-rating-period="kunlik">Kunlik</button>
+            <button class="lang-btn${_ratingPeriod === 'haftalik' ? ' active' : ''}" data-rating-period="haftalik">Haftalik</button>
+            <button class="lang-btn${_ratingPeriod === 'oylik' ? ' active' : ''}" data-rating-period="oylik">Oylik</button>
+        </div>
+    </div>
+    ${podiumHTML}
+    ${viewToggleHTML}
+    ${mainContent}`;
+
+    el.querySelectorAll('[data-rating-period]').forEach(btn => {
+        btn.onclick = () => { _ratingPeriod = btn.dataset.ratingPeriod; renderLeaderboardSection(); };
+    });
+    const viewNormal = el.querySelector('#ratingViewNormal');
+    const viewMarralar = el.querySelector('#ratingViewMarralar');
+    if (viewNormal) viewNormal.onclick = () => { _ratingView = 'normal'; renderLeaderboardSection(); };
+    if (viewMarralar) viewMarralar.onclick = () => { _ratingView = 'marralar'; renderLeaderboardSection(); };
+}
+
+function renderBonusListSection() {
+    const el = document.getElementById('ratingBonusList');
+    if (!el) return;
+
+    const rankBonusCards = RANK_BONUSES.map(b => `
+        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
+            <div class="bonus-card-shine"></div>
+            <div class="bonus-card-icon">${b.icon}</div>
+            <div class="bonus-card-label">${b.label}</div>
+            <div class="bonus-card-prize">${b.prize}</div>
+            <div class="bonus-card-cond">Oylik rejaning ${b.pct}%+ bajargan bo'lishi kerak<br>${fmtMoney(b.threshold)} dan yuqori</div>
+        </div>`).join('');
+
+    const dailyCards = DAILY_BONUSES.map(b => `
+        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
+            <div class="bonus-card-shine"></div>
+            <div class="bonus-card-icon">${b.icon}</div>
+            <div class="bonus-card-label">${b.label}</div>
+            <div class="bonus-card-cond">${b.desc}</div>
+        </div>`).join('');
+
+    const weeklyCards = WEEKLY_BONUSES.map(b => `
+        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
+            <div class="bonus-card-shine"></div>
+            <div class="bonus-card-icon">${b.icon}</div>
+            <div class="bonus-card-label">${b.label}</div>
+            <div class="bonus-card-cond">${b.desc}</div>
+        </div>`).join('');
+
+    const monthlyCards = MONTHLY_BONUSES.map(b => `
+        <div class="bonus-card bonus-card--shimmer" style="--bc:${b.color}">
+            <div class="bonus-card-shine"></div>
+            <div class="bonus-card-icon">${b.icon}</div>
+            <div class="bonus-card-label">${b.label}</div>
+            <div class="bonus-card-cond">${b.desc}</div>
+        </div>`).join('');
+
+    el.innerHTML = `
+    <div class="page-title-bar"><div><h1>Bonuslar ro'yxati</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Barcha mavjud mukofotlar</p></div></div>
+
+    <h2 style="font-size:15px;font-weight:800;margin:0 0 12px;color:var(--text)">🏅 Hamma erishishi mumkin bo'lgan mukofotlar</h2>
+
+    <div style="margin-bottom:28px">
+        <div class="bonus-period-label">☀️ Kunlik bonuslar</div>
+        <div class="bonus-cards-grid">${dailyCards}</div>
+    </div>
+    <div style="margin-bottom:28px">
+        <div class="bonus-period-label">📅 Haftalik bonuslar</div>
+        <div class="bonus-cards-grid">${weeklyCards}</div>
+    </div>
+    <div style="margin-bottom:36px">
+        <div class="bonus-period-label">📆 Oylik bonuslar</div>
+        <div class="bonus-cards-grid">${monthlyCards}</div>
+    </div>
+
+    <h2 style="font-size:15px;font-weight:800;margin:0 0 12px;color:var(--text)">🏆 O'rinli mukofotlar</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px">Oylik reja kamida 110% bajarilganda va o'sha oyning eng yuqori sotuvchisi bo'linganda beriladi</p>
+    <div class="bonus-cards-grid">${rankBonusCards}</div>`;
+}
+
+function renderBonusHistorySection() {
+    const el = document.getElementById('ratingBonusHistory');
+    if (!el) return;
+
+    const history = getItem(STORAGE_KEYS.bonusHistory, []);
+    const managers = getSalesManagers();
+
+    const filtered = history.filter(h => {
+        if (!h.date) return true;
+        const d = new Date(h.date);
+        const now = new Date();
+        if (_bonusHistoryPeriod === 'kunlik') {
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+        }
+        if (_bonusHistoryPeriod === 'haftalik') {
+            const ws = new Date(now);
+            ws.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+            ws.setHours(0, 0, 0, 0);
+            return d >= ws && d <= now;
+        }
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const mgrOptions = managers.map(m =>
+        `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
+    ).join('');
+
+    const allBonuses = [
+        ...DAILY_BONUSES.map(b => ({ ...b, period: 'Kunlik' })),
+        ...WEEKLY_BONUSES.map(b => ({ ...b, period: 'Haftalik' })),
+        ...MONTHLY_BONUSES.map(b => ({ ...b, period: 'Oylik' })),
+        ...RANK_BONUSES.map(b => ({ ...b, period: 'O\'rinli' })),
+    ];
+
+    el.innerHTML = `
+    <div class="page-title-bar" style="flex-wrap:wrap;gap:10px">
+        <div><h1>Bonus olganlar</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Kim qaysi bonusni oldi</p></div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <div class="sales-header-lang" style="margin:0">
+                <button class="lang-btn${_bonusHistoryPeriod === 'kunlik' ? ' active' : ''}" data-bh-period="kunlik">Kunlik</button>
+                <button class="lang-btn${_bonusHistoryPeriod === 'haftalik' ? ' active' : ''}" data-bh-period="haftalik">Haftalik</button>
+                <button class="lang-btn${_bonusHistoryPeriod === 'oylik' ? ' active' : ''}" data-bh-period="oylik">Oylik</button>
+            </div>
+            <button class="btn btn-primary" id="addBonusHistoryBtn">+ Bonus belgilash</button>
+        </div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+        ${filtered.length ? `<table class="sdp-table">
+            <thead><tr>
+                <th>Sana</th>
+                <th>Menejer</th>
+                <th>Bonus</th>
+                <th>Davr</th>
+                <th style="width:40px"></th>
+            </tr></thead>
+            <tbody>
+                ${filtered.map(h => {
+                    const mgr = managers.find(m => m.id === h.managerId);
+                    const bonus = allBonuses.find(b => b.id === h.bonusId);
+                    return `<tr>
+                        <td style="color:var(--text-muted);font-size:12px">${escapeHtml(h.date || '')}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div class="rating-avatar" style="width:28px;height:28px;font-size:11px">${managerInitials(mgr?.name)}</div>
+                                <span>${escapeHtml(mgr?.name || h.managerId)}</span>
+                            </div>
+                        </td>
+                        <td>${bonus ? `<span style="color:${bonus.color}">${bonus.icon} ${bonus.label}</span>` : escapeHtml(h.bonusId)}</td>
+                        <td><span class="badge" style="background:var(--bg-secondary);color:var(--text-muted)">${escapeHtml(bonus?.period || '')}</span></td>
+                        <td>
+                            <button class="icon-btn" title="O'chirish" data-delete-bh="${escapeHtml(h.id)}">🗑️</button>
+                        </td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>` : `<div style="text-align:center;padding:60px;color:var(--text-muted)">
+            <div style="font-size:48px;margin-bottom:12px">🎁</div>
+            <p>Bu davrda bonus belgilanmagan</p>
+        </div>`}
+    </div>`;
+
+    el.querySelectorAll('[data-bh-period]').forEach(btn => {
+        btn.onclick = () => { _bonusHistoryPeriod = btn.dataset.bhPeriod; renderBonusHistorySection(); };
+    });
+
+    el.querySelectorAll('[data-delete-bh]').forEach(btn => {
+        btn.onclick = () => {
+            const id = btn.dataset.deleteBh;
+            if (!confirm('Bu yozuvni o\'chirasizmi?')) return;
+            const updated = getItem(STORAGE_KEYS.bonusHistory, []).filter(h => h.id !== id);
+            setItem(STORAGE_KEYS.bonusHistory, updated);
+            renderBonusHistorySection();
+        };
+    });
+
+    const addBtn = el.querySelector('#addBonusHistoryBtn');
+    if (addBtn) {
+        addBtn.onclick = () => {
+            const today = new Date().toISOString().slice(0, 10);
+            const bonusOpts = [
+                '<optgroup label="Kunlik">',
+                ...DAILY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
+                '</optgroup><optgroup label="Haftalik">',
+                ...WEEKLY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
+                '</optgroup><optgroup label="Oylik">',
+                ...MONTHLY_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.label}</option>`),
+                '</optgroup><optgroup label="O\'rinli">',
+                ...RANK_BONUSES.map(b => `<option value="${b.id}">${b.icon} ${b.prize} (${b.label})</option>`),
+                '</optgroup>',
+            ].join('');
+
+            openModal("Bonus belgilash", `
+                <div style="display:flex;flex-direction:column;gap:14px">
+                    <div>
+                        <label class="form-label">Menejer *</label>
+                        <select id="bhMgr" class="form-control">${mgrOptions}</select>
+                    </div>
+                    <div>
+                        <label class="form-label">Bonus *</label>
+                        <select id="bhBonus" class="form-control">${bonusOpts}</select>
+                    </div>
+                    <div>
+                        <label class="form-label">Sana</label>
+                        <input id="bhDate" type="date" class="form-control" value="${today}">
+                    </div>
+                    <div>
+                        <label class="form-label">Izoh (ixtiyoriy)</label>
+                        <input id="bhNote" class="form-control" placeholder="Qo'shimcha ma'lumot...">
+                    </div>
+                </div>`,
+                `<button class="btn btn-secondary" id="bhCancel">Bekor</button>
+                 <button class="btn btn-primary" id="bhSave">Saqlash</button>`
+            );
+
+            document.getElementById('bhCancel').onclick = closeModal;
+            document.getElementById('bhSave').onclick = () => {
+                const managerId = document.getElementById('bhMgr')?.value;
+                const bonusId = document.getElementById('bhBonus')?.value;
+                const date = document.getElementById('bhDate')?.value || today;
+                const note = document.getElementById('bhNote')?.value || '';
+                if (!managerId || !bonusId) { alert('Menejer va bonusni tanlang'); return; }
+                const hist = getItem(STORAGE_KEYS.bonusHistory, []);
+                hist.unshift({ id: 'bh_' + Date.now(), managerId, bonusId, date, note });
+                setItem(STORAGE_KEYS.bonusHistory, hist);
+                closeModal();
+                renderBonusHistorySection();
+            };
+        };
+    }
 }
 
 bootApp();

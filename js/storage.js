@@ -15,7 +15,8 @@ const STORAGE_KEYS = {
     hrEmployees: 'mh_hr_employees',
     bookRoadmap: 'mh_book_roadmap',
     mobileContent: 'mh_mobile_content',
-    scripts: 'mh_scripts'
+    scripts: 'mh_scripts',
+    bonusHistory: 'mh_bonus_history'
 };
 
 const CACHE_KEY_MAP = {
@@ -30,7 +31,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.hrEmployees]: 'hrEmployees',
     [STORAGE_KEYS.bookRoadmap]: 'bookRoadmap',
     [STORAGE_KEYS.mobileContent]: 'mobileContent',
-    [STORAGE_KEYS.scripts]: 'scripts'
+    [STORAGE_KEYS.scripts]: 'scripts',
+    [STORAGE_KEYS.bonusHistory]: 'bonusHistory'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(
