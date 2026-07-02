@@ -11798,30 +11798,26 @@ function _openScriptModal(editId) {
     const scripts = getItem(STORAGE_KEYS.scripts, []);
     const existing = editId ? scripts.find(s => s.id === editId) : null;
 
-    const sel = existing ? existing.color : SCRIPT_COLORS[0];
+    const selColor = existing ? existing.color : SCRIPT_COLORS[0];
     const selSticker = existing ? existing.sticker : SCRIPT_STICKERS[0];
 
-    const colorSwatches = SCRIPT_COLORS.map(c => `
-        <div class="script-color-swatch${c === sel ? ' selected' : ''}"
-             style="background:${c}" data-color="${c}"
-             onclick="(function(el){document.querySelectorAll('.script-color-swatch').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');})(this)"></div>
-    `).join('');
+    const colorSwatches = SCRIPT_COLORS.map(c =>
+        `<div class="script-color-swatch${c === selColor ? ' selected' : ''}" style="background:${c}" data-color="${c}"></div>`
+    ).join('');
 
-    const stickerBtns = SCRIPT_STICKERS.map(st => `
-        <button type="button" class="script-sticker-btn${st === selSticker ? ' selected' : ''}"
-                data-sticker="${st}"
-                onclick="(function(el){document.querySelectorAll('.script-sticker-btn').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');})(this)">${st}</button>
-    `).join('');
+    const stickerBtns = SCRIPT_STICKERS.map(st =>
+        `<button type="button" class="script-sticker-btn${st === selSticker ? ' selected' : ''}" data-sticker="${escapeHtml(st)}">${st}</button>`
+    ).join('');
 
     const body = `
     <div style="display:flex;flex-direction:column;gap:14px">
         <div>
             <label class="form-label">Rang</label>
-            <div class="script-color-grid">${colorSwatches}</div>
+            <div class="script-color-grid" id="scriptColorGrid">${colorSwatches}</div>
         </div>
         <div>
             <label class="form-label">Stiker</label>
-            <div class="script-sticker-grid">${stickerBtns}</div>
+            <div class="script-sticker-grid" id="scriptStickerGrid">${stickerBtns}</div>
         </div>
         <div>
             <label class="form-label">Nomi *</label>
@@ -11838,12 +11834,28 @@ function _openScriptModal(editId) {
     </div>`;
 
     const footer = `
-        <button class="btn btn-secondary" onclick="closeModal()">Bekor qilish</button>
-        <button class="btn btn-primary" onclick="saveScriptFromModal('${editId || ''}')">
-            ${editId ? 'Saqlash' : 'Qo\'shish'}
-        </button>`;
+        <button class="btn btn-secondary" id="scriptModalCancel">Bekor qilish</button>
+        <button class="btn btn-primary" id="scriptModalSave">${editId ? 'Saqlash' : "Qo'shish"}</button>`;
 
-    openModal(editId ? 'Artikl tahrirlash' : 'Yangi artikl qo\'shish', body, footer);
+    openModal(editId ? 'Artikl tahrirlash' : "Yangi artikl qo'shish", body, footer);
+
+    // Wire events after modal is open
+    document.getElementById('scriptColorGrid')?.querySelectorAll('.script-color-swatch').forEach(el => {
+        el.onclick = () => {
+            document.querySelectorAll('.script-color-swatch').forEach(x => x.classList.remove('selected'));
+            el.classList.add('selected');
+        };
+    });
+
+    document.getElementById('scriptStickerGrid')?.querySelectorAll('.script-sticker-btn').forEach(el => {
+        el.onclick = () => {
+            document.querySelectorAll('.script-sticker-btn').forEach(x => x.classList.remove('selected'));
+            el.classList.add('selected');
+        };
+    });
+
+    document.getElementById('scriptModalCancel').onclick = closeModal;
+    document.getElementById('scriptModalSave').onclick = () => saveScriptFromModal(editId || '');
 }
 
 function saveScriptFromModal(editId) {
