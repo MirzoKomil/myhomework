@@ -7191,7 +7191,16 @@ body.modal-open {
     align-items: flex-end;
 }
 .rating-main-tabs #ratingPeriodFilter {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
     margin-bottom: 4px;
+}
+.rating-main-tabs #ratingPeriodFilter .lang-btn {
+    min-width: unset;
+    padding: 7px 14px;
+    font-size: 13px;
+    border-radius: 8px;
 }
 .rating-main-tab {
     padding: 9px 18px;
