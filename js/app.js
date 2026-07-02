@@ -53,6 +53,11 @@ let _targetMonth = 'feb';
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
 let _studentsDurationFilter = 'all';
+let _debtorsMgrFilter = 'all';
+let _debtorsTeacherFilter = 'all';
+let _debtorsTariffFilter = 'all';
+let _debtorsDateFrom = '';
+let _debtorsDateTo = '';
 let _profileSection = 'edit';
 let _profileUser = null;
 let _profileEditing = {};
@@ -381,6 +386,7 @@ function switchStudentsSection(section) {
     if (addBtn) addBtn.style.display = section === 'faol' ? '' : 'none';
     if (section === 'faol') renderStudents();
     if (section === 'muzlatilgan') renderFrozenStudents();
+    if (section === 'qarzdorlar') renderDebtors();
 }
 
 function renderFrozenStudents() {
@@ -12373,6 +12379,333 @@ function openAddBonusHistoryModal() {
         setItem(STORAGE_KEYS.bonusHistory, hist);
         closeModal();
         renderBonusHistorySection();
+    };
+}
+
+// ===== Qarzdorlar =====
+function renderDebtors() {
+    const container = document.getElementById('studentsPanel-qarzdorlar');
+    if (!container) return;
+
+    const allStudents = getItem(STORAGE_KEYS.students, []);
+    const allTeachers = [
+        ...getItem(STORAGE_KEYS.teachers, []),
+        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
+    ];
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+
+    const debtors = allStudents.filter(s => {
+        const debt = Number(s.debtAmount || 0);
+        return debt > 0 || s.paymentDueDate;
+    });
+
+    const dateFrom = _debtorsDateFrom ? new Date(_debtorsDateFrom) : null;
+    const dateTo = _debtorsDateTo ? new Date(_debtorsDateTo) : null;
+
+    const filtered = debtors.filter(s => {
+        if (_debtorsMgrFilter !== 'all' && s.managerId !== _debtorsMgrFilter) return false;
+        if (_debtorsTeacherFilter !== 'all' && s.teacherId !== _debtorsTeacherFilter) return false;
+        if (_debtorsTariffFilter !== 'all' && (s.tariff || 'standard') !== _debtorsTariffFilter) return false;
+        if (dateFrom || dateTo) {
+            const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+            if (due) {
+                if (dateFrom && due < dateFrom) return false;
+                if (dateTo && due > dateTo) return false;
+            } else {
+                if (dateFrom || dateTo) return false;
+            }
+        }
+        return true;
+    });
+
+    const totalDebt = filtered.reduce((sum, s) => sum + Number(s.debtAmount || 0), 0);
+    const totalPaid = filtered.reduce((sum, s) => sum + Number(s.paidAmount || 0), 0);
+    const overdueCount = filtered.filter(s => {
+        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+        return due && due < new Date();
+    }).length;
+
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const thisMonthExpected = filtered.filter(s => {
+        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+        return due && due >= monthStart && due <= monthEnd;
+    }).reduce((sum, s) => sum + Number(s.debtAmount || 0), 0);
+
+    function teacherName(id) {
+        const t = allTeachers.find(t => t.id === id);
+        return t ? t.name : '—';
+    }
+    function mgrName(id) {
+        const m = managers.find(m => m.id === id);
+        return m ? m.name : '—';
+    }
+
+    const mgrOptions = `<option value="all">Barcha menejerlar</option>` +
+        managers.map(m => `<option value="${m.id}" ${_debtorsMgrFilter === m.id ? 'selected' : ''}>${m.name}</option>`).join('');
+
+    const teacherOptions = `<option value="all">Barcha o'qituvchilar</option>` +
+        allTeachers.filter(t => t.type === 'asosiy' || !t.type).map(t =>
+            `<option value="${t.id}" ${_debtorsTeacherFilter === t.id ? 'selected' : ''}>${t.name}</option>`
+        ).join('');
+
+    const tariffOptions = `<option value="all">Barcha tariflar</option>
+        <option value="standard" ${_debtorsTariffFilter === 'standard' ? 'selected' : ''}>Standard</option>
+        <option value="premium" ${_debtorsTariffFilter === 'premium' ? 'selected' : ''}>Premium</option>
+        <option value="vip" ${_debtorsTariffFilter === 'vip' ? 'selected' : ''}>VIP</option>`;
+
+    const rows = filtered.map((s, idx) => {
+        const debt = Number(s.debtAmount || 0);
+        const paid = Number(s.paidAmount || 0);
+        const total = debt + paid;
+        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+        const isOverdue = due && due < new Date();
+        const dueStr = due ? due.toLocaleDateString('uz-UZ') : '—';
+        const statusBadge = s.frozen
+            ? `<span class="debtor-badge frozen">Muzlatilgan</span>`
+            : isOverdue
+                ? `<span class="debtor-badge overdue">Muddati o'tgan</span>`
+                : `<span class="debtor-badge active">Faol</span>`;
+        const dueCls = isOverdue ? 'overdue' : 'on-time';
+
+        return `<tr>
+            <td>${idx + 1}</td>
+            <td>${s.name || '—'}</td>
+            <td>${s.phone || '—'}</td>
+            <td>${mgrName(s.managerId)}</td>
+            <td>${teacherName(s.teacherId)}</td>
+            <td>${s.subject === 'russian' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili'}</td>
+            <td>${s.tariff || 'Standard'}</td>
+            <td>${s.group || '—'}</td>
+            <td>${s.schedulePattern === 'tts' ? 'SSh' : 'DCJ'}</td>
+            <td>${s.startDate || '—'}</td>
+            <td>${s.lessonDuration || 15} daqiqa</td>
+            <td class="paid-amount">${formatMoney(paid)}</td>
+            <td class="debt-amount">${formatMoney(debt)}</td>
+            <td>${formatMoney(total)}</td>
+            <td>${debt > 0 && total > 0 ? Math.round((paid / total) * 100) + '%' : '—'}</td>
+            <td><span class="${dueCls}">${dueStr}</span></td>
+            <td>${statusBadge}</td>
+            <td>${s.lastPaymentDate || '—'}</td>
+            <td>${s.paymentCount || 0}</td>
+            <td>${s.comment || '—'}</td>
+            <td>${s.note || '—'}</td>
+            <td style="text-align:center">
+                <button class="debtors-dot-menu-btn" data-sid="${s.id}" title="Amallar">⋯</button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    const emptyRow = filtered.length === 0
+        ? `<tr><td colspan="22" style="text-align:center;padding:60px 20px;color:var(--text-muted)">Qarzdor o'quvchilar topilmadi</td></tr>`
+        : '';
+
+    container.innerHTML = `<div class="debtors-wrap">
+        <div class="debtors-stats-bar">
+            <div class="debtors-stat-card">
+                <span class="stat-label">Jami qarzdorlar</span>
+                <span class="stat-value">${filtered.length} ta</span>
+            </div>
+            <div class="debtors-stat-card">
+                <span class="stat-label">Jami qarz</span>
+                <span class="stat-value danger">${formatMoney(totalDebt)}</span>
+            </div>
+            <div class="debtors-stat-card">
+                <span class="stat-label">Bu oy kutilgan</span>
+                <span class="stat-value">${formatMoney(thisMonthExpected)}</span>
+            </div>
+            <div class="debtors-stat-card">
+                <span class="stat-label">Muddati o'tgan</span>
+                <span class="stat-value danger">${overdueCount} ta</span>
+            </div>
+            <div class="debtors-stat-card">
+                <span class="stat-label">To'langan (filtrlangan)</span>
+                <span class="stat-value">${formatMoney(totalPaid)}</span>
+            </div>
+        </div>
+        <div class="debtors-filters">
+            <input type="date" id="debtorsDateFrom" value="${_debtorsDateFrom}" title="Dan">
+            <span style="color:var(--text-muted);font-size:13px">—</span>
+            <input type="date" id="debtorsDateTo" value="${_debtorsDateTo}" title="Gacha">
+            <select id="debtorsMgrFilter">${mgrOptions}</select>
+            <select id="debtorsTeacherFilter">${teacherOptions}</select>
+            <select id="debtorsTariffFilter">${tariffOptions}</select>
+        </div>
+        <div class="debtors-table-wrap">
+            <table class="debtors-table">
+                <thead><tr>
+                    <th>#</th>
+                    <th>Ism Familiya</th>
+                    <th>Telefon</th>
+                    <th>Menejer</th>
+                    <th>O'qituvchi</th>
+                    <th>Yo'nalish</th>
+                    <th>Tarif</th>
+                    <th>Guruh</th>
+                    <th>Jadval</th>
+                    <th>Boshlagan sana</th>
+                    <th>Dars davomiyligi</th>
+                    <th>To'langan</th>
+                    <th>Qarz</th>
+                    <th>Jami</th>
+                    <th>To'lov %</th>
+                    <th>To'lov muddati</th>
+                    <th>Holat</th>
+                    <th>Oxirgi to'lov</th>
+                    <th>To'lovlar soni</th>
+                    <th>Izoh</th>
+                    <th>Eslatma</th>
+                    <th>Amal</th>
+                </tr></thead>
+                <tbody>${rows}${emptyRow}</tbody>
+            </table>
+        </div>
+    </div>`;
+
+    document.getElementById('debtorsDateFrom')?.addEventListener('change', e => {
+        _debtorsDateFrom = e.target.value;
+        renderDebtors();
+    });
+    document.getElementById('debtorsDateTo')?.addEventListener('change', e => {
+        _debtorsDateTo = e.target.value;
+        renderDebtors();
+    });
+    document.getElementById('debtorsMgrFilter')?.addEventListener('change', e => {
+        _debtorsMgrFilter = e.target.value;
+        renderDebtors();
+    });
+    document.getElementById('debtorsTeacherFilter')?.addEventListener('change', e => {
+        _debtorsTeacherFilter = e.target.value;
+        renderDebtors();
+    });
+    document.getElementById('debtorsTariffFilter')?.addEventListener('change', e => {
+        _debtorsTariffFilter = e.target.value;
+        renderDebtors();
+    });
+
+    container.querySelectorAll('.debtors-dot-menu-btn').forEach(btn => {
+        btn.onclick = () => openDebtorMenu(btn.dataset.sid);
+    });
+}
+
+function openDebtorMenu(studentId) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const s = students.find(s => s.id === studentId);
+    if (!s) return;
+
+    const menuEl = document.getElementById('debtorCtxMenu');
+    if (menuEl) menuEl.remove();
+
+    const menu = document.createElement('div');
+    menu.id = 'debtorCtxMenu';
+    menu.style.cssText = 'position:fixed;z-index:9999;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:6px 0;min-width:180px';
+    menu.innerHTML = `
+        <div class="ctx-item" data-action="call" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">📞 Qo'ng'iroq qilish</div>
+        <div class="ctx-item" data-action="sms"  style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💬 SMS yuborish</div>
+        <div class="ctx-item" data-action="edit" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">✏️ Qarz tahrirlash</div>
+        <div class="ctx-item" data-action="delete" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center;color:#e74c3c">🗑 O'chirish</div>
+    `;
+    document.body.appendChild(menu);
+
+    const btn = document.querySelector(`.debtors-dot-menu-btn[data-sid="${studentId}"]`);
+    if (btn) {
+        const rect = btn.getBoundingClientRect();
+        const menuW = 180;
+        let left = rect.right - menuW;
+        if (left < 8) left = 8;
+        menu.style.top = (rect.bottom + 6) + 'px';
+        menu.style.left = left + 'px';
+    }
+
+    menu.querySelectorAll('.ctx-item').forEach(item => {
+        item.addEventListener('mouseenter', () => item.style.background = 'var(--hover-bg,rgba(0,0,0,.05))');
+        item.addEventListener('mouseleave', () => item.style.background = '');
+        item.onclick = () => {
+            menu.remove();
+            const action = item.dataset.action;
+            if (action === 'call') {
+                if (s.phone) window.open('tel:' + s.phone);
+            } else if (action === 'sms') {
+                if (s.phone) window.open('sms:' + s.phone);
+            } else if (action === 'edit') {
+                openDebtorEditModal(studentId);
+            } else if (action === 'delete') {
+                if (!confirm(`"${s.name}" ni o'chirishni tasdiqlaysizmi?`)) return;
+                const all = getItem(STORAGE_KEYS.students, []).filter(x => x.id !== studentId);
+                setItem(STORAGE_KEYS.students, all);
+                renderDebtors();
+            }
+        };
+    });
+
+    const close = e => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close, true); } };
+    setTimeout(() => document.addEventListener('click', close, true), 0);
+}
+
+function openDebtorEditModal(studentId) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const s = students.find(s => s.id === studentId);
+    if (!s) return;
+
+    const body = `
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'langan summa (so'm)</label>
+                <input type="number" id="dePaid" value="${s.paidAmount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Qarz miqdori (so'm)</label>
+                <input type="number" id="deDebt" value="${s.debtAmount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lov muddati</label>
+                <input type="date" id="deDueDate" value="${s.paymentDueDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Tarif</label>
+                <select id="deTariff" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                    <option value="standard" ${(s.tariff||'standard')==='standard'?'selected':''}>Standard</option>
+                    <option value="premium" ${s.tariff==='premium'?'selected':''}>Premium</option>
+                    <option value="vip" ${s.tariff==='vip'?'selected':''}>VIP</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Oxirgi to'lov sanasi</label>
+                <input type="date" id="deLastPayment" value="${s.lastPaymentDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lovlar soni</label>
+                <input type="number" id="dePayCount" value="${s.paymentCount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Izoh</label>
+                <textarea id="deComment" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${s.comment || ''}</textarea>
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Eslatma</label>
+                <textarea id="deNote" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${s.note || ''}</textarea>
+            </div>
+        </div>`;
+
+    const footer = `
+        <button class="btn btn-ghost" onclick="closeModal()">Bekor qilish</button>
+        <button class="btn btn-primary" id="debtorSaveBtn">Saqlash</button>`;
+
+    openModal(`Qarz tahrirlash — ${s.name}`, body, footer);
+
+    document.getElementById('debtorSaveBtn').onclick = () => {
+        const paid = Number(document.getElementById('dePaid')?.value || 0);
+        const debt = Number(document.getElementById('deDebt')?.value || 0);
+        const dueDate = document.getElementById('deDueDate')?.value || '';
+        const tariff = document.getElementById('deTariff')?.value || 'standard';
+        const lastPayment = document.getElementById('deLastPayment')?.value || '';
+        const payCount = Number(document.getElementById('dePayCount')?.value || 0);
+        const comment = document.getElementById('deComment')?.value || '';
+        const note = document.getElementById('deNote')?.value || '';
+        updateStudent(studentId, { paidAmount: paid, debtAmount: debt, paymentDueDate: dueDate, tariff, lastPaymentDate: lastPayment, paymentCount: payCount, comment, note });
+        closeModal();
+        renderDebtors();
     };
 }
 
