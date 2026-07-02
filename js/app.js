@@ -363,6 +363,7 @@ function switchSalesSection(section) {
     if (section === 'leads') renderLeads();
     if (section === 'book-roadmap') renderBookRoadmap();
     if (section === 'sales-stats') renderSalesFunnel();
+    if (section === 'scripts') renderScripts();
 }
 
 function switchStudentsSection(section) {
@@ -11685,6 +11686,197 @@ if (brColumnsFilterBtn) {
         dropdown.hidden = !willOpen;
         brColumnsFilterBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
+}
+
+// ===== Skriptlar =====
+
+const SCRIPT_COLORS = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
+    '#f97316', '#eab308', '#22c55e', '#14b8a6',
+    '#3b82f6', '#06b6d4', '#a855f7', '#64748b'
+];
+
+const SCRIPT_STICKERS = [
+    '📘', '📗', '📙', '📕', '📚', '🎯',
+    '💡', '🔑', '⭐', '🚀', '💬', '🗣️',
+    '📋', '✅', '🧠', '💎', '🔥', '🎓'
+];
+
+let _currentScriptId = null;
+
+function renderScripts() {
+    const grid = document.getElementById('scriptsGrid');
+    if (!grid) return;
+
+    const scripts = getItem(STORAGE_KEYS.scripts, []);
+
+    if (!scripts.length) {
+        grid.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--text-muted)">
+            <div style="font-size:56px;margin-bottom:16px">📚</div>
+            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px">Hozircha skript yo'q</h3>
+            <p style="font-size:14px;margin:0">Birinchi artikl qo'shish uchun "Artikl qo'shish" tugmasini bosing</p>
+        </div>`;
+        return;
+    }
+
+    grid.innerHTML = scripts.map(s => {
+        const preview = (s.content || '').slice(0, 120).replace(/\n/g, ' ');
+        const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('uz-UZ') : '';
+        return `
+        <div class="script-card" style="background:${escapeHtml(s.color || '#6366f1')}" onclick="openScriptArticle('${escapeHtml(s.id)}')">
+            <span class="script-card-sticker">${escapeHtml(s.sticker || '📘')}</span>
+            <h3 class="script-card-title">${escapeHtml(s.title || 'Nomsiz')}</h3>
+            ${s.subtitle ? `<p class="script-card-subtitle">${escapeHtml(s.subtitle)}</p>` : ''}
+            ${preview ? `<p class="script-card-preview">${escapeHtml(preview)}</p>` : ''}
+            <div class="script-card-footer">
+                <span class="script-card-date">${dateStr}</span>
+            </div>
+            <div class="script-card-actions" onclick="event.stopPropagation()">
+                <button class="script-card-action-btn" onclick="openEditScriptModal('${escapeHtml(s.id)}')">✏️ Tahrirlash</button>
+                <button class="script-card-action-btn" onclick="deleteScript('${escapeHtml(s.id)}')">🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openScriptArticle(id) {
+    const scripts = getItem(STORAGE_KEYS.scripts, []);
+    const s = scripts.find(x => x.id === id);
+    if (!s) return;
+    _currentScriptId = id;
+
+    const listView = document.getElementById('scriptsListView');
+    const articleView = document.getElementById('scriptArticleView');
+    const header = document.getElementById('scriptArticleHeader');
+    const meta = document.getElementById('scriptArticleMeta');
+    const body = document.getElementById('scriptArticleBody');
+
+    header.style.background = s.color || '#6366f1';
+    header.style.borderBottom = 'none';
+    meta.innerHTML = `
+        <h2 style="color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.18)">${escapeHtml(s.sticker || '')} ${escapeHtml(s.title || '')}</h2>
+        ${s.subtitle ? `<p style="color:rgba(255,255,255,.8)">${escapeHtml(s.subtitle)}</p>` : ''}`;
+
+    const editBtn = document.getElementById('scriptEditBtn');
+    if (editBtn) {
+        editBtn.style.cssText = 'background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px)';
+        editBtn.onclick = () => openEditScriptModal(id);
+    }
+
+    body.innerHTML = `<div class="script-article-content">${escapeHtml(s.content || '')}</div>`;
+
+    listView.style.display = 'none';
+    articleView.style.display = 'flex';
+    requestAnimationFrame(() => articleView.classList.add('active'));
+}
+
+function closeScriptArticle() {
+    const listView = document.getElementById('scriptsListView');
+    const articleView = document.getElementById('scriptArticleView');
+    articleView.classList.remove('active');
+    setTimeout(() => {
+        articleView.style.display = 'none';
+        listView.style.display = '';
+    }, 220);
+    _currentScriptId = null;
+}
+
+function editCurrentScript() {
+    if (_currentScriptId) openEditScriptModal(_currentScriptId);
+}
+
+function openAddScriptModal() {
+    _openScriptModal(null);
+}
+
+function openEditScriptModal(id) {
+    _openScriptModal(id);
+}
+
+function _openScriptModal(editId) {
+    const scripts = getItem(STORAGE_KEYS.scripts, []);
+    const existing = editId ? scripts.find(s => s.id === editId) : null;
+
+    const sel = existing ? existing.color : SCRIPT_COLORS[0];
+    const selSticker = existing ? existing.sticker : SCRIPT_STICKERS[0];
+
+    const colorSwatches = SCRIPT_COLORS.map(c => `
+        <div class="script-color-swatch${c === sel ? ' selected' : ''}"
+             style="background:${c}" data-color="${c}"
+             onclick="(function(el){document.querySelectorAll('.script-color-swatch').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');})(this)"></div>
+    `).join('');
+
+    const stickerBtns = SCRIPT_STICKERS.map(st => `
+        <button type="button" class="script-sticker-btn${st === selSticker ? ' selected' : ''}"
+                data-sticker="${st}"
+                onclick="(function(el){document.querySelectorAll('.script-sticker-btn').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');})(this)">${st}</button>
+    `).join('');
+
+    const body = `
+    <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+            <label class="form-label">Rang</label>
+            <div class="script-color-grid">${colorSwatches}</div>
+        </div>
+        <div>
+            <label class="form-label">Stiker</label>
+            <div class="script-sticker-grid">${stickerBtns}</div>
+        </div>
+        <div>
+            <label class="form-label">Nomi *</label>
+            <input id="scriptTitle" class="form-control" placeholder="Masalan: IELTS kursi haqida" value="${escapeHtml(existing?.title || '')}">
+        </div>
+        <div>
+            <label class="form-label">Qisqacha tavsif</label>
+            <input id="scriptSubtitle" class="form-control" placeholder="Kichik tushuntirish matni" value="${escapeHtml(existing?.subtitle || '')}">
+        </div>
+        <div>
+            <label class="form-label">Matn (to'liq ma'lumot)</label>
+            <textarea id="scriptContent" class="script-content-textarea" placeholder="Bu yerga kurs haqida batafsil ma'lumot yozing...">${escapeHtml(existing?.content || '')}</textarea>
+        </div>
+    </div>`;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeModal()">Bekor qilish</button>
+        <button class="btn btn-primary" onclick="saveScriptFromModal('${editId || ''}')">
+            ${editId ? 'Saqlash' : 'Qo\'shish'}
+        </button>`;
+
+    openModal(editId ? 'Artikl tahrirlash' : 'Yangi artikl qo\'shish', body, footer);
+}
+
+function saveScriptFromModal(editId) {
+    const title = document.getElementById('scriptTitle')?.value?.trim();
+    if (!title) { alert('Nom kiritilishi shart'); return; }
+
+    const color = document.querySelector('.script-color-swatch.selected')?.dataset?.color || SCRIPT_COLORS[0];
+    const sticker = document.querySelector('.script-sticker-btn.selected')?.dataset?.sticker || SCRIPT_STICKERS[0];
+    const subtitle = document.getElementById('scriptSubtitle')?.value?.trim() || '';
+    const content = document.getElementById('scriptContent')?.value || '';
+
+    const scripts = getItem(STORAGE_KEYS.scripts, []);
+
+    if (editId) {
+        const idx = scripts.findIndex(s => s.id === editId);
+        if (idx >= 0) scripts[idx] = { ...scripts[idx], title, subtitle, color, sticker, content };
+    } else {
+        scripts.unshift({ id: 'sc_' + Date.now(), title, subtitle, color, sticker, content, createdAt: new Date().toISOString() });
+    }
+
+    setItem(STORAGE_KEYS.scripts, scripts);
+    closeModal();
+    renderScripts();
+
+    if (editId && _currentScriptId === editId) openScriptArticle(editId);
+}
+
+function deleteScript(id) {
+    if (!confirm('Bu artiklni o\'chirasizmi?')) return;
+    const scripts = getItem(STORAGE_KEYS.scripts, []).filter(s => s.id !== id);
+    setItem(STORAGE_KEYS.scripts, scripts);
+    if (_currentScriptId === id) closeScriptArticle();
+    renderScripts();
 }
 
 bootApp();
