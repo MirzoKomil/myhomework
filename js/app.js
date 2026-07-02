@@ -11708,6 +11708,11 @@ function renderScripts() {
     const grid = document.getElementById('scriptsGrid');
     if (!grid) return;
 
+    const addBtn = document.getElementById('addScriptBtn');
+    if (addBtn) addBtn.onclick = openAddScriptModal;
+    const backBtn = document.getElementById('scriptBackBtn');
+    if (backBtn) backBtn.onclick = closeScriptArticle;
+
     const scripts = getItem(STORAGE_KEYS.scripts, []);
 
     if (!scripts.length) {

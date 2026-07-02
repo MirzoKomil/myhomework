@@ -773,15 +773,15 @@
                                             <h1>Skriptlar</h1>
                                             <p class="text-muted" style="margin:2px 0 0;font-size:13px">Sotuvchilar uchun kurs ma'lumotlari ensiklopediyasi</p>
                                         </div>
-                                        <button class="btn btn-primary" id="addScriptBtn" onclick="openAddScriptModal()">+ Artikl qo'shish</button>
+                                        <button class="btn btn-primary" id="addScriptBtn">+ Artikl qo'shish</button>
                                     </div>
                                     <div id="scriptsGrid" class="scripts-grid"></div>
                                 </div>
-                                <div id="scriptArticleView" class="script-article-view" style="display:none">
+                                <div id="scriptArticleView" class="script-article-view">
                                     <div class="script-article-header" id="scriptArticleHeader">
-                                        <button class="sdp-close-btn" onclick="closeScriptArticle()">Orqaga</button>
+                                        <button class="sdp-close-btn" id="scriptBackBtn">Orqaga</button>
                                         <div class="script-article-meta" id="scriptArticleMeta"></div>
-                                        <button class="btn btn-sm" id="scriptEditBtn" onclick="editCurrentScript()">Tahrirlash</button>
+                                        <button class="btn btn-sm" id="scriptEditBtn">Tahrirlash</button>
                                     </div>
                                     <div class="script-article-body" id="scriptArticleBody"></div>
                                 </div>
