@@ -7078,34 +7078,23 @@ body.modal-open {
 .script-card-action-btn:hover { background: rgba(255,255,255,.35); }
 
 /* Script article full view */
+#scriptsListView { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .script-article-view {
-    position: absolute;
-    inset: 0;
-    background: var(--bg, #fff);
-    z-index: 10;
-    display: flex;
+    display: none;
     flex-direction: column;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity .22s, transform .22s;
-    pointer-events: none;
+    flex: 1;
+    min-height: 0;
+    background: var(--bg, #fff);
+    animation: scriptFadeIn .2s ease;
 }
-.script-article-view.active {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-}
+.script-article-view.active { display: flex; }
+@keyframes scriptFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 .script-article-header {
     display: flex;
     align-items: center;
     gap: 16px;
     padding: 18px 40px;
-    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    background: inherit;
-    z-index: 2;
 }
 .script-article-meta { flex: 1; }
 .script-article-meta h2 { margin: 0; font-size: 18px; font-weight: 800; }

@@ -11753,7 +11753,6 @@ function openScriptArticle(id) {
     const body = document.getElementById('scriptArticleBody');
 
     header.style.background = s.color || '#6366f1';
-    header.style.borderBottom = 'none';
     meta.innerHTML = `
         <h2 style="color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.18)">${escapeHtml(s.sticker || '')} ${escapeHtml(s.title || '')}</h2>
         ${s.subtitle ? `<p style="color:rgba(255,255,255,.8)">${escapeHtml(s.subtitle)}</p>` : ''}`;
@@ -11767,18 +11766,14 @@ function openScriptArticle(id) {
     body.innerHTML = `<div class="script-article-content">${escapeHtml(s.content || '')}</div>`;
 
     listView.style.display = 'none';
-    articleView.style.display = 'flex';
-    requestAnimationFrame(() => articleView.classList.add('active'));
+    articleView.classList.add('active');
 }
 
 function closeScriptArticle() {
     const listView = document.getElementById('scriptsListView');
     const articleView = document.getElementById('scriptArticleView');
     articleView.classList.remove('active');
-    setTimeout(() => {
-        articleView.style.display = 'none';
-        listView.style.display = '';
-    }, 220);
+    listView.style.display = '';
     _currentScriptId = null;
 }
 
