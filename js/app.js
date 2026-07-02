@@ -11939,18 +11939,16 @@ function getSalesManagers() {
     );
 }
 
-function getManagerSalesForPeriod(managerId, period) {
+function _getClosedLeadsInPeriod(managerId, period) {
     const now = new Date();
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const allLeads = [...(leads.english || []), ...(leads.russian || [])];
-    const closed = allLeads.filter(l => {
+    return allLeads.filter(l => {
         if (normalizeLeadStatus(l.status) !== 'tolov-yopildi') return false;
         if (managerId !== 'all' && l.managerId !== managerId) return false;
-        return true;
-    });
-    const inPeriod = closed.filter(l => {
-        if (!l.date) return period === 'oylik';
-        const d = new Date(l.date);
+        const dateStr = l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
         if (isNaN(d.getTime())) return false;
         if (period === 'kunlik') {
             return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
@@ -11963,7 +11961,27 @@ function getManagerSalesForPeriod(managerId, period) {
         }
         return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     });
-    return inPeriod.length * AVG_CHECK;
+}
+
+function getManagerSalesForPeriod(managerId, period) {
+    return _getClosedLeadsInPeriod(managerId, period).reduce((sum, l) => {
+        const amount = l.paymentClosedSurvey?.actualAmount
+            || l.paymentClosedSurvey?.totalAmount
+            || l.paymentSurvey?.totalAmount
+            || AVG_CHECK;
+        return sum + (Number(amount) || AVG_CHECK);
+    }, 0);
+}
+
+function getManagerDealsCount(managerId, period) {
+    return _getClosedLeadsInPeriod(managerId, period).length;
+}
+
+function getManagerTotalLeads(managerId) {
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const allLeads = [...(leads.english || []), ...(leads.russian || [])];
+    if (managerId === 'all') return allLeads.length;
+    return allLeads.filter(l => l.managerId === managerId).length;
 }
 
 function getPeriodTarget(period) {
@@ -12029,6 +12047,8 @@ function renderLeaderboardSection() {
     const ranked = managers.map(m => ({
         ...m,
         sales: getManagerSalesForPeriod(m.id, _ratingPeriod),
+        deals: getManagerDealsCount(m.id, _ratingPeriod),
+        totalLeads: getManagerTotalLeads(m.id),
     })).sort((a, b) => b.sales - a.sales);
 
     const periodLabel = _ratingPeriod === 'kunlik' ? 'Kunlik' : _ratingPeriod === 'haftalik' ? 'Haftalik' : 'Oylik';
@@ -12050,6 +12070,7 @@ function renderLeaderboardSection() {
                 <div class="rating-podium-avatar">${managerInitials(m.name)}</div>
                 <div class="rating-podium-name">${escapeHtml(m.name)}</div>
                 <div class="rating-podium-sales">${fmtMoney(m.sales)}</div>
+                <div style="font-size:12px;opacity:.85;margin-top:2px">${m.deals} ta bitim · ${m.totalLeads} lid</div>
                 <div class="rating-podium-prog-wrap">
                     <div class="rating-podium-prog-bar" style="width:${pct}%"></div>
                 </div>
@@ -12073,6 +12094,7 @@ function renderLeaderboardSection() {
                     <tr>
                         <th style="width:48px">#</th>
                         <th>Menejer</th>
+                        <th style="text-align:right">Bitimlar</th>
                         <th style="text-align:right">Bajarildi</th>
                         <th style="text-align:right">Reja</th>
                         <th style="text-align:right">Daromad (10%)</th>
@@ -12090,9 +12112,13 @@ function renderLeaderboardSection() {
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px">
                                     <div class="rating-avatar">${managerInitials(m.name)}</div>
-                                    <strong>${escapeHtml(m.name)}</strong>
+                                    <div>
+                                        <strong>${escapeHtml(m.name)}</strong>
+                                        <div style="font-size:11px;color:var(--text-muted)">${m.totalLeads} ta lid</div>
+                                    </div>
                                 </div>
                             </td>
+                            <td style="text-align:right;font-weight:700;color:#059669">${m.deals} ta</td>
                             <td style="text-align:right;font-weight:700;color:#6366f1">${fmtMoney(m.sales)}</td>
                             <td style="text-align:right;color:var(--text-muted)">${fmtMoney(target)}</td>
                             <td style="text-align:right;color:#16a34a;font-weight:600">${fmtMoney(commission)}</td>
@@ -12105,7 +12131,7 @@ function renderLeaderboardSection() {
                                 </div>
                             </td>
                         </tr>`;
-                    }).join('') : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">Menejerlar topilmadi</td></tr>`}
+                    }).join('') : `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Menejerlar topilmadi</td></tr>`}
                 </tbody>
             </table>
         </div>`;
@@ -12156,7 +12182,10 @@ function renderLeaderboardSection() {
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
                         <span style="font-size:18px">${medal}</span>
                         <div class="rating-avatar">${managerInitials(m.name)}</div>
-                        <strong>${escapeHtml(m.name)}</strong>
+                        <div>
+                            <strong>${escapeHtml(m.name)}</strong>
+                            <div style="font-size:11px;color:var(--text-muted)">${m.deals} bitim · ${m.totalLeads} lid</div>
+                        </div>
                         <span style="margin-left:auto;font-weight:700;color:#6366f1">${fmtMoney(m.sales)}</span>
                     </div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap">${marraHTML}</div>
