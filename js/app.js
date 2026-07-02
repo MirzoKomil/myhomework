@@ -11847,8 +11847,8 @@ function _openScriptModal(editId) {
     </div>`;
 
     const footer = `
-        <button class="btn btn-secondary" id="scriptModalCancel">Bekor qilish</button>
-        <button class="btn btn-primary" id="scriptModalSave">${editId ? 'Saqlash' : "Qo'shish"}</button>`;
+        <button class="btn-ghost" id="scriptModalCancel">Bekor qilish</button>
+        <button class="btn-primary-sm" id="scriptModalSave">${editId ? 'Saqlash' : "Qo'shish"}</button>`;
 
     openModal(editId ? 'Artikl tahrirlash' : "Yangi artikl qo'shish", body, footer);
 
@@ -12392,8 +12392,8 @@ function openAddBonusHistoryModal() {
                 <input id="bhNote" class="form-control" placeholder="Qo'shimcha ma'lumot...">
             </div>
         </div>`,
-        `<button class="btn btn-secondary" id="bhCancel">Bekor</button>
-         <button class="btn btn-primary" id="bhSave">Saqlash</button>`
+        `<button class="btn-ghost" id="bhCancel">Bekor</button>
+         <button class="btn-primary-sm" id="bhSave">Saqlash</button>`
     );
 
     document.getElementById('bhCancel').onclick = closeModal;
@@ -12718,8 +12718,8 @@ function openDebtorEditModal(studentId) {
         </div>`;
 
     const footer = `
-        <button class="btn btn-ghost" onclick="closeModal()">Bekor qilish</button>
-        <button class="btn btn-primary" id="debtorSaveBtn">Saqlash</button>`;
+        <button class="btn-ghost" onclick="closeModal()">Bekor qilish</button>
+        <button class="btn-primary-sm" id="debtorSaveBtn">Saqlash</button>`;
 
     openModal(`Qarz tahrirlash — ${s.name}`, body, footer);
 
