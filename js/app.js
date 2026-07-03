@@ -6084,6 +6084,14 @@ function renderCashFlow() {
                 }
             }
         });
+        document.getElementById('cfPrintBtn').addEventListener('click', () => window.print());
+        document.getElementById('cfExportBtn').addEventListener('click', exportCashFlowToExcel);
+        document.getElementById('cfImportBtn').addEventListener('click', () => document.getElementById('cfImportInput').click());
+        document.getElementById('cfImportInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            e.target.value = '';
+            if (file) await importCashFlowFromExcel(file);
+        });
     }
 }
 
@@ -6386,6 +6394,155 @@ function openCashFlowModal(editId) {
         closeModal();
         renderCashFlow();
     });
+}
+
+let _xlsxLibPromise = null;
+function loadXlsxLib() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (_xlsxLibPromise) return _xlsxLibPromise;
+    _xlsxLibPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'js/vendor/xlsx.full.min.js';
+        script.onload = () => resolve(window.XLSX);
+        script.onerror = () => reject(new Error("Excel kutubxonasini yuklab bo'lmadi"));
+        document.head.appendChild(script);
+    });
+    return _xlsxLibPromise;
+}
+
+function cfParseImportDate(value) {
+    if (value instanceof Date && !isNaN(value)) return value.toISOString().slice(0, 10);
+    if (typeof value === 'number') {
+        const d = new Date(Math.round((value - 25569) * 86400 * 1000));
+        if (!isNaN(d)) return d.toISOString().slice(0, 10);
+    }
+    const s = String(value || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const dmy = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})$/);
+    if (dmy) {
+        const [, d, m, y] = dmy;
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    const parsed = new Date(s);
+    return isNaN(parsed) ? null : parsed.toISOString().slice(0, 10);
+}
+
+const CF_IMPORT_SOURCE_MAP = { sales: 'sotuv', 'internal sales': 'ichki-sotuv', investment: 'investitsiya', operating: 'operatsion' };
+const CF_IMPORT_TYPE_MAP = { inflow: 'kirim', outflow: 'chiqim' };
+const CF_IMPORT_METHOD_MAP = { cash: 'Naqd pul', 'bank transfer': 'Bank hisob raqami', bank: 'Bank hisob raqami', 'card transfer': 'Karta', card: 'Karta' };
+
+function cfFindPersonMatch(list, name) {
+    if (!name) return null;
+    const n = String(name).trim().toLowerCase();
+    if (!n) return null;
+    return list.find(p => p.name.trim().toLowerCase() === n) ||
+        list.find(p => n.includes(p.name.trim().toLowerCase()) || p.name.trim().toLowerCase().includes(n));
+}
+
+async function importCashFlowFromExcel(file) {
+    let XLSX;
+    try {
+        XLSX = await loadXlsxLib();
+    } catch (err) {
+        alert(err.message);
+        return;
+    }
+    let rows;
+    try {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    } catch (err) {
+        alert("Faylni o'qishda xatolik: " + err.message);
+        return;
+    }
+
+    const managers = getSalesManagers();
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const list = getCashFlowTx();
+    let imported = 0, skipped = 0;
+
+    rows.forEach((row, i) => {
+        if (i === 0) return;
+        const [dateRaw, typeRaw, amountRaw, sourceRaw, purposeRaw, methodRaw, personRaw, notesRaw] = row;
+        const type = CF_IMPORT_TYPE_MAP[String(typeRaw || '').trim().toLowerCase()];
+        if (!type) { skipped++; return; }
+        const date = cfParseImportDate(dateRaw);
+        const amount = Number(amountRaw) || 0;
+        if (!date || amount <= 0) { skipped++; return; }
+
+        const category = CF_IMPORT_SOURCE_MAP[String(sourceRaw || '').trim().toLowerCase()] || 'operatsion';
+        const method = CF_IMPORT_METHOD_MAP[String(methodRaw || '').trim().toLowerCase()] || 'Naqd pul';
+        let purpose = String(purposeRaw || 'Boshqa').trim() || 'Boshqa';
+        if (/salary|maosh|oylik/i.test(purpose)) purpose = CASH_FLOW_SALARY_PURPOSE;
+
+        let managerId = null, employeeId = null;
+        if (category === 'sotuv' || category === 'ichki-sotuv') {
+            const m = cfFindPersonMatch(managers, personRaw);
+            if (m) managerId = m.id;
+        }
+        if (purpose === CASH_FLOW_SALARY_PURPOSE) {
+            const e = cfFindPersonMatch(employees, personRaw) || cfFindPersonMatch(employees, notesRaw);
+            if (e) employeeId = e.id;
+        }
+
+        list.push({
+            id: 'cf-imp-' + Date.now() + '-' + i,
+            type, date, amount, category, purpose,
+            paymentMethod: method,
+            managerId, employeeId,
+            person: (managerId || employeeId) ? '' : String(personRaw || '').trim(),
+            notes: String(notesRaw || '').trim(),
+            createdAt: Date.now()
+        });
+        imported++;
+    });
+
+    if (!imported) {
+        alert("Import qilinadigan tranzaksiya topilmadi. Fayl ustunlari: Date, Transaction Type, Amount, Source, Purpose, Payment Method, Responsible Person, Notes tartibida bo'lishi kerak.");
+        return;
+    }
+    saveCashFlowTx(list);
+    renderCashFlow();
+    alert(`${imported} ta tranzaksiya import qilindi${skipped ? `, ${skipped} ta qator o'tkazib yuborildi (noma'lum format)` : ''}.`);
+}
+
+async function exportCashFlowToExcel() {
+    let XLSX;
+    try {
+        XLSX = await loadXlsxLib();
+    } catch (err) {
+        alert(err.message);
+        return;
+    }
+    const list = getCashFlowTx();
+    const managers = getSalesManagers();
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+
+    const txRows = list.slice().sort((a, b) => a.date.localeCompare(b.date)).map(t => {
+        let person = t.person || '';
+        if (t.managerId) person = managers.find(m => m.id === t.managerId)?.name || person;
+        else if (t.employeeId) person = employees.find(e => e.id === t.employeeId)?.name || person;
+        return {
+            Sana: t.date,
+            Turi: t.type === 'kirim' ? 'Kirim' : 'Chiqim',
+            Toifa: CASH_FLOW_CATEGORIES[t.category] || t.category,
+            Maqsad: t.purpose || '',
+            Summa: t.amount,
+            "To'lov usuli": t.paymentMethod,
+            "Mas'ul": person,
+            Izoh: t.notes || ''
+        };
+    });
+    const plRows = cfMonthlyPL(list).map(r => ({
+        Oy: r.label, Daromad: r.revenue, 'Operatsion xarajat': r.expense, 'Foyda / Zarar': r.profit
+    }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txRows), 'Tranzaksiyalar');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(plRows), 'P&L');
+    XLSX.writeFile(wb, `cash-flow-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 // --- HR Bo'limi ---

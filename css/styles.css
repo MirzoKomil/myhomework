@@ -7464,7 +7464,8 @@ body.modal-open {
 
 /* Cash Flow */
 .cf-wrap { padding-top: 20px; display: flex; flex-direction: column; gap: 16px; }
-.cf-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cf-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cf-toolbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cf-title { font-size: 22px; font-weight: 800; margin: 0; }
 .cf-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .cf-net-card, .cf-invest-card { padding: 24px; }
@@ -7503,4 +7504,11 @@ body.modal-open {
 @media (max-width: 768px) {
     .cf-grid-2 { grid-template-columns: 1fr; }
     .cf-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media print {
+    body * { visibility: hidden; }
+    .cf-wrap, .cf-wrap * { visibility: visible; }
+    .cf-wrap { position: absolute; top: 0; left: 0; width: 100%; padding: 0; }
+    .cf-toolbar-actions, .cf-tx-filters, .cf-row-action { display: none !important; }
+    .cf-tx-table th:last-child, .cf-tx-table td:last-child { display: none !important; }
 }

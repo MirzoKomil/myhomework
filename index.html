@@ -1082,7 +1082,13 @@
                                         <h2 class="cf-title">Cash Flow</h2>
                                         <p class="text-muted" style="margin:2px 0 0;font-size:13px">Kassa qoldig'i, pul oqimi va foyda-zarar monitoringi</p>
                                     </div>
-                                    <button type="button" class="btn-primary-sm" id="cfAddTxBtn">+ Tranzaksiya qo'shish</button>
+                                    <div class="cf-toolbar-actions">
+                                        <input type="file" id="cfImportInput" accept=".xlsx,.xls" hidden>
+                                        <button type="button" class="btn-ghost" id="cfImportBtn" title="Excel fayldan tranzaksiyalarni import qilish">⬆️ Excel import</button>
+                                        <button type="button" class="btn-ghost" id="cfExportBtn" title="Tranzaksiyalar va P&amp;L hisobotini Excel formatida yuklab olish">⬇️ Excel eksport</button>
+                                        <button type="button" class="btn-ghost" id="cfPrintBtn" title="Hisobotni chop etish yoki PDF sifatida saqlash">🖨️ PDF</button>
+                                        <button type="button" class="btn-primary-sm" id="cfAddTxBtn">+ Tranzaksiya qo'shish</button>
+                                    </div>
                                 </div>
 
                                 <div class="cf-kpi-grid" id="cfKpiGrid"></div>
