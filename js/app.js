@@ -371,6 +371,7 @@ function switchSalesSection(section) {
     if (section === 'scripts') renderScripts();
     if (section === 'rating') renderRating();
     if (section === 'sales-plan') renderSalesPlan();
+    if (section === 'debtors') renderSalesDebtors();
 }
 
 function switchStudentsSection(section) {
@@ -13404,9 +13405,21 @@ function openAddBonusHistoryModal() {
 }
 
 // ===== Qarzdorlar =====
-function renderDebtors() {
-    const container = document.getElementById('studentsPanel-qarzdorlar');
+const DEBTORS_CONTAINER_IDS = ['studentsPanel-qarzdorlar', 'salesPanel-debtors'];
+
+function renderDebtors() { renderDebtorsTable('studentsPanel-qarzdorlar'); }
+function renderSalesDebtors() { renderDebtorsTable('salesPanel-debtors'); }
+
+function refreshAllDebtorViews() {
+    DEBTORS_CONTAINER_IDS.forEach(id => {
+        if (document.getElementById(id)) renderDebtorsTable(id);
+    });
+}
+
+function renderDebtorsTable(containerId) {
+    const container = document.getElementById(containerId);
     if (!container) return;
+    const uid = s => `${containerId}__${s}`;
 
     const allStudents = getItem(STORAGE_KEYS.students, []);
     const allTeachers = [
@@ -13546,12 +13559,12 @@ function renderDebtors() {
             </div>
         </div>
         <div class="debtors-filters">
-            <input type="date" id="debtorsDateFrom" value="${_debtorsDateFrom}" title="Dan">
+            <input type="date" id="${uid('dateFrom')}" value="${_debtorsDateFrom}" title="Dan">
             <span style="color:var(--text-muted);font-size:13px">—</span>
-            <input type="date" id="debtorsDateTo" value="${_debtorsDateTo}" title="Gacha">
-            <select id="debtorsMgrFilter">${mgrOptions}</select>
-            <select id="debtorsTeacherFilter">${teacherOptions}</select>
-            <select id="debtorsTariffFilter">${tariffOptions}</select>
+            <input type="date" id="${uid('dateTo')}" value="${_debtorsDateTo}" title="Gacha">
+            <select id="${uid('mgrFilter')}">${mgrOptions}</select>
+            <select id="${uid('teacherFilter')}">${teacherOptions}</select>
+            <select id="${uid('tariffFilter')}">${tariffOptions}</select>
         </div>
         <div class="debtors-table-wrap">
             <table class="debtors-table">
@@ -13584,33 +13597,33 @@ function renderDebtors() {
         </div>
     </div>`;
 
-    document.getElementById('debtorsDateFrom')?.addEventListener('change', e => {
+    document.getElementById(uid('dateFrom'))?.addEventListener('change', e => {
         _debtorsDateFrom = e.target.value;
-        renderDebtors();
+        refreshAllDebtorViews();
     });
-    document.getElementById('debtorsDateTo')?.addEventListener('change', e => {
+    document.getElementById(uid('dateTo'))?.addEventListener('change', e => {
         _debtorsDateTo = e.target.value;
-        renderDebtors();
+        refreshAllDebtorViews();
     });
-    document.getElementById('debtorsMgrFilter')?.addEventListener('change', e => {
+    document.getElementById(uid('mgrFilter'))?.addEventListener('change', e => {
         _debtorsMgrFilter = e.target.value;
-        renderDebtors();
+        refreshAllDebtorViews();
     });
-    document.getElementById('debtorsTeacherFilter')?.addEventListener('change', e => {
+    document.getElementById(uid('teacherFilter'))?.addEventListener('change', e => {
         _debtorsTeacherFilter = e.target.value;
-        renderDebtors();
+        refreshAllDebtorViews();
     });
-    document.getElementById('debtorsTariffFilter')?.addEventListener('change', e => {
+    document.getElementById(uid('tariffFilter'))?.addEventListener('change', e => {
         _debtorsTariffFilter = e.target.value;
-        renderDebtors();
+        refreshAllDebtorViews();
     });
 
     container.querySelectorAll('.debtors-dot-menu-btn').forEach(btn => {
-        btn.onclick = () => openDebtorMenu(btn.dataset.sid);
+        btn.onclick = () => openDebtorMenu(btn.dataset.sid, btn);
     });
 }
 
-function openDebtorMenu(studentId) {
+function openDebtorMenu(studentId, triggerBtn) {
     const students = getItem(STORAGE_KEYS.students, []);
     const s = students.find(s => s.id === studentId);
     if (!s) return;
@@ -13629,9 +13642,8 @@ function openDebtorMenu(studentId) {
     `;
     document.body.appendChild(menu);
 
-    const btn = document.querySelector(`.debtors-dot-menu-btn[data-sid="${studentId}"]`);
-    if (btn) {
-        const rect = btn.getBoundingClientRect();
+    if (triggerBtn) {
+        const rect = triggerBtn.getBoundingClientRect();
         const menuW = 180;
         let left = rect.right - menuW;
         if (left < 8) left = 8;
@@ -13655,7 +13667,7 @@ function openDebtorMenu(studentId) {
                 if (!confirm(`"${s.name}" ni o'chirishni tasdiqlaysizmi?`)) return;
                 const all = getItem(STORAGE_KEYS.students, []).filter(x => x.id !== studentId);
                 setItem(STORAGE_KEYS.students, all);
-                renderDebtors();
+                refreshAllDebtorViews();
             }
         };
     });
@@ -13726,7 +13738,7 @@ function openDebtorEditModal(studentId) {
         const note = document.getElementById('deNote')?.value || '';
         updateStudent(studentId, { paidAmount: paid, debtAmount: debt, paymentDueDate: dueDate, tariff, lastPaymentDate: lastPayment, paymentCount: payCount, comment, note });
         closeModal();
-        renderDebtors();
+        refreshAllDebtorViews();
     };
 }
 
