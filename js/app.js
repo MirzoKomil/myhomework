@@ -10901,6 +10901,7 @@ document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         if (_tabContext.salesSection === 'leads') renderLeads();
         if (_tabContext.salesSection === 'book-roadmap') renderBookRoadmap();
         if (_tabContext.salesSection === 'sales-stats') renderSalesFunnel();
+        if (_tabContext.salesSection === 'scripts') renderScripts();
     });
 });
 
@@ -12355,6 +12356,72 @@ const SCRIPT_STICKERS = [
     '📋', '✅', '🧠', '💎', '🔥', '🎓'
 ];
 
+const SCRIPT_TEXT_COLORS = [
+    '#1a1d2e', '#ef4444', '#f97316', '#eab308',
+    '#22c55e', '#14b8a6', '#3b82f6', '#6366f1',
+    '#a855f7', '#ec4899', '#64748b', '#ffffff'
+];
+
+const SCRIPT_EMOJIS = [
+    '😀', '😊', '😉', '😍', '🤔', '😅', '😎', '🙌',
+    '👍', '👏', '🙏', '💪', '✅', '❌', '⭐', '🔥',
+    '💡', '📌', '📚', '🎯', '🚀', '💰', '📞', '💬',
+    '❤️', '🎉', '⚠️', '➡️'
+];
+
+const SCRIPT_ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'SPAN', 'DIV', 'BR', 'P', 'UL', 'OL', 'LI', 'FONT']);
+const SCRIPT_ALLOWED_STYLE_PROPS = new Set(['color', 'background-color', 'font-weight', 'font-style', 'text-decoration']);
+
+function _sanitizeScriptNode(node) {
+    [...node.childNodes].forEach(child => {
+        if (child.nodeType === Node.ELEMENT_NODE) {
+            _sanitizeScriptNode(child);
+            if (!SCRIPT_ALLOWED_TAGS.has(child.tagName)) {
+                while (child.firstChild) node.insertBefore(child.firstChild, child);
+                node.removeChild(child);
+                return;
+            }
+            [...child.attributes].forEach(attr => {
+                if (attr.name === 'style') {
+                    const clean = [...child.style]
+                        .filter(p => SCRIPT_ALLOWED_STYLE_PROPS.has(p))
+                        .map(p => `${p}:${child.style.getPropertyValue(p)}`)
+                        .join(';');
+                    if (clean) child.setAttribute('style', clean); else child.removeAttribute('style');
+                } else if (attr.name !== 'color' && attr.name !== 'face') {
+                    child.removeAttribute(attr.name);
+                }
+            });
+        } else if (child.nodeType !== Node.TEXT_NODE) {
+            node.removeChild(child);
+        }
+    });
+}
+
+function sanitizeScriptHtml(html) {
+    const container = document.createElement('div');
+    container.innerHTML = html || '';
+    _sanitizeScriptNode(container);
+    return container.innerHTML;
+}
+
+function scriptContentToEditableHtml(content) {
+    if (!content) return '';
+    if (/<[a-z][\s\S]*>/i.test(content)) return content;
+    return escapeHtml(content).replace(/\n/g, '<br>');
+}
+
+function renderScriptContentHtml(content) {
+    return sanitizeScriptHtml(scriptContentToEditableHtml(content));
+}
+
+function stripHtmlToText(html) {
+    if (!html) return '';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return (div.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
 let _currentScriptId = null;
 
 function renderScripts() {
@@ -12366,7 +12433,8 @@ function renderScripts() {
     const backBtn = document.getElementById('scriptBackBtn');
     if (backBtn) backBtn.onclick = closeScriptArticle;
 
-    const scripts = getItem(STORAGE_KEYS.scripts, []);
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const scripts = getItem(STORAGE_KEYS.scripts, []).filter(s => (s.lang || 'english') === lang);
 
     if (!scripts.length) {
         grid.innerHTML = `
@@ -12379,7 +12447,7 @@ function renderScripts() {
     }
 
     grid.innerHTML = scripts.map(s => {
-        const preview = (s.content || '').slice(0, 120).replace(/\n/g, ' ');
+        const preview = stripHtmlToText(s.content || '').slice(0, 120);
         const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('uz-UZ') : '';
         return `
         <div class="script-card" style="background:${escapeHtml(s.color || '#6366f1')}" onclick="openScriptArticle('${escapeHtml(s.id)}')">
@@ -12421,7 +12489,7 @@ function openScriptArticle(id) {
         editBtn.onclick = () => openEditScriptModal(id);
     }
 
-    body.innerHTML = `<div class="script-article-content">${escapeHtml(s.content || '')}</div>`;
+    body.innerHTML = `<div class="script-article-content">${renderScriptContentHtml(s.content)}</div>`;
 
     listView.style.display = 'none';
     articleView.classList.add('active');
@@ -12462,6 +12530,14 @@ function _openScriptModal(editId) {
         `<button type="button" class="script-sticker-btn${st === selSticker ? ' selected' : ''}" data-sticker="${escapeHtml(st)}">${st}</button>`
     ).join('');
 
+    const defaultLang = existing?.lang || (_leadsLangFilter === 'russian' ? 'russian' : 'english');
+    const colorSwatchesEditor = SCRIPT_TEXT_COLORS.map(c =>
+        `<div class="script-editor-color-dot" style="background:${c}" data-color="${c}"></div>`
+    ).join('');
+    const emojiItems = SCRIPT_EMOJIS.map(e =>
+        `<span class="script-editor-emoji-item" data-emoji="${e}">${e}</span>`
+    ).join('');
+
     const body = `
     <div style="display:flex;flex-direction:column;gap:14px">
         <div>
@@ -12473,6 +12549,13 @@ function _openScriptModal(editId) {
             <div class="script-sticker-grid" id="scriptStickerGrid">${stickerBtns}</div>
         </div>
         <div>
+            <label class="form-label">Til</label>
+            <select id="scriptLang" class="form-control">
+                <option value="english" ${defaultLang !== 'russian' ? 'selected' : ''}>🇬🇧 Ingliz tili</option>
+                <option value="russian" ${defaultLang === 'russian' ? 'selected' : ''}>🇷🇺 Rus tili</option>
+            </select>
+        </div>
+        <div>
             <label class="form-label">Nomi *</label>
             <input id="scriptTitle" class="form-control" placeholder="Masalan: IELTS kursi haqida" value="${escapeHtml(existing?.title || '')}">
         </div>
@@ -12482,7 +12565,24 @@ function _openScriptModal(editId) {
         </div>
         <div>
             <label class="form-label">Matn (to'liq ma'lumot)</label>
-            <textarea id="scriptContent" class="script-content-textarea" placeholder="Bu yerga kurs haqida batafsil ma'lumot yozing...">${escapeHtml(existing?.content || '')}</textarea>
+            <div class="script-editor-toolbar" id="scriptEditorToolbar">
+                <button type="button" class="script-editor-btn" data-cmd="bold" title="Qalin"><b>B</b></button>
+                <button type="button" class="script-editor-btn" data-cmd="italic" title="Kursiv"><i>I</i></button>
+                <button type="button" class="script-editor-btn" data-cmd="underline" title="Tagiga chizilgan"><u>U</u></button>
+                <button type="button" class="script-editor-btn" data-cmd="insertUnorderedList" title="Ro'yxat">☰</button>
+                <span class="script-editor-sep"></span>
+                <div class="script-editor-color-wrap">
+                    <button type="button" class="script-editor-btn" id="scriptEditorColorBtn" title="Matn rangi">🎨</button>
+                    <div class="script-editor-color-panel" id="scriptEditorColorPanel" hidden>${colorSwatchesEditor}</div>
+                </div>
+                <div class="script-editor-emoji-wrap">
+                    <button type="button" class="script-editor-btn" id="scriptEditorEmojiBtn" title="Emoji">😊</button>
+                    <div class="script-editor-emoji-panel" id="scriptEditorEmojiPanel" hidden>${emojiItems}</div>
+                </div>
+                <span class="script-editor-sep"></span>
+                <button type="button" class="script-editor-btn" data-cmd="removeFormat" title="Formatni tozalash">⟲</button>
+            </div>
+            <div id="scriptContentEditable" class="script-content-editable" contenteditable="true" data-placeholder="Bu yerga kurs haqida batafsil ma'lumot yozing..."></div>
         </div>
     </div>`;
 
@@ -12507,6 +12607,60 @@ function _openScriptModal(editId) {
         };
     });
 
+    const editableEl = document.getElementById('scriptContentEditable');
+    if (editableEl) {
+        editableEl.innerHTML = scriptContentToEditableHtml(existing?.content || '');
+        try { document.execCommand('defaultParagraphSeparator', false, 'br'); } catch { /* ignore */ }
+    }
+
+    const colorPanel = document.getElementById('scriptEditorColorPanel');
+    const emojiPanel = document.getElementById('scriptEditorEmojiPanel');
+    const preventStealFocus = el => el.addEventListener('mousedown', e => e.preventDefault());
+
+    document.getElementById('scriptEditorToolbar')?.querySelectorAll('[data-cmd]').forEach(btn => {
+        preventStealFocus(btn);
+        btn.onclick = () => {
+            editableEl?.focus();
+            document.execCommand(btn.dataset.cmd, false, null);
+        };
+    });
+
+    const colorBtn = document.getElementById('scriptEditorColorBtn');
+    if (colorBtn && colorPanel) {
+        preventStealFocus(colorBtn);
+        colorBtn.onclick = e => {
+            e.stopPropagation();
+            colorPanel.hidden = !colorPanel.hidden;
+            if (emojiPanel) emojiPanel.hidden = true;
+        };
+        colorPanel.querySelectorAll('.script-editor-color-dot').forEach(dot => {
+            preventStealFocus(dot);
+            dot.onclick = () => {
+                editableEl?.focus();
+                document.execCommand('foreColor', false, dot.dataset.color);
+                colorPanel.hidden = true;
+            };
+        });
+    }
+
+    const emojiBtn = document.getElementById('scriptEditorEmojiBtn');
+    if (emojiBtn && emojiPanel) {
+        preventStealFocus(emojiBtn);
+        emojiBtn.onclick = e => {
+            e.stopPropagation();
+            emojiPanel.hidden = !emojiPanel.hidden;
+            if (colorPanel) colorPanel.hidden = true;
+        };
+        emojiPanel.querySelectorAll('.script-editor-emoji-item').forEach(item => {
+            preventStealFocus(item);
+            item.onclick = () => {
+                editableEl?.focus();
+                document.execCommand('insertText', false, item.dataset.emoji);
+                emojiPanel.hidden = true;
+            };
+        });
+    }
+
     document.getElementById('scriptModalCancel').onclick = closeModal;
     document.getElementById('scriptModalSave').onclick = () => saveScriptFromModal(editId || '');
 }
@@ -12518,15 +12672,16 @@ function saveScriptFromModal(editId) {
     const color = document.querySelector('.script-color-swatch.selected')?.dataset?.color || SCRIPT_COLORS[0];
     const sticker = document.querySelector('.script-sticker-btn.selected')?.dataset?.sticker || SCRIPT_STICKERS[0];
     const subtitle = document.getElementById('scriptSubtitle')?.value?.trim() || '';
-    const content = document.getElementById('scriptContent')?.value || '';
+    const lang = document.getElementById('scriptLang')?.value === 'russian' ? 'russian' : 'english';
+    const content = sanitizeScriptHtml(document.getElementById('scriptContentEditable')?.innerHTML || '');
 
     const scripts = getItem(STORAGE_KEYS.scripts, []);
 
     if (editId) {
         const idx = scripts.findIndex(s => s.id === editId);
-        if (idx >= 0) scripts[idx] = { ...scripts[idx], title, subtitle, color, sticker, content };
+        if (idx >= 0) scripts[idx] = { ...scripts[idx], title, subtitle, color, sticker, lang, content };
     } else {
-        scripts.unshift({ id: 'sc_' + Date.now(), title, subtitle, color, sticker, content, createdAt: new Date().toISOString() });
+        scripts.unshift({ id: 'sc_' + Date.now(), title, subtitle, color, sticker, lang, content, createdAt: new Date().toISOString() });
     }
 
     setItem(STORAGE_KEYS.scripts, scripts);
@@ -12814,6 +12969,21 @@ function renderSalesPlanResults() {
     }).join('');
 }
 
+function pctToPlanColor(pct) {
+    const red = [239, 68, 68];
+    const yellow = [217, 119, 6];
+    const green = [22, 163, 74];
+    const lerp = (a, b, t) => a.map((c, i) => Math.round(c + (b[i] - c) * t));
+    const toHex = rgb => '#' + rgb.map(x => x.toString(16).padStart(2, '0')).join('');
+    let rgb;
+    if (pct <= 50) rgb = red;
+    else if (pct <= 55) rgb = lerp(red, yellow, (pct - 50) / 5);
+    else if (pct <= 75) rgb = yellow;
+    else if (pct <= 80) rgb = lerp(yellow, green, (pct - 75) / 5);
+    else rgb = green;
+    return toHex(rgb);
+}
+
 function renderRating() {
     const panel = document.querySelector('[data-sales-panel="rating"]');
     if (!panel) return;
@@ -12827,10 +12997,10 @@ function renderRating() {
     });
 
     panel.querySelectorAll('[data-rating-period]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.ratingPeriod === _ratingPeriod);
+        btn.classList.toggle('lang-btn--active', btn.dataset.ratingPeriod === _ratingPeriod);
         btn.onclick = () => {
             _ratingPeriod = btn.dataset.ratingPeriod;
-            panel.querySelectorAll('[data-rating-period]').forEach(b => b.classList.toggle('active', b.dataset.ratingPeriod === _ratingPeriod));
+            panel.querySelectorAll('[data-rating-period]').forEach(b => b.classList.toggle('lang-btn--active', b.dataset.ratingPeriod === _ratingPeriod));
             if (_ratingSection === 'leaderboard') renderLeaderboardSection();
             if (_ratingSection === 'bonus-history') renderBonusHistorySection();
         };
@@ -12921,7 +13091,7 @@ function renderLeaderboardSection() {
                         const pct = Math.min(100, target > 0 ? Math.round((m.sales / target) * 100) : 0);
                         const commission = Math.round(m.sales * 0.1);
                         const medal = i < 3 ? podiumMedals[i] : `<span style="color:var(--text-muted);font-weight:700">${i + 1}</span>`;
-                        const barColor = pct >= 100 ? '#16a34a' : pct >= 70 ? '#6366f1' : pct >= 40 ? '#d97706' : '#ef4444';
+                        const barColor = pctToPlanColor(pct);
                         return `<tr>
                             <td style="text-align:center;font-size:18px">${medal}</td>
                             <td>
@@ -12942,7 +13112,7 @@ function renderLeaderboardSection() {
                                     <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
                                         <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s"></div>
                                     </div>
-                                    <span style="font-size:12px;font-weight:700;color:${barColor};white-space:nowrap">${pct}%</span>
+                                    <span style="font-size:12px;font-weight:700;color:${barColor};white-space:nowrap">🚩 ${pct}%</span>
                                 </div>
                             </td>
                         </tr>`;
@@ -13011,7 +13181,7 @@ function renderLeaderboardSection() {
 
     el.innerHTML = `
     ${viewToggleHTML}
-    ${podiumHTML}
+    ${_ratingView === 'normal' ? podiumHTML : ''}
     ${mainContent}`;
 
     const viewNormal = el.querySelector('#ratingViewNormal');
