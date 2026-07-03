@@ -12866,8 +12866,6 @@ function renderLeaderboardSection() {
         totalLeads: getManagerTotalLeads(m.id),
     })).sort((a, b) => b.sales - a.sales);
 
-    const periodLabel = _ratingPeriod === 'kunlik' ? 'Kunlik' : _ratingPeriod === 'haftalik' ? 'Haftalik' : 'Oylik';
-
     const podiumColors = [
         'linear-gradient(135deg,#f59e0b,#fbbf24)',
         'linear-gradient(135deg,#94a3b8,#cbd5e1)',
@@ -12880,7 +12878,8 @@ function renderLeaderboardSection() {
     <div class="rating-podium">
         ${top3.map((m, i) => {
             const pct = Math.min(100, target > 0 ? Math.round((m.sales / target) * 100) : 0);
-            return `<div class="rating-podium-card" style="background:${podiumColors[i] || '#6366f1'}">
+            return `<div class="rating-podium-card bonus-card--3d" style="background:${podiumColors[i] || '#6366f1'}">
+                <div class="bonus-card-shine"></div>
                 <div class="rating-podium-rank">${podiumMedals[i]}</div>
                 <div class="rating-podium-avatar">${managerInitials(m.name)}</div>
                 <div class="rating-podium-name">${escapeHtml(m.name)}</div>
@@ -13010,17 +13009,15 @@ function renderLeaderboardSection() {
     }
 
     el.innerHTML = `
-    <div class="page-title-bar">
-        <div><h1>Leaderboard</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Sotuv menejerlarining natijalari · ${periodLabel}</p></div>
-    </div>
-    ${podiumHTML}
     ${viewToggleHTML}
+    ${podiumHTML}
     ${mainContent}`;
 
     const viewNormal = el.querySelector('#ratingViewNormal');
     const viewMarralar = el.querySelector('#ratingViewMarralar');
     if (viewNormal) viewNormal.onclick = () => { _ratingView = 'normal'; renderLeaderboardSection(); };
     if (viewMarralar) viewMarralar.onclick = () => { _ratingView = 'marralar'; renderLeaderboardSection(); };
+    _attach3DTilt(el);
 }
 
 function _allBonusList() {
