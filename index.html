@@ -1076,10 +1076,96 @@
 
                         <!-- Cash Flow -->
                         <div class="finance-panel" data-finance-panel="cashflow" id="financePanel-cashflow">
-                            <div class="mac-empty" style="padding:80px 0">
-                                <div style="font-size:40px;margin-bottom:12px">📈</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Cash Flow</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            <div class="cf-wrap">
+                                <div class="cf-toolbar">
+                                    <div>
+                                        <h2 class="cf-title">Cash Flow</h2>
+                                        <p class="text-muted" style="margin:2px 0 0;font-size:13px">Kassa qoldig'i, pul oqimi va foyda-zarar monitoringi</p>
+                                    </div>
+                                    <button type="button" class="btn-primary-sm" id="cfAddTxBtn">+ Tranzaksiya qo'shish</button>
+                                </div>
+
+                                <div class="cf-kpi-grid" id="cfKpiGrid"></div>
+
+                                <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
+                                    <div class="card cf-net-card">
+                                        <div class="cf-net-header">
+                                            <h3>Net Cash Flow</h3>
+                                            <div class="sp-period-tabs" id="cfNetPeriodTabs" style="margin:0">
+                                                <button type="button" class="sp-period-tab active" data-cf-net-period="kunlik">Kunlik</button>
+                                                <button type="button" class="sp-period-tab" data-cf-net-period="haftalik">Haftalik</button>
+                                                <button type="button" class="sp-period-tab" data-cf-net-period="oylik">Oylik</button>
+                                            </div>
+                                        </div>
+                                        <div class="cf-net-body" id="cfNetBody"></div>
+                                    </div>
+                                    <div class="card cf-invest-card" id="cfInvestCard"></div>
+                                </div>
+
+                                <div class="card">
+                                    <div class="card-header"><h3>Oylik P&amp;L (Foyda va zarar)</h3></div>
+                                    <div class="cf-pl-table-wrap">
+                                        <table class="table cf-pl-table" id="cfPlTable"></table>
+                                    </div>
+                                </div>
+
+                                <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
+                                    <div class="card">
+                                        <div class="card-header"><h3>Kirim / Chiqim dinamikasi</h3></div>
+                                        <div id="cfTrendChart" class="cf-chart-box"></div>
+                                    </div>
+                                    <div class="card">
+                                        <div class="card-header"><h3>Chiqimlar taqsimoti</h3></div>
+                                        <div id="cfDonutChart" class="cf-chart-box"></div>
+                                    </div>
+                                </div>
+
+                                <div class="card">
+                                    <div class="card-header"><h3>Sotuv menejerlari bo'yicha tushumlar</h3></div>
+                                    <div id="cfManagerBars"></div>
+                                </div>
+
+                                <div class="card">
+                                    <div class="cf-tx-toolbar">
+                                        <h3>Tranzaksiyalar</h3>
+                                        <div class="cf-tx-filters">
+                                            <select id="cfFilterType" class="form-control-sm">
+                                                <option value="all">Barchasi</option>
+                                                <option value="kirim">Kirim</option>
+                                                <option value="chiqim">Chiqim</option>
+                                            </select>
+                                            <select id="cfFilterCategory" class="form-control-sm">
+                                                <option value="all">Barcha toifalar</option>
+                                                <option value="sotuv">Sotuv</option>
+                                                <option value="ichki-sotuv">Ichki sotuv</option>
+                                                <option value="investitsiya">Investitsiya</option>
+                                                <option value="operatsion">Operatsion</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="cf-tx-table-wrap">
+                                        <table class="table cf-tx-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sana</th>
+                                                    <th>Turi</th>
+                                                    <th>Toifa</th>
+                                                    <th>Maqsad</th>
+                                                    <th>Summa</th>
+                                                    <th>To'lov usuli</th>
+                                                    <th>Mas'ul</th>
+                                                    <th>Izoh</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="cfTxTableBody"></tbody>
+                                        </table>
+                                        <div class="mac-empty" id="cfTxEmpty" style="display:none;padding:40px 0">
+                                            <div style="font-size:32px;margin-bottom:8px">🗂️</div>
+                                            <div style="font-size:13px;color:var(--text-muted)">Hozircha tranzaksiyalar yo'q. "+ Tranzaksiya qo'shish" tugmasi orqali birinchisini qo'shing.</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

@@ -5882,6 +5882,7 @@ function switchFinanceSection(section) {
         panel.classList.toggle('active', panel.dataset.financePanel === section);
     });
     applyFinanceLang();
+    if (section === 'cashflow') renderCashFlow();
 }
 
 function renderFinance() {
@@ -5905,6 +5906,486 @@ function renderFinance() {
         b.classList.toggle('active', b.dataset.financeLang === _financeLang)
     );
     switchFinanceSection(_tabContext.financeSection || 'tolovlar');
+}
+
+// --- Cash Flow ---
+
+const CASH_FLOW_CATEGORIES = {
+    sotuv: 'Sotuv',
+    'ichki-sotuv': 'Ichki sotuv',
+    investitsiya: 'Investitsiya',
+    operatsion: 'Operatsion'
+};
+
+const CASH_FLOW_PURPOSES = {
+    sotuv: ["Kurs to'lovi", 'Boshqa'],
+    'ichki-sotuv': ["Kurs to'lovi", 'Boshqa'],
+    investitsiya: ["O'sish fondi", 'CRM tizimi', "Bo'sh ish o'rni", 'Boshqa'],
+    operatsion: ['Oylik (xodim maoshi)', 'Marketing', 'CRM tizimi', 'Target byudjeti', 'CEO shaxsiy xarajati', 'Boshqa']
+};
+
+const CASH_FLOW_PAYMENT_METHODS = ['Naqd pul', 'Bank hisob raqami', 'Karta'];
+const CASH_FLOW_SALARY_PURPOSE = 'Oylik (xodim maoshi)';
+const CF_DONUT_COLORS = ['#7B61FF', '#4F8CFF', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#94A3B8', '#22D3EE'];
+
+let _cfNetPeriod = 'kunlik';
+
+function getCashFlowTx() {
+    return getItem(STORAGE_KEYS.cashFlow, []);
+}
+
+function saveCashFlowTx(list) {
+    setItem(STORAGE_KEYS.cashFlow, list);
+}
+
+function deleteCashFlowTx(id) {
+    saveCashFlowTx(getCashFlowTx().filter(t => t.id !== id));
+}
+
+function cfBalancesByMethod(list) {
+    const balances = {};
+    CASH_FLOW_PAYMENT_METHODS.forEach(m => balances[m] = 0);
+    list.forEach(t => {
+        const sign = t.type === 'kirim' ? 1 : -1;
+        balances[t.paymentMethod] = (balances[t.paymentMethod] || 0) + sign * (Number(t.amount) || 0);
+    });
+    return balances;
+}
+
+function cfDateInPeriod(dateStr, period) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    if (period === 'kunlik') return d.toDateString() === now.toDateString();
+    if (period === 'haftalik') {
+        const day = now.getDay() || 7;
+        const weekStart = new Date(now); weekStart.setDate(now.getDate() - day + 1); weekStart.setHours(0, 0, 0, 0);
+        return d >= weekStart && d <= now;
+    }
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+function cfKirimChiqimForPeriod(list, period) {
+    let kirim = 0, chiqim = 0;
+    list.forEach(t => {
+        if (!cfDateInPeriod(t.date, period)) return;
+        if (t.type === 'kirim') kirim += Number(t.amount) || 0;
+        else chiqim += Number(t.amount) || 0;
+    });
+    return { kirim, chiqim };
+}
+
+function cfInvestmentTotals(list) {
+    let kiritilgan = 0, sarflangan = 0;
+    list.forEach(t => {
+        if (t.category !== 'investitsiya') return;
+        if (t.type === 'kirim') kiritilgan += Number(t.amount) || 0;
+        else sarflangan += Number(t.amount) || 0;
+    });
+    return { kiritilgan, sarflangan, qoldiq: kiritilgan - sarflangan };
+}
+
+function cfMonthKey(dateStr) {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function cfMonthLabel(monthKey) {
+    const [y, m] = monthKey.split('-').map(Number);
+    const names = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+    return `${names[m - 1]} ${y}`;
+}
+
+function cfMonthlyPL(list) {
+    const months = {};
+    list.forEach(t => {
+        const key = cfMonthKey(t.date);
+        if (!months[key]) months[key] = { revenue: 0, expense: 0 };
+        if (t.type === 'kirim' && (t.category === 'sotuv' || t.category === 'ichki-sotuv')) {
+            months[key].revenue += Number(t.amount) || 0;
+        } else if (t.type === 'chiqim' && t.category === 'operatsion') {
+            months[key].expense += Number(t.amount) || 0;
+        }
+    });
+    return Object.entries(months)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, v]) => ({ key, label: cfMonthLabel(key), revenue: v.revenue, expense: v.expense, profit: v.revenue - v.expense }));
+}
+
+function cfManagerInflows(list) {
+    const byId = {};
+    getSalesManagers().forEach(m => byId[m.id] = { id: m.id, name: m.name, total: 0 });
+    list.forEach(t => {
+        if (t.type !== 'kirim' || !t.managerId || !byId[t.managerId]) return;
+        byId[t.managerId].total += Number(t.amount) || 0;
+    });
+    return Object.values(byId).filter(m => m.total > 0).sort((a, b) => b.total - a.total);
+}
+
+function cfExpenseBreakdown(list) {
+    const byPurpose = {};
+    list.forEach(t => {
+        if (t.type !== 'chiqim') return;
+        const key = t.purpose || 'Boshqa';
+        byPurpose[key] = (byPurpose[key] || 0) + (Number(t.amount) || 0);
+    });
+    return Object.entries(byPurpose).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+}
+
+function cfTrend(list, days = 14) {
+    const out = [];
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now); d.setDate(now.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        let kirim = 0, chiqim = 0;
+        list.forEach(t => {
+            if (t.date !== dateStr) return;
+            if (t.type === 'kirim') kirim += Number(t.amount) || 0;
+            else chiqim += Number(t.amount) || 0;
+        });
+        out.push({ date: dateStr, label: `${d.getDate()}.${d.getMonth() + 1}`, kirim, chiqim });
+    }
+    return out;
+}
+
+function renderCashFlow() {
+    const panel = document.querySelector('[data-finance-panel="cashflow"]');
+    if (!panel) return;
+
+    renderCfKpis();
+    renderCfNetCashFlow();
+    renderCfInvestCard();
+    renderCfPlTable();
+    renderCfCharts();
+    renderCfManagerBars();
+    renderCfTxTable();
+
+    if (!panel.dataset.cfBound) {
+        panel.dataset.cfBound = '1';
+        document.getElementById('cfAddTxBtn').addEventListener('click', () => openCashFlowModal());
+        document.querySelectorAll('#cfNetPeriodTabs [data-cf-net-period]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                _cfNetPeriod = btn.dataset.cfNetPeriod;
+                document.querySelectorAll('#cfNetPeriodTabs [data-cf-net-period]').forEach(b =>
+                    b.classList.toggle('active', b.dataset.cfNetPeriod === _cfNetPeriod));
+                renderCfNetCashFlow();
+            });
+        });
+        document.getElementById('cfFilterType').addEventListener('change', renderCfTxTable);
+        document.getElementById('cfFilterCategory').addEventListener('change', renderCfTxTable);
+        document.getElementById('cfTxTableBody').addEventListener('click', e => {
+            const editBtn = e.target.closest('[data-cf-edit]');
+            const delBtn = e.target.closest('[data-cf-delete]');
+            if (editBtn) openCashFlowModal(editBtn.dataset.cfEdit);
+            if (delBtn) {
+                if (confirm("Tranzaksiyani o'chirishni tasdiqlaysizmi?")) {
+                    deleteCashFlowTx(delBtn.dataset.cfDelete);
+                    renderCashFlow();
+                }
+            }
+        });
+    }
+}
+
+function renderCfKpis() {
+    const list = getCashFlowTx();
+    const balances = cfBalancesByMethod(list);
+    const total = Object.values(balances).reduce((a, b) => a + b, 0);
+    const el = document.getElementById('cfKpiGrid');
+    if (!el) return;
+    const cards = [
+        { label: 'Umumiy qoldiq', value: total, icon: '💰', color: 'purple' },
+        { label: 'Naqd pul', value: balances['Naqd pul'], icon: '💵', color: 'green' },
+        { label: 'Karta', value: balances['Karta'], icon: '💳', color: 'blue' },
+        { label: 'Bank hisob raqami', value: balances['Bank hisob raqami'], icon: '🏦', color: 'yellow' }
+    ];
+    el.innerHTML = cards.map(c => `
+        <div class="stat-card">
+            <div class="stat-icon ${c.color}">${c.icon}</div>
+            <div class="stat-info">
+                <div class="stat-label">${escapeHtml(c.label)}</div>
+                <div class="stat-value ${c.value < 0 ? 'sp-neg' : ''}" style="font-size:20px">${fmtMoney(c.value)}</div>
+            </div>
+        </div>`).join('');
+}
+
+function renderCfNetCashFlow() {
+    const { kirim, chiqim } = cfKirimChiqimForPeriod(getCashFlowTx(), _cfNetPeriod);
+    const net = kirim - chiqim;
+    const body = document.getElementById('cfNetBody');
+    if (!body) return;
+    body.innerHTML = `
+        <div class="cf-net-value ${net >= 0 ? 'sp-pos' : 'sp-neg'}">${net >= 0 ? '+' : ''}${fmtMoney(net)}</div>
+        <div class="cf-net-sub">
+            <span><span class="sp-pos">▲</span> Kirim: ${fmtMoney(kirim)}</span>
+            <span><span class="sp-neg">▼</span> Chiqim: ${fmtMoney(chiqim)}</span>
+        </div>`;
+}
+
+function renderCfInvestCard() {
+    const inv = cfInvestmentTotals(getCashFlowTx());
+    const el = document.getElementById('cfInvestCard');
+    if (!el) return;
+    el.innerHTML = `
+        <div class="card-header"><h3>Investitsiya</h3></div>
+        <div class="cf-invest-row"><span>Jami kiritilgan</span><b class="sp-pos">${fmtMoney(inv.kiritilgan)}</b></div>
+        <div class="cf-invest-row"><span>Sarflangan</span><b class="sp-neg">${fmtMoney(inv.sarflangan)}</b></div>
+        <div class="cf-invest-row cf-invest-row-total"><span>Qoldiq</span><b>${fmtMoney(inv.qoldiq)}</b></div>`;
+}
+
+function renderCfPlTable() {
+    const rows = cfMonthlyPL(getCashFlowTx());
+    const el = document.getElementById('cfPlTable');
+    if (!el) return;
+    if (!rows.length) {
+        el.innerHTML = `<tbody><tr><td class="text-muted" style="padding:20px 0;text-align:center">Ma'lumot yo'q</td></tr></tbody>`;
+        return;
+    }
+    el.innerHTML = `
+        <thead><tr><th>Oy</th><th>Daromad</th><th>Operatsion xarajat</th><th>Foyda / Zarar</th></tr></thead>
+        <tbody>
+            ${rows.map(r => `
+                <tr>
+                    <td>${escapeHtml(r.label)}</td>
+                    <td>${fmtMoney(r.revenue)}</td>
+                    <td>${fmtMoney(r.expense)}</td>
+                    <td class="${r.profit >= 0 ? 'sp-pos' : 'sp-neg'}" style="font-weight:700">${r.profit >= 0 ? '+' : ''}${fmtMoney(r.profit)}</td>
+                </tr>`).join('')}
+        </tbody>`;
+}
+
+function renderCfCharts() {
+    const list = getCashFlowTx();
+    renderCfTrendChart(cfTrend(list));
+    renderCfDonutChart(cfExpenseBreakdown(list));
+}
+
+function renderCfTrendChart(data) {
+    const el = document.getElementById('cfTrendChart');
+    if (!el) return;
+    if (!data.some(d => d.kirim || d.chiqim)) {
+        el.innerHTML = `<div class="mac-empty" style="padding:30px 0"><div style="font-size:13px;color:var(--text-muted)">Hozircha ma'lumot yo'q</div></div>`;
+        return;
+    }
+    const W = 560, H = 200, PAD = 28;
+    const maxVal = Math.max(1, ...data.map(d => Math.max(d.kirim, d.chiqim)));
+    const stepX = (W - PAD * 2) / (data.length - 1 || 1);
+    const toY = v => H - PAD - (v / maxVal) * (H - PAD * 2);
+    const line = arr => arr.map((d, i) => `${PAD + i * stepX},${toY(d)}`).join(' ');
+    const kirimPts = line(data.map(d => d.kirim));
+    const chiqimPts = line(data.map(d => d.chiqim));
+    const labelEvery = Math.ceil(data.length / 7);
+    const labels = data.map((d, i) => i % labelEvery === 0
+        ? `<text x="${PAD + i * stepX}" y="${H - 6}" font-size="9" fill="var(--text-muted)" text-anchor="middle">${d.label}</text>` : '').join('');
+    el.innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" width="100%" height="220">
+            <polyline points="${kirimPts}" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="${chiqimPts}" fill="none" stroke="#F87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            ${labels}
+        </svg>
+        <div class="cf-chart-legend">
+            <span><i style="background:#34D399"></i> Kirim</span>
+            <span><i style="background:#F87171"></i> Chiqim</span>
+        </div>`;
+}
+
+function renderCfDonutChart(segments) {
+    const el = document.getElementById('cfDonutChart');
+    if (!el) return;
+    const total = segments.reduce((s, x) => s + x.value, 0);
+    if (!total) {
+        el.innerHTML = `<div class="mac-empty" style="padding:30px 0"><div style="font-size:13px;color:var(--text-muted)">Hozircha chiqim yo'q</div></div>`;
+        return;
+    }
+    const r = 38, cx = 50, cy = 50, circumference = 2 * Math.PI * r;
+    let offsetAcc = 0;
+    const circles = segments.map((s, i) => {
+        const frac = s.value / total;
+        const dash = frac * circumference;
+        const circle = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${CF_DONUT_COLORS[i % CF_DONUT_COLORS.length]}" stroke-width="14"
+            stroke-dasharray="${dash} ${circumference - dash}" stroke-dashoffset="${-offsetAcc}"/>`;
+        offsetAcc += dash;
+        return circle;
+    }).join('');
+    const legend = segments.map((s, i) => `
+        <div class="cf-donut-legend-row">
+            <i style="background:${CF_DONUT_COLORS[i % CF_DONUT_COLORS.length]}"></i>
+            <span>${escapeHtml(s.label)}</span>
+            <b>${Math.round(s.value / total * 100)}%</b>
+        </div>`).join('');
+    el.innerHTML = `
+        <div class="cf-donut-wrap">
+            <svg width="120" height="120" viewBox="0 0 100 100" style="transform:rotate(-90deg)">${circles}</svg>
+            <div class="cf-donut-legend">${legend}</div>
+        </div>`;
+}
+
+function renderCfManagerBars() {
+    const ranked = cfManagerInflows(getCashFlowTx());
+    const el = document.getElementById('cfManagerBars');
+    if (!el) return;
+    if (!ranked.length) {
+        el.innerHTML = `<div class="mac-empty" style="padding:30px 0"><div style="font-size:13px;color:var(--text-muted)">Hozircha menejerga bog'langan kirim yo'q</div></div>`;
+        return;
+    }
+    const max = ranked[0].total;
+    el.innerHTML = ranked.map(m => `
+        <div class="cf-mgr-row">
+            <div class="cf-mgr-name">${escapeHtml(m.name)}</div>
+            <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${max > 0 ? Math.round(m.total / max * 100) : 0}%"></div></div>
+            <div class="cf-mgr-value">${fmtMoney(m.total)}</div>
+        </div>`).join('');
+}
+
+function renderCfTxTable() {
+    const typeFilter = document.getElementById('cfFilterType')?.value || 'all';
+    const catFilter = document.getElementById('cfFilterCategory')?.value || 'all';
+    const list = getCashFlowTx()
+        .filter(t => typeFilter === 'all' || t.type === typeFilter)
+        .filter(t => catFilter === 'all' || t.category === catFilter)
+        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+
+    const body = document.getElementById('cfTxTableBody');
+    const empty = document.getElementById('cfTxEmpty');
+    if (!body) return;
+    if (!list.length) {
+        body.innerHTML = '';
+        if (empty) empty.style.display = '';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const managers = getSalesManagers();
+    body.innerHTML = list.map(t => {
+        let person = t.person || '—';
+        if (t.managerId) {
+            const m = managers.find(x => x.id === t.managerId);
+            if (m) person = m.name;
+        } else if (t.employeeId) {
+            const e = employees.find(x => x.id === t.employeeId);
+            if (e) person = e.name;
+        }
+        return `
+        <tr>
+            <td>${escapeHtml(t.date)}</td>
+            <td><span class="cf-type-badge ${t.type}">${t.type === 'kirim' ? 'Kirim' : 'Chiqim'}</span></td>
+            <td>${escapeHtml(CASH_FLOW_CATEGORIES[t.category] || t.category)}</td>
+            <td>${escapeHtml(t.purpose || '—')}</td>
+            <td class="${t.type === 'kirim' ? 'sp-pos' : 'sp-neg'}" style="font-weight:700">${t.type === 'kirim' ? '+' : '-'}${fmtMoney(t.amount)}</td>
+            <td>${escapeHtml(t.paymentMethod)}</td>
+            <td>${escapeHtml(person)}</td>
+            <td>${escapeHtml(t.notes || '—')}</td>
+            <td>
+                <button type="button" class="cf-row-action" data-cf-edit="${t.id}" title="Tahrirlash">✏️</button>
+                <button type="button" class="cf-row-action" data-cf-delete="${t.id}" title="O'chirish">🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function cfPurposeOptions(category) {
+    return (CASH_FLOW_PURPOSES[category] || []).map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+}
+
+function openCashFlowModal(editId) {
+    const existing = editId ? getCashFlowTx().find(t => t.id === editId) : null;
+    const today = new Date().toISOString().slice(0, 10);
+    const category = existing?.category || 'sotuv';
+
+    const body = `
+        <div class="form-group"><label>Turi</label>
+            <select id="cfTxType" class="form-control">
+                <option value="kirim" ${existing?.type !== 'chiqim' ? 'selected' : ''}>Kirim</option>
+                <option value="chiqim" ${existing?.type === 'chiqim' ? 'selected' : ''}>Chiqim</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Sana</label><input type="date" id="cfTxDate" class="form-control" value="${existing?.date || today}"></div>
+        <div class="form-group"><label>Summa (so'm)</label><input type="number" id="cfTxAmount" class="form-control" min="0" step="1000" value="${existing?.amount || ''}"></div>
+        <div class="form-group"><label>Toifa</label>
+            <select id="cfTxCategory" class="form-control">
+                ${Object.entries(CASH_FLOW_CATEGORIES).map(([k, v]) => `<option value="${k}" ${category === k ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
+            </select>
+        </div>
+        <div class="form-group"><label>Maqsad</label>
+            <select id="cfTxPurpose" class="form-control">${cfPurposeOptions(category)}</select>
+        </div>
+        <div class="form-group"><label>To'lov usuli</label>
+            <select id="cfTxMethod" class="form-control">
+                ${CASH_FLOW_PAYMENT_METHODS.map(m => `<option value="${escapeHtml(m)}" ${existing?.paymentMethod === m ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('')}
+            </select>
+        </div>
+        <div class="form-group" id="cfTxManagerWrap" style="display:none">
+            <label>Sotuv menejeri</label>
+            <select id="cfTxManager" class="form-control">
+                <option value="">— Tanlanmagan —</option>
+                ${getSalesManagers().map(m => `<option value="${m.id}" ${existing?.managerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+            </select>
+        </div>
+        <div class="form-group" id="cfTxEmployeeWrap" style="display:none">
+            <label>Xodim</label>
+            <select id="cfTxEmployee" class="form-control">
+                <option value="">— Tanlanmagan —</option>
+                ${getItem(STORAGE_KEYS.hrEmployees, []).map(e => `<option value="${e.id}" ${existing?.employeeId === e.id ? 'selected' : ''}>${escapeHtml(e.name)}</option>`).join('')}
+            </select>
+        </div>
+        <div class="form-group"><label>Mas'ul shaxs (ixtiyoriy)</label><input id="cfTxPerson" class="form-control" placeholder="Masalan: Abdulloh" value="${escapeHtml(existing?.person || '')}"></div>
+        <div class="form-group"><label>Izoh</label><textarea id="cfTxNotes" class="form-control" rows="2">${escapeHtml(existing?.notes || '')}</textarea></div>
+    `;
+    const footer = `
+        <button type="button" class="btn-ghost" id="cfTxCancelBtn">Bekor qilish</button>
+        <button type="button" class="btn-primary-sm" id="cfTxSaveBtn">Saqlash</button>
+    `;
+    openModal(existing ? 'Tranzaksiyani tahrirlash' : 'Yangi tranzaksiya', body, footer);
+
+    const categorySelect = document.getElementById('cfTxCategory');
+    const purposeSelect = document.getElementById('cfTxPurpose');
+    const managerWrap = document.getElementById('cfTxManagerWrap');
+    const employeeWrap = document.getElementById('cfTxEmployeeWrap');
+
+    function syncConditionalFields() {
+        const cat = categorySelect.value;
+        managerWrap.style.display = (cat === 'sotuv' || cat === 'ichki-sotuv') ? '' : 'none';
+        employeeWrap.style.display = purposeSelect.value === CASH_FLOW_SALARY_PURPOSE ? '' : 'none';
+    }
+    categorySelect.addEventListener('change', () => {
+        purposeSelect.innerHTML = cfPurposeOptions(categorySelect.value);
+        syncConditionalFields();
+    });
+    purposeSelect.addEventListener('change', syncConditionalFields);
+    if (existing?.purpose) purposeSelect.value = existing.purpose;
+    syncConditionalFields();
+
+    document.getElementById('cfTxCancelBtn').addEventListener('click', closeModal);
+    document.getElementById('cfTxSaveBtn').addEventListener('click', () => {
+        const amount = Number(document.getElementById('cfTxAmount').value) || 0;
+        const date = document.getElementById('cfTxDate').value || today;
+        if (amount <= 0) { alert("Summani to'g'ri kiriting"); return; }
+        const tx = {
+            id: existing?.id || ('cf' + Date.now()),
+            type: document.getElementById('cfTxType').value,
+            date,
+            amount,
+            category: categorySelect.value,
+            purpose: purposeSelect.value,
+            paymentMethod: document.getElementById('cfTxMethod').value,
+            managerId: document.getElementById('cfTxManager').value || null,
+            employeeId: document.getElementById('cfTxEmployee').value || null,
+            person: document.getElementById('cfTxPerson').value.trim(),
+            notes: document.getElementById('cfTxNotes').value.trim(),
+            createdAt: existing?.createdAt || Date.now()
+        };
+        const list = getCashFlowTx();
+        if (existing) {
+            const idx = list.findIndex(t => t.id === existing.id);
+            if (idx >= 0) list[idx] = tx;
+        } else {
+            list.push(tx);
+        }
+        saveCashFlowTx(list);
+        closeModal();
+        renderCashFlow();
+    });
 }
 
 // --- HR Bo'limi ---

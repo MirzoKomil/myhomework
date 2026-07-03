@@ -18,7 +18,8 @@ const STORAGE_KEYS = {
     scripts: 'mh_scripts',
     bonusHistory: 'mh_bonus_history',
     bonusData: 'mh_bonus_data',
-    salesPlan: 'mh_sales_plan'
+    salesPlan: 'mh_sales_plan',
+    cashFlow: 'mh_cash_flow'
 };
 
 const CACHE_KEY_MAP = {
@@ -36,7 +37,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.scripts]: 'scripts',
     [STORAGE_KEYS.bonusHistory]: 'bonusHistory',
     [STORAGE_KEYS.bonusData]: 'bonusData',
-    [STORAGE_KEYS.salesPlan]: 'salesPlan'
+    [STORAGE_KEYS.salesPlan]: 'salesPlan',
+    [STORAGE_KEYS.cashFlow]: 'cashFlow'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(
