@@ -370,6 +370,7 @@ function switchSalesSection(section) {
     if (section === 'sales-stats') renderSalesFunnel();
     if (section === 'scripts') renderScripts();
     if (section === 'rating') renderRating();
+    if (section === 'sales-plan') renderSalesPlan();
 }
 
 function switchStudentsSection(section) {
@@ -11996,6 +11997,182 @@ function fmtMoney(n) {
 
 function managerInitials(name) {
     return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+// ── Sotuv rejasi (sales plan calculator) ─────────────────────────────────────
+
+const SALES_PLAN_DEFAULTS = {
+    managers: 12,
+    leadsPerDay: 15,
+    duration: 30,
+    leadCost: 9500,
+    avgCheck: 1500000,
+    conversions: { min: 4.5, mid: 5.0, max: 5.5 }
+};
+
+const SALES_PLAN_TIERS = [
+    { key: 'min', label: 'Plan min', color: 'var(--danger)', bg: 'var(--danger-bg)' },
+    { key: 'mid', label: "Plan o'rtacha", color: '#D97706', bg: 'var(--warning-bg)' },
+    { key: 'max', label: "Plan zo'r", color: 'var(--success)', bg: 'var(--success-bg)' }
+];
+
+let _salesPlanPeriod = 'full';
+
+function getSalesPlan() {
+    const saved = getItem(STORAGE_KEYS.salesPlan, null) || {};
+    return {
+        ...SALES_PLAN_DEFAULTS,
+        ...saved,
+        conversions: { ...SALES_PLAN_DEFAULTS.conversions, ...(saved.conversions || {}) }
+    };
+}
+
+function saveSalesPlanPatch(patch) {
+    const current = getSalesPlan();
+    const updated = { ...current, ...patch };
+    if (patch.conversions) updated.conversions = { ...current.conversions, ...patch.conversions };
+    setItem(STORAGE_KEYS.salesPlan, updated);
+    return updated;
+}
+
+function getSalesPlanPeriods(duration) {
+    const periods = [{ key: 'full', label: 'Oyliq jami', days: duration }];
+    const chunk = 10;
+    let day = 0;
+    while (day < duration) {
+        const next = Math.min(day + chunk, duration);
+        periods.push({ key: `seg-${day}`, label: `${day === 0 ? 1 : day}–${next}`, days: next - day });
+        day = next;
+    }
+    return periods;
+}
+
+function computeSalesPlanMetrics(plan, convPercent, days) {
+    const lidSoniKunlik = Math.round(plan.managers * plan.leadsPerDay);
+    const sotuvSoniKunlik = Math.round(lidSoniKunlik * convPercent / 100);
+    const sotuvSummaKunlik = sotuvSoniKunlik * plan.avgCheck;
+    const budjetKunlik = lidSoniKunlik * plan.leadCost;
+    const romiKunlik = budjetKunlik > 0 ? ((sotuvSummaKunlik - budjetKunlik) / budjetKunlik * 100) : 0;
+
+    const lidSoniDavr = lidSoniKunlik * days;
+    const sotuvSoniDavr = Math.round(lidSoniDavr * convPercent / 100);
+    const sotuvSummaDavr = sotuvSoniDavr * plan.avgCheck;
+    const budjetDavr = lidSoniDavr * plan.leadCost;
+    const romiDavr = budjetDavr > 0 ? ((sotuvSummaDavr - budjetDavr) / budjetDavr * 100) : 0;
+
+    return {
+        kunlik: { lidSoni: lidSoniKunlik, konversiya: convPercent, sotuvSoni: sotuvSoniKunlik, sotuvSumma: sotuvSummaKunlik, budjet: budjetKunlik, romi: romiKunlik },
+        davr: {
+            lidSoni: lidSoniDavr, leadCost: plan.leadCost, konversiya: convPercent, sotuvSoni: sotuvSoniDavr,
+            avgCheck: plan.avgCheck, sotuvSumma: sotuvSummaDavr, budjet: budjetDavr, romi: romiDavr, days
+        }
+    };
+}
+
+function fmtPct1(n) {
+    return (Number(n) || 0).toLocaleString('uz-UZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+}
+
+function fmtSignedPct(n) {
+    const v = Number(n) || 0;
+    return (v > 0 ? '+' : '') + Math.round(v).toLocaleString('uz-UZ') + '%';
+}
+
+function renderSalesPlan() {
+    const panel = document.querySelector('[data-sales-panel="sales-plan"]');
+    if (!panel) return;
+    const plan = getSalesPlan();
+
+    const fields = [
+        ['spManagers', 'managers'], ['spLeadsPerDay', 'leadsPerDay'], ['spDuration', 'duration'],
+        ['spLeadCost', 'leadCost'], ['spAvgCheck', 'avgCheck']
+    ];
+    fields.forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = plan[key];
+    });
+    const convFields = [['spConvMin', 'min'], ['spConvMid', 'mid'], ['spConvMax', 'max']];
+    convFields.forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = plan.conversions[key];
+    });
+
+    if (!panel.dataset.spBound) {
+        panel.dataset.spBound = '1';
+        fields.forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('input', () => {
+                const val = Number(el.value) || 0;
+                saveSalesPlanPatch({ [key]: val });
+                if (key === 'duration') _salesPlanPeriod = 'full';
+                renderSalesPlanResults();
+            });
+        });
+        convFields.forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('input', () => {
+                const val = Number(el.value) || 0;
+                saveSalesPlanPatch({ conversions: { [key]: val } });
+                renderSalesPlanResults();
+            });
+        });
+    }
+
+    renderSalesPlanResults();
+}
+
+function renderSalesPlanResults() {
+    const tabsEl = document.getElementById('spPeriodTabs');
+    const gridEl = document.getElementById('spPlansGrid');
+    if (!tabsEl || !gridEl) return;
+
+    const plan = getSalesPlan();
+    const periods = getSalesPlanPeriods(plan.duration);
+    if (!periods.find(p => p.key === _salesPlanPeriod)) _salesPlanPeriod = 'full';
+    const activePeriod = periods.find(p => p.key === _salesPlanPeriod) || periods[0];
+
+    tabsEl.innerHTML = periods.map(p =>
+        `<button type="button" class="sp-period-tab${p.key === _salesPlanPeriod ? ' active' : ''}" data-sp-period="${p.key}">${escapeHtml(p.label)}</button>`
+    ).join('');
+    tabsEl.querySelectorAll('[data-sp-period]').forEach(btn => {
+        btn.onclick = () => {
+            _salesPlanPeriod = btn.dataset.spPeriod;
+            renderSalesPlanResults();
+        };
+    });
+
+    gridEl.innerHTML = SALES_PLAN_TIERS.map(tier => {
+        const conv = plan.conversions[tier.key];
+        const m = computeSalesPlanMetrics(plan, conv, activePeriod.days);
+        return `
+        <div class="sp-plan-card" style="border-top-color:${tier.color}">
+            <div class="sp-plan-header" style="background:${tier.bg};color:${tier.color}">
+                ${escapeHtml(tier.label)} <span class="sp-plan-header-conv">${fmtPct1(conv)}</span>
+            </div>
+            <div class="sp-plan-block">
+                <div class="sp-plan-block-title">Kunlik</div>
+                <div class="sp-row"><span>Lid soni</span><b>${m.kunlik.lidSoni.toLocaleString('uz-UZ')}</b></div>
+                <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.kunlik.konversiya)}</b></div>
+                <div class="sp-row"><span>Sotuv soni</span><b>${m.kunlik.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
+                <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.kunlik.sotuvSumma)}</b></div>
+                <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.kunlik.budjet)}</b></div>
+                <div class="sp-row"><span>ROMI</span><b class="${m.kunlik.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.kunlik.romi)}</b></div>
+            </div>
+            <div class="sp-plan-block">
+                <div class="sp-plan-block-title">${escapeHtml(activePeriod.label)} <span class="text-muted" style="font-weight:500">(${m.davr.days} kun)</span></div>
+                <div class="sp-row"><span>Lid soni</span><b>${m.davr.lidSoni.toLocaleString('uz-UZ')}</b></div>
+                <div class="sp-row"><span>Lid narxi</span><b>${fmtMoney(m.davr.leadCost)}</b></div>
+                <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.davr.konversiya)}</b></div>
+                <div class="sp-row"><span>Sotuv soni</span><b>${m.davr.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
+                <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(m.davr.avgCheck)}</b></div>
+                <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.davr.sotuvSumma)}</b></div>
+                <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.davr.budjet)}</b></div>
+                <div class="sp-row"><span>ROMI</span><b class="${m.davr.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.davr.romi)}</b></div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function renderRating() {

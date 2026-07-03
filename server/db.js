@@ -460,7 +460,7 @@ async function saveMobileContentData(client, data) {
 async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
-        scripts, bonusHistory, bonusData] = await Promise.all([
+        scripts, bonusHistory, bonusData, salesPlan] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -477,6 +477,7 @@ async function getFullState() {
         getJsonData('scripts'),
         getJsonData('bonusHistory'),
         getJsonData('bonusData'),
+        getJsonData('salesPlan'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -494,7 +495,7 @@ async function getFullState() {
         assistantAttendance: assistAtt,
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
-        scripts, bonusHistory, bonusData
+        scripts, bonusHistory, bonusData, salesPlan
     };
 }
 
@@ -616,7 +617,7 @@ async function saveHrEmployeesData(client, employees) {
 
 async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
-    if (!row) return key === 'bonusData' ? {} : [];
+    if (!row) return (key === 'bonusData' || key === 'salesPlan') ? {} : [];
     return row.data;
 }
 
@@ -643,6 +644,7 @@ async function patchState(partial) {
         if (partial.scripts !== undefined)     await saveJsonData(client, 'scripts', partial.scripts);
         if (partial.bonusHistory !== undefined) await saveJsonData(client, 'bonusHistory', partial.bonusHistory);
         if (partial.bonusData !== undefined)   await saveJsonData(client, 'bonusData', partial.bonusData);
+        if (partial.salesPlan !== undefined)   await saveJsonData(client, 'salesPlan', partial.salesPlan);
     });
 }
 

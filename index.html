@@ -797,13 +797,50 @@
 
                             <div class="sales-panel" data-sales-panel="sales-plan">
                                 <div class="page-title-bar">
-                                    <h1>Sotuv rejasi</h1>
+                                    <div>
+                                        <h1>Sotuv rejasi</h1>
+                                        <p class="text-muted" style="margin:2px 0 0;font-size:13px">Lidlar, konversiya va budjet asosida sotuv prognozi kalkulyatori</p>
+                                    </div>
                                 </div>
-                                <div class="card placeholder-card">
-                                    <div class="placeholder-icon">🚧</div>
-                                    <h3>Tez orada</h3>
-                                    <p class="text-muted">Bu bo'lim hozircha ishlab chiqilmoqda.</p>
+                                <div class="card sp-params-card">
+                                    <div class="card-header"><h3>Parametrlar</h3></div>
+                                    <div class="sp-params-grid">
+                                        <div class="sp-param">
+                                            <label for="spManagers">Menejer soni</label>
+                                            <input type="number" id="spManagers" class="form-control-sm" min="1" step="1">
+                                        </div>
+                                        <div class="sp-param">
+                                            <label for="spLeadsPerDay">Lid (1 menejerga, kunlik)</label>
+                                            <input type="number" id="spLeadsPerDay" class="form-control-sm" min="0" step="1">
+                                        </div>
+                                        <div class="sp-param">
+                                            <label for="spDuration">Muddat (kun)</label>
+                                            <input type="number" id="spDuration" class="form-control-sm" min="1" step="1">
+                                        </div>
+                                        <div class="sp-param">
+                                            <label for="spLeadCost">Lid narxi (so'm)</label>
+                                            <input type="number" id="spLeadCost" class="form-control-sm" min="0" step="500">
+                                        </div>
+                                        <div class="sp-param">
+                                            <label for="spAvgCheck">O'rtacha chek (so'm)</label>
+                                            <input type="number" id="spAvgCheck" class="form-control-sm" min="0" step="10000">
+                                        </div>
+                                        <div class="sp-param">
+                                            <label for="spConvMin">Konversiya — min (%)</label>
+                                            <input type="number" id="spConvMin" class="form-control-sm" min="0" step="0.1">
+                                        </div>
+                                        <div class="sp-param">
+                                            <label for="spConvMid">Konversiya — o'rtacha (%)</label>
+                                            <input type="number" id="spConvMid" class="form-control-sm" min="0" step="0.1">
+                                        </div>
+                                        <div class="sp-param">
+                                            <label for="spConvMax">Konversiya — zo'r (%)</label>
+                                            <input type="number" id="spConvMax" class="form-control-sm" min="0" step="0.1">
+                                        </div>
+                                    </div>
                                 </div>
+                                <div class="sp-period-tabs" id="spPeriodTabs"></div>
+                                <div class="sp-plans-grid" id="spPlansGrid"></div>
                             </div>
 
                             <div class="sales-panel" data-sales-panel="debtors">

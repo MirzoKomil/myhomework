@@ -7430,3 +7430,34 @@ body.modal-open {
 .debtor-badge.overdue { background: #fadbd8; color: #c0392b; }
 .debtors-dot-menu-btn { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-muted); padding: 4px 8px; border-radius: 8px; line-height: 1; }
 .debtors-dot-menu-btn:hover { background: var(--hover-bg, rgba(0,0,0,.06)); }
+
+/* Sotuv rejasi (sales plan calculator) */
+.sp-params-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.sp-param { display: flex; flex-direction: column; gap: 6px; }
+.sp-param label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.sp-period-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
+.sp-period-tab {
+    padding: 8px 16px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text-muted); font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.sp-period-tab.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+.sp-plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.sp-plan-card {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-card);
+    border-top: 4px solid var(--purple); overflow: hidden;
+}
+.sp-plan-header { padding: 14px 18px; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: space-between; }
+.sp-plan-header-conv { font-size: 13px; font-weight: 700; opacity: .85; }
+.sp-plan-block { padding: 14px 18px; }
+.sp-plan-block + .sp-plan-block { border-top: 1px solid var(--border); }
+.sp-plan-block-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.sp-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; color: var(--text); }
+.sp-row span { color: var(--text-muted); }
+.sp-row b { font-weight: 700; }
+.sp-row-strong { border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); margin: 2px 0; }
+.sp-row-strong b { font-weight: 800; }
+.sp-pos { color: var(--success); }
+.sp-neg { color: var(--danger); }
+@media (max-width: 768px) {
+    .sp-plans-grid { grid-template-columns: 1fr; }
+}
