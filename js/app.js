@@ -5916,14 +5916,15 @@ const CASH_FLOW_CATEGORIES = {
 };
 
 const CASH_FLOW_PURPOSES = {
-    sotuv: ["Kurs to'lovi", 'Boshqa'],
-    'ichki-sotuv': ["Kurs to'lovi", 'Boshqa'],
+    sotuv: ["Kurs to'lovi", 'Pul qaytarish (Refund)', 'Boshqa'],
+    'ichki-sotuv': ["Kurs to'lovi", 'Pul qaytarish (Refund)', 'Boshqa'],
     investitsiya: ["O'sish fondi", 'CRM tizimi', "Bo'sh ish o'rni", 'Boshqa'],
     operatsion: ['Oylik (xodim maoshi)', 'Marketing', 'CRM tizimi', 'Target byudjeti', 'CEO shaxsiy xarajati', 'Boshqa']
 };
 
 const CASH_FLOW_PAYMENT_METHODS = ['Naqd pul', 'Bank hisob raqami', 'Karta'];
 const CASH_FLOW_SALARY_PURPOSE = 'Oylik (xodim maoshi)';
+const CASH_FLOW_REFUND_PURPOSE = 'Pul qaytarish (Refund)';
 const CF_DONUT_COLORS = ['#7B61FF', '#4F8CFF', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#94A3B8', '#22D3EE'];
 
 let _cfNetPeriod = 'kunlik';
@@ -6110,7 +6111,7 @@ function renderCfKpis() {
             <div class="stat-icon ${c.color}">${c.icon}</div>
             <div class="stat-info">
                 <div class="stat-label">${escapeHtml(c.label)}</div>
-                <div class="stat-value ${c.value < 0 ? 'sp-neg' : ''}" style="font-size:20px">${fmtMoney(c.value)}</div>
+                <div class="stat-value" style="font-size:20px${c.value < 0 ? ';color:var(--danger)' : ''}">${fmtMoney(c.value)}</div>
             </div>
         </div>`).join('');
 }
@@ -6589,6 +6590,8 @@ function switchAnalitikaSection(section) {
     document.querySelectorAll('.analitika-panel').forEach(panel => {
         panel.classList.toggle('active', panel.dataset.analitikaPanel === section);
     });
+    if (section === 'sotuv-marketing') renderAnalitikaSotuvMarketing();
+    if (section === 'moliyaviy') renderAnalitikaMoliyaviy();
 }
 
 function renderAnalitika() {
@@ -6598,6 +6601,258 @@ function renderAnalitika() {
         btn.addEventListener('click', () => switchAnalitikaSection(btn.dataset.analitikaSection));
     });
     switchAnalitikaSection(_tabContext.analitikaSection || 'hisobotlar');
+}
+
+// --- Analitika: Sotuv va Marketing ---
+
+let _anMktPeriod = 'oylik';
+
+function anGetAllLeadsFlat() {
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    return [
+        ...(leads.english || []).map(l => ({ ...l, lang: 'english' })),
+        ...(leads.russian || []).map(l => ({ ...l, lang: 'russian' }))
+    ];
+}
+
+function anLeadsInPeriod(period) {
+    return anGetAllLeadsFlat().filter(l => l.date && cfDateInPeriod(l.date, period));
+}
+
+function anLeadRevenue(lead) {
+    return Number(lead.paymentClosedSurvey?.actualAmount || lead.paymentClosedSurvey?.totalAmount || 0);
+}
+
+function renderAnalitikaSotuvMarketing() {
+    const panel = document.getElementById('analitikaPanel-sotuv-marketing');
+    if (!panel) return;
+
+    const periodLeads = anLeadsInPeriod(_anMktPeriod);
+    const total = periodLeads.length;
+    const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
+    const convRate = total > 0 ? (closed.length / total * 100) : 0;
+    const totalRevenue = closed.reduce((sum, l) => sum + anLeadRevenue(l), 0);
+
+    const sources = ['Organik', 'Target'];
+    const bySource = sources.map(src => {
+        const leadsForSrc = periodLeads.filter(l => (l.source || 'Organik') === src);
+        const closedForSrc = leadsForSrc.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
+        return {
+            label: src, total: leadsForSrc.length, closed: closedForSrc.length,
+            rate: leadsForSrc.length ? (closedForSrc.length / leadsForSrc.length * 100) : 0
+        };
+    });
+
+    const managers = getSalesManagers();
+    const mgrPerf = managers.map(m => {
+        const mgrLeads = periodLeads.filter(l => l.managerId === m.id);
+        const mgrClosed = mgrLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
+        const revenue = mgrClosed.reduce((sum, l) => sum + anLeadRevenue(l), 0);
+        return {
+            name: m.name, total: mgrLeads.length, closed: mgrClosed.length,
+            closeRate: mgrLeads.length ? (mgrClosed.length / mgrLeads.length * 100) : 0,
+            revenue, avgCheck: mgrClosed.length ? Math.round(revenue / mgrClosed.length) : 0
+        };
+    }).filter(m => m.total > 0).sort((a, b) => b.revenue - a.revenue);
+
+    const stageCounts = FUNNEL_STAGES.map(s => ({
+        ...s, count: periodLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length
+    }));
+    const cum = new Array(FUNNEL_STAGES.length).fill(0);
+    let running = 0;
+    for (let i = stageCounts.length - 1; i >= 0; i--) { running += stageCounts[i].count; cum[i] = running; }
+    const stagesData = FUNNEL_STAGES.map((s, i) => ({
+        ...s, count: stageCounts[i].count, cumulative: cum[i],
+        convRate: i === 0 ? 100 : (cum[0] > 0 ? Math.round((cum[i] / cum[0]) * 100) : 0)
+    }));
+
+    const withContact = periodLeads.filter(l => l.firstContactAt && l.date);
+    const speedHours = withContact
+        .map(l => (l.firstContactAt - new Date(l.date).getTime()) / 3600000)
+        .filter(h => h >= 0);
+    const avgSpeedHours = speedHours.length ? speedHours.reduce((a, b) => a + b, 0) / speedHours.length : null;
+
+    const lost = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'muvaffaqiyatsiz-sotuv' && l.failedSaleReason?.label);
+    const lostByReason = {};
+    lost.forEach(l => {
+        const label = l.failedSaleReason.label;
+        lostByReason[label] = (lostByReason[label] || 0) + 1;
+    });
+    const lostReasonsRanked = Object.entries(lostByReason)
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count);
+
+    panel.innerHTML = `
+    <div class="page-title-bar">
+        <div><h1>Sotuv va Marketing analitikasi</h1><p class="text-muted" style="margin:2px 0 0;font-size:13px">Lidlar, konversiya va menejerlar samaradorligi</p></div>
+        <div class="sp-period-tabs" id="anMktPeriodTabs">
+            <button type="button" class="sp-period-tab${_anMktPeriod === 'kunlik' ? ' active' : ''}" data-an-mkt-period="kunlik">Kunlik</button>
+            <button type="button" class="sp-period-tab${_anMktPeriod === 'haftalik' ? ' active' : ''}" data-an-mkt-period="haftalik">Haftalik</button>
+            <button type="button" class="sp-period-tab${_anMktPeriod === 'oylik' ? ' active' : ''}" data-an-mkt-period="oylik">Oylik</button>
+        </div>
+    </div>
+
+    <div class="cf-kpi-grid" style="margin-bottom:16px">
+        <div class="stat-card"><div class="stat-icon purple">📥</div><div class="stat-info"><div class="stat-label">Jami lidlar</div><div class="stat-value" style="font-size:20px">${total}</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Konversiya</div><div class="stat-value" style="font-size:20px">${convRate.toFixed(1)}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue">💰</div><div class="stat-info"><div class="stat-label">Yopilgan savdo summasi</div><div class="stat-value" style="font-size:20px">${fmtMoney(totalRevenue)}</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">⏱️</div><div class="stat-info"><div class="stat-label">Aloqaga chiqish tezligi</div><div class="stat-value" style="font-size:18px">${avgSpeedHours !== null ? avgSpeedHours.toFixed(1) + ' soat' : "To'planmoqda"}</div></div></div>
+    </div>
+
+    <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch;margin-bottom:16px">
+        <div class="card">
+            <div class="card-header"><h3>Kanal bo'yicha konversiya</h3></div>
+            ${bySource.some(s => s.total > 0) ? bySource.map(s => `
+                <div class="cf-mgr-row">
+                    <div class="cf-mgr-name">${escapeHtml(s.label)}</div>
+                    <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${Math.min(100, s.rate)}%"></div></div>
+                    <div class="cf-mgr-value">${s.rate.toFixed(1)}% (${s.closed}/${s.total})</div>
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Bu davrda lid yo'q</div></div>`}
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>Rad etish sabablari</h3></div>
+            ${lostReasonsRanked.length ? lostReasonsRanked.map(r => `
+                <div class="cf-mgr-row">
+                    <div class="cf-mgr-name" style="font-size:12px">${escapeHtml(r.label)}</div>
+                    <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${Math.round(r.count / lostReasonsRanked[0].count * 100)}%;background:#F87171"></div></div>
+                    <div class="cf-mgr-value">${r.count} ta</div>
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Bu davrda rad etilgan savdo yo'q</div></div>`}
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><h3>Menejerlar samaradorligi</h3></div>
+        <div class="cf-tx-table-wrap">
+            <table class="table">
+                <thead><tr><th>Menejer</th><th>Lidlar</th><th>Yopilgan</th><th>Close rate</th><th>Daromad</th><th>O'rtacha chek</th></tr></thead>
+                <tbody>
+                    ${mgrPerf.length ? mgrPerf.map(m => `
+                        <tr>
+                            <td>${escapeHtml(m.name)}</td>
+                            <td>${m.total}</td>
+                            <td>${m.closed}</td>
+                            <td>${m.closeRate.toFixed(1)}%</td>
+                            <td>${fmtMoney(m.revenue)}</td>
+                            <td>${fmtMoney(m.avgCheck)}</td>
+                        </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Bu davrda ma'lumot yo'q</td></tr>`}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3>Sotuv voronkasi</h3></div>
+        ${buildFunnelSVG(stagesData)}
+    </div>`;
+
+    document.querySelectorAll('[data-an-mkt-period]').forEach(btn => {
+        btn.onclick = () => {
+            _anMktPeriod = btn.dataset.anMktPeriod;
+            renderAnalitikaSotuvMarketing();
+        };
+    });
+}
+
+// --- Analitika: Moliyaviy ko'rsatkichlar ---
+
+let _anFinPeriod = 'oylik';
+
+function anGetPaymentsByStudent() {
+    const payments = getItem(STORAGE_KEYS.payments, []);
+    const byStudent = {};
+    payments.forEach(p => {
+        if (!p.studentId) return;
+        (byStudent[p.studentId] = byStudent[p.studentId] || []).push(p);
+    });
+    return byStudent;
+}
+
+function renderAnalitikaMoliyaviy() {
+    const panel = document.getElementById('analitikaPanel-moliyaviy');
+    if (!panel) return;
+
+    const cfTx = getCashFlowTx();
+    const period = _anFinPeriod;
+
+    const byStudent = anGetPaymentsByStudent();
+    const studentTotals = Object.values(byStudent)
+        .map(list => list.reduce((s, p) => s + (Number(p.paid) || 0), 0))
+        .filter(v => v > 0);
+    const ltv = studentTotals.length ? Math.round(studentTotals.reduce((a, b) => a + b, 0) / studentTotals.length) : 0;
+
+    let firstPurchaseSum = 0, repeatPurchaseSum = 0;
+    Object.values(byStudent).forEach(list => {
+        const sorted = list.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+        sorted.forEach((p, i) => {
+            if (i === 0) firstPurchaseSum += Number(p.paid) || 0;
+            else repeatPurchaseSum += Number(p.paid) || 0;
+        });
+    });
+
+    const marketingSpend = cfTx
+        .filter(t => t.type === 'chiqim' && t.purpose === 'Marketing' && cfDateInPeriod(t.date, period))
+        .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const newCustomers = _getClosedLeadsInPeriod('all', period).length;
+    const cac = newCustomers > 0 ? Math.round(marketingSpend / newCustomers) : null;
+
+    const targetRevenue = _getClosedLeadsInPeriod('all', period)
+        .filter(l => (l.source || 'Organik') === 'Target')
+        .reduce((s, l) => s + anLeadRevenue(l), 0);
+    const romi = marketingSpend > 0 ? ((targetRevenue - marketingSpend) / marketingSpend * 100) : null;
+
+    const salesCount = cfTx.filter(t => t.type === 'kirim' && (t.category === 'sotuv' || t.category === 'ichki-sotuv') && cfDateInPeriod(t.date, period)).length;
+    const refundTx = cfTx.filter(t => t.type === 'chiqim' && t.purpose === CASH_FLOW_REFUND_PURPOSE && cfDateInPeriod(t.date, period));
+    const refundCount = refundTx.length;
+    const refundAmount = refundTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const refundRate = salesCount > 0 ? (refundCount / salesCount * 100) : 0;
+
+    const upsellTotal = firstPurchaseSum + repeatPurchaseSum;
+
+    panel.innerHTML = `
+    <div class="page-title-bar">
+        <div><h1>Moliyaviy ko'rsatkichlar</h1><p class="text-muted" style="margin:2px 0 0;font-size:13px">LTV, CAC, ROMI va boshqa moliyaviy samaradorlik metrikalari</p></div>
+        <div class="sp-period-tabs" id="anFinPeriodTabs">
+            <button type="button" class="sp-period-tab${period === 'kunlik' ? ' active' : ''}" data-an-fin-period="kunlik">Kunlik</button>
+            <button type="button" class="sp-period-tab${period === 'haftalik' ? ' active' : ''}" data-an-fin-period="haftalik">Haftalik</button>
+            <button type="button" class="sp-period-tab${period === 'oylik' ? ' active' : ''}" data-an-fin-period="oylik">Oylik</button>
+        </div>
+    </div>
+
+    <div class="cf-kpi-grid" style="margin-bottom:16px">
+        <div class="stat-card"><div class="stat-icon purple">💎</div><div class="stat-info"><div class="stat-label">LTV (o'rtacha)</div><div class="stat-value" style="font-size:20px">${fmtMoney(ltv)}</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue">🎯</div><div class="stat-info"><div class="stat-label">CAC</div><div class="stat-value" style="font-size:20px">${cac !== null ? fmtMoney(cac) : "Ma'lumot yo'q"}</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">📈</div><div class="stat-info"><div class="stat-label">ROMI</div><div class="stat-value" style="font-size:20px${romi !== null && romi < 0 ? ';color:var(--danger)' : ''}">${romi !== null ? (romi >= 0 ? '+' : '') + romi.toFixed(0) + '%' : "Ma'lumot yo'q"}</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">↩️</div><div class="stat-info"><div class="stat-label">Refund Rate</div><div class="stat-value" style="font-size:20px">${refundRate.toFixed(1)}%</div></div></div>
+    </div>
+
+    <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
+        <div class="card">
+            <div class="card-header"><h3>Birinchi xarid vs Takroriy xarid (Up-sell)</h3></div>
+            <div class="cf-mgr-row">
+                <div class="cf-mgr-name">Birinchi xarid</div>
+                <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${upsellTotal > 0 ? Math.round(firstPurchaseSum / upsellTotal * 100) : 0}%"></div></div>
+                <div class="cf-mgr-value">${fmtMoney(firstPurchaseSum)}</div>
+            </div>
+            <div class="cf-mgr-row">
+                <div class="cf-mgr-name">Takroriy (Up-sell)</div>
+                <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${upsellTotal > 0 ? Math.round(repeatPurchaseSum / upsellTotal * 100) : 0}%;background:#34D399"></div></div>
+                <div class="cf-mgr-value">${fmtMoney(repeatPurchaseSum)}</div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>Pul qaytarish (Refund) tafsiloti</h3></div>
+            <div class="cf-invest-row"><span>Qaytarilgan operatsiyalar</span><b>${refundCount} ta</b></div>
+            <div class="cf-invest-row"><span>Qaytarilgan summa</span><b class="sp-neg">${fmtMoney(refundAmount)}</b></div>
+            <div class="cf-invest-row cf-invest-row-total"><span>Sotuvlarga nisbatan (shu davr)</span><b>${refundRate.toFixed(1)}%</b></div>
+        </div>
+    </div>`;
+
+    document.querySelectorAll('[data-an-fin-period]').forEach(btn => {
+        btn.onclick = () => {
+            _anFinPeriod = btn.dataset.anFinPeriod;
+            renderAnalitikaMoliyaviy();
+        };
+    });
 }
 
 // --- Sotuv bo'limi ---
@@ -10032,6 +10287,11 @@ function updateLeadInStorage(lang, leadId, updater) {
     leads[lang] = list;
     setItem(STORAGE_KEYS.leads, leads);
     const newStatus = normalizeLeadStatus(list[idx].status);
+    if (oldStatus === 'yangi-lidlar' && newStatus !== 'yangi-lidlar' && !list[idx].firstContactAt) {
+        list[idx].firstContactAt = Date.now();
+        leads[lang] = list;
+        setItem(STORAGE_KEYS.leads, leads);
+    }
     if (newStatus === 'tolov-jarayonida' && oldStatus !== 'tolov-jarayonida') {
         autoSyncLeadToBookRoadmap(lang, list[idx]);
         autoAddLeadAsStudent(lang, list[idx]); // 7-ish
