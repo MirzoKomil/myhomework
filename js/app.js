@@ -6596,6 +6596,7 @@ function switchAnalitikaSection(section) {
     if (section === 'moliyaviy') renderAnalitikaMoliyaviy();
     if (section === 'hisobotlar') renderAnalitikaHisobotlar();
     if (section === 'akademik') renderAnalitikaAkademik();
+    if (section === 'xodimlar') renderAnalitikaXodimlar();
 }
 
 function renderAnalitika() {
@@ -6892,7 +6893,7 @@ function manualMetricAgg(roleKey, metricDef, period) {
     return metricDef.agg === 'avg' ? +(sum / entries.length).toFixed(1) : sum;
 }
 
-function openManualMetricModal(roleKey, metricDef, period, onSaved) {
+function openManualMetricModal(roleKey, metricDef, period, onSaved, employeeId) {
     const today = new Date().toISOString().slice(0, 10);
     const body = `
         <div class="form-group"><label>Sana</label><input type="date" id="mmDate" class="form-control" value="${today}"></div>
@@ -6911,7 +6912,7 @@ function openManualMetricModal(roleKey, metricDef, period, onSaved) {
         if (!value && value !== 0) { alert("Qiymatni kiriting"); return; }
         const note = document.getElementById('mmNote').value.trim();
         const list = getManualMetrics();
-        list.push({ id: 'mm_' + Date.now(), roleKey, metricKey: metricDef.key, date, value, note, createdAt: Date.now() });
+        list.push({ id: 'mm_' + Date.now(), roleKey, metricKey: metricDef.key, employeeId: employeeId || null, date, value, note, createdAt: Date.now() });
         saveManualMetrics(list);
         closeModal();
         if (onSaved) onSaved(); else renderAnalitikaHisobotlar();
@@ -7386,6 +7387,164 @@ function renderAnalitikaAkademik() {
         btn.onclick = () => {
             const metricDef = JSON.parse(btn.dataset.mmAdd);
             openManualMetricModal(AA_MANUAL_ROLE, metricDef, _aaPeriod, renderAnalitikaAkademik);
+        };
+    });
+}
+
+// --- Analitika: Xodimlar analitikasi ---
+
+let _xaPeriod = 'oylik';
+const XA_MANUAL_ROLE = 'xodimlar-analitikasi';
+
+function manualMetricAggForEmployee(roleKey, metricDef, employeeId, period) {
+    const entries = getManualMetrics().filter(m =>
+        m.roleKey === roleKey && m.metricKey === metricDef.key && m.employeeId === employeeId &&
+        m.date && cfDateInPeriod(m.date, period)
+    );
+    if (!entries.length) return null;
+    const sum = entries.reduce((s, e) => s + (Number(e.value) || 0), 0);
+    return metricDef.agg === 'avg' ? +(sum / entries.length).toFixed(1) : sum;
+}
+
+function xaTeacherRetention() {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const teachers = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
+        e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi'
+    );
+    return teachers.map(t => {
+        const assigned = students.filter(s => s.teacherId === t.id);
+        const active = assigned.filter(s => !s.frozen);
+        return {
+            name: t.name,
+            total: assigned.length,
+            active: active.length,
+            rate: assigned.length ? (active.length / assigned.length * 100) : null
+        };
+    }).filter(t => t.total > 0).sort((a, b) => (b.rate ?? 0) - (a.rate ?? 0));
+}
+
+function xaTurnoverByDept() {
+    const emps = getItem(STORAGE_KEYS.hrEmployees, []);
+    const byDept = {};
+    emps.forEach(e => {
+        const dept = e.department || 'Boshqa';
+        if (!byDept[dept]) byDept[dept] = { total: 0, inactive: 0 };
+        byDept[dept].total++;
+        if (e.status === 'inactive') byDept[dept].inactive++;
+    });
+    return Object.entries(byDept).map(([dept, s]) => ({
+        dept, total: s.total, inactive: s.inactive,
+        rate: s.total ? (s.inactive / s.total * 100) : 0
+    })).sort((a, b) => b.rate - a.rate);
+}
+
+function xaAvgTenureActiveMonths() {
+    const emps = getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.status !== 'inactive' && (e.joinDate || e.startDate));
+    if (!emps.length) return null;
+    const now = new Date();
+    const daysList = emps
+        .map(e => new Date(e.joinDate || e.startDate))
+        .filter(d => !isNaN(d.getTime()))
+        .map(d => (now - d) / (24 * 3600 * 1000))
+        .filter(v => v >= 0);
+    if (!daysList.length) return null;
+    return daysList.reduce((a, b) => a + b, 0) / daysList.length / 30;
+}
+
+function xaEmployeeMetricCard(title, roleKey, metricDef, employees, period) {
+    const rows = employees.map(e => ({
+        id: e.id, name: e.name,
+        agg: manualMetricAggForEmployee(roleKey, metricDef, e.id, period)
+    }));
+    return `<div class="card">
+        <div class="card-header"><h3>${escapeHtml(title)}</h3></div>
+        ${rows.length ? rows.map(r => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${escapeHtml(r.name)}</div>
+                <div style="font-size:13px;font-weight:700;color:${r.agg !== null ? 'var(--text)' : 'var(--text-muted)'}">${r.agg !== null ? r.agg + ' ' + escapeHtml(metricDef.unit) : "Kiritilmagan"}</div>
+                <button type="button" class="an-manual-add-btn" data-xa-emp-add="${escapeHtml(JSON.stringify({ ...metricDef, employeeId: r.id, employeeName: r.name }))}" title="Kiritish">+</button>
+            </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Xodim topilmadi</div></div>`}
+    </div>`;
+}
+
+function renderAnalitikaXodimlar() {
+    const panel = document.getElementById('analitikaPanel-xodimlar');
+    if (!panel) return;
+
+    const period = _xaPeriod;
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.status !== 'inactive');
+    const teachersAndCurators = employees.filter(e => e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi');
+    const curators = employees.filter(e => e.role === 'yordamchi');
+
+    const turnoverByDept = xaTurnoverByDept();
+    const overallTurnover = (() => {
+        const total = turnoverByDept.reduce((s, d) => s + d.total, 0);
+        const inactive = turnoverByDept.reduce((s, d) => s + d.inactive, 0);
+        return total ? (inactive / total * 100) : 0;
+    })();
+    const avgTenure = xaAvgTenureActiveMonths();
+    const teacherRetention = xaTeacherRetention();
+    const maxRetention = teacherRetention.length ? Math.max(...teacherRetention.map(t => t.rate ?? 0)) : 0;
+
+    const slaDef = { key: 'sla', label: 'SLA (uy vazifasini tekshirish tezligi)', unit: 'soat', agg: 'avg' };
+    const csatDef = { key: 'csat', label: 'CSAT (mijozlar qoniqishi)', unit: 'ball (1-5)', agg: 'avg' };
+    const qualityDef = { key: 'quality-score', label: 'Sifat Indeksi (Quality Score)', unit: '%', agg: 'avg' };
+
+    panel.innerHTML = `
+    <div class="page-title-bar">
+        <div><h1>Xodimlar analitikasi</h1><p class="text-muted" style="margin:2px 0 0;font-size:13px">KPI, ish sifati va xodimlar qo'nimdorligi</p></div>
+        <div class="sp-period-tabs" id="xaPeriodTabs">
+            <button type="button" class="sp-period-tab${period === 'kunlik' ? ' active' : ''}" data-xa-period="kunlik">Kunlik</button>
+            <button type="button" class="sp-period-tab${period === 'haftalik' ? ' active' : ''}" data-xa-period="haftalik">Haftalik</button>
+            <button type="button" class="sp-period-tab${period === 'oylik' ? ' active' : ''}" data-xa-period="oylik">Oylik</button>
+        </div>
+    </div>
+
+    <div class="cf-kpi-grid" style="margin-bottom:16px">
+        <div class="stat-card"><div class="stat-icon yellow">🔄</div><div class="stat-info"><div class="stat-label">Xodimlar qo'nimdorligi (Turnover)</div><div class="stat-value" style="font-size:18px">${overallTurnover.toFixed(1)}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon purple">📅</div><div class="stat-info"><div class="stat-label">O'rtacha ish staji (faol xodimlar)</div><div class="stat-value" style="font-size:18px">${avgTenure !== null ? avgTenure.toFixed(1) + ' oy' : "Ma'lumot yo'q"}</div></div></div>
+    </div>
+
+    <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch;margin-bottom:16px">
+        <div class="card">
+            <div class="card-header"><h3>Turnover — bo'limlar kesimida</h3></div>
+            ${turnoverByDept.length ? turnoverByDept.map(d => `
+                <div class="cf-mgr-row">
+                    <div class="cf-mgr-name">${escapeHtml(d.dept)}</div>
+                    <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${Math.max(2, Math.round(d.rate))}%;background:#F87171"></div></div>
+                    <div class="cf-mgr-value">${d.rate.toFixed(0)}% (${d.inactive}/${d.total})</div>
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Xodim topilmadi</div></div>`}
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>Teacher Retention Rate</h3></div>
+            ${teacherRetention.length ? teacherRetention.map(t => `
+                <div class="cf-mgr-row">
+                    <div class="cf-mgr-name">${escapeHtml(t.name)}</div>
+                    <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${maxRetention > 0 ? Math.round((t.rate ?? 0) / maxRetention * 100) : 0}%"></div></div>
+                    <div class="cf-mgr-value">${(t.rate ?? 0).toFixed(0)}% (${t.active}/${t.total})</div>
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Biriktirilgan o'quvchisi bor ustoz topilmadi</div></div>`}
+        </div>
+    </div>
+
+    <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
+        ${xaEmployeeMetricCard('SLA — Kuratorlar va yordamchi ustozlar', XA_MANUAL_ROLE, slaDef, curators, period)}
+        ${xaEmployeeMetricCard('CSAT — Ustozlar va kuratorlar', XA_MANUAL_ROLE, csatDef, teachersAndCurators, period)}
+    </div>
+    <div style="margin-top:16px">
+        ${xaEmployeeMetricCard('Sifat Indeksi (Quality Score) — barcha xodimlar', XA_MANUAL_ROLE, qualityDef, employees, period)}
+    </div>`;
+
+    document.querySelectorAll('[data-xa-period]').forEach(btn => {
+        btn.onclick = () => {
+            _xaPeriod = btn.dataset.xaPeriod;
+            renderAnalitikaXodimlar();
+        };
+    });
+    panel.querySelectorAll('[data-xa-emp-add]').forEach(btn => {
+        btn.onclick = () => {
+            const data = JSON.parse(btn.dataset.xaEmpAdd);
+            const metricDef = { key: data.key, label: `${data.label} — ${data.employeeName}`, unit: data.unit, agg: data.agg };
+            openManualMetricModal(XA_MANUAL_ROLE, metricDef, _xaPeriod, renderAnalitikaXodimlar, data.employeeId);
         };
     });
 }
