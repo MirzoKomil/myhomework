@@ -248,6 +248,21 @@ export const dailyStages: DailyStage[] = [
   { key: 'speakingGame', label: 'Speaking game', icon: 'game-controller-outline', progress: 0, done: false },
 ];
 
+export type SkillProgress = {
+  key: 'vocabulary' | 'speaking' | 'listening' | 'grammar' | 'writing';
+  label: string;
+  icon: 'book-outline' | 'mic-outline' | 'headset-outline' | 'school-outline' | 'create-outline';
+  progress: number;
+};
+
+export const skillProgress: SkillProgress[] = [
+  { key: 'vocabulary', label: 'Vocabulary', icon: 'book-outline', progress: 62 },
+  { key: 'speaking', label: 'Speaking', icon: 'mic-outline', progress: 45 },
+  { key: 'listening', label: 'Listening', icon: 'headset-outline', progress: 70 },
+  { key: 'grammar', label: 'Grammar', icon: 'school-outline', progress: 38 },
+  { key: 'writing', label: 'Writing', icon: 'create-outline', progress: 55 },
+];
+
 export const nextLiveLesson = {
   topic: 'Speaking Club: Present Simple',
   startsAt: new Date(Date.now() + 1000 * 60 * (60 * 2 + 45)).toISOString(),

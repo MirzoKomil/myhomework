@@ -7,8 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { LessonReminder } from '@/components/ui/LessonReminder';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
-import { courses, dailyStages, nextLiveLesson, profileStats } from '@/data/mock';
+import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
 
 export default function HomeScreen() {
   const activeCourse = courses[0];
@@ -58,6 +59,9 @@ export default function HomeScreen() {
           startsAt={nextLiveLesson.startsAt}
           telegramLink={nextLiveLesson.telegramLink}
         />
+
+        <Text style={styles.sectionTitle}>Ko'nikmalar progressi</Text>
+        <SkillBars skills={skillProgress} />
 
         <Text style={styles.sectionTitle}>Bugungi bosqichlar</Text>
         <View style={styles.quickGrid}>
