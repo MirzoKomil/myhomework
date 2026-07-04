@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260704c">
+    <link rel="stylesheet" href="css/styles.css?v=20260704d">
 </head>
 
 <body>
@@ -87,37 +87,12 @@
                     <span class="label">HR Bo'limi</span>
                 </a>
 
-                <div class="menu-group">
-                    <button type="button" class="menu-group-toggle" aria-expanded="false">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M18 20V10M12 20V4M6 20v-6" />
-                        </svg>
-                        <span class="label">Analitika</span>
-                    </button>
-                    <div class="menu-subitems">
-                        <a href="#" class="menu-sub-item" data-tab="analytics-overview">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M3 3v18h18" />
-                                <path d="M7 16l4-5 4 3 6-8" />
-                            </svg>
-                            Umumiy ko'rsatkichlar
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="analytics-sales">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                            </svg>
-                            Sotuv analitikasi
-                        </a>
-                        <a href="#" class="menu-sub-item" data-tab="analytics-teachers">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                                <circle cx="9" cy="7" r="4" />
-                                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
-                            </svg>
-                            Ustozlar samaradorligi
-                        </a>
-                    </div>
-                </div>
+                <a href="#" class="menu-item" data-tab="analitika">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 20V10M12 20V4M6 20v-6" />
+                    </svg>
+                    <span class="label">Analitika</span>
+                </a>
 
                 <a href="#" class="menu-item" data-tab="student-app">
                     <svg viewBox="0 0 24 24">
@@ -1316,30 +1291,57 @@
                     </section>
 
                     <!-- Analitika -->
-                    <section id="tab-analytics-overview" class="tab-content">
-                        <div class="page-title-bar">
-                            <h1>Umumiy ko'rsatkichlar</h1>
+                    <section id="tab-analitika" class="tab-content">
+                        <div class="sales-pinned">
+                            <div class="sales-header-layout">
+                                <nav class="section-nav sales-header-nav" id="analitikaSectionNav" aria-label="Analitika">
+                                    <button type="button" class="section-nav-item active" data-analitika-section="hisobotlar">Hisobotlar</button>
+                                    <button type="button" class="section-nav-item" data-analitika-section="sotuv-marketing">Sotuv va Marketing</button>
+                                    <button type="button" class="section-nav-item" data-analitika-section="akademik">Akademik</button>
+                                    <button type="button" class="section-nav-item" data-analitika-section="xodimlar">Xodimlar analitikasi</button>
+                                    <button type="button" class="section-nav-item" data-analitika-section="moliyaviy">Moliyaviy ko'rsatkichlar</button>
+                                </nav>
+                            </div>
                         </div>
-                        <div id="analyticsOverviewContent" class="analytics-content">
-                            <p class="text-muted" style="padding:32px;text-align:center">Analitika bo'limi ishlab chiqilmoqda...</p>
-                        </div>
-                    </section>
 
-                    <section id="tab-analytics-sales" class="tab-content">
-                        <div class="page-title-bar">
-                            <h1>Sotuv analitikasi</h1>
+                        <div class="analitika-panel active" data-analitika-panel="hisobotlar" id="analitikaPanel-hisobotlar">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">📊</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Hisobotlar</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
                         </div>
-                        <div id="analyticsSalesContent" class="analytics-content">
-                            <p class="text-muted" style="padding:32px;text-align:center">Sotuv analitikasi bo'limi ishlab chiqilmoqda...</p>
-                        </div>
-                    </section>
 
-                    <section id="tab-analytics-teachers" class="tab-content">
-                        <div class="page-title-bar">
-                            <h1>Ustozlar samaradorligi</h1>
+                        <div class="analitika-panel" data-analitika-panel="sotuv-marketing" id="analitikaPanel-sotuv-marketing">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">📈</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Sotuv va Marketing</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
                         </div>
-                        <div id="analyticsTeachersContent" class="analytics-content">
-                            <p class="text-muted" style="padding:32px;text-align:center">Ustozlar samaradorligi analitikasi ishlab chiqilmoqda...</p>
+
+                        <div class="analitika-panel" data-analitika-panel="akademik" id="analitikaPanel-akademik">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">🎓</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Akademik</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+
+                        <div class="analitika-panel" data-analitika-panel="xodimlar" id="analitikaPanel-xodimlar">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">👥</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Xodimlar analitikasi</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
+                        </div>
+
+                        <div class="analitika-panel" data-analitika-panel="moliyaviy" id="analitikaPanel-moliyaviy">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">💰</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Moliyaviy ko'rsatkichlar</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            </div>
                         </div>
                     </section>
 
@@ -1501,9 +1503,9 @@
     </div>
 
     <script src="js/api.js?v=20260629w"></script>
-    <script src="js/storage.js?v=20260704c"></script>
+    <script src="js/storage.js?v=20260704d"></script>
     <script src="js/notifications.js?v=20260629w"></script>
-    <script src="js/app.js?v=20260704c"></script>
+    <script src="js/app.js?v=20260704d"></script>
 </body>
 
 </html>

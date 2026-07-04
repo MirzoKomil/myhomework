@@ -740,6 +740,25 @@ body {
     flex-direction: column;
 }
 
+/* Analitika */
+#tab-analitika.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.analitika-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.analitika-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
 /* Target Monitoringi */
 .tm-wrap {
     padding: 20px;

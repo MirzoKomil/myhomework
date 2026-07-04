@@ -18,9 +18,7 @@ const TAB_TITLES = {
     'hr': "HR Bo'limi",
     'finance': "Moliya",
     'hr-employees': 'Xodimlar',
-    'analytics-overview': 'Umumiy ko\'rsatkichlar',
-    'analytics-sales': 'Sotuv analitikasi',
-    'analytics-teachers': 'Ustozlar samaradorligi',
+    'analitika': 'Analitika',
     'teachers-section': "Akademik bo'lim"
 };
 
@@ -47,7 +45,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar' };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar', analitikaSection: 'hisobotlar' };
 let _marketingLang = 'english';
 let _targetMonth = 'feb';
 let _studentsTeacherFilter = 'all';
@@ -111,7 +109,7 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analytics-overview', 'analytics-sales'],
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika'],
     teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
     employee:      ['student-app'],
     hr:            ['dashboard', 'hr']
@@ -335,6 +333,7 @@ function switchTab(tab, ctx = {}) {
         studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol'),
         hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
         financeSection: tab === 'finance' ? (ctx.financeSection || 'tolovlar') : (_tabContext.financeSection || 'tolovlar'),
+        analitikaSection: tab === 'analitika' ? (ctx.analitikaSection || 'hisobotlar') : (_tabContext.analitikaSection || 'hisobotlar'),
         marketingSection: _tabContext.marketingSection || 'target'
     };
 
@@ -608,9 +607,7 @@ function renderTab(tab) {
         case 'sales': renderSales(); break;
         case 'marketing': renderMarketing(); break;
         case 'settings': break;
-        case 'analytics-overview':
-        case 'analytics-sales':
-        case 'analytics-teachers': break;
+        case 'analitika': renderAnalitika(); break;
         case 'profile': renderProfile(); break;
         case 'placeholder': renderPlaceholder(); break;
         case 'student-app': renderStudentApp(); break;
@@ -6581,6 +6578,26 @@ function renderHr() {
         b.classList.toggle('active', b.dataset.hrPinnedLang === _hrPinnedLang)
     );
     switchHrSection(_tabContext.hrSection || 'xodimlar');
+}
+
+// --- Analitika ---
+function switchAnalitikaSection(section) {
+    _tabContext.analitikaSection = section;
+    document.querySelectorAll('[data-analitika-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.analitikaSection === section);
+    });
+    document.querySelectorAll('.analitika-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.analitikaPanel === section);
+    });
+}
+
+function renderAnalitika() {
+    document.querySelectorAll('[data-analitika-section]').forEach(btn => {
+        if (btn.dataset.analitikaBound) return;
+        btn.dataset.analitikaBound = '1';
+        btn.addEventListener('click', () => switchAnalitikaSection(btn.dataset.analitikaSection));
+    });
+    switchAnalitikaSection(_tabContext.analitikaSection || 'hisobotlar');
 }
 
 // --- Sotuv bo'limi ---
