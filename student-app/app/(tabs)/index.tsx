@@ -39,18 +39,13 @@ export default function HomeScreen() {
         </LinearGradient>
 
         <View style={styles.quickGrid}>
-          {[
-            { icon: 'school' as const, label: 'Uy vazifasi', route: '/homework' },
-            { icon: 'library' as const, label: 'Resurslar', route: '/resources' },
-            { icon: 'sparkles' as const, label: 'AI yordam', route: '/ai' },
-            { icon: 'calendar' as const, label: 'Jadval', route: '/profile/schedule' },
-          ].map((item) => (
-            <Pressable key={item.label} style={styles.quickItem} onPress={() => router.push(item.route as never)}>
-              <View style={styles.quickIcon}>
-                <Ionicons name={item.icon} size={22} color={theme.colors.purple} />
+          {dailyStages.map((stage) => (
+            <View key={stage.key} style={styles.quickItem}>
+              <View style={[styles.quickIcon, { backgroundColor: stage.bg }]}>
+                <Ionicons name={stage.icon} size={22} color={stage.color} />
               </View>
-              <Text style={styles.quickLabel}>{item.label}</Text>
-            </Pressable>
+              <Text style={styles.quickLabel}>{stage.label}</Text>
+            </View>
           ))}
         </View>
 
@@ -62,28 +57,6 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Ko'nikmalar progressi</Text>
         <SkillBars skills={skillProgress} />
-
-        <Text style={styles.sectionTitle}>Bugungi bosqichlar</Text>
-        <View style={styles.quickGrid}>
-          {dailyStages.map((stage) => (
-            <View key={stage.key} style={styles.stageItem}>
-              <View style={[styles.stageIcon, stage.done && styles.stageIconDone]}>
-                <Ionicons
-                  name={stage.done ? 'checkmark' : stage.icon}
-                  size={22}
-                  color={stage.done ? theme.colors.success : theme.colors.purple}
-                />
-              </View>
-              <Text style={styles.quickLabel}>{stage.label}</Text>
-              <ProgressBar
-                progress={stage.progress}
-                height={5}
-                color={stage.done ? theme.colors.success : theme.colors.purple}
-              />
-              <Text style={styles.stagePercent}>{stage.done ? 'Bajarildi' : `${stage.progress}%`}</Text>
-            </View>
-          ))}
-        </View>
 
         <Card>
           <View style={styles.courseRow}>
@@ -144,24 +117,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   quickLabel: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },
-  stageItem: {
-    width: '47%',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    padding: 16,
-    gap: 8,
-    ...theme.shadow.card,
-  },
-  stageIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: theme.colors.purpleLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stageIconDone: { backgroundColor: theme.colors.successBg },
-  stagePercent: { fontFamily: theme.fonts.medium, fontSize: 12, color: theme.colors.textMuted },
   courseRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   courseBadge: { backgroundColor: theme.colors.blueLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   courseBadgeText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.blue },
