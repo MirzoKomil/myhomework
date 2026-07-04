@@ -22,9 +22,13 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'"],   // vanilla JS uchun
-            styleSrc: ["'self'", "'unsafe-inline'"],
+            // Helmet standart bo'yicha scriptSrcAttr'ni 'none' qilib qo'yadi (scriptSrc'dan mustaqil
+            // ravishda), bu esa butun ilova bo'ylab ishlatiladigan onclick="..." kabi inline
+            // atributlarni block qilib qo'yardi (masalan, Skriptlar bo'limida "Tahrirlash" tugmasi).
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             imgSrc: ["'self'", "data:", "blob:", "https:"],
-            fontSrc: ["'self'", "data:"],
+            fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
             connectSrc: ["'self'"],
             frameSrc: ["'none'"],
             objectSrc: ["'none'"],
