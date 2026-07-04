@@ -53,7 +53,11 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        <LessonReminder topic={nextLiveLesson.topic} startsAt={nextLiveLesson.startsAt} />
+        <LessonReminder
+          topic={nextLiveLesson.topic}
+          startsAt={nextLiveLesson.startsAt}
+          telegramLink={nextLiveLesson.telegramLink}
+        />
 
         <Text style={styles.sectionTitle}>Bugungi bosqichlar</Text>
         <View style={styles.quickGrid}>
@@ -77,7 +81,6 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Faol kurs</Text>
         <Card>
           <View style={styles.courseRow}>
             <View style={styles.courseBadge}>

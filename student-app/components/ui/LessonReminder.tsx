@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/constants/theme';
 
 type LessonReminderProps = {
   topic: string;
   startsAt: string;
+  telegramLink: string;
 };
 
 function formatCountdown(ms: number) {
@@ -18,7 +19,7 @@ function formatCountdown(ms: number) {
   return `${minutes} daqiqa`;
 }
 
-export function LessonReminder({ topic, startsAt }: LessonReminderProps) {
+export function LessonReminder({ topic, startsAt, telegramLink }: LessonReminderProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -29,7 +30,7 @@ export function LessonReminder({ topic, startsAt }: LessonReminderProps) {
   const diff = new Date(startsAt).getTime() - now;
 
   return (
-    <View style={styles.card}>
+    <Pressable style={styles.card} onPress={() => Linking.openURL(telegramLink)}>
       <View style={styles.iconWrap}>
         <Ionicons name="videocam" size={22} color={theme.colors.blue} />
       </View>
@@ -40,7 +41,7 @@ export function LessonReminder({ topic, startsAt }: LessonReminderProps) {
       <View style={styles.countdownBadge}>
         <Text style={styles.countdownText}>{formatCountdown(diff)}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
