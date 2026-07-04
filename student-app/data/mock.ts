@@ -241,13 +241,64 @@ export type DailyStage = {
   done: boolean;
   bg: string;
   color: string;
+  route?: string;
 };
 
 export const dailyStages: DailyStage[] = [
-  { key: 'radio', label: 'Radio', icon: 'musical-notes-outline', progress: 100, done: true, bg: '#D1FAE5', color: '#059669' },
+  { key: 'radio', label: 'Radio', icon: 'musical-notes-outline', progress: 100, done: true, bg: '#D1FAE5', color: '#059669', route: '/radio' },
   { key: 'words', label: 'So\'zlar', icon: 'book-outline', progress: 60, done: false, bg: '#E8F0FF', color: '#4F8CFF' },
   { key: 'translator', label: 'Tarjimon', icon: 'swap-horizontal-outline', progress: 0, done: false, bg: '#EDE9FE', color: '#7B61FF' },
   { key: 'speakingGame', label: 'Speaking Battle', icon: 'mic-outline', progress: 0, done: false, bg: '#FCE7F3', color: '#F472B6' },
+];
+
+export type RadioAnnouncement = {
+  id: string;
+  title: string;
+  subtitle: string;
+  colors: [string, string];
+};
+
+export const radioAnnouncements: RadioAnnouncement[] = [
+  {
+    id: 'a1',
+    title: 'Yangi BBC dasturi qo\'shildi',
+    subtitle: 'Ingliz tilida tinglab, talaffuzni oshiring',
+    colors: ['#6FA8FF', '#4F8CFF'],
+  },
+  {
+    id: 'a2',
+    title: 'Homework Radio jonli efirda',
+    subtitle: 'Har kuni yangi darslar va musiqalar',
+    colors: ['#9B7BFF', '#6B4FE0'],
+  },
+  {
+    id: 'a3',
+    title: 'Amerika aksentini o\'rganing',
+    subtitle: '5 ta Amerika radiosi sizni kutmoqda',
+    colors: ['#5EE6B0', '#34D399'],
+  },
+];
+
+export type RadioStation = {
+  id: string;
+  name: string;
+  country: 'UK' | 'US' | 'Homework';
+  flag: string;
+  genre: string;
+  colors: [string, string];
+};
+
+export const radioStations: RadioStation[] = [
+  { id: 'bbc-radio-1', name: 'BBC Radio 1', country: 'UK', flag: '🇬🇧', genre: 'Pop & Hits', colors: ['#E85D5D', '#C43E3E'] },
+  { id: 'bbc-radio-2', name: 'BBC Radio 2', country: 'UK', flag: '🇬🇧', genre: 'Adult Contemporary', colors: ['#4F8CFF', '#3A6FE0'] },
+  { id: 'capital-fm', name: 'Capital FM', country: 'UK', flag: '🇬🇧', genre: 'Top 40', colors: ['#F472B6', '#DB4E93'] },
+  { id: 'classic-fm', name: 'Classic FM', country: 'UK', flag: '🇬🇧', genre: 'Classical', colors: ['#7B61FF', '#5A3FD6'] },
+  { id: 'npr', name: 'NPR', country: 'US', flag: '🇺🇸', genre: 'News & Talk', colors: ['#34D399', '#1FA97D'] },
+  { id: 'iheart-hits', name: 'iHeart Hits', country: 'US', flag: '🇺🇸', genre: 'Pop Hits', colors: ['#FBBF24', '#E5A70F'] },
+  { id: 'kiss-fm', name: 'KISS FM', country: 'US', flag: '🇺🇸', genre: 'Hip-Hop & R&B', colors: ['#F87171', '#DF4F4F'] },
+  { id: 'jazz24', name: 'Jazz24', country: 'US', flag: '🇺🇸', genre: 'Jazz', colors: ['#6B4FE0', '#4C31B0'] },
+  { id: 'classic-rock-101', name: 'Classic Rock 101', country: 'US', flag: '🇺🇸', genre: 'Classic Rock', colors: ['#4B5563', '#1F2937'] },
+  { id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'] },
 ];
 
 export type SkillProgress = {

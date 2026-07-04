@@ -39,14 +39,31 @@ export default function HomeScreen() {
         </LinearGradient>
 
         <View style={styles.quickGrid}>
-          {dailyStages.map((stage) => (
-            <View key={stage.key} style={styles.quickItem}>
-              <View style={[styles.quickIcon, { backgroundColor: stage.bg }]}>
-                <Ionicons name={stage.icon} size={22} color={stage.color} />
+          {dailyStages.map((stage) => {
+            const inner = (
+              <>
+                <View style={[styles.quickIcon, { backgroundColor: stage.bg }]}>
+                  <Ionicons name={stage.icon} size={22} color={stage.color} />
+                </View>
+                <Text style={styles.quickLabel}>{stage.label}</Text>
+              </>
+            );
+            if (stage.route) {
+              return (
+                <Pressable
+                  key={stage.key}
+                  style={styles.quickItem}
+                  onPress={() => router.push(stage.route as never)}>
+                  {inner}
+                </Pressable>
+              );
+            }
+            return (
+              <View key={stage.key} style={styles.quickItem}>
+                {inner}
               </View>
-              <Text style={styles.quickLabel}>{stage.label}</Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         <LessonReminder
