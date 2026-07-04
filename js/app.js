@@ -455,6 +455,7 @@ function renderFrozenStudents() {
             const idx = students.findIndex(s => s.id === sid);
             if (idx !== -1) {
                 students[idx].frozen = false;
+                students[idx].frozenAt = null;
                 setItem(STORAGE_KEYS.students, students);
                 showMiniToast("Muzlatish bekor qilindi");
                 switchStudentsSection('faol');
@@ -4273,6 +4274,7 @@ function renderSdpHeader(studentId) {
         const idx = allStudents.findIndex(st => st.id === studentId);
         if (idx !== -1) {
             allStudents[idx].frozen = !allStudents[idx].frozen;
+            allStudents[idx].frozenAt = allStudents[idx].frozen ? Date.now() : null;
             setItem(STORAGE_KEYS.students, allStudents);
             renderSdpHeader(studentId);
             const nowFrozen = allStudents[idx].frozen;
@@ -6593,6 +6595,7 @@ function switchAnalitikaSection(section) {
     if (section === 'sotuv-marketing') renderAnalitikaSotuvMarketing();
     if (section === 'moliyaviy') renderAnalitikaMoliyaviy();
     if (section === 'hisobotlar') renderAnalitikaHisobotlar();
+    if (section === 'akademik') renderAnalitikaAkademik();
 }
 
 function renderAnalitika() {
@@ -6889,7 +6892,7 @@ function manualMetricAgg(roleKey, metricDef, period) {
     return metricDef.agg === 'avg' ? +(sum / entries.length).toFixed(1) : sum;
 }
 
-function openManualMetricModal(roleKey, metricDef, period) {
+function openManualMetricModal(roleKey, metricDef, period, onSaved) {
     const today = new Date().toISOString().slice(0, 10);
     const body = `
         <div class="form-group"><label>Sana</label><input type="date" id="mmDate" class="form-control" value="${today}"></div>
@@ -6911,7 +6914,7 @@ function openManualMetricModal(roleKey, metricDef, period) {
         list.push({ id: 'mm_' + Date.now(), roleKey, metricKey: metricDef.key, date, value, note, createdAt: Date.now() });
         saveManualMetrics(list);
         closeModal();
-        renderAnalitikaHisobotlar();
+        if (onSaved) onSaved(); else renderAnalitikaHisobotlar();
     };
 }
 
@@ -7252,7 +7255,137 @@ function renderAnalitikaHisobotlar() {
     content.querySelectorAll('[data-mm-add]').forEach(btn => {
         btn.onclick = () => {
             const metricDef = JSON.parse(btn.dataset.mmAdd);
-            openManualMetricModal(_hbRole, metricDef, _hbPeriod);
+            openManualMetricModal(_hbRole, metricDef, _hbPeriod, renderAnalitikaHisobotlar);
+        };
+    });
+}
+
+// --- Analitika: Akademik (Student Success) ---
+
+let _aaPeriod = 'oylik';
+const AA_MANUAL_ROLE = 'akademik-analitika';
+
+function aaAtRiskStudents(minMarks = 3, rateThreshold = 50) {
+    const now = new Date();
+    const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    const asstAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
+    const allAtt = { ...mainAtt, ...asstAtt };
+    const students = getItem(STORAGE_KEYS.students, []);
+    const studentsById = Object.fromEntries(students.map(s => [s.id, s]));
+
+    const perStudent = {};
+    Object.entries(allAtt).forEach(([attKey, studentMap]) => {
+        if (!attKey.startsWith(monthVal + '_')) return;
+        Object.entries(studentMap).forEach(([studentId, days]) => {
+            const entries = Object.entries(days).map(([d, v]) => [Number(d), v]).sort((a, b) => b[0] - a[0]);
+            const recent = entries.slice(0, minMarks);
+            if (!perStudent[studentId]) perStudent[studentId] = { present: 0, total: 0 };
+            recent.forEach(([, v]) => {
+                perStudent[studentId].total++;
+                if (v) perStudent[studentId].present++;
+            });
+        });
+    });
+
+    return Object.entries(perStudent)
+        .filter(([, stat]) => stat.total >= minMarks && (stat.present / stat.total * 100) < rateThreshold)
+        .map(([sid, stat]) => ({
+            id: sid,
+            name: studentsById[sid]?.name || "Noma'lum o'quvchi",
+            rate: stat.present / stat.total * 100
+        }))
+        .sort((a, b) => a.rate - b.rate);
+}
+
+function aaChurnByWeek() {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const frozen = students.filter(s => s.frozen && s.startDate);
+    const buckets = [
+        { label: '1-2 hafta', count: 0 },
+        { label: '3-4 hafta', count: 0 },
+        { label: '5-8 hafta', count: 0 },
+        { label: '9+ hafta', count: 0 }
+    ];
+    frozen.forEach(s => {
+        const start = new Date(s.startDate);
+        if (isNaN(start.getTime())) return;
+        const end = s.frozenAt ? new Date(s.frozenAt) : new Date();
+        const weeks = Math.max(1, Math.ceil((end - start) / (7 * 24 * 3600 * 1000)));
+        if (weeks <= 2) buckets[0].count++;
+        else if (weeks <= 4) buckets[1].count++;
+        else if (weeks <= 8) buckets[2].count++;
+        else buckets[3].count++;
+    });
+    return buckets;
+}
+
+function renderAnalitikaAkademik() {
+    const panel = document.getElementById('analitikaPanel-akademik');
+    if (!panel) return;
+
+    const period = _aaPeriod;
+    const attStats = hbAttendanceStats(period);
+    const retention = hbRetentionRate();
+    const churnRate = 100 - retention;
+    const atRisk = aaAtRiskStudents();
+    const churnWeeks = aaChurnByWeek();
+    const maxChurn = Math.max(1, ...churnWeeks.map(b => b.count));
+
+    const hwDef = { key: 'homework-completion', label: 'Vazifalar topshirilishi (Homework Completion Rate)', unit: '%', agg: 'avg' };
+    const videoDef = { key: 'video-retention', label: 'Video darslar retentioni', unit: '%', agg: 'avg' };
+    const levelUpDef = { key: 'level-up', label: 'Level Up foizi', unit: '%', agg: 'avg' };
+
+    panel.innerHTML = `
+    <div class="page-title-bar">
+        <div><h1>Akademik analitika</h1><p class="text-muted" style="margin:2px 0 0;font-size:13px">Talabaning platformada qolishi va natijaga erishish ko'rsatkichlari (Student Success)</p></div>
+        <div class="sp-period-tabs" id="aaPeriodTabs">
+            <button type="button" class="sp-period-tab${period === 'kunlik' ? ' active' : ''}" data-aa-period="kunlik">Kunlik</button>
+            <button type="button" class="sp-period-tab${period === 'haftalik' ? ' active' : ''}" data-aa-period="haftalik">Haftalik</button>
+            <button type="button" class="sp-period-tab${period === 'oylik' ? ' active' : ''}" data-aa-period="oylik">Oylik</button>
+        </div>
+    </div>
+
+    <div class="cf-kpi-grid" style="margin-bottom:16px">
+        ${hbManualCard(AA_MANUAL_ROLE, hwDef, period, '📝')}
+        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Jonli darslar davomati (Attendance Rate)</div><div class="stat-value" style="font-size:18px">${attStats.rate.toFixed(1)}%</div></div></div>
+        ${hbManualCard(AA_MANUAL_ROLE, videoDef, period, '🎬')}
+        <div class="stat-card"><div class="stat-icon yellow">📉</div><div class="stat-info"><div class="stat-label">Churn Rate</div><div class="stat-value" style="font-size:18px">${churnRate.toFixed(1)}%</div></div></div>
+        ${hbManualCard(AA_MANUAL_ROLE, levelUpDef, period, '🚀')}
+    </div>
+
+    <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
+        <div class="card">
+            <div class="card-header"><h3>Surunkali dars qoldirayotgan talabalar (ogohlantirish)</h3></div>
+            ${atRisk.length ? atRisk.map(s => `
+                <div class="cf-mgr-row">
+                    <div class="cf-mgr-name">${escapeHtml(s.name)}</div>
+                    <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${Math.max(4, Math.round(s.rate))}%;background:#F87171"></div></div>
+                    <div class="cf-mgr-value">${s.rate.toFixed(0)}%</div>
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Hozircha xavf ostidagi o'quvchi yo'q</div></div>`}
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>Churn — qaysi haftada tashlab ketishmoqda</h3></div>
+            ${churnWeeks.some(b => b.count > 0) ? churnWeeks.map(b => `
+                <div class="cf-mgr-row">
+                    <div class="cf-mgr-name">${escapeHtml(b.label)}</div>
+                    <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${Math.round(b.count / maxChurn * 100)}%"></div></div>
+                    <div class="cf-mgr-value">${b.count} ta</div>
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Muzlatilgan o'quvchi yo'q</div></div>`}
+            <p class="text-muted" style="font-size:11px;margin:10px 0 0">Muzlatilgan sana avtomatik yozib borilgani uchun, bu bo'lim vaqt o'tishi bilan aniqroq bo'lib boradi.</p>
+        </div>
+    </div>`;
+
+    document.querySelectorAll('[data-aa-period]').forEach(btn => {
+        btn.onclick = () => {
+            _aaPeriod = btn.dataset.aaPeriod;
+            renderAnalitikaAkademik();
+        };
+    });
+    panel.querySelectorAll('[data-mm-add]').forEach(btn => {
+        btn.onclick = () => {
+            const metricDef = JSON.parse(btn.dataset.mmAdd);
+            openManualMetricModal(AA_MANUAL_ROLE, metricDef, _aaPeriod, renderAnalitikaAkademik);
         };
     });
 }
