@@ -6558,6 +6558,7 @@ function switchHrSection(section) {
         panel.classList.toggle('active', panel.dataset.hrPanel === section);
     });
     if (section === 'xodimlar') renderHrEmployees();
+    if (section === 'org-struktura') renderOrgStruktura();
 }
 
 function renderHr() {
@@ -13910,6 +13911,260 @@ function openDebtorEditModal(studentId) {
         closeModal();
         refreshAllDebtorViews();
     };
+}
+
+// --- Org Struktura (tashkiliy tuzilma) ---
+
+const ORG_DEPARTMENTS = ['Rahbariyat', 'Sotuv', 'Marketing', 'Akademik', 'Moliya', 'HR', 'IT', 'Boshqa'];
+const ORG_DEPT_COLORS = {
+    'Rahbariyat': '#7B61FF',
+    'Sotuv': '#4F8CFF',
+    'Marketing': '#F472B6',
+    'Akademik': '#34D399',
+    'Moliya': '#FBBF24',
+    'HR': '#F87171',
+    'IT': '#22D3EE',
+    'Boshqa': '#94A3B8'
+};
+
+function getOrgChart() {
+    return getItem(STORAGE_KEYS.orgChart, []);
+}
+
+function saveOrgChart(nodes) {
+    setItem(STORAGE_KEYS.orgChart, nodes);
+}
+
+function deleteOrgNodeCascade(nodeId) {
+    const nodes = getOrgChart();
+    const toDelete = new Set([nodeId]);
+    let changed = true;
+    while (changed) {
+        changed = false;
+        nodes.forEach(n => {
+            if (n.parentId && toDelete.has(n.parentId) && !toDelete.has(n.id)) {
+                toDelete.add(n.id);
+                changed = true;
+            }
+        });
+    }
+    saveOrgChart(nodes.filter(n => !toDelete.has(n.id)));
+}
+
+function buildOrgNodeHtml(node, childrenMap, employeesById) {
+    const children = (childrenMap[node.id] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const emp = node.employeeId ? employeesById[node.employeeId] : null;
+    const displayName = emp ? emp.name : (node.manualName || '');
+    const isVacant = !displayName;
+    const initials = displayName ? getUserInitials(displayName) : '—';
+    const deptColor = ORG_DEPT_COLORS[node.department] || ORG_DEPT_COLORS['Boshqa'];
+    const phone = emp ? emp.phone : node.manualPhone;
+    const noCrmBadge = (!emp && node.manualName) ? `<span class="org-node-badge">CRM'da yo'q</span>` : '';
+
+    return `
+    <div class="org-node-group" data-node-id="${escapeHtml(node.id)}">
+        <div class="org-node-box" style="--dept-color:${deptColor}">
+            <div class="org-node-actions">
+                <button type="button" class="org-node-action-btn" data-org-add-child="${escapeHtml(node.id)}" title="Pozitsiya qo'shish">+</button>
+                <button type="button" class="org-node-action-btn" data-org-edit="${escapeHtml(node.id)}" title="Tahrirlash">✏️</button>
+            </div>
+            <div class="org-node-avatar${isVacant ? ' org-node-avatar--vacant' : ''}">${escapeHtml(initials)}</div>
+            <div class="org-node-name${isVacant ? ' org-node-name--vacant' : ''}">${isVacant ? "Bo'sh o'rin" : escapeHtml(displayName)}</div>
+            <div class="org-node-title">${escapeHtml(node.title || '')}</div>
+            ${phone ? `<div class="org-node-phone">${escapeHtml(phone)}</div>` : ''}
+            ${noCrmBadge}
+        </div>
+        ${children.length ? `
+        <div class="org-children-row">
+            ${children.map(c => buildOrgNodeHtml(c, childrenMap, employeesById)).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
+function drawOrgConnectors() {
+    const inner = document.getElementById('orgTreeInner');
+    const svg = document.getElementById('orgConnectorsSvg');
+    if (!inner || !svg) return;
+    const innerRect = inner.getBoundingClientRect();
+    svg.setAttribute('width', inner.scrollWidth);
+    svg.setAttribute('height', inner.scrollHeight);
+
+    const paths = [];
+    inner.querySelectorAll('.org-node-group').forEach(group => {
+        const box = group.querySelector(':scope > .org-node-box');
+        const childrenRow = group.querySelector(':scope > .org-children-row');
+        if (!box || !childrenRow) return;
+        const boxRect = box.getBoundingClientRect();
+        const parentX = boxRect.left + boxRect.width / 2 - innerRect.left;
+        const parentY = boxRect.bottom - innerRect.top;
+
+        childrenRow.querySelectorAll(':scope > .org-node-group').forEach(childGroup => {
+            const childBox = childGroup.querySelector(':scope > .org-node-box');
+            if (!childBox) return;
+            const childRect = childBox.getBoundingClientRect();
+            const childX = childRect.left + childRect.width / 2 - innerRect.left;
+            const childY = childRect.top - innerRect.top;
+            const midY = (parentY + childY) / 2;
+            paths.push(`M ${parentX} ${parentY} L ${parentX} ${midY} L ${childX} ${midY} L ${childX} ${childY}`);
+        });
+    });
+
+    svg.innerHTML = paths.map(d => `<path d="${d}" fill="none" stroke="#c7c9e0" stroke-width="2"/>`).join('');
+}
+
+function wireOrgNodeButtons() {
+    document.querySelectorAll('[data-org-add-child]').forEach(btn => {
+        btn.onclick = e => { e.stopPropagation(); openOrgNodeModal(btn.dataset.orgAddChild); };
+    });
+    document.querySelectorAll('[data-org-edit]').forEach(btn => {
+        btn.onclick = e => {
+            e.stopPropagation();
+            const node = getOrgChart().find(n => n.id === btn.dataset.orgEdit);
+            if (node) openOrgNodeModal(node.parentId, node);
+        };
+    });
+}
+
+function renderOrgStruktura() {
+    const wrap = document.getElementById('orgChartWrap');
+    if (!wrap) return;
+
+    const addRootBtn = document.getElementById('orgAddRootBtn');
+    if (addRootBtn) addRootBtn.onclick = () => openOrgNodeModal(null);
+
+    const nodes = getOrgChart();
+    if (!nodes.length) {
+        wrap.innerHTML = `
+        <div class="mac-empty" style="padding:80px 0">
+            <div style="font-size:40px;margin-bottom:12px">🏢</div>
+            <div style="font-size:16px;font-weight:600;margin-bottom:6px">Tashkiliy tuzilma hali yaratilmagan</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Eng yuqori lavozimdan (masalan, Bosh direktor) boshlang</div>
+            <button class="btn-primary-sm" id="orgAddFirstBtn">+ Asosiy rahbar qo'shish</button>
+        </div>`;
+        document.getElementById('orgAddFirstBtn').onclick = () => openOrgNodeModal(null);
+        return;
+    }
+
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const employeesById = Object.fromEntries(employees.map(e => [e.id, e]));
+    const childrenMap = {};
+    nodes.forEach(n => {
+        const key = n.parentId || '__root__';
+        (childrenMap[key] = childrenMap[key] || []).push(n);
+    });
+    const roots = (childrenMap['__root__'] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    wrap.innerHTML = `
+    <div class="org-tree-scroll">
+        <div class="org-tree-inner" id="orgTreeInner">
+            ${roots.map(r => buildOrgNodeHtml(r, childrenMap, employeesById)).join('')}
+            <svg class="org-connectors-svg" id="orgConnectorsSvg"></svg>
+        </div>
+    </div>`;
+
+    wireOrgNodeButtons();
+    requestAnimationFrame(drawOrgConnectors);
+}
+
+window.addEventListener('resize', () => {
+    if (document.getElementById('orgTreeInner')) drawOrgConnectors();
+});
+
+function openOrgNodeModal(parentId, existing = null) {
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const isManual = !!(existing && !existing.employeeId && existing.manualName);
+
+    const deptOptions = ORG_DEPARTMENTS.map(d =>
+        `<option value="${escapeHtml(d)}" ${existing?.department === d ? 'selected' : ''}>${escapeHtml(d)}</option>`
+    ).join('');
+    const empOptions = `<option value="">— Tanlanmagan (bo'sh o'rin) —</option>` +
+        employees.map(e =>
+            `<option value="${escapeHtml(e.id)}" ${existing?.employeeId === e.id ? 'selected' : ''}>${escapeHtml(e.name)} (${escapeHtml(HR_ROLE_MAP[e.role] || e.role)})</option>`
+        ).join('');
+
+    const body = `
+        <div class="form-group"><label>Lavozim nomi *</label><input id="orgNodeTitle" class="form-control" placeholder="Masalan: Marketing bo'limi boshlig'i" value="${escapeHtml(existing?.title || '')}"></div>
+        <div class="form-group"><label>Bo'lim</label>
+            <select id="orgNodeDept" class="form-control">${deptOptions}</select>
+        </div>
+        <div class="form-group">
+            <label>Egallovchi shaxs</label>
+            <div class="org-assign-toggle">
+                <button type="button" class="lang-btn${!isManual ? ' lang-btn--active' : ''}" id="orgAssignModeEmp">Xodimlar ro'yxatidan</button>
+                <button type="button" class="lang-btn${isManual ? ' lang-btn--active' : ''}" id="orgAssignModeManual">Qo'lda kiritish</button>
+            </div>
+        </div>
+        <div class="form-group" id="orgAssignEmpWrap" style="${isManual ? 'display:none' : ''}">
+            <select id="orgNodeEmployee" class="form-control">${empOptions}</select>
+        </div>
+        <div id="orgAssignManualWrap" style="display:${isManual ? 'flex' : 'none'};flex-direction:column;gap:12px">
+            <div class="form-group"><label>Ism familiya</label><input id="orgNodeManualName" class="form-control" placeholder="CRM tizimida akkaunti yo'q shaxs" value="${escapeHtml(existing?.manualName || '')}"></div>
+            <div class="form-group"><label>Telefon</label><input id="orgNodeManualPhone" class="form-control" value="${escapeHtml(existing?.manualPhone || '')}"></div>
+            <div class="form-group"><label>Izoh</label><input id="orgNodeManualNote" class="form-control" placeholder="Masalan: tashqi maslahatchi" value="${escapeHtml(existing?.manualNote || '')}"></div>
+        </div>
+    `;
+    const footer = `
+        ${existing ? `<button type="button" class="btn-danger-sm" id="orgNodeDeleteBtn" style="margin-right:auto">O'chirish</button>` : ''}
+        <button type="button" class="btn-ghost" id="orgNodeCancelBtn">Bekor qilish</button>
+        <button type="button" class="btn-primary-sm" id="orgNodeSaveBtn">Saqlash</button>
+    `;
+    openModal(existing ? 'Pozitsiyani tahrirlash' : "Yangi pozitsiya qo'shish", body, footer);
+
+    const empWrap = document.getElementById('orgAssignEmpWrap');
+    const manualWrap = document.getElementById('orgAssignManualWrap');
+    const modeEmpBtn = document.getElementById('orgAssignModeEmp');
+    const modeManualBtn = document.getElementById('orgAssignModeManual');
+
+    modeEmpBtn.onclick = () => {
+        modeEmpBtn.classList.add('lang-btn--active');
+        modeManualBtn.classList.remove('lang-btn--active');
+        empWrap.style.display = '';
+        manualWrap.style.display = 'none';
+    };
+    modeManualBtn.onclick = () => {
+        modeManualBtn.classList.add('lang-btn--active');
+        modeEmpBtn.classList.remove('lang-btn--active');
+        empWrap.style.display = 'none';
+        manualWrap.style.display = 'flex';
+    };
+
+    document.getElementById('orgNodeCancelBtn').onclick = closeModal;
+    document.getElementById('orgNodeSaveBtn').onclick = () => {
+        const title = document.getElementById('orgNodeTitle').value.trim();
+        if (!title) { alert('Lavozim nomini kiriting'); return; }
+        const department = document.getElementById('orgNodeDept').value;
+        const isManualMode = modeManualBtn.classList.contains('lang-btn--active');
+        const employeeId = isManualMode ? null : (document.getElementById('orgNodeEmployee').value || null);
+        const manualName = isManualMode ? document.getElementById('orgNodeManualName').value.trim() : '';
+        const manualPhone = isManualMode ? document.getElementById('orgNodeManualPhone').value.trim() : '';
+        const manualNote = isManualMode ? document.getElementById('orgNodeManualNote').value.trim() : '';
+
+        const nodes = getOrgChart();
+        if (existing) {
+            const idx = nodes.findIndex(n => n.id === existing.id);
+            if (idx >= 0) nodes[idx] = { ...nodes[idx], title, department, employeeId, manualName, manualPhone, manualNote };
+        } else {
+            const siblings = nodes.filter(n => (n.parentId || null) === (parentId || null));
+            nodes.push({
+                id: 'org_' + Date.now(),
+                parentId: parentId || null,
+                title, department, employeeId, manualName, manualPhone, manualNote,
+                order: siblings.length
+            });
+        }
+        saveOrgChart(nodes);
+        closeModal();
+        renderOrgStruktura();
+    };
+
+    if (existing) {
+        document.getElementById('orgNodeDeleteBtn').onclick = () => {
+            if (!confirm("Bu pozitsiyani (va uning ostidagi barcha pozitsiyalarni) o'chirishni tasdiqlaysizmi?")) return;
+            deleteOrgNodeCascade(existing.id);
+            closeModal();
+            renderOrgStruktura();
+        };
+    }
 }
 
 bootApp();

@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260704b">
+    <link rel="stylesheet" href="css/styles.css?v=20260704c">
 </head>
 
 <body>
@@ -1245,11 +1245,14 @@
                         </div>
 
                         <div class="hr-panel" data-hr-panel="org-struktura" id="hrPanel-org-struktura">
-                            <div class="mac-empty" style="padding:80px 0">
-                                <div style="font-size:40px;margin-bottom:12px">🏢</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Org Struktura</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            <div class="page-title-bar">
+                                <div>
+                                    <h1>Tashkiliy tuzilma</h1>
+                                    <p class="text-muted" style="margin:2px 0 0;font-size:13px">Kompaniya ierarxiyasi — asosiy rahbardan tortib har bir pozitsiyagacha</p>
+                                </div>
+                                <button class="btn-primary-sm" id="orgAddRootBtn">+ Bo'lim/pozitsiya qo'shish</button>
                             </div>
+                            <div class="org-chart-wrap" id="orgChartWrap"></div>
                         </div>
 
                         <div class="hr-panel" data-hr-panel="yoriqnomalar" id="hrPanel-yoriqnomalar">
@@ -1498,9 +1501,9 @@
     </div>
 
     <script src="js/api.js?v=20260629w"></script>
-    <script src="js/storage.js?v=20260629w"></script>
+    <script src="js/storage.js?v=20260704c"></script>
     <script src="js/notifications.js?v=20260629w"></script>
-    <script src="js/app.js?v=20260704b"></script>
+    <script src="js/app.js?v=20260704c"></script>
 </body>
 
 </html>

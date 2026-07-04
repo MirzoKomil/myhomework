@@ -7594,3 +7594,68 @@ body.modal-open {
     .cf-toolbar-actions, .cf-tx-filters, .cf-row-action { display: none !important; }
     .cf-tx-table th:last-child, .cf-tx-table td:last-child { display: none !important; }
 }
+
+/* Org Struktura (tashkiliy tuzilma) */
+.org-chart-wrap { margin-top: 20px; }
+.org-tree-scroll { overflow-x: auto; padding: 24px 12px 40px; }
+.org-tree-inner {
+    position: relative;
+    display: inline-flex;
+    gap: 56px;
+    min-width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+}
+.org-connectors-svg { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.org-node-group { display: flex; flex-direction: column; align-items: center; }
+.org-children-row { display: flex; flex-direction: row; align-items: flex-start; gap: 28px; margin-top: 56px; }
+.org-node-box {
+    position: relative;
+    width: 190px;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 18px 14px 14px;
+    box-shadow: var(--shadow-card);
+    border-top: 4px solid var(--dept-color, var(--purple));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform .15s, box-shadow .15s;
+    z-index: 1;
+    box-sizing: border-box;
+}
+.org-node-box:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(26,29,46,.12); }
+.org-node-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.org-node-box:hover .org-node-actions { opacity: 1; }
+.org-node-action-btn {
+    width: 24px; height: 24px; border: none; border-radius: 6px;
+    background: var(--bg); font-size: 11px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+}
+.org-node-action-btn:hover { background: var(--purple-light); color: var(--purple); }
+.org-node-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; color: #fff;
+    background: var(--dept-color, var(--purple));
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+.org-node-avatar--vacant { background: var(--border); color: var(--text-muted); }
+.org-node-name { font-size: 14px; font-weight: 800; color: var(--text); }
+.org-node-name--vacant { color: var(--text-muted); font-style: italic; font-weight: 600; }
+.org-node-title { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.org-node-phone { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.org-node-badge {
+    margin-top: 6px; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+    background: var(--warning-bg); color: #92400e;
+}
+.org-assign-toggle { display: flex; gap: 8px; margin-top: 4px; }
+.org-assign-toggle .lang-btn { min-width: unset; padding: 8px 14px; font-size: 13px; }
+@media (max-width: 768px) {
+    .org-node-box { width: 150px; }
+    .org-children-row { gap: 16px; }
+    .org-tree-inner { gap: 32px; }
+}
