@@ -7083,6 +7083,9 @@ body.modal-open {
     transition: opacity .15s;
 }
 .script-card:hover .script-card-actions { opacity: 1; }
+@media (hover: none) {
+    .script-card-actions { opacity: 1; }
+}
 .script-card-action-btn {
     background: rgba(255,255,255,.22);
     border: none;
@@ -7605,6 +7608,23 @@ body.modal-open {
 @media (max-width: 768px) {
     .cf-grid-2 { grid-template-columns: 1fr; }
     .cf-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .cf-mgr-row { grid-template-columns: 1fr; gap: 4px; row-gap: 2px; }
+    .cf-mgr-value { text-align: left; }
+}
+@media (max-width: 480px) {
+    .cf-kpi-grid { grid-template-columns: 1fr; }
+    .cf-toolbar { flex-direction: column; align-items: stretch; }
+    .cf-toolbar-actions { justify-content: stretch; }
+    .cf-toolbar-actions .btn-ghost, .cf-toolbar-actions .btn-primary-sm { flex: 1; text-align: center; }
+    .cf-donut-wrap { flex-direction: column; }
+
+    /* Skript tahrirlash toolbar — rang/emoji panellari tor ekranda o'ngga
+       "yopishgan" tugmalar tagida chiqqanda ekrandan chiqib ketmasin */
+    .script-editor-color-panel, .script-editor-emoji-panel {
+        left: auto;
+        right: 0;
+        max-width: calc(100vw - 64px);
+    }
 }
 @media print {
     body * { visibility: hidden; }
@@ -7677,6 +7697,10 @@ body.modal-open {
     .org-node-box { width: 150px; }
     .org-children-row { gap: 16px; }
     .org-tree-inner { gap: 32px; }
+}
+@media (hover: none) {
+    /* Sensorli ekranlarda hover ishlamaydi — tugmalar doim ko'rinib tursin */
+    .org-node-actions { opacity: 1; }
 }
 
 /* Analitika: Hisobotlar */
