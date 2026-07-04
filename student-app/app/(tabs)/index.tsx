@@ -5,9 +5,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { LessonReminder } from '@/components/ui/LessonReminder';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { theme } from '@/constants/theme';
-import { courses, profileStats } from '@/data/mock';
+import { courses, dailyStages, nextLiveLesson, profileStats } from '@/data/mock';
 
 export default function HomeScreen() {
   const activeCourse = courses[0];
@@ -36,7 +37,6 @@ export default function HomeScreen() {
           <Text style={styles.heroProgress}>55% bajarildi</Text>
         </LinearGradient>
 
-        <Text style={styles.sectionTitle}>Tezkor kirish</Text>
         <View style={styles.quickGrid}>
           {[
             { icon: 'school' as const, label: 'Uy vazifasi', route: '/homework' },
@@ -50,6 +50,30 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.quickLabel}>{item.label}</Text>
             </Pressable>
+          ))}
+        </View>
+
+        <LessonReminder topic={nextLiveLesson.topic} startsAt={nextLiveLesson.startsAt} />
+
+        <Text style={styles.sectionTitle}>Bugungi bosqichlar</Text>
+        <View style={styles.quickGrid}>
+          {dailyStages.map((stage) => (
+            <View key={stage.key} style={styles.stageItem}>
+              <View style={[styles.stageIcon, stage.done && styles.stageIconDone]}>
+                <Ionicons
+                  name={stage.done ? 'checkmark' : stage.icon}
+                  size={22}
+                  color={stage.done ? theme.colors.success : theme.colors.purple}
+                />
+              </View>
+              <Text style={styles.quickLabel}>{stage.label}</Text>
+              <ProgressBar
+                progress={stage.progress}
+                height={5}
+                color={stage.done ? theme.colors.success : theme.colors.purple}
+              />
+              <Text style={styles.stagePercent}>{stage.done ? 'Bajarildi' : `${stage.progress}%`}</Text>
+            </View>
           ))}
         </View>
 
@@ -113,6 +137,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   quickLabel: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },
+  stageItem: {
+    width: '47%',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    padding: 16,
+    gap: 8,
+    ...theme.shadow.card,
+  },
+  stageIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.colors.purpleLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stageIconDone: { backgroundColor: theme.colors.successBg },
+  stagePercent: { fontFamily: theme.fonts.medium, fontSize: 12, color: theme.colors.textMuted },
   courseRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   courseBadge: { backgroundColor: theme.colors.blueLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   courseBadgeText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.blue },

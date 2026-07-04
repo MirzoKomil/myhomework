@@ -233,6 +233,26 @@ export const lessonActivities: Record<string, LessonActivity[]> = {
   ],
 };
 
+export type DailyStage = {
+  key: 'radio' | 'words' | 'translator' | 'speakingGame';
+  label: string;
+  icon: 'radio-outline' | 'book-outline' | 'swap-horizontal-outline' | 'game-controller-outline';
+  progress: number;
+  done: boolean;
+};
+
+export const dailyStages: DailyStage[] = [
+  { key: 'radio', label: 'Radio', icon: 'radio-outline', progress: 100, done: true },
+  { key: 'words', label: 'So\'zlar', icon: 'book-outline', progress: 60, done: false },
+  { key: 'translator', label: 'Tarjimon', icon: 'swap-horizontal-outline', progress: 0, done: false },
+  { key: 'speakingGame', label: 'Speaking game', icon: 'game-controller-outline', progress: 0, done: false },
+];
+
+export const nextLiveLesson = {
+  topic: 'Speaking Club: Present Simple',
+  startsAt: new Date(Date.now() + 1000 * 60 * (60 * 2 + 45)).toISOString(),
+};
+
 export const profileStats = {
   name: 'Shahzoda Mavlonova',
   level: 'Beginner',
