@@ -6592,6 +6592,7 @@ function switchAnalitikaSection(section) {
     });
     if (section === 'sotuv-marketing') renderAnalitikaSotuvMarketing();
     if (section === 'moliyaviy') renderAnalitikaMoliyaviy();
+    if (section === 'hisobotlar') renderAnalitikaHisobotlar();
 }
 
 function renderAnalitika() {
@@ -6851,6 +6852,407 @@ function renderAnalitikaMoliyaviy() {
         btn.onclick = () => {
             _anFinPeriod = btn.dataset.anFinPeriod;
             renderAnalitikaMoliyaviy();
+        };
+    });
+}
+
+// --- Analitika: Hisobotlar (rol bo'yicha davriy hisobotlar) ---
+
+const HISOBOTLAR_ROLES = [
+    { key: 'sotuv-menejeri', label: 'Sotuv menejerlari', icon: '📞' },
+    { key: 'rop', label: 'ROP', icon: '📊' },
+    { key: 'marketolog', label: 'Marketolog', icon: '📣' },
+    { key: 'oqituvchi', label: 'Ustozlar', icon: '👩‍🏫' },
+    { key: 'yordamchi', label: 'Kuratorlar', icon: '🧑‍🏫' },
+    { key: 'akademik-rahbar', label: 'Akademik rahbar', icon: '🎓' },
+    { key: 'bosh-nazoratchi', label: 'Bosh nazoratchi', icon: '🔍' },
+    { key: 'hr-menejer', label: 'HR menejer', icon: '🧑‍💼' }
+];
+
+let _hbRole = 'sotuv-menejeri';
+let _hbPeriod = 'kunlik';
+
+function getManualMetrics() {
+    return getItem(STORAGE_KEYS.manualMetrics, []);
+}
+
+function saveManualMetrics(list) {
+    setItem(STORAGE_KEYS.manualMetrics, list);
+}
+
+function manualMetricAgg(roleKey, metricDef, period) {
+    const entries = getManualMetrics().filter(m =>
+        m.roleKey === roleKey && m.metricKey === metricDef.key && m.date && cfDateInPeriod(m.date, period)
+    );
+    if (!entries.length) return null;
+    const sum = entries.reduce((s, e) => s + (Number(e.value) || 0), 0);
+    return metricDef.agg === 'avg' ? +(sum / entries.length).toFixed(1) : sum;
+}
+
+function openManualMetricModal(roleKey, metricDef, period) {
+    const today = new Date().toISOString().slice(0, 10);
+    const body = `
+        <div class="form-group"><label>Sana</label><input type="date" id="mmDate" class="form-control" value="${today}"></div>
+        <div class="form-group"><label>${escapeHtml(metricDef.label)} (${escapeHtml(metricDef.unit)})</label><input type="number" id="mmValue" class="form-control" step="any"></div>
+        <div class="form-group"><label>Izoh (ixtiyoriy)</label><input id="mmNote" class="form-control"></div>
+    `;
+    const footer = `
+        <button type="button" class="btn-ghost" id="mmCancelBtn">Bekor qilish</button>
+        <button type="button" class="btn-primary-sm" id="mmSaveBtn">Saqlash</button>
+    `;
+    openModal(`${metricDef.label} — kiritish`, body, footer);
+    document.getElementById('mmCancelBtn').onclick = closeModal;
+    document.getElementById('mmSaveBtn').onclick = () => {
+        const date = document.getElementById('mmDate').value || today;
+        const value = Number(document.getElementById('mmValue').value);
+        if (!value && value !== 0) { alert("Qiymatni kiriting"); return; }
+        const note = document.getElementById('mmNote').value.trim();
+        const list = getManualMetrics();
+        list.push({ id: 'mm_' + Date.now(), roleKey, metricKey: metricDef.key, date, value, note, createdAt: Date.now() });
+        saveManualMetrics(list);
+        closeModal();
+        renderAnalitikaHisobotlar();
+    };
+}
+
+function hbCard(icon, color, label, value) {
+    return `<div class="stat-card"><div class="stat-icon ${color}">${icon}</div><div class="stat-info"><div class="stat-label">${escapeHtml(label)}</div><div class="stat-value" style="font-size:18px">${value}</div></div></div>`;
+}
+
+function hbManualCard(roleKey, metricDef, period, icon) {
+    const agg = manualMetricAgg(roleKey, metricDef, period);
+    const display = agg === null ? "Kiritilmagan" : `${agg} ${escapeHtml(metricDef.unit)}`;
+    return `<div class="stat-card">
+        <div class="stat-icon yellow">${icon || '✏️'}</div>
+        <div class="stat-info">
+            <div class="stat-label">${escapeHtml(metricDef.label)}
+                <button type="button" class="an-manual-add-btn" data-mm-add="${escapeHtml(JSON.stringify(metricDef))}" title="Qo'lda kiritish">+</button>
+            </div>
+            <div class="stat-value" style="font-size:16px">${display}</div>
+        </div>
+    </div>`;
+}
+
+function hbAttendanceStats(period) {
+    const now = new Date();
+    const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    const asstAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
+    const allAtt = { ...mainAtt, ...asstAtt };
+
+    let targetDays;
+    if (period === 'kunlik') {
+        targetDays = [now.getDate()];
+    } else if (period === 'haftalik') {
+        const dow = now.getDay() || 7;
+        targetDays = [];
+        for (let i = 0; i < dow; i++) { const d = now.getDate() - i; if (d >= 1) targetDays.push(d); }
+    } else {
+        targetDays = Array.from({ length: now.getDate() }, (_, i) => i + 1);
+    }
+
+    let presentCount = 0, totalMarkable = 0;
+    Object.entries(allAtt).forEach(([attKey, students]) => {
+        if (!attKey.startsWith(monthVal + '_')) return;
+        Object.values(students).forEach(days => {
+            targetDays.forEach(d => {
+                if (days[d] !== undefined) {
+                    totalMarkable++;
+                    if (days[d]) presentCount++;
+                }
+            });
+        });
+    });
+    return { presentCount, totalMarkable, rate: totalMarkable > 0 ? (presentCount / totalMarkable * 100) : 0 };
+}
+
+function hbRetentionRate() {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const total = students.length;
+    const active = students.filter(s => !s.frozen).length;
+    return total > 0 ? (active / total * 100) : 0;
+}
+
+function hbStaffTurnover() {
+    const emps = getItem(STORAGE_KEYS.hrEmployees, []);
+    const total = emps.length;
+    const inactive = emps.filter(e => e.status === 'inactive').length;
+    return total > 0 ? (inactive / total * 100) : 0;
+}
+
+function hbHeadcountByRole() {
+    const emps = getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.status !== 'inactive');
+    const byRole = {};
+    emps.forEach(e => {
+        const label = HR_ROLE_MAP[e.role] || e.role || 'Boshqa';
+        byRole[label] = (byRole[label] || 0) + 1;
+    });
+    return byRole;
+}
+
+function hbSotuvMenejeri(period) {
+    const periodLeads = anLeadsInPeriod(period);
+    const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
+    const revenue = closed.reduce((s, l) => s + anLeadRevenue(l), 0);
+    const managers = getSalesManagers();
+
+    let cards = '';
+    if (period === 'kunlik') {
+        const withContact = periodLeads.filter(l => l.firstContactAt && l.date);
+        const speedHours = withContact.map(l => (l.firstContactAt - new Date(l.date).getTime()) / 3600000).filter(h => h >= 0);
+        const avgSpeed = speedHours.length ? (speedHours.reduce((a, b) => a + b, 0) / speedHours.length) : null;
+        cards += hbCard('💰', 'blue', 'Kunlik yopilgan sotuv summasi', fmtMoney(revenue));
+        cards += hbManualCard('sotuv-menejeri', { key: 'calls', label: "Bajarilgan qo'ng'iroqlar soni", unit: 'ta', agg: 'sum' }, period, '📞');
+        cards += hbManualCard('sotuv-menejeri', { key: 'call-minutes', label: 'Gaplashilgan daqiqalar', unit: 'daqiqa', agg: 'sum' }, period, '⏱️');
+        cards += hbCard('⚡', 'yellow', "Yangi lidlar bilan bog'lanish tezligi", avgSpeed !== null ? avgSpeed.toFixed(1) + ' soat' : "To'planmoqda");
+    } else if (period === 'haftalik') {
+        const target = getPeriodTarget(period) * (managers.length || 1);
+        const planPct = target > 0 ? (revenue / target * 100) : 0;
+        const convRate = periodLeads.length ? (closed.length / periodLeads.length * 100) : 0;
+        cards += hbCard('📈', 'green', 'Shaxsiy rejaning bajarilishi', planPct.toFixed(0) + '%');
+        cards += hbCard('🔻', 'purple', 'Voronka konversiyasi', convRate.toFixed(1) + '%');
+    } else {
+        const target = getPeriodTarget(period) * (managers.length || 1);
+        const planPct = target > 0 ? (revenue / target * 100) : 0;
+        cards += hbCard('💵', 'blue', 'Jami olib kelingan sof tushum', fmtMoney(revenue));
+        cards += hbCard('🏆', 'green', 'Oylik shaxsiy KPI yakuni', planPct.toFixed(0) + '%');
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbRop(period) {
+    const periodLeads = anLeadsInPeriod(period);
+    const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
+    const revenue = closed.reduce((s, l) => s + anLeadRevenue(l), 0);
+    const managers = getSalesManagers();
+    const target = getPeriodTarget(period) * (managers.length || 1);
+
+    let cards = '';
+    if (period === 'kunlik') {
+        const perMgr = managers.map(m => periodLeads.filter(l => l.managerId === m.id).length);
+        const maxLeads = perMgr.length ? Math.max(...perMgr) : 0;
+        const minLeads = perMgr.length ? Math.min(...perMgr) : 0;
+        const lost = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'muvaffaqiyatsiz-sotuv' && l.failedSaleReason?.label);
+        const reasonCounts = {};
+        lost.forEach(l => { reasonCounts[l.failedSaleReason.label] = (reasonCounts[l.failedSaleReason.label] || 0) + 1; });
+        const topReason = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])[0];
+        cards += hbCard('💰', 'blue', 'Jami sotuv summasi (Fakt)', fmtMoney(revenue));
+        cards += hbCard('🎯', 'purple', 'Kunlik reja (Plan)', fmtMoney(target));
+        cards += hbCard('⚖️', 'green', 'Lidlar taqsimlanishi (max/min)', `${maxLeads} / ${minLeads}`);
+        cards += hbCard('❌', 'yellow', "Eng ko'p uchragan rad sababi", topReason ? `${escapeHtml(topReason[0])} (${topReason[1]})` : "Yo'q");
+    } else if (period === 'haftalik') {
+        const mgrPerf = managers.map(m => {
+            const mgrClosed = periodLeads.filter(l => l.managerId === m.id && normalizeLeadStatus(l.status) === 'tolov-yopildi');
+            return { name: m.name, revenue: mgrClosed.reduce((s, l) => s + anLeadRevenue(l), 0) };
+        }).sort((a, b) => b.revenue - a.revenue);
+        const stageCounts = FUNNEL_STAGES.map(s => ({ ...s, count: periodLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length }));
+        const cum = new Array(FUNNEL_STAGES.length).fill(0);
+        let running = 0;
+        for (let i = stageCounts.length - 1; i >= 0; i--) { running += stageCounts[i].count; cum[i] = running; }
+        let bottleneck = null, worstRate = 101;
+        for (let i = 1; i < FUNNEL_STAGES.length; i++) {
+            if (cum[i - 1] > 0) {
+                const rate = cum[i] / cum[i - 1] * 100;
+                if (rate < worstRate) { worstRate = rate; bottleneck = FUNNEL_STAGES[i].label; }
+            }
+        }
+        const maxRevenue = mgrPerf.length ? mgrPerf[0].revenue : 0;
+        cards += `<div class="card" style="grid-column:1/-1"><div class="card-header"><h3>Menejerlar Liderboard</h3></div>` +
+            (mgrPerf.length ? mgrPerf.map((m, i) => `
+                <div class="cf-mgr-row">
+                    <div class="cf-mgr-name">${i + 1}. ${escapeHtml(m.name)}</div>
+                    <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${maxRevenue > 0 ? Math.round(m.revenue / maxRevenue * 100) : 0}%"></div></div>
+                    <div class="cf-mgr-value">${fmtMoney(m.revenue)}</div>
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Ma'lumot yo'q</div></div>`) +
+            `</div>`;
+        cards += hbCard('🚧', 'yellow', 'Voronkadagi tiqilib qolgan bosqich', bottleneck ? `${escapeHtml(bottleneck)} (${worstRate.toFixed(0)}%)` : "Ma'lumot yo'q");
+    } else {
+        const planPct = target > 0 ? (revenue / target * 100) : 0;
+        const cfTx = getCashFlowTx();
+        const refundAmount = cfTx.filter(t => t.type === 'chiqim' && t.purpose === CASH_FLOW_REFUND_PURPOSE && cfDateInPeriod(t.date, period))
+            .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+        const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+        const forecast = revenue / Math.max(1, new Date().getDate()) * daysInMonth;
+        cards += hbCard('🏆', 'green', 'Oylik reja yakuni', planPct.toFixed(0) + '%');
+        cards += hbCard('↩️', 'yellow', 'Refund summasi', fmtMoney(refundAmount));
+        cards += hbCard('🔮', 'purple', 'Kelgusi oy uchun prognoz', fmtMoney(Math.round(forecast)));
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbMarketolog(period) {
+    const cfTx = getCashFlowTx();
+    const spend = cfTx.filter(t => t.type === 'chiqim' && t.purpose === 'Marketing' && cfDateInPeriod(t.date, period))
+        .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const periodLeads = anLeadsInPeriod(period);
+    const cpl = periodLeads.length ? Math.round(spend / periodLeads.length) : null;
+
+    let cards = '';
+    if (period === 'kunlik') {
+        cards += hbCard('💸', 'blue', 'Sarflangan reklama budjeti', fmtMoney(spend));
+        cards += hbCard('📥', 'purple', 'Jami lidlar soni', periodLeads.length);
+        cards += hbCard('🎯', 'green', "Bitta lidning tannarxi (CPL)", cpl !== null ? fmtMoney(cpl) : "Ma'lumot yo'q");
+    } else if (period === 'haftalik') {
+        const targetLeads = periodLeads.filter(l => (l.source || 'Organik') === 'Target').length;
+        const qualityRate = periodLeads.length ? (targetLeads / periodLeads.length * 100) : 0;
+        cards += hbCard('📋', 'purple', 'Jami lidlar (davr fakti)', periodLeads.length);
+        cards += hbCard('✅', 'green', '"Maqsadli" deb tasdiqlangan arizalar foizi', qualityRate.toFixed(1) + '%');
+    } else {
+        const newCustomers = _getClosedLeadsInPeriod('all', period).length;
+        const cac = newCustomers > 0 ? Math.round(spend / newCustomers) : null;
+        const targetRevenue = _getClosedLeadsInPeriod('all', period)
+            .filter(l => (l.source || 'Organik') === 'Target')
+            .reduce((s, l) => s + anLeadRevenue(l), 0);
+        const romi = spend > 0 ? ((targetRevenue - spend) / spend * 100) : null;
+        cards += hbCard('🎯', 'blue', 'CAC', cac !== null ? fmtMoney(cac) : "Ma'lumot yo'q");
+        cards += hbCard('📈', 'green', 'ROMI', romi !== null ? (romi >= 0 ? '+' : '') + romi.toFixed(0) + '%' : "Ma'lumot yo'q");
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbOqituvchi(period) {
+    let cards = '';
+    if (period === 'kunlik') {
+        const stats = hbAttendanceStats('kunlik');
+        cards += hbCard('📚', 'blue', "O'tilgan (belgilangan) darslar soni", stats.totalMarkable);
+        cards += hbCard('✅', 'green', 'Davomat (Attendance Rate)', stats.rate.toFixed(1) + '%');
+        cards += hbManualCard('oqituvchi', { key: 'student-rating', label: "O'quvchilar bergan kunlik reyting", unit: 'ball (1-5)', agg: 'avg' }, period, '⭐');
+    } else if (period === 'haftalik') {
+        const stats = hbAttendanceStats('haftalik');
+        cards += hbCard('📊', 'green', 'Umumiy faollik koeffitsiyenti', stats.rate.toFixed(1) + '%');
+        cards += hbManualCard('oqituvchi', { key: 'syllabus-progress', label: "Syllabus bo'yicha ketish", unit: '%', agg: 'avg' }, period, '📘');
+        cards += hbManualCard('oqituvchi', { key: 'quiz-score', label: 'Oraliq nazorat (Quiz) natijasi', unit: '%', agg: 'avg' }, period, '📝');
+    } else {
+        const retention = hbRetentionRate();
+        const stats = hbAttendanceStats('oylik');
+        cards += hbCard('🔄', 'purple', "O'quvchilarni saqlab qolish (Retention)", retention.toFixed(1) + '%');
+        cards += hbCard('⏳', 'blue', "Maosh uchun o'tilgan darslar soni", stats.totalMarkable);
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbYordamchi(period) {
+    let cards = '';
+    if (period === 'kunlik') {
+        cards += hbManualCard('yordamchi', { key: 'hw-checked', label: 'Tekshirilgan uy vazifalari soni', unit: 'ta', agg: 'sum' }, period, '📝');
+        cards += hbManualCard('yordamchi', { key: 'hw-sla', label: 'Tekshirish tezligi (SLA)', unit: 'soat', agg: 'avg' }, period, '⏱️');
+        cards += hbManualCard('yordamchi', { key: 'chat-activity', label: 'Chatlardagi faollik', unit: 'xabar', agg: 'sum' }, period, '💬');
+    } else if (period === 'haftalik') {
+        cards += hbManualCard('yordamchi', { key: 'risky-students', label: '"Xavfli guruh" o\'quvchilari soni', unit: 'ta', agg: 'sum' }, period, '⚠️');
+        cards += hbManualCard('yordamchi', { key: 'hw-completion', label: 'Haftalik vazifa topshirish foizi', unit: '%', agg: 'avg' }, period, '📊');
+    } else {
+        cards += hbManualCard('yordamchi', { key: 'hw-completion-month', label: "Oylik o'rtacha topshirish koeffitsiyenti", unit: '%', agg: 'avg' }, period, '📈');
+        cards += hbManualCard('yordamchi', { key: 'csat', label: 'Kurator CSAT', unit: 'ball (1-5)', agg: 'avg' }, period, '😊');
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbAkademikRahbar(period) {
+    let cards = '';
+    if (period === 'kunlik') {
+        const stats = hbAttendanceStats('kunlik');
+        cards += hbCard('✅', 'green', 'Umumiy davomat', stats.rate.toFixed(1) + '%');
+        cards += hbCard('🚫', 'yellow', 'Qolib ketgan darslar', Math.max(0, stats.totalMarkable - stats.presentCount));
+        cards += hbManualCard('akademik-rahbar', { key: 'late-hw', label: 'Kechikayotgan uy vazifalari', unit: 'ta', agg: 'sum' }, period, '⏰');
+    } else if (period === 'haftalik') {
+        const stats = hbAttendanceStats('haftalik');
+        cards += hbCard('📊', 'green', 'Umumiy faollik koeffitsiyenti', stats.rate.toFixed(1) + '%');
+        cards += hbManualCard('akademik-rahbar', { key: 'problem-cases', label: 'Akademik muammoli keyslar', unit: 'ta', agg: 'sum' }, period, '🧩');
+    } else {
+        const retention = hbRetentionRate();
+        const statsM = hbAttendanceStats('oylik');
+        cards += hbCard('📉', 'yellow', 'Churn Rate', (100 - retention).toFixed(1) + '%');
+        cards += hbManualCard('akademik-rahbar', { key: 'level-up', label: 'Level Up qilgan talabalar', unit: 'ta', agg: 'sum' }, period, '🚀');
+        cards += hbCard('🏅', 'purple', 'Akademik tarkib KPI (davomat asosida)', statsM.rate.toFixed(1) + '%');
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbBoshNazoratchi(period) {
+    let cards = '';
+    if (period === 'kunlik') {
+        cards += hbManualCard('bosh-nazoratchi', { key: 'audio-reviewed', label: "Eshitilgan audio-qo'ng'iroqlar", unit: 'ta', agg: 'sum' }, period, '🎧');
+        cards += hbManualCard('bosh-nazoratchi', { key: 'feedback-quality', label: 'Kuratorlar fikrlarining sifati', unit: 'ball (1-5)', agg: 'avg' }, period, '💬');
+        cards += hbManualCard('bosh-nazoratchi', { key: 'system-errors', label: 'Tizim xatolari', unit: 'ta', agg: 'sum' }, period, '🐞');
+    } else if (period === 'haftalik') {
+        cards += hbManualCard('bosh-nazoratchi', { key: 'violations', label: 'Qoidabuzarliklar', unit: 'ta', agg: 'sum' }, period, '🚩');
+        cards += hbManualCard('bosh-nazoratchi', { key: 'quality-score', label: 'Sifat Indeksi (Quality Score)', unit: '%', agg: 'avg' }, period, '⭐');
+    } else {
+        cards += hbManualCard('bosh-nazoratchi', { key: 'service-quality', label: "Xizmat ko'rsatish sifati", unit: '%', agg: 'avg' }, period, '🏅');
+        cards += hbManualCard('bosh-nazoratchi', { key: 'penalty-bonus', label: "Jarima/rag'batlantirish soni", unit: 'ta', agg: 'sum' }, period, '⚖️');
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbHrMenejer(period) {
+    let cards = '';
+    if (period === 'kunlik') {
+        cards += hbManualCard('hr-menejer', { key: 'resumes', label: "Ko'rib chiqilgan rezyumelar", unit: 'ta', agg: 'sum' }, period, '📄');
+        cards += hbManualCard('hr-menejer', { key: 'interviews', label: 'Suhbatlar soni', unit: 'ta', agg: 'sum' }, period, '🗣️');
+    } else if (period === 'haftalik') {
+        cards += hbManualCard('hr-menejer', { key: 'open-vacancies', label: 'Ochiq vakansiyalar', unit: 'ta', agg: 'avg' }, period, '📌');
+        cards += hbManualCard('hr-menejer', { key: 'onboarding', label: 'Yangi xodimlar adaptatsiyasi', unit: '%', agg: 'avg' }, period, '🌱');
+    } else {
+        const turnover = hbStaffTurnover();
+        const byRole = hbHeadcountByRole();
+        cards += hbCard('🔄', 'yellow', "Xodimlar qo'nimdorligi (Turnover)", turnover.toFixed(1) + '%');
+        cards += `<div class="card" style="grid-column:1/-1"><div class="card-header"><h3>Shtat jadvali</h3></div>` +
+            (Object.keys(byRole).length ? Object.entries(byRole).map(([label, count]) =>
+                `<div class="cf-invest-row"><span>${escapeHtml(label)}</span><b>${count} ta</b></div>`).join('')
+                : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Xodimlar topilmadi</div></div>`) +
+            `</div>`;
+        cards += hbManualCard('hr-menejer', { key: 'recruiting-plan', label: 'Kelgusi oy rekruting rejasi', unit: 'ta', agg: 'sum' }, period, '📅');
+    }
+    return `<div class="cf-kpi-grid">${cards}</div>`;
+}
+
+function hbBuildContent(role, period) {
+    const builders = {
+        'sotuv-menejeri': hbSotuvMenejeri,
+        'rop': hbRop,
+        'marketolog': hbMarketolog,
+        'oqituvchi': hbOqituvchi,
+        'yordamchi': hbYordamchi,
+        'akademik-rahbar': hbAkademikRahbar,
+        'bosh-nazoratchi': hbBoshNazoratchi,
+        'hr-menejer': hbHrMenejer
+    };
+    const fn = builders[role];
+    return fn ? fn(period) : '';
+}
+
+function renderAnalitikaHisobotlar() {
+    const panel = document.getElementById('analitikaPanel-hisobotlar');
+    if (!panel) return;
+
+    panel.innerHTML = `
+    <div class="page-title-bar">
+        <div><h1>Hisobotlar</h1><p class="text-muted" style="margin:2px 0 0;font-size:13px">Har bir xodim va rahbar uchun davr kesimidagi faoliyat hisoboti</p></div>
+    </div>
+    <div class="an-role-tabs" id="anRoleTabs">
+        ${HISOBOTLAR_ROLES.map(r => `<button type="button" class="an-role-tab${r.key === _hbRole ? ' active' : ''}" data-hb-role="${r.key}">${r.icon} ${escapeHtml(r.label)}</button>`).join('')}
+    </div>
+    <div class="sp-period-tabs" id="anRepPeriodTabs" style="margin:16px 0">
+        <button type="button" class="sp-period-tab${_hbPeriod === 'kunlik' ? ' active' : ''}" data-hb-period="kunlik">Kunlik</button>
+        <button type="button" class="sp-period-tab${_hbPeriod === 'haftalik' ? ' active' : ''}" data-hb-period="haftalik">Haftalik</button>
+        <button type="button" class="sp-period-tab${_hbPeriod === 'oylik' ? ' active' : ''}" data-hb-period="oylik">Oylik</button>
+    </div>
+    <div id="anHbContent"></div>`;
+
+    document.querySelectorAll('[data-hb-role]').forEach(btn => {
+        btn.onclick = () => { _hbRole = btn.dataset.hbRole; renderAnalitikaHisobotlar(); };
+    });
+    document.querySelectorAll('[data-hb-period]').forEach(btn => {
+        btn.onclick = () => { _hbPeriod = btn.dataset.hbPeriod; renderAnalitikaHisobotlar(); };
+    });
+
+    const content = document.getElementById('anHbContent');
+    content.innerHTML = hbBuildContent(_hbRole, _hbPeriod);
+
+    content.querySelectorAll('[data-mm-add]').forEach(btn => {
+        btn.onclick = () => {
+            const metricDef = JSON.parse(btn.dataset.mmAdd);
+            openManualMetricModal(_hbRole, metricDef, _hbPeriod);
         };
     });
 }
