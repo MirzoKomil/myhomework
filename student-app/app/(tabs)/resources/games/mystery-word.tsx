@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { addCoins } from '@/services/coinsStore';
 
 const WORDS = ['apple', 'grape', 'house', 'water', 'plant', 'chair', 'brave', 'smile', 'dance', 'light'];
 const WORD_LENGTH = 5;
@@ -57,6 +58,7 @@ export default function MysteryWordGame() {
     setError(null);
 
     if (word === answer) {
+      addCoins(1);
       setGameOver('won');
     } else if (nextGuesses.length >= MAX_TRIES) {
       setGameOver('lost');

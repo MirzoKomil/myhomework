@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
 import { getLessonContent } from '@/data/lessonContent';
+import { addCoins } from '@/services/coinsStore';
 import { markDone } from '@/services/lessonProgressStore';
 
 export default function VideoExercisesScreen() {
@@ -26,7 +27,10 @@ export default function VideoExercisesScreen() {
     if (answered) return;
     setSelected(opt);
     setAnswered(true);
-    if (opt === current.answer) setCorrectCount((c) => c + 1);
+    if (opt === current.answer) {
+      setCorrectCount((c) => c + 1);
+      addCoins(1, String(lessonId));
+    }
   };
 
   const handleNext = () => {

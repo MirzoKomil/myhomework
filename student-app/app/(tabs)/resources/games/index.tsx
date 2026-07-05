@@ -3,9 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CoinIcon } from '@/components/ui/CoinIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { profileStats } from '@/data/mock';
+import { useCoins } from '@/services/coinsStore';
 
 type GameItem = {
   id: string;
@@ -60,6 +61,7 @@ const games: GameItem[] = [
 ];
 
 export default function GamesScreen() {
+  const coins = useCoins();
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
@@ -67,8 +69,8 @@ export default function GamesScreen() {
         showBack
         rightAction={
           <View style={styles.coinPill}>
-            <Text style={styles.coinEmoji}>⭐</Text>
-            <Text style={styles.coinText}>{profileStats.coins}</Text>
+            <CoinIcon size={14} />
+            <Text style={styles.coinText}>{coins}</Text>
           </View>
         }
       />

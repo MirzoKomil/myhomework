@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CoinIcon } from '@/components/ui/CoinIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
@@ -14,8 +15,8 @@ import {
   BattleOpponentType,
   BattleWord,
   battleWords,
-  profileStats,
 } from '@/data/mock';
+import { addCoins, useCoins } from '@/services/coinsStore';
 
 const RANDOM_NAMES = ['Aziz', 'Malika', 'Diyor', 'Kamola', 'Sardor', 'Nilufar', 'Javlon', 'Zarina'];
 const RANDOM_AVATARS = ['🧑', '👩', '🧑‍🦱', '👨‍🦰'];
@@ -33,6 +34,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function BattleScreen() {
+  const coins = useCoins();
   const [phase, setPhase] = useState<Phase>('select');
   const [opponentType, setOpponentType] = useState<BattleOpponentType | null>(null);
   const [opponentName, setOpponentName] = useState('Bot');
@@ -125,6 +127,13 @@ export default function BattleScreen() {
     };
   }, [roundWinner]);
 
+  // G'alaba qozonilganda bonus coinlarni bir marta hisoblash.
+  useEffect(() => {
+    if (phase === 'result' && playerScore > opponentScore) {
+      addCoins(BATTLE_WIN_COINS);
+    }
+  }, [phase]);
+
   const handleAnswer = (option: string) => {
     if (roundLockedRef.current || phase !== 'playing') return;
     roundLockedRef.current = true;
@@ -134,6 +143,7 @@ export default function BattleScreen() {
     if (option === currentWord.translation) {
       setPlayerScore((s) => s + 1);
       setRoundWinner('player');
+      addCoins(1);
     } else {
       setOpponentScore((s) => s + 1);
       setRoundWinner('opponent');
@@ -156,8 +166,8 @@ export default function BattleScreen() {
       {phase === 'select' && (
         <View style={styles.selectWrap}>
           <View style={styles.coinRow}>
-            <Text style={styles.coinEmoji}>🪙</Text>
-            <Text style={styles.coinText}>{profileStats.coins}</Text>
+            <CoinIcon size={18} />
+            <Text style={styles.coinText}>{coins}</Text>
           </View>
           <Text style={styles.selectTitle}>Kim bilan o'ynaysiz?</Text>
           <Text style={styles.selectSubtitle}>
@@ -266,7 +276,8 @@ export default function BattleScreen() {
           </Text>
           {playerScore > opponentScore && (
             <View style={styles.rewardPill}>
-              <Text style={styles.rewardText}>+{BATTLE_WIN_COINS} 🪙</Text>
+              <Text style={styles.rewardText}>+{BATTLE_WIN_COINS}</Text>
+              <CoinIcon size={16} />
             </View>
           )}
           <Pressable style={styles.playAgainBtn} onPress={resetGame}>
@@ -365,6 +376,9 @@ const styles = StyleSheet.create({
   resultTitle: { fontFamily: theme.fonts.extraBold, fontSize: 26, color: theme.colors.text, marginBottom: 8 },
   resultScore: { fontFamily: theme.fonts.medium, fontSize: 15, color: theme.colors.textMuted, marginBottom: 20 },
   rewardPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: theme.colors.warningBg,
     paddingHorizontal: 18,
     paddingVertical: 10,

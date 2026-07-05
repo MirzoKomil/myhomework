@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { addCoins } from '@/services/coinsStore';
 
 const WORD_BANK = [
   'apple', 'elephant', 'tiger', 'rabbit', 'tomato', 'orange', 'egg', 'grape', 'eagle', 'ant',
@@ -41,6 +42,7 @@ export default function WordChainGame() {
       setError("Bu so'z allaqachon ishlatilgan");
       return;
     }
+    addCoins(1);
     setChain((c) => [...c, word]);
     setInput('');
     setError(null);

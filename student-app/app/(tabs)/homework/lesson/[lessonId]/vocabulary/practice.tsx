@@ -6,11 +6,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { getLessonContent, VocabWord } from '@/data/lessonContent';
+import { getLessonContent, VOCAB_PRACTICE_SIZE, VocabWord } from '@/data/lessonContent';
+import { addCoins } from '@/services/coinsStore';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
-const PRACTICE_SIZE = 8;
+const PRACTICE_SIZE = VOCAB_PRACTICE_SIZE;
 const STEP_LABELS = ['Choose translation', 'Construct word', 'Pronounce word'];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -40,7 +41,8 @@ export default function VocabularyPracticeScreen() {
   const totalSteps = words.length * STEP_LABELS.length;
   const stepNumber = round * words.length + wordIndex;
 
-  const advance = () => {
+  const advance = (correct: boolean) => {
+    if (correct) addCoins(1, String(lessonId));
     if (wordIndex + 1 < words.length) {
       setWordIndex(wordIndex + 1);
       return;
@@ -93,7 +95,7 @@ export default function VocabularyPracticeScreen() {
   );
 }
 
-function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; allWords: VocabWord[]; onDone: () => void }) {
+function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; allWords: VocabWord[]; onDone: (correct: boolean) => void }) {
   const options = useMemo(
     () => shuffle([word.translation, ...pickDistractors(allWords, word, 3)]),
     [word, allWords]
@@ -130,7 +132,7 @@ function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; al
         })}
       </View>
       {answered && (
-        <Pressable style={styles.continueBtn} onPress={onDone}>
+        <Pressable style={styles.continueBtn} onPress={() => onDone(isCorrect)}>
           <Text style={styles.continueBtnText}>Davom etish</Text>
         </Pressable>
       )}
@@ -138,7 +140,7 @@ function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; al
   );
 }
 
-function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: () => void }) {
+function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct: boolean) => void }) {
   const letters = useMemo(() => shuffle(word.english.split('')), [word]);
   const [used, setUsed] = useState<boolean[]>(() => letters.map(() => false));
   const [built, setBuilt] = useState<number[]>([]);
@@ -187,7 +189,7 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: () => vo
           <Text style={[styles.feedbackText, { color: isCorrect ? theme.colors.success : theme.colors.danger }]}>
             {isCorrect ? "To'g'ri!" : `To'g'ri javob: ${word.english}`}
           </Text>
-          <Pressable style={styles.continueBtn} onPress={onDone}>
+          <Pressable style={styles.continueBtn} onPress={() => onDone(isCorrect)}>
             <Text style={styles.continueBtnText}>Davom etish</Text>
           </Pressable>
         </View>
@@ -201,7 +203,7 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: () => vo
   );
 }
 
-function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: () => void }) {
+function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct: boolean) => void }) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState(false);
   const [recorded, setRecorded] = useState(false);
@@ -241,7 +243,7 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: () => vo
         )}
       </View>
       {recorded && (
-        <Pressable style={styles.continueBtn} onPress={onDone}>
+        <Pressable style={styles.continueBtn} onPress={() => onDone(true)}>
           <Text style={styles.continueBtnText}>Davom etish</Text>
         </Pressable>
       )}

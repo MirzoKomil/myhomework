@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CoinIcon } from '@/components/ui/CoinIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
@@ -12,8 +13,8 @@ import {
   LeaderboardPeriod,
   LeaderboardScope,
   ME_LEADERBOARD_ID,
-  profileStats,
 } from '@/data/mock';
+import { useCoins } from '@/services/coinsStore';
 
 const PERIODS: LeaderboardPeriod[] = ['daily', 'weekly', 'monthly', 'alltime'];
 const SCOPES: LeaderboardScope[] = ['region', 'country', 'global'];
@@ -21,6 +22,7 @@ const SCOPES: LeaderboardScope[] = ['region', 'country', 'global'];
 const PODIUM_COLORS = ['#C0C6D8', '#F2C14E', '#E2A76F'];
 
 export default function LeaderboardScreen() {
+  const coins = useCoins();
   const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
   const [scope, setScope] = useState<LeaderboardScope>('country');
 
@@ -37,8 +39,8 @@ export default function LeaderboardScreen() {
         showBack
         rightAction={
           <View style={styles.coinPill}>
-            <Text style={styles.coinEmoji}>🪙</Text>
-            <Text style={styles.coinText}>{profileStats.coins}</Text>
+            <CoinIcon size={14} />
+            <Text style={styles.coinText}>{coins}</Text>
           </View>
         }
       />
@@ -100,7 +102,8 @@ export default function LeaderboardScreen() {
                 </View>
                 <Text style={styles.podiumName}>{entry.name}</Text>
                 <View style={styles.podiumXpPill}>
-                  <Text style={styles.podiumXpText}>⭐ {entry.displayCoins.toLocaleString('uz-UZ')}</Text>
+                  <CoinIcon size={11} />
+                  <Text style={styles.podiumXpText}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
                 </View>
               </View>
             ) : (
@@ -122,7 +125,10 @@ export default function LeaderboardScreen() {
                 </Text>
                 <Text style={styles.listMeta}>{entry.lessonsCompleted} dars yakunlandi</Text>
               </View>
-              <Text style={styles.listXp}>⭐ {entry.displayCoins.toLocaleString('uz-UZ')}</Text>
+              <View style={styles.listXpRow}>
+                <CoinIcon size={12} />
+                <Text style={styles.listXp}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -206,7 +212,15 @@ const styles = StyleSheet.create({
   },
   podiumRankText: { fontFamily: theme.fonts.extraBold, fontSize: 11, color: '#fff' },
   podiumName: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.text, marginBottom: 4 },
-  podiumXpPill: { backgroundColor: theme.colors.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  podiumXpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
   podiumXpText: { fontFamily: theme.fonts.semiBold, fontSize: 11, color: theme.colors.text },
   list: {
     backgroundColor: theme.colors.surface,
@@ -238,5 +252,6 @@ const styles = StyleSheet.create({
   listName: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },
   listNameMe: { color: theme.colors.purple },
   listMeta: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  listXpRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   listXp: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.text },
 });

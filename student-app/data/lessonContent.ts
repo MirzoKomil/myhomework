@@ -280,3 +280,32 @@ export function getLessonContent(lessonId: string, dayIndex: number): LessonCont
 
 export const VOCAB_PRACTICE_STEPS = ['translation', 'construct', 'pronounce'] as const;
 export type VocabPracticeStep = (typeof VOCAB_PRACTICE_STEPS)[number];
+export const VOCAB_PRACTICE_SIZE = 8;
+
+// ─── Possible coins per lesson ───────────────────────────────────────────────
+function homeworkPartCoins(part: HomeworkPart): number {
+  switch (part.kind) {
+    case 'matching':
+      return part.pairs.length;
+    case 'fillBlank':
+      return part.blanks.length;
+    case 'multipleChoice':
+      return part.questions.length;
+    case 'sentenceBuild':
+      return part.items.length;
+    case 'record':
+    case 'pronunciation':
+      return part.prompts.length;
+    case 'roleplay':
+      return part.scenario.lines.length;
+    case 'creative':
+      return 1;
+  }
+}
+
+export function getLessonPossibleCoins(content: LessonContent): number {
+  const vocabCoins = VOCAB_PRACTICE_SIZE * VOCAB_PRACTICE_STEPS.length;
+  const homeworkCoins = content.homeworkParts.reduce((sum, part) => sum + homeworkPartCoins(part), 0);
+  const grammarCoins = content.grammarBlanks.length;
+  return vocabCoins + homeworkCoins + grammarCoins;
+}

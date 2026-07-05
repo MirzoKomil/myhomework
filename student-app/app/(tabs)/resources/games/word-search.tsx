@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { addCoins } from '@/services/coinsStore';
 
 const GRID_SIZE = 8;
 const WORDS_TO_FIND = ['CAT', 'DOG', 'SUN', 'RAIN', 'BOOK'];
@@ -86,6 +87,7 @@ export default function WordSearchGame() {
     const match = WORDS_TO_FIND.find((w) => (w === forward || w === backward) && !foundWords.has(w));
 
     if (match) {
+      addCoins(1);
       setFoundWords((s) => new Set(s).add(match));
       setFoundCells((s) => {
         const next = new Set(s);

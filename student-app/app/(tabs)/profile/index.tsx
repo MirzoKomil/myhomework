@@ -5,9 +5,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { CoinIcon } from '@/components/ui/CoinIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
+import { useCoins } from '@/services/coinsStore';
 
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -27,6 +29,7 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function ProfileScreen() {
+  const coins = useCoins();
   const ranked = getRankedLeaderboard('alltime', 'country');
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
 
@@ -65,9 +68,12 @@ export default function ProfileScreen() {
               <View>
                 <Text style={styles.balanceLabel}>Leaderboard</Text>
                 <Text style={styles.balanceAmount}>{me ? `${me.rank}-o'rin` : '—'}</Text>
-                <Text style={styles.tariffText}>
-                  {me ? `⭐ ${me.displayCoins.toLocaleString('uz-UZ')} coin` : ''}
-                </Text>
+                {me && (
+                  <View style={styles.tariffRow}>
+                    <CoinIcon size={12} />
+                    <Text style={styles.tariffText}>{me.displayCoins.toLocaleString('uz-UZ')} coin</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.trophyEmoji}>🏆</Text>
             </View>
@@ -92,15 +98,19 @@ export default function ProfileScreen() {
             },
             {
               label: 'Coinlar',
-              value: profileStats.coins,
-              icon: 'star' as const,
+              value: coins,
+              icon: 'coin' as const,
               bg: theme.colors.warningBg,
               color: theme.colors.warning,
             },
           ].map((stat) => (
             <View key={stat.label} style={styles.statBox}>
               <View style={[styles.statIconWrap, { backgroundColor: stat.bg }]}>
-                <Ionicons name={stat.icon} size={18} color={stat.color} />
+                {stat.icon === 'coin' ? (
+                  <CoinIcon size={18} />
+                ) : (
+                  <Ionicons name={stat.icon} size={18} color={stat.color} />
+                )}
               </View>
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
@@ -159,7 +169,8 @@ const styles = StyleSheet.create({
   leaderboardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabel: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.8)' },
   balanceAmount: { fontFamily: theme.fonts.extraBold, fontSize: 28, color: '#fff', marginTop: 4 },
-  tariffText: { fontFamily: theme.fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 6 },
+  tariffRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  tariffText: { fontFamily: theme.fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.75)' },
   trophyEmoji: { fontSize: 48 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statBox: {

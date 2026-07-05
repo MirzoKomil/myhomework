@@ -10,6 +10,7 @@ import { ChatThreadView } from '@/components/chat/ChatThreadView';
 import { theme } from '@/constants/theme';
 import { ChatMessage } from '@/data/mock';
 import { getLessonContent, HomeworkPart, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
+import { addCoins } from '@/services/coinsStore';
 import { markHomeworkPartDone } from '@/services/lessonProgressStore';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -49,14 +50,14 @@ export default function HomeworkPartScreen() {
         <View style={{ width: 28 }} />
       </View>
 
-      {part.kind === 'matching' && <MatchingPart pairs={part.pairs} onDone={complete} />}
-      {part.kind === 'fillBlank' && <FillBlankPart blanks={part.blanks} onDone={complete} />}
-      {part.kind === 'multipleChoice' && <MultipleChoicePart questions={part.questions} onDone={complete} />}
-      {part.kind === 'sentenceBuild' && <SentenceBuildPart items={part.items} onDone={complete} />}
-      {part.kind === 'record' && <RecordPart prompts={part.prompts} onDone={complete} />}
-      {part.kind === 'pronunciation' && <PronunciationPart prompts={part.prompts} onDone={complete} />}
-      {part.kind === 'roleplay' && <RoleplayPart scenario={part.scenario} onDone={complete} />}
-      {part.kind === 'creative' && <CreativePart instruction={part.instruction} mediaType={part.mediaType} onDone={complete} />}
+      {part.kind === 'matching' && <MatchingPart pairs={part.pairs} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'fillBlank' && <FillBlankPart blanks={part.blanks} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'multipleChoice' && <MultipleChoicePart questions={part.questions} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'sentenceBuild' && <SentenceBuildPart items={part.items} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'record' && <RecordPart prompts={part.prompts} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'pronunciation' && <PronunciationPart prompts={part.prompts} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'roleplay' && <RoleplayPart scenario={part.scenario} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'creative' && <CreativePart instruction={part.instruction} mediaType={part.mediaType} onDone={complete} lessonId={String(lessonId)} />}
     </SafeAreaView>
   );
 }
@@ -75,7 +76,7 @@ function DoneScreen({ emoji, title, subtitle }: { emoji: string; title: string; 
 }
 
 // ─── PART A (grammar) — Matching ────────────────────────────────────────────
-function MatchingPart({ pairs, onDone }: { pairs: MatchPair[]; onDone: () => void }) {
+function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone: () => void; lessonId: string }) {
   const rightItems = useMemo(() => shuffle(pairs.map((p) => ({ id: p.id, label: p.right }))), [pairs]);
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
@@ -94,6 +95,7 @@ function MatchingPart({ pairs, onDone }: { pairs: MatchPair[]; onDone: () => voi
       next.add(id);
       setMatched(next);
       setSelectedLeft(null);
+      addCoins(1, lessonId);
       if (next.size === pairs.length) {
         onDone();
         setTimeout(() => setFinished(true), 500);
@@ -153,7 +155,7 @@ function MatchingPart({ pairs, onDone }: { pairs: MatchPair[]; onDone: () => voi
 }
 
 // ─── PART B (grammar) — Fill in the blank ───────────────────────────────────
-function FillBlankPart({ blanks, onDone }: { blanks: { id: string; sentence: string; answer: string; options: string[] }[]; onDone: () => void }) {
+function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sentence: string; answer: string; options: string[] }[]; onDone: () => void; lessonId: string }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
@@ -162,6 +164,7 @@ function FillBlankPart({ blanks, onDone }: { blanks: { id: string; sentence: str
   const isCorrect = selected === current?.answer;
 
   const next = () => {
+    if (isCorrect) addCoins(1, lessonId);
     if (index + 1 >= blanks.length) {
       onDone();
       setFinished(true);
@@ -209,7 +212,7 @@ function FillBlankPart({ blanks, onDone }: { blanks: { id: string; sentence: str
 }
 
 // ─── PART C (grammar) — Multiple choice ─────────────────────────────────────
-function MultipleChoicePart({ questions, onDone }: { questions: MultipleChoiceQ[]; onDone: () => void }) {
+function MultipleChoicePart({ questions, onDone, lessonId }: { questions: MultipleChoiceQ[]; onDone: () => void; lessonId: string }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
@@ -218,6 +221,7 @@ function MultipleChoicePart({ questions, onDone }: { questions: MultipleChoiceQ[
   const isCorrect = selected === current?.correctIndex;
 
   const next = () => {
+    if (isCorrect) addCoins(1, lessonId);
     if (index + 1 >= questions.length) {
       onDone();
       setFinished(true);
@@ -265,7 +269,7 @@ function MultipleChoicePart({ questions, onDone }: { questions: MultipleChoiceQ[
 }
 
 // ─── PART D (grammar) — Sentence building ───────────────────────────────────
-function SentenceBuildPart({ items, onDone }: { items: SentenceBuildQ[]; onDone: () => void }) {
+function SentenceBuildPart({ items, onDone, lessonId }: { items: SentenceBuildQ[]; onDone: () => void; lessonId: string }) {
   const [index, setIndex] = useState(0);
   const [finished, setFinished] = useState(false);
   const current = items[index];
@@ -274,6 +278,7 @@ function SentenceBuildPart({ items, onDone }: { items: SentenceBuildQ[]; onDone:
     <SentenceBuildRound
       key={current.id}
       item={current}
+      lessonId={lessonId}
       onNext={() => {
         if (index + 1 >= items.length) {
           onDone();
@@ -288,7 +293,7 @@ function SentenceBuildPart({ items, onDone }: { items: SentenceBuildQ[]; onDone:
   );
 }
 
-function SentenceBuildRound({ item, onNext, finished, total }: { item: SentenceBuildQ; onNext: () => void; finished: boolean; total: number }) {
+function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item: SentenceBuildQ; onNext: () => void; finished: boolean; total: number; lessonId: string }) {
   const words = useMemo(() => shuffle(item.words), [item]);
   const [used, setUsed] = useState<boolean[]>(() => words.map(() => false));
   const [built, setBuilt] = useState<number[]>([]);
@@ -331,7 +336,12 @@ function SentenceBuildRound({ item, onNext, finished, total }: { item: SentenceB
           <Text style={[styles.feedbackText, { color: isCorrect ? theme.colors.success : theme.colors.danger }]}>
             {isCorrect ? "To'g'ri!" : `To'g'ri javob: ${item.answer.join(' ')}`}
           </Text>
-          <Pressable style={styles.continueBtn} onPress={onNext}>
+          <Pressable
+            style={styles.continueBtn}
+            onPress={() => {
+              if (isCorrect) addCoins(1, lessonId);
+              onNext();
+            }}>
             <Text style={styles.continueBtnText}>Keyingi</Text>
           </Pressable>
         </View>
@@ -346,7 +356,7 @@ function SentenceBuildRound({ item, onNext, finished, total }: { item: SentenceB
 }
 
 // ─── PART A (speaking) — Record yourself ────────────────────────────────────
-function RecordPart({ prompts, onDone }: { prompts: { id: string; sentence: string; translation: string }[]; onDone: () => void }) {
+function RecordPart({ prompts, onDone, lessonId }: { prompts: { id: string; sentence: string; translation: string }[]; onDone: () => void; lessonId: string }) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [index, setIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -370,6 +380,7 @@ function RecordPart({ prompts, onDone }: { prompts: { id: string; sentence: stri
   };
 
   const next = () => {
+    addCoins(1, lessonId);
     if (index + 1 >= prompts.length) {
       onDone();
       setFinished(true);
@@ -411,7 +422,7 @@ function RecordPart({ prompts, onDone }: { prompts: { id: string; sentence: stri
 }
 
 // ─── PART C (speaking) — Pronunciation check ────────────────────────────────
-function PronunciationPart({ prompts, onDone }: { prompts: { id: string; sentence: string; translation: string }[]; onDone: () => void }) {
+function PronunciationPart({ prompts, onDone, lessonId }: { prompts: { id: string; sentence: string; translation: string }[]; onDone: () => void; lessonId: string }) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [index, setIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -435,6 +446,7 @@ function PronunciationPart({ prompts, onDone }: { prompts: { id: string; sentenc
   };
 
   const next = () => {
+    if (score !== null && score >= 80) addCoins(1, lessonId);
     if (index + 1 >= prompts.length) {
       onDone();
       setFinished(true);
@@ -476,7 +488,7 @@ function PronunciationPart({ prompts, onDone }: { prompts: { id: string; sentenc
 }
 
 // ─── PART B (speaking) — AI roleplay ────────────────────────────────────────
-function RoleplayPart({ scenario, onDone }: { scenario: { id: string; title: string; intro: string; lines: string[]; closing: string }; onDone: () => void }) {
+function RoleplayPart({ scenario, onDone, lessonId }: { scenario: { id: string; title: string; intro: string; lines: string[]; closing: string }; onDone: () => void; lessonId: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: 'intro', chatId: scenario.id, from: 'them', type: 'text', text: scenario.lines[0], time: 'hozir' },
   ]);
@@ -499,6 +511,7 @@ function RoleplayPart({ scenario, onDone }: { scenario: { id: string; title: str
   const onSendText = (text: string) => {
     const next: ChatMessage[] = [...messages, { id: `me-${Date.now()}`, chatId: scenario.id, from: 'me', type: 'text', text, time: 'hozir' }];
     setMessages(next);
+    addCoins(1, lessonId);
     advanceBot(next);
   };
 
@@ -508,6 +521,7 @@ function RoleplayPart({ scenario, onDone }: { scenario: { id: string; title: str
       { id: `me-${Date.now()}`, chatId: scenario.id, from: 'me', type: 'voice', voiceUri: uri, voiceDuration: durationSeconds, time: 'hozir' },
     ];
     setMessages(next);
+    addCoins(1, lessonId);
     advanceBot(next);
   };
 
@@ -529,7 +543,7 @@ function RoleplayPart({ scenario, onDone }: { scenario: { id: string; title: str
 // ─── Ijodiy vazifa ───────────────────────────────────────────────────────────
 type CreativeStatus = 'draft' | 'pending' | 'graded';
 
-function CreativePart({ instruction, mediaType, onDone }: { instruction: string; mediaType: 'text' | 'audio'; onDone: () => void }) {
+function CreativePart({ instruction, mediaType, onDone, lessonId }: { instruction: string; mediaType: 'text' | 'audio'; onDone: () => void; lessonId: string }) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [status, setStatus] = useState<CreativeStatus>('draft');
   const [text, setText] = useState('');
@@ -563,6 +577,7 @@ function CreativePart({ instruction, mediaType, onDone }: { instruction: string;
   const submit = () => {
     setStatus('pending');
     onDone();
+    addCoins(1, lessonId);
     setTimeout(() => setStatus('graded'), 4000);
   };
 

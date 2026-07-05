@@ -12,9 +12,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
+import { getLessonContent, getLessonPossibleCoins } from '@/data/lessonContent';
 import { fetchMobileContent, AdminCourse } from '@/services/contentApi';
+import { useCoins, useLessonCoins } from '@/services/coinsStore';
 
 // ─── Type config ────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
@@ -51,9 +54,11 @@ function TypeBadge({ type }: { type: LessonType }) {
 }
 
 // ─── Lesson card ─────────────────────────────────────────────────────────────
-function LessonCard({ lesson, isActive }: { lesson: LessonNode; isActive: boolean }) {
+function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive: boolean; index: number }) {
   const isCompleted = !lesson.locked && lesson.progress > 0;
   const numText = lesson.id;
+  const earnedCoins = useLessonCoins(lesson.id);
+  const possibleCoins = getLessonPossibleCoins(getLessonContent(lesson.id, index));
 
   const cardBorderColor = lesson.type === 'bonus' && !lesson.locked
     ? '#F59E0B'
@@ -128,6 +133,12 @@ function LessonCard({ lesson, isActive }: { lesson: LessonNode; isActive: boolea
               <Text style={ss.percentText}>{lesson.progress}%</Text>
             </View>
           )}
+          <View style={ss.coinRow}>
+            <CoinIcon size={13} />
+            <Text style={ss.coinRowText}>
+              {earnedCoins}/{possibleCoins}
+            </Text>
+          </View>
         </View>
 
         {/* Chevron for active */}
@@ -184,7 +195,7 @@ function PathConnector({
 }
 
 // ─── Lesson row ───────────────────────────────────────────────────────────────
-function LessonRow({ lesson, isActive }: { lesson: LessonNode; isActive: boolean }) {
+function LessonRow({ lesson, isActive, index }: { lesson: LessonNode; isActive: boolean; index: number }) {
   const isLeft = lesson.side === 'left';
 
   return (
@@ -192,7 +203,7 @@ function LessonRow({ lesson, isActive }: { lesson: LessonNode; isActive: boolean
       {isLeft ? (
         <>
           <View style={ss.cardWrap}>
-            <LessonCard lesson={lesson} isActive={isActive} />
+            <LessonCard lesson={lesson} isActive={isActive} index={index} />
           </View>
           <View style={ss.badgeWrap}>
             {lesson.milestone && <MilestoneBadge badge={lesson.milestone} />}
@@ -204,7 +215,7 @@ function LessonRow({ lesson, isActive }: { lesson: LessonNode; isActive: boolean
             {lesson.milestone && <MilestoneBadge badge={lesson.milestone} />}
           </View>
           <View style={ss.cardWrap}>
-            <LessonCard lesson={lesson} isActive={isActive} />
+            <LessonCard lesson={lesson} isActive={isActive} index={index} />
           </View>
         </>
       )}
@@ -215,6 +226,7 @@ function LessonRow({ lesson, isActive }: { lesson: LessonNode; isActive: boolean
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function RoadmapScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
+  const totalCoins = useCoins();
   const [course, setCourse] = useState<AdminCourse | null>(null);
   const [lessons, setLessons] = useState<LessonNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -269,10 +281,7 @@ export default function RoadmapScreen() {
         </View>
 
         <View style={ss.headerRight}>
-          <View style={ss.statPill}>
-            <Ionicons name="star" size={14} color="#F59E0B" />
-            <Text style={ss.statPillText}>0</Text>
-          </View>
+          <CoinPill amount={totalCoins} />
         </View>
       </View>
 
@@ -301,7 +310,7 @@ export default function RoadmapScreen() {
                     completed={connectorCompleted}
                   />
                 )}
-                <LessonRow lesson={lesson} isActive={isActive} />
+                <LessonRow lesson={lesson} isActive={isActive} index={index} />
               </React.Fragment>
             );
           })}
@@ -372,29 +381,6 @@ const ss = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  statPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    backgroundColor: '#FEF3C7',
-  },
-  statPillGold: {
-    backgroundColor: '#FEF3C7',
-  },
-  statPillCoin: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 13,
-    color: '#D97706',
-  },
-  statPillText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 13,
-    color: '#D97706',
-  },
-
   // Section header
   sectionHeader: {
     flexDirection: 'row',
@@ -551,6 +537,17 @@ const ss = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 4,
+  },
+  coinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  coinRowText: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: 11,
+    color: '#B45309',
   },
   starsRow: {
     flexDirection: 'row',

@@ -2,9 +2,11 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CoinIcon } from '@/components/ui/CoinIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
+import { useCoins } from '@/services/coinsStore';
 
 const BADGES = [
   { emoji: '🔥', label: '5 kunlik streak', earned: true },
@@ -16,6 +18,7 @@ const BADGES = [
 ];
 
 export default function MotivationScreen() {
+  const coins = useCoins();
   const ranked = getRankedLeaderboard('alltime', 'country');
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
 
@@ -30,8 +33,10 @@ export default function MotivationScreen() {
             <Text style={styles.statLabel}>kunlik streak</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>🪙</Text>
-            <Text style={styles.statValue}>{profileStats.coins}</Text>
+            <View style={{ marginBottom: 6 }}>
+              <CoinIcon size={22} />
+            </View>
+            <Text style={styles.statValue}>{coins}</Text>
             <Text style={styles.statLabel}>coin</Text>
           </View>
           <View style={styles.statCard}>
