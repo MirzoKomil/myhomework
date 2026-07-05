@@ -12,7 +12,7 @@ const libraryItems = [
   { icon: 'list' as const, title: "So'zlar ro'yxati", count: '119 mavzu', color: theme.colors.purple, bg: theme.colors.purpleLight, route: '/resources/library/words' },
   { icon: 'mic' as const, title: 'Talaffuz', count: '16 mavzu', color: theme.colors.pink, bg: theme.colors.pinkBg, route: '/resources/pronunciation' },
   { icon: 'chatbubbles' as const, title: 'Speaking topiklar', count: '60 ta', color: theme.colors.warning, bg: theme.colors.warningBg, route: '/resources/speaking' },
-  { icon: 'headset' as const, title: 'Podkastlar', count: '48 ta', color: theme.colors.success, bg: theme.colors.successBg },
+  { icon: 'headset' as const, title: 'Podkastlar', count: '36 ta', color: theme.colors.success, bg: theme.colors.successBg, route: '/resources/podcasts' },
   { icon: 'library' as const, title: 'Kitoblar', count: '18 ta', color: theme.colors.blue, bg: theme.colors.blueLight },
 ];
 
