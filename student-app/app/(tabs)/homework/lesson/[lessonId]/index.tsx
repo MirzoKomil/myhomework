@@ -7,87 +7,149 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { fetchMobileContent, AdminModule } from '@/services/contentApi';
+import { getLessonContent, LessonContent } from '@/data/lessonContent';
+import { fetchMobileContent } from '@/services/contentApi';
+import { getCategoryProgress, ProgressCategory, useLessonProgress } from '@/services/lessonProgressStore';
 
-type ModuleVM = AdminModule & { hasContent: boolean };
-
-const typeConfig: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
-  video:  { icon: 'play-circle',    color: theme.colors.blue,    bg: theme.colors.blueLight },
-  pdf:    { icon: 'document-text',  color: '#e11d48',            bg: '#ffe4e6' },
-  word:   { icon: 'document',       color: '#2563eb',            bg: '#dbeafe' },
-  image:  { icon: 'image',          color: '#d97706',            bg: '#fef3c7' },
-  text:   { icon: 'text',           color: theme.colors.success, bg: theme.colors.successBg },
-  quiz:   { icon: 'game-controller', color: theme.colors.success, bg: theme.colors.successBg },
+type CategoryDef = {
+  key: ProgressCategory;
+  title: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  bg: string;
+  route: string;
 };
 
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [modules, setModules] = useState<ModuleVM[]>([]);
-  const [lessonName, setLessonName] = useState('');
+  const [lessonName, setLessonName] = useState('Dars');
+  const [content, setContent] = useState<LessonContent | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchMobileContent().then((mc) => {
-      const lesson = mc.lessons.find((l) => l.id === lessonId);
-      setLessonName(lesson?.name ?? `Dars`);
-      const mods = mc.modules.filter((m) => m.lessonId === lessonId);
-      const vms: ModuleVM[] = mods.map((m) => ({
-        ...m,
-        hasContent: mc.moduleContents.some((c) => c.moduleId === m.id),
-      }));
-      setModules(vms);
-    }).finally(() => setLoading(false));
+    let cancelled = false;
+    fetchMobileContent()
+      .then((mc) => {
+        if (cancelled) return;
+        const lesson = mc.lessons.find((l) => l.id === lessonId);
+        setLessonName(lesson?.name ?? 'Dars');
+        const courseLessons = lesson ? mc.lessons.filter((l) => l.courseId === lesson.courseId) : [];
+        const dayIndex = Math.max(0, courseLessons.findIndex((l) => l.id === lessonId));
+        setContent(getLessonContent(String(lessonId), dayIndex));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [lessonId]);
+
+  // Re-renders this screen whenever lesson progress changes elsewhere.
+  useLessonProgress(String(lessonId));
+
+  if (loading || !content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader title="Dars" showBack />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const categories: CategoryDef[] =
+    content.dayType === 'grammar'
+      ? [
+          {
+            key: 'video',
+            title: 'Videodars',
+            subtitle: 'Video, konspekt va grammatika mashqlari',
+            icon: 'play-circle',
+            color: theme.colors.blue,
+            bg: theme.colors.blueLight,
+            route: 'video',
+          },
+          {
+            key: 'vocabulary',
+            title: "Yangi so'zlar",
+            subtitle: `${content.vocabulary.length} ta yangi so'z`,
+            icon: 'book-outline',
+            color: theme.colors.purple,
+            bg: theme.colors.purpleLight,
+            route: 'vocabulary',
+          },
+          {
+            key: 'homework',
+            title: 'Uyga vazifa',
+            subtitle: `${content.homeworkParts.length} ta qism`,
+            icon: 'create-outline',
+            color: theme.colors.success,
+            bg: theme.colors.successBg,
+            route: 'homework',
+          },
+        ]
+      : [
+          {
+            key: 'speaking',
+            title: "Speaking ko'rgazmalari",
+            subtitle: 'Slaydlar va speaking mashqlari',
+            icon: 'easel-outline',
+            color: theme.colors.pink,
+            bg: theme.colors.pinkBg,
+            route: 'speaking',
+          },
+          {
+            key: 'vocabulary',
+            title: "Yangi so'zlar",
+            subtitle: `${content.vocabulary.length} ta yangi so'z`,
+            icon: 'book-outline',
+            color: theme.colors.purple,
+            bg: theme.colors.purpleLight,
+            route: 'vocabulary',
+          },
+          {
+            key: 'homework',
+            title: 'Uyga vazifa',
+            subtitle: `${content.homeworkParts.length} ta qism`,
+            icon: 'create-outline',
+            color: theme.colors.success,
+            bg: theme.colors.successBg,
+            route: 'homework',
+          },
+        ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title={lessonName || 'Dars'} showBack />
+      <ScreenHeader title={lessonName} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>Barcha bo'limlarni ketma-ket bajaring</Text>
 
-        {loading && (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={theme.colors.purple} />
-          </View>
-        )}
-
-        {!loading && modules.length === 0 && (
-          <View style={styles.center}>
-            <Ionicons name="file-tray-outline" size={40} color={theme.colors.textMuted} />
-            <Text style={styles.emptyText}>Hali modullar qo'shilmagan</Text>
-          </View>
-        )}
-
-        {modules.map((mod, index) => {
-          const cfg = typeConfig[mod.type ?? 'text'] ?? typeConfig.text;
-          const isLast = index === modules.length - 1;
+        {categories.map((cat) => {
+          const pct = getCategoryProgress(String(lessonId), cat.key, content.homeworkParts.length);
           return (
-            <View key={mod.id} style={styles.timelineItem}>
-              <View style={styles.timelineLeft}>
-                <View style={[styles.dot, { backgroundColor: cfg.color }]}>
-                  <Ionicons name={cfg.icon} size={14} color="#fff" />
-                </View>
-                {!isLast && <View style={styles.line} />}
-              </View>
-              <Pressable
-                style={{ flex: 1 }}
-                onPress={() => router.push(`/homework/lesson/${lessonId}/module/${mod.id}`)}>
-                <Card style={[styles.activityCard]}>
-                  <View style={styles.activityRow}>
-                    <View style={[styles.activityIcon, { backgroundColor: cfg.bg }]}>
-                      <Ionicons name={cfg.icon} size={24} color={cfg.color} />
-                    </View>
-                    <View style={styles.activityInfo}>
-                      <Text style={styles.activityTitle}>{mod.name}</Text>
-                      <Text style={styles.activityDuration}>
-                        {mod.duration ? mod.duration + ' daq' : mod.hasContent ? 'Kontent mavjud' : 'Hali kontent yo\'q'}
-                      </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
+            <Pressable key={cat.key} onPress={() => router.push(`/homework/lesson/${lessonId}/${cat.route}` as never)}>
+              <Card style={styles.card}>
+                <View style={styles.row}>
+                  <View style={[styles.iconWrap, { backgroundColor: cat.bg }]}>
+                    <Ionicons name={cat.icon} size={26} color={cat.color} />
                   </View>
-                </Card>
-              </Pressable>
-            </View>
+                  <View style={styles.info}>
+                    <Text style={styles.title}>{cat.title}</Text>
+                    <Text style={styles.subtitleSmall}>{cat.subtitle}</Text>
+                    <View style={styles.progressRow}>
+                      <View style={styles.progressBarBg}>
+                        <View style={[styles.progressBarFill, { width: `${pct}%`, backgroundColor: cat.color }]} />
+                      </View>
+                      <Text style={[styles.pctText, { color: cat.color }]}>{pct}%</Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
+                </View>
+              </Card>
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -97,18 +159,17 @@ export default function LessonScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
-  scroll: { padding: 20, paddingBottom: 40 },
-  subtitle: { fontFamily: theme.fonts.regular, fontSize: 14, color: theme.colors.textMuted, marginBottom: 20 },
-  timelineItem: { flexDirection: 'row', gap: 14, marginBottom: 4 },
-  timelineLeft: { alignItems: 'center', width: 28 },
-  dot: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  line: { flex: 1, width: 2, backgroundColor: theme.colors.border, marginVertical: 4 },
-  activityCard: { marginBottom: 8 },
-  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  activityIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  activityInfo: { flex: 1 },
-  activityTitle: { fontFamily: theme.fonts.semiBold, fontSize: 16, color: theme.colors.text },
-  activityDuration: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginTop: 2 },
-  center: { alignItems: 'center', paddingVertical: 40, gap: 12 },
-  emptyText: { fontFamily: theme.fonts.medium, fontSize: 15, color: theme.colors.textMuted },
+  scroll: { padding: 20, paddingBottom: 40, gap: 12 },
+  subtitle: { fontFamily: theme.fonts.regular, fontSize: 14, color: theme.colors.textMuted, marginBottom: 8 },
+  card: {},
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  iconWrap: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  info: { flex: 1, gap: 3 },
+  title: { fontFamily: theme.fonts.bold, fontSize: 16, color: theme.colors.text },
+  subtitleSmall: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  progressBarBg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: theme.colors.border },
+  progressBarFill: { height: 5, borderRadius: 3 },
+  pctText: { fontFamily: theme.fonts.bold, fontSize: 12, minWidth: 30, textAlign: 'right' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

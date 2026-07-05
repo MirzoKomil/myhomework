@@ -229,7 +229,7 @@ export default function RoadmapScreen() {
           id: l.id,
           title: l.name,
           subtitle: l.isDemo ? 'Demo dars' : l.isPaid ? 'Pullik' : '',
-          type: 'grammar' as LessonType,
+          type: (i % 2 === 0 ? 'grammar' : 'speaking') as LessonType,
           progress: 0,
           locked: !l.isActive,
           side: i % 2 === 0 ? 'left' : 'right',

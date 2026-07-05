@@ -23,7 +23,7 @@ export default function HomeScreen() {
 
   const handleContinue = () => {
     if (lastPosition) {
-      router.push(`/homework/lesson/${lastPosition.lessonId}/module/${lastPosition.moduleId}` as never);
+      router.push(`/homework/lesson/${lastPosition.lessonId}/${lastPosition.section}` as never);
     } else {
       router.push('/homework');
     }

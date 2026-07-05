@@ -4,8 +4,8 @@ const KEY = 'mh_last_position';
 
 export type LastPosition = {
   lessonId: string;
-  moduleId: string;
-  moduleName: string;
+  section: string;
+  label: string;
   updatedAt: number;
 };
 
