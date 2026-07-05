@@ -1147,6 +1147,10 @@ function _openLessonContextMenu(anchor, lessonId, course, container) {
 
     menu.innerHTML = [
         menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`, 'Tahrirlash', 'edit'),
+        menuItem(lesson.isActive
+            ? `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>`
+            : `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`,
+            lesson.isActive ? 'Nofaol qilish' : 'Faollashtirish (qulfdan chiqarish)', 'toggle-active'),
         menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`, lesson.isPaid ? 'Bepul qilish' : 'Pullik qilish', 'toggle-paid'),
         menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`, 'Nusxalash', 'copy'),
         idx > 0 ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`, "Yuqoriga ko'chirish", 'move-up') : '',
@@ -1188,6 +1192,11 @@ function _openLessonContextMenu(anchor, lessonId, course, container) {
                 closeModal();
                 renderMobileCourseDetailTab(container, course);
             };
+        } else if (action === 'toggle-active') {
+            mc2.lessons[gIdx].isActive = !mc2.lessons[gIdx].isActive;
+            saveMobileContent(mc2);
+            renderMobileCourseDetailTab(container, course);
+            showMiniToast(mc2.lessons[gIdx].isActive ? 'Dars faollashtirildi' : 'Dars nofaol qilindi');
         } else if (action === 'toggle-paid') {
             mc2.lessons[gIdx].isPaid = !mc2.lessons[gIdx].isPaid;
             saveMobileContent(mc2);
