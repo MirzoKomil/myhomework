@@ -11,6 +11,8 @@ export default function ResourcesLayout() {
       <Stack.Screen name="library/words/[topicId]" />
       <Stack.Screen name="speaking/index" />
       <Stack.Screen name="speaking/[topicId]" />
+      <Stack.Screen name="pronunciation/index" />
+      <Stack.Screen name="pronunciation/[topicId]" />
       <Stack.Screen name="games/index" />
       <Stack.Screen name="games/word-chain" />
       <Stack.Screen name="games/memory-match" />
