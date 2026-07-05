@@ -83,6 +83,11 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {renderGroup(group1)}
         {renderGroup(group2)}
+
+        <Pressable style={styles.logoutBtn}>
+          <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
+          <Text style={styles.logoutText}>Chiqish</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -101,4 +106,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   rowLabel: { flex: 1, fontFamily: theme.fonts.medium, fontSize: 15, color: theme.colors.text },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    backgroundColor: theme.colors.dangerBg,
+    borderRadius: theme.radius.sm,
+  },
+  logoutText: { fontFamily: theme.fonts.semiBold, fontSize: 15, color: theme.colors.danger },
 });

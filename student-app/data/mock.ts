@@ -471,6 +471,7 @@ export const profileStats = {
   balance: 120000,
   tariff: 'Standard',
   coins: 320,
+  streakDays: 5,
 };
 
 export const weeklySchedule = [

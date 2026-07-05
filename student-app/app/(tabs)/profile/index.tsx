@@ -18,15 +18,12 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
-  { icon: 'calendar', label: 'Haftalik jadval va davomat', route: '/profile/schedule' },
+  { icon: 'calendar', label: 'Dars jadvali', route: '/profile/schedule' },
+  { icon: 'person-circle', label: 'Mening ustozim', route: '/profile/teacher' },
   { icon: 'bar-chart', label: 'Baholar', route: '/profile/grades' },
-  { icon: 'chatbubble-ellipses', label: 'Muloqot', route: '/messages' },
-  { icon: 'notifications', label: 'Bildirishnomalar', route: '/notifications' },
-  { icon: 'book', label: "O'rganilgan lug'atlar", value: `${profileStats.vocabularyCount} ta` },
-  { icon: 'document-text', label: "O'rganilgan grammatika", value: `${profileStats.grammarCount} ta` },
-  { icon: 'time', label: 'Ilovada sarflangan vaqt', value: `${profileStats.hoursSpent} soat` },
-  { icon: 'settings', label: 'Sozlamalar', route: '/profile/settings' },
-  { icon: 'card', label: "To'lov tarixi va tarif", route: '/profile/payment' },
+  { icon: 'trophy', label: 'Motivatsiya tizimi', route: '/profile/motivation' },
+  { icon: 'stats-chart', label: 'Natijalarim', route: '/profile/results' },
+  { icon: 'card', label: "To'lovlar tarixi", route: '/profile/payment' },
 ];
 
 export default function ProfileScreen() {
@@ -129,11 +126,6 @@ export default function ProfileScreen() {
             </Pressable>
           ))}
         </View>
-
-        <Pressable style={styles.logoutBtn}>
-          <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
-          <Text style={styles.logoutText}>Chiqish</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -206,15 +198,4 @@ const styles = StyleSheet.create({
   },
   menuLabel: { flex: 1, fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.text },
   menuValue: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.purple },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: theme.colors.dangerBg,
-    borderRadius: theme.radius.sm,
-  },
-  logoutText: { fontFamily: theme.fonts.semiBold, fontSize: 15, color: theme.colors.danger },
 });

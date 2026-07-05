@@ -9,6 +9,9 @@ export default function ProfileLayout() {
       <Stack.Screen name="settings" />
       <Stack.Screen name="payment" />
       <Stack.Screen name="leaderboard" />
+      <Stack.Screen name="teacher" />
+      <Stack.Screen name="motivation" />
+      <Stack.Screen name="results" />
     </Stack>
   );
 }
