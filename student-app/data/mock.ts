@@ -248,7 +248,7 @@ export const dailyStages: DailyStage[] = [
   { key: 'radio', label: 'Radio', icon: 'musical-notes-outline', progress: 100, done: true, bg: '#D1FAE5', color: '#059669', route: '/radio' },
   { key: 'words', label: 'So\'zlar', icon: 'book-outline', progress: 60, done: false, bg: '#E8F0FF', color: '#4F8CFF' },
   { key: 'translator', label: 'Tarjimon', icon: 'swap-horizontal-outline', progress: 0, done: false, bg: '#EDE9FE', color: '#7B61FF', route: '/translator' },
-  { key: 'speakingGame', label: 'Speaking Battle', icon: 'mic-outline', progress: 0, done: false, bg: '#FCE7F3', color: '#F472B6' },
+  { key: 'speakingGame', label: 'Speaking Battle', icon: 'mic-outline', progress: 0, done: false, bg: '#FCE7F3', color: '#F472B6', route: '/battle' },
 ];
 
 export type RadioAnnouncement = {
@@ -301,6 +301,33 @@ export const radioStations: RadioStation[] = [
   { id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'] },
 ];
 
+export type BattleWord = {
+  word: string;
+  translation: string;
+  options: string[];
+};
+
+export const battleWords: BattleWord[] = [
+  { word: 'apple', translation: 'olma', options: ['olma', 'nok', 'uzum', 'shaftoli'] },
+  { word: 'window', translation: 'deraza', options: ['eshik', 'deraza', 'devor', 'tom'] },
+  { word: 'friend', translation: 'do\'st', options: ['dushman', 'qo\'shni', 'do\'st', 'begona'] },
+  { word: 'happy', translation: 'baxtli', options: ['g\'amgin', 'charchagan', 'baxtli', 'asabiy'] },
+  { word: 'travel', translation: 'sayohat qilmoq', options: ['ishlamoq', 'sayohat qilmoq', 'uxlamoq', 'yozmoq'] },
+  { word: 'kitchen', translation: 'oshxona', options: ['yotoqxona', 'mehmonxona', 'oshxona', 'hammom'] },
+  { word: 'weather', translation: 'ob-havo', options: ['ob-havo', 'fasl', 'quyosh', 'shamol'] },
+  { word: 'teacher', translation: 'o\'qituvchi', options: ['shifokor', 'o\'qituvchi', 'muhandis', 'haydovchi'] },
+  { word: 'quick', translation: 'tez', options: ['sekin', 'tez', 'og\'ir', 'yengil'] },
+  { word: 'library', translation: 'kutubxona', options: ['kutubxona', 'do\'kon', 'bozor', 'bank'] },
+  { word: 'important', translation: 'muhim', options: ['muhim', 'oddiy', 'qiziqarli', 'zerikarli'] },
+  { word: 'morning', translation: 'ertalab', options: ['kechqurun', 'tush payti', 'ertalab', 'kecha'] },
+];
+
+export type BattleOpponentType = 'bot' | 'random';
+
+export const BATTLE_ROUNDS = 5;
+export const BATTLE_ROUND_SECONDS = 8;
+export const BATTLE_WIN_COINS = 50;
+
 export type SkillProgress = {
   key: 'vocabulary' | 'speaking' | 'listening' | 'grammar' | 'writing';
   label: string;
@@ -333,6 +360,7 @@ export const profileStats = {
   attendanceRate: 92,
   balance: 120000,
   tariff: 'Standard',
+  coins: 320,
 };
 
 export const weeklySchedule = [
