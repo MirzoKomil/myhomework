@@ -66,6 +66,11 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => <TabIcon name="person" color={color} focused={focused} />,
         }}
       />
+      <Tabs.Screen name="radio" options={{ href: null }} />
+      <Tabs.Screen name="translator" options={{ href: null }} />
+      <Tabs.Screen name="battle" options={{ href: null }} />
+      <Tabs.Screen name="messages" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   );
 }
