@@ -237,16 +237,21 @@ export default function RoadmapScreen() {
       setCourse(c);
       if (c) {
         const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
-        const mapped: LessonNode[] = adminLessons.map((l, i) => ({
-          id: l.id,
-          title: l.name,
-          subtitle: l.isDemo ? 'Demo dars' : l.isPaid ? 'Pullik' : '',
-          type: (i % 2 === 0 ? 'grammar' : 'speaking') as LessonType,
-          progress: 0,
-          locked: !l.isActive,
-          side: i % 2 === 0 ? 'left' : 'right',
-          stars: 0,
-        }));
+        const TOTAL_LESSONS = 90;
+        const UNLOCKED_COUNT = 3;
+        const mapped: LessonNode[] = Array.from({ length: TOTAL_LESSONS }, (_, i) => {
+          const l = adminLessons[i];
+          return {
+            id: l?.id ?? String(i + 1),
+            title: l?.name ?? `${i + 1}-dars`,
+            subtitle: l?.isDemo ? 'Demo dars' : l?.isPaid ? 'Pullik' : '',
+            type: (i % 2 === 0 ? 'grammar' : 'speaking') as LessonType,
+            progress: 0,
+            locked: i >= UNLOCKED_COUNT,
+            side: i % 2 === 0 ? 'left' : 'right',
+            stars: 0,
+          };
+        });
         setLessons(mapped);
       }
     }).finally(() => setLoading(false));
