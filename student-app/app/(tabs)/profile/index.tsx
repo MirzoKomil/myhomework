@@ -79,12 +79,32 @@ export default function ProfileScreen() {
 
         <View style={styles.statsRow}>
           {[
-            { label: 'Davomat', value: `${profileStats.attendanceRate}%`, icon: 'checkmark-circle' as const },
-            { label: "Lug'at", value: profileStats.vocabularyCount, icon: 'book' as const },
-            { label: 'Grammatika', value: profileStats.grammarCount, icon: 'document-text' as const },
+            {
+              label: 'Davomat',
+              value: `${profileStats.attendanceRate}%`,
+              icon: 'checkmark-circle' as const,
+              bg: theme.colors.successBg,
+              color: theme.colors.success,
+            },
+            {
+              label: 'Vaqt',
+              value: `${profileStats.hoursSpent} soat`,
+              icon: 'time' as const,
+              bg: theme.colors.blueLight,
+              color: theme.colors.blue,
+            },
+            {
+              label: 'Coinlar',
+              value: profileStats.coins,
+              icon: 'star' as const,
+              bg: theme.colors.warningBg,
+              color: theme.colors.warning,
+            },
           ].map((stat) => (
             <View key={stat.label} style={styles.statBox}>
-              <Ionicons name={stat.icon} size={20} color={theme.colors.purple} />
+              <View style={[styles.statIconWrap, { backgroundColor: stat.bg }]}>
+                <Ionicons name={stat.icon} size={18} color={stat.color} />
+              </View>
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
             </View>
@@ -157,6 +177,13 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
     ...theme.shadow.card,
+  },
+  statIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statValue: { fontFamily: theme.fonts.bold, fontSize: 18, color: theme.colors.text, marginTop: 6 },
   statLabel: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
