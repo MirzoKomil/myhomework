@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CourseProgressCard } from '@/components/ui/CourseProgressCard';
 import { LessonReminder } from '@/components/ui/LessonReminder';
-import { ProgressBar } from '@/components/ui/ProgressBar';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
@@ -50,16 +48,11 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <LinearGradient
-          colors={['#9B7BFF', '#6B4FE0', '#5B6CF8']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.hero}>
-          <Text style={styles.heroLabel}>Bugungi maqsad</Text>
-          <Text style={styles.heroTitle}>2 ta vazifani yakunlang</Text>
-          <ProgressBar progress={55} color="#fff" height={8} />
-          <Text style={styles.heroProgress}>55% bajarildi</Text>
-        </LinearGradient>
+        <LessonReminder
+          topic={nextLiveLesson.topic}
+          startsAt={nextLiveLesson.startsAt}
+          telegramLink={nextLiveLesson.telegramLink}
+        />
 
         <View style={styles.quickGrid}>
           {dailyStages.map((stage) => {
@@ -88,12 +81,6 @@ export default function HomeScreen() {
             );
           })}
         </View>
-
-        <LessonReminder
-          topic={nextLiveLesson.topic}
-          startsAt={nextLiveLesson.startsAt}
-          telegramLink={nextLiveLesson.telegramLink}
-        />
 
         <Text style={styles.sectionTitle}>Ko'nikmalar progressi</Text>
         <SkillBars skills={skillProgress} />
@@ -145,10 +132,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: theme.colors.bg,
   },
-  hero: { borderRadius: theme.radius.lg, padding: 24, marginBottom: 28 },
-  heroLabel: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
-  heroTitle: { fontFamily: theme.fonts.bold, fontSize: 20, color: '#fff', marginBottom: 16 },
-  heroProgress: { fontFamily: theme.fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 8 },
   sectionTitle: { fontFamily: theme.fonts.bold, fontSize: 18, color: theme.colors.text, marginBottom: 14 },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 },
   quickItem: {
