@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { profileStats } from '@/data/mock';
+import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
 
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -30,6 +30,9 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function ProfileScreen() {
+  const ranked = getRankedLeaderboard('alltime', 'country');
+  const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
@@ -55,17 +58,24 @@ export default function ProfileScreen() {
           </Pressable>
         </Card>
 
-        <LinearGradient
-          colors={['#34D399', '#10B981']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Balans</Text>
-          <Text style={styles.balanceAmount}>
-            {profileStats.balance.toLocaleString('uz-UZ')} UZS
-          </Text>
-          <Text style={styles.tariffText}>Tarif: {profileStats.tariff}</Text>
-        </LinearGradient>
+        <Pressable onPress={() => router.push('/profile/leaderboard' as never)}>
+          <LinearGradient
+            colors={['#7B61FF', '#4F46E5']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.balanceCard}>
+            <View style={styles.leaderboardRow}>
+              <View>
+                <Text style={styles.balanceLabel}>Leaderboard</Text>
+                <Text style={styles.balanceAmount}>{me ? `${me.rank}-o'rin` : '—'}</Text>
+                <Text style={styles.tariffText}>
+                  {me ? `⭐ ${me.displayCoins.toLocaleString('uz-UZ')} coin` : ''}
+                </Text>
+              </View>
+              <Text style={styles.trophyEmoji}>🏆</Text>
+            </View>
+          </LinearGradient>
+        </Pressable>
 
         <View style={styles.statsRow}>
           {[
@@ -134,9 +144,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   balanceCard: { borderRadius: theme.radius.md, padding: 20, marginBottom: 16 },
+  leaderboardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabel: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.8)' },
   balanceAmount: { fontFamily: theme.fonts.extraBold, fontSize: 28, color: '#fff', marginTop: 4 },
   tariffText: { fontFamily: theme.fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 6 },
+  trophyEmoji: { fontSize: 48 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statBox: {
     flex: 1,

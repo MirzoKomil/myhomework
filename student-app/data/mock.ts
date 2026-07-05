@@ -604,3 +604,69 @@ export const celebrityPersonas: CelebrityPersona[] = [
     intro: "Everybody lies. But let's talk medicine anyway — what's your question?",
   },
 ];
+
+export type LeaderboardEntry = {
+  id: string;
+  name: string;
+  avatarEmoji: string;
+  lessonsCompleted: number;
+  coins: number;
+};
+
+export const ME_LEADERBOARD_ID = 'me';
+
+export const leaderboardEntries: LeaderboardEntry[] = [
+  { id: 'e1', name: 'Azizbek', avatarEmoji: '🧑', lessonsCompleted: 95, coins: 12560 },
+  { id: 'e2', name: 'Zarina', avatarEmoji: '👩', lessonsCompleted: 92, coins: 11230 },
+  { id: 'e3', name: 'Behruz', avatarEmoji: '🧑‍🦱', lessonsCompleted: 88, coins: 9870 },
+  { id: 'e4', name: 'Madina', avatarEmoji: '👩‍🦱', lessonsCompleted: 90, coins: 8420 },
+  { id: 'e5', name: 'Diyor', avatarEmoji: '🧑‍🦰', lessonsCompleted: 85, coins: 7650 },
+  { id: 'e6', name: 'Kamila', avatarEmoji: '👱‍♀️', lessonsCompleted: 80, coins: 6980 },
+  { id: ME_LEADERBOARD_ID, name: 'Siz', avatarEmoji: '🙂', lessonsCompleted: 75, coins: 6250 },
+  { id: 'e7', name: 'Sardor', avatarEmoji: '🧔', lessonsCompleted: 70, coins: 5420 },
+  { id: 'e8', name: 'Gulnoza', avatarEmoji: '🧕', lessonsCompleted: 65, coins: 4980 },
+  { id: 'e9', name: 'Asilbek', avatarEmoji: '👨', lessonsCompleted: 60, coins: 4250 },
+  { id: 'e10', name: 'Nodira', avatarEmoji: '👩‍🦳', lessonsCompleted: 58, coins: 3900 },
+  { id: 'e11', name: 'Jasur', avatarEmoji: '👦', lessonsCompleted: 55, coins: 3600 },
+  { id: 'e12', name: 'Sitora', avatarEmoji: '👧', lessonsCompleted: 52, coins: 3200 },
+  { id: 'e13', name: 'Otabek', avatarEmoji: '🧑‍🎓', lessonsCompleted: 48, coins: 2800 },
+  { id: 'e14', name: 'Feruza', avatarEmoji: '👩‍🎓', lessonsCompleted: 44, coins: 2400 },
+];
+
+export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'alltime';
+export type LeaderboardScope = 'region' | 'country' | 'global';
+
+export const LEADERBOARD_PERIOD_LABELS: Record<LeaderboardPeriod, string> = {
+  daily: 'Kunlik',
+  weekly: 'Haftalik',
+  monthly: 'Oylik',
+  alltime: 'Doimiy',
+};
+
+export const LEADERBOARD_SCOPE_LABELS: Record<LeaderboardScope, string> = {
+  region: "O'z viloyati",
+  country: "O'zbekiston",
+  global: 'Global',
+};
+
+const PERIOD_SCALE: Record<LeaderboardPeriod, number> = {
+  daily: 0.02,
+  weekly: 0.12,
+  monthly: 0.4,
+  alltime: 1,
+};
+
+const SCOPE_SCALE: Record<LeaderboardScope, number> = {
+  region: 0.5,
+  country: 1,
+  global: 2.4,
+};
+
+export type RankedLeaderboardEntry = LeaderboardEntry & { rank: number; displayCoins: number };
+
+export function getRankedLeaderboard(period: LeaderboardPeriod, scope: LeaderboardScope): RankedLeaderboardEntry[] {
+  const factor = PERIOD_SCALE[period] * SCOPE_SCALE[scope];
+  const scaled = leaderboardEntries.map((e) => ({ ...e, displayCoins: Math.max(1, Math.round(e.coins * factor)) }));
+  scaled.sort((a, b) => b.displayCoins - a.displayCoins);
+  return scaled.map((e, i) => ({ ...e, rank: i + 1 }));
+}
