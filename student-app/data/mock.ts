@@ -301,6 +301,80 @@ export const radioStations: RadioStation[] = [
   { id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'] },
 ];
 
+export type NotifCategory = 'news' | 'lessons';
+
+export type AppNotification = {
+  id: string;
+  category: NotifCategory;
+  date: string;
+  title: string;
+  message: string;
+  detail: string;
+  unread: boolean;
+  colors: [string, string];
+  emoji: string;
+  interactive?: 'attendance';
+};
+
+export const appNotifications: AppNotification[] = [
+  {
+    id: 'n1',
+    category: 'lessons',
+    date: '14:35, 11.10.2026',
+    title: '11-dars yakunlandi',
+    message: 'Bugungi darsda ishtirok etdingizmi?',
+    detail: '11-dars "Present Simple" mavzusida o\'tildi. Darsda ishtirokingizni tasdiqlang — bu sizning davomat statistikangizga ta\'sir qiladi.',
+    unread: true,
+    colors: ['#4F8CFF', '#3A6FE0'],
+    emoji: '📋',
+    interactive: 'attendance',
+  },
+  {
+    id: 'n2',
+    category: 'lessons',
+    date: 'Ertaga, 19:00',
+    title: 'Live darsga chaqiruv',
+    message: 'Speaking Club darsi boshlanishiga sanoqli soatlar qoldi',
+    detail: 'Ertaga soat 19:00 da "Speaking Club: Present Simple" mavzusidagi live darsimizga qo\'shiling. Darsni o\'tkazib yubormang!',
+    unread: true,
+    colors: ['#9B7BFF', '#6B4FE0'],
+    emoji: '🔔',
+  },
+  {
+    id: 'n3',
+    category: 'lessons',
+    date: '2 kun oldin',
+    title: 'Tabriklaymiz!',
+    message: 'Siz 5 kunlik streak\'ni ushladingiz',
+    detail: 'Ketma-ket 5 kun davomida darslarni bajardingiz! Davom eting va yanada ko\'proq bonus yutuqlarga erishing.',
+    unread: false,
+    colors: ['#34D399', '#1FA97D'],
+    emoji: '🏆',
+  },
+  {
+    id: 'n4',
+    category: 'news',
+    date: '12.12.2026',
+    title: 'Yangi kitob sotuvda',
+    message: '"Beparvolikning nozik san\'ati" kitobi endi platformamizda mavjud',
+    detail: 'Kitobni ingliz tilidan to\'g\'ridan-to\'g\'ri iste\'dodli va tajribali tarjimon o\'zbek tiliga o\'girgan. Resurslar bo\'limidan yuklab oling.',
+    unread: true,
+    colors: ['#F472B6', '#DB4E93'],
+    emoji: '📘',
+  },
+  {
+    id: 'n5',
+    category: 'news',
+    date: '05.11.2026',
+    title: 'Do\'stingizni taklif qiling',
+    message: 'Do\'stingizni taklif qiling va 100 coin oling',
+    detail: 'Referral havolangizni ulashing — do\'stingiz ro\'yxatdan o\'tsa, ikkalangiz ham 100 coin qo\'lga kiritasiz.',
+    unread: false,
+    colors: ['#FBBF24', '#E5A70F'],
+    emoji: '🎁',
+  },
+];
+
 export type BattleWord = {
   word: string;
   translation: string;
