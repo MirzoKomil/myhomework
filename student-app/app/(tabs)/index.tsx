@@ -38,9 +38,15 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>Salom,</Text>
           <Text style={styles.name}>{profileStats.name.split(' ')[0]} 👋</Text>
         </View>
-        <Pressable style={styles.avatar} onPress={() => router.push('/profile')}>
-          <Ionicons name="person" size={20} color={theme.colors.purple} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.iconBtn} onPress={() => router.push('/messages' as never)}>
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.purple} />
+          </Pressable>
+          <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>
+            <Ionicons name="notifications-outline" size={20} color={theme.colors.purple} />
+            <View style={styles.badgeDot} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -119,13 +125,25 @@ const styles = StyleSheet.create({
   },
   greeting: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted },
   name: { fontFamily: theme.fonts.extraBold, fontSize: 26, color: theme.colors.text },
-  avatar: {
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconBtn: {
     width: 40,
     height: 40,
     borderRadius: 14,
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.danger,
+    borderWidth: 1.5,
+    borderColor: theme.colors.bg,
   },
   hero: { borderRadius: theme.radius.lg, padding: 24, marginBottom: 28 },
   heroLabel: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
