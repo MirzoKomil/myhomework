@@ -19,7 +19,7 @@ const BADGES = [
 
 export default function MotivationScreen() {
   const coins = useCoins();
-  const ranked = getRankedLeaderboard('alltime', 'country');
+  const ranked = getRankedLeaderboard('alltime', 'country', coins);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
 
   return (

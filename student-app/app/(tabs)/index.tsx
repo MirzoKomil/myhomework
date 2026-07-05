@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CourseProgressCard } from '@/components/ui/CourseProgressCard';
 import { LessonReminder } from '@/components/ui/LessonReminder';
+import { ShopEntryCard } from '@/components/ui/ShopEntryCard';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
@@ -103,6 +104,8 @@ export default function HomeScreen() {
           lessonsTotal={activeCourse.lessonsTotal}
           onPress={handleContinue}
         />
+
+        <ShopEntryCard onPress={() => router.push('/shop' as never)} />
       </ScrollView>
     </SafeAreaView>
   );

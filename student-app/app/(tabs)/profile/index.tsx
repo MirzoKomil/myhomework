@@ -30,7 +30,7 @@ const menuItems: MenuItem[] = [
 
 export default function ProfileScreen() {
   const coins = useCoins();
-  const ranked = getRankedLeaderboard('alltime', 'country');
+  const ranked = getRankedLeaderboard('alltime', 'country', coins);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
 
   return (

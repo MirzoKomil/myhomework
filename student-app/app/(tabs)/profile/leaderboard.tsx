@@ -26,7 +26,7 @@ export default function LeaderboardScreen() {
   const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
   const [scope, setScope] = useState<LeaderboardScope>('country');
 
-  const ranked = useMemo(() => getRankedLeaderboard(period, scope), [period, scope]);
+  const ranked = useMemo(() => getRankedLeaderboard(period, scope, coins), [period, scope, coins]);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
   const top3 = ranked.slice(0, 3);
   const rest = ranked.slice(3);

@@ -665,9 +665,12 @@ const SCOPE_SCALE: Record<LeaderboardScope, number> = {
 
 export type RankedLeaderboardEntry = LeaderboardEntry & { rank: number; displayCoins: number };
 
-export function getRankedLeaderboard(period: LeaderboardPeriod, scope: LeaderboardScope): RankedLeaderboardEntry[] {
+export function getRankedLeaderboard(period: LeaderboardPeriod, scope: LeaderboardScope, myCoins?: number): RankedLeaderboardEntry[] {
   const factor = PERIOD_SCALE[period] * SCOPE_SCALE[scope];
-  const scaled = leaderboardEntries.map((e) => ({ ...e, displayCoins: Math.max(1, Math.round(e.coins * factor)) }));
+  const entries = myCoins !== undefined
+    ? leaderboardEntries.map((e) => (e.id === ME_LEADERBOARD_ID ? { ...e, coins: myCoins } : e))
+    : leaderboardEntries;
+  const scaled = entries.map((e) => ({ ...e, displayCoins: Math.max(1, Math.round(e.coins * factor)) }));
   scaled.sort((a, b) => b.displayCoins - a.displayCoins);
   return scaled.map((e, i) => ({ ...e, rank: i + 1 }));
 }
