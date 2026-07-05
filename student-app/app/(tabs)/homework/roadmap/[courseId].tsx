@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
@@ -150,37 +151,34 @@ function MilestoneBadge({ badge }: { badge: NonNullable<LessonNode['milestone']>
 }
 
 // ─── Path connector ───────────────────────────────────────────────────────────
+const CONNECTOR_H = 56;
+
 function PathConnector({
   fromSide,
+  toX,
   completed,
 }: {
   fromSide: 'left' | 'right';
+  toX?: number;
   completed: boolean;
 }) {
   const color = completed ? theme.colors.success : theme.colors.purpleLight;
+  const startX = fromSide === 'left' ? 28 : 72;
+  const endX = toX ?? (fromSide === 'left' ? 72 : 28);
+  const d = `M ${startX} 0 C ${startX} ${CONNECTOR_H * 0.6}, ${endX} ${CONNECTOR_H * 0.4}, ${endX} ${CONNECTOR_H}`;
 
-  if (fromSide === 'left') {
-    // Curve around the RIGHT side
-    return (
-      <View style={ss.connectorWrap}>
-        <View
-          style={[
-            ss.connectorRight,
-            { borderColor: color },
-          ]}
-        />
-      </View>
-    );
-  }
-  // Curve around the LEFT side
   return (
     <View style={ss.connectorWrap}>
-      <View
-        style={[
-          ss.connectorLeft,
-          { borderColor: color },
-        ]}
-      />
+      <Svg width="100%" height={CONNECTOR_H} viewBox={`0 0 100 ${CONNECTOR_H}`} preserveAspectRatio="none">
+        <Path
+          d={d}
+          stroke={color}
+          strokeWidth={3}
+          strokeLinecap="round"
+          fill="none"
+          vectorEffect="non-scaling-stroke"
+        />
+      </Svg>
     </View>
   );
 }
@@ -309,9 +307,13 @@ export default function RoadmapScreen() {
           })}
 
           {/* ── Final milestone ── */}
-          <View style={ss.finalConnector}>
-            <View style={ss.finalConnectorLine} />
-          </View>
+          {lessons.length > 0 && (
+            <PathConnector
+              fromSide={lessons[lessons.length - 1].side}
+              toX={50}
+              completed={!lessons[lessons.length - 1].locked && lessons[lessons.length - 1].progress > 0}
+            />
+          )}
           <View style={ss.finalMilestone}>
             <View style={ss.finalMilestoneCircle}>
               <Text style={ss.finalMilestoneFlag}>🏁</Text>
@@ -583,51 +585,11 @@ const ss = StyleSheet.create({
 
   // Connector
   connectorWrap: {
-    height: 44,
-    paddingHorizontal: 4,
+    height: CONNECTOR_H,
     justifyContent: 'center',
-  },
-  connectorRight: {
-    // Wraps around the RIGHT side: from ~70% to 100%, C-shape open to left
-    position: 'absolute',
-    right: 4,
-    top: 0,
-    bottom: 0,
-    width: '28%',
-    borderTopRightRadius: 22,
-    borderBottomRightRadius: 22,
-    borderRightWidth: 2.5,
-    borderTopWidth: 2.5,
-    borderBottomWidth: 2.5,
-    borderColor: theme.colors.purpleLight,
-  },
-  connectorLeft: {
-    // Wraps around the LEFT side
-    position: 'absolute',
-    left: 4,
-    top: 0,
-    bottom: 0,
-    width: '28%',
-    borderTopLeftRadius: 22,
-    borderBottomLeftRadius: 22,
-    borderLeftWidth: 2.5,
-    borderTopWidth: 2.5,
-    borderBottomWidth: 2.5,
-    borderColor: theme.colors.purpleLight,
   },
 
   // Final milestone
-  finalConnector: {
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  finalConnectorLine: {
-    width: 2.5,
-    height: 36,
-    backgroundColor: theme.colors.purpleLight,
-    borderRadius: 2,
-  },
   finalMilestone: {
     alignItems: 'center',
     paddingVertical: 8,
