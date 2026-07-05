@@ -9,6 +9,7 @@ import { LessonReminder } from '@/components/ui/LessonReminder';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
+import { fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
 
 export default function HomeScreen() {
@@ -24,9 +25,20 @@ export default function HomeScreen() {
   const handleContinue = () => {
     if (lastPosition) {
       router.push(`/homework/lesson/${lastPosition.lessonId}/${lastPosition.section}` as never);
-    } else {
-      router.push('/homework');
+      return;
     }
+    fetchMobileContent()
+      .then((mc) => {
+        const course = mc.courses[0];
+        const lessons = course ? mc.lessons.filter((l) => l.courseId === course.id) : [];
+        const current = lessons.find((l) => l.isActive) ?? lessons[0];
+        if (current) {
+          router.push(`/homework/lesson/${current.id}` as never);
+        } else {
+          router.push('/homework');
+        }
+      })
+      .catch(() => router.push('/homework'));
   };
 
   return (
