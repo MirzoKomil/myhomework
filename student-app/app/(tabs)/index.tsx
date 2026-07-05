@@ -33,17 +33,26 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Salom,</Text>
-            <Text style={styles.name}>{profileStats.name.split(' ')[0]} 👋</Text>
-          </View>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Salom,</Text>
+          <Text style={styles.name}>{profileStats.name.split(' ')[0]} 👋</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.iconBtn} onPress={() => router.push('/ai')}>
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.purple} />
+          </Pressable>
+          <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>
+            <Ionicons name="notifications-outline" size={20} color={theme.colors.purple} />
+            <View style={styles.badgeDot} />
+          </Pressable>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={24} color={theme.colors.purple} />
+            <Ionicons name="person" size={20} color={theme.colors.purple} />
           </View>
         </View>
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <LinearGradient
           colors={['#9B7BFF', '#6B4FE0', '#5B6CF8']}
           start={{ x: 0, y: 0 }}
@@ -106,13 +115,43 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   scroll: { padding: 20, paddingBottom: 32 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: theme.colors.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
   greeting: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted },
   name: { fontFamily: theme.fonts.extraBold, fontSize: 26, color: theme.colors.text },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: theme.colors.purpleLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.danger,
+    borderWidth: 1.5,
+    borderColor: theme.colors.bg,
+  },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
