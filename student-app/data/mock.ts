@@ -493,3 +493,114 @@ export const paymentHistory = [
   { id: '2', date: '2026-04-01', amount: 450000, tariff: 'Standard', status: 'paid' },
   { id: '3', date: '2026-03-01', amount: 450000, tariff: 'Standard', status: 'paid' },
 ];
+
+export type PersonaCategory = 'general' | 'business' | 'sports' | 'politics' | 'film' | 'medicine';
+
+export type CelebrityPersona = {
+  id: string;
+  name: string;
+  category: PersonaCategory;
+  emoji: string;
+  colors: [string, string];
+  intro: string;
+};
+
+export const PERSONA_CATEGORY_LABELS: Record<PersonaCategory, string> = {
+  general: 'General',
+  business: 'Business',
+  sports: 'Sports',
+  politics: 'Politics',
+  film: 'Film & Movies',
+  medicine: 'Medicine',
+};
+
+export const celebrityPersonas: CelebrityPersona[] = [
+  {
+    id: 'homework-bot',
+    name: 'Homework Bot',
+    category: 'general',
+    emoji: '🤖',
+    colors: ['#6FA8FF', '#4F8CFF'],
+    intro: "Hi there! I'm Homework Bot. Ask me anything about English, or just practice chatting with me!",
+  },
+  {
+    id: 'shumboma',
+    name: 'Shumboma',
+    category: 'general',
+    emoji: '🎭',
+    colors: ['#F472B6', '#DB4E93'],
+    intro: "Hey! I'm Shumboma, always up for a fun chat. What's on your mind today?",
+  },
+  {
+    id: 'elon-musk',
+    name: 'Elon Musk',
+    category: 'business',
+    emoji: '🚀',
+    colors: ['#9B7BFF', '#6B4FE0'],
+    intro: "Hey, let's talk business, technology, or rockets. What do you want to know?",
+  },
+  {
+    id: 'mark-zuckerberg',
+    name: 'Mark Zuckerberg',
+    category: 'business',
+    emoji: '💻',
+    colors: ['#4F8CFF', '#3A6FE0'],
+    intro: "Hi! Let's chat about building companies, technology, and connecting people.",
+  },
+  {
+    id: 'messi',
+    name: 'Lionel Messi',
+    category: 'sports',
+    emoji: '⚽',
+    colors: ['#6FCF97', '#34D399'],
+    intro: "Hola! Let's talk football, training, and what it takes to become a champion.",
+  },
+  {
+    id: 'ronaldo',
+    name: 'Cristiano Ronaldo',
+    category: 'sports',
+    emoji: '🏆',
+    colors: ['#34D399', '#1FA97D'],
+    intro: "Hey! Ask me about football, discipline, and staying at the top of your game.",
+  },
+  {
+    id: 'franklin',
+    name: 'Benjamin Franklin',
+    category: 'politics',
+    emoji: '🦅',
+    colors: ['#FBBF24', '#D97706'],
+    intro: "Good day! Let's discuss politics, invention, and the wisdom of hard work.",
+  },
+  {
+    id: 'queen-elizabeth',
+    name: 'Queen Elizabeth II',
+    category: 'politics',
+    emoji: '👑',
+    colors: ['#A78BFA', '#7C3AED'],
+    intro: "Good afternoon. I would be delighted to talk about leadership, duty, and history.",
+  },
+  {
+    id: 'dicaprio',
+    name: 'Leonardo DiCaprio',
+    category: 'film',
+    emoji: '🎬',
+    colors: ['#F87171', '#DF4F4F'],
+    intro: "Hey, let's talk about acting, storytelling, and the movie industry.",
+  },
+  {
+    id: 'jolie',
+    name: 'Angelina Jolie',
+    category: 'film',
+    emoji: '🎥',
+    colors: ['#F472B6', '#EC4899'],
+    intro: "Hi! I'd love to chat about film, humanitarian work, and following your passions.",
+  },
+  {
+    id: 'dr-house',
+    name: 'Dr. House',
+    category: 'medicine',
+    emoji: '🩺',
+    colors: ['#4B5563', '#1F2937'],
+    intro: "Everybody lies. But let's talk medicine anyway — what's your question?",
+  },
+];
