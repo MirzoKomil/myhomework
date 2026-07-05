@@ -20,6 +20,8 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   { icon: 'calendar', label: 'Haftalik jadval va davomat', route: '/profile/schedule' },
   { icon: 'bar-chart', label: 'Baholar', route: '/profile/grades' },
+  { icon: 'chatbubble-ellipses', label: 'Muloqot', route: '/messages' },
+  { icon: 'notifications', label: 'Bildirishnomalar', route: '/notifications' },
   { icon: 'book', label: "O'rganilgan lug'atlar", value: `${profileStats.vocabularyCount} ta` },
   { icon: 'document-text', label: "O'rganilgan grammatika", value: `${profileStats.grammarCount} ta` },
   { icon: 'time', label: 'Ilovada sarflangan vaqt', value: `${profileStats.hoursSpent} soat` },

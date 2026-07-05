@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -19,10 +18,6 @@ export function CourseProgressCard({ progress, lessonsDone, lessonsTotal, onPres
       <LinearGradient colors={['#7B61FF', '#6B4FE0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
         <Text style={styles.sparkle1}>✦</Text>
         <Text style={styles.sparkle2}>✦</Text>
-
-        <View style={styles.arrowBtn}>
-          <Ionicons name="arrow-up-outline" size={18} color="#6B4FE0" style={styles.arrowIcon} />
-        </View>
 
         <Text style={styles.label}>Umumiy progress</Text>
         <Text style={styles.percent}>{clamped}%</Text>
@@ -59,18 +54,6 @@ const styles = StyleSheet.create({
   },
   sparkle1: { position: 'absolute', top: 24, right: 90, color: 'rgba(255,255,255,0.5)', fontSize: 12 },
   sparkle2: { position: 'absolute', top: 64, right: 60, color: 'rgba(255,255,255,0.35)', fontSize: 9 },
-  arrowBtn: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrowIcon: { transform: [{ rotate: '45deg' }] },
   label: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.85)', marginBottom: 6 },
   percent: { fontFamily: theme.fonts.extraBold, fontSize: 40, color: '#fff', marginBottom: 22 },
   sliderTrack: {
