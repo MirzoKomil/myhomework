@@ -1,18 +1,35 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card } from '@/components/ui/Card';
+import { CourseProgressCard } from '@/components/ui/CourseProgressCard';
 import { LessonReminder } from '@/components/ui/LessonReminder';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
+import { getLastPosition, LastPosition } from '@/services/progressStore';
 
 export default function HomeScreen() {
   const activeCourse = courses[0];
+  const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      getLastPosition().then(setLastPosition);
+    }, [])
+  );
+
+  const handleContinue = () => {
+    if (lastPosition) {
+      router.push(`/homework/lesson/${lastPosition.lessonId}/module/${lastPosition.moduleId}` as never);
+    } else {
+      router.push('/homework');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -75,23 +92,12 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>Ko'nikmalar progressi</Text>
         <SkillBars skills={skillProgress} />
 
-        <Card>
-          <View style={styles.courseRow}>
-            <View style={styles.courseBadge}>
-              <Text style={styles.courseBadgeText}>{activeCourse.level}</Text>
-            </View>
-            <Text style={styles.courseProgress}>{activeCourse.progress}%</Text>
-          </View>
-          <Text style={styles.courseTitle}>{activeCourse.title}</Text>
-          <Text style={styles.courseMeta}>
-            {activeCourse.lessonsDone}/{activeCourse.lessonsTotal} dars tugallangan
-          </Text>
-          <ProgressBar progress={activeCourse.progress} />
-          <Pressable style={styles.continueBtn} onPress={() => router.push('/homework')}>
-            <Text style={styles.continueText}>Davom etish</Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
-          </Pressable>
-        </Card>
+        <CourseProgressCard
+          progress={activeCourse.progress}
+          lessonsDone={activeCourse.lessonsDone}
+          lessonsTotal={activeCourse.lessonsTotal}
+          onPress={handleContinue}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -134,21 +140,4 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   quickLabel: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },
-  courseRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  courseBadge: { backgroundColor: theme.colors.blueLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  courseBadgeText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.blue },
-  courseProgress: { fontFamily: theme.fonts.bold, fontSize: 14, color: theme.colors.purple },
-  courseTitle: { fontFamily: theme.fonts.bold, fontSize: 20, color: theme.colors.text, marginBottom: 4 },
-  courseMeta: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginBottom: 12 },
-  continueBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.purple,
-    borderRadius: theme.radius.sm,
-    paddingVertical: 14,
-    marginTop: 16,
-  },
-  continueText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#fff' },
 });

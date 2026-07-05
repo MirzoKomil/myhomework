@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { AdminModuleContent, fetchMobileContent } from '@/services/contentApi';
+import { saveLastPosition } from '@/services/progressStore';
 
 function ytId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
@@ -102,10 +103,14 @@ export default function ModuleContentScreen() {
   useEffect(() => {
     fetchMobileContent().then((mc) => {
       const mod = mc.modules.find((m) => m.id === moduleId);
-      setModName(mod?.name ?? 'Modul');
+      const name = mod?.name ?? 'Modul';
+      setModName(name);
       setContents(mc.moduleContents.filter((c) => c.moduleId === moduleId));
+      if (lessonId && moduleId) {
+        saveLastPosition({ lessonId, moduleId, moduleName: name });
+      }
     }).finally(() => setLoading(false));
-  }, [moduleId]);
+  }, [lessonId, moduleId]);
 
   return (
     <SafeAreaView style={bs.safe} edges={['top']}>
