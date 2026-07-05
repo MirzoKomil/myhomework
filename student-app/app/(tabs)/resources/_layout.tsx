@@ -7,6 +7,8 @@ export default function ResourcesLayout() {
       <Stack.Screen name="library/index" />
       <Stack.Screen name="library/grammar/index" />
       <Stack.Screen name="library/grammar/[topicId]" />
+      <Stack.Screen name="library/words/index" />
+      <Stack.Screen name="library/words/[topicId]" />
       <Stack.Screen name="games/index" />
       <Stack.Screen name="games/word-chain" />
       <Stack.Screen name="games/memory-match" />
