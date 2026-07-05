@@ -39,7 +39,7 @@ export default function HomeScreen() {
           <Text style={styles.name}>{profileStats.name.split(' ')[0]} 👋</Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable style={styles.iconBtn} onPress={() => router.push('/ai')}>
+          <Pressable style={styles.iconBtn} onPress={() => router.push('/messages' as never)}>
             <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.purple} />
           </Pressable>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>

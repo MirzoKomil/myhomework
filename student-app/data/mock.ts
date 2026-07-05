@@ -375,6 +375,42 @@ export const appNotifications: AppNotification[] = [
   },
 ];
 
+export type ChatThread = {
+  id: string;
+  name: string;
+  role: string;
+  emoji: string;
+  color: string;
+};
+
+export const chatThreads: ChatThread[] = [
+  { id: 'support', name: 'Qo\'llab-quvvatlash', role: 'Yordam xizmati', emoji: '🎧', color: '#4F8CFF' },
+  { id: 'main-teacher', name: 'Asosiy ustoz', role: 'Sizning o\'qituvchingiz', emoji: '👩‍🏫', color: '#7B61FF' },
+  { id: 'assistant-teacher', name: 'Yordamchi ustoz', role: 'Kurator', emoji: '🧑‍🏫', color: '#34D399' },
+  { id: 'project-lead', name: 'Loyiha rahbari', role: 'Menejer', emoji: '🧑‍💼', color: '#F472B6' },
+];
+
+export type ChatMessageType = 'text' | 'image' | 'voice';
+
+export type ChatMessage = {
+  id: string;
+  chatId: string;
+  from: 'me' | 'them';
+  type: ChatMessageType;
+  text?: string;
+  imageUri?: string;
+  voiceUri?: string;
+  voiceDuration?: number;
+  time: string;
+};
+
+export const initialChatMessages: ChatMessage[] = [
+  { id: 'm1', chatId: 'support', from: 'them', type: 'text', text: 'Salom! Sizga qanday yordam bera olaman?', time: '09:12' },
+  { id: 'm2', chatId: 'main-teacher', from: 'them', type: 'text', text: 'Assalomu alaykum, bugungi vazifangizni ko\'rib chiqdim, ajoyib ish!', time: 'Kecha' },
+  { id: 'm3', chatId: 'assistant-teacher', from: 'them', type: 'text', text: 'Eslatma: ertaga soat 19:00 da live dars bor.', time: '2 kun oldin' },
+  { id: 'm4', chatId: 'project-lead', from: 'them', type: 'text', text: 'Xush kelibsiz! Savollaringiz bo\'lsa bemalol yozing.', time: '1 hafta oldin' },
+];
+
 export type BattleWord = {
   word: string;
   translation: string;
