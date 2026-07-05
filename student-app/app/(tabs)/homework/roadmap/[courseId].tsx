@@ -56,7 +56,7 @@ function TypeBadge({ type }: { type: LessonType }) {
 // ─── Lesson card ─────────────────────────────────────────────────────────────
 function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive: boolean; index: number }) {
   const isCompleted = !lesson.locked && lesson.progress > 0;
-  const numText = lesson.id;
+  const numText = String(index + 1);
   const earnedCoins = useLessonCoins(lesson.id);
   const possibleCoins = getLessonPossibleCoins(getLessonContent(lesson.id, index));
 
