@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -245,7 +244,6 @@ export default function RoadmapScreen() {
 
   const activeIndex = lessons.findIndex((l) => !l.locked && l.progress < 100);
   const total = lessons.length;
-  const done = lessons.filter((l) => !l.locked && l.progress === 100).length;
 
   if (loading) {
     return (
@@ -281,59 +279,13 @@ export default function RoadmapScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ss.scroll}>
-        {/* ── Progress banner ── */}
-        <LinearGradient
-          colors={['#4C3FDE', '#7B61FF', '#9E8FFF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={ss.banner}
-        >
-          <Text style={[ss.bannerStar, { top: 16, left: 100, fontSize: 10 }]}>✦</Text>
-          <Text style={[ss.bannerStar, { top: 40, left: 160, fontSize: 7 }]}>✦</Text>
-          <Text style={[ss.bannerStar, { top: 28, right: 130, fontSize: 8 }]}>✦</Text>
-
-          <View style={ss.bannerLeft}>
-            <Text style={ss.bannerLabel}>Umumiy progress</Text>
-            <Text style={ss.bannerPercent}>0%</Text>
-
-            <View style={ss.bannerBarWrap}>
-              <View style={ss.bannerBubbleRow}>
-                <View style={{ flex: 1, alignItems: 'flex-start' }}>
-                  <View style={ss.bannerBubble}>
-                    <Text style={ss.bannerBubbleText}>0</Text>
-                  </View>
-                </View>
-                <View style={{ flex: 99 }} />
-              </View>
-              <View style={ss.bannerTrack}>
-                <View style={[ss.bannerFill, { width: '0%' }]} />
-                <View style={[ss.bannerDot, { left: '0%', marginLeft: -6 }]} />
-              </View>
-            </View>
-
-            <Text style={ss.bannerCount}>
-              {done} / {total} dars
-            </Text>
-          </View>
-
-          <View style={ss.bannerRocket}>
-            <Text style={ss.rocketEmoji}>🚀</Text>
-            <View style={ss.rocketGlow} />
-          </View>
-        </LinearGradient>
-
         {/* ── Section header ── */}
         <View style={ss.sectionHeader}>
           <Text style={ss.sectionTitle}>Darslar yo'li</Text>
-          <View style={ss.sectionActions}>
-            <Pressable style={ss.filterBtn}>
-              <Text style={ss.filterText}>Barchasi</Text>
-              <Ionicons name="chevron-down" size={15} color={theme.colors.text} />
-            </Pressable>
-            <Pressable style={ss.listToggleBtn}>
-              <Ionicons name="list" size={20} color={theme.colors.text} />
-            </Pressable>
-          </View>
+          <Pressable style={ss.bonusBtn} onPress={() => router.push('/homework/bonus' as never)}>
+            <Ionicons name="gift-outline" size={16} color="#D97706" />
+            <Text style={ss.bonusBtnText}>Bonus darslar</Text>
+          </Pressable>
         </View>
 
         {/* ── Lesson path ── */}
@@ -441,107 +393,6 @@ const ss = StyleSheet.create({
     color: '#D97706',
   },
 
-  // Banner
-  banner: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    minHeight: 140,
-  },
-  bannerLeft: {
-    flex: 1,
-  },
-  bannerStar: {
-    position: 'absolute',
-    color: 'rgba(255,255,255,0.6)',
-  },
-  bannerLabel: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 2,
-  },
-  bannerPercent: {
-    fontFamily: theme.fonts.extraBold,
-    fontSize: 42,
-    color: '#fff',
-    lineHeight: 50,
-    marginBottom: 10,
-  },
-  bannerBarWrap: {
-    marginRight: 12,
-    marginBottom: 2,
-  },
-  bannerBubbleRow: {
-    flexDirection: 'row',
-    marginBottom: 4,
-    height: 22,
-  },
-  bannerBubble: {
-    width: 32,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: -16,
-  },
-  bannerBubbleText: {
-    fontFamily: theme.fonts.bold,
-    fontSize: 11,
-    color: theme.colors.purple,
-  },
-  bannerTrack: {
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 99,
-    overflow: 'visible',
-    position: 'relative',
-  },
-  bannerFill: {
-    height: 8,
-    backgroundColor: '#4ADE80',
-    borderRadius: 99,
-  },
-  bannerDot: {
-    position: 'absolute',
-    top: -3,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#fff',
-    borderWidth: 2.5,
-    borderColor: '#4ADE80',
-  },
-  bannerCount: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 10,
-  },
-  bannerRocket: {
-    width: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  rocketEmoji: {
-    fontSize: 64,
-    transform: [{ rotate: '25deg' }],
-  },
-  rocketGlow: {
-    position: 'absolute',
-    bottom: -10,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,200,100,0.18)',
-  },
-
   // Section header
   sectionHeader: {
     flexDirection: 'row',
@@ -556,36 +407,19 @@ const ss = StyleSheet.create({
     fontSize: 20,
     color: theme.colors.text,
   },
-  sectionActions: {
+  bonusBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  filterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FEF3C7',
   },
-  filterText: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 13,
-    color: theme.colors.text,
-  },
-  listToggleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  bonusBtnText: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: 12,
+    color: '#D97706',
   },
 
   // Path
