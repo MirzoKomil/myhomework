@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ export default function TranslatorScreen() {
   const [targetText, setTargetText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const labels = LANG_LABEL[direction];
 
@@ -43,6 +45,7 @@ export default function TranslatorScreen() {
     if (!sourceText.trim() || loading) return;
     setLoading(true);
     setError(null);
+    setCopied(false);
     try {
       const result = await translateText(sourceText.trim(), labels.pair);
       setTargetText(result);
@@ -53,10 +56,17 @@ export default function TranslatorScreen() {
     }
   };
 
+  const handleCopy = async () => {
+    if (!targetText) return;
+    await Clipboard.setStringAsync(targetText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Tarjimon" showBack />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <Text style={styles.langLabel}>{labels.from}</Text>
           <TextInput
@@ -79,28 +89,37 @@ export default function TranslatorScreen() {
             <View style={styles.swapLine} />
           </View>
 
-          <Text style={styles.langLabel}>{labels.to}</Text>
+          <View style={styles.outputHeaderRow}>
+            <Text style={styles.langLabel}>{labels.to}</Text>
+            {targetText ? (
+              <Pressable style={styles.copyBtn} onPress={handleCopy} hitSlop={10}>
+                <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={16} color={theme.colors.purple} />
+                <Text style={styles.copyBtnText}>{copied ? 'Nusxalandi' : 'Nusxalash'}</Text>
+              </Pressable>
+            ) : null}
+          </View>
           <Text style={[styles.input, styles.outputText, !targetText && styles.outputPlaceholder]}>
             {targetText || 'Tarjima shu yerda chiqadi'}
           </Text>
         </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <Pressable
-          style={[styles.translateBtn, !sourceText.trim() && styles.translateBtnDisabled]}
-          disabled={!sourceText.trim() || loading}
-          onPress={handleTranslate}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.translateBtnText}>Tarjima qilish</Text>}
-        </Pressable>
       </ScrollView>
+
+      <Pressable
+        style={[styles.translateBtn, !sourceText.trim() && styles.translateBtnDisabled]}
+        disabled={!sourceText.trim() || loading}
+        onPress={handleTranslate}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.translateBtnText}>Tarjima qilish</Text>}
+      </Pressable>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
-  scroll: { padding: 20, paddingBottom: 32, flexGrow: 1 },
+  scrollFlex: { flex: 1 },
+  scroll: { padding: 20, paddingBottom: 20 },
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
@@ -108,6 +127,18 @@ const styles = StyleSheet.create({
     ...theme.shadow.card,
   },
   langLabel: { fontFamily: theme.fonts.bold, fontSize: 15, color: theme.colors.text, marginBottom: 12 },
+  outputHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: theme.colors.purpleLight,
+    marginBottom: 12,
+  },
+  copyBtnText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.purple },
   input: {
     fontFamily: theme.fonts.medium,
     fontSize: 16,
@@ -135,7 +166,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   translateBtn: {
-    marginTop: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
     backgroundColor: theme.colors.purple,
     borderRadius: theme.radius.sm,
     paddingVertical: 16,
