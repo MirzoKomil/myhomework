@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -39,6 +39,40 @@ export default function ProfileScreen() {
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const wobbleAnim = useRef(new Animated.Value(0)).current;
+
+  const attendanceAnim = useRef(new Animated.Value(0)).current;
+  const hoursAnim = useRef(new Animated.Value(0)).current;
+  const coinsAnim = useRef(new Animated.Value(0)).current;
+  const [displayAttendance, setDisplayAttendance] = useState(0);
+  const [displayHours, setDisplayHours] = useState(0);
+  const [displayCoins, setDisplayCoins] = useState(0);
+
+  // Har safar bu ekran fokusga kelganda statistika 0 dan joriy qiymatgacha sanaladi.
+  useFocusEffect(
+    useCallback(() => {
+      attendanceAnim.setValue(0);
+      hoursAnim.setValue(0);
+      coinsAnim.setValue(0);
+      setDisplayAttendance(0);
+      setDisplayHours(0);
+      setDisplayCoins(0);
+
+      const attendanceId = attendanceAnim.addListener(({ value }) => setDisplayAttendance(Math.round(value)));
+      const hoursId = hoursAnim.addListener(({ value }) => setDisplayHours(value));
+      const coinsId = coinsAnim.addListener(({ value }) => setDisplayCoins(Math.round(value)));
+
+      const animConfig = { duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: false };
+      Animated.timing(attendanceAnim, { ...animConfig, toValue: profileStats.attendanceRate }).start();
+      Animated.timing(hoursAnim, { ...animConfig, toValue: profileStats.hoursSpent }).start();
+      Animated.timing(coinsAnim, { ...animConfig, toValue: coins }).start();
+
+      return () => {
+        attendanceAnim.removeListener(attendanceId);
+        hoursAnim.removeListener(hoursId);
+        coinsAnim.removeListener(coinsId);
+      };
+    }, [attendanceAnim, hoursAnim, coinsAnim, coins])
+  );
 
   useEffect(() => {
     const shimmerLoop = Animated.loop(
@@ -138,21 +172,21 @@ export default function ProfileScreen() {
           {[
             {
               label: 'Davomat',
-              value: `${profileStats.attendanceRate}%`,
+              value: `${displayAttendance}%`,
               icon: 'checkmark-circle' as const,
               bg: theme.colors.successBg,
               color: theme.colors.success,
             },
             {
               label: 'Vaqt',
-              value: `${profileStats.hoursSpent} soat`,
+              value: `${displayHours.toFixed(1)} soat`,
               icon: 'time' as const,
               bg: theme.colors.blueLight,
               color: theme.colors.blue,
             },
             {
               label: 'Coinlar',
-              value: coins,
+              value: displayCoins,
               icon: 'coin' as const,
               bg: theme.colors.warningBg,
               color: theme.colors.warning,
