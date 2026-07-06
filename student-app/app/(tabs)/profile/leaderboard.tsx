@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,10 +26,8 @@ export default function LeaderboardScreen() {
   const [scope, setScope] = useState<LeaderboardScope>('country');
 
   const ranked = useMemo(() => getRankedLeaderboard(period, scope, coins), [period, scope, coins]);
-  const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
   const top3 = ranked.slice(0, 3);
   const rest = ranked.slice(3);
-  const topPercent = me ? Math.max(1, Math.round((me.rank / ranked.length) * 100)) : 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -45,19 +42,7 @@ export default function LeaderboardScreen() {
         }
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={['#7B61FF', '#4F46E5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.rankCard}>
-          <View style={styles.rankLeft}>
-            <Text style={styles.rankLabel}>Sizning o'rningiz</Text>
-            <View style={styles.rankRow}>
-              <Text style={styles.rankNum}>{me?.rank ?? '—'}</Text>
-              <Text style={styles.rankTotal}> / {ranked.length}</Text>
-            </View>
-            <Text style={styles.rankSub}>Top {topPercent}% ichidasiz! 🔥</Text>
-          </View>
-          <Text style={styles.trophyEmoji}>🏆</Text>
-        </LinearGradient>
-
-        <View style={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {PERIODS.map((p) => (
             <Pressable
               key={p}
@@ -68,9 +53,7 @@ export default function LeaderboardScreen() {
               </Text>
             </Pressable>
           ))}
-        </View>
-
-        <View style={styles.filterRow}>
+          <View style={styles.filterDivider} />
           {SCOPES.map((s) => (
             <Pressable
               key={s}
@@ -81,7 +64,7 @@ export default function LeaderboardScreen() {
               </Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
 
         <View style={styles.podiumRow}>
           {/* order visually as 2nd, 1st, 3rd */}
@@ -151,32 +134,18 @@ const styles = StyleSheet.create({
   },
   coinEmoji: { fontSize: 14 },
   coinText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#B45309' },
-  rankCard: {
-    borderRadius: theme.radius.lg,
-    padding: 22,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  rankLeft: { flex: 1 },
-  rankLabel: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.85)', marginBottom: 4 },
-  rankRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  rankNum: { fontFamily: theme.fonts.extraBold, fontSize: 40, color: '#fff' },
-  rankTotal: { fontFamily: theme.fonts.semiBold, fontSize: 16, color: 'rgba(255,255,255,0.75)', marginBottom: 6 },
-  rankSub: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 6 },
-  trophyEmoji: { fontSize: 48 },
-  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
+  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
+  filterDivider: { width: 1, height: 18, backgroundColor: theme.colors.border, marginHorizontal: 4 },
   filterChip: {
     backgroundColor: theme.colors.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   filterChipActive: { backgroundColor: theme.colors.purple, borderColor: theme.colors.purple },
-  filterChipText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.textMuted },
+  filterChipText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.textMuted },
   filterChipTextActive: { color: '#fff' },
   podiumRow: {
     flexDirection: 'row',
