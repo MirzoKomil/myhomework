@@ -1,13 +1,34 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
 
 export default function ResourcesScreen() {
   const [showInfo, setShowInfo] = useState(false);
+
+  const libraryShimmer = useRef(new Animated.Value(0)).current;
+  const gamesShimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(libraryShimmer, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(libraryShimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(500),
+        Animated.timing(gamesShimmer, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(gamesShimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(500),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [libraryShimmer, gamesShimmer]);
+
+  const libraryTranslate = libraryShimmer.interpolate({ inputRange: [0, 1], outputRange: [-160, 400] });
+  const gamesTranslate = gamesShimmer.interpolate({ inputRange: [0, 1], outputRange: [-160, 400] });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -24,6 +45,16 @@ export default function ResourcesScreen() {
             <Text style={styles.emoji}>📚</Text>
             <Text style={styles.title}>Kutubxona</Text>
             <Text style={styles.subtitle}>Grammatika, so'zlar, talaffuz va boshqa o'quv materiallari</Text>
+            <View style={styles.shimmerClip} pointerEvents="none">
+              <Animated.View style={[styles.shimmerSweep, { transform: [{ translateX: libraryTranslate }, { rotate: '20deg' }] }]}>
+                <LinearGradient
+                  colors={['transparent', 'rgba(255,255,255,0.4)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </View>
           </LinearGradient>
         </Pressable>
 
@@ -32,6 +63,16 @@ export default function ResourcesScreen() {
             <Text style={styles.emoji}>🎮</Text>
             <Text style={styles.title}>O'yinlar</Text>
             <Text style={styles.subtitle}>O'ynab, til ko'nikmalaringizni mashq qiling</Text>
+            <View style={styles.shimmerClip} pointerEvents="none">
+              <Animated.View style={[styles.shimmerSweep, { transform: [{ translateX: gamesTranslate }, { rotate: '20deg' }] }]}>
+                <LinearGradient
+                  colors={['transparent', 'rgba(255,255,255,0.4)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </View>
           </LinearGradient>
         </Pressable>
       </View>
@@ -87,8 +128,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     padding: 24,
     justifyContent: 'center',
+    overflow: 'hidden',
     ...theme.shadow.card,
   },
+  shimmerClip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
+  shimmerSweep: { position: 'absolute', top: -40, bottom: -40, width: 100 },
   emoji: { fontSize: 32, marginBottom: 10 },
   title: { fontFamily: theme.fonts.extraBold, fontSize: 22, color: '#fff', marginBottom: 6 },
   subtitle: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 18 },
