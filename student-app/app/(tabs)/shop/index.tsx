@@ -170,9 +170,9 @@ const styles = StyleSheet.create({
   tabChipActive: { backgroundColor: theme.colors.purple },
   tabChipText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.textMuted },
   tabChipTextActive: { color: '#fff' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 16, gap: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 16, justifyContent: 'space-between', rowGap: 12 },
   card: {
-    width: '46%',
+    width: '48%',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
     padding: 14,
