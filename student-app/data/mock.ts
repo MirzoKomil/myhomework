@@ -543,10 +543,20 @@ export const grades = [
 ];
 
 export const paymentHistory = [
-  { id: '1', date: '2026-05-01', amount: 450000, tariff: 'Standard', status: 'paid' },
-  { id: '2', date: '2026-04-01', amount: 450000, tariff: 'Standard', status: 'paid' },
-  { id: '3', date: '2026-03-01', amount: 450000, tariff: 'Standard', status: 'paid' },
+  { id: '4', date: '2026-06-01', amount: 450000, tariff: 'Standard', status: 'debt' as const, dueDate: '2026-07-10' },
+  { id: '1', date: '2026-05-01', amount: 450000, tariff: 'Standard', status: 'paid' as const },
+  { id: '2', date: '2026-04-01', amount: 450000, tariff: 'Standard', status: 'paid' as const },
+  { id: '3', date: '2026-03-01', amount: 450000, tariff: 'Standard', status: 'paid' as const },
 ];
+
+export const courseEnrollment = {
+  tariffMinutes: 30,
+  courseStartDate: '2026-03-01',
+  courseEndDate: '2026-12-01',
+  salesManager: 'Kamronbek Yusupov',
+  contractNumber: 'SHN-2026-0451',
+  contractFileAvailable: false,
+};
 
 export type PersonaCategory = 'general' | 'business' | 'sports' | 'politics' | 'film' | 'medicine';
 
