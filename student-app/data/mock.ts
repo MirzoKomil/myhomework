@@ -543,13 +543,6 @@ export const weeklySchedule = [
   { day: 'Jum', time: '14:00', topic: 'Grammar Review', attended: null },
 ];
 
-export const grades = [
-  { subject: 'Speaking', score: 85, max: 100 },
-  { subject: 'Listening', score: 78, max: 100 },
-  { subject: 'Grammar', score: 91, max: 100 },
-  { subject: 'Vocabulary', score: 88, max: 100 },
-];
-
 export const paymentHistory = [
   { id: '4', date: '2026-06-01', amount: 450000, tariff: 'Standard', status: 'debt' as const, dueDate: '2026-07-10' },
   { id: '1', date: '2026-05-01', amount: 450000, tariff: 'Standard', status: 'paid' as const },

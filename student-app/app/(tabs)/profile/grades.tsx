@@ -20,11 +20,10 @@ import {
   generateStudentRatingOfTeacher,
   generateTeacherScores,
 } from '@/data/lessonGrades';
-import { grades } from '@/data/mock';
 import { UZ_MONTHS, generateScheduleDays } from '@/data/scheduleCalendar';
 
 function formatShortDate(d: Date): string {
-  return `${d.getDate()}-${UZ_MONTHS[d.getMonth()].toLowerCase().slice(0, 3)}`;
+  return `${d.getDate()}-${UZ_MONTHS[d.getMonth()].toLowerCase()}`;
 }
 
 function Dots({ value, max = 5, color }: { value: number; max?: number; color: string }) {
@@ -56,7 +55,6 @@ function StarRow({
 }
 
 export default function GradesScreen() {
-  const average = Math.round(grades.reduce((sum, g) => sum + g.score, 0) / grades.length);
   const [showRubric, setShowRubric] = useState(false);
 
   const [scheduleDays] = useState(() => generateScheduleDays());
@@ -65,6 +63,19 @@ export default function GradesScreen() {
     [scheduleDays]
   );
   const recentUnratedIds = useMemo(() => new Set(liveLessons.slice(0, 2).map((d) => d.dayNumber)), [liveLessons]);
+
+  const categoryAverages = useMemo(() => {
+    return TEACHER_GRADE_CRITERIA.map((c) => {
+      if (liveLessons.length === 0) return { ...c, avg: 0 };
+      const sum = liveLessons.reduce((s, lesson) => s + generateTeacherScores(lesson.dayNumber)[c.key], 0);
+      return { ...c, avg: sum / liveLessons.length };
+    });
+  }, [liveLessons]);
+
+  const overallAverage = useMemo(() => {
+    if (categoryAverages.length === 0) return 0;
+    return categoryAverages.reduce((sum, c) => sum + c.avg, 0) / categoryAverages.length;
+  }, [categoryAverages]);
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [studentRatings, setStudentRatings] = useState<Record<number, Record<TeacherRatingKey, number>>>(() => {
@@ -132,21 +143,21 @@ export default function GradesScreen() {
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.averageCard}>
-          <Text style={styles.averageLabel}>O'rtacha ball</Text>
-          <Text style={styles.averageValue}>{average}</Text>
-          <Text style={styles.averageMax}>/ 100</Text>
+          <Text style={styles.averageLabel}>Ustozdan o'rtacha baho</Text>
+          <Text style={styles.averageValue}>{overallAverage.toFixed(1)}</Text>
+          <Text style={styles.averageMax}>/ 5</Text>
         </Card>
 
-        {grades.map((grade) => (
-          <Card key={grade.subject} style={styles.gradeCard}>
+        {categoryAverages.map((c) => (
+          <Card key={c.key} style={styles.gradeCard}>
             <View style={styles.gradeRow}>
-              <Text style={styles.subject}>{grade.subject}</Text>
+              <Text style={styles.subject}>{c.label}</Text>
               <Text style={styles.score}>
-                {grade.score}
-                <Text style={styles.max}> / {grade.max}</Text>
+                {c.avg.toFixed(1)}
+                <Text style={styles.max}> / 5</Text>
               </Text>
             </View>
-            <ProgressBar progress={(grade.score / grade.max) * 100} />
+            <ProgressBar progress={(c.avg / 5) * 100} />
           </Card>
         ))}
 
