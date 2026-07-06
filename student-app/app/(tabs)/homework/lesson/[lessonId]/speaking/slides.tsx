@@ -84,7 +84,8 @@ export default function SlidesScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onScrollEnd}>
+        onMomentumScrollEnd={onScrollEnd}
+        onScrollEndDrag={onScrollEnd}>
         {slides.map((slide) => (
           <View key={slide.id} style={[styles.slidePage, { width }]}>
             <View style={styles.slideVisual}>
