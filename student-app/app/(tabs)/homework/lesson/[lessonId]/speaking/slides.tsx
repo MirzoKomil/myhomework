@@ -1,7 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Dimensions, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  KeyboardAvoidingView,
+  Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
@@ -11,12 +24,30 @@ import { saveLastPosition } from '@/services/progressStore';
 
 const { width } = Dimensions.get('window');
 
+type Comment = { id: string; name: string; text: string; time: string; me?: boolean };
+
+const MOCK_COMMENTS: Comment[] = [
+  { id: 'c1', name: 'Kamola', text: "Slaydlar juda tushunarli tayyorlangan, rahmat!", time: '3 kun oldin' },
+  { id: 'c2', name: 'Jasur', text: "Misollar ko'p bo'lgani yoqdi.", time: '1 kun oldin' },
+  { id: 'c3', name: 'Nilufar', text: "Shu mavzuni takrorlash uchun juda foydali.", time: '6 soat oldin' },
+];
+
 export default function SlidesScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content] = useState(() => getLessonContent(String(lessonId), 1));
   const slides = content.slides;
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
+  const [draft, setDraft] = useState('');
+
+  const submitComment = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setComments((prev) => [{ id: `me-${Date.now()}`, name: 'Siz', text, time: 'hozir', me: true }, ...prev]);
+    setDraft('');
+  };
 
   useEffect(() => {
     markDone(String(lessonId), 'slidesWatch');
@@ -64,12 +95,18 @@ export default function SlidesScreen() {
         ))}
       </ScrollView>
 
-      <View style={styles.dotsRow}>
-        {slides.map((s, i) => (
-          <Pressable key={s.id} onPress={() => goTo(i)} hitSlop={6}>
-            <View style={[styles.dotItem, i === activeIndex && styles.dotItemActive]} />
-          </Pressable>
-        ))}
+      <View style={styles.progressRow}>
+        <View style={styles.dotsRow}>
+          {slides.map((s, i) => (
+            <Pressable key={s.id} onPress={() => goTo(i)} hitSlop={6}>
+              <View style={[styles.dotItem, i === activeIndex && styles.dotItemActive]} />
+            </Pressable>
+          ))}
+        </View>
+        <Pressable style={styles.commentsPill} onPress={() => setShowComments(true)}>
+          <Ionicons name="chatbubble-ellipses-outline" size={15} color={theme.colors.purple} />
+          <Text style={styles.commentsPillText}>Izohlar ({comments.length})</Text>
+        </Pressable>
       </View>
 
       <View style={styles.konspektSection}>
@@ -96,6 +133,44 @@ export default function SlidesScreen() {
           </Pressable>
         )}
       </View>
+
+      <Modal visible={showComments} animationType="slide" transparent onRequestClose={() => setShowComments(false)}>
+        <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable style={styles.modalBackdropTap} onPress={() => setShowComments(false)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Izohlar</Text>
+            <ScrollView contentContainerStyle={styles.commentsList} showsVerticalScrollIndicator={false}>
+              {comments.map((c) => (
+                <View key={c.id} style={styles.commentRow}>
+                  <View style={[styles.commentAvatar, c.me && styles.commentAvatarMe]}>
+                    <Text style={styles.commentAvatarText}>{c.name.charAt(0)}</Text>
+                  </View>
+                  <View style={styles.commentBody}>
+                    <View style={styles.commentHeaderRow}>
+                      <Text style={styles.commentName}>{c.name}</Text>
+                      <Text style={styles.commentTime}>{c.time}</Text>
+                    </View>
+                    <Text style={styles.commentText}>{c.text}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.commentInputRow}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Izoh qoldiring..."
+                placeholderTextColor={theme.colors.textLight}
+                value={draft}
+                onChangeText={setDraft}
+              />
+              <Pressable style={styles.commentSendBtn} onPress={submitComment}>
+                <Ionicons name="send" size={18} color="#fff" />
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -121,9 +196,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   slideVisualTitle: { fontFamily: theme.fonts.bold, fontSize: 16, color: '#fff' },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 14 },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 14,
+    gap: 8,
+  },
+  dotsRow: { flexDirection: 'row', gap: 6 },
   dotItem: { width: 7, height: 7, borderRadius: 4, backgroundColor: theme.colors.border },
   dotItemActive: { backgroundColor: theme.colors.pink, width: 20 },
+  commentsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: theme.colors.purpleLight,
+  },
+  commentsPillText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.purple },
   konspektSection: { paddingHorizontal: 20, paddingTop: 20, flex: 1 },
   sectionLabel: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.purple, marginBottom: 6 },
   body: { fontFamily: theme.fonts.regular, fontSize: 15, color: theme.colors.textMuted, lineHeight: 24 },
@@ -145,4 +238,65 @@ const styles = StyleSheet.create({
   nextNavBtnText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#fff' },
   doneBtn: { flex: 1, backgroundColor: theme.colors.success, borderRadius: theme.radius.sm, paddingVertical: 14, alignItems: 'center' },
   doneText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#fff' },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  sheet: {
+    backgroundColor: theme.colors.bg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '75%',
+    paddingTop: 10,
+    paddingHorizontal: 20,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.border,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  sheetTitle: { fontFamily: theme.fonts.extraBold, fontSize: 18, color: theme.colors.text, marginBottom: 12 },
+  commentsList: { paddingBottom: 12, gap: 14 },
+  commentRow: { flexDirection: 'row', gap: 10 },
+  commentAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.purpleLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentAvatarMe: { backgroundColor: theme.colors.purple },
+  commentAvatarText: { fontFamily: theme.fonts.bold, fontSize: 14, color: theme.colors.purple },
+  commentBody: { flex: 1 },
+  commentHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  commentName: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.text },
+  commentTime: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textLight },
+  commentText: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginTop: 2 },
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+  },
+  commentInput: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontFamily: theme.fonts.regular,
+    fontSize: 14,
+    color: theme.colors.text,
+  },
+  commentSendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.purple,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
