@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -35,6 +36,33 @@ export default function ProfileScreen() {
   const avatarUri = useAvatarUri();
   const ranked = getRankedLeaderboard('alltime', 'country', coins);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
+
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const wobbleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmerLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 1600, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(700),
+      ])
+    );
+    shimmerLoop.start();
+    const wobbleLoop = Animated.loop(
+      Animated.timing(wobbleAnim, { toValue: 1, duration: 2400, useNativeDriver: true })
+    );
+    wobbleLoop.start();
+    return () => {
+      shimmerLoop.stop();
+      wobbleLoop.stop();
+    };
+  }, [shimmerAnim, wobbleAnim]);
+
+  const shimmerTranslate = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [-160, 340] });
+  const wobbleTranslateX = wobbleAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -3, 0, 3, 0] });
+  const wobbleTranslateY = wobbleAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -3, 0, 3, 0] });
+  const wobbleRotate = wobbleAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ['0deg', '-6deg', '0deg', '6deg', '0deg'] });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -71,6 +99,16 @@ export default function ProfileScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.balanceCard}>
+            <View style={styles.shimmerClip} pointerEvents="none">
+              <Animated.View style={[styles.shimmerSweep, { transform: [{ translateX: shimmerTranslate }] }]}>
+                <LinearGradient
+                  colors={['transparent', 'rgba(255,255,255,0.4)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </View>
             <View style={styles.leaderboardRow}>
               <View>
                 <Text style={styles.balanceLabel}>Leaderboard</Text>
@@ -82,7 +120,13 @@ export default function ProfileScreen() {
                   </View>
                 )}
               </View>
-              <Text style={styles.trophyEmoji}>🏆</Text>
+              <Animated.Text
+                style={[
+                  styles.trophyEmoji,
+                  { transform: [{ translateX: wobbleTranslateX }, { translateY: wobbleTranslateY }, { rotate: wobbleRotate }] },
+                ]}>
+                🏆
+              </Animated.Text>
             </View>
           </LinearGradient>
         </Pressable>
@@ -174,7 +218,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  balanceCard: { borderRadius: theme.radius.md, padding: 20, marginBottom: 16 },
+  balanceCard: { borderRadius: theme.radius.md, padding: 20, marginBottom: 16, overflow: 'hidden' },
+  shimmerClip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
+  shimmerSweep: { position: 'absolute', top: 0, bottom: 0, width: 100 },
   leaderboardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   balanceLabel: { fontFamily: theme.fonts.medium, fontSize: 13, color: 'rgba(255,255,255,0.8)' },
   balanceAmount: { fontFamily: theme.fonts.extraBold, fontSize: 28, color: '#fff', marginTop: 4 },
