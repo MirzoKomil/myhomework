@@ -17,8 +17,14 @@ type LessonFolder = {
   wordCount: number;
 };
 
+const TOTAL_LESSONS = 72;
+const UNLOCKED_COUNT = 3;
+const BONUS_TOTAL = 18;
+const BONUS_UNLOCKED = 1;
+
 export default function VocabularyHubScreen() {
   const [folders, setFolders] = useState<LessonFolder[]>([]);
+  const [bonusFolders, setBonusFolders] = useState<LessonFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLockedNotice, setShowLockedNotice] = useState(false);
 
@@ -27,13 +33,28 @@ export default function VocabularyHubScreen() {
       .then((mc) => {
         const course = mc.courses[0];
         const adminLessons = course ? mc.lessons.filter((l) => l.courseId === course.id) : [];
-        const mapped: LessonFolder[] = adminLessons.map((l, i) => ({
-          id: l.id,
-          name: l.name,
-          locked: !l.isActive,
-          wordCount: getLessonContent(l.id, i).vocabulary.length,
-        }));
+        const mapped: LessonFolder[] = Array.from({ length: TOTAL_LESSONS }, (_, i) => {
+          const l = adminLessons[i];
+          const id = l?.id ?? String(i + 1);
+          return {
+            id,
+            name: l?.name ?? `${i + 1}-dars`,
+            locked: i >= UNLOCKED_COUNT,
+            wordCount: getLessonContent(id, i).vocabulary.length,
+          };
+        });
         setFolders(mapped);
+
+        const bonus: LessonFolder[] = Array.from({ length: BONUS_TOTAL }, (_, i) => {
+          const id = `bonus-${i + 1}`;
+          return {
+            id,
+            name: `${i + 1}-Yakshanba bonus dars`,
+            locked: i >= BONUS_UNLOCKED,
+            wordCount: getLessonContent(id, i).vocabulary.length,
+          };
+        });
+        setBonusFolders(bonus);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -56,14 +77,7 @@ export default function VocabularyHubScreen() {
         </View>
       )}
 
-      {!loading && folders.length === 0 && (
-        <View style={styles.center}>
-          <Ionicons name="book-outline" size={40} color={theme.colors.textMuted} />
-          <Text style={styles.emptyText}>Hali darslar qo'shilmagan</Text>
-        </View>
-      )}
-
-      {!loading && folders.length > 0 && (
+      {!loading && (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.subtitle}>Darsdan darsga to'plangan lug'atingiz</Text>
           {folders.map((folder, index) => (
@@ -80,6 +94,32 @@ export default function VocabularyHubScreen() {
                   <View style={styles.info}>
                     <Text style={[styles.title, folder.locked && styles.titleLocked]} numberOfLines={1}>
                       {index + 1}-dars — {folder.name}
+                    </Text>
+                    <Text style={styles.subtitleSmall}>
+                      {folder.locked ? 'Hali ochilmagan' : `${folder.wordCount} ta so'z`}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
+                </View>
+              </Card>
+            </Pressable>
+          ))}
+
+          <Text style={[styles.subtitle, styles.bonusSectionTitle]}>Yakshanba bonus darslar lug'ati</Text>
+          {bonusFolders.map((folder) => (
+            <Pressable key={folder.id} onPress={() => openFolder(folder)}>
+              <Card style={folder.locked ? styles.cardLocked : undefined}>
+                <View style={styles.row}>
+                  <View style={[styles.iconWrap, folder.locked && styles.iconWrapLocked]}>
+                    <Ionicons
+                      name={folder.locked ? 'lock-closed' : 'folder-open-outline'}
+                      size={22}
+                      color={folder.locked ? theme.colors.textLight : theme.colors.purple}
+                    />
+                  </View>
+                  <View style={styles.info}>
+                    <Text style={[styles.title, folder.locked && styles.titleLocked]} numberOfLines={1}>
+                      {folder.name}
                     </Text>
                     <Text style={styles.subtitleSmall}>
                       {folder.locked ? 'Hali ochilmagan' : `${folder.wordCount} ta so'z`}
@@ -118,6 +158,7 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: theme.fonts.medium, fontSize: 15, color: theme.colors.textMuted },
   scroll: { padding: 20, paddingBottom: 40, gap: 10 },
   subtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 },
+  bonusSectionTitle: { marginTop: 20 },
   cardLocked: { opacity: 0.65 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   iconWrap: {
