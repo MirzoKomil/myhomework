@@ -84,6 +84,7 @@ export default function ResultsScreen() {
     { icon: 'game-controller', label: "O'yinlarga sarflangan vaqt", value: `${profileStats.gamesTimeHours} soat`, bg: theme.colors.dangerBg, color: theme.colors.danger },
     { icon: 'library', label: 'Kutubxonada sarflangan vaqt', value: `${profileStats.libraryTimeHours} soat`, bg: theme.colors.blueLight, color: theme.colors.blue },
     { icon: 'sparkles', label: 'AI chatda sarflangan vaqt', value: `${profileStats.aiChatTimeHours} soat`, bg: theme.colors.purpleLight, color: theme.colors.purple },
+    { icon: 'radio', label: 'Radioga sarflangan vaqt', value: `${profileStats.radioTimeHours} soat`, bg: theme.colors.successBg, color: theme.colors.success },
   ];
 
   return (

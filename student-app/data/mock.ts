@@ -532,6 +532,7 @@ export const profileStats = {
   gamesTimeHours: 3.2,
   libraryTimeHours: 5.8,
   aiChatTimeHours: 1.4,
+  radioTimeHours: 2.6,
 };
 
 export const weeklySchedule = [
