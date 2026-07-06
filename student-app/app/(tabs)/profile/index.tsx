@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -9,6 +9,7 @@ import { CoinIcon } from '@/components/ui/CoinIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
+import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 
 type MenuItem = {
@@ -31,6 +32,7 @@ const menuItems: MenuItem[] = [
 
 export default function ProfileScreen() {
   const coins = useCoins();
+  const avatarUri = useAvatarUri();
   const ranked = getRankedLeaderboard('alltime', 'country', coins);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
 
@@ -47,14 +49,18 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.userCard}>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={32} color={theme.colors.purple} />
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={32} color={theme.colors.purple} />
+            )}
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{profileStats.name}</Text>
-            <Text style={styles.userLevel}>{profileStats.level}</Text>
+            <Text style={styles.userLevel}>ID: {profileStats.studentId}</Text>
             <Text style={styles.userPhone}>{profileStats.phone}</Text>
           </View>
-          <Pressable style={styles.editBtn}>
+          <Pressable style={styles.editBtn} onPress={() => router.push('/profile/edit' as never)}>
             <Ionicons name="pencil" size={16} color={theme.colors.blue} />
           </Pressable>
         </Card>
@@ -153,7 +159,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: 64, height: 64 },
   userInfo: { flex: 1 },
   userName: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text },
   userLevel: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginTop: 2 },

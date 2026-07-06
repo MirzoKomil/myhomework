@@ -16,6 +16,7 @@ export default function Root({ children }: { children: ReactNode }) {
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
         <meta name="theme-color" content={theme.colors.purple} />
+        <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Myhomework" />
