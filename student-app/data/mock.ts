@@ -206,8 +206,8 @@ export const courses: Course[] = [
     id: 'elementary-1',
     title: 'Elementary 1',
     level: 'A1',
-    progress: 24,
-    lessonsTotal: 90,
+    progress: 31,
+    lessonsTotal: 72,
     lessonsDone: 22,
   },
   {
@@ -215,7 +215,7 @@ export const courses: Course[] = [
     title: 'Elementary 2',
     level: 'A2',
     progress: 0,
-    lessonsTotal: 90,
+    lessonsTotal: 72,
     lessonsDone: 0,
   },
 ];

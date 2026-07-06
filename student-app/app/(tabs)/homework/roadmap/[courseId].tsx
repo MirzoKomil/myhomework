@@ -237,7 +237,7 @@ export default function RoadmapScreen() {
       setCourse(c);
       if (c) {
         const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
-        const TOTAL_LESSONS = 90;
+        const TOTAL_LESSONS = 72;
         const UNLOCKED_COUNT = 3;
         const mapped: LessonNode[] = Array.from({ length: TOTAL_LESSONS }, (_, i) => {
           const l = adminLessons[i];
