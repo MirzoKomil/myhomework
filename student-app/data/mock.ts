@@ -286,19 +286,72 @@ export type RadioStation = {
   flag: string;
   genre: string;
   colors: [string, string];
+  location: string;
+  founded: string;
+  about: string;
 };
 
 export const radioStations: RadioStation[] = [
-  { id: 'bbc-radio-1', name: 'BBC Radio 1', country: 'UK', flag: '🇬🇧', genre: 'Pop & Hits', colors: ['#E85D5D', '#C43E3E'] },
-  { id: 'bbc-radio-2', name: 'BBC Radio 2', country: 'UK', flag: '🇬🇧', genre: 'Adult Contemporary', colors: ['#4F8CFF', '#3A6FE0'] },
-  { id: 'capital-fm', name: 'Capital FM', country: 'UK', flag: '🇬🇧', genre: 'Top 40', colors: ['#F472B6', '#DB4E93'] },
-  { id: 'classic-fm', name: 'Classic FM', country: 'UK', flag: '🇬🇧', genre: 'Classical', colors: ['#7B61FF', '#5A3FD6'] },
-  { id: 'npr', name: 'NPR', country: 'US', flag: '🇺🇸', genre: 'News & Talk', colors: ['#34D399', '#1FA97D'] },
-  { id: 'iheart-hits', name: 'iHeart Hits', country: 'US', flag: '🇺🇸', genre: 'Pop Hits', colors: ['#FBBF24', '#E5A70F'] },
-  { id: 'kiss-fm', name: 'KISS FM', country: 'US', flag: '🇺🇸', genre: 'Hip-Hop & R&B', colors: ['#F87171', '#DF4F4F'] },
-  { id: 'jazz24', name: 'Jazz24', country: 'US', flag: '🇺🇸', genre: 'Jazz', colors: ['#6B4FE0', '#4C31B0'] },
-  { id: 'classic-rock-101', name: 'Classic Rock 101', country: 'US', flag: '🇺🇸', genre: 'Classic Rock', colors: ['#4B5563', '#1F2937'] },
-  { id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'] },
+  {
+    id: 'bbc-radio-1', name: 'BBC Radio 1', country: 'UK', flag: '🇬🇧', genre: 'Pop & Hits', colors: ['#E85D5D', '#C43E3E'],
+    location: 'London, Buyuk Britaniya',
+    founded: '1967-yildan beri',
+    about: "Yosh tinglovchilar uchun eng so'nggi pop va hit qo'shiqlarni, DJ dasturlari va musiqa chartlarini efirga uzatadi.",
+  },
+  {
+    id: 'bbc-radio-2', name: 'BBC Radio 2', country: 'UK', flag: '🇬🇧', genre: 'Adult Contemporary', colors: ['#4F8CFF', '#3A6FE0'],
+    location: 'London, Buyuk Britaniya',
+    founded: '1967-yildan beri',
+    about: "Katta yoshdagi tinglovchilar uchun mashhur qo'shiqlar, intervyular va turli janrdagi musiqiy dasturlarni namoyish etadi.",
+  },
+  {
+    id: 'capital-fm', name: 'Capital FM', country: 'UK', flag: '🇬🇧', genre: 'Top 40', colors: ['#F472B6', '#DB4E93'],
+    location: 'London, Buyuk Britaniya',
+    founded: '1973-yildan beri',
+    about: "Top 40 chartidagi eng mashhur zamonaviy qo'shiqlarni va shou-dasturlarni efirga uzatadi.",
+  },
+  {
+    id: 'classic-fm', name: 'Classic FM', country: 'UK', flag: '🇬🇧', genre: 'Classical', colors: ['#7B61FF', '#5A3FD6'],
+    location: 'London, Buyuk Britaniya',
+    founded: '1992-yildan beri',
+    about: "Dunyoning eng mashhur klassik musiqa asarlarini kun bo'yi tinglovchilarga yetkazadi.",
+  },
+  {
+    id: 'npr', name: 'NPR', country: 'US', flag: '🇺🇸', genre: 'News & Talk', colors: ['#34D399', '#1FA97D'],
+    location: 'Vashington, AQSH',
+    founded: '1970-yildan beri',
+    about: "Chuqur tahliliy yangiliklar, jamiyat va madaniyatga oid suhbat-dasturlarni efirga uzatuvchi jamoat radiosi.",
+  },
+  {
+    id: 'iheart-hits', name: 'iHeart Hits', country: 'US', flag: '🇺🇸', genre: 'Pop Hits', colors: ['#FBBF24', '#E5A70F'],
+    location: 'AQSH',
+    founded: '2008-yildan beri',
+    about: "Eng ommabop zamonaviy pop hitlarni uzluksiz tarzda efirga uzatadi.",
+  },
+  {
+    id: 'kiss-fm', name: 'KISS FM', country: 'US', flag: '🇺🇸', genre: 'Hip-Hop & R&B', colors: ['#F87171', '#DF4F4F'],
+    location: 'AQSH',
+    founded: "1980-yillardan beri",
+    about: "Hip-hop, R&B va zamonaviy shahar musiqasi janrlaridagi qo'shiqlarni efirga uzatadi.",
+  },
+  {
+    id: 'jazz24', name: 'Jazz24', country: 'US', flag: '🇺🇸', genre: 'Jazz', colors: ['#6B4FE0', '#4C31B0'],
+    location: 'Sietl, AQSH',
+    founded: '2005-yildan beri',
+    about: "Kecha-yu kunduz klassik va zamonaviy jaz musiqasini tinglovchilarga taqdim etadi.",
+  },
+  {
+    id: 'classic-rock-101', name: 'Classic Rock 101', country: 'US', flag: '🇺🇸', genre: 'Classic Rock', colors: ['#4B5563', '#1F2937'],
+    location: 'AQSH',
+    founded: "20 yildan ortiq vaqtdan beri",
+    about: "70–90-yillarning mashhur rok guruhlari va klassik rok qo'shiqlarini efirga uzatadi.",
+  },
+  {
+    id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'],
+    location: 'Myhomework.uz platformasi',
+    founded: 'Platforma ochilgan kundan beri',
+    about: "Ingliz tilini o'rganuvchilar uchun maxsus tanlangan qo'shiqlar, audio darslar va motivatsion kontentni efirga uzatadi.",
+  },
 ];
 
 export type NotifCategory = 'news' | 'lessons';
