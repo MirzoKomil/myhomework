@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
+import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins } from '@/data/lessonContent';
@@ -229,6 +230,7 @@ export default function RoadmapScreen() {
   const totalCoins = useCoins();
   const [lessons, setLessons] = useState<LessonNode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCoinInfo, setShowCoinInfo] = useState(false);
 
   useEffect(() => {
     fetchMobileContent().then((mc) => {
@@ -284,9 +286,13 @@ export default function RoadmapScreen() {
         </View>
 
         <View style={ss.headerRight}>
-          <CoinPill amount={totalCoins} />
+          <Pressable onPress={() => setShowCoinInfo(true)}>
+            <CoinPill amount={totalCoins} />
+          </Pressable>
         </View>
       </View>
+
+      <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ss.scroll}>
         {/* ── Section header ── */}

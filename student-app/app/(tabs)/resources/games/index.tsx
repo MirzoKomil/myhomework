@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
+import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { useCoins } from '@/services/coinsStore';
@@ -62,16 +64,17 @@ const games: GameItem[] = [
 
 export default function GamesScreen() {
   const coins = useCoins();
+  const [showCoinInfo, setShowCoinInfo] = useState(false);
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
         title="O'YINLAR"
         showBack
         rightAction={
-          <View style={styles.coinPill}>
+          <Pressable style={styles.coinPill} onPress={() => setShowCoinInfo(true)}>
             <CoinIcon size={14} />
             <Text style={styles.coinText}>{coins}</Text>
-          </View>
+          </Pressable>
         }
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -91,6 +94,8 @@ export default function GamesScreen() {
           </Pressable>
         ))}
       </ScrollView>
+
+      <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
     </SafeAreaView>
   );
 }

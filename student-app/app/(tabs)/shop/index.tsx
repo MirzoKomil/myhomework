@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
+import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { theme } from '@/constants/theme';
 import { SHOP_CATEGORY_LABELS, SHOP_PRODUCTS, ShopCategory, ShopProduct } from '@/data/shopProducts';
 import { useCoins } from '@/services/coinsStore';
@@ -18,6 +19,7 @@ export default function ShopScreen() {
   const coins = useCoins();
   const [category, setCategory] = useState<ShopCategory>('merch');
   const [showInfo, setShowInfo] = useState(false);
+  const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
 
   const products = SHOP_PRODUCTS.filter((p) => p.category === category);
@@ -37,7 +39,9 @@ export default function ShopScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Homework Shop</Text>
         <View style={styles.headerRight}>
-          <CoinPill amount={coins} size={12} />
+          <Pressable onPress={() => setShowCoinInfo(true)}>
+            <CoinPill amount={coins} size={12} />
+          </Pressable>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/shop/orders' as never)} hitSlop={8}>
             <Ionicons name="bag-handle-outline" size={18} color={theme.colors.text} />
           </Pressable>
@@ -137,6 +141,8 @@ export default function ShopScreen() {
           )}
         </View>
       </Modal>
+
+      <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
     </SafeAreaView>
   );
 }

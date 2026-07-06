@@ -5,9 +5,16 @@ import { profileStats } from '@/data/mock';
 
 const TOTAL_KEY = 'mh_coins_total';
 const BY_LESSON_KEY = 'mh_coins_by_lesson';
+const TODAY_KEY = 'mh_coins_today';
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 let total = 0;
 let byLesson: Record<string, number> = {};
+let todayDate = todayStr();
+let todayEarned = 0;
 let loaded = false;
 let loadPromise: Promise<void> | null = null;
 
@@ -26,14 +33,28 @@ export function subscribe(listener: Listener): () => void {
 async function ensureLoaded(): Promise<void> {
   if (loaded) return;
   if (!loadPromise) {
-    loadPromise = Promise.all([AsyncStorage.getItem(TOTAL_KEY), AsyncStorage.getItem(BY_LESSON_KEY)])
-      .then(([totalRaw, byLessonRaw]) => {
+    loadPromise = Promise.all([
+      AsyncStorage.getItem(TOTAL_KEY),
+      AsyncStorage.getItem(BY_LESSON_KEY),
+      AsyncStorage.getItem(TODAY_KEY),
+    ])
+      .then(([totalRaw, byLessonRaw, todayRaw]) => {
         total = totalRaw !== null ? Number(totalRaw) : profileStats.coins;
         byLesson = byLessonRaw ? JSON.parse(byLessonRaw) : {};
+        const today = todayStr();
+        if (todayRaw) {
+          const parsed = JSON.parse(todayRaw) as { date: string; amount: number };
+          todayEarned = parsed.date === today ? parsed.amount : 0;
+        } else {
+          todayEarned = 0;
+        }
+        todayDate = today;
       })
       .catch(() => {
         total = profileStats.coins;
         byLesson = {};
+        todayEarned = 0;
+        todayDate = todayStr();
       })
       .finally(() => {
         loaded = true;
@@ -46,6 +67,7 @@ async function persist() {
   try {
     await AsyncStorage.setItem(TOTAL_KEY, String(total));
     await AsyncStorage.setItem(BY_LESSON_KEY, JSON.stringify(byLesson));
+    await AsyncStorage.setItem(TODAY_KEY, JSON.stringify({ date: todayDate, amount: todayEarned }));
   } catch {
     // Xotiraga yozib bo'lmasa jim o'tkazib yuboramiz.
   }
@@ -59,6 +81,11 @@ export function getLessonCoins(lessonId: string): number {
   return byLesson[lessonId] ?? 0;
 }
 
+export function getTodayCoins(): number {
+  const today = todayStr();
+  return todayDate === today ? todayEarned : 0;
+}
+
 export async function loadCoins(): Promise<void> {
   await ensureLoaded();
   notify();
@@ -69,6 +96,14 @@ export async function addCoins(amount: number, lessonId?: string) {
   total += amount;
   if (lessonId) {
     byLesson[lessonId] = (byLesson[lessonId] ?? 0) + amount;
+  }
+  const today = todayStr();
+  if (todayDate !== today) {
+    todayDate = today;
+    todayEarned = 0;
+  }
+  if (amount > 0) {
+    todayEarned += amount;
   }
   notify();
   await persist();
@@ -81,6 +116,15 @@ export function useCoins(): number {
     return subscribe(() => setTick((t) => t + 1));
   }, []);
   return getTotalCoins();
+}
+
+export function useTodayCoins(): number {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    loadCoins().then(() => setTick((t) => t + 1));
+    return subscribe(() => setTick((t) => t + 1));
+  }, []);
+  return getTodayCoins();
 }
 
 export function useLessonCoins(lessonId: string): number {

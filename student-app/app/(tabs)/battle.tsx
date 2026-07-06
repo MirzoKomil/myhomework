@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
+import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
@@ -35,6 +36,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 export default function BattleScreen() {
   const coins = useCoins();
+  const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [phase, setPhase] = useState<Phase>('select');
   const [opponentType, setOpponentType] = useState<BattleOpponentType | null>(null);
   const [opponentName, setOpponentName] = useState('Bot');
@@ -165,10 +167,10 @@ export default function BattleScreen() {
 
       {phase === 'select' && (
         <View style={styles.selectWrap}>
-          <View style={styles.coinRow}>
+          <Pressable style={styles.coinRow} onPress={() => setShowCoinInfo(true)}>
             <CoinIcon size={18} />
             <Text style={styles.coinText}>{coins}</Text>
-          </View>
+          </Pressable>
           <Text style={styles.selectTitle}>Kim bilan o'ynaysiz?</Text>
           <Text style={styles.selectSubtitle}>
             So'zni tinglang va to'g'ri tarjimasini birinchi bo'lib toping — g'olib coin yutadi!
@@ -285,6 +287,8 @@ export default function BattleScreen() {
           </Pressable>
         </View>
       )}
+
+      <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
     </SafeAreaView>
   );
 }

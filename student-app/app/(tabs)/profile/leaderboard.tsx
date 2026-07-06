@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
+import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
@@ -24,6 +25,7 @@ export default function LeaderboardScreen() {
   const coins = useCoins();
   const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
   const [scope, setScope] = useState<LeaderboardScope>('country');
+  const [showCoinInfo, setShowCoinInfo] = useState(false);
 
   const ranked = useMemo(() => getRankedLeaderboard(period, scope, coins), [period, scope, coins]);
   const top3 = ranked.slice(0, 3);
@@ -35,10 +37,10 @@ export default function LeaderboardScreen() {
         title="Leaderboard"
         showBack
         rightAction={
-          <View style={styles.coinPill}>
+          <Pressable style={styles.coinPill} onPress={() => setShowCoinInfo(true)}>
             <CoinIcon size={14} />
             <Text style={styles.coinText}>{coins}</Text>
-          </View>
+          </Pressable>
         }
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -116,6 +118,8 @@ export default function LeaderboardScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
     </SafeAreaView>
   );
 }
