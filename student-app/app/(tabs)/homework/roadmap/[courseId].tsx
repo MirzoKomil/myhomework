@@ -16,12 +16,12 @@ import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins } from '@/data/lessonContent';
-import { fetchMobileContent, AdminCourse } from '@/services/contentApi';
+import { fetchMobileContent } from '@/services/contentApi';
 import { useCoins, useLessonCoins } from '@/services/coinsStore';
 
 // ─── Type config ────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
-  grammar: { icon: 'book-outline', color: '#7B61FF', bg: '#EDE9FE', label: 'Grammar' },
+  grammar: { icon: 'book-outline', color: '#7B61FF', bg: '#EDE9FE', label: 'Videodars' },
   speaking: { icon: 'mic-outline', color: '#2563EB', bg: '#DBEAFE', label: 'Speaking' },
   bonus: { icon: 'gift-outline', color: '#D97706', bg: '#FEF3C7', label: 'Bonus' },
 };
@@ -227,14 +227,12 @@ function LessonRow({ lesson, isActive, index }: { lesson: LessonNode; isActive: 
 export default function RoadmapScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const totalCoins = useCoins();
-  const [course, setCourse] = useState<AdminCourse | null>(null);
   const [lessons, setLessons] = useState<LessonNode[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchMobileContent().then((mc) => {
       const c = mc.courses.find((x) => x.id === courseId) ?? mc.courses[0] ?? null;
-      setCourse(c);
       if (c) {
         const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
         const TOTAL_LESSONS = 72;
@@ -270,7 +268,7 @@ export default function RoadmapScreen() {
     );
   }
 
-  const courseTitle = course?.name ?? 'Kurs';
+  const courseTitle = "90 kunda gapiramiz";
 
   return (
     <SafeAreaView style={ss.safe} edges={['top']}>
