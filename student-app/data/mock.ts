@@ -561,6 +561,47 @@ export const courseEnrollment = {
   contractFileAvailable: false,
 };
 
+export type DeliveryStage = 'preparing' | 'dispatched' | 'in_transit' | 'delivered';
+
+export const DELIVERY_STAGE_ORDER: DeliveryStage[] = ['preparing', 'dispatched', 'in_transit', 'delivered'];
+
+export const DELIVERY_STAGE_LABELS: Record<DeliveryStage, string> = {
+  preparing: 'Tayyorlanmoqda',
+  dispatched: "Jo'natildi",
+  in_transit: "Yo'lda",
+  delivered: 'Yetkazib berildi',
+};
+
+export type BookDelivery = {
+  id: string;
+  title: string;
+  emoji: string;
+  stage: DeliveryStage;
+  address: string;
+  dispatchedDate?: string;
+  deliveredDate?: string;
+};
+
+export const bookDeliveries: BookDelivery[] = [
+  {
+    id: 'coursebook',
+    title: 'Coursebook',
+    emoji: '📘',
+    stage: 'delivered',
+    address: "Toshkent sh., Chilonzor tumani, Bunyodkor ko'chasi 12-uy",
+    dispatchedDate: '2026-06-20',
+    deliveredDate: '2026-06-25',
+  },
+  {
+    id: 'vocabulary-book',
+    title: 'Vocabulary Book',
+    emoji: '📗',
+    stage: 'in_transit',
+    address: "Toshkent sh., Chilonzor tumani, Bunyodkor ko'chasi 12-uy",
+    dispatchedDate: '2026-07-02',
+  },
+];
+
 export type PersonaCategory = 'general' | 'business' | 'sports' | 'politics' | 'film' | 'medicine';
 
 export type CelebrityPersona = {
