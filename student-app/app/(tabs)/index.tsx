@@ -51,10 +51,10 @@ export default function HomeScreen() {
         </View>
         <View style={styles.headerActions}>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/messages' as never)}>
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color={theme.colors.purple} />
+            <Ionicons name="chatbubble-ellipses-outline" size={24} color={theme.colors.tabInactive} />
           </Pressable>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>
-            <Ionicons name="notifications-outline" size={20} color={theme.colors.purple} />
+            <Ionicons name="notifications-outline" size={24} color={theme.colors.tabInactive} />
             <View style={styles.badgeDot} />
           </Pressable>
         </View>
@@ -127,12 +127,10 @@ const styles = StyleSheet.create({
   },
   greeting: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted },
   name: { fontFamily: theme.fonts.extraBold, fontSize: 26, color: theme.colors.text },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: theme.colors.purpleLight,
+    width: 26,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
