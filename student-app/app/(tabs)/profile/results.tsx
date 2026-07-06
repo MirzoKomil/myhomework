@@ -60,6 +60,7 @@ export default function ResultsScreen() {
   }, [liveLessons]);
 
   const speakingHours = (liveLessons.length * courseEnrollment.tariffMinutes) / 60;
+  const homeworkCompleted = videoLessons.length + liveLessons.length;
 
   const generalStats: StatItem[] = [
     { icon: 'checkmark-circle', label: 'Davomat', value: `${profileStats.attendanceRate}%`, bg: theme.colors.successBg, color: theme.colors.success },
@@ -76,6 +77,7 @@ export default function ResultsScreen() {
     { icon: 'videocam', label: "Tugallangan videodars (grammatika)", value: `${videoLessons.length} ta`, bg: theme.colors.blueLight, color: theme.colors.blue },
     { icon: 'mic', label: 'Live darslar (speaking)', value: `${liveLessons.length} ta`, bg: theme.colors.pinkBg, color: theme.colors.pink },
     { icon: 'hourglass', label: 'Speaking soati', value: `${speakingHours.toFixed(1)} soat`, bg: theme.colors.successBg, color: theme.colors.success },
+    { icon: 'document-text', label: 'Bajarilgan uyga vazifalar', value: `${homeworkCompleted} ta`, bg: theme.colors.purpleLight, color: theme.colors.purple },
   ];
 
   const resourceStats: StatItem[] = [
