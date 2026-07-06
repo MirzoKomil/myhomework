@@ -50,7 +50,10 @@ export default function ProfileScreen() {
     );
     shimmerLoop.start();
     const wobbleLoop = Animated.loop(
-      Animated.timing(wobbleAnim, { toValue: 1, duration: 2400, useNativeDriver: true })
+      Animated.sequence([
+        Animated.timing(wobbleAnim, { toValue: 1, duration: 2400, useNativeDriver: true }),
+        Animated.timing(wobbleAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
     );
     wobbleLoop.start();
     return () => {
