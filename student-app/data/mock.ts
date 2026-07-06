@@ -525,6 +525,9 @@ export const profileStats = {
   tariff: 'Standard',
   coins: 320,
   streakDays: 5,
+  gamesTimeHours: 3.2,
+  libraryTimeHours: 5.8,
+  aiChatTimeHours: 1.4,
 };
 
 export const weeklySchedule = [

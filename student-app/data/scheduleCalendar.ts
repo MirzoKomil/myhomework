@@ -76,7 +76,7 @@ export function generateScheduleDays(referenceDate: Date = new Date()): Schedule
     const dayNumber = i + 1;
     const isPast = date.getTime() < today.getTime();
     const isToday = date.getTime() === today.getTime();
-    const missed = type === 'live' && isPast && dayNumber % 11 === 0;
+    const missed = isPast && ((type === 'live' && dayNumber % 11 === 0) || (type === 'bonus' && dayNumber % 13 === 0));
 
     days.push({ dayNumber, date, type, topic, isPast, isToday, missed });
   }
