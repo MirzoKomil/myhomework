@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
+import { DeliveryStage } from '@/data/mock';
 import { ShopProduct } from '@/data/shopProducts';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
 
@@ -12,6 +13,7 @@ export type ShopOrder = {
   productName: string;
   price: number;
   date: string;
+  stage: DeliveryStage;
 };
 
 let orders: ShopOrder[] = [];
@@ -69,7 +71,14 @@ export async function placeOrder(product: ShopProduct): Promise<boolean> {
   if (getTotalCoins() < product.price) return false;
   await addCoins(-product.price);
   orders = [
-    { id: `order-${Date.now()}`, productId: product.id, productName: product.name, price: product.price, date: new Date().toLocaleDateString('uz-UZ') },
+    {
+      id: `order-${Date.now()}`,
+      productId: product.id,
+      productName: product.name,
+      price: product.price,
+      date: new Date().toLocaleDateString('uz-UZ'),
+      stage: 'preparing',
+    },
     ...orders,
   ];
   notify();

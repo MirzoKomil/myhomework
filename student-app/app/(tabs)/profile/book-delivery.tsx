@@ -4,26 +4,43 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { CoinIcon } from '@/components/ui/CoinIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { BookDelivery, DELIVERY_STAGE_LABELS, DELIVERY_STAGE_ORDER, bookDeliveries } from '@/data/mock';
+import { BookDelivery, DELIVERY_STAGE_LABELS, DELIVERY_STAGE_ORDER, DeliveryStage, bookDeliveries } from '@/data/mock';
 import { UZ_MONTHS } from '@/data/scheduleCalendar';
+import { useOrders } from '@/services/shopStore';
+
+type Category = 'books' | 'shop';
+
+const CATEGORY_LABELS: Record<Category, string> = {
+  books: 'Kitob yetkazish',
+  shop: 'Homework Shop',
+};
 
 function formatDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number);
   return `${d}-${UZ_MONTHS[m - 1].toLowerCase()}, ${y}`;
 }
 
-function StageTimeline({ book }: { book: BookDelivery }) {
-  const currentIndex = DELIVERY_STAGE_ORDER.indexOf(book.stage);
+function StageTimeline({
+  stage,
+  dispatchedDate,
+  deliveredDate,
+}: {
+  stage: DeliveryStage;
+  dispatchedDate?: string;
+  deliveredDate?: string;
+}) {
+  const currentIndex = DELIVERY_STAGE_ORDER.indexOf(stage);
   return (
     <View style={styles.timeline}>
-      {DELIVERY_STAGE_ORDER.map((stage, i) => {
+      {DELIVERY_STAGE_ORDER.map((s, i) => {
         const done = i <= currentIndex;
         const isLast = i === DELIVERY_STAGE_ORDER.length - 1;
-        const dateForStage = stage === 'dispatched' ? book.dispatchedDate : stage === 'delivered' ? book.deliveredDate : undefined;
+        const dateForStage = s === 'dispatched' ? dispatchedDate : s === 'delivered' ? deliveredDate : undefined;
         return (
-          <View key={stage} style={styles.timelineRow}>
+          <View key={s} style={styles.timelineRow}>
             <View style={styles.timelineMarkerCol}>
               <View style={[styles.timelineDot, done && styles.timelineDotDone]}>
                 {done && <Ionicons name="checkmark" size={11} color="#fff" />}
@@ -31,7 +48,7 @@ function StageTimeline({ book }: { book: BookDelivery }) {
               {!isLast && <View style={[styles.timelineLine, i < currentIndex && styles.timelineLineDone]} />}
             </View>
             <View style={styles.timelineInfo}>
-              <Text style={[styles.timelineLabel, done && styles.timelineLabelDone]}>{DELIVERY_STAGE_LABELS[stage]}</Text>
+              <Text style={[styles.timelineLabel, done && styles.timelineLabelDone]}>{DELIVERY_STAGE_LABELS[s]}</Text>
               {dateForStage && <Text style={styles.timelineDate}>{formatDate(dateForStage)}</Text>}
             </View>
           </View>
@@ -41,47 +58,73 @@ function StageTimeline({ book }: { book: BookDelivery }) {
   );
 }
 
+function StatusBadge({ stage }: { stage: DeliveryStage }) {
+  const delivered = stage === 'delivered';
+  return delivered ? (
+    <View style={styles.deliveredBadge}>
+      <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
+      <Text style={styles.deliveredBadgeText}>Yetkazib berildi</Text>
+    </View>
+  ) : (
+    <View style={styles.pendingBadge}>
+      <Ionicons name="bicycle-outline" size={16} color="#D97706" />
+      <Text style={styles.pendingBadgeText}>{DELIVERY_STAGE_LABELS[stage]}</Text>
+    </View>
+  );
+}
+
 function BookCard({ book }: { book: BookDelivery }) {
-  const delivered = book.stage === 'delivered';
   return (
-    <Card style={styles.bookCard}>
-      <View style={styles.bookHeadRow}>
-        <View style={styles.bookIconWrap}>
-          <Text style={styles.bookEmoji}>{book.emoji}</Text>
+    <Card style={styles.itemCard}>
+      <View style={styles.itemHeadRow}>
+        <View style={styles.itemIconWrap}>
+          <Text style={styles.itemEmoji}>{book.emoji}</Text>
         </View>
-        <View style={styles.bookHeadInfo}>
-          <Text style={styles.bookTitle}>{book.title}</Text>
-          <Text style={styles.bookAddress} numberOfLines={2}>
+        <View style={styles.itemHeadInfo}>
+          <Text style={styles.itemTitle}>{book.title}</Text>
+          <Text style={styles.itemAddress} numberOfLines={2}>
             {book.address}
           </Text>
         </View>
       </View>
-
-      {delivered ? (
-        <View style={styles.deliveredBadge}>
-          <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
-          <Text style={styles.deliveredBadgeText}>Yetkazib berildi</Text>
-        </View>
-      ) : (
-        <View style={styles.pendingBadge}>
-          <Ionicons name="bicycle-outline" size={16} color="#D97706" />
-          <Text style={styles.pendingBadgeText}>{DELIVERY_STAGE_LABELS[book.stage]}</Text>
-        </View>
-      )}
-
+      <StatusBadge stage={book.stage} />
       <View style={styles.divider} />
-      <StageTimeline book={book} />
+      <StageTimeline stage={book.stage} dispatchedDate={book.dispatchedDate} deliveredDate={book.deliveredDate} />
+    </Card>
+  );
+}
+
+function ShopOrderCard({ order }: { order: ReturnType<typeof useOrders>[number] }) {
+  return (
+    <Card style={styles.itemCard}>
+      <View style={styles.itemHeadRow}>
+        <View style={styles.itemIconWrap}>
+          <Ionicons name="bag-handle" size={24} color={theme.colors.purple} />
+        </View>
+        <View style={styles.itemHeadInfo}>
+          <Text style={styles.itemTitle}>{order.productName}</Text>
+          <View style={styles.orderPriceRow}>
+            <CoinIcon size={12} />
+            <Text style={styles.orderPriceText}>{order.price} — {order.date} sotib olindi</Text>
+          </View>
+        </View>
+      </View>
+      <StatusBadge stage={order.stage} />
+      <View style={styles.divider} />
+      <StageTimeline stage={order.stage} />
     </Card>
   );
 }
 
 export default function BookDeliveryScreen() {
   const [showInfo, setShowInfo] = useState(false);
+  const [category, setCategory] = useState<Category>('books');
+  const orders = useOrders();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
-        title="Darslik eltib berish"
+        title="Yetkazib berish xizmati"
         showBack
         rightAction={
           <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
@@ -89,11 +132,41 @@ export default function BookDeliveryScreen() {
           </Pressable>
         }
       />
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Sizga yetkazib beriladigan darsliklar holati</Text>
-        {bookDeliveries.map((book) => (
-          <BookCard key={book.id} book={book} />
+
+      <View style={styles.categoryRow}>
+        {(['books', 'shop'] as Category[]).map((c) => (
+          <Pressable
+            key={c}
+            style={[styles.categoryChip, category === c && styles.categoryChipActive]}
+            onPress={() => setCategory(c)}>
+            <Text style={[styles.categoryChipText, category === c && styles.categoryChipTextActive]}>
+              {CATEGORY_LABELS[c]}
+            </Text>
+          </Pressable>
         ))}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {category === 'books' ? (
+          <>
+            <Text style={styles.subtitle}>Sizga yetkazib beriladigan darsliklar holati</Text>
+            {bookDeliveries.map((book) => (
+              <BookCard key={book.id} book={book} />
+            ))}
+          </>
+        ) : (
+          <>
+            <Text style={styles.subtitle}>Homework Shop'dan sotib olgan tovarlaringiz yetkazib berish jarayoni</Text>
+            {orders.length === 0 ? (
+              <View style={styles.empty}>
+                <Ionicons name="bag-handle-outline" size={40} color={theme.colors.textMuted} />
+                <Text style={styles.emptyText}>Hali xaridlar yo'q</Text>
+              </View>
+            ) : (
+              orders.map((order) => <ShopOrderCard key={order.id} order={order} />)
+            )}
+          </>
+        )}
       </ScrollView>
 
       <Modal visible={showInfo} animationType="fade" transparent onRequestClose={() => setShowInfo(false)}>
@@ -101,11 +174,11 @@ export default function BookDeliveryScreen() {
           <Pressable style={styles.dialogBackdropTap} onPress={() => setShowInfo(false)} />
           <View style={styles.dialogCard}>
             <Ionicons name="gift-outline" size={36} color={theme.colors.purple} />
-            <Text style={styles.dialogTitle}>Darslik yetkazib berish nima uchun kerak?</Text>
+            <Text style={styles.dialogTitle}>Yetkazib berish xizmati nima uchun kerak?</Text>
             <Text style={styles.dialogSubtitle}>
               Kursni sotib olganingiz uchun bonus sifatida sizga Coursebook va Vocabulary Book darsliklari bepul
-              yetkazib beriladi. Qog'ozdagi kitob bilan mashq qilish darslarni yanada ko'proq va samaraliroq
-              bajarishga, bilimlaringizni mustahkamlashga yordam beradi.
+              yetkazib beriladi. Bundan tashqari, Homework Shop'dan coinlaringizga sotib olgan tovarlaringiz ham
+              shu yerda kuzatib borilishi mumkin.
             </Text>
             <Pressable style={styles.dialogBtn} onPress={() => setShowInfo(false)}>
               <Text style={styles.dialogBtnText}>Tushunarli</Text>
@@ -119,7 +192,7 @@ export default function BookDeliveryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
-  scroll: { padding: 20, paddingBottom: 40, gap: 14 },
+  scroll: { padding: 20, paddingTop: 8, paddingBottom: 40, gap: 14 },
   infoBtn: {
     width: 40,
     height: 40,
@@ -131,9 +204,26 @@ const styles = StyleSheet.create({
   },
   subtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginBottom: 2 },
 
-  bookCard: {},
-  bookHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  bookIconWrap: {
+  categoryRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
+  categoryChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+  },
+  categoryChipActive: { backgroundColor: theme.colors.purple, borderColor: theme.colors.purple },
+  categoryChipText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.textMuted },
+  categoryChipTextActive: { color: '#fff' },
+
+  empty: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 60 },
+  emptyText: { fontFamily: theme.fonts.medium, fontSize: 15, color: theme.colors.textMuted },
+
+  itemCard: {},
+  itemHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  itemIconWrap: {
     width: 52,
     height: 52,
     borderRadius: 16,
@@ -141,10 +231,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bookEmoji: { fontSize: 26 },
-  bookHeadInfo: { flex: 1 },
-  bookTitle: { fontFamily: theme.fonts.bold, fontSize: 16, color: theme.colors.text },
-  bookAddress: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  itemEmoji: { fontSize: 26 },
+  itemHeadInfo: { flex: 1 },
+  itemTitle: { fontFamily: theme.fonts.bold, fontSize: 16, color: theme.colors.text },
+  itemAddress: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  orderPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  orderPriceText: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted },
 
   deliveredBadge: {
     flexDirection: 'row',
