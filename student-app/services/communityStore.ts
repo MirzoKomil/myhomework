@@ -291,6 +291,44 @@ export function useMyIdentity(): { name: string; emoji: string; avatarUri: strin
   return { name: profileStats.name, emoji: '🙂', avatarUri };
 }
 
+export type CommunityActivity = {
+  likes: { postId: string; postText: string; likeCount: number }[];
+  comments: { postId: string; postText: string; authorName: string; authorEmoji: string; text: string }[];
+  replies: { postId: string; myCommentText: string; authorName: string; authorEmoji: string; text: string }[];
+  hasActivity: boolean;
+};
+
+export function useCommunityActivity(): CommunityActivity {
+  const posts = usePosts();
+
+  const myPosts = posts.filter((p) => p.me);
+  const likes = myPosts.map((p) => ({ postId: p.id, postText: p.text, likeCount: p.likeCount }));
+
+  const comments: CommunityActivity['comments'] = [];
+  myPosts.forEach((p) => {
+    p.comments.forEach((c) => {
+      if (!c.me) comments.push({ postId: p.id, postText: p.text, authorName: c.authorName, authorEmoji: c.authorEmoji, text: c.text });
+    });
+  });
+
+  const myCommentIds = new Set<string>();
+  posts.forEach((p) => p.comments.forEach((c) => c.me && myCommentIds.add(c.id)));
+
+  const replies: CommunityActivity['replies'] = [];
+  posts.forEach((p) => {
+    p.comments.forEach((c) => {
+      if (c.parentId && myCommentIds.has(c.parentId) && !c.me) {
+        const myComment = p.comments.find((mc) => mc.id === c.parentId);
+        replies.push({ postId: p.id, myCommentText: myComment?.text ?? '', authorName: c.authorName, authorEmoji: c.authorEmoji, text: c.text });
+      }
+    });
+  });
+
+  const hasActivity = likes.some((l) => l.likeCount > 0) || comments.length > 0 || replies.length > 0;
+
+  return { likes, comments, replies, hasActivity };
+}
+
 export function timeAgo(timestamp: number): string {
   const diffMs = Date.now() - timestamp;
   const minutes = Math.floor(diffMs / (1000 * 60));

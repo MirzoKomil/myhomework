@@ -4,11 +4,13 @@ import { useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ActivityModal } from '@/components/ActivityModal';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinPill } from '@/components/ui/CoinIcon';
+import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
 import { useAvatarUri } from '@/services/avatarStore';
-import { CommunityPost, timeAgo, toggleLikePost, usePosts } from '@/services/communityStore';
+import { CommunityPost, timeAgo, toggleLikePost, useCommunityActivity, usePosts } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
 
 type Filter = 'all' | 'popular' | 'official';
@@ -99,37 +101,7 @@ export default function CommunityScreen() {
     return posts;
   }, [posts, filter]);
 
-  const activity = useMemo(() => {
-    const myPosts = posts.filter((p) => p.me);
-    const likes = myPosts.map((p) => ({ postId: p.id, postText: p.text, likeCount: p.likeCount }));
-
-    const comments: { postId: string; postText: string; authorName: string; authorEmoji: string; text: string }[] = [];
-    myPosts.forEach((p) => {
-      p.comments.forEach((c) => {
-        if (!c.me) comments.push({ postId: p.id, postText: p.text, authorName: c.authorName, authorEmoji: c.authorEmoji, text: c.text });
-      });
-    });
-
-    const myCommentIds = new Set<string>();
-    posts.forEach((p) => p.comments.forEach((c) => c.me && myCommentIds.add(c.id)));
-
-    const replies: { postId: string; myCommentText: string; authorName: string; authorEmoji: string; text: string }[] = [];
-    posts.forEach((p) => {
-      p.comments.forEach((c) => {
-        if (c.parentId && myCommentIds.has(c.parentId) && !c.me) {
-          const myComment = p.comments.find((mc) => mc.id === c.parentId);
-          replies.push({ postId: p.id, myCommentText: myComment?.text ?? '', authorName: c.authorName, authorEmoji: c.authorEmoji, text: c.text });
-        }
-      });
-    });
-
-    return { likes, comments, replies };
-  }, [posts]);
-
-  const goToPost = (postId: string) => {
-    setShowActivity(false);
-    router.push(`/community/${postId}` as never);
-  };
+  const { hasActivity } = useCommunityActivity();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -140,7 +112,9 @@ export default function CommunityScreen() {
         <Text style={styles.headerTitle}>Hamjamiyat</Text>
         <View style={styles.headerRight}>
           <Pressable style={styles.heartBtn} onPress={() => setShowActivity(true)} hitSlop={8}>
-            <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
+            <WobbleIcon active={hasActivity}>
+              <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
+            </WobbleIcon>
           </Pressable>
           <CoinPill amount={coins} />
           <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
@@ -194,74 +168,7 @@ export default function CommunityScreen() {
         </View>
       </Modal>
 
-      <Modal visible={showActivity} animationType="slide" transparent onRequestClose={() => setShowActivity(false)}>
-        <View style={styles.actBackdrop}>
-          <Pressable style={styles.actBackdropTap} onPress={() => setShowActivity(false)} />
-          <View style={styles.actSheet}>
-            <View style={styles.actHandle} />
-            <Text style={styles.actTitle}>❤️ Faolligim</Text>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.actScroll}>
-              <Text style={styles.actSectionTitle}>Postlaringizga kelgan like'lar</Text>
-              {activity.likes.length === 0 ? (
-                <Text style={styles.actEmpty}>Hali postingiz yo'q.</Text>
-              ) : (
-                activity.likes.map((l) => (
-                  <Pressable key={l.postId} style={styles.actLikeRow} onPress={() => goToPost(l.postId)}>
-                    <Ionicons name="heart" size={16} color={theme.colors.danger} />
-                    <Text style={styles.actLikeText} numberOfLines={1}>
-                      {l.postText}
-                    </Text>
-                    <Text style={styles.actLikeCount}>{l.likeCount}</Text>
-                  </Pressable>
-                ))
-              )}
-
-              <Text style={styles.actSectionTitle}>Postlaringizga yozilgan izohlar</Text>
-              {activity.comments.length === 0 ? (
-                <Text style={styles.actEmpty}>Hali izoh yo'q.</Text>
-              ) : (
-                activity.comments.map((c, i) => (
-                  <Pressable key={i} style={styles.actCommentRow} onPress={() => goToPost(c.postId)}>
-                    <Text style={styles.actCommentAuthor}>
-                      {c.authorEmoji} {c.authorName}
-                    </Text>
-                    <Text style={styles.actCommentText} numberOfLines={2}>
-                      {c.text}
-                    </Text>
-                    <Text style={styles.actCommentMeta} numberOfLines={1}>
-                      Postingizga: "{c.postText}"
-                    </Text>
-                  </Pressable>
-                ))
-              )}
-
-              <Text style={styles.actSectionTitle}>Izohlaringizga javoblar</Text>
-              {activity.replies.length === 0 ? (
-                <Text style={styles.actEmpty}>Hali javob yo'q.</Text>
-              ) : (
-                activity.replies.map((r, i) => (
-                  <Pressable key={i} style={styles.actCommentRow} onPress={() => goToPost(r.postId)}>
-                    <Text style={styles.actCommentAuthor}>
-                      {r.authorEmoji} {r.authorName}
-                    </Text>
-                    <Text style={styles.actCommentText} numberOfLines={2}>
-                      {r.text}
-                    </Text>
-                    <Text style={styles.actCommentMeta} numberOfLines={1}>
-                      Izohingizga: "{r.myCommentText}"
-                    </Text>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-
-            <Pressable style={styles.actCloseBtn} onPress={() => setShowActivity(false)}>
-              <Text style={styles.actCloseBtnText}>Yopish</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <ActivityModal visible={showActivity} onClose={() => setShowActivity(false)} />
     </SafeAreaView>
   );
 }
@@ -398,50 +305,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dialogBtnText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff' },
-
-  actBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  actBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  actSheet: {
-    backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-    paddingTop: 10,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  actHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.border, alignSelf: 'center', marginBottom: 12 },
-  actTitle: { fontFamily: theme.fonts.extraBold, fontSize: 18, color: theme.colors.text, marginBottom: 12 },
-  actScroll: { paddingBottom: 8 },
-  actSectionTitle: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.textMuted, marginBottom: 8, marginTop: 12 },
-  actEmpty: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textLight, marginBottom: 4 },
-  actLikeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.sm,
-    padding: 12,
-    marginBottom: 8,
-  },
-  actLikeText: { flex: 1, fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.text },
-  actLikeCount: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.danger },
-  actCommentRow: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.sm,
-    padding: 12,
-    marginBottom: 8,
-    gap: 3,
-  },
-  actCommentAuthor: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.text },
-  actCommentText: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.text, lineHeight: 18 },
-  actCommentMeta: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textLight, marginTop: 2 },
-  actCloseBtn: {
-    backgroundColor: theme.colors.purple,
-    borderRadius: theme.radius.sm,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  actCloseBtnText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff' },
 });

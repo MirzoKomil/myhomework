@@ -9,13 +9,11 @@ import { LessonReminder } from '@/components/ui/LessonReminder';
 import { ShopEntryCard } from '@/components/ui/ShopEntryCard';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
-import { appNotifications, chatThreads, courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
-import { getLastMessage } from '@/services/chatStore';
+import { appNotifications, courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
 import { fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
 
 const hasUnreadNotifications = appNotifications.some((n) => n.unread);
-const hasUnreadMessages = chatThreads.some((t) => getLastMessage(t.id)?.from === 'them');
 
 export default function HomeScreen() {
   const activeCourse = courses[0];
@@ -23,7 +21,6 @@ export default function HomeScreen() {
 
   const waveAnim = useRef(new Animated.Value(0)).current;
   const bellShake = useRef(new Animated.Value(0)).current;
-  const messageShake = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -46,20 +43,6 @@ export default function HomeScreen() {
     loop.start();
     return () => loop.stop();
   }, [bellShake]);
-
-  useEffect(() => {
-    if (!hasUnreadMessages) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(700),
-        Animated.timing(messageShake, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(messageShake, { toValue: 0, duration: 0, useNativeDriver: true }),
-        Animated.delay(3700),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [messageShake]);
 
   const waveRotate = waveAnim.interpolate({
     inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],
@@ -97,12 +80,6 @@ export default function HomeScreen() {
           </Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable style={styles.iconBtn} onPress={() => router.push('/messages' as never)}>
-            <Animated.View style={{ transform: [{ rotate: shakeRotate(messageShake) }] }}>
-              <Ionicons name="chatbubble-ellipses-outline" size={24} color={theme.colors.tabInactive} />
-            </Animated.View>
-            {hasUnreadMessages && <View style={styles.badgeDot} />}
-          </Pressable>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>
             <Animated.View style={{ transform: [{ rotate: shakeRotate(bellShake) }] }}>
               <Ionicons name="notifications-outline" size={24} color={theme.colors.tabInactive} />

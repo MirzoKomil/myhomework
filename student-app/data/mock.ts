@@ -1,3 +1,5 @@
+import type { ImageSourcePropType } from 'react-native';
+
 export type Course = {
   id: string;
   title: string;
@@ -429,13 +431,14 @@ export const bookDeliveries: BookDelivery[] = [
   },
 ];
 
-export type PersonaCategory = 'general' | 'business' | 'sports' | 'politics' | 'film' | 'medicine';
+export type PersonaCategory = 'general' | 'business' | 'sports' | 'politics' | 'film' | 'medicine' | 'science';
 
 export type CelebrityPersona = {
   id: string;
   name: string;
   category: PersonaCategory;
   emoji: string;
+  avatarImage: ImageSourcePropType;
   colors: [string, string];
   intro: string;
 };
@@ -447,30 +450,16 @@ export const PERSONA_CATEGORY_LABELS: Record<PersonaCategory, string> = {
   politics: 'Politics',
   film: 'Film & Movies',
   medicine: 'Medicine',
+  science: 'Science',
 };
 
 export const celebrityPersonas: CelebrityPersona[] = [
-  {
-    id: 'homework-bot',
-    name: 'Homework Bot',
-    category: 'general',
-    emoji: '🤖',
-    colors: ['#6FA8FF', '#4F8CFF'],
-    intro: "Hi there! I'm Homework Bot. Ask me anything about English, or just practice chatting with me!",
-  },
-  {
-    id: 'shumboma',
-    name: 'Shumboma',
-    category: 'general',
-    emoji: '🎭',
-    colors: ['#F472B6', '#DB4E93'],
-    intro: "Hey! I'm Shumboma, always up for a fun chat. What's on your mind today?",
-  },
   {
     id: 'elon-musk',
     name: 'Elon Musk',
     category: 'business',
     emoji: '🚀',
+    avatarImage: require('@/assets/images/personas/elon-musk.png'),
     colors: ['#9B7BFF', '#6B4FE0'],
     intro: "Hey, let's talk business, technology, or rockets. What do you want to know?",
   },
@@ -479,6 +468,7 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Mark Zuckerberg',
     category: 'business',
     emoji: '💻',
+    avatarImage: require('@/assets/images/personas/mark-zuckerberg.png'),
     colors: ['#4F8CFF', '#3A6FE0'],
     intro: "Hi! Let's chat about building companies, technology, and connecting people.",
   },
@@ -487,6 +477,7 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Lionel Messi',
     category: 'sports',
     emoji: '⚽',
+    avatarImage: require('@/assets/images/personas/messi.png'),
     colors: ['#6FCF97', '#34D399'],
     intro: "Hola! Let's talk football, training, and what it takes to become a champion.",
   },
@@ -495,6 +486,7 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Cristiano Ronaldo',
     category: 'sports',
     emoji: '🏆',
+    avatarImage: require('@/assets/images/personas/ronaldo.png'),
     colors: ['#34D399', '#1FA97D'],
     intro: "Hey! Ask me about football, discipline, and staying at the top of your game.",
   },
@@ -503,6 +495,7 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Benjamin Franklin',
     category: 'politics',
     emoji: '🦅',
+    avatarImage: require('@/assets/images/personas/franklin.png'),
     colors: ['#FBBF24', '#D97706'],
     intro: "Good day! Let's discuss politics, invention, and the wisdom of hard work.",
   },
@@ -511,6 +504,7 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Queen Elizabeth II',
     category: 'politics',
     emoji: '👑',
+    avatarImage: require('@/assets/images/personas/queen-elizabeth.png'),
     colors: ['#A78BFA', '#7C3AED'],
     intro: "Good afternoon. I would be delighted to talk about leadership, duty, and history.",
   },
@@ -519,6 +513,7 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Leonardo DiCaprio',
     category: 'film',
     emoji: '🎬',
+    avatarImage: require('@/assets/images/personas/dicaprio.png'),
     colors: ['#F87171', '#DF4F4F'],
     intro: "Hey, let's talk about acting, storytelling, and the movie industry.",
   },
@@ -527,6 +522,7 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Angelina Jolie',
     category: 'film',
     emoji: '🎥',
+    avatarImage: require('@/assets/images/personas/jolie.png'),
     colors: ['#F472B6', '#EC4899'],
     intro: "Hi! I'd love to chat about film, humanitarian work, and following your passions.",
   },
@@ -535,8 +531,18 @@ export const celebrityPersonas: CelebrityPersona[] = [
     name: 'Dr. House',
     category: 'medicine',
     emoji: '🩺',
+    avatarImage: require('@/assets/images/personas/dr-house.png'),
     colors: ['#4B5563', '#1F2937'],
     intro: "Everybody lies. But let's talk medicine anyway — what's your question?",
+  },
+  {
+    id: 'einstein',
+    name: 'Albert Einstein',
+    category: 'science',
+    emoji: '🧠',
+    avatarImage: require('@/assets/images/personas/einstein.png'),
+    colors: ['#A78BFA', '#7C3AED'],
+    intro: "Hello! Let's talk about science, curiosity, and how imagination shapes discovery.",
   },
 ];
 

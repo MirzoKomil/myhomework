@@ -55,9 +55,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="ai"
+        name="messages"
         options={{
-          tabBarIcon: ({ color, focused }) => <TabIcon name="sparkles" color={color} focused={focused} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="chatbubbles" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -69,7 +69,6 @@ export default function TabLayout() {
       <Tabs.Screen name="radio" options={{ href: null }} />
       <Tabs.Screen name="translator" options={{ href: null }} />
       <Tabs.Screen name="battle" options={{ href: null }} />
-      <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="shop" options={{ href: null }} />
       <Tabs.Screen name="community" options={{ href: null }} />
