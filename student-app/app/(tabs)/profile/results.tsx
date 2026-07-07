@@ -18,6 +18,8 @@ import { useOrders } from '@/services/shopStore';
 
 type StatItem = { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; bg: string; color: string };
 
+const BONUS_TOTAL = 18;
+
 function StatGrid({ stats }: { stats: StatItem[] }) {
   return (
     <View style={styles.grid}>
@@ -122,12 +124,12 @@ export default function ResultsScreen() {
           <View style={styles.bonusHeadRow}>
             <Text style={styles.bonusTitle}>Bonus (Yakshanba) darslar</Text>
             <Text style={styles.bonusCount}>
-              {bonusAttended}/{bonusDaysPast.length}
+              {bonusAttended}/{BONUS_TOTAL}
             </Text>
           </View>
-          <ProgressBar progress={bonusDaysPast.length ? (bonusAttended / bonusDaysPast.length) * 100 : 0} color={theme.colors.warning} />
+          <ProgressBar progress={(bonusAttended / BONUS_TOTAL) * 100} color={theme.colors.warning} />
           <Text style={styles.bonusHint}>
-            90 kunlik dasturda jami {bonusDays.length} ta bonus dars rejalashtirilgan, hozirgacha {bonusDaysPast.length} tasi o'tdi.
+            Kurs davomida jami {BONUS_TOTAL} ta yakshanba bonus dars rejalashtirilgan, hozirgacha {bonusDaysPast.length} tasi o'tdi.
           </Text>
         </View>
 
