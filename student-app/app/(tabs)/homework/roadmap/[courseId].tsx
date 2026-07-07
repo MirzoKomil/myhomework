@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Modal,
   Pressable,
   ScrollView,
@@ -63,31 +65,25 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
   const percent = possibleCoins > 0 ? Math.min(100, Math.round((earnedCoins / possibleCoins) * 100)) : 0;
   const isCompleted = !lesson.locked && percent >= 100;
 
+  const glowSpin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!isActive) return;
+    const loop = Animated.loop(Animated.timing(glowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, [isActive, glowSpin]);
+  const glowRotate = glowSpin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
   const cardBorderColor = lesson.type === 'bonus' && !lesson.locked
     ? '#F59E0B'
-    : isActive
-      ? theme.colors.purple
-      : isCompleted
-        ? theme.colors.success
-        : theme.colors.border;
+    : isCompleted
+      ? theme.colors.success
+      : theme.colors.border;
 
-  const cardBg = lesson.type === 'bonus' && !lesson.locked
-    ? '#FFFBEB'
-    : isActive
-      ? '#F5F3FF'
-      : theme.colors.surface;
+  const cardBg = lesson.type === 'bonus' && !lesson.locked ? '#FFFBEB' : theme.colors.surface;
 
-  return (
-    <Pressable
-      disabled={lesson.locked}
-      onPress={() => router.push(`/homework/lesson/${lesson.id}`)}
-      style={[
-        ss.card,
-        { borderColor: cardBorderColor, backgroundColor: cardBg },
-        lesson.locked && ss.cardLocked,
-      ]}
-    >
-      {/* Type badge */}
+  const cardBody = (
+    <>
       <TypeBadge type={lesson.type} />
 
       <View style={ss.cardBody}>
@@ -149,6 +145,42 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
         )}
       </View>
+    </>
+  );
+
+  if (isActive) {
+    return (
+      <View style={ss.activeGlowWrap}>
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: glowRotate }] }]}>
+          <LinearGradient
+            colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        <View style={ss.activeBadge}>
+          <Ionicons name="flash" size={11} color="#fff" />
+          <Text style={ss.activeBadgeText}>Joriy dars</Text>
+        </View>
+        <Pressable onPress={() => router.push(`/homework/lesson/${lesson.id}`)} style={ss.activeGlowInner}>
+          {cardBody}
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      disabled={lesson.locked}
+      onPress={() => router.push(`/homework/lesson/${lesson.id}`)}
+      style={[
+        ss.card,
+        { borderColor: cardBorderColor, backgroundColor: cardBg },
+        lesson.locked && ss.cardLocked,
+      ]}
+    >
+      {cardBody}
     </Pressable>
   );
 }
@@ -260,7 +292,9 @@ export default function RoadmapScreen() {
     }).finally(() => setLoading(false));
   }, [courseId]);
 
-  const activeIndex = lessons.findIndex((l) => !l.locked && l.progress < 100);
+  // Joriy dars — ochilgan darslarning eng oxirgisi (frontier), progress darajasidan qat'i nazar.
+  const unlockedCount = lessons.filter((l) => !l.locked).length;
+  const activeIndex = unlockedCount - 1;
   const total = lessons.length;
 
   if (loading) {
@@ -495,6 +529,32 @@ const ss = StyleSheet.create({
   cardLocked: {
     opacity: 0.65,
   },
+  activeGlowWrap: {
+    borderRadius: 22,
+    padding: 2,
+    overflow: 'hidden',
+    ...theme.shadow.card,
+  },
+  activeGlowInner: {
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    padding: 14,
+  },
+  activeBadge: {
+    position: 'absolute',
+    top: -10,
+    right: 16,
+    zIndex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.purple,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    ...theme.shadow.card,
+  },
+  activeBadgeText: { fontFamily: theme.fonts.bold, fontSize: 11, color: '#fff' },
   cardBody: {
     flexDirection: 'row',
     alignItems: 'center',
