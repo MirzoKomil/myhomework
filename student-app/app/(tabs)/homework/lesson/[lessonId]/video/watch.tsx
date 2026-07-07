@@ -20,6 +20,7 @@ const MOCK_COMMENTS: Comment[] = [
 
 export default function WatchVideoScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  const isBonus = String(lessonId).startsWith('bonus-');
   const [content, setContent] = useState(() => getLessonContent(String(lessonId), 0));
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
@@ -48,13 +49,19 @@ export default function WatchVideoScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={28} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>Video dars</Text>
+        <Text style={styles.topTitle}>{isBonus ? 'Bonus dars' : 'Video dars'}</Text>
         <View style={{ width: 28 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.videoPlaceholder}>
-          <View style={styles.playBtn}>
+        {isBonus && (
+          <View style={styles.bonusBadge}>
+            <Text style={styles.bonusBadgeText}>🎁 Yakshanba bonus darsi</Text>
+          </View>
+        )}
+
+        <View style={[styles.videoPlaceholder, isBonus && styles.videoPlaceholderBonus]}>
+          <View style={[styles.playBtn, isBonus && styles.playBtnBonus]}>
             <Ionicons name="play" size={36} color="#fff" />
           </View>
           <Text style={styles.videoDuration}>12:08</Text>
@@ -138,6 +145,15 @@ const styles = StyleSheet.create({
   },
   topTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text },
   scroll: { padding: 20, paddingBottom: 100 },
+  bonusBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginBottom: 14,
+  },
+  bonusBadgeText: { fontFamily: theme.fonts.bold, fontSize: 12, color: '#B45309' },
   videoPlaceholder: {
     height: 200,
     backgroundColor: theme.colors.text,
@@ -146,6 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
+  videoPlaceholderBonus: { backgroundColor: '#B45309' },
   playBtn: {
     width: 64,
     height: 64,
@@ -154,6 +171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  playBtnBonus: { backgroundColor: 'rgba(255,255,255,0.3)' },
   videoDuration: { fontFamily: theme.fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 8 },
   unitTitle: { flex: 1, fontFamily: theme.fonts.extraBold, fontSize: 20, color: theme.colors.text },

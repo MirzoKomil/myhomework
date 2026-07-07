@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 
-export type LessonDayType = 'grammar' | 'speaking';
+export type LessonDayType = 'grammar' | 'speaking' | 'bonus';
 
 export type VocabWord = {
   id: string;
@@ -257,8 +257,50 @@ function buildSpeakingHomework(offset: number): HomeworkPart[] {
   ];
 }
 
+// ─── Bonus (Yakshanba) darslar — 6 kategoriya, 3 marta takrorlanadi = 18 dars ──
+export type BonusCategory = { key: string; label: string; emoji: string; color: string; bg: string; konspekt: string };
+
+export const BONUS_CATEGORIES: BonusCategory[] = [
+  { key: 'movie', label: 'Kino tahlil', emoji: '🎬', color: '#DC2626', bg: '#FEE2E2', konspekt: "Ushbu darsda qisqa video parcha ingliz tilida tahlil qilinadi — muhim iboralar va so'zlashuv uslubi o'rganiladi." },
+  { key: 'music', label: 'Musiqiy dars', emoji: '🎵', color: '#7C3AED', bg: '#EDE9FE', konspekt: "Ashula matni orqali yangi so'zlar va to'g'ri talaffuz mashq qilinadi." },
+  { key: 'motivation', label: 'Motivatsion dars', emoji: '🌟', color: '#D97706', bg: '#FEF3C7', konspekt: "Shaxsiy rivojlanish va motivatsiya mavzusida ingliz tilida qisqa video ko'rib chiqiladi." },
+  { key: 'quiz', label: "Intellektual o'yin", emoji: '🧠', color: '#2563EB', bg: '#DBEAFE', konspekt: "Quiz Night — bilimlaringizni ingliz tilida sinab ko'ring." },
+  { key: 'slang', label: "Ko'cha ingliz tili", emoji: '🗣️', color: '#059669', bg: '#D1FAE5', konspekt: "Kundalik hayotda ishlatiladigan so'zlashuv iboralari va slenglar o'rganiladi." },
+  { key: 'roleplay', label: 'Hayotiy vaziyat', emoji: '🎭', color: '#DB2777', bg: '#FCE7F3', konspekt: "Hayotiy vaziyatlar simulyatsiyasi orqali amaliy ingliz tili mashq qilinadi." },
+];
+
+function buildBonusHomework(offset: number): HomeworkPart[] {
+  return [
+    { id: 'A', kind: 'matching', title: 'PART A — Matching', pairs: pickWindow(MATCH_POOL, offset, 6) },
+    { id: 'B', kind: 'multipleChoice', title: 'PART B — Multiple choice', questions: pickWindow(MC_POOL, offset, 5) },
+    { id: 'C', kind: 'sentenceBuild', title: 'PART C — Sentence building', items: pickWindow(SENTENCE_POOL, offset, 4) },
+  ];
+}
+
+export function getBonusLessonContent(bonusIndex: number): LessonContent {
+  const category = BONUS_CATEGORIES[bonusIndex % BONUS_CATEGORIES.length];
+  const round = Math.floor(bonusIndex / BONUS_CATEGORIES.length) + 1;
+  const offset = hashId(`bonus-${bonusIndex}`);
+  return {
+    lessonId: `bonus-${bonusIndex + 1}`,
+    dayType: 'bonus',
+    unitTitle: `${category.emoji} ${category.label}`,
+    konspekt: category.konspekt,
+    slides: [],
+    vocabulary: pickWindow(VOCAB_POOL, offset, 10),
+    grammarBlanks: [],
+    speakingPractice: [],
+    homeworkParts: buildBonusHomework(offset),
+  };
+}
+
 // ─── Main entry point ───────────────────────────────────────────────────────
 export function getLessonContent(lessonId: string, dayIndex: number): LessonContent {
+  if (lessonId.startsWith('bonus-')) {
+    const bonusIndex = Math.max(0, parseInt(lessonId.replace('bonus-', ''), 10) - 1);
+    return getBonusLessonContent(bonusIndex);
+  }
+
   const dayType: LessonDayType = dayIndex % 2 === 0 ? 'grammar' : 'speaking';
   const offset = hashId(lessonId);
 

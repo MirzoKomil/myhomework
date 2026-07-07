@@ -1,45 +1,44 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { BONUS_CATEGORIES } from '@/data/lessonContent';
+import { getCategoryProgress, getLessonProgress, subscribe } from '@/services/lessonProgressStore';
 
-const BONUS_LESSONS = [
-  { id: 'b1', title: 'Bonus dars 1 — Kundalik suhbat', date: 'Yakshanba, 12.07', duration: '18 daq' },
-  { id: 'b2', title: 'Bonus dars 2 — Grammatika mashqi', date: 'Yakshanba, 19.07', duration: '22 daq' },
-  { id: 'b3', title: 'Bonus dars 3 — Talaffuz sirlari', date: 'Yakshanba, 26.07', duration: '15 daq' },
-  { id: 'b4', title: 'Bonus dars 4 — Idiomalar', date: 'Yakshanba, 02.08', duration: '20 daq' },
-  { id: 'b5', title: 'Bonus dars 5 — Amerika slangi', date: 'Yakshanba, 09.08', duration: '17 daq' },
-  { id: 'b6', title: 'Bonus dars 6 — Ish suhbati', date: 'Yakshanba, 16.08', duration: '21 daq' },
-  { id: 'b7', title: 'Bonus dars 7 — Sayohat iboralari', date: 'Yakshanba, 23.08', duration: '19 daq' },
-  { id: 'b8', title: 'Bonus dars 8 — Telefon orqali gaplashish', date: 'Yakshanba, 30.08', duration: '16 daq' },
-  { id: 'b9', title: 'Bonus dars 9 — Restoranda buyurtma', date: 'Yakshanba, 06.09', duration: '18 daq' },
-  { id: 'b10', title: 'Bonus dars 10 — Ijtimoiy tarmoqlar tili', date: 'Yakshanba, 13.09', duration: '20 daq' },
-  { id: 'b11', title: 'Bonus dars 11 — Filmlardan iboralar', date: 'Yakshanba, 20.09', duration: '23 daq' },
-  { id: 'b12', title: 'Bonus dars 12 — Yangiliklarni tinglash', date: 'Yakshanba, 27.09', duration: '22 daq' },
-  { id: 'b13', title: 'Bonus dars 13 — Debat mashqlari', date: 'Yakshanba, 04.10', duration: '25 daq' },
-  { id: 'b14', title: 'Bonus dars 14 — Hikoya aytish', date: 'Yakshanba, 11.10', duration: '20 daq' },
-  { id: 'b15', title: 'Bonus dars 15 — Prezentatsiya mahorati', date: 'Yakshanba, 18.10', duration: '24 daq' },
-  { id: 'b16', title: "Bonus dars 16 — Muzokara san'ati", date: 'Yakshanba, 25.10', duration: '21 daq' },
-  { id: 'b17', title: 'Bonus dars 17 — Kundalik yozish', date: 'Yakshanba, 01.11', duration: '18 daq' },
-  { id: 'b18', title: 'Bonus dars 18 — Yakuniy takrorlash', date: 'Yakshanba, 08.11', duration: '26 daq' },
-];
-
+const TOTAL = 18;
 const UNLOCKED_COUNT = 1;
+const BONUS_HOMEWORK_PARTS = 3;
+
+const BONUS_LESSONS = Array.from({ length: TOTAL }, (_, i) => ({
+  id: `bonus-${i + 1}`,
+  category: BONUS_CATEGORIES[i % BONUS_CATEGORIES.length],
+  round: Math.floor(i / BONUS_CATEGORIES.length) + 1,
+}));
+
+function overallProgress(bonusId: string): number {
+  const video = getLessonProgress(bonusId).videoWatch ? 100 : 0;
+  const vocab = getCategoryProgress(bonusId, 'vocabulary');
+  const homework = getCategoryProgress(bonusId, 'homework', BONUS_HOMEWORK_PARTS);
+  return Math.round((video + vocab + homework) / 3);
+}
 
 export default function BonusLessonsScreen() {
-  const [dialogLesson, setDialogLesson] = useState<(typeof BONUS_LESSONS)[number] | null>(null);
+  const [, forceUpdate] = useState(0);
   const [showLockedNotice, setShowLockedNotice] = useState(false);
+
+  useEffect(() => subscribe(() => forceUpdate((n) => n + 1)), []);
 
   const openLesson = (lesson: (typeof BONUS_LESSONS)[number], locked: boolean) => {
     if (locked) {
       setShowLockedNotice(true);
       return;
     }
-    setDialogLesson(lesson);
+    router.push(`/homework/bonusLesson/${lesson.id}` as never);
   };
 
   return (
@@ -49,40 +48,41 @@ export default function BonusLessonsScreen() {
         <Text style={styles.subtitle}>Har yakshanba kuni beriladigan qo'shimcha video darslar to'plami</Text>
         {BONUS_LESSONS.map((lesson, index) => {
           const locked = index >= UNLOCKED_COUNT;
+          const pct = locked ? 0 : overallProgress(lesson.id);
           return (
             <Pressable key={lesson.id} onPress={() => openLesson(lesson, locked)}>
               <Card style={locked ? styles.cardLocked : styles.card}>
-                <View style={[styles.iconWrap, locked && styles.iconWrapLocked]}>
-                  <Ionicons name={locked ? 'lock-closed' : 'play-circle'} size={locked ? 20 : 26} color={locked ? theme.colors.textLight : '#D97706'} />
+                <View style={styles.row}>
+                  <View style={[styles.iconWrap, locked && styles.iconWrapLocked, !locked && { backgroundColor: lesson.category.bg }]}>
+                    {locked ? (
+                      <Ionicons name="lock-closed" size={20} color={theme.colors.textLight} />
+                    ) : (
+                      <Text style={styles.iconEmoji}>{lesson.category.emoji}</Text>
+                    )}
+                  </View>
+                  <View style={styles.info}>
+                    <Text style={[styles.title, locked && styles.titleLocked]}>
+                      Bonus dars {index + 1} — {lesson.category.label}
+                    </Text>
+                    <Text style={styles.meta}>
+                      {locked ? 'Hali ochilmagan' : `${lesson.round}-bosqich`}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
                 </View>
-                <View style={styles.info}>
-                  <Text style={[styles.title, locked && styles.titleLocked]}>{lesson.title}</Text>
-                  <Text style={styles.meta}>{locked ? 'Hali ochilmagan' : `${lesson.date} · ${lesson.duration}`}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
+                {!locked && (
+                  <View style={styles.progressRow}>
+                    <View style={styles.progressBarBg}>
+                      <View style={[styles.progressBarFill, { width: `${pct}%`, backgroundColor: lesson.category.color }]} />
+                    </View>
+                    <Text style={[styles.pctText, { color: lesson.category.color }]}>{pct}%</Text>
+                  </View>
+                )}
               </Card>
             </Pressable>
           );
         })}
       </ScrollView>
-
-      <Modal visible={dialogLesson !== null} animationType="fade" transparent onRequestClose={() => setDialogLesson(null)}>
-        <View style={styles.dialogBackdrop}>
-          <Pressable style={styles.dialogBackdropTap} onPress={() => setDialogLesson(null)} />
-          {dialogLesson && (
-            <View style={styles.dialogCard}>
-              <View style={styles.dialogIconWrap}>
-                <Ionicons name="play-circle" size={30} color="#D97706" />
-              </View>
-              <Text style={styles.dialogTitle}>{dialogLesson.title}</Text>
-              <Text style={styles.dialogSubtitle}>Video tez orada qo'shiladi</Text>
-              <Pressable style={styles.dialogConfirmBtn} onPress={() => setDialogLesson(null)}>
-                <Text style={styles.dialogConfirmText}>Tushunarli</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-      </Modal>
 
       <Modal visible={showLockedNotice} animationType="fade" transparent onRequestClose={() => setShowLockedNotice(false)}>
         <View style={styles.dialogBackdrop}>
@@ -107,14 +107,20 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   scroll: { padding: 20, paddingBottom: 32, gap: 12 },
   subtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginBottom: 4, lineHeight: 19 },
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  cardLocked: { flexDirection: 'row', alignItems: 'center', gap: 14, opacity: 0.6 },
+  card: {},
+  cardLocked: { opacity: 0.6 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   iconWrap: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' },
   iconWrapLocked: { backgroundColor: theme.colors.bg },
+  iconEmoji: { fontSize: 22 },
   info: { flex: 1 },
   title: { fontFamily: theme.fonts.semiBold, fontSize: 15, color: theme.colors.text },
   titleLocked: { color: theme.colors.textMuted },
   meta: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  progressBarBg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: theme.colors.border },
+  progressBarFill: { height: 5, borderRadius: 3 },
+  pctText: { fontFamily: theme.fonts.bold, fontSize: 12, minWidth: 32, textAlign: 'right' },
 
   dialogBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   dialogBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
