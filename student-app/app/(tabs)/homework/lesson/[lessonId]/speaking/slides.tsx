@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
 import { getLessonContent } from '@/data/lessonContent';
 import { markDone } from '@/services/lessonProgressStore';
@@ -41,6 +42,7 @@ export default function SlidesScreen() {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
   const [draft, setDraft] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
   const submitComment = () => {
     const text = draft.trim();
@@ -144,12 +146,16 @@ export default function SlidesScreen() {
             <ScrollView contentContainerStyle={styles.commentsList} showsVerticalScrollIndicator={false}>
               {comments.map((c) => (
                 <View key={c.id} style={styles.commentRow}>
-                  <View style={[styles.commentAvatar, c.me && styles.commentAvatarMe]}>
-                    <Text style={styles.commentAvatarText}>{c.name.charAt(0)}</Text>
-                  </View>
+                  <Pressable onPress={() => !c.me && setSelectedStudent(c.name)}>
+                    <View style={[styles.commentAvatar, c.me && styles.commentAvatarMe]}>
+                      <Text style={styles.commentAvatarText}>{c.name.charAt(0)}</Text>
+                    </View>
+                  </Pressable>
                   <View style={styles.commentBody}>
                     <View style={styles.commentHeaderRow}>
-                      <Text style={styles.commentName}>{c.name}</Text>
+                      <Pressable onPress={() => !c.me && setSelectedStudent(c.name)}>
+                        <Text style={styles.commentName}>{c.name}</Text>
+                      </Pressable>
                       <Text style={styles.commentTime}>{c.time}</Text>
                     </View>
                     <Text style={styles.commentText}>{c.text}</Text>
@@ -172,6 +178,8 @@ export default function SlidesScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
     </SafeAreaView>
   );
 }

@@ -8,6 +8,8 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { ChatMessage, chatThreads } from '@/data/mock';
 import { addMessage, getMessages, subscribe } from '@/services/chatStore';
+import { getStudentProfile } from '@/data/studentProfiles';
+import { getThread, sendMessage, subscribe as subscribeStudentChat } from '@/services/studentChatStore';
 
 function nowTime() {
   const d = new Date();
@@ -16,13 +18,47 @@ function nowTime() {
 
 export default function ChatScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
+  const isStudentChat = typeof chatId === 'string' && chatId.startsWith('student-');
+  const studentProfileId = isStudentChat ? chatId.replace(/^student-/, '') : null;
+
   const thread = chatThreads.find((t) => t.id === chatId);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => (chatId ? getMessages(chatId) : []));
+  const [messages, setMessages] = useState<ChatMessage[]>(() => (chatId && !isStudentChat ? getMessages(chatId) : []));
 
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId || isStudentChat) return;
     return subscribe(() => setMessages(getMessages(chatId)));
-  }, [chatId]);
+  }, [chatId, isStudentChat]);
+
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    if (!isStudentChat) return;
+    return subscribeStudentChat(() => forceUpdate((n) => n + 1));
+  }, [isStudentChat]);
+
+  if (isStudentChat && studentProfileId) {
+    const studentThread = getThread(studentProfileId);
+    const profile = getStudentProfile(studentThread?.name ?? studentProfileId.replace(/-/g, ' '));
+    const studentMessages: ChatMessage[] = (studentThread?.messages ?? []).map((m) => ({
+      id: m.id,
+      chatId: chatId as string,
+      from: m.from,
+      type: 'text',
+      text: m.text,
+      time: m.time,
+    }));
+
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <ScreenHeader title={studentThread?.name ?? profile.name} showBack />
+        <ChatThreadView
+          messages={studentMessages}
+          onSendText={(text) => sendMessage(profile, text)}
+          onSendImage={() => {}}
+          onSendVoice={() => {}}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (!thread || !chatId) {
     return (

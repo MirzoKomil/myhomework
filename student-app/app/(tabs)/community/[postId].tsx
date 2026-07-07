@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
 import {
   CommunityComment,
@@ -30,18 +31,24 @@ function CommentRow({
   comment,
   isReply,
   onReply,
+  onAuthorPress,
 }: {
   comment: CommunityComment;
   isReply?: boolean;
   onReply?: (comment: CommunityComment) => void;
+  onAuthorPress: (name: string) => void;
 }) {
   return (
     <View style={[styles.commentRow, isReply && styles.replyRow]}>
-      <View style={styles.commentAvatar}>
-        <Text style={styles.commentAvatarEmoji}>{comment.authorEmoji}</Text>
-      </View>
+      <Pressable onPress={() => !comment.me && onAuthorPress(comment.authorName)}>
+        <View style={styles.commentAvatar}>
+          <Text style={styles.commentAvatarEmoji}>{comment.authorEmoji}</Text>
+        </View>
+      </Pressable>
       <View style={styles.commentBody}>
-        <Text style={styles.commentName}>{comment.authorName}</Text>
+        <Pressable onPress={() => !comment.me && onAuthorPress(comment.authorName)} hitSlop={4}>
+          <Text style={styles.commentName}>{comment.authorName}</Text>
+        </Pressable>
         <Text style={styles.commentTime}>{timeAgo(comment.createdAt)}</Text>
         <Text style={styles.commentText}>{comment.text}</Text>
         <View style={styles.commentActions}>
@@ -71,6 +78,7 @@ export default function PostDetailScreen() {
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<CommunityComment | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
   if (!post) {
     return (
@@ -130,7 +138,9 @@ export default function PostDetailScreen() {
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.postHeader}>
+          <Pressable
+            style={styles.postHeader}
+            onPress={() => !post.me && setSelectedStudent(post.authorName)}>
             <View style={styles.avatar}>
               <Text style={styles.avatarEmoji}>{post.authorEmoji}</Text>
             </View>
@@ -138,7 +148,7 @@ export default function PostDetailScreen() {
               <Text style={styles.authorName}>{post.authorName}</Text>
               <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
             </View>
-          </View>
+          </Pressable>
 
           <Text style={styles.postText}>{post.text}</Text>
           {post.imageUri && <Image source={{ uri: post.imageUri }} style={styles.postImage} />}
@@ -171,7 +181,7 @@ export default function PostDetailScreen() {
             const isExpanded = expandedReplies.has(comment.id);
             return (
               <View key={comment.id}>
-                <CommentRow comment={comment} onReply={setReplyTo} />
+                <CommentRow comment={comment} onReply={setReplyTo} onAuthorPress={setSelectedStudent} />
                 {replies.length > 0 && (
                   <Pressable style={styles.toggleRepliesBtn} onPress={() => toggleReplies(comment.id)}>
                     <Text style={styles.toggleRepliesText}>
@@ -179,7 +189,10 @@ export default function PostDetailScreen() {
                     </Text>
                   </Pressable>
                 )}
-                {isExpanded && replies.map((reply) => <CommentRow key={reply.id} comment={reply} isReply />)}
+                {isExpanded &&
+                  replies.map((reply) => (
+                    <CommentRow key={reply.id} comment={reply} isReply onAuthorPress={setSelectedStudent} />
+                  ))}
               </View>
             );
           })}
@@ -211,6 +224,8 @@ export default function PostDetailScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
     </SafeAreaView>
   );
 }

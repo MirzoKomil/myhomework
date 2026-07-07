@@ -4,16 +4,23 @@ import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { CommunityPost, timeAgo, toggleLikePost, usePosts } from '@/services/communityStore';
 
-function PostCard({ post }: { post: CommunityPost }) {
+function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress: (name: string) => void }) {
   const commentCount = post.comments.length;
 
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/community/${post.id}` as never)}>
-      <View style={styles.cardHeader}>
+      <Pressable
+        style={styles.cardHeader}
+        onPress={(e) => {
+          if (post.me) return;
+          e.stopPropagation();
+          onAuthorPress(post.authorName);
+        }}>
         <View style={styles.avatar}>
           <Text style={styles.avatarEmoji}>{post.authorEmoji}</Text>
         </View>
@@ -21,7 +28,7 @@ function PostCard({ post }: { post: CommunityPost }) {
           <Text style={styles.authorName}>{post.authorName}</Text>
           <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
         </View>
-      </View>
+      </Pressable>
 
       <Text style={styles.postText} numberOfLines={6}>
         {post.text}
@@ -54,6 +61,7 @@ function PostCard({ post }: { post: CommunityPost }) {
 export default function CommunityScreen() {
   const posts = usePosts();
   const [showInfo, setShowInfo] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -69,9 +77,11 @@ export default function CommunityScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard key={post.id} post={post} onAuthorPress={setSelectedStudent} />
         ))}
       </ScrollView>
+
+      <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
 
       <Pressable style={styles.fab} onPress={() => router.push('/community/new' as never)}>
         <Ionicons name="add" size={28} color="#fff" />

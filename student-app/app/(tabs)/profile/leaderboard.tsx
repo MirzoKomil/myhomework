@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -29,6 +30,7 @@ export default function LeaderboardScreen() {
   const [scope, setScope] = useState<LeaderboardScope>('country');
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<'period' | 'scope' | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
   const ranked = useMemo(() => getRankedLeaderboard(period, scope, coins), [period, scope, coins]);
   const top3 = ranked.slice(0, 3);
@@ -103,7 +105,10 @@ export default function LeaderboardScreen() {
           {/* order visually as 2nd, 1st, 3rd */}
           {[top3[1], top3[0], top3[2]].map((entry, i) =>
             entry ? (
-              <View key={entry.id} style={[styles.podiumCol, i === 1 && styles.podiumColCenter]}>
+              <Pressable
+                key={entry.id}
+                style={[styles.podiumCol, i === 1 && styles.podiumColCenter]}
+                onPress={() => entry.id !== ME_LEADERBOARD_ID && setSelectedStudent(entry.name)}>
                 {i === 1 && (
                   <Animated.Text
                     style={[
@@ -143,7 +148,7 @@ export default function LeaderboardScreen() {
                   <CoinIcon size={11} />
                   <Text style={styles.podiumXpText}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
                 </View>
-              </View>
+              </Pressable>
             ) : (
               <View key={`empty-${i}`} style={styles.podiumCol} />
             )
@@ -152,7 +157,10 @@ export default function LeaderboardScreen() {
 
         <View style={styles.list}>
           {rest.map((entry) => (
-            <View key={entry.id} style={[styles.listRow, entry.id === ME_LEADERBOARD_ID && styles.listRowMe]}>
+            <Pressable
+              key={entry.id}
+              style={[styles.listRow, entry.id === ME_LEADERBOARD_ID && styles.listRowMe]}
+              onPress={() => entry.id !== ME_LEADERBOARD_ID && setSelectedStudent(entry.name)}>
               <Text style={[styles.listRank, entry.id === ME_LEADERBOARD_ID && styles.listRankMe]}>{entry.rank}</Text>
               <View style={styles.listAvatar}>
                 <Text style={styles.listAvatarEmoji}>{entry.avatarEmoji}</Text>
@@ -167,12 +175,13 @@ export default function LeaderboardScreen() {
                 <CoinIcon size={12} />
                 <Text style={styles.listXp}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
 
       <Modal visible={activeDropdown !== null} transparent animationType="fade" onRequestClose={() => setActiveDropdown(null)}>
         <Pressable style={styles.dropdownBackdrop} onPress={() => setActiveDropdown(null)}>

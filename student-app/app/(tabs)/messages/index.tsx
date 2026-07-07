@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { chatThreads } from '@/data/mock';
 import { getLastMessage, subscribe } from '@/services/chatStore';
+import { useStudentThreads } from '@/services/studentChatStore';
 
 function previewText(chatId: string): string {
   const last = getLastMessage(chatId);
@@ -18,6 +19,7 @@ function previewText(chatId: string): string {
 
 export default function MessagesScreen() {
   const [, forceUpdate] = useState(0);
+  const studentThreads = useStudentThreads();
 
   useEffect(() => subscribe(() => forceUpdate((n) => n + 1)), []);
 
@@ -42,6 +44,27 @@ export default function MessagesScreen() {
                 </Text>
               </View>
               {last && <Text style={styles.time}>{last.time}</Text>}
+            </Pressable>
+          );
+        })}
+
+        {studentThreads.map((thread) => {
+          const lastMsg = thread.messages[thread.messages.length - 1];
+          return (
+            <Pressable
+              key={thread.id}
+              style={styles.row}
+              onPress={() => router.push(`/messages/student-${thread.id}` as never)}>
+              <View style={[styles.avatar, { backgroundColor: theme.colors.purpleLight }]}>
+                <Text style={styles.avatarEmoji}>{thread.avatarEmoji}</Text>
+              </View>
+              <View style={styles.info}>
+                <Text style={styles.name}>{thread.name}</Text>
+                <Text style={styles.preview} numberOfLines={1}>
+                  {lastMsg ? lastMsg.text : "O'quvchi hamkursingiz"}
+                </Text>
+              </View>
+              {lastMsg && <Text style={styles.time}>{lastMsg.time}</Text>}
             </Pressable>
           );
         })}
