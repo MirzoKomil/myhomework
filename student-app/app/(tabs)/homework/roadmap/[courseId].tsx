@@ -168,14 +168,84 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
   );
 }
 
+// ─── Milestone gifts (every 5th lesson) ────────────────────────────────────────
+const MILESTONE_GIFTS: NonNullable<LessonNode['milestone']>[] = [
+  { emoji: '🚀', fact: "Dunyoda 1,5 milliarddan ortiq odam ingliz tilida gaplashadi yoki uni o'rganmoqda — bu Yer aholisining har 5-kishisidan biri!" },
+  { emoji: '🔥', fact: 'Ingliz tili 60 dan ortiq davlatda rasmiy til hisoblanadi — bu boshqa har qanday tildan ko\'proq!' },
+  { emoji: '💪', fact: "Ingliz tilida 170,000 dan ortiq faol so'z bor, lekin kundalik muloqot uchun atigi 3000 tasi yetarli!" },
+  { emoji: '🌟', fact: '"The" so\'zi — ingliz tilidagi eng ko\'p ishlatiladigan so\'z, u har 40-so\'zning birida uchraydi!' },
+  { emoji: '🏆', fact: "Internetdagi barcha kontentning qariyb 55% qismi ingliz tilida yaratilgan!" },
+  { emoji: '🎯', fact: 'Ingliz tili aviatsiyada butun dunyo bo\'ylab xalqaro muloqot tili hisoblanadi!' },
+  { emoji: '💡', fact: "Shekspir o'z asarlarida ingliz tiliga 1700 dan ortiq yangi so'z qo'shgan!" },
+  { emoji: '🧠', fact: 'Har yili ingliz tili lug\'atlariga yuzlab yangi so\'zlar qo\'shiladi — til doimo tirik va rivojlanmoqda!' },
+  { emoji: '📚', fact: '"Set" so\'zi ingliz tilida 430 dan ortiq turli ma\'noga ega bo\'lishi mumkin!' },
+  { emoji: '🌈', fact: "Ingliz tilini bilish dunyo bo'ylab ish topish imkoniyatingizni sezilarli darajada oshiradi!" },
+  { emoji: '⚡', fact: 'Dunyodagi ilmiy maqolalarning katta qismi aynan ingliz tilida chop etiladi!' },
+  { emoji: '🥇', fact: 'YouTube va Netflix kabi platformalardagi eng ko\'p tomosha qilinadigan kontent ingliz tilida!' },
+  { emoji: '🎓', fact: "Ingliz tilida fe'l zamonlari boshqa ko'p tillarga qaraganda soddaroq — buni siz allaqachon his qilyapsiz!" },
+  { emoji: '🌱', fact: "Tabriklaymiz, siz 70-darsgacha yetib keldingiz — bu kursning deyarli oxiri, endi bir necha qadam qoldi!" },
+];
+
 // ─── Milestone badge ──────────────────────────────────────────────────────────
-function MilestoneBadge({ badge }: { badge: NonNullable<LessonNode['milestone']> }) {
+function MilestoneBadge({ badge, locked }: { badge: NonNullable<LessonNode['milestone']>; locked: boolean }) {
+  const [showModal, setShowModal] = useState(false);
+  const wobble = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wobble, { toValue: 1, duration: 2400, useNativeDriver: true }),
+        Animated.timing(wobble, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [wobble]);
+
+  const translateX = wobble.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -2, 0, 2, 0] });
+  const translateY = wobble.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -2, 0, 2, 0] });
+  const rotate = wobble.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ['0deg', '-10deg', '0deg', '10deg', '0deg'] });
+
   return (
-    <View style={[ss.milestoneBadge, { backgroundColor: badge.bg }]}>
-      <Ionicons name={badge.icon} size={22} color={badge.iconColor} />
-      <Text style={[ss.milestoneLabel, { color: badge.iconColor }]}>{badge.label}</Text>
-      <Text style={[ss.milestoneSub, { color: badge.iconColor }]}>{badge.sub}</Text>
-    </View>
+    <>
+      <Pressable onPress={() => setShowModal(true)} hitSlop={10} style={ss.milestoneBadge}>
+        <Animated.Text style={[ss.milestoneEmoji, { transform: [{ translateX }, { translateY }, { rotate }] }]}>
+          {badge.emoji}
+        </Animated.Text>
+      </Pressable>
+
+      <Modal visible={showModal} animationType="fade" transparent onRequestClose={() => setShowModal(false)}>
+        <View style={ss.dialogBackdrop}>
+          <Pressable style={ss.dialogBackdropTap} onPress={() => setShowModal(false)} />
+          <View style={ss.dialogCard}>
+            {locked ? (
+              <>
+                <Text style={ss.dialogEmoji}>🤫</Text>
+                <Text style={ss.dialogTitle}>Sizga qiziq bir gapim bor!</Text>
+                <Text style={ss.dialogSubtitle}>
+                  Bu darsga yetib kelganingizda sizga qiziq bir gapim bor, shunday ekan shoshiling!
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={ss.dialogEmoji}>{badge.emoji}</Text>
+                <Text style={ss.dialogTitle}>Tabriklaymiz, bu yerga yetib keldingiz! 🎉</Text>
+                <Text style={ss.dialogSubtitle}>
+                  Har bir qadam sizni maqsadingizga yaqinlashtiryapti — davom eting, siz ajoyib ish qilyapsiz!
+                </Text>
+                <View style={ss.dialogFactBox}>
+                  <Text style={ss.dialogFactLabel}>🎁 Qiziq fakt sovg'asi</Text>
+                  <Text style={ss.dialogFactText}>{badge.fact}</Text>
+                </View>
+              </>
+            )}
+            <Pressable style={ss.dialogConfirmBtn} onPress={() => setShowModal(false)}>
+              <Text style={ss.dialogConfirmText}>Tushunarli</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -224,13 +294,13 @@ function LessonRow({ lesson, isActive, index }: { lesson: LessonNode; isActive: 
             <LessonCard lesson={lesson} isActive={isActive} index={index} />
           </View>
           <View style={ss.badgeWrap}>
-            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} />}
+            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
           </View>
         </>
       ) : (
         <>
           <View style={ss.badgeWrap}>
-            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} />}
+            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
           </View>
           <View style={ss.cardWrap}>
             <LessonCard lesson={lesson} isActive={isActive} index={index} />
@@ -259,15 +329,17 @@ export default function RoadmapScreen() {
         const UNLOCKED_COUNT = 3;
         const mapped: LessonNode[] = Array.from({ length: TOTAL_LESSONS }, (_, i) => {
           const l = adminLessons[i];
+          const lessonNum = i + 1;
           return {
-            id: l?.id ?? String(i + 1),
-            title: l?.name ?? `${i + 1}-dars`,
+            id: l?.id ?? String(lessonNum),
+            title: l?.name ?? `${lessonNum}-dars`,
             subtitle: l?.isDemo ? 'Demo dars' : l?.isPaid ? 'Pullik' : '',
             type: (i % 2 === 0 ? 'grammar' : 'speaking') as LessonType,
             progress: 0,
             locked: i >= UNLOCKED_COUNT,
             side: i % 2 === 0 ? 'left' : 'right',
             stars: 0,
+            milestone: lessonNum % 5 === 0 ? MILESTONE_GIFTS[lessonNum / 5 - 1] : undefined,
           };
         });
         setLessons(mapped);
@@ -655,22 +727,33 @@ const ss = StyleSheet.create({
 
   // Milestone badge (side)
   milestoneBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
   },
-  milestoneLabel: {
+  milestoneEmoji: {
+    fontSize: 30,
+  },
+  dialogFactBox: {
+    width: '100%',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: theme.radius.md,
+    padding: 12,
+    gap: 4,
+  },
+  dialogFactLabel: {
     fontFamily: theme.fonts.bold,
-    fontSize: 9,
-    textAlign: 'center',
+    fontSize: 12,
+    color: '#B45309',
   },
-  milestoneSub: {
-    fontFamily: theme.fonts.medium,
-    fontSize: 8,
-    textAlign: 'center',
+  dialogFactText: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 13,
+    color: theme.colors.text,
+    lineHeight: 19,
   },
 
   // Connector
