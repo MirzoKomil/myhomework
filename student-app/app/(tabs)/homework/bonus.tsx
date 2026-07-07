@@ -50,6 +50,7 @@ function overallProgress(bonusId: string): number {
 export default function BonusLessonsScreen() {
   const [, forceUpdate] = useState(0);
   const [showLockedNotice, setShowLockedNotice] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => subscribe(() => forceUpdate((n) => n + 1)), []);
 
@@ -63,7 +64,15 @@ export default function BonusLessonsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Bonus darslar" showBack />
+      <ScreenHeader
+        title="Bonus darslar"
+        showBack
+        rightAction={
+          <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
+            <Ionicons name="information-circle-outline" size={22} color={theme.colors.textMuted} />
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>Har yakshanba kuni beriladigan qo'shimcha video darslar to'plami</Text>
         {BONUS_LESSONS.map((lesson, index) => {
@@ -119,6 +128,25 @@ export default function BonusLessonsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={showInfo} animationType="fade" transparent onRequestClose={() => setShowInfo(false)}>
+        <View style={styles.dialogBackdrop}>
+          <Pressable style={styles.dialogBackdropTap} onPress={() => setShowInfo(false)} />
+          <View style={styles.dialogCard}>
+            <Text style={styles.dialogEmoji}>🎁</Text>
+            <Text style={styles.dialogTitle}>Bonus darslar nima?</Text>
+            <Text style={[styles.dialogSubtitle, styles.dialogSubtitleLeft]}>
+              🗓️ Har yakshanba kuni yangita bonus dars ochiladi — jami 18 ta dars.{'\n\n'}
+              🎬🎵🌟🧠🗣️🎭 6 ta qiziqarli kategoriya (Kino tahlil, Musiqiy dars, Motivatsion dars, Intellektual o'yin, Ko'cha ingliz tili, Hayotiy vaziyat) 3 marta takrorlanadi.{'\n\n'}
+              📺 Har bir dars video, yangi so'zlar va avtomatik tekshiriladigan uyga vazifadan iborat — ijodiy qism yo'q, chunki bu qo'shimcha bonus dars!{'\n\n'}
+              💬 Izoh qoldirish va coin yig'ish ham mavjud.
+            </Text>
+            <Pressable style={styles.dialogConfirmBtn} onPress={() => setShowInfo(false)}>
+              <Text style={styles.dialogConfirmText}>Tushunarli</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -154,8 +182,19 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dialogIconWrap: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FEF3C7', marginBottom: 4 },
+  dialogEmoji: { fontSize: 36 },
   dialogTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text, textAlign: 'center' },
   dialogSubtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center' },
+  dialogSubtitleLeft: { textAlign: 'left', lineHeight: 20 },
+  infoBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadow.card,
+  },
   dialogConfirmBtn: {
     width: '100%',
     paddingVertical: 13,
