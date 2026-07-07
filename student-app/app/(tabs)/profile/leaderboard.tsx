@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
@@ -33,6 +34,45 @@ export default function LeaderboardScreen() {
   const top3 = ranked.slice(0, 3);
   const rest = ranked.slice(3);
 
+  const rank1Shimmer = useRef(new Animated.Value(0)).current;
+  const rank2Shimmer = useRef(new Animated.Value(0)).current;
+  const rank3Shimmer = useRef(new Animated.Value(0)).current;
+  const crownWobble = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const shimmerLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(rank1Shimmer, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(rank1Shimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(400),
+        Animated.timing(rank2Shimmer, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(rank2Shimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(400),
+        Animated.timing(rank3Shimmer, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(rank3Shimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(400),
+      ])
+    );
+    shimmerLoop.start();
+    const wobbleLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(crownWobble, { toValue: 1, duration: 2400, useNativeDriver: true }),
+        Animated.timing(crownWobble, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+    wobbleLoop.start();
+    return () => {
+      shimmerLoop.stop();
+      wobbleLoop.stop();
+    };
+  }, [rank1Shimmer, rank2Shimmer, rank3Shimmer, crownWobble]);
+
+  const podiumShimmerByIndex = [rank2Shimmer, rank1Shimmer, rank3Shimmer];
+  const shimmerTranslate = (anim: Animated.Value) => anim.interpolate({ inputRange: [0, 1], outputRange: [-70, 70] });
+  const crownTranslateX = crownWobble.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -2, 0, 2, 0] });
+  const crownTranslateY = crownWobble.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -2, 0, 2, 0] });
+  const crownRotate = crownWobble.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ['0deg', '-8deg', '0deg', '8deg', '0deg'] });
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
@@ -64,7 +104,15 @@ export default function LeaderboardScreen() {
           {[top3[1], top3[0], top3[2]].map((entry, i) =>
             entry ? (
               <View key={entry.id} style={[styles.podiumCol, i === 1 && styles.podiumColCenter]}>
-                {i === 1 && <Text style={styles.crown}>👑</Text>}
+                {i === 1 && (
+                  <Animated.Text
+                    style={[
+                      styles.crown,
+                      { transform: [{ translateX: crownTranslateX }, { translateY: crownTranslateY }, { rotate: crownRotate }] },
+                    ]}>
+                    👑
+                  </Animated.Text>
+                )}
                 <View
                   style={[
                     styles.podiumAvatar,
@@ -72,6 +120,20 @@ export default function LeaderboardScreen() {
                     i === 1 && styles.podiumAvatarCenter,
                   ]}>
                   <Text style={styles.podiumEmoji}>{entry.avatarEmoji}</Text>
+                  <View style={styles.podiumShimmerClip} pointerEvents="none">
+                    <Animated.View
+                      style={[
+                        styles.podiumShimmerSweep,
+                        { transform: [{ translateX: shimmerTranslate(podiumShimmerByIndex[i]) }, { rotate: '20deg' }] },
+                      ]}>
+                      <LinearGradient
+                        colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    </Animated.View>
+                  </View>
                 </View>
                 <View style={[styles.podiumRankBadge, { backgroundColor: PODIUM_COLORS[i] }]}>
                   <Text style={styles.podiumRankText}>{entry.rank}</Text>
@@ -210,8 +272,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+    overflow: 'hidden',
   },
   podiumAvatarCenter: { width: 72, height: 72, borderRadius: 36 },
+  podiumShimmerClip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
+  podiumShimmerSweep: { position: 'absolute', top: -20, bottom: -20, width: 30 },
   podiumEmoji: { fontSize: 26 },
   podiumRankBadge: {
     width: 22,
