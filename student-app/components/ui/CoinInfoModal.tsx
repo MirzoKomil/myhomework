@@ -14,6 +14,7 @@ const TIPS: { icon: keyof typeof Ionicons.glyphMap; label: string; route: string
   { icon: 'school', label: "Ko'proq dars qil!", route: '/homework' },
   { icon: 'book', label: "Yangi so'zlar yodla!", route: '/vocabulary' },
   { icon: 'game-controller', label: "O'yinlar orqali mashq qil!", route: '/resources/games' },
+  { icon: 'people', label: "Hamjamiyatda post joyla!", route: '/community' },
 ];
 
 export function CoinInfoModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
