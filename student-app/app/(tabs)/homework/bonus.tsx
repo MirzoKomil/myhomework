@@ -8,16 +8,36 @@ import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { BONUS_CATEGORIES } from '@/data/lessonContent';
+import { courseEnrollment } from '@/data/mock';
+import { UZ_MONTHS } from '@/data/scheduleCalendar';
 import { getCategoryProgress, getLessonProgress, subscribe } from '@/services/lessonProgressStore';
 
 const TOTAL = 18;
 const UNLOCKED_COUNT = 1;
 const BONUS_HOMEWORK_PARTS = 3;
 
+// Kurs boshlangan sanadan keyingi birinchi yakshanba — bonus darslar shu kundan boshlab har hafta beriladi.
+function firstSundayOnOrAfter(isoDate: string): Date {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dow = date.getDay();
+  date.setDate(date.getDate() + (dow === 0 ? 0 : 7 - dow));
+  return date;
+}
+
+const FIRST_BONUS_DATE = firstSundayOnOrAfter(courseEnrollment.courseStartDate);
+
+function bonusDateLabel(index: number): string {
+  const date = new Date(FIRST_BONUS_DATE);
+  date.setDate(date.getDate() + index * 7);
+  return `${date.getDate()}-${UZ_MONTHS[date.getMonth()].toLowerCase()}`;
+}
+
 const BONUS_LESSONS = Array.from({ length: TOTAL }, (_, i) => ({
   id: `bonus-${i + 1}`,
   category: BONUS_CATEGORIES[i % BONUS_CATEGORIES.length],
   round: Math.floor(i / BONUS_CATEGORIES.length) + 1,
+  dateLabel: bonusDateLabel(i),
 }));
 
 function overallProgress(bonusId: string): number {
@@ -65,7 +85,7 @@ export default function BonusLessonsScreen() {
                       Bonus dars {index + 1} — {lesson.category.label}
                     </Text>
                     <Text style={styles.meta}>
-                      {locked ? 'Hali ochilmagan' : `${lesson.round}-bosqich`}
+                      {locked ? `Hali ochilmagan • ${lesson.dateLabel}` : `${lesson.round}-bosqich • ${lesson.dateLabel}`}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
