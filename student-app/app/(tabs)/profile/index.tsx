@@ -27,6 +27,7 @@ const menuItems: MenuItem[] = [
   { icon: 'bar-chart', label: 'Baholar', route: '/profile/grades' },
   { icon: 'trophy', label: 'Motivatsiya tizimi', route: '/profile/motivation' },
   { icon: 'stats-chart', label: 'Natijalarim', route: '/profile/results' },
+  { icon: 'ribbon', label: 'Sertifikatlarim', route: '/profile/certificates' },
   { icon: 'cube', label: 'Darslik eltib berish', route: '/profile/book-delivery' },
   { icon: 'card', label: "To'lovlar tarixi", route: '/profile/payment' },
 ];

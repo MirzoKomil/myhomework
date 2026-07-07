@@ -44,6 +44,15 @@ function startOfDay(d: Date): Date {
   return copy;
 }
 
+// Berilgan ISO sanadan boshlab, ko'rsatilgan hafta kunига (0=Yakshanba, 1=Dushanba, ...) to'g'ri keladigan birinchi sanani topadi.
+export function firstWeekdayOnOrAfter(isoDate: string, targetDow: number): Date {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dow = date.getDay();
+  date.setDate(date.getDate() + ((targetDow - dow + 7) % 7));
+  return date;
+}
+
 export function generateScheduleDays(referenceDate: Date = new Date()): ScheduleDay[] {
   const today = startOfDay(referenceDate);
   const courseStart = startOfDay(today);

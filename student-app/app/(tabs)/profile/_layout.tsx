@@ -12,6 +12,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="teacher" />
       <Stack.Screen name="motivation" />
       <Stack.Screen name="results" />
+      <Stack.Screen name="certificates" />
     </Stack>
   );
 }

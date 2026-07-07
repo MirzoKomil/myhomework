@@ -9,7 +9,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { BONUS_CATEGORIES } from '@/data/lessonContent';
 import { courseEnrollment } from '@/data/mock';
-import { UZ_MONTHS } from '@/data/scheduleCalendar';
+import { firstWeekdayOnOrAfter, UZ_MONTHS } from '@/data/scheduleCalendar';
 import { getCategoryProgress, getLessonProgress, subscribe } from '@/services/lessonProgressStore';
 
 const TOTAL = 18;
@@ -17,15 +17,7 @@ const UNLOCKED_COUNT = 1;
 const BONUS_HOMEWORK_PARTS = 3;
 
 // Kurs boshlangan sanadan keyingi birinchi yakshanba — bonus darslar shu kundan boshlab har hafta beriladi.
-function firstSundayOnOrAfter(isoDate: string): Date {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  const dow = date.getDay();
-  date.setDate(date.getDate() + (dow === 0 ? 0 : 7 - dow));
-  return date;
-}
-
-const FIRST_BONUS_DATE = firstSundayOnOrAfter(courseEnrollment.courseStartDate);
+const FIRST_BONUS_DATE = firstWeekdayOnOrAfter(courseEnrollment.courseStartDate, 0);
 
 function bonusDateLabel(index: number): string {
   const date = new Date(FIRST_BONUS_DATE);
