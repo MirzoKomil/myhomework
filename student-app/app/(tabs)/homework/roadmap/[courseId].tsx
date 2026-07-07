@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -231,6 +232,7 @@ export default function RoadmapScreen() {
   const [lessons, setLessons] = useState<LessonNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showCourseInfo, setShowCourseInfo] = useState(false);
 
   useEffect(() => {
     fetchMobileContent().then((mc) => {
@@ -280,10 +282,10 @@ export default function RoadmapScreen() {
           <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
         </Pressable>
 
-        <View style={ss.headerTitle}>
+        <Pressable style={ss.headerTitle} onPress={() => setShowCourseInfo(true)}>
           <Text style={ss.headerTitleText}>{courseTitle}</Text>
           <Ionicons name="chevron-down" size={16} color={theme.colors.text} />
-        </View>
+        </Pressable>
 
         <View style={ss.headerRight}>
           <Pressable onPress={() => setShowCoinInfo(true)}>
@@ -293,6 +295,25 @@ export default function RoadmapScreen() {
       </View>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+
+      <Modal visible={showCourseInfo} animationType="fade" transparent onRequestClose={() => setShowCourseInfo(false)}>
+        <View style={ss.dialogBackdrop}>
+          <Pressable style={ss.dialogBackdropTap} onPress={() => setShowCourseInfo(false)} />
+          <View style={ss.dialogCard}>
+            <Text style={ss.dialogEmoji}>🚀</Text>
+            <Text style={ss.dialogTitle}>90 kunda ingliz tilida gapiring</Text>
+            <Text style={ss.dialogSubtitle}>
+              📅 Har kuni videodars va speaking mashg'ulotlari almashinib boradi{'\n'}
+              🗣️ 72 ta asosiy dars + 🎁 18 ta yakshanba bonus darsi{'\n'}
+              🎯 Maqsad — 90 kun ichida ingliz tilida erkin va ishonch bilan gaplasha olish{'\n\n'}
+              💪 Har bir kichik qadam katta natijaga olib boradi — bugun boshlang, ertaga o'zingizga rahmat aytasiz!
+            </Text>
+            <Pressable style={ss.dialogConfirmBtn} onPress={() => setShowCourseInfo(false)}>
+              <Text style={ss.dialogConfirmText}>Zo'r, boshladik!</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ss.scroll}>
         {/* ── Section header ── */}
@@ -381,6 +402,30 @@ const ss = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
+
+  dialogBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  dialogBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+  dialogEmoji: { fontSize: 36 },
+  dialogTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text, textAlign: 'center' },
+  dialogSubtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'left', lineHeight: 20 },
+  dialogConfirmBtn: {
+    width: '100%',
+    marginTop: 10,
+    paddingVertical: 13,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.purple,
+    alignItems: 'center',
+  },
+  dialogConfirmText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff' },
   headerTitleText: {
     fontFamily: theme.fonts.bold,
     fontSize: 17,
