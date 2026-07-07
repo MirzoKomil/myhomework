@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AvatarCropModal } from '@/components/AvatarCropModal';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
@@ -22,21 +24,19 @@ const DETAIL_ROWS: { label: string; value: string }[] = [
 
 export default function EditProfileScreen() {
   const avatarUri = useAvatarUri();
+  const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      base64: Platform.OS === 'web',
-    });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
     if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    // Web'da tanlangan rasm blob: URL beradi — bu vaqtinchalik, sahifa qayta yuklanganda o'chib qoladi.
-    // Shu sababli saqlash uchun doimiy base64 data URI ishlatamiz.
-    const uri = Platform.OS === 'web' && asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : asset.uri;
-    await setAvatarUri(uri);
+    setPendingImageUri(result.assets[0].uri);
+  };
+
+  const handleCropConfirm = async (croppedUri: string) => {
+    setPendingImageUri(null);
+    await setAvatarUri(croppedUri);
   };
 
   return (
@@ -90,6 +90,13 @@ export default function EditProfileScreen() {
           ))}
         </Card>
       </ScrollView>
+
+      <AvatarCropModal
+        visible={pendingImageUri !== null}
+        imageUri={pendingImageUri}
+        onConfirm={handleCropConfirm}
+        onCancel={() => setPendingImageUri(null)}
+      />
     </SafeAreaView>
   );
 }
