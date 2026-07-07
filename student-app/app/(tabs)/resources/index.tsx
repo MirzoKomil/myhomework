@@ -11,6 +11,7 @@ export default function ResourcesScreen() {
 
   const libraryShimmer = useRef(new Animated.Value(0)).current;
   const gamesShimmer = useRef(new Animated.Value(0)).current;
+  const communityShimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -21,14 +22,18 @@ export default function ResourcesScreen() {
         Animated.timing(gamesShimmer, { toValue: 1, duration: 1200, useNativeDriver: true }),
         Animated.timing(gamesShimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
         Animated.delay(500),
+        Animated.timing(communityShimmer, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(communityShimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(500),
       ])
     );
     loop.start();
     return () => loop.stop();
-  }, [libraryShimmer, gamesShimmer]);
+  }, [libraryShimmer, gamesShimmer, communityShimmer]);
 
   const libraryTranslate = libraryShimmer.interpolate({ inputRange: [0, 1], outputRange: [-160, 400] });
   const gamesTranslate = gamesShimmer.interpolate({ inputRange: [0, 1], outputRange: [-160, 400] });
+  const communityTranslate = communityShimmer.interpolate({ inputRange: [0, 1], outputRange: [-160, 400] });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -75,6 +80,24 @@ export default function ResourcesScreen() {
             </View>
           </LinearGradient>
         </Pressable>
+
+        <Pressable style={styles.cardWrap} onPress={() => router.push('/community' as never)}>
+          <LinearGradient colors={['#9B7BFF', '#6B4FE0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+            <Text style={styles.emoji}>👥</Text>
+            <Text style={styles.title}>Hamjamiyat</Text>
+            <Text style={styles.subtitle}>O'quvchilar bilan fikr almashing, post yozing, izoh qoldiring</Text>
+            <View style={styles.shimmerClip} pointerEvents="none">
+              <Animated.View style={[styles.shimmerSweep, { transform: [{ translateX: communityTranslate }, { rotate: '20deg' }] }]}>
+                <LinearGradient
+                  colors={['transparent', 'rgba(255,255,255,0.4)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </View>
+          </LinearGradient>
+        </Pressable>
       </View>
 
       <Modal visible={showInfo} animationType="fade" transparent onRequestClose={() => setShowInfo(false)}>
@@ -84,11 +107,13 @@ export default function ResourcesScreen() {
             <Text style={styles.dialogEmoji}>💡</Text>
             <Text style={styles.dialogTitle}>Resurslar bo'limi nima uchun kerak?</Text>
             <Text style={styles.dialogSubtitle}>
-              Bu yerda ingliz tilini mustaqil rivojlantirish uchun ikkita bo'lim mavjud: {'\n\n'}
+              Bu yerda ingliz tilini mustaqil rivojlantirish uchun uchta bo'lim mavjud: {'\n\n'}
               📚 <Text style={styles.dialogBold}>Kutubxona</Text> — grammatik qo'llanma, so'zlar ro'yxati,
               talaffuz, speaking topiklar, podkastlar va kitoblar.{'\n\n'}
               🎮 <Text style={styles.dialogBold}>O'yinlar</Text> — so'z boyligingiz va tilni his qilishingizni
-              mashq qildiradigan interaktiv o'yinlar to'plami.
+              mashq qildiradigan interaktiv o'yinlar to'plami.{'\n\n'}
+              👥 <Text style={styles.dialogBold}>Hamjamiyat</Text> — boshqa o'quvchilar bilan tajriba
+              almashadigan forum.
             </Text>
             <Pressable style={styles.dialogBtn} onPress={() => setShowInfo(false)}>
               <Text style={styles.dialogBtnText}>Tushunarli</Text>

@@ -72,6 +72,7 @@ export default function TabLayout() {
       <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="shop" options={{ href: null }} />
+      <Tabs.Screen name="community" options={{ href: null }} />
       <Tabs.Screen name="vocabulary" options={{ href: null }} />
     </Tabs>
   );
