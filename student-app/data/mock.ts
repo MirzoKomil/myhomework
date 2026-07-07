@@ -515,7 +515,7 @@ export const nextLiveLesson = {
 export const profileStats = {
   name: 'Shahzoda Mavlonova',
   level: 'Beginner',
-  studentId: 'STU-2026-00842',
+  studentId: 'AZ8421',
   age: 19,
   gender: 'Ayol',
   address: "Toshkent sh., Chilonzor tumani, Bunyodkor ko'chasi 12-uy",

@@ -122,8 +122,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{profileStats.name}</Text>
-            <Text style={styles.userLevel}>ID: {profileStats.studentId}</Text>
-            <Text style={styles.userPhone}>{profileStats.phone}</Text>
+            <Text style={styles.userLevel}>ID {profileStats.studentId}</Text>
           </View>
           <Pressable style={styles.editBtn} onPress={() => router.push('/profile/edit' as never)}>
             <Ionicons name="pencil" size={16} color={theme.colors.blue} />
@@ -246,7 +245,6 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1 },
   userName: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text },
   userLevel: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginTop: 2 },
-  userPhone: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textLight, marginTop: 2 },
   editBtn: {
     width: 36,
     height: 36,
