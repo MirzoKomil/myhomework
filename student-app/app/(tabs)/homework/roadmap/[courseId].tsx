@@ -30,22 +30,6 @@ const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; co
   bonus: { icon: 'gift-outline', color: '#D97706', bg: '#FEF3C7', label: 'Bonus' },
 };
 
-// ─── Stars ───────────────────────────────────────────────────────────────────
-function Stars({ count }: { count: number }) {
-  return (
-    <View style={ss.starsRow}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Ionicons
-          key={i}
-          name={i <= count ? 'star' : 'star-outline'}
-          size={12}
-          color={i <= count ? '#F59E0B' : theme.colors.textLight}
-        />
-      ))}
-    </View>
-  );
-}
-
 // ─── Type badge ──────────────────────────────────────────────────────────────
 function TypeBadge({ type }: { type: LessonType }) {
   const cfg = TYPE_CONFIG[type];
@@ -128,7 +112,6 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
           </Text>
           {!lesson.locked && (
             <View style={ss.starsPercent}>
-              <Stars count={lesson.stars} />
               <Text style={ss.percentText}>{percent}%</Text>
             </View>
           )}
@@ -650,7 +633,7 @@ const ss = StyleSheet.create({
   starsPercent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginTop: 4,
   },
   coinRow: {
@@ -663,11 +646,6 @@ const ss = StyleSheet.create({
     fontFamily: theme.fonts.semiBold,
     fontSize: 11,
     color: '#B45309',
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 2,
-    alignItems: 'center',
   },
   percentText: {
     fontFamily: theme.fonts.semiBold,
