@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StudentProfileModal } from '@/components/StudentProfileModal';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { CoinPill } from '@/components/ui/CoinIcon';
 import { theme } from '@/constants/theme';
 import { useAvatarUri } from '@/services/avatarStore';
 import { CommunityPost, timeAgo, toggleLikePost, usePosts } from '@/services/communityStore';
+import { useCoins } from '@/services/coinsStore';
+
+type Filter = 'all' | 'popular' | 'official';
 
 function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress: (name: string) => void }) {
   const commentCount = post.comments.length;
@@ -31,7 +34,15 @@ function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress:
           )}
         </View>
         <View style={styles.cardHeaderInfo}>
-          <Text style={styles.authorName}>{post.authorName}</Text>
+          <View style={styles.authorRow}>
+            <Text style={styles.authorName}>{post.authorName}</Text>
+            {post.official && (
+              <View style={styles.officialBadge}>
+                <Ionicons name="checkmark-circle" size={12} color={theme.colors.blue} />
+                <Text style={styles.officialBadgeText}>Rasmiy</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
         </View>
       </Pressable>
@@ -64,27 +75,61 @@ function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress:
   );
 }
 
+const FILTER_LABELS: Record<Filter, string> = {
+  all: 'Hammasi',
+  popular: '🔥 Mashhur',
+  official: '✅ Rasmiy',
+};
+
 export default function CommunityScreen() {
   const posts = usePosts();
+  const coins = useCoins();
   const [showInfo, setShowInfo] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>('all');
+
+  const displayedPosts = useMemo(() => {
+    if (filter === 'popular') {
+      return [...posts].sort((a, b) => b.likeCount + b.comments.length - (a.likeCount + a.comments.length));
+    }
+    if (filter === 'official') {
+      return posts.filter((p) => p.official);
+    }
+    return posts;
+  }, [posts, filter]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader
-        title="Hamjamiyat"
-        showBack
-        rightAction={
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Hamjamiyat</Text>
+        <View style={styles.headerRight}>
+          <CoinPill amount={coins} />
           <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
-            <Ionicons name="information-circle-outline" size={22} color={theme.colors.textMuted} />
+            <Ionicons name="information-circle-outline" size={20} color={theme.colors.textMuted} />
           </Pressable>
-        }
-      />
+        </View>
+      </View>
+
+      <View style={styles.filterRow}>
+        {(['all', 'popular', 'official'] as Filter[]).map((f) => (
+          <Pressable
+            key={f}
+            style={[styles.filterChip, filter === f && styles.filterChipActive]}
+            onPress={() => setFilter(f)}>
+            <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>{FILTER_LABELS[f]}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} onAuthorPress={setSelectedStudent} />
-        ))}
+        {displayedPosts.length === 0 ? (
+          <Text style={styles.emptyText}>Bu bo'limda hali postlar yo'q.</Text>
+        ) : (
+          displayedPosts.map((post) => <PostCard key={post.id} post={post} onAuthorPress={setSelectedStudent} />)
+        )}
       </ScrollView>
 
       <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
@@ -118,6 +163,25 @@ export default function CommunityScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadow.card,
+  },
+  headerTitle: { flex: 1, fontFamily: theme.fonts.bold, fontSize: 18, color: theme.colors.text, textAlign: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   infoBtn: {
     width: 40,
     height: 40,
@@ -127,6 +191,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...theme.shadow.card,
   },
+
+  filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterChipActive: { backgroundColor: theme.colors.purple, borderColor: theme.colors.purple },
+  filterChipText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.textMuted },
+  filterChipTextActive: { color: '#fff' },
+  emptyText: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center', marginTop: 30 },
+
   scroll: { padding: 20, paddingTop: 8, paddingBottom: 100, gap: 14 },
 
   card: {
@@ -148,7 +227,18 @@ const styles = StyleSheet.create({
   avatarImage: { width: 40, height: 40 },
   avatarEmoji: { fontSize: 18 },
   cardHeaderInfo: { flex: 1 },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   authorName: { fontFamily: theme.fonts.bold, fontSize: 14, color: theme.colors.text },
+  officialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: theme.colors.blueLight,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  officialBadgeText: { fontFamily: theme.fonts.bold, fontSize: 10, color: theme.colors.blue },
   timeText: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textLight, marginTop: 1 },
   postText: { fontFamily: theme.fonts.regular, fontSize: 14, color: theme.colors.text, lineHeight: 21, marginBottom: 10 },
   postImage: { width: '100%', height: 180, borderRadius: theme.radius.sm, marginBottom: 10 },

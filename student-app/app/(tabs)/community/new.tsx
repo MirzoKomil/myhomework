@@ -14,7 +14,9 @@ export default function NewPostScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = text.trim().length > 0 || !!imageUri;
+  const wordCount = text.trim().length > 0 ? text.trim().split(/\s+/).length : 0;
+  const MIN_WORDS = 3;
+  const canSubmit = wordCount >= MIN_WORDS;
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -72,6 +74,11 @@ export default function NewPostScreen() {
             multiline
             autoFocus
           />
+          {!canSubmit && (
+            <Text style={styles.wordHint}>
+              Kamida {MIN_WORDS} ta so'z yozing (hozir: {wordCount} ta)
+            </Text>
+          )}
 
           {imageUri && (
             <View style={styles.imagePreviewWrap}>
@@ -129,6 +136,7 @@ const styles = StyleSheet.create({
   authorSub: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 1 },
 
   input: { fontFamily: theme.fonts.regular, fontSize: 16, color: theme.colors.text, minHeight: 120, textAlignVertical: 'top' },
+  wordHint: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: -6 },
 
   imagePreviewWrap: { marginTop: 14, alignSelf: 'flex-start' },
   imagePreview: { width: 160, height: 160, borderRadius: theme.radius.sm },

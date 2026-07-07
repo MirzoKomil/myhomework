@@ -33,9 +33,24 @@ export type CommunityPost = {
   viewCount: number;
   comments: CommunityComment[];
   me?: boolean;
+  official?: boolean;
 };
 
 const SEED_POSTS: CommunityPost[] = [
+  {
+    id: 'p0',
+    authorName: 'Homework.uz jamoasi',
+    authorEmoji: '📢',
+    createdAt: Date.now() - 1000 * 60 * 60 * 24 * 1,
+    text: "Assalomu alaykum, aziz o'quvchilar! Yangi 'Speaking Battle' rejimi ilovaga qo'shildi — endi boshqa o'quvchilar bilan jonli musobaqalasha olasiz. Sinab ko'ring! 🏆",
+    imageUri: null,
+    likeCount: 42,
+    likedByMe: false,
+    shareCount: 5,
+    viewCount: 310,
+    comments: [],
+    official: true,
+  },
   {
     id: 'p1',
     authorName: 'Azizbek',
