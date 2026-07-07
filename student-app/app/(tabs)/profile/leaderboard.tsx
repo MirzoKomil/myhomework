@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StudentProfileModal } from '@/components/StudentProfileModal';
@@ -17,6 +17,7 @@ import {
   LeaderboardScope,
   ME_LEADERBOARD_ID,
 } from '@/data/mock';
+import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 
 const PERIODS: LeaderboardPeriod[] = ['daily', 'weekly', 'monthly', 'alltime'];
@@ -26,6 +27,7 @@ const PODIUM_COLORS = ['#C0C6D8', '#F2C14E', '#E2A76F'];
 
 export default function LeaderboardScreen() {
   const coins = useCoins();
+  const myAvatarUri = useAvatarUri();
   const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
   const [scope, setScope] = useState<LeaderboardScope>('country');
   const [showCoinInfo, setShowCoinInfo] = useState(false);
@@ -124,7 +126,11 @@ export default function LeaderboardScreen() {
                     { backgroundColor: PODIUM_COLORS[i === 1 ? 0 : i === 0 ? 1 : 2] },
                     i === 1 && styles.podiumAvatarCenter,
                   ]}>
-                  <Text style={styles.podiumEmoji}>{entry.avatarEmoji}</Text>
+                  {entry.id === ME_LEADERBOARD_ID && myAvatarUri ? (
+                    <Image source={{ uri: myAvatarUri }} style={styles.podiumAvatarImage} />
+                  ) : (
+                    <Text style={styles.podiumEmoji}>{entry.avatarEmoji}</Text>
+                  )}
                   <View style={styles.podiumShimmerClip} pointerEvents="none">
                     <Animated.View
                       style={[
@@ -163,7 +169,11 @@ export default function LeaderboardScreen() {
               onPress={() => entry.id !== ME_LEADERBOARD_ID && setSelectedStudent(entry.name)}>
               <Text style={[styles.listRank, entry.id === ME_LEADERBOARD_ID && styles.listRankMe]}>{entry.rank}</Text>
               <View style={styles.listAvatar}>
-                <Text style={styles.listAvatarEmoji}>{entry.avatarEmoji}</Text>
+                {entry.id === ME_LEADERBOARD_ID && myAvatarUri ? (
+                  <Image source={{ uri: myAvatarUri }} style={styles.listAvatarImage} />
+                ) : (
+                  <Text style={styles.listAvatarEmoji}>{entry.avatarEmoji}</Text>
+                )}
               </View>
               <View style={styles.listInfo}>
                 <Text style={[styles.listName, entry.id === ME_LEADERBOARD_ID && styles.listNameMe]}>
@@ -287,6 +297,7 @@ const styles = StyleSheet.create({
   podiumShimmerClip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   podiumShimmerSweep: { position: 'absolute', top: -20, bottom: -20, width: 30 },
   podiumEmoji: { fontSize: 26 },
+  podiumAvatarImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   podiumRankBadge: {
     width: 22,
     height: 22,
@@ -334,7 +345,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  listAvatarImage: { width: 40, height: 40 },
   listAvatarEmoji: { fontSize: 18 },
   listInfo: { flex: 1 },
   listName: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },

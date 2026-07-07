@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
+import { useAvatarUri } from '@/services/avatarStore';
 import {
   CommunityComment,
   addComment,
@@ -38,11 +39,16 @@ function CommentRow({
   onReply?: (comment: CommunityComment) => void;
   onAuthorPress: (name: string) => void;
 }) {
+  const myAvatarUri = useAvatarUri();
   return (
     <View style={[styles.commentRow, isReply && styles.replyRow]}>
       <Pressable onPress={() => !comment.me && onAuthorPress(comment.authorName)}>
         <View style={styles.commentAvatar}>
-          <Text style={styles.commentAvatarEmoji}>{comment.authorEmoji}</Text>
+          {comment.me && myAvatarUri ? (
+            <Image source={{ uri: myAvatarUri }} style={styles.commentAvatarImage} />
+          ) : (
+            <Text style={styles.commentAvatarEmoji}>{comment.authorEmoji}</Text>
+          )}
         </View>
       </Pressable>
       <View style={styles.commentBody}>
@@ -79,6 +85,7 @@ export default function PostDetailScreen() {
   const [replyTo, setReplyTo] = useState<CommunityComment | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const myAvatarUri = useAvatarUri();
 
   if (!post) {
     return (
@@ -142,7 +149,11 @@ export default function PostDetailScreen() {
             style={styles.postHeader}
             onPress={() => !post.me && setSelectedStudent(post.authorName)}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarEmoji}>{post.authorEmoji}</Text>
+              {post.me && myAvatarUri ? (
+                <Image source={{ uri: myAvatarUri }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarEmoji}>{post.authorEmoji}</Text>
+              )}
             </View>
             <View style={styles.postHeaderInfo}>
               <Text style={styles.authorName}>{post.authorName}</Text>
@@ -253,7 +264,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: 42, height: 42 },
   avatarEmoji: { fontSize: 19 },
   postHeaderInfo: { flex: 1 },
   authorName: { fontFamily: theme.fonts.bold, fontSize: 14, color: theme.colors.text },
@@ -285,7 +298,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  commentAvatarImage: { width: 34, height: 34 },
   commentAvatarEmoji: { fontSize: 15 },
   commentBody: { flex: 1 },
   commentName: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.text },

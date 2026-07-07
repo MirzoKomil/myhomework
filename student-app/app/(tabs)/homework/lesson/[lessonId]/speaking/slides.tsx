@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
+  Image,
   KeyboardAvoidingView,
   Modal,
   NativeScrollEvent,
@@ -20,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
 import { getLessonContent } from '@/data/lessonContent';
+import { useAvatarUri } from '@/services/avatarStore';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
@@ -43,6 +45,7 @@ export default function SlidesScreen() {
   const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
   const [draft, setDraft] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const myAvatarUri = useAvatarUri();
 
   const submitComment = () => {
     const text = draft.trim();
@@ -148,7 +151,11 @@ export default function SlidesScreen() {
                 <View key={c.id} style={styles.commentRow}>
                   <Pressable onPress={() => !c.me && setSelectedStudent(c.name)}>
                     <View style={[styles.commentAvatar, c.me && styles.commentAvatarMe]}>
-                      <Text style={styles.commentAvatarText}>{c.name.charAt(0)}</Text>
+                      {c.me && myAvatarUri ? (
+                        <Image source={{ uri: myAvatarUri }} style={styles.commentAvatarImage} />
+                      ) : (
+                        <Text style={styles.commentAvatarText}>{c.name.charAt(0)}</Text>
+                      )}
                     </View>
                   </Pressable>
                   <View style={styles.commentBody}>
@@ -276,8 +283,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   commentAvatarMe: { backgroundColor: theme.colors.purple },
+  commentAvatarImage: { width: 34, height: 34 },
   commentAvatarText: { fontFamily: theme.fonts.bold, fontSize: 14, color: theme.colors.purple },
   commentBody: { flex: 1 },
   commentHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

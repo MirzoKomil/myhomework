@@ -7,10 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useAvatarUri } from '@/services/avatarStore';
 import { CommunityPost, timeAgo, toggleLikePost, usePosts } from '@/services/communityStore';
 
 function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress: (name: string) => void }) {
   const commentCount = post.comments.length;
+  const myAvatarUri = useAvatarUri();
 
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/community/${post.id}` as never)}>
@@ -22,7 +24,11 @@ function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress:
           onAuthorPress(post.authorName);
         }}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarEmoji}>{post.authorEmoji}</Text>
+          {post.me && myAvatarUri ? (
+            <Image source={{ uri: myAvatarUri }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarEmoji}>{post.authorEmoji}</Text>
+          )}
         </View>
         <View style={styles.cardHeaderInfo}>
           <Text style={styles.authorName}>{post.authorName}</Text>
@@ -137,7 +143,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: 40, height: 40 },
   avatarEmoji: { fontSize: 18 },
   cardHeaderInfo: { flex: 1 },
   authorName: { fontFamily: theme.fonts.bold, fontSize: 14, color: theme.colors.text },
