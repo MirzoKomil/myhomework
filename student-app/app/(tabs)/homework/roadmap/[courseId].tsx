@@ -57,10 +57,11 @@ function TypeBadge({ type }: { type: LessonType }) {
 
 // ─── Lesson card ─────────────────────────────────────────────────────────────
 function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive: boolean; index: number }) {
-  const isCompleted = !lesson.locked && lesson.progress > 0;
   const numText = String(index + 1);
   const earnedCoins = useLessonCoins(lesson.id);
   const possibleCoins = getLessonPossibleCoins(getLessonContent(lesson.id, index));
+  const percent = possibleCoins > 0 ? Math.min(100, Math.round((earnedCoins / possibleCoins) * 100)) : 0;
+  const isCompleted = !lesson.locked && percent >= 100;
 
   const cardBorderColor = lesson.type === 'bonus' && !lesson.locked
     ? '#F59E0B'
@@ -132,7 +133,7 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
           {!lesson.locked && (
             <View style={ss.starsPercent}>
               <Stars count={lesson.stars} />
-              <Text style={ss.percentText}>{lesson.progress}%</Text>
+              <Text style={ss.percentText}>{percent}%</Text>
             </View>
           )}
           <View style={ss.coinRow}>
