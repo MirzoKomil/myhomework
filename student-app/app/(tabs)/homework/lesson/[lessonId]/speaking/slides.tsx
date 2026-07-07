@@ -89,6 +89,8 @@ export default function SlidesScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onScroll={onScrollEnd}
+        scrollEventThrottle={16}
         onMomentumScrollEnd={onScrollEnd}
         onScrollEndDrag={onScrollEnd}>
         {slides.map((slide) => (
