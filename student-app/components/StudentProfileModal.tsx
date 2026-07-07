@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/constants/theme';
-import { profileStats } from '@/data/mock';
+import { getRankedLeaderboard, profileStats } from '@/data/mock';
 import { getStudentProfile } from '@/data/studentProfiles';
 import { openThread } from '@/services/studentChatStore';
 
@@ -38,6 +38,7 @@ export function StudentProfileModal({
   if (!studentName) return null;
   const profile = getStudentProfile(studentName);
   const canMessage = profile.gender === MY_GENDER;
+  const leaderboardRank = getRankedLeaderboard('alltime', 'country').find((e) => e.name === profile.name)?.rank;
 
   const handleMessage = async () => {
     if (!canMessage) {
@@ -69,6 +70,12 @@ export function StudentProfileModal({
               <Text style={styles.name}>{profile.name}</Text>
               <Text style={styles.subLabel}>{profile.courseStartDate} dan buyon o'quvchi</Text>
             </View>
+            {leaderboardRank !== undefined && (
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankBadgeEmoji}>🏆</Text>
+                <Text style={styles.rankBadgeText}>{leaderboardRank}-o'rin</Text>
+              </View>
+            )}
           </View>
 
           {showBlocked && (
@@ -144,6 +151,16 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1 },
   name: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text },
   subLabel: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  rankBadge: {
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: theme.colors.warningBg,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  rankBadgeEmoji: { fontSize: 16 },
+  rankBadgeText: { fontFamily: theme.fonts.bold, fontSize: 12, color: '#B45309' },
 
   blockedBanner: {
     flexDirection: 'row',
