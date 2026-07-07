@@ -423,10 +423,16 @@ export default function RoadmapScreen() {
         {/* ── Section header ── */}
         <View style={ss.sectionHeader}>
           <Text style={ss.sectionTitle}>Darslar yo'li</Text>
-          <Pressable style={ss.bonusBtn} onPress={() => router.push('/homework/bonus' as never)}>
-            <Ionicons name="gift-outline" size={16} color="#D97706" />
-            <Text style={ss.bonusBtnText}>Bonus darslar</Text>
-          </Pressable>
+          <View style={ss.sectionBtnRow}>
+            <Pressable style={ss.bonusBtn} onPress={() => router.push('/homework/bonus' as never)}>
+              <Ionicons name="gift-outline" size={16} color="#D97706" />
+              <Text style={ss.bonusBtnText}>Bonus darslar</Text>
+            </Pressable>
+            <Pressable style={ss.examsBtn} onPress={() => router.push('/homework/exams' as never)}>
+              <Ionicons name="school-outline" size={16} color={theme.colors.blue} />
+              <Text style={ss.examsBtnText}>Imtihonlar</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* ── Lesson path ── */}
@@ -541,12 +547,15 @@ const ss = StyleSheet.create({
   },
   // Section header
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 12,
+    gap: 10,
+  },
+  sectionBtnRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   sectionTitle: {
     fontFamily: theme.fonts.extraBold,
@@ -566,6 +575,20 @@ const ss = StyleSheet.create({
     fontFamily: theme.fonts.semiBold,
     fontSize: 12,
     color: '#D97706',
+  },
+  examsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: theme.colors.blueLight,
+  },
+  examsBtnText: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: 12,
+    color: theme.colors.blue,
   },
 
   // Path

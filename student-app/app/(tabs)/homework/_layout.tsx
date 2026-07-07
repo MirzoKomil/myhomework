@@ -7,6 +7,8 @@ export default function HomeworkLayout() {
       <Stack.Screen name="roadmap/[courseId]" />
       <Stack.Screen name="bonus" />
       <Stack.Screen name="bonusLesson/[bonusId]/index" />
+      <Stack.Screen name="exams/index" />
+      <Stack.Screen name="exams/[examId]" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="lesson/[lessonId]/index" />
       <Stack.Screen name="lesson/[lessonId]/video/index" />
       <Stack.Screen name="lesson/[lessonId]/video/watch" options={{ presentation: 'fullScreenModal' }} />

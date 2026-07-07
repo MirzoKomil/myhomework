@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +10,14 @@ import { theme } from '@/constants/theme';
 import { Certificate, CERTIFICATES, CertificateType } from '@/data/certificates';
 import { courses, profileStats } from '@/data/mock';
 import { generateScheduleDays } from '@/data/scheduleCalendar';
+import { useExamResults } from '@/services/examStore';
+
+// Sertifikat ID'si mos imtihon ID'siga to'g'ri keladi ('interval-1' -> 'interval-1', 'course' -> 'final').
+function examIdForCertificate(cert: Certificate): string | null {
+  if (cert.type === 'interval') return cert.id;
+  if (cert.type === 'course') return 'final';
+  return null;
+}
 
 const TYPE_CONFIG: Record<CertificateType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
   interval: { icon: 'ribbon', color: theme.colors.purple, bg: theme.colors.purpleLight },
@@ -26,9 +35,17 @@ export default function CertificatesScreen() {
     () => scheduleDays.filter((d) => d.type === 'bonus' && d.isPast && !d.missed).length,
     [scheduleDays]
   );
+  const examResults = useExamResults();
 
-  const isUnlocked = (cert: Certificate) =>
+  const hasPassedExam = (cert: Certificate) => {
+    const examId = examIdForCertificate(cert);
+    return examId === null || examResults[examId]?.passed === true;
+  };
+
+  const lessonsReady = (cert: Certificate) =>
     cert.type === 'bonus' ? bonusAttended >= cert.requiredLessons : activeCourse.lessonsDone >= cert.requiredLessons;
+
+  const isUnlocked = (cert: Certificate) => lessonsReady(cert) && hasPassedExam(cert);
 
   const openCertificate = (cert: Certificate) => {
     if (isUnlocked(cert)) setSelected(cert);
@@ -50,20 +67,32 @@ export default function CertificatesScreen() {
       <ScreenHeader title="Sertifikatlarim" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
-          Har 12 ta darsni yakunlaganingizda yangi sertifikat, kurs oxirida esa to'liq kurs sertifikati beriladi.
+          Har 12 ta darsni yakunlab, mos imtihondan o'tganingizda yangi sertifikat, kurs oxirida esa to'liq kurs
+          sertifikati beriladi.
         </Text>
         {CERTIFICATES.map((cert) => {
           const unlocked = isUnlocked(cert);
+          const needsExam = lessonsReady(cert) && !hasPassedExam(cert);
           const cfg = TYPE_CONFIG[cert.type];
           return (
             <Pressable key={cert.id} onPress={() => openCertificate(cert)}>
               <Card style={StyleSheet.flatten([styles.card, !unlocked && styles.cardLocked])}>
                 <View style={[styles.iconWrap, { backgroundColor: unlocked ? cfg.bg : theme.colors.bg }]}>
-                  <Ionicons name={unlocked ? cfg.icon : 'lock-closed'} size={24} color={unlocked ? cfg.color : theme.colors.textLight} />
+                  <Ionicons
+                    name={unlocked ? cfg.icon : needsExam ? 'school-outline' : 'lock-closed'}
+                    size={24}
+                    color={unlocked ? cfg.color : theme.colors.textLight}
+                  />
                 </View>
                 <View style={styles.info}>
                   <Text style={[styles.title, !unlocked && styles.titleLocked]}>{cert.title}</Text>
-                  <Text style={styles.meta}>{unlocked ? cert.dateRangeLabel : `${cert.requiredLessons} ta dars talab qilinadi`}</Text>
+                  <Text style={styles.meta}>
+                    {unlocked
+                      ? cert.dateRangeLabel
+                      : needsExam
+                        ? "Imtihondan o'tishingiz kerak"
+                        : `${cert.requiredLessons} ta dars talab qilinadi`}
+                  </Text>
                 </View>
                 {unlocked && (
                   <View style={styles.doneBadge}>
@@ -125,10 +154,23 @@ export default function CertificatesScreen() {
               </View>
               <Text style={styles.dialogTitle}>Bu sertifikat hali qulflangan</Text>
               <Text style={styles.dialogSubtitle}>
-                Ushbu sertifikatni olish uchun {lockedNotice.requiredLessons} ta darsni yakunlashingiz kerak.
+                {lessonsReady(lockedNotice) && !hasPassedExam(lockedNotice)
+                  ? "Ushbu sertifikatni olish uchun mos imtihondan kamida 60% ball bilan o'tishingiz kerak."
+                  : `Ushbu sertifikatni olish uchun ${lockedNotice.requiredLessons} ta darsni yakunlashingiz kerak.`}
               </Text>
-              <Pressable style={styles.dialogConfirmBtn} onPress={() => setLockedNotice(null)}>
-                <Text style={styles.dialogConfirmText}>Tushunarli</Text>
+              {lessonsReady(lockedNotice) && !hasPassedExam(lockedNotice) && (
+                <Pressable
+                  style={styles.dialogConfirmBtn}
+                  onPress={() => {
+                    setLockedNotice(null);
+                    router.push('/homework/exams' as never);
+                  }}
+                >
+                  <Text style={styles.dialogConfirmText}>Imtihonlarga o'tish</Text>
+                </Pressable>
+              )}
+              <Pressable style={styles.closeBtn} onPress={() => setLockedNotice(null)}>
+                <Text style={styles.closeBtnText}>Tushunarli</Text>
               </Pressable>
             </View>
           )}

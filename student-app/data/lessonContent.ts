@@ -77,7 +77,7 @@ function hashId(id: string): number {
   return h;
 }
 
-function pickWindow<T>(pool: T[], offset: number, count: number): T[] {
+export function pickWindow<T>(pool: T[], offset: number, count: number): T[] {
   return Array.from({ length: Math.min(count, pool.length) }, (_, i) => pool[(offset + i) % pool.length]);
 }
 
@@ -126,7 +126,7 @@ const VOCAB_POOL: VocabWord[] = [
 ];
 
 // ─── Grammar fill-in-gap pool ───────────────────────────────────────────────
-const GRAMMAR_POOL: GrammarBlank[] = [
+export const GRAMMAR_POOL: GrammarBlank[] = [
   { id: 'g1', sentence: 'She ___ to school every day.', answer: 'goes', options: ['go', 'goes', 'going', 'gone'] },
   { id: 'g2', sentence: 'They ___ football on Sundays.', answer: 'play', options: ['play', 'plays', 'playing', 'played'] },
   { id: 'g3', sentence: 'He ___ watching TV right now.', answer: 'is', options: ['is', 'are', 'am', 'be'] },
@@ -145,7 +145,7 @@ const GRAMMAR_POOL: GrammarBlank[] = [
 const MATCH_POOL: MatchPair[] = VOCAB_POOL.slice(0, 20).map((w) => ({ id: w.id, left: w.english, right: w.translation }));
 
 // ─── Multiple choice pool ───────────────────────────────────────────────────
-const MC_POOL: MultipleChoiceQ[] = [
+export const MC_POOL: MultipleChoiceQ[] = [
   { id: 'mc1', question: "'Kutubxona' so'zining inglizchasi qaysi?", options: ['Library', 'Market', 'Kitchen', 'Journey'], correctIndex: 0 },
   { id: 'mc2', question: "Qaysi so'z 'tez' degan ma'noni bildiradi?", options: ['Slow', 'Quick', 'Heavy', 'Light'], correctIndex: 1 },
   { id: 'mc3', question: "'She ___ a teacher.' bo'sh joyga mos keladigan so'z?", options: ['am', 'is', 'are', 'be'], correctIndex: 1 },
@@ -159,7 +159,7 @@ const MC_POOL: MultipleChoiceQ[] = [
 ];
 
 // ─── Sentence building pool ─────────────────────────────────────────────────
-const SENTENCE_POOL: SentenceBuildQ[] = [
+export const SENTENCE_POOL: SentenceBuildQ[] = [
   { id: 's1', translation: 'U har kuni maktabga boradi.', words: ['school', 'to', 'goes', 'she', 'every', 'day'], answer: ['she', 'goes', 'to', 'school', 'every', 'day'] },
   { id: 's2', translation: 'Ular yakshanba kunlari futbol o\'ynashadi.', words: ['football', 'play', 'they', 'Sundays', 'on'], answer: ['they', 'play', 'football', 'on', 'Sundays'] },
   { id: 's3', translation: 'Men kecha uy vazifamni bajardim.', words: ['homework', 'did', 'my', 'yesterday', 'I'], answer: ['I', 'did', 'my', 'homework', 'yesterday'] },
@@ -171,7 +171,7 @@ const SENTENCE_POOL: SentenceBuildQ[] = [
 ];
 
 // ─── Speaking prompts pool ──────────────────────────────────────────────────
-const SPEAKING_POOL: SpeakingPrompt[] = [
+export const SPEAKING_POOL: SpeakingPrompt[] = [
   { id: 'sp1', sentence: 'Could you tell me more about yourself?', translation: 'O\'zingiz haqingizda ko\'proq gapirib bera olasizmi?' },
   { id: 'sp2', sentence: 'What do you usually do on weekends?', translation: 'Odatda dam olish kunlari nima qilasiz?' },
   { id: 'sp3', sentence: 'I would like to practice my pronunciation.', translation: 'Men talaffuzimni mashq qilmoqchiman.' },
