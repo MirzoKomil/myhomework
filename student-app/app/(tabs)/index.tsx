@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CourseProgressCard } from '@/components/ui/CourseProgressCard';
@@ -9,19 +9,64 @@ import { LessonReminder } from '@/components/ui/LessonReminder';
 import { ShopEntryCard } from '@/components/ui/ShopEntryCard';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
-import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
+import { appNotifications, chatThreads, courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
+import { getLastMessage } from '@/services/chatStore';
 import { fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
+
+const hasUnreadNotifications = appNotifications.some((n) => n.unread);
+const hasUnreadMessages = chatThreads.some((t) => getLastMessage(t.id)?.from === 'them');
 
 export default function HomeScreen() {
   const activeCourse = courses[0];
   const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
 
+  const waveAnim = useRef(new Animated.Value(0)).current;
+  const bellShake = useRef(new Animated.Value(0)).current;
+  const messageShake = useRef(new Animated.Value(0)).current;
+
   useFocusEffect(
     useCallback(() => {
       getLastPosition().then(setLastPosition);
-    }, [])
+
+      waveAnim.setValue(0);
+      Animated.timing(waveAnim, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start();
+    }, [waveAnim])
   );
+
+  useEffect(() => {
+    if (!hasUnreadNotifications) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bellShake, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bellShake, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(4400),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bellShake]);
+
+  useEffect(() => {
+    if (!hasUnreadMessages) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(700),
+        Animated.timing(messageShake, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(messageShake, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(3700),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [messageShake]);
+
+  const waveRotate = waveAnim.interpolate({
+    inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],
+    outputRange: ['0deg', '18deg', '-12deg', '18deg', '-8deg', '0deg'],
+  });
+  const shakeRotate = (anim: Animated.Value) =>
+    anim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ['0deg', '-14deg', '0deg', '14deg', '0deg'] });
 
   const handleContinue = () => {
     if (lastPosition) {
@@ -47,15 +92,22 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Salom,</Text>
-          <Text style={styles.name}>{profileStats.name.split(' ')[0]} 👋</Text>
+          <Text style={styles.name}>
+            {profileStats.name.split(' ')[0]} <Animated.Text style={{ transform: [{ rotate: waveRotate }] }}>👋</Animated.Text>
+          </Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/messages' as never)}>
-            <Ionicons name="chatbubble-ellipses-outline" size={24} color={theme.colors.tabInactive} />
+            <Animated.View style={{ transform: [{ rotate: shakeRotate(messageShake) }] }}>
+              <Ionicons name="chatbubble-ellipses-outline" size={24} color={theme.colors.tabInactive} />
+            </Animated.View>
+            {hasUnreadMessages && <View style={styles.badgeDot} />}
           </Pressable>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>
-            <Ionicons name="notifications-outline" size={24} color={theme.colors.tabInactive} />
-            <View style={styles.badgeDot} />
+            <Animated.View style={{ transform: [{ rotate: shakeRotate(bellShake) }] }}>
+              <Ionicons name="notifications-outline" size={24} color={theme.colors.tabInactive} />
+            </Animated.View>
+            {hasUnreadNotifications && <View style={styles.badgeDot} />}
           </Pressable>
         </View>
       </View>
@@ -136,14 +188,14 @@ const styles = StyleSheet.create({
   },
   badgeDot: {
     position: 'absolute',
-    top: 7,
-    right: 7,
+    top: -1,
+    right: -1,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: theme.colors.danger,
     borderWidth: 1.5,
-    borderColor: theme.colors.bg,
+    borderColor: theme.colors.surface,
   },
   sectionTitle: { fontFamily: theme.fonts.bold, fontSize: 18, color: theme.colors.text, marginBottom: 14 },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 },
