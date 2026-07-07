@@ -73,10 +73,11 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Salom,</Text>
-          <Text style={styles.name}>
-            {profileStats.name.split(' ')[0]} <Animated.Text style={{ transform: [{ rotate: waveRotate }] }}>👋</Animated.Text>
+        <View style={styles.greetingWrap}>
+          <Text style={styles.greetingLine} numberOfLines={1}>
+            <Text style={styles.greeting}>Salom, </Text>
+            <Text style={styles.name}>{profileStats.name.split(' ')[0]}</Text>{' '}
+            <Animated.Text style={{ transform: [{ rotate: waveRotate }] }}>👋</Animated.Text>
           </Text>
         </View>
         <View style={styles.headerActions}>
@@ -154,8 +155,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  greeting: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted },
-  name: { fontFamily: theme.fonts.extraBold, fontSize: 26, color: theme.colors.text },
+  greetingWrap: { flex: 1, marginRight: 12 },
+  greetingLine: { fontSize: 20 },
+  greeting: { fontFamily: theme.fonts.medium, fontSize: 16, color: theme.colors.textMuted },
+  name: { fontFamily: theme.fonts.extraBold, fontSize: 20, color: theme.colors.text },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   iconBtn: {
     width: 26,
