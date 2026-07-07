@@ -22,6 +22,7 @@ import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 import { useCoins, useLessonCoins } from '@/services/coinsStore';
+import { getCategoryProgress, ProgressCategory, useLessonProgress } from '@/services/lessonProgressStore';
 
 // ─── Type config ────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
@@ -45,14 +46,28 @@ function TypeBadge({ type }: { type: LessonType }) {
 function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive: boolean; index: number }) {
   const numText = String(index + 1);
   const earnedCoins = useLessonCoins(lesson.id);
-  const possibleCoins = getLessonPossibleCoins(getLessonContent(lesson.id, index));
-  const percent = possibleCoins > 0 ? Math.min(100, Math.round((earnedCoins / possibleCoins) * 100)) : 0;
+  const content = getLessonContent(lesson.id, index);
+  const possibleCoins = getLessonPossibleCoins(content);
+  // Reaktivlik uchun — lessonProgressStore o'zgarishlarida qayta render qilinsin.
+  useLessonProgress(lesson.id);
+  const videoCategory: ProgressCategory = lesson.type === 'speaking' ? 'speaking' : 'video';
+  const percent = Math.round(
+    (getCategoryProgress(lesson.id, videoCategory) +
+      getCategoryProgress(lesson.id, 'vocabulary') +
+      getCategoryProgress(lesson.id, 'homework', content.homeworkParts.length)) /
+      3
+  );
   const isCompleted = !lesson.locked && percent >= 100;
 
   const glowSpin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!isActive) return;
-    const loop = Animated.loop(Animated.timing(glowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true }));
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true }),
+        Animated.timing(glowSpin, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
     loop.start();
     return () => loop.stop();
   }, [isActive, glowSpin]);
@@ -93,9 +108,6 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
         {/* Content */}
         <View style={ss.cardContent}>
           <View style={ss.titleRow}>
-            {isCompleted && (
-              <Text style={ss.completedNum}>{numText}</Text>
-            )}
             <Text
               style={[
                 ss.cardTitle,
@@ -133,22 +145,24 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
 
   if (isActive) {
     return (
-      <View style={ss.activeGlowWrap}>
-        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: glowRotate }] }]}>
-          <LinearGradient
-            colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
+      <View style={ss.activeOuterWrap}>
+        <View style={ss.activeGlowWrap}>
+          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: glowRotate }] }]}>
+            <LinearGradient
+              colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+          <Pressable onPress={() => router.push(`/homework/lesson/${lesson.id}`)} style={ss.activeGlowInner}>
+            {cardBody}
+          </Pressable>
+        </View>
         <View style={ss.activeBadge}>
           <Ionicons name="flash" size={11} color="#fff" />
           <Text style={ss.activeBadgeText}>Joriy dars</Text>
         </View>
-        <Pressable onPress={() => router.push(`/homework/lesson/${lesson.id}`)} style={ss.activeGlowInner}>
-          {cardBody}
-        </Pressable>
       </View>
     );
   }
@@ -584,6 +598,9 @@ const ss = StyleSheet.create({
   cardLocked: {
     opacity: 0.65,
   },
+  activeOuterWrap: {
+    position: 'relative',
+  },
   activeGlowWrap: {
     borderRadius: 22,
     padding: 2,
@@ -679,11 +696,6 @@ const ss = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 5,
-  },
-  completedNum: {
-    fontFamily: theme.fonts.extraBold,
-    fontSize: 18,
-    color: '#34D399',
   },
   cardTitle: {
     fontFamily: theme.fonts.bold,
