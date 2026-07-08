@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   KeyboardAvoidingView,
@@ -20,7 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
-import { getLessonContent } from '@/data/lessonContent';
+import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { useAvatarUri } from '@/services/avatarStore';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
@@ -37,8 +38,7 @@ const MOCK_COMMENTS: Comment[] = [
 
 export default function SlidesScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [content] = useState(() => getLessonContent(String(lessonId), 1));
-  const slides = content.slides;
+  const [content, setContent] = useState<LessonContent | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const [showComments, setShowComments] = useState(false);
@@ -55,6 +55,10 @@ export default function SlidesScreen() {
   };
 
   useEffect(() => {
+    getResolvedLessonContent(String(lessonId), 1).then(setContent);
+  }, [lessonId]);
+
+  useEffect(() => {
     markDone(String(lessonId), 'slidesWatch');
     saveLastPosition({ lessonId: String(lessonId), section: 'speaking/slides', label: "Slidelarni ko'rish" });
   }, [lessonId]);
@@ -63,6 +67,18 @@ export default function SlidesScreen() {
     const idx = Math.round(e.nativeEvent.contentOffset.x / width);
     setActiveIndex(idx);
   };
+
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.konspektSection}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const slides = content.slides;
 
   const goTo = (idx: number) => {
     const clamped = Math.max(0, Math.min(slides.length - 1, idx));

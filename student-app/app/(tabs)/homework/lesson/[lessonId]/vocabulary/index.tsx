@@ -1,19 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { getLessonContent } from '@/data/lessonContent';
+import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 
 export default function VocabularySectionScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [content] = useState(() => getLessonContent(String(lessonId), 0));
+  const [content, setContent] = useState<LessonContent | null>(null);
   const progress = useLessonProgress(String(lessonId));
+
+  useEffect(() => {
+    getResolvedLessonContent(String(lessonId), 0).then(setContent);
+  }, [lessonId]);
+
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader title="Yangi so'zlar" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const items = [
     {
@@ -78,6 +93,7 @@ export default function VocabularySectionScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 20, paddingBottom: 40 },
   timelineItem: { flexDirection: 'row', gap: 14, marginBottom: 4 },
   timelineLeft: { alignItems: 'center', width: 28 },

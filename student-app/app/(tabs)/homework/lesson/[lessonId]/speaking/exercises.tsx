@@ -1,18 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { getLessonContent } from '@/data/lessonContent';
+import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { markDone } from '@/services/lessonProgressStore';
 
 export default function SpeakingExercisesScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [content] = useState(() => getLessonContent(String(lessonId), 1));
-  const prompts = content.speakingPractice;
+  const [content, setContent] = useState<LessonContent | null>(null);
+
+  useEffect(() => {
+    getResolvedLessonContent(String(lessonId), 1).then(setContent);
+  }, [lessonId]);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [index, setIndex] = useState(0);
@@ -20,6 +23,17 @@ export default function SpeakingExercisesScreen() {
   const [recorded, setRecorded] = useState(false);
   const [finished, setFinished] = useState(false);
 
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.resultCenter}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const prompts = content.speakingPractice;
   const current = prompts[index];
 
   const toggleRecording = async () => {

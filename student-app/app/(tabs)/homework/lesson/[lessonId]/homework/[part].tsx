@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
-import { useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatThreadView } from '@/components/chat/ChatThreadView';
 import { theme } from '@/constants/theme';
 import { ChatMessage } from '@/data/mock';
-import { getLessonContent, HomeworkPart, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
+import { getResolvedLessonContent, HomeworkPart, LessonContent, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markHomeworkPartDone } from '@/services/lessonProgressStore';
@@ -26,10 +26,25 @@ function shuffle<T>(arr: T[]): T[] {
 export default function HomeworkPartScreen() {
   const { lessonId, part: partId, day } = useLocalSearchParams<{ lessonId: string; part: string; day?: string }>();
   const dayIndex = day === 'speaking' ? 1 : 0;
-  const [content] = useState(() => getLessonContent(String(lessonId), dayIndex));
-  const part = content.homeworkParts.find((p) => p.id === partId) as HomeworkPart | undefined;
+  const [content, setContent] = useState<LessonContent | null>(null);
+
+  useEffect(() => {
+    getResolvedLessonContent(String(lessonId), dayIndex).then(setContent);
+  }, [lessonId, dayIndex]);
 
   const complete = () => markHomeworkPartDone(String(lessonId), String(partId));
+
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const part = content.homeworkParts.find((p) => p.id === partId) as HomeworkPart | undefined;
 
   if (!part) {
     return (

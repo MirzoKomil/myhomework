@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
-import { getLessonContent } from '@/data/lessonContent';
+import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { useAvatarUri } from '@/services/avatarStore';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
@@ -22,7 +22,7 @@ const MOCK_COMMENTS: Comment[] = [
 export default function WatchVideoScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const isBonus = String(lessonId).startsWith('bonus-');
-  const [content, setContent] = useState(() => getLessonContent(String(lessonId), 0));
+  const [content, setContent] = useState<LessonContent | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
   const [draft, setDraft] = useState('');
@@ -30,7 +30,7 @@ export default function WatchVideoScreen() {
   const myAvatarUri = useAvatarUri();
 
   useEffect(() => {
-    setContent(getLessonContent(String(lessonId), 0));
+    getResolvedLessonContent(String(lessonId), 0).then(setContent);
   }, [lessonId]);
 
   useEffect(() => {
@@ -44,6 +44,16 @@ export default function WatchVideoScreen() {
     setComments((prev) => [{ id: `me-${Date.now()}`, name: 'Siz', text, time: 'hozir', me: true }, ...prev]);
     setDraft('');
   };
+
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -142,6 +152,7 @@ export default function WatchVideoScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.surface },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

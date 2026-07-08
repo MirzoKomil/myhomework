@@ -1,24 +1,39 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { getLessonContent } from '@/data/lessonContent';
+import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
 export default function VocabularyListScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [content] = useState(() => getLessonContent(String(lessonId), 0));
+  const [content, setContent] = useState<LessonContent | null>(null);
+
+  useEffect(() => {
+    getResolvedLessonContent(String(lessonId), 0).then(setContent);
+  }, [lessonId]);
 
   useEffect(() => {
     markDone(String(lessonId), 'vocabList');
     saveLastPosition({ lessonId: String(lessonId), section: 'vocabulary/list', label: "So'zlar ro'yxati" });
   }, [lessonId]);
+
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader title="So'zlar ro'yxati" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -49,6 +64,7 @@ export default function VocabularyListScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 20, paddingBottom: 40, gap: 10 },
   subtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 },
   card: {},

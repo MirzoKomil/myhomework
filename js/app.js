@@ -635,6 +635,8 @@ let _activeCourseId = null;
 let _activeLessonId = null;
 let _activeModuleId = null;
 let _expandedLessonIds = new Set();
+let _lessonContentTab = 'konspekt';
+let _lcActiveHomeworkPart = null;
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -725,7 +727,7 @@ function switchMobileSubSection(sub) {
 function renderMobileEditPanel() {
     const panel = document.getElementById('mobileEditPanel');
     if (!panel) return;
-    const showRow     = _mobileSubSection === 'dars' || _mobileSubSection === 'resurslar';
+    const showRow     = (_mobileSubSection === 'dars' && !_activeLessonId) || _mobileSubSection === 'resurslar';
     const showMacTabs = _mobileSubSection === 'resurslar';
     const btnLabel    = _mobileSubSection !== 'dars'
         ? "+ YouTube video qo'shish"
@@ -963,21 +965,334 @@ function renderMobileModuleDetailTab(container, course, mod) {
     });
 }
 
-function renderMobileLessonDetailTab(container, course, lesson) {
-    container.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-        <button type="button" id="backToLessons" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--purple);background:none;border:none;cursor:pointer;padding:0">
-            ← Darslar
-        </button>
-    </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${escapeHtml(course.name)}</div>
-    <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:24px">${escapeHtml(lesson.name)}</div>
-    <div class="mac-empty">Dars tarkibi tez orada qo'shiladi</div>`;
+// ─── Generic add/edit/delete list-editor (vocab, grammar, homework items) ───
+// Ushbu bitta yordamchi funksiya lug'at, grammatika savollari va uyga vazifa
+// qismlaridagi 8 xil ro'yxat turi uchun ham ishlatiladi — har birida
+// add/edit/delete modal qayta yozilmasin deb.
+function renderEditableList(container, opts) {
+    const items = opts.items || [];
+    const rows = items.length
+        ? items.map((item, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--surface)">
+                <div style="flex:1;min-width:0;font-size:13px;color:var(--text);line-height:1.5">${opts.renderRow(item)}</div>
+                <button type="button" data-lc-edit="${i}" style="background:none;border:none;cursor:pointer;color:var(--purple,#7c3aed);font-size:12px;font-weight:600;flex-shrink:0">Tahrirlash</button>
+                <button type="button" data-lc-del="${i}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;flex-shrink:0">O'chirish</button>
+            </div>`).join('')
+        : `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Hali qo'shilmagan</div>`;
 
-    document.getElementById('backToLessons')?.addEventListener('click', () => {
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+            <div style="font-weight:700;font-size:14px;color:var(--text)">${opts.title}</div>
+            <button type="button" id="lcAddBtn" class="btn-primary-sm">${opts.addLabel || "+ Qo'shish"}</button>
+        </div>
+        <div id="lcRows">${rows}</div>`;
+
+    function openItemModal(index) {
+        const isEdit = index !== undefined;
+        const item = isEdit ? items[index] : {};
+        const formHtml = opts.fields.map(f => {
+            const raw = isEdit ? item[f.key] : undefined;
+            const val = Array.isArray(raw) ? raw.join(', ') : (raw !== undefined ? raw : '');
+            const req = f.required ? ` <span style="color:var(--danger)">*</span>` : '';
+            if (f.type === 'textarea') {
+                return `<div class="form-group"><label>${f.label}${req}</label><textarea id="lcField_${f.key}" class="form-control" rows="3" placeholder="${escapeHtml(f.placeholder || '')}">${escapeHtml(String(val))}</textarea></div>`;
+            }
+            return `<div class="form-group"><label>${f.label}${req}</label><input id="lcField_${f.key}" class="form-control" value="${escapeHtml(String(val))}" placeholder="${escapeHtml(f.placeholder || '')}"></div>`;
+        }).join('');
+
+        openModal(isEdit ? 'Tahrirlash' : "Qo'shish", formHtml,
+            `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor qilish</button><button type="button" class="btn-primary-sm" id="lcSaveItem">Saqlash</button>`,
+            { wide: true });
+
+        document.getElementById('lcSaveItem').onclick = () => {
+            const next = {};
+            let ok = true;
+            opts.fields.forEach(f => {
+                const raw = document.getElementById(`lcField_${f.key}`).value.trim();
+                if (f.required && !raw) ok = false;
+                if (f.type === 'csv') next[f.key] = raw.split(',').map(s => s.trim()).filter(Boolean);
+                else if (f.type === 'number') next[f.key] = Number(raw) || 0;
+                else next[f.key] = raw;
+            });
+            if (!ok) { alert("Majburiy (*) maydonlarni to'ldiring"); return; }
+            const merged = isEdit ? { ...item, ...next } : { id: (opts.idPrefix || 'item') + '-' + Date.now(), ...next };
+            const newItems = [...items];
+            if (isEdit) newItems[index] = merged;
+            else newItems.push(merged);
+            closeModal();
+            opts.onChange(newItems);
+        };
+    }
+
+    document.getElementById('lcAddBtn').addEventListener('click', () => openItemModal());
+    container.querySelectorAll('[data-lc-edit]').forEach(btn => btn.addEventListener('click', () => openItemModal(Number(btn.dataset.lcEdit))));
+    container.querySelectorAll('[data-lc-del]').forEach(btn => btn.addEventListener('click', () => {
+        if (!confirm("O'chirilsinmi?")) return;
+        const newItems = items.filter((_, i) => i !== Number(btn.dataset.lcDel));
+        opts.onChange(newItems);
+    }));
+}
+
+// ─── Dars tarkibi (lug'at, grammatika/speaking, uyga vazifa) tahrirlovchisi ──
+function _getLessonWorkingContent(mc, lesson, dayIndex) {
+    if (!mc.lessonContents) mc.lessonContents = {};
+    if (mc.lessonContents[lesson.id]) return mc.lessonContents[lesson.id];
+    return getDefaultLessonContent(lesson.id, dayIndex);
+}
+
+function _saveLessonWorkingContent(lesson, content) {
+    const mc = getMobileContent();
+    if (!mc.lessonContents) mc.lessonContents = {};
+    content.updatedAt = new Date().toISOString().slice(0, 10);
+    mc.lessonContents[lesson.id] = content;
+    saveMobileContent(mc);
+}
+
+function _homeworkKindLabel(kind) {
+    return {
+        matching: 'Moslashtirish', fillBlank: "Bo'sh joy to'ldirish", multipleChoice: 'Test',
+        sentenceBuild: 'Gap tuzish', record: 'Ovozli yozib olish', roleplay: "Rolli o'yin",
+        pronunciation: 'Talaffuz tekshirish', creative: 'Ijodiy vazifa',
+    }[kind] || kind;
+}
+
+function _homeworkPartItemCount(p) {
+    if (p.pairs) return p.pairs.length;
+    if (p.blanks) return p.blanks.length;
+    if (p.questions) return p.questions.length;
+    if (p.items) return p.items.length;
+    if (p.prompts) return p.prompts.length;
+    return null;
+}
+
+function _renderLcKonspekt(body, lesson, content) {
+    body.innerHTML = `
+        <div class="form-group"><label>Konspekt matni</label><textarea id="lcKonspekt" class="form-control" rows="8" placeholder="Ushbu darsning konspekti...">${escapeHtml(content.konspekt || '')}</textarea></div>
+        <button type="button" class="btn-primary-sm" id="lcSaveKonspekt">Saqlash</button>`;
+    document.getElementById('lcSaveKonspekt').addEventListener('click', () => {
+        content.konspekt = document.getElementById('lcKonspekt').value;
+        _saveLessonWorkingContent(lesson, content);
+        showMiniToast('Konspekt saqlandi');
+    });
+}
+
+function _renderLcVocab(body, lesson, content) {
+    renderEditableList(body, {
+        title: "Lug'at (so'zlar)",
+        addLabel: "+ So'z qo'shish",
+        items: content.vocabulary || [],
+        idPrefix: 'v',
+        renderRow: (w) => `<b>${escapeHtml(w.english || '')}</b> — ${escapeHtml(w.translation || '')} <span style="color:var(--text-muted)">${escapeHtml(w.transcript || '')}</span>`,
+        fields: [
+            { key: 'english', label: 'Inglizcha', required: true },
+            { key: 'translation', label: "O'zbekcha tarjima", required: true },
+            { key: 'transcript', label: 'Transkripsiya', placeholder: '/ˈæp.əl/' },
+            { key: 'icon', label: 'Icon nomi (ionicons, ixtiyoriy)', placeholder: 'restaurant-outline' },
+        ],
+        onChange: (newItems) => { content.vocabulary = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); },
+    });
+}
+
+function _renderLcGrammar(body, lesson, content) {
+    renderEditableList(body, {
+        title: "Grammatika (bo'sh joy to'ldirish)",
+        addLabel: "+ Savol qo'shish",
+        items: content.grammarBlanks || [],
+        idPrefix: 'g',
+        renderRow: (q) => `${escapeHtml(q.sentence || '')}<br><span style="color:var(--text-muted)">Javob: ${escapeHtml(q.answer || '')} · Variantlar: ${escapeHtml((q.options || []).join(', '))}</span>`,
+        fields: [
+            { key: 'sentence', label: "Gap (bo'sh joy o'rniga ___ qo'ying)", type: 'textarea', required: true, placeholder: 'She ___ to school every day.' },
+            { key: 'answer', label: "To'g'ri javob", required: true },
+            { key: 'options', label: 'Barcha variantlar (vergul bilan)', type: 'csv', required: true, placeholder: 'go, goes, going, gone' },
+        ],
+        onChange: (newItems) => { content.grammarBlanks = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); },
+    });
+}
+
+function _renderLcSpeakingMain(body, lesson, content) {
+    body.innerHTML = `<div id="lcSlides"></div><div style="height:28px"></div><div id="lcSpeakingPractice"></div>`;
+    renderEditableList(document.getElementById('lcSlides'), {
+        title: 'Slaydlar',
+        addLabel: "+ Slayd qo'shish",
+        items: content.slides || [],
+        idPrefix: 'slide',
+        renderRow: (s) => `<b>${escapeHtml(s.title || '')}</b><br><span style="color:var(--text-muted)">${escapeHtml(s.body || '')}</span>`,
+        fields: [
+            { key: 'title', label: 'Slayd sarlavhasi', required: true },
+            { key: 'body', label: 'Matn', type: 'textarea', required: true },
+        ],
+        onChange: (newItems) => { content.slides = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); },
+    });
+    renderEditableList(document.getElementById('lcSpeakingPractice'), {
+        title: 'Nutq mashqlari (speaking practice)',
+        addLabel: "+ Jumla qo'shish",
+        items: content.speakingPractice || [],
+        idPrefix: 'sp',
+        renderRow: (p) => `${escapeHtml(p.sentence || '')}<br><span style="color:var(--text-muted)">${escapeHtml(p.translation || '')}</span>`,
+        fields: [
+            { key: 'sentence', label: 'Inglizcha jumla', required: true },
+            { key: 'translation', label: 'Tarjima', required: true },
+        ],
+        onChange: (newItems) => { content.speakingPractice = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); },
+    });
+}
+
+function _renderLcHomework(body, lesson, content, dayType) {
+    const parts = content.homeworkParts || [];
+
+    if (_lcActiveHomeworkPart === null || _lcActiveHomeworkPart === undefined || !parts[_lcActiveHomeworkPart]) {
+        body.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">${
+            parts.map((p, i) => {
+                const count = _homeworkPartItemCount(p);
+                return `<div data-hw-part="${i}" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)">
+                    <div>
+                        <div style="font-weight:700;font-size:13px;color:var(--text)">${escapeHtml(p.title || '')}</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${_homeworkKindLabel(p.kind)}${count !== null ? ` · ${count} ta` : ''}</div>
+                    </div>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </div>`;
+            }).join('')
+        }</div>`;
+        body.querySelectorAll('[data-hw-part]').forEach(el => el.addEventListener('click', () => {
+            _lcActiveHomeworkPart = Number(el.dataset.hwPart);
+            _renderLcHomework(body, lesson, content, dayType);
+        }));
+        return;
+    }
+
+    const part = parts[_lcActiveHomeworkPart];
+    body.innerHTML = `<button type="button" id="hwPartBack" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;margin-bottom:14px">← ${escapeHtml(part.title || '')}</button><div id="hwPartBody"></div>`;
+    document.getElementById('hwPartBack').addEventListener('click', () => { _lcActiveHomeworkPart = null; _renderLcHomework(body, lesson, content, dayType); });
+    const partBody = document.getElementById('hwPartBody');
+
+    function persistPart(updatedPart) {
+        content.homeworkParts[_lcActiveHomeworkPart] = updatedPart;
+        _saveLessonWorkingContent(lesson, content);
+    }
+
+    if (part.kind === 'matching') {
+        renderEditableList(partBody, {
+            title: 'Juftliklar', addLabel: "+ Juftlik qo'shish", items: part.pairs || [], idPrefix: 'm',
+            renderRow: (x) => `${escapeHtml(x.left || '')} → ${escapeHtml(x.right || '')}`,
+            fields: [{ key: 'left', label: 'Inglizcha', required: true }, { key: 'right', label: "O'zbekcha", required: true }],
+            onChange: (items) => { persistPart({ ...part, pairs: items }); showMiniToast('Saqlandi'); },
+        });
+    } else if (part.kind === 'fillBlank') {
+        renderEditableList(partBody, {
+            title: "Bo'sh joy to'ldirish", addLabel: "+ Savol qo'shish", items: part.blanks || [], idPrefix: 'b',
+            renderRow: (x) => `${escapeHtml(x.sentence || '')}<br><span style="color:var(--text-muted)">Javob: ${escapeHtml(x.answer || '')}</span>`,
+            fields: [
+                { key: 'sentence', label: 'Gap', type: 'textarea', required: true },
+                { key: 'answer', label: "To'g'ri javob", required: true },
+                { key: 'options', label: 'Variantlar (vergul bilan)', type: 'csv', required: true },
+            ],
+            onChange: (items) => { persistPart({ ...part, blanks: items }); showMiniToast('Saqlandi'); },
+        });
+    } else if (part.kind === 'multipleChoice') {
+        renderEditableList(partBody, {
+            title: 'Testlar', addLabel: "+ Savol qo'shish", items: part.questions || [], idPrefix: 'q',
+            renderRow: (x) => `${escapeHtml(x.question || '')}<br><span style="color:var(--text-muted)">Variantlar: ${escapeHtml((x.options || []).join(', '))} · To'g'ri: #${x.correctIndex}</span>`,
+            fields: [
+                { key: 'question', label: 'Savol', type: 'textarea', required: true },
+                { key: 'options', label: 'Variantlar (vergul bilan)', type: 'csv', required: true },
+                { key: 'correctIndex', label: "To'g'ri variant raqami (0 dan boshlab)", type: 'number', required: true },
+            ],
+            onChange: (items) => { persistPart({ ...part, questions: items }); showMiniToast('Saqlandi'); },
+        });
+    } else if (part.kind === 'sentenceBuild') {
+        renderEditableList(partBody, {
+            title: 'Gap tuzish', addLabel: "+ Mashq qo'shish", items: part.items || [], idPrefix: 'sb',
+            renderRow: (x) => `${escapeHtml(x.translation || '')}<br><span style="color:var(--text-muted)">Javob: ${escapeHtml((x.answer || []).join(' '))}</span>`,
+            fields: [
+                { key: 'translation', label: "O'zbekcha tarjima", required: true },
+                { key: 'words', label: "Aralash so'zlar (vergul bilan)", type: 'csv', required: true },
+                { key: 'answer', label: "To'g'ri tartib (vergul bilan)", type: 'csv', required: true },
+            ],
+            onChange: (items) => { persistPart({ ...part, items: items }); showMiniToast('Saqlandi'); },
+        });
+    } else if (part.kind === 'record' || part.kind === 'pronunciation') {
+        renderEditableList(partBody, {
+            title: part.kind === 'record' ? 'Ovozli yozib olish' : 'Talaffuz tekshirish', addLabel: "+ Jumla qo'shish", items: part.prompts || [], idPrefix: 'p',
+            renderRow: (x) => `${escapeHtml(x.sentence || '')}<br><span style="color:var(--text-muted)">${escapeHtml(x.translation || '')}</span>`,
+            fields: [{ key: 'sentence', label: 'Inglizcha jumla', required: true }, { key: 'translation', label: 'Tarjima', required: true }],
+            onChange: (items) => { persistPart({ ...part, prompts: items }); showMiniToast('Saqlandi'); },
+        });
+    } else if (part.kind === 'roleplay') {
+        const sc = part.scenario || { title: '', intro: '', lines: [], closing: '' };
+        partBody.innerHTML = `
+            <div class="form-group"><label>Ssenariy sarlavhasi</label><input id="rpTitle" class="form-control" value="${escapeHtml(sc.title || '')}"></div>
+            <div class="form-group"><label>Kirish matni</label><textarea id="rpIntro" class="form-control" rows="2">${escapeHtml(sc.intro || '')}</textarea></div>
+            <div class="form-group"><label>Suhbat qatorlari (har birini yangi qatorga yozing)</label><textarea id="rpLines" class="form-control" rows="6">${escapeHtml((sc.lines || []).join('\n'))}</textarea></div>
+            <div class="form-group"><label>Yakunlovchi matn</label><textarea id="rpClosing" class="form-control" rows="2">${escapeHtml(sc.closing || '')}</textarea></div>
+            <button type="button" class="btn-primary-sm" id="rpSave">Saqlash</button>`;
+        document.getElementById('rpSave').addEventListener('click', () => {
+            const newScenario = {
+                id: sc.id || 'roleplay-' + Date.now(),
+                title: document.getElementById('rpTitle').value.trim(),
+                intro: document.getElementById('rpIntro').value.trim(),
+                lines: document.getElementById('rpLines').value.split('\n').map(s => s.trim()).filter(Boolean),
+                closing: document.getElementById('rpClosing').value.trim(),
+            };
+            persistPart({ ...part, scenario: newScenario });
+            showMiniToast('Ssenariy saqlandi');
+        });
+    } else if (part.kind === 'creative') {
+        partBody.innerHTML = `
+            <div class="form-group"><label>Topshiriq matni</label><textarea id="crInstruction" class="form-control" rows="4">${escapeHtml(part.instruction || '')}</textarea></div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Media turi: ${part.mediaType === 'audio' ? 'Ovozli xabar' : 'Matn'}</div>
+            <button type="button" class="btn-primary-sm" id="crSave">Saqlash</button>`;
+        document.getElementById('crSave').addEventListener('click', () => {
+            persistPart({ ...part, instruction: document.getElementById('crInstruction').value.trim() });
+            showMiniToast('Saqlandi');
+        });
+    }
+}
+
+function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
+    const dayType = dayIndex % 2 === 0 ? 'grammar' : 'speaking';
+    const dayBadgeHtml = dayType === 'grammar'
+        ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">🎬 Videodars</span>`
+        : `<span style="background:#4F8CFF;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">🗣️ Speaking</span>`;
+
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
+    container.innerHTML = `
+    <div style="flex-shrink:0;padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface);flex-wrap:wrap">
+        <button type="button" id="backToLessons" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Darslar
+        </button>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--border)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(lesson.name)}</span>
+        ${dayBadgeHtml}
+    </div>
+    <div class="mac-tabs" id="lessonContentTabs" style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0">
+        <button type="button" class="mac-tab-btn ${_lessonContentTab === 'konspekt' ? 'mac-tab-active' : ''}" data-lc-tab="konspekt">📝 Konspekt</button>
+        <button type="button" class="mac-tab-btn ${_lessonContentTab === 'vocab' ? 'mac-tab-active' : ''}" data-lc-tab="vocab">📖 Lug'at</button>
+        <button type="button" class="mac-tab-btn ${_lessonContentTab === 'main' ? 'mac-tab-active' : ''}" data-lc-tab="main">${dayType === 'grammar' ? '📐 Grammatika' : '🎬 Slaydlar'}</button>
+        <button type="button" class="mac-tab-btn ${_lessonContentTab === 'homework' ? 'mac-tab-active' : ''}" data-lc-tab="homework">📋 Uyga vazifa</button>
+    </div>
+    <div id="lessonContentBody" style="flex:1;overflow-y:auto;padding:20px"></div>`;
+
+    document.getElementById('backToLessons').addEventListener('click', () => {
         _activeLessonId = null;
+        _lcActiveHomeworkPart = null;
         renderMobileEditPanel();
     });
+
+    container.querySelectorAll('[data-lc-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _lessonContentTab = btn.dataset.lcTab;
+            _lcActiveHomeworkPart = null;
+            renderMobileLessonDetailTab(container, course, lesson, dayIndex);
+        });
+    });
+
+    const body = document.getElementById('lessonContentBody');
+    const content = _getLessonWorkingContent(getMobileContent(), lesson, dayIndex);
+    if (_lessonContentTab === 'konspekt') _renderLcKonspekt(body, lesson, content);
+    else if (_lessonContentTab === 'vocab') _renderLcVocab(body, lesson, content);
+    else if (_lessonContentTab === 'main') { dayType === 'grammar' ? _renderLcGrammar(body, lesson, content) : _renderLcSpeakingMain(body, lesson, content); }
+    else if (_lessonContentTab === 'homework') _renderLcHomework(body, lesson, content, dayType);
 }
 
 function renderMobileCourseDetailTab(container, course) {
@@ -1006,13 +1321,18 @@ function renderMobileCourseDetailTab(container, course) {
     const iconBtn = (attrs, svgContent, color) =>
         `<button type="button" ${attrs} style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:${color || 'var(--text-muted)'};transition:background 0.12s" onmouseover="this.style.background='var(--bg-secondary,#f3f4f6)'" onmouseout="this.style.background='transparent'">${svgContent}</button>`;
 
-    function lessonHTML(l) {
+    function lessonHTML(l, i) {
         const expanded = _expandedLessonIds.has(l.id);
         const mods = allModules.filter(m => m.lessonId === l.id);
         const modCount = mods.length;
         const dateLabel = l.createdAt ? `E'lon qilindi • Dan ${l.createdAt}` : '';
+        const isVideoDay = i % 2 === 0;
+        const dayBadge = isVideoDay
+            ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">🎬 Videodars</span>`
+            : `<span style="background:#4F8CFF;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">🗣️ Speaking</span>`;
 
         const badges = [
+            dayBadge,
             l.isDemo ? `<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Demo</span>` : '',
             l.isPaid ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Pullik</span>` : '',
             l.isActive ? `<span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Faol</span>` : '',
@@ -1059,7 +1379,7 @@ function renderMobileCourseDetailTab(container, course) {
                 <div style="display:flex;align-items:center;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
                     ${iconBtn(`data-lesson-menu="${escapeHtml(l.id)}"`, dotsSvg(), '')}
                     ${iconBtn(`data-add-mod="${escapeHtml(l.id)}"`, plusBoxSvg(), 'var(--purple,#7c3aed)')}
-                    ${iconBtn(`data-preview-lesson="${escapeHtml(l.id)}"`, eyeSvg(), '#16a34a')}
+                    ${iconBtn(`data-preview-lesson="${escapeHtml(l.id)}" title="Dars tarkibini ko'rish/tahrirlash"`, eyeSvg(), '#16a34a')}
                 </div>
                 <div style="color:var(--text-muted);flex-shrink:0;pointer-events:none">${chevronSvg(expanded)}</div>
             </div>
@@ -1078,7 +1398,7 @@ function renderMobileCourseDetailTab(container, course) {
         <span style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(course.name)}</span>
     </div>
     <div id="courseAccordion" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
-        ${lessons.length ? lessons.map(l => lessonHTML(l)).join('') : `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Hali darslar yaratilmagan</div>`}
+        ${lessons.length ? lessons.map((l, i) => lessonHTML(l, i)).join('') : `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Hali darslar yaratilmagan</div>`}
     </div>
     <button type="button" id="addLessonBtn" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-top:2px dashed var(--border);background:var(--surface);font-weight:700;font-size:14px;color:var(--purple,#7c3aed);border-left:none;border-right:none;border-bottom:none;cursor:pointer;width:100%;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background='var(--surface)'">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 6H3M3 12h5M3 18h5"/><path d="M13 12h8M17 8v8"/></svg>
@@ -1113,6 +1433,10 @@ function renderMobileCourseDetailTab(container, course) {
         }
         if (previewLesson) {
             e.stopPropagation();
+            _activeLessonId = previewLesson.dataset.previewLesson;
+            _lessonContentTab = 'konspekt';
+            _lcActiveHomeworkPart = null;
+            renderMobileEditPanel();
             return;
         }
         if (openMod) {
@@ -1477,6 +1801,12 @@ function renderMobileAdminTab(tab) {
                 const mod = (mc0.modules || []).find(m => m.id === _activeModuleId);
                 if (mod) renderMobileModuleDetailTab(container, course, mod);
                 else { _activeModuleId = null; renderMobileCourseDetailTab(container, course); }
+            } else if (_activeLessonId) {
+                const courseLessons = (mc0.lessons || []).filter(l => l.courseId === course.id);
+                const dayIndex = courseLessons.findIndex(l => l.id === _activeLessonId);
+                const lesson = courseLessons[dayIndex];
+                if (lesson) renderMobileLessonDetailTab(container, course, lesson, Math.max(0, dayIndex));
+                else { _activeLessonId = null; renderMobileCourseDetailTab(container, course); }
             } else {
                 renderMobileCourseDetailTab(container, course);
             }

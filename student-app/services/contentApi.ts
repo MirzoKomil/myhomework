@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import type { GrammarBlank, HomeworkPart, SlideContent, SpeakingPrompt, VocabWord } from '@/data/lessonContent';
+
 // Web uchun relative URL ishlaydi (server bir xil origin).
 // Native uchun env dan yoki fallback URL ishlatiladi.
 const API_BASE =
@@ -45,11 +47,24 @@ export type AdminModuleContent = {
   createdAt?: string;
 };
 
+// CRM'da "Dars" tahrirlovchisi orqali kiritilgan real dars tarkibi — barcha
+// maydonlar ixtiyoriy, chunki admin hali to'ldirmagan bo'lishi mumkin.
+export type AdminLessonContent = {
+  konspekt?: string;
+  vocabulary?: VocabWord[];
+  grammarBlanks?: GrammarBlank[];
+  slides?: SlideContent[];
+  speakingPractice?: SpeakingPrompt[];
+  homeworkParts?: HomeworkPart[];
+  updatedAt?: string;
+};
+
 export type MobileContent = {
   courses: AdminCourse[];
   lessons: AdminLesson[];
   modules: AdminModule[];
   moduleContents: AdminModuleContent[];
+  lessonContents: Record<string, AdminLessonContent>;
 };
 
 let _cache: MobileContent | null = null;
@@ -70,6 +85,7 @@ export async function fetchMobileContent(): Promise<MobileContent> {
         lessons: data.lessons ?? [],
         modules: data.modules ?? [],
         moduleContents: data.moduleContents ?? [],
+        lessonContents: data.lessonContents ?? {},
       };
       return _cache;
     })

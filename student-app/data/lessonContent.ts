@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 
+import { AdminLessonContent, fetchMobileContent } from '@/services/contentApi';
+
 export type LessonDayType = 'grammar' | 'speaking' | 'bonus';
 
 export type VocabWord = {
@@ -318,6 +320,28 @@ export function getLessonContent(lessonId: string, dayIndex: number): LessonCont
     speakingPractice: dayType === 'speaking' ? pickWindow(SPEAKING_POOL, offset, 5) : [],
     homeworkParts: dayType === 'grammar' ? buildGrammarHomework(offset) : buildSpeakingHomework(offset),
   };
+}
+
+// CRM'da admin kiritgan real kontentni proseduraviy generatsiya qilingan
+// standart kontent ustiga qo'yadi — admin faqat to'ldirgan maydonlar
+// almashtiriladi, qolganlari o'zgarmaydi.
+export function mergeLessonContent(base: LessonContent, admin?: AdminLessonContent): LessonContent {
+  if (!admin) return base;
+  return {
+    ...base,
+    konspekt: admin.konspekt && admin.konspekt.trim() ? admin.konspekt : base.konspekt,
+    vocabulary: admin.vocabulary && admin.vocabulary.length ? admin.vocabulary : base.vocabulary,
+    grammarBlanks: admin.grammarBlanks && admin.grammarBlanks.length ? admin.grammarBlanks : base.grammarBlanks,
+    slides: admin.slides && admin.slides.length ? admin.slides : base.slides,
+    speakingPractice: admin.speakingPractice && admin.speakingPractice.length ? admin.speakingPractice : base.speakingPractice,
+    homeworkParts: admin.homeworkParts && admin.homeworkParts.length ? admin.homeworkParts : base.homeworkParts,
+  };
+}
+
+export async function getResolvedLessonContent(lessonId: string, dayIndex: number): Promise<LessonContent> {
+  const base = getLessonContent(lessonId, dayIndex);
+  const mc = await fetchMobileContent();
+  return mergeLessonContent(base, mc.lessonContents[lessonId]);
 }
 
 export const VOCAB_PRACTICE_STEPS = ['translation', 'construct', 'pronounce'] as const;

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { getLessonContent } from '@/data/lessonContent';
+import { getLessonContent, mergeLessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 
 type LessonFolder = {
@@ -40,7 +40,7 @@ export default function VocabularyHubScreen() {
             id,
             name: l?.name ?? `${i + 1}-dars`,
             locked: i >= UNLOCKED_COUNT,
-            wordCount: getLessonContent(id, i).vocabulary.length,
+            wordCount: mergeLessonContent(getLessonContent(id, i), mc.lessonContents[id]).vocabulary.length,
           };
         });
         setFolders(mapped);
@@ -51,7 +51,7 @@ export default function VocabularyHubScreen() {
             id,
             name: `${i + 1}-Yakshanba bonus dars`,
             locked: i >= BONUS_UNLOCKED,
-            wordCount: getLessonContent(id, i).vocabulary.length,
+            wordCount: mergeLessonContent(getLessonContent(id, i), mc.lessonContents[id]).vocabulary.length,
           };
         });
         setBonusFolders(bonus);

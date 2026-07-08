@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { getLessonContent, HomeworkPart, LessonContent } from '@/data/lessonContent';
+import { getLessonContent, HomeworkPart, LessonContent, mergeLessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 
@@ -36,7 +36,7 @@ export default function HomeworkSectionScreen() {
         const lesson = mc.lessons.find((l) => l.id === lessonId);
         const courseLessons = lesson ? mc.lessons.filter((l) => l.courseId === lesson.courseId) : [];
         const dayIndex = Math.max(0, courseLessons.findIndex((l) => l.id === lessonId));
-        setContent(getLessonContent(String(lessonId), dayIndex));
+        setContent(mergeLessonContent(getLessonContent(String(lessonId), dayIndex), mc.lessonContents[String(lessonId)]));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

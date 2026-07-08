@@ -1,19 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { getLessonContent } from '@/data/lessonContent';
+import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markDone } from '@/services/lessonProgressStore';
 
 export default function VideoExercisesScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [content] = useState(() => getLessonContent(String(lessonId), 0));
-  const blanks = content.grammarBlanks;
+  const [content, setContent] = useState<LessonContent | null>(null);
+
+  useEffect(() => {
+    getResolvedLessonContent(String(lessonId), 0).then(setContent);
+  }, [lessonId]);
 
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -21,6 +24,17 @@ export default function VideoExercisesScreen() {
   const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
 
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.resultCenter}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const blanks = content.grammarBlanks;
   const current = blanks[index];
   const isCorrect = selected === current?.answer;
 

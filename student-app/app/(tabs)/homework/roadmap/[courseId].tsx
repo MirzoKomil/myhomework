@@ -20,8 +20,8 @@ import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
-import { getLessonContent, getLessonPossibleCoins } from '@/data/lessonContent';
-import { fetchMobileContent } from '@/services/contentApi';
+import { getLessonContent, getLessonPossibleCoins, mergeLessonContent } from '@/data/lessonContent';
+import { AdminLessonContent, fetchMobileContent } from '@/services/contentApi';
 import { useCoins, useLessonCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
 import { getCategoryProgress, ProgressCategory, useLessonProgress } from '@/services/lessonProgressStore';
@@ -45,10 +45,20 @@ function TypeBadge({ type }: { type: LessonType }) {
 }
 
 // ─── Lesson card ─────────────────────────────────────────────────────────────
-function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive: boolean; index: number }) {
+function LessonCard({
+  lesson,
+  isActive,
+  index,
+  adminContent,
+}: {
+  lesson: LessonNode;
+  isActive: boolean;
+  index: number;
+  adminContent?: AdminLessonContent;
+}) {
   const numText = String(index + 1);
   const earnedCoins = useLessonCoins(lesson.id);
-  const content = getLessonContent(lesson.id, index);
+  const content = mergeLessonContent(getLessonContent(lesson.id, index), adminContent);
   const possibleCoins = getLessonPossibleCoins(content);
   // Reaktivlik uchun — lessonProgressStore o'zgarishlarida qayta render qilinsin.
   useLessonProgress(lesson.id);
@@ -295,7 +305,17 @@ function PathConnector({
 }
 
 // ─── Lesson row ───────────────────────────────────────────────────────────────
-function LessonRow({ lesson, isActive, index }: { lesson: LessonNode; isActive: boolean; index: number }) {
+function LessonRow({
+  lesson,
+  isActive,
+  index,
+  adminContent,
+}: {
+  lesson: LessonNode;
+  isActive: boolean;
+  index: number;
+  adminContent?: AdminLessonContent;
+}) {
   const isLeft = lesson.side === 'left';
 
   return (
@@ -303,7 +323,7 @@ function LessonRow({ lesson, isActive, index }: { lesson: LessonNode; isActive: 
       {isLeft ? (
         <>
           <View style={ss.cardWrap}>
-            <LessonCard lesson={lesson} isActive={isActive} index={index} />
+            <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} />
           </View>
           <View style={ss.badgeWrap}>
             {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
@@ -315,7 +335,7 @@ function LessonRow({ lesson, isActive, index }: { lesson: LessonNode; isActive: 
             {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
           </View>
           <View style={ss.cardWrap}>
-            <LessonCard lesson={lesson} isActive={isActive} index={index} />
+            <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} />
           </View>
         </>
       )}
@@ -329,6 +349,7 @@ export default function RoadmapScreen() {
   const totalCoins = useCoins();
   const totalLightning = useLightning();
   const [lessons, setLessons] = useState<LessonNode[]>([]);
+  const [lessonContents, setLessonContents] = useState<Record<string, AdminLessonContent>>({});
   const [loading, setLoading] = useState(true);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showCourseInfo, setShowCourseInfo] = useState(false);
@@ -356,6 +377,7 @@ export default function RoadmapScreen() {
           };
         });
         setLessons(mapped);
+        setLessonContents(mc.lessonContents);
       }
     }).finally(() => setLoading(false));
   }, [courseId]);
@@ -450,7 +472,7 @@ export default function RoadmapScreen() {
                     completed={connectorCompleted}
                   />
                 )}
-                <LessonRow lesson={lesson} isActive={isActive} index={index} />
+                <LessonRow lesson={lesson} isActive={isActive} index={index} adminContent={lessonContents[lesson.id]} />
               </React.Fragment>
             );
           })}
