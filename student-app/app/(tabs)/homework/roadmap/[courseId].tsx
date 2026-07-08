@@ -122,16 +122,14 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
           <Text style={ss.cardSubtitle} numberOfLines={1}>
             {lesson.subtitle}
           </Text>
-          {!lesson.locked && (
-            <View style={ss.starsPercent}>
-              <Text style={ss.percentText}>{percent}%</Text>
-            </View>
-          )}
           <View style={ss.coinRow}>
-            <CoinIcon size={13} />
-            <Text style={ss.coinRowText}>
-              {earnedCoins}/{possibleCoins}
-            </Text>
+            <View style={ss.coinRowLeft}>
+              <CoinIcon size={13} />
+              <Text style={ss.coinRowText}>
+                {earnedCoins}/{possibleCoins}
+              </Text>
+            </View>
+            {!lesson.locked && <Text style={ss.percentText}>{percent}%</Text>}
           </View>
         </View>
 
@@ -742,17 +740,16 @@ const ss = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textMuted,
   },
-  starsPercent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 4,
-  },
   coinRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'space-between',
     marginTop: 4,
+  },
+  coinRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   coinRowText: {
     fontFamily: theme.fonts.semiBold,
