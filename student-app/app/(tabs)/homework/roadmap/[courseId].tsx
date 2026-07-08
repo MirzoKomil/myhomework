@@ -21,10 +21,16 @@ import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins, mergeLessonContent } from '@/data/lessonContent';
-import { AdminLessonContent, fetchMobileContent } from '@/services/contentApi';
+import { AdminLessonContent, fetchMobileContent, MobileContent } from '@/services/contentApi';
 import { useCoins, useLessonCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
-import { getCategoryProgress, ProgressCategory, useLessonProgress } from '@/services/lessonProgressStore';
+import {
+  getCategoryProgress,
+  loadLessonProgress,
+  ProgressCategory,
+  subscribe as subscribeLessonProgress,
+  useLessonProgress,
+} from '@/services/lessonProgressStore';
 
 // ─── Type config ────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
@@ -354,32 +360,67 @@ export default function RoadmapScreen() {
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showCourseInfo, setShowCourseInfo] = useState(false);
 
+  const mcRef = useRef<MobileContent | null>(null);
+
+  // Har bir keyingi dars faqat oldingi dars 100% bajarilganda avtomatik
+  // qulfdan chiqadi — birinchi UNLOCKED_COUNT ta dars boshlang'ich sifatida
+  // har doim ochiq turadi. Progress o'zgarganda qayta hisoblanishi uchun
+  // alohida funksiyaga chiqarilgan (faqat kursga kirgandagina emas).
+  const recomputeLessons = (mc: MobileContent, cId: string | undefined) => {
+    const c = mc.courses.find((x) => x.id === cId) ?? mc.courses[0] ?? null;
+    if (!c) return;
+    const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
+    const TOTAL_LESSONS = 72;
+    const UNLOCKED_COUNT = 3;
+    let prevComplete = true;
+    const mapped: LessonNode[] = [];
+    for (let i = 0; i < TOTAL_LESSONS; i++) {
+      const l = adminLessons[i];
+      const lessonNum = i + 1;
+      const id = l?.id ?? String(lessonNum);
+      const locked = i >= UNLOCKED_COUNT && !prevComplete;
+
+      const videoCategory: ProgressCategory = i % 2 === 0 ? 'video' : 'speaking';
+      const content = mergeLessonContent(getLessonContent(id, i), mc.lessonContents[id]);
+      const percent = Math.round(
+        (getCategoryProgress(id, videoCategory) +
+          getCategoryProgress(id, 'vocabulary') +
+          getCategoryProgress(id, 'homework', content.homeworkParts.length)) /
+          3
+      );
+      prevComplete = percent >= 100;
+
+      mapped.push({
+        id,
+        title: l?.name ?? `${lessonNum}-dars`,
+        subtitle: l?.isDemo ? 'Demo dars' : l?.isPaid ? 'Pullik' : '',
+        type: (i % 2 === 0 ? 'grammar' : 'speaking') as LessonType,
+        progress: 0,
+        locked,
+        side: i % 2 === 0 ? 'left' : 'right',
+        stars: 0,
+        milestone: lessonNum % 5 === 0 ? MILESTONE_GIFTS[lessonNum / 5 - 1] : undefined,
+      });
+    }
+    setLessons(mapped);
+    setLessonContents(mc.lessonContents);
+  };
+
   useEffect(() => {
-    fetchMobileContent().then((mc) => {
-      const c = mc.courses.find((x) => x.id === courseId) ?? mc.courses[0] ?? null;
-      if (c) {
-        const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
-        const TOTAL_LESSONS = 72;
-        const UNLOCKED_COUNT = 3;
-        const mapped: LessonNode[] = Array.from({ length: TOTAL_LESSONS }, (_, i) => {
-          const l = adminLessons[i];
-          const lessonNum = i + 1;
-          return {
-            id: l?.id ?? String(lessonNum),
-            title: l?.name ?? `${lessonNum}-dars`,
-            subtitle: l?.isDemo ? 'Demo dars' : l?.isPaid ? 'Pullik' : '',
-            type: (i % 2 === 0 ? 'grammar' : 'speaking') as LessonType,
-            progress: 0,
-            locked: i >= UNLOCKED_COUNT,
-            side: i % 2 === 0 ? 'left' : 'right',
-            stars: 0,
-            milestone: lessonNum % 5 === 0 ? MILESTONE_GIFTS[lessonNum / 5 - 1] : undefined,
-          };
-        });
-        setLessons(mapped);
-        setLessonContents(mc.lessonContents);
-      }
-    }).finally(() => setLoading(false));
+    // Progress keshi AsyncStorage'dan yuklanguncha kutamiz — aks holda birinchi
+    // hisoblashda hali yuklanmagan progress 0% deb noto'g'ri qabul qilinadi.
+    loadLessonProgress().then(() =>
+      fetchMobileContent().then((mc) => {
+        mcRef.current = mc;
+        recomputeLessons(mc, courseId);
+      })
+    ).finally(() => setLoading(false));
+  }, [courseId]);
+
+  useEffect(() => {
+    return subscribeLessonProgress(() => {
+      if (mcRef.current) recomputeLessons(mcRef.current, courseId);
+    });
   }, [courseId]);
 
   // Joriy dars — ochilgan darslarning eng oxirgisi (frontier), progress darajasidan qat'i nazar.
