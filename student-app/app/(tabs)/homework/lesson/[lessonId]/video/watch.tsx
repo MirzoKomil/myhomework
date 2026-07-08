@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MaterialsList } from '@/components/ui/MaterialsList';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
+import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
 import { theme } from '@/constants/theme';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { useAvatarUri } from '@/services/avatarStore';
+import { fetchMobileContent, getLessonMaterials, LessonMaterials } from '@/services/contentApi';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
@@ -23,6 +26,7 @@ export default function WatchVideoScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const isBonus = String(lessonId).startsWith('bonus-');
   const [content, setContent] = useState<LessonContent | null>(null);
+  const [materials, setMaterials] = useState<LessonMaterials | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
   const [draft, setDraft] = useState('');
@@ -31,6 +35,7 @@ export default function WatchVideoScreen() {
 
   useEffect(() => {
     getResolvedLessonContent(String(lessonId), 0).then(setContent);
+    fetchMobileContent().then((mc) => setMaterials(getLessonMaterials(mc, String(lessonId))));
   }, [lessonId]);
 
   useEffect(() => {
@@ -73,10 +78,16 @@ export default function WatchVideoScreen() {
         )}
 
         <View style={[styles.videoPlaceholder, isBonus && styles.videoPlaceholderBonus]}>
-          <View style={[styles.playBtn, isBonus && styles.playBtnBonus]}>
-            <Ionicons name="play" size={36} color="#fff" />
-          </View>
-          <Text style={styles.videoDuration}>12:08</Text>
+          {materials?.videoUrl ? (
+            <YouTubeEmbed url={materials.videoUrl} />
+          ) : (
+            <>
+              <View style={[styles.playBtn, isBonus && styles.playBtnBonus]}>
+                <Ionicons name="play" size={36} color="#fff" />
+              </View>
+              <Text style={styles.videoDuration}>Video hali biriktirilmagan</Text>
+            </>
+          )}
         </View>
 
         <View style={styles.titleRow}>
@@ -91,6 +102,8 @@ export default function WatchVideoScreen() {
           <Text style={styles.sectionLabel}>Konspekt</Text>
           <Text style={styles.body}>{content.konspekt}</Text>
         </View>
+
+        {materials && <MaterialsList files={materials.files} />}
       </ScrollView>
 
       <Pressable style={styles.doneBtn} onPress={() => router.back()}>

@@ -19,10 +19,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MaterialsList } from '@/components/ui/MaterialsList';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { useAvatarUri } from '@/services/avatarStore';
+import { fetchMobileContent, getLessonMaterials, LessonMaterials } from '@/services/contentApi';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
@@ -39,6 +41,7 @@ const MOCK_COMMENTS: Comment[] = [
 export default function SlidesScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
+  const [materials, setMaterials] = useState<LessonMaterials | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const [showComments, setShowComments] = useState(false);
@@ -56,6 +59,7 @@ export default function SlidesScreen() {
 
   useEffect(() => {
     getResolvedLessonContent(String(lessonId), 1).then(setContent);
+    fetchMobileContent().then((mc) => setMaterials(getLessonMaterials(mc, String(lessonId))));
   }, [lessonId]);
 
   useEffect(() => {
@@ -133,10 +137,11 @@ export default function SlidesScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.konspektSection}>
+      <ScrollView style={styles.konspektSection} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionLabel}>Konspekt</Text>
         <Text style={styles.body}>{current.body}</Text>
-      </View>
+        {materials && <MaterialsList files={materials.files} />}
+      </ScrollView>
 
       <View style={styles.navRow}>
         <Pressable

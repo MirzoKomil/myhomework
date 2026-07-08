@@ -1295,9 +1295,33 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
     else if (_lessonContentTab === 'homework') _renderLcHomework(body, lesson, content, dayType);
 }
 
+const MOBILE_TOTAL_LESSONS = 72;
+
+// Har bir kursda 72 ta dars slotini kafolatlaydi — mobil ilova har doim 72 ta
+// dars ko'rsatgani uchun, CRM'da ham hammasi ochilib tahrirlanishi mumkin bo'lsin
+// deb, hali qo'lda yaratilmagan darslar "N-dars" nomi bilan avtomatik to'ldiriladi.
+function _ensureAllLessonSlots(mc, course) {
+    const existing = (mc.lessons || []).filter(l => l.courseId === course.id);
+    if (existing.length >= MOBILE_TOTAL_LESSONS) return existing;
+    const base = Date.now();
+    const backfilled = [];
+    for (let i = existing.length; i < MOBILE_TOTAL_LESSONS; i++) {
+        backfilled.push({
+            id: 'l' + base + '-' + i,
+            courseId: course.id,
+            lang: course.lang || _mobileLang,
+            name: `${i + 1}-dars`,
+            createdAt: new Date().toISOString().slice(0, 10),
+        });
+    }
+    mc.lessons = [...(mc.lessons || []), ...backfilled];
+    saveMobileContent(mc);
+    return (mc.lessons || []).filter(l => l.courseId === course.id);
+}
+
 function renderMobileCourseDetailTab(container, course) {
     const mc = getMobileContent();
-    const lessons = (mc.lessons || []).filter(l => l.courseId === course.id);
+    const lessons = _ensureAllLessonSlots(mc, course);
     const allModules = mc.modules || [];
 
     function iconSvg(size) {

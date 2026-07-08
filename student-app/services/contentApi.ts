@@ -97,3 +97,18 @@ export async function fetchMobileContent(): Promise<MobileContent> {
 export function invalidateCache() {
   _cache = null;
 }
+
+// CRM'da darsga biriktirilgan video va boshqa fayllarni (pdf/word/rasm/matn)
+// ilova tomonida ko'rsatish uchun ajratib beradi.
+export type LessonMaterials = {
+  videoUrl?: string;
+  files: AdminModuleContent[];
+};
+
+export function getLessonMaterials(mc: MobileContent, lessonId: string): LessonMaterials {
+  const moduleIds = new Set(mc.modules.filter((m) => m.lessonId === lessonId).map((m) => m.id));
+  const contents = mc.moduleContents.filter((c) => moduleIds.has(c.moduleId));
+  const videoContent = contents.find((c) => c.type === 'video' && c.url);
+  const files = contents.filter((c) => c.id !== videoContent?.id);
+  return { videoUrl: videoContent?.url, files };
+}
