@@ -11,6 +11,7 @@ import { LightningIcon } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
+import { getLevelProgress } from '@/data/levels';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
@@ -40,6 +41,7 @@ export default function ProfileScreen() {
   const avatarUri = useAvatarUri();
   const ranked = getRankedLeaderboard('alltime', 'country', coins, lightning);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
+  const levelProgress = getLevelProgress(lightning);
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const wobbleAnim = useRef(new Animated.Value(0)).current;
@@ -132,6 +134,26 @@ export default function ProfileScreen() {
             <Ionicons name="pencil" size={16} color={theme.colors.blue} />
           </Pressable>
         </Card>
+
+        <Pressable onPress={() => router.push('/profile/levels' as never)}>
+          <Card style={styles.levelCard}>
+            <Image source={levelProgress.level.image} style={styles.levelImage} />
+            <View style={styles.levelInfo}>
+              <View style={styles.levelNameRow}>
+                <Text style={styles.levelName}>{levelProgress.level.name}</Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textLight} />
+              </View>
+              <View style={styles.levelProgressBarBg}>
+                <View style={[styles.levelProgressBarFill, { width: `${levelProgress.progressPercent}%` }]} />
+              </View>
+              <Text style={styles.levelHint}>
+                {levelProgress.next
+                  ? `${levelProgress.next.name} darajasiga yetish uchun yana ${levelProgress.remaining.toLocaleString('uz-UZ')} ta chaqmoq kerak`
+                  : "Siz eng yuqori darajadasiz!"}
+              </Text>
+            </View>
+          </Card>
+        </Pressable>
 
         <Pressable onPress={() => router.push('/profile/leaderboard' as never)}>
           <LinearGradient
@@ -259,6 +281,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  levelCard: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  levelImage: { width: 48, height: 48, resizeMode: 'contain' },
+  levelInfo: { flex: 1, gap: 6 },
+  levelNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  levelName: { fontFamily: theme.fonts.bold, fontSize: 15, color: theme.colors.text },
+  levelProgressBarBg: { height: 6, borderRadius: 3, backgroundColor: theme.colors.border },
+  levelProgressBarFill: { height: 6, borderRadius: 3, backgroundColor: theme.colors.blue },
+  levelHint: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted },
   balanceCard: { borderRadius: theme.radius.md, padding: 20, marginBottom: 16, overflow: 'hidden' },
   shimmerClip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   shimmerSweep: { position: 'absolute', top: 0, bottom: 0, width: 100 },
