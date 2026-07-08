@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityModal } from '@/components/ActivityModal';
 import { CoinPill } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
@@ -92,6 +93,7 @@ export default function MessagesScreen() {
   const [folder, setFolder] = useState<Folder>('all');
   const [showActivity, setShowActivity] = useState(false);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
   const { hasActivity } = useCommunityActivity();
   const { width } = useWindowDimensions();
   const pagerRef = useRef<ScrollView>(null);
@@ -210,7 +212,9 @@ export default function MessagesScreen() {
           <Pressable onPress={() => setShowCoinInfo(true)}>
             <CoinPill amount={coins} />
           </Pressable>
-          <LightningPill amount={lightning} />
+          <Pressable onPress={() => setShowLightningInfo(true)}>
+            <LightningPill amount={lightning} />
+          </Pressable>
           <Pressable style={styles.heartBtn} onPress={() => setShowActivity(true)} hitSlop={8}>
             <WobbleIcon active={hasActivity}>
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
@@ -221,6 +225,7 @@ export default function MessagesScreen() {
       </View>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
 
       <View style={styles.folderRow}>
         {FOLDER_ORDER.map((f) => (

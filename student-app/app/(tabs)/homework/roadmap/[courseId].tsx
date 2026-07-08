@@ -17,6 +17,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
@@ -358,6 +359,7 @@ export default function RoadmapScreen() {
   const [lessonContents, setLessonContents] = useState<Record<string, AdminLessonContent>>({});
   const [loading, setLoading] = useState(true);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [showCourseInfo, setShowCourseInfo] = useState(false);
 
   const mcRef = useRef<MobileContent | null>(null);
@@ -457,11 +459,14 @@ export default function RoadmapScreen() {
           <Pressable onPress={() => setShowCoinInfo(true)}>
             <CoinPill amount={totalCoins} size={12} />
           </Pressable>
-          <LightningPill amount={totalLightning} size={12} />
+          <Pressable onPress={() => setShowLightningInfo(true)}>
+            <LightningPill amount={totalLightning} size={12} />
+          </Pressable>
         </View>
       </View>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
 
       <Modal visible={showCourseInfo} animationType="fade" transparent onRequestClose={() => setShowCourseInfo(false)}>
         <View style={ss.dialogBackdrop}>

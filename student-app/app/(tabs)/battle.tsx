@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
@@ -40,6 +41,7 @@ export default function BattleScreen() {
   const coins = useCoins();
   const lightning = useLightning();
   const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [phase, setPhase] = useState<Phase>('select');
   const [opponentType, setOpponentType] = useState<BattleOpponentType | null>(null);
   const [opponentName, setOpponentName] = useState('Bot');
@@ -176,7 +178,9 @@ export default function BattleScreen() {
               <CoinIcon size={18} />
               <Text style={styles.coinText}>{coins}</Text>
             </Pressable>
-            <LightningPill amount={lightning} size={18} />
+            <Pressable onPress={() => setShowLightningInfo(true)}>
+              <LightningPill amount={lightning} size={18} />
+            </Pressable>
           </View>
           <Text style={styles.selectTitle}>Kim bilan o'ynaysiz?</Text>
           <Text style={styles.selectSubtitle}>
@@ -296,6 +300,7 @@ export default function BattleScreen() {
       )}
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
     </SafeAreaView>
   );
 }

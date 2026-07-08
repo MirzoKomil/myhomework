@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
@@ -68,6 +69,7 @@ export default function GamesScreen() {
   const coins = useCoins();
   const lightning = useLightning();
   const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
@@ -79,7 +81,9 @@ export default function GamesScreen() {
               <CoinIcon size={12} />
               <Text style={styles.coinText}>{coins}</Text>
             </Pressable>
-            <LightningPill amount={lightning} size={12} />
+            <Pressable onPress={() => setShowLightningInfo(true)}>
+              <LightningPill amount={lightning} size={12} />
+            </Pressable>
           </View>
         }
       />
@@ -102,6 +106,7 @@ export default function GamesScreen() {
       </ScrollView>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
     </SafeAreaView>
   );
 }

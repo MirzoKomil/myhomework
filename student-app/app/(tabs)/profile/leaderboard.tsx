@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningIcon, LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
@@ -34,6 +35,7 @@ export default function LeaderboardScreen() {
   const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
   const [scope, setScope] = useState<LeaderboardScope>('country');
   const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<'period' | 'scope' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
@@ -94,7 +96,9 @@ export default function LeaderboardScreen() {
               <CoinIcon size={12} />
               <Text style={styles.coinText}>{coins}</Text>
             </Pressable>
-            <LightningPill amount={lightning} size={12} />
+            <Pressable onPress={() => setShowLightningInfo(true)}>
+              <LightningPill amount={lightning} size={12} />
+            </Pressable>
           </View>
         }
       />
@@ -210,6 +214,7 @@ export default function LeaderboardScreen() {
       </ScrollView>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
       <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
 
       <Modal visible={activeDropdown !== null} transparent animationType="fade" onRequestClose={() => setActiveDropdown(null)}>

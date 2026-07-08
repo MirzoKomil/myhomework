@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { SHOP_CATEGORY_LABELS, SHOP_PRODUCTS, ShopCategory, ShopProduct } from '@/data/shopProducts';
@@ -23,6 +24,7 @@ export default function ShopScreen() {
   const [category, setCategory] = useState<ShopCategory>('merch');
   const [showInfo, setShowInfo] = useState(false);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
 
   const products = SHOP_PRODUCTS.filter((p) => p.category === category);
@@ -45,7 +47,9 @@ export default function ShopScreen() {
           <Pressable onPress={() => setShowCoinInfo(true)}>
             <CoinPill amount={coins} size={12} />
           </Pressable>
-          <LightningPill amount={lightning} size={12} />
+          <Pressable onPress={() => setShowLightningInfo(true)}>
+            <LightningPill amount={lightning} size={12} />
+          </Pressable>
           <Pressable style={styles.iconBtn} onPress={() => router.push('/shop/orders' as never)} hitSlop={8}>
             <Ionicons name="bag-handle-outline" size={18} color={theme.colors.text} />
           </Pressable>
@@ -147,6 +151,7 @@ export default function ShopScreen() {
       </Modal>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
     </SafeAreaView>
   );
 }
