@@ -7,11 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityModal } from '@/components/ActivityModal';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinPill } from '@/components/ui/CoinIcon';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
 import { useAvatarUri } from '@/services/avatarStore';
 import { CommunityPost, timeAgo, toggleLikePost, useCommunityActivity, usePosts } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 
 type Filter = 'all' | 'popular' | 'official';
 
@@ -86,6 +88,7 @@ const FILTER_LABELS: Record<Filter, string> = {
 export default function CommunityScreen() {
   const posts = usePosts();
   const coins = useCoins();
+  const lightning = useLightning();
   const [showInfo, setShowInfo] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
@@ -113,7 +116,8 @@ export default function CommunityScreen() {
           <Text style={styles.headerTitle}>Hamjamiyat</Text>
         </Pressable>
         <View style={styles.headerRight}>
-          <CoinPill amount={coins} />
+          <CoinPill amount={coins} size={12} />
+          <LightningPill amount={lightning} size={12} />
           <Pressable style={styles.heartBtn} onPress={() => setShowActivity(true)} hitSlop={8}>
             <WobbleIcon active={hasActivity}>
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />

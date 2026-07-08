@@ -6,9 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { SHOP_CATEGORY_LABELS, SHOP_PRODUCTS, ShopCategory, ShopProduct } from '@/data/shopProducts';
 import { useCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 import { placeOrder } from '@/services/shopStore';
 
 const CATEGORIES: ShopCategory[] = ['merch', 'books', 'gadgets', 'stationery'];
@@ -17,6 +19,7 @@ type Dialog = { type: 'confirm'; product: ShopProduct } | { type: 'result'; succ
 
 export default function ShopScreen() {
   const coins = useCoins();
+  const lightning = useLightning();
   const [category, setCategory] = useState<ShopCategory>('merch');
   const [showInfo, setShowInfo] = useState(false);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
@@ -42,6 +45,7 @@ export default function ShopScreen() {
           <Pressable onPress={() => setShowCoinInfo(true)}>
             <CoinPill amount={coins} size={12} />
           </Pressable>
+          <LightningPill amount={lightning} size={12} />
           <Pressable style={styles.iconBtn} onPress={() => router.push('/shop/orders' as never)} hitSlop={8}>
             <Ionicons name="bag-handle-outline" size={18} color={theme.colors.text} />
           </Pressable>

@@ -17,11 +17,13 @@ import Svg, { Path } from 'react-native-svg';
 
 import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 import { useCoins, useLessonCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 import { getCategoryProgress, ProgressCategory, useLessonProgress } from '@/services/lessonProgressStore';
 
 // ─── Type config ────────────────────────────────────────────────────────────
@@ -325,6 +327,7 @@ function LessonRow({ lesson, isActive, index }: { lesson: LessonNode; isActive: 
 export default function RoadmapScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const totalCoins = useCoins();
+  const totalLightning = useLightning();
   const [lessons, setLessons] = useState<LessonNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
@@ -389,8 +392,9 @@ export default function RoadmapScreen() {
 
         <View style={ss.headerRight}>
           <Pressable onPress={() => setShowCoinInfo(true)}>
-            <CoinPill amount={totalCoins} />
+            <CoinPill amount={totalCoins} size={12} />
           </Pressable>
+          <LightningPill amount={totalLightning} size={12} />
         </View>
       </View>
 

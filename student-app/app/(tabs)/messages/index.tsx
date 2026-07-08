@@ -20,11 +20,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityModal } from '@/components/ActivityModal';
 import { CoinPill } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
 import { celebrityPersonas, chatThreads } from '@/data/mock';
 import { useCommunityActivity } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 import { getLastMessage, getMessages, subscribe } from '@/services/chatStore';
 import { getPersonaMessages, hasRealExchange, loadPersonaChats, subscribePersona } from '@/services/personaChatStore';
 import { useStudentThreads } from '@/services/studentChatStore';
@@ -86,6 +88,7 @@ export default function MessagesScreen() {
   const [, forceUpdate] = useState(0);
   const studentThreads = useStudentThreads();
   const coins = useCoins();
+  const lightning = useLightning();
   const [folder, setFolder] = useState<Folder>('all');
   const [showActivity, setShowActivity] = useState(false);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
@@ -207,6 +210,7 @@ export default function MessagesScreen() {
           <Pressable onPress={() => setShowCoinInfo(true)}>
             <CoinPill amount={coins} />
           </Pressable>
+          <LightningPill amount={lightning} />
           <Pressable style={styles.heartBtn} onPress={() => setShowActivity(true)} hitSlop={8}>
             <WobbleIcon active={hasActivity}>
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />

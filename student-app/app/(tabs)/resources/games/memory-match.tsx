@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
+import { addLightning } from '@/services/lightningStore';
 
 const EMOJIS = ['🍎', '🐘', '🐯', '🐰', '🍅', '🥕', '🐸', '🐝'];
 
@@ -58,6 +59,7 @@ export default function MemoryMatchGame() {
 
     if (first.emoji === card.emoji) {
       addCoins(1);
+      addLightning(1);
       timeoutRef.current = setTimeout(() => {
         setCards((cs) => cs.map((c) => (c.id === id || c.id === firstPick ? { ...c, matched: true } : c)));
         setFirstPick(null);

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
@@ -19,6 +20,7 @@ import {
 } from '@/data/mock';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 
 const PERIODS: LeaderboardPeriod[] = ['daily', 'weekly', 'monthly', 'alltime'];
 const SCOPES: LeaderboardScope[] = ['region', 'country', 'global'];
@@ -27,6 +29,7 @@ const PODIUM_COLORS = ['#C0C6D8', '#F2C14E', '#E2A76F'];
 
 export default function LeaderboardScreen() {
   const coins = useCoins();
+  const lightning = useLightning();
   const myAvatarUri = useAvatarUri();
   const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
   const [scope, setScope] = useState<LeaderboardScope>('country');
@@ -83,10 +86,13 @@ export default function LeaderboardScreen() {
         title="Leaderboard"
         showBack
         rightAction={
-          <Pressable style={styles.coinPill} onPress={() => setShowCoinInfo(true)}>
-            <CoinIcon size={14} />
-            <Text style={styles.coinText}>{coins}</Text>
-          </Pressable>
+          <View style={styles.headerPillRow}>
+            <Pressable style={styles.coinPill} onPress={() => setShowCoinInfo(true)}>
+              <CoinIcon size={12} />
+              <Text style={styles.coinText}>{coins}</Text>
+            </Pressable>
+            <LightningPill amount={lightning} size={12} />
+          </View>
         }
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -227,6 +233,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   scroll: { padding: 20, paddingTop: 8, paddingBottom: 32 },
+  headerPillRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   coinPill: {
     flexDirection: 'row',
     alignItems: 'center',

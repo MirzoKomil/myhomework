@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/constants/theme';
 import { getLessonContent, VOCAB_PRACTICE_SIZE, VocabWord } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
+import { addLightning } from '@/services/lightningStore';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
@@ -42,7 +43,10 @@ export default function VocabularyPracticeScreen() {
   const stepNumber = round * words.length + wordIndex;
 
   const advance = (correct: boolean) => {
-    if (correct) addCoins(1, String(lessonId));
+    if (correct) {
+      addCoins(1, String(lessonId));
+      addLightning(1);
+    }
     if (wordIndex + 1 < words.length) {
       setWordIndex(wordIndex + 1);
       return;

@@ -7,11 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { CoinIcon } from '@/components/ui/CoinIcon';
+import { LightningIcon } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -34,6 +36,7 @@ const menuItems: MenuItem[] = [
 
 export default function ProfileScreen() {
   const coins = useCoins();
+  const lightning = useLightning();
   const avatarUri = useAvatarUri();
   const ranked = getRankedLeaderboard('alltime', 'country', coins);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
@@ -154,6 +157,8 @@ export default function ProfileScreen() {
                   <View style={styles.tariffRow}>
                     <CoinIcon size={12} />
                     <Text style={styles.tariffText}>{me.displayCoins.toLocaleString('uz-UZ')} coin</Text>
+                    <LightningIcon size={12} />
+                    <Text style={styles.tariffText}>{lightning.toLocaleString('uz-UZ')}</Text>
                   </View>
                 )}
               </View>

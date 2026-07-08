@@ -6,9 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { useCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 
 type GameItem = {
   id: string;
@@ -64,6 +66,7 @@ const games: GameItem[] = [
 
 export default function GamesScreen() {
   const coins = useCoins();
+  const lightning = useLightning();
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -71,10 +74,13 @@ export default function GamesScreen() {
         title="O'YINLAR"
         showBack
         rightAction={
-          <Pressable style={styles.coinPill} onPress={() => setShowCoinInfo(true)}>
-            <CoinIcon size={14} />
-            <Text style={styles.coinText}>{coins}</Text>
-          </Pressable>
+          <View style={styles.headerPillRow}>
+            <Pressable style={styles.coinPill} onPress={() => setShowCoinInfo(true)}>
+              <CoinIcon size={12} />
+              <Text style={styles.coinText}>{coins}</Text>
+            </Pressable>
+            <LightningPill amount={lightning} size={12} />
+          </View>
         }
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -102,6 +108,7 @@ export default function GamesScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  headerPillRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   coinPill: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CourseProgressCard } from '@/components/ui/CourseProgressCard';
+import { LightningIcon } from '@/components/ui/LightningIcon';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkillBars } from '@/components/ui/SkillBars';
@@ -14,6 +15,7 @@ import { courseEnrollment, courses, profileStats, skillProgress } from '@/data/m
 import { generateTeacherScores, TEACHER_GRADE_CRITERIA } from '@/data/lessonGrades';
 import { generateScheduleDays } from '@/data/scheduleCalendar';
 import { useCoins } from '@/services/coinsStore';
+import { useLightning } from '@/services/lightningStore';
 import { useOrders } from '@/services/shopStore';
 
 type StatItem = { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; bg: string; color: string };
@@ -39,6 +41,7 @@ function StatGrid({ stats }: { stats: StatItem[] }) {
 export default function ResultsScreen() {
   const activeCourse = courses[0];
   const coins = useCoins();
+  const lightning = useLightning();
   const orders = useOrders();
 
   const scheduleDays = useMemo(() => generateScheduleDays(), []);
@@ -147,6 +150,13 @@ export default function ResultsScreen() {
             </View>
             <Text style={styles.statValue}>{coins}</Text>
             <Text style={styles.statLabel}>Yig'gan ballari (coin)</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: theme.colors.blueLight }]}>
+              <LightningIcon size={20} />
+            </View>
+            <Text style={styles.statValue}>{lightning}</Text>
+            <Text style={styles.statLabel}>Yig'gan chaqmoqlar</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: theme.colors.successBg }]}>

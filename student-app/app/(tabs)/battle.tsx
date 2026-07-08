@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
@@ -18,6 +19,7 @@ import {
   battleWords,
 } from '@/data/mock';
 import { addCoins, useCoins } from '@/services/coinsStore';
+import { addLightning, useLightning } from '@/services/lightningStore';
 
 const RANDOM_NAMES = ['Aziz', 'Malika', 'Diyor', 'Kamola', 'Sardor', 'Nilufar', 'Javlon', 'Zarina'];
 const RANDOM_AVATARS = ['🧑', '👩', '🧑‍🦱', '👨‍🦰'];
@@ -36,6 +38,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 export default function BattleScreen() {
   const coins = useCoins();
+  const lightning = useLightning();
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [phase, setPhase] = useState<Phase>('select');
   const [opponentType, setOpponentType] = useState<BattleOpponentType | null>(null);
@@ -146,6 +149,7 @@ export default function BattleScreen() {
       setPlayerScore((s) => s + 1);
       setRoundWinner('player');
       addCoins(1);
+      addLightning(1);
     } else {
       setOpponentScore((s) => s + 1);
       setRoundWinner('opponent');
@@ -167,10 +171,13 @@ export default function BattleScreen() {
 
       {phase === 'select' && (
         <View style={styles.selectWrap}>
-          <Pressable style={styles.coinRow} onPress={() => setShowCoinInfo(true)}>
-            <CoinIcon size={18} />
-            <Text style={styles.coinText}>{coins}</Text>
-          </Pressable>
+          <View style={styles.balanceRow}>
+            <Pressable style={styles.coinRow} onPress={() => setShowCoinInfo(true)}>
+              <CoinIcon size={18} />
+              <Text style={styles.coinText}>{coins}</Text>
+            </Pressable>
+            <LightningPill amount={lightning} size={18} />
+          </View>
           <Text style={styles.selectTitle}>Kim bilan o'ynaysiz?</Text>
           <Text style={styles.selectSubtitle}>
             So'zni tinglang va to'g'ri tarjimasini birinchi bo'lib toping — g'olib coin yutadi!
@@ -296,6 +303,7 @@ export default function BattleScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   selectWrap: { flex: 1, paddingHorizontal: 20, paddingTop: 8 },
+  balanceRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 },
   coinRow: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -305,7 +313,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    marginBottom: 20,
   },
   coinEmoji: { fontSize: 16 },
   coinText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#B45309' },

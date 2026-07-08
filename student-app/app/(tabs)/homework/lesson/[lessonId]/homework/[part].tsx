@@ -11,6 +11,7 @@ import { theme } from '@/constants/theme';
 import { ChatMessage } from '@/data/mock';
 import { getLessonContent, HomeworkPart, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
+import { addLightning } from '@/services/lightningStore';
 import { markHomeworkPartDone } from '@/services/lessonProgressStore';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -96,6 +97,7 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
       setMatched(next);
       setSelectedLeft(null);
       addCoins(1, lessonId);
+      addLightning(1);
       if (next.size === pairs.length) {
         onDone();
         setTimeout(() => setFinished(true), 500);
@@ -164,7 +166,10 @@ function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sen
   const isCorrect = selected === current?.answer;
 
   const next = () => {
-    if (isCorrect) addCoins(1, lessonId);
+    if (isCorrect) {
+      addCoins(1, lessonId);
+      addLightning(1);
+    }
     if (index + 1 >= blanks.length) {
       onDone();
       setFinished(true);
@@ -221,7 +226,10 @@ function MultipleChoicePart({ questions, onDone, lessonId }: { questions: Multip
   const isCorrect = selected === current?.correctIndex;
 
   const next = () => {
-    if (isCorrect) addCoins(1, lessonId);
+    if (isCorrect) {
+      addCoins(1, lessonId);
+      addLightning(1);
+    }
     if (index + 1 >= questions.length) {
       onDone();
       setFinished(true);
@@ -339,7 +347,10 @@ function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item:
           <Pressable
             style={styles.continueBtn}
             onPress={() => {
-              if (isCorrect) addCoins(1, lessonId);
+              if (isCorrect) {
+                addCoins(1, lessonId);
+                addLightning(1);
+              }
               onNext();
             }}>
             <Text style={styles.continueBtnText}>Keyingi</Text>
@@ -381,6 +392,7 @@ function RecordPart({ prompts, onDone, lessonId }: { prompts: { id: string; sent
 
   const next = () => {
     addCoins(1, lessonId);
+    addLightning(1);
     if (index + 1 >= prompts.length) {
       onDone();
       setFinished(true);
@@ -446,7 +458,10 @@ function PronunciationPart({ prompts, onDone, lessonId }: { prompts: { id: strin
   };
 
   const next = () => {
-    if (score !== null && score >= 80) addCoins(1, lessonId);
+    if (score !== null && score >= 80) {
+      addCoins(1, lessonId);
+      addLightning(1);
+    }
     if (index + 1 >= prompts.length) {
       onDone();
       setFinished(true);
@@ -512,6 +527,7 @@ function RoleplayPart({ scenario, onDone, lessonId }: { scenario: { id: string; 
     const next: ChatMessage[] = [...messages, { id: `me-${Date.now()}`, chatId: scenario.id, from: 'me', type: 'text', text, time: 'hozir' }];
     setMessages(next);
     addCoins(1, lessonId);
+    addLightning(1);
     advanceBot(next);
   };
 
@@ -522,6 +538,7 @@ function RoleplayPart({ scenario, onDone, lessonId }: { scenario: { id: string; 
     ];
     setMessages(next);
     addCoins(1, lessonId);
+    addLightning(1);
     advanceBot(next);
   };
 
@@ -578,7 +595,11 @@ function CreativePart({ instruction, mediaType, onDone, lessonId }: { instructio
     setStatus('pending');
     onDone();
     addCoins(1, lessonId);
-    setTimeout(() => setStatus('graded'), 4000);
+    // Chaqmoq — ijodiy vazifani ustoz "baholagach" (simulyatsiya) beriladi, darhol emas.
+    setTimeout(() => {
+      setStatus('graded');
+      addLightning(1);
+    }, 4000);
   };
 
   const canSubmit = mediaType === 'text' ? text.trim().length > 0 : recorded;

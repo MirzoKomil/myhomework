@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { CoinIcon } from '@/components/ui/CoinIcon';
+import { LightningIcon } from '@/components/ui/LightningIcon';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
@@ -163,7 +164,7 @@ export default function GradesScreen() {
 
         <Text style={styles.sectionTitle}>Jonli darslar baholari</Text>
         <Text style={styles.sectionSubtitle}>
-          Har bir o'tgan jonli darsdan so'ng ustozingiz sizni 5 ta mezon bo'yicha baholaydi. Har bir ball — 1 coin.
+          Har bir o'tgan jonli darsdan so'ng ustozingiz sizni 5 ta mezon bo'yicha baholaydi. Har bir ball — 1 coin va 1 chaqmoq.
         </Text>
 
         {liveLessons.map((lesson) => {
@@ -184,6 +185,12 @@ export default function GradesScreen() {
                 <View style={styles.coinBadge}>
                   <CoinIcon size={13} />
                   <Text style={styles.coinBadgeText}>
+                    {totalCoins}/{TEACHER_GRADE_CRITERIA.length * 5}
+                  </Text>
+                </View>
+                <View style={styles.lightningBadge}>
+                  <LightningIcon size={13} />
+                  <Text style={styles.lightningBadgeText}>
                     {totalCoins}/{TEACHER_GRADE_CRITERIA.length * 5}
                   </Text>
                 </View>
@@ -346,6 +353,8 @@ const styles = StyleSheet.create({
   lessonTopic: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
   coinBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.warningBg, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10 },
   coinBadgeText: { fontFamily: theme.fonts.bold, fontSize: 11, color: '#B45309' },
+  lightningBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.blueLight, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10 },
+  lightningBadgeText: { fontFamily: theme.fonts.bold, fontSize: 11, color: theme.colors.blue },
 
   lessonBody: { marginTop: 16, gap: 10 },
   criterionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
