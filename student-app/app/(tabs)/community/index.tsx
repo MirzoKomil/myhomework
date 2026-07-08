@@ -109,16 +109,15 @@ export default function CommunityScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Hamjamiyat</Text>
+        <Pressable style={styles.headerTitleBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
+          <Text style={styles.headerTitle}>Hamjamiyat</Text>
+        </Pressable>
         <View style={styles.headerRight}>
+          <CoinPill amount={coins} />
           <Pressable style={styles.heartBtn} onPress={() => setShowActivity(true)} hitSlop={8}>
             <WobbleIcon active={hasActivity}>
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
             </WobbleIcon>
-          </Pressable>
-          <CoinPill amount={coins} />
-          <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
-            <Ionicons name="information-circle-outline" size={20} color={theme.colors.textMuted} />
           </Pressable>
         </View>
       </View>
@@ -192,17 +191,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...theme.shadow.card,
   },
-  headerTitle: { flex: 1, fontFamily: theme.fonts.bold, fontSize: 18, color: theme.colors.text, textAlign: 'center' },
+  headerTitleBtn: { flex: 1, alignItems: 'center' },
+  headerTitle: { fontFamily: theme.fonts.bold, fontSize: 18, color: theme.colors.text, textAlign: 'center' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadow.card,
-  },
   heartBtn: {
     width: 40,
     height: 40,
