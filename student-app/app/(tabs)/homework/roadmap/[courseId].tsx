@@ -62,11 +62,9 @@ function LessonCard({ lesson, isActive, index }: { lesson: LessonNode; isActive:
   const glowSpin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!isActive) return;
+    glowSpin.setValue(0);
     const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true }),
-        Animated.timing(glowSpin, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ])
+      Animated.timing(glowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true })
     );
     loop.start();
     return () => loop.stop();
