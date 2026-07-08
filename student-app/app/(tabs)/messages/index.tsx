@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActivityModal } from '@/components/ActivityModal';
 import { CoinPill } from '@/components/ui/CoinIcon';
+import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
 import { celebrityPersonas, chatThreads } from '@/data/mock';
@@ -87,6 +88,7 @@ export default function MessagesScreen() {
   const coins = useCoins();
   const [folder, setFolder] = useState<Folder>('all');
   const [showActivity, setShowActivity] = useState(false);
+  const [showCoinInfo, setShowCoinInfo] = useState(false);
   const { hasActivity } = useCommunityActivity();
   const { width } = useWindowDimensions();
   const pagerRef = useRef<ScrollView>(null);
@@ -207,9 +209,13 @@ export default function MessagesScreen() {
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
             </WobbleIcon>
           </Pressable>
-          <CoinPill amount={coins} />
+          <Pressable onPress={() => setShowCoinInfo(true)}>
+            <CoinPill amount={coins} />
+          </Pressable>
         </View>
       </View>
+
+      <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
 
       <View style={styles.folderRow}>
         {FOLDER_ORDER.map((f) => (
