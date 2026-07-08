@@ -2,7 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, ImageSourcePropType, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  Image,
+  ImageSourcePropType,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActivityModal } from '@/components/ActivityModal';
@@ -17,6 +29,8 @@ import { getPersonaMessages, hasRealExchange, loadPersonaChats, subscribePersona
 import { useStudentThreads } from '@/services/studentChatStore';
 
 type Folder = 'all' | 'peers' | 'legends' | 'admin';
+
+const FOLDER_ORDER: Folder[] = ['all', 'peers', 'legends', 'admin'];
 
 const FOLDER_LABELS: Record<Folder, string> = {
   all: 'Barchasi',
@@ -74,6 +88,8 @@ export default function MessagesScreen() {
   const [folder, setFolder] = useState<Folder>('all');
   const [showActivity, setShowActivity] = useState(false);
   const { hasActivity } = useCommunityActivity();
+  const { width } = useWindowDimensions();
+  const pagerRef = useRef<ScrollView>(null);
 
   useEffect(() => subscribe(() => forceUpdate((n) => n + 1)), []);
   useEffect(() => {
@@ -132,7 +148,54 @@ export default function MessagesScreen() {
 
   const allItems = [...adminItems, ...peerItems, ...legendItems].filter((item) => item.started);
 
-  const items = folder === 'admin' ? adminItems : folder === 'peers' ? peerItems : folder === 'legends' ? legendItems : allItems;
+  const itemsForFolder = (f: Folder) =>
+    f === 'admin' ? adminItems : f === 'peers' ? peerItems : f === 'legends' ? legendItems : allItems;
+
+  const goToFolder = (f: Folder, animated = true) => {
+    setFolder(f);
+    pagerRef.current?.scrollTo({ x: FOLDER_ORDER.indexOf(f) * width, animated });
+  };
+
+  const handlePagerScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+    const f = FOLDER_ORDER[idx];
+    if (f && f !== folder) setFolder(f);
+  };
+
+  const renderRow = (item: ReturnType<typeof itemsForFolder>[number]) => {
+    const rowContent = (
+      <>
+        <View style={[styles.avatar, { backgroundColor: item.isLegend ? theme.colors.purpleLight : item.color }]}>
+          {item.avatarImage ? (
+            <Image source={item.avatarImage} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarEmoji}>{item.emoji}</Text>
+          )}
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.preview} numberOfLines={1}>
+            {item.preview || item.sub}
+          </Text>
+        </View>
+        {item.time ? <Text style={styles.time}>{item.time}</Text> : null}
+      </>
+    );
+
+    if (item.isLegend) {
+      return (
+        <ShimmerRow key={item.key} onPress={() => router.push(item.route as never)}>
+          {rowContent}
+        </ShimmerRow>
+      );
+    }
+
+    return (
+      <Pressable key={item.key} style={styles.row} onPress={() => router.push(item.route as never)}>
+        {rowContent}
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -149,55 +212,41 @@ export default function MessagesScreen() {
       </View>
 
       <View style={styles.folderRow}>
-        {(['all', 'peers', 'legends', 'admin'] as Folder[]).map((f) => (
+        {FOLDER_ORDER.map((f) => (
           <Pressable
             key={f}
             style={[styles.folderChip, folder === f && styles.folderChipActive]}
-            onPress={() => setFolder(f)}>
+            onPress={() => goToFolder(f)}>
             <Text style={[styles.folderChipText, folder === f && styles.folderChipTextActive]}>{FOLDER_LABELS[f]}</Text>
           </Pressable>
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {items.length === 0 ? (
-          <Text style={styles.emptyText}>Bu bo'limda hali chat yo'q.</Text>
-        ) : (
-          items.map((item) => {
-            const rowContent = (
-              <>
-                <View style={[styles.avatar, { backgroundColor: item.isLegend ? theme.colors.purpleLight : item.color }]}>
-                  {item.avatarImage ? (
-                    <Image source={item.avatarImage} style={styles.avatarImage} />
-                  ) : (
-                    <Text style={styles.avatarEmoji}>{item.emoji}</Text>
-                  )}
-                </View>
-                <View style={styles.info}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.preview} numberOfLines={1}>
-                    {item.preview || item.sub}
-                  </Text>
-                </View>
-                {item.time ? <Text style={styles.time}>{item.time}</Text> : null}
-              </>
-            );
-
-            if (item.isLegend) {
-              return (
-                <ShimmerRow key={item.key} onPress={() => router.push(item.route as never)}>
-                  {rowContent}
-                </ShimmerRow>
-              );
-            }
-
-            return (
-              <Pressable key={item.key} style={styles.row} onPress={() => router.push(item.route as never)}>
-                {rowContent}
-              </Pressable>
-            );
-          })
-        )}
+      <ScrollView
+        ref={pagerRef}
+        style={styles.pager}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handlePagerScroll}
+        scrollEventThrottle={16}
+        contentOffset={{ x: FOLDER_ORDER.indexOf(folder) * width, y: 0 }}>
+        {FOLDER_ORDER.map((f) => {
+          const pageItems = itemsForFolder(f);
+          return (
+            <ScrollView
+              key={f}
+              style={[styles.pagerPage, { width }]}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}>
+              {pageItems.length === 0 ? (
+                <Text style={styles.emptyText}>Bu bo'limda hali chat yo'q.</Text>
+              ) : (
+                pageItems.map(renderRow)
+              )}
+            </ScrollView>
+          );
+        })}
       </ScrollView>
 
       <ActivityModal visible={showActivity} onClose={() => setShowActivity(false)} />
@@ -227,6 +276,8 @@ const styles = StyleSheet.create({
   },
 
   folderRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
+  pager: { flex: 1 },
+  pagerPage: { flex: 1 },
   folderChip: {
     paddingHorizontal: 13,
     paddingVertical: 8,
