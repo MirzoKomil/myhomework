@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
-import { LightningPill } from '@/components/ui/LightningIcon';
+import { LightningIcon, LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
@@ -37,7 +37,10 @@ export default function LeaderboardScreen() {
   const [activeDropdown, setActiveDropdown] = useState<'period' | 'scope' | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
-  const ranked = useMemo(() => getRankedLeaderboard(period, scope, coins), [period, scope, coins]);
+  const ranked = useMemo(
+    () => getRankedLeaderboard(period, scope, coins, lightning),
+    [period, scope, coins, lightning]
+  );
   const top3 = ranked.slice(0, 3);
   const rest = ranked.slice(3);
 
@@ -157,8 +160,12 @@ export default function LeaderboardScreen() {
                 </View>
                 <Text style={styles.podiumName}>{entry.name}</Text>
                 <View style={styles.podiumXpPill}>
-                  <CoinIcon size={11} />
-                  <Text style={styles.podiumXpText}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
+                  <LightningIcon size={11} />
+                  <Text style={styles.podiumXpText}>{entry.displayLightning.toLocaleString('uz-UZ')}</Text>
+                </View>
+                <View style={styles.podiumCoinRow}>
+                  <CoinIcon size={9} />
+                  <Text style={styles.podiumCoinText}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
                 </View>
               </Pressable>
             ) : (
@@ -187,9 +194,15 @@ export default function LeaderboardScreen() {
                 </Text>
                 <Text style={styles.listMeta}>{entry.lessonsCompleted} dars yakunlandi</Text>
               </View>
-              <View style={styles.listXpRow}>
-                <CoinIcon size={12} />
-                <Text style={styles.listXp}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
+              <View style={styles.listXpCol}>
+                <View style={styles.listXpRow}>
+                  <LightningIcon size={12} />
+                  <Text style={styles.listXp}>{entry.displayLightning.toLocaleString('uz-UZ')}</Text>
+                </View>
+                <View style={styles.listXpRow}>
+                  <CoinIcon size={10} />
+                  <Text style={styles.listCoin}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
+                </View>
               </View>
             </Pressable>
           ))}
@@ -328,6 +341,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   podiumXpText: { fontFamily: theme.fonts.semiBold, fontSize: 11, color: theme.colors.text },
+  podiumCoinRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  podiumCoinText: { fontFamily: theme.fonts.medium, fontSize: 10, color: theme.colors.textMuted },
   list: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
@@ -360,6 +375,8 @@ const styles = StyleSheet.create({
   listName: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },
   listNameMe: { color: theme.colors.purple },
   listMeta: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  listXpCol: { alignItems: 'flex-end', gap: 3 },
   listXpRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   listXp: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.text },
+  listCoin: { fontFamily: theme.fonts.medium, fontSize: 11, color: theme.colors.textMuted },
 });

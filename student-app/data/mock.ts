@@ -552,26 +552,30 @@ export type LeaderboardEntry = {
   avatarEmoji: string;
   lessonsCompleted: number;
   coins: number;
+  lightning: number;
 };
 
 export const ME_LEADERBOARD_ID = 'me';
 
+// Chaqmoq faqat to'planadi (sarflanmaydi), shuning uchun reyting shu bo'yicha
+// hisoblanadi — coin esa sarflanishi mumkinligi uchun faqat ma'lumot sifatida
+// ko'rsatiladi, o'ringa ta'sir qilmaydi.
 export const leaderboardEntries: LeaderboardEntry[] = [
-  { id: 'e1', name: 'Azizbek', avatarEmoji: '🧑', lessonsCompleted: 95, coins: 12560 },
-  { id: 'e2', name: 'Zarina', avatarEmoji: '👩', lessonsCompleted: 92, coins: 11230 },
-  { id: 'e3', name: 'Behruz', avatarEmoji: '🧑‍🦱', lessonsCompleted: 88, coins: 9870 },
-  { id: 'e4', name: 'Madina', avatarEmoji: '👩‍🦱', lessonsCompleted: 90, coins: 8420 },
-  { id: 'e5', name: 'Diyor', avatarEmoji: '🧑‍🦰', lessonsCompleted: 85, coins: 7650 },
-  { id: 'e6', name: 'Kamila', avatarEmoji: '👱‍♀️', lessonsCompleted: 80, coins: 6980 },
-  { id: ME_LEADERBOARD_ID, name: 'Siz', avatarEmoji: '🙂', lessonsCompleted: 75, coins: 6250 },
-  { id: 'e7', name: 'Sardor', avatarEmoji: '🧔', lessonsCompleted: 70, coins: 5420 },
-  { id: 'e8', name: 'Gulnoza', avatarEmoji: '🧕', lessonsCompleted: 65, coins: 4980 },
-  { id: 'e9', name: 'Asilbek', avatarEmoji: '👨', lessonsCompleted: 60, coins: 4250 },
-  { id: 'e10', name: 'Nodira', avatarEmoji: '👩‍🦳', lessonsCompleted: 58, coins: 3900 },
-  { id: 'e11', name: 'Jasur', avatarEmoji: '👦', lessonsCompleted: 55, coins: 3600 },
-  { id: 'e12', name: 'Sitora', avatarEmoji: '👧', lessonsCompleted: 52, coins: 3200 },
-  { id: 'e13', name: 'Otabek', avatarEmoji: '🧑‍🎓', lessonsCompleted: 48, coins: 2800 },
-  { id: 'e14', name: 'Feruza', avatarEmoji: '👩‍🎓', lessonsCompleted: 44, coins: 2400 },
+  { id: 'e1', name: 'Azizbek', avatarEmoji: '🧑', lessonsCompleted: 95, coins: 12560, lightning: 12500 },
+  { id: 'e2', name: 'Zarina', avatarEmoji: '👩', lessonsCompleted: 92, coins: 11230, lightning: 12000 },
+  { id: 'e4', name: 'Madina', avatarEmoji: '👩‍🦱', lessonsCompleted: 90, coins: 8420, lightning: 11500 },
+  { id: 'e3', name: 'Behruz', avatarEmoji: '🧑‍🦱', lessonsCompleted: 88, coins: 9870, lightning: 11000 },
+  { id: 'e5', name: 'Diyor', avatarEmoji: '🧑‍🦰', lessonsCompleted: 85, coins: 7650, lightning: 10200 },
+  { id: 'e6', name: 'Kamila', avatarEmoji: '👱‍♀️', lessonsCompleted: 80, coins: 6980, lightning: 9500 },
+  { id: ME_LEADERBOARD_ID, name: 'Siz', avatarEmoji: '🙂', lessonsCompleted: 75, coins: 6250, lightning: 8200 },
+  { id: 'e7', name: 'Sardor', avatarEmoji: '🧔', lessonsCompleted: 70, coins: 5420, lightning: 7800 },
+  { id: 'e8', name: 'Gulnoza', avatarEmoji: '🧕', lessonsCompleted: 65, coins: 4980, lightning: 7000 },
+  { id: 'e9', name: 'Asilbek', avatarEmoji: '👨', lessonsCompleted: 60, coins: 4250, lightning: 6200 },
+  { id: 'e10', name: 'Nodira', avatarEmoji: '👩‍🦳', lessonsCompleted: 58, coins: 3900, lightning: 5900 },
+  { id: 'e11', name: 'Jasur', avatarEmoji: '👦', lessonsCompleted: 55, coins: 3600, lightning: 5400 },
+  { id: 'e12', name: 'Sitora', avatarEmoji: '👧', lessonsCompleted: 52, coins: 3200, lightning: 5000 },
+  { id: 'e13', name: 'Otabek', avatarEmoji: '🧑‍🎓', lessonsCompleted: 48, coins: 2800, lightning: 4400 },
+  { id: 'e14', name: 'Feruza', avatarEmoji: '👩‍🎓', lessonsCompleted: 44, coins: 2400, lightning: 3900 },
 ];
 
 export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'alltime';
@@ -603,14 +607,27 @@ const SCOPE_SCALE: Record<LeaderboardScope, number> = {
   global: 2.4,
 };
 
-export type RankedLeaderboardEntry = LeaderboardEntry & { rank: number; displayCoins: number };
+export type RankedLeaderboardEntry = LeaderboardEntry & { rank: number; displayCoins: number; displayLightning: number };
 
-export function getRankedLeaderboard(period: LeaderboardPeriod, scope: LeaderboardScope, myCoins?: number): RankedLeaderboardEntry[] {
+export function getRankedLeaderboard(
+  period: LeaderboardPeriod,
+  scope: LeaderboardScope,
+  myCoins?: number,
+  myLightning?: number
+): RankedLeaderboardEntry[] {
   const factor = PERIOD_SCALE[period] * SCOPE_SCALE[scope];
-  const entries = myCoins !== undefined
-    ? leaderboardEntries.map((e) => (e.id === ME_LEADERBOARD_ID ? { ...e, coins: myCoins } : e))
-    : leaderboardEntries;
-  const scaled = entries.map((e) => ({ ...e, displayCoins: Math.max(1, Math.round(e.coins * factor)) }));
-  scaled.sort((a, b) => b.displayCoins - a.displayCoins);
+  const entries = leaderboardEntries.map((e) =>
+    e.id === ME_LEADERBOARD_ID
+      ? { ...e, coins: myCoins ?? e.coins, lightning: myLightning ?? e.lightning }
+      : e
+  );
+  // Reyting chaqmoq bo'yicha hisoblanadi — u faqat to'planadi, sarflanmaydi.
+  // Coin sarflanishi mumkinligi uchun faqat ma'lumot sifatida ko'rsatiladi.
+  const scaled = entries.map((e) => ({
+    ...e,
+    displayCoins: Math.max(1, Math.round(e.coins * factor)),
+    displayLightning: Math.max(1, Math.round(e.lightning * factor)),
+  }));
+  scaled.sort((a, b) => b.displayLightning - a.displayLightning);
   return scaled.map((e, i) => ({ ...e, rank: i + 1 }));
 }

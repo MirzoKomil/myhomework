@@ -38,7 +38,7 @@ export default function ProfileScreen() {
   const coins = useCoins();
   const lightning = useLightning();
   const avatarUri = useAvatarUri();
-  const ranked = getRankedLeaderboard('alltime', 'country', coins);
+  const ranked = getRankedLeaderboard('alltime', 'country', coins, lightning);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;
