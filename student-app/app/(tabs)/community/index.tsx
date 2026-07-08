@@ -118,6 +118,7 @@ export default function CommunityScreen() {
             <WobbleIcon active={hasActivity}>
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
             </WobbleIcon>
+            {hasActivity && <View style={styles.badgeDot} />}
           </Pressable>
         </View>
       </View>
@@ -202,6 +203,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadow.card,
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.danger,
+    borderWidth: 1.5,
+    borderColor: theme.colors.surface,
   },
 
   filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },

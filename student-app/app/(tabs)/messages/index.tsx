@@ -204,13 +204,14 @@ export default function MessagesScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Muloqot</Text>
         <View style={styles.headerRight}>
+          <Pressable onPress={() => setShowCoinInfo(true)}>
+            <CoinPill amount={coins} />
+          </Pressable>
           <Pressable style={styles.heartBtn} onPress={() => setShowActivity(true)} hitSlop={8}>
             <WobbleIcon active={hasActivity}>
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
             </WobbleIcon>
-          </Pressable>
-          <Pressable onPress={() => setShowCoinInfo(true)}>
-            <CoinPill amount={coins} />
+            {hasActivity && <View style={styles.badgeDot} />}
           </Pressable>
         </View>
       </View>
@@ -279,6 +280,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadow.card,
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.danger,
+    borderWidth: 1.5,
+    borderColor: theme.colors.surface,
   },
 
   folderRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
