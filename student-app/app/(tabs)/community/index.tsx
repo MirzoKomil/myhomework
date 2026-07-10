@@ -7,7 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityModal } from '@/components/ActivityModal';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinPill } from '@/components/ui/CoinIcon';
+import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
 import { useAvatarUri } from '@/services/avatarStore';
@@ -90,6 +92,8 @@ export default function CommunityScreen() {
   const coins = useCoins();
   const lightning = useLightning();
   const [showInfo, setShowInfo] = useState(false);
+  const [showCoinInfo, setShowCoinInfo] = useState(false);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -116,8 +120,12 @@ export default function CommunityScreen() {
           <Text style={styles.headerTitle}>Hamjamiyat</Text>
         </Pressable>
         <View style={styles.headerRight}>
-          <CoinPill amount={coins} size={12} />
-          <LightningPill amount={lightning} size={12} />
+          <Pressable onPress={() => setShowCoinInfo(true)}>
+            <CoinPill amount={coins} size={12} />
+          </Pressable>
+          <Pressable onPress={() => setShowLightningInfo(true)}>
+            <LightningPill amount={lightning} size={12} />
+          </Pressable>
           <Pressable style={styles.heartBtn} onPress={() => setShowActivity(true)} hitSlop={8}>
             <WobbleIcon active={hasActivity}>
               <Ionicons name="heart-outline" size={20} color={theme.colors.danger} />
@@ -173,6 +181,8 @@ export default function CommunityScreen() {
       </Modal>
 
       <ActivityModal visible={showActivity} onClose={() => setShowActivity(false)} />
+      <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
     </SafeAreaView>
   );
 }
