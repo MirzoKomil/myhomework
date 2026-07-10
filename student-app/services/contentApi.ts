@@ -50,6 +50,7 @@ export type AdminModuleContent = {
 // CRM'da "Dars" tahrirlovchisi orqali kiritilgan real dars tarkibi — barcha
 // maydonlar ixtiyoriy, chunki admin hali to'ldirmagan bo'lishi mumkin.
 export type AdminLessonContent = {
+  videoUrl?: string;
   konspekt?: string;
   vocabulary?: VocabWord[];
   grammarBlanks?: GrammarBlank[];
@@ -109,6 +110,9 @@ export function getLessonMaterials(mc: MobileContent, lessonId: string): LessonM
   const moduleIds = new Set(mc.modules.filter((m) => m.lessonId === lessonId).map((m) => m.id));
   const contents = mc.moduleContents.filter((c) => moduleIds.has(c.moduleId));
   const videoContent = contents.find((c) => c.type === 'video' && c.url);
+  // "Videodars" bo'limida to'g'ridan-to'g'ri kiritilgan videoUrl — eski modul-asosli
+  // videodan ustun turadi, chunki endi toq raqamli darslarda video shu yerdan boshqariladi.
+  const videoUrl = mc.lessonContents[lessonId]?.videoUrl || videoContent?.url;
   const files = contents.filter((c) => c.id !== videoContent?.id);
-  return { videoUrl: videoContent?.url, files };
+  return { videoUrl, files };
 }

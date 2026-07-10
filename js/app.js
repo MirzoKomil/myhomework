@@ -781,7 +781,12 @@ function renderMobileEditPanel() {
     if (addBtn) addBtn.textContent = btnLabel;
 
     const activeTab = panel.querySelector('.mac-tab-btn.mac-tab-active')?.dataset.macTab || 'videos';
-    renderMobileAdminTab(showMacTabs ? activeTab : (showRow ? 'videos' : null));
+    // "Dars" bo'limida _activeLessonId/_activeModuleId o'rnatilganda showRow=false bo'lib
+    // qoladi (yuqoridagi tab qatori kerak emasligi uchun) — lekin bu holatda ham
+    // renderMobileAdminTab'ga albatta haqiqiy (falsy bo'lmagan) tab qiymati berilishi
+    // kerak, aks holda funksiya darhol "tez orada" placeholder bilan qaytib ketadi va
+    // dars/modul tarkibi hech qachon ko'rinmaydi.
+    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : null);
 }
 
 function renderMobileModuleDetailTab(container, course, mod) {
@@ -1067,12 +1072,14 @@ function _homeworkPartItemCount(p) {
 
 function _renderLcKonspekt(body, lesson, content) {
     body.innerHTML = `
+        <div class="form-group"><label>Video havolasi (YouTube URL)</label><input id="lcVideoUrl" class="form-control" value="${escapeHtml(content.videoUrl || '')}" placeholder="https://www.youtube.com/watch?v=..."></div>
         <div class="form-group"><label>Konspekt matni</label><textarea id="lcKonspekt" class="form-control" rows="8" placeholder="Ushbu darsning konspekti...">${escapeHtml(content.konspekt || '')}</textarea></div>
         <button type="button" class="btn-primary-sm" id="lcSaveKonspekt">Saqlash</button>`;
     document.getElementById('lcSaveKonspekt').addEventListener('click', () => {
+        content.videoUrl = document.getElementById('lcVideoUrl').value.trim();
         content.konspekt = document.getElementById('lcKonspekt').value;
         _saveLessonWorkingContent(lesson, content);
-        showMiniToast('Konspekt saqlandi');
+        showMiniToast('Saqlandi');
     });
 }
 
@@ -1362,11 +1369,30 @@ function renderMobileCourseDetailTab(container, course) {
             l.isActive ? `<span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Faol</span>` : '',
         ].filter(Boolean).join('');
 
-        const countBadge = modCount
+        const countBadge = modCount && !isVideoDay
             ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${modCount}</span>`
             : '';
 
-        const modulesHTML = expanded ? `
+        // Toq raqamli (videodars) darslarda modullar tizimi o'rniga ilovadagi
+        // aynan uch bo'lim (Videodars/Yangi so'zlar/Uyga vazifa)ga to'g'ridan-to'g'ri
+        // o'tish qatorlari ko'rsatiladi — bular ilova ekranidagi tarkib bilan bevosita bog'liq.
+        const lcContent = isVideoDay && expanded ? _getLessonWorkingContent(mc, l, i) : null;
+        const sectionRow = (icon, title, subtitle, tab) => `
+            <div data-open-lesson-section="${escapeHtml(l.id)}:${tab}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">${icon}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(title)}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(subtitle)}</div>
+                </div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(false)}</div>
+            </div>`;
+
+        const modulesHTML = !expanded ? '' : isVideoDay ? `
+        <div style="border-top:1px solid var(--border)">
+            ${sectionRow('🎬', 'Videodars', lcContent.videoUrl ? "Video, konspekt va grammatika mashqlari — video qo'yilgan" : "Video, konspekt va grammatika mashqlari — video hali qo'yilmagan", 'konspekt')}
+            ${sectionRow('📖', "Yangi so'zlar", `${(lcContent.vocabulary || []).length} ta yangi so'z`, 'vocab')}
+            ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
+        </div>` : `
         <div style="border-top:1px solid var(--border)">
             ${mods.length ? mods.map((m, mi) => {
                 const typeIcon = m.type === 'video' ? '🎬' : m.type === 'pdf' ? '📄' : m.type === 'text' ? '📝' : '📁';
@@ -1384,7 +1410,7 @@ function renderMobileCourseDetailTab(container, course) {
                 ${iconBtn(`data-preview-mod="${escapeHtml(m.id)}"`, eyeSvg(), '#16a34a')}
             </div>`;
             }).join('') : `<div style="padding:20px;text-align:center;font-size:13px;color:var(--text-muted)">Hali modullar yo'q. <button type="button" data-add-mod="${escapeHtml(l.id)}" style="background:none;border:none;color:var(--purple,#7c3aed);font-weight:600;cursor:pointer;font-size:13px">+ Modul qo'shish</button></div>`}
-        </div>` : '';
+        </div>`;
 
         return `
         <div data-lesson-card="${escapeHtml(l.id)}" style="flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
@@ -1402,7 +1428,7 @@ function renderMobileCourseDetailTab(container, course) {
                 </div>
                 <div style="display:flex;align-items:center;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
                     ${iconBtn(`data-lesson-menu="${escapeHtml(l.id)}"`, dotsSvg(), '')}
-                    ${iconBtn(`data-add-mod="${escapeHtml(l.id)}"`, plusBoxSvg(), 'var(--purple,#7c3aed)')}
+                    ${isVideoDay ? '' : iconBtn(`data-add-mod="${escapeHtml(l.id)}"`, plusBoxSvg(), 'var(--purple,#7c3aed)')}
                     ${iconBtn(`data-preview-lesson="${escapeHtml(l.id)}" title="Dars tarkibini ko'rish/tahrirlash"`, eyeSvg(), '#16a34a')}
                 </div>
                 <div style="color:var(--text-muted);flex-shrink:0;pointer-events:none">${chevronSvg(expanded)}</div>
@@ -1444,6 +1470,7 @@ function renderMobileCourseDetailTab(container, course) {
         const addMod = e.target.closest('[data-add-mod]');
         const previewLesson = e.target.closest('[data-preview-lesson]');
         const openMod = e.target.closest('[data-open-module]');
+        const openSection = e.target.closest('[data-open-lesson-section]');
 
         if (menuBtn) {
             e.stopPropagation();
@@ -1453,6 +1480,14 @@ function renderMobileCourseDetailTab(container, course) {
         if (addMod) {
             e.stopPropagation();
             _openAddModuleModal(addMod.dataset.addMod);
+            return;
+        }
+        if (openSection) {
+            e.stopPropagation();
+            _activeLessonId = openSection.dataset.openLessonSection.split(':')[0];
+            _lessonContentTab = openSection.dataset.openLessonSection.split(':')[1];
+            _lcActiveHomeworkPart = null;
+            renderMobileEditPanel();
             return;
         }
         if (previewLesson) {
