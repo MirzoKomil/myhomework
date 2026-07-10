@@ -809,7 +809,7 @@ function renderMobileModuleDetailTab(container, course, mod) {
         }
         const isVideo = c.type === 'video';
         const ytId = isVideo ? ytVideoId(c.url || '') : null;
-        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        return `<div style="flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
             ${ytId ? `<div style="position:relative;padding-top:56.25%;background:#000;border-radius:10px 10px 0 0;overflow:hidden"><iframe src="https://www.youtube.com/embed/${ytId}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allowfullscreen loading="lazy"></iframe></div>` : ''}
             <div style="padding:12px 14px;display:flex;align-items:center;gap:10px">
                 ${!ytId ? `<span style="font-size:22px">${typeIcon(c.type)}</span>` : ''}
@@ -1387,7 +1387,7 @@ function renderMobileCourseDetailTab(container, course) {
         </div>` : '';
 
         return `
-        <div data-lesson-card="${escapeHtml(l.id)}" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+        <div data-lesson-card="${escapeHtml(l.id)}" style="flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
             <div data-toggle-lesson="${escapeHtml(l.id)}" style="padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none">
                 <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--purple,#7c3aed) 0%,#a855f7 100%);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff">
                     ${iconSvg(18)}
