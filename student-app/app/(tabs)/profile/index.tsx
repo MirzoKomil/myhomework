@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { LightningIcon } from '@/components/ui/LightningIcon';
+import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
@@ -42,42 +43,30 @@ export default function ProfileScreen() {
   const ranked = getRankedLeaderboard('alltime', 'country', coins, lightning);
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
   const levelProgress = getLevelProgress(lightning);
+  const [showLightningInfo, setShowLightningInfo] = useState(false);
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const wobbleAnim = useRef(new Animated.Value(0)).current;
 
-  const attendanceAnim = useRef(new Animated.Value(0)).current;
-  const hoursAnim = useRef(new Animated.Value(0)).current;
-  const coinsAnim = useRef(new Animated.Value(0)).current;
-  const [displayAttendance, setDisplayAttendance] = useState(0);
-  const [displayHours, setDisplayHours] = useState(0);
-  const [displayCoins, setDisplayCoins] = useState(0);
+  const lightningAnim = useRef(new Animated.Value(0)).current;
+  const [displayLightning, setDisplayLightning] = useState(0);
 
-  // Har safar bu ekran fokusga kelganda statistika 0 dan joriy qiymatgacha sanaladi.
+  // Davomat va Vaqt endi doim joriy qiymatini ko'rsatadi — faqat chaqmoq
+  // (badge) raqami har safar ekran fokusga kelganda 0 dan sanaladi.
   useFocusEffect(
     useCallback(() => {
-      attendanceAnim.setValue(0);
-      hoursAnim.setValue(0);
-      coinsAnim.setValue(0);
-      setDisplayAttendance(0);
-      setDisplayHours(0);
-      setDisplayCoins(0);
+      lightningAnim.setValue(0);
+      setDisplayLightning(0);
 
-      const attendanceId = attendanceAnim.addListener(({ value }) => setDisplayAttendance(Math.round(value)));
-      const hoursId = hoursAnim.addListener(({ value }) => setDisplayHours(value));
-      const coinsId = coinsAnim.addListener(({ value }) => setDisplayCoins(Math.round(value)));
+      const lightningId = lightningAnim.addListener(({ value }) => setDisplayLightning(Math.round(value)));
 
       const animConfig = { duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: false };
-      Animated.timing(attendanceAnim, { ...animConfig, toValue: profileStats.attendanceRate }).start();
-      Animated.timing(hoursAnim, { ...animConfig, toValue: profileStats.hoursSpent }).start();
-      Animated.timing(coinsAnim, { ...animConfig, toValue: coins }).start();
+      Animated.timing(lightningAnim, { ...animConfig, toValue: lightning }).start();
 
       return () => {
-        attendanceAnim.removeListener(attendanceId);
-        hoursAnim.removeListener(hoursId);
-        coinsAnim.removeListener(coinsId);
+        lightningAnim.removeListener(lightningId);
       };
-    }, [attendanceAnim, hoursAnim, coinsAnim, coins])
+    }, [lightningAnim, lightning])
   );
 
   useEffect(() => {
@@ -135,26 +124,6 @@ export default function ProfileScreen() {
           </Pressable>
         </Card>
 
-        <Pressable onPress={() => router.push('/profile/levels' as never)}>
-          <Card style={styles.levelCard}>
-            <Image source={levelProgress.level.image} style={styles.levelImage} />
-            <View style={styles.levelInfo}>
-              <View style={styles.levelNameRow}>
-                <Text style={styles.levelName}>{levelProgress.level.name}</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.textLight} />
-              </View>
-              <View style={styles.levelProgressBarBg}>
-                <View style={[styles.levelProgressBarFill, { width: `${levelProgress.progressPercent}%` }]} />
-              </View>
-              <Text style={styles.levelHint}>
-                {levelProgress.next
-                  ? `${levelProgress.next.name} darajasiga yetish uchun yana ${levelProgress.remaining.toLocaleString('uz-UZ')} ta chaqmoq kerak`
-                  : "Siz eng yuqori darajadasiz!"}
-              </Text>
-            </View>
-          </Card>
-        </Pressable>
-
         <Pressable onPress={() => router.push('/profile/leaderboard' as never)}>
           <LinearGradient
             colors={['#7B61FF', '#4F46E5']}
@@ -199,37 +168,38 @@ export default function ProfileScreen() {
           {[
             {
               label: 'Davomat',
-              value: `${displayAttendance}%`,
+              value: `${profileStats.attendanceRate}%`,
               icon: 'checkmark-circle' as const,
               bg: theme.colors.successBg,
               color: theme.colors.success,
             },
             {
               label: 'Vaqt',
-              value: `${displayHours.toFixed(1)} soat`,
+              value: `${profileStats.hoursSpent.toFixed(1)} soat`,
               icon: 'time' as const,
               bg: theme.colors.blueLight,
               color: theme.colors.blue,
             },
             {
-              label: 'Coinlar',
-              value: displayCoins,
-              icon: 'coin' as const,
-              bg: theme.colors.warningBg,
-              color: theme.colors.warning,
+              label: 'Chaqmoq',
+              value: displayLightning,
+              icon: 'badge' as const,
+              bg: theme.colors.purpleLight,
+              color: theme.colors.purple,
+              onPress: () => setShowLightningInfo(true),
             },
           ].map((stat) => (
-            <View key={stat.label} style={styles.statBox}>
+            <Pressable key={stat.label} style={styles.statBox} onPress={stat.onPress} disabled={!stat.onPress}>
               <View style={[styles.statIconWrap, { backgroundColor: stat.bg }]}>
-                {stat.icon === 'coin' ? (
-                  <CoinIcon size={18} />
+                {stat.icon === 'badge' ? (
+                  <Image source={levelProgress.level.image} style={styles.statBadgeImage} />
                 ) : (
                   <Ionicons name={stat.icon} size={18} color={stat.color} />
                 )}
               </View>
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
 
@@ -252,6 +222,8 @@ export default function ProfileScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
     </SafeAreaView>
   );
 }
@@ -281,14 +253,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  levelCard: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
-  levelImage: { width: 48, height: 48, resizeMode: 'contain' },
-  levelInfo: { flex: 1, gap: 6 },
-  levelNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  levelName: { fontFamily: theme.fonts.bold, fontSize: 15, color: theme.colors.text },
-  levelProgressBarBg: { height: 6, borderRadius: 3, backgroundColor: theme.colors.border },
-  levelProgressBarFill: { height: 6, borderRadius: 3, backgroundColor: theme.colors.blue },
-  levelHint: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted },
   balanceCard: { borderRadius: theme.radius.md, padding: 20, marginBottom: 16, overflow: 'hidden' },
   shimmerClip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   shimmerSweep: { position: 'absolute', top: 0, bottom: 0, width: 100 },
@@ -314,6 +278,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  statBadgeImage: { width: 22, height: 22, resizeMode: 'contain' },
   statValue: { fontFamily: theme.fonts.bold, fontSize: 18, color: theme.colors.text, marginTop: 6 },
   statLabel: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
   menu: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, overflow: 'hidden', ...theme.shadow.card },
