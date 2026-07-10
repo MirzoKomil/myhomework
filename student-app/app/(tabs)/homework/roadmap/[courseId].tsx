@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { createElement, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,6 +33,19 @@ import {
   subscribe as subscribeLessonProgress,
   useLessonProgress,
 } from '@/services/lessonProgressStore';
+
+// ─── Web-only CSS spin (joriy dars kartasi atrofidagi aylanuvchi tovlanish) ────
+// RN Animated'ning JS drayveri veb'da React qayta render'lari, tab throttling
+// va boshqa JS-thread band bo'lishlariga qaram — shu sababli bir necha soniyadan
+// keyin "qotib qolgan" ko'rinishi mumkin. CSS @keyframes esa brauzer kompozitor
+// oqimida ishlaydi va JS-thread'dan butunlay mustaqil — hech qachon qotmaydi.
+const GLOW_SPIN_KEYFRAMES_ID = 'mh-glow-spin-keyframes';
+if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById(GLOW_SPIN_KEYFRAMES_ID)) {
+  const styleEl = document.createElement('style');
+  styleEl.id = GLOW_SPIN_KEYFRAMES_ID;
+  styleEl.textContent = '@keyframes mh-glow-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+  document.head.appendChild(styleEl);
+}
 
 // ─── Type config ────────────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
@@ -80,13 +94,31 @@ function LessonCard({
 
   const glowSpin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!isActive) return;
-    glowSpin.setValue(0);
-    const loop = Animated.loop(
-      Animated.timing(glowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true })
-    );
-    loop.start();
-    return () => loop.stop();
+    // Veb'da CSS @keyframes ishlatiladi (pastda), RN Animated shart emas.
+    if (Platform.OS === 'web' || !isActive) return;
+    let cancelled = false;
+    let currentAnim: Animated.CompositeAnimation | null = null;
+    // Animated.loop'ning ichki resetBeforeIteration mexanizmiga tayanmaymiz —
+    // JS drayverida ba'zan bir necha aylanishdan keyin qotib qolgan. Buning
+    // o'rniga har bir aylanishni qo'lda qayta boshlaymiz: setValue(0) —
+    // animatsiyasiz, zumda qiymatni qaytaradi — so'ng navbatdagi aylanish
+    // faqat oldingisi tugagach boshlanadi. Effekt tozalanganda joriy
+    // animatsiya aniq to'xtatiladi — aks holda (masalan Strict Mode yoki
+    // tezkor qayta render'larda) eski va yangi aylanishlar bitta qiymat
+    // ustida bir-biriga qarshi ishlab, tovlanish sakrab-sakrab ko'rinadi.
+    const runCycle = () => {
+      if (cancelled) return;
+      glowSpin.setValue(0);
+      currentAnim = Animated.timing(glowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true });
+      currentAnim.start(({ finished }) => {
+        if (finished && !cancelled) runCycle();
+      });
+    };
+    runCycle();
+    return () => {
+      cancelled = true;
+      currentAnim?.stop();
+    };
   }, [isActive, glowSpin]);
   const glowRotate = glowSpin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
@@ -162,14 +194,36 @@ function LessonCard({
     return (
       <View style={ss.activeOuterWrap}>
         <View style={ss.activeGlowWrap}>
-          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: glowRotate }] }]}>
-            <LinearGradient
-              colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          </Animated.View>
+          {Platform.OS === 'web' ? (
+            createElement(
+              'div',
+              {
+                style: {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  animation: 'mh-glow-spin 3s linear infinite',
+                },
+              },
+              <LinearGradient
+                colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            )
+          ) : (
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: glowRotate }] }]}>
+              <LinearGradient
+                colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </Animated.View>
+          )}
           <Pressable onPress={() => router.push(`/homework/lesson/${lesson.id}`)} style={ss.activeGlowInner}>
             {cardBody}
           </Pressable>
