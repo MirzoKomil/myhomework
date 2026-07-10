@@ -38,6 +38,11 @@ app.use(helmet({
         }
     },
     crossOriginEmbedderPolicy: false,  // rasm/media uchun
+    // Helmet standart bo'yicha "no-referrer" qo'yadi — bu esa YouTube'ga sahifamiz
+    // manzilini butunlay yashiradi, natijada YouTube o'zining "faqat ruxsat etilgan
+    // saytlarda ko'rsatish" tekshiruvini o'tkaza olmay, aslida joylashtirishga (embed)
+    // ruxsat berilgan videolarni ham "Xato 153" bilan rad etadi.
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 // CORS: faqat ruxsat berilgan manzillar
