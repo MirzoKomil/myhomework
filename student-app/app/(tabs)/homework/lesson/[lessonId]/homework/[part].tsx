@@ -7,6 +7,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatThreadView } from '@/components/chat/ChatThreadView';
+import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { theme } from '@/constants/theme';
 import { ChatMessage } from '@/data/mock';
 import { getResolvedLessonContent, HomeworkPart, LessonContent, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
@@ -78,7 +79,12 @@ export default function HomeworkPartScreen() {
   );
 }
 
+// PASS_THRESHOLD — savol-javobli mashqlarda (matching, fill-blank, MC, sentence-build)
+// keyingi darsni ochish uchun kamida shuncha foiz to'g'ri javob berilishi kerak.
+const PASS_THRESHOLD = 0.65;
+
 function DoneScreen({ emoji, title, subtitle }: { emoji: string; title: string; subtitle: string }) {
+  const [celebrating, setCelebrating] = useState(true);
   return (
     <View style={styles.resultCenter}>
       <Text style={styles.resultEmoji}>{emoji}</Text>
@@ -86,6 +92,24 @@ function DoneScreen({ emoji, title, subtitle }: { emoji: string; title: string; 
       <Text style={styles.resultSubtitle}>{subtitle}</Text>
       <Pressable style={styles.resultBtn} onPress={() => router.back()}>
         <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
+      </Pressable>
+      <CelebrationOverlay visible={celebrating} onFinish={() => setCelebrating(false)} />
+    </View>
+  );
+}
+
+// Agar to'g'ri javoblar PASS_THRESHOLD'dan kam bo'lsa — dars "o'tilgan" deb
+// belgilanmaydi, o'quvchi qayta urinib ko'rishi kerak.
+function RetryScreen({ percent, onRetry }: { percent: number; onRetry: () => void }) {
+  return (
+    <View style={styles.resultCenter}>
+      <Text style={styles.resultEmoji}>💪</Text>
+      <Text style={styles.resultTitle}>Yana bir bor urinib ko'ring!</Text>
+      <Text style={styles.resultSubtitle}>
+        {percent}% to'g'ri javob berdingiz. Davom etish uchun kamida {Math.round(PASS_THRESHOLD * 100)}% kerak.
+      </Text>
+      <Pressable style={styles.resultBtn} onPress={onRetry}>
+        <Text style={styles.resultBtnText}>Qayta boshlash</Text>
       </Pressable>
     </View>
   );
@@ -97,7 +121,9 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
   const [wrongFlash, setWrongFlash] = useState<{ left: string; right: string } | null>(null);
+  const [wrongCount, setWrongCount] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [tooLow, setTooLow] = useState<number | null>(null);
 
   const tapLeft = (id: string) => {
     if (matched.has(id)) return;
@@ -114,10 +140,16 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
       addCoins(1, lessonId);
       addLightning(1);
       if (next.size === pairs.length) {
-        onDone();
-        setTimeout(() => setFinished(true), 500);
+        const accuracy = pairs.length / (pairs.length + wrongCount);
+        if (accuracy >= PASS_THRESHOLD) {
+          onDone();
+          setTimeout(() => setFinished(true), 500);
+        } else {
+          setTimeout(() => setTooLow(Math.round(accuracy * 100)), 500);
+        }
       }
     } else {
+      setWrongCount((c) => c + 1);
       setWrongFlash({ left: selectedLeft, right: id });
       setTimeout(() => {
         setWrongFlash(null);
@@ -126,7 +158,16 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
     }
   };
 
+  const retry = () => {
+    setMatched(new Set());
+    setSelectedLeft(null);
+    setWrongFlash(null);
+    setWrongCount(0);
+    setTooLow(null);
+  };
+
   if (finished) return <DoneScreen emoji="✅" title="Ajoyib!" subtitle={`${pairs.length} ta juftlik moslashtirildi`} />;
+  if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
     <View style={styles.stepContent}>
@@ -175,26 +216,43 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
 function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sentence: string; answer: string; options: string[] }[]; onDone: () => void; lessonId: string }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [tooLow, setTooLow] = useState<number | null>(null);
   const current = blanks[index];
   const answered = selected !== null;
   const isCorrect = selected === current?.answer;
 
   const next = () => {
+    const nextCorrectCount = isCorrect ? correctCount + 1 : correctCount;
     if (isCorrect) {
       addCoins(1, lessonId);
       addLightning(1);
     }
     if (index + 1 >= blanks.length) {
-      onDone();
-      setFinished(true);
+      const accuracy = nextCorrectCount / blanks.length;
+      if (accuracy >= PASS_THRESHOLD) {
+        onDone();
+        setFinished(true);
+      } else {
+        setTooLow(Math.round(accuracy * 100));
+      }
       return;
     }
+    setCorrectCount(nextCorrectCount);
     setIndex(index + 1);
     setSelected(null);
   };
 
+  const retry = () => {
+    setIndex(0);
+    setSelected(null);
+    setCorrectCount(0);
+    setTooLow(null);
+  };
+
   if (finished) return <DoneScreen emoji="✍️" title="Tayyor!" subtitle={`${blanks.length} ta gap to'ldirildi`} />;
+  if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
     <View style={styles.stepContent}>
@@ -235,26 +293,43 @@ function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sen
 function MultipleChoicePart({ questions, onDone, lessonId }: { questions: MultipleChoiceQ[]; onDone: () => void; lessonId: string }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
+  const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [tooLow, setTooLow] = useState<number | null>(null);
   const current = questions[index];
   const answered = selected !== null;
   const isCorrect = selected === current?.correctIndex;
 
   const next = () => {
+    const nextCorrectCount = isCorrect ? correctCount + 1 : correctCount;
     if (isCorrect) {
       addCoins(1, lessonId);
       addLightning(1);
     }
     if (index + 1 >= questions.length) {
-      onDone();
-      setFinished(true);
+      const accuracy = nextCorrectCount / questions.length;
+      if (accuracy >= PASS_THRESHOLD) {
+        onDone();
+        setFinished(true);
+      } else {
+        setTooLow(Math.round(accuracy * 100));
+      }
       return;
     }
+    setCorrectCount(nextCorrectCount);
     setIndex(index + 1);
     setSelected(null);
   };
 
+  const retry = () => {
+    setIndex(0);
+    setSelected(null);
+    setCorrectCount(0);
+    setTooLow(null);
+  };
+
   if (finished) return <DoneScreen emoji="🎯" title="Zo'r natija!" subtitle={`${questions.length} ta savol yakunlandi`} />;
+  if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
     <View style={styles.stepContent}>
@@ -294,19 +369,36 @@ function MultipleChoicePart({ questions, onDone, lessonId }: { questions: Multip
 // ─── PART D (grammar) — Sentence building ───────────────────────────────────
 function SentenceBuildPart({ items, onDone, lessonId }: { items: SentenceBuildQ[]; onDone: () => void; lessonId: string }) {
   const [index, setIndex] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [tooLow, setTooLow] = useState<number | null>(null);
   const current = items[index];
+
+  const retry = () => {
+    setIndex(0);
+    setCorrectCount(0);
+    setTooLow(null);
+  };
+
+  if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
     <SentenceBuildRound
       key={current.id}
       item={current}
       lessonId={lessonId}
-      onNext={() => {
+      onNext={(roundCorrect) => {
+        const nextCorrectCount = roundCorrect ? correctCount + 1 : correctCount;
         if (index + 1 >= items.length) {
-          onDone();
-          setFinished(true);
+          const accuracy = nextCorrectCount / items.length;
+          if (accuracy >= PASS_THRESHOLD) {
+            onDone();
+            setFinished(true);
+          } else {
+            setTooLow(Math.round(accuracy * 100));
+          }
         } else {
+          setCorrectCount(nextCorrectCount);
           setIndex(index + 1);
         }
       }}
@@ -316,7 +408,7 @@ function SentenceBuildPart({ items, onDone, lessonId }: { items: SentenceBuildQ[
   );
 }
 
-function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item: SentenceBuildQ; onNext: () => void; finished: boolean; total: number; lessonId: string }) {
+function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item: SentenceBuildQ; onNext: (correct: boolean) => void; finished: boolean; total: number; lessonId: string }) {
   const words = useMemo(() => shuffle(item.words), [item]);
   const [used, setUsed] = useState<boolean[]>(() => words.map(() => false));
   const [built, setBuilt] = useState<number[]>([]);
@@ -366,7 +458,7 @@ function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item:
                 addCoins(1, lessonId);
                 addLightning(1);
               }
-              onNext();
+              onNext(isCorrect);
             }}>
             <Text style={styles.continueBtnText}>Keyingi</Text>
           </Pressable>

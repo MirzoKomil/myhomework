@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
@@ -129,6 +130,7 @@ export default function WordSearchGame() {
           <Pressable style={styles.restartBtn} onPress={restart}>
             <Text style={styles.restartText}>Qaytadan o'ynash</Text>
           </Pressable>
+          <CelebrationOverlay visible={won} />
         </View>
       ) : (
         <View style={styles.grid}>

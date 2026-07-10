@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
@@ -296,6 +297,7 @@ export default function BattleScreen() {
           <Pressable style={styles.playAgainBtn} onPress={resetGame}>
             <Text style={styles.playAgainText}>Yana o'ynash</Text>
           </Pressable>
+          <CelebrationOverlay visible={playerScore > opponentScore} />
         </View>
       )}
 
