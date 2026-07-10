@@ -30,7 +30,9 @@ app.use(helmet({
             imgSrc: ["'self'", "data:", "blob:", "https:"],
             fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'none'"],
+            // YouTube video darslarni CRM'da va ilovada ko'rsatish uchun (Videodars/
+            // Slaydlar bo'limlariga qo'yilgan havolalar) — boshqa hamma joyda 'none' qoladi.
+            frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
         }
