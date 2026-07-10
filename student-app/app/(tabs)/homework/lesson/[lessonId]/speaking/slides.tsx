@@ -115,10 +115,14 @@ export default function SlidesScreen() {
         onScrollEndDrag={onScrollEnd}>
         {slides.map((slide) => (
           <View key={slide.id} style={[styles.slidePage, { width }]}>
-            <View style={styles.slideVisual}>
-              <Ionicons name="easel-outline" size={48} color="#fff" />
-              <Text style={styles.slideVisualTitle}>{slide.title}</Text>
-            </View>
+            {slide.imageUrl ? (
+              <Image source={{ uri: slide.imageUrl }} style={styles.slideImage} resizeMode="contain" />
+            ) : (
+              <View style={styles.slideVisual}>
+                <Ionicons name="easel-outline" size={48} color="#fff" />
+                <Text style={styles.slideVisualTitle}>{slide.title}</Text>
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
@@ -235,6 +239,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   slideVisualTitle: { fontFamily: theme.fonts.bold, fontSize: 16, color: '#fff' },
+  slideImage: { width: '100%', height: 200, borderRadius: theme.radius.md, backgroundColor: theme.colors.bg },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',

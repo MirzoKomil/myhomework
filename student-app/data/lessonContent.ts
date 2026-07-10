@@ -59,7 +59,7 @@ export type HomeworkPart =
   | { id: string; kind: 'pronunciation'; title: string; prompts: SpeakingPrompt[] }
   | { id: string; kind: 'creative'; title: string; instruction: string; mediaType: 'text' | 'audio' };
 
-export type SlideContent = { id: string; title: string; body: string };
+export type SlideContent = { id: string; title: string; body: string; imageUrl?: string };
 
 export type LessonContent = {
   lessonId: string;

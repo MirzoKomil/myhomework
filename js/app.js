@@ -1038,6 +1038,50 @@ function renderEditableList(container, opts) {
     }));
 }
 
+// ─── PDF'ni sahifama-sahifa slaydlarga aylantirish ───────────────────────────
+// pdf.js kutubxonasi faqat kerak bo'lganda (birinchi PDF yuklashda) yuklanadi —
+// har bir admin panel sahifasini og'irlashtirmaslik uchun.
+let _pdfJsLoadPromise = null;
+function _ensurePdfJsLoaded() {
+    if (window.pdfjsLib) return Promise.resolve();
+    if (_pdfJsLoadPromise) return _pdfJsLoadPromise;
+    _pdfJsLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'js/vendor/pdfjs/pdf.min.js';
+        script.onload = () => {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/vendor/pdfjs/pdf.worker.min.js';
+            resolve();
+        };
+        script.onerror = () => reject(new Error("PDF kutubxonasini yuklab bo'lmadi"));
+        document.head.appendChild(script);
+    });
+    return _pdfJsLoadPromise;
+}
+
+// PDF faylni sahifama-sahifa PNG rasmlarga aylantiradi, har birini serverga
+// yuklaydi va {url, fileName} ro'yxatini qaytaradi (yuklash tartibida).
+async function _pdfFileToSlideImages(file, onProgress) {
+    await _ensurePdfJsLoaded();
+    const buf = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    const results = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+        if (onProgress) onProgress(i, pdf.numPages);
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        const imgFile = new File([blob], `slide-${i}.png`, { type: 'image/png' });
+        const uploaded = await apiUploadFile(imgFile);
+        results.push({ url: uploaded.url, fileName: uploaded.fileName });
+    }
+    return results;
+}
+
 // ─── Dars tarkibi (lug'at, grammatika/speaking, uyga vazifa) tahrirlovchisi ──
 function _getLessonWorkingContent(mc, lesson, dayIndex) {
     if (!mc.lessonContents) mc.lessonContents = {};
@@ -1117,19 +1161,75 @@ function _renderLcGrammar(body, lesson, content) {
 }
 
 function _renderLcSpeakingMain(body, lesson, content) {
-    body.innerHTML = `<div id="lcSlides"></div><div style="height:28px"></div><div id="lcSpeakingPractice"></div>`;
-    renderEditableList(document.getElementById('lcSlides'), {
+    body.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+            <div style="font-size:12px;color:var(--text-muted)">PDF fayl yuklang — har bir sahifa avtomatik alohida slaydga aylanadi</div>
+            <div>
+                <input type="file" id="lcSlidePdfInput" accept="application/pdf" style="display:none">
+                <button type="button" id="lcSlidePdfBtn" class="btn-ghost" style="font-size:12px">📄 PDF yuklash</button>
+            </div>
+        </div>
+        <div id="lcSlidePdfStatus" style="display:none;font-size:12px;color:var(--purple,#7c3aed);margin-bottom:10px"></div>
+        <div id="lcSlides"></div>
+        <div style="height:28px"></div>
+        <div id="lcSpeakingPractice"></div>`;
+
+    const renderSlidesList = () => renderEditableList(document.getElementById('lcSlides'), {
         title: 'Slaydlar',
         addLabel: "+ Slayd qo'shish",
         items: content.slides || [],
         idPrefix: 'slide',
-        renderRow: (s) => `<b>${escapeHtml(s.title || '')}</b><br><span style="color:var(--text-muted)">${escapeHtml(s.body || '')}</span>`,
+        renderRow: (s) => `<div style="display:flex;align-items:center;gap:10px">
+            ${s.imageUrl
+                ? `<img src="${escapeHtml(s.imageUrl)}" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)">`
+                : `<div style="width:52px;height:52px;border-radius:6px;flex-shrink:0;background:var(--bg,#f9fafb);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px">🖼️</div>`}
+            <div style="min-width:0"><b>${escapeHtml(s.title || '')}</b><br><span style="color:var(--text-muted)">${escapeHtml(s.body || '')}</span></div>
+        </div>`,
         fields: [
             { key: 'title', label: 'Slayd sarlavhasi', required: true },
             { key: 'body', label: 'Matn', type: 'textarea', required: true },
         ],
-        onChange: (newItems) => { content.slides = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); },
+        onChange: (newItems) => { content.slides = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); renderSlidesList(); },
     });
+    renderSlidesList();
+
+    const pdfBtn = document.getElementById('lcSlidePdfBtn');
+    const pdfInput = document.getElementById('lcSlidePdfInput');
+    const pdfStatus = document.getElementById('lcSlidePdfStatus');
+    pdfBtn.addEventListener('click', () => pdfInput.click());
+    pdfInput.addEventListener('change', async () => {
+        const file = pdfInput.files && pdfInput.files[0];
+        pdfInput.value = '';
+        if (!file) return;
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            alert("Faqat PDF formatidagi fayllar qo'llab-quvvatlanadi. PowerPoint/Word/Excel fayllaringizni avval \"PDF sifatida saqlash\" qilib, keyin shu yerga yuklang.");
+            return;
+        }
+        pdfBtn.disabled = true;
+        pdfStatus.style.display = 'block';
+        pdfStatus.textContent = "PDF yuklanmoqda...";
+        try {
+            const images = await _pdfFileToSlideImages(file, (i, total) => {
+                pdfStatus.textContent = `${i}/${total} sahifa qayta ishlanmoqda...`;
+            });
+            const newSlides = images.map((img, i) => ({
+                id: 'slide-' + Date.now() + '-' + i,
+                title: `${i + 1}-slayd`,
+                body: '',
+                imageUrl: img.url,
+            }));
+            content.slides = [...(content.slides || []), ...newSlides];
+            _saveLessonWorkingContent(lesson, content);
+            renderSlidesList();
+            showMiniToast(`${newSlides.length} ta slayd qo'shildi`);
+        } catch (err) {
+            alert(err.message || "PDF'ni qayta ishlashda xatolik yuz berdi");
+        } finally {
+            pdfBtn.disabled = false;
+            pdfStatus.style.display = 'none';
+        }
+    });
+
     renderEditableList(document.getElementById('lcSpeakingPractice'), {
         title: 'Nutq mashqlari (speaking practice)',
         addLabel: "+ Jumla qo'shish",
