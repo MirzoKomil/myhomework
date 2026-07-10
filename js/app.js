@@ -1329,7 +1329,6 @@ function _ensureAllLessonSlots(mc, course) {
 function renderMobileCourseDetailTab(container, course) {
     const mc = getMobileContent();
     const lessons = _ensureAllLessonSlots(mc, course);
-    const allModules = mc.modules || [];
 
     function iconSvg(size) {
         return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>`;
@@ -1345,17 +1344,11 @@ function renderMobileCourseDetailTab(container, course) {
     function dotsSvg() {
         return `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>`;
     }
-    function plusBoxSvg() {
-        return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>`;
-    }
-
     const iconBtn = (attrs, svgContent, color) =>
         `<button type="button" ${attrs} style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:${color || 'var(--text-muted)'};transition:background 0.12s" onmouseover="this.style.background='var(--bg-secondary,#f3f4f6)'" onmouseout="this.style.background='transparent'">${svgContent}</button>`;
 
     function lessonHTML(l, i) {
         const expanded = _expandedLessonIds.has(l.id);
-        const mods = allModules.filter(m => m.lessonId === l.id);
-        const modCount = mods.length;
         const dateLabel = l.createdAt ? `E'lon qilindi • Dan ${l.createdAt}` : '';
         const isVideoDay = i % 2 === 0;
         const dayBadge = isVideoDay
@@ -1369,14 +1362,10 @@ function renderMobileCourseDetailTab(container, course) {
             l.isActive ? `<span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Faol</span>` : '',
         ].filter(Boolean).join('');
 
-        const countBadge = modCount && !isVideoDay
-            ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${modCount}</span>`
-            : '';
-
-        // Toq raqamli (videodars) darslarda modullar tizimi o'rniga ilovadagi
-        // aynan uch bo'lim (Videodars/Yangi so'zlar/Uyga vazifa)ga to'g'ridan-to'g'ri
-        // o'tish qatorlari ko'rsatiladi — bular ilova ekranidagi tarkib bilan bevosita bog'liq.
-        const lcContent = isVideoDay && expanded ? _getLessonWorkingContent(mc, l, i) : null;
+        // Modullar tizimi o'rniga ilovadagi aynan uch bo'limga (video/speaking kunlariga
+        // qarab farqlanadi) to'g'ridan-to'g'ri o'tish qatorlari ko'rsatiladi — bular ilova
+        // ekranidagi tarkib bilan bevosita bog'liq, o'rniga eski ad-hoc modullar tizimi kerak emas.
+        const lcContent = expanded ? _getLessonWorkingContent(mc, l, i) : null;
         const sectionRow = (icon, title, subtitle, tab) => `
             <div data-open-lesson-section="${escapeHtml(l.id)}:${tab}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
                 <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">${icon}</div>
@@ -1394,22 +1383,9 @@ function renderMobileCourseDetailTab(container, course) {
             ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
         </div>` : `
         <div style="border-top:1px solid var(--border)">
-            ${mods.length ? mods.map((m, mi) => {
-                const typeIcon = m.type === 'video' ? '🎬' : m.type === 'pdf' ? '📄' : m.type === 'text' ? '📝' : '📁';
-                const contents = (allModules._contents || []);
-                return `
-            <div data-open-module="${escapeHtml(m.id)}" style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
-                <span style="font-size:12px;color:var(--text-muted);min-width:24px;text-align:right;flex-shrink:0">#${mi + 1}</span>
-                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">
-                    ${typeIcon}
-                </div>
-                <div style="flex:1;min-width:0">
-                    <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(m.name)}</div>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.status === 'draft' ? 'Qoralama' : "E'lon qilindi"} • ${escapeHtml(m.createdAt || '')}</div>
-                </div>
-                ${iconBtn(`data-preview-mod="${escapeHtml(m.id)}"`, eyeSvg(), '#16a34a')}
-            </div>`;
-            }).join('') : `<div style="padding:20px;text-align:center;font-size:13px;color:var(--text-muted)">Hali modullar yo'q. <button type="button" data-add-mod="${escapeHtml(l.id)}" style="background:none;border:none;color:var(--purple,#7c3aed);font-weight:600;cursor:pointer;font-size:13px">+ Modul qo'shish</button></div>`}
+            ${sectionRow('🗣️', 'Speaking ko\'rgazmalari', 'Slaydlar va speaking mashqlari', 'main')}
+            ${sectionRow('📖', "Yangi so'zlar", `${(lcContent.vocabulary || []).length} ta yangi so'z`, 'vocab')}
+            ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
         </div>`;
 
         return `
@@ -1422,13 +1398,11 @@ function renderMobileCourseDetailTab(container, course) {
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                         ${badges}
                         <span style="font-weight:700;font-size:14px;color:var(--text)">${escapeHtml(l.name)}</span>
-                        ${countBadge}
                     </div>
                     ${dateLabel ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">${escapeHtml(dateLabel)}</div>` : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
                     ${iconBtn(`data-lesson-menu="${escapeHtml(l.id)}"`, dotsSvg(), '')}
-                    ${isVideoDay ? '' : iconBtn(`data-add-mod="${escapeHtml(l.id)}"`, plusBoxSvg(), 'var(--purple,#7c3aed)')}
                     ${iconBtn(`data-preview-lesson="${escapeHtml(l.id)}" title="Dars tarkibini ko'rish/tahrirlash"`, eyeSvg(), '#16a34a')}
                 </div>
                 <div style="color:var(--text-muted);flex-shrink:0;pointer-events:none">${chevronSvg(expanded)}</div>
@@ -1467,19 +1441,12 @@ function renderMobileCourseDetailTab(container, course) {
     accordion.addEventListener('click', e => {
         const toggle = e.target.closest('[data-toggle-lesson]');
         const menuBtn = e.target.closest('[data-lesson-menu]');
-        const addMod = e.target.closest('[data-add-mod]');
         const previewLesson = e.target.closest('[data-preview-lesson]');
-        const openMod = e.target.closest('[data-open-module]');
         const openSection = e.target.closest('[data-open-lesson-section]');
 
         if (menuBtn) {
             e.stopPropagation();
             _openLessonContextMenu(menuBtn, menuBtn.dataset.lessonMenu, course, container);
-            return;
-        }
-        if (addMod) {
-            e.stopPropagation();
-            _openAddModuleModal(addMod.dataset.addMod);
             return;
         }
         if (openSection) {
@@ -1495,12 +1462,6 @@ function renderMobileCourseDetailTab(container, course) {
             _activeLessonId = previewLesson.dataset.previewLesson;
             _lessonContentTab = 'konspekt';
             _lcActiveHomeworkPart = null;
-            renderMobileEditPanel();
-            return;
-        }
-        if (openMod) {
-            e.stopPropagation();
-            _activeModuleId = openMod.dataset.openModule;
             renderMobileEditPanel();
             return;
         }
