@@ -124,7 +124,20 @@ app.get(['/student', '/student/*'], (req, res, next) => {
     });
 });
 
-app.use(express.static(ROOT, { index: false, extensions: ['html'] }));
+app.use(express.static(ROOT, {
+    index: false,
+    extensions: ['html'],
+    setHeaders: (res, filePath) => {
+        // CRM'ning JS/CSS fayllari tez-tez yangilanadi, lekin index.html'dagi
+        // versiya so'rov-satri (?v=...) har safar qo'lda oshirilishi shart emas —
+        // brauzer har doim serverdan tekshirib olsin (ETag orqali tez, keshsiz
+        // "304 o'zgarmagan" javobi kifoya), aks holda foydalanuvchi eski JS'ni
+        // keshdan olib, yangi funksiyalarni ko'ra olmay qoladi.
+        if (/\.(js|css)$/.test(filePath)) {
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+    }
+}));
 app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'login.html')));
 
 // Catch-all: faqat .html fayllar, path traversal himoyasi
