@@ -25,6 +25,11 @@ const DEMO_MESSAGES_API_BASE =
     ? '/api/state/demo-messages'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-messages';
 
+const DEMO_PEER_MESSAGES_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-peer-messages'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-peer-messages';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -259,6 +264,47 @@ export async function sendDemoMessage(threadId: DemoMessageThreadId, text: strin
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ threadId, text }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Xatolik' }));
+    throw new Error(err.error || 'Xatolik');
+  }
+  const data = await r.json();
+  return data.message;
+}
+
+// "Maqsaddoshlar" (hamkurs) suhbatlari — CRM'da "Namuna o'quvchi" deb
+// belgilangan bitta o'quvchi uchun haqiqiy, serverda saqlanadigan xabarlar.
+// CRM tomonda hamkurs ismi (best-effort) haqiqiy o'quvchi yozuviga
+// bog'lanadi va admin o'z profilidan shu hamkurs nomidan javob yozishi mumkin.
+export type DemoPeerMessage = {
+  id: string;
+  sender: 'student' | 'peer';
+  senderName?: string;
+  type: 'text';
+  text?: string;
+  time: string;
+};
+
+export type DemoPeerThread = {
+  peerName: string;
+  linkedStudentId: string | null;
+  messages: DemoPeerMessage[];
+};
+
+export type DemoPeerMessagesResponse = Record<string, DemoPeerThread>;
+
+export async function fetchDemoPeerMessages(): Promise<DemoPeerMessagesResponse> {
+  const r = await fetch(DEMO_PEER_MESSAGES_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function sendDemoPeerMessage(peerId: string, peerName: string, text: string): Promise<DemoPeerMessage> {
+  const r = await fetch(DEMO_PEER_MESSAGES_API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ peerId, peerName, text }),
   });
   if (!r.ok) {
     const err = await r.json().catch(() => ({ error: 'Xatolik' }));

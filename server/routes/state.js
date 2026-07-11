@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -91,6 +91,34 @@ router.post('/demo-messages', async (req, res) => {
     }
 });
 
+// Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchining barcha "hamkurs" (Maqsaddoshlar) suhbatlarini qaytaradi.
+router.get('/demo-peer-messages', async (req, res) => {
+    try {
+        const data = await getDemoStudentPeerMessages();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-peer-messages', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — namuna o'quvchi ilovadan hamkursiga xabar yozganda shu
+// yerga yuboradi. StudentId har doim serverda demoStudentId'dan olinadi.
+router.post('/demo-peer-messages', async (req, res) => {
+    try {
+        const { peerId, peerName, text } = req.body || {};
+        if (!peerId || typeof text !== 'string') {
+            return res.status(400).json({ error: "Hamkurs va xabar matni yuborilishi shart" });
+        }
+        const message = await sendDemoStudentPeerMessage(peerId, peerName, text);
+        res.json({ ok: true, message });
+    } catch (err) {
+        console.error('POST /api/state/demo-peer-messages', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
 router.get('/', authRequired, async (req, res) => {
     try {
         res.json(await getFullState());
@@ -108,7 +136,7 @@ router.patch('/', authRequired, async (req, res) => {
             'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
             'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics',
-            'liveGrades', 'demoStudentId', 'studentMessages'
+            'liveGrades', 'demoStudentId', 'studentMessages', 'peerMessages'
         ];
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

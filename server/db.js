@@ -461,7 +461,7 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages] = await Promise.all([
+        liveGrades, demoStudentId, studentMessages, peerMessages] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -485,6 +485,7 @@ async function getFullState() {
         getJsonData('liveGrades'),
         getJsonData('demoStudentId'),
         getJsonData('studentMessages'),
+        getJsonData('peerMessages'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -503,7 +504,7 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages
+        liveGrades, demoStudentId, studentMessages, peerMessages
     };
 }
 
@@ -627,7 +628,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages') ? {} : [];
     }
     return row.data;
 }
@@ -758,6 +759,58 @@ async function sendDemoStudentMessage(threadId, text) {
     return message;
 }
 
+// Appdagi "Maqsaddoshlar" (hamkurs) suhbatlari uchun bir martalik urinish —
+// hamkurs ismi (masalan "Madina") CRM'dagi haqiqiy o'quvchilar ro'yxatidagi
+// ismning birinchi so'zi bilan mos kelsa, shu haqiqiy o'quvchi ID'siga
+// bog'lab qo'yiladi (faqat ma'lumot uchun, CRM administratorga qaysi haqiqiy
+// o'quvchi nazarda tutilganini ko'rsatish uchun) — topilmasa, baribir suhbat
+// real/saqlanadigan bo'lib qoladi, faqat bog'lanish bo'sh qoladi.
+async function findRealStudentIdByFirstName(name) {
+    if (!name) return null;
+    const target = String(name).trim().split(/\s+/)[0].toLowerCase();
+    if (!target) return null;
+    const rows = await q('SELECT id, name FROM students');
+    const match = rows.find(r => String(r.name || '').trim().split(/\s+/)[0].toLowerCase() === target);
+    return match ? match.id : null;
+}
+
+// Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
+// bitta o'quvchining barcha "hamkurs" (Maqsaddoshlar) suhbatlarini qaytaradi.
+async function getDemoStudentPeerMessages() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return {};
+    const all = await getJsonData('peerMessages');
+    return all[demoStudentId] || {};
+}
+
+// Namuna o'quvchi ilovadan hamkursiga xabar yozganda shu yerga yuboradi.
+// StudentId har doim serverda demoStudentId'dan olinadi.
+async function sendDemoStudentPeerMessage(peerId, peerName, text) {
+    const trimmedId = String(peerId || '').trim();
+    if (!trimmedId) throw new Error("Hamkurs aniqlanmadi");
+    const trimmed = String(text || '').trim();
+    if (!trimmed) throw new Error("Xabar matni bo'sh bo'lishi mumkin emas");
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+
+    const all = await getJsonData('peerMessages');
+    if (!all[demoStudentId]) all[demoStudentId] = {};
+    if (!all[demoStudentId][trimmedId]) {
+        const linkedStudentId = await findRealStudentIdByFirstName(peerName);
+        all[demoStudentId][trimmedId] = { peerName: peerName || trimmedId, linkedStudentId, messages: [] };
+    }
+    const message = {
+        id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        sender: 'student', type: 'text', text: trimmed,
+        time: new Date().toISOString(),
+    };
+    all[demoStudentId][trimmedId].messages.push(message);
+    await tx(async (client) => {
+        await saveJsonData(client, 'peerMessages', all);
+    });
+    return message;
+}
+
 async function saveJsonData(client, key, data) {
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
@@ -788,6 +841,7 @@ async function patchState(partial) {
         if (partial.liveGrades !== undefined)    await saveJsonData(client, 'liveGrades', partial.liveGrades);
         if (partial.demoStudentId !== undefined) await saveJsonData(client, 'demoStudentId', partial.demoStudentId);
         if (partial.studentMessages !== undefined) await saveJsonData(client, 'studentMessages', partial.studentMessages);
+        if (partial.peerMessages !== undefined) await saveJsonData(client, 'peerMessages', partial.peerMessages);
     });
 }
 
@@ -960,6 +1014,7 @@ module.exports = {
     getHrEmployeesData, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule,
     getDemoStudentMessages, sendDemoStudentMessage,
+    getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init

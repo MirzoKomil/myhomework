@@ -24,7 +24,8 @@ const STORAGE_KEYS = {
     manualMetrics: 'mh_manual_metrics',
     liveGrades: 'mh_live_grades',
     demoStudentId: 'mh_demo_student_id',
-    studentMessages: 'mh_student_messages'
+    studentMessages: 'mh_student_messages',
+    peerMessages: 'mh_peer_messages'
 };
 
 const CACHE_KEY_MAP = {
@@ -48,7 +49,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.manualMetrics]: 'manualMetrics',
     [STORAGE_KEYS.liveGrades]: 'liveGrades',
     [STORAGE_KEYS.demoStudentId]: 'demoStudentId',
-    [STORAGE_KEYS.studentMessages]: 'studentMessages'
+    [STORAGE_KEYS.studentMessages]: 'studentMessages',
+    [STORAGE_KEYS.peerMessages]: 'peerMessages'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(

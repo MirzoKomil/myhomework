@@ -642,6 +642,7 @@ let _activeBonusIndex = null;
 let _bonusContentTab = 'konspekt';
 let _activeExamId = null;
 let _activeHomeSection = null;
+let _activePeerId = null;
 
 const SHOP_CATEGORY_LABELS = { merch: 'Merch', books: 'Kitoblar', gadgets: 'Gadgetlar', stationery: 'Kontsstovarlar' };
 const SHOP_CATEGORY_OPTIONS = [
@@ -3354,6 +3355,20 @@ function renderProfileSupportSection() {
         </div>`;
 }
 
+// 122-ish: appdagi "Maqsaddoshlar" bo'limidagi hamkurs suhbatlarini admin
+// shu yerdan (o'z profilidan) kuzatadi va xohlasa hamkurs nomidan javob yozadi.
+function renderProfilePeerChatsSection() {
+    _activePeerId = null;
+    return `
+        <div class="profile-header-bar">
+            <h1>Maqsaddoshlar suhbatlari</h1>
+            <p>Appdagi "Maqsaddoshlar" bo'limida namuna o'quvchi yozgan xabarlarni shu yerdan kuzating</p>
+        </div>
+        <div class="profile-cards" style="max-width:560px">
+            <div class="profile-card" id="adminPeerChats"></div>
+        </div>`;
+}
+
 function renderProfileNotificationsSection() {
     const prefs = getProfileNotifPrefs();
     const rows = [
@@ -3752,6 +3767,7 @@ function renderProfileBody() {
         case 'notifications': html = renderProfileNotificationsSection(); break;
         case 'sessions': html = renderProfileSessionsSection(); break;
         case 'support': html = renderProfileSupportSection(); break;
+        case 'peer-chats': html = renderProfilePeerChatsSection(); break;
         default: html = renderProfileEditSection(user);
     }
     body.innerHTML = html;
@@ -3771,6 +3787,9 @@ function renderProfileBody() {
                 });
             }
         }
+    }
+    if (_profileSection === 'peer-chats') {
+        renderCrmPeerChatsBody(document.getElementById('adminPeerChats'));
     }
 }
 
@@ -3796,6 +3815,14 @@ async function renderProfile() {
         const isFullAccess = FULL_ACCESS_ROLES.has(_profileUser?.role);
         supportNavBtn.style.display = isFullAccess ? '' : 'none';
         if (!isFullAccess && _profileSection === 'support') _profileSection = 'edit';
+    }
+    // 122-ish: "Maqsaddoshlar suhbatlari" bo'limi ham xuddi shunday faqat
+    // to'liq ruxsatli rollarga ko'rinadi.
+    const peerChatsNavBtn = document.querySelector('[data-profile-section="peer-chats"]');
+    if (peerChatsNavBtn) {
+        const isFullAccess = FULL_ACCESS_ROLES.has(_profileUser?.role);
+        peerChatsNavBtn.style.display = isFullAccess ? '' : 'none';
+        if (!isFullAccess && _profileSection === 'peer-chats') _profileSection = 'edit';
     }
     switchProfileSection(_profileSection);
 }
@@ -4679,6 +4706,25 @@ function appendStudentMessage(studentId, threadId, message) {
     setItem(STORAGE_KEYS.studentMessages, all);
 }
 
+// 122-ish: appdagi "Maqsaddoshlar" (hamkurs) suhbatlari — mh_peer_messages:
+// { [studentId]: { [peerId]: { peerName, linkedStudentId, messages: [] } } }.
+function getPeerThreads(studentId) {
+    const all = getItem(STORAGE_KEYS.peerMessages, {});
+    return (all[studentId]) || {};
+}
+
+function getPeerThread(studentId, peerId) {
+    return getPeerThreads(studentId)[peerId] || null;
+}
+
+function appendPeerMessage(studentId, peerId, peerName, message) {
+    const all = getItem(STORAGE_KEYS.peerMessages, {});
+    if (!all[studentId]) all[studentId] = {};
+    if (!all[studentId][peerId]) all[studentId][peerId] = { peerName: peerName || peerId, linkedStudentId: null, messages: [] };
+    all[studentId][peerId].messages.push(message);
+    setItem(STORAGE_KEYS.peerMessages, all);
+}
+
 function _formatCrmChatTime(iso) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
@@ -4690,10 +4736,13 @@ function _formatCrmChatTime(iso) {
 // yozish qatori. `senderRole` shu yerdan yuborilayotgan xabarning kimdan
 // ekanini bildiradi ('teacher' yoki 'admin'), studentga esa u appda "them"
 // (o'zganiki) sifatida ko'rinadi.
+// `opts.getMessages`/`opts.onSend` berilsa shulardan foydalaniladi (masalan
+// hamkurs/peer suhbatlari uchun) — berilmasa, standart studentMessages
+// (ustoz/qo'llab-quvvatlash) manbasidan o'qiydi/yozadi.
 function renderCrmChatThread(container, opts) {
     if (!container) return;
     const { studentId, threadId, senderRole, senderId, senderName, title } = opts;
-    const messages = getStudentMessages(studentId, threadId);
+    const messages = opts.getMessages ? opts.getMessages() : getStudentMessages(studentId, threadId);
     const bubbles = messages.length
         ? messages.map(m => `
             <div style="display:flex;${m.sender === 'student' ? '' : 'justify-content:flex-end;'}margin-bottom:8px">
@@ -4708,7 +4757,7 @@ function renderCrmChatThread(container, opts) {
             </div>`).join('')
         : `<div class="mac-empty" style="padding:20px 0;text-align:center;color:var(--text-muted)">Hali xabar yo'q</div>`;
 
-    const uid = `${threadId}_${senderRole}`;
+    const uid = opts.uid || `${threadId}_${senderRole}`;
     container.innerHTML = `
         <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:10px">${escapeHtml(title)}</div>
         <div style="max-height:320px;overflow-y:auto;padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--bg)">${bubbles}</div>
@@ -4721,16 +4770,108 @@ function renderCrmChatThread(container, opts) {
         const input = document.getElementById(`crmChatInput_${uid}`);
         const text = input.value.trim();
         if (!text) return;
-        appendStudentMessage(studentId, threadId, {
-            id: 'msg-' + Date.now(),
-            threadId, sender: senderRole, senderId: senderId || null, senderName: senderName || '',
-            type: 'text', text, time: new Date().toISOString(),
-        });
+        if (opts.onSend) {
+            opts.onSend(text);
+        } else {
+            appendStudentMessage(studentId, threadId, {
+                id: 'msg-' + Date.now(),
+                threadId, sender: senderRole, senderId: senderId || null, senderName: senderName || '',
+                type: 'text', text, time: new Date().toISOString(),
+            });
+        }
         renderCrmChatThread(container, opts);
     };
     document.getElementById(`crmChatSend_${uid}`).addEventListener('click', send);
     document.getElementById(`crmChatInput_${uid}`).addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); send(); }
+    });
+}
+
+// 122-ish: admin profilidagi "Maqsaddoshlar" (hamkurslar) suhbatini
+// kuzatish/javob yozish bo'limi — ro'yxat va tafsilot (list/detail) ko'rinishi.
+function renderCrmPeerChatsBody(container) {
+    if (!container) return;
+    const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
+    if (!demoStudentId) {
+        container.innerHTML = '<p class="text-muted">Namuna o\'quvchi hali belgilanmagan (Davomat bo\'limidan tanlang).</p>';
+        return;
+    }
+    if (_activePeerId) {
+        renderCrmPeerChatDetail(container, demoStudentId, _activePeerId);
+    } else {
+        renderCrmPeerChatList(container, demoStudentId);
+    }
+}
+
+function renderCrmPeerChatList(container, studentId) {
+    const threads = getPeerThreads(studentId);
+    const rows = Object.entries(threads).sort((a, b) => {
+        const la = a[1].messages[a[1].messages.length - 1];
+        const lb = b[1].messages[b[1].messages.length - 1];
+        return new Date(lb?.time || 0) - new Date(la?.time || 0);
+    });
+
+    const rowsHtml = rows.length
+        ? rows.map(([peerId, thread]) => {
+            const last = thread.messages[thread.messages.length - 1];
+            const linkedBadge = thread.linkedStudentId
+                ? `<span class="badge badge-probniy" style="margin-left:6px">Haqiqiy o'quvchiga bog'langan</span>`
+                : `<span class="badge" style="margin-left:6px">Mos o'quvchi topilmadi</span>`;
+            return `
+            <div class="peer-chat-row" data-peer-id="${escapeHtml(peerId)}" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--surface)">
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(thread.peerName)}${linkedBadge}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(last?.text || '')}</div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);flex-shrink:0">${last ? _formatCrmChatTime(last.time) : ''}</div>
+            </div>`;
+        }).join('')
+        : `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Hali hamkurs suhbatlari yo'q</div>`;
+
+    container.innerHTML = `
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:12px">Maqsaddoshlar suhbatlari</div>
+        ${rowsHtml}`;
+
+    container.querySelectorAll('[data-peer-id]').forEach(row => {
+        row.addEventListener('click', () => {
+            _activePeerId = row.dataset.peerId;
+            renderCrmPeerChatsBody(container);
+        });
+    });
+}
+
+function renderCrmPeerChatDetail(container, studentId, peerId) {
+    const thread = getPeerThread(studentId, peerId);
+    if (!thread) { _activePeerId = null; renderCrmPeerChatsBody(container); return; }
+
+    const backWrap = document.createElement('div');
+    backWrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px';
+    backWrap.innerHTML = `<button type="button" class="btn-ghost" id="peerChatBackBtn" style="padding:4px 10px">← Ro'yxat</button>`;
+    container.innerHTML = '';
+    container.appendChild(backWrap);
+    const chatBody = document.createElement('div');
+    container.appendChild(chatBody);
+
+    document.getElementById('peerChatBackBtn').addEventListener('click', () => {
+        _activePeerId = null;
+        renderCrmPeerChatsBody(container);
+    });
+
+    const title = thread.linkedStudentId
+        ? `${thread.peerName} (haqiqiy o'quvchiga bog'langan)`
+        : `${thread.peerName} (mos o'quvchi topilmadi)`;
+
+    renderCrmChatThread(chatBody, {
+        uid: `peer_${peerId}`,
+        title,
+        senderRole: 'peer',
+        getMessages: () => getPeerThread(studentId, peerId)?.messages || [],
+        onSend: (text) => {
+            appendPeerMessage(studentId, peerId, thread.peerName, {
+                id: 'msg-' + Date.now(), sender: 'peer', senderName: thread.peerName,
+                type: 'text', text, time: new Date().toISOString(),
+            });
+        },
     });
 }
 
