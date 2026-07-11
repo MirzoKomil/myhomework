@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -16,15 +16,34 @@ router.get('/mobile-content', async (req, res) => {
 });
 
 // Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
-// o'quvchining jonli dars baholarini qaytaradi (boshqa o'quvchilarning
-// ma'lumotlari hech qachon shu orqali oshkor qilinmaydi).
+// o'quvchining jonli dars baholarini (va ustozning agregat reytingini)
+// qaytaradi. Boshqa o'quvchilarning ma'lumotlari hech qachon shu orqali
+// oshkor qilinmaydi.
 router.get('/demo-grades', async (req, res) => {
     try {
-        const grades = await getDemoStudentGrades();
-        res.json({ grades });
+        const data = await getDemoStudentGrades();
+        res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-grades', err);
         res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — namuna o'quvchi ilovadan ustozni baholaganda shu yerga
+// yuboradi. StudentId har doim serverda demoStudentId'dan olinadi — mijozdan
+// kelgan hech qanday qiymatga ishonilmaydi, shuning uchun bu boshqa hech bir
+// o'quvchi ma'lumotini yoza olmaydi.
+router.post('/demo-grades/rate-teacher', async (req, res) => {
+    try {
+        const { date, ratings } = req.body || {};
+        if (!date || !ratings || typeof ratings !== 'object') {
+            return res.status(400).json({ error: "Sana va baholar yuborilishi shart" });
+        }
+        await submitDemoStudentTeacherRating(date, ratings);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/state/demo-grades/rate-teacher', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });
 

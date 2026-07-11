@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Linking,
@@ -26,6 +26,7 @@ import {
   TeacherComment,
   TeacherProfile,
 } from '@/data/teacherProfiles';
+import { fetchDemoGrades } from '@/services/contentApi';
 
 const TELEGRAM_GROUP_URL = 'https://t.me/myhomeworkuz';
 
@@ -107,8 +108,19 @@ function TeacherCard({ profile, commentsCount, onMessage, onGroup, onHelp, onCom
 
 export default function TeacherScreen() {
   const videoTeacher = TEACHER_PROFILES.find((t) => t.id === 'video-teacher')!;
-  const mainTeacher = TEACHER_PROFILES.find((t) => t.id === 'main-teacher')!;
   const assistantTeacher = TEACHER_PROFILES.find((t) => t.id === 'assistant-teacher')!;
+
+  // Asosiy ustozning reytingi endi o'quvchilar CRM orqali haqiqatda bergan
+  // "Siz ustozni baholang" baholarining o'rtachasi — hali haqiqiy baho
+  // bo'lmasa, mock qiymatga tushadi.
+  const mainTeacherBase = TEACHER_PROFILES.find((t) => t.id === 'main-teacher')!;
+  const [realRating, setRealRating] = useState<number | null>(null);
+  useEffect(() => {
+    fetchDemoGrades()
+      .then(({ teacherRating }) => setRealRating(teacherRating))
+      .catch(() => {});
+  }, []);
+  const mainTeacher = realRating !== null ? { ...mainTeacherBase, rating: realRating } : mainTeacherBase;
 
   const [mainComments, setMainComments] = useState<TeacherComment[]>(MAIN_TEACHER_COMMENTS);
   const [assistantComments, setAssistantComments] = useState<TeacherComment[]>(ASSISTANT_TEACHER_COMMENTS);

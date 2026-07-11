@@ -199,7 +199,7 @@ export type AppNotification = {
   unread: boolean;
   colors: [string, string];
   emoji: string;
-  interactive?: 'attendance';
+  interactive?: 'attendance' | 'rate-teacher';
 };
 
 export const appNotifications: AppNotification[] = [

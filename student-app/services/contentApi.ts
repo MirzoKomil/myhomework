@@ -144,17 +144,47 @@ export function getLessonMaterials(mc: MobileContent, lessonId: string): LessonM
 // belgilaganda majburiy kiritgan jonli dars bahosi — faqat CRM'da "Namuna
 // o'quvchi" deb belgilangan bitta o'quvchi uchun (boshqa o'quvchilarning
 // ma'lumotlari bu public endpoint orqali hech qachon oshkor qilinmaydi).
+export type StudentRatingOfTeacher = {
+  explanation: number;
+  punctuality: number;
+  techQuality: number;
+  engagement: number;
+  overall: number;
+};
+
 export type LiveGradeEntry = {
   date: string;
   teacherId: string;
   lessonId: string;
   lessonName: string;
   scores: { attendance: number; activity: number; speaking: number; understanding: number; discipline: number };
+  studentRatingOfTeacher?: StudentRatingOfTeacher;
 };
 
-export async function fetchDemoGrades(): Promise<LiveGradeEntry[]> {
+export type DemoGradesResponse = {
+  grades: LiveGradeEntry[];
+  teacherRating: number | null;
+};
+
+export async function fetchDemoGrades(): Promise<DemoGradesResponse> {
   const r = await fetch(DEMO_GRADES_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
-  return data.grades ?? [];
+  return { grades: data.grades ?? [], teacherRating: data.teacherRating ?? null };
+}
+
+// O'quvchi ilovada "Siz ustozni baholang" formasini yuborganda shu yerga
+// yozadi — qaysi o'quvchi ekanligini server har doim CRM'da belgilangan
+// "Namuna o'quvchi"dan aniqlaydi, mijozdan kelgan hech qanday ID'ga
+// ishonilmaydi.
+export async function submitTeacherRating(date: string, ratings: StudentRatingOfTeacher): Promise<void> {
+  const r = await fetch(`${DEMO_GRADES_API_BASE}/rate-teacher`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, ratings }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Xatolik' }));
+    throw new Error(err.error || 'Xatolik');
+  }
 }

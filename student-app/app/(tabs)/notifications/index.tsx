@@ -1,12 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { AppNotification, NotifCategory, appNotifications } from '@/data/mock';
+import { fetchDemoGrades } from '@/services/contentApi';
 
 const ATTENDANCE_OPTIONS = ['Darsga kirdim', 'Darsga kira olmadim', 'Dars yarmida tugadi'];
 
@@ -39,8 +40,12 @@ function AttendanceCard({ notif }: { notif: AppNotification }) {
 }
 
 function NotifCard({ notif }: { notif: AppNotification }) {
+  const onPress =
+    notif.interactive === 'rate-teacher'
+      ? () => router.push('/profile/grades' as never)
+      : () => router.push(`/notifications/${notif.id}` as never);
   return (
-    <Pressable style={styles.card} onPress={() => router.push(`/notifications/${notif.id}` as never)}>
+    <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.cardTopRow}>
         <LinearGradient
           colors={notif.colors}
@@ -66,10 +71,36 @@ function NotifCard({ notif }: { notif: AppNotification }) {
 
 export default function NotificationsScreen() {
   const [tab, setTab] = useState<NotifCategory>('news');
+  const [rateTeacherNotifs, setRateTeacherNotifs] = useState<AppNotification[]>([]);
 
-  const newsUnread = appNotifications.filter((n) => n.category === 'news' && n.unread).length;
-  const lessonsUnread = appNotifications.filter((n) => n.category === 'lessons' && n.unread).length;
-  const list = appNotifications.filter((n) => n.category === tab);
+  // Ustoz davomat qilib baholagach, hali ustoz baholanmagan har bir jonli
+  // dars uchun "Ustozni baholang" bildirishnomasi avtomatik qo'shiladi.
+  useEffect(() => {
+    fetchDemoGrades()
+      .then(({ grades }) => {
+        const unrated = grades.filter((g) => !g.studentRatingOfTeacher);
+        setRateTeacherNotifs(
+          unrated.map((g) => ({
+            id: `rate-teacher-${g.date}`,
+            category: 'lessons' as const,
+            date: g.date,
+            title: 'Ustozni baholang',
+            message: `${g.lessonName} darsi uchun ustozingizni baholashingiz kutilmoqda.`,
+            detail: `${g.lessonName} darsidan so'ng ustozingiz sizni baholadi. Endi navbat sizda — "Baholar" bo'limida ustozingizni baholang.`,
+            unread: true,
+            colors: ['#F59E0B', '#D97706'] as [string, string],
+            emoji: '⭐',
+            interactive: 'rate-teacher' as const,
+          }))
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  const allNotifications = [...rateTeacherNotifs, ...appNotifications];
+  const newsUnread = allNotifications.filter((n) => n.category === 'news' && n.unread).length;
+  const lessonsUnread = allNotifications.filter((n) => n.category === 'lessons' && n.unread).length;
+  const list = allNotifications.filter((n) => n.category === tab);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

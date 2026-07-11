@@ -633,14 +633,47 @@ async function getJsonData(key) {
 
 // Faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchining jonli
 // dars baholarini qaytaradi — boshqa barcha o'quvchilarning ma'lumotlari
-// public endpoint orqali hech qachon oshkor qilinmaydi.
+// public endpoint orqali hech qachon oshkor qilinmaydi. Ustozning umumiy
+// reytingi esa BARCHA o'quvchilarning "overall" bahosi o'rtachasi sifatida
+// hisoblanadi — bu faqat bitta agregat son, hech kimning shaxsiy bahosini
+// oshkor qilmaydi.
 async function getDemoStudentGrades() {
-    const [liveGrades, demoStudentId] = await Promise.all([
-        getJsonData('liveGrades'),
-        getJsonData('demoStudentId'),
-    ]);
-    if (!demoStudentId) return [];
-    return liveGrades[demoStudentId] || [];
+    const liveGrades = await getJsonData('liveGrades');
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return { grades: [], teacherRating: null };
+    const grades = liveGrades[demoStudentId] || [];
+
+    const lastTeacherId = grades.length ? grades[grades.length - 1].teacherId : null;
+    let teacherRating = null;
+    if (lastTeacherId) {
+        const overalls = [];
+        Object.values(liveGrades).forEach((entries) => {
+            (entries || []).forEach((e) => {
+                if (e.teacherId === lastTeacherId && e.studentRatingOfTeacher && typeof e.studentRatingOfTeacher.overall === 'number') {
+                    overalls.push(e.studentRatingOfTeacher.overall);
+                }
+            });
+        });
+        if (overalls.length) teacherRating = Math.round((overalls.reduce((a, b) => a + b, 0) / overalls.length) * 10) / 10;
+    }
+    return { grades, teacherRating };
+}
+
+// Faqat "Namuna o'quvchi" uchun — bitta jonli dars sanasiga ustozni baholash
+// natijasini qo'shadi. Boshqa hech qanday o'quvchi ma'lumotini yozib
+// bo'lmaydi, chunki studentId har doim serverda demoStudentId'dan olinadi
+// (mijozdan kelgan qiymatga ishonilmaydi).
+async function submitDemoStudentTeacherRating(date, ratings) {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+    const liveGrades = await getJsonData('liveGrades');
+    const entries = liveGrades[demoStudentId] || [];
+    const entry = entries.find((e) => e.date === date);
+    if (!entry) throw new Error('Mos dars topilmadi');
+    entry.studentRatingOfTeacher = ratings;
+    await tx(async (client) => {
+        await saveJsonData(client, 'liveGrades', liveGrades);
+    });
 }
 
 async function saveJsonData(client, key, data) {
@@ -841,7 +874,7 @@ module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, insertLead, patchState,
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
-    getHrEmployeesData, getMobileContentData, getDemoStudentGrades,
+    getHrEmployeesData, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init

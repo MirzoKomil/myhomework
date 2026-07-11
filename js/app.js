@@ -6223,6 +6223,22 @@ function renderTpRating() {
     const now = new Date();
     const monthVal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
+    // O'quvchilar CRM'da davomat tasdiqlanganda ustozga bergan "Siz ustozni
+    // baholang" bahosi (overall mezoni) — bu ustozning reytingiga ham
+    // ta'sir qiladi (davomat % bilan birga qo'shilgan ball sifatida).
+    const liveGrades = getItem(STORAGE_KEYS.liveGrades, {});
+    const teacherRatingAvg = (teacherId) => {
+        const overalls = [];
+        Object.values(liveGrades).forEach(entries => {
+            (entries || []).forEach(e => {
+                if (e.teacherId === teacherId && e.studentRatingOfTeacher && typeof e.studentRatingOfTeacher.overall === 'number') {
+                    overalls.push(e.studentRatingOfTeacher.overall);
+                }
+            });
+        });
+        return overalls.length ? overalls.reduce((a, b) => a + b, 0) / overalls.length : null;
+    };
+
     const stats = teachers.map(t => {
         const myStudents = students.filter(s => s.teacherId === t.id);
         const attKey = `${monthVal}_${t.id}`;
@@ -6234,8 +6250,10 @@ function renderTpRating() {
         });
         const attRate = totalRecorded > 0 ? Math.round((totalPresent / totalRecorded) * 100) : 0;
         const avgGrade = myStudents.filter(s=>s.grade).reduce((sum,s,_,arr)=>sum+parseFloat(s.grade||0)/arr.length, 0);
-        return { t, myStudents, attRate, avgGrade: avgGrade.toFixed(1) };
-    }).sort((a, b) => b.attRate - a.attRate);
+        const studentRating = teacherRatingAvg(t.id);
+        const score = studentRating !== null ? attRate * 0.5 + (studentRating / 5 * 100) * 0.5 : attRate;
+        return { t, myStudents, attRate, avgGrade: avgGrade.toFixed(1), studentRating, score };
+    }).sort((a, b) => b.score - a.score);
 
     const rows = stats.map((s, i) => {
         const subjectLabel = s.t.role === 'rus-oqituvchi' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili';
@@ -6259,17 +6277,19 @@ function renderTpRating() {
                 </div>
             </td>
             <td style="text-align:center">${parseFloat(s.avgGrade) > 0 ? s.avgGrade : '—'}</td>
+            <td style="text-align:center">${s.studentRating !== null ? `⭐ ${s.studentRating.toFixed(1)}` : '—'}</td>
         </tr>`;
-    }).join('') || `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">O'qituvchilar yo'q</td></tr>`;
+    }).join('') || `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">O'qituvchilar yo'q</td></tr>`;
 
     container.innerHTML = `
     <div style="padding:20px">
         <div class="page-title-bar" style="margin-bottom:16px"><h2>O'qituvchilar reytingi — ${monthVal}</h2></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Reyting davomat % va o'quvchilarning "Siz ustozni baholang" bahosi (o'rtachasi) asosida hisoblanadi.</div>
         <div class="card">
             <div class="table-responsive">
                 <table class="table">
                     <thead><tr>
-                        <th>#</th><th>Ustoz</th><th>Til</th><th>O'quvchilar</th><th>Davomat %</th><th>O'rt. baho</th>
+                        <th>#</th><th>Ustoz</th><th>Til</th><th>O'quvchilar</th><th>Davomat %</th><th>O'rt. baho</th><th>O'quvchilar bahosi</th>
                     </tr></thead>
                     <tbody>${rows}</tbody>
                 </table>

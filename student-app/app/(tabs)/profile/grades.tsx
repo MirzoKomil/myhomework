@@ -17,10 +17,9 @@ import {
   TEACHER_RATING_CRITERIA,
   TeacherRatingKey,
   generateAssistantWeeklyRating,
-  generateStudentRatingOfTeacher,
 } from '@/data/lessonGrades';
 import { UZ_MONTHS, generateScheduleDays } from '@/data/scheduleCalendar';
-import { fetchDemoGrades, LiveGradeEntry } from '@/services/contentApi';
+import { fetchDemoGrades, LiveGradeEntry, StudentRatingOfTeacher, submitTeacherRating } from '@/services/contentApi';
 
 function formatShortDate(d: Date): string {
   return `${d.getDate()}-${UZ_MONTHS[d.getMonth()].toLowerCase()}`;
@@ -71,11 +70,9 @@ export default function GradesScreen() {
   const [liveLessons, setLiveLessons] = useState<LiveGradeEntry[] | null>(null);
   useEffect(() => {
     fetchDemoGrades()
-      .then((grades) => setLiveLessons([...grades].sort((a, b) => (a.date < b.date ? 1 : -1))))
+      .then(({ grades }) => setLiveLessons([...grades].sort((a, b) => (a.date < b.date ? 1 : -1))))
       .catch(() => setLiveLessons([]));
   }, []);
-
-  const recentUnratedIds = useMemo(() => new Set((liveLessons ?? []).slice(0, 2).map((d) => d.date)), [liveLessons]);
 
   const categoryAverages = useMemo(() => {
     const lessons = liveLessons ?? [];
@@ -94,19 +91,16 @@ export default function GradesScreen() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [studentRatings, setStudentRatings] = useState<Record<string, Record<TeacherRatingKey, number>>>({});
 
+  // Serverdan kelgan haqiqiy baholarni holatga joylaymiz — hali baholanmagan
+  // darslar uchun pastdagi forma ko'rsatiladi (soxta generatsiya endi yo'q).
   useEffect(() => {
     if (!liveLessons) return;
-    setStudentRatings((prev) => {
-      const seeded = { ...prev };
-      liveLessons.forEach((d) => {
-        if (!recentUnratedIds.has(d.date) && !seeded[d.date]) {
-          const seed = d.date.split('-').reduce((s, part) => s + Number(part), 0);
-          seeded[d.date] = generateStudentRatingOfTeacher(seed);
-        }
-      });
-      return seeded;
+    const seeded: Record<string, Record<TeacherRatingKey, number>> = {};
+    liveLessons.forEach((d) => {
+      if (d.studentRatingOfTeacher) seeded[d.date] = d.studentRatingOfTeacher;
     });
-  }, [liveLessons, recentUnratedIds]);
+    setStudentRatings(seeded);
+  }, [liveLessons]);
 
   const [drafts, setDrafts] = useState<Record<string, Partial<Record<TeacherRatingKey, number>>>>({});
 
@@ -128,7 +122,16 @@ export default function GradesScreen() {
     if (!draft) return;
     const complete = TEACHER_RATING_CRITERIA.every((c) => draft[c.key]);
     if (!complete) return;
-    setStudentRatings((prev) => ({ ...prev, [dateKey]: draft as Record<TeacherRatingKey, number> }));
+    const ratings = draft as StudentRatingOfTeacher;
+    setStudentRatings((prev) => ({ ...prev, [dateKey]: ratings }));
+    submitTeacherRating(dateKey, ratings).catch(() => {
+      // Yuborishda xatolik bo'lsa, mahalliy holatni bekor qilamiz — o'quvchi qayta urinib ko'rishi mumkin.
+      setStudentRatings((prev) => {
+        const next = { ...prev };
+        delete next[dateKey];
+        return next;
+      });
+    });
   };
 
   const [scheduleDays] = useState(() => generateScheduleDays());
