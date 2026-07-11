@@ -41,14 +41,21 @@ export default function VocabularyPracticeScreen() {
   const words = useMemo(() => (content ? content.vocabulary.slice(0, PRACTICE_SIZE) : []), [content]);
 
   const [round, setRound] = useState(0); // 0: translation, 1: construct, 2: pronounce
-  const [wordIndex, setWordIndex] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
 
-  const current = words[wordIndex];
+  // Noto'g'ri javob berilgan so'z darhol tashlab yuborilmaydi — shu bosqich
+  // (round) navbatining oxiriga qo'shilib, to'g'ri javob berilgunicha
+  // qayta-qayta so'raladi. Har bir bosqich boshida navbat to'liq so'zlar
+  // ro'yxatidan qayta tuziladi.
+  const [roundQueue, setRoundQueue] = useState<VocabWord[] | null>(null);
+  useEffect(() => {
+    if (words.length && !roundQueue) setRoundQueue(words);
+  }, [words, roundQueue]);
+
   const totalSteps = words.length * STEP_LABELS.length;
-  const stepNumber = round * words.length + wordIndex;
 
-  if (!content) {
+  if (!content || !roundQueue) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.resultCenter}>
@@ -58,18 +65,26 @@ export default function VocabularyPracticeScreen() {
     );
   }
 
+  const current = roundQueue[0];
+  const completedSteps = round * words.length + (words.length - roundQueue.length);
+
   const advance = (correct: boolean) => {
     if (correct) {
       addCoins(1, String(lessonId));
       addLightning(1);
+    } else {
+      setWrongAttempts((w) => w + 1);
     }
-    if (wordIndex + 1 < words.length) {
-      setWordIndex(wordIndex + 1);
+
+    const rest = roundQueue.slice(1);
+    const nextQueue = correct ? rest : [...rest, current];
+    if (nextQueue.length > 0) {
+      setRoundQueue(nextQueue);
       return;
     }
     if (round + 1 < STEP_LABELS.length) {
       setRound(round + 1);
-      setWordIndex(0);
+      setRoundQueue(words);
       return;
     }
     markDone(String(lessonId), 'vocabPractice');
@@ -83,7 +98,8 @@ export default function VocabularyPracticeScreen() {
         <View style={styles.resultCenter}>
           <Text style={styles.resultEmoji}>📚</Text>
           <Text style={styles.resultTitle}>Ajoyib!</Text>
-          <Text style={styles.resultSubtitle}>{words.length} ta so'z bo'yicha 3 bosqichli mashq yakunlandi</Text>
+          <Text style={styles.resultSubtitle}>{words.length} ta so'z bo'yicha 3 bosqichli mashqni muvaffaqiyatli yakunladingiz!</Text>
+          {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>}
           <Pressable style={styles.resultBtn} onPress={() => router.back()}>
             <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
           </Pressable>
@@ -100,12 +116,12 @@ export default function VocabularyPracticeScreen() {
         </Pressable>
         <Text style={styles.topTitle}>{STEP_LABELS[round]}</Text>
         <Text style={styles.progress}>
-          {stepNumber + 1} / {totalSteps}
+          {completedSteps} / {totalSteps}
         </Text>
       </View>
 
       <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${((stepNumber + 1) / totalSteps) * 100}%` }]} />
+        <View style={[styles.progressFill, { width: `${(completedSteps / totalSteps) * 100}%` }]} />
       </View>
 
       {round === 0 && <ChooseTranslationStep key={current.id} word={current} allWords={words} onDone={advance} />}

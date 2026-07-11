@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
+import { getResolvedLessonContent, GrammarBlank, LessonContent } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markDone } from '@/services/lessonProgressStore';
@@ -18,13 +18,21 @@ export default function VideoExercisesScreen() {
     getResolvedLessonContent(String(lessonId), 0).then(setContent);
   }, [lessonId]);
 
-  const [index, setIndex] = useState(0);
+  // Noto'g'ri javob berilgan savol darhol tashlab yuborilmaydi — navbat oxiriga
+  // qo'shilib, to'g'ri javob berilgunicha qayta-qayta so'raladi. Shu sababli
+  // "blanks" o'rniga o'zgaruvchan navbat (queue) saqlanadi; jami savollar soni
+  // (total) esa hisoblash uchun boshlang'ich ro'yxatdan olinadi va o'zgarmaydi.
+  const [queue, setQueue] = useState<GrammarBlank[] | null>(null);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
+  useEffect(() => {
+    if (content) setQueue(content.grammarBlanks);
+  }, [content]);
+
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
-  const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
 
-  if (!content) {
+  if (!content || !queue) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.resultCenter}>
@@ -34,8 +42,9 @@ export default function VideoExercisesScreen() {
     );
   }
 
-  const blanks = content.grammarBlanks;
-  const current = blanks[index];
+  const total = content.grammarBlanks.length;
+  const completed = total - queue.length;
+  const current = queue[0];
   const isCorrect = selected === current?.answer;
 
   const handleSelect = (opt: string) => {
@@ -43,19 +52,22 @@ export default function VideoExercisesScreen() {
     setSelected(opt);
     setAnswered(true);
     if (opt === current.answer) {
-      setCorrectCount((c) => c + 1);
       addCoins(1, String(lessonId));
       addLightning(1);
+    } else {
+      setWrongAttempts((w) => w + 1);
     }
   };
 
   const handleNext = () => {
-    if (index + 1 >= blanks.length) {
+    const rest = queue.slice(1);
+    const nextQueue = isCorrect ? rest : [...rest, current];
+    if (nextQueue.length === 0) {
       markDone(String(lessonId), 'videoExercises');
       setFinished(true);
       return;
     }
-    setIndex(index + 1);
+    setQueue(nextQueue);
     setSelected(null);
     setAnswered(false);
   };
@@ -67,8 +79,11 @@ export default function VideoExercisesScreen() {
           <Text style={styles.resultEmoji}>🎉</Text>
           <Text style={styles.resultTitle}>Mashqlar tugadi!</Text>
           <Text style={styles.resultSubtitle}>
-            {correctCount} / {blanks.length} to'g'ri javob
+            {total} ta savolning barchasiga to'g'ri javob berdingiz!
           </Text>
+          {wrongAttempts > 0 && (
+            <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>
+          )}
           <Pressable style={styles.resultBtn} onPress={() => router.back()}>
             <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
           </Pressable>
@@ -85,12 +100,12 @@ export default function VideoExercisesScreen() {
         </Pressable>
         <Text style={styles.topTitle}>Grammar mashqlar</Text>
         <Text style={styles.progress}>
-          {index + 1} / {blanks.length}
+          {completed} / {total}
         </Text>
       </View>
 
       <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${((index + 1) / blanks.length) * 100}%` }]} />
+        <View style={[styles.progressFill, { width: `${(completed / total) * 100}%` }]} />
       </View>
 
       <View style={styles.content}>
