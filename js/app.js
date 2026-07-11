@@ -1145,6 +1145,73 @@ function _renderLcVocab(body, lesson, content) {
     });
 }
 
+// "O'rganish, yodlash, takrorlash" mashqlari ilovada content.vocabulary asosida
+// to'liq avtomatik (protsedural) yaratiladi — alohida saqlanadigan tarkibga ega
+// emas. Shuning uchun bu yerda faqat tahrirlanmaydigan, ilovadagi 3 bosqichni
+// (tarjima tanlash / so'z yig'ish / talaffuz) aynan shu darsning so'zlari bilan
+// namoyish qiladigan oldindan ko'rish (preview) ko'rsatiladi.
+function _renderLcVocabPractice(body, lesson, content) {
+    const words = content.vocabulary || [];
+
+    function shuffleArr(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    function render() {
+        if (!words.length) {
+            body.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Avval "Yangi so'zlar ro'yxati" qismiga so'z qo'shing</div>`;
+            return;
+        }
+        const w1 = words[Math.floor(Math.random() * words.length)];
+        const distractors = shuffleArr(words.filter(w => w.id !== w1.id).map(w => w.translation)).slice(0, 3);
+        const options = shuffleArr([w1.translation, ...distractors]);
+        const w2 = words[Math.floor(Math.random() * words.length)];
+        const letters = shuffleArr((w2.english || '').split(''));
+
+        body.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px;flex-wrap:wrap">
+                <div style="font-weight:700;font-size:14px;color:var(--text)">O'rganish, yodlash, takrorlash — ilovadagi mashqlar ko'rinishi</div>
+                <button type="button" id="lcPracticeShuffle" class="btn-ghost" style="font-size:12px">🔄 Boshqa so'z bilan ko'rish</button>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Bu mashqlar tahrirlanmaydi — "Yangi so'zlar ro'yxati"ga kiritilgan so'zlar asosida ilovada avtomatik yaratiladi. Bu yerda faqat ko'rinishini oldindan tekshirish mumkin.</div>
+
+            <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;background:var(--surface)">
+                <div style="font-weight:700;font-size:12px;color:var(--purple,#7c3aed);margin-bottom:10px">1-bosqich · Tarjimasini tanlang</div>
+                <div style="text-align:center;padding:14px;background:var(--bg,#f9fafb);border-radius:8px;margin-bottom:10px">
+                    <div style="font-weight:800;font-size:18px;color:var(--text)">${escapeHtml(w1.english || '')}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${escapeHtml(w1.transcript || '')}</div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    ${options.map(o => `<div style="padding:10px;text-align:center;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text)">${escapeHtml(o)}</div>`).join('')}
+                </div>
+            </div>
+
+            <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;background:var(--surface)">
+                <div style="font-weight:700;font-size:12px;color:var(--purple,#7c3aed);margin-bottom:10px">2-bosqich · So'zni harflardan yig'ing</div>
+                <div style="text-align:center;padding:14px;background:var(--bg,#f9fafb);border-radius:8px;margin-bottom:10px;font-weight:700;font-size:14px;color:var(--text)">${escapeHtml(w2.translation || '')}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
+                    ${letters.map(ch => `<div style="width:34px;height:38px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:var(--text);text-transform:uppercase">${escapeHtml(ch)}</div>`).join('')}
+                </div>
+            </div>
+
+            <div style="border:1px solid var(--border);border-radius:10px;padding:16px;background:var(--surface)">
+                <div style="font-weight:700;font-size:12px;color:var(--purple,#7c3aed);margin-bottom:10px">3-bosqich · Talaffuz qiling</div>
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div style="width:48px;height:48px;border-radius:24px;background:var(--purple,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🎤</div>
+                    <div style="font-size:12px;color:var(--text-muted)">Talaba mikrofon orqali so'zni talaffuz qiladi (ilovada ovoz yozib olinadi)</div>
+                </div>
+            </div>`;
+
+        document.getElementById('lcPracticeShuffle').addEventListener('click', render);
+    }
+    render();
+}
+
 function _renderLcGrammar(body, lesson, content) {
     renderEditableList(body, {
         title: "Grammatika (bo'sh joy to'ldirish)",
@@ -1377,6 +1444,7 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
     <div class="mac-tabs" id="lessonContentTabs" style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0">
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'konspekt' ? 'mac-tab-active' : ''}" data-lc-tab="konspekt">📝 Konspekt</button>
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'vocab' ? 'mac-tab-active' : ''}" data-lc-tab="vocab">📖 Lug'at</button>
+        <button type="button" class="mac-tab-btn ${_lessonContentTab === 'vocabPractice' ? 'mac-tab-active' : ''}" data-lc-tab="vocabPractice">🔄 Mashqlar</button>
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'main' ? 'mac-tab-active' : ''}" data-lc-tab="main">${dayType === 'grammar' ? '📐 Grammatika' : '🎬 Slaydlar'}</button>
         ${dayType !== 'grammar' ? `<button type="button" class="mac-tab-btn ${_lessonContentTab === 'practice' ? 'mac-tab-active' : ''}" data-lc-tab="practice">🎤 Nutq mashqlari</button>` : ''}
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'homework' ? 'mac-tab-active' : ''}" data-lc-tab="homework">📋 Uyga vazifa</button>
@@ -1401,6 +1469,7 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
     const content = _getLessonWorkingContent(getMobileContent(), lesson, dayIndex);
     if (_lessonContentTab === 'konspekt') _renderLcKonspekt(body, lesson, content);
     else if (_lessonContentTab === 'vocab') _renderLcVocab(body, lesson, content);
+    else if (_lessonContentTab === 'vocabPractice') _renderLcVocabPractice(body, lesson, content);
     else if (_lessonContentTab === 'main') { dayType === 'grammar' ? _renderLcGrammar(body, lesson, content) : _renderLcSlides(body, lesson, content); }
     else if (_lessonContentTab === 'practice') _renderLcSpeakingPractice(body, lesson, content);
     else if (_lessonContentTab === 'homework') _renderLcHomework(body, lesson, content, dayType);
@@ -1546,13 +1615,7 @@ function renderMobileCourseDetailTab(container, course) {
             ${vocabRowExpanded ? `
             <div>
                 ${subRow('📋', "Yangi so'zlar ro'yxati", `${(lcContent.vocabulary || []).length} ta so'z — rasm, tarjima, talaffuz`, 'vocab')}
-                <div style="display:flex;align-items:center;gap:10px;padding:10px 16px 10px 46px;border-bottom:1px solid var(--border,#e5e7eb);background:var(--bg,#f9fafb)">
-                    <div style="width:30px;height:30px;border-radius:7px;background:var(--surface);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px">🔄</div>
-                    <div style="flex:1;min-width:0">
-                        <div style="font-weight:600;font-size:12px;color:var(--text)">O'rganish, yodlash, takrorlash</div>
-                        <div style="font-size:10px;color:var(--text-muted);margin-top:1px">Tarjima tanlash, so'z tuzish, talaffuz — yuqoridagi ro'yxat asosida avtomatik</div>
-                    </div>
-                </div>
+                ${subRow('🔄', "O'rganish, yodlash, takrorlash", 'Tarjima tanlash, so\'z tuzish, talaffuz', 'vocabPractice')}
             </div>` : ''}` : '';
 
         const modulesHTML = !expanded ? '' : isVideoDay ? `
