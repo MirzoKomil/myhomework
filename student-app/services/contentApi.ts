@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 import type { GrammarBlank, HomeworkPart, SlideContent, SpeakingPrompt, VocabWord } from '@/data/lessonContent';
+import type { ShopProduct } from '@/data/shopProducts';
 
 // Web uchun relative URL ishlaydi (server bir xil origin).
 // Native uchun env dan yoki fallback URL ishlatiladi.
@@ -92,6 +93,9 @@ export type MobileContent = {
   lessonContents: Record<string, AdminLessonContent>;
   examContents: Record<string, AdminExamContent>;
   certificateTemplateUrl?: string;
+  // CRM'ning "Asosiy oyna → Homework Shop" bo'limida qo'shilgan mahsulotlar —
+  // appning statik SHOP_PRODUCTS ro'yxatiga qo'shimcha sifatida ko'rsatiladi.
+  shopProducts: ShopProduct[];
 };
 
 let _cache: MobileContent | null = null;
@@ -115,6 +119,7 @@ export async function fetchMobileContent(): Promise<MobileContent> {
         lessonContents: data.lessonContents ?? {},
         examContents: data.examContents ?? {},
         certificateTemplateUrl: data.certificateTemplateUrl,
+        shopProducts: data.shopProducts ?? [],
       };
       return _cache;
     })

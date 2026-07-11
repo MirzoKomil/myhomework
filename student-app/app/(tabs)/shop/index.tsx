@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +11,7 @@ import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { SHOP_CATEGORY_LABELS, SHOP_PRODUCTS, ShopCategory, ShopProduct } from '@/data/shopProducts';
 import { useCoins } from '@/services/coinsStore';
+import { fetchMobileContent } from '@/services/contentApi';
 import { useLightning } from '@/services/lightningStore';
 import { placeOrder } from '@/services/shopStore';
 
@@ -26,8 +27,18 @@ export default function ShopScreen() {
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  const [adminProducts, setAdminProducts] = useState<ShopProduct[]>([]);
 
-  const products = SHOP_PRODUCTS.filter((p) => p.category === category);
+  // CRM'ning "Asosiy oyna → Homework Shop" bo'limida qo'shilgan mahsulotlar —
+  // statik ro'yxatga qo'shimcha sifatida ko'rsatiladi.
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => setAdminProducts(mc.shopProducts))
+      .catch(() => {});
+  }, []);
+
+  const allProducts = [...SHOP_PRODUCTS, ...adminProducts];
+  const products = allProducts.filter((p) => p.category === category);
 
   const confirmPurchase = async () => {
     if (!dialog || dialog.type !== 'confirm') return;

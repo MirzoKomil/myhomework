@@ -641,6 +641,15 @@ let _lcActiveHomeworkPart = null;
 let _activeBonusIndex = null;
 let _bonusContentTab = 'konspekt';
 let _activeExamId = null;
+let _activeHomeSection = null;
+
+const SHOP_CATEGORY_LABELS = { merch: 'Merch', books: 'Kitoblar', gadgets: 'Gadgetlar', stationery: 'Kontsstovarlar' };
+const SHOP_CATEGORY_OPTIONS = [
+    { value: 'merch', label: 'Merch' },
+    { value: 'books', label: 'Kitoblar' },
+    { value: 'gadgets', label: 'Gadgetlar' },
+    { value: 'stationery', label: 'Kontsstovarlar' },
+];
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -792,7 +801,7 @@ function renderMobileEditPanel() {
     // renderMobileAdminTab'ga albatta haqiqiy (falsy bo'lmagan) tab qiymati berilishi
     // kerak, aks holda funksiya darhol "tez orada" placeholder bilan qaytib ketadi va
     // dars/modul tarkibi hech qachon ko'rinmaydi.
-    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : null);
+    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : _mobileSubSection === 'asosiy' ? 'asosiy' : null);
 }
 
 function renderMobileModuleDetailTab(container, course, mod) {
@@ -1008,6 +1017,19 @@ function renderEditableList(container, opts) {
             if (f.type === 'textarea') {
                 return `<div class="form-group"><label>${f.label}${req}</label><textarea id="lcField_${f.key}" class="form-control" rows="3" placeholder="${escapeHtml(f.placeholder || '')}">${escapeHtml(String(val))}</textarea></div>`;
             }
+            if (f.type === 'select') {
+                const opts = (f.options || []).map(o =>
+                    `<option value="${escapeHtml(o.value)}"${String(val) === String(o.value) ? ' selected' : ''}>${escapeHtml(o.label)}</option>`
+                ).join('');
+                return `<div class="form-group"><label>${f.label}${req}</label><select id="lcField_${f.key}" class="form-select">${opts}</select></div>`;
+            }
+            if (f.type === 'boolean') {
+                const isYes = raw === undefined ? true : !!raw;
+                return `<div class="form-group"><label>${f.label}${req}</label><select id="lcField_${f.key}" class="form-select">
+                    <option value="yes"${isYes ? ' selected' : ''}>Ha</option>
+                    <option value="no"${!isYes ? ' selected' : ''}>Yo'q</option>
+                </select></div>`;
+            }
             return `<div class="form-group"><label>${f.label}${req}</label><input id="lcField_${f.key}" class="form-control" value="${escapeHtml(String(val))}" placeholder="${escapeHtml(f.placeholder || '')}"></div>`;
         }).join('');
 
@@ -1023,6 +1045,7 @@ function renderEditableList(container, opts) {
                 if (f.required && !raw) ok = false;
                 if (f.type === 'csv') next[f.key] = raw.split(',').map(s => s.trim()).filter(Boolean);
                 else if (f.type === 'number') next[f.key] = Number(raw) || 0;
+                else if (f.type === 'boolean') next[f.key] = raw === 'yes';
                 else next[f.key] = raw;
             });
             if (!ok) { alert("Majburiy (*) maydonlarni to'ldiring"); return; }
@@ -1482,6 +1505,73 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
     else if (_lessonContentTab === 'main') { dayType === 'grammar' ? _renderLcGrammar(body, lesson, content) : _renderLcSlides(body, lesson, content); }
     else if (_lessonContentTab === 'practice') _renderLcSpeakingPractice(body, lesson, content);
     else if (_lessonContentTab === 'homework') _renderLcHomework(body, lesson, content, dayType);
+}
+
+// Ilovaning bosh sahifasi (Asosiy oyna) bilan bog'liq bo'limlar ro'yxati —
+// hozircha faqat Homework Shop, kelajakda kengaytirilishi mumkin.
+function renderMobileHomeListTab(container) {
+    container.innerHTML = `
+    <div style="padding:12px 0 20px">
+        <p style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:14px">Bosh sahifa bo'limlari</p>
+        <div id="homeShopCard" style="display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)">
+            <div style="width:44px;height:44px;border-radius:12px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🛍️</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:14px;color:var(--text)">Homework Shop</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Mahsulotlar, narxlar va kategoriyalarni boshqarish</div>
+            </div>
+            <span style="color:var(--text-muted);font-size:18px;flex-shrink:0">›</span>
+        </div>
+    </div>`;
+    document.getElementById('homeShopCard').addEventListener('click', () => {
+        _activeHomeSection = 'shop';
+        renderMobileEditPanel();
+    });
+}
+
+// Appdagi "Homework Shop" ekranida ko'rinadigan mahsulotlar — CRM'da
+// qo'shilgan har bir mahsulot mc.shopProducts massiviga yoziladi va
+// student-app/data/shopProducts.ts'dagi statik ro'yxatga QO'SHIMCHA sifatida
+// (uni almashtirmasdan) appda ko'rinadi.
+function renderMobileShopTab(container) {
+    const mc = getMobileContent();
+    container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button type="button" id="backToHomeBtn" class="btn-ghost" style="padding:4px 10px">← Bosh sahifa</button>
+        <div style="font-weight:700;font-size:14px;color:var(--text)">Homework Shop — mahsulotlar</div>
+    </div>
+    <div id="shopProductsList"></div>`;
+
+    document.getElementById('backToHomeBtn').addEventListener('click', () => {
+        _activeHomeSection = null;
+        renderMobileEditPanel();
+    });
+
+    renderEditableList(document.getElementById('shopProductsList'), {
+        title: "Mahsulotlar ro'yxati",
+        addLabel: "+ Mahsulot qo'shish",
+        items: mc.shopProducts,
+        idPrefix: 'shop',
+        renderRow: (item) => `
+            <strong>${escapeHtml(item.name || '—')}</strong>
+            <span class="badge" style="margin-left:8px">${escapeHtml(SHOP_CATEGORY_LABELS[item.category] || item.category || '—')}</span>
+            <div style="color:var(--text-muted);margin-top:4px">🪙 ${Number(item.price) || 0} coin · ${item.delivered === false ? 'Yetkazib berilmaydi' : 'Yetkazib beriladi'}</div>
+        `,
+        fields: [
+            { key: 'name', label: 'Mahsulot nomi', required: true, placeholder: 'Homework futbolkasi' },
+            { key: 'category', label: 'Kategoriya', required: true, type: 'select', options: SHOP_CATEGORY_OPTIONS },
+            { key: 'price', label: 'Narxi (coin)', required: true, type: 'number', placeholder: '600' },
+            { key: 'icon', label: 'Icon nomi (ionicons, ixtiyoriy)', placeholder: 'shirt-outline' },
+            { key: 'color', label: 'Icon rangi (hex, ixtiyoriy)', placeholder: '#7B61FF' },
+            { key: 'bg', label: 'Icon foni (hex, ixtiyoriy)', placeholder: '#EDE9FE' },
+            { key: 'delivered', label: 'Yetkazib beriladimi?', type: 'boolean' },
+        ],
+        onChange: (newItems) => {
+            const mc2 = getMobileContent();
+            mc2.shopProducts = newItems;
+            saveMobileContent(mc2);
+            renderMobileShopTab(container);
+        }
+    });
 }
 
 const MOBILE_TOTAL_BONUS_LESSONS = 18;
@@ -2393,6 +2483,7 @@ function getMobileContent() {
     mc.lessons = mc.lessons || [];
     mc.modules = mc.modules || [];
     mc.moduleContents = mc.moduleContents || [];
+    mc.shopProducts = mc.shopProducts || [];
     return mc;
 }
 
@@ -2456,6 +2547,15 @@ function renderMobileAdminTab(tab) {
             renderExamDetailTab(container, _activeExamId);
         } else {
             renderMobileExamListTab(container);
+        }
+        return;
+    }
+
+    if (_mobileSubSection === 'asosiy') {
+        if (_activeHomeSection === 'shop') {
+            renderMobileShopTab(container);
+        } else {
+            renderMobileHomeListTab(container);
         }
         return;
     }
