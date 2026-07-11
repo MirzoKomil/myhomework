@@ -635,7 +635,7 @@ let _activeCourseId = null;
 let _activeLessonId = null;
 let _activeModuleId = null;
 let _expandedLessonIds = new Set();
-let _expandedVideoRows = new Set();
+let _expandedSectionRows = new Set();
 let _lessonContentTab = 'konspekt';
 let _lcActiveHomeworkPart = null;
 
@@ -1161,7 +1161,7 @@ function _renderLcGrammar(body, lesson, content) {
     });
 }
 
-function _renderLcSpeakingMain(body, lesson, content) {
+function _renderLcSlides(body, lesson, content) {
     body.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
             <div style="font-size:12px;color:var(--text-muted)">PDF fayl yuklang — har bir sahifa avtomatik alohida slaydga aylanadi</div>
@@ -1171,9 +1171,7 @@ function _renderLcSpeakingMain(body, lesson, content) {
             </div>
         </div>
         <div id="lcSlidePdfStatus" style="display:none;font-size:12px;color:var(--purple,#7c3aed);margin-bottom:10px"></div>
-        <div id="lcSlides"></div>
-        <div style="height:28px"></div>
-        <div id="lcSpeakingPractice"></div>`;
+        <div id="lcSlides"></div>`;
 
     const renderSlidesList = () => renderEditableList(document.getElementById('lcSlides'), {
         title: 'Slaydlar',
@@ -1231,7 +1229,10 @@ function _renderLcSpeakingMain(body, lesson, content) {
         }
     });
 
-    renderEditableList(document.getElementById('lcSpeakingPractice'), {
+}
+
+function _renderLcSpeakingPractice(body, lesson, content) {
+    renderEditableList(body, {
         title: 'Nutq mashqlari (speaking practice)',
         addLabel: "+ Jumla qo'shish",
         items: content.speakingPractice || [],
@@ -1377,6 +1378,7 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'konspekt' ? 'mac-tab-active' : ''}" data-lc-tab="konspekt">📝 Konspekt</button>
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'vocab' ? 'mac-tab-active' : ''}" data-lc-tab="vocab">📖 Lug'at</button>
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'main' ? 'mac-tab-active' : ''}" data-lc-tab="main">${dayType === 'grammar' ? '📐 Grammatika' : '🎬 Slaydlar'}</button>
+        ${dayType !== 'grammar' ? `<button type="button" class="mac-tab-btn ${_lessonContentTab === 'practice' ? 'mac-tab-active' : ''}" data-lc-tab="practice">🎤 Nutq mashqlari</button>` : ''}
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'homework' ? 'mac-tab-active' : ''}" data-lc-tab="homework">📋 Uyga vazifa</button>
     </div>
     <div id="lessonContentBody" style="flex:1;overflow-y:auto;padding:20px"></div>`;
@@ -1399,7 +1401,8 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
     const content = _getLessonWorkingContent(getMobileContent(), lesson, dayIndex);
     if (_lessonContentTab === 'konspekt') _renderLcKonspekt(body, lesson, content);
     else if (_lessonContentTab === 'vocab') _renderLcVocab(body, lesson, content);
-    else if (_lessonContentTab === 'main') { dayType === 'grammar' ? _renderLcGrammar(body, lesson, content) : _renderLcSpeakingMain(body, lesson, content); }
+    else if (_lessonContentTab === 'main') { dayType === 'grammar' ? _renderLcGrammar(body, lesson, content) : _renderLcSlides(body, lesson, content); }
+    else if (_lessonContentTab === 'practice') _renderLcSpeakingPractice(body, lesson, content);
     else if (_lessonContentTab === 'homework') _renderLcHomework(body, lesson, content, dayType);
 }
 
@@ -1491,20 +1494,37 @@ function renderMobileCourseDetailTab(container, course) {
                 </div>
                 <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(false)}</div>
             </div>`;
-        const videoRowExpanded = _expandedVideoRows.has(l.id);
+        const sectionRowExpanded = _expandedSectionRows.has(l.id);
         const videoRow = expanded && isVideoDay ? `
-            <div data-toggle-video-row="${escapeHtml(l.id)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+            <div data-toggle-section-row="${escapeHtml(l.id)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
                 <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">🎬</div>
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:13px;color:var(--text)">Videodars</div>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(lcContent.videoUrl ? "Video, konspekt va grammatika mashqlari — video qo'yilgan" : "Video, konspekt va grammatika mashqlari — video hali qo'yilmagan")}</div>
                 </div>
-                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(videoRowExpanded)}</div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(sectionRowExpanded)}</div>
             </div>
-            ${videoRowExpanded ? `
+            ${sectionRowExpanded ? `
             <div>
                 ${subRow('▶️', "Videodarsni ko'rish", 'Video + konspekt + izohlar', 'konspekt')}
                 ${subRow('✏️', 'Mashqlarni bajarish', 'Grammar vazifalar', 'main')}
+            </div>` : ''}` : '';
+        // Ilovada "Speaking ko'rgazmalari" ochilganda ham xuddi shunday ikkita qism
+        // ko'rsatiladi: Slaydlarni ko'rish (slaydlar + PDF yuklash shu yerda) va
+        // Mashqlarni bajarish (Nutq mashqlari — alohida).
+        const speakingRow = expanded && !isVideoDay ? `
+            <div data-toggle-section-row="${escapeHtml(l.id)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">🗣️</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">Speaking ko'rgazmalari</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Slaydlar va speaking mashqlari</div>
+                </div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(sectionRowExpanded)}</div>
+            </div>
+            ${sectionRowExpanded ? `
+            <div>
+                ${subRow('🖼️', "Slaydlarni ko'rish", "Ko'rgazmali slaydlar + konspekt", 'main')}
+                ${subRow('🎤', 'Mashqlarni bajarish', 'Speaking vazifalar', 'practice')}
             </div>` : ''}` : '';
 
         const modulesHTML = !expanded ? '' : isVideoDay ? `
@@ -1514,7 +1534,7 @@ function renderMobileCourseDetailTab(container, course) {
             ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
         </div>` : `
         <div style="border-top:1px solid var(--border)">
-            ${sectionRow('🗣️', 'Speaking ko\'rgazmalari', 'Slaydlar va speaking mashqlari', 'main')}
+            ${speakingRow}
             ${sectionRow('📖', "Yangi so'zlar", `${(lcContent.vocabulary || []).length} ta yangi so'z`, 'vocab')}
             ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
         </div>`;
@@ -1574,18 +1594,18 @@ function renderMobileCourseDetailTab(container, course) {
         const menuBtn = e.target.closest('[data-lesson-menu]');
         const previewLesson = e.target.closest('[data-preview-lesson]');
         const openSection = e.target.closest('[data-open-lesson-section]');
-        const toggleVideoRow = e.target.closest('[data-toggle-video-row]');
+        const toggleSectionRow = e.target.closest('[data-toggle-section-row]');
 
         if (menuBtn) {
             e.stopPropagation();
             _openLessonContextMenu(menuBtn, menuBtn.dataset.lessonMenu, course, container);
             return;
         }
-        if (toggleVideoRow) {
+        if (toggleSectionRow) {
             e.stopPropagation();
-            const lid = toggleVideoRow.dataset.toggleVideoRow;
-            if (_expandedVideoRows.has(lid)) _expandedVideoRows.delete(lid);
-            else _expandedVideoRows.add(lid);
+            const lid = toggleSectionRow.dataset.toggleSectionRow;
+            if (_expandedSectionRows.has(lid)) _expandedSectionRows.delete(lid);
+            else _expandedSectionRows.add(lid);
             renderMobileCourseDetailTab(container, course);
             return;
         }
