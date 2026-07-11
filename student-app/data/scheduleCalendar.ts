@@ -93,6 +93,86 @@ export function generateScheduleDays(referenceDate: Date = new Date()): Schedule
   return days;
 }
 
+// O'quvchining asosiy ustozi haftaning qaysi 3 kunida dars o'tishini
+// bildiradi (CRM'dagi SCHEDULE_PATTERNS bilan bir xil, ISO hafta kuni: 1=Du..7=Yak).
+export const SCHEDULE_PATTERN_DAYS: Record<'mwf' | 'tts', number[]> = {
+  mwf: [1, 3, 5],
+  tts: [2, 4, 6],
+};
+
+function parseIsoDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function toIsoDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function isoWeekday(d: Date): number {
+  const dow = d.getDay();
+  return dow === 0 ? 7 : dow;
+}
+
+// 123-ish: o'quvchining HAQIQIY o'qish boshlagan kuni (courseStartDate) va
+// asosiy ustozining haftalik dars kunlari patterniga (mwf/tts) qurilgan
+// jadval — har hafta shu 3 kunda video/jonli darslar navbat bilan almashadi,
+// yakshanbalar bonus dars kuni hisoblanadi. "Qoldirilgan" (missed) holati
+// haqiqiy davomat ma'lumotlaridan (attendedDates — liveGrades'dagi sanalar)
+// aniqlanadi — faqat "jonli dars" kunlari uchun, chunki faqat ular uchun
+// ustoz tomonidan davomat tasdiqlanadi.
+export function generateRealScheduleDays(
+  courseStartDate: string,
+  schedulePattern: 'mwf' | 'tts',
+  attendedDates: Set<string>,
+  attendedTopics: Map<string, string>,
+  referenceDate: Date = new Date()
+): ScheduleDay[] {
+  const today = startOfDay(referenceDate);
+  const start = startOfDay(parseIsoDate(courseStartDate));
+  const end = new Date(today);
+  end.setDate(end.getDate() + 60);
+
+  const patternDays = SCHEDULE_PATTERN_DAYS[schedulePattern] || SCHEDULE_PATTERN_DAYS.mwf;
+
+  const days: ScheduleDay[] = [];
+  let lessonIdx = 0;
+  let dayNumber = 0;
+  const cursor = new Date(start);
+
+  while (cursor.getTime() <= end.getTime()) {
+    const date = new Date(cursor);
+    const dow = isoWeekday(date);
+    dayNumber += 1;
+
+    let type: ScheduleDayType | null = null;
+    let topic = '';
+    if (dow === 7) {
+      type = 'bonus';
+      topic = 'Bonus dars';
+    } else if (patternDays.includes(dow)) {
+      type = lessonIdx % 2 === 0 ? 'video' : 'live';
+      const isoKey = toIsoDateKey(date);
+      topic =
+        type === 'live'
+          ? attendedTopics.get(isoKey) ?? LIVE_TOPICS[Math.floor(lessonIdx / 2) % LIVE_TOPICS.length]
+          : VIDEO_TOPICS[Math.floor(lessonIdx / 2) % VIDEO_TOPICS.length];
+      lessonIdx += 1;
+    }
+
+    if (type) {
+      const isPast = date.getTime() < today.getTime();
+      const isToday = date.getTime() === today.getTime();
+      const missed = isPast && type === 'live' && !attendedDates.has(toIsoDateKey(date));
+      days.push({ dayNumber, date, type, topic, isPast, isToday, missed });
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return days;
+}
+
 export function getMonthMatrix(year: number, month: number): (Date | null)[][] {
   const firstDay = new Date(year, month, 1);
   const startWeekday = (firstDay.getDay() + 6) % 7;

@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { weeklySchedule } from '@/data/mock';
 import {
   SCHEDULE_MISSED_COLOR,
   SCHEDULE_TYPE_COLORS,
@@ -16,29 +15,56 @@ import {
   UZ_WEEKDAY_FULL,
   UZ_WEEKDAY_LABELS,
   dateKey,
+  generateRealScheduleDays,
   generateScheduleDays,
   getMonthMatrix,
   isSameDate,
 } from '@/data/scheduleCalendar';
+import { fetchDemoGrades, fetchDemoSchedule } from '@/services/contentApi';
 
 function formatDate(d: Date): string {
   return `${d.getDate()}-${UZ_MONTHS[d.getMonth()].toLowerCase()}, ${UZ_WEEKDAY_FULL[(d.getDay() + 6) % 7]}`;
 }
 
-export default function ScheduleScreen() {
-  const attended = weeklySchedule.filter((s) => s.attended === true).length;
-  const total = weeklySchedule.filter((s) => s.attended !== null).length;
+const WEEK_DAY_LABELS = ['Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan', 'Yak'];
 
-  const [scheduleDays] = useState<ScheduleDay[]>(() => generateScheduleDays());
+type WeeklyItem = { day: string; time: string; topic: string; attended: boolean | null };
+
+export default function ScheduleScreen() {
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  // Real ma'lumot kelguncha eski (statik) jadval bilan boshlanadi — server
+  // javob bergach, agar o'quvchining haqiqiy o'qish boshlagan kuni topilsa,
+  // shu asosda qurilgan haqiqiy jadval bilan almashtiriladi.
+  const [scheduleDays, setScheduleDays] = useState<ScheduleDay[]>(() => generateScheduleDays());
+  const [lessonTime, setLessonTime] = useState('');
+
+  useEffect(() => {
+    Promise.all([fetchDemoSchedule(), fetchDemoGrades()])
+      .then(([schedule, grades]) => {
+        if (!schedule.courseStartDate) return;
+        const attendedDates = new Set(grades.grades.map((g) => g.date));
+        const attendedTopics = new Map(grades.grades.map((g) => [g.date, g.lessonName]));
+        setScheduleDays(
+          generateRealScheduleDays(schedule.courseStartDate, schedule.schedulePattern, attendedDates, attendedTopics)
+        );
+        setLessonTime(schedule.lessonTime);
+      })
+      .catch(() => {});
+  }, []);
+
   const dayMap = useMemo(() => {
     const map = new Map<string, ScheduleDay>();
     scheduleDays.forEach((d) => map.set(dateKey(d.date), d));
     return map;
   }, [scheduleDays]);
 
-  const courseStart = scheduleDays[0].date;
-  const courseEnd = scheduleDays[scheduleDays.length - 1].date;
-  const today = scheduleDays.find((d) => d.isToday)?.date ?? new Date();
+  const courseStart = scheduleDays[0]?.date ?? today;
+  const courseEnd = scheduleDays[scheduleDays.length - 1]?.date ?? today;
 
   const [viewMonth, setViewMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const canGoPrev = viewMonth.getFullYear() > courseStart.getFullYear() || (viewMonth.getFullYear() === courseStart.getFullYear() && viewMonth.getMonth() > courseStart.getMonth());
@@ -51,6 +77,25 @@ export default function ScheduleScreen() {
     [scheduleDays]
   );
   const missedDays = useMemo(() => pastDays.filter((d) => d.missed), [pastDays]);
+
+  // Joriy hafta (Dushanbadan Yakshanbagacha) jadvali — haqiqiy scheduleDays'dan hisoblanadi.
+  const weeklyItems: WeeklyItem[] = useMemo(() => {
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return scheduleDays
+      .filter((d) => d.date.getTime() >= weekStart.getTime() && d.date.getTime() <= weekEnd.getTime())
+      .map((d) => ({
+        day: WEEK_DAY_LABELS[(d.date.getDay() + 6) % 7],
+        time: d.type === 'bonus' ? '' : lessonTime,
+        topic: d.topic,
+        attended: d.isToday || !d.isPast ? null : !d.missed,
+      }));
+  }, [scheduleDays, lessonTime, today]);
+
+  const attended = weeklyItems.filter((s) => s.attended === true).length;
+  const total = weeklyItems.filter((s) => s.attended !== null).length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -89,10 +134,12 @@ export default function ScheduleScreen() {
                 if (!date) return <View key={di} style={styles.dayCell} />;
                 const sd = dayMap.get(dateKey(date));
                 const dotColor = sd ? (sd.missed ? SCHEDULE_MISSED_COLOR : SCHEDULE_TYPE_COLORS[sd.type]) : undefined;
+                const isToday = isSameDate(date, today);
+                const isPast = date.getTime() < today.getTime();
                 return (
                   <View key={di} style={styles.dayCell}>
-                    <View style={[styles.dayCircle, sd?.isToday && styles.dayCircleToday]}>
-                      <Text style={[styles.dayNumber, sd?.isPast && !sd.isToday && styles.dayNumberPast]}>{date.getDate()}</Text>
+                    <View style={[styles.dayCircle, isToday && styles.dayCircleToday]}>
+                      <Text style={[styles.dayNumber, isPast && !isToday && styles.dayNumberPast]}>{date.getDate()}</Text>
                     </View>
                     {dotColor && <View style={[styles.dayDot, { backgroundColor: dotColor }]} />}
                   </View>
@@ -128,12 +175,12 @@ export default function ScheduleScreen() {
             {attended}/{total} dars
           </Text>
           <View style={styles.rateBar}>
-            <View style={[styles.rateFill, { width: `${(attended / total) * 100}%` }]} />
+            <View style={[styles.rateFill, { width: `${total > 0 ? (attended / total) * 100 : 0}%` }]} />
           </View>
         </Card>
 
-        {weeklySchedule.map((item) => (
-          <Card key={item.day} style={styles.dayCard}>
+        {weeklyItems.map((item, i) => (
+          <Card key={`${item.day}-${i}`} style={styles.dayCard}>
             <View style={styles.dayRow}>
               <View>
                 <Text style={styles.dayName}>{item.day}</Text>

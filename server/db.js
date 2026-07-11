@@ -703,17 +703,40 @@ function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
 // bitta o'quvchining Telegram guruh havolasi va navbatdagi speaking dars
 // vaqtini qaytaradi. StudentId har doim serverda demoStudentId'dan olinadi.
 async function getDemoStudentSchedule() {
+    const empty = {
+        telegramGroupLink: '', topic: '', startsAt: null,
+        courseStartDate: null, schedulePattern: 'mwf', lessonDayOfWeek: null, lessonTime: ''
+    };
     const demoStudentId = await getJsonData('demoStudentId');
-    if (!demoStudentId) return { telegramGroupLink: '', topic: '', startsAt: null };
+    if (!demoStudentId) return empty;
     const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
-    if (!row) return { telegramGroupLink: '', topic: '', startsAt: null };
+    if (!row) return empty;
     const student = rowToStudent(row);
+
+    // 123-ish: "Jadval va davomat" ekrani o'quvchining haqiqiy o'qish
+    // boshlagan kuni va o'zining asosiy ustozining haftalik dars kunlari
+    // patterni (mwf/tts) asosida quriladi — shuning uchun ular ham
+    // qaytariladi.
+    let schedulePattern = 'mwf';
+    if (student.teacherId) {
+        const teacherRow = await q1('SELECT schedule_pattern FROM teachers WHERE id = $1', [student.teacherId]);
+        if (teacherRow?.schedule_pattern) schedulePattern = teacherRow.schedule_pattern;
+    }
+    const courseStartDate = student.startDate || null;
+
     if (student.lessonDayOfWeek == null || !student.lessonTime) {
-        return { telegramGroupLink: student.telegramGroupLink || '', topic: '', startsAt: null };
+        return {
+            telegramGroupLink: student.telegramGroupLink || '', topic: '', startsAt: null,
+            courseStartDate, schedulePattern, lessonDayOfWeek: null, lessonTime: ''
+        };
     }
     const startsAt = computeNextWeeklyOccurrence(student.lessonDayOfWeek, student.lessonTime, student.lessonDuration);
     const topic = student.group ? `Speaking Club: ${student.group}` : 'Speaking Club';
-    return { telegramGroupLink: student.telegramGroupLink || '', topic, startsAt };
+    return {
+        telegramGroupLink: student.telegramGroupLink || '', topic, startsAt,
+        courseStartDate, schedulePattern,
+        lessonDayOfWeek: student.lessonDayOfWeek, lessonTime: student.lessonTime
+    };
 }
 
 const DEMO_MESSAGE_THREAD_IDS = ['support', 'main-teacher', 'assistant-teacher'];

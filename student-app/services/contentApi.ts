@@ -216,13 +216,28 @@ export type DemoScheduleResponse = {
   telegramGroupLink: string;
   topic: string;
   startsAt: string | null;
+  // 123-ish: "Jadval va davomat" ekranini o'quvchining haqiqiy o'qish
+  // boshlagan kuni va asosiy ustozining haftalik dars kunlari patterniga
+  // (mwf/tts) qurish uchun.
+  courseStartDate: string | null;
+  schedulePattern: 'mwf' | 'tts';
+  lessonDayOfWeek: number | null;
+  lessonTime: string;
 };
 
 export async function fetchDemoSchedule(): Promise<DemoScheduleResponse> {
   const r = await fetch(DEMO_SCHEDULE_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
-  return { telegramGroupLink: data.telegramGroupLink ?? '', topic: data.topic ?? '', startsAt: data.startsAt ?? null };
+  return {
+    telegramGroupLink: data.telegramGroupLink ?? '',
+    topic: data.topic ?? '',
+    startsAt: data.startsAt ?? null,
+    courseStartDate: data.courseStartDate ?? null,
+    schedulePattern: data.schedulePattern === 'tts' ? 'tts' : 'mwf',
+    lessonDayOfWeek: data.lessonDayOfWeek ?? null,
+    lessonTime: data.lessonTime ?? '',
+  };
 }
 
 // "Muloqot" bo'limidagi Qo'llab-quvvatlash/Asosiy ustoz/Yordamchi ustoz

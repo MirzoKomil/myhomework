@@ -380,14 +380,6 @@ export const profileStats = {
   radioTimeHours: 2.6,
 };
 
-export const weeklySchedule = [
-  { day: 'Dush', time: '14:00', topic: 'Present Simple', attended: true },
-  { day: 'Sesh', time: '14:00', topic: 'Vocabulary: Family', attended: true },
-  { day: 'Chor', time: '14:00', topic: 'Listening Practice', attended: false },
-  { day: 'Pay', time: '14:00', topic: 'Speaking Club', attended: true },
-  { day: 'Jum', time: '14:00', topic: 'Grammar Review', attended: null },
-];
-
 export const paymentHistory = [
   { id: '4', date: '2026-06-01', amount: 450000, tariff: 'Standard', status: 'debt' as const, dueDate: '2026-07-10' },
   { id: '1', date: '2026-05-01', amount: 450000, tariff: 'Standard', status: 'paid' as const },
