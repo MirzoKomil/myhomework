@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
+import { CoinPill } from '@/components/ui/CoinIcon';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { getResolvedLessonContent, GrammarBlank, LessonContent } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
@@ -31,6 +34,8 @@ export default function VideoExercisesScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [earnedCoins, setEarnedCoins] = useState(0);
+  const [earnedLightning, setEarnedLightning] = useState(0);
 
   if (!content || !queue) {
     return (
@@ -54,6 +59,8 @@ export default function VideoExercisesScreen() {
     if (opt === current.answer) {
       addCoins(1, String(lessonId));
       addLightning(1);
+      setEarnedCoins((c) => c + 1);
+      setEarnedLightning((l) => l + 1);
     } else {
       setWrongAttempts((w) => w + 1);
     }
@@ -75,19 +82,12 @@ export default function VideoExercisesScreen() {
   if (finished) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.resultCenter}>
-          <Text style={styles.resultEmoji}>🎉</Text>
-          <Text style={styles.resultTitle}>Mashqlar tugadi!</Text>
-          <Text style={styles.resultSubtitle}>
-            {total} ta savolning barchasiga to'g'ri javob berdingiz!
-          </Text>
-          {wrongAttempts > 0 && (
-            <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>
-          )}
-          <Pressable style={styles.resultBtn} onPress={() => router.back()}>
-            <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
-          </Pressable>
-        </View>
+        <FinishedScreen
+          total={total}
+          wrongAttempts={wrongAttempts}
+          earnedCoins={earnedCoins}
+          earnedLightning={earnedLightning}
+        />
       </SafeAreaView>
     );
   }
@@ -151,6 +151,36 @@ export default function VideoExercisesScreen() {
   );
 }
 
+function FinishedScreen({
+  total,
+  wrongAttempts,
+  earnedCoins,
+  earnedLightning,
+}: {
+  total: number;
+  wrongAttempts: number;
+  earnedCoins: number;
+  earnedLightning: number;
+}) {
+  const [celebrating, setCelebrating] = useState(true);
+  return (
+    <View style={styles.resultCenter}>
+      <Text style={styles.resultEmoji}>🎉</Text>
+      <Text style={styles.resultTitle}>Mashqlar tugadi!</Text>
+      <Text style={styles.resultSubtitle}>{total} ta savolning barchasiga to'g'ri javob berdingiz!</Text>
+      {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>}
+      <View style={styles.rewardsRow}>
+        <CoinPill amount={earnedCoins} />
+        <LightningPill amount={earnedLightning} />
+      </View>
+      <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+        <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
+      </Pressable>
+      <CelebrationOverlay visible={celebrating} onFinish={() => setCelebrating(false)} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   topBar: {
@@ -203,6 +233,7 @@ const styles = StyleSheet.create({
   resultEmoji: { fontSize: 56 },
   resultTitle: { fontFamily: theme.fonts.extraBold, fontSize: 22, color: theme.colors.text },
   resultSubtitle: { fontFamily: theme.fonts.medium, fontSize: 15, color: theme.colors.textMuted },
+  rewardsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   resultBtn: {
     marginTop: 16,
     backgroundColor: theme.colors.purple,

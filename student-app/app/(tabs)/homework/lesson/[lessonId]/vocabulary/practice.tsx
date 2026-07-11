@@ -6,6 +6,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
+import { CoinPill } from '@/components/ui/CoinIcon';
+import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { getResolvedLessonContent, LessonContent, VOCAB_PRACTICE_SIZE, VocabWord } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
@@ -43,6 +46,8 @@ export default function VocabularyPracticeScreen() {
   const [round, setRound] = useState(0); // 0: translation, 1: construct, 2: pronounce
   const [finished, setFinished] = useState(false);
   const [wrongAttempts, setWrongAttempts] = useState(0);
+  const [earnedCoins, setEarnedCoins] = useState(0);
+  const [earnedLightning, setEarnedLightning] = useState(0);
 
   // Noto'g'ri javob berilgan so'z darhol tashlab yuborilmaydi — shu bosqich
   // (round) navbatining oxiriga qo'shilib, to'g'ri javob berilgunicha
@@ -72,6 +77,8 @@ export default function VocabularyPracticeScreen() {
     if (correct) {
       addCoins(1, String(lessonId));
       addLightning(1);
+      setEarnedCoins((c) => c + 1);
+      setEarnedLightning((l) => l + 1);
     } else {
       setWrongAttempts((w) => w + 1);
     }
@@ -95,15 +102,12 @@ export default function VocabularyPracticeScreen() {
   if (finished) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.resultCenter}>
-          <Text style={styles.resultEmoji}>📚</Text>
-          <Text style={styles.resultTitle}>Ajoyib!</Text>
-          <Text style={styles.resultSubtitle}>{words.length} ta so'z bo'yicha 3 bosqichli mashqni muvaffaqiyatli yakunladingiz!</Text>
-          {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>}
-          <Pressable style={styles.resultBtn} onPress={() => router.back()}>
-            <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
-          </Pressable>
-        </View>
+        <FinishedScreen
+          wordsCount={words.length}
+          wrongAttempts={wrongAttempts}
+          earnedCoins={earnedCoins}
+          earnedLightning={earnedLightning}
+        />
       </SafeAreaView>
     );
   }
@@ -128,6 +132,36 @@ export default function VocabularyPracticeScreen() {
       {round === 1 && <ConstructWordStep key={current.id} word={current} onDone={advance} />}
       {round === 2 && <PronounceWordStep key={current.id} word={current} onDone={advance} />}
     </SafeAreaView>
+  );
+}
+
+function FinishedScreen({
+  wordsCount,
+  wrongAttempts,
+  earnedCoins,
+  earnedLightning,
+}: {
+  wordsCount: number;
+  wrongAttempts: number;
+  earnedCoins: number;
+  earnedLightning: number;
+}) {
+  const [celebrating, setCelebrating] = useState(true);
+  return (
+    <View style={styles.resultCenter}>
+      <Text style={styles.resultEmoji}>📚</Text>
+      <Text style={styles.resultTitle}>Ajoyib!</Text>
+      <Text style={styles.resultSubtitle}>{wordsCount} ta so'z bo'yicha 3 bosqichli mashqni muvaffaqiyatli yakunladingiz!</Text>
+      {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>}
+      <View style={styles.rewardsRow}>
+        <CoinPill amount={earnedCoins} />
+        <LightningPill amount={earnedLightning} />
+      </View>
+      <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+        <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
+      </Pressable>
+      <CelebrationOverlay visible={celebrating} onFinish={() => setCelebrating(false)} />
+    </View>
   );
 }
 
@@ -386,6 +420,7 @@ const styles = StyleSheet.create({
   resultEmoji: { fontSize: 56 },
   resultTitle: { fontFamily: theme.fonts.extraBold, fontSize: 22, color: theme.colors.text },
   resultSubtitle: { fontFamily: theme.fonts.medium, fontSize: 15, color: theme.colors.textMuted, textAlign: 'center' },
+  rewardsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   resultBtn: {
     marginTop: 16,
     backgroundColor: theme.colors.purple,
