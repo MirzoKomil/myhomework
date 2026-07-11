@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -44,6 +44,19 @@ router.post('/demo-grades/rate-teacher', async (req, res) => {
     } catch (err) {
         console.error('POST /api/state/demo-grades/rate-teacher', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchining Telegram guruh havolasi va navbatdagi speaking dars vaqtini
+// qaytaradi. StudentId har doim serverda demoStudentId'dan olinadi.
+router.get('/demo-schedule', async (req, res) => {
+    try {
+        const data = await getDemoStudentSchedule();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-schedule', err);
+        res.status(500).json({ error: 'Xatolik' });
     }
 });
 

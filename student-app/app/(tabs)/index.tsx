@@ -10,7 +10,7 @@ import { ShopEntryCard } from '@/components/ui/ShopEntryCard';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { appNotifications, courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
-import { fetchMobileContent } from '@/services/contentApi';
+import { fetchDemoSchedule, fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
 
 const hasUnreadNotifications = appNotifications.some((n) => n.unread);
@@ -18,6 +18,21 @@ const hasUnreadNotifications = appNotifications.some((n) => n.unread);
 export default function HomeScreen() {
   const activeCourse = courses[0];
   const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
+  const [liveLesson, setLiveLesson] = useState(nextLiveLesson);
+
+  useEffect(() => {
+    fetchDemoSchedule()
+      .then((schedule) => {
+        if (schedule.telegramGroupLink && schedule.startsAt) {
+          setLiveLesson({
+            topic: schedule.topic || nextLiveLesson.topic,
+            startsAt: schedule.startsAt,
+            telegramLink: schedule.telegramGroupLink,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const waveAnim = useRef(new Animated.Value(0)).current;
   const bellShake = useRef(new Animated.Value(0)).current;
@@ -92,9 +107,9 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <LessonReminder
-          topic={nextLiveLesson.topic}
-          startsAt={nextLiveLesson.startsAt}
-          telegramLink={nextLiveLesson.telegramLink}
+          topic={liveLesson.topic}
+          startsAt={liveLesson.startsAt}
+          telegramLink={liveLesson.telegramLink}
         />
 
         <View style={styles.quickGrid}>

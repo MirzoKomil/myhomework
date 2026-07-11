@@ -4281,6 +4281,7 @@ function renderTimetable() {
 
 function promoteStudentFromOnboarding(lang, onboarding, lead) {
     if (onboarding.becomeStudent !== 'yes') return;
+    if (!onboarding.telegramGroupLink) return;
     const students = getItem(STORAGE_KEYS.students, []);
     const existing = students.find(s =>
         s.name === onboarding.studentFullName && s.teacherId === onboarding.teacherId
@@ -4291,6 +4292,7 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
             lessonTime: onboarding.lessonTime,
             lessonDuration: onboarding.lessonDuration || 15,
             assistantTeacherId: onboarding.assistantTeacherId || null,
+            telegramGroupLink: onboarding.telegramGroupLink || '',
             source: 'lead'
         });
         return existing.id;
@@ -4309,6 +4311,7 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         lessonDayOfWeek: onboarding.lessonDayOfWeek,
         lessonTime: onboarding.lessonTime,
         lessonDuration: duration,
+        telegramGroupLink: onboarding.telegramGroupLink || '',
         startDate: new Date().toISOString().slice(0, 10),
         source: 'lead',
         managerId: lead?.managerId || '',
@@ -9596,6 +9599,7 @@ function leadHasTeacherSchedule(lead) {
         onboarding?.teacherId
         && onboarding.lessonDayOfWeek != null
         && onboarding.lessonTime
+        && onboarding.telegramGroupLink
     );
 }
 
@@ -10690,6 +10694,10 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         modalBody.dataset.onboardScheduleDay = String(existing.lessonDayOfWeek);
         modalBody.dataset.onboardScheduleTime = existing.lessonTime;
     }
+    if (existing?.telegramGroupLink) {
+        const linkInput = modalBody.querySelector('#onboardTelegramGroupLink');
+        if (linkInput) linkInput.value = existing.telegramGroupLink;
+    }
 
     const teacherSel = modalBody.querySelector('#onboardTeacherId');
     const scheduleBlock = modalBody.querySelector('#onboardScheduleBlock');
@@ -10743,6 +10751,9 @@ function collectTeacherScheduleData(modalBody) {
         return { error: 'Tanlangan vaqt band yoki dars davomiyligi uchun yetarli bo\'sh slot yo\'q' };
     }
 
+    const telegramGroupLink = modalBody.querySelector('#onboardTelegramGroupLink')?.value?.trim() || '';
+    if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting' };
+
     return {
         data: {
             teacherId,
@@ -10750,7 +10761,8 @@ function collectTeacherScheduleData(modalBody) {
             lessonDayOfWeek,
             lessonDayLabel,
             lessonTime,
-            lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`
+            lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
+            telegramGroupLink
         }
     };
 }
@@ -10768,6 +10780,11 @@ function renderTeacherScheduleSection(asosiyTeachers) {
             <p class="lead-survey-hint">O'qituvchining band va bo'sh vaqtlarini ko'rib, bo'sh slotdan tanlang.</p>
             <div id="onboardSchedulePicker" class="onboard-schedule-picker"></div>
             <output id="onboardScheduleSelected" class="onboard-schedule-selected" for="onboardSchedulePicker"></output>
+        </div>
+        <div class="lead-survey-field">
+            <label for="onboardTelegramGroupLink">Telegram guruh havolasi <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="onboardTelegramGroupLink" class="form-control" placeholder="https://t.me/+...">
+            <p class="lead-survey-hint">O'quvchi uchun ochilgan maxsus Telegram guruh havolasi — o'quvchiga aylantirish uchun majburiy.</p>
         </div>
     </section>`;
 }
@@ -10891,6 +10908,9 @@ function collectPaymentOnboardingData(modalBody) {
     const lessonDayOfWeek = parseInt(lessonDayOfWeekRaw, 10);
     const lessonDayLabel = DAYS_UZ[lessonDayOfWeek - 1] || '';
 
+    const telegramGroupLink = getVal('onboardTelegramGroupLink');
+    if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting' };
+
     const firstLessonDate = getVal('onboardFirstLessonDate');
     if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang' };
 
@@ -10928,6 +10948,7 @@ function collectPaymentOnboardingData(modalBody) {
             lessonDayLabel,
             lessonTime,
             lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
+            telegramGroupLink,
             firstLessonDate
         }
     };
@@ -10944,6 +10965,7 @@ function formatPaymentOnboardingComment(data) {
         `• Manzil: ${data.bookAddress}`,
         `• O'qituvchi: ${data.teacherName}`,
         `• Dars jadvali: ${data.lessonScheduleLabel}`,
+        `• Telegram guruh havolasi: ${data.telegramGroupLink}`,
         `• Yordamchi: ${data.assistantTeacherName || '—'}`,
         `• Ilk dars sanasi: ${data.firstLessonDate}`
     ];
@@ -11686,7 +11708,7 @@ function finalizePaymentClosed(lang, leadId, closedSurveyData, scheduleData) {
 }
 
 function promoteStudentFromClosed(lang, lead, scheduleData) {
-    if (!scheduleData?.teacherId || scheduleData.lessonDayOfWeek == null || !scheduleData.lessonTime) return;
+    if (!scheduleData?.teacherId || scheduleData.lessonDayOfWeek == null || !scheduleData.lessonTime || !scheduleData.telegramGroupLink) return;
     const students = getItem(STORAGE_KEYS.students, []);
     const existing = students.find(s => s.name === lead.name && s.teacherId === scheduleData.teacherId);
     const ps = lead.paymentSurvey;
@@ -11696,6 +11718,7 @@ function promoteStudentFromClosed(lang, lead, scheduleData) {
             lessonDayOfWeek: scheduleData.lessonDayOfWeek,
             lessonTime: scheduleData.lessonTime,
             lessonDuration: duration,
+            telegramGroupLink: scheduleData.telegramGroupLink,
             source: 'lead-closed'
         });
         return existing.id;
@@ -11712,6 +11735,7 @@ function promoteStudentFromClosed(lang, lead, scheduleData) {
         lessonDayOfWeek: scheduleData.lessonDayOfWeek,
         lessonTime: scheduleData.lessonTime,
         lessonDuration: duration,
+        telegramGroupLink: scheduleData.telegramGroupLink,
         startDate: new Date().toISOString().slice(0, 10),
         source: 'lead-closed',
         managerId: lead?.managerId || '',

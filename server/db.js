@@ -676,6 +676,44 @@ async function submitDemoStudentTeacherRating(date, ratings) {
     });
 }
 
+// Tashkentda (UTC+5, DST yo'q) berilgan hafta kuni (1=Dushanba..7=Yakshanba)
+// va soatdan kelib chiqib, keyingi eng yaqin sodir bo'lish vaqtini hisoblaydi.
+// Agar bugun aynan shu kun bo'lsa-yu, dars (davomiyligi bilan) hali tugamagan
+// bo'lsa, bugungi vaqt qaytariladi — aks holda keyingi haftaga o'tkaziladi.
+function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
+    const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const [hh, mm] = String(timeStr).split(':').map(Number);
+    const nowUtcMs = Date.now();
+    const nowTashkent = new Date(nowUtcMs + TASHKENT_OFFSET_MS);
+    const nowDow = nowTashkent.getUTCDay() === 0 ? 7 : nowTashkent.getUTCDay();
+    const dayDiff = (dayOfWeek - nowDow + 7) % 7;
+    const candidateTashkentMs = Date.UTC(
+        nowTashkent.getUTCFullYear(), nowTashkent.getUTCMonth(), nowTashkent.getUTCDate() + dayDiff,
+        hh || 0, mm || 0, 0, 0
+    );
+    let candidateUtcMs = candidateTashkentMs - TASHKENT_OFFSET_MS;
+    const durMs = (durationMinutes || 0) * 60 * 1000;
+    if (candidateUtcMs + durMs <= nowUtcMs) candidateUtcMs += 7 * 24 * 60 * 60 * 1000;
+    return new Date(candidateUtcMs).toISOString();
+}
+
+// Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
+// bitta o'quvchining Telegram guruh havolasi va navbatdagi speaking dars
+// vaqtini qaytaradi. StudentId har doim serverda demoStudentId'dan olinadi.
+async function getDemoStudentSchedule() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return { telegramGroupLink: '', topic: '', startsAt: null };
+    const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
+    if (!row) return { telegramGroupLink: '', topic: '', startsAt: null };
+    const student = rowToStudent(row);
+    if (student.lessonDayOfWeek == null || !student.lessonTime) {
+        return { telegramGroupLink: student.telegramGroupLink || '', topic: '', startsAt: null };
+    }
+    const startsAt = computeNextWeeklyOccurrence(student.lessonDayOfWeek, student.lessonTime, student.lessonDuration);
+    const topic = student.group ? `Speaking Club: ${student.group}` : 'Speaking Club';
+    return { telegramGroupLink: student.telegramGroupLink || '', topic, startsAt };
+}
+
 async function saveJsonData(client, key, data) {
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
@@ -875,6 +913,7 @@ module.exports = {
     getFullState, getLeads, insertLead, patchState,
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
     getHrEmployeesData, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating,
+    getDemoStudentSchedule,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init

@@ -14,6 +14,11 @@ const DEMO_GRADES_API_BASE =
     ? '/api/state/demo-grades'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-grades';
 
+const DEMO_SCHEDULE_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-schedule'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-schedule';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -187,4 +192,20 @@ export async function submitTeacherRating(date: string, ratings: StudentRatingOf
     const err = await r.json().catch(() => ({ error: 'Xatolik' }));
     throw new Error(err.error || 'Xatolik');
   }
+}
+
+// Bosh sahifadagi eslatma kartochkasi uchun — CRM'da "Namuna o'quvchi" deb
+// belgilangan bitta o'quvchining Telegram guruh havolasi va navbatdagi
+// speaking dars vaqtini qaytaradi (haqiqiy dars kuni/soatidan hisoblanadi).
+export type DemoScheduleResponse = {
+  telegramGroupLink: string;
+  topic: string;
+  startsAt: string | null;
+};
+
+export async function fetchDemoSchedule(): Promise<DemoScheduleResponse> {
+  const r = await fetch(DEMO_SCHEDULE_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const data = await r.json();
+  return { telegramGroupLink: data.telegramGroupLink ?? '', topic: data.topic ?? '', startsAt: data.startsAt ?? null };
 }
