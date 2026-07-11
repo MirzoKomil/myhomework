@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ImageBackground, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -10,6 +10,7 @@ import { theme } from '@/constants/theme';
 import { Certificate, CERTIFICATES, CertificateType } from '@/data/certificates';
 import { courses, profileStats } from '@/data/mock';
 import { generateScheduleDays } from '@/data/scheduleCalendar';
+import { fetchMobileContent } from '@/services/contentApi';
 import { useExamResults } from '@/services/examStore';
 
 // Sertifikat ID'si mos imtihon ID'siga to'g'ri keladi ('interval-1' -> 'interval-1', 'course' -> 'final').
@@ -36,6 +37,11 @@ export default function CertificatesScreen() {
     [scheduleDays]
   );
   const examResults = useExamResults();
+  const [templateUrl, setTemplateUrl] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    fetchMobileContent().then((mc) => setTemplateUrl(mc.certificateTemplateUrl));
+  }, []);
 
   const hasPassedExam = (cert: Certificate) => {
     const examId = examIdForCertificate(cert);
@@ -111,25 +117,41 @@ export default function CertificatesScreen() {
           <Pressable style={styles.dialogBackdropTap} onPress={() => setSelected(null)} />
           {selected && (
             <View style={styles.certModalCard}>
-              <View style={[styles.certPaper, { borderColor: TYPE_CONFIG[selected.type].color }]}>
-                <Ionicons name={TYPE_CONFIG[selected.type].icon} size={40} color={TYPE_CONFIG[selected.type].color} />
-                <Text style={styles.certKicker}>SERTIFIKAT</Text>
-                <Text style={styles.certStudentName}>{profileStats.name}</Text>
-                <Text style={styles.certBody}>quyidagi darslarni muvaffaqiyatli yakunladi:</Text>
-                <Text style={[styles.certRange, { color: TYPE_CONFIG[selected.type].color }]}>{selected.rangeLabel}</Text>
-                <View style={styles.certDivider} />
-                <View style={styles.certStatsRow}>
-                  <View style={styles.certStatItem}>
-                    <Text style={styles.certStatValue}>{selected.points}</Text>
-                    <Text style={styles.certStatLabel}>to'plagan ball</Text>
+              {(() => {
+                const cfg = TYPE_CONFIG[selected.type];
+                const content = (
+                  <View style={templateUrl ? styles.certContentPanel : undefined}>
+                    <Ionicons name={cfg.icon} size={40} color={cfg.color} />
+                    <Text style={styles.certKicker}>SERTIFIKAT</Text>
+                    <Text style={styles.certStudentName}>{profileStats.name}</Text>
+                    <Text style={styles.certBody}>quyidagi darslarni muvaffaqiyatli yakunladi:</Text>
+                    <Text style={[styles.certRange, { color: cfg.color }]}>{selected.rangeLabel}</Text>
+                    <View style={styles.certDivider} />
+                    <View style={styles.certStatsRow}>
+                      <View style={styles.certStatItem}>
+                        <Text style={styles.certStatValue}>{selected.points}</Text>
+                        <Text style={styles.certStatLabel}>to'plagan ball</Text>
+                      </View>
+                      <View style={styles.certStatItem}>
+                        <Text style={styles.certStatValue}>{selected.dateRangeLabel}</Text>
+                        <Text style={styles.certStatLabel}>o'qigan davr</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.certFooter}>myhomework.uz</Text>
                   </View>
-                  <View style={styles.certStatItem}>
-                    <Text style={styles.certStatValue}>{selected.dateRangeLabel}</Text>
-                    <Text style={styles.certStatLabel}>o'qigan davr</Text>
-                  </View>
-                </View>
-                <Text style={styles.certFooter}>myhomework.uz</Text>
-              </View>
+                );
+                return templateUrl ? (
+                  <ImageBackground
+                    source={{ uri: templateUrl }}
+                    style={[styles.certPaper, { borderColor: cfg.color }]}
+                    imageStyle={{ borderRadius: theme.radius.lg }}
+                    resizeMode="cover">
+                    {content}
+                  </ImageBackground>
+                ) : (
+                  <View style={[styles.certPaper, { borderColor: cfg.color }]}>{content}</View>
+                );
+              })()}
 
               <Pressable style={styles.exportBtn} onPress={() => exportPdf(selected)}>
                 <Ionicons name="download-outline" size={18} color="#fff" />
@@ -226,6 +248,13 @@ const styles = StyleSheet.create({
   dialogConfirmText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff' },
 
   certModalCard: { width: '100%', maxWidth: 360, gap: 12 },
+  certContentPanel: {
+    width: '100%',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: theme.radius.md,
+    padding: 12,
+  },
   certPaper: {
     backgroundColor: '#fff',
     borderRadius: theme.radius.lg,

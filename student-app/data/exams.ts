@@ -1,5 +1,6 @@
 import { COURSE_TOTAL_LESSONS, INTERVAL_SIZE } from '@/data/certificates';
 import { GRAMMAR_POOL, MC_POOL, pickWindow, SENTENCE_POOL, SPEAKING_POOL } from '@/data/lessonContent';
+import { AdminExamContent, fetchMobileContent } from '@/services/contentApi';
 
 export type ExamQuestion =
   | { kind: 'multipleChoice'; id: string; question: string; options: string[]; correctIndex: number }
@@ -101,4 +102,30 @@ export const EXAM_PASS_PERCENT = 60;
 
 export function getExam(examId: string): Exam | undefined {
   return EXAMS.find((e) => e.id === examId);
+}
+
+// CRM'da admin tahrirlagan savollar (agar kiritilgan bo'lsa) protsedural
+// ro'yxat o'rniga ishlatiladi — davomiylik va tanaffus ham savollar soniga
+// qarab qayta hisoblanadi.
+export function mergeExamContent(base: Exam, admin?: AdminExamContent): { exam: Exam; passPercent: number } {
+  const passPercent = admin?.passPercent ?? EXAM_PASS_PERCENT;
+  if (!admin?.questions || !admin.questions.length) {
+    return { exam: base, passPercent };
+  }
+  const questions = admin.questions as unknown as ExamQuestion[];
+  const durationSeconds = questions.length * 45;
+  const breakAfterIndex = questions.length > BREAK_THRESHOLD ? Math.ceil(questions.length / 2) - 1 : null;
+  return { exam: { ...base, questions, durationSeconds, breakAfterIndex }, passPercent };
+}
+
+export async function getResolvedExam(examId: string): Promise<{ exam: Exam; passPercent: number } | undefined> {
+  const base = getExam(examId);
+  if (!base) return undefined;
+  const mc = await fetchMobileContent();
+  return mergeExamContent(base, mc.examContents[examId]);
+}
+
+export async function getResolvedExams(): Promise<{ exam: Exam; passPercent: number }[]> {
+  const mc = await fetchMobileContent();
+  return EXAMS.map((base) => mergeExamContent(base, mc.examContents[base.id]));
 }

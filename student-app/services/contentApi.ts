@@ -62,12 +62,26 @@ export type AdminLessonContent = {
   updatedAt?: string;
 };
 
+export type AdminExamQuestion =
+  | { kind: 'multipleChoice'; id: string; question: string; options: string[]; correctIndex: number }
+  | { kind: 'sentenceBuild'; id: string; translation: string; words: string[]; answer: string[] }
+  | { kind: 'fillBlank'; id: string; sentence: string; answer: string; options: string[] }
+  | { kind: 'speaking'; id: string; sentence: string; translation: string };
+
+export type AdminExamContent = {
+  passPercent?: number;
+  questions?: AdminExamQuestion[];
+  updatedAt?: string;
+};
+
 export type MobileContent = {
   courses: AdminCourse[];
   lessons: AdminLesson[];
   modules: AdminModule[];
   moduleContents: AdminModuleContent[];
   lessonContents: Record<string, AdminLessonContent>;
+  examContents: Record<string, AdminExamContent>;
+  certificateTemplateUrl?: string;
 };
 
 let _cache: MobileContent | null = null;
@@ -89,6 +103,8 @@ export async function fetchMobileContent(): Promise<MobileContent> {
         modules: data.modules ?? [],
         moduleContents: data.moduleContents ?? [],
         lessonContents: data.lessonContents ?? {},
+        examContents: data.examContents ?? {},
+        certificateTemplateUrl: data.certificateTemplateUrl,
       };
       return _cache;
     })

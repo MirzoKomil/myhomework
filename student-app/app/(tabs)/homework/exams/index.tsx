@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { EXAM_PASS_PERCENT, EXAMS, Exam } from '@/data/exams';
+import { Exam, getResolvedExams } from '@/data/exams';
 import { courses } from '@/data/mock';
 import { useExamResults } from '@/services/examStore';
 
@@ -15,6 +15,11 @@ export default function ExamsScreen() {
   const activeCourse = courses[0];
   const results = useExamResults();
   const [lockedNotice, setLockedNotice] = useState<Exam | null>(null);
+  const [resolved, setResolved] = useState<{ exam: Exam; passPercent: number }[] | null>(null);
+
+  useEffect(() => {
+    getResolvedExams().then(setResolved);
+  }, []);
 
   const isUnlocked = (exam: Exam) => activeCourse.lessonsDone >= exam.requiredLessons;
 
@@ -26,18 +31,30 @@ export default function ExamsScreen() {
     router.push(`/homework/exams/${exam.id}` as never);
   };
 
+  if (!resolved) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader title="Imtihonlar" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Imtihonlar" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
           Har 12 ta darsdan so'ng imtihon, kurs oxirida esa yakunlovchi imtihon topshiriladi. Sertifikat olish
-          uchun mos imtihondan {EXAM_PASS_PERCENT}% dan yuqori ball olish kerak.
+          uchun mos imtihondan yuqori ball olish kerak.
         </Text>
-        {EXAMS.map((exam, index) => {
+        {resolved.map(({ exam, passPercent }, index) => {
           const unlocked = isUnlocked(exam);
           const result = results[exam.id];
           const isFinal = exam.id === 'final';
+          void passPercent;
           return (
             <Pressable key={exam.id} onPress={() => openExam(exam)}>
               <Card style={unlocked ? styles.card : styles.cardLocked}>
@@ -101,6 +118,7 @@ export default function ExamsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 20, paddingBottom: 32, gap: 12 },
   subtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginBottom: 4, lineHeight: 19 },
   card: {},

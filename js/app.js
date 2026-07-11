@@ -640,6 +640,7 @@ let _lessonContentTab = 'konspekt';
 let _lcActiveHomeworkPart = null;
 let _activeBonusIndex = null;
 let _bonusContentTab = 'konspekt';
+let _activeExamId = null;
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -722,6 +723,7 @@ function switchMobileSubSection(sub) {
     _activeLessonId = null;
     _activeModuleId = null;
     _activeBonusIndex = null;
+    _activeExamId = null;
     document.querySelectorAll('[data-mobile-sub]').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.mobileSub === sub)
     );
@@ -790,7 +792,7 @@ function renderMobileEditPanel() {
     // renderMobileAdminTab'ga albatta haqiqiy (falsy bo'lmagan) tab qiymati berilishi
     // kerak, aks holda funksiya darhol "tez orada" placeholder bilan qaytib ketadi va
     // dars/modul tarkibi hech qachon ko'rinmaydi.
-    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : null);
+    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : null);
 }
 
 function renderMobileModuleDetailTab(container, course, mod) {
@@ -1565,6 +1567,215 @@ function renderBonusLessonDetailTab(container, bonusIndex) {
     else if (_bonusContentTab === 'homework') _renderLcHomework(body, lessonRef, content, 'bonus');
 }
 
+// ─── Imtihonlar (72 dars — har 12 tadan + yakunlovchi = 7 ta) ───────────────
+function _getExamWorkingContent(mc, examId) {
+    if (!mc.examContents) mc.examContents = {};
+    if (mc.examContents[examId]) return mc.examContents[examId];
+    return getDefaultExamContent(examId);
+}
+
+function _saveExamWorkingContent(examId, content) {
+    const mc = getMobileContent();
+    if (!mc.examContents) mc.examContents = {};
+    content.updatedAt = new Date().toISOString().slice(0, 10);
+    mc.examContents[examId] = content;
+    saveMobileContent(mc);
+}
+
+function renderMobileExamListTab(container) {
+    const mc = getMobileContent();
+    const templateUrl = mc.certificateTemplateUrl;
+    const rows = LD_EXAM_META.map((meta, i) => {
+        const isFinal = meta.id === 'final';
+        const saved = mc.examContents && mc.examContents[meta.id];
+        const totalDefault = meta.counts.mc + meta.counts.sentence + meta.counts.blank + meta.counts.speaking;
+        const qCount = saved && saved.questions && saved.questions.length ? saved.questions.length : totalDefault;
+        const passPct = (saved && saved.passPercent) || 60;
+        return `
+        <div data-exam-id="${meta.id}" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+            <div style="width:44px;height:44px;border-radius:12px;background:${isFinal ? '#FEF3C7' : 'var(--blue-light,#dbeafe)'};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${isFinal ? '🏁' : '⏱️'}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:14px;color:var(--text)">${isFinal ? '🏁 ' : `${i + 1}-imtihon — `}${escapeHtml(meta.title)}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${qCount} ta savol · ${passPct}% o'tish balli${saved ? ' · tahrirlangan' : ''}</div>
+            </div>
+            <div style="color:var(--text-muted);flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--surface);margin-bottom:20px">
+            <div style="font-weight:700;font-size:13px;color:var(--text)">Sertifikat andozasi</div>
+            <div style="font-size:12px;color:var(--text-muted);margin:4px 0 12px">O'quvchi imtihondan muvaffaqiyatli o'tganda shu andoza fonida ismi va natijasi bilan sertifikat avtomatik tayyorlanadi.</div>
+            ${templateUrl ? `<img src="${escapeHtml(templateUrl)}" style="max-width:220px;max-height:140px;border-radius:8px;border:1px solid var(--border);margin-bottom:12px;display:block">` : ''}
+            <div style="display:flex;gap:8px;align-items:center">
+                <input type="file" id="certTemplateInput" accept="image/*" style="display:none">
+                <button type="button" id="certTemplateBtn" class="btn-ghost" style="font-size:12px">${templateUrl ? "🖼️ Andozani almashtirish" : '🖼️ Andoza yuklash'}</button>
+                ${templateUrl ? `<button type="button" id="certTemplateRemoveBtn" class="btn-danger-sm" style="font-size:12px">O'chirish</button>` : ''}
+            </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Har 12 ta darsdan so'ng imtihon, kurs oxirida esa yakunlovchi imtihon — savollarni va o'tish ballini shu yerdan tahrirlashingiz mumkin.</div>
+        <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)">${rows}</div>`;
+
+    document.getElementById('certTemplateBtn').addEventListener('click', () => document.getElementById('certTemplateInput').click());
+    document.getElementById('certTemplateInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const uploaded = await apiUploadFile(file);
+            const mc2 = getMobileContent();
+            mc2.certificateTemplateUrl = uploaded.url;
+            saveMobileContent(mc2);
+            renderMobileExamListTab(container);
+            showMiniToast('Andoza yuklandi');
+        } catch (err) {
+            alert('Yuklashda xatolik: ' + (err.message || err));
+        }
+    });
+    const removeBtn = document.getElementById('certTemplateRemoveBtn');
+    if (removeBtn) removeBtn.addEventListener('click', () => {
+        const mc2 = getMobileContent();
+        delete mc2.certificateTemplateUrl;
+        saveMobileContent(mc2);
+        renderMobileExamListTab(container);
+        showMiniToast("Andoza o'chirildi");
+    });
+
+    container.querySelectorAll('[data-exam-id]').forEach(row => {
+        row.addEventListener('click', () => {
+            _activeExamId = row.dataset.examId;
+            renderMobileEditPanel();
+        });
+    });
+}
+
+function renderExamDetailTab(container, examId) {
+    const meta = LD_EXAM_META.find(e => e.id === examId);
+    const index = LD_EXAM_META.findIndex(e => e.id === examId);
+    const isFinal = examId === 'final';
+
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
+    container.innerHTML = `
+    <div style="flex-shrink:0;padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface);flex-wrap:wrap">
+        <button type="button" id="backToExamList" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Imtihonlar
+        </button>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--border)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isFinal ? '🏁 ' : `${index + 1}-imtihon — `}${escapeHtml(meta.title)}</span>
+    </div>
+    <div id="examContentBody" style="flex:1;overflow-y:auto;padding:20px"></div>`;
+
+    document.getElementById('backToExamList').addEventListener('click', () => {
+        _activeExamId = null;
+        renderMobileEditPanel();
+    });
+
+    const body = document.getElementById('examContentBody');
+    const content = _getExamWorkingContent(getMobileContent(), examId);
+    if (!content.questions) content.questions = [];
+
+    function renderAll() {
+        body.innerHTML = `
+            <div class="form-group" style="max-width:240px">
+                <label>O'tish balli (%)</label>
+                <input type="number" id="examPassPercent" class="form-control" min="0" max="100" value="${content.passPercent ?? 60}">
+            </div>
+            <button type="button" class="btn-primary-sm" id="examSavePassPercent" style="margin-bottom:20px">Saqlash</button>
+            <div id="examMcList" style="margin-bottom:24px"></div>
+            <div id="examBlankList" style="margin-bottom:24px"></div>
+            <div id="examSentenceList" style="margin-bottom:24px"></div>
+            <div id="examSpeakingList" style="margin-bottom:24px"></div>`;
+
+        document.getElementById('examSavePassPercent').addEventListener('click', () => {
+            const raw = parseInt(document.getElementById('examPassPercent').value, 10);
+            content.passPercent = Math.max(0, Math.min(100, isNaN(raw) ? 60 : raw));
+            _saveExamWorkingContent(examId, content);
+            showMiniToast('Saqlandi');
+        });
+
+        renderEditableList(document.getElementById('examMcList'), {
+            title: 'Test savollari (multiple choice)', addLabel: "+ Savol qo'shish",
+            items: content.questions.filter(q => q.kind === 'multipleChoice'), idPrefix: 'emc',
+            renderRow: (x) => `${escapeHtml(x.question || '')}<br><span style="color:var(--text-muted)">Variantlar: ${escapeHtml((x.options || []).join(', '))} · To'g'ri: #${x.correctIndex}</span>`,
+            fields: [
+                { key: 'question', label: 'Savol', type: 'textarea', required: true },
+                { key: 'options', label: 'Variantlar (vergul bilan)', type: 'csv', required: true },
+                { key: 'correctIndex', label: "To'g'ri variant raqami (0 dan boshlab)", type: 'number', required: true },
+            ],
+            onChange: (newItems) => {
+                content.questions = [
+                    ...content.questions.filter(q => q.kind !== 'multipleChoice'),
+                    ...newItems.map(x => ({ ...x, kind: 'multipleChoice' })),
+                ];
+                _saveExamWorkingContent(examId, content);
+                showMiniToast('Saqlandi');
+                renderAll();
+            },
+        });
+
+        renderEditableList(document.getElementById('examBlankList'), {
+            title: "Bo'sh joy to'ldirish (fill blank)", addLabel: "+ Savol qo'shish",
+            items: content.questions.filter(q => q.kind === 'fillBlank'), idPrefix: 'eb',
+            renderRow: (x) => `${escapeHtml(x.sentence || '')}<br><span style="color:var(--text-muted)">Javob: ${escapeHtml(x.answer || '')} · Variantlar: ${escapeHtml((x.options || []).join(', '))}</span>`,
+            fields: [
+                { key: 'sentence', label: 'Gap', type: 'textarea', required: true },
+                { key: 'answer', label: "To'g'ri javob", required: true },
+                { key: 'options', label: 'Variantlar (vergul bilan)', type: 'csv', required: true },
+            ],
+            onChange: (newItems) => {
+                content.questions = [
+                    ...content.questions.filter(q => q.kind !== 'fillBlank'),
+                    ...newItems.map(x => ({ ...x, kind: 'fillBlank' })),
+                ];
+                _saveExamWorkingContent(examId, content);
+                showMiniToast('Saqlandi');
+                renderAll();
+            },
+        });
+
+        renderEditableList(document.getElementById('examSentenceList'), {
+            title: 'Gap tuzish (sentence build)', addLabel: "+ Gap qo'shish",
+            items: content.questions.filter(q => q.kind === 'sentenceBuild'), idPrefix: 'es',
+            renderRow: (x) => `${escapeHtml(x.translation || '')}<br><span style="color:var(--text-muted)">Javob: ${escapeHtml((x.answer || []).join(' '))}</span>`,
+            fields: [
+                { key: 'translation', label: 'Tarjima', required: true },
+                { key: 'words', label: "So'zlar (vergul bilan, aralash tartibda)", type: 'csv', required: true },
+                { key: 'answer', label: "To'g'ri tartib (vergul bilan)", type: 'csv', required: true },
+            ],
+            onChange: (newItems) => {
+                content.questions = [
+                    ...content.questions.filter(q => q.kind !== 'sentenceBuild'),
+                    ...newItems.map(x => ({ ...x, kind: 'sentenceBuild' })),
+                ];
+                _saveExamWorkingContent(examId, content);
+                showMiniToast('Saqlandi');
+                renderAll();
+            },
+        });
+
+        renderEditableList(document.getElementById('examSpeakingList'), {
+            title: 'Speaking (talaffuz)', addLabel: "+ Jumla qo'shish",
+            items: content.questions.filter(q => q.kind === 'speaking'), idPrefix: 'esp',
+            renderRow: (x) => `${escapeHtml(x.sentence || '')}<br><span style="color:var(--text-muted)">${escapeHtml(x.translation || '')}</span>`,
+            fields: [
+                { key: 'sentence', label: 'Inglizcha jumla', required: true },
+                { key: 'translation', label: 'Tarjima', required: true },
+            ],
+            onChange: (newItems) => {
+                content.questions = [
+                    ...content.questions.filter(q => q.kind !== 'speaking'),
+                    ...newItems.map(x => ({ ...x, kind: 'speaking' })),
+                ];
+                _saveExamWorkingContent(examId, content);
+                showMiniToast('Saqlandi');
+                renderAll();
+            },
+        });
+    }
+
+    renderAll();
+}
+
 const MOBILE_TOTAL_LESSONS = 72;
 
 // Har bir kursda 72 ta dars slotini kafolatlaydi — mobil ilova har doim 72 ta
@@ -2236,6 +2447,15 @@ function renderMobileAdminTab(tab) {
             renderBonusLessonDetailTab(container, _activeBonusIndex);
         } else {
             renderMobileBonusListTab(container);
+        }
+        return;
+    }
+
+    if (_mobileSubSection === 'imtihon') {
+        if (_activeExamId !== null) {
+            renderExamDetailTab(container, _activeExamId);
+        } else {
+            renderMobileExamListTab(container);
         }
         return;
     }

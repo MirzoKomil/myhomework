@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EXAM_PASS_PERCENT, ExamQuestion, getExam } from '@/data/exams';
+import { Exam, ExamQuestion, getResolvedExam } from '@/data/exams';
 import { theme } from '@/constants/theme';
 import { ExamMistake, saveExamResult } from '@/services/examStore';
 
@@ -41,7 +41,13 @@ type Phase = 'intro' | 'active' | 'break' | 'result';
 
 export default function ExamScreen() {
   const { examId } = useLocalSearchParams<{ examId: string }>();
-  const exam = useMemo(() => getExam(String(examId)), [examId]);
+  const [resolved, setResolved] = useState<{ exam: Exam; passPercent: number } | null | undefined>(undefined);
+  const exam = resolved?.exam;
+  const EXAM_PASS_PERCENT = resolved?.passPercent ?? 60;
+
+  useEffect(() => {
+    getResolvedExam(String(examId)).then((r) => setResolved(r ?? null));
+  }, [examId]);
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [qIndex, setQIndex] = useState(0);
@@ -83,6 +89,16 @@ export default function ExamScreen() {
     const t = setTimeout(() => setBreakRemaining((r) => r - 1), 1000);
     return () => clearTimeout(t);
   }, [phase, breakRemaining]);
+
+  if (resolved === undefined) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!exam) {
     return (

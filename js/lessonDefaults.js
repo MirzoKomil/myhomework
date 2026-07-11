@@ -224,6 +224,61 @@ function getDefaultBonusLessonContent(bonusIndex) {
     };
 }
 
+// ─── Imtihonlar — 6 ta oraliq (har 12 darsdan) + 1 ta yakunlovchi = 7 ta ───────
+// student-app/data/exams.ts'dagi buildExams()/buildQuestions() bilan bir xil mantiq.
+const LD_EXAM_INTERVAL_SIZE = 12;
+const LD_EXAM_TOTAL_LESSONS = 72;
+const LD_EXAM_INTERVAL_COUNT = LD_EXAM_TOTAL_LESSONS / LD_EXAM_INTERVAL_SIZE;
+
+function ldBuildExamQuestions(offset, mcCount, sentenceCount, blankCount, speakingCount) {
+    const mc = ldPickWindow(LD_MC_POOL, offset, mcCount).map((q) => ({
+        kind: 'multipleChoice', id: `${q.id}-${offset}`, question: q.question, options: q.options, correctIndex: q.correctIndex,
+    }));
+    const sentence = ldPickWindow(LD_SENTENCE_POOL, offset, sentenceCount).map((q) => ({
+        kind: 'sentenceBuild', id: `${q.id}-${offset}`, translation: q.translation, words: q.words, answer: q.answer,
+    }));
+    const blank = ldPickWindow(LD_GRAMMAR_POOL, offset, blankCount).map((q) => ({
+        kind: 'fillBlank', id: `${q.id}-${offset}`, sentence: q.sentence, answer: q.answer, options: q.options,
+    }));
+    const speaking = ldPickWindow(LD_SPEAKING_POOL, offset, speakingCount).map((q) => ({
+        kind: 'speaking', id: `${q.id}-${offset}`, sentence: q.sentence, translation: q.translation,
+    }));
+    return [...mc, ...blank, ...sentence, ...speaking];
+}
+
+const LD_EXAM_META = (() => {
+    const list = [];
+    for (let i = 0; i < LD_EXAM_INTERVAL_COUNT; i++) {
+        const fromLesson = i * LD_EXAM_INTERVAL_SIZE + 1;
+        const toLesson = fromLesson + LD_EXAM_INTERVAL_SIZE - 1;
+        list.push({
+            id: `interval-${i + 1}`,
+            title: `${fromLesson}–${toLesson}-darslar imtihoni`,
+            requiredLessons: toLesson,
+            offset: i * 7,
+            counts: { mc: 4, sentence: 3, blank: 3, speaking: 2 },
+        });
+    }
+    list.push({
+        id: 'final',
+        title: 'Yakunlovchi kurs imtihoni',
+        requiredLessons: LD_EXAM_TOTAL_LESSONS,
+        offset: LD_EXAM_INTERVAL_COUNT * 7,
+        counts: { mc: 6, sentence: 5, blank: 5, speaking: 4 },
+    });
+    return list;
+})();
+
+function getDefaultExamContent(examId) {
+    const meta = LD_EXAM_META.find((e) => e.id === examId);
+    if (!meta) return { passPercent: 60, questions: [] };
+    const { mc, sentence, blank, speaking } = meta.counts;
+    return {
+        passPercent: 60,
+        questions: ldBuildExamQuestions(meta.offset, mc, sentence, blank, speaking),
+    };
+}
+
 // ─── Main entry point ───────────────────────────────────────────────────────
 // student-app/data/lessonContent.ts ning getLessonContent() bilan bir xil natija beradi —
 // faqat CRM tahrirlash formasini "hozir appda chiqib turgan" qiymatlar bilan
