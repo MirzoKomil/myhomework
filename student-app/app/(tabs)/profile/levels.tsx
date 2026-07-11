@@ -26,6 +26,11 @@ export default function LevelsScreen() {
             <Card
               key={level.key}
               style={StyleSheet.flatten([styles.card, !isReached && styles.cardLocked, isCurrent && styles.cardCurrent])}>
+              {!isReached && (
+                <View style={styles.lockBadge}>
+                  <Ionicons name="lock-closed" size={14} color={theme.colors.textLight} />
+                </View>
+              )}
               <View style={styles.row}>
                 <Image source={level.image} style={[styles.image, !isReached && styles.imageLocked]} />
                 <View style={styles.info}>
@@ -37,9 +42,7 @@ export default function LevelsScreen() {
                       </View>
                     ) : isReached ? (
                       <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
-                    ) : (
-                      <Ionicons name="lock-closed" size={16} color={theme.colors.textLight} />
-                    )}
+                    ) : null}
                   </View>
                   <Text style={[styles.desc, !isReached && styles.descLocked]}>{level.description}</Text>
                   <Text style={styles.range}>
@@ -75,6 +78,20 @@ const styles = StyleSheet.create({
   card: {},
   cardLocked: { opacity: 0.6 },
   cardCurrent: { borderWidth: 1.5, borderColor: theme.colors.blue },
+  lockBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   image: { width: 56, height: 56, resizeMode: 'contain' },
   imageLocked: { opacity: 0.5 },
