@@ -190,6 +190,40 @@ function ldBuildSpeakingHomework(offset) {
     ];
 }
 
+// ─── Bonus (Yakshanba) darslar — 6 kategoriya, 3 marta takrorlanadi = 18 dars ──
+const LD_BONUS_CATEGORIES = [
+    { key: 'movie', label: 'Kino tahlil', emoji: '🎬', color: '#DC2626', bg: '#FEE2E2', konspekt: "Ushbu darsda qisqa video parcha ingliz tilida tahlil qilinadi — muhim iboralar va so'zlashuv uslubi o'rganiladi." },
+    { key: 'music', label: 'Musiqiy dars', emoji: '🎵', color: '#7C3AED', bg: '#EDE9FE', konspekt: "Ashula matni orqali yangi so'zlar va to'g'ri talaffuz mashq qilinadi." },
+    { key: 'motivation', label: 'Motivatsion dars', emoji: '🌟', color: '#D97706', bg: '#FEF3C7', konspekt: "Shaxsiy rivojlanish va motivatsiya mavzusida ingliz tilida qisqa video ko'rib chiqiladi." },
+    { key: 'quiz', label: "Intellektual o'yin", emoji: '🧠', color: '#2563EB', bg: '#DBEAFE', konspekt: "Quiz Night — bilimlaringizni ingliz tilida sinab ko'ring." },
+    { key: 'slang', label: "Ko'cha ingliz tili", emoji: '🗣️', color: '#059669', bg: '#D1FAE5', konspekt: "Kundalik hayotda ishlatiladigan so'zlashuv iboralari va slenglar o'rganiladi." },
+    { key: 'roleplay', label: 'Hayotiy vaziyat', emoji: '🎭', color: '#DB2777', bg: '#FCE7F3', konspekt: "Hayotiy vaziyatlar simulyatsiyasi orqali amaliy ingliz tili mashq qilinadi." },
+];
+
+function ldBuildBonusHomework(offset) {
+    return [
+        { id: 'A', kind: 'matching', title: 'PART A — Matching', pairs: ldPickWindow(LD_MATCH_POOL, offset, 6) },
+        { id: 'B', kind: 'multipleChoice', title: 'PART B — Multiple choice', questions: ldPickWindow(LD_MC_POOL, offset, 5) },
+        { id: 'C', kind: 'sentenceBuild', title: 'PART C — Sentence building', items: ldPickWindow(LD_SENTENCE_POOL, offset, 4) },
+    ];
+}
+
+function getDefaultBonusLessonContent(bonusIndex) {
+    const category = LD_BONUS_CATEGORIES[bonusIndex % LD_BONUS_CATEGORIES.length];
+    const offset = ldHashId(`bonus-${bonusIndex}`);
+    return {
+        lessonId: `bonus-${bonusIndex + 1}`,
+        dayType: 'bonus',
+        unitTitle: `${category.emoji} ${category.label}`,
+        konspekt: category.konspekt,
+        slides: [],
+        vocabulary: ldPickWindow(LD_VOCAB_POOL, offset, 10),
+        grammarBlanks: [],
+        speakingPractice: [],
+        homeworkParts: ldBuildBonusHomework(offset),
+    };
+}
+
 // ─── Main entry point ───────────────────────────────────────────────────────
 // student-app/data/lessonContent.ts ning getLessonContent() bilan bir xil natija beradi —
 // faqat CRM tahrirlash formasini "hozir appda chiqib turgan" qiymatlar bilan

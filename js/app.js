@@ -638,6 +638,8 @@ let _expandedLessonIds = new Set();
 let _expandedSectionRows = new Set();
 let _lessonContentTab = 'konspekt';
 let _lcActiveHomeworkPart = null;
+let _activeBonusIndex = null;
+let _bonusContentTab = 'konspekt';
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -719,6 +721,7 @@ function switchMobileSubSection(sub) {
     _activeCourseId = null;
     _activeLessonId = null;
     _activeModuleId = null;
+    _activeBonusIndex = null;
     document.querySelectorAll('[data-mobile-sub]').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.mobileSub === sub)
     );
@@ -787,7 +790,7 @@ function renderMobileEditPanel() {
     // renderMobileAdminTab'ga albatta haqiqiy (falsy bo'lmagan) tab qiymati berilishi
     // kerak, aks holda funksiya darhol "tez orada" placeholder bilan qaytib ketadi va
     // dars/modul tarkibi hech qachon ko'rinmaydi.
-    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : null);
+    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : null);
 }
 
 function renderMobileModuleDetailTab(container, course, mod) {
@@ -1087,6 +1090,10 @@ async function _pdfFileToSlideImages(file, onProgress) {
 function _getLessonWorkingContent(mc, lesson, dayIndex) {
     if (!mc.lessonContents) mc.lessonContents = {};
     if (mc.lessonContents[lesson.id]) return mc.lessonContents[lesson.id];
+    if (String(lesson.id).startsWith('bonus-')) {
+        const bonusIndex = Math.max(0, parseInt(String(lesson.id).replace('bonus-', ''), 10) - 1);
+        return getDefaultBonusLessonContent(bonusIndex);
+    }
     return getDefaultLessonContent(lesson.id, dayIndex);
 }
 
@@ -1473,6 +1480,89 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
     else if (_lessonContentTab === 'main') { dayType === 'grammar' ? _renderLcGrammar(body, lesson, content) : _renderLcSlides(body, lesson, content); }
     else if (_lessonContentTab === 'practice') _renderLcSpeakingPractice(body, lesson, content);
     else if (_lessonContentTab === 'homework') _renderLcHomework(body, lesson, content, dayType);
+}
+
+const MOBILE_TOTAL_BONUS_LESSONS = 18;
+
+// Ilovadagi "Bonus darslar" (har yakshanba, 6 kategoriya 3 marta takrorlanadi =
+// 18 dars, student-app/data/lessonContent.ts'dagi BONUS_CATEGORIES bilan bir
+// xil) ro'yxati — kurslardan mustaqil, alohida bo'lim sifatida ko'rsatiladi.
+function renderMobileBonusListTab(container) {
+    const mc = getMobileContent();
+    const rows = Array.from({ length: MOBILE_TOTAL_BONUS_LESSONS }, (_, i) => {
+        const category = LD_BONUS_CATEGORIES[i % LD_BONUS_CATEGORIES.length];
+        const round = Math.floor(i / LD_BONUS_CATEGORIES.length) + 1;
+        const bonusId = `bonus-${i + 1}`;
+        const saved = mc.lessonContents && mc.lessonContents[bonusId];
+        return `
+        <div data-bonus-index="${i}" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+            <div style="width:44px;height:44px;border-radius:12px;background:${category.bg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${category.emoji}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:14px;color:var(--text)">Bonus dars ${i + 1} — ${escapeHtml(category.label)}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${round}-bosqich${saved ? ' · tahrirlangan' : ''}</div>
+            </div>
+            <div style="color:var(--text-muted);flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Har yakshanba kuni beriladigan 18 ta qo'shimcha video dars — har birining video, konspekt, so'zlar va uyga vazifasini shu yerdan tahrirlashingiz mumkin.</div>
+        <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)">${rows}</div>`;
+
+    container.querySelectorAll('[data-bonus-index]').forEach(row => {
+        row.addEventListener('click', () => {
+            _activeBonusIndex = Number(row.dataset.bonusIndex);
+            _bonusContentTab = 'konspekt';
+            renderMobileEditPanel();
+        });
+    });
+}
+
+function renderBonusLessonDetailTab(container, bonusIndex) {
+    const category = LD_BONUS_CATEGORIES[bonusIndex % LD_BONUS_CATEGORIES.length];
+    const round = Math.floor(bonusIndex / LD_BONUS_CATEGORIES.length) + 1;
+    const bonusId = `bonus-${bonusIndex + 1}`;
+    const lessonRef = { id: bonusId };
+
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
+    container.innerHTML = `
+    <div style="flex-shrink:0;padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface);flex-wrap:wrap">
+        <button type="button" id="backToBonusList" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Bonus darslar
+        </button>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--border)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Bonus dars ${bonusIndex + 1} — ${escapeHtml(category.label)}</span>
+        <span style="background:${category.color};color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">${category.emoji} ${round}-bosqich</span>
+    </div>
+    <div class="mac-tabs" id="bonusContentTabs" style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0">
+        <button type="button" class="mac-tab-btn ${_bonusContentTab === 'konspekt' ? 'mac-tab-active' : ''}" data-blc-tab="konspekt">📝 Konspekt</button>
+        <button type="button" class="mac-tab-btn ${_bonusContentTab === 'vocab' ? 'mac-tab-active' : ''}" data-blc-tab="vocab">📖 Lug'at</button>
+        <button type="button" class="mac-tab-btn ${_bonusContentTab === 'vocabPractice' ? 'mac-tab-active' : ''}" data-blc-tab="vocabPractice">🔄 Mashqlar</button>
+        <button type="button" class="mac-tab-btn ${_bonusContentTab === 'homework' ? 'mac-tab-active' : ''}" data-blc-tab="homework">📋 Uyga vazifa</button>
+    </div>
+    <div id="bonusContentBody" style="flex:1;overflow-y:auto;padding:20px"></div>`;
+
+    document.getElementById('backToBonusList').addEventListener('click', () => {
+        _activeBonusIndex = null;
+        _lcActiveHomeworkPart = null;
+        renderMobileEditPanel();
+    });
+
+    container.querySelectorAll('[data-blc-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _bonusContentTab = btn.dataset.blcTab;
+            _lcActiveHomeworkPart = null;
+            renderBonusLessonDetailTab(container, bonusIndex);
+        });
+    });
+
+    const body = document.getElementById('bonusContentBody');
+    const content = _getLessonWorkingContent(getMobileContent(), lessonRef, 0);
+    if (_bonusContentTab === 'konspekt') _renderLcKonspekt(body, lessonRef, content);
+    else if (_bonusContentTab === 'vocab') _renderLcVocab(body, lessonRef, content);
+    else if (_bonusContentTab === 'vocabPractice') _renderLcVocabPractice(body, lessonRef, content);
+    else if (_bonusContentTab === 'homework') _renderLcHomework(body, lessonRef, content, 'bonus');
 }
 
 const MOBILE_TOTAL_LESSONS = 72;
@@ -2137,6 +2227,15 @@ function renderMobileAdminTab(tab) {
             }
         } else {
             renderMobileCoursesTab(container);
+        }
+        return;
+    }
+
+    if (_mobileSubSection === 'bonus') {
+        if (_activeBonusIndex !== null) {
+            renderBonusLessonDetailTab(container, _activeBonusIndex);
+        } else {
+            renderMobileBonusListTab(container);
         }
         return;
     }
