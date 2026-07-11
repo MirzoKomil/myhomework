@@ -1528,8 +1528,20 @@ function renderMobileCourseDetailTab(container, course) {
             ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">🎬 Videodars</span>`
             : `<span style="background:#4F8CFF;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">🗣️ Speaking</span>`;
 
+        // Qulf holati: video (toq) kunlarda oldingi darsning kerakli foizi, speaking
+        // (juft) kunlarda esa faqat davomat olinganidan keyin ochiladi — davomat
+        // holati alohida ko'rsatiladi.
+        const lockBadge = l.lock && l.lock.enabled
+            ? (isVideoDay
+                ? `<span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">🔒 ${l.lock.requiredPercent ?? 100}% talab</span>`
+                : (l.attendanceTaken
+                    ? `<span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">🔓 Davomat olindi</span>`
+                    : `<span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">🔒 Davomat kutilmoqda</span>`))
+            : '';
+
         const badges = [
             dayBadge,
+            lockBadge,
             l.isDemo ? `<span style="background:#f97316;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Demo</span>` : '',
             l.isPaid ? `<span style="background:var(--purple,#7c3aed);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Pullik</span>` : '',
             l.isActive ? `<span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;line-height:1.5;flex-shrink:0">Faol</span>` : '',
@@ -1747,6 +1759,13 @@ function _openLessonContextMenu(anchor, lessonId, course, container) {
             : `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`,
             lesson.isActive ? 'Nofaol qilish' : 'Faollashtirish (qulfdan chiqarish)', 'toggle-active'),
         menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`, lesson.isPaid ? 'Bepul qilish' : 'Pullik qilish', 'toggle-paid'),
+        menuItem(lesson.lock && lesson.lock.enabled
+            ? `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>`
+            : `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`,
+            lesson.lock && lesson.lock.enabled ? 'Qulfdan chiqarish' : 'Qulflash', 'toggle-lock'),
+        (idx % 2 !== 0 && lesson.lock && lesson.lock.enabled)
+            ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>`, lesson.attendanceTaken ? 'Davomatni bekor qilish' : 'Davomat olindi (ochish)', 'toggle-attendance')
+            : '',
         menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`, 'Nusxalash', 'copy'),
         idx > 0 ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`, "Yuqoriga ko'chirish", 'move-up') : '',
         idx < lessons.length - 1 ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>`, "Pastga ko'chirish", 'move-down') : '',
@@ -1797,6 +1816,41 @@ function _openLessonContextMenu(anchor, lessonId, course, container) {
             saveMobileContent(mc2);
             renderMobileCourseDetailTab(container, course);
             showMiniToast(mc2.lessons[gIdx].isPaid ? 'Pullik qilindi' : 'Bepul qilindi');
+        } else if (action === 'toggle-lock') {
+            const current = mc2.lessons[gIdx];
+            const isVideoDayForThis = idx % 2 === 0;
+            if (current.lock && current.lock.enabled) {
+                current.lock = { enabled: false };
+                saveMobileContent(mc2);
+                renderMobileCourseDetailTab(container, course);
+                showMiniToast('Dars qulfdan chiqarildi');
+            } else if (isVideoDayForThis) {
+                openModal('Darsni qulflash',
+                    `<div class="form-group"><label>Ushbu darsni ochish uchun oldingi dars necha % bajarilishi kerak?</label><input id="lockPercentInput" type="number" min="0" max="100" class="form-control" value="100"></div>`,
+                    `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor qilish</button><button type="button" class="btn-primary-sm" id="saveLockPercent">Qulflash</button>`,
+                    { wide: false }
+                );
+                document.getElementById('saveLockPercent').onclick = () => {
+                    const raw = parseInt(document.getElementById('lockPercentInput').value, 10);
+                    const pct = Math.max(0, Math.min(100, isNaN(raw) ? 100 : raw));
+                    current.lock = { enabled: true, requiredPercent: pct };
+                    saveMobileContent(mc2);
+                    closeModal();
+                    renderMobileCourseDetailTab(container, course);
+                    showMiniToast('Dars qulflandi');
+                };
+            } else {
+                current.lock = { enabled: true };
+                current.attendanceTaken = false;
+                saveMobileContent(mc2);
+                renderMobileCourseDetailTab(container, course);
+                showMiniToast('Dars qulflandi — davomat olinmaguncha ochilmaydi');
+            }
+        } else if (action === 'toggle-attendance') {
+            mc2.lessons[gIdx].attendanceTaken = !mc2.lessons[gIdx].attendanceTaken;
+            saveMobileContent(mc2);
+            renderMobileCourseDetailTab(container, course);
+            showMiniToast(mc2.lessons[gIdx].attendanceTaken ? 'Davomat olindi — dars ochiladi' : 'Davomat bekor qilindi');
         } else if (action === 'copy') {
             const copy = { ...allLessons[gIdx], id: 'l' + Date.now(), name: allLessons[gIdx].name + ' (nusxa)', createdAt: new Date().toISOString().slice(0, 10) };
             mc2.lessons.splice(gIdx + 1, 0, copy);

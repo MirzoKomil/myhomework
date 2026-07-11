@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { createElement, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Modal,
   Platform,
@@ -130,6 +131,24 @@ function LessonCard({
 
   const cardBg = lesson.type === 'bonus' && !lesson.locked ? '#FFFBEB' : theme.colors.surface;
 
+  // Qulflangan darsga bosilganda nega ochilmaganini tushuntiruvchi xabar — CRM'da
+  // qo'lda qulflangan darslar uchun (avtomatik "hali navbat kelmagan" darslar esa
+  // bosilmasligicha qoladi, ss.cardLocked'dagi disabled orqali).
+  const handleLockedPress = () => {
+    if (lesson.lockReason === 'attendance') {
+      Alert.alert(
+        'Dars hali ochilmagan',
+        "Siz ushbu darsga yetib keldingiz! Ustoz bilan dars o'tilganidan so'ng dars ma'lumotlari va uyga vazifalarini olishingiz mumkin bo'ladi."
+      );
+    } else if (lesson.lockReason === 'percent') {
+      Alert.alert(
+        'Dars hali ochilmagan',
+        `Bu darsni ochish uchun oldingi darsni kamida ${lesson.lockRequiredPercent ?? 100}% bajarishingiz kerak.`
+      );
+    }
+  };
+  const isManuallyLocked = lesson.locked && !!lesson.lockReason;
+
   const cardBody = (
     <>
       <TypeBadge type={lesson.type} />
@@ -238,8 +257,8 @@ function LessonCard({
 
   return (
     <Pressable
-      disabled={lesson.locked}
-      onPress={() => router.push(`/homework/lesson/${lesson.id}`)}
+      disabled={lesson.locked && !isManuallyLocked}
+      onPress={() => (lesson.locked ? handleLockedPress() : router.push(`/homework/lesson/${lesson.id}`))}
       style={[
         ss.card,
         { borderColor: cardBorderColor, backgroundColor: cardBg },
@@ -429,14 +448,36 @@ export default function RoadmapScreen() {
     const TOTAL_LESSONS = 72;
     const UNLOCKED_COUNT = 3;
     let prevComplete = true;
+    let prevPercent = 100;
     const mapped: LessonNode[] = [];
     for (let i = 0; i < TOTAL_LESSONS; i++) {
       const l = adminLessons[i];
       const lessonNum = i + 1;
       const id = l?.id ?? String(lessonNum);
-      const locked = i >= UNLOCKED_COUNT && !prevComplete;
+      const isVideoDay = i % 2 === 0;
 
-      const videoCategory: ProgressCategory = i % 2 === 0 ? 'video' : 'speaking';
+      // CRM'da admin darsni qulflagan bo'lsa: video (toq) kunlar oldingi
+      // (speaking) darsning kerakli % ga yetishi bilan ochiladi, speaking
+      // (juft) kunlar esa % dan qat'i nazar faqat davomat olinganda ochiladi.
+      // Hech qanday qulf sozlanmagan bo'lsa — eski standart ketma-ket ochilish
+      // qoidasi (birinchi UNLOCKED_COUNT ta dars ochiq, keyin oldingisi 100%
+      // bo'lishi kerak) ishlatiladi.
+      let locked: boolean;
+      let lockReason: 'percent' | 'attendance' | undefined;
+      if (l?.lock?.enabled) {
+        if (isVideoDay) {
+          const requiredPercent = l.lock.requiredPercent ?? 100;
+          locked = prevPercent < requiredPercent;
+          if (locked) lockReason = 'percent';
+        } else {
+          locked = !l.attendanceTaken;
+          if (locked) lockReason = 'attendance';
+        }
+      } else {
+        locked = i >= UNLOCKED_COUNT && !prevComplete;
+      }
+
+      const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
       const content = mergeLessonContent(getLessonContent(id, i), mc.lessonContents[id]);
       const percent = Math.round(
         (getCategoryProgress(id, videoCategory) +
@@ -445,15 +486,18 @@ export default function RoadmapScreen() {
           3
       );
       prevComplete = percent >= 100;
+      prevPercent = percent;
 
       mapped.push({
         id,
         title: l?.name ?? `${lessonNum}-dars`,
         subtitle: l?.isDemo ? 'Demo dars' : l?.isPaid ? 'Pullik' : '',
-        type: (i % 2 === 0 ? 'grammar' : 'speaking') as LessonType,
+        type: (isVideoDay ? 'grammar' : 'speaking') as LessonType,
         progress: 0,
         locked,
-        side: i % 2 === 0 ? 'left' : 'right',
+        lockReason,
+        lockRequiredPercent: l?.lock?.requiredPercent,
+        side: isVideoDay ? 'left' : 'right',
         stars: 0,
         milestone: lessonNum % 5 === 0 ? MILESTONE_GIFTS[lessonNum / 5 - 1] : undefined,
       });

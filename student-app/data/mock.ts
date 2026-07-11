@@ -23,6 +23,8 @@ export type LessonNode = {
   type: LessonType;
   progress: number;
   locked: boolean;
+  lockReason?: 'percent' | 'attendance';
+  lockRequiredPercent?: number;
   side: 'left' | 'right';
   stars: number;
   milestone?: MilestoneBadge;

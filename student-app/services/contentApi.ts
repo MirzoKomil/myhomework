@@ -23,6 +23,8 @@ export type AdminLesson = {
   isDemo?: boolean;
   isPaid?: boolean;
   isActive?: boolean;
+  lock?: { enabled: boolean; requiredPercent?: number };
+  attendanceTaken?: boolean;
   createdAt?: string;
 };
 
