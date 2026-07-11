@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/constants/theme';
+import { getLevelForLightning } from '@/data/levels';
 import { getRankedLeaderboard, profileStats } from '@/data/mock';
 import { getStudentProfile } from '@/data/studentProfiles';
 import { openThread } from '@/services/studentChatStore';
@@ -38,7 +39,9 @@ export function StudentProfileModal({
   if (!studentName) return null;
   const profile = getStudentProfile(studentName);
   const canMessage = profile.gender === MY_GENDER;
-  const leaderboardRank = getRankedLeaderboard('alltime', 'country').find((e) => e.name === profile.name)?.rank;
+  const leaderboardEntry = getRankedLeaderboard('alltime', 'country').find((e) => e.name === profile.name);
+  const leaderboardRank = leaderboardEntry?.rank;
+  const level = getLevelForLightning(leaderboardEntry?.displayLightning ?? 0);
 
   const handleMessage = async () => {
     if (!canMessage) {
@@ -70,6 +73,14 @@ export function StudentProfileModal({
               <Text style={styles.name}>{profile.name}</Text>
               <Text style={styles.subLabel}>{profile.courseStartDate} dan buyon o'quvchi</Text>
             </View>
+            {leaderboardEntry && (
+              <View style={styles.levelBadge}>
+                <Image source={level.image} style={styles.levelBadgeImage} />
+                <Text style={styles.levelBadgeText} numberOfLines={1}>
+                  {level.name}
+                </Text>
+              </View>
+            )}
             {leaderboardRank !== undefined && (
               <View style={styles.rankBadge}>
                 <Text style={styles.rankBadgeEmoji}>🏆</Text>
@@ -161,6 +172,17 @@ const styles = StyleSheet.create({
   },
   rankBadgeEmoji: { fontSize: 16 },
   rankBadgeText: { fontFamily: theme.fonts.bold, fontSize: 12, color: '#B45309' },
+  levelBadge: {
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: theme.colors.purpleLight,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    maxWidth: 76,
+  },
+  levelBadgeImage: { width: 22, height: 22, resizeMode: 'contain' },
+  levelBadgeText: { fontFamily: theme.fonts.bold, fontSize: 10, color: theme.colors.purple },
 
   blockedBanner: {
     flexDirection: 'row',
