@@ -8,7 +8,7 @@ import { ChatThreadView } from '@/components/chat/ChatThreadView';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { ChatMessage, celebrityPersonas, chatThreads } from '@/data/mock';
-import { addMessage, getMessages, subscribe } from '@/services/chatStore';
+import { addMessage, getMessages, refreshRealMessages, subscribe } from '@/services/chatStore';
 import { getStudentProfile } from '@/data/studentProfiles';
 import { getThread, sendMessage, subscribe as subscribeStudentChat } from '@/services/studentChatStore';
 import {
@@ -137,6 +137,7 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (!chatId || isStudentChat || isPersonaChat) return;
+    refreshRealMessages().then(() => setMessages(getMessages(chatId)));
     return subscribe(() => setMessages(getMessages(chatId)));
   }, [chatId, isStudentChat, isPersonaChat]);
 

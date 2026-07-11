@@ -20,6 +20,11 @@ const DEMO_SCHEDULE_API_BASE =
     ? '/api/state/demo-schedule'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-schedule';
 
+const DEMO_MESSAGES_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-messages'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-messages';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -213,4 +218,52 @@ export async function fetchDemoSchedule(): Promise<DemoScheduleResponse> {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
   return { telegramGroupLink: data.telegramGroupLink ?? '', topic: data.topic ?? '', startsAt: data.startsAt ?? null };
+}
+
+// "Muloqot" bo'limidagi Qo'llab-quvvatlash/Asosiy ustoz/Yordamchi ustoz
+// suhbatlari — CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchi
+// uchun haqiqiy, serverda saqlanadigan xabarlar. Boshqa hech qanday
+// o'quvchi ma'lumoti bu orqali oshkor qilinmaydi.
+export type DemoMessageThreadId = 'support' | 'main-teacher' | 'assistant-teacher';
+
+export type DemoMessage = {
+  id: string;
+  threadId: DemoMessageThreadId;
+  sender: 'student' | 'teacher' | 'admin';
+  senderId?: string | null;
+  senderName?: string;
+  type: 'text';
+  text?: string;
+  time: string;
+};
+
+export type DemoMessagesResponse = {
+  support: DemoMessage[];
+  mainTeacher: DemoMessage[];
+  assistantTeacher: DemoMessage[];
+};
+
+export async function fetchDemoMessages(): Promise<DemoMessagesResponse> {
+  const r = await fetch(DEMO_MESSAGES_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const data = await r.json();
+  return {
+    support: data.support ?? [],
+    mainTeacher: data.mainTeacher ?? [],
+    assistantTeacher: data.assistantTeacher ?? [],
+  };
+}
+
+export async function sendDemoMessage(threadId: DemoMessageThreadId, text: string): Promise<DemoMessage> {
+  const r = await fetch(DEMO_MESSAGES_API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ threadId, text }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Xatolik' }));
+    throw new Error(err.error || 'Xatolik');
+  }
+  const data = await r.json();
+  return data.message;
 }

@@ -461,7 +461,7 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId] = await Promise.all([
+        liveGrades, demoStudentId, studentMessages] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -484,6 +484,7 @@ async function getFullState() {
         getJsonData('manualMetrics'),
         getJsonData('liveGrades'),
         getJsonData('demoStudentId'),
+        getJsonData('studentMessages'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -502,7 +503,7 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId
+        liveGrades, demoStudentId, studentMessages
     };
 }
 
@@ -626,7 +627,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages') ? {} : [];
     }
     return row.data;
 }
@@ -714,6 +715,49 @@ async function getDemoStudentSchedule() {
     return { telegramGroupLink: student.telegramGroupLink || '', topic, startsAt };
 }
 
+const DEMO_MESSAGE_THREAD_IDS = ['support', 'main-teacher', 'assistant-teacher'];
+
+// Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
+// bitta o'quvchining uchta suhbat (Qo'llab-quvvatlash / Asosiy ustoz /
+// Yordamchi ustoz) xabarlarini qaytaradi. StudentId har doim serverda
+// demoStudentId'dan olinadi — mijozdan kelgan qiymatga ishonilmaydi.
+async function getDemoStudentMessages() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return { support: [], mainTeacher: [], assistantTeacher: [] };
+    const all = await getJsonData('studentMessages');
+    const byThread = all[demoStudentId] || {};
+    return {
+        support: byThread['support'] || [],
+        mainTeacher: byThread['main-teacher'] || [],
+        assistantTeacher: byThread['assistant-teacher'] || [],
+    };
+}
+
+// Namuna o'quvchi ilovadan xabar yozganda shu yerga yuboradi. StudentId
+// har doim serverda demoStudentId'dan olinadi, shuning uchun bu boshqa
+// hech bir o'quvchi ma'lumotini yoza olmaydi.
+async function sendDemoStudentMessage(threadId, text) {
+    if (!DEMO_MESSAGE_THREAD_IDS.includes(threadId)) throw new Error("Noto'g'ri suhbat");
+    const trimmed = String(text || '').trim();
+    if (!trimmed) throw new Error("Xabar matni bo'sh bo'lishi mumkin emas");
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+
+    const all = await getJsonData('studentMessages');
+    if (!all[demoStudentId]) all[demoStudentId] = {};
+    if (!all[demoStudentId][threadId]) all[demoStudentId][threadId] = [];
+    const message = {
+        id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        threadId, sender: 'student', type: 'text', text: trimmed,
+        time: new Date().toISOString(),
+    };
+    all[demoStudentId][threadId].push(message);
+    await tx(async (client) => {
+        await saveJsonData(client, 'studentMessages', all);
+    });
+    return message;
+}
+
 async function saveJsonData(client, key, data) {
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
@@ -743,6 +787,7 @@ async function patchState(partial) {
         if (partial.manualMetrics !== undefined) await saveJsonData(client, 'manualMetrics', partial.manualMetrics);
         if (partial.liveGrades !== undefined)    await saveJsonData(client, 'liveGrades', partial.liveGrades);
         if (partial.demoStudentId !== undefined) await saveJsonData(client, 'demoStudentId', partial.demoStudentId);
+        if (partial.studentMessages !== undefined) await saveJsonData(client, 'studentMessages', partial.studentMessages);
     });
 }
 
@@ -914,6 +959,7 @@ module.exports = {
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
     getHrEmployeesData, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule,
+    getDemoStudentMessages, sendDemoStudentMessage,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init

@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -60,6 +60,37 @@ router.get('/demo-schedule', async (req, res) => {
     }
 });
 
+// Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchining uchta suhbat (Qo'llab-quvvatlash/Asosiy ustoz/Yordamchi
+// ustoz) xabarlarini qaytaradi. StudentId har doim serverda demoStudentId'dan
+// olinadi.
+router.get('/demo-messages', async (req, res) => {
+    try {
+        const data = await getDemoStudentMessages();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-messages', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — namuna o'quvchi ilovadan xabar yozganda shu yerga
+// yuboradi. StudentId har doim serverda demoStudentId'dan olinadi — mijozdan
+// kelgan hech qanday qiymatga ishonilmaydi.
+router.post('/demo-messages', async (req, res) => {
+    try {
+        const { threadId, text } = req.body || {};
+        if (!threadId || typeof text !== 'string') {
+            return res.status(400).json({ error: "Suhbat va xabar matni yuborilishi shart" });
+        }
+        const message = await sendDemoStudentMessage(threadId, text);
+        res.json({ ok: true, message });
+    } catch (err) {
+        console.error('POST /api/state/demo-messages', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
 router.get('/', authRequired, async (req, res) => {
     try {
         res.json(await getFullState());
@@ -77,7 +108,7 @@ router.patch('/', authRequired, async (req, res) => {
             'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
             'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics',
-            'liveGrades', 'demoStudentId'
+            'liveGrades', 'demoStudentId', 'studentMessages'
         ];
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

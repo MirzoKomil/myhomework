@@ -3341,6 +3341,19 @@ function renderProfileSecuritySection() {
         </div>`;
 }
 
+// 121-ish: appdan "Qo'llab-quvvatlash" bo'limiga yozilgan xabarlarga admin
+// shu yerdan (o'z profilidan) javob beradi.
+function renderProfileSupportSection() {
+    return `
+        <div class="profile-header-bar">
+            <h1>Qo'llab-quvvatlash</h1>
+            <p>Appdagi "Qo'llab-quvvatlash" bo'limiga yozilgan xabarlarga shu yerdan javob bering</p>
+        </div>
+        <div class="profile-cards" style="max-width:560px">
+            <div class="profile-card" id="adminSupportChat"></div>
+        </div>`;
+}
+
 function renderProfileNotificationsSection() {
     const prefs = getProfileNotifPrefs();
     const rows = [
@@ -3738,11 +3751,27 @@ function renderProfileBody() {
         case 'security': html = renderProfileSecuritySection(); break;
         case 'notifications': html = renderProfileNotificationsSection(); break;
         case 'sessions': html = renderProfileSessionsSection(); break;
+        case 'support': html = renderProfileSupportSection(); break;
         default: html = renderProfileEditSection(user);
     }
     body.innerHTML = html;
     bindProfileEvents();
     if (_profileSection === 'sessions') loadAndRenderSessions();
+    if (_profileSection === 'support') {
+        const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
+        const container = document.getElementById('adminSupportChat');
+        if (container) {
+            if (!demoStudentId) {
+                container.innerHTML = '<p class="text-muted">Namuna o\'quvchi hali belgilanmagan (Davomat bo\'limidan tanlang).</p>';
+            } else {
+                renderCrmChatThread(container, {
+                    studentId: demoStudentId, threadId: 'support',
+                    senderRole: 'admin', senderId: null, senderName: user.name || 'Admin',
+                    title: "Qo'llab-quvvatlash",
+                });
+            }
+        }
+    }
 }
 
 function switchProfileSection(section) {
@@ -3759,6 +3788,14 @@ async function renderProfile() {
         _profileUser = await apiMe();
     } catch {
         _profileUser = getCurrentUser();
+    }
+    // 121-ish: "Qo'llab-quvvatlash" bo'limi faqat to'liq ruxsatli rollarga
+    // (admin/rop/boshliq) ko'rinadi — ustoz/sotuv menejeri/HR uchun yashirin.
+    const supportNavBtn = document.querySelector('[data-profile-section="support"]');
+    if (supportNavBtn) {
+        const isFullAccess = FULL_ACCESS_ROLES.has(_profileUser?.role);
+        supportNavBtn.style.display = isFullAccess ? '' : 'none';
+        if (!isFullAccess && _profileSection === 'support') _profileSection = 'edit';
     }
     switchProfileSection(_profileSection);
 }
@@ -4619,6 +4656,84 @@ function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCanc
     if (overlay) overlay.addEventListener('click', onOverlayClick);
 }
 
+// ─── O'quvchi ↔ ustoz/admin muloqoti (121-ish) ───────────────────────────────
+// Appdagi "Muloqot" bo'limining "Asosiy ustoz"/"Yordamchi ustoz"/"Qo'llab-
+// quvvatlash" suhbatlari uchun — faqat "Namuna o'quvchi" bilan bog'liq
+// xabarlar shu yerda saqlanadi (mh_student_messages: { [studentId]: { [threadId]: [] } }).
+const CRM_CHAT_THREAD_LABELS = {
+    support: "Qo'llab-quvvatlash",
+    'main-teacher': 'Asosiy ustoz',
+    'assistant-teacher': 'Yordamchi ustoz',
+};
+
+function getStudentMessages(studentId, threadId) {
+    const all = getItem(STORAGE_KEYS.studentMessages, {});
+    return (all[studentId] && all[studentId][threadId]) || [];
+}
+
+function appendStudentMessage(studentId, threadId, message) {
+    const all = getItem(STORAGE_KEYS.studentMessages, {});
+    if (!all[studentId]) all[studentId] = {};
+    if (!all[studentId][threadId]) all[studentId][threadId] = [];
+    all[studentId][threadId].push(message);
+    setItem(STORAGE_KEYS.studentMessages, all);
+}
+
+function _formatCrmChatTime(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+// Ixtiyoriy suhbat oynasini (ustoz kabineti yoki admin profilidagi
+// qo'llab-quvvatlash bo'limi uchun) chizadi — xabarlar ro'yxati + javob
+// yozish qatori. `senderRole` shu yerdan yuborilayotgan xabarning kimdan
+// ekanini bildiradi ('teacher' yoki 'admin'), studentga esa u appda "them"
+// (o'zganiki) sifatida ko'rinadi.
+function renderCrmChatThread(container, opts) {
+    if (!container) return;
+    const { studentId, threadId, senderRole, senderId, senderName, title } = opts;
+    const messages = getStudentMessages(studentId, threadId);
+    const bubbles = messages.length
+        ? messages.map(m => `
+            <div style="display:flex;${m.sender === 'student' ? '' : 'justify-content:flex-end;'}margin-bottom:8px">
+                <div style="max-width:78%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;${
+                    m.sender === 'student'
+                        ? 'background:var(--surface);color:var(--text);border:1px solid var(--border)'
+                        : 'background:var(--purple,#7c3aed);color:#fff'
+                }">
+                    <div>${escapeHtml(m.text || '')}</div>
+                    <div style="font-size:10px;opacity:0.75;margin-top:4px">${m.sender !== 'student' && m.senderName ? escapeHtml(m.senderName) + ' · ' : ''}${_formatCrmChatTime(m.time)}</div>
+                </div>
+            </div>`).join('')
+        : `<div class="mac-empty" style="padding:20px 0;text-align:center;color:var(--text-muted)">Hali xabar yo'q</div>`;
+
+    const uid = `${threadId}_${senderRole}`;
+    container.innerHTML = `
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:10px">${escapeHtml(title)}</div>
+        <div style="max-height:320px;overflow-y:auto;padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--bg)">${bubbles}</div>
+        <div style="display:flex;gap:8px">
+            <input type="text" id="crmChatInput_${uid}" class="form-control" placeholder="Javob yozing...">
+            <button type="button" class="btn-primary-sm" id="crmChatSend_${uid}">Yuborish</button>
+        </div>`;
+
+    const send = () => {
+        const input = document.getElementById(`crmChatInput_${uid}`);
+        const text = input.value.trim();
+        if (!text) return;
+        appendStudentMessage(studentId, threadId, {
+            id: 'msg-' + Date.now(),
+            threadId, sender: senderRole, senderId: senderId || null, senderName: senderName || '',
+            type: 'text', text, time: new Date().toISOString(),
+        });
+        renderCrmChatThread(container, opts);
+    };
+    document.getElementById(`crmChatSend_${uid}`).addEventListener('click', send);
+    document.getElementById(`crmChatInput_${uid}`).addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); send(); }
+    });
+}
+
 function renderMainAttendance() {
     initMainAttControls();
     _populateDemoStudentSelect();
@@ -4957,7 +5072,31 @@ function renderTeacherCabinetContent(teacherId) {
     if (!students.length) html += '<tr><td colspan="3" class="text-muted">O\'quvchilar yo\'q</td></tr>';
     html += '</tbody></table>';
 
+    // Appdagi "Muloqot" bo'limi bilan integratsiya (121-ish) — namuna
+    // o'quvchi shu ustozga biriktirilgan bo'lsa (asosiy yoki yordamchi
+    // sifatida), o'quvchi bilan yozishma shu yerda ko'rinadi.
+    const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
+    const demoStudent = demoStudentId ? getItem(STORAGE_KEYS.students, []).find(s => s.id === demoStudentId) : null;
+    const chatSlots = [];
+    if (demoStudent?.teacherId === teacherId) chatSlots.push({ threadId: 'main-teacher', label: 'Asosiy ustoz' });
+    if (demoStudent?.assistantTeacherId === teacherId) chatSlots.push({ threadId: 'assistant-teacher', label: 'Yordamchi ustoz' });
+    chatSlots.forEach(slot => {
+        html += `<h4 style="margin:20px 0 10px">💬 ${escapeHtml(demoStudent.name)} bilan yozishma (${slot.label})</h4>
+        <div id="teacherChat_${slot.threadId}"></div>`;
+    });
+
     document.getElementById('teacherCabinetContent').innerHTML = html;
+
+    chatSlots.forEach(slot => {
+        renderCrmChatThread(document.getElementById(`teacherChat_${slot.threadId}`), {
+            studentId: demoStudentId,
+            threadId: slot.threadId,
+            senderRole: 'teacher',
+            senderId: teacherId,
+            senderName: teacher?.name || '',
+            title: `${demoStudent.name} — ${slot.label}`,
+        });
+    });
 }
 
 // --- Maosh hisob-kitobi ---
