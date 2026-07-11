@@ -1,33 +1,139 @@
 import { Ionicons } from '@expo/vector-icons';
+import { AudioPlayer, createAudioPlayer } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { radioStations } from '@/data/mock';
+import { resolveStationStreamCandidates } from '@/services/radioStreams';
 
 const BAR_COUNT = 20;
 const WAVE_INTERVAL = 450;
+const CANDIDATE_TIMEOUT_MS = 8000;
 
 function randomWave() {
   return Array.from({ length: BAR_COUNT }, () => 8 + Math.floor(Math.random() * 36));
 }
 
+// Homework Radio — hech qanday tashqi oqimga ulanmaydigan, statik namoyish
+// sifatida qoladigan yagona stansiya (119-ish: qolgan hammasi haqiqiy
+// jonli oqimga ulanadi, bu birgina istisno).
+const STATIC_DEMO_ID = 'homework-radio';
+
+type PlaybackState = 'resolving' | 'buffering' | 'playing' | 'paused' | 'error';
+
 export default function RadioPlayerScreen() {
   const { stationId } = useLocalSearchParams<{ stationId: string }>();
   const station = radioStations.find((s) => s.id === stationId) ?? radioStations[0];
-  const [isPlaying, setIsPlaying] = useState(true);
+  const isStaticDemo = station.id === STATIC_DEMO_ID;
+
+  const [isPlaying, setIsPlaying] = useState(isStaticDemo);
+  const [playback, setPlayback] = useState<PlaybackState>(isStaticDemo ? 'playing' : 'resolving');
   const [waveHeights, setWaveHeights] = useState(randomWave);
   const [showInfo, setShowInfo] = useState(false);
+
+  const playerRef = useRef<AudioPlayer | null>(null);
+  const cancelledRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Nomzodlar ro'yxatidagi bittasi ishlamasa (xato beradi yoki belgilangan
+  // vaqt ichida jonli oqim boshlanmasa — masalan HLS Chrome'da), avtomatik
+  // ravishda keyingi nomzodga o'tadi. Faqat hammasi tugagandan keyin xato
+  // holatiga o'tkaziladi.
+  const tryCandidate = (candidates: string[], index: number) => {
+    if (cancelledRef.current) return;
+    if (index >= candidates.length) {
+      setPlayback('error');
+      return;
+    }
+    const player = createAudioPlayer(candidates[index]);
+    playerRef.current = player;
+
+    const advance = () => {
+      if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+      player.remove();
+      if (playerRef.current === player) playerRef.current = null;
+      tryCandidate(candidates, index + 1);
+    };
+
+    timeoutRef.current = setTimeout(() => {
+      if (cancelledRef.current || playerRef.current !== player) return;
+      advance();
+    }, CANDIDATE_TIMEOUT_MS);
+
+    player.addListener('playbackStatusUpdate', (status) => {
+      if (cancelledRef.current || playerRef.current !== player) return;
+      if (status.error) {
+        advance();
+        return;
+      }
+      if (status.playing) {
+        if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+        setPlayback('playing');
+        setIsPlaying(true);
+        return;
+      }
+      if (status.isBuffering) {
+        setPlayback('buffering');
+        return;
+      }
+      setPlayback('paused');
+      setIsPlaying(false);
+    });
+    player.play();
+  };
+
+  const connect = () => {
+    setPlayback('resolving');
+    setIsPlaying(false);
+    resolveStationStreamCandidates(station.streamQuery ?? station.name).then((candidates) => {
+      if (cancelledRef.current) return;
+      if (!candidates.length) {
+        setPlayback('error');
+        return;
+      }
+      tryCandidate(candidates, 0);
+    });
+  };
+
+  useEffect(() => {
+    if (isStaticDemo) return;
+    cancelledRef.current = false;
+    connect();
+    return () => {
+      cancelledRef.current = true;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      playerRef.current?.remove();
+      playerRef.current = null;
+    };
+  }, [station.id]);
 
   useEffect(() => {
     if (!isPlaying) return;
     const id = setInterval(() => setWaveHeights(randomWave()), WAVE_INTERVAL);
     return () => clearInterval(id);
   }, [isPlaying]);
+
+  const togglePlay = () => {
+    if (isStaticDemo) {
+      setIsPlaying((p) => !p);
+      return;
+    }
+    if (playback === 'error') {
+      connect();
+      return;
+    }
+    const player = playerRef.current;
+    if (!player) return;
+    if (player.playing) player.pause();
+    else player.play();
+  };
+
+  const isBusy = playback === 'resolving' || playback === 'buffering';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -49,10 +155,17 @@ export default function RadioPlayerScreen() {
           <Text style={styles.coverFlag}>{station.flag}</Text>
         </LinearGradient>
 
-        <View style={styles.liveBadge}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>JONLI EFIR</Text>
-        </View>
+        {playback === 'error' ? (
+          <View style={[styles.liveBadge, styles.errorBadge]}>
+            <Ionicons name="alert-circle" size={14} color={theme.colors.danger} />
+            <Text style={styles.liveText}>Ulanib bo'lmadi</Text>
+          </View>
+        ) : (
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>{isBusy ? 'ULANMOQDA...' : 'JONLI EFIR'}</Text>
+          </View>
+        )}
 
         <Text style={styles.name}>{station.name}</Text>
         <Text style={styles.genre}>{station.genre}</Text>
@@ -70,9 +183,14 @@ export default function RadioPlayerScreen() {
         </View>
 
         <Pressable
-          style={[styles.playBtn, { backgroundColor: station.colors[1] }]}
-          onPress={() => setIsPlaying((p) => !p)}>
-          <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
+          style={[styles.playBtn, { backgroundColor: station.colors[1] }, isBusy && styles.playBtnDisabled]}
+          disabled={isBusy}
+          onPress={togglePlay}>
+          {isBusy ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Ionicons name={playback === 'error' ? 'refresh' : isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
+          )}
         </Pressable>
       </View>
 
@@ -139,6 +257,7 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: theme.colors.danger },
   liveText: { fontFamily: theme.fonts.bold, fontSize: 11, color: theme.colors.danger, letterSpacing: 0.5 },
+  errorBadge: { gap: 6 },
   name: { fontFamily: theme.fonts.extraBold, fontSize: 24, color: theme.colors.text, marginBottom: 4 },
   genre: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted, marginBottom: 36 },
   waveRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 48, marginBottom: 36 },
@@ -151,6 +270,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...theme.shadow.card,
   },
+  playBtnDisabled: { opacity: 0.7 },
 
   dialogBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   dialogBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
