@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Speech from 'expo-speech';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { getLessonContent, VOCAB_PRACTICE_SIZE, VocabWord } from '@/data/lessonContent';
+import { getResolvedLessonContent, LessonContent, VOCAB_PRACTICE_SIZE, VocabWord } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markDone } from '@/services/lessonProgressStore';
@@ -31,8 +32,13 @@ function pickDistractors(all: VocabWord[], correct: VocabWord, count: number): s
 
 export default function VocabularyPracticeScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [content] = useState(() => getLessonContent(String(lessonId), 0));
-  const words = useMemo(() => content.vocabulary.slice(0, PRACTICE_SIZE), [content]);
+  const [content, setContent] = useState<LessonContent | null>(null);
+
+  useEffect(() => {
+    getResolvedLessonContent(String(lessonId), 0).then(setContent);
+  }, [lessonId]);
+
+  const words = useMemo(() => (content ? content.vocabulary.slice(0, PRACTICE_SIZE) : []), [content]);
 
   const [round, setRound] = useState(0); // 0: translation, 1: construct, 2: pronounce
   const [wordIndex, setWordIndex] = useState(0);
@@ -41,6 +47,16 @@ export default function VocabularyPracticeScreen() {
   const current = words[wordIndex];
   const totalSteps = words.length * STEP_LABELS.length;
   const stepNumber = round * words.length + wordIndex;
+
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.resultCenter}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const advance = (correct: boolean) => {
     if (correct) {
@@ -111,11 +127,14 @@ function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; al
   return (
     <View style={styles.stepContent}>
       <Text style={styles.instruction}>Tarjimasini tanlang</Text>
-      <View style={styles.wordCard}>
+      <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
-        <Text style={styles.wordEnglish}>{word.english}</Text>
+        <View style={styles.wordEnglishRow}>
+          <Text style={styles.wordEnglish}>{word.english}</Text>
+          <Ionicons name="volume-medium-outline" size={18} color={theme.colors.textLight} />
+        </View>
         <Text style={styles.wordTranscript}>{word.transcript}</Text>
-      </View>
+      </Pressable>
       <View style={styles.optionsGrid}>
         {options.map((opt) => {
           const isSelected = selected === opt;
@@ -230,11 +249,14 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
   return (
     <View style={styles.stepContent}>
       <Text style={styles.instruction}>So'zni talaffuz qiling</Text>
-      <View style={styles.wordCard}>
+      <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
-        <Text style={styles.wordEnglish}>{word.english}</Text>
+        <View style={styles.wordEnglishRow}>
+          <Text style={styles.wordEnglish}>{word.english}</Text>
+          <Ionicons name="volume-medium-outline" size={18} color={theme.colors.textLight} />
+        </View>
         <Text style={styles.wordTranscript}>{word.transcript}</Text>
-      </View>
+      </Pressable>
       <View style={styles.pronounceArea}>
         <Pressable style={[styles.micBtn, isRecording && styles.micBtnActive]} onPress={toggleRecording}>
           <Ionicons name={isRecording ? 'stop' : 'mic'} size={30} color="#fff" />
@@ -279,7 +301,8 @@ const styles = StyleSheet.create({
     gap: 4,
     ...theme.shadow.card,
   },
-  wordEnglish: { fontFamily: theme.fonts.extraBold, fontSize: 24, color: theme.colors.text, marginTop: 8 },
+  wordEnglishRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  wordEnglish: { fontFamily: theme.fonts.extraBold, fontSize: 24, color: theme.colors.text },
   wordTranscript: { fontFamily: theme.fonts.regular, fontSize: 14, color: theme.colors.textMuted },
   wordTranslationBig: { fontFamily: theme.fonts.bold, fontSize: 20, color: theme.colors.text, marginTop: 8 },
   optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import * as Speech from 'expo-speech';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -34,21 +35,23 @@ export default function VocabularyFolderScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>{content.vocabulary.length} ta so'z</Text>
         {content.vocabulary.map((word) => (
-          <Card key={word.id} style={styles.card}>
-            <View style={styles.row}>
-              <View style={styles.iconWrap}>
-                <Ionicons name={word.icon} size={26} color={theme.colors.purple} />
-              </View>
-              <View style={styles.info}>
-                <View style={styles.headRow}>
-                  <Text style={styles.english}>{word.english}</Text>
-                  <Ionicons name="volume-medium-outline" size={16} color={theme.colors.textLight} />
+          <Pressable key={word.id} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
+            <Card style={styles.card}>
+              <View style={styles.row}>
+                <View style={styles.iconWrap}>
+                  <Ionicons name={word.icon} size={26} color={theme.colors.purple} />
                 </View>
-                <Text style={styles.transcript}>{word.transcript}</Text>
-                <Text style={styles.translation}>{word.translation}</Text>
+                <View style={styles.info}>
+                  <View style={styles.headRow}>
+                    <Text style={styles.english}>{word.english}</Text>
+                    <Ionicons name="volume-medium-outline" size={16} color={theme.colors.textLight} />
+                  </View>
+                  <Text style={styles.transcript}>{word.transcript}</Text>
+                  <Text style={styles.translation}>{word.translation}</Text>
+                </View>
               </View>
-            </View>
-          </Card>
+            </Card>
+          </Pressable>
         ))}
       </ScrollView>
     </SafeAreaView>
