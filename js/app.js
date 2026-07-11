@@ -635,6 +635,7 @@ let _activeCourseId = null;
 let _activeLessonId = null;
 let _activeModuleId = null;
 let _expandedLessonIds = new Set();
+let _expandedVideoRows = new Set();
 let _lessonContentTab = 'konspekt';
 let _lcActiveHomeworkPart = null;
 
@@ -1476,9 +1477,39 @@ function renderMobileCourseDetailTab(container, course) {
                 <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(false)}</div>
             </div>`;
 
+        // Ilovada "Videodars" bo'limi ochilganda ikkita qism ko'rsatiladi (Videodarsni
+        // ko'rish / Mashqlarni bajarish) — CRM'da ham xuddi shunday ikki bosqichli
+        // qilib ko'rsatamiz: "Videodars" qatori tugmaga aylanadi, bosilganda shu ikki
+        // qism ochiladi. Video havolasi+konspekt aynan "Videodarsni ko'rish" ustiga
+        // bosilganda ochiladi.
+        const subRow = (icon, title, subtitle, tab) => `
+            <div data-open-lesson-section="${escapeHtml(l.id)}:${tab}" style="display:flex;align-items:center;gap:10px;padding:10px 16px 10px 46px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;background:var(--bg,#f9fafb);transition:background 0.12s" onmouseover="this.style.background='var(--border,#e5e7eb)'" onmouseout="this.style.background='var(--bg,#f9fafb)'">
+                <div style="width:30px;height:30px;border-radius:7px;background:var(--surface);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px">${icon}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:12px;color:var(--text)">${escapeHtml(title)}</div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${escapeHtml(subtitle)}</div>
+                </div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(false)}</div>
+            </div>`;
+        const videoRowExpanded = _expandedVideoRows.has(l.id);
+        const videoRow = expanded && isVideoDay ? `
+            <div data-toggle-video-row="${escapeHtml(l.id)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">🎬</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">Videodars</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(lcContent.videoUrl ? "Video, konspekt va grammatika mashqlari — video qo'yilgan" : "Video, konspekt va grammatika mashqlari — video hali qo'yilmagan")}</div>
+                </div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(videoRowExpanded)}</div>
+            </div>
+            ${videoRowExpanded ? `
+            <div>
+                ${subRow('▶️', "Videodarsni ko'rish", 'Video + konspekt + izohlar', 'konspekt')}
+                ${subRow('✏️', 'Mashqlarni bajarish', 'Grammar vazifalar', 'main')}
+            </div>` : ''}` : '';
+
         const modulesHTML = !expanded ? '' : isVideoDay ? `
         <div style="border-top:1px solid var(--border)">
-            ${sectionRow('🎬', 'Videodars', lcContent.videoUrl ? "Video, konspekt va grammatika mashqlari — video qo'yilgan" : "Video, konspekt va grammatika mashqlari — video hali qo'yilmagan", 'konspekt')}
+            ${videoRow}
             ${sectionRow('📖', "Yangi so'zlar", `${(lcContent.vocabulary || []).length} ta yangi so'z`, 'vocab')}
             ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
         </div>` : `
@@ -1543,10 +1574,19 @@ function renderMobileCourseDetailTab(container, course) {
         const menuBtn = e.target.closest('[data-lesson-menu]');
         const previewLesson = e.target.closest('[data-preview-lesson]');
         const openSection = e.target.closest('[data-open-lesson-section]');
+        const toggleVideoRow = e.target.closest('[data-toggle-video-row]');
 
         if (menuBtn) {
             e.stopPropagation();
             _openLessonContextMenu(menuBtn, menuBtn.dataset.lessonMenu, course, container);
+            return;
+        }
+        if (toggleVideoRow) {
+            e.stopPropagation();
+            const lid = toggleVideoRow.dataset.toggleVideoRow;
+            if (_expandedVideoRows.has(lid)) _expandedVideoRows.delete(lid);
+            else _expandedVideoRows.add(lid);
+            renderMobileCourseDetailTab(container, course);
             return;
         }
         if (openSection) {
