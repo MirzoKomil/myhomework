@@ -9,6 +9,11 @@ const API_BASE =
     ? '/api/state/mobile-content'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/mobile-content';
 
+const DEMO_GRADES_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-grades'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-grades';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -133,4 +138,23 @@ export function getLessonMaterials(mc: MobileContent, lessonId: string): LessonM
   const videoUrl = mc.lessonContents[lessonId]?.videoUrl || videoContent?.url;
   const files = contents.filter((c) => c.id !== videoContent?.id);
   return { videoUrl, files };
+}
+
+// Ustoz CRM'da o'zining kabinetidan davomat qilib, o'quvchini "qatnashdi" deb
+// belgilaganda majburiy kiritgan jonli dars bahosi — faqat CRM'da "Namuna
+// o'quvchi" deb belgilangan bitta o'quvchi uchun (boshqa o'quvchilarning
+// ma'lumotlari bu public endpoint orqali hech qachon oshkor qilinmaydi).
+export type LiveGradeEntry = {
+  date: string;
+  teacherId: string;
+  lessonId: string;
+  lessonName: string;
+  scores: { attendance: number; activity: number; speaking: number; understanding: number; discipline: number };
+};
+
+export async function fetchDemoGrades(): Promise<LiveGradeEntry[]> {
+  const r = await fetch(DEMO_GRADES_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const data = await r.json();
+  return data.grades ?? [];
 }

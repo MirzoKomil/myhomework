@@ -21,7 +21,9 @@ const STORAGE_KEYS = {
     salesPlan: 'mh_sales_plan',
     cashFlow: 'mh_cash_flow',
     orgChart: 'mh_org_chart',
-    manualMetrics: 'mh_manual_metrics'
+    manualMetrics: 'mh_manual_metrics',
+    liveGrades: 'mh_live_grades',
+    demoStudentId: 'mh_demo_student_id'
 };
 
 const CACHE_KEY_MAP = {
@@ -42,7 +44,9 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.salesPlan]: 'salesPlan',
     [STORAGE_KEYS.cashFlow]: 'cashFlow',
     [STORAGE_KEYS.orgChart]: 'orgChart',
-    [STORAGE_KEYS.manualMetrics]: 'manualMetrics'
+    [STORAGE_KEYS.manualMetrics]: 'manualMetrics',
+    [STORAGE_KEYS.liveGrades]: 'liveGrades',
+    [STORAGE_KEYS.demoStudentId]: 'demoStudentId'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(

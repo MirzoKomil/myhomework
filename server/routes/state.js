@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -11,6 +11,19 @@ router.get('/mobile-content', async (req, res) => {
         res.json(mc);
     } catch (err) {
         console.error('GET /api/state/mobile-content', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchining jonli dars baholarini qaytaradi (boshqa o'quvchilarning
+// ma'lumotlari hech qachon shu orqali oshkor qilinmaydi).
+router.get('/demo-grades', async (req, res) => {
+    try {
+        const grades = await getDemoStudentGrades();
+        res.json({ grades });
+    } catch (err) {
+        console.error('GET /api/state/demo-grades', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });
@@ -31,7 +44,8 @@ router.patch('/', authRequired, async (req, res) => {
             'teachers', 'students', 'salesManagers', 'timetable',
             'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
-            'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics'
+            'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics',
+            'liveGrades', 'demoStudentId'
         ];
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

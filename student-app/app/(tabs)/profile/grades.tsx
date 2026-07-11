@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -12,19 +12,27 @@ import { theme } from '@/constants/theme';
 import {
   ASSISTANT_RATING_CRITERIA,
   AssistantRatingKey,
-  GradeCriterionKey,
   TEACHER_GRADE_CRITERIA,
   TEACHER_GRADE_RUBRIC,
   TEACHER_RATING_CRITERIA,
   TeacherRatingKey,
   generateAssistantWeeklyRating,
   generateStudentRatingOfTeacher,
-  generateTeacherScores,
 } from '@/data/lessonGrades';
 import { UZ_MONTHS, generateScheduleDays } from '@/data/scheduleCalendar';
+import { fetchDemoGrades, LiveGradeEntry } from '@/services/contentApi';
 
 function formatShortDate(d: Date): string {
   return `${d.getDate()}-${UZ_MONTHS[d.getMonth()].toLowerCase()}`;
+}
+
+function formatDateLabel(dateStr: string): string {
+  // "YYYY-MM-DD" qismlarini to'g'ridan-to'g'ri ajratib olamiz — Date obyekti
+  // orqali parslash vaqt zonasiga qarab kunni bir kun oldinga/orqaga
+  // siljitib yuborishi mumkin.
+  const [, month, day] = dateStr.split('-').map(Number);
+  if (!month || !day) return dateStr;
+  return `${day}-${UZ_MONTHS[month - 1].toLowerCase()}`;
 }
 
 function Dots({ value, max = 5, color }: { value: number; max?: number; color: string }) {
@@ -58,18 +66,23 @@ function StarRow({
 export default function GradesScreen() {
   const [showRubric, setShowRubric] = useState(false);
 
-  const [scheduleDays] = useState(() => generateScheduleDays());
-  const liveLessons = useMemo(
-    () => scheduleDays.filter((d) => d.type === 'live' && d.isPast).sort((a, b) => b.date.getTime() - a.date.getTime()),
-    [scheduleDays]
-  );
-  const recentUnratedIds = useMemo(() => new Set(liveLessons.slice(0, 2).map((d) => d.dayNumber)), [liveLessons]);
+  // Ustoz CRM'da davomat qilib "qatnashdi" deb belgilagach majburiy kiritgan
+  // haqiqiy jonli dars baholari — endi soxta generatsiya o'rniga shu yerdan keladi.
+  const [liveLessons, setLiveLessons] = useState<LiveGradeEntry[] | null>(null);
+  useEffect(() => {
+    fetchDemoGrades()
+      .then((grades) => setLiveLessons([...grades].sort((a, b) => (a.date < b.date ? 1 : -1))))
+      .catch(() => setLiveLessons([]));
+  }, []);
+
+  const recentUnratedIds = useMemo(() => new Set((liveLessons ?? []).slice(0, 2).map((d) => d.date)), [liveLessons]);
 
   const categoryAverages = useMemo(() => {
+    const lessons = liveLessons ?? [];
     return TEACHER_GRADE_CRITERIA.map((c) => {
-      if (liveLessons.length === 0) return { ...c, avg: 0 };
-      const sum = liveLessons.reduce((s, lesson) => s + generateTeacherScores(lesson.dayNumber)[c.key], 0);
-      return { ...c, avg: sum / liveLessons.length };
+      if (lessons.length === 0) return { ...c, avg: 0 };
+      const sum = lessons.reduce((s, lesson) => s + lesson.scores[c.key], 0);
+      return { ...c, avg: sum / lessons.length };
     });
   }, [liveLessons]);
 
@@ -78,37 +91,47 @@ export default function GradesScreen() {
     return categoryAverages.reduce((sum, c) => sum + c.avg, 0) / categoryAverages.length;
   }, [categoryAverages]);
 
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const [studentRatings, setStudentRatings] = useState<Record<number, Record<TeacherRatingKey, number>>>(() => {
-    const seeded: Record<number, Record<TeacherRatingKey, number>> = {};
-    liveLessons.forEach((d) => {
-      if (!recentUnratedIds.has(d.dayNumber)) seeded[d.dayNumber] = generateStudentRatingOfTeacher(d.dayNumber);
-    });
-    return seeded;
-  });
-  const [drafts, setDrafts] = useState<Record<number, Partial<Record<TeacherRatingKey, number>>>>({});
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [studentRatings, setStudentRatings] = useState<Record<string, Record<TeacherRatingKey, number>>>({});
 
-  const toggleExpanded = (dayNumber: number) => {
+  useEffect(() => {
+    if (!liveLessons) return;
+    setStudentRatings((prev) => {
+      const seeded = { ...prev };
+      liveLessons.forEach((d) => {
+        if (!recentUnratedIds.has(d.date) && !seeded[d.date]) {
+          const seed = d.date.split('-').reduce((s, part) => s + Number(part), 0);
+          seeded[d.date] = generateStudentRatingOfTeacher(seed);
+        }
+      });
+      return seeded;
+    });
+  }, [liveLessons, recentUnratedIds]);
+
+  const [drafts, setDrafts] = useState<Record<string, Partial<Record<TeacherRatingKey, number>>>>({});
+
+  const toggleExpanded = (dateKey: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(dayNumber)) next.delete(dayNumber);
-      else next.add(dayNumber);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
       return next;
     });
   };
 
-  const setDraftValue = (dayNumber: number, key: TeacherRatingKey, value: number) => {
-    setDrafts((prev) => ({ ...prev, [dayNumber]: { ...prev[dayNumber], [key]: value } }));
+  const setDraftValue = (dateKey: string, key: TeacherRatingKey, value: number) => {
+    setDrafts((prev) => ({ ...prev, [dateKey]: { ...prev[dateKey], [key]: value } }));
   };
 
-  const submitRating = (dayNumber: number) => {
-    const draft = drafts[dayNumber];
+  const submitRating = (dateKey: string) => {
+    const draft = drafts[dateKey];
     if (!draft) return;
     const complete = TEACHER_RATING_CRITERIA.every((c) => draft[c.key]);
     if (!complete) return;
-    setStudentRatings((prev) => ({ ...prev, [dayNumber]: draft as Record<TeacherRatingKey, number> }));
+    setStudentRatings((prev) => ({ ...prev, [dateKey]: draft as Record<TeacherRatingKey, number> }));
   };
 
+  const [scheduleDays] = useState(() => generateScheduleDays());
   const completedSundays = useMemo(
     () => scheduleDays.filter((d) => d.type === 'bonus' && d.isPast).sort((a, b) => b.date.getTime() - a.date.getTime()),
     [scheduleDays]
@@ -167,20 +190,27 @@ export default function GradesScreen() {
           Har bir o'tgan jonli darsdan so'ng ustozingiz sizni 5 ta mezon bo'yicha baholaydi. Har bir ball — 1 coin va 1 chaqmoq.
         </Text>
 
-        {liveLessons.map((lesson) => {
-          const scores = generateTeacherScores(lesson.dayNumber);
-          const totalCoins = TEACHER_GRADE_CRITERIA.reduce((sum, c) => sum + scores[c.key as GradeCriterionKey], 0);
-          const isOpen = expanded.has(lesson.dayNumber);
-          const rated = studentRatings[lesson.dayNumber];
-          const draft = drafts[lesson.dayNumber] ?? {};
+        {liveLessons === null ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={theme.colors.purple} />
+          </View>
+        ) : liveLessons.length === 0 ? (
+          <Text style={styles.emptyText}>Hali ustozingiz sizni jonli darsdan baholamagan.</Text>
+        ) : (
+          liveLessons.map((lesson) => {
+          const scores = lesson.scores;
+          const totalCoins = TEACHER_GRADE_CRITERIA.reduce((sum, c) => sum + scores[c.key], 0);
+          const isOpen = expanded.has(lesson.date);
+          const rated = studentRatings[lesson.date];
+          const draft = drafts[lesson.date] ?? {};
           const draftComplete = TEACHER_RATING_CRITERIA.every((c) => draft[c.key]);
 
           return (
-            <Card key={lesson.dayNumber} style={styles.lessonCard}>
-              <Pressable style={styles.lessonHeader} onPress={() => toggleExpanded(lesson.dayNumber)}>
+            <Card key={lesson.date} style={styles.lessonCard}>
+              <Pressable style={styles.lessonHeader} onPress={() => toggleExpanded(lesson.date)}>
                 <View style={styles.lessonHeaderInfo}>
-                  <Text style={styles.lessonDate}>{formatShortDate(lesson.date)}</Text>
-                  <Text style={styles.lessonTopic}>{lesson.topic}</Text>
+                  <Text style={styles.lessonDate}>{formatDateLabel(lesson.date)}</Text>
+                  <Text style={styles.lessonTopic}>{lesson.lessonName}</Text>
                 </View>
                 <View style={styles.coinBadge}>
                   <CoinIcon size={13} />
@@ -222,13 +252,13 @@ export default function GradesScreen() {
                         <View key={c.key} style={styles.ratingInputBlock}>
                           <Text style={styles.criterionLabel}>{c.label}</Text>
                           <Text style={styles.ratingQuestion}>{c.question}</Text>
-                          <StarRow value={draft[c.key] ?? 0} onChange={(v) => setDraftValue(lesson.dayNumber, c.key, v)} />
+                          <StarRow value={draft[c.key] ?? 0} onChange={(v) => setDraftValue(lesson.date, c.key, v)} />
                         </View>
                       ))}
                       <Pressable
                         style={[styles.submitBtn, !draftComplete && styles.submitBtnDisabled]}
                         disabled={!draftComplete}
-                        onPress={() => submitRating(lesson.dayNumber)}>
+                        onPress={() => submitRating(lesson.date)}>
                         <Text style={styles.submitBtnText}>Baholarni yuborish</Text>
                       </Pressable>
                     </>
@@ -237,7 +267,8 @@ export default function GradesScreen() {
               )}
             </Card>
           );
-        })}
+        })
+        )}
 
         <Text style={styles.sectionTitle}>Yordamchi ustozni haftalik baholash</Text>
         <Text style={styles.sectionSubtitle}>Har yakshanba, hafta yakunlangach, yordamchi ustozingizni baholaysiz.</Text>
@@ -345,6 +376,8 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontFamily: theme.fonts.extraBold, fontSize: 16, color: theme.colors.text, marginTop: 12 },
   sectionSubtitle: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginBottom: 4, lineHeight: 17 },
+  loadingWrap: { paddingVertical: 30, alignItems: 'center' },
+  emptyText: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center', paddingVertical: 20 },
 
   lessonCard: {},
   lessonHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },

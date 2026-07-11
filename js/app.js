@@ -4415,8 +4415,110 @@ function initMainAttControls() {
     updateAttSectionTitle('mainAttTitle', subject);
 }
 
+// Ilovaning yagona namoyish profili qaysi haqiqiy o'quvchiga mos kelishini
+// tanlash — shu tanlovga qarab jonli dars baholari public API orqali
+// ilovaga chiqadi (boshqa o'quvchilarning ma'lumotlari hech qachon
+// oshkor qilinmaydi, chunki ular auth talab qiladigan CRM ichida qoladi).
+function _populateDemoStudentSelect() {
+    const sel = document.getElementById('demoStudentSelect');
+    if (!sel) return;
+    const allStudents = getItem(STORAGE_KEYS.students, []);
+    const current = getItem(STORAGE_KEYS.demoStudentId, '');
+    sel.innerHTML = '<option value="">— tanlanmagan —</option>' +
+        allStudents.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === current ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+    if (!sel.dataset.bound) {
+        sel.dataset.bound = '1';
+        sel.addEventListener('change', () => {
+            setItem(STORAGE_KEYS.demoStudentId, sel.value);
+            showMiniToast("Namuna o'quvchi yangilandi");
+        });
+    }
+}
+
+// Davomat tasdiqlanganda tanlanadigan darslar ro'yxati — barcha kurslardagi
+// juft (speaking) kunlar, chunki jonli darslar aynan shu kunlarda o'tiladi.
+function _getSpeakingLessonOptions() {
+    const mc = getMobileContent();
+    const options = [];
+    (mc.courses || []).forEach(course => {
+        const lessons = (mc.lessons || []).filter(l => l.courseId === course.id);
+        lessons.forEach((l, i) => {
+            const isVideoDay = i % 2 === 0;
+            if (!isVideoDay) options.push({ id: l.id, label: `${course.name} — ${l.name}` });
+        });
+    });
+    return options;
+}
+
+const LIVE_GRADE_CRITERIA = [
+    { key: 'attendance', label: 'Attendance (Qatnashuv)' },
+    { key: 'activity', label: 'Activity (Faollik)' },
+    { key: 'speaking', label: 'Speaking (Gapirish)' },
+    { key: 'understanding', label: 'Understanding (Tushunish)' },
+    { key: 'discipline', label: 'Discipline (Intizom)' },
+];
+
+// O'quvchini darsga "qatnashdi" deb belgilashdan oldin ustozdan majburiy
+// ravishda: (1) bugun qaysi dars o'tilgani va (2) 5 ta mezon bo'yicha baho
+// so'raladi — bekor qilinsa, davomat belgisi ham qo'yilmaydi.
+function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCancel) {
+    const lessonOptionsHtml = lessonOptions.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.label)}</option>`).join('');
+    const critHtml = LIVE_GRADE_CRITERIA.map(c => `
+        <div class="form-group">
+            <label>${escapeHtml(c.label)} <span style="color:var(--danger)">*</span></label>
+            <select id="lg_${c.key}" class="form-control">
+                <option value="">Tanlang</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            </select>
+        </div>`).join('');
+
+    openModal(`${escapeHtml(studentName)} — davomat tasdiqlash (${dateStr})`,
+        `<div class="form-group">
+            <label>Bugun qaysi dars o'tildi? <span style="color:var(--danger)">*</span></label>
+            <select id="lgLesson" class="form-control"><option value="">Tanlang</option>${lessonOptionsHtml}</select>
+        </div>
+        ${critHtml}`,
+        `<button type="button" class="btn-ghost" id="lgCancelBtn">Bekor qilish</button><button type="button" class="btn-primary-sm" id="lgSaveBtn">Tasdiqlash</button>`,
+        { wide: true }
+    );
+
+    let cancelled = false;
+    document.getElementById('lgCancelBtn').addEventListener('click', () => {
+        cancelled = true;
+        closeModal();
+        onCancel();
+    });
+    document.getElementById('lgSaveBtn').addEventListener('click', () => {
+        const lessonSel = document.getElementById('lgLesson');
+        const lessonId = lessonSel.value;
+        const lessonName = lessonId ? lessonSel.selectedOptions[0].textContent : '';
+        const scores = {};
+        let ok = !!lessonId;
+        LIVE_GRADE_CRITERIA.forEach(c => {
+            const v = document.getElementById(`lg_${c.key}`).value;
+            if (!v) ok = false;
+            scores[c.key] = Number(v) || 0;
+        });
+        if (!ok) { alert("Barcha maydonlarni to'ldiring — dars va barcha 5 ta mezon majburiy."); return; }
+        closeModal();
+        onSave({ lessonId, lessonName, scores });
+    });
+
+    // Modal tashqarisiga bosilganda ham "bekor qilish" bilan bir xil — checkbox ortga qaytariladi.
+    const overlay = document.getElementById('modalOverlay');
+    const onOverlayClick = (e) => {
+        if (e.target.id === 'modalOverlay' && !cancelled) {
+            cancelled = true;
+            overlay.removeEventListener('click', onOverlayClick);
+            onCancel();
+        }
+    };
+    if (overlay) overlay.addEventListener('click', onOverlayClick);
+}
+
 function renderMainAttendance() {
     initMainAttControls();
+    _populateDemoStudentSelect();
     const subject = getSelectedSubject('mainAttSubjectTabs');
     const teacherId = document.getElementById('mainAttTeacher').value;
     if (!teacherId) {
@@ -4483,10 +4585,36 @@ function renderMainAttendance() {
             const day = cb.dataset.day;
             if (!att[k]) att[k] = {};
             if (!att[k][sid]) att[k][sid] = {};
-            if (cb.checked) att[k][sid][day] = 1;
-            else delete att[k][sid][day];
-            setItem(STORAGE_KEYS.mainAttendance, att);
-            renderMainAttendance();
+            const [gy, gm] = monthVal.split('-').map(Number);
+            const dateStr = `${gy}-${String(gm).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            if (cb.checked) {
+                // Davomat qatnashdi deb belgilanishidan oldin dars va 5 mezonli baho
+                // majburiy — bekor qilinsa, checkbox ortga qaytariladi va davomat
+                // saqlanmaydi.
+                const student = students.find(s => s.id === sid);
+                _openLiveGradeModal(student ? student.name : sid, dateStr, _getSpeakingLessonOptions(), (grade) => {
+                    att[k][sid][day] = 1;
+                    setItem(STORAGE_KEYS.mainAttendance, att);
+                    const grades = getItem(STORAGE_KEYS.liveGrades, {});
+                    if (!grades[sid]) grades[sid] = [];
+                    grades[sid] = grades[sid].filter(g => g.date !== dateStr);
+                    grades[sid].push({ date: dateStr, teacherId, lessonId: grade.lessonId, lessonName: grade.lessonName, scores: grade.scores });
+                    setItem(STORAGE_KEYS.liveGrades, grades);
+                    renderMainAttendance();
+                }, () => {
+                    cb.checked = false;
+                });
+            } else {
+                delete att[k][sid][day];
+                setItem(STORAGE_KEYS.mainAttendance, att);
+                const grades = getItem(STORAGE_KEYS.liveGrades, {});
+                if (grades[sid] && grades[sid].length) {
+                    grades[sid] = grades[sid].filter(g => g.date !== dateStr);
+                    setItem(STORAGE_KEYS.liveGrades, grades);
+                }
+                renderMainAttendance();
+            }
         });
     });
 

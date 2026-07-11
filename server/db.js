@@ -460,7 +460,8 @@ async function saveMobileContentData(client, data) {
 async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
-        scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics] = await Promise.all([
+        scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
+        liveGrades, demoStudentId] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -481,6 +482,8 @@ async function getFullState() {
         getJsonData('cashFlow'),
         getJsonData('orgChart'),
         getJsonData('manualMetrics'),
+        getJsonData('liveGrades'),
+        getJsonData('demoStudentId'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -498,7 +501,8 @@ async function getFullState() {
         assistantAttendance: assistAtt,
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
-        scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics
+        scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
+        liveGrades, demoStudentId
     };
 }
 
@@ -620,8 +624,23 @@ async function saveHrEmployeesData(client, employees) {
 
 async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
-    if (!row) return (key === 'bonusData' || key === 'salesPlan') ? {} : [];
+    if (!row) {
+        if (key === 'demoStudentId') return '';
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades') ? {} : [];
+    }
     return row.data;
+}
+
+// Faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchining jonli
+// dars baholarini qaytaradi — boshqa barcha o'quvchilarning ma'lumotlari
+// public endpoint orqali hech qachon oshkor qilinmaydi.
+async function getDemoStudentGrades() {
+    const [liveGrades, demoStudentId] = await Promise.all([
+        getJsonData('liveGrades'),
+        getJsonData('demoStudentId'),
+    ]);
+    if (!demoStudentId) return [];
+    return liveGrades[demoStudentId] || [];
 }
 
 async function saveJsonData(client, key, data) {
@@ -651,6 +670,8 @@ async function patchState(partial) {
         if (partial.cashFlow !== undefined)    await saveJsonData(client, 'cashFlow', partial.cashFlow);
         if (partial.orgChart !== undefined)    await saveJsonData(client, 'orgChart', partial.orgChart);
         if (partial.manualMetrics !== undefined) await saveJsonData(client, 'manualMetrics', partial.manualMetrics);
+        if (partial.liveGrades !== undefined)    await saveJsonData(client, 'liveGrades', partial.liveGrades);
+        if (partial.demoStudentId !== undefined) await saveJsonData(client, 'demoStudentId', partial.demoStudentId);
     });
 }
 
@@ -820,7 +841,7 @@ module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, insertLead, patchState,
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
-    getHrEmployeesData, getMobileContentData,
+    getHrEmployeesData, getMobileContentData, getDemoStudentGrades,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init
