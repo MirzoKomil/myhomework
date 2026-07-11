@@ -1494,17 +1494,17 @@ function renderMobileCourseDetailTab(container, course) {
                 </div>
                 <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(false)}</div>
             </div>`;
-        const sectionRowExpanded = _expandedSectionRows.has(l.id);
+        const mediaRowExpanded = _expandedSectionRows.has(`${l.id}:media`);
         const videoRow = expanded && isVideoDay ? `
-            <div data-toggle-section-row="${escapeHtml(l.id)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+            <div data-toggle-section-row="${escapeHtml(l.id)}:media" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
                 <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">🎬</div>
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:13px;color:var(--text)">Videodars</div>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(lcContent.videoUrl ? "Video, konspekt va grammatika mashqlari — video qo'yilgan" : "Video, konspekt va grammatika mashqlari — video hali qo'yilmagan")}</div>
                 </div>
-                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(sectionRowExpanded)}</div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(mediaRowExpanded)}</div>
             </div>
-            ${sectionRowExpanded ? `
+            ${mediaRowExpanded ? `
             <div>
                 ${subRow('▶️', "Videodarsni ko'rish", 'Video + konspekt + izohlar', 'konspekt')}
                 ${subRow('✏️', 'Mashqlarni bajarish', 'Grammar vazifalar', 'main')}
@@ -1513,29 +1513,57 @@ function renderMobileCourseDetailTab(container, course) {
         // ko'rsatiladi: Slaydlarni ko'rish (slaydlar + PDF yuklash shu yerda) va
         // Mashqlarni bajarish (Nutq mashqlari — alohida).
         const speakingRow = expanded && !isVideoDay ? `
-            <div data-toggle-section-row="${escapeHtml(l.id)}" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+            <div data-toggle-section-row="${escapeHtml(l.id)}:media" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
                 <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">🗣️</div>
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:13px;color:var(--text)">Speaking ko'rgazmalari</div>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Slaydlar va speaking mashqlari</div>
                 </div>
-                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(sectionRowExpanded)}</div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(mediaRowExpanded)}</div>
             </div>
-            ${sectionRowExpanded ? `
+            ${mediaRowExpanded ? `
             <div>
                 ${subRow('🖼️', "Slaydlarni ko'rish", "Ko'rgazmali slaydlar + konspekt", 'main')}
                 ${subRow('🎤', 'Mashqlarni bajarish', 'Speaking vazifalar', 'practice')}
             </div>` : ''}` : '';
 
+        // Ilovada "Yangi so'zlar" ochilganda ham ikkita qism ko'rsatiladi: "Yangi
+        // so'zlar ro'yxati" (so'zlarni ko'rish/tinglash) va "O'rganish, yodlash,
+        // takrorlash" (mashqlar — bular so'zlar ro'yxati asosida avtomatik
+        // yaratiladi, alohida tahrirlanadigan tarkibga ega emas). So'zlarni
+        // qo'shish/tahrirlash qismi aynan "Yangi so'zlar ro'yxati" ustiga
+        // bosilganda ochiladi — bu toq va juft kunlarning ikkalasiga ham tegishli.
+        const vocabRowExpanded = expanded && _expandedSectionRows.has(`${l.id}:vocab`);
+        const vocabRow = expanded ? `
+            <div data-toggle-section-row="${escapeHtml(l.id)}:vocab" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
+                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">📖</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">Yangi so'zlar</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${(lcContent.vocabulary || []).length} ta yangi so'z</div>
+                </div>
+                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(vocabRowExpanded)}</div>
+            </div>
+            ${vocabRowExpanded ? `
+            <div>
+                ${subRow('📋', "Yangi so'zlar ro'yxati", `${(lcContent.vocabulary || []).length} ta so'z — rasm, tarjima, talaffuz`, 'vocab')}
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 16px 10px 46px;border-bottom:1px solid var(--border,#e5e7eb);background:var(--bg,#f9fafb)">
+                    <div style="width:30px;height:30px;border-radius:7px;background:var(--surface);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px">🔄</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600;font-size:12px;color:var(--text)">O'rganish, yodlash, takrorlash</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:1px">Tarjima tanlash, so'z tuzish, talaffuz — yuqoridagi ro'yxat asosida avtomatik</div>
+                    </div>
+                </div>
+            </div>` : ''}` : '';
+
         const modulesHTML = !expanded ? '' : isVideoDay ? `
         <div style="border-top:1px solid var(--border)">
             ${videoRow}
-            ${sectionRow('📖', "Yangi so'zlar", `${(lcContent.vocabulary || []).length} ta yangi so'z`, 'vocab')}
+            ${vocabRow}
             ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
         </div>` : `
         <div style="border-top:1px solid var(--border)">
             ${speakingRow}
-            ${sectionRow('📖', "Yangi so'zlar", `${(lcContent.vocabulary || []).length} ta yangi so'z`, 'vocab')}
+            ${vocabRow}
             ${sectionRow('📋', 'Uyga vazifa', `${(lcContent.homeworkParts || []).length} ta qism`, 'homework')}
         </div>`;
 
