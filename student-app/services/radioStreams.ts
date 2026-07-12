@@ -31,6 +31,19 @@ function streamScore(s: RadioBrowserStation): number {
   return score;
 }
 
+// Katalogdagi ko'p stansiyalar hali ham oddiy http:// manzil bilan qayd
+// etilgan (garchi aslida https'ni ham qo'llab-quvvatlasa-da) — bizning sayt
+// esa https-only (upgrade-insecure-requests + mixed-content bloklanadi),
+// shuning uchun http:// manzilga to'g'ridan-to'g'ri <audio> orqali ulanib
+// bo'lmaydi ("Media load rejected by URL safety check"). Shu sababli har bir
+// http:// nomzod uchun avval xuddi shu host+yo'l bo'yicha https:// varianti
+// sinab ko'riladi, asl http:// esa (kamdan-kam holatda kerak bo'lishi mumkin
+// bo'lgani uchun) pastroq ustuvorlikdagi zaxira sifatida saqlanadi.
+function withHttpsFallback(u: string): string[] {
+  if (u.startsWith('http://')) return [u.replace(/^http:\/\//, 'https://'), u];
+  return [u];
+}
+
 async function searchStreamUrls(query: string): Promise<string[]> {
   const url = `${RADIO_BROWSER_BASE}?name=${encodeURIComponent(query)}&limit=15&order=clickcount&reverse=true&hidebroken=true`;
   const res = await fetch(url, { headers: { 'User-Agent': 'MyHomeworkApp/1.0' } });
@@ -41,13 +54,16 @@ async function searchStreamUrls(query: string): Promise<string[]> {
 
   const seen = new Set<string>();
   const urls: string[] = [];
-  for (const c of candidates) {
-    const u = c.url_resolved || c.url;
-    if (u && !seen.has(u)) {
-      seen.add(u);
-      urls.push(u);
+  outer: for (const c of candidates) {
+    const raw = c.url_resolved || c.url;
+    if (!raw) continue;
+    for (const u of withHttpsFallback(raw)) {
+      if (!seen.has(u)) {
+        seen.add(u);
+        urls.push(u);
+      }
+      if (urls.length >= 6) break outer;
     }
-    if (urls.length >= 6) break;
   }
   return urls;
 }
