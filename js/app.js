@@ -2047,7 +2047,7 @@ function renderMobileCourseDetailTab(container, course) {
                     </div>
                     ${dateLabel ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">${escapeHtml(dateLabel)}</div>` : ''}
                 </div>
-                <div style="display:flex;align-items:center;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
+                <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
                     ${iconBtn(`data-lesson-menu="${escapeHtml(l.id)}"`, dotsSvg(), '')}
                     ${iconBtn(`data-preview-lesson="${escapeHtml(l.id)}" title="Dars tarkibini ko'rish/tahrirlash"`, eyeSvg(), '#16a34a')}
                 </div>
