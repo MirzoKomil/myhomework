@@ -3369,6 +3369,19 @@ function renderProfilePeerChatsSection() {
         </div>`;
 }
 
+// 125-ish: admin o'z profilidan namuna o'quvchining ilovadagi haqiqiy
+// faoliyatini (imtihon/uyga vazifa/mashq natijalari) kuzatadi.
+function renderProfileActivitySection() {
+    return `
+        <div class="profile-header-bar">
+            <h1>O'quvchi faoliyati</h1>
+            <p>Namuna o'quvchining ilovadagi haqiqiy natijalarini (imtihon, uyga vazifa, mashqlar) shu yerdan kuzating</p>
+        </div>
+        <div class="profile-cards" style="max-width:640px">
+            <div class="profile-card" id="adminActivityPanel"></div>
+        </div>`;
+}
+
 function renderProfileNotificationsSection() {
     const prefs = getProfileNotifPrefs();
     const rows = [
@@ -3768,6 +3781,7 @@ function renderProfileBody() {
         case 'sessions': html = renderProfileSessionsSection(); break;
         case 'support': html = renderProfileSupportSection(); break;
         case 'peer-chats': html = renderProfilePeerChatsSection(); break;
+        case 'activity': html = renderProfileActivitySection(); break;
         default: html = renderProfileEditSection(user);
     }
     body.innerHTML = html;
@@ -3790,6 +3804,17 @@ function renderProfileBody() {
     }
     if (_profileSection === 'peer-chats') {
         renderCrmPeerChatsBody(document.getElementById('adminPeerChats'));
+    }
+    if (_profileSection === 'activity') {
+        const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
+        const container = document.getElementById('adminActivityPanel');
+        if (container) {
+            if (!demoStudentId) {
+                container.innerHTML = '<p class="text-muted">Namuna o\'quvchi hali belgilanmagan (Davomat bo\'limidan tanlang).</p>';
+            } else {
+                renderCrmActivityPanel(container, demoStudentId);
+            }
+        }
     }
 }
 
@@ -3823,6 +3848,14 @@ async function renderProfile() {
         const isFullAccess = FULL_ACCESS_ROLES.has(_profileUser?.role);
         peerChatsNavBtn.style.display = isFullAccess ? '' : 'none';
         if (!isFullAccess && _profileSection === 'peer-chats') _profileSection = 'edit';
+    }
+    // 125-ish: "O'quvchi faoliyati" bo'limi ham xuddi shunday faqat
+    // to'liq ruxsatli rollarga ko'rinadi.
+    const activityNavBtn = document.querySelector('[data-profile-section="activity"]');
+    if (activityNavBtn) {
+        const isFullAccess = FULL_ACCESS_ROLES.has(_profileUser?.role);
+        activityNavBtn.style.display = isFullAccess ? '' : 'none';
+        if (!isFullAccess && _profileSection === 'activity') _profileSection = 'edit';
     }
     switchProfileSection(_profileSection);
 }
@@ -4731,6 +4764,61 @@ function _formatCrmChatTime(iso) {
     return d.toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+// ─── O'quvchining ilovadagi haqiqiy faoliyati (125-ish) ──────────────────────
+// Appda imtihon/uyga vazifa/video/lug'at mashqi yakunlanganda yozilgan
+// natijalar (mh_student_activity) — ustoz kabineti va admin profilida
+// faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchi uchun
+// ko'rsatiladi.
+const ACTIVITY_TYPE_LABELS = {
+    exam: "📝 Imtihon",
+    homework: "📋 Uyga vazifa",
+    video: "🎬 Video mashq",
+    vocab: "🔤 Lug'at mashqi",
+};
+
+function getStudentActivity(studentId) {
+    const all = getItem(STORAGE_KEYS.studentActivity, {});
+    return all[studentId] || [];
+}
+
+function renderCrmActivityPanel(container, studentId) {
+    if (!container) return;
+    const entries = getStudentActivity(studentId).slice(0, 15);
+    if (!entries.length) {
+        container.innerHTML = `<div class="mac-empty" style="padding:20px 0;text-align:center;color:var(--text-muted)">Hali faoliyat qayd etilmagan</div>`;
+        return;
+    }
+    container.innerHTML = entries.map(e => {
+        const typeLabel = ACTIVITY_TYPE_LABELS[e.type] || e.type;
+        let resultHtml = '';
+        if (e.type === 'exam') {
+            resultHtml = `<span class="badge ${e.passed ? 'badge-probniy' : 'badge-danger'}">${e.scorePercent}%${e.passed ? " — O'tdi" : ' — Yiqildi'}</span>`;
+        } else if (e.type === 'homework') {
+            resultHtml = `<span class="badge">${e.scorePercent}% to'g'ri</span>`;
+        } else if (e.wrongAttempts != null) {
+            resultHtml = e.wrongAttempts > 0
+                ? `<span class="badge badge-danger">${e.wrongAttempts} marta adashdi</span>`
+                : `<span class="badge badge-probniy">Xatosiz bajardi</span>`;
+        }
+        const mistakesHtml = (e.mistakes && e.mistakes.length)
+            ? `<div style="margin-top:6px;padding:8px;background:var(--bg);border-radius:8px">${e.mistakes.map(m => `
+                <div style="font-size:12px;margin-bottom:4px">
+                    <strong>${escapeHtml(m.question)}</strong><br>
+                    <span style="color:var(--danger)">Javobi: ${escapeHtml(m.yourAnswer)}</span> ·
+                    <span style="color:#22c55e">To'g'risi: ${escapeHtml(m.correctAnswer)}</span>
+                </div>`).join('')}</div>`
+            : '';
+        return `<div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <div style="font-weight:600;font-size:13px;color:var(--text)">${typeLabel} — ${escapeHtml(e.label)}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${_formatCrmChatTime(e.time)}</div>
+            </div>
+            <div style="margin-top:4px">${resultHtml}</div>
+            ${mistakesHtml}
+        </div>`;
+    }).join('');
+}
+
 // Ixtiyoriy suhbat oynasini (ustoz kabineti yoki admin profilidagi
 // qo'llab-quvvatlash bo'limi uchun) chizadi — xabarlar ro'yxati + javob
 // yozish qatori. `senderRole` shu yerdan yuborilayotgan xabarning kimdan
@@ -5226,6 +5314,13 @@ function renderTeacherCabinetContent(teacherId) {
         <div id="teacherChat_${slot.threadId}"></div>`;
     });
 
+    // 125-ish: o'quvchining ilovadagi haqiqiy faoliyati (imtihon/uyga
+    // vazifa/mashq natijalari) — faqat shu ustozga biriktirilgan bo'lsa.
+    if (chatSlots.length) {
+        html += `<h4 style="margin:20px 0 10px">📊 ${escapeHtml(demoStudent.name)} — ilovadagi faoliyati</h4>
+        <div id="teacherActivityPanel"></div>`;
+    }
+
     document.getElementById('teacherCabinetContent').innerHTML = html;
 
     chatSlots.forEach(slot => {
@@ -5238,6 +5333,10 @@ function renderTeacherCabinetContent(teacherId) {
             title: `${demoStudent.name} — ${slot.label}`,
         });
     });
+
+    if (chatSlots.length) {
+        renderCrmActivityPanel(document.getElementById('teacherActivityPanel'), demoStudentId);
+    }
 }
 
 // --- Maosh hisob-kitobi ---

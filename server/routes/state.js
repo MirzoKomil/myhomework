@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -129,6 +129,36 @@ router.get('/demo-book-delivery', async (req, res) => {
     } catch (err) {
         console.error('GET /api/state/demo-book-delivery', err);
         res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchining oxirgi imtihon/uyga vazifa/video/lug'at mashqi natijalarini
+// qaytaradi (ustoz kabineti va admin profili shu yerdan kuzatadi).
+router.get('/demo-activity', async (req, res) => {
+    try {
+        const data = await getDemoStudentActivity();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-activity', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — namuna o'quvchi ilovada mashq/imtihonni yakunlaganda
+// haqiqiy natijasini shu yerga yozadi. StudentId har doim serverda
+// demoStudentId'dan olinadi.
+router.post('/demo-activity', async (req, res) => {
+    try {
+        const { type, label, scorePercent, passed, wrongAttempts, mistakes } = req.body || {};
+        if (!type || typeof label !== 'string') {
+            return res.status(400).json({ error: "Faoliyat turi va nomi yuborilishi shart" });
+        }
+        const record = await addDemoStudentActivity({ type, label, scorePercent, passed, wrongAttempts, mistakes });
+        res.json({ ok: true, record });
+    } catch (err) {
+        console.error('POST /api/state/demo-activity', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });
 

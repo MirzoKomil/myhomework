@@ -9,6 +9,7 @@ import { CoinPill } from '@/components/ui/CoinIcon';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { getResolvedLessonContent, GrammarBlank, LessonContent } from '@/data/lessonContent';
+import { reportActivity } from '@/services/activitySync';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markDone } from '@/services/lessonProgressStore';
@@ -71,6 +72,7 @@ export default function VideoExercisesScreen() {
     const nextQueue = isCorrect ? rest : [...rest, current];
     if (nextQueue.length === 0) {
       markDone(String(lessonId), 'videoExercises');
+      reportActivity({ type: 'video', label: `${lessonId} - Video mashqlar`, wrongAttempts });
       setFinished(true);
       return;
     }

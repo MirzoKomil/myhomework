@@ -11,6 +11,7 @@ import { CoinPill } from '@/components/ui/CoinIcon';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { getResolvedLessonContent, LessonContent, VOCAB_PRACTICE_SIZE, VocabWord } from '@/data/lessonContent';
+import { reportActivity } from '@/services/activitySync';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markDone } from '@/services/lessonProgressStore';
@@ -96,6 +97,7 @@ export default function VocabularyPracticeScreen() {
     }
     markDone(String(lessonId), 'vocabPractice');
     saveLastPosition({ lessonId: String(lessonId), section: 'vocabulary/practice', label: "O'rganish, yodlash, takrorlash" });
+    reportActivity({ type: 'vocab', label: `${lessonId} - Lug'at mashqi`, wrongAttempts });
     setFinished(true);
   };
 

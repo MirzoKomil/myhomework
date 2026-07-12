@@ -11,6 +11,7 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { theme } from '@/constants/theme';
 import { ChatMessage } from '@/data/mock';
 import { getResolvedLessonContent, HomeworkPart, LessonContent, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
+import { reportActivity } from '@/services/activitySync';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markHomeworkPartDone } from '@/services/lessonProgressStore';
@@ -143,6 +144,7 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
         const accuracy = pairs.length / (pairs.length + wrongCount);
         if (accuracy >= PASS_THRESHOLD) {
           onDone();
+          reportActivity({ type: 'homework', label: `${lessonId} - Moslashtirish`, scorePercent: Math.round(accuracy * 100) });
           setTimeout(() => setFinished(true), 500);
         } else {
           setTimeout(() => setTooLow(Math.round(accuracy * 100)), 500);
@@ -233,6 +235,7 @@ function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sen
       const accuracy = nextCorrectCount / blanks.length;
       if (accuracy >= PASS_THRESHOLD) {
         onDone();
+        reportActivity({ type: 'homework', label: `${lessonId} - Bo'sh joy to'ldirish`, scorePercent: Math.round(accuracy * 100) });
         setFinished(true);
       } else {
         setTooLow(Math.round(accuracy * 100));
@@ -310,6 +313,7 @@ function MultipleChoicePart({ questions, onDone, lessonId }: { questions: Multip
       const accuracy = nextCorrectCount / questions.length;
       if (accuracy >= PASS_THRESHOLD) {
         onDone();
+        reportActivity({ type: 'homework', label: `${lessonId} - Testlar`, scorePercent: Math.round(accuracy * 100) });
         setFinished(true);
       } else {
         setTooLow(Math.round(accuracy * 100));
@@ -393,6 +397,7 @@ function SentenceBuildPart({ items, onDone, lessonId }: { items: SentenceBuildQ[
           const accuracy = nextCorrectCount / items.length;
           if (accuracy >= PASS_THRESHOLD) {
             onDone();
+            reportActivity({ type: 'homework', label: `${lessonId} - Gap tuzish`, scorePercent: Math.round(accuracy * 100) });
             setFinished(true);
           } else {
             setTooLow(Math.round(accuracy * 100));

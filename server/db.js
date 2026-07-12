@@ -467,7 +467,7 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages] = await Promise.all([
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -492,6 +492,7 @@ async function getFullState() {
         getJsonData('demoStudentId'),
         getJsonData('studentMessages'),
         getJsonData('peerMessages'),
+        getJsonData('studentActivity'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -510,7 +511,7 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity
     };
 }
 
@@ -634,7 +635,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity') ? {} : [];
     }
     return row.data;
 }
@@ -883,6 +884,52 @@ async function getDemoStudentBookDelivery() {
     };
 }
 
+const ACTIVITY_TYPES = ['exam', 'homework', 'video', 'vocab'];
+const MAX_ACTIVITY_ENTRIES = 50;
+
+// 125-ish: appda o'quvchi imtihon/uyga vazifa/video/lug'at mashqlarini
+// bajarganda haqiqiy natijasini (ball, to'g'ri/adashgan) shu yerga yozadi —
+// ustoz o'z kabinetidan va admin profilidan bularni kuzatib turishi uchun.
+// Faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchi uchun.
+async function getDemoStudentActivity() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return [];
+    const all = await getJsonData('studentActivity');
+    return all[demoStudentId] || [];
+}
+
+async function addDemoStudentActivity(entry) {
+    const type = String(entry?.type || '').trim();
+    if (!ACTIVITY_TYPES.includes(type)) throw new Error("Noto'g'ri faoliyat turi");
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+
+    const all = await getJsonData('studentActivity');
+    if (!all[demoStudentId]) all[demoStudentId] = [];
+    const record = {
+        id: 'act-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        type,
+        label: String(entry.label || '').slice(0, 200),
+        scorePercent: typeof entry.scorePercent === 'number' ? entry.scorePercent : null,
+        passed: typeof entry.passed === 'boolean' ? entry.passed : null,
+        wrongAttempts: typeof entry.wrongAttempts === 'number' ? entry.wrongAttempts : null,
+        mistakes: Array.isArray(entry.mistakes)
+            ? entry.mistakes.slice(0, 20).map(m => ({
+                question: String(m?.question || '').slice(0, 300),
+                yourAnswer: String(m?.yourAnswer || '').slice(0, 300),
+                correctAnswer: String(m?.correctAnswer || '').slice(0, 300),
+            }))
+            : [],
+        time: new Date().toISOString(),
+    };
+    all[demoStudentId].unshift(record);
+    if (all[demoStudentId].length > MAX_ACTIVITY_ENTRIES) all[demoStudentId].length = MAX_ACTIVITY_ENTRIES;
+    await tx(async (client) => {
+        await saveJsonData(client, 'studentActivity', all);
+    });
+    return record;
+}
+
 async function saveJsonData(client, key, data) {
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
@@ -1088,6 +1135,7 @@ module.exports = {
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     getDemoStudentBookDelivery,
+    getDemoStudentActivity, addDemoStudentActivity,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init

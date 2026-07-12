@@ -25,7 +25,8 @@ const STORAGE_KEYS = {
     liveGrades: 'mh_live_grades',
     demoStudentId: 'mh_demo_student_id',
     studentMessages: 'mh_student_messages',
-    peerMessages: 'mh_peer_messages'
+    peerMessages: 'mh_peer_messages',
+    studentActivity: 'mh_student_activity'
 };
 
 const CACHE_KEY_MAP = {
@@ -50,7 +51,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.liveGrades]: 'liveGrades',
     [STORAGE_KEYS.demoStudentId]: 'demoStudentId',
     [STORAGE_KEYS.studentMessages]: 'studentMessages',
-    [STORAGE_KEYS.peerMessages]: 'peerMessages'
+    [STORAGE_KEYS.peerMessages]: 'peerMessages',
+    [STORAGE_KEYS.studentActivity]: 'studentActivity'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(

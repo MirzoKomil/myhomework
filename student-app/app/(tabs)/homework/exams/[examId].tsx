@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Exam, ExamQuestion, getResolvedExam } from '@/data/exams';
 import { theme } from '@/constants/theme';
+import { reportActivity } from '@/services/activitySync';
 import { ExamMistake, saveExamResult } from '@/services/examStore';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -133,6 +134,8 @@ export default function ExamScreen() {
     const scorePercent = Math.round((correctCount / total) * 100);
     const passed = scorePercent >= EXAM_PASS_PERCENT;
     saveExamResult(exam!.id, { passed, scorePercent, mistakes, attemptedAt: Date.now() });
+    // 125-ish: ustoz/admin CRM'dan haqiqiy natijani kuzatishi uchun.
+    reportActivity({ type: 'exam', label: exam!.title, scorePercent, passed, mistakes });
     setPhase('result');
     void answeredSoFar;
   }

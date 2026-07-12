@@ -35,6 +35,11 @@ const DEMO_BOOK_DELIVERY_API_BASE =
     ? '/api/state/demo-book-delivery'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-book-delivery';
 
+const DEMO_ACTIVITY_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-activity'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-activity';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -349,4 +354,43 @@ export async function fetchDemoBookDelivery(): Promise<DemoBookDeliveryResponse>
   const r = await fetch(DEMO_BOOK_DELIVERY_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
+}
+
+// 125-ish: o'quvchi imtihon/uyga vazifa/video/lug'at mashqini yakunlaganda
+// haqiqiy natijasini (ball, to'g'ri/adashgan, xatolar) shu yerga yozadi —
+// ustoz o'z kabinetidan va admin profilidan bularni kuzatib turishi uchun.
+// Faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchi uchun.
+export type ActivityMistake = { question: string; yourAnswer: string; correctAnswer: string };
+
+export type DemoActivityEntry = {
+  id: string;
+  type: 'exam' | 'homework' | 'video' | 'vocab';
+  label: string;
+  scorePercent: number | null;
+  passed: boolean | null;
+  wrongAttempts: number | null;
+  mistakes: ActivityMistake[];
+  time: string;
+};
+
+export async function fetchDemoActivity(): Promise<DemoActivityEntry[]> {
+  const r = await fetch(DEMO_ACTIVITY_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function sendDemoActivity(entry: {
+  type: DemoActivityEntry['type'];
+  label: string;
+  scorePercent?: number;
+  passed?: boolean;
+  wrongAttempts?: number;
+  mistakes?: ActivityMistake[];
+}): Promise<void> {
+  const r = await fetch(DEMO_ACTIVITY_API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
 }
