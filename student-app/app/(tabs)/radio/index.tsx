@@ -65,13 +65,13 @@ export default function RadioScreen() {
           </View>
         </LinearGradient>
 
-        <Text style={styles.sectionTitle}>🇬🇧 Britaniya radiolari</Text>
-        {ukStations.map((station) => (
+        <Text style={styles.sectionTitle}>🇺🇸 Amerika radiolari</Text>
+        {usStations.map((station) => (
           <StationRow key={station.id} station={station} />
         ))}
 
-        <Text style={styles.sectionTitle}>🇺🇸 Amerika radiolari</Text>
-        {usStations.map((station) => (
+        <Text style={styles.sectionTitle}>🇬🇧 Britaniya radiolari</Text>
+        {ukStations.map((station) => (
           <StationRow key={station.id} station={station} />
         ))}
 
