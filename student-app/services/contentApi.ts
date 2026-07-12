@@ -30,6 +30,11 @@ const DEMO_PEER_MESSAGES_API_BASE =
     ? '/api/state/demo-peer-messages'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-peer-messages';
 
+const DEMO_BOOK_DELIVERY_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-book-delivery'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-book-delivery';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -327,4 +332,21 @@ export async function sendDemoPeerMessage(peerId: string, peerName: string, text
   }
   const data = await r.json();
   return data.message;
+}
+
+// "Yetkazib berish xizmati → Kitob yetkazish" ekrani uchun — CRM'ning
+// Sotuv bo'limidagi "Kitob yetkazish" kanban-yozuvidan (bookRoadmap) olingan
+// haqiqiy holat. Faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchi uchun — mos yozuv topilmasa null.
+export type DemoBookDeliveryResponse = {
+  address: string;
+  stage: 'preparing' | 'dispatched' | 'in_transit' | 'delivered';
+  dispatchedDate: string | null;
+  deliveredDate: string | null;
+} | null;
+
+export async function fetchDemoBookDelivery(): Promise<DemoBookDeliveryResponse> {
+  const r = await fetch(DEMO_BOOK_DELIVERY_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
 }

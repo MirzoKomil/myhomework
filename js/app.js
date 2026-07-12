@@ -14229,6 +14229,9 @@ function autoSyncLeadToBookRoadmap(lang, lead) {
         date: new Date().toLocaleDateString('uz-UZ'),
         status: 'yangi-oquvchi',
         lang,
+        // 124-ish: appdagi "Kitob yetkazish" ekrani shu manzilni ko'rsatadi.
+        address: lead.paymentOnboarding?.bookAddress || '',
+        dispatchedAt: '', deliveredAt: '',
         comments: [...leadComments, syncComment],
     };
     items.unshift(newEntry);
@@ -14554,10 +14557,39 @@ function getBrById(id) {
     return getItem(STORAGE_KEYS.bookRoadmap, []).find(i => i.id === id) || null;
 }
 
+// 124-ish: CRM'ning 6 bosqichli "Kitob yetkazish" kanban ustunlarini
+// appning 4 bosqichli ko'rsatkichiga (Tayyorlanmoqda/Jo'natildi/Yo'lda/
+// Yetkazib berildi) moslashtiradi — server/db.js'dagi xuddi shu xaritaga mos.
+const BOOK_ROADMAP_STAGE_MAP = {
+    'yangi-oquvchi': 'preparing',
+    'manzil-olindi': 'preparing',
+    'pochtaga-tayyorlandi': 'preparing',
+    'pochtaga-topshirildi': 'dispatched',
+    'pochta-yetib-bordi': 'in_transit',
+    'mijoz-qabul-qildi': 'delivered',
+};
+
 function updateBrInStorage(id, updater) {
     const items = getItem(STORAGE_KEYS.bookRoadmap, []);
     const idx = items.findIndex(i => i.id === id);
-    if (idx !== -1) items[idx] = updater(items[idx]);
+    if (idx !== -1) {
+        const prevStatus = items[idx].status;
+        let updated = updater(items[idx]);
+        // Bosqich appdagi "dispatched"/"delivered"ga birinchi marta
+        // yetganda haqiqiy sanani avtomatik belgilaydi (faqat bir marta —
+        // qayta orqaga qaytarilsa ham eski sana o'chirilmaydi).
+        if (updated.status !== prevStatus) {
+            const newStage = BOOK_ROADMAP_STAGE_MAP[updated.status];
+            const todayIso = new Date().toISOString().slice(0, 10);
+            if (newStage === 'dispatched' && !updated.dispatchedAt) {
+                updated = { ...updated, dispatchedAt: todayIso };
+            }
+            if (newStage === 'delivered' && !updated.deliveredAt) {
+                updated = { ...updated, deliveredAt: todayIso };
+            }
+        }
+        items[idx] = updated;
+    }
     setItem(STORAGE_KEYS.bookRoadmap, items);
 }
 
@@ -14604,6 +14636,10 @@ function openBookRoadmapModal(existing = null) {
                 <label>Viloyat, tuman</label>
                 <input type="text" id="brRegion" class="form-control" value="${escapeHtml(d.region || '')}" placeholder="Toshkent, Yunusobod">
             </div>
+            <div class="form-group">
+                <label>Yetkazib berish manzili</label>
+                <input type="text" id="brAddress" class="form-control" value="${escapeHtml(d.address || '')}" placeholder="Ko'cha, uy raqami">
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
                 <div class="form-group" ${_isSmBr ? 'style="display:none"' : ''}>
                     <label>Sotuv menejeri</label>
@@ -14634,6 +14670,17 @@ function openBookRoadmapModal(existing = null) {
     document.getElementById('brSaveBtn').onclick = () => {
         const name = document.getElementById('brName').value.trim();
         if (!name) { alert("Ism familya kiritilishi shart"); return; }
+        const newStatus = document.getElementById('brStatus').value;
+        let dispatchedAt = existing?.dispatchedAt || '';
+        let deliveredAt = existing?.deliveredAt || '';
+        // 124-ish: bosqich appdagi "dispatched"/"delivered"ga birinchi marta
+        // yetganda haqiqiy sanani avtomatik belgilaydi.
+        if (!existing || existing.status !== newStatus) {
+            const newStage = BOOK_ROADMAP_STAGE_MAP[newStatus];
+            const todayIso = new Date().toISOString().slice(0, 10);
+            if (newStage === 'dispatched' && !dispatchedAt) dispatchedAt = todayIso;
+            if (newStage === 'delivered' && !deliveredAt) deliveredAt = todayIso;
+        }
         const data = {
             id: existing?.id || crypto.randomUUID(),
             leadRef: existing?.leadRef || null,
@@ -14642,10 +14689,12 @@ function openBookRoadmapModal(existing = null) {
             date: document.getElementById('brDate').value.trim(),
             phone: document.getElementById('brPhone').value.trim(),
             region: document.getElementById('brRegion').value.trim(),
+            address: document.getElementById('brAddress').value.trim(),
             managerId: _isSmBr ? brAutoManagerId : document.getElementById('brManager').value,
             kind: document.getElementById('brKind').value,
             lang: document.getElementById('brLang').value,
-            status: document.getElementById('brStatus').value,
+            status: newStatus,
+            dispatchedAt, deliveredAt,
             comments: existing?.comments || [],
         };
         const items = getItem(STORAGE_KEYS.bookRoadmap, []);

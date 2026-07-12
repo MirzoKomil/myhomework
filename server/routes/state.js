@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -116,6 +116,19 @@ router.post('/demo-peer-messages', async (req, res) => {
     } catch (err) {
         console.error('POST /api/state/demo-peer-messages', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchining haqiqiy kitob yetkazib berish holatini (Sotuv bo'limidagi
+// "Kitob yetkazish" kanban-yozuvidan) qaytaradi. Topilmasa — null.
+router.get('/demo-book-delivery', async (req, res) => {
+    try {
+        const data = await getDemoStudentBookDelivery();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-book-delivery', err);
+        res.status(500).json({ error: 'Xatolik' });
     }
 });
 

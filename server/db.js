@@ -219,6 +219,10 @@ async function initSchema() {
     // Migration: book_roadmap jadvaliga yangi ustunlar qo'shish
     await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
     await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS lead_ref TEXT DEFAULT NULL`).catch(() => {});
+    // 124-ish: haqiqiy yetkazib berish manzili va bosqich sanalarini saqlash uchun
+    await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS address TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS dispatched_at TEXT DEFAULT ''`).catch(() => {});
+    await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS delivered_at TEXT DEFAULT ''`).catch(() => {});
 
     // Migration: hr_employees jadvaliga yangi ustunlar qo'shish
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS first_name TEXT DEFAULT ''`).catch(() => {});
@@ -393,6 +397,7 @@ function rowToBookRoadmap(r) {
         managerId: r.manager_id || '', kind: r.kind || 'organik',
         status: r.status || 'yangi-oquvchi', date: r.date || '',
         lang: r.lang || 'english', leadRef,
+        address: r.address || '', dispatchedAt: r.dispatched_at || '', deliveredAt: r.delivered_at || '',
         comments: parseJsonArray(r.comments), createdAt: r.created_at || null
     };
 }
@@ -406,14 +411,15 @@ async function saveBookRoadmap(client, items) {
     await client.query('DELETE FROM book_roadmap');
     for (const r of items) {
         await client.query(
-            `INSERT INTO book_roadmap (id, name, student_id, phone, region, manager_id, kind, status, date, lang, lead_ref, comments)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+            `INSERT INTO book_roadmap (id, name, student_id, phone, region, manager_id, kind, status, date, lang, lead_ref, comments, address, dispatched_at, delivered_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
             [r.id, r.name || '', r.studentId || '', r.phone || '',
              r.region || '', r.managerId || '', r.kind || 'organik',
              r.status || 'yangi-oquvchi', r.date || '',
              r.lang || 'english',
              r.leadRef ? JSON.stringify(r.leadRef) : null,
-             JSON.stringify(r.comments || [])]
+             JSON.stringify(r.comments || []),
+             r.address || '', r.dispatchedAt || '', r.deliveredAt || '']
         );
     }
 }
@@ -834,6 +840,49 @@ async function sendDemoStudentPeerMessage(peerId, peerName, text) {
     return message;
 }
 
+// 124-ish: CRM'ning Sotuv bo'limidagi "Kitob yetkazish" kanban-bosqichlarini
+// appning 4 bosqichli ko'rsatkichiga (Tayyorlanmoqda/Jo'natildi/Yo'lda/
+// Yetkazib berildi) moslashtiradi.
+const BOOK_ROADMAP_STAGE_MAP = {
+    'yangi-oquvchi': 'preparing',
+    'manzil-olindi': 'preparing',
+    'pochtaga-tayyorlandi': 'preparing',
+    'pochtaga-topshirildi': 'dispatched',
+    'pochta-yetib-bordi': 'in_transit',
+    'mijoz-qabul-qildi': 'delivered',
+};
+
+// Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
+// bitta o'quvchining haqiqiy kitob yetkazib berish holatini qaytaradi.
+// bookRoadmap yozuvi studentga to'g'ridan-to'g'ri bog'lanmagani uchun
+// (CRM'da bu maydon to'ldirilmaydi), avval student.leadRef orqali (ishonchli),
+// topilmasa ism bo'yicha (best-effort) moslashtiriladi.
+async function getDemoStudentBookDelivery() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return null;
+    const studentRow = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
+    if (!studentRow) return null;
+    const student = rowToStudent(studentRow);
+
+    const bookRoadmap = await getBookRoadmap();
+    let entry = null;
+    if (student.leadRef?.id) {
+        entry = bookRoadmap.find(b => b.leadRef && b.leadRef.id === student.leadRef.id && b.leadRef.lang === student.leadRef.lang);
+    }
+    if (!entry && student.name) {
+        const target = student.name.trim().toLowerCase();
+        entry = bookRoadmap.find(b => b.name && b.name.trim().toLowerCase() === target);
+    }
+    if (!entry) return null;
+
+    return {
+        address: entry.address || '',
+        stage: BOOK_ROADMAP_STAGE_MAP[entry.status] || 'preparing',
+        dispatchedDate: entry.dispatchedAt || null,
+        deliveredDate: entry.deliveredAt || null,
+    };
+}
+
 async function saveJsonData(client, key, data) {
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
@@ -1038,6 +1087,7 @@ module.exports = {
     getDemoStudentSchedule,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
+    getDemoStudentBookDelivery,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init

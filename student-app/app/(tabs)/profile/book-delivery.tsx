@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { BookDelivery, DELIVERY_STAGE_LABELS, DELIVERY_STAGE_ORDER, DeliveryStage, bookDeliveries } from '@/data/mock';
 import { UZ_MONTHS } from '@/data/scheduleCalendar';
+import { DemoBookDeliveryResponse, fetchDemoBookDelivery } from '@/services/contentApi';
 import { useOrders } from '@/services/shopStore';
 
 type Category = 'books' | 'shop';
@@ -121,6 +122,26 @@ export default function BookDeliveryScreen() {
   const [category, setCategory] = useState<Category>('books');
   const orders = useOrders();
 
+  // CRM'ning Sotuv bo'limidagi "Kitob yetkazish" kanban-yozuvidan haqiqiy
+  // holat — namuna o'quvchiga mos yozuv topilmasa, statik namuna holatida qoladi.
+  const [realDelivery, setRealDelivery] = useState<DemoBookDeliveryResponse>(null);
+  useEffect(() => {
+    fetchDemoBookDelivery()
+      .then(setRealDelivery)
+      .catch(() => {});
+  }, []);
+
+  const displayedBooks: BookDelivery[] = useMemo(() => {
+    if (!realDelivery) return bookDeliveries;
+    return bookDeliveries.map((b) => ({
+      ...b,
+      address: realDelivery.address || b.address,
+      stage: realDelivery.stage,
+      dispatchedDate: realDelivery.dispatchedDate ?? undefined,
+      deliveredDate: realDelivery.deliveredDate ?? undefined,
+    }));
+  }, [realDelivery]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
@@ -150,7 +171,7 @@ export default function BookDeliveryScreen() {
         {category === 'books' ? (
           <>
             <Text style={styles.subtitle}>Sizga yetkazib beriladigan darsliklar holati</Text>
-            {bookDeliveries.map((book) => (
+            {displayedBooks.map((book) => (
               <BookCard key={book.id} book={book} />
             ))}
           </>
