@@ -450,9 +450,31 @@ async function getHrEmployeesData() {
     }));
 }
 
+// Har bir speaking (juft) darsning "attendanceTaken" holati har o'qishda
+// real liveGrades'dan qayta hisoblanadi — CRM'da saqlangan qiymatga hech
+// qachon ishonilmaydi (admin uni qo'lda "soxta" o'zgartira olmasligi kerak,
+// faqat ustoz o'z kabinetidan haqiqiy davomat olgandagina o'zgaradi).
+function applyComputedLessonAttendance(mc, liveGrades, demoStudentId) {
+    if (!demoStudentId) return mc;
+    const attendedIds = new Set((liveGrades[demoStudentId] || []).map(g => g.lessonId));
+    (mc.courses || []).forEach(course => {
+        (mc.lessons || [])
+            .filter(l => l.courseId === course.id)
+            .forEach((l, i) => {
+                if (i % 2 !== 0) l.attendanceTaken = attendedIds.has(l.id);
+            });
+    });
+    return mc;
+}
+
 async function getMobileContentData() {
     const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
-    return row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
+    const mc = row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
+    const [liveGrades, demoStudentId] = await Promise.all([
+        getJsonData('liveGrades'),
+        getJsonData('demoStudentId'),
+    ]);
+    return applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
 }
 
 async function saveMobileContentData(client, data) {

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { createElement, useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { createElement, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,7 +24,7 @@ import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
 import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins, mergeLessonContent } from '@/data/lessonContent';
-import { AdminLessonContent, fetchMobileContent, MobileContent } from '@/services/contentApi';
+import { AdminLessonContent, fetchMobileContent, invalidateCache, MobileContent } from '@/services/contentApi';
 import { useCoins, useLessonCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
 import {
@@ -506,16 +506,33 @@ export default function RoadmapScreen() {
     setLessonContents(mc.lessonContents);
   };
 
-  useEffect(() => {
-    // Progress keshi AsyncStorage'dan yuklanguncha kutamiz — aks holda birinchi
-    // hisoblashda hali yuklanmagan progress 0% deb noto'g'ri qabul qilinadi.
-    loadLessonProgress().then(() =>
-      fetchMobileContent().then((mc) => {
-        mcRef.current = mc;
-        recomputeLessons(mc, courseId);
-      })
-    ).finally(() => setLoading(false));
-  }, [courseId]);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      const isFirstLoad = !mcRef.current;
+      // Ekranga har safar qaytilganda kesh majburan yangilanadi — CRM'da
+      // ustoz endi haqiqiy davomat olgan yoki qulf holati o'zgargan bo'lishi
+      // mumkin, shu holat qurilmani qayta ishga tushirmasdan ko'rinishi kerak.
+      invalidateCache();
+      // Progress keshi AsyncStorage'dan yuklanguncha kutamiz — aks holda birinchi
+      // hisoblashda hali yuklanmagan progress 0% deb noto'g'ri qabul qilinadi.
+      loadLessonProgress()
+        .then(() => {
+          if (cancelled) return;
+          return fetchMobileContent().then((mc) => {
+            if (cancelled) return;
+            mcRef.current = mc;
+            recomputeLessons(mc, courseId);
+          });
+        })
+        .finally(() => {
+          if (!cancelled && isFirstLoad) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [courseId])
+  );
 
   useEffect(() => {
     return subscribeLessonProgress(() => {

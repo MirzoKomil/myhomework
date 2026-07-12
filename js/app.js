@@ -2155,9 +2155,6 @@ function _openLessonContextMenu(anchor, lessonId, course, container) {
             ? `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>`
             : `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`,
             lesson.lock && lesson.lock.enabled ? 'Qulfdan chiqarish' : 'Qulflash', 'toggle-lock'),
-        (idx % 2 !== 0 && lesson.lock && lesson.lock.enabled)
-            ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>`, lesson.attendanceTaken ? 'Davomatni bekor qilish' : 'Davomat olindi (ochish)', 'toggle-attendance')
-            : '',
         menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`, 'Nusxalash', 'copy'),
         idx > 0 ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`, "Yuqoriga ko'chirish", 'move-up') : '',
         idx < lessons.length - 1 ? menuItem(`<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>`, "Pastga ko'chirish", 'move-down') : '',
@@ -2232,17 +2229,14 @@ function _openLessonContextMenu(anchor, lessonId, course, container) {
                     showMiniToast('Dars qulflandi');
                 };
             } else {
+                // attendanceTaken CRM'da qo'lda sozlanmaydi — u har doim serverda
+                // real liveGrades'dan hisoblanadi (ustoz o'z kabinetidan haqiqiy
+                // davomat olganda avtomatik o'zgaradi).
                 current.lock = { enabled: true };
-                current.attendanceTaken = false;
                 saveMobileContent(mc2);
                 renderMobileCourseDetailTab(container, course);
-                showMiniToast('Dars qulflandi — davomat olinmaguncha ochilmaydi');
+                showMiniToast('Dars qulflandi — ustoz davomat olmaguncha ochilmaydi');
             }
-        } else if (action === 'toggle-attendance') {
-            mc2.lessons[gIdx].attendanceTaken = !mc2.lessons[gIdx].attendanceTaken;
-            saveMobileContent(mc2);
-            renderMobileCourseDetailTab(container, course);
-            showMiniToast(mc2.lessons[gIdx].attendanceTaken ? 'Davomat olindi — dars ochiladi' : 'Davomat bekor qilindi');
         } else if (action === 'copy') {
             const copy = { ...allLessons[gIdx], id: 'l' + Date.now(), name: allLessons[gIdx].name + ' (nusxa)', createdAt: new Date().toISOString().slice(0, 10) };
             mc2.lessons.splice(gIdx + 1, 0, copy);
