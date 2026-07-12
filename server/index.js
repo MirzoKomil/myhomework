@@ -29,7 +29,16 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             imgSrc: ["'self'", "data:", "blob:", "https:"],
             fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-            connectSrc: ["'self'"],
+            // Radio bo'limi: stansiya qidiruvi radio-browser.info'ning turli oyna
+            // (mirror) subdomenlaridan birortasiga so'rov yuborishi mumkin (de1, nl1,
+            // at1, all va h.k.) — shuning uchun konkret bitta subdomen emas, butun
+            // *.api.radio-browser.info joylashuvi ruxsat etiladi.
+            connectSrc: ["'self'", "https://*.api.radio-browser.info"],
+            // Real radio stansiyalarining audio oqimi (stream) manzili oldindan
+            // ma'lum emas — radio-browser.info katalogidan qaysi haqiqiy translyatsiya
+            // serveri qaytishi har xil bo'ladi (BBC, Capital, NPR va h.k. o'zlarining
+            // domenlaridan translyatsiya qiladi) — imgSrc'dagi kabi keng https: ruxsati.
+            mediaSrc: ["'self'", "https:"],
             // YouTube video darslarni CRM'da va ilovada ko'rsatish uchun (Videodars/
             // Slaydlar bo'limlariga qo'yilgan havolalar) — boshqa hamma joyda 'none' qoladi.
             frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
