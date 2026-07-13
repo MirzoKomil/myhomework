@@ -698,11 +698,32 @@ function renderStudentApp() {
         btn.dataset.msubBound = '1';
         btn.addEventListener('click', () => switchMobileSubSection(btn.dataset.mobileSub));
     });
-    document.querySelectorAll('[data-mobile-sub]').forEach(b =>
-        b.classList.toggle('active', b.dataset.mobileSub === _mobileSubSection)
-    );
+    document.querySelectorAll('[data-mobile-dars-sub]').forEach(btn => {
+        if (btn.dataset.mdsBound) return;
+        btn.dataset.mdsBound = '1';
+        btn.addEventListener('click', () => switchMobileSubSection(btn.dataset.mobileDarsSub));
+    });
+    _syncMobileSubNavUI();
 
     switchMobileSection(_mobileSection);
+}
+
+// "Dars" tugmasi endi Bonus darslar/Imtihonlarni ham o'z ichiga olgan guruh
+// sifatida ishlaydi — shu uchun top-darajadagi va ikkinchi darajadagi
+// nav'larning aktiv holatini va ikkinchi qatorning ko'rinish/yashirinishini
+// bitta joydan sinxron qiladi.
+const MOBILE_DARS_GROUP = ['dars', 'bonus', 'imtihon'];
+function _syncMobileSubNavUI() {
+    document.querySelectorAll('[data-mobile-sub]').forEach(btn => {
+        const val = btn.dataset.mobileSub;
+        const isActive = val === 'dars' ? MOBILE_DARS_GROUP.includes(_mobileSubSection) : val === _mobileSubSection;
+        btn.classList.toggle('active', isActive);
+    });
+    const darsSubHeader = document.getElementById('mobileDarsSubHeader');
+    if (darsSubHeader) darsSubHeader.style.display = MOBILE_DARS_GROUP.includes(_mobileSubSection) ? '' : 'none';
+    document.querySelectorAll('[data-mobile-dars-sub]').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.mobileDarsSub === _mobileSubSection)
+    );
 }
 
 function switchMobileSection(section) {
@@ -715,6 +736,8 @@ function switchMobileSection(section) {
     );
     const subHeader = document.getElementById('mobileSubHeader');
     if (subHeader) subHeader.style.display = section === 'edit' ? '' : 'none';
+    const darsSubHeader = document.getElementById('mobileDarsSubHeader');
+    if (darsSubHeader) darsSubHeader.style.display = section === 'edit' && MOBILE_DARS_GROUP.includes(_mobileSubSection) ? '' : 'none';
     const openBtn = document.getElementById('mobileOpenAppBtn');
     const langTabs = document.getElementById('mobileLangTabs');
     if (openBtn) openBtn.style.display = section === 'view' ? '' : 'none';
@@ -734,9 +757,7 @@ function switchMobileSubSection(sub) {
     _activeModuleId = null;
     _activeBonusIndex = null;
     _activeExamId = null;
-    document.querySelectorAll('[data-mobile-sub]').forEach(btn =>
-        btn.classList.toggle('active', btn.dataset.mobileSub === sub)
-    );
+    _syncMobileSubNavUI();
     renderMobileEditPanel();
 }
 
@@ -802,7 +823,7 @@ function renderMobileEditPanel() {
     // renderMobileAdminTab'ga albatta haqiqiy (falsy bo'lmagan) tab qiymati berilishi
     // kerak, aks holda funksiya darhol "tez orada" placeholder bilan qaytib ketadi va
     // dars/modul tarkibi hech qachon ko'rinmaydi.
-    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : _mobileSubSection === 'asosiy' ? 'asosiy' : null);
+    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : _mobileSubSection === 'asosiy' ? 'asosiy' : _mobileSubSection === 'muloqot' ? 'muloqot' : null);
 }
 
 function renderMobileModuleDetailTab(container, course, mod) {
@@ -2555,6 +2576,11 @@ function renderMobileAdminTab(tab) {
         return;
     }
 
+    if (_mobileSubSection === 'muloqot') {
+        renderMobileMuloqotTab(container);
+        return;
+    }
+
     const content = getMobileContent();
     if (tab === 'videos') {
         renderMobileVideosTab(container, content);
@@ -2641,6 +2667,40 @@ function _openEditCourseNameModal(idx, container) {
         renderMobileCoursesTab(container);
         showMiniToast('Kurs nomi yangilandi');
     };
+}
+
+// 131-ish: "Suniy intellekt" o'rniga qo'shilgan "Muloqot" bo'limi — appdagi
+// "Qo'llab-quvvatlash" va "Maqsaddoshlar" chatlarini admin profilidagi bilan
+// bir xil (121/122-ish'da qurilgan) komponentlarni qayta ishlatib, Mobil
+// ilovani tahrirlash bo'limidan ham to'g'ridan-to'g'ri ko'rish/javob berish
+// imkonini beradi.
+function renderMobileMuloqotTab(container) {
+    _activePeerId = null;
+    const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
+    if (!demoStudentId) {
+        container.innerHTML = `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Namuna o'quvchi hali belgilanmagan (Davomat bo'limidan tanlang)</div>`;
+        return;
+    }
+    const user = getCurrentUser();
+    container.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:28px;max-width:640px">
+            <div>
+                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Qo'llab-quvvatlash</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Appdagi "Qo'llab-quvvatlash" bo'limiga yozilgan xabarlarga shu yerdan javob bering</div>
+                <div class="profile-card" id="mobileMuloqotSupport"></div>
+            </div>
+            <div>
+                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Maqsaddoshlar suhbatlari</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Appdagi "Maqsaddoshlar" bo'limida namuna o'quvchi yozgan xabarlarni shu yerdan kuzating</div>
+                <div class="profile-card" id="mobileMuloqotPeerChats"></div>
+            </div>
+        </div>`;
+    renderCrmChatThread(document.getElementById('mobileMuloqotSupport'), {
+        studentId: demoStudentId, threadId: 'support',
+        senderRole: 'admin', senderId: null, senderName: user?.name || 'Admin',
+        title: "Qo'llab-quvvatlash",
+    });
+    renderCrmPeerChatsBody(document.getElementById('mobileMuloqotPeerChats'));
 }
 
 function renderMobileVideosTab(container, content) {
