@@ -24,11 +24,19 @@ const inflight = new Map<string, Promise<string[]>>();
 // variantlar ro'yxat oxirida saqlanadi — pleer birinchi ishlamagan
 // nomzoddan keyingisiga avtomatik o'tadi, shuning uchun ular butunlay
 // tashlab yuborilmaydi (ba'zi platformalarda, masalan iOS'da, ishlaydi).
+//
+// Diqqat: bu yerda https:// manzilga qo'shimcha ustunlik BERILMAYDI —
+// http:// nomzodlar baribir pastdagi withHttpsFallback() orqali avtomatik
+// https'ga ko'tariladi, shuning uchun asl sxema (http/https) hech narsani
+// anglatmaydi. Aksincha, bunday bonus zararli edi: masalan "BBC World
+// Service" uchun asosiy (eng ishonchli, eng ko'p tinglangan) oqim
+// radio-browser.info'da http:// sifatida qayd etilgan, shu bonus esa uni
+// unchalik ishonchli bo'lmagan mintaqaviy ko'zgu (masalan "east_asia")
+// nusxasidan pastroqqa tushirib yuborardi. Sort barqaror (stable) bo'lgani
+// uchun, bonus olib tashlangach, tenglik holida API'ning o'zi qaytargan
+// klik-soni tartibi saqlanadi — bu haqiqiy ustuvorlikni yaxshiroq aks ettiradi.
 function streamScore(s: RadioBrowserStation): number {
-  let score = 0;
-  if (!s.hls) score += 100;
-  if ((s.url_resolved || s.url || '').startsWith('https://')) score += 10;
-  return score;
+  return s.hls ? 0 : 100;
 }
 
 // Katalogdagi ko'p stansiyalar hali ham oddiy http:// manzil bilan qayd
