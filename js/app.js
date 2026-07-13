@@ -643,6 +643,12 @@ let _bonusContentTab = 'konspekt';
 let _activeExamId = null;
 let _activeHomeSection = null;
 let _activePeerId = null;
+// 132-ish: "Resurslar" bo'limi endi appdagi haqiqiy tuzilishni (Kutubxona/
+// O'yinlar/Hamjamiyat) aks ettiradi — null=3 ta karta, 'library'=Kutubxona
+// ichidagi 6 ta resurs turi, 'library-items'=shulardan biriga bosilganda
+// ochiladigan eski video/PDF/prezentatsiya/darslik boshqaruvi, 'games'/
+// 'community'=hozircha oddiy izoh.
+let _activeResourceCategory = null;
 
 const SHOP_CATEGORY_LABELS = { merch: 'Merch', books: 'Kitoblar', gadgets: 'Gadgetlar', stationery: 'Kontsstovarlar' };
 const SHOP_CATEGORY_OPTIONS = [
@@ -757,6 +763,7 @@ function switchMobileSubSection(sub) {
     _activeModuleId = null;
     _activeBonusIndex = null;
     _activeExamId = null;
+    _activeResourceCategory = null;
     _syncMobileSubNavUI();
     renderMobileEditPanel();
 }
@@ -764,8 +771,14 @@ function switchMobileSubSection(sub) {
 function renderMobileEditPanel() {
     const panel = document.getElementById('mobileEditPanel');
     if (!panel) return;
-    const showRow     = (_mobileSubSection === 'dars' && !_activeLessonId) || _mobileSubSection === 'resurslar';
-    const showMacTabs = _mobileSubSection === 'resurslar';
+    // "Resurslar"da video/PDF/prezentatsiya/darslik boshqaruvi (eski mac-tabs
+    // qatori) endi faqat Kutubxona ichidagi 6 ta resurs turidan biriga
+    // bosilgandan keyin ("library-items" bosqichida) ko'rinadi — undan oldin
+    // 3 ta karta (Kutubxona/O'yinlar/Hamjamiyat), so'ng Kutubxona ro'yxati
+    // ko'rsatiladi (bular alohida, o'zining renderMobileResourcesTab orqali).
+    const inLibraryItems = _mobileSubSection === 'resurslar' && _activeResourceCategory === 'library-items';
+    const showRow     = (_mobileSubSection === 'dars' && !_activeLessonId) || inLibraryItems;
+    const showMacTabs = inLibraryItems;
     const btnLabel    = _mobileSubSection !== 'dars'
         ? "+ YouTube video qo'shish"
         : _activeLessonId ? 'Mavzu qo\'shish'
@@ -776,11 +789,14 @@ function renderMobileEditPanel() {
         panel.style.cssText = 'flex-direction:column;overflow:hidden';
         panel.innerHTML = `
         <div id="mobileContentTabsRow" style="display:none;align-items:center;justify-content:space-between;background:var(--bg);border-bottom:1px solid var(--border)">
-            <div class="mac-tabs" id="mobileAdminTabs" style="display:flex;gap:0">
-                <button type="button" class="mac-tab-btn mac-tab-active" data-mac-tab="videos">🎬 Videodarslar</button>
-                <button type="button" class="mac-tab-btn" data-mac-tab="pdfs">📄 PDF va hujjatlar</button>
-                <button type="button" class="mac-tab-btn" data-mac-tab="presentations">📊 Prezentatsiyalar</button>
-                <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
+            <div style="display:flex;align-items:center">
+                <button type="button" id="mobileResourcesBackBtn" style="display:none;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:0 8px 0 20px;white-space:nowrap">← Kutubxona</button>
+                <div class="mac-tabs" id="mobileAdminTabs" style="display:flex;gap:0">
+                    <button type="button" class="mac-tab-btn mac-tab-active" data-mac-tab="videos">🎬 Videodarslar</button>
+                    <button type="button" class="mac-tab-btn" data-mac-tab="pdfs">📄 PDF va hujjatlar</button>
+                    <button type="button" class="mac-tab-btn" data-mac-tab="presentations">📊 Prezentatsiyalar</button>
+                    <button type="button" class="mac-tab-btn" data-mac-tab="textbooks">📚 Darsliklar</button>
+                </div>
             </div>
             <div style="padding:0 20px;flex-shrink:0">
                 <button type="button" class="btn-primary-sm" id="mobileAddVideoHeaderBtn"></button>
@@ -794,6 +810,10 @@ function renderMobileEditPanel() {
                 btn.classList.add('mac-tab-active');
                 renderMobileAdminTab(btn.dataset.macTab);
             });
+        });
+        document.getElementById('mobileResourcesBackBtn')?.addEventListener('click', () => {
+            _activeResourceCategory = 'library';
+            renderMobileEditPanel();
         });
         document.getElementById('mobileAddVideoHeaderBtn')?.addEventListener('click', () => {
             if (_mobileSubSection === 'dars') {
@@ -814,6 +834,9 @@ function renderMobileEditPanel() {
     const macTabsEl = document.getElementById('mobileAdminTabs');
     if (macTabsEl) macTabsEl.style.display = showMacTabs ? 'flex' : 'none';
 
+    const backBtn = document.getElementById('mobileResourcesBackBtn');
+    if (backBtn) backBtn.style.display = inLibraryItems ? 'inline-flex' : 'none';
+
     const addBtn = document.getElementById('mobileAddVideoHeaderBtn');
     if (addBtn) addBtn.textContent = btnLabel;
 
@@ -823,7 +846,7 @@ function renderMobileEditPanel() {
     // renderMobileAdminTab'ga albatta haqiqiy (falsy bo'lmagan) tab qiymati berilishi
     // kerak, aks holda funksiya darhol "tez orada" placeholder bilan qaytib ketadi va
     // dars/modul tarkibi hech qachon ko'rinmaydi.
-    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : _mobileSubSection === 'asosiy' ? 'asosiy' : _mobileSubSection === 'muloqot' ? 'muloqot' : null);
+    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : _mobileSubSection === 'asosiy' ? 'asosiy' : _mobileSubSection === 'muloqot' ? 'muloqot' : _mobileSubSection === 'resurslar' ? 'resurslar' : null);
 }
 
 function renderMobileModuleDetailTab(container, course, mod) {
@@ -2581,6 +2604,11 @@ function renderMobileAdminTab(tab) {
         return;
     }
 
+    if (_mobileSubSection === 'resurslar' && _activeResourceCategory !== 'library-items') {
+        renderMobileResourcesTab(container);
+        return;
+    }
+
     const content = getMobileContent();
     if (tab === 'videos') {
         renderMobileVideosTab(container, content);
@@ -2701,6 +2729,92 @@ function renderMobileMuloqotTab(container) {
         title: "Qo'llab-quvvatlash",
     });
     renderCrmPeerChatsBody(document.getElementById('mobileMuloqotPeerChats'));
+}
+
+// 132-ish: "Resurslar" bo'limi endi appning haqiqiy Resurslar ekranidagi
+// tuzilishni (Kutubxona/O'yinlar/Hamjamiyat, so'ng Kutubxonaning 6 ta resurs
+// turi) aynan aks ettiradi — bular hozircha appdagi kabi statik (mavzu/dona
+// soni appning o'zidagi qattiq yozilgan ro'yxatdan olingan), lekin admin uchun
+// tanish, appga mos navigatsiya beradi.
+function renderMobileResourcesTab(container) {
+    if (_activeResourceCategory === 'library') {
+        renderMobileLibraryItemsTab(container);
+    } else if (_activeResourceCategory === 'games' || _activeResourceCategory === 'community') {
+        renderMobileResourceCategoryPlaceholder(container, _activeResourceCategory);
+    } else {
+        renderMobileResourcesLandingTab(container);
+    }
+}
+
+const MOBILE_RESOURCE_CATEGORIES = [
+    { id: 'library', icon: '📚', title: 'Kutubxona', desc: "Grammatika, so'zlar, talaffuz va boshqa o'quv materiallari", colors: ['#6FA8FF', '#4F8CFF'] },
+    { id: 'games', icon: '🎮', title: "O'yinlar", desc: "O'ynab, til ko'nikmalaringizni mashq qiling", colors: ['#F0807D', '#D65656'] },
+    { id: 'community', icon: '👥', title: 'Hamjamiyat', desc: "O'quvchilar bilan fikr almashing, post yozing, izoh qoldiring", colors: ['#9B7BFF', '#6B4FE0'] },
+];
+
+function renderMobileResourcesLandingTab(container) {
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px">
+        ${MOBILE_RESOURCE_CATEGORIES.map(cat => `
+            <div data-resource-cat="${cat.id}" style="cursor:pointer;background:linear-gradient(135deg,${cat.colors[0]},${cat.colors[1]});border-radius:16px;padding:28px;color:#fff;min-height:150px;display:flex;flex-direction:column;justify-content:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+                <div style="font-size:32px">${cat.icon}</div>
+                <div style="font-size:19px;font-weight:800">${escapeHtml(cat.title)}</div>
+                <div style="font-size:13px;opacity:0.9;line-height:1.4">${escapeHtml(cat.desc)}</div>
+            </div>
+        `).join('')}
+    </div>`;
+    container.querySelectorAll('[data-resource-cat]').forEach(card => {
+        card.addEventListener('click', () => {
+            _activeResourceCategory = card.dataset.resourceCat;
+            renderMobileEditPanel();
+        });
+    });
+}
+
+const MOBILE_LIBRARY_ITEMS = [
+    { icon: '📘', title: "Grammatik qo'llanma", count: '85 mavzu' },
+    { icon: '📋', title: "So'zlar ro'yxati", count: '119 mavzu' },
+    { icon: '🎤', title: 'Talaffuz', count: '16 mavzu' },
+    { icon: '💬', title: 'Speaking topiklar', count: '60 ta' },
+    { icon: '🎧', title: 'Podkastlar', count: '36 ta' },
+    { icon: '📖', title: 'Kitoblar', count: '45 ta' },
+];
+
+function renderMobileLibraryItemsTab(container) {
+    container.innerHTML = `
+        <button type="button" id="mobileLibraryBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Resurslar</button>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:480px">
+            ${MOBILE_LIBRARY_ITEMS.map(item => `
+                <div data-library-item style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:box-shadow 0.15s">
+                    <div style="width:44px;height:44px;border-radius:12px;background:var(--bg,#f9fafb);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${item.icon}</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600;font-size:14px;color:var(--text)">${escapeHtml(item.title)}</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${escapeHtml(item.count)}</div>
+                    </div>
+                    <span style="color:var(--text-muted);flex-shrink:0">›</span>
+                </div>
+            `).join('')}
+        </div>`;
+    document.getElementById('mobileLibraryBackBtn').addEventListener('click', () => {
+        _activeResourceCategory = null;
+        renderMobileEditPanel();
+    });
+    container.querySelectorAll('[data-library-item]').forEach(row => {
+        row.addEventListener('click', () => {
+            _activeResourceCategory = 'library-items';
+            renderMobileEditPanel();
+        });
+    });
+}
+
+function renderMobileResourceCategoryPlaceholder(container, catId) {
+    const cat = MOBILE_RESOURCE_CATEGORIES.find(c => c.id === catId);
+    container.innerHTML = `
+        <button type="button" id="mobileResourceCatBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Resurslar</button>
+        <div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">${cat ? escapeHtml(cat.title) : ''} bo'limi uchun boshqaruv tez orada qo'shiladi</div>`;
+    document.getElementById('mobileResourceCatBackBtn').addEventListener('click', () => {
+        _activeResourceCategory = null;
+        renderMobileEditPanel();
+    });
 }
 
 function renderMobileVideosTab(container, content) {
