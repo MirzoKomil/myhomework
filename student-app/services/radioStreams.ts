@@ -45,11 +45,31 @@ function streamScore(s: RadioBrowserStation): number {
 // shuning uchun http:// manzilga to'g'ridan-to'g'ri <audio> orqali ulanib
 // bo'lmaydi ("Media load rejected by URL safety check"). Shu sababli har bir
 // http:// nomzod uchun avval xuddi shu host+yo'l bo'yicha https:// varianti
-// sinab ko'riladi, asl http:// esa (kamdan-kam holatda kerak bo'lishi mumkin
-// bo'lgani uchun) pastroq ustuvorlikdagi zaxira sifatida saqlanadi.
+// sinab ko'riladi.
+//
+// Ba'zi CDN'lar (masalan streamtheworld.com'ning eski :3690 kabi porti) esa
+// https'ni aynan o'sha portda umuman qo'llab-quvvatlamaydi — https faqat
+// standart (443) portda ishlaydi (masalan C-SPAN Radio'da tekshirib
+// tasdiqlandi: https://host:3690/... ulanmaydi, https://host/... esa
+// ishlaydi). Shu sababli, agar manzilda aniq port ko'rsatilgan bo'lsa, portsiz
+// https varianti ham qo'shimcha nomzod sifatida sinab ko'riladi. Asl http://
+// esa (kamdan-kam holatda kerak bo'lishi mumkin bo'lgani uchun) eng pastki
+// ustuvorlikdagi zaxira sifatida saqlanadi.
 function withHttpsFallback(u: string): string[] {
-  if (u.startsWith('http://')) return [u.replace(/^http:\/\//, 'https://'), u];
-  return [u];
+  if (!u.startsWith('http://')) return [u];
+  const httpsWithPort = u.replace(/^http:\/\//, 'https://');
+  const variants = [httpsWithPort];
+  try {
+    const parsed = new URL(httpsWithPort);
+    if (parsed.port) {
+      parsed.port = '';
+      variants.push(parsed.toString());
+    }
+  } catch {
+    // Noto'g'ri formatlangan URL — shunchaki o'tkazib yuboriladi.
+  }
+  variants.push(u);
+  return variants;
 }
 
 async function searchStreamUrls(query: string): Promise<string[]> {

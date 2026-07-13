@@ -164,12 +164,17 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/fox-news-radio.jpg'),
   },
   {
-    id: 'voa-learning-english', name: 'VOA Learning English', country: 'US', flag: '🇺🇸', genre: "Til o'rganish uchun yangiliklar", colors: ['#3B82F6', '#1D4ED8'],
+    // VOA Learning English (avvalgi stansiya) faqat HLS oqimga ega edi — bu
+    // Chrome/Android/desktop'da <audio> orqali haqiqiy tovush chiqarmaydi
+    // (ekranda "jonli" ko'rinadi, lekin ovozsiz). VOA'ning na asosiy
+    // (voanews.com), na Learning English saytida umuman veb orqali jonli
+    // tinglash imkoniyati yo'q edi — muqobil topilmadi. C-SPAN Radio esa
+    // barcha qurilmalarda ishlaydigan, real, rasmiy AQSh stansiyasi.
+    id: 'c-span-radio', name: 'C-SPAN Radio', country: 'US', flag: '🇺🇸', genre: 'Kongress va siyosat', colors: ['#3B82F6', '#1D4ED8'],
     location: 'Vashington, AQSH',
-    founded: '1959-yildan beri',
-    about: "Ingliz tilini o'rganuvchilar uchun maxsus, sekin va sodda tilda tayyorlangan yangiliklar va dasturlarni efirga uzatadi.",
-    streamQuery: 'VOA Learning English',
-    logo: require('@/assets/images/radio/voa-learning-english.jpg'),
+    founded: '1979-yildan beri',
+    about: "AQSh Kongressidagi muhokamalar, matbuot anjumanlari va siyosiy suhbatlarni to'g'ridan-to'g'ri, aniq va sekin nutqda efirga uzatadi.",
+    streamQuery: 'C-SPAN Radio',
   },
   {
     id: 'bbc-world-service', name: 'BBC World Service', country: 'UK', flag: '🇬🇧', genre: 'Xalqaro yangiliklar', colors: ['#7C3AED', '#5B21B6'],
