@@ -175,6 +175,7 @@ export const radioStations: RadioStation[] = [
     founded: '1979-yildan beri',
     about: "AQSh Kongressidagi muhokamalar, matbuot anjumanlari va siyosiy suhbatlarni to'g'ridan-to'g'ri, aniq va sekin nutqda efirga uzatadi.",
     streamQuery: 'C-SPAN Radio',
+    logo: require('@/assets/images/radio/c-span-radio.jpg'),
   },
   {
     id: 'bbc-world-service', name: 'BBC World Service', country: 'UK', flag: '🇬🇧', genre: 'Xalqaro yangiliklar', colors: ['#7C3AED', '#5B21B6'],
