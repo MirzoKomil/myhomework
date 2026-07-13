@@ -3,7 +3,7 @@ import { AudioPlayer, createAudioPlayer } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -147,13 +147,19 @@ export default function RadioPlayerScreen() {
         }
       />
       <View style={styles.content}>
-        <LinearGradient
-          colors={station.colors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.cover}>
-          <Text style={styles.coverFlag}>{station.flag}</Text>
-        </LinearGradient>
+        {station.logo ? (
+          <View style={styles.cover}>
+            <Image source={station.logo} style={styles.coverLogoImg} resizeMode="cover" />
+          </View>
+        ) : (
+          <LinearGradient
+            colors={station.colors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cover}>
+            <Text style={styles.coverFlag}>{station.flag}</Text>
+          </LinearGradient>
+        )}
 
         {playback === 'error' ? (
           <View style={[styles.liveBadge, styles.errorBadge]}>
@@ -242,8 +248,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
     ...theme.shadow.card,
   },
+  coverLogoImg: { width: '100%', height: '100%' },
   coverFlag: { fontSize: 72 },
   liveBadge: {
     flexDirection: 'row',

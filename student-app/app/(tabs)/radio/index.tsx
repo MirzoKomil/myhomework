@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -13,13 +13,19 @@ const ANNOUNCEMENT_INTERVAL = 3500;
 function StationRow({ station }: { station: RadioStation }) {
   return (
     <Pressable style={styles.stationRow} onPress={() => router.push(`/radio/${station.id}` as never)}>
-      <LinearGradient
-        colors={station.colors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.stationIcon}>
-        <Text style={styles.stationFlag}>{station.flag}</Text>
-      </LinearGradient>
+      {station.logo ? (
+        <View style={styles.stationIcon}>
+          <Image source={station.logo} style={styles.stationLogoImg} resizeMode="cover" />
+        </View>
+      ) : (
+        <LinearGradient
+          colors={station.colors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.stationIcon}>
+          <Text style={styles.stationFlag}>{station.flag}</Text>
+        </LinearGradient>
+      )}
       <View style={styles.stationInfo}>
         <Text style={styles.stationName}>{station.name}</Text>
         <Text style={styles.stationGenre}>{station.genre}</Text>
@@ -104,7 +110,8 @@ const styles = StyleSheet.create({
     gap: 12,
     ...theme.shadow.card,
   },
-  stationIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  stationIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: '#fff' },
+  stationLogoImg: { width: '100%', height: '100%' },
   stationFlag: { fontSize: 20 },
   stationInfo: { flex: 1 },
   stationName: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },

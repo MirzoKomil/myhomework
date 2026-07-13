@@ -125,6 +125,9 @@ export type RadioStation = {
   // Haqiqiy jonli oqimni radio-browser.info orqali topish uchun qidiruv so'zi.
   // Homework Radio'da yo'q — u alohida, statik namoyish sifatida qoladi.
   streamQuery?: string;
+  // Stansiyaning haqiqiy rasmiy logotipi — mavjud bo'lsa, ro'yxat va pleer
+  // ekranida bayroq+gradient o'rniga shu tasvir ko'rsatiladi.
+  logo?: ImageSourcePropType;
 };
 
 export const radioStations: RadioStation[] = [
@@ -134,6 +137,7 @@ export const radioStations: RadioStation[] = [
     founded: '1970-yildan beri',
     about: "Chuqur tahliliy yangiliklar, jamiyat va madaniyatga oid suhbat-dasturlarni efirga uzatuvchi jamoat radiosi.",
     streamQuery: 'NPR News',
+    logo: require('@/assets/images/radio/npr.jpg'),
   },
   {
     id: 'wnyc', name: 'WNYC', country: 'US', flag: '🇺🇸', genre: 'News & Talk', colors: ['#0EA5E9', '#0284C7'],
@@ -141,6 +145,7 @@ export const radioStations: RadioStation[] = [
     founded: '1924-yildan beri',
     about: "Nyu-York davlat radiosi — siyosat, madaniyat va ijtimoiy hayot haqida chuqur suhbatlar va podkastlarni efirga uzatadi.",
     streamQuery: 'WNYC',
+    logo: require('@/assets/images/radio/wnyc.jpg'),
   },
   {
     id: 'bloomberg-radio', name: 'Bloomberg Radio', country: 'US', flag: '🇺🇸', genre: 'Biznes va iqtisodiyot', colors: ['#1E293B', '#0F172A'],
@@ -148,6 +153,7 @@ export const radioStations: RadioStation[] = [
     founded: '1990-yillardan beri',
     about: "Biznes, iqtisodiyot va global bozorlar haqida professional tahliliy dasturlarni efirga uzatadi.",
     streamQuery: 'Bloomberg Radio',
+    logo: require('@/assets/images/radio/bloomberg-radio.jpg'),
   },
   {
     id: 'fox-news-radio', name: 'Fox News Radio', country: 'US', flag: '🇺🇸', genre: 'Yangiliklar', colors: ['#DC2626', '#991B1B'],
@@ -155,6 +161,7 @@ export const radioStations: RadioStation[] = [
     founded: '2003-yildan beri',
     about: "Kundalik yangiliklar, siyosiy debatlar va dolzarb mavzular bo'yicha tinimsiz muloqotlarni efirga uzatadi.",
     streamQuery: 'Fox News Radio',
+    logo: require('@/assets/images/radio/fox-news-radio.jpg'),
   },
   {
     id: 'voa-learning-english', name: 'VOA Learning English', country: 'US', flag: '🇺🇸', genre: "Til o'rganish uchun yangiliklar", colors: ['#3B82F6', '#1D4ED8'],
@@ -162,6 +169,7 @@ export const radioStations: RadioStation[] = [
     founded: '1959-yildan beri',
     about: "Ingliz tilini o'rganuvchilar uchun maxsus, sekin va sodda tilda tayyorlangan yangiliklar va dasturlarni efirga uzatadi.",
     streamQuery: 'VOA Learning English',
+    logo: require('@/assets/images/radio/voa-learning-english.jpg'),
   },
   {
     id: 'bbc-world-service', name: 'BBC World Service', country: 'UK', flag: '🇬🇧', genre: 'Xalqaro yangiliklar', colors: ['#7C3AED', '#5B21B6'],
@@ -169,6 +177,7 @@ export const radioStations: RadioStation[] = [
     founded: '1932-yildan beri',
     about: "Dunyo bo'ylab turli aksentlardagi suhbatlar va xalqaro yangiliklarni efirga uzatadi — tinglab tushunish mahoratini oshirish uchun ajoyib manba.",
     streamQuery: 'BBC World Service',
+    logo: require('@/assets/images/radio/bbc-world-service.png'),
   },
   {
     id: 'bbc-radio-4', name: 'BBC Radio 4', country: 'UK', flag: '🇬🇧', genre: 'Nutq, drama va madaniyat', colors: ['#0F766E', '#115E59'],
@@ -176,6 +185,7 @@ export const radioStations: RadioStation[] = [
     founded: '1967-yildan beri',
     about: "Musiqasiz — faqat drama, komediya, fan va madaniyat haqida chuqur suhbatlardan iborat Buyuk Britaniyaning eng mashhur nutq radiosi.",
     streamQuery: 'BBC Radio 4',
+    logo: require('@/assets/images/radio/bbc-radio-4.png'),
   },
   {
     id: 'lbc', name: 'LBC', country: 'UK', flag: '🇬🇧', genre: 'Jonli muloqot', colors: ['#F59E0B', '#D97706'],
@@ -186,6 +196,7 @@ export const radioStations: RadioStation[] = [
     // (alohida, faqat yangiliklar beruvchi opa-singil kanal) sifatida chiqishi
     // mumkin — aynan asosiy LBC talk-radio oqimini olish uchun "LBC UK" ishlatiladi.
     streamQuery: 'LBC UK',
+    logo: require('@/assets/images/radio/lbc.png'),
   },
   {
     id: 'times-radio', name: 'Times Radio', country: 'UK', flag: '🇬🇧', genre: 'Siyosat va tahlil', colors: ['#7F1D1D', '#450A0A'],
@@ -193,6 +204,7 @@ export const radioStations: RadioStation[] = [
     founded: '2020-yildan beri',
     about: "The Times nashri tomonidan tashkil etilgan, yuqori saviyadagi siyosiy va ijtimoiy tahliliy dasturlarni efirga uzatadi.",
     streamQuery: 'Times Radio',
+    logo: require('@/assets/images/radio/times-radio.jpg'),
   },
   {
     id: 'talksport', name: 'talkSPORT', country: 'UK', flag: '🇬🇧', genre: 'Sport sharhlari', colors: ['#EA580C', '#C2410C'],
@@ -200,6 +212,7 @@ export const radioStations: RadioStation[] = [
     founded: '2000-yildan beri',
     about: "Kun bo'yi futbol va boshqa sport turlari bo'yicha qizg'in sharhlar va bahslarni efirga uzatadi.",
     streamQuery: 'talkSPORT',
+    logo: require('@/assets/images/radio/talksport.png'),
   },
   {
     id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'],
