@@ -2573,21 +2573,31 @@ function renderMobileCoursesTab(container) {
     const courses = (mc.courses || []).filter(c => (c.lang || 'english') === _mobileLang);
 
     const cards = courses.length ? courses.map((c, i) => `
-        <div data-course-id="${escapeHtml(c.id)}" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);cursor:pointer;transition:box-shadow 0.15s">
-            <div style="font-size:36px;line-height:1">📚</div>
-            <div style="font-size:15px;font-weight:700;color:var(--text);text-align:center;line-height:1.4;word-break:break-word">${escapeHtml(c.name)}</div>
-            <div style="font-size:11px;color:var(--text-muted)">${escapeHtml(c.createdAt || '')}</div>
-            <button type="button" class="btn-danger-sm" data-delete-course="${i}" style="margin-top:6px;width:100%">O'chirish</button>
+        <div data-course-id="${escapeHtml(c.id)}" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 24px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);cursor:pointer;transition:box-shadow 0.15s">
+            <div style="font-size:52px;line-height:1">📚</div>
+            <div style="font-size:19px;font-weight:700;color:var(--text);text-align:center;line-height:1.4;word-break:break-word">${escapeHtml(c.name)}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${escapeHtml(c.createdAt || '')}</div>
+            <div style="display:flex;gap:8px;width:100%;margin-top:8px">
+                <button type="button" class="btn-ghost" data-edit-course="${i}" style="flex:1">✏️ Nomini o'zgartirish</button>
+                <button type="button" class="btn-danger-sm" data-delete-course="${i}" style="flex:1">O'chirish</button>
+            </div>
         </div>
     `).join('') : `<div class="mac-empty">Hali kurslar yaratilmagan</div>`;
 
-    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px">${cards}</div>`;
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px">${cards}</div>`;
 
     container.querySelectorAll('[data-course-id]').forEach(card => {
         card.addEventListener('click', e => {
-            if (e.target.closest('[data-delete-course]')) return;
+            if (e.target.closest('[data-delete-course]') || e.target.closest('[data-edit-course]')) return;
             _activeCourseId = card.dataset.courseId;
             renderMobileEditPanel();
+        });
+    });
+
+    container.querySelectorAll('[data-edit-course]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.editCourse);
+            _openEditCourseNameModal(idx, container);
         });
     });
 
@@ -2602,6 +2612,35 @@ function renderMobileCoursesTab(container) {
             showMiniToast("Kurs o'chirildi");
         });
     });
+}
+
+function _openEditCourseNameModal(idx, container) {
+    const mc = getMobileContent();
+    const courses = (mc.courses || []).filter(c => (c.lang || 'english') === _mobileLang);
+    const course = courses[idx];
+    if (!course) return;
+    openModal('Kurs nomini o\'zgartirish',
+        `<div class="form-group">
+            <label>Kurs nomi <span style="color:var(--danger)">*</span></label>
+            <input id="editCourseNameInput" class="form-control" value="${escapeHtml(course.name)}" autofocus>
+         </div>`,
+        `<button type="button" class="btn-ghost" id="cancelEditCourseName">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveEditCourseName">Saqlash</button>`,
+        { wide: false }
+    );
+    document.getElementById('cancelEditCourseName').onclick = () => closeModal();
+    document.getElementById('saveEditCourseName').onclick = () => {
+        const name = document.getElementById('editCourseNameInput').value.trim();
+        if (!name) { alert('Kurs nomi kiritilishi shart'); return; }
+        const mc2 = getMobileContent();
+        const gIdx = (mc2.courses || []).findIndex(c => c.id === course.id);
+        if (gIdx === -1) { closeModal(); return; }
+        mc2.courses[gIdx].name = name;
+        saveMobileContent(mc2);
+        closeModal();
+        renderMobileCoursesTab(container);
+        showMiniToast('Kurs nomi yangilandi');
+    };
 }
 
 function renderMobileVideosTab(container, content) {
