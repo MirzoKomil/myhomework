@@ -226,6 +226,16 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
     setBuilt((b) => [...b, idx]);
   };
 
+  // Xato harf qo'yilganda butun so'zni Tozalash orqali boshidan yozish shart
+  // emas — qurilgan qatordagi oxirgi harfga bosish xuddi backspace kabi faqat
+  // o'sha bitta harfni olib tashlaydi.
+  const removeLast = () => {
+    if (built.length === 0) return;
+    const lastIdx = built[built.length - 1];
+    setUsed((u) => u.map((v, i) => (i === lastIdx ? false : v)));
+    setBuilt((b) => b.slice(0, -1));
+  };
+
   const reset = () => {
     setUsed(letters.map(() => false));
     setBuilt([]);
@@ -244,11 +254,19 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
       </View>
 
       <View style={styles.builtRow}>
-        {letters.map((_, i) => (
-          <View key={i} style={styles.builtSlot}>
-            <Text style={styles.builtSlotText}>{built[i] !== undefined ? letters[built[i]] : ''}</Text>
-          </View>
-        ))}
+        {letters.map((_, i) => {
+          const isFilled = built[i] !== undefined;
+          const isLastFilled = isFilled && i === built.length - 1;
+          return (
+            <Pressable
+              key={i}
+              style={styles.builtSlot}
+              disabled={!isLastFilled || isComplete}
+              onPress={removeLast}>
+              <Text style={styles.builtSlotText}>{isFilled ? letters[built[i]] : ''}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={styles.lettersGrid}>
