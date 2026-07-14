@@ -22,6 +22,7 @@ import { useAvatarUri } from '@/services/avatarStore';
 import {
   CommunityComment,
   addComment,
+  isDisplayableImageUri,
   timeAgo,
   toggleLikeComment,
   toggleLikePost,
@@ -162,7 +163,7 @@ export default function PostDetailScreen() {
           </Pressable>
 
           <Text style={styles.postText}>{post.text}</Text>
-          {post.imageUri && <Image source={{ uri: post.imageUri }} style={styles.postImage} />}
+          {isDisplayableImageUri(post.imageUri) && <Image source={{ uri: post.imageUri }} style={styles.postImage} />}
 
           <View style={styles.engageRow}>
             <Pressable style={styles.engageBtn} onPress={() => toggleLikePost(post.id)} hitSlop={6}>

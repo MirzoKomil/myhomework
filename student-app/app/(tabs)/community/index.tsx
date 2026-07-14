@@ -13,7 +13,7 @@ import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
 import { useAvatarUri } from '@/services/avatarStore';
-import { CommunityPost, timeAgo, toggleLikePost, useCommunityActivity, usePosts } from '@/services/communityStore';
+import { CommunityPost, isDisplayableImageUri, timeAgo, toggleLikePost, useCommunityActivity, usePosts } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
 
@@ -57,7 +57,7 @@ function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress:
         {post.text}
       </Text>
 
-      {post.imageUri && <Image source={{ uri: post.imageUri }} style={styles.postImage} />}
+      {isDisplayableImageUri(post.imageUri) && <Image source={{ uri: post.imageUri }} style={styles.postImage} />}
 
       <View style={styles.engageRow}>
         <Pressable style={styles.engageBtn} onPress={() => toggleLikePost(post.id)} hitSlop={6}>

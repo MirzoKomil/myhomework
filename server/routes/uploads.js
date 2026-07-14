@@ -52,6 +52,24 @@ router.post('/', authRequired, upload.single('file'), (req, res) => {
     });
 });
 
+// Hamjamiyat post rasmlari uchun — public (ilovada login yo'q, yagona
+// haqiqiy foydalanuvchi namuna o'quvchi). Umumiy /api/upload'dan farqli
+// o'laroq faqat rasm turlariga va kichikroq hajmga (8 MB) cheklangan, shu
+// tufayli login talab qilmasa ham suiiste'mol qilish qiyin.
+const communityImageUpload = multer({
+    storage,
+    limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+    fileFilter: (req, file, cb) => {
+        if (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.mimetype)) return cb(null, true);
+        cb(new Error('Faqat rasm fayllari ruxsat etilgan'));
+    }
+});
+
+router.post('/community-image', communityImageUpload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Fayl yuklanmadi' });
+    res.json({ url: `/uploads/${req.file.filename}` });
+});
+
 router.delete('/:filename', authRequired, (req, res) => {
     const filename = path.basename(req.params.filename);
     const filePath = path.join(UPLOADS_DIR, filename);

@@ -14,6 +14,11 @@ const API_BASE =
     ? '/api/state/community'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/community';
 
+const UPLOAD_BASE =
+  Platform.OS === 'web'
+    ? '/api/upload/community-image'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/upload/community-image';
+
 export type CommunityComment = {
   id: string;
   postId: string;
@@ -76,6 +81,15 @@ export function subscribe(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+// blob:/data: URI'lar faqat ularni yaratgan brauzer sessiyasida ishlaydi —
+// bir marta serverga yozib qayta yuklansa (yoki boshqa qurilma/CRM'dan
+// ochilsa), doim o'lik bo'ladi. addPost endi bunday URI'larni hech qachon
+// saqlamaydi, lekin shu tekshiruv eski (fix'dan oldingi) postlarda qolib
+// ketgan buzilgan rasm o'rniga hech narsa ko'rsatmaslikni ta'minlaydi.
+export function isDisplayableImageUri(uri?: string | null): uri is string {
+  return !!uri && !uri.startsWith('blob:') && !uri.startsWith('data:');
+}
+
 export function getPosts(): CommunityPost[] {
   return [...posts].sort((a, b) => b.createdAt - a.createdAt);
 }
@@ -99,12 +113,42 @@ export async function loadPosts(): Promise<void> {
   }
 }
 
+// Rasm tanlanganda ImagePicker qaytaradigan URI (webda blob:/data:, nativeda
+// file://) faqat shu qurilma/sessiya doirasida ishlaydi — postni serverga
+// yozib, keyin qayta yuklab ochsak (yoki CRM'dan ko'rsak), bu URI allaqachon
+// o'lik bo'ladi. Shu sabab haqiqiy yuklashdan oldin uni serverga haqiqiy
+// faylga aylantirib, doimiy /uploads/... havolasini olamiz.
+async function uploadCommunityImage(imageUri: string): Promise<string | null> {
+  try {
+    const formData = new FormData();
+    if (Platform.OS === 'web') {
+      const blobResp = await fetch(imageUri);
+      const blob = await blobResp.blob();
+      formData.append('file', blob, 'post-image.jpg');
+    } else {
+      // @ts-expect-error — React Native'ning FormData'si {uri,name,type} shaklidagi
+      // fayl obyektini qabul qiladi, bu web File/Blob turidan farq qiladi.
+      formData.append('file', { uri: imageUri, name: 'post-image.jpg', type: 'image/jpeg' });
+    }
+    const res = await fetch(UPLOAD_BASE, { method: 'POST', body: formData });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.url ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function addPost(text: string, authorName: string, authorEmoji: string, imageUri?: string | null): Promise<void> {
+  let uploadedImageUrl: string | null = null;
+  if (imageUri) {
+    uploadedImageUrl = await uploadCommunityImage(imageUri);
+  }
   try {
     const res = await fetch(`${API_BASE}/posts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, authorName, authorEmoji, imageUri: imageUri ?? null }),
+      body: JSON.stringify({ text, authorName, authorEmoji, imageUri: uploadedImageUrl }),
     });
     const data = await res.json();
     if (data.post) {

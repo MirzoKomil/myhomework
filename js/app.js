@@ -2956,7 +2956,7 @@ function _communityPostCardHtml(p) {
             <button type="button" data-del-post="${escapeHtml(p.id)}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;flex-shrink:0">O'chirish</button>
         </div>
         <div style="font-size:14px;color:var(--text);white-space:pre-wrap;line-height:1.5;margin-bottom:10px">${escapeHtml(p.text || '')}</div>
-        ${p.imageUri ? `<img src="${escapeHtml(p.imageUri)}" style="max-width:100%;border-radius:8px;margin-bottom:10px">` : ''}
+        ${p.imageUri && !p.imageUri.startsWith('blob:') && !p.imageUri.startsWith('data:') ? `<img src="${escapeHtml(p.imageUri)}" style="max-width:100%;border-radius:8px;margin-bottom:10px">` : ''}
         <div style="display:flex;gap:16px;font-size:12px;color:var(--text-muted);${comments.length ? 'margin-bottom:12px' : ''}">
             <span>❤️ ${p.likeCount || 0}</span>
             <span>💬 ${comments.length}</span>
