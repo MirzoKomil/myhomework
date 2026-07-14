@@ -251,6 +251,57 @@ async function initSchema() {
         `INSERT INTO mobile_content (singleton, data) VALUES (1, $1) ON CONFLICT (singleton) DO NOTHING`,
         [JSON.stringify({ videos: [], documents: [], courses: [], lessons: [], modules: [], moduleContents: [] })]
     );
+
+    // Boshlang'ich hamjamiyat (community) postlari — ilgari appda faqat
+    // qurilma xotirasida (AsyncStorage) yashagan namuna postlar endi
+    // serverda saqlanadi, shunda CRM ham ularni ko'rib, o'chira oladi.
+    await pool.query(
+        `INSERT INTO json_data (key, data) VALUES ('communityPosts', $1) ON CONFLICT (key) DO NOTHING`,
+        [JSON.stringify(COMMUNITY_SEED_POSTS())]
+    );
+}
+
+function COMMUNITY_SEED_POSTS() {
+    const now = Date.now();
+    const day = 1000 * 60 * 60 * 24;
+    return [
+        {
+            id: 'p0', authorName: "Homework.uz jamoasi", authorEmoji: '📢',
+            createdAt: now - day * 1,
+            text: "Assalomu alaykum, aziz o'quvchilar! Yangi 'Speaking Battle' rejimi ilovaga qo'shildi — endi boshqa o'quvchilar bilan jonli musobaqalasha olasiz. Sinab ko'ring! 🏆",
+            imageUri: null, likeCount: 42, likedByMe: false, shareCount: 5, viewCount: 310,
+            comments: [], official: true,
+        },
+        {
+            id: 'p1', authorName: 'Azizbek', authorEmoji: '🧑',
+            createdAt: now - day * 2,
+            text: "Bugun Present Perfect mavzusini yakunladim! Dastlab juda chalkash tuyulgan edi, lekin videodarslardagi misollar juda yordam berdi 💪",
+            imageUri: null, likeCount: 14, likedByMe: false, shareCount: 1, viewCount: 86,
+            comments: [
+                { id: 'c1', postId: 'p1', parentId: null, authorName: 'Zarina', authorEmoji: '👩', createdAt: now - 1000 * 60 * 60 * 20, text: "Zo'r! Menga ham shu mavzu ancha qiyin bo'lgandi 😄", likeCount: 3, likedByMe: false },
+                { id: 'c2', postId: 'p1', parentId: 'c1', authorName: 'Azizbek', authorEmoji: '🧑', createdAt: now - 1000 * 60 * 60 * 18, text: 'Rahmat! Ha, mashq qilgan sari osonlashadi', likeCount: 1, likedByMe: false },
+            ],
+        },
+        {
+            id: 'p2', authorName: 'Madina', authorEmoji: '👩‍🦱',
+            createdAt: now - day * 4,
+            text: "So'zlar ro'yxatidagi yangi 20 ta so'zni yodladim. Kim menga hamroh bo'lib, birga mashq qilishni xohlaydi? 📚",
+            imageUri: null, likeCount: 9, likedByMe: false, shareCount: 0, viewCount: 54,
+            comments: [
+                { id: 'c3', postId: 'p2', parentId: null, authorName: 'Diyor', authorEmoji: '🧑‍🦰', createdAt: now - day * 3, text: "Men ham qo'shilaman!", likeCount: 2, likedByMe: false },
+            ],
+        },
+        {
+            id: 'p3', authorName: 'Sardor', authorEmoji: '🧔',
+            createdAt: now - day * 7,
+            text: "Speaking Battle'da birinchi marta g'alaba qozondim! Juda qiziqarli o'yin ekan 🏆",
+            imageUri: null, likeCount: 21, likedByMe: false, shareCount: 2, viewCount: 130,
+            comments: [
+                { id: 'c4', postId: 'p3', parentId: null, authorName: 'Gulnoza', authorEmoji: '🧕', createdAt: now - day * 6, text: 'Tabriklayman! 🎉', likeCount: 4, likedByMe: false },
+                { id: 'c5', postId: 'p3', parentId: null, authorName: 'Kamila', authorEmoji: '👱‍♀️', createdAt: now - day * 5, text: 'Men ham urinib ko\'raman', likeCount: 1, likedByMe: false },
+            ],
+        },
+    ];
 }
 
 // ── Seed & migrate ───────────────────────────────────────────────────────────
@@ -896,6 +947,91 @@ async function sendDemoStudentPeerMessage(peerId, peerName, text) {
     return message;
 }
 
+// ── Hamjamiyat (Community) ───────────────────────────────────────────────────
+// Bitta umumiy lenta — namuna o'quvchi ilovadan ko'radigan va CRM
+// administratori nazorat qiladigan bir xil ma'lumot. "likedByMe"/"me"
+// maydonlari yagona haqiqiy foydalanuvchi — namuna o'quvchi — nuqtai
+// nazaridan yoziladi.
+
+async function getCommunityPosts() {
+    return await getJsonData('communityPosts');
+}
+
+async function addCommunityPost(text, authorName, authorEmoji, imageUri) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) throw new Error("Post matni bo'sh bo'lishi mumkin emas");
+    const posts = await getJsonData('communityPosts');
+    const post = {
+        id: 'p-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        authorName: authorName || "O'quvchi",
+        authorEmoji: authorEmoji || '🙂',
+        createdAt: Date.now(),
+        text: trimmed,
+        imageUri: imageUri || null,
+        likeCount: 0, likedByMe: false, shareCount: 0, viewCount: 0,
+        comments: [], me: true,
+    };
+    posts.unshift(post);
+    await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
+    return post;
+}
+
+async function toggleCommunityPostLike(postId) {
+    const posts = await getJsonData('communityPosts');
+    const post = posts.find(p => p.id === postId);
+    if (!post) throw new Error('Post topilmadi');
+    post.likedByMe = !post.likedByMe;
+    post.likeCount = Math.max(0, (post.likeCount || 0) + (post.likedByMe ? 1 : -1));
+    await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
+    return post;
+}
+
+async function addCommunityComment(postId, text, parentId, authorName, authorEmoji) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) throw new Error("Izoh matni bo'sh bo'lishi mumkin emas");
+    const posts = await getJsonData('communityPosts');
+    const post = posts.find(p => p.id === postId);
+    if (!post) throw new Error('Post topilmadi');
+    const comment = {
+        id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        postId, parentId: parentId || null,
+        authorName: authorName || "O'quvchi",
+        authorEmoji: authorEmoji || '🙂',
+        createdAt: Date.now(),
+        text: trimmed, likeCount: 0, likedByMe: false, me: true,
+    };
+    post.comments.push(comment);
+    await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
+    return comment;
+}
+
+async function toggleCommunityCommentLike(postId, commentId) {
+    const posts = await getJsonData('communityPosts');
+    const post = posts.find(p => p.id === postId);
+    if (!post) throw new Error('Post topilmadi');
+    const comment = post.comments.find(c => c.id === commentId);
+    if (!comment) throw new Error('Izoh topilmadi');
+    comment.likedByMe = !comment.likedByMe;
+    comment.likeCount = Math.max(0, (comment.likeCount || 0) + (comment.likedByMe ? 1 : -1));
+    await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
+    return comment;
+}
+
+// Faqat admin (CRM) uchun — istalgan postni yoki izohni butunlay o'chiradi.
+async function deleteCommunityPost(postId) {
+    const posts = await getJsonData('communityPosts');
+    const next = posts.filter(p => p.id !== postId);
+    await tx(async (client) => { await saveJsonData(client, 'communityPosts', next); });
+}
+
+async function deleteCommunityComment(postId, commentId) {
+    const posts = await getJsonData('communityPosts');
+    const post = posts.find(p => p.id === postId);
+    if (!post) throw new Error('Post topilmadi');
+    post.comments = post.comments.filter(c => c.id !== commentId);
+    await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
+}
+
 // 124-ish: CRM'ning Sotuv bo'limidagi "Kitob yetkazish" kanban-bosqichlarini
 // appning 4 bosqichli ko'rsatkichiga (Tayyorlanmoqda/Jo'natildi/Yo'lda/
 // Yetkazib berildi) moslashtiradi.
@@ -1191,6 +1327,9 @@ module.exports = {
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     getDemoStudentBookDelivery,
     getDemoStudentActivity, addDemoStudentActivity,
+    getCommunityPosts, addCommunityPost, toggleCommunityPostLike,
+    addCommunityComment, toggleCommunityCommentLike,
+    deleteCommunityPost, deleteCommunityComment,
     createSession, findSessionByJti, getSessionById, getSessionsByUserId,
     touchSession, deleteSession, deleteSessionByJti, deleteOtherSessions,
     init

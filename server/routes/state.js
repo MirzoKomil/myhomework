@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -158,6 +158,83 @@ router.post('/demo-activity', async (req, res) => {
         res.json({ ok: true, record });
     } catch (err) {
         console.error('POST /api/state/demo-activity', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Hamjamiyat (Community) — bitta umumiy lenta, namuna o'quvchi ilovadan va
+// CRM administratoridan bir xil ko'rinadi. O'qish hammaga ochiq (public);
+// post/izoh qo'shish va like bosish ham public (ilovada login yo'q — yagona
+// haqiqiy foydalanuvchi namuna o'quvchi); FAQAT o'chirish operatsiyalari
+// admin autentifikatsiyasini talab qiladi.
+router.get('/community', async (req, res) => {
+    try {
+        res.json({ posts: await getCommunityPosts() });
+    } catch (err) {
+        console.error('GET /api/state/community', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/community/posts', async (req, res) => {
+    try {
+        const { text, authorName, authorEmoji, imageUri } = req.body || {};
+        const post = await addCommunityPost(text, authorName, authorEmoji, imageUri);
+        res.json({ ok: true, post });
+    } catch (err) {
+        console.error('POST /api/state/community/posts', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/community/posts/:postId/like', async (req, res) => {
+    try {
+        const post = await toggleCommunityPostLike(req.params.postId);
+        res.json({ ok: true, post });
+    } catch (err) {
+        console.error('POST /api/state/community/posts/:postId/like', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/community/posts/:postId/comments', async (req, res) => {
+    try {
+        const { text, parentId, authorName, authorEmoji } = req.body || {};
+        const comment = await addCommunityComment(req.params.postId, text, parentId, authorName, authorEmoji);
+        res.json({ ok: true, comment });
+    } catch (err) {
+        console.error('POST /api/state/community/posts/:postId/comments', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/community/posts/:postId/comments/:commentId/like', async (req, res) => {
+    try {
+        const comment = await toggleCommunityCommentLike(req.params.postId, req.params.commentId);
+        res.json({ ok: true, comment });
+    } catch (err) {
+        console.error('POST /api/state/community/posts/:postId/comments/:commentId/like', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Faqat CRM admin — istalgan postni yoki izohni butunlay o'chiradi.
+router.delete('/community/posts/:postId', authRequired, async (req, res) => {
+    try {
+        await deleteCommunityPost(req.params.postId);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('DELETE /api/state/community/posts/:postId', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.delete('/community/posts/:postId/comments/:commentId', authRequired, async (req, res) => {
+    try {
+        await deleteCommunityComment(req.params.postId, req.params.commentId);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('DELETE /api/state/community/posts/:postId/comments/:commentId', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

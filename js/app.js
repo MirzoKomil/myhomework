@@ -2804,7 +2804,9 @@ function renderMobileResourcesTab(container) {
         } else {
             renderMobileLibraryItemsTab(container);
         }
-    } else if (_activeResourceCategory === 'games' || _activeResourceCategory === 'community') {
+    } else if (_activeResourceCategory === 'community') {
+        renderMobileCommunityTab(container);
+    } else if (_activeResourceCategory === 'games') {
         renderMobileResourceCategoryPlaceholder(container, _activeResourceCategory);
     } else {
         renderMobileResourcesLandingTab(container);
@@ -2882,6 +2884,98 @@ function renderMobileResourceCategoryPlaceholder(container, catId) {
         _activeResourceCategory = null;
         renderMobileEditPanel();
     });
+}
+
+// ─── Hamjamiyat (Community) — barcha post/izohlarni ko'rish va o'chirish ────
+let _communityPostsCache = [];
+
+function renderMobileCommunityTab(container) {
+    container.innerHTML = `<div class="mac-empty" style="padding:40px 0;text-align:center;color:var(--text-muted)">Yuklanmoqda...</div>`;
+    apiFetchCommunity().then(data => {
+        _communityPostsCache = data.posts || [];
+        _renderCommunityPostsList(container);
+    }).catch(err => {
+        container.innerHTML = `
+            <button type="button" id="mobileCommunityBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Resurslar</button>
+            <div class="mac-empty" style="padding:40px 0;text-align:center;color:var(--danger)">Yuklashda xatolik: ${escapeHtml(err.message || String(err))}</div>`;
+        document.getElementById('mobileCommunityBackBtn').addEventListener('click', () => {
+            _activeResourceCategory = null;
+            renderMobileEditPanel();
+        });
+    });
+}
+
+function _renderCommunityPostsList(container) {
+    const posts = _communityPostsCache;
+    container.innerHTML = `
+        <button type="button" id="mobileCommunityBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Resurslar</button>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${posts.length} ta post</div>
+        <div style="display:flex;flex-direction:column;gap:14px;max-width:640px">
+            ${posts.length ? posts.map(p => _communityPostCardHtml(p)).join('') : `<div class="mac-empty" style="padding:40px 0;text-align:center;color:var(--text-muted)">Hali postlar yo'q</div>`}
+        </div>`;
+    document.getElementById('mobileCommunityBackBtn').addEventListener('click', () => {
+        _activeResourceCategory = null;
+        renderMobileEditPanel();
+    });
+    container.querySelectorAll('[data-del-post]').forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm("Ushbu post barcha izohlari bilan butunlay o'chirilsinmi?")) return;
+        const postId = btn.dataset.delPost;
+        try {
+            await apiDeleteCommunityPost(postId);
+            _communityPostsCache = _communityPostsCache.filter(p => p.id !== postId);
+            _renderCommunityPostsList(container);
+            showMiniToast("Post o'chirildi");
+        } catch (err) {
+            alert("O'chirishda xatolik: " + (err.message || err));
+        }
+    }));
+    container.querySelectorAll('[data-del-comment]').forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm("Ushbu izoh o'chirilsinmi?")) return;
+        const [postId, commentId] = btn.dataset.delComment.split('::');
+        try {
+            await apiDeleteCommunityComment(postId, commentId);
+            const post = _communityPostsCache.find(p => p.id === postId);
+            if (post) post.comments = (post.comments || []).filter(c => c.id !== commentId);
+            _renderCommunityPostsList(container);
+            showMiniToast("Izoh o'chirildi");
+        } catch (err) {
+            alert("O'chirishda xatolik: " + (err.message || err));
+        }
+    }));
+}
+
+function _communityPostCardHtml(p) {
+    const comments = p.comments || [];
+    return `<div style="border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--surface)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:22px;flex-shrink:0">${escapeHtml(p.authorEmoji || '🙂')}</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:13px;color:var(--text)">${escapeHtml(p.authorName || '')}${p.official ? ' <span style="color:var(--purple,#7c3aed);font-weight:600">· rasmiy</span>' : ''}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${p.createdAt ? new Date(p.createdAt).toLocaleString('uz-UZ') : ''}</div>
+            </div>
+            <button type="button" data-del-post="${escapeHtml(p.id)}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;flex-shrink:0">O'chirish</button>
+        </div>
+        <div style="font-size:14px;color:var(--text);white-space:pre-wrap;line-height:1.5;margin-bottom:10px">${escapeHtml(p.text || '')}</div>
+        ${p.imageUri ? `<img src="${escapeHtml(p.imageUri)}" style="max-width:100%;border-radius:8px;margin-bottom:10px">` : ''}
+        <div style="display:flex;gap:16px;font-size:12px;color:var(--text-muted);${comments.length ? 'margin-bottom:12px' : ''}">
+            <span>❤️ ${p.likeCount || 0}</span>
+            <span>💬 ${comments.length}</span>
+            <span>🔁 ${p.shareCount || 0}</span>
+            <span>👁️ ${p.viewCount || 0}</span>
+        </div>
+        ${comments.length ? `<div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px">
+            ${comments.map(c => `
+                <div style="display:flex;align-items:flex-start;gap:8px">
+                    <div style="font-size:16px;flex-shrink:0">${escapeHtml(c.authorEmoji || '🙂')}</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:12px;color:var(--text)"><b>${escapeHtml(c.authorName || '')}</b> ${escapeHtml(c.text || '')}</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">❤️ ${c.likeCount || 0} · ${c.createdAt ? new Date(c.createdAt).toLocaleString('uz-UZ') : ''}</div>
+                    </div>
+                    <button type="button" data-del-comment="${escapeHtml(p.id)}::${escapeHtml(c.id)}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:11px;font-weight:600;flex-shrink:0">O'chirish</button>
+                </div>
+            `).join('')}
+        </div>` : ''}
+    </div>`;
 }
 
 // ─── Kutubxonaning 6 resurs turi — har biri uchun to'liq CRUD ───────────────

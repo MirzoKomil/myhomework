@@ -161,3 +161,15 @@ async function apiUploadFile(file) {
 async function apiDeleteUpload(filename) {
     return apiFetch('/api/upload/' + encodeURIComponent(filename), { method: 'DELETE' });
 }
+
+async function apiFetchCommunity() {
+    return apiFetch('/api/state/community');
+}
+
+async function apiDeleteCommunityPost(postId) {
+    return apiFetch('/api/state/community/posts/' + encodeURIComponent(postId), { method: 'DELETE' });
+}
+
+async function apiDeleteCommunityComment(postId, commentId) {
+    return apiFetch('/api/state/community/posts/' + encodeURIComponent(postId) + '/comments/' + encodeURIComponent(commentId), { method: 'DELETE' });
+}
