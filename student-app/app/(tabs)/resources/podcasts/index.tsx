@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -11,12 +11,22 @@ import {
   PODCAST_LEVEL_COLORS,
   PODCAST_LEVEL_LABELS,
   PODCAST_LEVELS_ORDER,
-  getPodcastEpisodesByLevel,
+  PODCAST_EPISODES,
+  PodcastEpisode,
 } from '@/data/podcastEpisodes';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function PodcastsLevelScreen() {
   const [level, setLevel] = useState<PodcastLevel>('a1');
-  const episodes = getPodcastEpisodesByLevel(level);
+  const [allEpisodes, setAllEpisodes] = useState<(PodcastEpisode & { coverUrl?: string; audioUrl?: string })[]>(PODCAST_EPISODES);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.podcasts.length) setAllEpisodes(mc.library.podcasts); })
+      .catch(() => {});
+  }, []);
+
+  const episodes = allEpisodes.filter((e) => e.level === level);
   const accent = PODCAST_LEVEL_COLORS[level];
 
   return (
@@ -44,12 +54,20 @@ export default function PodcastsLevelScreen() {
               key={ep.id}
               style={styles.cardWrap}
               onPress={() => router.push(`/resources/podcasts/${ep.id}` as never)}>
-              <LinearGradient colors={ep.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-                <View style={[styles.levelBadge, { backgroundColor: accent }]}>
-                  <Text style={styles.levelBadgeText}>{PODCAST_LEVEL_LABELS[level]}</Text>
-                </View>
-                <Text style={styles.cardEmoji}>{ep.emoji}</Text>
-              </LinearGradient>
+              {ep.coverUrl ? (
+                <ImageBackground source={{ uri: ep.coverUrl }} style={styles.card} imageStyle={styles.cardImg}>
+                  <View style={[styles.levelBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.levelBadgeText}>{PODCAST_LEVEL_LABELS[level]}</Text>
+                  </View>
+                </ImageBackground>
+              ) : (
+                <LinearGradient colors={ep.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+                  <View style={[styles.levelBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.levelBadgeText}>{PODCAST_LEVEL_LABELS[level]}</Text>
+                  </View>
+                  <Text style={styles.cardEmoji}>{ep.emoji}</Text>
+                </LinearGradient>
+              )}
               <Text style={styles.cardTitle} numberOfLines={2}>
                 {ep.title}
               </Text>
@@ -93,4 +111,5 @@ const styles = StyleSheet.create({
   levelBadgeText: { fontFamily: theme.fonts.bold, fontSize: 9, color: '#fff' },
   cardEmoji: { fontSize: 32 },
   cardTitle: { fontFamily: theme.fonts.semiBold, fontSize: 11, color: theme.colors.text, textAlign: 'center', marginTop: 6, lineHeight: 14 },
+  cardImg: { borderRadius: theme.radius.md },
 });

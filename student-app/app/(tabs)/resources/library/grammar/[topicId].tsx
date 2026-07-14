@@ -1,15 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { GRAMMAR_LEVEL_COLORS, GRAMMAR_LEVEL_LABELS, GRAMMAR_TOPICS } from '@/data/grammarGuide';
+import { GRAMMAR_LEVEL_COLORS, GRAMMAR_LEVEL_LABELS, GRAMMAR_TOPICS, GrammarTopic } from '@/data/grammarGuide';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function GrammarTopicScreen() {
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
-  const topic = GRAMMAR_TOPICS.find((t) => t.id === topicId);
+  const [allTopics, setAllTopics] = useState<GrammarTopic[]>(GRAMMAR_TOPICS);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.grammar.length) setAllTopics(mc.library.grammar); })
+      .catch(() => {});
+  }, []);
+
+  const topic = allTopics.find((t) => t.id === topicId);
 
   if (!topic) {
     return (

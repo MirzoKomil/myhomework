@@ -21,6 +21,7 @@ const ALLOWED_MIME = new Set([
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'video/mp4', 'video/webm',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/ogg',
     'text/plain',
 ]);
 

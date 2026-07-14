@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -11,12 +11,22 @@ import {
   BOOK_LEVEL_COLORS,
   BOOK_LEVEL_LABELS,
   BOOK_LEVELS_ORDER,
-  getBookStoriesByLevel,
+  BOOK_STORIES,
+  BookStory,
 } from '@/data/bookStories';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function BooksLevelScreen() {
   const [level, setLevel] = useState<BookLevel>('a1');
-  const stories = getBookStoriesByLevel(level);
+  const [allStories, setAllStories] = useState<(BookStory & { coverUrl?: string })[]>(BOOK_STORIES);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.books.length) setAllStories(mc.library.books); })
+      .catch(() => {});
+  }, []);
+
+  const stories = allStories.filter((s) => s.level === level);
   const accent = BOOK_LEVEL_COLORS[level];
 
   return (
@@ -41,12 +51,20 @@ export default function BooksLevelScreen() {
         <View style={styles.grid}>
           {stories.map((s) => (
             <Pressable key={s.id} style={styles.cardWrap} onPress={() => router.push(`/resources/books/${s.id}` as never)}>
-              <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-                <View style={[styles.levelBadge, { backgroundColor: accent }]}>
-                  <Text style={styles.levelBadgeText}>{BOOK_LEVEL_LABELS[level]}</Text>
-                </View>
-                <Text style={styles.cardEmoji}>{s.emoji}</Text>
-              </LinearGradient>
+              {s.coverUrl ? (
+                <ImageBackground source={{ uri: s.coverUrl }} style={styles.card} imageStyle={styles.cardImg}>
+                  <View style={[styles.levelBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.levelBadgeText}>{BOOK_LEVEL_LABELS[level]}</Text>
+                  </View>
+                </ImageBackground>
+              ) : (
+                <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+                  <View style={[styles.levelBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.levelBadgeText}>{BOOK_LEVEL_LABELS[level]}</Text>
+                  </View>
+                  <Text style={styles.cardEmoji}>{s.emoji}</Text>
+                </LinearGradient>
+              )}
               <Text style={styles.cardTitle} numberOfLines={2}>
                 {s.title}
               </Text>
@@ -90,4 +108,5 @@ const styles = StyleSheet.create({
   levelBadgeText: { fontFamily: theme.fonts.bold, fontSize: 7, color: '#fff' },
   cardEmoji: { fontSize: 22 },
   cardTitle: { fontFamily: theme.fonts.semiBold, fontSize: 9, color: theme.colors.text, textAlign: 'center', marginTop: 4, lineHeight: 11 },
+  cardImg: { borderRadius: theme.radius.sm },
 });

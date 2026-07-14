@@ -4,6 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
+// Kutubxona (Grammatika/So'zlar/Talaffuz/Speaking/Podkastlar/Kitoblar) — appning
+// statik ma'lumotlaridan bir martalik ko'chirilgan boshlang'ich to'plam. CRM
+// tahrirlari bu massivlarga yozilmaydi — ular faqat pastdagi libraryOverrides
+// bilan qo'shib o'qiladi (lessonContents'dagi kabi override-pattern).
+const LIBRARY_DEFAULTS = require('./data/libraryDefaults.json');
+
 // ── Connection ───────────────────────────────────────────────────────────────
 
 if (!process.env.DATABASE_URL) {
@@ -467,6 +473,32 @@ function applyComputedLessonAttendance(mc, liveGrades, demoStudentId) {
     return mc;
 }
 
+// Kutubxonaning 6 kategoriyasini (grammar/words/pronunciation/speaking/podcasts/
+// books) statik LIBRARY_DEFAULTS bilan CRM'da kiritilgan mc.libraryOverrides'ni
+// birlashtirib, mc.library'ga yozadi. Overridedagi { _deleted: true } — o'sha
+// id'ni ro'yxatdan chiqarib tashlaydi; default'da yo'q id'lar (CRM'da "+
+// Qo'shish" bilan qo'shilgan yangi elementlar) to'g'ridan-to'g'ri qo'shiladi.
+function applyLibraryOverrides(mc) {
+    const overrides = mc.libraryOverrides || {};
+    const library = {};
+    for (const cat of Object.keys(LIBRARY_DEFAULTS)) {
+        const catOverrides = overrides[cat] || {};
+        const defaultIds = new Set();
+        const merged = LIBRARY_DEFAULTS[cat].map(item => {
+            defaultIds.add(item.id);
+            const patch = catOverrides[item.id];
+            if (patch && patch._deleted) return null;
+            return patch ? { ...item, ...patch } : item;
+        }).filter(Boolean);
+        Object.keys(catOverrides).forEach(id => {
+            if (!defaultIds.has(id) && !catOverrides[id]._deleted) merged.push({ id, ...catOverrides[id] });
+        });
+        library[cat] = merged;
+    }
+    mc.library = library;
+    return mc;
+}
+
 async function getMobileContentData() {
     const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
     const mc = row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
@@ -474,7 +506,8 @@ async function getMobileContentData() {
         getJsonData('liveGrades'),
         getJsonData('demoStudentId'),
     ]);
-    return applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
+    applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
+    return applyLibraryOverrides(mc);
 }
 
 async function saveMobileContentData(client, data) {

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { AudioPlayer, createAudioPlayer } from 'expo-audio';
 import { useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
@@ -7,7 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { PRONUNCIATION_TOPICS } from '@/data/pronunciationTopics';
+import { PRONUNCIATION_TOPICS, PronunciationTopic } from '@/data/pronunciationTopics';
+import { fetchMobileContent } from '@/services/contentApi';
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.round(ms / 1000));
@@ -18,23 +20,36 @@ function formatTime(ms: number): string {
 
 export default function PronunciationTopicScreen() {
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
-  const topic = PRONUNCIATION_TOPICS.find((t) => t.id === topicId);
+  const [topics, setTopics] = useState<(PronunciationTopic & { audioUrl?: string })[]>(PRONUNCIATION_TOPICS);
+  const topic = topics.find((t) => t.id === topicId);
   const [isPlaying, setIsPlaying] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [realDurationMs, setRealDurationMs] = useState(0);
   const [speakingWord, setSpeakingWord] = useState<number | null>(null);
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const audioPlayerRef = useRef<AudioPlayer | null>(null);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.pronunciation.length) setTopics(mc.library.pronunciation); })
+      .catch(() => {});
+  }, []);
 
   const wordCount = topic ? topic.synopsis.split(/\s+/).length : 0;
-  const estimatedDuration = Math.max(3000, wordCount * 380);
+  const estimatedDuration = realDurationMs || Math.max(3000, wordCount * 380);
 
   useEffect(() => {
     return () => {
       Speech.stop();
+      audioPlayerRef.current?.remove();
+      audioPlayerRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    const id = progressAnim.addListener(({ value }) => setElapsedMs(value * estimatedDuration));
+    const id = progressAnim.addListener(({ value }) => {
+      if (!audioPlayerRef.current) setElapsedMs(value * estimatedDuration);
+    });
     return () => progressAnim.removeListener(id);
   }, [estimatedDuration]);
 
@@ -50,6 +65,11 @@ export default function PronunciationTopicScreen() {
   }
 
   const stopSynopsis = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.remove();
+      audioPlayerRef.current = null;
+    }
     Speech.stop();
     progressAnim.stopAnimation();
     progressAnim.setValue(0);
@@ -57,7 +77,33 @@ export default function PronunciationTopicScreen() {
     setElapsedMs(0);
   };
 
+  const playRealAudio = (audioUrl: string) => {
+    setIsPlaying(true);
+    const player = createAudioPlayer(audioUrl);
+    audioPlayerRef.current = player;
+    player.addListener('playbackStatusUpdate', (status) => {
+      if (audioPlayerRef.current !== player) return;
+      if (status.duration) {
+        setRealDurationMs(status.duration * 1000);
+        progressAnim.setValue(status.currentTime / status.duration);
+      }
+      setElapsedMs((status.currentTime || 0) * 1000);
+      if (status.didJustFinish) {
+        setIsPlaying(false);
+        setElapsedMs(0);
+        progressAnim.setValue(0);
+        player.remove();
+        audioPlayerRef.current = null;
+      }
+    });
+    player.play();
+  };
+
   const playSynopsis = () => {
+    if (topic.audioUrl) {
+      playRealAudio(topic.audioUrl);
+      return;
+    }
     setIsPlaying(true);
     progressAnim.setValue(0);
     Animated.timing(progressAnim, { toValue: 1, duration: estimatedDuration, useNativeDriver: false }).start(({ finished }) => {

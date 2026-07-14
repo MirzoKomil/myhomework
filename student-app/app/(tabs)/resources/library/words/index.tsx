@@ -1,16 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { VocabLevel, VOCAB_LEVEL_LABELS, VOCAB_LEVELS_ORDER, getVocabTopicsByLevel } from '@/data/vocabularyLibrary';
+import { VocabLevel, VOCAB_LEVEL_LABELS, VOCAB_LEVELS_ORDER, VOCAB_TOPICS, VocabTopic } from '@/data/vocabularyLibrary';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function WordsLevelScreen() {
   const [level, setLevel] = useState<VocabLevel>('beginner');
-  const topics = getVocabTopicsByLevel(level);
+  const [allTopics, setAllTopics] = useState<VocabTopic[]>(VOCAB_TOPICS);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.words.length) setAllTopics(mc.library.words); })
+      .catch(() => {});
+  }, []);
+
+  const topics = allTopics.filter((t) => t.level === level);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -11,12 +11,22 @@ import {
   SPEAKING_LEVEL_COLORS,
   SPEAKING_LEVEL_LABELS,
   SPEAKING_LEVELS_ORDER,
-  getSpeakingTopicsByLevel,
+  SPEAKING_TOPICS,
+  SpeakingTopic,
 } from '@/data/speakingTopics';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function SpeakingLevelScreen() {
   const [level, setLevel] = useState<SpeakingLevel>('easy');
-  const topics = getSpeakingTopicsByLevel(level);
+  const [allTopics, setAllTopics] = useState<(SpeakingTopic & { coverUrl?: string })[]>(SPEAKING_TOPICS);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.speaking.length) setAllTopics(mc.library.speaking); })
+      .catch(() => {});
+  }, []);
+
+  const topics = allTopics.filter((t) => t.level === level);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -44,12 +54,21 @@ export default function SpeakingLevelScreen() {
               key={t.id}
               style={styles.cardWrap}
               onPress={() => router.push(`/resources/speaking/${t.id}` as never)}>
-              <LinearGradient colors={t.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-                <Text style={styles.cardEmoji}>{t.emoji}</Text>
-                <Text style={styles.cardTitle} numberOfLines={2}>
-                  {t.title}
-                </Text>
-              </LinearGradient>
+              {t.coverUrl ? (
+                <ImageBackground source={{ uri: t.coverUrl }} style={styles.card} imageStyle={styles.cardImg}>
+                  <View style={styles.cardOverlay} />
+                  <Text style={styles.cardTitle} numberOfLines={2}>
+                    {t.title}
+                  </Text>
+                </ImageBackground>
+              ) : (
+                <LinearGradient colors={t.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+                  <Text style={styles.cardEmoji}>{t.emoji}</Text>
+                  <Text style={styles.cardTitle} numberOfLines={2}>
+                    {t.title}
+                  </Text>
+                </LinearGradient>
+              )}
             </Pressable>
           ))}
         </View>
@@ -87,4 +106,6 @@ const styles = StyleSheet.create({
   },
   cardEmoji: { fontSize: 34, marginBottom: 8 },
   cardTitle: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff', lineHeight: 18 },
+  cardImg: { borderRadius: theme.radius.md },
+  cardOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
 });

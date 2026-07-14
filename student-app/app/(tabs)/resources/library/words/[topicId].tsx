@@ -1,17 +1,26 @@
 import { useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { VOCAB_TOPICS } from '@/data/vocabularyLibrary';
+import { VOCAB_TOPICS, VocabTopic } from '@/data/vocabularyLibrary';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function WordsTopicScreen() {
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
-  const topic = VOCAB_TOPICS.find((t) => t.id === topicId);
+  const [allTopics, setAllTopics] = useState<VocabTopic[]>(VOCAB_TOPICS);
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.words.length) setAllTopics(mc.library.words); })
+      .catch(() => {});
+  }, []);
+
+  const topic = allTopics.find((t) => t.id === topicId);
 
   if (!topic) {
     return (

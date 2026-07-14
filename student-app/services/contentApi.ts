@@ -2,6 +2,12 @@ import { Platform } from 'react-native';
 
 import type { GrammarBlank, HomeworkPart, SlideContent, SpeakingPrompt, VocabWord } from '@/data/lessonContent';
 import type { ShopProduct } from '@/data/shopProducts';
+import type { GrammarTopic } from '@/data/grammarGuide';
+import type { VocabTopic } from '@/data/vocabularyLibrary';
+import type { PronunciationTopic } from '@/data/pronunciationTopics';
+import type { SpeakingTopic } from '@/data/speakingTopics';
+import type { PodcastEpisode } from '@/data/podcastEpisodes';
+import type { BookStory } from '@/data/bookStories';
 
 // Web uchun relative URL ishlaydi (server bir xil origin).
 // Native uchun env dan yoki fallback URL ishlatiladi.
@@ -105,6 +111,20 @@ export type AdminExamContent = {
   updatedAt?: string;
 };
 
+// Kutubxonaning 6 resurs turi uchun CRM'da tahrirlangan, statik
+// ma'lumotlar bilan serverda allaqachon birlashtirilgan (resolved) ro'yxatlar
+// — appda static import o'rniga shu yerdan o'qiladi. Talaffuz/Podkastlarga
+// haqiqiy audioUrl, Speaking/Podkastlar/Kitoblarga esa coverUrl qo'shilishi
+// mumkin (CRM'da yuklangan bo'lsa).
+export type LibraryContent = {
+  grammar: GrammarTopic[];
+  words: VocabTopic[];
+  pronunciation: (PronunciationTopic & { audioUrl?: string })[];
+  speaking: (SpeakingTopic & { coverUrl?: string })[];
+  podcasts: (PodcastEpisode & { coverUrl?: string; audioUrl?: string })[];
+  books: (BookStory & { coverUrl?: string })[];
+};
+
 export type MobileContent = {
   courses: AdminCourse[];
   lessons: AdminLesson[];
@@ -116,6 +136,7 @@ export type MobileContent = {
   // CRM'ning "Asosiy oyna → Homework Shop" bo'limida qo'shilgan mahsulotlar —
   // appning statik SHOP_PRODUCTS ro'yxatiga qo'shimcha sifatida ko'rsatiladi.
   shopProducts: ShopProduct[];
+  library: LibraryContent;
 };
 
 let _cache: MobileContent | null = null;
@@ -140,6 +161,14 @@ export async function fetchMobileContent(): Promise<MobileContent> {
         examContents: data.examContents ?? {},
         certificateTemplateUrl: data.certificateTemplateUrl,
         shopProducts: data.shopProducts ?? [],
+        library: {
+          grammar: data.library?.grammar ?? [],
+          words: data.library?.words ?? [],
+          pronunciation: data.library?.pronunciation ?? [],
+          speaking: data.library?.speaking ?? [],
+          podcasts: data.library?.podcasts ?? [],
+          books: data.library?.books ?? [],
+        },
       };
       return _cache;
     })

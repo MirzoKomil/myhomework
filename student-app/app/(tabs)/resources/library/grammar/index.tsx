@@ -1,13 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { GRAMMAR_LEVEL_COLORS, GRAMMAR_LEVEL_LABELS, GRAMMAR_LEVELS_ORDER, getGrammarTopicsByLevel } from '@/data/grammarGuide';
+import { GRAMMAR_LEVEL_COLORS, GRAMMAR_LEVEL_LABELS, GRAMMAR_LEVELS_ORDER, GRAMMAR_TOPICS, GrammarTopic } from '@/data/grammarGuide';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function GrammarGuideScreen() {
+  const [allTopics, setAllTopics] = useState<GrammarTopic[]>(GRAMMAR_TOPICS);
+
+  // CRM'da tahrirlangan mavzular — yuklanguncha statik ro'yxat ko'rsatiladi.
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.grammar.length) setAllTopics(mc.library.grammar); })
+      .catch(() => {});
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Grammatik qo'llanma" showBack />
@@ -15,7 +26,7 @@ export default function GrammarGuideScreen() {
         <Text style={styles.subtitle}>A1 darajadan B1 darajagacha mavzular</Text>
 
         {GRAMMAR_LEVELS_ORDER.map((level, levelIndex) => {
-          const topics = getGrammarTopicsByLevel(level);
+          const topics = allTopics.filter((t) => t.level === level);
           const [iconColor] = GRAMMAR_LEVEL_COLORS[level];
           return (
             <View key={level}>

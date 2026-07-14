@@ -645,10 +645,14 @@ let _activeHomeSection = null;
 let _activePeerId = null;
 // 132-ish: "Resurslar" bo'limi endi appdagi haqiqiy tuzilishni (Kutubxona/
 // O'yinlar/Hamjamiyat) aks ettiradi — null=3 ta karta, 'library'=Kutubxona
-// ichidagi 6 ta resurs turi, 'library-items'=shulardan biriga bosilganda
-// ochiladigan eski video/PDF/prezentatsiya/darslik boshqaruvi, 'games'/
-// 'community'=hozircha oddiy izoh.
+// ichidagi 6 ta resurs turi, 'games'/'community'=hozircha oddiy izoh.
+// Keyingi ish: Kutubxonadagi har bir resurs turi endi o'zining haqiqiy
+// tarkibini (mc.library.<catKey>) ko'rsatadi — _activeLibraryCategory shu
+// 6 tadan qaysi biri tanlanganini, _activeLibraryTopicId esa shu kategoriya
+// ichidagi qaysi mavzu/element tafsilotiga kirilganini bildiradi.
 let _activeResourceCategory = null;
+let _activeLibraryCategory = null;
+let _activeLibraryTopicId = null;
 
 const SHOP_CATEGORY_LABELS = { merch: 'Merch', books: 'Kitoblar', gadgets: 'Gadgetlar', stationery: 'Kontsstovarlar' };
 const SHOP_CATEGORY_OPTIONS = [
@@ -764,6 +768,8 @@ function switchMobileSubSection(sub) {
     _activeBonusIndex = null;
     _activeExamId = null;
     _activeResourceCategory = null;
+    _activeLibraryCategory = null;
+    _activeLibraryTopicId = null;
     _syncMobileSubNavUI();
     renderMobileEditPanel();
 }
@@ -771,14 +777,13 @@ function switchMobileSubSection(sub) {
 function renderMobileEditPanel() {
     const panel = document.getElementById('mobileEditPanel');
     if (!panel) return;
-    // "Resurslar"da video/PDF/prezentatsiya/darslik boshqaruvi (eski mac-tabs
-    // qatori) endi faqat Kutubxona ichidagi 6 ta resurs turidan biriga
-    // bosilgandan keyin ("library-items" bosqichida) ko'rinadi — undan oldin
-    // 3 ta karta (Kutubxona/O'yinlar/Hamjamiyat), so'ng Kutubxona ro'yxati
-    // ko'rsatiladi (bular alohida, o'zining renderMobileResourcesTab orqali).
-    const inLibraryItems = _mobileSubSection === 'resurslar' && _activeResourceCategory === 'library-items';
-    const showRow     = (_mobileSubSection === 'dars' && !_activeLessonId) || inLibraryItems;
-    const showMacTabs = inLibraryItems;
+    // Eski video/PDF/prezentatsiya/darslik boshqaruvi (mac-tabs qatori) endi
+    // hech qayerdan ochilmaydi — Kutubxonaning 6 ta resurs turi endi o'zining
+    // haqiqiy tarkibini renderMobileResourcesTab orqali ko'rsatadi, o'zining
+    // ("← ...") orqaga qaytish tugmasi bilan. Bu qator faqat "Dars" bo'limida
+    // kurs/dars yaratish tugmasi uchun qoladi.
+    const showRow     = (_mobileSubSection === 'dars' && !_activeLessonId);
+    const showMacTabs = false;
     const btnLabel    = _mobileSubSection !== 'dars'
         ? "+ YouTube video qo'shish"
         : _activeLessonId ? 'Mavzu qo\'shish'
@@ -811,10 +816,6 @@ function renderMobileEditPanel() {
                 renderMobileAdminTab(btn.dataset.macTab);
             });
         });
-        document.getElementById('mobileResourcesBackBtn')?.addEventListener('click', () => {
-            _activeResourceCategory = 'library';
-            renderMobileEditPanel();
-        });
         document.getElementById('mobileAddVideoHeaderBtn')?.addEventListener('click', () => {
             if (_mobileSubSection === 'dars') {
                 if (_activeCourseId) _openCreateLessonModal();
@@ -835,7 +836,7 @@ function renderMobileEditPanel() {
     if (macTabsEl) macTabsEl.style.display = showMacTabs ? 'flex' : 'none';
 
     const backBtn = document.getElementById('mobileResourcesBackBtn');
-    if (backBtn) backBtn.style.display = inLibraryItems ? 'inline-flex' : 'none';
+    if (backBtn) backBtn.style.display = 'none';
 
     const addBtn = document.getElementById('mobileAddVideoHeaderBtn');
     if (addBtn) addBtn.textContent = btnLabel;
@@ -1038,7 +1039,7 @@ function renderEditableList(container, opts) {
     const items = opts.items || [];
     const rows = items.length
         ? items.map((item, i) => `
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--surface)">
+            <div data-lc-row="${i}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--surface)${opts.onRowClick ? ';cursor:pointer' : ''}">
                 <div style="flex:1;min-width:0;font-size:13px;color:var(--text);line-height:1.5">${opts.renderRow(item)}</div>
                 <button type="button" data-lc-edit="${i}" style="background:none;border:none;cursor:pointer;color:var(--purple,#7c3aed);font-size:12px;font-weight:600;flex-shrink:0">Tahrirlash</button>
                 <button type="button" data-lc-del="${i}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;font-weight:600;flex-shrink:0">O'chirish</button>
@@ -1075,12 +1076,50 @@ function renderEditableList(container, opts) {
                     <option value="no"${!isYes ? ' selected' : ''}>Yo'q</option>
                 </select></div>`;
             }
+            if (f.type === 'image' || f.type === 'audio') {
+                const url = val ? String(val) : '';
+                return `<div class="form-group">
+                    <label>${f.label}${req}</label>
+                    <input type="hidden" id="lcField_${f.key}" value="${escapeHtml(url)}">
+                    <div id="lcFieldPreview_${f.key}" style="margin-bottom:8px">${_lcFieldPreviewHtml(f.type, url)}</div>
+                    <input type="file" id="lcFieldFile_${f.key}" accept="${f.type === 'image' ? 'image/*' : 'audio/*'}" style="display:none">
+                    <button type="button" id="lcFieldBtn_${f.key}" class="btn-ghost" style="font-size:12px">${url ? 'Almashtirish' : 'Yuklash'}</button>
+                    <button type="button" id="lcFieldRemove_${f.key}" class="btn-danger-sm" style="font-size:12px${url ? '' : ';display:none'}">O'chirish</button>
+                </div>`;
+            }
             return `<div class="form-group"><label>${f.label}${req}</label><input id="lcField_${f.key}" class="form-control" value="${escapeHtml(String(val))}" placeholder="${escapeHtml(f.placeholder || '')}"></div>`;
         }).join('');
 
         openModal(isEdit ? 'Tahrirlash' : "Qo'shish", formHtml,
             `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor qilish</button><button type="button" class="btn-primary-sm" id="lcSaveItem">Saqlash</button>`,
             { wide: true });
+
+        opts.fields.filter(f => f.type === 'image' || f.type === 'audio').forEach(f => {
+            const hiddenInput = document.getElementById(`lcField_${f.key}`);
+            const fileInput = document.getElementById(`lcFieldFile_${f.key}`);
+            const btn = document.getElementById(`lcFieldBtn_${f.key}`);
+            const removeBtn = document.getElementById(`lcFieldRemove_${f.key}`);
+            const preview = document.getElementById(`lcFieldPreview_${f.key}`);
+            const setUrl = (url) => {
+                hiddenInput.value = url || '';
+                preview.innerHTML = _lcFieldPreviewHtml(f.type, url || '');
+                btn.textContent = url ? 'Almashtirish' : 'Yuklash';
+                removeBtn.style.display = url ? '' : 'none';
+            };
+            btn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async () => {
+                const file = fileInput.files && fileInput.files[0];
+                fileInput.value = '';
+                if (!file) return;
+                try {
+                    const uploaded = await apiUploadFile(file);
+                    setUrl(uploaded.url);
+                } catch (err) {
+                    alert('Yuklashda xatolik: ' + (err.message || err));
+                }
+            });
+            removeBtn.addEventListener('click', () => setUrl(''));
+        });
 
         document.getElementById('lcSaveItem').onclick = () => {
             const next = {};
@@ -1104,12 +1143,27 @@ function renderEditableList(container, opts) {
     }
 
     document.getElementById('lcAddBtn').addEventListener('click', () => openItemModal());
-    container.querySelectorAll('[data-lc-edit]').forEach(btn => btn.addEventListener('click', () => openItemModal(Number(btn.dataset.lcEdit))));
-    container.querySelectorAll('[data-lc-del]').forEach(btn => btn.addEventListener('click', () => {
+    container.querySelectorAll('[data-lc-edit]').forEach(btn => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openItemModal(Number(btn.dataset.lcEdit));
+    }));
+    container.querySelectorAll('[data-lc-del]').forEach(btn => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (!confirm("O'chirilsinmi?")) return;
         const newItems = items.filter((_, i) => i !== Number(btn.dataset.lcDel));
         opts.onChange(newItems);
     }));
+    if (opts.onRowClick) {
+        container.querySelectorAll('[data-lc-row]').forEach(row => row.addEventListener('click', () => {
+            opts.onRowClick(items[Number(row.dataset.lcRow)], Number(row.dataset.lcRow));
+        }));
+    }
+}
+
+function _lcFieldPreviewHtml(type, url) {
+    if (!url) return `<div style="font-size:12px;color:var(--text-muted)">Hali yuklanmagan</div>`;
+    if (type === 'image') return `<img src="${escapeHtml(url)}" style="max-width:160px;max-height:100px;border-radius:8px;border:1px solid var(--border);display:block">`;
+    return `<audio controls src="${escapeHtml(url)}" style="height:32px;max-width:260px"></audio>`;
 }
 
 // ─── PDF'ni sahifama-sahifa slaydlarga aylantirish ───────────────────────────
@@ -2523,6 +2577,11 @@ function getMobileContent() {
     mc.modules = mc.modules || [];
     mc.moduleContents = mc.moduleContents || [];
     mc.shopProducts = mc.shopProducts || [];
+    mc.libraryOverrides = mc.libraryOverrides || {};
+    mc.library = mc.library || {};
+    ['grammar', 'words', 'pronunciation', 'speaking', 'podcasts', 'books'].forEach(cat => {
+        mc.library[cat] = mc.library[cat] || [];
+    });
     return mc;
 }
 
@@ -2604,7 +2663,7 @@ function renderMobileAdminTab(tab) {
         return;
     }
 
-    if (_mobileSubSection === 'resurslar' && _activeResourceCategory !== 'library-items') {
+    if (_mobileSubSection === 'resurslar') {
         renderMobileResourcesTab(container);
         return;
     }
@@ -2738,7 +2797,13 @@ function renderMobileMuloqotTab(container) {
 // tanish, appga mos navigatsiya beradi.
 function renderMobileResourcesTab(container) {
     if (_activeResourceCategory === 'library') {
-        renderMobileLibraryItemsTab(container);
+        if (_activeLibraryCategory && _activeLibraryTopicId) {
+            renderMobileLibraryTopicDetailTab(container, _activeLibraryCategory, _activeLibraryTopicId);
+        } else if (_activeLibraryCategory) {
+            renderMobileLibraryCategoryTab(container, _activeLibraryCategory);
+        } else {
+            renderMobileLibraryItemsTab(container);
+        }
     } else if (_activeResourceCategory === 'games' || _activeResourceCategory === 'community') {
         renderMobileResourceCategoryPlaceholder(container, _activeResourceCategory);
     } else {
@@ -2771,24 +2836,25 @@ function renderMobileResourcesLandingTab(container) {
 }
 
 const MOBILE_LIBRARY_ITEMS = [
-    { icon: '📘', title: "Grammatik qo'llanma", count: '85 mavzu' },
-    { icon: '📋', title: "So'zlar ro'yxati", count: '119 mavzu' },
-    { icon: '🎤', title: 'Talaffuz', count: '16 mavzu' },
-    { icon: '💬', title: 'Speaking topiklar', count: '60 ta' },
-    { icon: '🎧', title: 'Podkastlar', count: '36 ta' },
-    { icon: '📖', title: 'Kitoblar', count: '45 ta' },
+    { catKey: 'grammar', icon: '📘', title: "Grammatik qo'llanma" },
+    { catKey: 'words', icon: '📋', title: "So'zlar ro'yxati" },
+    { catKey: 'pronunciation', icon: '🎤', title: 'Talaffuz' },
+    { catKey: 'speaking', icon: '💬', title: 'Speaking topiklar' },
+    { catKey: 'podcasts', icon: '🎧', title: 'Podkastlar' },
+    { catKey: 'books', icon: '📖', title: 'Kitoblar' },
 ];
 
 function renderMobileLibraryItemsTab(container) {
+    const mc = getMobileContent();
     container.innerHTML = `
         <button type="button" id="mobileLibraryBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Resurslar</button>
         <div style="display:flex;flex-direction:column;gap:10px;max-width:480px">
             ${MOBILE_LIBRARY_ITEMS.map(item => `
-                <div data-library-item style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:box-shadow 0.15s">
+                <div data-library-item="${item.catKey}" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:box-shadow 0.15s">
                     <div style="width:44px;height:44px;border-radius:12px;background:var(--bg,#f9fafb);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${item.icon}</div>
                     <div style="flex:1;min-width:0">
                         <div style="font-weight:600;font-size:14px;color:var(--text)">${escapeHtml(item.title)}</div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${escapeHtml(item.count)}</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${(mc.library[item.catKey] || []).length} ta</div>
                     </div>
                     <span style="color:var(--text-muted);flex-shrink:0">›</span>
                 </div>
@@ -2800,7 +2866,8 @@ function renderMobileLibraryItemsTab(container) {
     });
     container.querySelectorAll('[data-library-item]').forEach(row => {
         row.addEventListener('click', () => {
-            _activeResourceCategory = 'library-items';
+            _activeLibraryCategory = row.dataset.libraryItem;
+            _activeLibraryTopicId = null;
             renderMobileEditPanel();
         });
     });
@@ -2815,6 +2882,235 @@ function renderMobileResourceCategoryPlaceholder(container, catId) {
         _activeResourceCategory = null;
         renderMobileEditPanel();
     });
+}
+
+// ─── Kutubxonaning 6 resurs turi — har biri uchun to'liq CRUD ───────────────
+// Har bir kategoriya uchun: mavzular ro'yxati darajasidagi maydonlar
+// (itemFields) va bitta mavzu ichidagi ichki ro'yxat (masalan grammatika
+// misollari, so'zlar, dialog qatorlari, paragraflar) uchun alohida
+// maydonlar (nestedFields) — ikkalasi ham mavjud renderEditableList
+// komponenti orqali ishlaydi.
+const LIBRARY_LEVEL_OPTIONS = {
+    grammar: [
+        { value: 'beginner', label: 'Beginner (0-daraja)' },
+        { value: 'a1', label: 'A1 Grammar' },
+        { value: 'a2', label: 'A2 Grammar' },
+        { value: 'b1', label: 'B1 Grammar' },
+    ],
+    words: [
+        { value: 'beginner', label: "Boshlang'ich" },
+        { value: 'intermediate', label: "O'rta" },
+        { value: 'advanced', label: 'Yuqori' },
+    ],
+    speaking: [
+        { value: 'easy', label: 'Oson' },
+        { value: 'medium', label: "O'rtacha" },
+        { value: 'hard', label: 'Qiyin' },
+    ],
+    podcasts: [
+        { value: 'a1', label: 'A1' }, { value: 'a2', label: 'A2' }, { value: 'b1', label: 'B1' },
+    ],
+    books: [
+        { value: 'a1', label: 'A1' }, { value: 'a2', label: 'A2' }, { value: 'b1', label: 'B1' },
+    ],
+};
+
+const LIBRARY_CATEGORY_SCHEMAS = {
+    grammar: {
+        label: "Grammatik qo'llanma",
+        idPrefix: 'grammar',
+        itemFields: [
+            { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.grammar },
+            { key: 'title', label: 'Mavzu nomi', required: true },
+            { key: 'formula', label: 'Formula (ixtiyoriy)', placeholder: 'Subject + Verb + Object' },
+            { key: 'description', label: 'Tavsif', type: 'textarea' },
+        ],
+        itemRenderRow: (t) => `<b>${escapeHtml(t.title || '')}</b> <span style="color:var(--text-muted)">· ${escapeHtml((LIBRARY_LEVEL_OPTIONS.grammar.find(o => o.value === t.level) || {}).label || t.level || '')} · ${(t.examples || []).length} ta misol</span>`,
+        nestedKey: 'examples', nestedTitle: 'Misollar', nestedAddLabel: "+ Misol qo'shish", nestedIdPrefix: 'ex',
+        nestedFields: [
+            { key: 'en', label: 'Inglizcha', required: true },
+            { key: 'uz', label: "O'zbekcha", required: true },
+        ],
+        nestedRenderRow: (e) => `<b>${escapeHtml(e.en || '')}</b> — ${escapeHtml(e.uz || '')}`,
+    },
+    words: {
+        label: "So'zlar ro'yxati",
+        idPrefix: 'words',
+        itemFields: [
+            { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.words },
+            { key: 'title', label: 'Mavzu nomi', required: true },
+            { key: 'icon', label: 'Icon (emoji)', placeholder: '🐝' },
+        ],
+        itemRenderRow: (t) => `<b>${escapeHtml(t.icon || '')} ${escapeHtml(t.title || '')}</b> <span style="color:var(--text-muted)">· ${(t.words || []).length} ta so'z</span>`,
+        nestedKey: 'words', nestedTitle: "So'zlar", nestedAddLabel: "+ So'z qo'shish", nestedIdPrefix: 'w',
+        nestedFields: [
+            { key: 'emoji', label: 'Emoji', placeholder: '🐝' },
+            { key: 'en', label: 'Inglizcha', required: true },
+            { key: 'uz', label: "O'zbekcha", required: true },
+        ],
+        nestedRenderRow: (w) => `${escapeHtml(w.emoji || '')} <b>${escapeHtml(w.en || '')}</b> — ${escapeHtml(w.uz || '')}`,
+    },
+    pronunciation: {
+        label: 'Talaffuz',
+        idPrefix: 'pron',
+        itemFields: [
+            { key: 'title', label: 'Mavzu nomi', required: true },
+            { key: 'synopsis', label: 'Tavsif', type: 'textarea', required: true },
+            { key: 'audioUrl', label: "Haqiqiy audio (ixtiyoriy — yuklansa, ilovada shu ijro etiladi)", type: 'audio' },
+        ],
+        itemRenderRow: (t) => `<b>${escapeHtml(t.title || '')}</b> <span style="color:var(--text-muted)">· ${(t.examples || []).length} ta misol${t.audioUrl ? ' · 🔊 audio bor' : ''}</span>`,
+        nestedKey: 'examples', nestedTitle: 'Misollar', nestedAddLabel: "+ Misol qo'shish", nestedIdPrefix: 'ex',
+        nestedFields: [
+            { key: 'text', label: 'Matn', required: true },
+            { key: 'hint', label: "Talaffuz yo'riqnomasi", required: true },
+        ],
+        nestedRenderRow: (e) => `<b>${escapeHtml(e.text || '')}</b> — ${escapeHtml(e.hint || '')}`,
+    },
+    speaking: {
+        label: 'Speaking topiklar',
+        idPrefix: 'speak',
+        itemFields: [
+            { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.speaking },
+            { key: 'title', label: 'Mavzu nomi', required: true },
+            { key: 'description', label: 'Tavsif', type: 'textarea' },
+            { key: 'emoji', label: 'Emoji', placeholder: '👋' },
+            { key: 'coverUrl', label: 'Muqova rasmi (ixtiyoriy)', type: 'image' },
+        ],
+        itemRenderRow: (t) => `<b>${escapeHtml(t.emoji || '')} ${escapeHtml(t.title || '')}</b> <span style="color:var(--text-muted)">· ${(t.lines || []).length} ta replika${t.coverUrl ? ' · 🖼️ muqova bor' : ''}</span>`,
+        nestedKey: 'lines', nestedTitle: 'Dialog', nestedAddLabel: "+ Replika qo'shish", nestedIdPrefix: 'line',
+        nestedFields: [
+            { key: 'speaker', label: 'Kim gapiryapti', required: true },
+            { key: 'en', label: 'Inglizcha', required: true },
+            { key: 'uz', label: "O'zbekcha", required: true },
+        ],
+        nestedRenderRow: (l) => `<b>${escapeHtml(l.speaker || '')}:</b> ${escapeHtml(l.en || '')} — ${escapeHtml(l.uz || '')}`,
+    },
+    podcasts: {
+        label: 'Podkastlar',
+        idPrefix: 'podcast',
+        itemFields: [
+            { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.podcasts },
+            { key: 'title', label: 'Epizod nomi', required: true },
+            { key: 'emoji', label: 'Emoji', placeholder: '🎧' },
+            { key: 'coverUrl', label: 'Muqova rasmi (ixtiyoriy)', type: 'image' },
+            { key: 'audioUrl', label: "Haqiqiy audio (ixtiyoriy — yuklansa, ilovada shu ijro etiladi)", type: 'audio' },
+        ],
+        itemRenderRow: (t) => `<b>${escapeHtml(t.emoji || '')} ${escapeHtml(t.title || '')}</b> <span style="color:var(--text-muted)">· ${(t.lines || []).length} qator${t.coverUrl ? ' · 🖼️' : ''}${t.audioUrl ? ' · 🔊' : ''}</span>`,
+        nestedKey: 'lines', nestedTitle: 'Matn', nestedAddLabel: "+ Qator qo'shish", nestedIdPrefix: 'line',
+        nestedFields: [
+            { key: 'en', label: 'Inglizcha', required: true },
+            { key: 'uz', label: "O'zbekcha", required: true },
+        ],
+        nestedRenderRow: (l) => `<b>${escapeHtml(l.en || '')}</b> — ${escapeHtml(l.uz || '')}`,
+    },
+    books: {
+        label: 'Kitoblar',
+        idPrefix: 'book',
+        itemFields: [
+            { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.books },
+            { key: 'title', label: 'Hikoya nomi', required: true },
+            { key: 'description', label: 'Tavsif', type: 'textarea' },
+            { key: 'emoji', label: 'Emoji', placeholder: '📖' },
+            { key: 'coverUrl', label: 'Muqova rasmi (ixtiyoriy)', type: 'image' },
+        ],
+        itemRenderRow: (t) => `<b>${escapeHtml(t.emoji || '')} ${escapeHtml(t.title || '')}</b> <span style="color:var(--text-muted)">· ${(t.paragraphs || []).length} paragraf${t.coverUrl ? ' · 🖼️ muqova bor' : ''}</span>`,
+        nestedKey: 'paragraphs', nestedTitle: 'Matn (paragraflar)', nestedAddLabel: "+ Paragraf qo'shish", nestedIdPrefix: 'p',
+        nestedFields: [
+            { key: 'en', label: 'Inglizcha', type: 'textarea', required: true },
+            { key: 'uz', label: "O'zbekcha", type: 'textarea', required: true },
+        ],
+        nestedRenderRow: (p) => `<div>${escapeHtml((p.en || '').slice(0, 90))}${(p.en || '').length > 90 ? '…' : ''}</div>`,
+    },
+};
+
+function _saveLibraryItemOverride(catKey, itemId, patch) {
+    const mc = getMobileContent();
+    if (!mc.libraryOverrides[catKey]) mc.libraryOverrides[catKey] = {};
+    mc.libraryOverrides[catKey][itemId] = { ...mc.libraryOverrides[catKey][itemId], ...patch };
+    saveMobileContent(mc);
+}
+
+function _deleteLibraryItem(catKey, itemId) {
+    _saveLibraryItemOverride(catKey, itemId, { _deleted: true });
+}
+
+function renderMobileLibraryCategoryTab(container, catKey) {
+    const schema = LIBRARY_CATEGORY_SCHEMAS[catKey];
+    if (!schema) { _activeLibraryCategory = null; renderMobileLibraryItemsTab(container); return; }
+    const mc = getMobileContent();
+    container.innerHTML = `
+        <button type="button" id="mobileLibraryCatBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Kutubxona</button>
+        <div id="mobileLibraryCatList"></div>`;
+    document.getElementById('mobileLibraryCatBackBtn').addEventListener('click', () => {
+        _activeLibraryCategory = null;
+        renderMobileEditPanel();
+    });
+    const listEl = document.getElementById('mobileLibraryCatList');
+    // mc.library serverda har bir so'rovda qayta hisoblanadigan (computed)
+    // maydon — saqlagandan keyin darhol qayta o'qilsa hali eskirgan holatni
+    // qaytaradi. Shu sabab qayta chizishda uni QAYTA O'QIMAYMIZ — renderEditableList
+    // hisoblab bergan `newItems`ning o'zini to'g'ridan-to'g'ri ishlatamiz
+    // (xuddi lessonContents'dagi renderSlidesList naqshiga o'xshab).
+    function renderList(items) {
+        renderEditableList(listEl, {
+            title: schema.label,
+            addLabel: "+ Mavzu qo'shish",
+            items,
+            idPrefix: schema.idPrefix,
+            renderRow: schema.itemRenderRow,
+            fields: schema.itemFields,
+            onRowClick: (item) => {
+                _activeLibraryTopicId = item.id;
+                renderMobileEditPanel();
+            },
+            onChange: (newItems) => {
+                newItems.forEach(item => {
+                    const prev = items.find(b => b.id === item.id);
+                    if (!prev || JSON.stringify(prev) !== JSON.stringify(item)) {
+                        _saveLibraryItemOverride(catKey, item.id, item);
+                    }
+                });
+                items.forEach(prev => {
+                    if (!newItems.find(n => n.id === prev.id)) _deleteLibraryItem(catKey, prev.id);
+                });
+                showMiniToast('Saqlandi');
+                renderList(newItems);
+            },
+        });
+    }
+    renderList(mc.library[catKey] || []);
+}
+
+function renderMobileLibraryTopicDetailTab(container, catKey, topicId) {
+    const schema = LIBRARY_CATEGORY_SCHEMAS[catKey];
+    const mc = getMobileContent();
+    const topic = (mc.library[catKey] || []).find(t => t.id === topicId);
+    if (!schema || !topic) { _activeLibraryTopicId = null; renderMobileLibraryCategoryTab(container, catKey); return; }
+    container.innerHTML = `
+        <button type="button" id="mobileLibraryTopicBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← ${escapeHtml(schema.label)}</button>
+        <div style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:14px">${escapeHtml(topic.title || '')}</div>
+        <div id="mobileLibraryTopicNested"></div>`;
+    document.getElementById('mobileLibraryTopicBackBtn').addEventListener('click', () => {
+        _activeLibraryTopicId = null;
+        renderMobileEditPanel();
+    });
+    const nestedEl = document.getElementById('mobileLibraryTopicNested');
+    function renderNested(items) {
+        renderEditableList(nestedEl, {
+            title: schema.nestedTitle,
+            addLabel: schema.nestedAddLabel,
+            items,
+            idPrefix: schema.nestedIdPrefix,
+            renderRow: schema.nestedRenderRow,
+            fields: schema.nestedFields,
+            onChange: (newItems) => {
+                _saveLibraryItemOverride(catKey, topicId, { [schema.nestedKey]: newItems });
+                showMiniToast('Saqlandi');
+                renderNested(newItems);
+            },
+        });
+    }
+    renderNested(topic[schema.nestedKey] || []);
 }
 
 function renderMobileVideosTab(container, content) {

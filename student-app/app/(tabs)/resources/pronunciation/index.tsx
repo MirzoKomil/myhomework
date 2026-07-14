@@ -1,23 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { PRONUNCIATION_TOPICS, getPronunciationTopicPracticeCount } from '@/data/pronunciationTopics';
+import { PRONUNCIATION_TOPICS, PronunciationTopic, getPronunciationTopicPracticeCount } from '@/data/pronunciationTopics';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function PronunciationListScreen() {
+  const [topics, setTopics] = useState<PronunciationTopic[]>(PRONUNCIATION_TOPICS);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.pronunciation.length) setTopics(mc.library.pronunciation); })
+      .catch(() => {});
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Talaffuz" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{PRONUNCIATION_TOPICS.length} ta mavzu</Text>
+        <Text style={styles.subtitle}>{topics.length} ta mavzu</Text>
         <View style={styles.topicList}>
-          {PRONUNCIATION_TOPICS.map((topic, i) => (
+          {topics.map((topic, i) => (
             <Pressable
               key={topic.id}
-              style={[styles.row, i === PRONUNCIATION_TOPICS.length - 1 && styles.rowLast]}
+              style={[styles.row, i === topics.length - 1 && styles.rowLast]}
               onPress={() => router.push(`/resources/pronunciation/${topic.id}` as never)}>
               <View style={[styles.iconWrap, { backgroundColor: topic.bg }]}>
                 <Ionicons name={topic.icon} size={20} color={topic.color} />

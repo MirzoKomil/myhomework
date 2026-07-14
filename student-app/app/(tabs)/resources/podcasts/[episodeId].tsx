@@ -1,25 +1,37 @@
 import { Ionicons } from '@expo/vector-icons';
+import { AudioPlayer, createAudioPlayer } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { PODCAST_EPISODES, PODCAST_LEVEL_LABELS } from '@/data/podcastEpisodes';
+import { PODCAST_EPISODES, PODCAST_LEVEL_LABELS, PodcastEpisode } from '@/data/podcastEpisodes';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function PodcastEpisodeScreen() {
   const { episodeId } = useLocalSearchParams<{ episodeId: string }>();
-  const episode = PODCAST_EPISODES.find((e) => e.id === episodeId);
+  const [allEpisodes, setAllEpisodes] = useState<(PodcastEpisode & { coverUrl?: string; audioUrl?: string })[]>(PODCAST_EPISODES);
+  const episode = allEpisodes.find((e) => e.id === episodeId);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [autoPlaying, setAutoPlaying] = useState(false);
   const isAutoRef = useRef(false);
+  const audioPlayerRef = useRef<AudioPlayer | null>(null);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.podcasts.length) setAllEpisodes(mc.library.podcasts); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     return () => {
       isAutoRef.current = false;
       Speech.stop();
+      audioPlayerRef.current?.remove();
+      audioPlayerRef.current = null;
     };
   }, []);
 
@@ -50,6 +62,21 @@ export default function PodcastEpisodeScreen() {
   };
 
   const playAll = () => {
+    if (episode.audioUrl) {
+      setAutoPlaying(true);
+      const player = createAudioPlayer(episode.audioUrl);
+      audioPlayerRef.current = player;
+      player.addListener('playbackStatusUpdate', (status) => {
+        if (audioPlayerRef.current !== player) return;
+        if (status.didJustFinish) {
+          setAutoPlaying(false);
+          player.remove();
+          audioPlayerRef.current = null;
+        }
+      });
+      player.play();
+      return;
+    }
     isAutoRef.current = true;
     setAutoPlaying(true);
     const step = (i: number) => {
@@ -65,6 +92,13 @@ export default function PodcastEpisodeScreen() {
   };
 
   const stopAll = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.remove();
+      audioPlayerRef.current = null;
+      setAutoPlaying(false);
+      return;
+    }
     isAutoRef.current = false;
     setAutoPlaying(false);
     Speech.stop();
@@ -79,7 +113,11 @@ export default function PodcastEpisodeScreen() {
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color="#fff" />
         </Pressable>
-        <Text style={styles.heroEmoji}>{episode.emoji}</Text>
+        {episode.coverUrl ? (
+          <Image source={{ uri: episode.coverUrl }} style={styles.heroCoverImg} resizeMode="cover" />
+        ) : (
+          <Text style={styles.heroEmoji}>{episode.emoji}</Text>
+        )}
         <Text style={styles.heroLevel}>{PODCAST_LEVEL_LABELS[episode.level]} · Podkast</Text>
         <Text style={styles.heroTitle}>{episode.title}</Text>
       </LinearGradient>
@@ -137,6 +175,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   heroEmoji: { fontSize: 44, marginBottom: 8 },
+  heroCoverImg: { width: 72, height: 72, borderRadius: 16, marginBottom: 10, backgroundColor: 'rgba(255,255,255,0.2)' },
   heroLevel: {
     fontFamily: theme.fonts.bold,
     fontSize: 12,

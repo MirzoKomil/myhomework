@@ -3,15 +3,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { BOOK_LEVEL_LABELS, BOOK_STORIES } from '@/data/bookStories';
+import { BOOK_LEVEL_LABELS, BOOK_STORIES, BookStory } from '@/data/bookStories';
+import { fetchMobileContent } from '@/services/contentApi';
 
 export default function BookStoryScreen() {
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
-  const story = BOOK_STORIES.find((s) => s.id === storyId);
+  const [allStories, setAllStories] = useState<(BookStory & { coverUrl?: string })[]>(BOOK_STORIES);
+  const story = allStories.find((s) => s.id === storyId);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [autoPlaying, setAutoPlaying] = useState(false);
   const isAutoRef = useRef(false);
@@ -21,6 +23,12 @@ export default function BookStoryScreen() {
       isAutoRef.current = false;
       Speech.stop();
     };
+  }, []);
+
+  useEffect(() => {
+    fetchMobileContent()
+      .then((mc) => { if (mc.library.books.length) setAllStories(mc.library.books); })
+      .catch(() => {});
   }, []);
 
   if (!story) {
@@ -79,7 +87,11 @@ export default function BookStoryScreen() {
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color="#fff" />
         </Pressable>
-        <Text style={styles.heroEmoji}>{story.emoji}</Text>
+        {story.coverUrl ? (
+          <Image source={{ uri: story.coverUrl }} style={styles.heroCoverImg} resizeMode="cover" />
+        ) : (
+          <Text style={styles.heroEmoji}>{story.emoji}</Text>
+        )}
         <Text style={styles.heroLevel}>{BOOK_LEVEL_LABELS[story.level]} · Audio-hikoya</Text>
         <Text style={styles.heroTitle}>{story.title}</Text>
         <Text style={styles.heroDesc}>{story.description}</Text>
@@ -142,6 +154,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   heroEmoji: { fontSize: 44, marginBottom: 8 },
+  heroCoverImg: { width: 72, height: 72, borderRadius: 16, marginBottom: 10, backgroundColor: 'rgba(255,255,255,0.2)' },
   heroLevel: {
     fontFamily: theme.fonts.bold,
     fontSize: 12,
