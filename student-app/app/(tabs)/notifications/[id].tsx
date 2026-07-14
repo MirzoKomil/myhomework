@@ -1,15 +1,26 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { appNotifications } from '@/data/mock';
+import { AppNotification } from '@/data/mock';
+import { fetchDemoNotifications, toAppNotification } from '@/services/contentApi';
 
 export default function NotificationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const notif = appNotifications.find((n) => n.id === id);
+  const [notif, setNotif] = useState<AppNotification | undefined>(undefined);
+
+  useEffect(() => {
+    fetchDemoNotifications()
+      .then((list) => {
+        const found = list.find((n) => n.id === id);
+        if (found) setNotif(toAppNotification(found));
+      })
+      .catch(() => {});
+  }, [id]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

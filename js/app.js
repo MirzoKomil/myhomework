@@ -2889,6 +2889,11 @@ function renderMobileAdminTab(tab) {
         return;
     }
 
+    if (_mobileSubSection === 'bildirishnomalar') {
+        renderMobileNotificationsTab(container);
+        return;
+    }
+
     if (_mobileSubSection === 'resurslar') {
         renderMobileResourcesTab(container);
         return;
@@ -3194,6 +3199,160 @@ function renderCrmLegendChatDetail(container, personaId) {
         senderRole: 'persona',
         readOnly: true,
         getMessages: () => thread.messages.map(m => ({ ...m, sender: m.sender === 'student' ? 'student' : 'admin' })),
+    });
+}
+
+// ─── 141-ish: "Bildirishnomalar" — avtomatik eslatma sozlamalari va ─────────
+// qo'lda yuboriladigan xabarlar. 2 karta (avtomatik/ixtiyoriy), Muloqot
+// bo'limidagi 3-karta naqshi bilan bir xil (_activeNotifCategory: null|
+// 'avtomatik'|'ixtiyoriy').
+let _activeNotifCategory = null;
+
+const MOBILE_NOTIF_CATEGORIES = [
+    { id: 'avtomatik', icon: '⏰', title: 'Avtomatik eslatmalar', desc: "Tizim o'zi hisoblab yuboradigan eslatmalar uchun yoqish/o'chirish va matn sozlamalari" },
+    { id: 'ixtiyoriy', icon: '📣', title: 'Ixtiyoriy eslatmalar', desc: "O'zingiz yozib, darhol yuboradigan xabarlar (tarix va o'chirish imkoni bilan)" },
+];
+
+function renderMobileNotificationsTab(container) {
+    if (_activeNotifCategory === 'avtomatik') {
+        renderMobileNotifBackedBody(container, (body) => renderMobileNotifAutoTab(body));
+    } else if (_activeNotifCategory === 'ixtiyoriy') {
+        renderMobileNotifBackedBody(container, (body) => renderMobileNotifManualTab(body));
+    } else {
+        renderMobileNotifLandingTab(container);
+    }
+}
+
+function renderMobileNotifLandingTab(container) {
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;max-width:820px">
+        ${MOBILE_NOTIF_CATEGORIES.map(cat => `
+            <div data-notif-cat="${cat.id}" style="cursor:pointer;display:flex;flex-direction:column;gap:8px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+                <div style="font-size:28px">${cat.icon}</div>
+                <div style="font-size:15px;font-weight:700;color:var(--text)">${escapeHtml(cat.title)}</div>
+                <div style="font-size:12px;color:var(--text-muted);line-height:1.4">${escapeHtml(cat.desc)}</div>
+            </div>
+        `).join('')}
+    </div>`;
+    container.querySelectorAll('[data-notif-cat]').forEach(card => {
+        card.addEventListener('click', () => {
+            _activeNotifCategory = card.dataset.notifCat;
+            renderMobileEditPanel();
+        });
+    });
+}
+
+function renderMobileNotifBackedBody(container, renderBody) {
+    container.innerHTML = `
+        <button type="button" id="notifBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Bildirishnomalar</button>
+        <div id="notifCategoryBody" style="max-width:640px"></div>`;
+    document.getElementById('notifBackBtn').addEventListener('click', () => {
+        _activeNotifCategory = null;
+        renderMobileEditPanel();
+    });
+    renderBody(document.getElementById('notifCategoryBody'));
+}
+
+function renderMobileNotifAutoTab(container) {
+    container.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Yuklanmoqda...</div>`;
+    apiFetchNotificationRules().then(rules => {
+        _renderNotifAutoForm(container, rules);
+    }).catch(err => {
+        container.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--danger)">Yuklashda xatolik: ${escapeHtml(err.message || String(err))}</div>`;
+    });
+}
+
+function _renderNotifAutoForm(container, rules) {
+    const rule = rules.lessonReminder || { enabled: true, minutesBefore: 60, title: '', message: '' };
+    container.innerHTML = `
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:12px">Dars boshlanishidan oldin eslatma</div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <input type="checkbox" id="notifAutoEnabled" ${rule.enabled ? 'checked' : ''} style="width:16px;height:16px">
+            <label for="notifAutoEnabled" style="margin:0">Yoqilgan</label>
+        </div>
+        <div class="form-group">
+            <label>Necha daqiqa oldin</label>
+            <input type="number" id="notifAutoMinutes" class="form-control" min="1" value="${Number(rule.minutesBefore) || 60}">
+        </div>
+        <div class="form-group">
+            <label>Sarlavha</label>
+            <input type="text" id="notifAutoTitle" class="form-control" value="${escapeHtml(rule.title || '')}">
+        </div>
+        <div class="form-group">
+            <label>Matn ({course} va {time} avtomatik almashtiriladi)</label>
+            <textarea id="notifAutoMessage" class="form-control" rows="3">${escapeHtml(rule.message || '')}</textarea>
+        </div>
+        <button type="button" class="btn-primary-sm" id="notifAutoSaveBtn">Saqlash</button>
+        <span id="notifAutoSavedMsg" style="display:none;margin-left:10px;font-size:12px;color:#22c55e">Saqlandi ✓</span>`;
+
+    document.getElementById('notifAutoSaveBtn').addEventListener('click', () => {
+        const updatedRules = {
+            ...rules,
+            lessonReminder: {
+                enabled: document.getElementById('notifAutoEnabled').checked,
+                minutesBefore: Number(document.getElementById('notifAutoMinutes').value) || 60,
+                title: document.getElementById('notifAutoTitle').value.trim(),
+                message: document.getElementById('notifAutoMessage').value.trim(),
+            },
+        };
+        apiSaveNotificationRules(updatedRules).then(saved => {
+            rules = saved;
+            const msg = document.getElementById('notifAutoSavedMsg');
+            msg.style.display = 'inline';
+            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+        }).catch(err => alert(err.message || 'Xatolik'));
+    });
+}
+
+function renderMobileNotifManualTab(container) {
+    container.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Yuklanmoqda...</div>`;
+    apiFetchDemoNotifications().then(list => {
+        _renderNotifManualForm(container, list.filter(n => n.source === 'manual'));
+    }).catch(err => {
+        container.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--danger)">Yuklashda xatolik: ${escapeHtml(err.message || String(err))}</div>`;
+    });
+}
+
+function _renderNotifManualForm(container, sentList) {
+    container.innerHTML = `
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:12px">Yangi xabar yuborish</div>
+        <div class="form-group">
+            <label>Sarlavha</label>
+            <input type="text" id="notifManualTitle" class="form-control" placeholder="Masalan: Bugun maxsus dars bo'ladi">
+        </div>
+        <div class="form-group">
+            <label>Matn</label>
+            <textarea id="notifManualMessage" class="form-control" rows="3"></textarea>
+        </div>
+        <button type="button" class="btn-primary-sm" id="notifManualSendBtn">Yuborish</button>
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin:20px 0 12px">Yuborilganlar tarixi</div>
+        <div id="notifManualHistory">
+            ${sentList.length ? sentList.map(n => `
+                <div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface)">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                        <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(n.title)}</div>
+                        <button type="button" class="btn-ghost" data-notif-delete-id="${escapeHtml(n.id)}" style="padding:2px 8px;font-size:12px;color:var(--danger)">O'chirish</button>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${escapeHtml(n.message)}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${_formatCrmChatTime(n.date)}</div>
+                </div>`).join('')
+                : `<div class="mac-empty" style="padding:20px 0;text-align:center;color:var(--text-muted)">Hali xabar yuborilmagan</div>`}
+        </div>`;
+
+    document.getElementById('notifManualSendBtn').addEventListener('click', () => {
+        const title = document.getElementById('notifManualTitle').value.trim();
+        const message = document.getElementById('notifManualMessage').value.trim();
+        if (!title || !message) { alert("Sarlavha va matn to'ldirilishi shart"); return; }
+        apiSendManualNotification(title, message).then(() => {
+            renderMobileNotifManualTab(container);
+        }).catch(err => alert(err.message || 'Xatolik'));
+    });
+
+    container.querySelectorAll('[data-notif-delete-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            apiDeleteManualNotification(btn.dataset.notifDeleteId).then(() => {
+                renderMobileNotifManualTab(container);
+            }).catch(err => alert(err.message || 'Xatolik'));
+        });
     });
 }
 

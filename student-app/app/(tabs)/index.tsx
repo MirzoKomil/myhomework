@@ -9,16 +9,15 @@ import { LessonReminder } from '@/components/ui/LessonReminder';
 import { ShopEntryCard } from '@/components/ui/ShopEntryCard';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
-import { appNotifications, courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
-import { fetchDemoSchedule, fetchMobileContent } from '@/services/contentApi';
+import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
+import { fetchDemoNotifications, fetchDemoSchedule, fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
-
-const hasUnreadNotifications = appNotifications.some((n) => n.unread);
 
 export default function HomeScreen() {
   const activeCourse = courses[0];
   const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
   const [liveLesson, setLiveLesson] = useState(nextLiveLesson);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   useEffect(() => {
     fetchDemoSchedule()
@@ -31,6 +30,12 @@ export default function HomeScreen() {
           });
         }
       })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchDemoNotifications()
+      .then((list) => setHasUnreadNotifications(list.some((n) => n.unread)))
       .catch(() => {});
   }, []);
 
@@ -57,7 +62,7 @@ export default function HomeScreen() {
     );
     loop.start();
     return () => loop.stop();
-  }, [bellShake]);
+  }, [bellShake, hasUnreadNotifications]);
 
   const waveRotate = waveAnim.interpolate({
     inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],

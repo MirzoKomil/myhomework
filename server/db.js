@@ -767,7 +767,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules') ? {} : [];
     }
     return row.data;
 }
@@ -1023,6 +1023,107 @@ async function sendDemoStudentPersonaMessage(personaId, personaName, text, sende
         await saveJsonData(client, 'personaMessages', all);
     });
     return message;
+}
+
+// ── Bildirishnomalar (Notifications) — 141-ish ───────────────────────────────
+// Ikki manba bir ro'yxatga birlashtiriladi: (1) "avtomatik" — CRM'da yoqilgan
+// qoidalar asosida haqiqiy ma'lumotdan (masalan dars jadvali) hisoblab
+// chiqariladigan eslatmalar, saqlanmaydi, har so'rovda qayta hisoblanadi;
+// (2) "qo'lda" — admin CRM'dan yozib yuborgan xabarlar, saqlanadi.
+const DEFAULT_NOTIFICATION_RULES = {
+    lessonReminder: {
+        enabled: true,
+        minutesBefore: 60,
+        title: "Darsingiz boshlanmoqda!",
+        message: "{course} darsi {time} da boshlanadi.",
+    },
+};
+
+async function getNotificationRules() {
+    const rules = await getJsonData('notificationRules');
+    return { ...DEFAULT_NOTIFICATION_RULES, ...rules };
+}
+
+async function saveNotificationRules(rules) {
+    await tx(async (client) => {
+        await saveJsonData(client, 'notificationRules', rules || {});
+    });
+    return getNotificationRules();
+}
+
+async function getManualNotifications() {
+    return getJsonData('manualNotifications');
+}
+
+async function addManualNotification(title, text, sentBy) {
+    const trimmedTitle = String(title || '').trim();
+    const trimmed = String(text || '').trim();
+    if (!trimmedTitle || !trimmed) throw new Error("Sarlavha va matn to'ldirilishi shart");
+
+    const all = await getJsonData('manualNotifications');
+    const notification = {
+        id: 'notif-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        title: trimmedTitle, message: trimmed,
+        createdAt: new Date().toISOString(), sentBy: sentBy || 'Admin',
+    };
+    all.unshift(notification);
+    await tx(async (client) => {
+        await saveJsonData(client, 'manualNotifications', all);
+    });
+    return notification;
+}
+
+async function deleteManualNotification(id) {
+    const all = await getJsonData('manualNotifications');
+    const filtered = all.filter(n => n.id !== id);
+    await tx(async (client) => {
+        await saveJsonData(client, 'manualNotifications', filtered);
+    });
+}
+
+function fillNotificationTemplate(template, vars) {
+    return String(template || '').replace(/\{(\w+)\}/g, (match, key) => (vars[key] != null ? vars[key] : match));
+}
+
+// Namuna o'quvchi (va CRM'ning oldindan ko'rish oynasi) uchun haqiqiy,
+// birlashtirilgan bildirishnomalar ro'yxatini qaytaradi.
+async function getComputedDemoNotifications() {
+    const rules = await getNotificationRules();
+    const notifications = [];
+
+    const lessonRule = rules.lessonReminder;
+    if (lessonRule?.enabled) {
+        const schedule = await getDemoStudentSchedule();
+        if (schedule.startsAt) {
+            const minutesUntil = (new Date(schedule.startsAt).getTime() - Date.now()) / 60000;
+            if (minutesUntil >= 0 && minutesUntil <= (lessonRule.minutesBefore || 60)) {
+                const vars = {
+                    course: schedule.topic || 'Dars',
+                    time: new Date(schedule.startsAt).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }),
+                };
+                notifications.push({
+                    id: 'auto-lesson-' + schedule.startsAt,
+                    category: 'lessons', source: 'auto',
+                    title: fillNotificationTemplate(lessonRule.title, vars),
+                    message: fillNotificationTemplate(lessonRule.message, vars),
+                    date: new Date().toISOString(),
+                    unread: true,
+                });
+            }
+        }
+    }
+
+    const manual = await getManualNotifications();
+    for (const n of manual) {
+        notifications.push({
+            id: n.id, category: 'news', source: 'manual',
+            title: n.title, message: n.message,
+            date: n.createdAt, unread: true,
+        });
+    }
+
+    notifications.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return notifications;
 }
 
 // ── Hamjamiyat (Community) ───────────────────────────────────────────────────
@@ -1452,6 +1553,9 @@ module.exports = {
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage,
+    getNotificationRules, saveNotificationRules,
+    getManualNotifications, addManualNotification, deleteManualNotification,
+    getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,

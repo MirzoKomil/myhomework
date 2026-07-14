@@ -170,6 +170,32 @@ async function apiFetchPersonaMessages() {
     return apiFetch('/api/state/demo-persona-messages');
 }
 
+async function apiFetchNotificationRules() {
+    return apiFetch('/api/state/notification-rules');
+}
+
+async function apiSaveNotificationRules(rules) {
+    return apiFetch('/api/state/notification-rules', {
+        method: 'POST',
+        body: JSON.stringify(rules)
+    });
+}
+
+async function apiFetchDemoNotifications() {
+    return apiFetch('/api/state/demo-notifications');
+}
+
+async function apiSendManualNotification(title, message) {
+    return apiFetch('/api/state/notifications/manual', {
+        method: 'POST',
+        body: JSON.stringify({ title, message })
+    });
+}
+
+async function apiDeleteManualNotification(id) {
+    return apiFetch('/api/state/notifications/manual/' + encodeURIComponent(id), { method: 'DELETE' });
+}
+
 async function apiDeleteCommunityPost(postId) {
     return apiFetch('/api/state/community/posts/' + encodeURIComponent(postId), { method: 'DELETE' });
 }

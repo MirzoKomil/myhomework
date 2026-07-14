@@ -46,6 +46,11 @@ const DEMO_BOOK_DELIVERY_API_BASE =
     ? '/api/state/demo-book-delivery'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-book-delivery';
 
+const DEMO_NOTIFICATIONS_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-notifications'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-notifications';
+
 const DEMO_ACTIVITY_API_BASE =
   Platform.OS === 'web'
     ? '/api/state/demo-activity'
@@ -415,6 +420,54 @@ export async function sendDemoPersonaMessage(
   }
   const data = await r.json();
   return data.message;
+}
+
+// 141-ish: "Bildirishnomalar" — CRM'da yoqilgan avtomatik eslatma qoidalari
+// (masalan dars boshlanishidan oldin) haqiqiy jadval ma'lumotidan hisoblab
+// chiqarilib, admin qo'lda yuborgan xabarlar bilan bitta ro'yxatga
+// birlashtirilib qaytariladi. Faqat CRM'da "Namuna o'quvchi" deb belgilangan
+// bitta o'quvchi uchun.
+export type DemoNotification = {
+  id: string;
+  category: 'news' | 'lessons';
+  source: 'auto' | 'manual';
+  title: string;
+  message: string;
+  date: string;
+  unread: boolean;
+};
+
+export async function fetchDemoNotifications(): Promise<DemoNotification[]> {
+  const r = await fetch(DEMO_NOTIFICATIONS_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// Server faqat matn qaytaradi — UI ko'rinishi (rang/emoji) manba turiga
+// qarab shu yerda beriladi, `AppNotification` shakliga moslashtirib.
+export function toAppNotification(n: DemoNotification): {
+  id: string;
+  category: 'news' | 'lessons';
+  date: string;
+  title: string;
+  message: string;
+  detail: string;
+  unread: boolean;
+  colors: [string, string];
+  emoji: string;
+} {
+  const isAuto = n.source === 'auto';
+  return {
+    id: n.id,
+    category: n.category,
+    date: new Date(n.date).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    title: n.title,
+    message: n.message,
+    detail: n.message,
+    unread: n.unread,
+    colors: isAuto ? ['#7C3AED', '#5B21B6'] : ['#3B82F6', '#2563EB'],
+    emoji: isAuto ? '🔔' : '📣',
+  };
 }
 
 // "Yetkazib berish xizmati → Kitob yetkazish" ekrani uchun — CRM'ning

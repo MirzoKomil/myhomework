@@ -6,8 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { AppNotification, NotifCategory, appNotifications } from '@/data/mock';
-import { fetchDemoGrades } from '@/services/contentApi';
+import { AppNotification, NotifCategory } from '@/data/mock';
+import { fetchDemoGrades, fetchDemoNotifications, toAppNotification } from '@/services/contentApi';
 
 const ATTENDANCE_OPTIONS = ['Darsga kirdim', 'Darsga kira olmadim', 'Dars yarmida tugadi'];
 
@@ -72,6 +72,7 @@ function NotifCard({ notif }: { notif: AppNotification }) {
 export default function NotificationsScreen() {
   const [tab, setTab] = useState<NotifCategory>('news');
   const [rateTeacherNotifs, setRateTeacherNotifs] = useState<AppNotification[]>([]);
+  const [realNotifs, setRealNotifs] = useState<AppNotification[]>([]);
 
   // Ustoz davomat qilib baholagach, hali ustoz baholanmagan har bir jonli
   // dars uchun "Ustozni baholang" bildirishnomasi avtomatik qo'shiladi.
@@ -97,7 +98,13 @@ export default function NotificationsScreen() {
       .catch(() => {});
   }, []);
 
-  const allNotifications = [...rateTeacherNotifs, ...appNotifications];
+  useEffect(() => {
+    fetchDemoNotifications()
+      .then((list) => setRealNotifs(list.map(toAppNotification)))
+      .catch(() => {});
+  }, []);
+
+  const allNotifications = [...rateTeacherNotifs, ...realNotifs];
   const newsUnread = allNotifications.filter((n) => n.category === 'news' && n.unread).length;
   const lessonsUnread = allNotifications.filter((n) => n.category === 'lessons' && n.unread).length;
   const list = allNotifications.filter((n) => n.category === tab);

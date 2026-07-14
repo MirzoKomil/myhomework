@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, getComputedDemoNotifications, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -155,6 +155,62 @@ router.post('/demo-persona-messages', async (req, res) => {
         res.json({ ok: true, message });
     } catch (err) {
         console.error('POST /api/state/demo-persona-messages', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 141-ish: "Bildirishnomalar" — avtomatik eslatma qoidalari (CRM sozlaydi).
+// O'qish public (CRM ham, ilova ham o'qishi mumkin), yozish faqat CRM admin.
+router.get('/notification-rules', async (req, res) => {
+    try {
+        const data = await getNotificationRules();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/notification-rules', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/notification-rules', authRequired, async (req, res) => {
+    try {
+        const data = await saveNotificationRules(req.body || {});
+        res.json(data);
+    } catch (err) {
+        console.error('POST /api/state/notification-rules', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Namuna o'quvchi (va CRM'ning oldindan ko'rish oynasi) uchun haqiqiy,
+// birlashtirilgan (avtomatik + qo'lda yuborilgan) bildirishnomalar ro'yxati.
+router.get('/demo-notifications', async (req, res) => {
+    try {
+        const data = await getComputedDemoNotifications();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-notifications', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Faqat CRM admin — namuna o'quvchiga darhol xabar yuboradi/o'chiradi.
+router.post('/notifications/manual', authRequired, async (req, res) => {
+    try {
+        const { title, message } = req.body || {};
+        const notification = await addManualNotification(title, message, req.user?.email || 'Admin');
+        res.json({ ok: true, notification });
+    } catch (err) {
+        console.error('POST /api/state/notifications/manual', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.delete('/notifications/manual/:id', authRequired, async (req, res) => {
+    try {
+        await deleteManualNotification(req.params.id);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('DELETE /api/state/notifications/manual/:id', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });
