@@ -642,6 +642,9 @@ let _activeBonusIndex = null;
 let _bonusContentTab = 'konspekt';
 let _activeExamId = null;
 let _activeHomeSection = null;
+// Homework Shop endi "Mahsulotlar" (mavjud mahsulot boshqaruvi) va "Yetkazib
+// berish" (hozircha izoh) deb ikkiga bo'lingan — null=2 ta karta.
+let _activeShopCategory = null;
 let _activePeerId = null;
 // 132-ish: "Resurslar" bo'limi endi appdagi haqiqiy tuzilishni (Kutubxona/
 // O'yinlar/Hamjamiyat) aks ettiradi — null=3 ta karta, 'library'=Kutubxona
@@ -1627,21 +1630,82 @@ function renderMobileHomeListTab(container) {
     });
 }
 
+// Homework Shop bo'limiga kirilganda avval 2 ta karta ko'rsatiladi:
+// "Mahsulotlar" (mavjud mahsulot boshqaruvi) va "Yetkazib berish".
+const MOBILE_SHOP_CATEGORIES = [
+    { id: 'products', icon: '🛍️', title: 'Mahsulotlar', desc: "Mahsulot qo'shish, narxlarini va kategoriyalarini boshqarish" },
+    { id: 'delivery', icon: '🚚', title: 'Yetkazib berish', desc: "O'quvchilar buyurtma qilgan mahsulotlarni yetkazib berish holati" },
+];
+
+function renderMobileShopTab(container) {
+    if (_activeShopCategory === 'products') {
+        renderMobileShopProductsTab(container);
+    } else if (_activeShopCategory === 'delivery') {
+        renderMobileShopDeliveryTab(container);
+    } else {
+        renderMobileShopLandingTab(container);
+    }
+}
+
+function renderMobileShopLandingTab(container) {
+    container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+        <button type="button" id="backToHomeBtn" class="btn-ghost" style="padding:4px 10px">← Bosh sahifa</button>
+        <div style="font-weight:700;font-size:14px;color:var(--text)">Homework Shop</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;max-width:640px">
+        ${MOBILE_SHOP_CATEGORIES.map(cat => `
+            <div data-shop-cat="${cat.id}" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+                <div style="width:44px;height:44px;border-radius:12px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${cat.icon}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:14px;color:var(--text)">${escapeHtml(cat.title)}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${escapeHtml(cat.desc)}</div>
+                </div>
+                <span style="color:var(--text-muted);flex-shrink:0">›</span>
+            </div>
+        `).join('')}
+    </div>`;
+    document.getElementById('backToHomeBtn').addEventListener('click', () => {
+        _activeHomeSection = null;
+        _activeShopCategory = null;
+        renderMobileEditPanel();
+    });
+    container.querySelectorAll('[data-shop-cat]').forEach(card => {
+        card.addEventListener('click', () => {
+            _activeShopCategory = card.dataset.shopCat;
+            renderMobileEditPanel();
+        });
+    });
+}
+
+function renderMobileShopDeliveryTab(container) {
+    container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button type="button" id="backToShopBtn" class="btn-ghost" style="padding:4px 10px">← Homework Shop</button>
+        <div style="font-weight:700;font-size:14px;color:var(--text)">Yetkazib berish</div>
+    </div>
+    <div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Yetkazib berish boshqaruvi tez orada qo'shiladi</div>`;
+    document.getElementById('backToShopBtn').addEventListener('click', () => {
+        _activeShopCategory = null;
+        renderMobileEditPanel();
+    });
+}
+
 // Appdagi "Homework Shop" ekranida ko'rinadigan mahsulotlar — CRM'da
 // qo'shilgan har bir mahsulot mc.shopProducts massiviga yoziladi va
 // student-app/data/shopProducts.ts'dagi statik ro'yxatga QO'SHIMCHA sifatida
 // (uni almashtirmasdan) appda ko'rinadi.
-function renderMobileShopTab(container) {
+function renderMobileShopProductsTab(container) {
     const mc = getMobileContent();
     container.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <button type="button" id="backToHomeBtn" class="btn-ghost" style="padding:4px 10px">← Bosh sahifa</button>
+        <button type="button" id="backToShopBtn" class="btn-ghost" style="padding:4px 10px">← Homework Shop</button>
         <div style="font-weight:700;font-size:14px;color:var(--text)">Homework Shop — mahsulotlar</div>
     </div>
     <div id="shopProductsList"></div>`;
 
-    document.getElementById('backToHomeBtn').addEventListener('click', () => {
-        _activeHomeSection = null;
+    document.getElementById('backToShopBtn').addEventListener('click', () => {
+        _activeShopCategory = null;
         renderMobileEditPanel();
     });
 
@@ -1668,7 +1732,7 @@ function renderMobileShopTab(container) {
             const mc2 = getMobileContent();
             mc2.shopProducts = newItems;
             saveMobileContent(mc2);
-            renderMobileShopTab(container);
+            renderMobileShopProductsTab(container);
         }
     });
 }
