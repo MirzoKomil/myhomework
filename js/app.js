@@ -646,6 +646,14 @@ let _activeHomeSection = null;
 // berish" (hozircha izoh) deb ikkiga bo'lingan — null=2 ta karta.
 let _activeShopCategory = null;
 let _activePeerId = null;
+// 140-ish: "Muloqot" bo'limi endi appdagi Folder tuzilishini (Maqsaddoshlar/
+// Afsonalar/Ma'muriyat) aks ettiradi — null=3 ta karta. Maqsaddoshlar va
+// Afsonalar faqat kuzatish uchun (readOnly), Ma'muriyat esa admin javob
+// yoza oladigan haqiqiy suhbat (support/asosiy ustoz/yordamchi ustoz).
+let _activeMuloqotCategory = null;
+let _activeLegendId = null;
+let _activeAdminThreadId = null;
+let _legendMessagesCache = null;
 // 132-ish: "Resurslar" bo'limi endi appdagi haqiqiy tuzilishni (Kutubxona/
 // O'yinlar/Hamjamiyat) aks ettiradi — null=3 ta karta, 'library'=Kutubxona
 // ichidagi 6 ta resurs turi, 'games'/'community'=hozircha oddiy izoh.
@@ -2979,33 +2987,214 @@ function _openEditCourseNameModal(idx, container) {
 // bir xil (121/122-ish'da qurilgan) komponentlarni qayta ishlatib, Mobil
 // ilovani tahrirlash bo'limidan ham to'g'ridan-to'g'ri ko'rish/javob berish
 // imkonini beradi.
+// 140-ish: appdagi Muloqot ekranining Folder tuzilishi (Maqsaddoshlar/
+// Afsonalar/Ma'muriyat) — null=3 ta karta, boshqasi shu kategoriyaning
+// ro'yxat/tafsilot ko'rinishi.
+const MOBILE_MULOQOT_CATEGORIES = [
+    { id: 'peers', icon: '👥', title: 'Maqsaddoshlar', desc: "O'quvchilarning bir-biri bilan yozishmalarini kuzating (faqat ko'rish)" },
+    { id: 'legends', icon: '✨', title: 'Afsonalar', desc: "Namuna o'quvchining AI-personajlar bilan suhbatlarini kuzating (faqat ko'rish)" },
+    { id: 'admin', icon: '🛠️', title: "Ma'muriyat", desc: "Qo'llab-quvvatlash va ustozlar bilan haqiqiy yozishmalarga javob bering" },
+];
+
 function renderMobileMuloqotTab(container) {
-    _activePeerId = null;
     const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
     if (!demoStudentId) {
         container.innerHTML = `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Namuna o'quvchi hali belgilanmagan (Davomat bo'limidan tanlang)</div>`;
         return;
     }
-    const user = getCurrentUser();
-    container.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:28px;max-width:640px">
-            <div>
-                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Qo'llab-quvvatlash</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Appdagi "Qo'llab-quvvatlash" bo'limiga yozilgan xabarlarga shu yerdan javob bering</div>
-                <div class="profile-card" id="mobileMuloqotSupport"></div>
+    if (_activeMuloqotCategory === 'peers') {
+        renderMobileMuloqotBackedBody(container, (body) => renderCrmPeerChatsBody(body));
+    } else if (_activeMuloqotCategory === 'legends') {
+        renderMobileMuloqotBackedBody(container, (body) => renderCrmLegendChatsBody(body));
+    } else if (_activeMuloqotCategory === 'admin') {
+        renderMobileMuloqotBackedBody(container, (body) => renderCrmAdminChatsBody(body, demoStudentId));
+    } else {
+        renderMobileMuloqotLandingTab(container);
+    }
+}
+
+function renderMobileMuloqotLandingTab(container) {
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;max-width:820px">
+        ${MOBILE_MULOQOT_CATEGORIES.map(cat => `
+            <div data-muloqot-cat="${cat.id}" style="cursor:pointer;display:flex;flex-direction:column;gap:8px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+                <div style="font-size:28px">${cat.icon}</div>
+                <div style="font-size:15px;font-weight:700;color:var(--text)">${escapeHtml(cat.title)}</div>
+                <div style="font-size:12px;color:var(--text-muted);line-height:1.4">${escapeHtml(cat.desc)}</div>
             </div>
-            <div>
-                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Maqsaddoshlar suhbatlari</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Appdagi "Maqsaddoshlar" bo'limida namuna o'quvchi yozgan xabarlarni shu yerdan kuzating</div>
-                <div class="profile-card" id="mobileMuloqotPeerChats"></div>
-            </div>
-        </div>`;
-    renderCrmChatThread(document.getElementById('mobileMuloqotSupport'), {
-        studentId: demoStudentId, threadId: 'support',
-        senderRole: 'admin', senderId: null, senderName: user?.name || 'Admin',
-        title: "Qo'llab-quvvatlash",
+        `).join('')}
+    </div>`;
+    container.querySelectorAll('[data-muloqot-cat]').forEach(card => {
+        card.addEventListener('click', () => {
+            _activeMuloqotCategory = card.dataset.muloqotCat;
+            renderMobileEditPanel();
+        });
     });
-    renderCrmPeerChatsBody(document.getElementById('mobileMuloqotPeerChats'));
+}
+
+// Har bir kategoriya bo'limi ustiga "← Muloqot" orqaga qaytish tugmasini
+// qo'shadigan umumiy o'ram — 3 ta kategoriyaning hammasida bir xil.
+function renderMobileMuloqotBackedBody(container, renderBody) {
+    container.innerHTML = `
+        <button type="button" id="muloqotBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← Muloqot</button>
+        <div id="muloqotCategoryBody" style="max-width:640px"></div>`;
+    document.getElementById('muloqotBackBtn').addEventListener('click', () => {
+        _activeMuloqotCategory = null;
+        _activePeerId = null;
+        _activeLegendId = null;
+        _activeAdminThreadId = null;
+        renderMobileEditPanel();
+    });
+    renderBody(document.getElementById('muloqotCategoryBody'));
+}
+
+// ─── Ma'muriyat (support/asosiy ustoz/yordamchi ustoz) — ro'yxat/tafsilot ───
+const MOBILE_ADMIN_THREADS = [
+    { id: 'support', title: "Qo'llab-quvvatlash" },
+    { id: 'main-teacher', title: 'Asosiy ustoz' },
+    { id: 'assistant-teacher', title: 'Yordamchi ustoz' },
+];
+
+function renderCrmAdminChatsBody(container, studentId) {
+    if (_activeAdminThreadId) {
+        renderCrmAdminChatDetail(container, studentId, _activeAdminThreadId);
+    } else {
+        renderCrmAdminChatList(container, studentId);
+    }
+}
+
+function renderCrmAdminChatList(container, studentId) {
+    const rows = MOBILE_ADMIN_THREADS
+        .map(t => ({ ...t, messages: getStudentMessages(studentId, t.id) }))
+        .sort((a, b) => {
+            const la = a.messages[a.messages.length - 1];
+            const lb = b.messages[b.messages.length - 1];
+            return new Date(lb?.time || 0) - new Date(la?.time || 0);
+        });
+
+    container.innerHTML = `
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:12px">Ma'muriyat suhbatlari</div>
+        ${rows.map(t => {
+            const last = t.messages[t.messages.length - 1];
+            return `
+            <div class="peer-chat-row" data-admin-thread-id="${escapeHtml(t.id)}" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--surface)">
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(t.title)}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(last?.text || 'Hali xabar yo\'q')}</div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);flex-shrink:0">${last ? _formatCrmChatTime(last.time) : ''}</div>
+            </div>`;
+        }).join('')}`;
+
+    container.querySelectorAll('[data-admin-thread-id]').forEach(row => {
+        row.addEventListener('click', () => {
+            _activeAdminThreadId = row.dataset.adminThreadId;
+            renderCrmAdminChatsBody(container, studentId);
+        });
+    });
+}
+
+function renderCrmAdminChatDetail(container, studentId, threadId) {
+    const thread = MOBILE_ADMIN_THREADS.find(t => t.id === threadId);
+    if (!thread) { _activeAdminThreadId = null; renderCrmAdminChatsBody(container, studentId); return; }
+
+    const backWrap = document.createElement('div');
+    backWrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px';
+    backWrap.innerHTML = `<button type="button" class="btn-ghost" id="adminChatBackBtn" style="padding:4px 10px">← Ro'yxat</button>`;
+    container.innerHTML = '';
+    container.appendChild(backWrap);
+    const chatBody = document.createElement('div');
+    container.appendChild(chatBody);
+
+    document.getElementById('adminChatBackBtn').addEventListener('click', () => {
+        _activeAdminThreadId = null;
+        renderCrmAdminChatsBody(container, studentId);
+    });
+
+    const user = getCurrentUser();
+    renderCrmChatThread(chatBody, {
+        studentId, threadId,
+        senderRole: 'admin', senderId: null, senderName: user?.name || 'Admin',
+        title: thread.title,
+    });
+}
+
+// ─── Afsonalar (AI-personajlar bilan suhbatlar) — faqat kuzatish ───────────
+function renderCrmLegendChatsBody(container) {
+    container.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Yuklanmoqda...</div>`;
+    apiFetchPersonaMessages().then(data => {
+        _legendMessagesCache = data || {};
+        renderCrmLegendChatsBodyFromCache(container);
+    }).catch(err => {
+        container.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--danger)">Yuklashda xatolik: ${escapeHtml(err.message || String(err))}</div>`;
+    });
+}
+
+function renderCrmLegendChatsBodyFromCache(container) {
+    if (_activeLegendId) {
+        renderCrmLegendChatDetail(container, _activeLegendId);
+    } else {
+        renderCrmLegendChatList(container);
+    }
+}
+
+function renderCrmLegendChatList(container) {
+    const threads = _legendMessagesCache || {};
+    const rows = Object.entries(threads).sort((a, b) => {
+        const la = a[1].messages[a[1].messages.length - 1];
+        const lb = b[1].messages[b[1].messages.length - 1];
+        return new Date(lb?.time || 0) - new Date(la?.time || 0);
+    });
+
+    const rowsHtml = rows.length
+        ? rows.map(([personaId, thread]) => {
+            const last = thread.messages[thread.messages.length - 1];
+            return `
+            <div class="peer-chat-row" data-legend-id="${escapeHtml(personaId)}" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--surface)">
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(thread.personaName)}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(last?.text || '')}</div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);flex-shrink:0">${last ? _formatCrmChatTime(last.time) : ''}</div>
+            </div>`;
+        }).join('')
+        : `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Hali afsona suhbatlari yo'q</div>`;
+
+    container.innerHTML = `
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:12px">Afsonalar suhbatlari</div>
+        ${rowsHtml}`;
+
+    container.querySelectorAll('[data-legend-id]').forEach(row => {
+        row.addEventListener('click', () => {
+            _activeLegendId = row.dataset.legendId;
+            renderCrmLegendChatsBodyFromCache(container);
+        });
+    });
+}
+
+function renderCrmLegendChatDetail(container, personaId) {
+    const thread = (_legendMessagesCache || {})[personaId];
+    if (!thread) { _activeLegendId = null; renderCrmLegendChatsBodyFromCache(container); return; }
+
+    const backWrap = document.createElement('div');
+    backWrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px';
+    backWrap.innerHTML = `<button type="button" class="btn-ghost" id="legendChatBackBtn" style="padding:4px 10px">← Ro'yxat</button>`;
+    container.innerHTML = '';
+    container.appendChild(backWrap);
+    const chatBody = document.createElement('div');
+    container.appendChild(chatBody);
+
+    document.getElementById('legendChatBackBtn').addEventListener('click', () => {
+        _activeLegendId = null;
+        renderCrmLegendChatsBodyFromCache(container);
+    });
+
+    renderCrmChatThread(chatBody, {
+        uid: `legend_${personaId}`,
+        title: thread.personaName,
+        senderRole: 'persona',
+        readOnly: true,
+        getMessages: () => thread.messages.map(m => ({ ...m, sender: m.sender === 'student' ? 'student' : 'admin' })),
+    });
 }
 
 // 132-ish: "Resurslar" bo'limi endi appning haqiqiy Resurslar ekranidagi
@@ -5661,13 +5850,19 @@ function renderCrmChatThread(container, opts) {
         : `<div class="mac-empty" style="padding:20px 0;text-align:center;color:var(--text-muted)">Hali xabar yo'q</div>`;
 
     const uid = opts.uid || `${threadId}_${senderRole}`;
+    // 140-ish: Maqsaddoshlar/Afsonalar suhbatlari faqat kuzatish uchun —
+    // admin ikki tomonlama shaxsiy suhbatga aralashmasligi kerak, shu sabab
+    // bu holatda javob yozish qatori umuman ko'rsatilmaydi.
     container.innerHTML = `
         <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:10px">${escapeHtml(title)}</div>
-        <div style="max-height:320px;overflow-y:auto;padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--bg)">${bubbles}</div>
+        <div style="max-height:320px;overflow-y:auto;padding:10px;border:1px solid var(--border);border-radius:10px;${opts.readOnly ? '' : 'margin-bottom:10px;'}background:var(--bg)">${bubbles}</div>
+        ${opts.readOnly ? '' : `
         <div style="display:flex;gap:8px">
             <input type="text" id="crmChatInput_${uid}" class="form-control" placeholder="Javob yozing...">
             <button type="button" class="btn-primary-sm" id="crmChatSend_${uid}">Yuborish</button>
-        </div>`;
+        </div>`}`;
+
+    if (opts.readOnly) return;
 
     const send = () => {
         const input = document.getElementById(`crmChatInput_${uid}`);
@@ -5768,13 +5963,8 @@ function renderCrmPeerChatDetail(container, studentId, peerId) {
         uid: `peer_${peerId}`,
         title,
         senderRole: 'peer',
+        readOnly: true,
         getMessages: () => getPeerThread(studentId, peerId)?.messages || [],
-        onSend: (text) => {
-            appendPeerMessage(studentId, peerId, thread.peerName, {
-                id: 'msg-' + Date.now(), sender: 'peer', senderName: thread.peerName,
-                type: 'text', text, time: new Date().toISOString(),
-            });
-        },
     });
 }
 

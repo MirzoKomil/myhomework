@@ -36,6 +36,11 @@ const DEMO_PEER_MESSAGES_API_BASE =
     ? '/api/state/demo-peer-messages'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-peer-messages';
 
+const DEMO_PERSONA_MESSAGES_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-persona-messages'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-persona-messages';
+
 const DEMO_BOOK_DELIVERY_API_BASE =
   Platform.OS === 'web'
     ? '/api/state/demo-book-delivery'
@@ -360,6 +365,49 @@ export async function sendDemoPeerMessage(peerId: string, peerName: string, text
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ peerId, peerName, text }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Xatolik' }));
+    throw new Error(err.error || 'Xatolik');
+  }
+  const data = await r.json();
+  return data.message;
+}
+
+// "Afsonalar" (Legends) — namuna o'quvchining AI-personajlar bilan
+// suhbatlari. peerMessages bilan bir xil naqsh, lekin sender aniq
+// ko'rsatiladi ('student'/'persona') va linkedStudentId yo'q.
+export type DemoPersonaMessage = {
+  id: string;
+  sender: 'student' | 'persona';
+  type: 'text';
+  text?: string;
+  time: string;
+};
+
+export type DemoPersonaThread = {
+  personaName: string;
+  messages: DemoPersonaMessage[];
+};
+
+export type DemoPersonaMessagesResponse = Record<string, DemoPersonaThread>;
+
+export async function fetchDemoPersonaMessages(): Promise<DemoPersonaMessagesResponse> {
+  const r = await fetch(DEMO_PERSONA_MESSAGES_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function sendDemoPersonaMessage(
+  personaId: string,
+  personaName: string,
+  text: string,
+  sender: 'student' | 'persona'
+): Promise<DemoPersonaMessage> {
+  const r = await fetch(DEMO_PERSONA_MESSAGES_API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ personaId, personaName, text, sender }),
   });
   if (!r.ok) {
     const err = await r.json().catch(() => ({ error: 'Xatolik' }));

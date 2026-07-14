@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -128,6 +128,33 @@ router.post('/demo-peer-messages', async (req, res) => {
         res.json({ ok: true, message });
     } catch (err) {
         console.error('POST /api/state/demo-peer-messages', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 140-ish: "Afsonalar" (Legends) — namuna o'quvchining AI-personajlar bilan
+// suhbatlari. Faqat monitoring uchun (CRM javob yozmaydi) - shu sabab public
+// GET/POST yetarli, alohida authRequired endpoint kerak emas.
+router.get('/demo-persona-messages', async (req, res) => {
+    try {
+        const data = await getDemoStudentPersonaMessages();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-persona-messages', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/demo-persona-messages', async (req, res) => {
+    try {
+        const { personaId, personaName, text, sender } = req.body || {};
+        if (!personaId || typeof text !== 'string') {
+            return res.status(400).json({ error: "Personaj va xabar matni yuborilishi shart" });
+        }
+        const message = await sendDemoStudentPersonaMessage(personaId, personaName, text, sender);
+        res.json({ ok: true, message });
+    } catch (err) {
+        console.error('POST /api/state/demo-persona-messages', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

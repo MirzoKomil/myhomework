@@ -987,6 +987,44 @@ async function sendDemoStudentPeerMessage(peerId, peerName, text) {
     return message;
 }
 
+// 140-ish: "Afsonalar" (Legends) — namuna o'quvchining AI-personajlar bilan
+// suhbatlari. peerMessages bilan bir xil { [studentId]: { [personaId]: {...} } }
+// naqshi, lekin real o'quvchiga bog'lash (linkedStudentId) kerak emas va
+// sender aniq ko'rsatiladi ('student'/'persona'), chunki personajning "javobi"
+// mijoz tomonida generatsiya qilinadi, boshqa qurilmadan kelmaydi.
+async function getDemoStudentPersonaMessages() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return {};
+    const all = await getJsonData('personaMessages');
+    return all[demoStudentId] || {};
+}
+
+async function sendDemoStudentPersonaMessage(personaId, personaName, text, sender) {
+    const trimmedId = String(personaId || '').trim();
+    if (!trimmedId) throw new Error("Personaj aniqlanmadi");
+    const trimmed = String(text || '').trim();
+    if (!trimmed) throw new Error("Xabar matni bo'sh bo'lishi mumkin emas");
+    const senderVal = sender === 'persona' ? 'persona' : 'student';
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+
+    const all = await getJsonData('personaMessages');
+    if (!all[demoStudentId]) all[demoStudentId] = {};
+    if (!all[demoStudentId][trimmedId]) {
+        all[demoStudentId][trimmedId] = { personaName: personaName || trimmedId, messages: [] };
+    }
+    const message = {
+        id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        sender: senderVal, type: 'text', text: trimmed,
+        time: new Date().toISOString(),
+    };
+    all[demoStudentId][trimmedId].messages.push(message);
+    await tx(async (client) => {
+        await saveJsonData(client, 'personaMessages', all);
+    });
+    return message;
+}
+
 // ── Hamjamiyat (Community) ───────────────────────────────────────────────────
 // Bitta umumiy lenta — namuna o'quvchi ilovadan ko'radigan va CRM
 // administratori nazorat qiladigan bir xil ma'lumot. "likedByMe"/"me"
@@ -1413,6 +1451,7 @@ module.exports = {
     getDemoStudentSchedule, getDemoStudentProfile,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
+    getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage,
     getDemoStudentBookDelivery,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { celebrityPersonas, ChatMessage } from '@/data/mock';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
+import { sendDemoPersonaMessage } from '@/services/contentApi';
 
 const MESSAGES_KEY = 'mh_persona_chat_messages';
 const ACCESS_KEY = 'mh_persona_chat_access';
@@ -86,10 +87,21 @@ export function hasRealExchange(personaId: string): boolean {
   return messages.some((m) => m.chatId === personaId && !m.id.startsWith('intro-'));
 }
 
+// 140-ish: matn xabarlarini serverga ham ko'chiradi (fire-and-forget) — CRM
+// "Afsonalar" bo'limida shu suhbatlarni kuzatishi uchun. Mahalliy xatti-
+// harakat (AsyncStorage'ga saqlash, rasm/ovozli xabarlar) o'zgarishsiz
+// qoladi — bu faqat ko'rish uchun qo'shimcha oyna, asosiy manba emas.
+function syncPersonaMessageToServer(msg: ChatMessage) {
+  if (msg.type !== 'text' || !msg.text) return;
+  const persona = celebrityPersonas.find((p) => p.id === msg.chatId);
+  sendDemoPersonaMessage(msg.chatId, persona?.name || msg.chatId, msg.text, msg.from === 'me' ? 'student' : 'persona').catch(() => {});
+}
+
 export async function addPersonaMessage(msg: ChatMessage) {
   await ensureLoaded();
   messages.push(msg);
   notify();
+  syncPersonaMessageToServer(msg);
   await persistMessages();
 }
 

@@ -166,6 +166,10 @@ async function apiFetchCommunity() {
     return apiFetch('/api/state/community');
 }
 
+async function apiFetchPersonaMessages() {
+    return apiFetch('/api/state/demo-persona-messages');
+}
+
 async function apiDeleteCommunityPost(postId) {
     return apiFetch('/api/state/community/posts/' + encodeURIComponent(postId), { method: 'DELETE' });
 }
