@@ -598,7 +598,7 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity] = await Promise.all([
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -624,6 +624,7 @@ async function getFullState() {
         getJsonData('studentMessages'),
         getJsonData('peerMessages'),
         getJsonData('studentActivity'),
+        getJsonData('shopOrders'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -642,7 +643,7 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders
     };
 }
 
@@ -1114,6 +1115,50 @@ async function getDemoStudentBookDelivery() {
     };
 }
 
+// 139-ish: Homework Shop'dan sotib olingan mahsulotlarning yetkazib berish
+// holati — CRM'ning "Yetkazib berish" kanban'i bilan bir xil 4 bosqichli
+// DeliveryStage (preparing/dispatched/in_transit/delivered) ishlatiladi,
+// kitob yetkazishdagi kabi murakkab lead-bosqichlar kerak emas, chunki
+// mahsulot allaqachon ro'yxatdan o'tgan o'quvchi tomonidan sotib olinadi.
+
+// Namuna o'quvchi ilovadan mahsulot sotib olganda shu yerga yozadi.
+// StudentId har doim serverda demoStudentId'dan olinadi.
+async function addDemoShopOrder(productId, productName, category, price) {
+    const demoStudentId = await getJsonData('demoStudentId');
+    let studentName = '';
+    if (demoStudentId) {
+        const row = await q1('SELECT name FROM students WHERE id = $1', [demoStudentId]);
+        studentName = row?.name || '';
+    }
+    const orders = await getJsonData('shopOrders');
+    const order = {
+        id: 'order-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        studentId: demoStudentId || null,
+        studentName,
+        productId: productId || '',
+        productName: productName || "Noma'lum mahsulot",
+        category: category || '',
+        price: Number(price) || 0,
+        stage: 'preparing',
+        createdAt: Date.now(),
+        dispatchedAt: null,
+        deliveredAt: null,
+    };
+    orders.unshift(order);
+    await tx(async (client) => { await saveJsonData(client, 'shopOrders', orders); });
+    return order;
+}
+
+// Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
+// bitta o'quvchining o'z buyurtmalarini qaytaradi (appning "Yetkazib
+// berish" ekranidagi StageTimeline shu yerdan real vaqtda o'qiydi).
+async function getDemoShopOrders() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return [];
+    const orders = await getJsonData('shopOrders');
+    return orders.filter(o => o.studentId === demoStudentId);
+}
+
 const ACTIVITY_TYPES = ['exam', 'homework', 'video', 'vocab'];
 const MAX_ACTIVITY_ENTRIES = 50;
 
@@ -1191,6 +1236,10 @@ async function patchState(partial) {
         if (partial.demoStudentId !== undefined) await saveJsonData(client, 'demoStudentId', partial.demoStudentId);
         if (partial.studentMessages !== undefined) await saveJsonData(client, 'studentMessages', partial.studentMessages);
         if (partial.peerMessages !== undefined) await saveJsonData(client, 'peerMessages', partial.peerMessages);
+        // 139-ish: Homework Shop buyurtmalarining yetkazib berish bosqichi —
+        // CRM'ning "Yetkazib berish" kanban'i shu yerdan o'qiydi/yozadi
+        // (bookRoadmap'dagi kabi, lekin oddiyroq JSON-massiv sifatida).
+        if (partial.shopOrders !== undefined) await saveJsonData(client, 'shopOrders', partial.shopOrders);
     });
 }
 
@@ -1365,6 +1414,7 @@ module.exports = {
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     getDemoStudentBookDelivery,
+    addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
     getCommunityPosts, addCommunityPost, toggleCommunityPostLike,
     addCommunityComment, toggleCommunityCommentLike,

@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -252,6 +252,31 @@ router.delete('/community/posts/:postId/comments/:commentId', authRequired, asyn
     }
 });
 
+// 139-ish: Homework Shop buyurtmalarining yetkazib berish holati — namuna
+// o'quvchi ilova orqali buyurtma qo'shadi (public), o'zining buyurtmalarini
+// o'qiydi (public). Bosqichni o'zgartirish (Kanban'da surish) esa CRM'ning
+// umumiy PATCH /api/state -> shopOrders kaliti orqali (authRequired) amalga
+// oshadi — bookRoadmap bilan bir xil naqsh.
+router.get('/demo-shop-orders', async (req, res) => {
+    try {
+        res.json({ orders: await getDemoShopOrders() });
+    } catch (err) {
+        console.error('GET /api/state/demo-shop-orders', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/demo-shop-orders', async (req, res) => {
+    try {
+        const { productId, productName, category, price } = req.body || {};
+        const order = await addDemoShopOrder(productId, productName, category, price);
+        res.json({ ok: true, order });
+    } catch (err) {
+        console.error('POST /api/state/demo-shop-orders', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
 router.get('/', authRequired, async (req, res) => {
     try {
         res.json(await getFullState());
@@ -269,7 +294,7 @@ router.patch('/', authRequired, async (req, res) => {
             'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
             'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics',
-            'liveGrades', 'demoStudentId', 'studentMessages', 'peerMessages'
+            'liveGrades', 'demoStudentId', 'studentMessages', 'peerMessages', 'shopOrders'
         ];
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

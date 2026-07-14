@@ -1682,17 +1682,127 @@ function renderMobileShopLandingTab(container) {
     });
 }
 
+// 139-ish: Homework Shop buyurtmalarining yetkazib berish kanban'i —
+// Sotuv bo'limidagi "Kitob yetkazish" bilan bir xil vizual (lead-column/
+// lead-card CSS'i, native drag-drop), lekin 4 bosqichli soddaroq ustunlar
+// bilan (DeliveryStage — appning "Yetkazib berish xizmati" ekranidagi
+// StageTimeline shu bilan bir xil bosqichlarni kutadi).
+const SHOP_DELIVERY_COLUMNS = [
+    { id: 'preparing',  label: 'Tayyorlanmoqda',   bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
+    { id: 'dispatched', label: "Jo'natildi",       bg: '#EEF2FF', border: '#A5B4FC', headerBg: 'rgba(79,70,229,0.12)',  title: '#3730A3', count: '#4F46E5' },
+    { id: 'in_transit', label: "Yo'lda",           bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)',  title: '#C2410C', count: '#EA580C' },
+    { id: 'delivered',  label: 'Yetkazib berildi', bg: '#ECFDF5', border: '#6EE7B7', headerBg: 'rgba(5,150,105,0.12)',  title: '#047857', count: '#059669' },
+];
+
+function normalizeShopOrderStage(s) {
+    return SHOP_DELIVERY_COLUMNS.some(c => c.id === s) ? s : 'preparing';
+}
+
 function renderMobileShopDeliveryTab(container) {
     container.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <button type="button" id="backToShopBtn" class="btn-ghost" style="padding:4px 10px">← Homework Shop</button>
         <div style="font-weight:700;font-size:14px;color:var(--text)">Yetkazib berish</div>
     </div>
-    <div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Yetkazib berish boshqaruvi tez orada qo'shiladi</div>`;
+    <div class="leads-kanban" id="shopDeliveryKanban"></div>`;
     document.getElementById('backToShopBtn').addEventListener('click', () => {
         _activeShopCategory = null;
         renderMobileEditPanel();
     });
+    renderShopDeliveryKanban();
+}
+
+function renderShopDeliveryKanban() {
+    const kanban = document.getElementById('shopDeliveryKanban');
+    if (!kanban) return;
+    const items = getItem(STORAGE_KEYS.shopOrders, []);
+
+    kanban.innerHTML = SHOP_DELIVERY_COLUMNS.map(col => {
+        const colItems = items.filter(i => normalizeShopOrderStage(i.stage) === col.id);
+        const cards = colItems.length
+            ? colItems.map(i => renderShopOrderCard(i)).join('')
+            : '<div class="lead-column-empty">Buyurtmalar yo\'q</div>';
+        return `<div class="lead-column" data-shop-order-col="${col.id}" style="background:${col.bg};border-color:${col.border}">
+            <div class="lead-column-header" style="background:${col.headerBg}">
+                <h3 class="lead-column-title" style="color:${col.title}">${escapeHtml(col.label)}</h3>
+                <span class="lead-column-count" style="color:${col.count}">${colItems.length}</span>
+            </div>
+            <div class="lead-column-cards" data-shop-order-drop-col="${col.id}">${cards}</div>
+        </div>`;
+    }).join('');
+
+    initShopOrderDragDrop(kanban);
+}
+
+function renderShopOrderCard(item) {
+    const categoryLabel = SHOP_CATEGORY_LABELS[item.category] || item.category || '—';
+    const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('uz-UZ') : '';
+    return `<article class="lead-card" draggable="true" data-shop-order-id="${escapeHtml(item.id)}">
+        <div class="lead-card-top">
+            <div class="lead-card-title-wrap">
+                <h4 class="lead-card-name">${escapeHtml(item.productName || '—')}</h4>
+                <span class="lead-card-serial">${escapeHtml(categoryLabel)}</span>
+            </div>
+        </div>
+        <div class="lead-card-contact">
+            <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>${escapeHtml(item.studentName || "Noma'lum o'quvchi")}</span>
+        </div>
+        <div class="lead-card-contact">
+            <span>🪙 ${Number(item.price) || 0} coin</span>
+        </div>
+        <div class="lead-card-footer">
+            <span class="lead-card-kind">${escapeHtml(createdDate)}</span>
+        </div>
+    </article>`;
+}
+
+function initShopOrderDragDrop(kanban) {
+    kanban.querySelectorAll('.lead-card[data-shop-order-id]').forEach(card => {
+        card.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', card.dataset.shopOrderId);
+            card.classList.add('lead-card--dragging');
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('lead-card--dragging');
+            kanban.querySelectorAll('.lead-column-cards').forEach(z => z.classList.remove('drag-over'));
+        });
+    });
+    kanban.querySelectorAll('.lead-column-cards[data-shop-order-drop-col]').forEach(zone => {
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', e => {
+            if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+        });
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const id = e.dataTransfer.getData('text/plain');
+            const toStage = zone.dataset.shopOrderDropCol;
+            if (!id || !toStage) return;
+            updateShopOrderStage(id, toStage);
+        });
+    });
+}
+
+// Bosqich birinchi marta "dispatched"/"delivered"ga yetganda haqiqiy sanani
+// avtomatik belgilaydi — bookRoadmap'dagi updateBrInStorage bilan bir xil
+// mantiq (appdagi StageTimeline shu sanalarni ko'rsatadi).
+function updateShopOrderStage(orderId, newStage) {
+    const items = getItem(STORAGE_KEYS.shopOrders, []);
+    const idx = items.findIndex(i => i.id === orderId);
+    if (idx === -1) return;
+    if (items[idx].stage === newStage) return;
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const updated = { ...items[idx], stage: newStage };
+    if (newStage === 'dispatched' && !updated.dispatchedAt) updated.dispatchedAt = todayIso;
+    if (newStage === 'delivered' && !updated.deliveredAt) updated.deliveredAt = todayIso;
+    items[idx] = updated;
+    setItem(STORAGE_KEYS.shopOrders, items);
+    renderShopDeliveryKanban();
+    showMiniToast('Bosqich yangilandi');
 }
 
 function _saveShopItemOverride(itemId, patch) {

@@ -112,7 +112,7 @@ function ShopOrderCard({ order }: { order: ReturnType<typeof useOrders>[number] 
       </View>
       <StatusBadge stage={order.stage} />
       <View style={styles.divider} />
-      <StageTimeline stage={order.stage} />
+      <StageTimeline stage={order.stage} dispatchedDate={order.dispatchedAt ?? undefined} deliveredDate={order.deliveredAt ?? undefined} />
     </Card>
   );
 }
