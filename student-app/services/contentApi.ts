@@ -133,9 +133,10 @@ export type MobileContent = {
   lessonContents: Record<string, AdminLessonContent>;
   examContents: Record<string, AdminExamContent>;
   certificateTemplateUrl?: string;
-  // CRM'ning "Asosiy oyna → Homework Shop" bo'limida qo'shilgan mahsulotlar —
-  // appning statik SHOP_PRODUCTS ro'yxatiga qo'shimcha sifatida ko'rsatiladi.
-  shopProducts: ShopProduct[];
+  // Homework Shop'ning haqiqiy mahsulotlari — statik SHOP_PRODUCTS bazasi
+  // serverda CRM'ning shopOverrides'i bilan allaqachon birlashtirilgan
+  // (resolved) holda keladi, appda qo'shimcha birlashtirish shart emas.
+  shop: ShopProduct[];
   library: LibraryContent;
 };
 
@@ -160,7 +161,7 @@ export async function fetchMobileContent(): Promise<MobileContent> {
         lessonContents: data.lessonContents ?? {},
         examContents: data.examContents ?? {},
         certificateTemplateUrl: data.certificateTemplateUrl,
-        shopProducts: data.shopProducts ?? [],
+        shop: data.shop ?? [],
         library: {
           grammar: data.library?.grammar ?? [],
           words: data.library?.words ?? [],

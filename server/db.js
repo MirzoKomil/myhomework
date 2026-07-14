@@ -10,6 +10,11 @@ const bcrypt = require('bcryptjs');
 // bilan qo'shib o'qiladi (lessonContents'dagi kabi override-pattern).
 const LIBRARY_DEFAULTS = require('./data/libraryDefaults.json');
 
+// Homework Shop'ning boshlang'ich mahsulot to'plami — xuddi LIBRARY_DEFAULTS
+// kabi bir martalik ko'chirilgan baza, CRM tahrirlari faqat shopOverrides
+// orqali qo'shib o'qiladi.
+const SHOP_PRODUCTS_DEFAULTS = require('./data/shopProductsDefaults.json');
+
 // ── Connection ───────────────────────────────────────────────────────────────
 
 if (!process.env.DATABASE_URL) {
@@ -550,6 +555,25 @@ function applyLibraryOverrides(mc) {
     return mc;
 }
 
+// Homework Shop'ning haqiqiy mahsulotlari — SHOP_PRODUCTS_DEFAULTS bilan
+// CRM'da kiritilgan mc.shopOverrides'ni applyLibraryOverrides bilan bir xil
+// naqsh bo'yicha birlashtirib, mc.shop'ga yozadi.
+function applyShopOverrides(mc) {
+    const overrides = mc.shopOverrides || {};
+    const defaultIds = new Set();
+    const merged = SHOP_PRODUCTS_DEFAULTS.map(item => {
+        defaultIds.add(item.id);
+        const patch = overrides[item.id];
+        if (patch && patch._deleted) return null;
+        return patch ? { ...item, ...patch } : item;
+    }).filter(Boolean);
+    Object.keys(overrides).forEach(id => {
+        if (!defaultIds.has(id) && !overrides[id]._deleted) merged.push({ id, ...overrides[id] });
+    });
+    mc.shop = merged;
+    return mc;
+}
+
 async function getMobileContentData() {
     const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
     const mc = row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
@@ -558,7 +582,8 @@ async function getMobileContentData() {
         getJsonData('demoStudentId'),
     ]);
     applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
-    return applyLibraryOverrides(mc);
+    applyLibraryOverrides(mc);
+    return applyShopOverrides(mc);
 }
 
 async function saveMobileContentData(client, data) {

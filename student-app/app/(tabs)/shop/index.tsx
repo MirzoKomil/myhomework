@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CoinIcon, CoinPill } from '@/components/ui/CoinIcon';
@@ -27,17 +27,16 @@ export default function ShopScreen() {
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
-  const [adminProducts, setAdminProducts] = useState<ShopProduct[]>([]);
+  const [allProducts, setAllProducts] = useState<ShopProduct[]>(SHOP_PRODUCTS);
 
-  // CRM'ning "Asosiy oyna → Homework Shop" bo'limida qo'shilgan mahsulotlar —
-  // statik ro'yxatga qo'shimcha sifatida ko'rsatiladi.
+  // CRM'da tahrirlangan/qo'shilgan haqiqiy mahsulotlar — server statik
+  // bazani CRM'ning shopOverrides'i bilan allaqachon birlashtirib qaytaradi.
   useEffect(() => {
     fetchMobileContent()
-      .then((mc) => setAdminProducts(mc.shopProducts))
+      .then((mc) => { if (mc.shop.length) setAllProducts(mc.shop); })
       .catch(() => {});
   }, []);
 
-  const allProducts = [...SHOP_PRODUCTS, ...adminProducts];
   const products = allProducts.filter((p) => p.category === category);
 
   const confirmPurchase = async () => {
@@ -81,9 +80,13 @@ export default function ShopScreen() {
       <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
         {products.map((product) => (
           <Pressable key={product.id} style={styles.card} onPress={() => setDialog({ type: 'confirm', product })}>
-            <View style={[styles.cardIconWrap, { backgroundColor: product.bg }]}>
-              <Ionicons name={product.icon} size={30} color={product.color} />
-            </View>
+            {product.imageUrl ? (
+              <Image source={{ uri: product.imageUrl }} style={styles.cardImage} resizeMode="cover" />
+            ) : (
+              <View style={[styles.cardIconWrap, { backgroundColor: product.bg }]}>
+                <Ionicons name={product.icon} size={30} color={product.color} />
+              </View>
+            )}
             <Text style={styles.cardName} numberOfLines={2}>
               {product.name}
             </Text>
@@ -120,9 +123,13 @@ export default function ShopScreen() {
           <Pressable style={styles.modalBackdropTap} onPress={() => setDialog(null)} />
           {dialog?.type === 'confirm' && (
             <View style={styles.dialogCard}>
-              <View style={[styles.dialogIconWrap, { backgroundColor: dialog.product.bg }]}>
-                <Ionicons name={dialog.product.icon} size={30} color={dialog.product.color} />
-              </View>
+              {dialog.product.imageUrl ? (
+                <Image source={{ uri: dialog.product.imageUrl }} style={styles.dialogImage} resizeMode="cover" />
+              ) : (
+                <View style={[styles.dialogIconWrap, { backgroundColor: dialog.product.bg }]}>
+                  <Ionicons name={dialog.product.icon} size={30} color={dialog.product.color} />
+                </View>
+              )}
               <Text style={styles.dialogTitle}>{dialog.product.name}</Text>
               <View style={styles.dialogPriceRow}>
                 <Text style={styles.dialogPriceLabel}>Narxi:</Text>
@@ -207,6 +214,7 @@ const styles = StyleSheet.create({
     ...theme.shadow.card,
   },
   cardIconWrap: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  cardImage: { width: 64, height: 64, borderRadius: 18, backgroundColor: theme.colors.bg },
   cardName: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.text, textAlign: 'center' },
   cardDelivered: { fontFamily: theme.fonts.regular, fontSize: 10, color: theme.colors.textMuted, marginTop: -4 },
 
@@ -242,6 +250,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dialogIconWrap: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  dialogImage: { width: 64, height: 64, borderRadius: 18, backgroundColor: theme.colors.bg, marginBottom: 4 },
   dialogTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text, textAlign: 'center' },
   dialogSubtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center' },
   dialogPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 export type ShopCategory = 'merch' | 'books' | 'gadgets' | 'stationery';
 
 export const SHOP_CATEGORY_LABELS: Record<ShopCategory, string> = {
-  merch: 'Merch',
+  merch: 'Homework',
   books: 'Kitoblar',
   gadgets: 'Gadgetlar',
   stationery: 'Kontsstovarlar',
@@ -18,6 +18,9 @@ export type ShopProduct = {
   color: string;
   bg: string;
   delivered?: boolean;
+  // CRM'da mahsulotga haqiqiy rasm yuklansa shu maydon to'ldiriladi — mavjud
+  // bo'lsa icon/color/bg o'rniga shu rasm ko'rsatiladi.
+  imageUrl?: string;
 };
 
 export const SHOP_PRODUCTS: ShopProduct[] = [

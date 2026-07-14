@@ -657,13 +657,17 @@ let _activeResourceCategory = null;
 let _activeLibraryCategory = null;
 let _activeLibraryTopicId = null;
 
-const SHOP_CATEGORY_LABELS = { merch: 'Merch', books: 'Kitoblar', gadgets: 'Gadgetlar', stationery: 'Kontsstovarlar' };
+const SHOP_CATEGORY_LABELS = { merch: 'Homework', books: 'Kitoblar', gadgets: 'Gadgetlar', stationery: 'Kontsstovarlar' };
 const SHOP_CATEGORY_OPTIONS = [
-    { value: 'merch', label: 'Merch' },
+    { value: 'merch', label: 'Homework' },
     { value: 'books', label: 'Kitoblar' },
     { value: 'gadgets', label: 'Gadgetlar' },
     { value: 'stationery', label: 'Kontsstovarlar' },
 ];
+// Mahsulotlar bo'limiga kirilganda tanlangan kategoriya tabi (appdagi
+// tab-chip qatoriga mos) — yangi mahsulot qo'shilganda shu kategoriya
+// avtomatik biriktiriladi.
+let _activeShopProductCategory = 'merch';
 
 function renderStudentApp() {
     const cu = getCurrentUser();
@@ -1691,10 +1695,22 @@ function renderMobileShopDeliveryTab(container) {
     });
 }
 
-// Appdagi "Homework Shop" ekranida ko'rinadigan mahsulotlar — CRM'da
-// qo'shilgan har bir mahsulot mc.shopProducts massiviga yoziladi va
-// student-app/data/shopProducts.ts'dagi statik ro'yxatga QO'SHIMCHA sifatida
-// (uni almashtirmasdan) appda ko'rinadi.
+function _saveShopItemOverride(itemId, patch) {
+    const mc = getMobileContent();
+    if (!mc.shopOverrides) mc.shopOverrides = {};
+    mc.shopOverrides[itemId] = { ...mc.shopOverrides[itemId], ...patch };
+    saveMobileContent(mc);
+}
+
+function _deleteShopItem(itemId) {
+    _saveShopItemOverride(itemId, { _deleted: true });
+}
+
+// Appdagi "Homework Shop" ekranida ko'rinadigan mahsulotlar — statik baza
+// (mc.shop, applyShopOverrides orqali serverda hisoblanadi) endi CRM'da to'g'
+// -ridan-to'g'ri tahrirlanadi/o'chiriladi, appdagi kabi 4 ta kategoriya
+// tab-chip qatori bilan. Har bir tabdagi "+ Qo'shish" shu kategoriyaga
+// avtomatik biriktiriladi — kategoriya alohida maydon sifatida ko'rsatilmaydi.
 function renderMobileShopProductsTab(container) {
     const mc = getMobileContent();
     container.innerHTML = `
@@ -1702,39 +1718,65 @@ function renderMobileShopProductsTab(container) {
         <button type="button" id="backToShopBtn" class="btn-ghost" style="padding:4px 10px">← Homework Shop</button>
         <div style="font-weight:700;font-size:14px;color:var(--text)">Homework Shop — mahsulotlar</div>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        ${SHOP_CATEGORY_OPTIONS.map(opt => `
+            <button type="button" data-shop-product-cat="${opt.value}" class="subject-tab${opt.value === _activeShopProductCategory ? ' active' : ''}">${escapeHtml(opt.label)}</button>
+        `).join('')}
+    </div>
     <div id="shopProductsList"></div>`;
 
     document.getElementById('backToShopBtn').addEventListener('click', () => {
         _activeShopCategory = null;
         renderMobileEditPanel();
     });
-
-    renderEditableList(document.getElementById('shopProductsList'), {
-        title: "Mahsulotlar ro'yxati",
-        addLabel: "+ Mahsulot qo'shish",
-        items: mc.shopProducts,
-        idPrefix: 'shop',
-        renderRow: (item) => `
-            <strong>${escapeHtml(item.name || '—')}</strong>
-            <span class="badge" style="margin-left:8px">${escapeHtml(SHOP_CATEGORY_LABELS[item.category] || item.category || '—')}</span>
-            <div style="color:var(--text-muted);margin-top:4px">🪙 ${Number(item.price) || 0} coin · ${item.delivered === false ? 'Yetkazib berilmaydi' : 'Yetkazib beriladi'}</div>
-        `,
-        fields: [
-            { key: 'name', label: 'Mahsulot nomi', required: true, placeholder: 'Homework futbolkasi' },
-            { key: 'category', label: 'Kategoriya', required: true, type: 'select', options: SHOP_CATEGORY_OPTIONS },
-            { key: 'price', label: 'Narxi (coin)', required: true, type: 'number', placeholder: '600' },
-            { key: 'icon', label: 'Icon nomi (ionicons, ixtiyoriy)', placeholder: 'shirt-outline' },
-            { key: 'color', label: 'Icon rangi (hex, ixtiyoriy)', placeholder: '#7B61FF' },
-            { key: 'bg', label: 'Icon foni (hex, ixtiyoriy)', placeholder: '#EDE9FE' },
-            { key: 'delivered', label: 'Yetkazib beriladimi?', type: 'boolean' },
-        ],
-        onChange: (newItems) => {
-            const mc2 = getMobileContent();
-            mc2.shopProducts = newItems;
-            saveMobileContent(mc2);
+    container.querySelectorAll('[data-shop-product-cat]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _activeShopProductCategory = btn.dataset.shopProductCat;
             renderMobileShopProductsTab(container);
-        }
+        });
     });
+
+    const listEl = document.getElementById('shopProductsList');
+    function renderList(items) {
+        renderEditableList(listEl, {
+            title: `${SHOP_CATEGORY_LABELS[_activeShopProductCategory] || ''} mahsulotlari`,
+            addLabel: "+ Mahsulot qo'shish",
+            items,
+            idPrefix: 'shop',
+            renderRow: (item) => `
+                <div style="display:flex;align-items:center;gap:10px">
+                    ${item.imageUrl
+                        ? `<img src="${escapeHtml(item.imageUrl)}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--border)">`
+                        : `<div style="width:40px;height:40px;border-radius:8px;flex-shrink:0;background:var(--bg,#f9fafb);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px">🛍️</div>`}
+                    <div>
+                        <strong>${escapeHtml(item.name || '—')}</strong>
+                        <div style="color:var(--text-muted);margin-top:2px">🪙 ${Number(item.price) || 0} coin · ${item.delivered === false ? 'Yetkazib berilmaydi' : 'Yetkazib beriladi'}</div>
+                    </div>
+                </div>
+            `,
+            fields: [
+                { key: 'name', label: 'Mahsulot nomi', required: true, placeholder: 'Homework futbolkasi' },
+                { key: 'imageUrl', label: 'Mahsulot rasmi', type: 'image' },
+                { key: 'price', label: 'Narxi (coin)', required: true, type: 'number', placeholder: '600' },
+                { key: 'delivered', label: 'Yetkazib beriladimi?', type: 'boolean' },
+            ],
+            onChange: (newItems) => {
+                newItems.forEach(item => {
+                    if (!item.category) item.category = _activeShopProductCategory;
+                    const prev = items.find(b => b.id === item.id);
+                    if (!prev || JSON.stringify(prev) !== JSON.stringify(item)) {
+                        _saveShopItemOverride(item.id, item);
+                    }
+                });
+                items.forEach(prev => {
+                    if (!newItems.find(n => n.id === prev.id)) _deleteShopItem(prev.id);
+                });
+                showMiniToast('Saqlandi');
+                renderList(newItems);
+            },
+        });
+    }
+    renderList((mc.shop || []).filter(p => p.category === _activeShopProductCategory));
 }
 
 const MOBILE_TOTAL_BONUS_LESSONS = 18;
@@ -2646,6 +2688,8 @@ function getMobileContent() {
     ['grammar', 'words', 'pronunciation', 'speaking', 'podcasts', 'books'].forEach(cat => {
         mc.library[cat] = mc.library[cat] || [];
     });
+    mc.shopOverrides = mc.shopOverrides || {};
+    mc.shop = mc.shop || [];
     return mc;
 }
 
