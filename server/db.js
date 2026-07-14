@@ -813,6 +813,20 @@ function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
 }
 
 // Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
+// bitta o'quvchining CRM'da admin tomonidan kiritilgan haqiqiy parolini
+// qaytaradi (o'quvchi profilidagi "Parol" bosilganda ko'rsatish uchun).
+// Parol students.extra_data'da saqlanadi (rowToStudent uni avtomatik
+// birlashtiradi) — alohida ustun yoki migratsiya kerak emas.
+async function getDemoStudentProfile() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return { password: '' };
+    const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
+    if (!row) return { password: '' };
+    const student = rowToStudent(row);
+    return { password: student.password || '' };
+}
+
+// Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
 // bitta o'quvchining Telegram guruh havolasi va navbatdagi speaking dars
 // vaqtini qaytaradi. StudentId har doim serverda demoStudentId'dan olinadi.
 async function getDemoStudentSchedule() {
@@ -1322,7 +1336,7 @@ module.exports = {
     getFullState, getLeads, insertLead, patchState,
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
     getHrEmployeesData, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating,
-    getDemoStudentSchedule,
+    getDemoStudentSchedule, getDemoStudentProfile,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     getDemoStudentBookDelivery,

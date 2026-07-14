@@ -7750,7 +7750,22 @@ function studentFormHtml(sfx, defaults) {
     <div class="form-group">
         <label>Yordamchi ustoz (ixtiyoriy)</label>
         <select id="mStAsstTeacher${sfx}" class="form-control"></select>
+    </div>
+    <div class="form-group">
+        <label>Parol (ilovaga kirish uchun, ixtiyoriy)</label>
+        <div class="input-password-wrap">
+            <input type="password" id="mStPassword${sfx}" class="form-control" value="${escapeHtml(d.password || '')}" autocomplete="off">
+            <button type="button" class="input-eye-btn" id="mStPasswordEye${sfx}" tabindex="-1" aria-label="Parolni ko'rsat">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </div>
     </div>`;
+}
+
+function _bindStudentPasswordEye(sfx) {
+    const btn = document.getElementById(`mStPasswordEye${sfx}`);
+    const inp = document.getElementById(`mStPassword${sfx}`);
+    if (btn && inp) btn.addEventListener('click', () => { inp.type = inp.type === 'password' ? 'text' : 'password'; });
 }
 
 document.getElementById('addStudentBtn').addEventListener('click', () => {
@@ -7764,6 +7779,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
     document.getElementById('mStSubject').addEventListener('change', e => {
         fillStudentTeacherOptions(e.target.value, '');
     });
+    _bindStudentPasswordEye('');
     document.getElementById('cancelAddStudent').onclick = () => closeModal();
     document.getElementById('saveStudent').onclick = () => {
         const name = document.getElementById('mStName').value.trim();
@@ -7783,6 +7799,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             subject: document.getElementById('mStSubject').value,
             teacherId,
             assistantTeacherId: document.getElementById('mStAsstTeacher').value || null,
+            password: document.getElementById('mStPassword').value.trim(),
             source: 'manual'
         });
         setItem(STORAGE_KEYS.students, students);
@@ -7808,6 +7825,7 @@ function openEditStudentModal(studentId) {
     document.getElementById('mStSubjectE').addEventListener('change', e => {
         fillStudentTeacherOptions(e.target.value, 'E');
     });
+    _bindStudentPasswordEye('E');
     document.getElementById('cancelEditStudent').onclick = () => closeModal();
     document.getElementById('saveEditStudent').onclick = () => {
         const name = document.getElementById('mStNameE').value.trim();
@@ -7826,6 +7844,7 @@ function openEditStudentModal(studentId) {
             subject: document.getElementById('mStSubjectE').value,
             teacherId,
             assistantTeacherId: document.getElementById('mStAsstTeacherE').value || null,
+            password: document.getElementById('mStPasswordE').value.trim(),
         };
         const allStudents = getItem(STORAGE_KEYS.students, []);
         const idx = allStudents.findIndex(st => st.id === studentId);

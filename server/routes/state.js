@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -11,6 +11,19 @@ router.get('/mobile-content', async (req, res) => {
         res.json(mc);
     } catch (err) {
         console.error('GET /api/state/mobile-content', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
+// o'quvchining CRM'da admin kiritgan haqiqiy parolini qaytaradi (profil
+// ekranidagi "Parol" bosilganda ko'rsatish uchun).
+router.get('/demo-profile', async (req, res) => {
+    try {
+        const data = await getDemoStudentProfile();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-profile', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });
