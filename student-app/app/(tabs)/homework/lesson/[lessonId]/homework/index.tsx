@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getLessonContent, HomeworkPart, LessonContent, mergeLessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
+import { CreativeSubmissionRecord, fetchCreativeSubmission } from '@/services/creativeSubmissionApi';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 
 const KIND_ICON: Record<HomeworkPart['kind'], keyof typeof Ionicons.glyphMap> = {
@@ -26,6 +27,7 @@ export default function HomeworkSectionScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creativeSubmission, setCreativeSubmission] = useState<CreativeSubmissionRecord | null>(null);
   const progress = useLessonProgress(String(lessonId));
 
   useEffect(() => {
@@ -46,6 +48,21 @@ export default function HomeworkSectionScreen() {
     };
   }, [lessonId]);
 
+  // 148-ish: "Ijodiy vazifa"ning haqiqiy holati (kutilmoqda/qabul qilindi)
+  // — bu shu ekranga qaytilganda ham yangilanib turishi uchun fokusda qayta
+  // tekshiriladi.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      fetchCreativeSubmission(String(lessonId)).then((record) => {
+        if (!cancelled) setCreativeSubmission(record);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [lessonId])
+  );
+
   if (loading || !content) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -58,7 +75,11 @@ export default function HomeworkSectionScreen() {
   }
 
   const parts = content.homeworkParts;
-  const doneCount = parts.filter((p) => progress.homeworkParts[p.id]).length;
+  // 148-ish: "Ijodiy vazifa" ustoz qabul qilib 100% ballamaguncha bajarilgan
+  // hisoblanmaydi — boshqa qismlar avvalgidek darhol avtomatik ballanadi.
+  const isPartDone = (part: HomeworkPart) =>
+    part.kind === 'creative' ? creativeSubmission?.status === 'graded' : !!progress.homeworkParts[part.id];
+  const doneCount = parts.filter(isPartDone).length;
   const overallPct = Math.round((doneCount / parts.length) * 100);
 
   return (
@@ -76,7 +97,9 @@ export default function HomeworkSectionScreen() {
         </Card>
 
         {parts.map((part) => {
-          const isDone = !!progress.homeworkParts[part.id];
+          const isDone = isPartDone(part);
+          const isPendingCreative = part.kind === 'creative' && creativeSubmission?.status === 'pending';
+          const statusLabel = isDone ? 'Bajarildi' : isPendingCreative ? "Yuborilgan — tekshirilmoqda" : 'Bajarilmagan';
           return (
             <Pressable
               key={part.id}
@@ -84,12 +107,16 @@ export default function HomeworkSectionScreen() {
               <Card style={styles.card}>
                 <View style={styles.row}>
                   <View style={[styles.iconWrap, isDone && styles.iconWrapDone]}>
-                    <Ionicons name={isDone ? 'checkmark' : KIND_ICON[part.kind]} size={22} color={isDone ? '#fff' : theme.colors.success} />
+                    <Ionicons
+                      name={isDone ? 'checkmark' : isPendingCreative ? 'time-outline' : KIND_ICON[part.kind]}
+                      size={22}
+                      color={isDone ? '#fff' : theme.colors.success}
+                    />
                   </View>
                   <View style={styles.info}>
                     <Text style={styles.title}>{part.title}</Text>
                     <Text style={[styles.status, isDone && styles.statusDone]}>
-                      {isDone ? (part.kind === 'creative' ? 'Yuborilgan' : 'Bajarildi') : 'Bajarilmagan'}
+                      {statusLabel}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />

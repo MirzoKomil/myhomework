@@ -15,6 +15,8 @@ import { reportActivity } from '@/services/activitySync';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markHomeworkPartDone } from '@/services/lessonProgressStore';
+import { fetchMobileContent } from '@/services/contentApi';
+import { fetchCreativeSubmission, submitCreativeSubmission } from '@/services/creativeSubmissionApi';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -75,7 +77,15 @@ export default function HomeworkPartScreen() {
       {part.kind === 'record' && <RecordPart prompts={part.prompts} onDone={complete} lessonId={String(lessonId)} />}
       {part.kind === 'pronunciation' && <PronunciationPart prompts={part.prompts} onDone={complete} lessonId={String(lessonId)} />}
       {part.kind === 'roleplay' && <RoleplayPart scenario={part.scenario} onDone={complete} lessonId={String(lessonId)} />}
-      {part.kind === 'creative' && <CreativePart instruction={part.instruction} mediaType={part.mediaType} onDone={complete} lessonId={String(lessonId)} />}
+      {part.kind === 'creative' && (
+        <CreativePart
+          instruction={part.instruction}
+          mediaType={part.mediaType}
+          onDone={complete}
+          lessonId={String(lessonId)}
+          category={content.dayType === 'speaking' ? 'speaking' : 'video'}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -670,15 +680,77 @@ function RoleplayPart({ scenario, onDone, lessonId }: { scenario: { id: string; 
 }
 
 // ─── Ijodiy vazifa ───────────────────────────────────────────────────────────
-type CreativeStatus = 'draft' | 'pending' | 'graded';
+// 148-ish: submission endi haqiqiy serverga boradi (ustoz kabinetiga) va
+// ustoz "Qabul qilish" tugmasini bosmaguncha 'pending'da qoladi — shu
+// tufayli onDone() (darsning umumiy progressini 100%ga olib boruvchi belgi)
+// faqat haqiqiy baholanganda chaqiriladi, submit paytida emas.
+type CreativeStatus = 'checking' | 'draft' | 'pending' | 'graded';
 
-function CreativePart({ instruction, mediaType, onDone, lessonId }: { instruction: string; mediaType: 'text' | 'audio'; onDone: () => void; lessonId: string }) {
+function CreativePart({
+  instruction,
+  mediaType,
+  onDone,
+  lessonId,
+  category,
+}: {
+  instruction: string;
+  mediaType: 'text' | 'audio';
+  onDone: () => void;
+  lessonId: string;
+  category: 'video' | 'speaking';
+}) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const [status, setStatus] = useState<CreativeStatus>('draft');
+  const [status, setStatus] = useState<CreativeStatus>('checking');
   const [text, setText] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recorded, setRecorded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [gradedScore, setGradedScore] = useState<number | null>(null);
+  const [gradedFeedback, setGradedFeedback] = useState<string | null>(null);
+
+  // Ekran ochilganda avval serverdagi haqiqiy holatni tekshiramiz — masalan
+  // o'quvchi vazifani yuborib chiqib ketgan va qaytib kirgan bo'lishi mumkin.
+  useEffect(() => {
+    let cancelled = false;
+    fetchCreativeSubmission(lessonId).then((record) => {
+      if (cancelled) return;
+      if (record?.status === 'graded') {
+        setGradedScore(record.scorePercent);
+        setGradedFeedback(record.feedback);
+        setStatus('graded');
+        onDone();
+      } else if (record?.status === 'pending') {
+        setStatus('pending');
+      } else {
+        setStatus('draft');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
+  // 'pending' bo'lganda ustoz qabul qilganini aniqlash uchun davriy tekshirish.
+  useEffect(() => {
+    if (status !== 'pending') return;
+    let cancelled = false;
+    const poll = setInterval(async () => {
+      const record = await fetchCreativeSubmission(lessonId);
+      if (cancelled || !record || record.status !== 'graded') return;
+      setGradedScore(record.scorePercent);
+      setGradedFeedback(record.feedback);
+      setStatus('graded');
+      addLightning(1);
+      onDone();
+    }, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, lessonId]);
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -703,26 +775,41 @@ function CreativePart({ instruction, mediaType, onDone, lessonId }: { instructio
     setIsRecording(true);
   };
 
-  const submit = () => {
+  const submit = async () => {
+    setSubmitting(true);
+    const mc = await fetchMobileContent().catch(() => null);
+    const lessonTitle = mc?.lessons.find((l) => l.id === lessonId)?.name || lessonId;
+    await submitCreativeSubmission({
+      lessonId,
+      lessonTitle,
+      category,
+      mediaType,
+      text: mediaType === 'text' ? text : '',
+      imageUri: mediaType === 'text' ? imageUri : null,
+      audioUri: mediaType === 'audio' ? recorder.uri : null,
+    });
+    setSubmitting(false);
     setStatus('pending');
-    onDone();
     addCoins(1, lessonId);
-    // Chaqmoq — ijodiy vazifani ustoz "baholagach" (simulyatsiya) beriladi, darhol emas.
-    setTimeout(() => {
-      setStatus('graded');
-      addLightning(1);
-    }, 4000);
   };
 
   const canSubmit = mediaType === 'text' ? text.trim().length > 0 : recorded;
+
+  if (status === 'checking') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={theme.colors.purple} />
+      </View>
+    );
+  }
 
   if (status === 'graded') {
     return (
       <View style={styles.stepContent}>
         <View style={styles.gradedCard}>
           <Ionicons name="ribbon-outline" size={40} color={theme.colors.success} />
-          <Text style={styles.gradedScore}>92 / 100</Text>
-          <Text style={styles.gradedFeedback}>"Juda yaxshi bajarilgan, davom eting!" — o'qituvchi</Text>
+          <Text style={styles.gradedScore}>{gradedScore ?? 100} / 100</Text>
+          <Text style={styles.gradedFeedback}>"{gradedFeedback || "Juda yaxshi bajarilgan, davom eting!"}" — o'qituvchi</Text>
         </View>
         <Pressable style={styles.continueBtn} onPress={() => router.back()}>
           <Text style={styles.continueBtnText}>Orqaga qaytish</Text>
@@ -782,8 +869,11 @@ function CreativePart({ instruction, mediaType, onDone, lessonId }: { instructio
           )}
         </View>
       )}
-      <Pressable style={[styles.continueBtn, !canSubmit && styles.continueBtnDisabled]} disabled={!canSubmit} onPress={submit}>
-        <Text style={styles.continueBtnText}>Yuborish</Text>
+      <Pressable
+        style={[styles.continueBtn, (!canSubmit || submitting) && styles.continueBtnDisabled]}
+        disabled={!canSubmit || submitting}
+        onPress={submit}>
+        <Text style={styles.continueBtnText}>{submitting ? 'Yuborilmoqda...' : 'Yuborish'}</Text>
       </Pressable>
     </ScrollView>
   );

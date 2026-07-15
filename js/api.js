@@ -222,6 +222,17 @@ async function apiDeleteContentComment(id) {
     return apiFetch('/api/state/content-comments/' + encodeURIComponent(id), { method: 'DELETE' });
 }
 
+async function apiFetchCreativeSubmissions() {
+    return apiFetch('/api/state/creative-submissions');
+}
+
+async function apiGradeCreativeSubmission(lessonId, { scorePercent, feedback }) {
+    return apiFetch('/api/state/creative-submissions/' + encodeURIComponent(lessonId) + '/grade', {
+        method: 'POST',
+        body: JSON.stringify({ scorePercent, feedback })
+    });
+}
+
 async function apiDeleteCommunityPost(postId) {
     return apiFetch('/api/state/community/posts/' + encodeURIComponent(postId), { method: 'DELETE' });
 }

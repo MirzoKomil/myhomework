@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -334,6 +334,40 @@ router.post('/demo-activity', async (req, res) => {
         res.json({ ok: true, record });
     } catch (err) {
         console.error('POST /api/state/demo-activity', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 148-ish: video/speaking darslardagi "Ijodiy vazifa". O'quvchi matn/audio/
+// rasm yuborishi public (ilovada login yo'q); ustoz kabinetida qabul qilib
+// ballash esa faqat CRM'dan (authRequired).
+router.get('/creative-submissions', async (req, res) => {
+    try {
+        const data = await getDemoCreativeSubmissions();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/creative-submissions', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/creative-submissions', async (req, res) => {
+    try {
+        const { lessonId, lessonTitle, category, mediaType, text, imageUrl, audioUrl } = req.body || {};
+        const record = await submitDemoCreativeSubmission({ lessonId, lessonTitle, category, mediaType, text, imageUrl, audioUrl });
+        res.json({ ok: true, record });
+    } catch (err) {
+        console.error('POST /api/state/creative-submissions', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/creative-submissions/:lessonId/grade', authRequired, async (req, res) => {
+    try {
+        const record = await gradeDemoCreativeSubmission(req.params.lessonId, req.body || {});
+        res.json({ ok: true, record });
+    } catch (err) {
+        console.error('POST /api/state/creative-submissions/:lessonId/grade', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

@@ -6473,6 +6473,61 @@ function renderCrmActivityPanel(container, studentId) {
     }).join('');
 }
 
+// ─── Ijodiy vazifalar — video/speaking uyga vazifasi (148-ish) ───────────────
+// Appda "Ijodiy vazifa" bosqichi endi haqiqiy serverga yuboriladi va
+// darsning progress'iga 100% sifatida hisoblanishi uchun ustoz shu yerdan
+// aynan qabul qilishi kerak — avval hech qanday tekshiruvsiz avtomatik
+// "bajarildi" bo'lib qolar edi.
+async function renderCrmCreativeSubmissionsPanel(container) {
+    if (!container) return;
+    container.innerHTML = '<div class="text-muted" style="padding:12px 0">Yuklanmoqda...</div>';
+    let all;
+    try {
+        all = await apiFetchCreativeSubmissions();
+    } catch (err) {
+        container.innerHTML = '<div class="text-muted" style="padding:12px 0">Yuklab bo\'lmadi</div>';
+        return;
+    }
+    const entries = Object.values(all || {}).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    if (!entries.length) {
+        container.innerHTML = `<div class="mac-empty" style="padding:20px 0;text-align:center;color:var(--text-muted)">Hali ijodiy vazifa yuborilmagan</div>`;
+        return;
+    }
+    container.innerHTML = entries.map(e => {
+        const catLabel = e.category === 'speaking' ? '🎤 Speaking' : '🎬 Videodars';
+        const mediaHtml = e.mediaType === 'audio' && e.audioUrl
+            ? `<audio controls src="${e.audioUrl}" style="width:100%;margin-top:6px"></audio>`
+            : `<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap">${escapeHtml(e.text || '')}</div>`;
+        const imageHtml = e.imageUrl ? `<img src="${e.imageUrl}" style="max-width:220px;border-radius:8px;margin-top:6px;display:block">` : '';
+        const statusBadge = e.status === 'graded'
+            ? `<span class="badge badge-probniy">✅ Qabul qilindi — ${e.scorePercent}%</span>`
+            : `<span class="badge">⏳ Kutilmoqda</span>`;
+        const actionHtml = e.status === 'pending'
+            ? `<button class="btn btn-sm" onclick="gradeCreativeSubmission('${e.lessonId}')" style="margin-top:8px">✅ Qabul qilish (100%)</button>`
+            : (e.feedback ? `<div style="margin-top:6px;font-size:12px;color:var(--text-muted)">Izoh: ${escapeHtml(e.feedback)}</div>` : '');
+        return `<div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                <div style="font-weight:600;font-size:13px;color:var(--text)">${catLabel} — ${escapeHtml(e.lessonTitle || e.lessonId)}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${_formatCrmChatTime(e.submittedAt)}</div>
+            </div>
+            <div style="margin-top:4px">${statusBadge}</div>
+            ${mediaHtml}
+            ${imageHtml}
+            ${actionHtml}
+        </div>`;
+    }).join('');
+}
+
+async function gradeCreativeSubmission(lessonId) {
+    try {
+        await apiGradeCreativeSubmission(lessonId, { scorePercent: 100, feedback: "Juda yaxshi bajarilgan, davom eting!" });
+        const panel = document.getElementById('teacherCreativePanel');
+        if (panel) await renderCrmCreativeSubmissionsPanel(panel);
+    } catch (err) {
+        alert('Xatolik: ' + (err.message || err));
+    }
+}
+
 // Ixtiyoriy suhbat oynasini (ustoz kabineti yoki admin profilidagi
 // qo'llab-quvvatlash bo'limi uchun) chizadi — xabarlar ro'yxati + javob
 // yozish qatori. `senderRole` shu yerdan yuborilayotgan xabarning kimdan
@@ -6974,6 +7029,12 @@ function renderTeacherCabinetContent(teacherId) {
     if (chatSlots.length) {
         html += `<h4 style="margin:20px 0 10px">📊 ${escapeHtml(demoStudent.name)} — ilovadagi faoliyati</h4>
         <div id="teacherActivityPanel"></div>`;
+
+        // 148-ish: video/speaking darslardagi "Ijodiy vazifa" — o'quvchi
+        // yuborgan matn/audio/rasm shu yerda ko'rinadi, ustoz qabul qilib
+        // 100% gacha ballaydi.
+        html += `<h4 style="margin:20px 0 10px">🎨 ${escapeHtml(demoStudent.name)} — Ijodiy vazifalar</h4>
+        <div id="teacherCreativePanel"></div>`;
     }
 
     document.getElementById('teacherCabinetContent').innerHTML = html;
@@ -6991,6 +7052,7 @@ function renderTeacherCabinetContent(teacherId) {
 
     if (chatSlots.length) {
         renderCrmActivityPanel(document.getElementById('teacherActivityPanel'), demoStudentId);
+        renderCrmCreativeSubmissionsPanel(document.getElementById('teacherCreativePanel'));
     }
 }
 

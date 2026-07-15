@@ -70,6 +70,28 @@ router.post('/community-image', communityImageUpload.single('file'), (req, res) 
     res.json({ url: `/uploads/${req.file.filename}` });
 });
 
+// 148-ish: "Ijodiy vazifa" (video/speaking uyga vazifasi) uchun matn bilan
+// birga biriktirilgan rasm yoki audio yozuv — public (ilovada login yo'q,
+// yagona haqiqiy foydalanuvchi namuna o'quvchi). Rasm/audio turlariga va
+// 15 MB gacha cheklangan.
+const creativeSubmissionUpload = multer({
+    storage,
+    limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB
+    fileFilter: (req, file, cb) => {
+        const allowed = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/ogg',
+        ];
+        if (allowed.includes(file.mimetype)) return cb(null, true);
+        cb(new Error('Faqat rasm yoki audio fayllari ruxsat etilgan'));
+    }
+});
+
+router.post('/creative-submission', creativeSubmissionUpload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Fayl yuklanmadi' });
+    res.json({ url: `/uploads/${req.file.filename}` });
+});
+
 router.delete('/:filename', authRequired, (req, res) => {
     const filename = path.basename(req.params.filename);
     const filePath = path.join(UPLOADS_DIR, filename);

@@ -767,7 +767,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions') ? {} : [];
     }
     return row.data;
 }
@@ -1701,6 +1701,67 @@ async function addDemoStudentActivity(entry) {
     return record;
 }
 
+// 148-ish: video/speaking darslardagi "Ijodiy vazifa" — o'quvchi matn/audio/
+// rasm yuborgach "kutilmoqda" holatida turadi, ustoz kabinetidan qabul
+// qilinmaguncha darsning umumiy progressiga 100% sifatida qo'shilmaydi.
+// Bir darsda faqat bitta faol topshiriq bo'ladi — qayta yuborilsa (masalan
+// "Tahrirlash va qayta yuborish"), oldingi yozuv shu lessonId bo'yicha
+// almashtiriladi. Faqat "Namuna o'quvchi" uchun (studentActivity bilan bir
+// xil cheklov).
+async function getDemoCreativeSubmissions() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return {};
+    const all = await getJsonData('creativeSubmissions');
+    return all[demoStudentId] || {};
+}
+
+async function submitDemoCreativeSubmission(entry) {
+    const lessonId = String(entry?.lessonId || '').trim();
+    if (!lessonId) throw new Error("Dars belgilanmagan");
+    const category = ['video', 'speaking'].includes(entry?.category) ? entry.category : 'video';
+    const mediaType = entry?.mediaType === 'audio' ? 'audio' : 'text';
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+
+    const all = await getJsonData('creativeSubmissions');
+    if (!all[demoStudentId]) all[demoStudentId] = {};
+    const record = {
+        lessonId,
+        lessonTitle: String(entry.lessonTitle || '').slice(0, 200),
+        category,
+        mediaType,
+        text: mediaType === 'text' ? String(entry.text || '').slice(0, 4000) : '',
+        imageUrl: entry.imageUrl ? String(entry.imageUrl).slice(0, 500) : null,
+        audioUrl: mediaType === 'audio' && entry.audioUrl ? String(entry.audioUrl).slice(0, 500) : null,
+        status: 'pending',
+        scorePercent: null,
+        feedback: null,
+        submittedAt: new Date().toISOString(),
+        gradedAt: null,
+    };
+    all[demoStudentId][lessonId] = record;
+    await tx(async (client) => {
+        await saveJsonData(client, 'creativeSubmissions', all);
+    });
+    return record;
+}
+
+async function gradeDemoCreativeSubmission(lessonId, { scorePercent, feedback } = {}) {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+    const all = await getJsonData('creativeSubmissions');
+    const record = all[demoStudentId] && all[demoStudentId][lessonId];
+    if (!record) throw new Error("Ijodiy vazifa topilmadi");
+    record.status = 'graded';
+    record.scorePercent = typeof scorePercent === 'number' ? Math.max(0, Math.min(100, Math.round(scorePercent))) : 100;
+    record.feedback = String(feedback || "Juda yaxshi bajarilgan, davom eting!").slice(0, 500);
+    record.gradedAt = new Date().toISOString();
+    await tx(async (client) => {
+        await saveJsonData(client, 'creativeSubmissions', all);
+    });
+    return record;
+}
+
 async function saveJsonData(client, key, data) {
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
@@ -1966,6 +2027,7 @@ module.exports = {
     getDemoStudentBookDelivery,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
+    getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,
     getCommunityPosts, addCommunityPost, toggleCommunityPostLike,
     addCommunityComment, toggleCommunityCommentLike,
     deleteCommunityPost, deleteCommunityComment,
