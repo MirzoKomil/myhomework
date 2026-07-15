@@ -1627,7 +1627,7 @@ function renderMobileHomeListTab(container) {
     container.innerHTML = `
     <div style="padding:12px 0 20px">
         <p style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:14px">Bosh sahifa bo'limlari</p>
-        <div id="homeShopCard" style="display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)">
+        <div id="homeShopCard" style="display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface);margin-bottom:10px">
             <div style="width:44px;height:44px;border-radius:12px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🛍️</div>
             <div style="flex:1;min-width:0">
                 <div style="font-weight:600;font-size:14px;color:var(--text)">Homework Shop</div>
@@ -1635,9 +1635,21 @@ function renderMobileHomeListTab(container) {
             </div>
             <span style="color:var(--text-muted);font-size:18px;flex-shrink:0">›</span>
         </div>
+        <div id="homeRadioCard" style="display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)">
+            <div style="width:44px;height:44px;border-radius:12px;background:#DBEAFE;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📻</div>
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:14px;color:var(--text)">Radio</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Barcha radio stansiyalarini shu yerdan tinglash</div>
+            </div>
+            <span style="color:var(--text-muted);font-size:18px;flex-shrink:0">›</span>
+        </div>
     </div>`;
     document.getElementById('homeShopCard').addEventListener('click', () => {
         _activeHomeSection = 'shop';
+        renderMobileEditPanel();
+    });
+    document.getElementById('homeRadioCard').addEventListener('click', () => {
+        _activeHomeSection = 'radio';
         renderMobileEditPanel();
     });
 }
@@ -1686,6 +1698,144 @@ function renderMobileShopLandingTab(container) {
         card.addEventListener('click', () => {
             _activeShopCategory = card.dataset.shopCat;
             renderMobileEditPanel();
+        });
+    });
+}
+
+// 143-ish: "Radio" bo'limi — appdagi student-app/data/mock.ts'dagi
+// radioStations bilan bir xil (id/nom/janr/qidiruv so'zi), lekin logotip
+// rasmlarisiz (CRM'da faqat bayroq emoji ko'rsatiladi). "Homework Radio"
+// (streamQuery yo'q) appdagi kabi statik namoyish sifatida qoladi — haqiqiy
+// oqimga ulanmaydi.
+const MOBILE_RADIO_STATIONS = [
+    { id: 'npr', name: 'NPR', flag: '🇺🇸', genre: 'News & Talk', streamQuery: 'NPR News' },
+    { id: 'wnyc', name: 'WNYC', flag: '🇺🇸', genre: 'News & Talk', streamQuery: 'WNYC' },
+    { id: 'bloomberg-radio', name: 'Bloomberg Radio', flag: '🇺🇸', genre: 'Biznes va iqtisodiyot', streamQuery: 'Bloomberg Radio' },
+    { id: 'fox-news-radio', name: 'Fox News Radio', flag: '🇺🇸', genre: 'Yangiliklar', streamQuery: 'Fox News Radio' },
+    { id: 'c-span-radio', name: 'C-SPAN Radio', flag: '🇺🇸', genre: 'Kongress va siyosat', streamQuery: 'C-SPAN Radio' },
+    { id: 'bbc-world-service', name: 'BBC World Service', flag: '🇬🇧', genre: 'Xalqaro yangiliklar', streamQuery: 'BBC World Service' },
+    { id: 'bbc-radio-4', name: 'BBC Radio 4', flag: '🇬🇧', genre: 'Nutq, drama va madaniyat', streamQuery: 'BBC Radio 4' },
+    { id: 'lbc', name: 'LBC', flag: '🇬🇧', genre: 'Jonli muloqot', streamQuery: 'LBC UK' },
+    { id: 'times-radio', name: 'Times Radio', flag: '🇬🇧', genre: 'Siyosat va tahlil', streamQuery: 'Times Radio' },
+    { id: 'talksport', name: 'talkSPORT', flag: '🇬🇧', genre: 'Sport sharhlari', streamQuery: 'talkSPORT' },
+    { id: 'homework-radio', name: 'Homework Radio', flag: '🎓', genre: "Til o'rganish uchun maxsus", streamQuery: null },
+];
+
+const RADIO_BROWSER_BASE = 'https://de1.api.radio-browser.info/json/stations/search';
+const _radioStreamCache = new Map();
+
+// student-app/services/radioStreams.ts bilan bir xil mantiq (soddalashtirilgan):
+// HLS bo'lmagan (mp3/aac) oqimlarga ustunlik, http:// nomzodlar https'ga
+// ko'tariladi (mixed-content bloklanmasligi uchun).
+function _radioWithHttpsFallback(u) {
+    if (!u.startsWith('http://')) return [u];
+    const httpsUrl = u.replace(/^http:\/\//, 'https://');
+    const variants = [httpsUrl];
+    try {
+        const parsed = new URL(httpsUrl);
+        if (parsed.port) { parsed.port = ''; variants.push(parsed.toString()); }
+    } catch {}
+    variants.push(u);
+    return variants;
+}
+
+async function resolveRadioStreamCandidates(query) {
+    if (_radioStreamCache.has(query)) return _radioStreamCache.get(query);
+    try {
+        const url = `${RADIO_BROWSER_BASE}?name=${encodeURIComponent(query)}&limit=15&order=clickcount&reverse=true&hidebroken=true`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'MyHomeworkCRM/1.0' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const list = await res.json();
+        const candidates = list.filter(s => s.lastcheckok === 1 && (s.url_resolved || s.url));
+        candidates.sort((a, b) => (b.hls ? 0 : 100) - (a.hls ? 0 : 100));
+        const seen = new Set();
+        const urls = [];
+        outer: for (const c of candidates) {
+            const raw = c.url_resolved || c.url;
+            if (!raw) continue;
+            for (const u of _radioWithHttpsFallback(raw)) {
+                if (!seen.has(u)) { seen.add(u); urls.push(u); }
+                if (urls.length >= 6) break outer;
+            }
+        }
+        _radioStreamCache.set(query, urls);
+        return urls;
+    } catch {
+        return [];
+    }
+}
+
+function renderMobileRadioTab(container) {
+    container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+        <button type="button" id="backToHomeFromRadioBtn" class="btn-ghost" style="padding:4px 10px">← Bosh sahifa</button>
+        <div style="font-weight:700;font-size:14px;color:var(--text)">Radio</div>
+    </div>
+    <audio id="mobileRadioPlayer" style="display:none"></audio>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;max-width:900px">
+        ${MOBILE_RADIO_STATIONS.map(st => `
+            <div data-radio-station="${st.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;${st.streamQuery ? 'cursor:pointer' : 'opacity:0.6'}">
+                <div style="width:40px;height:40px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${st.flag}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(st.name)}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(st.genre)}</div>
+                </div>
+                <span data-radio-status="${st.id}" style="font-size:18px;flex-shrink:0">${st.streamQuery ? '▶️' : '🚫'}</span>
+            </div>
+        `).join('')}
+    </div>`;
+
+    document.getElementById('backToHomeFromRadioBtn').addEventListener('click', () => {
+        const player = document.getElementById('mobileRadioPlayer');
+        if (player) player.pause();
+        _activeHomeSection = null;
+        renderMobileEditPanel();
+    });
+
+    const audio = document.getElementById('mobileRadioPlayer');
+    let activeStationId = null;
+
+    const setAllIcons = () => {
+        MOBILE_RADIO_STATIONS.forEach(st => {
+            const icon = container.querySelector(`[data-radio-status="${st.id}"]`);
+            if (!icon || !st.streamQuery) return;
+            icon.textContent = st.id === activeStationId ? '⏸️' : '▶️';
+        });
+    };
+
+    const playCandidates = (candidates, index) => {
+        if (index >= candidates.length) {
+            const icon = container.querySelector(`[data-radio-status="${activeStationId}"]`);
+            if (icon) icon.textContent = '⚠️';
+            activeStationId = null;
+            return;
+        }
+        audio.src = candidates[index];
+        audio.oncanplay = () => setAllIcons();
+        audio.onerror = () => playCandidates(candidates, index + 1);
+        audio.play().catch(() => playCandidates(candidates, index + 1));
+    };
+
+    container.querySelectorAll('[data-radio-station]').forEach(card => {
+        card.addEventListener('click', () => {
+            const stationId = card.dataset.radioStation;
+            const station = MOBILE_RADIO_STATIONS.find(s => s.id === stationId);
+            if (!station || !station.streamQuery) return;
+
+            if (activeStationId === stationId) {
+                audio.pause();
+                activeStationId = null;
+                setAllIcons();
+                return;
+            }
+
+            activeStationId = stationId;
+            const icon = container.querySelector(`[data-radio-status="${stationId}"]`);
+            if (icon) icon.textContent = '⏳';
+            resolveRadioStreamCandidates(station.streamQuery).then(candidates => {
+                if (activeStationId !== stationId) return;
+                playCandidates(candidates, 0);
+            });
         });
     });
 }
@@ -2878,6 +3028,8 @@ function renderMobileAdminTab(tab) {
     if (_mobileSubSection === 'asosiy') {
         if (_activeHomeSection === 'shop') {
             renderMobileShopTab(container);
+        } else if (_activeHomeSection === 'radio') {
+            renderMobileRadioTab(container);
         } else {
             renderMobileHomeListTab(container);
         }
