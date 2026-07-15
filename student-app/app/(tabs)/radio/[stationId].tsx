@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommentsSheet } from '@/components/CommentsSheet';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { getHomeworkArtworkUri, HOMEWORK_SCHOOL_NAME } from '@/constants/nowPlaying';
 import { radioStations } from '@/data/mock';
 import { fetchHomeworkRadioSchedule, getActiveHomeworkRadioBlock } from '@/services/contentApi';
 import { resolveStationStreamCandidates } from '@/services/radioStreams';
@@ -82,6 +83,14 @@ export default function RadioPlayerScreen() {
         if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
         setPlayback('playing');
         setIsPlaying(true);
+        // 146-ish: qulflangan ekran/boshqaruv markazida stansiya nomi va
+        // Homework logotipi ko'rinishi uchun — "Myhomework — O'quvchi" kabi
+        // umumiy PWA nomi o'rniga.
+        player.setActiveForLockScreen(true, {
+          title: station.name,
+          artist: HOMEWORK_SCHOOL_NAME,
+          artworkUrl: getHomeworkArtworkUri(),
+        });
         return;
       }
       if (status.isBuffering) {
@@ -128,6 +137,13 @@ export default function RadioPlayerScreen() {
           if (status.playing) {
             setPlayback('playing');
             setIsPlaying(true);
+            // 146-ish: hozir efirda turgan aniq klip nomi + Homework
+            // logotipi qulflangan ekranda ko'rsatiladi.
+            player.setActiveForLockScreen(true, {
+              title: block.title,
+              artist: HOMEWORK_SCHOOL_NAME,
+              artworkUrl: getHomeworkArtworkUri(),
+            });
             return;
           }
           if (status.isBuffering) {
@@ -150,6 +166,7 @@ export default function RadioPlayerScreen() {
     return () => {
       cancelledRef.current = true;
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      playerRef.current?.clearLockScreenControls();
       playerRef.current?.remove();
       playerRef.current = null;
       activeBlockIdRef.current = null;
@@ -176,6 +193,7 @@ export default function RadioPlayerScreen() {
     return () => {
       cancelledRef.current = true;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      playerRef.current?.clearLockScreenControls();
       playerRef.current?.remove();
       playerRef.current = null;
     };

@@ -8,6 +8,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { getHomeworkArtworkUri, HOMEWORK_SCHOOL_NAME } from '@/constants/nowPlaying';
 import { PODCAST_EPISODES, PODCAST_LEVEL_LABELS, PodcastEpisode } from '@/data/podcastEpisodes';
 import { fetchMobileContent } from '@/services/contentApi';
 
@@ -30,6 +31,7 @@ export default function PodcastEpisodeScreen() {
     return () => {
       isAutoRef.current = false;
       Speech.stop();
+      audioPlayerRef.current?.clearLockScreenControls();
       audioPlayerRef.current?.remove();
       audioPlayerRef.current = null;
     };
@@ -70,9 +72,17 @@ export default function PodcastEpisodeScreen() {
         if (audioPlayerRef.current !== player) return;
         if (status.didJustFinish) {
           setAutoPlaying(false);
+          player.clearLockScreenControls();
           player.remove();
           audioPlayerRef.current = null;
         }
+      });
+      // 146-ish: qulflangan ekran/boshqaruv markazida epizod nomi va
+      // Homework logotipi ko'rinishi uchun.
+      player.setActiveForLockScreen(true, {
+        title: episode.title,
+        artist: HOMEWORK_SCHOOL_NAME,
+        artworkUrl: getHomeworkArtworkUri(),
       });
       player.play();
       return;
@@ -94,6 +104,7 @@ export default function PodcastEpisodeScreen() {
   const stopAll = () => {
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
+      audioPlayerRef.current.clearLockScreenControls();
       audioPlayerRef.current.remove();
       audioPlayerRef.current = null;
       setAutoPlaying(false);
