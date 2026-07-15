@@ -34,6 +34,7 @@ const menuItems: MenuItem[] = [
   { icon: 'ribbon', label: 'Sertifikatlarim', route: '/profile/certificates' },
   { icon: 'cube', label: 'Yetkazib berish xizmati', route: '/profile/book-delivery' },
   { icon: 'card', label: "To'lovlar tarixi", route: '/profile/payment' },
+  { icon: 'settings-outline', label: 'Sozlamalar', route: '/profile/settings' },
 ];
 
 export default function ProfileScreen() {
@@ -98,14 +99,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader
-        title="Profil"
-        rightAction={
-          <Pressable onPress={() => router.push('/profile/settings')}>
-            <Ionicons name="settings-outline" size={22} color={theme.colors.textMuted} />
-          </Pressable>
-        }
-      />
+      <ScreenHeader title="Profil" />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.userCard}>
           <View style={styles.avatar}>
