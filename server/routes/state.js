@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getHomeworkRadioSchedule, saveHomeworkRadioDay, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -224,6 +224,28 @@ router.post('/notifications/absence-reason', async (req, res) => {
         res.json({ ok: true });
     } catch (err) {
         console.error('POST /api/state/notifications/absence-reason', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 144-ish: "Homework Radio" haqiqiy dastur jadvali — o'qish public (app va
+// CRM ikkalasi ham), yozish faqat CRM admin.
+router.get('/homework-radio-schedule', async (req, res) => {
+    try {
+        const data = await getHomeworkRadioSchedule();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/homework-radio-schedule', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/homework-radio-schedule/:date', authRequired, async (req, res) => {
+    try {
+        const blocks = await saveHomeworkRadioDay(req.params.date, req.body?.blocks);
+        res.json({ ok: true, blocks });
+    } catch (err) {
+        console.error('POST /api/state/homework-radio-schedule/:date', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

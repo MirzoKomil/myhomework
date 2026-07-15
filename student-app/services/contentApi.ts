@@ -56,6 +56,11 @@ const ABSENCE_REASON_API_BASE =
     ? '/api/state/notifications/absence-reason'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/notifications/absence-reason';
 
+const HOMEWORK_RADIO_SCHEDULE_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/homework-radio-schedule'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/homework-radio-schedule';
+
 const DEMO_ACTIVITY_API_BASE =
   Platform.OS === 'web'
     ? '/api/state/demo-activity'
@@ -461,6 +466,46 @@ export async function submitAbsenceReason(lessonDate: string, reason: string): P
     const err = await r.json().catch(() => ({ error: 'Xatolik' }));
     throw new Error(err.error || 'Xatolik');
   }
+}
+
+// 144-ish: "Homework Radio" haqiqiy dastur jadvali — CRM'da yuklangan audio
+// kliplarni haqiqiy sana + soat oralig'iga bog'laydi. Kalit — kalendar sanasi
+// ("YYYY-MM-DD"), takrorlanadigan shablon emas.
+export type HomeworkRadioBlock = {
+  id: string;
+  title: string;
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
+  audioUrl: string;
+};
+
+export type HomeworkRadioSchedule = Record<string, HomeworkRadioBlock[]>;
+
+export async function fetchHomeworkRadioSchedule(): Promise<HomeworkRadioSchedule> {
+  const r = await fetch(HOMEWORK_RADIO_SCHEDULE_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// Berilgan jadval va vaqt uchun hozir "efirda" bo'lishi kerak bo'lgan
+// klipni topadi — topilmasa (hech narsa rejalashtirilmagan bo'lsa) null.
+// Toshkent vaqtiga moslashtirilgan (+5 soat) — 142-ish'dagi `tashkentNow()`
+// bilan bir xil yondashuv, server bilan bir xil "bugun"ni ko'rish uchun.
+export function getActiveHomeworkRadioBlock(
+  schedule: HomeworkRadioSchedule,
+  now: Date = new Date(Date.now() + 5 * 60 * 60 * 1000)
+): HomeworkRadioBlock | null {
+  const todayStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+  const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const blocks = schedule[todayStr] || [];
+  for (const b of blocks) {
+    const [sh, sm] = b.startTime.split(':').map(Number);
+    const [eh, em] = b.endTime.split(':').map(Number);
+    const start = sh * 60 + sm;
+    const end = eh * 60 + em;
+    if (nowMinutes >= start && nowMinutes < end) return b;
+  }
+  return null;
 }
 
 // Server faqat matn qaytaradi — UI ko'rinishi (rang/emoji) manba turiga

@@ -9,35 +9,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { radioStations } from '@/data/mock';
+import { fetchHomeworkRadioSchedule, getActiveHomeworkRadioBlock } from '@/services/contentApi';
 import { resolveStationStreamCandidates } from '@/services/radioStreams';
 
 const BAR_COUNT = 20;
 const WAVE_INTERVAL = 450;
 const CANDIDATE_TIMEOUT_MS = 8000;
+const HW_RADIO_POLL_MS = 30000;
 
 function randomWave() {
   return Array.from({ length: BAR_COUNT }, () => 8 + Math.floor(Math.random() * 36));
 }
 
-// Homework Radio — hech qanday tashqi oqimga ulanmaydigan, statik namoyish
-// sifatida qoladigan yagona stansiya (119-ish: qolgan hammasi haqiqiy
-// jonli oqimga ulanadi, bu birgina istisno).
+// Homework Radio — tashqi jonli oqimga ulanmaydi, o'rniga 144-ish'da CRM'dan
+// yuklangan real audio jadvaliga (haqiqiy sana + soat oralig'i) ulanadi.
+// Hozirgi vaqtga mos klip topilmasa, radio jim turadi.
 const STATIC_DEMO_ID = 'homework-radio';
 
-type PlaybackState = 'resolving' | 'buffering' | 'playing' | 'paused' | 'error';
+type PlaybackState = 'resolving' | 'buffering' | 'playing' | 'paused' | 'error' | 'silent';
 
 export default function RadioPlayerScreen() {
   const { stationId } = useLocalSearchParams<{ stationId: string }>();
   const station = radioStations.find((s) => s.id === stationId) ?? radioStations[0];
   const isStaticDemo = station.id === STATIC_DEMO_ID;
 
-  const [isPlaying, setIsPlaying] = useState(isStaticDemo);
-  const [playback, setPlayback] = useState<PlaybackState>(isStaticDemo ? 'playing' : 'resolving');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playback, setPlayback] = useState<PlaybackState>('resolving');
   const [waveHeights, setWaveHeights] = useState(randomWave);
   const [showInfo, setShowInfo] = useState(false);
+  const [activeBlockTitle, setActiveBlockTitle] = useState<string | null>(null);
 
   const playerRef = useRef<AudioPlayer | null>(null);
   const cancelledRef = useRef(false);
+  const activeBlockIdRef = useRef<string | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Nomzodlar ro'yxatidagi bittasi ishlamasa (xato beradi yoki belgilangan
@@ -87,6 +92,68 @@ export default function RadioPlayerScreen() {
     player.play();
   };
 
+  // 144-ish: "Homework Radio" — real dastur jadvalidan hozirgi vaqtga mos
+  // klipni topib qo'yadi. Hech narsa rejalashtirilmagan bo'lsa jim turadi.
+  // Klip almashinishini ilg'ash uchun har HW_RADIO_POLL_MS'da qayta tekshiradi.
+  const checkHomeworkRadioSchedule = () => {
+    fetchHomeworkRadioSchedule()
+      .then((schedule) => {
+        if (cancelledRef.current) return;
+        const block = getActiveHomeworkRadioBlock(schedule);
+        if (!block) {
+          if (activeBlockIdRef.current !== null) {
+            playerRef.current?.remove();
+            playerRef.current = null;
+            activeBlockIdRef.current = null;
+          }
+          setPlayback('silent');
+          setIsPlaying(false);
+          setActiveBlockTitle(null);
+          return;
+        }
+        if (block.id === activeBlockIdRef.current) return;
+        playerRef.current?.remove();
+        const player = createAudioPlayer(block.audioUrl);
+        playerRef.current = player;
+        activeBlockIdRef.current = block.id;
+        setActiveBlockTitle(block.title);
+        player.addListener('playbackStatusUpdate', (status) => {
+          if (cancelledRef.current || playerRef.current !== player) return;
+          if (status.error) {
+            setPlayback('error');
+            return;
+          }
+          if (status.playing) {
+            setPlayback('playing');
+            setIsPlaying(true);
+            return;
+          }
+          if (status.isBuffering) {
+            setPlayback('buffering');
+            return;
+          }
+          setPlayback('paused');
+          setIsPlaying(false);
+        });
+        player.play();
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!isStaticDemo) return;
+    cancelledRef.current = false;
+    checkHomeworkRadioSchedule();
+    pollIntervalRef.current = setInterval(checkHomeworkRadioSchedule, HW_RADIO_POLL_MS);
+    return () => {
+      cancelledRef.current = true;
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      playerRef.current?.remove();
+      playerRef.current = null;
+      activeBlockIdRef.current = null;
+    };
+  }, [station.id]);
+
   const connect = () => {
     setPlayback('resolving');
     setIsPlaying(false);
@@ -120,7 +187,13 @@ export default function RadioPlayerScreen() {
 
   const togglePlay = () => {
     if (isStaticDemo) {
-      setIsPlaying((p) => !p);
+      const player = playerRef.current;
+      if (!player) {
+        checkHomeworkRadioSchedule();
+        return;
+      }
+      if (player.playing) player.pause();
+      else player.play();
       return;
     }
     if (playback === 'error') {
@@ -166,6 +239,11 @@ export default function RadioPlayerScreen() {
             <Ionicons name="alert-circle" size={14} color={theme.colors.danger} />
             <Text style={styles.liveText}>Ulanib bo'lmadi</Text>
           </View>
+        ) : playback === 'silent' ? (
+          <View style={[styles.liveBadge, styles.silentBadge]}>
+            <Ionicons name="moon-outline" size={14} color={theme.colors.textMuted} />
+            <Text style={styles.silentText}>HOZIRCHA JIM</Text>
+          </View>
         ) : (
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />
@@ -174,7 +252,7 @@ export default function RadioPlayerScreen() {
         )}
 
         <Text style={styles.name}>{station.name}</Text>
-        <Text style={styles.genre}>{station.genre}</Text>
+        <Text style={styles.genre}>{isStaticDemo && activeBlockTitle ? activeBlockTitle : station.genre}</Text>
 
         <View style={styles.waveRow}>
           {waveHeights.map((h, i) => (
@@ -267,6 +345,8 @@ const styles = StyleSheet.create({
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: theme.colors.danger },
   liveText: { fontFamily: theme.fonts.bold, fontSize: 11, color: theme.colors.danger, letterSpacing: 0.5 },
   errorBadge: { gap: 6 },
+  silentBadge: { backgroundColor: theme.colors.surface, gap: 6 },
+  silentText: { fontFamily: theme.fonts.bold, fontSize: 11, color: theme.colors.textMuted, letterSpacing: 0.5 },
   name: { fontFamily: theme.fonts.extraBold, fontSize: 24, color: theme.colors.text, marginBottom: 4 },
   genre: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted, marginBottom: 36 },
   waveRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 48, marginBottom: 36 },

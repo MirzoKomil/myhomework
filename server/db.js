@@ -767,7 +767,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule') ? {} : [];
     }
     return row.data;
 }
@@ -1460,6 +1460,32 @@ async function deleteCommunityComment(postId, commentId) {
     await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
 }
 
+// ── "Homework Radio" jadvali — 144-ish ───────────────────────────────────────
+// CRM'da yuklangan audio kliplarni haqiqiy kalendar sanasi + soat oralig'iga
+// bog'laydi: { "2026-07-14": [{id,title,startTime,endTime,audioUrl}, ...] }.
+// Takrorlanadigan haftalik shablon emas — haqiqiy, doimiy o'sib boradigan
+// dastur jadvali (CRM'ning davomat jadvali kabi haqiqiy sanalar bilan
+// ishlaydi). Appdagi pleer shu yerdan o'qib, hozirgi vaqtga to'g'ri keladigan
+// klipni topib qo'yadi — mos kelmasa radio jim turadi.
+async function getHomeworkRadioSchedule() {
+    return getJsonData('homeworkRadioSchedule');
+}
+
+async function saveHomeworkRadioDay(dateStr, blocks) {
+    const trimmedDate = String(dateStr || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) throw new Error("Sana formati noto'g'ri");
+    const schedule = await getJsonData('homeworkRadioSchedule');
+    if (Array.isArray(blocks) && blocks.length) {
+        schedule[trimmedDate] = blocks;
+    } else {
+        delete schedule[trimmedDate];
+    }
+    await tx(async (client) => {
+        await saveJsonData(client, 'homeworkRadioSchedule', schedule);
+    });
+    return schedule[trimmedDate] || [];
+}
+
 // 124-ish: CRM'ning Sotuv bo'limidagi "Kitob yetkazish" kanban-bosqichlarini
 // appning 4 bosqichli ko'rsatkichiga (Tayyorlanmoqda/Jo'natildi/Yo'lda/
 // Yetkazib berildi) moslashtiradi.
@@ -1855,6 +1881,7 @@ module.exports = {
     getNotificationRules, saveNotificationRules,
     getManualNotifications, addManualNotification, deleteManualNotification,
     addSystemNotification, submitAbsenceReason,
+    getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     addDemoShopOrder, getDemoShopOrders,

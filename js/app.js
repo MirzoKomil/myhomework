@@ -1051,6 +1051,15 @@ function renderMobileModuleDetailTab(container, course, mod) {
 // qismlaridagi 8 xil ro'yxat turi uchun ham ishlatiladi — har birida
 // add/edit/delete modal qayta yozilmasin deb.
 function renderEditableList(container, opts) {
+    // `uid` bo'lmasa (mavjud barcha chaqiruvlar kabi), id'lar o'zgarishsiz
+    // qoladi. Bir sahifada bir nechta renderEditableList bir vaqtda ishlasa
+    // (masalan 144-ish'dagi Homework Radio haftalik jadvali — 7 ta kunlik
+    // ro'yxat bir vaqtda ko'rsatiladi), `uid` id to'qnashuvining oldini oladi
+    // (aks holda document.getElementById har doim FAQAT birinchisini topardi).
+    const idSuffix = opts.uid ? `_${opts.uid}` : '';
+    const addBtnId = `lcAddBtn${idSuffix}`;
+    const rowsId = `lcRows${idSuffix}`;
+
     const items = opts.items || [];
     const rows = items.length
         ? items.map((item, i) => `
@@ -1064,9 +1073,9 @@ function renderEditableList(container, opts) {
     container.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
             <div style="font-weight:700;font-size:14px;color:var(--text)">${opts.title}</div>
-            <button type="button" id="lcAddBtn" class="btn-primary-sm">${opts.addLabel || "+ Qo'shish"}</button>
+            <button type="button" id="${addBtnId}" class="btn-primary-sm">${opts.addLabel || "+ Qo'shish"}</button>
         </div>
-        <div id="lcRows">${rows}</div>`;
+        <div id="${rowsId}">${rows}</div>`;
 
     function openItemModal(index) {
         const isEdit = index !== undefined;
@@ -1157,7 +1166,7 @@ function renderEditableList(container, opts) {
         };
     }
 
-    document.getElementById('lcAddBtn').addEventListener('click', () => openItemModal());
+    document.getElementById(addBtnId).addEventListener('click', () => openItemModal());
     container.querySelectorAll('[data-lc-edit]').forEach(btn => btn.addEventListener('click', (e) => {
         e.stopPropagation();
         openItemModal(Number(btn.dataset.lcEdit));
@@ -1765,7 +1774,18 @@ async function resolveRadioStreamCandidates(query) {
     }
 }
 
+// 144-ish: "Homework Radio" o'zining tashqi jonli oqimi yo'q — CRM'dan
+// yuklangan audio kliplar haqiqiy sana+soat jadvaliga bog'lanadi. Shu sabab
+// uning kartochkasi ustiga bosilganda tinglash o'rniga jadval sozlash oynasi
+// ochiladi (_activeRadioView='schedule').
+let _activeRadioView = null;
+let _hwRadioWeekOffset = 0;
+
 function renderMobileRadioTab(container) {
+    if (_activeRadioView === 'schedule') {
+        renderHomeworkRadioScheduler(container);
+        return;
+    }
     container.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
         <button type="button" id="backToHomeFromRadioBtn" class="btn-ghost" style="padding:4px 10px">← Bosh sahifa</button>
@@ -1773,16 +1793,20 @@ function renderMobileRadioTab(container) {
     </div>
     <audio id="mobileRadioPlayer" style="display:none"></audio>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;max-width:900px">
-        ${MOBILE_RADIO_STATIONS.map(st => `
-            <div data-radio-station="${st.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;${st.streamQuery ? 'cursor:pointer' : 'opacity:0.6'}">
+        ${MOBILE_RADIO_STATIONS.map(st => {
+            const isHwRadio = st.id === 'homework-radio';
+            const clickable = !!st.streamQuery || isHwRadio;
+            const icon = isHwRadio ? '⚙️' : (st.streamQuery ? '▶️' : '🚫');
+            return `
+            <div data-radio-station="${st.id}" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;${clickable ? 'cursor:pointer' : 'opacity:0.6'}">
                 <div style="width:40px;height:40px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${st.flag}</div>
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(st.name)}</div>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(st.genre)}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${isHwRadio ? "Dastur jadvalini sozlash" : escapeHtml(st.genre)}</div>
                 </div>
-                <span data-radio-status="${st.id}" style="font-size:18px;flex-shrink:0">${st.streamQuery ? '▶️' : '🚫'}</span>
-            </div>
-        `).join('')}
+                <span data-radio-status="${st.id}" style="font-size:18px;flex-shrink:0">${icon}</span>
+            </div>`;
+        }).join('')}
     </div>`;
 
     document.getElementById('backToHomeFromRadioBtn').addEventListener('click', () => {
@@ -1819,6 +1843,12 @@ function renderMobileRadioTab(container) {
     container.querySelectorAll('[data-radio-station]').forEach(card => {
         card.addEventListener('click', () => {
             const stationId = card.dataset.radioStation;
+            if (stationId === 'homework-radio') {
+                audio.pause();
+                _activeRadioView = 'schedule';
+                renderMobileRadioTab(container);
+                return;
+            }
             const station = MOBILE_RADIO_STATIONS.find(s => s.id === stationId);
             if (!station || !station.streamQuery) return;
 
@@ -1837,6 +1867,166 @@ function renderMobileRadioTab(container) {
                 playCandidates(candidates, 0);
             });
         });
+    });
+}
+
+// ─── 144-ish: "Homework Radio" haqiqiy dastur jadvali ──────────────────────
+function _hwRadioDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Berilgan hafta siljishi (0=joriy hafta, -1=oldingi, +1=keyingi) uchun
+// dushanbadan boshlab 7 ta haqiqiy sanani qaytaradi.
+function _getHwRadioWeekDates(weekOffset) {
+    const now = new Date();
+    const dow = now.getDay(); // 0=Yakshanba..6=Shanba
+    const mondayShift = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayShift + weekOffset * 7);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+        dates.push(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+    }
+    return dates;
+}
+
+function _hwRadioTimeToMinutes(t) {
+    const m = /^(\d{2}):(\d{2})$/.exec(String(t || ''));
+    if (!m) return null;
+    return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function _hwRadioValidateBlocks(blocks) {
+    for (const b of blocks) {
+        const start = _hwRadioTimeToMinutes(b.startTime);
+        const end = _hwRadioTimeToMinutes(b.endTime);
+        if (start === null || end === null) return `"${b.title || ''}" uchun vaqt formati noto'g'ri (HH:MM bo'lishi kerak)`;
+        if (start >= end) return `"${b.title || ''}" uchun boshlanish vaqti tugash vaqtidan oldin bo'lishi kerak`;
+    }
+    return null;
+}
+
+function _hwRadioOverlapWarning(blocks) {
+    const sorted = [...blocks]
+        .map(b => ({ ...b, _s: _hwRadioTimeToMinutes(b.startTime), _e: _hwRadioTimeToMinutes(b.endTime) }))
+        .filter(b => b._s !== null && b._e !== null)
+        .sort((a, b) => a._s - b._s);
+    for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i]._s < sorted[i - 1]._e) return true;
+    }
+    return false;
+}
+
+function _hwRadioTimelineHtml(blocks) {
+    const segments = blocks.map(b => {
+        const start = _hwRadioTimeToMinutes(b.startTime);
+        const end = _hwRadioTimeToMinutes(b.endTime);
+        if (start === null || end === null || end <= start) return '';
+        const leftPct = (start / 1440) * 100;
+        const widthPct = ((end - start) / 1440) * 100;
+        return `<div title="${escapeHtml(b.title || '')} (${escapeHtml(b.startTime)}–${escapeHtml(b.endTime)})" style="position:absolute;left:${leftPct}%;width:${widthPct}%;top:0;bottom:0;background:var(--purple,#7c3aed);border-radius:3px;min-width:2px"></div>`;
+    }).join('');
+    return `<div style="position:relative;height:20px;background:var(--bg);border:1px solid var(--border);border-radius:4px;margin:8px 0">${segments}</div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-bottom:10px">
+            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:59</span>
+        </div>`;
+}
+
+function _renderHwRadioDayCard(container, date) {
+    const dateStr = _hwRadioDateStr(date);
+    const weekdayLabel = DAYS_UZ[(date.getDay() + 6) % 7];
+    const dateLabel = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+
+    container.innerHTML = `
+        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:2px">${weekdayLabel}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${dateLabel}</div>
+        <div id="hwRadioTimeline_${dateStr}"></div>
+        <div id="hwRadioList_${dateStr}"></div>`;
+
+    apiFetchHomeworkRadioSchedule().then(schedule => {
+        const blocks = (schedule[dateStr] || []).slice().sort((a, b) =>
+            (_hwRadioTimeToMinutes(a.startTime) || 0) - (_hwRadioTimeToMinutes(b.startTime) || 0));
+        document.getElementById(`hwRadioTimeline_${dateStr}`).innerHTML = _hwRadioTimelineHtml(blocks);
+
+        const listBody = document.getElementById(`hwRadioList_${dateStr}`);
+        renderEditableList(listBody, {
+            uid: dateStr,
+            title: '',
+            addLabel: '+ Audio qo\'shish',
+            items: blocks,
+            idPrefix: 'hwblock',
+            renderRow: (b) => `<b>${escapeHtml(b.startTime || '')}–${escapeHtml(b.endTime || '')}</b> ${escapeHtml(b.title || '')}${b.audioUrl ? ' · 🔊' : ' · <span style="color:var(--danger)">audio yo\'q</span>'}`,
+            fields: [
+                { key: 'title', label: 'Nomi', required: true, placeholder: 'Masalan: Ertalabki motivatsiya' },
+                { key: 'startTime', label: 'Boshlanish vaqti (HH:MM)', required: true, placeholder: '09:00' },
+                { key: 'endTime', label: 'Tugash vaqti (HH:MM)', required: true, placeholder: '10:30' },
+                { key: 'audioUrl', label: 'Audio fayl', type: 'audio', required: true },
+            ],
+            onChange: (newItems) => {
+                const err = _hwRadioValidateBlocks(newItems);
+                if (err) { alert(err); return; }
+                apiSaveHomeworkRadioDay(dateStr, newItems).then(() => {
+                    _renderHwRadioDayCard(container, date);
+                    if (_hwRadioOverlapWarning(newItems)) {
+                        showMiniToast("Diqqat: ba'zi audiolar vaqt jihatidan bir-biriga to'g'ri kelmoqda");
+                    }
+                }).catch(err2 => alert(err2.message || 'Xatolik'));
+            },
+        });
+    });
+}
+
+function renderHomeworkRadioScheduler(container) {
+    const weekDates = _getHwRadioWeekDates(_hwRadioWeekOffset);
+    const todayStr = _hwRadioDateStr(new Date());
+    const pastDates = weekDates.filter(d => _hwRadioDateStr(d) < todayStr);
+    const normalDates = weekDates.filter(d => _hwRadioDateStr(d) >= todayStr);
+    const rangeLabel = `${_hwRadioDateStr(weekDates[0])} — ${_hwRadioDateStr(weekDates[6])}`;
+
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+            <button type="button" id="backToRadioListBtn" class="btn-ghost" style="padding:4px 10px">← Radio</button>
+            <div style="font-weight:700;font-size:14px;color:var(--text)">Homework Radio — dastur jadvali</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+            <button type="button" id="hwRadioPrevWeekBtn" class="btn-ghost" style="padding:4px 10px">← Oldingi hafta</button>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${rangeLabel}</div>
+            <button type="button" id="hwRadioNextWeekBtn" class="btn-ghost" style="padding:4px 10px">Keyingi hafta →</button>
+        </div>
+        ${pastDates.length ? `
+        <details open style="margin-bottom:18px">
+            <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--text-muted);margin-bottom:10px">O'tgan kunlar (${pastDates.length})</summary>
+            <div id="hwRadioPastGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;max-width:1100px"></div>
+        </details>` : ''}
+        <div id="hwRadioNormalGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;max-width:1100px"></div>`;
+
+    document.getElementById('backToRadioListBtn').addEventListener('click', () => {
+        _activeRadioView = null;
+        renderMobileRadioTab(container);
+    });
+    document.getElementById('hwRadioPrevWeekBtn').addEventListener('click', () => {
+        _hwRadioWeekOffset -= 1;
+        renderHomeworkRadioScheduler(container);
+    });
+    document.getElementById('hwRadioNextWeekBtn').addEventListener('click', () => {
+        _hwRadioWeekOffset += 1;
+        renderHomeworkRadioScheduler(container);
+    });
+
+    if (pastDates.length) {
+        const pastGrid = document.getElementById('hwRadioPastGrid');
+        pastDates.forEach(date => {
+            const card = document.createElement('div');
+            card.style.cssText = 'padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px';
+            pastGrid.appendChild(card);
+            _renderHwRadioDayCard(card, date);
+        });
+    }
+    const normalGrid = document.getElementById('hwRadioNormalGrid');
+    normalDates.forEach(date => {
+        const card = document.createElement('div');
+        card.style.cssText = 'padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px';
+        normalGrid.appendChild(card);
+        _renderHwRadioDayCard(card, date);
     });
 }
 

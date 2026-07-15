@@ -196,6 +196,17 @@ async function apiDeleteManualNotification(id) {
     return apiFetch('/api/state/notifications/manual/' + encodeURIComponent(id), { method: 'DELETE' });
 }
 
+async function apiFetchHomeworkRadioSchedule() {
+    return apiFetch('/api/state/homework-radio-schedule');
+}
+
+async function apiSaveHomeworkRadioDay(dateStr, blocks) {
+    return apiFetch('/api/state/homework-radio-schedule/' + encodeURIComponent(dateStr), {
+        method: 'POST',
+        body: JSON.stringify({ blocks })
+    });
+}
+
 async function apiDeleteCommunityPost(postId) {
     return apiFetch('/api/state/community/posts/' + encodeURIComponent(postId), { method: 'DELETE' });
 }
