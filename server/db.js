@@ -1486,6 +1486,85 @@ async function saveHomeworkRadioDay(dateStr, blocks) {
     return schedule[trimmedDate] || [];
 }
 
+// ── "Izohlar" (Comments) — 145-ish ───────────────────────────────────────────
+// Bitta umumiy, tekis massiv — turli kontent turlari (hozircha faqat radio,
+// keyinroq video/speaking/bonus/ustoz ham qo'shilishi mumkin) uchun bir xil
+// shaklda: { id, category, itemId, itemLabel, authorName, text, createdAt,
+// parentId, isAdmin, adminName? }. `parentId` orqali istalgan izohga javob
+// yozish mumkin (Hamjamiyat'dagi addCommunityComment bilan bir xil naqsh) —
+// izoh muallifi o'quvchimi yoki CRM adminmi, `isAdmin` bilan ajratiladi.
+async function getContentComments() {
+    return getJsonData('contentComments');
+}
+
+async function addContentComment(category, itemId, itemLabel, authorName, text, parentId) {
+    const trimmedCategory = String(category || '').trim();
+    const trimmedItemId = String(itemId || '').trim();
+    const trimmed = String(text || '').trim();
+    if (!trimmedCategory || !trimmedItemId) throw new Error("Kontent aniqlanmadi");
+    if (!trimmed) throw new Error("Izoh matni bo'sh bo'lishi mumkin emas");
+
+    const all = await getJsonData('contentComments');
+    const comment = {
+        id: 'cc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        category: trimmedCategory, itemId: trimmedItemId,
+        itemLabel: itemLabel || trimmedItemId,
+        authorName: authorName || "O'quvchi",
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+        parentId: parentId || null,
+        isAdmin: false,
+    };
+    all.push(comment);
+    await tx(async (client) => { await saveJsonData(client, 'contentComments', all); });
+    return comment;
+}
+
+// Faqat CRM admin — istalgan izohga (o'quvchiniki yoki boshqa adminniki)
+// javob yozadi. category/itemId/itemLabel javob yozilayotgan izohdan
+// avtomatik olinadi (mijozdan so'ralmaydi).
+async function addAdminContentReply(commentId, text, adminName) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) throw new Error("Javob matni bo'sh bo'lishi mumkin emas");
+    const all = await getJsonData('contentComments');
+    const parent = all.find(c => c.id === commentId);
+    if (!parent) throw new Error('Izoh topilmadi');
+
+    const reply = {
+        id: 'cc-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        category: parent.category, itemId: parent.itemId, itemLabel: parent.itemLabel,
+        authorName: adminName || 'Admin',
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+        parentId: commentId,
+        isAdmin: true,
+    };
+    all.push(reply);
+    await tx(async (client) => { await saveJsonData(client, 'contentComments', all); });
+    return reply;
+}
+
+// Faqat CRM admin — izohni (va agar bor bo'lsa, unga yozilgan barcha
+// javoblarni ham) butunlay o'chiradi.
+async function deleteContentComment(commentId) {
+    const all = await getJsonData('contentComments');
+    // Faqat to'g'ridan-to'g'ri javoblar emas, balki javobga yozilgan javoblar
+    // ham (butun zanjir) o'chiriladi — aks holda "yetim" yozuvlar qolib ketadi.
+    const toDelete = new Set([commentId]);
+    let changed = true;
+    while (changed) {
+        changed = false;
+        for (const c of all) {
+            if (c.parentId && toDelete.has(c.parentId) && !toDelete.has(c.id)) {
+                toDelete.add(c.id);
+                changed = true;
+            }
+        }
+    }
+    const filtered = all.filter(c => !toDelete.has(c.id));
+    await tx(async (client) => { await saveJsonData(client, 'contentComments', filtered); });
+}
+
 // 124-ish: CRM'ning Sotuv bo'limidagi "Kitob yetkazish" kanban-bosqichlarini
 // appning 4 bosqichli ko'rsatkichiga (Tayyorlanmoqda/Jo'natildi/Yo'lda/
 // Yetkazib berildi) moslashtiradi.
@@ -1882,6 +1961,7 @@ module.exports = {
     getManualNotifications, addManualNotification, deleteManualNotification,
     addSystemNotification, submitAbsenceReason,
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
+    getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     addDemoShopOrder, getDemoShopOrders,

@@ -207,6 +207,21 @@ async function apiSaveHomeworkRadioDay(dateStr, blocks) {
     });
 }
 
+async function apiFetchContentComments() {
+    return apiFetch('/api/state/content-comments');
+}
+
+async function apiReplyContentComment(id, text) {
+    return apiFetch('/api/state/content-comments/' + encodeURIComponent(id) + '/reply', {
+        method: 'POST',
+        body: JSON.stringify({ text })
+    });
+}
+
+async function apiDeleteContentComment(id) {
+    return apiFetch('/api/state/content-comments/' + encodeURIComponent(id), { method: 'DELETE' });
+}
+
 async function apiDeleteCommunityPost(postId) {
     return apiFetch('/api/state/community/posts/' + encodeURIComponent(postId), { method: 'DELETE' });
 }

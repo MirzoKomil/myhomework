@@ -61,6 +61,11 @@ const HOMEWORK_RADIO_SCHEDULE_API_BASE =
     ? '/api/state/homework-radio-schedule'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/homework-radio-schedule';
 
+const CONTENT_COMMENTS_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/content-comments'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/content-comments';
+
 const DEMO_ACTIVITY_API_BASE =
   Platform.OS === 'web'
     ? '/api/state/demo-activity'
@@ -506,6 +511,48 @@ export function getActiveHomeworkRadioBlock(
     if (nowMinutes >= start && nowMinutes < end) return b;
   }
   return null;
+}
+
+// 145-ish: "Izohlar" — hozircha radio stansiyalari uchun. `parentId` orqali
+// istalgan izohga (o'quvchiniki yoki adminniki) javob yozish mumkin.
+export type ContentComment = {
+  id: string;
+  category: string;
+  itemId: string;
+  itemLabel: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+  parentId: string | null;
+  isAdmin: boolean;
+};
+
+export async function fetchContentComments(category: string, itemId: string): Promise<ContentComment[]> {
+  const r = await fetch(CONTENT_COMMENTS_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const all: ContentComment[] = await r.json();
+  return all.filter((c) => c.category === category && c.itemId === itemId);
+}
+
+export async function addContentComment(
+  category: string,
+  itemId: string,
+  itemLabel: string,
+  authorName: string,
+  text: string,
+  parentId?: string
+): Promise<ContentComment> {
+  const r = await fetch(CONTENT_COMMENTS_API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, itemId, itemLabel, authorName, text, parentId: parentId ?? null }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Xatolik' }));
+    throw new Error(err.error || 'Xatolik');
+  }
+  const data = await r.json();
+  return data.comment;
 }
 
 // Server faqat matn qaytaradi — UI ko'rinishi (rang/emoji) manba turiga

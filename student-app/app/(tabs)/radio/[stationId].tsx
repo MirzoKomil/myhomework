@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CommentsSheet } from '@/components/CommentsSheet';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { radioStations } from '@/data/mock';
@@ -37,6 +38,7 @@ export default function RadioPlayerScreen() {
   const [playback, setPlayback] = useState<PlaybackState>('resolving');
   const [waveHeights, setWaveHeights] = useState(randomWave);
   const [showInfo, setShowInfo] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [activeBlockTitle, setActiveBlockTitle] = useState<string | null>(null);
 
   const playerRef = useRef<AudioPlayer | null>(null);
@@ -214,25 +216,37 @@ export default function RadioPlayerScreen() {
         title="Radio"
         showBack
         rightAction={
-          <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
-            <Ionicons name="information-circle-outline" size={22} color={theme.colors.textMuted} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable style={styles.infoBtn} onPress={() => setShowComments(true)} hitSlop={8}>
+              <Ionicons name="chatbubble-outline" size={20} color={theme.colors.textMuted} />
+            </Pressable>
+            <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
+              <Ionicons name="information-circle-outline" size={22} color={theme.colors.textMuted} />
+            </Pressable>
+          </View>
         }
       />
       <View style={styles.content}>
-        {station.logo ? (
-          <View style={styles.cover}>
-            <Image source={station.logo} style={styles.coverLogoImg} resizeMode="cover" />
-          </View>
-        ) : (
-          <LinearGradient
-            colors={station.colors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cover}>
-            <Text style={styles.coverFlag}>{station.flag}</Text>
-          </LinearGradient>
-        )}
+        <View>
+          {station.logo ? (
+            <View style={styles.cover}>
+              <Image source={station.logo} style={styles.coverLogoImg} resizeMode="cover" />
+            </View>
+          ) : (
+            <LinearGradient
+              colors={station.colors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cover}>
+              <Text style={styles.coverFlag}>{station.flag}</Text>
+            </LinearGradient>
+          )}
+          {station.logo && (
+            <View style={styles.flagBadge}>
+              <Text style={styles.flagBadgeText}>{station.flag}</Text>
+            </View>
+          )}
+        </View>
 
         {playback === 'error' ? (
           <View style={[styles.liveBadge, styles.errorBadge]}>
@@ -303,12 +317,21 @@ export default function RadioPlayerScreen() {
           </View>
         </View>
       </Modal>
+
+      <CommentsSheet
+        visible={showComments}
+        onClose={() => setShowComments(false)}
+        category="radio"
+        itemId={station.id}
+        itemLabel={station.name}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  headerActions: { flexDirection: 'row', gap: 8 },
   infoBtn: {
     width: 40,
     height: 40,
@@ -332,6 +355,21 @@ const styles = StyleSheet.create({
   },
   coverLogoImg: { width: '100%', height: '100%' },
   coverFlag: { fontSize: 72 },
+  flagBadge: {
+    position: 'absolute',
+    bottom: -8,
+    right: -8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
+    ...theme.shadow.card,
+  },
+  flagBadgeText: { fontSize: 20 },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',

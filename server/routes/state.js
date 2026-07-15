@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getHomeworkRadioSchedule, saveHomeworkRadioDay, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -246,6 +246,51 @@ router.post('/homework-radio-schedule/:date', authRequired, async (req, res) => 
         res.json({ ok: true, blocks });
     } catch (err) {
         console.error('POST /api/state/homework-radio-schedule/:date', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 145-ish: "Izohlar" — hozircha radio stansiyalari uchun, keyinroq boshqa
+// kontent turlariga ham kengaytiriladi. O'qish va o'quvchi izoh/javob yozishi
+// public (mijozdan hech qanday shaxsiy ma'lumot talab qilinmaydi), admin
+// javob yozishi va o'chirish esa faqat CRM'dan (authRequired).
+router.get('/content-comments', async (req, res) => {
+    try {
+        const data = await getContentComments();
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/content-comments', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/content-comments', async (req, res) => {
+    try {
+        const { category, itemId, itemLabel, authorName, text, parentId } = req.body || {};
+        const comment = await addContentComment(category, itemId, itemLabel, authorName, text, parentId);
+        res.json({ ok: true, comment });
+    } catch (err) {
+        console.error('POST /api/state/content-comments', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/content-comments/:id/reply', authRequired, async (req, res) => {
+    try {
+        const reply = await addAdminContentReply(req.params.id, req.body?.text, req.body?.adminName);
+        res.json({ ok: true, comment: reply });
+    } catch (err) {
+        console.error('POST /api/state/content-comments/:id/reply', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.delete('/content-comments/:id', authRequired, async (req, res) => {
+    try {
+        await deleteContentComment(req.params.id);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('DELETE /api/state/content-comments/:id', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

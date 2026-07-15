@@ -1780,10 +1780,15 @@ async function resolveRadioStreamCandidates(query) {
 // ochiladi (_activeRadioView='schedule').
 let _activeRadioView = null;
 let _hwRadioWeekOffset = 0;
+let _activeCommentStationId = null;
 
 function renderMobileRadioTab(container) {
     if (_activeRadioView === 'schedule') {
         renderHomeworkRadioScheduler(container);
+        return;
+    }
+    if (_activeRadioView === 'comments') {
+        renderRadioCommentsView(container, _activeCommentStationId);
         return;
     }
     container.innerHTML = `
@@ -1804,10 +1809,22 @@ function renderMobileRadioTab(container) {
                     <div style="font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(st.name)}</div>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${isHwRadio ? "Dastur jadvalini sozlash" : escapeHtml(st.genre)}</div>
                 </div>
+                <button type="button" data-radio-comments="${st.id}" title="Izohlar" style="background:none;border:none;cursor:pointer;font-size:16px;flex-shrink:0;padding:4px">💬</button>
                 <span data-radio-status="${st.id}" style="font-size:18px;flex-shrink:0">${icon}</span>
             </div>`;
         }).join('')}
     </div>`;
+
+    container.querySelectorAll('[data-radio-comments]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const player = document.getElementById('mobileRadioPlayer');
+            if (player) player.pause();
+            _activeRadioView = 'comments';
+            _activeCommentStationId = btn.dataset.radioComments;
+            renderMobileRadioTab(container);
+        });
+    });
 
     document.getElementById('backToHomeFromRadioBtn').addEventListener('click', () => {
         const player = document.getElementById('mobileRadioPlayer');
@@ -2027,6 +2044,98 @@ function renderHomeworkRadioScheduler(container) {
         card.style.cssText = 'padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px';
         normalGrid.appendChild(card);
         _renderHwRadioDayCard(card, date);
+    });
+}
+
+// ─── 145-ish: Radio stansiyasi izohlari (moderatsiya) ──────────────────────
+// Har bir izohga (top-level yoki boshqa javobga) admin javob yozishi mumkin —
+// _communityPostCardHtml'dagi "tekis ro'yxat + ichma-ich javoblar + o'chirish"
+// naqshi bilan bir xil g'oya, faqat bu yerda har bir yozuvga alohida javob
+// qutisi ham qo'shiladi.
+function renderRadioCommentsView(container, stationId) {
+    const station = MOBILE_RADIO_STATIONS.find(s => s.id === stationId);
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <button type="button" id="backToRadioListFromCommentsBtn" class="btn-ghost" style="padding:4px 10px">← Radio</button>
+            <div style="font-weight:700;font-size:14px;color:var(--text)">${escapeHtml(station?.flag || '')} ${escapeHtml(station?.name || '')} — Izohlar</div>
+        </div>
+        <div id="radioCommentsBody" style="max-width:640px"><div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Yuklanmoqda...</div></div>`;
+
+    document.getElementById('backToRadioListFromCommentsBtn').addEventListener('click', () => {
+        _activeRadioView = null;
+        _activeCommentStationId = null;
+        renderMobileRadioTab(container);
+    });
+
+    _loadRadioComments(container, stationId);
+}
+
+function _loadRadioComments(container, stationId) {
+    const body = document.getElementById('radioCommentsBody');
+    apiFetchContentComments().then(all => {
+        const forStation = all.filter(c => c.category === 'radio' && c.itemId === stationId);
+        const topLevel = forStation
+            .filter(c => !c.parentId)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const repliesByParent = {};
+        forStation.filter(c => c.parentId).forEach(c => {
+            if (!repliesByParent[c.parentId]) repliesByParent[c.parentId] = [];
+            repliesByParent[c.parentId].push(c);
+        });
+
+        const commentRowHtml = (c, isReply) => `
+            <div style="display:flex;align-items:flex-start;gap:8px;${isReply ? 'margin-left:24px;margin-top:8px' : 'margin-bottom:6px'}">
+                <div style="font-size:16px;flex-shrink:0">${c.isAdmin ? '🛠️' : '🙂'}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:12px;color:var(--text)"><b>${escapeHtml(c.authorName || '')}</b>${c.isAdmin ? ' <span style="color:var(--purple,#7c3aed)">· admin</span>' : ''} ${escapeHtml(c.text || '')}</div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${c.createdAt ? new Date(c.createdAt).toLocaleString('uz-UZ') : ''}</div>
+                    <div style="display:flex;gap:12px;margin-top:4px">
+                        <button type="button" data-radio-reply="${escapeHtml(c.id)}" style="background:none;border:none;cursor:pointer;color:var(--purple,#7c3aed);font-size:11px;font-weight:600">Javob yozish</button>
+                        <button type="button" data-radio-del="${escapeHtml(c.id)}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:11px;font-weight:600">O'chirish</button>
+                    </div>
+                    <div data-radio-reply-box="${escapeHtml(c.id)}" style="display:none;margin-top:8px;gap:6px"></div>
+                </div>
+            </div>`;
+
+        const html = topLevel.length
+            ? topLevel.map(c => `
+                <div style="border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface);margin-bottom:10px">
+                    ${commentRowHtml(c, false)}
+                    ${(repliesByParent[c.id] || []).map(r => commentRowHtml(r, true)).join('')}
+                </div>`).join('')
+            : `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Hali izoh yo'q</div>`;
+
+        body.innerHTML = html;
+
+        body.querySelectorAll('[data-radio-del]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!confirm("Izoh o'chirilsinmi?")) return;
+                apiDeleteContentComment(btn.dataset.radioDel).then(() => _loadRadioComments(container, stationId));
+            });
+        });
+
+        body.querySelectorAll('[data-radio-reply]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const box = body.querySelector(`[data-radio-reply-box="${btn.dataset.radioReply}"]`);
+                if (!box) return;
+                if (box.style.display === 'flex') { box.style.display = 'none'; box.innerHTML = ''; return; }
+                box.style.display = 'flex';
+                box.innerHTML = `
+                    <input type="text" class="form-control" placeholder="Admin nomidan javob..." style="flex:1">
+                    <button type="button" class="btn-primary-sm" style="flex-shrink:0">Yuborish</button>`;
+                const input = box.querySelector('input');
+                const sendBtn = box.querySelector('button');
+                const send = () => {
+                    const text = input.value.trim();
+                    if (!text) return;
+                    apiReplyContentComment(btn.dataset.radioReply, text).then(() => _loadRadioComments(container, stationId));
+                };
+                sendBtn.addEventListener('click', send);
+                input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+            });
+        });
+    }).catch(err => {
+        body.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--danger)">Yuklashda xatolik: ${escapeHtml(err.message || String(err))}</div>`;
     });
 }
 
