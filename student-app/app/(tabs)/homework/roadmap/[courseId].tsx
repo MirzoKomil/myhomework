@@ -272,21 +272,25 @@ function LessonCard({
 
 // ─── Milestone gifts (every 5th lesson) ────────────────────────────────────────
 const MILESTONE_GIFTS: NonNullable<LessonNode['milestone']>[] = [
-  { emoji: '🚀', fact: "Dunyoda 1,5 milliarddan ortiq odam ingliz tilida gaplashadi yoki uni o'rganmoqda — bu Yer aholisining har 5-kishisidan biri!" },
-  { emoji: '🔥', fact: 'Ingliz tili 60 dan ortiq davlatda rasmiy til hisoblanadi — bu boshqa har qanday tildan ko\'proq!' },
-  { emoji: '💪', fact: "Ingliz tilida 170,000 dan ortiq faol so'z bor, lekin kundalik muloqot uchun atigi 3000 tasi yetarli!" },
-  { emoji: '🌟', fact: '"The" so\'zi — ingliz tilidagi eng ko\'p ishlatiladigan so\'z, u har 40-so\'zning birida uchraydi!' },
-  { emoji: '🏆', fact: "Internetdagi barcha kontentning qariyb 55% qismi ingliz tilida yaratilgan!" },
-  { emoji: '🎯', fact: 'Ingliz tili aviatsiyada butun dunyo bo\'ylab xalqaro muloqot tili hisoblanadi!' },
-  { emoji: '💡', fact: "Shekspir o'z asarlarida ingliz tiliga 1700 dan ortiq yangi so'z qo'shgan!" },
-  { emoji: '🧠', fact: 'Har yili ingliz tili lug\'atlariga yuzlab yangi so\'zlar qo\'shiladi — til doimo tirik va rivojlanmoqda!' },
-  { emoji: '📚', fact: '"Set" so\'zi ingliz tilida 430 dan ortiq turli ma\'noga ega bo\'lishi mumkin!' },
-  { emoji: '🌈', fact: "Ingliz tilini bilish dunyo bo'ylab ish topish imkoniyatingizni sezilarli darajada oshiradi!" },
-  { emoji: '⚡', fact: 'Dunyodagi ilmiy maqolalarning katta qismi aynan ingliz tilida chop etiladi!' },
-  { emoji: '🥇', fact: 'YouTube va Netflix kabi platformalardagi eng ko\'p tomosha qilinadigan kontent ingliz tilida!' },
-  { emoji: '🎓', fact: "Ingliz tilida fe'l zamonlari boshqa ko'p tillarga qaraganda soddaroq — buni siz allaqachon his qilyapsiz!" },
-  { emoji: '🌱', fact: "Tabriklaymiz, siz 70-darsgacha yetib keldingiz — bu kursning deyarli oxiri, endi bir necha qadam qoldi!" },
+  { emoji: '🚀', title: 'Aviatsiya siri', fact: 'Dunyo bo\'ylab barcha xalqaro uchuvchilar qaysi davlatdan bo\'lishidan qat\'i nazar, parvoz paytida faqat ingliz tilida gaplashishlari shart. Bu qoida "Aviation English" deb nomlanadi. Ingliz tili — osmonni zabt etgan til!' },
+  { emoji: '🔥', title: 'Siz yolg\'iz emassiz!', fact: 'Dunyoda 1.5 milliardan ortiq odam ingliz tilida so\'zlashadi. Lekin eng qizig\'i — ularning faqat 400 millionga yaqinining ona tili ingliz tili, xolos. Qolgan 1 milliarddan ortiq inson xuddi siz kabi uni o\'rgangan!' },
+  { emoji: '💡', title: 'To\'xtovsiz o\'sayotgan til', fact: 'Ingliz tili dunyodagi eng tez boyib borayotgan tillardan biri. Har yili lug\'atga o\'rtacha 4000 ta yangi so\'z qo\'shiladi. Bu degani har 2 soatda bitta yangi so\'z yaratilmoqda!' },
+  { emoji: '🌐', title: 'Internet kaliti', fact: 'Internetdagi barcha ma\'lumotlar va veb-saytlarning 50% dan ortig\'i ingliz tilida yozilgan. Ingliz tilini bilish — sizga butun dunyo bilimlar omborining eshigini ochadi!' },
+  { emoji: '⚡️', title: 'Eng qisqa gap', fact: 'Ingliz tilidagi eng qisqa, grammatik jihatdan mutlaqo to\'g\'ri va tugallangan gap bu — "Go." (Bor / Ket) gapidir. Atigi ikki harf, lekin ulkan ma\'no!' },
+  { emoji: '🧠', title: 'Miya uchun trenajyor', fact: 'Ilmiy tadqiqotlarga ko\'ra, ingliz tilini o\'rganish miya faoliyatini yaxshilaydi, xotirani kuchaytiradi va qariganda miya kasalliklarining oldini oladi. Siz hozir nafaqat til o\'rganyapsiz, balki miyangizni yoshartiryapsiz!' },
+  { emoji: '🔬', title: 'Ilm-fan tili', fact: 'Dunyo bo\'ylab chop etiladigan ilmiy maqolalar, tadqiqotlar va kashfiyotlarning 90% dan ortig\'i ingliz tilida nashr etiladi. Eng so\'nggi texnologiya va bilimlardan birinchi bo\'lib xabardor bo\'lish kaliti sizning qo\'lingizda!' },
+  { emoji: '✍️', title: 'Shekspirning sehri', fact: 'Buyuk yozuvchi Uilyam Shekspir ingliz tiliga 1700 dan ortiq yangi so\'z olib kirgan. Biz bugun ishlatadigan lonely (yolg\'iz), fashionable (zamonaviy) va manager (menejer) kabi so\'zlarni aynan u o\'ylab topgan.' },
+  { emoji: '🔤', title: 'Eng mashhur harf', fact: 'Ingliz tilida eng ko\'p ishlatiladigan harf bu — "E" harfidir (barcha matnlarning deyarli 11% qismini tashkil qiladi). Eng kam ishlatiladigan harf esa — "Q". Keyingi safar matn o\'qiganingizda e\'tibor berib ko\'ring!' },
+  { emoji: '🐕', title: 'Sehrli gap (Pangramma)', fact: '"The quick brown fox jumps over the lazy dog" gapida ingliz alifbosidagi barcha 26 ta harf ishtirok etgan. Bunday gaplar "pangramma" deyiladi va klaviaturalarni tekshirish uchun ishlatiladi.' },
+  { emoji: '💼', title: 'Katta daromad siri', fact: 'Xalqaro kompaniyalarda ingliz tilini biladigan xodimlar, bilmaydigan hamkasblariga qaraganda o\'rtacha 30% dan 50% gacha ko\'proq maosh oladilar. Siz hozir o\'z kelajagingizga eng foydali investitsiyani kirityapsiz!' },
+  { emoji: '👻', title: 'Arvoh so\'z', fact: 'Lug\'atlarda adashib paydo bo\'lib qolgan so\'zlar bo\'lishini bilarmidingiz? Masalan, "Dord" so\'zi bosmaxona xatosi tufayli ingliz tili lug\'atida 8 yil davomida turgan va uning hech qanday ma\'nosi bo\'lmagan. Uni "arvoh so\'z" (ghost word) deb atashadi.' },
+  { emoji: '🍊', title: 'Qofiyasiz so\'zlar', fact: 'Ingliz tilida she\'r yozish oson, lekin ba\'zi so\'zlar borki, ularga hech qanday qofiya topib bo\'lmaydi. Masalan: Orange (apelsin), Silver (kumush), Purple (binafsharang) so\'zlariga mos keladigan qofiyadosh so\'z ingliz tilida mavjud emas!' },
+  { emoji: '🏆', title: 'Siz buni uddaladingiz!', fact: 'Tabriklaymiz, siz deyarli maqsadga yetdingiz! Ingliz tili — global aloqa tili (Lingua Franca). Siz ushbu darslarni yakunlab, yer yuzidagi istalgan nuqtada o\'zingizga do\'st, hamkor va yangi imkoniyatlar topa oladigan shaxsga aylandingiz!' },
 ];
+
+// 147-ish: darsni ochganda ko'rsatiladigan tabrik sarlavhalari — xilma-xillik
+// uchun juft/toq marralarda almashtirib turiladi.
+const MILESTONE_CELEBRATION_TITLES = ['Siz buni uddaladingiz! 🎉', 'Yangi marra zabt etildi! 🚀'];
 
 // ─── Milestone badge ──────────────────────────────────────────────────────────
 function MilestoneBadge({ badge, locked }: { badge: NonNullable<LessonNode['milestone']>; locked: boolean }) {
@@ -331,12 +335,14 @@ function MilestoneBadge({ badge, locked }: { badge: NonNullable<LessonNode['mile
             ) : (
               <>
                 <Text style={ss.dialogEmoji}>{badge.emoji}</Text>
-                <Text style={ss.dialogTitle}>Tabriklaymiz, bu yerga yetib keldingiz! 🎉</Text>
+                <Text style={ss.dialogTitle}>
+                  {MILESTONE_CELEBRATION_TITLES[MILESTONE_GIFTS.indexOf(badge) % MILESTONE_CELEBRATION_TITLES.length]}
+                </Text>
                 <Text style={ss.dialogSubtitle}>
                   Har bir qadam sizni maqsadingizga yaqinlashtiryapti — davom eting, siz ajoyib ish qilyapsiz!
                 </Text>
                 <View style={ss.dialogFactBox}>
-                  <Text style={ss.dialogFactLabel}>🎁 Qiziq fakt sovg'asi</Text>
+                  <Text style={ss.dialogFactLabel}>🎁 {badge.title}</Text>
                   <Text style={ss.dialogFactText}>{badge.fact}</Text>
                 </View>
               </>

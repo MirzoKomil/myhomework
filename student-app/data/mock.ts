@@ -13,6 +13,7 @@ export type LessonType = 'grammar' | 'speaking' | 'bonus';
 
 export type MilestoneBadge = {
   emoji: string;
+  title: string;
   fact: string;
 };
 
