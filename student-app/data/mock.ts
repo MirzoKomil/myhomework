@@ -241,6 +241,7 @@ export type AppNotification = {
   colors: [string, string];
   emoji: string;
   interactive?: 'attendance' | 'rate-teacher';
+  lessonDate?: string;
 };
 
 export const appNotifications: AppNotification[] = [

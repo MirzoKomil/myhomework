@@ -51,6 +51,11 @@ const DEMO_NOTIFICATIONS_API_BASE =
     ? '/api/state/demo-notifications'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-notifications';
 
+const ABSENCE_REASON_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/notifications/absence-reason'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/notifications/absence-reason';
+
 const DEMO_ACTIVITY_API_BASE =
   Platform.OS === 'web'
     ? '/api/state/demo-activity'
@@ -430,17 +435,32 @@ export async function sendDemoPersonaMessage(
 export type DemoNotification = {
   id: string;
   category: 'news' | 'lessons';
-  source: 'auto' | 'manual';
+  source: 'auto' | 'system' | 'manual';
   title: string;
   message: string;
   date: string;
   unread: boolean;
+  interactive?: 'attendance' | 'rate-teacher';
+  lessonDate?: string;
 };
 
 export async function fetchDemoNotifications(): Promise<DemoNotification[]> {
   const r = await fetch(DEMO_NOTIFICATIONS_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
+}
+
+// 142-ish: o'quvchi "Darsni nega qoldirdingiz?" so'rovnomasiga javob berganda.
+export async function submitAbsenceReason(lessonDate: string, reason: string): Promise<void> {
+  const r = await fetch(ABSENCE_REASON_API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lessonDate, reason }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Xatolik' }));
+    throw new Error(err.error || 'Xatolik');
+  }
 }
 
 // Server faqat matn qaytaradi — UI ko'rinishi (rang/emoji) manba turiga
@@ -455,6 +475,8 @@ export function toAppNotification(n: DemoNotification): {
   unread: boolean;
   colors: [string, string];
   emoji: string;
+  interactive?: 'attendance' | 'rate-teacher';
+  lessonDate?: string;
 } {
   const isAuto = n.source === 'auto';
   return {
@@ -467,6 +489,8 @@ export function toAppNotification(n: DemoNotification): {
     unread: n.unread,
     colors: isAuto ? ['#7C3AED', '#5B21B6'] : ['#3B82F6', '#2563EB'],
     emoji: isAuto ? '🔔' : '📣',
+    interactive: n.interactive,
+    lessonDate: n.lessonDate,
   };
 }
 

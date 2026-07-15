@@ -1408,6 +1408,9 @@ async function toggleCommunityPostLike(postId) {
     post.likedByMe = !post.likedByMe;
     post.likeCount = Math.max(0, (post.likeCount || 0) + (post.likedByMe ? 1 : -1));
     await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
+    if (post.likedByMe) {
+        await addSystemNotification('communityLike', {});
+    }
     return post;
 }
 
@@ -1587,6 +1590,9 @@ async function addDemoStudentActivity(entry) {
     await tx(async (client) => {
         await saveJsonData(client, 'studentActivity', all);
     });
+    if (type === 'exam' && record.passed === true) {
+        await addSystemNotification('examPassed', { label: record.label || 'Imtihon' });
+    }
     return record;
 }
 
@@ -1597,7 +1603,54 @@ async function saveJsonData(client, key, data) {
     );
 }
 
+// 142-ish: patchState orqali kelayotgan studentMessages/shopOrders'ni
+// yozishdan OLDIN eski holat bilan solishtirib, "Ma'muriyatdan xabar" va
+// "Yetkazib berish holati yangilandi" tizim voqealarini aniqlaydi. Bu yerda
+// aniqlanadi, chunki bu ikkalasi ham CRM'ning umumiy `setItem` -> generic
+// PATCH oqimi orqali yoziladi (dedicated endpoint yo'q) — yagona real tutash
+// nuqta shu.
+async function detectPatchStateNotificationEvents(partial) {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return;
+
+    if (partial.studentMessages !== undefined) {
+        const oldAll = await getJsonData('studentMessages');
+        const oldThreads = oldAll[demoStudentId] || {};
+        const newThreads = partial.studentMessages[demoStudentId] || {};
+        for (const threadId of Object.keys(newThreads)) {
+            const oldMsgs = oldThreads[threadId] || [];
+            const oldIds = new Set(oldMsgs.map(m => m.id));
+            const newMsgs = newThreads[threadId] || [];
+            const hasNewAdminMsg = newMsgs.some(m => !oldIds.has(m.id) && m.sender !== 'student');
+            if (hasNewAdminMsg) {
+                await addSystemNotification('muloqotMessage', {});
+                break;
+            }
+        }
+    }
+
+    if (partial.shopOrders !== undefined) {
+        const oldOrders = await getJsonData('shopOrders');
+        const oldStageById = new Map(oldOrders.map(o => [o.id, o.stage]));
+        for (const order of partial.shopOrders) {
+            if (order.studentId !== demoStudentId) continue;
+            const oldStage = oldStageById.get(order.id);
+            if (oldStage !== undefined && oldStage !== order.stage) {
+                await addSystemNotification('deliveryUpdated', { stage: SHOP_ORDER_STAGE_LABELS[order.stage] || order.stage });
+            }
+        }
+    }
+}
+
+const SHOP_ORDER_STAGE_LABELS = {
+    preparing: 'Tayyorlanmoqda',
+    dispatched: "Jo'natildi",
+    in_transit: "Yo'lda",
+    delivered: 'Yetkazildi',
+};
+
 async function patchState(partial) {
+    await detectPatchStateNotificationEvents(partial);
     await tx(async (client) => {
         if (partial.teachers)           await saveTeachers(client, partial.teachers);
         if (partial.students)           await saveStudents(client, partial.students);

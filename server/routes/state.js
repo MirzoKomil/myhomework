@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, getComputedDemoNotifications, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired } = require('../middleware/auth');
 
 const router = express.Router();
@@ -211,6 +211,19 @@ router.delete('/notifications/manual/:id', authRequired, async (req, res) => {
         res.json({ ok: true });
     } catch (err) {
         console.error('DELETE /api/state/notifications/manual/:id', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Namuna o'quvchi appdagi "Darsni nega qoldirdingiz?" so'rovnomasiga javob
+// berganda shu yerga yozadi — public, chunki bu o'quvchi tomonidan yuboriladi.
+router.post('/notifications/absence-reason', async (req, res) => {
+    try {
+        const { lessonDate, reason } = req.body || {};
+        await submitAbsenceReason(lessonDate, reason);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/state/notifications/absence-reason', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

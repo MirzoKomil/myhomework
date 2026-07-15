@@ -7,13 +7,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { AppNotification, NotifCategory } from '@/data/mock';
-import { fetchDemoGrades, fetchDemoNotifications, toAppNotification } from '@/services/contentApi';
+import { fetchDemoNotifications, submitAbsenceReason, toAppNotification } from '@/services/contentApi';
 
 const ATTENDANCE_OPTIONS = ['Darsga kirdim', 'Darsga kira olmadim', 'Dars yarmida tugadi'];
 
 function AttendanceCard({ notif }: { notif: AppNotification }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const onConfirm = () => {
+    if (!selected || !notif.lessonDate) return;
+    setSubmitting(true);
+    submitAbsenceReason(notif.lessonDate, selected)
+      .then(() => setSubmitted(true))
+      .catch(() => {})
+      .finally(() => setSubmitting(false));
+  };
 
   return (
     <View style={styles.card}>
@@ -30,9 +40,9 @@ function AttendanceCard({ notif }: { notif: AppNotification }) {
         </Pressable>
       ))}
       <Pressable
-        style={[styles.confirmBtn, (!selected || submitted) && styles.confirmBtnDisabled]}
-        disabled={!selected || submitted}
-        onPress={() => setSubmitted(true)}>
+        style={[styles.confirmBtn, (!selected || submitted || submitting) && styles.confirmBtnDisabled]}
+        disabled={!selected || submitted || submitting}
+        onPress={onConfirm}>
         <Text style={styles.confirmBtnText}>{submitted ? 'Tasdiqlandi ✓' : 'Tasdiqlash'}</Text>
       </Pressable>
     </View>
@@ -71,40 +81,18 @@ function NotifCard({ notif }: { notif: AppNotification }) {
 
 export default function NotificationsScreen() {
   const [tab, setTab] = useState<NotifCategory>('news');
-  const [rateTeacherNotifs, setRateTeacherNotifs] = useState<AppNotification[]>([]);
   const [realNotifs, setRealNotifs] = useState<AppNotification[]>([]);
 
-  // Ustoz davomat qilib baholagach, hali ustoz baholanmagan har bir jonli
-  // dars uchun "Ustozni baholang" bildirishnomasi avtomatik qo'shiladi.
-  useEffect(() => {
-    fetchDemoGrades()
-      .then(({ grades }) => {
-        const unrated = grades.filter((g) => !g.studentRatingOfTeacher);
-        setRateTeacherNotifs(
-          unrated.map((g) => ({
-            id: `rate-teacher-${g.date}`,
-            category: 'lessons' as const,
-            date: g.date,
-            title: 'Ustozni baholang',
-            message: `${g.lessonName} darsi uchun ustozingizni baholashingiz kutilmoqda.`,
-            detail: `${g.lessonName} darsidan so'ng ustozingiz sizni baholadi. Endi navbat sizda — "Baholar" bo'limida ustozingizni baholang.`,
-            unread: true,
-            colors: ['#F59E0B', '#D97706'] as [string, string],
-            emoji: '⭐',
-            interactive: 'rate-teacher' as const,
-          }))
-        );
-      })
-      .catch(() => {});
-  }, []);
-
+  // 142-ish: "Ustozni baholang" eslatmasi (va boshqa 16 avtomatik qoida) endi
+  // serverdagi qoida katalogidan real ravishda hisoblab keladi — mahalliy
+  // generatsiya kerak emas (ilgari shu yerda alohida qilingan edi).
   useEffect(() => {
     fetchDemoNotifications()
       .then((list) => setRealNotifs(list.map(toAppNotification)))
       .catch(() => {});
   }, []);
 
-  const allNotifications = [...rateTeacherNotifs, ...realNotifs];
+  const allNotifications = realNotifs;
   const newsUnread = allNotifications.filter((n) => n.category === 'news' && n.unread).length;
   const lessonsUnread = allNotifications.filter((n) => n.category === 'lessons' && n.unread).length;
   const list = allNotifications.filter((n) => n.category === tab);
