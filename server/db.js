@@ -767,7 +767,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons') ? {} : [];
     }
     return row.data;
 }
@@ -1025,18 +1025,51 @@ async function sendDemoStudentPersonaMessage(personaId, personaName, text, sende
     return message;
 }
 
-// ── Bildirishnomalar (Notifications) — 141-ish ───────────────────────────────
-// Ikki manba bir ro'yxatga birlashtiriladi: (1) "avtomatik" — CRM'da yoqilgan
-// qoidalar asosida haqiqiy ma'lumotdan (masalan dars jadvali) hisoblab
-// chiqariladigan eslatmalar, saqlanmaydi, har so'rovda qayta hisoblanadi;
-// (2) "qo'lda" — admin CRM'dan yozib yuborgan xabarlar, saqlanadi.
+// ── Bildirishnomalar (Notifications) — 141/142-ish ───────────────────────────
+// Uch manba bir ro'yxatga birlashtiriladi: (1) "avtomatik/computed" — CRM'da
+// yoqilgan qoidalar asosida haqiqiy ma'lumotdan (dars jadvali, to'lov qarzi,
+// uyga vazifa va h.k.) har so'rovda qayta hisoblanadigan, hozir "to'g'ri"
+// bo'lgan-bo'lmaganligiga qarab ko'rinadigan/yo'qoladigan shartlar;
+// (2) "tizim voqealari" — muayyan lahzada sodir bo'lgan va bir marta
+// qayd etiladigan hodisalar (imtihondan o'tish, yetkazib berish holati,
+// Ma'muriyatdan xabar, hamjamiyatdagi "yurakcha"), `systemNotifications`da
+// saqlanadi; (3) "qo'lda" — admin CRM'dan yozib yuborgan xabarlar, saqlanadi.
 const DEFAULT_NOTIFICATION_RULES = {
-    lessonReminder: {
-        enabled: true,
-        minutesBefore: 60,
-        title: "Darsingiz boshlanmoqda!",
-        message: "{course} darsi {time} da boshlanadi.",
-    },
+    lessonReminder120: { enabled: true, title: '2 soatdan keyin darsingiz bor', message: "{course} darsi bugun soat {time} da boshlanadi — 2 soat qoldi." },
+    lessonReminder60: { enabled: true, title: '1 soatdan keyin darsingiz bor', message: "{course} darsi soat {time} da boshlanadi — 1 soat qoldi." },
+    lessonReminder30: { enabled: true, title: '30 daqiqadan keyin darsingiz bor', message: "{course} darsi soat {time} da boshlanadi — 30 daqiqa qoldi." },
+    lessonReminder15: { enabled: true, title: '15 daqiqadan keyin darsingiz bor', message: "{course} darsi soat {time} da boshlanadi — 15 daqiqa qoldi." },
+    lessonReminder10: { enabled: true, title: '10 daqiqadan keyin darsingiz bor', message: "{course} darsi soat {time} da boshlanadi — 10 daqiqa qoldi." },
+    lessonReminder5: { enabled: true, title: '5 daqiqadan keyin darsingiz bor', message: "{course} darsi soat {time} da boshlanadi — 5 daqiqa qoldi." },
+    lessonReminder0: { enabled: true, title: 'Darsingiz boshlandi!', message: "{course} darsi hozir boshlandi. Guruhga qo'shiling!" },
+    teacherRatingPrompt: { enabled: true, title: 'Ustozingizni baholang', message: "So'nggi darsingiz uchun ustozingizni baholashingiz kutilmoqda." },
+    videoLessonMorning: { enabled: true, title: 'Bugun videodars kuni', message: "Bugungi videodarsni ko'rishni unutmang!" },
+    homeworkIncomplete: { enabled: true, title: 'Uyga vazifa tugallanmagan', message: "Bugungi uyga vazifangizni hali to'liq bajarmadingiz." },
+    bonusLessonSunday: { enabled: true, title: 'Yakshanba bonus darsi', message: "Bugun soat 12:00 dan bonus darsni ko'rishingiz mumkin!" },
+    paymentDebt: { enabled: true, title: "To'lov bo'yicha eslatma", message: "Hisobingizda qarzdorlik mavjud. Iltimos, to'lovni amalga oshiring." },
+    absenceSurvey: { enabled: true, title: 'Darsni nega qoldirdingiz?', message: "So'nggi darsingizda ishtirok etmadingiz — sababini bizga ayting." },
+    examPassed: { enabled: true, title: "Tabriklaymiz! Imtihondan o'tdingiz", message: "{label} imtihonidan muvaffaqiyatli o'tdingiz." },
+    deliveryUpdated: { enabled: true, title: 'Yetkazib berish holati yangilandi', message: "Buyurtmangiz holati o'zgardi: {stage}." },
+    muloqotMessage: { enabled: true, title: 'Yangi xabar keldi', message: "Sizga Muloqot bo'limida yangi xabar yozildi." },
+    communityLike: { enabled: true, title: 'Postingiz yoqtirildi', message: 'Hamjamiyatdagi postingizga yurakcha bosishdi ❤️' },
+};
+
+const LESSON_COUNTDOWN_RULES = [
+    { id: 'lessonReminder120', minutes: 120 },
+    { id: 'lessonReminder60', minutes: 60 },
+    { id: 'lessonReminder30', minutes: 30 },
+    { id: 'lessonReminder15', minutes: 15 },
+    { id: 'lessonReminder10', minutes: 10 },
+    { id: 'lessonReminder5', minutes: 5 },
+    { id: 'lessonReminder0', minutes: 0 },
+];
+const COUNTDOWN_TOLERANCE_MINUTES = 3;
+
+// js/storage.js'dagi SCHEDULE_PATTERNS bilan bir xil (mwf/tts, JS Date.getDay()
+// konventsiyasi: 0=Yakshanba..6=Shanba).
+const NOTIF_SCHEDULE_PATTERNS = {
+    mwf: [1, 3, 5],
+    tts: [2, 4, 6],
 };
 
 async function getNotificationRules() {
@@ -1081,8 +1114,103 @@ async function deleteManualNotification(id) {
     });
 }
 
+// Tizim voqealari — muayyan lahzada sodir bo'lgan hodisalar uchun (imtihondan
+// o'tish, yetkazib berish, Ma'muriyat xabari, hamjamiyat yurakchasi). Qoida
+// matni voqea sodir bo'lgan lahzada "suratga olinadi" — keyinroq qoida
+// tahrirlansa ham, eski yozuvlar o'zgarmaydi.
+async function addSystemNotification(ruleId, vars) {
+    const rules = await getNotificationRules();
+    const rule = rules[ruleId];
+    if (!rule?.enabled) return null;
+    const all = await getJsonData('systemNotifications');
+    const notification = {
+        id: 'sys-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        ruleId,
+        title: fillNotificationTemplate(rule.title, vars || {}),
+        message: fillNotificationTemplate(rule.message, vars || {}),
+        createdAt: new Date().toISOString(),
+    };
+    all.unshift(notification);
+    if (all.length > 100) all.length = 100;
+    await tx(async (client) => {
+        await saveJsonData(client, 'systemNotifications', all);
+    });
+    return notification;
+}
+
 function fillNotificationTemplate(template, vars) {
     return String(template || '').replace(/\{(\w+)\}/g, (match, key) => (vars[key] != null ? vars[key] : match));
+}
+
+async function getDemoStudent() {
+    const demoStudentId = await getJsonData('demoStudentId');
+    if (!demoStudentId) return null;
+    const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
+    if (!row) return null;
+    return rowToStudent(row);
+}
+
+// Bugun (Toshkent vaqti) darsning "kim uchun" video kuni ekanligini
+// aniqlaydi — o'quvchining jonli (speaking) kunlari mwf/tts patternidan
+// biri bo'lsa, video (grammar) kunlari QARAMA-QARSHI pattern kunlariga to'g'ri
+// keladi (kurs strukturasi har kuni navbatma-navbat grammar/speaking darsi
+// bo'yicha qurilgan — 72 dars, haftada 6 kun).
+function isVideoLessonDayToday(livePattern) {
+    const videoPattern = livePattern === 'tts' ? 'mwf' : 'tts';
+    const nowTashkent = new Date(Date.now() + 5 * 60 * 60 * 1000);
+    const dow = nowTashkent.getUTCDay();
+    return NOTIF_SCHEDULE_PATTERNS[videoPattern].includes(dow);
+}
+
+function tashkentNow() {
+    return new Date(Date.now() + 5 * 60 * 60 * 1000);
+}
+
+// O'quvchining eng so'nggi o'tgan (bugungidan oldingi, oxirgi 7 kun ichidagi)
+// jonli dars kunini topadi va o'sha kunda davomat belgilanganmi (main_attendance
+// jadvalida qator bormi) tekshiradi. `att_key`/`day` formati CRM'ning
+// davomat jadvali bilan bir xil (js/app.js renderMainAttendance): "YYYY-MM_teacherId" + kalendar kun raqami.
+async function findRecentUnexplainedAbsence(student) {
+    if (!student?.teacherId || student.lessonDayOfWeek == null) return null;
+    const teacherRow = await q1('SELECT schedule_pattern FROM teachers WHERE id = $1', [student.teacherId]);
+    const pattern = NOTIF_SCHEDULE_PATTERNS[teacherRow?.schedule_pattern] ? teacherRow.schedule_pattern : 'mwf';
+    const liveDows = NOTIF_SCHEDULE_PATTERNS[pattern];
+
+    const nowTashkent = tashkentNow();
+    for (let back = 1; back <= 7; back++) {
+        const d = new Date(Date.UTC(nowTashkent.getUTCFullYear(), nowTashkent.getUTCMonth(), nowTashkent.getUTCDate() - back));
+        if (!liveDows.includes(d.getUTCDay())) continue;
+        const year = d.getUTCFullYear(), month = d.getUTCMonth() + 1, day = d.getUTCDate();
+        const monthVal = `${year}-${String(month).padStart(2, '0')}`;
+        const dateStr = `${monthVal}-${String(day).padStart(2, '0')}`;
+        const attKey = `${monthVal}_${student.teacherId}`;
+
+        const presentRow = await q1(
+            'SELECT 1 FROM main_attendance WHERE att_key = $1 AND student_id = $2 AND day = $3',
+            [attKey, student.id, day]
+        );
+        if (presentRow) return null; // eng so'nggi jonli kunda qatnashgan — so'rovnoma kerak emas
+
+        const reasons = await getJsonData('absenceReasons');
+        if (reasons[dateStr]) return null; // sababi allaqachon berilgan
+
+        return dateStr; // qatnashmagan va sababi hali berilmagan
+    }
+    return null;
+}
+
+// Namuna o'quvchi appdagi "Darsni nega qoldirdingiz?" so'rovnomasiga javob
+// berganda shu yerga yoziladi — shu sana uchun `findRecentUnexplainedAbsence`
+// endi qayta so'ramaydi.
+async function submitAbsenceReason(lessonDate, reason) {
+    const dateStr = String(lessonDate || '').trim();
+    const trimmedReason = String(reason || '').trim();
+    if (!dateStr || !trimmedReason) throw new Error("Sana va sabab yuborilishi shart");
+    const reasons = await getJsonData('absenceReasons');
+    reasons[dateStr] = trimmedReason;
+    await tx(async (client) => {
+        await saveJsonData(client, 'absenceReasons', reasons);
+    });
 }
 
 // Namuna o'quvchi (va CRM'ning oldindan ko'rish oynasi) uchun haqiqiy,
@@ -1090,27 +1218,145 @@ function fillNotificationTemplate(template, vars) {
 async function getComputedDemoNotifications() {
     const rules = await getNotificationRules();
     const notifications = [];
+    const student = await getDemoStudent();
 
-    const lessonRule = rules.lessonReminder;
-    if (lessonRule?.enabled) {
-        const schedule = await getDemoStudentSchedule();
-        if (schedule.startsAt) {
-            const minutesUntil = (new Date(schedule.startsAt).getTime() - Date.now()) / 60000;
-            if (minutesUntil >= 0 && minutesUntil <= (lessonRule.minutesBefore || 60)) {
+    // ── Jonli dars sanog'i (7 ta chegara) ───────────────────────────────────
+    const schedule = await getDemoStudentSchedule();
+    if (schedule.startsAt) {
+        const minutesUntil = (new Date(schedule.startsAt).getTime() - Date.now()) / 60000;
+        for (const { id, minutes } of LESSON_COUNTDOWN_RULES) {
+            const rule = rules[id];
+            if (!rule?.enabled) continue;
+            const windowLow = minutes === 0 ? -COUNTDOWN_TOLERANCE_MINUTES : minutes - COUNTDOWN_TOLERANCE_MINUTES;
+            const windowHigh = minutes === 0 ? COUNTDOWN_TOLERANCE_MINUTES : minutes;
+            if (minutesUntil >= windowLow && minutesUntil <= windowHigh) {
                 const vars = {
                     course: schedule.topic || 'Dars',
                     time: new Date(schedule.startsAt).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }),
                 };
                 notifications.push({
-                    id: 'auto-lesson-' + schedule.startsAt,
+                    id: 'auto-' + id + '-' + schedule.startsAt,
                     category: 'lessons', source: 'auto',
-                    title: fillNotificationTemplate(lessonRule.title, vars),
-                    message: fillNotificationTemplate(lessonRule.message, vars),
+                    title: fillNotificationTemplate(rule.title, vars),
+                    message: fillNotificationTemplate(rule.message, vars),
+                    date: new Date().toISOString(),
+                    unread: true,
+                });
+                break; // faqat eng yaqin chegara ko'rsatiladi, bir vaqtda bir nechtasi emas
+            }
+        }
+    }
+
+    // ── Ustozni baholash (dars tugagach) ────────────────────────────────────
+    if (rules.teacherRatingPrompt?.enabled) {
+        const { grades } = await getDemoStudentGrades();
+        const unrated = grades.find(g => !g.studentRatingOfTeacher);
+        if (unrated) {
+            notifications.push({
+                id: 'auto-teacherRatingPrompt-' + unrated.date,
+                category: 'lessons', source: 'auto',
+                title: rules.teacherRatingPrompt.title,
+                message: rules.teacherRatingPrompt.message,
+                date: new Date().toISOString(),
+                unread: true,
+                interactive: 'rate-teacher',
+            });
+        }
+    }
+
+    // ── Bugun videodars kuni (soat 09:00 dan) ───────────────────────────────
+    if (rules.videoLessonMorning?.enabled && student?.lessonDayOfWeek != null) {
+        const teacherRow = await q1('SELECT schedule_pattern FROM teachers WHERE id = $1', [student.teacherId]);
+        const livePattern = teacherRow?.schedule_pattern || 'mwf';
+        const now = tashkentNow();
+        if (now.getUTCHours() >= 9 && isVideoLessonDayToday(livePattern)) {
+            notifications.push({
+                id: 'auto-videoLessonMorning-' + now.toISOString().slice(0, 10),
+                category: 'lessons', source: 'auto',
+                title: rules.videoLessonMorning.title,
+                message: rules.videoLessonMorning.message,
+                date: new Date().toISOString(),
+                unread: true,
+            });
+        }
+    }
+
+    // ── Uyga vazifa tugallanmagan (09:00-22:00) ─────────────────────────────
+    if (rules.homeworkIncomplete?.enabled) {
+        const now = tashkentNow();
+        if (now.getUTCHours() >= 9 && now.getUTCHours() < 22) {
+            const todayStr = now.toISOString().slice(0, 10);
+            const activity = await getDemoStudentActivity();
+            const todaysHomework = activity.filter(a => a.type === 'homework' && a.time.slice(0, 10) === todayStr);
+            const completedToday = todaysHomework.some(a => (a.scorePercent || 0) >= 100);
+            if (!completedToday) {
+                notifications.push({
+                    id: 'auto-homeworkIncomplete-' + todayStr,
+                    category: 'lessons', source: 'auto',
+                    title: rules.homeworkIncomplete.title,
+                    message: rules.homeworkIncomplete.message,
                     date: new Date().toISOString(),
                     unread: true,
                 });
             }
         }
+    }
+
+    // ── Yakshanba bonus dars taklifi (12:00 dan) ────────────────────────────
+    if (rules.bonusLessonSunday?.enabled) {
+        const now = tashkentNow();
+        if (now.getUTCDay() === 0 && now.getUTCHours() >= 12) {
+            notifications.push({
+                id: 'auto-bonusLessonSunday-' + now.toISOString().slice(0, 10),
+                category: 'news', source: 'auto',
+                title: rules.bonusLessonSunday.title,
+                message: rules.bonusLessonSunday.message,
+                date: new Date().toISOString(),
+                unread: true,
+            });
+        }
+    }
+
+    // ── To'lov qarzdorligi ───────────────────────────────────────────────────
+    if (rules.paymentDebt?.enabled && student) {
+        const debtRow = await q1('SELECT COALESCE(SUM(debt),0) AS total FROM payments WHERE student_id = $1', [student.id]);
+        if (debtRow && Number(debtRow.total) > 0) {
+            notifications.push({
+                id: 'auto-paymentDebt-' + student.id,
+                category: 'news', source: 'auto',
+                title: rules.paymentDebt.title,
+                message: rules.paymentDebt.message,
+                date: new Date().toISOString(),
+                unread: true,
+            });
+        }
+    }
+
+    // ── Dars qoldirish sababi so'rovnomasi ──────────────────────────────────
+    if (rules.absenceSurvey?.enabled && student) {
+        const absenceDate = await findRecentUnexplainedAbsence(student);
+        if (absenceDate) {
+            notifications.push({
+                id: 'auto-absenceSurvey-' + absenceDate,
+                category: 'lessons', source: 'auto',
+                title: rules.absenceSurvey.title,
+                message: rules.absenceSurvey.message,
+                date: new Date().toISOString(),
+                unread: true,
+                interactive: 'attendance',
+                lessonDate: absenceDate,
+            });
+        }
+    }
+
+    // ── Tizim voqealari + qo'lda yuborilgan xabarlar ────────────────────────
+    const system = await getJsonData('systemNotifications');
+    for (const n of system) {
+        notifications.push({
+            id: n.id, category: 'news', source: 'system',
+            title: n.title, message: n.message,
+            date: n.createdAt, unread: true,
+        });
     }
 
     const manual = await getManualNotifications();
@@ -1555,6 +1801,7 @@ module.exports = {
     getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage,
     getNotificationRules, saveNotificationRules,
     getManualNotifications, addManualNotification, deleteManualNotification,
+    addSystemNotification, submitAbsenceReason,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     addDemoShopOrder, getDemoShopOrders,

@@ -3261,39 +3261,79 @@ function renderMobileNotifAutoTab(container) {
     });
 }
 
+// 142-ish: 17 ta avtomatik eslatma qoidasi, 3 guruhga bo'lingan holda
+// ko'rsatiladi. Har birining yoqish/o'chirish, sarlavha va matnini CRM'dan
+// tahrirlash mumkin — barchasi bitta "Barchasini saqlash" tugmasi bilan
+// birgalikda yuboriladi.
+const NOTIF_RULE_GROUPS = [
+    {
+        label: 'Jonli dars eslatmalari',
+        rules: [
+            { id: 'lessonReminder120', label: '2 soat qolganda' },
+            { id: 'lessonReminder60', label: '1 soat qolganda' },
+            { id: 'lessonReminder30', label: '30 daqiqa qolganda' },
+            { id: 'lessonReminder15', label: '15 daqiqa qolganda' },
+            { id: 'lessonReminder10', label: '10 daqiqa qolganda' },
+            { id: 'lessonReminder5', label: '5 daqiqa qolganda' },
+            { id: 'lessonReminder0', label: 'Dars boshlanganda' },
+            { id: 'teacherRatingPrompt', label: 'Dars tugagach ustozni baholash' },
+            { id: 'absenceSurvey', label: 'Dars qoldirilganda sabab so\'rash' },
+        ],
+    },
+    {
+        label: 'Kunlik eslatmalar',
+        rules: [
+            { id: 'videoLessonMorning', label: 'Videodars kuni ertalab 09:00' },
+            { id: 'homeworkIncomplete', label: "Uyga vazifa tugallanmagan (09:00-22:00)" },
+            { id: 'bonusLessonSunday', label: 'Yakshanba bonus dars taklifi (12:00)' },
+            { id: 'paymentDebt', label: "To'lov qarzdorligi" },
+        ],
+    },
+    {
+        label: 'Voqea asosidagi eslatmalar',
+        rules: [
+            { id: 'examPassed', label: "Imtihondan o'tganda" },
+            { id: 'deliveryUpdated', label: 'Yetkazib berish holati yangilanganda' },
+            { id: 'muloqotMessage', label: "Ma'muriyatdan xabar kelganda" },
+            { id: 'communityLike', label: "Hamjamiyatda post yoqtirilganda" },
+        ],
+    },
+];
+
 function _renderNotifAutoForm(container, rules) {
-    const rule = rules.lessonReminder || { enabled: true, minutesBefore: 60, title: '', message: '' };
+    const rowHtml = (ruleId, label) => {
+        const rule = rules[ruleId] || { enabled: true, title: '', message: '' };
+        return `
+        <div style="padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--surface)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <input type="checkbox" data-rule-enabled="${ruleId}" ${rule.enabled ? 'checked' : ''} style="width:16px;height:16px">
+                <label style="margin:0;font-weight:600;font-size:13px;color:var(--text)">${escapeHtml(label)}</label>
+            </div>
+            <input type="text" data-rule-title="${ruleId}" class="form-control" style="margin-bottom:6px" placeholder="Sarlavha" value="${escapeHtml(rule.title || '')}">
+            <textarea data-rule-message="${ruleId}" class="form-control" rows="2" placeholder="Matn">${escapeHtml(rule.message || '')}</textarea>
+        </div>`;
+    };
+
     container.innerHTML = `
-        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:12px">Dars boshlanishidan oldin eslatma</div>
-        <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-            <input type="checkbox" id="notifAutoEnabled" ${rule.enabled ? 'checked' : ''} style="width:16px;height:16px">
-            <label for="notifAutoEnabled" style="margin:0">Yoqilgan</label>
-        </div>
-        <div class="form-group">
-            <label>Necha daqiqa oldin</label>
-            <input type="number" id="notifAutoMinutes" class="form-control" min="1" value="${Number(rule.minutesBefore) || 60}">
-        </div>
-        <div class="form-group">
-            <label>Sarlavha</label>
-            <input type="text" id="notifAutoTitle" class="form-control" value="${escapeHtml(rule.title || '')}">
-        </div>
-        <div class="form-group">
-            <label>Matn ({course} va {time} avtomatik almashtiriladi)</label>
-            <textarea id="notifAutoMessage" class="form-control" rows="3">${escapeHtml(rule.message || '')}</textarea>
-        </div>
-        <button type="button" class="btn-primary-sm" id="notifAutoSaveBtn">Saqlash</button>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">{course} va {time} kabi belgilar avtomatik almashtiriladi (qo'llaniladigan joyda).</div>
+        ${NOTIF_RULE_GROUPS.map(group => `
+            <div style="font-weight:700;font-size:14px;color:var(--text);margin:16px 0 10px">${escapeHtml(group.label)}</div>
+            ${group.rules.map(r => rowHtml(r.id, r.label)).join('')}
+        `).join('')}
+        <button type="button" class="btn-primary-sm" id="notifAutoSaveBtn" style="margin-top:8px">Barchasini saqlash</button>
         <span id="notifAutoSavedMsg" style="display:none;margin-left:10px;font-size:12px;color:#22c55e">Saqlandi ✓</span>`;
 
     document.getElementById('notifAutoSaveBtn').addEventListener('click', () => {
-        const updatedRules = {
-            ...rules,
-            lessonReminder: {
-                enabled: document.getElementById('notifAutoEnabled').checked,
-                minutesBefore: Number(document.getElementById('notifAutoMinutes').value) || 60,
-                title: document.getElementById('notifAutoTitle').value.trim(),
-                message: document.getElementById('notifAutoMessage').value.trim(),
-            },
-        };
+        const updatedRules = { ...rules };
+        NOTIF_RULE_GROUPS.forEach(group => {
+            group.rules.forEach(({ id }) => {
+                updatedRules[id] = {
+                    enabled: container.querySelector(`[data-rule-enabled="${id}"]`).checked,
+                    title: container.querySelector(`[data-rule-title="${id}"]`).value.trim(),
+                    message: container.querySelector(`[data-rule-message="${id}"]`).value.trim(),
+                };
+            });
+        });
         apiSaveNotificationRules(updatedRules).then(saved => {
             rules = saved;
             const msg = document.getElementById('notifAutoSavedMsg');
