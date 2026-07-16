@@ -398,9 +398,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadow.card,
-  },
+    // Veb'da so'zni sudrab tashlashga harakat qilinganda brauzer standart
+    // matn tanlash (text-selection) xatti-harakatini boshlab yuborishi va
+    // PanResponder'ning tortish (drag) jestini "o'g'irlab ketishi" mumkin —
+    // shuning uchun chip matnini tanlab bo'lmaydigan qilib qo'yamiz.
+    userSelect: 'none',
+    touchAction: 'none',
+  } as any,
   chipGhost: { opacity: 0.25 },
-  chipText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.purple },
+  chipText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.purple, userSelect: 'none' } as any,
   dragOverlay: {
     position: 'absolute',
     minWidth: 100,
