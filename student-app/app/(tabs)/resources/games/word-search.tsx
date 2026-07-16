@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -7,39 +7,72 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
+import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
-const GRID_SIZE = 8;
-const WORDS_TO_FIND = ['CAT', 'DOG', 'SUN', 'RAIN', 'BOOK'];
+const MIN_GRID_SIZE = 8;
+const WORD_COUNT = 5;
+const MIN_POOL_SIZE = 3;
+// O'quvchining lug'atida mos so'z yetarli topilmasa ishlatiladigan zaxira.
+const FALLBACK_WORDS = ['CAT', 'DOG', 'SUN', 'RAIN', 'BOOK'];
 
 type Placement = { word: string; row: number; col: number; dir: [number, number] };
-const PLACEMENTS: Placement[] = [
-  { word: 'CAT', row: 0, col: 0, dir: [0, 1] },
-  { word: 'DOG', row: 0, col: 5, dir: [1, 0] },
-  { word: 'SUN', row: 3, col: 2, dir: [0, 1] },
-  { word: 'RAIN', row: 4, col: 0, dir: [1, 0] },
-  { word: 'BOOK', row: 6, col: 3, dir: [0, 1] },
-];
-
 type Cell = { row: number; col: number };
 
-function buildGrid(): string[][] {
-  const grid: string[][] = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(''));
-  PLACEMENTS.forEach(({ word, row, col, dir }) => {
+const DIRECTIONS: [number, number][] = [
+  [0, 1], // o'ngga
+  [1, 0], // pastga
+];
+
+// Berilgan so'zlar ro'yxatidan haqiqiy grid (harflar jadvali) va har bir
+// so'zning joylashuvini quradi — tasodifiy joy/yo'nalish tanlab, band
+// katakchalarga to'qnashsa qayta urinib ko'radi. Joylashtirib bo'lmagan
+// so'zlar (kamdan-kam, joy yetishmasa) o'yindan chetlab o'tiladi.
+function buildGrid(words: string[]): { grid: string[][]; placed: Placement[] } {
+  const longest = Math.max(...words.map((w) => w.length), 0);
+  const size = Math.max(MIN_GRID_SIZE, longest);
+  const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(''));
+  const placed: Placement[] = [];
+
+  const canPlace = (word: string, row: number, col: number, dir: [number, number]) => {
     for (let i = 0; i < word.length; i++) {
-      grid[row + dir[0] * i][col + dir[1] * i] = word[i];
+      const r = row + dir[0] * i;
+      const c = col + dir[1] * i;
+      if (r >= size || c >= size) return false;
+      const existing = grid[r][c];
+      if (existing && existing !== word[i]) return false;
     }
-  });
+    return true;
+  };
+
+  for (const word of words) {
+    let ok = false;
+    for (let attempt = 0; attempt < 60 && !ok; attempt++) {
+      const dir = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+      const maxRow = dir[0] === 1 ? size - word.length : size - 1;
+      const maxCol = dir[1] === 1 ? size - word.length : size - 1;
+      if (maxRow < 0 || maxCol < 0) continue;
+      const row = Math.floor(Math.random() * (maxRow + 1));
+      const col = Math.floor(Math.random() * (maxCol + 1));
+      if (!canPlace(word, row, col, dir)) continue;
+      for (let i = 0; i < word.length; i++) {
+        grid[row + dir[0] * i][col + dir[1] * i] = word[i];
+      }
+      placed.push({ word, row, col, dir });
+      ok = true;
+    }
+  }
+
   const filler = 'ETAOINSHRDLUCMFWYPVBGKJQXZ';
   let fi = 0;
-  for (let r = 0; r < GRID_SIZE; r++) {
-    for (let c = 0; c < GRID_SIZE; c++) {
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       if (!grid[r][c]) {
         grid[r][c] = filler[fi % filler.length];
         fi++;
       }
     }
   }
-  return grid;
+  return { grid, placed };
 }
 
 function getPath(a: Cell, b: Cell): Cell[] | null {
@@ -62,13 +95,37 @@ function cellKey(c: Cell) {
 }
 
 export default function WordSearchGame() {
-  const [grid] = useState(buildGrid);
+  const [board, setBoard] = useState<{ grid: string[][]; words: string[] } | null>(null);
   const [selection, setSelection] = useState<Cell | null>(null);
   const [foundCells, setFoundCells] = useState<Set<string>>(new Set());
   const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
   const [flash, setFlash] = useState<Set<string>>(new Set());
 
-  const won = foundWords.size === WORDS_TO_FIND.length;
+  useEffect(() => {
+    let cancelled = false;
+    getAccumulatedVocabulary().then((vocab) => {
+      if (cancelled) return;
+      const pool = Array.from(
+        new Set(
+          vocab
+            .map((w) => w.english.toUpperCase())
+            .filter((w) => /^[A-Z]+$/.test(w) && w.length >= 3 && w.length <= 8)
+        )
+      );
+      const source = pool.length >= MIN_POOL_SIZE ? pool : FALLBACK_WORDS;
+      const shuffled = [...source].sort(() => Math.random() - 0.5);
+      const picked = shuffled.slice(0, WORD_COUNT).sort((a, b) => b.length - a.length);
+      const { grid, placed } = buildGrid(picked);
+      setBoard({ grid, words: placed.map((p) => p.word) });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const grid = board?.grid ?? [];
+  const WORDS_TO_FIND = board?.words ?? [];
+  const won = board !== null && foundWords.size === WORDS_TO_FIND.length;
 
   const handleTap = (cell: Cell) => {
     if (won) return;
@@ -110,6 +167,17 @@ export default function WordSearchGame() {
     setFoundWords(new Set());
     setFlash(new Set());
   };
+
+  if (!board) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <ScreenHeader title="So'ztopar" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -167,6 +235,7 @@ const CELL_SIZE = 38;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, marginBottom: 16 },
   wordChip: {
     backgroundColor: theme.colors.surface,

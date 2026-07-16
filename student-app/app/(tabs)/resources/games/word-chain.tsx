@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -8,35 +8,54 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
+import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
-const WORD_BANK = [
+// O'quvchining lug'ati juda kichik bo'lgan (yoki hali internetdan yuklanmagan)
+// holatlar uchun zaxira so'zlar ro'yxati.
+const FALLBACK_WORD_BANK = [
   'apple', 'elephant', 'tiger', 'rabbit', 'tomato', 'orange', 'egg', 'grape', 'eagle', 'ant',
   'nest', 'table', 'engine', 'ear', 'rain', 'nose', 'ever', 'river', 'rope', 'exit',
   'tea', 'apron', 'note', 'evening', 'garden', 'name', 'east', 'time', 'echo', 'ocean',
   'nut', 'toy', 'yellow', 'window', 'water', 'road', 'day', 'yard', 'door', 'red',
   'dog', 'game', 'egg', 'gold', 'dream', 'moon', 'nine', 'earth', 'hand', 'dance',
 ];
-
-const START_WORD = 'radio';
+const MIN_BANK_SIZE = 5;
 
 export default function WordChainGame() {
-  const [chain, setChain] = useState<string[]>([START_WORD]);
+  const [wordBank, setWordBank] = useState<string[] | null>(null);
+  const [chain, setChain] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
 
-  const lastWord = chain[chain.length - 1];
+  useEffect(() => {
+    let cancelled = false;
+    getAccumulatedVocabulary().then((words) => {
+      if (cancelled) return;
+      const bank = Array.from(
+        new Set(words.map((w) => w.english.toLowerCase()).filter((w) => /^[a-z]+$/.test(w)))
+      );
+      const finalBank = bank.length >= MIN_BANK_SIZE ? bank : FALLBACK_WORD_BANK;
+      setWordBank(finalBank);
+      setChain([finalBank[Math.floor(Math.random() * finalBank.length)]]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const lastWord = chain[chain.length - 1] ?? '';
   const requiredLetter = lastWord.slice(-1).toUpperCase();
 
   const submit = () => {
     const word = input.trim().toLowerCase();
-    if (!word) return;
+    if (!word || !wordBank) return;
 
     if (word[0] !== lastWord.slice(-1).toLowerCase()) {
       setError(`So'z "${requiredLetter}" harfi bilan boshlanishi kerak`);
       return;
     }
-    if (!WORD_BANK.includes(word)) {
+    if (!wordBank.includes(word)) {
       setError("Bu so'z ro'yxatda yo'q, boshqasini urinib ko'ring");
       return;
     }
@@ -52,13 +71,25 @@ export default function WordChainGame() {
   };
 
   const restart = () => {
-    setChain([START_WORD]);
+    if (!wordBank) return;
+    setChain([wordBank[Math.floor(Math.random() * wordBank.length)]]);
     setInput('');
     setError(null);
     setFinished(false);
   };
 
   const score = chain.length - 1;
+
+  if (!wordBank || chain.length === 0) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <ScreenHeader title="So'nggi harf" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -121,6 +152,7 @@ export default function WordChainGame() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scoreRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -18,14 +18,16 @@ import {
   BATTLE_WIN_COINS,
   BattleOpponentType,
   BattleWord,
-  battleWords,
+  battleWords as FALLBACK_BATTLE_WORDS,
 } from '@/data/mock';
 import { addCoins, useCoins } from '@/services/coinsStore';
 import { addLightning, useLightning } from '@/services/lightningStore';
+import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const RANDOM_NAMES = ['Aziz', 'Malika', 'Diyor', 'Kamola', 'Sardor', 'Nilufar', 'Javlon', 'Zarina'];
 const RANDOM_AVATARS = ['🧑', '👩', '🧑‍🦱', '👨‍🦰'];
 const OPTION_COLORS = ['#4F8CFF', '#F472B6', '#FBBF24', '#34D399'];
+const MIN_POOL_SIZE = 4;
 
 type Phase = 'select' | 'matching' | 'playing' | 'result';
 
@@ -36,6 +38,24 @@ function shuffle<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// O'quvchi hozirgacha ochgan darslardagi so'zlardan raund uchun so'z va
+// 4 ta tanlov (to'g'ri tarjima + boshqa so'zlardan 3 ta noto'g'ri variant) quradi.
+function buildBattleWords(vocab: { english: string; translation: string }[]): BattleWord[] {
+  const uniq = new Map<string, string>();
+  for (const w of vocab) {
+    const key = w.english.toLowerCase();
+    if (!uniq.has(key)) uniq.set(key, w.translation);
+  }
+  const pool = Array.from(uniq.entries());
+  if (pool.length < MIN_POOL_SIZE) return FALLBACK_BATTLE_WORDS;
+
+  return pool.map(([word, translation], i) => {
+    const others = pool.filter((_, j) => j !== i).map(([, t]) => t);
+    const distractors = shuffle(others).slice(0, 3);
+    return { word, translation, options: shuffle([translation, ...distractors]) };
+  });
 }
 
 export default function BattleScreen() {
@@ -59,8 +79,22 @@ export default function BattleScreen() {
   const botTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nextRoundTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roundLockedRef = useRef(false);
+  // O'quvchi ochgan darslardagi so'zlardan quriladigan raund havzasi —
+  // ekran ochilishi bilan oldindan yuklab qo'yiladi, shunda "o'yin boshlash"
+  // bosilganda kutish shart bo'lmaydi.
+  const battleWordsRef = useRef<BattleWord[]>(FALLBACK_BATTLE_WORDS);
 
   const currentWord = roundWords[round];
+
+  useEffect(() => {
+    let cancelled = false;
+    getAccumulatedVocabulary().then((words) => {
+      if (!cancelled) battleWordsRef.current = buildBattleWords(words);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -82,7 +116,7 @@ export default function BattleScreen() {
     }
     setPhase('matching');
     setTimeout(() => {
-      setRoundWords(shuffle(battleWords).slice(0, BATTLE_ROUNDS));
+      setRoundWords(shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS));
       setRound(0);
       setPlayerScore(0);
       setOpponentScore(0);

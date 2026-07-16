@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -7,10 +7,13 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
+import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
-const WORDS = ['apple', 'grape', 'house', 'water', 'plant', 'chair', 'brave', 'smile', 'dance', 'light'];
+// O'quvchining lug'atida aynan 5 harfli so'z yetarli topilmasa ishlatiladigan zaxira.
+const FALLBACK_WORDS = ['apple', 'grape', 'house', 'water', 'plant', 'chair', 'brave', 'smile', 'dance', 'light'];
 const WORD_LENGTH = 5;
 const MAX_TRIES = 6;
+const MIN_POOL_SIZE = 3;
 
 type LetterStatus = 'correct' | 'present' | 'absent';
 
@@ -36,18 +39,40 @@ function evaluateGuess(guess: string, answer: string): LetterStatus[] {
   return result;
 }
 
-function pickAnswer() {
-  return WORDS[Math.floor(Math.random() * WORDS.length)];
+function pickAnswer(pool: string[]) {
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 export default function MysteryWordGame() {
-  const [answer, setAnswer] = useState(pickAnswer);
+  const [wordPool, setWordPool] = useState<string[] | null>(null);
+  const [answer, setAnswer] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<{ word: string; statuses: LetterStatus[] }[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [gameOver, setGameOver] = useState<'won' | 'lost' | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    getAccumulatedVocabulary().then((words) => {
+      if (cancelled) return;
+      const pool = Array.from(
+        new Set(
+          words
+            .map((w) => w.english.toLowerCase())
+            .filter((w) => w.length === WORD_LENGTH && /^[a-z]+$/.test(w))
+        )
+      );
+      const finalPool = pool.length >= MIN_POOL_SIZE ? pool : FALLBACK_WORDS;
+      setWordPool(finalPool);
+      setAnswer(pickAnswer(finalPool));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const submit = () => {
+    if (!answer) return;
     const word = input.trim().toLowerCase();
     if (word.length !== WORD_LENGTH || !/^[a-z]+$/.test(word)) {
       setError(`${WORD_LENGTH} harfli so'z kiriting`);
@@ -69,7 +94,8 @@ export default function MysteryWordGame() {
   };
 
   const restart = () => {
-    setAnswer(pickAnswer());
+    if (!wordPool) return;
+    setAnswer(pickAnswer(wordPool));
     setGuesses([]);
     setInput('');
     setError(null);
@@ -78,6 +104,17 @@ export default function MysteryWordGame() {
 
   const statusColor = (s: LetterStatus) =>
     s === 'correct' ? theme.colors.success : s === 'present' ? theme.colors.warning : theme.colors.textLight;
+
+  if (!answer) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <ScreenHeader title="Sirli So'z" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -141,6 +178,7 @@ export default function MysteryWordGame() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   board: { alignItems: 'center', paddingTop: 12, gap: 6 },
   row: { flexDirection: 'row', gap: 6 },
   cell: { width: 46, height: 46, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
