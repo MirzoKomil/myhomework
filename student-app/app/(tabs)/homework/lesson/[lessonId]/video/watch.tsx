@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MaterialsList } from '@/components/ui/MaterialsList';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
 import { theme } from '@/constants/theme';
@@ -102,8 +101,6 @@ export default function WatchVideoScreen() {
           <Text style={styles.sectionLabel}>Konspekt</Text>
           <Text style={styles.body}>{content.konspekt}</Text>
         </View>
-
-        {materials && <MaterialsList files={materials.files} />}
       </ScrollView>
 
       <Pressable style={styles.doneBtn} onPress={() => router.back()}>
