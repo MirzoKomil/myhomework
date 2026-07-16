@@ -764,8 +764,10 @@ function switchMobileSection(section) {
     const darsSubHeader = document.getElementById('mobileDarsSubHeader');
     if (darsSubHeader) darsSubHeader.style.display = section === 'edit' && MOBILE_DARS_GROUP.includes(_mobileSubSection) ? '' : 'none';
     const openBtn = document.getElementById('mobileOpenAppBtn');
+    const openWebAppBtn = document.getElementById('mobileOpenWebAppBtn');
     const langTabs = document.getElementById('mobileLangTabs');
     if (openBtn) openBtn.style.display = section === 'view' ? '' : 'none';
+    if (openWebAppBtn) openWebAppBtn.style.display = section === 'view' ? '' : 'none';
     if (langTabs) langTabs.style.display = section === 'view' ? 'none' : '';
     if (section === 'edit') renderMobileEditPanel();
     else if (section === 'stats') renderMobileStatsPanel();

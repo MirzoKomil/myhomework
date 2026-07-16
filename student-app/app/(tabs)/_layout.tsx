@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { theme } from '@/constants/theme';
-import { WEB_APP_MAX_WIDTH } from '@/constants/web';
+import { DESKTOP_BREAKPOINT, DESKTOP_CONTENT_MAX_WIDTH, DESKTOP_SIDEBAR_WIDTH, WEB_APP_MAX_WIDTH } from '@/constants/web';
 import { useColorScheme } from '@/components/useColorScheme';
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
@@ -25,44 +25,60 @@ function TabIcon({ name, color, focused }: { name: TabIconName; color: string; f
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  // 151-ish: keng brauzer oynasida (kompyuterdan kirilganda) pastki
+  // tab-navigatsiya chap sidebar'ga aylanadi — Expo Router'ning Tabs
+  // komponenti buni `tabBarPosition: 'left'` orqali tayyor qo'llab-
+  // quvvatlaydi, alohida navigator yozish shart emas.
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: isDesktop,
+        tabBarPosition: isDesktop ? 'left' : 'bottom',
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.tabIconDefault,
-        tabBarStyle: [styles.tabBar, Platform.OS === 'web' && styles.tabBarWeb],
-        sceneStyle: Platform.OS === 'web' ? styles.sceneWeb : undefined,
+        tabBarStyle: [
+          styles.tabBar,
+          Platform.OS === 'web' && !isDesktop && styles.tabBarWeb,
+          isDesktop && styles.tabBarDesktop,
+        ],
+        sceneStyle: Platform.OS === 'web' ? (isDesktop ? styles.sceneDesktop : styles.sceneWeb) : undefined,
       }}>
       <Tabs.Screen
         name="index"
         options={{
+          tabBarLabel: 'Bosh sahifa',
           tabBarIcon: ({ color, focused }) => <TabIcon name="home" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="homework"
         options={{
+          tabBarLabel: 'Darslar',
           tabBarIcon: ({ color, focused }) => <TabIcon name="school" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="resources"
         options={{
+          tabBarLabel: 'Resurslar',
           tabBarIcon: ({ color, focused }) => <TabIcon name="library" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
+          tabBarLabel: 'Muloqot',
           tabBarIcon: ({ color, focused }) => <TabIcon name="chatbubbles" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
+          tabBarLabel: 'Profil',
           tabBarIcon: ({ color, focused }) => <TabIcon name="person" color={color} focused={focused} />,
         }}
       />
@@ -98,8 +114,26 @@ const styles = StyleSheet.create({
     maxWidth: WEB_APP_MAX_WIDTH,
     zIndex: 100,
   },
+  // 151-ish: sidebar — Tabs `tabBarPosition:'left'` bilan bu elementni
+  // oddiy flex-qatordagi chap "ustun" sifatida render qiladi (fixed emas),
+  // shuning uchun kontent maydoni tabiiy ravishda qolgan kenglikni oladi.
+  tabBarDesktop: {
+    width: DESKTOP_SIDEBAR_WIDTH,
+    height: '100%',
+    borderTopWidth: 0,
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.border,
+    paddingTop: 28,
+    paddingBottom: 16,
+  },
   sceneWeb: {
     paddingBottom: TAB_BAR_HEIGHT,
+    minHeight: '100dvh',
+  },
+  sceneDesktop: {
+    width: '100%',
+    maxWidth: DESKTOP_CONTENT_MAX_WIDTH,
+    marginHorizontal: 'auto',
     minHeight: '100dvh',
   },
   activeIcon: {

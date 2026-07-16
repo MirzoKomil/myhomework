@@ -2,7 +2,7 @@ import { ScrollViewStyleReset } from 'expo-router/html';
 import type { ReactNode } from 'react';
 
 import { theme } from '@/constants/theme';
-import { WEB_APP_MAX_WIDTH } from '@/constants/web';
+import { DESKTOP_BREAKPOINT, WEB_APP_MAX_WIDTH } from '@/constants/web';
 import { webFontFaces } from '@/constants/webFonts';
 
 export default function Root({ children }: { children: ReactNode }) {
@@ -59,12 +59,29 @@ body {
 #root,
 body > div:first-child {
   width: 100%;
-  max-width: ${WEB_APP_MAX_WIDTH}px;
   min-height: 100dvh;
   background: ${theme.colors.bg};
   position: relative;
-  box-shadow: 0 16px 64px rgba(26, 29, 46, 0.14);
   overflow-x: hidden;
+}
+
+/* Kompyuter kengligida (${DESKTOP_BREAKPOINT}px+) ilova telefon maketi
+   sifatida emas, to'liq kengaygan desktop ilova sifatida ochiladi —
+   ichki sidebar/kontent kengligini (tabs)/_layout.tsx o'zi boshqaradi. */
+@media (min-width: ${DESKTOP_BREAKPOINT}px) {
+  #root,
+  body > div:first-child {
+    max-width: none;
+  }
+}
+
+@media (max-width: ${DESKTOP_BREAKPOINT - 1}px) {
+  #root,
+  body > div:first-child {
+    max-width: ${WEB_APP_MAX_WIDTH}px;
+    margin: 0 auto;
+    box-shadow: 0 16px 64px rgba(26, 29, 46, 0.14);
+  }
 }
 
 @media (max-width: ${WEB_APP_MAX_WIDTH}px) {

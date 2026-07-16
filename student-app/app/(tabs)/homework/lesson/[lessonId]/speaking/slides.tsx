@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -15,6 +14,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,13 +22,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialsList } from '@/components/ui/MaterialsList';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
+import { DESKTOP_CONTENT_MAX_WIDTH } from '@/constants/web';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { useAvatarUri } from '@/services/avatarStore';
 import { fetchMobileContent, getLessonMaterials, LessonMaterials } from '@/services/contentApi';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
-
-const { width } = Dimensions.get('window');
 
 type Comment = { id: string; name: string; text: string; time: string; me?: boolean };
 
@@ -40,6 +39,12 @@ const MOCK_COMMENTS: Comment[] = [
 
 export default function SlidesScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  // 151-ish: avval modul darajasida bir marta o'lchanardi (oyna kengligi
+  // o'zgarsa yangilanmasdi) va desktop rejimida haqiqiy ko'rinadigan tor
+  // ustundan kattaroq bo'lib, slaydlar chetga chiqib ketardi — endi reaktiv
+  // va desktop kontent kengligiga cheklangan.
+  const { width: windowWidth } = useWindowDimensions();
+  const width = Math.min(windowWidth, DESKTOP_CONTENT_MAX_WIDTH);
   const [content, setContent] = useState<LessonContent | null>(null);
   const [materials, setMaterials] = useState<LessonMaterials | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
