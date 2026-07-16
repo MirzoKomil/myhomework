@@ -546,6 +546,29 @@ export default function RoadmapScreen() {
     });
   }, [courseId]);
 
+  // Yakuniy (final) belgi — joriy dars kartasidagi kabi doimiy aylanuvchi
+  // tovlanish, LessonCard'dagi glowSpin bilan bir xil naqsh (91-123-qatorlar).
+  const finalGlowSpin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let cancelled = false;
+    let currentAnim: Animated.CompositeAnimation | null = null;
+    const runCycle = () => {
+      if (cancelled) return;
+      finalGlowSpin.setValue(0);
+      currentAnim = Animated.timing(finalGlowSpin, { toValue: 1, duration: 3000, easing: (t) => t, useNativeDriver: true });
+      currentAnim.start(({ finished }) => {
+        if (finished && !cancelled) runCycle();
+      });
+    };
+    runCycle();
+    return () => {
+      cancelled = true;
+      currentAnim?.stop();
+    };
+  }, [finalGlowSpin]);
+  const finalGlowRotate = finalGlowSpin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
   // Joriy dars — ochilgan darslarning eng oxirgisi (frontier), progress darajasidan qat'i nazar.
   const unlockedCount = lessons.filter((l) => !l.locked).length;
   const activeIndex = unlockedCount - 1;
@@ -653,10 +676,42 @@ export default function RoadmapScreen() {
             />
           )}
           <View style={ss.finalMilestone}>
-            <View style={ss.finalMilestoneCircle}>
-              <Text style={ss.finalMilestoneFlag}>🏁</Text>
-              <Text style={ss.finalMilestoneNum}>{total}</Text>
-              <Text style={ss.finalMilestoneSub}>Dars {total}</Text>
+            <View style={ss.finalGlowWrap}>
+              {Platform.OS === 'web' ? (
+                createElement(
+                  'div',
+                  {
+                    style: {
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      animation: 'mh-glow-spin 3s linear infinite',
+                    },
+                  },
+                  <LinearGradient
+                    colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                )
+              ) : (
+                <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: finalGlowRotate }] }]}>
+                  <LinearGradient
+                    colors={['transparent', 'transparent', '#C4B5FD', theme.colors.purple, '#C4B5FD', 'transparent', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+              )}
+              <View style={ss.finalGlowInner}>
+                <Text style={ss.finalMilestoneFlag}>🏁</Text>
+                <Text style={ss.finalMilestoneNum}>{total}</Text>
+                <Text style={ss.finalMilestoneSub}>Dars {total}</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -995,16 +1050,20 @@ const ss = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
-  finalMilestoneCircle: {
+  finalGlowWrap: {
     width: 88,
     height: 88,
     borderRadius: 44,
+    padding: 3,
+    overflow: 'hidden',
+    ...theme.shadow.card,
+  },
+  finalGlowInner: {
+    flex: 1,
+    borderRadius: 41,
     backgroundColor: '#EDE9FE',
-    borderWidth: 3,
-    borderColor: theme.colors.purple,
     alignItems: 'center',
     justifyContent: 'center',
-    ...theme.shadow.card,
   },
   finalMilestoneFlag: {
     fontSize: 18,
