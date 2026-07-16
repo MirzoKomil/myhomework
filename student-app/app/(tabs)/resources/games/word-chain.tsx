@@ -6,19 +6,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
-// O'quvchining lug'ati juda kichik bo'lgan (yoki hali internetdan yuklanmagan)
-// holatlar uchun zaxira so'zlar ro'yxati.
-const FALLBACK_WORD_BANK = [
-  'apple', 'elephant', 'tiger', 'rabbit', 'tomato', 'orange', 'egg', 'grape', 'eagle', 'ant',
-  'nest', 'table', 'engine', 'ear', 'rain', 'nose', 'ever', 'river', 'rope', 'exit',
-  'tea', 'apron', 'note', 'evening', 'garden', 'name', 'east', 'time', 'echo', 'ocean',
-  'nut', 'toy', 'yellow', 'window', 'water', 'road', 'day', 'yard', 'door', 'red',
-  'dog', 'game', 'egg', 'gold', 'dream', 'moon', 'nine', 'earth', 'hand', 'dance',
-];
+// So'z faqat o'quvchi hozircha o'rgangan ~25-75 so'zdan iborat lug'atga
+// cheklansa, zanjir tez-tez tiqilib qoladi (kerakli harf bilan boshlanadigan
+// so'z topilmay qoladi). Shuning uchun tekshiruv uchun ingliz tilidagi eng
+// ko'p ishlatiladigan 10 000 so'zdan iborat ro'yxat (commonEnglishWords.json)
+// bilan birlashtiriladi — cheklov deyarli yo'qoladi, boshlang'ich so'z esa
+// baribir o'quvchining o'z lug'atidan tanlanadi.
 const MIN_BANK_SIZE = 5;
 
 export default function WordChainGame() {
@@ -32,12 +30,11 @@ export default function WordChainGame() {
     let cancelled = false;
     getAccumulatedVocabulary().then((words) => {
       if (cancelled) return;
-      const bank = Array.from(
-        new Set(words.map((w) => w.english.toLowerCase()).filter((w) => /^[a-z]+$/.test(w)))
-      );
-      const finalBank = bank.length >= MIN_BANK_SIZE ? bank : FALLBACK_WORD_BANK;
+      const vocabWords = words.map((w) => w.english.toLowerCase()).filter((w) => /^[a-z]+$/.test(w));
+      const finalBank = Array.from(new Set([...vocabWords, ...COMMON_ENGLISH_WORDS]));
+      const startPool = vocabWords.length >= MIN_BANK_SIZE ? vocabWords : finalBank;
       setWordBank(finalBank);
-      setChain([finalBank[Math.floor(Math.random() * finalBank.length)]]);
+      setChain([startPool[Math.floor(Math.random() * startPool.length)]]);
     });
     return () => {
       cancelled = true;
