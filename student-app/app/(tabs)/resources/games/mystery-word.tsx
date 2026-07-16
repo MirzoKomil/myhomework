@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -14,6 +16,8 @@ const FALLBACK_WORDS = ['apple', 'grape', 'house', 'water', 'plant', 'chair', 'b
 const WORD_LENGTH = 5;
 const MAX_TRIES = 6;
 const MIN_POOL_SIZE = 3;
+const MAX_HINTS = 2;
+const RULES_SEEN_KEY = 'mh_mystery_word_rules_seen';
 
 type LetterStatus = 'correct' | 'present' | 'absent';
 
@@ -43,6 +47,59 @@ function pickAnswer(pool: string[]) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// O'yin qoidalarini va rang-belgilar ma'nosini tushuntiruvchi oyna —
+// birinchi marta ochilganda avtomatik chiqadi, keyin ham (i) tugmasi
+// orqali istalgan payt qayta ko'rish mumkin.
+function RulesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return (
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <View style={styles.rulesBackdrop}>
+        <View style={styles.rulesCard}>
+          <Pressable style={styles.rulesCloseBtn} onPress={onClose} hitSlop={10}>
+            <Ionicons name="close" size={22} color={theme.colors.textMuted} />
+          </Pressable>
+          <Text style={styles.rulesTitle}>Qanday o'ynash kerak?</Text>
+          <Text style={styles.rulesText}>
+            Yashirin {WORD_LENGTH} harfli inglizcha so'zni topish uchun sizda {MAX_TRIES} ta urinish bor. Har bir
+            urinishdan keyin harflar rangi javobga qanchalik yaqinligingizni ko'rsatadi:
+          </Text>
+
+          <View style={styles.rulesLegendRow}>
+            <View style={[styles.rulesLegendCell, { backgroundColor: theme.colors.textLight }]}>
+              <Text style={styles.rulesLegendLetter}>A</Text>
+            </View>
+            <Text style={styles.rulesLegendText}>Bu harf yashirin so'zda umuman yo'q.</Text>
+          </View>
+          <View style={styles.rulesLegendRow}>
+            <View style={[styles.rulesLegendCell, { backgroundColor: theme.colors.warning }]}>
+              <Text style={styles.rulesLegendLetter}>B</Text>
+            </View>
+            <Text style={styles.rulesLegendText}>So'zda bor, lekin noto'g'ri joyda.</Text>
+          </View>
+          <View style={styles.rulesLegendRow}>
+            <View style={[styles.rulesLegendCell, { backgroundColor: theme.colors.success }]}>
+              <Text style={styles.rulesLegendLetter}>C</Text>
+            </View>
+            <Text style={styles.rulesLegendText}>So'zda bor va aynan to'g'ri joyda.</Text>
+          </View>
+
+          <View style={styles.rulesHintNote}>
+            <Ionicons name="bulb" size={16} color="#B45309" />
+            <Text style={styles.rulesHintNoteText}>
+              Qiynalsangiz, tepadagi lampochka tugmasi orqali {MAX_HINTS} marta yordam so'rashingiz mumkin — u sizga
+              bitta harfning to'g'ri joyini ochib beradi.
+            </Text>
+          </View>
+
+          <Pressable style={styles.rulesConfirmBtn} onPress={onClose}>
+            <Text style={styles.rulesConfirmText}>Tushunarli</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function MysteryWordGame() {
   const [wordPool, setWordPool] = useState<string[] | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
@@ -50,6 +107,9 @@ export default function MysteryWordGame() {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [gameOver, setGameOver] = useState<'won' | 'lost' | null>(null);
+  const [hintsLeft, setHintsLeft] = useState(MAX_HINTS);
+  const [hints, setHints] = useState<{ index: number; letter: string }[]>([]);
+  const [showRules, setShowRules] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +130,33 @@ export default function MysteryWordGame() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(RULES_SEEN_KEY).then((seen) => {
+      if (cancelled) return;
+      if (!seen) {
+        setShowRules(true);
+        AsyncStorage.setItem(RULES_SEEN_KEY, '1');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const useHint = () => {
+    if (!answer || hintsLeft <= 0 || gameOver) return;
+    const alreadyHinted = new Set(hints.map((h) => h.index));
+    const revealable: number[] = [];
+    for (let i = 0; i < WORD_LENGTH; i++) {
+      if (!alreadyHinted.has(i)) revealable.push(i);
+    }
+    if (revealable.length === 0) return;
+    const idx = revealable[Math.floor(Math.random() * revealable.length)];
+    setHints((h) => [...h, { index: idx, letter: answer[idx] }]);
+    setHintsLeft((h) => h - 1);
+  };
 
   const submit = () => {
     if (!answer) return;
@@ -100,6 +187,8 @@ export default function MysteryWordGame() {
     setInput('');
     setError(null);
     setGameOver(null);
+    setHintsLeft(MAX_HINTS);
+    setHints([]);
   };
 
   const statusColor = (s: LetterStatus) =>
@@ -118,7 +207,38 @@ export default function MysteryWordGame() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <ScreenHeader title="Sirli So'z" showBack />
+      <ScreenHeader
+        title="Sirli So'z"
+        showBack
+        rightAction={
+          <View style={styles.headerActions}>
+            <Pressable
+              style={[styles.hintBtn, hintsLeft === 0 && styles.hintBtnDisabled]}
+              onPress={useHint}
+              disabled={hintsLeft === 0 || !!gameOver}
+              hitSlop={6}>
+              <Ionicons name="bulb" size={16} color={hintsLeft === 0 ? theme.colors.textLight : '#B45309'} />
+              <Text style={[styles.hintBtnText, hintsLeft === 0 && styles.hintBtnTextDisabled]}>{hintsLeft}</Text>
+            </Pressable>
+            <Pressable style={styles.infoBtn} onPress={() => setShowRules(true)} hitSlop={8}>
+              <Ionicons name="information-circle-outline" size={22} color={theme.colors.textMuted} />
+            </Pressable>
+          </View>
+        }
+      />
+
+      {hints.length > 0 && (
+        <View style={styles.hintsRow}>
+          {hints.map((h) => (
+            <View key={h.index} style={styles.hintChip}>
+              <Text style={styles.hintChipText}>
+                {h.index + 1}-harf: {h.letter.toUpperCase()}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={styles.board}>
         {guesses.map((g, gi) => (
           <View key={gi} style={styles.row}>
@@ -172,6 +292,8 @@ export default function MysteryWordGame() {
           <CelebrationOverlay visible={gameOver === 'won'} />
         </View>
       )}
+
+      <RulesModal visible={showRules} onClose={() => setShowRules(false)} />
     </SafeAreaView>
   );
 }
@@ -179,6 +301,55 @@ export default function MysteryWordGame() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hintBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.warningBg,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  hintBtnDisabled: { backgroundColor: theme.colors.surface },
+  hintBtnText: { fontFamily: theme.fonts.bold, fontSize: 13, color: '#B45309' },
+  hintBtnTextDisabled: { color: theme.colors.textLight },
+  infoBtn: { padding: 2 },
+  hintsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, marginTop: 4, justifyContent: 'center' },
+  hintChip: {
+    backgroundColor: theme.colors.warningBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  hintChipText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: '#B45309' },
+  rulesBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  rulesCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.radius.lg,
+    padding: 22,
+  },
+  rulesCloseBtn: { position: 'absolute', top: 14, right: 14, zIndex: 1 },
+  rulesTitle: { fontFamily: theme.fonts.extraBold, fontSize: 18, color: theme.colors.text, marginBottom: 10, paddingRight: 24 },
+  rulesText: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, lineHeight: 19, marginBottom: 16 },
+  rulesLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  rulesLegendCell: { width: 34, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  rulesLegendLetter: { fontFamily: theme.fonts.extraBold, fontSize: 15, color: '#fff' },
+  rulesLegendText: { flex: 1, fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.text },
+  rulesHintNote: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: theme.colors.warningBg,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 6,
+    marginBottom: 18,
+  },
+  rulesHintNoteText: { flex: 1, fontFamily: theme.fonts.medium, fontSize: 12, color: '#92400E', lineHeight: 17 },
+  rulesConfirmBtn: { backgroundColor: theme.colors.purple, borderRadius: theme.radius.sm, paddingVertical: 14, alignItems: 'center' },
+  rulesConfirmText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#fff' },
   board: { alignItems: 'center', paddingTop: 12, gap: 6 },
   row: { flexDirection: 'row', gap: 6 },
   cell: { width: 46, height: 46, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
