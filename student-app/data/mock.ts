@@ -226,6 +226,7 @@ export const radioStations: RadioStation[] = [
     location: 'Myhomework.uz platformasi',
     founded: 'Platforma ochilgan kundan beri',
     about: "Ingliz tilini o'rganuvchilar uchun maxsus tanlangan qo'shiqlar, audio darslar va motivatsion kontentni efirga uzatadi.",
+    logo: require('@/assets/images/radio/homework-radio.png'),
   },
 ];
 
