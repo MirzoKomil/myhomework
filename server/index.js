@@ -33,7 +33,9 @@ app.use(helmet({
             // (mirror) subdomenlaridan birortasiga so'rov yuborishi mumkin (de1, nl1,
             // at1, all va h.k.) — shuning uchun konkret bitta subdomen emas, butun
             // *.api.radio-browser.info joylashuvi ruxsat etiladi.
-            connectSrc: ["'self'", "https://*.api.radio-browser.info"],
+            // Tarjimon bo'limi: MyMemory tarjima API'siga to'g'ridan-to'g'ri
+            // brauzerdan so'rov yuboriladi (student-app/app/(tabs)/translator.tsx).
+            connectSrc: ["'self'", "https://*.api.radio-browser.info", "https://api.mymemory.translated.net"],
             // Real radio stansiyalarining audio oqimi (stream) manzili oldindan
             // ma'lum emas — radio-browser.info katalogidan qaysi haqiqiy translyatsiya
             // serveri qaytishi har xil bo'ladi (BBC, Capital, NPR va h.k. o'zlarining
