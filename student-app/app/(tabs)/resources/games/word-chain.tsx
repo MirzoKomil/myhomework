@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
 import { addCoins } from '@/services/coinsStore';
+import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -77,6 +78,12 @@ export default function WordChainGame() {
 
   const score = chain.length - 1;
 
+  const finish = () => {
+    setFinished(true);
+    if (score > 0) playWinSound();
+    else playLoseSound();
+  };
+
   if (!wordBank || chain.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -129,7 +136,7 @@ export default function WordChainGame() {
               <Ionicons name="arrow-forward" size={20} color="#fff" />
             </Pressable>
           </View>
-          <Pressable style={styles.finishBtn} onPress={() => setFinished(true)}>
+          <Pressable style={styles.finishBtn} onPress={finish}>
             <Text style={styles.finishText}>Yakunlash</Text>
           </Pressable>
         </View>

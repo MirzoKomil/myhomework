@@ -6,6 +6,7 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
+import { playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -125,7 +126,11 @@ export default function WordSearchGame() {
 
   const grid = board?.grid ?? [];
   const WORDS_TO_FIND = board?.words ?? [];
-  const won = board !== null && foundWords.size === WORDS_TO_FIND.length;
+  const won = board !== null && WORDS_TO_FIND.length > 0 && foundWords.size === WORDS_TO_FIND.length;
+
+  useEffect(() => {
+    if (won) playWinSound();
+  }, [won]);
 
   const handleTap = (cell: Cell) => {
     if (won) return;

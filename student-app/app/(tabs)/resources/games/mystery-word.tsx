@@ -8,6 +8,7 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
+import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -175,8 +176,10 @@ export default function MysteryWordGame() {
       addCoins(1);
       addLightning(1);
       setGameOver('won');
+      playWinSound();
     } else if (nextGuesses.length >= MAX_TRIES) {
       setGameOver('lost');
+      playLoseSound();
     }
   };
 

@@ -7,6 +7,7 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { addCoins } from '@/services/coinsStore';
+import { playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -111,6 +112,7 @@ export default function MemoryMatchGame() {
       addCoins(items.length);
       addLightning(items.length);
       setPhase('result');
+      playWinSound();
     }
   };
 

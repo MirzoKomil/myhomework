@@ -21,6 +21,7 @@ import {
   battleWords as FALLBACK_BATTLE_WORDS,
 } from '@/data/mock';
 import { addCoins, useCoins } from '@/services/coinsStore';
+import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning, useLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -169,10 +170,14 @@ export default function BattleScreen() {
     };
   }, [roundWinner]);
 
-  // G'alaba qozonilganda bonus coinlarni bir marta hisoblash.
+  // G'alaba qozonilganda bonus coinlarni va tovushni bir marta ishga tushirish.
   useEffect(() => {
-    if (phase === 'result' && playerScore > opponentScore) {
+    if (phase !== 'result') return;
+    if (playerScore > opponentScore) {
       addCoins(BATTLE_WIN_COINS);
+      playWinSound();
+    } else if (playerScore < opponentScore) {
+      playLoseSound();
     }
   }, [phase]);
 
