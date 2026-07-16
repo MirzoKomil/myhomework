@@ -504,15 +504,19 @@ export async function fetchHomeworkRadioSchedule(): Promise<HomeworkRadioSchedul
   return r.json();
 }
 
-// Berilgan jadval va vaqt uchun hozir "efirda" bo'lishi kerak bo'lgan
-// klipni topadi — topilmasa (hech narsa rejalashtirilmagan bo'lsa) null.
 // Toshkent vaqtiga moslashtirilgan (+5 soat) — 142-ish'dagi `tashkentNow()`
 // bilan bir xil yondashuv, server bilan bir xil "bugun"ni ko'rish uchun.
+export function getHomeworkRadioTodayKey(now: Date = new Date(Date.now() + 5 * 60 * 60 * 1000)): string {
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+}
+
+// Berilgan jadval va vaqt uchun hozir "efirda" bo'lishi kerak bo'lgan
+// klipni topadi — topilmasa (hech narsa rejalashtirilmagan bo'lsa) null.
 export function getActiveHomeworkRadioBlock(
   schedule: HomeworkRadioSchedule,
   now: Date = new Date(Date.now() + 5 * 60 * 60 * 1000)
 ): HomeworkRadioBlock | null {
-  const todayStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+  const todayStr = getHomeworkRadioTodayKey(now);
   const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
   const blocks = schedule[todayStr] || [];
   for (const b of blocks) {

@@ -11,7 +11,12 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { getHomeworkArtworkUri, HOMEWORK_SCHOOL_NAME } from '@/constants/nowPlaying';
 import { radioStations } from '@/data/mock';
-import { fetchHomeworkRadioSchedule, getActiveHomeworkRadioBlock } from '@/services/contentApi';
+import {
+  fetchHomeworkRadioSchedule,
+  getActiveHomeworkRadioBlock,
+  getHomeworkRadioTodayKey,
+  HomeworkRadioBlock,
+} from '@/services/contentApi';
 import { resolveStationStreamCandidates } from '@/services/radioStreams';
 
 const BAR_COUNT = 20;
@@ -30,6 +35,77 @@ const STATIC_DEMO_ID = 'homework-radio';
 
 type PlaybackState = 'resolving' | 'buffering' | 'playing' | 'paused' | 'error' | 'silent';
 
+function formatBlockTime(b: HomeworkRadioBlock) {
+  return `${b.startTime} - ${b.endTime}`;
+}
+
+// 162-ish: "Efir jadvali" — bugungi kun uchun CRM'da rejalashtirilgan
+// Homework Radio bloklari ro'yxatini ko'rsatadi (vaqt oralig'i + nomi),
+// hozir efirda turgan blokni ajratib ko'rsatadi.
+function ScheduleModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const [blocks, setBlocks] = useState<HomeworkRadioBlock[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    setBlocks(null);
+    setFailed(false);
+    fetchHomeworkRadioSchedule()
+      .then((schedule) => {
+        const todayKey = getHomeworkRadioTodayKey();
+        const todays = (schedule[todayKey] ?? []).slice().sort((a, b) => a.startTime.localeCompare(b.startTime));
+        setBlocks(todays);
+      })
+      .catch(() => setFailed(true));
+  }, [visible]);
+
+  const activeBlock = blocks ? getActiveHomeworkRadioBlock({ [getHomeworkRadioTodayKey()]: blocks }) : null;
+
+  return (
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <View style={styles.dialogBackdrop}>
+        <Pressable style={styles.dialogBackdropTap} onPress={onClose} />
+        <View style={styles.dialogCard}>
+          <Ionicons name="calendar" size={28} color={theme.colors.purple} />
+          <Text style={styles.dialogTitle}>Bugungi efir jadvali</Text>
+
+          {failed ? (
+            <Text style={styles.scheduleEmpty}>Jadvalni yuklab bo'lmadi</Text>
+          ) : blocks === null ? (
+            <ActivityIndicator color={theme.colors.purple} style={styles.scheduleLoading} />
+          ) : blocks.length === 0 ? (
+            <Text style={styles.scheduleEmpty}>Bugun uchun efir jadvali hali belgilanmagan</Text>
+          ) : (
+            <View style={styles.scheduleList}>
+              {blocks.map((b) => {
+                const isActive = b.id === activeBlock?.id;
+                return (
+                  <View key={b.id} style={[styles.scheduleRow, isActive && styles.scheduleRowActive]}>
+                    <Text style={[styles.scheduleTime, isActive && styles.scheduleTimeActive]}>{formatBlockTime(b)}</Text>
+                    <Text style={[styles.scheduleBlockTitle, isActive && styles.scheduleBlockTitleActive]} numberOfLines={1}>
+                      {b.title}
+                    </Text>
+                    {isActive && (
+                      <View style={styles.scheduleActiveBadge}>
+                        <View style={styles.liveDot} />
+                        <Text style={styles.scheduleActiveBadgeText}>EFIRDA</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          <Pressable style={styles.dialogBtn} onPress={onClose}>
+            <Text style={styles.dialogBtnText}>Yopish</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function RadioPlayerScreen() {
   const { stationId } = useLocalSearchParams<{ stationId: string }>();
   const station = radioStations.find((s) => s.id === stationId) ?? radioStations[0];
@@ -40,6 +116,7 @@ export default function RadioPlayerScreen() {
   const [waveHeights, setWaveHeights] = useState(randomWave);
   const [showInfo, setShowInfo] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [activeBlockTitle, setActiveBlockTitle] = useState<string | null>(null);
 
   const playerRef = useRef<AudioPlayer | null>(null);
@@ -286,6 +363,13 @@ export default function RadioPlayerScreen() {
         <Text style={styles.name}>{station.name}</Text>
         <Text style={styles.genre}>{isStaticDemo && activeBlockTitle ? activeBlockTitle : station.genre}</Text>
 
+        {isStaticDemo && (
+          <Pressable style={styles.scheduleBtn} onPress={() => setShowSchedule(true)}>
+            <Ionicons name="calendar-outline" size={15} color={theme.colors.purple} />
+            <Text style={styles.scheduleBtnText}>Efir jadvali</Text>
+          </Pressable>
+        )}
+
         <View style={styles.waveRow}>
           {waveHeights.map((h, i) => (
             <View
@@ -343,6 +427,8 @@ export default function RadioPlayerScreen() {
         itemId={station.id}
         itemLabel={station.name}
       />
+
+      {isStaticDemo && <ScheduleModal visible={showSchedule} onClose={() => setShowSchedule(false)} />}
     </SafeAreaView>
   );
 }
@@ -404,7 +490,52 @@ const styles = StyleSheet.create({
   silentBadge: { backgroundColor: theme.colors.surface, gap: 6 },
   silentText: { fontFamily: theme.fonts.bold, fontSize: 11, color: theme.colors.textMuted, letterSpacing: 0.5 },
   name: { fontFamily: theme.fonts.extraBold, fontSize: 24, color: theme.colors.text, marginBottom: 4 },
-  genre: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted, marginBottom: 36 },
+  genre: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted, marginBottom: 12 },
+  scheduleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.purpleLight,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  scheduleBtnText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.purple },
+  scheduleLoading: { marginTop: 16, marginBottom: 4 },
+  scheduleEmpty: {
+    fontFamily: theme.fonts.medium,
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  scheduleList: { width: '100%', gap: 8, marginTop: 12, marginBottom: 4 },
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  scheduleRowActive: { backgroundColor: theme.colors.purpleLight },
+  scheduleTime: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.textMuted },
+  scheduleTimeActive: { color: theme.colors.purple },
+  scheduleBlockTitle: { flex: 1, fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.text },
+  scheduleBlockTitleActive: { fontFamily: theme.fonts.semiBold, color: theme.colors.purple },
+  scheduleActiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.dangerBg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  scheduleActiveBadgeText: { fontFamily: theme.fonts.bold, fontSize: 9, color: theme.colors.danger, letterSpacing: 0.3 },
   waveRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 48, marginBottom: 36 },
   waveBar: { width: 4, borderRadius: 2 },
   playBtn: {
