@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { invalidateCache } from '@/services/contentApi';
+import { clearAuth, useAuth } from '@/services/studentAuthStore';
 
 type Row = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -20,6 +22,13 @@ function shareApp() {
 
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
+  const { student } = useAuth();
+
+  const handleLogout = async () => {
+    await clearAuth();
+    invalidateCache();
+    router.replace('/');
+  };
 
   const group1: Row[] = [
     { icon: 'globe-outline', label: 'Ilova tili', onPress: () => router.push('/profile/settings/language' as never), right: 'chevron' },
@@ -84,10 +93,17 @@ export default function SettingsScreen() {
         {renderGroup(group1)}
         {renderGroup(group2)}
 
-        <Pressable style={styles.logoutBtn}>
-          <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
-          <Text style={styles.logoutText}>Chiqish</Text>
-        </Pressable>
+        {student ? (
+          <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
+            <Text style={styles.logoutText}>Chiqish ({student.name})</Text>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.loginBtn} onPress={() => router.push('/login' as never)}>
+            <Ionicons name="log-in-outline" size={20} color={theme.colors.purple} />
+            <Text style={styles.loginText}>Hisobingizga kirish</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -116,4 +132,14 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   logoutText: { fontFamily: theme.fonts.semiBold, fontSize: 15, color: theme.colors.danger },
+  loginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    backgroundColor: theme.colors.purpleLight,
+    borderRadius: theme.radius.sm,
+  },
+  loginText: { fontFamily: theme.fonts.semiBold, fontSize: 15, color: theme.colors.purple },
 });

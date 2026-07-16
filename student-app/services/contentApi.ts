@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { getToken } from '@/services/studentAuthStore';
 import type { GrammarBlank, HomeworkPart, SlideContent, SpeakingPrompt, VocabWord } from '@/data/lessonContent';
 import type { ShopProduct } from '@/data/shopProducts';
 import type { GrammarTopic } from '@/data/grammarGuide';
@@ -165,6 +166,17 @@ export type MobileContent = {
   library: LibraryContent;
 };
 
+// 150-ish: haqiqiy o'quvchi login qilgan bo'lsa, uning tokeni har bir
+// "demo-*" so'rovga qo'shiladi — server shu token orqali qaysi o'quvchi
+// ekanini aniqlaydi (token yo'q bo'lsa, eskicha "Namuna o'quvchi" ma'lumoti
+// qaytadi, hech qanday xatti-harakat o'zgarmaydi).
+export async function authedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string> | undefined) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return fetch(url, { ...options, headers });
+}
+
 let _cache: MobileContent | null = null;
 let _fetchPromise: Promise<MobileContent> | null = null;
 
@@ -172,7 +184,7 @@ export async function fetchMobileContent(): Promise<MobileContent> {
   if (_cache) return _cache;
   if (_fetchPromise) return _fetchPromise;
 
-  _fetchPromise = fetch(API_BASE)
+  _fetchPromise = authedFetch(API_BASE)
     .then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
@@ -252,7 +264,7 @@ export type DemoGradesResponse = {
 };
 
 export async function fetchDemoGrades(): Promise<DemoGradesResponse> {
-  const r = await fetch(DEMO_GRADES_API_BASE);
+  const r = await authedFetch(DEMO_GRADES_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
   return { grades: data.grades ?? [], teacherRating: data.teacherRating ?? null };
@@ -263,7 +275,7 @@ export async function fetchDemoGrades(): Promise<DemoGradesResponse> {
 // "Namuna o'quvchi"dan aniqlaydi, mijozdan kelgan hech qanday ID'ga
 // ishonilmaydi.
 export async function submitTeacherRating(date: string, ratings: StudentRatingOfTeacher): Promise<void> {
-  const r = await fetch(`${DEMO_GRADES_API_BASE}/rate-teacher`, {
+  const r = await authedFetch(`${DEMO_GRADES_API_BASE}/rate-teacher`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date, ratings }),
@@ -291,7 +303,7 @@ export type DemoScheduleResponse = {
 };
 
 export async function fetchDemoSchedule(): Promise<DemoScheduleResponse> {
-  const r = await fetch(DEMO_SCHEDULE_API_BASE);
+  const r = await authedFetch(DEMO_SCHEDULE_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
   return {
@@ -329,7 +341,7 @@ export type DemoMessagesResponse = {
 };
 
 export async function fetchDemoMessages(): Promise<DemoMessagesResponse> {
-  const r = await fetch(DEMO_MESSAGES_API_BASE);
+  const r = await authedFetch(DEMO_MESSAGES_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const data = await r.json();
   return {
@@ -340,7 +352,7 @@ export async function fetchDemoMessages(): Promise<DemoMessagesResponse> {
 }
 
 export async function sendDemoMessage(threadId: DemoMessageThreadId, text: string): Promise<DemoMessage> {
-  const r = await fetch(DEMO_MESSAGES_API_BASE, {
+  const r = await authedFetch(DEMO_MESSAGES_API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ threadId, text }),
@@ -375,13 +387,13 @@ export type DemoPeerThread = {
 export type DemoPeerMessagesResponse = Record<string, DemoPeerThread>;
 
 export async function fetchDemoPeerMessages(): Promise<DemoPeerMessagesResponse> {
-  const r = await fetch(DEMO_PEER_MESSAGES_API_BASE);
+  const r = await authedFetch(DEMO_PEER_MESSAGES_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
 export async function sendDemoPeerMessage(peerId: string, peerName: string, text: string): Promise<DemoPeerMessage> {
-  const r = await fetch(DEMO_PEER_MESSAGES_API_BASE, {
+  const r = await authedFetch(DEMO_PEER_MESSAGES_API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ peerId, peerName, text }),
@@ -413,7 +425,7 @@ export type DemoPersonaThread = {
 export type DemoPersonaMessagesResponse = Record<string, DemoPersonaThread>;
 
 export async function fetchDemoPersonaMessages(): Promise<DemoPersonaMessagesResponse> {
-  const r = await fetch(DEMO_PERSONA_MESSAGES_API_BASE);
+  const r = await authedFetch(DEMO_PERSONA_MESSAGES_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -424,7 +436,7 @@ export async function sendDemoPersonaMessage(
   text: string,
   sender: 'student' | 'persona'
 ): Promise<DemoPersonaMessage> {
-  const r = await fetch(DEMO_PERSONA_MESSAGES_API_BASE, {
+  const r = await authedFetch(DEMO_PERSONA_MESSAGES_API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ personaId, personaName, text, sender }),
@@ -455,14 +467,14 @@ export type DemoNotification = {
 };
 
 export async function fetchDemoNotifications(): Promise<DemoNotification[]> {
-  const r = await fetch(DEMO_NOTIFICATIONS_API_BASE);
+  const r = await authedFetch(DEMO_NOTIFICATIONS_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
 
 // 142-ish: o'quvchi "Darsni nega qoldirdingiz?" so'rovnomasiga javob berganda.
 export async function submitAbsenceReason(lessonDate: string, reason: string): Promise<void> {
-  const r = await fetch(ABSENCE_REASON_API_BASE, {
+  const r = await authedFetch(ABSENCE_REASON_API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ lessonDate, reason }),
@@ -598,7 +610,7 @@ export type DemoBookDeliveryResponse = {
 } | null;
 
 export async function fetchDemoBookDelivery(): Promise<DemoBookDeliveryResponse> {
-  const r = await fetch(DEMO_BOOK_DELIVERY_API_BASE);
+  const r = await authedFetch(DEMO_BOOK_DELIVERY_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -621,7 +633,7 @@ export type DemoActivityEntry = {
 };
 
 export async function fetchDemoActivity(): Promise<DemoActivityEntry[]> {
-  const r = await fetch(DEMO_ACTIVITY_API_BASE);
+  const r = await authedFetch(DEMO_ACTIVITY_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -634,7 +646,7 @@ export async function sendDemoActivity(entry: {
   wrongAttempts?: number;
   mistakes?: ActivityMistake[];
 }): Promise<void> {
-  const r = await fetch(DEMO_ACTIVITY_API_BASE, {
+  const r = await authedFetch(DEMO_ACTIVITY_API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entry),

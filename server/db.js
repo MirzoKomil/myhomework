@@ -574,12 +574,12 @@ function applyShopOverrides(mc) {
     return mc;
 }
 
-async function getMobileContentData() {
+async function getMobileContentData(studentId) {
     const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
     const mc = row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
     const [liveGrades, demoStudentId] = await Promise.all([
         getJsonData('liveGrades'),
-        getJsonData('demoStudentId'),
+        resolveStudentId(studentId),
     ]);
     applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
     applyLibraryOverrides(mc);
@@ -659,11 +659,21 @@ async function saveTeachers(client, teachers) {
     }
 }
 
+const BCRYPT_HASH_RE = /^\$2[aby]\$\d{2}\$/;
+
 async function saveStudents(client, students) {
     await client.query('DELETE FROM students');
     for (const s of students) {
         const { id, name, phone, group, subject, teacherId, assistantTeacherId,
-                lessonDayOfWeek, lessonTime, lessonDuration, ...extra } = s;
+                lessonDayOfWeek, lessonTime, lessonDuration, password, ...extra } = s;
+        // 150-ish: parol endi hech qachon oddiy matn holida saqlanmaydi —
+        // CRM formasi yuborgan (yangi kiritilgan) parolni bcrypt bilan
+        // shifrlab, faqat hash'ni `extra_data.passwordHash`'ga yozamiz.
+        // Forma bo'sh qoldirilgan bo'lsa (`password` yo'q), mavjud hash
+        // `extra` ichida allaqachon bor va o'zgarishsiz qoladi.
+        if (password) {
+            extra.passwordHash = BCRYPT_HASH_RE.test(password) ? password : bcrypt.hashSync(password, 10);
+        }
         await client.query(
             `INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration, extra_data)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
@@ -772,15 +782,24 @@ async function getJsonData(key) {
     return row.data;
 }
 
+// 150-ish: barcha "demo o'quvchi"ga asoslangan funksiyalar uchun umumiy —
+// agar haqiqiy tizimga kirgan o'quvchi ID'si berilgan bo'lsa o'shani, aks
+// holda CRM'da belgilangan eski "Namuna o'quvchi" ID'sini qaytaradi. Shu
+// bitta funksiya orqali token yo'q/eskicha so'rovlar uchun hozirgi
+// xatti-harakat 100% saqlanib qoladi.
+async function resolveStudentId(studentId) {
+    return studentId || await getJsonData('demoStudentId');
+}
+
 // Faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchining jonli
 // dars baholarini qaytaradi — boshqa barcha o'quvchilarning ma'lumotlari
 // public endpoint orqali hech qachon oshkor qilinmaydi. Ustozning umumiy
 // reytingi esa BARCHA o'quvchilarning "overall" bahosi o'rtachasi sifatida
 // hisoblanadi — bu faqat bitta agregat son, hech kimning shaxsiy bahosini
 // oshkor qilmaydi.
-async function getDemoStudentGrades() {
+async function getDemoStudentGrades(studentId) {
     const liveGrades = await getJsonData('liveGrades');
-    const demoStudentId = await getJsonData('demoStudentId');
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return { grades: [], teacherRating: null };
     const grades = liveGrades[demoStudentId] || [];
 
@@ -804,8 +823,8 @@ async function getDemoStudentGrades() {
 // natijasini qo'shadi. Boshqa hech qanday o'quvchi ma'lumotini yozib
 // bo'lmaydi, chunki studentId har doim serverda demoStudentId'dan olinadi
 // (mijozdan kelgan qiymatga ishonilmaydi).
-async function submitDemoStudentTeacherRating(date, ratings) {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function submitDemoStudentTeacherRating(date, ratings, studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
     const liveGrades = await getJsonData('liveGrades');
     const entries = liveGrades[demoStudentId] || [];
@@ -838,29 +857,24 @@ function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
     return new Date(candidateUtcMs).toISOString();
 }
 
-// Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
-// bitta o'quvchining CRM'da admin tomonidan kiritilgan haqiqiy parolini
-// qaytaradi (o'quvchi profilidagi "Parol" bosilganda ko'rsatish uchun).
-// Parol students.extra_data'da saqlanadi (rowToStudent uni avtomatik
-// birlashtiradi) — alohida ustun yoki migratsiya kerak emas.
-async function getDemoStudentProfile() {
-    const demoStudentId = await getJsonData('demoStudentId');
-    if (!demoStudentId) return { password: '' };
-    const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
-    if (!row) return { password: '' };
-    const student = rowToStudent(row);
-    return { password: student.password || '' };
+// 150-ish: parol endi bcrypt bilan shifrlanadi (o'zgarmas hash), shuning
+// uchun uni ilovaga qaytarib ko'rsatishning iloji yo'q — appning profil
+// ekrani endi bu endpointni chaqirmaydi, lekin eski/keshlangan build'lar
+// bilan mos kelishi uchun bo'sh obyekt bilan javob berishda davom etadi.
+async function getDemoStudentProfile(studentId) {
+    await resolveStudentId(studentId);
+    return {};
 }
 
 // Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
 // bitta o'quvchining Telegram guruh havolasi va navbatdagi speaking dars
 // vaqtini qaytaradi. StudentId har doim serverda demoStudentId'dan olinadi.
-async function getDemoStudentSchedule() {
+async function getDemoStudentSchedule(studentId) {
     const empty = {
         telegramGroupLink: '', topic: '', startsAt: null,
         courseStartDate: null, schedulePattern: 'mwf', lessonDayOfWeek: null, lessonTime: ''
     };
-    const demoStudentId = await getJsonData('demoStudentId');
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return empty;
     const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
     if (!row) return empty;
@@ -898,8 +912,8 @@ const DEMO_MESSAGE_THREAD_IDS = ['support', 'main-teacher', 'assistant-teacher']
 // bitta o'quvchining uchta suhbat (Qo'llab-quvvatlash / Asosiy ustoz /
 // Yordamchi ustoz) xabarlarini qaytaradi. StudentId har doim serverda
 // demoStudentId'dan olinadi — mijozdan kelgan qiymatga ishonilmaydi.
-async function getDemoStudentMessages() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoStudentMessages(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return { support: [], mainTeacher: [], assistantTeacher: [] };
     const all = await getJsonData('studentMessages');
     const byThread = all[demoStudentId] || {};
@@ -913,11 +927,11 @@ async function getDemoStudentMessages() {
 // Namuna o'quvchi ilovadan xabar yozganda shu yerga yuboradi. StudentId
 // har doim serverda demoStudentId'dan olinadi, shuning uchun bu boshqa
 // hech bir o'quvchi ma'lumotini yoza olmaydi.
-async function sendDemoStudentMessage(threadId, text) {
+async function sendDemoStudentMessage(threadId, text, studentId) {
     if (!DEMO_MESSAGE_THREAD_IDS.includes(threadId)) throw new Error("Noto'g'ri suhbat");
     const trimmed = String(text || '').trim();
     if (!trimmed) throw new Error("Xabar matni bo'sh bo'lishi mumkin emas");
-    const demoStudentId = await getJsonData('demoStudentId');
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
 
     const all = await getJsonData('studentMessages');
@@ -941,6 +955,18 @@ async function sendDemoStudentMessage(threadId, text) {
 // bog'lab qo'yiladi (faqat ma'lumot uchun, CRM administratorga qaysi haqiqiy
 // o'quvchi nazarda tutilganini ko'rsatish uchun) — topilmasa, baribir suhbat
 // real/saqlanadigan bo'lib qoladi, faqat bog'lanish bo'sh qoladi.
+// 150-ish: o'quvchi real login orqali ilovaga kirganda ishlatiladi. `login`
+// va `passwordHash` haqiqiy ustunlar emas, `extra_data` JSONB ichida
+// saqlanadi, shuning uchun indekslab bo'lmaydi — `findRealStudentIdByFirstName`
+// bilan bir xil to'liq skanerlash patterni.
+async function findStudentByLogin(login) {
+    const trimmed = String(login || '').trim().toLowerCase();
+    if (!trimmed) return null;
+    const rows = await q('SELECT * FROM students');
+    const match = rows.map(rowToStudent).find(s => String(s.login || '').trim().toLowerCase() === trimmed);
+    return match || null;
+}
+
 async function findRealStudentIdByFirstName(name) {
     if (!name) return null;
     const target = String(name).trim().split(/\s+/)[0].toLowerCase();
@@ -952,8 +978,8 @@ async function findRealStudentIdByFirstName(name) {
 
 // Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
 // bitta o'quvchining barcha "hamkurs" (Maqsaddoshlar) suhbatlarini qaytaradi.
-async function getDemoStudentPeerMessages() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoStudentPeerMessages(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return {};
     const all = await getJsonData('peerMessages');
     return all[demoStudentId] || {};
@@ -961,12 +987,12 @@ async function getDemoStudentPeerMessages() {
 
 // Namuna o'quvchi ilovadan hamkursiga xabar yozganda shu yerga yuboradi.
 // StudentId har doim serverda demoStudentId'dan olinadi.
-async function sendDemoStudentPeerMessage(peerId, peerName, text) {
+async function sendDemoStudentPeerMessage(peerId, peerName, text, studentId) {
     const trimmedId = String(peerId || '').trim();
     if (!trimmedId) throw new Error("Hamkurs aniqlanmadi");
     const trimmed = String(text || '').trim();
     if (!trimmed) throw new Error("Xabar matni bo'sh bo'lishi mumkin emas");
-    const demoStudentId = await getJsonData('demoStudentId');
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
 
     const all = await getJsonData('peerMessages');
@@ -992,20 +1018,20 @@ async function sendDemoStudentPeerMessage(peerId, peerName, text) {
 // naqshi, lekin real o'quvchiga bog'lash (linkedStudentId) kerak emas va
 // sender aniq ko'rsatiladi ('student'/'persona'), chunki personajning "javobi"
 // mijoz tomonida generatsiya qilinadi, boshqa qurilmadan kelmaydi.
-async function getDemoStudentPersonaMessages() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoStudentPersonaMessages(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return {};
     const all = await getJsonData('personaMessages');
     return all[demoStudentId] || {};
 }
 
-async function sendDemoStudentPersonaMessage(personaId, personaName, text, sender) {
+async function sendDemoStudentPersonaMessage(personaId, personaName, text, sender, studentId) {
     const trimmedId = String(personaId || '').trim();
     if (!trimmedId) throw new Error("Personaj aniqlanmadi");
     const trimmed = String(text || '').trim();
     if (!trimmed) throw new Error("Xabar matni bo'sh bo'lishi mumkin emas");
     const senderVal = sender === 'persona' ? 'persona' : 'student';
-    const demoStudentId = await getJsonData('demoStudentId');
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
 
     const all = await getJsonData('personaMessages');
@@ -1142,8 +1168,8 @@ function fillNotificationTemplate(template, vars) {
     return String(template || '').replace(/\{(\w+)\}/g, (match, key) => (vars[key] != null ? vars[key] : match));
 }
 
-async function getDemoStudent() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoStudent(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return null;
     const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
     if (!row) return null;
@@ -1192,7 +1218,7 @@ async function findRecentUnexplainedAbsence(student) {
         if (presentRow) return null; // eng so'nggi jonli kunda qatnashgan — so'rovnoma kerak emas
 
         const reasons = await getJsonData('absenceReasons');
-        if (reasons[dateStr]) return null; // sababi allaqachon berilgan
+        if (reasons[student.id]?.[dateStr]) return null; // sababi allaqachon berilgan
 
         return dateStr; // qatnashmagan va sababi hali berilmagan
     }
@@ -1202,12 +1228,19 @@ async function findRecentUnexplainedAbsence(student) {
 // Namuna o'quvchi appdagi "Darsni nega qoldirdingiz?" so'rovnomasiga javob
 // berganda shu yerga yoziladi — shu sana uchun `findRecentUnexplainedAbsence`
 // endi qayta so'ramaydi.
-async function submitAbsenceReason(lessonDate, reason) {
+// 150-ish: avval bu global `absenceReasons[dateStr]` kalitida saqlanardi —
+// haqiqiy ko'p o'quvchi bilan bu bitta o'quvchining sababini boshqa
+// o'quvchiga ham "berilgan" deb ko'rsatib qo'yardi. Endi o'quvchi bo'yicha
+// ichma-ich joylashtirilgan.
+async function submitAbsenceReason(lessonDate, reason, studentId) {
     const dateStr = String(lessonDate || '').trim();
     const trimmedReason = String(reason || '').trim();
     if (!dateStr || !trimmedReason) throw new Error("Sana va sabab yuborilishi shart");
+    const demoStudentId = await resolveStudentId(studentId);
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
     const reasons = await getJsonData('absenceReasons');
-    reasons[dateStr] = trimmedReason;
+    if (!reasons[demoStudentId]) reasons[demoStudentId] = {};
+    reasons[demoStudentId][dateStr] = trimmedReason;
     await tx(async (client) => {
         await saveJsonData(client, 'absenceReasons', reasons);
     });
@@ -1215,13 +1248,13 @@ async function submitAbsenceReason(lessonDate, reason) {
 
 // Namuna o'quvchi (va CRM'ning oldindan ko'rish oynasi) uchun haqiqiy,
 // birlashtirilgan bildirishnomalar ro'yxatini qaytaradi.
-async function getComputedDemoNotifications() {
+async function getComputedDemoNotifications(studentId) {
     const rules = await getNotificationRules();
     const notifications = [];
-    const student = await getDemoStudent();
+    const student = await getDemoStudent(studentId);
 
     // ── Jonli dars sanog'i (7 ta chegara) ───────────────────────────────────
-    const schedule = await getDemoStudentSchedule();
+    const schedule = await getDemoStudentSchedule(studentId);
     if (schedule.startsAt) {
         const minutesUntil = (new Date(schedule.startsAt).getTime() - Date.now()) / 60000;
         for (const { id, minutes } of LESSON_COUNTDOWN_RULES) {
@@ -1249,7 +1282,7 @@ async function getComputedDemoNotifications() {
 
     // ── Ustozni baholash (dars tugagach) ────────────────────────────────────
     if (rules.teacherRatingPrompt?.enabled) {
-        const { grades } = await getDemoStudentGrades();
+        const { grades } = await getDemoStudentGrades(studentId);
         const unrated = grades.find(g => !g.studentRatingOfTeacher);
         if (unrated) {
             notifications.push({
@@ -1582,8 +1615,8 @@ const BOOK_ROADMAP_STAGE_MAP = {
 // bookRoadmap yozuvi studentga to'g'ridan-to'g'ri bog'lanmagani uchun
 // (CRM'da bu maydon to'ldirilmaydi), avval student.leadRef orqali (ishonchli),
 // topilmasa ism bo'yicha (best-effort) moslashtiriladi.
-async function getDemoStudentBookDelivery() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoStudentBookDelivery(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return null;
     const studentRow = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
     if (!studentRow) return null;
@@ -1616,8 +1649,8 @@ async function getDemoStudentBookDelivery() {
 
 // Namuna o'quvchi ilovadan mahsulot sotib olganda shu yerga yozadi.
 // StudentId har doim serverda demoStudentId'dan olinadi.
-async function addDemoShopOrder(productId, productName, category, price) {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function addDemoShopOrder(productId, productName, category, price, studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     let studentName = '';
     if (demoStudentId) {
         const row = await q1('SELECT name FROM students WHERE id = $1', [demoStudentId]);
@@ -1645,8 +1678,8 @@ async function addDemoShopOrder(productId, productName, category, price) {
 // Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
 // bitta o'quvchining o'z buyurtmalarini qaytaradi (appning "Yetkazib
 // berish" ekranidagi StageTimeline shu yerdan real vaqtda o'qiydi).
-async function getDemoShopOrders() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoShopOrders(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return [];
     const orders = await getJsonData('shopOrders');
     return orders.filter(o => o.studentId === demoStudentId);
@@ -1659,17 +1692,17 @@ const MAX_ACTIVITY_ENTRIES = 50;
 // bajarganda haqiqiy natijasini (ball, to'g'ri/adashgan) shu yerga yozadi —
 // ustoz o'z kabinetidan va admin profilidan bularni kuzatib turishi uchun.
 // Faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta o'quvchi uchun.
-async function getDemoStudentActivity() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoStudentActivity(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return [];
     const all = await getJsonData('studentActivity');
     return all[demoStudentId] || [];
 }
 
-async function addDemoStudentActivity(entry) {
+async function addDemoStudentActivity(entry, studentId) {
     const type = String(entry?.type || '').trim();
     if (!ACTIVITY_TYPES.includes(type)) throw new Error("Noto'g'ri faoliyat turi");
-    const demoStudentId = await getJsonData('demoStudentId');
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
 
     const all = await getJsonData('studentActivity');
@@ -1708,19 +1741,19 @@ async function addDemoStudentActivity(entry) {
 // "Tahrirlash va qayta yuborish"), oldingi yozuv shu lessonId bo'yicha
 // almashtiriladi. Faqat "Namuna o'quvchi" uchun (studentActivity bilan bir
 // xil cheklov).
-async function getDemoCreativeSubmissions() {
-    const demoStudentId = await getJsonData('demoStudentId');
+async function getDemoCreativeSubmissions(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return {};
     const all = await getJsonData('creativeSubmissions');
     return all[demoStudentId] || {};
 }
 
-async function submitDemoCreativeSubmission(entry) {
+async function submitDemoCreativeSubmission(entry, studentId) {
     const lessonId = String(entry?.lessonId || '').trim();
     if (!lessonId) throw new Error("Dars belgilanmagan");
     const category = ['video', 'speaking'].includes(entry?.category) ? entry.category : 'video';
     const mediaType = entry?.mediaType === 'audio' ? 'audio' : 'text';
-    const demoStudentId = await getJsonData('demoStudentId');
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
 
     const all = await getJsonData('creativeSubmissions');
@@ -2013,7 +2046,7 @@ module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, insertLead, patchState,
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
-    getHrEmployeesData, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating,
+    getHrEmployeesData, getMobileContentData, findStudentByLogin, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,

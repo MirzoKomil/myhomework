@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AvatarCropModal } from '@/components/AvatarCropModal';
@@ -21,39 +21,9 @@ const DETAIL_ROWS: { label: string; value: string }[] = [
   { label: 'Telefon raqami', value: profileStats.phone },
 ];
 
-const MASKED_PASSWORD = '••••••••';
-const PASSWORD_REVEAL_MS = 4000;
-
-const PROFILE_API_BASE =
-  Platform.OS === 'web'
-    ? '/api/state/demo-profile'
-    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-profile';
-
 export default function EditProfileScreen() {
   const avatarUri = useAvatarUri();
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
-  const [password, setPassword] = useState<string | null>(null);
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // CRM'da admin o'quvchiga kiritgan haqiqiy parol — "Parol" qatoriga
-  // bosilganda shu qiymat qisqa vaqtga ko'rsatiladi.
-  useEffect(() => {
-    fetch(PROFILE_API_BASE)
-      .then((r) => r.json())
-      .then((data) => setPassword(data.password || null))
-      .catch(() => {});
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
-  }, []);
-
-  const revealPassword = () => {
-    if (!password) return;
-    setPasswordVisible(true);
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => setPasswordVisible(false), PASSWORD_REVEAL_MS);
-  };
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -117,12 +87,12 @@ export default function EditProfileScreen() {
               </Text>
             </View>
           ))}
-          <Pressable style={[styles.detailRow, styles.detailRowLast]} onPress={revealPassword} disabled={!password}>
+          <View style={[styles.detailRow, styles.detailRowLast]}>
             <Text style={styles.detailLabel}>Parol</Text>
             <Text style={styles.detailValue} numberOfLines={2}>
-              {passwordVisible && password ? password : MASKED_PASSWORD}
+              Ustozingizga murojaat qiling
             </Text>
-          </Pressable>
+          </View>
         </Card>
       </ScrollView>
 

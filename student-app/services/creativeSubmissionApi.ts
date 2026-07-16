@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { authedFetch } from '@/services/contentApi';
+
 // 148-ish: video/speaking darslardagi "Ijodiy vazifa" — matn/audio/rasm
 // haqiqiy serverga yuboriladi va ustoz kabinetida qabul qilinmaguncha
 // "kutilmoqda" holatida turadi (avval hech qanday tekshiruvsiz 4 soniyada
@@ -60,7 +62,7 @@ async function uploadCreativeMedia(uri: string, kind: 'image' | 'audio'): Promis
 
 export async function fetchCreativeSubmission(lessonId: string): Promise<CreativeSubmissionRecord | null> {
   try {
-    const res = await fetch(API_BASE);
+    const res = await authedFetch(API_BASE);
     const all = await res.json();
     return all?.[lessonId] ?? null;
   } catch {
@@ -80,7 +82,7 @@ export async function submitCreativeSubmission(params: {
   const imageUrl = params.imageUri ? await uploadCreativeMedia(params.imageUri, 'image') : null;
   const audioUrl = params.audioUri ? await uploadCreativeMedia(params.audioUri, 'audio') : null;
   try {
-    const res = await fetch(API_BASE, {
+    const res = await authedFetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

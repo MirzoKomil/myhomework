@@ -102,7 +102,7 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'Myhomework.uz API', version: '1.0.0' });
 });
 
-app.use('/api/auth/login', loginLimit);
+app.use(['/api/auth/login', '/api/auth/student-login'], loginLimit);
 app.use('/api/leads', webhookLimit);
 app.use('/api', apiLimit);
 

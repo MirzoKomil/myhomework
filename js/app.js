@@ -8872,9 +8872,13 @@ function studentFormHtml(sfx, defaults) {
         <select id="mStAsstTeacher${sfx}" class="form-control"></select>
     </div>
     <div class="form-group">
-        <label>Parol (ilovaga kirish uchun, ixtiyoriy)</label>
+        <label>Login (ilovaga kirish uchun, ixtiyoriy)</label>
+        <input type="text" id="mStLogin${sfx}" class="form-control" value="${escapeHtml(d.login || '')}" placeholder="Masalan: +998901234567" autocomplete="off">
+    </div>
+    <div class="form-group">
+        <label>Parol (ilovaga kirish uchun, o'zgartirmaslik uchun bo'sh qoldiring)</label>
         <div class="input-password-wrap">
-            <input type="password" id="mStPassword${sfx}" class="form-control" value="${escapeHtml(d.password || '')}" autocomplete="off">
+            <input type="password" id="mStPassword${sfx}" class="form-control" value="" autocomplete="off">
             <button type="button" class="input-eye-btn" id="mStPasswordEye${sfx}" tabindex="-1" aria-label="Parolni ko'rsat">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
@@ -8906,11 +8910,18 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         if (!name) { alert('Ism familiya kiritilishi shart'); return; }
         const teacherId = document.getElementById('mStTeacher').value;
         if (!teacherId) { alert('Asosiy ustozni tanlang'); return; }
+        const phone = document.getElementById('mStPhone').value.trim();
+        const login = document.getElementById('mStLogin').value.trim() || phone.replace(/\s/g, '');
+        const password = document.getElementById('mStPassword').value.trim();
         const students = getItem(STORAGE_KEYS.students, []);
+        if (login && students.find(s => s.login === login)) {
+            alert('Bu login allaqachon mavjud.');
+            return;
+        }
         students.push({
             id: 's' + Date.now(),
             name,
-            phone: document.getElementById('mStPhone').value.trim(),
+            phone,
             age: parseInt(document.getElementById('mStAge').value) || null,
             gender: document.getElementById('mStGender').value,
             region: document.getElementById('mStRegion').value.trim(),
@@ -8919,10 +8930,17 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             subject: document.getElementById('mStSubject').value,
             teacherId,
             assistantTeacherId: document.getElementById('mStAsstTeacher').value || null,
-            password: document.getElementById('mStPassword').value.trim(),
+            login,
+            password,
             source: 'manual'
         });
         setItem(STORAGE_KEYS.students, students);
+        // 150-ish: parol saqlangach shifrlanadi (bcrypt) va qayta ko'rsatib
+        // bo'lmaydi — shu tufayli hozir, hali oddiy matn holida ekan,
+        // adminga bir martalik eslatma ko'rsatiladi.
+        if (login && password) {
+            alert(`O'quvchi qo'shildi.\n\nLogin: ${login}\nParol: ${password}\n\nBu parolni saqlab qo'ying — u qayta ko'rsatilmaydi.`);
+        }
         closeModal();
         renderStudents();
     };
@@ -8952,10 +8970,18 @@ function openEditStudentModal(studentId) {
         if (!name) { alert('Ism familiya kiritilishi shart'); return; }
         const teacherId = document.getElementById('mStTeacherE').value;
         if (!teacherId) { alert('Asosiy ustozni tanlang'); return; }
+        const phone = document.getElementById('mStPhoneE').value.trim();
+        const login = document.getElementById('mStLoginE').value.trim() || phone.replace(/\s/g, '');
+        const password = document.getElementById('mStPasswordE').value.trim();
+        const allStudentsCheck = getItem(STORAGE_KEYS.students, []);
+        if (login && allStudentsCheck.find(st => st.login === login && st.id !== studentId)) {
+            alert('Bu login allaqachon mavjud.');
+            return;
+        }
         const updated = {
             ...s,
             name,
-            phone: document.getElementById('mStPhoneE').value.trim(),
+            phone,
             age: parseInt(document.getElementById('mStAgeE').value) || null,
             gender: document.getElementById('mStGenderE').value,
             region: document.getElementById('mStRegionE').value.trim(),
@@ -8964,8 +8990,12 @@ function openEditStudentModal(studentId) {
             subject: document.getElementById('mStSubjectE').value,
             teacherId,
             assistantTeacherId: document.getElementById('mStAsstTeacherE').value || null,
-            password: document.getElementById('mStPasswordE').value.trim(),
+            login,
         };
+        // Parol maydoni bo'sh qoldirilsa, mavjud (shifrlangan) parol o'zgarishsiz
+        // qoladi — faqat admin yangi parol kiritsa, u yuboriladi va serverda
+        // qayta shifrlanadi.
+        if (password) updated.password = password;
         const allStudents = getItem(STORAGE_KEYS.students, []);
         const idx = allStudents.findIndex(st => st.id === studentId);
         if (idx !== -1) allStudents[idx] = updated;

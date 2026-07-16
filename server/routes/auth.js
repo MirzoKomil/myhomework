@@ -5,7 +5,8 @@ const fs = require('fs');
 const {
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
     createSession, getSessionsByUserId, getSessionById,
-    deleteSession, deleteSessionByJti, deleteOtherSessions, DATA_DIR
+    deleteSession, deleteSessionByJti, deleteOtherSessions, DATA_DIR,
+    findStudentByLogin
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
 
@@ -57,6 +58,31 @@ router.post('/login', async (req, res) => {
         res.json({ token, user: publicUser(user) });
     } catch (err) {
         console.error('POST /login', err);
+        res.status(500).json({ error: 'Server xatoligi' });
+    }
+});
+
+// 150-ish: o'quvchining o'zi (CRM'da admin biriktirgan login/parol bilan)
+// ilovaga real kirishi uchun — admin/xodim login'idan alohida, chunki
+// o'quvchi hisob ma'lumotlari `users` jadvalida emas, `students.extra_data`
+// ichida saqlanadi. Muvaffaqiyatli kirishda xuddi admin login'idagi kabi
+// signToken + createSession ishlatiladi (sessions jadvali umumiy, faqat
+// role='student' orqali farqlanadi).
+router.post('/student-login', async (req, res) => {
+    try {
+        const { login, password } = req.body || {};
+        if (!login?.trim() || !password)
+            return res.status(400).json({ error: 'Login va parol kiriting' });
+        const student = await findStudentByLogin(login.trim());
+        if (!student || !student.passwordHash || !bcrypt.compareSync(password, student.passwordHash))
+            return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri' });
+        const { token, jti } = signToken({ id: student.id, email: student.login, role: 'student' });
+        const userAgent = req.headers['user-agent'] || '';
+        const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
+        await createSession({ userId: student.id, jti, userAgent, ip });
+        res.json({ token, student: { id: student.id, name: student.name, login: student.login } });
+    } catch (err) {
+        console.error('POST /student-login', err);
         res.status(500).json({ error: 'Server xatoligi' });
     }
 });

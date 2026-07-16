@@ -1,13 +1,13 @@
 const express = require('express');
 const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
-const { authRequired } = require('../middleware/auth');
+const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Public endpoint — student app uchun, auth talab qilmaydi
-router.get('/mobile-content', async (req, res) => {
+router.get('/mobile-content', studentAuthOptional, async (req, res) => {
     try {
-        const mc = await getMobileContentData();
+        const mc = await getMobileContentData(req.studentId);
         res.json(mc);
     } catch (err) {
         console.error('GET /api/state/mobile-content', err);
@@ -18,9 +18,9 @@ router.get('/mobile-content', async (req, res) => {
 // Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
 // o'quvchining CRM'da admin kiritgan haqiqiy parolini qaytaradi (profil
 // ekranidagi "Parol" bosilganda ko'rsatish uchun).
-router.get('/demo-profile', async (req, res) => {
+router.get('/demo-profile', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentProfile();
+        const data = await getDemoStudentProfile(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-profile', err);
@@ -32,9 +32,9 @@ router.get('/demo-profile', async (req, res) => {
 // o'quvchining jonli dars baholarini (va ustozning agregat reytingini)
 // qaytaradi. Boshqa o'quvchilarning ma'lumotlari hech qachon shu orqali
 // oshkor qilinmaydi.
-router.get('/demo-grades', async (req, res) => {
+router.get('/demo-grades', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentGrades();
+        const data = await getDemoStudentGrades(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-grades', err);
@@ -46,13 +46,13 @@ router.get('/demo-grades', async (req, res) => {
 // yuboradi. StudentId har doim serverda demoStudentId'dan olinadi — mijozdan
 // kelgan hech qanday qiymatga ishonilmaydi, shuning uchun bu boshqa hech bir
 // o'quvchi ma'lumotini yoza olmaydi.
-router.post('/demo-grades/rate-teacher', async (req, res) => {
+router.post('/demo-grades/rate-teacher', studentAuthOptional, async (req, res) => {
     try {
         const { date, ratings } = req.body || {};
         if (!date || !ratings || typeof ratings !== 'object') {
             return res.status(400).json({ error: "Sana va baholar yuborilishi shart" });
         }
-        await submitDemoStudentTeacherRating(date, ratings);
+        await submitDemoStudentTeacherRating(date, ratings, req.studentId);
         res.json({ ok: true });
     } catch (err) {
         console.error('POST /api/state/demo-grades/rate-teacher', err);
@@ -63,9 +63,9 @@ router.post('/demo-grades/rate-teacher', async (req, res) => {
 // Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
 // o'quvchining Telegram guruh havolasi va navbatdagi speaking dars vaqtini
 // qaytaradi. StudentId har doim serverda demoStudentId'dan olinadi.
-router.get('/demo-schedule', async (req, res) => {
+router.get('/demo-schedule', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentSchedule();
+        const data = await getDemoStudentSchedule(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-schedule', err);
@@ -77,9 +77,9 @@ router.get('/demo-schedule', async (req, res) => {
 // o'quvchining uchta suhbat (Qo'llab-quvvatlash/Asosiy ustoz/Yordamchi
 // ustoz) xabarlarini qaytaradi. StudentId har doim serverda demoStudentId'dan
 // olinadi.
-router.get('/demo-messages', async (req, res) => {
+router.get('/demo-messages', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentMessages();
+        const data = await getDemoStudentMessages(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-messages', err);
@@ -90,13 +90,13 @@ router.get('/demo-messages', async (req, res) => {
 // Public endpoint — namuna o'quvchi ilovadan xabar yozganda shu yerga
 // yuboradi. StudentId har doim serverda demoStudentId'dan olinadi — mijozdan
 // kelgan hech qanday qiymatga ishonilmaydi.
-router.post('/demo-messages', async (req, res) => {
+router.post('/demo-messages', studentAuthOptional, async (req, res) => {
     try {
         const { threadId, text } = req.body || {};
         if (!threadId || typeof text !== 'string') {
             return res.status(400).json({ error: "Suhbat va xabar matni yuborilishi shart" });
         }
-        const message = await sendDemoStudentMessage(threadId, text);
+        const message = await sendDemoStudentMessage(threadId, text, req.studentId);
         res.json({ ok: true, message });
     } catch (err) {
         console.error('POST /api/state/demo-messages', err);
@@ -106,9 +106,9 @@ router.post('/demo-messages', async (req, res) => {
 
 // Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
 // o'quvchining barcha "hamkurs" (Maqsaddoshlar) suhbatlarini qaytaradi.
-router.get('/demo-peer-messages', async (req, res) => {
+router.get('/demo-peer-messages', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentPeerMessages();
+        const data = await getDemoStudentPeerMessages(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-peer-messages', err);
@@ -118,13 +118,13 @@ router.get('/demo-peer-messages', async (req, res) => {
 
 // Public endpoint — namuna o'quvchi ilovadan hamkursiga xabar yozganda shu
 // yerga yuboradi. StudentId har doim serverda demoStudentId'dan olinadi.
-router.post('/demo-peer-messages', async (req, res) => {
+router.post('/demo-peer-messages', studentAuthOptional, async (req, res) => {
     try {
         const { peerId, peerName, text } = req.body || {};
         if (!peerId || typeof text !== 'string') {
             return res.status(400).json({ error: "Hamkurs va xabar matni yuborilishi shart" });
         }
-        const message = await sendDemoStudentPeerMessage(peerId, peerName, text);
+        const message = await sendDemoStudentPeerMessage(peerId, peerName, text, req.studentId);
         res.json({ ok: true, message });
     } catch (err) {
         console.error('POST /api/state/demo-peer-messages', err);
@@ -135,9 +135,9 @@ router.post('/demo-peer-messages', async (req, res) => {
 // 140-ish: "Afsonalar" (Legends) — namuna o'quvchining AI-personajlar bilan
 // suhbatlari. Faqat monitoring uchun (CRM javob yozmaydi) - shu sabab public
 // GET/POST yetarli, alohida authRequired endpoint kerak emas.
-router.get('/demo-persona-messages', async (req, res) => {
+router.get('/demo-persona-messages', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentPersonaMessages();
+        const data = await getDemoStudentPersonaMessages(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-persona-messages', err);
@@ -145,13 +145,13 @@ router.get('/demo-persona-messages', async (req, res) => {
     }
 });
 
-router.post('/demo-persona-messages', async (req, res) => {
+router.post('/demo-persona-messages', studentAuthOptional, async (req, res) => {
     try {
         const { personaId, personaName, text, sender } = req.body || {};
         if (!personaId || typeof text !== 'string') {
             return res.status(400).json({ error: "Personaj va xabar matni yuborilishi shart" });
         }
-        const message = await sendDemoStudentPersonaMessage(personaId, personaName, text, sender);
+        const message = await sendDemoStudentPersonaMessage(personaId, personaName, text, sender, req.studentId);
         res.json({ ok: true, message });
     } catch (err) {
         console.error('POST /api/state/demo-persona-messages', err);
@@ -183,9 +183,9 @@ router.post('/notification-rules', authRequired, async (req, res) => {
 
 // Namuna o'quvchi (va CRM'ning oldindan ko'rish oynasi) uchun haqiqiy,
 // birlashtirilgan (avtomatik + qo'lda yuborilgan) bildirishnomalar ro'yxati.
-router.get('/demo-notifications', async (req, res) => {
+router.get('/demo-notifications', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getComputedDemoNotifications();
+        const data = await getComputedDemoNotifications(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-notifications', err);
@@ -217,10 +217,10 @@ router.delete('/notifications/manual/:id', authRequired, async (req, res) => {
 
 // Namuna o'quvchi appdagi "Darsni nega qoldirdingiz?" so'rovnomasiga javob
 // berganda shu yerga yozadi — public, chunki bu o'quvchi tomonidan yuboriladi.
-router.post('/notifications/absence-reason', async (req, res) => {
+router.post('/notifications/absence-reason', studentAuthOptional, async (req, res) => {
     try {
         const { lessonDate, reason } = req.body || {};
-        await submitAbsenceReason(lessonDate, reason);
+        await submitAbsenceReason(lessonDate, reason, req.studentId);
         res.json({ ok: true });
     } catch (err) {
         console.error('POST /api/state/notifications/absence-reason', err);
@@ -298,9 +298,9 @@ router.delete('/content-comments/:id', authRequired, async (req, res) => {
 // Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
 // o'quvchining haqiqiy kitob yetkazib berish holatini (Sotuv bo'limidagi
 // "Kitob yetkazish" kanban-yozuvidan) qaytaradi. Topilmasa — null.
-router.get('/demo-book-delivery', async (req, res) => {
+router.get('/demo-book-delivery', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentBookDelivery();
+        const data = await getDemoStudentBookDelivery(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-book-delivery', err);
@@ -311,9 +311,9 @@ router.get('/demo-book-delivery', async (req, res) => {
 // Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
 // o'quvchining oxirgi imtihon/uyga vazifa/video/lug'at mashqi natijalarini
 // qaytaradi (ustoz kabineti va admin profili shu yerdan kuzatadi).
-router.get('/demo-activity', async (req, res) => {
+router.get('/demo-activity', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoStudentActivity();
+        const data = await getDemoStudentActivity(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-activity', err);
@@ -324,13 +324,13 @@ router.get('/demo-activity', async (req, res) => {
 // Public endpoint — namuna o'quvchi ilovada mashq/imtihonni yakunlaganda
 // haqiqiy natijasini shu yerga yozadi. StudentId har doim serverda
 // demoStudentId'dan olinadi.
-router.post('/demo-activity', async (req, res) => {
+router.post('/demo-activity', studentAuthOptional, async (req, res) => {
     try {
         const { type, label, scorePercent, passed, wrongAttempts, mistakes } = req.body || {};
         if (!type || typeof label !== 'string') {
             return res.status(400).json({ error: "Faoliyat turi va nomi yuborilishi shart" });
         }
-        const record = await addDemoStudentActivity({ type, label, scorePercent, passed, wrongAttempts, mistakes });
+        const record = await addDemoStudentActivity({ type, label, scorePercent, passed, wrongAttempts, mistakes }, req.studentId);
         res.json({ ok: true, record });
     } catch (err) {
         console.error('POST /api/state/demo-activity', err);
@@ -341,9 +341,9 @@ router.post('/demo-activity', async (req, res) => {
 // 148-ish: video/speaking darslardagi "Ijodiy vazifa". O'quvchi matn/audio/
 // rasm yuborishi public (ilovada login yo'q); ustoz kabinetida qabul qilib
 // ballash esa faqat CRM'dan (authRequired).
-router.get('/creative-submissions', async (req, res) => {
+router.get('/creative-submissions', studentAuthOptional, async (req, res) => {
     try {
-        const data = await getDemoCreativeSubmissions();
+        const data = await getDemoCreativeSubmissions(req.studentId);
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/creative-submissions', err);
@@ -351,10 +351,10 @@ router.get('/creative-submissions', async (req, res) => {
     }
 });
 
-router.post('/creative-submissions', async (req, res) => {
+router.post('/creative-submissions', studentAuthOptional, async (req, res) => {
     try {
         const { lessonId, lessonTitle, category, mediaType, text, imageUrl, audioUrl } = req.body || {};
-        const record = await submitDemoCreativeSubmission({ lessonId, lessonTitle, category, mediaType, text, imageUrl, audioUrl });
+        const record = await submitDemoCreativeSubmission({ lessonId, lessonTitle, category, mediaType, text, imageUrl, audioUrl }, req.studentId);
         res.json({ ok: true, record });
     } catch (err) {
         console.error('POST /api/state/creative-submissions', err);
@@ -454,19 +454,19 @@ router.delete('/community/posts/:postId/comments/:commentId', authRequired, asyn
 // o'qiydi (public). Bosqichni o'zgartirish (Kanban'da surish) esa CRM'ning
 // umumiy PATCH /api/state -> shopOrders kaliti orqali (authRequired) amalga
 // oshadi — bookRoadmap bilan bir xil naqsh.
-router.get('/demo-shop-orders', async (req, res) => {
+router.get('/demo-shop-orders', studentAuthOptional, async (req, res) => {
     try {
-        res.json({ orders: await getDemoShopOrders() });
+        res.json({ orders: await getDemoShopOrders(req.studentId) });
     } catch (err) {
         console.error('GET /api/state/demo-shop-orders', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });
 
-router.post('/demo-shop-orders', async (req, res) => {
+router.post('/demo-shop-orders', studentAuthOptional, async (req, res) => {
     try {
         const { productId, productName, category, price } = req.body || {};
-        const order = await addDemoShopOrder(productId, productName, category, price);
+        const order = await addDemoShopOrder(productId, productName, category, price, req.studentId);
         res.json({ ok: true, order });
     } catch (err) {
         console.error('POST /api/state/demo-shop-orders', err);

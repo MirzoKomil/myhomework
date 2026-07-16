@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { DeliveryStage } from '@/data/mock';
 import { ShopProduct } from '@/data/shopProducts';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
+import { authedFetch } from '@/services/contentApi';
 
 // Homework Shop buyurtmalari — ilgari faqat qurilma xotirasida (AsyncStorage)
 // yashagan, bosqichi hech qachon o'zgarmagan (doim "preparing") edi. Endi
@@ -62,7 +63,7 @@ function fromServerOrder(o: any): ShopOrder {
 // o'quvchi bu ekranga qaytganda darhol yangilangan holatni ko'radi.
 export async function loadOrders(): Promise<void> {
   try {
-    const res = await fetch(API_BASE);
+    const res = await authedFetch(API_BASE);
     const data = await res.json();
     if (Array.isArray(data.orders)) orders = data.orders.map(fromServerOrder);
   } catch {
@@ -76,7 +77,7 @@ export async function placeOrder(product: ShopProduct): Promise<boolean> {
   if (getTotalCoins() < product.price) return false;
   await addCoins(-product.price);
   try {
-    const res = await fetch(API_BASE, {
+    const res = await authedFetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
