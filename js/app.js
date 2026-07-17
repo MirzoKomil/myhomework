@@ -3378,7 +3378,6 @@ function renderMobileCoursesTab(container) {
             <div style="font-size:19px;font-weight:700;color:var(--text);text-align:center;line-height:1.4;word-break:break-word">${escapeHtml(c.name)}</div>
             <div style="font-size:12px;color:var(--text-muted)">${escapeHtml(c.createdAt || '')}</div>
             <div style="display:flex;gap:8px;width:100%;margin-top:8px">
-                <button type="button" class="btn-ghost" data-edit-course="${i}" style="flex:1">✏️ Nomini o'zgartirish</button>
                 <button type="button" class="btn-danger-sm" data-delete-course="${i}" style="flex:1">O'chirish</button>
             </div>
         </div>
@@ -3388,16 +3387,9 @@ function renderMobileCoursesTab(container) {
 
     container.querySelectorAll('[data-course-id]').forEach(card => {
         card.addEventListener('click', e => {
-            if (e.target.closest('[data-delete-course]') || e.target.closest('[data-edit-course]')) return;
+            if (e.target.closest('[data-delete-course]')) return;
             _activeCourseId = card.dataset.courseId;
             renderMobileEditPanel();
-        });
-    });
-
-    container.querySelectorAll('[data-edit-course]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const idx = parseInt(btn.dataset.editCourse);
-            _openEditCourseNameModal(idx, container);
         });
     });
 
@@ -3412,35 +3404,6 @@ function renderMobileCoursesTab(container) {
             showMiniToast("Kurs o'chirildi");
         });
     });
-}
-
-function _openEditCourseNameModal(idx, container) {
-    const mc = getMobileContent();
-    const courses = (mc.courses || []).filter(c => (c.lang || 'english') === _mobileLang);
-    const course = courses[idx];
-    if (!course) return;
-    openModal('Kurs nomini o\'zgartirish',
-        `<div class="form-group">
-            <label>Kurs nomi <span style="color:var(--danger)">*</span></label>
-            <input id="editCourseNameInput" class="form-control" value="${escapeHtml(course.name)}" autofocus>
-         </div>`,
-        `<button type="button" class="btn-ghost" id="cancelEditCourseName">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="saveEditCourseName">Saqlash</button>`,
-        { wide: false }
-    );
-    document.getElementById('cancelEditCourseName').onclick = () => closeModal();
-    document.getElementById('saveEditCourseName').onclick = () => {
-        const name = document.getElementById('editCourseNameInput').value.trim();
-        if (!name) { alert('Kurs nomi kiritilishi shart'); return; }
-        const mc2 = getMobileContent();
-        const gIdx = (mc2.courses || []).findIndex(c => c.id === course.id);
-        if (gIdx === -1) { closeModal(); return; }
-        mc2.courses[gIdx].name = name;
-        saveMobileContent(mc2);
-        closeModal();
-        renderMobileCoursesTab(container);
-        showMiniToast('Kurs nomi yangilandi');
-    };
 }
 
 // 131-ish: "Suniy intellekt" o'rniga qo'shilgan "Muloqot" bo'limi — appdagi
