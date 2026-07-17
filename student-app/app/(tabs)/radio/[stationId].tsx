@@ -124,6 +124,7 @@ export default function RadioPlayerScreen() {
   const activeBlockIdRef = useRef<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hwTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Nomzodlar ro'yxatidagi bittasi ishlamasa (xato beradi yoki belgilangan
   // vaqt ichida jonli oqim boshlanmasa — masalan HLS Chrome'da), avtomatik
@@ -201,17 +202,39 @@ export default function RadioPlayerScreen() {
         }
         if (block.id === activeBlockIdRef.current) return;
         playerRef.current?.remove();
+        if (hwTimeoutRef.current) { clearTimeout(hwTimeoutRef.current); hwTimeoutRef.current = null; }
         const player = createAudioPlayer(block.audioUrl);
         playerRef.current = player;
         activeBlockIdRef.current = block.id;
         setActiveBlockTitle(block.title);
+
+        // Bu klip uchun birinchi urinish muvaffaqiyatsiz bo'lsa (xato yoki hech
+        // qanday status kelmay "osilib qolsa" — masalan tarmoq muammosi),
+        // activeBlockIdRef'ni tozalab qo'yamiz — aks holda keyingi so'rovlar
+        // "bu blok allaqachon ishlangan" deb hisoblab, umuman qayta urinib
+        // ko'rmaydi va klip butun oraliq davomida qotib qoladi. Tozalasak,
+        // keyingi HW_RADIO_POLL_MS so'rovida xuddi shu blokka qayta ulanadi.
+        const giveUpOnBlock = () => {
+          if (hwTimeoutRef.current) { clearTimeout(hwTimeoutRef.current); hwTimeoutRef.current = null; }
+          setPlayback('error');
+          player.remove();
+          if (playerRef.current === player) playerRef.current = null;
+          if (activeBlockIdRef.current === block.id) activeBlockIdRef.current = null;
+        };
+
+        hwTimeoutRef.current = setTimeout(() => {
+          if (cancelledRef.current || playerRef.current !== player) return;
+          giveUpOnBlock();
+        }, CANDIDATE_TIMEOUT_MS);
+
         player.addListener('playbackStatusUpdate', (status) => {
           if (cancelledRef.current || playerRef.current !== player) return;
           if (status.error) {
-            setPlayback('error');
+            giveUpOnBlock();
             return;
           }
           if (status.playing) {
+            if (hwTimeoutRef.current) { clearTimeout(hwTimeoutRef.current); hwTimeoutRef.current = null; }
             setPlayback('playing');
             setIsPlaying(true);
             // 146-ish: hozir efirda turgan aniq klip nomi + Homework
@@ -243,6 +266,7 @@ export default function RadioPlayerScreen() {
     return () => {
       cancelledRef.current = true;
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (hwTimeoutRef.current) { clearTimeout(hwTimeoutRef.current); hwTimeoutRef.current = null; }
       playerRef.current?.clearLockScreenControls();
       playerRef.current?.remove();
       playerRef.current = null;
