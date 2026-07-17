@@ -304,13 +304,33 @@ function normalizeSpoken(s: string): string {
 
 type PronounceStatus = 'idle' | 'listening' | 'correct' | 'wrong' | 'unsupported' | 'error';
 
+// Safari (ayniqsa iOS'da) Chrome'dan farqli ishlaydi: gapirish tugaganda
+// o'zi avtomatik `onresult` chaqirmaydi — natija olish uchun aniq `stop()`
+// chaqirilishi shart. Hatto shundan keyin ham WebKit'ning ba'zi versiyalarida
+// (bilan tanish xizmati vaqtincha ishlamay qolganda) hech qanday hodisa
+// umuman chaqirilmasligi mumkin — shu sabab ikkita xavfsizlik choralari bor:
+// 1) foydalanuvchi o'zi to'xtatmasa ham, belgilangan vaqtdan keyin avtomatik
+//    `stop()` chaqiriladi; 2) shundan keyin ham hech narsa bo'lmasa, majburiy
+//    xato holatiga o'tkaziladi — cheksiz "tinglanmoqda" holatida qolib
+//    ketmasligi uchun.
+const AUTO_STOP_MS = 4500;
+const HANG_FAILSAFE_MS = 8000;
+
 function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct: boolean) => void }) {
   const [status, setStatus] = useState<PronounceStatus>('idle');
   const [heardText, setHeardText] = useState('');
   const recognitionRef = useRef<any>(null);
+  const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hangTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimers = () => {
+    if (autoStopTimerRef.current) { clearTimeout(autoStopTimerRef.current); autoStopTimerRef.current = null; }
+    if (hangTimerRef.current) { clearTimeout(hangTimerRef.current); hangTimerRef.current = null; }
+  };
 
   useEffect(() => {
     return () => {
+      clearTimers();
       try {
         recognitionRef.current?.stop();
       } catch {
@@ -336,20 +356,36 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
     recognition.interimResults = false;
     recognition.maxAlternatives = 3;
     recognition.onresult = (event: any) => {
+      clearTimers();
       const alternatives: string[] = Array.from(event.results[0]).map((r: any) => r.transcript as string);
       const target = normalizeSpoken(word.english);
       const matched = alternatives.some((t) => normalizeSpoken(t) === target);
       setHeardText(alternatives[0] || '');
       setStatus(matched ? 'correct' : 'wrong');
     };
-    recognition.onerror = () => setStatus('error');
+    recognition.onerror = () => {
+      clearTimers();
+      setStatus('error');
+    };
     recognition.onend = () => {
+      clearTimers();
       setStatus((s) => (s === 'listening' ? 'error' : s));
     };
     recognitionRef.current = recognition;
     setHeardText('');
     setStatus('listening');
     recognition.start();
+
+    autoStopTimerRef.current = setTimeout(() => {
+      try {
+        recognition.stop();
+      } catch {
+        // ignore
+      }
+    }, AUTO_STOP_MS);
+    hangTimerRef.current = setTimeout(() => {
+      setStatus((s) => (s === 'listening' ? 'error' : s));
+    }, HANG_FAILSAFE_MS);
   };
 
   const stopListening = () => {
@@ -376,7 +412,7 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
           onPress={status === 'listening' ? stopListening : startListening}>
           <Ionicons name={status === 'listening' ? 'stop' : 'mic'} size={30} color="#fff" />
         </Pressable>
-        {status === 'listening' && <Text style={styles.recordedText}>Tinglanmoqda...</Text>}
+        {status === 'listening' && <Text style={styles.recordedText}>Tinglanmoqda... gapiring</Text>}
         {status === 'unsupported' && (
           <Text style={[styles.recordedText, { color: theme.colors.danger }]}>
             Brauzeringiz ovozni aniqlashni qo'llab-quvvatlamaydi
