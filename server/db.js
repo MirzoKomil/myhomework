@@ -3,6 +3,17 @@ const { randomUUID } = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const webpush = require('web-push');
+
+// 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
+// bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
+// almashtirish mumkin, lekin qo'shimcha sozlashsiz ham ishlashi uchun bir
+// martalik generatsiya qilingan qiymatlar standart sifatida ishlatiladi.
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY
+    || 'BLKXuHiH8pcCr1YMhQ9xTCSz6pCam_ntLlckzdK1nZH335qYIh99Q4yvtQJfDPrDqZoYouMcTxdrdw7_KHIXBpk';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY
+    || 'kaNy2-IlX42QM4etyHidLD3PidQUcNUxo-3Vh0T2mvY';
+webpush.setVapidDetails('mailto:support@myhomework.uz', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // Kutubxona (Grammatika/So'zlar/Talaffuz/Speaking/Podkastlar/Kitoblar) — appning
 // statik ma'lumotlaridan bir martalik ko'chirilgan boshlang'ich to'plam. CRM
@@ -1151,6 +1162,7 @@ async function addManualNotification(title, text, sentBy) {
     await tx(async (client) => {
         await saveJsonData(client, 'manualNotifications', all);
     });
+    sendPushToAll(notification.title, notification.message).catch(() => {});
     return notification;
 }
 
@@ -1183,11 +1195,62 @@ async function addSystemNotification(ruleId, vars) {
     await tx(async (client) => {
         await saveJsonData(client, 'systemNotifications', all);
     });
+    sendPushToAll(notification.title, notification.message).catch(() => {});
     return notification;
 }
 
 function fillNotificationTemplate(template, vars) {
     return String(template || '').replace(/\{(\w+)\}/g, (match, key) => (vars[key] != null ? vars[key] : match));
+}
+
+// ── Web Push obunalari — 142-ish qayta ish 8 ("appdan tashqarida" keladigan
+// haqiqiy bildirishnomalar) ────────────────────────────────────────────────
+// Bitta "namuna o'quvchi" arxitekturasiga mos — barcha obunalar bitta ro'yxatda
+// saqlanadi va har bir tizim/hisoblangan voqeada BARCHASIGA yuboriladi
+// (masalan bir nechta qurilmada ochilgan bo'lsa — telefon + kompyuter).
+async function getPushSubscriptions() {
+    return getJsonData('pushSubscriptions');
+}
+
+async function addPushSubscription(subscription) {
+    if (!subscription?.endpoint) throw new Error("Noto'g'ri obuna ma'lumoti");
+    const all = await getJsonData('pushSubscriptions');
+    const filtered = all.filter(s => s.endpoint !== subscription.endpoint);
+    filtered.push({ ...subscription, addedAt: new Date().toISOString() });
+    await tx(async (client) => {
+        await saveJsonData(client, 'pushSubscriptions', filtered);
+    });
+    return { ok: true };
+}
+
+async function removePushSubscription(endpoint) {
+    const all = await getJsonData('pushSubscriptions');
+    const filtered = all.filter(s => s.endpoint !== endpoint);
+    await tx(async (client) => {
+        await saveJsonData(client, 'pushSubscriptions', filtered);
+    });
+}
+
+// Yaroqsiz bo'lib qolgan obunalarni (404/410 — foydalanuvchi ruxsatni bekor
+// qilgan yoki brauzer obunani eskirtirgan) jimgina ro'yxatdan olib tashlaydi.
+async function sendPushToAll(title, message, url) {
+    const subs = await getPushSubscriptions();
+    if (!subs.length) return;
+    const payload = JSON.stringify({ title, body: message, url: url || '/student/notifications' });
+    const stale = [];
+    await Promise.all(subs.map(async (sub) => {
+        try {
+            await webpush.sendNotification(sub, payload);
+        } catch (err) {
+            if (err.statusCode === 404 || err.statusCode === 410) stale.push(sub.endpoint);
+        }
+    }));
+    if (stale.length) {
+        const remaining = subs.filter(s => !stale.includes(s.endpoint));
+        await tx(async (client) => {
+            await saveJsonData(client, 'pushSubscriptions', remaining);
+        });
+    }
 }
 
 async function getDemoStudent(studentId) {
@@ -2078,6 +2141,36 @@ async function init() {
     await seedIfEmpty();
 }
 
+// ── "Hisoblangan" (computed/auto) eslatmalarni push orqali yetkazish ────────
+// 142-ish qayta ish 8: jonli dars sanog'i, videodars nazorat nuqtalari,
+// uyga vazifa, to'lov qarzi va h.k. — bular tizim voqealaridan farqli, hech
+// qayerda saqlanmaydi, har so'rovda "hozir to'g'rimi" deb qayta hisoblanadi.
+// Shu sabab ularni push qilish uchun vaqti-vaqti bilan o'zimiz tekshirib,
+// avval yuborilmagan (id bo'yicha) yangilarini push qilamiz. Xotiradagi Set
+// server qayta ishga tushganda tozalanadi — bu qabul qilinadi (eng yomon
+// holatda qayta ishga tushgandan keyingi birinchi tsiklda bir nechta eslatma
+// qayta yuborilishi mumkin, lekin cheksiz takrorlanmaydi).
+let _pushedComputedIds = new Set();
+async function _checkAndPushComputedNotifications() {
+    try {
+        const subs = await getPushSubscriptions();
+        if (!subs.length) return; // hech kim obuna bo'lmagan bo'lsa, hisoblashning hojati yo'q
+        const notifications = await getComputedDemoNotifications();
+        for (const n of notifications) {
+            if (n.source !== 'auto' || _pushedComputedIds.has(n.id)) continue;
+            _pushedComputedIds.add(n.id);
+            await sendPushToAll(n.title, n.message);
+        }
+        if (_pushedComputedIds.size > 500) {
+            _pushedComputedIds = new Set(Array.from(_pushedComputedIds).slice(-200));
+        }
+    } catch (err) {
+        console.error('[push] hisoblangan eslatmalarni tekshirishda xatolik:', err.message);
+    }
+}
+const PUSH_CHECK_INTERVAL_MS = 60 * 1000;
+setInterval(_checkAndPushComputedNotifications, PUSH_CHECK_INTERVAL_MS);
+
 module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, insertLead, patchState,
@@ -2090,6 +2183,7 @@ module.exports = {
     getNotificationRules, saveNotificationRules,
     getManualNotifications, addManualNotification, deleteManualNotification,
     addSystemNotification, submitAbsenceReason,
+    getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY,
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
     getComputedDemoNotifications,

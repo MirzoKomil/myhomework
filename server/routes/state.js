@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -216,6 +216,44 @@ router.post('/notifications/leaderboard-climb', studentAuthOptional, async (req,
     } catch (err) {
         console.error('POST /api/state/notifications/leaderboard-climb', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 142-ish qayta ish 8: haqiqiy Web Push (ilova yopiq bo'lsa ham keladigan
+// bildirishnoma) — public, chunki ilova tarafida login shart emas.
+router.get('/push/vapid-public-key', (req, res) => {
+    res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+router.post('/push/subscribe', studentAuthOptional, async (req, res) => {
+    try {
+        await addPushSubscription(req.body);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/state/push/subscribe', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/push/unsubscribe', studentAuthOptional, async (req, res) => {
+    try {
+        await removePushSubscription(req.body?.endpoint);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/state/push/unsubscribe', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// CRM'dan qancha qurilma obuna bo'lganini ko'rish uchun (admin panel
+// "Bildirishnomalar" bo'limida ko'rsatilishi mumkin).
+router.get('/push/subscriptions-count', authRequired, async (req, res) => {
+    try {
+        const subs = await getPushSubscriptions();
+        res.json({ count: subs.length });
+    } catch (err) {
+        console.error('GET /api/state/push/subscriptions-count', err);
+        res.status(500).json({ error: 'Xatolik' });
     }
 });
 
