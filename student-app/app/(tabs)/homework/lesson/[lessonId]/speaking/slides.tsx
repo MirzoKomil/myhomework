@@ -4,41 +4,29 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CommentsSheet } from '@/components/CommentsSheet';
 import { MaterialsList } from '@/components/ui/MaterialsList';
-import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
 import { DESKTOP_CONTENT_MAX_WIDTH } from '@/constants/web';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
-import { useAvatarUri } from '@/services/avatarStore';
 import { fetchMobileContent, getLessonMaterials, LessonMaterials } from '@/services/contentApi';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
-type Comment = { id: string; name: string; text: string; time: string; me?: boolean };
-
-const MOCK_COMMENTS: Comment[] = [
-  { id: 'c1', name: 'Kamola', text: "Slaydlar juda tushunarli tayyorlangan, rahmat!", time: '3 kun oldin' },
-  { id: 'c2', name: 'Jasur', text: "Misollar ko'p bo'lgani yoqdi.", time: '1 kun oldin' },
-  { id: 'c3', name: 'Nilufar', text: "Shu mavzuni takrorlash uchun juda foydali.", time: '6 soat oldin' },
-];
-
 export default function SlidesScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  const isBonus = String(lessonId).startsWith('bonus-');
   // 151-ish: avval modul darajasida bir marta o'lchanardi (oyna kengligi
   // o'zgarsa yangilanmasdi) va desktop rejimida haqiqiy ko'rinadigan tor
   // ustundan kattaroq bo'lib, slaydlar chetga chiqib ketardi — endi reaktiv
@@ -50,17 +38,6 @@ export default function SlidesScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
-  const [draft, setDraft] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
-  const myAvatarUri = useAvatarUri();
-
-  const submitComment = () => {
-    const text = draft.trim();
-    if (!text) return;
-    setComments((prev) => [{ id: `me-${Date.now()}`, name: 'Siz', text, time: 'hozir', me: true }, ...prev]);
-    setDraft('');
-  };
 
   useEffect(() => {
     getResolvedLessonContent(String(lessonId), 1).then(setContent);
@@ -142,7 +119,7 @@ export default function SlidesScreen() {
         </View>
         <Pressable style={styles.commentsPill} onPress={() => setShowComments(true)}>
           <Ionicons name="chatbubble-ellipses-outline" size={15} color={theme.colors.purple} />
-          <Text style={styles.commentsPillText}>Izohlar ({comments.length})</Text>
+          <Text style={styles.commentsPillText}>Izohlar</Text>
         </Pressable>
       </View>
 
@@ -172,53 +149,13 @@ export default function SlidesScreen() {
         )}
       </View>
 
-      <Modal visible={showComments} animationType="slide" transparent onRequestClose={() => setShowComments(false)}>
-        <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <Pressable style={styles.modalBackdropTap} onPress={() => setShowComments(false)} />
-          <View style={styles.sheet}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Izohlar</Text>
-            <ScrollView contentContainerStyle={styles.commentsList} showsVerticalScrollIndicator={false}>
-              {comments.map((c) => (
-                <View key={c.id} style={styles.commentRow}>
-                  <Pressable onPress={() => !c.me && setSelectedStudent(c.name)}>
-                    <View style={[styles.commentAvatar, c.me && styles.commentAvatarMe]}>
-                      {c.me && myAvatarUri ? (
-                        <Image source={{ uri: myAvatarUri }} style={styles.commentAvatarImage} />
-                      ) : (
-                        <Text style={styles.commentAvatarText}>{c.name.charAt(0)}</Text>
-                      )}
-                    </View>
-                  </Pressable>
-                  <View style={styles.commentBody}>
-                    <View style={styles.commentHeaderRow}>
-                      <Pressable onPress={() => !c.me && setSelectedStudent(c.name)}>
-                        <Text style={styles.commentName}>{c.name}</Text>
-                      </Pressable>
-                      <Text style={styles.commentTime}>{c.time}</Text>
-                    </View>
-                    <Text style={styles.commentText}>{c.text}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-            <View style={styles.commentInputRow}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Izoh qoldiring..."
-                placeholderTextColor={theme.colors.textLight}
-                value={draft}
-                onChangeText={setDraft}
-              />
-              <Pressable style={styles.commentSendBtn} onPress={submitComment}>
-                <Ionicons name="send" size={18} color="#fff" />
-              </Pressable>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
+      <CommentsSheet
+        visible={showComments}
+        onClose={() => setShowComments(false)}
+        category={isBonus ? 'bonus' : 'speaking'}
+        itemId={String(lessonId)}
+        itemLabel={content.unitTitle}
+      />
     </SafeAreaView>
   );
 }
@@ -287,67 +224,4 @@ const styles = StyleSheet.create({
   nextNavBtnText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#fff' },
   doneBtn: { flex: 1, backgroundColor: theme.colors.success, borderRadius: theme.radius.sm, paddingVertical: 14, alignItems: 'center' },
   doneText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#fff' },
-
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  sheet: {
-    backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '75%',
-    paddingTop: 10,
-    paddingHorizontal: 20,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: theme.colors.border,
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  sheetTitle: { fontFamily: theme.fonts.extraBold, fontSize: 18, color: theme.colors.text, marginBottom: 12 },
-  commentsList: { paddingBottom: 12, gap: 14 },
-  commentRow: { flexDirection: 'row', gap: 10 },
-  commentAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: theme.colors.purpleLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  commentAvatarMe: { backgroundColor: theme.colors.purple },
-  commentAvatarImage: { width: 34, height: 34 },
-  commentAvatarText: { fontFamily: theme.fonts.bold, fontSize: 14, color: theme.colors.purple },
-  commentBody: { flex: 1 },
-  commentHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  commentName: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.text },
-  commentTime: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textLight },
-  commentText: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, marginTop: 2 },
-  commentInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 14,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
-    color: theme.colors.text,
-  },
-  commentSendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.purple,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

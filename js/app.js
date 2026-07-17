@@ -654,6 +654,9 @@ let _activeMuloqotCategory = null;
 let _activeLegendId = null;
 let _activeAdminThreadId = null;
 let _legendMessagesCache = null;
+// 140-ish: "Izohlar" ostidagi 5 ta kontent turi (video/speaking/bonus/
+// teacher/radio) orasidan tanlanganini saqlaydi — null=5 ta karta.
+let _activeCommentCategory = null;
 // 132-ish: "Resurslar" bo'limi endi appdagi haqiqiy tuzilishni (Kutubxona/
 // O'yinlar/Hamjamiyat) aks ettiradi — null=3 ta karta, 'library'=Kutubxona
 // ichidagi 6 ta resurs turi, 'games'/'community'=hozircha oddiy izoh.
@@ -3452,9 +3455,16 @@ const MOBILE_MULOQOT_CATEGORIES = [
     { id: 'peers', icon: '👥', title: 'Maqsaddoshlar', desc: "O'quvchilarning bir-biri bilan yozishmalarini kuzating (faqat ko'rish)" },
     { id: 'legends', icon: '✨', title: 'Afsonalar', desc: "Namuna o'quvchining AI-personajlar bilan suhbatlarini kuzating (faqat ko'rish)" },
     { id: 'admin', icon: '🛠️', title: "Ma'muriyat", desc: "Qo'llab-quvvatlash va ustozlar bilan haqiqiy yozishmalarga javob bering" },
+    { id: 'comments', icon: '💬', title: 'Izohlar', desc: "Video, speaking, bonus darslar, ustozlar va radiolar bo'yicha izohlarni ko'ring, o'chiring va javob yozing" },
 ];
 
 function renderMobileMuloqotTab(container) {
+    // "Izohlar" (140-ish) — bitta namuna o'quvchiga bog'liq emas (kontent
+    // bo'yicha izohlar), shu sabab quyidagi demoStudentId talabidan mustasno.
+    if (_activeMuloqotCategory === 'comments') {
+        renderMobileMuloqotBackedBody(container, (body) => renderMobileCommentsLandingBody(body));
+        return;
+    }
     const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
     if (!demoStudentId) {
         container.innerHTML = `<div class="mac-empty" style="padding:60px 0;text-align:center;color:var(--text-muted)">Namuna o'quvchi hali belgilanmagan (Davomat bo'limidan tanlang)</div>`;
@@ -3500,9 +3510,138 @@ function renderMobileMuloqotBackedBody(container, renderBody) {
         _activePeerId = null;
         _activeLegendId = null;
         _activeAdminThreadId = null;
+        _activeCommentCategory = null;
         renderMobileEditPanel();
     });
     renderBody(document.getElementById('muloqotCategoryBody'));
+}
+
+// 140-ish: "Izohlar" — 5 ta kontent turi bo'yicha moderatsiya (145-ish'da
+// faqat radio stansiyalari uchun qurilgan izoh tizimini umumlashtiradi).
+// Har bir turdagi BARCHA elementlar (masalan barcha video darslar)ning
+// izohlari bitta oqimda ko'rsatiladi — qaysi element ekanligini `itemLabel`
+// bildiradi (xuddi radio stansiyasi nomi kabi).
+const COMMENT_CATEGORIES = [
+    { id: 'video', icon: '🎬', title: 'Videodarslar', desc: "Video darslar bo'yicha o'quvchi izohlari" },
+    { id: 'speaking', icon: '🗣️', title: 'Speaking darslari', desc: "Speaking darslari bo'yicha izohlar" },
+    { id: 'bonus', icon: '🎁', title: 'Bonus darslar', desc: "Bonus darslar bo'yicha izohlar" },
+    { id: 'teacher', icon: '👨‍🏫', title: 'Ustozlar', desc: "Ustozlar bo'yicha izohlar" },
+    { id: 'radio', icon: '📻', title: 'Radiolar', desc: "Radio stansiyalari bo'yicha izohlar" },
+];
+const COMMENT_CATEGORY_MAP = Object.fromEntries(COMMENT_CATEGORIES.map(c => [c.id, c]));
+
+function renderMobileCommentsLandingBody(container) {
+    if (_activeCommentCategory) {
+        renderCommentsCategoryView(container, _activeCommentCategory);
+        return;
+    }
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+        ${COMMENT_CATEGORIES.map(cat => `
+            <div data-comment-cat="${cat.id}" style="cursor:pointer;display:flex;flex-direction:column;gap:8px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+                <div style="font-size:28px">${cat.icon}</div>
+                <div style="font-size:15px;font-weight:700;color:var(--text)">${escapeHtml(cat.title)}</div>
+                <div style="font-size:12px;color:var(--text-muted);line-height:1.4">${escapeHtml(cat.desc)}</div>
+            </div>
+        `).join('')}
+    </div>`;
+    container.querySelectorAll('[data-comment-cat]').forEach(card => {
+        card.addEventListener('click', () => {
+            _activeCommentCategory = card.dataset.commentCat;
+            renderMobileEditPanel();
+        });
+    });
+}
+
+function renderCommentsCategoryView(container, categoryKey) {
+    const cat = COMMENT_CATEGORY_MAP[categoryKey];
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <button type="button" id="backToCommentsLandingBtn" class="btn-ghost" style="padding:4px 10px">← Izohlar</button>
+            <div style="font-weight:700;font-size:14px;color:var(--text)">${cat ? cat.icon : ''} ${escapeHtml(cat ? cat.title : '')}</div>
+        </div>
+        <div id="commentsCategoryBody"><div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Yuklanmoqda...</div></div>`;
+    document.getElementById('backToCommentsLandingBtn').addEventListener('click', () => {
+        _activeCommentCategory = null;
+        renderMobileEditPanel();
+    });
+    _loadCommentsForCategory(categoryKey);
+}
+
+function _loadCommentsForCategory(categoryKey) {
+    const body = document.getElementById('commentsCategoryBody');
+    if (!body) return;
+    apiFetchContentComments().then(all => {
+        const forCategory = all.filter(c => c.category === categoryKey);
+        const topLevel = forCategory.filter(c => !c.parentId);
+        const repliesByParent = {};
+        forCategory.filter(c => c.parentId).forEach(c => {
+            if (!repliesByParent[c.parentId]) repliesByParent[c.parentId] = [];
+            repliesByParent[c.parentId].push(c);
+        });
+        // Eng oxirgi faollik (o'zi yoki javoblaridan biri) bo'yicha saralanadi —
+        // qaysi suhbat eng yangi yozilgan bo'lsa, o'sha yuqorida turadi.
+        const threadActivity = (c) => {
+            const replies = repliesByParent[c.id] || [];
+            const times = [c.createdAt, ...replies.map(r => r.createdAt)].map(t => new Date(t).getTime());
+            return Math.max(...times);
+        };
+        topLevel.sort((a, b) => threadActivity(b) - threadActivity(a));
+
+        const commentRowHtml = (c, isReply) => `
+            <div style="display:flex;align-items:flex-start;gap:8px;${isReply ? 'margin-left:24px;margin-top:8px' : 'margin-bottom:6px'}">
+                <div style="font-size:16px;flex-shrink:0">${c.isAdmin ? '🛠️' : '🙂'}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:12px;color:var(--text)"><b>${escapeHtml(c.authorName || '')}</b>${c.isAdmin ? ' <span style="color:var(--purple,#7c3aed)">· admin</span>' : ''} ${escapeHtml(c.text || '')}</div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${c.createdAt ? new Date(c.createdAt).toLocaleString('uz-UZ') : ''}</div>
+                    <div style="display:flex;gap:12px;margin-top:4px">
+                        <button type="button" data-cc-reply="${escapeHtml(c.id)}" style="background:none;border:none;cursor:pointer;color:var(--purple,#7c3aed);font-size:11px;font-weight:600">Javob yozish</button>
+                        <button type="button" data-cc-del="${escapeHtml(c.id)}" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:11px;font-weight:600">O'chirish</button>
+                    </div>
+                    <div data-cc-reply-box="${escapeHtml(c.id)}" style="display:none;margin-top:8px;gap:6px"></div>
+                </div>
+            </div>`;
+
+        const html = topLevel.length
+            ? topLevel.map(c => `
+                <div style="border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface);margin-bottom:10px">
+                    <div style="font-size:11px;font-weight:700;color:var(--purple,#7c3aed);margin-bottom:8px">${escapeHtml(c.itemLabel || c.itemId || '')}</div>
+                    ${commentRowHtml(c, false)}
+                    ${(repliesByParent[c.id] || []).map(r => commentRowHtml(r, true)).join('')}
+                </div>`).join('')
+            : `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--text-muted)">Hali izoh yo'q</div>`;
+
+        body.innerHTML = html;
+
+        body.querySelectorAll('[data-cc-del]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!confirm("Izoh o'chirilsinmi?")) return;
+                apiDeleteContentComment(btn.dataset.ccDel).then(() => _loadCommentsForCategory(categoryKey));
+            });
+        });
+
+        body.querySelectorAll('[data-cc-reply]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const box = body.querySelector(`[data-cc-reply-box="${btn.dataset.ccReply}"]`);
+                if (!box) return;
+                if (box.style.display === 'flex') { box.style.display = 'none'; box.innerHTML = ''; return; }
+                box.style.display = 'flex';
+                box.innerHTML = `
+                    <input type="text" class="form-control" placeholder="Admin nomidan javob..." style="flex:1">
+                    <button type="button" class="btn-primary-sm" style="flex-shrink:0">Yuborish</button>`;
+                const input = box.querySelector('input');
+                const sendBtn = box.querySelector('button');
+                const send = () => {
+                    const text = input.value.trim();
+                    if (!text) return;
+                    apiReplyContentComment(btn.dataset.ccReply, text).then(() => _loadCommentsForCategory(categoryKey));
+                };
+                sendBtn.addEventListener('click', send);
+                input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+            });
+        });
+    }).catch(err => {
+        body.innerHTML = `<div class="mac-empty" style="padding:30px 0;text-align:center;color:var(--danger)">Yuklashda xatolik: ${escapeHtml(err.message || String(err))}</div>`;
+    });
 }
 
 // ─── Ma'muriyat (support/asosiy ustoz/yordamchi ustoz) — ro'yxat/tafsilot ───
