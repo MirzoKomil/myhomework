@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -190,6 +190,32 @@ router.get('/demo-notifications', studentAuthOptional, async (req, res) => {
     } catch (err) {
         console.error('GET /api/state/demo-notifications', err);
         res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// 142-ish qayta ish 8: chaqmoq darajasi va reyting o'rni butunlay ilova
+// qurilmasida (AsyncStorage) hisoblanadi — server bu o'zgarishni bilmaydi,
+// shu sabab ilovaning o'zi darajaga/reytingga chiqqanini aniqlab, shu 2 ta
+// maxsus (qattiq belgilangan ruleId'li, o'zboshimcha ruleId qabul qilmaydigan)
+// endpoint orqali xabar beradi.
+router.post('/notifications/level-up', studentAuthOptional, async (req, res) => {
+    try {
+        const { level } = req.body || {};
+        const notification = await addSystemNotification('levelUp', { level: level || '' });
+        res.json({ ok: true, notification });
+    } catch (err) {
+        console.error('POST /api/state/notifications/level-up', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/notifications/leaderboard-climb', studentAuthOptional, async (req, res) => {
+    try {
+        const notification = await addSystemNotification('leaderboardClimb', {});
+        res.json({ ok: true, notification });
+    } catch (err) {
+        console.error('POST /api/state/notifications/leaderboard-climb', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });
 

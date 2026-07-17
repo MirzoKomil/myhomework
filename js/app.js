@@ -3876,6 +3876,9 @@ const NOTIF_RULE_GROUPS = [
         label: 'Kunlik eslatmalar',
         rules: [
             { id: 'videoLessonMorning', label: 'Videodars kuni ertalab 09:00' },
+            { id: 'videoLessonNoon', label: "Videodars kuni 12:00 (hali ko'rmagan bo'lsa)" },
+            { id: 'videoLessonEvening', label: "Videodars kuni 18:00 (hali ko'rmagan bo'lsa)" },
+            { id: 'videoLessonNight', label: "Videodars kuni 21:00 (hali ko'rmagan bo'lsa)" },
             { id: 'homeworkIncomplete', label: "Uyga vazifa tugallanmagan (09:00-22:00)" },
             { id: 'bonusLessonSunday', label: 'Yakshanba bonus dars taklifi (12:00)' },
             { id: 'paymentDebt', label: "To'lov qarzdorligi" },
@@ -3888,6 +3891,8 @@ const NOTIF_RULE_GROUPS = [
             { id: 'deliveryUpdated', label: 'Yetkazib berish holati yangilanganda' },
             { id: 'muloqotMessage', label: "Ma'muriyatdan xabar kelganda" },
             { id: 'communityLike', label: "Hamjamiyatda post yoqtirilganda" },
+            { id: 'levelUp', label: 'Daraja (chaqmoq) oshganda' },
+            { id: 'leaderboardClimb', label: "Reytingda 10 pog'ona ko'tarilganda" },
         ],
     },
 ];

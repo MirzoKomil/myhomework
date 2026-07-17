@@ -1070,6 +1070,12 @@ const DEFAULT_NOTIFICATION_RULES = {
     lessonReminder0: { enabled: true, title: 'Darsingiz boshlandi!', message: "{course} darsi hozir boshlandi. Guruhga qo'shiling!" },
     teacherRatingPrompt: { enabled: true, title: 'Ustozingizni baholang', message: "So'nggi darsingiz uchun ustozingizni baholashingiz kutilmoqda." },
     videoLessonMorning: { enabled: true, title: 'Bugun videodars kuni', message: "Bugungi videodarsni ko'rishni unutmang!" },
+    // 142-ish qayta ish 8: soat 09:00'dagi yagona eslatmadan tashqari, kun
+    // davomida yana 3 ta nazorat nuqtasi (12:00/18:00/21:00) — faqat hali
+    // ko'rilmagan bo'lsa yuboriladi (VIDEO_REMINDER_CHECKPOINTS'ga qarang).
+    videoLessonNoon: { enabled: true, title: 'Bugun videodars kuni', message: "Hali videodarsni ko'rmadingiz — soat 12:00 bo'ldi, unutmang!" },
+    videoLessonEvening: { enabled: true, title: 'Bugun videodars kuni', message: "Hali videodarsni ko'rmadingiz — kun tugayapti, unutmang!" },
+    videoLessonNight: { enabled: true, title: 'Bugun videodars kuni', message: "Bugun videodarsni ko'rishni unutmang, vaqt kam qoldi!" },
     homeworkIncomplete: { enabled: true, title: 'Uyga vazifa tugallanmagan', message: "Bugungi uyga vazifangizni hali to'liq bajarmadingiz." },
     bonusLessonSunday: { enabled: true, title: 'Yakshanba bonus darsi', message: "Bugun soat 12:00 dan bonus darsni ko'rishingiz mumkin!" },
     paymentDebt: { enabled: true, title: "To'lov bo'yicha eslatma", message: "Hisobingizda qarzdorlik mavjud. Iltimos, to'lovni amalga oshiring." },
@@ -1078,6 +1084,12 @@ const DEFAULT_NOTIFICATION_RULES = {
     deliveryUpdated: { enabled: true, title: 'Yetkazib berish holati yangilandi', message: "Buyurtmangiz holati o'zgardi: {stage}." },
     muloqotMessage: { enabled: true, title: 'Yangi xabar keldi', message: "Sizga Muloqot bo'limida yangi xabar yozildi." },
     communityLike: { enabled: true, title: 'Postingiz yoqtirildi', message: 'Hamjamiyatdagi postingizga yurakcha bosishdi ❤️' },
+    // 142-ish qayta ish 8: mijoz (student-app) tomonidan aniqlanib, maxsus
+    // /api/state/notifications/level-up va /leaderboard-climb orqali qo'lda
+    // qo'zg'atiladigan voqealar — chaqmoq/reyting butunlay qurilmada
+    // (AsyncStorage) saqlangani sababli serverda o'zi hisoblab bo'lmaydi.
+    levelUp: { enabled: true, title: 'Tabriklaymiz! Yangi darajaga chiqdingiz', message: 'Siz endi "{level}" darajasidasiz! Shunday davom eting 🎉' },
+    leaderboardClimb: { enabled: true, title: "Reytingda ko'tarildingiz!", message: "Siz reytingda 10 pog'ona yuqoriga chiqdingiz — zo'r natija! 🏆" },
 };
 
 const LESSON_COUNTDOWN_RULES = [
@@ -1090,6 +1102,16 @@ const LESSON_COUNTDOWN_RULES = [
     { id: 'lessonReminder0', minutes: 0 },
 ];
 const COUNTDOWN_TOLERANCE_MINUTES = 3;
+
+// 142-ish qayta ish 8: kun davomidagi 4 ta "hali ko'rmadingizmi" nazorat
+// nuqtasi — soat kelganda va bugun hali video darsga oid faoliyat (mashqlar
+// yakunlangani) qayd etilmagan bo'lsagina yuboriladi.
+const VIDEO_REMINDER_CHECKPOINTS = [
+    { id: 'videoLessonMorning', hour: 9 },
+    { id: 'videoLessonNoon', hour: 12 },
+    { id: 'videoLessonEvening', hour: 18 },
+    { id: 'videoLessonNight', hour: 21 },
+];
 
 // js/storage.js'dagi SCHEDULE_PATTERNS bilan bir xil (mwf/tts, JS Date.getDay()
 // konventsiyasi: 0=Yakshanba..6=Shanba).
@@ -1297,20 +1319,34 @@ async function getComputedDemoNotifications(studentId) {
         }
     }
 
-    // ── Bugun videodars kuni (soat 09:00 dan) ───────────────────────────────
-    if (rules.videoLessonMorning?.enabled && student?.lessonDayOfWeek != null) {
+    // ── Bugun videodars kuni (09:00/12:00/18:00/21:00 nazorat nuqtalari) ────
+    if (student?.lessonDayOfWeek != null && VIDEO_REMINDER_CHECKPOINTS.some(cp => rules[cp.id]?.enabled)) {
         const teacherRow = await q1('SELECT schedule_pattern FROM teachers WHERE id = $1', [student.teacherId]);
         const livePattern = teacherRow?.schedule_pattern || 'mwf';
         const now = tashkentNow();
-        if (now.getUTCHours() >= 9 && isVideoLessonDayToday(livePattern)) {
-            notifications.push({
-                id: 'auto-videoLessonMorning-' + now.toISOString().slice(0, 10),
-                category: 'lessons', source: 'auto',
-                title: rules.videoLessonMorning.title,
-                message: rules.videoLessonMorning.message,
-                date: new Date().toISOString(),
-                unread: true,
-            });
+        if (isVideoLessonDayToday(livePattern)) {
+            const todayStr = now.toISOString().slice(0, 10);
+            // Video mashqlari yakunlangani — videoni ko'rib chiqqanining eng
+            // yaqin serverda kuzatiladigan belgisi (mashqlarni bajarish uchun
+            // avval video ko'rilishi kerak).
+            const activity = await getDemoStudentActivity();
+            const watchedToday = activity.some(a => a.type === 'video' && a.time.slice(0, 10) === todayStr);
+            if (!watchedToday) {
+                const nowHour = now.getUTCHours();
+                // Faqat eng yaqin (o'tib bo'lgan) nazorat nuqtasi ko'rsatiladi —
+                // bir vaqtda bir nechtasi emas (LESSON_COUNTDOWN_RULES'dagi kabi).
+                const dueCheckpoint = [...VIDEO_REMINDER_CHECKPOINTS].reverse().find(cp => rules[cp.id]?.enabled && nowHour >= cp.hour);
+                if (dueCheckpoint) {
+                    notifications.push({
+                        id: 'auto-' + dueCheckpoint.id + '-' + todayStr,
+                        category: 'lessons', source: 'auto',
+                        title: rules[dueCheckpoint.id].title,
+                        message: rules[dueCheckpoint.id].message,
+                        date: new Date().toISOString(),
+                        unread: true,
+                    });
+                }
+            }
         }
     }
 

@@ -21,6 +21,7 @@ import {
 } from '@/data/mock';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
+import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
 import { useLightning } from '@/services/lightningStore';
 
 const PERIODS: LeaderboardPeriod[] = ['daily', 'weekly', 'monthly', 'alltime'];
@@ -45,6 +46,15 @@ export default function LeaderboardScreen() {
   );
   const top3 = ranked.slice(0, 3);
   const rest = ranked.slice(3);
+
+  // 142-ish qayta ish 8: reyting o'rni ko'tarilishini faqat ekran ochilganda
+  // standart tanlanadigan (alltime/country) ko'rinishda kuzatamiz — aks holda
+  // foydalanuvchi filtr almashtirganda soxta "ko'tarildingiz" signali chiqadi.
+  useEffect(() => {
+    if (period !== 'alltime' || scope !== 'country') return;
+    const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
+    if (me) checkLeaderboardClimb(me.rank);
+  }, [ranked, period, scope]);
 
   const rank1Shimmer = useRef(new Animated.Value(0)).current;
   const rank2Shimmer = useRef(new Animated.Value(0)).current;
