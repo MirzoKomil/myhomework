@@ -126,7 +126,17 @@ app.use('/uploads', express.static(UPLOADS_DIR, {
 
 const studentWebDist = path.join(ROOT, 'student-app', 'dist');
 app.use('/student', express.static(studentWebDist, {
-    extensions: ['html'], index: 'index.html', redirect: false
+    extensions: ['html'], index: 'index.html', redirect: false,
+    setHeaders: (res, filePath) => {
+        // .html qobiqlari (index.html va h.k.) hash'langan JS bundle'ga ?v= emas,
+        // fayl nomining o'zidagi hash orqali ishora qiladi — shu sabab HTML
+        // keshda qolib ketsa, brauzer eskirgan bundle nomiga abadiy ishonib
+        // qoladi (yangi kod serverga chiqqan bo'lsa ham). JS/CSS assetlar esa
+        // hash nomli bo'lgani uchun cheksiz keshlansa ham xavfsiz.
+        if (/\.html$/.test(filePath)) {
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+    }
 }));
 app.get(['/student', '/student/*'], (req, res, next) => {
     if (path.extname(req.path)) return next();
@@ -144,12 +154,15 @@ app.use(express.static(ROOT, {
         // brauzer har doim serverdan tekshirib olsin (ETag orqali tez, keshsiz
         // "304 o'zgarmagan" javobi kifoya), aks holda foydalanuvchi eski JS'ni
         // keshdan olib, yangi funksiyalarni ko'ra olmay qoladi.
-        if (/\.(js|css)$/.test(filePath)) {
+        if (/\.(js|css|html)$/.test(filePath)) {
             res.setHeader('Cache-Control', 'no-cache');
         }
     }
 }));
-app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'login.html')));
+app.get('/', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(ROOT, 'login.html'));
+});
 
 // Catch-all: faqat .html fayllar, path traversal himoyasi
 app.use((req, res, next) => {
@@ -161,6 +174,7 @@ app.use((req, res, next) => {
     const file = path.join(ROOT, safePath.endsWith('.html') ? safePath : safePath + '.html');
     // ROOT dan tashqariga chiqishga ruxsat bermaslik
     if (!file.startsWith(ROOT)) return res.status(403).send('Ruxsat yo\'q');
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(file, err => {
         if (err) res.status(404).send('Sahifa topilmadi');
     });
