@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
@@ -29,8 +29,11 @@ export default function NewPostScreen() {
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return;
     setSubmitting(true);
-    await addPost(text.trim(), name, '🙂', imageUri);
+    const { imageUploadFailed } = await addPost(text.trim(), name, '🙂', imageUri);
     setSubmitting(false);
+    if (imageUploadFailed) {
+      Alert.alert('Diqqat', "Post yuborildi, lekin rasmni yuklab bo'lmadi. Internet aloqasini tekshirib, qayta urinib ko'ring.");
+    }
     router.back();
   };
 

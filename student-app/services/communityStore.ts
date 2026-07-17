@@ -131,19 +131,32 @@ async function uploadCommunityImage(imageUri: string): Promise<string | null> {
       formData.append('file', { uri: imageUri, name: 'post-image.jpg', type: 'image/jpeg' });
     }
     const res = await fetch(UPLOAD_BASE, { method: 'POST', body: formData });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('uploadCommunityImage: HTTP', res.status);
+      return null;
+    }
     const data = await res.json();
     return data.url ?? null;
-  } catch {
+  } catch (err) {
+    console.error('uploadCommunityImage failed:', err);
     return null;
   }
 }
 
-export async function addPost(text: string, authorName: string, authorEmoji: string, imageUri?: string | null): Promise<void> {
+// Rasm biriktirilgan bo'lsa-yu, yuklash muvaffaqiyatsiz bo'lsa, buni chaqiruvchiga
+// bildiramiz (imageUploadFailed=true) — avval bu holat sukut saqlab, rasmsiz
+// post yuborilib, foydalanuvchi hech qanday xabar ko'rmasdi.
+export async function addPost(
+  text: string,
+  authorName: string,
+  authorEmoji: string,
+  imageUri?: string | null
+): Promise<{ imageUploadFailed: boolean }> {
   let uploadedImageUrl: string | null = null;
   if (imageUri) {
     uploadedImageUrl = await uploadCommunityImage(imageUri);
   }
+  const imageUploadFailed = !!imageUri && !uploadedImageUrl;
   try {
     const res = await fetch(`${API_BASE}/posts`, {
       method: 'POST',
@@ -159,6 +172,7 @@ export async function addPost(text: string, authorName: string, authorEmoji: str
     // Post yuborilmasa jim o'tkazib yuboramiz — foydalanuvchi ekranda qoladi.
   }
   await addCoins(1);
+  return { imageUploadFailed };
 }
 
 export async function toggleLikePost(postId: string): Promise<void> {
