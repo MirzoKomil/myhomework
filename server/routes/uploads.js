@@ -21,7 +21,7 @@ const ALLOWED_MIME = new Set([
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'video/mp4', 'video/webm',
-    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/ogg',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/ogg', 'audio/webm',
     'text/plain',
 ]);
 
@@ -80,7 +80,7 @@ const creativeSubmissionUpload = multer({
     fileFilter: (req, file, cb) => {
         const allowed = [
             'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-            'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/ogg',
+            'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/ogg', 'audio/webm',
         ];
         if (allowed.includes(file.mimetype)) return cb(null, true);
         cb(new Error('Faqat rasm yoki audio fayllari ruxsat etilgan'));
