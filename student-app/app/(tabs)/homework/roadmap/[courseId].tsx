@@ -143,7 +143,7 @@ function LessonCard({
     } else if (lesson.lockReason === 'percent') {
       Alert.alert(
         'Dars hali ochilmagan',
-        `Bu darsni ochish uchun oldingi darsni kamida ${lesson.lockRequiredPercent ?? 100}% bajarishingiz kerak.`
+        `Bu darsni ochish uchun oldingi darsni kamida ${lesson.lockRequiredPercent ?? 80}% bajarishingiz kerak.`
       );
     }
   };
@@ -443,16 +443,21 @@ export default function RoadmapScreen() {
 
   const mcRef = useRef<MobileContent | null>(null);
 
-  // Har bir keyingi dars faqat oldingi dars 100% bajarilganda avtomatik
-  // qulfdan chiqadi — birinchi UNLOCKED_COUNT ta dars boshlang'ich sifatida
-  // har doim ochiq turadi. Progress o'zgarganda qayta hisoblanishi uchun
-  // alohida funksiyaga chiqarilgan (faqat kursga kirgandagina emas).
+  // Har bir keyingi dars oldingi dars kamida DEFAULT_UNLOCK_PERCENT bajarilganda
+  // avtomatik qulfdan chiqadi (147-ish qayta ish 11: avval qat'iy 100% talab
+  // qilinardi — bu amalda deyarli erishib bo'lmaydigan chegara edi, chunki
+  // talaba bironta kichik mashqni o'tkazib yuborsa ham dars "tugallanmagan"
+  // deb hisoblanardi va butun yo'nalish shu yerda to'xtab qolardi) — birinchi
+  // UNLOCKED_COUNT ta dars boshlang'ich sifatida har doim ochiq turadi.
+  // Progress o'zgarganda qayta hisoblanishi uchun alohida funksiyaga
+  // chiqarilgan (faqat kursga kirgandagina emas).
   const recomputeLessons = (mc: MobileContent, cId: string | undefined) => {
     const c = mc.courses.find((x) => x.id === cId) ?? mc.courses[0] ?? null;
     if (!c) return;
     const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
     const TOTAL_LESSONS = 72;
     const UNLOCKED_COUNT = 3;
+    const DEFAULT_UNLOCK_PERCENT = 80;
     let prevComplete = true;
     let prevPercent = 100;
     const mapped: LessonNode[] = [];
@@ -465,14 +470,14 @@ export default function RoadmapScreen() {
       // CRM'da admin darsni qulflagan bo'lsa: video (toq) kunlar oldingi
       // (speaking) darsning kerakli % ga yetishi bilan ochiladi, speaking
       // (juft) kunlar esa % dan qat'i nazar faqat davomat olinganda ochiladi.
-      // Hech qanday qulf sozlanmagan bo'lsa — eski standart ketma-ket ochilish
-      // qoidasi (birinchi UNLOCKED_COUNT ta dars ochiq, keyin oldingisi 100%
-      // bo'lishi kerak) ishlatiladi.
+      // Hech qanday qulf sozlanmagan bo'lsa — standart ketma-ket ochilish
+      // qoidasi (birinchi UNLOCKED_COUNT ta dars ochiq, keyin oldingisi
+      // kamida DEFAULT_UNLOCK_PERCENT bo'lishi kerak) ishlatiladi.
       let locked: boolean;
       let lockReason: 'percent' | 'attendance' | undefined;
       if (l?.lock?.enabled) {
         if (isVideoDay) {
-          const requiredPercent = l.lock.requiredPercent ?? 100;
+          const requiredPercent = l.lock.requiredPercent ?? DEFAULT_UNLOCK_PERCENT;
           locked = prevPercent < requiredPercent;
           if (locked) lockReason = 'percent';
         } else {
@@ -491,7 +496,7 @@ export default function RoadmapScreen() {
           getCategoryProgress(id, 'homework', content.homeworkParts.length)) /
           3
       );
-      prevComplete = percent >= 100;
+      prevComplete = percent >= DEFAULT_UNLOCK_PERCENT;
       prevPercent = percent;
 
       mapped.push({
