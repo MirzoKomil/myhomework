@@ -9,18 +9,28 @@ import { theme } from '@/constants/theme';
 
 type Direction = 'en-uz' | 'uz-en';
 
-const LANG_LABEL: Record<Direction, { from: string; to: string; pair: string }> = {
-  'en-uz': { from: 'English', to: 'O\'zbekcha', pair: 'en|uz' },
-  'uz-en': { from: 'O\'zbekcha', to: 'English', pair: 'uz|en' },
+const LANG_LABEL: Record<Direction, { from: string; to: string; sl: string; tl: string }> = {
+  'en-uz': { from: 'English', to: 'O\'zbekcha', sl: 'en', tl: 'uz' },
+  'uz-en': { from: 'O\'zbekcha', to: 'English', sl: 'uz', tl: 'en' },
 };
 
-async function translateText(text: string, pair: string): Promise<string> {
+// 154-ish qayta ish 12: avval api.mymemory.translated.net ishlatilgan — bu
+// haqiqiy mashina tarjimasi emas, balki foydalanuvchilar to'ldiradigan
+// "tarjima xotirasi" (translation memory) bazasi, shu sabab tez-tez butunlay
+// noto'g'ri natija berardi (masalan "Salom" so'ziga eng yuqori mos yozuv
+// sifatida kimdir tasodifan yozib qo'ygan "Man yaxshi man" gapi qaytardi) yoki
+// tarjima qilmasdan xuddi shu so'zni qaytarardi. Google Translate'ning bepul,
+// kalitsiz ochiq endpointi haqiqiy neyron mashina tarjimasi ishlatadi va bu
+// muammolarning ikkalasini ham bartaraf qiladi.
+async function translateText(text: string, sl: string, tl: string): Promise<string> {
   const res = await fetch(
-    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`
   );
   const data = await res.json();
-  const translated = data?.responseData?.translatedText;
-  if (!translated) throw new Error('empty translation');
+  const segments = data?.[0];
+  if (!Array.isArray(segments) || !segments.length) throw new Error('empty translation');
+  const translated = segments.map((seg: unknown) => (Array.isArray(seg) ? seg[0] ?? '' : '')).join('');
+  if (!translated.trim()) throw new Error('empty translation');
   return translated;
 }
 
@@ -47,7 +57,7 @@ export default function TranslatorScreen() {
     setError(null);
     setCopied(false);
     try {
-      const result = await translateText(sourceText.trim(), labels.pair);
+      const result = await translateText(sourceText.trim(), labels.sl, labels.tl);
       setTargetText(result);
     } catch {
       setError('Tarjima qilishda xatolik yuz berdi. Internetni tekshirib qayta urining.');

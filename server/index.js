@@ -33,15 +33,18 @@ app.use(helmet({
             // (mirror) subdomenlaridan birortasiga so'rov yuborishi mumkin (de1, nl1,
             // at1, all va h.k.) — shuning uchun konkret bitta subdomen emas, butun
             // *.api.radio-browser.info joylashuvi ruxsat etiladi.
-            // Tarjimon bo'limi: MyMemory tarjima API'siga to'g'ridan-to'g'ri
-            // brauzerdan so'rov yuboriladi (student-app/app/(tabs)/translator.tsx).
+            // Tarjimon bo'limi: Google Translate'ning bepul, kalitsiz endpointiga
+            // to'g'ridan-to'g'ri brauzerdan so'rov yuboriladi
+            // (student-app/app/(tabs)/translator.tsx) — 154-ish qayta ish 12'da
+            // MyMemory'dan almashtirildi, chunki uning "tarjima xotirasi" bazasi
+            // ko'pincha butunlay noto'g'ri (yoki tarjima qilinmagan) natija berardi.
             // "blob:" — ImagePicker orqali tanlangan rasm/audio faylni serverga
             // yuklashdan oldin haqiqiy Blob'ga aylantirish uchun `fetch(blob:...)`
             // chaqiriladi (masalan Hamjamiyat posti, kutubxona rasm/audio yuklash).
             // imgSrc'da "blob:" bor edi (shu sabab tanlangan rasm mahalliy oldindan
             // ko'rishda ko'rinardi), lekin connectSrc'da yo'q edi — natijada haqiqiy
             // yuklash bosqichi jim xato bilan (`TypeError: Failed to fetch`) buzilardi.
-            connectSrc: ["'self'", "blob:", "https://*.api.radio-browser.info", "https://api.mymemory.translated.net"],
+            connectSrc: ["'self'", "blob:", "https://*.api.radio-browser.info", "https://translate.googleapis.com"],
             // Real radio stansiyalarining audio oqimi (stream) manzili oldindan
             // ma'lum emas — radio-browser.info katalogidan qaysi haqiqiy translyatsiya
             // serveri qaytishi har xil bo'ladi (BBC, Capital, NPR va h.k. o'zlarining
