@@ -15952,7 +15952,7 @@ function openEditEmployeeModal(empId) {
         if (newPassword && emp.login) {
             const roleForLogin = resolvedRole === 'rop' ? 'rop'
                 : (resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri') ? 'sales_manager'
-                : (resolvedRole === 'oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
+                : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
                 : 'employee';
             try {
                 await apiCreateHrUser({ name: updated.name, login: emp.login, password: newPassword, role: roleForLogin });
@@ -16118,7 +16118,7 @@ function openAddEmployeeModal() {
 
         const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
-            : (role === 'oqituvchi' || role === 'yordamchi') ? 'teacher'
+            : (role === 'oqituvchi' || role === 'ingliz-oqituvchi' || role === 'rus-oqituvchi' || role === 'yordamchi') ? 'teacher'
             : 'employee';
         try {
             await apiCreateHrUser({ name, login, password, role: hrUserRole });
