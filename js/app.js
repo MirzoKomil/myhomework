@@ -17639,7 +17639,8 @@ function renderLeaderboardSection() {
     if (_ratingView === 'normal') {
         mainContent = `
         <div class="card" style="padding:0;overflow:hidden;margin-top:20px">
-            <table class="sdp-table">
+            <div style="overflow-x:auto">
+            <table class="sdp-table" style="min-width:640px">
                 <thead>
                     <tr>
                         <th style="width:48px">#</th>
@@ -17684,6 +17685,7 @@ function renderLeaderboardSection() {
                     }).join('') : `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Menejerlar topilmadi</td></tr>`}
                 </tbody>
             </table>
+            </div>
         </div>`;
     } else {
         // Marralar view
