@@ -10163,16 +10163,13 @@ function renderAnalitikaSotuvMarketing() {
         };
     }).filter(m => m.total > 0).sort((a, b) => b.revenue - a.revenue);
 
-    const stageCounts = FUNNEL_STAGES.map(s => ({
-        ...s, count: periodLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length
-    }));
-    const cum = new Array(FUNNEL_STAGES.length).fill(0);
-    let running = 0;
-    for (let i = stageCounts.length - 1; i >= 0; i--) { running += stageCounts[i].count; cum[i] = running; }
-    const stagesData = FUNNEL_STAGES.map((s, i) => ({
-        ...s, count: stageCounts[i].count, cumulative: cum[i],
-        convRate: i === 0 ? 100 : (cum[0] > 0 ? Math.round((cum[i] / cum[0]) * 100) : 0)
-    }));
+    // 7-vazifa: har bosqich aynan o'sha bosqichda turgan lidlar sonini
+    // ko'rsatishi kerak (Kanban ustunlari bilan bir xil hisoblash) —
+    // "kumulyativ o'tish" mantig'i noto'g'ri edi, ko'ring renderSalesFunnel.
+    const stagesData = FUNNEL_STAGES.map(s => {
+        const count = periodLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length;
+        return { ...s, count, share: total > 0 ? Math.round((count / total) * 100) : 0 };
+    });
 
     const withContact = periodLeads.filter(l => l.firstContactAt && l.date);
     const speedHours = withContact
@@ -11137,31 +11134,23 @@ function buildFunnelSVG(stagesData) {
 
         const poly = `<polygon points="${x1L},${y1} ${x1R},${y1} ${x2R},${y2} ${x2L},${y2}" fill="${s.color}" rx="4"/>`;
 
-        // Conversion from previous stage
-        const convPrev = i === 0 ? null
-            : (stagesData[i - 1].cumulative > 0
-                ? Math.round((s.cumulative / stagesData[i - 1].cumulative) * 100)
-                : 0);
-
         // Connector line from funnel edge to label area
         const connX1 = (cx + wMid / 2 + 2).toFixed(1);
         const connX2 = (cx + topW / 2 + 10).toFixed(1);
         const rX = (cx + topW / 2 + 18).toFixed(1);
 
-        const convText = convPrev !== null
-            ? `↓ ${convPrev}% o'tdi`
-            : 'Kirish nuqtasi';
-        const convColor = convPrev === null ? '#3b82f6'
-            : convPrev >= 70 ? '#16a34a'
-            : convPrev >= 40 ? '#d97706' : '#dc2626';
+        // 7-vazifa: har segment FAQAT o'ziga tegishli aniq sonni (count) va
+        // umumiy lidlardan ulushini ko'rsatadi — avvalgi "kumulyativ o'tish
+        // foizi" mantig'i noto'g'ri edi (haqiqiy tarixiy o'tishni kuzatmasdan,
+        // joriy statusni pastdan yuqoriga qo'shib chiqarardi).
+        const shareText = `${s.share}% (${s.count} ta)`;
 
-        // Inside: only count number
         const label = `
-            <text x="${cx}" y="${midY + 5}" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,system-ui,sans-serif" paint-order="stroke" stroke="rgba(0,0,0,0.18)" stroke-width="3">${s.cumulative}</text>
+            <text x="${cx}" y="${midY + 5}" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,system-ui,sans-serif" paint-order="stroke" stroke="rgba(0,0,0,0.18)" stroke-width="3">${s.count}</text>
             <line x1="${connX1}" y1="${midY}" x2="${connX2}" y2="${midY}" stroke="${s.color}" stroke-width="1.5" opacity="0.7"/>
             <circle cx="${connX2}" cy="${midY}" r="3" fill="${s.color}"/>
             <text x="${rX}" y="${midY - 6}" fill="#1e293b" font-size="12" font-weight="700" font-family="Inter,system-ui,sans-serif">${s.label}</text>
-            <text x="${rX}" y="${midY + 9}" fill="${convColor}" font-size="11" font-weight="600" font-family="Inter,system-ui,sans-serif">${convText}</text>`;
+            <text x="${rX}" y="${midY + 9}" fill="#64748b" font-size="11" font-weight="600" font-family="Inter,system-ui,sans-serif">${shareText}</text>`;
 
         return poly + label;
     }).join('\n');
@@ -11196,26 +11185,24 @@ function renderSalesFunnel() {
         ? langLeads
         : langLeads.filter(l => l.managerId === _salesFunnelMgr);
 
-    // Count per stage (current exact status)
-    const stageCounts = FUNNEL_STAGES.map(s => ({
-        ...s,
-        count: filteredLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length
-    }));
-
-    // Cumulative: stage i = leads at stage i + all later stages
-    const cum = new Array(FUNNEL_STAGES.length).fill(0);
-    let running = 0;
-    for (let i = stageCounts.length - 1; i >= 0; i--) {
-        running += stageCounts[i].count;
-        cum[i] = running;
-    }
-
-    const stagesData = FUNNEL_STAGES.map((s, i) => ({
-        ...s,
-        count: stageCounts[i].count,
-        cumulative: cum[i],
-        convRate: i === 0 ? 100 : (cum[0] > 0 ? Math.round((cum[i] / cum[0]) * 100) : 0)
-    }));
+    // 7-vazifa: har bir bosqich HOZIRGI holatda aynan o'sha ustunda turgan
+    // lidlar sonini ko'rsatishi kerak — lidlar Kanban-taxtasidagi ustunlar
+    // bilan bir xil hisoblash mantig'i (normalizeLeadStatus asosida aniq
+    // moslik). Ilgari bu yerda "kumulyativ" (bosqichdan pastdagi barcha
+    // bosqichlar yig'indisi) hisoblanardi — bu lidning haqiqiy tarixiy
+    // o'tishini kuzatmaganligi uchun, joriy status statik suratiga
+    // noto'g'ri qo'llanilib, deyarli har doim bir xil (oxirgi to'ldirilgan
+    // bosqichning) sonini barcha oldingi bosqichlarga ham chiqarib
+    // yuborardi. Endi har ustun FAQAT o'ziga tegishli aniq sonni ko'rsatadi.
+    const totalCount = filteredLeads.length;
+    const stagesData = FUNNEL_STAGES.map(s => {
+        const count = filteredLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length;
+        return {
+            ...s,
+            count,
+            share: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0
+        };
+    });
 
     const converted = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi').length;
     const convRate = filteredLeads.length > 0 ? ((converted / filteredLeads.length) * 100).toFixed(1) : '0.0';
@@ -11249,19 +11236,12 @@ function renderSalesFunnel() {
                 <tr>
                     <th>#</th>
                     <th>Bosqich</th>
-                    <th style="text-align:right">Shu bosqichda</th>
-                    <th style="text-align:right">Kumulyativ</th>
-                    <th style="text-align:right">Jami konversiya</th>
-                    <th style="text-align:right">Bosqich konversiyasi</th>
+                    <th style="text-align:right">Lidlar soni</th>
+                    <th style="text-align:right">Ulush</th>
                 </tr>
             </thead>
             <tbody>
-                ${stagesData.map((s, i) => {
-                    const prevCum = i === 0 ? null : stagesData[i - 1].cumulative;
-                    const stepConv = prevCum
-                        ? Math.round((s.cumulative / prevCum) * 100) : null;
-                    const stepColor = stepConv === null ? '' : stepConv >= 70 ? '#16a34a' : stepConv >= 40 ? '#d97706' : '#dc2626';
-                    return `
+                ${stagesData.map((s, i) => `
                 <tr>
                     <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
                     <td>
@@ -11269,13 +11249,8 @@ function renderSalesFunnel() {
                         <strong>${escapeHtml(s.label)}</strong>
                     </td>
                     <td style="text-align:right;font-weight:700">${s.count}</td>
-                    <td style="text-align:right">${s.cumulative}</td>
-                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.convRate}%</td>
-                    <td style="text-align:right;font-weight:600;color:${stepColor}">
-                        ${stepConv === null ? '<span style="color:var(--text-muted)">Kirish</span>' : stepConv + '%'}
-                    </td>
-                </tr>`;
-                }).join('')}
+                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.share}%</td>
+                </tr>`).join('')}
             </tbody>
         </table>
     </div>`;
