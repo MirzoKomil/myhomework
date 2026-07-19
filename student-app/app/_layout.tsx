@@ -17,6 +17,7 @@ import 'react-native-reanimated';
 import { TeacherRatingModal } from '@/components/TeacherRatingModal';
 import { theme } from '@/constants/theme';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
+import { loadAuth } from '@/services/studentAuthStore';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -59,6 +60,17 @@ export default function RootLayout() {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.title = 'Myhomework — O\'quvchi';
     }
+  }, []);
+
+  // 6-vazifa (qayta ish): haqiqiy o'quvchi tokeni avval faqat Sozlamalar
+  // ekrani ochilganda useAuth() orqali AsyncStorage'dan yuklanardi — shu
+  // sababli foydalanuvchi login qilib to'g'ridan-to'g'ri boshqa ekranga
+  // o'tsa (masalan To'lovlar), getToken() hali bo'sh qaytarardi va barcha
+  // "demo-*" so'rovlar (shartnoma, baholar, jadval, xabarlar va h.k.)
+  // xato ravishda "Namuna o'quvchi"ga tushib qolardi. Endi ilova ochilishi
+  // bilanoq shu yerda bir marta yuklab qo'yiladi.
+  useEffect(() => {
+    loadAuth();
   }, []);
 
   if (!loaded) return null;
