@@ -12941,13 +12941,33 @@ function getOnboardScheduleTimeSlots(teacher) {
     return generateTimeSlots().filter((_, i) => i % step === 0);
 }
 
+// 3-vazifa (qayta ish): Sinov darsi va "o'quvchiga aylanish" oqimlarida
+// ustoz tanlansa-yu, jadval "O'qituvchi topilmadi" deb chiqib qolardi —
+// sababi bu yerdagi qidiruv faqat STORAGE_KEYS.teachers'dagi HAQIQIY
+// (allaqachon sozlangan) yozuvlarni ko'rar, HR xodimlar ro'yxatidan hali
+// birinchi marta "Ustoz ish jadvalini sozlash" orqali sozlanmagan "virtual"
+// ustozlarni (filterTeachersByTypeAndSubject shu HR yozuvidan sintez
+// qilib ko'rsatadigan) HISOBGA OLMASDI — aynan o'sha ustoz tanlov
+// ro'yxatida to'liq ko'rinib turgan bo'lsa ham.
+function resolveTeacherWithVirtual(teacherId) {
+    if (!teacherId) return null;
+    const real = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === teacherId);
+    if (real) return real;
+    for (const type of ['asosiy', 'yordamchi']) {
+        for (const subject of ['english', 'russian']) {
+            const found = filterTeachersByTypeAndSubject(type, subject).find(t => t.id === teacherId);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
 function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) {
     const container = modalBody.querySelector('#onboardSchedulePicker');
     const selectedEl = modalBody.querySelector('#onboardScheduleSelected');
     if (!container) return;
 
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
-    const teacher = teachers.find(t => t.id === teacherId);
+    const teacher = resolveTeacherWithVirtual(teacherId);
     if (!teacher) {
         container.innerHTML = '<p class="text-muted lead-empty-hint">O\'qituvchi topilmadi</p>';
         return;
@@ -13064,8 +13084,7 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         }
         scheduleBlock.hidden = false;
         scheduleBlock.style.display = '';
-        const teachers = getItem(STORAGE_KEYS.teachers, []);
-        const teacher = teachers.find(t => t.id === teacherId);
+        const teacher = resolveTeacherWithVirtual(teacherId);
         const lessonDuration = getLeadLessonDuration(lead, teacher);
         renderOnboardTeacherSchedulePicker(modalBody, teacherId, { lead, lessonDuration });
     };
@@ -13090,8 +13109,7 @@ function collectTeacherScheduleData(modalBody) {
 
     const lessonDayOfWeek = parseInt(lessonDayOfWeekRaw, 10);
     const lessonDayLabel = DAYS_UZ[lessonDayOfWeek - 1] || '';
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
-    const teacher = teachers.find(t => t.id === teacherId);
+    const teacher = resolveTeacherWithVirtual(teacherId);
     const teacherName = teacher?.name || '';
     const duration = teacher?.lessonDuration || 15;
     const busy = getTeacherBusyWeeklySlots(teacherId);
