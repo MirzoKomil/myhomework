@@ -1935,8 +1935,13 @@ async function submitDemoCreativeSubmission(entry, studentId) {
     return record;
 }
 
-async function gradeDemoCreativeSubmission(lessonId, { scorePercent, feedback } = {}) {
-    const demoStudentId = await getJsonData('demoStudentId');
+// 4-vazifa: ustoz kabinetidan endi HAR BIR haqiqiy o'quvchining ijodiy
+// vazifasini baholay olishi kerak, faqat "Namuna o'quvchi"ni emas —
+// shuning uchun studentId (berilsa) shu orqali resolveStudentId bilan
+// aniqlanadi, berilmasa eskicha demoStudentId'ga tushadi (orqaga
+// mos kelish uchun).
+async function gradeDemoCreativeSubmission(lessonId, { scorePercent, feedback } = {}, studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
     const all = await getJsonData('creativeSubmissions');
     const record = all[demoStudentId] && all[demoStudentId][lessonId];

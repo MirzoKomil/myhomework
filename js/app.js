@@ -178,6 +178,38 @@ function applyRoleBasedAccess(user) {
     }
 }
 
+const HR_ROLES_SYNCED_KEY = 'mh_hr_roles_synced_v1';
+
+// 4-vazifa: ilgari (create-user'dagi ROP/ustoz rol-mapping bug tufayli)
+// "employee" bo'lib qolib ketgan xodim login hisoblari uchun — admin
+// panelga kirganda BIR MARTA (shu brauzerda) barcha xodimlarning login
+// rolini HR yozuvidagi haqiqiy rolidan qayta hisoblab, parolga tegmasdan
+// serverga sinxronlaydi. Masalan, ustoz kabinetiga kirilganda faqat
+// "Mobil ilova" ko'rinib, dars jadvali/o'quvchilari/davomati yo'qolib
+// qolishining sababi aynan shu edi.
+async function syncHrLoginRolesOnce(currentUser) {
+    if (currentUser?.role !== 'admin') return;
+    try {
+        if (localStorage.getItem(HR_ROLES_SYNCED_KEY)) return;
+    } catch { return; }
+
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const entries = employees.filter(e => e.login).map(e => ({
+        login: e.login,
+        role: e.role === 'rop' ? 'rop'
+            : (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? 'sales_manager'
+            : (e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi') ? 'teacher'
+            : 'employee'
+    }));
+
+    try {
+        if (entries.length) await apiSyncHrRoles(entries);
+        localStorage.setItem(HR_ROLES_SYNCED_KEY, '1');
+    } catch (err) {
+        console.warn('Login rollarini sinxronlashda xatolik:', err.message);
+    }
+}
+
 async function bootApp() {
     const currentUser = getCurrentUser();
     if (!currentUser || !getToken()) {
@@ -251,6 +283,7 @@ async function bootApp() {
 
     setUiLang(getUiLang());
     initUserUI(currentUser);
+    syncHrLoginRolesOnce(currentUser);
     renderDashboard();
     renderCalendarWidget();
     startLeadsPolling();
@@ -6602,12 +6635,13 @@ function renderCrmActivityPanel(container, studentId) {
 // darsning progress'iga 100% sifatida hisoblanishi uchun ustoz shu yerdan
 // aynan qabul qilishi kerak — avval hech qanday tekshiruvsiz avtomatik
 // "bajarildi" bo'lib qolar edi.
-async function renderCrmCreativeSubmissionsPanel(container) {
+async function renderCrmCreativeSubmissionsPanel(container, studentId) {
     if (!container) return;
+    container.dataset.studentId = studentId || '';
     container.innerHTML = '<div class="text-muted" style="padding:12px 0">Yuklanmoqda...</div>';
     let all;
     try {
-        all = await apiFetchCreativeSubmissions();
+        all = await apiFetchCreativeSubmissions(studentId);
     } catch (err) {
         container.innerHTML = '<div class="text-muted" style="padding:12px 0">Yuklab bo\'lmadi</div>';
         return;
@@ -6627,7 +6661,7 @@ async function renderCrmCreativeSubmissionsPanel(container) {
             ? `<span class="badge badge-probniy">✅ Qabul qilindi — ${e.scorePercent}%</span>`
             : `<span class="badge">⏳ Kutilmoqda</span>`;
         const actionHtml = e.status === 'pending'
-            ? `<button class="btn btn-sm" onclick="gradeCreativeSubmission('${e.lessonId}')" style="margin-top:8px">✅ Qabul qilish (100%)</button>`
+            ? `<button class="btn btn-sm" onclick="gradeCreativeSubmission('${e.lessonId}','${escapeHtml(studentId || '')}')" style="margin-top:8px">✅ Qabul qilish (100%)</button>`
             : (e.feedback ? `<div style="margin-top:6px;font-size:12px;color:var(--text-muted)">Izoh: ${escapeHtml(e.feedback)}</div>` : '');
         return `<div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface)">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
@@ -6642,11 +6676,11 @@ async function renderCrmCreativeSubmissionsPanel(container) {
     }).join('');
 }
 
-async function gradeCreativeSubmission(lessonId) {
+async function gradeCreativeSubmission(lessonId, studentId) {
     try {
-        await apiGradeCreativeSubmission(lessonId, { scorePercent: 100, feedback: "Juda yaxshi bajarilgan, davom eting!" });
+        await apiGradeCreativeSubmission(lessonId, { scorePercent: 100, feedback: "Juda yaxshi bajarilgan, davom eting!" }, studentId || undefined);
         const panel = document.getElementById('teacherCreativePanel');
-        if (panel) await renderCrmCreativeSubmissionsPanel(panel);
+        if (panel) await renderCrmCreativeSubmissionsPanel(panel, panel.dataset.studentId || undefined);
     } catch (err) {
         alert('Xatolik: ' + (err.message || err));
     }
@@ -7135,49 +7169,77 @@ function renderTeacherCabinetContent(teacherId) {
     if (!students.length) html += '<tr><td colspan="3" class="text-muted">O\'quvchilar yo\'q</td></tr>';
     html += '</tbody></table>';
 
-    // Appdagi "Muloqot" bo'limi bilan integratsiya (121-ish) — namuna
-    // o'quvchi shu ustozga biriktirilgan bo'lsa (asosiy yoki yordamchi
-    // sifatida), o'quvchi bilan yozishma shu yerda ko'rinadi.
-    const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
-    const demoStudent = demoStudentId ? getItem(STORAGE_KEYS.students, []).find(s => s.id === demoStudentId) : null;
-    const chatSlots = [];
-    if (demoStudent?.teacherId === teacherId) chatSlots.push({ threadId: 'main-teacher', label: 'Asosiy ustoz' });
-    if (demoStudent?.assistantTeacherId === teacherId) chatSlots.push({ threadId: 'assistant-teacher', label: 'Yordamchi ustoz' });
-    chatSlots.forEach(slot => {
-        html += `<h4 style="margin:20px 0 10px">💬 ${escapeHtml(demoStudent.name)} bilan yozishma (${slot.label})</h4>
-        <div id="teacherChat_${slot.threadId}"></div>`;
-    });
-
-    // 125-ish: o'quvchining ilovadagi haqiqiy faoliyati (imtihon/uyga
-    // vazifa/mashq natijalari) — faqat shu ustozga biriktirilgan bo'lsa.
-    if (chatSlots.length) {
-        html += `<h4 style="margin:20px 0 10px">📊 ${escapeHtml(demoStudent.name)} — ilovadagi faoliyati</h4>
-        <div id="teacherActivityPanel"></div>`;
-
-        // 148-ish: video/speaking darslardagi "Ijodiy vazifa" — o'quvchi
-        // yuborgan matn/audio/rasm shu yerda ko'rinadi, ustoz qabul qilib
-        // 100% gacha ballaydi.
-        html += `<h4 style="margin:20px 0 10px">🎨 ${escapeHtml(demoStudent.name)} — Ijodiy vazifalar</h4>
-        <div id="teacherCreativePanel"></div>`;
+    // 4-vazifa: appdagi "Muloqot" yozishmasi, ilovadagi haqiqiy faoliyat
+    // va "Ijodiy vazifa"lar endi FAQAT "Namuna o'quvchi" uchun emas, ustozga
+    // biriktirilgan HAR BIR haqiqiy o'quvchi uchun ko'rinadi — pastda
+    // tanlangan o'quvchiga qarab qayta chiziladi.
+    if (students.length) {
+        const selectedId = (_teacherCabinetSelectedStudent && students.some(s => s.id === _teacherCabinetSelectedStudent))
+            ? _teacherCabinetSelectedStudent
+            : students[0].id;
+        _teacherCabinetSelectedStudent = selectedId;
+        html += `<h4 style="margin:20px 0 10px">O'quvchi bilan ishlash</h4>
+        <div class="form-group" style="max-width:320px">
+            <select id="teacherCabinetStudentSelect" class="form-select">
+                ${students.map(s => `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
+            </select>
+        </div>
+        <div id="teacherStudentDetailPanels"></div>`;
     }
 
     document.getElementById('teacherCabinetContent').innerHTML = html;
 
+    if (students.length) {
+        const selectEl = document.getElementById('teacherCabinetStudentSelect');
+        selectEl.addEventListener('change', () => {
+            _teacherCabinetSelectedStudent = selectEl.value;
+            renderTeacherStudentDetailPanels(teacherId, selectEl.value);
+        });
+        renderTeacherStudentDetailPanels(teacherId, selectEl.value);
+    }
+}
+
+let _teacherCabinetSelectedStudent = null;
+
+// 4-vazifa: tanlangan (ixtiyoriy haqiqiy) o'quvchi bo'yicha yozishma,
+// ilovadagi faoliyat va ijodiy vazifalar panellarini chizadi — bitta
+// o'quvchi shu ustozga ham asosiy, ham yordamchi sifatida biriktirilgan
+// bo'lishi mumkin, shu sabab ikkalasi ham (mavjud bo'lsa) ko'rsatiladi.
+function renderTeacherStudentDetailPanels(teacherId, studentId) {
+    const wrap = document.getElementById('teacherStudentDetailPanels');
+    if (!wrap) return;
+    const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === studentId);
+    if (!student) { wrap.innerHTML = ''; return; }
+    const teacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === teacherId);
+
+    const chatSlots = [];
+    if (student.teacherId === teacherId) chatSlots.push({ threadId: 'main-teacher', label: 'Asosiy ustoz' });
+    if (student.assistantTeacherId === teacherId) chatSlots.push({ threadId: 'assistant-teacher', label: 'Yordamchi ustoz' });
+
+    let html = '';
+    chatSlots.forEach(slot => {
+        html += `<h4 style="margin:20px 0 10px">💬 ${escapeHtml(student.name)} bilan yozishma (${slot.label})</h4>
+        <div id="teacherChat_${slot.threadId}"></div>`;
+    });
+    html += `<h4 style="margin:20px 0 10px">📊 ${escapeHtml(student.name)} — ilovadagi faoliyati</h4>
+    <div id="teacherActivityPanel"></div>
+    <h4 style="margin:20px 0 10px">🎨 ${escapeHtml(student.name)} — Ijodiy vazifalar</h4>
+    <div id="teacherCreativePanel"></div>`;
+    wrap.innerHTML = html;
+
     chatSlots.forEach(slot => {
         renderCrmChatThread(document.getElementById(`teacherChat_${slot.threadId}`), {
-            studentId: demoStudentId,
+            studentId,
             threadId: slot.threadId,
             senderRole: 'teacher',
             senderId: teacherId,
             senderName: teacher?.name || '',
-            title: `${demoStudent.name} — ${slot.label}`,
+            title: `${student.name} — ${slot.label}`,
         });
     });
 
-    if (chatSlots.length) {
-        renderCrmActivityPanel(document.getElementById('teacherActivityPanel'), demoStudentId);
-        renderCrmCreativeSubmissionsPanel(document.getElementById('teacherCreativePanel'));
-    }
+    renderCrmActivityPanel(document.getElementById('teacherActivityPanel'), studentId);
+    renderCrmCreativeSubmissionsPanel(document.getElementById('teacherCreativePanel'), studentId);
 }
 
 // --- Maosh hisob-kitobi ---

@@ -43,6 +43,36 @@ router.post('/create-user', authRequired, async (req, res) => {
     }
 });
 
+// 4-vazifa: eski (buggy) rol-mapping orqali yaratilgan xodim login
+// hisoblari (masalan, ustoz "employee" bo'lib qolgan holatlar) parolni
+// qayta kiritmasdan to'g'irlanishi uchun — CRM bu yerga faqat rolni
+// yuboradi, parolga tegilmaydi.
+router.post('/sync-roles', authRequired, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin')
+            return res.status(403).json({ error: 'Faqat admin' });
+        const { entries } = req.body || {};
+        if (!Array.isArray(entries))
+            return res.status(400).json({ error: 'entries massiv bo\'lishi kerak' });
+        const validRoles = ['admin', 'teacher', 'sales_manager', 'rop', 'employee'];
+        let updated = 0;
+        for (const entry of entries) {
+            const login = entry?.login?.trim();
+            const role = entry?.role;
+            if (!login || !validRoles.includes(role)) continue;
+            const user = await findUserByEmail(login);
+            if (user && user.role !== role && !(user.email === 'admin' && user.role === 'admin')) {
+                await updateUser(user.id, { role });
+                updated++;
+            }
+        }
+        res.json({ ok: true, updated });
+    } catch (err) {
+        console.error('POST /sync-roles', err);
+        res.status(500).json({ error: 'Server xatoligi' });
+    }
+});
+
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body || {};

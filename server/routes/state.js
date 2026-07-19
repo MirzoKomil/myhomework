@@ -470,11 +470,26 @@ router.post('/creative-submissions', studentAuthOptional, async (req, res) => {
 
 router.post('/creative-submissions/:lessonId/grade', authRequired, async (req, res) => {
     try {
-        const record = await gradeDemoCreativeSubmission(req.params.lessonId, req.body || {});
+        const { scorePercent, feedback, studentId } = req.body || {};
+        const record = await gradeDemoCreativeSubmission(req.params.lessonId, { scorePercent, feedback }, studentId);
         res.json({ ok: true, record });
     } catch (err) {
         console.error('POST /api/state/creative-submissions/:lessonId/grade', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 4-vazifa: CRM (ustoz kabineti)dan HAR QANDAY haqiqiy o'quvchining
+// ijodiy vazifalarini ko'rish uchun — studentAuthOptional'dagi
+// req.studentId faqat o'quvchining O'ZI kirganda ishlaydi, bu yerda esa
+// admin/xodim tomonidan ixtiyoriy o'quvchi ID'si aniq beriladi.
+router.get('/creative-submissions/student/:studentId', authRequired, async (req, res) => {
+    try {
+        const data = await getDemoCreativeSubmissions(req.params.studentId);
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/creative-submissions/student/:studentId', err);
+        res.status(500).json({ error: 'Xatolik' });
     }
 });
 

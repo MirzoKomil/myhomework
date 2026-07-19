@@ -131,6 +131,15 @@ async function apiCreateHrUser(data) {
     });
 }
 
+// 4-vazifa: eski buggy rol-mapping orqali "employee" bo'lib qolgan
+// xodim login hisoblarini parolga tegmasdan to'g'irlash uchun.
+async function apiSyncHrRoles(entries) {
+    return apiFetch('/api/auth/sync-roles', {
+        method: 'POST',
+        body: JSON.stringify({ entries })
+    });
+}
+
 async function apiGetSessions() {
     return apiFetch('/api/auth/sessions');
 }
@@ -228,14 +237,19 @@ async function apiDeleteContentComment(id) {
     return apiFetch('/api/state/content-comments/' + encodeURIComponent(id), { method: 'DELETE' });
 }
 
-async function apiFetchCreativeSubmissions() {
-    return apiFetch('/api/state/creative-submissions');
+// 4-vazifa: studentId berilsa (ustoz kabinetidan aniq o'quvchi tanlanganda),
+// shu o'quvchining o'ziga tegishli yozuvlar keladi — berilmasa eskicha
+// "Namuna o'quvchi" (demo) natijasi qaytadi.
+async function apiFetchCreativeSubmissions(studentId) {
+    return studentId
+        ? apiFetch('/api/state/creative-submissions/student/' + encodeURIComponent(studentId))
+        : apiFetch('/api/state/creative-submissions');
 }
 
-async function apiGradeCreativeSubmission(lessonId, { scorePercent, feedback }) {
+async function apiGradeCreativeSubmission(lessonId, { scorePercent, feedback }, studentId) {
     return apiFetch('/api/state/creative-submissions/' + encodeURIComponent(lessonId) + '/grade', {
         method: 'POST',
-        body: JSON.stringify({ scorePercent, feedback })
+        body: JSON.stringify({ scorePercent, feedback, studentId })
     });
 }
 
