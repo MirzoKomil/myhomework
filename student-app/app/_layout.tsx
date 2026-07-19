@@ -7,7 +7,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
@@ -17,7 +17,7 @@ import 'react-native-reanimated';
 import { TeacherRatingModal } from '@/components/TeacherRatingModal';
 import { theme } from '@/constants/theme';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
-import { loadAuth } from '@/services/studentAuthStore';
+import { getToken, loadAuth } from '@/services/studentAuthStore';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -71,6 +71,29 @@ export default function RootLayout() {
   // bilanoq shu yerda bir marta yuklab qo'yiladi.
   useEffect(() => {
     loadAuth();
+  }, []);
+
+  // 151-ish (qayta ish): standalone brauzerdan (haqiqiy foydalanuvchi)
+  // /student/ manziliga to'g'ridan-to'g'ri kirilganda token bo'lmasa
+  // login sahifasiga yo'naltiramiz. CRM'ning o'z "O'quvchi ilovasi"
+  // ko'rib chiqish tabi /student/'ni bir xil origin'dagi iframe'da
+  // ochadi (js/app.js) — shu holatda hech qanday yo'naltirish qilinmaydi,
+  // 150-ish arxitekturasidagi demo tajriba o'zgarishsiz qoladi.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let cancelled = false;
+    (async () => {
+      await loadAuth();
+      if (cancelled) return;
+      const isEmbedded = typeof window !== 'undefined' && window.self !== window.top;
+      if (isEmbedded) return;
+      if (getToken()) return;
+      if (typeof window !== 'undefined' && window.location.pathname.includes('login')) return;
+      router.replace('/login' as never);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!loaded) return null;
