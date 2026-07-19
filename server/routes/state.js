@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -368,6 +368,48 @@ router.get('/demo-book-delivery', studentAuthOptional, async (req, res) => {
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-book-delivery', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// 6-vazifa: CRM'da lid to'lov jarayonida o'quvchiga aylantirilayotganda
+// shartnoma raqamini endi sotuv bo'limi qo'lda kiritmaydi — shu yerdan
+// avtomatik, atomik ravishda olib, yangi o'quvchi yozuviga biriktiradi.
+router.post('/contracts/next-number', authRequired, async (req, res) => {
+    try {
+        const number = await getNextContractNumber();
+        res.json({ number, date: new Date().toISOString().slice(0, 10) });
+    } catch (err) {
+        console.error('POST /api/state/contracts/next-number', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — mobil ilovaning "To'lovlar" ekranida shartnoma
+// raqami/sanasini ko'rsatish uchun (haqiqiy PDF bilan mos kelishi uchun).
+router.get('/demo-contract', studentAuthOptional, async (req, res) => {
+    try {
+        const contract = await getOrCreateStudentContract(req.studentId);
+        if (!contract) return res.json({ number: null, date: null });
+        res.json({ number: contract.number, date: contract.date });
+    } catch (err) {
+        console.error('GET /api/state/demo-contract', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Public endpoint — mobil ilovaning "Shartnoma faylini ko'rish (PDF)"
+// tugmasi shu yerga chiqadi. Token Authorization sarlavhasi yoki ?token=
+// query orqali (Linking.openURL uchun) qabul qilinadi.
+router.get('/demo-contract-pdf', studentAuthOptional, async (req, res) => {
+    try {
+        const result = await getStudentContractPdf(req.studentId);
+        if (!result) return res.status(404).json({ error: 'Shartnoma topilmadi' });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${result.filename}"`);
+        res.send(result.buffer);
+    } catch (err) {
+        console.error('GET /api/state/demo-contract-pdf', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });

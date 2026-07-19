@@ -48,7 +48,13 @@ async function authRequired(req, res, next) {
 async function studentAuthOptional(req, res, next) {
     req.studentId = null;
     const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+    // 6-vazifa: shartnoma PDF havolasi <a>/Linking.openURL orqali to'g'ridan
+    // to'g'ri ochiladi — bunda maxsus Authorization sarlavhasi yuborib
+    // bo'lmaydi, shuning uchun token query-parametr sifatida ham qabul
+    // qilinadi (faqat sarlavha yo'q bo'lgandagina, mavjud xatti-harakatga
+    // ta'sir qilmaydi).
+    let token = header.startsWith('Bearer ') ? header.slice(7) : null;
+    if (!token && typeof req.query?.token === 'string') token = req.query.token;
     if (!token) return next();
 
     try {

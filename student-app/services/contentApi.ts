@@ -72,6 +72,16 @@ const DEMO_ACTIVITY_API_BASE =
     ? '/api/state/demo-activity'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-activity';
 
+const DEMO_CONTRACT_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-contract'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-contract';
+
+const DEMO_CONTRACT_PDF_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-contract-pdf'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-contract-pdf';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -656,4 +666,23 @@ export async function sendDemoActivity(entry: {
     body: JSON.stringify(entry),
   });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
+}
+
+// 6-vazifa: "To'lovlar" ekranidagi shartnoma raqami/sanasi — lid
+// o'quvchiga aylanganda CRM tomonidan avtomatik biriktirilgan haqiqiy
+// qiymatlar (PDF fayldagi bilan bir xil bo'lishi uchun).
+export type DemoContractResponse = { number: string | null; date: string | null };
+
+export async function fetchDemoContract(): Promise<DemoContractResponse> {
+  const r = await authedFetch(DEMO_CONTRACT_API_BASE);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// PDF havolasi Linking.openURL bilan to'g'ridan-to'g'ri ochiladi — bunda
+// maxsus Authorization sarlavhasi yuborib bo'lmaydi, shuning uchun token
+// query-parametr sifatida qo'shiladi (server buni ham qabul qiladi).
+export function getContractPdfUrl(): string {
+  const token = getToken();
+  return token ? `${DEMO_CONTRACT_PDF_API_BASE}?token=${encodeURIComponent(token)}` : DEMO_CONTRACT_PDF_API_BASE;
 }

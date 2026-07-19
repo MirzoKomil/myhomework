@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { courseEnrollment, paymentHistory, profileStats } from '@/data/mock';
 import { UZ_MONTHS } from '@/data/scheduleCalendar';
+import { fetchDemoContract, getContractPdfUrl } from '@/services/contentApi';
 
 function formatDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number);
@@ -15,8 +16,16 @@ function formatDate(isoDate: string): string {
 }
 
 export default function PaymentScreen() {
-  const [showContractInfo, setShowContractInfo] = useState(false);
+  const [contractNumber, setContractNumber] = useState(courseEnrollment.contractNumber);
   const debtEntry = paymentHistory.find((p) => p.status === 'debt');
+
+  useEffect(() => {
+    fetchDemoContract()
+      .then((c) => {
+        if (c.number) setContractNumber(c.number);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -54,10 +63,10 @@ export default function PaymentScreen() {
           <View style={styles.contractDivider} />
           <View style={styles.contractRow}>
             <Text style={styles.contractLabel}>Shartnoma raqami</Text>
-            <Text style={styles.contractValue}>{courseEnrollment.contractNumber}</Text>
+            <Text style={styles.contractValue}>{contractNumber}</Text>
           </View>
           <View style={styles.contractDivider} />
-          <Pressable style={styles.fileRow} onPress={() => setShowContractInfo(true)}>
+          <Pressable style={styles.fileRow} onPress={() => Linking.openURL(getContractPdfUrl())}>
             <Ionicons name="document-text-outline" size={18} color={theme.colors.purple} />
             <Text style={styles.fileRowText}>Shartnoma faylini ko'rish (PDF)</Text>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.textLight} />
@@ -110,24 +119,6 @@ export default function PaymentScreen() {
           </Card>
         ))}
       </ScrollView>
-
-      <Modal visible={showContractInfo} animationType="fade" transparent onRequestClose={() => setShowContractInfo(false)}>
-        <View style={styles.dialogBackdrop}>
-          <Pressable style={styles.dialogBackdropTap} onPress={() => setShowContractInfo(false)} />
-          <View style={styles.dialogCard}>
-            <Ionicons name="document-text-outline" size={36} color={theme.colors.purple} />
-            <Text style={styles.dialogTitle}>Shartnoma fayli</Text>
-            <Text style={styles.dialogSubtitle}>
-              {courseEnrollment.contractFileAvailable
-                ? 'Shartnoma fayli yuklanmoqda...'
-                : "PDF faylni yuklab olish tez orada mavjud bo'ladi. Hozircha shartnoma nusxasi uchun sotuv menejeringizga murojaat qiling."}
-            </Text>
-            <Pressable style={styles.dialogBtn} onPress={() => setShowContractInfo(false)}>
-              <Text style={styles.dialogBtnText}>Tushunarli</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -169,20 +160,4 @@ const styles = StyleSheet.create({
   paidText: { fontFamily: theme.fonts.semiBold, fontSize: 11, color: theme.colors.success },
   debtBadge: { backgroundColor: theme.colors.dangerBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
   debtText: { fontFamily: theme.fonts.semiBold, fontSize: 11, color: theme.colors.danger },
-
-  dialogBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  dialogBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  dialogCard: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: 24,
-    alignItems: 'center',
-    gap: 10,
-  },
-  dialogTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text, textAlign: 'center' },
-  dialogSubtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center', lineHeight: 19 },
-  dialogBtn: { width: '100%', marginTop: 10, paddingVertical: 13, borderRadius: theme.radius.sm, backgroundColor: theme.colors.purple, alignItems: 'center' },
-  dialogBtnText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff' },
 });

@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const webpush = require('web-push');
+const { generateContractPdfBuffer } = require('./services/contractPdf');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -875,6 +876,62 @@ function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
 async function getDemoStudentProfile(studentId) {
     await resolveStudentId(studentId);
     return {};
+}
+
+// 6-vazifa: lid to'lov jarayonida o'quvchiga aylanganda unga avtomatik
+// shartnoma raqami beriladi — sotuv bo'limi endi buni qo'lda kiritmaydi.
+// json_data'dagi 'contractCounter' kalitini bitta SQL amali orqali (INSERT
+// ... ON CONFLICT ... DO UPDATE) atomik ravishda oshiramiz, shu bilan bir
+// nechta admin bir vaqtda konvertatsiya qilsa ham raqam takrorlanmaydi.
+async function getNextContractNumber() {
+    const year = new Date().getFullYear();
+    const row = await q1(
+        `INSERT INTO json_data (key, data) VALUES ('contractCounter', '1'::jsonb)
+         ON CONFLICT (key) DO UPDATE SET data = to_jsonb((json_data.data)::text::int + 1)
+         RETURNING data`
+    );
+    const seq = parseInt(row.data, 10) || 1;
+    const high = String(Math.floor((seq - 1) / 1000)).padStart(3, '0');
+    const low = String((seq - 1) % 1000).padStart(3, '0');
+    return `${year}/${high}-${low}`;
+}
+
+// Shartnoma ma'lumoti odatda promoteStudentFromOnboarding orqali (CRM'da
+// lid o'quvchiga aylanayotganda) o'quvchi yozuviga qo'shiladi. Agar biror
+// sababga ko'ra topilmasa (masalan, funksiya chiqishidan oldin qo'shilgan
+// eski/demo o'quvchi), shu yerda birinchi so'rovda avtomatik yaratib,
+// o'quvchi yozuviga darhol yozib qo'yamiz — shartnoma PDF hech qachon
+// "topilmadi" holatiga tushmasligi uchun.
+async function getOrCreateStudentContract(studentId) {
+    const realId = await resolveStudentId(studentId);
+    if (!realId) return null;
+    const row = await q1('SELECT * FROM students WHERE id = $1', [realId]);
+    if (!row) return null;
+    let extra = {};
+    try {
+        extra = typeof row.extra_data === 'object' ? row.extra_data : JSON.parse(row.extra_data || '{}');
+    } catch { extra = {}; }
+    if (extra.contract && extra.contract.number) {
+        return { number: extra.contract.number, date: extra.contract.date, studentName: row.name };
+    }
+    const contract = { number: await getNextContractNumber(), date: new Date().toISOString().slice(0, 10) };
+    extra = { ...extra, contract };
+    await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), realId]);
+    return { number: contract.number, date: contract.date, studentName: row.name };
+}
+
+// Mobil ilovaning "To'lovlar" ekranidagi "Shartnoma faylini ko'rish (PDF)"
+// tugmasi shu yerga chiqadi — namuna shartnoma matnini haqiqiy o'quvchi
+// ismi va shartnoma raqami/sanasi bilan qayta generatsiya qiladi.
+async function getStudentContractPdf(studentId) {
+    const contract = await getOrCreateStudentContract(studentId);
+    if (!contract) return null;
+    const buffer = await generateContractPdfBuffer({
+        contractNumber: contract.number,
+        studentFullName: contract.studentName || "O'quvchi",
+        contractDate: contract.date
+    });
+    return { buffer, filename: `shartnoma-${contract.number.replace(/[^\w-]/g, '')}.pdf` };
 }
 
 // Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
@@ -2188,6 +2245,7 @@ module.exports = {
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
+    getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
     getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,

@@ -92,6 +92,12 @@ async function apiFetchLeads() {
     return apiFetch('/api/leads');
 }
 
+// 6-vazifa: lid o'quvchiga aylanayotganda shartnoma raqami endi qo'lda
+// kiritilmaydi — shu yerdan serverdagi atomik hisoblagichdan olinadi.
+async function apiGetNextContractNumber() {
+    return apiFetch('/api/state/contracts/next-number', { method: 'POST', body: JSON.stringify({}) });
+}
+
 async function apiHealth() {
     return apiFetch('/api/health');
 }

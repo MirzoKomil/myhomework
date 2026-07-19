@@ -6257,7 +6257,12 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
             lessonDuration: onboarding.lessonDuration || 15,
             assistantTeacherId: onboarding.assistantTeacherId || null,
             telegramGroupLink: onboarding.telegramGroupLink || '',
-            source: 'lead'
+            source: 'lead',
+            // 6-vazifa: agar bu o'quvchida shartnoma allaqachon bo'lsa,
+            // uni ustidan yozib qo'ymaymiz — faqat yo'q bo'lsa beriladi.
+            contract: existing.contract || (onboarding.contractNumber
+                ? { number: onboarding.contractNumber, date: onboarding.contractDate }
+                : undefined)
         });
         return existing.id;
     }
@@ -6279,7 +6284,13 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         startDate: new Date().toISOString().slice(0, 10),
         source: 'lead',
         managerId: lead?.managerId || '',
-        leadRef: lead?.id ? { lang, id: lead.id } : undefined
+        leadRef: lead?.id ? { lang, id: lead.id } : undefined,
+        // 6-vazifa: lid o'quvchiga aylanganda mijoz shartnomasi shu yerda
+        // avtomatik biriktiriladi — mobil ilova "Shartnoma faylini ko'rish
+        // (PDF)" tugmasi shu raqam/sana bilan real PDF generatsiya qiladi.
+        contract: onboarding.contractNumber
+            ? { number: onboarding.contractNumber, date: onboarding.contractDate }
+            : undefined
     });
     setItem(STORAGE_KEYS.students, students);
     return id;
@@ -13218,10 +13229,6 @@ function initPaymentOnboardingForm(modalBody, options = {}) {
         const show = !!selected;
         contractNumberBlock.hidden = !show;
         contractNumberBlock.style.display = show ? '' : 'none';
-        if (!show) {
-            const input = modalBody.querySelector('#onboardContractNumber');
-            if (input) input.value = '';
-        }
     };
     modalBody.querySelectorAll('[data-onboard-field="contractType"]').forEach(radio => {
         radio.addEventListener('change', syncContractNumber);
@@ -13240,9 +13247,6 @@ function collectPaymentOnboardingData(modalBody) {
     if (!becomeStudent) return { error: '«O\'quvchiga aylansinmi?» savoliga javob bering' };
     if (!platformConnected) return { error: '«Platforma ulab berildimi?» savoliga javob bering' };
     if (!contractType) return { error: 'Shartnoma turini tanlang' };
-
-    const contractNumber = getVal('onboardContractNumber');
-    if (!contractNumber) return { error: 'Shartnoma raqamini kiriting' };
 
     const studentFirstName = getVal('onboardStudentFirstName');
     const studentLastName = getVal('onboardStudentLastName');
@@ -13293,7 +13297,6 @@ function collectPaymentOnboardingData(modalBody) {
             platformConnectedLabel: platformConnected.value === 'yes' ? 'Ha' : 'Yo\'q',
             contractType: contractType.value,
             contractTypeLabel: contractLabel,
-            contractNumber,
             studentFullName,
             studentFirstName,
             studentLastName,
@@ -13351,8 +13354,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
             <h4 class="lead-survey-title">O'quvchi bilan shartnoma tuzildimi?</h4>
             ${renderPaymentRadioGroup('contractType', LEAD_CONTRACT_TYPES).replace(/data-payment-field/g, 'data-onboard-field')}
             <div id="onboardContractNumberBlock" class="lead-survey-field lead-contract-number-block" hidden>
-                <label for="onboardContractNumber">Shartnoma raqami</label>
-                <input type="text" id="onboardContractNumber" class="form-control" placeholder="Shartnoma raqamini kiriting">
+                <p class="lead-survey-hint">Shartnoma raqami saqlash bosilganda avtomatik generatsiya qilinadi</p>
             </div>
         </section>
         <section class="lead-survey-section">
@@ -13426,16 +13428,29 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
         renderLeads();
     };
 
-    document.getElementById('confirmPaymentOnboarding').onclick = () => {
+    document.getElementById('confirmPaymentOnboarding').onclick = async () => {
         const result = collectPaymentOnboardingData(modalBody);
         if (result.error) {
             alert(result.error);
             return;
         }
 
+        // 6-vazifa: shartnoma raqami endi qo'lda kiritilmaydi — saqlash
+        // bosilganda serverdagi atomik hisoblagichdan avtomatik olinadi.
+        const confirmBtn = document.getElementById('confirmPaymentOnboarding');
+        if (confirmBtn) confirmBtn.disabled = true;
+        let contractInfo;
+        try {
+            contractInfo = await apiGetNextContractNumber();
+        } catch (err) {
+            if (confirmBtn) confirmBtn.disabled = false;
+            alert('Shartnoma raqamini olishda xatolik: ' + err.message);
+            return;
+        }
+
         const user = getCurrentUser();
         const author = user?.name || 'Admin';
-        const onboarding = result.data;
+        const onboarding = { ...result.data, contractNumber: contractInfo.number, contractDate: contractInfo.date };
         const commentText = formatPaymentOnboardingComment(onboarding);
 
         const updated = updateLeadInStorage(lang, leadId, l => {
