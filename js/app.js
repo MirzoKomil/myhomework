@@ -125,12 +125,16 @@ function applyRoleBasedAccess(user) {
         sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
             el.style.display = '';
         });
-        // 16-ish: ROP uchun Akademik bo'lim va Moliya yashiriladi
+        // 16-ish / 1-ish: ROP uchun Akademik bo'lim, Moliya, HR Bo'limi,
+        // Analitika va Mobil ilova yashiriladi. ("Moliya" avval alohida
+        // getElementById('menuGroupMoliya') orqali yashirilardi, lekin
+        // HTML'dagi haqiqiy id — "menuItemMoliya" — bilan mos kelmasligi
+        // sabab u hech qachon amalda yashirilmagan edi.)
         if (role === 'rop') {
-            const akademik = document.getElementById('menuItemAkademik');
-            const moliya = document.getElementById('menuGroupMoliya');
-            if (akademik) akademik.style.display = 'none';
-            if (moliya) moliya.style.display = 'none';
+            ['teachers-section', 'finance', 'hr', 'analitika', 'student-app'].forEach(tab => {
+                const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
+                if (el) el.style.display = 'none';
+            });
         }
         return;
     }
