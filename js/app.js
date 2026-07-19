@@ -11173,8 +11173,12 @@ function renderSalesFunnel() {
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const langLeads = (allLeads[lang] || []);
 
+    // 2-ish: menejer tanlash ro'yxati ham joriy til yo'nalishiga cheklanadi —
+    // aks holda qarshi tildagi menejerlar nomi ko'rinib, chalkashlik keltirardi
+    // (leadlar bari bir tomonlama filtrlangan bo'lsa ham).
     const allManagers = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
-        e.role === 'Sotuv menejeri' || e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri'
+        (e.role === 'Sotuv menejeri' || e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri')
+        && (e.lang || 'english') === lang
     );
 
     const filteredLeads = _salesFunnelMgr === 'all'
@@ -15939,6 +15943,24 @@ function openEditEmployeeModal(empId) {
             }
         }
 
+        // 2-ish: xodimning kirish (login) hisobidagi roli yaratilgandan keyin
+        // hech qachon qayta sinxronlanmasdi — masalan ilgari yaratilgan ROP
+        // hisoblari "admin" bo'lib qolgan bo'lsa, bu yerda parolni qayta
+        // kiritish orqali to'g'ri rolga qaytarish mumkin (server /create-user
+        // yo'li parol talab qiladi, shu sabab faqat parol o'zgartirilganda
+        // ishlaydi).
+        if (newPassword && emp.login) {
+            const roleForLogin = resolvedRole === 'rop' ? 'rop'
+                : (resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri') ? 'sales_manager'
+                : (resolvedRole === 'oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
+                : 'employee';
+            try {
+                await apiCreateHrUser({ name: updated.name, login: emp.login, password: newPassword, role: roleForLogin });
+            } catch (err) {
+                console.warn('Kirish hisobini yangilashda xatolik:', err.message);
+            }
+        }
+
         const allEmps = getHrEmployees() || [];
         const idx = allEmps.findIndex(e => e.id === empId);
         if (idx !== -1) allEmps[idx] = updated;
@@ -16094,7 +16116,7 @@ function openAddEmployeeModal() {
         employees.push(newEmp);
         saveHrEmployees(employees);
 
-        const hrUserRole = role === 'rop' ? 'admin'
+        const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
             : (role === 'oqituvchi' || role === 'yordamchi') ? 'teacher'
             : 'employee';
@@ -16274,7 +16296,11 @@ function renderBrManagerFilter() {
         }
         return;
     }
-    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    // 2-ish: ROP faqat o'z til yo'nalishiga tegishli menejerlarni ko'radi
+    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
+    const managers = user && user.role === 'rop'
+        ? allManagers.filter(m => (m.lang || 'english') === (user.linkedRopLang || 'english'))
+        : allManagers;
     const current = _brManagerFilter;
     select.innerHTML = `<option value="all">Barcha menejerlar</option>
         <option value="unassigned">Biriktirilmagan</option>
@@ -17561,7 +17587,12 @@ function renderLeaderboardSection() {
     const el = document.getElementById('ratingLeaderboard');
     if (!el) return;
 
-    const managers = getSalesManagers();
+    // 2-ish: ROP faqat o'z til yo'nalishiga tegishli menejerlar reytingini ko'radi
+    const _cuRating = getCurrentUser();
+    const allSalesManagers = getSalesManagers();
+    const managers = _cuRating && _cuRating.role === 'rop'
+        ? allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english'))
+        : allSalesManagers;
     const target = getPeriodTarget(_ratingPeriod);
 
     const ranked = managers.map(m => ({
@@ -18125,15 +18156,23 @@ function renderDebtorsTable(containerId) {
     if (!container) return;
     const uid = s => `${containerId}__${s}`;
 
+    // 2-ish: ROP faqat o'z til yo'nalishiga tegishli qarzdorlarni ko'radi
+    // (Students va Sales bo'limidagi Qarzdorlar bir xil funksiyani ishlatadi,
+    // ROP ikkalasiga ham kirishi mumkin bo'lgani uchun bu yerda cheklanadi)
+    const _cuDebtors = getCurrentUser();
+    const _debtorsRopLang = _cuDebtors && _cuDebtors.role === 'rop' ? (_cuDebtors.linkedRopLang || 'english') : null;
+
     const allStudents = getItem(STORAGE_KEYS.students, []);
     const allTeachers = [
         ...getItem(STORAGE_KEYS.teachers, []),
         ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
     ];
-    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const managers = getItem(STORAGE_KEYS.salesManagers, [])
+        .filter(m => !_debtorsRopLang || (m.lang || 'english') === _debtorsRopLang);
 
     const debtors = allStudents.filter(s => {
         const debt = Number(s.debtAmount || 0);
+        if (_debtorsRopLang && (s.subject || 'english') !== _debtorsRopLang) return false;
         return debt > 0 || s.paymentDueDate;
     });
 

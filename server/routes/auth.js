@@ -26,7 +26,7 @@ router.post('/create-user', authRequired, async (req, res) => {
             return res.status(400).json({ error: 'Ism, login va parol talab qilinadi' });
         if (String(password).length < 4)
             return res.status(400).json({ error: 'Parol kamida 4 ta belgidan iborat bo\'lishi kerak' });
-        const validRoles = ['admin', 'teacher', 'sales_manager', 'employee'];
+        const validRoles = ['admin', 'teacher', 'sales_manager', 'rop', 'employee'];
         const userRole = validRoles.includes(role) ? role : 'employee';
         const existing = await findUserByEmail(login.trim());
         if (existing) {
