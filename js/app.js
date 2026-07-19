@@ -7151,23 +7151,23 @@ function renderTeacherCabinetContent(teacherId) {
     if (todayProbniy.length === 0) {
         html += '<p class="text-muted">Bugun probniy darslar yo\'q.</p>';
     } else {
-        html += '<table class="table"><thead><tr><th>Vaqt</th><th>O\'quvchi</th><th>Status</th></tr></thead><tbody>';
+        html += '<div class="table-responsive"><table class="table"><thead><tr><th>Vaqt</th><th>O\'quvchi</th><th>Status</th></tr></thead><tbody>';
         const allStudents = getItem(STORAGE_KEYS.students, []);
         todayProbniy.forEach(([key, entry]) => {
             const time = key.split('_')[1];
             const student = allStudents.find(s => s.id === entry.studentId);
             html += `<tr><td>${time}</td><td>${student?.name || '—'}</td><td>${entry.completed ? '<span class="badge badge-probniy">O\'tdi</span>' : '<span class="badge">Kutilmoqda</span>'}</td></tr>`;
         });
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
     }
 
     html += `<h4 style="margin:20px 0 10px">Mening o'quvchilarim</h4>
-    <table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Guruh</th></tr></thead><tbody>`;
+    <div class="table-responsive"><table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Guruh</th></tr></thead><tbody>`;
     students.forEach(s => {
         html += `<tr><td>${s.name}</td><td>${s.phone || '—'}</td><td>${s.group || '—'}</td></tr>`;
     });
     if (!students.length) html += '<tr><td colspan="3" class="text-muted">O\'quvchilar yo\'q</td></tr>';
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
 
     // 4-vazifa: appdagi "Muloqot" yozishmasi, ilovadagi haqiqiy faoliyat
     // va "Ijodiy vazifa"lar endi FAQAT "Namuna o'quvchi" uchun emas, ustozga
@@ -11293,7 +11293,8 @@ function renderSalesFunnel() {
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
-        <table class="sdp-table">
+        <div class="table-responsive">
+        <table class="sdp-table" style="min-width:420px">
             <thead>
                 <tr>
                     <th>#</th>
@@ -11315,6 +11316,7 @@ function renderSalesFunnel() {
                 </tr>`).join('')}
             </tbody>
         </table>
+        </div>
     </div>`;
 
     document.getElementById('funnelMgrSelect')?.addEventListener('change', e => {
@@ -18108,7 +18110,7 @@ function renderBonusHistorySection() {
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
-        ${filtered.length ? `<table class="sdp-table">
+        ${filtered.length ? `<div class="table-responsive"><table class="sdp-table" style="min-width:520px">
             <thead><tr>
                 <th>Sana</th>
                 <th>Menejer</th>
@@ -18136,7 +18138,7 @@ function renderBonusHistorySection() {
                     </tr>`;
                 }).join('')}
             </tbody>
-        </table>` : `<div style="text-align:center;padding:60px;color:var(--text-muted)">
+        </table></div>` : `<div style="text-align:center;padding:60px;color:var(--text-muted)">
             <div style="font-size:48px;margin-bottom:12px">🎁</div>
             <p>Bu davrda bonus belgilanmagan</p>
         </div>`}
