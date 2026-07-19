@@ -421,7 +421,30 @@ function updateTeacher(id, fields) {
     if (idx >= 0) {
         teachers[idx] = { ...teachers[idx], ...fields };
         setItem(STORAGE_KEYS.teachers, teachers);
+        return;
     }
+    // 3-vazifa: Xodimlar ro'yxatida bor, lekin STORAGE_KEYS.teachers'da hali
+    // haqiqiy yozuvi yo'q "virtual" ustoz uchun (filterTeachersByTypeAndSubject
+    // shu HR yozuvidan vaqtincha sintez qilib ko'rsatadigan, _fromHr belgili
+    // yozuv) — bu funksiya avval hech narsa saqlamasdi, chunki faqat MAVJUD
+    // yozuvni yangilar, yangisini hech qachon yaratmasdi. Shu sabab "Ustoz
+    // ish jadvalini sozlash"da saqlash tashqi ko'rinishda ishlagandek
+    // tuyulardi-yu, aslida hech narsa saqlanmasdi — keyin "Sinov darsi"
+    // oynasida xuddi shu ustoz "topilmadi" deb chiqardi.
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const emp = employees.find(e => e.id === id);
+    const inferredType = emp?.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
+    const inferredSubject = emp?.role === 'rus-oqituvchi' ? 'russian' : 'english';
+    teachers.push({
+        id,
+        name: emp?.name || '',
+        type: inferredType,
+        subject: inferredSubject,
+        phone: emp?.phone || '',
+        login: emp?.login || '',
+        ...fields
+    });
+    setItem(STORAGE_KEYS.teachers, teachers);
 }
 
 function updateStudent(id, fields) {
