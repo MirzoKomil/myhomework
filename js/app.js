@@ -12078,26 +12078,39 @@ function backfillMissingLeadSerials() {
     if (changed) setItem(STORAGE_KEYS.leads, leads);
 }
 
-// 8-vazifa: allaqachon o'quvchiga aylangan, lekin bu tuzatishdan oldin
-// yaratilgani uchun serialCode'i yo'q yozuvlarni o'zining lid yozuvidan
-// (leadRef) topib to'ldiradi — shunda "O'quvchilar" bo'limi ID'si sotuv
-// bo'limidagi lid ID'si bilan bir xil bo'lib qoladi.
+// 8-vazifa (qayta ish): allaqachon o'quvchiga aylangan, lekin bu tuzatishdan
+// oldin yaratilgani uchun serialCode'i yo'q yozuvlarni o'zining lid
+// yozuvidan (leadRef) topib to'ldiradi — shunda "O'quvchilar" bo'limi ID'si
+// sotuv bo'limidagi lid ID'si bilan bir xil bo'lib qoladi. Agar bog'langan
+// lid o'zi ham hali ID olmagan bo'lsa (masalan admin hech qachon Lidlar
+// bo'limini shu lid ustida qayta ochmagan bo'lsa), shu yerning o'zida yangi
+// ID generatsiya qilib, ham lidga, ham o'quvchiga yoziladi — shu bilan
+// backfill faqat lidda ID bor holatlargagina emas, doim ishlaydi.
 function backfillStudentSerialCodesFromLeads() {
     const students = getItem(STORAGE_KEYS.students, []);
     const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const leadSerialById = new Map();
-    [...(leadsData.english || []), ...(leadsData.russian || [])].forEach(l => {
-        if (l.serialCode) leadSerialById.set(l.id, l.serialCode);
+    const leadLocationById = new Map();
+    ['english', 'russian'].forEach(lang => {
+        (leadsData[lang] || []).forEach((l, idx) => leadLocationById.set(l.id, { lang, idx }));
     });
-    let changed = false;
-    const updated = students.map(s => {
+    let leadsChanged = false;
+    let studentsChanged = false;
+    const updatedStudents = students.map(s => {
         if (s.serialCode || !s.leadRef?.id) return s;
-        const serial = leadSerialById.get(s.leadRef.id);
-        if (!serial) return s;
-        changed = true;
+        const loc = leadLocationById.get(s.leadRef.id);
+        if (!loc) return s;
+        const lead = leadsData[loc.lang][loc.idx];
+        let serial = lead.serialCode;
+        if (!serial) {
+            serial = generateNextLeadSerial();
+            leadsData[loc.lang][loc.idx] = { ...lead, serialCode: serial };
+            leadsChanged = true;
+        }
+        studentsChanged = true;
         return { ...s, serialCode: serial };
     });
-    if (changed) setItem(STORAGE_KEYS.students, updated);
+    if (leadsChanged) setItem(STORAGE_KEYS.leads, leadsData);
+    if (studentsChanged) setItem(STORAGE_KEYS.students, updatedStudents);
 }
 
 function leadHasTeacherSchedule(lead) {
