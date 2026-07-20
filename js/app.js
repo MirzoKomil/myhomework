@@ -7373,6 +7373,7 @@ function renderStudents() {
     initStudentsSubjectTabs();
     const titleEl = document.getElementById('studentsPageTitle');
 
+    backfillMissingStudentsFromActiveLeads();
     backfillStudentSerialCodesFromLeads();
     let students = getItem(STORAGE_KEYS.students, []);
 
@@ -12171,6 +12172,50 @@ function backfillStudentSerialCodesFromLeads() {
     });
     if (leadsChanged) setItem(STORAGE_KEYS.leads, leadsData);
     if (studentsChanged) setItem(STORAGE_KEYS.students, updatedStudents);
+}
+
+// 11-vazifa (qayta ish): "To'lov jarayonida"/"To'lov yopildi" bosqichidagi
+// HAR BIR lid uchun mos o'quvchi yozuvi borligini kafolatlaydi. Odatda bu
+// promoteStudentFromOnboarding/promoteStudentFromClosed orqali avtomatik
+// bo'ladi, lekin ba'zi lidlar (masalan to'liq onboarding so'rovnomasidan
+// o'tmasdan, boshqa yo'l bilan shu bosqichga kelib qolgan bo'lsa) hech
+// qachon o'quvchiga aylantirilmagan bo'lishi mumkin edi — natijada Sotuv
+// bo'limida ko'rinib, O'quvchilar bo'limida umuman yo'q bo'lib qolardi.
+// Shu funksiya har bir bunday "yetim" faol lid uchun kamida minimal
+// o'quvchi yozuvini avtomatik yaratadi, shunda ikki bo'lim doim to'liq
+// mos keladi.
+function backfillMissingStudentsFromActiveLeads() {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const linkedLeadIds = new Set(students.filter(s => s.leadRef?.id).map(s => s.leadRef.id));
+    const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const newStudents = [];
+    let counter = 0;
+    ['english', 'russian'].forEach(lang => {
+        (leadsData[lang] || []).forEach(l => {
+            if (!LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) return;
+            if (linkedLeadIds.has(l.id)) return;
+            const onboarding = l.paymentOnboarding || {};
+            counter += 1;
+            newStudents.push({
+                id: 's' + Date.now() + '_' + counter,
+                serialCode: l.serialCode,
+                leadRef: { lang, id: l.id },
+                name: l.name || '',
+                phone: l.phone || '',
+                subject: lang,
+                teacherId: onboarding.teacherId || null,
+                assistantTeacherId: onboarding.assistantTeacherId || null,
+                lessonDayOfWeek: onboarding.lessonDayOfWeek ?? null,
+                lessonTime: onboarding.lessonTime || '',
+                lessonDuration: getLeadLessonDuration(l, null),
+                telegramGroupLink: onboarding.telegramGroupLink || '',
+                startDate: new Date().toISOString().slice(0, 10),
+                source: 'lead-sync',
+                managerId: l.managerId || ''
+            });
+        });
+    });
+    if (newStudents.length) setItem(STORAGE_KEYS.students, [...students, ...newStudents]);
 }
 
 function leadHasTeacherSchedule(lead) {
