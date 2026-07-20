@@ -7402,6 +7402,21 @@ function renderStudents() {
     // Muzlatilgan o'quvchilarni Faol ro'yxatdan chiqarish
     students = students.filter(s => !s.frozen);
 
+    // 8-vazifa (qayta ish 4): O'quvchilar bo'limi Sotuv bo'limi bilan to'liq
+    // integratsiya qilingan — "Faol o'quvchilar" ro'yxatida FAQAT sotuv
+    // bo'limida "To'lov jarayonida" yoki "To'lov yopildi" bosqichida turgan
+    // lidga (leadRef orqali) bog'langan o'quvchilar ko'rinadi. Bu ikki
+    // bo'lim ro'yxati doim bir-biriga mos kelishini kafolatlaydi — Sotuv
+    // bo'limida yo'q o'quvchi bu yerda ham ko'rinmaydi.
+    const _leadsForActiveFilter = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const _activeLeadIdSet = new Set();
+    ['english', 'russian'].forEach(lang => {
+        (_leadsForActiveFilter[lang] || []).forEach(l => {
+            if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) _activeLeadIdSet.add(l.id);
+        });
+    });
+    students = students.filter(s => s.leadRef?.id && _activeLeadIdSet.has(s.leadRef.id));
+
     // Search filter
     const searchVal = (document.getElementById('studentsSearch')?.value || '').trim().toLowerCase();
     if (searchVal) {
@@ -9148,7 +9163,21 @@ function _bindStudentPasswordEye(sfx) {
 
 document.getElementById('addStudentBtn').addEventListener('click', () => {
     const _defaultSubject = getStudentsSelectedSubject();
-    openModal("O'quvchi qo'shish", studentFormHtml('', { subject: _defaultSubject }),
+    // 8-vazifa (qayta ish 4): O'quvchilar bo'limidan to'g'ridan-to'g'ri
+    // qo'shilgan o'quvchi Sotuv bo'limida ham lid sifatida yaratiladi —
+    // shuning uchun qaysi ustunga (bosqichga) qo'yilishi shu yerda MAJBURIY
+    // tanlanadi.
+    const leadStageFieldHtml = `
+    <div class="form-group">
+        <label>Sotuv bo'limi ustuni <span style="color:var(--danger)">*</span></label>
+        <select id="mStLeadStage" class="form-control">
+            <option value="">— Tanlang —</option>
+            <option value="tolov-jarayonida">To'lov jarayonida</option>
+            <option value="tolov-yopildi">To'lov yopildi</option>
+        </select>
+        <p class="lead-survey-hint">Bu o'quvchi shu bosqichda Sotuv bo'limiga lid sifatida ham qo'shiladi — ikki bo'lim doim bir-biriga mos kelishi uchun.</p>
+    </div>`;
+    openModal("O'quvchi qo'shish", studentFormHtml('', { subject: _defaultSubject }) + leadStageFieldHtml,
         `<button type="button" class="btn-ghost" id="cancelAddStudent">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="saveStudent">Saqlash</button>`,
         { wide: false }
@@ -9164,6 +9193,8 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         if (!name) { alert('Ism familiya kiritilishi shart'); return; }
         const teacherId = document.getElementById('mStTeacher').value;
         if (!teacherId) { alert('Asosiy ustozni tanlang'); return; }
+        const leadStage = document.getElementById('mStLeadStage').value;
+        if (!leadStage) { alert("Sotuv bo'limi ustunini tanlang"); return; }
         const phone = document.getElementById('mStPhone').value.trim();
         const login = document.getElementById('mStLogin').value.trim() || phone.replace(/\s/g, '');
         const password = document.getElementById('mStPassword').value.trim();
@@ -9172,8 +9203,34 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             alert('Bu login allaqachon mavjud.');
             return;
         }
+
+        const subjectVal = document.getElementById('mStSubject').value;
+        const lang = subjectVal === 'russian' ? 'russian' : 'english';
+        const leadId = 'l' + Date.now();
+        const serialCode = generateNextLeadSerial();
+        const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+        leadsData[lang] = leadsData[lang] || [];
+        leadsData[lang].push({
+            id: leadId,
+            name,
+            phone,
+            phone2: '',
+            managerId: '',
+            source: 'Organik',
+            leadType: 'organic',
+            status: leadStage,
+            serialCode,
+            comments: [],
+            managerPhoto: null,
+            attachments: [],
+            date: new Date().toLocaleDateString('uz-UZ')
+        });
+        setItem(STORAGE_KEYS.leads, leadsData);
+
         students.push({
             id: 's' + Date.now(),
+            serialCode,
+            leadRef: { lang, id: leadId },
             name,
             phone,
             age: parseInt(document.getElementById('mStAge').value) || null,
@@ -9181,7 +9238,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             region: document.getElementById('mStRegion').value.trim(),
             startDate: document.getElementById('mStStartDate').value,
             grade: parseFloat(document.getElementById('mStGrade').value) || null,
-            subject: document.getElementById('mStSubject').value,
+            subject: subjectVal,
             teacherId,
             assistantTeacherId: document.getElementById('mStAsstTeacher').value || null,
             login,
