@@ -8161,6 +8161,30 @@ function renderSdpSales(s) {
     </div>` : ''}`;
 }
 
+// 9-vazifa: ustoz shunchaki almashtirilib, jadval eski ustozning kunu
+// vaqtida qolib ketardi — bu yerdan yangi ustozning ham bo'sh/band
+// vaqtlarini ko'rsatadigan, lid onboarding'da ishlatiladigan jadval
+// tanlagichi (renderOnboardTeacherSchedulePicker) qayta ishlatiladi,
+// shunda tanlangan slot darhol dars jadvali va davomatga to'g'ri
+// integratsiya bo'ladi.
+function collectSdpTeacherScheduleData(modalBody, s) {
+    const teacherId = modalBody.querySelector('#onboardTeacherId')?.value?.trim() || '';
+    if (!teacherId) return { error: 'Yangi ustozni tanlang' };
+    const lessonDayOfWeekRaw = modalBody.dataset.onboardScheduleDay;
+    const lessonTime = modalBody.dataset.onboardScheduleTime || '';
+    if (!lessonDayOfWeekRaw || !lessonTime) {
+        return { error: 'Dars kunini va soatini jadvaldan tanlang' };
+    }
+    const lessonDayOfWeek = parseInt(lessonDayOfWeekRaw, 10);
+    const teacher = resolveTeacherWithVirtual(teacherId);
+    const duration = s.lessonDuration || teacher?.lessonDuration || 15;
+    const busy = getTeacherBusyWeeklySlots(teacherId, s.id);
+    if (!canFitWeeklyLesson(busy, lessonDayOfWeek, lessonTime, duration)) {
+        return { error: 'Tanlangan vaqt band yoki dars davomiyligi uchun yetarli bo\'sh joy yo\'q' };
+    }
+    return { data: { teacherId, lessonDayOfWeek, lessonTime } };
+}
+
 function openSdpTransferTeacher(s) {
     const subject = s.subject || 'english';
     const asosiy = filterTeachersByTypeAndSubject('asosiy', subject);
@@ -8168,25 +8192,60 @@ function openSdpTransferTeacher(s) {
         `<option value="${escapeHtml(t.id)}"${t.id===s.teacherId?' selected':''}>${escapeHtml(t.name)}</option>`
     ).join('');
     openModal("Ustoz almashtirish",
-        `<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${escapeHtml(s.name)} — yangi ustozni tanlang:</p>
-         <div class="form-group">
-            <label>Asosiy ustoz</label>
-            <select id="sdpNewTeacher" class="form-control">${options}</select>
+        `<div class="lead-survey lead-survey--schedule">
+         <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${escapeHtml(s.name)} — yangi ustozni tanlang, so'ng uning bo'sh vaqtidan dars jadvalini belgilang:</p>
+         <div class="lead-survey-field">
+            <label for="onboardTeacherId">Asosiy ustoz</label>
+            <select id="onboardTeacherId" class="form-select">${options}</select>
+         </div>
+         <div id="onboardScheduleBlock" class="lead-survey-field" hidden>
+            <span class="lead-survey-label">Dars kunlari va soati</span>
+            <p class="lead-survey-hint">O'qituvchining band va bo'sh vaqtlarini ko'rib, bo'sh slotdan tanlang.</p>
+            <div id="onboardSchedulePicker" class="onboard-schedule-picker"></div>
+            <output id="onboardScheduleSelected" class="onboard-schedule-selected" for="onboardSchedulePicker"></output>
+         </div>
          </div>`,
         `<button type="button" class="btn-ghost" id="sdpCancelTeacher">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="sdpSaveTeacher">Saqlash</button>`,
-        { wide: false }
+        { wide: true }
     );
+
+    const modalBody = document.getElementById('modalBody');
+    const teacherSel = modalBody.querySelector('#onboardTeacherId');
+    const scheduleBlock = modalBody.querySelector('#onboardScheduleBlock');
+    const syncSchedule = () => {
+        const teacherId = teacherSel?.value || '';
+        if (!teacherId || !scheduleBlock) {
+            if (scheduleBlock) scheduleBlock.hidden = true;
+            return;
+        }
+        scheduleBlock.hidden = false;
+        const teacher = resolveTeacherWithVirtual(teacherId);
+        const lessonDuration = s.lessonDuration || teacher?.lessonDuration || 15;
+        renderOnboardTeacherSchedulePicker(modalBody, teacherId, { lessonDuration });
+    };
+    teacherSel?.addEventListener('change', () => {
+        delete modalBody.dataset.onboardScheduleDay;
+        delete modalBody.dataset.onboardScheduleTime;
+        syncSchedule();
+    });
+    syncSchedule();
+
     document.getElementById('sdpCancelTeacher').onclick = () => closeModal();
     document.getElementById('sdpSaveTeacher').onclick = () => {
-        const newTeacherId = document.getElementById('sdpNewTeacher').value;
-        if (!newTeacherId) return;
-        updateStudent(s.id, { teacherId: newTeacherId });
+        const result = collectSdpTeacherScheduleData(modalBody, s);
+        if (result.error) { alert(result.error); return; }
+        updateStudent(s.id, {
+            teacherId: result.data.teacherId,
+            lessonDayOfWeek: result.data.lessonDayOfWeek,
+            lessonTime: result.data.lessonTime
+        });
         closeModal();
         renderSdpHeader(s.id);
         renderSdpTab('profile', s.id);
         renderStudents();
-        showMiniToast("Ustoz almashtirildi");
+        if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
+        showMiniToast("Ustoz va jadval yangilandi");
     };
 }
 
