@@ -405,6 +405,13 @@ router.get('/demo-contract-pdf', studentAuthOptional, async (req, res) => {
     try {
         const result = await getStudentContractPdf(req.studentId);
         if (!result) return res.status(404).json({ error: 'Shartnoma topilmadi' });
+        // Chrome'ning o'rnatilgan PDF ko'ruvchisi javobni ichki <object>/<embed>
+        // sifatida render qiladi — global helmet CSP'dagi object-src 'none'
+        // direktivasi (server/index.js) shu tufayli PDF'ni blokladi va sahifa
+        // bo'sh, o'rtasida "buzilgan plagin" belgisi bilan ochilardi. Bu bitta
+        // binary PDF javobi, HTML sahifa emas — CSP bu yerda foydasiz, shuning
+        // uchun faqat shu javob uchun olib tashlanadi.
+        res.removeHeader('Content-Security-Policy');
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="${result.filename}"`);
         res.send(result.buffer);
