@@ -6291,6 +6291,10 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
             assistantTeacherId: onboarding.assistantTeacherId || null,
             telegramGroupLink: onboarding.telegramGroupLink || '',
             source: 'lead',
+            // 8-vazifa: sotuv bo'limi lidga bergan ID (serialCode) o'quvchiga
+            // aylanganda ham saqlanib qolishi kerak — mavjud bo'lsa ustidan
+            // yozilmaydi, yo'q bo'lsa lid'nikidan olinadi.
+            serialCode: existing.serialCode || lead?.serialCode || undefined,
             // 6-vazifa: agar bu o'quvchida shartnoma allaqachon bo'lsa,
             // uni ustidan yozib qo'ymaymiz — faqat yo'q bo'lsa beriladi.
             contract: existing.contract || (onboarding.contractNumber
@@ -6304,6 +6308,9 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
     const id = 's' + Date.now();
     students.push({
         id,
+        // 8-vazifa: lid to'lov jarayoniga o'tganda olgan ID (masalan AA391)
+        // o'quvchilar bo'limida ham xuddi shu holicha ko'rinishi uchun.
+        serialCode: lead?.serialCode || undefined,
         name: onboarding.studentFullName,
         phone: lead?.phone || '',
         group: onboarding.courseLevelLabel || '',
@@ -7366,6 +7373,7 @@ function renderStudents() {
     initStudentsSubjectTabs();
     const titleEl = document.getElementById('studentsPageTitle');
 
+    backfillStudentSerialCodesFromLeads();
     let students = getItem(STORAGE_KEYS.students, []);
 
     const subject = isSalesManager ? 'english' : getStudentsSelectedSubject();
@@ -7400,7 +7408,8 @@ function renderStudents() {
         students = students.filter(s =>
             (s.name || '').toLowerCase().includes(searchVal) ||
             (s.phone || '').toLowerCase().includes(searchVal) ||
-            (s.id || '').toLowerCase().includes(searchVal)
+            (s.id || '').toLowerCase().includes(searchVal) ||
+            (s.serialCode || '').toLowerCase().includes(searchVal)
         );
     }
 
@@ -7535,7 +7544,7 @@ function renderStudents() {
                     <span style="font-weight:500">${escapeHtml(s.name || '—')}</span>
                 </div>
             </td>
-            <td><span class="student-id-badge">#${escapeHtml(String(s.id).slice(-6))}</span></td>
+            <td><span class="student-id-badge">#${escapeHtml(s.serialCode || String(s.id).slice(-6))}</span></td>
             <td>${escapeHtml(s.phone || '—')}</td>
             <td>${escapeHtml(ageStr)}</td>
             <td>${escapeHtml(genderLabel)}</td>
@@ -11990,19 +11999,46 @@ function generateNextLeadSerial() {
     return code;
 }
 
+// 8-vazifa: ilgari faqat "tolov-jarayonida" statusidagi lidlarga ID
+// berilardi — shu sababli "To'lov yopildi"ga to'g'ridan-to'g'ri o'tgan
+// yoki bu tuzatishdan oldingi eski lidlarda ID umuman yo'q edi.
+const LEAD_STATUSES_NEED_SERIAL = new Set(['tolov-jarayonida', 'tolov-yopildi']);
+
 function backfillMissingLeadSerials() {
     syncLeadSerialCounterFromExisting();
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     let changed = false;
     ['english', 'russian'].forEach(lang => {
         (leads[lang] || []).forEach((lead, idx) => {
-            if (normalizeLeadStatus(lead.status) === 'tolov-jarayonida' && !lead.serialCode) {
+            if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(lead.status)) && !lead.serialCode) {
                 leads[lang][idx] = { ...lead, serialCode: generateNextLeadSerial() };
                 changed = true;
             }
         });
     });
     if (changed) setItem(STORAGE_KEYS.leads, leads);
+}
+
+// 8-vazifa: allaqachon o'quvchiga aylangan, lekin bu tuzatishdan oldin
+// yaratilgani uchun serialCode'i yo'q yozuvlarni o'zining lid yozuvidan
+// (leadRef) topib to'ldiradi — shunda "O'quvchilar" bo'limi ID'si sotuv
+// bo'limidagi lid ID'si bilan bir xil bo'lib qoladi.
+function backfillStudentSerialCodesFromLeads() {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const leadSerialById = new Map();
+    [...(leadsData.english || []), ...(leadsData.russian || [])].forEach(l => {
+        if (l.serialCode) leadSerialById.set(l.id, l.serialCode);
+    });
+    let changed = false;
+    const updated = students.map(s => {
+        if (s.serialCode || !s.leadRef?.id) return s;
+        const serial = leadSerialById.get(s.leadRef.id);
+        if (!serial) return s;
+        changed = true;
+        return { ...s, serialCode: serial };
+    });
+    if (changed) setItem(STORAGE_KEYS.students, updated);
 }
 
 function leadHasTeacherSchedule(lead) {
@@ -14153,13 +14189,16 @@ function promoteStudentFromClosed(lang, lead, scheduleData) {
             lessonTime: scheduleData.lessonTime,
             lessonDuration: duration,
             telegramGroupLink: scheduleData.telegramGroupLink,
-            source: 'lead-closed'
+            source: 'lead-closed',
+            // 8-vazifa: sotuv bo'limidagi lid ID'si o'quvchiga ham o'tishi kerak.
+            serialCode: existing.serialCode || lead?.serialCode || undefined
         });
         return existing.id;
     }
     const id = 's' + Date.now();
     students.push({
         id,
+        serialCode: lead?.serialCode || undefined,
         name: lead.name,
         phone: lead.phone || '',
         group: '',
@@ -14697,7 +14736,10 @@ function renderLeadCard(lead, langKey) {
         : _managerInitials
         ? `<span class="lead-mgr-avatar-initials">${escapeHtml(_managerInitials)}</span>`
         : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-    const showSerial = normalizeLeadStatus(normalized.status) === 'tolov-jarayonida' && normalized.serialCode;
+    // 8-vazifa: ID faqat "To'lov jarayonida" bosqichida emas, lid "To'lov
+    // yopildi"ga (va undan keyin) o'tgandan so'ng ham kartochkada ko'rinib
+    // turishi kerak — bir marta berilgan ID hech qachon yo'qolmasligi kerak.
+    const showSerial = Boolean(normalized.serialCode);
     const serialHtml = showSerial
         ? `<span class="lead-card-serial">#${escapeHtml(normalized.serialCode)}</span>`
         : '';
