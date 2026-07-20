@@ -12078,40 +12078,29 @@ function backfillMissingLeadSerials() {
     if (changed) setItem(STORAGE_KEYS.leads, leads);
 }
 
-// 8-vazifa (qayta ish 2): allaqachon o'quvchiga aylangan, lekin bu
+// 8-vazifa (qayta ish 3): allaqachon o'quvchiga aylangan, lekin bu
 // tuzatishlardan oldin yaratilgani uchun serialCode'i yo'q yozuvlarni
 // o'zining lid yozuvidan topib to'ldiradi — shunda "O'quvchilar" bo'limi
-// ID'si sotuv bo'limidagi lid ID'si bilan bir xil bo'lib qoladi. Avval
-// faqat leadRef orqali bog'langan yozuvlar to'ldirilardi — lekin
-// promoteStudentFromOnboarding/FromClosed'dan OLDIN (leadRef maydoni hali
-// yozilmagan davrda) yaratilgan eski o'quvchi yozuvlarida leadRef umuman
-// yo'q edi. Shu sabab, agar leadRef orqali topilmasa, xuddi
-// promoteStudentFromOnboarding'ning o'zi ham qilgani kabi, ISM bo'yicha
-// mos lid izlanadi (bir xil ismli bir nechta lid bo'lsa, birinchisi
-// olinadi — test/dublikat holatlar uchun mukammal emas, lekin haqiqiy
-// yagona ismlar uchun to'g'ri ishlaydi). Bog'langan lid o'zi ham hali ID
-// olmagan bo'lsa, shu yerning o'zida yangi ID generatsiya qilinadi.
+// ID'si sotuv bo'limidagi lid ID'si bilan bir xil bo'lib qoladi.
+// MUHIM: moslashtirish FAQAT lead.id (har bir lidning takrorlanmas,
+// o'ziga xos identifikatori — leadRef.id sifatida saqlanadi) orqali
+// amalga oshiriladi. Ism/familiya orqali moslashtirish ATAYLAB
+// ishlatilmaydi — bir xil ism-familiyali bir nechta lid/o'quvchi bo'lishi
+// mumkin, bu esa noto'g'ri odamga ID biriktirib qo'yishi mumkin edi.
+// Bog'langan lid o'zi ham hali ID olmagan bo'lsa, shu yerning o'zida
+// yangi ID generatsiya qilinadi.
 function backfillStudentSerialCodesFromLeads() {
     const students = getItem(STORAGE_KEYS.students, []);
     const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const leadLocationById = new Map();
-    const leadLocationByName = new Map();
     ['english', 'russian'].forEach(lang => {
-        (leadsData[lang] || []).forEach((l, idx) => {
-            leadLocationById.set(l.id, { lang, idx });
-            const nameKey = String(l.name || '').trim().toLowerCase();
-            if (nameKey && !leadLocationByName.has(nameKey)) leadLocationByName.set(nameKey, { lang, idx });
-        });
+        (leadsData[lang] || []).forEach((l, idx) => leadLocationById.set(l.id, { lang, idx }));
     });
     let leadsChanged = false;
     let studentsChanged = false;
     const updatedStudents = students.map(s => {
-        if (s.serialCode) return s;
-        let loc = s.leadRef?.id ? leadLocationById.get(s.leadRef.id) : null;
-        if (!loc) {
-            const nameKey = String(s.name || '').trim().toLowerCase();
-            loc = nameKey ? leadLocationByName.get(nameKey) : null;
-        }
+        if (s.serialCode || !s.leadRef?.id) return s;
+        const loc = leadLocationById.get(s.leadRef.id);
         if (!loc) return s;
         const lead = leadsData[loc.lang][loc.idx];
         let serial = lead.serialCode;
@@ -12121,7 +12110,7 @@ function backfillStudentSerialCodesFromLeads() {
             leadsChanged = true;
         }
         studentsChanged = true;
-        return { ...s, serialCode: serial, leadRef: s.leadRef || { lang: loc.lang, id: lead.id } };
+        return { ...s, serialCode: serial };
     });
     if (leadsChanged) setItem(STORAGE_KEYS.leads, leadsData);
     if (studentsChanged) setItem(STORAGE_KEYS.students, updatedStudents);
