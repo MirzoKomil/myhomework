@@ -14,6 +14,7 @@ import { theme } from '@/constants/theme';
 import { courseEnrollment, courses, profileStats, skillProgress } from '@/data/mock';
 import { generateTeacherScores, TEACHER_GRADE_CRITERIA } from '@/data/lessonGrades';
 import { generateScheduleDays } from '@/data/scheduleCalendar';
+import { useCommunityLikesTotal } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
 import { useOrders } from '@/services/shopStore';
@@ -43,6 +44,7 @@ export default function ResultsScreen() {
   const coins = useCoins();
   const lightning = useLightning();
   const orders = useOrders();
+  const communityLikes = useCommunityLikesTotal();
 
   const scheduleDays = useMemo(() => generateScheduleDays(), []);
 
@@ -164,6 +166,13 @@ export default function ResultsScreen() {
             </View>
             <Text style={styles.statValue}>{orders.length} ta</Text>
             <Text style={styles.statLabel}>Homework Shopdan xaridlar</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: theme.colors.pinkBg }]}>
+              <Ionicons name="heart" size={20} color={theme.colors.pink} />
+            </View>
+            <Text style={styles.statValue}>{communityLikes} ta</Text>
+            <Text style={styles.statLabel}>Hamjamiyatda yig'gan like'lar</Text>
           </View>
         </View>
       </ScrollView>

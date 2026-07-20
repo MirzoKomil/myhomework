@@ -281,6 +281,20 @@ export function useCommunityActivity(): CommunityActivity {
   return { likes, comments, replies, hasActivity };
 }
 
+// 10-vazifa: "Natijalarim" ekranidagi "Yutuqlar" bo'limi uchun — o'zi
+// yozgan postlar VA izohlarga tushgan barcha like'larning umumiy soni.
+export function useCommunityLikesTotal(): number {
+  const posts = usePosts();
+  let total = 0;
+  posts.forEach((p) => {
+    if (p.me) total += p.likeCount;
+    p.comments.forEach((c) => {
+      if (c.me) total += c.likeCount;
+    });
+  });
+  return total;
+}
+
 export function timeAgo(timestamp: number): string {
   const diffMs = Date.now() - timestamp;
   const minutes = Math.floor(diffMs / (1000 * 60));
