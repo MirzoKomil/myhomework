@@ -13888,6 +13888,7 @@ function collectPaymentOnboardingData(modalBody) {
 
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const assistantTeacherId = getVal('onboardAssistantTeacherId');
+    if (!assistantTeacherId) return { error: "Yordamchi o'qituvchini tanlang", target: '#onboardAssistantTeacherId' };
     const contractLabel = getSurveyOptionLabel(LEAD_CONTRACT_TYPES, contractType.value);
     const courseLevelLabel = getSurveyOptionLabel(LEAD_COURSE_LEVELS, courseLevel.value);
     const teacherName = teachers.find(t => t.id === teacherId)?.name || '';
