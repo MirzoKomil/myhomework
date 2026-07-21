@@ -5961,8 +5961,18 @@ function initTimetableControls() {
 
     const savedTeacher = isTeacherRole && linkedTeacherId ? linkedTeacherId : teacherEl.value;
     if (isTeacherRole) {
-        // O'qituvchi faqat o'zining jadvalini ko'radi — filtrni yashir
-        teacherEl.innerHTML = teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+        // 12-ish: O'qituvchi faqat o'zining jadvalini ko'rishi kerak. Avval
+        // select'ga BARCHA ustozlar to'ldirilib, faqat CSS bilan
+        // yashirilardi — agar o'qituvchining o'z ID'si shu "asosiy" turdagi
+        // ro'yxatda topilmasa (masalan HR'dan hali "asosiy ustoz" sifatida
+        // sozlanmagan virtual yozuv bo'lsa), brauzer birinchi variantni —
+        // BOSHQA ustozni — tanlab qo'yardi. Endi FAQAT shu o'qituvchining
+        // o'zi (haqiqiy yoki virtual HR yozuvi bo'lsa ham
+        // resolveTeacherWithVirtual orqali) select'ga qo'yiladi.
+        const ownTeacher = linkedTeacherId ? resolveTeacherWithVirtual(linkedTeacherId) : null;
+        teacherEl.innerHTML = ownTeacher
+            ? `<option value="${escapeHtml(ownTeacher.id)}">${escapeHtml(ownTeacher.name)}</option>`
+            : '<option value="">— Sizga hali dars jadvali biriktirilmagan —</option>';
         const teacherWrap = teacherEl.closest('.form-group') || teacherEl.parentElement;
         if (teacherWrap) teacherWrap.style.display = 'none';
     } else {
@@ -6246,12 +6256,37 @@ function renderTimetable() {
         titleEl.textContent = `Dars jadvali — ${SUBJECTS[filters.lang]?.label || filters.lang || 'Ingliz tili'}`;
     }
 
+    const container = document.getElementById('timetableContainer');
+    if (!container) return;
+
+    // 12-ish: O'qituvchi hech qachon boshqa ustozning (yoki "Barcha
+    // ustozlar" umumiy haftalik jadvalining) ma'lumotini ko'rmasligi
+    // kerak. Bu yerda o'quvchilar/ustozlar ro'yxati "asosiy" turi va
+    // joriy til tabiga qarab filtrlanadi — agar o'qituvchi shu ikkalasiga
+    // aniq mos kelmasa (masalan HR'dan "yordamchi" sifatida sozlangan
+    // bo'lsa), umumiy ro'yxatdan tashqarida qolib, oxir-oqibat noto'g'ri
+    // ustoz yoki umumiy jadval ko'rsatilishi mumkin edi. Shu sababli
+    // o'qituvchi uchun bu yerning o'zida, mustaqil ravishda, faqat
+    // o'zining jadvali (resolveTeacherWithVirtual orqali, tur/tilidan
+    // qat'iy nazar) hisoblanadi.
+    const _cuTimetable = getCurrentUser();
+    if (_cuTimetable?.role === 'teacher') {
+        const ownTeacher = _cuTimetable.linkedTeacherId ? resolveTeacherWithVirtual(_cuTimetable.linkedTeacherId) : null;
+        if (!ownTeacher) {
+            container.innerHTML = '<p class="text-muted" style="padding:24px">Sizga hali dars jadvali biriktirilmagan.</p>';
+            return;
+        }
+        const ownEntries = collectWeeklyScheduleEntries({ ...filters, teacherId: ownTeacher.id, lang: null });
+        container.innerHTML = `<div class="tt-grid-header"><strong>${escapeHtml(ownTeacher.name)}</strong> · ${escapeHtml(patternLabel)}</div>`
+            + renderTimetableTeacherGrid(ownTeacher, ownEntries, filters.pattern);
+        wireTimetableCells();
+        return;
+    }
+
     // 5-ish: HR xodimlar bilan integratsiya + til filtri
     const teachers = filterTeachersByTypeAndSubject('asosiy', filters.lang || 'english');
 
     const entries = collectWeeklyScheduleEntries(filters);
-    const container = document.getElementById('timetableContainer');
-    if (!container) return;
 
     if (!teachers.length) {
         container.innerHTML = '<p class="text-muted" style="padding:24px">Tanlangan filtrlarga mos ustoz topilmadi.</p>';
