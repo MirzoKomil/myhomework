@@ -14885,18 +14885,79 @@ function normalizeLeadExtras(lead) {
     };
 }
 
+// 18-ish: mobilda "Boshqa bosqichga o'tkazish" submenyusi ustun
+// konteynerining overflow (auto/hidden) xususiyati tufayli kesilib qolar
+// edi — ro'yxatning yuqori qismi (ilk bosqichlar) hech qanday aylantirish
+// bilan ko'rinmasdi, chunki kesish chegarasi ota elementning o'zida edi,
+// submenyuning ichki scroll'i emas. Yechim: ochilganda menyu/submenyuni
+// document.body'ga "portal" qilib, ekranga nisbatan fixed joylashtiramiz
+// (ota elementlarning overflow'i fixed pozitsiyaga umuman ta'sir qilmaydi)
+// va kerak bo'lsa yuqoriga "flip" qilamiz, ekran balandligiga moslab
+// max-height beramiz — shu orqali butun ro'yxat har doim to'liq ko'rinadi
+// va ichki scroll orqali erishiladigan bo'ladi.
+function openFloatingMenu(menu, anchorEl) {
+    const margin = 8;
+    menu.hidden = false;
+    menu.style.position = 'fixed';
+    menu.style.visibility = 'hidden';
+    menu.style.left = '0px';
+    menu.style.top = '0px';
+    menu.style.right = 'auto';
+    menu.style.maxHeight = '';
+    menu.style.overflowY = '';
+    const rect = anchorEl.getBoundingClientRect();
+    const naturalH = menu.scrollHeight;
+    const mw = menu.offsetWidth;
+    const spaceBelow = window.innerHeight - rect.bottom - margin;
+    const spaceAbove = rect.top - margin;
+    const cap = 320;
+    const openDown = spaceBelow >= Math.min(naturalH, cap) || spaceBelow >= spaceAbove;
+    const available = Math.max(120, openDown ? spaceBelow : spaceAbove);
+    const finalH = Math.min(naturalH, cap, available);
+    menu.style.maxHeight = finalH + 'px';
+    menu.style.overflowY = 'auto';
+    const top = openDown ? rect.bottom + 4 : Math.max(margin, rect.top - finalH - 4);
+    let left = rect.right - mw;
+    if (left < margin) left = margin;
+    if (left + mw > window.innerWidth - margin) left = window.innerWidth - mw - margin;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    menu.style.visibility = '';
+}
+
+function closeFloatingMenu(menu) {
+    menu.hidden = true;
+    menu.style.position = '';
+    menu.style.top = '';
+    menu.style.left = '';
+    menu.style.right = '';
+    menu.style.maxHeight = '';
+    menu.style.overflowY = '';
+    menu.style.visibility = '';
+}
+
 function closeLeadCardMenus() {
     document.querySelectorAll('.lead-card-menu-dropdown').forEach(el => {
-        el.hidden = true;
+        const sub = el.querySelector('.lead-card-menu-submenu');
+        if (sub) closeFloatingMenu(sub);
+        closeFloatingMenu(el);
+        if (el._menuOriginParent) {
+            el._menuOriginParent.appendChild(el);
+            el._menuOriginParent = null;
+        }
     });
 }
 
 function toggleLeadCardMenu(btn) {
-    const menu = btn.closest('.lead-card-menu-wrap')?.querySelector('.lead-card-menu-dropdown');
+    const wrap = btn.closest('.lead-card-menu-wrap');
+    const menu = wrap?.querySelector('.lead-card-menu-dropdown');
     if (!menu) return;
     const willOpen = menu.hidden;
     closeLeadCardMenus();
-    menu.hidden = !willOpen;
+    if (!willOpen) return;
+    menu._menuOriginParent = wrap;
+    document.body.appendChild(menu);
+    openFloatingMenu(menu, btn);
 }
 
 function getLeadById(lang, leadId) {
@@ -15406,7 +15467,9 @@ function renderLeads() {
         btn.addEventListener('click', e => {
             e.stopPropagation();
             const sub = btn.closest('.lead-card-menu-submenu-wrap')?.querySelector('.lead-card-menu-submenu');
-            if (sub) { sub.hidden = !sub.hidden; }
+            if (!sub) return;
+            if (sub.hidden) openFloatingMenu(sub, btn);
+            else closeFloatingMenu(sub);
         });
     });
 
