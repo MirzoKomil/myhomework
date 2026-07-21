@@ -11692,11 +11692,12 @@ function openSifatsizLidFlow(lang, leadId) {
     );
 
     document.getElementById('cancelSifatsiz').onclick = () => { closeModal(); renderLeads(); };
+    const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
 
     document.getElementById('confirmSifatsiz').onclick = () => {
-        const modalBody = document.getElementById('modalBody');
         const selected = modalBody?.querySelector('[data-reason-radio]:checked');
-        if (!selected) { alert('Bitta sabab tanlang'); return; }
+        if (!selected) { showLeadModalValidation(modalBody, { error: 'Bitta sabab tanlang', target: '[data-reason-radio]' }); return; }
 
         const reason = SIFATSIZ_LID_REASONS.find(r => r.id === selected.value);
         if (!reason) return;
@@ -11753,11 +11754,12 @@ function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus) {
     );
 
     document.getElementById('cancelFailedSale').onclick = () => { closeModal(); renderLeads(); };
+    const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
 
     document.getElementById('confirmFailedSale').onclick = () => {
-        const modalBody = document.getElementById('modalBody');
         const selected = modalBody?.querySelector('[data-reason-radio]:checked');
-        if (!selected) { alert('Bitta sabab tanlang'); return; }
+        if (!selected) { showLeadModalValidation(modalBody, { error: 'Bitta sabab tanlang', target: '[data-reason-radio]' }); return; }
 
         const groupId = selected.dataset.group;
         const group = FAILED_SALE_REASON_GROUPS.find(g => g.id === groupId);
@@ -11818,12 +11820,13 @@ function openContactFailModal(lang, leadId, toStatus, options = {}) {
 
     const confirmBtn = document.getElementById('confirmContactFail');
     if (!confirmBtn) return;
+    const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
 
     confirmBtn.onclick = () => {
-        const modalBody = document.getElementById('modalBody');
         const selected = modalBody?.querySelector('[data-reason-radio]:checked');
         if (!selected) {
-            alert('Bitta variant tanlang');
+            showLeadModalValidation(modalBody, { error: 'Bitta variant tanlang', target: '[data-reason-radio]' });
             return;
         }
         const reason = LEAD_CONTACT_FAIL_REASONS.find(r => r.id === selected.value);
@@ -12122,6 +12125,7 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
     document.getElementById('cancelTrialFlow').onclick = () => { closeModal(); renderLeads(); };
 
     const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
     wireTeacherSchedulePicker(modalBody, { lead });
 
     document.getElementById('confirmTrialFlow').onclick = () => {
@@ -12131,7 +12135,10 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
         const time = modalBody.dataset.onboardScheduleTime;
 
         if (!teacherId || !day || !time) {
-            alert("O'qituvchi, kun va vaqt tanlang!");
+            showLeadModalValidation(modalBody, {
+                error: "O'qituvchi, kun va vaqt tanlang!",
+                target: !teacherId ? '#onboardTeacherId' : '#onboardSchedulePicker'
+            });
             return;
         }
 
@@ -12524,12 +12531,12 @@ function collectConnectedSurveyData(modalBody) {
     const ageInput = modalBody.querySelector('#leadSurveyAge');
     const residenceType = getRadio('residenceType');
 
-    if (!languageLevel) return { error: 'Til darajasini tanlang' };
-    if (!applicant) return { error: 'Ariza kim tomonidan qoldirilganini tanlang' };
-    if (!ageInput) return { error: 'Yoshni tanlang' };
-    if (!gender) return { error: 'Jinsini tanlang' };
-    if (!residenceType) return { error: 'Hudud turini tanlang' };
-    if (!learningGoal) return { error: 'O\'rganish maqsadini tanlang' };
+    if (!languageLevel) return { error: 'Til darajasini tanlang', target: '[data-survey-field="languageLevel"]' };
+    if (!applicant) return { error: 'Ariza kim tomonidan qoldirilganini tanlang', target: '[data-survey-field="applicant"]' };
+    if (!ageInput) return { error: 'Yoshni tanlang', target: '#leadSurveyAge' };
+    if (!gender) return { error: 'Jinsini tanlang', target: '[data-survey-field="gender"]' };
+    if (!residenceType) return { error: 'Hudud turini tanlang', target: '[data-survey-field="residenceType"]' };
+    if (!learningGoal) return { error: 'O\'rganish maqsadini tanlang', target: '[data-survey-field="learningGoal"]' };
 
     let residenceLabel = '';
     const survey = {
@@ -12547,13 +12554,13 @@ function collectConnectedSurveyData(modalBody) {
 
     if (residenceType.value === 'uz') {
         const region = getRadio('uzRegion');
-        if (!region) return { error: 'Viloyatni tanlang' };
+        if (!region) return { error: 'Viloyatni tanlang', target: '[data-survey-field="uzRegion"]' };
         survey.region = region.value;
         survey.regionLabel = getSurveyOptionLabel(LEAD_UZ_REGIONS, region.value);
         residenceLabel = survey.regionLabel;
     } else {
         const country = getRadio('foreignCountry');
-        if (!country) return { error: 'Davlatni tanlang' };
+        if (!country) return { error: 'Davlatni tanlang', target: '[data-survey-field="foreignCountry"]' };
         survey.country = country.value;
         survey.countryLabel = getSurveyOptionLabel(LEAD_FOREIGN_COUNTRIES, country.value);
         residenceLabel = survey.countryLabel;
@@ -12639,6 +12646,7 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
     );
 
     const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
     const ageInput = modalBody.querySelector('#leadSurveyAge');
     const ageOutput = modalBody.querySelector('#leadSurveyAgeValue');
     const syncAgeSlider = () => {
@@ -12673,7 +12681,7 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
     document.getElementById('confirmConnectedSurvey').onclick = () => {
         const result = collectConnectedSurveyData(modalBody);
         if (result.error) {
-            alert(result.error);
+            showLeadModalValidation(modalBody, result);
             return;
         }
 
@@ -12825,6 +12833,62 @@ function showInfoProvidedValidation(modalBody, result) {
     });
 }
 
+function clearLeadModalValidation(modalBody) {
+    modalBody.querySelectorAll('.lead-validation-target--invalid').forEach(target => {
+        target.classList.remove('lead-validation-target--invalid');
+    });
+    modalBody.querySelector('.lead-modal-validation-summary')?.remove();
+}
+
+function findFirstLeadModalIncompleteTarget(modalBody) {
+    const isVisible = element => !element.closest('[hidden]') && getComputedStyle(element).display !== 'none';
+    const handledRadioNames = new Set();
+
+    for (const field of modalBody.querySelectorAll('input, select, textarea')) {
+        if (!isVisible(field) || field.disabled) continue;
+        if (field.type === 'radio') {
+            if (handledRadioNames.has(field.name)) continue;
+            handledRadioNames.add(field.name);
+            if (!modalBody.querySelector(`input[type="radio"][name="${CSS.escape(field.name)}"]:checked`)) return field;
+            continue;
+        }
+        if (field.type === 'checkbox') {
+            if (!field.checked) return field;
+            continue;
+        }
+        if (!field.value?.trim()) return field;
+    }
+    return null;
+}
+
+function showLeadModalValidation(modalBody, result) {
+    clearLeadModalValidation(modalBody);
+
+    const target = result.target ? modalBody.querySelector(result.target) : findFirstLeadModalIncompleteTarget(modalBody);
+    const container = target?.closest('.lead-info-question, .lead-survey-section, .lead-survey-field, .form-group, .failed-sale-group, .lead-reason-list') || target;
+    const summary = document.createElement('p');
+    summary.className = 'lead-modal-validation-summary';
+    summary.textContent = result.error;
+    summary.setAttribute('role', 'alert');
+    summary.setAttribute('aria-live', 'polite');
+
+    if (container) {
+        container.classList.add('lead-validation-target--invalid');
+        container.append(summary);
+        container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        requestAnimationFrame(() => target?.focus({ preventScroll: true }));
+        return;
+    }
+
+    modalBody.prepend(summary);
+    modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function wireLeadModalValidationClear(modalBody) {
+    modalBody.addEventListener('input', () => clearLeadModalValidation(modalBody));
+    modalBody.addEventListener('change', () => clearLeadModalValidation(modalBody));
+}
+
 function formatInfoProvidedComment(answers) {
     const lines = answers.map(a => `• ${a.label} Ha`);
     return ['Ma\'lumot berildi — tekshiruv:', ...lines].join('\n');
@@ -12944,12 +13008,13 @@ function openDecisionProcessModal(lang, leadId, options = {}) {
         closeModal();
         renderLeads();
     };
+    const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
 
     document.getElementById('confirmDecisionProcess').onclick = () => {
-        const modalBody = document.getElementById('modalBody');
         const selected = modalBody?.querySelector('[data-decision-radio]:checked');
         if (!selected) {
-            alert('Sababni tanlang');
+            showLeadModalValidation(modalBody, { error: 'Sababni tanlang', target: '[data-decision-radio]' });
             return;
         }
         const reason = LEAD_DECISION_REASONS.find(r => r.id === selected.value);
@@ -13190,16 +13255,16 @@ function collectPaymentSurveyData(modalBody) {
     const tariff = getRadio('tariff');
     const amount = getRadio('amount');
 
-    if (!paymentType) return { error: 'To\'lov turini tanlang' };
-    if (!tariff) return { error: 'Tarifni tanlang' };
-    if (!amount) return { error: 'Summani tanlang' };
+    if (!paymentType) return { error: 'To\'lov turini tanlang', target: '[data-payment-field="paymentType"]' };
+    if (!tariff) return { error: 'Tarifni tanlang', target: '[data-payment-field="tariff"]' };
+    if (!amount) return { error: 'Summani tanlang', target: '[data-payment-field="amount"]' };
 
     let installmentPartner = null;
     let installmentPartnerLabel = '';
 
     if (paymentType.value === 'installment') {
         installmentPartner = getRadio('installmentPartner');
-        if (!installmentPartner) return { error: 'Nasiya hamkorini tanlang' };
+        if (!installmentPartner) return { error: 'Nasiya hamkorini tanlang', target: '[data-payment-field="installmentPartner"]' };
         installmentPartnerLabel = getSurveyOptionLabel(LEAD_INSTALLMENT_PARTNERS, installmentPartner.value);
     }
 
@@ -13217,13 +13282,13 @@ function collectPaymentSurveyData(modalBody) {
 
     if (paymentType.value === 'partial') {
         const paidRaw = modalBody.querySelector('#paymentPaidAmount')?.value?.trim();
-        if (!paidRaw) return { error: 'Qancha to\'laganini kiriting' };
+        if (!paidRaw) return { error: 'Qancha to\'laganini kiriting', target: '#paymentPaidAmount' };
         const paid = parseMoneyInput(paidRaw);
         if (!Number.isFinite(paid) || paid <= 0) {
-            return { error: 'To\'langan summa noto\'g\'ri' };
+            return { error: 'To\'langan summa noto\'g\'ri', target: '#paymentPaidAmount' };
         }
         if (paid > totalAmount) {
-            return { error: 'To\'langan summa umumiy summadan katta bo\'lmasligi kerak' };
+            return { error: 'To\'langan summa umumiy summadan katta bo\'lmasligi kerak', target: '#paymentPaidAmount' };
         }
         paidAmount = paid;
         paidAmountLabel = formatUzMoney(paid);
@@ -13232,8 +13297,8 @@ function collectPaymentSurveyData(modalBody) {
 
         lastPaymentDate = modalBody.querySelector('#paymentLastPaymentDate')?.value || '';
         nextPaymentDate = modalBody.querySelector('#paymentNextPaymentDate')?.value || '';
-        if (!lastPaymentDate) return { error: 'Oxirgi to\'lov sanasini kiriting' };
-        if (!nextPaymentDate) return { error: 'Keyingi to\'lov sanasini kiriting' };
+        if (!lastPaymentDate) return { error: 'Oxirgi to\'lov sanasini kiriting', target: '#paymentLastPaymentDate' };
+        if (!nextPaymentDate) return { error: 'Keyingi to\'lov sanasini kiriting', target: '#paymentNextPaymentDate' };
     }
 
     return {
@@ -13563,12 +13628,12 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
 
 function collectTeacherScheduleData(modalBody) {
     const teacherId = modalBody.querySelector('#onboardTeacherId')?.value?.trim() || '';
-    if (!teacherId) return { error: 'Asosiy ustozni tanlang' };
+    if (!teacherId) return { error: 'Asosiy ustozni tanlang', target: '#onboardTeacherId' };
 
     const lessonDayOfWeekRaw = modalBody.dataset.onboardScheduleDay;
     const lessonTime = modalBody.dataset.onboardScheduleTime || '';
     if (!lessonDayOfWeekRaw || !lessonTime) {
-        return { error: 'Dars kunini va soatini jadvaldan tanlang' };
+        return { error: 'Dars kunini va soatini jadvaldan tanlang', target: '#onboardSchedulePicker' };
     }
 
     const lessonDayOfWeek = parseInt(lessonDayOfWeekRaw, 10);
@@ -13578,11 +13643,11 @@ function collectTeacherScheduleData(modalBody) {
     const duration = teacher?.lessonDuration || 15;
     const busy = getTeacherBusyWeeklySlots(teacherId);
     if (!canFitWeeklyLesson(busy, lessonDayOfWeek, lessonTime, duration)) {
-        return { error: 'Tanlangan vaqt band yoki dars davomiyligi uchun yetarli bo\'sh slot yo\'q' };
+        return { error: 'Tanlangan vaqt band yoki dars davomiyligi uchun yetarli bo\'sh slot yo\'q', target: '#onboardSchedulePicker' };
     }
 
     const telegramGroupLink = modalBody.querySelector('#onboardTelegramGroupLink')?.value?.trim() || '';
-    if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting' };
+    if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
 
     return {
         data: {
@@ -13654,6 +13719,7 @@ function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
     );
 
     const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
     wireTeacherSchedulePicker(modalBody, { lead });
 
     document.getElementById('cancelPaymentTeacherSchedule').onclick = () => {
@@ -13664,7 +13730,7 @@ function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
     document.getElementById('confirmPaymentTeacherSchedule').onclick = () => {
         const result = collectTeacherScheduleData(modalBody);
         if (result.error) {
-            alert(result.error);
+            showLeadModalValidation(modalBody, result);
             return;
         }
 
@@ -13703,39 +13769,39 @@ function collectPaymentOnboardingData(modalBody) {
 
     if (!becomeStudent) return { error: '«O\'quvchiga aylansinmi?» savoliga javob bering' };
     if (!platformConnected) return { error: '«Platforma ulab berildimi?» savoliga javob bering' };
-    if (!contractType) return { error: 'Shartnoma turini tanlang' };
+    if (!contractType) return { error: 'Shartnoma turini tanlang', target: '[data-onboard-field="contractType"]' };
 
     const studentFirstName = getVal('onboardStudentFirstName');
     const studentLastName = getVal('onboardStudentLastName');
-    if (!studentFirstName) return { error: 'O\'quvchi ismi kiritilishi shart' };
-    if (!studentLastName) return { error: 'O\'quvchi familiyasi kiritilishi shart' };
+    if (!studentFirstName) return { error: 'O\'quvchi ismi kiritilishi shart', target: '#onboardStudentFirstName' };
+    if (!studentLastName) return { error: 'O\'quvchi familiyasi kiritilishi shart', target: '#onboardStudentLastName' };
     const studentFullName = `${studentFirstName} ${studentLastName}`.trim();
 
     const genderRadio = getRadio('gender');
-    if (!genderRadio) return { error: 'Jinsi tanlanishi shart' };
+    if (!genderRadio) return { error: 'Jinsi tanlanishi shart', target: '[data-onboard-field="gender"]' };
 
     const courseLevel = getRadio('courseLevel');
-    if (!courseLevel) return { error: 'Kurs darajasini tanlang' };
+    if (!courseLevel) return { error: 'Kurs darajasini tanlang', target: '[data-onboard-field="courseLevel"]' };
 
     const bookAddress = getVal('onboardBookAddress');
-    if (!bookAddress) return { error: 'Kitob yetkazib berish manzilini kiriting' };
+    if (!bookAddress) return { error: 'Kitob yetkazib berish manzilini kiriting', target: '#onboardBookAddress' };
 
     const teacherId = getVal('onboardTeacherId');
-    if (!teacherId) return { error: 'O\'qituvchini tanlang' };
+    if (!teacherId) return { error: 'O\'qituvchini tanlang', target: '#onboardTeacherId' };
 
     const lessonDayOfWeekRaw = modalBody.dataset.onboardScheduleDay;
     const lessonTime = modalBody.dataset.onboardScheduleTime || '';
     if (!lessonDayOfWeekRaw || !lessonTime) {
-        return { error: 'Dars kunini va soatini jadvaldan tanlang' };
+        return { error: 'Dars kunini va soatini jadvaldan tanlang', target: '#onboardSchedulePicker' };
     }
     const lessonDayOfWeek = parseInt(lessonDayOfWeekRaw, 10);
     const lessonDayLabel = DAYS_UZ[lessonDayOfWeek - 1] || '';
 
     const telegramGroupLink = getVal('onboardTelegramGroupLink');
-    if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting' };
+    if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
 
     const firstLessonDate = getVal('onboardFirstLessonDate');
-    if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang' };
+    if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang', target: '#onboardFirstLessonDate' };
 
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const assistantTeacherId = getVal('onboardAssistantTeacherId');
@@ -13878,6 +13944,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     );
 
     const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
     initPaymentOnboardingForm(modalBody, { lead });
 
     document.getElementById('cancelPaymentOnboarding').onclick = () => {
@@ -13888,7 +13955,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     document.getElementById('confirmPaymentOnboarding').onclick = async () => {
         const result = collectPaymentOnboardingData(modalBody);
         if (result.error) {
-            alert(result.error);
+            showLeadModalValidation(modalBody, result);
             return;
         }
 
@@ -14008,6 +14075,7 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
     );
 
     const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
     initPaymentSurveyForm(modalBody);
 
     document.getElementById('cancelPaymentProcess').onclick = () => {
@@ -14018,7 +14086,7 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
     document.getElementById('confirmPaymentProcess').onclick = () => {
         const result = collectPaymentSurveyData(modalBody);
         if (result.error) {
-            alert(result.error);
+            showLeadModalValidation(modalBody, result);
             return;
         }
 
@@ -14326,6 +14394,7 @@ function openPaymentClosedModal(lang, leadId) {
     );
 
     const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
     initEnhancedPaymentClosedForm(modalBody);
 
     document.getElementById('cancelPaymentClosed').onclick = () => {
@@ -14336,7 +14405,7 @@ function openPaymentClosedModal(lang, leadId) {
     // 9-ish: ustoz so'ralmaydi — mavjud paymentOnboarding bilan to'g'ridan-to'g'ri yakunlaymiz
     document.getElementById('confirmPaymentClosed').onclick = () => {
         const result = collectEnhancedPaymentClosedData(modalBody, ps, { hasDebt, hasInstallment, hasDebtor });
-        if (result.error) { alert(result.error); return; }
+        if (result.error) { showLeadModalValidation(modalBody, result); return; }
         closeModal();
         finalizePaymentClosed(lang, leadId, result.data, lead.paymentOnboarding || null);
     };
@@ -14490,6 +14559,7 @@ function openClosedScheduleModal(lang, leadId, closedSurveyData) {
     );
 
     const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
     wireTeacherSchedulePicker(modalBody, { lead });
 
     document.getElementById('cancelClosedSchedule').onclick = () => {
@@ -14499,7 +14569,7 @@ function openClosedScheduleModal(lang, leadId, closedSurveyData) {
 
     document.getElementById('confirmClosedSchedule').onclick = () => {
         const result = collectTeacherScheduleData(modalBody);
-        if (result.error) { alert(result.error); return; }
+        if (result.error) { showLeadModalValidation(modalBody, result); return; }
         closeModal();
         finalizePaymentClosed(lang, leadId, closedSurveyData, result.data);
     };

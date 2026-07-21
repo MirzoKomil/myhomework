@@ -4374,6 +4374,21 @@ body {
     background: color-mix(in srgb, var(--danger) 7%, var(--surface));
 }
 
+.lead-validation-target--invalid {
+    border: 1px solid var(--danger) !important;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+
+.lead-modal-validation-summary {
+    margin: 10px 0 0;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
 .lead-info-question:last-child {
     border-bottom: none;
     padding-bottom: 0;
