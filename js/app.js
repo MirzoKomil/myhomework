@@ -15682,6 +15682,11 @@ document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         if (_tabContext.salesSection === 'book-roadmap') renderBookRoadmap();
         if (_tabContext.salesSection === 'sales-stats') renderSalesFunnel();
         if (_tabContext.salesSection === 'scripts') renderScripts();
+        // 11-vazifa: Reyting bo'limi ilgari bu filtr o'zgarganda umuman
+        // qayta chizilmasdi — shu sababli "Ingliz tili"/"Rus tili"
+        // tugmalari bosilsa ham Leaderboard/Bonus tarixi o'zgarmay
+        // qolardi.
+        if (_tabContext.salesSection === 'rating') renderRating();
     });
 });
 
@@ -17579,10 +17584,15 @@ const RANK_BONUSES = [
     { id: 'rank3', label: '3-o\'rin', prize: '$50',  threshold: 36_300_000, pct: 110, icon: '🥉', color: '#cd7f32' },
 ];
 
-function getSalesManagers() {
-    return getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
+// 11-vazifa: Reyting bo'limidagi funksiyalar shu yerdan `lang` parametrini
+// berib, faqat shu til yo'nalishidagi menejerlarni olishi mumkin — boshqa
+// eski chaqiruvlar (parametrsiz) avvalgidek barcha menejerlarni oladi.
+function getSalesManagers(lang) {
+    const all = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
         e.role === 'Sotuv menejeri' || e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri'
     );
+    if (!lang) return all;
+    return all.filter(m => (m.lang || 'english') === lang);
 }
 
 function _getClosedLeadsInPeriod(managerId, period) {
@@ -17879,8 +17889,13 @@ function renderLeaderboardSection() {
     if (!el) return;
 
     // 2-ish: ROP faqat o'z til yo'nalishiga tegishli menejerlar reytingini ko'radi
+    // 11-vazifa: admin/rop bo'lmagan foydalanuvchilar uchun ham Sotuv
+    // bo'limining yuqorisidagi umumiy "Ingliz tili/Rus tili" filtri
+    // (_leadsLangFilter) shu yerda ham qo'llanadi — avval bu filtr
+    // Reyting bo'limida butunlay e'tiborga olinmasdi.
     const _cuRating = getCurrentUser();
-    const allSalesManagers = getSalesManagers();
+    const _ratingLangFilter = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const allSalesManagers = getSalesManagers(_ratingLangFilter);
     const managers = _cuRating && _cuRating.role === 'rop'
         ? allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english'))
         : allSalesManagers;
@@ -18294,9 +18309,12 @@ function renderBonusHistorySection() {
     if (!el) return;
 
     const history = getItem(STORAGE_KEYS.bonusHistory, []);
-    const managers = getSalesManagers();
+    // 11-vazifa: bu ro'yxat ham Sotuv bo'limining umumiy til filtriga bo'ysunadi.
+    const managers = getSalesManagers(_leadsLangFilter === 'russian' ? 'russian' : 'english');
 
+    const managerIdSet = new Set(managers.map(m => m.id));
     const filtered = history.filter(h => {
+        if (!managerIdSet.has(h.managerId)) return false;
         if (!h.date) return true;
         const d = new Date(h.date);
         const now = new Date();
@@ -18376,7 +18394,9 @@ function renderBonusHistorySection() {
 }
 
 function openAddBonusHistoryModal() {
-    const managers = getSalesManagers();
+    // 11-vazifa: bonus belgilashda ham faqat joriy til yo'nalishidagi
+    // menejerlar ro'yxatda chiqadi.
+    const managers = getSalesManagers(_leadsLangFilter === 'russian' ? 'russian' : 'english');
     const mgrOptions = managers.map(m =>
         `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
     ).join('');
