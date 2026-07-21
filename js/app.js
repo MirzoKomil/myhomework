@@ -6442,23 +6442,49 @@ function updateAttSectionTitle(titleId, subject) {
 
 // --- Asosiy ustozlar davomati (o'quvchi davomati) ---
 function initMainAttControls() {
+    const currentUser = getCurrentUser();
+    const isTeacherRole = currentUser?.role === 'teacher';
+    const linkedTeacherId = currentUser?.linkedTeacherId;
+    // 14-ish: avval bu yerda ham (Dars jadvali/O'quvchilarda topilgan bug
+    // bilan bir xil) ustozning o'z ID'si shu "asosiy" turdagi ro'yxatda
+    // topilmasa, birinchi variant (BOSHQA ustoz) tanlanib qo'yardi.
+    // Endi resolveTeacherWithVirtual orqali FAQAT o'zining yozuvi olinadi.
+    const ownTeacher = isTeacherRole && linkedTeacherId ? resolveTeacherWithVirtual(linkedTeacherId) : null;
+
     initSubjectTabs('mainAttSubjectTabs', renderMainAttendance);
+    const tabsEl = document.getElementById('mainAttSubjectTabs');
+    if (tabsEl) {
+        if (isTeacherRole) {
+            tabsEl.hidden = true;
+            tabsEl.style.display = 'none';
+            const ownSubject = ownTeacher?.subject || 'english';
+            tabsEl.querySelectorAll('.subject-tab').forEach(b => {
+                b.classList.toggle('active', b.dataset.subject === ownSubject);
+            });
+        } else {
+            tabsEl.hidden = false;
+            tabsEl.style.display = '';
+        }
+    }
+
     const subject = getSelectedSubject('mainAttSubjectTabs');
     const teachers = filterTeachersByTypeAndSubject('asosiy', subject);
     const sel = document.getElementById('mainAttTeacher');
     const month = document.getElementById('mainAttMonth');
     if (!month.value) month.value = getMonthKey(new Date());
 
-    const currentUser = getCurrentUser();
-    const isTeacherRole = currentUser?.role === 'teacher';
-    const linkedTeacherId = currentUser?.linkedTeacherId;
-
-    const prev = isTeacherRole && linkedTeacherId ? linkedTeacherId : sel.value;
-    sel.innerHTML = teachers.length
-        ? teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
-        : '<option value="">— Ustoz yo\'q —</option>';
-    if (prev && teachers.some(t => t.id === prev)) sel.value = prev;
-    else if (teachers.length) sel.value = teachers[0].id;
+    if (isTeacherRole) {
+        sel.innerHTML = ownTeacher
+            ? `<option value="${escapeHtml(ownTeacher.id)}">${escapeHtml(ownTeacher.name)}</option>`
+            : '<option value="">— Sizga hali ustozlik biriktirilmagan —</option>';
+    } else {
+        const prev = sel.value;
+        sel.innerHTML = teachers.length
+            ? teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+            : '<option value="">— Ustoz yo\'q —</option>';
+        if (prev && teachers.some(t => t.id === prev)) sel.value = prev;
+        else if (teachers.length) sel.value = teachers[0].id;
+    }
 
     const selWrap = sel.closest('.form-group') || sel.parentElement;
     if (selWrap) selWrap.style.display = isTeacherRole ? 'none' : '';
