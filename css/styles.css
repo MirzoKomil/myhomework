@@ -2501,7 +2501,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    /* 9-vazifa qayta ish 2: .sdp-panel (o'quvchi tafsilotlari to'liq
+       ekran paneli) z-index: 1101 bo'lgani uchun, undan ochiladigan
+       "Ustoz almashtirish"/"Jadval o'zgartirish" kabi modallar (bu
+       overlay orqali) uning ORQASIDA qolib ketardi. Modal har doim eng
+       tepada bo'lishi kerak — shuning uchun 1101'dan yuqori qo'yildi. */
+    z-index: 1150;
 }
 
 .modal {
