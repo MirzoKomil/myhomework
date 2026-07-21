@@ -9253,7 +9253,7 @@ function studentFormHtml(sfx, defaults) {
         </div>
         <div class="form-group" style="flex:1">
             <label>Dars boshlagan sana</label>
-            <input type="date" id="mStStartDate${sfx}" class="form-control" value="${escapeHtml(d.startDate || '')}">
+            <input type="date" lang="en-GB" id="mStStartDate${sfx}" class="form-control" value="${escapeHtml(d.startDate || '')}">
         </div>
     </div>
     <div style="display:flex;gap:10px">
@@ -9491,7 +9491,7 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
          <div class="form-group"><label>Platforma to'lovi (so'm)</label><input type="number" id="mPayPlatform" class="form-control" value="0"></div>
          <div class="form-group"><label>Kitob to'lovi (so'm)</label><input type="number" id="mPayBook" class="form-control" value="0"></div>
          <div class="form-group"><label>To'langan (so'm)</label><input type="number" id="mPayPaid" class="form-control" value="0"></div>
-         <div class="form-group"><label>Sana</label><input type="date" id="mPayDate" class="form-control" value="${new Date().toISOString().split('T')[0]}"></div>`,
+         <div class="form-group"><label>Sana</label><input type="date" lang="en-GB" id="mPayDate" class="form-control" value="${new Date().toISOString().split('T')[0]}"></div>`,
         `<button class="btn-primary-sm" id="savePayment">Saqlash</button>`
     );
     document.getElementById('savePayment').onclick = () => {
@@ -10137,7 +10137,7 @@ function openCashFlowModal(editId) {
                 <option value="chiqim" ${existing?.type === 'chiqim' ? 'selected' : ''}>Chiqim</option>
             </select>
         </div>
-        <div class="form-group"><label>Sana</label><input type="date" id="cfTxDate" class="form-control" value="${existing?.date || today}"></div>
+        <div class="form-group"><label>Sana</label><input type="date" lang="en-GB" id="cfTxDate" class="form-control" value="${existing?.date || today}"></div>
         <div class="form-group"><label>Summa (so'm)</label><input type="number" id="cfTxAmount" class="form-control" min="0" step="1000" value="${existing?.amount || ''}"></div>
         <div class="form-group"><label>Toifa</label>
             <select id="cfTxCategory" class="form-control">
@@ -10723,7 +10723,7 @@ function manualMetricAgg(roleKey, metricDef, period) {
 function openManualMetricModal(roleKey, metricDef, period, onSaved, employeeId) {
     const today = new Date().toISOString().slice(0, 10);
     const body = `
-        <div class="form-group"><label>Sana</label><input type="date" id="mmDate" class="form-control" value="${today}"></div>
+        <div class="form-group"><label>Sana</label><input type="date" lang="en-GB" id="mmDate" class="form-control" value="${today}"></div>
         <div class="form-group"><label>${escapeHtml(metricDef.label)} (${escapeHtml(metricDef.unit)})</label><input type="number" id="mmValue" class="form-control" step="any"></div>
         <div class="form-group"><label>Izoh (ixtiyoriy)</label><input id="mmNote" class="form-control"></div>
     `;
@@ -14013,7 +14013,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
             </div>
             <div class="lead-survey-field">
                 <label for="onboardFirstLessonDate">Ilk dars boshlash sanasi</label>
-                <input type="date" id="onboardFirstLessonDate" class="form-control">
+                <input type="date" lang="en-GB" id="onboardFirstLessonDate" class="form-control">
             </div>
         </section>
     </div>`;
@@ -14140,11 +14140,11 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
             </div>
             <div class="lead-survey-field">
                 <label for="paymentLastPaymentDate">Qachon to'ladi</label>
-                <input type="date" id="paymentLastPaymentDate" class="form-control">
+                <input type="date" lang="en-GB" id="paymentLastPaymentDate" class="form-control">
             </div>
             <div class="lead-survey-field">
                 <label for="paymentNextPaymentDate">Keyingi to'lovni qachon amalga oshiradi</label>
-                <input type="date" id="paymentNextPaymentDate" class="form-control">
+                <input type="date" lang="en-GB" id="paymentNextPaymentDate" class="form-control">
             </div>
         </section>
     </div>`;
@@ -14246,7 +14246,7 @@ function renderCloseSurveyYesNo(name, label) {
 function renderCloseSurveyDateField(id, label, fieldName) {
     return `<div class="lead-survey-field" data-close-date-wrap="${fieldName}">
         <label for="${id}">${escapeHtml(label)}</label>
-        <input type="date" id="${id}" class="form-control" data-close-field="${fieldName}" value="${todayIsoDate()}">
+        <input type="date" lang="en-GB" id="${id}" class="form-control" data-close-field="${fieldName}" value="${todayIsoDate()}">
     </div>`;
 }
 
@@ -16511,11 +16511,11 @@ function openEditEmployeeModal(empId) {
         <div style="display:flex;gap:10px">
             <div class="form-group" style="flex:1">
                 <label>Tug'ilgan sana</label>
-                <input type="date" id="editEmpBirthDate" class="form-control" value="${escapeHtml(emp.birthDate || '')}">
+                <input type="date" lang="en-GB" id="editEmpBirthDate" class="form-control" value="${escapeHtml(emp.birthDate || '')}">
             </div>
             <div class="form-group" style="flex:1">
                 <label>Faoliyat boshlagan</label>
-                <input type="date" id="editEmpStartDate" class="form-control" value="${escapeHtml(emp.startDate || emp.joinDate || '')}">
+                <input type="date" lang="en-GB" id="editEmpStartDate" class="form-control" value="${escapeHtml(emp.startDate || emp.joinDate || '')}">
             </div>
         </div>
         <div class="form-group">
@@ -16700,11 +16700,11 @@ function openAddEmployeeModal() {
         <div style="display:flex;gap:10px">
             <div class="form-group" style="flex:1">
                 <label>Tug'ilgan sana <span style="color:var(--danger)">*</span></label>
-                <input type="date" id="empBirthDate" class="form-control">
+                <input type="date" lang="en-GB" id="empBirthDate" class="form-control">
             </div>
             <div class="form-group" style="flex:1">
                 <label>Faoliyat boshlagan sana <span style="color:var(--danger)">*</span></label>
-                <input type="date" id="empStartDate" class="form-control" value="${new Date().toISOString().slice(0,10)}">
+                <input type="date" lang="en-GB" id="empStartDate" class="form-control" value="${new Date().toISOString().slice(0,10)}">
             </div>
         </div>
         <div class="form-group">
@@ -18829,7 +18829,7 @@ function openAddBonusHistoryModal() {
             </div>
             <div>
                 <label class="form-label">Sana</label>
-                <input id="bhDate" type="date" class="form-control" value="${today}">
+                <input id="bhDate" type="date" lang="en-GB" class="form-control" value="${today}">
             </div>
             <div>
                 <label class="form-label">Izoh (ixtiyoriy)</label>
@@ -19018,9 +19018,9 @@ function renderDebtorsTable(containerId) {
             </div>
         </div>
         <div class="debtors-filters">
-            <input type="date" id="${uid('dateFrom')}" value="${_debtorsDateFrom}" title="Dan">
+            <input type="date" lang="en-GB" id="${uid('dateFrom')}" value="${_debtorsDateFrom}" title="Dan">
             <span style="color:var(--text-muted);font-size:13px">—</span>
-            <input type="date" id="${uid('dateTo')}" value="${_debtorsDateTo}" title="Gacha">
+            <input type="date" lang="en-GB" id="${uid('dateTo')}" value="${_debtorsDateTo}" title="Gacha">
             <select id="${uid('mgrFilter')}">${mgrOptions}</select>
             <select id="${uid('teacherFilter')}">${teacherOptions}</select>
             <select id="${uid('tariffFilter')}">${tariffOptions}</select>
@@ -19152,7 +19152,7 @@ function openDebtorEditModal(studentId) {
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lov muddati</label>
-                <input type="date" id="deDueDate" value="${s.paymentDueDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="date" lang="en-GB" id="deDueDate" value="${s.paymentDueDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Tarif</label>
@@ -19164,7 +19164,7 @@ function openDebtorEditModal(studentId) {
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Oxirgi to'lov sanasi</label>
-                <input type="date" id="deLastPayment" value="${s.lastPaymentDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="date" lang="en-GB" id="deLastPayment" value="${s.lastPaymentDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lovlar soni</label>
