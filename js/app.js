@@ -110,7 +110,11 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
     sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika'],
-    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance'],
+    // 15-ish: "teacher-cabinet" ("Ustozlarga kabinet" — o'zining o'quvchilari
+    // bilan yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) allaqachon
+    // to'liq qurilgan va ustoz roli uchun ichkarida to'g'ri cheklangan edi,
+    // lekin bu ro'yxatda yo'q bo'lgani uchun sidebar'da ko'rinmasdi.
+    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'teacher-cabinet'],
     employee:      ['student-app'],
     hr:            ['dashboard', 'hr']
 };
