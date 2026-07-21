@@ -13774,9 +13774,54 @@ function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
     };
 }
 
+// 21-ish: "Ilk dars boshlash sanasi" ustozning dars kuni patterniga
+// (toq — Dushanba/Chorshanba/Juma yoki juft — Seshanba/Payshanba/Shanba)
+// mos kelmasa, tanlangan sana avtomatik ravishda shu pattern bo'yicha
+// eng yaqin to'g'ri kunga suriladi.
+function getNearestValidLessonDate(dateStr, allowedDays) {
+    if (!dateStr || !allowedDays?.length) return dateStr;
+    const d = new Date(`${dateStr}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    for (let i = 0; i < 7; i++) {
+        if (allowedDays.includes(d.getDay())) {
+            return d.toISOString().slice(0, 10);
+        }
+        d.setDate(d.getDate() + 1);
+    }
+    return dateStr;
+}
+
+function wireFirstLessonDatePattern(modalBody) {
+    const dateInput = modalBody.querySelector('#onboardFirstLessonDate');
+    const teacherSel = modalBody.querySelector('#onboardTeacherId');
+    if (!dateInput || !teacherSel) return;
+
+    const getAllowedDays = () => {
+        const teacher = resolveTeacherWithVirtual(teacherSel.value);
+        return teacher ? getTeacherLessonDays(teacher) : null;
+    };
+
+    const snapToPattern = (notify) => {
+        const allowedDays = getAllowedDays();
+        if (!dateInput.value || !allowedDays?.length) return;
+        const snapped = getNearestValidLessonDate(dateInput.value, allowedDays);
+        if (snapped !== dateInput.value) {
+            dateInput.value = snapped;
+            if (notify) {
+                const patternLabel = allowedDays.includes(1) ? 'toq kunlar (Dushanba/Chorshanba/Juma)' : 'juft kunlar (Seshanba/Payshanba/Shanba)';
+                showMiniToast(`Sana ustozning dars kuniga (${patternLabel}) moslab o'zgartirildi`);
+            }
+        }
+    };
+
+    dateInput.addEventListener('change', () => snapToPattern(true));
+    teacherSel.addEventListener('change', () => snapToPattern(false));
+}
+
 function initPaymentOnboardingForm(modalBody, options = {}) {
     const { lead = null } = options;
     wireTeacherSchedulePicker(modalBody, { lead });
+    wireFirstLessonDatePattern(modalBody);
 
     const contractNumberBlock = modalBody.querySelector('#onboardContractNumberBlock');
     const syncContractNumber = () => {
@@ -13835,6 +13880,11 @@ function collectPaymentOnboardingData(modalBody) {
 
     const firstLessonDate = getVal('onboardFirstLessonDate');
     if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang', target: '#onboardFirstLessonDate' };
+    const patternDays = [1, 3, 5].includes(lessonDayOfWeek) ? [1, 3, 5] : [2, 4, 6].includes(lessonDayOfWeek) ? [2, 4, 6] : [lessonDayOfWeek];
+    const firstLessonDateObj = new Date(`${firstLessonDate}T12:00:00`);
+    if (Number.isNaN(firstLessonDateObj.getTime()) || !patternDays.includes(firstLessonDateObj.getDay())) {
+        return { error: "Ilk dars sanasi ustozning dars kuniga (masalan juft yoki toq kunlarga) to'g'ri kelishi kerak", target: '#onboardFirstLessonDate' };
+    }
 
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const assistantTeacherId = getVal('onboardAssistantTeacherId');
