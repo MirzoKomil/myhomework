@@ -60,6 +60,31 @@ let _profileSection = 'edit';
 let _profileUser = null;
 let _profileEditing = {};
 
+// 17-ish: sahifa qayta yuklanganda (obnovleniya) foydalanuvchi qaysi
+// bo'limda bo'lsa o'sha bo'limdan davom etishi uchun oxirgi tab/bo'lim
+// holatini localStorage'ga saqlab boramiz.
+const LAST_TAB_STORAGE_KEY = 'mh_last_tab_v1';
+
+function saveLastTab(tab, ctx) {
+    try {
+        localStorage.setItem(LAST_TAB_STORAGE_KEY, JSON.stringify({ tab, ctx: ctx || {} }));
+    } catch { /* xotira to'lgan yoki bloklangan bo'lsa jim o'tkazamiz */ }
+}
+
+function loadLastTab() {
+    try {
+        const raw = localStorage.getItem(LAST_TAB_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
+function persistCurrentTab() {
+    const activeEl = document.querySelector('.tab-content.active');
+    const tab = activeEl ? activeEl.id.replace(/^tab-/, '') : null;
+    if (!tab) return;
+    saveLastTab(tab, _tabContext);
+}
+
 const ROLE_LABELS = { admin: 'Administrator', teacher: 'Ustoz' };
 
 const PROFILE_NOTIF_KEY = 'mh_profile_notif_prefs';
@@ -134,11 +159,20 @@ function applyRoleBasedAccess(user) {
         // getElementById('menuGroupMoliya') orqali yashirilardi, lekin
         // HTML'dagi haqiqiy id — "menuItemMoliya" — bilan mos kelmasligi
         // sabab u hech qachon amalda yashirilmagan edi.)
+        let hiddenForRop = new Set();
         if (role === 'rop') {
-            ['teachers-section', 'finance', 'hr', 'analitika', 'student-app'].forEach(tab => {
+            hiddenForRop = new Set(['teachers-section', 'finance', 'hr', 'analitika', 'student-app']);
+            hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
             });
+        }
+        // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
+        // oldin qaysi bo'limda bo'lgan bo'lsa, o'sha bo'limdan davom etsin —
+        // aks holda hozirgacha har doim "Bosh sahifa"ga qaytib ketardi.
+        const last = loadLastTab();
+        if (last && last.tab && !hiddenForRop.has(last.tab)) {
+            setTimeout(() => switchTab(last.tab, last.ctx || {}), 50);
         }
         return;
     }
@@ -171,14 +205,20 @@ function applyRoleBasedAccess(user) {
         }
     });
 
-    // Boshlang'ich tab (rol bo'yicha)
+    // Boshlang'ich tab (rol bo'yicha) — 17-ish: agar foydalanuvchi oldin
+    // ruxsat etilgan boshqa bo'limda bo'lgan bo'lsa (masalan ustoz
+    // "O'quvchilar"da edi), obnovleniyadan keyin o'sha bo'limga qaytariladi,
+    // aks holda rol bo'yicha standart bo'limga o'tadi.
+    const last = loadLastTab();
+    const restoreTab = (last && last.tab && allowedSet.has(last.tab)) ? last.tab : null;
+    const restoreCtx = restoreTab ? (last.ctx || {}) : {};
     if (role === 'sales_manager') {
-        setTimeout(() => switchTab('sales'), 50);
+        setTimeout(() => switchTab(restoreTab || 'sales', restoreCtx), 50);
     } else if (role === 'teacher') {
-        setTimeout(() => switchTab('timetable'), 50);
+        setTimeout(() => switchTab(restoreTab || 'timetable', restoreCtx), 50);
     } else {
         // employee yoki noma'lum rol — mobil ilovaga o'tkazish
-        setTimeout(() => switchTab('student-app'), 50);
+        setTimeout(() => switchTab(restoreTab || 'student-app', restoreCtx), 50);
     }
 }
 
@@ -386,6 +426,7 @@ function switchTab(tab, ctx = {}) {
     document.getElementById('rightPanel').classList.toggle('hidden', tab !== 'dashboard');
     if (tab === 'profile') _profileEditing = {};
     renderTab(tab);
+    persistCurrentTab();
 }
 
 function switchSalesSection(section) {
@@ -412,6 +453,7 @@ function switchSalesSection(section) {
     if (section === 'rating') renderRating();
     if (section === 'sales-plan') renderSalesPlan();
     if (section === 'debtors') renderSalesDebtors();
+    persistCurrentTab();
 }
 
 function switchStudentsSection(section) {
@@ -429,6 +471,7 @@ function switchStudentsSection(section) {
     if (section === 'faol') renderStudents();
     if (section === 'muzlatilgan') renderFrozenStudents();
     if (section === 'qarzdorlar') renderDebtors();
+    persistCurrentTab();
 }
 
 function renderFrozenStudents() {
@@ -5629,6 +5672,7 @@ function switchProfileSection(section) {
         btn.classList.toggle('active', btn.dataset.profileSection === section);
     });
     renderProfileBody();
+    persistCurrentTab();
 }
 
 async function renderProfile() {
@@ -8436,6 +8480,7 @@ function switchTeachersSection(section) {
     else if (section === 'rating') renderTpRating();
     else if (section === 'textbook') renderTpTextbook();
     else if (section === 'whiteboard') renderTpWhiteboard();
+    persistCurrentTab();
 }
 
 function getAllTeachersForSection() {
@@ -9663,6 +9708,7 @@ function switchFinanceSection(section) {
     });
     applyFinanceLang();
     if (section === 'cashflow') renderCashFlow();
+    persistCurrentTab();
 }
 
 function renderFinance() {
@@ -10339,6 +10385,7 @@ function switchHrSection(section) {
     });
     if (section === 'xodimlar') renderHrEmployees();
     if (section === 'org-struktura') renderOrgStruktura();
+    persistCurrentTab();
 }
 
 function renderHr() {
@@ -10377,6 +10424,7 @@ function switchAnalitikaSection(section) {
     if (section === 'hisobotlar') renderAnalitikaHisobotlar();
     if (section === 'akademik') renderAnalitikaAkademik();
     if (section === 'xodimlar') renderAnalitikaXodimlar();
+    persistCurrentTab();
 }
 
 function renderAnalitika() {
@@ -11335,6 +11383,7 @@ function switchMarketingSection(section) {
     document.querySelectorAll('.marketing-panel').forEach(panel => {
         panel.classList.toggle('active', panel.dataset.marketingPanel === section);
     });
+    persistCurrentTab();
 }
 
 function renderMarketing() {
