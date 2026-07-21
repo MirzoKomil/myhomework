@@ -5942,6 +5942,8 @@ function isWeeklySlotContinuation(busy, dayOfWeek, time) {
 }
 
 function getLeadLessonDuration(lead, teacher) {
+    const scheduledDuration = Number(lead?.paymentOnboarding?.lessonDuration);
+    if ([15, 30, 60].includes(scheduledDuration)) return scheduledDuration;
     const tariff = lead?.paymentSurvey?.tariff;
     if (tariff) return parseInt(tariff, 10) || 15;
     return teacher?.lessonDuration || 15;
@@ -13398,7 +13400,7 @@ function parseTimetableSlotKey(key) {
     return { dateStr, time, teacherId, dayOfWeek: date.getDay() };
 }
 
-function getTeacherBusyWeeklySlots(teacherId, excludeStudentId = null) {
+function getTeacherBusyWeeklySlots(teacherId, excludeStudentId = null, excludeLeadId = null) {
     const busy = new Map();
     const students = getItem(STORAGE_KEYS.students, []);
     const teachers = getItem(STORAGE_KEYS.teachers, []);
@@ -13420,6 +13422,7 @@ function getTeacherBusyWeeklySlots(teacherId, excludeStudentId = null) {
 
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     [...(leads.english || []), ...(leads.russian || [])].forEach(lead => {
+        if (excludeLeadId && lead.id === excludeLeadId) return;
         const onboarding = lead.paymentOnboarding;
         if (!onboarding || onboarding.teacherId !== teacherId) return;
         if (onboarding.lessonDayOfWeek == null || !onboarding.lessonTime) return;
@@ -13505,7 +13508,7 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) 
     const { lead = null } = options;
     const lessonDuration = options.lessonDuration || getLeadLessonDuration(lead, teacher);
     const lessonDays = getTeacherLessonDays(teacher);
-    const busyMap = getTeacherBusyWeeklySlots(teacherId);
+    const busyMap = getTeacherBusyWeeklySlots(teacherId, null, lead?.id || null);
     const times = generateTimeSlots();
     const patternLabel = SCHEDULE_PATTERNS[teacher.schedulePattern || 'mwf']?.label || '';
 
@@ -13554,7 +13557,7 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) 
         modalBody.dataset.onboardScheduleDay = String(dow);
         modalBody.dataset.onboardScheduleTime = time;
         if (selectedEl) {
-            selectedEl.textContent = `Tanlangan: ${DAYS_UZ[dow - 1] || ''}, ${time}`;
+            selectedEl.textContent = `Tanlangan: ${lessonDays.map(day => DAYS_UZ[day - 1]).join(', ')} — ${time} (${lessonDuration} daqiqa)`;
         }
     };
 
@@ -13583,11 +13586,17 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) 
 function wireTeacherSchedulePicker(modalBody, options = {}) {
     const { lead = null } = options;
     const existing = lead?.paymentOnboarding;
+    if (lead?.id) modalBody.dataset.onboardScheduleLeadId = lead.id;
     if (existing?.teacherId) {
         const teacherSel = modalBody.querySelector('#onboardTeacherId');
         if (teacherSel) teacherSel.value = existing.teacherId;
     }
-    if (existing?.lessonDayOfWeek != null && existing.lessonTime) {
+    const durationSel = modalBody.querySelector('#onboardLessonDuration');
+    if (durationSel) {
+        const initialDuration = getLeadLessonDuration(lead, resolveTeacherWithVirtual(existing?.teacherId));
+        durationSel.value = String([15, 30, 60].includes(initialDuration) ? initialDuration : 15);
+    }
+    if (existing?.lessonDayOfWeek != null && existing.lessonTime && !existing.isTrial) {
         modalBody.dataset.onboardScheduleDay = String(existing.lessonDayOfWeek);
         modalBody.dataset.onboardScheduleTime = existing.lessonTime;
     }
@@ -13614,11 +13623,16 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         scheduleBlock.hidden = false;
         scheduleBlock.style.display = '';
         const teacher = resolveTeacherWithVirtual(teacherId);
-        const lessonDuration = getLeadLessonDuration(lead, teacher);
+        const lessonDuration = Number(durationSel?.value) || getLeadLessonDuration(lead, teacher);
         renderOnboardTeacherSchedulePicker(modalBody, teacherId, { lead, lessonDuration });
     };
 
     teacherSel?.addEventListener('change', () => {
+        delete modalBody.dataset.onboardScheduleDay;
+        delete modalBody.dataset.onboardScheduleTime;
+        syncTeacherSchedule();
+    });
+    durationSel?.addEventListener('change', () => {
         delete modalBody.dataset.onboardScheduleDay;
         delete modalBody.dataset.onboardScheduleTime;
         syncTeacherSchedule();
@@ -13630,6 +13644,11 @@ function collectTeacherScheduleData(modalBody) {
     const teacherId = modalBody.querySelector('#onboardTeacherId')?.value?.trim() || '';
     if (!teacherId) return { error: 'Asosiy ustozni tanlang', target: '#onboardTeacherId' };
 
+    const lessonDuration = Number(modalBody.querySelector('#onboardLessonDuration')?.value);
+    if (![15, 30, 60].includes(lessonDuration)) {
+        return { error: 'Dars davomiyligini tanlang', target: '#onboardLessonDuration' };
+    }
+
     const lessonDayOfWeekRaw = modalBody.dataset.onboardScheduleDay;
     const lessonTime = modalBody.dataset.onboardScheduleTime || '';
     if (!lessonDayOfWeekRaw || !lessonTime) {
@@ -13640,9 +13659,8 @@ function collectTeacherScheduleData(modalBody) {
     const lessonDayLabel = DAYS_UZ[lessonDayOfWeek - 1] || '';
     const teacher = resolveTeacherWithVirtual(teacherId);
     const teacherName = teacher?.name || '';
-    const duration = teacher?.lessonDuration || 15;
-    const busy = getTeacherBusyWeeklySlots(teacherId);
-    if (!canFitWeeklyLesson(busy, lessonDayOfWeek, lessonTime, duration)) {
+    const busy = getTeacherBusyWeeklySlots(teacherId, null, modalBody.dataset.onboardScheduleLeadId || null);
+    if (!canFitWeeklyLesson(busy, lessonDayOfWeek, lessonTime, lessonDuration)) {
         return { error: 'Tanlangan vaqt band yoki dars davomiyligi uchun yetarli bo\'sh slot yo\'q', target: '#onboardSchedulePicker' };
     }
 
@@ -13657,6 +13675,7 @@ function collectTeacherScheduleData(modalBody) {
             lessonDayLabel,
             lessonTime,
             lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
+            lessonDuration,
             telegramGroupLink
         }
     };
@@ -13669,6 +13688,15 @@ function renderTeacherScheduleSection(asosiyTeachers) {
             <select id="onboardTeacherId" class="form-select">
                 ${renderOnboardTeacherOptions(asosiyTeachers, "Asosiy ustozni tanlang")}
             </select>
+        </div>
+        <div class="lead-survey-field">
+            <label for="onboardLessonDuration">Dars davomiyligi</label>
+            <select id="onboardLessonDuration" class="form-select">
+                <option value="15">15 daqiqa</option>
+                <option value="30">30 daqiqa</option>
+                <option value="60">60 daqiqa</option>
+            </select>
+            <p class="lead-survey-hint">Tanlangan vaqt ustozning uchta dars kuni uchun bir xil davomiylikda band qilinadi.</p>
         </div>
         <div id="onboardScheduleBlock" class="lead-survey-field" hidden>
             <span class="lead-survey-label">Dars kunlari va soati</span>
@@ -13688,7 +13716,12 @@ function renderTeacherScheduleSection(asosiyTeachers) {
 function saveLeadTeacherSchedule(lang, leadId, scheduleData) {
     updateLeadInStorage(lang, leadId, l => ({
         ...l,
-        paymentOnboarding: { ...(l.paymentOnboarding || {}), ...scheduleData }
+        paymentOnboarding: {
+            ...(l.paymentOnboarding || {}),
+            ...scheduleData,
+            isTrial: false,
+            trialDaysCount: null
+        }
     }));
 }
 
