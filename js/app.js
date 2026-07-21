@@ -12738,7 +12738,7 @@ const LEAD_INFO_PROVIDED_QUESTIONS = [
 
 function renderInfoProvidedQuestions() {
     return LEAD_INFO_PROVIDED_QUESTIONS.map(q => `
-        <div class="lead-info-question">
+        <div class="lead-info-question" data-info-question="${q.id}" tabindex="-1">
             <p class="lead-info-question-text">${escapeHtml(q.label)}</p>
             <div class="lead-info-yesno">
                 <label class="lead-reason-option lead-reason-option--inline">
@@ -12750,6 +12750,7 @@ function renderInfoProvidedQuestions() {
                     <span>Yo'q</span>
                 </label>
             </div>
+            <p class="lead-info-question-error" id="info_${q.id}_error" role="alert" aria-live="polite" hidden></p>
         </div>`).join('');
 }
 
@@ -12759,7 +12760,7 @@ function collectInfoProvidedData(modalBody) {
     for (const q of LEAD_INFO_PROVIDED_QUESTIONS) {
         const selected = modalBody.querySelector(`[data-info-field="${q.id}"]:checked`);
         if (!selected) {
-            return { error: `"${q.label}" savoliga javob bering` };
+            return { error: `"${q.label}" savoliga javob bering`, fieldId: q.id };
         }
         answers[q.id] = selected.value;
     }
@@ -12781,6 +12782,49 @@ function collectInfoProvidedData(modalBody) {
     };
 }
 
+function clearInfoProvidedValidation(modalBody) {
+    modalBody.querySelectorAll('.lead-info-question--invalid').forEach(question => {
+        question.classList.remove('lead-info-question--invalid');
+    });
+    modalBody.querySelectorAll('.lead-info-question-error').forEach(error => {
+        error.textContent = '';
+        error.hidden = true;
+    });
+    const summary = modalBody.querySelector('.lead-info-validation-summary');
+    if (summary) {
+        summary.textContent = '';
+        summary.hidden = true;
+    }
+}
+
+function showInfoProvidedValidation(modalBody, result) {
+    clearInfoProvidedValidation(modalBody);
+
+    if (!result.fieldId) {
+        const summary = modalBody.querySelector('.lead-info-validation-summary');
+        if (summary) {
+            summary.textContent = result.error;
+            summary.hidden = false;
+            modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        return;
+    }
+
+    const question = modalBody.querySelector(`[data-info-question="${result.fieldId}"]`);
+    if (!question) return;
+
+    question.classList.add('lead-info-question--invalid');
+    const error = question.querySelector('.lead-info-question-error');
+    if (error) {
+        error.textContent = result.error;
+        error.hidden = false;
+    }
+    question.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    requestAnimationFrame(() => {
+        question.querySelector(`[data-info-field="${result.fieldId}"]`)?.focus({ preventScroll: true });
+    });
+}
+
 function formatInfoProvidedComment(answers) {
     const lines = answers.map(a => `• ${a.label} Ha`);
     return ['Ma\'lumot berildi — tekshiruv:', ...lines].join('\n');
@@ -12792,6 +12836,7 @@ function openInfoProvidedModal(lang, leadId, options = {}) {
     if (!lead) return;
 
     const bodyHtml = `<div class="lead-survey lead-survey--info">
+        <div class="lead-info-validation-summary" role="alert" aria-live="polite" hidden></div>
         ${renderInfoProvidedQuestions()}
     </div>`;
 
@@ -12808,11 +12853,15 @@ function openInfoProvidedModal(lang, leadId, options = {}) {
         renderLeads();
     };
 
+    const modalBody = document.getElementById('modalBody');
+    modalBody.addEventListener('change', event => {
+        if (event.target.matches('[data-info-field]')) clearInfoProvidedValidation(modalBody);
+    });
+
     document.getElementById('confirmInfoProvided').onclick = () => {
-        const modalBody = document.getElementById('modalBody');
         const result = collectInfoProvidedData(modalBody);
         if (result.error) {
-            alert(result.error);
+            showInfoProvidedValidation(modalBody, result);
             return;
         }
 

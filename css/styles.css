@@ -4351,9 +4351,36 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
+.lead-info-question--invalid {
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+
+.lead-info-question-error,
+.lead-info-validation-summary {
+    margin: 0;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.lead-info-validation-summary {
+    padding: 10px 12px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+
 .lead-info-question:last-child {
     border-bottom: none;
     padding-bottom: 0;
+}
+
+.lead-info-question--invalid:last-child {
+    border-bottom: 1px solid var(--danger);
 }
 
 .lead-info-question-text {
