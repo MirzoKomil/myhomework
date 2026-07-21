@@ -7378,6 +7378,7 @@ function initStudentsSubjectTabs() {
 function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
+    const isTeacherRole = currentUser?.role === 'teacher';
 
     // Nav tugmalarini bir marta bind qilish
     const nav = document.getElementById('studentsSectionNav');
@@ -7401,7 +7402,7 @@ function renderStudents() {
     if (activeSection !== 'faol') return;
 
     const tabsEl = document.getElementById('studentsSubjectTabs');
-    if (tabsEl) tabsEl.hidden = isSalesManager;
+    if (tabsEl) tabsEl.hidden = isSalesManager || isTeacherRole;
     const addStudentBtnEl = document.getElementById('addStudentBtn');
     if (addStudentBtnEl) addStudentBtnEl.hidden = isSalesManager;
 
@@ -7412,7 +7413,19 @@ function renderStudents() {
     backfillStudentSerialCodesFromLeads();
     let students = getItem(STORAGE_KEYS.students, []);
 
-    const subject = isSalesManager ? 'english' : getStudentsSelectedSubject();
+    // 13-ish: ustoz o'zining tili tab holatiga qarab emas, o'zining haqiqiy
+    // fan/tiliga qarab cheklanadi — avval bu yerdagi umumiy "Ingliz
+    // tili/Rus tili" tab holati (boshqa foydalanuvchi/sessiyadan qolgan
+    // bo'lishi mumkin) ishlatilardi, natijada ustoz o'zining tiliga
+    // umuman aloqasi bo'lmagan o'quvchilarni ham ko'rar edi.
+    const ownTeacherForFilter = isTeacherRole && currentUser?.linkedTeacherId
+        ? resolveTeacherWithVirtual(currentUser.linkedTeacherId)
+        : null;
+    const subject = isSalesManager
+        ? 'english'
+        : isTeacherRole
+        ? (ownTeacherForFilter?.subject || 'english')
+        : getStudentsSelectedSubject();
 
     if (isSalesManager) {
         const managerId = currentUser?.linkedManagerId || '';
@@ -7429,9 +7442,12 @@ function renderStudents() {
     } else {
         students = students.filter(s => (s.subject || 'english') === subject);
         if (titleEl) titleEl.textContent = `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`;
-        if (currentUser?.role === 'teacher' && currentUser?.linkedTeacherId) {
-            const tid = currentUser.linkedTeacherId;
-            students = students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid);
+        if (isTeacherRole) {
+            // 13-ish: agar ustozning o'zi (haqiqiy yoki virtual HR yozuvi
+            // sifatida) topilmasa, hech qanday o'quvchi ko'rsatilmaydi —
+            // boshqa ustozlarning o'quvchilariga tushib qolish o'rniga.
+            const tid = ownTeacherForFilter?.id;
+            students = tid ? students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid) : [];
         }
     }
 
@@ -7479,7 +7495,12 @@ function renderStudents() {
 
     // Filtr selectlar: handler bir marta, optionlar har render da til bo'yicha qayta yoziladi
     const teacherSel = document.getElementById('studentsTeacherFilter');
-    if (teacherSel) {
+    // 13-ish: ustoz o'z kabinetida faqat o'z o'quvchilarini ko'radi — bu
+    // holatda "Ustozlar bo'yicha" filtri ma'nosiz, shuning uchun butunlay
+    // yashiriladi.
+    const teacherFilterWrap = teacherSel?.closest('.leads-filter-box');
+    if (teacherFilterWrap) teacherFilterWrap.style.display = isTeacherRole ? 'none' : '';
+    if (teacherSel && !isTeacherRole) {
         if (!teacherSel.dataset.handlerBound) {
             teacherSel.dataset.handlerBound = '1';
             teacherSel.addEventListener('change', () => {
@@ -7546,7 +7567,10 @@ function renderStudents() {
     }
 
     // Ustozlar, menejerlar va tarif bo'yicha filtrlash
-    if (_studentsTeacherFilter !== 'all') {
+    // 13-ish: ustoz uchun bu filtr o'chirilgan (yashiringan) — shu sababli
+    // undan avval boshqa foydalanuvchi/sessiyada qolib ketgan qiymat
+    // ishlatilmasligi uchun shu yerda e'tiborga olinmaydi.
+    if (!isTeacherRole && _studentsTeacherFilter !== 'all') {
         students = students.filter(s => s.teacherId === _studentsTeacherFilter || s.assistantTeacherId === _studentsTeacherFilter);
     }
     if (_studentsManagerFilter !== 'all') {
