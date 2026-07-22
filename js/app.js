@@ -16206,6 +16206,9 @@ document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         // tugmalari bosilsa ham Leaderboard/Bonus tarixi o'zgarmay
         // qolardi.
         if (_tabContext.salesSection === 'rating') renderRating();
+        // 33-vazifa: Sotuv rejasi endi til bo'yicha ajratilgan — tugma
+        // bosilganda shu bo'lim ham qayta chizilishi kerak.
+        if (_tabContext.salesSection === 'sales-plan') renderSalesPlan();
     });
 });
 
@@ -18630,20 +18633,69 @@ const SALES_PLAN_TIERS = [
 
 let _salesPlanPeriod = 'full';
 
-function getSalesPlan() {
-    const saved = getItem(STORAGE_KEYS.salesPlan, null) || {};
+// 33-vazifa: Sotuv rejasi ilgari BITTA umumiy (til bo'yicha ajratilmagan)
+// parametrlar to'plamidan iborat edi. Endi har bir til (ingliz/rus) o'z
+// mustaqil rejasiga ega — eski "tekis" (flat) blob birinchi tahrirlashda
+// avtomatik ikkala tilga ham nusxalanadi, shunda hech kim eski qiymatlarini
+// yo'qotmaydi.
+function _salesPlanLangBase(raw) {
+    const isLegacyFlat = raw && typeof raw.managers === 'number' && !raw.english && !raw.russian;
+    return isLegacyFlat ? { english: raw, russian: raw } : { english: raw?.english || {}, russian: raw?.russian || {} };
+}
+
+function getSalesPlan(lang) {
+    const targetLang = lang === 'russian' ? 'russian' : 'english';
+    const raw = getItem(STORAGE_KEYS.salesPlan, null) || {};
+    const langBlob = _salesPlanLangBase(raw)[targetLang];
     return {
         ...SALES_PLAN_DEFAULTS,
-        ...saved,
-        conversions: { ...SALES_PLAN_DEFAULTS.conversions, ...(saved.conversions || {}) }
+        ...langBlob,
+        conversions: { ...SALES_PLAN_DEFAULTS.conversions, ...(langBlob.conversions || {}) }
     };
 }
 
-function saveSalesPlanPatch(patch) {
-    const current = getSalesPlan();
+function saveSalesPlanPatch(lang, patch) {
+    const targetLang = lang === 'russian' ? 'russian' : 'english';
+    const raw = getItem(STORAGE_KEYS.salesPlan, null) || {};
+    const base = _salesPlanLangBase(raw);
+    const current = {
+        ...SALES_PLAN_DEFAULTS,
+        ...base[targetLang],
+        conversions: { ...SALES_PLAN_DEFAULTS.conversions, ...(base[targetLang].conversions || {}) }
+    };
     const updated = { ...current, ...patch };
     if (patch.conversions) updated.conversions = { ...current.conversions, ...patch.conversions };
-    setItem(STORAGE_KEYS.salesPlan, updated);
+    base[targetLang] = updated;
+    setItem(STORAGE_KEYS.salesPlan, base);
+    return updated;
+}
+
+// Individual reja — har bir sotuv menejeri uchun alohida reja (managerId
+// bo'yicha), jamoaviy rejadan mustaqil saqlanadi.
+const INDIVIDUAL_SALES_PLAN_DEFAULTS = {
+    leadsPerDay: 15,
+    duration: 30,
+    leadCost: 9500,
+    avgCheck: 1500000,
+    conversions: { min: 4.5, mid: 5.0, max: 5.5 }
+};
+
+function getIndividualSalesPlan(managerId) {
+    const all = getItem(STORAGE_KEYS.individualSalesPlans, {});
+    const saved = all[managerId] || {};
+    return {
+        ...INDIVIDUAL_SALES_PLAN_DEFAULTS,
+        ...saved,
+        conversions: { ...INDIVIDUAL_SALES_PLAN_DEFAULTS.conversions, ...(saved.conversions || {}) }
+    };
+}
+
+function saveIndividualSalesPlanPatch(managerId, patch) {
+    const all = getItem(STORAGE_KEYS.individualSalesPlans, {});
+    const current = getIndividualSalesPlan(managerId);
+    const updated = { ...current, ...patch };
+    if (patch.conversions) updated.conversions = { ...current.conversions, ...patch.conversions };
+    setItem(STORAGE_KEYS.individualSalesPlans, { ...all, [managerId]: updated });
     return updated;
 }
 
@@ -18690,72 +18742,12 @@ function fmtSignedPct(n) {
     return (v > 0 ? '+' : '') + Math.round(v).toLocaleString('uz-UZ') + '%';
 }
 
-function renderSalesPlan() {
-    const panel = document.querySelector('[data-sales-panel="sales-plan"]');
-    if (!panel) return;
-    const plan = getSalesPlan();
+let _spMainSection = 'jamoaviy';
+let _spIndManagerId = null;
+let _spIndPeriod = 'full';
 
-    const fields = [
-        ['spManagers', 'managers'], ['spLeadsPerDay', 'leadsPerDay'], ['spDuration', 'duration'],
-        ['spLeadCost', 'leadCost'], ['spAvgCheck', 'avgCheck']
-    ];
-    fields.forEach(([id, key]) => {
-        const el = document.getElementById(id);
-        if (el && document.activeElement !== el) el.value = plan[key];
-    });
-    const convFields = [['spConvMin', 'min'], ['spConvMid', 'mid'], ['spConvMax', 'max']];
-    convFields.forEach(([id, key]) => {
-        const el = document.getElementById(id);
-        if (el && document.activeElement !== el) el.value = plan.conversions[key];
-    });
-
-    if (!panel.dataset.spBound) {
-        panel.dataset.spBound = '1';
-        fields.forEach(([id, key]) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.addEventListener('input', () => {
-                const val = Number(el.value) || 0;
-                saveSalesPlanPatch({ [key]: val });
-                if (key === 'duration') _salesPlanPeriod = 'full';
-                renderSalesPlanResults();
-            });
-        });
-        convFields.forEach(([id, key]) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.addEventListener('input', () => {
-                const val = Number(el.value) || 0;
-                saveSalesPlanPatch({ conversions: { [key]: val } });
-                renderSalesPlanResults();
-            });
-        });
-    }
-
-    renderSalesPlanResults();
-}
-
-function renderSalesPlanResults() {
-    const tabsEl = document.getElementById('spPeriodTabs');
-    const gridEl = document.getElementById('spPlansGrid');
-    if (!tabsEl || !gridEl) return;
-
-    const plan = getSalesPlan();
-    const periods = getSalesPlanPeriods(plan.duration);
-    if (!periods.find(p => p.key === _salesPlanPeriod)) _salesPlanPeriod = 'full';
-    const activePeriod = periods.find(p => p.key === _salesPlanPeriod) || periods[0];
-
-    tabsEl.innerHTML = periods.map(p =>
-        `<button type="button" class="sp-period-tab${p.key === _salesPlanPeriod ? ' active' : ''}" data-sp-period="${p.key}">${escapeHtml(p.label)}</button>`
-    ).join('');
-    tabsEl.querySelectorAll('[data-sp-period]').forEach(btn => {
-        btn.onclick = () => {
-            _salesPlanPeriod = btn.dataset.spPeriod;
-            renderSalesPlanResults();
-        };
-    });
-
-    gridEl.innerHTML = SALES_PLAN_TIERS.map(tier => {
+function renderSalesPlanTierCards(plan, activePeriod) {
+    return SALES_PLAN_TIERS.map(tier => {
         const conv = plan.conversions[tier.key];
         const m = computeSalesPlanMetrics(plan, conv, activePeriod.days);
         return `
@@ -18785,6 +18777,229 @@ function renderSalesPlanResults() {
             </div>
         </div>`;
     }).join('');
+}
+
+// 33-vazifa: "Sotuv rejasi" endi 2 ta pastki bo'limga ega — Jamoaviy reja
+// (avvalgi kalkulyator, endi til bo'yicha ajratilgan) va Individual reja
+// (har bir sotuv menejeri uchun alohida). ROP va sotuv menejeri bu yerga
+// kirganda ham faqat o'z tiliga tegishli ma'lumotni ko'radi — Lidlar
+// bo'limidagi (renderLeads) xuddi shu naqsh takrorlanadi.
+function renderSalesPlan() {
+    const panel = document.querySelector('[data-sales-panel="sales-plan"]');
+    if (!panel) return;
+
+    const _cuSp = getCurrentUser();
+    const _isSalesManagerSp = _cuSp?.role === 'sales_manager';
+    const _isRopSp = _cuSp?.role === 'rop';
+    const langTabsEl = document.getElementById('leadsLangTabs');
+    if (_isSalesManagerSp || _isRopSp) {
+        _leadsLangFilter = _cuSp.linkedManagerLang || _cuSp.linkedRopLang || 'english';
+        if (langTabsEl) langTabsEl.style.display = 'none';
+    } else if (langTabsEl) {
+        langTabsEl.style.display = '';
+    }
+    syncLeadsLangTabs();
+
+    panel.querySelectorAll('[data-sp-main]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.spMain === _spMainSection);
+        btn.onclick = () => {
+            _spMainSection = btn.dataset.spMain;
+            renderSalesPlan();
+        };
+    });
+    panel.querySelectorAll('[data-sp-main-panel]').forEach(el => {
+        el.style.display = el.dataset.spMainPanel === _spMainSection ? '' : 'none';
+    });
+
+    if (_spMainSection === 'jamoaviy') renderSalesPlanTeam();
+    if (_spMainSection === 'individual') renderSalesPlanIndividual();
+}
+
+function renderSalesPlanTeam() {
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const plan = getSalesPlan(lang);
+
+    const fields = [
+        ['spManagers', 'managers'], ['spLeadsPerDay', 'leadsPerDay'], ['spDuration', 'duration'],
+        ['spLeadCost', 'leadCost'], ['spAvgCheck', 'avgCheck']
+    ];
+    fields.forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = plan[key];
+    });
+    const convFields = [['spConvMin', 'min'], ['spConvMid', 'mid'], ['spConvMax', 'max']];
+    convFields.forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = plan.conversions[key];
+    });
+
+    [...fields, ...convFields].forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (!el || el.dataset.spBound) return;
+        el.dataset.spBound = '1';
+        const isConv = convFields.some(([cid]) => cid === id);
+        el.addEventListener('input', () => {
+            const val = Number(el.value) || 0;
+            const curLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+            saveSalesPlanPatch(curLang, isConv ? { conversions: { [key]: val } } : { [key]: val });
+            if (key === 'duration') _salesPlanPeriod = 'full';
+            renderSalesPlanResults();
+        });
+    });
+
+    renderSalesPlanResults();
+}
+
+function renderSalesPlanResults() {
+    const tabsEl = document.getElementById('spPeriodTabs');
+    const gridEl = document.getElementById('spPlansGrid');
+    if (!tabsEl || !gridEl) return;
+
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const plan = getSalesPlan(lang);
+    const periods = getSalesPlanPeriods(plan.duration);
+    if (!periods.find(p => p.key === _salesPlanPeriod)) _salesPlanPeriod = 'full';
+    const activePeriod = periods.find(p => p.key === _salesPlanPeriod) || periods[0];
+
+    tabsEl.innerHTML = periods.map(p =>
+        `<button type="button" class="sp-period-tab${p.key === _salesPlanPeriod ? ' active' : ''}" data-sp-period="${p.key}">${escapeHtml(p.label)}</button>`
+    ).join('');
+    tabsEl.querySelectorAll('[data-sp-period]').forEach(btn => {
+        btn.onclick = () => {
+            _salesPlanPeriod = btn.dataset.spPeriod;
+            renderSalesPlanResults();
+        };
+    });
+
+    gridEl.innerHTML = renderSalesPlanTierCards(plan, activePeriod);
+}
+
+// --- Individual reja ---
+
+function renderSalesPlanIndividual() {
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const cu = getCurrentUser();
+    const isSalesManager = cu?.role === 'sales_manager';
+    const managers = getSalesManagers(lang);
+
+    const pickerWrap = document.getElementById('spIndManagerPickerWrap');
+    if (isSalesManager) {
+        _spIndManagerId = cu.linkedManagerId || null;
+        if (pickerWrap) pickerWrap.style.display = 'none';
+    } else {
+        if (pickerWrap) pickerWrap.style.display = '';
+        if (!_spIndManagerId || !managers.find(m => m.id === _spIndManagerId)) {
+            _spIndManagerId = managers[0]?.id || null;
+        }
+        const select = document.getElementById('spIndManagerSelect');
+        if (select) {
+            select.innerHTML = managers.map(m =>
+                `<option value="${escapeHtml(m.id)}" ${m.id === _spIndManagerId ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
+            ).join('');
+            if (!select.dataset.bound) {
+                select.dataset.bound = '1';
+                select.addEventListener('change', () => {
+                    _spIndManagerId = select.value;
+                    _spIndPeriod = 'full';
+                    renderSalesPlanIndividual();
+                });
+            }
+        }
+    }
+
+    const emptyEl = document.getElementById('spIndEmpty');
+    const contentEl = document.getElementById('spIndContent');
+    if (!_spIndManagerId) {
+        if (emptyEl) emptyEl.style.display = '';
+        if (contentEl) contentEl.style.display = 'none';
+        return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = '';
+
+    const plan = getIndividualSalesPlan(_spIndManagerId);
+
+    const fields = [
+        ['spIndLeadsPerDay', 'leadsPerDay'], ['spIndDuration', 'duration'],
+        ['spIndLeadCost', 'leadCost'], ['spIndAvgCheck', 'avgCheck']
+    ];
+    fields.forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = plan[key];
+    });
+    const convFields = [['spIndConvMin', 'min'], ['spIndConvMid', 'mid'], ['spIndConvMax', 'max']];
+    convFields.forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el && document.activeElement !== el) el.value = plan.conversions[key];
+    });
+
+    [...fields, ...convFields].forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (!el || el.dataset.spIndBound) return;
+        el.dataset.spIndBound = '1';
+        const isConv = convFields.some(([cid]) => cid === id);
+        el.addEventListener('input', () => {
+            const val = Number(el.value) || 0;
+            saveIndividualSalesPlanPatch(_spIndManagerId, isConv ? { conversions: { [key]: val } } : { [key]: val });
+            if (key === 'duration') _spIndPeriod = 'full';
+            renderSalesPlanIndividualResults();
+        });
+    });
+
+    renderSalesPlanIndividualProgress();
+    renderSalesPlanIndividualResults();
+}
+
+function renderSalesPlanIndividualProgress() {
+    const el = document.getElementById('spIndProgressCard');
+    if (!el || !_spIndManagerId) return;
+
+    const plan = { ...getIndividualSalesPlan(_spIndManagerId), managers: 1 };
+    const m = computeSalesPlanMetrics(plan, plan.conversions.mid, plan.duration);
+    const target = m.davr.sotuvSumma;
+    const actual = getManagerSalesForPeriod(_spIndManagerId, 'oylik');
+    const pct = target > 0 ? Math.min(100, Math.round(actual / target * 100)) : 0;
+    const color = pctToPlanColor(pct);
+
+    el.innerHTML = `
+        <div class="card-header"><h3>Haqiqiy natija vs Maqsad (shu oy)</h3></div>
+        <div style="padding:16px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                <span style="font-size:13px;color:var(--text-muted)">Haqiqiy sotuv</span>
+                <b>${fmtMoney(actual)}</b>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+                <span style="font-size:13px;color:var(--text-muted)">Maqsad (Plan o'rtacha)</span>
+                <b>${fmtMoney(target)}</b>
+            </div>
+            <div style="height:10px;border-radius:6px;background:var(--border);overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:${color}"></div>
+            </div>
+            <div style="text-align:right;margin-top:6px;font-size:13px;font-weight:700;color:${color}">${pct}%</div>
+        </div>`;
+}
+
+function renderSalesPlanIndividualResults() {
+    const tabsEl = document.getElementById('spIndPeriodTabs');
+    const gridEl = document.getElementById('spIndPlansGrid');
+    if (!tabsEl || !gridEl || !_spIndManagerId) return;
+
+    const plan = { ...getIndividualSalesPlan(_spIndManagerId), managers: 1 };
+    const periods = getSalesPlanPeriods(plan.duration);
+    if (!periods.find(p => p.key === _spIndPeriod)) _spIndPeriod = 'full';
+    const activePeriod = periods.find(p => p.key === _spIndPeriod) || periods[0];
+
+    tabsEl.innerHTML = periods.map(p =>
+        `<button type="button" class="sp-period-tab${p.key === _spIndPeriod ? ' active' : ''}" data-sp-ind-period="${p.key}">${escapeHtml(p.label)}</button>`
+    ).join('');
+    tabsEl.querySelectorAll('[data-sp-ind-period]').forEach(btn => {
+        btn.onclick = () => {
+            _spIndPeriod = btn.dataset.spIndPeriod;
+            renderSalesPlanIndividualResults();
+        };
+    });
+
+    gridEl.innerHTML = renderSalesPlanTierCards(plan, activePeriod);
 }
 
 function pctToPlanColor(pct) {

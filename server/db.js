@@ -610,7 +610,7 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides] = await Promise.all([
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -638,6 +638,7 @@ async function getFullState() {
         getJsonData('studentActivity'),
         getJsonData('shopOrders'),
         getJsonData('guides'),
+        getJsonData('individualSalesPlans'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -656,7 +657,7 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans
     };
 }
 
@@ -790,7 +791,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans') ? {} : [];
     }
     return row.data;
 }
@@ -2040,6 +2041,7 @@ async function patchState(partial) {
         // (bookRoadmap'dagi kabi, lekin oddiyroq JSON-massiv sifatida).
         if (partial.shopOrders !== undefined) await saveJsonData(client, 'shopOrders', partial.shopOrders);
         if (partial.guides !== undefined)      await saveJsonData(client, 'guides', partial.guides);
+        if (partial.individualSalesPlans !== undefined) await saveJsonData(client, 'individualSalesPlans', partial.individualSalesPlans);
     });
 }
 

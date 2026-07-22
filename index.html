@@ -818,45 +818,103 @@
                                         <p class="text-muted" style="margin:2px 0 0;font-size:13px">Lidlar, konversiya va budjet asosida sotuv prognozi kalkulyatori</p>
                                     </div>
                                 </div>
-                                <div class="card sp-params-card">
-                                    <div class="card-header"><h3>Parametrlar</h3></div>
-                                    <div class="sp-params-grid">
-                                        <div class="sp-param">
-                                            <label for="spManagers">Menejer soni</label>
-                                            <input type="number" id="spManagers" class="form-control-sm" min="1" step="1">
-                                        </div>
-                                        <div class="sp-param">
-                                            <label for="spLeadsPerDay">Lid (1 menejerga, kunlik)</label>
-                                            <input type="number" id="spLeadsPerDay" class="form-control-sm" min="0" step="1">
-                                        </div>
-                                        <div class="sp-param">
-                                            <label for="spDuration">Muddat (kun)</label>
-                                            <input type="number" id="spDuration" class="form-control-sm" min="1" step="1">
-                                        </div>
-                                        <div class="sp-param">
-                                            <label for="spLeadCost">Lid narxi (so'm)</label>
-                                            <input type="number" id="spLeadCost" class="form-control-sm" min="0" step="500">
-                                        </div>
-                                        <div class="sp-param">
-                                            <label for="spAvgCheck">O'rtacha chek (so'm)</label>
-                                            <input type="number" id="spAvgCheck" class="form-control-sm" min="0" step="10000">
-                                        </div>
-                                        <div class="sp-param">
-                                            <label for="spConvMin">Konversiya — min (%)</label>
-                                            <input type="number" id="spConvMin" class="form-control-sm" min="0" step="0.1">
-                                        </div>
-                                        <div class="sp-param">
-                                            <label for="spConvMid">Konversiya — o'rtacha (%)</label>
-                                            <input type="number" id="spConvMid" class="form-control-sm" min="0" step="0.1">
-                                        </div>
-                                        <div class="sp-param">
-                                            <label for="spConvMax">Konversiya — zo'r (%)</label>
-                                            <input type="number" id="spConvMax" class="form-control-sm" min="0" step="0.1">
+                                <div class="section-nav" id="spMainNav" style="margin-bottom:16px">
+                                    <button type="button" class="section-nav-item active" data-sp-main="jamoaviy">Jamoaviy reja</button>
+                                    <button type="button" class="section-nav-item" data-sp-main="individual">Individual reja</button>
+                                </div>
+
+                                <div class="sp-main-panel" data-sp-main-panel="jamoaviy">
+                                    <div class="card sp-params-card">
+                                        <div class="card-header"><h3>Parametrlar</h3></div>
+                                        <div class="sp-params-grid">
+                                            <div class="sp-param">
+                                                <label for="spManagers">Menejer soni</label>
+                                                <input type="number" id="spManagers" class="form-control-sm" min="1" step="1">
+                                            </div>
+                                            <div class="sp-param">
+                                                <label for="spLeadsPerDay">Lid (1 menejerga, kunlik)</label>
+                                                <input type="number" id="spLeadsPerDay" class="form-control-sm" min="0" step="1">
+                                            </div>
+                                            <div class="sp-param">
+                                                <label for="spDuration">Muddat (kun)</label>
+                                                <input type="number" id="spDuration" class="form-control-sm" min="1" step="1">
+                                            </div>
+                                            <div class="sp-param">
+                                                <label for="spLeadCost">Lid narxi (so'm)</label>
+                                                <input type="number" id="spLeadCost" class="form-control-sm" min="0" step="500">
+                                            </div>
+                                            <div class="sp-param">
+                                                <label for="spAvgCheck">O'rtacha chek (so'm)</label>
+                                                <input type="number" id="spAvgCheck" class="form-control-sm" min="0" step="10000">
+                                            </div>
+                                            <div class="sp-param">
+                                                <label for="spConvMin">Konversiya — min (%)</label>
+                                                <input type="number" id="spConvMin" class="form-control-sm" min="0" step="0.1">
+                                            </div>
+                                            <div class="sp-param">
+                                                <label for="spConvMid">Konversiya — o'rtacha (%)</label>
+                                                <input type="number" id="spConvMid" class="form-control-sm" min="0" step="0.1">
+                                            </div>
+                                            <div class="sp-param">
+                                                <label for="spConvMax">Konversiya — zo'r (%)</label>
+                                                <input type="number" id="spConvMax" class="form-control-sm" min="0" step="0.1">
+                                            </div>
                                         </div>
                                     </div>
+                                    <div class="sp-period-tabs" id="spPeriodTabs"></div>
+                                    <div class="sp-plans-grid" id="spPlansGrid"></div>
                                 </div>
-                                <div class="sp-period-tabs" id="spPeriodTabs"></div>
-                                <div class="sp-plans-grid" id="spPlansGrid"></div>
+
+                                <div class="sp-main-panel" data-sp-main-panel="individual" style="display:none">
+                                    <div class="card" id="spIndManagerPickerWrap" style="padding:14px 16px;margin-bottom:16px">
+                                        <div style="display:flex;align-items:center;gap:10px">
+                                            <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap" for="spIndManagerSelect">Sotuv menejeri:</label>
+                                            <select id="spIndManagerSelect" class="form-control-sm" style="min-width:220px"></select>
+                                        </div>
+                                    </div>
+                                    <div id="spIndEmpty" class="mac-empty" style="padding:60px 0;display:none">
+                                        <div style="font-size:40px;margin-bottom:12px">🧑‍💼</div>
+                                        <div style="font-size:15px;font-weight:600">Sotuv menejeri topilmadi</div>
+                                    </div>
+                                    <div id="spIndContent">
+                                        <div class="card sp-params-card">
+                                            <div class="card-header"><h3>Parametrlar</h3></div>
+                                            <div class="sp-params-grid">
+                                                <div class="sp-param">
+                                                    <label for="spIndLeadsPerDay">Lid (kunlik)</label>
+                                                    <input type="number" id="spIndLeadsPerDay" class="form-control-sm" min="0" step="1">
+                                                </div>
+                                                <div class="sp-param">
+                                                    <label for="spIndDuration">Muddat (kun)</label>
+                                                    <input type="number" id="spIndDuration" class="form-control-sm" min="1" step="1">
+                                                </div>
+                                                <div class="sp-param">
+                                                    <label for="spIndLeadCost">Lid narxi (so'm)</label>
+                                                    <input type="number" id="spIndLeadCost" class="form-control-sm" min="0" step="500">
+                                                </div>
+                                                <div class="sp-param">
+                                                    <label for="spIndAvgCheck">O'rtacha chek (so'm)</label>
+                                                    <input type="number" id="spIndAvgCheck" class="form-control-sm" min="0" step="10000">
+                                                </div>
+                                                <div class="sp-param">
+                                                    <label for="spIndConvMin">Konversiya — min (%)</label>
+                                                    <input type="number" id="spIndConvMin" class="form-control-sm" min="0" step="0.1">
+                                                </div>
+                                                <div class="sp-param">
+                                                    <label for="spIndConvMid">Konversiya — o'rtacha (%)</label>
+                                                    <input type="number" id="spIndConvMid" class="form-control-sm" min="0" step="0.1">
+                                                </div>
+                                                <div class="sp-param">
+                                                    <label for="spIndConvMax">Konversiya — zo'r (%)</label>
+                                                    <input type="number" id="spIndConvMax" class="form-control-sm" min="0" step="0.1">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card" id="spIndProgressCard" style="margin-bottom:16px"></div>
+                                        <div class="sp-period-tabs" id="spIndPeriodTabs"></div>
+                                        <div class="sp-plans-grid" id="spIndPlansGrid"></div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="sales-panel" data-sales-panel="debtors" id="salesPanel-debtors" style="overflow-y:auto"></div>
