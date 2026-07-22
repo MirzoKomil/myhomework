@@ -11560,12 +11560,12 @@ function renderSalesFunnel() {
         </div>
     </div>
 
-    <div class="card" style="padding:32px 24px 28px;margin-bottom:16px">
+    <div class="card" style="padding:32px 24px 28px;margin-bottom:16px;flex-shrink:0">
         <h3 style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 28px;text-align:center">${langLabel} lidlari — jami ${filteredLeads.length} ta · konversiya ${convRate}%</h3>
         ${buildFunnelSVG(stagesData)}
     </div>
 
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card" style="padding:0;overflow:hidden;flex-shrink:0">
         <div class="table-responsive">
         <table class="sdp-table" style="min-width:420px">
             <thead>
