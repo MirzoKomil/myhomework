@@ -314,8 +314,11 @@ function filterTeachersByTypeAndSubject(type, subject) {
     }
 
     if (type === 'yordamchi') {
+        // 31-ish: yordamchi o'qituvchi ham til bo'yicha alohida-alohida
+        // bo'lishi kerak — "lang" maydoni orqali ajratiladi (asosiy
+        // o'qituvchidagi kabi alohida rol satri emas).
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, [])
-            .filter(e => e.role === 'yordamchi' && e.status !== 'inactive');
+            .filter(e => e.role === 'yordamchi' && e.status !== 'inactive' && (e.lang || 'english') === subject);
         const hrIds = new Set(hrEmployees.map(e => e.id));
         const storedInHr = stored.filter(t => hrIds.has(t.id));
         const storedIds = new Set(storedInHr.map(t => t.id));

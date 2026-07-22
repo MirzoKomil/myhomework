@@ -16243,12 +16243,17 @@ function teacherLangHtml(selected = '') {
     </div>`;
 }
 
+// 31-ish: yordamchi o'qituvchi ham asosiy o'qituvchi kabi Ingliz/Rus tili
+// yo'nalishini so'rashi kerak — aks holda barcha yordamchi o'qituvchilar
+// (til yo'nalishidan qat'iy nazar) ikkala til ro'yxatida ham bir xilda
+// ko'rinib qolardi (filterTeachersByTypeAndSubject'da yordamchi filtri
+// hech qanday til bo'yicha ajratmasdi).
 function bindTeacherLangToggle(roleSelectId) {
     const roleEl = document.getElementById(roleSelectId);
     const wrap = document.getElementById('empTeacherLangWrap');
     if (!roleEl || !wrap) return;
     const toggle = () => {
-        wrap.style.display = roleEl.value === 'oqituvchi' ? '' : 'none';
+        wrap.style.display = (roleEl.value === 'oqituvchi' || roleEl.value === 'yordamchi') ? '' : 'none';
     };
     roleEl.addEventListener('change', toggle);
     toggle();
@@ -16259,6 +16264,14 @@ function resolveTeacherRole(baseRole) {
     const checked = document.querySelector('input[name="empTeacherLang"]:checked');
     if (!checked) return 'oqituvchi';
     return checked.value === 'ingliz' ? 'ingliz-oqituvchi' : 'rus-oqituvchi';
+}
+
+// 31-ish: yordamchi o'qituvchi roli o'zi (asosiy o'qituvchidan farqli
+// o'laroq) til bo'yicha alohida rol satriga aylantirilmaydi — buning
+// o'rniga sotuv menejeri/ROP kabi alohida "lang" maydonida saqlanadi.
+function resolveTeacherLang() {
+    const checked = document.querySelector('input[name="empTeacherLang"]:checked');
+    return checked?.value === 'rus' ? 'russian' : 'english';
 }
 
 function managerLangHtml(selected = 'english') {
@@ -16564,7 +16577,10 @@ function openEditEmployeeModal(empId) {
     // ingliz/rus-oqituvchi → display as 'oqituvchi' in dropdown
     const isTeacherLang = emp.role === 'ingliz-oqituvchi' || emp.role === 'rus-oqituvchi';
     const displayRole = isTeacherLang ? 'oqituvchi' : emp.role;
-    const preselectedLang = emp.role === 'ingliz-oqituvchi' ? 'ingliz' : emp.role === 'rus-oqituvchi' ? 'rus' : '';
+    const preselectedLang = emp.role === 'ingliz-oqituvchi' ? 'ingliz'
+        : emp.role === 'rus-oqituvchi' ? 'rus'
+        : emp.role === 'yordamchi' ? (emp.lang === 'russian' ? 'rus' : 'ingliz')
+        : '';
 
     const roleOptions = Object.entries(HR_ROLE_MAP_MODAL).map(([k, v]) =>
         `<option value="${k}"${displayRole === k ? ' selected' : ''}>${escapeHtml(v)}</option>`
@@ -16746,7 +16762,7 @@ function openEditEmployeeModal(empId) {
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
-            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : (emp.lang || 'english'),
+            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : (emp.lang || 'english'),
             cardNumber: document.getElementById('editEmpCardNumber').value.trim(),
             passportSeries: document.getElementById('editEmpPassportSeries').value.trim(),
             address: document.getElementById('editEmpAddress').value.trim(),
@@ -16951,7 +16967,7 @@ function openAddEmployeeModal() {
             role, phone, email, department, status, login, password,
             cardNumber, passportSeries, address,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
-            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : 'english'
+            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : 'english'
         };
         employees.push(newEmp);
         saveHrEmployees(employees);
