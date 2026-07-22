@@ -18706,7 +18706,7 @@ function saveIndividualSalesPlan(managerId, data) {
 }
 
 function getSalesPlanPeriods(duration) {
-    const periods = [{ key: 'full', label: 'Oyliq jami', days: duration }];
+    const periods = [{ key: 'full', label: 'Oylik jami', days: duration }];
     const chunk = 10;
     let day = 0;
     while (day < duration) {
@@ -18820,8 +18820,33 @@ function renderSalesPlan() {
     if (_spMainSection === 'individual') renderSalesPlanIndividual();
 }
 
+// 35-vazifa: Jamoaviy reja ichida "Plan" (mavjud kalkulyator) va "Fakt"
+// (shu oy uchun barcha menejerlarning real jami natijasi) o'rtasida
+// almashtiriladigan kichik ko'rinish tugmasi.
+let _spJamoaviyView = 'plan';
+
 function renderSalesPlanTeam() {
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+
+    document.querySelectorAll('#spJamoaviyViewToggle [data-sp-view]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.spView === _spJamoaviyView);
+        btn.onclick = () => {
+            _spJamoaviyView = btn.dataset.spView;
+            renderSalesPlanTeam();
+        };
+    });
+
+    const planView = document.getElementById('spPlanView');
+    const faktView = document.getElementById('spFaktView');
+    if (planView) planView.style.display = _spJamoaviyView === 'plan' ? '' : 'none';
+    if (faktView) faktView.style.display = _spJamoaviyView === 'fakt' ? '' : 'none';
+
+    if (_spJamoaviyView === 'fakt') {
+        const grid = document.getElementById('spFaktGrid');
+        if (grid) grid.innerHTML = renderSalesPlanFactCard(lang);
+        return;
+    }
+
     const plan = getSalesPlan(lang);
 
     const fields = [
@@ -18877,6 +18902,75 @@ function renderSalesPlanResults() {
     });
 
     gridEl.innerHTML = renderSalesPlanTierCards(plan, activePeriod);
+}
+
+// 35-vazifa: Jamoaviy reja > Fakt — shu til yo'nalishidagi BARCHA sotuv
+// menejerlarining shu oydagi real (haqiqiy) jami natijasi. Lid soni Sotuv
+// bo'limining o'z lidlar bazasidan (shu oyda yaratilgan lidlar, shu til)
+// hisoblanadi — Marketing bo'limidagi qo'lda kiritiladigan, tillar
+// bo'yicha ajratilmagan raqamdan emas.
+function computeSalesPlanFactMetrics(lang) {
+    const now = new Date();
+    const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const langLeads = leadsData[lang] || [];
+    const lidSoni = langLeads.filter(l => {
+        const d = new Date(l.date || l.createdAt);
+        return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).length;
+
+    const managers = getSalesManagers(lang);
+    let sotuvSoni = 0, sotuvSumma = 0;
+    managers.forEach(m => {
+        sotuvSoni += getManagerDealsCount(m.id, 'oylik');
+        sotuvSumma += getManagerSalesForPeriod(m.id, 'oylik');
+    });
+
+    const konversiya = lidSoni > 0 ? (sotuvSoni / lidSoni * 100) : 0;
+    const avgCheck = sotuvSoni > 0 ? Math.round(sotuvSumma / sotuvSoni) : 0;
+    const leadCost = getSalesPlan(lang).leadCost;
+    const budjet = lidSoni * leadCost;
+    const romi = budjet > 0 ? ((sotuvSumma - budjet) / budjet * 100) : 0;
+
+    const elapsedDays = Math.max(1, now.getDate());
+    return {
+        kunlik: {
+            lidSoni: Math.round(lidSoni / elapsedDays),
+            konversiya,
+            sotuvSoni: Math.round(sotuvSoni / elapsedDays),
+            sotuvSumma: Math.round(sotuvSumma / elapsedDays),
+            budjet: Math.round(budjet / elapsedDays),
+            romi
+        },
+        davr: { lidSoni, leadCost, konversiya, sotuvSoni, avgCheck, sotuvSumma, budjet, romi, days: elapsedDays }
+    };
+}
+
+function renderSalesPlanFactCard(lang) {
+    const m = computeSalesPlanFactMetrics(lang);
+    return `
+    <div class="sp-plan-card" style="border-top-color:var(--success)">
+        <div class="sp-plan-header" style="background:var(--success-bg);color:var(--success)">Fakt (haqiqiy natija)</div>
+        <div class="sp-plan-block">
+            <div class="sp-plan-block-title">Kunlik o'rtacha</div>
+            <div class="sp-row"><span>Lid soni</span><b>${m.kunlik.lidSoni.toLocaleString('uz-UZ')}</b></div>
+            <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.kunlik.konversiya)}</b></div>
+            <div class="sp-row"><span>Sotuv soni</span><b>${m.kunlik.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
+            <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.kunlik.sotuvSumma)}</b></div>
+            <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.kunlik.budjet)}</b></div>
+            <div class="sp-row"><span>ROMI</span><b class="${m.kunlik.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.kunlik.romi)}</b></div>
+        </div>
+        <div class="sp-plan-block">
+            <div class="sp-plan-block-title">Oylik jami <span class="text-muted" style="font-weight:500">(${m.davr.days} kun)</span></div>
+            <div class="sp-row"><span>Lid soni</span><b>${m.davr.lidSoni.toLocaleString('uz-UZ')}</b></div>
+            <div class="sp-row"><span>Lid narxi</span><b>${fmtMoney(m.davr.leadCost)}</b></div>
+            <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.davr.konversiya)}</b></div>
+            <div class="sp-row"><span>Sotuv soni</span><b>${m.davr.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
+            <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(m.davr.avgCheck)}</b></div>
+            <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.davr.sotuvSumma)}</b></div>
+            <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.davr.budjet)}</b></div>
+            <div class="sp-row"><span>ROMI</span><b class="${m.davr.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.davr.romi)}</b></div>
+        </div>
+    </div>`;
 }
 
 // --- Individual reja ---
