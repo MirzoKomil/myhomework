@@ -27,7 +27,8 @@ const STORAGE_KEYS = {
     studentMessages: 'mh_student_messages',
     peerMessages: 'mh_peer_messages',
     studentActivity: 'mh_student_activity',
-    shopOrders: 'mh_shop_orders'
+    shopOrders: 'mh_shop_orders',
+    guides: 'mh_guides'
 };
 
 const CACHE_KEY_MAP = {
@@ -54,7 +55,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.studentMessages]: 'studentMessages',
     [STORAGE_KEYS.peerMessages]: 'peerMessages',
     [STORAGE_KEYS.studentActivity]: 'studentActivity',
-    [STORAGE_KEYS.shopOrders]: 'shopOrders'
+    [STORAGE_KEYS.shopOrders]: 'shopOrders',
+    [STORAGE_KEYS.guides]: 'guides'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(

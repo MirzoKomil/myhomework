@@ -134,14 +134,14 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika'],
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'guides'],
     // 15-ish: "teacher-cabinet" ("Ustozlarga kabinet" — o'zining o'quvchilari
     // bilan yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) allaqachon
     // to'liq qurilgan va ustoz roli uchun ichkarida to'g'ri cheklangan edi,
     // lekin bu ro'yxatda yo'q bo'lgani uchun sidebar'da ko'rinmasdi.
-    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'teacher-cabinet'],
-    employee:      ['student-app'],
-    hr:            ['dashboard', 'hr']
+    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'teacher-cabinet', 'guides'],
+    employee:      ['student-app', 'guides'],
+    hr:            ['dashboard', 'hr', 'guides']
 };
 
 function applyRoleBasedAccess(user) {
@@ -166,6 +166,14 @@ function applyRoleBasedAccess(user) {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
             });
+        } else {
+            // 32-vazifa: "Yo'riqnomalar" alohida sidebar punkti faqat ROP
+            // uchun (u haqiqiy nishon lavozim bo'lgani va HR Bo'limi undan
+            // yashiringani sabab) — admin/boshliq esa uni HR Bo'limi >
+            // Yo'riqnomalar orqali yozadi, alohida punktga muhtoj emas.
+            hiddenForRop = new Set(['guides']);
+            const el = sidebar.querySelector('.menu-item[data-tab="guides"]');
+            if (el) el.style.display = 'none';
         }
         // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
         // oldin qaysi bo'limda bo'lgan bo'lsa, o'sha bo'limdan davom etsin —
@@ -706,6 +714,7 @@ function renderTab(tab) {
         case 'hr-employees': renderHrEmployees(); break;
         case 'hr': renderHr(); break;
         case 'finance': renderFinance(); break;
+        case 'guides': renderMyGuides(); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -10431,6 +10440,7 @@ function switchHrSection(section) {
     });
     if (section === 'xodimlar') renderHrEmployees();
     if (section === 'org-struktura') renderOrgStruktura();
+    if (section === 'yoriqnomalar') renderGuides();
     persistCurrentTab();
 }
 
@@ -16216,7 +16226,9 @@ const HR_ROLE_MAP = {
     'oqituvchi': "O'qituvchi",
     'ingliz-oqituvchi': "Ingliz tili o'qituvchi",
     'rus-oqituvchi': "Rus tili o'qituvchi",
-    'yordamchi': "Yordamchi o'qituvchi"
+    'yordamchi': "Yordamchi o'qituvchi",
+    'marketolog': 'Marketolog',
+    'head-of-teachers': 'Head of Teachers'
 };
 
 // Modal dropdown uchun (ingliz/rus — separate sub-field orqali belgilanadi)
@@ -16224,7 +16236,9 @@ const HR_ROLE_MAP_MODAL = {
     'rop': 'ROP',
     'sotuv-menejeri': 'Sotuv menejeri',
     'oqituvchi': "O'qituvchi",
-    'yordamchi': "Yordamchi o'qituvchi"
+    'yordamchi': "Yordamchi o'qituvchi",
+    'marketolog': 'Marketolog',
+    'head-of-teachers': 'Head of Teachers'
 };
 
 function teacherLangHtml(selected = '') {
@@ -16272,6 +16286,50 @@ function resolveTeacherRole(baseRole) {
 function resolveTeacherLang() {
     const checked = document.querySelector('input[name="empTeacherLang"]:checked');
     return checked?.value === 'rus' ? 'russian' : 'english';
+}
+
+// 32-vazifa: "Yo'riqnomalar" (jarima/qoida yo'riqnomalari) — har bir
+// yo'riqnoma qaysi lavozim(lar)ga tegishli ekanligi shu 7 ta teg orqali
+// belgilanadi. Login roli faqat 4 ta ('teacher' asosiy/yordamchi uchun ham,
+// 'employee' esa marketolog/head-of-teachers uchun ham umumiy) bo'lgani
+// sabab, joriy foydalanuvchining aniq lavozimi HR xodim yozuvidan (ism
+// bo'yicha, ROP til aniqlashda ishlatilgan namunaviy usul bilan) topiladi.
+const GUIDE_AUDIENCE_ROLES = [
+    { key: 'sales_manager', label: 'Sotuv menejerlari' },
+    { key: 'teacher_main', label: 'Asosiy ustozlar' },
+    { key: 'teacher_assistant', label: "Yordamchi o'qituvchi" },
+    { key: 'rop', label: 'ROP' },
+    { key: 'hr', label: 'HR' },
+    { key: 'marketolog', label: 'Marketolog' },
+    { key: 'head_of_teachers', label: 'Head of Teachers' }
+];
+
+function guideAudienceLabel(key) {
+    return GUIDE_AUDIENCE_ROLES.find(r => r.key === key)?.label || key;
+}
+
+function resolveGuideAudienceTags(user) {
+    if (!user) return [];
+    const role = user.role;
+    if (role === 'sales_manager') return ['sales_manager'];
+    if (role === 'rop') return ['rop'];
+    if (role === 'hr') return ['hr'];
+
+    const findLinkedEmployee = () => {
+        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+        return hrEmployees.find(e => e.name?.trim().toLowerCase() === user.name?.trim().toLowerCase());
+    };
+
+    if (role === 'teacher') {
+        const linked = findLinkedEmployee();
+        return linked?.role === 'yordamchi' ? ['teacher_assistant'] : ['teacher_main'];
+    }
+    if (role === 'employee') {
+        const linked = findLinkedEmployee();
+        if (linked?.role === 'marketolog') return ['marketolog'];
+        if (linked?.role === 'head-of-teachers') return ['head_of_teachers'];
+    }
+    return [];
 }
 
 function managerLangHtml(selected = 'english') {
@@ -18113,6 +18171,345 @@ function deleteScript(id) {
     setItem(STORAGE_KEYS.scripts, scripts);
     if (_currentScriptId === id) closeScriptArticle();
     renderScripts();
+}
+
+// ===== Yo'riqnomalar (32-vazifa) =====
+// Skriptlar (yuqorida) bilan bir xil kartochka+oyna UI namunasi, lekin
+// til o'rniga har bir kartochka qaysi lavozim(lar)ga ko'rinishini
+// belgilaydigan "targetRoles" massividan foydalanadi. Ikkita ko'rinish bor:
+// 1) HR Bo'limi > Yo'riqnomalar — admin/HR uchun to'liq CRUD (renderGuides).
+// 2) Har bir lavozimning o'z kabineti sidebar'idagi alohida "Yo'riqnomalar"
+//    punkti — faqat o'ziga tegishli yo'riqnomalarni ko'radigan, tahrirlash
+//    imkonisiz o'qish rejimi (renderMyGuides).
+let _currentGuideId = null;
+
+function renderGuideCards(guides, editable) {
+    if (!guides.length) {
+        return `
+        <div style="grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--text-muted)">
+            <div style="font-size:56px;margin-bottom:16px">📋</div>
+            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px">Hozircha yo'riqnoma yo'q</h3>
+            <p style="font-size:14px;margin:0">${editable ? "Birinchi yo'riqnoma qo'shish uchun \"Yo'riqnoma qo'shish\" tugmasini bosing" : "Sizga tegishli yo'riqnoma hali kiritilmagan"}</p>
+        </div>`;
+    }
+
+    return guides.map(g => {
+        const preview = stripHtmlToText(g.content || '').slice(0, 120);
+        const dateStr = g.createdAt ? new Date(g.createdAt).toLocaleDateString('uz-UZ') : '';
+        const roleChips = (g.targetRoles || []).map(t =>
+            `<span style="display:inline-block;background:rgba(255,255,255,.25);color:#fff;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin:0 4px 4px 0">${escapeHtml(guideAudienceLabel(t))}</span>`
+        ).join('');
+        const openFn = editable ? 'openGuideArticle' : 'openMyGuideArticle';
+        const actions = editable ? `
+            <div class="script-card-actions" onclick="event.stopPropagation()">
+                <button class="script-card-action-btn" onclick="openEditGuideModal('${escapeHtml(g.id)}')">✏️ Tahrirlash</button>
+                <button class="script-card-action-btn" onclick="deleteGuide('${escapeHtml(g.id)}')">🗑️</button>
+            </div>` : '';
+        return `
+        <div class="script-card" style="background:${escapeHtml(g.color || '#6366f1')}" onclick="${openFn}('${escapeHtml(g.id)}')">
+            <span class="script-card-sticker">${escapeHtml(g.sticker || '📋')}</span>
+            <h3 class="script-card-title">${escapeHtml(g.title || 'Nomsiz')}</h3>
+            ${g.subtitle ? `<p class="script-card-subtitle">${escapeHtml(g.subtitle)}</p>` : ''}
+            ${preview ? `<p class="script-card-preview">${escapeHtml(preview)}</p>` : ''}
+            <div style="margin-top:8px">${roleChips}</div>
+            <div class="script-card-footer">
+                <span class="script-card-date">${dateStr}</span>
+            </div>
+            ${actions}
+        </div>`;
+    }).join('');
+}
+
+// --- Admin/HR: to'liq CRUD (HR Bo'limi > Yo'riqnomalar) ---
+
+function renderGuides() {
+    const grid = document.getElementById('guidesGrid');
+    if (!grid) return;
+
+    const addBtn = document.getElementById('addGuideBtn');
+    if (addBtn) addBtn.onclick = openAddGuideModal;
+    const backBtn = document.getElementById('guideBackBtn');
+    if (backBtn) backBtn.onclick = closeGuideArticle;
+
+    const guides = getItem(STORAGE_KEYS.guides, []);
+    grid.innerHTML = renderGuideCards(guides, true);
+}
+
+function openGuideArticle(id) {
+    const guides = getItem(STORAGE_KEYS.guides, []);
+    const g = guides.find(x => x.id === id);
+    if (!g) return;
+    _currentGuideId = id;
+
+    const listView = document.getElementById('guidesListView');
+    const articleView = document.getElementById('guideArticleView');
+    const header = document.getElementById('guideArticleHeader');
+    const meta = document.getElementById('guideArticleMeta');
+    const body = document.getElementById('guideArticleBody');
+
+    header.style.background = g.color || '#6366f1';
+    meta.innerHTML = `
+        <h2 style="color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.18)">${escapeHtml(g.sticker || '')} ${escapeHtml(g.title || '')}</h2>
+        ${g.subtitle ? `<p style="color:rgba(255,255,255,.8)">${escapeHtml(g.subtitle)}</p>` : ''}`;
+
+    const editBtn = document.getElementById('guideEditBtn');
+    if (editBtn) {
+        editBtn.style.cssText = 'background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px)';
+        editBtn.onclick = () => openEditGuideModal(id);
+    }
+
+    body.innerHTML = `<div class="script-article-content">${renderScriptContentHtml(g.content)}</div>`;
+
+    listView.style.display = 'none';
+    articleView.classList.add('active');
+}
+
+function closeGuideArticle() {
+    const listView = document.getElementById('guidesListView');
+    const articleView = document.getElementById('guideArticleView');
+    articleView.classList.remove('active');
+    listView.style.display = '';
+    _currentGuideId = null;
+}
+
+function openAddGuideModal() {
+    _openGuideModal(null);
+}
+
+function openEditGuideModal(id) {
+    _openGuideModal(id);
+}
+
+function _openGuideModal(editId) {
+    const guides = getItem(STORAGE_KEYS.guides, []);
+    const existing = editId ? guides.find(g => g.id === editId) : null;
+
+    const selColor = existing ? existing.color : SCRIPT_COLORS[0];
+    const selSticker = existing ? existing.sticker : SCRIPT_STICKERS[0];
+
+    const colorSwatches = SCRIPT_COLORS.map(c =>
+        `<div class="script-color-swatch${c === selColor ? ' selected' : ''}" style="background:${c}" data-color="${c}"></div>`
+    ).join('');
+
+    const stickerBtns = SCRIPT_STICKERS.map(st =>
+        `<button type="button" class="script-sticker-btn${st === selSticker ? ' selected' : ''}" data-sticker="${escapeHtml(st)}">${st}</button>`
+    ).join('');
+
+    const selectedRoles = new Set(existing?.targetRoles || []);
+    const roleCheckboxes = GUIDE_AUDIENCE_ROLES.map(r => `
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+            <input type="checkbox" class="guide-role-checkbox" value="${r.key}" ${selectedRoles.has(r.key) ? 'checked' : ''}>
+            <span style="font-size:13px">${escapeHtml(r.label)}</span>
+        </label>`).join('');
+
+    const colorSwatchesEditor = SCRIPT_TEXT_COLORS.map(c =>
+        `<div class="script-editor-color-dot" style="background:${c}" data-color="${c}"></div>`
+    ).join('');
+    const emojiItems = SCRIPT_EMOJIS.map(e =>
+        `<span class="script-editor-emoji-item" data-emoji="${e}">${e}</span>`
+    ).join('');
+
+    const body = `
+    <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+            <label class="form-label">Rang</label>
+            <div class="script-color-grid" id="guideColorGrid">${colorSwatches}</div>
+        </div>
+        <div>
+            <label class="form-label">Stiker</label>
+            <div class="script-sticker-grid" id="guideStickerGrid">${stickerBtns}</div>
+        </div>
+        <div>
+            <label class="form-label">Kimga ko'rinadi *</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="guideRoleGrid">${roleCheckboxes}</div>
+        </div>
+        <div>
+            <label class="form-label">Nomi *</label>
+            <input id="guideTitle" class="form-control" placeholder="Masalan: Kechikish jarimasi" value="${escapeHtml(existing?.title || '')}">
+        </div>
+        <div>
+            <label class="form-label">Qisqacha tavsif</label>
+            <input id="guideSubtitle" class="form-control" placeholder="Kichik tushuntirish matni" value="${escapeHtml(existing?.subtitle || '')}">
+        </div>
+        <div>
+            <label class="form-label">Matn (to'liq ma'lumot)</label>
+            <div class="script-editor-toolbar" id="guideEditorToolbar">
+                <button type="button" class="script-editor-btn" data-cmd="bold" title="Qalin"><b>B</b></button>
+                <button type="button" class="script-editor-btn" data-cmd="italic" title="Kursiv"><i>I</i></button>
+                <button type="button" class="script-editor-btn" data-cmd="underline" title="Tagiga chizilgan"><u>U</u></button>
+                <button type="button" class="script-editor-btn" data-cmd="insertUnorderedList" title="Ro'yxat">☰</button>
+                <span class="script-editor-sep"></span>
+                <div class="script-editor-color-wrap">
+                    <button type="button" class="script-editor-btn" id="guideEditorColorBtn" title="Matn rangi">🎨</button>
+                    <div class="script-editor-color-panel" id="guideEditorColorPanel" hidden>${colorSwatchesEditor}</div>
+                </div>
+                <div class="script-editor-emoji-wrap">
+                    <button type="button" class="script-editor-btn" id="guideEditorEmojiBtn" title="Emoji">😊</button>
+                    <div class="script-editor-emoji-panel" id="guideEditorEmojiPanel" hidden>${emojiItems}</div>
+                </div>
+                <span class="script-editor-sep"></span>
+                <button type="button" class="script-editor-btn" data-cmd="removeFormat" title="Formatni tozalash">⟲</button>
+            </div>
+            <div id="guideContentEditable" class="script-content-editable" contenteditable="true" data-placeholder="Bu yerga qoida/jarima haqida batafsil ma'lumot yozing..."></div>
+        </div>
+    </div>`;
+
+    const footer = `
+        <button class="btn-ghost" id="guideModalCancel">Bekor qilish</button>
+        <button class="btn-primary-sm" id="guideModalSave">${editId ? 'Saqlash' : "Qo'shish"}</button>`;
+
+    openModal(editId ? "Yo'riqnoma tahrirlash" : "Yangi yo'riqnoma qo'shish", body, footer);
+
+    document.getElementById('guideColorGrid')?.querySelectorAll('.script-color-swatch').forEach(el => {
+        el.onclick = () => {
+            document.querySelectorAll('#guideColorGrid .script-color-swatch').forEach(x => x.classList.remove('selected'));
+            el.classList.add('selected');
+        };
+    });
+
+    document.getElementById('guideStickerGrid')?.querySelectorAll('.script-sticker-btn').forEach(el => {
+        el.onclick = () => {
+            document.querySelectorAll('#guideStickerGrid .script-sticker-btn').forEach(x => x.classList.remove('selected'));
+            el.classList.add('selected');
+        };
+    });
+
+    const editableEl = document.getElementById('guideContentEditable');
+    if (editableEl) {
+        editableEl.innerHTML = scriptContentToEditableHtml(existing?.content || '');
+        try { document.execCommand('defaultParagraphSeparator', false, 'br'); } catch { /* ignore */ }
+    }
+
+    const colorPanel = document.getElementById('guideEditorColorPanel');
+    const emojiPanel = document.getElementById('guideEditorEmojiPanel');
+    const preventStealFocus = el => el.addEventListener('mousedown', e => e.preventDefault());
+
+    document.getElementById('guideEditorToolbar')?.querySelectorAll('[data-cmd]').forEach(btn => {
+        preventStealFocus(btn);
+        btn.onclick = () => {
+            editableEl?.focus();
+            document.execCommand(btn.dataset.cmd, false, null);
+        };
+    });
+
+    const colorBtn = document.getElementById('guideEditorColorBtn');
+    if (colorBtn && colorPanel) {
+        preventStealFocus(colorBtn);
+        colorBtn.onclick = e => {
+            e.stopPropagation();
+            colorPanel.hidden = !colorPanel.hidden;
+            if (emojiPanel) emojiPanel.hidden = true;
+        };
+        colorPanel.querySelectorAll('.script-editor-color-dot').forEach(dot => {
+            preventStealFocus(dot);
+            dot.onclick = () => {
+                editableEl?.focus();
+                document.execCommand('foreColor', false, dot.dataset.color);
+                colorPanel.hidden = true;
+            };
+        });
+    }
+
+    const emojiBtn = document.getElementById('guideEditorEmojiBtn');
+    if (emojiBtn && emojiPanel) {
+        preventStealFocus(emojiBtn);
+        emojiBtn.onclick = e => {
+            e.stopPropagation();
+            emojiPanel.hidden = !emojiPanel.hidden;
+            if (colorPanel) colorPanel.hidden = true;
+        };
+        emojiPanel.querySelectorAll('.script-editor-emoji-item').forEach(item => {
+            preventStealFocus(item);
+            item.onclick = () => {
+                editableEl?.focus();
+                document.execCommand('insertText', false, item.dataset.emoji);
+                emojiPanel.hidden = true;
+            };
+        });
+    }
+
+    document.getElementById('guideModalCancel').onclick = closeModal;
+    document.getElementById('guideModalSave').onclick = () => saveGuideFromModal(editId || '');
+}
+
+function saveGuideFromModal(editId) {
+    const title = document.getElementById('guideTitle')?.value?.trim();
+    if (!title) { alert('Nom kiritilishi shart'); return; }
+
+    const targetRoles = [...document.querySelectorAll('.guide-role-checkbox:checked')].map(el => el.value);
+    if (!targetRoles.length) { alert("Kamida bitta lavozim tanlanishi shart"); return; }
+
+    const color = document.querySelector('#guideColorGrid .script-color-swatch.selected')?.dataset?.color || SCRIPT_COLORS[0];
+    const sticker = document.querySelector('#guideStickerGrid .script-sticker-btn.selected')?.dataset?.sticker || SCRIPT_STICKERS[0];
+    const subtitle = document.getElementById('guideSubtitle')?.value?.trim() || '';
+    const content = sanitizeScriptHtml(document.getElementById('guideContentEditable')?.innerHTML || '');
+
+    const guides = getItem(STORAGE_KEYS.guides, []);
+
+    if (editId) {
+        const idx = guides.findIndex(g => g.id === editId);
+        if (idx >= 0) guides[idx] = { ...guides[idx], title, subtitle, color, sticker, targetRoles, content };
+    } else {
+        guides.unshift({ id: 'gd_' + Date.now(), title, subtitle, color, sticker, targetRoles, content, createdAt: new Date().toISOString() });
+    }
+
+    setItem(STORAGE_KEYS.guides, guides);
+    closeModal();
+    renderGuides();
+
+    if (editId && _currentGuideId === editId) openGuideArticle(editId);
+}
+
+function deleteGuide(id) {
+    if (!confirm("Bu yo'riqnomani o'chirasizmi?")) return;
+    const guides = getItem(STORAGE_KEYS.guides, []).filter(g => g.id !== id);
+    setItem(STORAGE_KEYS.guides, guides);
+    if (_currentGuideId === id) closeGuideArticle();
+    renderGuides();
+}
+
+// --- Har bir lavozim uchun o'qish rejimi (sidebar > Yo'riqnomalar) ---
+
+function renderMyGuides() {
+    const grid = document.getElementById('myGuidesGrid');
+    if (!grid) return;
+
+    const backBtn = document.getElementById('myGuideBackBtn');
+    if (backBtn) backBtn.onclick = closeMyGuideArticle;
+
+    const cu = getCurrentUser();
+    const tags = resolveGuideAudienceTags(cu);
+    const guides = getItem(STORAGE_KEYS.guides, []).filter(g => (g.targetRoles || []).some(t => tags.includes(t)));
+    grid.innerHTML = renderGuideCards(guides, false);
+}
+
+function openMyGuideArticle(id) {
+    const guides = getItem(STORAGE_KEYS.guides, []);
+    const g = guides.find(x => x.id === id);
+    if (!g) return;
+
+    const listView = document.getElementById('myGuidesListView');
+    const articleView = document.getElementById('myGuideArticleView');
+    const header = document.getElementById('myGuideArticleHeader');
+    const meta = document.getElementById('myGuideArticleMeta');
+    const body = document.getElementById('myGuideArticleBody');
+
+    header.style.background = g.color || '#6366f1';
+    meta.innerHTML = `
+        <h2 style="color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.18)">${escapeHtml(g.sticker || '')} ${escapeHtml(g.title || '')}</h2>
+        ${g.subtitle ? `<p style="color:rgba(255,255,255,.8)">${escapeHtml(g.subtitle)}</p>` : ''}`;
+
+    body.innerHTML = `<div class="script-article-content">${renderScriptContentHtml(g.content)}</div>`;
+
+    listView.style.display = 'none';
+    articleView.classList.add('active');
+}
+
+function closeMyGuideArticle() {
+    const listView = document.getElementById('myGuidesListView');
+    const articleView = document.getElementById('myGuideArticleView');
+    articleView.classList.remove('active');
+    listView.style.display = '';
 }
 
 // ===== Reyting / Leaderboard =====

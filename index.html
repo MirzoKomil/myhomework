@@ -127,6 +127,14 @@
                     </svg>
                     <span class="label">Mobil ilova</span>
                 </a>
+
+                <a href="#" class="menu-item" data-tab="guides">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+                    </svg>
+                    <span class="label">Yo'riqnomalar</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="menu-group" id="settingsLangGroup">
@@ -1266,10 +1274,23 @@
                         </div>
 
                         <div class="hr-panel" data-hr-panel="yoriqnomalar" id="hrPanel-yoriqnomalar">
-                            <div class="mac-empty" style="padding:80px 0">
-                                <div style="font-size:40px;margin-bottom:12px">📋</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Yo'riqnomalar</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            <div id="guidesListView">
+                                <div class="page-title-bar">
+                                    <div>
+                                        <h1>Yo'riqnomalar</h1>
+                                        <p class="text-muted" style="margin:2px 0 0;font-size:13px">Lavozimlar bo'yicha qoidalar va jarima yo'riqnomalari</p>
+                                    </div>
+                                    <button class="btn-primary-sm" id="addGuideBtn">+ Yo'riqnoma qo'shish</button>
+                                </div>
+                                <div id="guidesGrid" class="scripts-grid"></div>
+                            </div>
+                            <div id="guideArticleView" class="script-article-view">
+                                <div class="script-article-header" id="guideArticleHeader">
+                                    <button class="sdp-close-btn" id="guideBackBtn">Orqaga</button>
+                                    <div class="script-article-meta" id="guideArticleMeta"></div>
+                                    <button class="btn-ghost" id="guideEditBtn">Tahrirlash</button>
+                                </div>
+                                <div class="script-article-body" id="guideArticleBody"></div>
                             </div>
                         </div>
 
@@ -1295,6 +1316,25 @@
                                 <div style="font-size:16px;font-weight:600;margin-bottom:6px">Academy</div>
                                 <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
                             </div>
+                        </div>
+                    </section>
+
+                    <section id="tab-guides" class="tab-content">
+                        <div id="myGuidesListView">
+                            <div class="page-title-bar">
+                                <div>
+                                    <h1>Yo'riqnomalar</h1>
+                                    <p class="text-muted" style="margin:2px 0 0;font-size:13px">Sizning lavozimingizga tegishli qoidalar va yo'riqnomalar</p>
+                                </div>
+                            </div>
+                            <div id="myGuidesGrid" class="scripts-grid"></div>
+                        </div>
+                        <div id="myGuideArticleView" class="script-article-view">
+                            <div class="script-article-header" id="myGuideArticleHeader">
+                                <button class="sdp-close-btn" id="myGuideBackBtn">Orqaga</button>
+                                <div class="script-article-meta" id="myGuideArticleMeta"></div>
+                            </div>
+                            <div class="script-article-body" id="myGuideArticleBody"></div>
                         </div>
                     </section>
 

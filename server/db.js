@@ -610,7 +610,7 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders] = await Promise.all([
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -637,6 +637,7 @@ async function getFullState() {
         getJsonData('peerMessages'),
         getJsonData('studentActivity'),
         getJsonData('shopOrders'),
+        getJsonData('guides'),
     ]);
     const timetable = {};
     ttRows.forEach(r => {
@@ -655,7 +656,7 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides
     };
 }
 
@@ -2038,6 +2039,7 @@ async function patchState(partial) {
         // CRM'ning "Yetkazib berish" kanban'i shu yerdan o'qiydi/yozadi
         // (bookRoadmap'dagi kabi, lekin oddiyroq JSON-massiv sifatida).
         if (partial.shopOrders !== undefined) await saveJsonData(client, 'shopOrders', partial.shopOrders);
+        if (partial.guides !== undefined)      await saveJsonData(client, 'guides', partial.guides);
     });
 }
 
