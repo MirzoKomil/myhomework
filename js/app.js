@@ -5084,7 +5084,7 @@ function renderProfileEditSection(user) {
     })() : null;
 
     const docsCard = empRecord ? (() => {
-        const incomplete = !empRecord.cardNumber || !empRecord.passportSeries || !empRecord.pinfl || !empRecord.address;
+        const incomplete = !empRecord.cardNumber || !empRecord.passportSeries || !empRecord.address;
         if (docsEditing) {
             return `<div class="profile-card">
                 ${profileCardHeader('Shaxsiy hujjatlar', 'documents')}
@@ -5093,15 +5093,9 @@ function renderProfileEditSection(user) {
                         <label>Plastik karta raqami</label>
                         <input type="text" id="docCardNumber" class="form-control" value="${escapeHtml(empRecord.cardNumber || '')}" placeholder="0000 0000 0000 0000" maxlength="19">
                     </div>
-                    <div style="display:flex;gap:10px">
-                        <div class="form-group" style="flex:1">
-                            <label>Passport seriyasi</label>
-                            <input type="text" id="docPassportSeries" class="form-control" value="${escapeHtml(empRecord.passportSeries || '')}" placeholder="AA1234567" maxlength="9">
-                        </div>
-                        <div class="form-group" style="flex:1">
-                            <label>JSHSHIR (PINFL)</label>
-                            <input type="text" id="docPinfl" class="form-control" value="${escapeHtml(empRecord.pinfl || '')}" placeholder="14 xonali raqam" maxlength="14">
-                        </div>
+                    <div class="form-group" style="width:100%">
+                        <label>Passport seriyasi</label>
+                        <input type="text" id="docPassportSeries" class="form-control" value="${escapeHtml(empRecord.passportSeries || '')}" placeholder="AA1234567" maxlength="9">
                     </div>
                     <div class="form-group" style="width:100%">
                         <label>Yashash manzili</label>
@@ -5121,7 +5115,6 @@ function renderProfileEditSection(user) {
             <div class="profile-info-grid">
                 <div class="profile-info-item"><label>Plastik karta</label>${val(empRecord.cardNumber)}</div>
                 <div class="profile-info-item"><label>Passport seriyasi</label>${val(empRecord.passportSeries)}</div>
-                <div class="profile-info-item"><label>JSHSHIR (PINFL)</label>${val(empRecord.pinfl)}</div>
                 <div class="profile-info-item profile-info-item--full"><label>Yashash manzili</label>${val(empRecord.address)}</div>
             </div>
         </div>`;
@@ -5486,7 +5479,6 @@ async function saveProfileField(field) {
             ...emps[idx],
             cardNumber: document.getElementById('docCardNumber')?.value.trim() || emps[idx].cardNumber,
             passportSeries: document.getElementById('docPassportSeries')?.value.trim() || emps[idx].passportSeries,
-            pinfl: document.getElementById('docPinfl')?.value.trim() || emps[idx].pinfl,
             address: document.getElementById('docAddress')?.value.trim() || emps[idx].address
         };
         saveHrEmployees(emps);
@@ -16607,6 +16599,20 @@ function openEditEmployeeModal(empId) {
             </select>
         </div>
         <hr style="margin:12px 0;border-color:var(--border)">
+        <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Shaxsiy hujjatlar</p>
+        <div class="form-group">
+            <label>Plastik karta raqami</label>
+            <input type="text" id="editEmpCardNumber" class="form-control" value="${escapeHtml(emp.cardNumber || '')}" placeholder="8600 XXXX XXXX XXXX">
+        </div>
+        <div class="form-group">
+            <label>Passport seriyasi</label>
+            <input type="text" id="editEmpPassportSeries" class="form-control" value="${escapeHtml(emp.passportSeries || '')}" placeholder="AB1234567">
+        </div>
+        <div class="form-group">
+            <label>Yashash manzili</label>
+            <input type="text" id="editEmpAddress" class="form-control" value="${escapeHtml(emp.address || '')}" placeholder="Shahar, tuman, ko'cha">
+        </div>
+        <hr style="margin:12px 0;border-color:var(--border)">
         <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Parolni yangilash (ixtiyoriy)</p>
         <div class="form-group">
             <label>Yangi parol</label>
@@ -16689,6 +16695,9 @@ function openEditEmployeeModal(empId) {
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
             lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : (emp.lang || 'english'),
+            cardNumber: document.getElementById('editEmpCardNumber').value.trim(),
+            passportSeries: document.getElementById('editEmpPassportSeries').value.trim(),
+            address: document.getElementById('editEmpAddress').value.trim(),
         };
         if (newPassword) updated.password = newPassword;
 
@@ -16789,6 +16798,20 @@ function openAddEmployeeModal() {
             <select id="empDepartment" class="form-control">${deptOptions}</select>
         </div>
         <hr style="margin:12px 0;border-color:var(--border)">
+        <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Shaxsiy hujjatlar (ixtiyoriy)</p>
+        <div class="form-group">
+            <label>Plastik karta raqami</label>
+            <input type="text" id="empCardNumber" class="form-control" placeholder="8600 XXXX XXXX XXXX">
+        </div>
+        <div class="form-group">
+            <label>Passport seriyasi</label>
+            <input type="text" id="empPassportSeries" class="form-control" placeholder="AB1234567">
+        </div>
+        <div class="form-group">
+            <label>Yashash manzili</label>
+            <input type="text" id="empAddress" class="form-control" placeholder="Shahar, tuman, ko'cha">
+        </div>
+        <hr style="margin:12px 0;border-color:var(--border)">
         <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Kirish ma'lumotlari</p>
         <div class="form-group">
             <label>Login (avtomatik — telefon raqami)</label>
@@ -16848,6 +16871,9 @@ function openAddEmployeeModal() {
         const status = document.getElementById('empStatus').value;
         const login = document.getElementById('empLogin').value.trim() || phone.replace(/\s/g, '');
         const password = document.getElementById('empPassword').value.trim();
+        const cardNumber = document.getElementById('empCardNumber').value.trim();
+        const passportSeries = document.getElementById('empPassportSeries').value.trim();
+        const address = document.getElementById('empAddress').value.trim();
 
         if (!firstName) { alert('Ism kiritilishi shart'); return; }
         if (!lastName) { alert('Familiya kiritilishi shart'); return; }
@@ -16871,6 +16897,7 @@ function openAddEmployeeModal() {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
             role, phone, email, department, status, login, password,
+            cardNumber, passportSeries, address,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
             lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : 'english'
         };
