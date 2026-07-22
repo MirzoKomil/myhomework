@@ -9488,16 +9488,17 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
         `<div class="form-group"><label>O'quvchi</label>
             <select id="mPayStudent" class="form-select">${students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select>
          </div>
-         <div class="form-group"><label>Platforma to'lovi (so'm)</label><input type="number" id="mPayPlatform" class="form-control" value="0"></div>
-         <div class="form-group"><label>Kitob to'lovi (so'm)</label><input type="number" id="mPayBook" class="form-control" value="0"></div>
-         <div class="form-group"><label>To'langan (so'm)</label><input type="number" id="mPayPaid" class="form-control" value="0"></div>
+         <div class="form-group"><label>Platforma to'lovi (so'm)</label><input type="text" inputmode="numeric" id="mPayPlatform" class="form-control" data-money-input value="0"></div>
+         <div class="form-group"><label>Kitob to'lovi (so'm)</label><input type="text" inputmode="numeric" id="mPayBook" class="form-control" data-money-input value="0"></div>
+         <div class="form-group"><label>To'langan (so'm)</label><input type="text" inputmode="numeric" id="mPayPaid" class="form-control" data-money-input value="0"></div>
          <div class="form-group"><label>Sana</label><input type="date" lang="en-GB" id="mPayDate" class="form-control" value="${new Date().toISOString().split('T')[0]}"></div>`,
         `<button class="btn-primary-sm" id="savePayment">Saqlash</button>`
     );
+    wireMoneyInputs();
     document.getElementById('savePayment').onclick = () => {
-        const platform = parseInt(document.getElementById('mPayPlatform').value) || 0;
-        const book = parseInt(document.getElementById('mPayBook').value) || 0;
-        const paid = parseInt(document.getElementById('mPayPaid').value) || 0;
+        const platform = parseInt(document.getElementById('mPayPlatform').value.replace(/,/g, '')) || 0;
+        const book = parseInt(document.getElementById('mPayBook').value.replace(/,/g, '')) || 0;
+        const paid = parseInt(document.getElementById('mPayPaid').value.replace(/,/g, '')) || 0;
         const total = platform + book;
         const payments = getItem(STORAGE_KEYS.payments, []);
         payments.push({
@@ -10138,7 +10139,7 @@ function openCashFlowModal(editId) {
             </select>
         </div>
         <div class="form-group"><label>Sana</label><input type="date" lang="en-GB" id="cfTxDate" class="form-control" value="${existing?.date || today}"></div>
-        <div class="form-group"><label>Summa (so'm)</label><input type="number" id="cfTxAmount" class="form-control" min="0" step="1000" value="${existing?.amount || ''}"></div>
+        <div class="form-group"><label>Summa (so'm)</label><input type="text" inputmode="numeric" id="cfTxAmount" class="form-control" data-money-input value="${existing?.amount || ''}"></div>
         <div class="form-group"><label>Toifa</label>
             <select id="cfTxCategory" class="form-control">
                 ${Object.entries(CASH_FLOW_CATEGORIES).map(([k, v]) => `<option value="${k}" ${category === k ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}
@@ -10174,6 +10175,7 @@ function openCashFlowModal(editId) {
         <button type="button" class="btn-primary-sm" id="cfTxSaveBtn">Saqlash</button>
     `;
     openModal(existing ? 'Tranzaksiyani tahrirlash' : 'Yangi tranzaksiya', body, footer);
+    wireMoneyInputs();
 
     const categorySelect = document.getElementById('cfTxCategory');
     const purposeSelect = document.getElementById('cfTxPurpose');
@@ -10195,7 +10197,7 @@ function openCashFlowModal(editId) {
 
     document.getElementById('cfTxCancelBtn').addEventListener('click', closeModal);
     document.getElementById('cfTxSaveBtn').addEventListener('click', () => {
-        const amount = Number(document.getElementById('cfTxAmount').value) || 0;
+        const amount = Number(document.getElementById('cfTxAmount').value.replace(/,/g, '')) || 0;
         const date = document.getElementById('cfTxDate').value || today;
         if (amount <= 0) { alert("Summani to'g'ri kiriting"); return; }
         const tx = {
@@ -13133,6 +13135,29 @@ function formatUzMoney(n) {
     return Number(n).toLocaleString('uz-UZ');
 }
 
+// 24-ish: pul summasi maydonlariga yozayotganda har 3 xonadan keyin
+// vergul (,) bilan avtomatik ajratib boradi (masalan 500000 -> 500,000),
+// o'qishni osonlashtirish uchun. Saqlashda/o'qishda vergullar olib
+// tashlanadi (data-money-input belgilangan barcha maydonlar uchun).
+function formatMoneyDigits(raw) {
+    const digits = String(raw || '').replace(/\D/g, '');
+    if (!digits) return '';
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function wireMoneyInput(input) {
+    if (!input || input.dataset.moneyWired) return;
+    input.dataset.moneyWired = '1';
+    input.value = formatMoneyDigits(input.value);
+    input.addEventListener('input', () => {
+        input.value = formatMoneyDigits(input.value);
+    });
+}
+
+function wireMoneyInputs(container) {
+    (container || document).querySelectorAll('[data-money-input]').forEach(wireMoneyInput);
+}
+
 function todayIsoDate() {
     return new Date().toISOString().slice(0, 10);
 }
@@ -14455,7 +14480,7 @@ function openPaymentClosedModal(lang, leadId) {
         <section class="lead-survey-section">
             <div class="form-group" style="margin-bottom:12px">
                 <label style="font-weight:600">To'lov qilingan summa (so'm)</label>
-                <input type="number" id="pcActualAmount" class="form-control" min="0" placeholder="Masalan: 500000" style="margin-top:6px">
+                <input type="text" inputmode="numeric" id="pcActualAmount" class="form-control" data-money-input placeholder="Masalan: 500,000" style="margin-top:6px">
             </div>
             <div class="lead-info-question" style="margin-top:4px">
                 <label class="lead-reason-option" style="align-items:center;gap:10px;cursor:pointer">
@@ -14479,6 +14504,7 @@ function openPaymentClosedModal(lang, leadId) {
 
     const modalBody = document.getElementById('modalBody');
     wireLeadModalValidationClear(modalBody);
+    wireMoneyInputs(modalBody);
     initEnhancedPaymentClosedForm(modalBody);
 
     document.getElementById('cancelPaymentClosed').onclick = () => {
@@ -14537,7 +14563,7 @@ function collectEnhancedPaymentClosedData(modalBody, ps, flags = {}) {
 
     // 9-ish: to'lov miqdori va qarzdor emas tasdiqlov
     const actualAmountRaw = modalBody.querySelector('#pcActualAmount')?.value?.trim() || '';
-    const actualAmount = actualAmountRaw ? parseInt(actualAmountRaw, 10) : null;
+    const actualAmount = actualAmountRaw ? parseInt(actualAmountRaw.replace(/,/g, ''), 10) : null;
     if (!actualAmountRaw) return { error: "To'lov qilingan summani kiriting" };
     const noDebtConfirmed = modalBody.querySelector('#pcNoDebtConfirm')?.checked;
     if (!noDebtConfirmed) return { error: "O'quvchi qarzdor emasligini tasdiqlang" };
@@ -19145,11 +19171,11 @@ function openDebtorEditModal(studentId) {
         <div style="display:flex;flex-direction:column;gap:14px">
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'langan summa (so'm)</label>
-                <input type="number" id="dePaid" value="${s.paidAmount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="text" inputmode="numeric" id="dePaid" data-money-input value="${s.paidAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Qarz miqdori (so'm)</label>
-                <input type="number" id="deDebt" value="${s.debtAmount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="text" inputmode="numeric" id="deDebt" data-money-input value="${s.debtAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lov muddati</label>
@@ -19186,10 +19212,11 @@ function openDebtorEditModal(studentId) {
         <button class="btn-primary-sm" id="debtorSaveBtn">Saqlash</button>`;
 
     openModal(`Qarz tahrirlash — ${s.name}`, body, footer);
+    wireMoneyInputs();
 
     document.getElementById('debtorSaveBtn').onclick = () => {
-        const paid = Number(document.getElementById('dePaid')?.value || 0);
-        const debt = Number(document.getElementById('deDebt')?.value || 0);
+        const paid = Number((document.getElementById('dePaid')?.value || '0').replace(/,/g, ''));
+        const debt = Number((document.getElementById('deDebt')?.value || '0').replace(/,/g, ''));
         const dueDate = document.getElementById('deDueDate')?.value || '';
         const tariff = document.getElementById('deTariff')?.value || 'standard';
         const lastPayment = document.getElementById('deLastPayment')?.value || '';
