@@ -8008,7 +8008,7 @@ function renderSdpProfile(s) {
             <div class="sdp-info-item"><div class="sdp-info-label">Yordamchi ustoz</div><div class="sdp-info-value">${escapeHtml(asst?.name||'—')}</div></div>
             <div class="sdp-info-item"><div class="sdp-info-label">Sotuv menejeri</div><div class="sdp-info-value">${escapeHtml(manager?.name||'—')}</div></div>
             <div class="sdp-info-item"><div class="sdp-info-label">Kurs darajasi</div><div class="sdp-info-value">${escapeHtml(s.group||'—')}</div></div>
-            ${s.lessonDayOfWeek != null ? `<div class="sdp-info-item"><div class="sdp-info-label">Dars kuni</div><div class="sdp-info-value">${escapeHtml(s.lessonDayOfWeek === 0 ? 'Dushanba, Chorshanba, Juma' : 'Seshanba, Payshanba, Shanba')}</div></div>` : ''}
+            ${s.lessonDayOfWeek != null ? `<div class="sdp-info-item"><div class="sdp-info-label">Dars kuni</div><div class="sdp-info-value">${escapeHtml(DAYS_UZ[s.lessonDayOfWeek - 1] || '—')}</div></div>` : ''}
             ${s.lessonTime ? `<div class="sdp-info-item"><div class="sdp-info-label">Dars vaqti</div><div class="sdp-info-value">${escapeHtml(s.lessonTime)}</div></div>` : ''}
         </div>
     </div>
@@ -8412,14 +8412,17 @@ function openSdpChangeSchedule(s) {
     const timeOpts = TIME_SLOTS.map(t =>
         `<option value="${t}"${s.lessonTime===t?' selected':''}>${t}</option>`
     ).join('');
+    const teachers = getItem(STORAGE_KEYS.teachers, []);
+    const teacher = teachers.find(t => t.id === s.teacherId);
+    const lessonDays = getTeacherLessonDays(teacher);
+    const dayOpts = lessonDays.map(dow =>
+        `<option value="${dow}"${s.lessonDayOfWeek===dow?' selected':''}>${escapeHtml(DAYS_UZ[dow - 1] || '')}</option>`
+    ).join('');
     openModal("Jadval o'zgartirish",
         `<p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${escapeHtml(s.name)} — dars vaqtini o'zgartirish:</p>
          <div class="form-group">
             <label>Dars kuni</label>
-            <select id="sdpNewDay" class="form-control">
-                <option value="0"${(s.lessonDayOfWeek===0||s.lessonDayOfWeek==null)?' selected':''}>Dushanba, Chorshanba, Juma</option>
-                <option value="1"${s.lessonDayOfWeek===1?' selected':''}>Seshanba, Payshanba, Shanba</option>
-            </select>
+            <select id="sdpNewDay" class="form-control">${dayOpts}</select>
          </div>
          <div class="form-group">
             <label>Dars vaqti</label>
