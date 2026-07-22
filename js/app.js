@@ -478,8 +478,14 @@ function renderFrozenStudents() {
     const container = document.getElementById('studentsPanel-muzlatilgan');
     if (!container) return;
 
+    // 30-ish: sotuv menejeri bu yerda ham faqat o'zining o'quvchilarini
+    // ko'rishi kerak.
+    const _cuFrozen = getCurrentUser();
     const allStudents = getItem(STORAGE_KEYS.students, []);
-    const frozen = allStudents.filter(s => s.frozen);
+    let frozen = allStudents.filter(s => s.frozen);
+    if (_cuFrozen?.role === 'sales_manager') {
+        frozen = filterStudentsForSalesManager(frozen, _cuFrozen);
+    }
     const allTeachers = [
         ...getItem(STORAGE_KEYS.teachers, []),
         ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
@@ -7453,6 +7459,24 @@ function initStudentsSubjectTabs() {
     initSubjectTabs('studentsSubjectTabs', renderStudents);
 }
 
+// 30-ish: sotuv menejeri O'quvchilar bo'limining barcha bo'limlarida
+// (Faol/Muzlatilgan/Qarzdorlar) faqat o'ziga tegishli (o'z lidlaridan
+// kelib chiqqan) o'quvchilarni ko'rishi kerak — boshqa menejerlarning
+// o'quvchilari umuman ko'rinmasligi shart.
+function filterStudentsForSalesManager(students, currentUser) {
+    const managerId = currentUser?.linkedManagerId || '';
+    if (!managerId) return [];
+    const allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const managerLeadIds = new Set([
+        ...(allLeads.english || []).filter(l => l.managerId === managerId).map(l => l.id),
+        ...(allLeads.russian || []).filter(l => l.managerId === managerId).map(l => l.id)
+    ]);
+    return students.filter(s =>
+        (s.managerId && s.managerId === managerId) ||
+        (s.leadRef && managerLeadIds.has(s.leadRef.id))
+    );
+}
+
 function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
@@ -7479,10 +7503,22 @@ function renderStudents() {
     // Faol bo'lim "faol" bo'lmasa, faqat panel almashtirish
     if (activeSection !== 'faol') return;
 
+    // 30-ish: .leads-lang-tabs CSS qoidasi (display:flex) [hidden]
+    // atributidan ko'ra kuchliroq specifiklikka ega bo'lgani uchun faqat
+    // .hidden = true qo'yish yetarli emas edi — sotuv menejeriga bu tab
+    // hali ham ko'rinib turardi. Endi inline style.display bilan ham
+    // majburan yashiriladi.
     const tabsEl = document.getElementById('studentsSubjectTabs');
-    if (tabsEl) tabsEl.hidden = isSalesManager || isTeacherRole;
+    if (tabsEl) {
+        const hideTabs = isSalesManager || isTeacherRole;
+        tabsEl.hidden = hideTabs;
+        tabsEl.style.display = hideTabs ? 'none' : '';
+    }
     const addStudentBtnEl = document.getElementById('addStudentBtn');
-    if (addStudentBtnEl) addStudentBtnEl.hidden = isSalesManager;
+    if (addStudentBtnEl) {
+        addStudentBtnEl.hidden = isSalesManager;
+        addStudentBtnEl.style.display = isSalesManager ? 'none' : '';
+    }
 
     initStudentsSubjectTabs();
     const titleEl = document.getElementById('studentsPageTitle');
@@ -7499,23 +7535,19 @@ function renderStudents() {
     const ownTeacherForFilter = isTeacherRole && currentUser?.linkedTeacherId
         ? resolveTeacherWithVirtual(currentUser.linkedTeacherId)
         : null;
+    // 30-ish: sotuv menejerining o'z tili yo'nalishi (linkedManagerLang)
+    // ishlatiladi — ilgari bu doim "english" ga qattiq belgilangan edi,
+    // shu sabab rus tili menejerlarining o'quvchilari uchun ustoz/menejer
+    // nomlari noto'g'ri (bo'sh) hisoblanardi (allTeachers/allManagers ham
+    // shu subject bo'yicha filtrlanadi).
     const subject = isSalesManager
-        ? 'english'
+        ? (currentUser?.linkedManagerLang || 'english')
         : isTeacherRole
         ? (ownTeacherForFilter?.subject || 'english')
         : getStudentsSelectedSubject();
 
     if (isSalesManager) {
-        const managerId = currentUser?.linkedManagerId || '';
-        const allLeads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-        const managerLeadIds = new Set([
-            ...(allLeads.english || []).filter(l => l.managerId === managerId).map(l => l.id),
-            ...(allLeads.russian || []).filter(l => l.managerId === managerId).map(l => l.id)
-        ]);
-        students = students.filter(s =>
-            (s.managerId && s.managerId === managerId) ||
-            (s.leadRef && managerLeadIds.has(s.leadRef.id))
-        );
+        students = filterStudentsForSalesManager(students, currentUser);
         if (titleEl) titleEl.textContent = "Mening o'quvchilarim";
     } else {
         students = students.filter(s => (s.subject || 'english') === subject);
@@ -7605,7 +7637,12 @@ function renderStudents() {
     }
 
     const managerSel = document.getElementById('studentsManagerFilter');
-    if (managerSel) {
+    // 30-ish: sotuv menejeri o'z kabinetida faqat o'zining o'quvchilarini
+    // ko'radi — "Sotuv menejerlari bo'yicha" filtri bu holatda ma'nosiz,
+    // shuning uchun butunlay yashiriladi.
+    const managerFilterWrap = managerSel?.closest('.leads-filter-box');
+    if (managerFilterWrap) managerFilterWrap.style.display = isSalesManager ? 'none' : '';
+    if (managerSel && !isSalesManager) {
         if (!managerSel.dataset.handlerBound) {
             managerSel.dataset.handlerBound = '1';
             managerSel.addEventListener('change', () => {
@@ -7651,7 +7688,7 @@ function renderStudents() {
     if (!isTeacherRole && _studentsTeacherFilter !== 'all') {
         students = students.filter(s => s.teacherId === _studentsTeacherFilter || s.assistantTeacherId === _studentsTeacherFilter);
     }
-    if (_studentsManagerFilter !== 'all') {
+    if (!isSalesManager && _studentsManagerFilter !== 'all') {
         students = students.filter(s => s.managerId === _studentsManagerFilter);
     }
     if (_studentsDurationFilter !== 'all') {
@@ -18981,6 +19018,11 @@ function renderDebtorsTable(containerId) {
     // ROP ikkalasiga ham kirishi mumkin bo'lgani uchun bu yerda cheklanadi)
     const _cuDebtors = getCurrentUser();
     const _debtorsRopLang = _cuDebtors && _cuDebtors.role === 'rop' ? (_cuDebtors.linkedRopLang || 'english') : null;
+    // 30-ish: sotuv menejeri Qarzdorlar ro'yxatida ham faqat o'z tilidagi,
+    // o'zining o'quvchilarini ko'rishi kerak (na boshqa til, na boshqa
+    // menejerlarning qarzdorlari).
+    const _isDebtorsSalesManager = _cuDebtors?.role === 'sales_manager';
+    const _debtorsSalesManagerLang = _isDebtorsSalesManager ? (_cuDebtors.linkedManagerLang || 'english') : null;
 
     const allStudents = getItem(STORAGE_KEYS.students, []);
     const allTeachers = [
@@ -18990,17 +19032,21 @@ function renderDebtorsTable(containerId) {
     const managers = getItem(STORAGE_KEYS.salesManagers, [])
         .filter(m => !_debtorsRopLang || (m.lang || 'english') === _debtorsRopLang);
 
-    const debtors = allStudents.filter(s => {
+    let debtors = allStudents.filter(s => {
         const debt = Number(s.debtAmount || 0);
         if (_debtorsRopLang && (s.subject || 'english') !== _debtorsRopLang) return false;
+        if (_debtorsSalesManagerLang && (s.subject || 'english') !== _debtorsSalesManagerLang) return false;
         return debt > 0 || s.paymentDueDate;
     });
+    if (_isDebtorsSalesManager) {
+        debtors = filterStudentsForSalesManager(debtors, _cuDebtors);
+    }
 
     const dateFrom = _debtorsDateFrom ? new Date(_debtorsDateFrom) : null;
     const dateTo = _debtorsDateTo ? new Date(_debtorsDateTo) : null;
 
     const filtered = debtors.filter(s => {
-        if (_debtorsMgrFilter !== 'all' && s.managerId !== _debtorsMgrFilter) return false;
+        if (!_isDebtorsSalesManager && _debtorsMgrFilter !== 'all' && s.managerId !== _debtorsMgrFilter) return false;
         if (_debtorsTeacherFilter !== 'all' && s.teacherId !== _debtorsTeacherFilter) return false;
         if (_debtorsTariffFilter !== 'all' && (s.tariff || 'standard') !== _debtorsTariffFilter) return false;
         if (dateFrom || dateTo) {
