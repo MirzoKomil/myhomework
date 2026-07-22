@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -21,10 +21,11 @@ export default function ContactsScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  const [showThanks, setShowThanks] = useState(false);
 
   const submit = () => {
     if (!name.trim() || !message.trim()) return;
-    Alert.alert('Rahmat!', "Xabaringiz qabul qilindi, tez orada javob beramiz.");
+    setShowThanks(true);
     setName('');
     setEmail('');
     setMessage('');
@@ -87,6 +88,20 @@ export default function ContactsScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <Modal visible={showThanks} animationType="fade" transparent onRequestClose={() => setShowThanks(false)}>
+        <View style={styles.dialogBackdrop}>
+          <Pressable style={styles.dialogBackdropTap} onPress={() => setShowThanks(false)} />
+          <View style={styles.dialogCard}>
+            <Ionicons name="checkmark-circle" size={44} color={theme.colors.success} />
+            <Text style={styles.dialogTitle}>Rahmat!</Text>
+            <Text style={styles.dialogSubtitle}>Xabaringiz qabul qilindi, tez orada javob beramiz.</Text>
+            <Pressable style={styles.dialogConfirmBtn} onPress={() => setShowThanks(false)}>
+              <Text style={styles.dialogConfirmText}>Tushunarli</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -125,4 +140,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitText: { fontFamily: theme.fonts.bold, fontSize: 15, color: '#fff' },
+
+  dialogBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  dialogBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+  dialogTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text, textAlign: 'center' },
+  dialogSubtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center' },
+  dialogConfirmBtn: {
+    width: '100%',
+    paddingVertical: 13,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.purple,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  dialogConfirmText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff' },
 });
