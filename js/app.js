@@ -519,7 +519,7 @@ function renderFrozenStudents() {
                                 <span style="font-weight:500">${escapeHtml(s.name || '—')}</span>
                             </div>
                         </td>
-                        <td>${escapeHtml(s.phone || '—')}</td>
+                        <td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td>
                         <td>${escapeHtml(teacher?.name || '—')}</td>
                         <td>
                             <button type="button" class="btn-primary-sm" data-unfreeze="${escapeHtml(s.id)}" style="font-size:12px;padding:4px 12px">
@@ -7001,7 +7001,7 @@ function renderMainAttendance() {
 
     students.forEach((s, i) => {
         if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
-        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${s.phone || '—'}</td><td class="lesson-count" data-student="${s.id}">0</td>`;
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = attendance[attKey][s.id][d];
             const isLesson = isLessonDay(year, month, d, pattern);
@@ -7132,7 +7132,7 @@ function renderAssistantAttendance() {
 
     students.forEach((s, i) => {
         if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
-        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${s.phone || '—'}</td><td class="asst-lesson-count" data-student="${s.id}">0</td>`;
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="asst-lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = attendance[attKey][s.id][d];
             const isLesson = isLessonDay(year, month, d, pattern);
@@ -7292,7 +7292,7 @@ function renderTeacherCabinetContent(teacherId) {
     html += `<h4 style="margin:20px 0 10px">Mening o'quvchilarim</h4>
     <div class="table-responsive"><table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Guruh</th></tr></thead><tbody>`;
     students.forEach(s => {
-        html += `<tr><td>${s.name}</td><td>${s.phone || '—'}</td><td>${s.group || '—'}</td></tr>`;
+        html += `<tr><td>${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td>${s.group || '—'}</td></tr>`;
     });
     if (!students.length) html += '<tr><td colspan="3" class="text-muted">O\'quvchilar yo\'q</td></tr>';
     html += '</tbody></table></div>';
@@ -7706,7 +7706,7 @@ function renderStudents() {
                 </div>
             </td>
             <td><span class="student-id-badge">#${escapeHtml(s.serialCode || String(s.id).slice(-6))}</span></td>
-            <td>${escapeHtml(s.phone || '—')}</td>
+            <td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td>
             <td>${escapeHtml(ageStr)}</td>
             <td>${escapeHtml(genderLabel)}</td>
             <td>${escapeHtml(s.region || '—')}</td>
@@ -7914,7 +7914,7 @@ function renderSdpHeader(studentId) {
             <div class="sdp-avatar">${escapeHtml(initials)}</div>
             <div>
                 <p class="sdp-name">${escapeHtml(s.name || '—')}${frozenBadge}</p>
-                <p class="sdp-meta">${subjectLabel} · ${escapeHtml(s.phone || '—')}</p>
+                <p class="sdp-meta">${subjectLabel} · ${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</p>
             </div>
         </div>`;
 
@@ -8633,7 +8633,7 @@ function _renderTpMainTable() {
     }
     students.forEach((s, i) => {
         if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
-        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name)}</td><td>${escapeHtml(s.phone || '—')}</td><td class="tp-main-lc" data-student="${s.id}">0</td>`;
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name)}</td><td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td><td class="tp-main-lc" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = attendance[attKey][s.id][d];
             const il = isLessonDay(year, month, d, pattern);
@@ -8754,7 +8754,7 @@ function _renderTpAsstTable() {
     }
     students.forEach((s, i) => {
         if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
-        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name)}</td><td>${escapeHtml(s.phone || '—')}</td><td class="tp-asst-lc" data-student="${s.id}">0</td>`;
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name)}</td><td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td><td class="tp-asst-lc" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = attendance[attKey][s.id][d];
             const il = isLessonDay(year, month, d, pattern);
@@ -13145,6 +13145,19 @@ function formatUzMoney(n) {
     return Number(n).toLocaleString('uz-UZ');
 }
 
+// 26-ish: telefon raqamlar hamma joyda o'qish oson bo'lishi uchun
+// "+998 90 000 00 00" formatida ko'rsatiladi — faqat ko'rsatish uchun,
+// saqlangan qiymat o'zgarmaydi. O'zbekiston raqamiga mos kelmasa (masalan
+// chet el raqami) xavfsizlik uchun asl qiymat o'zgartirilmay qaytariladi.
+function formatPhoneDisplay(phone) {
+    const raw = String(phone || '').trim();
+    if (!raw) return '';
+    let digits = raw.replace(/\D/g, '');
+    if (digits.length === 9) digits = '998' + digits;
+    if (digits.length !== 12 || !digits.startsWith('998')) return raw;
+    return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 10)} ${digits.slice(10, 12)}`;
+}
+
 // 24-ish: pul summasi maydonlariga yozayotganda har 3 xonadan keyin
 // vergul (,) bilan avtomatik ajratib boradi (masalan 500000 -> 500,000),
 // o'qishni osonlashtirish uchun. Saqlashda/o'qishda vergullar olib
@@ -15346,8 +15359,8 @@ function formatFileSize(bytes) {
 
 function renderLeadCard(lead, langKey) {
     const normalized = normalizeLeadExtras(lead);
-    const phone = normalized.phone || '—';
-    const phone2 = normalized.phone2 || '—';
+    const phone = formatPhoneDisplay(normalized.phone) || '—';
+    const phone2 = formatPhoneDisplay(normalized.phone2) || '—';
     const commentCount = normalized.comments.length;
     const hasManagerPhoto = Boolean(normalized.managerPhoto);
 
@@ -16375,7 +16388,7 @@ function renderHrEmployeeCard(emp) {
             </div>
             <div class="employee-contact-item">
                 <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                ${escapeHtml(emp.phone || '—')}
+                ${escapeHtml(formatPhoneDisplay(emp.phone) || '—')}
             </div>
         </div>
         <div class="employee-footer">
@@ -17239,7 +17252,7 @@ function renderBookRoadmapCard(item) {
         <div class="lead-card-contacts">
             <div class="lead-card-contact">
                 ${phoneSvg}
-                <span>${escapeHtml(item.phone || '—')}</span>
+                <span>${escapeHtml(formatPhoneDisplay(item.phone) || '—')}</span>
             </div>
             <div class="lead-card-contact">
                 ${locationSvg}
@@ -19014,7 +19027,7 @@ function renderDebtorsTable(containerId) {
         return `<tr>
             <td>${idx + 1}</td>
             <td>${s.name || '—'}</td>
-            <td>${s.phone || '—'}</td>
+            <td>${formatPhoneDisplay(s.phone) || '—'}</td>
             <td>${mgrName(s.managerId)}</td>
             <td>${teacherName(s.teacherId)}</td>
             <td>${s.subject === 'russian' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili'}</td>
@@ -19296,7 +19309,7 @@ function buildOrgNodeHtml(node, childrenMap, employeesById) {
     const isVacant = !displayName;
     const initials = displayName ? getUserInitials(displayName) : '—';
     const deptColor = ORG_DEPT_COLORS[node.department] || ORG_DEPT_COLORS['Boshqa'];
-    const phone = emp ? emp.phone : node.manualPhone;
+    const phone = formatPhoneDisplay(emp ? emp.phone : node.manualPhone);
     const noCrmBadge = (!emp && node.manualName) ? `<span class="org-node-badge">CRM'da yo'q</span>` : '';
 
     return `
