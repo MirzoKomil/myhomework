@@ -18606,6 +18606,22 @@ function getPeriodTarget(period) {
     return MONTHLY_TARGET;
 }
 
+// 34-vazifa: agar ROP shu menejer uchun Individual reja (Sotuv rejasi >
+// Individual reja) orqali shaxsiy oylik maqsad belgilagan bo'lsa, Reyting
+// bo'limidagi "Reja"/"Rejaga yetish" ustunlari o'sha shaxsiy maqsaddan
+// kelib chiqadi — aks holda umumiy platforma maqsadiga (getPeriodTarget)
+// qaytadi. Kunlik/haftalik davrlar uchun oylik maqsad xuddi umumiy
+// maqsadlar orasidagi nisbat bilan mutanosib ravishda pasaytiriladi.
+function getManagerPeriodTarget(managerId, period) {
+    const plan = getIndividualSalesPlan(managerId);
+    if (plan.totalAmount > 0) {
+        if (period === 'kunlik') return Math.round(plan.totalAmount * (DAILY_TARGET / MONTHLY_TARGET));
+        if (period === 'haftalik') return Math.round(plan.totalAmount * (WEEKLY_TARGET / MONTHLY_TARGET));
+        return plan.totalAmount;
+    }
+    return getPeriodTarget(period);
+}
+
 function fmtMoney(n) {
     return new Intl.NumberFormat('uz-UZ').format(n) + " so'm";
 }
@@ -18670,33 +18686,23 @@ function saveSalesPlanPatch(lang, patch) {
     return updated;
 }
 
-// Individual reja — har bir sotuv menejeri uchun alohida reja (managerId
-// bo'yicha), jamoaviy rejadan mustaqil saqlanadi.
-const INDIVIDUAL_SALES_PLAN_DEFAULTS = {
-    leadsPerDay: 15,
-    duration: 30,
-    leadCost: 9500,
-    avgCheck: 1500000,
-    conversions: { min: 4.5, mid: 5.0, max: 5.5 }
-};
+// 34-vazifa: Individual reja — ROP har bir sotuv menejeri uchun oddiy
+// oylik maqsad belgilaydi (jami summa / sotuvlar soni / o'rtacha chek),
+// managerId bo'yicha saqlanadi, jamoaviy rejadan mustaqil.
+const INDIVIDUAL_SALES_PLAN_DEFAULTS = { totalAmount: 0, dealsCount: 0, avgCheck: 0 };
 
 function getIndividualSalesPlan(managerId) {
     const all = getItem(STORAGE_KEYS.individualSalesPlans, {});
-    const saved = all[managerId] || {};
-    return {
-        ...INDIVIDUAL_SALES_PLAN_DEFAULTS,
-        ...saved,
-        conversions: { ...INDIVIDUAL_SALES_PLAN_DEFAULTS.conversions, ...(saved.conversions || {}) }
-    };
+    return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...(all[managerId] || {}) };
 }
 
-function saveIndividualSalesPlanPatch(managerId, patch) {
+function hasIndividualSalesPlan(plan) {
+    return plan.totalAmount > 0 || plan.dealsCount > 0;
+}
+
+function saveIndividualSalesPlan(managerId, data) {
     const all = getItem(STORAGE_KEYS.individualSalesPlans, {});
-    const current = getIndividualSalesPlan(managerId);
-    const updated = { ...current, ...patch };
-    if (patch.conversions) updated.conversions = { ...current.conversions, ...patch.conversions };
-    setItem(STORAGE_KEYS.individualSalesPlans, { ...all, [managerId]: updated });
-    return updated;
+    setItem(STORAGE_KEYS.individualSalesPlans, { ...all, [managerId]: { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...data } });
 }
 
 function getSalesPlanPeriods(duration) {
@@ -18744,7 +18750,6 @@ function fmtSignedPct(n) {
 
 let _spMainSection = 'jamoaviy';
 let _spIndManagerId = null;
-let _spIndPeriod = 'full';
 
 function renderSalesPlanTierCards(plan, activePeriod) {
     return SALES_PLAN_TIERS.map(tier => {
@@ -18900,7 +18905,6 @@ function renderSalesPlanIndividual() {
                 select.dataset.bound = '1';
                 select.addEventListener('change', () => {
                     _spIndManagerId = select.value;
-                    _spIndPeriod = 'full';
                     renderSalesPlanIndividual();
                 });
             }
@@ -18917,89 +18921,100 @@ function renderSalesPlanIndividual() {
     if (emptyEl) emptyEl.style.display = 'none';
     if (contentEl) contentEl.style.display = '';
 
-    const plan = getIndividualSalesPlan(_spIndManagerId);
-
-    const fields = [
-        ['spIndLeadsPerDay', 'leadsPerDay'], ['spIndDuration', 'duration'],
-        ['spIndLeadCost', 'leadCost'], ['spIndAvgCheck', 'avgCheck']
-    ];
-    fields.forEach(([id, key]) => {
-        const el = document.getElementById(id);
-        if (el && document.activeElement !== el) el.value = plan[key];
-    });
-    const convFields = [['spIndConvMin', 'min'], ['spIndConvMid', 'mid'], ['spIndConvMax', 'max']];
-    convFields.forEach(([id, key]) => {
-        const el = document.getElementById(id);
-        if (el && document.activeElement !== el) el.value = plan.conversions[key];
-    });
-
-    [...fields, ...convFields].forEach(([id, key]) => {
-        const el = document.getElementById(id);
-        if (!el || el.dataset.spIndBound) return;
-        el.dataset.spIndBound = '1';
-        const isConv = convFields.some(([cid]) => cid === id);
-        el.addEventListener('input', () => {
-            const val = Number(el.value) || 0;
-            saveIndividualSalesPlanPatch(_spIndManagerId, isConv ? { conversions: { [key]: val } } : { [key]: val });
-            if (key === 'duration') _spIndPeriod = 'full';
-            renderSalesPlanIndividualResults();
-        });
-    });
-
-    renderSalesPlanIndividualProgress();
-    renderSalesPlanIndividualResults();
+    renderSalesPlanIndividualPlanCard();
 }
 
-function renderSalesPlanIndividualProgress() {
-    const el = document.getElementById('spIndProgressCard');
+// 34-vazifa: Individual reja — ROP/menejer uchun oddiy Reja/Fakt kartochkasi.
+// Reja hali belgilanmagan bo'lsa "+ Reja belgilash" tugmasi, aks holda
+// Reja/Fakt taqqoslashi va tahrirlash uchun qalamcha (✏️) tugmasi ko'rsatiladi.
+function renderSalesPlanIndividualPlanCard() {
+    const el = document.getElementById('spIndPlanCard');
     if (!el || !_spIndManagerId) return;
 
-    const plan = { ...getIndividualSalesPlan(_spIndManagerId), managers: 1 };
-    const m = computeSalesPlanMetrics(plan, plan.conversions.mid, plan.duration);
-    const target = m.davr.sotuvSumma;
-    const actual = getManagerSalesForPeriod(_spIndManagerId, 'oylik');
-    const pct = target > 0 ? Math.min(100, Math.round(actual / target * 100)) : 0;
+    const plan = getIndividualSalesPlan(_spIndManagerId);
+    const actualAmount = getManagerSalesForPeriod(_spIndManagerId, 'oylik');
+    const actualDeals = getManagerDealsCount(_spIndManagerId, 'oylik');
+    const actualAvgCheck = actualDeals > 0 ? Math.round(actualAmount / actualDeals) : 0;
+
+    if (!hasIndividualSalesPlan(plan)) {
+        el.innerHTML = `
+        <div style="padding:40px 20px;text-align:center">
+            <div style="font-size:36px;margin-bottom:10px">🎯</div>
+            <div style="font-size:14px;color:var(--text-muted);margin-bottom:14px">Bu menejer uchun hali reja belgilanmagan</div>
+            <button class="btn-primary-sm" id="spIndSetPlanBtn">+ Reja belgilash</button>
+        </div>`;
+        const btn = document.getElementById('spIndSetPlanBtn');
+        if (btn) btn.onclick = openIndividualSalesPlanModal;
+        return;
+    }
+
+    const pct = plan.totalAmount > 0 ? Math.min(100, Math.round(actualAmount / plan.totalAmount * 100)) : 0;
     const color = pctToPlanColor(pct);
 
     el.innerHTML = `
-        <div class="card-header"><h3>Haqiqiy natija vs Maqsad (shu oy)</h3></div>
-        <div style="padding:16px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-                <span style="font-size:13px;color:var(--text-muted)">Haqiqiy sotuv</span>
-                <b>${fmtMoney(actual)}</b>
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+            <h3>Shu oy uchun reja</h3>
+            <button class="btn-ghost" id="spIndEditPlanBtn" title="Rejani tahrirlash">✏️</button>
+        </div>
+        <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div>
+                <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">REJA</div>
+                <div class="sp-row"><span>Jami sotuv summasi</span><b>${fmtMoney(plan.totalAmount)}</b></div>
+                <div class="sp-row"><span>Sotuvlar soni</span><b>${plan.dealsCount.toLocaleString('uz-UZ')}</b></div>
+                <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(plan.avgCheck)}</b></div>
             </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-                <span style="font-size:13px;color:var(--text-muted)">Maqsad (Plan o'rtacha)</span>
-                <b>${fmtMoney(target)}</b>
+            <div>
+                <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">FAKT (shu oy)</div>
+                <div class="sp-row"><span>Jami sotuv summasi</span><b>${fmtMoney(actualAmount)}</b></div>
+                <div class="sp-row"><span>Sotuvlar soni</span><b>${actualDeals.toLocaleString('uz-UZ')}</b></div>
+                <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(actualAvgCheck)}</b></div>
             </div>
+        </div>
+        <div style="padding:0 16px 16px">
             <div style="height:10px;border-radius:6px;background:var(--border);overflow:hidden">
                 <div style="height:100%;width:${pct}%;background:${color}"></div>
             </div>
-            <div style="text-align:right;margin-top:6px;font-size:13px;font-weight:700;color:${color}">${pct}%</div>
+            <div style="text-align:right;margin-top:6px;font-size:13px;font-weight:700;color:${color}">${pct}% bajarildi</div>
         </div>`;
+    const editBtn = document.getElementById('spIndEditPlanBtn');
+    if (editBtn) editBtn.onclick = openIndividualSalesPlanModal;
 }
 
-function renderSalesPlanIndividualResults() {
-    const tabsEl = document.getElementById('spIndPeriodTabs');
-    const gridEl = document.getElementById('spIndPlansGrid');
-    if (!tabsEl || !gridEl || !_spIndManagerId) return;
+function openIndividualSalesPlanModal() {
+    if (!_spIndManagerId) return;
+    const plan = getIndividualSalesPlan(_spIndManagerId);
 
-    const plan = { ...getIndividualSalesPlan(_spIndManagerId), managers: 1 };
-    const periods = getSalesPlanPeriods(plan.duration);
-    if (!periods.find(p => p.key === _spIndPeriod)) _spIndPeriod = 'full';
-    const activePeriod = periods.find(p => p.key === _spIndPeriod) || periods[0];
+    const body = `
+    <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+            <label class="form-label">Jami sotuv summasi (so'm)</label>
+            <input type="text" inputmode="numeric" id="spIndPlanTotalAmount" class="form-control" data-money-input value="${plan.totalAmount || ''}">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Sotuvlar soni</label>
+            <input type="number" id="spIndPlanDealsCount" class="form-control" min="0" step="1" value="${plan.dealsCount || ''}">
+        </div>
+        <div class="form-group">
+            <label class="form-label">O'rtacha chek (so'm)</label>
+            <input type="text" inputmode="numeric" id="spIndPlanAvgCheck" class="form-control" data-money-input value="${plan.avgCheck || ''}">
+        </div>
+    </div>`;
+    const footer = `
+        <button class="btn-ghost" id="spIndPlanCancel">Bekor qilish</button>
+        <button class="btn-primary-sm" id="spIndPlanSave">Saqlash</button>`;
 
-    tabsEl.innerHTML = periods.map(p =>
-        `<button type="button" class="sp-period-tab${p.key === _spIndPeriod ? ' active' : ''}" data-sp-ind-period="${p.key}">${escapeHtml(p.label)}</button>`
-    ).join('');
-    tabsEl.querySelectorAll('[data-sp-ind-period]').forEach(btn => {
-        btn.onclick = () => {
-            _spIndPeriod = btn.dataset.spIndPeriod;
-            renderSalesPlanIndividualResults();
-        };
-    });
+    openModal('Reja belgilash', body, footer);
+    wireMoneyInputs();
 
-    gridEl.innerHTML = renderSalesPlanTierCards(plan, activePeriod);
+    document.getElementById('spIndPlanCancel').onclick = closeModal;
+    document.getElementById('spIndPlanSave').onclick = () => {
+        const totalAmount = Number((document.getElementById('spIndPlanTotalAmount').value || '').replace(/,/g, '')) || 0;
+        const dealsCount = Number(document.getElementById('spIndPlanDealsCount').value) || 0;
+        const avgCheck = Number((document.getElementById('spIndPlanAvgCheck').value || '').replace(/,/g, '')) || 0;
+        saveIndividualSalesPlan(_spIndManagerId, { totalAmount, dealsCount, avgCheck });
+        closeModal();
+        renderSalesPlanIndividualPlanCard();
+    };
 }
 
 function pctToPlanColor(pct) {
@@ -19071,13 +19086,17 @@ function renderLeaderboardSection() {
     const managers = _cuRating && _cuRating.role === 'rop'
         ? allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english'))
         : allSalesManagers;
-    const target = getPeriodTarget(_ratingPeriod);
 
+    // 34-vazifa: har bir menejerning "Reja"/"Rejaga yetish" ko'rsatkichi
+    // endi (agar ROP Individual reja orqali belgilagan bo'lsa) o'sha
+    // shaxsiy maqsaddan kelib chiqadi — umumiy `target` o'rniga
+    // getManagerPeriodTarget() har bir menejer uchun alohida hisoblanadi.
     const ranked = managers.map(m => ({
         ...m,
         sales: getManagerSalesForPeriod(m.id, _ratingPeriod),
         deals: getManagerDealsCount(m.id, _ratingPeriod),
         totalLeads: getManagerTotalLeads(m.id),
+        target: getManagerPeriodTarget(m.id, _ratingPeriod),
     })).sort((a, b) => b.sales - a.sales);
 
     const podiumColors = [
@@ -19091,7 +19110,7 @@ function renderLeaderboardSection() {
     const podiumHTML = top3.length ? `
     <div class="rating-podium">
         ${top3.map((m, i) => {
-            const pct = Math.min(100, target > 0 ? Math.round((m.sales / target) * 100) : 0);
+            const pct = Math.min(100, m.target > 0 ? Math.round((m.sales / m.target) * 100) : 0);
             return `<div class="rating-podium-card bonus-card--3d" style="background:${podiumColors[i] || '#6366f1'}">
                 <div class="bonus-card-shine"></div>
                 <div class="rating-podium-rank">${podiumMedals[i]}</div>
@@ -19132,7 +19151,7 @@ function renderLeaderboardSection() {
                 </thead>
                 <tbody>
                     ${ranked.length ? ranked.map((m, i) => {
-                        const pct = Math.min(100, target > 0 ? Math.round((m.sales / target) * 100) : 0);
+                        const pct = Math.min(100, m.target > 0 ? Math.round((m.sales / m.target) * 100) : 0);
                         const commission = Math.round(m.sales * 0.1);
                         const medal = i < 3 ? podiumMedals[i] : `<span style="color:var(--text-muted);font-weight:700">${i + 1}</span>`;
                         const barColor = pctToPlanColor(pct);
@@ -19149,7 +19168,7 @@ function renderLeaderboardSection() {
                             </td>
                             <td style="text-align:right;font-weight:700;color:#059669">${m.deals} ta</td>
                             <td style="text-align:right;font-weight:700;color:#6366f1">${fmtMoney(m.sales)}</td>
-                            <td style="text-align:right;color:var(--text-muted)">${fmtMoney(target)}</td>
+                            <td style="text-align:right;color:var(--text-muted)">${fmtMoney(m.target)}</td>
                             <td style="text-align:right;color:#16a34a;font-weight:600">${fmtMoney(commission)}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px">
