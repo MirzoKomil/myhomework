@@ -11516,6 +11516,15 @@ function renderSalesFunnel() {
         && (e.lang || 'english') === lang
     );
 
+    // 29-ish: sotuv menejeri faqat o'zining lidlaridan kelib chiqadigan
+    // voronka statistikasini ko'rishi kerak — boshqa menejerlarni tanlab,
+    // ularning natijalarini ko'ra olmasligi shart.
+    const _cuFunnel = getCurrentUser();
+    const isSalesManagerFunnel = _cuFunnel?.role === 'sales_manager';
+    if (isSalesManagerFunnel) {
+        _salesFunnelMgr = _cuFunnel.linkedManagerId || 'none';
+    }
+
     const filteredLeads = _salesFunnelMgr === 'all'
         ? langLeads
         : langLeads.filter(l => l.managerId === _salesFunnelMgr);
@@ -11548,16 +11557,19 @@ function renderSalesFunnel() {
 
     const langLabel = lang === 'russian' ? 'Rus tili' : 'Ingliz tili';
 
-    panel.innerHTML = `
-    <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
-        <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
+    const mgrFilterHtml = isSalesManagerFunnel ? '' : `
         <div style="display:flex;align-items:center;gap:6px">
             <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">Menejer:</label>
             <select id="funnelMgrSelect" class="form-control-sm" style="min-width:170px">
                 <option value="all" ${_salesFunnelMgr === 'all' ? 'selected' : ''}>Barcha menejerlar</option>
                 ${mgrOptions}
             </select>
-        </div>
+        </div>`;
+
+    panel.innerHTML = `
+    <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
+        <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
+        ${mgrFilterHtml}
     </div>
 
     <div class="card" style="padding:32px 24px 28px;margin-bottom:16px;flex-shrink:0">
