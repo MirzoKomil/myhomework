@@ -6368,6 +6368,15 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
     const existing = students.find(s =>
         s.name === onboarding.studentFullName && s.teacherId === onboarding.teacherId
     );
+    const leadSurvey = lead?.paymentSurvey;
+    // 25-ish: to'lov so'rovnomasida "Qisman to'lov" javobi berilgan bo'lsa,
+    // qolgan qarz shu yerda o'quvchi yozuviga o'tkaziladi — shu orqali
+    // o'quvchi hali "To'lov jarayonida" bosqichida turgan paytdayoq
+    // "Qarzdorlar" ro'yxatida (renderDebtorsTable qarz>0 bo'yicha filtrlaydi)
+    // avtomatik ko'rinadi.
+    const debtAmount = leadSurvey?.debtAmount || 0;
+    const paidAmount = leadSurvey?.paidAmount || 0;
+    const paymentDueDate = leadSurvey?.nextPaymentDate || '';
     if (existing) {
         updateStudent(existing.id, {
             lessonDayOfWeek: onboarding.lessonDayOfWeek,
@@ -6376,6 +6385,7 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
             assistantTeacherId: onboarding.assistantTeacherId || null,
             telegramGroupLink: onboarding.telegramGroupLink || '',
             source: 'lead',
+            debtAmount, paidAmount, paymentDueDate,
             // 8-vazifa: sotuv bo'limi lidga bergan ID (serialCode) o'quvchiga
             // aylanganda ham saqlanib qolishi kerak — mavjud bo'lsa ustidan
             // yozilmaydi, yo'q bo'lsa lid'nikidan olinadi.
@@ -6388,7 +6398,6 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         });
         return existing.id;
     }
-    const leadSurvey = lead?.paymentSurvey;
     const duration = leadSurvey?.tariff ? parseInt(leadSurvey.tariff, 10) : 15;
     const id = 's' + Date.now();
     students.push({
@@ -6410,6 +6419,7 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         source: 'lead',
         managerId: lead?.managerId || '',
         leadRef: lead?.id ? { lang, id: lead.id } : undefined,
+        debtAmount, paidAmount, paymentDueDate,
         // 6-vazifa: lid o'quvchiga aylanganda mijoz shartnomasi shu yerda
         // avtomatik biriktiriladi — mobil ilova "Shartnoma faylini ko'rish
         // (PDF)" tugmasi shu raqam/sana bilan real PDF generatsiya qiladi.
@@ -14711,10 +14721,22 @@ function finalizePaymentClosed(lang, leadId, closedSurveyData, scheduleData) {
     if (!updated) { alert('Lid topilmadi'); return; }
 
     const leadAfter = getLeadById(lang, leadId);
+    let promotedStudentId = null;
     if (leadAfter && scheduleData?.teacherId) {
-        promoteStudentFromClosed(lang, leadAfter, scheduleData);
+        promotedStudentId = promoteStudentFromClosed(lang, leadAfter, scheduleData);
     } else if (leadAfter?.paymentOnboarding?.becomeStudent === 'yes') {
-        promoteStudentFromOnboarding(lang, leadAfter.paymentOnboarding, leadAfter);
+        promotedStudentId = promoteStudentFromOnboarding(lang, leadAfter.paymentOnboarding, leadAfter);
+    }
+
+    // 25-ish: "To'lov yopildi" tasdiqlanganda (bu yerga yetguncha "O'quvchi
+    // haqiqatdan ham qarzdor emas" tasdiqlangan bo'ladi) bog'liq o'quvchi
+    // Qarzdorlar ro'yxatidan avtomatik chiqib ketishi uchun qarzi tozalanadi.
+    if (!promotedStudentId) {
+        const linked = getItem(STORAGE_KEYS.students, []).find(s => s.leadRef?.id === leadId);
+        if (linked) promotedStudentId = linked.id;
+    }
+    if (promotedStudentId) {
+        updateStudent(promotedStudentId, { debtAmount: 0, paymentDueDate: '' });
     }
 
     renderLeads();
