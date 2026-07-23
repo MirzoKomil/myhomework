@@ -7,11 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { Exam, getResolvedExams } from '@/data/exams';
 import { courses } from '@/data/mock';
 import { useExamResults } from '@/services/examStore';
 
 export default function ExamsScreen() {
+  const { t } = useLang();
   const activeCourse = courses[0];
   const results = useExamResults();
   const [lockedNotice, setLockedNotice] = useState<Exam | null>(null);
@@ -34,7 +36,7 @@ export default function ExamsScreen() {
   if (!resolved) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Imtihonlar" showBack />
+        <ScreenHeader title={t('exams_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -47,8 +49,7 @@ export default function ExamsScreen() {
       <ScreenHeader title="Imtihonlar" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
-          Har 12 ta darsdan so'ng imtihon, kurs oxirida esa yakunlovchi imtihon topshiriladi. Sertifikat olish
-          uchun mos imtihondan yuqori ball olish kerak.
+          {t('exams_subtitle')}
         </Text>
         {resolved.map(({ exam, passPercent }, index) => {
           const unlocked = isUnlocked(exam);
@@ -74,11 +75,13 @@ export default function ExamsScreen() {
                   </View>
                   <View style={styles.info}>
                     <Text style={[styles.title, !unlocked && styles.titleLocked]}>
-                      {isFinal ? '🏁 ' : `${index + 1}-imtihon — `}
+                      {isFinal ? '🏁 ' : `${index + 1}-${t('exam_label_suffix')} — `}
                       {exam.title}
                     </Text>
                     <Text style={styles.meta}>
-                      {unlocked ? `${exam.questions.length} ta savol · ${Math.round(exam.durationSeconds / 60)} daqiqa` : `${exam.requiredLessons} ta dars talab qilinadi`}
+                      {unlocked
+                        ? t('exams_meta_unlocked').replace('{n}', String(exam.questions.length)).replace('{m}', String(Math.round(exam.durationSeconds / 60)))
+                        : t('exams_meta_locked').replace('{n}', String(exam.requiredLessons))}
                     </Text>
                   </View>
                   {result && (
@@ -101,12 +104,12 @@ export default function ExamsScreen() {
               <View style={styles.dialogIconWrap}>
                 <Ionicons name="lock-closed" size={30} color={theme.colors.textMuted} />
               </View>
-              <Text style={styles.dialogTitle}>Bu imtihon hali qulflangan</Text>
+              <Text style={styles.dialogTitle}>{t('exams_locked_title')}</Text>
               <Text style={styles.dialogSubtitle}>
-                Ushbu imtihonga kirish uchun {lockedNotice.requiredLessons} ta darsni yakunlashingiz kerak.
+                {t('exams_locked_body').replace('{n}', String(lockedNotice.requiredLessons))}
               </Text>
               <Pressable style={styles.dialogConfirmBtn} onPress={() => setLockedNotice(null)}>
-                <Text style={styles.dialogConfirmText}>Tushunarli</Text>
+                <Text style={styles.dialogConfirmText}>{t('common_tushunarli')}</Text>
               </Pressable>
             </View>
           )}

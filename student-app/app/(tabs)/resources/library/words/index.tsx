@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { VocabLevel, VOCAB_LEVEL_LABELS, VOCAB_LEVELS_ORDER, VOCAB_TOPICS, VocabTopic } from '@/data/vocabularyLibrary';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function WordsLevelScreen() {
+  const { t } = useLang();
   const [level, setLevel] = useState<VocabLevel>('beginner');
   const [allTopics, setAllTopics] = useState<VocabTopic[]>(VOCAB_TOPICS);
 
@@ -23,7 +25,7 @@ export default function WordsLevelScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="So'zlar ro'yxati" showBack />
+      <ScreenHeader title={t('res_words_title')} showBack />
       <View style={styles.tabs}>
         {VOCAB_LEVELS_ORDER.map((lv) => {
           const active = lv === level;
@@ -36,21 +38,21 @@ export default function WordsLevelScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{topics.length} ta mavzu</Text>
+        <Text style={styles.subtitle}>{t('res_topic_count').replace('{n}', String(topics.length))}</Text>
         <View style={styles.topicList}>
-          {topics.map((t, i) => (
+          {topics.map((topic, i) => (
             <Pressable
-              key={t.id}
+              key={topic.id}
               style={[styles.row, i === topics.length - 1 && styles.rowLast]}
-              onPress={() => router.push(`/resources/library/words/${t.id}` as never)}>
+              onPress={() => router.push(`/resources/library/words/${topic.id}` as never)}>
               <View style={styles.iconWrap}>
-                <Text style={styles.iconEmoji}>{t.icon}</Text>
+                <Text style={styles.iconEmoji}>{topic.icon}</Text>
               </View>
               <View style={styles.rowInfo}>
                 <Text style={styles.rowTitle} numberOfLines={1}>
-                  {t.title}
+                  {topic.title}
                 </Text>
-                <Text style={styles.rowSubtitle}>{t.words.length} ta so'z</Text>
+                <Text style={styles.rowSubtitle}>{t('res_words_word_count').replace('{n}', String(topic.words.length))}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.textLight} />
             </Pressable>

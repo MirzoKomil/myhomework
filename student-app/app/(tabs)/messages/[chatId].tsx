@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatThreadView } from '@/components/chat/ChatThreadView';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { ChatMessage, celebrityPersonas, chatThreads } from '@/data/mock';
 import { addMessage, getMessages, refreshRealMessages, subscribe } from '@/services/chatStore';
 import { getStudentProfile } from '@/data/studentProfiles';
@@ -36,6 +37,7 @@ function formatClock(seconds: number): string {
 const MINUTE_PRESETS = [5, 10, 15, 30];
 
 function PersonaChatScreen({ personaId }: { personaId: string }) {
+  const { t } = useLang();
   const persona = celebrityPersonas.find((p) => p.id === personaId)!;
   const [messages, setMessages] = useState<ChatMessage[]>(() => getPersonaMessages(personaId));
   const coins = useCoins();
@@ -63,7 +65,13 @@ function PersonaChatScreen({ personaId }: { personaId: string }) {
     const ok = await purchaseMinutes(personaId, minutes);
     setBuying(false);
     if (!ok) {
-      Alert.alert('Coin yetarli emas', `${minutes} daqiqa uchun ${minutes * COIN_PER_MINUTE} coin kerak, sizda ${coins} coin bor.`);
+      Alert.alert(
+        t('msg_not_enough_coins_title'),
+        t('msg_not_enough_coins_body')
+          .replace('{minutes}', String(minutes))
+          .replace('{cost}', String(minutes * COIN_PER_MINUTE))
+          .replace('{coins}', String(coins))
+      );
     }
   };
 
@@ -74,7 +82,7 @@ function PersonaChatScreen({ personaId }: { personaId: string }) {
         <View style={[styles.timerBar, remainingSeconds < 30 && styles.timerBarLow]}>
           <Ionicons name="timer-outline" size={15} color={remainingSeconds < 30 ? theme.colors.danger : theme.colors.blue} />
           <Text style={[styles.timerBarText, remainingSeconds < 30 && styles.timerBarTextLow]}>
-            {formatClock(remainingSeconds)} qoldi — har daqiqa 1 coin
+            {formatClock(remainingSeconds)} {t('msg_timer_remaining_suffix')}
           </Text>
         </View>
       )}
@@ -106,18 +114,20 @@ function PersonaChatScreen({ personaId }: { personaId: string }) {
       ) : (
         <View style={styles.paywall}>
           <Image source={persona.avatarImage} style={styles.paywallAvatar} />
-          <Text style={styles.paywallTitle}>{persona.name} bilan suhbatlashish uchun vaqt sotib oling</Text>
-          <Text style={styles.paywallSub}>Har daqiqa uchun {COIN_PER_MINUTE} coin sarflanadi. Sizda hozir {coins} coin bor.</Text>
+          <Text style={styles.paywallTitle}>{persona.name} {t('msg_paywall_title_suffix')}</Text>
+          <Text style={styles.paywallSub}>
+            {t('msg_paywall_sub').replace('{rate}', String(COIN_PER_MINUTE)).replace('{coins}', String(coins))}
+          </Text>
           <View style={styles.presetRow}>
             {MINUTE_PRESETS.map((m) => (
               <Pressable key={m} style={styles.presetBtn} disabled={buying} onPress={() => buy(m)}>
-                <Text style={styles.presetMinutes}>{m} daqiqa</Text>
+                <Text style={styles.presetMinutes}>{m} {t('msg_minutes_suffix')}</Text>
                 <Text style={styles.presetCost}>{m * COIN_PER_MINUTE} coin</Text>
               </Pressable>
             ))}
           </View>
           <Text style={styles.paywallWarning}>
-            ⚠️ Diqqat: vaqt sotib olgach, chatdan chiqib ketsangiz ham vaqt hisoblanishda davom etadi.
+            {t('msg_paywall_warning')}
           </Text>
         </View>
       )}
@@ -126,6 +136,7 @@ function PersonaChatScreen({ personaId }: { personaId: string }) {
 }
 
 export default function ChatScreen() {
+  const { t } = useLang();
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
   const isStudentChat = typeof chatId === 'string' && chatId.startsWith('student-');
   const isPersonaChat = typeof chatId === 'string' && chatId.startsWith('persona-');
@@ -179,7 +190,7 @@ export default function ChatScreen() {
   if (!thread || !chatId) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Chat" showBack />
+        <ScreenHeader title={t('msg_chat_title')} showBack />
       </SafeAreaView>
     );
   }

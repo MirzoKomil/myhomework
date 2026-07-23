@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getLevelForLightning } from '@/data/levels';
 import { getRankedLeaderboard, profileStats } from '@/data/mock';
 import { getStudentProfile } from '@/data/studentProfiles';
@@ -34,6 +35,7 @@ export function StudentProfileModal({
   onClose: () => void;
   studentName: string | null;
 }) {
+  const { t } = useLang();
   const [showBlocked, setShowBlocked] = useState(false);
 
   if (!studentName) return null;
@@ -71,7 +73,7 @@ export function StudentProfileModal({
             </View>
             <View style={styles.headerInfo}>
               <Text style={styles.name}>{profile.name}</Text>
-              <Text style={styles.subLabel}>{profile.courseStartDate} dan buyon o'quvchi</Text>
+              <Text style={styles.subLabel}>{t('spm_student_since').replace('{date}', profile.courseStartDate)}</Text>
             </View>
             {leaderboardEntry && (
               <View style={styles.levelBadge}>
@@ -84,7 +86,7 @@ export function StudentProfileModal({
             {leaderboardRank !== undefined && (
               <View style={styles.rankBadge}>
                 <Text style={styles.rankBadgeEmoji}>🏆</Text>
-                <Text style={styles.rankBadgeText}>{leaderboardRank}-o'rin</Text>
+                <Text style={styles.rankBadgeText}>{leaderboardRank}{t('profile_place_suffix')}</Text>
               </View>
             )}
           </View>
@@ -93,41 +95,40 @@ export function StudentProfileModal({
             <View style={styles.blockedBanner}>
               <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.danger} />
               <Text style={styles.blockedText}>
-                Qarama-qarshi jins vakillari bilan muloqot qilish xavfsizlik jihatidan cheklangan. Tushunganingiz
-                uchun rahmat.
+                {t('spm_blocked_text')}
               </Text>
             </View>
           )}
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-            <Text style={styles.sectionTitle}>Kurs va ustozlar</Text>
+            <Text style={styles.sectionTitle}>{t('spm_section_course')}</Text>
             <View style={styles.card}>
-              <Row icon="calendar-outline" label="Kursni boshlagan" value={profile.courseStartDate} />
-              <Row icon="person-outline" label="Asosiy ustoz" value={profile.mainTeacher} />
-              <Row icon="people-outline" label="Yordamchi ustoz" value={profile.assistantTeacher} />
-              <Row icon="videocam-outline" label="Videodars ustozi" value={profile.videoTeacher} />
+              <Row icon="calendar-outline" label={t('spm_row_course_start')} value={profile.courseStartDate} />
+              <Row icon="person-outline" label={t('spm_row_main_teacher')} value={profile.mainTeacher} />
+              <Row icon="people-outline" label={t('spm_row_assistant_teacher')} value={profile.assistantTeacher} />
+              <Row icon="videocam-outline" label={t('spm_row_video_teacher')} value={profile.videoTeacher} />
             </View>
 
-            <Text style={styles.sectionTitle}>Natijalar va baholar</Text>
+            <Text style={styles.sectionTitle}>{t('spm_section_results')}</Text>
             <View style={styles.card}>
-              <Row icon="trending-up-outline" label="Umumiy progress" value={`${profile.overallProgress}%`} />
-              <Row icon="checkmark-circle-outline" label="Davomat" value={`${profile.attendanceRate}%`} />
-              <Row icon="star-outline" label="O'rtacha baho" value={`${profile.avgGrade.toFixed(1)}/5`} />
-              <Row icon="book-outline" label="Tugallangan darslar" value={`${profile.lessonsCompleted} ta`} />
+              <Row icon="trending-up-outline" label={t('hw_overall_progress')} value={`${profile.overallProgress}%`} />
+              <Row icon="checkmark-circle-outline" label={t('profile_attendance')} value={`${profile.attendanceRate}%`} />
+              <Row icon="star-outline" label={t('spm_row_avg_grade')} value={`${profile.avgGrade.toFixed(1)}/5`} />
+              <Row icon="book-outline" label={t('spm_row_completed_lessons')} value={`${profile.lessonsCompleted} ${t('spm_count_suffix')}`} />
             </View>
 
-            <Text style={styles.sectionTitle}>Faollik</Text>
+            <Text style={styles.sectionTitle}>{t('spm_section_activity')}</Text>
             <View style={styles.card}>
-              <Row icon="newspaper-outline" label="Hamjamiyat postlari" value={`${profile.communityPostsCount} ta`} />
-              <Row icon="chatbubble-outline" label="Yozgan izohlari" value={`${profile.commentsCount} ta`} />
-              <Row icon="heart-outline" label="To'plagan like'lari" value={`${profile.totalLikes} ta`} />
-              <Row icon="bag-handle-outline" label="Shopdan xaridlar" value={`${profile.shopPurchasesCount} ta`} />
+              <Row icon="newspaper-outline" label={t('spm_row_community_posts')} value={`${profile.communityPostsCount} ${t('spm_count_suffix')}`} />
+              <Row icon="chatbubble-outline" label={t('spm_row_comments_written')} value={`${profile.commentsCount} ${t('spm_count_suffix')}`} />
+              <Row icon="heart-outline" label={t('spm_row_total_likes')} value={`${profile.totalLikes} ${t('spm_count_suffix')}`} />
+              <Row icon="bag-handle-outline" label={t('spm_row_shop_purchases')} value={`${profile.shopPurchasesCount} ${t('spm_count_suffix')}`} />
             </View>
           </ScrollView>
 
           <Pressable style={styles.messageBtn} onPress={handleMessage}>
             <Ionicons name="chatbubbles" size={18} color="#fff" />
-            <Text style={styles.messageBtnText}>Muloqot qilish</Text>
+            <Text style={styles.messageBtnText}>{t('spm_message_btn')}</Text>
           </Pressable>
         </View>
       </View>

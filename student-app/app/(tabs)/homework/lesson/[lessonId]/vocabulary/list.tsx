@@ -8,11 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
 export default function VocabularyListScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
 
@@ -22,13 +24,13 @@ export default function VocabularyListScreen() {
 
   useEffect(() => {
     markDone(String(lessonId), 'vocabList');
-    saveLastPosition({ lessonId: String(lessonId), section: 'vocabulary/list', label: "So'zlar ro'yxati" });
+    saveLastPosition({ lessonId: String(lessonId), section: 'vocabulary/list', label: t('res_words_title') });
   }, [lessonId]);
 
   if (!content) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="So'zlar ro'yxati" showBack />
+        <ScreenHeader title={t('res_words_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -40,7 +42,7 @@ export default function VocabularyListScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="So'zlar ro'yxati" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{content.vocabulary.length} ta yangi so'z</Text>
+        <Text style={styles.subtitle}>{content.vocabulary.length} {t('hw_cat_vocab_sub_suffix')}</Text>
         {content.vocabulary.map((word) => (
           <Pressable key={word.id} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
             <Card style={styles.card}>

@@ -4,19 +4,21 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function VideoSectionScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const progress = useLessonProgress(String(lessonId));
 
   const items = [
     {
       id: 'watch',
-      title: 'Videodarsni ko\'rish',
-      subtitle: 'Video + konspekt + izohlar',
+      title: t('hw_video_watch_title'),
+      subtitle: t('hw_video_watch_sub'),
       icon: 'play-circle' as const,
       color: theme.colors.blue,
       bg: theme.colors.blueLight,
@@ -25,8 +27,8 @@ export default function VideoSectionScreen() {
     },
     {
       id: 'exercises',
-      title: 'Mashqlarni bajarish',
-      subtitle: "Grammar vazifalar",
+      title: t('hw_exercises_title'),
+      subtitle: t('hw_video_exercises_sub'),
       icon: 'create-outline' as const,
       color: theme.colors.purple,
       bg: theme.colors.purpleLight,
@@ -37,7 +39,7 @@ export default function VideoSectionScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Videodars" showBack />
+      <ScreenHeader title={t('hw_cat_video_title')} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

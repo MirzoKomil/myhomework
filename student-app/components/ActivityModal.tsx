@@ -3,9 +3,11 @@ import { router } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { useCommunityActivity } from '@/services/communityStore';
 
 export function ActivityModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useLang();
   const activity = useCommunityActivity();
 
   const goToPost = (postId: string) => {
@@ -24,12 +26,12 @@ export function ActivityModal({ visible, onClose }: { visible: boolean; onClose:
         <Pressable style={styles.backdropTap} onPress={onClose} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          <Text style={styles.title}>❤️ Faolligim</Text>
+          <Text style={styles.title}>{t('act_title')}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-            <Text style={styles.sectionTitle}>Postlaringizga kelgan like'lar</Text>
+            <Text style={styles.sectionTitle}>{t('act_likes_title')}</Text>
             {activity.likes.length === 0 ? (
-              <Text style={styles.empty}>Hali postingiz yo'q.</Text>
+              <Text style={styles.empty}>{t('act_no_posts')}</Text>
             ) : (
               activity.likes.map((l) => (
                 <Pressable key={l.postId} style={styles.likeRow} onPress={() => goToPost(l.postId)}>
@@ -42,9 +44,9 @@ export function ActivityModal({ visible, onClose }: { visible: boolean; onClose:
               ))
             )}
 
-            <Text style={styles.sectionTitle}>Postlaringizga yozilgan izohlar</Text>
+            <Text style={styles.sectionTitle}>{t('act_comments_on_posts_title')}</Text>
             {activity.comments.length === 0 ? (
-              <Text style={styles.empty}>Hali izoh yo'q.</Text>
+              <Text style={styles.empty}>{t('act_no_comments')}</Text>
             ) : (
               activity.comments.map((c, i) => (
                 <Pressable key={i} style={styles.commentRow} onPress={() => goToPost(c.postId)}>
@@ -55,15 +57,15 @@ export function ActivityModal({ visible, onClose }: { visible: boolean; onClose:
                     {c.text}
                   </Text>
                   <Text style={styles.commentMeta} numberOfLines={1}>
-                    Postingizga: "{c.postText}"
+                    {t('act_comment_meta_prefix')} "{c.postText}"
                   </Text>
                 </Pressable>
               ))
             )}
 
-            <Text style={styles.sectionTitle}>Izohlaringizga javoblar</Text>
+            <Text style={styles.sectionTitle}>{t('act_replies_title')}</Text>
             {activity.replies.length === 0 ? (
-              <Text style={styles.empty}>Hali javob yo'q.</Text>
+              <Text style={styles.empty}>{t('act_no_replies')}</Text>
             ) : (
               activity.replies.map((r, i) => (
                 <Pressable key={i} style={styles.commentRow} onPress={() => goToPost(r.postId)}>
@@ -74,7 +76,7 @@ export function ActivityModal({ visible, onClose }: { visible: boolean; onClose:
                     {r.text}
                   </Text>
                   <Text style={styles.commentMeta} numberOfLines={1}>
-                    Izohingizga: "{r.myCommentText}"
+                    {t('act_reply_meta_prefix')} "{r.myCommentText}"
                   </Text>
                 </Pressable>
               ))
@@ -83,10 +85,10 @@ export function ActivityModal({ visible, onClose }: { visible: boolean; onClose:
 
           <Pressable style={styles.communityBtn} onPress={goToCommunity}>
             <Ionicons name="people-outline" size={18} color={theme.colors.purple} />
-            <Text style={styles.communityBtnText}>Hamjamiyatga o'tish</Text>
+            <Text style={styles.communityBtnText}>{t('act_go_community')}</Text>
           </Pressable>
           <Pressable style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>Yopish</Text>
+            <Text style={styles.closeBtnText}>{t('act_close')}</Text>
           </Pressable>
         </View>
       </View>

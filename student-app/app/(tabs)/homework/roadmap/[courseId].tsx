@@ -22,6 +22,8 @@ import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins, mergeLessonContent } from '@/data/lessonContent';
 import { AdminLessonContent, fetchMobileContent, invalidateCache, MobileContent } from '@/services/contentApi';
@@ -49,19 +51,20 @@ if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getEle
 }
 
 // ─── Type config ────────────────────────────────────────────────────────────
-const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string }> = {
-  grammar: { icon: 'book-outline', color: '#7B61FF', bg: '#EDE9FE', label: 'Videodars' },
-  speaking: { icon: 'mic-outline', color: '#2563EB', bg: '#DBEAFE', label: 'Speaking' },
-  bonus: { icon: 'gift-outline', color: '#D97706', bg: '#FEF3C7', label: 'Bonus' },
+const TYPE_CONFIG: Record<LessonType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; labelKey: TranslationKey }> = {
+  grammar: { icon: 'book-outline', color: '#7B61FF', bg: '#EDE9FE', labelKey: 'hw_cat_video_title' },
+  speaking: { icon: 'mic-outline', color: '#2563EB', bg: '#DBEAFE', labelKey: 'roadmap_type_speaking' },
+  bonus: { icon: 'gift-outline', color: '#D97706', bg: '#FEF3C7', labelKey: 'roadmap_type_bonus' },
 };
 
 // ─── Type badge ──────────────────────────────────────────────────────────────
 function TypeBadge({ type }: { type: LessonType }) {
+  const { t } = useLang();
   const cfg = TYPE_CONFIG[type];
   return (
     <View style={[ss.typeBadge, { backgroundColor: cfg.bg }]}>
       <Ionicons name={cfg.icon} size={11} color={cfg.color} />
-      <Text style={[ss.typeBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
+      <Text style={[ss.typeBadgeText, { color: cfg.color }]}>{t(cfg.labelKey)}</Text>
     </View>
   );
 }
@@ -78,6 +81,7 @@ function LessonCard({
   index: number;
   adminContent?: AdminLessonContent;
 }) {
+  const { t } = useLang();
   const numText = String(index + 1);
   const earnedCoins = useLessonCoins(lesson.id);
   const content = mergeLessonContent(getLessonContent(lesson.id, index), adminContent);
@@ -136,14 +140,11 @@ function LessonCard({
   // bosilmasligicha qoladi, ss.cardLocked'dagi disabled orqali).
   const handleLockedPress = () => {
     if (lesson.lockReason === 'attendance') {
-      Alert.alert(
-        'Dars hali ochilmagan',
-        "Siz ushbu darsga yetib keldingiz! Ustoz bilan dars o'tilganidan so'ng dars ma'lumotlari va uyga vazifalarini olishingiz mumkin bo'ladi."
-      );
+      Alert.alert(t('roadmap_locked_title'), t('roadmap_locked_attendance_body'));
     } else if (lesson.lockReason === 'percent') {
       Alert.alert(
-        'Dars hali ochilmagan',
-        `Bu darsni ochish uchun oldingi darsni kamida ${lesson.lockRequiredPercent ?? 80}% bajarishingiz kerak.`
+        t('roadmap_locked_title'),
+        t('roadmap_locked_percent_body').replace('{n}', String(lesson.lockRequiredPercent ?? 80))
       );
     }
   };
@@ -249,7 +250,7 @@ function LessonCard({
         </View>
         <View style={ss.activeBadge}>
           <Ionicons name="flash" size={11} color="#fff" />
-          <Text style={ss.activeBadgeText}>Joriy dars</Text>
+          <Text style={ss.activeBadgeText}>{t('roadmap_active_badge')}</Text>
         </View>
       </View>
     );
@@ -288,14 +289,36 @@ const MILESTONE_GIFTS: NonNullable<LessonNode['milestone']>[] = [
   { emoji: '🏆', title: 'Siz buni uddaladingiz!', fact: 'Tabriklaymiz, siz deyarli maqsadga yetdingiz! Ingliz tili — global aloqa tili (Lingua Franca). Siz ushbu darslarni yakunlab, yer yuzidagi istalgan nuqtada o\'zingizga do\'st, hamkor va yangi imkoniyatlar topa oladigan shaxsga aylandingiz!' },
 ];
 
+// 40-vazifa: MILESTONE_GIFTS bilan bir xil tartib/emoji, faqat title+fact rus
+// tilida — MilestoneBadge joriy tilga qarab shu ikkitadan birini tanlaydi.
+const MILESTONE_GIFTS_RU: NonNullable<LessonNode['milestone']>[] = [
+  { emoji: '🚀', title: 'Секрет авиации', fact: 'Все пилоты международных рейсов, независимо от страны, обязаны общаться во время полёта только на английском языке. Это правило называется «Aviation English». Английский — язык, покоривший небо!' },
+  { emoji: '🔥', title: 'Вы не одиноки!', fact: 'В мире более 1,5 миллиарда человек говорят по-английски. Но самое интересное — родным он является лишь примерно для 400 миллионов из них. Остальной миллиард с лишним выучил его так же, как сейчас вы!' },
+  { emoji: '💡', title: 'Постоянно растущий язык', fact: 'Английский — один из самых быстрорастущих языков в мире. Каждый год в словарь добавляется в среднем 4000 новых слов. Это значит, что каждые 2 часа появляется новое слово!' },
+  { emoji: '🌐', title: 'Ключ к интернету', fact: 'Более 50% всей информации и веб-сайтов в интернете написаны на английском языке. Знание английского открывает вам двери ко всей мировой сокровищнице знаний!' },
+  { emoji: '⚡️', title: 'Самое короткое предложение', fact: 'Самое короткое, грамматически верное и законченное предложение в английском языке — это «Go.» (Иди / Езжай). Всего два слова, но какой огромный смысл!' },
+  { emoji: '🧠', title: 'Тренажёр для мозга', fact: 'По данным научных исследований, изучение английского улучшает работу мозга, укрепляет память и помогает предотвратить возрастные заболевания мозга. Вы сейчас не просто учите язык, а омолаживаете свой мозг!' },
+  { emoji: '🔬', title: 'Язык науки', fact: 'Более 90% научных статей, исследований и открытий, публикуемых в мире, выходят на английском языке. Ключ к тому, чтобы первым узнавать о новейших технологиях и знаниях, — в ваших руках!' },
+  { emoji: '✍️', title: 'Магия Шекспира', fact: 'Великий писатель Уильям Шекспир ввёл в английский язык более 1700 новых слов. Слова lonely (одинокий), fashionable (модный) и manager (менеджер), которые мы используем сегодня, придумал именно он.' },
+  { emoji: '🔤', title: 'Самая популярная буква', fact: 'Самая часто используемая буква в английском языке — «E» (составляет около 11% всех текстов). А реже всего используется буква «Q». В следующий раз, читая текст, обратите на это внимание!' },
+  { emoji: '🐕', title: 'Волшебное предложение (панграмма)', fact: 'В предложении «The quick brown fox jumps over the lazy dog» участвуют все 26 букв английского алфавита. Такие предложения называются «панграммами» и используются для проверки клавиатур.' },
+  { emoji: '💼', title: 'Секрет высокого дохода', fact: 'В международных компаниях сотрудники, владеющие английским языком, в среднем зарабатывают на 30–50% больше своих коллег, не знающих его. Сейчас вы делаете самую выгодную инвестицию в своё будущее!' },
+  { emoji: '👻', title: 'Слово-призрак', fact: 'Знали ли вы, что в словарях иногда появляются слова по ошибке? Например, слово «Dord» из-за опечатки при печати просуществовало в английском словаре 8 лет, не имея никакого значения. Такие слова называют «словами-призраками» (ghost word).' },
+  { emoji: '🍊', title: 'Слова без рифмы', fact: 'Писать стихи на английском легко, но есть слова, к которым невозможно подобрать рифму. Например: Orange (апельсин), Silver (серебро), Purple (фиолетовый) — для этих слов в английском языке просто не существует рифмующегося слова!' },
+  { emoji: '🏆', title: 'Вы справились с этим!', fact: 'Поздравляем, вы почти достигли цели! Английский — это язык глобального общения (Lingua Franca). Завершив эти уроки, вы стали человеком, который может найти друзей, партнёров и новые возможности в любой точке мира!' },
+];
+
 // 147-ish: darsni ochganda ko'rsatiladigan tabrik sarlavhalari — xilma-xillik
 // uchun juft/toq marralarda almashtirib turiladi.
-const MILESTONE_CELEBRATION_TITLES = ['Siz buni uddaladingiz! 🎉', 'Yangi marra zabt etildi! 🚀'];
+const MILESTONE_CELEBRATION_TITLE_KEYS: TranslationKey[] = ['roadmap_celebration_title_1', 'roadmap_celebration_title_2'];
 
 // ─── Milestone badge ──────────────────────────────────────────────────────────
 function MilestoneBadge({ badge, locked }: { badge: NonNullable<LessonNode['milestone']>; locked: boolean }) {
+  const { t, lang } = useLang();
   const [showModal, setShowModal] = useState(false);
   const wobble = useRef(new Animated.Value(0)).current;
+  const giftIndex = MILESTONE_GIFTS.indexOf(badge);
+  const localizedGift = lang === 'ru' && giftIndex >= 0 ? MILESTONE_GIFTS_RU[giftIndex] : badge;
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -327,28 +350,28 @@ function MilestoneBadge({ badge, locked }: { badge: NonNullable<LessonNode['mile
             {locked ? (
               <>
                 <Text style={ss.dialogEmoji}>🤫</Text>
-                <Text style={ss.dialogTitle}>Sizga qiziq bir gapim bor!</Text>
+                <Text style={ss.dialogTitle}>{t('roadmap_milestone_locked_title')}</Text>
                 <Text style={ss.dialogSubtitle}>
-                  Bu darsga yetib kelganingizda sizga qiziq bir gapim bor, shunday ekan shoshiling!
+                  {t('roadmap_milestone_locked_body')}
                 </Text>
               </>
             ) : (
               <>
                 <Text style={ss.dialogEmoji}>{badge.emoji}</Text>
                 <Text style={ss.dialogTitle}>
-                  {MILESTONE_CELEBRATION_TITLES[MILESTONE_GIFTS.indexOf(badge) % MILESTONE_CELEBRATION_TITLES.length]}
+                  {t(MILESTONE_CELEBRATION_TITLE_KEYS[giftIndex % MILESTONE_CELEBRATION_TITLE_KEYS.length])}
                 </Text>
                 <Text style={ss.dialogSubtitle}>
-                  Har bir qadam sizni maqsadingizga yaqinlashtiryapti — davom eting, siz ajoyib ish qilyapsiz!
+                  {t('roadmap_milestone_encourage')}
                 </Text>
                 <View style={ss.dialogFactBox}>
-                  <Text style={ss.dialogFactLabel}>🎁 {badge.title}</Text>
-                  <Text style={ss.dialogFactText}>{badge.fact}</Text>
+                  <Text style={ss.dialogFactLabel}>🎁 {localizedGift.title}</Text>
+                  <Text style={ss.dialogFactText}>{localizedGift.fact}</Text>
                 </View>
               </>
             )}
             <Pressable style={ss.dialogConfirmBtn} onPress={() => setShowModal(false)}>
-              <Text style={ss.dialogConfirmText}>Tushunarli</Text>
+              <Text style={ss.dialogConfirmText}>{t('common_tushunarli')}</Text>
             </Pressable>
           </View>
         </View>
@@ -431,6 +454,7 @@ function LessonRow({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function RoadmapScreen() {
+  const { t } = useLang();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const totalCoins = useCoins();
   const totalLightning = useLightning();
@@ -501,8 +525,8 @@ export default function RoadmapScreen() {
 
       mapped.push({
         id,
-        title: l?.name ?? `${lessonNum}-dars`,
-        subtitle: l?.isDemo ? 'Demo dars' : l?.isPaid ? 'Pullik' : '',
+        title: l?.name ?? `${lessonNum}-${t('roadmap_lesson_num_suffix')}`,
+        subtitle: l?.isDemo ? t('roadmap_demo_lesson') : l?.isPaid ? t('roadmap_paid_lesson') : '',
         type: (isVideoDay ? 'grammar' : 'speaking') as LessonType,
         progress: 0,
         locked,
@@ -589,7 +613,7 @@ export default function RoadmapScreen() {
     );
   }
 
-  const courseTitle = "90 kunda gapiramiz";
+  const courseTitle = t('roadmap_course_title');
 
   return (
     <SafeAreaView style={ss.safe} edges={['top']}>
@@ -622,15 +646,12 @@ export default function RoadmapScreen() {
           <Pressable style={ss.dialogBackdropTap} onPress={() => setShowCourseInfo(false)} />
           <View style={ss.dialogCard}>
             <Text style={ss.dialogEmoji}>🚀</Text>
-            <Text style={ss.dialogTitle}>90 kunda ingliz tilida gapiring</Text>
+            <Text style={ss.dialogTitle}>{t('roadmap_course_dialog_title')}</Text>
             <Text style={ss.dialogSubtitle}>
-              📅 Har kuni videodars va speaking mashg'ulotlari almashinib boradi{'\n'}
-              🗣️ 72 ta asosiy dars + 🎁 18 ta yakshanba bonus darsi{'\n'}
-              🎯 Maqsad — 90 kun ichida ingliz tilida erkin va ishonch bilan gaplasha olish{'\n\n'}
-              💪 Har bir kichik qadam katta natijaga olib boradi — bugun boshlang, ertaga o'zingizga rahmat aytasiz!
+              {t('roadmap_course_dialog_body')}
             </Text>
             <Pressable style={ss.dialogConfirmBtn} onPress={() => setShowCourseInfo(false)}>
-              <Text style={ss.dialogConfirmText}>Zo'r, boshladik!</Text>
+              <Text style={ss.dialogConfirmText}>{t('roadmap_course_dialog_btn')}</Text>
             </Pressable>
           </View>
         </View>
@@ -639,15 +660,15 @@ export default function RoadmapScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={ss.scroll}>
         {/* ── Section header ── */}
         <View style={ss.sectionHeader}>
-          <Text style={ss.sectionTitle}>Darslar yo'li</Text>
+          <Text style={ss.sectionTitle}>{t('roadmap_section_title')}</Text>
           <View style={ss.sectionBtnRow}>
             <Pressable style={ss.bonusBtn} onPress={() => router.push('/homework/bonus' as never)}>
               <Ionicons name="gift-outline" size={16} color="#D97706" />
-              <Text style={ss.bonusBtnText}>Bonus darslar</Text>
+              <Text style={ss.bonusBtnText}>{t('bonus_title')}</Text>
             </Pressable>
             <Pressable style={ss.examsBtn} onPress={() => router.push('/homework/exams' as never)}>
               <Ionicons name="school-outline" size={16} color={theme.colors.blue} />
-              <Text style={ss.examsBtnText}>Imtihonlar</Text>
+              <Text style={ss.examsBtnText}>{t('exams_title')}</Text>
             </Pressable>
           </View>
         </View>
@@ -715,7 +736,7 @@ export default function RoadmapScreen() {
               <View style={ss.finalGlowInner}>
                 <Text style={ss.finalMilestoneFlag}>🏁</Text>
                 <Text style={ss.finalMilestoneNum}>{total}</Text>
-                <Text style={ss.finalMilestoneSub}>Dars {total}</Text>
+                <Text style={ss.finalMilestoneSub}>{t('roadmap_final_dars_prefix')} {total}</Text>
               </View>
             </View>
           </View>

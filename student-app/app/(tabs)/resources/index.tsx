@@ -5,9 +5,11 @@ import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 
 export default function ResourcesScreen() {
   const [showInfo, setShowInfo] = useState(false);
+  const { t } = useLang();
 
   const libraryShimmer = useRef(new Animated.Value(0)).current;
   const gamesShimmer = useRef(new Animated.Value(0)).current;
@@ -38,7 +40,7 @@ export default function ResourcesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>O'z ustingda ishla 🔥</Text>
+        <Text style={styles.headerTitle}>{t('res_hub_title')}</Text>
         <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
           <Text style={styles.bulbEmoji}>💡</Text>
         </Pressable>
@@ -48,8 +50,8 @@ export default function ResourcesScreen() {
         <Pressable style={styles.cardWrap} onPress={() => router.push('/resources/library' as never)}>
           <LinearGradient colors={['#6FA8FF', '#4F8CFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
             <Text style={styles.emoji}>📚</Text>
-            <Text style={styles.title}>Kutubxona</Text>
-            <Text style={styles.subtitle}>Grammatika, so'zlar, talaffuz va boshqa o'quv materiallari</Text>
+            <Text style={styles.title}>{t('res_hub_library_title')}</Text>
+            <Text style={styles.subtitle}>{t('res_hub_library_subtitle')}</Text>
             <View style={styles.shimmerClip} pointerEvents="none">
               <Animated.View style={[styles.shimmerSweep, { transform: [{ translateX: libraryTranslate }, { rotate: '20deg' }] }]}>
                 <LinearGradient
@@ -66,8 +68,8 @@ export default function ResourcesScreen() {
         <Pressable style={styles.cardWrap} onPress={() => router.push('/resources/games' as never)}>
           <LinearGradient colors={['#F0807D', '#D65656']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
             <Text style={styles.emoji}>🎮</Text>
-            <Text style={styles.title}>O'yinlar</Text>
-            <Text style={styles.subtitle}>O'ynab, til ko'nikmalaringizni mashq qiling</Text>
+            <Text style={styles.title}>{t('res_hub_games_title')}</Text>
+            <Text style={styles.subtitle}>{t('res_hub_games_subtitle')}</Text>
             <View style={styles.shimmerClip} pointerEvents="none">
               <Animated.View style={[styles.shimmerSweep, { transform: [{ translateX: gamesTranslate }, { rotate: '20deg' }] }]}>
                 <LinearGradient
@@ -84,8 +86,8 @@ export default function ResourcesScreen() {
         <Pressable style={styles.cardWrap} onPress={() => router.push('/community' as never)}>
           <LinearGradient colors={['#9B7BFF', '#6B4FE0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
             <Text style={styles.emoji}>👥</Text>
-            <Text style={styles.title}>Hamjamiyat</Text>
-            <Text style={styles.subtitle}>O'quvchilar bilan fikr almashing, post yozing, izoh qoldiring</Text>
+            <Text style={styles.title}>{t('res_hub_community_title')}</Text>
+            <Text style={styles.subtitle}>{t('res_hub_community_subtitle')}</Text>
             <View style={styles.shimmerClip} pointerEvents="none">
               <Animated.View style={[styles.shimmerSweep, { transform: [{ translateX: communityTranslate }, { rotate: '20deg' }] }]}>
                 <LinearGradient
@@ -105,18 +107,15 @@ export default function ResourcesScreen() {
           <Pressable style={styles.dialogBackdropTap} onPress={() => setShowInfo(false)} />
           <View style={styles.dialogCard}>
             <Text style={styles.dialogEmoji}>💡</Text>
-            <Text style={styles.dialogTitle}>Resurslar bo'limi nima uchun kerak?</Text>
+            <Text style={styles.dialogTitle}>{t('res_hub_info_title')}</Text>
             <Text style={styles.dialogSubtitle}>
-              Bu yerda ingliz tilini mustaqil rivojlantirish uchun uchta bo'lim mavjud: {'\n\n'}
-              📚 <Text style={styles.dialogBold}>Kutubxona</Text> — grammatik qo'llanma, so'zlar ro'yxati,
-              talaffuz, speaking topiklar, podkastlar va kitoblar.{'\n\n'}
-              🎮 <Text style={styles.dialogBold}>O'yinlar</Text> — so'z boyligingiz va tilni his qilishingizni
-              mashq qildiradigan interaktiv o'yinlar to'plami.{'\n\n'}
-              👥 <Text style={styles.dialogBold}>Hamjamiyat</Text> — boshqa o'quvchilar bilan tajriba
-              almashadigan forum.
+              {t('res_hub_info_intro')} {'\n\n'}
+              📚 <Text style={styles.dialogBold}>{t('res_hub_library_title')}</Text> — {t('res_hub_info_library_desc')}{'\n\n'}
+              🎮 <Text style={styles.dialogBold}>{t('res_hub_games_title')}</Text> — {t('res_hub_info_games_desc')}{'\n\n'}
+              👥 <Text style={styles.dialogBold}>{t('res_hub_community_title')}</Text> — {t('res_hub_info_community_desc')}
             </Text>
             <Pressable style={styles.dialogBtn} onPress={() => setShowInfo(false)}>
-              <Text style={styles.dialogBtnText}>Tushunarli</Text>
+              <Text style={styles.dialogBtnText}>{t('common_tushunarli')}</Text>
             </Pressable>
           </View>
         </View>

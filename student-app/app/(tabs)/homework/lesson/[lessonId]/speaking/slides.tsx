@@ -19,12 +19,14 @@ import { CommentsSheet } from '@/components/CommentsSheet';
 import { MaterialsList } from '@/components/ui/MaterialsList';
 import { theme } from '@/constants/theme';
 import { DESKTOP_CONTENT_MAX_WIDTH } from '@/constants/web';
+import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent, getLessonMaterials, LessonMaterials } from '@/services/contentApi';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
 export default function SlidesScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const isBonus = String(lessonId).startsWith('bonus-');
   // 151-ish: avval modul darajasida bir marta o'lchanardi (oyna kengligi
@@ -46,7 +48,7 @@ export default function SlidesScreen() {
 
   useEffect(() => {
     markDone(String(lessonId), 'slidesWatch');
-    saveLastPosition({ lessonId: String(lessonId), section: 'speaking/slides', label: "Slidelarni ko'rish" });
+    saveLastPosition({ lessonId: String(lessonId), section: 'speaking/slides', label: t('hw_speaking_slides_title') });
   }, [lessonId]);
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -80,7 +82,7 @@ export default function SlidesScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={28} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>Slaydlar</Text>
+        <Text style={styles.topTitle}>{t('slides_title')}</Text>
         <Text style={styles.progress}>
           {activeIndex + 1} / {slides.length}
         </Text>
@@ -119,12 +121,12 @@ export default function SlidesScreen() {
         </View>
         <Pressable style={styles.commentsPill} onPress={() => setShowComments(true)}>
           <Ionicons name="chatbubble-ellipses-outline" size={15} color={theme.colors.purple} />
-          <Text style={styles.commentsPillText}>Izohlar</Text>
+          <Text style={styles.commentsPillText}>{t('common_izohlar')}</Text>
         </Pressable>
       </View>
 
       <ScrollView style={styles.konspektSection} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionLabel}>Konspekt</Text>
+        <Text style={styles.sectionLabel}>{t('common_konspekt')}</Text>
         <Text style={styles.body}>{current.body}</Text>
         {materials && <MaterialsList files={materials.files} />}
       </ScrollView>
@@ -135,15 +137,15 @@ export default function SlidesScreen() {
           disabled={activeIndex === 0}
           onPress={() => goTo(activeIndex - 1)}>
           <Ionicons name="chevron-back" size={20} color={activeIndex === 0 ? theme.colors.textLight : theme.colors.purple} />
-          <Text style={[styles.navBtnText, activeIndex === 0 && styles.navBtnTextDisabled]}>Oldingi</Text>
+          <Text style={[styles.navBtnText, activeIndex === 0 && styles.navBtnTextDisabled]}>{t('common_oldingi')}</Text>
         </Pressable>
         {activeIndex === slides.length - 1 ? (
           <Pressable style={styles.doneBtn} onPress={() => router.back()}>
-            <Text style={styles.doneText}>Tugatish</Text>
+            <Text style={styles.doneText}>{t('common_tugatish')}</Text>
           </Pressable>
         ) : (
           <Pressable style={styles.nextNavBtn} onPress={() => goTo(activeIndex + 1)}>
-            <Text style={styles.nextNavBtnText}>Keyingi</Text>
+            <Text style={styles.nextNavBtnText}>{t('common_keyingi')}</Text>
             <Ionicons name="chevron-forward" size={20} color="#fff" />
           </Pressable>
         )}

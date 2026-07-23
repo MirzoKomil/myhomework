@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { useAvatarUri } from '@/services/avatarStore';
 import {
   CommunityComment,
@@ -40,6 +41,7 @@ function CommentRow({
   onReply?: (comment: CommunityComment) => void;
   onAuthorPress: (name: string) => void;
 }) {
+  const { t } = useLang();
   const myAvatarUri = useAvatarUri();
   return (
     <View style={[styles.commentRow, isReply && styles.replyRow]}>
@@ -70,7 +72,7 @@ function CommentRow({
           {!isReply && onReply && (
             <Pressable style={styles.commentActionBtn} onPress={() => onReply(comment)} hitSlop={6}>
               <Ionicons name="return-down-forward-outline" size={15} color={theme.colors.textMuted} />
-              <Text style={styles.commentActionText}>Javob qaytarish</Text>
+              <Text style={styles.commentActionText}>{t('comm_reply_action')}</Text>
             </Pressable>
           )}
         </View>
@@ -80,6 +82,7 @@ function CommentRow({
 }
 
 export default function PostDetailScreen() {
+  const { t } = useLang();
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const post = usePost(String(postId));
   const [draft, setDraft] = useState('');
@@ -95,7 +98,7 @@ export default function PostDetailScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Ionicons name="chevron-back" size={26} color={theme.colors.text} />
           </Pressable>
-          <Text style={styles.topTitle}>post</Text>
+          <Text style={styles.topTitle}>{t('comm_post_fallback_title')}</Text>
           <View style={{ width: 26 }} />
         </View>
       </SafeAreaView>
@@ -138,7 +141,7 @@ export default function PostDetailScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>post</Text>
+        <Text style={styles.topTitle}>{t('comm_post_fallback_title')}</Text>
         <Pressable onPress={handleShare} hitSlop={12}>
           <Ionicons name="share-outline" size={22} color={theme.colors.text} />
         </Pressable>
@@ -184,9 +187,9 @@ export default function PostDetailScreen() {
             </View>
           </View>
 
-          <Text style={styles.commentsTitle}>Bildirilgan fikrlar</Text>
+          <Text style={styles.commentsTitle}>{t('comm_comments_title')}</Text>
 
-          {topLevelComments.length === 0 && <Text style={styles.emptyText}>Hali izohlar yo'q. Birinchi bo'ling!</Text>}
+          {topLevelComments.length === 0 && <Text style={styles.emptyText}>{t('comm_no_comments')}</Text>}
 
           {topLevelComments.map((comment) => {
             const replies = repliesOf(comment.id);
@@ -197,7 +200,7 @@ export default function PostDetailScreen() {
                 {replies.length > 0 && (
                   <Pressable style={styles.toggleRepliesBtn} onPress={() => toggleReplies(comment.id)}>
                     <Text style={styles.toggleRepliesText}>
-                      {isExpanded ? "Javoblarni yashirish" : `Javoblarni ko'rish (${replies.length})`}
+                      {isExpanded ? t('comm_hide_replies') : `${t('comm_show_replies')} (${replies.length})`}
                     </Text>
                   </Pressable>
                 )}
@@ -214,7 +217,7 @@ export default function PostDetailScreen() {
           {replyTo && (
             <View style={styles.replyingRow}>
               <Text style={styles.replyingText}>
-                Javob: <Text style={styles.replyingName}>{replyTo.authorName}</Text>
+                {t('comm_reply_label')} <Text style={styles.replyingName}>{replyTo.authorName}</Text>
               </Text>
               <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
                 <Ionicons name="close" size={16} color={theme.colors.textMuted} />
@@ -224,7 +227,7 @@ export default function PostDetailScreen() {
           <View style={styles.commentInputRow}>
             <TextInput
               style={styles.commentInput}
-              placeholder="Fikringizni bildiring..."
+              placeholder={t('comm_comment_placeholder')}
               placeholderTextColor={theme.colors.textLight}
               value={draft}
               onChangeText={setDraft}

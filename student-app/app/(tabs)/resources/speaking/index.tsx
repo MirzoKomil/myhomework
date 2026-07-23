@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import {
   SpeakingLevel,
   SPEAKING_LEVEL_COLORS,
@@ -17,6 +18,7 @@ import {
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function SpeakingLevelScreen() {
+  const { t } = useLang();
   const [level, setLevel] = useState<SpeakingLevel>('easy');
   const [allTopics, setAllTopics] = useState<(SpeakingTopic & { coverUrl?: string })[]>(SPEAKING_TOPICS);
 
@@ -30,7 +32,7 @@ export default function SpeakingLevelScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Speaking mavzular" showBack />
+      <ScreenHeader title={t('res_speaking_title')} showBack />
       <View style={styles.tabs}>
         {SPEAKING_LEVELS_ORDER.map((lv) => {
           const active = lv === level;
@@ -47,7 +49,7 @@ export default function SpeakingLevelScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{topics.length} ta mavzu</Text>
+        <Text style={styles.subtitle}>{t('res_topic_count').replace('{n}', String(topics.length))}</Text>
         <View style={styles.grid}>
           {topics.map((t) => (
             <Pressable

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getLessonContent, HomeworkPart, LessonContent, mergeLessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 import { CreativeSubmissionRecord, fetchCreativeSubmission } from '@/services/creativeSubmissionApi';
@@ -24,6 +25,7 @@ const KIND_ICON: Record<HomeworkPart['kind'], keyof typeof Ionicons.glyphMap> = 
 };
 
 export default function HomeworkSectionScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function HomeworkSectionScreen() {
   if (loading || !content) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Uyga vazifa" showBack />
+        <ScreenHeader title={t('hw_cat_homework_title')} showBack />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -87,7 +89,7 @@ export default function HomeworkSectionScreen() {
       <ScreenHeader title="Uyga vazifa" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.overallCard}>
-          <Text style={styles.overallLabel}>Umumiy progress</Text>
+          <Text style={styles.overallLabel}>{t('hw_overall_progress')}</Text>
           <View style={styles.overallRow}>
             <View style={styles.progressBarBg}>
               <View style={[styles.progressBarFill, { width: `${overallPct}%` }]} />
@@ -99,7 +101,7 @@ export default function HomeworkSectionScreen() {
         {parts.map((part) => {
           const isDone = isPartDone(part);
           const isPendingCreative = part.kind === 'creative' && creativeSubmission?.status === 'pending';
-          const statusLabel = isDone ? 'Bajarildi' : isPendingCreative ? "Yuborilgan — tekshirilmoqda" : 'Bajarilmagan';
+          const statusLabel = isDone ? t('hw_status_done') : isPendingCreative ? t('hw_status_pending_review') : t('hw_status_not_done');
           return (
             <Pressable
               key={part.id}

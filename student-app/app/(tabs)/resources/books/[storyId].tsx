@@ -7,10 +7,12 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { BOOK_LEVEL_LABELS, BOOK_STORIES, BookStory } from '@/data/bookStories';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function BookStoryScreen() {
+  const { t } = useLang();
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
   const [allStories, setAllStories] = useState<(BookStory & { coverUrl?: string })[]>(BOOK_STORIES);
   const story = allStories.find((s) => s.id === storyId);
@@ -35,7 +37,7 @@ export default function BookStoryScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Hikoya topilmadi</Text>
+          <Text style={styles.emptyText}>{t('res_story_not_found')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -92,7 +94,7 @@ export default function BookStoryScreen() {
         ) : (
           <Text style={styles.heroEmoji}>{story.emoji}</Text>
         )}
-        <Text style={styles.heroLevel}>{BOOK_LEVEL_LABELS[story.level]} · Audio-hikoya</Text>
+        <Text style={styles.heroLevel}>{BOOK_LEVEL_LABELS[story.level]} · {t('res_story_audio_label')}</Text>
         <Text style={styles.heroTitle}>{story.title}</Text>
         <Text style={styles.heroDesc}>{story.description}</Text>
       </LinearGradient>
@@ -131,7 +133,7 @@ export default function BookStoryScreen() {
       <View style={styles.playBar}>
         <Pressable style={styles.playBtn} onPress={() => (isBusy ? stopAll() : playAll())}>
           <Ionicons name={isBusy ? 'pause' : 'play'} size={20} color="#fff" />
-          <Text style={styles.playBtnText}>{isBusy ? "To'xtatish" : 'Hikoyani tinglash'}</Text>
+          <Text style={styles.playBtnText}>{isBusy ? t('common_toxtatish') : t('res_story_listen')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

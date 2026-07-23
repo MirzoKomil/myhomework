@@ -12,6 +12,8 @@ import { LightningPill } from '@/components/ui/LightningIcon';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { useAvatarUri } from '@/services/avatarStore';
 import { CommunityPost, isDisplayableImageUri, timeAgo, toggleLikePost, useCommunityActivity, usePosts } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
@@ -20,6 +22,7 @@ import { useLightning } from '@/services/lightningStore';
 type Filter = 'all' | 'popular' | 'official';
 
 function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress: (name: string) => void }) {
+  const { t } = useLang();
   const commentCount = post.comments.length;
   const myAvatarUri = useAvatarUri();
 
@@ -45,7 +48,7 @@ function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress:
             {post.official && (
               <View style={styles.officialBadge}>
                 <Ionicons name="checkmark-circle" size={12} color={theme.colors.blue} />
-                <Text style={styles.officialBadgeText}>Rasmiy</Text>
+                <Text style={styles.officialBadgeText}>{t('comm_official_badge')}</Text>
               </View>
             )}
           </View>
@@ -81,13 +84,14 @@ function PostCard({ post, onAuthorPress }: { post: CommunityPost; onAuthorPress:
   );
 }
 
-const FILTER_LABELS: Record<Filter, string> = {
-  all: 'Hammasi',
-  popular: '🔥 Mashhur',
-  official: '✅ Rasmiy',
+const FILTER_LABEL_KEYS: Record<Filter, TranslationKey> = {
+  all: 'comm_filter_all',
+  popular: 'comm_filter_popular',
+  official: 'comm_filter_official',
 };
 
 export default function CommunityScreen() {
+  const { t } = useLang();
   const posts = usePosts();
   const coins = useCoins();
   const lightning = useLightning();
@@ -117,7 +121,7 @@ export default function CommunityScreen() {
           <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </Pressable>
         <Pressable style={styles.headerTitleBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
-          <Text style={styles.headerTitle}>Hamjamiyat</Text>
+          <Text style={styles.headerTitle}>{t('comm_title')}</Text>
         </Pressable>
         <View style={styles.headerRight}>
           <Pressable onPress={() => setShowCoinInfo(true)}>
@@ -141,14 +145,14 @@ export default function CommunityScreen() {
             key={f}
             style={[styles.filterChip, filter === f && styles.filterChipActive]}
             onPress={() => setFilter(f)}>
-            <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>{FILTER_LABELS[f]}</Text>
+            <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>{t(FILTER_LABEL_KEYS[f])}</Text>
           </Pressable>
         ))}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {displayedPosts.length === 0 ? (
-          <Text style={styles.emptyText}>Bu bo'limda hali postlar yo'q.</Text>
+          <Text style={styles.emptyText}>{t('comm_empty')}</Text>
         ) : (
           displayedPosts.map((post) => <PostCard key={post.id} post={post} onAuthorPress={setSelectedStudent} />)
         )}
@@ -165,16 +169,13 @@ export default function CommunityScreen() {
           <Pressable style={styles.dialogBackdropTap} onPress={() => setShowInfo(false)} />
           <View style={styles.dialogCard}>
             <Text style={styles.dialogEmoji}>💡</Text>
-            <Text style={styles.dialogTitle}>Hamjamiyat nima uchun kerak?</Text>
+            <Text style={styles.dialogTitle}>{t('comm_info_title')}</Text>
             <Text style={styles.dialogSubtitle}>
-              Bu yerda boshqa o'quvchilar bilan tajriba almashishingiz, savol berishingiz, yutuqlaringiz bilan
-              bo'lishishingiz mumkin. Postlarga izoh yozing, izohlarga javob bering, yoqqan post yoki izohga
-              like bosing.{'\n\n'}
-              ✍️ <Text style={styles.dialogBold}>Har bir post uchun 1 coin</Text> qo'lga kiritasiz — o'zingiz
-              yozgan har bir yangi post uchun avtomatik hisoblanadi.
+              {t('comm_info_body')}{'\n\n'}
+              ✍️ <Text style={styles.dialogBold}>{t('comm_info_coin_bold')}</Text> {t('comm_info_coin_rest')}
             </Text>
             <Pressable style={styles.dialogBtn} onPress={() => setShowInfo(false)}>
-              <Text style={styles.dialogBtnText}>Tushunarli</Text>
+              <Text style={styles.dialogBtnText}>{t('common_tushunarli')}</Text>
             </Pressable>
           </View>
         </View>

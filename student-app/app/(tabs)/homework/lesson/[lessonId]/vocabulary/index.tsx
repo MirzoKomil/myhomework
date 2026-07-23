@@ -7,10 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 
 export default function VocabularySectionScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
   const progress = useLessonProgress(String(lessonId));
@@ -22,7 +24,7 @@ export default function VocabularySectionScreen() {
   if (!content) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Yangi so'zlar" showBack />
+        <ScreenHeader title={t('hw_cat_vocab_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -33,8 +35,8 @@ export default function VocabularySectionScreen() {
   const items = [
     {
       id: 'list',
-      title: "Yangi so'zlar ro'yxati",
-      subtitle: `${content.vocabulary.length} ta so'z — rasm, tarjima, talaffuz`,
+      title: t('hw_vocab_list_title'),
+      subtitle: `${content.vocabulary.length} ${t('hw_vocab_list_sub_suffix')}`,
       icon: 'list-outline' as const,
       color: theme.colors.purple,
       bg: theme.colors.purpleLight,
@@ -43,8 +45,8 @@ export default function VocabularySectionScreen() {
     },
     {
       id: 'practice',
-      title: "O'rganish, yodlash, takrorlash",
-      subtitle: 'Tarjima tanlash, so\'z tuzish, talaffuz',
+      title: t('hw_vocab_practice_title'),
+      subtitle: t('hw_vocab_practice_sub'),
       icon: 'repeat-outline' as const,
       color: theme.colors.success,
       bg: theme.colors.successBg,
@@ -55,7 +57,7 @@ export default function VocabularySectionScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Yangi so'zlar" showBack />
+      <ScreenHeader title={t('hw_cat_vocab_title')} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

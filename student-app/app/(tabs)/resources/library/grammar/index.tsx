@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { GRAMMAR_LEVEL_COLORS, GRAMMAR_LEVEL_LABELS, GRAMMAR_LEVELS_ORDER, GRAMMAR_TOPICS, GrammarTopic } from '@/data/grammarGuide';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function GrammarGuideScreen() {
+  const { t } = useLang();
   const [allTopics, setAllTopics] = useState<GrammarTopic[]>(GRAMMAR_TOPICS);
 
   // CRM'da tahrirlangan mavzular — yuklanguncha statik ro'yxat ko'rsatiladi.
@@ -21,9 +23,9 @@ export default function GrammarGuideScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Grammatik qo'llanma" showBack />
+      <ScreenHeader title={t('res_grammar_title')} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>A1 darajadan B1 darajagacha mavzular</Text>
+        <Text style={styles.subtitle}>{t('res_grammar_subtitle')}</Text>
 
         {GRAMMAR_LEVELS_ORDER.map((level, levelIndex) => {
           const topics = allTopics.filter((t) => t.level === level);

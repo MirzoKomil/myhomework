@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { BONUS_CATEGORIES } from '@/data/lessonContent';
 import { courseEnrollment } from '@/data/mock';
 import { firstWeekdayOnOrAfter, UZ_MONTHS } from '@/data/scheduleCalendar';
@@ -40,6 +41,7 @@ function overallProgress(bonusId: string): number {
 }
 
 export default function BonusLessonsScreen() {
+  const { t } = useLang();
   const [, forceUpdate] = useState(0);
   const [showLockedNotice, setShowLockedNotice] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -57,7 +59,7 @@ export default function BonusLessonsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
-        title="Bonus darslar"
+        title={t('bonus_title')}
         showBack
         rightAction={
           <Pressable style={styles.infoBtn} onPress={() => setShowInfo(true)} hitSlop={8}>
@@ -66,7 +68,7 @@ export default function BonusLessonsScreen() {
         }
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Har yakshanba kuni beriladigan qo'shimcha video darslar to'plami</Text>
+        <Text style={styles.subtitle}>{t('bonus_subtitle')}</Text>
         {BONUS_LESSONS.map((lesson, index) => {
           const locked = index >= UNLOCKED_COUNT;
           const pct = locked ? 0 : overallProgress(lesson.id);
@@ -83,10 +85,10 @@ export default function BonusLessonsScreen() {
                   </View>
                   <View style={styles.info}>
                     <Text style={[styles.title, locked && styles.titleLocked]}>
-                      Bonus dars {index + 1} — {lesson.category.label}
+                      {t('bonus_lesson_label_prefix')} {index + 1} — {lesson.category.label}
                     </Text>
                     <Text style={styles.meta}>
-                      {locked ? `Hali ochilmagan • ${lesson.dateLabel}` : `${lesson.round}-bosqich • ${lesson.dateLabel}`}
+                      {locked ? `${t('bonus_locked_meta')} • ${lesson.dateLabel}` : `${lesson.round}-${t('bonus_stage_suffix')} • ${lesson.dateLabel}`}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
@@ -112,10 +114,10 @@ export default function BonusLessonsScreen() {
             <View style={styles.dialogIconWrap}>
               <Ionicons name="lock-closed" size={30} color={theme.colors.textMuted} />
             </View>
-            <Text style={styles.dialogTitle}>Bu bonus dars hali ochilmagan</Text>
-            <Text style={styles.dialogSubtitle}>Har yakshanba navbatdagi bonus dars ochiladi. Iltimos, o'z navbatini kuting.</Text>
+            <Text style={styles.dialogTitle}>{t('bonus_locked_notice_title')}</Text>
+            <Text style={styles.dialogSubtitle}>{t('bonus_locked_notice_body')}</Text>
             <Pressable style={styles.dialogConfirmBtn} onPress={() => setShowLockedNotice(false)}>
-              <Text style={styles.dialogConfirmText}>Tushunarli</Text>
+              <Text style={styles.dialogConfirmText}>{t('common_tushunarli')}</Text>
             </Pressable>
           </View>
         </View>
@@ -126,15 +128,12 @@ export default function BonusLessonsScreen() {
           <Pressable style={styles.dialogBackdropTap} onPress={() => setShowInfo(false)} />
           <View style={styles.dialogCard}>
             <Text style={styles.dialogEmoji}>🎁</Text>
-            <Text style={styles.dialogTitle}>Bonus darslar nima?</Text>
+            <Text style={styles.dialogTitle}>{t('bonus_info_title')}</Text>
             <Text style={[styles.dialogSubtitle, styles.dialogSubtitleLeft]}>
-              🗓️ Har yakshanba kuni yangita bonus dars ochiladi — jami 18 ta dars.{'\n\n'}
-              🎬🎵🌟🧠🗣️🎭 6 ta qiziqarli kategoriya (Kino tahlil, Musiqiy dars, Motivatsion dars, Intellektual o'yin, Ko'cha ingliz tili, Hayotiy vaziyat) 3 marta takrorlanadi.{'\n\n'}
-              📺 Har bir dars video, yangi so'zlar va avtomatik tekshiriladigan uyga vazifadan iborat — ijodiy qism yo'q, chunki bu qo'shimcha bonus dars!{'\n\n'}
-              💬 Izoh qoldirish va coin yig'ish ham mavjud.
+              {t('bonus_info_body')}
             </Text>
             <Pressable style={styles.dialogConfirmBtn} onPress={() => setShowInfo(false)}>
-              <Text style={styles.dialogConfirmText}>Tushunarli</Text>
+              <Text style={styles.dialogConfirmText}>{t('common_tushunarli')}</Text>
             </Pressable>
           </View>
         </View>

@@ -7,10 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { getCategoryProgress, useLessonProgress } from '@/services/lessonProgressStore';
 
 export default function BonusLessonHubScreen() {
+  const { t } = useLang();
   const { bonusId } = useLocalSearchParams<{ bonusId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
   const progress = useLessonProgress(String(bonusId));
@@ -22,7 +24,7 @@ export default function BonusLessonHubScreen() {
   if (!content) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Bonus dars" showBack />
+        <ScreenHeader title={t('bonus_lesson_fallback_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -33,24 +35,24 @@ export default function BonusLessonHubScreen() {
   const rows = [
     {
       key: 'video',
-      title: 'Videodars',
-      subtitle: 'Video, konspekt va izohlar',
+      title: t('hw_cat_video_title'),
+      subtitle: t('bonus_video_sub'),
       icon: 'play-circle' as const,
       pct: progress.videoWatch ? 100 : 0,
       route: 'video/watch',
     },
     {
       key: 'vocabulary',
-      title: "Yangi so'zlar",
-      subtitle: `${content.vocabulary.length} ta yangi so'z`,
+      title: t('hw_cat_vocab_title'),
+      subtitle: `${content.vocabulary.length} ${t('hw_cat_vocab_sub_suffix')}`,
       icon: 'book-outline' as const,
       pct: getCategoryProgress(String(bonusId), 'vocabulary'),
       route: 'vocabulary',
     },
     {
       key: 'homework',
-      title: 'Uyga vazifani bajarish',
-      subtitle: `${content.homeworkParts.length} ta avtomatik tekshiriladigan qism`,
+      title: t('bonus_row_homework_title'),
+      subtitle: `${content.homeworkParts.length} ${t('bonus_row_homework_sub_suffix')}`,
       icon: 'create-outline' as const,
       pct: getCategoryProgress(String(bonusId), 'homework', content.homeworkParts.length),
       route: 'homework',
@@ -64,12 +66,12 @@ export default function BonusLessonHubScreen() {
         <View style={styles.banner}>
           <Text style={styles.bannerEmoji}>🎁</Text>
           <View style={styles.bannerInfo}>
-            <Text style={styles.bannerTag}>Yakshanba bonus darsi</Text>
+            <Text style={styles.bannerTag}>{t('bonus_banner_tag')}</Text>
             <Text style={styles.bannerTitle}>{content.unitTitle}</Text>
           </View>
         </View>
 
-        <Text style={styles.subtitle}>Barcha bo'limlarni ketma-ket bajaring</Text>
+        <Text style={styles.subtitle}>{t('hw_all_sections_hint')}</Text>
 
         {rows.map((row) => (
           <Pressable key={row.key} onPress={() => router.push(`/homework/lesson/${bonusId}/${row.route}` as never)}>

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getLessonContent, LessonContent, mergeLessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 import { getCategoryProgress, ProgressCategory, useLessonProgress } from '@/services/lessonProgressStore';
@@ -22,8 +23,9 @@ type CategoryDef = {
 };
 
 export default function LessonScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
-  const [lessonName, setLessonName] = useState('Dars');
+  const [lessonName, setLessonName] = useState(t('hw_lesson_fallback_title'));
   const [content, setContent] = useState<LessonContent | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +35,7 @@ export default function LessonScreen() {
       .then((mc) => {
         if (cancelled) return;
         const lesson = mc.lessons.find((l) => l.id === lessonId);
-        setLessonName(lesson?.name ?? 'Dars');
+        setLessonName(lesson?.name ?? t('hw_lesson_fallback_title'));
         const courseLessons = lesson ? mc.lessons.filter((l) => l.courseId === lesson.courseId) : [];
         const dayIndex = Math.max(0, courseLessons.findIndex((l) => l.id === lessonId));
         setContent(mergeLessonContent(getLessonContent(String(lessonId), dayIndex), mc.lessonContents[String(lessonId)]));
@@ -52,7 +54,7 @@ export default function LessonScreen() {
   if (loading || !content) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Dars" showBack />
+        <ScreenHeader title={t('hw_lesson_fallback_title')} showBack />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -65,8 +67,8 @@ export default function LessonScreen() {
       ? [
           {
             key: 'video',
-            title: 'Videodars',
-            subtitle: 'Video, konspekt va grammatika mashqlari',
+            title: t('hw_cat_video_title'),
+            subtitle: t('hw_cat_video_sub'),
             icon: 'play-circle',
             color: theme.colors.blue,
             bg: theme.colors.blueLight,
@@ -74,8 +76,8 @@ export default function LessonScreen() {
           },
           {
             key: 'vocabulary',
-            title: "Yangi so'zlar",
-            subtitle: `${content.vocabulary.length} ta yangi so'z`,
+            title: t('hw_cat_vocab_title'),
+            subtitle: `${content.vocabulary.length} ${t('hw_cat_vocab_sub_suffix')}`,
             icon: 'book-outline',
             color: theme.colors.purple,
             bg: theme.colors.purpleLight,
@@ -83,8 +85,8 @@ export default function LessonScreen() {
           },
           {
             key: 'homework',
-            title: 'Uyga vazifa',
-            subtitle: `${content.homeworkParts.length} ta qism`,
+            title: t('hw_cat_homework_title'),
+            subtitle: `${content.homeworkParts.length} ${t('hw_cat_homework_sub_suffix')}`,
             icon: 'create-outline',
             color: theme.colors.success,
             bg: theme.colors.successBg,
@@ -94,8 +96,8 @@ export default function LessonScreen() {
       : [
           {
             key: 'speaking',
-            title: "Speaking ko'rgazmalari",
-            subtitle: 'Slaydlar va speaking mashqlari',
+            title: t('hw_cat_speaking_title'),
+            subtitle: t('hw_cat_speaking_sub'),
             icon: 'easel-outline',
             color: theme.colors.pink,
             bg: theme.colors.pinkBg,
@@ -103,8 +105,8 @@ export default function LessonScreen() {
           },
           {
             key: 'vocabulary',
-            title: "Yangi so'zlar",
-            subtitle: `${content.vocabulary.length} ta yangi so'z`,
+            title: t('hw_cat_vocab_title'),
+            subtitle: `${content.vocabulary.length} ${t('hw_cat_vocab_sub_suffix')}`,
             icon: 'book-outline',
             color: theme.colors.purple,
             bg: theme.colors.purpleLight,
@@ -112,8 +114,8 @@ export default function LessonScreen() {
           },
           {
             key: 'homework',
-            title: 'Uyga vazifa',
-            subtitle: `${content.homeworkParts.length} ta qism`,
+            title: t('hw_cat_homework_title'),
+            subtitle: `${content.homeworkParts.length} ${t('hw_cat_homework_sub_suffix')}`,
             icon: 'create-outline',
             color: theme.colors.success,
             bg: theme.colors.successBg,
@@ -125,7 +127,7 @@ export default function LessonScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title={lessonName} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Barcha bo'limlarni ketma-ket bajaring</Text>
+        <Text style={styles.subtitle}>{t('hw_all_sections_hint')}</Text>
 
         {categories.map((cat) => {
           const pct = getCategoryProgress(String(lessonId), cat.key, content.homeworkParts.length);

@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { GRAMMAR_LEVEL_COLORS, GRAMMAR_LEVEL_LABELS, GRAMMAR_TOPICS, GrammarTopic } from '@/data/grammarGuide';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function GrammarTopicScreen() {
+  const { t } = useLang();
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [allTopics, setAllTopics] = useState<GrammarTopic[]>(GRAMMAR_TOPICS);
 
@@ -24,9 +26,9 @@ export default function GrammarTopicScreen() {
   if (!topic) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Mavzu" showBack />
+        <ScreenHeader title={t('common_mavzu')} showBack />
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Mavzu topilmadi</Text>
+          <Text style={styles.emptyText}>{t('common_mavzu_topilmadi')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -48,27 +50,27 @@ export default function GrammarTopicScreen() {
         {!hasContent && (
           <View style={styles.comingSoon}>
             <Ionicons name="construct-outline" size={32} color={theme.colors.textMuted} />
-            <Text style={styles.comingSoonText}>Bu mavzu tez orada to'liq qo'shiladi</Text>
+            <Text style={styles.comingSoonText}>{t('res_grammar_coming_soon')}</Text>
           </View>
         )}
 
         {topic.formula && (
           <View style={[styles.formulaBox, { borderColor: accentColor }]}>
-            <Text style={[styles.formulaLabel, { color: accentColor }]}>Formula</Text>
+            <Text style={[styles.formulaLabel, { color: accentColor }]}>{t('res_formula')}</Text>
             <Text style={styles.formulaText}>{topic.formula}</Text>
           </View>
         )}
 
         {topic.description && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Tushuntirish</Text>
+            <Text style={styles.sectionLabel}>{t('res_explanation')}</Text>
             <Text style={styles.description}>{topic.description}</Text>
           </View>
         )}
 
         {topic.examples && topic.examples.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Misollar</Text>
+            <Text style={styles.sectionLabel}>{t('common_misollar')}</Text>
             {topic.examples.map((ex, i) => (
               <View key={i} style={styles.exampleBox}>
                 <Text style={styles.exampleEn}>{ex.en}</Text>

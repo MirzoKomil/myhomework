@@ -7,10 +7,12 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { SPEAKING_TOPICS, SpeakingTopic } from '@/data/speakingTopics';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function SpeakingTopicScreen() {
+  const { t } = useLang();
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [allTopics, setAllTopics] = useState<(SpeakingTopic & { coverUrl?: string })[]>(SPEAKING_TOPICS);
   const topic = allTopics.find((t) => t.id === topicId);
@@ -35,7 +37,7 @@ export default function SpeakingTopicScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Mavzu topilmadi</Text>
+          <Text style={styles.emptyText}>{t('common_mavzu_topilmadi')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -97,7 +99,7 @@ export default function SpeakingTopicScreen() {
       </LinearGradient>
 
       <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionLabel}>Suhbat</Text>
+        <Text style={styles.sectionLabel}>{t('res_suhbat')}</Text>
         {topic.lines.map((line, i) => {
           const active = playingIndex === i;
           return (
@@ -127,7 +129,7 @@ export default function SpeakingTopicScreen() {
       <View style={styles.playBar}>
         <Pressable style={styles.playBtn} onPress={() => (isBusy ? stopAll() : playAll())}>
           <Ionicons name={isBusy ? 'pause' : 'play'} size={20} color="#fff" />
-          <Text style={styles.playBtnText}>{isBusy ? "To'xtatish" : 'Barchasini tinglash'}</Text>
+          <Text style={styles.playBtnText}>{isBusy ? t('common_toxtatish') : t('res_listen_all')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

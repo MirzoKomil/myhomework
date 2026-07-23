@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import {
   PodcastLevel,
   PODCAST_LEVEL_COLORS,
@@ -17,6 +18,7 @@ import {
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function PodcastsLevelScreen() {
+  const { t } = useLang();
   const [level, setLevel] = useState<PodcastLevel>('a1');
   const [allEpisodes, setAllEpisodes] = useState<(PodcastEpisode & { coverUrl?: string; audioUrl?: string })[]>(PODCAST_EPISODES);
 
@@ -31,7 +33,7 @@ export default function PodcastsLevelScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Podkastlar" showBack />
+      <ScreenHeader title={t('res_podcasts_title')} showBack />
       <View style={styles.tabs}>
         {PODCAST_LEVELS_ORDER.map((lv) => {
           const active = lv === level;
@@ -47,7 +49,7 @@ export default function PodcastsLevelScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{episodes.length} ta epizod</Text>
+        <Text style={styles.subtitle}>{t('res_episode_count').replace('{n}', String(episodes.length))}</Text>
         <View style={styles.grid}>
           {episodes.map((ep) => (
             <Pressable

@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { VOCAB_TOPICS, VocabTopic } from '@/data/vocabularyLibrary';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function WordsTopicScreen() {
+  const { t } = useLang();
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [allTopics, setAllTopics] = useState<VocabTopic[]>(VOCAB_TOPICS);
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
@@ -25,9 +27,9 @@ export default function WordsTopicScreen() {
   if (!topic) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Mavzu" showBack />
+        <ScreenHeader title={t('common_mavzu')} showBack />
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Mavzu topilmadi</Text>
+          <Text style={styles.emptyText}>{t('common_mavzu_topilmadi')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -42,7 +44,7 @@ export default function WordsTopicScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title={topic.title} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Rasmga bosing — tarjima va talaffuzni eshiting</Text>
+        <Text style={styles.subtitle}>{t('res_words_tap_hint')}</Text>
         <View style={styles.grid}>
           {topic.words.map((word, i) => {
             const isRevealed = !!revealed[i];

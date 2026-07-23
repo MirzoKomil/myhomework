@@ -24,6 +24,8 @@ import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { WobbleIcon } from '@/components/ui/WobbleIcon';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { celebrityPersonas, chatThreads } from '@/data/mock';
 import { useCommunityActivity } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
@@ -36,18 +38,18 @@ type Folder = 'all' | 'peers' | 'legends' | 'admin';
 
 const FOLDER_ORDER: Folder[] = ['all', 'peers', 'legends', 'admin'];
 
-const FOLDER_LABELS: Record<Folder, string> = {
-  all: 'Barchasi',
-  peers: 'Maqsaddoshlar',
-  legends: 'Afsonalar',
-  admin: "Ma'muriyat",
+const FOLDER_LABEL_KEYS: Record<Folder, TranslationKey> = {
+  all: 'folder_all',
+  peers: 'folder_peers',
+  legends: 'folder_legends',
+  admin: 'folder_admin',
 };
 
-function previewText(chatId: string): string {
+function previewText(chatId: string, t: (key: TranslationKey) => string): string {
   const last = getLastMessage(chatId);
   if (!last) return '';
-  if (last.type === 'image') return '📷 Rasm';
-  if (last.type === 'voice') return '🎤 Ovozli xabar';
+  if (last.type === 'image') return t('msg_preview_photo');
+  if (last.type === 'voice') return t('msg_preview_voice');
   return last.text ?? '';
 }
 
@@ -86,6 +88,7 @@ function ShimmerRow({ children, onPress }: { children: React.ReactNode; onPress:
 }
 
 export default function MessagesScreen() {
+  const { t } = useLang();
   const [, forceUpdate] = useState(0);
   const studentThreads = useStudentThreads();
   const coins = useCoins();
@@ -112,7 +115,7 @@ export default function MessagesScreen() {
     emoji: chat.emoji,
     avatarImage: null as ImageSourcePropType | null,
     color: chat.color,
-    preview: previewText(chat.id),
+    preview: previewText(chat.id, t),
     time: getLastMessage(chat.id)?.time ?? '',
     started: getMessages(chat.id).length > 0,
     isLegend: false,
@@ -124,7 +127,7 @@ export default function MessagesScreen() {
       key: `peer-${thread.id}`,
       route: `/messages/student-${thread.id}`,
       name: thread.name,
-      sub: "O'quvchi hamkursingiz",
+      sub: t('msg_peer_sub'),
       emoji: thread.avatarEmoji,
       avatarImage: null as ImageSourcePropType | null,
       color: theme.colors.purpleLight,
@@ -142,7 +145,7 @@ export default function MessagesScreen() {
       key: `legend-${p.id}`,
       route: `/messages/persona-${p.id}`,
       name: p.name,
-      sub: 'Afsona bilan suhbat',
+      sub: t('msg_legend_sub'),
       emoji: p.emoji,
       avatarImage: p.avatarImage as ImageSourcePropType | null,
       color: p.colors[0],
@@ -207,7 +210,7 @@ export default function MessagesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Muloqot</Text>
+        <Text style={styles.headerTitle}>{t('msg_title')}</Text>
         <View style={styles.headerRight}>
           <Pressable onPress={() => setShowCoinInfo(true)}>
             <CoinPill amount={coins} />
@@ -233,7 +236,7 @@ export default function MessagesScreen() {
             key={f}
             style={[styles.folderChip, folder === f && styles.folderChipActive]}
             onPress={() => goToFolder(f)}>
-            <Text style={[styles.folderChipText, folder === f && styles.folderChipTextActive]}>{FOLDER_LABELS[f]}</Text>
+            <Text style={[styles.folderChipText, folder === f && styles.folderChipTextActive]}>{t(FOLDER_LABEL_KEYS[f])}</Text>
           </Pressable>
         ))}
       </View>
@@ -256,7 +259,7 @@ export default function MessagesScreen() {
               contentContainerStyle={styles.list}
               showsVerticalScrollIndicator={false}>
               {pageItems.length === 0 ? (
-                <Text style={styles.emptyText}>Bu bo'limda hali chat yo'q.</Text>
+                <Text style={styles.emptyText}>{t('msg_empty')}</Text>
               ) : (
                 pageItems.map(renderRow)
               )}

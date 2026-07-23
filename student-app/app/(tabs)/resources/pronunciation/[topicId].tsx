@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { PRONUNCIATION_TOPICS, PronunciationTopic } from '@/data/pronunciationTopics';
 import { fetchMobileContent } from '@/services/contentApi';
 
@@ -19,6 +20,7 @@ function formatTime(ms: number): string {
 }
 
 export default function PronunciationTopicScreen() {
+  const { t } = useLang();
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [topics, setTopics] = useState<(PronunciationTopic & { audioUrl?: string })[]>(PRONUNCIATION_TOPICS);
   const topic = topics.find((t) => t.id === topicId);
@@ -56,9 +58,9 @@ export default function PronunciationTopicScreen() {
   if (!topic) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenHeader title="Mavzu" showBack />
+        <ScreenHeader title={t('common_mavzu')} showBack />
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Mavzu topilmadi</Text>
+          <Text style={styles.emptyText}>{t('common_mavzu_topilmadi')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -156,7 +158,7 @@ export default function PronunciationTopicScreen() {
           </Pressable>
           <View style={styles.audioInfo}>
             <Text style={styles.audioTitle} numberOfLines={1}>
-              {topic.title} — audio tushuntirish
+              {topic.title} — {t('res_audio_explanation_suffix')}
             </Text>
             <View style={styles.progressTrack}>
               <Animated.View
@@ -173,10 +175,10 @@ export default function PronunciationTopicScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionLabel}>Konspekt</Text>
+        <Text style={styles.sectionLabel}>{t('common_konspekt')}</Text>
         <Text style={styles.synopsis}>{topic.synopsis}</Text>
 
-        <Text style={styles.sectionLabel}>Misollar</Text>
+        <Text style={styles.sectionLabel}>{t('common_misollar')}</Text>
         {topic.examples.map((example, i) => {
           const active = speakingWord === i;
           return (

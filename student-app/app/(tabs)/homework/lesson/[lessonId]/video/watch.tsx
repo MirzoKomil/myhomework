@@ -7,12 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommentsSheet } from '@/components/CommentsSheet';
 import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent, getLessonMaterials, LessonMaterials } from '@/services/contentApi';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
 export default function WatchVideoScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const isBonus = String(lessonId).startsWith('bonus-');
   const [content, setContent] = useState<LessonContent | null>(null);
@@ -26,7 +28,7 @@ export default function WatchVideoScreen() {
 
   useEffect(() => {
     markDone(String(lessonId), 'videoWatch');
-    saveLastPosition({ lessonId: String(lessonId), section: 'video/watch', label: 'Videodars' });
+    saveLastPosition({ lessonId: String(lessonId), section: 'video/watch', label: t('hw_cat_video_title') });
   }, [lessonId]);
 
   if (!content) {
@@ -45,14 +47,14 @@ export default function WatchVideoScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={28} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>{isBonus ? 'Bonus dars' : 'Video dars'}</Text>
+        <Text style={styles.topTitle}>{isBonus ? t('bonus_lesson_fallback_title') : t('video_dars_title')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {isBonus && (
           <View style={styles.bonusBadge}>
-            <Text style={styles.bonusBadgeText}>🎁 Yakshanba bonus darsi</Text>
+            <Text style={styles.bonusBadgeText}>🎁 {t('bonus_banner_tag')}</Text>
           </View>
         )}
 
@@ -64,7 +66,7 @@ export default function WatchVideoScreen() {
               <View style={[styles.playBtn, isBonus && styles.playBtnBonus]}>
                 <Ionicons name="play" size={36} color="#fff" />
               </View>
-              <Text style={styles.videoDuration}>Video hali biriktirilmagan</Text>
+              <Text style={styles.videoDuration}>{t('video_not_attached')}</Text>
             </>
           )}
         </View>
@@ -73,18 +75,18 @@ export default function WatchVideoScreen() {
           <Text style={styles.unitTitle}>{content.unitTitle}</Text>
           <Pressable style={styles.commentsPill} onPress={() => setShowComments(true)}>
             <Ionicons name="chatbubble-ellipses-outline" size={15} color={theme.colors.purple} />
-            <Text style={styles.commentsPillText}>Izohlar</Text>
+            <Text style={styles.commentsPillText}>{t('common_izohlar')}</Text>
           </Pressable>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Konspekt</Text>
+          <Text style={styles.sectionLabel}>{t('common_konspekt')}</Text>
           <Text style={styles.body}>{content.konspekt}</Text>
         </View>
       </ScrollView>
 
       <Pressable style={styles.doneBtn} onPress={() => router.back()}>
-        <Text style={styles.doneText}>Ko'rdim</Text>
+        <Text style={styles.doneText}>{t('video_seen_btn')}</Text>
       </Pressable>
 
       <CommentsSheet

@@ -8,11 +8,13 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getHomeworkArtworkUri, HOMEWORK_SCHOOL_NAME } from '@/constants/nowPlaying';
 import { PODCAST_EPISODES, PODCAST_LEVEL_LABELS, PodcastEpisode } from '@/data/podcastEpisodes';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function PodcastEpisodeScreen() {
+  const { t } = useLang();
   const { episodeId } = useLocalSearchParams<{ episodeId: string }>();
   const [allEpisodes, setAllEpisodes] = useState<(PodcastEpisode & { coverUrl?: string; audioUrl?: string })[]>(PODCAST_EPISODES);
   const episode = allEpisodes.find((e) => e.id === episodeId);
@@ -41,7 +43,7 @@ export default function PodcastEpisodeScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>Epizod topilmadi</Text>
+          <Text style={styles.emptyText}>{t('res_episode_not_found')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -129,12 +131,12 @@ export default function PodcastEpisodeScreen() {
         ) : (
           <Text style={styles.heroEmoji}>{episode.emoji}</Text>
         )}
-        <Text style={styles.heroLevel}>{PODCAST_LEVEL_LABELS[episode.level]} · Podkast</Text>
+        <Text style={styles.heroLevel}>{PODCAST_LEVEL_LABELS[episode.level]} · {t('res_podcast_label')}</Text>
         <Text style={styles.heroTitle}>{episode.title}</Text>
       </LinearGradient>
 
       <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionLabel}>Matn</Text>
+        <Text style={styles.sectionLabel}>{t('res_text_label')}</Text>
         {episode.lines.map((line, i) => {
           const active = playingIndex === i;
           return (
@@ -163,7 +165,7 @@ export default function PodcastEpisodeScreen() {
       <View style={styles.playBar}>
         <Pressable style={styles.playBtn} onPress={() => (isBusy ? stopAll() : playAll())}>
           <Ionicons name={isBusy ? 'pause' : 'play'} size={20} color="#fff" />
-          <Text style={styles.playBtnText}>{isBusy ? "To'xtatish" : 'Barchasini tinglash'}</Text>
+          <Text style={styles.playBtnText}>{isBusy ? t('common_toxtatish') : t('res_listen_all')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

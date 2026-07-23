@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { PRONUNCIATION_TOPICS, PronunciationTopic, getPronunciationTopicPracticeCount } from '@/data/pronunciationTopics';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function PronunciationListScreen() {
+  const { t } = useLang();
   const [topics, setTopics] = useState<PronunciationTopic[]>(PRONUNCIATION_TOPICS);
 
   useEffect(() => {
@@ -20,9 +22,9 @@ export default function PronunciationListScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Talaffuz" showBack />
+      <ScreenHeader title={t('res_pronunciation_title')} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{topics.length} ta mavzu</Text>
+        <Text style={styles.subtitle}>{t('res_topic_count').replace('{n}', String(topics.length))}</Text>
         <View style={styles.topicList}>
           {topics.map((topic, i) => (
             <Pressable
@@ -36,7 +38,7 @@ export default function PronunciationListScreen() {
                 <Text style={styles.rowTitle} numberOfLines={1}>
                   {topic.title}
                 </Text>
-                <Text style={styles.rowSubtitle}>{getPronunciationTopicPracticeCount(topic)} ta mashq</Text>
+                <Text style={styles.rowSubtitle}>{t('res_exercise_count').replace('{n}', String(getPronunciationTopicPracticeCount(topic)))}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.textLight} />
             </Pressable>

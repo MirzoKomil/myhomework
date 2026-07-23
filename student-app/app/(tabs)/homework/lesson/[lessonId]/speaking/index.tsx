@@ -6,17 +6,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 
 export default function SpeakingSectionScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const progress = useLessonProgress(String(lessonId));
 
   const items = [
     {
       id: 'slides',
-      title: "Slidelarni ko'rish",
-      subtitle: 'Ko\'rgazmali slaydlar + konspekt',
+      title: t('hw_speaking_slides_title'),
+      subtitle: t('hw_speaking_slides_sub'),
       icon: 'easel-outline' as const,
       color: theme.colors.pink,
       bg: theme.colors.pinkBg,
@@ -25,8 +27,8 @@ export default function SpeakingSectionScreen() {
     },
     {
       id: 'exercises',
-      title: 'Mashqlarni bajarish',
-      subtitle: 'Speaking vazifalar',
+      title: t('hw_exercises_title'),
+      subtitle: t('hw_speaking_exercises_sub'),
       icon: 'mic-outline' as const,
       color: theme.colors.blue,
       bg: theme.colors.blueLight,
@@ -37,7 +39,7 @@ export default function SpeakingSectionScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Speaking ko'rgazmalari" showBack />
+      <ScreenHeader title={t('hw_cat_speaking_title')} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

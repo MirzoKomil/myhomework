@@ -5,9 +5,11 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function HomeworkEntryScreen() {
+  const { t } = useLang();
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -20,11 +22,11 @@ export default function HomeworkEntryScreen() {
           if (first) {
             router.replace(`/homework/roadmap/${first.id}`);
           } else {
-            setError("Hali kurslar qo'shilmagan");
+            setError(t('hw_no_courses'));
           }
         })
         .catch(() => {
-          if (!cancelled) setError("Kurslarni yuklab bo'lmadi");
+          if (!cancelled) setError(t('hw_load_failed'));
         });
       return () => {
         cancelled = true;

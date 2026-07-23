@@ -6,22 +6,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 
 const libraryItems = [
-  { icon: 'book' as const, title: "Grammatik qo'llanma", count: '85 mavzu', color: theme.colors.blue, bg: theme.colors.blueLight, route: '/resources/library/grammar' },
-  { icon: 'list' as const, title: "So'zlar ro'yxati", count: '119 mavzu', color: theme.colors.purple, bg: theme.colors.purpleLight, route: '/resources/library/words' },
-  { icon: 'mic' as const, title: 'Talaffuz', count: '16 mavzu', color: theme.colors.pink, bg: theme.colors.pinkBg, route: '/resources/pronunciation' },
-  { icon: 'chatbubbles' as const, title: 'Speaking topiklar', count: '60 ta', color: theme.colors.warning, bg: theme.colors.warningBg, route: '/resources/speaking' },
-  { icon: 'headset' as const, title: 'Podkastlar', count: '36 ta', color: theme.colors.success, bg: theme.colors.successBg, route: '/resources/podcasts' },
-  { icon: 'library' as const, title: 'Kitoblar', count: '45 ta', color: theme.colors.blue, bg: theme.colors.blueLight, route: '/resources/books' },
+  { icon: 'book' as const, titleKey: 'res_lib_item_grammar_title' as TranslationKey, countKey: 'res_lib_item_grammar_count' as TranslationKey, color: theme.colors.blue, bg: theme.colors.blueLight, route: '/resources/library/grammar' },
+  { icon: 'list' as const, titleKey: 'res_lib_item_words_title' as TranslationKey, countKey: 'res_lib_item_words_count' as TranslationKey, color: theme.colors.purple, bg: theme.colors.purpleLight, route: '/resources/library/words' },
+  { icon: 'mic' as const, titleKey: 'res_lib_item_pron_title' as TranslationKey, countKey: 'res_lib_item_pron_count' as TranslationKey, color: theme.colors.pink, bg: theme.colors.pinkBg, route: '/resources/pronunciation' },
+  { icon: 'chatbubbles' as const, titleKey: 'res_lib_item_speaking_title' as TranslationKey, countKey: 'res_lib_item_speaking_count' as TranslationKey, color: theme.colors.warning, bg: theme.colors.warningBg, route: '/resources/speaking' },
+  { icon: 'headset' as const, titleKey: 'res_lib_item_podcasts_title' as TranslationKey, countKey: 'res_lib_item_podcasts_count' as TranslationKey, color: theme.colors.success, bg: theme.colors.successBg, route: '/resources/podcasts' },
+  { icon: 'library' as const, titleKey: 'res_lib_item_books_title' as TranslationKey, countKey: 'res_lib_item_books_count' as TranslationKey, color: theme.colors.blue, bg: theme.colors.blueLight, route: '/resources/books' },
 ];
 
 export default function LibraryScreen() {
+  const { t } = useLang();
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Kutubxona" showBack />
+      <ScreenHeader title={t('res_library_title')} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Qo'shimcha o'quv materiallari</Text>
+        <Text style={styles.subtitle}>{t('res_library_subtitle')}</Text>
         {libraryItems.map((item) => {
           const content = (
             <View style={styles.resourceRow}>
@@ -29,21 +32,21 @@ export default function LibraryScreen() {
                 <Ionicons name={item.icon} size={24} color={item.color} />
               </View>
               <View style={styles.resourceInfo}>
-                <Text style={styles.resourceTitle}>{item.title}</Text>
-                <Text style={styles.resourceCount}>{item.count}</Text>
+                <Text style={styles.resourceTitle}>{t(item.titleKey)}</Text>
+                <Text style={styles.resourceCount}>{t(item.countKey)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
             </View>
           );
           if (item.route) {
             return (
-              <Pressable key={item.title} onPress={() => router.push(item.route as never)}>
+              <Pressable key={item.route} onPress={() => router.push(item.route as never)}>
                 <Card style={styles.resourceCard}>{content}</Card>
               </Pressable>
             );
           }
           return (
-            <Card key={item.title} style={styles.resourceCard}>
+            <Card key={item.route} style={styles.resourceCard}>
               {content}
             </Card>
           );

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import {
   BookLevel,
   BOOK_LEVEL_COLORS,
@@ -17,6 +18,7 @@ import {
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function BooksLevelScreen() {
+  const { t } = useLang();
   const [level, setLevel] = useState<BookLevel>('a1');
   const [allStories, setAllStories] = useState<(BookStory & { coverUrl?: string })[]>(BOOK_STORIES);
 
@@ -31,7 +33,7 @@ export default function BooksLevelScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Kitoblar" showBack />
+      <ScreenHeader title={t('res_books_title')} showBack />
       <View style={styles.tabs}>
         {BOOK_LEVELS_ORDER.map((lv) => {
           const active = lv === level;
@@ -47,7 +49,7 @@ export default function BooksLevelScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{stories.length} ta audio-hikoya</Text>
+        <Text style={styles.subtitle}>{t('res_books_count').replace('{n}', String(stories.length))}</Text>
         <View style={styles.grid}>
           {stories.map((s) => (
             <Pressable key={s.id} style={styles.cardWrap} onPress={() => router.push(`/resources/books/${s.id}` as never)}>

@@ -6,9 +6,11 @@ import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, St
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { addPost, useMyIdentity } from '@/services/communityStore';
 
 export default function NewPostScreen() {
+  const { t } = useLang();
   const { name, avatarUri } = useMyIdentity();
   const [text, setText] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export default function NewPostScreen() {
     const { imageUploadFailed } = await addPost(text.trim(), name, '🙂', imageUri);
     setSubmitting(false);
     if (imageUploadFailed) {
-      Alert.alert('Diqqat', "Post yuborildi, lekin rasmni yuklab bo'lmadi. Internet aloqasini tekshirib, qayta urinib ko'ring.");
+      Alert.alert(t('comm_alert_attention'), t('comm_alert_image_fail'));
     }
     router.back();
   };
@@ -44,12 +46,12 @@ export default function NewPostScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Ionicons name="close" size={26} color={theme.colors.text} />
           </Pressable>
-          <Text style={styles.topTitle}>Yangi post</Text>
+          <Text style={styles.topTitle}>{t('comm_new_title')}</Text>
           <Pressable
             style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
             disabled={!canSubmit || submitting}
             onPress={handleSubmit}>
-            <Text style={styles.submitBtnText}>Yuborish</Text>
+            <Text style={styles.submitBtnText}>{t('comm_send')}</Text>
           </Pressable>
         </View>
 
@@ -64,13 +66,13 @@ export default function NewPostScreen() {
             </View>
             <View>
               <Text style={styles.authorName}>{name}</Text>
-              <Text style={styles.authorSub}>Hamjamiyat: 🇬🇧 Ingliz tili</Text>
+              <Text style={styles.authorSub}>{t('comm_lang_label')}</Text>
             </View>
           </View>
 
           <TextInput
             style={styles.input}
-            placeholder="Yozing..."
+            placeholder={t('comm_placeholder_write')}
             placeholderTextColor={theme.colors.textLight}
             value={text}
             onChangeText={setText}
@@ -79,7 +81,7 @@ export default function NewPostScreen() {
           />
           {!canSubmit && (
             <Text style={styles.wordHint}>
-              Kamida {MIN_WORDS} ta so'z yozing (hozir: {wordCount} ta)
+              {t('comm_min_words_hint').replace('{n}', String(MIN_WORDS)).replace('{m}', String(wordCount))}
             </Text>
           )}
 
