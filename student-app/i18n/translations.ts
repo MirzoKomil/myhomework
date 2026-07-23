@@ -435,6 +435,21 @@ export const translations = {
     hwp_creative_pending_title: "Ko'rib chiqilmoqda",
     hwp_creative_pending_sub: "O'qituvchi vazifangizni tekshirmoqda, natija tez orada chiqadi.",
     hwp_creative_edit_resubmit: 'Tahrirlash va qayta yuborish',
+
+    // Sozlamalar (settings/index.tsx) va Ilova tili (settings/language.tsx)
+    settings_app_language: 'Ilova tili',
+    settings_active_lessons: "Faol mashg'ulotlar",
+    settings_notifications: 'Bildirishnoma',
+    settings_active_devices: 'Faol qurilmalar',
+    settings_dark_mode: "Qorong'ulik rejimi",
+    settings_share_friends: "Do'stlarga ulashish",
+    settings_about_us: 'Biz haqimizda',
+    settings_faq: 'FAQ',
+    settings_privacy_policy: 'Maxfiylik siyosati',
+    settings_contacts: 'Kontaktlar',
+    settings_logout: 'Chiqish',
+    settings_login: 'Hisobingizga kirish',
+    lang_screen_note: "Tanlangan til ilovaning barcha ekranlarida qo'llaniladi.",
   },
   ru: {
     nav_home: 'Главная',
@@ -835,6 +850,21 @@ export const translations = {
     hwp_creative_pending_title: 'На проверке',
     hwp_creative_pending_sub: 'Учитель проверяет ваше задание, результат появится в ближайшее время.',
     hwp_creative_edit_resubmit: 'Изменить и отправить заново',
+
+    // Sozlamalar (settings/index.tsx) va Ilova tili (settings/language.tsx)
+    settings_app_language: 'Язык приложения',
+    settings_active_lessons: 'Активные занятия',
+    settings_notifications: 'Уведомления',
+    settings_active_devices: 'Активные устройства',
+    settings_dark_mode: 'Тёмный режим',
+    settings_share_friends: 'Поделиться с друзьями',
+    settings_about_us: 'О нас',
+    settings_faq: 'FAQ',
+    settings_privacy_policy: 'Политика конфиденциальности',
+    settings_contacts: 'Контакты',
+    settings_logout: 'Выйти',
+    settings_login: 'Войти в аккаунт',
+    lang_screen_note: 'Выбранный язык будет применён ко всем экранам приложения.',
   },
 } as const;
 

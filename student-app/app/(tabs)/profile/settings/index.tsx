@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { invalidateCache } from '@/services/contentApi';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
+import { useLang } from '@/i18n/LanguageContext';
 
 type Row = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -23,6 +24,7 @@ function shareApp() {
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const { student } = useAuth();
+  const { t } = useLang();
 
   const handleLogout = async () => {
     await clearAuth();
@@ -31,46 +33,46 @@ export default function SettingsScreen() {
   };
 
   const group1: Row[] = [
-    { icon: 'globe-outline', label: 'Ilova tili', onPress: () => router.push('/profile/settings/language' as never), right: 'chevron' },
+    { icon: 'globe-outline', label: t('settings_app_language'), onPress: () => router.push('/profile/settings/language' as never), right: 'chevron' },
     {
       icon: 'videocam-outline',
-      label: "Faol mashg'ulotlar",
+      label: t('settings_active_lessons'),
       onPress: () => router.push('/profile/settings/active-lessons' as never),
       right: 'chevron',
     },
     {
       icon: 'notifications-outline',
-      label: 'Bildirishnoma',
+      label: t('settings_notifications'),
       onPress: () => router.push('/profile/settings/notifications' as never),
       right: 'chevron',
     },
     {
       icon: 'phone-portrait-outline',
-      label: 'Faol qurilmalar',
+      label: t('settings_active_devices'),
       onPress: () => router.push('/profile/settings/devices' as never),
       right: 'chevron',
     },
-    { icon: 'moon-outline', label: "Qorong'ulik rejimi", right: 'switch' },
+    { icon: 'moon-outline', label: t('settings_dark_mode'), right: 'switch' },
   ];
 
   const group2: Row[] = [
-    { icon: 'share-social-outline', label: "Do'stlarga ulashish", onPress: shareApp, right: 'chevron' },
-    { icon: 'information-circle-outline', label: 'Biz haqimizda', onPress: () => router.push('/profile/settings/about' as never), right: 'chevron' },
-    { icon: 'help-circle-outline', label: 'FAQ', onPress: () => router.push('/profile/settings/faq' as never), right: 'chevron' },
+    { icon: 'share-social-outline', label: t('settings_share_friends'), onPress: shareApp, right: 'chevron' },
+    { icon: 'information-circle-outline', label: t('settings_about_us'), onPress: () => router.push('/profile/settings/about' as never), right: 'chevron' },
+    { icon: 'help-circle-outline', label: t('settings_faq'), onPress: () => router.push('/profile/settings/faq' as never), right: 'chevron' },
     {
       icon: 'shield-checkmark-outline',
-      label: 'Maxfiylik siyosati',
+      label: t('settings_privacy_policy'),
       onPress: () => router.push('/profile/settings/privacy' as never),
       right: 'chevron',
     },
-    { icon: 'call-outline', label: 'Kontaktlar', onPress: () => router.push('/profile/settings/contacts' as never), right: 'chevron' },
+    { icon: 'call-outline', label: t('settings_contacts'), onPress: () => router.push('/profile/settings/contacts' as never), right: 'chevron' },
   ];
 
   const renderGroup = (rows: Row[]) => (
     <View style={styles.group}>
       {rows.map((row, i) => (
         <Pressable
-          key={row.label}
+          key={row.icon}
           style={[styles.row, i < rows.length - 1 && styles.rowBorder]}
           onPress={row.onPress}
           disabled={!row.onPress}>
@@ -88,7 +90,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Sozlamalar" showBack />
+      <ScreenHeader title={t('profile_settings')} showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {renderGroup(group1)}
         {renderGroup(group2)}
@@ -96,12 +98,12 @@ export default function SettingsScreen() {
         {student ? (
           <Pressable style={styles.logoutBtn} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
-            <Text style={styles.logoutText}>Chiqish ({student.name})</Text>
+            <Text style={styles.logoutText}>{t('settings_logout')} ({student.name})</Text>
           </Pressable>
         ) : (
           <Pressable style={styles.loginBtn} onPress={() => router.push('/login' as never)}>
             <Ionicons name="log-in-outline" size={20} color={theme.colors.purple} />
-            <Text style={styles.loginText}>Hisobingizga kirish</Text>
+            <Text style={styles.loginText}>{t('settings_login')}</Text>
           </Pressable>
         )}
       </ScrollView>
