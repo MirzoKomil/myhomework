@@ -17434,6 +17434,14 @@ function renderBookRoadmap() {
     const kanban = document.getElementById('bookRoadmapKanban');
     if (!kanban) return;
 
+    // 37-vazifa: sotuv menejeri o'z kabinetidan Kitob yetkazishga yangi
+    // yozuv qo'sha olmasligi kerak.
+    const _cuBr = getCurrentUser();
+    const addBrBtn = document.getElementById('addBookRoadmapHeaderBtn');
+    if (addBrBtn && _cuBr?.role === 'sales_manager') {
+        addBrBtn.style.display = 'none';
+    }
+
     renderBrManagerFilter();
     initBrColumnsFilter();
     updateBrColumnsFilterLabel();
