@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatThreadView } from '@/components/chat/ChatThreadView';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { ChatMessage } from '@/data/mock';
 import { getResolvedLessonContent, HomeworkPart, LessonContent, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
 import { reportActivity } from '@/services/activitySync';
@@ -28,6 +29,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function HomeworkPartScreen() {
+  const { t } = useLang();
   const { lessonId, part: partId, day } = useLocalSearchParams<{ lessonId: string; part: string; day?: string }>();
   const dayIndex = day === 'speaking' ? 1 : 0;
   const [content, setContent] = useState<LessonContent | null>(null);
@@ -54,7 +56,7 @@ export default function HomeworkPartScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.center}>
-          <Text style={styles.errorText}>Vazifa topilmadi</Text>
+          <Text style={styles.errorText}>{t('hwp_not_found')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -95,6 +97,7 @@ export default function HomeworkPartScreen() {
 const PASS_THRESHOLD = 0.65;
 
 function DoneScreen({ emoji, title, subtitle }: { emoji: string; title: string; subtitle: string }) {
+  const { t } = useLang();
   const [celebrating, setCelebrating] = useState(true);
   return (
     <View style={styles.resultCenter}>
@@ -102,7 +105,7 @@ function DoneScreen({ emoji, title, subtitle }: { emoji: string; title: string; 
       <Text style={styles.resultTitle}>{title}</Text>
       <Text style={styles.resultSubtitle}>{subtitle}</Text>
       <Pressable style={styles.resultBtn} onPress={() => router.back()}>
-        <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
+        <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
       </Pressable>
       <CelebrationOverlay visible={celebrating} onFinish={() => setCelebrating(false)} />
     </View>
@@ -112,15 +115,16 @@ function DoneScreen({ emoji, title, subtitle }: { emoji: string; title: string; 
 // Agar to'g'ri javoblar PASS_THRESHOLD'dan kam bo'lsa — dars "o'tilgan" deb
 // belgilanmaydi, o'quvchi qayta urinib ko'rishi kerak.
 function RetryScreen({ percent, onRetry }: { percent: number; onRetry: () => void }) {
+  const { t } = useLang();
   return (
     <View style={styles.resultCenter}>
       <Text style={styles.resultEmoji}>💪</Text>
-      <Text style={styles.resultTitle}>Yana bir bor urinib ko'ring!</Text>
+      <Text style={styles.resultTitle}>{t('hwp_retry_title')}</Text>
       <Text style={styles.resultSubtitle}>
-        {percent}% to'g'ri javob berdingiz. Davom etish uchun kamida {Math.round(PASS_THRESHOLD * 100)}% kerak.
+        {t('hwp_retry_sub').replace('{percent}', String(percent)).replace('{threshold}', String(Math.round(PASS_THRESHOLD * 100)))}
       </Text>
       <Pressable style={styles.resultBtn} onPress={onRetry}>
-        <Text style={styles.resultBtnText}>Qayta boshlash</Text>
+        <Text style={styles.resultBtnText}>{t('hwp_retry_btn')}</Text>
       </Pressable>
     </View>
   );
@@ -128,6 +132,7 @@ function RetryScreen({ percent, onRetry }: { percent: number; onRetry: () => voi
 
 // ─── PART A (grammar) — Matching ────────────────────────────────────────────
 function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone: () => void; lessonId: string }) {
+  const { t } = useLang();
   const rightItems = useMemo(() => shuffle(pairs.map((p) => ({ id: p.id, label: p.right }))), [pairs]);
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
@@ -178,12 +183,12 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
     setTooLow(null);
   };
 
-  if (finished) return <DoneScreen emoji="✅" title="Ajoyib!" subtitle={`${pairs.length} ta juftlik moslashtirildi`} />;
+  if (finished) return <DoneScreen emoji="✅" title={t('hwp_matching_done_title')} subtitle={t('hwp_matching_done_sub').replace('{n}', String(pairs.length))} />;
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.instruction}>So'zlarni tarjimasi bilan moslashtiring</Text>
+      <Text style={styles.instruction}>{t('hwp_matching_instruction')}</Text>
       <View style={styles.matchColumns}>
         <View style={styles.matchColumn}>
           {pairs.map((p) => (
@@ -218,7 +223,7 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
         </View>
       </View>
       <Text style={styles.matchProgress}>
-        {matched.size} / {pairs.length} juftlik topildi
+        {t('hwp_matching_progress').replace('{matched}', String(matched.size)).replace('{total}', String(pairs.length))}
       </Text>
     </View>
   );
@@ -226,6 +231,7 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
 
 // ─── PART B (grammar) — Fill in the blank ───────────────────────────────────
 function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sentence: string; answer: string; options: string[] }[]; onDone: () => void; lessonId: string }) {
+  const { t } = useLang();
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
@@ -264,13 +270,13 @@ function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sen
     setTooLow(null);
   };
 
-  if (finished) return <DoneScreen emoji="✍️" title="Tayyor!" subtitle={`${blanks.length} ta gap to'ldirildi`} />;
+  if (finished) return <DoneScreen emoji="✍️" title={t('hwp_fillblank_done_title')} subtitle={t('hwp_fillblank_done_sub').replace('{n}', String(blanks.length))} />;
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
     <View style={styles.stepContent}>
       <Text style={styles.instruction}>
-        Bo'sh joyga mos so'zni tanlang ({index + 1}/{blanks.length})
+        {t('hwp_fillblank_instruction').replace('{current}', String(index + 1)).replace('{total}', String(blanks.length))}
       </Text>
       <View style={styles.sentenceCard}>
         <Text style={styles.sentence}>{current.sentence}</Text>
@@ -295,7 +301,7 @@ function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sen
       </View>
       {answered && (
         <Pressable style={styles.continueBtn} onPress={next}>
-          <Text style={styles.continueBtnText}>Keyingi</Text>
+          <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
         </Pressable>
       )}
     </View>
@@ -304,6 +310,7 @@ function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sen
 
 // ─── PART C (grammar) — Multiple choice ─────────────────────────────────────
 function MultipleChoicePart({ questions, onDone, lessonId }: { questions: MultipleChoiceQ[]; onDone: () => void; lessonId: string }) {
+  const { t } = useLang();
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
@@ -342,7 +349,7 @@ function MultipleChoicePart({ questions, onDone, lessonId }: { questions: Multip
     setTooLow(null);
   };
 
-  if (finished) return <DoneScreen emoji="🎯" title="Zo'r natija!" subtitle={`${questions.length} ta savol yakunlandi`} />;
+  if (finished) return <DoneScreen emoji="🎯" title={t('hwp_mc_done_title')} subtitle={t('hwp_mc_done_sub').replace('{n}', String(questions.length))} />;
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
@@ -373,7 +380,7 @@ function MultipleChoicePart({ questions, onDone, lessonId }: { questions: Multip
       </View>
       {answered && (
         <Pressable style={styles.continueBtn} onPress={next}>
-          <Text style={styles.continueBtnText}>Keyingi</Text>
+          <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
         </Pressable>
       )}
     </View>
@@ -424,11 +431,12 @@ function SentenceBuildPart({ items, onDone, lessonId }: { items: SentenceBuildQ[
 }
 
 function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item: SentenceBuildQ; onNext: (correct: boolean) => void; finished: boolean; total: number; lessonId: string }) {
+  const { t } = useLang();
   const words = useMemo(() => shuffle(item.words), [item]);
   const [used, setUsed] = useState<boolean[]>(() => words.map(() => false));
   const [built, setBuilt] = useState<number[]>([]);
 
-  if (finished) return <DoneScreen emoji="🧩" title="Ajoyib!" subtitle={`${total} ta gap tuzildi`} />;
+  if (finished) return <DoneScreen emoji="🧩" title={t('hwp_matching_done_title')} subtitle={t('hwp_sentence_build_done_sub').replace('{n}', String(total))} />;
 
   const tap = (i: number) => {
     if (used[i]) return;
@@ -447,7 +455,7 @@ function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item:
 
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.instruction}>Gapni to'g'ri tartibda tuzing</Text>
+      <Text style={styles.instruction}>{t('exam_sentence_build_instruction')}</Text>
       <View style={styles.sentenceCard}>
         <Text style={styles.sentence}>{item.translation}</Text>
       </View>
@@ -464,7 +472,7 @@ function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item:
       {isComplete ? (
         <View style={{ gap: 10, marginTop: 8 }}>
           <Text style={[styles.feedbackText, { color: isCorrect ? theme.colors.success : theme.colors.danger }]}>
-            {isCorrect ? "To'g'ri!" : `To'g'ri javob: ${item.answer.join(' ')}`}
+            {isCorrect ? t('vp_correct') : `${t('exam_correct_answer')} ${item.answer.join(' ')}`}
           </Text>
           <Pressable
             style={styles.continueBtn}
@@ -475,13 +483,13 @@ function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item:
               }
               onNext(isCorrect);
             }}>
-            <Text style={styles.continueBtnText}>Keyingi</Text>
+            <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
           </Pressable>
         </View>
       ) : (
         <Pressable style={styles.resetBtn} onPress={reset}>
           <Ionicons name="refresh" size={16} color={theme.colors.textMuted} />
-          <Text style={styles.resetBtnText}>Tozalash</Text>
+          <Text style={styles.resetBtnText}>{t('vp_clear_btn')}</Text>
         </Pressable>
       )}
     </View>
@@ -490,6 +498,7 @@ function SentenceBuildRound({ item, onNext, finished, total, lessonId }: { item:
 
 // ─── PART A (speaking) — Record yourself ────────────────────────────────────
 function RecordPart({ prompts, onDone, lessonId }: { prompts: { id: string; sentence: string; translation: string }[]; onDone: () => void; lessonId: string }) {
+  const { t } = useLang();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [index, setIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -524,12 +533,12 @@ function RecordPart({ prompts, onDone, lessonId }: { prompts: { id: string; sent
     setRecorded(false);
   };
 
-  if (finished) return <DoneScreen emoji="🎙️" title="Barakalla!" subtitle={`${prompts.length} ta savolga ovozli javob yozildi`} />;
+  if (finished) return <DoneScreen emoji="🎙️" title={t('hwp_record_done_title')} subtitle={t('hwp_record_done_sub').replace('{n}', String(prompts.length))} />;
 
   return (
     <View style={styles.stepContent}>
       <Text style={styles.instruction}>
-        Savolga ovozli javob bering ({index + 1}/{prompts.length})
+        {t('hwp_record_instruction').replace('{current}', String(index + 1)).replace('{total}', String(prompts.length))}
       </Text>
       <View style={styles.sentenceCard}>
         <Text style={styles.sentence}>{current.sentence}</Text>
@@ -542,13 +551,13 @@ function RecordPart({ prompts, onDone, lessonId }: { prompts: { id: string; sent
         {recorded && (
           <View style={styles.recordedBadge}>
             <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-            <Text style={styles.recordedText}>Javob yozib olindi</Text>
+            <Text style={styles.recordedText}>{t('hwp_record_recorded')}</Text>
           </View>
         )}
       </View>
       {recorded && (
         <Pressable style={styles.continueBtn} onPress={next}>
-          <Text style={styles.continueBtnText}>Keyingi</Text>
+          <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
         </Pressable>
       )}
     </View>
@@ -557,6 +566,7 @@ function RecordPart({ prompts, onDone, lessonId }: { prompts: { id: string; sent
 
 // ─── PART C (speaking) — Pronunciation check ────────────────────────────────
 function PronunciationPart({ prompts, onDone, lessonId }: { prompts: { id: string; sentence: string; translation: string }[]; onDone: () => void; lessonId: string }) {
+  const { t } = useLang();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [index, setIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -593,12 +603,12 @@ function PronunciationPart({ prompts, onDone, lessonId }: { prompts: { id: strin
     setScore(null);
   };
 
-  if (finished) return <DoneScreen emoji="🌟" title="Tayyor!" subtitle={`${prompts.length} ta jumla talaffuzi tekshirildi`} />;
+  if (finished) return <DoneScreen emoji="🌟" title={t('hwp_fillblank_done_title')} subtitle={t('hwp_pron_done_sub').replace('{n}', String(prompts.length))} />;
 
   return (
     <View style={styles.stepContent}>
       <Text style={styles.instruction}>
-        Jumlani o'qing, talaffuzingiz baholanadi ({index + 1}/{prompts.length})
+        {t('hwp_pron_instruction').replace('{current}', String(index + 1)).replace('{total}', String(prompts.length))}
       </Text>
       <View style={styles.sentenceCard}>
         <Text style={styles.sentence}>{current.sentence}</Text>
@@ -611,13 +621,13 @@ function PronunciationPart({ prompts, onDone, lessonId }: { prompts: { id: strin
         {score !== null && (
           <View style={styles.scoreBadge}>
             <Text style={styles.scoreBadgeText}>{score}%</Text>
-            <Text style={styles.scoreBadgeLabel}>{score >= 90 ? "A'lo talaffuz!" : score >= 80 ? 'Yaxshi talaffuz' : "Yana mashq qiling"}</Text>
+            <Text style={styles.scoreBadgeLabel}>{score >= 90 ? t('hwp_pron_excellent') : score >= 80 ? t('hwp_pron_good') : t('hwp_pron_practice_more')}</Text>
           </View>
         )}
       </View>
       {score !== null && (
         <Pressable style={styles.continueBtn} onPress={next}>
-          <Text style={styles.continueBtnText}>Keyingi</Text>
+          <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
         </Pressable>
       )}
     </View>
@@ -626,6 +636,7 @@ function PronunciationPart({ prompts, onDone, lessonId }: { prompts: { id: strin
 
 // ─── PART B (speaking) — AI roleplay ────────────────────────────────────────
 function RoleplayPart({ scenario, onDone, lessonId }: { scenario: { id: string; title: string; intro: string; lines: string[]; closing: string }; onDone: () => void; lessonId: string }) {
+  const { t } = useLang();
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: 'intro', chatId: scenario.id, from: 'them', type: 'text', text: scenario.lines[0], time: 'hozir' },
   ]);
@@ -672,7 +683,7 @@ function RoleplayPart({ scenario, onDone, lessonId }: { scenario: { id: string; 
       <ChatThreadView messages={messages} onSendText={onSendText} onSendImage={onSendImage} onSendVoice={onSendVoice} />
       {ended && (
         <Pressable style={styles.roleplayDoneBtn} onPress={() => router.back()}>
-          <Text style={styles.continueBtnText}>Suhbat yakunlandi — Orqaga</Text>
+          <Text style={styles.continueBtnText}>{t('hwp_roleplay_done_btn')}</Text>
         </Pressable>
       )}
     </View>
@@ -699,6 +710,7 @@ function CreativePart({
   lessonId: string;
   category: 'video' | 'speaking';
 }) {
+  const { t } = useLang();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [status, setStatus] = useState<CreativeStatus>('checking');
   const [text, setText] = useState('');
@@ -809,10 +821,10 @@ function CreativePart({
         <View style={styles.gradedCard}>
           <Ionicons name="ribbon-outline" size={40} color={theme.colors.success} />
           <Text style={styles.gradedScore}>{gradedScore ?? 100} / 100</Text>
-          <Text style={styles.gradedFeedback}>"{gradedFeedback || "Juda yaxshi bajarilgan, davom eting!"}" — o'qituvchi</Text>
+          <Text style={styles.gradedFeedback}>"{gradedFeedback || t('hwp_creative_graded_feedback_fallback')}" {t('hwp_creative_teacher_suffix')}</Text>
         </View>
         <Pressable style={styles.continueBtn} onPress={() => router.back()}>
-          <Text style={styles.continueBtnText}>Orqaga qaytish</Text>
+          <Text style={styles.continueBtnText}>{t('ex_back_btn')}</Text>
         </Pressable>
       </View>
     );
@@ -823,12 +835,12 @@ function CreativePart({
       <View style={styles.stepContent}>
         <View style={styles.pendingCard}>
           <Ionicons name="time-outline" size={40} color={theme.colors.warning} />
-          <Text style={styles.pendingTitle}>Ko'rib chiqilmoqda</Text>
-          <Text style={styles.pendingSubtitle}>O'qituvchi vazifangizni tekshirmoqda, natija tez orada chiqadi.</Text>
+          <Text style={styles.pendingTitle}>{t('hwp_creative_pending_title')}</Text>
+          <Text style={styles.pendingSubtitle}>{t('hwp_creative_pending_sub')}</Text>
         </View>
         <Pressable style={styles.editBtn} onPress={() => setStatus('draft')}>
           <Ionicons name="create-outline" size={16} color={theme.colors.purple} />
-          <Text style={styles.editBtnText}>Tahrirlash va qayta yuborish</Text>
+          <Text style={styles.editBtnText}>{t('hwp_creative_edit_resubmit')}</Text>
         </Pressable>
       </View>
     );
@@ -841,7 +853,7 @@ function CreativePart({
         <>
           <TextInput
             style={styles.creativeInput}
-            placeholder="Matningizni shu yerga yozing..."
+            placeholder={t('hwp_creative_placeholder')}
             placeholderTextColor={theme.colors.textLight}
             value={text}
             onChangeText={setText}
@@ -852,7 +864,7 @@ function CreativePart({
           ) : (
             <Pressable style={styles.attachBtn} onPress={pickImage}>
               <Ionicons name="image-outline" size={18} color={theme.colors.purple} />
-              <Text style={styles.attachBtnText}>Rasm biriktirish</Text>
+              <Text style={styles.attachBtnText}>{t('hwp_creative_attach_image')}</Text>
             </Pressable>
           )}
         </>
@@ -864,7 +876,7 @@ function CreativePart({
           {recorded && (
             <View style={styles.recordedBadge}>
               <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-              <Text style={styles.recordedText}>Ovozli xabar tayyor</Text>
+              <Text style={styles.recordedText}>{t('hwp_creative_voice_ready')}</Text>
             </View>
           )}
         </View>
@@ -873,7 +885,7 @@ function CreativePart({
         style={[styles.continueBtn, (!canSubmit || submitting) && styles.continueBtnDisabled]}
         disabled={!canSubmit || submitting}
         onPress={submit}>
-        <Text style={styles.continueBtnText}>{submitting ? 'Yuborilmoqda...' : 'Yuborish'}</Text>
+        <Text style={styles.continueBtnText}>{submitting ? t('hwp_creative_sending') : t('hwp_creative_send')}</Text>
       </Pressable>
     </ScrollView>
   );

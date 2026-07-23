@@ -8,6 +8,7 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { CoinPill } from '@/components/ui/CoinIcon';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, GrammarBlank, LessonContent } from '@/data/lessonContent';
 import { reportActivity } from '@/services/activitySync';
 import { addCoins } from '@/services/coinsStore';
@@ -15,6 +16,7 @@ import { addLightning } from '@/services/lightningStore';
 import { markDone } from '@/services/lessonProgressStore';
 
 export default function VideoExercisesScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
 
@@ -72,6 +74,8 @@ export default function VideoExercisesScreen() {
     const nextQueue = isCorrect ? rest : [...rest, current];
     if (nextQueue.length === 0) {
       markDone(String(lessonId), 'videoExercises');
+      // CRM'dagi (admin/ustoz uchun) faollik jurnali doim o'zbek tilida
+      // ko'rsatiladi — bu yerdagi label ilova tiliga bog'liq emas.
       reportActivity({ type: 'video', label: `${lessonId} - Video mashqlar`, wrongAttempts });
       setFinished(true);
       return;
@@ -100,7 +104,7 @@ export default function VideoExercisesScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={28} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>Grammar mashqlar</Text>
+        <Text style={styles.topTitle}>{t('ve_title')}</Text>
         <Text style={styles.progress}>
           {completed} / {total}
         </Text>
@@ -111,7 +115,7 @@ export default function VideoExercisesScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.instruction}>Bo'sh joyga mos so'zni tanlang</Text>
+        <Text style={styles.instruction}>{t('ve_instruction')}</Text>
 
         <View style={styles.sentenceCard}>
           <Ionicons name="volume-high" size={18} color={theme.colors.purple} style={{ marginBottom: 10 }} />
@@ -143,9 +147,9 @@ export default function VideoExercisesScreen() {
       {answered && (
         <View style={[styles.footer, isCorrect ? styles.footerCorrect : styles.footerWrong]}>
           <Ionicons name={isCorrect ? 'checkmark-circle' : 'close-circle'} size={22} color="#fff" />
-          <Text style={styles.footerText}>{isCorrect ? "To'g'ri javob!" : `To'g'ri javob: ${current.answer}`}</Text>
+          <Text style={styles.footerText}>{isCorrect ? t('ve_correct') : `${t('exam_correct_answer')} ${current.answer}`}</Text>
           <Pressable style={styles.nextBtn} onPress={handleNext}>
-            <Text style={styles.nextText}>Keyingi</Text>
+            <Text style={styles.nextText}>{t('common_keyingi')}</Text>
           </Pressable>
         </View>
       )}
@@ -164,19 +168,20 @@ function FinishedScreen({
   earnedCoins: number;
   earnedLightning: number;
 }) {
+  const { t } = useLang();
   const [celebrating, setCelebrating] = useState(true);
   return (
     <View style={styles.resultCenter}>
       <Text style={styles.resultEmoji}>🎉</Text>
-      <Text style={styles.resultTitle}>Mashqlar tugadi!</Text>
-      <Text style={styles.resultSubtitle}>{total} ta savolning barchasiga to'g'ri javob berdingiz!</Text>
-      {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>}
+      <Text style={styles.resultTitle}>{t('ex_finished_title')}</Text>
+      <Text style={styles.resultSubtitle}>{t('ve_all_correct_sub').replace('{n}', String(total))}</Text>
+      {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{t('ve_retry_count').replace('{n}', String(wrongAttempts))}</Text>}
       <View style={styles.rewardsRow}>
         <CoinPill amount={earnedCoins} />
         <LightningPill amount={earnedLightning} />
       </View>
       <Pressable style={styles.resultBtn} onPress={() => router.back()}>
-        <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
+        <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
       </Pressable>
       <CelebrationOverlay visible={celebrating} onFinish={() => setCelebrating(false)} />
     </View>

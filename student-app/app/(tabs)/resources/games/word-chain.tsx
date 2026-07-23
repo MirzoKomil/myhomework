@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
 import { addCoins } from '@/services/coinsStore';
 import { playLoseSound, playWinSound } from '@/services/gameSounds';
@@ -21,6 +22,7 @@ import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 const MIN_BANK_SIZE = 5;
 
 export default function WordChainGame() {
+  const { t } = useLang();
   const [wordBank, setWordBank] = useState<string[] | null>(null);
   const [chain, setChain] = useState<string[]>([]);
   const [input, setInput] = useState('');
@@ -50,15 +52,15 @@ export default function WordChainGame() {
     if (!word || !wordBank) return;
 
     if (word[0] !== lastWord.slice(-1).toLowerCase()) {
-      setError(`So'z "${requiredLetter}" harfi bilan boshlanishi kerak`);
+      setError(t('wc_error_start_letter').replace('{letter}', requiredLetter));
       return;
     }
     if (!wordBank.includes(word)) {
-      setError("Bu so'z ro'yxatda yo'q, boshqasini urinib ko'ring");
+      setError(t('wc_error_not_in_list'));
       return;
     }
     if (chain.includes(word)) {
-      setError("Bu so'z allaqachon ishlatilgan");
+      setError(t('wc_error_already_used'));
       return;
     }
     addCoins(1);
@@ -87,7 +89,7 @@ export default function WordChainGame() {
   if (!wordBank || chain.length === 0) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <ScreenHeader title="So'nggi harf" showBack />
+        <ScreenHeader title={t('game_word_chain_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -99,7 +101,7 @@ export default function WordChainGame() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="So'nggi harf" showBack />
       <View style={styles.scoreRow}>
-        <Text style={styles.scoreLabel}>Zanjir uzunligi</Text>
+        <Text style={styles.scoreLabel}>{t('wc_chain_length')}</Text>
         <Text style={styles.scoreValue}>{score}</Text>
       </View>
 
@@ -116,17 +118,17 @@ export default function WordChainGame() {
       {!finished ? (
         <View style={styles.inputBar}>
           <Text style={styles.hint}>
-            Keyingi so'z <Text style={styles.hintLetter}>{requiredLetter}</Text> harfi bilan boshlanishi kerak
+            {t('wc_hint_prefix')} <Text style={styles.hintLetter}>{requiredLetter}</Text> {t('wc_hint_suffix')}
           </Text>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
-              placeholder="So'z yozing..."
+              placeholder={t('wc_placeholder')}
               placeholderTextColor={theme.colors.textLight}
               value={input}
-              onChangeText={(t) => {
-                setInput(t);
+              onChangeText={(text) => {
+                setInput(text);
                 setError(null);
               }}
               autoCapitalize="none"
@@ -137,15 +139,15 @@ export default function WordChainGame() {
             </Pressable>
           </View>
           <Pressable style={styles.finishBtn} onPress={finish}>
-            <Text style={styles.finishText}>Yakunlash</Text>
+            <Text style={styles.finishText}>{t('wc_finish_btn')}</Text>
           </Pressable>
         </View>
       ) : (
         <View style={styles.resultWrap}>
           <Text style={styles.resultEmoji}>🏆</Text>
-          <Text style={styles.resultTitle}>Natija: {score}</Text>
+          <Text style={styles.resultTitle}>{t('wc_result_label')} {score}</Text>
           <Pressable style={styles.restartBtn} onPress={restart}>
-            <Text style={styles.restartText}>Qaytadan boshlash</Text>
+            <Text style={styles.restartText}>{t('wc_restart')}</Text>
           </Pressable>
           <CelebrationOverlay visible={finished && score > 0} />
         </View>

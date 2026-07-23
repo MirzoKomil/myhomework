@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
 import { playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
@@ -96,6 +97,7 @@ function cellKey(c: Cell) {
 }
 
 export default function WordSearchGame() {
+  const { t } = useLang();
   const [board, setBoard] = useState<{ grid: string[][]; words: string[] } | null>(null);
   const [selection, setSelection] = useState<Cell | null>(null);
   const [foundCells, setFoundCells] = useState<Set<string>>(new Set());
@@ -176,7 +178,7 @@ export default function WordSearchGame() {
   if (!board) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <ScreenHeader title="So'ztopar" showBack />
+        <ScreenHeader title={t('game_word_search_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -199,9 +201,9 @@ export default function WordSearchGame() {
       {won ? (
         <View style={styles.resultWrap}>
           <Text style={styles.resultEmoji}>🎉</Text>
-          <Text style={styles.resultTitle}>Barcha so'zlar topildi!</Text>
+          <Text style={styles.resultTitle}>{t('ws_all_found')}</Text>
           <Pressable style={styles.restartBtn} onPress={restart}>
-            <Text style={styles.restartText}>Qaytadan o'ynash</Text>
+            <Text style={styles.restartText}>{t('game_replay')}</Text>
           </Pressable>
           <CelebrationOverlay visible={won} />
         </View>

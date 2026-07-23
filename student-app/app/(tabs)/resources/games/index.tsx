@@ -10,13 +10,15 @@ import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { useCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
 
 type GameItem = {
   id: string;
-  title: string;
-  description: string;
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
   emoji: string;
   colors: [string, string];
   route: string;
@@ -25,40 +27,40 @@ type GameItem = {
 const games: GameItem[] = [
   {
     id: 'word-chain',
-    title: "So'nggi harf",
-    description: "Keyingi so'z oldingi so'zning oxirgi harfi bilan boshlanadi. O'ynab ko'ring.",
+    titleKey: 'game_word_chain_title',
+    descKey: 'game_word_chain_desc',
     emoji: '🔤',
     colors: ['#9B7BFF', '#6B4FE0'],
     route: '/resources/games/word-chain',
   },
   {
     id: 'memory-match',
-    title: 'Esla-Mosla',
-    description: "Rasmlarni eslang va ularni to'g'ri juftlik bilan moslang.",
+    titleKey: 'game_memory_match_title',
+    descKey: 'game_memory_match_desc',
     emoji: '❓',
     colors: ['#F87171', '#F59E0B'],
     route: '/resources/games/memory-match',
   },
   {
     id: 'word-search',
-    title: "So'ztopar",
-    description: "Harflar orasiga yashiringan so'zlarni toping.",
+    titleKey: 'game_word_search_title',
+    descKey: 'game_word_search_desc',
     emoji: '🔍',
     colors: ['#D879E8', '#A855F7'],
     route: '/resources/games/word-search',
   },
   {
     id: 'mystery-word',
-    title: "Sirli So'z",
-    description: "Kataklar ortidagi yashirin so'zni toping.",
+    titleKey: 'game_mystery_word_title',
+    descKey: 'game_mystery_word_desc',
     emoji: '🟩',
     colors: ['#FBBF24', '#D97706'],
     route: '/resources/games/mystery-word',
   },
   {
     id: 'face-to-face',
-    title: 'Yuzma-Yuz',
-    description: "Boshqalar bilan o'ynang va to'g'ri tarjima variantlarini tanlang.",
+    titleKey: 'game_face_to_face_title',
+    descKey: 'game_face_to_face_desc',
     emoji: '⚔️',
     colors: ['#7B61FF', '#4F46E5'],
     route: '/battle',
@@ -66,6 +68,7 @@ const games: GameItem[] = [
 ];
 
 export default function GamesScreen() {
+  const { t } = useLang();
   const coins = useCoins();
   const lightning = useLightning();
   const [showCoinInfo, setShowCoinInfo] = useState(false);
@@ -73,7 +76,7 @@ export default function GamesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
-        title="O'YINLAR"
+        title={t('games_title')}
         showBack
         rightAction={
           <View style={styles.headerPillRow}>
@@ -96,8 +99,8 @@ export default function GamesScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.card}>
               <View style={styles.cardText}>
-                <Text style={styles.cardTitle}>{game.title}</Text>
-                <Text style={styles.cardDesc}>{game.description}</Text>
+                <Text style={styles.cardTitle}>{t(game.titleKey)}</Text>
+                <Text style={styles.cardDesc}>{t(game.descKey)}</Text>
               </View>
               <Text style={styles.cardEmoji}>{game.emoji}</Text>
             </LinearGradient>

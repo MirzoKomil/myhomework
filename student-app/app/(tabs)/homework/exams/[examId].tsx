@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Exam, ExamQuestion, getResolvedExam } from '@/data/exams';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { reportActivity } from '@/services/activitySync';
 import { ExamMistake, saveExamResult } from '@/services/examStore';
 
@@ -31,16 +33,17 @@ function questionPrompt(q: ExamQuestion): string {
   return q.sentence;
 }
 
-function correctAnswerLabel(q: ExamQuestion): string {
+function correctAnswerLabel(q: ExamQuestion, t: (key: TranslationKey) => string): string {
   if (q.kind === 'multipleChoice') return q.options[q.correctIndex];
   if (q.kind === 'fillBlank') return q.answer;
   if (q.kind === 'sentenceBuild') return q.answer.join(' ');
-  return "To'g'ri talaffuz bilan aytilishi";
+  return t('exam_correct_pronunciation_fallback');
 }
 
 type Phase = 'intro' | 'active' | 'break' | 'result';
 
 export default function ExamScreen() {
+  const { t } = useLang();
   const { examId } = useLocalSearchParams<{ examId: string }>();
   const [resolved, setResolved] = useState<{ exam: Exam; passPercent: number } | null | undefined>(undefined);
   const exam = resolved?.exam;
@@ -105,7 +108,7 @@ export default function ExamScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center}>
-          <Text style={styles.body}>Imtihon topilmadi</Text>
+          <Text style={styles.body}>{t('exam_not_found')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -123,7 +126,7 @@ export default function ExamScreen() {
     if (isCorrect) {
       setCorrectCount((c) => c + 1);
     } else if (current) {
-      setMistakes((m) => [...m, { question: questionPrompt(current), yourAnswer, correctAnswer: correctAnswerLabel(current) }]);
+      setMistakes((m) => [...m, { question: questionPrompt(current), yourAnswer, correctAnswer: correctAnswerLabel(current, t) }]);
     }
   }
 
@@ -166,7 +169,7 @@ export default function ExamScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Ionicons name="close" size={26} color={theme.colors.text} />
           </Pressable>
-          <Text style={styles.topTitle}>Imtihon</Text>
+          <Text style={styles.topTitle}>{t('exam_title')}</Text>
           <View style={{ width: 26 }} />
         </View>
         <View style={styles.introWrap}>
@@ -177,25 +180,25 @@ export default function ExamScreen() {
           <View style={styles.introStatsRow}>
             <View style={styles.introStat}>
               <Text style={styles.introStatValue}>{exam.questions.length}</Text>
-              <Text style={styles.introStatLabel}>savol</Text>
+              <Text style={styles.introStatLabel}>{t('exam_questions_label')}</Text>
             </View>
             <View style={styles.introStat}>
               <Text style={styles.introStatValue}>{Math.round(exam.durationSeconds / 60)}</Text>
-              <Text style={styles.introStatLabel}>daqiqa</Text>
+              <Text style={styles.introStatLabel}>{t('exam_minutes_label')}</Text>
             </View>
             <View style={styles.introStat}>
               <Text style={styles.introStatValue}>{EXAM_PASS_PERCENT}%</Text>
-              <Text style={styles.introStatLabel}>o'tish balli</Text>
+              <Text style={styles.introStatLabel}>{t('exam_pass_score_label')}</Text>
             </View>
           </View>
           <Text style={styles.introHint}>
-            ⏱️ Imtihon boshlanganda vaqt orqaga sanaladi.{'\n'}
-            {exam.breakAfterIndex !== null && `☕ Yarmida ${Math.round(exam.breakSeconds / 60)} daqiqalik tanaffus beriladi.\n`}
-            🎯 Har bir savol savol turiga mos usulda (test, gap to'ldirish, gap tuzish, speaking) tekshiriladi.{'\n'}
-            📊 Oxirida foiz, o'tdi/o'tmadi natijasi va xatolaringizga izoh chiqadi.
+            {t('exam_intro_hint_time')}{'\n'}
+            {exam.breakAfterIndex !== null && `${t('exam_intro_hint_break').replace('{n}', String(Math.round(exam.breakSeconds / 60)))}\n`}
+            {t('exam_intro_hint_types')}{'\n'}
+            {t('exam_intro_hint_result')}
           </Text>
           <Pressable style={styles.startBtn} onPress={start}>
-            <Text style={styles.startBtnText}>Imtihonni boshlash</Text>
+            <Text style={styles.startBtnText}>{t('exam_start_btn')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -208,11 +211,11 @@ export default function ExamScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.breakWrap}>
           <Text style={styles.breakEmoji}>☕</Text>
-          <Text style={styles.breakTitle}>Qisqa tanaffus</Text>
+          <Text style={styles.breakTitle}>{t('exam_break_title')}</Text>
           <Text style={styles.breakClock}>{formatClock(breakRemaining)}</Text>
-          <Text style={styles.breakHint}>Dam oling, imtihon avtomatik davom etadi.</Text>
+          <Text style={styles.breakHint}>{t('exam_break_hint')}</Text>
           <Pressable style={styles.breakSkipBtn} onPress={() => setPhase('active')}>
-            <Text style={styles.breakSkipBtnText}>Hoziroq davom etish</Text>
+            <Text style={styles.breakSkipBtnText}>{t('exam_break_skip')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -230,34 +233,35 @@ export default function ExamScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Ionicons name="close" size={26} color={theme.colors.text} />
           </Pressable>
-          <Text style={styles.topTitle}>Natija</Text>
+          <Text style={styles.topTitle}>{t('exam_result_title')}</Text>
           <View style={{ width: 26 }} />
         </View>
         <ScrollView contentContainerStyle={styles.resultScroll} showsVerticalScrollIndicator={false}>
           <View style={[styles.resultBanner, passed ? styles.resultBannerPass : styles.resultBannerFail]}>
             <Text style={styles.resultEmoji}>{passed ? '🎉' : '📚'}</Text>
             <Text style={styles.resultPercent}>{scorePercent}%</Text>
-            <Text style={styles.resultVerdict}>{passed ? "Imtihondan o'tdingiz!" : "Imtihondan o'ta olmadingiz"}</Text>
+            <Text style={styles.resultVerdict}>{passed ? t('exam_passed_text') : t('exam_failed_text')}</Text>
             <Text style={styles.resultSub}>
-              {correctCount}/{total} ta savolga to'g'ri javob berdingiz{!passed ? ` — o'tish balli ${EXAM_PASS_PERCENT}%` : ''}
+              {t('exam_result_sub').replace('{correct}', String(correctCount)).replace('{total}', String(total))}
+              {!passed ? t('exam_result_fail_suffix').replace('{n}', String(EXAM_PASS_PERCENT)) : ''}
             </Text>
           </View>
 
           {mistakes.length > 0 && (
             <>
-              <Text style={styles.mistakesTitle}>Xatolaringiz ({mistakes.length})</Text>
+              <Text style={styles.mistakesTitle}>{t('exam_mistakes_title')} ({mistakes.length})</Text>
               {mistakes.map((m, i) => (
                 <View key={i} style={styles.mistakeCard}>
                   <Text style={styles.mistakeQuestion}>{m.question}</Text>
-                  <Text style={styles.mistakeYour}>Sizning javobingiz: {m.yourAnswer}</Text>
-                  <Text style={styles.mistakeCorrect}>To'g'ri javob: {m.correctAnswer}</Text>
+                  <Text style={styles.mistakeYour}>{t('exam_your_answer')} {m.yourAnswer}</Text>
+                  <Text style={styles.mistakeCorrect}>{t('exam_correct_answer')} {m.correctAnswer}</Text>
                 </View>
               ))}
             </>
           )}
 
           <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>Imtihonlar ro'yxatiga qaytish</Text>
+            <Text style={styles.backBtnText}>{t('exam_back_to_list')}</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -347,7 +351,7 @@ export default function ExamScreen() {
 
         {q.kind === 'sentenceBuild' && (
           <>
-            <Text style={styles.instruction}>Gapni to'g'ri tartibda tuzing</Text>
+            <Text style={styles.instruction}>{t('exam_sentence_build_instruction')}</Text>
             <View style={styles.sentenceCard}>
               <Text style={styles.sentence}>{q.translation}</Text>
             </View>
@@ -378,12 +382,12 @@ export default function ExamScreen() {
                   goNext();
                 }}
               >
-                <Text style={styles.continueBtnText}>Javobni tekshirish va davom etish</Text>
+                <Text style={styles.continueBtnText}>{t('exam_check_continue')}</Text>
               </Pressable>
             )}
             {builtOrder.length > 0 && builtOrder.length < q.words.length && (
               <Pressable style={styles.resetBtn} onPress={() => setBuiltOrder([])}>
-                <Text style={styles.resetBtnText}>Boshidan boshlash</Text>
+                <Text style={styles.resetBtnText}>{t('exam_restart_from_scratch')}</Text>
               </Pressable>
             )}
           </>
@@ -391,7 +395,7 @@ export default function ExamScreen() {
 
         {q.kind === 'speaking' && (
           <>
-            <Text style={styles.instruction}>Jumlani ovoz chiqarib o'qing</Text>
+            <Text style={styles.instruction}>{t('exam_speaking_instruction')}</Text>
             <View style={styles.sentenceCard}>
               <Text style={styles.sentence}>{q.sentence}</Text>
               <Text style={styles.sentenceTranslation}>{q.translation}</Text>
@@ -401,17 +405,17 @@ export default function ExamScreen() {
                 style={styles.speakBtn}
                 onPress={() => {
                   const score = 78 + Math.floor(Math.random() * 20);
-                  recordAnswer(score >= 80, `Talaffuz balli: ${score}%`);
+                  recordAnswer(score >= 80, `${t('exam_pronunciation_score_label')} ${score}%`);
                   setSpeakingDone(true);
                 }}
               >
                 <Ionicons name="mic" size={20} color="#fff" />
-                <Text style={styles.speakBtnText}>Ovoz chiqarib o'qidim</Text>
+                <Text style={styles.speakBtnText}>{t('exam_speak_btn')}</Text>
               </Pressable>
             ) : (
               <View style={styles.speakDoneBox}>
                 <Ionicons name="checkmark-circle" size={22} color={theme.colors.success} />
-                <Text style={styles.speakDoneText}>Qabul qilindi</Text>
+                <Text style={styles.speakDoneText}>{t('exam_speak_accepted')}</Text>
               </View>
             )}
           </>
@@ -422,7 +426,7 @@ export default function ExamScreen() {
         (q.kind === 'fillBlank' && blankSelected !== null) ||
         (q.kind === 'speaking' && speakingDone)) && (
         <Pressable style={styles.continueBtnFixed} onPress={goNext}>
-          <Text style={styles.continueBtnText}>Keyingi</Text>
+          <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
         </Pressable>
       )}
     </SafeAreaView>

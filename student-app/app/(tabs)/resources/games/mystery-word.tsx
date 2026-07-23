@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
 import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
@@ -52,6 +53,7 @@ function pickAnswer(pool: string[]) {
 // birinchi marta ochilganda avtomatik chiqadi, keyin ham (i) tugmasi
 // orqali istalgan payt qayta ko'rish mumkin.
 function RulesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useLang();
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.rulesBackdrop}>
@@ -59,41 +61,39 @@ function RulesModal({ visible, onClose }: { visible: boolean; onClose: () => voi
           <Pressable style={styles.rulesCloseBtn} onPress={onClose} hitSlop={10}>
             <Ionicons name="close" size={22} color={theme.colors.textMuted} />
           </Pressable>
-          <Text style={styles.rulesTitle}>Qanday o'ynash kerak?</Text>
+          <Text style={styles.rulesTitle}>{t('mw_rules_title')}</Text>
           <Text style={styles.rulesText}>
-            Yashirin {WORD_LENGTH} harfli inglizcha so'zni topish uchun sizda {MAX_TRIES} ta urinish bor. Har bir
-            urinishdan keyin harflar rangi javobga qanchalik yaqinligingizni ko'rsatadi:
+            {t('mw_rules_intro').replace('{n}', String(WORD_LENGTH)).replace('{m}', String(MAX_TRIES))}
           </Text>
 
           <View style={styles.rulesLegendRow}>
             <View style={[styles.rulesLegendCell, { backgroundColor: theme.colors.textLight }]}>
               <Text style={styles.rulesLegendLetter}>A</Text>
             </View>
-            <Text style={styles.rulesLegendText}>Bu harf yashirin so'zda umuman yo'q.</Text>
+            <Text style={styles.rulesLegendText}>{t('mw_rules_absent')}</Text>
           </View>
           <View style={styles.rulesLegendRow}>
             <View style={[styles.rulesLegendCell, { backgroundColor: theme.colors.warning }]}>
               <Text style={styles.rulesLegendLetter}>B</Text>
             </View>
-            <Text style={styles.rulesLegendText}>So'zda bor, lekin noto'g'ri joyda.</Text>
+            <Text style={styles.rulesLegendText}>{t('mw_rules_present')}</Text>
           </View>
           <View style={styles.rulesLegendRow}>
             <View style={[styles.rulesLegendCell, { backgroundColor: theme.colors.success }]}>
               <Text style={styles.rulesLegendLetter}>C</Text>
             </View>
-            <Text style={styles.rulesLegendText}>So'zda bor va aynan to'g'ri joyda.</Text>
+            <Text style={styles.rulesLegendText}>{t('mw_rules_correct')}</Text>
           </View>
 
           <View style={styles.rulesHintNote}>
             <Ionicons name="bulb" size={16} color="#B45309" />
             <Text style={styles.rulesHintNoteText}>
-              Qiynalsangiz, tepadagi lampochka tugmasi orqali {MAX_HINTS} marta yordam so'rashingiz mumkin — u sizga
-              bitta harfning to'g'ri joyini ochib beradi.
+              {t('mw_rules_hint_note').replace('{n}', String(MAX_HINTS))}
             </Text>
           </View>
 
           <Pressable style={styles.rulesConfirmBtn} onPress={onClose}>
-            <Text style={styles.rulesConfirmText}>Tushunarli</Text>
+            <Text style={styles.rulesConfirmText}>{t('common_tushunarli')}</Text>
           </Pressable>
         </View>
       </View>
@@ -102,6 +102,7 @@ function RulesModal({ visible, onClose }: { visible: boolean; onClose: () => voi
 }
 
 export default function MysteryWordGame() {
+  const { t } = useLang();
   const [wordPool, setWordPool] = useState<string[] | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<{ word: string; statuses: LetterStatus[] }[]>([]);
@@ -163,7 +164,7 @@ export default function MysteryWordGame() {
     if (!answer) return;
     const word = input.trim().toLowerCase();
     if (word.length !== WORD_LENGTH || !/^[a-z]+$/.test(word)) {
-      setError(`${WORD_LENGTH} harfli so'z kiriting`);
+      setError(t('mw_error_letters').replace('{n}', String(WORD_LENGTH)));
       return;
     }
     const statuses = evaluateGuess(word, answer);
@@ -200,7 +201,7 @@ export default function MysteryWordGame() {
   if (!answer) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <ScreenHeader title="Sirli So'z" showBack />
+        <ScreenHeader title={t('game_mystery_word_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -211,7 +212,7 @@ export default function MysteryWordGame() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader
-        title="Sirli So'z"
+        title={t('game_mystery_word_title')}
         showBack
         rightAction={
           <View style={styles.headerActions}>
@@ -235,7 +236,7 @@ export default function MysteryWordGame() {
           {hints.map((h) => (
             <View key={h.index} style={styles.hintChip}>
               <Text style={styles.hintChipText}>
-                {h.index + 1}-harf: {h.letter.toUpperCase()}
+                {h.index + 1}{t('mw_hint_letter_suffix')} {h.letter.toUpperCase()}
               </Text>
             </View>
           ))}
@@ -268,11 +269,11 @@ export default function MysteryWordGame() {
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
-              placeholder={`${WORD_LENGTH} harfli so'z...`}
+              placeholder={t('mw_placeholder').replace('{n}', String(WORD_LENGTH))}
               placeholderTextColor={theme.colors.textLight}
               value={input}
-              onChangeText={(t) => {
-                setInput(t);
+              onChangeText={(text) => {
+                setInput(text);
                 setError(null);
               }}
               maxLength={WORD_LENGTH}
@@ -280,17 +281,17 @@ export default function MysteryWordGame() {
               onSubmitEditing={submit}
             />
             <Pressable style={styles.submitBtn} onPress={submit}>
-              <Text style={styles.submitText}>Tekshirish</Text>
+              <Text style={styles.submitText}>{t('mw_check_btn')}</Text>
             </Pressable>
           </View>
         </View>
       ) : (
         <View style={styles.resultWrap}>
           <Text style={styles.resultEmoji}>{gameOver === 'won' ? '🎉' : '😔'}</Text>
-          <Text style={styles.resultTitle}>{gameOver === 'won' ? "Topdingiz!" : "Afsus, sinab ko'ring"}</Text>
-          <Text style={styles.resultSub}>Javob: {answer.toUpperCase()}</Text>
+          <Text style={styles.resultTitle}>{gameOver === 'won' ? t('mw_won') : t('mw_lost')}</Text>
+          <Text style={styles.resultSub}>{t('mw_answer_label')} {answer.toUpperCase()}</Text>
           <Pressable style={styles.restartBtn} onPress={restart}>
-            <Text style={styles.restartText}>Qaytadan o'ynash</Text>
+            <Text style={styles.restartText}>{t('game_replay')}</Text>
           </Pressable>
           <CelebrationOverlay visible={gameOver === 'won'} />
         </View>

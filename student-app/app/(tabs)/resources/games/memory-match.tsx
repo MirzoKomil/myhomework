@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
 import { playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
@@ -40,6 +41,7 @@ function shuffle<T>(arr: T[]): T[] {
 type Phase = 'study' | 'match' | 'result';
 
 export default function MemoryMatchGame() {
+  const { t } = useLang();
   const [items, setItems] = useState<Item[] | null>(null);
   const [phase, setPhase] = useState<Phase>('study');
   const [slotFill, setSlotFill] = useState<Record<string, string | null>>({});
@@ -191,7 +193,7 @@ export default function MemoryMatchGame() {
   if (!items) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <ScreenHeader title="Esla-Mosla" showBack />
+        <ScreenHeader title={t('game_memory_match_title')} showBack />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={theme.colors.purple} />
         </View>
@@ -208,7 +210,7 @@ export default function MemoryMatchGame() {
           rightAction={
             phase === 'match' ? (
               <Pressable onPress={restart}>
-                <Text style={styles.restartLink}>Qayta boshlash</Text>
+                <Text style={styles.restartLink}>{t('mm_restart')}</Text>
               </Pressable>
             ) : undefined
           }
@@ -226,12 +228,12 @@ export default function MemoryMatchGame() {
       {phase === 'result' ? (
         <View style={styles.resultWrap}>
           <Text style={styles.resultEmoji}>🎉</Text>
-          <Text style={styles.resultTitle}>Barchasi topildi!</Text>
+          <Text style={styles.resultTitle}>{t('mm_all_found')}</Text>
           <Text style={styles.resultSub}>
-            {formatTime(seconds)} ichida, {moves} ta urinishda yakunladingiz
+            {t('mm_time_moves_result').replace('{time}', formatTime(seconds)).replace('{moves}', String(moves))}
           </Text>
           <Pressable style={styles.restartBtn} onPress={restart}>
-            <Text style={styles.restartText}>Qaytadan o'ynash</Text>
+            <Text style={styles.restartText}>{t('game_replay')}</Text>
           </Pressable>
           <CelebrationOverlay visible={phase === 'result'} />
         </View>
@@ -278,15 +280,15 @@ export default function MemoryMatchGame() {
             <View style={styles.studyFooter}>
               <View style={styles.hintPill}>
                 <Ionicons name="information-circle" size={16} color={theme.colors.purple} />
-                <Text style={styles.hintPillText}>Bu so'zlar va rasmlarni eslab qoling</Text>
+                <Text style={styles.hintPillText}>{t('mm_memorize_hint')}</Text>
               </View>
               <Pressable style={styles.memorizedBtn} onPress={startMatch}>
-                <Text style={styles.memorizedBtnText}>ESLAB QOLDIM!</Text>
+                <Text style={styles.memorizedBtnText}>{t('mm_memorized_btn')}</Text>
               </Pressable>
             </View>
           ) : (
             <>
-              <Text style={styles.dragHint}>So'zlarni bo'sh kataklarga sudrab qo'ying</Text>
+              <Text style={styles.dragHint}>{t('mm_drag_hint')}</Text>
               <View style={styles.chipBank}>
                 {chipIds.map((chipId) => {
                   const item = items.find((it) => it.id === chipId)!;

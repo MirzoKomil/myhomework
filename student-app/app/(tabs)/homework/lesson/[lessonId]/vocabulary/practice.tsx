@@ -9,6 +9,8 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { CoinPill } from '@/components/ui/CoinIcon';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { getResolvedLessonContent, LessonContent, VOCAB_PRACTICE_SIZE, VocabWord } from '@/data/lessonContent';
 import { reportActivity } from '@/services/activitySync';
 import { addCoins } from '@/services/coinsStore';
@@ -17,7 +19,7 @@ import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
 const PRACTICE_SIZE = VOCAB_PRACTICE_SIZE;
-const STEP_LABELS = ['Choose translation', 'Construct word', 'Pronounce word'];
+const STEP_LABEL_KEYS: TranslationKey[] = ['vp_step_translation', 'vp_step_construct', 'vp_step_pronounce'];
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -34,6 +36,7 @@ function pickDistractors(all: VocabWord[], correct: VocabWord, count: number): s
 }
 
 export default function VocabularyPracticeScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
 
@@ -58,7 +61,7 @@ export default function VocabularyPracticeScreen() {
     if (words.length && !roundQueue) setRoundQueue(words);
   }, [words, roundQueue]);
 
-  const totalSteps = words.length * STEP_LABELS.length;
+  const totalSteps = words.length * STEP_LABEL_KEYS.length;
 
   if (!content || !roundQueue) {
     return (
@@ -89,13 +92,14 @@ export default function VocabularyPracticeScreen() {
       setRoundQueue(nextQueue);
       return;
     }
-    if (round + 1 < STEP_LABELS.length) {
+    if (round + 1 < STEP_LABEL_KEYS.length) {
       setRound(round + 1);
       setRoundQueue(words);
       return;
     }
     markDone(String(lessonId), 'vocabPractice');
-    saveLastPosition({ lessonId: String(lessonId), section: 'vocabulary/practice', label: "O'rganish, yodlash, takrorlash" });
+    saveLastPosition({ lessonId: String(lessonId), section: 'vocabulary/practice', label: t('hw_vocab_practice_title') });
+    // CRM'dagi faollik jurnali doim o'zbek tilida ko'rsatiladi.
     reportActivity({ type: 'vocab', label: `${lessonId} - Lug'at mashqi`, wrongAttempts });
     setFinished(true);
   };
@@ -119,7 +123,7 @@ export default function VocabularyPracticeScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={28} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>{STEP_LABELS[round]}</Text>
+        <Text style={styles.topTitle}>{t(STEP_LABEL_KEYS[round])}</Text>
         <Text style={styles.progress}>
           {completedSteps} / {totalSteps}
         </Text>
@@ -147,19 +151,20 @@ function FinishedScreen({
   earnedCoins: number;
   earnedLightning: number;
 }) {
+  const { t } = useLang();
   const [celebrating, setCelebrating] = useState(true);
   return (
     <View style={styles.resultCenter}>
       <Text style={styles.resultEmoji}>📚</Text>
-      <Text style={styles.resultTitle}>Ajoyib!</Text>
-      <Text style={styles.resultSubtitle}>{wordsCount} ta so'z bo'yicha 3 bosqichli mashqni muvaffaqiyatli yakunladingiz!</Text>
-      {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{wrongAttempts} marta qayta urinildi</Text>}
+      <Text style={styles.resultTitle}>{t('vp_finished_great')}</Text>
+      <Text style={styles.resultSubtitle}>{t('vp_finished_sub').replace('{n}', String(wordsCount))}</Text>
+      {wrongAttempts > 0 && <Text style={styles.resultSubtitle}>{t('ve_retry_count').replace('{n}', String(wrongAttempts))}</Text>}
       <View style={styles.rewardsRow}>
         <CoinPill amount={earnedCoins} />
         <LightningPill amount={earnedLightning} />
       </View>
       <Pressable style={styles.resultBtn} onPress={() => router.back()}>
-        <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
+        <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
       </Pressable>
       <CelebrationOverlay visible={celebrating} onFinish={() => setCelebrating(false)} />
     </View>
@@ -167,6 +172,7 @@ function FinishedScreen({
 }
 
 function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; allWords: VocabWord[]; onDone: (correct: boolean) => void }) {
+  const { t } = useLang();
   const options = useMemo(
     () => shuffle([word.translation, ...pickDistractors(allWords, word, 3)]),
     [word, allWords]
@@ -177,7 +183,7 @@ function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; al
 
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.instruction}>Tarjimasini tanlang</Text>
+      <Text style={styles.instruction}>{t('vp_choose_translation')}</Text>
       <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
         <View style={styles.wordEnglishRow}>
@@ -207,7 +213,7 @@ function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; al
       </View>
       {answered && (
         <Pressable style={styles.continueBtn} onPress={() => onDone(isCorrect)}>
-          <Text style={styles.continueBtnText}>Davom etish</Text>
+          <Text style={styles.continueBtnText}>{t('common_davom_etish')}</Text>
         </Pressable>
       )}
     </View>
@@ -215,6 +221,7 @@ function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; al
 }
 
 function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct: boolean) => void }) {
+  const { t } = useLang();
   const letters = useMemo(() => shuffle(word.english.split('')), [word]);
   const [used, setUsed] = useState<boolean[]>(() => letters.map(() => false));
   const [built, setBuilt] = useState<number[]>([]);
@@ -246,7 +253,7 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
 
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.instruction}>Harflardan so'zni yig'ing</Text>
+      <Text style={styles.instruction}>{t('vp_construct_word')}</Text>
       <View style={styles.wordCard}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
         <Text style={styles.wordTranslationBig}>{word.translation}</Text>
@@ -279,16 +286,16 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
       {isComplete ? (
         <View style={{ gap: 10 }}>
           <Text style={[styles.feedbackText, { color: isCorrect ? theme.colors.success : theme.colors.danger }]}>
-            {isCorrect ? "To'g'ri!" : `To'g'ri javob: ${word.english}`}
+            {isCorrect ? t('vp_correct') : `${t('exam_correct_answer')} ${word.english}`}
           </Text>
           <Pressable style={styles.continueBtn} onPress={() => onDone(isCorrect)}>
-            <Text style={styles.continueBtnText}>Davom etish</Text>
+            <Text style={styles.continueBtnText}>{t('common_davom_etish')}</Text>
           </Pressable>
         </View>
       ) : (
         <Pressable style={styles.resetBtn} onPress={reset}>
           <Ionicons name="refresh" size={16} color={theme.colors.textMuted} />
-          <Text style={styles.resetBtnText}>Tozalash</Text>
+          <Text style={styles.resetBtnText}>{t('vp_clear_btn')}</Text>
         </Pressable>
       )}
     </View>
@@ -317,6 +324,7 @@ const AUTO_STOP_MS = 4500;
 const HANG_FAILSAFE_MS = 8000;
 
 function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct: boolean) => void }) {
+  const { t } = useLang();
   const [status, setStatus] = useState<PronounceStatus>('idle');
   const [heardText, setHeardText] = useState('');
   const recognitionRef = useRef<any>(null);
@@ -359,7 +367,7 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
       clearTimers();
       const alternatives: string[] = Array.from(event.results[0]).map((r: any) => r.transcript as string);
       const target = normalizeSpoken(word.english);
-      const matched = alternatives.some((t) => normalizeSpoken(t) === target);
+      const matched = alternatives.some((alt) => normalizeSpoken(alt) === target);
       setHeardText(alternatives[0] || '');
       setStatus(matched ? 'correct' : 'wrong');
     };
@@ -397,7 +405,7 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
 
   return (
     <View style={styles.stepContent}>
-      <Text style={styles.instruction}>So'zni talaffuz qiling</Text>
+      <Text style={styles.instruction}>{t('vp_pronounce_word')}</Text>
       <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
         <View style={styles.wordEnglishRow}>
@@ -412,15 +420,15 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
           onPress={status === 'listening' ? stopListening : startListening}>
           <Ionicons name={status === 'listening' ? 'stop' : 'mic'} size={30} color="#fff" />
         </Pressable>
-        {status === 'listening' && <Text style={styles.recordedText}>Tinglanmoqda... gapiring</Text>}
+        {status === 'listening' && <Text style={styles.recordedText}>{t('vp_listening')}</Text>}
         {status === 'unsupported' && (
           <Text style={[styles.recordedText, { color: theme.colors.danger }]}>
-            Brauzeringiz ovozni aniqlashni qo'llab-quvvatlamaydi
+            {t('vp_unsupported')}
           </Text>
         )}
         {status === 'error' && (
           <Text style={[styles.recordedText, { color: theme.colors.danger }]}>
-            Ovoz eshitilmadi, qaytadan urinib ko'ring
+            {t('vp_error_retry')}
           </Text>
         )}
         {isDone && (
@@ -432,12 +440,12 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
                 color={status === 'correct' ? theme.colors.success : theme.colors.danger}
               />
               <Text style={[styles.recordedText, { color: status === 'correct' ? theme.colors.success : theme.colors.danger }]}>
-                {status === 'correct' ? "To'g'ri talaffuz!" : `Eshitildi: "${heardText || '—'}"`}
+                {status === 'correct' ? t('vp_correct_pronunciation') : `${t('vp_heard_prefix')} "${heardText || '—'}"`}
               </Text>
             </View>
             {status === 'wrong' && (
               <Pressable onPress={retry} hitSlop={8}>
-                <Text style={{ fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.purple }}>Qayta urinish</Text>
+                <Text style={{ fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.purple }}>{t('vp_retry_btn')}</Text>
               </Pressable>
             )}
           </View>
@@ -445,7 +453,7 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
       </View>
       {isDone && (
         <Pressable style={styles.continueBtn} onPress={() => onDone(status === 'correct')}>
-          <Text style={styles.continueBtnText}>Davom etish</Text>
+          <Text style={styles.continueBtnText}>{t('common_davom_etish')}</Text>
         </Pressable>
       )}
     </View>

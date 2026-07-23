@@ -6,10 +6,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
 import { markDone } from '@/services/lessonProgressStore';
 
 export default function SpeakingExercisesScreen() {
+  const { t } = useLang();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [content, setContent] = useState<LessonContent | null>(null);
 
@@ -67,10 +69,10 @@ export default function SpeakingExercisesScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.resultCenter}>
           <Text style={styles.resultEmoji}>🎤</Text>
-          <Text style={styles.resultTitle}>Mashqlar tugadi!</Text>
-          <Text style={styles.resultSubtitle}>{prompts.length} ta jumla mashq qilindi</Text>
+          <Text style={styles.resultTitle}>{t('ex_finished_title')}</Text>
+          <Text style={styles.resultSubtitle}>{t('se_sentences_practiced').replace('{n}', String(prompts.length))}</Text>
           <Pressable style={styles.resultBtn} onPress={() => router.back()}>
-            <Text style={styles.resultBtnText}>Orqaga qaytish</Text>
+            <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -83,7 +85,7 @@ export default function SpeakingExercisesScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={28} color={theme.colors.text} />
         </Pressable>
-        <Text style={styles.topTitle}>Speaking mashqlari</Text>
+        <Text style={styles.topTitle}>{t('se_title')}</Text>
         <Text style={styles.progress}>
           {index + 1} / {prompts.length}
         </Text>
@@ -94,7 +96,7 @@ export default function SpeakingExercisesScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.instruction}>Jumlani diqqat bilan tinglang va talaffuz qiling</Text>
+        <Text style={styles.instruction}>{t('se_instruction')}</Text>
 
         <View style={styles.wordCard}>
           <View style={styles.illustration}>
@@ -125,14 +127,14 @@ export default function SpeakingExercisesScreen() {
           {recorded && (
             <View style={styles.recordedBadge}>
               <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-              <Text style={styles.recordedText}>Ovoz yozib olindi</Text>
+              <Text style={styles.recordedText}>{t('se_recorded')}</Text>
             </View>
           )}
         </View>
       </View>
 
       <Pressable style={[styles.nextBtn, !recorded && styles.nextBtnDisabled]} disabled={!recorded} onPress={handleNext}>
-        <Text style={styles.nextBtnText}>Keyingi</Text>
+        <Text style={styles.nextBtnText}>{t('common_keyingi')}</Text>
       </Pressable>
     </SafeAreaView>
   );
