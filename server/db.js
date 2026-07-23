@@ -872,12 +872,22 @@ function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
 }
 
 // 150-ish: parol endi bcrypt bilan shifrlanadi (o'zgarmas hash), shuning
-// uchun uni ilovaga qaytarib ko'rsatishning iloji yo'q — appning profil
-// ekrani endi bu endpointni chaqirmaydi, lekin eski/keshlangan build'lar
-// bilan mos kelishi uchun bo'sh obyekt bilan javob berishda davom etadi.
+// uchun uni ilovaga qaytarib ko'rsatishning iloji yo'q.
+// 40-vazifa: appning Bosh sahifa/Profil ekranlari ilgari real ma'lumot
+// o'rniga hardcode qilingan namuna ("Shahzoda Mavlonova") ismini
+// ko'rsatardi — chunki hech qanday real endpoint ism/ID qaytarmasdi. Endi
+// bu funksiya xavfsiz (parolga aloqasi yo'q) maydonlarni qaytaradi.
 async function getDemoStudentProfile(studentId) {
-    await resolveStudentId(studentId);
-    return {};
+    const id = await resolveStudentId(studentId);
+    if (!id) return {};
+    const rows = await q('SELECT * FROM students WHERE id = $1', [id]);
+    const student = rows[0] ? rowToStudent(rows[0]) : null;
+    if (!student) return {};
+    return {
+        name: student.name || '',
+        studentId: student.serialCode || student.id,
+        lang: student.subject === 'russian' ? 'russian' : 'english',
+    };
 }
 
 // 6-vazifa: lid to'lov jarayonida o'quvchiga aylanganda unga avtomatik

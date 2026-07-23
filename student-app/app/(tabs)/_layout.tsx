@@ -6,6 +6,7 @@ import Colors from '@/constants/Colors';
 import { theme } from '@/constants/theme';
 import { DESKTOP_BREAKPOINT, DESKTOP_CONTENT_MAX_WIDTH, DESKTOP_SIDEBAR_WIDTH, WEB_APP_MAX_WIDTH } from '@/constants/web';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useLang } from '@/i18n/LanguageContext';
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
 
@@ -31,6 +32,7 @@ export default function TabLayout() {
   // quvvatlaydi, alohida navigator yozish shart emas.
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+  const { t } = useLang();
 
   return (
     <Tabs
@@ -50,35 +52,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarLabel: 'Bosh sahifa',
+          tabBarLabel: t('nav_home'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="home" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="homework"
         options={{
-          tabBarLabel: 'Darslar',
+          tabBarLabel: t('nav_lessons'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="school" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="resources"
         options={{
-          tabBarLabel: 'Resurslar',
+          tabBarLabel: t('nav_resources'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="library" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          tabBarLabel: 'Muloqot',
+          tabBarLabel: t('nav_community'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="chatbubbles" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarLabel: 'Profil',
+          tabBarLabel: t('nav_profile'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="person" color={color} focused={focused} />,
         }}
       />

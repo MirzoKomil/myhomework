@@ -9,15 +9,40 @@ import { LessonReminder } from '@/components/ui/LessonReminder';
 import { ShopEntryCard } from '@/components/ui/ShopEntryCard';
 import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
-import { fetchDemoNotifications, fetchDemoSchedule, fetchMobileContent } from '@/services/contentApi';
+import { fetchDemoNotifications, fetchDemoSchedule, fetchDemoStudentProfile, fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
+
+// 40-vazifa: `dailyStages` (data/mock.ts) hali ham o'zbekcha `label`
+// saqlaydi — shu lug'at orqali `stage.key` bo'yicha tarjima qidiriladi,
+// topilmasa asl (o'zbekcha) label ko'rsatiladi.
+const STAGE_LABEL_KEYS: Record<string, TranslationKey> = {
+  radio: 'home_radio',
+  words: 'home_words',
+  translator: 'home_translator',
+  speakingGame: 'home_speaking_battle',
+};
 
 export default function HomeScreen() {
   const activeCourse = courses[0];
   const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
   const [liveLesson, setLiveLesson] = useState(nextLiveLesson);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  // 40-vazifa: ilgari bu yerda doim mock namuna ismi ko'rsatilardi — endi
+  // CRM'da tanlangan (yoki real login qilgan) o'quvchining o'z ismi
+  // ko'rsatiladi, xatolik bo'lsa namuna ismga qaytiladi.
+  const [firstName, setFirstName] = useState(profileStats.name.split(' ')[0]);
+  const { t } = useLang();
+
+  useEffect(() => {
+    fetchDemoStudentProfile()
+      .then((profile) => {
+        if (profile?.name) setFirstName(profile.name.split(' ')[0]);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchDemoSchedule()
@@ -95,8 +120,8 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.greetingWrap}>
           <Text style={styles.greetingLine} numberOfLines={1}>
-            <Text style={styles.greeting}>Salom, </Text>
-            <Text style={styles.name}>{profileStats.name.split(' ')[0]}</Text>{' '}
+            <Text style={styles.greeting}>{t('home_greeting')}, </Text>
+            <Text style={styles.name}>{firstName}</Text>{' '}
             <Animated.Text style={{ transform: [{ rotate: waveRotate }] }}>👋</Animated.Text>
           </Text>
         </View>
@@ -119,12 +144,13 @@ export default function HomeScreen() {
 
         <View style={styles.quickGrid}>
           {dailyStages.map((stage) => {
+            const label = STAGE_LABEL_KEYS[stage.key] ? t(STAGE_LABEL_KEYS[stage.key]) : stage.label;
             const inner = (
               <>
                 <View style={[styles.quickIcon, { backgroundColor: stage.bg }]}>
                   <Ionicons name={stage.icon} size={22} color={stage.color} />
                 </View>
-                <Text style={styles.quickLabel}>{stage.label}</Text>
+                <Text style={styles.quickLabel}>{label}</Text>
               </>
             );
             if (stage.route) {
@@ -145,7 +171,7 @@ export default function HomeScreen() {
           })}
         </View>
 
-        <Text style={styles.sectionTitle}>Ko'nikmalar progressi</Text>
+        <Text style={styles.sectionTitle}>{t('home_skills_progress')}</Text>
         <SkillBars skills={skillProgress} />
 
         <CourseProgressCard

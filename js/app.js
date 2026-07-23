@@ -813,7 +813,13 @@ function renderStudentApp() {
             document.querySelectorAll('[data-mobile-lang]').forEach(b =>
                 b.classList.toggle('active', b.dataset.mobileLang === _mobileLang)
             );
-            switchMobileSection(_mobileSection);
+            // 40-vazifa: "Ilovani ko'rish"da til tanlansa, appning haqiqiy
+            // preview'i (iframe + tashqi tugmalar) shu tilga qayta yuklanadi.
+            if (_mobileSection === 'view') {
+                _reloadStudentAppPreview();
+            } else {
+                switchMobileSection(_mobileSection);
+            }
         });
     });
     document.querySelectorAll('[data-mobile-lang]').forEach(b =>
@@ -853,6 +859,28 @@ function _syncMobileSubNavUI() {
     );
 }
 
+// 40-vazifa: "Ilovani ko'rish" preview'i (iframe + "Yangi oynada ochish"/
+// "Web app holatida ko'rish" tugmalari) endi mobileLangTabs'da tanlangan
+// tilga (`_mobileLang`) qarab `?lang=english`/`?lang=russian` bilan ochiladi
+// — student-app'ning LanguageContext'i shu query'ni har qanday boshqa
+// manbadan ustun qo'yadi.
+function _studentAppPreviewUrl() {
+    const lang = _mobileLang === 'russian' ? 'russian' : 'english';
+    return `/student/?lang=${lang}&v=${Date.now()}`;
+}
+function _updateStudentAppPreviewLinks() {
+    const url = _studentAppPreviewUrl();
+    const openBtn = document.getElementById('mobileOpenAppBtn');
+    if (openBtn) openBtn.href = url;
+    const openWebAppBtn = document.getElementById('mobileOpenWebAppBtn');
+    if (openWebAppBtn) openWebAppBtn.href = url;
+}
+function _reloadStudentAppPreview() {
+    const frame = document.getElementById('studentAppFrame');
+    if (frame) frame.src = _studentAppPreviewUrl();
+    _updateStudentAppPreviewLinks();
+}
+
 function switchMobileSection(section) {
     _mobileSection = section;
     document.querySelectorAll('[data-mobile-section]').forEach(btn =>
@@ -870,12 +898,13 @@ function switchMobileSection(section) {
     const langTabs = document.getElementById('mobileLangTabs');
     if (openBtn) openBtn.style.display = section === 'view' ? '' : 'none';
     if (openWebAppBtn) openWebAppBtn.style.display = section === 'view' ? '' : 'none';
-    if (langTabs) langTabs.style.display = section === 'view' ? 'none' : '';
+    if (langTabs) langTabs.style.display = '';
     if (section === 'edit') renderMobileEditPanel();
     else if (section === 'stats') renderMobileStatsPanel();
     else if (section === 'view') {
         const frame = document.getElementById('studentAppFrame');
-        if (frame && frame.src === 'about:blank') frame.src = `/student/?v=${Date.now()}`;
+        if (frame && frame.src === 'about:blank') frame.src = _studentAppPreviewUrl();
+        _updateStudentAppPreviewLinks();
     }
 }
 

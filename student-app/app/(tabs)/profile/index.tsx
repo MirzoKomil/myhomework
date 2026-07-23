@@ -11,30 +11,33 @@ import { LightningIcon } from '@/components/ui/LightningIcon';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
 import { getLevelProgress } from '@/data/levels';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
+import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { useLightning } from '@/services/lightningStore';
 
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  labelKey: TranslationKey;
   value?: string;
   route?: string;
   color?: string;
 };
 
 const menuItems: MenuItem[] = [
-  { icon: 'calendar', label: 'Dars jadvali', route: '/profile/schedule' },
-  { icon: 'person-circle', label: 'Mening ustozim', route: '/profile/teacher' },
-  { icon: 'bar-chart', label: 'Baholar', route: '/profile/grades' },
-  { icon: 'trophy', label: 'Motivatsiya tizimi', route: '/profile/motivation' },
-  { icon: 'stats-chart', label: 'Natijalarim', route: '/profile/results' },
-  { icon: 'ribbon', label: 'Sertifikatlarim', route: '/profile/certificates' },
-  { icon: 'cube', label: 'Yetkazib berish xizmati', route: '/profile/book-delivery' },
-  { icon: 'card', label: "To'lovlar tarixi", route: '/profile/payment' },
-  { icon: 'settings-outline', label: 'Sozlamalar', route: '/profile/settings' },
+  { icon: 'calendar', labelKey: 'profile_schedule', route: '/profile/schedule' },
+  { icon: 'person-circle', labelKey: 'profile_my_teacher', route: '/profile/teacher' },
+  { icon: 'bar-chart', labelKey: 'profile_grades', route: '/profile/grades' },
+  { icon: 'trophy', labelKey: 'profile_motivation', route: '/profile/motivation' },
+  { icon: 'stats-chart', labelKey: 'profile_results', route: '/profile/results' },
+  { icon: 'ribbon', labelKey: 'profile_certificates', route: '/profile/certificates' },
+  { icon: 'cube', labelKey: 'profile_delivery', route: '/profile/book-delivery' },
+  { icon: 'card', labelKey: 'profile_payments', route: '/profile/payment' },
+  { icon: 'settings-outline', labelKey: 'profile_settings', route: '/profile/settings' },
 ];
 
 export default function ProfileScreen() {
@@ -45,6 +48,22 @@ export default function ProfileScreen() {
   const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
   const levelProgress = getLevelProgress(lightning);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
+  const { t } = useLang();
+
+  // 40-vazifa: ilgari doim mock namuna ism/ID ko'rsatilardi — endi CRM'da
+  // tanlangan (yoki real login qilgan) o'quvchining o'z ma'lumoti
+  // ko'rsatiladi, xatolik bo'lsa namuna ma'lumotga qaytiladi.
+  const [displayName, setDisplayName] = useState(profileStats.name);
+  const [displayId, setDisplayId] = useState(profileStats.studentId);
+
+  useEffect(() => {
+    fetchDemoStudentProfile()
+      .then((profile) => {
+        if (profile?.name) setDisplayName(profile.name);
+        if (profile?.studentId) setDisplayId(profile.studentId);
+      })
+      .catch(() => {});
+  }, []);
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const wobbleAnim = useRef(new Animated.Value(0)).current;
@@ -99,7 +118,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Profil" />
+      <ScreenHeader title={t('profile_title')} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.userCard}>
           <View style={styles.avatar}>
@@ -110,8 +129,8 @@ export default function ProfileScreen() {
             )}
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{profileStats.name}</Text>
-            <Text style={styles.userLevel}>ID {profileStats.studentId}</Text>
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userLevel}>ID {displayId}</Text>
           </View>
           <Pressable style={styles.editBtn} onPress={() => router.push('/profile/edit' as never)}>
             <Ionicons name="pencil" size={16} color={theme.colors.blue} />
@@ -136,8 +155,8 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.leaderboardRow}>
               <View>
-                <Text style={styles.balanceLabel}>Leaderboard</Text>
-                <Text style={styles.balanceAmount}>{me ? `${me.rank}-o'rin` : '—'}</Text>
+                <Text style={styles.balanceLabel}>{t('profile_leaderboard')}</Text>
+                <Text style={styles.balanceAmount}>{me ? `${me.rank}${t('profile_place_suffix')}` : '—'}</Text>
                 {me && (
                   <View style={styles.tariffRow}>
                     <CoinIcon size={12} />
@@ -161,21 +180,24 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           {[
             {
-              label: 'Davomat',
+              id: 'attendance',
+              label: t('profile_attendance'),
               value: `${profileStats.attendanceRate}%`,
               icon: 'checkmark-circle' as const,
               bg: theme.colors.successBg,
               color: theme.colors.success,
             },
             {
-              label: 'Vaqt',
-              value: `${profileStats.hoursSpent.toFixed(1)} soat`,
+              id: 'time',
+              label: t('profile_time'),
+              value: `${profileStats.hoursSpent.toFixed(1)} ${t('profile_hour_short')}`,
               icon: 'time' as const,
               bg: theme.colors.blueLight,
               color: theme.colors.blue,
             },
             {
-              label: 'Chaqmoq',
+              id: 'streak',
+              label: t('profile_streak'),
               value: displayLightning,
               icon: 'badge' as const,
               bg: theme.colors.purpleLight,
@@ -183,7 +205,7 @@ export default function ProfileScreen() {
               onPress: () => setShowLightningInfo(true),
             },
           ].map((stat) => (
-            <Pressable key={stat.label} style={styles.statBox} onPress={stat.onPress} disabled={!stat.onPress}>
+            <Pressable key={stat.id} style={styles.statBox} onPress={stat.onPress} disabled={!stat.onPress}>
               <View style={[styles.statIconWrap, { backgroundColor: stat.bg }]}>
                 {stat.icon === 'badge' ? (
                   <Image source={levelProgress.level.image} style={styles.statBadgeImage} />
@@ -200,13 +222,13 @@ export default function ProfileScreen() {
         <View style={styles.menu}>
           {menuItems.map((item) => (
             <Pressable
-              key={item.label}
+              key={item.route}
               style={styles.menuItem}
               onPress={() => item.route && router.push(item.route as never)}>
               <View style={styles.menuIcon}>
                 <Ionicons name={item.icon} size={20} color={theme.colors.purple} />
               </View>
-              <Text style={styles.menuLabel}>{item.label}</Text>
+              <Text style={styles.menuLabel}>{t(item.labelKey)}</Text>
               {item.value ? (
                 <Text style={styles.menuValue}>{item.value}</Text>
               ) : (

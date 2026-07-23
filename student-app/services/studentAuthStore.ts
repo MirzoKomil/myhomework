@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 const TOKEN_KEY = 'mh_student_token';
 const STUDENT_KEY = 'mh_student_info';
 
-export type StudentInfo = { id: string; name: string; login: string };
+export type StudentInfo = { id: string; name: string; login: string; lang?: 'english' | 'russian' };
 
 let token: string | null = null;
 let student: StudentInfo | null = null;

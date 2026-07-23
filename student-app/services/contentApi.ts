@@ -82,6 +82,11 @@ const DEMO_CONTRACT_PDF_API_BASE =
     ? '/api/state/demo-contract-pdf'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-contract-pdf';
 
+const DEMO_PROFILE_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-profile'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-profile';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -311,6 +316,28 @@ export type DemoScheduleResponse = {
   lessonDayOfWeek: number | null;
   lessonTime: string;
 };
+
+// 40-vazifa: Bosh sahifa/Profil ekranlaridagi ism va ID ilgari hardcode
+// qilingan namuna ("Shahzoda Mavlonova") edi — endi CRM'da haqiqatan
+// tanlangan (yoki real login qilgan) o'quvchining o'z ismi/ID/kurs
+// tilini qaytaradi.
+export type DemoProfileResponse = {
+  name: string;
+  studentId: string;
+  lang: 'english' | 'russian';
+};
+
+export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | null> {
+  const r = await authedFetch(DEMO_PROFILE_API_BASE);
+  if (!r.ok) return null;
+  const data = await r.json();
+  if (!data?.name) return null;
+  return {
+    name: data.name,
+    studentId: data.studentId ?? '',
+    lang: data.lang === 'russian' ? 'russian' : 'english',
+  };
+}
 
 export async function fetchDemoSchedule(): Promise<DemoScheduleResponse> {
   const r = await authedFetch(DEMO_SCHEDULE_API_BASE);

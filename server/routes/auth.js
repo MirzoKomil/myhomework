@@ -110,7 +110,7 @@ router.post('/student-login', async (req, res) => {
         const userAgent = req.headers['user-agent'] || '';
         const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
         await createSession({ userId: student.id, jti, userAgent, ip });
-        res.json({ token, student: { id: student.id, name: student.name, login: student.login } });
+        res.json({ token, student: { id: student.id, name: student.name, login: student.login, lang: student.subject === 'russian' ? 'russian' : 'english' } });
     } catch (err) {
         console.error('POST /student-login', err);
         res.status(500).json({ error: 'Server xatoligi' });

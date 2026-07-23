@@ -17,6 +17,7 @@ import 'react-native-reanimated';
 import { TeacherRatingModal } from '@/components/TeacherRatingModal';
 import { theme } from '@/constants/theme';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
+import { LanguageProvider } from '@/i18n/LanguageContext';
 import { getToken, loadAuth } from '@/services/studentAuthStore';
 
 export { ErrorBoundary } from 'expo-router';
@@ -99,13 +100,13 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <>
+    <LanguageProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
       </Stack>
       <TeacherRatingModal />
-    </>
+    </LanguageProvider>
   );
 }
