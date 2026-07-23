@@ -19,6 +19,15 @@ export const translations = {
     home_translator: 'Tarjimon',
     home_speaking_battle: 'Speaking Battle',
     home_skills_progress: "Ko'nikmalar progressi",
+    home_shop_title: 'Homework Shop',
+    home_shop_subtitle: "Coinlaringizni sovg'alarga almashtiring",
+
+    // 42-vazifa: Ko'nikmalar progressi panelidagi ko'nikma nomlari
+    skill_vocabulary: 'Vocabulary',
+    skill_speaking: 'Speaking',
+    skill_listening: 'Listening',
+    skill_grammar: 'Grammar',
+    skill_writing: 'Writing',
 
     profile_title: 'Profil',
     profile_leaderboard: 'Leaderboard',
@@ -462,8 +471,16 @@ export const translations = {
     home_radio: 'Радио',
     home_words: 'Слова',
     home_translator: 'Переводчик',
-    home_speaking_battle: 'Speaking Battle',
+    home_speaking_battle: 'Спикинг Баттл',
     home_skills_progress: 'Прогресс навыков',
+    home_shop_title: 'Магазин домашних заданий',
+    home_shop_subtitle: 'Обменивайте монеты на подарки',
+
+    skill_vocabulary: 'Словарный запас',
+    skill_speaking: 'Говорение',
+    skill_listening: 'Аудирование',
+    skill_grammar: 'Грамматика',
+    skill_writing: 'Письмо',
 
     profile_title: 'Профиль',
     profile_leaderboard: 'Лидерборд',

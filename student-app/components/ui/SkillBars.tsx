@@ -6,9 +6,22 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/constants/theme';
 import { SkillProgress } from '@/data/mock';
+import { useLang } from '@/i18n/LanguageContext';
+import type { TranslationKey } from '@/i18n/translations';
 
 const BAR_HEIGHT = 110;
 const SHIMMER_HEIGHT = 46;
+
+// 42-vazifa: ko'nikma nomlari (Vocabulary/Speaking/...) ilgari hamma tilda
+// bir xil ingliz so'zi bilan qattiq yozilgan edi — endi rus tilida haqiqiy
+// tarjimasi ko'rsatiladi.
+const SKILL_LABEL_KEYS: Record<SkillProgress['key'], TranslationKey> = {
+  vocabulary: 'skill_vocabulary',
+  speaking: 'skill_speaking',
+  listening: 'skill_listening',
+  grammar: 'skill_grammar',
+  writing: 'skill_writing',
+};
 
 type SkillBarsProps = {
   skills: SkillProgress[];
@@ -23,6 +36,7 @@ const GRADIENTS: Record<SkillProgress['key'], [string, string]> = {
 };
 
 function SkillBar({ skill, progressAnim }: { skill: SkillProgress; progressAnim: Animated.Value }) {
+  const { t } = useLang();
   const [displayPercent, setDisplayPercent] = useState(0);
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -73,7 +87,7 @@ function SkillBar({ skill, progressAnim }: { skill: SkillProgress; progressAnim:
         </Animated.View>
       </View>
       <Ionicons name={skill.icon} size={15} color={theme.colors.textMuted} style={styles.icon} />
-      <Text style={styles.label}>{skill.label}</Text>
+      <Text style={styles.label}>{t(SKILL_LABEL_KEYS[skill.key])}</Text>
     </View>
   );
 }
