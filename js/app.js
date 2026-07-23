@@ -7803,6 +7803,10 @@ function renderStudents() {
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
                     Platformaga qo'shish
                 </button>
+                <button type="button" class="student-dropdown-item" data-view-app-student="${escapeHtml(sid)}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+                    Ilovada ko'rish
+                </button>
                 <button type="button" class="student-dropdown-item student-dropdown-item--danger" data-del-student="${escapeHtml(sid)}">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     O'chirish
@@ -7816,6 +7820,18 @@ function renderStudents() {
             menu.querySelector('[data-platform-student]')?.addEventListener('click', () => {
                 menu.remove();
                 openAddToPlatformModal(sid);
+            });
+            // 38-vazifa: "Ilovada ko'rish" — shu o'quvchini "Namuna o'quvchi"
+            // (demoStudentId) sifatida belgilaydi va ilovani yangi oynada
+            // ochadi, shunda admin aynan shu o'quvchining haqiqiy ma'lumotini
+            // (ismi, dars jadvali, ustozi va h.k.) ko'rishi mumkin.
+            menu.querySelector('[data-view-app-student]')?.addEventListener('click', () => {
+                menu.remove();
+                setItem(STORAGE_KEYS.demoStudentId, sid);
+                const select = document.getElementById('demoStudentSelect');
+                if (select) select.value = sid;
+                showMiniToast("Ilova shu o'quvchi ma'lumotlari bilan ochilmoqda...");
+                window.open('/student/?v=' + Date.now(), '_blank', 'noopener');
             });
             menu.querySelector('[data-del-student]')?.addEventListener('click', () => {
                 menu.remove();
@@ -9349,6 +9365,13 @@ function _bindStudentPasswordEye(sfx) {
     if (btn && inp) btn.addEventListener('click', () => { inp.type = inp.type === 'password' ? 'text' : 'password'; });
 }
 
+// 38-vazifa: o'quvchi uchun oddiy 6 xonali sonli parol — telefon raqami
+// asosidagi login bilan birga, o'quvchi buni oson eslab qolib, o'zi
+// kiritishi mumkin.
+function generateStudentPassword() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 document.getElementById('addStudentBtn').addEventListener('click', () => {
     const _defaultSubject = getStudentsSelectedSubject();
     // 8-vazifa (qayta ish 4): O'quvchilar bo'limidan to'g'ridan-to'g'ri
@@ -9385,7 +9408,10 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         if (!leadStage) { alert("Sotuv bo'limi ustunini tanlang"); return; }
         const phone = document.getElementById('mStPhone').value.trim();
         const login = document.getElementById('mStLogin').value.trim() || phone.replace(/\s/g, '');
-        const password = document.getElementById('mStPassword').value.trim();
+        // 38-vazifa: agar admin Parolni bo'sh qoldirsa ham, o'quvchi ilovaga
+        // real kira olishi uchun avtomatik parol generatsiya qilinadi —
+        // aks holda bo'sh parol bilan login umuman ishlamas edi.
+        const password = document.getElementById('mStPassword').value.trim() || generateStudentPassword();
         const students = getItem(STORAGE_KEYS.students, []);
         if (login && students.find(s => s.login === login)) {
             alert('Bu login allaqachon mavjud.');
@@ -9437,7 +9463,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         // 150-ish: parol saqlangach shifrlanadi (bcrypt) va qayta ko'rsatib
         // bo'lmaydi — shu tufayli hozir, hali oddiy matn holida ekan,
         // adminga bir martalik eslatma ko'rsatiladi.
-        if (login && password) {
+        if (login) {
             alert(`O'quvchi qo'shildi.\n\nLogin: ${login}\nParol: ${password}\n\nBu parolni saqlab qo'ying — u qayta ko'rsatilmaydi.`);
         }
         closeModal();
