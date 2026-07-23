@@ -22,6 +22,12 @@ webpush.setVapidDetails('mailto:support@myhomework.uz', VAPID_PUBLIC_KEY, VAPID_
 // bilan qo'shib o'qiladi (lessonContents'dagi kabi override-pattern).
 const LIBRARY_DEFAULTS = require('./data/libraryDefaults.json');
 
+// 41-qism: Rus tili kursi uchun Kutubxonaning boshlang'ich to'plami — ataylab
+// bo'sh, chunki LIBRARY_DEFAULTS ingliz tili lug'ati/grammatikasi (masalan
+// {"en":"Bee","uz":"Asalari"}) va rus tili uchun soxta tarjima o'ylab
+// topilmaydi — admin CRM'ning "Rus tili" tabidan haqiqiy kontentni qo'shadi.
+const LIBRARY_DEFAULTS_RU = require('./data/libraryDefaultsRussian.json');
+
 // Homework Shop'ning boshlang'ich mahsulot to'plami — xuddi LIBRARY_DEFAULTS
 // kabi bir martalik ko'chirilgan baza, CRM tahrirlari faqat shopOverrides
 // orqali qo'shib o'qiladi.
@@ -541,18 +547,34 @@ function applyComputedLessonAttendance(mc, liveGrades, demoStudentId) {
     return mc;
 }
 
+// 41-qism: mc.libraryOverrides ilgari yassi ({grammar:{...}, words:{...}})
+// edi — CRM endi Ingliz/Rus tili uchun alohida tahrir qilishi kerak bo'lgani
+// sabab, uni { english:{...}, russian:{...} } shakliga o'tkazamiz. Eski
+// yassi ma'lumot yo'qolib ketmasligi uchun "english" bo'limiga o'raladi —
+// bu shakl faqat xotirada hisoblanadi, keyingi har qanday CRM saqlashida
+// tabiiy ravishda saqlangan holatga ham yoziladi (xuddi mc.library/mc.shop
+// computed maydonlari kabi).
+function normalizeLibraryOverrides(mc) {
+    const root = mc.libraryOverrides || {};
+    if (root.english || root.russian) return root;
+    mc.libraryOverrides = { english: root, russian: {} };
+    return mc.libraryOverrides;
+}
+
 // Kutubxonaning 6 kategoriyasini (grammar/words/pronunciation/speaking/podcasts/
-// books) statik LIBRARY_DEFAULTS bilan CRM'da kiritilgan mc.libraryOverrides'ni
-// birlashtirib, mc.library'ga yozadi. Overridedagi { _deleted: true } — o'sha
-// id'ni ro'yxatdan chiqarib tashlaydi; default'da yo'q id'lar (CRM'da "+
-// Qo'shish" bilan qo'shilgan yangi elementlar) to'g'ridan-to'g'ri qo'shiladi.
-function applyLibraryOverrides(mc) {
-    const overrides = mc.libraryOverrides || {};
+// books) berilgan til uchun statik default (LIBRARY_DEFAULTS/LIBRARY_DEFAULTS_RU)
+// bilan o'sha tilning override'larini birlashtiradi. Overridedagi
+// { _deleted: true } — o'sha id'ni ro'yxatdan chiqarib tashlaydi; default'da
+// yo'q id'lar (CRM'da "+ Qo'shish" bilan qo'shilgan yangi elementlar)
+// to'g'ridan-to'g'ri qo'shiladi.
+function buildLibraryForLang(overridesByLang, lang) {
+    const defaults = lang === 'russian' ? LIBRARY_DEFAULTS_RU : LIBRARY_DEFAULTS;
+    const langOverrides = overridesByLang[lang] || {};
     const library = {};
-    for (const cat of Object.keys(LIBRARY_DEFAULTS)) {
-        const catOverrides = overrides[cat] || {};
+    for (const cat of Object.keys(defaults)) {
+        const catOverrides = langOverrides[cat] || {};
         const defaultIds = new Set();
-        const merged = LIBRARY_DEFAULTS[cat].map(item => {
+        const merged = defaults[cat].map(item => {
             defaultIds.add(item.id);
             const patch = catOverrides[item.id];
             if (patch && patch._deleted) return null;
@@ -563,7 +585,19 @@ function applyLibraryOverrides(mc) {
         });
         library[cat] = merged;
     }
-    mc.library = library;
+    return library;
+}
+
+// `lang` berilsa ('english'/'russian') — mc.library o'sha tilning yassi
+// to'plami bo'ladi (public/o'quvchi so'rovi uchun, bugungi shaklga mos).
+// `lang` berilmasa (CRM to'liq holat so'rovi) — mc.library ikkala tilni
+// birdek o'z ichiga oladi ({ english:{...}, russian:{...} }), chunki admin
+// _mobileLang tugmasi orqali istalgan vaqt ikkalasini ham tahrirlaydi.
+function applyLibraryOverrides(mc, lang) {
+    const overridesByLang = normalizeLibraryOverrides(mc);
+    mc.library = (lang === 'english' || lang === 'russian')
+        ? buildLibraryForLang(overridesByLang, lang)
+        : { english: buildLibraryForLang(overridesByLang, 'english'), russian: buildLibraryForLang(overridesByLang, 'russian') };
     return mc;
 }
 
@@ -586,7 +620,42 @@ function applyShopOverrides(mc) {
     return mc;
 }
 
-async function getMobileContentData(studentId) {
+// 41-qism: berilgan o'quvchining haqiqiy kurs yo'nalishini ('english'/'russian')
+// students.subject ustunidan aniqlaydi — getDemoStudentProfile'dagi bilan
+// bir xil mantiq, shu yerga chiqarilib, ikkalasida ham qayta ishlatiladi.
+async function resolveStudentSubjectLang(studentId) {
+    if (!studentId) return 'english';
+    const rows = await q('SELECT subject FROM students WHERE id = $1', [studentId]);
+    return rows[0] && rows[0].subject === 'russian' ? 'russian' : 'english';
+}
+
+const BONUS_ID_RE = /^bonus-\d+$/;
+const EXAM_ID_RE = /^interval-\d+$|^final$/;
+
+// 41-qism: Bonus darslar/Imtihonlar global (kursga bog'liq bo'lmagan) sobit
+// slotlar bo'lgani uchun, CRM ularning rus tili variantini "<id>-russian"
+// prefiksi bilan alohida saqlaydi (mc.lessonContents/mc.examContents ichida,
+// ingliz tili kaliti o'zgarishsiz qoladi). Bu funksiya faqat rus tili
+// kursidagi o'quvchiga (public/bitta-o'quvchi rejimida) mo'ljallangan javobda
+// shu "-russian" kalitlarni oddiy nomga almashtiradi — shunday qilib
+// student-app hech qanday o'zgarishsiz, doim bir xil (suffixsiz) kalitlarni
+// so'raydi va to'g'ri tildagi kontentni oladi. Oddiy (kursga tegishli,
+// noyob lessonId'li) darslar bu bilan ishlamaydi — ular allaqachon
+// course.lang orqali to'g'ri ajratilgan.
+function resolveLangScopedContent(mc, studentLang) {
+    if (studentLang !== 'russian') return;
+    for (const store of [mc.lessonContents, mc.examContents]) {
+        if (!store) continue;
+        for (const key of Object.keys(store)) {
+            if (!BONUS_ID_RE.test(key) && !EXAM_ID_RE.test(key)) continue;
+            const ruKey = `${key}-russian`;
+            if (store[ruKey]) store[key] = store[ruKey];
+            else delete store[key];
+        }
+    }
+}
+
+async function getMobileContentData(studentId, { crmMode = false } = {}) {
     const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
     const mc = row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
     const [liveGrades, demoStudentId] = await Promise.all([
@@ -594,7 +663,9 @@ async function getMobileContentData(studentId) {
         resolveStudentId(studentId),
     ]);
     applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
-    applyLibraryOverrides(mc);
+    const studentLang = crmMode ? undefined : await resolveStudentSubjectLang(demoStudentId);
+    applyLibraryOverrides(mc, studentLang);
+    if (!crmMode) resolveLangScopedContent(mc, studentLang);
     return applyShopOverrides(mc);
 }
 
@@ -623,7 +694,7 @@ async function getFullState() {
         getLeads(),
         getHrEmployeesData(),
         getBookRoadmap(),
-        getMobileContentData(),
+        getMobileContentData(undefined, { crmMode: true }),
         getJsonData('scripts'),
         getJsonData('bonusHistory'),
         getJsonData('bonusData'),
@@ -886,7 +957,7 @@ async function getDemoStudentProfile(studentId) {
     return {
         name: student.name || '',
         studentId: student.serialCode || student.id,
-        lang: student.subject === 'russian' ? 'russian' : 'english',
+        lang: await resolveStudentSubjectLang(id),
     };
 }
 

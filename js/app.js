@@ -2484,12 +2484,24 @@ const MOBILE_TOTAL_BONUS_LESSONS = 18;
 // Ilovadagi "Bonus darslar" (har yakshanba, 6 kategoriya 3 marta takrorlanadi =
 // 18 dars, student-app/data/lessonContent.ts'dagi BONUS_CATEGORIES bilan bir
 // xil) ro'yxati — kurslardan mustaqil, alohida bo'lim sifatida ko'rsatiladi.
+// 41-qism: Bonus darslar/Imtihonlar kursga bog'liq bo'lmagan sobit global
+// slotlar bo'lgani uchun, ularning rus tili tarkibi "<id>-russian" prefiksi
+// bilan alohida saqlanadi (ingliz tili kaliti o'zgarishsiz qoladi) — xuddi
+// server/db.js'dagi resolveLangScopedContent bilan bir xil naqsh.
+function _mobileLangContentId(baseId) {
+    return _mobileLang === 'russian' ? `${baseId}-russian` : baseId;
+}
+
+function _mobileLangKey() {
+    return _mobileLang === 'russian' ? 'russian' : 'english';
+}
+
 function renderMobileBonusListTab(container) {
     const mc = getMobileContent();
     const rows = Array.from({ length: MOBILE_TOTAL_BONUS_LESSONS }, (_, i) => {
         const category = LD_BONUS_CATEGORIES[i % LD_BONUS_CATEGORIES.length];
         const round = Math.floor(i / LD_BONUS_CATEGORIES.length) + 1;
-        const bonusId = `bonus-${i + 1}`;
+        const bonusId = _mobileLangContentId(`bonus-${i + 1}`);
         const saved = mc.lessonContents && mc.lessonContents[bonusId];
         return `
         <div data-bonus-index="${i}" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
@@ -2518,7 +2530,7 @@ function renderMobileBonusListTab(container) {
 function renderBonusLessonDetailTab(container, bonusIndex) {
     const category = LD_BONUS_CATEGORIES[bonusIndex % LD_BONUS_CATEGORIES.length];
     const round = Math.floor(bonusIndex / LD_BONUS_CATEGORIES.length) + 1;
-    const bonusId = `bonus-${bonusIndex + 1}`;
+    const bonusId = _mobileLangContentId(`bonus-${bonusIndex + 1}`);
     const lessonRef = { id: bonusId };
 
     container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
@@ -2582,7 +2594,7 @@ function renderMobileExamListTab(container) {
     const templateUrl = mc.certificateTemplateUrl;
     const rows = LD_EXAM_META.map((meta, i) => {
         const isFinal = meta.id === 'final';
-        const saved = mc.examContents && mc.examContents[meta.id];
+        const saved = mc.examContents && mc.examContents[_mobileLangContentId(meta.id)];
         const totalDefault = meta.counts.mc + meta.counts.sentence + meta.counts.blank + meta.counts.speaking;
         const qCount = saved && saved.questions && saved.questions.length ? saved.questions.length : totalDefault;
         const passPct = (saved && saved.passPercent) || 60;
@@ -2647,6 +2659,10 @@ function renderExamDetailTab(container, examId) {
     const meta = LD_EXAM_META.find(e => e.id === examId);
     const index = LD_EXAM_META.findIndex(e => e.id === examId);
     const isFinal = examId === 'final';
+    // Ko'rsatiladigan sarlavha/counts (meta) hamisha bazaviy examId bo'yicha —
+    // faqat saqlangan KONTENT (savollar) tanlangan _mobileLang'ga qarab
+    // alohida joyda saqlanadi.
+    const contentExamId = _mobileLangContentId(examId);
 
     container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
     container.innerHTML = `
@@ -2666,7 +2682,7 @@ function renderExamDetailTab(container, examId) {
     });
 
     const body = document.getElementById('examContentBody');
-    const content = _getExamWorkingContent(getMobileContent(), examId);
+    const content = _getExamWorkingContent(getMobileContent(), contentExamId);
     if (!content.questions) content.questions = [];
 
     function renderAll() {
@@ -2684,7 +2700,7 @@ function renderExamDetailTab(container, examId) {
         document.getElementById('examSavePassPercent').addEventListener('click', () => {
             const raw = parseInt(document.getElementById('examPassPercent').value, 10);
             content.passPercent = Math.max(0, Math.min(100, isNaN(raw) ? 60 : raw));
-            _saveExamWorkingContent(examId, content);
+            _saveExamWorkingContent(contentExamId, content);
             showMiniToast('Saqlandi');
         });
 
@@ -2702,7 +2718,7 @@ function renderExamDetailTab(container, examId) {
                     ...content.questions.filter(q => q.kind !== 'multipleChoice'),
                     ...newItems.map(x => ({ ...x, kind: 'multipleChoice' })),
                 ];
-                _saveExamWorkingContent(examId, content);
+                _saveExamWorkingContent(contentExamId, content);
                 showMiniToast('Saqlandi');
                 renderAll();
             },
@@ -2722,7 +2738,7 @@ function renderExamDetailTab(container, examId) {
                     ...content.questions.filter(q => q.kind !== 'fillBlank'),
                     ...newItems.map(x => ({ ...x, kind: 'fillBlank' })),
                 ];
-                _saveExamWorkingContent(examId, content);
+                _saveExamWorkingContent(contentExamId, content);
                 showMiniToast('Saqlandi');
                 renderAll();
             },
@@ -2742,7 +2758,7 @@ function renderExamDetailTab(container, examId) {
                     ...content.questions.filter(q => q.kind !== 'sentenceBuild'),
                     ...newItems.map(x => ({ ...x, kind: 'sentenceBuild' })),
                 ];
-                _saveExamWorkingContent(examId, content);
+                _saveExamWorkingContent(contentExamId, content);
                 showMiniToast('Saqlandi');
                 renderAll();
             },
@@ -2761,7 +2777,7 @@ function renderExamDetailTab(container, examId) {
                     ...content.questions.filter(q => q.kind !== 'speaking'),
                     ...newItems.map(x => ({ ...x, kind: 'speaking' })),
                 ];
-                _saveExamWorkingContent(examId, content);
+                _saveExamWorkingContent(contentExamId, content);
                 showMiniToast('Saqlandi');
                 renderAll();
             },
@@ -3385,8 +3401,16 @@ function getMobileContent() {
     mc.shopProducts = mc.shopProducts || [];
     mc.libraryOverrides = mc.libraryOverrides || {};
     mc.library = mc.library || {};
-    ['grammar', 'words', 'pronunciation', 'speaking', 'podcasts', 'books'].forEach(cat => {
-        mc.library[cat] = mc.library[cat] || [];
+    // 41-qism: mc.library endi { english:{...}, russian:{...} } shaklida —
+    // agar hali server bilan sinxronlanmagan (yoki bu deploydan oldingi eski
+    // yassi) ma'lumot bo'lsa, uni "english" bo'limiga o'rab qo'yamiz, real
+    // shakl esa keyingi to'liq holat sinxronizatsiyasida serverdan keladi.
+    if (!mc.library.english && !mc.library.russian) mc.library = { english: mc.library, russian: {} };
+    ['english', 'russian'].forEach(lang => {
+        mc.library[lang] = mc.library[lang] || {};
+        ['grammar', 'words', 'pronunciation', 'speaking', 'podcasts', 'books'].forEach(cat => {
+            mc.library[lang][cat] = mc.library[lang][cat] || [];
+        });
     });
     mc.shopOverrides = mc.shopOverrides || {};
     mc.shop = mc.shop || [];
@@ -4150,7 +4174,7 @@ function renderMobileLibraryItemsTab(container) {
                     <div style="width:44px;height:44px;border-radius:12px;background:var(--bg,#f9fafb);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${item.icon}</div>
                     <div style="flex:1;min-width:0">
                         <div style="font-weight:600;font-size:14px;color:var(--text)">${escapeHtml(item.title)}</div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${(mc.library[item.catKey] || []).length} ta</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${(mc.library[_mobileLangKey()][item.catKey] || []).length} ta</div>
                     </div>
                     <span style="color:var(--text-muted);flex-shrink:0">›</span>
                 </div>
@@ -4413,8 +4437,11 @@ const LIBRARY_CATEGORY_SCHEMAS = {
 
 function _saveLibraryItemOverride(catKey, itemId, patch) {
     const mc = getMobileContent();
-    if (!mc.libraryOverrides[catKey]) mc.libraryOverrides[catKey] = {};
-    mc.libraryOverrides[catKey][itemId] = { ...mc.libraryOverrides[catKey][itemId], ...patch };
+    const lang = _mobileLangKey();
+    if (!mc.libraryOverrides) mc.libraryOverrides = {};
+    if (!mc.libraryOverrides[lang]) mc.libraryOverrides[lang] = {};
+    if (!mc.libraryOverrides[lang][catKey]) mc.libraryOverrides[lang][catKey] = {};
+    mc.libraryOverrides[lang][catKey][itemId] = { ...mc.libraryOverrides[lang][catKey][itemId], ...patch };
     saveMobileContent(mc);
 }
 
@@ -4466,13 +4493,13 @@ function renderMobileLibraryCategoryTab(container, catKey) {
             },
         });
     }
-    renderList(mc.library[catKey] || []);
+    renderList(mc.library[_mobileLangKey()][catKey] || []);
 }
 
 function renderMobileLibraryTopicDetailTab(container, catKey, topicId) {
     const schema = LIBRARY_CATEGORY_SCHEMAS[catKey];
     const mc = getMobileContent();
-    const topic = (mc.library[catKey] || []).find(t => t.id === topicId);
+    const topic = (mc.library[_mobileLangKey()][catKey] || []).find(t => t.id === topicId);
     if (!schema || !topic) { _activeLibraryTopicId = null; renderMobileLibraryCategoryTab(container, catKey); return; }
     container.innerHTML = `
         <button type="button" id="mobileLibraryTopicBackBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--purple,#7c3aed);background:none;border:none;cursor:pointer;padding:4px 8px;margin-bottom:14px">← ${escapeHtml(schema.label)}</button>
