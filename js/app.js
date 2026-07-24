@@ -1860,6 +1860,19 @@ const MOBILE_RADIO_STATIONS = [
     { id: 'lbc', name: 'LBC', flag: '🇬🇧', genre: 'Jonli muloqot', streamQuery: 'LBC UK' },
     { id: 'times-radio', name: 'Times Radio', flag: '🇬🇧', genre: 'Siyosat va tahlil', streamQuery: 'Times Radio' },
     { id: 'talksport', name: 'talkSPORT', flag: '🇬🇧', genre: 'Sport sharhlari', streamQuery: 'talkSPORT' },
+    // 43-vazifa: rus tili kursidagi o'quvchilarga appda shu 10 ta rus radiosi
+    // ko'rsatiladi (student-app/data/mock.ts) — shu yerda ham admin ularning
+    // izohlarini moderatsiya qila olishi uchun ro'yxatga qo'shildi.
+    { id: 'radio-rossii', name: 'Радио России', flag: '🇷🇺', genre: 'Madaniyat va adabiyot', streamQuery: 'Радио России' },
+    { id: 'radio-monte-carlo', name: 'Радио Monte-Carlo', flag: '🇷🇺', genre: 'Sayohat va brendlar tarixi', streamQuery: 'Радио Монте Карло' },
+    { id: 'radio-mayak', name: 'Радио Маяк', flag: '🇷🇺', genre: 'Fan va texnika', streamQuery: 'Радио Маяк' },
+    { id: 'radio-chocolate', name: 'Радио CHOCOLATE', flag: '🇷🇺', genre: 'Sayohat va zamonaviy hayot', streamQuery: 'Радио Шоколад' },
+    { id: 'radio-kultura', name: 'Радио Культура', flag: '🇷🇺', genre: "San'at va teatr", streamQuery: 'Радио Культура' },
+    { id: 'business-fm', name: 'Бизнес ФМ', flag: '🇷🇺', genre: 'Biznes va moliya', streamQuery: 'Business FM' },
+    { id: 'radio-zvezda', name: 'Радио Звезда', flag: '🇷🇺', genre: 'Tarix va sayohat', streamQuery: 'Radio Zvezda' },
+    { id: 'detskoe-radio', name: 'Детское Радио', flag: '🇷🇺', genre: 'Bolalar uchun', streamQuery: 'Детское Радио' },
+    { id: 'radio-kniga', name: 'Радио Книга', flag: '🇷🇺', genre: 'Audiokitoblar', streamQuery: 'Радио Книга' },
+    { id: 'silver-rain', name: 'Серебряный Дождь', flag: '🇷🇺', genre: 'Psixologiya va dizayn', streamQuery: 'Серебряный дождь' },
     { id: 'homework-radio', name: 'Homework Radio', flag: '🎓', genre: "Til o'rganish uchun maxsus", streamQuery: null },
 ];
 

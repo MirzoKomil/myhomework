@@ -90,6 +90,9 @@ export type RadioAnnouncement = {
   title: string;
   subtitle: string;
   colors: [string, string];
+  // 43-vazifa: lang yo'q bo'lsa (masalan Homework Radio e'loni) har ikkala
+  // kurs tilida ham ko'rsatiladi.
+  lang?: 'english' | 'russian';
 };
 
 export const radioAnnouncements: RadioAnnouncement[] = [
@@ -98,6 +101,7 @@ export const radioAnnouncements: RadioAnnouncement[] = [
     title: 'Yangi BBC dasturi qo\'shildi',
     subtitle: 'Ingliz tilida tinglab, talaffuzni oshiring',
     colors: ['#6FA8FF', '#4F8CFF'],
+    lang: 'english',
   },
   {
     id: 'a2',
@@ -110,13 +114,25 @@ export const radioAnnouncements: RadioAnnouncement[] = [
     title: 'Amerika aksentini o\'rganing',
     subtitle: '5 ta Amerika radiosi sizni kutmoqda',
     colors: ['#5EE6B0', '#34D399'],
+    lang: 'english',
+  },
+  {
+    id: 'a4',
+    title: 'Rus radiolari qo\'shildi',
+    subtitle: '10 ta rus radiosi sizni kutmoqda',
+    colors: ['#B91C1C', '#7F1D1D'],
+    lang: 'russian',
   },
 ];
 
 export type RadioStation = {
   id: string;
   name: string;
-  country: 'UK' | 'US' | 'Homework';
+  country: 'UK' | 'US' | 'RU' | 'Homework';
+  // 43-vazifa: rus tili kursidagi o'quvchiga ingliz radiolari o'rniga rus
+  // radiolari ko'rsatiladi — Homework Radio (lang yo'q) har ikkala tilda ham
+  // qoladi.
+  lang?: 'english' | 'russian';
   flag: string;
   genre: string;
   colors: [string, string];
@@ -133,7 +149,7 @@ export type RadioStation = {
 
 export const radioStations: RadioStation[] = [
   {
-    id: 'npr', name: 'NPR', country: 'US', flag: '🇺🇸', genre: 'News & Talk', colors: ['#34D399', '#1FA97D'],
+    id: 'npr', name: 'NPR', country: 'US', lang: 'english', flag: '🇺🇸', genre: 'News & Talk', colors: ['#34D399', '#1FA97D'],
     location: 'Vashington, AQSH',
     founded: '1970-yildan beri',
     about: "Chuqur tahliliy yangiliklar, jamiyat va madaniyatga oid suhbat-dasturlarni efirga uzatuvchi jamoat radiosi.",
@@ -141,7 +157,7 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/npr.jpg'),
   },
   {
-    id: 'wnyc', name: 'WNYC', country: 'US', flag: '🇺🇸', genre: 'News & Talk', colors: ['#0EA5E9', '#0284C7'],
+    id: 'wnyc', name: 'WNYC', country: 'US', lang: 'english', flag: '🇺🇸', genre: 'News & Talk', colors: ['#0EA5E9', '#0284C7'],
     location: 'Nyu-York, AQSH',
     founded: '1924-yildan beri',
     about: "Nyu-York davlat radiosi — siyosat, madaniyat va ijtimoiy hayot haqida chuqur suhbatlar va podkastlarni efirga uzatadi.",
@@ -149,7 +165,7 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/wnyc.jpg'),
   },
   {
-    id: 'bloomberg-radio', name: 'Bloomberg Radio', country: 'US', flag: '🇺🇸', genre: 'Biznes va iqtisodiyot', colors: ['#1E293B', '#0F172A'],
+    id: 'bloomberg-radio', name: 'Bloomberg Radio', country: 'US', lang: 'english', flag: '🇺🇸', genre: 'Biznes va iqtisodiyot', colors: ['#1E293B', '#0F172A'],
     location: 'Nyu-York, AQSH',
     founded: '1990-yillardan beri',
     about: "Biznes, iqtisodiyot va global bozorlar haqida professional tahliliy dasturlarni efirga uzatadi.",
@@ -157,7 +173,7 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/bloomberg-radio.jpg'),
   },
   {
-    id: 'fox-news-radio', name: 'Fox News Radio', country: 'US', flag: '🇺🇸', genre: 'Yangiliklar', colors: ['#DC2626', '#991B1B'],
+    id: 'fox-news-radio', name: 'Fox News Radio', country: 'US', lang: 'english', flag: '🇺🇸', genre: 'Yangiliklar', colors: ['#DC2626', '#991B1B'],
     location: 'AQSH',
     founded: '2003-yildan beri',
     about: "Kundalik yangiliklar, siyosiy debatlar va dolzarb mavzular bo'yicha tinimsiz muloqotlarni efirga uzatadi.",
@@ -171,7 +187,7 @@ export const radioStations: RadioStation[] = [
     // (voanews.com), na Learning English saytida umuman veb orqali jonli
     // tinglash imkoniyati yo'q edi — muqobil topilmadi. C-SPAN Radio esa
     // barcha qurilmalarda ishlaydigan, real, rasmiy AQSh stansiyasi.
-    id: 'c-span-radio', name: 'C-SPAN Radio', country: 'US', flag: '🇺🇸', genre: 'Kongress va siyosat', colors: ['#3B82F6', '#1D4ED8'],
+    id: 'c-span-radio', name: 'C-SPAN Radio', country: 'US', lang: 'english', flag: '🇺🇸', genre: 'Kongress va siyosat', colors: ['#3B82F6', '#1D4ED8'],
     location: 'Vashington, AQSH',
     founded: '1979-yildan beri',
     about: "AQSh Kongressidagi muhokamalar, matbuot anjumanlari va siyosiy suhbatlarni to'g'ridan-to'g'ri, aniq va sekin nutqda efirga uzatadi.",
@@ -179,7 +195,7 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/c-span-radio.jpg'),
   },
   {
-    id: 'bbc-world-service', name: 'BBC World Service', country: 'UK', flag: '🇬🇧', genre: 'Xalqaro yangiliklar', colors: ['#7C3AED', '#5B21B6'],
+    id: 'bbc-world-service', name: 'BBC World Service', country: 'UK', lang: 'english', flag: '🇬🇧', genre: 'Xalqaro yangiliklar', colors: ['#7C3AED', '#5B21B6'],
     location: 'London, Buyuk Britaniya',
     founded: '1932-yildan beri',
     about: "Dunyo bo'ylab turli aksentlardagi suhbatlar va xalqaro yangiliklarni efirga uzatadi — tinglab tushunish mahoratini oshirish uchun ajoyib manba.",
@@ -187,7 +203,7 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/bbc-world-service.png'),
   },
   {
-    id: 'bbc-radio-4', name: 'BBC Radio 4', country: 'UK', flag: '🇬🇧', genre: 'Nutq, drama va madaniyat', colors: ['#0F766E', '#115E59'],
+    id: 'bbc-radio-4', name: 'BBC Radio 4', country: 'UK', lang: 'english', flag: '🇬🇧', genre: 'Nutq, drama va madaniyat', colors: ['#0F766E', '#115E59'],
     location: 'London, Buyuk Britaniya',
     founded: '1967-yildan beri',
     about: "Musiqasiz — faqat drama, komediya, fan va madaniyat haqida chuqur suhbatlardan iborat Buyuk Britaniyaning eng mashhur nutq radiosi.",
@@ -195,7 +211,7 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/bbc-radio-4.png'),
   },
   {
-    id: 'lbc', name: 'LBC', country: 'UK', flag: '🇬🇧', genre: 'Jonli muloqot', colors: ['#F59E0B', '#D97706'],
+    id: 'lbc', name: 'LBC', country: 'UK', lang: 'english', flag: '🇬🇧', genre: 'Jonli muloqot', colors: ['#F59E0B', '#D97706'],
     location: 'London, Buyuk Britaniya',
     founded: '1973-yildan beri',
     about: "Oddiy odamlar qo'ng'iroq qilib, boshlovchi bilan bahslashadigan Buyuk Britaniyaning eng mashhur jonli muloqot radiosi.",
@@ -206,7 +222,7 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/lbc.png'),
   },
   {
-    id: 'times-radio', name: 'Times Radio', country: 'UK', flag: '🇬🇧', genre: 'Siyosat va tahlil', colors: ['#7F1D1D', '#450A0A'],
+    id: 'times-radio', name: 'Times Radio', country: 'UK', lang: 'english', flag: '🇬🇧', genre: 'Siyosat va tahlil', colors: ['#7F1D1D', '#450A0A'],
     location: 'London, Buyuk Britaniya',
     founded: '2020-yildan beri',
     about: "The Times nashri tomonidan tashkil etilgan, yuqori saviyadagi siyosiy va ijtimoiy tahliliy dasturlarni efirga uzatadi.",
@@ -214,12 +230,84 @@ export const radioStations: RadioStation[] = [
     logo: require('@/assets/images/radio/times-radio.jpg'),
   },
   {
-    id: 'talksport', name: 'talkSPORT', country: 'UK', flag: '🇬🇧', genre: 'Sport sharhlari', colors: ['#EA580C', '#C2410C'],
+    id: 'talksport', name: 'talkSPORT', country: 'UK', lang: 'english', flag: '🇬🇧', genre: 'Sport sharhlari', colors: ['#EA580C', '#C2410C'],
     location: 'London, Buyuk Britaniya',
     founded: '2000-yildan beri',
     about: "Kun bo'yi futbol va boshqa sport turlari bo'yicha qizg'in sharhlar va bahslarni efirga uzatadi.",
     streamQuery: 'talkSPORT',
     logo: require('@/assets/images/radio/talksport.png'),
+  },
+  // 43-vazifa: rus tili kursidagi o'quvchilar uchun — yuqoridagi AQSH/Buyuk
+  // Britaniya radiolari o'rniga shu 10 ta rus radiosi ko'rsatiladi.
+  {
+    id: 'radio-rossii', name: 'Радио России', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Madaniyat va adabiyot', colors: ['#B91C1C', '#7F1D1D'],
+    location: 'Moskva, Rossiya',
+    founded: '1990-yildan beri',
+    about: "Rossiyaning davlat radiosi — madaniyat, adabiyot va audio-spektakllarni efirga uzatadi.",
+    streamQuery: 'Радио России',
+  },
+  {
+    id: 'radio-monte-carlo', name: 'Радио Monte-Carlo', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Sayohat va brendlar tarixi', colors: ['#2563EB', '#1E3A8A'],
+    location: 'Moskva, Rossiya',
+    founded: '2002-yildan beri',
+    about: "Sayohatlar, dunyoning mashhur brendlari tarixi, taniqli shaxslar hayoti va san'at haqida dasturlarni efirga uzatadi.",
+    streamQuery: 'Радио Монте Карло',
+  },
+  {
+    id: 'radio-mayak', name: 'Радио Маяк', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Fan va texnika', colors: ['#0891B2', '#155E75'],
+    location: 'Moskva, Rossiya',
+    founded: '1964-yildan beri',
+    about: "Fan, texnika, psixologiya va intellektual shoularni efirga uzatuvchi Rossiyaning eng qadimiy radiostansiyalaridan biri.",
+    streamQuery: 'Радио Маяк',
+  },
+  {
+    id: 'radio-chocolate', name: 'Радио CHOCOLATE', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Sayohat va zamonaviy hayot', colors: ['#92400E', '#78350F'],
+    location: 'Moskva, Rossiya',
+    founded: '2003-yildan beri',
+    about: "Sayohat, kino, kitob va zamonaviy hayot haqida yengil va qiziqarli dasturlarni efirga uzatadi.",
+    streamQuery: 'Радио Шоколад',
+  },
+  {
+    id: 'radio-kultura', name: 'Радио Культура', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: "San'at va teatr", colors: ['#7E22CE', '#581C87'],
+    location: 'Moskva, Rossiya',
+    founded: '1990-yillar oxiridan beri',
+    about: "San'at, teatr, kino va klassik adabiyot tahliliga bag'ishlangan dasturlarni efirga uzatadi.",
+    streamQuery: 'Радио Культура',
+  },
+  {
+    id: 'business-fm', name: 'Бизнес ФМ', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Biznes va moliya', colors: ['#111827', '#030712'],
+    location: 'Moskva, Rossiya',
+    founded: '2007-yildan beri',
+    about: "Biznes, moliya va lo'nda iqtisodiy tahlillarni kun bo'yi efirga uzatadigan Rossiyaning yetakchi biznes-radiosi.",
+    streamQuery: 'Business FM',
+  },
+  {
+    id: 'radio-zvezda', name: 'Радио Звезда', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Tarix va sayohat', colors: ['#1D4ED8', '#1E3A8A'],
+    location: 'Moskva, Rossiya',
+    founded: '2010-yillardan beri',
+    about: "Tarixiy hikoyalar, sayohatlar va audiokitoblarni efirga uzatadi.",
+    streamQuery: 'Radio Zvezda',
+  },
+  {
+    id: 'detskoe-radio', name: 'Детское Радио', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Bolalar uchun', colors: ['#F472B6', '#DB2777'],
+    location: 'Moskva, Rossiya',
+    founded: '2006-yildan beri',
+    about: "Ertaklar hamda bolalar uchun sodda va qiziqarli ko'rsatuvlarni efirga uzatadigan Rossiyaning birinchi bolalar radiosi.",
+    streamQuery: 'Детское Радио',
+  },
+  {
+    id: 'radio-kniga', name: 'Радио Книга', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Audiokitoblar', colors: ['#B45309', '#92400E'],
+    location: 'Moskva, Rossiya',
+    founded: "So'nggi yillarda ishga tushirilgan",
+    about: "Jahon va rus adabiyoti durdonalaridan audio parchalarni efirga uzatadi.",
+    streamQuery: 'Радио Книга',
+  },
+  {
+    id: 'silver-rain', name: 'Серебряный Дождь', country: 'RU', lang: 'russian', flag: '🇷🇺', genre: 'Psixologiya va dizayn', colors: ['#94A3B8', '#64748B'],
+    location: 'Moskva, Rossiya',
+    founded: '1995-yildan beri',
+    about: "Psixologiya, dizayn va mualliflik suhbat dasturlarini efirga uzatadigan mustaqil Rossiya radiosi.",
+    streamQuery: 'Серебряный дождь',
   },
   {
     id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'],

@@ -25,20 +25,30 @@ function readQueryLang(): AppLang | null {
   return null;
 }
 
+// 43-vazifa: o'quvchining haqiqiy KURS yo'nalishi ('english'/'russian') —
+// ilova UI tilidan (uz/ru) mustaqil signal. Masalan, rus tilini o'rganayotgan
+// o'quvchi ilova menyusini o'zbekcha ko'rishni tanlashi mumkin, lekin Radio
+// bo'limi baribir rus radiolarini ko'rsatishi kerak — shu sababli bu ikkitasi
+// aralashtirilmasligi kerak.
+type CourseLang = 'english' | 'russian';
+
 type Ctx = {
   lang: AppLang;
   setLang: (l: AppLang) => void;
   t: (key: TranslationKey) => string;
+  courseLang: CourseLang;
 };
 
 const LanguageContext = createContext<Ctx>({
   lang: 'uz',
   setLang: () => {},
   t: (key) => translations.uz[key],
+  courseLang: 'english',
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<AppLang>('uz');
+  const [courseLang, setCourseLang] = useState<CourseLang>('english');
   const { student, token } = useAuth();
   // URL orqali aniq til tanlangan bo'lsa, boshqa manbalar (real o'quvchi,
   // namuna o'quvchi) uni bekor qilmasligi kerak.
@@ -97,6 +107,22 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [token]);
 
+  // 43-vazifa: courseLang — yuqoridagi UI-til effektlaridan mustaqil, chunki
+  // manual ?lang= override yoki o'quvchining o'zi tanlagan UI tili bilan
+  // aralashmasligi kerak (Radio kabi kurs-mavzusiga bog'liq kontent uchun).
+  useEffect(() => {
+    if (student?.lang) setCourseLang(student.lang === 'russian' ? 'russian' : 'english');
+  }, [student?.lang]);
+
+  useEffect(() => {
+    if (token) return;
+    fetchDemoStudentProfile()
+      .then((profile) => {
+        if (profile?.lang) setCourseLang(profile.lang === 'russian' ? 'russian' : 'english');
+      })
+      .catch(() => {});
+  }, [token]);
+
   const setLang = useCallback((l: AppLang) => {
     queryOverride.current = l;
     setLangState(l);
@@ -109,7 +135,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>{children}</LanguageContext.Provider>
+    <LanguageContext.Provider value={{ lang, setLang, t, courseLang }}>{children}</LanguageContext.Provider>
   );
 }
 

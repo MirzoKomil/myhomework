@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { radioAnnouncements, radioStations, RadioStation } from '@/data/mock';
+import { useLang } from '@/i18n/LanguageContext';
 
 const ANNOUNCEMENT_INTERVAL = 3500;
 
@@ -40,18 +41,23 @@ function StationRow({ station }: { station: RadioStation }) {
 
 export default function RadioScreen() {
   const [activeSlide, setActiveSlide] = useState(0);
+  const { courseLang } = useLang();
+  const isRussianCourse = courseLang === 'russian';
+  const announcements = radioAnnouncements.filter((a) => !a.lang || a.lang === courseLang);
 
   useEffect(() => {
+    setActiveSlide(0);
     const id = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % radioAnnouncements.length);
+      setActiveSlide((prev) => (prev + 1) % announcements.length);
     }, ANNOUNCEMENT_INTERVAL);
     return () => clearInterval(id);
-  }, []);
+  }, [announcements.length]);
 
   const ukStations = radioStations.filter((s) => s.country === 'UK');
   const usStations = radioStations.filter((s) => s.country === 'US');
+  const ruStations = radioStations.filter((s) => s.country === 'RU');
   const homeworkStations = radioStations.filter((s) => s.country === 'Homework');
-  const announcement = radioAnnouncements[activeSlide];
+  const announcement = announcements[activeSlide];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -65,21 +71,32 @@ export default function RadioScreen() {
           <Text style={styles.bannerTitle}>{announcement.title}</Text>
           <Text style={styles.bannerSubtitle}>{announcement.subtitle}</Text>
           <View style={styles.dotsRow}>
-            {radioAnnouncements.map((item, i) => (
+            {announcements.map((item, i) => (
               <View key={item.id} style={[styles.dot, i === activeSlide && styles.dotActive]} />
             ))}
           </View>
         </LinearGradient>
 
-        <Text style={styles.sectionTitle}>🇺🇸 Amerika radiolari</Text>
-        {usStations.map((station) => (
-          <StationRow key={station.id} station={station} />
-        ))}
+        {isRussianCourse ? (
+          <>
+            <Text style={styles.sectionTitle}>🇷🇺 Rossiya radiolari</Text>
+            {ruStations.map((station) => (
+              <StationRow key={station.id} station={station} />
+            ))}
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>🇺🇸 Amerika radiolari</Text>
+            {usStations.map((station) => (
+              <StationRow key={station.id} station={station} />
+            ))}
 
-        <Text style={styles.sectionTitle}>🇬🇧 Britaniya radiolari</Text>
-        {ukStations.map((station) => (
-          <StationRow key={station.id} station={station} />
-        ))}
+            <Text style={styles.sectionTitle}>🇬🇧 Britaniya radiolari</Text>
+            {ukStations.map((station) => (
+              <StationRow key={station.id} station={station} />
+            ))}
+          </>
+        )}
 
         <Text style={styles.sectionTitle}>🎓 Homework Radio</Text>
         {homeworkStations.map((station) => (
