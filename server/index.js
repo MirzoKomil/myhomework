@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const stateRoutes = require('./routes/state');
 const leadsRoutes = require('./routes/leads');
 const { router: uploadsRouter, UPLOADS_DIR } = require('./routes/uploads');
+const telephonyRoutes = require('./routes/telephony');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -115,12 +116,14 @@ app.get('/api/health', (req, res) => {
 
 app.use(['/api/auth/login', '/api/auth/student-login'], loginLimit);
 app.use('/api/leads', webhookLimit);
+app.use('/api/telephony', webhookLimit);
 app.use('/api', apiLimit);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/upload', uploadsRouter);
+app.use('/api/telephony', telephonyRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 

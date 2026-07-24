@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders } = require('../db');
+const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, addCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -355,6 +355,34 @@ router.delete('/content-comments/:id', authRequired, async (req, res) => {
         res.json({ ok: true });
     } catch (err) {
         console.error('DELETE /api/state/content-comments/:id', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 45-vazifa: bitta lidga tegishli qo'ng'iroq yozuvlari ("Zapis"). Faqat CRM
+// admin ko'radi va qo'lda yuklaydi (Beeline hali ulanmagan).
+router.get('/call-recordings', authRequired, async (req, res) => {
+    try {
+        const { lang, leadId } = req.query;
+        const data = await getCallRecordings(lang, leadId);
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/call-recordings', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/call-recordings', authRequired, async (req, res) => {
+    try {
+        const { lang, leadId, url, fileName, duration } = req.body || {};
+        const recording = await addCallRecording({
+            lang, leadId, url, fileName, duration,
+            uploadedBy: req.user?.name || req.user?.email || '',
+            source: 'manual',
+        });
+        res.json({ ok: true, recording });
+    } catch (err) {
+        console.error('POST /api/state/call-recordings', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

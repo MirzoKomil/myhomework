@@ -237,6 +237,18 @@ async function apiDeleteContentComment(id) {
     return apiFetch('/api/state/content-comments/' + encodeURIComponent(id), { method: 'DELETE' });
 }
 
+// 45-vazifa: bitta lidga tegishli qo'ng'iroq yozuvlari ("Zapis").
+async function apiFetchCallRecordings(lang, leadId) {
+    return apiFetch('/api/state/call-recordings?lang=' + encodeURIComponent(lang) + '&leadId=' + encodeURIComponent(leadId));
+}
+
+async function apiAddCallRecording(lang, leadId, url, fileName, duration) {
+    return apiFetch('/api/state/call-recordings', {
+        method: 'POST',
+        body: JSON.stringify({ lang, leadId, url, fileName, duration })
+    });
+}
+
 // 4-vazifa: studentId berilsa (ustoz kabinetidan aniq o'quvchi tanlanganda),
 // shu o'quvchining o'ziga tegishli yozuvlar keladi — berilmasa eskicha
 // "Namuna o'quvchi" (demo) natijasi qaytadi.

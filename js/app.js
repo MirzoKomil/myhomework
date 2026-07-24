@@ -15618,23 +15618,85 @@ function renderLeadCard(lead, langKey) {
     </article>`;
 }
 
-// 4-ish: Zapis modali (faqat o'qish)
+// 45-vazifa: Zapis modali — endi haqiqiy qo'ng'iroq yozuvlarini ko'rsatadi
+// (audio pleer bilan) va CRM'dan qo'lda yuklash imkonini beradi. Beeline IP
+// Telefoniyasi ulanganda (hisob ochilib, API integratsiyasi yakunlangach —
+// server/routes/telephony.js) qo'ng'iroqlar avtomatik shu yerga tushadi;
+// hozircha faqat qo'lda yuklash ishlaydi (masalan telefoningizning o'z
+// qo'ng'iroq-yozuvchisi bilan yozib olib, shu yerdan yuklaysiz).
+function _leadRecordingBodyHtml(recordings, state) {
+    const listHtml = state === 'loading'
+        ? `<div class="text-muted" style="padding:20px 0;text-align:center">Yuklanmoqda...</div>`
+        : state === 'error'
+        ? `<div class="text-muted" style="padding:20px 0;text-align:center">Zapislarni yuklashda xatolik</div>`
+        : recordings.length
+        ? recordings.map(r => `
+            <div class="lead-recording-item" style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${escapeHtml(new Date(r.createdAt).toLocaleString('uz-UZ'))} · ${r.source === 'beeline' ? 'Beeline' : "Qo'lda yuklangan"}</div>
+                <audio controls style="width:100%" src="${escapeHtml(r.url)}"></audio>
+            </div>`).join('')
+        : `<p class="text-muted lead-empty-hint" style="margin-top:4px">Hozircha zapis mavjud emas</p>`;
+
+    return `
+    <div class="lead-recording-notice">
+        <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <p class="lead-recording-notice-text">Suhbatlaringiz yozib olinadi</p>
+    </div>
+    <div style="margin-top:14px">
+        <input type="file" id="recordingFileInput" accept="audio/*" style="display:none">
+        <button type="button" class="btn-primary-sm" id="recordingUploadBtn">+ Zapis yuklash</button>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">Beeline IP Telefoniyasi ulanganda qo'ng'iroqlar avtomatik shu yerga tushadi. Hozircha telefoningizning o'z qo'ng'iroq-yozuvchisi bilan yozib, shu yerdan yuklashingiz mumkin.</div>
+    </div>
+    <div id="recordingsList" style="margin-top:14px">${listHtml}</div>`;
+}
+
 function openLeadRecordingModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
-    openModal(`${escapeHtml(lead.name)} — Zapis`,
-        `<div class="lead-recording-notice">
-            <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
-            </svg>
-            <p class="lead-recording-notice-text">Suhbatlaringiz yozib olinadi</p>
-        </div>
-        <p class="text-muted lead-empty-hint" style="margin-top:12px">Hozircha zapis mavjud emas</p>`,
-        ''
-    );
+
+    function bindUploadBtn(refresh) {
+        const fileInput = document.getElementById('recordingFileInput');
+        const uploadBtn = document.getElementById('recordingUploadBtn');
+        if (!fileInput || !uploadBtn) return;
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Yuklanmoqda...';
+            try {
+                const uploaded = await apiUploadFile(file);
+                await apiAddCallRecording(lang, leadId, uploaded.url, uploaded.fileName, 0);
+                showMiniToast('Zapis yuklandi');
+                await refresh();
+            } catch (err) {
+                alert('Yuklashda xatolik: ' + (err.message || err));
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '+ Zapis yuklash';
+            } finally {
+                fileInput.value = '';
+            }
+        });
+    }
+
+    async function refresh() {
+        try {
+            const recordings = await apiFetchCallRecordings(lang, leadId);
+            document.getElementById('modalBody').innerHTML = _leadRecordingBodyHtml(recordings, 'loaded');
+        } catch (err) {
+            document.getElementById('modalBody').innerHTML = _leadRecordingBodyHtml([], 'error');
+        }
+        bindUploadBtn(refresh);
+    }
+
+    openModal(`${escapeHtml(lead.name)} — Zapis`, _leadRecordingBodyHtml([], 'loading'), '');
+    bindUploadBtn(refresh);
+    refresh();
 }
 
 function openLeadNotifyModal(lang, leadId) {

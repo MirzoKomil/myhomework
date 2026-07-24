@@ -1837,6 +1837,67 @@ async function deleteContentComment(commentId) {
     await tx(async (client) => { await saveJsonData(client, 'contentComments', filtered); });
 }
 
+// ── "Zapis" (qo'ng'iroq yozuvlari) — 45-vazifa ───────────────────────────────
+// Bitta umumiy, tekis massiv: { id, lang, leadId, url, fileName, duration,
+// source ('manual'|'beeline'), uploadedBy, createdAt }. `lang`+`leadId`
+// juftligi qaysi lidga tegishli ekanini bildiradi (js/app.js'dagi
+// getLeadById(lang, leadId) bilan bir xil naqsh — Sotuv bo'limidagi
+// Ingliz/Rus tili filtri). Hozircha faqat "manual" (CRM'dan qo'lda
+// yuklangan) manba ishlaydi. Beeline IP Telefoniyasi hali ulanmagan (hisob
+// yo'q, API hujjatlari yo'q) — pastdagi handleBeelineWebhook shu sabab hali
+// faqat logga yozadi, haqiqiy integratsiya hisob ochilib API ko'rilgach
+// yakunlanadi.
+async function getCallRecordings(lang, leadId) {
+    const trimmedLang = lang === 'russian' ? 'russian' : 'english';
+    const trimmedLeadId = String(leadId || '').trim();
+    if (!trimmedLeadId) return [];
+    const all = await getJsonData('callRecordings');
+    return all
+        .filter(r => r.lang === trimmedLang && r.leadId === trimmedLeadId)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+async function addCallRecording({ lang, leadId, url, fileName, duration, uploadedBy, source }) {
+    const trimmedLang = lang === 'russian' ? 'russian' : 'english';
+    const trimmedLeadId = String(leadId || '').trim();
+    const trimmedUrl = String(url || '').trim();
+    if (!trimmedLeadId) throw new Error('Lid aniqlanmadi');
+    if (!trimmedUrl) throw new Error('Fayl havolasi topilmadi');
+
+    const all = await getJsonData('callRecordings');
+    const recording = {
+        id: 'rec-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        lang: trimmedLang,
+        leadId: trimmedLeadId,
+        url: trimmedUrl,
+        fileName: fileName || '',
+        duration: Number(duration) || 0,
+        source: source === 'beeline' ? 'beeline' : 'manual',
+        uploadedBy: uploadedBy || '',
+        createdAt: new Date().toISOString(),
+    };
+    all.push(recording);
+    await tx(async (client) => { await saveJsonData(client, 'callRecordings', all); });
+    return recording;
+}
+
+// Beeline IP Telefoniyasi hisobi hali ochilmagan va API hujjatlari
+// ko'rilmagan — shu sabab bu funksiya HAQIQIY integratsiya EMAS, faqat
+// kelgan so'rovni Railway loglariga yozib, 200 qaytaradi. Hisob ochilib
+// sinov qo'ng'irog'i qilinganda, shu loglardan Beeline'ning haqiqiy payload
+// shaklini ko'rib, quyidagi TODO qadamlarni yakunlash kerak:
+//   1) payload'dan qo'ng'iroq qilingan raqamni aniqlash va shu raqam
+//      bo'yicha tegishli lidni (lang+leadId) topish (masalan leads jadvalida
+//      telefon raqami bo'yicha qidiruv orqali),
+//   2) audio fayl havolasini olish (Beeline to'g'ridan-to'g'ri URL bersa —
+//      shuni ishlatish, aks holda faylni yuklab olib /uploads'ga saqlash),
+//   3) addCallRecording({ lang, leadId, url, source: 'beeline', ... })
+//      chaqirish.
+async function handleBeelineWebhook(payload) {
+    console.log('[beeline-webhook] Hali integratsiya yozilmagan — kelgan payload:', JSON.stringify(payload));
+    return { ok: true, note: 'logged, integration pending' };
+}
+
 // 124-ish: CRM'ning Sotuv bo'limidagi "Kitob yetkazish" kanban-bosqichlarini
 // appning 4 bosqichli ko'rsatkichiga (Tayyorlanmoqda/Jo'natildi/Yo'lda/
 // Yetkazib berildi) moslashtiradi.
@@ -2333,6 +2394,7 @@ module.exports = {
     getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY,
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
+    getCallRecordings, addCallRecording, handleBeelineWebhook,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
