@@ -995,7 +995,7 @@ function renderMobileEditPanel() {
     // renderMobileAdminTab'ga albatta haqiqiy (falsy bo'lmagan) tab qiymati berilishi
     // kerak, aks holda funksiya darhol "tez orada" placeholder bilan qaytib ketadi va
     // dars/modul tarkibi hech qachon ko'rinmaydi.
-    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : _mobileSubSection === 'asosiy' ? 'asosiy' : _mobileSubSection === 'muloqot' ? 'muloqot' : _mobileSubSection === 'resurslar' ? 'resurslar' : null);
+    renderMobileAdminTab(showMacTabs ? activeTab : showRow ? 'videos' : _mobileSubSection === 'dars' ? 'dars' : _mobileSubSection === 'bonus' ? 'bonus' : _mobileSubSection === 'imtihon' ? 'imtihon' : _mobileSubSection === 'asosiy' ? 'asosiy' : _mobileSubSection === 'muloqot' ? 'muloqot' : _mobileSubSection === 'bildirishnomalar' ? 'bildirishnomalar' : _mobileSubSection === 'resurslar' ? 'resurslar' : null);
 }
 
 function renderMobileModuleDetailTab(container, course, mod) {
