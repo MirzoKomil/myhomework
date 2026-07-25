@@ -687,9 +687,9 @@ export const translations = {
     roadmap_paid_lesson: 'Платный',
     roadmap_lesson_num_suffix: 'урок',
     roadmap_course_title: '90 kunda gapiramiz',
-    roadmap_course_dialog_title: 'Заговорите по-английски за 90 дней',
-    roadmap_course_dialog_body: '📅 Каждый день чередуются видеоурок и speaking-занятие\n🗣️ 72 основных урока + 🎁 18 воскресных бонусных уроков\n🎯 Цель — свободно и уверенно заговорить по-английски за 90 дней\n\n💪 Каждый маленький шаг ведёт к большому результату — начните сегодня, завтра скажете себе спасибо!',
-    roadmap_course_dialog_btn: 'Отлично, начинаем!',
+    roadmap_course_dialog_title: 'Rus tilida 90 kunda gapiring',
+    roadmap_course_dialog_body: '📅 Har kuni videodars va speaking mashg‘uloti almashinib boradi\n🗣️ 72 ta asosiy dars + 🎁 18 ta yakshanba bonus darsi\n🎯 Maqsad — 90 kunda rus tilida erkin va ishonchli gapirish\n\n💪 Har bir kichik qadam katta natijaga olib boradi — bugun boshlang, ertaga o‘zingizga rahmat aytasiz!',
+    roadmap_course_dialog_btn: 'Zo‘r, boshladik!',
     roadmap_section_title: "Darslar yo'li",
     roadmap_final_dars_prefix: 'Урок',
 
