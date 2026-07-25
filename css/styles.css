@@ -626,6 +626,80 @@ body {
     stroke-width: 1.8;
 }
 
+.communication-hub-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.communication-hub-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.communication-hub-row:hover {
+    border-color: var(--purple);
+    background: var(--purple-light);
+}
+
+.communication-hub-avatar {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: var(--purple-light);
+    color: var(--purple);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.communication-hub-meta {
+    min-width: 0;
+    flex: 1;
+}
+
+.communication-hub-name,
+.communication-hub-preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.communication-hub-name {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.communication-hub-preview {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.communication-hub-count {
+    min-width: 22px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--purple);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
 .user-avatar {
     width: 42px;
     height: 42px;

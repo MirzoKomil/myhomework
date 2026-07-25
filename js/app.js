@@ -126,6 +126,8 @@ function initUserUI(currentUser) {
         switchTab('profile');
     });
 
+    document.getElementById('communicationToggle')?.addEventListener('click', openCommunicationHub);
+
     applyRoleBasedAccess(currentUser);
 }
 
@@ -6963,6 +6965,116 @@ function renderCrmChatThread(container, opts) {
     document.getElementById(`crmChatSend_${uid}`).addEventListener('click', send);
     document.getElementById(`crmChatInput_${uid}`).addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); send(); }
+    });
+}
+
+// ─── Yuqori paneldagi umumiy Muloqot oynasi ────────────────────────────────
+// Barcha kabinet egalari shu oynadan o'ziga ruxsat berilgan o'quvchi/mijoz
+// yozishmalarini ko'radi va tegishli chatga javob bera oladi.
+function getCommunicationStudents(user) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    if (!user || FULL_ACCESS_ROLES.has(user.role)) return students;
+
+    if (user.role === 'teacher' && user.linkedTeacherId) {
+        return students.filter(student =>
+            student.teacherId === user.linkedTeacherId || student.assistantTeacherId === user.linkedTeacherId
+        );
+    }
+
+    if (user.role === 'sales_manager' && user.linkedManagerId) {
+        return students.filter(student => student.managerId === user.linkedManagerId);
+    }
+
+    return students;
+}
+
+function getCommunicationThreadIds(student, user) {
+    const allMessages = getItem(STORAGE_KEYS.studentMessages, {});
+
+    if (user?.role === 'teacher' && user.linkedTeacherId) {
+        const allowed = [];
+        if (student.teacherId === user.linkedTeacherId) allowed.push('main-teacher');
+        if (student.assistantTeacherId === user.linkedTeacherId) allowed.push('assistant-teacher');
+        return allowed;
+    }
+
+    const existing = Object.keys(allMessages[student.id] || {});
+    return [...new Set([...existing, 'support'])];
+}
+
+function getCommunicationSenderRole(user) {
+    if (user?.role === 'teacher') return 'teacher';
+    if (user?.role === 'sales_manager') return 'sales_manager';
+    if (user?.role === 'rop') return 'rop';
+    return 'admin';
+}
+
+function openCommunicationHub() {
+    openModal('Muloqot', '<div id="communicationHubBody"></div>', '', { wide: true });
+    renderCommunicationHubList();
+}
+
+function renderCommunicationHubList() {
+    const container = document.getElementById('communicationHubBody');
+    const user = getCurrentUser();
+    if (!container || !user) return;
+
+    const allMessages = getItem(STORAGE_KEYS.studentMessages, {});
+    const rows = getCommunicationStudents(user).map(student => {
+        const messages = Object.values(allMessages[student.id] || {}).flat();
+        const last = messages.slice().sort((a, b) => new Date(b.time) - new Date(a.time))[0];
+        return { student, messages, last };
+    }).sort((a, b) => new Date(b.last?.time || 0) - new Date(a.last?.time || 0));
+
+    container.innerHTML = `
+        <p class="text-muted" style="margin:0 0 14px">O'quvchilar va mijozlar bilan yozishmalar</p>
+        <div class="communication-hub-list">
+            ${rows.length ? rows.map(({ student, messages, last }) => {
+                const initials = (student.name || '?').split(/\s+/).map(word => word[0] || '').join('').slice(0, 2).toUpperCase();
+                return `<button type="button" class="communication-hub-row" data-communication-student="${escapeHtml(student.id)}">
+                    <span class="communication-hub-avatar">${escapeHtml(initials)}</span>
+                    <span class="communication-hub-meta">
+                        <span class="communication-hub-name">${escapeHtml(student.name || 'Noma\'lum o\'quvchi')}</span>
+                        <span class="communication-hub-preview">${escapeHtml(last?.text || 'Yozishmani oching')}</span>
+                    </span>
+                    ${messages.length ? `<span class="communication-hub-count">${messages.length}</span>` : ''}
+                </button>`;
+            }).join('') : '<div class="lead-empty-hint">Sizga biriktirilgan o\'quvchi yoki mijoz yo\'q.</div>'}
+        </div>`;
+
+    container.querySelectorAll('[data-communication-student]').forEach(button => {
+        button.addEventListener('click', () => renderCommunicationHubConversation(button.dataset.communicationStudent));
+    });
+}
+
+function renderCommunicationHubConversation(studentId) {
+    const container = document.getElementById('communicationHubBody');
+    const user = getCurrentUser();
+    const student = getCommunicationStudents(user).find(item => item.id === studentId);
+    if (!container || !user || !student) return;
+
+    const threadIds = getCommunicationThreadIds(student, user);
+    container.innerHTML = `<button type="button" class="btn-ghost" id="communicationHubBack" style="padding:4px 10px;margin-bottom:12px">← Yozishmalar</button>
+        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:14px">${escapeHtml(student.name || 'O\'quvchi')}</div>
+        <div id="communicationHubThreads" style="display:grid;gap:16px"></div>`;
+    document.getElementById('communicationHubBack').addEventListener('click', renderCommunicationHubList);
+
+    const threads = document.getElementById('communicationHubThreads');
+    const senderRole = getCommunicationSenderRole(user);
+    const senderName = user.name || ROLE_LABELS[user.role] || 'Xodim';
+    threadIds.forEach(threadId => {
+        const thread = document.createElement('section');
+        thread.className = 'profile-card';
+        threads.appendChild(thread);
+        renderCrmChatThread(thread, {
+            studentId,
+            threadId,
+            senderRole,
+            senderId: user.id || user.login || null,
+            senderName,
+            title: CRM_CHAT_THREAD_LABELS[threadId] || "Mijoz bilan yozishma",
+            uid: `hub_${studentId}_${threadId}_${senderRole}`,
+        });
     });
 }
 
