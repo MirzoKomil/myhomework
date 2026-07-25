@@ -11,9 +11,10 @@ import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
-import { courses, dailyStages, nextLiveLesson, profileStats, skillProgress } from '@/data/mock';
+import { courses, dailyStages, nextLiveLesson, skillProgress } from '@/data/mock';
 import { fetchDemoNotifications, fetchDemoSchedule, fetchDemoStudentProfile, fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
+import { useAuth } from '@/services/studentAuthStore';
 
 // 40-vazifa: `dailyStages` (data/mock.ts) hali ham o'zbekcha `label`
 // saqlaydi — shu lug'at orqali `stage.key` bo'yicha tarjima qidiriladi,
@@ -33,16 +34,22 @@ export default function HomeScreen() {
   // 40-vazifa: ilgari bu yerda doim mock namuna ismi ko'rsatilardi — endi
   // CRM'da tanlangan (yoki real login qilgan) o'quvchining o'z ismi
   // ko'rsatiladi, xatolik bo'lsa namuna ismga qaytiladi.
-  const [firstName, setFirstName] = useState(profileStats.name.split(' ')[0]);
+  const [firstName, setFirstName] = useState('');
+  const { student, token } = useAuth();
   const { t } = useLang();
 
   useEffect(() => {
+    if (student?.name) {
+      setFirstName(student.name.split(' ')[0]);
+      return;
+    }
+    if (token) return;
     fetchDemoStudentProfile()
       .then((profile) => {
         if (profile?.name) setFirstName(profile.name.split(' ')[0]);
       })
       .catch(() => {});
-  }, []);
+  }, [student?.id, student?.name, token]);
 
   useEffect(() => {
     fetchDemoSchedule()
@@ -121,7 +128,7 @@ export default function HomeScreen() {
         <View style={styles.greetingWrap}>
           <Text style={styles.greetingLine} numberOfLines={1}>
             <Text style={styles.greeting}>{t('home_greeting')}, </Text>
-            <Text style={styles.name}>{firstName}</Text>{' '}
+            {firstName ? <Text style={styles.name}>{firstName}</Text> : null}{' '}
             <Animated.Text style={{ transform: [{ rotate: waveRotate }] }}>👋</Animated.Text>
           </Text>
         </View>

@@ -19,6 +19,7 @@ import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { useLightning } from '@/services/lightningStore';
+import { useAuth } from '@/services/studentAuthStore';
 
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -53,17 +54,24 @@ export default function ProfileScreen() {
   // 40-vazifa: ilgari doim mock namuna ism/ID ko'rsatilardi — endi CRM'da
   // tanlangan (yoki real login qilgan) o'quvchining o'z ma'lumoti
   // ko'rsatiladi, xatolik bo'lsa namuna ma'lumotga qaytiladi.
-  const [displayName, setDisplayName] = useState(profileStats.name);
-  const [displayId, setDisplayId] = useState(profileStats.studentId);
+  const [displayName, setDisplayName] = useState('');
+  const [displayId, setDisplayId] = useState('');
+  const { student, token } = useAuth();
 
   useEffect(() => {
+    if (student) {
+      setDisplayName(student.name);
+      setDisplayId(student.id);
+      return;
+    }
+    if (token) return;
     fetchDemoStudentProfile()
       .then((profile) => {
         if (profile?.name) setDisplayName(profile.name);
         if (profile?.studentId) setDisplayId(profile.studentId);
       })
       .catch(() => {});
-  }, []);
+  }, [student?.id, student?.name, token]);
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const wobbleAnim = useRef(new Animated.Value(0)).current;
@@ -129,8 +137,8 @@ export default function ProfileScreen() {
             )}
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{displayName}</Text>
-            <Text style={styles.userLevel}>ID {displayId}</Text>
+            <Text style={styles.userName}>{displayName || '—'}</Text>
+            <Text style={styles.userLevel}>ID {displayId || '—'}</Text>
           </View>
           <Pressable style={styles.editBtn} onPress={() => router.push('/profile/edit' as never)}>
             <Ionicons name="pencil" size={16} color={theme.colors.blue} />
