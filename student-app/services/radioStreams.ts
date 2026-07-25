@@ -11,16 +11,16 @@ const RADIO_BROWSER_BASE = 'https://de1.api.radio-browser.info/json/stations/sea
 // qaytarardi; shu manbalar avval sinovdan o'tadi, keyin umumiy qidiruv zaxira
 // sifatida ishlatiladi.
 const VERIFIED_RUSSIAN_STREAMS: Record<string, string> = {
-  'Радио России': 'http://icecast.vgtrk.cdnvideo.ru/rrzonam_mp3_128kbps',
+  'Радио России': 'https://icecast-vgtrk.cdnvideo.ru/rrzonam',
   'Радио Монте Карло': 'https://montecarlo.hostingradio.ru/montecarlo128.mp3',
-  'Радио Маяк': 'http://icecast.vgtrk.cdnvideo.ru/mayakfm_mp3_192kbps',
+  'Радио Маяк': 'https://icecast-vgtrk.cdnvideo.ru/mayakfm',
   'Радио Шоколад': 'https://choco.hostingradio.ru:10010/fm',
-  'Радио Культура': 'http://icecast.vgtrk.cdnvideo.ru/kulturafm',
+  'Радио Культура': 'https://icecast-vgtrk.cdnvideo.ru/kulturafm',
   'Business FM': 'https://bfm.hostingradio.ru:9075/fm',
   'Radio Zvezda': 'https://zvezda-radio-rzv.mediacdn.ru/radio/zvezda/zvezda_128',
   'Детское Радио': 'https://pub0101.101.ru/stream/air/aac/64/199',
   'Радио Книга': 'http://bookradio.hostingradio.ru:8069/fm',
-  'Серебряный дождь': 'http://213.59.4.27:8000/silver128.mp3',
+  'Серебряный дождь': 'https://silverrainreg.hostingradio.ru/stavropol.silver128.mp3',
 };
 
 type RadioBrowserStation = {
@@ -124,6 +124,16 @@ export async function resolveStationStreamCandidates(query: string): Promise<str
   const verifiedCandidates = VERIFIED_RUSSIAN_STREAMS[query]
     ? withHttpsFallback(VERIFIED_RUSSIAN_STREAMS[query])
     : [];
+  // Oldindan tekshirilgan stansiyalar uchun katalog so'rovini kutib turmaymiz:
+  // u mobil tarmoqda ulanib olishni sezilarli sekinlashtirardi. Katalog
+  // natijalari zaxira sifatida fon rejimida keshlanadi.
+  if (verifiedCandidates.length) {
+    cache.set(query, verifiedCandidates);
+    void searchStreamUrls(query)
+      .then((result) => cache.set(query, [...new Set([...verifiedCandidates, ...result])]))
+      .catch(() => undefined);
+    return verifiedCandidates;
+  }
   const promise = searchStreamUrls(query)
     .catch(() => [])
     .then((result) => {

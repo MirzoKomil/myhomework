@@ -21,7 +21,7 @@ import { resolveStationStreamCandidates } from '@/services/radioStreams';
 
 const BAR_COUNT = 20;
 const WAVE_INTERVAL = 450;
-const CANDIDATE_TIMEOUT_MS = 8000;
+const CANDIDATE_TIMEOUT_MS = 3500;
 const HW_RADIO_POLL_MS = 30000;
 
 function randomWave() {
