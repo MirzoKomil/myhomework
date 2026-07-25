@@ -61,10 +61,12 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (student) {
       setDisplayName(student.name);
-      setDisplayId(student.id);
-      return;
+      if (student.studentId) {
+        setDisplayId(student.studentId);
+        return;
+      }
     }
-    if (token) return;
+    if (token && !student) return;
     fetchDemoStudentProfile()
       .then((profile) => {
         if (profile?.name) setDisplayName(profile.name);

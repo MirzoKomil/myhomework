@@ -956,7 +956,9 @@ async function getDemoStudentProfile(studentId) {
     if (!student) return {};
     return {
         name: student.name || '',
-        studentId: student.serialCode || student.id,
+        // CRM jadvalidagi "ID" ustuni ham aynan shu formatdan foydalanadi.
+        // Texnik `students.id` (masalan s178...) ilova interfeysida ko'rinmaydi.
+        studentId: student.serialCode || String(student.id || '').slice(-6),
         lang: await resolveStudentSubjectLang(id),
     };
 }
