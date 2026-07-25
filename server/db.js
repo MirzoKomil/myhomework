@@ -643,16 +643,54 @@ const EXAM_ID_RE = /^interval-\d+$|^final$/;
 // noyob lessonId'li) darslar bu bilan ishlamaydi — ular allaqachon
 // course.lang orqali to'g'ri ajratilgan.
 function resolveLangScopedContent(mc, studentLang) {
-    if (studentLang !== 'russian') return;
     for (const store of [mc.lessonContents, mc.examContents]) {
         if (!store) continue;
-        for (const key of Object.keys(store)) {
-            if (!BONUS_ID_RE.test(key) && !EXAM_ID_RE.test(key)) continue;
-            const ruKey = `${key}-russian`;
-            if (store[ruKey]) store[key] = store[ruKey];
-            else delete store[key];
+        const baseIds = new Set(
+            Object.keys(store)
+                .map(key => key.endsWith('-russian') ? key.slice(0, -'-russian'.length) : key)
+                .filter(key => BONUS_ID_RE.test(key) || EXAM_ID_RE.test(key))
+        );
+        for (const baseId of baseIds) {
+            const ruKey = `${baseId}-russian`;
+            if (studentLang === 'russian') {
+                if (store[ruKey]) store[baseId] = store[ruKey];
+                else delete store[baseId];
+            }
+            // Tilga bog'langan ichki kalit public javobda hech qachon qolmaydi.
+            delete store[ruKey];
         }
     }
+}
+
+// O'quvchi ilovasiga faqat uning kurs tilidagi dars sozlamalari beriladi.
+// CRM esa `crmMode` orqali ikkala tildagi kontentni bir vaqtda ko'rishda
+// davom etadi. Bu qatlam kurslar ro'yxatini emas, dars/modul/fayl va saqlangan
+// lesson contentni ham kesib tashlaydi — boshqa til materialiga URL orqali
+// tasodifan kirib qolishning oldi olinadi.
+function scopeMobileContentToStudentLanguage(mc, studentLang) {
+    const lang = studentLang === 'russian' ? 'russian' : 'english';
+    const matchesLang = item => (item?.lang || 'english') === lang;
+
+    const courses = (mc.courses || []).filter(matchesLang);
+    const courseIds = new Set(courses.map(c => c.id));
+    const lessons = (mc.lessons || []).filter(l => courseIds.has(l.courseId));
+    const lessonIds = new Set(lessons.map(l => l.id));
+    const modules = (mc.modules || []).filter(m => lessonIds.has(m.lessonId));
+    const moduleIds = new Set(modules.map(m => m.id));
+
+    mc.courses = courses;
+    mc.lessons = lessons;
+    mc.modules = modules;
+    mc.moduleContents = (mc.moduleContents || []).filter(c => moduleIds.has(c.moduleId));
+    mc.lessonContents = Object.fromEntries(
+        Object.entries(mc.lessonContents || {}).filter(([id]) => lessonIds.has(id) || BONUS_ID_RE.test(id))
+    );
+    mc.examContents = Object.fromEntries(
+        Object.entries(mc.examContents || {}).filter(([id]) => EXAM_ID_RE.test(id))
+    );
+    mc.videos = (mc.videos || []).filter(matchesLang);
+    mc.documents = (mc.documents || []).filter(matchesLang);
+    return mc;
 }
 
 async function getMobileContentData(studentId, { crmMode = false } = {}) {
@@ -665,7 +703,10 @@ async function getMobileContentData(studentId, { crmMode = false } = {}) {
     applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
     const studentLang = crmMode ? undefined : await resolveStudentSubjectLang(demoStudentId);
     applyLibraryOverrides(mc, studentLang);
-    if (!crmMode) resolveLangScopedContent(mc, studentLang);
+    if (!crmMode) {
+        resolveLangScopedContent(mc, studentLang);
+        scopeMobileContentToStudentLanguage(mc, studentLang);
+    }
     return applyShopOverrides(mc);
 }
 
