@@ -19441,8 +19441,9 @@ function renderRating() {
 
     const addBonusBtn = panel.querySelector('#ratingAddBonusBtn');
     if (addBonusBtn) {
-        addBonusBtn.style.display = _ratingSection === 'bonus-history' ? '' : 'none';
-        addBonusBtn.onclick = openAddBonusHistoryModal;
+        const canAssignBonus = ['admin', 'rop'].includes(getCurrentUser()?.role);
+        addBonusBtn.style.display = _ratingSection === 'bonus-history' && canAssignBonus ? '' : 'none';
+        addBonusBtn.onclick = canAssignBonus ? openAddBonusHistoryModal : null;
     }
 
     const sections = { leaderboard: 'ratingLeaderboard', bonuslar: 'ratingBonusList', 'bonus-history': 'ratingBonusHistory' };
@@ -19970,6 +19971,11 @@ function renderBonusHistorySection() {
 }
 
 function openAddBonusHistoryModal() {
+    if (!['admin', 'rop'].includes(getCurrentUser()?.role)) {
+        showMiniToast('Bonus belgilash faqat admin va ROP uchun ruxsat etilgan');
+        return;
+    }
+
     // 11-vazifa: bonus belgilashda ham faqat joriy til yo'nalishidagi
     // menejerlar ro'yxatda chiqadi.
     const managers = getSalesManagers(_leadsLangFilter === 'russian' ? 'russian' : 'english');
