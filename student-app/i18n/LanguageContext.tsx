@@ -6,7 +6,10 @@ import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { useAuth } from '@/services/studentAuthStore';
 import { translations, AppLang, TranslationKey } from './translations';
 
-const LANG_KEY = 'mh_student_lang';
+// Bu kalit faqat o'quvchi Sozlamalardan o'zi tanlagan interfeys tilini
+// saqlaydi. Eski `mh_student_lang` kurs tilidan avtomatik yozilgan bo'lishi
+// mumkin, shu sababli yangilanishdan keyin undan foydalanilmaydi.
+const LANG_PREFERENCE_KEY = 'mh_student_lang_preference_v2';
 
 // 40-vazifa: CRM'ning "Ilovani ko'rish" preview'i /student/?lang=russian
 // (yoki ?lang=english) ko'rinishida ochilganda, admin qaysi tilni tanlagan
@@ -58,58 +61,30 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     queryOverride.current = readQueryLang();
   }, []);
 
-  // 1-ustuvorlik: URL'dagi ?lang= yoki oldin saqlangan tanlov.
+  // 1-ustuvorlik: URL'dagi ?lang= preview uchun aniq ko'rsatma. Boshqa
+  // holatlarda dastlabki interfeys tili o'zbekcha; faqat foydalanuvchining
+  // Sozlamalardan o'zi qilgan tanlovi qayta tiklanadi.
   useEffect(() => {
     (async () => {
       if (queryOverride.current) {
         setLangState(queryOverride.current);
-        try {
-          await AsyncStorage.setItem(LANG_KEY, queryOverride.current);
-        } catch {
-          // ignore
-        }
         return;
       }
       try {
-        const saved = await AsyncStorage.getItem(LANG_KEY);
+        const saved = await AsyncStorage.getItem(LANG_PREFERENCE_KEY);
         if (saved === 'uz' || saved === 'ru') setLangState(saved);
+        else {
+          setLangState('uz');
+          await AsyncStorage.removeItem('mh_student_lang');
+        }
       } catch {
         // ignore
       }
     })();
   }, []);
 
-  // 2-ustuvorlik: haqiqiy o'quvchi login qilgan bo'lsa, ilova tili o'sha
-  // o'quvchining kurs yo'nalishiga (ingliz/rus) qarab avtomatik moslanadi.
-  useEffect(() => {
-    if (queryOverride.current) return;
-    if (student?.lang) {
-      const resolved: AppLang = student.lang === 'russian' ? 'ru' : 'uz';
-      setLangState(resolved);
-      AsyncStorage.setItem(LANG_KEY, resolved).catch(() => {});
-    }
-  }, [student?.lang]);
-
-  // 3-ustuvorlik: hech kim real login qilmagan bo'lsa (CRM'ning "Ilovani
-  // ko'rish" preview holati) — CRM'da hozir tanlangan "Namuna o'quvchi"ning
-  // o'z kurs tiliga qarab moslanadi (masalan admin biror o'quvchining
-  // qatoridagi "Ilovada ko'rish" tugmasini bossa).
-  useEffect(() => {
-    if (queryOverride.current) return;
-    if (token) return; // haqiqiy o'quvchi allaqachon 2-ustuvorlikda hal qilindi
-    fetchDemoStudentProfile()
-      .then((profile) => {
-        if (!profile) return;
-        const resolved: AppLang = profile.lang === 'russian' ? 'ru' : 'uz';
-        setLangState(resolved);
-        AsyncStorage.setItem(LANG_KEY, resolved).catch(() => {});
-      })
-      .catch(() => {});
-  }, [token]);
-
-  // 43-vazifa: courseLang — yuqoridagi UI-til effektlaridan mustaqil, chunki
-  // manual ?lang= override yoki o'quvchining o'zi tanlagan UI tili bilan
-  // aralashmasligi kerak (Radio kabi kurs-mavzusiga bog'liq kontent uchun).
+  // Kurs tili UI tilidan mustaqil. Rus guruhidagi o'quvchi menyularni
+  // o'zbekcha ko'radi, ammo unga ruscha dars va kursga tegishli kontent keladi.
   useEffect(() => {
     if (student?.lang) setCourseLang(student.lang === 'russian' ? 'russian' : 'english');
   }, [student?.lang]);
@@ -124,9 +99,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const setLang = useCallback((l: AppLang) => {
-    queryOverride.current = l;
     setLangState(l);
-    AsyncStorage.setItem(LANG_KEY, l).catch(() => {});
+    AsyncStorage.setItem(LANG_PREFERENCE_KEY, l).catch(() => {});
   }, []);
 
   const t = useCallback(
