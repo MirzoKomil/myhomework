@@ -100,7 +100,7 @@ function syncHeaderAvatar(user) {
         el.innerHTML = '';
         const img = document.createElement('img');
         img.alt = '';
-        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:12px';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
         img.onerror = () => {
             el.textContent = getUserInitials(user.name);
         };
