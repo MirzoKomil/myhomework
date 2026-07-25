@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -11,6 +11,7 @@ import { BookDelivery, DELIVERY_STAGE_LABELS, DELIVERY_STAGE_ORDER, DeliveryStag
 import { UZ_MONTHS } from '@/data/scheduleCalendar';
 import { DemoBookDeliveryResponse, fetchDemoBookDelivery } from '@/services/contentApi';
 import { useOrders } from '@/services/shopStore';
+import { useLang } from '@/i18n/LanguageContext';
 
 type Category = 'books' | 'shop';
 
@@ -18,6 +19,11 @@ const CATEGORY_LABELS: Record<Category, string> = {
   books: 'Kitob yetkazish',
   shop: 'Homework Shop',
 };
+
+const RUSSIAN_BOOK_DELIVERIES: BookDelivery[] = [
+  { ...bookDeliveries[0], id: 'russian-coursebook', title: 'Русский язык — учебник', emoji: '📕' },
+  { ...bookDeliveries[1], id: 'russian-workbook', title: 'Русский язык — рабочая тетрадь', emoji: '📙' },
+];
 
 function formatDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number);
@@ -121,26 +127,31 @@ export default function BookDeliveryScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const [category, setCategory] = useState<Category>('books');
   const orders = useOrders();
+  const { courseLang } = useLang();
 
   // CRM'ning Sotuv bo'limidagi "Kitob yetkazish" kanban-yozuvidan haqiqiy
   // holat — namuna o'quvchiga mos yozuv topilmasa, statik namuna holatida qoladi.
   const [realDelivery, setRealDelivery] = useState<DemoBookDeliveryResponse>(null);
+  const [deliveryLoaded, setDeliveryLoaded] = useState(false);
   useEffect(() => {
     fetchDemoBookDelivery()
       .then(setRealDelivery)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setDeliveryLoaded(true));
   }, []);
 
   const displayedBooks: BookDelivery[] = useMemo(() => {
-    if (!realDelivery) return bookDeliveries;
-    return bookDeliveries.map((b) => ({
+    if (!realDelivery) return [];
+    const isRussianCourse = realDelivery.lang === 'russian' || courseLang === 'russian';
+    const courseBooks = isRussianCourse ? RUSSIAN_BOOK_DELIVERIES : bookDeliveries;
+    return courseBooks.map((b) => ({
       ...b,
       address: realDelivery.address || b.address,
       stage: realDelivery.stage,
       dispatchedDate: realDelivery.dispatchedDate ?? undefined,
       deliveredDate: realDelivery.deliveredDate ?? undefined,
     }));
-  }, [realDelivery]);
+  }, [courseLang, realDelivery]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -170,10 +181,17 @@ export default function BookDeliveryScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {category === 'books' ? (
           <>
-            <Text style={styles.subtitle}>Sizga yetkazib beriladigan darsliklar holati</Text>
-            {displayedBooks.map((book) => (
-              <BookCard key={book.id} book={book} />
-            ))}
+            <Text style={styles.subtitle}>Sotuv bo‘limidagi kitob yetkazib berish holati</Text>
+            {!deliveryLoaded ? (
+              <View style={styles.empty}><ActivityIndicator color={theme.colors.purple} /></View>
+            ) : displayedBooks.length === 0 ? (
+              <View style={styles.empty}>
+                <Ionicons name="book-outline" size={40} color={theme.colors.textMuted} />
+                <Text style={styles.emptyText}>Siz uchun kitob yetkazib berish ma’lumoti hali kiritilmagan</Text>
+              </View>
+            ) : (
+              displayedBooks.map((book) => <BookCard key={book.id} book={book} />)
+            )}
           </>
         ) : (
           <>

@@ -1938,14 +1938,28 @@ async function getDemoStudentBookDelivery(studentId) {
     if (!studentRow) return null;
     const student = rowToStudent(studentRow);
 
+    const studentLang = await resolveStudentSubjectLang(demoStudentId);
+    const studentDisplayId = String(student.serialCode || String(student.id || '').slice(-6)).trim().toLowerCase();
     const bookRoadmap = await getBookRoadmap();
     let entry = null;
-    if (student.leadRef?.id) {
-        entry = bookRoadmap.find(b => b.leadRef && b.leadRef.id === student.leadRef.id && b.leadRef.lang === student.leadRef.lang);
+    // Eng ishonchli bog'lanish — Sotuv bo'limidagi Student ID. Til ham
+    // tekshiriladi, shunda bir xil ismli ingliz/rus o'quvchilar aralashmaydi.
+    if (studentDisplayId) {
+        entry = bookRoadmap.find(b =>
+            b.lang === studentLang && String(b.studentId || '').trim().toLowerCase() === studentDisplayId
+        );
+    }
+    if (!entry && student.leadRef?.id) {
+        entry = bookRoadmap.find(b =>
+            b.lang === studentLang && b.leadRef && b.leadRef.id === student.leadRef.id &&
+            b.leadRef.lang === student.leadRef.lang
+        );
     }
     if (!entry && student.name) {
         const target = student.name.trim().toLowerCase();
-        entry = bookRoadmap.find(b => b.name && b.name.trim().toLowerCase() === target);
+        entry = bookRoadmap.find(b =>
+            b.lang === studentLang && b.name && b.name.trim().toLowerCase() === target
+        );
     }
     if (!entry) return null;
 
@@ -1954,6 +1968,8 @@ async function getDemoStudentBookDelivery(studentId) {
         stage: BOOK_ROADMAP_STAGE_MAP[entry.status] || 'preparing',
         dispatchedDate: entry.dispatchedAt || null,
         deliveredDate: entry.deliveredAt || null,
+        lang: studentLang,
+        studentId: studentDisplayId,
     };
 }
 

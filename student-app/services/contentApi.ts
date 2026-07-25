@@ -648,6 +648,8 @@ export type DemoBookDeliveryResponse = {
   stage: 'preparing' | 'dispatched' | 'in_transit' | 'delivered';
   dispatchedDate: string | null;
   deliveredDate: string | null;
+  lang: 'english' | 'russian';
+  studentId: string;
 } | null;
 
 export async function fetchDemoBookDelivery(): Promise<DemoBookDeliveryResponse> {
