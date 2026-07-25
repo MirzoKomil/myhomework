@@ -6,6 +6,23 @@
 // natija so'raladi va keshlanadi.
 const RADIO_BROWSER_BASE = 'https://de1.api.radio-browser.info/json/stations/search';
 
+// Rus radiolari uchun 2026-07-25 kuni radio-browser katalogida tekshirilgan
+// jonli oqimlar. Dinamik qidiruv ba'zan bir xil nomli boshqa stansiyani
+// qaytarardi; shu manbalar avval sinovdan o'tadi, keyin umumiy qidiruv zaxira
+// sifatida ishlatiladi.
+const VERIFIED_RUSSIAN_STREAMS: Record<string, string> = {
+  'Радио России': 'http://icecast.vgtrk.cdnvideo.ru/rrzonam_mp3_128kbps',
+  'Радио Монте Карло': 'https://montecarlo.hostingradio.ru/montecarlo128.mp3',
+  'Радио Маяк': 'http://icecast.vgtrk.cdnvideo.ru/mayakfm_mp3_192kbps',
+  'Радио Шоколад': 'https://choco.hostingradio.ru:10010/fm',
+  'Радио Культура': 'http://icecast.vgtrk.cdnvideo.ru/kulturafm',
+  'Business FM': 'https://bfm.hostingradio.ru:9075/fm',
+  'Radio Zvezda': 'https://zvezda-radio-rzv.mediacdn.ru/radio/zvezda/zvezda_128',
+  'Детское Радио': 'https://pub0101.101.ru/stream/air/aac/64/199',
+  'Радио Книга': 'http://bookradio.hostingradio.ru:8069/fm',
+  'Серебряный дождь': 'http://213.59.4.27:8000/silver128.mp3',
+};
+
 type RadioBrowserStation = {
   url_resolved?: string;
   url?: string;
@@ -104,12 +121,16 @@ export async function resolveStationStreamCandidates(query: string): Promise<str
   if (cache.has(query)) return cache.get(query)!;
   if (inflight.has(query)) return inflight.get(query)!;
 
+  const verifiedCandidates = VERIFIED_RUSSIAN_STREAMS[query]
+    ? withHttpsFallback(VERIFIED_RUSSIAN_STREAMS[query])
+    : [];
   const promise = searchStreamUrls(query)
     .catch(() => [])
     .then((result) => {
-      cache.set(query, result);
+      const candidates = [...new Set([...verifiedCandidates, ...result])];
+      cache.set(query, candidates);
       inflight.delete(query);
-      return result;
+      return candidates;
     });
   inflight.set(query, promise);
   return promise;

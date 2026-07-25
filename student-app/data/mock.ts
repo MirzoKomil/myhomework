@@ -318,6 +318,24 @@ export const radioStations: RadioStation[] = [
   },
 ];
 
+const russianRadioLogos: Record<string, ImageSourcePropType> = {
+  'radio-rossii': require('@/assets/images/radio/radio-rossii.png'),
+  'radio-monte-carlo': require('@/assets/images/radio/radio-monte-carlo.jpg'),
+  'radio-mayak': require('@/assets/images/radio/radio-mayak.png'),
+  'radio-chocolate': require('@/assets/images/radio/radio-chocolate.png'),
+  'radio-kultura': require('@/assets/images/radio/radio-kultura.png'),
+  'business-fm': require('@/assets/images/radio/business-fm.jpg'),
+  'radio-zvezda': require('@/assets/images/radio/radio-zvezda.jpg'),
+  'detskoe-radio': require('@/assets/images/radio/detskoe-radio.png'),
+  'radio-kniga': require('@/assets/images/radio/radio-kniga.png'),
+  'silver-rain': require('@/assets/images/radio/silver-rain.jpg'),
+};
+
+radioStations.forEach(station => {
+  const logo = russianRadioLogos[station.id];
+  if (logo) station.logo = logo;
+});
+
 export type NotifCategory = 'news' | 'lessons';
 
 export type AppNotification = {
