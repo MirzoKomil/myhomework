@@ -4648,6 +4648,17 @@ textarea.form-control {
         scroll-snap-align: start;
     }
 
+    /* 51-vazifa: mobil ekranda kartochkalar scroll bo'lganda foydalanuvchi
+       qaysi kanban ustunida ekanini yo'qotmasligi uchun sarlavha joyida
+       qoladi. Scroll konteyneri .leads-kanban bo'lgani sababli sticky aynan
+       shu ustun ichida ishlaydi va yonlama scrollga xalaqit bermaydi. */
+    .sales-panel[data-sales-panel="leads"] .lead-column-header {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        box-shadow: 0 7px 12px -12px rgba(15, 23, 42, 0.7);
+    }
+
     .table {
         font-size: 13px;
     }
