@@ -1857,6 +1857,20 @@ async function getCallRecordings(lang, leadId) {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
+// Kanban kartochkalaridagi mikrofon belgisi uchun barcha lidlarning zapis
+// sonini bir so'rovda qaytaradi. Kalit: "lang:leadId".
+async function getCallRecordingCounts() {
+    const all = await getJsonData('callRecordings');
+    return all.reduce((counts, recording) => {
+        const lang = recording.lang === 'russian' ? 'russian' : 'english';
+        const leadId = String(recording.leadId || '').trim();
+        if (!leadId) return counts;
+        const key = `${lang}:${leadId}`;
+        counts[key] = (counts[key] || 0) + 1;
+        return counts;
+    }, {});
+}
+
 async function addCallRecording({ lang, leadId, url, fileName, duration, uploadedBy, source }) {
     const trimmedLang = lang === 'russian' ? 'russian' : 'english';
     const trimmedLeadId = String(leadId || '').trim();
@@ -2394,7 +2408,7 @@ module.exports = {
     getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY,
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
-    getCallRecordings, addCallRecording, handleBeelineWebhook,
+    getCallRecordings, getCallRecordingCounts, addCallRecording, handleBeelineWebhook,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,

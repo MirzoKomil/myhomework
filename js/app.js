@@ -15632,6 +15632,23 @@ function formatFileSize(bytes) {
     return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function refreshLeadRecordingCounts() {
+    apiFetchCallRecordingCounts()
+        .then((counts) => {
+            document.querySelectorAll('[data-lead-recording]').forEach((button) => {
+                const key = `${button.dataset.leadRecording}:${button.dataset.leadId}`;
+                let countEl = button.querySelector('.lead-recording-count');
+                if (!countEl) {
+                    countEl = document.createElement('span');
+                    countEl.className = 'lead-recording-count';
+                    button.appendChild(countEl);
+                }
+                countEl.textContent = counts?.[key] || 0;
+            });
+        })
+        .catch(() => {});
+}
+
 function renderLeadCard(lead, langKey) {
     const normalized = normalizeLeadExtras(lead);
     const phone = formatPhoneDisplay(normalized.phone) || '—';
@@ -15799,6 +15816,7 @@ function openLeadRecordingModal(lang, leadId) {
                 const uploaded = await apiUploadFile(file);
                 await apiAddCallRecording(lang, leadId, uploaded.url, uploaded.fileName, 0);
                 showMiniToast('Zapis yuklandi');
+                refreshLeadRecordingCounts();
                 await refresh();
             } catch (err) {
                 alert('Yuklashda xatolik: ' + (err.message || err));
@@ -15971,6 +15989,7 @@ function renderLeads() {
     }).join('');
 
     initLeadDragDrop(board);
+    refreshLeadRecordingCounts();
 
     board.querySelectorAll('[data-lead-notify]').forEach(btn => {
         btn.addEventListener('click', e => {

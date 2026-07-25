@@ -242,6 +242,10 @@ async function apiFetchCallRecordings(lang, leadId) {
     return apiFetch('/api/state/call-recordings?lang=' + encodeURIComponent(lang) + '&leadId=' + encodeURIComponent(leadId));
 }
 
+async function apiFetchCallRecordingCounts() {
+    return apiFetch('/api/state/call-recordings/counts');
+}
+
 async function apiAddCallRecording(lang, leadId, url, fileName, duration) {
     return apiFetch('/api/state/call-recordings', {
         method: 'POST',
