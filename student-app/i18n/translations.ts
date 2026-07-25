@@ -473,8 +473,8 @@ export const translations = {
     home_translator: 'Переводчик',
     home_speaking_battle: 'Спикинг Баттл',
     home_skills_progress: 'Прогресс навыков',
-    home_shop_title: 'Магазин домашних заданий',
-    home_shop_subtitle: 'Обменивайте монеты на подарки',
+    home_shop_title: 'Domwork Магазин',
+    home_shop_subtitle: "Coinlaringizni sovg'alarga almashtiring",
 
     skill_vocabulary: 'Словарный запас',
     skill_speaking: 'Говорение',
