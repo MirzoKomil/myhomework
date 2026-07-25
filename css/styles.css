@@ -335,6 +335,29 @@ body {
     display: block;
 }
 
+.settings-sidebar-section {
+    padding: 4px 0 6px;
+}
+
+.settings-sidebar-label {
+    display: block;
+    padding: 5px 14px 4px 36px;
+    color: var(--text-light);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.settings-sidebar-action svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+}
+
 .menu-sub-item {
     display: flex;
     align-items: center;

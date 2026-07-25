@@ -630,6 +630,20 @@ function initSidebarMenu() {
         });
     });
 
+    document.querySelectorAll('[data-settings-archive]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            showMiniToast("Arxiv bo'limi tez orada qo'shiladi");
+        });
+    });
+
+    document.querySelectorAll('[data-settings-notifications]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            document.getElementById('notifToggle')?.click();
+        });
+    });
+
     updateSidebarLangActive(localStorage.getItem('mh_ui_lang') || 'uz');
 }
 
