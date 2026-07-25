@@ -4456,11 +4456,13 @@ textarea.form-control {
 
     .leads-kanban {
         overflow-x: auto;
-        overflow-y: hidden;
+        /* Kanban ustunlari yonlama, kartochkalar esa pastga scroll qilinadi. */
+        overflow-y: auto;
         flex: 1 1 0;
         min-height: 0;
         scroll-snap-type: x proximity;
         -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
         gap: 12px;
         padding-bottom: 16px;
     }
