@@ -2362,6 +2362,14 @@ async function findUserById(id) {
     return q1('SELECT * FROM users WHERE id = $1', [id]);
 }
 
+// Xodimlar o'rtasidagi muloqotda ism va avatar aynan login akkauntidan
+// olinishi uchun faqat kerakli rollarning xavfsiz katalogi.
+async function listUsersByRoles(roles = []) {
+    const allowed = Array.isArray(roles) ? roles.filter(Boolean) : [];
+    if (!allowed.length) return [];
+    return q('SELECT id, name, email, role, phone, bio, location, avatar, created_at FROM users WHERE role = ANY($1::text[]) ORDER BY name', [allowed]);
+}
+
 async function createUser({ name, email, passwordHash, role }) {
     const id = randomUUID();
     await pool.query(
@@ -2490,7 +2498,7 @@ setInterval(_checkAndPushComputedNotifications, PUSH_CHECK_INTERVAL_MS);
 module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, insertLead, patchState,
-    findUserByEmail, findUserById, createUser, updateUser, publicUser,
+    findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
     getHrEmployeesData, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile,
     getDemoStudentMessages, sendDemoStudentMessage,

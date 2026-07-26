@@ -242,6 +242,11 @@ async function apiFetchCallRecordings(lang, leadId) {
     return apiFetch('/api/state/call-recordings?lang=' + encodeURIComponent(lang) + '&leadId=' + encodeURIComponent(leadId));
 }
 
+async function apiGetStaffDirectory() {
+    const data = await apiFetch('/api/auth/staff-directory');
+    return Array.isArray(data.users) ? data.users : [];
+}
+
 async function apiFetchCallRecordingCounts() {
     return apiFetch('/api/state/call-recordings/counts');
 }

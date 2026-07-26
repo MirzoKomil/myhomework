@@ -7259,57 +7259,109 @@ function getCommunicationSenderRole(user) {
     return 'admin';
 }
 
-// 59-vazifa: sotuv menejeri o'z kabinetidan faqat o'z yo'nalishidagi ROP
-// hamda asosiy administrator bilan bevosita yozisha oladi. Mijoz/o'quvchi
-// yozishmalari bu rolda Muloqot oynasidan mutlaqo chiqarib tashlanadi.
-function getSalesManagerCommunicationContacts(user) {
-    const managerLang = user?.linkedManagerLang || 'english';
-    const rops = getItem(STORAGE_KEYS.hrEmployees, [])
-        .filter(employee => String(employee.role || '').toLowerCase() === 'rop')
-        .filter(employee => !employee.lang || employee.lang === managerLang)
-        .map(employee => ({
-            id: `rop-${employee.id}`,
-            name: employee.name || 'ROP',
-            role: 'rop',
-            avatar: employee.avatar || '',
-        }));
+// 74-vazifa: xodimlararo suhbatlarda profil ma'lumoti HRdagi namuna yozuvdan
+// emas, bevosita login akkauntidan olinadi. Shunday qilib ism/avatar hamda
+// ikki tomondan ochiladigan suhbatning identifikatori doim bir xil bo'ladi.
+let _staffDirectoryCache = null;
 
-    return [
-        ...rops,
-        { id: 'main-admin', name: 'Asosiy admin', role: 'admin', avatar: '' },
-    ];
+async function getStaffAccountDirectory() {
+    try {
+        _staffDirectoryCache = await apiGetStaffDirectory();
+    } catch (err) {
+        console.warn('Xodimlar katalogini yuklab bo\'lmadi:', err.message);
+    }
+    return _staffDirectoryCache || [];
+}
+
+function sameStaffAccount(account, employee) {
+    const accountLogin = String(account?.email || '').trim().toLowerCase();
+    const employeeLogin = String(employee?.login || '').trim().toLowerCase();
+    return (accountLogin && employeeLogin && accountLogin === employeeLogin) ||
+        String(account?.name || '').trim().toLowerCase() === String(employee?.name || '').trim().toLowerCase();
+}
+
+function makeStaffContact(account, role, employee = null) {
+    return {
+        id: `user-${account.id}`,
+        accountId: account.id,
+        name: account.name || employee?.name || role,
+        role,
+        avatar: account.avatar || employee?.avatar || '',
+    };
+}
+
+async function getSalesManagerCommunicationContacts(user) {
+    const managerLang = user?.linkedManagerLang || 'english';
+    const directory = await getStaffAccountDirectory();
+    const ropEmployees = getItem(STORAGE_KEYS.hrEmployees, [])
+        .filter(employee => String(employee.role || '').toLowerCase() === 'rop')
+        .filter(employee => !employee.lang || employee.lang === managerLang);
+    const rops = directory
+        .filter(account => account.role === 'rop')
+        .filter(account => ropEmployees.some(employee => sameStaffAccount(account, employee)))
+        .map(account => makeStaffContact(account, 'rop', ropEmployees.find(employee => sameStaffAccount(account, employee))));
+    const mainAdmin = directory.find(account => account.role === 'admin' && account.email === 'admin') ||
+        directory.find(account => account.role === 'admin');
+    return [...rops, ...(mainAdmin ? [makeStaffContact(mainAdmin, 'admin')] : [])];
+}
+
+async function getSupervisorCommunicationContacts(user) {
+    const directory = await getStaffAccountDirectory();
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const lang = user.role === 'rop' ? (user.linkedRopLang || 'english') : null;
+    return directory
+        .filter(account => account.role === 'sales_manager')
+        .filter(account => {
+            const employee = employees.find(item => sameStaffAccount(account, item));
+            return !lang || !employee?.lang || employee.lang === lang;
+        })
+        .map(account => makeStaffContact(account, 'sales_manager', employees.find(item => sameStaffAccount(account, item))));
 }
 
 function getStaffConversationId(user, contact) {
     const ownId = user?.id || user?.login || user?.name || 'sales-manager';
-    return `staff-${[String(ownId), String(contact.id)].sort().join('-')}`;
+    const contactId = contact?.accountId || contact?.id || 'contact';
+    return `staff-${[String(ownId), String(contactId)].sort().join('-')}`;
 }
 
-function renderSalesManagerCommunicationList(container, user) {
-    const contacts = getSalesManagerCommunicationContacts(user);
+function renderStaffAvatar(contact) {
+    const initials = (contact.name || '?').split(/\s+/).map(word => word[0] || '').join('').slice(0, 2).toUpperCase();
+    return `<span class="communication-hub-avatar">${contact.avatar
+        ? `<img src="${escapeHtml(contact.avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+        : escapeHtml(initials)}</span>`;
+}
+
+function staffRoleLabel(role) {
+    return role === 'rop' ? 'ROP' : role === 'admin' ? 'Asosiy admin' : 'Sotuv menejeri';
+}
+
+function renderStaffContactRows(contacts, user) {
     const allMessages = getItem(STORAGE_KEYS.studentMessages, {});
-    const rows = contacts.map(contact => {
+    return contacts.map(contact => {
         const conversationId = getStaffConversationId(user, contact);
         const messages = getStudentMessages(conversationId, 'staff');
         const last = messages.slice().sort((a, b) => new Date(b.time) - new Date(a.time))[0];
         return { contact, conversationId, messages, last };
     }).sort((a, b) => new Date(b.last?.time || 0) - new Date(a.last?.time || 0));
+}
+
+async function renderSalesManagerCommunicationList(container, user) {
+    const contacts = await getSalesManagerCommunicationContacts(user);
+    const rows = renderStaffContactRows(contacts, user);
 
     container.innerHTML = `
         <p class="text-muted" style="margin:0 0 14px">ROP va asosiy admin bilan yozishmalar</p>
         <div class="communication-hub-list">
             ${rows.map(({ contact, messages, last }) => {
-                const initials = (contact.name || '?').split(/\s+/).map(word => word[0] || '').join('').slice(0, 2).toUpperCase();
-                const roleLabel = contact.role === 'rop' ? 'ROP' : 'Asosiy admin';
                 return `<button type="button" class="communication-hub-row" data-sales-staff-contact="${escapeHtml(contact.id)}">
-                    <span class="communication-hub-avatar">${escapeHtml(initials)}</span>
+                    ${renderStaffAvatar(contact)}
                     <span class="communication-hub-meta">
                         <span class="communication-hub-name">${escapeHtml(contact.name)}</span>
-                        <span class="communication-hub-preview">${escapeHtml(last?.text || roleLabel)}</span>
+                        <span class="communication-hub-preview">${escapeHtml(last?.text || staffRoleLabel(contact.role))}</span>
                     </span>
                     ${messages.length ? `<span class="communication-hub-count">${messages.length}</span>` : ''}
                 </button>`;
-            }).join('')}
+            }).join('') || '<div class="lead-empty-hint">Sizning yo\'nalishingizga biriktirilgan ROP yoki asosiy admin akkaunti topilmadi.</div>'}
         </div>`;
 
     container.querySelectorAll('[data-sales-staff-contact]').forEach(button => {
@@ -7343,16 +7395,59 @@ function openCommunicationHub() {
     renderCommunicationHubList();
 }
 
-function renderCommunicationHubList() {
+function renderSupervisorStaffConversation(container, user, contact) {
+    const conversationId = getStaffConversationId(user, contact);
+    container.innerHTML = `<button type="button" class="btn-ghost" id="communicationHubBack" style="padding:4px 10px;margin-bottom:12px">← Yozishmalar</button>
+        <div id="supervisorStaffChatThread"></div>`;
+    document.getElementById('communicationHubBack').addEventListener('click', () => renderCommunicationHubList());
+    renderCrmChatThread(document.getElementById('supervisorStaffChatThread'), {
+        studentId: conversationId,
+        threadId: 'staff',
+        senderRole: getCommunicationSenderRole(user),
+        senderId: user.id || user.login || null,
+        senderName: user.name || staffRoleLabel(user.role),
+        title: contact.name,
+        uid: `staff_${conversationId}`,
+        incomingSenderRoles: [contact.role],
+    });
+}
+
+async function renderCommunicationHubList() {
     const container = document.getElementById('communicationHubBody');
     const user = getCurrentUser();
     if (!container || !user) return;
+
+    // Xodimlar chatida boshqa akkaunt yuborgan oxirgi xabar ham darhol
+    // ko'rinishi uchun dialog ochilganida serverdagi umumiy tarixni yangilaymiz.
+    try {
+        const state = await apiLoadState();
+        _cache.studentMessages = state.studentMessages || {};
+    } catch (err) {
+        console.warn('Chat tarixini yangilab bo\'lmadi:', err.message);
+    }
 
     if (user.role === 'sales_manager') {
         renderSalesManagerCommunicationList(container, user);
         return;
     }
 
+    const staffContacts = (user.role === 'rop' || user.role === 'admin')
+        ? await getSupervisorCommunicationContacts(user)
+        : [];
+    const staffRows = renderStaffContactRows(staffContacts, user);
+    const staffSection = staffRows.length ? `
+        <p class="text-muted" style="margin:0 0 14px">Sotuv menejerlari bilan yozishmalar</p>
+        <div class="communication-hub-list" style="margin-bottom:18px">
+            ${staffRows.map(({ contact, messages, last }) => `
+                <button type="button" class="communication-hub-row" data-supervisor-staff-contact="${escapeHtml(contact.id)}">
+                    ${renderStaffAvatar(contact)}
+                    <span class="communication-hub-meta">
+                        <span class="communication-hub-name">${escapeHtml(contact.name)}</span>
+                        <span class="communication-hub-preview">${escapeHtml(last?.text || staffRoleLabel(contact.role))}</span>
+                    </span>
+                    ${messages.length ? `<span class="communication-hub-count">${messages.length}</span>` : ''}
+                </button>`).join('')}
+        </div>` : '';
     const allMessages = getItem(STORAGE_KEYS.studentMessages, {});
     const rows = getCommunicationStudents(user).map(student => {
         const messages = Object.values(allMessages[student.id] || {}).flat();
@@ -7361,6 +7456,7 @@ function renderCommunicationHubList() {
     }).sort((a, b) => new Date(b.last?.time || 0) - new Date(a.last?.time || 0));
 
     container.innerHTML = `
+        ${staffSection}
         <p class="text-muted" style="margin:0 0 14px">O'quvchilar va mijozlar bilan yozishmalar</p>
         <div class="communication-hub-list">
             ${rows.length ? rows.map(({ student, messages, last }) => {
@@ -7378,6 +7474,12 @@ function renderCommunicationHubList() {
 
     container.querySelectorAll('[data-communication-student]').forEach(button => {
         button.addEventListener('click', () => renderCommunicationHubConversation(button.dataset.communicationStudent));
+    });
+    container.querySelectorAll('[data-supervisor-staff-contact]').forEach(button => {
+        button.addEventListener('click', () => {
+            const contact = staffContacts.find(item => item.id === button.dataset.supervisorStaffContact);
+            if (contact) renderSupervisorStaffConversation(container, user, contact);
+        });
     });
 }
 

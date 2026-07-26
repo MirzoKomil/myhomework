@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 const {
-    findUserByEmail, findUserById, createUser, updateUser, publicUser,
+    findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
     createSession, getSessionsByUserId, getSessionById,
     deleteSession, deleteSessionByJti, deleteOtherSessions, DATA_DIR,
     findStudentByLogin, getStudentPublicId
@@ -130,6 +130,21 @@ router.get('/me', authRequired, async (req, res) => {
         if (!user) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
         res.json({ user: publicUser(user) });
     } catch (err) { res.status(500).json({ error: 'Server xatoligi' }); }
+});
+
+// 74-vazifa: sotuv menejeri, ROP va asosiy admin o'zaro muloqotida
+// kontaktning namuna emas, haqiqiy akkauntdagi ism va avatari ko'rinadi.
+router.get('/staff-directory', authRequired, async (req, res) => {
+    try {
+        if (!['admin', 'rop', 'sales_manager', 'boshliq'].includes(req.user.role)) {
+            return res.status(403).json({ error: 'Xodimlar katalogiga ruxsat yo\'q' });
+        }
+        const users = await listUsersByRoles(['admin', 'rop', 'sales_manager']);
+        res.json({ users: users.map(publicUser) });
+    } catch (err) {
+        console.error('GET /staff-directory', err);
+        res.status(500).json({ error: 'Server xatoligi' });
+    }
 });
 
 router.patch('/me', authRequired, async (req, res) => {
