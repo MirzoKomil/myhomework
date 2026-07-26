@@ -5894,8 +5894,6 @@ function renderDashboard() {
     document.getElementById('statLeadsLabel').textContent = isSalesManager ? 'Sotuv summam' : 'Organik lidlar';
 
     renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads });
-    renderTeacherCards(teachers, students);
-    renderMiniSchedule();
     renderCalendarWidget();
     renderHwProgress(students);
 }
