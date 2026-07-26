@@ -5847,12 +5847,25 @@ function renderDashboard() {
     const students = getItem(STORAGE_KEYS.students, []);
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const currentUser = getCurrentUser();
+    const isSalesManager = currentUser?.role === 'sales_manager';
     const organicLeads = [...(leads.english || []), ...(leads.russian || [])].filter(l => (l.leadType || 'organic') === 'organic').length;
-    document.getElementById('statStudents').textContent = students.length;
-    document.getElementById('statTeachers').textContent = teachers.length;
-    document.getElementById('statLeads').textContent = organicLeads;
+    const allLeads = [...(leads.english || []), ...(leads.russian || [])];
+    const managerId = isSalesManager ? getDashboardManagerId(currentUser) : null;
+    const managerLeads = managerId ? allLeads.filter(lead => lead.managerId === managerId) : [];
+    const managerStudents = isSalesManager ? filterStudentsForSalesManager(students, { ...currentUser, linkedManagerId: managerId }) : students;
+    const managerClosed = managerLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
+    const managerRevenue = managerClosed.reduce((sum, lead) => sum + getDashboardLeadRevenue(lead), 0);
+    const formatMoney = typeof fmtMoney === 'function' ? fmtMoney : amount => `${Number(amount || 0).toLocaleString('uz-UZ')} so'm`;
 
-    renderDashboardOverview({ students, teachers, leads });
+    document.getElementById('statStudents').textContent = isSalesManager ? managerStudents.length : students.length;
+    document.getElementById('statTeachers').textContent = isSalesManager ? managerClosed.length : teachers.length;
+    document.getElementById('statLeads').textContent = isSalesManager ? formatMoney(managerRevenue) : organicLeads;
+    document.getElementById('statStudentsLabel').textContent = isSalesManager ? "O'quvchilarim" : "O'quvchilar";
+    document.getElementById('statTeachersLabel').textContent = isSalesManager ? "Sotuvlarim" : 'Ustozlar';
+    document.getElementById('statLeadsLabel').textContent = isSalesManager ? 'Sotuv summam' : 'Organik lidlar';
+
+    renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads });
     renderTeacherCards(teachers, students);
     renderMiniSchedule();
     renderCalendarWidget();
@@ -6972,18 +6985,42 @@ function renderCrmChatThread(container, opts) {
     });
 }
 
-function renderDashboardOverview({ students, teachers, leads }) {
+function getDashboardManagerId(user) {
+    if (!user) return '';
+    if (user.linkedManagerId) return user.linkedManagerId;
+    const normalizedName = String(user.name || '').trim().toLowerCase();
+    return getSalesManagers().find(manager => String(manager.name || '').trim().toLowerCase() === normalizedName)?.id || '';
+}
+
+function getDashboardLeadRevenue(lead) {
+    return Number(lead?.paymentClosedSurvey?.actualAmount || lead?.paymentClosedSurvey?.totalAmount || lead?.paymentSurvey?.paidAmount || 0);
+}
+
+function formatDashboardSessionDuration(user) {
+    const id = String(user?.id || user?.linkedManagerId || user?.name || 'current');
+    const key = `mh_dashboard_session_started_${id}`;
+    let startedAt = Number(sessionStorage.getItem(key));
+    if (!Number.isFinite(startedAt) || startedAt <= 0) {
+        startedAt = Date.now();
+        sessionStorage.setItem(key, String(startedAt));
+    }
+    const minutes = Math.max(0, Math.floor((Date.now() - startedAt) / 60000));
+    const hours = Math.floor(minutes / 60);
+    return hours ? `${hours} soat ${minutes % 60} daqiqa` : `${minutes} daqiqa`;
+}
+
+function renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads }) {
     const container = document.getElementById('dashboardOverview');
     if (!container) return;
+
+    const isSalesManager = currentUser?.role === 'sales_manager';
 
     const allLeads = [
         ...(leads.english || []).map(lead => ({ ...lead, language: 'english' })),
         ...(leads.russian || []).map(lead => ({ ...lead, language: 'russian' }))
     ];
     const closedLeads = allLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
-    const leadRevenue = lead => Number(
-        lead.paymentClosedSurvey?.actualAmount || lead.paymentClosedSurvey?.totalAmount || lead.paymentSurvey?.paidAmount || 0
-    );
+    const leadRevenue = getDashboardLeadRevenue;
     const totalRevenue = closedLeads.reduce((sum, lead) => sum + leadRevenue(lead), 0);
     const targetLeads = allLeads.filter(lead => (lead.source || 'Organik') === 'Target');
     const targetClosed = targetLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
@@ -7012,9 +7049,10 @@ function renderDashboardOverview({ students, teachers, leads }) {
 
     const maxSalesRevenue = Math.max(...salesRating.map(item => item.revenue), 1);
     const maxTeacherStudents = Math.max(...teacherRating.map(item => item.students), 1);
+    const dashboardLeads = isSalesManager ? (managerLeads || []) : allLeads;
     const funnelStages = FUNNEL_STAGES.map(stage => ({
         label: stage.label,
-        count: allLeads.filter(lead => normalizeLeadStatus(lead.status) === stage.id).length
+        count: dashboardLeads.filter(lead => normalizeLeadStatus(lead.status) === stage.id).length
     }));
     const maxFunnelCount = Math.max(...funnelStages.map(stage => stage.count), 1);
     const formatMoney = typeof fmtMoney === 'function'
@@ -7029,13 +7067,13 @@ function renderDashboardOverview({ students, teachers, leads }) {
         : '<p class="dashboard-empty">Hozircha ma\'lumot yo\'q</p>';
 
     container.innerHTML = `
-        <div class="dashboard-section-title"><h3>Umumiy ko'rsatkichlar</h3><span>CRM ma'lumotlari asosida</span></div>
-        <div class="dashboard-kpi-grid">
+        <div class="dashboard-section-title"><h3>${isSalesManager ? 'Mening ko\'rsatkichlarim' : "Umumiy ko'rsatkichlar"}</h3><span>${isSalesManager ? 'Shaxsiy natijalar va joriy sessiya' : "CRM ma'lumotlari asosida"}</span></div>
+        ${isSalesManager ? `<div class="dashboard-kpi-grid dashboard-kpi-grid--single"><div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#9201;</span><div><small>Platformada sarflagan vaqt</small><b id="dashboardSessionDuration">${formatDashboardSessionDuration(currentUser)}</b><em>Joriy sessiya</em></div></div></div>` : `<div class="dashboard-kpi-grid">
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon purple">&#128101;</span><div><small>O'quvchilar soni</small><b>${students.length}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon blue">&#128200;</span><div><small>Sotuvlar soni</small><b>${closedLeads.length}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon green">&#128176;</span><div><small>Sotuv summasi</small><b>${formatMoney(totalRevenue)}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#128188;</span><div><small>Xodimlar soni</small><b>${employeeIds.size}</b></div></div>
-        </div>
+        </div>`}
         <div class="dashboard-grid-2">
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
                 ${rankRows(salesRating.map(item => ({ ...item, value: item.revenue })), maxSalesRevenue, item => `${item.deals} ta · ${formatMoney(item.revenue)}`)}
@@ -7045,18 +7083,26 @@ function renderDashboardOverview({ students, teachers, leads }) {
             </section>
         </div>
         <div class="dashboard-grid-2">
-            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Voronka</h3><span>Jami ${allLeads.length} ta lid</span></div>
+            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>${isSalesManager ? 'Mening voronkam' : 'Voronka'}</h3><span>Jami ${dashboardLeads.length} ta lid</span></div>
                 <div class="dashboard-funnel">${funnelStages.map(stage => `<div class="dashboard-funnel-row"><span>${escapeHtml(stage.label)}</span><div><i style="width:${Math.max(stage.count ? 6 : 0, stage.count / maxFunnelCount * 100)}%"></i></div><b>${stage.count}</b></div>`).join('')}</div>
             </section>
-            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Target statistikasi</h3><span>Target manbasi</span></div>
+            ${isSalesManager ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Mening o'quvchilarim</h3><span>Faqat menga biriktirilgan</span></div><div class="dashboard-target-stats"><div><small>Faol o'quvchilar</small><b>${(managerStudents || []).filter(student => !student.frozen).length}</b></div><div><small>Jami o'quvchilar</small><b>${(managerStudents || []).length}</b></div></div></section>` : `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Target statistikasi</h3><span>Target manbasi</span></div>
                 <div class="dashboard-target-stats">
                     <div><small>Target lidlar</small><b>${targetLeads.length}</b></div>
                     <div><small>Yopilgan sotuvlar</small><b>${targetClosed.length}</b></div>
                     <div><small>Konversiya</small><b>${targetLeads.length ? (targetClosed.length / targetLeads.length * 100).toFixed(1) : 0}%</b></div>
                     <div><small>Sotuv summasi</small><b>${formatMoney(targetRevenue)}</b></div>
                 </div>
-            </section>
+            </section>`}
         </div>`;
+
+    if (isSalesManager) {
+        clearInterval(window._dashboardSessionTimer);
+        window._dashboardSessionTimer = setInterval(() => {
+            const value = document.getElementById('dashboardSessionDuration');
+            if (value) value.textContent = formatDashboardSessionDuration(currentUser);
+        }, 30000);
+    }
 }
 
 // ─── Yuqori paneldagi umumiy Muloqot oynasi ────────────────────────────────
