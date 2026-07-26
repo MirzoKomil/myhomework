@@ -16018,6 +16018,47 @@ function createLeadComment({ text, author, type, reason }) {
     };
 }
 
+function openLeadFollowUpReminderModal(lang, leadId, leadName, author) {
+    openModal(
+        `${escapeHtml(leadName)} — bog'lanish eslatmasi`,
+        `<div class="form-group" style="margin-bottom:0">
+            <label>Bog'lanish kuni va aniq vaqti</label>
+            <input type="datetime-local" id="leadFollowUpAt" class="form-control" required>
+            <p class="text-muted" style="font-size:12px;margin:8px 0 0">Eslatma izohlar tarixida qizil rangda saqlanadi.</p>
+         </div>`,
+        `<button type="button" class="btn-ghost" id="cancelLeadFollowUp">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveLeadFollowUp">Eslatmani saqlash</button>`
+    );
+    document.getElementById('cancelLeadFollowUp').onclick = closeModal;
+    document.getElementById('saveLeadFollowUp').onclick = () => {
+        const input = document.getElementById('leadFollowUpAt');
+        const reminderAt = input?.value ? new Date(input.value) : null;
+        if (!reminderAt || Number.isNaN(reminderAt.getTime())) {
+            input?.focus();
+            showMiniToast('Bog\'lanish kuni va vaqtini tanlang');
+            return;
+        }
+        const when = formatCommentTime(reminderAt.toISOString());
+        updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return {
+                ...base,
+                comments: [...base.comments, {
+                    ...createLeadComment({
+                        text: `Bog'lanish uchun eslatma: ${when}`,
+                        author,
+                        type: 'follow-up-reminder'
+                    }),
+                    reminderAt: reminderAt.toISOString()
+                }]
+            };
+        });
+        closeModal();
+        renderLeads();
+        showMiniToast('Bog\'lanish eslatmasi saqlandi');
+    };
+}
+
 function renderLeadCommentItem(c) {
     const isContactFail = c.type === 'contact-fail';
     const isConnectedSurvey = c.type === 'connected-survey';
@@ -16025,6 +16066,7 @@ function renderLeadCommentItem(c) {
     const isDecisionProcess = c.type === 'decision-process';
     const isPaymentProcess = c.type === 'payment-process';
     const isPaymentOnboarding = c.type === 'payment-onboarding';
+    const isFollowUpReminder = c.type === 'follow-up-reminder';
     let badge = '';
     if (isContactFail) badge = '<span class="lead-comment-badge">Bog\'lanish sababi</span>';
     if (isConnectedSurvey) badge = '<span class="lead-comment-badge lead-comment-badge--survey">Anketa</span>';
@@ -16032,6 +16074,7 @@ function renderLeadCommentItem(c) {
     if (isDecisionProcess) badge = '<span class="lead-comment-badge lead-comment-badge--decision">Qaror</span>';
     if (isPaymentProcess) badge = '<span class="lead-comment-badge lead-comment-badge--payment">To\'lov</span>';
     if (isPaymentOnboarding) badge = '<span class="lead-comment-badge lead-comment-badge--onboard">O\'quvchi</span>';
+    if (isFollowUpReminder) badge = '<span class="lead-comment-badge lead-comment-badge--reminder">Bog\'lanish eslatmasi</span>';
     const bodyText = c.text || (isContactFail && c.reason ? `Qo'ng'iroq qilindi, lekin: ${c.reason}` : '');
     const itemClass = isContactFail
         ? ' lead-comment-item--contact-fail'
@@ -16039,7 +16082,8 @@ function renderLeadCommentItem(c) {
             : (isInfoProvided ? ' lead-comment-item--info'
                 : (isDecisionProcess ? ' lead-comment-item--decision'
                     : (isPaymentProcess ? ' lead-comment-item--payment'
-                        : (isPaymentOnboarding ? ' lead-comment-item--onboard' : '')))));
+                        : (isPaymentOnboarding ? ' lead-comment-item--onboard'
+                            : (isFollowUpReminder ? ' lead-comment-item--reminder' : ''))))));
 
     return `<div class="lead-comment-item${itemClass}">
         <div class="lead-comment-meta">
@@ -16299,7 +16343,10 @@ function openLeadCommentsModal(lang, leadId) {
             <label>Yangi izoh</label>
             <textarea id="mLeadCommentText" class="form-control" rows="3" placeholder="Izoh yozing..."></textarea>
          </div>`,
-        `<button type="button" class="btn-primary-sm" id="saveLeadComment">Izoh qo'shish</button>`
+        `<div style="display:grid;gap:8px;width:100%">
+           <button type="button" class="btn-primary-sm" id="saveLeadComment" style="width:100%">Izoh qo'shish</button>
+           <button type="button" id="addLeadFollowUp" style="width:100%;border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer">Bog'lanish uchun eslatma</button>
+         </div>`
     );
 
     document.getElementById('saveLeadComment').onclick = () => {
@@ -16314,6 +16361,9 @@ function openLeadCommentsModal(lang, leadId) {
         });
         closeModal();
         renderLeads();
+    };
+    document.getElementById('addLeadFollowUp').onclick = () => {
+        openLeadFollowUpReminderModal(lang, leadId, lead.name, author);
     };
 }
 

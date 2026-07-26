@@ -4307,6 +4307,16 @@ body {
     border-color: rgba(22, 163, 74, 0.2);
 }
 
+.lead-comment-item--reminder {
+    background: #FEF2F2;
+    border-color: rgba(220, 38, 38, 0.32);
+}
+
+.lead-comment-badge--reminder {
+    background: rgba(220, 38, 38, 0.12);
+    color: #B91C1C;
+}
+
 .lead-comment-badge--onboard {
     background: rgba(22, 163, 74, 0.14);
     color: #166534;
