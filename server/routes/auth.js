@@ -6,7 +6,7 @@ const {
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
     createSession, getSessionsByUserId, getSessionById,
     deleteSession, deleteSessionByJti, deleteOtherSessions, DATA_DIR,
-    findStudentByLogin
+    findStudentByLogin, getStudentPublicId
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
 
@@ -113,7 +113,7 @@ router.post('/student-login', async (req, res) => {
         res.json({ token, student: {
             id: student.id,
             // CRM/Sotuvdagi ID bilan bir xil ko'rinadigan identifikator.
-            studentId: student.serialCode || String(student.id || '').slice(-6),
+            studentId: await getStudentPublicId(student),
             name: student.name,
             login: student.login,
             lang: student.subject === 'russian' ? 'russian' : 'english'

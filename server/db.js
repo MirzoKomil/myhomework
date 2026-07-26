@@ -998,11 +998,44 @@ async function getDemoStudentProfile(studentId) {
     if (!student) return {};
     return {
         name: student.name || '',
-        // CRM jadvalidagi "ID" ustuni ham aynan shu formatdan foydalanadi.
-        // Texnik `students.id` (masalan s178...) ilova interfeysida ko'rinmaydi.
-        studentId: student.serialCode || String(student.id || '').slice(-6),
+        // CRM jadvalidagi "ID" ustuni bilan aynan bir xil ko'rinadigan ID.
+        // Texnik `students.id` (masalan s178...) hech qachon ilovaga uzatilmaydi.
+        studentId: await getStudentPublicId(student),
         lang: await resolveStudentSubjectLang(id),
     };
+}
+
+function isCanonicalStudentSerial(value) {
+    return /^[A-Z]{2}\d{3}$/.test(String(value || '').trim().toUpperCase());
+}
+
+// Eski yozuvlarda serialCode texnik `s...` ID bo'lib qolgan bo'lishi mumkin.
+// Avval sotuvdagi bog'langan lidning haqiqiy serialini olamiz; topilmasa CRM
+// jadvalidagi avvaldan ishlatilgan 6 belgili fallbackni saqlaymiz.
+async function getStudentPublicId(student) {
+    const ownSerial = String(student?.serialCode || '').trim().toUpperCase();
+    if (isCanonicalStudentSerial(ownSerial)) return ownSerial;
+
+    let linkedSerial = '';
+    const linkedLeadId = student?.leadRef?.id;
+    if (linkedLeadId) {
+        const leadRow = await q1('SELECT * FROM leads WHERE id = $1', [linkedLeadId]);
+        if (leadRow) {
+            const lead = rowToLead(leadRow);
+            const serial = String(lead.serialCode || '').trim().toUpperCase();
+            if (isCanonicalStudentSerial(serial)) linkedSerial = serial;
+        }
+    }
+
+    const publicId = linkedSerial || String(student?.id || '').slice(-6);
+    if (publicId && student?.id && student.serialCode !== publicId) {
+        const extra = { ...student, serialCode: publicId };
+        delete extra.id; delete extra.name; delete extra.phone; delete extra.group;
+        delete extra.subject; delete extra.teacherId; delete extra.assistantTeacherId;
+        delete extra.lessonDayOfWeek; delete extra.lessonTime; delete extra.lessonDuration;
+        await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), student.id]);
+    }
+    return publicId;
 }
 
 // 6-vazifa: lid to'lov jarayonida o'quvchiga aylanganda unga avtomatik
@@ -2458,7 +2491,7 @@ module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, insertLead, patchState,
     findUserByEmail, findUserById, createUser, updateUser, publicUser,
-    getHrEmployeesData, getMobileContentData, findStudentByLogin, getDemoStudentGrades, submitDemoStudentTeacherRating,
+    getHrEmployeesData, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,

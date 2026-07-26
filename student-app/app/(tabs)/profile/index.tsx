@@ -58,19 +58,25 @@ export default function ProfileScreen() {
   const [displayId, setDisplayId] = useState('');
   const { student, token } = useAuth();
 
+  // Eski sessiyalarda texnik `s...` ID local storage'da saqlangan bo'lishi
+  // mumkin. Ilovada faqat CRM'dagi ko'rinadigan serial (AA001) yoki u yerdagi
+  // 6 belgili fallback ko'rsatiladi.
+  const formatStudentId = (value?: string) => {
+    const id = String(value || '').trim();
+    if (!id) return '';
+    if (/^s\d+$/i.test(id)) return id.slice(-6);
+    return id;
+  };
+
   useEffect(() => {
     if (student) {
       setDisplayName(student.name);
-      if (student.studentId) {
-        setDisplayId(student.studentId);
-        return;
-      }
+      setDisplayId(formatStudentId(student.studentId || student.id));
     }
-    if (token && !student) return;
     fetchDemoStudentProfile()
       .then((profile) => {
         if (profile?.name) setDisplayName(profile.name);
-        if (profile?.studentId) setDisplayId(profile.studentId);
+        if (profile?.studentId) setDisplayId(formatStudentId(profile.studentId));
       })
       .catch(() => {});
   }, [student?.id, student?.name, token]);
