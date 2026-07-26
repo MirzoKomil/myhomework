@@ -36,11 +36,15 @@ export default function HomeScreen() {
   // ko'rsatiladi, xatolik bo'lsa namuna ismga qaytiladi.
   const [firstName, setFirstName] = useState('');
   const { student, token } = useAuth();
+  const [learningLanguage, setLearningLanguage] = useState<'english' | 'russian'>(student?.lang === 'russian' ? 'russian' : 'english');
   const { t } = useLang();
 
   useEffect(() => {
     if (student?.name) {
       setFirstName(student.name.split(' ')[0]);
+    }
+    if (student?.lang) {
+      setLearningLanguage(student.lang);
     }
     fetchDemoStudentProfile()
       .then((profile) => {
@@ -48,6 +52,7 @@ export default function HomeScreen() {
           // Bosh sahifa ham profil kabi serverdagi aynan shu o'quvchini
           // ko'rsatadi — eski local sessiyadagi ismga tayanmaydi.
           setFirstName(profile.name.split(' ')[0]);
+          setLearningLanguage(profile.lang);
         } else if (token) {
           void clearAuth();
         }
@@ -55,7 +60,7 @@ export default function HomeScreen() {
       .catch(() => {
         if (token) void clearAuth();
       });
-  }, [student?.id, student?.name, token]);
+  }, [student?.id, student?.name, student?.lang, token]);
 
   useEffect(() => {
     fetchDemoSchedule()
@@ -194,7 +199,12 @@ export default function HomeScreen() {
           onPress={handleContinue}
         />
 
-        <ShopEntryCard onPress={() => router.push('/shop' as never)} />
+        <ShopEntryCard
+          onPress={() => router.push('/shop' as never)}
+          {...(learningLanguage === 'russian'
+            ? { title: 'Domwork Магазин', subtitle: "Coinlarni sovg'alarga almashtiring" }
+            : {})}
+        />
       </ScrollView>
     </SafeAreaView>
   );

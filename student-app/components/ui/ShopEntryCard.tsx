@@ -4,7 +4,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 
-export function ShopEntryCard({ onPress }: { onPress: () => void }) {
+type ShopEntryCardProps = {
+  onPress: () => void;
+  title?: string;
+  subtitle?: string;
+};
+
+export function ShopEntryCard({ onPress, title, subtitle }: ShopEntryCardProps) {
   const { t } = useLang();
   return (
     <Pressable onPress={onPress} style={styles.card}>
@@ -12,8 +18,8 @@ export function ShopEntryCard({ onPress }: { onPress: () => void }) {
         <Ionicons name="storefront-outline" size={26} color="#D97706" />
       </View>
       <View style={styles.info}>
-        <Text style={styles.title}>{t('home_shop_title')}</Text>
-        <Text style={styles.subtitle}>{t('home_shop_subtitle')}</Text>
+        <Text style={styles.title}>{title ?? t('home_shop_title')}</Text>
+        <Text style={styles.subtitle}>{subtitle ?? t('home_shop_subtitle')}</Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
     </Pressable>
