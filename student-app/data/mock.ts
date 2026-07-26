@@ -105,7 +105,7 @@ export const radioAnnouncements: RadioAnnouncement[] = [
   },
   {
     id: 'a2',
-    title: 'Homework Radio jonli efirda',
+    title: 'Domwork jonli efirda',
     subtitle: 'Har kuni yangi darslar va musiqalar',
     colors: ['#9B7BFF', '#6B4FE0'],
   },
@@ -310,7 +310,7 @@ export const radioStations: RadioStation[] = [
     streamQuery: 'Серебряный дождь',
   },
   {
-    id: 'homework-radio', name: 'Homework Radio', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'],
+    id: 'homework-radio', name: 'Domwork', country: 'Homework', flag: '🎓', genre: 'Til o\'rganish uchun maxsus', colors: ['#9B7BFF', '#6B4FE0'],
     location: 'Myhomework.uz platformasi',
     founded: 'Platforma ochilgan kundan beri',
     about: "Ingliz tilini o'rganuvchilar uchun maxsus tanlangan qo'shiqlar, audio darslar va motivatsion kontentni efirga uzatadi.",
