@@ -15861,6 +15861,78 @@ function getLeadById(lang, leadId) {
     return lead ? normalizeLeadExtras(lead) : null;
 }
 
+// 71-vazifa: lid bilan tezkor aloqa. Tashqi SMS gateway ulanmagan bo'lgani
+// uchun xabar telefonning standart SMS oynasida ochiladi — jo'natish qarorini
+// xodimning o'zi tasdiqlaydi. Bu admin, ROP va sotuv menejeriga bir xil ishlaydi.
+const LEAD_SMS_TEMPLATES = {
+    english: [
+        'Assalomu alaykum, {name}! Homework ingliz tili kursi bo‘yicha siz bilan bog‘lanmoqchi edik.',
+        'Assalomu alaykum, {name}! Sizga qulay vaqtda Homework kursi haqida batafsil ma’lumot beramiz.',
+        'Assalomu alaykum, {name}! Homework kursiga yozilish bo‘yicha savollaringiz bo‘lsa, mamnuniyat bilan javob beramiz.'
+    ],
+    russian: [
+        'Assalomu alaykum, {name}! Homework rus tili kursi bo‘yicha siz bilan bog‘lanmoqchi edik.',
+        'Assalomu alaykum, {name}! Sizga qulay vaqtda Homework kursi haqida batafsil ma’lumot beramiz.',
+        'Assalomu alaykum, {name}! Homework rus tili kursiga yozilish bo‘yicha savollaringiz bo‘lsa, mamnuniyat bilan javob beramiz.'
+    ]
+};
+
+function getLeadMessagingPhone(lead) {
+    const raw = String(lead?.phone || lead?.phones?.[0] || '').trim();
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return '';
+    const international = digits.startsWith('998')
+        ? digits
+        : digits.length === 9 ? `998${digits}` : digits;
+    return `+${international}`;
+}
+
+function openLeadSmsTemplateModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    const phone = getLeadMessagingPhone(lead);
+    closeLeadCardMenus();
+    if (!lead || !phone) {
+        showMiniToast('Lidning telefon raqami topilmadi');
+        return;
+    }
+
+    const templates = LEAD_SMS_TEMPLATES[lang === 'russian' ? 'russian' : 'english']
+        .map(text => text.replace('{name}', lead.name || 'mijoz'));
+    openModal(
+        'SMS xabar yuborish',
+        `<p class="text-muted" style="margin:0 0 14px">${escapeHtml(lead.name || 'Lid')} — ${escapeHtml(phone)}</p>
+         <div style="display:flex;flex-direction:column;gap:8px">
+           ${templates.map((text, index) => `<label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--border);border-radius:10px;cursor:pointer">
+             <input type="radio" name="leadSmsTemplate" value="${index}"${index === 0 ? ' checked' : ''} style="margin-top:3px">
+             <span style="font-size:14px;line-height:1.45">${escapeHtml(text)}</span>
+           </label>`).join('')}
+         </div>`,
+        `<button type="button" class="btn-ghost" id="leadSmsCancelBtn">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="leadSmsSendBtn">SMS oynasini ochish</button>`
+    );
+    document.getElementById('leadSmsCancelBtn').onclick = closeModal;
+    document.getElementById('leadSmsSendBtn').onclick = () => {
+        const selected = document.querySelector('input[name="leadSmsTemplate"]:checked');
+        const text = templates[Number(selected?.value || 0)] || templates[0];
+        closeModal();
+        window.location.href = `sms:${phone}?body=${encodeURIComponent(text)}`;
+    };
+}
+
+function openLeadTelegramProfile(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    const phone = getLeadMessagingPhone(lead);
+    closeLeadCardMenus();
+    if (!lead || !phone) {
+        showMiniToast('Lidning telefon raqami topilmadi');
+        return;
+    }
+    // Telegram ilovasi o'rnatilgan bo'lsa shu raqamdagi profilga bevosita
+    // o'tadi. Profil mavjud bo'lmasa Telegram tegishli natijani o'zi ko'rsatadi.
+    const digits = phone.replace(/\D/g, '');
+    window.location.href = `tg://resolve?phone=${digits}`;
+}
+
 function syncLeadManagerToBookRoadmap(lang, leadId, managerId) {
     const items = getItem(STORAGE_KEYS.bookRoadmap, []);
     const idx = items.findIndex(i => i.leadRef && i.leadRef.id === leadId && i.leadRef.lang === lang);
@@ -16084,6 +16156,8 @@ function renderLeadCard(lead, langKey) {
                                 ${moveItems}
                             </div>
                         </div>
+                        <button type="button" class="lead-card-menu-item" data-lead-sms="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">SMS xabar yuborish</button>
+                        <button type="button" class="lead-card-menu-item" data-lead-telegram="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Telegramdan xabar yozish</button>
                         ${deleteItem}
                     </div>
                 </div>
@@ -16437,6 +16511,20 @@ function renderLeads() {
             e.stopPropagation();
             closeLeadCardMenus();
             openAssignManagerModal(btn.dataset.leadMenuManager, btn.dataset.leadId);
+        });
+    });
+
+    board.querySelectorAll('[data-lead-sms]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openLeadSmsTemplateModal(btn.dataset.leadSms, btn.dataset.leadId);
+        });
+    });
+
+    board.querySelectorAll('[data-lead-telegram]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openLeadTelegramProfile(btn.dataset.leadTelegram, btn.dataset.leadId);
         });
     });
 
