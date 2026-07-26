@@ -15663,6 +15663,27 @@ function getLeadSlaNotificationsForCurrentUser() {
     return ['english', 'russian'].flatMap(lang => (leads[lang] || []).flatMap(lead => getLeadSlaAlerts(normalizeLeadExtras(lead), lang).map(alert => ({ ...alert, leadId: lead.id, leadLang: lang, tab: 'sales' }))));
 }
 
+// 75-vazifa: kartochkadagi qo'ng'iroqcha umumiy bildirishnoma paneli bilan
+// aynan bir xil SLA xabarlarini ko'rsatadi. Shu sabab o'qilgan holat ham bitta
+// joyda saqlanadi va badge faqat hali ochilmagan xabarlarni sanaydi.
+function getUnreadLeadSlaAlerts(lead, lang) {
+    const readIds = new Set(typeof getNotifications === 'function'
+        ? getNotifications().filter(item => item.read).map(item => item.id)
+        : []);
+    return getLeadSlaAlerts(lead, lang).filter(alert => !readIds.has(alert.id));
+}
+
+function markLeadSlaAlertsRead(alerts) {
+    if (!alerts?.length || typeof getNotifications !== 'function' || typeof saveNotifications !== 'function') return;
+    const existing = getNotifications();
+    const existingIds = new Set(existing.map(item => item.id));
+    const updated = existing.map(item => alerts.some(alert => alert.id === item.id) ? { ...item, read: true } : item);
+    alerts.forEach(alert => {
+        if (!existingIds.has(alert.id)) updated.push({ ...alert, read: true });
+    });
+    saveNotifications(updated);
+}
+
 function leadKindLabel(lead) {
     return getLeadKind(lead) === 'target' ? 'Target' : 'Organik';
 }
@@ -16358,6 +16379,8 @@ function renderLeadCard(lead, langKey) {
     const _cu = getCurrentUser();
     const _isAdminOrRop = _cu && (FULL_ACCESS_ROLES.has(_cu.role));
     const _isSalesManager = _cu?.role === 'sales_manager';
+    const unreadAlerts = getUnreadLeadSlaAlerts(normalized, langKey);
+    const unreadAlertCount = unreadAlerts.length;
 
     const checkboxHtml = _isAdminOrRop
         ? `<input type="checkbox" class="lead-bulk-checkbox" data-id="${escapeHtml(normalized.id)}" data-lang="${langKey}" aria-label="Belgilash">`
@@ -16389,8 +16412,9 @@ function renderLeadCard(lead, langKey) {
                 </div>
             </div>
             <div class="lead-card-top-actions">
-                <button type="button" class="lead-card-notify" data-lead-notify="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Bildirishnomalar" aria-label="Bildirishnomalar">
+                <button type="button" class="lead-card-notify${unreadAlertCount ? ' has-unread is-ringing' : ''}" data-lead-notify="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="${unreadAlertCount ? `${unreadAlertCount} ta o'qilmagan bildirishnoma` : 'Bildirishnomalar'}" aria-label="${unreadAlertCount ? `${unreadAlertCount} ta o'qilmagan bildirishnoma` : 'Bildirishnomalar'}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+                    ${unreadAlertCount ? `<span class="lead-card-notify-badge">${unreadAlertCount > 9 ? '9+' : unreadAlertCount}</span>` : ''}
                 </button>
                 <div class="lead-card-menu-wrap">
                     <button type="button" class="lead-card-menu-btn" data-lead-menu-toggle="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Boshqa amallar" aria-label="Boshqa amallar" aria-haspopup="true">
@@ -16528,6 +16552,10 @@ function openLeadNotifyModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
     const alerts = getLeadSlaAlerts(lead, lang);
+    markLeadSlaAlertsRead(alerts);
+    if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+    // Badge ochilgani zahoti yo'qolishi uchun faqat lead taxtasini yangilaymiz.
+    if (document.getElementById('leadsBoard')) renderLeads();
     const ropAlert = alerts.find(alert => alert.audience === 'rop');
     const alertHtml = alerts.length
         ? `<div style="display:grid;gap:10px">${alerts.map(alert => `

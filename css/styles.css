@@ -3524,6 +3524,52 @@ body {
     flex-shrink: 0;
 }
 
+.lead-card-notify {
+    position: relative;
+}
+
+.lead-card-notify.has-unread {
+    color: #DC2626;
+}
+
+.lead-card-notify-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--surface, #fff);
+    border-radius: 999px;
+    background: #EF4444;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    z-index: 1;
+}
+
+.lead-card-notify.is-ringing {
+    animation: lead-card-bell-nudge 7s ease-in-out infinite;
+    transform-origin: 50% 12%;
+}
+
+@keyframes lead-card-bell-nudge {
+    0%, 84%, 100% { transform: rotate(0); }
+    86% { transform: rotate(12deg); }
+    88% { transform: rotate(-12deg); }
+    90% { transform: rotate(9deg); }
+    92% { transform: rotate(-9deg); }
+    94% { transform: rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lead-card-notify.is-ringing { animation: none; }
+}
+
 .lead-card-notify svg,
 .lead-card-menu-btn svg {
     width: 17px;
