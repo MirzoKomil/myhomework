@@ -15513,11 +15513,20 @@ function getTrialLessonTimestamp(day, time) {
 function parseLeadSlaTime(value) {
     if (typeof value === 'number' && Number.isFinite(value)) return value;
     const parsed = Date.parse(value || '');
-    return Number.isFinite(parsed) ? parsed : 0;
+    if (Number.isFinite(parsed)) return parsed;
+    // Avvalgi lidlarda sana `DD/MM/YYYY` ko'rinishida saqlangan. JavaScript
+    // bunday formatni barcha brauzerlarda parse qilmaydi; SLA joriy etilganda
+    // ular sukut bo'yicha "hozir" deb olinib, kechikkan vazifalar yashirinib
+    // qolmasligi uchun uni aniq mahalliy sana sifatida o'qiymiz.
+    const match = String(value || '').trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+    if (!match) return 0;
+    const [, day, month, year] = match;
+    const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+    return Number.isFinite(localDate.getTime()) ? localDate.getTime() : 0;
 }
 
 function getLeadSlaStageStartedAt(lead) {
-    return parseLeadSlaTime(lead.slaStageEnteredAt) || parseLeadSlaTime(lead.createdAt) || parseLeadSlaTime(lead.date) || Date.now();
+    return parseLeadSlaTime(lead.slaStageEnteredAt) || parseLeadSlaTime(lead.statusChangedAt) || parseLeadSlaTime(lead.updatedAt) || parseLeadSlaTime(lead.createdAt) || parseLeadSlaTime(lead.date) || Date.now();
 }
 
 function getLeadSlaBaseTime(lead, rule) {
