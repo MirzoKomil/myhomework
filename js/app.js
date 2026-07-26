@@ -6919,17 +6919,20 @@ function renderCrmChatThread(container, opts) {
     const { studentId, threadId, senderRole, senderId, senderName, title } = opts;
     const messages = opts.getMessages ? opts.getMessages() : getStudentMessages(studentId, threadId);
     const bubbles = messages.length
-        ? messages.map(m => `
-            <div style="display:flex;${m.sender === 'student' ? '' : 'justify-content:flex-end;'}margin-bottom:8px">
+        ? messages.map(m => {
+            const isIncoming = opts.incomingSenderRoles ? opts.incomingSenderRoles.includes(m.sender) : m.sender === 'student';
+            return `
+            <div style="display:flex;${isIncoming ? '' : 'justify-content:flex-end;'}margin-bottom:8px">
                 <div style="max-width:78%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4;${
-                    m.sender === 'student'
+                    isIncoming
                         ? 'background:var(--surface);color:var(--text);border:1px solid var(--border)'
                         : 'background:var(--purple,#7c3aed);color:#fff'
                 }">
                     <div>${escapeHtml(m.text || '')}</div>
                     <div style="font-size:10px;opacity:0.75;margin-top:4px">${m.sender !== 'student' && m.senderName ? escapeHtml(m.senderName) + ' · ' : ''}${_formatCrmChatTime(m.time)}</div>
                 </div>
-            </div>`).join('')
+            </div>`;
+        }).join('')
         : `<div class="mac-empty" style="padding:20px 0;text-align:center;color:var(--text-muted)">Hali xabar yo'q</div>`;
 
     const uid = opts.uid || `${threadId}_${senderRole}`;
@@ -7009,6 +7012,85 @@ function getCommunicationSenderRole(user) {
     return 'admin';
 }
 
+// 59-vazifa: sotuv menejeri o'z kabinetidan faqat o'z yo'nalishidagi ROP
+// hamda asosiy administrator bilan bevosita yozisha oladi. Mijoz/o'quvchi
+// yozishmalari bu rolda Muloqot oynasidan mutlaqo chiqarib tashlanadi.
+function getSalesManagerCommunicationContacts(user) {
+    const managerLang = user?.linkedManagerLang || 'english';
+    const rops = getItem(STORAGE_KEYS.hrEmployees, [])
+        .filter(employee => String(employee.role || '').toLowerCase() === 'rop')
+        .filter(employee => !employee.lang || employee.lang === managerLang)
+        .map(employee => ({
+            id: `rop-${employee.id}`,
+            name: employee.name || 'ROP',
+            role: 'rop',
+            avatar: employee.avatar || '',
+        }));
+
+    return [
+        ...rops,
+        { id: 'main-admin', name: 'Asosiy admin', role: 'admin', avatar: '' },
+    ];
+}
+
+function getStaffConversationId(user, contact) {
+    const ownId = user?.id || user?.login || user?.name || 'sales-manager';
+    return `staff-${[String(ownId), String(contact.id)].sort().join('-')}`;
+}
+
+function renderSalesManagerCommunicationList(container, user) {
+    const contacts = getSalesManagerCommunicationContacts(user);
+    const allMessages = getItem(STORAGE_KEYS.studentMessages, {});
+    const rows = contacts.map(contact => {
+        const conversationId = getStaffConversationId(user, contact);
+        const messages = getStudentMessages(conversationId, 'staff');
+        const last = messages.slice().sort((a, b) => new Date(b.time) - new Date(a.time))[0];
+        return { contact, conversationId, messages, last };
+    }).sort((a, b) => new Date(b.last?.time || 0) - new Date(a.last?.time || 0));
+
+    container.innerHTML = `
+        <p class="text-muted" style="margin:0 0 14px">ROP va asosiy admin bilan yozishmalar</p>
+        <div class="communication-hub-list">
+            ${rows.map(({ contact, messages, last }) => {
+                const initials = (contact.name || '?').split(/\s+/).map(word => word[0] || '').join('').slice(0, 2).toUpperCase();
+                const roleLabel = contact.role === 'rop' ? 'ROP' : 'Asosiy admin';
+                return `<button type="button" class="communication-hub-row" data-sales-staff-contact="${escapeHtml(contact.id)}">
+                    <span class="communication-hub-avatar">${escapeHtml(initials)}</span>
+                    <span class="communication-hub-meta">
+                        <span class="communication-hub-name">${escapeHtml(contact.name)}</span>
+                        <span class="communication-hub-preview">${escapeHtml(last?.text || roleLabel)}</span>
+                    </span>
+                    ${messages.length ? `<span class="communication-hub-count">${messages.length}</span>` : ''}
+                </button>`;
+            }).join('')}
+        </div>`;
+
+    container.querySelectorAll('[data-sales-staff-contact]').forEach(button => {
+        button.addEventListener('click', () => {
+            const contact = contacts.find(item => item.id === button.dataset.salesStaffContact);
+            if (contact) renderSalesManagerCommunicationConversation(container, user, contact);
+        });
+    });
+}
+
+function renderSalesManagerCommunicationConversation(container, user, contact) {
+    const conversationId = getStaffConversationId(user, contact);
+    container.innerHTML = `<button type="button" class="btn-ghost" id="communicationHubBack" style="padding:4px 10px;margin-bottom:12px">← Yozishmalar</button>
+        <div id="salesStaffChatThread"></div>`;
+    document.getElementById('communicationHubBack').addEventListener('click', () => renderSalesManagerCommunicationList(container, user));
+
+    renderCrmChatThread(document.getElementById('salesStaffChatThread'), {
+        studentId: conversationId,
+        threadId: 'staff',
+        senderRole: 'sales_manager',
+        senderId: user.id || user.login || null,
+        senderName: user.name || 'Sotuv menejeri',
+        title: contact.name,
+        uid: `staff_${conversationId}`,
+        incomingSenderRoles: [contact.role],
+    });
+}
+
 function openCommunicationHub() {
     openModal('Muloqot', '<div id="communicationHubBody"></div>', '', { wide: true });
     renderCommunicationHubList();
@@ -7018,6 +7100,11 @@ function renderCommunicationHubList() {
     const container = document.getElementById('communicationHubBody');
     const user = getCurrentUser();
     if (!container || !user) return;
+
+    if (user.role === 'sales_manager') {
+        renderSalesManagerCommunicationList(container, user);
+        return;
+    }
 
     const allMessages = getItem(STORAGE_KEYS.studentMessages, {});
     const rows = getCommunicationStudents(user).map(student => {
