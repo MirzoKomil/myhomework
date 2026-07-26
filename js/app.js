@@ -15630,6 +15630,22 @@ function getLeadSlaManagerName(lead) {
     return getItem(STORAGE_KEYS.salesManagers, []).find(manager => manager.id === lead.managerId)?.name || 'biriktirilmagan menejer';
 }
 
+function getLeadSlaManagerAlerts(lead) {
+    const status = normalizeLeadStatus(lead.status);
+    const rule = LEAD_SLA_RULES[status];
+    if (!rule) return [];
+    const now = Date.now();
+    const baseTime = getLeadSlaBaseTime(lead, rule);
+    const interpolate = text => text.replace('{name}', lead.name || 'Mijoz').replace('{manager}', getLeadSlaManagerName(lead));
+    return (rule.manager || []).flatMap(item => {
+        const dueAt = baseTime + item.after * LEAD_SLA_MINUTE;
+        return now >= dueAt ? [{
+            id: `lead-sla-manager-${lead.id}-${status}-${item.after}`,
+            audience: 'manager', type: 'info', title: "Lid bo'yicha eslatma", message: interpolate(item.text), time: dueAt
+        }] : [];
+    });
+}
+
 function getLeadSlaAlerts(lead, lang, user = getCurrentUser()) {
     const status = normalizeLeadStatus(lead.status);
     const rule = LEAD_SLA_RULES[status];
@@ -15642,12 +15658,7 @@ function getLeadSlaAlerts(lead, lang, user = getCurrentUser()) {
     const isLanguageRop = user.role === 'rop' && (user.linkedRopLang || 'english') === lang;
     const isMainAdmin = user.role === 'admin';
     const alerts = [];
-    if (isAssignedManager) {
-        (rule.manager || []).forEach(item => {
-            const dueAt = baseTime + item.after * LEAD_SLA_MINUTE;
-            if (now >= dueAt) alerts.push({ id: `lead-sla-manager-${lead.id}-${status}-${item.after}`, audience: 'manager', type: 'info', title: "Lid bo'yicha eslatma", message: interpolate(item.text), time: dueAt });
-        });
-    }
+    if (isAssignedManager) alerts.push(...getLeadSlaManagerAlerts(lead));
     if (rule.rop) {
         const ropDueAt = baseTime + rule.rop.after * LEAD_SLA_MINUTE;
         const stageKey = getLeadSlaStageKey(lead);
@@ -15663,6 +15674,16 @@ function getLeadSlaNotificationsForCurrentUser() {
     return ['english', 'russian'].flatMap(lang => (leads[lang] || []).flatMap(lead => getLeadSlaAlerts(normalizeLeadExtras(lead), lang).map(alert => ({ ...alert, leadId: lead.id, leadLang: lang, tab: 'sales' }))));
 }
 
+// Asosiy admin kartochka ichida menejerga yuborilgan buyruqlarni kuzatadi,
+// lekin ular adminning yuqori notification oynasiga qo'shilmaydi.
+function getLeadSlaCardAlerts(lead, lang, user = getCurrentUser()) {
+    const ownAlerts = getLeadSlaAlerts(lead, lang, user);
+    if (user?.role !== 'admin') return ownAlerts;
+    const managerAlerts = getLeadSlaManagerAlerts(lead);
+    const managerIds = new Set(managerAlerts.map(alert => alert.id));
+    return [...managerAlerts, ...ownAlerts.filter(alert => !managerIds.has(alert.id))];
+}
+
 // 75-vazifa: kartochkadagi qo'ng'iroqcha umumiy bildirishnoma paneli bilan
 // aynan bir xil SLA xabarlarini ko'rsatadi. Shu sabab o'qilgan holat ham bitta
 // joyda saqlanadi va badge faqat hali ochilmagan xabarlarni sanaydi.
@@ -15670,7 +15691,7 @@ function getUnreadLeadSlaAlerts(lead, lang) {
     const readIds = new Set(typeof getNotifications === 'function'
         ? getNotifications().filter(item => item.read).map(item => item.id)
         : []);
-    return getLeadSlaAlerts(lead, lang).filter(alert => !readIds.has(alert.id));
+    return getLeadSlaCardAlerts(lead, lang).filter(alert => !readIds.has(alert.id));
 }
 
 function markLeadSlaAlertsRead(alerts) {
@@ -16551,11 +16572,21 @@ function openLeadRecordingModal(lang, leadId) {
 function openLeadNotifyModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
-    const alerts = getLeadSlaAlerts(lead, lang);
-    markLeadSlaAlertsRead(alerts);
-    if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
-    // Badge ochilgani zahoti yo'qolishi uchun faqat lead taxtasini yangilaymiz.
-    if (document.getElementById('leadsBoard')) renderLeads();
+    const user = getCurrentUser();
+    const alerts = getLeadSlaCardAlerts(lead, lang, user);
+    // Menejer eslatmasi faqat o'sha lid biriktirilgan menejer o'z kabinetida
+    // ochgandagina o'qilgan bo'ladi. Admin faqat kuzatuvchi hisoblanadi.
+    const managerId = user?.linkedManagerId || (typeof getDashboardManagerId === 'function' ? getDashboardManagerId(user) : '');
+    const isAssignedManager = user?.role === 'sales_manager' && managerId && lead.managerId === managerId;
+    const isAssignedRop = user?.role === 'rop' && (user.linkedRopLang || 'english') === lang;
+    if (isAssignedManager || isAssignedRop) {
+        markLeadSlaAlertsRead(alerts.filter(alert =>
+            (isAssignedManager && alert.audience === 'manager') ||
+            (isAssignedRop && alert.audience === 'rop')
+        ));
+        if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+        if (document.getElementById('leadsBoard')) renderLeads();
+    }
     const ropAlert = alerts.find(alert => alert.audience === 'rop');
     const alertHtml = alerts.length
         ? `<div style="display:grid;gap:10px">${alerts.map(alert => `
