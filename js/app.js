@@ -15773,6 +15773,23 @@ function normalizeLeadExtras(lead) {
 // max-height beramiz — shu orqali butun ro'yxat har doim to'liq ko'rinadi
 // va ichki scroll orqali erishiladigan bo'ladi.
 function openFloatingMenu(menu, anchorEl) {
+    // Telefonda uch nuqta menyusi bottom-sheet sifatida ochiladi. CSS'dagi
+    // `bottom: 0` ustiga `top` ham qo'yilsa fixed element ekranning oxirigacha
+    // cho'zilib, pastida katta bo'sh joy qoladi. Mobil holatda CSS joylashuvi
+    // saqlanadi; faqat desktop/tabletda anchor yonida floating menyu ishlaydi.
+    if (window.matchMedia('(max-width: 600px)').matches) {
+        menu.hidden = false;
+        menu.style.position = '';
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.right = '';
+        menu.style.bottom = '';
+        menu.style.maxHeight = '';
+        menu.style.overflowY = '';
+        menu.style.visibility = '';
+        return;
+    }
+
     const margin = 8;
     menu.hidden = false;
     menu.style.position = 'fixed';
@@ -15808,6 +15825,7 @@ function closeFloatingMenu(menu) {
     menu.style.top = '';
     menu.style.left = '';
     menu.style.right = '';
+    menu.style.bottom = '';
     menu.style.maxHeight = '';
     menu.style.overflowY = '';
     menu.style.visibility = '';
