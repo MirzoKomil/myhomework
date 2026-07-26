@@ -349,7 +349,7 @@ export default function RadioPlayerScreen() {
         <View>
           {station.logo ? (
             <View style={styles.cover}>
-              <Image source={station.logo} style={styles.coverLogoImg} resizeMode="cover" />
+              <Image source={station.logo} style={styles.coverLogoImg} resizeMode="contain" />
             </View>
           ) : (
             <LinearGradient

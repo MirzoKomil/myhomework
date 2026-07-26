@@ -16,7 +16,7 @@ function StationRow({ station }: { station: RadioStation }) {
     <Pressable style={styles.stationRow} onPress={() => router.push(`/radio/${station.id}` as never)}>
       {station.logo ? (
         <View style={styles.stationIcon}>
-          <Image source={station.logo} style={styles.stationLogoImg} resizeMode="cover" />
+          <Image source={station.logo} style={styles.stationLogoImg} resizeMode="contain" />
         </View>
       ) : (
         <LinearGradient
