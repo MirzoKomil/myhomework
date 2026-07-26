@@ -19,7 +19,7 @@ import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { useLightning } from '@/services/lightningStore';
-import { useAuth } from '@/services/studentAuthStore';
+import { clearAuth, useAuth } from '@/services/studentAuthStore';
 
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -77,8 +77,11 @@ export default function ProfileScreen() {
       .then((profile) => {
         if (profile?.name) setDisplayName(profile.name);
         if (profile?.studentId) setDisplayId(formatStudentId(profile.studentId));
+        if (!profile?.name && token) void clearAuth();
       })
-      .catch(() => {});
+      .catch(() => {
+        if (token) void clearAuth();
+      });
   }, [student?.id, student?.name, token]);
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;

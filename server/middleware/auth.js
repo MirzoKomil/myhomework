@@ -67,6 +67,13 @@ async function studentAuthOptional(req, res, next) {
             const age = Date.now() - new Date(session.last_seen).getTime();
             if (age > 5 * 60 * 1000) await touchSession(payload.jti).catch(() => {});
         }
+        // O'quvchi arxivga o'tkazilgan/o'chirilgan bo'lsa, uning eski tokeni
+        // boshqa "namuna o'quvchi" ma'lumotlariga tushib ketmasligi kerak.
+        // Har bir student token CRM'da haqiqatan mavjud o'quvchiga tegishli
+        // ekanini tekshiramiz.
+        const { getDemoStudentProfile } = require('../db');
+        const profile = await getDemoStudentProfile(payload.id);
+        if (!profile?.name) return res.status(401).json({ error: 'O\'quvchi akkaunti mavjud emas' });
         req.studentId = payload.id;
     } catch {
         // token yaroqsiz/eskirgan — jim ravishda demo rejimga qaytiladi

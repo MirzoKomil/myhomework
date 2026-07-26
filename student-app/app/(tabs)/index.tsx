@@ -14,7 +14,7 @@ import type { TranslationKey } from '@/i18n/translations';
 import { courses, dailyStages, nextLiveLesson, skillProgress } from '@/data/mock';
 import { fetchDemoNotifications, fetchDemoSchedule, fetchDemoStudentProfile, fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
-import { useAuth } from '@/services/studentAuthStore';
+import { clearAuth, useAuth } from '@/services/studentAuthStore';
 
 // 40-vazifa: `dailyStages` (data/mock.ts) hali ham o'zbekcha `label`
 // saqlaydi — shu lug'at orqali `stage.key` bo'yicha tarjima qidiriladi,
@@ -41,14 +41,20 @@ export default function HomeScreen() {
   useEffect(() => {
     if (student?.name) {
       setFirstName(student.name.split(' ')[0]);
-      return;
     }
-    if (token) return;
     fetchDemoStudentProfile()
       .then((profile) => {
-        if (profile?.name) setFirstName(profile.name.split(' ')[0]);
+        if (profile?.name) {
+          // Bosh sahifa ham profil kabi serverdagi aynan shu o'quvchini
+          // ko'rsatadi — eski local sessiyadagi ismga tayanmaydi.
+          setFirstName(profile.name.split(' ')[0]);
+        } else if (token) {
+          void clearAuth();
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (token) void clearAuth();
+      });
   }, [student?.id, student?.name, token]);
 
   useEffect(() => {
