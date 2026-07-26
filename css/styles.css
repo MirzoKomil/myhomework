@@ -4605,8 +4605,10 @@ textarea.form-control {
 
     .leads-kanban {
         overflow-x: auto;
-        /* Kanban ustunlari yonlama, kartochkalar esa pastga scroll qilinadi. */
-        overflow-y: auto;
+        /* Ustunlar yonlama scroll qilinadi. Vertikal scroll har bir ustunning
+           o'zida bo'ladi — shunda uning sarlavhasi kartochkalardan mustaqil
+           ravishda qotib turadi. */
+        overflow-y: hidden;
         flex: 1 1 0;
         min-height: 0;
         scroll-snap-type: x proximity;
@@ -4694,13 +4696,17 @@ textarea.form-control {
     .lead-column {
         flex: 0 0 min(280px, 86vw);
         min-width: min(260px, 84vw);
+        height: 100%;
+        min-height: 0;
+        align-self: stretch;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
         scroll-snap-align: start;
     }
 
-    /* 51-vazifa: mobil ekranda kartochkalar scroll bo'lganda foydalanuvchi
-       qaysi kanban ustunida ekanini yo'qotmasligi uchun sarlavha joyida
-       qoladi. Scroll konteyneri .leads-kanban bo'lgani sababli sticky aynan
-       shu ustun ichida ishlaydi va yonlama scrollga xalaqit bermaydi. */
+    /* 51/68-vazifa: kartochkalar ustun ichida pastga scroll qilinsa ham
+       sarlavha o'sha ustunning yuqorisida qoladi. */
     .sales-panel[data-sales-panel="leads"] .lead-column-header {
         position: sticky;
         top: 0;
