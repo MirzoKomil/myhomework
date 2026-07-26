@@ -621,6 +621,20 @@ function initSidebarMenu() {
         });
     }
 
+    document.querySelectorAll('.settings-language-toggle').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            const section = btn.closest('.settings-sidebar-section');
+            const options = section?.querySelector('.settings-language-options');
+            if (!options) return;
+            const willOpen = options.hidden;
+            options.hidden = !willOpen;
+            btn.setAttribute('aria-expanded', String(willOpen));
+            section.classList.toggle('is-open', willOpen);
+        });
+    });
+
     document.querySelectorAll('.lang-sidebar-btn').forEach(btn => {
         btn.addEventListener('click', e => {
             e.preventDefault();

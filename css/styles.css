@@ -339,6 +339,13 @@ body {
     padding: 4px 0 6px;
 }
 
+.settings-language-toggle { display:flex; align-items:center; gap:10px; width:100%; border:0; background:transparent; cursor:pointer; text-align:left; }
+.settings-language-toggle svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.settings-language-chevron { margin-left:auto; font-size:18px; line-height:1; transition:transform .2s ease; }
+.settings-sidebar-section.is-open .settings-language-chevron { transform:rotate(180deg); }
+.settings-language-options { padding:2px 0 3px; }
+.settings-language-options[hidden] { display:none; }
+
 .settings-sidebar-label {
     display: block;
     padding: 5px 14px 4px 36px;
