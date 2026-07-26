@@ -136,7 +136,7 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'guides'],
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides'],
     // 15-ish: "teacher-cabinet" ("Ustozlarga kabinet" — o'zining o'quvchilari
     // bilan yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) allaqachon
     // to'liq qurilgan va ustoz roli uchun ichkarida to'g'ri cheklangan edi,
@@ -814,14 +814,25 @@ function renderStudentApp() {
     const isAdmin = cu && (cu.role === 'admin' || cu.role === 'rop' || cu.role === 'boshliq');
 
     if (!isAdmin) {
-        // Employee: faqat iframe ko'rsatiladi, nav yashiriladi
+        // Xodimlar (jumladan sotuv menejeri): faqat iframe ko'rsatiladi,
+        // tahrirlash/statistika navigatsiyasi umuman ochilmaydi. Menejerning
+        // yo'nalishi rus bo'lsa rus ilovasi, aks holda ingliz ilovasi ochiladi.
+        const previewLang = cu?.role === 'sales_manager' && cu.linkedManagerLang === 'russian'
+            ? 'russian'
+            : 'english';
+        _mobileLang = previewLang;
         const header = document.getElementById('mobileAppHeader');
         if (header) header.style.display = 'none';
+        const subHeader = document.getElementById('mobileSubHeader');
+        if (subHeader) subHeader.style.display = 'none';
+        const darsSubHeader = document.getElementById('mobileDarsSubHeader');
+        if (darsSubHeader) darsSubHeader.style.display = 'none';
         document.querySelectorAll('[data-mobile-panel]').forEach(p => p.classList.remove('active'));
         const viewPanel = document.getElementById('mobileViewPanel');
         if (viewPanel) viewPanel.classList.add('active');
         const frame = document.getElementById('studentAppFrame');
-        if (frame && frame.src === 'about:blank') frame.src = `/student/?v=${Date.now()}`;
+        const previewUrl = _studentAppPreviewUrl();
+        if (frame && !frame.src.includes(`lang=${previewLang}`)) frame.src = previewUrl;
         return;
     }
 
@@ -896,7 +907,10 @@ function _syncMobileSubNavUI() {
 // manbadan ustun qo'yadi.
 function _studentAppPreviewUrl() {
     const lang = _mobileLang === 'russian' ? 'russian' : 'english';
-    return `/student/?lang=${lang}&v=${Date.now()}`;
+    // `course` student-app'dagi kurs kontentini ham qat'iy yo'nalishga
+    // bog'laydi. Shu bilan rus menejer preview'ida ingliz namuna o'quvchi
+    // kursi aralashib ketmaydi (va aksincha).
+    return `/student/?lang=${lang}&course=${lang}&v=${Date.now()}`;
 }
 function _updateStudentAppPreviewLinks() {
     const url = _studentAppPreviewUrl();
