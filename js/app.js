@@ -5877,21 +5877,10 @@ function renderDashboard() {
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
-    const organicLeads = [...(leads.english || []), ...(leads.russian || [])].filter(l => (l.leadType || 'organic') === 'organic').length;
     const allLeads = [...(leads.english || []), ...(leads.russian || [])];
     const managerId = isSalesManager ? getDashboardManagerId(currentUser) : null;
     const managerLeads = managerId ? allLeads.filter(lead => lead.managerId === managerId) : [];
     const managerStudents = isSalesManager ? filterStudentsForSalesManager(students, { ...currentUser, linkedManagerId: managerId }) : students;
-    const managerClosed = managerLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
-    const managerRevenue = managerClosed.reduce((sum, lead) => sum + getDashboardLeadRevenue(lead), 0);
-    const formatMoney = typeof fmtMoney === 'function' ? fmtMoney : amount => `${Number(amount || 0).toLocaleString('uz-UZ')} so'm`;
-
-    document.getElementById('statStudents').textContent = isSalesManager ? managerStudents.length : students.length;
-    document.getElementById('statTeachers').textContent = isSalesManager ? managerClosed.length : teachers.length;
-    document.getElementById('statLeads').textContent = isSalesManager ? formatMoney(managerRevenue) : organicLeads;
-    document.getElementById('statStudentsLabel').textContent = isSalesManager ? "O'quvchilarim" : "O'quvchilar";
-    document.getElementById('statTeachersLabel').textContent = isSalesManager ? "Sotuvlarim" : 'Ustozlar';
-    document.getElementById('statLeadsLabel').textContent = isSalesManager ? 'Sotuv summam' : 'Organik lidlar';
 
     renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads });
     renderCalendarWidget();
