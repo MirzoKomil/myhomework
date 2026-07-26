@@ -12779,7 +12779,9 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
         updateLeadInStorage(lang, leadId, l => ({
             ...l,
             status: 'sinov-darsida',
-            paymentOnboarding: onboarding
+            paymentOnboarding: onboarding,
+            // Sinov darsi uchun SLA darsning aniq rejalashtirilgan vaqtiga bog'liq.
+            trialLessonAt: getTrialLessonTimestamp(day, time)
         }));
 
         closeModal();
@@ -15458,6 +15460,111 @@ function normalizeLeadStatus(status) {
     return LEAD_STATUS_IDS.has(status) ? status : 'yangi-lidlar';
 }
 
+// 73-vazifa: CRM voronkasi SLA qoidalari. Eslatmalar panel ochilganda va
+// mavjud 30 soniyalik polling paytida hisoblanadi.
+const LEAD_SLA_MINUTE = 60 * 1000;
+const LEAD_SLA_RULES = {
+    'yangi-lidlar': {
+        manager: [{ after: 0, text: "🚨 Yangi lid! Mijoz yaqinda so'rov qoldirdi. Hali 'issiq' vaqtida darhol qo'ng'iroq qiling!" }],
+        rop: { after: 30, text: "⚠️ Eskalatsiya: Yangi lid 15 daqiqadan beri ko'rib chiqilmadi! Menejer: {manager}." }
+    },
+    'boglanishga-urinilmoqda': {
+        manager: [{ after: 120, text: "📞 2-urinish: Mijoz ko'tarmadi. Telegram/SMS orqali qisqa matnli xabar yuboring." }, { after: 360, text: "🎙 3-urinish: Qayta aloqaga chiqing yoki SMS/Telegram xabar qoldiring." }],
+        rop: { after: 1440, text: "⚠️ Lid muzlayapti: {name} bilan 24 soat ichida bog'lanib bo'linmadi. Menejer lidni yo'qotyapti." }
+    },
+    'boglanildi': {
+        manager: [{ after: 0, text: "💬 Mijoz ehtiyojini aniqlang: maqsad va muammosini CRM'ga yozing, keyin unga mos taklif yoki prezentatsiya yuboring!" }],
+        rop: { after: 360, text: "⚠️ Harakat yo'q: 'Bog'lanildi' etapida lid 6 soatdan beri turibdi, keyingi qadam belgilanmadi." }
+    },
+    'malumot-berildi': {
+        manager: [{ after: 720, text: "📩 Feedback oling: Ma'lumot yuborilganiga 12 soat bo'ldi. Mijoz material bilan tanishdimi? Qayta aloqaga chiqing va sinov darsiga taklif qiling!" }],
+        rop: { after: 1440, text: "⚠️ Natija yo'q: Ma'lumot berilgan, lekin 24 soatdan beri qayta aloqa qilinmagan." }
+    },
+    'qaror-jarayonida': {
+        manager: [{ after: 1440, text: "🤔 E'tirozlar bilan ishlang: Mijoz nimada ikkilanmoqda? Natijalar va keyslarni yuboring!" }, { after: 2160, text: "🎁 Trigger qo'llang: Chegirma yoki bonus muddati tugayotganini eslatib qo'ying." }],
+        rop: { after: 2880, text: "⚠️ Xavfli zona: Mijoz 2 kundan beri qaror qabul qilmayapti. ROP aralashuvi yoki menejerni almashtirish tavsiya etiladi." }
+    },
+    'sinov-darsida': {
+        trialBased: true,
+        manager: [{ after: -120, text: "⏰ Eslatma yuboring: Bugun sinov darsi! Mijozga dars havolasi va vaqtini eslatdingizmi?" }, { after: 60, text: "🎯 Sotuv vaqti! Sinov darsi tugadi. Darhol mijozga qo'ng'iroq qilib taassurotlarni so'rang va to'lovga yo'naltiring." }],
+        rop: { after: 720, text: "⚠️ Issiq lid yo'qotilmoqda: Sinov darsi o'tdi, lekin menejer to'lov bo'yicha feedback olmadi." }
+    },
+    'tolov-jarayonida': {
+        manager: [{ after: 360, text: "💳 Karta raqamlari yuborilgan: To'lov cheki olindimi? Qiyinchilik bo'lmayaptimi, surishtiring." }, { after: 1080, text: "⏳ Muddat tugamoqda: Joyni band qilish yoki chegirma tugashini eslatib qo'ying." }],
+        rop: { after: 1440, text: "⚠️ To'lov ushlanmoqda: Lid to'lov bosqichida 24 soatdan ortiq qolib ketdi!" }
+    },
+    'tolov-yopildi': {
+        manager: [{ after: 0, text: "🎉 Barakalla! To'lov qabul qilindi. O'quvchini guruhga/kuratorga topshiring, platformaga ulang va Xush kelibsiz xabarini yuboring." }]
+    }
+};
+
+function getTrialLessonTimestamp(day, time) {
+    const weekday = Number(day);
+    const parts = String(time || '').split(':').map(Number);
+    if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6 || !Number.isFinite(parts[0])) return null;
+    const now = new Date();
+    const result = new Date(now);
+    result.setDate(now.getDate() + ((weekday - now.getDay() + 7) % 7));
+    result.setHours(parts[0], Number.isFinite(parts[1]) ? parts[1] : 0, 0, 0);
+    if (result.getTime() <= now.getTime()) result.setDate(result.getDate() + 7);
+    return result.toISOString();
+}
+
+function parseLeadSlaTime(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    const parsed = Date.parse(value || '');
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getLeadSlaStageStartedAt(lead) {
+    return parseLeadSlaTime(lead.slaStageEnteredAt) || parseLeadSlaTime(lead.createdAt) || parseLeadSlaTime(lead.date) || Date.now();
+}
+
+function getLeadSlaBaseTime(lead, rule) {
+    return rule.trialBased ? (parseLeadSlaTime(lead.trialLessonAt) || getLeadSlaStageStartedAt(lead)) : getLeadSlaStageStartedAt(lead);
+}
+
+function getLeadSlaStageKey(lead) {
+    return `${normalizeLeadStatus(lead.status)}:${getLeadSlaStageStartedAt(lead)}`;
+}
+
+function getLeadSlaManagerName(lead) {
+    return getItem(STORAGE_KEYS.salesManagers, []).find(manager => manager.id === lead.managerId)?.name || 'biriktirilmagan menejer';
+}
+
+function getLeadSlaAlerts(lead, lang, user = getCurrentUser()) {
+    const status = normalizeLeadStatus(lead.status);
+    const rule = LEAD_SLA_RULES[status];
+    if (!rule || !user) return [];
+    const now = Date.now();
+    const baseTime = getLeadSlaBaseTime(lead, rule);
+    const interpolate = text => text.replace('{name}', lead.name || 'Mijoz').replace('{manager}', getLeadSlaManagerName(lead));
+    const managerId = user.linkedManagerId || (typeof getDashboardManagerId === 'function' ? getDashboardManagerId(user) : '');
+    const isAssignedManager = user.role === 'sales_manager' && !!managerId && lead.managerId === managerId;
+    const isLanguageRop = user.role === 'rop' && (user.linkedRopLang || 'english') === lang;
+    const isMainAdmin = user.role === 'admin';
+    const alerts = [];
+    if (isAssignedManager) {
+        (rule.manager || []).forEach(item => {
+            const dueAt = baseTime + item.after * LEAD_SLA_MINUTE;
+            if (now >= dueAt) alerts.push({ id: `lead-sla-manager-${lead.id}-${status}-${item.after}`, audience: 'manager', type: 'info', title: "Lid bo'yicha eslatma", message: interpolate(item.text), time: dueAt });
+        });
+    }
+    if (rule.rop) {
+        const ropDueAt = baseTime + rule.rop.after * LEAD_SLA_MINUTE;
+        const stageKey = getLeadSlaStageKey(lead);
+        const ropAcknowledged = parseLeadSlaTime(lead.slaRopAcknowledged?.[stageKey]);
+        if (isLanguageRop && now >= ropDueAt) alerts.push({ id: `lead-sla-rop-${lead.id}-${stageKey}`, audience: 'rop', type: 'warning', title: 'SLA eskalatsiyasi', message: interpolate(rule.rop.text), time: ropDueAt, stageKey });
+        if (isMainAdmin && now >= ropDueAt + 24 * 60 * LEAD_SLA_MINUTE && !ropAcknowledged) alerts.push({ id: `lead-sla-admin-${lead.id}-${stageKey}`, audience: 'admin', type: 'danger', title: "ROP eskalatsiyani ko'rmadi", message: `⚠️ ${lead.name || 'Lid'} bo'yicha ROPga yuborilgan SLA eskalatsiyasi 24 soatdan beri ko'rib chiqilmadi.`, time: ropDueAt + 24 * 60 * LEAD_SLA_MINUTE, stageKey });
+    }
+    return alerts;
+}
+
+function getLeadSlaNotificationsForCurrentUser() {
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    return ['english', 'russian'].flatMap(lang => (leads[lang] || []).flatMap(lead => getLeadSlaAlerts(normalizeLeadExtras(lead), lang).map(alert => ({ ...alert, leadId: lead.id, leadLang: lang, tab: 'sales' }))));
+}
+
 function leadKindLabel(lead) {
     return getLeadKind(lead) === 'target' ? 'Target' : 'Organik';
 }
@@ -15950,8 +16057,10 @@ function updateLeadInStorage(lang, leadId, updater) {
     const oldStatus = normalizeLeadStatus(list[idx].status);
     list[idx] = normalizeLeadExtras(updater({ ...list[idx] }));
     leads[lang] = list;
-    setItem(STORAGE_KEYS.leads, leads);
     const newStatus = normalizeLeadStatus(list[idx].status);
+    // SLA uchun har bir yangi etapning boshlanish vaqti alohida saqlanadi.
+    if (oldStatus !== newStatus) list[idx].slaStageEnteredAt = new Date().toISOString();
+    setItem(STORAGE_KEYS.leads, leads);
     if (oldStatus === 'yangi-lidlar' && newStatus !== 'yangi-lidlar' && !list[idx].firstContactAt) {
         list[idx].firstContactAt = Date.now();
         leads[lang] = list;
@@ -16320,11 +16429,25 @@ function openLeadRecordingModal(lang, leadId) {
 function openLeadNotifyModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
-
-    openModal(`${escapeHtml(lead.name)} — bildirishnomalar`,
-        `<p class="text-muted lead-empty-hint">Bu lid uchun bildirishnomalar tez orada qo'shiladi.</p>`,
-        ''
-    );
+    const alerts = getLeadSlaAlerts(lead, lang);
+    const ropAlert = alerts.find(alert => alert.audience === 'rop');
+    const alertHtml = alerts.length
+        ? `<div style="display:grid;gap:10px">${alerts.map(alert => `
+            <div style="padding:12px;border-radius:10px;background:${alert.type === 'warning' ? '#FFFBEB' : alert.type === 'danger' ? '#FEF2F2' : '#EFF6FF'};border:1px solid ${alert.type === 'warning' ? '#FCD34D' : alert.type === 'danger' ? '#FCA5A5' : '#BFDBFE'}">
+                <strong>${escapeHtml(alert.title)}</strong><p style="margin:6px 0 0;line-height:1.45">${escapeHtml(alert.message)}</p>
+            </div>`).join('')}</div>`
+        : `<p class="text-muted lead-empty-hint">Hozircha bu lid uchun faol SLA eslatmasi yo'q.</p>`;
+    openModal(`${escapeHtml(lead.name)} — bildirishnomalar`, alertHtml,
+        ropAlert ? `<button type="button" class="btn-primary-sm" id="ackLeadSlaRop">Ko'rib chiqildi</button>` : '');
+    document.getElementById('ackLeadSlaRop')?.addEventListener('click', () => {
+        updateLeadInStorage(lang, leadId, item => ({
+            ...item,
+            slaRopAcknowledged: { ...(item.slaRopAcknowledged || {}), [ropAlert.stageKey]: new Date().toISOString() }
+        }));
+        closeModal();
+        if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+        renderLeads();
+    });
 }
 
 function openLeadCommentsModal(lang, leadId) {
@@ -16948,6 +17071,8 @@ function openAddLeadModal() {
             comments: [],
             managerPhoto: null,
             attachments: [],
+            createdAt: new Date().toISOString(),
+            slaStageEnteredAt: new Date().toISOString(),
             date: new Date().toLocaleDateString('uz-UZ')
         });
         setItem(STORAGE_KEYS.leads, leads);

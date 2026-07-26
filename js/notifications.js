@@ -125,6 +125,12 @@ function syncNotifications() {
         }
     });
 
+    // CRM SLA eslatmalari app.js ichida rol va til bo'yicha filtrlanadi:
+    // menejerga buyruqlar, ROPga faqat kechikishlar, adminga yakuniy eskalatsiya.
+    if (typeof getLeadSlaNotificationsForCurrentUser === 'function') {
+        fresh.push(...getLeadSlaNotificationsForCurrentUser());
+    }
+
     const merged = fresh.map(n => ({
         ...n,
         read: readIds.has(n.id)
@@ -186,6 +192,9 @@ function renderNotificationPanel() {
             if (tab && typeof switchTab === 'function') {
                 switchTab(tab, tab === 'sales' ? { salesSection: 'leads' } : {});
                 closeNotificationPanel();
+                if (n.leadId && typeof openLeadNotifyModal === 'function') {
+                    window.setTimeout(() => openLeadNotifyModal(n.leadLang, n.leadId), 0);
+                }
             }
         });
     });
