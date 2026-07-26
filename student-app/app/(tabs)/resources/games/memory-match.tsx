@@ -22,8 +22,9 @@ const FALLBACK_ITEMS: { word: string; icon: keyof typeof Ionicons.glyphMap }[] =
   { word: 'kitchen', icon: 'flame-outline' },
   { word: 'weather', icon: 'partly-sunny-outline' },
   { word: 'teacher', icon: 'school-outline' },
+  { word: 'book', icon: 'book-outline' },
 ];
-const ITEM_COUNT = 8;
+const ITEM_COUNT = 9;
 const MIN_POOL_SIZE = 6;
 
 type Item = { id: string; word: string; icon: keyof typeof Ionicons.glyphMap };
@@ -50,6 +51,8 @@ export default function MemoryMatchGame() {
   const [moves, setMoves] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [dragChip, setDragChip] = useState<{ id: string; word: string; x: number; y: number } | null>(null);
+  const [selectedChipId, setSelectedChipId] = useState<string | null>(null);
+  const [rewardCoins, setRewardCoins] = useState(0);
 
   const slotRefs = useRef<Record<string, View | null>>({});
   const slotRects = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
@@ -66,7 +69,9 @@ export default function MemoryMatchGame() {
         if (/^[a-z]+$/.test(key) && !uniq.has(key)) uniq.set(key, w.icon);
       }
       const pool = Array.from(uniq.entries()).map(([word, icon]) => ({ word, icon }));
-      const source = pool.length >= MIN_POOL_SIZE ? pool : FALLBACK_ITEMS;
+      const source = pool.length >= MIN_POOL_SIZE
+        ? [...pool, ...FALLBACK_ITEMS.filter((fallback) => !uniq.has(fallback.word))]
+        : FALLBACK_ITEMS;
       const picked = shuffle(source)
         .slice(0, ITEM_COUNT)
         .map((p, i) => ({ id: `item-${i}-${p.word}`, word: p.word, icon: p.icon }));
@@ -96,6 +101,8 @@ export default function MemoryMatchGame() {
     setChipIds(shuffle(items.map((it) => it.id)));
     setMoves(0);
     setSeconds(0);
+    setSelectedChipId(null);
+    setRewardCoins(0);
     setPhase('match');
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -104,6 +111,8 @@ export default function MemoryMatchGame() {
   const restart = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     setPhase('study');
+    setSelectedChipId(null);
+    setRewardCoins(0);
   };
 
   const finishIfComplete = (fill: Record<string, string | null>) => {
@@ -111,7 +120,9 @@ export default function MemoryMatchGame() {
     const allCorrect = items.every((it) => fill[it.id] === it.id);
     if (allCorrect) {
       if (timerRef.current) clearInterval(timerRef.current);
-      addCoins(items.length);
+      const reward = items.length;
+      setRewardCoins(reward);
+      addCoins(reward);
       addLightning(items.length);
       setPhase('result');
       playWinSound();
@@ -131,8 +142,8 @@ export default function MemoryMatchGame() {
         if (remaining === 0) onDone();
         return;
       }
-      ref.measure((_x, _y, w, h, pageX, pageY) => {
-        slotRects.current[it.id] = { x: pageX, y: pageY, w, h };
+      ref.measureInWindow((x, y, w, h) => {
+        slotRects.current[it.id] = { x, y, w, h };
         remaining--;
         if (remaining === 0) onDone();
       });
@@ -147,6 +158,7 @@ export default function MemoryMatchGame() {
         const { moveX, moveY, x0, y0 } = gestureState;
         const px = moveX || x0;
         const py = moveY || y0;
+        setSelectedChipId(chipId);
         setDragChip({ id: chipId, word, x: px - chipSize.current.w / 2, y: py - chipSize.current.h / 2 });
         snapshotSlotRects(() => {});
       },
@@ -155,37 +167,39 @@ export default function MemoryMatchGame() {
         setDragChip((d) => (d ? { ...d, x: moveX - chipSize.current.w / 2, y: moveY - chipSize.current.h / 2 } : d));
       },
       onPanResponderRelease: (_evt, gestureState) => {
-        const { moveX, moveY } = gestureState;
-        const pageX = moveX;
-        const pageY = moveY;
-        let droppedOn: string | null = null;
-        for (const [slotId, rect] of Object.entries(slotRects.current)) {
-          if (pageX >= rect.x && pageX <= rect.x + rect.w && pageY >= rect.y && pageY <= rect.y + rect.h) {
-            droppedOn = slotId;
-            break;
-          }
-        }
         setDragChip(null);
-        if (!droppedOn || !items) return;
-        if (slotFill[droppedOn]) return; // slot band edi
-
-        setMoves((m) => m + 1);
-        if (droppedOn === chipId) {
-          setSlotFill((f) => {
-            const next = { ...f, [droppedOn as string]: chipId };
-            finishIfComplete(next);
-            return next;
-          });
-          setSlotStatus((s) => ({ ...s, [droppedOn as string]: 'correct' }));
-          setChipIds((ids) => ids.filter((id) => id !== chipId));
-        } else {
-          setSlotStatus((s) => ({ ...s, [droppedOn as string]: 'wrong' }));
-          setTimeout(() => {
-            setSlotStatus((s) => (s[droppedOn as string] === 'wrong' ? { ...s, [droppedOn as string]: 'empty' } : s));
-          }, 500);
-        }
+        snapshotSlotRects(() => {
+          const droppedOn = Object.entries(slotRects.current).find(([, rect]) =>
+            gestureState.moveX >= rect.x && gestureState.moveX <= rect.x + rect.w &&
+            gestureState.moveY >= rect.y && gestureState.moveY <= rect.y + rect.h,
+          )?.[0];
+          if (droppedOn) placeChipInSlot(chipId, droppedOn);
+        });
       },
     });
+
+  const placeChipInSlot = (chipId: string, slotId: string) => {
+    if (!items || slotFill[slotId]) return;
+    setMoves((m) => m + 1);
+    setSelectedChipId(null);
+
+    if (slotId === chipId) {
+      setSlotFill((fill) => {
+        if (fill[slotId]) return fill;
+        const next = { ...fill, [slotId]: chipId };
+        finishIfComplete(next);
+        return next;
+      });
+      setSlotStatus((status) => ({ ...status, [slotId]: 'correct' }));
+      setChipIds((ids) => ids.filter((id) => id !== chipId));
+      return;
+    }
+
+    setSlotStatus((status) => ({ ...status, [slotId]: 'wrong' }));
+    setTimeout(() => {
+      setSlotStatus((status) => (status[slotId] === 'wrong' ? { ...status, [slotId]: 'empty' } : status));
+    }, 500);
+  };
 
   const matchedCount = items ? items.filter((it) => slotFill[it.id] === it.id).length : 0;
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -232,6 +246,10 @@ export default function MemoryMatchGame() {
           <Text style={styles.resultSub}>
             {t('mm_time_moves_result').replace('{time}', formatTime(seconds)).replace('{moves}', String(moves))}
           </Text>
+          <View style={styles.rewardPill}>
+            <Ionicons name="logo-bitcoin" size={20} color="#B45309" />
+            <Text style={styles.rewardText}>+{rewardCoins} coin</Text>
+          </View>
           <Pressable style={styles.restartBtn} onPress={restart}>
             <Text style={styles.restartText}>{t('game_replay')}</Text>
           </Pressable>
@@ -253,12 +271,16 @@ export default function MemoryMatchGame() {
                       {it.word}
                     </Text>
                   ) : (
-                    <View
+                    <Pressable
                       ref={(r) => {
                         slotRefs.current[it.id] = r;
                       }}
+                      onPress={() => {
+                        if (selectedChipId) placeChipInSlot(selectedChipId, it.id);
+                      }}
                       style={[
                         styles.dropSlot,
+                        selectedChipId && status === 'empty' && styles.dropSlotReady,
                         status === 'correct' && styles.dropSlotCorrect,
                         status === 'wrong' && styles.dropSlotWrong,
                       ]}>
@@ -269,7 +291,7 @@ export default function MemoryMatchGame() {
                       ) : status === 'wrong' ? (
                         <Ionicons name="close" size={16} color={theme.colors.danger} />
                       ) : null}
-                    </View>
+                    </Pressable>
                   )}
                 </View>
               );
@@ -295,8 +317,11 @@ export default function MemoryMatchGame() {
                   const responder = makePanResponder(chipId, item.word);
                   const isDragging = dragChip?.id === chipId;
                   return (
-                    <View key={chipId} style={[styles.chip, isDragging && styles.chipGhost]} {...responder.panHandlers}>
-                      <Text style={styles.chipText}>{item.word}</Text>
+                    <View
+                      key={chipId}
+                      style={[styles.chip, isDragging && styles.chipGhost, selectedChipId === chipId && styles.chipSelected]}
+                      {...responder.panHandlers}>
+                      <Text style={[styles.chipText, selectedChipId === chipId && styles.chipTextSelected]}>{item.word}</Text>
                     </View>
                   );
                 })}
@@ -356,6 +381,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dropSlotReady: { borderColor: theme.colors.purple, backgroundColor: theme.colors.purpleLight },
   dropSlotCorrect: { borderStyle: 'solid', borderColor: theme.colors.success, backgroundColor: theme.colors.successBg },
   dropSlotWrong: { borderStyle: 'solid', borderColor: theme.colors.danger, backgroundColor: theme.colors.dangerBg },
   dropSlotText: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.success },
@@ -410,7 +436,9 @@ const styles = StyleSheet.create({
     touchAction: 'none',
   } as any,
   chipGhost: { opacity: 0.25 },
+  chipSelected: { backgroundColor: theme.colors.purple, borderWidth: 2, borderColor: '#fff' },
   chipText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.purple, userSelect: 'none' } as any,
+  chipTextSelected: { color: '#fff' },
   dragOverlay: {
     position: 'absolute',
     minWidth: 100,
@@ -427,6 +455,18 @@ const styles = StyleSheet.create({
   resultEmoji: { fontSize: 56, marginBottom: 14 },
   resultTitle: { fontFamily: theme.fonts.extraBold, fontSize: 22, color: theme.colors.text, marginBottom: 6 },
   resultSub: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted, marginBottom: 24, textAlign: 'center' },
+  rewardPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: -12,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+  },
+  rewardText: { fontFamily: theme.fonts.extraBold, fontSize: 15, color: '#B45309' },
   restartBtn: {
     backgroundColor: theme.colors.purple,
     borderRadius: theme.radius.sm,
