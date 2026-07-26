@@ -29,7 +29,8 @@ const STORAGE_KEYS = {
     studentActivity: 'mh_student_activity',
     shopOrders: 'mh_shop_orders',
     guides: 'mh_guides',
-    individualSalesPlans: 'mh_individual_sales_plans'
+    individualSalesPlans: 'mh_individual_sales_plans',
+    archive: 'mh_archive'
 };
 
 const CACHE_KEY_MAP = {
@@ -58,7 +59,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.studentActivity]: 'studentActivity',
     [STORAGE_KEYS.shopOrders]: 'shopOrders',
     [STORAGE_KEYS.guides]: 'guides',
-    [STORAGE_KEYS.individualSalesPlans]: 'individualSalesPlans'
+    [STORAGE_KEYS.individualSalesPlans]: 'individualSalesPlans',
+    [STORAGE_KEYS.archive]: 'archive'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(

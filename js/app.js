@@ -649,7 +649,7 @@ function initSidebarMenu() {
     document.querySelectorAll('[data-settings-archive]').forEach(btn => {
         btn.addEventListener('click', e => {
             e.preventDefault();
-            showMiniToast("Arxiv bo'limi tez orada qo'shiladi");
+            openArchiveModal();
         });
     });
 
@@ -7006,6 +7006,93 @@ function getDashboardManagerId(user) {
     return getSalesManagers().find(manager => String(manager.name || '').trim().toLowerCase() === normalizedName)?.id || '';
 }
 
+// --- Arxiv (soft delete) ---
+function getArchiveRecords() {
+    return getItem(STORAGE_KEYS.archive, []);
+}
+
+function archiveRecord(type, item, meta = {}) {
+    if (!item?.id) return;
+    const records = getArchiveRecords();
+    if (records.some(record => record.type === type && record.item?.id === item.id)) return;
+    records.unshift({
+        id: `archive_${type}_${item.id}_${Date.now()}`,
+        type,
+        item: { ...item },
+        meta,
+        deletedAt: new Date().toISOString()
+    });
+    setItem(STORAGE_KEYS.archive, records);
+}
+
+function archiveTypeLabel(type, item) {
+    if (type === 'lead') return 'Lid';
+    if (type === 'student') return "O'quvchi";
+    return HR_ROLE_MAP?.[item?.role] || item?.role || 'Xodim';
+}
+
+function archiveRecordDetails(record) {
+    const item = record.item || {};
+    if (record.type === 'lead') return [item.phone, item.status, record.meta?.lang === 'russian' ? 'Rus tili' : 'Ingliz tili'].filter(Boolean).join(' · ');
+    if (record.type === 'student') return [item.studentId || item.serialCode || item.id, item.phone, item.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'].filter(Boolean).join(' · ');
+    return [archiveTypeLabel('employee', item), item.department, item.phone || item.login].filter(Boolean).join(' · ');
+}
+
+function restoreArchiveRecord(recordId) {
+    const records = getArchiveRecords();
+    const record = records.find(item => item.id === recordId);
+    if (!record) return;
+    const item = record.item;
+    if (record.type === 'lead') {
+        const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+        const lang = record.meta?.lang === 'russian' ? 'russian' : 'english';
+        if (!(leads[lang] || []).some(lead => lead.id === item.id)) leads[lang] = [...(leads[lang] || []), item];
+        setItem(STORAGE_KEYS.leads, leads);
+    } else if (record.type === 'student') {
+        const students = getItem(STORAGE_KEYS.students, []);
+        if (!students.some(student => student.id === item.id)) setItem(STORAGE_KEYS.students, [...students, item]);
+    } else if (record.type === 'employee') {
+        const employees = getHrEmployees() || [];
+        if (!employees.some(employee => employee.id === item.id)) saveHrEmployees([...employees, item]);
+    }
+    setItem(STORAGE_KEYS.archive, records.filter(item => item.id !== recordId));
+    renderLeads();
+    renderStudents();
+    renderHrEmployees();
+    showMiniToast(`${item.name || 'Yozuv'} tiklandi`);
+}
+
+function openArchiveModal() {
+    const records = getArchiveRecords();
+    const groups = [
+        { type: 'lead', title: 'Lidlar' },
+        { type: 'student', title: "O'quvchilar" },
+        { type: 'employee', title: 'Xodimlar (lavozimlar bo\'yicha)' }
+    ];
+    const renderGroup = group => {
+        const items = records.filter(record => record.type === group.type);
+        if (!items.length) return `<section class="archive-group"><h4>${group.title}<span>0</span></h4><p class="archive-empty">O'chirilgan yozuv yo'q</p></section>`;
+        const grouped = group.type === 'employee'
+            ? Object.entries(items.reduce((out, record) => {
+                const key = archiveTypeLabel('employee', record.item);
+                (out[key] = out[key] || []).push(record);
+                return out;
+            }, {})).map(([role, roleItems]) => `<div class="archive-role-group"><b>${escapeHtml(role)}</b>${roleItems.map(renderArchiveItem).join('')}</div>`).join('')
+            : items.map(renderArchiveItem).join('');
+        return `<section class="archive-group"><h4>${group.title}<span>${items.length}</span></h4>${grouped}</section>`;
+    };
+    const renderArchiveItem = record => `<article class="archive-item"><div><b>${escapeHtml(record.item?.name || 'Nomsiz yozuv')}</b><small>${escapeHtml(archiveRecordDetails(record) || "Qo'shimcha ma'lumot yo'q")}</small><time>${new Date(record.deletedAt).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div><button type="button" class="btn-primary archive-restore-btn" data-archive-restore="${escapeHtml(record.id)}">Tiklash</button></article>`;
+
+    openModal('Arxiv', `<div class="archive-modal"><div class="archive-intro"><b>O'chirib yuborilgan ma'lumotlar</b><span>Kerakli yozuvni tanlab, istalgan payt qayta tiklashingiz mumkin.</span></div>${groups.map(renderGroup).join('')}</div>`, '<button type="button" class="btn-ghost" id="closeArchiveModal">Yopish</button>', { wide: true });
+    document.getElementById('closeArchiveModal').onclick = closeModal;
+    document.querySelectorAll('[data-archive-restore]').forEach(btn => {
+        btn.onclick = () => {
+            restoreArchiveRecord(btn.dataset.archiveRestore);
+            openArchiveModal();
+        };
+    });
+}
+
 function getDashboardLeadRevenue(lead) {
     return Number(lead?.paymentClosedSurvey?.actualAmount || lead?.paymentClosedSurvey?.totalAmount || lead?.paymentSurvey?.paidAmount || 0);
 }
@@ -8266,7 +8353,9 @@ function renderStudents() {
             menu.querySelector('[data-del-student]')?.addEventListener('click', () => {
                 menu.remove();
                 if (!confirm("O'quvchini o'chirasizmi?")) return;
-                setItem(STORAGE_KEYS.students, getItem(STORAGE_KEYS.students, []).filter(s => s.id !== sid));
+                const allStudents = getItem(STORAGE_KEYS.students, []);
+                archiveRecord('student', allStudents.find(s => s.id === sid));
+                setItem(STORAGE_KEYS.students, allStudents.filter(s => s.id !== sid));
                 renderStudents();
             });
 
@@ -16303,6 +16392,8 @@ function renderLeads() {
             if (!confirm('Lidni o\'chirishni xohlaysizmi?')) return;
             const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
             const langKey = btn.dataset.leadMenuDelete;
+            const deletedLead = (leads[langKey] || []).find(l => l.id === btn.dataset.leadId);
+            archiveRecord('lead', deletedLead, { lang: langKey });
             leads[langKey] = (leads[langKey] || []).filter(l => l.id !== btn.dataset.leadId);
             setItem(STORAGE_KEYS.leads, leads);
             renderLeads();
@@ -17137,6 +17228,7 @@ function closeEmpMenus() {
 
 function deleteHrEmployee(id) {
     let employees = getHrEmployees() || [];
+    archiveRecord('employee', employees.find(e => e.id === id));
     employees = employees.filter(e => e.id !== id);
     saveHrEmployees(employees);
     renderHrEmployees();
