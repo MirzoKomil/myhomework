@@ -5852,6 +5852,7 @@ function renderDashboard() {
     document.getElementById('statTeachers').textContent = teachers.length;
     document.getElementById('statLeads').textContent = organicLeads;
 
+    renderDashboardOverview({ students, teachers, leads });
     renderTeacherCards(teachers, students);
     renderMiniSchedule();
     renderCalendarWidget();
@@ -6969,6 +6970,93 @@ function renderCrmChatThread(container, opts) {
     document.getElementById(`crmChatInput_${uid}`).addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); send(); }
     });
+}
+
+function renderDashboardOverview({ students, teachers, leads }) {
+    const container = document.getElementById('dashboardOverview');
+    if (!container) return;
+
+    const allLeads = [
+        ...(leads.english || []).map(lead => ({ ...lead, language: 'english' })),
+        ...(leads.russian || []).map(lead => ({ ...lead, language: 'russian' }))
+    ];
+    const closedLeads = allLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
+    const leadRevenue = lead => Number(
+        lead.paymentClosedSurvey?.actualAmount || lead.paymentClosedSurvey?.totalAmount || lead.paymentSurvey?.paidAmount || 0
+    );
+    const totalRevenue = closedLeads.reduce((sum, lead) => sum + leadRevenue(lead), 0);
+    const targetLeads = allLeads.filter(lead => (lead.source || 'Organik') === 'Target');
+    const targetClosed = targetLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
+    const targetRevenue = targetClosed.reduce((sum, lead) => sum + leadRevenue(lead), 0);
+    const managers = getSalesManagers();
+    const employeeIds = new Set([
+        ...getItem(STORAGE_KEYS.hrEmployees, []).map(employee => employee.id),
+        ...teachers.map(teacher => teacher.id),
+        ...managers.map(manager => manager.id)
+    ].filter(Boolean));
+
+    const salesRating = managers.map(manager => {
+        const managerLeads = allLeads.filter(lead => lead.managerId === manager.id);
+        const closed = managerLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
+        return {
+            name: manager.name || 'Noma\'lum menejer',
+            deals: closed.length,
+            revenue: closed.reduce((sum, lead) => sum + leadRevenue(lead), 0)
+        };
+    }).sort((a, b) => b.revenue - a.revenue || b.deals - a.deals).slice(0, 5);
+
+    const teacherRating = teachers.map(teacher => ({
+        name: teacher.name || 'Noma\'lum ustoz',
+        students: students.filter(student => student.teacherId === teacher.id || student.mainTeacherId === teacher.id).length
+    })).sort((a, b) => b.students - a.students).slice(0, 5);
+
+    const maxSalesRevenue = Math.max(...salesRating.map(item => item.revenue), 1);
+    const maxTeacherStudents = Math.max(...teacherRating.map(item => item.students), 1);
+    const funnelStages = FUNNEL_STAGES.map(stage => ({
+        label: stage.label,
+        count: allLeads.filter(lead => normalizeLeadStatus(lead.status) === stage.id).length
+    }));
+    const maxFunnelCount = Math.max(...funnelStages.map(stage => stage.count), 1);
+    const formatMoney = typeof fmtMoney === 'function'
+        ? fmtMoney
+        : amount => `${Number(amount || 0).toLocaleString('uz-UZ')} so'm`;
+    const rankRows = (items, max, valueText) => items.length
+        ? items.map((item, index) => `<div class="dashboard-rank-row">
+            <span class="dashboard-rank-place">${index + 1}</span>
+            <div class="dashboard-rank-info"><b>${escapeHtml(item.name)}</b><div class="dashboard-rank-track"><i style="width:${Math.max(4, item.value / max * 100)}%"></i></div></div>
+            <strong>${valueText(item)}</strong>
+        </div>`).join('')
+        : '<p class="dashboard-empty">Hozircha ma\'lumot yo\'q</p>';
+
+    container.innerHTML = `
+        <div class="dashboard-section-title"><h3>Umumiy ko'rsatkichlar</h3><span>CRM ma'lumotlari asosida</span></div>
+        <div class="dashboard-kpi-grid">
+            <div class="dashboard-kpi"><span class="dashboard-kpi-icon purple">&#128101;</span><div><small>O'quvchilar soni</small><b>${students.length}</b></div></div>
+            <div class="dashboard-kpi"><span class="dashboard-kpi-icon blue">&#128200;</span><div><small>Sotuvlar soni</small><b>${closedLeads.length}</b></div></div>
+            <div class="dashboard-kpi"><span class="dashboard-kpi-icon green">&#128176;</span><div><small>Sotuv summasi</small><b>${formatMoney(totalRevenue)}</b></div></div>
+            <div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#128188;</span><div><small>Xodimlar soni</small><b>${employeeIds.size}</b></div></div>
+        </div>
+        <div class="dashboard-grid-2">
+            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
+                ${rankRows(salesRating.map(item => ({ ...item, value: item.revenue })), maxSalesRevenue, item => `${item.deals} ta · ${formatMoney(item.revenue)}`)}
+            </section>
+            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Ustozlar reytingi</h3><span>Biriktirilgan o'quvchilar</span></div>
+                ${rankRows(teacherRating.map(item => ({ ...item, value: item.students })), maxTeacherStudents, item => `${item.students} ta`)}
+            </section>
+        </div>
+        <div class="dashboard-grid-2">
+            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Voronka</h3><span>Jami ${allLeads.length} ta lid</span></div>
+                <div class="dashboard-funnel">${funnelStages.map(stage => `<div class="dashboard-funnel-row"><span>${escapeHtml(stage.label)}</span><div><i style="width:${Math.max(stage.count ? 6 : 0, stage.count / maxFunnelCount * 100)}%"></i></div><b>${stage.count}</b></div>`).join('')}</div>
+            </section>
+            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Target statistikasi</h3><span>Target manbasi</span></div>
+                <div class="dashboard-target-stats">
+                    <div><small>Target lidlar</small><b>${targetLeads.length}</b></div>
+                    <div><small>Yopilgan sotuvlar</small><b>${targetClosed.length}</b></div>
+                    <div><small>Konversiya</small><b>${targetLeads.length ? (targetClosed.length / targetLeads.length * 100).toFixed(1) : 0}%</b></div>
+                    <div><small>Sotuv summasi</small><b>${formatMoney(targetRevenue)}</b></div>
+                </div>
+            </section>
+        </div>`;
 }
 
 // ─── Yuqori paneldagi umumiy Muloqot oynasi ────────────────────────────────
