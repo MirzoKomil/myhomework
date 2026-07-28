@@ -4672,15 +4672,18 @@ textarea.form-control {
         scroll-snap-type: x proximity;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
-        /* 46-vazifa: bu qator faqat GORIZONTAL (x) teginish-scroll'ni o'ziga
-           oladi — vertikal (y) teginish harakati esa pastdagi .lead-column'ga
-           topshiriladi. Buni aniq belgilamasak, ba'zi mobil brauzerlar (aynan
-           iOS Safari) gorizontal snap-scroll konteyner ichidagi vertikal
-           scroll'ni tan olmay, ustundagi kartochkalarni bir necha dona
-           ko'rsatgach "qotib qolgan"dek tuyuladi — foydalanuvchi tagidagi
-           kartochkalarga tusha olmaydi.
+        /* 4-vazifa (46-vazifa'ni qayta ko'rib chiqish): avval bu yerda faqat
+           "pan-x" bor edi, .lead-column'da esa faqat "pan-y" — ya'ni ustun
+           ustida boshlangan teginish harakati uchun ikkalasining kesishmasi
+           BO'SH bo'lib qolar edi (birontasi ham ishlamaydi), chunki ustun
+           ekranning deyarli butun kengligini egallaydi (86vw) va gorizontal
+           surish deyarli har doim ustun ustidan boshlanadi. Natijada
+           ustundan-ustunga surib o'tish deyarli imkonsiz bo'lib qoldi. Endi
+           ikkalasida ham "pan-x pan-y" — brauzerning o'zi tegishli teginish
+           harakati yo'nalishiga qarab qaysi konteyner (gorizontal qatormi,
+           vertikal ustunmi) scroll qilishini tabiiy tanlaydi.
         */
-        touch-action: pan-x;
+        touch-action: pan-x pan-y;
         gap: 12px;
         padding-bottom: 16px;
     }
@@ -4769,9 +4772,10 @@ textarea.form-control {
         overflow-y: auto;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
-        /* 46-vazifa: .leads-kanban'ning touch-action:pan-x'iga juftlik —
-           bu ustun vertikal teginish-scroll'ni o'ziga oladi. */
-        touch-action: pan-y;
+        /* 4-vazifa: yuqoridagi .leads-kanban'dagi izohga qarang — endi
+           ikkalasida ham "pan-x pan-y", brauzer teginish yo'nalishiga qarab
+           to'g'ri konteynerni tanlaydi. */
+        touch-action: pan-x pan-y;
         scroll-snap-align: start;
     }
 
