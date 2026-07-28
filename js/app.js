@@ -8994,7 +8994,7 @@ function renderSdpSales(s) {
         <p class="sdp-section-title">To'lov shartnomasi</p>
         <div class="sdp-info-grid">
             ${lead.paymentSurvey.contractNumber ? `<div class="sdp-info-item"><div class="sdp-info-label">Shartnoma raqami</div><div class="sdp-info-value">${escapeHtml(lead.paymentSurvey.contractNumber)}</div></div>` : ''}
-            ${lead.paymentSurvey.amount ? `<div class="sdp-info-item"><div class="sdp-info-label">To'lov miqdori</div><div class="sdp-info-value">${formatMoney(lead.paymentSurvey.amount)}</div></div>` : ''}
+            ${lead.paymentSurvey.totalAmount ? `<div class="sdp-info-item"><div class="sdp-info-label">To'lov miqdori</div><div class="sdp-info-value">${formatMoney(lead.paymentSurvey.totalAmount)}</div></div>` : ''}
             ${lead.paymentSurvey.tariff ? `<div class="sdp-info-item"><div class="sdp-info-label">Tarif (daqiqa)</div><div class="sdp-info-value">${escapeHtml(String(lead.paymentSurvey.tariff))} daq.</div></div>` : ''}
         </div>
     </div>` : ''}`;
@@ -14047,22 +14047,17 @@ const LEAD_TARIFFS = [
     { id: '60', label: '60 daqiqalik' }
 ];
 
-const LEAD_TARIFF_AMOUNTS = {
-    '15': [
-        { id: '1497000', label: '1,497,000' },
-        { id: '1200000', label: '1,200,000' }
-    ],
-    '30': [
-        { id: '1999000', label: '1,999,000' },
-        { id: '1499000', label: '1,499,000' }
-    ],
-    '60': [
-        { id: '5999000', label: '5,999,000' },
-        { id: '4500000', label: '4,500,000' },
-        { id: '3000000-month', label: '3,000,000 (individual oyiga)' },
-        { id: '2000000-month-discount', label: '2,000,000 (individual oyiga chegirma bilan)' }
-    ]
-};
+// 1-vazifa: Summa endi tanlangan Tarif (15/30/60 daqiqalik)ga bog'liq emas —
+// qaysi tarif tanlanishidan qat'iy nazar bir xil ro'yxat ko'rsatiladi, va
+// oxirida "Boshqa summa" bilan istalgan qiymatni qo'lda kiritish mumkin.
+const LEAD_PAYMENT_AMOUNTS = [
+    { id: '1200000', label: '1,200,000' },
+    { id: '1500000', label: '1,500,000' },
+    { id: '1800000', label: '1,800,000' },
+    { id: '2100000', label: '2,100,000' },
+    { id: '4500000', label: '4,500,000' },
+    { id: '6000000', label: '6,000,000' }
+];
 
 function renderPaymentRadioGroup(name, options) {
     return `<div class="lead-survey-options">${options.map(o => `
@@ -14072,16 +14067,20 @@ function renderPaymentRadioGroup(name, options) {
         </label>`).join('')}</div>`;
 }
 
-function renderPaymentAmountOptions(tariffId) {
-    const amounts = LEAD_TARIFF_AMOUNTS[tariffId];
-    if (!amounts?.length) {
-        return '<p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>';
-    }
-    return amounts.map(a => `
+function renderPaymentAmountOptions() {
+    const fixedHtml = LEAD_PAYMENT_AMOUNTS.map(a => `
         <label class="lead-reason-option">
             <input type="radio" name="paymentAmount" value="${escapeHtml(a.id)}" data-payment-field="amount">
             <span>${escapeHtml(a.label)}</span>
         </label>`).join('');
+    return `${fixedHtml}
+        <label class="lead-reason-option">
+            <input type="radio" name="paymentAmount" value="custom" data-payment-field="amount">
+            <span>Boshqa summa</span>
+        </label>
+        <div class="lead-survey-field" id="paymentCustomAmountField" hidden>
+            <input type="text" id="paymentCustomAmount" class="form-control" inputmode="numeric" placeholder="Summani kiriting" data-money-input>
+        </div>`;
 }
 
 function parsePaymentAmountNumber(amountId) {
@@ -14154,11 +14153,19 @@ function formatUzDate(iso) {
 function initPaymentSurveyForm(modalBody) {
     const partnerBlock = modalBody.querySelector('#installmentPartnerBlock');
     const partialBlock = modalBody.querySelector('#partialPaymentBlock');
-    const amountContainer = modalBody.querySelector('#paymentAmountOptions');
+    const customAmountField = modalBody.querySelector('#paymentCustomAmountField');
     const paidInput = modalBody.querySelector('#paymentPaidAmount');
-    const debtOutput = modalBody.querySelector('#paymentDebtAmount');
+    const debtInput = modalBody.querySelector('#paymentDebtAmount');
     const lastPaymentInput = modalBody.querySelector('#paymentLastPaymentDate');
     const nextPaymentInput = modalBody.querySelector('#paymentNextPaymentDate');
+
+    wireMoneyInputs(modalBody);
+
+    // 1-vazifa: qarzdorlik summasi avtomatik hisoblanadi (summa - to'langan),
+    // lekin admin xohlasa qo'lda o'zgartirishi mumkin — shu holatda avtomatik
+    // qayta hisoblash uni ustidan yozib yubormaydi.
+    let debtManuallyEdited = false;
+    debtInput?.addEventListener('input', () => { debtManuallyEdited = true; });
 
     const syncPartnerVisibility = () => {
         const installment = modalBody.querySelector('[data-payment-field="paymentType"][value="installment"]')?.checked;
@@ -14179,7 +14186,8 @@ function initPaymentSurveyForm(modalBody) {
         partialBlock.style.display = isPartial ? '' : 'none';
         if (!isPartial && paidInput) {
             paidInput.value = '';
-            if (debtOutput) debtOutput.textContent = '—';
+            if (debtInput) debtInput.value = '';
+            debtManuallyEdited = false;
             if (lastPaymentInput) lastPaymentInput.value = '';
             if (nextPaymentInput) nextPaymentInput.value = '';
         } else {
@@ -14194,39 +14202,28 @@ function initPaymentSurveyForm(modalBody) {
     };
 
     const syncPartialDebt = () => {
-        if (!debtOutput) return;
+        if (!debtInput || debtManuallyEdited) return;
         const isPartial = modalBody.querySelector('[data-payment-field="paymentType"][value="partial"]')?.checked;
         if (!isPartial) {
-            debtOutput.textContent = '—';
+            debtInput.value = '';
             return;
         }
         const total = getSelectedPaymentTotal(modalBody);
         const paid = parseMoneyInput(paidInput?.value);
-        if (total == null) {
-            debtOutput.textContent = 'Avval summani tanlang';
-            return;
-        }
-        if (!paidInput?.value?.trim()) {
-            debtOutput.textContent = '—';
-            return;
-        }
-        if (!Number.isFinite(paid)) {
-            debtOutput.textContent = 'Noto\'g\'ri summa';
+        if (total == null || !paidInput?.value?.trim() || !Number.isFinite(paid)) {
+            debtInput.value = '';
             return;
         }
         const debt = Math.max(0, total - paid);
-        debtOutput.textContent = `${formatUzMoney(debt)} so'm`;
+        debtInput.value = formatMoneyDigits(String(debt));
     };
 
-    const syncAmountOptions = () => {
-        const tariff = modalBody.querySelector('[data-payment-field="tariff"]:checked');
-        if (!amountContainer) return;
-        amountContainer.innerHTML = tariff
-            ? renderPaymentAmountOptions(tariff.value)
-            : '<p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>';
-        amountContainer.querySelectorAll('[data-payment-field="amount"]').forEach(radio => {
-            radio.addEventListener('change', syncPartialDebt);
-        });
+    const syncCustomAmountVisibility = () => {
+        const isCustom = modalBody.querySelector('[data-payment-field="amount"][value="custom"]')?.checked;
+        if (customAmountField) {
+            customAmountField.hidden = !isCustom;
+            customAmountField.style.display = isCustom ? '' : 'none';
+        }
         syncPartialDebt();
     };
 
@@ -14236,18 +14233,24 @@ function initPaymentSurveyForm(modalBody) {
             syncPartialVisibility();
         });
     });
-    modalBody.querySelectorAll('[data-payment-field="tariff"]').forEach(radio => {
-        radio.addEventListener('change', syncAmountOptions);
+    modalBody.querySelectorAll('[data-payment-field="amount"]').forEach(radio => {
+        radio.addEventListener('change', syncCustomAmountVisibility);
     });
+    modalBody.querySelector('#paymentCustomAmount')?.addEventListener('input', syncPartialDebt);
     paidInput?.addEventListener('input', syncPartialDebt);
 
     syncPartnerVisibility();
     syncPartialVisibility();
+    syncCustomAmountVisibility();
 }
 
 function getSelectedPaymentTotal(modalBody) {
     const amount = modalBody.querySelector('[data-payment-field="amount"]:checked');
     if (!amount) return null;
+    if (amount.value === 'custom') {
+        const custom = parseMoneyInput(modalBody.querySelector('#paymentCustomAmount')?.value);
+        return Number.isFinite(custom) && custom > 0 ? custom : null;
+    }
     return parsePaymentAmountNumber(amount.value);
 }
 
@@ -14272,9 +14275,22 @@ function collectPaymentSurveyData(modalBody) {
     }
 
     const tariffLabel = getSurveyOptionLabel(LEAD_TARIFFS, tariff.value);
-    const amountLabel = LEAD_TARIFF_AMOUNTS[tariff.value]?.find(a => a.id === amount.value)?.label || amount.value;
     const paymentTypeLabel = getSurveyOptionLabel(LEAD_PAYMENT_TYPES, paymentType.value);
-    const totalAmount = parsePaymentAmountNumber(amount.value);
+
+    let amountLabel;
+    let totalAmount;
+    if (amount.value === 'custom') {
+        const customRaw = modalBody.querySelector('#paymentCustomAmount')?.value?.trim();
+        const customVal = parseMoneyInput(customRaw);
+        if (!customRaw || !Number.isFinite(customVal) || customVal <= 0) {
+            return { error: 'Boshqa summani kiriting', target: '#paymentCustomAmount' };
+        }
+        totalAmount = customVal;
+        amountLabel = formatUzMoney(customVal);
+    } else {
+        totalAmount = parsePaymentAmountNumber(amount.value);
+        amountLabel = LEAD_PAYMENT_AMOUNTS.find(a => a.id === amount.value)?.label || amount.value;
+    }
 
     let paidAmount = null;
     let paidAmountLabel = '';
@@ -14295,7 +14311,13 @@ function collectPaymentSurveyData(modalBody) {
         }
         paidAmount = paid;
         paidAmountLabel = formatUzMoney(paid);
-        debtAmount = totalAmount - paid;
+
+        // 1-vazifa: qarzdorlik summasi standart bo'yicha (summa - to'langan)
+        // hisoblanadi, lekin admin qo'lda o'zgartirgan bo'lsa o'sha qiymat
+        // ustuvor bo'ladi.
+        const debtRaw = modalBody.querySelector('#paymentDebtAmount')?.value?.trim();
+        const debtFromInput = debtRaw ? parseMoneyInput(debtRaw) : NaN;
+        debtAmount = Number.isFinite(debtFromInput) ? debtFromInput : Math.max(0, totalAmount - paid);
         debtAmountLabel = formatUzMoney(debtAmount);
 
         lastPaymentDate = modalBody.querySelector('#paymentLastPaymentDate')?.value || '';
@@ -15126,7 +15148,7 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
         <section class="lead-survey-section">
             <h4 class="lead-survey-title">Summa</h4>
             <div id="paymentAmountOptions" class="lead-survey-options">
-                <p class="text-muted lead-empty-hint">Avval tarifni tanlang</p>
+                ${renderPaymentAmountOptions()}
             </div>
         </section>
         <section id="partialPaymentBlock" class="lead-survey-section" hidden>
@@ -15136,9 +15158,9 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
                 <input type="text" id="paymentPaidAmount" class="form-control" inputmode="numeric" placeholder="Masalan: 500 000">
             </div>
             <div class="lead-survey-field">
-                <span class="lead-survey-label">Qarzdorligi</span>
-                <output id="paymentDebtAmount" class="lead-payment-debt" for="paymentPaidAmount">—</output>
-                <p class="lead-survey-hint">Tarif summasidan to'langan summa ayiriladi</p>
+                <label for="paymentDebtAmount">Qarzdorligi</label>
+                <input type="text" id="paymentDebtAmount" class="form-control" inputmode="numeric" placeholder="Avtomatik hisoblanadi yoki qo'lda kiriting" data-money-input>
+                <p class="lead-survey-hint">Summadan to'langan summa ayiriladi — xohlasangiz qo'lda o'zgartirishingiz mumkin</p>
             </div>
             <div class="lead-survey-field">
                 <label for="paymentLastPaymentDate">Qachon to'ladi</label>
