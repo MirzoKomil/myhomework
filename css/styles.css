@@ -3420,6 +3420,12 @@ body {
     margin-bottom: 14px;
     padding: 10px 12px;
     border-radius: var(--radius-sm);
+    /* 2-vazifa: kartochkalar ustun ichida pastga scroll qilinganda ham
+       ustun sarlavhasi (nomi/soni) doim tepada ko'rinib tursin — desktopda
+       ham (mobil uchun bu allaqachon 4778-qatorda bor edi). */
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .lead-column-title {
