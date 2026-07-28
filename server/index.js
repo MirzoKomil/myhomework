@@ -10,6 +10,7 @@ const stateRoutes = require('./routes/state');
 const leadsRoutes = require('./routes/leads');
 const { router: uploadsRouter, UPLOADS_DIR } = require('./routes/uploads');
 const telephonyRoutes = require('./routes/telephony');
+const smsRoutes = require('./routes/sms');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -138,6 +139,7 @@ app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/upload', uploadsRouter);
 app.use('/api/telephony', telephonyRoutes);
+app.use('/api/sms', smsRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 

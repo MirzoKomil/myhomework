@@ -11,6 +11,7 @@ const TAB_TITLES = {
     payments: "To'lovlar",
     sales: "Sotuv bo'limi",
     marketing: "Marketing bo'limi",
+    sms: "SMS rassilka",
     settings: 'Sozlamalar',
     profile: 'Profil',
     placeholder: 'Bo\'lim',
@@ -136,7 +137,7 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides'],
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides', 'sms'],
     // 15-ish: "teacher-cabinet" ("Ustozlarga kabinet" — o'zining o'quvchilari
     // bilan yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) allaqachon
     // to'liq qurilgan va ustoz roli uchun ichkarida to'g'ri cheklangan edi,
@@ -735,6 +736,7 @@ function renderTab(tab) {
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
         case 'marketing': renderMarketing(); break;
+        case 'sms': renderSms(); break;
         case 'settings': break;
         case 'analitika': renderAnalitika(); break;
         case 'profile': renderProfile(); break;
@@ -12111,6 +12113,253 @@ function renderMarketing() {
     );
     switchMarketingSection(_tabContext.marketingSection || 'target');
     renderMarketingTargetPanel();
+}
+
+// ===== SMS rassilka (Eskiz.uz) =====
+let _smsAudience = 'lidlar';
+let _smsSelected = new Set(); // `${type}:${id}`
+let _smsSearch = '';
+
+function _smsGetAudienceList(audience) {
+    if (audience === 'oquvchilar') {
+        return getItem(STORAGE_KEYS.students, []).filter(s => s.phone).map(s => ({
+            id: s.id, type: 'student', name: s.name || '(ismsiz)', phone: s.phone, sub: s.group || ''
+        }));
+    }
+    if (audience === 'qarzdorlar') {
+        return getItem(STORAGE_KEYS.students, [])
+            .filter(s => s.phone && (Number(s.debtAmount || 0) > 0 || s.paymentDueDate))
+            .map(s => ({
+                id: s.id, type: 'debtor', name: s.name || '(ismsiz)', phone: s.phone,
+                sub: Number(s.debtAmount || 0) > 0 ? `${Number(s.debtAmount).toLocaleString()} so'm qarz` : (s.paymentDueDate || '')
+            }));
+    }
+    // lidlar (standart)
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const stageLabel = id => (FUNNEL_STAGES.find(f => f.id === id) || {}).label || id || '';
+    return [...(leads.english || []), ...(leads.russian || [])]
+        .filter(l => l.phone)
+        .map(l => ({ id: l.id, type: 'lead', name: l.name || '(ismsiz)', phone: l.phone, sub: stageLabel(l.status) }));
+}
+
+function _smsFilteredList() {
+    const list = _smsGetAudienceList(_smsAudience);
+    if (!_smsSearch) return list;
+    return list.filter(r =>
+        (r.name || '').toLowerCase().includes(_smsSearch) ||
+        (r.phone || '').toLowerCase().includes(_smsSearch)
+    );
+}
+
+function _smsUpdateSelectedCount() {
+    const el = document.getElementById('smsSelectedCount');
+    if (el) el.textContent = `${_smsSelected.size} ta qabul qiluvchi tanlangan`;
+}
+
+function _smsRenderRecipientList() {
+    const listEl = document.getElementById('smsRecipientList');
+    if (!listEl) return;
+    const filtered = _smsFilteredList();
+    const countEl = document.getElementById('smsFilteredCount');
+    if (countEl) countEl.textContent = filtered.length;
+    const selectAllEl = document.getElementById('smsSelectAll');
+    if (selectAllEl) selectAllEl.checked = filtered.length > 0 && filtered.every(r => _smsSelected.has(`${r.type}:${r.id}`));
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">Hech kim topilmadi</div>`;
+    } else {
+        listEl.innerHTML = filtered.map(r => {
+            const key = `${r.type}:${r.id}`;
+            const checked = _smsSelected.has(key) ? 'checked' : '';
+            return `
+                <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border-color,#eee);cursor:pointer;font-size:13px">
+                    <input type="checkbox" data-sms-recipient="${escapeHtml(key)}" ${checked}>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.name)}</div>
+                        <div style="color:var(--text-muted);font-size:12px">${escapeHtml(r.phone)}${r.sub ? ' &middot; ' + escapeHtml(String(r.sub)) : ''}</div>
+                    </div>
+                </label>`;
+        }).join('');
+        listEl.querySelectorAll('[data-sms-recipient]').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const key = e.target.dataset.smsRecipient;
+                if (e.target.checked) _smsSelected.add(key); else _smsSelected.delete(key);
+                _smsUpdateSelectedCount();
+                const sa = document.getElementById('smsSelectAll');
+                if (sa) sa.checked = _smsFilteredList().every(r => _smsSelected.has(`${r.type}:${r.id}`));
+            });
+        });
+    }
+    _smsUpdateSelectedCount();
+}
+
+function _smsUpdateCharCount() {
+    const ta = document.getElementById('smsMessage');
+    const el = document.getElementById('smsCharCount');
+    if (!ta || !el) return;
+    const len = (ta.value || '').length;
+    const segSize = 70; // kiril/lotin apostrof harflari uchun xavfsiz (unicode) baho
+    const segments = len === 0 ? 0 : Math.ceil(len / segSize);
+    el.textContent = len === 0 ? '' : `${len} belgi &middot; ${segments} SMS segment${segments === 1 ? '' : 'i'}`;
+}
+
+async function _smsFetchBalance() {
+    const el = document.getElementById('smsBalance');
+    if (!el) return;
+    try {
+        const data = await apiFetchSmsBalance();
+        const bal = data?.data?.balance ?? data?.balance;
+        el.textContent = bal != null ? `Balans: ${Number(bal).toLocaleString()} SMS` : '';
+    } catch (err) {
+        el.textContent = '';
+    }
+}
+
+async function _smsFetchHistory() {
+    const el = document.getElementById('smsHistoryTable');
+    if (!el) return;
+    el.innerHTML = `<div style="padding:16px;color:var(--text-muted);font-size:13px">Yuklanmoqda...</div>`;
+    try {
+        const history = await apiFetchSmsHistory(50);
+        if (!history.length) {
+            el.innerHTML = `<div style="padding:16px;color:var(--text-muted);font-size:13px">Hali SMS yuborilmagan</div>`;
+            return;
+        }
+        el.innerHTML = `
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                    <tr style="text-align:left;color:var(--text-muted);border-bottom:1px solid var(--border-color,#eee)">
+                        <th style="padding:6px 8px">Qabul qiluvchi</th>
+                        <th style="padding:6px 8px">Telefon</th>
+                        <th style="padding:6px 8px">Xabar</th>
+                        <th style="padding:6px 8px">Holat</th>
+                        <th style="padding:6px 8px">Vaqt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${history.map(h => `
+                        <tr style="border-bottom:1px solid var(--border-color,#f3f4f6)">
+                            <td style="padding:6px 8px">${escapeHtml(h.name || '&mdash;')}</td>
+                            <td style="padding:6px 8px">${escapeHtml(h.phone || '&mdash;')}</td>
+                            <td style="padding:6px 8px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(h.message || '')}</td>
+                            <td style="padding:6px 8px">${h.status === 'sent'
+                                ? '<span style="color:#059669">Yuborildi</span>'
+                                : `<span style="color:#DC2626" title="${escapeHtml(h.error || '')}">Xato</span>`}</td>
+                            <td style="padding:6px 8px;color:var(--text-muted)">${escapeHtml(new Date(h.sentAt).toLocaleString('uz-UZ'))}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+    } catch (err) {
+        el.innerHTML = `<div style="padding:16px;color:#DC2626;font-size:13px">Xatolik: ${escapeHtml(err.message || '')}</div>`;
+    }
+}
+
+async function _smsHandleSend() {
+    const btn = document.getElementById('smsSendBtn');
+    const resultEl = document.getElementById('smsSendResult');
+    const message = document.getElementById('smsMessage').value.trim();
+    if (!message) { alert('Xabar matnini kiriting'); return; }
+    if (_smsSelected.size === 0) { alert('Kamida bitta qabul qiluvchi tanlang'); return; }
+
+    // Tanlov audience almashtirilganda tozalanadi, lekin xavfsizlik uchun
+    // barcha auditoriyalar bo'yicha qidiruv jadvali tuziladi.
+    const lookup = new Map();
+    ['lidlar', 'oquvchilar', 'qarzdorlar'].forEach(aud => {
+        _smsGetAudienceList(aud).forEach(r => lookup.set(`${r.type}:${r.id}`, r));
+    });
+    const recipients = [..._smsSelected].map(key => {
+        const r = lookup.get(key);
+        return r ? { id: r.id, type: r.type, name: r.name, phone: r.phone } : null;
+    }).filter(Boolean);
+
+    if (!confirm(`${recipients.length} ta qabul qiluvchiga SMS yuborilsinmi?`)) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Yuborilmoqda...';
+    resultEl.textContent = '';
+    try {
+        const res = await apiSendSms(recipients, message, _smsAudience);
+        resultEl.innerHTML = `<span style="color:#059669">${res.sent} ta yuborildi</span>` +
+            (res.failed ? `, <span style="color:#DC2626">${res.failed} ta xato</span>` : '');
+        document.getElementById('smsMessage').value = '';
+        _smsUpdateCharCount();
+        _smsSelected.clear();
+        _smsRenderRecipientList();
+        _smsFetchHistory();
+        _smsFetchBalance();
+    } catch (err) {
+        resultEl.innerHTML = `<span style="color:#DC2626">Xatolik: ${escapeHtml(err.message || 'nomalum')}</span>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Yuborish';
+    }
+}
+
+function renderSms() {
+    const container = document.getElementById('tab-sms');
+    if (!container) return;
+    if (!container.dataset.smsInit) {
+        container.dataset.smsInit = '1';
+        container.innerHTML = `
+            <div class="sales-pinned">
+                <div class="sales-header-layout">
+                    <nav class="section-nav sales-header-nav" id="smsAudienceNav" aria-label="SMS rassilka">
+                        <button type="button" class="section-nav-item active" data-sms-audience="lidlar">Sotuv lidlari</button>
+                        <button type="button" class="section-nav-item" data-sms-audience="oquvchilar">O'quvchilar</button>
+                        <button type="button" class="section-nav-item" data-sms-audience="qarzdorlar">Qarzdorlar</button>
+                    </nav>
+                    <div id="smsBalance" style="font-size:13px;color:var(--text-muted);padding:8px 4px"></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:20px;padding:16px;align-items:flex-start;flex-wrap:wrap">
+                <div class="card" style="flex:1;min-width:320px;max-width:420px;padding:16px">
+                    <input type="text" id="smsSearch" class="form-control" placeholder="Ism yoki telefon bo'yicha qidirish..." style="margin-bottom:10px">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:8px;cursor:pointer">
+                        <input type="checkbox" id="smsSelectAll"> Hammasini tanlash (<span id="smsFilteredCount">0</span>)
+                    </label>
+                    <div id="smsRecipientList" style="max-height:400px;overflow-y:auto;border:1px solid var(--border-color,#e5e7eb);border-radius:8px"></div>
+                </div>
+                <div class="card" style="flex:1;min-width:320px;padding:16px">
+                    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Xabar matni</div>
+                    <textarea id="smsMessage" class="form-control" rows="6" placeholder="SMS matnini kiriting..." style="resize:vertical"></textarea>
+                    <div id="smsCharCount" style="font-size:12px;color:var(--text-muted);margin-top:4px"></div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+                        <div id="smsSelectedCount" style="font-size:13px;color:var(--text-muted)">0 ta qabul qiluvchi tanlangan</div>
+                        <button type="button" class="btn-primary-sm" id="smsSendBtn">Yuborish</button>
+                    </div>
+                    <div id="smsSendResult" style="margin-top:10px;font-size:13px"></div>
+                </div>
+            </div>
+            <div class="card" style="margin:0 16px 16px;padding:16px">
+                <div style="font-size:13px;font-weight:700;margin-bottom:10px">Yuborilgan SMS tarixi</div>
+                <div id="smsHistoryTable"></div>
+            </div>
+        `;
+        container.querySelectorAll('#smsAudienceNav [data-sms-audience]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                _smsAudience = btn.dataset.smsAudience;
+                _smsSelected.clear();
+                container.querySelectorAll('#smsAudienceNav [data-sms-audience]').forEach(b => b.classList.toggle('active', b === btn));
+                _smsRenderRecipientList();
+            });
+        });
+        document.getElementById('smsSearch').addEventListener('input', (e) => {
+            _smsSearch = e.target.value.toLowerCase();
+            _smsRenderRecipientList();
+        });
+        document.getElementById('smsSelectAll').addEventListener('change', (e) => {
+            const list = _smsFilteredList();
+            if (e.target.checked) list.forEach(r => _smsSelected.add(`${r.type}:${r.id}`));
+            else list.forEach(r => _smsSelected.delete(`${r.type}:${r.id}`));
+            _smsRenderRecipientList();
+        });
+        document.getElementById('smsMessage').addEventListener('input', _smsUpdateCharCount);
+        document.getElementById('smsSendBtn').addEventListener('click', _smsHandleSend);
+        _smsFetchBalance();
+        _smsFetchHistory();
+    }
+    _smsRenderRecipientList();
+    _smsUpdateCharCount();
 }
 
 function renderSales() {

@@ -207,6 +207,25 @@ async function apiSendManualNotification(title, message) {
     });
 }
 
+async function apiFetchSmsBalance() {
+    return apiFetch('/api/sms/balance');
+}
+
+async function apiFetchSmsHistory(limit) {
+    return apiFetch(`/api/sms/history${limit ? `?limit=${limit}` : ''}`);
+}
+
+// Har bir qabul qiluvchiga alohida so'rov ketadi (Eskiz'da batch endpoint
+// ishonchliligi tekshirilmagan) — shu sabab katta ro'yxatlarda javob
+// standart 15s'dan uzoqroq kutilishi kerak.
+async function apiSendSms(recipients, message, audience) {
+    return apiFetch('/api/sms/send', {
+        method: 'POST',
+        body: JSON.stringify({ recipients, message, audience }),
+        timeout: Math.min(120000, 15000 + recipients.length * 1500)
+    });
+}
+
 async function apiDeleteManualNotification(id) {
     return apiFetch('/api/state/notifications/manual/' + encodeURIComponent(id), { method: 'DELETE' });
 }

@@ -1972,6 +1972,27 @@ async function addCallRecording({ lang, leadId, url, fileName, duration, uploade
     return recording;
 }
 
+// SMS rassilka tarixi — Eskiz.uz orqali yuborilgan har bir SMS uchun bitta
+// yozuv (natijasi muvaffaqiyatli yoki xatolik bo'lishidan qat'i nazar, shu
+// yerda saqlanadi — hisobot/tekshiruv uchun).
+async function getSmsHistory(limit) {
+    const all = await getJsonData('smsHistory');
+    const sorted = [...all].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+    return limit ? sorted.slice(0, limit) : sorted;
+}
+
+async function addSmsHistoryEntries(entries) {
+    const all = await getJsonData('smsHistory');
+    const withIds = entries.map(e => ({
+        id: 'sms-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        sentAt: new Date().toISOString(),
+        ...e,
+    }));
+    all.push(...withIds);
+    await tx(async (client) => { await saveJsonData(client, 'smsHistory', all); });
+    return withIds;
+}
+
 // Beeline IP Telefoniyasi hisobi hali ochilmagan va API hujjatlari
 // ko'rilmagan — shu sabab bu funksiya HAQIQIY integratsiya EMAS, faqat
 // kelgan so'rovni Railway loglariga yozib, 200 qaytaradi. Hisob ochilib
@@ -2511,6 +2532,7 @@ module.exports = {
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
     getCallRecordings, getCallRecordingCounts, addCallRecording, handleBeelineWebhook,
+    getSmsHistory, addSmsHistoryEntries,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
