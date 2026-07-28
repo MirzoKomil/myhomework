@@ -4670,6 +4670,15 @@ textarea.form-control {
         scroll-snap-type: x proximity;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
+        /* 46-vazifa: bu qator faqat GORIZONTAL (x) teginish-scroll'ni o'ziga
+           oladi — vertikal (y) teginish harakati esa pastdagi .lead-column'ga
+           topshiriladi. Buni aniq belgilamasak, ba'zi mobil brauzerlar (aynan
+           iOS Safari) gorizontal snap-scroll konteyner ichidagi vertikal
+           scroll'ni tan olmay, ustundagi kartochkalarni bir necha dona
+           ko'rsatgach "qotib qolgan"dek tuyuladi — foydalanuvchi tagidagi
+           kartochkalarga tusha olmaydi.
+        */
+        touch-action: pan-x;
         gap: 12px;
         padding-bottom: 16px;
     }
@@ -4758,6 +4767,9 @@ textarea.form-control {
         overflow-y: auto;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
+        /* 46-vazifa: .leads-kanban'ning touch-action:pan-x'iga juftlik —
+           bu ustun vertikal teginish-scroll'ni o'ziga oladi. */
+        touch-action: pan-y;
         scroll-snap-align: start;
     }
 
