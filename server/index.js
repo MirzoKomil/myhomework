@@ -66,23 +66,31 @@ app.use(helmet({
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-// CORS: faqat ruxsat berilgan manzillar. homeworkuz.uz/domwork.netlify.app —
-// lid-qo'lga kiritish (landing page) saytlari, ular /api/leads webhookiga
-// brauzerdan to'g'ridan-to'g'ri fetch() bilan so'rov yuboradi (integrations/
-// homeworkuz-fix.js, integrations/domwork-fix.js). Agar Railway'da
-// ALLOWED_ORIGINS o'zgaruvchisi qo'lda o'rnatilgan bo'lsa, bu ro'yxat
-// TO'LIQ almashtiriladi — o'sha holatda shu ikki manzilni ham o'sha
-// o'zgaruvchiga qo'shish kerak.
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://myhomework.uz,http://localhost:3000,https://homeworkuz.uz,https://www.homeworkuz.uz,https://domwork.netlify.app,https://domwork.uz,https://www.domwork.uz')
+// CORS: faqat ruxsat berilgan manzillar — CRM'ning login/o'quvchi/holat
+// API'lari uchun. Agar Railway'da ALLOWED_ORIGINS o'zgaruvchisi qo'lda
+// o'rnatilgan bo'lsa, bu ro'yxat TO'LIQ almashtiriladi.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://myhomework.uz,http://localhost:3000')
     .split(',').map(o => o.trim());
 
-app.use(cors({
-    origin: (origin, cb) => {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-        cb(new Error(`CORS: ${origin} ruxsat etilmagan`));
-    },
-    credentials: true
-}));
+// /api/leads — lid-qo'lga kiritish (landing page) webhooki. Bu saytlar
+// (domwork/homework va h.k.) turli hosting'larda (Netlify, Vercel, bepul
+// subdomenlar) joylashishi va domeni istalgan vaqt o'zgarishi mumkin —
+// shu sabab bu bitta endpoint uchun CORS domen bo'yicha CHEKLANMAYDI,
+// istalgan manbadan so'rov qabul qilinadi. Xavfsizlik X-Webhook-Secret
+// orqali ta'minlanadi (server/middleware/webhook.js) — bu faqat yangi lid
+// yaratish huquqini beradi, boshqa hech qanday CRM ma'lumotiga kirish yo'q.
+const corsOptionsDelegate = (req, cb) => {
+    if (req.path === '/api/leads' || req.path.startsWith('/api/leads/')) {
+        return cb(null, { origin: true, credentials: false });
+    }
+    const origin = req.headers.origin;
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        return cb(null, { origin: true, credentials: true });
+    }
+    cb(new Error(`CORS: ${origin} ruxsat etilmagan`));
+};
+
+app.use(cors(corsOptionsDelegate));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 
