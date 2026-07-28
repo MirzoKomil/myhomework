@@ -66,8 +66,14 @@ app.use(helmet({
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-// CORS: faqat ruxsat berilgan manzillar
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://myhomework.uz,http://localhost:3000')
+// CORS: faqat ruxsat berilgan manzillar. homeworkuz.uz/domwork.netlify.app —
+// lid-qo'lga kiritish (landing page) saytlari, ular /api/leads webhookiga
+// brauzerdan to'g'ridan-to'g'ri fetch() bilan so'rov yuboradi (integrations/
+// homeworkuz-fix.js, integrations/domwork-fix.js). Agar Railway'da
+// ALLOWED_ORIGINS o'zgaruvchisi qo'lda o'rnatilgan bo'lsa, bu ro'yxat
+// TO'LIQ almashtiriladi — o'sha holatda shu ikki manzilni ham o'sha
+// o'zgaruvchiga qo'shish kerak.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://myhomework.uz,http://localhost:3000,https://homeworkuz.uz,https://www.homeworkuz.uz,https://domwork.netlify.app,https://domwork.uz,https://www.domwork.uz')
     .split(',').map(o => o.trim());
 
 app.use(cors({
