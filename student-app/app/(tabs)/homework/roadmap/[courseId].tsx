@@ -480,7 +480,10 @@ export default function RoadmapScreen() {
     if (!c) return;
     const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
     const TOTAL_LESSONS = 72;
-    const UNLOCKED_COUNT = 3;
+    // 11-vazifa: yangi (hali hech narsa bajarmagan) o'quvchi uchun faqat
+    // 1-dars ochiq turishi kerak edi — avval bu 3 ta bo'lgani sabab 2- va
+    // 3-darslar ham hech qanday progress bo'lmasa ham ochiq ko'rinardi.
+    const UNLOCKED_COUNT = 1;
     const DEFAULT_UNLOCK_PERCENT = 80;
     let prevComplete = true;
     let prevPercent = 100;
