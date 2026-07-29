@@ -11,17 +11,23 @@ import { translations, AppLang, TranslationKey } from './translations';
 // mumkin, shu sababli yangilanishdan keyin undan foydalanilmaydi.
 const LANG_PREFERENCE_KEY = 'mh_student_lang_preference_v2';
 
-// 40-vazifa: CRM'ning "Ilovani ko'rish" preview'i /student/?lang=russian
-// (yoki ?lang=english) ko'rinishida ochilganda, admin qaysi tilni tanlagan
-// bo'lsa o'sha til ko'rsatiladi — bu tanlov boshqa hech narsa (haqiqiy
-// o'quvchi yoki namuna o'quvchi kursi tili) tomonidan bekor qilinmaydi.
+// 7-vazifa (40-vazifa'ni qayta ko'rib chiqish): avval `?lang=russian` yoki
+// `?lang=english` ("english"/"russian" — kurs tili qiymatlari) interfeys
+// tiliga ("uz"/"ru") to'g'ridan-to'g'ri xaritalanardi — shu sabab CRM'ning
+// "Ilovani ko'rish" preview'ida Rus tili kursi tanlanganda butun ilova
+// interfeysi (menyu, "Salom" kabi matnlar) ham ruschaga o'tib qolardi,
+// aslida bu faqat KURS kontenti tanlovi bo'lishi kerak edi. Interfeys
+// tili kurs tilidan MUSTAQIL — standart bo'yicha har doim o'zbekcha
+// (pastdagi courseLang mexanizmiga qarang) — shu sabab endi bu yerda
+// faqat aniq "uz"/"ru" qiymatlari qabul qilinadi (haqiqiy interfeys-til
+// deep link uchun), "english"/"russian" (kurs qiymatlari) e'tiborga
+// olinmaydi.
 function readQueryLang(): AppLang | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
   try {
     const params = new URLSearchParams(window.location.search);
     const v = (params.get('lang') || '').toLowerCase();
-    if (v === 'russian' || v === 'ru') return 'ru';
-    if (v === 'english' || v === 'uz') return 'uz';
+    if (v === 'uz' || v === 'ru') return v;
   } catch {
     // ignore
   }

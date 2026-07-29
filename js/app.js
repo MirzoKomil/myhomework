@@ -862,7 +862,7 @@ function renderStudentApp() {
         if (viewPanel) viewPanel.classList.add('active');
         const frame = document.getElementById('studentAppFrame');
         const previewUrl = _studentAppPreviewUrl();
-        if (frame && !frame.src.includes(`lang=${previewLang}`)) frame.src = previewUrl;
+        if (frame && !frame.src.includes(`course=${previewLang}`)) frame.src = previewUrl;
         return;
     }
 
@@ -932,15 +932,18 @@ function _syncMobileSubNavUI() {
 
 // 40-vazifa: "Ilovani ko'rish" preview'i (iframe + "Yangi oynada ochish"/
 // "Web app holatida ko'rish" tugmalari) endi mobileLangTabs'da tanlangan
-// tilga (`_mobileLang`) qarab `?lang=english`/`?lang=russian` bilan ochiladi
-// — student-app'ning LanguageContext'i shu query'ni har qanday boshqa
-// manbadan ustun qo'yadi.
+// tilga (`_mobileLang`) qarab `?course=english`/`?course=russian` bilan
+// ochiladi — bu FAQAT dars/kurs kontentini tanlaydi. Shu bilan rus
+// menejer preview'ida ingliz namuna o'quvchi kursi aralashib ketmaydi
+// (va aksincha).
+// 7-vazifa: avval bu yerda `?lang=` ham yuborilardi — bu esa (kutilmaganda)
+// ilova interfeysining o'zini (menyu, "Salom" kabi matnlar) ham kurs
+// tiliga qarab ruschaga aylantirib qo'yardi. Interfeys tili har doim
+// o'zbekcha qolishi kerak (student-app/i18n/LanguageContext.tsx), shu
+// sabab bu param olib tashlandi.
 function _studentAppPreviewUrl() {
     const lang = _mobileLang === 'russian' ? 'russian' : 'english';
-    // `course` student-app'dagi kurs kontentini ham qat'iy yo'nalishga
-    // bog'laydi. Shu bilan rus menejer preview'ida ingliz namuna o'quvchi
-    // kursi aralashib ketmaydi (va aksincha).
-    return `/student/?lang=${lang}&course=${lang}&v=${Date.now()}`;
+    return `/student/?course=${lang}&v=${Date.now()}`;
 }
 function _updateStudentAppPreviewLinks() {
     const url = _studentAppPreviewUrl();
