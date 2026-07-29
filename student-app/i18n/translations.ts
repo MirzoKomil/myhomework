@@ -236,7 +236,7 @@ export const translations = {
     video_seen_btn: "Ko'rdim",
 
     // Darslar yo'li (roadmap)
-    roadmap_type_speaking: 'Speaking',
+    roadmap_type_speaking: 'Razgovor',
     roadmap_type_bonus: 'Bonus',
     roadmap_locked_title: 'Dars hali ochilmagan',
     roadmap_locked_attendance_body: "Siz ushbu darsga yetib keldingiz! Ustoz bilan dars o'tilganidan so'ng dars ma'lumotlari va uyga vazifalarini olishingiz mumkin bo'ladi.",
@@ -672,7 +672,7 @@ export const translations = {
     video_not_attached: 'Видео пока не прикреплено',
     video_seen_btn: 'Посмотрел(а)',
 
-    roadmap_type_speaking: 'Speaking',
+    roadmap_type_speaking: 'Разговор',
     roadmap_type_bonus: 'Бонус',
     roadmap_locked_title: 'Урок пока не открыт',
     roadmap_locked_attendance_body: 'Вы дошли до этого урока! После того как учитель проведёт занятие, вы сможете получить материалы урока и домашнее задание.',
