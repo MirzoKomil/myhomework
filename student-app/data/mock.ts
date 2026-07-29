@@ -490,7 +490,6 @@ export const skillProgress: SkillProgress[] = [
 ];
 
 export const nextLiveLesson = {
-  topic: 'Speaking Club: Present Simple',
   startsAt: new Date(Date.now() + 1000 * 60 * (60 * 2 + 45)).toISOString(),
   telegramLink: 'https://t.me/+myhomework_elementary1',
 };

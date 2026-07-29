@@ -6,7 +6,6 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '@/constants/theme';
 
 type LessonReminderProps = {
-  topic: string;
   startsAt: string;
   telegramLink: string;
 };
@@ -23,7 +22,7 @@ function formatCountdown(ms: number) {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-export function LessonReminder({ topic, startsAt, telegramLink }: LessonReminderProps) {
+export function LessonReminder({ startsAt, telegramLink }: LessonReminderProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -49,7 +48,7 @@ export function LessonReminder({ topic, startsAt, telegramLink }: LessonReminder
               <Text style={styles.countdown}>{diff > 0 ? formatCountdown(diff) : 'Boshlandi'}</Text>
             </View>
             <View style={styles.divider} />
-            <Text style={styles.topic} numberOfLines={1}>{topic}</Text>
+            <Text style={styles.topic} numberOfLines={1}>Jonli darsni unutmang</Text>
           </View>
           <View style={styles.arrowBtn}>
             <Ionicons name="chevron-forward" size={20} color="#D65656" />

@@ -67,7 +67,6 @@ export default function HomeScreen() {
       .then((schedule) => {
         if (schedule.telegramGroupLink && schedule.startsAt) {
           setLiveLesson({
-            topic: schedule.topic || nextLiveLesson.topic,
             startsAt: schedule.startsAt,
             telegramLink: schedule.telegramGroupLink,
           });
@@ -155,7 +154,6 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <LessonReminder
-          topic={liveLesson.topic}
           startsAt={liveLesson.startsAt}
           telegramLink={liveLesson.telegramLink}
         />
