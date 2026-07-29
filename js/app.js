@@ -142,7 +142,7 @@ const ROLE_TABS = {
     // bilan yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) allaqachon
     // to'liq qurilgan va ustoz roli uchun ichkarida to'g'ri cheklangan edi,
     // lekin bu ro'yxatda yo'q bo'lgani uchun sidebar'da ko'rinmasdi.
-    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'teacher-cabinet', 'guides'],
+    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'teacher-cabinet', 'guides', 'student-app'],
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
 };
@@ -157,14 +157,17 @@ function applyRoleBasedAccess(user) {
         sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
             el.style.display = '';
         });
-        // 16-ish / 1-ish: ROP uchun Akademik bo'lim, Moliya, HR Bo'limi,
-        // Analitika va Mobil ilova yashiriladi. ("Moliya" avval alohida
+        // 16-ish / 1-ish: ROP uchun Akademik bo'lim, Moliya, HR Bo'limi va
+        // Analitika yashiriladi. ("Moliya" avval alohida
         // getElementById('menuGroupMoliya') orqali yashirilardi, lekin
         // HTML'dagi haqiqiy id — "menuItemMoliya" — bilan mos kelmasligi
         // sabab u hech qachon amalda yashirilmagan edi.)
+        // 6-vazifa: "Mobil ilova" endi ROP uchun ham ko'rinadi (sotuv
+        // menejeriga o'xshab, faqat o'z tiliga qulflangan holda —
+        // renderStudentApp()'ga qarang).
         let hiddenForRop = new Set();
         if (role === 'rop') {
-            hiddenForRop = new Set(['teachers-section', 'finance', 'hr', 'analitika', 'student-app']);
+            hiddenForRop = new Set(['teachers-section', 'finance', 'hr', 'analitika']);
             hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
@@ -332,6 +335,25 @@ async function bootApp() {
         const detectedLang = linked?.lang || 'english';
         if (currentUser.linkedRopLang !== detectedLang) {
             currentUser.linkedRopLang = detectedLang;
+            setCurrentUser(currentUser);
+        }
+    }
+
+    // 6-vazifa: Ustoz (asosiy va yordamchi) uchun ham til yo'nalishini
+    // aniqlash — Mobil ilova bo'limida faqat o'z tiliga tegishli ilovani
+    // ko'rishi uchun (ROP/Sotuv menejeriga o'xshab). Asosiy ustozda til
+    // HR lavozim satirining o'zida ("ingliz-oqituvchi"/"rus-oqituvchi"),
+    // yordamchi ustozda esa alohida "lang" maydonida saqlanadi.
+    if (currentUser.role === 'teacher') {
+        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+        const linked = hrEmployees.find(e =>
+            e.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+        );
+        const detectedTeacherLang = linked?.role === 'rus-oqituvchi' ? 'russian'
+            : linked?.role === 'ingliz-oqituvchi' ? 'english'
+            : linked?.lang || 'english';
+        if (currentUser.linkedTeacherLang !== detectedTeacherLang) {
+            currentUser.linkedTeacherLang = detectedTeacherLang;
             setCurrentUser(currentUser);
         }
     }
@@ -813,13 +835,19 @@ let _activeShopProductCategory = 'merch';
 
 function renderStudentApp() {
     const cu = getCurrentUser();
-    const isAdmin = cu && (cu.role === 'admin' || cu.role === 'rop' || cu.role === 'boshliq');
+    const isAdmin = cu && (cu.role === 'admin' || cu.role === 'boshliq');
 
     if (!isAdmin) {
-        // Xodimlar (jumladan sotuv menejeri): faqat iframe ko'rsatiladi,
-        // tahrirlash/statistika navigatsiyasi umuman ochilmaydi. Menejerning
-        // yo'nalishi rus bo'lsa rus ilovasi, aks holda ingliz ilovasi ochiladi.
-        const previewLang = cu?.role === 'sales_manager' && cu.linkedManagerLang === 'russian'
+        // 6-vazifa: Xodimlar (sotuv menejeri, ROP, ustoz — asosiy va
+        // yordamchi): faqat iframe ko'rsatiladi, tahrirlash/statistika
+        // navigatsiyasi umuman ochilmaydi. Har biri faqat O'ZINING til
+        // yo'nalishiga tegishli ilovani ko'radi (rus bo'lsa rus ilovasi,
+        // aks holda ingliz ilovasi) — admin/boshliqdan farqli o'laroq
+        // ikkala tilni almashtirib ko'rish imkoni yo'q.
+        const previewLang =
+            (cu?.role === 'sales_manager' && cu.linkedManagerLang === 'russian') ||
+            (cu?.role === 'rop' && cu.linkedRopLang === 'russian') ||
+            (cu?.role === 'teacher' && cu.linkedTeacherLang === 'russian')
             ? 'russian'
             : 'english';
         _mobileLang = previewLang;
