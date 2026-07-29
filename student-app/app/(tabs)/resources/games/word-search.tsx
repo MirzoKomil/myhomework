@@ -16,6 +16,8 @@ const WORD_COUNT = 5;
 const MIN_POOL_SIZE = 3;
 // O'quvchining lug'atida mos so'z yetarli topilmasa ishlatiladigan zaxira.
 const FALLBACK_WORDS = ['CAT', 'DOG', 'SUN', 'RAIN', 'BOOK'];
+// 13-vazifa: rus tili kursi uchun alohida zaxira.
+const FALLBACK_WORDS_RU = ['ДОМ', 'КОТ', 'СОК', 'ЧАЙ', 'НОЖ', 'ДЕНЬ', 'УТРО', 'ОКНО', 'ХЛЕБ', 'РЫБА', 'ПТИЦА', 'ШКОЛА', 'ГОРОД', 'МАШИНА', 'СОБАКА', 'ЯБЛОКО', 'ПОГОДА'];
 
 type Placement = { word: string; row: number; col: number; dir: [number, number] };
 type Cell = { row: number; col: number };
@@ -29,7 +31,7 @@ const DIRECTIONS: [number, number][] = [
 // so'zning joylashuvini quradi — tasodifiy joy/yo'nalish tanlab, band
 // katakchalarga to'qnashsa qayta urinib ko'radi. Joylashtirib bo'lmagan
 // so'zlar (kamdan-kam, joy yetishmasa) o'yindan chetlab o'tiladi.
-function buildGrid(words: string[]): { grid: string[][]; placed: Placement[] } {
+function buildGrid(words: string[], filler = 'ETAOINSHRDLUCMFWYPVBGKJQXZ'): { grid: string[][]; placed: Placement[] } {
   const longest = Math.max(...words.map((w) => w.length), 0);
   const size = Math.max(MIN_GRID_SIZE, longest);
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(''));
@@ -64,7 +66,6 @@ function buildGrid(words: string[]): { grid: string[][]; placed: Placement[] } {
     }
   }
 
-  const filler = 'ETAOINSHRDLUCMFWYPVBGKJQXZ';
   let fi = 0;
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
@@ -97,7 +98,7 @@ function cellKey(c: Cell) {
 }
 
 export default function WordSearchGame() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
   const [board, setBoard] = useState<{ grid: string[][]; words: string[] } | null>(null);
   const [selection, setSelection] = useState<Cell | null>(null);
   const [foundCells, setFoundCells] = useState<Set<string>>(new Set());
@@ -106,25 +107,27 @@ export default function WordSearchGame() {
 
   useEffect(() => {
     let cancelled = false;
+    const isRu = courseLang === 'russian';
+    const letterRe = isRu ? /^[А-ЯЁ]+$/ : /^[A-Z]+$/;
     getAccumulatedVocabulary().then((vocab) => {
       if (cancelled) return;
       const pool = Array.from(
         new Set(
           vocab
             .map((w) => w.english.toUpperCase())
-            .filter((w) => /^[A-Z]+$/.test(w) && w.length >= 3 && w.length <= 8)
+            .filter((w) => letterRe.test(w) && w.length >= 3 && w.length <= 8)
         )
       );
-      const source = pool.length >= MIN_POOL_SIZE ? pool : FALLBACK_WORDS;
+      const source = pool.length >= MIN_POOL_SIZE ? pool : (isRu ? FALLBACK_WORDS_RU : FALLBACK_WORDS);
       const shuffled = [...source].sort(() => Math.random() - 0.5);
       const picked = shuffled.slice(0, WORD_COUNT).sort((a, b) => b.length - a.length);
-      const { grid, placed } = buildGrid(picked);
+      const { grid, placed } = buildGrid(picked, isRu ? 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ' : undefined);
       setBoard({ grid, words: placed.map((p) => p.word) });
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [courseLang]);
 
   const grid = board?.grid ?? [];
   const WORDS_TO_FIND = board?.words ?? [];

@@ -24,6 +24,26 @@ const FALLBACK_ITEMS: { word: string; icon: keyof typeof Ionicons.glyphMap }[] =
   { word: 'teacher', icon: 'school-outline' },
   { word: 'book', icon: 'book-outline' },
 ];
+// 13-vazifa: rus tili kursi uchun alohida zaxira (A1/A2 darajadagi so'zlar).
+const FALLBACK_ITEMS_RU: { word: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { word: 'яблоко', icon: 'restaurant-outline' },
+  { word: 'друг', icon: 'people-outline' },
+  { word: 'счастье', icon: 'happy-outline' },
+  { word: 'самолёт', icon: 'airplane-outline' },
+  { word: 'кухня', icon: 'flame-outline' },
+  { word: 'погода', icon: 'partly-sunny-outline' },
+  { word: 'учитель', icon: 'school-outline' },
+  { word: 'книга', icon: 'book-outline' },
+  { word: 'дом', icon: 'home-outline' },
+  { word: 'вода', icon: 'water-outline' },
+  { word: 'собака', icon: 'paw-outline' },
+  { word: 'одежда', icon: 'shirt-outline' },
+  { word: 'телефон', icon: 'phone-portrait-outline' },
+  { word: 'облако', icon: 'cloud-outline' },
+  { word: 'врач', icon: 'medkit-outline' },
+  { word: 'спорт', icon: 'football-outline' },
+  { word: 'ночь', icon: 'moon-outline' },
+];
 const ITEM_COUNT = 9;
 const MIN_POOL_SIZE = 6;
 
@@ -42,7 +62,7 @@ function shuffle<T>(arr: T[]): T[] {
 type Phase = 'study' | 'match' | 'result';
 
 export default function MemoryMatchGame() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
   const [items, setItems] = useState<Item[] | null>(null);
   const [phase, setPhase] = useState<Phase>('study');
   const [slotFill, setSlotFill] = useState<Record<string, string | null>>({});
@@ -61,17 +81,20 @@ export default function MemoryMatchGame() {
 
   useEffect(() => {
     let cancelled = false;
+    const isRu = courseLang === 'russian';
+    const letterRe = isRu ? /^[а-яё]+$/i : /^[a-z]+$/;
+    const fallbackItems = isRu ? FALLBACK_ITEMS_RU : FALLBACK_ITEMS;
     getAccumulatedVocabulary().then((words) => {
       if (cancelled) return;
       const uniq = new Map<string, keyof typeof Ionicons.glyphMap>();
       for (const w of words) {
         const key = w.english.toLowerCase();
-        if (/^[a-z]+$/.test(key) && !uniq.has(key)) uniq.set(key, w.icon);
+        if (letterRe.test(key) && !uniq.has(key)) uniq.set(key, w.icon);
       }
       const pool = Array.from(uniq.entries()).map(([word, icon]) => ({ word, icon }));
       const source = pool.length >= MIN_POOL_SIZE
-        ? [...pool, ...FALLBACK_ITEMS.filter((fallback) => !uniq.has(fallback.word))]
-        : FALLBACK_ITEMS;
+        ? [...pool, ...fallbackItems.filter((fallback) => !uniq.has(fallback.word))]
+        : fallbackItems;
       const picked = shuffle(source)
         .slice(0, ITEM_COUNT)
         .map((p, i) => ({ id: `item-${i}-${p.word}`, word: p.word, icon: p.icon }));
@@ -80,7 +103,7 @@ export default function MemoryMatchGame() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [courseLang]);
 
   useEffect(() => {
     return () => {

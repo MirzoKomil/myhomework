@@ -15,6 +15,8 @@ import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 // O'quvchining lug'atida aynan 5 harfli so'z yetarli topilmasa ishlatiladigan zaxira.
 const FALLBACK_WORDS = ['apple', 'grape', 'house', 'water', 'plant', 'chair', 'brave', 'smile', 'dance', 'light'];
+// 13-vazifa: rus tili kursi uchun alohida 5 harfli so'zlar zaxirasi.
+const FALLBACK_WORDS_RU = ['время', 'слово', 'книга', 'земля', 'белый', 'синий', 'осень', 'улица', 'дверь', 'жизнь', 'ответ', 'парта'];
 const WORD_LENGTH = 5;
 const MAX_TRIES = 6;
 const MIN_POOL_SIZE = 3;
@@ -102,7 +104,7 @@ function RulesModal({ visible, onClose }: { visible: boolean; onClose: () => voi
 }
 
 export default function MysteryWordGame() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
   const [wordPool, setWordPool] = useState<string[] | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<{ word: string; statuses: LetterStatus[] }[]>([]);
@@ -113,6 +115,9 @@ export default function MysteryWordGame() {
   const [hints, setHints] = useState<{ index: number; letter: string }[]>([]);
   const [showRules, setShowRules] = useState(false);
 
+  const isRu = courseLang === 'russian';
+  const letterRe = isRu ? /^[а-яё]+$/i : /^[a-z]+$/;
+
   useEffect(() => {
     let cancelled = false;
     getAccumulatedVocabulary().then((words) => {
@@ -121,17 +126,17 @@ export default function MysteryWordGame() {
         new Set(
           words
             .map((w) => w.english.toLowerCase())
-            .filter((w) => w.length === WORD_LENGTH && /^[a-z]+$/.test(w))
+            .filter((w) => w.length === WORD_LENGTH && letterRe.test(w))
         )
       );
-      const finalPool = pool.length >= MIN_POOL_SIZE ? pool : FALLBACK_WORDS;
+      const finalPool = pool.length >= MIN_POOL_SIZE ? pool : (isRu ? FALLBACK_WORDS_RU : FALLBACK_WORDS);
       setWordPool(finalPool);
       setAnswer(pickAnswer(finalPool));
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [courseLang]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,7 +168,7 @@ export default function MysteryWordGame() {
   const submit = () => {
     if (!answer) return;
     const word = input.trim().toLowerCase();
-    if (word.length !== WORD_LENGTH || !/^[a-z]+$/.test(word)) {
+    if (word.length !== WORD_LENGTH || !letterRe.test(word)) {
       setError(t('mw_error_letters').replace('{n}', String(WORD_LENGTH)));
       return;
     }

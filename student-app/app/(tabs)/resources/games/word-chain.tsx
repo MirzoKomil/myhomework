@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
+import COMMON_RUSSIAN_WORDS from '@/data/commonRussianWords.json';
 import { addCoins } from '@/services/coinsStore';
 import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
@@ -15,14 +16,14 @@ import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 // So'z faqat o'quvchi hozircha o'rgangan ~25-75 so'zdan iborat lug'atga
 // cheklansa, zanjir tez-tez tiqilib qoladi (kerakli harf bilan boshlanadigan
-// so'z topilmay qoladi). Shuning uchun tekshiruv uchun ingliz tilidagi eng
-// ko'p ishlatiladigan 10 000 so'zdan iborat ro'yxat (commonEnglishWords.json)
-// bilan birlashtiriladi — cheklov deyarli yo'qoladi, boshlang'ich so'z esa
-// baribir o'quvchining o'z lug'atidan tanlanadi.
+// so'z topilmay qoladi). Shuning uchun tekshiruv uchun tegishli tildagi eng
+// ko'p ishlatiladigan so'zlar ro'yxati (commonEnglishWords.json /
+// commonRussianWords.json) bilan birlashtiriladi — cheklov deyarli yo'qoladi,
+// boshlang'ich so'z esa baribir o'quvchining o'z lug'atidan tanlanadi.
 const MIN_BANK_SIZE = 5;
 
 export default function WordChainGame() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
   const [wordBank, setWordBank] = useState<string[] | null>(null);
   const [chain, setChain] = useState<string[]>([]);
   const [input, setInput] = useState('');
@@ -31,10 +32,13 @@ export default function WordChainGame() {
 
   useEffect(() => {
     let cancelled = false;
+    const isRu = courseLang === 'russian';
+    const letterRe = isRu ? /^[а-яё]+$/i : /^[a-z]+$/;
+    const commonWords = isRu ? COMMON_RUSSIAN_WORDS : COMMON_ENGLISH_WORDS;
     getAccumulatedVocabulary().then((words) => {
       if (cancelled) return;
-      const vocabWords = words.map((w) => w.english.toLowerCase()).filter((w) => /^[a-z]+$/.test(w));
-      const finalBank = Array.from(new Set([...vocabWords, ...COMMON_ENGLISH_WORDS]));
+      const vocabWords = words.map((w) => w.english.toLowerCase()).filter((w) => letterRe.test(w));
+      const finalBank = Array.from(new Set([...vocabWords, ...commonWords]));
       const startPool = vocabWords.length >= MIN_BANK_SIZE ? vocabWords : finalBank;
       setWordBank(finalBank);
       setChain([startPool[Math.floor(Math.random() * startPool.length)]]);
@@ -42,7 +46,7 @@ export default function WordChainGame() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [courseLang]);
 
   const lastWord = chain[chain.length - 1] ?? '';
   const requiredLetter = lastWord.slice(-1).toUpperCase();
