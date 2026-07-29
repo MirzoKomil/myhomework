@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import { getToken } from '@/services/studentAuthStore';
+import { getToken, ready } from '@/services/studentAuthStore';
 import type { GrammarBlank, HomeworkPart, SlideContent, SpeakingPrompt, VocabWord } from '@/data/lessonContent';
 import type { ShopProduct } from '@/data/shopProducts';
 import type { GrammarTopic } from '@/data/grammarGuide';
@@ -186,6 +186,12 @@ export type MobileContent = {
 // ekanini aniqlaydi (token yo'q bo'lsa, eskicha "Namuna o'quvchi" ma'lumoti
 // qaytadi, hech qanday xatti-harakat o'zgarmaydi).
 export async function authedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  // 5-vazifa: token AsyncStorage'dan hali yuklanmagan bo'lishi mumkin
+  // (ilova ochilgan ilk lahzalarda) — shuni kutmasak, birinchi so'rov
+  // tokensiz ketib, server noto'g'ri (demo) o'quvchi ma'lumotini
+  // qaytaradi va bu keshda qolib ketadi (masalan rus tili o'quvchisiga
+  // ingliz tili kursi ko'rinishi kabi buglarga sabab bo'ladi).
+  await ready();
   const token = getToken();
   const headers: Record<string, string> = { ...(options.headers as Record<string, string> | undefined) };
   if (token) headers.Authorization = `Bearer ${token}`;

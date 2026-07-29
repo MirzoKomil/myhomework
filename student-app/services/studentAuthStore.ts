@@ -52,6 +52,17 @@ async function ensureLoaded(): Promise<void> {
   return loadPromise;
 }
 
+// 5-vazifa: authedFetch() har bir so'rovdan oldin shuni kutishi kerak —
+// aks holda ilova ochilgan zahoti (AsyncStorage'dan token hali yuklanmay
+// turib) yuborilgan birinchi so'rov tokensiz ketib, server "Namuna
+// o'quvchi"ning (demo) kursini qaytarardi, va bu noto'g'ri til/kurs
+// keshda (_cache, contentApi.ts) abadiy qolib ketardi. loadAuth()'dan
+// farqli o'laroq bu yerda notify() chaqirilmaydi — har bir so'rovda
+// keraksiz qayta-render bo'lmasligi uchun.
+export function ready(): Promise<void> {
+  return ensureLoaded();
+}
+
 export function getToken(): string | null {
   return token;
 }
