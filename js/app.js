@@ -13145,13 +13145,32 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
         onboarding.trialDaysCount = count;
         onboarding.isTrial = true;
 
-        updateLeadInStorage(lang, leadId, l => ({
-            ...l,
-            status: 'sinov-darsida',
-            paymentOnboarding: onboarding,
-            // Sinov darsi uchun SLA darsning aniq rejalashtirilgan vaqtiga bog'liq.
-            trialLessonAt: getTrialLessonTimestamp(day, time)
-        }));
+        const teacherName = teachers.find(t => t.id === teacherId)?.name || '—';
+        const dayLabel = DAYS_UZ[parseInt(day, 10) - 1] || '';
+        const user = getCurrentUser();
+        const author = user?.name || 'Admin';
+        const commentText = [
+            "Sinov darsi belgilandi:",
+            `• O'qituvchi: ${teacherName}`,
+            `• Kuni: ${dayLabel}, ${time}`,
+            `• Davomiyligi: ${count} kun`
+        ].join('\n');
+
+        updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return {
+                ...base,
+                status: 'sinov-darsida',
+                paymentOnboarding: onboarding,
+                // Sinov darsi uchun SLA darsning aniq rejalashtirilgan vaqtiga bog'liq.
+                trialLessonAt: getTrialLessonTimestamp(day, time),
+                comments: [...base.comments, createLeadComment({
+                    type: 'trial-lesson',
+                    text: commentText,
+                    author
+                })]
+            };
+        });
 
         closeModal();
         renderLeads();
@@ -16618,6 +16637,7 @@ function renderLeadCommentItem(c) {
     const isPaymentProcess = c.type === 'payment-process';
     const isPaymentOnboarding = c.type === 'payment-onboarding';
     const isFollowUpReminder = c.type === 'follow-up-reminder';
+    const isTrialLesson = c.type === 'trial-lesson';
     let badge = '';
     if (isContactFail) badge = '<span class="lead-comment-badge">Bog\'lanish sababi</span>';
     if (isConnectedSurvey) badge = '<span class="lead-comment-badge lead-comment-badge--survey">Anketa</span>';
@@ -16626,6 +16646,7 @@ function renderLeadCommentItem(c) {
     if (isPaymentProcess) badge = '<span class="lead-comment-badge lead-comment-badge--payment">To\'lov</span>';
     if (isPaymentOnboarding) badge = '<span class="lead-comment-badge lead-comment-badge--onboard">O\'quvchi</span>';
     if (isFollowUpReminder) badge = '<span class="lead-comment-badge lead-comment-badge--reminder">Bog\'lanish eslatmasi</span>';
+    if (isTrialLesson) badge = '<span class="lead-comment-badge lead-comment-badge--onboard">Sinov darsi</span>';
     const bodyText = c.text || (isContactFail && c.reason ? `Qo'ng'iroq qilindi, lekin: ${c.reason}` : '');
     const itemClass = isContactFail
         ? ' lead-comment-item--contact-fail'
@@ -16634,7 +16655,8 @@ function renderLeadCommentItem(c) {
                 : (isDecisionProcess ? ' lead-comment-item--decision'
                     : (isPaymentProcess ? ' lead-comment-item--payment'
                         : (isPaymentOnboarding ? ' lead-comment-item--onboard'
-                            : (isFollowUpReminder ? ' lead-comment-item--reminder' : ''))))));
+                            : (isFollowUpReminder ? ' lead-comment-item--reminder'
+                                : (isTrialLesson ? ' lead-comment-item--onboard' : '')))))));
 
     return `<div class="lead-comment-item${itemClass}">
         <div class="lead-comment-meta">
