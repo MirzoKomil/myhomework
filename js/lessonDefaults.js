@@ -172,10 +172,10 @@ function ldBuildSlides(offset) {
 // ─── Homework builders ──────────────────────────────────────────────────────
 function ldBuildGrammarHomework(offset) {
     return [
-        { id: 'A', kind: 'matching', title: 'PART A — Matching', pairs: ldPickWindow(LD_MATCH_POOL, offset, 6) },
-        { id: 'B', kind: 'fillBlank', title: 'PART B — Fill in the blank', blanks: ldPickWindow(LD_GRAMMAR_POOL, offset, 5) },
-        { id: 'C', kind: 'multipleChoice', title: 'PART C — Multiple choice', questions: ldPickWindow(LD_MC_POOL, offset, 5) },
-        { id: 'D', kind: 'sentenceBuild', title: 'PART D — Sentence building', items: ldPickWindow(LD_SENTENCE_POOL, offset, 4) },
+        { id: 'A', kind: 'matching', title: 'A-QISM — Moslashtirish', pairs: ldPickWindow(LD_MATCH_POOL, offset, 6) },
+        { id: 'B', kind: 'fillBlank', title: "B-QISM — Bo'sh joylarni to'ldirish", blanks: ldPickWindow(LD_GRAMMAR_POOL, offset, 5) },
+        { id: 'C', kind: 'multipleChoice', title: "C-QISM — To'g'ri javobni tanlash", questions: ldPickWindow(LD_MC_POOL, offset, 5) },
+        { id: 'D', kind: 'sentenceBuild', title: 'D-QISM — Gap tuzish', items: ldPickWindow(LD_SENTENCE_POOL, offset, 4) },
         { id: 'creative', kind: 'creative', title: 'Ijodiy vazifa', instruction: "Bugungi mavzu bo'yicha 5-6 gapdan iborat qisqa matn yozing va agar xohlasangiz rasm biriktiring.", mediaType: 'text' },
     ];
 }
@@ -202,9 +202,9 @@ const LD_BONUS_CATEGORIES = [
 
 function ldBuildBonusHomework(offset) {
     return [
-        { id: 'A', kind: 'matching', title: 'PART A — Matching', pairs: ldPickWindow(LD_MATCH_POOL, offset, 6) },
-        { id: 'B', kind: 'multipleChoice', title: 'PART B — Multiple choice', questions: ldPickWindow(LD_MC_POOL, offset, 5) },
-        { id: 'C', kind: 'sentenceBuild', title: 'PART C — Sentence building', items: ldPickWindow(LD_SENTENCE_POOL, offset, 4) },
+        { id: 'A', kind: 'matching', title: 'A-QISM — Moslashtirish', pairs: ldPickWindow(LD_MATCH_POOL, offset, 6) },
+        { id: 'B', kind: 'multipleChoice', title: "B-QISM — To'g'ri javobni tanlash", questions: ldPickWindow(LD_MC_POOL, offset, 5) },
+        { id: 'C', kind: 'sentenceBuild', title: 'C-QISM — Gap tuzish', items: ldPickWindow(LD_SENTENCE_POOL, offset, 4) },
     ];
 }
 
