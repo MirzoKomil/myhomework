@@ -6,13 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 
-type Direction = 'en-uz' | 'uz-en';
-
-const LANG_LABEL: Record<Direction, { from: string; to: string; sl: string; tl: string }> = {
-  'en-uz': { from: 'English', to: 'O\'zbekcha', sl: 'en', tl: 'uz' },
-  'uz-en': { from: 'O\'zbekcha', to: 'English', sl: 'uz', tl: 'en' },
-};
+type Direction = 'other-uz' | 'uz-other';
 
 // 154-ish qayta ish 12: avval api.mymemory.translated.net ishlatilgan — bu
 // haqiqiy mashina tarjimasi emas, balki foydalanuvchilar to'ldiradigan
@@ -35,7 +31,16 @@ async function translateText(text: string, sl: string, tl: string): Promise<stri
 }
 
 export default function TranslatorScreen() {
-  const [direction, setDirection] = useState<Direction>('en-uz');
+  const { courseLang } = useLang();
+  const isRu = courseLang === 'russian';
+  const otherCode = isRu ? 'ru' : 'en';
+  const otherLabel = isRu ? 'Русский' : 'English';
+  const LANG_LABEL: Record<Direction, { from: string; to: string; sl: string; tl: string }> = {
+    'other-uz': { from: otherLabel, to: 'O\'zbekcha', sl: otherCode, tl: 'uz' },
+    'uz-other': { from: 'O\'zbekcha', to: otherLabel, sl: 'uz', tl: otherCode },
+  };
+
+  const [direction, setDirection] = useState<Direction>('other-uz');
   const [sourceText, setSourceText] = useState('');
   const [targetText, setTargetText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,7 +50,7 @@ export default function TranslatorScreen() {
   const labels = LANG_LABEL[direction];
 
   const handleSwap = () => {
-    setDirection((d) => (d === 'en-uz' ? 'uz-en' : 'en-uz'));
+    setDirection((d) => (d === 'other-uz' ? 'uz-other' : 'other-uz'));
     setSourceText(targetText);
     setTargetText(sourceText);
     setError(null);
