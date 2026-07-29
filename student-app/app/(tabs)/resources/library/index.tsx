@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -19,7 +19,12 @@ const libraryItems = [
 ];
 
 export default function LibraryScreen() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
+  // 12-vazifa: Rus tili kursi uchun bu kutubxona bo'limlari hali
+  // tayyorlanmagan (ichida hozircha ingliz tiliga oid resurslar yotibdi) -
+  // shu sabab rus kursi o'quvchilariga qulflangan holda, targ'ibot xabari
+  // bilan ko'rsatiladi (ichkariga kirgizmaydi).
+  const isLocked = courseLang === 'russian';
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title={t('res_library_title')} showBack />
@@ -35,9 +40,20 @@ export default function LibraryScreen() {
                 <Text style={styles.resourceTitle}>{t(item.titleKey)}</Text>
                 <Text style={styles.resourceCount}>{t(item.countKey)}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
+              <Ionicons
+                name={isLocked ? 'lock-closed' : 'chevron-forward'}
+                size={20}
+                color={theme.colors.textLight}
+              />
             </View>
           );
+          if (isLocked) {
+            return (
+              <Pressable key={item.route} onPress={() => Alert.alert(t(item.titleKey), t('res_lib_locked_body'))}>
+                <Card style={styles.resourceCard}>{content}</Card>
+              </Pressable>
+            );
+          }
           if (item.route) {
             return (
               <Pressable key={item.route} onPress={() => router.push(item.route as never)}>

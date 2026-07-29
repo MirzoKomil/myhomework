@@ -80,6 +80,7 @@ export const translations = {
     // Resurslar — Kutubxona (ro'yxat)
     res_library_title: 'Kutubxona',
     res_library_subtitle: "Qo'shimcha o'quv materiallari",
+    res_lib_locked_body: "Ushbu resurslardan siz kursimizni haqiqiy o'quvchisiga aylanib to'lov qilganingizda bepulga sovg'a qilinadi va ochib beriladi.\n\nDomwork o'quvchisiga aylaning va o'z ustingizda ishlang.",
     res_lib_item_grammar_title: "Grammatik qo'llanma",
     res_lib_item_grammar_count: '85 mavzu',
     res_lib_item_words_title: "So'zlar ro'yxati",
@@ -529,6 +530,7 @@ export const translations = {
 
     res_library_title: 'Библиотека',
     res_library_subtitle: 'Дополнительные учебные материалы',
+    res_lib_locked_body: 'Эти ресурсы будут подарены и открыты бесплатно, когда вы станете настоящим учеником нашего курса и оплатите обучение.\n\nСтаньте учеником Domwork и работайте над собой.',
     res_lib_item_grammar_title: 'Грамматический справочник',
     res_lib_item_grammar_count: '85 тем',
     res_lib_item_words_title: 'Список слов',
