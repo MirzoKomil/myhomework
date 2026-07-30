@@ -13167,15 +13167,53 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
     openTrialScheduleModal(lang, leadId, { isReschedule: false });
 }
 
+// 23-vazifa: qayta sinov darsi qo'yishdan oldin, avvalgi sinov darsi bilan
+// nima yuz berganini so'rash uchun.
+const TRIAL_LESSON_OUTCOME_REASONS = [
+    { id: 'teacher-late', label: "Ustoz vaqtida o'tmadi" },
+    { id: 'student-missed', label: "O'quvchi vaqtida qatnashmadi" },
+    { id: 'student-rescheduled', label: "O'quvchi boshqa vaqtga ko'chirdi" },
+    { id: 'teacher-rescheduled', label: "Ustoz boshqa vaqtga ko'chirdi" },
+    { id: 'attended-wants-other-teacher', label: "Qatnashdi, boshqa ustozni ham ko'rmoqchi" },
+];
+
 // 22-vazifa: lid allaqachon "Sinov darsida" ustunida turganda, izohlar
 // oynasidagi "Qayta sinov darsi qo'yish" tugmasi orqali yangi sana/vaqt/
-// o'qituvchi tanlab, sinov darsini qayta belgilash uchun.
+// o'qituvchi tanlab, sinov darsini qayta belgilash uchun. 23-vazifa: avval
+// avvalgi sinov darsi natijasi so'raladi, keyin jadval oynasiga o'tiladi.
 function openRescheduleTrialLessonModal(lang, leadId) {
-    openTrialScheduleModal(lang, leadId, { isReschedule: true });
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+
+    const reasonOptions = TRIAL_LESSON_OUTCOME_REASONS.map(r => `
+        <label class="lead-reason-option">
+            <input type="radio" name="trialOutcomeReason" value="${r.id}" data-reason-radio>
+            <span>${escapeHtml(r.label)}</span>
+        </label>`).join('');
+
+    openModal(
+        `${escapeHtml(lead.name)} — avvalgi sinov darsi`,
+        `<p class="lead-reason-subtitle">Avvalgi sinov darsi bilan nima yuz berdi?</p>
+         <div class="lead-reason-list">${reasonOptions}</div>`,
+        `<button type="button" class="btn-danger-sm" id="cancelTrialOutcome">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="confirmTrialOutcome">Davom etish</button>`
+    );
+
+    document.getElementById('cancelTrialOutcome').onclick = () => { closeModal(); renderLeads(); };
+    const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
+
+    document.getElementById('confirmTrialOutcome').onclick = () => {
+        const selected = modalBody?.querySelector('[data-reason-radio]:checked');
+        if (!selected) { showLeadModalValidation(modalBody, { error: 'Bitta variant tanlang', target: '[data-reason-radio]' }); return; }
+        const reason = TRIAL_LESSON_OUTCOME_REASONS.find(r => r.id === selected.value);
+        if (!reason) return;
+        openTrialScheduleModal(lang, leadId, { isReschedule: true, prevOutcome: reason });
+    };
 }
 
 function openTrialScheduleModal(lang, leadId, options = {}) {
-    const { isReschedule = false } = options;
+    const { isReschedule = false, prevOutcome = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
     // 5-ish: lang parametridan foydalanish (lead.language bilan bir xil, lekin ishonchli)
@@ -13250,6 +13288,7 @@ function openTrialScheduleModal(lang, leadId, options = {}) {
         const author = user?.name || 'Admin';
         const commentText = [
             `${isReschedule ? "Qayta sinov darsi tashkil qilindi" : "Sinov darsi belgilandi"}:`,
+            ...(prevOutcome ? [`• Avvalgi natija: ${prevOutcome.label}`] : []),
             `• O'qituvchi: ${teacherName}`,
             `• Kuni: ${dateLabel}${dayLabel}, ${time}`,
             `• Davomiyligi: ${count} kun`
