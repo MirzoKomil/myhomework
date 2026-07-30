@@ -6211,11 +6211,18 @@ function initTimetableControls() {
     }
 }
 
-function collectWeeklyScheduleEntries(filters) {
-    const patternDays = SCHEDULE_PATTERNS[filters.pattern]?.days || [];
+// 19-vazifa: Sotuv bo'limi tomonidan belgilangan sinov darslari ham shu
+// ustozning "Dars jadvali" sahifasida band bo'lib chiqishi kerak. Doimiy
+// o'quvchilar hamon haftalik takrorlanuvchi qoida bo'yicha `monthDays`dagi
+// HAR bir mos sanada band bo'ladi, sinov darslari esa (bir martalik voqea
+// bo'lgani uchun) faqat o'zining haqiqiy (getTrialLessonDates orqali
+// hisoblangan) sanalarida band bo'ladi - muddati o'tgan sinov darslari
+// butunlay hisobga olinmaydi (18-vazifa bilan bir xil mantiq).
+function collectWeeklyScheduleEntries(filters, monthDays) {
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const students = getItem(STORAGE_KEYS.students, []);
     const entries = [];
+    const days = monthDays || getTimetableMonthDays().days;
 
     students.forEach(s => {
         if (s.lessonDayOfWeek == null || !s.lessonTime) return;
@@ -6223,16 +6230,19 @@ function collectWeeklyScheduleEntries(filters) {
         if (!teacher) return;
         if (filters.lang && (s.subject || 'english') !== filters.lang) return;
         if (filters.teacherId !== 'all' && s.teacherId !== filters.teacherId) return;
-        const daysList = [1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [Number(s.lessonDayOfWeek)];
-        daysList.forEach(dow => {
+        const patternDays = expandLessonPatternDays(s.lessonDayOfWeek);
+        const duration = s.lessonDuration || teacher.lessonDuration || 15;
+        days.forEach(({ dow, dateKey }) => {
+            if (!patternDays.includes(dow)) return;
             entries.push({
                 studentId: s.id,
                 studentName: s.name,
                 teacherId: s.teacherId,
                 teacherName: teacher.name,
+                dateKey,
                 dayOfWeek: dow,
                 time: s.lessonTime,
-                duration: s.lessonDuration || teacher.lessonDuration || 15,
+                duration,
                 source: s.source === 'lead' ? 'lead' : 'student'
             });
         });
@@ -6248,26 +6258,44 @@ function collectWeeklyScheduleEntries(filters) {
         if (filters.lang && lang !== filters.lang) return;
         if (filters.teacherId !== 'all' && ob.teacherId !== filters.teacherId) return;
         const duration = getLeadLessonDuration(lead, teacher);
-        let daysList = [1, 3, 5].includes(Number(ob.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(ob.lessonDayOfWeek)) ? [2, 4, 6] : [Number(ob.lessonDayOfWeek)];
-        if (ob.isTrial && ob.trialDaysCount) {
-            const idx = daysList.indexOf(Number(ob.lessonDayOfWeek));
-            if (idx >= 0) {
-                const reordered = daysList.slice(idx).concat(daysList.slice(0, idx));
-                daysList = reordered.slice(0, ob.trialDaysCount);
-            }
-        }
-        daysList.forEach(dow => {
-            entries.push({
-                studentId: lead.serialCode || lead.id?.slice(0, 6) || 'LID',
-                studentName: lead.name,
-                teacherId: ob.teacherId,
-                teacherName: teacher.name,
-                dayOfWeek: dow,
-                time: ob.lessonTime,
-                duration,
-                source: ob.isTrial ? 'trial' : 'lead'
+        const studentId = lead.serialCode || lead.id?.slice(0, 6) || 'LID';
+
+        if (ob.isTrial) {
+            if (isTrialLessonExpired(lead)) return;
+            const trialDates = getTrialLessonDates(lead.trialLessonAt, ob.lessonDayOfWeek, ob.trialDaysCount);
+            trialDates.forEach(td => {
+                const dk = dateKeyOf(td);
+                const match = days.find(d => d.dateKey === dk);
+                if (!match) return; // ko'rsatilayotgan oy tashqarisida (yoki yakshanba)
+                entries.push({
+                    studentId,
+                    studentName: lead.name,
+                    teacherId: ob.teacherId,
+                    teacherName: teacher.name,
+                    dateKey: dk,
+                    dayOfWeek: match.dow,
+                    time: ob.lessonTime,
+                    duration,
+                    source: 'trial'
+                });
             });
-        });
+        } else {
+            const patternDays = expandLessonPatternDays(ob.lessonDayOfWeek);
+            days.forEach(({ dow, dateKey }) => {
+                if (!patternDays.includes(dow)) return;
+                entries.push({
+                    studentId,
+                    studentName: lead.name,
+                    teacherId: ob.teacherId,
+                    teacherName: teacher.name,
+                    dateKey,
+                    dayOfWeek: dow,
+                    time: ob.lessonTime,
+                    duration,
+                    source: 'lead'
+                });
+            });
+        }
     });
 
     return entries;
@@ -6279,12 +6307,12 @@ function buildScheduleCellMap(entries) {
     const times = generateTimeSlots();
 
     entries.forEach(entry => {
-        const key = `${entry.teacherId || 'all'}_${entry.dayOfWeek}_${entry.time}`;
+        const key = `${entry.teacherId || 'all'}_${entry.dateKey}_${entry.time}`;
         map.set(key, entry);
         const startIdx = times.indexOf(entry.time);
         const span = getLessonSlotSpan(entry.duration);
         for (let i = 1; i < span; i++) {
-            covered.add(`${entry.teacherId || 'all'}_${entry.dayOfWeek}_${times[startIdx + i]}`);
+            covered.add(`${entry.teacherId || 'all'}_${entry.dateKey}_${times[startIdx + i]}`);
         }
     });
 
@@ -6311,7 +6339,7 @@ function getTimetableMonthDays() {
         const date = new Date(year, month, d);
         const jsDow = date.getDay(); // 0=Yakshanba..6=Shanba
         if (jsDow === 0) continue; // Yakshanba oddiy jadvalga kirmaydi (Bonus kun)
-        days.push({ day: d, dow: jsDow }); // JS getDay() 1..6 DAYS_UZ'dagi 1..6 (Dush..Shan) bilan bir xil
+        days.push({ day: d, dow: jsDow, dateKey: dateKeyOf(date) }); // JS getDay() 1..6 DAYS_UZ'dagi 1..6 (Dush..Shan) bilan bir xil
     }
     return { year, month, days };
 }
@@ -6330,8 +6358,8 @@ function renderTimetableTeacherGrid(teacher, entries) {
 
     times.forEach(time => {
         html += `<tr><td class="tt-time-col">${time}</td>`;
-        monthDays.forEach(({ dow }) => {
-            const cellKey = `${teacher.id}_${dow}_${time}`;
+        monthDays.forEach(({ dow, dateKey }) => {
+            const cellKey = `${teacher.id}_${dateKey}_${time}`;
             if (covered.has(cellKey)) return;
             const entry = map.get(cellKey);
             if (entry) {
@@ -6485,11 +6513,11 @@ function renderTimetable() {
     }
     // 17-vazifa: kartochka sarlavhasiga joriy oy va yilni chiqarish - jadval
     // shu oyning haqiqiy kunlarini ko'rsatadi va oy almashganda o'zi yangilanadi.
+    const { year: ttYear, month: ttMonth, days: ttMonthDays } = getTimetableMonthDays();
     const cardTitleEl = document.getElementById('timetableCardTitle');
     if (cardTitleEl) {
         const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
-        const { year, month } = getTimetableMonthDays();
-        cardTitleEl.textContent = `Oylik jadval — ${monthNames[month]} ${year}`;
+        cardTitleEl.textContent = `Oylik jadval — ${monthNames[ttMonth]} ${ttYear}`;
     }
 
     const container = document.getElementById('timetableContainer');
@@ -6512,7 +6540,7 @@ function renderTimetable() {
             container.innerHTML = '<p class="text-muted" style="padding:24px">Sizga hali dars jadvali biriktirilmagan.</p>';
             return;
         }
-        const ownEntries = collectWeeklyScheduleEntries({ ...filters, teacherId: ownTeacher.id, lang: null });
+        const ownEntries = collectWeeklyScheduleEntries({ ...filters, teacherId: ownTeacher.id, lang: null }, ttMonthDays);
         container.innerHTML = `<div class="tt-grid-header"><strong>${escapeHtml(ownTeacher.name)}</strong> · ${escapeHtml(patternLabel)}</div>`
             + renderTimetableTeacherGrid(ownTeacher, ownEntries, filters.pattern);
         wireTimetableCells();
@@ -6522,7 +6550,7 @@ function renderTimetable() {
     // 5-ish: HR xodimlar bilan integratsiya + til filtri
     const teachers = filterTeachersByTypeAndSubject('asosiy', filters.lang || 'english');
 
-    const entries = collectWeeklyScheduleEntries(filters);
+    const entries = collectWeeklyScheduleEntries(filters, ttMonthDays);
 
     if (!teachers.length) {
         container.innerHTML = '<p class="text-muted" style="padding:24px">Tanlangan filtrlarga mos ustoz topilmadi.</p>';
