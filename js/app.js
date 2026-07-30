@@ -12324,6 +12324,7 @@ async function _smsFetchHistory() {
                         <th style="padding:6px 8px">Telefon</th>
                         <th style="padding:6px 8px">Xabar</th>
                         <th style="padding:6px 8px">Holat</th>
+                        <th style="padding:6px 8px">Sabab</th>
                         <th style="padding:6px 8px">Vaqt</th>
                     </tr>
                 </thead>
@@ -12336,6 +12337,7 @@ async function _smsFetchHistory() {
                             <td style="padding:6px 8px">${h.status === 'sent'
                                 ? '<span style="color:#059669">Yuborildi</span>'
                                 : `<span style="color:#DC2626" title="${escapeHtml(h.error || '')}">Xato</span>`}</td>
+                            <td style="padding:6px 8px;max-width:300px;color:${h.status === 'sent' ? 'var(--text-muted)' : '#DC2626'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(h.error || '')}">${h.status === 'sent' ? '&mdash;' : escapeHtml(h.error || 'Sabab qaytmadi')}</td>
                             <td style="padding:6px 8px;color:var(--text-muted)">${escapeHtml(new Date(h.sentAt).toLocaleString('uz-UZ'))}</td>
                         </tr>`).join('')}
                 </tbody>
@@ -12370,8 +12372,11 @@ async function _smsHandleSend() {
     resultEl.textContent = '';
     try {
         const res = await apiSendSms(recipients, message, _smsAudience);
+        const errors = (res.results || []).filter(item => item.status === 'error')
+            .map(item => item.error).filter(Boolean);
         resultEl.innerHTML = `<span style="color:#059669">${res.sent} ta yuborildi</span>` +
-            (res.failed ? `, <span style="color:#DC2626">${res.failed} ta xato</span>` : '');
+            (res.failed ? `, <span style="color:#DC2626">${res.failed} ta xato</span>` : '') +
+            (errors.length ? `<div style="margin-top:6px;color:#DC2626">Sabab: ${escapeHtml(errors.slice(0, 3).join('; '))}</div>` : '');
         document.getElementById('smsMessage').value = '';
         _smsUpdateCharCount();
         _smsSelected.clear();
