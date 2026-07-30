@@ -6291,22 +6291,46 @@ function buildScheduleCellMap(entries) {
     return { map, covered };
 }
 
+// 17-vazifa: "Dars jadvali" avval umumiy haftalik namuna (Dushanba..Shanba
+// ustunlari) sifatida chiqardi, haqiqiy sanalarga bog'liq emasdi. Endi
+// joriy oyning HAQIQIY kunlari (1-sanadan oxirgi kunigacha, yakshanba —
+// bonus kuni bo'lgani uchun bu jadvalga kirmaydi) ustun sifatida
+// chiqariladi. Bandlik hali ham haftalik takrorlanuvchi qoida (dayOfWeek)
+// asosida hisoblanadi — shu sabab bitta o'quvchining dars kuni oy davomida
+// takrorlanadigan HAR bir mos sanada avtomatik band bo'lib chiqadi, alohida
+// har bir sana uchun qayta belgilash shart emas. Oy almashganda `new
+// Date()` joriy oyni qaytaradi, shuning uchun jadval o'zi yangi oyga
+// avtomatik o'tadi — hech qanday saqlangan holat yo'q.
+function getTimetableMonthDays() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let d = 1; d <= lastDay; d++) {
+        const date = new Date(year, month, d);
+        const jsDow = date.getDay(); // 0=Yakshanba..6=Shanba
+        if (jsDow === 0) continue; // Yakshanba oddiy jadvalga kirmaydi (Bonus kun)
+        days.push({ day: d, dow: jsDow }); // JS getDay() 1..6 DAYS_UZ'dagi 1..6 (Dush..Shan) bilan bir xil
+    }
+    return { year, month, days };
+}
+
 function renderTimetableTeacherGrid(teacher, entries) {
-    const days = [1, 2, 3, 4, 5, 6];
+    const { days: monthDays } = getTimetableMonthDays();
     const times = generateTimeSlots();
     const { map, covered } = buildScheduleCellMap(entries.filter(e => e.teacherId === teacher.id));
     const workSlots = teacher.workSlots ? new Set(teacher.workSlots) : null;
 
     let html = `<table class="table tt-week-table"><thead><tr><th class="tt-time-col">Vaqt</th>`;
-    days.forEach(dow => {
-        const isSunday = dow === 7;
-        html += `<th${isSunday ? ' style="color:#DC2626"' : ''}>${escapeHtml(DAYS_UZ[dow - 1] || '')}</th>`;
+    monthDays.forEach(({ day, dow }) => {
+        html += `<th><span class="tt-date-num">${day}</span><span class="tt-date-dow">${escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 3))}</span></th>`;
     });
     html += '</tr></thead><tbody>';
 
     times.forEach(time => {
         html += `<tr><td class="tt-time-col">${time}</td>`;
-        days.forEach(dow => {
+        monthDays.forEach(({ dow }) => {
             const cellKey = `${teacher.id}_${dow}_${time}`;
             if (covered.has(cellKey)) return;
             const entry = map.get(cellKey);
@@ -6320,11 +6344,10 @@ function renderTimetableTeacherGrid(teacher, entries) {
             } else {
                 const key = `${dow}_${time}`;
                 const isOff = workSlots && !workSlots.has(key);
-                const isSunday = dow === 7;
                 if (isOff) {
                     html += `<td class="tt-cell tt-cell--off" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Ishlashi belgilanmagan"></td>`;
                 } else {
-                    html += `<td class="tt-cell tt-cell--free${isSunday ? ' tt-cell--sunday' : ''}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Bo'sh — bosing"></td>`;
+                    html += `<td class="tt-cell tt-cell--free" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" title="Bo'sh — bosing"></td>`;
                 }
             }
         });
@@ -6459,6 +6482,14 @@ function renderTimetable() {
     const patternLabel = SCHEDULE_PATTERNS[filters.pattern]?.label || '';
     if (titleEl) {
         titleEl.textContent = `Dars jadvali — ${SUBJECTS[filters.lang]?.label || filters.lang || 'Ingliz tili'}`;
+    }
+    // 17-vazifa: kartochka sarlavhasiga joriy oy va yilni chiqarish - jadval
+    // shu oyning haqiqiy kunlarini ko'rsatadi va oy almashganda o'zi yangilanadi.
+    const cardTitleEl = document.getElementById('timetableCardTitle');
+    if (cardTitleEl) {
+        const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+        const { year, month } = getTimetableMonthDays();
+        cardTitleEl.textContent = `Oylik jadval — ${monthNames[month]} ${year}`;
     }
 
     const container = document.getElementById('timetableContainer');

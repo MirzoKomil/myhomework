@@ -2199,6 +2199,22 @@ body {
     z-index: 2;
 }
 
+.tt-date-num {
+    display: block;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.tt-date-dow {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
 .tt-time-col,
 .tt-teacher-col {
     position: sticky;
