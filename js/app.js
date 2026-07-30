@@ -6204,7 +6204,8 @@ function initTimetableControls() {
         });
         if (btnEdit) {
             btnEdit.addEventListener('click', () => {
-                openTeacherWorkScheduleModal(teacherEl.value === 'all' ? null : teacherEl.value);
+                const liveFilters = getTimetableFilters();
+                openTeacherWorkScheduleModal(teacherEl.value === 'all' ? null : teacherEl.value, liveFilters.lang || 'english');
             });
         }
     }
@@ -17351,18 +17352,34 @@ function initLeadDragDrop(board) {
     });
 }
 
-function openTeacherWorkScheduleModal(initialTeacherId) {
-    // 5-ish: HR xodimlar + til filtri (joriy tabContext'dan)
-    const _wsSubject = _tabContext?.subject || 'english';
+function openTeacherWorkScheduleModal(initialTeacherId, subject) {
+    // 16-vazifa: avval bu yerda joriy tildan qat'i nazar har doim
+    // _tabContext.subject (odatda 'english') ishlatilardi - shu sabab
+    // Dars jadvali "Rus tili" tabida ochilganda ustozlar ro'yxati baribir
+    // ingliz tili ustozlari bo'lib qolardi va oldindan tanlangan rus tili
+    // ustozi ro'yxatda topilmasdi. Endi chaqiruvchi joriy til filtrini
+    // (filters.lang) to'g'ridan-to'g'ri uzatadi.
+    const _wsSubject = subject || _tabContext?.subject || 'english';
     const teachers = filterTeachersByTypeAndSubject('asosiy', _wsSubject);
     const options = `<option value="">— Tanlang —</option>` +
         teachers.map(t => `<option value="${t.id}" ${t.id === initialTeacherId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
 
-    openModal("Ustoz ish jadvalini sozlash",
-        `<div class="form-group">
+    // 16-vazifa: agar allaqachon aniq bir ustoz tanlangan bo'lsa (jadval
+    // sahifasidagi "Barcha ustozlar" emas), qayta ustoz tanlashni so'ramay,
+    // to'g'ridan-to'g'ri o'sha ustozning jadval tahrirlash oynasi ochilsin.
+    const preselectedTeacher = initialTeacherId ? teachers.find(t => t.id === initialTeacherId) : null;
+    const teacherFieldHtml = preselectedTeacher
+        ? `<div class="form-group">
+            <label>O'qituvchi</label>
+            <p class="text-muted" style="margin:0;font-weight:600;color:var(--text)">${escapeHtml(preselectedTeacher.name)}</p>
+        </div>`
+        : `<div class="form-group">
             <label>O'qituvchi</label>
             <select id="workScheduleTeacher" class="form-control">${options}</select>
-        </div>
+        </div>`;
+
+    openModal("Ustoz ish jadvalini sozlash",
+        `${teacherFieldHtml}
         <div id="workScheduleGridContainer"></div>`,
         `<button type="button" class="btn-danger-sm" id="cancelWorkSchedule">Yopish</button>
          <button type="button" class="btn-primary-sm" id="saveWorkSchedule">Saqlash</button>`
@@ -17371,7 +17388,7 @@ function openTeacherWorkScheduleModal(initialTeacherId) {
     document.getElementById('cancelWorkSchedule').onclick = () => closeModal();
 
     let currentWorkSlots = null;
-    let selectedTeacherId = initialTeacherId;
+    let selectedTeacherId = preselectedTeacher ? initialTeacherId : null;
 
     const renderGrid = () => {
         const container = document.getElementById('workScheduleGridContainer');
@@ -17447,7 +17464,7 @@ function openTeacherWorkScheduleModal(initialTeacherId) {
     };
 
     const selectEl = document.getElementById('workScheduleTeacher');
-    selectEl.addEventListener('change', () => {
+    selectEl?.addEventListener('change', () => {
         selectedTeacherId = selectEl.value;
         currentWorkSlots = null;
         renderGrid();
