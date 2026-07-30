@@ -13118,6 +13118,15 @@ function dispatchLeadTargetFlow(lang, leadId, fromStatus, toStatus) {
     moveLeadToStatus(lang, leadId, toStatus);
 }
 
+// 20-vazifa: "Qaror jarayonida" so'rovnomasi lid o'ylab ko'rish uchun vaqt
+// so'rab, keyin qaror qabul qilayotgan holat uchun mo'ljallangan. Lid
+// boshqa ustunlarni chetlab o'tib to'g'ridan-to'g'ri "To'lov jarayonida"ga
+// (yoki undan oldingi "Sinov darsida"ga — bu SURVEY_CASCADE_TARGETS orqali
+// alohida hisoblanadi) ko'chirilsa, demak u o'ylab o'tirmasdan sinov
+// darsiga rozi bo'lgan yoki darhol to'lov qilgan - shu sabab bu holatda
+// "qaror-jarayonida" so'rovnomasi CHIQMAYDI, faqat lid TO'G'RIDAN-TO'G'RI
+// qaror-jarayonida ustuniga ko'chirilganda chiqadi (getSkippedSurveySteps
+// bilan bir xil qoida).
 function getPendingSurveyStepsBeforePayment(fromStatus) {
     const fromIdx = getLeadColumnIndex(fromStatus);
     const paymentIdx = getLeadColumnIndex('tolov-jarayonida');
@@ -13129,7 +13138,6 @@ function getPendingSurveyStepsBeforePayment(fromStatus) {
         if (col.id === 'sinov-darsida') continue;
         if (col.id === 'boglanildi') steps.push('connected');
         else if (col.id === 'malumot-berildi') steps.push('info');
-        else if (col.id === 'qaror-jarayonida') steps.push('decision');
     }
     return steps;
 }
