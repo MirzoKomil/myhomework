@@ -13154,12 +13154,16 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
 
     const modalBody = document.getElementById('modalBody');
     wireLeadModalValidationClear(modalBody);
-    wireTeacherSchedulePicker(modalBody, { lead });
+    // 18-vazifa: sinov darsi bir martalik voqea - haftalik takrorlanuvchi
+    // pattern (3 kun) o'rniga haqiqiy sanalar bilan to'liq hafta (yakshanba
+    // ham) ko'rsatiladi, o'tib ketgan sana/soat tanlab bo'lmaydi.
+    wireTeacherSchedulePicker(modalBody, { lead, isTrial: true });
 
     document.getElementById('confirmTrialFlow').onclick = () => {
         const teacherId = document.getElementById('onboardTeacherId').value;
         const count = parseInt(document.getElementById('trialDaysCount').value, 10);
         const day = modalBody.dataset.onboardScheduleDay;
+        const dateKey = modalBody.dataset.onboardScheduleDate;
         const time = modalBody.dataset.onboardScheduleTime;
 
         if (!teacherId || !day || !time) {
@@ -13177,14 +13181,22 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
         onboarding.trialDaysCount = count;
         onboarding.isTrial = true;
 
+        // 18-vazifa: sana pikerda to'g'ridan-to'g'ri tanlangani uchun
+        // "keyingi mos hafta kuni"ni hisoblab o'tirish shart emas - aynan
+        // shu bosilgan sanadan foydalanamiz.
+        const trialLessonAt = dateKey
+            ? new Date(`${dateKey}T${time}:00`).toISOString()
+            : getTrialLessonTimestamp(day, time);
+
         const teacherName = teachers.find(t => t.id === teacherId)?.name || '—';
         const dayLabel = DAYS_UZ[parseInt(day, 10) - 1] || '';
+        const dateLabel = dateKey ? dateKey.split('-').reverse().join('.') + ', ' : '';
         const user = getCurrentUser();
         const author = user?.name || 'Admin';
         const commentText = [
             "Sinov darsi belgilandi:",
             `• O'qituvchi: ${teacherName}`,
-            `• Kuni: ${dayLabel}, ${time}`,
+            `• Kuni: ${dateLabel}${dayLabel}, ${time}`,
             `• Davomiyligi: ${count} kun`
         ].join('\n');
 
@@ -13195,7 +13207,7 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
                 status: 'sinov-darsida',
                 paymentOnboarding: onboarding,
                 // Sinov darsi uchun SLA darsning aniq rejalashtirilgan vaqtiga bog'liq.
-                trialLessonAt: getTrialLessonTimestamp(day, time),
+                trialLessonAt,
                 comments: [...base.comments, createLeadComment({
                     type: 'trial-lesson',
                     text: commentText,
@@ -14492,6 +14504,72 @@ function getTeacherLessonDays(teacher) {
     return pattern.days;
 }
 
+// 18-vazifa: DAYS_UZ konventsiyasi (1=Dushanba..7=Yakshanba) bilan JS
+// Date.getDay() konventsiyasi (0=Yakshanba..6=Shanba) orasidagi o'girish.
+function uzDowToJsDay(dow) {
+    return dow === 7 ? 0 : dow;
+}
+function jsDayToUzDow(jsDay) {
+    return jsDay === 0 ? 7 : jsDay;
+}
+
+function dateKeyOf(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// O'quvchining/lidning dars kuni maydonida faqat bitta kun saqlanadi, lekin
+// bu ustozning toq (Dush/Chor/Juma) yoki juft (Sesh/Pay/Shan) patternidagi
+// UCHALA kunini ham anglatadi - shu sabab boshqa joylarda ham (masalan
+// collectWeeklyScheduleEntries, getTeacherBusyWeeklySlots) shu mantiq
+// takrorlanadi.
+function expandLessonPatternDays(day) {
+    const d = Number(day);
+    if ([1, 3, 5].includes(d)) return [1, 3, 5];
+    if ([2, 4, 6].includes(d)) return [2, 4, 6];
+    return [d];
+}
+
+// 18-vazifa: Sinov darsi bir martalik voqea - qaysi haqiqiy sanalarga
+// to'g'ri kelishini lead.trialLessonAt (birinchi sinov kuni) dan boshlab,
+// ustozning dars kuni patterni bo'yicha keyingi kunlarga davom ettirib
+// hisoblaydi (masalan 3 kunlik sinov: Dushanba, Chorshanba, Juma).
+function getTrialLessonDates(trialLessonAt, dayOfWeek, trialDaysCount) {
+    if (!trialLessonAt) return [];
+    const start = new Date(trialLessonAt);
+    if (Number.isNaN(start.getTime())) return [];
+    const patternDays = expandLessonPatternDays(dayOfWeek);
+    const count = Math.max(1, Number(trialDaysCount) || 1);
+    const dates = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    let guard = 0;
+    while (dates.length < count && guard < 30) {
+        if (patternDays.includes(jsDayToUzDow(cursor.getDay()))) {
+            dates.push(new Date(cursor));
+        }
+        cursor.setDate(cursor.getDate() + 1);
+        guard++;
+    }
+    return dates;
+}
+
+// 18-vazifa: bitta martalik sinov darsining oxirgi (yoki yagona) kuni +
+// dars davomiyligi allaqachon o'tib ketgan bo'lsa, ustozning shu vaqti endi
+// band emas - dars o'tdimi yo'qmi, u baribir takrorlanmaydi, shuning uchun
+// jadvalda abadiy "band" bo'lib turmasligi kerak.
+function isTrialLessonExpired(lead) {
+    const onboarding = lead?.paymentOnboarding;
+    if (!onboarding?.isTrial || !lead.trialLessonAt) return false;
+    const dates = getTrialLessonDates(lead.trialLessonAt, onboarding.lessonDayOfWeek, onboarding.trialDaysCount);
+    if (!dates.length) return false;
+    const last = dates[dates.length - 1];
+    const [h, m] = String(onboarding.lessonTime || '00:00').split(':').map(Number);
+    const lastEnd = new Date(last.getFullYear(), last.getMonth(), last.getDate(), Number.isFinite(h) ? h : 0, Number.isFinite(m) ? m : 0, 0, 0);
+    const teacher = resolveTeacherWithVirtual(onboarding.teacherId);
+    const duration = getLeadLessonDuration(lead, teacher);
+    lastEnd.setMinutes(lastEnd.getMinutes() + (Number(duration) || 15));
+    return Date.now() >= lastEnd.getTime();
+}
+
 function weeklyLessonSlotKey(dayOfWeek, time) {
     return `${dayOfWeek}_${time}`;
 }
@@ -14531,6 +14609,9 @@ function getTeacherBusyWeeklySlots(teacherId, excludeStudentId = null, excludeLe
         const onboarding = lead.paymentOnboarding;
         if (!onboarding || onboarding.teacherId !== teacherId) return;
         if (onboarding.lessonDayOfWeek == null || !onboarding.lessonTime) return;
+        // 18-vazifa: bir martalik sinov darsining sanasi o'tib ketgan bo'lsa,
+        // ustozning bu vaqti endi abadiy "band" bo'lib turmasligi kerak.
+        if (onboarding.isTrial && isTrialLessonExpired(lead)) return;
         const teacher = teachers.find(t => t.id === teacherId);
         const duration = getLeadLessonDuration(lead, teacher);
         let daysList = [1, 3, 5].includes(Number(onboarding.lessonDayOfWeek)) ? [1, 3, 5] : [2, 4, 6].includes(Number(onboarding.lessonDayOfWeek)) ? [2, 4, 6] : [Number(onboarding.lessonDayOfWeek)];
@@ -14610,11 +14691,20 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) 
         return;
     }
 
-    const { lead = null } = options;
+    const { lead = null, isTrial = false } = options;
     const lessonDuration = options.lessonDuration || getLeadLessonDuration(lead, teacher);
+    const times = generateTimeSlots();
+
+    // 18-vazifa: sinov darsi bir martalik voqea - ustozning 3 kunlik
+    // takrorlanuvchi patterni o'rniga haqiqiy sanalar bilan to'liq hafta
+    // (yakshanba ham) ko'rsatiladi, o'tib ketgan sana/soat band deb chiqadi.
+    if (isTrial) {
+        renderOnboardTrialSchedulePicker(modalBody, container, selectedEl, teacher, lead, lessonDuration, times);
+        return;
+    }
+
     const lessonDays = getTeacherLessonDays(teacher);
     const busyMap = getTeacherBusyWeeklySlots(teacherId, null, lead?.id || null);
-    const times = generateTimeSlots();
     const patternLabel = SCHEDULE_PATTERNS[teacher.schedulePattern || 'mwf']?.label || '';
 
     let html = `<p class="lead-survey-sub">${escapeHtml(teacher.name)} — ${escapeHtml(patternLabel)} · ${lessonDuration} daqiqa</p>`;
@@ -14688,8 +14778,175 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) 
     }
 }
 
+function canFitDateLesson(busyMap, dateKey, time, duration) {
+    const slots = generateTimeSlots();
+    const startIdx = slots.indexOf(time);
+    if (startIdx < 0) return false;
+    const span = getLessonSlotSpan(duration);
+    for (let i = 0; i < span; i++) {
+        const t = slots[startIdx + i];
+        if (!t || busyMap.has(`${dateKey}_${t}`)) return false;
+    }
+    return true;
+}
+
+// 18-vazifa: Sinov darsi pikeri uchun sanaga bog'liq bandlik xaritasi.
+// Doimiy o'quvchilar/lidlar hamon har hafta takrorlanadi (patterndagi HAR
+// bir kunga mos sanada band), sinov darslari esa faqat o'zining haqiqiy
+// (getTrialLessonDates orqali hisoblangan) sanalarida band bo'ladi - muddati
+// o'tgan sinov darslari umuman hisobga olinmaydi.
+function getTeacherBusyForDateColumns(teacherId, columns, excludeLeadId = null) {
+    const busy = new Map();
+    const teacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === teacherId) || resolveTeacherWithVirtual(teacherId);
+
+    const markBusy = (dateKey, time, duration, meta) => {
+        const slots = generateTimeSlots();
+        const startIdx = slots.indexOf(time);
+        if (startIdx < 0) return;
+        const span = getLessonSlotSpan(duration);
+        for (let i = 0; i < span; i++) {
+            const t = slots[startIdx + i];
+            if (!t) break;
+            busy.set(`${dateKey}_${t}`, { ...meta, isStart: i === 0, span, startTime: time });
+        }
+    };
+
+    const students = getItem(STORAGE_KEYS.students, []);
+    students.forEach(s => {
+        if (s.teacherId !== teacherId || s.lessonDayOfWeek == null || !s.lessonTime) return;
+        const patternDays = expandLessonPatternDays(s.lessonDayOfWeek);
+        const duration = s.lessonDuration || teacher?.lessonDuration || 15;
+        columns.forEach(({ date, dow }) => {
+            if (!patternDays.includes(dow)) return;
+            markBusy(dateKeyOf(date), s.lessonTime, duration, { label: s.name || "O'quvchi", studentId: s.id, source: 'student' });
+        });
+    });
+
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    [...(leads.english || []), ...(leads.russian || [])].forEach(lead => {
+        if (excludeLeadId && lead.id === excludeLeadId) return;
+        const onboarding = lead.paymentOnboarding;
+        if (!onboarding || onboarding.teacherId !== teacherId) return;
+        if (onboarding.lessonDayOfWeek == null || !onboarding.lessonTime) return;
+        const duration = getLeadLessonDuration(lead, teacher);
+        if (onboarding.isTrial) {
+            if (isTrialLessonExpired(lead)) return;
+            const trialDates = getTrialLessonDates(lead.trialLessonAt, onboarding.lessonDayOfWeek, onboarding.trialDaysCount);
+            trialDates.forEach(td => {
+                const dateKey = dateKeyOf(td);
+                if (!columns.some(c => dateKeyOf(c.date) === dateKey)) return;
+                markBusy(dateKey, onboarding.lessonTime, duration, { label: lead.name || 'Lid', studentId: lead.serialCode || 'LID', source: 'trial' });
+            });
+        } else {
+            const patternDays = expandLessonPatternDays(onboarding.lessonDayOfWeek);
+            columns.forEach(({ date, dow }) => {
+                if (!patternDays.includes(dow)) return;
+                markBusy(dateKeyOf(date), onboarding.lessonTime, duration, { label: lead.name || 'Lid', studentId: lead.serialCode || 'LID', source: 'lead' });
+            });
+        }
+    });
+
+    return busy;
+}
+
+// 18-vazifa: sinov darsi tanlagichi - bugundan boshlab keyingi 7 kun
+// (yakshanba ham) haqiqiy sanalar bilan ko'rsatiladi. O'tib ketgan sana
+// umuman ro'yxatga kirmaydi, bugungi o'tib ketgan soatlar esa "band" deb
+// belgilanadi (tanlab bo'lmaydi).
+function renderOnboardTrialSchedulePicker(modalBody, container, selectedEl, teacher, lead, lessonDuration, times) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const columns = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        columns.push({ date, dow: jsDayToUzDow(date.getDay()) });
+    }
+
+    const busyMap = getTeacherBusyForDateColumns(teacher.id, columns, lead?.id || null);
+    const now = new Date();
+    const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let html = `<p class="lead-survey-sub">${escapeHtml(teacher.name)} — ${lessonDuration} daqiqa</p>`;
+    html += `<div class="onboard-schedule-legend">
+        <span class="onboard-schedule-legend-item onboard-schedule-legend-item--free">Bo'sh</span>
+        <span class="onboard-schedule-legend-item onboard-schedule-legend-item--busy">Band</span>
+        <span class="onboard-schedule-legend-item onboard-schedule-legend-item--picked">Tanlangan</span>
+    </div>`;
+    html += `<div class="onboard-schedule-grid" style="--osd-cols:${columns.length}">`;
+    html += '<div class="onboard-schedule-corner"></div>';
+    columns.forEach(({ date, dow }) => {
+        html += `<div class="onboard-schedule-day"><span class="tt-date-num">${date.getDate()}</span><span class="tt-date-dow">${escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 3))}</span></div>`;
+    });
+
+    times.forEach(time => {
+        html += `<div class="onboard-schedule-time">${time}</div>`;
+        columns.forEach(({ date, dow }, colIdx) => {
+            const dateKey = dateKeyOf(date);
+            const isPastTime = colIdx === 0 && time <= nowStr;
+            const key = `${dateKey}_${time}`;
+            const busy = busyMap.get(key);
+            if (isPastTime) {
+                html += `<div class="onboard-schedule-cell onboard-schedule-cell--busy" title="O'tib ketgan vaqt">—</div>`;
+            } else if (busy) {
+                const display = busy.studentId || busy.label || 'Band';
+                const title = busy.label ? `Band: ${busy.label}` : 'Band';
+                html += `<div class="onboard-schedule-cell onboard-schedule-cell--busy" title="${escapeHtml(title)}">${escapeHtml(display)}</div>`;
+            } else if (!canFitDateLesson(busyMap, dateKey, time, lessonDuration)) {
+                html += `<div class="onboard-schedule-cell onboard-schedule-cell--busy" title="Yetarli bo'sh vaqt yo'q">—</div>`;
+            } else {
+                html += `<div class="onboard-schedule-cell onboard-schedule-cell--free" data-onboard-schedule-slot data-day="${dow}" data-date="${dateKey}" data-time="${time}" tabindex="0" role="button" title="Bo'sh vaqt">Bo'sh</div>`;
+            }
+        });
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    const pickCell = cell => {
+        container.querySelectorAll('.onboard-schedule-cell--picked').forEach(c => {
+            c.classList.remove('onboard-schedule-cell--picked');
+            c.classList.add('onboard-schedule-cell--free');
+            c.textContent = 'Bo\'sh';
+        });
+        cell.classList.remove('onboard-schedule-cell--free');
+        cell.classList.add('onboard-schedule-cell--picked');
+        cell.textContent = 'Tanlandi';
+        const dow = parseInt(cell.dataset.day, 10);
+        const dateKey = cell.dataset.date;
+        const time = cell.dataset.time;
+        modalBody.dataset.onboardScheduleDay = String(dow);
+        modalBody.dataset.onboardScheduleDate = dateKey;
+        modalBody.dataset.onboardScheduleTime = time;
+        if (selectedEl) {
+            const dateLabel = dateKey.split('-').reverse().join('.');
+            selectedEl.textContent = `Tanlangan: ${dateLabel}, ${DAYS_UZ[dow - 1] || ''} — ${time} (${lessonDuration} daqiqa)`;
+        }
+    };
+
+    container.querySelectorAll('[data-onboard-schedule-slot]').forEach(cell => {
+        const activate = () => pickCell(cell);
+        cell.addEventListener('click', activate);
+        cell.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+            }
+        });
+    });
+
+    const savedDate = modalBody.dataset.onboardScheduleDate;
+    const savedTime = modalBody.dataset.onboardScheduleTime;
+    if (savedDate && savedTime) {
+        const savedCell = container.querySelector(`[data-date="${savedDate}"][data-time="${savedTime}"]`);
+        if (savedCell) pickCell(savedCell);
+        else if (selectedEl) selectedEl.textContent = '';
+    } else if (selectedEl) {
+        selectedEl.textContent = '';
+    }
+}
+
 function wireTeacherSchedulePicker(modalBody, options = {}) {
-    const { lead = null } = options;
+    const { lead = null, isTrial = false } = options;
     const existing = lead?.paymentOnboarding;
     if (lead?.id) modalBody.dataset.onboardScheduleLeadId = lead.id;
     if (existing?.teacherId) {
@@ -14720,6 +14977,7 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
                 scheduleBlock.style.display = 'none';
             }
             delete modalBody.dataset.onboardScheduleDay;
+            delete modalBody.dataset.onboardScheduleDate;
             delete modalBody.dataset.onboardScheduleTime;
             const selectedEl = modalBody.querySelector('#onboardScheduleSelected');
             if (selectedEl) selectedEl.textContent = '';
@@ -14729,16 +14987,18 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         scheduleBlock.style.display = '';
         const teacher = resolveTeacherWithVirtual(teacherId);
         const lessonDuration = Number(durationSel?.value) || getLeadLessonDuration(lead, teacher);
-        renderOnboardTeacherSchedulePicker(modalBody, teacherId, { lead, lessonDuration });
+        renderOnboardTeacherSchedulePicker(modalBody, teacherId, { lead, lessonDuration, isTrial });
     };
 
     teacherSel?.addEventListener('change', () => {
         delete modalBody.dataset.onboardScheduleDay;
+        delete modalBody.dataset.onboardScheduleDate;
         delete modalBody.dataset.onboardScheduleTime;
         syncTeacherSchedule();
     });
     durationSel?.addEventListener('change', () => {
         delete modalBody.dataset.onboardScheduleDay;
+        delete modalBody.dataset.onboardScheduleDate;
         delete modalBody.dataset.onboardScheduleTime;
         syncTeacherSchedule();
     });
@@ -15940,13 +16200,18 @@ const LEAD_SLA_RULES = {
     }
 };
 
+// Zaxira funksiya - odatda sinov darsi sanasi to'g'ridan-to'g'ri
+// pikerdan tanlanadi (18-vazifa), bu yerga faqat data-date topilmagan
+// holatlar uchun murojaat qilinadi. `day` DAYS_UZ konventsiyasida
+// (1=Dushanba..7=Yakshanba) keladi - JS Date.getDay()ga o'girib olinadi.
 function getTrialLessonTimestamp(day, time) {
-    const weekday = Number(day);
+    const uzDow = Number(day);
     const parts = String(time || '').split(':').map(Number);
-    if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6 || !Number.isFinite(parts[0])) return null;
+    if (!Number.isInteger(uzDow) || uzDow < 1 || uzDow > 7 || !Number.isFinite(parts[0])) return null;
+    const jsWeekday = uzDowToJsDay(uzDow);
     const now = new Date();
     const result = new Date(now);
-    result.setDate(now.getDate() + ((weekday - now.getDay() + 7) % 7));
+    result.setDate(now.getDate() + ((jsWeekday - now.getDay() + 7) % 7));
     result.setHours(parts[0], Number.isFinite(parts[1]) ? parts[1] : 0, 0, 0);
     if (result.getTime() <= now.getTime()) result.setDate(result.getDate() + 7);
     return result.toISOString();
