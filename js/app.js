@@ -16824,14 +16824,30 @@ function openLeadSmsTemplateModal(lang, leadId) {
            </label>`).join('')}
          </div>`,
         `<button type="button" class="btn-ghost" id="leadSmsCancelBtn">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="leadSmsSendBtn">SMS oynasini ochish</button>`
+         <button type="button" class="btn-primary-sm" id="leadSmsSendBtn">SMS yuborish</button>`
     );
     document.getElementById('leadSmsCancelBtn').onclick = closeModal;
-    document.getElementById('leadSmsSendBtn').onclick = () => {
+    document.getElementById('leadSmsSendBtn').onclick = async () => {
         const selected = document.querySelector('input[name="leadSmsTemplate"]:checked');
         const text = templates[Number(selected?.value || 0)] || templates[0];
-        closeModal();
-        window.location.href = `sms:${phone}?body=${encodeURIComponent(text)}`;
+        const sendBtn = document.getElementById('leadSmsSendBtn');
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Yuborilmoqda...';
+        try {
+            const result = await apiSendSms([{
+                id: lead.id,
+                type: 'lead',
+                name: lead.name || 'Lid',
+                phone
+            }], text, 'lidlar');
+            if (!result?.sent) throw new Error(result?.results?.[0]?.error || 'SMS yuborilmadi');
+            closeModal();
+            showMiniToast('SMS yuborildi');
+        } catch (err) {
+            showMiniToast(`SMS yuborilmadi: ${err.message || "noma'lum xatolik"}`);
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'SMS yuborish';
+        }
     };
 }
 

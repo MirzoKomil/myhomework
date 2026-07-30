@@ -13,3 +13,11 @@ services:
         generateValue: true
       - key: LEADS_WEBHOOK_SECRET
         generateValue: true
+      # Eskiz ma'lumotlari Render dashboarddagi Environment bo'limida
+      # qo'lda kiritiladi. Ular repository yoki render.yaml ichida saqlanmaydi.
+      - key: ESKIZ_EMAIL
+        sync: false
+      - key: ESKIZ_PASSWORD
+        sync: false
+      - key: ESKIZ_SENDER_NICKNAME
+        value: "4546"
