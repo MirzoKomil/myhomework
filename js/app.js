@@ -13159,6 +13159,18 @@ function needsTrialLessonPrompt(fromStatus, toStatus) {
 }
 
 function openTrialLessonFlow(lang, leadId, fromStatus) {
+    openTrialScheduleModal(lang, leadId, { isReschedule: false });
+}
+
+// 22-vazifa: lid allaqachon "Sinov darsida" ustunida turganda, izohlar
+// oynasidagi "Qayta sinov darsi qo'yish" tugmasi orqali yangi sana/vaqt/
+// o'qituvchi tanlab, sinov darsini qayta belgilash uchun.
+function openRescheduleTrialLessonModal(lang, leadId) {
+    openTrialScheduleModal(lang, leadId, { isReschedule: true });
+}
+
+function openTrialScheduleModal(lang, leadId, options = {}) {
+    const { isReschedule = false } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
     // 5-ish: lang parametridan foydalanish (lead.language bilan bir xil, lekin ishonchli)
@@ -13166,7 +13178,7 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
     const teacherOptions = `<option value="">— Tanlang —</option>` +
         teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
 
-    openModal(`Sinov darsi — ${escapeHtml(lead.name)}`,
+    openModal(`${isReschedule ? "Qayta sinov darsi" : "Sinov darsi"} — ${escapeHtml(lead.name)}`,
         `<div class="form-group">
             <label>O'qituvchi</label>
             <select id="onboardTeacherId" class="form-control">${teacherOptions}</select>
@@ -13232,7 +13244,7 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
         const user = getCurrentUser();
         const author = user?.name || 'Admin';
         const commentText = [
-            "Sinov darsi belgilandi:",
+            `${isReschedule ? "Qayta sinov darsi tashkil qilindi" : "Sinov darsi belgilandi"}:`,
             `• O'qituvchi: ${teacherName}`,
             `• Kuni: ${dateLabel}${dayLabel}, ${time}`,
             `• Davomiyligi: ${count} kun`
@@ -13256,6 +13268,7 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
 
         closeModal();
         renderLeads();
+        if (isReschedule) showMiniToast("Qayta sinov darsi tashkil qilindi");
     };
 }
 
@@ -17276,6 +17289,13 @@ function openLeadCommentsModal(lang, leadId) {
         ? lead.comments.map(renderLeadCommentItem).join('')
         : '<p class="text-muted lead-empty-hint">Hozircha izoh yo\'q</p>';
 
+    // 22-vazifa: "Qayta sinov darsi qo'yish" tugmasi faqat lid aynan
+    // "Sinov darsida" ustunida turgandagina chiqadi.
+    const isInTrial = normalizeLeadStatus(lead.status) === 'sinov-darsida';
+    const rescheduleTrialBtnHtml = isInTrial
+        ? `<button type="button" id="rescheduleTrialLesson" style="width:100%;border:1px solid #A7F3D0;background:#ECFDF5;color:#047857;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer">Qayta sinov darsi qo'yish</button>`
+        : '';
+
     openModal(`${escapeHtml(lead.name)} — izohlar`,
         `<div class="lead-comments-list">${listHtml}</div>
          <div class="form-group" style="margin-top:16px;margin-bottom:0">
@@ -17285,6 +17305,7 @@ function openLeadCommentsModal(lang, leadId) {
         `<div style="display:grid;gap:8px;width:100%">
            <button type="button" class="btn-primary-sm" id="saveLeadComment" style="width:100%">Izoh qo'shish</button>
            <button type="button" id="addLeadFollowUp" style="width:100%;border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer">Bog'lanish uchun eslatma</button>
+           ${rescheduleTrialBtnHtml}
          </div>`
     );
 
@@ -17304,6 +17325,9 @@ function openLeadCommentsModal(lang, leadId) {
     document.getElementById('addLeadFollowUp').onclick = () => {
         openLeadFollowUpReminderModal(lang, leadId, lead.name, author);
     };
+    document.getElementById('rescheduleTrialLesson')?.addEventListener('click', () => {
+        openRescheduleTrialLessonModal(lang, leadId);
+    });
 }
 
 function openLeadManagerPhotoModal(lang, leadId) {
