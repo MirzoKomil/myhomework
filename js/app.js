@@ -12687,6 +12687,8 @@ const FAILED_SALE_REASON_GROUPS = [
             { id: 'format-disliked', label: 'Format yoqmadi' },
             { id: 'schedule-changed', label: 'O\'qish vaqti rejalarini o\'zgartirib oldi' },
             { id: 'later', label: 'Keyinroq o\'qimoqchiligini aytdi' },
+            { id: 'wants-offline', label: 'Oflayn o\'qimoqchi' },
+            { id: 'needs-cefr-prep', label: 'CEFR sertifikatiga tayyorlov kerak' },
         ]
     },
     {
