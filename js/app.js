@@ -5,7 +5,6 @@ const TAB_TITLES = {
     timetable: 'Dars jadvali',
     'main-attendance': 'Asosiy ustozlar davomati',
     'assistant-attendance': 'Yordamchi ustoz davomati',
-    'teacher-cabinet': 'Ustozlarga kabinet',
     salary: 'Ustozlar maoshi',
     students: "O'quvchilar",
     payments: "To'lovlar",
@@ -194,11 +193,13 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
     sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides', 'sms'],
-    // 15-ish: "teacher-cabinet" ("Ustozlarga kabinet" — o'zining o'quvchilari
-    // bilan yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) allaqachon
-    // to'liq qurilgan va ustoz roli uchun ichkarida to'g'ri cheklangan edi,
-    // lekin bu ro'yxatda yo'q bo'lgani uchun sidebar'da ko'rinmasdi.
-    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'teacher-cabinet', 'guides', 'student-app'],
+    // 31-qism: "Ustozlarga kabinet" (o'zining o'quvchilari bilan
+    // yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) endi alohida
+    // tab emas, "Akademik bo'lim" (teachers-section) ichidagi "O'quvchini
+    // tekshirish" sub-bo'limi - shu sabab ustoz uchun 'teachers-section'
+    // ruxsat etiladi. renderTeachersSection() ustoz/ROP uchun sub-navigatsiyani
+    // faqat shu bitta bo'limga cheklaydi, avvalgi tor ruxsat saqlanib qoladi.
+    teacher:       ['dashboard', 'students', 'timetable', 'main-attendance', 'teachers-section', 'guides', 'student-app'],
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
 };
@@ -223,7 +224,12 @@ function applyRoleBasedAccess(user) {
         // renderStudentApp()'ga qarang).
         let hiddenForRop = new Set();
         if (role === 'rop') {
-            hiddenForRop = new Set(['teachers-section', 'finance', 'hr', 'analitika']);
+            // 31-qism: "teachers-section" (Akademik bo'lim) endi ROP avvaldan
+            // ko'ra olgan "O'quvchini tekshirish"ni ham o'z ichiga oladi -
+            // shu sabab butunlay yashirilmaydi, faqat renderTeachersSection()
+            // ROP uchun sub-navigatsiyani o'sha bitta bo'limga cheklaydi
+            // (Davomat/Sinov darsi/Reyting/Darslik/Elektron doska hamon yopiq).
+            hiddenForRop = new Set(['finance', 'hr', 'analitika']);
             hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
@@ -826,7 +832,6 @@ function renderTab(tab) {
         case 'timetable': renderTimetable(); break;
         case 'main-attendance': renderMainAttendance(); break;
         case 'assistant-attendance': renderAssistantAttendance(); break;
-        case 'teacher-cabinet': renderTeacherCabinet(); break;
         case 'salary': renderSalary(); break;
         case 'students': renderStudents(); break;
         case 'payments': renderPayments(); break;
@@ -9329,7 +9334,22 @@ function renderTeachersSection() {
     document.querySelectorAll('[data-teachers-lang]').forEach(b =>
         b.classList.toggle('active', b.dataset.teachersLang === _teachersLang)
     );
-    const sec = _tabContext.teachersSection || 'attendance';
+
+    // 31-qism: "O'quvchini tekshirish" avval ROP/ustoz uchun mustaqil, tor
+    // ruxsatli tab edi ("teacher-cabinet"). Endi shu Akademik bo'lim ichiga
+    // ko'chirilgani uchun, ularning avvalgi ruxsati o'zgarmasligi uchun
+    // sub-navigatsiya shu ikki rol uchun faqat "O'quvchini tekshirish"ga
+    // cheklanadi - Davomat/Sinov darsi/Reyting/Darslik/Elektron doska
+    // ularga hamon yopiq.
+    const cu = getCurrentUser();
+    const restrictedToCabinet = cu?.role === 'rop' || cu?.role === 'teacher';
+    document.querySelectorAll('[data-teachers-section]').forEach(btn => {
+        btn.style.display = (!restrictedToCabinet || btn.dataset.teachersSection === 'cabinet') ? '' : 'none';
+    });
+    const teachersLangActionsEl = document.getElementById('teachersLangActions');
+    if (teachersLangActionsEl) teachersLangActionsEl.style.display = restrictedToCabinet ? 'none' : '';
+
+    const sec = restrictedToCabinet ? 'cabinet' : (_tabContext.teachersSection || 'attendance');
     switchTeachersSection(sec);
 }
 
@@ -9346,6 +9366,7 @@ function switchTeachersSection(section) {
     else if (section === 'rating') renderTpRating();
     else if (section === 'textbook') renderTpTextbook();
     else if (section === 'whiteboard') renderTpWhiteboard();
+    else if (section === 'cabinet') renderTeacherCabinet();
     persistCurrentTab();
 }
 
