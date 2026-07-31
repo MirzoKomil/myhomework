@@ -9,7 +9,6 @@ const TAB_TITLES = {
     payments: "To'lovlar",
     sales: "Sotuv bo'limi",
     marketing: "Marketing bo'limi",
-    sms: "SMS rassilka",
     settings: 'Sozlamalar',
     profile: 'Profil',
     placeholder: 'Bo\'lim',
@@ -191,7 +190,13 @@ const FULL_ACCESS_ROLES = new Set(['admin', 'rop', 'boshliq']);
 
 // Cheklangan rollar uchun ruxsat etilgan tab ro'yxati
 const ROLE_TABS = {
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides', 'sms'],
+    // 34-vazifa: "SMS rassilka" alohida tab emas, "Marketing bo'limi"
+    // (marketing) ichidagi sub-bo'lim bo'ldi - shu sabab sotuv menejeri
+    // uchun 'marketing' ruxsat etiladi. renderMarketing() bu rol uchun
+    // sub-navigatsiyani faqat "SMS rassilka"ga cheklaydi (Target
+    // Monitoringi/Kontent reja/Raqobatchilar tahlili/Statistika hamon
+    // yopiq), avvalgi tor ruxsat saqlanib qoladi.
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides', 'marketing'],
     // 31-qism: "Ustozlarga kabinet" (o'zining o'quvchilari bilan
     // yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) endi alohida
     // tab emas, "Akademik bo'lim" (teachers-section) ichidagi "O'quvchini
@@ -838,7 +843,6 @@ function renderTab(tab) {
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
         case 'marketing': renderMarketing(); break;
-        case 'sms': renderSms(); break;
         case 'settings': break;
         case 'analitika': renderAnalitika(); break;
         case 'profile': renderProfile(); break;
@@ -12002,6 +12006,7 @@ function switchMarketingSection(section) {
     document.querySelectorAll('.marketing-panel').forEach(panel => {
         panel.classList.toggle('active', panel.dataset.marketingPanel === section);
     });
+    if (section === 'sms') renderSms();
     persistCurrentTab();
 }
 
@@ -12024,8 +12029,23 @@ function renderMarketing() {
     document.querySelectorAll('[data-marketing-lang]').forEach(b =>
         b.classList.toggle('active', b.dataset.marketingLang === _marketingLang)
     );
-    switchMarketingSection(_tabContext.marketingSection || 'target');
-    renderMarketingTargetPanel();
+
+    // 34-vazifa: "SMS rassilka" endi bu bo'lim ichidagi sub-bo'lim.
+    // Sotuv menejeri avval mustaqil "sms" tabga ega edi (Target
+    // Monitoringi/Kontent reja/Raqobatchilar tahlili/Statistikaga kirisha
+    // olmasdi) - shu ruxsat doirasi saqlanishi uchun sub-navigatsiya bu
+    // rol uchun faqat "SMS rassilka"ga cheklanadi.
+    const cu = getCurrentUser();
+    const restrictedToSms = cu?.role === 'sales_manager';
+    document.querySelectorAll('[data-marketing-section]').forEach(btn => {
+        btn.style.display = (!restrictedToSms || btn.dataset.marketingSection === 'sms') ? '' : 'none';
+    });
+    const marketingLangActionsEl = document.getElementById('marketingLangActions');
+    if (marketingLangActionsEl) marketingLangActionsEl.style.display = restrictedToSms ? 'none' : '';
+
+    const sec = restrictedToSms ? 'sms' : (_tabContext.marketingSection || 'target');
+    switchMarketingSection(sec);
+    if (sec !== 'sms') renderMarketingTargetPanel();
 }
 
 // ===== SMS rassilka (Eskiz.uz) =====
@@ -12214,7 +12234,7 @@ async function _smsHandleSend() {
 }
 
 function renderSms() {
-    const container = document.getElementById('tab-sms');
+    const container = document.getElementById('marketingPanel-sms');
     if (!container) return;
     if (!container.dataset.smsInit) {
         container.dataset.smsInit = '1';
