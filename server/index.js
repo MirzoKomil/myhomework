@@ -11,6 +11,7 @@ const leadsRoutes = require('./routes/leads');
 const { router: uploadsRouter, UPLOADS_DIR } = require('./routes/uploads');
 const telephonyRoutes = require('./routes/telephony');
 const smsRoutes = require('./routes/sms');
+const metaRoutes = require('./routes/meta');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -121,7 +122,11 @@ const webhookLimit = rateLimit({
     message: { error: 'Webhook so\'rovlar haddan oshdi.' },
 });
 
-app.use(express.json({ limit: '6mb' }));
+app.use(express.json({
+    limit: '6mb',
+    // Meta webhook imzosini tekshirish uchun aynan kelgan baytlarni saqlaymiz.
+    verify: (req, res, buffer) => { req.rawBody = buffer; },
+}));
 
 // ── API routes ────────────────────────────────────────────────────────────────
 
@@ -132,6 +137,7 @@ app.get('/api/health', (req, res) => {
 app.use(['/api/auth/login', '/api/auth/student-login'], loginLimit);
 app.use('/api/leads', webhookLimit);
 app.use('/api/telephony', webhookLimit);
+app.use('/api/meta', webhookLimit);
 app.use('/api', apiLimit);
 
 app.use('/api/auth', authRoutes);
@@ -140,6 +146,7 @@ app.use('/api/leads', leadsRoutes);
 app.use('/api/upload', uploadsRouter);
 app.use('/api/telephony', telephonyRoutes);
 app.use('/api/sms', smsRoutes);
+app.use('/api/meta', metaRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 

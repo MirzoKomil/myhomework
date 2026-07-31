@@ -21,3 +21,17 @@ services:
         sync: false
       - key: ESKIZ_SENDER_NICKNAME
         value: "4546"
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_PAGE_ID
+        sync: false
+      - key: META_PAGE_ACCESS_TOKEN
+        sync: false
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        generateValue: true
+      - key: META_RUSSIAN_FORM_IDS
+        sync: false
+      - key: META_ENGLISH_FORM_IDS
+        sync: false
