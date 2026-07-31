@@ -50,7 +50,7 @@ function syncNotifications() {
             type: 'info',
             title: 'Davomat eslatmasi',
             message: 'Bugun dars kuni — davomatni belgilashni unutmang',
-            tab: 'main-attendance',
+            tab: 'teachers-section',
             time: Date.now()
         });
     }
@@ -190,7 +190,10 @@ function renderNotificationPanel() {
             markNotificationRead(item.dataset.notifId);
             const tab = item.dataset.notifTab;
             if (tab && typeof switchTab === 'function') {
-                switchTab(tab, tab === 'sales' ? { salesSection: 'leads' } : {});
+                let ctx = {};
+                if (tab === 'sales') ctx = { salesSection: 'leads' };
+                else if (tab === 'teachers-section') ctx = { teachersSection: 'attendance' };
+                switchTab(tab, ctx);
                 closeNotificationPanel();
                 if (n.leadId && typeof openLeadNotifyModal === 'function') {
                     window.setTimeout(() => openLeadNotifyModal(n.leadLang, n.leadId), 0);
