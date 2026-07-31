@@ -7156,7 +7156,8 @@ function archiveRecord(type, item, meta = {}) {
         type,
         item: { ...item },
         meta,
-        deletedAt: new Date().toISOString()
+        deletedAt: new Date().toISOString(),
+        deletedBy: getCurrentUser()?.name || "Noma'lum foydalanuvchi"
     });
     setItem(STORAGE_KEYS.archive, records);
 }
@@ -7223,7 +7224,7 @@ function renderSettingsArchivePanel() {
             : items.map(renderArchiveItem).join('');
         return `<section class="archive-group"><h4>${group.title}<span>${items.length}</span></h4>${grouped}</section>`;
     };
-    const renderArchiveItem = record => `<article class="archive-item"><div><b>${escapeHtml(record.item?.name || 'Nomsiz yozuv')}</b><small>${escapeHtml(archiveRecordDetails(record) || "Qo'shimcha ma'lumot yo'q")}</small><time>${new Date(record.deletedAt).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div><button type="button" class="btn-primary archive-restore-btn" data-archive-restore="${escapeHtml(record.id)}">Tiklash</button></article>`;
+    const renderArchiveItem = record => `<article class="archive-item"><div><b>${escapeHtml(record.item?.name || 'Nomsiz yozuv')}</b><small>${escapeHtml(archiveRecordDetails(record) || "Qo'shimcha ma'lumot yo'q")}</small><small>${escapeHtml(record.deletedBy || "Noma'lum foydalanuvchi")} tomonidan o'chirilgan</small><time>${new Date(record.deletedAt).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div><button type="button" class="btn-primary archive-restore-btn" data-archive-restore="${escapeHtml(record.id)}">Tiklash</button></article>`;
 
     container.innerHTML = `<div class="archive-modal" style="padding:20px"><div class="archive-intro"><b>O'chirib yuborilgan ma'lumotlar</b><span>Kerakli yozuvni tanlab, istalgan payt qayta tiklashingiz mumkin.</span></div>${groups.map(renderGroup).join('')}</div>`;
     container.querySelectorAll('[data-archive-restore]').forEach(btn => {
