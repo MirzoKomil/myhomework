@@ -8243,8 +8243,11 @@ function renderStudents() {
     }
     const addStudentBtnEl = document.getElementById('addStudentBtn');
     if (addStudentBtnEl) {
-        addStudentBtnEl.hidden = isSalesManager;
-        addStudentBtnEl.style.display = isSalesManager ? 'none' : '';
+        // 28-vazifa: ustoz kabinetida ham o'quvchi qo'shish imkoniyati
+        // bo'lmasligi kerak - bu sotuv/admin vazifasi.
+        const hideAddStudentBtn = isSalesManager || isTeacherRole;
+        addStudentBtnEl.hidden = hideAddStudentBtn;
+        addStudentBtnEl.style.display = hideAddStudentBtn ? 'none' : '';
     }
 
     initStudentsSubjectTabs();
