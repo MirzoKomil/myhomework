@@ -7209,6 +7209,11 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
     if (!container) return;
 
     const isSalesManager = currentUser?.role === 'sales_manager';
+    // 27-vazifa: ustoz kabinetining bosh sahifasida umumiy CRM
+    // statistikalari (O'quvchilar/Sotuvlar/Xodimlar soni, Voronka, Target
+    // statistikasi) ko'rsatilmasligi kerak - bular sotuv/moliya
+    // ma'lumotlari, ustozga aloqasi yo'q.
+    const isTeacher = currentUser?.role === 'teacher';
 
     const allLeads = [
         ...(leads.english || []).map(lead => ({ ...lead, language: 'english' })),
@@ -7262,13 +7267,13 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
         : '<p class="dashboard-empty">Hozircha ma\'lumot yo\'q</p>';
 
     container.innerHTML = `
-        <div class="dashboard-section-title"><h3>${isSalesManager ? 'Mening ko\'rsatkichlarim' : "Umumiy ko'rsatkichlar"}</h3><span>${isSalesManager ? 'Shaxsiy natijalar va joriy sessiya' : "CRM ma'lumotlari asosida"}</span></div>
+        ${isTeacher ? '' : `<div class="dashboard-section-title"><h3>${isSalesManager ? 'Mening ko\'rsatkichlarim' : "Umumiy ko'rsatkichlar"}</h3><span>${isSalesManager ? 'Shaxsiy natijalar va joriy sessiya' : "CRM ma'lumotlari asosida"}</span></div>
         ${isSalesManager ? `<div class="dashboard-kpi-grid dashboard-kpi-grid--single"><div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#9201;</span><div><small>Platformada sarflagan vaqt</small><b id="dashboardSessionDuration">${formatDashboardSessionDuration(currentUser)}</b><em>Joriy sessiya</em></div></div></div>` : `<div class="dashboard-kpi-grid">
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon purple">&#128101;</span><div><small>O'quvchilar soni</small><b>${students.length}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon blue">&#128200;</span><div><small>Sotuvlar soni</small><b>${closedLeads.length}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon green">&#128176;</span><div><small>Sotuv summasi</small><b>${formatMoney(totalRevenue)}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#128188;</span><div><small>Xodimlar soni</small><b>${employeeIds.size}</b></div></div>
-        </div>`}
+        </div>`}`}
         <div class="dashboard-grid-2">
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
                 ${rankRows(salesRating.map(item => ({ ...item, value: item.revenue })), maxSalesRevenue, item => `${item.deals} ta · ${formatMoney(item.revenue)}`)}
@@ -7277,7 +7282,7 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
                 ${rankRows(teacherRating.map(item => ({ ...item, value: item.students })), maxTeacherStudents, item => `${item.students} ta`)}
             </section>
         </div>
-        <div class="dashboard-grid-2">
+        ${isTeacher ? '' : `<div class="dashboard-grid-2">
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>${isSalesManager ? 'Mening voronkam' : 'Voronka'}</h3><span>Jami ${dashboardLeads.length} ta lid</span></div>
                 <div class="dashboard-funnel">${funnelStages.map(stage => `<div class="dashboard-funnel-row"><span>${escapeHtml(stage.label)}</span><div><i style="width:${Math.max(stage.count ? 6 : 0, stage.count / maxFunnelCount * 100)}%"></i></div><b>${stage.count}</b></div>`).join('')}</div>
             </section>
@@ -7289,7 +7294,7 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
                     <div><small>Sotuv summasi</small><b>${formatMoney(targetRevenue)}</b></div>
                 </div>
             </section>`}
-        </div>`;
+        </div>`}`;
 
     if (isSalesManager) {
         clearInterval(window._dashboardSessionTimer);
