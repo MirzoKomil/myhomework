@@ -835,6 +835,34 @@ body {
     flex-direction: column;
 }
 
+/* Sozlamalar */
+#tab-settings.tab-content.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.settings-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.settings-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
+#settingsNotifList {
+    max-height: none;
+}
+
+.menu-group-toggle.active {
+    background: var(--purple-light);
+    color: var(--purple);
+}
+
 /* HR Bo'limi */
 #tab-hr.tab-content.active {
     display: flex;

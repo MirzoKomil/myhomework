@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260801a">
+    <link rel="stylesheet" href="css/styles.css?v=20260801b">
 </head>
 
 <body>
@@ -112,7 +112,7 @@
             </nav>
             <div class="sidebar-footer">
                 <div class="menu-group" id="settingsLangGroup">
-                    <button type="button" class="menu-group-toggle" aria-expanded="false">
+                    <button type="button" class="menu-group-toggle" id="settingsToggle" data-open-tab="settings" aria-expanded="false">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="3" />
                             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
@@ -140,14 +140,6 @@
                         </button>
                             </div>
                         </div>
-                        <button type="button" class="menu-sub-item settings-sidebar-action" data-settings-archive>
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4z"/><path d="M3 4h18v3H3zM10 11h4"/></svg>
-                            Arxiv
-                        </button>
-                        <button type="button" class="menu-sub-item settings-sidebar-action" data-settings-notifications>
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
-                            Bildirishnomalar
-                        </button>
                     </div>
                 </div>
             </div>
@@ -1330,6 +1322,26 @@
                         </div>
                     </section>
 
+                    <!-- Sozlamalar -->
+                    <section id="tab-settings" class="tab-content">
+                        <div class="sales-pinned">
+                            <div class="sales-header-layout">
+                                <nav class="section-nav sales-header-nav" id="settingsSectionNav" aria-label="Sozlamalar">
+                                    <button type="button" class="section-nav-item active" data-settings-section="archive">Arxiv</button>
+                                    <button type="button" class="section-nav-item" data-settings-section="notifications">Bildirishnomalar</button>
+                                </nav>
+                            </div>
+                        </div>
+                        <div class="settings-panel active" data-settings-panel="archive" id="settingsPanel-archive"></div>
+                        <div class="settings-panel" data-settings-panel="notifications" id="settingsPanel-notifications">
+                            <div class="notif-panel-header">
+                                <h4>Bildirishnomalar</h4>
+                                <button type="button" class="notif-mark-all" id="settingsNotifMarkAll">Barchasini o'qildi</button>
+                            </div>
+                            <div class="notif-list" id="settingsNotifList"></div>
+                        </div>
+                    </section>
+
                     <section id="tab-student-app" class="tab-content">
                         <div class="sales-pinned" id="mobileAppHeader">
                             <div class="sales-header-layout">
@@ -1434,34 +1446,6 @@
                                 <div style="font-size:40px;margin-bottom:12px">💰</div>
                                 <div style="font-size:16px;font-weight:600;margin-bottom:6px">Moliyaviy ko'rsatkichlar</div>
                                 <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Sozlamalar -->
-                    <section id="tab-settings" class="tab-content">
-                        <div class="page-title-bar">
-                            <h1>Sozlamalar</h1>
-                        </div>
-                        <div class="settings-page">
-                            <div class="settings-section">
-                                <h2 class="settings-section-title">Interfeys tili</h2>
-                                <p class="settings-section-desc">Admin panel ko'rsatiladigan tilni tanlang</p>
-                                <div class="lang-options" id="langOptions">
-                                    <button type="button" class="lang-btn" data-lang="uz">
-                                        <img src="images/flags/uz.svg" alt="" class="lang-flag" onerror="this.style.display='none'">
-                                        <span class="lang-name">O'zbekcha</span>
-                                    </button>
-                                    <button type="button" class="lang-btn" data-lang="ru">
-                                        <img src="images/flags/ru.svg" alt="" class="lang-flag" onerror="this.style.display='none'">
-                                        <span class="lang-name">Русский</span>
-                                    </button>
-                                    <button type="button" class="lang-btn" data-lang="en">
-                                        <img src="images/flags/gb.svg" alt="" class="lang-flag" onerror="this.style.display='none'">
-                                        <span class="lang-name">English</span>
-                                    </button>
-                                </div>
-                                <p class="lang-saved-msg" id="langSavedMsg"></p>
                             </div>
                         </div>
                     </section>
@@ -1621,9 +1605,9 @@
 
     <script src="js/api.js?v=20260729a"></script>
     <script src="js/storage.js?v=20260724a"></script>
-    <script src="js/notifications.js?v=20260801a"></script>
+    <script src="js/notifications.js?v=20260801b"></script>
     <script src="js/lessonDefaults.js?v=20260729a"></script>
-    <script src="js/app.js?v=20260801g"></script>
+    <script src="js/app.js?v=20260801h"></script>
 </body>
 
 </html>

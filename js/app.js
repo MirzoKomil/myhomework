@@ -43,7 +43,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar', analitikaSection: 'hisobotlar' };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar', analitikaSection: 'hisobotlar', settingsSection: 'archive' };
 let _marketingLang = 'english';
 let _targetMonth = 'feb';
 let _studentsTeacherFilter = 'all';
@@ -535,10 +535,12 @@ function switchTab(tab, ctx = {}) {
         hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
         financeSection: tab === 'finance' ? (ctx.financeSection || 'tolovlar') : (_tabContext.financeSection || 'tolovlar'),
         analitikaSection: tab === 'analitika' ? (ctx.analitikaSection || 'hisobotlar') : (_tabContext.analitikaSection || 'hisobotlar'),
-        marketingSection: _tabContext.marketingSection || 'target'
+        marketingSection: _tabContext.marketingSection || 'target',
+        settingsSection: _tabContext.settingsSection || 'archive'
     };
 
     updateSidebarActiveState(tab, _tabContext);
+    document.getElementById('settingsToggle')?.classList.toggle('active', tab === 'settings');
 
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     const el = document.getElementById(`tab-${tab}`);
@@ -756,20 +758,6 @@ function initSidebarMenu() {
         });
     });
 
-    document.querySelectorAll('[data-settings-archive]').forEach(btn => {
-        btn.addEventListener('click', e => {
-            e.preventDefault();
-            openArchiveModal();
-        });
-    });
-
-    document.querySelectorAll('[data-settings-notifications]').forEach(btn => {
-        btn.addEventListener('click', e => {
-            e.preventDefault();
-            document.getElementById('notifToggle')?.click();
-        });
-    });
-
     updateSidebarLangActive(localStorage.getItem('mh_ui_lang') || 'uz');
 }
 
@@ -843,7 +831,7 @@ function renderTab(tab) {
         case 'payments': renderPayments(); break;
         case 'sales': renderSales(); break;
         case 'marketing': renderMarketing(); break;
-        case 'settings': break;
+        case 'settings': renderSettings(); break;
         case 'analitika': renderAnalitika(); break;
         case 'profile': renderProfile(); break;
         case 'placeholder': renderPlaceholder(); break;
@@ -4968,36 +4956,6 @@ function setUiLang(lang) {
     document.documentElement.lang = lang === 'ru' ? 'ru' : lang === 'en' ? 'en' : 'uz';
 }
 
-function renderSettings() {
-    const current = getUiLang();
-    const container = document.getElementById('langOptions');
-    const msg = document.getElementById('langSavedMsg');
-    if (!container) return;
-
-    container.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.classList.toggle('lang-btn--active', btn.dataset.lang === current);
-    });
-
-    if (container.dataset.bound) return;
-    container.dataset.bound = '1';
-
-    container.addEventListener('click', e => {
-        const btn = e.target.closest('.lang-btn');
-        if (!btn) return;
-        const lang = btn.dataset.lang;
-        setUiLang(lang);
-        container.querySelectorAll('.lang-btn').forEach(b => {
-            b.classList.toggle('lang-btn--active', b.dataset.lang === lang);
-        });
-        if (msg) {
-            msg.textContent = `✓ ${LANG_LABELS[lang] || lang} tili tanlandi`;
-            msg.classList.add('lang-saved-msg--visible');
-            clearTimeout(msg._t);
-            msg._t = setTimeout(() => msg.classList.remove('lang-saved-msg--visible'), 2500);
-        }
-    });
-}
-
 function renderProfileSalarySection(user) {
     const emps = getHrEmployees() || [];
     const emp = emps.find(e => e.login === user.email || e.phone === user.phone) || {};
@@ -7240,7 +7198,13 @@ function restoreArchiveRecord(recordId) {
     showMiniToast(`${item.name || 'Yozuv'} tiklandi`);
 }
 
-function openArchiveModal() {
+// 35-vazifa: avval bu "Arxiv" oynasi modal ko'rinishida ochilardi
+// (Sozlamalar akkordeonidagi tugma orqali). Endi "Sozlamalar" sahifasining
+// o'z sub-bo'limi, shu sabab modal o'rniga to'g'ridan-to'g'ri
+// #settingsPanel-archive konteyneriga render qilinadi.
+function renderSettingsArchivePanel() {
+    const container = document.getElementById('settingsPanel-archive');
+    if (!container) return;
     const records = getArchiveRecords();
     const groups = [
         { type: 'lead', title: 'Lidlar' },
@@ -7261,12 +7225,11 @@ function openArchiveModal() {
     };
     const renderArchiveItem = record => `<article class="archive-item"><div><b>${escapeHtml(record.item?.name || 'Nomsiz yozuv')}</b><small>${escapeHtml(archiveRecordDetails(record) || "Qo'shimcha ma'lumot yo'q")}</small><time>${new Date(record.deletedAt).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div><button type="button" class="btn-primary archive-restore-btn" data-archive-restore="${escapeHtml(record.id)}">Tiklash</button></article>`;
 
-    openModal('Arxiv', `<div class="archive-modal"><div class="archive-intro"><b>O'chirib yuborilgan ma'lumotlar</b><span>Kerakli yozuvni tanlab, istalgan payt qayta tiklashingiz mumkin.</span></div>${groups.map(renderGroup).join('')}</div>`, '<button type="button" class="btn-ghost" id="closeArchiveModal">Yopish</button>', { wide: true });
-    document.getElementById('closeArchiveModal').onclick = closeModal;
-    document.querySelectorAll('[data-archive-restore]').forEach(btn => {
+    container.innerHTML = `<div class="archive-modal" style="padding:20px"><div class="archive-intro"><b>O'chirib yuborilgan ma'lumotlar</b><span>Kerakli yozuvni tanlab, istalgan payt qayta tiklashingiz mumkin.</span></div>${groups.map(renderGroup).join('')}</div>`;
+    container.querySelectorAll('[data-archive-restore]').forEach(btn => {
         btn.onclick = () => {
             restoreArchiveRecord(btn.dataset.archiveRestore);
-            openArchiveModal();
+            renderSettingsArchivePanel();
         };
     });
 }
@@ -12046,6 +12009,33 @@ function renderMarketing() {
     const sec = restrictedToSms ? 'sms' : (_tabContext.marketingSection || 'target');
     switchMarketingSection(sec);
     if (sec !== 'sms') renderMarketingTargetPanel();
+}
+
+// ===== Sozlamalar =====
+// 35-vazifa: "Sozlamalar" endi boshqa bo'limlarga o'xshab alohida
+// sahifa - sub-navigatsiyasida "Arxiv" va "Bildirishnomalar" kategoriyalari
+// bor (avval bular sidebar'dagi Sozlamalar akkordeoni ichida alohida
+// tugma/modal edi).
+function switchSettingsSection(section) {
+    _tabContext.settingsSection = section;
+    document.querySelectorAll('[data-settings-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.settingsSection === section);
+    });
+    document.querySelectorAll('.settings-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.settingsPanel === section);
+    });
+    if (section === 'archive') renderSettingsArchivePanel();
+    else if (section === 'notifications' && typeof renderNotificationPanel === 'function') renderNotificationPanel();
+    persistCurrentTab();
+}
+
+function renderSettings() {
+    document.querySelectorAll('[data-settings-section]').forEach(btn => {
+        if (btn.dataset.setBound) return;
+        btn.dataset.setBound = '1';
+        btn.addEventListener('click', () => switchSettingsSection(btn.dataset.settingsSection));
+    });
+    switchSettingsSection(_tabContext.settingsSection || 'archive');
 }
 
 // ===== SMS rassilka (Eskiz.uz) =====

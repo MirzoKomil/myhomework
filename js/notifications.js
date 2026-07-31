@@ -155,10 +155,13 @@ function markAllNotificationsRead() {
     renderNotificationPanel();
 }
 
+// 35-vazifa: bildirishnomalar ro'yxati endi ikki joyda ko'rinadi - header
+// qo'ng'iroq oynasida (#notifList) va Sozlamalar > Bildirishnomalar
+// sahifasida (#settingsNotifList) - shu sabab ro'yxat qurish alohida
+// funksiyaga chiqarildi va har ikkala konteyner uchun ham chaqiriladi.
 function renderNotificationPanel() {
     const list = syncNotifications();
     const badge = document.getElementById('notifBadge');
-    const body = document.getElementById('notifList');
     const unread = list.filter(n => !n.read).length;
 
     if (badge) {
@@ -166,6 +169,12 @@ function renderNotificationPanel() {
         badge.style.display = unread > 0 ? 'flex' : 'none';
     }
 
+    renderNotifListInto('notifList', list);
+    renderNotifListInto('settingsNotifList', list);
+}
+
+function renderNotifListInto(targetId, list) {
+    const body = document.getElementById(targetId);
     if (!body) return;
 
     if (!list.length) {
@@ -187,6 +196,7 @@ function renderNotificationPanel() {
 
     body.querySelectorAll('.notif-item').forEach(item => {
         item.addEventListener('click', () => {
+            const notif = list.find(x => x.id === item.dataset.notifId);
             markNotificationRead(item.dataset.notifId);
             const tab = item.dataset.notifTab;
             if (tab && typeof switchTab === 'function') {
@@ -195,8 +205,8 @@ function renderNotificationPanel() {
                 else if (tab === 'teachers-section') ctx = { teachersSection: 'attendance' };
                 switchTab(tab, ctx);
                 closeNotificationPanel();
-                if (n.leadId && typeof openLeadNotifyModal === 'function') {
-                    window.setTimeout(() => openLeadNotifyModal(n.leadLang, n.leadId), 0);
+                if (notif?.leadId && typeof openLeadNotifyModal === 'function') {
+                    window.setTimeout(() => openLeadNotifyModal(notif.leadLang, notif.leadId), 0);
                 }
             }
         });
@@ -249,6 +259,9 @@ function initNotifications() {
         e.stopPropagation();
         markAllNotificationsRead();
     });
+
+    const settingsMarkAll = document.getElementById('settingsNotifMarkAll');
+    if (settingsMarkAll) settingsMarkAll.addEventListener('click', () => markAllNotificationsRead());
 
     document.addEventListener('click', e => {
         const panel = document.getElementById('notifPanel');
