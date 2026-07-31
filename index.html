@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260730a">
+    <link rel="stylesheet" href="css/styles.css?v=20260801a">
 </head>
 
 <body>
@@ -238,17 +238,39 @@
                 <div class="content-main">
                     <!-- Bosh sahifa -->
                     <section id="tab-dashboard" class="tab-content active">
-                        <div class="welcome-banner">
-                            <div class="welcome-text">
-                                <h2 id="welcomeName">Xush kelibsiz!</h2>
-                                <p>Myhomework.uz admin paneliga xush kelibsiz. Bugungi darslar va statistikani kuzating.
-                                </p>
-                                <a href="#" class="welcome-link" data-goto="main-attendance">DAVOMATGA O'TISH →</a>
-                                <div class="banner-dots">
-                                    <span class="active"></span><span></span><span></span>
+                        <!-- 30-vazifa: 3 ta rangli slayddan iborat karusel banner, har 6
+                             soniyada avtomatik almashadi (initWelcomeBannerCarousel). -->
+                        <div class="welcome-banner" id="welcomeBanner">
+                            <div class="welcome-banner-inner active" data-banner-slide="0">
+                                <div class="welcome-text">
+                                    <h2 id="welcomeName">Xush kelibsiz!</h2>
+                                    <p>Homework onlayn maktabiga xush kelibsiz. Bugungi darslar va statistikani kuzating.
+                                    </p>
+                                    <a href="#" class="welcome-link" data-goto="timetable">DARS JADVALIGA O'TISH →</a>
                                 </div>
+                                <div class="banner-emoji">📖</div>
                             </div>
-                            <div class="banner-emoji">📖</div>
+                            <div class="welcome-banner-inner" data-banner-slide="1">
+                                <div class="welcome-text">
+                                    <h2>Sotuv jarayonini kuzating</h2>
+                                    <p>Yangi lidlar, sinov darslari va yopilgan sotuvlar holatini shu yerdan boshqaring.
+                                    </p>
+                                    <a href="#" class="welcome-link" id="bannerSalesLink">SOTUV BO'LIMIGA O'TISH →</a>
+                                </div>
+                                <div class="banner-emoji">📊</div>
+                            </div>
+                            <div class="welcome-banner-inner" data-banner-slide="2">
+                                <div class="welcome-text">
+                                    <h2>Maoshingizni kuzating</h2>
+                                    <p>Oylik maosh hisobotingizni istalgan vaqtda shu yerdan ko'rishingiz mumkin.
+                                    </p>
+                                    <a href="#" class="welcome-link" id="bannerSalaryLink">MENING MAOSHIMGA O'TISH →</a>
+                                </div>
+                                <div class="banner-emoji">💰</div>
+                            </div>
+                            <div class="banner-dots" id="bannerDots">
+                                <span class="active" data-banner-dot="0"></span><span data-banner-dot="1"></span><span data-banner-dot="2"></span>
+                            </div>
                         </div>
 
                         <!-- Dashboard KPI va operatsion ko'rsatkichlar -->
@@ -1644,7 +1666,7 @@
     <script src="js/storage.js?v=20260724a"></script>
     <script src="js/notifications.js?v=20260726a"></script>
     <script src="js/lessonDefaults.js?v=20260729a"></script>
-    <script src="js/app.js?v=20260801c"></script>
+    <script src="js/app.js?v=20260801d"></script>
 </body>
 
 </html>

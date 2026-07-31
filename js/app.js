@@ -115,6 +115,7 @@ function syncHeaderAvatar(user) {
 function initUserUI(currentUser) {
     syncHeaderAvatar(currentUser);
     document.getElementById('welcomeName').textContent = `Xush kelibsiz, ${currentUser.name.split(' ')[0]}!`;
+    initWelcomeBannerCarousel(currentUser);
 
     const headerDateEl = document.getElementById('headerDate');
     if (headerDateEl) {
@@ -130,6 +131,61 @@ function initUserUI(currentUser) {
     document.getElementById('communicationToggle')?.addEventListener('click', openCommunicationHub);
 
     applyRoleBasedAccess(currentUser);
+}
+
+// 30-vazifa: Bosh sahifadagi xush kelibsiz banneri 3 ta rangli slayddan
+// iborat karusel - har 6 soniyada avtomatik almashadi, nuqtalar bosilganda
+// ham to'g'ridan-to'g'ri o'sha slaydga o'tadi.
+function initWelcomeBannerCarousel(currentUser) {
+    const banner = document.getElementById('welcomeBanner');
+    if (!banner || banner.dataset.carouselBound) return;
+    banner.dataset.carouselBound = '1';
+
+    const slides = Array.from(banner.querySelectorAll('.welcome-banner-inner'));
+    const dots = Array.from(document.querySelectorAll('#bannerDots [data-banner-dot]'));
+    if (!slides.length) return;
+
+    const isTeacherRole = currentUser?.role === 'teacher';
+
+    // 2-slayd: "Sotuv bo'limi" - ustoz kabinetida bu bo'lim yo'q, shuning
+    // uchun o'rniga "Akademik bo'lim"ga o'tkaziladi.
+    document.getElementById('bannerSalesLink')?.addEventListener('click', e => {
+        e.preventDefault();
+        switchTab(isTeacherRole ? 'teachers-section' : 'sales');
+    });
+
+    // 3-slayd: "Mening maoshim" - profil ichidagi "salary" bo'limiga o'tkaziladi.
+    document.getElementById('bannerSalaryLink')?.addEventListener('click', e => {
+        e.preventDefault();
+        _profileSection = 'salary';
+        switchTab('profile');
+    });
+
+    const colorClasses = ['', 'banner-color-2', 'banner-color-3'];
+    let current = 0;
+    let timer = null;
+
+    const showSlide = index => {
+        current = index;
+        slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+        dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        colorClasses.forEach(cls => { if (cls) banner.classList.remove(cls); });
+        if (colorClasses[index]) banner.classList.add(colorClasses[index]);
+    };
+
+    const resetTimer = () => {
+        clearInterval(timer);
+        timer = setInterval(() => showSlide((current + 1) % slides.length), 6000);
+    };
+
+    dots.forEach((dot, i) => {
+        dot.addEventListener('click', () => {
+            showSlide(i);
+            resetTimer();
+        });
+    });
+
+    resetTimer();
 }
 
 // To'liq ruxsatli rollar (sidebar cheklovsiz)

@@ -1453,13 +1453,30 @@ body {
     border-radius: var(--radius);
     padding: 32px 36px;
     color: #fff;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: 24px;
     position: relative;
     overflow: hidden;
     min-height: 160px;
+    transition: background 0.4s ease;
+}
+
+/* 30-vazifa: 3 ta rangli karusel slayd - bir vaqtda faqat .active bo'lgani ko'rinadi */
+.welcome-banner-inner {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.welcome-banner-inner.active {
+    display: flex;
+}
+
+.welcome-banner.banner-color-2 {
+    background: linear-gradient(135deg, #0EA5E9, #0369A1);
+}
+
+.welcome-banner.banner-color-3 {
+    background: linear-gradient(135deg, #10B981, #047857);
 }
 
 .welcome-banner::after {
@@ -1511,7 +1528,11 @@ body {
 .banner-dots {
     display: flex;
     gap: 6px;
-    margin-top: 16px;
+    position: absolute;
+    left: 36px;
+    bottom: 20px;
+    z-index: 2;
+    cursor: pointer;
 }
 
 .banner-dots span {
@@ -2881,7 +2902,7 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .welcome-banner {
+    .welcome-banner-inner {
         flex-direction: column;
         text-align: center;
     }
@@ -6811,7 +6832,8 @@ body.modal-open {
     .stat-info .stat-label { font-size: 11px; }
 
     /* Welcome banner */
-    .welcome-banner { flex-direction: column; padding: 16px; border-radius: 16px; }
+    .welcome-banner { padding: 16px; border-radius: 16px; }
+    .welcome-banner-inner { flex-direction: column; }
     .welcome-text h2 { font-size: 18px; }
     .banner-emoji { margin: 0 auto; }
 
