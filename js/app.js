@@ -296,9 +296,27 @@ async function bootApp() {
     // O'qituvchi uchun bog'liq teacher ID ni aniqlash
     if (currentUser.role === 'teacher' && !currentUser.linkedTeacherId) {
         const teachers = getItem(STORAGE_KEYS.teachers, []);
-        const linked = teachers.find(t =>
+        let linked = teachers.find(t =>
             t.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
         );
+        // 29-vazifa: ustoz hali "Ustoz ish jadvalini sozlash" orqali
+        // haqiqiy STORAGE_KEYS.teachers yozuviga aylanmagan, faqat HR
+        // xodimlar ro'yxatida "virtual" ustoz sifatida mavjud bo'lsa,
+        // yuqoridagi qidiruv hech narsa topmasdi va ustozning shaxsiy
+        // Dars jadvali "Sizga hali dars jadvali biriktirilmagan" deb
+        // bo'sh chiqib qolardi (admin panelda jadval belgilangan bo'lsa
+        // ham). Endi HR xodimlar ro'yxatidan ham (tur/tilidan qat'iy
+        // nazar) qidiriladi — xuddi resolveTeacherWithVirtual kabi.
+        if (!linked) {
+            outer: for (const type of ['asosiy', 'yordamchi']) {
+                for (const subject of ['english', 'russian']) {
+                    const found = filterTeachersByTypeAndSubject(type, subject).find(t =>
+                        t.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+                    );
+                    if (found) { linked = found; break outer; }
+                }
+            }
+        }
         if (linked) {
             currentUser.linkedTeacherId = linked.id;
             setCurrentUser(currentUser);
