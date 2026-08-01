@@ -100,7 +100,15 @@ function getItem(key, fallback) {
     }
 
     const cacheKey = CACHE_KEY_MAP[key];
-    if (cacheKey && _cache[cacheKey] !== undefined) return _cache[cacheKey];
+    if (cacheKey && _cache[cacheKey] !== undefined) {
+        // Buzilgan lidlar keshini hech qachon qaytarmaymiz — aks holda uni
+        // o'qib-o'zgartirib-yozadigan kod bazadagi lidlarni yo'q qilardi.
+        if (key === STORAGE_KEYS.leads && !isValidLeadsShape(_cache[cacheKey])) {
+            console.error('[storage] Lidlar keshi buzilgan — saqlash bloklanadi');
+            return fallback;
+        }
+        return _cache[cacheKey];
+    }
     if (key === STORAGE_KEYS.currentUser) {
         try {
             const raw = localStorage.getItem(key);
@@ -115,6 +123,14 @@ function getItem(key, fallback) {
 function setItem(key, value) {
     const cacheKey = CACHE_KEY_MAP[key];
     if (cacheKey) {
+        // Lidlar serverda "hammasini o'chirib, qaytadan yozish" tamoyili
+        // bo'yicha saqlanadi — shu sabab noto'g'ri shakldagi qiymat butun
+        // bazani yo'q qilishi mumkin. Bunday yozuvni umuman yo'ldan qaytaramiz.
+        if (key === STORAGE_KEYS.leads && !isValidLeadsShape(value)) {
+            console.error('[storage] Noto\'g\'ri shakldagi lidlar ro\'yxati — saqlash bekor qilindi', value);
+            showSaveError('Lidlarni saqlab bo\'lmadi (ma\'lumot buzilgan). Sahifani yangilang.');
+            return;
+        }
         _cache[cacheKey] = value;
         if (_apiReady) {
             apiPatchState({ [cacheKey]: value }).catch(err => {
@@ -144,8 +160,23 @@ function showSaveError(msg) {
     setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
+// Lidlar obyekti haqiqiy ({english:[], russian:[]}) ko'rinishdami?
+// Server `saveLeads` klient yuborgan ro'yxatni to'g'ridan-to'g'ri bazaga
+// yozgani uchun, buzilgan (masalan `{}` yoki `null`) qiymat keshga tushib
+// qolsa, keyingi har qanday saqlash bazadagi lidlarni o'chirib yuborishi
+// mumkin edi. Shu sabab bunday qiymat na keshga yoziladi, na serverga.
+function isValidLeadsShape(value) {
+    return Boolean(value)
+        && typeof value === 'object'
+        && Array.isArray(value.english)
+        && Array.isArray(value.russian);
+}
+
 async function refreshLeadsFromApi() {
     const leads = await apiFetchLeads();
+    if (!isValidLeadsShape(leads)) {
+        throw new Error('Serverdan lidlar ro\'yxati noto\'g\'ri formatda keldi');
+    }
     _cache.leads = leads;
     return leads;
 }

@@ -858,24 +858,77 @@ async function savePayments(client, payments) {
     }
 }
 
+// Bitta PATCH so'rovida o'chirilishi mumkin bo'lgan lidlarning maksimal soni.
+// CRM'da lidlar faqat bittalab o'chiriladi (ommaviy o'chirish tugmasi yo'q —
+// ommaviy amal faqat "menejer biriktirish"), shu sabab bundan ko'p yozuvning
+// yo'qolishi har doim xato/buzilgan payload belgisi hisoblanadi.
+const MAX_LEAD_DELETIONS_PER_PATCH = 3;
+
+function resolveLeadCreatedAt(existingValue, rawCreatedAt) {
+    if (existingValue) return existingValue;
+    if (rawCreatedAt) {
+        const d = new Date(rawCreatedAt);
+        if (!Number.isNaN(d.getTime())) return d;
+    }
+    return new Date();
+}
+
+// MUHIM (lidlar yo'qolishi bo'yicha tuzatish): bu funksiya avval shartsiz
+// `DELETE FROM leads` qilib, keyin klient yuborgan ro'yxatni qayta yozardi.
+// Natijada klientdagi kesh biror sababga ko'ra bo'sh yoki buzilgan bo'lsa
+// (masalan tarmoq uzilishi natijasida `{}` keshga tushib qolsa), bitta
+// oddiy saqlash butun lidlar bazasini o'chirib yuborardi. Endi:
+//   1) faqat klient haqiqatan ham yuborgan tillarga tegiladi;
+//   2) bir so'rovda ko'p yozuv yo'qoladigan bo'lsa — amal rad etiladi;
+//   3) `created_at` saqlab qolinadi (avval har saqlashda NOW() ga tushib,
+//      barcha kartochkalar "hozirgi vaqt"ni ko'rsatib qolardi).
 async function saveLeads(client, leads) {
-    await client.query('DELETE FROM leads');
-    for (const lang of ['english', 'russian']) {
-        for (const l of (leads[lang] || [])) {
+    const langs = ['english', 'russian'].filter(lang => Array.isArray(leads?.[lang]));
+    if (!langs.length) {
+        console.warn("[DB] saveLeads: yaroqli lidlar ro'yxati kelmadi — hech narsa o'zgartirilmadi");
+        return;
+    }
+
+    const { rows: existing } = await client.query(
+        'SELECT id, created_at FROM leads WHERE language = ANY($1)',
+        [langs]
+    );
+    const createdAtById = new Map(existing.map(r => [r.id, r.created_at]));
+
+    const incomingIds = new Set();
+    for (const lang of langs) {
+        for (const l of leads[lang]) if (l?.id) incomingIds.add(l.id);
+    }
+
+    const removed = existing.filter(r => !incomingIds.has(r.id));
+    if (removed.length > MAX_LEAD_DELETIONS_PER_PATCH) {
+        const err = new Error(
+            `Xavfsizlik to'sig'i: bitta so'rovda ${removed.length} ta lid o'chib ketishi mumkin edi — ` +
+            `amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
+        );
+        err.code = 'LEADS_BULK_DELETE_BLOCKED';
+        throw err;
+    }
+
+    await client.query('DELETE FROM leads WHERE language = ANY($1)', [langs]);
+    for (const lang of langs) {
+        for (const l of leads[lang]) {
+            if (!l?.id) continue;
             const photo = l.managerPhoto || (l.attachments && l.attachments[0]) || null;
             const attachmentsArr = photo ? [photo] : [];
             const { id, name, phone, phone2, email, managerId, source, date,
                     externalId, status, leadType, comments, managerPhoto,
                     attachments, createdAt, ...extra } = l;
             await client.query(
-                `INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type, comments, attachments, extra_data)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+                `INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type, comments, attachments, extra_data, created_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
                 [l.id, l.name || '', l.phone || '', l.phone2 || '', l.email || '',
                  l.managerId || '', l.source || 'Organik', lang, l.date || '',
                  l.externalId || null, l.status || 'yangi-lidlar',
                  l.leadType === 'target' ? 'target' : 'organic',
                  JSON.stringify(l.comments || []), JSON.stringify(attachmentsArr),
-                 JSON.stringify(extra)]
+                 JSON.stringify(extra),
+                 resolveLeadCreatedAt(createdAtById.get(l.id), createdAt)]
             );
         }
     }
