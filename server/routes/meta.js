@@ -23,12 +23,21 @@ function getWebhookConfig() {
     });
 }
 
-function getLeadConfig() {
+// Meta Instant Forms tarixini o'qish uchun webhook maxfiy kalitlari kerak
+// emas. Tiklash oqimini webhook konfiguratsiyasidan ajratib saqlaymiz:
+// Page ID va Page Access Token tarixiy formalar/lidlarni o'qish uchun yetarli.
+function getPageConfig() {
     return requireConfig({
-        ...getWebhookConfig(),
         pageToken: process.env.META_PAGE_ACCESS_TOKEN,
         pageId: process.env.META_PAGE_ID,
     });
+}
+
+function getLeadConfig() {
+    return {
+        ...getWebhookConfig(),
+        ...getPageConfig(),
+    };
 }
 
 function verifyMetaSignature(req, appSecret) {
@@ -223,7 +232,7 @@ async function fetchHistoricalMetaLeads(config, selectedFormIds = null) {
 }
 
 async function buildRecoveryPreview(selectedFormIds = null) {
-    const config = getLeadConfig();
+    const config = getPageConfig();
     const historical = await fetchHistoricalMetaLeads(config, selectedFormIds);
     const current = await getLeads();
     const allCurrent = [...(current.english || []), ...(current.russian || [])];
