@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
     salary: 'mh_salary',
     payments: 'mh_payments',
     leads: 'mh_leads',
+    salesLeadStats: 'mh_sales_lead_stats',
     hrEmployees: 'mh_hr_employees',
     bookRoadmap: 'mh_book_roadmap',
     mobileContent: 'mh_mobile_content',
@@ -42,6 +43,7 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.assistantAttendance]: 'assistantAttendance',
     [STORAGE_KEYS.payments]: 'payments',
     [STORAGE_KEYS.leads]: 'leads',
+    [STORAGE_KEYS.salesLeadStats]: 'salesLeadStats',
     [STORAGE_KEYS.hrEmployees]: 'hrEmployees',
     [STORAGE_KEYS.bookRoadmap]: 'bookRoadmap',
     [STORAGE_KEYS.mobileContent]: 'mobileContent',
@@ -132,6 +134,9 @@ function setItem(key, value) {
             return;
         }
         _cache[cacheKey] = value;
+        // Lidlar generic /api/state snapshoti orqali yuborilmaydi. Har bir
+        // lid apiSaveLead/apiDeleteLead bilan row-level saqlanadi.
+        if (key === STORAGE_KEYS.leads) return;
         if (_apiReady) {
             apiPatchState({ [cacheKey]: value }).catch(err => {
                 console.error('Saqlash xatoligi:', err.message);

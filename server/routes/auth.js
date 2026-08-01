@@ -6,7 +6,7 @@ const {
     findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
     createSession, getSessionsByUserId, getSessionById,
     deleteSession, deleteSessionByJti, deleteOtherSessions, DATA_DIR,
-    findStudentByLogin, getStudentPublicId
+    findStudentByLogin, getStudentPublicId, setSalesManagerUserLink
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
 
@@ -21,7 +21,7 @@ router.post('/create-user', authRequired, async (req, res) => {
     try {
         if (req.user.role !== 'admin')
             return res.status(403).json({ error: 'Faqat admin foydalanuvchi yarata oladi' });
-        const { name, login, password, role } = req.body || {};
+        const { name, login, password, role, salesManagerId } = req.body || {};
         if (!name?.trim() || !login?.trim() || !password)
             return res.status(400).json({ error: 'Ism, login va parol talab qilinadi' });
         if (String(password).length < 4)
@@ -33,10 +33,13 @@ router.post('/create-user', authRequired, async (req, res) => {
             if (existing.email === 'admin' && existing.role === 'admin')
                 return res.status(403).json({ error: 'Asosiy admin akkauntini bu yo\'l bilan o\'zgartirib bo\'lmaydi' });
             await updateUser(existing.id, { name: name.trim(), passwordHash: bcrypt.hashSync(String(password), 10), role: userRole });
+            if (userRole !== 'sales_manager') await setSalesManagerUserLink(existing.id, '');
+            else if (salesManagerId !== undefined) await setSalesManagerUserLink(existing.id, salesManagerId);
             return res.json({ ok: true, user: publicUser(await findUserById(existing.id)) });
         }
         const user = await createUser({ name: name.trim(), email: login.trim(), passwordHash: bcrypt.hashSync(String(password), 10), role: userRole });
-        res.status(201).json({ ok: true, user: publicUser(user) });
+        await setSalesManagerUserLink(user.id, userRole === 'sales_manager' ? salesManagerId : '');
+        res.status(201).json({ ok: true, user: publicUser(await findUserById(user.id)) });
     } catch (err) {
         console.error('POST /create-user', err);
         res.status(500).json({ error: 'Server xatoligi' });
@@ -59,11 +62,16 @@ router.post('/sync-roles', authRequired, async (req, res) => {
         for (const entry of entries) {
             const login = entry?.login?.trim();
             const role = entry?.role;
+            const salesManagerId = entry?.salesManagerId;
             if (!login || !validRoles.includes(role)) continue;
             const user = await findUserByEmail(login);
-            if (user && user.role !== role && !(user.email === 'admin' && user.role === 'admin')) {
-                await updateUser(user.id, { role });
-                updated++;
+            if (user && !(user.email === 'admin' && user.role === 'admin')) {
+                if (user.role !== role) {
+                    await updateUser(user.id, { role });
+                    updated++;
+                }
+                if (role !== 'sales_manager') await setSalesManagerUserLink(user.id, '');
+                else if (salesManagerId !== undefined) await setSalesManagerUserLink(user.id, salesManagerId);
             }
         }
         res.json({ ok: true, updated });

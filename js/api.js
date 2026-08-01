@@ -92,6 +92,41 @@ async function apiFetchLeads() {
     return apiFetch('/api/leads');
 }
 
+async function apiFetchDeletedLeads() {
+    return apiFetch('/api/leads/deleted');
+}
+
+async function apiSaveLead(language, lead) {
+    if (!lead?.id) throw new Error('Lid ID topilmadi');
+    return apiFetch(`/api/leads/${encodeURIComponent(lead.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ language, lead })
+    });
+}
+
+async function apiDeleteLead(id) {
+    return apiFetch(`/api/leads/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+async function apiRestoreLead(id) {
+    return apiFetch(`/api/leads/${encodeURIComponent(id)}/restore`, {
+        method: 'POST',
+        body: JSON.stringify({})
+    });
+}
+
+async function apiPreviewMetaLeadRecovery() {
+    return apiFetch('/api/meta/recovery/preview', { timeout: 60000 });
+}
+
+async function apiApplyMetaLeadRecovery(formLanguages, includePhoneMatches = false) {
+    return apiFetch('/api/meta/recovery/apply', {
+        method: 'POST',
+        body: JSON.stringify({ formLanguages: formLanguages || {}, includePhoneMatches }),
+        timeout: 120000
+    });
+}
+
 // 6-vazifa: lid o'quvchiga aylanayotganda shartnoma raqami endi qo'lda
 // kiritilmaydi — shu yerdan serverdagi atomik hisoblagichdan olinadi.
 async function apiGetNextContractNumber() {

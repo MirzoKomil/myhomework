@@ -188,6 +188,19 @@ async function initSchema() {
             lead_type TEXT DEFAULT 'organic',
             comments TEXT DEFAULT '[]',
             attachments TEXT DEFAULT '[]',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            deleted_at TIMESTAMPTZ,
+            deleted_by TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS lead_audit (
+            id BIGSERIAL PRIMARY KEY,
+            lead_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            actor_id TEXT DEFAULT '',
+            actor_name TEXT DEFAULT '',
+            snapshot JSONB NOT NULL DEFAULT '{}',
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
 
@@ -210,6 +223,12 @@ async function initSchema() {
             passport_series TEXT DEFAULT '',
             pinfl TEXT DEFAULT '',
             address TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS user_sales_manager_links (
+            user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            manager_id TEXT NOT NULL UNIQUE,
+            created_at TIMESTAMPTZ DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS book_roadmap (
@@ -244,6 +263,10 @@ async function initSchema() {
         ON leads(source, external_id)
         WHERE external_id IS NOT NULL
     `).catch(() => {});
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_lead_audit_lead_created
+        ON lead_audit(lead_id, created_at DESC)
+    `).catch(() => {});
 
     // Migration: book_roadmap jadvaliga yangi ustunlar qo'shish
     await pool.query(`ALTER TABLE book_roadmap ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
@@ -267,7 +290,47 @@ async function initSchema() {
 
     // Migration: leads va students jadvallariga extra_data qo'shish
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
+    // 200+ lid yo'qolgan hodisadan keyingi himoya: lidlar endi hard-delete
+    // qilinmaydi va har bir row-level o'zgarish audit tarixiga yoziladi.
+    await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(() => {});
+    await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`).catch(() => {});
+    await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS deleted_by TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
+
+    // Mavjud sotuv-menejeri loginlarini bir marta barqaror manager ID bilan
+    // bog'laymiz. Keyingi profil nomi o'zgarishi authorization'ga ta'sir
+    // qilmaydi. Bir xil ismli xodimlar avtomatik bog'lanmaydi (fail closed).
+    await pool.query(`
+        INSERT INTO user_sales_manager_links (user_id, manager_id)
+        SELECT u.id, managers.id
+        FROM users u
+        JOIN (
+            SELECT MIN(id) AS id, LOWER(TRIM(name)) AS name_key
+            FROM hr_employees
+            WHERE LOWER(REPLACE(REPLACE(TRIM(role), '_', '-'), ' ', '-'))
+                  IN ('sotuv-menejeri', 'sales-manager')
+            GROUP BY LOWER(TRIM(name))
+            HAVING COUNT(*) = 1
+        ) managers ON managers.name_key = LOWER(TRIM(u.name))
+        WHERE u.role = 'sales_manager'
+        ON CONFLICT DO NOTHING
+    `).catch(() => {});
+    await pool.query(`
+        INSERT INTO user_sales_manager_links (user_id, manager_id)
+        SELECT u.id, managers.id
+        FROM users u
+        JOIN (
+            SELECT MIN(id) AS id, LOWER(TRIM(name)) AS name_key
+            FROM sales_managers
+            GROUP BY LOWER(TRIM(name))
+            HAVING COUNT(*) = 1
+        ) managers ON managers.name_key = LOWER(TRIM(u.name))
+        WHERE u.role = 'sales_manager'
+          AND NOT EXISTS (
+              SELECT 1 FROM user_sales_manager_links link WHERE link.user_id = u.id
+          )
+        ON CONFLICT DO NOTHING
+    `).catch(() => {});
 
     // Boshlang'ich mobile_content qatori
     await pool.query(
@@ -440,7 +503,10 @@ function rowToLead(r) {
         status: r.status || 'new', leadType: r.lead_type || 'organic',
         comments: parseJsonArray(r.comments), attachments,
         managerPhoto: attachments[0] || null,
-        externalId: r.external_id || null, createdAt: r.created_at || null
+        externalId: r.external_id || null, createdAt: r.created_at || null,
+        updatedAt: r.updated_at || null,
+        language: r.language === 'russian' ? 'russian' : 'english',
+        deletedAt: r.deleted_at || null, deletedBy: r.deleted_by || ''
     };
 }
 
@@ -457,8 +523,14 @@ async function buildAttendanceObject(tableName) {
     return out;
 }
 
-async function getLeads() {
-    const rows = await q('SELECT * FROM leads ORDER BY created_at DESC, date DESC');
+async function getLeads(options = {}) {
+    const managerId = String(options.managerId || '').trim();
+    const rows = managerId
+        ? await q(
+            'SELECT * FROM leads WHERE deleted_at IS NULL AND manager_id = $1 ORDER BY created_at DESC, date DESC',
+            [managerId]
+        )
+        : await q('SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY created_at DESC, date DESC');
     const leads = { english: [], russian: [] };
     rows.forEach(r => {
         const item = rowToLead(r);
@@ -934,65 +1006,212 @@ function resolveLeadCreatedAt(existingValue, rawCreatedAt) {
     return new Date();
 }
 
-// MUHIM (lidlar yo'qolishi bo'yicha tuzatish): bu funksiya avval shartsiz
-// `DELETE FROM leads` qilib, keyin klient yuborgan ro'yxatni qayta yozardi.
-// Natijada klientdagi kesh biror sababga ko'ra bo'sh yoki buzilgan bo'lsa
-// (masalan tarmoq uzilishi natijasida `{}` keshga tushib qolsa), bitta
-// oddiy saqlash butun lidlar bazasini o'chirib yuborardi. Endi:
-//   1) faqat klient haqiqatan ham yuborgan tillarga tegiladi;
-//   2) bir so'rovda ko'p yozuv yo'qoladigan bo'lsa — amal rad etiladi;
-//   3) `created_at` saqlab qolinadi (avval har saqlashda NOW() ga tushib,
-//      barcha kartochkalar "hozirgi vaqt"ni ko'rsatib qolardi).
+async function getDeletedLeads() {
+    const rows = await q('SELECT * FROM leads WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC');
+    return rows.map(rowToLead);
+}
+
+async function getLeadById(id) {
+    const row = await q1('SELECT * FROM leads WHERE id = $1', [id]);
+    return row ? rowToLead(row) : null;
+}
+
+async function getSalesManagerIdForUser(userId) {
+    const row = await q1(
+        `SELECT manager_id
+         FROM user_sales_manager_links
+         WHERE user_id = $1`,
+        [userId]
+    );
+    return row?.manager_id || '';
+}
+
+async function setSalesManagerUserLink(userId, managerId) {
+    const normalizedManagerId = String(managerId || '').trim();
+    if (!normalizedManagerId) {
+        await pool.query('DELETE FROM user_sales_manager_links WHERE user_id = $1', [userId]);
+        return '';
+    }
+    await pool.query(
+        `INSERT INTO user_sales_manager_links (user_id, manager_id)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id) DO UPDATE SET manager_id = EXCLUDED.manager_id`,
+        [userId, normalizedManagerId]
+    );
+    return normalizedManagerId;
+}
+
+function normalizeStoredLeadLanguage(value) {
+    return value === 'russian' ? 'russian' : 'english';
+}
+
+function leadDbPayload(lead, language, existingCreatedAt = null) {
+    const l = lead || {};
+    const attachments = Array.isArray(l.attachments) ? l.attachments.filter(Boolean) : [];
+    if (l.managerPhoto && !attachments.includes(l.managerPhoto)) attachments.unshift(l.managerPhoto);
+    const {
+        id, name, phone, phone2, email, managerId, source, date,
+        externalId, status, leadType, comments, managerPhoto,
+        createdAt, updatedAt, deletedAt, deletedBy, language: _language,
+        attachments: _attachments, ...extra
+    } = l;
+    return {
+        id: String(id || '').trim(),
+        name: name || '',
+        phone: phone || '',
+        phone2: phone2 || '',
+        email: email || '',
+        managerId: managerId || '',
+        source: source || 'Organik',
+        language: normalizeStoredLeadLanguage(language || _language),
+        date: date || '',
+        externalId: externalId || null,
+        status: status || 'yangi-lidlar',
+        leadType: leadType === 'target' ? 'target' : 'organic',
+        comments: Array.isArray(comments) ? comments : [],
+        attachments,
+        extra,
+        createdAt: resolveLeadCreatedAt(existingCreatedAt, createdAt)
+    };
+}
+
+async function appendLeadAudit(client, leadId, action, actor, snapshot) {
+    await client.query(
+        `INSERT INTO lead_audit (lead_id, action, actor_id, actor_name, snapshot)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [leadId, action, actor?.id || '', actor?.name || actor?.email || '', JSON.stringify(snapshot || {})]
+    );
+}
+
+async function upsertLeadWithClient(client, lead, language, options = {}) {
+    if (!lead?.id) throw new Error('Lid ID yuborilishi shart');
+    const existing = await client.query('SELECT * FROM leads WHERE id = $1 FOR UPDATE', [lead.id]);
+    const existingRow = existing.rows[0] || null;
+    const before = existingRow ? rowToLead(existingRow) : null;
+
+    // Bir xil lid ikki eski tabdan bir paytda tahrir qilinsa, kech kelgan
+    // eski snapshot yangi ma'lumotni bosib yubormaydi.
+    if (existingRow && options.requireVersion !== false) {
+        const expected = lead.updatedAt ? new Date(lead.updatedAt).getTime() : NaN;
+        const actual = existingRow.updated_at ? new Date(existingRow.updated_at).getTime() : NaN;
+        if (!Number.isFinite(expected) || expected !== actual) {
+            const err = new Error("Bu lid boshqa oynada yangilangan. Sahifa yangilandi; o'zgarishni qayta kiriting.");
+            err.code = 'LEAD_VERSION_CONFLICT';
+            err.status = 409;
+            throw err;
+        }
+    }
+
+    // PATCH qisman obyekt yuborsa ham mavjud maydonlar bo'shab ketmasin.
+    const merged = existingRow ? { ...before, ...lead, id: existingRow.id } : lead;
+    const p = leadDbPayload(merged, language, existingRow?.created_at);
+    if (!p.name.trim()) throw new Error('Lid ismi bo\'sh bo\'lmasligi kerak');
+
+    let rows;
+    if (existingRow) {
+        ({ rows } = await client.query(
+            `UPDATE leads SET
+                name=$2, phone=$3, phone2=$4, email=$5, manager_id=$6,
+                source=$7, language=$8, date=$9, external_id=$10,
+                status=$11, lead_type=$12, comments=$13, attachments=$14,
+                extra_data=$15, updated_at=NOW(), deleted_at=NULL, deleted_by=''
+             WHERE id=$1 RETURNING *`,
+            [p.id, p.name, p.phone, p.phone2, p.email, p.managerId, p.source,
+             p.language, p.date, p.externalId, p.status, p.leadType,
+             JSON.stringify(p.comments), JSON.stringify(p.attachments), JSON.stringify(p.extra)]
+        ));
+    } else {
+        ({ rows } = await client.query(
+            `INSERT INTO leads
+                (id, name, phone, phone2, email, manager_id, source, language, date,
+                 external_id, status, lead_type, comments, attachments, extra_data,
+                 created_at, updated_at, deleted_at, deleted_by)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),NULL,'')
+             RETURNING *`,
+            [p.id, p.name, p.phone, p.phone2, p.email, p.managerId, p.source,
+             p.language, p.date, p.externalId, p.status, p.leadType,
+             JSON.stringify(p.comments), JSON.stringify(p.attachments),
+             JSON.stringify(p.extra), p.createdAt]
+        ));
+    }
+    const saved = { ...rowToLead(rows[0]), language: rows[0].language };
+    if (options.audit !== false) {
+        await appendLeadAudit(
+            client,
+            p.id,
+            existingRow ? 'updated' : 'created',
+            options.actor,
+            { before, after: saved }
+        );
+    }
+    return saved;
+}
+
+// Legacy brauzerlar hali ham /api/state orqali butun snapshot yuborishi
+// mumkin. Muhim qoida: payload ichida yo'q lidlar HECH QACHON o'chirilmaydi.
+// Shu tariqa eski/yarim yuklangan tab 200+ lidni yana yo'q qila olmaydi.
 async function saveLeads(client, leads) {
     const langs = ['english', 'russian'].filter(lang => Array.isArray(leads?.[lang]));
     if (!langs.length) {
         console.warn("[DB] saveLeads: yaroqli lidlar ro'yxati kelmadi — hech narsa o'zgartirilmadi");
         return;
     }
-
-    const { rows: existing } = await client.query(
-        'SELECT id, created_at FROM leads WHERE language = ANY($1)',
-        [langs]
-    );
-    const createdAtById = new Map(existing.map(r => [r.id, r.created_at]));
-
-    const incomingIds = new Set();
     for (const lang of langs) {
-        for (const l of leads[lang]) if (l?.id) incomingIds.add(l.id);
-    }
-
-    const removed = existing.filter(r => !incomingIds.has(r.id));
-    if (removed.length > MAX_BULK_DELETIONS_PER_PATCH) {
-        const err = new Error(
-            `Xavfsizlik to'sig'i: bitta so'rovda ${removed.length} ta lid o'chib ketishi mumkin edi — ` +
-            `amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
-        );
-        err.code = 'LEADS_BULK_DELETE_BLOCKED';
-        throw err;
-    }
-
-    await client.query('DELETE FROM leads WHERE language = ANY($1)', [langs]);
-    for (const lang of langs) {
-        for (const l of leads[lang]) {
-            if (!l?.id) continue;
-            const photo = l.managerPhoto || (l.attachments && l.attachments[0]) || null;
-            const attachmentsArr = photo ? [photo] : [];
-            const { id, name, phone, phone2, email, managerId, source, date,
-                    externalId, status, leadType, comments, managerPhoto,
-                    attachments, createdAt, ...extra } = l;
-            await client.query(
-                `INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type, comments, attachments, extra_data, created_at)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-                [l.id, l.name || '', l.phone || '', l.phone2 || '', l.email || '',
-                 l.managerId || '', l.source || 'Organik', lang, l.date || '',
-                 l.externalId || null, l.status || 'yangi-lidlar',
-                 l.leadType === 'target' ? 'target' : 'organic',
-                 JSON.stringify(l.comments || []), JSON.stringify(attachmentsArr),
-                 JSON.stringify(extra),
-                 resolveLeadCreatedAt(createdAtById.get(l.id), createdAt)]
-            );
+        for (const lead of leads[lang]) {
+            if (!lead?.id) continue;
+            // Bu faqat server ichidagi eski moslik yo'li. Public /api/state
+            // leads kalitini qabul qilmaydi; shu sabab versionsiz upsert faqat
+            // boshqa qatorlarni o'chirmaydigan legacy import uchun qoladi.
+            await upsertLeadWithClient(client, lead, lang, { audit: false, requireVersion: false });
         }
     }
+}
+
+async function upsertLead(lead, language, actor = {}) {
+    let saved;
+    await tx(async client => { saved = await upsertLeadWithClient(client, lead, language, { actor }); });
+    return saved;
+}
+
+async function softDeleteLead(id, actor = {}) {
+    let deleted = null;
+    await tx(async client => {
+        const existing = await client.query('SELECT * FROM leads WHERE id = $1 FOR UPDATE', [id]);
+        if (!existing.rows[0] || existing.rows[0].deleted_at) return;
+        const before = rowToLead(existing.rows[0]);
+        const { rows } = await client.query(
+            `UPDATE leads
+             SET deleted_at = NOW(), deleted_by = $2, updated_at = NOW()
+             WHERE id = $1 AND deleted_at IS NULL
+             RETURNING *`,
+            [id, actor?.name || actor?.email || '']
+        );
+        if (!rows[0]) return;
+        deleted = { ...rowToLead(rows[0]), language: rows[0].language };
+        await appendLeadAudit(client, id, 'deleted', actor, { before, after: deleted });
+    });
+    return deleted;
+}
+
+async function restoreLead(id, actor = {}) {
+    let restored = null;
+    await tx(async client => {
+        const existing = await client.query('SELECT * FROM leads WHERE id = $1 FOR UPDATE', [id]);
+        if (!existing.rows[0]) return;
+        const before = rowToLead(existing.rows[0]);
+        const { rows } = await client.query(
+            `UPDATE leads
+             SET deleted_at = NULL, deleted_by = '', updated_at = NOW()
+             WHERE id = $1
+             RETURNING *`,
+            [id]
+        );
+        restored = rowToLead(rows[0]);
+        if (before.deletedAt) {
+            await appendLeadAudit(client, id, 'restored', actor, { before, after: restored });
+        }
+    });
+    return restored;
 }
 
 async function saveHrEmployeesData(client, employees) {
@@ -2454,7 +2673,7 @@ function normalizeLeadSource(val) {
     return val;
 }
 
-async function insertLead({ name, phone, email, language, source, externalId, date, status, leadType, contactTime }) {
+async function insertLead({ name, phone, email, language, source, externalId, date, status, leadType, contactTime, createdAt }) {
     const src = normalizeLeadSource(source);
     const lang = languageForSource(src, language);
     const extId = externalId ? String(externalId) : null;
@@ -2462,8 +2681,16 @@ async function insertLead({ name, phone, email, language, source, externalId, da
     const statusNorm = status || 'yangi-lidlar';
 
     if (extId) {
-        const existing = await q1('SELECT id FROM leads WHERE source = $1 AND external_id = $2', [src, extId]);
-        if (existing) return { id: existing.id, duplicate: true };
+        const existing = await q1(
+            'SELECT id, deleted_at FROM leads WHERE source = $1 AND external_id = $2',
+            [src, extId]
+        );
+        if (existing) {
+            if (existing.deleted_at) {
+                await restoreLead(existing.id, { name: 'Meta tiklash' });
+            }
+            return { id: existing.id, duplicate: true, restored: Boolean(existing.deleted_at) };
+        }
     }
 
     const id = randomUUID();
@@ -2482,21 +2709,49 @@ async function insertLead({ name, phone, email, language, source, externalId, da
         });
     }
 
-    await pool.query(
-        'INSERT INTO leads (id, name, phone, email, source, language, date, external_id, status, lead_type, comments, attachments) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
-        [id, name, phone || '', email || '', src, lang, dateStr, extId, statusNorm, leadTypeNorm, JSON.stringify(initialComments), '[]']
-    );
-    return { id, duplicate: false, lead: { id, name, phone: phone || '', email: email || '', source: src, language: lang, date: dateStr, externalId: extId, status: statusNorm, leadType: leadTypeNorm } };
+    const created = createdAt && !Number.isNaN(new Date(createdAt).getTime())
+        ? new Date(createdAt)
+        : new Date();
+    const lead = {
+        id, name, phone: phone || '', email: email || '', source: src,
+        language: lang, date: dateStr, externalId: extId,
+        status: statusNorm, leadType: leadTypeNorm, comments: initialComments,
+        attachments: [], createdAt: created
+    };
+    await tx(async client => {
+        await client.query(
+            `INSERT INTO leads
+                (id, name, phone, email, source, language, date, external_id,
+                 status, lead_type, comments, attachments, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())`,
+            [id, name, phone || '', email || '', src, lang, dateStr, extId,
+             statusNorm, leadTypeNorm, JSON.stringify(initialComments), '[]', created]
+        );
+        await appendLeadAudit(client, id, 'created', { name: 'Tizim' }, lead);
+    });
+    return { id, duplicate: false, lead };
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────
 
 async function findUserByEmail(email) {
-    return q1('SELECT * FROM users WHERE email = $1', [email]);
+    return q1(
+        `SELECT u.*, link.manager_id AS sales_manager_id
+         FROM users u
+         LEFT JOIN user_sales_manager_links link ON link.user_id = u.id
+         WHERE u.email = $1`,
+        [email]
+    );
 }
 
 async function findUserById(id) {
-    return q1('SELECT * FROM users WHERE id = $1', [id]);
+    return q1(
+        `SELECT u.*, link.manager_id AS sales_manager_id
+         FROM users u
+         LEFT JOIN user_sales_manager_links link ON link.user_id = u.id
+         WHERE u.id = $1`,
+        [id]
+    );
 }
 
 // Xodimlar o'rtasidagi muloqotda ism va avatar aynan login akkauntidan
@@ -2542,7 +2797,8 @@ function publicUser(user) {
         id: user.id, name: user.name, email: user.email, role: user.role,
         phone: user.phone || '', bio: user.bio || '',
         location: user.location || '', avatar: user.avatar || '',
-        createdAt: user.created_at || ''
+        createdAt: user.created_at || '',
+        linkedManagerId: user.sales_manager_id || ''
     };
 }
 
@@ -2634,7 +2890,8 @@ setInterval(_checkAndPushComputedNotifications, PUSH_CHECK_INTERVAL_MS);
 
 module.exports = {
     pool, DATA_DIR,
-    getFullState, getLeads, insertLead, patchState,
+    getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
+    insertLead, upsertLead, softDeleteLead, restoreLead, patchState,
     findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
     getHrEmployeesData, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile,

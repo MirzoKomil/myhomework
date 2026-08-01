@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording } = require('../db');
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -639,31 +639,81 @@ router.post('/demo-shop-orders', studentAuthOptional, async (req, res) => {
     }
 });
 
-router.get('/', authRequired, async (req, res) => {
+function crmStateRequired(req, res, next) {
+    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'teacher', 'employee'].includes(req.user?.role)) {
+        return res.status(403).json({ error: 'CRM ma\'lumotlariga ruxsat yo\'q' });
+    }
+    next();
+}
+
+function crmStateMutationRequired(req, res, next) {
+    if (!['admin', 'rop', 'boshliq'].includes(req.user?.role)) {
+        return res.status(403).json({
+            error: 'Umumiy CRM snapshotini faqat admin yoki ROP yangilashi mumkin'
+        });
+    }
+    next();
+}
+
+async function getStateForUser(user) {
+    const state = await getFullState();
+    if (user.role === 'sales_manager') {
+        // Menejerlar reytingi uchun PII'siz umumiy ko'rsatkichlar qoladi;
+        // kartochkalarning o'zi esa faqat shu menejerga tegishli bo'ladi.
+        state.salesLeadStats = [...(state.leads?.english || []), ...(state.leads?.russian || [])].map(lead => ({
+            managerId: lead.managerId || '',
+            status: lead.status || '',
+            source: lead.source || 'Organik',
+            date: lead.date || '',
+            createdAt: lead.createdAt || null,
+            closedDate: lead.closedDate || null,
+            paymentClosedSurvey: lead.paymentClosedSurvey ? {
+                actualAmount: lead.paymentClosedSurvey.actualAmount,
+                totalAmount: lead.paymentClosedSurvey.totalAmount,
+                closedDate: lead.paymentClosedSurvey.closedDate
+            } : null,
+            paymentSurvey: lead.paymentSurvey ? {
+                paidAmount: lead.paymentSurvey.paidAmount,
+                totalAmount: lead.paymentSurvey.totalAmount
+            } : null
+        }));
+        const managerId = await getSalesManagerIdForUser(user.id);
+        state.leads = managerId ? await getLeads({ managerId }) : { english: [], russian: [] };
+        state.archive = [];
+    } else if (!['admin', 'rop', 'boshliq'].includes(user.role)) {
+        // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas.
+        state.leads = { english: [], russian: [] };
+        state.archive = [];
+    }
+    return state;
+}
+
+router.get('/', authRequired, crmStateRequired, async (req, res) => {
     try {
-        res.json(await getFullState());
+        res.json(await getStateForUser(req.user));
     } catch (err) {
         console.error('GET /api/state', err);
         res.status(500).json({ error: 'Ma\'lumotlarni yuklashda xatolik' });
     }
 });
 
-router.patch('/', authRequired, async (req, res) => {
+router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
     try {
         const body = req.body || {};
         const allowed = [
             'teachers', 'students', 'salesManagers', 'timetable',
-            'mainAttendance', 'assistantAttendance', 'payments', 'leads', 'hrEmployees',
+            'mainAttendance', 'assistantAttendance', 'payments', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
             'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics',
             'liveGrades', 'demoStudentId', 'studentMessages', 'peerMessages', 'shopOrders'
         ];
+        if (['admin', 'rop', 'boshliq'].includes(req.user.role)) allowed.push('archive');
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });
         if (!Object.keys(partial).length)
             return res.status(400).json({ error: 'Yangilash uchun ma\'lumot yuborilmadi' });
         await patchState(partial);
-        res.json({ ok: true, state: await getFullState() });
+        res.json({ ok: true, state: await getStateForUser(req.user) });
     } catch (err) {
         console.error('PATCH /api/state', err);
         res.status(500).json({ error: 'Saqlashda xatolik' });

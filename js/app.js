@@ -326,7 +326,8 @@ async function syncHrLoginRolesOnce(currentUser) {
         role: e.role === 'rop' ? 'rop'
             : (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? 'sales_manager'
             : (e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi') ? 'teacher'
-            : 'employee'
+            : 'employee',
+        salesManagerId: (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? e.id : ''
     }));
 
     try {
@@ -395,9 +396,8 @@ async function bootApp() {
     // Sotuv menejeri uchun bog'liq manager ID va til yo'nalishini aniqlash
     if (currentUser.role === 'sales_manager' && (!currentUser.linkedManagerId || !currentUser.linkedManagerLang)) {
         const managers = getItem(STORAGE_KEYS.salesManagers, []);
-        const linked = managers.find(m =>
-            m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
-        );
+        const linked = managers.find(m => String(m.id) === String(currentUser.linkedManagerId || ''))
+            || managers.find(m => m.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase());
         if (linked) {
             currentUser.linkedManagerId = linked.id;
             // linked.lang bo'lmasa, lidlar orqali tilni aniqlaymiz
@@ -482,15 +482,33 @@ function showProfileDocsBanner() {
 
 let _leadsPollTimer = null;
 
+function getLeadPollFingerprint(leads) {
+    return ['english', 'russian'].flatMap(lang => (leads?.[lang] || []).map(lead => [
+        lang,
+        String(lead.id || ''),
+        String(lead.updatedAt || ''),
+        String(lead.status || ''),
+        String(lead.managerId || '')
+    ].join('|'))).sort().join('\n');
+}
+
 function startLeadsPolling() {
     if (_leadsPollTimer) return;
     _leadsPollTimer = setInterval(async () => {
         try {
+            // Lokal PATCH navbati tugamasdan server snapshoti optimistik
+            // o'zgarishni bosib yubormasin.
+            if (hasPendingLeadChanges()) return;
+            const mutationGeneration = getLeadMutationGeneration();
             const prev = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-            const prevCount = prev.english.length + prev.russian.length;
-            const leads = await refreshLeadsFromApi();
+            const prevFingerprint = getLeadPollFingerprint(prev);
+            const leads = await apiFetchLeads();
+            if (hasPendingLeadChanges() || mutationGeneration !== getLeadMutationGeneration()) return;
+            const changed = prevFingerprint !== getLeadPollFingerprint(leads);
+            setItem(STORAGE_KEYS.leads, leads);
+            syncLeadServerVersions(leads);
             const newCount = leads.english.length + leads.russian.length;
-            if (newCount > prevCount) {
+            if (changed) {
                 if (typeof syncNotifications === 'function') syncNotifications();
                 if (document.getElementById('tab-sales')?.classList.contains('active')) renderSales();
                 if (document.getElementById('tab-dashboard')?.classList.contains('active')) renderDashboard();
@@ -7149,6 +7167,9 @@ function getArchiveRecords() {
 
 function archiveRecord(type, item, meta = {}) {
     if (!item?.id) return;
+    // Sotuv menejeri lidni soft-delete qilganda serverning canonical arxivi
+    // yetarli; global localStorage arxivini to'liq PATCH qilish huquqi yo'q.
+    if (type === 'lead' && getCurrentUser()?.role === 'sales_manager') return;
     const records = getArchiveRecords();
     if (records.some(record => record.type === type && record.item?.id === item.id)) return;
     records.unshift({
@@ -7175,16 +7196,34 @@ function archiveRecordDetails(record) {
     return [archiveTypeLabel('employee', item), item.department, item.phone || item.login].filter(Boolean).join(' · ');
 }
 
-function restoreArchiveRecord(recordId) {
-    const records = getArchiveRecords();
-    const record = records.find(item => item.id === recordId);
+async function restoreArchiveRecord(recordId, providedRecord = null) {
+    const localRecords = getArchiveRecords();
+    const record = providedRecord || localRecords.find(item => item.id === recordId);
     if (!record) return;
     const item = record.item;
     if (record.type === 'lead') {
-        const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-        const lang = record.meta?.lang === 'russian' ? 'russian' : 'english';
-        if (!(leads[lang] || []).some(lead => lead.id === item.id)) leads[lang] = [...(leads[lang] || []), item];
-        setItem(STORAGE_KEYS.leads, leads);
+        const lang = item.language === 'russian' || record.meta?.lang === 'russian' ? 'russian' : 'english';
+        try {
+            const result = await runExclusiveLeadMutation(async () => {
+                await waitForLeadPersistence(item.id);
+                try {
+                    return await apiRestoreLead(item.id);
+                } catch (err) {
+                    // Eski hard-delete davridan qolgan local arxivlarda server row
+                    // bo'lmasligi mumkin; bunday yozuv xavfsiz row-level INSERT bo'ladi.
+                    if (err.status !== 404) throw err;
+                    return apiSaveLead(lang, item);
+                }
+            });
+            const restored = result.lead || item;
+            if (restored.updatedAt) _leadServerVersions.set(String(item.id), restored.updatedAt);
+            const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+            leads[lang] = [...(leads[lang] || []).filter(lead => lead.id !== item.id), restored];
+            setItem(STORAGE_KEYS.leads, leads);
+        } catch (err) {
+            showSaveError(err.message);
+            return false;
+        }
     } else if (record.type === 'student') {
         const students = getItem(STORAGE_KEYS.students, []);
         if (!students.some(student => student.id === item.id)) setItem(STORAGE_KEYS.students, [...students, item]);
@@ -7192,21 +7231,42 @@ function restoreArchiveRecord(recordId) {
         const employees = getHrEmployees() || [];
         if (!employees.some(employee => employee.id === item.id)) saveHrEmployees([...employees, item]);
     }
-    setItem(STORAGE_KEYS.archive, records.filter(item => item.id !== recordId));
+    setItem(STORAGE_KEYS.archive, localRecords.filter(item => item.id !== recordId));
     renderLeads();
     renderStudents();
     renderHrEmployees();
     showMiniToast(`${item.name || 'Yozuv'} tiklandi`);
+    return true;
 }
 
 // 35-vazifa: avval bu "Arxiv" oynasi modal ko'rinishida ochilardi
 // (Sozlamalar akkordeonidagi tugma orqali). Endi "Sozlamalar" sahifasining
 // o'z sub-bo'limi, shu sabab modal o'rniga to'g'ridan-to'g'ri
 // #settingsPanel-archive konteyneriga render qilinadi.
-function renderSettingsArchivePanel() {
+async function renderSettingsArchivePanel() {
     const container = document.getElementById('settingsPanel-archive');
     if (!container) return;
-    const records = getArchiveRecords();
+    let records = getArchiveRecords();
+    const canRecoverMeta = ['admin', 'rop', 'boshliq'].includes(getCurrentUser()?.role);
+    if (canRecoverMeta) {
+        try {
+            const serverArchive = await apiFetchDeletedLeads();
+            const knownLeadIds = new Set(records.filter(record => record.type === 'lead').map(record => String(record.item?.id || '')));
+            const canonical = (serverArchive.leads || [])
+                .filter(lead => lead?.id && !knownLeadIds.has(String(lead.id)))
+                .map(lead => ({
+                    id: `server-lead-${lead.id}`,
+                    type: 'lead',
+                    item: lead,
+                    meta: { lang: lead.language === 'russian' ? 'russian' : 'english' },
+                    deletedAt: lead.deletedAt || new Date().toISOString(),
+                    deletedBy: lead.deletedBy || 'Server'
+                }));
+            records = [...canonical, ...records];
+        } catch (err) {
+            console.warn('Server lidlar arxivi olinmadi:', err.message);
+        }
+    }
     const groups = [
         { type: 'lead', title: 'Lidlar' },
         { type: 'student', title: "O'quvchilar" },
@@ -7226,13 +7286,108 @@ function renderSettingsArchivePanel() {
     };
     const renderArchiveItem = record => `<article class="archive-item"><div><b>${escapeHtml(record.item?.name || 'Nomsiz yozuv')}</b><small>${escapeHtml(archiveRecordDetails(record) || "Qo'shimcha ma'lumot yo'q")}</small><small>${escapeHtml(record.deletedBy || "Noma'lum foydalanuvchi")} tomonidan o'chirilgan</small><time>${new Date(record.deletedAt).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div><button type="button" class="btn-primary archive-restore-btn" data-archive-restore="${escapeHtml(record.id)}">Tiklash</button></article>`;
 
-    container.innerHTML = `<div class="archive-modal" style="padding:20px"><div class="archive-intro"><b>O'chirib yuborilgan ma'lumotlar</b><span>Kerakli yozuvni tanlab, istalgan payt qayta tiklashingiz mumkin.</span></div>${groups.map(renderGroup).join('')}</div>`;
+    const metaRecovery = canRecoverMeta ? `
+        <section class="archive-group" style="margin-bottom:18px">
+            <h4>Favqulodda tiklash <span>Meta</span></h4>
+            <div class="archive-intro" style="margin-bottom:10px">
+                <b>Meta Instant Forms tarixidan lidlarni tiklash</b>
+                <span>Avval tekshiradi; mavjud lidlarga tegmaydi va telefon/Meta ID bo'yicha dublikat qo'shmaydi.</span>
+            </div>
+            <button type="button" class="btn-primary archive-restore-btn" id="previewMetaLeadRecovery">Tekshirish va tiklash</button>
+            <div id="metaLeadRecoveryStatus" class="text-muted" style="margin:10px 0 0"></div>
+        </section>` : '';
+    container.innerHTML = `<div class="archive-modal" style="padding:20px"><div class="archive-intro"><b>O'chirib yuborilgan ma'lumotlar</b><span>Kerakli yozuvni tanlab, istalgan payt qayta tiklashingiz mumkin.</span></div>${metaRecovery}${groups.map(renderGroup).join('')}</div>`;
     container.querySelectorAll('[data-archive-restore]').forEach(btn => {
-        btn.onclick = () => {
-            restoreArchiveRecord(btn.dataset.archiveRestore);
-            renderSettingsArchivePanel();
+        btn.onclick = async () => {
+            btn.disabled = true;
+            const record = records.find(item => item.id === btn.dataset.archiveRestore);
+            const restored = await restoreArchiveRecord(btn.dataset.archiveRestore, record);
+            if (restored !== false) renderSettingsArchivePanel();
+            else btn.disabled = false;
         };
     });
+    const metaBtn = container.querySelector('#previewMetaLeadRecovery');
+    if (metaBtn) metaBtn.onclick = async () => {
+        const status = container.querySelector('#metaLeadRecoveryStatus');
+        metaBtn.disabled = true;
+        if (status) status.textContent = 'Meta formalari tekshirilmoqda...';
+        try {
+            const preview = await apiPreviewMetaLeadRecovery();
+            const summary = `Meta'da ${preview.metaLeadCount} ta, CRM'da ${preview.currentLeadCount} ta; ` +
+                `${preview.missingCount} ta Meta ariza ID'si yetishmayapti.`;
+            const formErrors = preview.formErrors || [];
+            if (!preview.missingCount) {
+                if (status) status.textContent = formErrors.length
+                    ? `Meta formalari to'liq tekshirilmadi: ${formErrors.map(item => `${item.formName || item.formId}: ${item.error}`).join('; ')}`
+                    : summary;
+                showMiniToast(formErrors.length ? 'Ayrim Meta formalari o\'qilmadi' : "Meta'da tiklanadigan yangi lid topilmadi");
+                return;
+            }
+            const forms = (preview.forms || []).filter(form => form.leadCount > 0);
+            const totalPhoneMatches = forms.reduce((sum, form) => sum + Number(form.phoneMatchCount || 0), 0);
+            if (status) status.innerHTML = `
+                <p style="margin:0 0 10px">${escapeHtml(summary)} Har bir formaning tilini tekshiring:</p>
+                ${formErrors.length ? `<div style="color:#dc2626;margin:0 0 10px"><b>${formErrors.length} ta forma o'qilmadi:</b><br>${formErrors.map(item => `${escapeHtml(item.formName || item.formId)}: ${escapeHtml(item.error)}`).join('<br>')}</div>` : ''}
+                <div style="display:grid;gap:8px">
+                    ${forms.map(form => `<label style="display:grid;grid-template-columns:minmax(140px,1fr) minmax(130px,180px);gap:8px;align-items:center">
+                        <span><b>${escapeHtml(form.name || `Form ${form.id}`)}</b><small style="display:block">${form.leadCount} ta jami, ${form.missingCount} ta yetishmaydi${form.phoneMatchCount ? `; ${form.phoneMatchCount} tasining telefoni CRM'da bor` : ''}</small></span>
+                        <select data-meta-recovery-form="${escapeHtml(form.id)}" data-missing-count="${form.missingCount}" data-safe-missing-count="${Math.max(0, form.missingCount - (form.phoneMatchCount || 0))}" data-phone-match-count="${form.phoneMatchCount || 0}" style="width:100%">
+                            <option value="">O'tkazib yuborish</option>
+                            <option value="english"${form.language === 'english' ? ' selected' : ''}>Ingliz tili</option>
+                            <option value="russian"${form.language === 'russian' ? ' selected' : ''}>Rus tili</option>
+                        </select>
+                    </label>`).join('')}
+                </div>
+                ${totalPhoneMatches ? `<label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px"><input type="checkbox" id="includeMetaPhoneMatches"><span>CRM'da shu telefon bilan lid bor bo'lsa ham alohida Meta ariza sifatida tiklash <small style="display:block">Odatda belgilanmaydi: Claude tiklagan ${totalPhoneMatches} tagacha yozuv dublikat bo'lmasligi uchun.</small></span></label>` : ''}
+                <button type="button" class="btn-primary archive-restore-btn" id="applyMetaLeadRecovery" style="margin-top:12px">Tanlangan lidlarni tiklash</button>`;
+
+            const applyBtn = status?.querySelector('#applyMetaLeadRecovery');
+            if (applyBtn) applyBtn.onclick = async () => {
+                const mappings = {};
+                let selectedMissing = 0;
+                let selectedPhoneMatches = 0;
+                const includePhoneMatches = Boolean(status.querySelector('#includeMetaPhoneMatches')?.checked);
+                status.querySelectorAll('[data-meta-recovery-form]').forEach(select => {
+                    if (!select.value) return;
+                    mappings[select.dataset.metaRecoveryForm] = select.value;
+                    selectedMissing += Number(includePhoneMatches ? select.dataset.missingCount : select.dataset.safeMissingCount || 0);
+                    selectedPhoneMatches += Number(select.dataset.phoneMatchCount || 0);
+                });
+                if (!Object.keys(mappings).length) {
+                    showMiniToast('Kamida bitta forma uchun til tanlang');
+                    return;
+                }
+                const warning = selectedPhoneMatches
+                    ? (includePhoneMatches
+                        ? `\n\n${selectedPhoneMatches} ta arizaning telefoni CRM'da bor, lekin Meta ariza ID'si boshqa. Belgilaganingiz uchun ular ham alohida lid bo'lib tiklanadi.`
+                        : `\n\nCRM'da telefoni mavjud ${selectedPhoneMatches} ta Meta ariza dublikat bo'lmasligi uchun hozircha o'tkazib yuboriladi.`)
+                    : '';
+                if (!confirm(`${selectedMissing} ta yetishmayotgan lid tiklanadi.${warning}\n\nDavom etasizmi?`)) return;
+                applyBtn.disabled = true;
+                try {
+                    const result = await runExclusiveLeadMutation(async () => {
+                        await waitForAllLeadPersistence();
+                        const applied = await apiApplyMetaLeadRecovery(mappings, includePhoneMatches);
+                        await refreshAllLeadsAfterExclusiveMutation();
+                        return applied;
+                    });
+                    const recovered = Number(result.inserted || 0) + Number(result.restored || 0);
+                    const done = `${recovered} ta lid tiklandi` + (result.failed ? `, ${result.failed} ta xato` : '') + '.';
+                    status.textContent = done;
+                    showNotification('Tiklash yakunlandi', done, result.failed ? 'warning' : 'success');
+                    renderLeads();
+                } catch (err) {
+                    showNotification('Tiklash xatoligi', err.message, 'error');
+                    applyBtn.disabled = false;
+                }
+            };
+        } catch (err) {
+            if (status) status.textContent = `Xatolik: ${err.message}`;
+            showNotification('Tiklash xatoligi', err.message, 'error');
+        } finally {
+            metaBtn.disabled = false;
+        }
+    };
 }
 
 function getDashboardLeadRevenue(lead) {
@@ -7280,8 +7435,9 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
         ...managers.map(manager => manager.id)
     ].filter(Boolean));
 
+    const ratingLeadPool = getLeadStatsForRankings(allLeads);
     const salesRating = managers.map(manager => {
-        const managerLeads = allLeads.filter(lead => lead.managerId === manager.id);
+        const managerLeads = ratingLeadPool.filter(lead => lead.managerId === manager.id);
         const closed = managerLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
         return {
             name: manager.name || 'Noma\'lum menejer',
@@ -9929,7 +10085,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         const serialCode = generateNextLeadSerial();
         const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         leadsData[lang] = leadsData[lang] || [];
-        leadsData[lang].push({
+        const newLead = {
             id: leadId,
             name,
             phone,
@@ -9943,8 +10099,10 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             managerPhoto: null,
             attachments: [],
             date: new Date().toLocaleDateString('uz-UZ')
-        });
+        };
+        leadsData[lang].push(newLead);
         setItem(STORAGE_KEYS.leads, leadsData);
+        persistLeadChange(lang, newLead).catch(() => {});
 
         students.push({
             id: 's' + Date.now(),
@@ -13259,15 +13417,20 @@ function backfillMissingLeadSerials() {
     syncLeadSerialCounterFromExisting();
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     let changed = false;
+    const changedLeads = [];
     ['english', 'russian'].forEach(lang => {
         (leads[lang] || []).forEach((lead, idx) => {
             if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(lead.status)) && !lead.serialCode) {
                 leads[lang][idx] = { ...lead, serialCode: generateNextLeadSerial() };
+                changedLeads.push({ lang, lead: leads[lang][idx] });
                 changed = true;
             }
         });
     });
-    if (changed) setItem(STORAGE_KEYS.leads, leads);
+    if (changed) {
+        setItem(STORAGE_KEYS.leads, leads);
+        changedLeads.forEach(item => persistLeadChange(item.lang, item.lead).catch(() => {}));
+    }
 }
 
 // 8-vazifa (qayta ish 3): allaqachon o'quvchiga aylangan, lekin bu
@@ -13290,6 +13453,7 @@ function backfillStudentSerialCodesFromLeads() {
     });
     let leadsChanged = false;
     let studentsChanged = false;
+    const changedLeadRows = [];
     const updatedStudents = students.map(s => {
         if (s.serialCode || !s.leadRef?.id) return s;
         const loc = leadLocationById.get(s.leadRef.id);
@@ -13299,12 +13463,16 @@ function backfillStudentSerialCodesFromLeads() {
         if (!serial) {
             serial = generateNextLeadSerial();
             leadsData[loc.lang][loc.idx] = { ...lead, serialCode: serial };
+            changedLeadRows.push({ lang: loc.lang, lead: leadsData[loc.lang][loc.idx] });
             leadsChanged = true;
         }
         studentsChanged = true;
         return { ...s, serialCode: serial };
     });
-    if (leadsChanged) setItem(STORAGE_KEYS.leads, leadsData);
+    if (leadsChanged) {
+        setItem(STORAGE_KEYS.leads, leadsData);
+        changedLeadRows.forEach(item => persistLeadChange(item.lang, item.lead).catch(() => {}));
+    }
     if (studentsChanged) setItem(STORAGE_KEYS.students, updatedStudents);
 }
 
@@ -16750,6 +16918,160 @@ function syncLeadManagerToBookRoadmap(lang, leadId, managerId) {
     setItem(STORAGE_KEYS.bookRoadmap, items);
 }
 
+const _leadWriteQueues = new Map();
+const _leadServerVersions = new Map();
+const _leadMutationTokens = new Map();
+let _leadMutationGeneration = 0;
+let _leadExclusiveQueue = Promise.resolve();
+let _leadExclusivePending = 0;
+
+function hasPendingLeadChanges() {
+    return _leadWriteQueues.size > 0 || _leadExclusivePending > 0;
+}
+
+function getLeadMutationGeneration() {
+    return _leadMutationGeneration;
+}
+
+function waitForLeadPersistence(leadId) {
+    return (_leadWriteQueues.get(String(leadId)) || Promise.resolve()).catch(() => {});
+}
+
+async function waitForAllLeadPersistence() {
+    // Kutayotgan promise tugashi bilan boshqa lead navbati paydo bo'lishi
+    // mumkin; Map butunlay bo'shaguncha tekshirishni davom ettiramiz.
+    while (_leadWriteQueues.size) {
+        await Promise.allSettled([..._leadWriteQueues.values()]);
+    }
+}
+
+function runExclusiveLeadMutation(task) {
+    _leadMutationGeneration++;
+    _leadExclusivePending++;
+    let operation;
+    operation = _leadExclusiveQueue.catch(() => {}).then(task).finally(() => {
+        _leadExclusivePending = Math.max(0, _leadExclusivePending - 1);
+        // Mutatsiya tugashidan oldin boshlangan polling javobi ham eskirgan.
+        _leadMutationGeneration++;
+    });
+    _leadExclusiveQueue = operation;
+    return operation;
+}
+
+function syncLeadServerVersions(leads) {
+    _leadServerVersions.clear();
+    ['english', 'russian'].forEach(lang => {
+        (leads?.[lang] || []).forEach(lead => {
+            if (lead?.id && lead?.updatedAt) {
+                _leadServerVersions.set(String(lead.id), lead.updatedAt);
+            }
+        });
+    });
+}
+
+function newestLeadVersion(...versions) {
+    return versions.filter(Boolean).reduce((newest, value) => {
+        const time = new Date(value).getTime();
+        const newestTime = newest ? new Date(newest).getTime() : NaN;
+        if (!Number.isFinite(time)) return newest;
+        return !Number.isFinite(newestTime) || time > newestTime ? value : newest;
+    }, '');
+}
+
+async function refreshSingleLeadFromApi(leadId, expectedMutationToken = null) {
+    const serverLeads = await apiFetchLeads();
+    const id = String(leadId);
+    let serverLead = null;
+    let serverLang = '';
+    for (const lang of ['english', 'russian']) {
+        const found = (serverLeads?.[lang] || []).find(lead => String(lead.id) === id);
+        if (found) {
+            serverLead = found;
+            serverLang = lang;
+            break;
+        }
+    }
+    // GET davomida shu lid uchun yangi optimistik tahrir boshlangan bo'lsa,
+    // eskirgan server snapshoti yangi local qiymatlarni bosib yubormasin.
+    if (expectedMutationToken !== null && _leadMutationTokens.get(id) !== expectedMutationToken) {
+        return false;
+    }
+    const cached = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    cached.english = (cached.english || []).filter(lead => String(lead.id) !== id);
+    cached.russian = (cached.russian || []).filter(lead => String(lead.id) !== id);
+    _leadServerVersions.delete(id);
+    if (serverLead) {
+        cached[serverLang].push(serverLead);
+        if (serverLead.updatedAt) _leadServerVersions.set(id, serverLead.updatedAt);
+    }
+    setItem(STORAGE_KEYS.leads, cached);
+    return true;
+}
+
+async function refreshAllLeadsAfterExclusiveMutation() {
+    // PATCH aynan GET davomida boshlansa, o'sha snapshotni qo'llamay qayta
+    // olamiz. Bu boshqa lidning optimistik o'zgarishini bosishdan saqlaydi.
+    for (;;) {
+        await waitForAllLeadPersistence();
+        const generation = getLeadMutationGeneration();
+        const leads = await apiFetchLeads();
+        if (_leadWriteQueues.size || generation !== getLeadMutationGeneration()) continue;
+        setItem(STORAGE_KEYS.leads, leads);
+        syncLeadServerVersions(leads);
+        return leads;
+    }
+}
+
+function updateCachedLeadVersion(lang, leadId, updatedAt) {
+    if (!updatedAt) return;
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const lead = (leads[lang] || []).find(item => item.id === leadId);
+    if (!lead) return;
+    lead.updatedAt = updatedAt;
+    setItem(STORAGE_KEYS.leads, leads);
+}
+
+function persistLeadChange(lang, lead) {
+    if (!lead?.id) return Promise.reject(new Error('Lid ID topilmadi'));
+    const leadId = String(lead.id);
+    const snapshot = typeof structuredClone === 'function'
+        ? structuredClone(lead)
+        : JSON.parse(JSON.stringify(lead));
+    const token = (_leadMutationTokens.get(leadId) || 0) + 1;
+    _leadMutationTokens.set(leadId, token);
+    _leadMutationGeneration++;
+
+    const previous = _leadWriteQueues.get(leadId) || Promise.resolve();
+    let operation;
+    operation = previous.catch(() => {}).then(async () => {
+        const latestVersion = newestLeadVersion(_leadServerVersions.get(leadId), snapshot.updatedAt);
+        if (latestVersion) snapshot.updatedAt = latestVersion;
+        const result = await apiSaveLead(lang, snapshot);
+        const saved = result.lead || snapshot;
+        if (saved.updatedAt) {
+            _leadServerVersions.set(leadId, saved.updatedAt);
+            updateCachedLeadVersion(lang, leadId, saved.updatedAt);
+        }
+        return saved;
+    }).catch(async err => {
+        console.error('Lidni saqlash xatoligi:', err.message);
+        // Faqat eng oxirgi mutation server bilan cache'ni tenglashtiradi;
+        // undan keyin navbatda turgan yangi local o'zgarish bosilmaydi.
+        if (_leadMutationTokens.get(leadId) === token) {
+            showSaveError(err.message);
+            try {
+                const applied = await refreshSingleLeadFromApi(leadId, token);
+                if (applied) renderLeads();
+            } catch {}
+        }
+        throw err;
+    }).finally(() => {
+        if (_leadWriteQueues.get(leadId) === operation) _leadWriteQueues.delete(leadId);
+    });
+    _leadWriteQueues.set(leadId, operation);
+    return operation;
+}
+
 function updateLeadInStorage(lang, leadId, updater) {
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const list = leads[lang] || [];
@@ -16762,12 +17084,12 @@ function updateLeadInStorage(lang, leadId, updater) {
     const newStatus = normalizeLeadStatus(list[idx].status);
     // SLA uchun har bir yangi etapning boshlanish vaqti alohida saqlanadi.
     if (oldStatus !== newStatus) list[idx].slaStageEnteredAt = new Date().toISOString();
-    setItem(STORAGE_KEYS.leads, leads);
     if (oldStatus === 'yangi-lidlar' && newStatus !== 'yangi-lidlar' && !list[idx].firstContactAt) {
         list[idx].firstContactAt = Date.now();
-        leads[lang] = list;
-        setItem(STORAGE_KEYS.leads, leads);
     }
+    leads[lang] = list;
+    setItem(STORAGE_KEYS.leads, leads);
+    persistLeadChange(lang, list[idx]).catch(() => {});
     if (newStatus === 'tolov-jarayonida' && oldStatus !== 'tolov-jarayonida') {
         autoSyncLeadToBookRoadmap(lang, list[idx]);
         autoAddLeadAsStudent(lang, list[idx]); // 7-ish
@@ -17398,17 +17720,29 @@ function renderLeads() {
     }
 
     board.querySelectorAll('[data-lead-menu-delete]').forEach(btn => {
-        btn.addEventListener('click', e => {
+        btn.addEventListener('click', async e => {
             e.stopPropagation();
             closeLeadCardMenus();
             if (!confirm('Lidni o\'chirishni xohlaysizmi?')) return;
             const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
             const langKey = btn.dataset.leadMenuDelete;
             const deletedLead = (leads[langKey] || []).find(l => l.id === btn.dataset.leadId);
-            archiveRecord('lead', deletedLead, { lang: langKey });
-            leads[langKey] = (leads[langKey] || []).filter(l => l.id !== btn.dataset.leadId);
-            setItem(STORAGE_KEYS.leads, leads);
-            renderLeads();
+            if (!deletedLead) return;
+            btn.disabled = true;
+            try {
+                await runExclusiveLeadMutation(async () => {
+                    await waitForLeadPersistence(deletedLead.id);
+                    await apiDeleteLead(deletedLead.id);
+                });
+                _leadServerVersions.delete(String(deletedLead.id));
+                archiveRecord('lead', deletedLead, { lang: langKey });
+                leads[langKey] = (leads[langKey] || []).filter(l => l.id !== deletedLead.id);
+                setItem(STORAGE_KEYS.leads, leads);
+                renderLeads();
+            } catch (err) {
+                btn.disabled = false;
+                showSaveError(err.message);
+            }
         });
     });
 
@@ -17808,7 +18142,7 @@ function openAddLeadModal() {
 
         const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         leads[lang] = leads[lang] || [];
-        leads[lang].push({
+        const newLead = {
             id: 'l' + Date.now(),
             name,
             phone: document.getElementById('mLeadPhone').value.trim(),
@@ -17823,8 +18157,10 @@ function openAddLeadModal() {
             createdAt: new Date().toISOString(),
             slaStageEnteredAt: new Date().toISOString(),
             date: new Date().toLocaleDateString('uz-UZ')
-        });
+        };
+        leads[lang].push(newLead);
         setItem(STORAGE_KEYS.leads, leads);
+        persistLeadChange(lang, newLead).catch(() => {});
         closeModal();
         renderLeads();
     };
@@ -18527,7 +18863,13 @@ function openEditEmployeeModal(empId) {
                 : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
                 : 'employee';
             try {
-                await apiCreateHrUser({ name: updated.name, login: emp.login, password: newPassword, role: roleForLogin });
+                await apiCreateHrUser({
+                    name: updated.name,
+                    login: emp.login,
+                    password: newPassword,
+                    role: roleForLogin,
+                    salesManagerId: roleForLogin === 'sales_manager' ? emp.id : ''
+                });
             } catch (err) {
                 console.warn('Kirish hisobini yangilashda xatolik:', err.message);
             }
@@ -18711,7 +19053,13 @@ function openAddEmployeeModal() {
             : (role === 'oqituvchi' || role === 'ingliz-oqituvchi' || role === 'rus-oqituvchi' || role === 'yordamchi') ? 'teacher'
             : 'employee';
         try {
-            await apiCreateHrUser({ name, login, password, role: hrUserRole });
+            await apiCreateHrUser({
+                name,
+                login,
+                password,
+                role: hrUserRole,
+                salesManagerId: hrUserRole === 'sales_manager' ? newEmp.id : ''
+            });
         } catch (err) {
             console.warn('Server user yaratishda xatolik:', err.message);
         }
@@ -20236,10 +20584,19 @@ function getSalesManagers(lang) {
     return all.filter(m => (m.lang || 'english') === lang);
 }
 
+function getLeadStatsForRankings(fallback = null) {
+    if (getCurrentUser()?.role === 'sales_manager') {
+        const stats = getItem(STORAGE_KEYS.salesLeadStats, null);
+        if (Array.isArray(stats)) return stats;
+    }
+    if (Array.isArray(fallback)) return fallback;
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    return [...(leads.english || []), ...(leads.russian || [])];
+}
+
 function _getClosedLeadsInPeriod(managerId, period) {
     const now = new Date();
-    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const allLeads = [...(leads.english || []), ...(leads.russian || [])];
+    const allLeads = getLeadStatsForRankings();
     return allLeads.filter(l => {
         if (normalizeLeadStatus(l.status) !== 'tolov-yopildi') return false;
         if (managerId !== 'all' && l.managerId !== managerId) return false;
@@ -20275,8 +20632,7 @@ function getManagerDealsCount(managerId, period) {
 }
 
 function getManagerTotalLeads(managerId) {
-    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const allLeads = [...(leads.english || []), ...(leads.russian || [])];
+    const allLeads = getLeadStatsForRankings();
     if (managerId === 'all') return allLeads.length;
     return allLeads.filter(l => l.managerId === managerId).length;
 }
