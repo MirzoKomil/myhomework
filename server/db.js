@@ -488,6 +488,8 @@ async function getBookRoadmap() {
 }
 
 async function saveBookRoadmap(client, items) {
+    if (!isUsableList(items, 'saveBookRoadmap')) return;
+    await guardBulkDelete(client, 'book_roadmap', 'Kitob yetkazish', items);
     await client.query('DELETE FROM book_roadmap');
     for (const r of items) {
         await client.query(
@@ -776,7 +778,39 @@ async function getFullState() {
 
 // ── Save functions (used in patchState) ─────────────────────────────────────
 
+// ── Ommaviy o'chirishdan himoya ──────────────────────────────────────────────
+// Quyidagi barcha `save*` funksiyalari "avval hammasini o'chir, so'ng klient
+// yuborgan ro'yxatni yoz" tamoyilida ishlaydi. Klientdagi kesh buzilgan yoki
+// eskirgan bo'lsa, bu butun jadvalni yo'q qilib yuborishi mumkin — 2026-08-01
+// da 200+ lid aynan shu sababdan yo'qolgan. Quyidagi ikki yordamchi har bir
+// saqlashdan oldin (1) payload haqiqiy massiv ekanini va (2) nechta yozuv
+// yo'qolishini tekshiradi; chegaradan oshsa amal butunlay rad etiladi.
+const MAX_BULK_DELETIONS_PER_PATCH = 3;
+
+function isUsableList(value, label) {
+    if (Array.isArray(value)) return true;
+    console.warn(`[DB] ${label}: yaroqli ro'yxat kelmadi — hech narsa o'zgartirilmadi`);
+    return false;
+}
+
+async function guardBulkDelete(client, table, label, incoming) {
+    const incomingIds = new Set();
+    for (const item of incoming) if (item?.id) incomingIds.add(item.id);
+    const { rows } = await client.query(`SELECT id FROM ${table}`);
+    const removed = rows.filter(r => !incomingIds.has(r.id));
+    if (removed.length > MAX_BULK_DELETIONS_PER_PATCH) {
+        const err = new Error(
+            `Xavfsizlik to'sig'i: bitta so'rovda "${label}" bo'limidan ${removed.length} ta yozuv ` +
+            `o'chib ketishi mumkin edi — amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
+        );
+        err.code = 'BULK_DELETE_BLOCKED';
+        throw err;
+    }
+}
+
 async function saveTeachers(client, teachers) {
+    if (!isUsableList(teachers, 'saveTeachers')) return;
+    await guardBulkDelete(client, 'teachers', 'Ustozlar', teachers);
     await client.query('DELETE FROM teachers');
     for (const t of teachers) {
         await client.query(
@@ -789,6 +823,8 @@ async function saveTeachers(client, teachers) {
 const BCRYPT_HASH_RE = /^\$2[aby]\$\d{2}\$/;
 
 async function saveStudents(client, students) {
+    if (!isUsableList(students, 'saveStudents')) return;
+    await guardBulkDelete(client, 'students', "O'quvchilar", students);
     await client.query('DELETE FROM students');
     for (const s of students) {
         const { id, name, phone, group, subject, teacherId, assistantTeacherId,
@@ -814,13 +850,37 @@ async function saveStudents(client, students) {
 }
 
 async function saveSalesManagers(client, list) {
+    if (!isUsableList(list, 'saveSalesManagers')) return;
+    await guardBulkDelete(client, 'sales_managers', 'Sotuv menejerlari', list);
     await client.query('DELETE FROM sales_managers');
     for (const s of list) {
         await client.query('INSERT INTO sales_managers (id, name) VALUES ($1,$2)', [s.id, s.name]);
     }
 }
 
+// Timetable va davomat massiv emas, obyekt-xarita ko'rinishida keladi va
+// ularda ko'p yozuvning yo'qolishi QONUNIY bo'lishi mumkin (masalan ustoz
+// bir oylik davomat belgilarini olib tashlasa). Shu sabab bu yerda faqat
+// eng aniq buzilish holati — "bor edi, butunlay yo'q bo'ldi" — to'siladi.
+async function guardTotalWipe(client, table, label, incomingCount) {
+    if (incomingCount > 0) return;
+    const { rows } = await client.query(`SELECT COUNT(*)::int AS c FROM ${table}`);
+    if (rows[0].c > MAX_BULK_DELETIONS_PER_PATCH) {
+        const err = new Error(
+            `Xavfsizlik to'sig'i: "${label}" bo'limidagi ${rows[0].c} ta yozuvning hammasi ` +
+            `o'chib ketishi mumkin edi — amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
+        );
+        err.code = 'BULK_DELETE_BLOCKED';
+        throw err;
+    }
+}
+
 async function saveTimetable(client, timetable) {
+    if (!timetable || typeof timetable !== 'object' || Array.isArray(timetable)) {
+        console.warn("[DB] saveTimetable: yaroqli jadval kelmadi — hech narsa o'zgartirilmadi");
+        return;
+    }
+    await guardTotalWipe(client, 'timetable', 'Dars jadvali', Object.keys(timetable).length);
     await client.query('DELETE FROM timetable');
     for (const [key, e] of Object.entries(timetable || {})) {
         const parts = key.split('_');
@@ -833,6 +893,11 @@ async function saveTimetable(client, timetable) {
 }
 
 async function saveAttendanceTable(client, tableName, data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        console.warn(`[DB] saveAttendanceTable(${tableName}): yaroqli ma'lumot kelmadi — o'zgartirilmadi`);
+        return;
+    }
+    await guardTotalWipe(client, tableName, 'Davomat', Object.keys(data).length);
     await client.query(`DELETE FROM ${tableName}`);
     for (const [attKey, students] of Object.entries(data || {})) {
         for (const [studentId, days] of Object.entries(students || {})) {
@@ -849,6 +914,8 @@ async function saveAttendanceTable(client, tableName, data) {
 }
 
 async function savePayments(client, payments) {
+    if (!isUsableList(payments, 'savePayments')) return;
+    await guardBulkDelete(client, 'payments', "To'lovlar", payments);
     await client.query('DELETE FROM payments');
     for (const p of payments) {
         await client.query(
@@ -857,12 +924,6 @@ async function savePayments(client, payments) {
         );
     }
 }
-
-// Bitta PATCH so'rovida o'chirilishi mumkin bo'lgan lidlarning maksimal soni.
-// CRM'da lidlar faqat bittalab o'chiriladi (ommaviy o'chirish tugmasi yo'q —
-// ommaviy amal faqat "menejer biriktirish"), shu sabab bundan ko'p yozuvning
-// yo'qolishi har doim xato/buzilgan payload belgisi hisoblanadi.
-const MAX_LEAD_DELETIONS_PER_PATCH = 3;
 
 function resolveLeadCreatedAt(existingValue, rawCreatedAt) {
     if (existingValue) return existingValue;
@@ -901,7 +962,7 @@ async function saveLeads(client, leads) {
     }
 
     const removed = existing.filter(r => !incomingIds.has(r.id));
-    if (removed.length > MAX_LEAD_DELETIONS_PER_PATCH) {
+    if (removed.length > MAX_BULK_DELETIONS_PER_PATCH) {
         const err = new Error(
             `Xavfsizlik to'sig'i: bitta so'rovda ${removed.length} ta lid o'chib ketishi mumkin edi — ` +
             `amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
@@ -935,6 +996,8 @@ async function saveLeads(client, leads) {
 }
 
 async function saveHrEmployeesData(client, employees) {
+    if (!isUsableList(employees, 'saveHrEmployeesData')) return;
+    await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
     await client.query('DELETE FROM hr_employees');
     for (const e of (employees || [])) {
         await client.query(
