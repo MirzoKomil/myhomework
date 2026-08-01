@@ -1104,6 +1104,28 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
 
     // PATCH qisman obyekt yuborsa ham mavjud maydonlar bo'shab ketmasin.
     const merged = existingRow ? { ...before, ...lead, id: existingRow.id } : lead;
+
+    // Telegram/CSV kabi tarixiy manbadan tiklangan lidlar eski sanasi bilan
+    // import qilinadi. Avvalgi menejer va etap noma'lum paytda ularga SLA
+    // yuborilmaydi (`recoveryPending=true`). Foydalanuvchi menejer biriktirsa
+    // yoki import qilingan etapni o'zgartirsa, tiklash holati yakunlangan deb
+    // olinadi va SLA aynan shu real harakat vaqtidan qayta boshlanadi.
+    const recoveryPending = before?.recoveryPending === true
+        || String(before?.recoveryPending || '').toLowerCase() === 'true';
+    if (existingRow && recoveryPending) {
+        const importedStatus = String(before.recoveryImportedStatus || before.status || 'yangi-lidlar');
+        const managerAssigned = !String(before.managerId || '').trim()
+            && Boolean(String(merged.managerId || '').trim());
+        const statusChanged = String(merged.status || 'yangi-lidlar') !== importedStatus;
+        if (managerAssigned || statusChanged) {
+            const reviewedAt = new Date().toISOString();
+            merged.recoveryPending = false;
+            merged.recoveryReviewedAt = reviewedAt;
+            merged.recoveryReviewedReason = managerAssigned ? 'manager-assigned' : 'status-changed';
+            merged.slaStageEnteredAt = reviewedAt;
+            merged.statusChangedAt = reviewedAt;
+        }
+    }
     const p = leadDbPayload(merged, language, existingRow?.created_at);
     if (!p.name.trim()) throw new Error('Lid ismi bo\'sh bo\'lmasligi kerak');
 

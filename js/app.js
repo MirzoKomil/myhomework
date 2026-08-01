@@ -16344,7 +16344,16 @@ function getLeadSlaManagerName(lead) {
     return getItem(STORAGE_KEYS.salesManagers, []).find(manager => manager.id === lead.managerId)?.name || 'biriktirilmagan menejer';
 }
 
+function isLeadRecoveryPending(lead) {
+    return lead?.recoveryPending === true || String(lead?.recoveryPending || '').toLowerCase() === 'true';
+}
+
 function getLeadSlaManagerAlerts(lead) {
+    // Tarixiy manbadan tiklangan lidning avvalgi menejeri/etapi hali
+    // tasdiqlanmagan bo'lsa, eski sana bo'yicha yolg'on SLA yaratmaymiz.
+    // Menejer biriktirilganda yoki etap o'zgarganda server bu belgini
+    // o'chiradi va yangi SLA vaqtini o'sha harakatdan boshlab hisoblaydi.
+    if (isLeadRecoveryPending(lead)) return [];
     const status = normalizeLeadStatus(lead.status);
     const rule = LEAD_SLA_RULES[status];
     if (!rule) return [];
@@ -16361,6 +16370,7 @@ function getLeadSlaManagerAlerts(lead) {
 }
 
 function getLeadSlaAlerts(lead, lang, user = getCurrentUser()) {
+    if (isLeadRecoveryPending(lead)) return [];
     const status = normalizeLeadStatus(lead.status);
     const rule = LEAD_SLA_RULES[status];
     if (!rule || !user) return [];
