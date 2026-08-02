@@ -35,9 +35,20 @@ router.post('/', webhookSecretRequired, async (req, res) => {
         const name = body.name || body.fullName || body.ism;
         const phone = body.phone || body.tel || body.telefon || '';
         const externalId = body.externalId || body.external_id || body.id || null;
-        if (!name?.trim()) return res.status(400).json({ error: 'Ism kiritilishi shart' });
+        // Kelgan so'rov nima bo'lganini ko'rish uchun — maydonlar mos kelmasa
+        // lid jimgina yo'qolib ketmasin.
+        console.log('[leads] KELDI  maydonlar=' + JSON.stringify(Object.keys(body)) +
+            ` ism=${name ? 'bor' : 'YO\'Q'} tel=${phone ? 'bor' : 'YO\'Q'}`);
+        if (!name?.trim()) {
+            console.warn('[leads] RAD: ism yo\'q. Yuborilgan tana:', JSON.stringify(body).slice(0, 300));
+            return res.status(400).json({ error: 'Ism kiritilishi shart' });
+        }
         const sourceResult = resolveSource(body, req);
-        if (sourceResult.error) return res.status(400).json({ error: sourceResult.error });
+        if (sourceResult.error) {
+            console.warn('[leads] RAD: manba noto\'g\'ri.', sourceResult.error,
+                'body.source=' + (body.source || '-'), 'referer=' + (req.headers['referer'] || '-'));
+            return res.status(400).json({ error: sourceResult.error });
+        }
 
         // 2-ish: Domen orqali til aniqlash (source='Organik' bo'lsa ham ishlaydi)
         // Referer/Origin header source fieldidan USTUN turadi
@@ -62,7 +73,11 @@ router.post('/', webhookSecretRequired, async (req, res) => {
             leadType: body.leadType || body.lead_type || body.type,
             contactTime
         });
-        if (result.duplicate) return res.status(200).json({ ok: true, id: result.id, duplicate: true });
+        if (result.duplicate) {
+            console.log(`[leads] DUBLIKAT  id=${result.id} manba=${sourceResult.value}`);
+            return res.status(200).json({ ok: true, id: result.id, duplicate: true });
+        }
+        console.log(`[leads] YARATILDI  id=${result.id} manba=${sourceResult.value} til=${language || '-'}`);
         res.status(201).json({ ok: true, id: result.id, lead: result.lead });
     } catch (err) {
         console.error('POST /api/leads', err);
