@@ -17218,7 +17218,12 @@ function sendAutoSmsMessages(lead, messages) {
         console.log('[26-vazifa] SMS yuborilmoqda ->', lead.phone, '|', text.slice(0, 60) + '...');
         apiSendSms([recipient], text, 'auto')
             .then(res => console.log('[26-vazifa] SMS natijasi:', res))
-            .catch(err => console.warn('[26-vazifa] Avtomatik SMS yuborishda XATOLIK:', err.message));
+            .catch(err => {
+                console.warn('[26-vazifa] Avtomatik SMS yuborishda XATOLIK:', err.message);
+                // Fire-and-forget yuborilgani uchun admin buni ko'rmasligi mumkin —
+                // xatolik konsolda qolib ketmasin, ko'zga ko'rinadigan qilib qo'yamiz.
+                showMiniToast(`Avtomatik SMS yuborilmadi (${lead.name || 'lid'}): ${err.message}`, 6000);
+            });
     });
 }
 

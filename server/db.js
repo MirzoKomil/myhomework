@@ -3025,6 +3025,7 @@ async function _checkAndSendTrialSmsReminders() {
                         audience: 'auto-sinov-' + rule.id, sentBy: 'system',
                     });
                 } catch (err) {
+                    console.warn(`[trial-sms] yuborilmadi — leadId=${lead.id} rule=${rule.id}:`, err.message);
                     historyEntries.push({
                         phone: lead.phone, name: lead.name, status: 'error',
                         error: err.message, message: text,
