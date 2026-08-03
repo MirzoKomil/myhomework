@@ -17215,8 +17215,10 @@ function sendAutoSmsMessages(lead, messages) {
     if (!messages || !messages.length || !lead.phone) return;
     const recipient = { id: lead.id, type: 'lead', name: lead.name || '', phone: lead.phone };
     messages.forEach(text => {
-        apiSendSms([recipient], text, 'auto').catch(err =>
-            console.warn("Avtomatik SMS yuborishda xatolik:", err.message));
+        console.log('[26-vazifa] SMS yuborilmoqda ->', lead.phone, '|', text.slice(0, 60) + '...');
+        apiSendSms([recipient], text, 'auto')
+            .then(res => console.log('[26-vazifa] SMS natijasi:', res))
+            .catch(err => console.warn('[26-vazifa] Avtomatik SMS yuborishda XATOLIK:', err.message));
     });
 }
 
@@ -17250,12 +17252,15 @@ function ensureStudentLoginForLead(lang, lead) {
 }
 
 function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus) {
-    if (lang !== 'russian') return;
-    if (oldStatus === newStatus) return;
-    if (!lead.phone) return;
+    console.log(`[26-vazifa] tekshirilyapti: lang=${lang} oldStatus=${oldStatus} newStatus=${newStatus} tel=${lead?.phone || '(yoq)'}`);
+    if (lang !== 'russian') { console.log('[26-vazifa] otkazib yuborildi: til rus emas'); return; }
+    if (oldStatus === newStatus) { console.log('[26-vazifa] otkazib yuborildi: status ozgarmadi'); return; }
+    if (!lead.phone) { console.log('[26-vazifa] otkazib yuborildi: telefon yoq'); return; }
 
     const ism = lead.name || 'Hurmatli mijoz';
     const messages = [];
+
+    try {
 
     if (newStatus === 'boglanishga-urinilmoqda') {
         messages.push(`Assalomu alaykum, ${ism}! Sizga Domwork onlayn rus tili maktabidan qo'ng'iroq qildik, bog'lana olmadik. Savollaringiz bo'lsa telegram orqali https://t.me/domwork_admin ga yozishingiz mumkin.`);
@@ -17288,6 +17293,12 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus) {
         }
     }
 
+    } catch (err) {
+        console.error('[26-vazifa] xabar tayyorlashda XATOLIK:', err);
+        return;
+    }
+
+    console.log(`[26-vazifa] tayyor xabarlar soni: ${messages.length}`, messages);
     if (messages.length) sendAutoSmsMessages(lead, messages);
 }
 
