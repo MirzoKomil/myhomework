@@ -20723,6 +20723,37 @@ function getManagerDealsCount(managerId, period) {
     return _getClosedLeadsInPeriod(managerId, period).length;
 }
 
+// 41-vazifa: individual reja endi tanlangan oyga tegishli, shuning uchun
+// fakt ham o'sha oy bo'yicha hisoblanadi ("oylik" davri faqat joriy oyni
+// beradi). monthKey — "YYYY-MM".
+function _getClosedLeadsInMonth(managerId, monthKey) {
+    if (!MONTH_KEY_RE.test(String(monthKey || ''))) return [];
+    const [yil, oy] = monthKey.split('-').map(Number);
+    return getLeadStatsForRankings().filter(l => {
+        if (normalizeLeadStatus(l.status) !== 'tolov-yopildi') return false;
+        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        const dateStr = l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return false;
+        return d.getFullYear() === yil && d.getMonth() === oy - 1;
+    });
+}
+
+function getManagerSalesForMonth(managerId, monthKey) {
+    return _getClosedLeadsInMonth(managerId, monthKey).reduce((sum, l) => {
+        const amount = l.paymentClosedSurvey?.actualAmount
+            || l.paymentClosedSurvey?.totalAmount
+            || l.paymentSurvey?.totalAmount
+            || AVG_CHECK;
+        return sum + (Number(amount) || AVG_CHECK);
+    }, 0);
+}
+
+function getManagerDealsCountForMonth(managerId, monthKey) {
+    return _getClosedLeadsInMonth(managerId, monthKey).length;
+}
+
 function getManagerTotalLeads(managerId) {
     const allLeads = getLeadStatsForRankings();
     if (managerId === 'all') return allLeads.length;
@@ -20742,7 +20773,9 @@ function getPeriodTarget(period) {
 // qaytadi. Kunlik/haftalik davrlar uchun oylik maqsad xuddi umumiy
 // maqsadlar orasidagi nisbat bilan mutanosib ravishda pasaytiriladi.
 function getManagerPeriodTarget(managerId, period) {
-    const plan = getIndividualSalesPlan(managerId);
+    // Reyting har doim joriy oy bo'yicha ko'rsatiladi, shuning uchun
+    // joriy oyning rejasi olinadi (oy berilmasa shu oy tanlanadi).
+    const plan = getIndividualSalesPlan(managerId, currentMonthKey());
     if (plan.totalAmount > 0) {
         if (period === 'kunlik') return Math.round(plan.totalAmount * (DAILY_TARGET / MONTHLY_TARGET));
         if (period === 'haftalik') return Math.round(plan.totalAmount * (WEEKLY_TARGET / MONTHLY_TARGET));
@@ -20818,20 +20851,58 @@ function saveSalesPlanPatch(lang, patch) {
 // 34-vazifa: Individual reja — ROP har bir sotuv menejeri uchun oddiy
 // oylik maqsad belgilaydi (jami summa / sotuvlar soni / o'rtacha chek),
 // managerId bo'yicha saqlanadi, jamoaviy rejadan mustaqil.
+//
+// 41-vazifa: reja endi OY bo'yicha saqlanadi:
+//   { [managerId]: { "2026-08": {...}, "2026-09": {...} } }
+// Eski (oysiz) yozuvlar shu obyektning ichida totalAmount/dealsCount/avgCheck
+// bo'lib qolaveradi — oy kalitlari "YYYY-MM" ko'rinishida bo'lgani uchun
+// to'qnashuv yo'q. Eski reja hali oyi ajratilmagan oylar uchun amal qiladi,
+// ya'ni hech kimning mavjud rejasi yo'qolmaydi.
 const INDIVIDUAL_SALES_PLAN_DEFAULTS = { totalAmount: 0, dealsCount: 0, avgCheck: 0 };
+const MONTH_KEY_RE = /^\d{4}-\d{2}$/;
+const UZ_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
+    'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
 
-function getIndividualSalesPlan(managerId) {
-    const all = getItem(STORAGE_KEYS.individualSalesPlans, {});
-    return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...(all[managerId] || {}) };
+function currentMonthKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthKeyLabel(key) {
+    if (!MONTH_KEY_RE.test(String(key || ''))) return '';
+    const [y, m] = key.split('-');
+    return `${UZ_MONTHS[Number(m) - 1]} ${y}`;
+}
+
+function getIndividualSalesPlan(managerId, monthKey) {
+    const oy = MONTH_KEY_RE.test(String(monthKey || '')) ? monthKey : currentMonthKey();
+    const yozuv = getItem(STORAGE_KEYS.individualSalesPlans, {})[managerId] || {};
+
+    if (yozuv[oy]) return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...yozuv[oy], month: oy };
+
+    // Eski format — oyi ko'rsatilmagan reja
+    if (typeof yozuv.totalAmount === 'number' || typeof yozuv.dealsCount === 'number') {
+        return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...yozuv, month: oy, legacy: true };
+    }
+    return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, month: oy };
 }
 
 function hasIndividualSalesPlan(plan) {
     return plan.totalAmount > 0 || plan.dealsCount > 0;
 }
 
-function saveIndividualSalesPlan(managerId, data) {
+function saveIndividualSalesPlan(managerId, monthKey, data) {
+    const oy = MONTH_KEY_RE.test(String(monthKey || '')) ? monthKey : currentMonthKey();
     const all = getItem(STORAGE_KEYS.individualSalesPlans, {});
-    setItem(STORAGE_KEYS.individualSalesPlans, { ...all, [managerId]: { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...data } });
+    const yozuv = { ...(all[managerId] || {}) };
+    yozuv[oy] = { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...data };
+    setItem(STORAGE_KEYS.individualSalesPlans, { ...all, [managerId]: yozuv });
+}
+
+// Reja belgilangan oylar ro'yxati (eng yangisidan eskisiga)
+function getIndividualPlanMonths(managerId) {
+    const yozuv = getItem(STORAGE_KEYS.individualSalesPlans, {})[managerId] || {};
+    return Object.keys(yozuv).filter(k => MONTH_KEY_RE.test(k)).sort().reverse();
 }
 
 function getSalesPlanPeriods(duration) {
@@ -20879,6 +20950,8 @@ function fmtSignedPct(n) {
 
 let _spMainSection = 'jamoaviy';
 let _spIndManagerId = null;
+// 41-vazifa: individual reja kartochkasida ko'rilayotgan oy ("YYYY-MM")
+let _spIndPlanMonth = null;
 
 function renderSalesPlanTierCards(plan, activePeriod) {
     return SALES_PLAN_TIERS.map(tier => {
@@ -21154,31 +21227,60 @@ function renderSalesPlanIndividualPlanCard() {
     const el = document.getElementById('spIndPlanCard');
     if (!el || !_spIndManagerId) return;
 
-    const plan = getIndividualSalesPlan(_spIndManagerId);
-    const actualAmount = getManagerSalesForPeriod(_spIndManagerId, 'oylik');
-    const actualDeals = getManagerDealsCount(_spIndManagerId, 'oylik');
+    const joriy = currentMonthKey();
+    if (!MONTH_KEY_RE.test(String(_spIndPlanMonth || ''))) _spIndPlanMonth = joriy;
+    const oy = _spIndPlanMonth;
+
+    // Tanlanadigan oylar: joriy oy + oldingi/keyingi 6 oy + reja belgilanganlar
+    const oylar = new Set([joriy, oy, ...getIndividualPlanMonths(_spIndManagerId)]);
+    for (let i = -6; i <= 6; i++) {
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() + i);
+        oylar.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const oySelect = `<select id="spIndPlanMonthSelect" class="form-control-sm" style="min-width:150px">
+        ${[...oylar].sort().reverse().map(k =>
+            `<option value="${k}" ${k === oy ? 'selected' : ''}>${monthKeyLabel(k)}${k === joriy ? ' (joriy)' : ''}</option>`
+        ).join('')}
+    </select>`;
+
+    const wireMonth = () => {
+        const sel = document.getElementById('spIndPlanMonthSelect');
+        if (sel) sel.onchange = () => { _spIndPlanMonth = sel.value; renderSalesPlanIndividualPlanCard(); };
+        const btn = document.getElementById('spIndSetPlanBtn') || document.getElementById('spIndEditPlanBtn');
+        if (btn) btn.onclick = openIndividualSalesPlanModal;
+    };
+
+    const plan = getIndividualSalesPlan(_spIndManagerId, oy);
+    const actualAmount = getManagerSalesForMonth(_spIndManagerId, oy);
+    const actualDeals = getManagerDealsCountForMonth(_spIndManagerId, oy);
     const actualAvgCheck = actualDeals > 0 ? Math.round(actualAmount / actualDeals) : 0;
 
+    const header = `
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <h3 style="margin:0">Oylik reja</h3>
+            <div style="display:flex;align-items:center;gap:8px">${oySelect}
+                ${hasIndividualSalesPlan(plan) ? '<button class="btn-ghost" id="spIndEditPlanBtn" title="Rejani tahrirlash">✏️</button>' : ''}
+            </div>
+        </div>`;
+
     if (!hasIndividualSalesPlan(plan)) {
-        el.innerHTML = `
+        el.innerHTML = header + `
         <div style="padding:40px 20px;text-align:center">
             <div style="font-size:36px;margin-bottom:10px">🎯</div>
-            <div style="font-size:14px;color:var(--text-muted);margin-bottom:14px">Bu menejer uchun hali reja belgilanmagan</div>
+            <div style="font-size:14px;color:var(--text-muted);margin-bottom:14px">${escapeHtml(monthKeyLabel(oy))} uchun reja belgilanmagan</div>
             <button class="btn-primary-sm" id="spIndSetPlanBtn">+ Reja belgilash</button>
         </div>`;
-        const btn = document.getElementById('spIndSetPlanBtn');
-        if (btn) btn.onclick = openIndividualSalesPlanModal;
+        wireMonth();
         return;
     }
 
     const pct = plan.totalAmount > 0 ? Math.min(100, Math.round(actualAmount / plan.totalAmount * 100)) : 0;
     const color = pctToPlanColor(pct);
 
-    el.innerHTML = `
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
-            <h3>Shu oy uchun reja</h3>
-            <button class="btn-ghost" id="spIndEditPlanBtn" title="Rejani tahrirlash">✏️</button>
-        </div>
+    el.innerHTML = header + `
+        ${plan.legacy ? `<div style="margin:0 16px;padding:8px 10px;border-radius:6px;background:rgba(217,119,6,.1);color:#b45309;font-size:12px">Bu reja oyi ko'rsatilmagan eski yozuv. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun biriktiriladi.</div>` : ''}
         <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
             <div>
                 <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">REJA</div>
@@ -21187,7 +21289,7 @@ function renderSalesPlanIndividualPlanCard() {
                 <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(plan.avgCheck)}</b></div>
             </div>
             <div>
-                <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">FAKT (shu oy)</div>
+                <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">FAKT (${escapeHtml(monthKeyLabel(oy))})</div>
                 <div class="sp-row"><span>Jami sotuv summasi</span><b>${fmtMoney(actualAmount)}</b></div>
                 <div class="sp-row"><span>Sotuvlar soni</span><b>${actualDeals.toLocaleString('uz-UZ')}</b></div>
                 <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(actualAvgCheck)}</b></div>
@@ -21199,16 +21301,21 @@ function renderSalesPlanIndividualPlanCard() {
             </div>
             <div style="text-align:right;margin-top:6px;font-size:13px;font-weight:700;color:${color}">${pct}% bajarildi</div>
         </div>`;
-    const editBtn = document.getElementById('spIndEditPlanBtn');
-    if (editBtn) editBtn.onclick = openIndividualSalesPlanModal;
+    wireMonth();
 }
 
 function openIndividualSalesPlanModal() {
     if (!_spIndManagerId) return;
-    const plan = getIndividualSalesPlan(_spIndManagerId);
+    const oy = MONTH_KEY_RE.test(String(_spIndPlanMonth || '')) ? _spIndPlanMonth : currentMonthKey();
+    const plan = getIndividualSalesPlan(_spIndManagerId, oy);
 
     const body = `
     <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+            <label class="form-label">Oy</label>
+            <input type="month" id="spIndPlanMonth" class="form-control" value="${oy}">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:5px">Reja shu menejerga aynan tanlangan oy uchun qo'llaniladi.</div>
+        </div>
         <div class="form-group">
             <label class="form-label">Jami sotuv summasi (so'm)</label>
             <input type="text" inputmode="numeric" id="spIndPlanTotalAmount" class="form-control" data-money-input value="${plan.totalAmount || ''}">
@@ -21231,10 +21338,15 @@ function openIndividualSalesPlanModal() {
 
     document.getElementById('spIndPlanCancel').onclick = closeModal;
     document.getElementById('spIndPlanSave').onclick = () => {
+        const tanlanganOy = document.getElementById('spIndPlanMonth').value;
+        if (!MONTH_KEY_RE.test(String(tanlanganOy || ''))) {
+            return showNotification('Xatolik', 'Oyni tanlang', 'error');
+        }
         const totalAmount = Number((document.getElementById('spIndPlanTotalAmount').value || '').replace(/,/g, '')) || 0;
         const dealsCount = Number(document.getElementById('spIndPlanDealsCount').value) || 0;
         const avgCheck = Number((document.getElementById('spIndPlanAvgCheck').value || '').replace(/,/g, '')) || 0;
-        saveIndividualSalesPlan(_spIndManagerId, { totalAmount, dealsCount, avgCheck });
+        saveIndividualSalesPlan(_spIndManagerId, tanlanganOy, { totalAmount, dealsCount, avgCheck });
+        _spIndPlanMonth = tanlanganOy;   // saqlangan oy darhol ko'rsatilsin
         closeModal();
         renderSalesPlanIndividualPlanCard();
     };
