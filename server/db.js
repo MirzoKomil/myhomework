@@ -287,6 +287,8 @@ async function initSchema() {
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS pinfl TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS address TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
+    // 24-vazifa: asosiy o'qituvchining sinov darsi Telegram guruhi havolasi
+    await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS trial_group_link TEXT DEFAULT ''`).catch(() => {});
 
     // Migration: leads va students jadvallariga extra_data qo'shish
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
@@ -600,7 +602,8 @@ async function getHrEmployeesData() {
         birthDate: r.birth_date || '', startDate: r.start_date || '',
         cardNumber: r.card_number || '', passportSeries: r.passport_series || '',
         pinfl: r.pinfl || '', address: r.address || '',
-        lang: r.lang || 'english'
+        lang: r.lang || 'english',
+        trialGroupLink: r.trial_group_link || ''
     }));
 }
 
@@ -1245,14 +1248,14 @@ async function saveHrEmployeesData(client, employees) {
             `INSERT INTO hr_employees
                 (id, name, first_name, last_name, role, login, phone, email,
                  department, status, join_date, gender, birth_date, start_date,
-                 card_number, passport_series, pinfl, address, lang)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+                 card_number, passport_series, pinfl, address, lang, trial_group_link)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
             [e.id, e.name, e.firstName || '', e.lastName || '',
              e.role || 'employee', e.login || '', e.phone || '', e.email || '',
              e.department || '', e.status || 'active', e.joinDate || '',
              e.gender || '', e.birthDate || '', e.startDate || '',
              e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '',
-             e.lang || 'english']
+             e.lang || 'english', e.trialGroupLink || '']
         );
     }
 }
