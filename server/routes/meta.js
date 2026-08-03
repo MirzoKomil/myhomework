@@ -275,6 +275,65 @@ function recoveryAdminRequired(req, res, next) {
     next();
 }
 
+// Meta integratsiyasi holati — nima sozlangan, nima yetishmayotganini
+// ko'rsatadi. Maxfiy qiymatlar HECH QACHON qaytarilmaydi, faqat bor/yo'q
+// va uzunlik. Page token haqiqatan ishlayotgani Graph API orqali sinaladi.
+router.get('/status', authRequired, recoveryAdminRequired, async (_req, res) => {
+    const bor = v => ({ sozlangan: Boolean(v), uzunlik: v ? String(v).length : 0 });
+    const env = {
+        META_APP_SECRET: bor(process.env.META_APP_SECRET),
+        META_WEBHOOK_VERIFY_TOKEN: bor(process.env.META_WEBHOOK_VERIFY_TOKEN),
+        META_PAGE_ACCESS_TOKEN: bor(process.env.META_PAGE_ACCESS_TOKEN),
+        META_PAGE_ID: bor(process.env.META_PAGE_ID),
+    };
+    const yetishmayapti = Object.entries(env).filter(([, v]) => !v.sozlangan).map(([k]) => k);
+
+    const natija = {
+        webhookUrl: 'https://myhomework.uz/api/meta/webhook',
+        graphVersion: GRAPH_API_VERSION,
+        env,
+        yetishmayapti,
+        tayyor: yetishmayapti.length === 0,
+        formaTillari: {
+            russian: [...getCsv(process.env.META_RUSSIAN_FORM_IDS)],
+            english: [...getCsv(process.env.META_ENGLISH_FORM_IDS)],
+            standart: process.env.META_DEFAULT_LANGUAGE === 'russian' ? 'russian' : 'english',
+        },
+    };
+
+    // Page token haqiqatda ishlayaptimi va webhookga obuna bo'lganmi?
+    if (env.META_PAGE_ACCESS_TOKEN.sozlangan && env.META_PAGE_ID.sozlangan) {
+        try {
+            const url = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(process.env.META_PAGE_ID)}`);
+            url.searchParams.set('fields', 'id,name');
+            url.searchParams.set('access_token', process.env.META_PAGE_ACCESS_TOKEN);
+            const r = await fetch(url);
+            const d = await r.json().catch(() => ({}));
+            natija.sahifa = r.ok
+                ? { ok: true, id: d.id, nomi: d.name }
+                : { ok: false, xato: d?.error?.message || `HTTP ${r.status}` };
+
+            if (r.ok) {
+                const subUrl = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(process.env.META_PAGE_ID)}/subscribed_apps`);
+                subUrl.searchParams.set('access_token', process.env.META_PAGE_ACCESS_TOKEN);
+                const sr = await fetch(subUrl);
+                const sd = await sr.json().catch(() => ({}));
+                const ilovalar = Array.isArray(sd.data) ? sd.data : [];
+                natija.obuna = {
+                    ok: sr.ok,
+                    ilovalar: ilovalar.map(a => ({ nomi: a.name, maydonlar: a.subscribed_fields || [] })),
+                    leadgenBor: ilovalar.some(a => (a.subscribed_fields || []).includes('leadgen')),
+                    xato: sr.ok ? undefined : (sd?.error?.message || `HTTP ${sr.status}`),
+                };
+            }
+        } catch (err) {
+            natija.sahifa = { ok: false, xato: err.message };
+        }
+    }
+
+    res.json(natija);
+});
+
 router.get('/recovery/preview', authRequired, recoveryAdminRequired, async (_req, res) => {
     try {
         const preview = await buildRecoveryPreview();
@@ -382,30 +441,43 @@ router.get('/webhook', (req, res) => {
     try {
         const { verifyToken } = getWebhookConfig();
         if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === verifyToken) {
+            console.log('[meta] Webhook TASDIQLANDI');
             return res.status(200).send(String(req.query['hub.challenge'] || ''));
         }
+        console.warn('[meta] Webhook tasdiqlash RAD ETILDI — verify token mos kelmadi');
         return res.sendStatus(403);
     } catch (err) {
-        console.error('GET /api/meta/webhook', err.message);
+        console.error('[meta] Webhook SOZLANMAGAN:', err.message);
         return res.status(503).send('Meta webhook sozlanmagan');
     }
 });
 
 router.post('/webhook', async (req, res) => {
+    // Kelgan hodisa jimgina yo'qolmasligi uchun har bir qadam logga tushadi.
+    const entries = Array.isArray(req.body?.entry) ? req.body.entry : [];
+    const leadgenSoni = entries.reduce((n, e) =>
+        n + (e?.changes || []).filter(c => c?.field === 'leadgen').length, 0);
+    console.log(`[meta] Webhook KELDI  entry=${entries.length} leadgen=${leadgenSoni}`);
+
     try {
         const config = getLeadConfig();
-        if (!verifyMetaSignature(req, config.appSecret)) return res.sendStatus(401);
-        const entries = Array.isArray(req.body?.entry) ? req.body.entry : [];
+        if (!verifyMetaSignature(req, config.appSecret)) {
+            console.warn('[meta] RAD: imzo mos kelmadi (META_APP_SECRET noto\'g\'ri bo\'lishi mumkin)');
+            return res.sendStatus(401);
+        }
         for (const entry of entries) {
             for (const change of entry?.changes || []) {
                 if (change?.field !== 'leadgen' || !change?.value?.leadgen_id) continue;
-                await importLead(change.value.leadgen_id, change.value.page_id || entry.id, config);
+                const natija = await importLead(change.value.leadgen_id, change.value.page_id || entry.id, config);
+                console.log(natija?.duplicate
+                    ? `[meta] DUBLIKAT  leadgen=${change.value.leadgen_id} id=${natija.id}`
+                    : `[meta] LID YARATILDI  leadgen=${change.value.leadgen_id} id=${natija?.id}`);
             }
         }
         return res.status(200).send('EVENT_RECEIVED');
     } catch (err) {
         // Meta 5xx javobda webhookni qayta yuboradi; externalId dublikatlarni bloklaydi.
-        console.error('POST /api/meta/webhook', err.message);
+        console.error('[meta] XATO:', err.message);
         return res.status(500).send('Meta lead import failed');
     }
 });
