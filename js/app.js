@@ -17600,6 +17600,47 @@ function openLeadManagerPhotoModal(lang, leadId) {
     }
 }
 
+// Bir yoki bir nechta lidni o'chiradi. targets: [{ lang, id }]
+// Ko'p tanlangan bo'lsa, o'chirishdan oldin sonini aytib tasdiq so'raydi.
+async function deleteLeadsInBulk(targets) {
+    if (!Array.isArray(targets) || !targets.length) return;
+
+    const savol = targets.length === 1
+        ? 'Lidni o\'chirishni xohlaysizmi?'
+        : `Siz ${targets.length} ta lidni o'chiryapsiz. Aminmisiz?`;
+    if (!confirm(savol)) return;
+
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const ochirilgan = [];
+    let xato = null;
+
+    for (const t of targets) {
+        const lead = (leads[t.lang] || []).find(l => l.id === t.id);
+        if (!lead) continue;
+        try {
+            await runExclusiveLeadMutation(async () => {
+                await waitForLeadPersistence(lead.id);
+                await apiDeleteLead(lead.id);
+            });
+            _leadServerVersions.delete(String(lead.id));
+            archiveRecord('lead', lead, { lang: t.lang });
+            leads[t.lang] = (leads[t.lang] || []).filter(l => l.id !== lead.id);
+            ochirilgan.push(lead);
+        } catch (err) {
+            // Bittasi xato bersa ham qolganlari o'chirilaveradi; birinchi xato ko'rsatiladi.
+            if (!xato) xato = err.message;
+        }
+    }
+
+    if (ochirilgan.length) setItem(STORAGE_KEYS.leads, leads);
+    renderLeads();
+
+    if (xato) showSaveError(xato);
+    else if (ochirilgan.length > 1) {
+        showNotification('Muvaffaqiyatli', `${ochirilgan.length} ta lid o'chirildi`, 'success');
+    }
+}
+
 function renderLeads() {
     const board = document.getElementById('leadsKanban');
     if (!board) return;
@@ -17682,7 +17723,13 @@ function renderLeads() {
     const bulkCount = document.getElementById('bulkSelectedCount');
     const bulkSelect = document.getElementById('bulkManagerSelect');
     const bulkAssignBtn = document.getElementById('bulkAssignBtn');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+
+    // Belgilangan lidlar — kartochkadagi 3 nuqta menyusi ham shundan foydalanadi
+    const tanlanganlar = () => Array.from(bulkChecks)
+        .filter(cb => cb.checked)
+        .map(cb => ({ lang: cb.dataset.lang, id: cb.dataset.id }));
 
     if (bulkBar && bulkChecks.length) {
         const updateBulkBar = () => {
@@ -17725,6 +17772,16 @@ function renderLeads() {
                 showNotification('Muvaffaqiyatli', `${checked.length} ta lid biriktirildi`, 'success');
             }
         };
+
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.onclick = async () => {
+                const targets = tanlanganlar();
+                if (!targets.length) return;
+                bulkDeleteBtn.disabled = true;
+                try { await deleteLeadsInBulk(targets); }
+                finally { bulkDeleteBtn.disabled = false; }
+            };
+        }
     } else if (bulkBar) {
         bulkBar.style.display = 'none';
     }
@@ -17733,26 +17790,21 @@ function renderLeads() {
         btn.addEventListener('click', async e => {
             e.stopPropagation();
             closeLeadCardMenus();
-            if (!confirm('Lidni o\'chirishni xohlaysizmi?')) return;
-            const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+
             const langKey = btn.dataset.leadMenuDelete;
-            const deletedLead = (leads[langKey] || []).find(l => l.id === btn.dataset.leadId);
-            if (!deletedLead) return;
+            const leadId = btn.dataset.leadId;
+
+            // Bir nechta lid belgilangan va shu kartochka ham ular orasida bo'lsa,
+            // belgilanganlarning hammasi o'chiriladi.
+            const belgilangan = tanlanganlar();
+            const shuKartochkaBelgilangan = belgilangan.some(t => t.id === leadId && t.lang === langKey);
+            const targets = (belgilangan.length > 1 && shuKartochkaBelgilangan)
+                ? belgilangan
+                : [{ lang: langKey, id: leadId }];
+
             btn.disabled = true;
-            try {
-                await runExclusiveLeadMutation(async () => {
-                    await waitForLeadPersistence(deletedLead.id);
-                    await apiDeleteLead(deletedLead.id);
-                });
-                _leadServerVersions.delete(String(deletedLead.id));
-                archiveRecord('lead', deletedLead, { lang: langKey });
-                leads[langKey] = (leads[langKey] || []).filter(l => l.id !== deletedLead.id);
-                setItem(STORAGE_KEYS.leads, leads);
-                renderLeads();
-            } catch (err) {
-                btn.disabled = false;
-                showSaveError(err.message);
-            }
+            try { await deleteLeadsInBulk(targets); }
+            finally { btn.disabled = false; }
         });
     });
 
