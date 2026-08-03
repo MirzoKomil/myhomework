@@ -312,6 +312,14 @@ async function apiAddCallRecording(lang, leadId, url, fileName, duration) {
     });
 }
 
+// Noto'g'ri yuklangan zapisni o'chirish. lang/leadId server tomonida
+// "bu zapisni kim yuklagan" tekshiruvi uchun kerak.
+async function apiDeleteCallRecording(id, lang, leadId) {
+    return apiFetch('/api/state/call-recordings/' + encodeURIComponent(id)
+        + '?lang=' + encodeURIComponent(lang)
+        + '&leadId=' + encodeURIComponent(leadId), { method: 'DELETE' });
+}
+
 // 4-vazifa: studentId berilsa (ustoz kabinetidan aniq o'quvchi tanlanganda),
 // shu o'quvchining o'ziga tegishli yozuvlar keladi — berilmasa eskicha
 // "Namuna o'quvchi" (demo) natijasi qaytadi.

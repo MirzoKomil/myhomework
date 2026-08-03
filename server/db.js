@@ -2329,6 +2329,21 @@ async function addCallRecording({ lang, leadId, url, fileName, duration, uploade
     return recording;
 }
 
+// Noto'g'ri yuklangan zapisni o'chirish. Bir martada faqat bitta yozuv
+// o'chiriladi — ommaviy o'chirish yo'li ataylab qo'yilmagan.
+async function deleteCallRecording(id) {
+    const trimmedId = String(id || '').trim();
+    if (!trimmedId) throw new Error('Zapis aniqlanmadi');
+
+    const all = await getJsonData('callRecordings');
+    const recording = all.find(r => r.id === trimmedId);
+    if (!recording) throw new Error('Zapis topilmadi');
+
+    const qolgan = all.filter(r => r.id !== trimmedId);
+    await tx(async (client) => { await saveJsonData(client, 'callRecordings', qolgan); });
+    return recording;
+}
+
 // SMS rassilka tarixi — Eskiz.uz orqali yuborilgan har bir SMS uchun bitta
 // yozuv (natijasi muvaffaqiyatli yoki xatolik bo'lishidan qat'i nazar, shu
 // yerda saqlanadi — hisobot/tekshiruv uchun).
@@ -2926,7 +2941,7 @@ module.exports = {
     getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY,
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
-    getCallRecordings, getCallRecordingCounts, addCallRecording, handleBeelineWebhook,
+    getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording, handleBeelineWebhook,
     getSmsHistory, addSmsHistoryEntries,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,

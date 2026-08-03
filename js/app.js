@@ -17398,7 +17398,16 @@ function _leadRecordingBodyHtml(recordings, state) {
         : recordings.length
         ? recordings.map(r => `
             <div class="lead-recording-item" style="padding:12px 0;border-bottom:1px solid var(--border)">
-                <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${escapeHtml(new Date(r.createdAt).toLocaleString('uz-UZ'))} · ${r.source === 'beeline' ? 'Beeline' : "Qo'lda yuklangan"}</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                    <div style="font-size:12px;color:var(--text-muted);flex:1;min-width:0">${escapeHtml(new Date(r.createdAt).toLocaleString('uz-UZ'))} · ${r.source === 'beeline' ? 'Beeline' : "Qo'lda yuklangan"}${r.uploadedBy ? ' · ' + escapeHtml(r.uploadedBy) : ''}</div>
+                    <button type="button" class="lead-recording-delete" data-recording-delete="${escapeHtml(r.id)}"
+                        title="Zapisni o'chirish" aria-label="Zapisni o'chirish">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
                 <audio controls style="width:100%" src="${escapeHtml(r.url)}"></audio>
             </div>`).join('')
         : `<p class="text-muted lead-empty-hint" style="margin-top:4px">Hozircha zapis mavjud emas</p>`;
@@ -17451,6 +17460,26 @@ function openLeadRecordingModal(lang, leadId) {
         });
     }
 
+    // Noto'g'ri yuklangan zapisni o'chirish. Ovoz fayli qaytarilmaydi,
+    // shuning uchun o'chirishdan oldin tasdiq so'raladi.
+    function bindDeleteBtns(refresh) {
+        document.querySelectorAll('[data-recording-delete]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm("Bu zapisni o'chirishni xohlaysizmi? Ovoz fayli qaytarilmaydi.")) return;
+                btn.disabled = true;
+                try {
+                    await apiDeleteCallRecording(btn.dataset.recordingDelete, lang, leadId);
+                    showMiniToast("Zapis o'chirildi");
+                    refreshLeadRecordingCounts();
+                    await refresh();
+                } catch (err) {
+                    btn.disabled = false;
+                    alert("O'chirishda xatolik: " + (err.message || err));
+                }
+            });
+        });
+    }
+
     async function refresh() {
         try {
             const recordings = await apiFetchCallRecordings(lang, leadId);
@@ -17459,6 +17488,7 @@ function openLeadRecordingModal(lang, leadId) {
             document.getElementById('modalBody').innerHTML = _leadRecordingBodyHtml([], 'error');
         }
         bindUploadBtn(refresh);
+        bindDeleteBtns(refresh);
     }
 
     openModal(`${escapeHtml(lead.name)} — Zapis`, _leadRecordingBodyHtml([], 'loading'), '');

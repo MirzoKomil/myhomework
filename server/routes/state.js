@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording } = require('../db');
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -392,6 +392,30 @@ router.post('/call-recordings', authRequired, async (req, res) => {
         res.json({ ok: true, recording });
     } catch (err) {
         console.error('POST /api/state/call-recordings', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Noto'g'ri yuklangan zapisni o'chirish.
+// Admin/ROP/boshliq istalganini, qolganlar faqat o'zi yuklaganini o'chiradi.
+router.delete('/call-recordings/:id', authRequired, async (req, res) => {
+    try {
+        const kim = req.user?.name || req.user?.email || '';
+        const toliqHuquq = ['admin', 'rop', 'boshliq'].includes(req.user?.role);
+
+        if (!toliqHuquq) {
+            const barchasi = await getCallRecordings(req.query.lang, req.query.leadId);
+            const zapis = barchasi.find(r => r.id === req.params.id);
+            if (zapis && zapis.uploadedBy && zapis.uploadedBy !== kim) {
+                return res.status(403).json({ error: 'Bu zapisni boshqa xodim yuklagan' });
+            }
+        }
+
+        const ochirilgan = await deleteCallRecording(req.params.id);
+        console.log(`[zapis] O'CHIRILDI id=${ochirilgan.id} lid=${ochirilgan.leadId} kim=${kim}`);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('DELETE /api/state/call-recordings', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

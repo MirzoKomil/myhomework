@@ -3920,6 +3920,33 @@ body {
     margin: 0;
 }
 
+/* Zapis ro'yxatidagi o'chirish tugmasi — odatda so'nik, ustiga borilganda
+   qizarib, tasodifan bosilishi ehtimoli kamayadi. */
+.lead-recording-delete {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color .15s, background .15s, border-color .15s;
+}
+.lead-recording-delete:hover:not(:disabled) {
+    color: #dc2626;
+    background: rgba(220, 38, 38, .09);
+    border-color: rgba(220, 38, 38, .28);
+}
+.lead-recording-delete:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
 .lead-card--dragging {
     opacity: 0.55;
 }
