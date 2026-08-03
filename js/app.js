@@ -12202,10 +12202,50 @@ let _smsAudience = 'lidlar';
 let _smsSelected = new Set(); // `${type}:${id}`
 let _smsSearch = '';
 
+// 24-vazifa: SMS matnidagi o'rin egallovchilar. Har bir qabul qiluvchi uchun
+// alohida almashtiriladi — shu sabab har kimga o'z ustozining guruh havolasi
+// ketadi.
+const SMS_PLACEHOLDERS = [
+    { key: '{ism}', label: 'Qabul qiluvchining ismi' },
+    { key: '{ustoz}', label: 'Sinov darsi ustozining ismi' },
+    { key: '{sinov_guruh}', label: "Sinov darsi Telegram guruhi havolasi" },
+];
+
+// O'qituvchilar ikki joyda: STORAGE_KEYS.teachers va HR xodimlari. Guruh
+// havolasi HR yozuvida saqlanadi, shuning uchun ikkalasi ham qaraladi.
+function findTeacherRecordById(teacherId) {
+    if (!teacherId) return null;
+    const hr = (getItem(STORAGE_KEYS.hrEmployees, []) || []).find(e => e.id === teacherId);
+    const plain = (getItem(STORAGE_KEYS.teachers, []) || []).find(t => t.id === teacherId);
+    if (!hr && !plain) return null;
+    return { ...(plain || {}), ...(hr || {}) };
+}
+
+function getTrialGroupLinkForTeacher(teacherId) {
+    return String(findTeacherRecordById(teacherId)?.trialGroupLink || '').trim();
+}
+
+function _smsRecipientContext(r) {
+    const teacher = findTeacherRecordById(r.teacherId);
+    return {
+        '{ism}': r.name || '',
+        '{ustoz}': teacher?.name || '',
+        '{sinov_guruh}': String(teacher?.trialGroupLink || '').trim(),
+    };
+}
+
+function fillSmsPlaceholders(text, ctx) {
+    return SMS_PLACEHOLDERS.reduce(
+        (out, p) => out.split(p.key).join(ctx[p.key] || ''),
+        String(text || '')
+    );
+}
+
 function _smsGetAudienceList(audience) {
     if (audience === 'oquvchilar') {
         return getItem(STORAGE_KEYS.students, []).filter(s => s.phone).map(s => ({
-            id: s.id, type: 'student', name: s.name || '(ismsiz)', phone: s.phone, sub: s.group || ''
+            id: s.id, type: 'student', name: s.name || '(ismsiz)', phone: s.phone, sub: s.group || '',
+            teacherId: s.teacherId || ''
         }));
     }
     if (audience === 'qarzdorlar') {
@@ -12213,7 +12253,8 @@ function _smsGetAudienceList(audience) {
             .filter(s => s.phone && (Number(s.debtAmount || 0) > 0 || s.paymentDueDate))
             .map(s => ({
                 id: s.id, type: 'debtor', name: s.name || '(ismsiz)', phone: s.phone,
-                sub: Number(s.debtAmount || 0) > 0 ? `${Number(s.debtAmount).toLocaleString()} so'm qarz` : (s.paymentDueDate || '')
+                sub: Number(s.debtAmount || 0) > 0 ? `${Number(s.debtAmount).toLocaleString()} so'm qarz` : (s.paymentDueDate || ''),
+                teacherId: s.teacherId || ''
             }));
     }
     // lidlar (standart)
@@ -12221,7 +12262,11 @@ function _smsGetAudienceList(audience) {
     const stageLabel = id => (FUNNEL_STAGES.find(f => f.id === id) || {}).label || id || '';
     return [...(leads.english || []), ...(leads.russian || [])]
         .filter(l => l.phone)
-        .map(l => ({ id: l.id, type: 'lead', name: l.name || '(ismsiz)', phone: l.phone, sub: stageLabel(l.status) }));
+        .map(l => ({
+            id: l.id, type: 'lead', name: l.name || '(ismsiz)', phone: l.phone, sub: stageLabel(l.status),
+            // Sinov darsi belgilanganda tanlangan ustoz shu yerda saqlanadi
+            teacherId: l.paymentOnboarding?.teacherId || ''
+        }));
 }
 
 function _smsFilteredList() {
@@ -12353,8 +12398,31 @@ async function _smsHandleSend() {
     });
     const recipients = [..._smsSelected].map(key => {
         const r = lookup.get(key);
-        return r ? { id: r.id, type: r.type, name: r.name, phone: r.phone } : null;
+        if (!r) return null;
+        const ctx = _smsRecipientContext(r);
+        return {
+            id: r.id, type: r.type, name: r.name, phone: r.phone,
+            // Har kimga o'z matni ketadi — {sinov_guruh} o'sha odamning
+            // ustoziga qarab almashadi.
+            message: fillSmsPlaceholders(message, ctx),
+            _missingGroup: message.includes('{sinov_guruh}') && !ctx['{sinov_guruh}'],
+        };
     }).filter(Boolean);
+
+    // Havolasi topilmaganlarni oldindan aytamiz — aks holda ular bo'sh joyli
+    // SMS olishardi va buni hech kim sezmasdi.
+    const missing = recipients.filter(r => r._missingGroup);
+    if (missing.length) {
+        const kimlar = missing.slice(0, 5).map(r => r.name).join(', ');
+        const ok = confirm(
+            `${missing.length} ta qabul qiluvchining sinov darsi guruhi aniqlanmadi ` +
+            `(${kimlar}${missing.length > 5 ? ' va boshqalar' : ''}).\n\n` +
+            `Sabab: ularga ustoz biriktirilmagan yoki ustozning guruh havolasi kiritilmagan.\n\n` +
+            `Ularga havolasiz SMS ketadi. Davom etilsinmi?`
+        );
+        if (!ok) return;
+    }
+    recipients.forEach(r => { delete r._missingGroup; });
 
     if (!confirm(`${recipients.length} ta qabul qiluvchiga SMS yuborilsinmi?`)) return;
 
@@ -12410,6 +12478,19 @@ function renderSms() {
                     <div style="font-size:13px;font-weight:700;margin-bottom:8px">Xabar matni</div>
                     <textarea id="smsMessage" class="form-control" rows="6" placeholder="SMS matnini kiriting..." style="resize:vertical"></textarea>
                     <div id="smsCharCount" style="font-size:12px;color:var(--text-muted);margin-top:4px"></div>
+                    <div style="margin-top:10px;padding:10px 12px;background:var(--bg-soft,#f8fafc);border:1px solid var(--border-color,#e5e7eb);border-radius:8px">
+                        <div style="font-size:12px;font-weight:700;margin-bottom:6px">Har kimga moslashadigan qismlar</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                            ${SMS_PLACEHOLDERS.map(p => `
+                                <button type="button" class="sms-placeholder-chip" data-sms-placeholder="${escapeHtml(p.key)}" title="${escapeHtml(p.label)}">${escapeHtml(p.key)}</button>
+                            `).join('')}
+                        </div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:7px;line-height:1.5">
+                            Bosilganda matnga qo'shiladi. Yuborilayotganda har bir odam uchun
+                            alohida almashtiriladi — masalan <b>{sinov_guruh}</b> o'sha o'quvchiga
+                            biriktirilgan ustozning guruh havolasiga aylanadi.
+                        </div>
+                    </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
                         <div id="smsSelectedCount" style="font-size:13px;color:var(--text-muted)">0 ta qabul qiluvchi tanlangan</div>
                         <button type="button" class="btn-primary-sm" id="smsSendBtn">Yuborish</button>
@@ -12441,6 +12522,21 @@ function renderSms() {
             _smsRenderRecipientList();
         });
         document.getElementById('smsMessage').addEventListener('input', _smsUpdateCharCount);
+
+        // O'rin egallovchini kursor turgan joyga qo'shadi
+        container.querySelectorAll('[data-sms-placeholder]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ta = document.getElementById('smsMessage');
+                if (!ta) return;
+                const key = btn.dataset.smsPlaceholder;
+                const start = ta.selectionStart ?? ta.value.length;
+                const end = ta.selectionEnd ?? ta.value.length;
+                ta.value = ta.value.slice(0, start) + key + ta.value.slice(end);
+                ta.focus();
+                ta.selectionStart = ta.selectionEnd = start + key.length;
+                _smsUpdateCharCount();
+            });
+        });
         document.getElementById('smsSendBtn').addEventListener('click', _smsHandleSend);
         _smsFetchBalance();
         _smsFetchHistory();
@@ -18344,6 +18440,50 @@ const HR_ROLE_MAP_MODAL = {
     'head-of-teachers': 'Head of Teachers'
 };
 
+// 24-vazifa: har bir asosiy o'qituvchi o'zining sinov darsi Telegram guruhiga
+// ega. O'quvchi sinov darsiga biriktirilganda SMS rassilkada aynan o'sha
+// ustozning guruh havolasi yuboriladi.
+//
+// Yordamchi o'qituvchilardan so'ralmaydi — sinov darsini faqat asosiy
+// o'qituvchi o'tadi (openTrialLessonFlow -> filterTeachersByTypeAndSubject('asosiy')).
+const TEACHER_ROLES_WITH_TRIAL_GROUP = new Set(['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi']);
+
+function isTrialGroupRole(role) {
+    return TEACHER_ROLES_WITH_TRIAL_GROUP.has(String(role || ''));
+}
+
+function trialGroupLinkHtml(value = '') {
+    return `<div class="form-group" id="empTrialGroupWrap" style="display:none">
+        <label>Sinov darsi Telegram guruhi <span style="color:var(--danger)">*</span></label>
+        <input type="url" id="empTrialGroupLink" class="form-control"
+               value="${escapeHtml(value)}" placeholder="https://t.me/+AbCdEf123456">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:5px">
+            Sinov darsi shu guruhda o'tadi. O'quvchi shu ustozga biriktirilganda,
+            SMS'da aynan shu havola yuboriladi.
+        </div>
+    </div>`;
+}
+
+function bindTrialGroupToggle(roleSelectId) {
+    const roleEl = document.getElementById(roleSelectId);
+    const wrap = document.getElementById('empTrialGroupWrap');
+    if (!roleEl || !wrap) return;
+    const toggle = () => { wrap.style.display = roleEl.value === 'oqituvchi' ? '' : 'none'; };
+    roleEl.addEventListener('change', toggle);
+    toggle();
+}
+
+// Bo'sh bo'lsa yoki Telegram havolasiga o'xshamasa — xato matnini qaytaradi.
+function validateTrialGroupLink(role, link) {
+    if (role !== 'oqituvchi') return '';
+    const v = String(link || '').trim();
+    if (!v) return "Sinov darsi Telegram guruhi havolasi kiritilishi shart";
+    if (!/^https?:\/\/(t\.me|telegram\.me|telegram\.dog)\//i.test(v)) {
+        return "Havola Telegram guruhiniki bo'lishi kerak (masalan https://t.me/+AbCdEf123456)";
+    }
+    return '';
+}
+
 function teacherLangHtml(selected = '') {
     return `<div class="form-group" id="empTeacherLangWrap" style="display:none">
         <label>Til yo'nalishi</label>
@@ -18807,6 +18947,7 @@ function openEditEmployeeModal(empId) {
             <select id="editEmpRole" class="form-control">${roleOptions}</select>
         </div>
         ${teacherLangHtml(preselectedLang)}
+        ${trialGroupLinkHtml(emp.trialGroupLink || '')}
         ${managerLangHtml(emp.lang || 'english')}
         ${ropLangHtml(emp.lang || 'english')}
         <div class="form-group">
@@ -18865,6 +19006,7 @@ function openEditEmployeeModal(empId) {
 
     // Til sub-field toggle
     bindTeacherLangToggle('editEmpRole');
+    bindTrialGroupToggle('editEmpRole');
     bindManagerLangToggle('editEmpRole');
     bindRopLangToggle('editEmpRole');
 
@@ -18908,7 +19050,12 @@ function openEditEmployeeModal(empId) {
         const newPassword = document.getElementById('editEmpPassword').value.trim();
         if (newPassword && newPassword.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
 
-        const resolvedRole = resolveTeacherRole(document.getElementById('editEmpRole').value);
+        const baseRoleEdit = document.getElementById('editEmpRole').value;
+        const trialGroupLink = (document.getElementById('empTrialGroupLink')?.value || '').trim();
+        const trialGroupError = validateTrialGroupLink(baseRoleEdit, trialGroupLink);
+        if (trialGroupError) { alert(trialGroupError); return; }
+
+        const resolvedRole = resolveTeacherRole(baseRoleEdit);
         const isMgrEdit = resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri';
         const isRopEdit = resolvedRole === 'rop';
         const updated = {
@@ -18928,6 +19075,9 @@ function openEditEmployeeModal(empId) {
             cardNumber: document.getElementById('editEmpCardNumber').value.trim(),
             passportSeries: document.getElementById('editEmpPassportSeries').value.trim(),
             address: document.getElementById('editEmpAddress').value.trim(),
+            // Rol o'qituvchidan boshqasiga o'zgartirilsa havola saqlanib qoladi —
+            // keyin qaytarilsa qayta yozish shart bo'lmaydi.
+            trialGroupLink: baseRoleEdit === 'oqituvchi' ? trialGroupLink : (emp.trialGroupLink || ''),
         };
         if (newPassword) updated.password = newPassword;
 
@@ -19019,6 +19169,7 @@ function openAddEmployeeModal() {
             <select id="empRole" class="form-control">${roleOptions}</select>
         </div>
         ${teacherLangHtml()}
+        ${trialGroupLinkHtml()}
         ${managerLangHtml()}
         ${ropLangHtml()}
         <div class="form-group">
@@ -19089,6 +19240,7 @@ function openAddEmployeeModal() {
 
     // Til sub-field toggle
     bindTeacherLangToggle('empRole');
+    bindTrialGroupToggle('empRole');
     bindManagerLangToggle('empRole');
     bindRopLangToggle('empRole');
 
@@ -19100,7 +19252,9 @@ function openAddEmployeeModal() {
         const gender = document.getElementById('empGender').value;
         const birthDate = document.getElementById('empBirthDate').value;
         const startDate = document.getElementById('empStartDate').value;
-        const role = resolveTeacherRole(document.getElementById('empRole').value);
+        const baseRoleAdd = document.getElementById('empRole').value;
+        const role = resolveTeacherRole(baseRoleAdd);
+        const trialGroupLink = (document.getElementById('empTrialGroupLink')?.value || '').trim();
         const phone = document.getElementById('empPhone').value.trim();
         const email = document.getElementById('empEmail').value.trim();
         const department = document.getElementById('empDepartment').value;
@@ -19117,6 +19271,8 @@ function openAddEmployeeModal() {
         if (!birthDate) { alert('Tug\'ilgan sana kiritilishi shart'); return; }
         if (!startDate) { alert('Faoliyat boshlagan sana kiritilishi shart'); return; }
         if (!phone) { alert('Telefon raqam kiritilishi shart'); return; }
+        const trialGroupErrorAdd = validateTrialGroupLink(baseRoleAdd, trialGroupLink);
+        if (trialGroupErrorAdd) { alert(trialGroupErrorAdd); return; }
         if (!login) { alert('Login kiritilishi shart'); return; }
         if (password.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
 
@@ -19133,7 +19289,7 @@ function openAddEmployeeModal() {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
             role, phone, email, department, status, login, password,
-            cardNumber, passportSeries, address,
+            cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
             lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : 'english'
         };

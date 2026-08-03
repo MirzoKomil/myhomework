@@ -3920,6 +3920,23 @@ body {
     margin: 0;
 }
 
+/* SMS matniga qo'shiladigan o'rin egallovchi tugmachalari */
+.sms-placeholder-chip {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #7c3aed;
+    background: rgba(124, 58, 237, .08);
+    border: 1px solid rgba(124, 58, 237, .25);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.sms-placeholder-chip:hover {
+    background: rgba(124, 58, 237, .16);
+    border-color: rgba(124, 58, 237, .45);
+}
+
 /* Zapis ro'yxatidagi o'chirish tugmasi — odatda so'nik, ustiga borilganda
    qizarib, tasodifan bosilishi ehtimoli kamayadi. */
 .lead-recording-delete {

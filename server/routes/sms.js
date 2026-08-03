@@ -47,28 +47,36 @@ router.post('/send', authRequired, async (req, res) => {
         for (const r of recipients) {
             const phone = String(r.phone || '').trim();
             const name = String(r.name || '').trim();
+            // 24-vazifa: qabul qiluvchi o'z matnini olib kelishi mumkin
+            // ({sinov_guruh} kabi o'rin egallovchilar CRM tomonida har kim
+            // uchun alohida almashtiriladi). Kelmasa — umumiy matn.
+            const personalText = String(r.message || '').trim() || text;
             if (!phone) {
                 results.push({ phone, name, status: 'error', error: 'Telefon raqami yo\'q' });
                 continue;
             }
             try {
-                const resp = await eskiz.sendSms(phone, text);
+                const resp = await eskiz.sendSms(phone, personalText);
                 results.push({
                     phone, name, status: 'sent',
                     eskizId: resp?.id || null,
                     recipientId: r.id || null, recipientType: r.type || null,
+                    message: personalText,
                 });
             } catch (err) {
                 results.push({
                     phone, name, status: 'error', error: err.message || 'Nomalum xatolik',
                     recipientId: r.id || null, recipientType: r.type || null,
+                    message: personalText,
                 });
             }
         }
 
+        // Tarixda har kimga aynan nima ketgani ko'rinishi kerak — umumiy
+        // shablon emas, o'sha odamga yuborilgan matn.
         await addSmsHistoryEntries(results.map(r => ({
             ...r,
-            message: text,
+            message: r.message || text,
             audience: audience || null,
             sentBy: req.user?.email || req.user?.id || null,
         })));
