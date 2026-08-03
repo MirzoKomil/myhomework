@@ -5,6 +5,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const webpush = require('web-push');
 const { generateContractPdfBuffer } = require('./services/contractPdf');
+const eskiz = require('./services/eskiz');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -1264,7 +1265,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders') ? {} : [];
     }
     return row.data;
 }
@@ -2927,6 +2928,130 @@ async function _checkAndPushComputedNotifications() {
 }
 const PUSH_CHECK_INTERVAL_MS = 60 * 1000;
 setInterval(_checkAndPushComputedNotifications, PUSH_CHECK_INTERVAL_MS);
+
+// ── 26-vazifa: sinov darsi vaqtiga qarab avtomatik SMS eslatmalari ──────────
+// Faqat vaqtga bog'liq (1 soat/30 daqiqa/10 daqiqa/boshlandi) qismi shu
+// yerda — bosqichga o'tilgan zahoti yuboriladigan SMS'lar (bog'lanishga
+// urinilmoqda, ma'lumot berildi va h.k.) CRM tomonida (js/app.js,
+// updateLeadInStorage) yuboriladi, chunki ular ADMIN harakatiga bog'liq va
+// o'sha vaqtdagi to'liq lid ma'lumoti (onboarding/paymentSurvey) faqat
+// brauzerda darhol mavjud. Vaqt bo'yicha eslatmalar esa hech kim CRM'ni
+// ochib o'tirmasa ham aniq daqiqada yuborilishi kerak — shu sabab bu
+// server tomonidagi mustaqil vazifa.
+const TRIAL_SMS_REMINDER_RULES = [
+    { id: '1h', minutes: 60 },
+    { id: '30m', minutes: 30 },
+    { id: '10m', minutes: 10 },
+    { id: 'start', minutes: 0 },
+];
+const TRIAL_SMS_TOLERANCE_MIN = 2; // tekshiruv har 60s da ishga tushadi — zaxira
+
+async function getActiveTrialLeads() {
+    const rows = await q(
+        `SELECT * FROM leads WHERE status = 'sinov-darsida' AND deleted_at IS NULL`
+    );
+    return rows.map(r => ({ ...rowToLead(r), language: r.language }));
+}
+
+async function getTeacherTrialLinksMap() {
+    const rows = await q(
+        `SELECT id, trial_group_link FROM hr_employees WHERE COALESCE(trial_group_link,'') <> ''`
+    );
+    return new Map(rows.map(r => [r.id, r.trial_group_link]));
+}
+
+function buildTrialReminderSmsText(ruleId, lead, link) {
+    const ism = lead.name || 'Hurmatli mijoz';
+    switch (ruleId) {
+        case '1h':
+            return `Eslatib o'tamiz sizga bitta bepul rus tili darsi belgilangan, dars bu yerda bo'ladi: ${link}`;
+        case '30m':
+            return `Atigi 30 daqiqa qoldi, va siz "90 kunda rus tilida gapiring" nomli kursimizdan tatib ko'rasiz. ${link}`;
+        case '10m':
+            return `Biz sizni sabrsizlik bilan kutmoqdamiz, yana 10 daqiqa va siz haqiqiy dastur guvohi bo'lasiz: ${link}`;
+        case 'start':
+            return `${ism}! Dars boshlandi, sizni bo'lajak ustozingiz kutmoqda, darsga bu yerdan kiring: ${link}`;
+        default:
+            return '';
+    }
+}
+
+async function _checkAndSendTrialSmsReminders() {
+    try {
+        const leads = await getActiveTrialLeads();
+        if (!leads.length) return;
+
+        const teacherLinks = await getTeacherTrialLinksMap();
+        const dedupe = await getJsonData('trialSmsReminders');
+        const historyEntries = [];
+        let changed = false;
+
+        for (const lead of leads) {
+            // Shablonlar aynan Domwork (rus tili) brendi uchun yozilgan.
+            if (lead.language !== 'russian') continue;
+            if (!lead.phone || !lead.trialLessonAt) continue;
+
+            const trialAtMs = new Date(lead.trialLessonAt).getTime();
+            if (Number.isNaN(trialAtMs)) continue;
+            const minutesUntil = (trialAtMs - Date.now()) / 60000;
+
+            const prev = dedupe[lead.id];
+            const entry = (prev && prev.trialLessonAt === lead.trialLessonAt)
+                ? prev
+                : { trialLessonAt: lead.trialLessonAt, sent: [] }; // reja o'zgargan bo'lsa qaytadan boshlanadi
+
+            const link = teacherLinks.get(lead.paymentOnboarding?.teacherId || '') || '';
+
+            for (const rule of TRIAL_SMS_REMINDER_RULES) {
+                if (entry.sent.includes(rule.id)) continue;
+                const low = rule.minutes === 0 ? -TRIAL_SMS_TOLERANCE_MIN : rule.minutes - TRIAL_SMS_TOLERANCE_MIN;
+                const high = rule.minutes === 0 ? TRIAL_SMS_TOLERANCE_MIN : rule.minutes + TRIAL_SMS_TOLERANCE_MIN;
+                if (minutesUntil < low || minutesUntil > high) continue;
+
+                if (!link) {
+                    console.warn(`[trial-sms] ustoz guruh havolasi topilmadi — leadId=${lead.id} teacherId=${lead.paymentOnboarding?.teacherId || '(yoq)'}`);
+                    entry.sent.push(rule.id);
+                    changed = true;
+                    continue;
+                }
+
+                const text = buildTrialReminderSmsText(rule.id, lead, link);
+                try {
+                    const resp = await eskiz.sendSms(lead.phone, text);
+                    historyEntries.push({
+                        phone: lead.phone, name: lead.name, status: 'sent',
+                        eskizId: resp?.id || null, message: text,
+                        recipientId: lead.id, recipientType: 'lead',
+                        audience: 'auto-sinov-' + rule.id, sentBy: 'system',
+                    });
+                } catch (err) {
+                    historyEntries.push({
+                        phone: lead.phone, name: lead.name, status: 'error',
+                        error: err.message, message: text,
+                        recipientId: lead.id, recipientType: 'lead',
+                        audience: 'auto-sinov-' + rule.id, sentBy: 'system',
+                    });
+                }
+                entry.sent.push(rule.id);
+                changed = true;
+            }
+            dedupe[lead.id] = entry;
+        }
+
+        // Endi sinov-darsida bo'lmagan lidlarning dedupe yozuvlarini tozalash
+        const activeIds = new Set(leads.map(l => l.id));
+        for (const id of Object.keys(dedupe)) {
+            if (!activeIds.has(id)) { delete dedupe[id]; changed = true; }
+        }
+
+        if (changed) await tx(async client => { await saveJsonData(client, 'trialSmsReminders', dedupe); });
+        if (historyEntries.length) await addSmsHistoryEntries(historyEntries);
+    } catch (err) {
+        console.error('[trial-sms] eslatmalarni tekshirishda xatolik:', err.message);
+    }
+}
+const TRIAL_SMS_CHECK_INTERVAL_MS = 60 * 1000;
+setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
     pool, DATA_DIR,

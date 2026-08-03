@@ -17178,6 +17178,119 @@ function persistLeadChange(lang, lead) {
     return operation;
 }
 
+// 26-vazifa: lid bosqichdan bosqichga o'tganda avtomatik SMS.
+// Faqat RUS TILI (Domwork) lidlari uchun — shablonlar aynan shu brend
+// uchun yozilgan. Ingliz tili (Homework) uchun alohida so'ralganda
+// qo'shiladi.
+//
+// Vaqtga bog'liq sinov darsi eslatmalari (1 soat/30 daqiqa/10 daqiqa/
+// boshlandi) BU YERDA emas — ular hech kim CRM'ni ochib o'tirmasa ham
+// aniq daqiqada yuborilishi kerak, shuning uchun server tomonida alohida
+// (server/db.js, _checkAndSendTrialSmsReminders). Shu yerda faqat ADMIN
+// harakati bilan bir zumda yuboriladigan xabarlar.
+const UZ_MONTHS_SHORT = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+    'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+
+function formatUzShortDate(dateStr) {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr || '');
+    return `${d.getDate()}-${UZ_MONTHS_SHORT[d.getMonth()]}`;
+}
+
+// "bugun soat 19:00" / "ertaga soat 10:00" / "31.07 kuni soat 15:00"
+function describeTrialLessonWhen(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    if (d.toDateString() === now.toDateString()) return `bugun soat ${hh}:${mm}`;
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    if (d.toDateString() === tomorrow.toDateString()) return `ertaga soat ${hh}:${mm}`;
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} kuni soat ${hh}:${mm}`;
+}
+
+function sendAutoSmsMessages(lead, messages) {
+    if (!messages || !messages.length || !lead.phone) return;
+    const recipient = { id: lead.id, type: 'lead', name: lead.name || '', phone: lead.phone };
+    messages.forEach(text => {
+        apiSendSms([recipient], text, 'auto').catch(err =>
+            console.warn("Avtomatik SMS yuborishda xatolik:", err.message));
+    });
+}
+
+// Lidga bog'liq o'quvchi yozuvini topadi (yo'q bo'lsa minimal yozuv
+// yaratadi) va agar hali login/parol berilmagan bo'lsa, yangisini
+// generatsiya qilib qaytaradi. Allaqachon bor bo'lsa — null (qayta
+// yubormaslik uchun).
+function ensureStudentLoginForLead(lang, lead) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    let idx = students.findIndex(s =>
+        (s.leadRef && s.leadRef.id === lead.id) ||
+        (s.phone && s.phone === lead.phone && s.name === lead.name)
+    );
+    if (idx === -1) {
+        students.unshift({
+            id: 's' + Date.now(),
+            leadRef: { lang, id: lead.id },
+            name: lead.name || '', phone: lead.phone || '',
+            group: '', subject: lead.language || lang || 'english',
+            teacherId: lead.paymentOnboarding?.teacherId || '',
+            assistantTeacherId: null, source: 'lead', managerId: lead.managerId || ''
+        });
+        idx = 0;
+    }
+    if (students[idx].login) return null;
+    const login = String(lead.phone || '').replace(/\s/g, '');
+    const password = generateStudentPassword();
+    students[idx] = { ...students[idx], login, password };
+    setItem(STORAGE_KEYS.students, students);
+    return { login, password };
+}
+
+function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus) {
+    if (lang !== 'russian') return;
+    if (oldStatus === newStatus) return;
+    if (!lead.phone) return;
+
+    const ism = lead.name || 'Hurmatli mijoz';
+    const messages = [];
+
+    if (newStatus === 'boglanishga-urinilmoqda') {
+        messages.push(`Assalomu alaykum, ${ism}! Sizga Domwork onlayn rus tili maktabidan qo'ng'iroq qildik, bog'lana olmadik. Savollaringiz bo'lsa telegram orqali https://t.me/domwork_admin ga yozishingiz mumkin.`);
+    } else if (newStatus === 'malumot-berildi') {
+        messages.push(`Hurmatli ${ism}! Onlayn rus tili kursi bo'yicha barcha batafsil ma'lumotlar sizga Telegramdan yuborildi. Savollaringiz bo'lsa javob berishdan mamnun bo'lamiz. https://t.me/domwork_admin`);
+    } else if (newStatus === 'qaror-jarayonida') {
+        messages.push(`${ism}! Domwork onlayn rus tili kursiga bugun yozilsangiz, 15% chegirma, mobil ilova va darslik kitoblari bepul beriladi. Imkoniyatni boy bermang!`);
+    } else if (newStatus === 'sinov-darsida') {
+        const link = getTrialGroupLinkForTeacher(lead.paymentOnboarding?.teacherId);
+        if (link && lead.trialLessonAt) {
+            const when = describeTrialLessonWhen(lead.trialLessonAt);
+            messages.push(`Tabriklaymiz ${ism}! Siz uchun individual bepul sinov darsi ${when} boshlanadi. Dars bu yerda bo'ladi: ${link}`);
+        }
+    } else if (newStatus === 'tolov-jarayonida') {
+        let msg = `Sizning Domwork onlayn maktabi uchun qilgan boshlang'ich to'lovingiz qabul qilindi.`;
+        const ps = lead.paymentSurvey;
+        if (ps?.paymentType === 'partial' && ps?.nextPaymentDate) {
+            msg += ` Qolgan qismni kelishilgandek ${formatUzShortDate(ps.nextPaymentDate)} kuni qilib berish yoddan chiqmasin.`;
+        }
+        messages.push(msg);
+        const creds = ensureStudentLoginForLead(lang, lead);
+        if (creds) {
+            messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: https://myhomework.uz/student/`);
+        }
+    } else if (newStatus === 'tolov-yopildi') {
+        messages.push(`Tabriklaymiz, siz kurs uchun to'lovlarni to'liq qildingiz, endi mazza qilib kursdan bahramand bo'lishingiz mumkin!`);
+        const creds = ensureStudentLoginForLead(lang, lead);
+        if (creds) {
+            messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: https://myhomework.uz/student/`);
+        }
+    }
+
+    if (messages.length) sendAutoSmsMessages(lead, messages);
+}
+
 function updateLeadInStorage(lang, leadId, updater) {
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const list = leads[lang] || [];
@@ -17200,6 +17313,7 @@ function updateLeadInStorage(lang, leadId, updater) {
         autoSyncLeadToBookRoadmap(lang, list[idx]);
         autoAddLeadAsStudent(lang, list[idx]); // 7-ish
     }
+    maybeSendAutoStageSms(lang, list[idx], oldStatus, newStatus); // 26-vazifa
     // Menejeri o'zgarganda book roadmap'ni ham yangilash
     if (list[idx].managerId !== prevManagerId) {
         syncLeadManagerToBookRoadmap(lang, leadId, list[idx].managerId);
