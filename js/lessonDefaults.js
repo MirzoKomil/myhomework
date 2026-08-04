@@ -283,9 +283,16 @@ function getDefaultExamContent(examId) {
 // student-app/data/lessonContent.ts ning getLessonContent() bilan bir xil natija beradi —
 // faqat CRM tahrirlash formasini "hozir appda chiqib turgan" qiymatlar bilan
 // oldindan to'ldirish uchun.
-function getDefaultLessonContent(lessonId, dayIndex) {
+//
+// `lang` — bu darsning kursi qaysi tilga tegishli ekani. Standart (proseduraviy)
+// kontent faqat INGLIZCHA havzalardan tuziladi — rus tili kursi uchun admin
+// hali haqiqiy kontent kiritmagan bo'lsa, CRM'da ham (xuddi ilovadagi kabi)
+// bo'sh ro'yxat ko'rsatiladi, aks holda admin "tayyor" deb o'ylab, aslida
+// ingliz tilidagi placeholder'ni tekshirmasdan saqlab qo'yishi mumkin edi.
+function getDefaultLessonContent(lessonId, dayIndex, lang) {
     const dayType = dayIndex % 2 === 0 ? 'grammar' : 'speaking';
     const offset = ldHashId(String(lessonId));
+    const isRussian = lang === 'russian';
 
     return {
         lessonId: String(lessonId),
@@ -295,10 +302,10 @@ function getDefaultLessonContent(lessonId, dayIndex) {
             dayType === 'grammar'
                 ? "Ushbu darsda asosiy grammatik qoida video orqali tushuntiriladi. Video tagida qisqacha konspekt joylashgan — asosiy formula va misollarni shu yerdan takrorlashingiz mumkin."
                 : "Ushbu live darsda o'qituvchi tomonidan tayyorlangan slaydlar asosida suhbat ko'nikmalari mashq qilinadi.",
-        slides: dayType === 'speaking' ? ldBuildSlides(offset) : [],
-        vocabulary: ldPickWindow(LD_VOCAB_POOL, offset, 25),
-        grammarBlanks: dayType === 'grammar' ? ldPickWindow(LD_GRAMMAR_POOL, offset, 6) : [],
-        speakingPractice: dayType === 'speaking' ? ldPickWindow(LD_SPEAKING_POOL, offset, 5) : [],
-        homeworkParts: dayType === 'grammar' ? ldBuildGrammarHomework(offset) : ldBuildSpeakingHomework(offset),
+        slides: !isRussian && dayType === 'speaking' ? ldBuildSlides(offset) : [],
+        vocabulary: isRussian ? [] : ldPickWindow(LD_VOCAB_POOL, offset, 25),
+        grammarBlanks: !isRussian && dayType === 'grammar' ? ldPickWindow(LD_GRAMMAR_POOL, offset, 6) : [],
+        speakingPractice: !isRussian && dayType === 'speaking' ? ldPickWindow(LD_SPEAKING_POOL, offset, 5) : [],
+        homeworkParts: isRussian ? [] : dayType === 'grammar' ? ldBuildGrammarHomework(offset) : ldBuildSpeakingHomework(offset),
     };
 }

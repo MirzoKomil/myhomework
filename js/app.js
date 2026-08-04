@@ -1542,7 +1542,7 @@ function _getLessonWorkingContent(mc, lesson, dayIndex) {
         const bonusIndex = Math.max(0, parseInt(String(lesson.id).replace('bonus-', ''), 10) - 1);
         return getDefaultBonusLessonContent(bonusIndex);
     }
-    return getDefaultLessonContent(lesson.id, dayIndex);
+    return getDefaultLessonContent(lesson.id, dayIndex, lesson.lang === 'russian' ? 'russian' : 'english');
 }
 
 function _saveLessonWorkingContent(lesson, content) {

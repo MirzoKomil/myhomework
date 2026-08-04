@@ -40,7 +40,9 @@ export default function HomeworkSectionScreen() {
         const lesson = mc.lessons.find((l) => l.id === lessonId);
         const courseLessons = lesson ? mc.lessons.filter((l) => l.courseId === lesson.courseId) : [];
         const dayIndex = Math.max(0, courseLessons.findIndex((l) => l.id === lessonId));
-        setContent(mergeLessonContent(getLessonContent(String(lessonId), dayIndex), mc.lessonContents[String(lessonId)]));
+        const course = lesson ? mc.courses.find((c) => c.id === lesson.courseId) : undefined;
+        const lang: 'english' | 'russian' = course?.lang === 'russian' ? 'russian' : 'english';
+        setContent(mergeLessonContent(getLessonContent(String(lessonId), dayIndex, lang), mc.lessonContents[String(lessonId)]));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

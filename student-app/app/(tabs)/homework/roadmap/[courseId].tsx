@@ -75,16 +75,18 @@ function LessonCard({
   isActive,
   index,
   adminContent,
+  courseLang = 'english',
 }: {
   lesson: LessonNode;
   isActive: boolean;
   index: number;
   adminContent?: AdminLessonContent;
+  courseLang?: 'english' | 'russian';
 }) {
   const { t } = useLang();
   const numText = String(index + 1);
   const earnedCoins = useLessonCoins(lesson.id);
-  const content = mergeLessonContent(getLessonContent(lesson.id, index), adminContent);
+  const content = mergeLessonContent(getLessonContent(lesson.id, index, courseLang), adminContent);
   const possibleCoins = getLessonPossibleCoins(content);
   // Reaktivlik uchun — lessonProgressStore o'zgarishlarida qayta render qilinsin.
   useLessonProgress(lesson.id);
@@ -419,11 +421,13 @@ function LessonRow({
   isActive,
   index,
   adminContent,
+  courseLang = 'english',
 }: {
   lesson: LessonNode;
   isActive: boolean;
   index: number;
   adminContent?: AdminLessonContent;
+  courseLang?: 'english' | 'russian';
 }) {
   const isLeft = lesson.side === 'left';
 
@@ -432,7 +436,7 @@ function LessonRow({
       {isLeft ? (
         <>
           <View style={ss.cardWrap}>
-            <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} />
+            <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} courseLang={courseLang} />
           </View>
           <View style={ss.badgeWrap}>
             {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
@@ -444,7 +448,7 @@ function LessonRow({
             {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
           </View>
           <View style={ss.cardWrap}>
-            <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} />
+            <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} courseLang={courseLang} />
           </View>
         </>
       )}
@@ -460,6 +464,7 @@ export default function RoadmapScreen() {
   const totalLightning = useLightning();
   const [lessons, setLessons] = useState<LessonNode[]>([]);
   const [lessonContents, setLessonContents] = useState<Record<string, AdminLessonContent>>({});
+  const [courseLang, setCourseLang] = useState<'english' | 'russian'>('english');
   const [loading, setLoading] = useState(true);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
@@ -478,6 +483,8 @@ export default function RoadmapScreen() {
   const recomputeLessons = (mc: MobileContent, cId: string | undefined) => {
     const c = mc.courses.find((x) => x.id === cId) ?? mc.courses[0] ?? null;
     if (!c) return;
+    const resolvedCourseLang: 'english' | 'russian' = c.lang === 'russian' ? 'russian' : 'english';
+    setCourseLang(resolvedCourseLang);
     const adminLessons = mc.lessons.filter((l) => l.courseId === c.id);
     const TOTAL_LESSONS = 72;
     // 11-vazifa: yangi (hali hech narsa bajarmagan) o'quvchi uchun faqat
@@ -516,7 +523,7 @@ export default function RoadmapScreen() {
       }
 
       const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
-      const content = mergeLessonContent(getLessonContent(id, i), mc.lessonContents[id]);
+      const content = mergeLessonContent(getLessonContent(id, i, resolvedCourseLang), mc.lessonContents[id]);
       const percent = Math.round(
         (getCategoryProgress(id, videoCategory) +
           getCategoryProgress(id, 'vocabulary') +
@@ -691,7 +698,7 @@ export default function RoadmapScreen() {
                     completed={connectorCompleted}
                   />
                 )}
-                <LessonRow lesson={lesson} isActive={isActive} index={index} adminContent={lessonContents[lesson.id]} />
+                <LessonRow lesson={lesson} isActive={isActive} index={index} adminContent={lessonContents[lesson.id]} courseLang={courseLang} />
               </React.Fragment>
             );
           })}

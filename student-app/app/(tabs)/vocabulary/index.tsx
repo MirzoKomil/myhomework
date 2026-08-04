@@ -32,6 +32,7 @@ export default function VocabularyHubScreen() {
     fetchMobileContent()
       .then((mc) => {
         const course = mc.courses[0];
+        const courseLang: 'english' | 'russian' = course?.lang === 'russian' ? 'russian' : 'english';
         const adminLessons = course ? mc.lessons.filter((l) => l.courseId === course.id) : [];
         const mapped: LessonFolder[] = Array.from({ length: TOTAL_LESSONS }, (_, i) => {
           const l = adminLessons[i];
@@ -40,7 +41,7 @@ export default function VocabularyHubScreen() {
             id,
             name: l?.name ?? `${i + 1}-dars`,
             locked: i >= UNLOCKED_COUNT,
-            wordCount: mergeLessonContent(getLessonContent(id, i), mc.lessonContents[id]).vocabulary.length,
+            wordCount: mergeLessonContent(getLessonContent(id, i, courseLang), mc.lessonContents[id]).vocabulary.length,
           };
         });
         setFolders(mapped);

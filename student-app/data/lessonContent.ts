@@ -297,7 +297,21 @@ export function getBonusLessonContent(bonusIndex: number): LessonContent {
 }
 
 // ─── Main entry point ───────────────────────────────────────────────────────
-export function getLessonContent(lessonId: string, dayIndex: number): LessonContent {
+// `lang` — darsning kursi qaysi tilga tegishli ekani. Standart (proseduraviy)
+// kontent — vocabulary/grammarBlanks/speakingPractice/homeworkParts/slides —
+// FAQAT inglizcha havzalardan tuziladi (VOCAB_POOL, GRAMMAR_POOL va h.k.).
+// Rus tili kursi uchun admin CRM'da hali haqiqiy kontent kiritmagan bo'lsa,
+// bu inglizcha havzalarni ko'rsatish noto'g'ri (o'quvchi rus tili darsida
+// "apple", "she goes to school" kabi inglizcha so'z/gaplarni ko'rardi) —
+// shuning uchun rus tili uchun bo'sh massiv qaytariladi, mergeLessonContent
+// esa admin haqiqiy kontent kiritgach avtomatik uni ko'rsatadi. konspekt/
+// unitTitle — o'zbekcha, til-neytral yo'riqnoma matni, ular ikkala tilda
+// ham bir xil qoladi.
+export function getLessonContent(
+  lessonId: string,
+  dayIndex: number,
+  lang: 'english' | 'russian' = 'english'
+): LessonContent {
   if (lessonId.startsWith('bonus-')) {
     const bonusIndex = Math.max(0, parseInt(lessonId.replace('bonus-', ''), 10) - 1);
     return getBonusLessonContent(bonusIndex);
@@ -305,6 +319,7 @@ export function getLessonContent(lessonId: string, dayIndex: number): LessonCont
 
   const dayType: LessonDayType = dayIndex % 2 === 0 ? 'grammar' : 'speaking';
   const offset = hashId(lessonId);
+  const isRussian = lang === 'russian';
 
   return {
     lessonId,
@@ -314,11 +329,11 @@ export function getLessonContent(lessonId: string, dayIndex: number): LessonCont
       dayType === 'grammar'
         ? "Ushbu darsda asosiy grammatik qoida video orqali tushuntiriladi. Video tagida qisqacha konspekt joylashgan — asosiy formula va misollarni shu yerdan takrorlashingiz mumkin."
         : "Ushbu live darsda o'qituvchi tomonidan tayyorlangan slaydlar asosida suhbat ko'nikmalari mashq qilinadi.",
-    slides: dayType === 'speaking' ? buildSlides(offset) : [],
-    vocabulary: pickWindow(VOCAB_POOL, offset, 25),
-    grammarBlanks: dayType === 'grammar' ? pickWindow(GRAMMAR_POOL, offset, 6) : [],
-    speakingPractice: dayType === 'speaking' ? pickWindow(SPEAKING_POOL, offset, 5) : [],
-    homeworkParts: dayType === 'grammar' ? buildGrammarHomework(offset) : buildSpeakingHomework(offset),
+    slides: !isRussian && dayType === 'speaking' ? buildSlides(offset) : [],
+    vocabulary: isRussian ? [] : pickWindow(VOCAB_POOL, offset, 25),
+    grammarBlanks: !isRussian && dayType === 'grammar' ? pickWindow(GRAMMAR_POOL, offset, 6) : [],
+    speakingPractice: !isRussian && dayType === 'speaking' ? pickWindow(SPEAKING_POOL, offset, 5) : [],
+    homeworkParts: isRussian ? [] : dayType === 'grammar' ? buildGrammarHomework(offset) : buildSpeakingHomework(offset),
   };
 }
 
@@ -339,8 +354,11 @@ export function mergeLessonContent(base: LessonContent, admin?: AdminLessonConte
 }
 
 export async function getResolvedLessonContent(lessonId: string, dayIndex: number): Promise<LessonContent> {
-  const base = getLessonContent(lessonId, dayIndex);
   const mc = await fetchMobileContent();
+  const lesson = mc.lessons.find((l) => l.id === lessonId);
+  const course = lesson ? mc.courses.find((c) => c.id === lesson.courseId) : undefined;
+  const lang: 'english' | 'russian' = course?.lang === 'russian' ? 'russian' : 'english';
+  const base = getLessonContent(lessonId, dayIndex, lang);
   return mergeLessonContent(base, mc.lessonContents[lessonId]);
 }
 
