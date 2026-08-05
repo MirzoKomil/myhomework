@@ -176,6 +176,56 @@ const LD_RU_LESSON1_HOMEWORK = [
     },
 ];
 
+// ─── Rus tili kursi, 2-dars uchun Uyga vazifa (speaking turi, admin CRM orqali kiritgan) ───
+const LD_RU_LESSON2_HOMEWORK = [
+    {
+        id: 'A',
+        kind: 'record',
+        title: 'PART A — Record yourself',
+        prompts: [
+            { id: 'ru2h-a1', sentence: 'Здравствуйте! Меня зовут [Имя], я из Узбекистана.', translation: "Assalomu alaykum! Mening ismim [Ism], men O'zbekistondanman." },
+            { id: 'ru2h-a2', sentence: 'Я живу в Ташкенте и учусь в университете.', translation: "Men Toshkentda yashayman va universitetda o'qiyman." },
+            { id: 'ru2h-a3', sentence: 'Я изучаю русский язык для работы и общения.', translation: "Men rus tilini ish va muloqot uchun o'rganyapman." },
+        ],
+    },
+    {
+        id: 'B',
+        kind: 'roleplay',
+        title: 'PART B — AI bilan suhbat / roleplay',
+        scenario: {
+            id: 'ru2h-b',
+            title: 'Первое знакомство (Birinchi tanishuv)',
+            intro: "Siz yangi muloqotdoshingiz bilan ko'rishib qoldingiz. U bilan salomlashing, ismingiz, yashash joyingiz, kasbingiz va rus tilini o'rganish maqsadingiz haqida suhbatlashing.",
+            lines: [
+                'Здравствуйте! Как вас зовут?',
+                'Очень приятно! Откуда вы и где сейчас живёте?',
+                'Чем вы занимаетесь: работаете или учитесь?',
+                'Почему вы решили изучать русский язык?',
+            ],
+            closing: 'Отлично! Был очень рад с вами познакомиться. Желаю успехов в учёбе!',
+        },
+    },
+    {
+        id: 'C',
+        kind: 'pronunciation',
+        title: 'PART C — Pronunciation check',
+        prompts: [
+            { id: 'ru2h-c1', sentence: 'Здравствуйте! Очень приятно с вами познакомиться.', translation: 'Assalomu alaykum! Siz bilan tanishganimdan juda xursandman.' },
+            { id: 'ru2h-c2', sentence: 'Извините, повторите, пожалуйста, немного медленнее.', translation: 'Kechirasiz, iltimos, biroz sekinroq takrorlang.' },
+            { id: 'ru2h-c3', sentence: 'Моё любимое хобби — читать книги и заниматься спортом.', translation: "Mening sevimli hobbim — kitob o'qish va sport bilan shug'ullanish." },
+            { id: 'ru2h-c4', sentence: 'Я свободно понимаю простые вопросы по-русски.', translation: 'Men rus tilida oddiy savollarni erkin tushunaman.' },
+        ],
+    },
+    {
+        id: 'creative',
+        kind: 'creative',
+        title: 'Ijodiy vazifa — Рассказ о себе (audio)',
+        instruction:
+            "Quyidagi tayyor qolipdan (shablon) foydalanib, o'zingiz haqingizdagi ma'lumotlar bilan to'ldiring va 30–60 soniyali audio xabar shaklida yozib yuboring:\n\nЗдравствуйте! Меня зовут [Ismingiz].\nЯ из [Viloyatingiz/Shahringiz], сейчас живу в [Hozirgi shahringiz].\nМне [Yoshingiz] лет.\nЯ работаю [Kasbingiz] / учусь в [O'quv joyingiz].\nМоё хобби — [Hobbiyingiz, masalan: спорт / книги / музыка].\nЯ изучаю русский язык, потому что [Sababi, masalan: он нужен для работы].",
+        mediaType: 'audio',
+    },
+];
+
 // ─── Matching pairs pool (english / uzbek) ─────────────────────────────────
 const LD_MATCH_POOL = LD_VOCAB_POOL.slice(0, 20).map((w) => ({ id: w.id, left: w.english, right: w.translation }));
 
@@ -411,7 +461,7 @@ function getDefaultLessonContent(lessonId, dayIndex, lang) {
             : (dayType === 'grammar' ? ldPickWindow(LD_GRAMMAR_POOL, offset, 6) : []),
         speakingPractice: !isRussian && dayType === 'speaking' ? ldPickWindow(LD_SPEAKING_POOL, offset, 5) : [],
         homeworkParts: isRussian
-            ? (dayIndex === 0 ? LD_RU_LESSON1_HOMEWORK : [])
+            ? (dayIndex === 0 ? LD_RU_LESSON1_HOMEWORK : dayIndex === 1 ? LD_RU_LESSON2_HOMEWORK : [])
             : (dayType === 'grammar' ? ldBuildGrammarHomework(offset) : ldBuildSpeakingHomework(offset)),
     };
 }
