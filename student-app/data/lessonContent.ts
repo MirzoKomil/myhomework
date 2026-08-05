@@ -191,6 +191,60 @@ const RU_LESSON1_GRAMMAR: GrammarBlank[] = [
   },
 ];
 
+// ─── Rus tili kursi, 1-dars uchun Uyga vazifa (admin CRM orqali kiritgan) ───
+const RU_LESSON1_HOMEWORK: HomeworkPart[] = [
+  {
+    id: 'A',
+    kind: 'multipleChoice',
+    title: 'A-QISM — Talaffuz va fonetika',
+    questions: [
+      { id: 'ru1h-a1', question: '"Красивого" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[красивого]', '[красивово]'], correctIndex: 1 },
+      { id: 'ru1h-a2', question: '"Молоко" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[молоко]', '[малако]'], correctIndex: 1 },
+      { id: 'ru1h-a3', question: '"Ещё" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[ешо]', '[ещё]', '[yeshchyo]'], correctIndex: 2 },
+      { id: 'ru1h-a4', question: '"Его" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[его]', '[ево]'], correctIndex: 1 },
+    ],
+  },
+  {
+    id: 'B',
+    kind: 'fillBlank',
+    title: "B-QISM — Bo'sh o'rinlarni to'ldirish (yosh)",
+    blanks: [
+      { id: 'ru1h-b1', sentence: 'Мне 25 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
+      { id: 'ru1h-b2', sentence: 'Мне 21 ___.', answer: 'год', options: ['год', 'года', 'лет'] },
+      { id: 'ru1h-b3', sentence: 'Мне 33 ___.', answer: 'года', options: ['год', 'года', 'лет'] },
+      { id: 'ru1h-b4', sentence: 'Мне 40 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
+    ],
+  },
+  {
+    id: 'C',
+    kind: 'fillBlank',
+    title: "C-QISM — Dialog to'ldirish",
+    blanks: [
+      { id: 'ru1h-c1', sentence: 'A: ___! Как вас зовут? B: Меня зовут Алишер.', answer: 'Здравствуйте', options: ['Здравствуйте', 'Пока', 'Спасибо'] },
+      { id: 'ru1h-c2', sentence: 'A: Очень приятно, Алишер. Сколько вам лет? B: Мне 28 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
+    ],
+  },
+  {
+    id: 'D',
+    kind: 'matching',
+    title: "D-QISM — Tarjima va juftlikni topish",
+    pairs: [
+      { id: 'ru1h-d1', left: 'Как тебя зовут?', right: 'Isming nima?' },
+      { id: 'ru1h-d2', left: 'Добрый день!', right: 'Xayrli kun!' },
+      { id: 'ru1h-d3', left: 'Очень приятно!', right: 'Juda mamnunman!' },
+      { id: 'ru1h-d4', left: 'Сегодня', right: 'Bugun' },
+    ],
+  },
+  {
+    id: 'creative',
+    kind: 'creative',
+    title: 'Ijodiy vazifa — Audio (nutq mashqi)',
+    instruction:
+      "Ovozli xabar (Audio) tugmasini bosing va o'zingiz haqingizda rus tilida 3-4 ta gapdan iborat tanishtiruv audio xabarini yozib qoldiring. Namuna: \"Здравствуйте! Меня зовут [Ismingiz]. Мне [Yoshingiz] лет/года/год. Очень приятно!\"",
+    mediaType: 'audio',
+  },
+];
+
 // ─── Matching pairs pool (english / uzbek) ─────────────────────────────────
 const MATCH_POOL: MatchPair[] = VOCAB_POOL.slice(0, 20).map((w) => ({ id: w.id, left: w.english, right: w.translation }));
 
@@ -387,7 +441,13 @@ export function getLessonContent(
         ? pickWindow(GRAMMAR_POOL, offset, 6)
         : [],
     speakingPractice: !isRussian && dayType === 'speaking' ? pickWindow(SPEAKING_POOL, offset, 5) : [],
-    homeworkParts: isRussian ? [] : dayType === 'grammar' ? buildGrammarHomework(offset) : buildSpeakingHomework(offset),
+    homeworkParts: isRussian
+      ? dayIndex === 0
+        ? RU_LESSON1_HOMEWORK
+        : []
+      : dayType === 'grammar'
+        ? buildGrammarHomework(offset)
+        : buildSpeakingHomework(offset),
   };
 }
 
