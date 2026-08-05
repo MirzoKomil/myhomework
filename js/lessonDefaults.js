@@ -58,6 +58,32 @@ const LD_VOCAB_POOL = [
     { id: 'v40', icon: 'bulb-outline', english: 'idea', translation: "g'oya", transcript: '/aɪˈdiːə/' },
 ];
 
+// ─── Rus tili kursi, 1-dars uchun lug'at (admin CRM orqali kiritgan) ────────
+const LD_RU_LESSON1_VOCAB = [
+    { id: 'ru1-1', icon: 'hand-right-outline', english: 'Здравствуйте!', translation: 'Assalomu alaykum! (rasmiy salomlashish)', transcript: '' },
+    { id: 'ru1-2', icon: 'chatbubble-outline', english: 'Привет!', translation: "Salom! (do'stona salomlashish)", transcript: '' },
+    { id: 'ru1-3', icon: 'sunny-outline', english: 'Добрый день!', translation: 'Xayrli kun!', transcript: '' },
+    { id: 'ru1-4', icon: 'help-circle-outline', english: 'Как вас зовут?', translation: 'Ismingiz nima? (rasmiy)', transcript: '' },
+    { id: 'ru1-5', icon: 'help-circle-outline', english: 'Как тебя зовут?', translation: "Isming nima? (do'stona)", transcript: '' },
+    { id: 'ru1-6', icon: 'person-outline', english: 'Меня зовут...', translation: 'Mening ismim...', transcript: '' },
+    { id: 'ru1-7', icon: 'happy-outline', english: 'Очень приятно!', translation: 'Juda mamnunman! (tanishganda)', transcript: '' },
+    { id: 'ru1-8', icon: 'calendar-outline', english: 'Сколько вам лет?', translation: 'Yoshingiz nechida? (rasmiy)', transcript: '' },
+    { id: 'ru1-9', icon: 'calendar-outline', english: 'Сколько тебе лет?', translation: "Yoshing nechida? (do'stona)", transcript: '' },
+    { id: 'ru1-10', icon: 'person-circle-outline', english: 'Мне ... лет / год / года', translation: 'Men ... yoshdaman.', transcript: '' },
+    { id: 'ru1-11', icon: 'time-outline', english: 'Год', translation: 'Yil / Yosh (1, 21, 31 yosh uchun)', transcript: '' },
+    { id: 'ru1-12', icon: 'time-outline', english: 'Года', translation: 'Yil / Yosh (2-4, 22-24, 32-34 yosh uchun)', transcript: '' },
+    { id: 'ru1-13', icon: 'time-outline', english: 'Лет', translation: 'Yil / Yosh (5-20, 25-30 yosh va hokazo)', transcript: '' },
+    { id: 'ru1-14', icon: 'exit-outline', english: 'До свидания!', translation: "Xayr! / Ko'rishguncha (rasmiy)", transcript: '' },
+    { id: 'ru1-15', icon: 'hand-left-outline', english: 'Пока!', translation: "Xayr! (do'stona)", transcript: '' },
+    { id: 'ru1-16', icon: 'today-outline', english: 'Сегодня', translation: 'Bugun', transcript: '[sivodnya]' },
+    { id: 'ru1-17', icon: 'person-outline', english: 'Его', translation: 'Uni / Uniki', transcript: '[evo]' },
+    { id: 'ru1-18', icon: 'home-outline', english: 'Дом', translation: 'Uy', transcript: '' },
+    { id: 'ru1-19', icon: 'cafe-outline', english: 'Молоко', translation: 'Süt', transcript: '[malako]' },
+    { id: 'ru1-20', icon: 'school-outline', english: 'Школа', translation: 'Maktab', transcript: '' },
+    { id: 'ru1-21', icon: 'add-circle-outline', english: 'Ещё', translation: 'Yana / Hali', transcript: '[yeshchyo]' },
+    { id: 'ru1-22', icon: 'close-circle-outline', english: 'Нет', translation: "Yo'q", transcript: '' },
+];
+
 // ─── Grammar fill-in-gap pool ───────────────────────────────────────────────
 const LD_GRAMMAR_POOL = [
     { id: 'g1', sentence: 'She ___ to school every day.', answer: 'goes', options: ['go', 'goes', 'going', 'gone'] },
@@ -303,7 +329,7 @@ function getDefaultLessonContent(lessonId, dayIndex, lang) {
                 ? "Ushbu darsda asosiy grammatik qoida video orqali tushuntiriladi. Video tagida qisqacha konspekt joylashgan — asosiy formula va misollarni shu yerdan takrorlashingiz mumkin."
                 : "Ushbu live darsda o'qituvchi tomonidan tayyorlangan slaydlar asosida suhbat ko'nikmalari mashq qilinadi.",
         slides: !isRussian && dayType === 'speaking' ? ldBuildSlides(offset) : [],
-        vocabulary: isRussian ? [] : ldPickWindow(LD_VOCAB_POOL, offset, 25),
+        vocabulary: isRussian ? (dayIndex === 0 ? LD_RU_LESSON1_VOCAB : []) : ldPickWindow(LD_VOCAB_POOL, offset, 25),
         grammarBlanks: !isRussian && dayType === 'grammar' ? ldPickWindow(LD_GRAMMAR_POOL, offset, 6) : [],
         speakingPractice: !isRussian && dayType === 'speaking' ? ldPickWindow(LD_SPEAKING_POOL, offset, 5) : [],
         homeworkParts: isRussian ? [] : dayType === 'grammar' ? ldBuildGrammarHomework(offset) : ldBuildSpeakingHomework(offset),
