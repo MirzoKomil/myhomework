@@ -14,6 +14,7 @@ const smsRoutes = require('./routes/sms');
 const metaRoutes = require('./routes/meta');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, '..');
 
