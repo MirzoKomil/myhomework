@@ -100,6 +100,28 @@ const LD_GRAMMAR_POOL = [
     { id: 'g12', sentence: 'He ___ to the gym twice a week.', answer: 'goes', options: ['go', 'goes', 'going', 'went'] },
 ];
 
+// ─── Rus tili kursi, 1-dars uchun Video Quiz (admin CRM orqali kiritgan) ────
+const LD_RU_LESSON1_GRAMMAR = [
+    {
+        id: 'ru1-q1',
+        sentence: '"О" harfiga urg\'u tushganda va tushmaganda qanday o\'qiladi?',
+        answer: "Urg'u tushsa [O], urg'usiz bo'lsa [A]",
+        options: ['Har doim [O] deb', "Urg'u tushsa [O], urg'usiz bo'lsa [A]", 'Har doim [A] deb'],
+    },
+    {
+        id: 'ru1-q2',
+        sentence: '"Сегодня" so\'zidagi "го" birikmasi qanday talaffuz qilinadi?',
+        answer: '[сиводня]',
+        options: ['[сегодня]', '[сиводня]', '[сеходня]'],
+    },
+    {
+        id: 'ru1-q3',
+        sentence: "Yoshingizni aytayotganda 1 yosh uchun qaysi so'z ishlatiladi? (masalan: Мне 21 ...)",
+        answer: 'Год',
+        options: ['Год', 'Года', 'Лет'],
+    },
+];
+
 // ─── Matching pairs pool (english / uzbek) ─────────────────────────────────
 const LD_MATCH_POOL = LD_VOCAB_POOL.slice(0, 20).map((w) => ({ id: w.id, left: w.english, right: w.translation }));
 
@@ -330,7 +352,9 @@ function getDefaultLessonContent(lessonId, dayIndex, lang) {
                 : "Ushbu live darsda o'qituvchi tomonidan tayyorlangan slaydlar asosida suhbat ko'nikmalari mashq qilinadi.",
         slides: !isRussian && dayType === 'speaking' ? ldBuildSlides(offset) : [],
         vocabulary: isRussian ? (dayIndex === 0 ? LD_RU_LESSON1_VOCAB : []) : ldPickWindow(LD_VOCAB_POOL, offset, 25),
-        grammarBlanks: !isRussian && dayType === 'grammar' ? ldPickWindow(LD_GRAMMAR_POOL, offset, 6) : [],
+        grammarBlanks: isRussian
+            ? (dayIndex === 0 ? LD_RU_LESSON1_GRAMMAR : [])
+            : (dayType === 'grammar' ? ldPickWindow(LD_GRAMMAR_POOL, offset, 6) : []),
         speakingPractice: !isRussian && dayType === 'speaking' ? ldPickWindow(LD_SPEAKING_POOL, offset, 5) : [],
         homeworkParts: isRussian ? [] : dayType === 'grammar' ? ldBuildGrammarHomework(offset) : ldBuildSpeakingHomework(offset),
     };
