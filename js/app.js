@@ -20995,14 +20995,59 @@ function _getClosedLeadsInPeriod(managerId, period) {
     });
 }
 
+// 1-vazifa: "to'lov jarayonida" bosqichida qarzga QISMAN to'lov qilib
+// kirgan lidlar ham reytingdagi summaga qo'shilishi kerak — lekin faqat
+// haqiqatda TO'LANGAN qism (umumiy shartnoma summasi emas). To'liq
+// yopilgan ("tolov-yopildi") lidlar avvalgidek to'liq summasi bilan
+// hisoblanadi. "Bitimlar" (deals) soniga qisman to'lovlar qo'shilmaydi —
+// bu hali yopilmagan bitim, faqat pul summasiga hissa qo'shadi.
+function _isPartialInProgressLead(l) {
+    return normalizeLeadStatus(l.status) === 'tolov-jarayonida'
+        && l.paymentSurvey?.paymentType === 'partial'
+        && Number.isFinite(Number(l.paymentSurvey.paidAmount))
+        && Number(l.paymentSurvey.paidAmount) > 0;
+}
+
+function _getLeadRankingAmount(l) {
+    if (_isPartialInProgressLead(l)) return Number(l.paymentSurvey.paidAmount) || 0;
+    const amount = l.paymentClosedSurvey?.actualAmount
+        || l.paymentClosedSurvey?.totalAmount
+        || l.paymentSurvey?.totalAmount
+        || AVG_CHECK;
+    return Number(amount) || AVG_CHECK;
+}
+
+function _getLeadRankingDate(l) {
+    if (_isPartialInProgressLead(l)) return l.paymentSurvey?.lastPaymentDate || l.createdAt;
+    return l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt;
+}
+
+function _getRankingLeadsInPeriod(managerId, period) {
+    const now = new Date();
+    const allLeads = getLeadStatsForRankings();
+    return allLeads.filter(l => {
+        const status = normalizeLeadStatus(l.status);
+        if (status !== 'tolov-yopildi' && !_isPartialInProgressLead(l)) return false;
+        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        const dateStr = _getLeadRankingDate(l);
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return false;
+        if (period === 'kunlik') {
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+        }
+        if (period === 'haftalik') {
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+            weekStart.setHours(0, 0, 0, 0);
+            return d >= weekStart && d <= now;
+        }
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+}
+
 function getManagerSalesForPeriod(managerId, period) {
-    return _getClosedLeadsInPeriod(managerId, period).reduce((sum, l) => {
-        const amount = l.paymentClosedSurvey?.actualAmount
-            || l.paymentClosedSurvey?.totalAmount
-            || l.paymentSurvey?.totalAmount
-            || AVG_CHECK;
-        return sum + (Number(amount) || AVG_CHECK);
-    }, 0);
+    return _getRankingLeadsInPeriod(managerId, period).reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
 }
 
 function getManagerDealsCount(managerId, period) {
@@ -21026,14 +21071,23 @@ function _getClosedLeadsInMonth(managerId, monthKey) {
     });
 }
 
+function _getRankingLeadsInMonth(managerId, monthKey) {
+    if (!MONTH_KEY_RE.test(String(monthKey || ''))) return [];
+    const [yil, oy] = monthKey.split('-').map(Number);
+    return getLeadStatsForRankings().filter(l => {
+        const status = normalizeLeadStatus(l.status);
+        if (status !== 'tolov-yopildi' && !_isPartialInProgressLead(l)) return false;
+        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        const dateStr = _getLeadRankingDate(l);
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return false;
+        return d.getFullYear() === yil && d.getMonth() === oy - 1;
+    });
+}
+
 function getManagerSalesForMonth(managerId, monthKey) {
-    return _getClosedLeadsInMonth(managerId, monthKey).reduce((sum, l) => {
-        const amount = l.paymentClosedSurvey?.actualAmount
-            || l.paymentClosedSurvey?.totalAmount
-            || l.paymentSurvey?.totalAmount
-            || AVG_CHECK;
-        return sum + (Number(amount) || AVG_CHECK);
-    }, 0);
+    return _getRankingLeadsInMonth(managerId, monthKey).reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
 }
 
 function getManagerDealsCountForMonth(managerId, monthKey) {
