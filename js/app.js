@@ -10374,6 +10374,47 @@ const EMPTY_TARGET_MONTH_DATA = {
     xodimlar: [],
 };
 
+// 12-vazifa: "Xodimlar natijalari" jadvali endi Sotuv bo'limidagi HAQIQIY
+// lidlar bilan to'g'ridan-to'g'ri integratsiya qilingan (qattiq yozilgan
+// TARGET_DATA.xodimlar endi o'qilmaydi). Faqat O'QISH - hech qanday lid
+// yozuvi o'zgartirilmaydi yoki o'chirilmaydi.
+//
+// "Sifatli lid" ta'rifi: lid "Bog'lanildi" bosqichiga yetgan (yoki undan
+// keyingi har qanday bosqichda) bo'lishi kerak - "Yangi lidlar",
+// "Bog'lanishga urinilmoqda", "Sifatsiz lidlar" va "Muvaffaqiyatsiz sotuv"
+// hisobga olinmaydi.
+const TM_LEAD_STAGE_ORDER = [
+    'yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'malumot-berildi',
+    'qaror-jarayonida', 'sinov-darsida', 'tolov-jarayonida', 'tolov-yopildi'
+];
+
+function _tmLeadStageIndex(lead) {
+    return TM_LEAD_STAGE_ORDER.indexOf(normalizeLeadStatus(lead.status));
+}
+
+function _tmLeadCreatedInMonth(lead, monthKey) {
+    const d = new Date(lead.createdAt || lead.date);
+    if (isNaN(d.getTime())) return false;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthKey;
+}
+
+function computeTargetManagerStats(managerId, langLeads, monthKey) {
+    const monthLeads = langLeads.filter(l => l.managerId === managerId && _tmLeadCreatedInMonth(l, monthKey));
+    const kvalIdx = TM_LEAD_STAGE_ORDER.indexOf('boglanildi');
+    const sinovIdx = TM_LEAD_STAGE_ORDER.indexOf('sinov-darsida');
+    const kval = monthLeads.filter(l => _tmLeadStageIndex(l) >= kvalIdx).length;
+    const sinov = monthLeads.filter(l => _tmLeadStageIndex(l) >= sinovIdx).length;
+
+    const sotuv = getManagerDealsCountForMonth(managerId, monthKey);
+    const summa = getManagerSalesForMonth(managerId, monthKey);
+    return {
+        kval, sinov, sotuv,
+        summaM: +(summa / 1_000_000).toFixed(1),
+        kvalPct: kval > 0 ? +(sotuv / kval * 100).toFixed(1) : 0,
+        avgChekM: sotuv > 0 ? +(summa / sotuv / 1_000_000).toFixed(1) : 0,
+    };
+}
+
 function renderMarketingTargetPanel() {
     const el = document.getElementById('marketingPanel-target');
     if (!el) return;
@@ -10386,6 +10427,7 @@ function renderMarketingTargetPanel() {
 
     const data = TARGET_DATA[_targetMonth] || EMPTY_TARGET_MONTH_DATA;
     const r = data.reklama;
+    const langKey = _marketingLang === 'russian' ? 'russian' : 'english';
     const lang = _marketingLang === 'russian' ? 'Rus' : 'Ingliz';
 
     function pctColor(pct) {
@@ -10457,8 +10499,21 @@ function renderMarketingTargetPanel() {
         </div>`;
     }).join('');
 
-    // Salesperson table
-    const hasData = data.xodimlar.length > 0;
+    // 12-vazifa: Sotuv bo'limi bilan jonli integratsiya - joriy til
+    // yo'nalishidagi HAQIQIY sotuv menejerlari, ism-familiya tartibida
+    // (raqamlanmasdan), har birining shu oydagi haqiqiy natijalari bilan.
+    const allLeadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const langLeads = allLeadsData[langKey] || [];
+    const tmManagers = getSalesManagers(langKey)
+        .slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uz'));
+    const xodimlarLive = tmManagers.map(m => ({
+        name: m.name,
+        avatar: m.avatar || '',
+        ...computeTargetManagerStats(m.id, langLeads, _targetMonth),
+    }));
+
+    const hasData = xodimlarLive.length > 0;
     const tableHtml = hasData ? `
         <div class="tm-table-wrap">
             <table class="tm-table">
@@ -10482,21 +10537,25 @@ function renderMarketingTargetPanel() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.xodimlar.map((x, i) => {
+                    ${xodimlarLive.map(x => {
                         const highlight = x.sotuv > 0 ? 'tm-tr-active' : '';
+                        const initials = managerInitials(x.name);
+                        const avatarHtml = x.avatar
+                            ? `<img src="${escapeHtml(x.avatar)}" alt="" class="tm-avatar-img">`
+                            : `<span class="tm-avatar-initials">${escapeHtml(initials)}</span>`;
                         return `<tr class="${highlight}">
-                            <td class="tm-td-name">${i+1}. ${x.name}</td>
+                            <td class="tm-td-name"><span class="tm-avatar">${avatarHtml}</span>${escapeHtml(x.name)}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kval>0?' tm-td-has':''}"> ${x.kval||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
-                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.summa>0?' tm-td-has':''}"> ${x.summa||'—'}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
-                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.avgChek>0?' tm-td-has':''}"> ${x.avgChek||'—'}</td>
+                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.avgChekM>0?' tm-td-has':''}"> ${x.avgChekM||'—'}</td>
                         </tr>`;
                     }).join('')}
                 </tbody>
             </table>
-        </div>` : `<div class="mac-empty" style="padding:40px 0"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:14px;color:var(--text-muted)">Bu oy uchun ma'lumot yo'q</div></div>`;
+        </div>` : `<div class="mac-empty" style="padding:40px 0"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:14px;color:var(--text-muted)">Bu til yo'nalishida sotuv menejeri topilmadi</div></div>`;
 
     el.innerHTML = `
         <div class="tm-wrap">
