@@ -12712,6 +12712,19 @@ function renderSalesFunnel() {
     const converted = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi').length;
     const convRate = filteredLeads.length > 0 ? ((converted / filteredLeads.length) * 100).toFixed(1) : '0.0';
 
+    // 6-vazifa: asosiy voronka bosqichlaridan tashqarida qolgan (Kanban'da
+    // yashirilgan) "Muvaffaqiyatsiz sotuv" va "Sifatsiz lidlar" ustunlari
+    // ham jadval tagida ko'rinsin — aks holda ko'rsatilgan bosqichlar
+    // ulushi 100%'ga yetmay, bu lidlar qayerga ketgani noaniq qolardi.
+    const EXTRA_FUNNEL_STAGES = [
+        { id: 'muvaffaqiyatsiz-sotuv', label: 'Muvaffaqiyatsiz sotuv', color: '#DC2626' },
+        { id: 'sifatsiz-lidlar', label: 'Sifatsiz lidlar', color: '#64748B' },
+    ];
+    const extraStagesData = EXTRA_FUNNEL_STAGES.map(s => {
+        const count = filteredLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length;
+        return { ...s, count, share: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0 };
+    });
+
     const mgrOptions = allManagers.map(m =>
         `<option value="${escapeHtml(m.id)}" ${m.id === _salesFunnelMgr ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
     ).join('');
@@ -12753,6 +12766,19 @@ function renderSalesFunnel() {
                 ${stagesData.map((s, i) => `
                 <tr>
                     <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
+                    <td>
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
+                        <strong>${escapeHtml(s.label)}</strong>
+                    </td>
+                    <td style="text-align:right;font-weight:700">${s.count}</td>
+                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.share}%</td>
+                </tr>`).join('')}
+                <tr>
+                    <td colspan="4" style="padding:8px 12px;background:var(--bg-secondary,#f8fafc);color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Voronkadan tashqarida</td>
+                </tr>
+                ${extraStagesData.map((s, i) => `
+                <tr>
+                    <td style="color:var(--text-muted);font-size:12px">${stagesData.length + i + 1}</td>
                     <td>
                         <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
                         <strong>${escapeHtml(s.label)}</strong>
