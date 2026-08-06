@@ -9997,6 +9997,30 @@ function studentFormHtml(sfx, defaults) {
             <input type="number" id="mStGrade${sfx}" class="form-control" min="0" max="100" value="${escapeHtml(String(d.grade || ''))}">
         </div>
     </div>
+    <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:1">
+            <label>To'langan summa (so'm)</label>
+            <input type="text" inputmode="numeric" id="mStPaidAmount${sfx}" class="form-control" data-money-input value="${d.paidAmount || 0}">
+        </div>
+        <div class="form-group" style="flex:1">
+            <label>Qarz miqdori (so'm)</label>
+            <input type="text" inputmode="numeric" id="mStDebtAmount${sfx}" class="form-control" data-money-input value="${d.debtAmount || 0}">
+        </div>
+    </div>
+    <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:1">
+            <label>To'lov muddati</label>
+            <input type="date" lang="en-GB" id="mStPaymentDueDate${sfx}" class="form-control" value="${escapeHtml(d.paymentDueDate || '')}">
+        </div>
+        <div class="form-group" style="flex:1">
+            <label>Tarif</label>
+            <select id="mStTariff${sfx}" class="form-control">
+                <option value="standard"${(d.tariff || 'standard') === 'standard' ? ' selected' : ''}>Standard</option>
+                <option value="premium"${d.tariff === 'premium' ? ' selected' : ''}>Premium</option>
+                <option value="vip"${d.tariff === 'vip' ? ' selected' : ''}>VIP</option>
+            </select>
+        </div>
+    </div>
     <div class="form-group">
         <label>Asosiy ustoz <span style="color:var(--danger)">*</span></label>
         <select id="mStTeacher${sfx}" class="form-control"></select>
@@ -10059,6 +10083,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         fillStudentTeacherOptions(e.target.value, '');
     });
     _bindStudentPasswordEye('');
+    wireMoneyInputs();
     document.getElementById('cancelAddStudent').onclick = () => closeModal();
     document.getElementById('saveStudent').onclick = () => {
         const name = document.getElementById('mStName').value.trim();
@@ -10116,6 +10141,10 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             startDate: document.getElementById('mStStartDate').value,
             grade: parseFloat(document.getElementById('mStGrade').value) || null,
             subject: subjectVal,
+            paidAmount: Number((document.getElementById('mStPaidAmount').value || '0').replace(/,/g, '')) || 0,
+            debtAmount: Number((document.getElementById('mStDebtAmount').value || '0').replace(/,/g, '')) || 0,
+            paymentDueDate: document.getElementById('mStPaymentDueDate').value || '',
+            tariff: document.getElementById('mStTariff').value || 'standard',
             teacherId,
             assistantTeacherId: document.getElementById('mStAsstTeacher').value || null,
             login,
@@ -10152,6 +10181,7 @@ function openEditStudentModal(studentId) {
         fillStudentTeacherOptions(e.target.value, 'E');
     });
     _bindStudentPasswordEye('E');
+    wireMoneyInputs();
     document.getElementById('cancelEditStudent').onclick = () => closeModal();
     document.getElementById('saveEditStudent').onclick = () => {
         const name = document.getElementById('mStNameE').value.trim();
@@ -10176,6 +10206,10 @@ function openEditStudentModal(studentId) {
             startDate: document.getElementById('mStStartDateE').value,
             grade: parseFloat(document.getElementById('mStGradeE').value) || null,
             subject: document.getElementById('mStSubjectE').value,
+            paidAmount: Number((document.getElementById('mStPaidAmountE').value || '0').replace(/,/g, '')) || 0,
+            debtAmount: Number((document.getElementById('mStDebtAmountE').value || '0').replace(/,/g, '')) || 0,
+            paymentDueDate: document.getElementById('mStPaymentDueDateE').value || '',
+            tariff: document.getElementById('mStTariffE').value || 'standard',
             teacherId,
             assistantTeacherId: document.getElementById('mStAsstTeacherE').value || null,
             login,
@@ -17349,6 +17383,13 @@ function autoAddLeadAsStudent(lang, lead) {
     const subject = lead.language || lang || 'english';
     const teacherId = lead.paymentOnboarding?.teacherId || '';
 
+    // 5-vazifa: to'lov so'rovnomasida qisman to'lov ("partial") tanlangan
+    // bo'lsa, qarz/to'langan summa shu yerdan avtomatik ko'chiriladi —
+    // aks holda bunday o'quvchi Qarzdorlar ro'yxatida umuman ko'rinmay
+    // qolardi (debtAmount/paidAmount hech qachon yozilmagani uchun).
+    const ps = lead.paymentSurvey;
+    const isPartial = ps?.paymentType === 'partial';
+
     students.unshift({
         id: 's' + Date.now(),
         leadRef: { lang, id: lead.id },
@@ -17359,7 +17400,11 @@ function autoAddLeadAsStudent(lang, lead) {
         teacherId,
         assistantTeacherId: null,
         source: 'lead',
-        managerId: lead.managerId || ''  // 11-ish uchun
+        managerId: lead.managerId || '',  // 11-ish uchun
+        paidAmount: isPartial ? (Number(ps.paidAmount) || 0) : (Number(ps?.totalAmount) || 0),
+        debtAmount: isPartial ? (Number(ps.debtAmount) || 0) : 0,
+        paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : '',
+        lessonDuration: ps?.tariff ? (Number(ps.tariff) || 15) : 15
     });
     setItem(STORAGE_KEYS.students, students);
 }
