@@ -10422,14 +10422,25 @@ function renderMarketingTargetPanel() {
         ).join('')}
     </select>`;
 
+    // 10-vazifa: "Rejani kiritish" orqali saqlangan reja (bu oy uchun) —
+    // lid narxi/kval. lid narxi budjetdan avtomatik hisoblanadi, qattiq
+    // yozilgan eski TARGET_DATA rejasi endi ishlatilmaydi.
+    const _tmPlan = getItem(STORAGE_KEYS.targetMonitoringPlan, {})[_targetMonth] || null;
+    const planBudget = _tmPlan?.budget || null;
+    const planLidSoni = _tmPlan?.lidSoni || null;
+    const planKvalLidSoni = _tmPlan?.kvalLidSoni || null;
+    const planKvalPct = (_tmPlan && Number.isFinite(_tmPlan.kvalLidPct)) ? _tmPlan.kvalLidPct : null;
+    const planLidNarxi = (planBudget && planLidSoni) ? planBudget / planLidSoni : null;
+    const planKvalNarxi = (planBudget && planKvalLidSoni) ? planBudget / planKvalLidSoni : null;
+
     // Reklama KPI cards
     const reklamaCards = [
-        { label: 'Budget (USD)', plan: r.budget.plan ? '$'+r.budget.plan : '—', fakt: fmtUSD(r.budget.fakt), pct: null, icon: '💰' },
-        { label: 'Lid soni', plan: r.lidSoni.plan || '—', fakt: r.lidSoni.fakt || '—', pct: r.lidSoni.pct, icon: '📋' },
-        { label: 'Lid narxi', plan: '—', fakt: fmtUSD(r.lidNarxi.fakt), pct: null, icon: '💵' },
-        { label: 'Kval. lid soni', plan: r.kvalLid.plan || '—', fakt: r.kvalLid.fakt || '—', pct: r.kvalLid.pct, icon: '✅' },
-        { label: 'Kval. lid narxi', plan: '—', fakt: fmtUSD(r.kvalNarxi.fakt), pct: null, icon: '🏷️' },
-        { label: 'Lid → Kval lid %', plan: r.lidKval.plan + '%', fakt: r.lidKval.fakt ? r.lidKval.fakt.toFixed(1)+'%' : '—', pct: r.lidKval.fakt && r.lidKval.plan ? (r.lidKval.fakt/r.lidKval.plan*100) : null, icon: '📊' },
+        { label: 'Budget (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(r.budget.fakt), pct: null, icon: '💰' },
+        { label: 'Lid soni', plan: planLidSoni ? planLidSoni.toLocaleString('uz-UZ') : '—', fakt: r.lidSoni.fakt || '—', pct: (planLidSoni && r.lidSoni.fakt) ? (r.lidSoni.fakt / planLidSoni * 100) : null, icon: '📋' },
+        { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(r.lidNarxi.fakt), pct: null, icon: '💵' },
+        { label: 'Kval. lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: r.kvalLid.fakt || '—', pct: (planKvalLidSoni && r.kvalLid.fakt) ? (r.kvalLid.fakt / planKvalLidSoni * 100) : null, icon: '✅' },
+        { label: 'Kval. lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(r.kvalNarxi.fakt), pct: null, icon: '🏷️' },
+        { label: 'Lid → Kval lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: r.lidKval.fakt ? r.lidKval.fakt.toFixed(1) + '%' : '—', pct: (r.lidKval.fakt && planKvalPct) ? (r.lidKval.fakt / planKvalPct * 100) : null, icon: '📊' },
     ].map(c => {
         const pc = c.pct ? c.pct.toFixed(1) : null;
         const barHtml = c.pct ? progressBar(c.pct) : '';
@@ -10489,7 +10500,10 @@ function renderMarketingTargetPanel() {
 
     el.innerHTML = `
         <div class="tm-wrap">
-            <div class="tm-months">${tabsHtml}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                <div class="tm-months">${tabsHtml}</div>
+                <button type="button" class="btn-primary-sm" id="tmEnterPlanBtn">+ Rejani kiritish</button>
+            </div>
 
             <div class="tm-section-title">📣 Reklama ko'rsatkichlari</div>
             <div class="tm-kpi-grid">${reklamaCards}</div>
@@ -10498,10 +10512,85 @@ function renderMarketingTargetPanel() {
             ${tableHtml}
         </div>`;
 
+    document.getElementById('tmEnterPlanBtn')?.addEventListener('click', () => openTargetPlanModal(_targetMonth));
+
     document.getElementById('tmMonthSelect')?.addEventListener('change', e => {
         _targetMonth = e.target.value;
         renderMarketingTargetPanel();
     });
+}
+
+// 10-vazifa: "Rejani kiritish" oynasi — Target Monitoringi uchun oylik
+// reja. Lid narxi / Kval. lid narxi qo'lda kiritilmaydi, byudjet va soni
+// asosida avtomatik (jonli, kiritish paytida) hisoblanadi.
+function openTargetPlanModal(monthKey) {
+    const existing = getItem(STORAGE_KEYS.targetMonitoringPlan, {})[monthKey] || {};
+    const body = `
+    <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+            <label>Lid byudjeti ($)</label>
+            <input type="number" id="tmPlanBudget" class="form-control" min="0" step="0.01" value="${existing.budget || ''}">
+        </div>
+        <div class="form-group">
+            <label>Lid soni</label>
+            <input type="number" id="tmPlanLidSoni" class="form-control" min="0" step="1" value="${existing.lidSoni || ''}">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+            <label>Lid narxi</label>
+            <div id="tmPlanLidNarxiPreview" style="padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-secondary,#f8fafc);color:var(--text-muted);font-weight:600">—</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:5px">Avtomatik hisoblanadi: byudjet ÷ lid soni</div>
+        </div>
+        <div class="form-group">
+            <label>Sifatli lid soni</label>
+            <input type="number" id="tmPlanKvalSoni" class="form-control" min="0" step="1" value="${existing.kvalLidSoni || ''}">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+            <label>Sifatli lid narxi</label>
+            <div id="tmPlanKvalNarxiPreview" style="padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-secondary,#f8fafc);color:var(--text-muted);font-weight:600">—</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:5px">Avtomatik hisoblanadi: byudjet ÷ sifatli lid soni</div>
+        </div>
+        <div class="form-group">
+            <label>Lidlarning necha foizi sifatli bo'lishi kerak (%)</label>
+            <input type="number" id="tmPlanKvalPct" class="form-control" min="0" max="100" step="0.1" value="${existing.kvalLidPct ?? ''}">
+        </div>
+    </div>`;
+    const footer = `
+        <button type="button" class="btn-ghost" id="tmPlanCancel">Bekor qilish</button>
+        <button type="button" class="btn-primary-sm" id="tmPlanSave">Saqlash</button>`;
+
+    openModal(`Reja kiritish — ${monthKeyLabel(monthKey)}`, body, footer);
+
+    const updatePreviews = () => {
+        const budget = Number(document.getElementById('tmPlanBudget').value) || 0;
+        const lidSoni = Number(document.getElementById('tmPlanLidSoni').value) || 0;
+        const kvalSoni = Number(document.getElementById('tmPlanKvalSoni').value) || 0;
+        document.getElementById('tmPlanLidNarxiPreview').textContent =
+            (budget && lidSoni) ? '$' + (budget / lidSoni).toFixed(2) : '—';
+        document.getElementById('tmPlanKvalNarxiPreview').textContent =
+            (budget && kvalSoni) ? '$' + (budget / kvalSoni).toFixed(2) : '—';
+    };
+    ['tmPlanBudget', 'tmPlanLidSoni', 'tmPlanKvalSoni'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updatePreviews);
+    });
+    updatePreviews();
+
+    document.getElementById('tmPlanCancel').onclick = closeModal;
+    document.getElementById('tmPlanSave').onclick = () => {
+        const budget = Number(document.getElementById('tmPlanBudget').value) || 0;
+        const lidSoni = Number(document.getElementById('tmPlanLidSoni').value) || 0;
+        const kvalLidSoni = Number(document.getElementById('tmPlanKvalSoni').value) || 0;
+        const kvalLidPctRaw = document.getElementById('tmPlanKvalPct').value;
+        const kvalLidPct = kvalLidPctRaw === '' ? null : Number(kvalLidPctRaw);
+
+        const all = getItem(STORAGE_KEYS.targetMonitoringPlan, {});
+        setItem(STORAGE_KEYS.targetMonitoringPlan, {
+            ...all,
+            [monthKey]: { budget, lidSoni, kvalLidSoni, kvalLidPct }
+        });
+        closeModal();
+        renderMarketingTargetPanel();
+        showMiniToast('Reja saqlandi');
+    };
 }
 
 // --- Moliya Bo'limi ---

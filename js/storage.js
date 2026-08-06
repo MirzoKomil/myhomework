@@ -31,6 +31,7 @@ const STORAGE_KEYS = {
     shopOrders: 'mh_shop_orders',
     guides: 'mh_guides',
     individualSalesPlans: 'mh_individual_sales_plans',
+    targetMonitoringPlan: 'mh_target_monitoring_plan',
     archive: 'mh_archive'
 };
 
@@ -62,6 +63,7 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.shopOrders]: 'shopOrders',
     [STORAGE_KEYS.guides]: 'guides',
     [STORAGE_KEYS.individualSalesPlans]: 'individualSalesPlans',
+    [STORAGE_KEYS.targetMonitoringPlan]: 'targetMonitoringPlan',
     [STORAGE_KEYS.archive]: 'archive'
 };
 

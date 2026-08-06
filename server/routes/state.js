@@ -736,7 +736,11 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
             'mainAttendance', 'assistantAttendance', 'payments', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
             'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics',
-            'liveGrades', 'demoStudentId', 'studentMessages', 'peerMessages', 'shopOrders'
+            'liveGrades', 'demoStudentId', 'studentMessages', 'peerMessages', 'shopOrders',
+            // individualSalesPlans avvaldan shu yerda yo'q edi - shu sabab
+            // saqlanmay, faqat brauzer keshida qolib ketardi. targetMonitoringPlan
+            // (10-vazifa) - Target Monitoringi rejasi.
+            'individualSalesPlans', 'targetMonitoringPlan'
         ];
         if (['admin', 'rop', 'boshliq'].includes(req.user.role)) allowed.push('archive');
         const partial = {};

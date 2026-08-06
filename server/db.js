@@ -800,7 +800,7 @@ async function getFullState() {
     const [teacherRows, smRows, studentRows, ttRows, paymentRows,
         mainAtt, assistAtt, leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans, archive] = await Promise.all([
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans, targetMonitoringPlan, archive] = await Promise.all([
         q('SELECT * FROM teachers ORDER BY name'),
         q(`SELECT sm.id, sm.name, COALESCE(u.avatar,'') AS avatar
            FROM sales_managers sm
@@ -829,6 +829,7 @@ async function getFullState() {
         getJsonData('shopOrders'),
         getJsonData('guides'),
         getJsonData('individualSalesPlans'),
+        getJsonData('targetMonitoringPlan'),
         getJsonData('archive'),
     ]);
     const timetable = {};
@@ -848,7 +849,7 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans, archive
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans, targetMonitoringPlan, archive
     };
 }
 
@@ -1265,7 +1266,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan') ? {} : [];
     }
     return row.data;
 }
@@ -2688,6 +2689,7 @@ async function patchState(partial) {
         if (partial.shopOrders !== undefined) await saveJsonData(client, 'shopOrders', partial.shopOrders);
         if (partial.guides !== undefined)      await saveJsonData(client, 'guides', partial.guides);
         if (partial.individualSalesPlans !== undefined) await saveJsonData(client, 'individualSalesPlans', partial.individualSalesPlans);
+        if (partial.targetMonitoringPlan !== undefined) await saveJsonData(client, 'targetMonitoringPlan', partial.targetMonitoringPlan);
         if (partial.archive !== undefined) await saveJsonData(client, 'archive', partial.archive);
     });
 }
