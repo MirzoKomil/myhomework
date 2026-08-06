@@ -17407,7 +17407,8 @@ function autoAddLeadAsStudent(lang, lead) {
     if (alreadyExists) return;
 
     const subject = lead.language || lang || 'english';
-    const teacherId = lead.paymentOnboarding?.teacherId || '';
+    const onboarding = lead.paymentOnboarding || {};
+    const teacherId = onboarding.teacherId || '';
 
     // 5-vazifa: to'lov so'rovnomasida qisman to'lov ("partial") tanlangan
     // bo'lsa, qarz/to'langan summa shu yerdan avtomatik ko'chiriladi —
@@ -17416,6 +17417,10 @@ function autoAddLeadAsStudent(lang, lead) {
     const ps = lead.paymentSurvey;
     const isPartial = ps?.paymentType === 'partial';
 
+    // 7-vazifa: onboarding (sinov darsi/ustoz biriktirish) bosqichida
+    // belgilangan dars kuni/vaqti shu yerda ko'chirilmasa, o'quvchi "Dars
+    // jadvali"da hech qachon band bo'lib chiqmaydi (collectWeeklyScheduleEntries
+    // faqat lessonDayOfWeek/lessonTime bor o'quvchilarni hisoblaydi).
     students.unshift({
         id: 's' + Date.now(),
         leadRef: { lang, id: lead.id },
@@ -17424,13 +17429,15 @@ function autoAddLeadAsStudent(lang, lead) {
         group: '',
         subject,
         teacherId,
-        assistantTeacherId: null,
+        assistantTeacherId: onboarding.assistantTeacherId || null,
+        lessonDayOfWeek: onboarding.lessonDayOfWeek ?? null,
+        lessonTime: onboarding.lessonTime || '',
         source: 'lead',
         managerId: lead.managerId || '',  // 11-ish uchun
         paidAmount: isPartial ? (Number(ps.paidAmount) || 0) : (Number(ps?.totalAmount) || 0),
         debtAmount: isPartial ? (Number(ps.debtAmount) || 0) : 0,
         paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : '',
-        lessonDuration: ps?.tariff ? (Number(ps.tariff) || 15) : 15
+        lessonDuration: ps?.tariff ? (Number(ps.tariff) || 15) : (onboarding.lessonDuration || 15)
     });
     setItem(STORAGE_KEYS.students, students);
 }
