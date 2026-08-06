@@ -10438,9 +10438,9 @@ function renderMarketingTargetPanel() {
         { label: 'Budget (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(r.budget.fakt), pct: null, icon: '💰' },
         { label: 'Lid soni', plan: planLidSoni ? planLidSoni.toLocaleString('uz-UZ') : '—', fakt: r.lidSoni.fakt || '—', pct: (planLidSoni && r.lidSoni.fakt) ? (r.lidSoni.fakt / planLidSoni * 100) : null, icon: '📋' },
         { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(r.lidNarxi.fakt), pct: null, icon: '💵' },
-        { label: 'Kval. lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: r.kvalLid.fakt || '—', pct: (planKvalLidSoni && r.kvalLid.fakt) ? (r.kvalLid.fakt / planKvalLidSoni * 100) : null, icon: '✅' },
-        { label: 'Kval. lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(r.kvalNarxi.fakt), pct: null, icon: '🏷️' },
-        { label: 'Lid → Kval lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: r.lidKval.fakt ? r.lidKval.fakt.toFixed(1) + '%' : '—', pct: (r.lidKval.fakt && planKvalPct) ? (r.lidKval.fakt / planKvalPct * 100) : null, icon: '📊' },
+        { label: 'Sifatli lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: r.kvalLid.fakt || '—', pct: (planKvalLidSoni && r.kvalLid.fakt) ? (r.kvalLid.fakt / planKvalLidSoni * 100) : null, icon: '✅' },
+        { label: 'Sifatli lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(r.kvalNarxi.fakt), pct: null, icon: '🏷️' },
+        { label: 'Lid → Sifatli lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: r.lidKval.fakt ? r.lidKval.fakt.toFixed(1) + '%' : '—', pct: (r.lidKval.fakt && planKvalPct) ? (r.lidKval.fakt / planKvalPct * 100) : null, icon: '📊' },
     ].map(c => {
         const pc = c.pct ? c.pct.toFixed(1) : null;
         const barHtml = c.pct ? progressBar(c.pct) : '';
@@ -10465,11 +10465,11 @@ function renderMarketingTargetPanel() {
                 <thead>
                     <tr>
                         <th rowspan="2" class="tm-th-name">Xodim (${lang} tili)</th>
-                        <th colspan="2">Kval. lid soni</th>
+                        <th colspan="2">Sifatli lid soni</th>
                         <th colspan="2">Sinov darsi</th>
                         <th colspan="2">Sotuvlar soni</th>
                         <th colspan="2">Sotuvlar summasi (M)</th>
-                        <th colspan="2">Kval→Sotuv %</th>
+                        <th colspan="2">Sifatli→Sotuv %</th>
                         <th colspan="2">O'rtacha chek (M)</th>
                     </tr>
                     <tr>
