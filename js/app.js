@@ -45,7 +45,7 @@ const PLACEHOLDER_TITLES = {
 
 let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar', analitikaSection: 'hisobotlar', settingsSection: 'archive' };
 let _marketingLang = 'english';
-let _targetMonth = 'feb';
+let _targetMonth = null; // renderMarketingTargetPanel har safar joriy oyga o'rnatadi
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
 let _studentsDurationFilter = 'all';
@@ -10308,16 +10308,14 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
 });
 
 // --- Marketing: Target Monitoringi ---
-const TARGET_MONTHS = [
-    { id: 'feb', label: 'Fevral 2026' },
-    { id: 'mar', label: 'Mart 2026' },
-    { id: 'apr', label: 'Aprel 2026' },
-    { id: 'may', label: 'May 2026' },
-    { id: 'jun', label: 'Iyun 2026' },
-];
-
+// 9-vazifa: oldin faqat 5 ta qattiq belgilangan oy (feb..jun) tanlanardi va
+// har safar sahifa ochilganda doim Fevral bilan boshlanardi. Endi oy
+// kalitlari standart "YYYY-MM" formatida (Individual sotuv rejasidagi bilan
+// bir xil), tanlagich joriy oy + oldingi/keyingi 6 oy + haqiqiy ma'lumoti
+// bor barcha oylarni ko'rsatadi, va _targetMonth har safar panel ochilganda
+// joriy oyga qaytariladi (pastda renderMarketingTargetPanel'da).
 const TARGET_DATA = {
-    feb: {
+    '2026-02': {
         reklama: {
             budget:    { plan: null, fakt: 1251.30 },
             lidSoni:   { plan: 3600, fakt: 1265,  pct: 35.1 },
@@ -10340,7 +10338,7 @@ const TARGET_DATA = {
             { name: "Ra'no Xusnitdinova",    kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
         ],
     },
-    mar: {
+    '2026-03': {
         reklama: {
             budget:    { plan: null, fakt: 306.67 },
             lidSoni:   { plan: 3600, fakt: 271,  pct: 7.5 },
@@ -10363,16 +10361,30 @@ const TARGET_DATA = {
             { name: 'Vazira Gafurova',       kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
         ],
     },
-    apr: { reklama: { budget:{plan:null,fakt:0}, lidSoni:{plan:3600,fakt:0,pct:0}, lidNarxi:{plan:null,fakt:0}, kvalLid:{plan:2340,fakt:0,pct:0}, kvalNarxi:{plan:null,fakt:0}, lidKval:{plan:65,fakt:0} }, xodimlar: [] },
-    may: { reklama: { budget:{plan:null,fakt:0}, lidSoni:{plan:3600,fakt:0,pct:0}, lidNarxi:{plan:null,fakt:0}, kvalLid:{plan:2340,fakt:0,pct:0}, kvalNarxi:{plan:null,fakt:0}, lidKval:{plan:65,fakt:0} }, xodimlar: [] },
-    jun: { reklama: { budget:{plan:null,fakt:0}, lidSoni:{plan:3600,fakt:0,pct:0}, lidNarxi:{plan:null,fakt:0}, kvalLid:{plan:2340,fakt:0,pct:0}, kvalNarxi:{plan:null,fakt:0}, lidKval:{plan:65,fakt:0} }, xodimlar: [] },
+};
+
+// Haqiqiy ma'lumoti bo'lmagan oy uchun bo'sh shablon (TARGET_DATA'da yozuvi
+// bo'lmagan har qanday oy uchun ishlatiladi).
+const EMPTY_TARGET_MONTH_DATA = {
+    reklama: {
+        budget: { plan: null, fakt: 0 }, lidSoni: { plan: 3600, fakt: 0, pct: 0 },
+        lidNarxi: { plan: null, fakt: 0 }, kvalLid: { plan: 2340, fakt: 0, pct: 0 },
+        kvalNarxi: { plan: null, fakt: 0 }, lidKval: { plan: 65, fakt: 0 },
+    },
+    xodimlar: [],
 };
 
 function renderMarketingTargetPanel() {
     const el = document.getElementById('marketingPanel-target');
     if (!el) return;
 
-    const data = TARGET_DATA[_targetMonth] || TARGET_DATA.feb;
+    // 9-vazifa: panel har safar (yangi sahifa ochilganda) joriy oy bilan
+    // boshlanishi kerak — _targetMonth hali belgilanmagan (yoki eskirgan
+    // formatda) bo'lsa, joriy oyga o'rnatiladi.
+    const joriyTm = currentMonthKey();
+    if (!MONTH_KEY_RE.test(String(_targetMonth || ''))) _targetMonth = joriyTm;
+
+    const data = TARGET_DATA[_targetMonth] || EMPTY_TARGET_MONTH_DATA;
     const r = data.reklama;
     const lang = _marketingLang === 'russian' ? 'Rus' : 'Ingliz';
 
@@ -10394,10 +10406,21 @@ function renderMarketingTargetPanel() {
         return `<div class="tm-progress"><div class="tm-progress-fill" style="width:${p}%;background:${color}"></div></div>`;
     };
 
-    // Month tabs
-    const tabsHtml = TARGET_MONTHS.map(m =>
-        `<button type="button" class="tm-month-tab${_targetMonth === m.id ? ' active' : ''}" data-tm-month="${m.id}">${m.label}</button>`
-    ).join('');
+    // 9-vazifa: oy tanlagich — joriy oy + oldingi/keyingi 6 oy + haqiqiy
+    // ma'lumoti bor barcha oylar (individual sotuv rejasidagi bilan bir xil
+    // naqsh), doim istalgan oyni tanlash imkonini beradi.
+    const tmOylar = new Set([joriyTm, _targetMonth, ...Object.keys(TARGET_DATA)]);
+    for (let i = -6; i <= 6; i++) {
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() + i);
+        tmOylar.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const tabsHtml = `<select id="tmMonthSelect" class="form-control-sm" style="min-width:170px">
+        ${[...tmOylar].sort().reverse().map(k =>
+            `<option value="${k}" ${k === _targetMonth ? 'selected' : ''}>${monthKeyLabel(k)}${k === joriyTm ? ' (joriy)' : ''}</option>`
+        ).join('')}
+    </select>`;
 
     // Reklama KPI cards
     const reklamaCards = [
@@ -10475,11 +10498,9 @@ function renderMarketingTargetPanel() {
             ${tableHtml}
         </div>`;
 
-    el.querySelectorAll('[data-tm-month]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            _targetMonth = btn.dataset.tmMonth;
-            renderMarketingTargetPanel();
-        });
+    document.getElementById('tmMonthSelect')?.addEventListener('change', e => {
+        _targetMonth = e.target.value;
+        renderMarketingTargetPanel();
     });
 }
 
