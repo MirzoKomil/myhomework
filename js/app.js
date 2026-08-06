@@ -22028,6 +22028,7 @@ function renderBonusListSection() {
     </div>
     <div style="margin-bottom:28px">
         <div class="bonus-period-label">📅 Haftalik bonuslar</div>
+        <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px">1 hafta ichida 15,000,000 so'mdan kam bo'lmagan sotuv qilgan sotuvchilar erisha oladi</p>
         <div class="bonus-cards-grid">${weeklyCards}</div>
     </div>
     <div style="margin-bottom:36px">
