@@ -21224,6 +21224,20 @@ function getIndividualSalesPlan(managerId, monthKey) {
     if (typeof yozuv.totalAmount === 'number' || typeof yozuv.dealsCount === 'number') {
         return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...yozuv, month: oy, legacy: true };
     }
+
+    // 4-vazifa: aniq shu oy uchun reja belgilanmagan bo'lsa — eng so'nggi
+    // OLDINGI oyda belgilangan reja avtomatik shu oyga ham qo'llaniladi
+    // (yangi oy boshlanganda ROP qayta kiritmasin, kerak bo'lsa tahrirlab
+    // o'zgartirsin). Faqat tanlangan oydan oldingi (yoki teng) oylar
+    // qaraladi — kelajakdagi reja o'tmishga tatbiq qilinmaydi.
+    const priorMonth = Object.keys(yozuv)
+        .filter(k => MONTH_KEY_RE.test(k) && k <= oy)
+        .sort()
+        .pop();
+    if (priorMonth) {
+        return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, ...yozuv[priorMonth], month: oy, carriedOverFrom: priorMonth };
+    }
+
     return { ...INDIVIDUAL_SALES_PLAN_DEFAULTS, month: oy };
 }
 
@@ -21621,6 +21635,7 @@ function renderSalesPlanIndividualPlanCard() {
 
     el.innerHTML = header + `
         ${plan.legacy ? `<div style="margin:0 16px;padding:8px 10px;border-radius:6px;background:rgba(217,119,6,.1);color:#b45309;font-size:12px">Bu reja oyi ko'rsatilmagan eski yozuv. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun biriktiriladi.</div>` : ''}
+        ${plan.carriedOverFrom ? `<div style="margin:0 16px;padding:8px 10px;border-radius:6px;background:rgba(79,140,255,.1);color:var(--purple,#7c3aed);font-size:12px">Bu reja ${escapeHtml(monthKeyLabel(plan.carriedOverFrom))} oyidan avtomatik ko'chirilgan. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun alohida biriktiriladi.</div>` : ''}
         <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
             <div>
                 <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">REJA</div>
