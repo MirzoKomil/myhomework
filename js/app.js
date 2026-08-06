@@ -197,6 +197,12 @@ const ROLE_TABS = {
     // Monitoringi/Kontent reja/Raqobatchilar tahlili/Statistika hamon
     // yopiq), avvalgi tor ruxsat saqlanib qoladi.
     sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides', 'marketing'],
+    // 8-vazifa: Targetolog - Marketing bo'limi xodimi, alohida kabinetga
+    // ega. Faqat shu 3 ta bo'lim ko'rinadi; Sotuv bo'limida esa
+    // renderLeadCard/initLeadDragDrop/openLeadCommentsModal/openLeadNotifyModal/
+    // openLeadRecordingModal ichidagi isLeadsReadOnly() tekshiruvi orqali
+    // FAQAT ko'rish (hech qanday amal qila olmaydi) huquqi beriladi.
+    targetolog: ['dashboard', 'sales', 'marketing'],
     // 31-qism: "Ustozlarga kabinet" (o'zining o'quvchilari bilan
     // yozishma/faoliyat/ijodiy vazifalarni tekshirish paneli) endi alohida
     // tab emas, "Akademik bo'lim" (teachers-section) ichidagi "O'quvchini
@@ -210,6 +216,16 @@ const ROLE_TABS = {
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
 };
+
+// 8-vazifa: Sotuv bo'limida hech qanday amal (o'chirish, menejer/bosqich
+// o'zgartirish, SMS/Telegram, zapis, izoh/eslatma) qila olmaydigan, faqat
+// KO'RISH huquqiga ega bo'lgan rollar. Server ham mustaqil ravishda
+// mutatsiya endpoint'larini shu rol uchun rad etadi (leadMutationRequired,
+// server/routes/leads.js) - bu yerdagi UI cheklovi qo'shimcha himoya.
+const LEADS_READ_ONLY_ROLES = new Set(['targetolog']);
+function isLeadsReadOnly(user) {
+    return LEADS_READ_ONLY_ROLES.has(user?.role);
+}
 
 function applyRoleBasedAccess(user) {
     const role = user.role;
@@ -299,6 +315,8 @@ function applyRoleBasedAccess(user) {
         setTimeout(() => switchTab(restoreTab || 'sales', restoreCtx), 50);
     } else if (role === 'teacher') {
         setTimeout(() => switchTab(restoreTab || 'timetable', restoreCtx), 50);
+    } else if (role === 'targetolog') {
+        setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else {
         // employee yoki noma'lum rol — mobil ilovaga o'tkazish
         setTimeout(() => switchTab(restoreTab || 'student-app', restoreCtx), 50);
@@ -326,6 +344,7 @@ async function syncHrLoginRolesOnce(currentUser) {
         role: e.role === 'rop' ? 'rop'
             : (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? 'sales_manager'
             : (e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi') ? 'teacher'
+            : e.role === 'targetolog' ? 'targetolog'
             : 'employee',
         salesManagerId: (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? e.id : ''
     }));
@@ -17601,6 +17620,7 @@ function renderLeadCard(lead, langKey) {
     const _cu = getCurrentUser();
     const _isAdminOrRop = _cu && (FULL_ACCESS_ROLES.has(_cu.role));
     const _isSalesManager = _cu?.role === 'sales_manager';
+    const _isReadOnlyLeads = isLeadsReadOnly(_cu);
     const unreadAlerts = getUnreadLeadSlaAlerts(normalized, langKey);
     const unreadAlertCount = unreadAlerts.length;
 
@@ -17613,17 +17633,32 @@ function renderLeadCard(lead, langKey) {
         const isDanger = col.id === 'muvaffaqiyatsiz-sotuv' || col.id === 'sifatsiz-lidlar';
         return `<button type="button" class="lead-card-menu-item${isDanger ? ' lead-card-menu-item--danger' : ''}" data-lead-menu-move="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" data-move-to="${escapeHtml(col.id)}">${escapeHtml(col.label)}</button>`;
     }).join('');
+    const moveSubmenuHtml = !_isReadOnlyLeads ? `
+                        <div class="lead-card-menu-submenu-wrap">
+                            <button type="button" class="lead-card-menu-item lead-card-menu-item--submenu" data-lead-menu-move-toggle>
+                                Boshqa bosqichga o'tkazish
+                                <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                            </button>
+                            <div class="lead-card-menu-submenu" hidden>
+                                ${moveItems}
+                            </div>
+                        </div>` : '';
 
-    // 15-ish: ROP ham lidni o'chira olmaydi
-    const deleteItem = (!_isSalesManager && _cu?.role !== 'rop')
+    // 15-ish: ROP ham lidni o'chira olmaydi. 8-vazifa: Targetolog (yoki
+    // boshqa isLeadsReadOnly rollari) hech qanday amal qila olmaydi.
+    const deleteItem = (!_isSalesManager && _cu?.role !== 'rop' && !_isReadOnlyLeads)
         ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-lead-menu-delete="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Lidni o'chirish</button>`
         : '';
 
-    const assignManagerItem = !_isSalesManager
+    const assignManagerItem = (!_isSalesManager && !_isReadOnlyLeads)
         ? `<button type="button" class="lead-card-menu-item" data-lead-menu-manager="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Menejer biriktirish</button>`
         : '';
 
-    return `<article class="lead-card" draggable="true" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
+    const smsAndTelegramItemsHtml = !_isReadOnlyLeads ? `
+                        <button type="button" class="lead-card-menu-item" data-lead-sms="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">SMS xabar yuborish</button>
+                        <button type="button" class="lead-card-menu-item" data-lead-telegram="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Telegramdan xabar yozish</button>` : '';
+
+    return `<article class="lead-card" draggable="${_isReadOnlyLeads ? 'false' : 'true'}" data-lead-id="${escapeHtml(normalized.id)}" data-lead-lang="${langKey}">
         <div class="lead-card-top">
             ${checkboxHtml}
             <div class="lead-card-title-wrap">
@@ -17638,26 +17673,17 @@ function renderLeadCard(lead, langKey) {
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                     ${unreadAlertCount ? `<span class="lead-card-notify-badge">${unreadAlertCount > 9 ? '9+' : unreadAlertCount}</span>` : ''}
                 </button>
-                <div class="lead-card-menu-wrap">
+                ${_isReadOnlyLeads ? '' : `<div class="lead-card-menu-wrap">
                     <button type="button" class="lead-card-menu-btn" data-lead-menu-toggle="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Boshqa amallar" aria-label="Boshqa amallar" aria-haspopup="true">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
                     </button>
                     <div class="lead-card-menu-dropdown" hidden>
                         ${assignManagerItem}
-                        <div class="lead-card-menu-submenu-wrap">
-                            <button type="button" class="lead-card-menu-item lead-card-menu-item--submenu" data-lead-menu-move-toggle>
-                                Boshqa bosqichga o'tkazish
-                                <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-                            </button>
-                            <div class="lead-card-menu-submenu" hidden>
-                                ${moveItems}
-                            </div>
-                        </div>
-                        <button type="button" class="lead-card-menu-item" data-lead-sms="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">SMS xabar yuborish</button>
-                        <button type="button" class="lead-card-menu-item" data-lead-telegram="${langKey}" data-lead-id="${escapeHtml(normalized.id)}">Telegramdan xabar yozish</button>
+                        ${moveSubmenuHtml}
+                        ${smsAndTelegramItemsHtml}
                         ${deleteItem}
                     </div>
-                </div>
+                </div>`}
             </div>
         </div>
         <div class="lead-card-contacts">
@@ -17694,7 +17720,7 @@ function renderLeadCard(lead, langKey) {
 // server/routes/telephony.js) qo'ng'iroqlar avtomatik shu yerga tushadi;
 // hozircha faqat qo'lda yuklash ishlaydi (masalan telefoningizning o'z
 // qo'ng'iroq-yozuvchisi bilan yozib olib, shu yerdan yuklaysiz).
-function _leadRecordingBodyHtml(recordings, state) {
+function _leadRecordingBodyHtml(recordings, state, readOnly) {
     const listHtml = state === 'loading'
         ? `<div class="text-muted" style="padding:20px 0;text-align:center">Yuklanmoqda...</div>`
         : state === 'error'
@@ -17704,17 +17730,24 @@ function _leadRecordingBodyHtml(recordings, state) {
             <div class="lead-recording-item" style="padding:12px 0;border-bottom:1px solid var(--border)">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
                     <div style="font-size:12px;color:var(--text-muted);flex:1;min-width:0">${escapeHtml(new Date(r.createdAt).toLocaleString('uz-UZ'))} · ${r.source === 'beeline' ? 'Beeline' : "Qo'lda yuklangan"}${r.uploadedBy ? ' · ' + escapeHtml(r.uploadedBy) : ''}</div>
-                    <button type="button" class="lead-recording-delete" data-recording-delete="${escapeHtml(r.id)}"
+                    ${readOnly ? '' : `<button type="button" class="lead-recording-delete" data-recording-delete="${escapeHtml(r.id)}"
                         title="Zapisni o'chirish" aria-label="Zapisni o'chirish">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"/>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                         </svg>
-                    </button>
+                    </button>`}
                 </div>
                 <audio controls style="width:100%" src="${escapeHtml(r.url)}"></audio>
             </div>`).join('')
         : `<p class="text-muted lead-empty-hint" style="margin-top:4px">Hozircha zapis mavjud emas</p>`;
+
+    const uploadSectionHtml = readOnly ? '' : `
+    <div style="margin-top:14px">
+        <input type="file" id="recordingFileInput" accept="audio/*" style="display:none">
+        <button type="button" class="btn-primary-sm" id="recordingUploadBtn">+ Zapis yuklash</button>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">Beeline IP Telefoniyasi ulanganda qo'ng'iroqlar avtomatik shu yerga tushadi. Hozircha telefoningizning o'z qo'ng'iroq-yozuvchisi bilan yozib, shu yerdan yuklashingiz mumkin.</div>
+    </div>`;
 
     return `
     <div class="lead-recording-notice">
@@ -17726,17 +17759,14 @@ function _leadRecordingBodyHtml(recordings, state) {
         </svg>
         <p class="lead-recording-notice-text">Suhbatlaringiz yozib olinadi</p>
     </div>
-    <div style="margin-top:14px">
-        <input type="file" id="recordingFileInput" accept="audio/*" style="display:none">
-        <button type="button" class="btn-primary-sm" id="recordingUploadBtn">+ Zapis yuklash</button>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">Beeline IP Telefoniyasi ulanganda qo'ng'iroqlar avtomatik shu yerga tushadi. Hozircha telefoningizning o'z qo'ng'iroq-yozuvchisi bilan yozib, shu yerdan yuklashingiz mumkin.</div>
-    </div>
+    ${uploadSectionHtml}
     <div id="recordingsList" style="margin-top:14px">${listHtml}</div>`;
 }
 
 function openLeadRecordingModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+    const _readOnly = isLeadsReadOnly(getCurrentUser());
 
     function bindUploadBtn(refresh) {
         const fileInput = document.getElementById('recordingFileInput');
@@ -17787,16 +17817,18 @@ function openLeadRecordingModal(lang, leadId) {
     async function refresh() {
         try {
             const recordings = await apiFetchCallRecordings(lang, leadId);
-            document.getElementById('modalBody').innerHTML = _leadRecordingBodyHtml(recordings, 'loaded');
+            document.getElementById('modalBody').innerHTML = _leadRecordingBodyHtml(recordings, 'loaded', _readOnly);
         } catch (err) {
-            document.getElementById('modalBody').innerHTML = _leadRecordingBodyHtml([], 'error');
+            document.getElementById('modalBody').innerHTML = _leadRecordingBodyHtml([], 'error', _readOnly);
         }
-        bindUploadBtn(refresh);
-        bindDeleteBtns(refresh);
+        if (!_readOnly) {
+            bindUploadBtn(refresh);
+            bindDeleteBtns(refresh);
+        }
     }
 
-    openModal(`${escapeHtml(lead.name)} — Zapis`, _leadRecordingBodyHtml([], 'loading'), '');
-    bindUploadBtn(refresh);
+    openModal(`${escapeHtml(lead.name)} — Zapis`, _leadRecordingBodyHtml([], 'loading', _readOnly), '');
+    if (!_readOnly) bindUploadBtn(refresh);
     refresh();
 }
 
@@ -17826,7 +17858,7 @@ function openLeadNotifyModal(lang, leadId) {
             </div>`).join('')}</div>`
         : `<p class="text-muted lead-empty-hint">Hozircha bu lid uchun faol SLA eslatmasi yo'q.</p>`;
     openModal(`${escapeHtml(lead.name)} — bildirishnomalar`, alertHtml,
-        ropAlert ? `<button type="button" class="btn-primary-sm" id="ackLeadSlaRop">Ko'rib chiqildi</button>` : '');
+        (ropAlert && !isLeadsReadOnly(user)) ? `<button type="button" class="btn-primary-sm" id="ackLeadSlaRop">Ko'rib chiqildi</button>` : '');
     document.getElementById('ackLeadSlaRop')?.addEventListener('click', () => {
         updateLeadInStorage(lang, leadId, item => ({
             ...item,
@@ -17851,22 +17883,32 @@ function openLeadCommentsModal(lang, leadId) {
     // 22-vazifa: "Qayta sinov darsi qo'yish" tugmasi faqat lid aynan
     // "Sinov darsida" ustunida turgandagina chiqadi.
     const isInTrial = normalizeLeadStatus(lead.status) === 'sinov-darsida';
-    const rescheduleTrialBtnHtml = isInTrial
+    // 8-vazifa: faqat-ko'rish rollari (Targetolog) mavjud izohlarni to'liq
+    // ko'ra oladi, lekin yangi izoh/eslatma qo'sha olmaydi, sinov darsini
+    // qayta belgilay olmaydi.
+    const _isReadOnlyComments = isLeadsReadOnly(user);
+    const rescheduleTrialBtnHtml = (isInTrial && !_isReadOnlyComments)
         ? `<button type="button" id="rescheduleTrialLesson" style="width:100%;border:1px solid #A7F3D0;background:#ECFDF5;color:#047857;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer">Qayta sinov darsi qo'yish</button>`
         : '';
 
-    openModal(`${escapeHtml(lead.name)} — izohlar`,
-        `<div class="lead-comments-list">${listHtml}</div>
+    const newCommentFormHtml = _isReadOnlyComments ? '' : `
          <div class="form-group" style="margin-top:16px;margin-bottom:0">
             <label>Yangi izoh</label>
             <textarea id="mLeadCommentText" class="form-control" rows="3" placeholder="Izoh yozing..."></textarea>
-         </div>`,
-        `<div style="display:grid;gap:8px;width:100%">
+         </div>`;
+    const commentsFooterHtml = _isReadOnlyComments ? '' : `
+        <div style="display:grid;gap:8px;width:100%">
            <button type="button" class="btn-primary-sm" id="saveLeadComment" style="width:100%">Izoh qo'shish</button>
            <button type="button" id="addLeadFollowUp" style="width:100%;border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer">Bog'lanish uchun eslatma</button>
            ${rescheduleTrialBtnHtml}
-         </div>`
+         </div>`;
+
+    openModal(`${escapeHtml(lead.name)} — izohlar`,
+        `<div class="lead-comments-list">${listHtml}</div>${newCommentFormHtml}`,
+        commentsFooterHtml
     );
+
+    if (_isReadOnlyComments) return;
 
     document.getElementById('saveLeadComment').onclick = () => {
         const text = document.getElementById('mLeadCommentText').value.trim();
@@ -18230,6 +18272,11 @@ function renderLeads() {
 }
 
 function initLeadDragDrop(board) {
+    // 8-vazifa: Targetolog kabi faqat-ko'rish rollari uchun ikkinchi
+    // himoya qatlami - kartochka draggable="false" bo'lgani uchun
+    // dragstart aslida ishga tushmaydi, lekin DOM eskirgan bo'lsa ham
+    // drop hech qachon lid statusini o'zgartirmasin.
+    if (isLeadsReadOnly(getCurrentUser())) return;
     board.querySelectorAll('.lead-card').forEach(card => {
         card.addEventListener('dragstart', e => {
             const lead = getLeadById(card.dataset.leadLang, card.dataset.leadId);
@@ -18635,6 +18682,7 @@ const HR_ROLE_MAP = {
     'rus-oqituvchi': "Rus tili o'qituvchi",
     'yordamchi': "Yordamchi o'qituvchi",
     'marketolog': 'Marketolog',
+    'targetolog': 'Targetolog',
     'head-of-teachers': 'Head of Teachers'
 };
 
@@ -18645,6 +18693,7 @@ const HR_ROLE_MAP_MODAL = {
     'oqituvchi': "O'qituvchi",
     'yordamchi': "Yordamchi o'qituvchi",
     'marketolog': 'Marketolog',
+    'targetolog': 'Targetolog',
     'head-of-teachers': 'Head of Teachers'
 };
 
@@ -19311,6 +19360,7 @@ function openEditEmployeeModal(empId) {
             const roleForLogin = resolvedRole === 'rop' ? 'rop'
                 : (resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri') ? 'sales_manager'
                 : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
+                : resolvedRole === 'targetolog' ? 'targetolog'
                 : 'employee';
             try {
                 await apiCreateHrUser({
@@ -19507,6 +19557,7 @@ function openAddEmployeeModal() {
         const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
             : (role === 'oqituvchi' || role === 'ingliz-oqituvchi' || role === 'rus-oqituvchi' || role === 'yordamchi') ? 'teacher'
+            : role === 'targetolog' ? 'targetolog'
             : 'employee';
         try {
             await apiCreateHrUser({

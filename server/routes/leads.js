@@ -93,7 +93,11 @@ function leadMutationRequired(req, res, next) {
 }
 
 function leadReadRequired(req, res, next) {
-    if (!['admin', 'rop', 'boshliq', 'sales_manager'].includes(req.user?.role)) {
+    // 8-vazifa: Targetolog faqat KO'RISH huquqiga ega - shu sabab shu yerga
+    // (o'qish) qo'shildi, lekin leadMutationRequired/leadArchiveRequired'ga
+    // qo'shilmadi, shuning uchun har qanday yozish/o'chirish/tiklash
+    // so'rovi serverda ham 403 bilan rad etiladi.
+    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'targetolog'].includes(req.user?.role)) {
         return res.status(403).json({ error: 'Lidlarni ko\'rish uchun ruxsat yo\'q' });
     }
     next();

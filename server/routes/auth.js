@@ -26,7 +26,7 @@ router.post('/create-user', authRequired, async (req, res) => {
             return res.status(400).json({ error: 'Ism, login va parol talab qilinadi' });
         if (String(password).length < 4)
             return res.status(400).json({ error: 'Parol kamida 4 ta belgidan iborat bo\'lishi kerak' });
-        const validRoles = ['admin', 'teacher', 'sales_manager', 'rop', 'employee'];
+        const validRoles = ['admin', 'teacher', 'sales_manager', 'rop', 'employee', 'targetolog'];
         const userRole = validRoles.includes(role) ? role : 'employee';
         const existing = await findUserByEmail(login.trim());
         if (existing) {
@@ -57,7 +57,7 @@ router.post('/sync-roles', authRequired, async (req, res) => {
         const { entries } = req.body || {};
         if (!Array.isArray(entries))
             return res.status(400).json({ error: 'entries massiv bo\'lishi kerak' });
-        const validRoles = ['admin', 'teacher', 'sales_manager', 'rop', 'employee'];
+        const validRoles = ['admin', 'teacher', 'sales_manager', 'rop', 'employee', 'targetolog'];
         let updated = 0;
         for (const entry of entries) {
             const login = entry?.login?.trim();

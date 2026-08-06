@@ -664,7 +664,7 @@ router.post('/demo-shop-orders', studentAuthOptional, async (req, res) => {
 });
 
 function crmStateRequired(req, res, next) {
-    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'teacher', 'employee'].includes(req.user?.role)) {
+    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'teacher', 'employee', 'targetolog'].includes(req.user?.role)) {
         return res.status(403).json({ error: 'CRM ma\'lumotlariga ruxsat yo\'q' });
     }
     next();
@@ -703,6 +703,13 @@ async function getStateForUser(user) {
         }));
         const managerId = await getSalesManagerIdForUser(user.id);
         state.leads = managerId ? await getLeads({ managerId }) : { english: [], russian: [] };
+        state.archive = [];
+    } else if (user.role === 'targetolog') {
+        // 8-vazifa: Targetolog Sotuv bo'limini TO'LIQ ko'rishi kerak (barcha
+        // menejerlar, barcha ustunlar, izohlar) - state.leads cheklanmaydi.
+        // Faqat mutatsiya endi ham blokланадi: bu rol leadMutationRequired/
+        // crmStateMutationRequired ro'yxatlarida yo'q, shu sabab har qanday
+        // yozish/o'chirish so'rovi serverda 403 bilan rad etiladi.
         state.archive = [];
     } else if (!['admin', 'rop', 'boshliq'].includes(user.role)) {
         // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas.
