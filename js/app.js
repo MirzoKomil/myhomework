@@ -10410,15 +10410,34 @@ function _tmLeadCreatedInMonth(lead, monthKey) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthKey;
 }
 
+// 14-vazifa: Target Monitoringi FAQAT "Target" manbali (getLeadKind ===
+// 'target') lidlar bilan ishlaydi — organik lidlar bu oynada umuman
+// hisobga olinmaydi.
 function computeTargetManagerStats(managerId, langLeads, monthKey) {
-    const monthLeads = langLeads.filter(l => l.managerId === managerId && _tmLeadCreatedInMonth(l, monthKey));
+    const targetLeads = langLeads.filter(l => getLeadKind(l) === 'target');
+    const monthLeads = targetLeads.filter(l => l.managerId === managerId && _tmLeadCreatedInMonth(l, monthKey));
     const kvalIdx = TM_LEAD_STAGE_ORDER.indexOf('boglanildi');
     const sinovIdx = TM_LEAD_STAGE_ORDER.indexOf('sinov-darsida');
     const kval = monthLeads.filter(l => _tmLeadStageIndex(l) >= kvalIdx).length;
     const sinov = monthLeads.filter(l => _tmLeadStageIndex(l) >= sinovIdx).length;
 
-    const sotuv = getManagerDealsCountForMonth(managerId, monthKey);
-    const summa = getManagerSalesForMonth(managerId, monthKey);
+    // Sotuv/summa — yopilgan (yoki qisman to'langan) sana bo'yicha, Reyting
+    // bo'limidagi bilan bir xil mantiq (_isPartialInProgressLead/
+    // _getLeadRankingAmount/_getLeadRankingDate), faqat shu yerda Target
+    // manbali lidlar bilan cheklangan.
+    const closedOrPartial = targetLeads.filter(l => {
+        if (l.managerId !== managerId) return false;
+        const status = normalizeLeadStatus(l.status);
+        if (status !== 'tolov-yopildi' && !_isPartialInProgressLead(l)) return false;
+        const dateStr = _getLeadRankingDate(l);
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return false;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthKey;
+    });
+    const sotuv = closedOrPartial.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi').length;
+    const summa = closedOrPartial.reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
+
     return {
         kval, sinov, sotuv,
         summaM: +(summa / 1_000_000).toFixed(1),
