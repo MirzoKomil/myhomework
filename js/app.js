@@ -7478,6 +7478,16 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
         count: dashboardLeads.filter(lead => normalizeLeadStatus(lead.status) === stage.id).length
     }));
     const maxFunnelCount = Math.max(...funnelStages.map(stage => stage.count), 1);
+    // 13-vazifa: "Sifatsiz lidlar" — "Sifatsiz lid" deb belgilangan VA
+    // "Bog'lanishga urinilmoqda" ustunida turgan barcha lidlar birgalikda
+    // hisoblanadi. dashboardLeads allaqachon rolga qarab to'g'ri
+    // cheklangan (sotuv menejeri — faqat o'ziniki, admin/ROP — barchasi),
+    // shuning uchun har bir menejer o'z kabinetida faqat o'z sifatsiz
+    // lidlar sonini ko'radi.
+    const sifatsizCount = dashboardLeads.filter(lead => {
+        const st = normalizeLeadStatus(lead.status);
+        return st === 'sifatsiz-lidlar' || st === 'boglanishga-urinilmoqda';
+    }).length;
     const formatMoney = typeof fmtMoney === 'function'
         ? fmtMoney
         : amount => `${Number(amount || 0).toLocaleString('uz-UZ')} so'm`;
@@ -7507,7 +7517,9 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
         </div>
         ${isTeacher ? '' : `<div class="dashboard-grid-2">
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>${isSalesManager ? 'Mening voronkam' : 'Voronka'}</h3><span>Jami ${dashboardLeads.length} ta lid</span></div>
-                <div class="dashboard-funnel">${funnelStages.map(stage => `<div class="dashboard-funnel-row"><span>${escapeHtml(stage.label)}</span><div><i style="width:${Math.max(stage.count ? 6 : 0, stage.count / maxFunnelCount * 100)}%"></i></div><b>${stage.count}</b></div>`).join('')}</div>
+                <div class="dashboard-funnel">${funnelStages.map(stage => `<div class="dashboard-funnel-row"><span>${escapeHtml(stage.label)}</span><div><i style="width:${Math.max(stage.count ? 6 : 0, stage.count / maxFunnelCount * 100)}%"></i></div><b>${stage.count}</b></div>`).join('')}
+                <div class="dashboard-funnel-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:12px"><span style="color:var(--text-muted)">Sifatsiz lidlar (jami)</span><div><i style="width:${Math.max(sifatsizCount ? 6 : 0, sifatsizCount / maxFunnelCount * 100)}%;background:#64748B"></i></div><b>${sifatsizCount}</b></div>
+                </div>
             </section>
             ${isSalesManager ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Mening o'quvchilarim</h3><span>Faqat menga biriktirilgan</span></div><div class="dashboard-target-stats"><div><small>Faol o'quvchilar</small><b>${(managerStudents || []).filter(student => !student.frozen).length}</b></div><div><small>Jami o'quvchilar</small><b>${(managerStudents || []).length}</b></div></div></section>` : `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Target statistikasi</h3><span>Target manbasi</span></div>
                 <div class="dashboard-target-stats">
