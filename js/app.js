@@ -10468,7 +10468,6 @@ function renderMarketingTargetPanel() {
     const data = TARGET_DATA[_targetMonth] || EMPTY_TARGET_MONTH_DATA;
     const r = data.reklama;
     const langKey = _marketingLang === 'russian' ? 'russian' : 'english';
-    const lang = _marketingLang === 'russian' ? 'Rus' : 'Ingliz';
 
     function pctColor(pct) {
         if (!pct) return '';
@@ -10562,7 +10561,7 @@ function renderMarketingTargetPanel() {
             <table class="tm-table">
                 <thead>
                     <tr>
-                        <th rowspan="2" class="tm-th-name">Xodim (${lang} tili)</th>
+                        <th rowspan="2" class="tm-th-name">Xodim</th>
                         <th colspan="2">Sifatli lid soni</th>
                         <th rowspan="2">Sinov darsi</th>
                         <th colspan="2">Sotuvlar soni</th>
