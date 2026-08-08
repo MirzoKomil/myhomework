@@ -10478,12 +10478,17 @@ function _tmMonthDayList(monthKey) {
     return list;
 }
 
+// 25-vazifa: "Kunlar" ko'rinishidagi HAR BIR ko'rsatkich faqat o'sha kuni
+// sotuv menejeri qabul qilib olgan (yaratilgan) lidlardan kelib chiqib
+// hisoblanadi — "Sinov darsi" ham shu qatorga kiradi (sinov darsi qaysi
+// kunga belgilanganidan qat'i nazar, lid o'sha kuni qabul qilingan bo'lsa
+// hisobga olinadi).
 function computeTargetDailyBreakdown(langLeads, monthKey) {
     const targetLeads = langLeads.filter(l => getLeadKind(l) === 'target');
     return _tmMonthDayList(monthKey).map(dayInfo => {
         const createdThisDay = targetLeads.filter(l => _tmDateKey(l.createdAt || l.date) === dayInfo.dateKey);
         const kval = createdThisDay.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
-        const sinov = targetLeads.filter(l => _tmDateKey(l.trialLessonAt) === dayInfo.dateKey).length;
+        const sinov = createdThisDay.filter(l => Boolean(l.trialLessonAt)).length;
         const soldThisDay = createdThisDay.filter(l => {
             const st = normalizeLeadStatus(l.status);
             return st === 'tolov-jarayonida' || st === 'tolov-yopildi';
