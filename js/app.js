@@ -10391,18 +10391,11 @@ const EMPTY_TARGET_MONTH_DATA = {
 // TARGET_DATA.xodimlar endi o'qilmaydi). Faqat O'QISH - hech qanday lid
 // yozuvi o'zgartirilmaydi yoki o'chirilmaydi.
 //
-// "Sifatli lid" ta'rifi: lid "Bog'lanildi" bosqichiga yetgan (yoki undan
-// keyingi har qanday bosqichda) bo'lishi kerak - "Yangi lidlar",
-// "Bog'lanishga urinilmoqda", "Sifatsiz lidlar" va "Muvaffaqiyatsiz sotuv"
-// hisobga olinmaydi.
-const TM_LEAD_STAGE_ORDER = [
-    'yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'malumot-berildi',
-    'qaror-jarayonida', 'sinov-darsida', 'tolov-jarayonida', 'tolov-yopildi'
-];
-
-function _tmLeadStageIndex(lead) {
-    return TM_LEAD_STAGE_ORDER.indexOf(normalizeLeadStatus(lead.status));
-}
+// 17-vazifa: "Sifatli lid" ta'rifi — "Yangi lidlar" (hali ishlanmagan),
+// "Bog'lanishga urinilmoqda" va "Sifatsiz lidlar" ustunlaridan TASHQARI
+// qolgan barcha ustunlardagi lidlar (jumladan "Muvaffaqiyatsiz sotuv" ham,
+// chunki u lid bilan real ishlangan, faqat sotuv amalga oshmagan).
+const TM_UNQUALIFIED_STATUSES = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda', 'sifatsiz-lidlar']);
 
 function _tmLeadCreatedInMonth(lead, monthKey) {
     const d = new Date(lead.createdAt || lead.date);
@@ -10426,8 +10419,7 @@ function _tmTrialScheduledInMonth(lead, monthKey) {
 function computeTargetManagerStats(managerId, langLeads, monthKey) {
     const targetLeads = langLeads.filter(l => getLeadKind(l) === 'target');
     const monthLeads = targetLeads.filter(l => l.managerId === managerId && _tmLeadCreatedInMonth(l, monthKey));
-    const kvalIdx = TM_LEAD_STAGE_ORDER.indexOf('boglanildi');
-    const kval = monthLeads.filter(l => _tmLeadStageIndex(l) >= kvalIdx).length;
+    const kval = monthLeads.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
     const sinov = targetLeads.filter(l => l.managerId === managerId && _tmTrialScheduledInMonth(l, monthKey)).length;
 
     // Sotuv/summa — yopilgan (yoki qisman to'langan) sana bo'yicha, Reyting
@@ -10554,6 +10546,11 @@ function renderMarketingTargetPanel() {
         avatar: m.avatar || '',
         ...computeTargetManagerStats(m.id, langLeads, _targetMonth),
     }));
+    // 17-vazifa: "Sifatli lid soni" Plan qiymati — yuqorida kiritilgan
+    // umumiy reja shu ro'yxatdagi menejerlar soniga teng bo'linadi.
+    const perManagerPlanKval = (planKvalLidSoni && tmManagers.length > 0)
+        ? +(planKvalLidSoni / tmManagers.length).toFixed(1)
+        : null;
 
     const hasData = xodimlarLive.length > 0;
     const tableHtml = hasData ? `
@@ -10586,7 +10583,7 @@ function renderMarketingTargetPanel() {
                             : `<span class="tm-avatar-initials">${escapeHtml(initials)}</span>`;
                         return `<tr class="${highlight}">
                             <td class="tm-td-name"><span class="tm-avatar">${avatarHtml}</span>${escapeHtml(x.name)}</td>
-                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kval>0?' tm-td-has':''}"> ${x.kval||'—'}</td>
+                            <td class="tm-td-plan">${perManagerPlanKval != null ? perManagerPlanKval : '—'}</td><td class="tm-td-fakt${x.kval>0?' tm-td-has':''}"> ${x.kval||'—'}</td>
                             <td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
