@@ -10433,17 +10433,18 @@ function computeTargetManagerStats(managerId, langLeads, monthKey) {
     const sotuv = soldLeads.length;
     const summa = soldLeads.reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
 
-    // 18/19-vazifa: "Sotuvlar soni" va "Sotuvlar summasi" Plan qismlari —
-    // har bir menejerning o'ziga tegishli Individual sotuv rejasidagi
-    // (Sotuv rejasi > Individual reja) qiymatlari, alohida-alohida (teng
-    // bo'linmaydi).
+    // 18/19/21-vazifa: "Sotuvlar soni", "Sotuvlar summasi" va "O'rtacha
+    // chek" Plan qismlari — har bir menejerning o'ziga tegishli Individual
+    // sotuv rejasidagi (Sotuv rejasi > Individual reja) qiymatlari,
+    // alohida-alohida (teng bo'linmaydi).
     const indivPlan = getIndividualSalesPlan(managerId, monthKey);
     const hasIndivPlan = hasIndividualSalesPlan(indivPlan);
     const planSotuv = hasIndivPlan ? indivPlan.dealsCount : null;
     const planSummaM = hasIndivPlan ? +(indivPlan.totalAmount / 1_000_000).toFixed(1) : null;
+    const planAvgChekM = (hasIndivPlan && indivPlan.avgCheck > 0) ? +(indivPlan.avgCheck / 1_000_000).toFixed(1) : null;
 
     return {
-        kval, sinov, sotuv, planSotuv, planSummaM,
+        kval, sinov, sotuv, planSotuv, planSummaM, planAvgChekM,
         summaM: +(summa / 1_000_000).toFixed(1),
         kvalPct: kval > 0 ? +(sotuv / kval * 100).toFixed(1) : 0,
         avgChekM: sotuv > 0 ? +(summa / sotuv / 1_000_000).toFixed(1) : 0,
@@ -10597,7 +10598,7 @@ function renderMarketingTargetPanel() {
                             <td class="tm-td-plan">${x.planSotuv != null ? x.planSotuv : '—'}</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
                             <td class="tm-td-plan">${x.planSummaM != null ? x.planSummaM : '—'}</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
                             <td class="tm-td-plan">${x.planKvalPct != null ? x.planKvalPct + '%' : '—'}</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
-                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.avgChekM>0?' tm-td-has':''}"> ${x.avgChekM||'—'}</td>
+                            <td class="tm-td-plan">${x.planAvgChekM != null ? x.planAvgChekM : '—'}</td><td class="tm-td-fakt${x.avgChekM>0?' tm-td-has':''}"> ${x.avgChekM||'—'}</td>
                         </tr>`;
                     }).join('')}
                 </tbody>
