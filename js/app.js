@@ -10422,25 +10422,25 @@ function computeTargetManagerStats(managerId, langLeads, monthKey) {
     const kval = monthLeads.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
     const sinov = targetLeads.filter(l => l.managerId === managerId && _tmTrialScheduledInMonth(l, monthKey)).length;
 
-    // Sotuv/summa — yopilgan (yoki qisman to'langan) sana bo'yicha, Reyting
-    // bo'limidagi bilan bir xil mantiq (_isPartialInProgressLead/
-    // _getLeadRankingAmount/_getLeadRankingDate), faqat shu yerda Target
-    // manbali lidlar bilan cheklangan.
-    const closedOrPartial = targetLeads.filter(l => {
-        if (l.managerId !== managerId) return false;
-        const status = normalizeLeadStatus(l.status);
-        if (status !== 'tolov-yopildi' && !_isPartialInProgressLead(l)) return false;
-        const dateStr = _getLeadRankingDate(l);
-        if (!dateStr) return false;
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return false;
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthKey;
+    // 18-vazifa: "Sotuvlar soni" — shu oyda qabul qilingan (monthLeads)
+    // Target lidlardan "To'lov jarayonida" YOKI "To'lov yopildi"
+    // ustunlarida turganlar — qarzi bo'lsa ham (qisman to'lagan bo'lsa
+    // ham) sotuv hisobiga qo'shiladi.
+    const soldLeads = monthLeads.filter(l => {
+        const st = normalizeLeadStatus(l.status);
+        return st === 'tolov-jarayonida' || st === 'tolov-yopildi';
     });
-    const sotuv = closedOrPartial.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi').length;
-    const summa = closedOrPartial.reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
+    const sotuv = soldLeads.length;
+    const summa = soldLeads.reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
+
+    // 18-vazifa: "Sotuvlar soni" Plan qismi — har bir menejerning o'ziga
+    // tegishli Individual sotuv rejasidagi (Sotuv rejasi > Individual reja)
+    // "Sotuvlar soni" qiymati, alohida-alohida (teng bo'linmaydi).
+    const indivPlan = getIndividualSalesPlan(managerId, monthKey);
+    const planSotuv = hasIndividualSalesPlan(indivPlan) ? indivPlan.dealsCount : null;
 
     return {
-        kval, sinov, sotuv,
+        kval, sinov, sotuv, planSotuv,
         summaM: +(summa / 1_000_000).toFixed(1),
         kvalPct: kval > 0 ? +(sotuv / kval * 100).toFixed(1) : 0,
         avgChekM: sotuv > 0 ? +(summa / sotuv / 1_000_000).toFixed(1) : 0,
@@ -10585,7 +10585,7 @@ function renderMarketingTargetPanel() {
                             <td class="tm-td-name"><span class="tm-avatar">${avatarHtml}</span>${escapeHtml(x.name)}</td>
                             <td class="tm-td-plan">${perManagerPlanKval != null ? perManagerPlanKval : '—'}</td><td class="tm-td-fakt${x.kval>0?' tm-td-has':''}"> ${x.kval||'—'}</td>
                             <td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
-                            <td class="tm-td-plan">—</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
+                            <td class="tm-td-plan">${x.planSotuv != null ? x.planSotuv : '—'}</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.avgChekM>0?' tm-td-has':''}"> ${x.avgChekM||'—'}</td>
