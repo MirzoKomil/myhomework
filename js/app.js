@@ -46,6 +46,7 @@ const PLACEHOLDER_TITLES = {
 let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar', analitikaSection: 'hisobotlar', settingsSection: 'archive' };
 let _marketingLang = 'english';
 let _targetMonth = null; // renderMarketingTargetPanel har safar joriy oyga o'rnatadi
+let _tmXodimView = 'jami'; // 'jami' | 'kunlar' — 22-vazifa
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
 let _studentsDurationFilter = 'all';
@@ -10451,6 +10452,53 @@ function computeTargetManagerStats(managerId, langLeads, monthKey) {
     };
 }
 
+// 22-vazifa: "Kunlar" ko'rinishi — tanlangan oyning har bir sanasi uchun
+// (barcha menejerlar bo'yicha birlashtirilgan) shu kunga to'g'ri keladigan
+// natijalar. Har bir ko'rsatkich xuddi "Jami" ko'rinishidagi bilan bir xil
+// mantiqda hisoblanadi (Target manbali, tegishli sana bo'yicha), faqat oy
+// bo'yicha emas, kun bo'yicha guruhlangan — shu sabab kunlar yig'indisi
+// "Jami" ko'rinishidagi umumiy songa teng chiqadi.
+function _tmDateKey(dateInput) {
+    if (!dateInput) return null;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function _tmMonthDayList(monthKey) {
+    const [y, m] = monthKey.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const list = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(y, m - 1, d);
+        const jsDow = date.getDay(); // 0=Yakshanba..6=Shanba
+        const uzDow = jsDow === 0 ? 7 : jsDow; // 1=Dushanba..7=Yakshanba
+        list.push({ day: d, dateKey: `${monthKey}-${String(d).padStart(2, '0')}`, weekday: DAYS_UZ[uzDow - 1] });
+    }
+    return list;
+}
+
+function computeTargetDailyBreakdown(langLeads, monthKey) {
+    const targetLeads = langLeads.filter(l => getLeadKind(l) === 'target');
+    return _tmMonthDayList(monthKey).map(dayInfo => {
+        const createdThisDay = targetLeads.filter(l => _tmDateKey(l.createdAt || l.date) === dayInfo.dateKey);
+        const kval = createdThisDay.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
+        const sinov = targetLeads.filter(l => _tmDateKey(l.trialLessonAt) === dayInfo.dateKey).length;
+        const soldThisDay = createdThisDay.filter(l => {
+            const st = normalizeLeadStatus(l.status);
+            return st === 'tolov-jarayonida' || st === 'tolov-yopildi';
+        });
+        const sotuv = soldThisDay.length;
+        const summa = soldThisDay.reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
+        return {
+            ...dayInfo, kval, sinov, sotuv,
+            summaM: +(summa / 1_000_000).toFixed(1),
+            kvalPct: kval > 0 ? +(sotuv / kval * 100).toFixed(1) : 0,
+            avgChekM: sotuv > 0 ? +(summa / sotuv / 1_000_000).toFixed(1) : 0,
+        };
+    });
+}
+
 function renderMarketingTargetPanel() {
     const el = document.getElementById('marketingPanel-target');
     if (!el) return;
@@ -10563,7 +10611,7 @@ function renderMarketingTargetPanel() {
     });
 
     const hasData = xodimlarLive.length > 0;
-    const tableHtml = hasData ? `
+    const jamiTableHtml = hasData ? `
         <div class="tm-table-wrap">
             <table class="tm-table">
                 <thead>
@@ -10605,6 +10653,41 @@ function renderMarketingTargetPanel() {
             </table>
         </div>` : `<div class="mac-empty" style="padding:40px 0"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:14px;color:var(--text-muted)">Bu til yo'nalishida sotuv menejeri topilmadi</div></div>`;
 
+    // 22-vazifa: "Kunlar" ko'rinishi — tanlangan oyning har bir sanasi
+    // (va hafta kuni) uchun barcha menejerlar bo'yicha birlashtirilgan
+    // natija. Plan ustuni yo'q (reja oylik, kunlik emas) — faqat Fakt.
+    const dailyStats = computeTargetDailyBreakdown(langLeads, _targetMonth);
+    const kunlarTableHtml = `
+        <div class="tm-table-wrap">
+            <table class="tm-table">
+                <thead>
+                    <tr>
+                        <th class="tm-th-name">Sana</th>
+                        <th>Sifatli lid soni</th>
+                        <th>Sinov darsi</th>
+                        <th>Sotuvlar soni</th>
+                        <th>Sotuvlar summasi (M)</th>
+                        <th>Sifatli→Sotuv %</th>
+                        <th>O'rtacha chek (M)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dailyStats.map(d => {
+                        const highlight = d.sotuv > 0 ? 'tm-tr-active' : '';
+                        return `<tr class="${highlight}">
+                            <td class="tm-td-name">${d.day}-sana, ${escapeHtml(d.weekday)}</td>
+                            <td class="tm-td-fakt${d.kval>0?' tm-td-has':''}"> ${d.kval||'—'}</td>
+                            <td class="tm-td-fakt${d.sinov>0?' tm-td-has':''}"> ${d.sinov||'—'}</td>
+                            <td class="tm-td-fakt tm-td-sotuv${d.sotuv>0?' tm-td-sotuv-pos':''}"> ${d.sotuv||'—'}</td>
+                            <td class="tm-td-fakt${d.summaM>0?' tm-td-has':''}"> ${d.summaM||'—'}</td>
+                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct?d.kvalPct.toFixed(1)+'%':'—'}</td>
+                            <td class="tm-td-fakt${d.avgChekM>0?' tm-td-has':''}"> ${d.avgChekM||'—'}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+
     el.innerHTML = `
         <div class="tm-wrap">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
@@ -10615,8 +10698,14 @@ function renderMarketingTargetPanel() {
             <div class="tm-section-title">📣 Reklama ko'rsatkichlari</div>
             <div class="tm-kpi-grid">${reklamaCards}</div>
 
-            <div class="tm-section-title">👥 Xodimlar natijalari</div>
-            ${tableHtml}
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px">
+                <div class="tm-section-title" style="margin:0">👥 Xodimlar natijalari</div>
+                <div class="mac-tabs" style="display:flex;gap:0">
+                    <button type="button" class="mac-tab-btn ${_tmXodimView === 'jami' ? 'mac-tab-active' : ''}" data-tm-xodim-view="jami">Jami</button>
+                    <button type="button" class="mac-tab-btn ${_tmXodimView === 'kunlar' ? 'mac-tab-active' : ''}" data-tm-xodim-view="kunlar">Kunlar</button>
+                </div>
+            </div>
+            ${_tmXodimView === 'kunlar' ? kunlarTableHtml : jamiTableHtml}
         </div>`;
 
     document.getElementById('tmEnterPlanBtn')?.addEventListener('click', () => openTargetPlanModal(_targetMonth));
@@ -10624,6 +10713,13 @@ function renderMarketingTargetPanel() {
     document.getElementById('tmMonthSelect')?.addEventListener('change', e => {
         _targetMonth = e.target.value;
         renderMarketingTargetPanel();
+    });
+
+    el.querySelectorAll('[data-tm-xodim-view]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _tmXodimView = btn.dataset.tmXodimView;
+            renderMarketingTargetPanel();
+        });
     });
 }
 
