@@ -10544,16 +10544,22 @@ function renderMarketingTargetPanel() {
         .filter(m => m.login)
         .slice()
         .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uz'));
-    const xodimlarLive = tmManagers.map(m => ({
-        name: m.name,
-        avatar: m.avatar || '',
-        ...computeTargetManagerStats(m.id, langLeads, _targetMonth),
-    }));
     // 17-vazifa: "Sifatli lid soni" Plan qiymati — yuqorida kiritilgan
     // umumiy reja shu ro'yxatdagi menejerlar soniga teng bo'linadi.
     const perManagerPlanKval = (planKvalLidSoni && tmManagers.length > 0)
         ? +(planKvalLidSoni / tmManagers.length).toFixed(1)
         : null;
+    const xodimlarLive = tmManagers.map(m => {
+        const stats = computeTargetManagerStats(m.id, langLeads, _targetMonth);
+        // 20-vazifa: "Sifatli→Sotuv %" Plan qismi — shu menejerning
+        // Individual rejadagi sotuv soni, teng bo'lingan sifatli lid
+        // rejasiga nisbatan foiz sifatida (Fakt qismidagi kvalPct bilan
+        // bir xil mantiq: sotuv/sifatli lid * 100).
+        const planKvalPct = (perManagerPlanKval > 0 && stats.planSotuv != null)
+            ? +(stats.planSotuv / perManagerPlanKval * 100).toFixed(1)
+            : null;
+        return { name: m.name, avatar: m.avatar || '', ...stats, planKvalPct };
+    });
 
     const hasData = xodimlarLive.length > 0;
     const tableHtml = hasData ? `
@@ -10590,7 +10596,7 @@ function renderMarketingTargetPanel() {
                             <td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
                             <td class="tm-td-plan">${x.planSotuv != null ? x.planSotuv : '—'}</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
                             <td class="tm-td-plan">${x.planSummaM != null ? x.planSummaM : '—'}</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
-                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
+                            <td class="tm-td-plan">${x.planKvalPct != null ? x.planKvalPct + '%' : '—'}</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.avgChekM>0?' tm-td-has':''}"> ${x.avgChekM||'—'}</td>
                         </tr>`;
                     }).join('')}
