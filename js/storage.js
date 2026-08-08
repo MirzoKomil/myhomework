@@ -32,6 +32,7 @@ const STORAGE_KEYS = {
     guides: 'mh_guides',
     individualSalesPlans: 'mh_individual_sales_plans',
     targetMonitoringPlan: 'mh_target_monitoring_plan',
+    targetDailyAdSpend: 'mh_target_daily_ad_spend',
     archive: 'mh_archive'
 };
 
@@ -64,6 +65,7 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.guides]: 'guides',
     [STORAGE_KEYS.individualSalesPlans]: 'individualSalesPlans',
     [STORAGE_KEYS.targetMonitoringPlan]: 'targetMonitoringPlan',
+    [STORAGE_KEYS.targetDailyAdSpend]: 'targetDailyAdSpend',
     [STORAGE_KEYS.archive]: 'archive'
 };
 

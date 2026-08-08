@@ -10653,6 +10653,38 @@ function renderMarketingTargetPanel() {
             </table>
         </div>` : `<div class="mac-empty" style="padding:40px 0"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:14px;color:var(--text-muted)">Bu til yo'nalishida sotuv menejeri topilmadi</div></div>`;
 
+    // 23-vazifa: Reklamaga sarflangan kunlik byudjet ($) va shu kuni kelgan
+    // lidlar soni — Targetolog tomonidan qo'lda, kun-ma-kun kiritiladi
+    // (qalam belgisi orqali), doimiy saqlanadi.
+    const dailyAdSpendAll = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
+    const dailyAdSpendMonth = dailyAdSpendAll[_targetMonth] || {};
+    const dailyAdSpendHtml = `
+        <div class="tm-table-wrap">
+            <table class="tm-table">
+                <thead>
+                    <tr>
+                        <th class="tm-th-name">Sana</th>
+                        <th>Reklamaga sarflangan ($ USD)</th>
+                        <th>Kelgan lidlar soni</th>
+                        <th style="width:44px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${_tmMonthDayList(_targetMonth).map(d => {
+                        const entry = dailyAdSpendMonth[d.dateKey];
+                        return `<tr>
+                            <td class="tm-td-name">${d.day}-sana, ${escapeHtml(d.weekday)}</td>
+                            <td class="tm-td-fakt${entry?.budget ? ' tm-td-has' : ''}"> ${entry?.budget ? '$' + Number(entry.budget).toLocaleString('uz-UZ') : '—'}</td>
+                            <td class="tm-td-fakt${entry?.leadCount ? ' tm-td-has' : ''}"> ${entry?.leadCount || '—'}</td>
+                            <td style="text-align:center">
+                                <button type="button" class="btn-ghost" data-tm-adspend-edit="${d.dateKey}" title="Kiritish/tahrirlash" aria-label="Kiritish/tahrirlash" style="padding:4px 8px">✏️</button>
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+
     // 22-vazifa: "Kunlar" ko'rinishi — tanlangan oyning har bir sanasi
     // (va hafta kuni) uchun barcha menejerlar bo'yicha birlashtirilgan
     // natija. Plan ustuni yo'q (reja oylik, kunlik emas) — faqat Fakt.
@@ -10698,6 +10730,9 @@ function renderMarketingTargetPanel() {
             <div class="tm-section-title">📣 Reklama ko'rsatkichlari</div>
             <div class="tm-kpi-grid">${reklamaCards}</div>
 
+            <div class="tm-section-title" style="margin-top:8px">📅 Kunlik reklama ma'lumotlari</div>
+            ${dailyAdSpendHtml}
+
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px">
                 <div class="tm-section-title" style="margin:0">👥 Xodimlar natijalari</div>
                 <div class="mac-tabs" style="display:flex;gap:0">
@@ -10721,6 +10756,52 @@ function renderMarketingTargetPanel() {
             renderMarketingTargetPanel();
         });
     });
+
+    el.querySelectorAll('[data-tm-adspend-edit]').forEach(btn => {
+        btn.addEventListener('click', () => openTargetDailyAdSpendModal(btn.dataset.tmAdspendEdit));
+    });
+}
+
+// 23-vazifa: bitta sanaga reklama byudjeti ($) va kelgan lidlar sonini
+// kiritish/tahrirlash oynasi.
+function openTargetDailyAdSpendModal(dateKey) {
+    const monthKey = dateKey.slice(0, 7);
+    const all = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
+    const existing = (all[monthKey] || {})[dateKey] || {};
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const dateLabel = `${d}-${['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'][m - 1]} ${y}`;
+
+    const body = `
+    <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+            <label>Reklamaga sarflangan summa ($ USD)</label>
+            <input type="number" id="tmAdSpendBudget" class="form-control" min="0" step="0.01" value="${existing.budget ?? ''}">
+        </div>
+        <div class="form-group">
+            <label>Shu kuni kelgan lidlar soni</label>
+            <input type="number" id="tmAdSpendLeadCount" class="form-control" min="0" step="1" value="${existing.leadCount ?? ''}">
+        </div>
+    </div>`;
+    const footer = `
+        <button type="button" class="btn-ghost" id="tmAdSpendCancel">Bekor qilish</button>
+        <button type="button" class="btn-primary-sm" id="tmAdSpendSave">Saqlash</button>`;
+
+    openModal(`Kunlik reklama ma'lumoti — ${dateLabel}`, body, footer);
+
+    document.getElementById('tmAdSpendCancel').onclick = closeModal;
+    document.getElementById('tmAdSpendSave').onclick = () => {
+        const budget = Number(document.getElementById('tmAdSpendBudget').value) || 0;
+        const leadCount = Number(document.getElementById('tmAdSpendLeadCount').value) || 0;
+
+        const current = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
+        const monthEntries = { ...(current[monthKey] || {}) };
+        monthEntries[dateKey] = { budget, leadCount };
+        setItem(STORAGE_KEYS.targetDailyAdSpend, { ...current, [monthKey]: monthEntries });
+
+        closeModal();
+        renderMarketingTargetPanel();
+        showMiniToast('Saqlandi');
+    };
 }
 
 // 10-vazifa: "Rejani kiritish" oynasi — Target Monitoringi uchun oylik

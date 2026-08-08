@@ -671,9 +671,14 @@ function crmStateRequired(req, res, next) {
 }
 
 function crmStateMutationRequired(req, res, next) {
-    if (!['admin', 'rop', 'boshliq'].includes(req.user?.role)) {
+    // 23-vazifa: Targetolog Marketing bo'limidagi kunlik reklama
+    // ma'lumotlarini (targetDailyAdSpend) va rejani (targetMonitoringPlan)
+    // saqlashi kerak - shu ikkisi uchun kirish beriladi, boshqa hech qanday
+    // CRM maydonini o'zgartira olmaydi (pastda, handlerning o'zida
+    // cheklanadi).
+    if (!['admin', 'rop', 'boshliq', 'targetolog'].includes(req.user?.role)) {
         return res.status(403).json({
-            error: 'Umumiy CRM snapshotini faqat admin yoki ROP yangilashi mumkin'
+            error: 'Umumiy CRM snapshotini faqat admin, ROP yoki Targetolog (faqat Marketing ma\'lumotlari) yangilashi mumkin'
         });
     }
     next();
@@ -731,7 +736,11 @@ router.get('/', authRequired, crmStateRequired, async (req, res) => {
 router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
     try {
         const body = req.body || {};
-        const allowed = [
+        const isFullAccess = ['admin', 'rop', 'boshliq'].includes(req.user.role);
+        // 23-vazifa: Targetolog FAQAT Marketing bo'limiga tegishli ikki
+        // kalitni (reja va kunlik reklama ma'lumoti) saqlashi mumkin -
+        // boshqa hech qanday CRM maydonini o'zgartira olmaydi.
+        const allowed = isFullAccess ? [
             'teachers', 'students', 'salesManagers', 'timetable',
             'mainAttendance', 'assistantAttendance', 'payments', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
@@ -740,9 +749,9 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
             // individualSalesPlans avvaldan shu yerda yo'q edi - shu sabab
             // saqlanmay, faqat brauzer keshida qolib ketardi. targetMonitoringPlan
             // (10-vazifa) - Target Monitoringi rejasi.
-            'individualSalesPlans', 'targetMonitoringPlan'
-        ];
-        if (['admin', 'rop', 'boshliq'].includes(req.user.role)) allowed.push('archive');
+            'individualSalesPlans', 'targetMonitoringPlan', 'targetDailyAdSpend'
+        ] : ['targetMonitoringPlan', 'targetDailyAdSpend'];
+        if (isFullAccess) allowed.push('archive');
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });
         if (!Object.keys(partial).length)
