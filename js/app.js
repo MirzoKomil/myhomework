@@ -10410,6 +10410,16 @@ function _tmLeadCreatedInMonth(lead, monthKey) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthKey;
 }
 
+// 15-vazifa: "Sinov darsi" endi lid YARATILGAN oyga emas, balki sinov
+// darsi BELGILANGAN (trialLessonAt) oyga qarab hisoblanadi — sotuv
+// menejeri shu oyda nechta lidga sinov darsi qo'ygan bo'lsa, o'sha son.
+function _tmTrialScheduledInMonth(lead, monthKey) {
+    if (!lead.trialLessonAt) return false;
+    const d = new Date(lead.trialLessonAt);
+    if (isNaN(d.getTime())) return false;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthKey;
+}
+
 // 14-vazifa: Target Monitoringi FAQAT "Target" manbali (getLeadKind ===
 // 'target') lidlar bilan ishlaydi — organik lidlar bu oynada umuman
 // hisobga olinmaydi.
@@ -10417,9 +10427,8 @@ function computeTargetManagerStats(managerId, langLeads, monthKey) {
     const targetLeads = langLeads.filter(l => getLeadKind(l) === 'target');
     const monthLeads = targetLeads.filter(l => l.managerId === managerId && _tmLeadCreatedInMonth(l, monthKey));
     const kvalIdx = TM_LEAD_STAGE_ORDER.indexOf('boglanildi');
-    const sinovIdx = TM_LEAD_STAGE_ORDER.indexOf('sinov-darsida');
     const kval = monthLeads.filter(l => _tmLeadStageIndex(l) >= kvalIdx).length;
-    const sinov = monthLeads.filter(l => _tmLeadStageIndex(l) >= sinovIdx).length;
+    const sinov = targetLeads.filter(l => l.managerId === managerId && _tmTrialScheduledInMonth(l, monthKey)).length;
 
     // Sotuv/summa — yopilgan (yoki qisman to'langan) sana bo'yicha, Reyting
     // bo'limidagi bilan bir xil mantiq (_isPartialInProgressLead/
@@ -10535,7 +10544,10 @@ function renderMarketingTargetPanel() {
     // (raqamlanmasdan), har birining shu oydagi haqiqiy natijalari bilan.
     const allLeadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const langLeads = allLeadsData[langKey] || [];
+    // 15-vazifa: faqat login/kabineti bor, ya'ni haqiqatan ishlayotgan
+    // sotuv menejerlari ro'yxatga kiritiladi.
     const tmManagers = getSalesManagers(langKey)
+        .filter(m => m.login)
         .slice()
         .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uz'));
     const xodimlarLive = tmManagers.map(m => ({
@@ -10552,14 +10564,13 @@ function renderMarketingTargetPanel() {
                     <tr>
                         <th rowspan="2" class="tm-th-name">Xodim (${lang} tili)</th>
                         <th colspan="2">Sifatli lid soni</th>
-                        <th colspan="2">Sinov darsi</th>
+                        <th rowspan="2">Sinov darsi</th>
                         <th colspan="2">Sotuvlar soni</th>
                         <th colspan="2">Sotuvlar summasi (M)</th>
                         <th colspan="2">Sifatli→Sotuv %</th>
                         <th colspan="2">O'rtacha chek (M)</th>
                     </tr>
                     <tr>
-                        <th>Plan</th><th>Fakt</th>
                         <th>Plan</th><th>Fakt</th>
                         <th>Plan</th><th>Fakt</th>
                         <th>Plan</th><th>Fakt</th>
@@ -10577,7 +10588,7 @@ function renderMarketingTargetPanel() {
                         return `<tr class="${highlight}">
                             <td class="tm-td-name"><span class="tm-avatar">${avatarHtml}</span>${escapeHtml(x.name)}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kval>0?' tm-td-has':''}"> ${x.kval||'—'}</td>
-                            <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
+                            <td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
                             <td class="tm-td-plan">—</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
