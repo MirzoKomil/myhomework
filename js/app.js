@@ -10653,6 +10653,13 @@ function renderMarketingTargetPanel() {
             </table>
         </div>` : `<div class="mac-empty" style="padding:40px 0"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:14px;color:var(--text-muted)">Bu til yo'nalishida sotuv menejeri topilmadi</div></div>`;
 
+    // 22/24-vazifa: tanlangan oyning har bir sanasi uchun (barcha
+    // menejerlar bo'yicha birlashtirilgan) Sotuv bo'limidan hisoblangan
+    // kunlik natija — 24-vazifadagi "Sifatli lid soni"/"Sifatli lid →
+    // Sotuv %" qatorlari ham shu bir xil hisoblashdan (d.kval/d.kvalPct)
+    // foydalanadi.
+    const dailyStats = computeTargetDailyBreakdown(langLeads, _targetMonth);
+
     // 23-vazifa: Reklamaga sarflangan kunlik byudjet ($) va shu kuni kelgan
     // lidlar soni — Targetolog tomonidan qo'lda, kun-ma-kun kiritiladi
     // (qalam belgisi orqali), doimiy saqlanadi.
@@ -10685,10 +10692,42 @@ function renderMarketingTargetPanel() {
             </table>
         </div>`;
 
-    // 22-vazifa: "Kunlar" ko'rinishi — tanlangan oyning har bir sanasi
-    // (va hafta kuni) uchun barcha menejerlar bo'yicha birlashtirilgan
-    // natija. Plan ustuni yo'q (reja oylik, kunlik emas) — faqat Fakt.
-    const dailyStats = computeTargetDailyBreakdown(langLeads, _targetMonth);
+    // 24-vazifa: kunlik reklama ma'lumotidan (byudjet, lid soni) va Sotuv
+    // bo'limidan hisoblangan kunlik natijadan (dailyStats) hosila
+    // ko'rsatkichlar — "Lid narxi" (byudjet/lid soni), "Sifatli lid soni"
+    // (dailyStats'dan, o'zgarishsiz), "Sifatli lid narxi" (byudjet/sifatli
+    // lid soni), "Sifatli lid → Sotuv %" (dailyStats'dan, o'zgarishsiz).
+    const derivedDailyHtml = `
+        <div class="tm-table-wrap">
+            <table class="tm-table">
+                <thead>
+                    <tr>
+                        <th class="tm-th-name">Sana</th>
+                        <th>Lid narxi</th>
+                        <th>Sifatli lid soni</th>
+                        <th>Sifatli lid narxi</th>
+                        <th>Sifatli lid → Sotuv %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dailyStats.map(d => {
+                        const entry = dailyAdSpendMonth[d.dateKey];
+                        const budget = entry?.budget || 0;
+                        const leadCount = entry?.leadCount || 0;
+                        const lidNarxi = (budget && leadCount) ? budget / leadCount : null;
+                        const sifatliLidNarxi = (budget && d.kval) ? budget / d.kval : null;
+                        return `<tr class="${d.sotuv > 0 ? 'tm-tr-active' : ''}">
+                            <td class="tm-td-name">${d.day}-sana, ${escapeHtml(d.weekday)}</td>
+                            <td class="tm-td-fakt${lidNarxi != null ? ' tm-td-has' : ''}"> ${lidNarxi != null ? '$' + lidNarxi.toFixed(2) : '—'}</td>
+                            <td class="tm-td-fakt${d.kval>0?' tm-td-has':''}"> ${d.kval || '—'}</td>
+                            <td class="tm-td-fakt${sifatliLidNarxi != null ? ' tm-td-has' : ''}"> ${sifatliLidNarxi != null ? '$' + sifatliLidNarxi.toFixed(2) : '—'}</td>
+                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct ? d.kvalPct.toFixed(1) + '%' : '—'}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+
     const kunlarTableHtml = `
         <div class="tm-table-wrap">
             <table class="tm-table">
@@ -10732,6 +10771,9 @@ function renderMarketingTargetPanel() {
 
             <div class="tm-section-title" style="margin-top:8px">📅 Kunlik reklama ma'lumotlari</div>
             ${dailyAdSpendHtml}
+
+            <div class="tm-section-title" style="margin-top:8px">📈 Kunlik hosila ko'rsatkichlar</div>
+            ${derivedDailyHtml}
 
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px">
                 <div class="tm-section-title" style="margin:0">👥 Xodimlar natijalari</div>
