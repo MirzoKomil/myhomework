@@ -1720,6 +1720,55 @@ async function getDemoStudentSchedule(studentId) {
     };
 }
 
+// 39-vazifa: mobil ilovaning "To'lovlar" ekrani ilgari to'liq namuna
+// (fake) ma'lumot ko'rsatardi. Endi haqiqiy ma'lumotdan tuziladi:
+// - Qarzdorlik/to'lov sanasi — Sotuv bo'limi bilan bir xil (student.
+//   debtAmount/paymentDueDate, xuddi CRM'dagi "Qarzdorlar" ro'yxati
+//   bilan bir xil manba - 5-vazifa/task 39'da tuzatilgan sinxronizatsiya).
+// - "To'lov tarixi" — CRM Moliya bo'limida admin/buxgalter tomonidan
+//   kiritilgan haqiqiy oylik to'lov yozuvlari (payments jadvali).
+async function getDemoStudentPayments(studentId) {
+    const empty = {
+        tariffLabel: 'Standard', lessonDuration: 15, monthlyAmount: 0,
+        courseStartDate: null, salesManagerName: '',
+        debtAmount: 0, paymentDueDate: null, history: [],
+    };
+    const id = await resolveStudentId(studentId);
+    if (!id) return empty;
+    const row = await q1('SELECT * FROM students WHERE id = $1', [id]);
+    if (!row) return empty;
+    const student = rowToStudent(row);
+
+    let salesManagerName = '';
+    if (student.managerId) {
+        const mgrRow = await q1('SELECT name FROM hr_employees WHERE id = $1', [student.managerId]);
+        salesManagerName = mgrRow?.name || '';
+    }
+
+    const paymentRows = await q('SELECT * FROM payments WHERE student_id = $1 ORDER BY date DESC', [id]);
+    const tariffRaw = String(student.tariff || 'standard');
+    const tariffLabel = tariffRaw.charAt(0).toUpperCase() + tariffRaw.slice(1);
+    const history = paymentRows.map((p) => ({
+        id: p.id,
+        date: p.date || '',
+        amount: (p.platform || 0) + (p.book || 0),
+        paid: p.paid || 0,
+        debt: p.debt || 0,
+        tariffLabel,
+    }));
+
+    return {
+        tariffLabel,
+        lessonDuration: student.lessonDuration || 15,
+        monthlyAmount: history[0]?.amount || 0,
+        courseStartDate: student.startDate || null,
+        salesManagerName,
+        debtAmount: Number(student.debtAmount) || 0,
+        paymentDueDate: student.paymentDueDate || null,
+        history,
+    };
+}
+
 const DEMO_MESSAGE_THREAD_IDS = ['support', 'main-teacher', 'assistant-teacher'];
 
 // Public endpoint uchun — faqat CRM'da "Namuna o'quvchi" deb belgilangan
@@ -3287,7 +3336,7 @@ module.exports = {
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState,
     findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
     getHrEmployeesData, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
-    getDemoStudentSchedule, getDemoStudentProfile,
+    getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage,

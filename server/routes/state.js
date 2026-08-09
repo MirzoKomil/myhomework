@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -69,6 +69,19 @@ router.get('/demo-schedule', studentAuthOptional, async (req, res) => {
         res.json(data);
     } catch (err) {
         console.error('GET /api/state/demo-schedule', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// 39-vazifa: mobil ilovaning "To'lovlar" ekrani uchun — Sotuv bo'limi
+// bilan integratsiya qilingan haqiqiy qarzdorlik/to'lov sanasi va Moliya
+// bo'limida kiritilgan haqiqiy to'lov tarixi.
+router.get('/demo-payments', studentAuthOptional, async (req, res) => {
+    try {
+        const data = await getDemoStudentPayments(req.studentId);
+        res.json(data);
+    } catch (err) {
+        console.error('GET /api/state/demo-payments', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });

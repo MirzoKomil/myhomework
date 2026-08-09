@@ -1,23 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { courseEnrollment, paymentHistory, profileStats } from '@/data/mock';
 import { UZ_MONTHS } from '@/data/scheduleCalendar';
-import { fetchDemoContract, getContractPdfUrl } from '@/services/contentApi';
+import { DemoPaymentsResponse, fetchDemoContract, fetchDemoStudentPayments, getContractPdfUrl } from '@/services/contentApi';
 
-function formatDate(isoDate: string): string {
+function formatDate(isoDate?: string | null): string {
+  if (!isoDate) return '—';
   const [y, m, d] = isoDate.split('-').map(Number);
+  if (!y || !m || !d) return '—';
   return `${d}-${UZ_MONTHS[m - 1].toLowerCase()}, ${y}`;
 }
 
+// 39-vazifa: "To'lovlar" ekrani ilgari to'liq namuna (fake) ma'lumot
+// ko'rsatardi. Endi haqiqiy ma'lumotdan tuziladi: Sotuv bo'limi bilan
+// integratsiya qilingan haqiqiy qarzdorlik/to'lov sanasi (student.
+// debtAmount/paymentDueDate — CRM'dagi "Qarzdorlar" ro'yxati bilan bir
+// xil manba) va Moliya bo'limida kiritilgan haqiqiy to'lov tarixi.
 export default function PaymentScreen() {
-  const [contractNumber, setContractNumber] = useState(courseEnrollment.contractNumber);
-  const debtEntry = paymentHistory.find((p) => p.status === 'debt');
+  const [contractNumber, setContractNumber] = useState('');
+  const [payments, setPayments] = useState<DemoPaymentsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDemoContract()
@@ -25,7 +32,23 @@ export default function PaymentScreen() {
         if (c.number) setContractNumber(c.number);
       })
       .catch(() => {});
+    fetchDemoStudentPayments()
+      .then(setPayments)
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader title="To'lovlar" showBack />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.purple} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const hasDebt = (payments?.debtAmount ?? 0) > 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -33,8 +56,10 @@ export default function PaymentScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Card style={styles.tariffCard}>
           <Text style={styles.tariffLabel}>Joriy tarif</Text>
-          <Text style={styles.tariffName}>{profileStats.tariff}</Text>
-          <Text style={styles.tariffPrice}>450 000 UZS / oy</Text>
+          <Text style={styles.tariffName}>{payments?.tariffLabel || 'Standard'}</Text>
+          {!!payments?.monthlyAmount && (
+            <Text style={styles.tariffPrice}>{payments.monthlyAmount.toLocaleString('uz-UZ')} UZS / oy</Text>
+          )}
         </Card>
 
         <Text style={styles.sectionTitle}>Shartnoma ma'lumotlari</Text>
@@ -42,29 +67,36 @@ export default function PaymentScreen() {
           <View style={styles.contractRow}>
             <Text style={styles.contractLabel}>Dars davomiyligi tarifi</Text>
             <View style={styles.durationPill}>
-              <Text style={styles.durationPillText}>{courseEnrollment.tariffMinutes} daqiqalik</Text>
+              <Text style={styles.durationPillText}>{payments?.lessonDuration ?? 15} daqiqalik</Text>
             </View>
           </View>
-          <View style={styles.contractDivider} />
-          <View style={styles.contractRow}>
-            <Text style={styles.contractLabel}>Kurs boshlangan sana</Text>
-            <Text style={styles.contractValue}>{formatDate(courseEnrollment.courseStartDate)}</Text>
-          </View>
-          <View style={styles.contractDivider} />
-          <View style={styles.contractRow}>
-            <Text style={styles.contractLabel}>Kurs tugash sanasi</Text>
-            <Text style={styles.contractValue}>{formatDate(courseEnrollment.courseEndDate)}</Text>
-          </View>
-          <View style={styles.contractDivider} />
-          <View style={styles.contractRow}>
-            <Text style={styles.contractLabel}>Sotuv menejeri</Text>
-            <Text style={styles.contractValue}>{courseEnrollment.salesManager}</Text>
-          </View>
-          <View style={styles.contractDivider} />
-          <View style={styles.contractRow}>
-            <Text style={styles.contractLabel}>Shartnoma raqami</Text>
-            <Text style={styles.contractValue}>{contractNumber}</Text>
-          </View>
+          {!!payments?.courseStartDate && (
+            <>
+              <View style={styles.contractDivider} />
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>Kurs boshlangan sana</Text>
+                <Text style={styles.contractValue}>{formatDate(payments.courseStartDate)}</Text>
+              </View>
+            </>
+          )}
+          {!!payments?.salesManagerName && (
+            <>
+              <View style={styles.contractDivider} />
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>Sotuv menejeri</Text>
+                <Text style={styles.contractValue}>{payments.salesManagerName}</Text>
+              </View>
+            </>
+          )}
+          {!!contractNumber && (
+            <>
+              <View style={styles.contractDivider} />
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>Shartnoma raqami</Text>
+                <Text style={styles.contractValue}>{contractNumber}</Text>
+              </View>
+            </>
+          )}
           <View style={styles.contractDivider} />
           <Pressable style={styles.fileRow} onPress={() => Linking.openURL(getContractPdfUrl())}>
             <Ionicons name="document-text-outline" size={18} color={theme.colors.purple} />
@@ -73,14 +105,15 @@ export default function PaymentScreen() {
           </Pressable>
         </Card>
 
-        {debtEntry ? (
+        {hasDebt ? (
           <Card style={styles.debtBanner}>
             <View style={styles.debtBannerRow}>
               <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
               <Text style={styles.debtBannerTitle}>Qarzdorlik mavjud</Text>
             </View>
             <Text style={styles.debtBannerText}>
-              {debtEntry.amount.toLocaleString('uz-UZ')} UZS — to'lov sanasi {formatDate(debtEntry.dueDate)} gacha
+              {payments!.debtAmount.toLocaleString('uz-UZ')} UZS
+              {payments?.paymentDueDate ? ` — to'lov sanasi ${formatDate(payments.paymentDueDate)} gacha` : ''}
             </Text>
           </Card>
         ) : (
@@ -93,31 +126,40 @@ export default function PaymentScreen() {
         )}
 
         <Text style={styles.sectionTitle}>To'lov tarixi</Text>
-        {paymentHistory.map((payment) => (
-          <Card key={payment.id} style={styles.paymentCard}>
-            <View style={styles.paymentRow}>
-              <View>
-                <Text style={styles.paymentDate}>{formatDate(payment.date)}</Text>
-                <Text style={styles.paymentTariff}>{payment.tariff}</Text>
-                {payment.status === 'debt' && (
-                  <Text style={styles.dueDateText}>To'lov sanasi: {formatDate(payment.dueDate)}</Text>
-                )}
-              </View>
-              <View style={styles.paymentRight}>
-                <Text style={styles.paymentAmount}>{payment.amount.toLocaleString('uz-UZ')} UZS</Text>
-                {payment.status === 'paid' ? (
-                  <View style={styles.paidBadge}>
-                    <Text style={styles.paidText}>To'langan</Text>
+        {payments && payments.history.length > 0 ? (
+          payments.history.map((payment) => {
+            const isDebt = payment.debt > 0;
+            return (
+              <Card key={payment.id} style={styles.paymentCard}>
+                <View style={styles.paymentRow}>
+                  <View>
+                    <Text style={styles.paymentDate}>{formatDate(payment.date)}</Text>
+                    <Text style={styles.paymentTariff}>{payment.tariffLabel}</Text>
+                    {isDebt && payments.paymentDueDate && (
+                      <Text style={styles.dueDateText}>To'lov sanasi: {formatDate(payments.paymentDueDate)}</Text>
+                    )}
                   </View>
-                ) : (
-                  <View style={styles.debtBadge}>
-                    <Text style={styles.debtText}>Qarzdor</Text>
+                  <View style={styles.paymentRight}>
+                    <Text style={styles.paymentAmount}>{payment.amount.toLocaleString('uz-UZ')} UZS</Text>
+                    {isDebt ? (
+                      <View style={styles.debtBadge}>
+                        <Text style={styles.debtText}>Qarzdor</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.paidBadge}>
+                        <Text style={styles.paidText}>To'langan</Text>
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
-            </View>
+                </View>
+              </Card>
+            );
+          })
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Text style={styles.emptyText}>Hali to'lov tarixi yo'q</Text>
           </Card>
-        ))}
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -125,6 +167,7 @@ export default function PaymentScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: 20, paddingBottom: 40 },
   tariffCard: { marginBottom: 24, backgroundColor: theme.colors.purpleLight },
   tariffLabel: { fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.purple },
@@ -160,4 +203,6 @@ const styles = StyleSheet.create({
   paidText: { fontFamily: theme.fonts.semiBold, fontSize: 11, color: theme.colors.success },
   debtBadge: { backgroundColor: theme.colors.dangerBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
   debtText: { fontFamily: theme.fonts.semiBold, fontSize: 11, color: theme.colors.danger },
+  emptyCard: { alignItems: 'center', paddingVertical: 24 },
+  emptyText: { fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.textMuted },
 });

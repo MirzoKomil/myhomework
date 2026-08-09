@@ -87,6 +87,13 @@ const DEMO_PROFILE_API_BASE =
     ? '/api/state/demo-profile'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-profile';
 
+// 39-vazifa: "To'lovlar" ekrani uchun — Sotuv bo'limi bilan integratsiya
+// qilingan haqiqiy qarzdorlik/to'lov tarixi.
+const DEMO_PAYMENTS_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-payments'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-payments';
+
 // 36-vazifa: haqiqiy Leaderboard uchun — o'quvchining o'z tanga/chaqmoq
 // jamlanmasini serverga yuborish va real ro'yxatni olish.
 const SYNC_PROGRESS_API_BASE =
@@ -360,6 +367,45 @@ export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | n
     lang: data.lang === 'russian' ? 'russian' : 'english',
     attendanceRate: Number(data.attendanceRate) || 0,
     hoursSpent: Number(data.hoursSpent) || 0,
+  };
+}
+
+export type DemoPaymentEntry = {
+  id: string;
+  date: string;
+  amount: number;
+  paid: number;
+  debt: number;
+  tariffLabel: string;
+};
+
+export type DemoPaymentsResponse = {
+  tariffLabel: string;
+  lessonDuration: number;
+  monthlyAmount: number;
+  courseStartDate: string | null;
+  salesManagerName: string;
+  debtAmount: number;
+  paymentDueDate: string | null;
+  history: DemoPaymentEntry[];
+};
+
+// 39-vazifa: "To'lovlar" ekrani ilgari to'liq namuna (fake) ma'lumot
+// ko'rsatardi — endi Sotuv bo'limi bilan integratsiya qilingan haqiqiy
+// qarzdorlik va Moliya bo'limidagi haqiqiy to'lov tarixini qaytaradi.
+export async function fetchDemoStudentPayments(): Promise<DemoPaymentsResponse | null> {
+  const r = await authedFetch(DEMO_PAYMENTS_API_BASE);
+  if (!r.ok) return null;
+  const data = await r.json();
+  return {
+    tariffLabel: data.tariffLabel || 'Standard',
+    lessonDuration: Number(data.lessonDuration) || 15,
+    monthlyAmount: Number(data.monthlyAmount) || 0,
+    courseStartDate: data.courseStartDate ?? null,
+    salesManagerName: data.salesManagerName || '',
+    debtAmount: Number(data.debtAmount) || 0,
+    paymentDueDate: data.paymentDueDate ?? null,
+    history: Array.isArray(data.history) ? data.history : [],
   };
 }
 
