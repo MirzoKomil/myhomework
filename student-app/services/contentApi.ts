@@ -366,7 +366,14 @@ export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | n
 // 36-vazifa: mobil ilova tanga/chaqmoq to'plaganda o'z jamlanma summasini
 // serverga yuboradi — bu Leaderboardni haqiqiy qiladi. Tarmoq xatoligi
 // bo'lsa jim o'tkazib yuboriladi (mahalliy AsyncStorage baribir to'g'ri).
-export async function syncStudentProgress(partial: { coins?: number; lightning?: number }): Promise<void> {
+export async function syncStudentProgress(partial: {
+  coins?: number;
+  lightning?: number;
+  // 37-vazifa: Kunlik/Haftalik/Oylik reyting uchun — shu chaqiruvda
+  // QANCHA qo'shilgani (umumiy summa emas).
+  coinsDelta?: number;
+  lightningDelta?: number;
+}): Promise<void> {
   try {
     await authedFetch(SYNC_PROGRESS_API_BASE, {
       method: 'POST',
@@ -388,8 +395,13 @@ export type LeaderboardEntryResponse = {
   isMe: boolean;
 };
 
-export async function fetchLeaderboard(scope: 'region' | 'country'): Promise<LeaderboardEntryResponse[]> {
-  const r = await authedFetch(`${LEADERBOARD_API_BASE}?scope=${scope}`);
+export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'alltime';
+
+export async function fetchLeaderboard(
+  scope: 'region' | 'country',
+  period: LeaderboardPeriod = 'alltime'
+): Promise<LeaderboardEntryResponse[]> {
+  const r = await authedFetch(`${LEADERBOARD_API_BASE}?scope=${scope}&period=${period}`);
   if (!r.ok) return [];
   const data = await r.json();
   return Array.isArray(data?.entries) ? data.entries : [];

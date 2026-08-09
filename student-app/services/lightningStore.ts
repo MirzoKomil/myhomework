@@ -69,9 +69,10 @@ export async function addLightning(amount = 1) {
   total += amount;
   notify();
   await persist();
-  // 36-vazifa: Leaderboard haqiqiy bo'lishi uchun jamlanma chaqmoq serverga
-  // ham yuboriladi.
-  void syncStudentProgress({ lightning: total });
+  // 36/37-vazifa: Leaderboard (jumladan Kunlik/Haftalik/Oylik) haqiqiy
+  // bo'lishi uchun jamlanma summa VA shu chaqiruvda qo'shilgan miqdor
+  // (delta) serverga ham yuboriladi.
+  void syncStudentProgress({ lightning: total, lightningDelta: amount });
 
   // 142-ish qayta ish 8: daraja (Uchqun→Shogird→... ) o'zgargani — chaqmoq
   // butunlay qurilmada saqlangani sababli, o'tishni shu yerda aniqlab

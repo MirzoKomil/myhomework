@@ -517,8 +517,8 @@ router.post('/demo-activity', studentAuthOptional, async (req, res) => {
 // haqiqiy login sessiyasidan (yoki demoStudentId fallback) olinadi.
 router.post('/sync-progress', studentAuthOptional, async (req, res) => {
     try {
-        const { coins, lightning } = req.body || {};
-        await syncStudentProgress(req.studentId, { coins, lightning });
+        const { coins, lightning, coinsDelta, lightningDelta } = req.body || {};
+        await syncStudentProgress(req.studentId, { coins, lightning, coinsDelta, lightningDelta });
         res.json({ ok: true });
     } catch (err) {
         console.error('POST /api/state/sync-progress', err);
@@ -526,12 +526,14 @@ router.post('/sync-progress', studentAuthOptional, async (req, res) => {
     }
 });
 
-// 36-vazifa: Leaderboard endi haqiqiy o'quvchilarning haqiqiy tanga/chaqmoq
-// yig'indisidan tuziladi (avval to'liq o'ylab topilgan/fake ro'yxat edi).
+// 36/37-vazifa: Leaderboard endi haqiqiy o'quvchilarning haqiqiy tanga/
+// chaqmoq yig'indisidan tuziladi (avval to'liq o'ylab topilgan/fake
+// ro'yxat edi). "period" - daily/weekly/monthly/alltime.
 router.get('/leaderboard', studentAuthOptional, async (req, res) => {
     try {
         const scope = req.query.scope === 'region' ? 'region' : 'country';
-        const entries = await getRealLeaderboard(req.studentId, scope);
+        const period = String(req.query.period || 'alltime');
+        const entries = await getRealLeaderboard(req.studentId, scope, period);
         res.json({ entries });
     } catch (err) {
         console.error('GET /api/state/leaderboard', err);

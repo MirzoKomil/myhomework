@@ -111,10 +111,10 @@ export async function addCoins(amount: number, lessonId?: string) {
   }
   notify();
   await persist();
-  // 36-vazifa: Leaderboard haqiqiy bo'lishi uchun jamlanma tanga serverga
-  // ham yuboriladi (o'zgarishlarni bloklamaydi, tarmoq xatoligi bo'lsa jim
-  // o'tkazib yuboriladi).
-  void syncStudentProgress({ coins: total });
+  // 36/37-vazifa: Leaderboard (jumladan Kunlik/Haftalik/Oylik) haqiqiy
+  // bo'lishi uchun jamlanma summa VA shu chaqiruvda qo'shilgan miqdor
+  // (delta) serverga ham yuboriladi.
+  void syncStudentProgress({ coins: total, coinsDelta: amount > 0 ? amount : 0 });
 }
 
 export function useCoins(): number {

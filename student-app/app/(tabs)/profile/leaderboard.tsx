@@ -11,7 +11,7 @@ import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningIcon, LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { fetchLeaderboard, LeaderboardEntryResponse } from '@/services/contentApi';
+import { fetchLeaderboard, LeaderboardEntryResponse, LeaderboardPeriod } from '@/services/contentApi';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
@@ -19,13 +19,21 @@ import { useLightning } from '@/services/lightningStore';
 
 // 36-vazifa: Leaderboard ilgari to'liq o'ylab topilgan (fake) o'quvchilar
 // ro'yxati edi (davr/hudud bo'yicha sun'iy ko'paytirilgan). Endi FAQAT
-// haqiqiy o'quvchilarning haqiqiy tanga/chaqmoq yig'indisidan tuzilgan
-// "Doimiy" reyting ko'rsatiladi — davr (Kunlik/Haftalik/Oylik) tanlovi
-// buning uchun alohida tarixiy kuzatuv talab qiladi, shu sabab hozircha
-// olib tashlandi. Hudud (O'zbekiston/Viloyat) esa o'quvchining CRM'dagi
-// haqiqiy "region" maydoniga qarab ishlaydi.
+// haqiqiy o'quvchilarning haqiqiy tanga/chaqmoq yig'indisidan tuziladi.
+// Hudud (O'zbekiston/Viloyat) o'quvchining CRM'dagi haqiqiy "region"
+// maydoniga qarab ishlaydi.
+// 37-vazifa: Kunlik/Haftalik/Oylik davr tanlovi ham qaytarildi — endi har
+// bir kunda to'plangan tanga/chaqmoq alohida (serverda) saqlanadi, shu
+// sabab bu davrlar ham haqiqiy hisoblanadi.
 type Scope = 'region' | 'country';
 const SCOPE_LABELS: Record<Scope, string> = { region: "O'z viloyati", country: "O'zbekiston" };
+const PERIODS: LeaderboardPeriod[] = ['daily', 'weekly', 'monthly', 'alltime'];
+const PERIOD_LABELS: Record<LeaderboardPeriod, string> = {
+  daily: 'Kunlik',
+  weekly: 'Haftalik',
+  monthly: 'Oylik',
+  alltime: 'Doimiy',
+};
 
 const PODIUM_COLORS = ['#C0C6D8', '#F2C14E', '#E2A76F'];
 
@@ -34,15 +42,16 @@ export default function LeaderboardScreen() {
   const lightning = useLightning();
   const myAvatarUri = useAvatarUri();
   const [scope, setScope] = useState<Scope>('country');
+  const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
   const [entries, setEntries] = useState<LeaderboardEntryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
-  const [showScopeSheet, setShowScopeSheet] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<'period' | 'scope' | null>(null);
 
-  const load = useCallback((s: Scope) => {
+  const load = useCallback((s: Scope, p: LeaderboardPeriod) => {
     setLoading(true);
-    fetchLeaderboard(s)
+    fetchLeaderboard(s, p)
       .then(setEntries)
       .catch(() => setEntries([]))
       .finally(() => setLoading(false));
@@ -50,14 +59,17 @@ export default function LeaderboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      load(scope);
-    }, [load, scope])
+      load(scope, period);
+    }, [load, scope, period])
   );
 
+  // 142-ish qayta ish 8: reyting o'rni ko'tarilishini faqat standart
+  // ko'rinishda (alltime/country) kuzatamiz — aks holda foydalanuvchi
+  // filtr almashtirganda soxta "ko'tarildingiz" signali chiqadi.
   useEffect(() => {
     const me = entries.find((e) => e.isMe);
-    if (scope === 'country' && me) checkLeaderboardClimb(me.rank);
-  }, [entries, scope]);
+    if (scope === 'country' && period === 'alltime' && me) checkLeaderboardClimb(me.rank);
+  }, [entries, scope, period]);
 
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
@@ -120,7 +132,12 @@ export default function LeaderboardScreen() {
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.filterRow}>
-          <Pressable style={styles.dropdownBtn} onPress={() => setShowScopeSheet(true)}>
+          <Pressable style={styles.dropdownBtn} onPress={() => setActiveDropdown('period')}>
+            <Ionicons name="calendar-outline" size={15} color={theme.colors.purple} />
+            <Text style={styles.dropdownBtnText}>{PERIOD_LABELS[period]}</Text>
+            <Ionicons name="chevron-down" size={15} color={theme.colors.textMuted} />
+          </Pressable>
+          <Pressable style={styles.dropdownBtn} onPress={() => setActiveDropdown('scope')}>
             <Ionicons name="location-outline" size={15} color={theme.colors.purple} />
             <Text style={styles.dropdownBtnText}>{SCOPE_LABELS[scope]}</Text>
             <Ionicons name="chevron-down" size={15} color={theme.colors.textMuted} />
@@ -232,23 +249,23 @@ export default function LeaderboardScreen() {
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
       <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
 
-      <Modal visible={showScopeSheet} transparent animationType="fade" onRequestClose={() => setShowScopeSheet(false)}>
-        <Pressable style={styles.dropdownBackdrop} onPress={() => setShowScopeSheet(false)}>
+      <Modal visible={activeDropdown !== null} transparent animationType="fade" onRequestClose={() => setActiveDropdown(null)}>
+        <Pressable style={styles.dropdownBackdrop} onPress={() => setActiveDropdown(null)}>
           <Pressable style={styles.dropdownSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.dropdownSheetTitle}>Hudud</Text>
-            {(['country', 'region'] as Scope[]).map((opt) => {
-              const selected = scope === opt;
+            <Text style={styles.dropdownSheetTitle}>{activeDropdown === 'period' ? 'Davr' : 'Hudud'}</Text>
+            {(activeDropdown === 'period' ? PERIODS : (['country', 'region'] as Scope[])).map((opt) => {
+              const label = activeDropdown === 'period' ? PERIOD_LABELS[opt as LeaderboardPeriod] : SCOPE_LABELS[opt as Scope];
+              const selected = activeDropdown === 'period' ? period === opt : scope === opt;
               return (
                 <Pressable
                   key={opt}
                   style={styles.dropdownOption}
                   onPress={() => {
-                    setScope(opt);
-                    setShowScopeSheet(false);
+                    if (activeDropdown === 'period') setPeriod(opt as LeaderboardPeriod);
+                    else setScope(opt as Scope);
+                    setActiveDropdown(null);
                   }}>
-                  <Text style={[styles.dropdownOptionText, selected && styles.dropdownOptionTextActive]}>
-                    {SCOPE_LABELS[opt]}
-                  </Text>
+                  <Text style={[styles.dropdownOptionText, selected && styles.dropdownOptionTextActive]}>{label}</Text>
                   {selected && <Ionicons name="checkmark" size={18} color={theme.colors.purple} />}
                 </Pressable>
               );

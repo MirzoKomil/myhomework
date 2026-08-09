@@ -1267,7 +1267,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory') ? {} : [];
     }
     return row.data;
 }
@@ -1429,49 +1429,131 @@ async function getDemoStudentAttendanceStats(studentId) {
 // yig'indisidan (mobil ilova syncStudentProgress orqali serverga yuborgan)
 // tuziladi — hali hech qanday tanga/chaqmoq to'plamagan (hech qachon
 // sinxronlanmagan) o'quvchilar ro'yxatda ko'rinmaydi.
-async function syncStudentProgress(studentId, { coins, lightning } = {}) {
+//
+// 37-vazifa: Kunlik/Haftalik/Oylik reyting uchun har bir kunda QANCHA
+// tanga/chaqmoq TO'PLANGANI (delta) alohida, kun bo'yicha saqlanadi
+// (studentProgressHistory: { [studentId]: { "YYYY-MM-DD": {coins,
+// lightning} } }) — "Doimiy" uchun esa hamon studentProgress'dagi umumiy
+// (all-time) summa ishlatiladi.
+function tashkentDateKey(tashkentDate) {
+    return `${tashkentDate.getUTCFullYear()}-${String(tashkentDate.getUTCMonth() + 1).padStart(2, '0')}-${String(tashkentDate.getUTCDate()).padStart(2, '0')}`;
+}
+
+async function syncStudentProgress(studentId, { coins, lightning, coinsDelta, lightningDelta } = {}) {
     const id = await resolveStudentId(studentId);
     if (!id) return;
+    // 37-vazifa: server (Railway) UTC vaqt zonasida ishlaydi, lekin barcha
+    // o'quvchilar O'zbekistonda (UTC+5) — shu sabab "bugungi kun" har doim
+    // tashkentNow() orqali Toshkent vaqtiga qarab hisoblanadi, aks holda
+    // tunda (23:00-05:00 UTC oralig'ida) to'plangan tanga/chaqmoq noto'g'ri
+    // (bir kun oldingi) kunga yozilib qolardi.
+    const todayKey = tashkentDateKey(tashkentNow());
+
+    const [all, history] = await Promise.all([
+        getJsonData('studentProgress'),
+        getJsonData('studentProgressHistory'),
+    ]);
+
+    const existing = all[id] || { coins: 0, lightning: 0 };
+    all[id] = {
+        coins: coins != null ? Math.max(0, Math.round(Number(coins) || 0)) : existing.coins,
+        lightning: lightning != null ? Math.max(0, Math.round(Number(lightning) || 0)) : existing.lightning,
+        updatedAt: new Date().toISOString(),
+    };
+
+    const cDelta = Math.max(0, Math.round(Number(coinsDelta) || 0));
+    const lDelta = Math.max(0, Math.round(Number(lightningDelta) || 0));
+    if (cDelta || lDelta) {
+        if (!history[id]) history[id] = {};
+        const day = history[id][todayKey] || { coins: 0, lightning: 0 };
+        history[id][todayKey] = { coins: day.coins + cDelta, lightning: day.lightning + lDelta };
+    }
+
     await tx(async (client) => {
-        const all = await getJsonData('studentProgress');
-        const existing = all[id] || { coins: 0, lightning: 0 };
-        all[id] = {
-            coins: coins != null ? Math.max(0, Math.round(Number(coins) || 0)) : existing.coins,
-            lightning: lightning != null ? Math.max(0, Math.round(Number(lightning) || 0)) : existing.lightning,
-            updatedAt: new Date().toISOString(),
-        };
         await saveJsonData(client, 'studentProgress', all);
+        if (cDelta || lDelta) await saveJsonData(client, 'studentProgressHistory', history);
     });
 }
 
-async function getRealLeaderboard(studentId, scope) {
+const LEADERBOARD_PERIODS = ['daily', 'weekly', 'monthly', 'alltime'];
+
+function sumProgressHistoryInRange(entries, fromKey, toKey) {
+    let coins = 0;
+    let lightning = 0;
+    Object.entries(entries || {}).forEach(([dateKey, v]) => {
+        if (dateKey >= fromKey && dateKey <= toKey) {
+            coins += v.coins || 0;
+            lightning += v.lightning || 0;
+        }
+    });
+    return { coins, lightning };
+}
+
+// Davr oynasini hisoblaydi — "daily" bugungi kun, "weekly" joriy hafta
+// (Dushanbadan boshlab), "monthly" joriy taqvim oyi — hammasi Toshkent
+// vaqtiga (UTC+5) qarab, server qaysi vaqt zonasida ishlashidan qat'iy
+// nazar. "alltime" uchun null qaytadi (chunki u alohida, studentProgress'
+// dagi umumiy summadan olinadi).
+function getLeaderboardPeriodRange(period) {
+    const nowTashkent = tashkentNow();
+    const todayKey = tashkentDateKey(nowTashkent);
+    if (period === 'daily') return { from: todayKey, to: todayKey };
+    if (period === 'weekly') {
+        const dow = nowTashkent.getUTCDay(); // 0=Yakshanba..6=Shanba
+        const diffToMonday = dow === 0 ? 6 : dow - 1;
+        const monday = new Date(Date.UTC(nowTashkent.getUTCFullYear(), nowTashkent.getUTCMonth(), nowTashkent.getUTCDate() - diffToMonday));
+        return { from: tashkentDateKey(monday), to: todayKey };
+    }
+    if (period === 'monthly') {
+        const first = `${nowTashkent.getUTCFullYear()}-${String(nowTashkent.getUTCMonth() + 1).padStart(2, '0')}-01`;
+        return { from: first, to: todayKey };
+    }
+    return null;
+}
+
+async function getRealLeaderboard(studentId, scope, period = 'alltime') {
     const id = await resolveStudentId(studentId);
-    const [progress, studentRows] = await Promise.all([
+    const safePeriod = LEADERBOARD_PERIODS.includes(period) ? period : 'alltime';
+    const range = getLeaderboardPeriodRange(safePeriod);
+
+    const [progress, history, studentRows] = await Promise.all([
         getJsonData('studentProgress'),
+        range ? getJsonData('studentProgressHistory') : Promise.resolve({}),
         q('SELECT * FROM students'),
     ]);
     const me = id ? studentRows.find((r) => r.id === id) : null;
     const meRegion = me ? (rowToStudent(me).region || '').trim().toLowerCase() : '';
 
-    const candidates = studentRows.filter((row) => {
-        const p = progress[row.id];
-        if (!p || (!p.coins && !p.lightning)) return false;
+    const candidates = [];
+    studentRows.forEach((row) => {
+        let coins = 0;
+        let lightning = 0;
+        if (range) {
+            const sums = sumProgressHistoryInRange(history[row.id], range.from, range.to);
+            coins = sums.coins;
+            lightning = sums.lightning;
+        } else {
+            const p = progress[row.id];
+            if (!p) return;
+            coins = p.coins || 0;
+            lightning = p.lightning || 0;
+        }
+        if (!coins && !lightning) return;
         if (scope === 'region' && meRegion) {
             const region = (rowToStudent(row).region || '').trim().toLowerCase();
-            if (region !== meRegion) return false;
+            if (region !== meRegion) return;
         }
-        return true;
+        candidates.push({ row, coins, lightning });
     });
 
-    const entries = await Promise.all(candidates.map(async (row) => {
+    const entries = await Promise.all(candidates.map(async ({ row, coins, lightning }) => {
         const s = rowToStudent(row);
-        const p = progress[row.id];
         const stats = await getDemoStudentAttendanceStats(row.id);
         return {
             id: row.id,
             name: s.name || '',
-            coins: p.coins || 0,
-            lightning: p.lightning || 0,
+            coins,
+            lightning,
             lessonsCompleted: stats.lessonsCompleted,
             isMe: row.id === id,
         };
