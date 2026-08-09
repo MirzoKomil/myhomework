@@ -1,8 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
-import { profileStats } from '@/data/mock';
-
 const TOTAL_KEY = 'mh_coins_total';
 const BY_LESSON_KEY = 'mh_coins_by_lesson';
 const TODAY_KEY = 'mh_coins_today';
@@ -39,7 +37,11 @@ async function ensureLoaded(): Promise<void> {
       AsyncStorage.getItem(TODAY_KEY),
     ])
       .then(([totalRaw, byLessonRaw, todayRaw]) => {
-        total = totalRaw !== null ? Number(totalRaw) : profileStats.coins;
+        // 34-vazifa: yangi (hali hech qanday tanga to'plamagan) o'quvchi
+        // 0 tanga bilan boshlashi kerak — ilgari bu yerda demo/namuna
+        // profildagi (profileStats.coins = 320) qiymat ishlatilardi, shu
+        // sabab har bir yangi akkaunt 320 tanga bilan ochilib qolardi.
+        total = totalRaw !== null ? Number(totalRaw) : 0;
         byLesson = byLessonRaw ? JSON.parse(byLessonRaw) : {};
         const today = todayStr();
         if (todayRaw) {
@@ -51,7 +53,7 @@ async function ensureLoaded(): Promise<void> {
         todayDate = today;
       })
       .catch(() => {
-        total = profileStats.coins;
+        total = 0;
         byLesson = {};
         todayEarned = 0;
         todayDate = todayStr();
