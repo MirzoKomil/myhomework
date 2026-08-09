@@ -6855,7 +6855,33 @@ function initMainAttControls() {
 function _populateDemoStudentSelect() {
     const sel = document.getElementById('demoStudentSelect');
     if (!sel) return;
-    const allStudents = getItem(STORAGE_KEYS.students, []);
+    const currentUser = getCurrentUser();
+    let allStudents = getItem(STORAGE_KEYS.students, []);
+
+    // 31-vazifa: ustoz o'z Davomat bo'limida bu ro'yxatda ILGARI butun
+    // tizimdagi BARCHA o'quvchilar (boshqa ustozlarniki, tark etgan/
+    // muzlatilgan/test yozuvlar ham) ko'rinib turardi. Endi "Faol
+    // o'quvchilar" ro'yxati bilan bir xil mezon (o'ziga biriktirilgan,
+    // muzlatilmagan, lidi hozir to'lov jarayonida/yopilgan) qo'llanadi.
+    if (currentUser?.role === 'teacher') {
+        const ownTeacher = currentUser.linkedTeacherId
+            ? resolveTeacherWithVirtual(currentUser.linkedTeacherId)
+            : null;
+        const leadsForDemo = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+        const activeLeadIds = new Set();
+        ['english', 'russian'].forEach(lang => {
+            (leadsForDemo[lang] || []).forEach(l => {
+                if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) activeLeadIds.add(l.id);
+            });
+        });
+        allStudents = ownTeacher
+            ? allStudents.filter(s =>
+                (s.teacherId === ownTeacher.id || s.assistantTeacherId === ownTeacher.id) &&
+                !s.frozen &&
+                s.leadRef?.id && activeLeadIds.has(s.leadRef.id))
+            : [];
+    }
+
     const current = getItem(STORAGE_KEYS.demoStudentId, '');
     sel.innerHTML = '<option value="">— tanlanmagan —</option>' +
         allStudents.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === current ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
