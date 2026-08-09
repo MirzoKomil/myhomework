@@ -676,7 +676,13 @@ function crmStateMutationRequired(req, res, next) {
     // saqlashi kerak - shu ikkisi uchun kirish beriladi, boshqa hech qanday
     // CRM maydonini o'zgartira olmaydi (pastda, handlerning o'zida
     // cheklanadi).
-    if (!['admin', 'rop', 'boshliq', 'targetolog'].includes(req.user?.role)) {
+    // 32-vazifa: ustoz o'z kabinetida davomat belgilashi va o'quvchini
+    // baholashi SHART - ilgari bu ro'yxatda 'teacher' umuman yo'q edi, shu
+    // sabab har qanday davomat/baho saqlash urinishi 403 bilan qaytardi
+    // ("Umumiy CRM snapshotini faqat admin yoki ROP..."). Endi ustozga
+    // FAQAT o'ziga tegishli uch kalit (davomat, baholar) uchun kirish
+    // beriladi - pastda, handlerning o'zida yana ham torroq cheklanadi.
+    if (!['admin', 'rop', 'boshliq', 'targetolog', 'teacher'].includes(req.user?.role)) {
         return res.status(403).json({
             error: 'Umumiy CRM snapshotini faqat admin, ROP yoki Targetolog (faqat Marketing ma\'lumotlari) yangilashi mumkin'
         });
@@ -740,6 +746,9 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
         // 23-vazifa: Targetolog FAQAT Marketing bo'limiga tegishli ikki
         // kalitni (reja va kunlik reklama ma'lumoti) saqlashi mumkin -
         // boshqa hech qanday CRM maydonini o'zgartira olmaydi.
+        // 32-vazifa: Ustoz FAQAT davomat (asosiy/yordamchi) va jonli dars
+        // baholarini saqlashi mumkin - boshqa hech qanday CRM maydonini
+        // o'zgartira olmaydi.
         const allowed = isFullAccess ? [
             'teachers', 'students', 'salesManagers', 'timetable',
             'mainAttendance', 'assistantAttendance', 'payments', 'hrEmployees',
@@ -750,7 +759,9 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
             // saqlanmay, faqat brauzer keshida qolib ketardi. targetMonitoringPlan
             // (10-vazifa) - Target Monitoringi rejasi.
             'individualSalesPlans', 'targetMonitoringPlan', 'targetDailyAdSpend'
-        ] : ['targetMonitoringPlan', 'targetDailyAdSpend'];
+        ] : req.user.role === 'teacher'
+            ? ['mainAttendance', 'assistantAttendance', 'liveGrades']
+            : ['targetMonitoringPlan', 'targetDailyAdSpend'];
         if (isFullAccess) allowed.push('archive');
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

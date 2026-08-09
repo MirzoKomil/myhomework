@@ -492,7 +492,11 @@ export default function RoadmapScreen() {
     // 3-darslar ham hech qanday progress bo'lmasa ham ochiq ko'rinardi.
     const UNLOCKED_COUNT = 1;
     const DEFAULT_UNLOCK_PERCENT = 80;
-    let prevComplete = true;
+    // 32-vazifa: jonli (speaking) darsning o'zi ochilishi uchun IKKI shart
+    // BIRGALIKDA bajarilishi shart — ustoz shu darsga davomat olgan
+    // bo'lishi VA undan oldingi videodars vazifalari kamida shu % bajarilgan
+    // bo'lishi. Bittasi yetarli emas.
+    const LIVE_LESSON_UNLOCK_PERCENT = 60;
     let prevPercent = 100;
     const mapped: LessonNode[] = [];
     for (let i = 0; i < TOTAL_LESSONS; i++) {
@@ -501,25 +505,27 @@ export default function RoadmapScreen() {
       const id = l?.id ?? String(lessonNum);
       const isVideoDay = i % 2 === 0;
 
-      // CRM'da admin darsni qulflagan bo'lsa: video (toq) kunlar oldingi
-      // (speaking) darsning kerakli % ga yetishi bilan ochiladi, speaking
-      // (juft) kunlar esa % dan qat'i nazar faqat davomat olinganda ochiladi.
-      // Hech qanday qulf sozlanmagan bo'lsa — standart ketma-ket ochilish
-      // qoidasi (birinchi UNLOCKED_COUNT ta dars ochiq, keyin oldingisi
-      // kamida DEFAULT_UNLOCK_PERCENT bo'lishi kerak) ishlatiladi.
+      // Video (toq) kunlar oldingi (speaking) darsning kerakli % ga
+      // yetishi bilan ochiladi. Speaking/jonli (juft) kunlar esa — ustoz
+      // shu darsga davomat OLGAN bo'lishi VA undan oldingi videodarsning
+      // kerakli % ga yetgan bo'lishi ikkisi HAM bajarilgandagina ochiladi
+      // (ilgari standart holatda davomat umuman tekshirilmasdi — shu sabab
+      // ustoz hech qachon davomat olmagan bo'lsa ham jonli dars "ochiq"
+      // ko'rinib qolardi). CRM'da lesson.lock.requiredPercent bilan har bir
+      // dars uchun bu foizni alohida belgilab qo'yish mumkinligicha qoladi.
       let locked: boolean;
       let lockReason: 'percent' | 'attendance' | undefined;
-      if (l?.lock?.enabled) {
-        if (isVideoDay) {
-          const requiredPercent = l.lock.requiredPercent ?? DEFAULT_UNLOCK_PERCENT;
-          locked = prevPercent < requiredPercent;
-          if (locked) lockReason = 'percent';
-        } else {
-          locked = !l.attendanceTaken;
-          if (locked) lockReason = 'attendance';
-        }
+      let requiredPercent: number;
+      if (isVideoDay) {
+        requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? DEFAULT_UNLOCK_PERCENT) : DEFAULT_UNLOCK_PERCENT;
+        locked = i >= UNLOCKED_COUNT && prevPercent < requiredPercent;
+        if (locked) lockReason = 'percent';
       } else {
-        locked = i >= UNLOCKED_COUNT && !prevComplete;
+        requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? LIVE_LESSON_UNLOCK_PERCENT) : LIVE_LESSON_UNLOCK_PERCENT;
+        const attendanceOk = !!l?.attendanceTaken;
+        const percentOk = prevPercent >= requiredPercent;
+        locked = i >= UNLOCKED_COUNT && (!attendanceOk || !percentOk);
+        if (locked) lockReason = !attendanceOk ? 'attendance' : 'percent';
       }
 
       const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
@@ -530,7 +536,6 @@ export default function RoadmapScreen() {
           getCategoryProgress(id, 'homework', content.homeworkParts.length)) /
           3
       );
-      prevComplete = percent >= DEFAULT_UNLOCK_PERCENT;
       prevPercent = percent;
 
       mapped.push({
@@ -541,7 +546,7 @@ export default function RoadmapScreen() {
         progress: 0,
         locked,
         lockReason,
-        lockRequiredPercent: l?.lock?.requiredPercent,
+        lockRequiredPercent: requiredPercent,
         side: isVideoDay ? 'left' : 'right',
         stars: 0,
         milestone: lessonNum % 5 === 0 ? MILESTONE_GIFTS[lessonNum / 5 - 1] : undefined,
