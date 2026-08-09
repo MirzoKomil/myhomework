@@ -155,6 +155,19 @@ function setItem(key, value) {
     }
 }
 
+// Serverdagi maxsus endpoint muvaffaqiyatli tugagandan keyin ekrandagi
+// ma'lumotni yangilash uchun. Bu funksiya PATCH /api/state yubormaydi.
+function setCachedItem(key, value) {
+    const cacheKey = CACHE_KEY_MAP[key];
+    if (cacheKey) {
+        _cache[cacheKey] = value;
+        return;
+    }
+    if (key === STORAGE_KEYS.currentUser) {
+        setItem(key, value);
+    }
+}
+
 function showSaveError(msg) {
     if (typeof document === 'undefined') return;
     let el = document.getElementById('saveErrorToast');

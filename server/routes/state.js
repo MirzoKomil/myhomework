@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
 getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
@@ -841,6 +841,22 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
     } catch (err) {
         console.error('PATCH /api/state', err);
         res.status(500).json({ error: 'Saqlashda xatolik' });
+    }
+});
+
+// 32-vazifa: ustoz davomatni umumiy CRM snapshotini yozmasdan, faqat o'z
+// o'quvchisi uchun saqlaydi. Shu orqali boshqa ustoz davomatini tasodifan
+// almashtirish ham, "faqat admin yoki ROP" xatosi ham bartaraf bo'ladi.
+router.post('/teacher-attendance', authRequired, async (req, res) => {
+    try {
+        if (!['admin', 'rop', 'boshliq', 'teacher'].includes(req.user?.role)) {
+            return res.status(403).json({ error: 'Davomat belgilashga ruxsat yo\'q' });
+        }
+        const result = await recordTeacherAttendance({ actor: req.user, ...(req.body || {}) });
+        res.json({ ok: true, ...result });
+    } catch (err) {
+        console.error('POST /api/state/teacher-attendance', err);
+        res.status(400).json({ error: err.message || 'Davomatni saqlab bo\'lmadi' });
     }
 });
 

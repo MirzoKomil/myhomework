@@ -88,6 +88,15 @@ async function apiPatchState(partial) {
     });
 }
 
+// Ustoz davomatni umumiy CRM snapshotini qayta yozmasdan saqlaydi. Server
+// foydalanuvchi aynan shu ustoz va shu o'quvchiga biriktirilganini tekshiradi.
+async function apiSaveTeacherAttendance(payload) {
+    return apiFetch('/api/state/teacher-attendance', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+}
+
 async function apiFetchLeads() {
     return apiFetch('/api/leads');
 }

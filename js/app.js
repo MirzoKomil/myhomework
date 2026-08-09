@@ -6766,19 +6766,26 @@ function renderKpiSummary(containerId, kpi, teacherName) {
     `;
 }
 
-function syncTeacherSettings(teacherId, patternSel, durationSel, rerender) {
-    const teacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === teacherId);
+function syncTeacherSettings(teacherId, patternSel, durationSel, rerender, options = {}) {
+    const storedTeacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === teacherId);
+    // HR ro'yxatidan kelgan ustoz hali alohida teachers jadvaliga yozilmagan
+    // bo'lishi mumkin. Bunday ustoz ham o'z o'quvchilarining davomatini
+    // ko'rishi kerak, shuning uchun virtual HR yozuvini ham qabul qilamiz.
+    const teacher = storedTeacher || resolveTeacherWithVirtual(teacherId);
     if (!teacher) return null;
+    const readOnly = Boolean(options.readOnly || !storedTeacher);
     if (patternSel) {
         patternSel.value = teacher.schedulePattern || 'mwf';
-        patternSel.onchange = () => {
+        patternSel.disabled = readOnly;
+        patternSel.onchange = readOnly ? null : () => {
             updateTeacher(teacherId, { schedulePattern: patternSel.value });
             rerender();
         };
     }
     if (durationSel) {
         durationSel.value = String(teacher.lessonDuration || 15);
-        durationSel.onchange = () => {
+        durationSel.disabled = readOnly;
+        durationSel.onchange = readOnly ? null : () => {
             updateTeacher(teacherId, { lessonDuration: parseInt(durationSel.value) });
             rerender();
         };
@@ -6871,31 +6878,18 @@ function _populateDemoStudentSelect() {
     const sel = document.getElementById('demoStudentSelect');
     if (!sel) return;
     const currentUser = getCurrentUser();
-    let allStudents = getItem(STORAGE_KEYS.students, []);
+    const selWrap = sel.closest('.form-group') || sel.parentElement;
 
-    // 31-vazifa: ustoz o'z Davomat bo'limida bu ro'yxatda ILGARI butun
-    // tizimdagi BARCHA o'quvchilar (boshqa ustozlarniki, tark etgan/
-    // muzlatilgan/test yozuvlar ham) ko'rinib turardi. Endi "Faol
-    // o'quvchilar" ro'yxati bilan bir xil mezon (o'ziga biriktirilgan,
-    // muzlatilmagan, lidi hozir to'lov jarayonida/yopilgan) qo'llanadi.
+    // Bu tanlov mobil ilovaning global namuna profilini almashtiradi. Ustoz
+    // undan foydalansa boshqa o'quvchining ilova profili o'zgarib ketardi va
+    // u baribir bu kalitni saqlash huquqiga ega emas. Ustozning haqiqiy
+    // o'quvchilari endi bevosita pastdagi davomat jadvalida ko'rinadi.
     if (currentUser?.role === 'teacher') {
-        const ownTeacher = currentUser.linkedTeacherId
-            ? resolveTeacherWithVirtual(currentUser.linkedTeacherId)
-            : null;
-        const leadsForDemo = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-        const activeLeadIds = new Set();
-        ['english', 'russian'].forEach(lang => {
-            (leadsForDemo[lang] || []).forEach(l => {
-                if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) activeLeadIds.add(l.id);
-            });
-        });
-        allStudents = ownTeacher
-            ? allStudents.filter(s =>
-                (s.teacherId === ownTeacher.id || s.assistantTeacherId === ownTeacher.id) &&
-                !s.frozen &&
-                s.leadRef?.id && activeLeadIds.has(s.leadRef.id))
-            : [];
+        if (selWrap) selWrap.hidden = true;
+        return;
     }
+    if (selWrap) selWrap.hidden = false;
+    let allStudents = getItem(STORAGE_KEYS.students, []);
 
     const current = getItem(STORAGE_KEYS.demoStudentId, '');
     sel.innerHTML = '<option value="">— tanlanmagan —</option>' +
@@ -6911,10 +6905,10 @@ function _populateDemoStudentSelect() {
 
 // Davomat tasdiqlanganda tanlanadigan darslar ro'yxati — barcha kurslardagi
 // juft (speaking) kunlar, chunki jonli darslar aynan shu kunlarda o'tiladi.
-function _getSpeakingLessonOptions() {
+function _getSpeakingLessonOptions(subject) {
     const mc = getMobileContent();
     const options = [];
-    (mc.courses || []).forEach(course => {
+    (mc.courses || []).filter(course => (course.lang || 'english') === subject).forEach(course => {
         const lessons = (mc.lessons || []).filter(l => l.courseId === course.id);
         lessons.forEach((l, i) => {
             const isVideoDay = i % 2 === 0;
@@ -7964,6 +7958,8 @@ function renderCrmPeerChatDetail(container, studentId, peerId) {
 function renderMainAttendance() {
     initMainAttControls();
     _populateDemoStudentSelect();
+    const currentUser = getCurrentUser();
+    const isTeacherRole = currentUser?.role === 'teacher';
     const subject = getSelectedSubject('mainAttSubjectTabs');
     const teacherId = document.getElementById('mainAttTeacher').value;
     if (!teacherId) {
@@ -7975,19 +7971,26 @@ function renderMainAttendance() {
     const monthVal = document.getElementById('mainAttMonth').value;
     const patternSel = document.getElementById('mainAttPattern');
     const durationSel = document.getElementById('mainAttDuration');
-    const teacher = syncTeacherSettings(teacherId, patternSel, durationSel, renderMainAttendance);
+    const teacher = syncTeacherSettings(teacherId, patternSel, durationSel, renderMainAttendance, {
+        readOnly: isTeacherRole
+    });
     if (!teacher) return;
 
     const [year, month] = monthVal.split('-').map(Number);
     const days = getDaysInMonth(year, month);
     const pattern = teacher.schedulePattern || 'mwf';
     const lessonDays = getLessonDaysInMonth(year, month, pattern);
+    const isAssistantTeacher = teacher.type === 'yordamchi';
+    const attendanceStorageKey = isAssistantTeacher
+        ? STORAGE_KEYS.assistantAttendance
+        : STORAGE_KEYS.mainAttendance;
     const students = getItem(STORAGE_KEYS.students, []).filter(s =>
-        s.teacherId === teacherId && (s.subject || 'english') === subject
+        (isAssistantTeacher ? s.assistantTeacherId : s.teacherId) === teacherId &&
+        (s.subject || 'english') === subject && !s.frozen && s.status !== 'inactive'
     );
-    const attendance = getItem(STORAGE_KEYS.mainAttendance, {});
+    const attendance = getItem(attendanceStorageKey, {});
     const attKey = `${monthVal}_${teacherId}`;
-    if (!attendance[attKey]) attendance[attKey] = {};
+    const attendanceForTeacher = attendance[attKey] || {};
 
     let html = '<table class="table attendance-table"><thead><tr>';
     html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
@@ -8002,10 +8005,10 @@ function renderMainAttendance() {
     }
 
     students.forEach((s, i) => {
-        if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
+        const studentAttendance = attendanceForTeacher[s.id] || {};
         html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
-            const marked = attendance[attKey][s.id][d];
+            const marked = studentAttendance[d];
             const isLesson = isLessonDay(year, month, d, pattern);
             const disabled = !isLesson ? 'disabled' : '';
             html += `<td class="att-cell ${isLesson ? 'lesson-day-col' : ''} ${marked ? 'att-present' : ''}">
@@ -8016,7 +8019,6 @@ function renderMainAttendance() {
     });
 
     html += '</tbody></table>';
-    setItem(STORAGE_KEYS.mainAttendance, attendance);
     document.getElementById('mainAttendanceContainer').innerHTML = html;
 
     const kpi = calculateKpiSalary(teacher, monthVal, attendance, students);
@@ -8024,48 +8026,44 @@ function renderMainAttendance() {
 
     document.querySelectorAll('.att-check').forEach(cb => {
         cb.addEventListener('change', () => {
-            const att = getItem(STORAGE_KEYS.mainAttendance, {});
-            const k = cb.dataset.attKey;
             const sid = cb.dataset.student;
             const day = cb.dataset.day;
-            if (!att[k]) att[k] = {};
-            if (!att[k][sid]) att[k][sid] = {};
             const [gy, gm] = monthVal.split('-').map(Number);
             const dateStr = `${gy}-${String(gm).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            cb.disabled = true;
 
             if (cb.checked) {
                 // Davomat qatnashdi deb belgilanishidan oldin dars va 5 mezonli baho
                 // majburiy — bekor qilinsa, checkbox ortga qaytariladi va davomat
                 // saqlanmaydi.
                 const student = students.find(s => s.id === sid);
-                _openLiveGradeModal(student ? student.name : sid, dateStr, _getSpeakingLessonOptions(), (grade) => {
-                    att[k][sid][day] = 1;
-                    setItem(STORAGE_KEYS.mainAttendance, att);
-                    const grades = getItem(STORAGE_KEYS.liveGrades, {});
-                    if (!grades[sid]) grades[sid] = [];
-                    grades[sid] = grades[sid].filter(g => g.date !== dateStr);
-                    grades[sid].push({ date: dateStr, teacherId, lessonId: grade.lessonId, lessonName: grade.lessonName, scores: grade.scores });
-                    setItem(STORAGE_KEYS.liveGrades, grades);
-                    renderMainAttendance();
+                _openLiveGradeModal(student ? student.name : sid, dateStr, _getSpeakingLessonOptions(subject), (grade) => {
+                    saveTeacherAttendanceChange({ teacherId, studentId: sid, date: dateStr, present: true, grade })
+                        .then(() => renderMainAttendance())
+                        .catch(err => {
+                            cb.checked = false;
+                            cb.disabled = false;
+                            showSaveError(err.message);
+                        });
                 }, () => {
                     cb.checked = false;
+                    cb.disabled = false;
                 });
             } else {
-                delete att[k][sid][day];
-                setItem(STORAGE_KEYS.mainAttendance, att);
-                const grades = getItem(STORAGE_KEYS.liveGrades, {});
-                if (grades[sid] && grades[sid].length) {
-                    grades[sid] = grades[sid].filter(g => g.date !== dateStr);
-                    setItem(STORAGE_KEYS.liveGrades, grades);
-                }
-                renderMainAttendance();
+                saveTeacherAttendanceChange({ teacherId, studentId: sid, date: dateStr, present: false })
+                    .then(() => renderMainAttendance())
+                    .catch(err => {
+                        cb.checked = true;
+                        cb.disabled = false;
+                        showSaveError(err.message);
+                    });
             }
         });
     });
 
     document.querySelectorAll('.lesson-count').forEach(cell => {
         const sid = cell.dataset.student;
-        const att = getItem(STORAGE_KEYS.mainAttendance, {})[attKey]?.[sid] || {};
+        const att = getItem(attendanceStorageKey, {})[attKey]?.[sid] || {};
         const count = lessonDays.filter(d => att[d]).length;
         cell.textContent = count;
     });
@@ -8118,7 +8116,7 @@ function renderAssistantAttendance() {
     );
     const attendance = getItem(STORAGE_KEYS.assistantAttendance, {});
     const attKey = `${monthVal}_${teacherId}`;
-    if (!attendance[attKey]) attendance[attKey] = {};
+    const attendanceForTeacher = attendance[attKey] || {};
 
     let html = '<table class="table attendance-table"><thead><tr>';
     html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
@@ -8133,10 +8131,10 @@ function renderAssistantAttendance() {
     }
 
     students.forEach((s, i) => {
-        if (!attendance[attKey][s.id]) attendance[attKey][s.id] = {};
+        const studentAttendance = attendanceForTeacher[s.id] || {};
         html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="asst-lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
-            const marked = attendance[attKey][s.id][d];
+            const marked = studentAttendance[d];
             const isLesson = isLessonDay(year, month, d, pattern);
             html += `<td class="att-cell ${isLesson ? 'lesson-day-col' : ''} ${marked ? 'att-present' : ''}">
                 <input type="checkbox" class="asst-att-check" data-att-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${!isLesson ? 'disabled' : ''}>
@@ -8146,7 +8144,6 @@ function renderAssistantAttendance() {
     });
 
     html += '</tbody></table>';
-    setItem(STORAGE_KEYS.assistantAttendance, attendance);
     document.getElementById('assistantAttendanceContainer').innerHTML = html;
 
     const kpi = calculateKpiSalary(teacher, monthVal, attendance, students);
@@ -15010,6 +15007,34 @@ function formatPhoneDisplay(phone) {
     if (digits.length === 9) digits = '998' + digits;
     if (digits.length !== 12 || !digits.startsWith('998')) return raw;
     return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 10)} ${digits.slice(10, 12)}`;
+}
+
+function applyTeacherAttendanceResult(result) {
+    const attendanceKey = result.attendanceType === 'assistant'
+        ? STORAGE_KEYS.assistantAttendance
+        : STORAGE_KEYS.mainAttendance;
+    const allAttendance = getItem(attendanceKey, {});
+    const attendance = { ...allAttendance };
+    const dayMap = { ...(attendance[result.attendanceKey] || {}) };
+    const studentDays = { ...(dayMap[result.studentId] || {}) };
+    if (result.present) studentDays[result.day] = 1;
+    else delete studentDays[result.day];
+    dayMap[result.studentId] = studentDays;
+    attendance[result.attendanceKey] = dayMap;
+    setCachedItem(attendanceKey, attendance);
+
+    const allGrades = getItem(STORAGE_KEYS.liveGrades, {});
+    const grades = { ...allGrades };
+    const current = (grades[result.studentId] || []).filter(item => item.date !== result.date);
+    if (result.present && result.grade) current.push(result.grade);
+    grades[result.studentId] = current;
+    setCachedItem(STORAGE_KEYS.liveGrades, grades);
+}
+
+async function saveTeacherAttendanceChange(payload) {
+    const result = await apiSaveTeacherAttendance(payload);
+    applyTeacherAttendanceResult(result);
+    return result;
 }
 
 // Xodim akkauntlari uchun yagona login formati. Admin ekranda telefonni

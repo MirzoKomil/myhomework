@@ -3012,6 +3012,146 @@ async function patchState(partial) {
     });
 }
 
+// Ustozning bitta o'quvchi/bitta jonli dars uchun davomatini saqlash.
+// Bu umumiy state snapshotini o'chirib-qayta yozmaydi: faqat kerakli qatordan
+// UPSERT qiladi va ustoz faqat o'ziga biriktirilgan o'quvchini baholay oladi.
+async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade }) {
+    const safeTeacherId = String(teacherId || '').trim();
+    const safeStudentId = String(studentId || '').trim();
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ''));
+    if (!safeTeacherId || !safeStudentId || !match) {
+        throw new Error("Ustoz, o'quvchi va to'g'ri sana yuborilishi shart");
+    }
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const asDate = new Date(`${date}T00:00:00Z`);
+    if (month < 1 || month > 12 || day < 1 || day > 31 || Number.isNaN(asDate.getTime()) ||
+        asDate.getUTCFullYear() !== year || asDate.getUTCMonth() + 1 !== month || asDate.getUTCDate() !== day) {
+        throw new Error("Davomat sanasi noto'g'ri");
+    }
+
+    const isStaffWithFullAccess = ['admin', 'rop', 'boshliq'].includes(actor?.role);
+    let savedGrade = null;
+    let result = null;
+    await tx(async (client) => {
+        const teacherResult = await client.query(
+            `SELECT t.id, t.name, t.type, t.subject
+             FROM teachers t WHERE t.id = $1
+             UNION ALL
+             SELECT he.id, he.name,
+                    CASE WHEN he.role = 'yordamchi' THEN 'yordamchi' ELSE 'asosiy' END AS type,
+                    COALESCE(NULLIF(he.lang, ''), 'english') AS subject
+             FROM hr_employees he
+             WHERE he.id = $1
+               AND NOT EXISTS (SELECT 1 FROM teachers t WHERE t.id = he.id)
+             LIMIT 1`,
+            [safeTeacherId]
+        );
+        const teacher = teacherResult.rows[0];
+        if (!teacher) throw new Error('Ustoz yozuvi topilmadi');
+
+        if (!isStaffWithFullAccess) {
+            // Teacher akkaunti HR loginiga biriktirilgan bo'lishi kerak. Eski
+            // yozuvlarda login bo'sh qolgan bo'lsa, faqat o'z ismiga mos
+            // yozuvni fallback sifatida qabul qilamiz.
+            const owner = await client.query(
+                `SELECT 1
+                 FROM users u
+                 JOIN hr_employees he ON (
+                     LOWER(TRIM(COALESCE(he.login, ''))) = LOWER(TRIM(u.email))
+                     OR (COALESCE(TRIM(he.login), '') = '' AND LOWER(TRIM(he.name)) = LOWER(TRIM(u.name)))
+                 )
+                 WHERE u.id = $1 AND he.id = $2
+                 LIMIT 1`,
+                [actor.id, safeTeacherId]
+            );
+            if (!owner.rowCount) {
+                throw new Error("Siz faqat o'zingizga biriktirilgan ustoz davomatini belgilashingiz mumkin");
+            }
+        }
+
+        const assignmentColumn = teacher.type === 'yordamchi' ? 'assistant_teacher_id' : 'teacher_id';
+        const studentResult = await client.query(
+            `SELECT id, subject FROM students WHERE id = $1 AND ${assignmentColumn} = $2`,
+            [safeStudentId, safeTeacherId]
+        );
+        const student = studentResult.rows[0];
+        if (!student) {
+            throw new Error("Bu o'quvchi ushbu ustozga biriktirilmagan");
+        }
+        if ((teacher.subject || 'english') !== (student.subject || 'english')) {
+            throw new Error("O'quvchi va ustoz fan yo'nalishi mos emas");
+        }
+
+        const tableName = teacher.type === 'yordamchi' ? 'assistant_attendance' : 'main_attendance';
+        const attendanceKey = `${match[1]}-${match[2]}_${safeTeacherId}`;
+
+        if (present) {
+            if (!grade || typeof grade !== 'object' || !grade.lessonId || !grade.scores) {
+                throw new Error("Qatnashuv uchun jonli dars va barcha baholar talab qilinadi");
+            }
+            const criteria = ['attendance', 'activity', 'speaking', 'understanding', 'discipline'];
+            for (const key of criteria) {
+                const score = Number(grade.scores[key]);
+                if (!Number.isInteger(score) || score < 1 || score > 5) {
+                    throw new Error("Barcha baholar 1 dan 5 gacha bo'lishi shart");
+                }
+            }
+
+            const contentResult = await client.query('SELECT data FROM mobile_content WHERE singleton = 1');
+            const mobileContent = contentResult.rows[0]?.data || {};
+            const course = (mobileContent.courses || []).find(c => c.id === (mobileContent.lessons || []).find(l => l.id === grade.lessonId)?.courseId);
+            const courseLessons = course ? (mobileContent.lessons || []).filter(l => l.courseId === course.id) : [];
+            const lessonIndex = courseLessons.findIndex(l => l.id === grade.lessonId);
+            if (!course || lessonIndex < 0 || lessonIndex % 2 === 0 || (course.lang || 'english') !== (student.subject || 'english')) {
+                throw new Error("Tanlangan jonli dars o'quvchi faniga tegishli emas");
+            }
+
+            await client.query(
+                `INSERT INTO ${tableName} (att_key, student_id, day, present)
+                 VALUES ($1, $2, $3, 1)
+                 ON CONFLICT (att_key, student_id, day) DO UPDATE SET present = 1`,
+                [attendanceKey, safeStudentId, day]
+            );
+
+            const gradesResult = await client.query("SELECT data FROM json_data WHERE key = 'liveGrades' FOR UPDATE");
+            const allGrades = gradesResult.rows[0]?.data && typeof gradesResult.rows[0].data === 'object'
+                ? gradesResult.rows[0].data
+                : {};
+            const entry = {
+                date: String(date), teacherId: safeTeacherId,
+                lessonId: String(grade.lessonId), lessonName: String(grade.lessonName || ''),
+                scores: Object.fromEntries(criteria.map(key => [key, Number(grade.scores[key])]))
+            };
+            allGrades[safeStudentId] = (allGrades[safeStudentId] || []).filter(item => item.date !== date);
+            allGrades[safeStudentId].push(entry);
+            await saveJsonData(client, 'liveGrades', allGrades);
+            savedGrade = entry;
+        } else {
+            await client.query(
+                `DELETE FROM ${tableName} WHERE att_key = $1 AND student_id = $2 AND day = $3`,
+                [attendanceKey, safeStudentId, day]
+            );
+            const gradesResult = await client.query("SELECT data FROM json_data WHERE key = 'liveGrades' FOR UPDATE");
+            const allGrades = gradesResult.rows[0]?.data && typeof gradesResult.rows[0].data === 'object'
+                ? gradesResult.rows[0].data
+                : {};
+            if (allGrades[safeStudentId]) {
+                allGrades[safeStudentId] = allGrades[safeStudentId].filter(item => item.date !== date);
+                await saveJsonData(client, 'liveGrades', allGrades);
+            }
+        }
+
+        result = {
+            attendanceKey, attendanceType: teacher.type === 'yordamchi' ? 'assistant' : 'main',
+            studentId: safeStudentId, date: String(date), day, present: Boolean(present), grade: savedGrade
+        };
+    });
+    return result;
+}
+
 // ── Leads insert (webhook) ───────────────────────────────────────────────────
 
 function normalizeLeadLanguage(val) {
@@ -3477,7 +3617,7 @@ setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
-    insertLead, upsertLead, softDeleteLead, restoreLead, patchState,
+    insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     getHrEmployeesData, getHrEmployeeById, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
