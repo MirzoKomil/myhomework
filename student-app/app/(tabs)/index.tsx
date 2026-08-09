@@ -11,7 +11,8 @@ import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
-import { courses, dailyStages, skillProgress } from '@/data/mock';
+import { dailyStages, skillProgress } from '@/data/mock';
+import { getCourseOverallProgress } from '@/data/lessonContent';
 import { fetchDemoNotifications, fetchDemoSchedule, fetchDemoStudentProfile, fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
@@ -27,7 +28,10 @@ const STAGE_LABEL_KEYS: Record<string, TranslationKey> = {
 };
 
 export default function HomeScreen() {
-  const activeCourse = courses[0];
+  // 38-vazifa: ilgari doim qattiq yozilgan namuna qiymatni (31%, 22/72)
+  // ko'rsatardi — endi "Darslar yo'li" bilan bir xil mantiqda haqiqiy
+  // ochilgan darslar sonidan hisoblanadi.
+  const [courseProgress, setCourseProgress] = useState({ done: 0, total: 72, percent: 0 });
   const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
   // 37-vazifa: ilgari bu yerda hech qachon o'chmaydigan namuna (fake)
   // taymer (~2 soat 45 daqiqa) standart holat sifatida ko'rsatilardi va
@@ -92,6 +96,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       getLastPosition().then(setLastPosition);
+      getCourseOverallProgress().then(setCourseProgress).catch(() => {});
 
       waveAnim.setValue(0);
       Animated.timing(waveAnim, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start();
@@ -198,9 +203,9 @@ export default function HomeScreen() {
         <SkillBars skills={skillProgress} />
 
         <CourseProgressCard
-          progress={activeCourse.progress}
-          lessonsDone={activeCourse.lessonsDone}
-          lessonsTotal={activeCourse.lessonsTotal}
+          progress={courseProgress.percent}
+          lessonsDone={courseProgress.done}
+          lessonsTotal={courseProgress.total}
           onPress={handleContinue}
         />
 

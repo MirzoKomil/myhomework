@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 
 import { AdminLessonContent, fetchMobileContent } from '@/services/contentApi';
+import { getCategoryProgress, loadLessonProgress, ProgressCategory } from '@/services/lessonProgressStore';
 
 export type LessonDayType = 'grammar' | 'speaking' | 'bonus';
 
@@ -531,6 +532,65 @@ export async function getResolvedLessonContent(lessonId: string, dayIndex: numbe
   const lang: 'english' | 'russian' = course?.lang === 'russian' ? 'russian' : 'english';
   const base = getLessonContent(lessonId, dayIndex, lang);
   return mergeLessonContent(base, mc.lessonContents[lessonId]);
+}
+
+const COURSE_TOTAL_LESSONS = 72;
+// 8-vazifa/32-vazifa: Bosh sahifa/Darslar yo'li'dagi bilan bir xil qoida -
+// birinchi dars har doim ochiq, keyingi VIDEO dars oldingi (speaking)
+// darsning bajarilishi kamida shu foizga (standart 80%) yetganda, keyingi
+// SPEAKING dars esa ustoz davomat OLGAN va oldingi videodars kamida shu
+// foizga (standart 60%) yetganda ochiladi (roadmap/[courseId].tsx'dagi
+// recomputeLessons bilan bir xil mantiq).
+const COURSE_DEFAULT_UNLOCK_PERCENT = 80;
+const COURSE_LIVE_LESSON_UNLOCK_PERCENT = 60;
+
+// 38-vazifa: Bosh sahifadagi "Umumiy progress" kartochkasi ilgari doim
+// qattiq yozilgan namuna qiymatni (31%, 22/72 dars) ko'rsatardi. Endi
+// "Darslar yo'li" ekranidagi bilan AYNAN bir xil qulflash mantig'i bo'yicha
+// haqiqiy ochilgan darslar sonini hisoblaydi.
+export async function getCourseOverallProgress(): Promise<{ done: number; total: number; percent: number }> {
+  const empty = { done: 0, total: COURSE_TOTAL_LESSONS, percent: 0 };
+  const mc = await fetchMobileContent();
+  const course = mc.courses[0];
+  if (!course) return empty;
+
+  await loadLessonProgress();
+  const adminLessons = mc.lessons.filter((l) => l.courseId === course.id);
+  const resolvedCourseLang: 'english' | 'russian' = course.lang === 'russian' ? 'russian' : 'english';
+
+  let prevPercent = 100;
+  let unlockedCount = 0;
+  for (let i = 0; i < COURSE_TOTAL_LESSONS; i++) {
+    const l = adminLessons[i];
+    const id = l?.id ?? String(i + 1);
+    const isVideoDay = i % 2 === 0;
+
+    let locked: boolean;
+    if (isVideoDay) {
+      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_DEFAULT_UNLOCK_PERCENT) : COURSE_DEFAULT_UNLOCK_PERCENT;
+      locked = i >= 1 && prevPercent < requiredPercent;
+    } else {
+      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_LIVE_LESSON_UNLOCK_PERCENT) : COURSE_LIVE_LESSON_UNLOCK_PERCENT;
+      locked = i >= 1 && (!l?.attendanceTaken || prevPercent < requiredPercent);
+    }
+    if (!locked) unlockedCount++;
+
+    const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
+    const content = mergeLessonContent(getLessonContent(id, i, resolvedCourseLang), mc.lessonContents[id]);
+    const percent = Math.round(
+      (getCategoryProgress(id, videoCategory) +
+        getCategoryProgress(id, 'vocabulary') +
+        getCategoryProgress(id, 'homework', content.homeworkParts.length)) /
+        3
+    );
+    prevPercent = percent;
+  }
+
+  return {
+    done: unlockedCount,
+    total: COURSE_TOTAL_LESSONS,
+    percent: Math.round((unlockedCount / COURSE_TOTAL_LESSONS) * 100),
+  };
 }
 
 export const VOCAB_PRACTICE_STEPS = ['translation', 'construct', 'pronounce'] as const;
