@@ -20058,18 +20058,11 @@ function initHrEmployeeTabs() {
             tabsContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            if (_hrRoleFilter === 'oqituvchi') {
-                // O'qituvchi tanlanganda til filtri ko'rinadi, default: Ingliz
-                _hrLangFilter = 'ingliz';
-                setLangFilterVisible(true);
-                if (langContainer) {
-                    langContainer.querySelectorAll('.subject-tab').forEach(b => b.classList.remove('active'));
-                    langContainer.querySelector('[data-hr-lang="ingliz"]')?.classList.add('active');
-                }
-            } else {
-                _hrLangFilter = 'all';
-                setLangFilterVisible(false);
-            }
+            // 28-vazifa: yuqorida (o'ng burchakda) allaqachon Ingliz/Rus tili
+            // tanlagichi bor - "O'qituvchi" ostida yana bir til filtri
+            // ortiqcha va chalkashlik keltiradi, shu sabab olib tashlandi.
+            _hrLangFilter = 'all';
+            setLangFilterVisible(false);
             renderHrEmployees();
         });
     }
