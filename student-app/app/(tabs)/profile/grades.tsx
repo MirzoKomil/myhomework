@@ -11,15 +11,37 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import {
   ASSISTANT_RATING_CRITERIA,
-  AssistantRatingKey,
   TEACHER_GRADE_CRITERIA,
   TEACHER_GRADE_RUBRIC,
   TEACHER_RATING_CRITERIA,
   TeacherRatingKey,
-  generateAssistantWeeklyRating,
 } from '@/data/lessonGrades';
-import { UZ_MONTHS, generateScheduleDays } from '@/data/scheduleCalendar';
-import { fetchDemoGrades, LiveGradeEntry, StudentRatingOfTeacher, submitTeacherRating } from '@/services/contentApi';
+import { UZ_MONTHS } from '@/data/scheduleCalendar';
+import {
+  AssistantRatingValues,
+  fetchAssistantRatings,
+  fetchDemoGrades,
+  LiveGradeEntry,
+  StudentRatingOfTeacher,
+  submitAssistantRating as submitAssistantRatingApi,
+  submitTeacherRating,
+} from '@/services/contentApi';
+
+// 40-vazifa: haqiqiy taqvim haftasi (Dushanbadan boshlab) — "eng so'nggi
+// TO'LIQ tugagan hafta" doim joriy haftadan oldingi hafta hisoblanadi,
+// bugun haftaning qaysi kuni bo'lishidan qat'i nazar (aniq, chalkashliksiz).
+function getMonday(d: Date): Date {
+  const day = d.getDay(); // 0=Yakshanba..6=Shanba
+  const diff = day === 0 ? 6 : day - 1;
+  const monday = new Date(d);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(d.getDate() - diff);
+  return monday;
+}
+
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 function formatShortDate(d: Date): string {
   return `${d.getDate()}-${UZ_MONTHS[d.getMonth()].toLowerCase()}`;
@@ -134,27 +156,40 @@ export default function GradesScreen() {
     });
   };
 
-  const [scheduleDays] = useState(() => generateScheduleDays());
-  const completedSundays = useMemo(
-    () => scheduleDays.filter((d) => d.type === 'bonus' && d.isPast).sort((a, b) => b.date.getTime() - a.date.getTime()),
-    [scheduleDays]
-  );
-  const pendingWeekId = completedSundays[0]?.dayNumber;
-  const [assistantRatings, setAssistantRatings] = useState<Record<number, Record<AssistantRatingKey, number>>>(() => {
-    const seeded: Record<number, Record<AssistantRatingKey, number>> = {};
-    completedSundays.slice(1).forEach((d) => {
-      seeded[d.dayNumber] = generateAssistantWeeklyRating(d.dayNumber);
-    });
-    return seeded;
-  });
-  const [assistantDraft, setAssistantDraft] = useState<Partial<Record<AssistantRatingKey, number>>>({});
+  // 40-vazifa: "eng so'nggi TO'LIQ tugagan hafta" — doim joriy haftadan
+  // oldingi hafta (Dushanba-Yakshanba), bugun qaysi kun bo'lishidan qat'iy
+  // nazar shu hafta har doim to'liq o'tib bo'lgan bo'ladi.
+  const pendingWeekKey = useMemo(() => {
+    const thisMonday = getMonday(new Date());
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(thisMonday.getDate() - 7);
+    return toDateKey(lastMonday);
+  }, []);
+
+  const [assistantRatings, setAssistantRatings] = useState<Record<string, AssistantRatingValues>>({});
+  const [assistantLoading, setAssistantLoading] = useState(true);
+  useEffect(() => {
+    fetchAssistantRatings()
+      .then(setAssistantRatings)
+      .finally(() => setAssistantLoading(false));
+  }, []);
+
+  const [assistantDraft, setAssistantDraft] = useState<Partial<Record<keyof AssistantRatingValues, number>>>({});
 
   const submitAssistantRating = () => {
-    if (pendingWeekId === undefined) return;
     const complete = ASSISTANT_RATING_CRITERIA.every((c) => assistantDraft[c.key]);
     if (!complete) return;
-    setAssistantRatings((prev) => ({ ...prev, [pendingWeekId]: assistantDraft as Record<AssistantRatingKey, number> }));
+    const ratings = assistantDraft as AssistantRatingValues;
+    setAssistantRatings((prev) => ({ ...prev, [pendingWeekKey]: ratings }));
     setAssistantDraft({});
+    submitAssistantRatingApi(pendingWeekKey, ratings).catch(() => {
+      // Yuborishda xatolik bo'lsa, mahalliy holatni bekor qilamiz — o'quvchi qayta urinib ko'rishi mumkin.
+      setAssistantRatings((prev) => {
+        const next = { ...prev };
+        delete next[pendingWeekKey];
+        return next;
+      });
+    });
   };
 
   return (
@@ -276,7 +311,7 @@ export default function GradesScreen() {
         <Text style={styles.sectionTitle}>Yordamchi ustozni haftalik baholash</Text>
         <Text style={styles.sectionSubtitle}>Har yakshanba, hafta yakunlangach, yordamchi ustozingizni baholaysiz.</Text>
 
-        {pendingWeekId !== undefined && !assistantRatings[pendingWeekId] && (
+        {!assistantLoading && !assistantRatings[pendingWeekKey] && (
           <Card style={styles.lessonCard}>
             <Text style={styles.rateTeacherTitle}>Bu haftalik ishlash uchun baholang</Text>
             {ASSISTANT_RATING_CRITERIA.map((c) => (
@@ -295,15 +330,19 @@ export default function GradesScreen() {
           </Card>
         )}
 
-        {completedSundays.map((week) => {
-          const rating = assistantRatings[week.dayNumber];
-          if (!rating) return null;
-          const weekStart = new Date(week.date);
-          weekStart.setDate(weekStart.getDate() - 6);
+        {Object.keys(assistantRatings)
+          .sort()
+          .reverse()
+          .map((weekKey) => {
+          const rating = assistantRatings[weekKey];
+          const [wy, wm, wd] = weekKey.split('-').map(Number);
+          const weekStart = new Date(wy, wm - 1, wd);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
           return (
-            <Card key={week.dayNumber} style={styles.lessonCard}>
+            <Card key={weekKey} style={styles.lessonCard}>
               <Text style={styles.lessonDate}>
-                {formatShortDate(weekStart)} — {formatShortDate(week.date)}
+                {formatShortDate(weekStart)} — {formatShortDate(weekEnd)}
               </Text>
               <View style={{ marginTop: 10, gap: 8 }}>
                 {ASSISTANT_RATING_CRITERIA.map((c) => (

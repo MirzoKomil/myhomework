@@ -1,5 +1,6 @@
 const express = require('express');
-const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
+getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -56,6 +57,32 @@ router.post('/demo-grades/rate-teacher', studentAuthOptional, async (req, res) =
         res.json({ ok: true });
     } catch (err) {
         console.error('POST /api/state/demo-grades/rate-teacher', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 40-vazifa: o'quvchining yordamchi ustozni haftalik baholashi — haqiqiy,
+// serverda saqlanadigan tarix. StudentId har doim demoStudentId'dan olinadi.
+router.get('/demo-assistant-ratings', studentAuthOptional, async (req, res) => {
+    try {
+        const ratings = await getDemoStudentAssistantRatings(req.studentId);
+        res.json({ ratings });
+    } catch (err) {
+        console.error('GET /api/state/demo-assistant-ratings', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/demo-assistant-ratings', studentAuthOptional, async (req, res) => {
+    try {
+        const { weekKey, ratings } = req.body || {};
+        if (!weekKey || !ratings || typeof ratings !== 'object') {
+            return res.status(400).json({ error: "Hafta va baholar yuborilishi shart" });
+        }
+        const saved = await submitDemoStudentAssistantRating(weekKey, ratings, req.studentId);
+        res.json({ ok: true, ratings: saved });
+    } catch (err) {
+        console.error('POST /api/state/demo-assistant-ratings', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });

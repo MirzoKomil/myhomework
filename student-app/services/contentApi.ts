@@ -22,6 +22,13 @@ const DEMO_GRADES_API_BASE =
     ? '/api/state/demo-grades'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-grades';
 
+// 40-vazifa: "Yordamchi ustozni haftalik baholash" — haqiqiy, serverda
+// saqlanadigan tarix.
+const DEMO_ASSISTANT_RATINGS_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-assistant-ratings'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-assistant-ratings';
+
 const DEMO_SCHEDULE_API_BASE =
   Platform.OS === 'web'
     ? '/api/state/demo-schedule'
@@ -319,6 +326,30 @@ export async function submitTeacherRating(date: string, ratings: StudentRatingOf
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date, ratings }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Xatolik' }));
+    throw new Error(err.error || 'Xatolik');
+  }
+}
+
+export type AssistantRatingValues = { contact: number; speed: number; help: number; motivation: number; overall: number };
+
+// 40-vazifa: o'quvchining yordamchi ustozini har hafta baholashi — haqiqiy,
+// serverda saqlanadigan tarix (avval mahalliy holatda, ilova qayta
+// ochilganda yo'qoladigan/hech qachon saqlanmagan edi).
+export async function fetchAssistantRatings(): Promise<Record<string, AssistantRatingValues>> {
+  const r = await authedFetch(DEMO_ASSISTANT_RATINGS_API_BASE);
+  if (!r.ok) return {};
+  const data = await r.json();
+  return data?.ratings && typeof data.ratings === 'object' ? data.ratings : {};
+}
+
+export async function submitAssistantRating(weekKey: string, ratings: AssistantRatingValues): Promise<void> {
+  const r = await authedFetch(DEMO_ASSISTANT_RATINGS_API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ weekKey, ratings }),
   });
   if (!r.ok) {
     const err = await r.json().catch(() => ({ error: 'Xatolik' }));

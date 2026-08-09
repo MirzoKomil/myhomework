@@ -1267,7 +1267,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory' || key === 'assistantWeeklyRatings') ? {} : [];
     }
     return row.data;
 }
@@ -1324,6 +1324,39 @@ async function submitDemoStudentTeacherRating(date, ratings, studentId) {
     await tx(async (client) => {
         await saveJsonData(client, 'liveGrades', liveGrades);
     });
+}
+
+const ASSISTANT_RATING_KEYS = ['contact', 'speed', 'help', 'motivation', 'overall'];
+
+// 40-vazifa: "Yordamchi ustozni haftalik baholash" bo'limi ilgari to'liq
+// o'ylab topilgan (sinov uchun tasodifiy, hafta raqamidan hosil qilingan)
+// tarixni ko'rsatardi, yangi yuborilgan baho esa hech qachon serverga
+// saqlanmasdi (faqat mahalliy holatda, ilova qayta ochilganda yo'qolib
+// ketardi). Endi haqiqiy o'quvchi uchun (assistantWeeklyRatings json_data
+// kaliti: { [studentId]: { "YYYY-MM-DD" (hafta Dushanbasi): {...} } }).
+async function getDemoStudentAssistantRatings(studentId) {
+    const demoStudentId = await resolveStudentId(studentId);
+    if (!demoStudentId) return {};
+    const all = await getJsonData('assistantWeeklyRatings');
+    return all[demoStudentId] || {};
+}
+
+async function submitDemoStudentAssistantRating(weekKey, ratings, studentId) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(weekKey || ''))) throw new Error("Noto'g'ri hafta");
+    if (!ASSISTANT_RATING_KEYS.every((k) => Number.isFinite(Number(ratings?.[k])) && ratings[k] >= 1 && ratings[k] <= 5)) {
+        throw new Error("Barcha mezonlar bo'yicha 1-5 baho kerak");
+    }
+    const demoStudentId = await resolveStudentId(studentId);
+    if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");
+    const all = await getJsonData('assistantWeeklyRatings');
+    if (!all[demoStudentId]) all[demoStudentId] = {};
+    const clean = {};
+    ASSISTANT_RATING_KEYS.forEach((k) => { clean[k] = Number(ratings[k]); });
+    all[demoStudentId][weekKey] = clean;
+    await tx(async (client) => {
+        await saveJsonData(client, 'assistantWeeklyRatings', all);
+    });
+    return clean;
 }
 
 // Tashkentda (UTC+5, DST yo'q) berilgan haftalik qolip (1=MWF, 2=TTS) va
@@ -3337,6 +3370,7 @@ module.exports = {
     findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
     getHrEmployeesData, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
+    getDemoStudentAssistantRatings, submitDemoStudentAssistantRating,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
     getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage,
