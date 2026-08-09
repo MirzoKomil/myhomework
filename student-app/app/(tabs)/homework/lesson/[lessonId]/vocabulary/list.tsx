@@ -44,7 +44,7 @@ export default function VocabularyListScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>{content.vocabulary.length} {t('hw_cat_vocab_sub_suffix')}</Text>
         {content.vocabulary.map((word) => (
-          <Pressable key={word.id} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
+          <Pressable key={word.id} onPress={() => Speech.speak(word.english, { language: content.lang === 'russian' ? 'ru-RU' : 'en-US', rate: 0.9 })}>
             <Card style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.iconWrap}>

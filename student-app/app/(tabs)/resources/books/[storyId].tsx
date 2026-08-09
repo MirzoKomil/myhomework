@@ -12,7 +12,8 @@ import { BOOK_LEVEL_LABELS, BOOK_STORIES, BookStory } from '@/data/bookStories';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function BookStoryScreen() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
+  const speechLang = courseLang === 'russian' ? 'ru-RU' : 'en-US';
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
   const [allStories, setAllStories] = useState<(BookStory & { coverUrl?: string })[]>(BOOK_STORIES);
   const story = allStories.find((s) => s.id === storyId);
@@ -47,7 +48,7 @@ export default function BookStoryScreen() {
     const p = story.paragraphs[index];
     setPlayingIndex(index);
     Speech.speak(p.en, {
-      language: 'en-US',
+      language: speechLang,
       rate: 0.95,
       onDone: () => {
         setPlayingIndex((cur) => (cur === index ? null : cur));

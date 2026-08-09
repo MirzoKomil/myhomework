@@ -20,7 +20,8 @@ function formatTime(ms: number): string {
 }
 
 export default function PronunciationTopicScreen() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
+  const speechLang = courseLang === 'russian' ? 'ru-RU' : 'en-US';
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [topics, setTopics] = useState<(PronunciationTopic & { audioUrl?: string })[]>(PRONUNCIATION_TOPICS);
   const topic = topics.find((t) => t.id === topicId);
@@ -139,7 +140,7 @@ export default function PronunciationTopicScreen() {
   const speakExample = (index: number, text: string) => {
     setSpeakingWord(index);
     Speech.speak(text, {
-      language: 'en-US',
+      language: speechLang,
       rate: 0.9,
       onDone: () => setSpeakingWord((cur) => (cur === index ? null : cur)),
       onStopped: () => setSpeakingWord((cur) => (cur === index ? null : cur)),

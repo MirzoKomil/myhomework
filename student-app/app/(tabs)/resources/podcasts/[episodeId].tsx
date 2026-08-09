@@ -14,7 +14,8 @@ import { PODCAST_EPISODES, PODCAST_LEVEL_LABELS, PodcastEpisode } from '@/data/p
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function PodcastEpisodeScreen() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
+  const speechLang = courseLang === 'russian' ? 'ru-RU' : 'en-US';
   const { episodeId } = useLocalSearchParams<{ episodeId: string }>();
   const [allEpisodes, setAllEpisodes] = useState<(PodcastEpisode & { coverUrl?: string; audioUrl?: string })[]>(PODCAST_EPISODES);
   const episode = allEpisodes.find((e) => e.id === episodeId);
@@ -53,7 +54,7 @@ export default function PodcastEpisodeScreen() {
     const line = episode.lines[index];
     setPlayingIndex(index);
     Speech.speak(line.en, {
-      language: 'en-US',
+      language: speechLang,
       rate: 0.95,
       onDone: () => {
         setPlayingIndex((cur) => (cur === index ? null : cur));

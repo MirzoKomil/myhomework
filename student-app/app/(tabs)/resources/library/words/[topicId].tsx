@@ -11,7 +11,8 @@ import { VOCAB_TOPICS, VocabTopic } from '@/data/vocabularyLibrary';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function WordsTopicScreen() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
+  const speechLang = courseLang === 'russian' ? 'ru-RU' : 'en-US';
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [allTopics, setAllTopics] = useState<VocabTopic[]>(VOCAB_TOPICS);
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
@@ -37,7 +38,7 @@ export default function WordsTopicScreen() {
 
   const handlePress = (index: number, en: string) => {
     setRevealed((prev) => ({ ...prev, [index]: true }));
-    Speech.speak(en, { language: 'en-US', rate: 0.9 });
+    Speech.speak(en, { language: speechLang, rate: 0.9 });
   };
 
   return (

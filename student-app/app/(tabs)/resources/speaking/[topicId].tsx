@@ -12,7 +12,8 @@ import { SPEAKING_TOPICS, SpeakingTopic } from '@/data/speakingTopics';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function SpeakingTopicScreen() {
-  const { t } = useLang();
+  const { t, courseLang } = useLang();
+  const speechLang = courseLang === 'russian' ? 'ru-RU' : 'en-US';
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [allTopics, setAllTopics] = useState<(SpeakingTopic & { coverUrl?: string })[]>(SPEAKING_TOPICS);
   const topic = allTopics.find((t) => t.id === topicId);
@@ -47,7 +48,7 @@ export default function SpeakingTopicScreen() {
     const line = topic.lines[index];
     setPlayingIndex(index);
     Speech.speak(line.en, {
-      language: 'en-US',
+      language: speechLang,
       rate: 0.95,
       onDone: () => {
         setPlayingIndex((cur) => (cur === index ? null : cur));

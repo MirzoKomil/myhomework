@@ -133,9 +133,9 @@ export default function VocabularyPracticeScreen() {
         <View style={[styles.progressFill, { width: `${(completedSteps / totalSteps) * 100}%` }]} />
       </View>
 
-      {round === 0 && <ChooseTranslationStep key={current.id} word={current} allWords={words} onDone={advance} />}
+      {round === 0 && <ChooseTranslationStep key={current.id} word={current} allWords={words} lang={content?.lang ?? 'english'} onDone={advance} />}
       {round === 1 && <ConstructWordStep key={current.id} word={current} onDone={advance} />}
-      {round === 2 && <PronounceWordStep key={current.id} word={current} onDone={advance} />}
+      {round === 2 && <PronounceWordStep key={current.id} word={current} lang={content?.lang ?? 'english'} onDone={advance} />}
     </SafeAreaView>
   );
 }
@@ -171,8 +171,9 @@ function FinishedScreen({
   );
 }
 
-function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; allWords: VocabWord[]; onDone: (correct: boolean) => void }) {
+function ChooseTranslationStep({ word, allWords, lang, onDone }: { word: VocabWord; allWords: VocabWord[]; lang: 'english' | 'russian'; onDone: (correct: boolean) => void }) {
   const { t } = useLang();
+  const speechLang = lang === 'russian' ? 'ru-RU' : 'en-US';
   const options = useMemo(
     () => shuffle([word.translation, ...pickDistractors(allWords, word, 3)]),
     [word, allWords]
@@ -184,7 +185,7 @@ function ChooseTranslationStep({ word, allWords, onDone }: { word: VocabWord; al
   return (
     <View style={styles.stepContent}>
       <Text style={styles.instruction}>{t('vp_choose_translation')}</Text>
-      <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
+      <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: speechLang, rate: 0.9 })}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
         <View style={styles.wordEnglishRow}>
           <Text style={styles.wordEnglish}>{word.english}</Text>
@@ -323,8 +324,9 @@ type PronounceStatus = 'idle' | 'listening' | 'correct' | 'wrong' | 'unsupported
 const AUTO_STOP_MS = 4500;
 const HANG_FAILSAFE_MS = 8000;
 
-function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct: boolean) => void }) {
+function PronounceWordStep({ word, lang, onDone }: { word: VocabWord; lang: 'english' | 'russian'; onDone: (correct: boolean) => void }) {
   const { t } = useLang();
+  const speechLang = lang === 'russian' ? 'ru-RU' : 'en-US';
   const [status, setStatus] = useState<PronounceStatus>('idle');
   const [heardText, setHeardText] = useState('');
   const recognitionRef = useRef<any>(null);
@@ -360,7 +362,7 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
       return;
     }
     const recognition = new SpeechRecognitionCtor();
-    recognition.lang = 'en-US';
+    recognition.lang = speechLang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 3;
     recognition.onresult = (event: any) => {
@@ -406,7 +408,7 @@ function PronounceWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
   return (
     <View style={styles.stepContent}>
       <Text style={styles.instruction}>{t('vp_pronounce_word')}</Text>
-      <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: 'en-US', rate: 0.9 })}>
+      <Pressable style={styles.wordCard} onPress={() => Speech.speak(word.english, { language: speechLang, rate: 0.9 })}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
         <View style={styles.wordEnglishRow}>
           <Text style={styles.wordEnglish}>{word.english}</Text>

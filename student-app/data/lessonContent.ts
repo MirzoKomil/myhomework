@@ -66,6 +66,9 @@ export type LessonContent = {
   dayType: LessonDayType;
   unitTitle: string;
   konspekt: string;
+  // 33-vazifa: so'z/ibora ovoz bilan o'qib berilganda to'g'ri talaffuz
+  // (aksent) tanlash uchun — darsning qaysi til kursiga tegishli ekani.
+  lang: 'english' | 'russian';
   slides: SlideContent[];
   vocabulary: VocabWord[];
   grammarBlanks: GrammarBlank[];
@@ -440,6 +443,7 @@ export function getBonusLessonContent(bonusIndex: number): LessonContent {
     dayType: 'bonus',
     unitTitle: `${category.emoji} ${category.label}`,
     konspekt: category.konspekt,
+    lang: 'english',
     slides: [],
     vocabulary: pickWindow(VOCAB_POOL, offset, 10),
     grammarBlanks: [],
@@ -481,6 +485,7 @@ export function getLessonContent(
       dayType === 'grammar'
         ? "Ushbu darsda asosiy grammatik qoida video orqali tushuntiriladi. Video tagida qisqacha konspekt joylashgan — asosiy formula va misollarni shu yerdan takrorlashingiz mumkin."
         : "Ushbu live darsda o'qituvchi tomonidan tayyorlangan slaydlar asosida suhbat ko'nikmalari mashq qilinadi.",
+    lang,
     slides: !isRussian && dayType === 'speaking' ? buildSlides(offset) : [],
     vocabulary: isRussian ? (dayIndex === 0 ? RU_LESSON1_VOCAB : []) : pickWindow(VOCAB_POOL, offset, 25),
     grammarBlanks: isRussian

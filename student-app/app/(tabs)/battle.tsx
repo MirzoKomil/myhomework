@@ -12,6 +12,7 @@ import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
+import { useLang } from '@/i18n/LanguageContext';
 import {
   BATTLE_ROUNDS,
   BATTLE_ROUND_SECONDS,
@@ -60,6 +61,8 @@ function buildBattleWords(vocab: { english: string; translation: string }[]): Ba
 }
 
 export default function BattleScreen() {
+  const { courseLang } = useLang();
+  const speechLang = courseLang === 'russian' ? 'ru-RU' : 'en-US';
   const coins = useCoins();
   const lightning = useLightning();
   const [showCoinInfo, setShowCoinInfo] = useState(false);
@@ -134,7 +137,7 @@ export default function BattleScreen() {
     setRoundWinner(null);
     setTimeLeft(BATTLE_ROUND_SECONDS);
 
-    Speech.speak(currentWord.word, { language: 'en-US', rate: 0.9 });
+    Speech.speak(currentWord.word, { language: speechLang, rate: 0.9 });
 
     tickRef.current = setInterval(() => {
       setTimeLeft((t) => Math.max(0, t - 1));
@@ -278,7 +281,7 @@ export default function BattleScreen() {
 
           <Pressable
             style={styles.wordCard}
-            onPress={() => Speech.speak(currentWord.word, { language: 'en-US', rate: 0.9 })}>
+            onPress={() => Speech.speak(currentWord.word, { language: speechLang, rate: 0.9 })}>
             <Ionicons name="volume-high" size={28} color={theme.colors.purple} />
             <Text style={styles.wordText}>{currentWord.word}</Text>
             <Text style={styles.wordHint}>Qayta eshitish uchun bosing</Text>
