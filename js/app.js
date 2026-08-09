@@ -10518,6 +10518,27 @@ function renderMarketingTargetPanel() {
     const r = data.reklama;
     const langKey = _marketingLang === 'russian' ? 'russian' : 'english';
 
+    // 26-vazifa: yuqoridagi "Reklama ko'rsatkichlari" kartochkalarining Fakt
+    // qismlari endi qattiq yozilgan TARGET_DATA'dan emas, balki haqiqiy
+    // ma'lumotlardan hisoblanadi: Budget — Targetolog kun-ma-kun kiritgan
+    // (23-vazifa) summalarning shu oydagi yig'indisi; Lid soni — shu oyda
+    // qabul qilingan BARCHA Target manbali lidlar (til, sifat va
+    // menejerdan qat'i nazar); Sifatli lid soni — shu oydagi barcha
+    // menejarlarning "sifatli" lidlari yig'indisi (Xodimlar natijalari
+    // jadvalidagi bilan bir xil mantiq). Qolganlari shulardan hosila.
+    const allLeadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const langLeads = allLeadsData[langKey] || [];
+    const dailyAdSpendAll = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
+    const dailyAdSpendMonth = dailyAdSpendAll[_targetMonth] || {};
+
+    const budgetFaktUSD = Object.values(dailyAdSpendMonth).reduce((sum, e) => sum + (Number(e?.budget) || 0), 0);
+    const allTargetMonthLeads = langLeads.filter(l => getLeadKind(l) === 'target' && _tmLeadCreatedInMonth(l, _targetMonth));
+    const lidSoniFakt = allTargetMonthLeads.length;
+    const kvalLidSoniFakt = allTargetMonthLeads.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
+    const lidNarxiFakt = (budgetFaktUSD && lidSoniFakt) ? budgetFaktUSD / lidSoniFakt : null;
+    const kvalLidNarxiFakt = (budgetFaktUSD && kvalLidSoniFakt) ? budgetFaktUSD / kvalLidSoniFakt : null;
+    const lidKvalPctFakt = (lidSoniFakt > 0) ? +(kvalLidSoniFakt / lidSoniFakt * 100).toFixed(1) : null;
+
     function pctColor(pct) {
         if (!pct) return '';
         if (pct >= 90) return 'color:#10b981';
@@ -10565,12 +10586,12 @@ function renderMarketingTargetPanel() {
 
     // Reklama KPI cards
     const reklamaCards = [
-        { label: 'Budget (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(r.budget.fakt), pct: null, icon: '💰' },
-        { label: 'Lid soni', plan: planLidSoni ? planLidSoni.toLocaleString('uz-UZ') : '—', fakt: r.lidSoni.fakt || '—', pct: (planLidSoni && r.lidSoni.fakt) ? (r.lidSoni.fakt / planLidSoni * 100) : null, icon: '📋' },
-        { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(r.lidNarxi.fakt), pct: null, icon: '💵' },
-        { label: 'Sifatli lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: r.kvalLid.fakt || '—', pct: (planKvalLidSoni && r.kvalLid.fakt) ? (r.kvalLid.fakt / planKvalLidSoni * 100) : null, icon: '✅' },
-        { label: 'Sifatli lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(r.kvalNarxi.fakt), pct: null, icon: '🏷️' },
-        { label: 'Lid → Sifatli lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: r.lidKval.fakt ? r.lidKval.fakt.toFixed(1) + '%' : '—', pct: (r.lidKval.fakt && planKvalPct) ? (r.lidKval.fakt / planKvalPct * 100) : null, icon: '📊' },
+        { label: 'Budget (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(budgetFaktUSD), pct: null, icon: '💰' },
+        { label: 'Lid soni', plan: planLidSoni ? planLidSoni.toLocaleString('uz-UZ') : '—', fakt: lidSoniFakt || '—', pct: (planLidSoni && lidSoniFakt) ? (lidSoniFakt / planLidSoni * 100) : null, icon: '📋' },
+        { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(lidNarxiFakt), pct: null, icon: '💵' },
+        { label: 'Sifatli lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: kvalLidSoniFakt || '—', pct: (planKvalLidSoni && kvalLidSoniFakt) ? (kvalLidSoniFakt / planKvalLidSoni * 100) : null, icon: '✅' },
+        { label: 'Sifatli lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(kvalLidNarxiFakt), pct: null, icon: '🏷️' },
+        { label: 'Lid → Sifatli lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: lidKvalPctFakt != null ? lidKvalPctFakt.toFixed(1) + '%' : '—', pct: (lidKvalPctFakt && planKvalPct) ? (lidKvalPctFakt / planKvalPct * 100) : null, icon: '📊' },
     ].map(c => {
         const pc = c.pct ? c.pct.toFixed(1) : null;
         const barHtml = c.pct ? progressBar(c.pct) : '';
@@ -10590,8 +10611,8 @@ function renderMarketingTargetPanel() {
     // 12-vazifa: Sotuv bo'limi bilan jonli integratsiya - joriy til
     // yo'nalishidagi HAQIQIY sotuv menejerlari, ism-familiya tartibida
     // (raqamlanmasdan), har birining shu oydagi haqiqiy natijalari bilan.
-    const allLeadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const langLeads = allLeadsData[langKey] || [];
+    // (allLeadsData/langLeads yuqorida, 26-vazifa KPI hisobi uchun ham
+    // ishlatilgani sababli, endi shu funksiya boshida bir marta olinadi.)
     // 15-vazifa: faqat login/kabineti bor, ya'ni haqiqatan ishlayotgan
     // sotuv menejerlari ro'yxatga kiritiladi.
     const tmManagers = getSalesManagers(langKey)
@@ -10667,9 +10688,9 @@ function renderMarketingTargetPanel() {
 
     // 23-vazifa: Reklamaga sarflangan kunlik byudjet ($) va shu kuni kelgan
     // lidlar soni — Targetolog tomonidan qo'lda, kun-ma-kun kiritiladi
-    // (qalam belgisi orqali), doimiy saqlanadi.
-    const dailyAdSpendAll = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
-    const dailyAdSpendMonth = dailyAdSpendAll[_targetMonth] || {};
+    // (qalam belgisi orqali), doimiy saqlanadi. (dailyAdSpendAll/Month
+    // yuqorida, 26-vazifa Budget Fakt hisobi uchun ham kerak bo'lgani
+    // sabab, endi shu funksiya boshida bir marta olinadi.)
     const dailyAdSpendHtml = `
         <div class="tm-table-wrap">
             <table class="tm-table">
