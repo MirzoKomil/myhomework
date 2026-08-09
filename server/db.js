@@ -608,6 +608,17 @@ async function getHrEmployeesData() {
     }));
 }
 
+async function getHrEmployeeById(id) {
+    if (!id) return null;
+    return q1('SELECT id, name, login, phone FROM hr_employees WHERE id = $1', [id]);
+}
+
+async function setHrEmployeeLogin(id, login) {
+    if (!id) return false;
+    const result = await pool.query('UPDATE hr_employees SET login = $2 WHERE id = $1', [id, login]);
+    return result.rowCount > 0;
+}
+
 // Har bir speaking (juft) darsning "attendanceTaken" holati har o'qishda
 // real liveGrades'dan qayta hisoblanadi — CRM'da saqlangan qiymatga hech
 // qachon ishonilmaydi (admin uni qo'lda "soxta" o'zgartira olmasligi kerak,
@@ -3085,13 +3096,27 @@ async function insertLead({ name, phone, email, language, source, externalId, da
 // ── Users ────────────────────────────────────────────────────────────────────
 
 async function findUserByEmail(email) {
-    return q1(
+    const login = String(email || '').trim();
+    const inputDigits = /^[+\d\s().-]+$/.test(login) ? login.replace(/\D/g, '') : '';
+    const phoneDigits = inputDigits.length >= 9 ? inputDigits.slice(-9) : '';
+    const whereClause = phoneDigits
+        ? `u.email ~ '^[+0-9 ().-]+$'
+           AND RIGHT(REGEXP_REPLACE(u.email, '[^0-9]', '', 'g'), 9) = $1`
+        : `LOWER(TRIM(u.email)) = LOWER($1)`;
+    const matches = await q(
         `SELECT u.*, link.manager_id AS sales_manager_id
          FROM users u
          LEFT JOIN user_sales_manager_links link ON link.user_id = u.id
-         WHERE u.email = $1`,
-        [email]
+         WHERE ${whereClause}
+         ORDER BY u.created_at, u.id`,
+        [phoneDigits || login]
     );
+    if (matches.length > 1) {
+        const error = new Error('Bu login bir nechta akkauntga bog\'langan. Admin dublikatlarni tekshirishi kerak.');
+        error.code = 'AMBIGUOUS_LOGIN';
+        throw error;
+    }
+    return matches[0] || null;
 }
 
 async function findUserById(id) {
@@ -3121,6 +3146,42 @@ async function createUser({ name, email, passwordHash, role }) {
     return findUserById(id);
 }
 
+// Yangi xodim va uning kirish hisobini bitta tranzaksiyada yaratadi.
+// Shunda users yozuvi yaralib, hr_employees yozuvi saqlanmay qolishi (yoki
+// aksincha) mumkin emas.
+async function createHrUserAccount({ employee, login, passwordHash, userRole, salesManagerId }) {
+    const accountId = randomUUID();
+    await tx(async client => {
+        await client.query(
+            'INSERT INTO users (id, name, email, password_hash, role) VALUES ($1,$2,$3,$4,$5)',
+            [accountId, employee.name, login, passwordHash, userRole]
+        );
+
+        if (userRole === 'sales_manager' && String(salesManagerId || '').trim()) {
+            await client.query(
+                `INSERT INTO user_sales_manager_links (user_id, manager_id)
+                 VALUES ($1, $2)`,
+                [accountId, String(salesManagerId).trim()]
+            );
+        }
+
+        await client.query(
+            `INSERT INTO hr_employees
+                (id, name, first_name, last_name, role, login, phone, email,
+                 department, status, join_date, gender, birth_date, start_date,
+                 card_number, passport_series, pinfl, address, lang, trial_group_link)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+            [employee.id, employee.name, employee.firstName || '', employee.lastName || '',
+             employee.role || 'employee', login, employee.phone || '', employee.email || '',
+             employee.department || '', employee.status || 'active', employee.joinDate || '',
+             employee.gender || '', employee.birthDate || '', employee.startDate || '',
+             employee.cardNumber || '', employee.passportSeries || '', employee.pinfl || '',
+             employee.address || '', employee.lang || 'english', employee.trialGroupLink || '']
+        );
+    });
+    return findUserById(accountId);
+}
+
 async function updateUser(id, fields) {
     const allowed = ['name', 'email', 'phone', 'bio', 'location', 'avatar', 'role'];
     const sets = [];
@@ -3140,6 +3201,56 @@ async function updateUser(id, fields) {
     vals.push(id);
     await pool.query(`UPDATE users SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
     return findUserById(id);
+}
+
+// Mavjud HR xodimining login/parolini bitta tranzaksiyada yangilaydi.
+// Users yangilanib, HR login eski holatda qolib ketishi mumkin emas.
+async function resetHrUserAccount({ userId, employeeId, name, login, passwordHash, role, salesManagerId }) {
+    const accountId = userId || randomUUID();
+    await tx(async client => {
+        const employeeResult = await client.query(
+            'SELECT id FROM hr_employees WHERE id = $1 FOR UPDATE',
+            [employeeId]
+        );
+        if (employeeResult.rowCount !== 1) {
+            const error = new Error('Xodim yozuvi topilmadi');
+            error.code = 'HR_EMPLOYEE_NOT_FOUND';
+            throw error;
+        }
+
+        if (userId) {
+            const userResult = await client.query(
+                `UPDATE users
+                 SET name = $2, email = $3, password_hash = $4, role = $5
+                 WHERE id = $1`,
+                [accountId, name, login, passwordHash, role]
+            );
+            if (userResult.rowCount !== 1) throw new Error('Kirish hisobi topilmadi');
+        } else {
+            await client.query(
+                'INSERT INTO users (id, name, email, password_hash, role) VALUES ($1,$2,$3,$4,$5)',
+                [accountId, name, login, passwordHash, role]
+            );
+        }
+
+        if (role === 'sales_manager' && String(salesManagerId || '').trim()) {
+            await client.query(
+                `INSERT INTO user_sales_manager_links (user_id, manager_id)
+                 VALUES ($1, $2)
+                 ON CONFLICT (user_id) DO UPDATE SET manager_id = EXCLUDED.manager_id`,
+                [accountId, String(salesManagerId).trim()]
+            );
+        } else {
+            await client.query('DELETE FROM user_sales_manager_links WHERE user_id = $1', [accountId]);
+        }
+
+        const hrResult = await client.query(
+            'UPDATE hr_employees SET login = $2 WHERE id = $1',
+            [employeeId, login]
+        );
+        if (hrResult.rowCount !== 1) throw new Error('Xodim logini yangilanmadi');
+    });
+    return findUserById(accountId);
 }
 
 function publicUser(user) {
@@ -3367,8 +3478,8 @@ module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState,
-    findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
-    getHrEmployeesData, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
+    findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
+    getHrEmployeesData, getHrEmployeeById, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
     getDemoStudentAssistantRatings, submitDemoStudentAssistantRating,
     getDemoStudentMessages, sendDemoStudentMessage,

@@ -3,10 +3,11 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 const {
-    findUserByEmail, findUserById, listUsersByRoles, createUser, updateUser, publicUser,
+    findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     createSession, getSessionsByUserId, getSessionById,
     deleteSession, deleteSessionByJti, deleteOtherSessions, DATA_DIR,
-    findStudentByLogin, getStudentPublicId, setSalesManagerUserLink
+    findStudentByLogin, getStudentPublicId, setSalesManagerUserLink,
+    getHrEmployeeById, setHrEmployeeLogin
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
 
@@ -21,27 +22,79 @@ router.post('/create-user', authRequired, async (req, res) => {
     try {
         if (req.user.role !== 'admin')
             return res.status(403).json({ error: 'Faqat admin foydalanuvchi yarata oladi' });
-        const { name, login, password, role, salesManagerId } = req.body || {};
+        const { name, login, password, role, salesManagerId, previousLogin, employeeId, employee, operation } = req.body || {};
         if (!name?.trim() || !login?.trim() || !password)
             return res.status(400).json({ error: 'Ism, login va parol talab qilinadi' });
         if (String(password).length < 4)
             return res.status(400).json({ error: 'Parol kamida 4 ta belgidan iborat bo\'lishi kerak' });
         const validRoles = ['admin', 'teacher', 'sales_manager', 'rop', 'employee', 'targetolog'];
         const userRole = validRoles.includes(role) ? role : 'employee';
-        const existing = await findUserByEmail(login.trim());
+        const targetLogin = login.trim();
+        const existingEmployee = employeeId ? await getHrEmployeeById(employeeId) : null;
+        const oldLogin = String(existingEmployee?.login || previousLogin || '').trim();
+        const targetUser = await findUserByEmail(targetLogin);
+        const oldUser = oldLogin && oldLogin.toLowerCase() !== targetLogin.toLowerCase()
+            ? await findUserByEmail(oldLogin)
+            : null;
+        if (targetUser && oldUser && targetUser.id !== oldUser.id) {
+            return res.status(409).json({ error: 'Telefon-login boshqa akkauntga biriktirilgan' });
+        }
+        const existing = targetUser || oldUser;
+        if (operation === 'create' && existing) {
+            return res.status(409).json({ error: 'Bu telefon raqamiga kirish hisobi allaqachon yaratilgan' });
+        }
         if (existing) {
             if (existing.email === 'admin' && existing.role === 'admin')
                 return res.status(403).json({ error: 'Asosiy admin akkauntini bu yo\'l bilan o\'zgartirib bo\'lmaydi' });
-            await updateUser(existing.id, { name: name.trim(), passwordHash: bcrypt.hashSync(String(password), 10), role: userRole });
+        }
+        const passwordHash = bcrypt.hashSync(String(password), 10);
+        if (operation === 'create') {
+            if (!employee?.id || !employee?.name?.trim()) {
+                return res.status(400).json({ error: 'Xodim ma\'lumotlari talab qilinadi' });
+            }
+            if (String(employee.login || '').trim() !== targetLogin) {
+                return res.status(400).json({ error: 'Xodim logini telefon-login bilan mos emas' });
+            }
+            const user = await createHrUserAccount({
+                employee: { ...employee, name: employee.name.trim(), login: targetLogin },
+                login: targetLogin,
+                passwordHash,
+                userRole,
+                salesManagerId
+            });
+            return res.status(201).json({ ok: true, user: publicUser(user) });
+        }
+        if (operation === 'reset') {
+            if (!employeeId) return res.status(400).json({ error: 'Xodim ID talab qilinadi' });
+            const user = await resetHrUserAccount({
+                userId: existing?.id,
+                employeeId,
+                name: name.trim(),
+                login: targetLogin,
+                passwordHash,
+                role: userRole,
+                salesManagerId
+            });
+            return res.json({ ok: true, user: publicUser(user) });
+        }
+        if (existing) {
+            await updateUser(existing.id, {
+                name: name.trim(), email: targetLogin,
+                passwordHash, role: userRole
+            });
             if (userRole !== 'sales_manager') await setSalesManagerUserLink(existing.id, '');
             else if (salesManagerId !== undefined) await setSalesManagerUserLink(existing.id, salesManagerId);
+            if (employeeId) await setHrEmployeeLogin(employeeId, targetLogin);
             return res.json({ ok: true, user: publicUser(await findUserById(existing.id)) });
         }
-        const user = await createUser({ name: name.trim(), email: login.trim(), passwordHash: bcrypt.hashSync(String(password), 10), role: userRole });
+        const user = await createUser({ name: name.trim(), email: targetLogin, passwordHash, role: userRole });
         await setSalesManagerUserLink(user.id, userRole === 'sales_manager' ? salesManagerId : '');
+        if (employeeId) await setHrEmployeeLogin(employeeId, targetLogin);
         res.status(201).json({ ok: true, user: publicUser(await findUserById(user.id)) });
     } catch (err) {
         console.error('POST /create-user', err);
+        if (err.code === 'AMBIGUOUS_LOGIN') return res.status(409).json({ error: err.message });
+        if (err.code === 'HR_EMPLOYEE_NOT_FOUND') return res.status(404).json({ error: err.message });
         res.status(500).json({ error: 'Server xatoligi' });
     }
 });
@@ -105,6 +158,7 @@ router.post('/login', async (req, res) => {
         res.json({ token, user: publicUser(user) });
     } catch (err) {
         console.error('POST /login', err);
+        if (err.code === 'AMBIGUOUS_LOGIN') return res.status(409).json({ error: err.message });
         res.status(500).json({ error: 'Server xatoligi' });
     }
 });

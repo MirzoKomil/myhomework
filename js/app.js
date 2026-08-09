@@ -15012,6 +15012,18 @@ function formatPhoneDisplay(phone) {
     return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8, 10)} ${digits.slice(10, 12)}`;
 }
 
+// Xodim akkauntlari uchun yagona login formati. Admin ekranda telefonni
+// qanday yozishidan qat'i nazar (+998 95..., 95..., tire/qavs bilan), login
+// bir xil qiymatga aylanadi.
+function normalizeEmployeePhoneLogin(phone) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length === 9) return `+998${digits}`;
+    if (digits.length === 10 && digits.startsWith('0')) return `+998${digits.slice(1)}`;
+    if (digits.length === 12 && digits.startsWith('998')) return `+${digits}`;
+    return '';
+}
+
 // 24-ish: pul summasi maydonlariga yozayotganda har 3 xonadan keyin
 // vergul (,) bilan avtomatik ajratib boradi (masalan 500000 -> 500,000),
 // o'qishni osonlashtirish uchun. Saqlashda/o'qishda vergullar olib
@@ -19485,10 +19497,10 @@ function getHrEmployees() {
 
 function saveHrEmployees(list) {
     // Serverga saqlash (parolsiz — xavfsizlik)
-    const forServer = list.map(({ password, ...rest }) => rest);
-    setItem(STORAGE_KEYS.hrEmployees, forServer);
+    const sanitized = list.map(({ password, ...rest }) => rest);
+    setItem(STORAGE_KEYS.hrEmployees, sanitized);
     // localStorage ga ham yozamiz (migration support)
-    localStorage.setItem(HR_EMPLOYEES_KEY, JSON.stringify(list));
+    localStorage.setItem(HR_EMPLOYEES_KEY, JSON.stringify(sanitized));
 }
 
 function seedHrEmployees() {
@@ -19507,16 +19519,16 @@ function seedHrEmployees() {
     }
     // Default seed
     const seed = [
-        { id: 'hr1', name: 'Alisher Karimov', role: 'rop', phone: '+998 90 111 22 33', email: 'alisher@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-05-15', login: 'alisher', password: '1234' },
-        { id: 'hr2', name: 'Dilnoza Rashidova', role: 'sotuv-menejeri', phone: '+998 91 222 33 44', email: 'dilnoza@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-08-20', login: 'dilnoza', password: '1234' },
-        { id: 'hr3', name: 'Bobur Toshmatov', role: 'sotuv-menejeri', phone: '+998 93 333 44 55', email: 'bobur@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-01-10', login: 'bobur', password: '1234' },
-        { id: 'hr4', name: 'Nodira Saidova', role: 'oqituvchi', phone: '+998 94 444 55 66', email: 'nodira@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-02-01', login: 'nodira', password: '1234' },
-        { id: 'hr5', name: 'Sardor Umarov', role: 'oqituvchi', phone: '+998 95 555 66 77', email: 'sardor@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-09-15', login: 'sardor', password: '1234' },
-        { id: 'hr6', name: 'Zulfiya Abdullayeva', role: 'oqituvchi', phone: '+998 97 666 77 88', email: 'zulfiya@myhomework.uz', department: 'Akademik', status: 'inactive', joinDate: '2024-03-01', login: 'zulfiya', password: '1234' },
-        { id: 'hr7', name: 'Javohir Nazarov', role: 'yordamchi', phone: '+998 90 777 88 99', email: 'javohir@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-06-01', login: 'javohir', password: '1234' },
-        { id: 'hr8', name: 'Madina Xolmatova', role: 'yordamchi', phone: '+998 91 888 99 00', email: 'madina@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-07-15', login: 'madina', password: '1234' },
-        { id: 'hr9', name: 'Sherzod Mirzayev', role: 'rop', phone: '+998 93 999 00 11', email: 'sherzod@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2022-11-20', login: 'sherzod', password: '1234' },
-        { id: 'hr10', name: 'Kamola Ergasheva', role: 'sotuv-menejeri', phone: '+998 94 000 11 22', email: 'kamola@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-02-14', login: 'kamola', password: '1234' }
+        { id: 'hr1', name: 'Alisher Karimov', role: 'rop', phone: '+998 90 111 22 33', email: 'alisher@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-05-15', login: 'alisher' },
+        { id: 'hr2', name: 'Dilnoza Rashidova', role: 'sotuv-menejeri', phone: '+998 91 222 33 44', email: 'dilnoza@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2023-08-20', login: 'dilnoza' },
+        { id: 'hr3', name: 'Bobur Toshmatov', role: 'sotuv-menejeri', phone: '+998 93 333 44 55', email: 'bobur@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-01-10', login: 'bobur' },
+        { id: 'hr4', name: 'Nodira Saidova', role: 'oqituvchi', phone: '+998 94 444 55 66', email: 'nodira@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-02-01', login: 'nodira' },
+        { id: 'hr5', name: 'Sardor Umarov', role: 'oqituvchi', phone: '+998 95 555 66 77', email: 'sardor@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2023-09-15', login: 'sardor' },
+        { id: 'hr6', name: 'Zulfiya Abdullayeva', role: 'oqituvchi', phone: '+998 97 666 77 88', email: 'zulfiya@myhomework.uz', department: 'Akademik', status: 'inactive', joinDate: '2024-03-01', login: 'zulfiya' },
+        { id: 'hr7', name: 'Javohir Nazarov', role: 'yordamchi', phone: '+998 90 777 88 99', email: 'javohir@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-06-01', login: 'javohir' },
+        { id: 'hr8', name: 'Madina Xolmatova', role: 'yordamchi', phone: '+998 91 888 99 00', email: 'madina@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2024-07-15', login: 'madina' },
+        { id: 'hr9', name: 'Sherzod Mirzayev', role: 'rop', phone: '+998 93 999 00 11', email: 'sherzod@myhomework.uz', department: 'Akademik', status: 'active', joinDate: '2022-11-20', login: 'sherzod' },
+        { id: 'hr10', name: 'Kamola Ergasheva', role: 'sotuv-menejeri', phone: '+998 94 000 11 22', email: 'kamola@myhomework.uz', department: 'Sotuv', status: 'active', joinDate: '2024-02-14', login: 'kamola' }
     ];
     saveHrEmployees(seed);
     return seed;
@@ -19529,8 +19541,12 @@ function migrateHrCredentials() {
     let changed = false;
     emps.forEach(e => {
         if (!e.login) {
-            e.login = e.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-            e.password = '1234';
+            e.login = normalizeEmployeePhoneLogin(e.phone)
+                || e.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+            changed = true;
+        }
+        if (Object.prototype.hasOwnProperty.call(e, 'password')) {
+            delete e.password;
             changed = true;
         }
     });
@@ -19786,6 +19802,11 @@ function openEditEmployeeModal(empId) {
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
         </div>
         <div class="form-group">
+            <label>Login (telefon raqami)</label>
+            <input type="text" id="editEmpLogin" class="form-control" value="${escapeHtml(normalizeEmployeePhoneLogin(emp.phone) || emp.login || '')}" readonly autocomplete="username">
+            <small style="color:var(--text-muted)">Yangi parol saqlanganda login shu telefon raqamiga moslanadi.</small>
+        </div>
+        <div class="form-group">
             <label>Email</label>
             <input type="email" id="editEmpEmail" class="form-control" value="${escapeHtml(emp.email || '')}" placeholder="email@example.com">
         </div>
@@ -19819,7 +19840,7 @@ function openEditEmployeeModal(empId) {
         <div class="form-group">
             <label>Yangi parol</label>
             <div class="input-password-wrap">
-                <input type="password" id="editEmpPassword" class="form-control" placeholder="Bo'sh qoldirsangiz o'zgarmaydi" autocomplete="off">
+                <input type="password" id="editEmpPassword" class="form-control" placeholder="Bo'sh qoldirsangiz o'zgarmaydi" autocomplete="new-password">
                 <button type="button" class="input-eye-btn" id="editEmpPasswordEye" tabindex="-1" aria-label="Parolni ko'rsat">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -19833,6 +19854,9 @@ function openEditEmployeeModal(empId) {
     document.getElementById('editEmpPasswordEye').addEventListener('click', () => {
         const inp = document.getElementById('editEmpPassword');
         inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+    document.getElementById('editEmpPhone').addEventListener('input', (event) => {
+        document.getElementById('editEmpLogin').value = normalizeEmployeePhoneLogin(event.target.value);
     });
 
     // Til sub-field toggle
@@ -19880,6 +19904,9 @@ function openEditEmployeeModal(empId) {
 
         const newPassword = document.getElementById('editEmpPassword').value.trim();
         if (newPassword && newPassword.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
+        const phone = document.getElementById('editEmpPhone').value.trim();
+        const accountLogin = normalizeEmployeePhoneLogin(phone) || String(emp.login || '').trim();
+        if (newPassword && !accountLogin) { alert('Parolni yangilash uchun telefon raqamini kiriting'); return; }
 
         const baseRoleEdit = document.getElementById('editEmpRole').value;
         const trialGroupLink = (document.getElementById('empTrialGroupLink')?.value || '').trim();
@@ -19898,7 +19925,7 @@ function openEditEmployeeModal(empId) {
             birthDate: document.getElementById('editEmpBirthDate').value,
             startDate: document.getElementById('editEmpStartDate').value,
             role: resolvedRole,
-            phone: document.getElementById('editEmpPhone').value.trim(),
+            phone,
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
@@ -19910,8 +19937,6 @@ function openEditEmployeeModal(empId) {
             // keyin qaytarilsa qayta yozish shart bo'lmaydi.
             trialGroupLink: baseRoleEdit === 'oqituvchi' ? trialGroupLink : (emp.trialGroupLink || ''),
         };
-        if (newPassword) updated.password = newPassword;
-
         const saveBtn = document.getElementById('saveEditEmployee');
         if (saveBtn) saveBtn.disabled = true;
 
@@ -19935,17 +19960,24 @@ function openEditEmployeeModal(empId) {
             : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
             : resolvedRole === 'targetolog' ? 'targetolog'
             : 'employee';
-        if (newPassword && emp.login) {
+        if (newPassword) {
             try {
                 await apiCreateHrUser({
                     name: updated.name,
-                    login: emp.login,
+                    login: accountLogin,
+                    previousLogin: emp.login || '',
+                    employeeId: emp.id,
+                    operation: 'reset',
                     password: newPassword,
                     role: roleForLogin,
                     salesManagerId: roleForLogin === 'sales_manager' ? emp.id : ''
                 });
+                updated.login = accountLogin;
             } catch (err) {
-                console.warn('Kirish hisobini yangilashda xatolik:', err.message);
+                console.error('Kirish hisobini yangilashda xatolik:', err);
+                alert(`Parolni yangilab bo'lmadi: ${err.message || 'server xatoligi'}`);
+                if (saveBtn) saveBtn.disabled = false;
+                return;
             }
         } else if (emp.login) {
             // 30-vazifa: parol o'zgartirilmagan taxrirlashlarda ham xodimning
@@ -19973,7 +20005,9 @@ function openEditEmployeeModal(empId) {
         saveHrEmployees(allEmps);
         closeModal();
         renderHrEmployees();
-        showMiniToast(`${updated.name} ma'lumotlari saqlandi`);
+        showMiniToast(newPassword
+            ? `${updated.name} paroli va ma'lumotlari yangilandi`
+            : `${updated.name} ma'lumotlari saqlandi`);
     };
 }
 
@@ -20052,12 +20086,12 @@ function openAddEmployeeModal() {
         <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Kirish ma'lumotlari</p>
         <div class="form-group">
             <label>Login (avtomatik — telefon raqami)</label>
-            <input type="text" id="empLogin" class="form-control" placeholder="+998901234567" autocomplete="off">
+            <input type="text" id="empLogin" class="form-control" placeholder="+998901234567" readonly autocomplete="username">
         </div>
         <div class="form-group">
             <label>Parol <span style="color:var(--danger)">*</span></label>
             <div class="input-password-wrap">
-                <input type="password" id="empPassword" class="form-control" placeholder="Kamida 4 ta belgi" autocomplete="off">
+                <input type="password" id="empPassword" class="form-control" placeholder="Kamida 4 ta belgi" autocomplete="new-password">
                 <button type="button" class="input-eye-btn" id="empPasswordEye" tabindex="-1" aria-label="Parolni ko'rsat">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -20079,7 +20113,7 @@ function openAddEmployeeModal() {
     document.getElementById('empPhone').addEventListener('input', () => {
         const phone = document.getElementById('empPhone').value.trim();
         const loginEl = document.getElementById('empLogin');
-        loginEl.value = phone.replace(/\s/g, '');
+        loginEl.value = normalizeEmployeePhoneLogin(phone);
     });
 
     // Parol ko'z tugmasi
@@ -20109,7 +20143,7 @@ function openAddEmployeeModal() {
         const email = document.getElementById('empEmail').value.trim();
         const department = document.getElementById('empDepartment').value;
         const status = document.getElementById('empStatus').value;
-        const login = document.getElementById('empLogin').value.trim() || phone.replace(/\s/g, '');
+        const login = normalizeEmployeePhoneLogin(phone);
         const password = document.getElementById('empPassword').value.trim();
         const cardNumber = document.getElementById('empCardNumber').value.trim();
         const passportSeries = document.getElementById('empPassportSeries').value.trim();
@@ -20127,7 +20161,7 @@ function openAddEmployeeModal() {
         if (password.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
 
         const employees = getHrEmployees() || [];
-        if (employees.find(e => e.login === login)) {
+        if (employees.find(e => normalizeEmployeePhoneLogin(e.phone) === login || e.login === login)) {
             alert('Bu login (telefon raqami) allaqachon mavjud.');
             return;
         }
@@ -20138,33 +20172,41 @@ function openAddEmployeeModal() {
         const newEmp = {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
-            role, phone, email, department, status, login, password,
+            role, phone, email, department, status, login,
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
             lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : 'english'
         };
-        employees.push(newEmp);
-        saveHrEmployees(employees);
-
         const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
             : (role === 'oqituvchi' || role === 'ingliz-oqituvchi' || role === 'rus-oqituvchi' || role === 'yordamchi') ? 'teacher'
             : role === 'targetolog' ? 'targetolog'
             : 'employee';
+        const saveBtn = document.getElementById('saveAddEmployee');
+        if (saveBtn) saveBtn.disabled = true;
         try {
             await apiCreateHrUser({
                 name,
                 login,
+                operation: 'create',
+                employee: newEmp,
                 password,
                 role: hrUserRole,
                 salesManagerId: hrUserRole === 'sales_manager' ? newEmp.id : ''
             });
         } catch (err) {
-            console.warn('Server user yaratishda xatolik:', err.message);
+            console.error('Server user yaratishda xatolik:', err);
+            alert(`Xodimning kirish hisobini yaratib bo'lmadi: ${err.message || 'server xatoligi'}`);
+            if (saveBtn) saveBtn.disabled = false;
+            return;
         }
+
+        employees.push(newEmp);
+        saveHrEmployees(employees);
 
         closeModal();
         renderHrEmployees();
+        showMiniToast(`${name} xodimi va kirish hisobi yaratildi`);
     };
 }
 
