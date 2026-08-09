@@ -331,6 +331,10 @@ export type DemoProfileResponse = {
   name: string;
   studentId: string;
   lang: 'english' | 'russian';
+  // 35-vazifa: "Davomat" va "Vaqt" kartochkalari uchun — haqiqiy davomat
+  // yozuvlaridan hisoblangan foiz va soat (namuna qiymatlar emas).
+  attendanceRate: number;
+  hoursSpent: number;
 };
 
 export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | null> {
@@ -342,6 +346,8 @@ export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | n
     name: data.name,
     studentId: data.studentId ?? '',
     lang: data.lang === 'russian' ? 'russian' : 'english',
+    attendanceRate: Number(data.attendanceRate) || 0,
+    hoursSpent: Number(data.hoursSpent) || 0,
   };
 }
 

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,6 +14,7 @@ import { theme } from '@/constants/theme';
 import { courseEnrollment, courses, profileStats, skillProgress } from '@/data/mock';
 import { generateTeacherScores, TEACHER_GRADE_CRITERIA } from '@/data/lessonGrades';
 import { generateScheduleDays } from '@/data/scheduleCalendar';
+import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { useCommunityLikesTotal } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
@@ -45,6 +46,22 @@ export default function ResultsScreen() {
   const lightning = useLightning();
   const orders = useOrders();
   const communityLikes = useCommunityLikesTotal();
+
+  // 35-vazifa: "Davomat" va "Ilovada sarflangan vaqt" ilgari namuna
+  // qiymatlarni (profileStats) ko'rsatardi — endi haqiqiy davomat
+  // yozuvlaridan hisoblangan qiymat.
+  const [attendanceRate, setAttendanceRate] = useState(0);
+  const [hoursSpent, setHoursSpent] = useState(0);
+  useEffect(() => {
+    fetchDemoStudentProfile()
+      .then((profile) => {
+        if (profile) {
+          setAttendanceRate(profile.attendanceRate);
+          setHoursSpent(profile.hoursSpent);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const scheduleDays = useMemo(() => generateScheduleDays(), []);
 
@@ -80,9 +97,9 @@ export default function ResultsScreen() {
   }, [videoLessons, liveLessons]);
 
   const generalStats: StatItem[] = [
-    { icon: 'checkmark-circle', label: 'Davomat', value: `${profileStats.attendanceRate}%`, bg: theme.colors.successBg, color: theme.colors.success },
+    { icon: 'checkmark-circle', label: 'Davomat', value: `${attendanceRate}%`, bg: theme.colors.successBg, color: theme.colors.success },
     { icon: 'book', label: "O'rganilgan so'zlar", value: `${profileStats.vocabularyCount} ta`, bg: theme.colors.purpleLight, color: theme.colors.purple },
-    { icon: 'time', label: 'Ilovada sarflangan vaqt', value: `${profileStats.hoursSpent} soat`, bg: theme.colors.warningBg, color: theme.colors.warning },
+    { icon: 'time', label: 'Ilovada sarflangan vaqt', value: `${hoursSpent} soat`, bg: theme.colors.warningBg, color: theme.colors.warning },
     { icon: 'build', label: 'Tuzatilgan xatolar', value: `${correctedMistakes} ta`, bg: theme.colors.dangerBg, color: theme.colors.danger },
   ];
 

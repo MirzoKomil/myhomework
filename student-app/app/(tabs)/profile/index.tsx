@@ -13,7 +13,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
-import { getRankedLeaderboard, ME_LEADERBOARD_ID, profileStats } from '@/data/mock';
+import { getRankedLeaderboard, ME_LEADERBOARD_ID } from '@/data/mock';
 import { getLevelProgress } from '@/data/levels';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
@@ -56,6 +56,10 @@ export default function ProfileScreen() {
   // ko'rsatiladi, xatolik bo'lsa namuna ma'lumotga qaytiladi.
   const [displayName, setDisplayName] = useState('');
   const [displayId, setDisplayId] = useState('');
+  // 35-vazifa: "Davomat" va "Vaqt" ilgari doim namuna qiymat (92%, 24.5 soat)
+  // ko'rsatardi — endi haqiqiy davomat yozuvlaridan hisoblangan qiymat.
+  const [attendanceRate, setAttendanceRate] = useState(0);
+  const [hoursSpent, setHoursSpent] = useState(0);
   const { student, token } = useAuth();
 
   // Eski sessiyalarda texnik `s...` ID local storage'da saqlangan bo'lishi
@@ -77,6 +81,10 @@ export default function ProfileScreen() {
       .then((profile) => {
         if (profile?.name) setDisplayName(profile.name);
         if (profile?.studentId) setDisplayId(formatStudentId(profile.studentId));
+        if (profile) {
+          setAttendanceRate(profile.attendanceRate);
+          setHoursSpent(profile.hoursSpent);
+        }
         if (!profile?.name && token) void clearAuth();
       })
       .catch(() => {
@@ -201,7 +209,7 @@ export default function ProfileScreen() {
             {
               id: 'attendance',
               label: t('profile_attendance'),
-              value: `${profileStats.attendanceRate}%`,
+              value: `${attendanceRate}%`,
               icon: 'checkmark-circle' as const,
               bg: theme.colors.successBg,
               color: theme.colors.success,
@@ -209,7 +217,7 @@ export default function ProfileScreen() {
             {
               id: 'time',
               label: t('profile_time'),
-              value: `${profileStats.hoursSpent.toFixed(1)} ${t('profile_hour_short')}`,
+              value: `${hoursSpent.toFixed(1)} ${t('profile_hour_short')}`,
               icon: 'time' as const,
               bg: theme.colors.blueLight,
               color: theme.colors.blue,

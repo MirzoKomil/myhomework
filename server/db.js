@@ -1353,18 +1353,91 @@ function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
 // o'rniga hardcode qilingan namuna ("Shahzoda Mavlonova") ismini
 // ko'rsatardi — chunki hech qanday real endpoint ism/ID qaytarmasdi. Endi
 // bu funksiya xavfsiz (parolga aloqasi yo'q) maydonlarni qaytaradi.
+// 35-vazifa: mobil ilovaning "Profil" ekranidagi "Davomat" va "Vaqt"
+// kartochkalari ilgari doim qattiq yozilgan namuna qiymatlarni (92%,
+// 24.5 soat) ko'rsatardi. Endi ikkalasi ham haqiqiy davomat yozuvlaridan
+// (main_attendance/assistant_attendance) hisoblanadi: "kutilgan" darslar
+// soni o'quvchining o'z jadvali (lessonDayOfWeek/lessonTime) bo'yicha
+// ro'yxatdan o'tgan kunidan (startDate) bugungacha bo'lgan haqiqiy dars
+// kunlari, "bajarilgan" esa shu kunlardan haqiqatan "kelgan" deb
+// belgilanganlari. Vaqt = bajarilgan darslar soni * dars davomiyligi.
+function expandLessonPatternDays(day) {
+    const d = Number(day);
+    if ([1, 3, 5].includes(d)) return [1, 3, 5];
+    if ([2, 4, 6].includes(d)) return [2, 4, 6];
+    return [d];
+}
+
+async function getDemoStudentAttendanceStats(studentId) {
+    const empty = { attendanceRate: 0, hoursSpent: 0 };
+    const id = await resolveStudentId(studentId);
+    if (!id) return empty;
+    const row = await q1('SELECT * FROM students WHERE id = $1', [id]);
+    if (!row) return empty;
+    const student = rowToStudent(row);
+    if (student.lessonDayOfWeek == null || !student.lessonTime) return empty;
+
+    const patternDays = expandLessonPatternDays(student.lessonDayOfWeek);
+    const duration = student.lessonDuration || 15;
+
+    const [mainRows, assistRows] = await Promise.all([
+        q('SELECT att_key, day FROM main_attendance WHERE student_id = $1 AND present = 1', [id]),
+        q('SELECT att_key, day FROM assistant_attendance WHERE student_id = $1 AND present = 1', [id]),
+    ]);
+    const presentDaysByMonth = {};
+    [...mainRows, ...assistRows].forEach(r => {
+        const monthKey = String(r.att_key || '').slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(monthKey)) return;
+        if (!presentDaysByMonth[monthKey]) presentDaysByMonth[monthKey] = new Set();
+        presentDaysByMonth[monthKey].add(r.day);
+    });
+
+    let startDate = student.startDate ? new Date(student.startDate) : null;
+    if (!startDate || Number.isNaN(startDate.getTime())) {
+        const earliestMonth = Object.keys(presentDaysByMonth).sort()[0];
+        startDate = earliestMonth ? new Date(`${earliestMonth}-01`) : null;
+    }
+    if (!startDate || Number.isNaN(startDate.getTime())) return empty;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    if (cursor > today) return empty;
+
+    let expected = 0;
+    let completed = 0;
+    let guard = 0;
+    while (cursor <= today && guard < 3660) {
+        guard++;
+        if (patternDays.includes(cursor.getDay())) {
+            expected++;
+            const monthKey = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+            if (presentDaysByMonth[monthKey]?.has(cursor.getDate())) completed++;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return {
+        attendanceRate: expected > 0 ? Math.round((completed / expected) * 100) : 0,
+        hoursSpent: +((completed * duration) / 60).toFixed(1),
+    };
+}
+
 async function getDemoStudentProfile(studentId) {
     const id = await resolveStudentId(studentId);
     if (!id) return {};
     const rows = await q('SELECT * FROM students WHERE id = $1', [id]);
     const student = rows[0] ? rowToStudent(rows[0]) : null;
     if (!student) return {};
+    const { attendanceRate, hoursSpent } = await getDemoStudentAttendanceStats(id);
     return {
         name: student.name || '',
         // CRM jadvalidagi "ID" ustuni bilan aynan bir xil ko'rinadigan ID.
         // Texnik `students.id` (masalan s178...) hech qachon ilovaga uzatilmaydi.
         studentId: await getStudentPublicId(student),
         lang: await resolveStudentSubjectLang(id),
+        attendanceRate,
+        hoursSpent,
     };
 }
 
