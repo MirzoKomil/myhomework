@@ -8478,6 +8478,49 @@ function filterStudentsForSalesManager(students, currentUser) {
     );
 }
 
+// Ustozlar HR xodimlari ro'yxatidan virtual yozuv sifatida ham, ilgari
+// yaratilgan `teachers` yozuvi sifatida ham kelishi mumkin. Bu ikki yozuvning
+// IDsi eski ma'lumotlarda farq qilgan bo'lsa, o'quvchi biriktirilgan bo'lsa
+// ham ustoz kabineti uni ko'rmay qolardi. Bir xil ism/login/telefon va
+// yo'nalishdagi yozuvlarning barcha IDlarini bitta ustozga tegishli deb olamiz.
+function getTeacherAssignmentIds(teacherId) {
+    const teacher = resolveTeacherWithVirtual(teacherId);
+    const ids = new Set(teacherId ? [String(teacherId)] : []);
+    if (!teacher) return ids;
+
+    const normalized = value => String(value || '').trim().toLowerCase();
+    const phoneDigits = value => String(value || '').replace(/\D/g, '');
+    const teacherName = normalized(teacher.name);
+    const teacherLogin = normalized(teacher.login);
+    const teacherPhone = phoneDigits(teacher.phone);
+    const sameSubject = value => (value || 'english') === (teacher.subject || 'english');
+    const sameIdentity = record => {
+        const recordName = normalized(record.name);
+        const recordLogin = normalized(record.login);
+        const recordPhone = phoneDigits(record.phone);
+        return (teacherLogin && recordLogin && teacherLogin === recordLogin)
+            || (teacherPhone.length >= 9 && recordPhone.length >= 9 && teacherPhone === recordPhone)
+            || (teacherName && recordName === teacherName);
+    };
+
+    getItem(STORAGE_KEYS.teachers, []).forEach(record => {
+        if (record.type === teacher.type && sameSubject(record.subject) && sameIdentity(record)) {
+            ids.add(String(record.id));
+        }
+    });
+
+    const hrRole = teacher.type === 'yordamchi'
+        ? 'yordamchi'
+        : (teacher.subject === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi');
+    getItem(STORAGE_KEYS.hrEmployees, []).forEach(record => {
+        const sameLane = record.role === hrRole
+            && (teacher.type !== 'yordamchi' || sameSubject(record.lang));
+        if (sameLane && sameIdentity(record)) ids.add(String(record.id));
+    });
+
+    return ids;
+}
+
 function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
@@ -8554,14 +8597,20 @@ function renderStudents() {
         students = filterStudentsForSalesManager(students, currentUser);
         if (titleEl) titleEl.textContent = "Mening o'quvchilarim";
     } else {
-        students = students.filter(s => (s.subject || 'english') === subject);
+        // Ustoz uchun til tabidan qolgan global holat emas, bevosita unga
+        // biriktirilgan o'quvchilar mezon bo'ladi.
+        if (!isTeacherRole) students = students.filter(s => (s.subject || 'english') === subject);
         if (titleEl) titleEl.textContent = `O'quvchilar — ${SUBJECTS[subject]?.label || subject}`;
         if (isTeacherRole) {
             // 13-ish: agar ustozning o'zi (haqiqiy yoki virtual HR yozuvi
             // sifatida) topilmasa, hech qanday o'quvchi ko'rsatilmaydi —
             // boshqa ustozlarning o'quvchilariga tushib qolish o'rniga.
-            const tid = ownTeacherForFilter?.id;
-            students = tid ? students.filter(s => s.teacherId === tid || s.assistantTeacherId === tid) : [];
+            const teacherIds = ownTeacherForFilter
+                ? getTeacherAssignmentIds(ownTeacherForFilter.id)
+                : new Set();
+            students = teacherIds.size
+                ? students.filter(s => teacherIds.has(String(s.teacherId || '')) || teacherIds.has(String(s.assistantTeacherId || '')))
+                : [];
         }
     }
 
@@ -8581,7 +8630,12 @@ function renderStudents() {
             if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) _activeLeadIdSet.add(l.id);
         });
     });
-    students = students.filter(s => s.leadRef?.id && _activeLeadIdSet.has(s.leadRef.id));
+    // Ustoz kabinetida ro'yxat faqat haqiqiy biriktirishga bog'liq. Lid
+    // arxivga o'tishi yoki boshqa CRM bosqichida bo'lishi o'quvchini
+    // ustozdan yashirib qo'ymasligi kerak.
+    if (!isTeacherRole) {
+        students = students.filter(s => s.leadRef?.id && _activeLeadIdSet.has(s.leadRef.id));
+    }
 
     // Search filter
     const searchVal = (document.getElementById('studentsSearch')?.value || '').trim().toLowerCase();
@@ -8645,8 +8699,11 @@ function renderStudents() {
     // ko'radi — "Sotuv menejerlari bo'yicha" filtri bu holatda ma'nosiz,
     // shuning uchun butunlay yashiriladi.
     const managerFilterWrap = managerSel?.closest('.leads-filter-box');
-    if (managerFilterWrap) managerFilterWrap.style.display = isSalesManager ? 'none' : '';
-    if (managerSel && !isSalesManager) {
+    // Ustoz o'zining biriktirilgan o'quvchilarini ko'radi; sotuv menejeri
+    // filtri unga tegishli emas va avvalgi sessiyadan qolgan qiymat ro'yxatni
+    // 0 qilib yuborishi mumkin.
+    if (managerFilterWrap) managerFilterWrap.style.display = (isSalesManager || isTeacherRole) ? 'none' : '';
+    if (managerSel && !isSalesManager && !isTeacherRole) {
         if (!managerSel.dataset.handlerBound) {
             managerSel.dataset.handlerBound = '1';
             managerSel.addEventListener('change', () => {
@@ -8673,6 +8730,8 @@ function renderStudents() {
     }
 
     const durationSel = document.getElementById('studentsDurationFilter');
+    const durationFilterWrap = durationSel?.closest('.leads-filter-box');
+    if (durationFilterWrap) durationFilterWrap.style.display = isTeacherRole ? 'none' : '';
     if (durationSel && !durationSel.dataset.bound) {
         durationSel.dataset.bound = '1';
         durationSel.addEventListener('change', () => {
@@ -8692,10 +8751,10 @@ function renderStudents() {
     if (!isTeacherRole && _studentsTeacherFilter !== 'all') {
         students = students.filter(s => s.teacherId === _studentsTeacherFilter || s.assistantTeacherId === _studentsTeacherFilter);
     }
-    if (!isSalesManager && _studentsManagerFilter !== 'all') {
+    if (!isSalesManager && !isTeacherRole && _studentsManagerFilter !== 'all') {
         students = students.filter(s => s.managerId === _studentsManagerFilter);
     }
-    if (_studentsDurationFilter !== 'all') {
+    if (!isTeacherRole && _studentsDurationFilter !== 'all') {
         const dur = parseInt(_studentsDurationFilter);
         students = students.filter(s => (s.lessonDuration || 15) === dur);
     }
