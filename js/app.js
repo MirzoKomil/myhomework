@@ -6299,14 +6299,21 @@ function initTimetableControls() {
 // hisoblangan) sanalarida band bo'ladi - muddati o'tgan sinov darslari
 // butunlay hisobga olinmaydi (18-vazifa bilan bir xil mantiq).
 function collectWeeklyScheduleEntries(filters, monthDays) {
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
     const students = getItem(STORAGE_KEYS.students, []);
     const entries = [];
     const days = monthDays || getTimetableMonthDays().days;
 
     students.forEach(s => {
         if (s.lessonDayOfWeek == null || !s.lessonTime) return;
-        const teacher = teachers.find(t => t.id === s.teacherId);
+        // 7-vazifa: ustoz hali "Ustoz ish jadvalini sozlash" orqali haqiqiy
+        // STORAGE_KEYS.teachers yozuviga aylanmagan, faqat HR xodimlar
+        // ro'yxatida "virtual" ustoz sifatida mavjud bo'lsa, oldingi
+        // teachers.find(...) hech narsa topmasdi va shu ustozning BARCHA
+        // o'quvchilari (hatto ularning band vaqtlari) Dars jadvalida umuman
+        // ko'rinmay qolardi — resolveTeacherWithVirtual esa HR yozuvidan
+        // ham qidiradi (xuddi O'quvchilar/Namuna o'quvchi ro'yxatlaridagi
+        // kabi).
+        const teacher = resolveTeacherWithVirtual(s.teacherId);
         if (!teacher) return;
         if (filters.lang && (s.subject || 'english') !== filters.lang) return;
         if (filters.teacherId !== 'all' && s.teacherId !== filters.teacherId) return;
@@ -6332,7 +6339,10 @@ function collectWeeklyScheduleEntries(filters, monthDays) {
     [...(leads.english || []), ...(leads.russian || [])].forEach(lead => {
         const ob = lead.paymentOnboarding;
         if (!ob || ob.lessonDayOfWeek == null || !ob.lessonTime) return;
-        const teacher = teachers.find(t => t.id === ob.teacherId);
+        // 7-vazifa: virtual (HR'dan) ustozlarning hali o'tilmagan sinov
+        // darslari ham xuddi shu sabab (real-only ro'yxatdan qidirilgani)
+        // Dars jadvalida ko'rinmay qolardi.
+        const teacher = resolveTeacherWithVirtual(ob.teacherId);
         if (!teacher) return;
         const lang = lead._lang || lead.language || 'english';
         if (filters.lang && lang !== filters.lang) return;
