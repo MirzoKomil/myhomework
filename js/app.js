@@ -6681,6 +6681,11 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
     const debtAmount = leadSurvey?.debtAmount || 0;
     const paidAmount = leadSurvey?.paidAmount || 0;
     const paymentDueDate = leadSurvey?.nextPaymentDate || '';
+    // 41-vazifa: "Oxirgi to'lov" sanasi ham xuddi debtAmount/paidAmount
+    // kabi to'lov so'rovnomasidan ko'chiriladi — ilgari bu yerda olib
+    // qolinmagani sabab Qarzdorlar jadvalidagi "Oxirgi to'lov" ustuni
+    // doim "—" bo'lib qolardi.
+    const lastPaymentDate = leadSurvey?.lastPaymentDate || '';
     if (existing) {
         updateStudent(existing.id, {
             lessonDayOfWeek: onboarding.lessonDayOfWeek,
@@ -6689,7 +6694,7 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
             assistantTeacherId: onboarding.assistantTeacherId || null,
             telegramGroupLink: onboarding.telegramGroupLink || '',
             source: 'lead',
-            debtAmount, paidAmount, paymentDueDate,
+            debtAmount, paidAmount, paymentDueDate, lastPaymentDate,
             // 8-vazifa: sotuv bo'limi lidga bergan ID (serialCode) o'quvchiga
             // aylanganda ham saqlanib qolishi kerak — mavjud bo'lsa ustidan
             // yozilmaydi, yo'q bo'lsa lid'nikidan olinadi.
@@ -6723,7 +6728,7 @@ function promoteStudentFromOnboarding(lang, onboarding, lead) {
         source: 'lead',
         managerId: lead?.managerId || '',
         leadRef: lead?.id ? { lang, id: lead.id } : undefined,
-        debtAmount, paidAmount, paymentDueDate,
+        debtAmount, paidAmount, paymentDueDate, lastPaymentDate,
         // 6-vazifa: lid o'quvchiga aylanganda mijoz shartnomasi shu yerda
         // avtomatik biriktiriladi — mobil ilova "Shartnoma faylini ko'rish
         // (PDF)" tugmasi shu raqam/sana bilan real PDF generatsiya qiladi.
@@ -14185,6 +14190,15 @@ function backfillMissingStudentsFromActiveLeads() {
                     existing.paidAmount = Number(ps.paidAmount) || 0;
                     existing.debtAmount = Number(ps.debtAmount) || 0;
                     existing.paymentDueDate = ps.nextPaymentDate || '';
+                    existing.lastPaymentDate = ps.lastPaymentDate || '';
+                    repaired = true;
+                } else if (isPartial && existing.lastPaymentDate == null && ps.lastPaymentDate) {
+                    // 41-vazifa: bu o'quvchining debtAmount/paidAmount avvalroq
+                    // (yuqoridagi shart orqali yoki qo'lda) allaqachon
+                    // to'ldirilgan, lekin "Oxirgi to'lov" sanasi hali umuman
+                    // yozilmagan bo'lishi mumkin — bu holatda faqat o'sha
+                    // bitta maydon alohida sinxronlanadi.
+                    existing.lastPaymentDate = ps.lastPaymentDate;
                     repaired = true;
                 }
                 return;
@@ -14209,7 +14223,8 @@ function backfillMissingStudentsFromActiveLeads() {
                 managerId: l.managerId || '',
                 paidAmount: isPartial ? (Number(ps.paidAmount) || 0) : (Number(ps?.totalAmount) || 0),
                 debtAmount: isPartial ? (Number(ps.debtAmount) || 0) : 0,
-                paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : ''
+                paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : '',
+                lastPaymentDate: isPartial ? (ps.lastPaymentDate || '') : ''
             });
         });
     });
@@ -17977,6 +17992,7 @@ function autoAddLeadAsStudent(lang, lead) {
         paidAmount: isPartial ? (Number(ps.paidAmount) || 0) : (Number(ps?.totalAmount) || 0),
         debtAmount: isPartial ? (Number(ps.debtAmount) || 0) : 0,
         paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : '',
+        lastPaymentDate: isPartial ? (ps.lastPaymentDate || '') : '',
         lessonDuration: ps?.tariff ? (Number(ps.tariff) || 15) : (onboarding.lessonDuration || 15)
     });
     setItem(STORAGE_KEYS.students, students);
