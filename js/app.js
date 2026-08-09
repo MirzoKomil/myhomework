@@ -9442,6 +9442,7 @@ function openSdpTransferTeacher(s) {
     teacherSel?.addEventListener('change', () => {
         delete modalBody.dataset.onboardScheduleDay;
         delete modalBody.dataset.onboardScheduleTime;
+        delete modalBody.dataset.onboardSchedulePattern;
         syncSchedule();
     });
     syncSchedule();
@@ -15510,11 +15511,27 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) 
         return;
     }
 
-    const lessonDays = getTeacherLessonDays(teacher);
+    // 42-vazifa: ustoz o'zining bitta sozlangan patterni (toq yoki juft
+    // kunlar) bilan cheklanib qolmasligi kerak — bitta ustoz turli
+    // guruhlarni turli kunlarda o'qitishi mumkin, shuning uchun sotuv
+    // menejeri shu yerda ikkala pattern orasida tanlov qila oladi.
+    // getTeacherBusyWeeklySlots band slotlarni haqiqiy saqlangan kunlar
+    // bo'yicha hisoblaydi (ustozning o'z patternidan qat'i nazar), shu
+    // sabab ikkala pattern uchun ham band/bo'sh holat to'g'ri chiqadi.
+    const patternKey = SCHEDULE_PATTERNS[modalBody.dataset.onboardSchedulePattern]
+        ? modalBody.dataset.onboardSchedulePattern
+        : (teacher.schedulePattern || 'mwf');
+    modalBody.dataset.onboardSchedulePattern = patternKey;
+    const lessonDays = SCHEDULE_PATTERNS[patternKey].days;
     const busyMap = getTeacherBusyWeeklySlots(teacherId, null, lead?.id || null);
-    const patternLabel = SCHEDULE_PATTERNS[teacher.schedulePattern || 'mwf']?.label || '';
+    const patternLabel = SCHEDULE_PATTERNS[patternKey]?.label || '';
 
     let html = `<p class="lead-survey-sub">${escapeHtml(teacher.name)} — ${escapeHtml(patternLabel)} · ${lessonDuration} daqiqa</p>`;
+    html += `<div class="onboard-schedule-pattern-toggle" style="display:flex;gap:8px;margin-bottom:10px">
+        ${Object.entries(SCHEDULE_PATTERNS).map(([key, p]) => `
+            <button type="button" class="subject-tab${key === patternKey ? ' active' : ''}" data-onboard-pattern-btn="${key}" style="flex:1">${key === 'mwf' ? 'Toq kunlari' : 'Juft kunlari'}</button>
+        `).join('')}
+    </div>`;
     html += `<div class="onboard-schedule-legend">
         <span class="onboard-schedule-legend-item onboard-schedule-legend-item--free">Bo'sh</span>
         <span class="onboard-schedule-legend-item onboard-schedule-legend-item--busy">Band</span>
@@ -15544,6 +15561,20 @@ function renderOnboardTeacherSchedulePicker(modalBody, teacherId, options = {}) 
     });
     html += '</div>';
     container.innerHTML = html;
+
+    container.querySelectorAll('[data-onboard-pattern-btn]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.dataset.onboardPatternBtn === modalBody.dataset.onboardSchedulePattern) return;
+            modalBody.dataset.onboardSchedulePattern = btn.dataset.onboardPatternBtn;
+            // Pattern almashganda kun ustunlari o'zgaradi — oldingi tanlov
+            // endi mos kelmasligi mumkin, shuning uchun tozalanadi.
+            delete modalBody.dataset.onboardScheduleDay;
+            delete modalBody.dataset.onboardScheduleTime;
+            renderOnboardTeacherSchedulePicker(modalBody, teacherId, options);
+            const firstLessonDateInput = modalBody.querySelector('#onboardFirstLessonDate');
+            if (firstLessonDateInput?.value) firstLessonDateInput.dispatchEvent(new Event('change'));
+        });
+    });
 
     const pickCell = cell => {
         container.querySelectorAll('.onboard-schedule-cell--picked').forEach(c => {
@@ -15768,6 +15799,7 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
     if (existing?.lessonDayOfWeek != null && existing.lessonTime && !existing.isTrial) {
         modalBody.dataset.onboardScheduleDay = String(existing.lessonDayOfWeek);
         modalBody.dataset.onboardScheduleTime = existing.lessonTime;
+        modalBody.dataset.onboardSchedulePattern = [2, 4, 6].includes(Number(existing.lessonDayOfWeek)) ? 'tts' : 'mwf';
     }
     if (existing?.telegramGroupLink) {
         const linkInput = modalBody.querySelector('#onboardTelegramGroupLink');
@@ -15801,6 +15833,7 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         delete modalBody.dataset.onboardScheduleDay;
         delete modalBody.dataset.onboardScheduleDate;
         delete modalBody.dataset.onboardScheduleTime;
+        delete modalBody.dataset.onboardSchedulePattern;
         syncTeacherSchedule();
     });
     durationSel?.addEventListener('change', () => {
@@ -15970,7 +16003,11 @@ function wireFirstLessonDatePattern(modalBody) {
 
     const getAllowedDays = () => {
         const teacher = resolveTeacherWithVirtual(teacherSel.value);
-        return teacher ? getTeacherLessonDays(teacher) : null;
+        if (!teacher) return null;
+        const patternKey = SCHEDULE_PATTERNS[modalBody.dataset.onboardSchedulePattern]
+            ? modalBody.dataset.onboardSchedulePattern
+            : (teacher.schedulePattern || 'mwf');
+        return SCHEDULE_PATTERNS[patternKey].days;
     };
 
     const snapToPattern = (notify) => {
