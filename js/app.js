@@ -19818,12 +19818,12 @@ function openEditEmployeeModal(empId) {
         // kiritish orqali to'g'ri rolga qaytarish mumkin (server /create-user
         // yo'li parol talab qiladi, shu sabab faqat parol o'zgartirilganda
         // ishlaydi).
+        const roleForLogin = resolvedRole === 'rop' ? 'rop'
+            : (resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri') ? 'sales_manager'
+            : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
+            : resolvedRole === 'targetolog' ? 'targetolog'
+            : 'employee';
         if (newPassword && emp.login) {
-            const roleForLogin = resolvedRole === 'rop' ? 'rop'
-                : (resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri') ? 'sales_manager'
-                : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
-                : resolvedRole === 'targetolog' ? 'targetolog'
-                : 'employee';
             try {
                 await apiCreateHrUser({
                     name: updated.name,
@@ -19834,6 +19834,24 @@ function openEditEmployeeModal(empId) {
                 });
             } catch (err) {
                 console.warn('Kirish hisobini yangilashda xatolik:', err.message);
+            }
+        } else if (emp.login) {
+            // 30-vazifa: parol o'zgartirilmagan taxrirlashlarda ham xodimning
+            // ismi (masalan xato yozilgan ism to'g'irlansa) login hisobiga
+            // sinxronlanishi SHART — aks holda ustoz/menejer/ROP kabinetidagi
+            // "o'ziniki"ni aniqlash HR yozuvi bilan ism bo'yicha solishtirib
+            // topiladi (bootApp), va eski (stale) ism saqlanib qolgani sabab
+            // hech qachon topilmay, o'quvchilar/jadval ro'yxati butunlay bo'sh
+            // ko'rinib qolardi.
+            try {
+                await apiSyncHrRoles([{
+                    login: emp.login,
+                    name: updated.name,
+                    role: roleForLogin,
+                    salesManagerId: roleForLogin === 'sales_manager' ? emp.id : ''
+                }]);
+            } catch (err) {
+                console.warn('Kirish hisobi ismini yangilashda xatolik:', err.message);
             }
         }
 

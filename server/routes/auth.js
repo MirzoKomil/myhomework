@@ -50,6 +50,11 @@ router.post('/create-user', authRequired, async (req, res) => {
 // hisoblari (masalan, ustoz "employee" bo'lib qolgan holatlar) parolni
 // qayta kiritmasdan to'g'irlanishi uchun — CRM bu yerga faqat rolni
 // yuboradi, parolga tegilmaydi.
+// 30-vazifa: shu bilan bir qatorda, agar HR'da xodim ismi tahrirlansa
+// (parol o'zgartirilmasa ham) login hisobidagi ism ham shu yo'l orqali
+// yangilanadi — aks holda ustoz/menejer/ROP kabinetini HR yozuvi bilan
+// ism bo'yicha bog'lash (bootApp) eski ismga qarab ishlab, hech qachon
+// topa olmay qolardi.
 router.post('/sync-roles', authRequired, async (req, res) => {
     try {
         if (req.user.role !== 'admin')
@@ -62,12 +67,16 @@ router.post('/sync-roles', authRequired, async (req, res) => {
         for (const entry of entries) {
             const login = entry?.login?.trim();
             const role = entry?.role;
+            const name = entry?.name?.trim();
             const salesManagerId = entry?.salesManagerId;
             if (!login || !validRoles.includes(role)) continue;
             const user = await findUserByEmail(login);
             if (user && !(user.email === 'admin' && user.role === 'admin')) {
-                if (user.role !== role) {
-                    await updateUser(user.id, { role });
+                const fields = {};
+                if (user.role !== role) fields.role = role;
+                if (name && user.name !== name) fields.name = name;
+                if (Object.keys(fields).length) {
+                    await updateUser(user.id, fields);
                     updated++;
                 }
                 if (role !== 'sales_manager') await setSalesManagerUserLink(user.id, '');
