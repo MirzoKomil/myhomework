@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -509,6 +509,33 @@ router.post('/demo-activity', studentAuthOptional, async (req, res) => {
     } catch (err) {
         console.error('POST /api/state/demo-activity', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 36-vazifa: mobil ilova tanga/chaqmoq to'plaganda o'z (haqiqiy) jamlanma
+// summasini shu yerga yuboradi — StudentId har doim serverda o'zining
+// haqiqiy login sessiyasidan (yoki demoStudentId fallback) olinadi.
+router.post('/sync-progress', studentAuthOptional, async (req, res) => {
+    try {
+        const { coins, lightning } = req.body || {};
+        await syncStudentProgress(req.studentId, { coins, lightning });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/state/sync-progress', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// 36-vazifa: Leaderboard endi haqiqiy o'quvchilarning haqiqiy tanga/chaqmoq
+// yig'indisidan tuziladi (avval to'liq o'ylab topilgan/fake ro'yxat edi).
+router.get('/leaderboard', studentAuthOptional, async (req, res) => {
+    try {
+        const scope = req.query.scope === 'region' ? 'region' : 'country';
+        const entries = await getRealLeaderboard(req.studentId, scope);
+        res.json({ entries });
+    } catch (err) {
+        console.error('GET /api/state/leaderboard', err);
+        res.status(500).json({ error: 'Xatolik' });
     }
 });
 

@@ -87,6 +87,18 @@ const DEMO_PROFILE_API_BASE =
     ? '/api/state/demo-profile'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-profile';
 
+// 36-vazifa: haqiqiy Leaderboard uchun — o'quvchining o'z tanga/chaqmoq
+// jamlanmasini serverga yuborish va real ro'yxatni olish.
+const SYNC_PROGRESS_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/sync-progress'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/sync-progress';
+
+const LEADERBOARD_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/leaderboard'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/leaderboard';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -349,6 +361,38 @@ export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | n
     attendanceRate: Number(data.attendanceRate) || 0,
     hoursSpent: Number(data.hoursSpent) || 0,
   };
+}
+
+// 36-vazifa: mobil ilova tanga/chaqmoq to'plaganda o'z jamlanma summasini
+// serverga yuboradi — bu Leaderboardni haqiqiy qiladi. Tarmoq xatoligi
+// bo'lsa jim o'tkazib yuboriladi (mahalliy AsyncStorage baribir to'g'ri).
+export async function syncStudentProgress(partial: { coins?: number; lightning?: number }): Promise<void> {
+  try {
+    await authedFetch(SYNC_PROGRESS_API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(partial),
+    });
+  } catch {
+    // ignore — keyingi o'zgarishda qayta urinilaveradi.
+  }
+}
+
+export type LeaderboardEntryResponse = {
+  id: string;
+  name: string;
+  coins: number;
+  lightning: number;
+  lessonsCompleted: number;
+  rank: number;
+  isMe: boolean;
+};
+
+export async function fetchLeaderboard(scope: 'region' | 'country'): Promise<LeaderboardEntryResponse[]> {
+  const r = await authedFetch(`${LEADERBOARD_API_BASE}?scope=${scope}`);
+  if (!r.ok) return [];
+  const data = await r.json();
+  return Array.isArray(data?.entries) ? data.entries : [];
 }
 
 export async function fetchDemoSchedule(): Promise<DemoScheduleResponse> {

@@ -1,31 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 
-import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningIcon, LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import {
-  getRankedLeaderboard,
-  LEADERBOARD_PERIOD_LABELS,
-  LEADERBOARD_SCOPE_LABELS,
-  LeaderboardPeriod,
-  LeaderboardScope,
-  ME_LEADERBOARD_ID,
-} from '@/data/mock';
+import { fetchLeaderboard, LeaderboardEntryResponse } from '@/services/contentApi';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
 import { useLightning } from '@/services/lightningStore';
 
-const PERIODS: LeaderboardPeriod[] = ['daily', 'weekly', 'monthly', 'alltime'];
-const SCOPES: LeaderboardScope[] = ['region', 'country', 'global'];
+// 36-vazifa: Leaderboard ilgari to'liq o'ylab topilgan (fake) o'quvchilar
+// ro'yxati edi (davr/hudud bo'yicha sun'iy ko'paytirilgan). Endi FAQAT
+// haqiqiy o'quvchilarning haqiqiy tanga/chaqmoq yig'indisidan tuzilgan
+// "Doimiy" reyting ko'rsatiladi — davr (Kunlik/Haftalik/Oylik) tanlovi
+// buning uchun alohida tarixiy kuzatuv talab qiladi, shu sabab hozircha
+// olib tashlandi. Hudud (O'zbekiston/Viloyat) esa o'quvchining CRM'dagi
+// haqiqiy "region" maydoniga qarab ishlaydi.
+type Scope = 'region' | 'country';
+const SCOPE_LABELS: Record<Scope, string> = { region: "O'z viloyati", country: "O'zbekiston" };
 
 const PODIUM_COLORS = ['#C0C6D8', '#F2C14E', '#E2A76F'];
 
@@ -33,28 +33,34 @@ export default function LeaderboardScreen() {
   const coins = useCoins();
   const lightning = useLightning();
   const myAvatarUri = useAvatarUri();
-  const [period, setPeriod] = useState<LeaderboardPeriod>('alltime');
-  const [scope, setScope] = useState<LeaderboardScope>('country');
+  const [scope, setScope] = useState<Scope>('country');
+  const [entries, setEntries] = useState<LeaderboardEntryResponse[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<'period' | 'scope' | null>(null);
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [showScopeSheet, setShowScopeSheet] = useState(false);
 
-  const ranked = useMemo(
-    () => getRankedLeaderboard(period, scope, coins, lightning),
-    [period, scope, coins, lightning]
+  const load = useCallback((s: Scope) => {
+    setLoading(true);
+    fetchLeaderboard(s)
+      .then(setEntries)
+      .catch(() => setEntries([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load(scope);
+    }, [load, scope])
   );
-  const top3 = ranked.slice(0, 3);
-  const rest = ranked.slice(3);
 
-  // 142-ish qayta ish 8: reyting o'rni ko'tarilishini faqat ekran ochilganda
-  // standart tanlanadigan (alltime/country) ko'rinishda kuzatamiz — aks holda
-  // foydalanuvchi filtr almashtirganda soxta "ko'tarildingiz" signali chiqadi.
   useEffect(() => {
-    if (period !== 'alltime' || scope !== 'country') return;
-    const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
-    if (me) checkLeaderboardClimb(me.rank);
-  }, [ranked, period, scope]);
+    const me = entries.find((e) => e.isMe);
+    if (scope === 'country' && me) checkLeaderboardClimb(me.rank);
+  }, [entries, scope]);
+
+  const top3 = entries.slice(0, 3);
+  const rest = entries.slice(3);
 
   const rank1Shimmer = useRef(new Animated.Value(0)).current;
   const rank2Shimmer = useRef(new Animated.Value(0)).current;
@@ -114,139 +120,135 @@ export default function LeaderboardScreen() {
       />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.filterRow}>
-          <Pressable style={styles.dropdownBtn} onPress={() => setActiveDropdown('period')}>
-            <Ionicons name="calendar-outline" size={15} color={theme.colors.purple} />
-            <Text style={styles.dropdownBtnText}>{LEADERBOARD_PERIOD_LABELS[period]}</Text>
-            <Ionicons name="chevron-down" size={15} color={theme.colors.textMuted} />
-          </Pressable>
-          <Pressable style={styles.dropdownBtn} onPress={() => setActiveDropdown('scope')}>
+          <Pressable style={styles.dropdownBtn} onPress={() => setShowScopeSheet(true)}>
             <Ionicons name="location-outline" size={15} color={theme.colors.purple} />
-            <Text style={styles.dropdownBtnText}>{LEADERBOARD_SCOPE_LABELS[scope]}</Text>
+            <Text style={styles.dropdownBtnText}>{SCOPE_LABELS[scope]}</Text>
             <Ionicons name="chevron-down" size={15} color={theme.colors.textMuted} />
           </Pressable>
         </View>
 
-        <View style={styles.podiumRow}>
-          {/* order visually as 2nd, 1st, 3rd */}
-          {[top3[1], top3[0], top3[2]].map((entry, i) =>
-            entry ? (
-              <Pressable
-                key={entry.id}
-                style={[styles.podiumCol, i === 1 && styles.podiumColCenter]}
-                onPress={() => entry.id !== ME_LEADERBOARD_ID && setSelectedStudent(entry.name)}>
-                {i === 1 && (
-                  <Animated.Text
-                    style={[
-                      styles.crown,
-                      { transform: [{ translateX: crownTranslateX }, { translateY: crownTranslateY }, { rotate: crownRotate }] },
-                    ]}>
-                    👑
-                  </Animated.Text>
-                )}
-                <View
-                  style={[
-                    styles.podiumAvatar,
-                    { backgroundColor: PODIUM_COLORS[i === 1 ? 0 : i === 0 ? 1 : 2] },
-                    i === 1 && styles.podiumAvatarCenter,
-                  ]}>
-                  {entry.id === ME_LEADERBOARD_ID && myAvatarUri ? (
-                    <Image source={{ uri: myAvatarUri }} style={styles.podiumAvatarImage} />
-                  ) : (
-                    <Text style={styles.podiumEmoji}>{entry.avatarEmoji}</Text>
-                  )}
-                  <View style={styles.podiumShimmerClip} pointerEvents="none">
-                    <Animated.View
+        {!loading && entries.length === 0 && (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyEmoji}>🏆</Text>
+            <Text style={styles.emptyText}>
+              Hali reytingda hech kim yo'q. Darslarni davom ettirib, birinchi bo'lib chaqmoq to'plang!
+            </Text>
+          </View>
+        )}
+
+        {entries.length > 0 && (
+          <>
+            <View style={styles.podiumRow}>
+              {/* order visually as 2nd, 1st, 3rd */}
+              {[top3[1], top3[0], top3[2]].map((entry, i) =>
+                entry ? (
+                  <View key={entry.id} style={[styles.podiumCol, i === 1 && styles.podiumColCenter]}>
+                    {i === 1 && (
+                      <Animated.Text
+                        style={[
+                          styles.crown,
+                          { transform: [{ translateX: crownTranslateX }, { translateY: crownTranslateY }, { rotate: crownRotate }] },
+                        ]}>
+                        👑
+                      </Animated.Text>
+                    )}
+                    <View
                       style={[
-                        styles.podiumShimmerSweep,
-                        { transform: [{ translateX: shimmerTranslate(podiumShimmerByIndex[i]) }, { rotate: '20deg' }] },
+                        styles.podiumAvatar,
+                        { backgroundColor: PODIUM_COLORS[i === 1 ? 0 : i === 0 ? 1 : 2] },
+                        i === 1 && styles.podiumAvatarCenter,
                       ]}>
-                      <LinearGradient
-                        colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={StyleSheet.absoluteFill}
-                      />
-                    </Animated.View>
+                      {entry.isMe && myAvatarUri ? (
+                        <Image source={{ uri: myAvatarUri }} style={styles.podiumAvatarImage} />
+                      ) : (
+                        <Text style={styles.podiumEmoji}>🙂</Text>
+                      )}
+                      <View style={styles.podiumShimmerClip} pointerEvents="none">
+                        <Animated.View
+                          style={[
+                            styles.podiumShimmerSweep,
+                            { transform: [{ translateX: shimmerTranslate(podiumShimmerByIndex[i]) }, { rotate: '20deg' }] },
+                          ]}>
+                          <LinearGradient
+                            colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={StyleSheet.absoluteFill}
+                          />
+                        </Animated.View>
+                      </View>
+                    </View>
+                    <View style={[styles.podiumRankBadge, { backgroundColor: PODIUM_COLORS[i] }]}>
+                      <Text style={styles.podiumRankText}>{entry.rank}</Text>
+                    </View>
+                    <Text style={styles.podiumName}>{entry.name}</Text>
+                    <View style={styles.podiumXpPill}>
+                      <LightningIcon size={11} />
+                      <Text style={styles.podiumXpText}>{entry.lightning.toLocaleString('uz-UZ')}</Text>
+                    </View>
+                    <View style={styles.podiumCoinRow}>
+                      <CoinIcon size={9} />
+                      <Text style={styles.podiumCoinText}>{entry.coins.toLocaleString('uz-UZ')}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View key={`empty-${i}`} style={styles.podiumCol} />
+                )
+              )}
+            </View>
+
+            <View style={styles.list}>
+              {rest.map((entry) => (
+                <View key={entry.id} style={[styles.listRow, entry.isMe && styles.listRowMe]}>
+                  <Text style={[styles.listRank, entry.isMe && styles.listRankMe]}>{entry.rank}</Text>
+                  <View style={styles.listAvatar}>
+                    {entry.isMe && myAvatarUri ? (
+                      <Image source={{ uri: myAvatarUri }} style={styles.listAvatarImage} />
+                    ) : (
+                      <Text style={styles.listAvatarEmoji}>🙂</Text>
+                    )}
+                  </View>
+                  <View style={styles.listInfo}>
+                    <Text style={[styles.listName, entry.isMe && styles.listNameMe]}>{entry.name}</Text>
+                    <Text style={styles.listMeta}>{entry.lessonsCompleted} dars yakunlandi</Text>
+                  </View>
+                  <View style={styles.listXpCol}>
+                    <View style={styles.listXpRow}>
+                      <LightningIcon size={12} />
+                      <Text style={styles.listXp}>{entry.lightning.toLocaleString('uz-UZ')}</Text>
+                    </View>
+                    <View style={styles.listXpRow}>
+                      <CoinIcon size={10} />
+                      <Text style={styles.listCoin}>{entry.coins.toLocaleString('uz-UZ')}</Text>
+                    </View>
                   </View>
                 </View>
-                <View style={[styles.podiumRankBadge, { backgroundColor: PODIUM_COLORS[i] }]}>
-                  <Text style={styles.podiumRankText}>{entry.rank}</Text>
-                </View>
-                <Text style={styles.podiumName}>{entry.name}</Text>
-                <View style={styles.podiumXpPill}>
-                  <LightningIcon size={11} />
-                  <Text style={styles.podiumXpText}>{entry.displayLightning.toLocaleString('uz-UZ')}</Text>
-                </View>
-                <View style={styles.podiumCoinRow}>
-                  <CoinIcon size={9} />
-                  <Text style={styles.podiumCoinText}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
-                </View>
-              </Pressable>
-            ) : (
-              <View key={`empty-${i}`} style={styles.podiumCol} />
-            )
-          )}
-        </View>
-
-        <View style={styles.list}>
-          {rest.map((entry) => (
-            <Pressable
-              key={entry.id}
-              style={[styles.listRow, entry.id === ME_LEADERBOARD_ID && styles.listRowMe]}
-              onPress={() => entry.id !== ME_LEADERBOARD_ID && setSelectedStudent(entry.name)}>
-              <Text style={[styles.listRank, entry.id === ME_LEADERBOARD_ID && styles.listRankMe]}>{entry.rank}</Text>
-              <View style={styles.listAvatar}>
-                {entry.id === ME_LEADERBOARD_ID && myAvatarUri ? (
-                  <Image source={{ uri: myAvatarUri }} style={styles.listAvatarImage} />
-                ) : (
-                  <Text style={styles.listAvatarEmoji}>{entry.avatarEmoji}</Text>
-                )}
-              </View>
-              <View style={styles.listInfo}>
-                <Text style={[styles.listName, entry.id === ME_LEADERBOARD_ID && styles.listNameMe]}>
-                  {entry.name}
-                </Text>
-                <Text style={styles.listMeta}>{entry.lessonsCompleted} dars yakunlandi</Text>
-              </View>
-              <View style={styles.listXpCol}>
-                <View style={styles.listXpRow}>
-                  <LightningIcon size={12} />
-                  <Text style={styles.listXp}>{entry.displayLightning.toLocaleString('uz-UZ')}</Text>
-                </View>
-                <View style={styles.listXpRow}>
-                  <CoinIcon size={10} />
-                  <Text style={styles.listCoin}>{entry.displayCoins.toLocaleString('uz-UZ')}</Text>
-                </View>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
       <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
-      <StudentProfileModal visible={selectedStudent !== null} studentName={selectedStudent} onClose={() => setSelectedStudent(null)} />
 
-      <Modal visible={activeDropdown !== null} transparent animationType="fade" onRequestClose={() => setActiveDropdown(null)}>
-        <Pressable style={styles.dropdownBackdrop} onPress={() => setActiveDropdown(null)}>
+      <Modal visible={showScopeSheet} transparent animationType="fade" onRequestClose={() => setShowScopeSheet(false)}>
+        <Pressable style={styles.dropdownBackdrop} onPress={() => setShowScopeSheet(false)}>
           <Pressable style={styles.dropdownSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.dropdownSheetTitle}>{activeDropdown === 'period' ? 'Davr' : 'Hudud'}</Text>
-            {(activeDropdown === 'period' ? PERIODS : SCOPES).map((opt) => {
-              const label =
-                activeDropdown === 'period'
-                  ? LEADERBOARD_PERIOD_LABELS[opt as LeaderboardPeriod]
-                  : LEADERBOARD_SCOPE_LABELS[opt as LeaderboardScope];
-              const selected = activeDropdown === 'period' ? period === opt : scope === opt;
+            <Text style={styles.dropdownSheetTitle}>Hudud</Text>
+            {(['country', 'region'] as Scope[]).map((opt) => {
+              const selected = scope === opt;
               return (
                 <Pressable
                   key={opt}
                   style={styles.dropdownOption}
                   onPress={() => {
-                    if (activeDropdown === 'period') setPeriod(opt as LeaderboardPeriod);
-                    else setScope(opt as LeaderboardScope);
-                    setActiveDropdown(null);
+                    setScope(opt);
+                    setShowScopeSheet(false);
                   }}>
-                  <Text style={[styles.dropdownOptionText, selected && styles.dropdownOptionTextActive]}>{label}</Text>
+                  <Text style={[styles.dropdownOptionText, selected && styles.dropdownOptionTextActive]}>
+                    {SCOPE_LABELS[opt]}
+                  </Text>
                   {selected && <Ionicons name="checkmark" size={18} color={theme.colors.purple} />}
                 </Pressable>
               );
@@ -287,6 +289,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   dropdownBtnText: { flex: 1, fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.text },
+
+  emptyWrap: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 24, gap: 10 },
+  emptyEmoji: { fontSize: 40 },
+  emptyText: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted, textAlign: 'center', lineHeight: 20 },
 
   dropdownBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   dropdownSheet: {

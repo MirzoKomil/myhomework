@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
+import { syncStudentProgress } from '@/services/contentApi';
+
 const TOTAL_KEY = 'mh_coins_total';
 const BY_LESSON_KEY = 'mh_coins_by_lesson';
 const TODAY_KEY = 'mh_coins_today';
@@ -109,6 +111,10 @@ export async function addCoins(amount: number, lessonId?: string) {
   }
   notify();
   await persist();
+  // 36-vazifa: Leaderboard haqiqiy bo'lishi uchun jamlanma tanga serverga
+  // ham yuboriladi (o'zgarishlarni bloklamaydi, tarmoq xatoligi bo'lsa jim
+  // o'tkazib yuboriladi).
+  void syncStudentProgress({ coins: total });
 }
 
 export function useCoins(): number {

@@ -1267,7 +1267,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress') ? {} : [];
     }
     return row.data;
 }
@@ -1369,7 +1369,7 @@ function expandLessonPatternDays(day) {
 }
 
 async function getDemoStudentAttendanceStats(studentId) {
-    const empty = { attendanceRate: 0, hoursSpent: 0 };
+    const empty = { attendanceRate: 0, hoursSpent: 0, lessonsCompleted: 0 };
     const id = await resolveStudentId(studentId);
     if (!id) return empty;
     const row = await q1('SELECT * FROM students WHERE id = $1', [id]);
@@ -1420,7 +1420,65 @@ async function getDemoStudentAttendanceStats(studentId) {
     return {
         attendanceRate: expected > 0 ? Math.round((completed / expected) * 100) : 0,
         hoursSpent: +((completed * duration) / 60).toFixed(1),
+        lessonsCompleted: completed,
     };
+}
+
+// 36-vazifa: Leaderboard ilgari to'liq o'ylab topilgan (fake) o'quvchilar
+// ro'yxati edi. Endi haqiqiy o'quvchilarning haqiqiy tanga/chaqmoq
+// yig'indisidan (mobil ilova syncStudentProgress orqali serverga yuborgan)
+// tuziladi — hali hech qanday tanga/chaqmoq to'plamagan (hech qachon
+// sinxronlanmagan) o'quvchilar ro'yxatda ko'rinmaydi.
+async function syncStudentProgress(studentId, { coins, lightning } = {}) {
+    const id = await resolveStudentId(studentId);
+    if (!id) return;
+    await tx(async (client) => {
+        const all = await getJsonData('studentProgress');
+        const existing = all[id] || { coins: 0, lightning: 0 };
+        all[id] = {
+            coins: coins != null ? Math.max(0, Math.round(Number(coins) || 0)) : existing.coins,
+            lightning: lightning != null ? Math.max(0, Math.round(Number(lightning) || 0)) : existing.lightning,
+            updatedAt: new Date().toISOString(),
+        };
+        await saveJsonData(client, 'studentProgress', all);
+    });
+}
+
+async function getRealLeaderboard(studentId, scope) {
+    const id = await resolveStudentId(studentId);
+    const [progress, studentRows] = await Promise.all([
+        getJsonData('studentProgress'),
+        q('SELECT * FROM students'),
+    ]);
+    const me = id ? studentRows.find((r) => r.id === id) : null;
+    const meRegion = me ? (rowToStudent(me).region || '').trim().toLowerCase() : '';
+
+    const candidates = studentRows.filter((row) => {
+        const p = progress[row.id];
+        if (!p || (!p.coins && !p.lightning)) return false;
+        if (scope === 'region' && meRegion) {
+            const region = (rowToStudent(row).region || '').trim().toLowerCase();
+            if (region !== meRegion) return false;
+        }
+        return true;
+    });
+
+    const entries = await Promise.all(candidates.map(async (row) => {
+        const s = rowToStudent(row);
+        const p = progress[row.id];
+        const stats = await getDemoStudentAttendanceStats(row.id);
+        return {
+            id: row.id,
+            name: s.name || '',
+            coins: p.coins || 0,
+            lightning: p.lightning || 0,
+            lessonsCompleted: stats.lessonsCompleted,
+            isMe: row.id === id,
+        };
+    }));
+
+    entries.sort((a, b) => b.lightning - a.lightning);
+    return entries.map((e, i) => ({ ...e, rank: i + 1 }));
 }
 
 async function getDemoStudentProfile(studentId) {
@@ -3154,6 +3212,7 @@ module.exports = {
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
+    syncStudentProgress, getRealLeaderboard,
     getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,
     getCommunityPosts, addCommunityPost, toggleCommunityPostLike,
     addCommunityComment, toggleCommunityCommentLike,

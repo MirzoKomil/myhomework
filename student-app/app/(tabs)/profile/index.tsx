@@ -13,11 +13,10 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
-import { getRankedLeaderboard, ME_LEADERBOARD_ID } from '@/data/mock';
 import { getLevelProgress } from '@/data/levels';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
-import { fetchDemoStudentProfile } from '@/services/contentApi';
+import { fetchDemoStudentProfile, fetchLeaderboard } from '@/services/contentApi';
 import { useLightning } from '@/services/lightningStore';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
 
@@ -45,8 +44,14 @@ export default function ProfileScreen() {
   const coins = useCoins();
   const lightning = useLightning();
   const avatarUri = useAvatarUri();
-  const ranked = getRankedLeaderboard('alltime', 'country', coins, lightning);
-  const me = ranked.find((e) => e.id === ME_LEADERBOARD_ID);
+  // 36-vazifa: Leaderboard endi haqiqiy o'quvchilardan tuzilgani sabab,
+  // bu yerdagi "N-o'rin" ham shu haqiqiy reytingdan olinadi.
+  const [myRank, setMyRank] = useState<number | null>(null);
+  useEffect(() => {
+    fetchLeaderboard('country')
+      .then((list) => setMyRank(list.find((e) => e.isMe)?.rank ?? null))
+      .catch(() => setMyRank(null));
+  }, [coins, lightning]);
   const levelProgress = getLevelProgress(lightning);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
   const { t } = useLang();
@@ -183,15 +188,13 @@ export default function ProfileScreen() {
             <View style={styles.leaderboardRow}>
               <View>
                 <Text style={styles.balanceLabel}>{t('profile_leaderboard')}</Text>
-                <Text style={styles.balanceAmount}>{me ? `${me.rank}${t('profile_place_suffix')}` : '—'}</Text>
-                {me && (
-                  <View style={styles.tariffRow}>
-                    <CoinIcon size={12} />
-                    <Text style={styles.tariffText}>{me.displayCoins.toLocaleString('uz-UZ')} coin</Text>
-                    <LightningIcon size={12} />
-                    <Text style={styles.tariffText}>{lightning.toLocaleString('uz-UZ')}</Text>
-                  </View>
-                )}
+                <Text style={styles.balanceAmount}>{myRank ? `${myRank}${t('profile_place_suffix')}` : '—'}</Text>
+                <View style={styles.tariffRow}>
+                  <CoinIcon size={12} />
+                  <Text style={styles.tariffText}>{coins.toLocaleString('uz-UZ')} coin</Text>
+                  <LightningIcon size={12} />
+                  <Text style={styles.tariffText}>{lightning.toLocaleString('uz-UZ')}</Text>
+                </View>
               </View>
               <Animated.Text
                 style={[

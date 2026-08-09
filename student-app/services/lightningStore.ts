@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 
 import { getLevelForLightning } from '@/data/levels';
+import { syncStudentProgress } from '@/services/contentApi';
 
 const TOTAL_KEY = 'mh_lightning_total';
 
@@ -68,6 +69,9 @@ export async function addLightning(amount = 1) {
   total += amount;
   notify();
   await persist();
+  // 36-vazifa: Leaderboard haqiqiy bo'lishi uchun jamlanma chaqmoq serverga
+  // ham yuboriladi.
+  void syncStudentProgress({ lightning: total });
 
   // 142-ish qayta ish 8: daraja (Uchqun→Shogird→... ) o'zgargani — chaqmoq
   // butunlay qurilmada saqlangani sababli, o'tishni shu yerda aniqlab
