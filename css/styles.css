@@ -2648,6 +2648,18 @@ body {
     background: var(--purple-light);
 }
 
+/* HR Bo'limi — pozitsiya (rol) filtri: tugmalar kontentiga mos, ixcham holda */
+.role-filters {
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.role-filters .subject-tab {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    font-size: 13px;
+}
+
 /* Sotuv bo'limi — gorizontal navigatsiya */
 .section-nav {
     display: flex;
