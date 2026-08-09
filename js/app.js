@@ -10586,11 +10586,11 @@ function renderMarketingTargetPanel() {
 
     // Reklama KPI cards
     const reklamaCards = [
-        { label: 'Budget (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(budgetFaktUSD), pct: null, icon: '💰' },
+        { label: 'Budget (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(budgetFaktUSD), pct: (planBudget && budgetFaktUSD) ? (budgetFaktUSD / planBudget * 100) : null, icon: '💰' },
         { label: 'Lid soni', plan: planLidSoni ? planLidSoni.toLocaleString('uz-UZ') : '—', fakt: lidSoniFakt || '—', pct: (planLidSoni && lidSoniFakt) ? (lidSoniFakt / planLidSoni * 100) : null, icon: '📋' },
-        { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(lidNarxiFakt), pct: null, icon: '💵' },
+        { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(lidNarxiFakt), pct: (planLidNarxi && lidNarxiFakt) ? (lidNarxiFakt / planLidNarxi * 100) : null, icon: '💵' },
         { label: 'Sifatli lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: kvalLidSoniFakt || '—', pct: (planKvalLidSoni && kvalLidSoniFakt) ? (kvalLidSoniFakt / planKvalLidSoni * 100) : null, icon: '✅' },
-        { label: 'Sifatli lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(kvalLidNarxiFakt), pct: null, icon: '🏷️' },
+        { label: 'Sifatli lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(kvalLidNarxiFakt), pct: (planKvalNarxi && kvalLidNarxiFakt) ? (kvalLidNarxiFakt / planKvalNarxi * 100) : null, icon: '🏷️' },
         { label: 'Lid → Sifatli lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: lidKvalPctFakt != null ? lidKvalPctFakt.toFixed(1) + '%' : '—', pct: (lidKvalPctFakt && planKvalPct) ? (lidKvalPctFakt / planKvalPct * 100) : null, icon: '📊' },
     ].map(c => {
         const pc = c.pct ? c.pct.toFixed(1) : null;
