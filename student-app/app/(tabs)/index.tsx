@@ -11,7 +11,7 @@ import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
-import { courses, dailyStages, nextLiveLesson, skillProgress } from '@/data/mock';
+import { courses, dailyStages, skillProgress } from '@/data/mock';
 import { fetchDemoNotifications, fetchDemoSchedule, fetchDemoStudentProfile, fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition, LastPosition } from '@/services/progressStore';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
@@ -29,7 +29,12 @@ const STAGE_LABEL_KEYS: Record<string, TranslationKey> = {
 export default function HomeScreen() {
   const activeCourse = courses[0];
   const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
-  const [liveLesson, setLiveLesson] = useState(nextLiveLesson);
+  // 37-vazifa: ilgari bu yerda hech qachon o'chmaydigan namuna (fake)
+  // taymer (~2 soat 45 daqiqa) standart holat sifatida ko'rsatilardi va
+  // haqiqiy jadval hali yuklanmagan yoki telegram guruh havolasi hali
+  // biriktirilmagan bo'lsa, o'sha soxta taymer abadiy ko'rinib qolardi.
+  // Endi haqiqiy ma'lumot kelmaguncha karta umuman ko'rsatilmaydi.
+  const [liveLesson, setLiveLesson] = useState<{ startsAt: string; telegramLink: string } | null>(null);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   // 40-vazifa: ilgari bu yerda doim mock namuna ismi ko'rsatilardi — endi
   // CRM'da tanlangan (yoki real login qilgan) o'quvchining o'z ismi
@@ -153,10 +158,12 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <LessonReminder
-          startsAt={liveLesson.startsAt}
-          telegramLink={liveLesson.telegramLink}
-        />
+        {liveLesson && (
+          <LessonReminder
+            startsAt={liveLesson.startsAt}
+            telegramLink={liveLesson.telegramLink}
+          />
+        )}
 
         <View style={styles.quickGrid}>
           {dailyStages.map((stage) => {

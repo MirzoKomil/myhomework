@@ -1326,25 +1326,35 @@ async function submitDemoStudentTeacherRating(date, ratings, studentId) {
     });
 }
 
-// Tashkentda (UTC+5, DST yo'q) berilgan hafta kuni (1=Dushanba..7=Yakshanba)
-// va soatdan kelib chiqib, keyingi eng yaqin sodir bo'lish vaqtini hisoblaydi.
-// Agar bugun aynan shu kun bo'lsa-yu, dars (davomiyligi bilan) hali tugamagan
-// bo'lsa, bugungi vaqt qaytariladi — aks holda keyingi haftaga o'tkaziladi.
+// Tashkentda (UTC+5, DST yo'q) berilgan haftalik qolip (1=MWF, 2=TTS) va
+// soatdan kelib chiqib, ENG YAQIN sodir bo'lish vaqtini hisoblaydi — qolip
+// kunlarining barchasi (masalan Dushanba/Chorshanba/Juma) hisobga olinadi,
+// faqat birinchisi emas (o'quvchining lessonDayOfWeek maydoni haqiqatda
+// BITTA kun emas, balki shu qolip belgisi — expandLessonPatternDays'ga
+// qarang, xuddi Dars jadvali/Davomat hisob-kitoblarida ishlatilgani kabi).
+// Agar bugun aynan shu qolip kunlaridan biri bo'lsa-yu, dars (davomiyligi
+// bilan) hali tugamagan bo'lsa, bugungi vaqt qaytariladi — aks holda
+// navbatdagi mos kunga o'tkaziladi.
 function computeNextWeeklyOccurrence(dayOfWeek, timeStr, durationMinutes) {
     const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
     const [hh, mm] = String(timeStr).split(':').map(Number);
     const nowUtcMs = Date.now();
     const nowTashkent = new Date(nowUtcMs + TASHKENT_OFFSET_MS);
     const nowDow = nowTashkent.getUTCDay() === 0 ? 7 : nowTashkent.getUTCDay();
-    const dayDiff = (dayOfWeek - nowDow + 7) % 7;
-    const candidateTashkentMs = Date.UTC(
-        nowTashkent.getUTCFullYear(), nowTashkent.getUTCMonth(), nowTashkent.getUTCDate() + dayDiff,
-        hh || 0, mm || 0, 0, 0
-    );
-    let candidateUtcMs = candidateTashkentMs - TASHKENT_OFFSET_MS;
     const durMs = (durationMinutes || 0) * 60 * 1000;
-    if (candidateUtcMs + durMs <= nowUtcMs) candidateUtcMs += 7 * 24 * 60 * 60 * 1000;
-    return new Date(candidateUtcMs).toISOString();
+
+    let bestUtcMs = null;
+    expandLessonPatternDays(dayOfWeek).forEach((pd) => {
+        const dayDiff = (pd - nowDow + 7) % 7;
+        const candidateTashkentMs = Date.UTC(
+            nowTashkent.getUTCFullYear(), nowTashkent.getUTCMonth(), nowTashkent.getUTCDate() + dayDiff,
+            hh || 0, mm || 0, 0, 0
+        );
+        let candidateUtcMs = candidateTashkentMs - TASHKENT_OFFSET_MS;
+        if (candidateUtcMs + durMs <= nowUtcMs) candidateUtcMs += 7 * 24 * 60 * 60 * 1000;
+        if (bestUtcMs === null || candidateUtcMs < bestUtcMs) bestUtcMs = candidateUtcMs;
+    });
+    return new Date(bestUtcMs).toISOString();
 }
 
 // 150-ish: parol endi bcrypt bilan shifrlanadi (o'zgarmas hash), shuning
