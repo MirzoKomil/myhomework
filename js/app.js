@@ -14151,14 +14151,34 @@ function backfillStudentSerialCodesFromLeads() {
 // mos keladi.
 function backfillMissingStudentsFromActiveLeads() {
     const students = getItem(STORAGE_KEYS.students, []);
-    const linkedLeadIds = new Set(students.filter(s => s.leadRef?.id).map(s => s.leadRef.id));
+    const studentByLeadId = new Map();
+    students.forEach(s => { if (s.leadRef?.id) studentByLeadId.set(s.leadRef.id, s); });
     const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const newStudents = [];
+    let repaired = false;
     let counter = 0;
     ['english', 'russian'].forEach(lang => {
         (leadsData[lang] || []).forEach(l => {
             if (!LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) return;
-            if (linkedLeadIds.has(l.id)) return;
+            const ps = l.paymentSurvey;
+            const isPartial = ps?.paymentType === 'partial';
+            const existing = studentByLeadId.get(l.id);
+            if (existing) {
+                // 5-vazifa (qayta ish): agar bu o'quvchi ilgari aynan shu
+                // backfill orqali (to'lov ma'lumotisiz) yaratilgan bo'lsa-yu,
+                // keyinchalik hech qachon qo'lda tahrirlanmagan bo'lsa
+                // (debtAmount/paidAmount hali umuman yozilmagan holicha),
+                // lidning to'lov so'rovnomasidagi qisman to'lov/qarz summasi
+                // endi shu yerda sinxronlanadi — aks holda bunday o'quvchi
+                // Qarzdorlar ro'yxatida hech qachon ko'rinmay qolardi.
+                if (isPartial && existing.debtAmount == null && existing.paidAmount == null) {
+                    existing.paidAmount = Number(ps.paidAmount) || 0;
+                    existing.debtAmount = Number(ps.debtAmount) || 0;
+                    existing.paymentDueDate = ps.nextPaymentDate || '';
+                    repaired = true;
+                }
+                return;
+            }
             const onboarding = l.paymentOnboarding || {};
             counter += 1;
             newStudents.push({
@@ -14176,11 +14196,14 @@ function backfillMissingStudentsFromActiveLeads() {
                 telegramGroupLink: onboarding.telegramGroupLink || '',
                 startDate: new Date().toISOString().slice(0, 10),
                 source: 'lead-sync',
-                managerId: l.managerId || ''
+                managerId: l.managerId || '',
+                paidAmount: isPartial ? (Number(ps.paidAmount) || 0) : (Number(ps?.totalAmount) || 0),
+                debtAmount: isPartial ? (Number(ps.debtAmount) || 0) : 0,
+                paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : ''
             });
         });
     });
-    if (newStudents.length) setItem(STORAGE_KEYS.students, [...students, ...newStudents]);
+    if (newStudents.length || repaired) setItem(STORAGE_KEYS.students, [...students, ...newStudents]);
 }
 
 function leadHasTeacherSchedule(lead) {
@@ -22984,6 +23007,12 @@ function renderDebtorsTable(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const uid = s => `${containerId}__${s}`;
+
+    // 5-vazifa: Sotuv bo'limidagi Qarzdorlar tabiga O'quvchilar bo'limiga
+    // umuman kirmasdan to'g'ridan-to'g'ri o'tilishi mumkin — shu holatda ham
+    // qisman to'lovli o'quvchilarning qarz ma'lumoti sinxronlangan bo'lishi
+    // uchun backfill/tuzatish shu yerda ham ishga tushiriladi.
+    backfillMissingStudentsFromActiveLeads();
 
     // 2-ish: ROP faqat o'z til yo'nalishiga tegishli qarzdorlarni ko'radi
     // (Students va Sales bo'limidagi Qarzdorlar bir xil funksiyani ishlatadi,
