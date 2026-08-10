@@ -3082,7 +3082,9 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
             throw new Error("Bu o'quvchi ushbu ustozga biriktirilmagan");
         }
         if ((teacher.subject || 'english') !== (student.subject || 'english')) {
-            throw new Error("O'quvchi va ustoz fan yo'nalishi mos emas");
+            // VAQTINCHALIK DIAGNOSTIKA: xato sababini aniqlash uchun haqiqiy
+            // qiymatlar korsatiladi - muammo topilgach oddiy xabarga qaytariladi.
+            throw new Error(`O'quvchi va ustoz fan yo'nalishi mos emas (DEBUG: ustoz.subject=${teacher.subject || '(yoq)'}, ustoz.id=${teacher.id}, ustoz.type=${teacher.type}, oquvchi.subject=${student.subject || '(yoq)'}, oquvchi.id=${student.id})`);
         }
 
         const tableName = teacher.type === 'yordamchi' ? 'assistant_attendance' : 'main_attendance';
