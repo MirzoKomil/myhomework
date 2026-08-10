@@ -503,6 +503,14 @@ async function bootApp() {
         }
     }
 
+    // Faqat Gulhayoxonning o'zi tizimga kirgandagina emas — admin/ROP
+    // kirganda BARCHA ustoz/yordamchi ustozlar HR yozuvi bilan solishtirib,
+    // fan yo'nalishi/turi eskirib qolganlari yoki hali formallashtirilmagan
+    // (haqiqiy yozuvi yo'q) ustozlar bir yo'la tuzatiladi/yaratiladi.
+    if (['admin', 'rop', 'boshliq'].includes(currentUser.role)) {
+        await backfillAllTeacherSubjectsFromHr();
+    }
+
     // Sotuv menejeri uchun bog'liq manager ID va til yo'nalishini aniqlash
     if (currentUser.role === 'sales_manager' && (!currentUser.linkedManagerId || !currentUser.linkedManagerLang)) {
         const managers = getItem(STORAGE_KEYS.salesManagers, []);
@@ -14337,6 +14345,51 @@ function backfillStudentSerialCodesFromLeads() {
         changedLeadRows.forEach(item => persistLeadChange(item.lang, item.lead).catch(() => {}));
     }
     if (studentsChanged) setItem(STORAGE_KEYS.students, updatedStudents);
+}
+
+// Gulhayoxon Hoshimova kabi HR ro'yxatida bor-u, hali haqiqiy
+// STORAGE_KEYS.teachers yozuvi yo'q ("formallashtirilmagan") yoki
+// mavjud yozuvida fan yo'nalishi eskirib qolgan BARCHA ustoz/yordamchi
+// ustozlarni bir yo'la tuzatadi/yaratadi — faqat o'sha bitta ustoz o'zi
+// tizimga kirgandagina emas, admin (yoki ROP) kirganda darhol. Bu davomat
+// belgilashda "O'quvchi va ustoz fan yo'nalishi mos emas" xatosiga olib
+// kelgan xuddi shu muammoning boshqa ustozlarda ham qaytalanishining
+// oldini oladi.
+async function backfillAllTeacherSubjectsFromHr() {
+    const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const teacherRoles = new Set(['rus-oqituvchi', 'ingliz-oqituvchi', 'yordamchi']);
+    const relevantEmps = hrEmployees.filter(e => teacherRoles.has(e.role) && e.status !== 'inactive');
+    if (!relevantEmps.length) return;
+
+    const teachers = getItem(STORAGE_KEYS.teachers, []);
+    const updated = [...teachers];
+    let changed = false;
+    relevantEmps.forEach(emp => {
+        const correctSubject = emp.role === 'rus-oqituvchi' ? 'russian'
+            : emp.role === 'ingliz-oqituvchi' ? 'english'
+            : (emp.lang === 'russian' ? 'russian' : 'english');
+        const correctType = emp.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
+        const idx = updated.findIndex(t => t.id === emp.id);
+        if (idx >= 0) {
+            if ((updated[idx].subject || 'english') !== correctSubject || updated[idx].type !== correctType) {
+                updated[idx] = { ...updated[idx], subject: correctSubject, type: correctType };
+                changed = true;
+            }
+        } else {
+            updated.push({
+                id: emp.id, name: emp.name || '', type: correctType, subject: correctSubject,
+                phone: emp.phone || '', login: emp.login || '', schedulePattern: 'mwf', lessonDuration: 15
+            });
+            changed = true;
+        }
+    });
+    if (!changed) return;
+    try {
+        await apiPatchState({ teachers: updated });
+        _cache.teachers = updated;
+    } catch (err) {
+        console.error('backfillAllTeacherSubjectsFromHr:', err.message);
+    }
 }
 
 // 11-vazifa (qayta ish): "To'lov jarayonida"/"To'lov yopildi" bosqichidagi
