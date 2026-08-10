@@ -455,35 +455,49 @@ async function bootApp() {
     // Ustoz tizimga har safar kirganda HR yozuvi bilan solishtirib
     // avtomatik tuzatiladi.
     if (currentUser.role === 'teacher' && currentUser.linkedTeacherId) {
-        const realTeacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === currentUser.linkedTeacherId);
-        if (!realTeacher) {
-            window.__subjectHealDebug = 'realTeacher TOPILMADI';
+        const emp = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === currentUser.linkedTeacherId);
+        if (!emp) {
+            window.__subjectHealDebug = `HR yozuv TOPILMADI (teacher.id=${currentUser.linkedTeacherId})`;
         } else {
-            const emp = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === realTeacher.id);
-            if (!emp) {
-                window.__subjectHealDebug = `HR yozuv TOPILMADI (teacher.id=${realTeacher.id})`;
+            const correctSubject = emp.role === 'rus-oqituvchi' ? 'russian'
+                : emp.role === 'ingliz-oqituvchi' ? 'english'
+                : (emp.lang === 'russian' ? 'russian' : 'english');
+            const correctType = emp.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
+            const teachers = getItem(STORAGE_KEYS.teachers, []);
+            const idx = teachers.findIndex(t => t.id === currentUser.linkedTeacherId);
+            if (idx >= 0 && (teachers[idx].subject || 'english') === correctSubject) {
+                window.__subjectHealDebug = `tuzatish shart emas edi (${correctSubject}), HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
             } else {
-                const correctSubject = emp.role === 'rus-oqituvchi' ? 'russian'
-                    : emp.role === 'ingliz-oqituvchi' ? 'english'
-                    : (emp.lang === 'russian' ? 'russian' : 'english');
-                if ((realTeacher.subject || 'english') !== correctSubject) {
-                    // VAQTINCHALIK DIAGNOSTIKA: setItem() xatoni yutib
-                    // yuborgani (faqat konsolga log + toast) uchun await
-                    // qilingan updateTeacher hech qachon "reject" bo'lmaydi
-                    // — shu sabab bu yerda to'g'ridan-to'g'ri apiPatchState
-                    // chaqirilib, natija ANIQ kuzatiladi.
-                    const teachers = getItem(STORAGE_KEYS.teachers, []);
-                    const idx = teachers.findIndex(t => t.id === realTeacher.id);
-                    if (idx >= 0) teachers[idx] = { ...teachers[idx], subject: correctSubject };
-                    try {
-                        await apiPatchState({ teachers });
-                        _cache.teachers = teachers;
-                        window.__subjectHealDebug = `TUZATILDI ${realTeacher.subject || 'english'}->${correctSubject}, HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
-                    } catch (err) {
-                        window.__subjectHealDebug = `PATCH XATOSI: ${err.message} (yangi qiymat serverga YETMADI)`;
-                    }
-                } else {
-                    window.__subjectHealDebug = `tuzatish shart emas edi (${correctSubject}), HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
+                // Ustozning HAQIQIY STORAGE_KEYS.teachers yozuvi hali umuman
+                // mavjud bo'lmasligi mumkin edi ("virtual", faqat HR
+                // ro'yxatidan sintez qilingan holat) — bu holda server
+                // tomonidagi zaxira (fallback) mantiq faqat "lang" maydoniga
+                // qarardi, asosiy ustozlarda esa til lavozim nomida
+                // ("rus-oqituvchi") saqlanadi, shu sabab har doim 'english'
+                // deb hisoblanardi. Shu yerda haqiqiy yozuv YO'Q bo'lsa ham
+                // to'g'ridan-to'g'ri YARATILADI (formallashtiriladi) — shunda
+                // server endi hech qachon "virtual" zaxira mantiqqa
+                // tayanmaydi. VAQTINCHALIK DIAGNOSTIKA: setItem() xatoni
+                // yutib yuborgani uchun bu yerda to'g'ridan-to'g'ri
+                // apiPatchState chaqirilib, natija ANIQ kuzatiladi.
+                const updated = idx >= 0
+                    ? teachers.map((t, i) => i === idx ? { ...t, subject: correctSubject, type: correctType } : t)
+                    : [...teachers, {
+                        id: currentUser.linkedTeacherId,
+                        name: emp.name || '',
+                        type: correctType,
+                        subject: correctSubject,
+                        phone: emp.phone || '',
+                        login: emp.login || '',
+                        schedulePattern: 'mwf',
+                        lessonDuration: 15
+                    }];
+                try {
+                    await apiPatchState({ teachers: updated });
+                    _cache.teachers = updated;
+                    window.__subjectHealDebug = `${idx >= 0 ? 'TUZATILDI' : 'YARATILDI'} -> subject=${correctSubject}, HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
+                } catch (err) {
+                    window.__subjectHealDebug = `PATCH XATOSI: ${err.message} (yangi qiymat serverga YETMADI)`;
                 }
             }
         }

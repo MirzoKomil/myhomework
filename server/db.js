@@ -3042,7 +3042,10 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
              UNION ALL
              SELECT he.id, he.name,
                     CASE WHEN he.role = 'yordamchi' THEN 'yordamchi' ELSE 'asosiy' END AS type,
-                    COALESCE(NULLIF(he.lang, ''), 'english') AS subject
+                    CASE WHEN he.role = 'rus-oqituvchi' THEN 'russian'
+                         WHEN he.role = 'ingliz-oqituvchi' THEN 'english'
+                         ELSE COALESCE(NULLIF(he.lang, ''), 'english')
+                    END AS subject
              FROM hr_employees he
              WHERE he.id = $1
                AND NOT EXISTS (SELECT 1 FROM teachers t WHERE t.id = he.id)
