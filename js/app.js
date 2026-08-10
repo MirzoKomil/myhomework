@@ -8067,6 +8067,20 @@ function renderMainAttendance() {
         (isAssistantTeacher ? s.assistantTeacherId : s.teacherId) === teacherId &&
         (s.subject || 'english') === subject && !s.frozen && s.status !== 'inactive'
     );
+
+    // VAQTINCHALIK DIAGNOSTIKA: har bir chiqayotgan o'quvchining xom
+    // teacherId/subject qiymatlarini korsatadi - muammo topilgach olib
+    // tashlanadi.
+    if (isTeacherRole) {
+        const debugEl2 = document.getElementById('mainAttDebugInfo');
+        if (debugEl2) {
+            const rows = students.map(s =>
+                `${s.name}[tId:${s.teacherId || '-'},aId:${s.assistantTeacherId || '-'},subj:${s.subject || '-'},froz:${!!s.frozen},st:${s.status || '-'}]`
+            ).join(' | ');
+            debugEl2.textContent += ` || royxat(${students.length}): ${rows}`;
+        }
+    }
+
     const attendance = getItem(attendanceStorageKey, {});
     const attKey = `${monthVal}_${teacherId}`;
     const attendanceForTeacher = attendance[attKey] || {};
