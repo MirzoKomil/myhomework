@@ -423,9 +423,23 @@ async function bootApp() {
         }
         // Ilgari (eski, faqat ism bo'yicha) noto'g'ri ustozga bog'lanib
         // qolgan hisoblar ham har safar kirishda avtomatik tuzatiladi.
-        if (linked && currentUser.linkedTeacherId !== linked.id) {
-            currentUser.linkedTeacherId = linked.id;
-            setCurrentUser(currentUser);
+        if (linked) {
+            if (currentUser.linkedTeacherId !== linked.id) {
+                currentUser.linkedTeacherId = linked.id;
+                setCurrentUser(currentUser);
+            }
+        } else if (currentUser.linkedTeacherId) {
+            // Yangi qidiruv hech kimni topmadi (login ham, ism ham mos
+            // kelmadi) — lekin avvalgi (localStorage'da saqlangan)
+            // linkedTeacherId hamon boshqa ustozga ishora qilib turgan
+            // bo'lishi mumkin edi. Shu ID hozir ham egalik tekshiruvidan
+            // o'tmasa (isOwn), boshqa ustozning ro'yxati "o'ziniki" bo'lib
+            // ko'rinib qolmasligi uchun tozalanadi.
+            const stale = resolveTeacherWithVirtual(currentUser.linkedTeacherId);
+            if (!stale || !isOwn(stale)) {
+                currentUser.linkedTeacherId = null;
+                setCurrentUser(currentUser);
+            }
         }
     }
 
