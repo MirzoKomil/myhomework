@@ -456,20 +456,34 @@ async function bootApp() {
     // avtomatik tuzatiladi.
     if (currentUser.role === 'teacher' && currentUser.linkedTeacherId) {
         const realTeacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === currentUser.linkedTeacherId);
-        if (realTeacher) {
+        if (!realTeacher) {
+            window.__subjectHealDebug = 'realTeacher TOPILMADI';
+        } else {
             const emp = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === realTeacher.id);
-            if (emp) {
+            if (!emp) {
+                window.__subjectHealDebug = `HR yozuv TOPILMADI (teacher.id=${realTeacher.id})`;
+            } else {
                 const correctSubject = emp.role === 'rus-oqituvchi' ? 'russian'
                     : emp.role === 'ingliz-oqituvchi' ? 'english'
                     : (emp.lang === 'russian' ? 'russian' : 'english');
                 if ((realTeacher.subject || 'english') !== correctSubject) {
-                    // Kutiladi — aks holda foydalanuvchi tuzatish serverga
-                    // hali yetib bormasidan davomat belgilashga urinishi
-                    // mumkin edi (server bootApp yakunlangach ochiladigan
-                    // sahifadan sekundning bir ulushida tezroq so'rov
-                    // yuborishi mumkin emas, lekin await bu poygani butunlay
-                    // yo'qqa chiqaradi).
-                    await updateTeacher(realTeacher.id, { subject: correctSubject });
+                    // VAQTINCHALIK DIAGNOSTIKA: setItem() xatoni yutib
+                    // yuborgani (faqat konsolga log + toast) uchun await
+                    // qilingan updateTeacher hech qachon "reject" bo'lmaydi
+                    // — shu sabab bu yerda to'g'ridan-to'g'ri apiPatchState
+                    // chaqirilib, natija ANIQ kuzatiladi.
+                    const teachers = getItem(STORAGE_KEYS.teachers, []);
+                    const idx = teachers.findIndex(t => t.id === realTeacher.id);
+                    if (idx >= 0) teachers[idx] = { ...teachers[idx], subject: correctSubject };
+                    try {
+                        await apiPatchState({ teachers });
+                        _cache.teachers = teachers;
+                        window.__subjectHealDebug = `TUZATILDI ${realTeacher.subject || 'english'}->${correctSubject}, HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
+                    } catch (err) {
+                        window.__subjectHealDebug = `PATCH XATOSI: ${err.message} (yangi qiymat serverga YETMADI)`;
+                    }
+                } else {
+                    window.__subjectHealDebug = `tuzatish shart emas edi (${correctSubject}), HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
                 }
             }
         }
@@ -6904,7 +6918,8 @@ function initMainAttControls() {
             );
             debugEl.textContent = `DEBUG: mening login=${currentUser.email || '(yoq)'} | mening ism=${currentUser.name || '(yoq)'} | ` +
                 `topilgan ustoz=${ownTeacher ? `"${ownTeacher.name}" (id:${ownTeacher.id}, subject:${ownTeacher.subject || 'english'}, type:${ownTeacher.type || '?'}, login:${ownTeacher.login || '(yoq)'})` : '(TOPILMADI)'} | ` +
-                `shu ismli HR yozuvlar soni=${nameMatches.length} | shu login'li HR yozuvlar soni=${loginMatches.length}`;
+                `shu ismli HR yozuvlar soni=${nameMatches.length} | shu login'li HR yozuvlar soni=${loginMatches.length} | ` +
+                `subject-tuzatish natijasi=${window.__subjectHealDebug || '(ishlamadi/hali yoq)'}`;
             debugEl.style.display = '';
         } else {
             debugEl.style.display = 'none';
