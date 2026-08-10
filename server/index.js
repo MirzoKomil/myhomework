@@ -12,6 +12,7 @@ const { router: uploadsRouter, UPLOADS_DIR } = require('./routes/uploads');
 const telephonyRoutes = require('./routes/telephony');
 const smsRoutes = require('./routes/sms');
 const metaRoutes = require('./routes/meta');
+const telegramRoutes = require('./routes/telegram');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -138,6 +139,7 @@ app.use(['/api/auth/login', '/api/auth/student-login'], loginLimit);
 app.use('/api/leads', webhookLimit);
 app.use('/api/telephony', webhookLimit);
 app.use('/api/meta', webhookLimit);
+app.use('/api/telegram', webhookLimit);
 app.use('/api', apiLimit);
 
 app.use('/api/auth', authRoutes);
@@ -147,6 +149,7 @@ app.use('/api/upload', uploadsRouter);
 app.use('/api/telephony', telephonyRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/meta', metaRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 
