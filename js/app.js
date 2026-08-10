@@ -443,21 +443,25 @@ async function bootApp() {
         }
     }
 
-    // Qo'shimcha (yordamchi) ustozning haqiqiy STORAGE_KEYS.teachers
-    // yozuvida subject ilgari noto'g'ri saqlangan bo'lishi mumkin edi —
-    // updateTeacher avval faqat HR lavozimidan ("rus-oqituvchi"/
-    // "ingliz-oqituvchi") kelib chiqib subject'ni aniqlardi, yordamchi
-    // ustozlarda esa til alohida "lang" maydonida saqlanadi, shu sabab
-    // har doim 'english' bo'lib qolardi — bu davomat saqlashda "O'quvchi
-    // va ustoz fan yo'nalishi mos emas" xatosiga olib kelardi. Ustoz
-    // tizimga har safar kirganda HR yozuvi bilan solishtirib avtomatik
-    // tuzatiladi.
+    // Ustozning haqiqiy STORAGE_KEYS.teachers yozuvida subject ilgari
+    // noto'g'ri saqlangan bo'lishi mumkin edi — updateTeacher avval faqat
+    // HR lavozimidan ("rus-oqituvchi"/"ingliz-oqituvchi") kelib chiqib
+    // subject'ni aniqlardi, yordamchi ustozlarda esa til alohida "lang"
+    // maydonida saqlanadi, shu sabab har doim 'english' bo'lib qolardi —
+    // bu davomat saqlashda "O'quvchi va ustoz fan yo'nalishi mos emas"
+    // xatosiga olib kelardi. Asosiy ustozlarda ham (masalan yozuv ancha
+    // oldin, hozirgi mantiqdan oldin yaratilgan bo'lsa) xuddi shunday
+    // eskirib qolishi mumkin, shuning uchun ikkalasi uchun ham tekshiriladi.
+    // Ustoz tizimga har safar kirganda HR yozuvi bilan solishtirib
+    // avtomatik tuzatiladi.
     if (currentUser.role === 'teacher' && currentUser.linkedTeacherId) {
         const realTeacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === currentUser.linkedTeacherId);
-        if (realTeacher && realTeacher.type === 'yordamchi') {
+        if (realTeacher) {
             const emp = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === realTeacher.id);
             if (emp) {
-                const correctSubject = emp.lang === 'russian' ? 'russian' : 'english';
+                const correctSubject = emp.role === 'rus-oqituvchi' ? 'russian'
+                    : emp.role === 'ingliz-oqituvchi' ? 'english'
+                    : (emp.lang === 'russian' ? 'russian' : 'english');
                 if ((realTeacher.subject || 'english') !== correctSubject) {
                     updateTeacher(realTeacher.id, { subject: correctSubject });
                 }
@@ -6878,6 +6882,29 @@ function initMainAttControls() {
     // topilmasa, birinchi variant (BOSHQA ustoz) tanlanib qo'yardi.
     // Endi resolveTeacherWithVirtual orqali FAQAT o'zining yozuvi olinadi.
     const ownTeacher = isTeacherRole && linkedTeacherId ? resolveTeacherWithVirtual(linkedTeacherId) : null;
+
+    // VAQTINCHALIK DIAGNOSTIKA (42-vazifadan keyingi davomat bogi): ustoz
+    // hamon boshqa birovning royxatini korayotgan sababini DB'ga kirmasdan
+    // aniqlash uchun - muammo topilgach olib tashlanadi.
+    const debugEl = document.getElementById('mainAttDebugInfo');
+    if (debugEl) {
+        if (isTeacherRole) {
+            const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+            const nameMatches = hrEmployees.filter(e =>
+                (e.name || '').trim().toLowerCase() === (currentUser.name || '').trim().toLowerCase()
+            );
+            const loginMatches = hrEmployees.filter(e =>
+                (e.login || '').trim().toLowerCase() && (e.login || '').trim().toLowerCase() === (currentUser.email || '').trim().toLowerCase()
+            );
+            debugEl.textContent = `DEBUG: mening login=${currentUser.email || '(yoq)'} | mening ism=${currentUser.name || '(yoq)'} | ` +
+                `topilgan ustoz=${ownTeacher ? `"${ownTeacher.name}" (id:${ownTeacher.id}, subject:${ownTeacher.subject || 'english'}, type:${ownTeacher.type || '?'}, login:${ownTeacher.login || '(yoq)'})` : '(TOPILMADI)'} | ` +
+                `shu ismli HR yozuvlar soni=${nameMatches.length} | shu login'li HR yozuvlar soni=${loginMatches.length}`;
+            debugEl.style.display = '';
+        } else {
+            debugEl.style.display = 'none';
+            debugEl.textContent = '';
+        }
+    }
 
     initSubjectTabs('mainAttSubjectTabs', renderMainAttendance);
     const tabsEl = document.getElementById('mainAttSubjectTabs');
