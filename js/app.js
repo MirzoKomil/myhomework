@@ -9620,10 +9620,11 @@ function openSdpChangeSchedule(s) {
     const timeOpts = TIME_SLOTS.map(t =>
         `<option value="${t}"${s.lessonTime===t?' selected':''}>${t}</option>`
     ).join('');
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
-    const teacher = teachers.find(t => t.id === s.teacherId);
-    const lessonDays = getTeacherLessonDays(teacher);
-    const dayOpts = lessonDays.map(dow =>
+    // 42-vazifadagi kabi: ustoz faqat o'zining bitta sozlangan patterni
+    // (toq yoki juft kunlar) bilan cheklanmasligi kerak - bitta ustoz
+    // turli o'quvchilarni turli kunlarda o'qitishi mumkin, shuning uchun
+    // barcha kunlar (Dush-Shan) tanlov uchun ochiq bo'lishi kerak.
+    const dayOpts = [1, 2, 3, 4, 5, 6].map(dow =>
         `<option value="${dow}"${s.lessonDayOfWeek===dow?' selected':''}>${escapeHtml(DAYS_UZ[dow - 1] || '')}</option>`
     ).join('');
     openModal("Jadval o'zgartirish",
