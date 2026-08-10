@@ -7333,7 +7333,7 @@ body.modal-open {
 }
 .sdp-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 .sdp-tab:hover:not(.active) { color: var(--text); }
-.sdp-body { flex: 1; overflow-y: auto; padding: 32px 40px; }
+.sdp-body { flex: 1; overflow-y: auto; overflow-x: auto; padding: 32px 40px; }
 .sdp-body-inner { max-width: 1080px; margin: 0 auto; }
 .sdp-section { margin-bottom: 28px; }
 .sdp-section-title {
@@ -7431,6 +7431,22 @@ body.modal-open {
     .funnel-row { grid-template-columns: 1fr; }
     .funnel-label-left { align-items: flex-start; text-align: left; }
     .funnel-label-right { display: none; }
+
+    /* O'quvchi tafsilotlari paneli (.sdp-*) - 40px gorizontal padding va
+       qattiq flex-direction:row amallar qatori tor ekranda mos kelmasdi.
+       Amallar qatori (Ustoz almashtirish/Jadval o'zgartirish/Muzlatish)
+       endi tablar kabi alohida, gorizontal surila oladigan qatorga
+       tushadi. */
+    .sdp-header { padding: 10px 16px; flex-wrap: wrap; gap: 10px; }
+    .sdp-header-actions {
+        flex: 1 1 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .sdp-avatar { width: 44px; height: 44px; font-size: 16px; }
+    .sdp-name { font-size: 17px; }
+    .sdp-tabs { padding: 0 16px; }
+    .sdp-body { padding: 16px; }
 }
 
 /* ===== Scripts / Skriptlar ===== */
