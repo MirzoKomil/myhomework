@@ -456,18 +456,14 @@ async function bootApp() {
     // avtomatik tuzatiladi.
     if (currentUser.role === 'teacher' && currentUser.linkedTeacherId) {
         const emp = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === currentUser.linkedTeacherId);
-        if (!emp) {
-            window.__subjectHealDebug = `HR yozuv TOPILMADI (teacher.id=${currentUser.linkedTeacherId})`;
-        } else {
+        if (emp) {
             const correctSubject = emp.role === 'rus-oqituvchi' ? 'russian'
                 : emp.role === 'ingliz-oqituvchi' ? 'english'
                 : (emp.lang === 'russian' ? 'russian' : 'english');
             const correctType = emp.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
             const teachers = getItem(STORAGE_KEYS.teachers, []);
             const idx = teachers.findIndex(t => t.id === currentUser.linkedTeacherId);
-            if (idx >= 0 && (teachers[idx].subject || 'english') === correctSubject) {
-                window.__subjectHealDebug = `tuzatish shart emas edi (${correctSubject}), HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
-            } else {
+            if (idx < 0 || (teachers[idx].subject || 'english') !== correctSubject || teachers[idx].type !== correctType) {
                 // Ustozning HAQIQIY STORAGE_KEYS.teachers yozuvi hali umuman
                 // mavjud bo'lmasligi mumkin edi ("virtual", faqat HR
                 // ro'yxatidan sintez qilingan holat) — bu holda server
@@ -477,9 +473,7 @@ async function bootApp() {
                 // deb hisoblanardi. Shu yerda haqiqiy yozuv YO'Q bo'lsa ham
                 // to'g'ridan-to'g'ri YARATILADI (formallashtiriladi) — shunda
                 // server endi hech qachon "virtual" zaxira mantiqqa
-                // tayanmaydi. VAQTINCHALIK DIAGNOSTIKA: setItem() xatoni
-                // yutib yuborgani uchun bu yerda to'g'ridan-to'g'ri
-                // apiPatchState chaqirilib, natija ANIQ kuzatiladi.
+                // tayanmaydi.
                 const updated = idx >= 0
                     ? teachers.map((t, i) => i === idx ? { ...t, subject: correctSubject, type: correctType } : t)
                     : [...teachers, {
@@ -492,13 +486,9 @@ async function bootApp() {
                         schedulePattern: 'mwf',
                         lessonDuration: 15
                     }];
-                try {
-                    await apiPatchState({ teachers: updated });
+                await apiPatchState({ teachers: updated }).then(() => {
                     _cache.teachers = updated;
-                    window.__subjectHealDebug = `${idx >= 0 ? 'TUZATILDI' : 'YARATILDI'} -> subject=${correctSubject}, HR.role=${emp.role || '(yoq)'}, HR.lang=${emp.lang || '(yoq)'}`;
-                } catch (err) {
-                    window.__subjectHealDebug = `PATCH XATOSI: ${err.message} (yangi qiymat serverga YETMADI)`;
-                }
+                }).catch(err => console.error('Ustoz subject tuzatishda xatolik:', err.message));
             }
         }
     }
@@ -6925,30 +6915,6 @@ function initMainAttControls() {
     // Endi resolveTeacherWithVirtual orqali FAQAT o'zining yozuvi olinadi.
     const ownTeacher = isTeacherRole && linkedTeacherId ? resolveTeacherWithVirtual(linkedTeacherId) : null;
 
-    // VAQTINCHALIK DIAGNOSTIKA (42-vazifadan keyingi davomat bogi): ustoz
-    // hamon boshqa birovning royxatini korayotgan sababini DB'ga kirmasdan
-    // aniqlash uchun - muammo topilgach olib tashlanadi.
-    const debugEl = document.getElementById('mainAttDebugInfo');
-    if (debugEl) {
-        if (isTeacherRole) {
-            const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
-            const nameMatches = hrEmployees.filter(e =>
-                (e.name || '').trim().toLowerCase() === (currentUser.name || '').trim().toLowerCase()
-            );
-            const loginMatches = hrEmployees.filter(e =>
-                (e.login || '').trim().toLowerCase() && (e.login || '').trim().toLowerCase() === (currentUser.email || '').trim().toLowerCase()
-            );
-            debugEl.textContent = `DEBUG: mening login=${currentUser.email || '(yoq)'} | mening ism=${currentUser.name || '(yoq)'} | ` +
-                `topilgan ustoz=${ownTeacher ? `"${ownTeacher.name}" (id:${ownTeacher.id}, subject:${ownTeacher.subject || 'english'}, type:${ownTeacher.type || '?'}, login:${ownTeacher.login || '(yoq)'})` : '(TOPILMADI)'} | ` +
-                `shu ismli HR yozuvlar soni=${nameMatches.length} | shu login'li HR yozuvlar soni=${loginMatches.length} | ` +
-                `subject-tuzatish natijasi=${window.__subjectHealDebug || '(ishlamadi/hali yoq)'}`;
-            debugEl.style.display = '';
-        } else {
-            debugEl.style.display = 'none';
-            debugEl.textContent = '';
-        }
-    }
-
     initSubjectTabs('mainAttSubjectTabs', renderMainAttendance);
     const tabsEl = document.getElementById('mainAttSubjectTabs');
     if (tabsEl) {
@@ -8110,19 +8076,6 @@ function renderMainAttendance() {
         (isAssistantTeacher ? s.assistantTeacherId : s.teacherId) === teacherId &&
         (s.subject || 'english') === subject && !s.frozen && s.status !== 'inactive'
     );
-
-    // VAQTINCHALIK DIAGNOSTIKA: har bir chiqayotgan o'quvchining xom
-    // teacherId/subject qiymatlarini korsatadi - muammo topilgach olib
-    // tashlanadi.
-    if (isTeacherRole) {
-        const debugEl2 = document.getElementById('mainAttDebugInfo');
-        if (debugEl2) {
-            const rows = students.map(s =>
-                `${s.name}[tId:${s.teacherId || '-'},aId:${s.assistantTeacherId || '-'},subj:${s.subject || '-'},froz:${!!s.frozen},st:${s.status || '-'}]`
-            ).join(' | ');
-            debugEl2.textContent += ` || royxat(${students.length}): ${rows}`;
-        }
-    }
 
     const attendance = getItem(attendanceStorageKey, {});
     const attKey = `${monthVal}_${teacherId}`;
