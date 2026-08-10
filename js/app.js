@@ -384,11 +384,27 @@ async function bootApp() {
     }
 
     // O'qituvchi uchun bog'liq teacher ID ni aniqlash
-    if (currentUser.role === 'teacher' && !currentUser.linkedTeacherId) {
+    if (currentUser.role === 'teacher') {
         const teachers = getItem(STORAGE_KEYS.teachers, []);
-        let linked = teachers.find(t =>
-            t.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
-        );
+        // Bir xil yoki o'xshash ismli ustozlar bo'lsa, faqat ism bo'yicha
+        // qidiruv NOTO'G'RI ustozga bog'lab qo'yishi mumkin edi — ustoz
+        // butunlay boshqa ustozning o'quvchilari, fan yo'nalishi va
+        // davomatini o'ziniki deb ko'rar edi. Server tomoni
+        // (recordTeacherAttendance) egalikni HAR BIR nomzod uchun avvalo
+        // login (currentUser.email === HR yozuvining login'i) orqali
+        // tekshiradi, faqat o'sha nomzodning login'i bo'sh bo'lsagina
+        // ismga fallback qiladi — mijoz tomoni ham endi xuddi shu
+        // tartibga amal qiladi (login bor bo'lsa, faqat login mos kelishi
+        // hisobga olinadi, ism hech qachon uni ustunlamaydi).
+        const myLogin = (currentUser.email || '').trim().toLowerCase();
+        const byName = t => t.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase();
+        const isOwn = t => {
+            const tLogin = (t.login || '').trim().toLowerCase();
+            return tLogin ? tLogin === myLogin : byName(t);
+        };
+        const findOwn = list => list.find(isOwn);
+
+        let linked = findOwn(teachers);
         // 29-vazifa: ustoz hali "Ustoz ish jadvalini sozlash" orqali
         // haqiqiy STORAGE_KEYS.teachers yozuviga aylanmagan, faqat HR
         // xodimlar ro'yxatida "virtual" ustoz sifatida mavjud bo'lsa,
@@ -400,14 +416,14 @@ async function bootApp() {
         if (!linked) {
             outer: for (const type of ['asosiy', 'yordamchi']) {
                 for (const subject of ['english', 'russian']) {
-                    const found = filterTeachersByTypeAndSubject(type, subject).find(t =>
-                        t.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
-                    );
+                    const found = findOwn(filterTeachersByTypeAndSubject(type, subject));
                     if (found) { linked = found; break outer; }
                 }
             }
         }
-        if (linked) {
+        // Ilgari (eski, faqat ism bo'yicha) noto'g'ri ustozga bog'lanib
+        // qolgan hisoblar ham har safar kirishda avtomatik tuzatiladi.
+        if (linked && currentUser.linkedTeacherId !== linked.id) {
             currentUser.linkedTeacherId = linked.id;
             setCurrentUser(currentUser);
         }
