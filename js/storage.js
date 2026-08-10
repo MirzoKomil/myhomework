@@ -496,7 +496,14 @@ function updateTeacher(id, fields) {
     const employees = getItem(STORAGE_KEYS.hrEmployees, []);
     const emp = employees.find(e => e.id === id);
     const inferredType = emp?.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
-    const inferredSubject = emp?.role === 'rus-oqituvchi' ? 'russian' : 'english';
+    // Asosiy ustozda til HR lavozim satirining o'zida ("ingliz-oqituvchi"/
+    // "rus-oqituvchi"), yordamchi ustozda esa alohida "lang" maydonida
+    // saqlanadi (filterTeachersByTypeAndSubject'dagi kabi) — faqat
+    // rol bo'yicha aniqlash yordamchi ustozlar uchun doim 'english'ga
+    // tushib qolardi, garchi ular rus tilida ishlasa ham.
+    const inferredSubject = emp?.role === 'rus-oqituvchi' ? 'russian'
+        : emp?.role === 'ingliz-oqituvchi' ? 'english'
+        : (emp?.lang === 'russian' ? 'russian' : 'english');
     teachers.push({
         id,
         name: emp?.name || '',

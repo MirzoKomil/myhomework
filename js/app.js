@@ -413,6 +413,28 @@ async function bootApp() {
         }
     }
 
+    // Qo'shimcha (yordamchi) ustozning haqiqiy STORAGE_KEYS.teachers
+    // yozuvida subject ilgari noto'g'ri saqlangan bo'lishi mumkin edi —
+    // updateTeacher avval faqat HR lavozimidan ("rus-oqituvchi"/
+    // "ingliz-oqituvchi") kelib chiqib subject'ni aniqlardi, yordamchi
+    // ustozlarda esa til alohida "lang" maydonida saqlanadi, shu sabab
+    // har doim 'english' bo'lib qolardi — bu davomat saqlashda "O'quvchi
+    // va ustoz fan yo'nalishi mos emas" xatosiga olib kelardi. Ustoz
+    // tizimga har safar kirganda HR yozuvi bilan solishtirib avtomatik
+    // tuzatiladi.
+    if (currentUser.role === 'teacher' && currentUser.linkedTeacherId) {
+        const realTeacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === currentUser.linkedTeacherId);
+        if (realTeacher && realTeacher.type === 'yordamchi') {
+            const emp = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === realTeacher.id);
+            if (emp) {
+                const correctSubject = emp.lang === 'russian' ? 'russian' : 'english';
+                if ((realTeacher.subject || 'english') !== correctSubject) {
+                    updateTeacher(realTeacher.id, { subject: correctSubject });
+                }
+            }
+        }
+    }
+
     // Sotuv menejeri uchun bog'liq manager ID va til yo'nalishini aniqlash
     if (currentUser.role === 'sales_manager' && (!currentUser.linkedManagerId || !currentUser.linkedManagerLang)) {
         const managers = getItem(STORAGE_KEYS.salesManagers, []);
