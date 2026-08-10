@@ -463,7 +463,13 @@ async function bootApp() {
                     : emp.role === 'ingliz-oqituvchi' ? 'english'
                     : (emp.lang === 'russian' ? 'russian' : 'english');
                 if ((realTeacher.subject || 'english') !== correctSubject) {
-                    updateTeacher(realTeacher.id, { subject: correctSubject });
+                    // Kutiladi — aks holda foydalanuvchi tuzatish serverga
+                    // hali yetib bormasidan davomat belgilashga urinishi
+                    // mumkin edi (server bootApp yakunlangach ochiladigan
+                    // sahifadan sekundning bir ulushida tezroq so'rov
+                    // yuborishi mumkin emas, lekin await bu poygani butunlay
+                    // yo'qqa chiqaradi).
+                    await updateTeacher(realTeacher.id, { subject: correctSubject });
                 }
             }
         }

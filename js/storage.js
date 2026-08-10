@@ -142,7 +142,15 @@ function setItem(key, value) {
         // lid apiSaveLead/apiDeleteLead bilan row-level saqlanadi.
         if (key === STORAGE_KEYS.leads) return;
         if (_apiReady) {
-            apiPatchState({ [cacheKey]: value }).catch(err => {
+            // Qaytarilgan promise — bir xil kalit (masalan "teachers") uchun
+            // ketma-ket bir necha joyda saqlash chaqirilsa (initStorage
+            // ichidagi migratsiyalar kabi), chaqiruvchi buni kutib, keyingi
+            // yozuv avvalgisi tugagandan SO'NG yuborilishini ta'minlashi
+            // mumkin — aks holda ikkita PATCH so'rovi tarmoqda bir-birini
+            // "poyga" qilib, oxirgisi emas, tasodifan tezroq kelgani
+            // g'olib chiqishi (eski qiymat yangisini bosib qo'yishi) mumkin
+            // edi.
+            return apiPatchState({ [cacheKey]: value }).catch(err => {
                 console.error('Saqlash xatoligi:', err.message);
                 showSaveError(err.message);
             });
@@ -208,10 +216,13 @@ async function initStorage() {
         const state = await apiLoadState();
         _cache = { ...state };
         _apiReady = true;
-        migrateTeachers();
-        migrateStudents();
-        migrateSalesManagersHREmployees();
-        cleanOrphanTeachers();
+        // Ketma-ket await qilinadi — bir nechtasi bir vaqtda "teachers" (yoki
+        // boshqa) kalitiga PATCH yuborsa, tarmoqda poyga bo'lib, birining
+        // natijasi ikkinchisinikini bosib qo'yishining oldi olinadi.
+        await migrateTeachers();
+        await migrateStudents();
+        await migrateSalesManagersHREmployees();
+        await cleanOrphanTeachers();
     } catch (err) {
         console.error('API ulanmadi:', err.message);
         _apiReady = false;
@@ -255,7 +266,7 @@ function requireAuth() {
     return user;
 }
 
-function migrateSalesManagersHREmployees() {
+async function migrateSalesManagersHREmployees() {
     const sm = window.localStorage.getItem(STORAGE_KEYS.salesManagers);
     if (!sm) return;
     try {
@@ -273,7 +284,7 @@ function migrateSalesManagersHREmployees() {
                     });
                 }
             }
-            setItem(STORAGE_KEYS.hrEmployees, hr);
+            await setItem(STORAGE_KEYS.hrEmployees, hr);
         }
         window.localStorage.removeItem(STORAGE_KEYS.salesManagers);
     } catch (e) { }
@@ -296,7 +307,14 @@ function slotKey(date, time, teacherId) {
     return `${date}_${time}_${teacherId || 'all'}`;
 }
 
-function migrateTeachers() {
+// Bir xil "teachers" kalitiga ketma-ket bir necha migratsiya funksiyasi
+// yozishi mumkin (bu, cleanOrphanTeachers) — har biri await qilinib
+// ketma-ket ishlatilishi kerak, aks holda ularning PATCH so'rovlari
+// tarmoqda "poyga" qilib, birining natijasi ikkinchisinikini bosib
+// qo'yishi mumkin edi (masalan boshqa joyda to'g'irlangan subject
+// qiymati shu eski migratsiya yozuvi bilan qayta noto'g'irga aylanib
+// qolardi).
+async function migrateTeachers() {
     const teachers = getItem(STORAGE_KEYS.teachers, null);
     if (!teachers) return;
     let changed = false;
@@ -308,22 +326,22 @@ function migrateTeachers() {
             changed = true;
         }
     });
-    if (changed) setItem(STORAGE_KEYS.teachers, teachers);
+    if (changed) await setItem(STORAGE_KEYS.teachers, teachers);
 }
 
 // HR da yo'q eski ustoz yozuvlarini teachers jadvalidan o'chiradi
-function cleanOrphanTeachers() {
+async function cleanOrphanTeachers() {
     const teachers = getItem(STORAGE_KEYS.teachers, null);
     if (!teachers || !teachers.length) return;
     const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
     const hrIds = new Set(hrEmployees.map(e => e.id));
     const cleaned = teachers.filter(t => hrIds.has(t.id));
     if (cleaned.length < teachers.length) {
-        setItem(STORAGE_KEYS.teachers, cleaned);
+        await setItem(STORAGE_KEYS.teachers, cleaned);
     }
 }
 
-function migrateStudents() {
+async function migrateStudents() {
     const students = getItem(STORAGE_KEYS.students, null);
     if (!students) return;
     let changed = false;
@@ -333,7 +351,7 @@ function migrateStudents() {
             changed = true;
         }
     });
-    if (changed) setItem(STORAGE_KEYS.students, students);
+    if (changed) await setItem(STORAGE_KEYS.students, students);
 }
 
 function normalizeSubject(val) {
@@ -477,13 +495,16 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     };
 }
 
-function updateTeacher(id, fields) {
+// Chaqiruvchilarning aksariyati bu promise'ni kutmaydi (fire-and-forget,
+// avvalgidek) — lekin bootApp'dagi o'z-o'zini tuzatish kabi joylar endi
+// await qilib, saqlash haqiqatan ham serverga yetganiga ishonch hosil
+// qilishi mumkin.
+async function updateTeacher(id, fields) {
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const idx = teachers.findIndex(t => t.id === id);
     if (idx >= 0) {
         teachers[idx] = { ...teachers[idx], ...fields };
-        setItem(STORAGE_KEYS.teachers, teachers);
-        return;
+        return setItem(STORAGE_KEYS.teachers, teachers);
     }
     // 3-vazifa: Xodimlar ro'yxatida bor, lekin STORAGE_KEYS.teachers'da hali
     // haqiqiy yozuvi yo'q "virtual" ustoz uchun (filterTeachersByTypeAndSubject
@@ -513,7 +534,7 @@ function updateTeacher(id, fields) {
         login: emp?.login || '',
         ...fields
     });
-    setItem(STORAGE_KEYS.teachers, teachers);
+    return setItem(STORAGE_KEYS.teachers, teachers);
 }
 
 function updateStudent(id, fields) {
