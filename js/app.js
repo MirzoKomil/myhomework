@@ -10254,7 +10254,7 @@ function studentFormHtml(sfx, defaults) {
         <input type="text" id="mStLogin${sfx}" class="form-control" value="${escapeHtml(d.login || '')}" placeholder="Masalan: +998901234567" autocomplete="off">
     </div>
     <div class="form-group">
-        <label>Parol (ilovaga kirish uchun, o'zgartirmaslik uchun bo'sh qoldiring)</label>
+        <label>Parol (ilovaga kirish uchun)${sfx ? ' — o\'zgartirmaslik uchun bo\'sh qoldiring' : ' — bo\'sh qoldirsangiz, telefon raqamining oxirgi 4 raqami parol bo\'ladi'}</label>
         <div class="input-password-wrap">
             <input type="password" id="mStPassword${sfx}" class="form-control" value="" autocomplete="off">
             <button type="button" class="input-eye-btn" id="mStPasswordEye${sfx}" tabindex="-1" aria-label="Parolni ko'rsat">
@@ -10270,11 +10270,31 @@ function _bindStudentPasswordEye(sfx) {
     if (btn && inp) btn.addEventListener('click', () => { inp.type = inp.type === 'password' ? 'text' : 'password'; });
 }
 
-// 38-vazifa: o'quvchi uchun oddiy 6 xonali sonli parol — telefon raqami
-// asosidagi login bilan birga, o'quvchi buni oson eslab qolib, o'zi
-// kiritishi mumkin.
-function generateStudentPassword() {
-    return String(Math.floor(100000 + Math.random() * 900000));
+// 46-vazifa: tasodifiy 6 xonali son o'rniga, o'quvchi/xodim o'zining
+// telefon raqamining oxirgi 4 raqamini parol sifatida oladi — bu
+// login (telefon raqami) bilan birga, u buni hech qayerdan qidirmasdan,
+// o'zi allaqachon bilgan holda darhol eslab qoladi. Raqam 4 tadan kam
+// bo'lgan juda kamdan-kam holatda ham parol bo'sh qolib ketmasligi
+// uchun tasodifiy 4 xonali songa tushiladi.
+function generatePasswordFromPhone(phone) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (digits.length >= 4) return digits.slice(-4);
+    return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+// 46-vazifa: yangi hisob yaratish shaklida parol maydonini telefon
+// raqami kiritilayotgan paytda jonli ravishda taklif qiladi (oxirgi 4
+// raqam) — admin uni ko'rib, kerak bo'lsa o'zi qo'lda o'zgartirishi
+// mumkin, shu sabab qo'lda tahrirlangach avtomatik taklif to'xtatiladi.
+function _wirePhonePasswordAutofill(phoneId, passwordId) {
+    const phoneEl = document.getElementById(phoneId);
+    const passwordEl = document.getElementById(passwordId);
+    if (!phoneEl || !passwordEl) return;
+    passwordEl.addEventListener('input', () => { passwordEl.dataset.userEdited = '1'; });
+    phoneEl.addEventListener('input', () => {
+        if (passwordEl.dataset.userEdited) return;
+        passwordEl.value = generatePasswordFromPhone(phoneEl.value);
+    });
 }
 
 document.getElementById('addStudentBtn').addEventListener('click', () => {
@@ -10303,6 +10323,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         fillStudentTeacherOptions(e.target.value, '');
     });
     _bindStudentPasswordEye('');
+    _wirePhonePasswordAutofill('mStPhone', 'mStPassword');
     wireMoneyInputs();
     document.getElementById('cancelAddStudent').onclick = () => closeModal();
     document.getElementById('saveStudent').onclick = () => {
@@ -10314,10 +10335,11 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         if (!leadStage) { alert("Sotuv bo'limi ustunini tanlang"); return; }
         const phone = document.getElementById('mStPhone').value.trim();
         const login = document.getElementById('mStLogin').value.trim() || phone.replace(/\s/g, '');
-        // 38-vazifa: agar admin Parolni bo'sh qoldirsa ham, o'quvchi ilovaga
-        // real kira olishi uchun avtomatik parol generatsiya qilinadi —
+        // 38-vazifa/46-vazifa: agar admin Parolni bo'sh qoldirsa ham,
+        // o'quvchi ilovaga real kira olishi uchun avtomatik parol
+        // generatsiya qilinadi (telefon raqamining oxirgi 4 raqami) —
         // aks holda bo'sh parol bilan login umuman ishlamas edi.
-        const password = document.getElementById('mStPassword').value.trim() || generateStudentPassword();
+        const password = document.getElementById('mStPassword').value.trim() || generatePasswordFromPhone(phone);
         const students = getItem(STORAGE_KEYS.students, []);
         if (login && students.find(s => s.login === login)) {
             alert('Bu login allaqachon mavjud.');
@@ -18133,7 +18155,7 @@ function ensureStudentLoginForLead(lang, lead) {
     }
     if (students[idx].login) return null;
     const login = String(lead.phone || '').replace(/\s/g, '');
-    const password = generateStudentPassword();
+    const password = generatePasswordFromPhone(lead.phone);
     students[idx] = { ...students[idx], login, password };
     setItem(STORAGE_KEYS.students, students);
     return { login, password };
@@ -20310,7 +20332,7 @@ function openAddEmployeeModal() {
         <div class="form-group">
             <label>Parol <span style="color:var(--danger)">*</span></label>
             <div class="input-password-wrap">
-                <input type="password" id="empPassword" class="form-control" placeholder="Kamida 4 ta belgi" autocomplete="new-password">
+                <input type="password" id="empPassword" class="form-control" placeholder="Avtomatik: telefonning oxirgi 4 raqami" autocomplete="new-password">
                 <button type="button" class="input-eye-btn" id="empPasswordEye" tabindex="-1" aria-label="Parolni ko'rsat">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -20334,6 +20356,9 @@ function openAddEmployeeModal() {
         const loginEl = document.getElementById('empLogin');
         loginEl.value = normalizeEmployeePhoneLogin(phone);
     });
+    // 46-vazifa: parol ham avtomatik - telefon raqamining oxirgi 4 raqami
+    // (admin qo'lda o'zgartirsa, avtomatik taklif to'xtaydi).
+    _wirePhonePasswordAutofill('empPhone', 'empPassword');
 
     // Parol ko'z tugmasi
     document.getElementById('empPasswordEye').addEventListener('click', () => {
