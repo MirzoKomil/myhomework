@@ -87,75 +87,6 @@ export function pickWindow<T>(pool: T[], offset: number, count: number): T[] {
   return Array.from({ length: Math.min(count, pool.length) }, (_, i) => pool[(offset + i) % pool.length]);
 }
 
-// ─── Vocabulary pool ────────────────────────────────────────────────────────
-const VOCAB_POOL: VocabWord[] = [
-  { id: 'v1', icon: 'restaurant-outline', english: 'apple', translation: 'olma', transcript: '/ˈæp.əl/' },
-  { id: 'v2', icon: 'walk-outline', english: 'window', translation: 'deraza', transcript: '/ˈwɪn.doʊ/' },
-  { id: 'v3', icon: 'people-outline', english: 'friend', translation: "do'st", transcript: '/frend/' },
-  { id: 'v4', icon: 'happy-outline', english: 'happy', translation: 'baxtli', transcript: '/ˈhæp.i/' },
-  { id: 'v5', icon: 'airplane-outline', english: 'travel', translation: 'sayohat qilmoq', transcript: '/ˈtræv.əl/' },
-  { id: 'v6', icon: 'flame-outline', english: 'kitchen', translation: 'oshxona', transcript: '/ˈkɪtʃ.ɪn/' },
-  { id: 'v7', icon: 'partly-sunny-outline', english: 'weather', translation: 'ob-havo', transcript: '/ˈweð.ər/' },
-  { id: 'v8', icon: 'school-outline', english: 'teacher', translation: "o'qituvchi", transcript: '/ˈtiː.tʃər/' },
-  { id: 'v9', icon: 'flash-outline', english: 'quick', translation: 'tez', transcript: '/kwɪk/' },
-  { id: 'v10', icon: 'library-outline', english: 'library', translation: 'kutubxona', transcript: '/ˈlaɪ.brer.i/' },
-  { id: 'v11', icon: 'star-outline', english: 'important', translation: 'muhim', transcript: '/ɪmˈpɔːr.tənt/' },
-  { id: 'v12', icon: 'sunny-outline', english: 'morning', translation: 'ertalab', transcript: '/ˈmɔːr.nɪŋ/' },
-  { id: 'v13', icon: 'water-outline', english: 'river', translation: "daryo", transcript: '/ˈrɪv.ər/' },
-  { id: 'v14', icon: 'car-outline', english: 'journey', translation: 'sayohat', transcript: '/ˈdʒɜːr.ni/' },
-  { id: 'v15', icon: 'bed-outline', english: 'bedroom', translation: 'yotoqxona', transcript: '/ˈbed.ruːm/' },
-  { id: 'v16', icon: 'basket-outline', english: 'market', translation: 'bozor', transcript: '/ˈmɑːr.kɪt/' },
-  { id: 'v17', icon: 'heart-outline', english: 'health', translation: 'salomatlik', transcript: '/helθ/' },
-  { id: 'v18', icon: 'book-outline', english: 'story', translation: 'hikoya', transcript: '/ˈstɔːr.i/' },
-  { id: 'v19', icon: 'time-outline', english: 'schedule', translation: 'jadval', transcript: '/ˈskedʒ.uːl/' },
-  { id: 'v20', icon: 'briefcase-outline', english: 'job', translation: 'ish', transcript: '/dʒɑːb/' },
-  { id: 'v21', icon: 'thunderstorm-outline', english: 'storm', translation: "bo'ron", transcript: '/stɔːrm/' },
-  { id: 'v22', icon: 'leaf-outline', english: 'nature', translation: 'tabiat', transcript: '/ˈneɪ.tʃər/' },
-  { id: 'v23', icon: 'gift-outline', english: 'present', translation: 'sovg\'a', transcript: '/ˈprez.ənt/' },
-  { id: 'v24', icon: 'musical-notes-outline', english: 'song', translation: "qo'shiq", transcript: '/sɔːŋ/' },
-  { id: 'v25', icon: 'wallet-outline', english: 'money', translation: 'pul', transcript: '/ˈmʌn.i/' },
-  { id: 'v26', icon: 'medkit-outline', english: 'doctor', translation: 'shifokor', transcript: '/ˈdɑːk.tər/' },
-  { id: 'v27', icon: 'football-outline', english: 'sport', translation: 'sport', transcript: '/spɔːrt/' },
-  { id: 'v28', icon: 'moon-outline', english: 'night', translation: 'kecha', transcript: '/naɪt/' },
-  { id: 'v29', icon: 'paw-outline', english: 'animal', translation: 'hayvon', transcript: '/ˈæn.ə.məl/' },
-  { id: 'v30', icon: 'shirt-outline', english: 'clothes', translation: 'kiyim', transcript: '/kloʊðz/' },
-  { id: 'v31', icon: 'phone-portrait-outline', english: 'phone', translation: 'telefon', transcript: '/foʊn/' },
-  { id: 'v32', icon: 'cloud-outline', english: 'cloud', translation: 'bulut', transcript: '/klaʊd/' },
-  { id: 'v33', icon: 'restaurant-outline', english: 'dinner', translation: 'kechki ovqat', transcript: '/ˈdɪn.ər/' },
-  { id: 'v34', icon: 'bus-outline', english: 'transport', translation: 'transport', transcript: '/ˈtræns.pɔːrt/' },
-  { id: 'v35', icon: 'globe-outline', english: 'country', translation: 'mamlakat', transcript: '/ˈkʌn.tri/' },
-  { id: 'v36', icon: 'construct-outline', english: 'build', translation: 'qurmoq', transcript: '/bɪld/' },
-  { id: 'v37', icon: 'trending-up-outline', english: 'improve', translation: 'yaxshilamoq', transcript: '/ɪmˈpruːv/' },
-  { id: 'v38', icon: 'hand-left-outline', english: 'strong', translation: 'kuchli', transcript: '/strɔːŋ/' },
-  { id: 'v39', icon: 'chatbubbles-outline', english: 'conversation', translation: 'suhbat', transcript: '/ˌkɑːn.vərˈseɪ.ʃən/' },
-  { id: 'v40', icon: 'bulb-outline', english: 'idea', translation: "g'oya", transcript: '/aɪˈdiːə/' },
-];
-
-// ─── Rus tili kursi, 1-dars uchun lug'at (admin CRM orqali kiritgan) ────────
-const RU_LESSON1_VOCAB: VocabWord[] = [
-  { id: 'ru1-1', icon: 'hand-right-outline', english: 'Здравствуйте!', translation: 'Assalomu alaykum! (rasmiy salomlashish)', transcript: '' },
-  { id: 'ru1-2', icon: 'chatbubble-outline', english: 'Привет!', translation: "Salom! (do'stona salomlashish)", transcript: '' },
-  { id: 'ru1-3', icon: 'sunny-outline', english: 'Добрый день!', translation: 'Xayrli kun!', transcript: '' },
-  { id: 'ru1-4', icon: 'help-circle-outline', english: 'Как вас зовут?', translation: 'Ismingiz nima? (rasmiy)', transcript: '' },
-  { id: 'ru1-5', icon: 'help-circle-outline', english: 'Как тебя зовут?', translation: "Isming nima? (do'stona)", transcript: '' },
-  { id: 'ru1-6', icon: 'person-outline', english: 'Меня зовут...', translation: 'Mening ismim...', transcript: '' },
-  { id: 'ru1-7', icon: 'happy-outline', english: 'Очень приятно!', translation: 'Juda mamnunman! (tanishganda)', transcript: '' },
-  { id: 'ru1-8', icon: 'calendar-outline', english: 'Сколько вам лет?', translation: 'Yoshingiz nechida? (rasmiy)', transcript: '' },
-  { id: 'ru1-9', icon: 'calendar-outline', english: 'Сколько тебе лет?', translation: "Yoshing nechida? (do'stona)", transcript: '' },
-  { id: 'ru1-10', icon: 'person-circle-outline', english: 'Мне ... лет / год / года', translation: 'Men ... yoshdaman.', transcript: '' },
-  { id: 'ru1-11', icon: 'time-outline', english: 'Год', translation: 'Yil / Yosh (1, 21, 31 yosh uchun)', transcript: '' },
-  { id: 'ru1-12', icon: 'time-outline', english: 'Года', translation: 'Yil / Yosh (2-4, 22-24, 32-34 yosh uchun)', transcript: '' },
-  { id: 'ru1-13', icon: 'time-outline', english: 'Лет', translation: 'Yil / Yosh (5-20, 25-30 yosh va hokazo)', transcript: '' },
-  { id: 'ru1-14', icon: 'exit-outline', english: 'До свидания!', translation: "Xayr! / Ko'rishguncha (rasmiy)", transcript: '' },
-  { id: 'ru1-15', icon: 'hand-left-outline', english: 'Пока!', translation: "Xayr! (do'stona)", transcript: '' },
-  { id: 'ru1-16', icon: 'today-outline', english: 'Сегодня', translation: 'Bugun', transcript: '[sivodnya]' },
-  { id: 'ru1-17', icon: 'person-outline', english: 'Его', translation: 'Uni / Uniki', transcript: '[evo]' },
-  { id: 'ru1-18', icon: 'home-outline', english: 'Дом', translation: 'Uy', transcript: '' },
-  { id: 'ru1-19', icon: 'cafe-outline', english: 'Молоко', translation: 'Süt', transcript: '[malako]' },
-  { id: 'ru1-20', icon: 'school-outline', english: 'Школа', translation: 'Maktab', transcript: '' },
-  { id: 'ru1-21', icon: 'add-circle-outline', english: 'Ещё', translation: 'Yana / Hali', transcript: '[yeshchyo]' },
-  { id: 'ru1-22', icon: 'close-circle-outline', english: 'Нет', translation: "Yo'q", transcript: '' },
-];
 
 // ─── Grammar fill-in-gap pool ───────────────────────────────────────────────
 export const GRAMMAR_POOL: GrammarBlank[] = [
@@ -172,135 +103,6 @@ export const GRAMMAR_POOL: GrammarBlank[] = [
   { id: 'g11', sentence: 'We ___ dinner at 7 pm usually.', answer: 'have', options: ['have', 'has', 'having', 'had'] },
   { id: 'g12', sentence: 'He ___ to the gym twice a week.', answer: 'goes', options: ['go', 'goes', 'going', 'went'] },
 ];
-
-// ─── Rus tili kursi, 1-dars uchun Video Quiz (admin CRM orqali kiritgan) ────
-const RU_LESSON1_GRAMMAR: GrammarBlank[] = [
-  {
-    id: 'ru1-q1',
-    sentence: '"О" harfiga urg\'u tushganda va tushmaganda qanday o\'qiladi?',
-    answer: "Urg'u tushsa [O], urg'usiz bo'lsa [A]",
-    options: ['Har doim [O] deb', "Urg'u tushsa [O], urg'usiz bo'lsa [A]", 'Har doim [A] deb'],
-  },
-  {
-    id: 'ru1-q2',
-    sentence: '"Сегодня" so\'zidagi "го" birikmasi qanday talaffuz qilinadi?',
-    answer: '[сиводня]',
-    options: ['[сегодня]', '[сиводня]', '[сеходня]'],
-  },
-  {
-    id: 'ru1-q3',
-    sentence: "Yoshingizni aytayotganda 1 yosh uchun qaysi so'z ishlatiladi? (masalan: Мне 21 ...)",
-    answer: 'Год',
-    options: ['Год', 'Года', 'Лет'],
-  },
-];
-
-// ─── Rus tili kursi, 1-dars uchun Uyga vazifa (admin CRM orqali kiritgan) ───
-const RU_LESSON1_HOMEWORK: HomeworkPart[] = [
-  {
-    id: 'A',
-    kind: 'multipleChoice',
-    title: 'A-QISM — Talaffuz va fonetika',
-    questions: [
-      { id: 'ru1h-a1', question: '"Красивого" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[красивого]', '[красивово]'], correctIndex: 1 },
-      { id: 'ru1h-a2', question: '"Молоко" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[молоко]', '[малако]'], correctIndex: 1 },
-      { id: 'ru1h-a3', question: '"Ещё" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[ешо]', '[ещё]', '[yeshchyo]'], correctIndex: 2 },
-      { id: 'ru1h-a4', question: '"Его" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[его]', '[ево]'], correctIndex: 1 },
-    ],
-  },
-  {
-    id: 'B',
-    kind: 'fillBlank',
-    title: "B-QISM — Bo'sh o'rinlarni to'ldirish (yosh)",
-    blanks: [
-      { id: 'ru1h-b1', sentence: 'Мне 25 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
-      { id: 'ru1h-b2', sentence: 'Мне 21 ___.', answer: 'год', options: ['год', 'года', 'лет'] },
-      { id: 'ru1h-b3', sentence: 'Мне 33 ___.', answer: 'года', options: ['год', 'года', 'лет'] },
-      { id: 'ru1h-b4', sentence: 'Мне 40 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
-    ],
-  },
-  {
-    id: 'C',
-    kind: 'fillBlank',
-    title: "C-QISM — Dialog to'ldirish",
-    blanks: [
-      { id: 'ru1h-c1', sentence: 'A: ___! Как вас зовут? B: Меня зовут Алишер.', answer: 'Здравствуйте', options: ['Здравствуйте', 'Пока', 'Спасибо'] },
-      { id: 'ru1h-c2', sentence: 'A: Очень приятно, Алишер. Сколько вам лет? B: Мне 28 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
-    ],
-  },
-  {
-    id: 'D',
-    kind: 'matching',
-    title: "D-QISM — Tarjima va juftlikni topish",
-    pairs: [
-      { id: 'ru1h-d1', left: 'Как тебя зовут?', right: 'Isming nima?' },
-      { id: 'ru1h-d2', left: 'Добрый день!', right: 'Xayrli kun!' },
-      { id: 'ru1h-d3', left: 'Очень приятно!', right: 'Juda mamnunman!' },
-      { id: 'ru1h-d4', left: 'Сегодня', right: 'Bugun' },
-    ],
-  },
-  {
-    id: 'creative',
-    kind: 'creative',
-    title: 'Ijodiy vazifa — Audio (nutq mashqi)',
-    instruction:
-      "Ovozli xabar (Audio) tugmasini bosing va o'zingiz haqingizda rus tilida 3-4 ta gapdan iborat tanishtiruv audio xabarini yozib qoldiring. Namuna: \"Здравствуйте! Меня зовут [Ismingiz]. Мне [Yoshingiz] лет/года/год. Очень приятно!\"",
-    mediaType: 'audio',
-  },
-];
-
-// ─── Rus tili kursi, 2-dars uchun Uyga vazifa (speaking turi, admin CRM orqali kiritgan) ───
-const RU_LESSON2_HOMEWORK: HomeworkPart[] = [
-  {
-    id: 'A',
-    kind: 'record',
-    title: 'PART A — Record yourself',
-    prompts: [
-      { id: 'ru2h-a1', sentence: 'Здравствуйте! Меня зовут [Имя], я из Узбекистана.', translation: "Assalomu alaykum! Mening ismim [Ism], men O'zbekistondanman." },
-      { id: 'ru2h-a2', sentence: 'Я живу в Ташкенте и учусь в университете.', translation: "Men Toshkentda yashayman va universitetda o'qiyman." },
-      { id: 'ru2h-a3', sentence: 'Я изучаю русский язык для работы и общения.', translation: 'Men rus tilini ish va muloqot uchun o\'rganyapman.' },
-    ],
-  },
-  {
-    id: 'B',
-    kind: 'roleplay',
-    title: 'PART B — AI bilan suhbat / roleplay',
-    scenario: {
-      id: 'ru2h-b',
-      title: 'Первое знакомство (Birinchi tanishuv)',
-      intro: "Siz yangi muloqotdoshingiz bilan ko'rishib qoldingiz. U bilan salomlashing, ismingiz, yashash joyingiz, kasbingiz va rus tilini o'rganish maqsadingiz haqida suhbatlashing.",
-      lines: [
-        'Здравствуйте! Как вас зовут?',
-        'Очень приятно! Откуда вы и где сейчас живёте?',
-        'Чем вы занимаетесь: работаете или учитесь?',
-        'Почему вы решили изучать русский язык?',
-      ],
-      closing: 'Отлично! Был очень рад с вами познакомиться. Желаю успехов в учёбе!',
-    },
-  },
-  {
-    id: 'C',
-    kind: 'pronunciation',
-    title: 'PART C — Pronunciation check',
-    prompts: [
-      { id: 'ru2h-c1', sentence: 'Здравствуйте! Очень приятно с вами познакомиться.', translation: 'Assalomu alaykum! Siz bilan tanishganimdan juda xursandman.' },
-      { id: 'ru2h-c2', sentence: 'Извините, повторите, пожалуйста, немного медленнее.', translation: 'Kechirasiz, iltimos, biroz sekinroq takrorlang.' },
-      { id: 'ru2h-c3', sentence: 'Моё любимое хобби — читать книги и заниматься спортом.', translation: "Mening sevimli hobbim — kitob o'qish va sport bilan shug'ullanish." },
-      { id: 'ru2h-c4', sentence: 'Я свободно понимаю простые вопросы по-русски.', translation: 'Men rus tilida oddiy savollarni erkin tushunaman.' },
-    ],
-  },
-  {
-    id: 'creative',
-    kind: 'creative',
-    title: 'Ijodiy vazifa — Рассказ о себе (audio)',
-    instruction:
-      "Quyidagi tayyor qolipdan (shablon) foydalanib, o'zingiz haqingizdagi ma'lumotlar bilan to'ldiring va 30–60 soniyali audio xabar shaklida yozib yuboring:\n\nЗдравствуйте! Меня зовут [Ismingiz].\nЯ из [Viloyatingiz/Shahringiz], сейчас живу в [Hozirgi shahringiz].\nМне [Yoshingiz] лет.\nЯ работаю [Kasbingiz] / учусь в [O'quv joyingiz].\nМоё хобби — [Hobbiyingiz, masalan: спорт / книги / музыка].\nЯ изучаю русский язык, потому что [Sababi, masalan: он нужен для работы].",
-    mediaType: 'audio',
-  },
-];
-
-// ─── Matching pairs pool (english / uzbek) ─────────────────────────────────
-const MATCH_POOL: MatchPair[] = VOCAB_POOL.slice(0, 20).map((w) => ({ id: w.id, left: w.english, right: w.translation }));
 
 // ─── Multiple choice pool ───────────────────────────────────────────────────
 export const MC_POOL: MultipleChoiceQ[] = [
@@ -340,81 +142,6 @@ export const SPEAKING_POOL: SpeakingPrompt[] = [
   { id: 'sp8', sentence: 'Let\'s talk about our future plans.', translation: 'Kelajakdagi rejalarimiz haqida gaplashaylik.' },
 ];
 
-// ─── Roleplay scenarios ──────────────────────────────────────────────────────
-const ROLEPLAY_SCENARIOS: RoleplayScenario[] = [
-  {
-    id: 'shop',
-    title: "Do'konda",
-    intro: "Siz do'konga kirdingiz. Sotuvchi bilan ingliz tilida suhbatlashing.",
-    lines: [
-      'Hello! Welcome to our shop. How can I help you today?',
-      'We have that in different colors. Which one do you like?',
-      'That will be 25 dollars in total. How would you like to pay?',
-    ],
-    closing: 'Thank you for shopping with us! Have a great day.',
-  },
-  {
-    id: 'restaurant',
-    title: 'Restoranda',
-    intro: "Siz restoranga keldingiz. Ofitsiant bilan buyurtma bering.",
-    lines: [
-      'Good evening! Table for how many people?',
-      'Here is the menu. What would you like to order?',
-      'Would you like anything to drink with that?',
-    ],
-    closing: 'Your order will be ready in 15 minutes. Enjoy your meal!',
-  },
-  {
-    id: 'airport',
-    title: 'Aeroportda',
-    intro: 'Siz aeroportda check-in qilmoqchisiz.',
-    lines: [
-      'Good morning! May I see your passport and ticket, please?',
-      'Do you have any luggage to check in?',
-      'Your gate is B12, boarding starts in 40 minutes.',
-    ],
-    closing: 'Have a safe flight!',
-  },
-];
-
-// ─── Slide content (speaking / live lesson) ─────────────────────────────────
-const SLIDE_TITLES: [string, string][] = [
-  ['Ochilish', "Bugungi mavzuga qisqacha kirish"],
-  ['Asosiy iboralar', "Suhbatda ko'p ishlatiladigan iboralar"],
-  ['Namuna dialog', 'Haqiqiy hayotdagi misol suhbat'],
-  ['Talaffuz maslahatlari', "To'g'ri talaffuz uchun maslahatlar"],
-  ['Amaliyot', "O'zingiz sinab ko'ring"],
-];
-
-function buildSlides(offset: number): SlideContent[] {
-  return SLIDE_TITLES.map((t, i) => ({
-    id: `slide-${offset}-${i}`,
-    title: t[0],
-    body: `${t[1]}. Ushbu slaydda o'qituvchi tomonidan tayyorlangan ko'rgazmali material joylashadi — rasm, misollar va qisqa izohlar bilan.`,
-  }));
-}
-
-// ─── Homework builders ──────────────────────────────────────────────────────
-function buildGrammarHomework(offset: number): HomeworkPart[] {
-  return [
-    { id: 'A', kind: 'matching', title: 'A-QISM — Moslashtirish', pairs: pickWindow(MATCH_POOL, offset, 6) },
-    { id: 'B', kind: 'fillBlank', title: "B-QISM — Bo'sh joylarni to'ldirish", blanks: pickWindow(GRAMMAR_POOL, offset, 5) },
-    { id: 'C', kind: 'multipleChoice', title: "C-QISM — To'g'ri javobni tanlash", questions: pickWindow(MC_POOL, offset, 5) },
-    { id: 'D', kind: 'sentenceBuild', title: 'D-QISM — Gap tuzish', items: pickWindow(SENTENCE_POOL, offset, 4) },
-    { id: 'creative', kind: 'creative', title: 'Ijodiy vazifa', instruction: "Bugungi mavzu bo'yicha 5-6 gapdan iborat qisqa matn yozing va agar xohlasangiz rasm biriktiring.", mediaType: 'text' },
-  ];
-}
-
-function buildSpeakingHomework(offset: number): HomeworkPart[] {
-  const scenario = ROLEPLAY_SCENARIOS[offset % ROLEPLAY_SCENARIOS.length];
-  return [
-    { id: 'A', kind: 'record', title: 'PART A — Record yourself', prompts: pickWindow(SPEAKING_POOL, offset, 3) },
-    { id: 'B', kind: 'roleplay', title: 'PART B — AI bilan suhbat / roleplay', scenario },
-    { id: 'C', kind: 'pronunciation', title: 'PART C — Pronunciation check', prompts: pickWindow(SPEAKING_POOL, offset + 3, 4) },
-    { id: 'creative', kind: 'creative', title: 'Ijodiy vazifa', instruction: "Bugungi mavzu bo'yicha 30-40 soniyalik ovozli xabar yozib yuboring.", mediaType: 'audio' },
-  ];
-}
-
 // ─── Bonus (Yakshanba) darslar — 6 kategoriya, 3 marta takrorlanadi = 18 dars ──
 export type BonusCategory = { key: string; label: string; emoji: string; color: string; bg: string; konspekt: string };
 
@@ -427,18 +154,8 @@ export const BONUS_CATEGORIES: BonusCategory[] = [
   { key: 'roleplay', label: 'Hayotiy vaziyat', emoji: '🎭', color: '#DB2777', bg: '#FCE7F3', konspekt: "Hayotiy vaziyatlar simulyatsiyasi orqali amaliy ingliz tili mashq qilinadi." },
 ];
 
-function buildBonusHomework(offset: number): HomeworkPart[] {
-  return [
-    { id: 'A', kind: 'matching', title: 'A-QISM — Moslashtirish', pairs: pickWindow(MATCH_POOL, offset, 6) },
-    { id: 'B', kind: 'multipleChoice', title: "B-QISM — To'g'ri javobni tanlash", questions: pickWindow(MC_POOL, offset, 5) },
-    { id: 'C', kind: 'sentenceBuild', title: 'C-QISM — Gap tuzish', items: pickWindow(SENTENCE_POOL, offset, 4) },
-  ];
-}
-
 export function getBonusLessonContent(bonusIndex: number): LessonContent {
   const category = BONUS_CATEGORIES[bonusIndex % BONUS_CATEGORIES.length];
-  const round = Math.floor(bonusIndex / BONUS_CATEGORIES.length) + 1;
-  const offset = hashId(`bonus-${bonusIndex}`);
   return {
     lessonId: `bonus-${bonusIndex + 1}`,
     dayType: 'bonus',
@@ -446,24 +163,25 @@ export function getBonusLessonContent(bonusIndex: number): LessonContent {
     konspekt: category.konspekt,
     lang: 'english',
     slides: [],
-    vocabulary: pickWindow(VOCAB_POOL, offset, 10),
+    vocabulary: [],
     grammarBlanks: [],
     speakingPractice: [],
-    homeworkParts: buildBonusHomework(offset),
+    homeworkParts: [],
   };
 }
 
 // ─── Main entry point ───────────────────────────────────────────────────────
-// `lang` — darsning kursi qaysi tilga tegishli ekani. Standart (proseduraviy)
-// kontent — vocabulary/grammarBlanks/speakingPractice/homeworkParts/slides —
-// FAQAT inglizcha havzalardan tuziladi (VOCAB_POOL, GRAMMAR_POOL va h.k.).
-// Rus tili kursi uchun admin CRM'da hali haqiqiy kontent kiritmagan bo'lsa,
-// bu inglizcha havzalarni ko'rsatish noto'g'ri (o'quvchi rus tili darsida
-// "apple", "she goes to school" kabi inglizcha so'z/gaplarni ko'rardi) —
-// shuning uchun rus tili uchun bo'sh massiv qaytariladi, mergeLessonContent
-// esa admin haqiqiy kontent kiritgach avtomatik uni ko'rsatadi. konspekt/
-// unitTitle — o'zbekcha, til-neytral yo'riqnoma matni, ular ikkala tilda
-// ham bir xil qoladi.
+// 52-vazifa: ilgari bu yerda "namuna" (proseduraviy generatsiya qilingan)
+// kontent avtomatik ko'rsatilardi — ingliz tili uchun VOCAB_POOL/GRAMMAR_POOL
+// kabi havzalardan, rus tili uchun esa manba kodiga qattiq yozilgan
+// RU_LESSON1_*/RU_LESSON2_* konstantalardan. Bu ikkalasi ham HAQIQIY,
+// platforma (CRM) orqali admin/o'qituvchi kiritgan kontent EMAS edi — shu
+// sabab ko'p darslar "to'liq" ko'rinsa ham, aslida hech kim tomonidan
+// yozilmagan namuna matn edi. Endi bazaviy kontent har doim BO'SH: FAQAT
+// mergeLessonContent orqali admin CRM'da (mc.lessonContents) haqiqatan
+// kiritgan kontent ko'rsatiladi. konspekt/unitTitle — o'zbekcha, til-neytral
+// umumiy yo'riqnoma matni (har bir dars uchun alohida yozilishi shart
+// bo'lmagan interfeys matni), shu sabab bular qoldirildi.
 export function getLessonContent(
   lessonId: string,
   dayIndex: number,
@@ -475,8 +193,6 @@ export function getLessonContent(
   }
 
   const dayType: LessonDayType = dayIndex % 2 === 0 ? 'grammar' : 'speaking';
-  const offset = hashId(lessonId);
-  const isRussian = lang === 'russian';
 
   return {
     lessonId,
@@ -487,25 +203,11 @@ export function getLessonContent(
         ? "Ushbu darsda asosiy grammatik qoida video orqali tushuntiriladi. Video tagida qisqacha konspekt joylashgan — asosiy formula va misollarni shu yerdan takrorlashingiz mumkin."
         : "Ushbu live darsda o'qituvchi tomonidan tayyorlangan slaydlar asosida suhbat ko'nikmalari mashq qilinadi.",
     lang,
-    slides: !isRussian && dayType === 'speaking' ? buildSlides(offset) : [],
-    vocabulary: isRussian ? (dayIndex === 0 ? RU_LESSON1_VOCAB : []) : pickWindow(VOCAB_POOL, offset, 25),
-    grammarBlanks: isRussian
-      ? dayIndex === 0
-        ? RU_LESSON1_GRAMMAR
-        : []
-      : dayType === 'grammar'
-        ? pickWindow(GRAMMAR_POOL, offset, 6)
-        : [],
-    speakingPractice: !isRussian && dayType === 'speaking' ? pickWindow(SPEAKING_POOL, offset, 5) : [],
-    homeworkParts: isRussian
-      ? dayIndex === 0
-        ? RU_LESSON1_HOMEWORK
-        : dayIndex === 1
-          ? RU_LESSON2_HOMEWORK
-          : []
-      : dayType === 'grammar'
-        ? buildGrammarHomework(offset)
-        : buildSpeakingHomework(offset),
+    slides: [],
+    vocabulary: [],
+    grammarBlanks: [],
+    speakingPractice: [],
+    homeworkParts: [],
   };
 }
 
