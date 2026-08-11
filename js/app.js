@@ -559,6 +559,7 @@ async function bootApp() {
     renderDashboard();
     renderCalendarWidget();
     startLeadsPolling();
+    startCoreDataPolling();
 
     // Hujjatlar banneri faqat adminga ko'rsatiladi (xodimlar o'zi tahrirlayolmaydi)
     // (removed non-admin banner)
@@ -621,6 +622,59 @@ function startLeadsPolling() {
                 if (document.getElementById('tab-sales')?.classList.contains('active')) renderSales();
                 if (document.getElementById('tab-dashboard')?.classList.contains('active')) renderDashboard();
                 if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+            }
+        } catch {
+            /* polling xatosini jim o'tkazamiz */
+        }
+    }, 30000);
+}
+
+let _coreDataPollTimer = null;
+
+function getStudentsPollFingerprint(students) {
+    return (students || []).map(s => [
+        String(s.id || ''), s.frozen ? '1' : '0', String(s.status || ''),
+        String(s.teacherId || ''), String(s.assistantTeacherId || ''), String(s.subject || '')
+    ].join('|')).sort().join('\n');
+}
+
+function getTeachersPollFingerprint(teachers) {
+    return (teachers || []).map(t => [
+        String(t.id || ''), String(t.subject || ''), String(t.type || ''),
+        String(t.schedulePattern || ''), String(t.lessonDuration || '')
+    ].join('|')).sort().join('\n');
+}
+
+// 50-vazifa: bitta hodim (masalan admin) o'quvchini o'chirsa/muzlatsa/
+// boshqa ustozga o'tkazsa, bu amal BOSHQA hodimlarning (masalan ustozning
+// o'z kabineti) ochiq turgan sahifasida darhol ko'rinishi kerak edi —
+// avval bu faqat sahifa to'liq qayta yuklanganda yangilanardi. Lidlar
+// uchun avvaldan mavjud bo'lgan xuddi shu davriy tekshirish (polling)
+// mantig'i endi students/teachers uchun ham qo'llaniladi.
+function startCoreDataPolling() {
+    if (_coreDataPollTimer) return;
+    _coreDataPollTimer = setInterval(async () => {
+        try {
+            const prevStudents = getItem(STORAGE_KEYS.students, []);
+            const prevTeachers = getItem(STORAGE_KEYS.teachers, []);
+            const prevStudentsFp = getStudentsPollFingerprint(prevStudents);
+            const prevTeachersFp = getTeachersPollFingerprint(prevTeachers);
+            const state = await apiLoadState();
+            const studentsChanged = prevStudentsFp !== getStudentsPollFingerprint(state.students);
+            const teachersChanged = prevTeachersFp !== getTeachersPollFingerprint(state.teachers);
+            if (!studentsChanged && !teachersChanged) return;
+            // Faqat mahalliy keshni yangilaymiz — setItem() ishlatilmaydi,
+            // chunki u serverga PATCH yuborar edi (bu yerda faqat O'QISH kerak).
+            if (studentsChanged) _cache.students = state.students;
+            if (teachersChanged) _cache.teachers = state.teachers;
+
+            if (document.getElementById('tab-teachers-section')?.classList.contains('active')) {
+                const activeSection = _tabContext.teachersSection;
+                if (activeSection === 'attendance') renderMainAttendance();
+                else if (activeSection === 'cabinet') renderTeacherCabinet();
+            }
+            if (studentsChanged && document.getElementById('tab-students')?.classList.contains('active')) {
+                renderStudents();
             }
         } catch {
             /* polling xatosini jim o'tkazamiz */
