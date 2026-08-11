@@ -36,6 +36,26 @@ export default function SpeakingExercisesScreen() {
   }
 
   const prompts = content.speakingPractice;
+
+  // Rus tili kursida admin CRM'da hali haqiqiy speaking kontentini
+  // kiritmagan bo'lsa, bu ro'yxat bo'sh keladi (lessonContent.ts'dagi
+  // qasddan qilingan dizayn qarori — ingliz tilidagi standart kontent
+  // rus tili darsida ko'rsatilmaydi). Bo'sh ro'yxatda prompts[0].sentence
+  // undefined ustida crash bo'lib qolar edi.
+  if (prompts.length === 0) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.resultCenter}>
+          <Text style={styles.resultEmoji}>🎤</Text>
+          <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+          <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+            <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const current = prompts[index];
 
   const toggleRecording = async () => {

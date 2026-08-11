@@ -377,6 +377,7 @@ export const translations = {
     // Speaking/Video mashqlari (umumiy)
     ex_finished_title: 'Mashqlar tugadi!',
     ex_back_btn: 'Orqaga qaytish',
+    ex_content_pending: 'Bu dars uchun mashqlar hali tayyorlanmoqda. Birozdan so\'ng qayta urinib ko\'ring.',
 
     // Speaking mashqlari
     se_title: 'Speaking mashqlari',
@@ -805,6 +806,7 @@ export const translations = {
 
     ex_finished_title: 'Упражнения завершены!',
     ex_back_btn: 'Вернуться назад',
+    ex_content_pending: 'Упражнения для этого урока ещё готовятся. Попробуйте немного позже.',
 
     se_title: 'Speaking упражнения',
     se_instruction: 'Внимательно послушайте предложение и произнесите его',
