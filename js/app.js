@@ -10371,7 +10371,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         setItem(STORAGE_KEYS.leads, leadsData);
         persistLeadChange(lang, newLead).catch(() => {});
 
-        students.push({
+        const newStudent = {
             id: 's' + Date.now(),
             serialCode,
             leadRef: { lang, id: leadId },
@@ -10392,8 +10392,17 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             login,
             password,
             source: 'manual'
-        });
+        };
+        students.push(newStudent);
         setItem(STORAGE_KEYS.students, students);
+        // 49-vazifa: server parolni bcrypt bilan shifrlab saqlagach, mijoz
+        // xotirasida oddiy matn holida QOLIB KETMASLIGI kerak — aks holda
+        // keyingi HAR QANDAY saqlash (hatto shu o'quvchiga aloqasi yo'q
+        // bo'lsa ham, chunki butun ro'yxat qayta yuboriladi) shu ESKI
+        // parolni qayta yuborib, uni doim o'sha eski qiymatga "qaytarib"
+        // qo'yardi — admin yangi parol qo'ysa ham, oxir-oqibat eski parol
+        // qolib ketardi.
+        delete newStudent.password;
         // 150-ish: parol saqlangach shifrlanadi (bcrypt) va qayta ko'rsatib
         // bo'lmaydi — shu tufayli hozir, hali oddiy matn holida ekan,
         // adminga bir martalik eslatma ko'rsatiladi.
@@ -10438,8 +10447,14 @@ function openEditStudentModal(studentId) {
             alert('Bu login allaqachon mavjud.');
             return;
         }
+        // 49-vazifa: ...s orqali eski (oldingi saqlashdan mijoz xotirasida
+        // qolib ketgan) oddiy matn parol tasodifan qayta yuborilmasligi
+        // uchun, spread qilishdan OLDIN s'dan password ayrim ajratiladi —
+        // yangi parol FAQAT quyidagi aniq "if (password)" qatori orqali
+        // qo'shiladi.
+        const { password: _staleOldPassword, ...sWithoutPassword } = s;
         const updated = {
-            ...s,
+            ...sWithoutPassword,
             name,
             phone,
             age: parseInt(document.getElementById('mStAgeE').value) || null,
@@ -10464,6 +10479,12 @@ function openEditStudentModal(studentId) {
         const idx = allStudents.findIndex(st => st.id === studentId);
         if (idx !== -1) allStudents[idx] = updated;
         setItem(STORAGE_KEYS.students, allStudents);
+        // Serverga yuborilgach, mijoz xotirasida oddiy matn parol
+        // QOLIB KETMASLIGI kerak (yuqoridagi izohga qarang) — aks holda
+        // shu student obyekti keyingi HAR QANDAY (unga aloqasi bo'lmagan)
+        // saqlashda ham eski parolni qayta-qayta yuborib, uni doim o'sha
+        // qiymatga "qaytarib" turaverardi.
+        if (idx !== -1) delete allStudents[idx].password;
         closeModal();
         renderStudents();
     };
@@ -18158,6 +18179,12 @@ function ensureStudentLoginForLead(lang, lead) {
     const password = generatePasswordFromPhone(lead.phone);
     students[idx] = { ...students[idx], login, password };
     setItem(STORAGE_KEYS.students, students);
+    // 49-vazifa: SMS matni uchun parol yuqorida qaytarib yuborilgach,
+    // mijoz xotirasida oddiy matn holida QOLIB KETMASLIGI kerak — aks
+    // holda shu o'quvchi keyingi har qanday (unga aloqasi bo'lmagan)
+    // saqlashda ham eski parolni qayta yuborib, uni doim o'sha qiymatga
+    // "qaytarib" turaverardi.
+    delete students[idx].password;
     return { login, password };
 }
 
