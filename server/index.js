@@ -18,6 +18,16 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, '..');
 
+// Railway ilovani bitta reverse-proxy orqasida ishga tushiradi va har bir
+// so'rovga X-Forwarded-For header'ini qo'shadi. Express'ning standart
+// "trust proxy=false" sozlamasida bu header'ga ishonilmaydi, natijada
+// express-rate-limit uni ANIQLAMAY, xavfsizlik tekshiruvi sifatida
+// ValidationError tashlab, so'rovni servergacha yetkazmay to'xtatib
+// qo'yishi mumkin edi (jumladan webhook so'rovlarini). "1" qiymati faqat
+// BITTA ishonchli proxy qatlamiga (Railway'ning o'ziga) ishonishni
+// bildiradi — undan uzoqroqdagi (soxta) header'lar hisobga olinmaydi.
+app.set('trust proxy', 1);
+
 // ── Xavfsizlik middleware'lari ────────────────────────────────────────────────
 
 // Muhim xavfsizlik headerlari: CSP, HSTS, X-Frame-Options, X-Content-Type va h.k.
