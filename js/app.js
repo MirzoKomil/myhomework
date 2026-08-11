@@ -1746,6 +1746,13 @@ function _renderLcKonspekt(body, lesson, content) {
 }
 
 function _renderLcVocab(body, lesson, content) {
+    // 51-vazifa: bu maydon nomi ("english") ma'lumot strukturasida shunday
+    // qolgan (o'zgartirish katta migratsiya talab qiladi), lekin RUS TILI
+    // darsi tahrirlanayotganda ham qattiq "Inglizcha" deb yozilgani admin
+    // uchun chalkash edi — u yerga rus so'zi yozish kerakligi tushunarsiz
+    // bo'lib qolardi. Faqat KO'RSATILADIGAN yorliq joriy tanlangan tilga
+    // (_mobileLang) qarab moslashadi.
+    const wordLabel = _mobileLang === 'russian' ? 'Ruscha' : 'Inglizcha';
     renderEditableList(body, {
         title: "Lug'at (so'zlar)",
         addLabel: "+ So'z qo'shish",
@@ -1753,7 +1760,7 @@ function _renderLcVocab(body, lesson, content) {
         idPrefix: 'v',
         renderRow: (w) => `<b>${escapeHtml(w.english || '')}</b> — ${escapeHtml(w.translation || '')} <span style="color:var(--text-muted)">${escapeHtml(w.transcript || '')}</span>`,
         fields: [
-            { key: 'english', label: 'Inglizcha', required: true },
+            { key: 'english', label: wordLabel, required: true },
             { key: 'translation', label: "O'zbekcha tarjima", required: true },
             { key: 'transcript', label: 'Transkripsiya', placeholder: '/ˈæp.əl/' },
             { key: 'icon', label: 'Icon nomi (ionicons, ixtiyoriy)', placeholder: 'restaurant-outline' },
@@ -1916,6 +1923,7 @@ function _renderLcSlides(body, lesson, content) {
 }
 
 function _renderLcSpeakingPractice(body, lesson, content) {
+    const sentenceLabel = _mobileLang === 'russian' ? 'Ruscha jumla' : 'Inglizcha jumla';
     renderEditableList(body, {
         title: 'Nutq mashqlari (speaking practice)',
         addLabel: "+ Jumla qo'shish",
@@ -1923,7 +1931,7 @@ function _renderLcSpeakingPractice(body, lesson, content) {
         idPrefix: 'sp',
         renderRow: (p) => `${escapeHtml(p.sentence || '')}<br><span style="color:var(--text-muted)">${escapeHtml(p.translation || '')}</span>`,
         fields: [
-            { key: 'sentence', label: 'Inglizcha jumla', required: true },
+            { key: 'sentence', label: sentenceLabel, required: true },
             { key: 'translation', label: 'Tarjima', required: true },
         ],
         onChange: (newItems) => { content.speakingPractice = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); },
@@ -1967,7 +1975,7 @@ function _renderLcHomework(body, lesson, content, dayType) {
         renderEditableList(partBody, {
             title: 'Juftliklar', addLabel: "+ Juftlik qo'shish", items: part.pairs || [], idPrefix: 'm',
             renderRow: (x) => `${escapeHtml(x.left || '')} → ${escapeHtml(x.right || '')}`,
-            fields: [{ key: 'left', label: 'Inglizcha', required: true }, { key: 'right', label: "O'zbekcha", required: true }],
+            fields: [{ key: 'left', label: _mobileLang === 'russian' ? 'Ruscha' : 'Inglizcha', required: true }, { key: 'right', label: "O'zbekcha", required: true }],
             onChange: (items) => { persistPart({ ...part, pairs: items }); showMiniToast('Saqlandi'); },
         });
     } else if (part.kind === 'fillBlank') {
@@ -2007,7 +2015,7 @@ function _renderLcHomework(body, lesson, content, dayType) {
         renderEditableList(partBody, {
             title: part.kind === 'record' ? 'Ovozli yozib olish' : 'Talaffuz tekshirish', addLabel: "+ Jumla qo'shish", items: part.prompts || [], idPrefix: 'p',
             renderRow: (x) => `${escapeHtml(x.sentence || '')}<br><span style="color:var(--text-muted)">${escapeHtml(x.translation || '')}</span>`,
-            fields: [{ key: 'sentence', label: 'Inglizcha jumla', required: true }, { key: 'translation', label: 'Tarjima', required: true }],
+            fields: [{ key: 'sentence', label: _mobileLang === 'russian' ? 'Ruscha jumla' : 'Inglizcha jumla', required: true }, { key: 'translation', label: 'Tarjima', required: true }],
             onChange: (items) => { persistPart({ ...part, prompts: items }); showMiniToast('Saqlandi'); },
         });
     } else if (part.kind === 'roleplay') {
@@ -3111,7 +3119,7 @@ function renderExamDetailTab(container, examId) {
             items: content.questions.filter(q => q.kind === 'speaking'), idPrefix: 'esp',
             renderRow: (x) => `${escapeHtml(x.sentence || '')}<br><span style="color:var(--text-muted)">${escapeHtml(x.translation || '')}</span>`,
             fields: [
-                { key: 'sentence', label: 'Inglizcha jumla', required: true },
+                { key: 'sentence', label: _mobileLang === 'russian' ? 'Ruscha jumla' : 'Inglizcha jumla', required: true },
                 { key: 'translation', label: 'Tarjima', required: true },
             ],
             onChange: (newItems) => {
