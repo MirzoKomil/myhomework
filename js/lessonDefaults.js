@@ -14,6 +14,34 @@ function ldPickWindow(pool, offset, count) {
     return Array.from({ length: Math.min(count, pool.length) }, (_, i) => pool[(offset + i) % pool.length]);
 }
 
+// ─── Rus tili kursi, 1-dars uchun lug'at ────────────────────────────────────
+// 53-vazifa: 52-vazifada olib tashlangan edi, keyin FAQAT shu 1-dars uchun
+// qaytarildi (student-app/data/lessonContent.ts'dagi bir xil izohga qarang).
+const LD_RU_LESSON1_VOCAB = [
+    { id: 'ru1-1', icon: 'hand-right-outline', english: 'Здравствуйте!', translation: 'Assalomu alaykum! (rasmiy salomlashish)', transcript: '' },
+    { id: 'ru1-2', icon: 'chatbubble-outline', english: 'Привет!', translation: "Salom! (do'stona salomlashish)", transcript: '' },
+    { id: 'ru1-3', icon: 'sunny-outline', english: 'Добрый день!', translation: 'Xayrli kun!', transcript: '' },
+    { id: 'ru1-4', icon: 'help-circle-outline', english: 'Как вас зовут?', translation: 'Ismingiz nima? (rasmiy)', transcript: '' },
+    { id: 'ru1-5', icon: 'help-circle-outline', english: 'Как тебя зовут?', translation: "Isming nima? (do'stona)", transcript: '' },
+    { id: 'ru1-6', icon: 'person-outline', english: 'Меня зовут...', translation: 'Mening ismim...', transcript: '' },
+    { id: 'ru1-7', icon: 'happy-outline', english: 'Очень приятно!', translation: 'Juda mamnunman! (tanishganda)', transcript: '' },
+    { id: 'ru1-8', icon: 'calendar-outline', english: 'Сколько вам лет?', translation: 'Yoshingiz nechida? (rasmiy)', transcript: '' },
+    { id: 'ru1-9', icon: 'calendar-outline', english: 'Сколько тебе лет?', translation: "Yoshing nechida? (do'stona)", transcript: '' },
+    { id: 'ru1-10', icon: 'person-circle-outline', english: 'Мне ... лет / год / года', translation: 'Men ... yoshdaman.', transcript: '' },
+    { id: 'ru1-11', icon: 'time-outline', english: 'Год', translation: 'Yil / Yosh (1, 21, 31 yosh uchun)', transcript: '' },
+    { id: 'ru1-12', icon: 'time-outline', english: 'Года', translation: 'Yil / Yosh (2-4, 22-24, 32-34 yosh uchun)', transcript: '' },
+    { id: 'ru1-13', icon: 'time-outline', english: 'Лет', translation: 'Yil / Yosh (5-20, 25-30 yosh va hokazo)', transcript: '' },
+    { id: 'ru1-14', icon: 'exit-outline', english: 'До свидания!', translation: "Xayr! / Ko'rishguncha (rasmiy)", transcript: '' },
+    { id: 'ru1-15', icon: 'hand-left-outline', english: 'Пока!', translation: "Xayr! (do'stona)", transcript: '' },
+    { id: 'ru1-16', icon: 'today-outline', english: 'Сегодня', translation: 'Bugun', transcript: '[sivodnya]' },
+    { id: 'ru1-17', icon: 'person-outline', english: 'Его', translation: 'Uni / Uniki', transcript: '[evo]' },
+    { id: 'ru1-18', icon: 'home-outline', english: 'Дом', translation: 'Uy', transcript: '' },
+    { id: 'ru1-19', icon: 'cafe-outline', english: 'Молоко', translation: 'Süt', transcript: '[malako]' },
+    { id: 'ru1-20', icon: 'school-outline', english: 'Школа', translation: 'Maktab', transcript: '' },
+    { id: 'ru1-21', icon: 'add-circle-outline', english: 'Ещё', translation: 'Yana / Hali', transcript: '[yeshchyo]' },
+    { id: 'ru1-22', icon: 'close-circle-outline', english: 'Нет', translation: "Yo'q", transcript: '' },
+];
+
 // ─── Grammar fill-in-gap pool ───────────────────────────────────────────────
 const LD_GRAMMAR_POOL = [
     { id: 'g1', sentence: 'She ___ to school every day.', answer: 'goes', options: ['go', 'goes', 'going', 'gone'] },
@@ -28,6 +56,82 @@ const LD_GRAMMAR_POOL = [
     { id: 'g10', sentence: 'They ___ studying for the exam right now.', answer: 'are', options: ['is', 'am', 'are', 'be'] },
     { id: 'g11', sentence: 'We ___ dinner at 7 pm usually.', answer: 'have', options: ['have', 'has', 'having', 'had'] },
     { id: 'g12', sentence: 'He ___ to the gym twice a week.', answer: 'goes', options: ['go', 'goes', 'going', 'went'] },
+];
+
+// ─── Rus tili kursi, 1-dars uchun Video Quiz ────────────────────────────────
+const LD_RU_LESSON1_GRAMMAR = [
+    {
+        id: 'ru1-q1',
+        sentence: '"О" harfiga urg\'u tushganda va tushmaganda qanday o\'qiladi?',
+        answer: "Urg'u tushsa [O], urg'usiz bo'lsa [A]",
+        options: ['Har doim [O] deb', "Urg'u tushsa [O], urg'usiz bo'lsa [A]", 'Har doim [A] deb'],
+    },
+    {
+        id: 'ru1-q2',
+        sentence: '"Сегодня" so\'zidagi "го" birikmasi qanday talaffuz qilinadi?',
+        answer: '[сиводня]',
+        options: ['[сегодня]', '[сиводня]', '[сеходня]'],
+    },
+    {
+        id: 'ru1-q3',
+        sentence: "Yoshingizni aytayotganda 1 yosh uchun qaysi so'z ishlatiladi? (masalan: Мне 21 ...)",
+        answer: 'Год',
+        options: ['Год', 'Года', 'Лет'],
+    },
+];
+
+// ─── Rus tili kursi, 1-dars uchun Uyga vazifa ───────────────────────────────
+const LD_RU_LESSON1_HOMEWORK = [
+    {
+        id: 'A',
+        kind: 'multipleChoice',
+        title: 'A-QISM — Talaffuz va fonetika',
+        questions: [
+            { id: 'ru1h-a1', question: '"Красивого" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[красивого]', '[красивово]'], correctIndex: 1 },
+            { id: 'ru1h-a2', question: '"Молоко" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[молоко]', '[малако]'], correctIndex: 1 },
+            { id: 'ru1h-a3', question: '"Ещё" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[ешо]', '[ещё]', '[yeshchyo]'], correctIndex: 2 },
+            { id: 'ru1h-a4', question: '"Его" so\'zining to\'g\'ri talaffuzi qaysi?', options: ['[его]', '[ево]'], correctIndex: 1 },
+        ],
+    },
+    {
+        id: 'B',
+        kind: 'fillBlank',
+        title: "B-QISM — Bo'sh o'rinlarni to'ldirish (yosh)",
+        blanks: [
+            { id: 'ru1h-b1', sentence: 'Мне 25 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
+            { id: 'ru1h-b2', sentence: 'Мне 21 ___.', answer: 'год', options: ['год', 'года', 'лет'] },
+            { id: 'ru1h-b3', sentence: 'Мне 33 ___.', answer: 'года', options: ['год', 'года', 'лет'] },
+            { id: 'ru1h-b4', sentence: 'Мне 40 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
+        ],
+    },
+    {
+        id: 'C',
+        kind: 'fillBlank',
+        title: "C-QISM — Dialog to'ldirish",
+        blanks: [
+            { id: 'ru1h-c1', sentence: 'A: ___! Как вас зовут? B: Меня зовут Алишер.', answer: 'Здравствуйте', options: ['Здравствуйте', 'Пока', 'Спасибо'] },
+            { id: 'ru1h-c2', sentence: 'A: Очень приятно, Алишер. Сколько вам лет? B: Мне 28 ___.', answer: 'лет', options: ['год', 'года', 'лет'] },
+        ],
+    },
+    {
+        id: 'D',
+        kind: 'matching',
+        title: "D-QISM — Tarjima va juftlikni topish",
+        pairs: [
+            { id: 'ru1h-d1', left: 'Как тебя зовут?', right: 'Isming nima?' },
+            { id: 'ru1h-d2', left: 'Добрый день!', right: 'Xayrli kun!' },
+            { id: 'ru1h-d3', left: 'Очень приятно!', right: 'Juda mamnunman!' },
+            { id: 'ru1h-d4', left: 'Сегодня', right: 'Bugun' },
+        ],
+    },
+    {
+        id: 'creative',
+        kind: 'creative',
+        title: 'Ijodiy vazifa — Audio (nutq mashqi)',
+        instruction:
+            "Ovozli xabar (Audio) tugmasini bosing va o'zingiz haqingizda rus tilida 3-4 ta gapdan iborat tanishtiruv audio xabarini yozib qoldiring. Namuna: \"Здравствуйте! Меня зовут [Ismingiz]. Мне [Yoshingiz] лет/года/год. Очень приятно!\"",
+        mediaType: 'audio',
+    },
 ];
 
 // ─── Multiple choice pool ───────────────────────────────────────────────────
@@ -159,6 +263,9 @@ function getDefaultExamContent(examId) {
 // hech qanday "namuna" bilan oldindan to'ldirilmaydi.
 function getDefaultLessonContent(lessonId, dayIndex, lang) {
     const dayType = dayIndex % 2 === 0 ? 'grammar' : 'speaking';
+    // 53-vazifa: faqat Rus tili kursining 1-darsi uchun (dayIndex === 0)
+    // avvaldan tayyorlangan kontent bilan CRM formasi oldindan to'ldiriladi.
+    const isRussianLesson1 = lang === 'russian' && dayIndex === 0;
 
     return {
         lessonId: String(lessonId),
@@ -169,9 +276,9 @@ function getDefaultLessonContent(lessonId, dayIndex, lang) {
                 ? "Ushbu darsda asosiy grammatik qoida video orqali tushuntiriladi. Video tagida qisqacha konspekt joylashgan — asosiy formula va misollarni shu yerdan takrorlashingiz mumkin."
                 : "Ushbu live darsda o'qituvchi tomonidan tayyorlangan slaydlar asosida suhbat ko'nikmalari mashq qilinadi.",
         slides: [],
-        vocabulary: [],
-        grammarBlanks: [],
+        vocabulary: isRussianLesson1 ? LD_RU_LESSON1_VOCAB : [],
+        grammarBlanks: isRussianLesson1 ? LD_RU_LESSON1_GRAMMAR : [],
         speakingPractice: [],
-        homeworkParts: [],
+        homeworkParts: isRussianLesson1 ? LD_RU_LESSON1_HOMEWORK : [],
     };
 }
