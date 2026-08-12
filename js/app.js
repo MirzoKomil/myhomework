@@ -1939,6 +1939,50 @@ function _renderLcSpeakingPractice(body, lesson, content) {
     });
 }
 
+// 55-vazifa: uyga vazifaga yangi qism qo'shish — endi kelajakdagi
+// darslarda ham (faqat Rus tili 1-darsida emas) admin CRM orqali
+// "Talaffuz mashqi" (moslashtirish), "Dialog" (4 variantli test) va
+// "O'qib tarjima qilish mashqi" (reading) qismlarini qo'sha oladi.
+// Boshqa eski turlar (fillBlank/sentenceBuild/record/roleplay/
+// pronunciation/creative) tanlov ro'yxatidan olib tashlandi, chunki
+// endi faqat shu 3 turdagi vazifa qo'llab-quvvatlanadi.
+function _openAddHomeworkPartModal(lesson, content, dayType, body) {
+    openModal("Uyga vazifa qismi qo'shish",
+        `<div class="form-group">
+            <label>Qism nomi</label>
+            <input id="hwpTitle" class="form-control" placeholder="Masalan: Talaffuz mashqi">
+         </div>
+         <div class="form-group">
+            <label>Turi</label>
+            <select id="hwpKind" class="form-control">
+                <option value="matching">Talaffuz mashqi (Moslashtirish)</option>
+                <option value="multipleChoice">Dialog (Test, 4 variant)</option>
+                <option value="reading">O'qib tarjima qilish mashqi</option>
+            </select>
+         </div>`,
+        `<button type="button" class="btn-ghost" id="cancelHwp">Bekor qilish</button>
+         <button type="button" class="btn-primary-sm" id="saveHwp">Yaratish</button>`,
+        { wide: false }
+    );
+    document.getElementById('cancelHwp').onclick = () => closeModal();
+    document.getElementById('saveHwp').onclick = () => {
+        const title = document.getElementById('hwpTitle').value.trim();
+        if (!title) { alert('Nomi kiritilishi shart'); return; }
+        const kind = document.getElementById('hwpKind').value;
+        const id = kind + '-' + Date.now();
+        let newPart;
+        if (kind === 'matching') newPart = { id, kind, title, pairs: [] };
+        else if (kind === 'multipleChoice') newPart = { id, kind, title, questions: [] };
+        else newPart = { id, kind: 'reading', title, paragraph: { id: 'p1', russianText: '' }, sentences: [] };
+        content.homeworkParts = [...(content.homeworkParts || []), newPart];
+        _saveLessonWorkingContent(lesson, content);
+        closeModal();
+        _lcActiveHomeworkPart = content.homeworkParts.length - 1;
+        _renderLcHomework(body, lesson, content, dayType);
+        showMiniToast("Qism qo'shildi");
+    };
+}
+
 function _renderLcHomework(body, lesson, content, dayType) {
     const parts = content.homeworkParts || [];
 
@@ -1946,19 +1990,33 @@ function _renderLcHomework(body, lesson, content, dayType) {
         body.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">${
             parts.map((p, i) => {
                 const count = _homeworkPartItemCount(p);
-                return `<div data-hw-part="${i}" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)">
-                    <div>
-                        <div style="font-weight:700;font-size:13px;color:var(--text)">${escapeHtml(p.title || '')}</div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${_homeworkKindLabel(p.kind)}${count !== null ? ` · ${count} ta` : ''}</div>
+                return `<div style="display:flex;align-items:center;gap:8px">
+                    <div data-hw-part="${i}" style="flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)">
+                        <div style="min-width:0">
+                            <div style="font-weight:700;font-size:13px;color:var(--text)">${escapeHtml(p.title || '')}</div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${_homeworkKindLabel(p.kind)}${count !== null ? ` · ${count} ta` : ''}</div>
+                        </div>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text-muted)" stroke-width="2" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
                     </div>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                    <button type="button" data-hw-delete="${i}" class="btn-danger-sm" style="flex-shrink:0">O'chirish</button>
                 </div>`;
             }).join('')
-        }</div>`;
+        }</div>
+        <button type="button" id="hwpAddBtn" class="btn-primary-sm" style="margin-top:14px">+ Qism qo'shish</button>`;
         body.querySelectorAll('[data-hw-part]').forEach(el => el.addEventListener('click', () => {
             _lcActiveHomeworkPart = Number(el.dataset.hwPart);
             _renderLcHomework(body, lesson, content, dayType);
         }));
+        body.querySelectorAll('[data-hw-delete]').forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = Number(btn.dataset.hwDelete);
+            if (!confirm("Bu uyga vazifa qismini o'chirasizmi?")) return;
+            content.homeworkParts.splice(idx, 1);
+            _saveLessonWorkingContent(lesson, content);
+            _renderLcHomework(body, lesson, content, dayType);
+            showMiniToast("Qism o'chirildi");
+        }));
+        document.getElementById('hwpAddBtn').addEventListener('click', () => _openAddHomeworkPartModal(lesson, content, dayType, body));
         return;
     }
 

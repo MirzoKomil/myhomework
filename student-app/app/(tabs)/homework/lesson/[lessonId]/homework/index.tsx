@@ -138,8 +138,8 @@ export default function HomeworkSectionScreen() {
                   />
                 </View>
                 <View style={styles.info}>
-                  {/* 54-vazifa: video kunlar uchun menyudagi nom "Gramatika mashqi" bo'lishi kerak */}
-                  <Text style={styles.title}>{isVideoDay ? 'Gramatika mashqi' : t('hw_exercises_title')}</Text>
+                  {/* 55-vazifa: menyudagi nom ikkala kun turi uchun ham "Gramatika mashqi" */}
+                  <Text style={styles.title}>Gramatika mashqi</Text>
                   <Text style={[styles.status, exerciseDone && styles.statusDone]}>
                     {exerciseDone ? t('hw_status_done') : t('hw_status_not_done')}
                   </Text>
