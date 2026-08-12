@@ -1,10 +1,10 @@
 import {
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
@@ -30,19 +30,19 @@ SplashScreen.preventAutoHideAsync();
 
 const nativeFonts = {
   ...Ionicons.font,
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
 };
 
 const webFonts = {
-  PlusJakartaSans_400Regular: `${WEB_FONT_BASE}/plus-jakarta-400.ttf`,
-  PlusJakartaSans_500Medium: `${WEB_FONT_BASE}/plus-jakarta-500.ttf`,
-  PlusJakartaSans_600SemiBold: `${WEB_FONT_BASE}/plus-jakarta-600.ttf`,
-  PlusJakartaSans_700Bold: `${WEB_FONT_BASE}/plus-jakarta-700.ttf`,
-  PlusJakartaSans_800ExtraBold: `${WEB_FONT_BASE}/plus-jakarta-800.ttf`,
+  Inter_400Regular: `${WEB_FONT_BASE}/inter-400.ttf`,
+  Inter_500Medium: `${WEB_FONT_BASE}/inter-500.ttf`,
+  Inter_600SemiBold: `${WEB_FONT_BASE}/inter-600.ttf`,
+  Inter_700Bold: `${WEB_FONT_BASE}/inter-700.ttf`,
+  Inter_800ExtraBold: `${WEB_FONT_BASE}/inter-800.ttf`,
   ionicons: `${WEB_FONT_BASE}/ionicons.ttf`,
 };
 

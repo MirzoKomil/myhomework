@@ -36,12 +36,15 @@ export const theme = {
       elevation: 4,
     },
   },
+  // 56-vazifa: Inter — kirill (rus) va lotin alifbosini bab-baravar to'liq
+  // qo'llab-quvvatlaydi (avvalgi Plus Jakarta Sans'da kirill glif to'plami
+  // yo'q edi).
   fonts: {
-    regular: 'PlusJakartaSans_400Regular',
-    medium: 'PlusJakartaSans_500Medium',
-    semiBold: 'PlusJakartaSans_600SemiBold',
-    bold: 'PlusJakartaSans_700Bold',
-    extraBold: 'PlusJakartaSans_800ExtraBold',
+    regular: 'Inter_400Regular',
+    medium: 'Inter_500Medium',
+    semiBold: 'Inter_600SemiBold',
+    bold: 'Inter_700Bold',
+    extraBold: 'Inter_800ExtraBold',
   },
 } as const;
 
