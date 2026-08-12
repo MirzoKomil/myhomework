@@ -310,8 +310,28 @@ export function getLessonContent(
     vocabulary: isRussianLesson1 ? RU_LESSON1_VOCAB : [],
     grammarBlanks: isRussianLesson1 ? RU_LESSON1_GRAMMAR : [],
     speakingPractice: [],
-    homeworkParts: isRussianLesson1 ? RU_LESSON1_HOMEWORK : [],
+    homeworkParts: isRussianLesson1 ? RU_LESSON1_HOMEWORK : defaultHomeworkParts(dayType === 'grammar'),
   };
+}
+
+// 60-vazifa: darslar ICHIDAGI kontent (so'zlar, matnlar, savollar) har bir
+// darsda har xil bo'lishi mumkin, lekin uyga vazifaning STRUKTURASI
+// (qismlar TURI) toq va juft kunlar bo'yicha bir xil bo'lishi kerak —
+// toq (video/grammar) kunlarda har doim "Talaffuz mashqi" (moslashtirish)
+// + "O'qib tarjima qilish mashqi" (reading), juft (jonli/speaking)
+// kunlarda esa "Dialog" (4 variantli test) + "O'qib tarjima qilish
+// mashqi". Admin bu qismlarning ICHINI CRM orqali to'ldiradi.
+function defaultHomeworkParts(isVideoDay: boolean): HomeworkPart[] {
+  const readingPart: HomeworkPart = {
+    id: 'reading',
+    kind: 'reading',
+    title: "O'qib tarjima qilish mashqi",
+    paragraph: { id: 'p1', russianText: '' },
+    sentences: [],
+  };
+  return isVideoDay
+    ? [{ id: 'talaffuz', kind: 'matching', title: 'Talaffuz mashqi', pairs: [] }, readingPart]
+    : [{ id: 'dialog', kind: 'multipleChoice', title: 'Dialog', questions: [] }, readingPart];
 }
 
 // CRM'da admin kiritgan real kontentni proseduraviy generatsiya qilingan
