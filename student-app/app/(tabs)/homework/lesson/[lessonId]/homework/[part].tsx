@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
+import * as Speech from 'expo-speech';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,13 +12,13 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { ChatMessage } from '@/data/mock';
-import { getResolvedLessonContent, HomeworkPart, LessonContent, MatchPair, MultipleChoiceQ, SentenceBuildQ } from '@/data/lessonContent';
+import { getResolvedLessonContent, HomeworkPart, LessonContent, MatchPair, MultipleChoiceQ, ReadingSentence, SentenceBuildQ } from '@/data/lessonContent';
 import { reportActivity } from '@/services/activitySync';
 import { addCoins } from '@/services/coinsStore';
 import { addLightning } from '@/services/lightningStore';
 import { markHomeworkPartDone } from '@/services/lessonProgressStore';
 import { fetchMobileContent } from '@/services/contentApi';
-import { fetchCreativeSubmission, submitCreativeSubmission } from '@/services/creativeSubmissionApi';
+import { fetchCreativeSubmission, submissionKey, submitCreativeSubmission } from '@/services/creativeSubmissionApi';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -87,6 +88,9 @@ export default function HomeworkPartScreen() {
           lessonId={String(lessonId)}
           category={content.dayType === 'speaking' ? 'speaking' : 'video'}
         />
+      )}
+      {part.kind === 'reading' && (
+        <ReadingPart paragraph={part.paragraph} sentences={part.sentences} onDone={complete} lessonId={String(lessonId)} />
       )}
     </SafeAreaView>
   );
@@ -891,6 +895,224 @@ function CreativePart({
   );
 }
 
+// ─── "O'qib tarjima qilish mashqi" (54-vazifa) ─────────────────────────────
+// Ruscha matnni (1-qism: paragraf, 2-qism: alohida gaplar) tinglab
+// (expo-speech orqali) o'zbekchaga tarjima qiladi — natija ustozga
+// tekshirish uchun boradi (Ijodiy vazifa bilan bir xil pending/graded oqim,
+// lekin alohida kalit ostida saqlanadi — submissionKey qarang).
+type ReadingSubmissionPayload = {
+  paragraphTranslation: string;
+  sentenceTranslations: string[];
+};
+
+type ReadingStatus = 'checking' | 'draft' | 'pending' | 'graded';
+
+function SpeakerButton({ text }: { text: string }) {
+  const [speaking, setSpeaking] = useState(false);
+  const toggle = () => {
+    if (speaking) {
+      Speech.stop();
+      setSpeaking(false);
+      return;
+    }
+    setSpeaking(true);
+    Speech.speak(text, {
+      language: 'ru-RU',
+      onDone: () => setSpeaking(false),
+      onStopped: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    });
+  };
+  return (
+    <Pressable style={styles.speakerBtn} onPress={toggle} hitSlop={8}>
+      <Ionicons name={speaking ? 'volume-high' : 'volume-medium-outline'} size={20} color={theme.colors.purple} />
+    </Pressable>
+  );
+}
+
+function ReadingPart({
+  paragraph,
+  sentences,
+  onDone,
+  lessonId,
+}: {
+  paragraph: { id: string; russianText: string };
+  sentences: ReadingSentence[];
+  onDone: () => void;
+  lessonId: string;
+}) {
+  const { t } = useLang();
+  const key = submissionKey(lessonId, 'reading');
+  const [status, setStatus] = useState<ReadingStatus>('checking');
+  const [step, setStep] = useState<'paragraph' | number>('paragraph');
+  const [paragraphTranslation, setParagraphTranslation] = useState('');
+  const [sentenceTranslations, setSentenceTranslations] = useState<string[]>(() => sentences.map(() => ''));
+  const [submitting, setSubmitting] = useState(false);
+  const [gradedScore, setGradedScore] = useState<number | null>(null);
+  const [gradedFeedback, setGradedFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCreativeSubmission(key).then((record) => {
+      if (cancelled) return;
+      if (record?.status === 'graded') {
+        setGradedScore(record.scorePercent);
+        setGradedFeedback(record.feedback);
+        setStatus('graded');
+        onDone();
+      } else if (record?.status === 'pending') {
+        setStatus('pending');
+      } else {
+        setStatus('draft');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
+  useEffect(() => {
+    if (status !== 'pending') return;
+    let cancelled = false;
+    const poll = setInterval(async () => {
+      const record = await fetchCreativeSubmission(key);
+      if (cancelled || !record || record.status !== 'graded') return;
+      setGradedScore(record.scorePercent);
+      setGradedFeedback(record.feedback);
+      setStatus('graded');
+      addLightning(1);
+      onDone();
+    }, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, lessonId]);
+
+  const submit = async () => {
+    setSubmitting(true);
+    const mc = await fetchMobileContent().catch(() => null);
+    const lessonTitle = mc?.lessons.find((l) => l.id === lessonId)?.name || lessonId;
+    const payload: ReadingSubmissionPayload = { paragraphTranslation, sentenceTranslations };
+    await submitCreativeSubmission({
+      lessonId: key,
+      lessonTitle,
+      category: 'reading',
+      mediaType: 'text',
+      text: JSON.stringify(payload),
+    });
+    setSubmitting(false);
+    setStatus('pending');
+    addCoins(1, lessonId);
+  };
+
+  if (status === 'checking') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={theme.colors.purple} />
+      </View>
+    );
+  }
+
+  if (status === 'graded') {
+    return (
+      <View style={styles.stepContent}>
+        <View style={styles.gradedCard}>
+          <Ionicons name="ribbon-outline" size={40} color={theme.colors.success} />
+          <Text style={styles.gradedScore}>{gradedScore ?? 100} / 100</Text>
+          <Text style={styles.gradedFeedback}>
+            "{gradedFeedback || t('hwp_creative_graded_feedback_fallback')}" {t('hwp_creative_teacher_suffix')}
+          </Text>
+        </View>
+        <Pressable style={styles.continueBtn} onPress={() => router.back()}>
+          <Text style={styles.continueBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (status === 'pending') {
+    return (
+      <View style={styles.stepContent}>
+        <View style={styles.pendingCard}>
+          <Ionicons name="time-outline" size={40} color={theme.colors.warning} />
+          <Text style={styles.pendingTitle}>{t('hwp_creative_pending_title')}</Text>
+          <Text style={styles.pendingSubtitle}>{t('hwp_creative_pending_sub')}</Text>
+        </View>
+        <Pressable style={styles.editBtn} onPress={() => setStatus('draft')}>
+          <Ionicons name="create-outline" size={16} color={theme.colors.purple} />
+          <Text style={styles.editBtnText}>{t('hwp_creative_edit_resubmit')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (step === 'paragraph') {
+    return (
+      <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.instruction}>{t('hwp_reading_paragraph_instruction')}</Text>
+        <View style={styles.sentenceCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <Text style={[styles.sentence, { flex: 1, textAlign: 'left' }]}>{paragraph.russianText}</Text>
+            <SpeakerButton text={paragraph.russianText} />
+          </View>
+        </View>
+        <TextInput
+          style={styles.creativeInput}
+          placeholder={t('hwp_reading_translation_placeholder')}
+          placeholderTextColor={theme.colors.textLight}
+          value={paragraphTranslation}
+          onChangeText={setParagraphTranslation}
+          multiline
+        />
+        <Pressable
+          style={[styles.continueBtn, !paragraphTranslation.trim() && styles.continueBtnDisabled]}
+          disabled={!paragraphTranslation.trim()}
+          onPress={() => setStep(0)}>
+          <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
+        </Pressable>
+      </ScrollView>
+    );
+  }
+
+  const sIndex = step;
+  const currentSentence = sentences[sIndex];
+  const isLast = sIndex === sentences.length - 1;
+  const currentTranslation = sentenceTranslations[sIndex];
+
+  return (
+    <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
+      <Text style={styles.instruction}>
+        {t('hwp_reading_sentence_instruction').replace('{current}', String(sIndex + 1)).replace('{total}', String(sentences.length))}
+      </Text>
+      <View style={styles.sentenceCard}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={[styles.sentence, { flex: 1 }]}>{currentSentence.russianText}</Text>
+          <SpeakerButton text={currentSentence.russianText} />
+        </View>
+      </View>
+      <TextInput
+        style={styles.creativeInput}
+        placeholder={t('hwp_reading_translation_placeholder')}
+        placeholderTextColor={theme.colors.textLight}
+        value={currentTranslation}
+        onChangeText={(text) => setSentenceTranslations((prev) => prev.map((v, i) => (i === sIndex ? text : v)))}
+        multiline
+      />
+      <Pressable
+        style={[styles.continueBtn, (!currentTranslation.trim() || submitting) && styles.continueBtnDisabled]}
+        disabled={!currentTranslation.trim() || submitting}
+        onPress={() => (isLast ? submit() : setStep(sIndex + 1))}>
+        <Text style={styles.continueBtnText}>
+          {isLast ? (submitting ? t('hwp_creative_sending') : t('hwp_reading_submit_btn')) : t('common_keyingi')}
+        </Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -999,6 +1221,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   micBtnActive: { backgroundColor: theme.colors.danger },
+  speakerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.purpleLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
   recordedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   recordedText: { fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.success },
   scoreBadge: { alignItems: 'center', gap: 2 },

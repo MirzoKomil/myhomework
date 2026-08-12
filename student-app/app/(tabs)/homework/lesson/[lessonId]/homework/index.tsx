@@ -10,7 +10,7 @@ import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { getLessonContent, HomeworkPart, LessonContent, mergeLessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
-import { CreativeSubmissionRecord, fetchCreativeSubmission } from '@/services/creativeSubmissionApi';
+import { CreativeSubmissionRecord, fetchCreativeSubmission, submissionKey } from '@/services/creativeSubmissionApi';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 
 const KIND_ICON: Record<HomeworkPart['kind'], keyof typeof Ionicons.glyphMap> = {
@@ -22,6 +22,7 @@ const KIND_ICON: Record<HomeworkPart['kind'], keyof typeof Ionicons.glyphMap> = 
   roleplay: 'chatbubbles-outline',
   pronunciation: 'megaphone-outline',
   creative: 'brush-outline',
+  reading: 'book-outline',
 };
 
 export default function HomeworkSectionScreen() {
@@ -30,6 +31,7 @@ export default function HomeworkSectionScreen() {
   const [content, setContent] = useState<LessonContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [creativeSubmission, setCreativeSubmission] = useState<CreativeSubmissionRecord | null>(null);
+  const [readingSubmission, setReadingSubmission] = useState<CreativeSubmissionRecord | null>(null);
   const progress = useLessonProgress(String(lessonId));
 
   useEffect(() => {
@@ -61,6 +63,9 @@ export default function HomeworkSectionScreen() {
       fetchCreativeSubmission(String(lessonId)).then((record) => {
         if (!cancelled) setCreativeSubmission(record);
       });
+      fetchCreativeSubmission(submissionKey(String(lessonId), 'reading')).then((record) => {
+        if (!cancelled) setReadingSubmission(record);
+      });
       return () => {
         cancelled = true;
       };
@@ -82,7 +87,11 @@ export default function HomeworkSectionScreen() {
   // 148-ish: "Ijodiy vazifa" ustoz qabul qilib 100% ballamaguncha bajarilgan
   // hisoblanmaydi — boshqa qismlar avvalgidek darhol avtomatik ballanadi.
   const isPartDone = (part: HomeworkPart) =>
-    part.kind === 'creative' ? creativeSubmission?.status === 'graded' : !!progress.homeworkParts[part.id];
+    part.kind === 'creative'
+      ? creativeSubmission?.status === 'graded'
+      : part.kind === 'reading'
+        ? readingSubmission?.status === 'graded'
+        : !!progress.homeworkParts[part.id];
 
   // 52-vazifa: Videodars/Jonli dars ichidagi alohida "Mashqlarni bajarish"
   // bosqichi olib tashlandi — grammatika (video kunlar) yoki speaking
@@ -129,7 +138,8 @@ export default function HomeworkSectionScreen() {
                   />
                 </View>
                 <View style={styles.info}>
-                  <Text style={styles.title}>{t('hw_exercises_title')}</Text>
+                  {/* 54-vazifa: video kunlar uchun menyudagi nom "Gramatika mashqi" bo'lishi kerak */}
+                  <Text style={styles.title}>{isVideoDay ? 'Gramatika mashqi' : t('hw_exercises_title')}</Text>
                   <Text style={[styles.status, exerciseDone && styles.statusDone]}>
                     {exerciseDone ? t('hw_status_done') : t('hw_status_not_done')}
                   </Text>
@@ -142,8 +152,10 @@ export default function HomeworkSectionScreen() {
 
         {parts.map((part) => {
           const isDone = isPartDone(part);
-          const isPendingCreative = part.kind === 'creative' && creativeSubmission?.status === 'pending';
-          const statusLabel = isDone ? t('hw_status_done') : isPendingCreative ? t('hw_status_pending_review') : t('hw_status_not_done');
+          const isPendingReview =
+            (part.kind === 'creative' && creativeSubmission?.status === 'pending') ||
+            (part.kind === 'reading' && readingSubmission?.status === 'pending');
+          const statusLabel = isDone ? t('hw_status_done') : isPendingReview ? t('hw_status_pending_review') : t('hw_status_not_done');
           return (
             <Pressable
               key={part.id}
@@ -152,7 +164,7 @@ export default function HomeworkSectionScreen() {
                 <View style={styles.row}>
                   <View style={[styles.iconWrap, isDone && styles.iconWrapDone]}>
                     <Ionicons
-                      name={isDone ? 'checkmark' : isPendingCreative ? 'time-outline' : KIND_ICON[part.kind]}
+                      name={isDone ? 'checkmark' : isPendingReview ? 'time-outline' : KIND_ICON[part.kind]}
                       size={22}
                       color={isDone ? '#fff' : theme.colors.success}
                     />

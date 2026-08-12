@@ -2873,7 +2873,10 @@ async function getDemoCreativeSubmissions(studentId) {
 async function submitDemoCreativeSubmission(entry, studentId) {
     const lessonId = String(entry?.lessonId || '').trim();
     if (!lessonId) throw new Error("Dars belgilanmagan");
-    const category = ['video', 'speaking'].includes(entry?.category) ? entry.category : 'video';
+    // 54-vazifa: "O'qib tarjima qilish mashqi" ham shu xuddi shu (pending/
+    // graded) tekshiruv oqimidan foydalanadi, faqat 'reading' kategoriyasi
+    // bilan va lessonId o'rniga composite kalit (submissionKey) ostida.
+    const category = ['video', 'speaking', 'reading'].includes(entry?.category) ? entry.category : 'video';
     const mediaType = entry?.mediaType === 'audio' ? 'audio' : 'text';
     const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) throw new Error("Namuna o'quvchi belgilanmagan");

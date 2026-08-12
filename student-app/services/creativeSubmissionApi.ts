@@ -21,7 +21,7 @@ export type CreativeSubmissionStatus = 'pending' | 'graded';
 export type CreativeSubmissionRecord = {
   lessonId: string;
   lessonTitle: string;
-  category: 'video' | 'speaking';
+  category: 'video' | 'speaking' | 'reading';
   mediaType: 'text' | 'audio';
   text: string;
   imageUrl: string | null;
@@ -60,6 +60,14 @@ async function uploadCreativeMedia(uri: string, kind: 'image' | 'audio'): Promis
   }
 }
 
+// 54-vazifa: bir darsda BIR NECHTA tekshiriladigan vazifa (masalan
+// "reading" va kelajakda "creative") bo'lishi mumkin bo'lgani uchun,
+// har biri lessonId'ga qo'shimcha partId bilan alohida kalit ostida
+// saqlanadi — shu tarzda ular bir-birini ustidan yozib yubormaydi.
+export function submissionKey(lessonId: string, partId: string): string {
+  return `${lessonId}::${partId}`;
+}
+
 export async function fetchCreativeSubmission(lessonId: string): Promise<CreativeSubmissionRecord | null> {
   try {
     const res = await authedFetch(API_BASE);
@@ -73,7 +81,7 @@ export async function fetchCreativeSubmission(lessonId: string): Promise<Creativ
 export async function submitCreativeSubmission(params: {
   lessonId: string;
   lessonTitle: string;
-  category: 'video' | 'speaking';
+  category: 'video' | 'speaking' | 'reading';
   mediaType: 'text' | 'audio';
   text?: string;
   imageUri?: string | null;

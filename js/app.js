@@ -1719,7 +1719,7 @@ function _homeworkKindLabel(kind) {
     return {
         matching: 'Moslashtirish', fillBlank: "Bo'sh joy to'ldirish", multipleChoice: 'Test',
         sentenceBuild: 'Gap tuzish', record: 'Ovozli yozib olish', roleplay: "Rolli o'yin",
-        pronunciation: 'Talaffuz tekshirish', creative: 'Ijodiy vazifa',
+        pronunciation: 'Talaffuz tekshirish', creative: 'Ijodiy vazifa', reading: "O'qish",
     }[kind] || kind;
 }
 
@@ -1729,6 +1729,7 @@ function _homeworkPartItemCount(p) {
     if (p.questions) return p.questions.length;
     if (p.items) return p.items.length;
     if (p.prompts) return p.prompts.length;
+    if (p.sentences) return p.sentences.length;
     return null;
 }
 
@@ -2045,6 +2046,26 @@ function _renderLcHomework(body, lesson, content, dayType) {
         document.getElementById('crSave').addEventListener('click', () => {
             persistPart({ ...part, instruction: document.getElementById('crInstruction').value.trim() });
             showMiniToast('Saqlandi');
+        });
+    } else if (part.kind === 'reading') {
+        // 54-vazifa: "O'qib tarjima qilish mashqi" — 1-qism bitta ruscha
+        // paragraf (matn), 2-qism esa alohida ruscha gaplar ro'yxati;
+        // o'quvchi ikkalasini ham o'zbekchaga tarjima qiladi, natija
+        // ustozga tekshirish uchun boradi (o'quvchi tomonida javob
+        // to'g'ri/xato deb avtomatik baholanmaydi).
+        partBody.innerHTML = `
+            <div class="form-group"><label>1-qism — Matn (paragraf, ruscha)</label><textarea id="rdParagraph" class="form-control" rows="5">${escapeHtml((part.paragraph && part.paragraph.russianText) || '')}</textarea></div>
+            <button type="button" class="btn-primary-sm" id="rdParagraphSave" style="margin-bottom:18px">Matnni saqlash</button>
+            <div id="rdSentences"></div>`;
+        document.getElementById('rdParagraphSave').addEventListener('click', () => {
+            persistPart({ ...part, paragraph: { id: (part.paragraph && part.paragraph.id) || 'p1', russianText: document.getElementById('rdParagraph').value.trim() } });
+            showMiniToast('Saqlandi');
+        });
+        renderEditableList(document.getElementById('rdSentences'), {
+            title: '2-qism — Gaplar', addLabel: "+ Gap qo'shish", items: part.sentences || [], idPrefix: 'rs',
+            renderRow: (x) => escapeHtml(x.russianText || ''),
+            fields: [{ key: 'russianText', label: 'Ruscha gap', required: true }],
+            onChange: (items) => { persistPart({ ...part, sentences: items }); showMiniToast('Saqlandi'); },
         });
     }
 }
@@ -7259,10 +7280,32 @@ async function renderCrmCreativeSubmissionsPanel(container, studentId) {
         return;
     }
     container.innerHTML = entries.map(e => {
-        const catLabel = e.category === 'speaking' ? '🎤 Speaking' : '🎬 Videodars';
-        const mediaHtml = e.mediaType === 'audio' && e.audioUrl
-            ? `<audio controls src="${e.audioUrl}" style="width:100%;margin-top:6px"></audio>`
-            : `<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap">${escapeHtml(e.text || '')}</div>`;
+        const catLabel = e.category === 'speaking' ? '🎤 Speaking' : e.category === 'reading' ? "📖 O'qish" : '🎬 Videodars';
+        // 54-vazifa: "O'qib tarjima qilish mashqi" javobi JSON shaklida
+        // (paragraphTranslation + sentenceTranslations) keladi — xom JSON
+        // o'rniga o'qish uchun qulay formatda ko'rsatamiz.
+        let readingHtml = '';
+        if (e.category === 'reading') {
+            try {
+                const parsed = JSON.parse(e.text || '{}');
+                const sentencesHtml = (parsed.sentenceTranslations || [])
+                    .map((s, i) => `<div>${i + 1}) ${escapeHtml(s || '')}</div>`)
+                    .join('');
+                readingHtml = `<div style="margin-top:6px;font-size:13px;color:var(--text)">
+                    <div style="font-weight:600;font-size:11px;color:var(--text-muted);margin-bottom:2px">Paragraf tarjimasi:</div>
+                    <div style="white-space:pre-wrap;margin-bottom:8px">${escapeHtml(parsed.paragraphTranslation || '')}</div>
+                    <div style="font-weight:600;font-size:11px;color:var(--text-muted);margin-bottom:2px">Gaplar tarjimasi:</div>
+                    ${sentencesHtml}
+                </div>`;
+            } catch {
+                readingHtml = `<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap">${escapeHtml(e.text || '')}</div>`;
+            }
+        }
+        const mediaHtml = e.category === 'reading'
+            ? readingHtml
+            : e.mediaType === 'audio' && e.audioUrl
+                ? `<audio controls src="${e.audioUrl}" style="width:100%;margin-top:6px"></audio>`
+                : `<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap">${escapeHtml(e.text || '')}</div>`;
         const imageHtml = e.imageUrl ? `<img src="${e.imageUrl}" style="max-width:220px;border-radius:8px;margin-top:6px;display:block">` : '';
         const statusBadge = e.status === 'graded'
             ? `<span class="badge badge-probniy">✅ Qabul qilindi — ${e.scorePercent}%</span>`
