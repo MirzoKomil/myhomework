@@ -35,6 +35,11 @@ export default function SlidesScreen() {
   // va desktop kontent kengligiga cheklangan.
   const { width: windowWidth } = useWindowDimensions();
   const width = Math.min(windowWidth, DESKTOP_CONTENT_MAX_WIDTH);
+  // 53-vazifa: slaydlar 5:4 nisbatda ko'rsatilishi kerak (kengroq, ko'rishga
+  // qulayroq) — slidePage'ning gorizontal padding'ini (20+20) hisobga olib,
+  // balandlik shu nisbatga qarab dinamik hisoblanadi.
+  const slideAreaWidth = width - 40;
+  const slideAreaHeight = (slideAreaWidth * 4) / 5;
   const [content, setContent] = useState<LessonContent | null>(null);
   const [materials, setMaterials] = useState<LessonMaterials | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -100,9 +105,9 @@ export default function SlidesScreen() {
         {slides.map((slide) => (
           <View key={slide.id} style={[styles.slidePage, { width }]}>
             {slide.imageUrl ? (
-              <Image source={{ uri: slide.imageUrl }} style={styles.slideImage} resizeMode="contain" />
+              <Image source={{ uri: slide.imageUrl }} style={[styles.slideImage, { height: slideAreaHeight }]} resizeMode="contain" />
             ) : (
-              <View style={styles.slideVisual}>
+              <View style={[styles.slideVisual, { height: slideAreaHeight }]}>
                 <Ionicons name="easel-outline" size={48} color="#fff" />
                 <Text style={styles.slideVisualTitle}>{slide.title}</Text>
               </View>
@@ -175,7 +180,6 @@ const styles = StyleSheet.create({
   progress: { fontFamily: theme.fonts.medium, fontSize: 14, color: theme.colors.textMuted },
   slidePage: { paddingHorizontal: 20 },
   slideVisual: {
-    height: 200,
     backgroundColor: theme.colors.pink,
     borderRadius: theme.radius.md,
     alignItems: 'center',
@@ -183,7 +187,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   slideVisualTitle: { fontFamily: theme.fonts.bold, fontSize: 16, color: '#fff' },
-  slideImage: { width: '100%', height: 200, borderRadius: theme.radius.md, backgroundColor: theme.colors.bg },
+  slideImage: { width: '100%', borderRadius: theme.radius.md, backgroundColor: theme.colors.bg },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
