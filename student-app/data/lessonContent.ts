@@ -11,6 +11,10 @@ export type VocabWord = {
   english: string;
   translation: string;
   transcript: string;
+  // 58-vazifa: admin CRM'dan kiritiladigan, ixtiyoriy — bo'lmasa `icon`ga
+  // qaytiladi (fallback).
+  imageUrl?: string;
+  exampleSentence?: string;
 };
 
 export type GrammarBlank = {

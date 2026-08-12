@@ -1,10 +1,10 @@
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
-} from '@expo-google-fonts/inter';
+  GolosText_400Regular,
+  GolosText_500Medium,
+  GolosText_600SemiBold,
+  GolosText_700Bold,
+  GolosText_800ExtraBold,
+} from '@expo-google-fonts/golos-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
@@ -30,19 +30,19 @@ SplashScreen.preventAutoHideAsync();
 
 const nativeFonts = {
   ...Ionicons.font,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
+  GolosText_400Regular,
+  GolosText_500Medium,
+  GolosText_600SemiBold,
+  GolosText_700Bold,
+  GolosText_800ExtraBold,
 };
 
 const webFonts = {
-  Inter_400Regular: `${WEB_FONT_BASE}/inter-400.ttf`,
-  Inter_500Medium: `${WEB_FONT_BASE}/inter-500.ttf`,
-  Inter_600SemiBold: `${WEB_FONT_BASE}/inter-600.ttf`,
-  Inter_700Bold: `${WEB_FONT_BASE}/inter-700.ttf`,
-  Inter_800ExtraBold: `${WEB_FONT_BASE}/inter-800.ttf`,
+  GolosText_400Regular: `${WEB_FONT_BASE}/golos-400.ttf`,
+  GolosText_500Medium: `${WEB_FONT_BASE}/golos-500.ttf`,
+  GolosText_600SemiBold: `${WEB_FONT_BASE}/golos-600.ttf`,
+  GolosText_700Bold: `${WEB_FONT_BASE}/golos-700.ttf`,
+  GolosText_800ExtraBold: `${WEB_FONT_BASE}/golos-800.ttf`,
   ionicons: `${WEB_FONT_BASE}/ionicons.ttf`,
 };
 

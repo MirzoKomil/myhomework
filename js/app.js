@@ -1764,7 +1764,12 @@ function _renderLcVocab(body, lesson, content) {
             { key: 'english', label: wordLabel, required: true },
             { key: 'translation', label: "O'zbekcha tarjima", required: true },
             { key: 'transcript', label: 'Transkripsiya', placeholder: '/ˈæp.əl/' },
-            { key: 'icon', label: 'Icon nomi (ionicons, ixtiyoriy)', placeholder: 'restaurant-outline' },
+            { key: 'icon', label: 'Icon nomi (ionicons, rasm bo\'lmaganda zaxira sifatida)', placeholder: 'restaurant-outline' },
+            // 58-vazifa: so'zlar ro'yxatida endi icon o'rniga shu rasm
+            // ko'rsatiladi (bo'lmasa iconga qaytiladi), misol gap esa so'z
+            // ustiga bosilganda ochiladigan tafsilot oynasida chiqadi.
+            { key: 'imageUrl', label: 'Rasm (ixtiyoriy)', type: 'image' },
+            { key: 'exampleSentence', label: 'Misol gap (ixtiyoriy)', type: 'textarea', placeholder: "Masalan: Здравствуйте, как дела?" },
         ],
         onChange: (newItems) => { content.vocabulary = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); },
     });

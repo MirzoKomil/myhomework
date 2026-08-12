@@ -36,15 +36,16 @@ export const theme = {
       elevation: 4,
     },
   },
-  // 56-vazifa: Inter — kirill (rus) va lotin alifbosini bab-baravar to'liq
-  // qo'llab-quvvatlaydi (avvalgi Plus Jakarta Sans'da kirill glif to'plami
-  // yo'q edi).
+  // 57-vazifa: Golos Text — kirill (rus) va lotin alifbosini bir xil
+  // uslubda, bab-baravar chiroyli chizadi (56-vazifadagi Inter kirillda
+  // "quruq"/tekis ko'rinar edi, Plus Jakarta Sans esa kirillni umuman
+  // qo'llab-quvvatlamas edi).
   fonts: {
-    regular: 'Inter_400Regular',
-    medium: 'Inter_500Medium',
-    semiBold: 'Inter_600SemiBold',
-    bold: 'Inter_700Bold',
-    extraBold: 'Inter_800ExtraBold',
+    regular: 'GolosText_400Regular',
+    medium: 'GolosText_500Medium',
+    semiBold: 'GolosText_600SemiBold',
+    bold: 'GolosText_700Bold',
+    extraBold: 'GolosText_800ExtraBold',
   },
 } as const;
 
