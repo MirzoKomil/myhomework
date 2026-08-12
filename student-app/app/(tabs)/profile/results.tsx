@@ -9,12 +9,20 @@ import { CourseProgressCard } from '@/components/ui/CourseProgressCard';
 import { LightningIcon } from '@/components/ui/LightningIcon';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { SkillBars } from '@/components/ui/SkillBars';
 import { theme } from '@/constants/theme';
-import { courseEnrollment, courses, profileStats, skillProgress } from '@/data/mock';
-import { generateTeacherScores, TEACHER_GRADE_CRITERIA } from '@/data/lessonGrades';
-import { generateScheduleDays } from '@/data/scheduleCalendar';
-import { fetchDemoStudentProfile } from '@/services/contentApi';
+import { TEACHER_GRADE_CRITERIA } from '@/data/lessonGrades';
+import { generateRealScheduleDays, ScheduleDay } from '@/data/scheduleCalendar';
+import { getCourseOverallProgress } from '@/data/lessonContent';
+import {
+  DemoActivityEntry,
+  fetchDemoActivity,
+  fetchDemoGrades,
+  fetchDemoSchedule,
+  fetchDemoStudentPayments,
+  fetchDemoStudentProfile,
+  LiveGradeEntry,
+} from '@/services/contentApi';
+import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 import { useCommunityLikesTotal } from '@/services/communityStore';
 import { useCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
@@ -40,19 +48,37 @@ function StatGrid({ stats }: { stats: StatItem[] }) {
   );
 }
 
+// 59-vazifa: "Natijalarim" ekrani ilgari ko'p qismda namuna (mock)
+// ma'lumotlarni ko'rsatardi — endi barcha kartochkalar shu ilovada
+// haqiqiy mavjud manbalardan (server API'lari va lessonProgressStore)
+// hisoblanadi. Haqiqiy manbasi yo'q ikkita bo'lim ("Ko'nikmalar
+// progressi" va "Qo'shimcha resurslar" — o'yin/kutubxona/AI chat/radio
+// vaqti) butunlay olib tashlandi, chunki ular uchun ilovada hech qanday
+// kuzatuv (tracking) mavjud emas edi.
 export default function ResultsScreen() {
-  const activeCourse = courses[0];
   const coins = useCoins();
   const lightning = useLightning();
   const orders = useOrders();
   const communityLikes = useCommunityLikesTotal();
 
-  // 35-vazifa: "Davomat" va "Ilovada sarflangan vaqt" ilgari namuna
-  // qiymatlarni (profileStats) ko'rsatardi — endi haqiqiy davomat
-  // yozuvlaridan hisoblangan qiymat.
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [courseProgress, setCourseProgress] = useState({ done: 0, total: 72, percent: 0, homeworkCompleted: 0 });
   const [attendanceRate, setAttendanceRate] = useState(0);
   const [hoursSpent, setHoursSpent] = useState(0);
+  const [vocabularyCount, setVocabularyCount] = useState(0);
+  const [correctedMistakes, setCorrectedMistakes] = useState(0);
+  const [grades, setGrades] = useState<LiveGradeEntry[]>([]);
+  const [scheduleDays, setScheduleDays] = useState<ScheduleDay[]>([]);
+  const [lessonDuration, setLessonDuration] = useState(15);
+
   useEffect(() => {
+    getCourseOverallProgress()
+      .then((p) => {
+        setCourseProgress(p);
+        setCourseId(p.courseId);
+      })
+      .catch(() => {});
+
     fetchDemoStudentProfile()
       .then((profile) => {
         if (profile) {
@@ -61,65 +87,77 @@ export default function ResultsScreen() {
         }
       })
       .catch(() => {});
+
+    getAccumulatedVocabulary()
+      .then((words) => setVocabularyCount(words.length))
+      .catch(() => {});
+
+    fetchDemoActivity()
+      .then((entries: DemoActivityEntry[]) => {
+        setCorrectedMistakes(entries.reduce((sum, e) => sum + (e.wrongAttempts || 0), 0));
+      })
+      .catch(() => {});
+
+    fetchDemoStudentPayments()
+      .then((payments) => {
+        if (payments) setLessonDuration(payments.lessonDuration);
+      })
+      .catch(() => {});
+
+    // Jonli dars baholari (Ustoz baholari bo'limi) va haqiqiy jadval
+    // (video/live/bonus kunlar soni) — "Jadval va davomat" ekranidagi
+    // bilan bir xil manbadan.
+    Promise.all([fetchDemoSchedule(), fetchDemoGrades()])
+      .then(([schedule, gradesResp]) => {
+        setGrades(gradesResp.grades);
+        if (schedule.courseStartDate) {
+          const attendedDates = new Set(gradesResp.grades.map((g) => g.date));
+          const attendedTopics = new Map(gradesResp.grades.map((g) => [g.date, g.lessonName]));
+          setScheduleDays(
+            generateRealScheduleDays(schedule.courseStartDate, schedule.schedulePattern, attendedDates, attendedTopics)
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  const scheduleDays = useMemo(() => generateScheduleDays(), []);
+  const categoryAverages = useMemo(
+    () =>
+      TEACHER_GRADE_CRITERIA.map((c) => {
+        if (grades.length === 0) return { ...c, avg: 0 };
+        return { ...c, avg: grades.reduce((s, g) => s + g.scores[c.key], 0) / grades.length };
+      }),
+    [grades]
+  );
+  const avgTeacherScore = useMemo(
+    () => (categoryAverages.length === 0 ? 0 : categoryAverages.reduce((s, c) => s + c.avg, 0) / categoryAverages.length),
+    [categoryAverages]
+  );
 
-  const liveLessons = useMemo(() => scheduleDays.filter((d) => d.type === 'live' && d.isPast), [scheduleDays]);
-  const videoLessons = useMemo(() => scheduleDays.filter((d) => d.type === 'video' && d.isPast), [scheduleDays]);
-  const bonusDays = useMemo(() => scheduleDays.filter((d) => d.type === 'bonus'), [scheduleDays]);
-  const bonusDaysPast = useMemo(() => bonusDays.filter((d) => d.isPast), [bonusDays]);
+  const liveLessonsPast = useMemo(() => scheduleDays.filter((d) => d.type === 'live' && d.isPast), [scheduleDays]);
+  const videoLessonsPast = useMemo(() => scheduleDays.filter((d) => d.type === 'video' && d.isPast), [scheduleDays]);
+  const bonusDaysPast = useMemo(() => scheduleDays.filter((d) => d.type === 'bonus' && d.isPast), [scheduleDays]);
   const bonusAttended = useMemo(() => bonusDaysPast.filter((d) => !d.missed).length, [bonusDaysPast]);
 
-  const avgTeacherScore = useMemo(() => {
-    if (liveLessons.length === 0) return 0;
-    let sum = 0;
-    liveLessons.forEach((lesson) => {
-      const scores = generateTeacherScores(lesson.dayNumber);
-      TEACHER_GRADE_CRITERIA.forEach((c) => {
-        sum += scores[c.key];
-      });
-    });
-    return sum / (liveLessons.length * TEACHER_GRADE_CRITERIA.length);
-  }, [liveLessons]);
-
-  const speakingHours = (liveLessons.length * courseEnrollment.tariffMinutes) / 60;
-  const homeworkCompleted = videoLessons.length + liveLessons.length;
-
-  const correctedMistakes = useMemo(() => {
-    let total = 0;
-    [...videoLessons, ...liveLessons].forEach((day) => {
-      const x = Math.sin(day.dayNumber * 17.31) * 10000;
-      const frac = x - Math.floor(x);
-      total += Math.floor(frac * 4); // har bir darsda 0-3 ta tuzatilgan xato
-    });
-    return total;
-  }, [videoLessons, liveLessons]);
+  const speakingHours = (grades.length * lessonDuration) / 60;
 
   const generalStats: StatItem[] = [
     { icon: 'checkmark-circle', label: 'Davomat', value: `${attendanceRate}%`, bg: theme.colors.successBg, color: theme.colors.success },
-    { icon: 'book', label: "O'rganilgan so'zlar", value: `${profileStats.vocabularyCount} ta`, bg: theme.colors.purpleLight, color: theme.colors.purple },
+    { icon: 'book', label: "O'rganilgan so'zlar", value: `${vocabularyCount} ta`, bg: theme.colors.purpleLight, color: theme.colors.purple },
     { icon: 'time', label: 'Ilovada sarflangan vaqt', value: `${hoursSpent} soat`, bg: theme.colors.warningBg, color: theme.colors.warning },
     { icon: 'build', label: 'Tuzatilgan xatolar', value: `${correctedMistakes} ta`, bg: theme.colors.dangerBg, color: theme.colors.danger },
   ];
 
   const teacherStats: StatItem[] = [
-    { icon: 'clipboard', label: 'Ustoz baholagan darslar', value: `${liveLessons.length} ta`, bg: theme.colors.blueLight, color: theme.colors.blue },
+    { icon: 'clipboard', label: 'Ustoz baholagan darslar', value: `${grades.length} ta`, bg: theme.colors.blueLight, color: theme.colors.blue },
     { icon: 'star', label: "Ustozdan o'rtacha baho", value: `${avgTeacherScore.toFixed(1)}/5`, bg: theme.colors.warningBg, color: '#D97706' },
   ];
 
   const lessonStats: StatItem[] = [
-    { icon: 'videocam', label: "Tugallangan videodars (grammatika)", value: `${videoLessons.length} ta`, bg: theme.colors.blueLight, color: theme.colors.blue },
-    { icon: 'mic', label: 'Live darslar (speaking)', value: `${liveLessons.length} ta`, bg: theme.colors.pinkBg, color: theme.colors.pink },
+    { icon: 'videocam', label: 'Tugallangan videodars (grammatika)', value: `${videoLessonsPast.length} ta`, bg: theme.colors.blueLight, color: theme.colors.blue },
+    { icon: 'mic', label: 'Live darslar (speaking)', value: `${liveLessonsPast.length} ta`, bg: theme.colors.pinkBg, color: theme.colors.pink },
     { icon: 'hourglass', label: 'Speaking soati', value: `${speakingHours.toFixed(1)} soat`, bg: theme.colors.successBg, color: theme.colors.success },
-    { icon: 'document-text', label: 'Bajarilgan uyga vazifalar', value: `${homeworkCompleted} ta`, bg: theme.colors.purpleLight, color: theme.colors.purple },
-  ];
-
-  const resourceStats: StatItem[] = [
-    { icon: 'game-controller', label: "O'yinlarga sarflangan vaqt", value: `${profileStats.gamesTimeHours} soat`, bg: theme.colors.dangerBg, color: theme.colors.danger },
-    { icon: 'library', label: 'Kutubxonada sarflangan vaqt', value: `${profileStats.libraryTimeHours} soat`, bg: theme.colors.blueLight, color: theme.colors.blue },
-    { icon: 'sparkles', label: 'AI chatda sarflangan vaqt', value: `${profileStats.aiChatTimeHours} soat`, bg: theme.colors.purpleLight, color: theme.colors.purple },
-    { icon: 'radio', label: 'Radioga sarflangan vaqt', value: `${profileStats.radioTimeHours} soat`, bg: theme.colors.successBg, color: theme.colors.success },
+    { icon: 'document-text', label: 'Bajarilgan uyga vazifalar', value: `${courseProgress.homeworkCompleted} ta`, bg: theme.colors.purpleLight, color: theme.colors.purple },
   ];
 
   return (
@@ -127,10 +165,10 @@ export default function ResultsScreen() {
       <ScreenHeader title="Natijalarim" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <CourseProgressCard
-          progress={activeCourse.progress}
-          lessonsDone={activeCourse.lessonsDone}
-          lessonsTotal={activeCourse.lessonsTotal}
-          onPress={() => router.push(`/homework/roadmap/${activeCourse.id}` as never)}
+          progress={courseProgress.percent}
+          lessonsDone={courseProgress.done}
+          lessonsTotal={courseProgress.total}
+          onPress={() => courseId && router.push(`/homework/roadmap/${courseId}` as never)}
         />
 
         <Text style={styles.sectionTitle}>Umumiy natijalar</Text>
@@ -154,12 +192,6 @@ export default function ResultsScreen() {
             Kurs davomida jami {BONUS_TOTAL} ta yakshanba bonus dars rejalashtirilgan, hozirgacha {bonusDaysPast.length} tasi o'tdi.
           </Text>
         </View>
-
-        <Text style={styles.sectionTitle}>Ko'nikmalar progressi</Text>
-        <SkillBars skills={skillProgress} />
-
-        <Text style={styles.sectionTitle}>Qo'shimcha resurslar</Text>
-        <StatGrid stats={resourceStats} />
 
         <Text style={styles.sectionTitle}>Yutuqlar ✨</Text>
         <View style={styles.grid}>

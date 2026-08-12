@@ -354,8 +354,14 @@ const COURSE_LIVE_LESSON_UNLOCK_PERCENT = 50;
 // qattiq yozilgan namuna qiymatni (31%, 22/72 dars) ko'rsatardi. Endi
 // "Darslar yo'li" ekranidagi bilan AYNAN bir xil qulflash mantig'i bo'yicha
 // haqiqiy ochilgan darslar sonini hisoblaydi.
-export async function getCourseOverallProgress(): Promise<{ done: number; total: number; percent: number }> {
-  const empty = { done: 0, total: COURSE_TOTAL_LESSONS, percent: 0 };
+export async function getCourseOverallProgress(): Promise<{
+  done: number;
+  total: number;
+  percent: number;
+  homeworkCompleted: number;
+  courseId: string | null;
+}> {
+  const empty = { done: 0, total: COURSE_TOTAL_LESSONS, percent: 0, homeworkCompleted: 0, courseId: null };
   const mc = await fetchMobileContent();
   const course = mc.courses[0];
   if (!course) return empty;
@@ -366,6 +372,10 @@ export async function getCourseOverallProgress(): Promise<{ done: number; total:
 
   let prevPercent = 100;
   let unlockedCount = 0;
+  // 59-vazifa: "Natijalarim" ekranidagi "Bajarilgan uyga vazifalar" endi
+  // haqiqiy — shu darsning "homework" kategoriyasi 100% bo'lgan (va
+  // kamida bitta uyga vazifa qismi bo'lgan) darslar soni.
+  let homeworkCompleted = 0;
   for (let i = 0; i < COURSE_TOTAL_LESSONS; i++) {
     const l = adminLessons[i];
     const id = l?.id ?? String(i + 1);
@@ -383,11 +393,10 @@ export async function getCourseOverallProgress(): Promise<{ done: number; total:
 
     const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
     const content = mergeLessonContent(getLessonContent(id, i, resolvedCourseLang), mc.lessonContents[id]);
+    const homeworkPercent = getCategoryProgress(id, 'homework', content.homeworkParts.length);
+    if (content.homeworkParts.length > 0 && homeworkPercent >= 100) homeworkCompleted++;
     const percent = Math.round(
-      (getCategoryProgress(id, videoCategory) +
-        getCategoryProgress(id, 'vocabulary') +
-        getCategoryProgress(id, 'homework', content.homeworkParts.length)) /
-        3
+      (getCategoryProgress(id, videoCategory) + getCategoryProgress(id, 'vocabulary') + homeworkPercent) / 3
     );
     prevPercent = percent;
   }
@@ -396,6 +405,8 @@ export async function getCourseOverallProgress(): Promise<{ done: number; total:
     done: unlockedCount,
     total: COURSE_TOTAL_LESSONS,
     percent: Math.round((unlockedCount / COURSE_TOTAL_LESSONS) * 100),
+    homeworkCompleted,
+    courseId: course.id,
   };
 }
 
