@@ -1696,6 +1696,25 @@ async function _pdfFileToSlideImages(file, onProgress) {
     return results;
 }
 
+// 61-vazifa: uyga vazifa qismining TURI/ID/NOMI saqlanadi, ICHI (juftliklar/
+// savollar/matn/gaplar) bo'shatiladi — shu kursning 1- yoki 2-darsi shaklini
+// boshqa (hali tahrirlanmagan) darsning tahrirlash formasiga "shablon"
+// sifatida ko'chirish uchun.
+function _homeworkPartsShapeTemplate(parts) {
+    return (parts || []).map(p => {
+        const shell = { id: p.id, kind: p.kind, title: p.title };
+        if (p.kind === 'matching') shell.pairs = [];
+        else if (p.kind === 'fillBlank') shell.blanks = [];
+        else if (p.kind === 'multipleChoice') shell.questions = [];
+        else if (p.kind === 'sentenceBuild') shell.items = [];
+        else if (p.kind === 'record' || p.kind === 'pronunciation') shell.prompts = [];
+        else if (p.kind === 'roleplay') shell.scenario = { id: 'r1', title: '', intro: '', lines: [], closing: '' };
+        else if (p.kind === 'creative') { shell.instruction = ''; shell.mediaType = p.mediaType || 'text'; }
+        else if (p.kind === 'reading') { shell.paragraph = { id: 'p1', russianText: '' }; shell.sentences = []; }
+        return shell;
+    });
+}
+
 // ─── Dars tarkibi (lug'at, grammatika/speaking, uyga vazifa) tahrirlovchisi ──
 function _getLessonWorkingContent(mc, lesson, dayIndex) {
     if (!mc.lessonContents) mc.lessonContents = {};
@@ -1704,7 +1723,21 @@ function _getLessonWorkingContent(mc, lesson, dayIndex) {
         const bonusIndex = Math.max(0, parseInt(String(lesson.id).replace('bonus-', ''), 10) - 1);
         return getDefaultBonusLessonContent(bonusIndex);
     }
-    return getDefaultLessonContent(lesson.id, dayIndex, lesson.lang === 'russian' ? 'russian' : 'english');
+    const base = getDefaultLessonContent(lesson.id, dayIndex, lesson.lang === 'russian' ? 'russian' : 'english');
+    // 61-vazifa: toq darslarning uyga vazifa strukturasi shu kursning
+    // 1-darsidan, juft darslarniki esa 2-darsidan olinadi (agar ular
+    // allaqachon tahrirlangan/saqlangan bo'lsa) — shu bilan bitta joyda
+    // (1- yoki 2-darsda) qism qo'shilsa/o'chirilsa, boshqa barcha mos
+    // darslar ham xuddi shu tarkib bilan tahrirlash uchun ochiladi.
+    const courseLessons = (mc.lessons || []).filter(l => l.courseId === lesson.courseId);
+    const templateLesson = dayIndex % 2 === 0 ? courseLessons[0] : courseLessons[1];
+    if (templateLesson && templateLesson.id !== lesson.id) {
+        const templateContent = mc.lessonContents[templateLesson.id];
+        if (templateContent && templateContent.homeworkParts && templateContent.homeworkParts.length) {
+            base.homeworkParts = _homeworkPartsShapeTemplate(templateContent.homeworkParts);
+        }
+    }
+    return base;
 }
 
 function _saveLessonWorkingContent(lesson, content) {
