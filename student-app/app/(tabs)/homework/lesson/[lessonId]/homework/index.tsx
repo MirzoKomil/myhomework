@@ -83,8 +83,20 @@ export default function HomeworkSectionScreen() {
   // hisoblanmaydi — boshqa qismlar avvalgidek darhol avtomatik ballanadi.
   const isPartDone = (part: HomeworkPart) =>
     part.kind === 'creative' ? creativeSubmission?.status === 'graded' : !!progress.homeworkParts[part.id];
-  const doneCount = parts.filter(isPartDone).length;
-  const overallPct = Math.round((doneCount / parts.length) * 100);
+
+  // 52-vazifa: Videodars/Jonli dars ichidagi alohida "Mashqlarni bajarish"
+  // bosqichi olib tashlandi — grammatika (video kunlar) yoki speaking
+  // (jonli kunlar) mashqi endi shu "Uyga vazifa" ro'yxatining birinchi
+  // qatori sifatida ko'rsatiladi, lekin ekranning o'zi (navbatga qaytarish,
+  // mukofotlar va h.k.) o'zgarishsiz qoladi — faqat kirish nuqtasi ko'chdi.
+  const isVideoDay = content.dayType === 'grammar';
+  const hasExercise = isVideoDay ? content.grammarBlanks.length > 0 : content.speakingPractice.length > 0;
+  const exerciseDone = isVideoDay ? progress.videoExercises : progress.speakingExercises;
+  const exerciseRoute = isVideoDay ? 'video/exercises' : 'speaking/exercises';
+
+  const doneCount = parts.filter(isPartDone).length + (hasExercise && exerciseDone ? 1 : 0);
+  const totalCount = parts.length + (hasExercise ? 1 : 0);
+  const overallPct = totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -99,6 +111,34 @@ export default function HomeworkSectionScreen() {
             <Text style={styles.overallPct}>{overallPct}%</Text>
           </View>
         </Card>
+
+        {hasExercise && (
+          <Pressable onPress={() => router.push(`/homework/lesson/${lessonId}/${exerciseRoute}` as never)}>
+            <Card style={styles.card}>
+              <View style={styles.row}>
+                <View
+                  style={[
+                    styles.iconWrap,
+                    { backgroundColor: isVideoDay ? theme.colors.purpleLight : theme.colors.blueLight },
+                    exerciseDone && styles.iconWrapDone,
+                  ]}>
+                  <Ionicons
+                    name={exerciseDone ? 'checkmark' : isVideoDay ? 'create-outline' : 'mic-outline'}
+                    size={22}
+                    color={exerciseDone ? '#fff' : isVideoDay ? theme.colors.purple : theme.colors.blue}
+                  />
+                </View>
+                <View style={styles.info}>
+                  <Text style={styles.title}>{t('hw_exercises_title')}</Text>
+                  <Text style={[styles.status, exerciseDone && styles.statusDone]}>
+                    {exerciseDone ? t('hw_status_done') : t('hw_status_not_done')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textLight} />
+              </View>
+            </Card>
+          </Pressable>
+        )}
 
         {parts.map((part) => {
           const isDone = isPartDone(part);

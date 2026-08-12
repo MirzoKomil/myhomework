@@ -74,7 +74,10 @@ export default function LessonScreen() {
             icon: 'play-circle',
             color: theme.colors.blue,
             bg: theme.colors.blueLight,
-            route: 'video',
+            // 52-vazifa: bosilganda to'g'ridan-to'g'ri videoni ko'rish
+            // ekraniga o'tadi — grammatika mashqi endi "Uyga vazifa"ga
+            // ko'chirilgani uchun oraliq ro'yxat kerak emas.
+            route: 'video/watch',
           },
           {
             key: 'vocabulary',
@@ -103,7 +106,10 @@ export default function LessonScreen() {
             icon: 'easel-outline',
             color: theme.colors.pink,
             bg: theme.colors.pinkBg,
-            route: 'speaking',
+            // 52-vazifa: bosilganda to'g'ridan-to'g'ri slaydlar ekraniga
+            // o'tadi — speaking mashqi endi "Uyga vazifa"ga ko'chirilgani
+            // uchun oraliq ro'yxat kerak emas.
+            route: 'speaking/slides',
           },
           {
             key: 'vocabulary',
