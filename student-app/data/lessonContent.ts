@@ -350,12 +350,13 @@ export async function getResolvedLessonContent(lessonId: string, dayIndex: numbe
 const COURSE_TOTAL_LESSONS = 72;
 // 8-vazifa/32-vazifa: Bosh sahifa/Darslar yo'li'dagi bilan bir xil qoida -
 // birinchi dars har doim ochiq, keyingi VIDEO dars oldingi (speaking)
-// darsning bajarilishi kamida shu foizga (standart 80%) yetganda, keyingi
-// SPEAKING dars esa ustoz davomat OLGAN va oldingi videodars kamida shu
-// foizga (standart 60%) yetganda ochiladi (roadmap/[courseId].tsx'dagi
-// recomputeLessons bilan bir xil mantiq).
-const COURSE_DEFAULT_UNLOCK_PERCENT = 80;
-const COURSE_LIVE_LESSON_UNLOCK_PERCENT = 60;
+// darsning bajarilishi kamida shu foizga yetganda, keyingi SPEAKING dars
+// esa ustoz davomat OLGAN va oldingi videodars kamida shu foizga yetganda
+// ochiladi (roadmap/[courseId].tsx'dagi recomputeLessons bilan bir xil
+// mantiq). 51-vazifa: ikkala chegara ham 50% ga tushirildi — davomat sharti
+// Razgovor (speaking) darslar uchun o'zgarishsiz qoladi.
+const COURSE_DEFAULT_UNLOCK_PERCENT = 50;
+const COURSE_LIVE_LESSON_UNLOCK_PERCENT = 50;
 
 // 38-vazifa: Bosh sahifadagi "Umumiy progress" kartochkasi ilgari doim
 // qattiq yozilgan namuna qiymatni (31%, 22/72 dars) ko'rsatardi. Endi

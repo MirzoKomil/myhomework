@@ -480,6 +480,10 @@ export default function RoadmapScreen() {
   // UNLOCKED_COUNT ta dars boshlang'ich sifatida har doim ochiq turadi.
   // Progress o'zgarganda qayta hisoblanishi uchun alohida funksiyaga
   // chiqarilgan (faqat kursga kirgandagina emas).
+  // 51-vazifa: chegara 80%/60% dan 50% ga tushirildi — o'quvchi darsni yarim
+  // bajarsa ham keyingi darsga o'tishi mumkin. Razgovor (speaking/jonli)
+  // darslar uchun ustoz davomat olishi sharti (attendanceOk) o'zgarishsiz
+  // qoladi — bu faqat foiz chegarasiga tegishli o'zgarish.
   const recomputeLessons = (mc: MobileContent, cId: string | undefined) => {
     const c = mc.courses.find((x) => x.id === cId) ?? mc.courses[0] ?? null;
     if (!c) return;
@@ -491,12 +495,12 @@ export default function RoadmapScreen() {
     // 1-dars ochiq turishi kerak edi — avval bu 3 ta bo'lgani sabab 2- va
     // 3-darslar ham hech qanday progress bo'lmasa ham ochiq ko'rinardi.
     const UNLOCKED_COUNT = 1;
-    const DEFAULT_UNLOCK_PERCENT = 80;
+    const DEFAULT_UNLOCK_PERCENT = 50;
     // 32-vazifa: jonli (speaking) darsning o'zi ochilishi uchun IKKI shart
     // BIRGALIKDA bajarilishi shart — ustoz shu darsga davomat olgan
     // bo'lishi VA undan oldingi videodars vazifalari kamida shu % bajarilgan
     // bo'lishi. Bittasi yetarli emas.
-    const LIVE_LESSON_UNLOCK_PERCENT = 60;
+    const LIVE_LESSON_UNLOCK_PERCENT = 50;
     let prevPercent = 100;
     const mapped: LessonNode[] = [];
     for (let i = 0; i < TOTAL_LESSONS; i++) {
