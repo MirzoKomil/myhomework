@@ -1,10 +1,10 @@
 import {
-  GolosText_400Regular,
-  GolosText_500Medium,
-  GolosText_600SemiBold,
-  GolosText_700Bold,
-  GolosText_800ExtraBold,
-} from '@expo-google-fonts/golos-text';
+  Onest_400Regular,
+  Onest_500Medium,
+  Onest_600SemiBold,
+  Onest_700Bold,
+  Onest_800ExtraBold,
+} from '@expo-google-fonts/onest';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
@@ -30,19 +30,19 @@ SplashScreen.preventAutoHideAsync();
 
 const nativeFonts = {
   ...Ionicons.font,
-  GolosText_400Regular,
-  GolosText_500Medium,
-  GolosText_600SemiBold,
-  GolosText_700Bold,
-  GolosText_800ExtraBold,
+  Onest_400Regular,
+  Onest_500Medium,
+  Onest_600SemiBold,
+  Onest_700Bold,
+  Onest_800ExtraBold,
 };
 
 const webFonts = {
-  GolosText_400Regular: `${WEB_FONT_BASE}/golos-400.ttf`,
-  GolosText_500Medium: `${WEB_FONT_BASE}/golos-500.ttf`,
-  GolosText_600SemiBold: `${WEB_FONT_BASE}/golos-600.ttf`,
-  GolosText_700Bold: `${WEB_FONT_BASE}/golos-700.ttf`,
-  GolosText_800ExtraBold: `${WEB_FONT_BASE}/golos-800.ttf`,
+  Onest_400Regular: `${WEB_FONT_BASE}/onest-400.ttf`,
+  Onest_500Medium: `${WEB_FONT_BASE}/onest-500.ttf`,
+  Onest_600SemiBold: `${WEB_FONT_BASE}/onest-600.ttf`,
+  Onest_700Bold: `${WEB_FONT_BASE}/onest-700.ttf`,
+  Onest_800ExtraBold: `${WEB_FONT_BASE}/onest-800.ttf`,
   ionicons: `${WEB_FONT_BASE}/ionicons.ttf`,
 };
 

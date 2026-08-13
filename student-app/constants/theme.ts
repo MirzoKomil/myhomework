@@ -36,16 +36,16 @@ export const theme = {
       elevation: 4,
     },
   },
-  // 57-vazifa: Golos Text — kirill (rus) va lotin alifbosini bir xil
-  // uslubda, bab-baravar chiroyli chizadi (56-vazifadagi Inter kirillda
-  // "quruq"/tekis ko'rinar edi, Plus Jakarta Sans esa kirillni umuman
-  // qo'llab-quvvatlamas edi).
+  // 59-vazifa: Onest — kirill (rus) va lotin alifbosini bir xil, yengil-
+  // ochiq uslubda chizadi (57-vazifadagi Golos Text kirillda "ortiqcha
+  // bold/qorong'i" ko'rinar edi, 56-vazifadagi Inter esa "quruq"/tekis,
+  // Plus Jakarta Sans esa kirillni umuman qo'llab-quvvatlamas edi).
   fonts: {
-    regular: 'GolosText_400Regular',
-    medium: 'GolosText_500Medium',
-    semiBold: 'GolosText_600SemiBold',
-    bold: 'GolosText_700Bold',
-    extraBold: 'GolosText_800ExtraBold',
+    regular: 'Onest_400Regular',
+    medium: 'Onest_500Medium',
+    semiBold: 'Onest_600SemiBold',
+    bold: 'Onest_700Bold',
+    extraBold: 'Onest_800ExtraBold',
   },
 } as const;
 
