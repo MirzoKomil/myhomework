@@ -13504,7 +13504,13 @@ let _ratingView = 'normal';
 let _bonusHistoryPeriod = 'oylik';
 
 // ===== Sales Funnel (Voronka) =====
-let _salesFunnelMgr = 'all';
+// 3-vazifa: bitta menejerni tanlash o'rniga endi bir nechtasini birdaniga
+// belgilab/bekor qilib tanlash mumkin (Lidlar bo'limidagi "Ustunlar
+// filtri"dagi kabi). `null` — "Barcha menejerlar" (filtr o'chiq), `Set` —
+// aniq tanlangan menejerlar ro'yxati (bo'sh bo'lishi ham mumkin — hech
+// kim tanlanmagan holat).
+let _salesFunnelMgrIds = null;
+let _salesFunnelMgrDropdownOpen = false;
 // 1-vazifa: "Lid biriktirilgan kun bo'yicha" sana filtri — lead.managerAssignedAt
 // (lid sotuv menejeriga biriktirilgan haqiqiy sana, lead.createdAt yoki
 // updatedAt EMAS) asosida. Ikkalasi ham bo'sh bo'lsa filtr o'chiq. Faqat
@@ -13608,12 +13614,12 @@ function renderSalesFunnel() {
     const _cuFunnel = getCurrentUser();
     const isSalesManagerFunnel = _cuFunnel?.role === 'sales_manager';
     if (isSalesManagerFunnel) {
-        _salesFunnelMgr = _cuFunnel.linkedManagerId || 'none';
+        _salesFunnelMgrIds = new Set([_cuFunnel.linkedManagerId || 'none']);
     }
 
-    const mgrFilteredLeads = _salesFunnelMgr === 'all'
+    const mgrFilteredLeads = _salesFunnelMgrIds === null
         ? langLeads
-        : langLeads.filter(l => l.managerId === _salesFunnelMgr);
+        : langLeads.filter(l => _salesFunnelMgrIds.has(l.managerId));
 
     // 1-vazifa: "Lid biriktirilgan kun bo'yicha" — lid ANIQ sotuv menejeriga
     // biriktirilgan kunga qarab (managerAssignedAt), lid CRM'ga kelib
@@ -13684,19 +13690,46 @@ function renderSalesFunnel() {
         return { ...s, count, share: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0 };
     });
 
-    const mgrOptions = allManagers.map(m =>
-        `<option value="${escapeHtml(m.id)}" ${m.id === _salesFunnelMgr ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
-    ).join('');
-
     const langLabel = lang === 'russian' ? 'Rus tili' : 'Ingliz tili';
 
+    // 3-vazifa: "Menejer" filtri endi Lidlar bo'limidagi "Ustunlar filtri"
+    // bilan bir xil ko'p tanlovli (checkbox) ochiladigan ro'yxat — bir
+    // vaqtning o'zida hammasini, bittasini yoki bir nechtasini tanlash
+    // mumkin.
+    const isMgrAllSelected = _salesFunnelMgrIds === null
+        || (allManagers.length > 0 && allManagers.every(m => _salesFunnelMgrIds.has(m.id)) && _salesFunnelMgrIds.size === allManagers.length);
+    const mgrSelectedCount = _salesFunnelMgrIds === null ? allManagers.length : _salesFunnelMgrIds.size;
+    const mgrTriggerLabel = isMgrAllSelected
+        ? 'Barcha menejerlar'
+        : mgrSelectedCount === 0
+            ? 'Menejer tanlanmagan'
+            : mgrSelectedCount === 1
+                ? (allManagers.find(m => _salesFunnelMgrIds.has(m.id))?.name || '1 ta menejer')
+                : `${mgrSelectedCount} ta menejer`;
+
+    const mgrCheckboxRows = allManagers.map(m => {
+        const checked = isMgrAllSelected || (_salesFunnelMgrIds !== null && _salesFunnelMgrIds.has(m.id));
+        return `<label class="leads-column-option">
+            <input type="checkbox" class="funnelMgrCheckbox" value="${escapeHtml(m.id)}" ${checked ? 'checked' : ''}>
+            <span>${escapeHtml(m.name)}</span>
+        </label>`;
+    }).join('');
+
     const mgrFilterHtml = isSalesManagerFunnel ? '' : `
-        <div style="display:flex;align-items:center;gap:6px">
-            <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">Menejer:</label>
-            <select id="funnelMgrSelect" class="form-control-sm" style="min-width:170px">
-                <option value="all" ${_salesFunnelMgr === 'all' ? 'selected' : ''}>Barcha menejerlar</option>
-                ${mgrOptions}
-            </select>
+        <div class="leads-filter-box leads-columns-filter-wrap">
+            <div class="leads-columns-filter">
+                <button type="button" class="leads-filter-trigger" id="funnelMgrFilterBtn" aria-haspopup="true" aria-expanded="${_salesFunnelMgrDropdownOpen ? 'true' : 'false'}">
+                    <span class="leads-filter-display${isMgrAllSelected ? '' : ' is-selected'}" id="funnelMgrFilterValue">${escapeHtml(mgrTriggerLabel)}</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+                <div class="leads-columns-dropdown" id="funnelMgrDropdown" ${_salesFunnelMgrDropdownOpen ? '' : 'hidden'}>
+                    <label class="leads-column-option" style="font-weight:700;border-bottom:1px solid var(--border);margin-bottom:6px;padding-bottom:8px">
+                        <input type="checkbox" id="funnelMgrSelectAll" ${isMgrAllSelected ? 'checked' : ''}>
+                        <span>Barchasini tanlash</span>
+                    </label>
+                    ${mgrCheckboxRows}
+                </div>
+            </div>
         </div>`;
 
     // 1/2-vazifa: sana filtrlari — faqat "Dan" to'ldirilsa bitta kunlik
@@ -13768,10 +13801,46 @@ function renderSalesFunnel() {
         </div>
     </div>`;
 
-    document.getElementById('funnelMgrSelect')?.addEventListener('change', e => {
-        _salesFunnelMgr = e.target.value;
+    // 3-vazifa: menejer ko'p-tanlovli (checkbox) ochiladigan ro'yxati.
+    // Ochiq/yopiq holati alohida bayroqda saqlanadi — aks holda har bir
+    // checkbox bosilganda voronka qayta chizilib, ro'yxat yopilib qolardi.
+    document.getElementById('funnelMgrFilterBtn')?.addEventListener('click', e => {
+        e.stopPropagation();
+        _salesFunnelMgrDropdownOpen = !_salesFunnelMgrDropdownOpen;
+        const dropdown = document.getElementById('funnelMgrDropdown');
+        const btn = document.getElementById('funnelMgrFilterBtn');
+        if (dropdown) dropdown.hidden = !_salesFunnelMgrDropdownOpen;
+        if (btn) btn.setAttribute('aria-expanded', _salesFunnelMgrDropdownOpen ? 'true' : 'false');
+    });
+    document.getElementById('funnelMgrDropdown')?.addEventListener('click', e => e.stopPropagation());
+    document.getElementById('funnelMgrSelectAll')?.addEventListener('change', e => {
+        _salesFunnelMgrIds = e.target.checked ? null : new Set();
         renderSalesFunnel();
     });
+    document.querySelectorAll('.funnelMgrCheckbox').forEach(cb => {
+        cb.addEventListener('change', e => {
+            // `null` ("barchasi") holatidan chiqib, joriy to'liq ro'yxatdan
+            // boshlab bitta qismini bekor qilamiz — aks holda bitta
+            // checkbox o'chirilganda boshqa hammasi ham yo'qolib qolardi.
+            const currentIds = _salesFunnelMgrIds === null ? new Set(allManagers.map(m => m.id)) : new Set(_salesFunnelMgrIds);
+            if (e.target.checked) currentIds.add(e.target.value);
+            else currentIds.delete(e.target.value);
+            _salesFunnelMgrIds = currentIds;
+            renderSalesFunnel();
+        });
+    });
+    if (!window._funnelMgrOutsideClickBound) {
+        window._funnelMgrOutsideClickBound = true;
+        document.addEventListener('click', e => {
+            if (!_salesFunnelMgrDropdownOpen) return;
+            if (e.target.closest('#funnelMgrFilterBtn') || e.target.closest('#funnelMgrDropdown')) return;
+            _salesFunnelMgrDropdownOpen = false;
+            const dropdown = document.getElementById('funnelMgrDropdown');
+            const btn = document.getElementById('funnelMgrFilterBtn');
+            if (dropdown) dropdown.hidden = true;
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        });
+    }
     document.getElementById('funnelAssignedDateFrom')?.addEventListener('change', e => {
         _salesFunnelAssignedFrom = e.target.value;
         renderSalesFunnel();
