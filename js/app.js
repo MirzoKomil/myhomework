@@ -13509,8 +13509,14 @@ let _salesFunnelMgr = 'all';
 // (lid sotuv menejeriga biriktirilgan haqiqiy sana, lead.createdAt yoki
 // updatedAt EMAS) asosida. Ikkalasi ham bo'sh bo'lsa filtr o'chiq. Faqat
 // "from" to'ldirilsa — bitta kunlik filtr sifatida ishlaydi.
-let _salesFunnelDateFrom = '';
-let _salesFunnelDateTo = '';
+let _salesFunnelAssignedFrom = '';
+let _salesFunnelAssignedTo = '';
+// 2-vazifa: "Lid CRMga kelib tushgan kun bo'yicha" — bundan farqli, lid
+// biriktirilganmi-yo'qmi buning uchun ahamiyatsiz, faqat lead.createdAt
+// (CRM'ga kelib tushgan sana) qaraladi. Ikkala sana filtri bir-biridan
+// mustaqil, ikkalasi ham yoqilsa BIRGALIKDA (AND) qo'llaniladi.
+let _salesFunnelCreatedFrom = '';
+let _salesFunnelCreatedTo = '';
 
 const FUNNEL_STAGES = [
     { id: 'yangi-lidlar',             label: 'Yangi lidlar',             color: '#3B82F6' },
@@ -13609,20 +13615,38 @@ function renderSalesFunnel() {
         ? langLeads
         : langLeads.filter(l => l.managerId === _salesFunnelMgr);
 
-    // 1-vazifa: sana filtri — lid ANIQ sotuv menejeriga biriktirilgan kunga
-    // qarab (managerAssignedAt), lid CRM'ga kelib tushgan yoki oxirgi
-    // yangilangan sanasiga emas. Eski (bu funksiya joriy qilinishidan
-    // oldingi) biriktirishlar uchun bu maydon bo'lmasligi mumkin — bunday
-    // lidlar sana filtri yoqilganda ko'rinmaydi (haqiqiy biriktirilgan
-    // sana noma'lum bo'lgani uchun).
-    const _funnelFrom = _salesFunnelDateFrom || _salesFunnelDateTo;
-    const _funnelTo = _salesFunnelDateTo || _salesFunnelDateFrom;
-    const filteredLeads = !_funnelFrom
+    // 1-vazifa: "Lid biriktirilgan kun bo'yicha" — lid ANIQ sotuv menejeriga
+    // biriktirilgan kunga qarab (managerAssignedAt), lid CRM'ga kelib
+    // tushgan yoki oxirgi yangilangan sanasiga emas. Eski (bu funksiya
+    // joriy qilinishidan oldingi) biriktirishlar uchun bu maydon
+    // bo'lmasligi mumkin — bunday lidlar sana filtri yoqilganda
+    // ko'rinmaydi (haqiqiy biriktirilgan sana noma'lum bo'lgani uchun).
+    const _assignedFrom = _salesFunnelAssignedFrom || _salesFunnelAssignedTo;
+    const _assignedTo = _salesFunnelAssignedTo || _salesFunnelAssignedFrom;
+    const assignedFilteredLeads = !_assignedFrom
         ? mgrFilteredLeads
         : mgrFilteredLeads.filter(l => {
             if (!l.managerAssignedAt) return false;
             const assignedDate = String(l.managerAssignedAt).slice(0, 10);
-            return assignedDate >= _funnelFrom && assignedDate <= _funnelTo;
+            return assignedDate >= _assignedFrom && assignedDate <= _assignedTo;
+        });
+
+    // 2-vazifa: "Lid CRMga kelib tushgan kun bo'yicha" — biriktirilgan-
+    // biriktirilmaganidan qat'i nazar, faqat lid CRM'ga kelib tushgan
+    // sanasi (createdAt, kamdan-kam hollarda bo'lmasa "date" maydoniga
+    // qaytiladi) qaraladi. Ikkala sana filtri bir-biridan mustaqil,
+    // ikkalasi ham yoqilsa BIRGALIKDA (AND) qo'llaniladi.
+    const _createdFrom = _salesFunnelCreatedFrom || _salesFunnelCreatedTo;
+    const _createdTo = _salesFunnelCreatedTo || _salesFunnelCreatedFrom;
+    const filteredLeads = !_createdFrom
+        ? assignedFilteredLeads
+        : assignedFilteredLeads.filter(l => {
+            const raw = l.createdAt || l.date;
+            if (!raw) return false;
+            const created = new Date(raw);
+            if (Number.isNaN(created.getTime())) return false;
+            const createdDate = created.toISOString().slice(0, 10);
+            return createdDate >= _createdFrom && createdDate <= _createdTo;
         });
 
     // 7-vazifa: har bir bosqich HOZIRGI holatda aynan o'sha ustunda turgan
@@ -13675,22 +13699,28 @@ function renderSalesFunnel() {
             </select>
         </div>`;
 
-    // 1-vazifa: "Lid biriktirilgan kun bo'yicha" sana filtri — faqat "Dan"
-    // to'ldirilsa bitta kunlik filtr, ikkalasi to'ldirilsa oraliq filtr.
-    const dateFilterHtml = `
+    // 1/2-vazifa: sana filtrlari — faqat "Dan" to'ldirilsa bitta kunlik
+    // filtr, ikkalasi to'ldirilsa oraliq filtr. Ikkalasi bir-biridan
+    // mustaqil (biriktirilgan sana / CRM'ga kelib tushgan sana).
+    function _funnelDateFilterHtml(idPrefix, label, from, to) {
+        return `
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">Lid biriktirilgan kun bo'yicha:</label>
-            <input type="date" id="funnelDateFrom" class="form-control-sm" style="min-width:140px" value="${escapeHtml(_salesFunnelDateFrom)}" title="Dan">
+            <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">${label}:</label>
+            <input type="date" id="${idPrefix}From" class="form-control-sm" style="min-width:140px" value="${escapeHtml(from)}" title="Dan">
             <span style="color:var(--text-muted);font-size:12px">—</span>
-            <input type="date" id="funnelDateTo" class="form-control-sm" style="min-width:140px" value="${escapeHtml(_salesFunnelDateTo)}" title="Gacha">
-            ${(_salesFunnelDateFrom || _salesFunnelDateTo) ? `<button type="button" id="funnelDateClear" class="btn-ghost" style="font-size:12px;padding:4px 10px">Tozalash</button>` : ''}
+            <input type="date" id="${idPrefix}To" class="form-control-sm" style="min-width:140px" value="${escapeHtml(to)}" title="Gacha">
+            ${(from || to) ? `<button type="button" id="${idPrefix}Clear" class="btn-ghost" style="font-size:12px;padding:4px 10px">Tozalash</button>` : ''}
         </div>`;
+    }
+    const assignedDateFilterHtml = _funnelDateFilterHtml('funnelAssignedDate', "Lid biriktirilgan kun bo'yicha", _salesFunnelAssignedFrom, _salesFunnelAssignedTo);
+    const createdDateFilterHtml = _funnelDateFilterHtml('funnelCreatedDate', "Lid CRMga kelib tushgan kun bo'yicha", _salesFunnelCreatedFrom, _salesFunnelCreatedTo);
 
     panel.innerHTML = `
     <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
         <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
         ${mgrFilterHtml}
-        ${dateFilterHtml}
+        ${assignedDateFilterHtml}
+        ${createdDateFilterHtml}
     </div>
 
     <div class="card" style="padding:32px 24px 28px;margin-bottom:16px;flex-shrink:0">
@@ -13742,17 +13772,30 @@ function renderSalesFunnel() {
         _salesFunnelMgr = e.target.value;
         renderSalesFunnel();
     });
-    document.getElementById('funnelDateFrom')?.addEventListener('change', e => {
-        _salesFunnelDateFrom = e.target.value;
+    document.getElementById('funnelAssignedDateFrom')?.addEventListener('change', e => {
+        _salesFunnelAssignedFrom = e.target.value;
         renderSalesFunnel();
     });
-    document.getElementById('funnelDateTo')?.addEventListener('change', e => {
-        _salesFunnelDateTo = e.target.value;
+    document.getElementById('funnelAssignedDateTo')?.addEventListener('change', e => {
+        _salesFunnelAssignedTo = e.target.value;
         renderSalesFunnel();
     });
-    document.getElementById('funnelDateClear')?.addEventListener('click', () => {
-        _salesFunnelDateFrom = '';
-        _salesFunnelDateTo = '';
+    document.getElementById('funnelAssignedDateClear')?.addEventListener('click', () => {
+        _salesFunnelAssignedFrom = '';
+        _salesFunnelAssignedTo = '';
+        renderSalesFunnel();
+    });
+    document.getElementById('funnelCreatedDateFrom')?.addEventListener('change', e => {
+        _salesFunnelCreatedFrom = e.target.value;
+        renderSalesFunnel();
+    });
+    document.getElementById('funnelCreatedDateTo')?.addEventListener('change', e => {
+        _salesFunnelCreatedTo = e.target.value;
+        renderSalesFunnel();
+    });
+    document.getElementById('funnelCreatedDateClear')?.addEventListener('click', () => {
+        _salesFunnelCreatedFrom = '';
+        _salesFunnelCreatedTo = '';
         renderSalesFunnel();
     });
 }
