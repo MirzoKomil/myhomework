@@ -13505,6 +13505,12 @@ let _bonusHistoryPeriod = 'oylik';
 
 // ===== Sales Funnel (Voronka) =====
 let _salesFunnelMgr = 'all';
+// 1-vazifa: "Lid biriktirilgan kun bo'yicha" sana filtri — lead.managerAssignedAt
+// (lid sotuv menejeriga biriktirilgan haqiqiy sana, lead.createdAt yoki
+// updatedAt EMAS) asosida. Ikkalasi ham bo'sh bo'lsa filtr o'chiq. Faqat
+// "from" to'ldirilsa — bitta kunlik filtr sifatida ishlaydi.
+let _salesFunnelDateFrom = '';
+let _salesFunnelDateTo = '';
 
 const FUNNEL_STAGES = [
     { id: 'yangi-lidlar',             label: 'Yangi lidlar',             color: '#3B82F6' },
@@ -13599,9 +13605,25 @@ function renderSalesFunnel() {
         _salesFunnelMgr = _cuFunnel.linkedManagerId || 'none';
     }
 
-    const filteredLeads = _salesFunnelMgr === 'all'
+    const mgrFilteredLeads = _salesFunnelMgr === 'all'
         ? langLeads
         : langLeads.filter(l => l.managerId === _salesFunnelMgr);
+
+    // 1-vazifa: sana filtri — lid ANIQ sotuv menejeriga biriktirilgan kunga
+    // qarab (managerAssignedAt), lid CRM'ga kelib tushgan yoki oxirgi
+    // yangilangan sanasiga emas. Eski (bu funksiya joriy qilinishidan
+    // oldingi) biriktirishlar uchun bu maydon bo'lmasligi mumkin — bunday
+    // lidlar sana filtri yoqilganda ko'rinmaydi (haqiqiy biriktirilgan
+    // sana noma'lum bo'lgani uchun).
+    const _funnelFrom = _salesFunnelDateFrom || _salesFunnelDateTo;
+    const _funnelTo = _salesFunnelDateTo || _salesFunnelDateFrom;
+    const filteredLeads = !_funnelFrom
+        ? mgrFilteredLeads
+        : mgrFilteredLeads.filter(l => {
+            if (!l.managerAssignedAt) return false;
+            const assignedDate = String(l.managerAssignedAt).slice(0, 10);
+            return assignedDate >= _funnelFrom && assignedDate <= _funnelTo;
+        });
 
     // 7-vazifa: har bir bosqich HOZIRGI holatda aynan o'sha ustunda turgan
     // lidlar sonini ko'rsatishi kerak — lidlar Kanban-taxtasidagi ustunlar
@@ -13653,10 +13675,22 @@ function renderSalesFunnel() {
             </select>
         </div>`;
 
+    // 1-vazifa: "Lid biriktirilgan kun bo'yicha" sana filtri — faqat "Dan"
+    // to'ldirilsa bitta kunlik filtr, ikkalasi to'ldirilsa oraliq filtr.
+    const dateFilterHtml = `
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <label style="font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap">Lid biriktirilgan kun bo'yicha:</label>
+            <input type="date" id="funnelDateFrom" class="form-control-sm" style="min-width:140px" value="${escapeHtml(_salesFunnelDateFrom)}" title="Dan">
+            <span style="color:var(--text-muted);font-size:12px">—</span>
+            <input type="date" id="funnelDateTo" class="form-control-sm" style="min-width:140px" value="${escapeHtml(_salesFunnelDateTo)}" title="Gacha">
+            ${(_salesFunnelDateFrom || _salesFunnelDateTo) ? `<button type="button" id="funnelDateClear" class="btn-ghost" style="font-size:12px;padding:4px 10px">Tozalash</button>` : ''}
+        </div>`;
+
     panel.innerHTML = `
     <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
         <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
         ${mgrFilterHtml}
+        ${dateFilterHtml}
     </div>
 
     <div class="card" style="padding:32px 24px 28px;margin-bottom:16px;flex-shrink:0">
@@ -13706,6 +13740,19 @@ function renderSalesFunnel() {
 
     document.getElementById('funnelMgrSelect')?.addEventListener('change', e => {
         _salesFunnelMgr = e.target.value;
+        renderSalesFunnel();
+    });
+    document.getElementById('funnelDateFrom')?.addEventListener('change', e => {
+        _salesFunnelDateFrom = e.target.value;
+        renderSalesFunnel();
+    });
+    document.getElementById('funnelDateTo')?.addEventListener('change', e => {
+        _salesFunnelDateTo = e.target.value;
+        renderSalesFunnel();
+    });
+    document.getElementById('funnelDateClear')?.addEventListener('click', () => {
+        _salesFunnelDateFrom = '';
+        _salesFunnelDateTo = '';
         renderSalesFunnel();
     });
 }
@@ -18466,6 +18513,11 @@ function updateLeadInStorage(lang, leadId, updater) {
     // Menejeri o'zgarganda book roadmap'ni ham yangilash
     if (list[idx].managerId !== prevManagerId) {
         syncLeadManagerToBookRoadmap(lang, leadId, list[idx].managerId);
+        // 1-vazifa: "Sotuv voronkasi"da "Lid biriktirilgan kun bo'yicha"
+        // filtri uchun — lid biriktirilgan haqiqiy sana shu yerda qayd
+        // etiladi (bo'shatilganda emas, faqat haqiqiy menejerga
+        // biriktirilganda).
+        if (list[idx].managerId) list[idx].managerAssignedAt = new Date().toISOString();
     }
     return list[idx];
 }
@@ -19640,12 +19692,13 @@ function openAddLeadModal() {
 
         const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         leads[lang] = leads[lang] || [];
+        const _newLeadManagerId = document.getElementById('mLeadManagerId').value || '';
         const newLead = {
             id: 'l' + Date.now(),
             name,
             phone: document.getElementById('mLeadPhone').value.trim(),
             phone2: document.getElementById('mLeadPhone2').value.trim(),
-            managerId: document.getElementById('mLeadManagerId').value || '',
+            managerId: _newLeadManagerId,
             source: sourceLabel,
             leadType,
             status: 'yangi-lidlar',
@@ -19654,6 +19707,9 @@ function openAddLeadModal() {
             attachments: [],
             createdAt: new Date().toISOString(),
             slaStageEnteredAt: new Date().toISOString(),
+            // 1-vazifa: yaratilishdayoq menejer tanlangan bo'lsa, bu ham
+            // "biriktirilgan sana" hisoblanadi.
+            managerAssignedAt: _newLeadManagerId ? new Date().toISOString() : null,
             date: new Date().toLocaleDateString('uz-UZ')
         };
         leads[lang].push(newLead);
