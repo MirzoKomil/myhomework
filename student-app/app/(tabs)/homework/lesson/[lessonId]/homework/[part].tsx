@@ -187,6 +187,19 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
     setTooLow(null);
   };
 
+  // 61-vazifa: admin hali juftliklarni kiritmagan (bo'sh qism-shabloni)
+  // bo'lsa — bo'sh ekranda "current"ga murojaat qilib crash bo'lmasin.
+  if (pairs.length === 0) {
+    return (
+      <View style={styles.resultCenter}>
+        <Text style={styles.resultEmoji}>🔤</Text>
+        <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+        <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+          <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (finished) return <DoneScreen emoji="✅" title={t('hwp_matching_done_title')} subtitle={t('hwp_matching_done_sub').replace('{n}', String(pairs.length))} />;
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
@@ -274,6 +287,17 @@ function FillBlankPart({ blanks, onDone, lessonId }: { blanks: { id: string; sen
     setTooLow(null);
   };
 
+  if (blanks.length === 0) {
+    return (
+      <View style={styles.resultCenter}>
+        <Text style={styles.resultEmoji}>✍️</Text>
+        <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+        <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+          <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (finished) return <DoneScreen emoji="✍️" title={t('hwp_fillblank_done_title')} subtitle={t('hwp_fillblank_done_sub').replace('{n}', String(blanks.length))} />;
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
@@ -353,6 +377,17 @@ function MultipleChoicePart({ questions, onDone, lessonId }: { questions: Multip
     setTooLow(null);
   };
 
+  if (questions.length === 0) {
+    return (
+      <View style={styles.resultCenter}>
+        <Text style={styles.resultEmoji}>🎯</Text>
+        <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+        <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+          <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (finished) return <DoneScreen emoji="🎯" title={t('hwp_mc_done_title')} subtitle={t('hwp_mc_done_sub').replace('{n}', String(questions.length))} />;
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
@@ -393,6 +428,7 @@ function MultipleChoicePart({ questions, onDone, lessonId }: { questions: Multip
 
 // ─── PART D (grammar) — Sentence building ───────────────────────────────────
 function SentenceBuildPart({ items, onDone, lessonId }: { items: SentenceBuildQ[]; onDone: () => void; lessonId: string }) {
+  const { t } = useLang();
   const [index, setIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -405,6 +441,17 @@ function SentenceBuildPart({ items, onDone, lessonId }: { items: SentenceBuildQ[
     setTooLow(null);
   };
 
+  if (items.length === 0) {
+    return (
+      <View style={styles.resultCenter}>
+        <Text style={styles.resultEmoji}>🧩</Text>
+        <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+        <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+          <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
@@ -537,6 +584,17 @@ function RecordPart({ prompts, onDone, lessonId }: { prompts: { id: string; sent
     setRecorded(false);
   };
 
+  if (prompts.length === 0) {
+    return (
+      <View style={styles.resultCenter}>
+        <Text style={styles.resultEmoji}>🎙️</Text>
+        <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+        <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+          <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (finished) return <DoneScreen emoji="🎙️" title={t('hwp_record_done_title')} subtitle={t('hwp_record_done_sub').replace('{n}', String(prompts.length))} />;
 
   return (
@@ -607,6 +665,17 @@ function PronunciationPart({ prompts, onDone, lessonId }: { prompts: { id: strin
     setScore(null);
   };
 
+  if (prompts.length === 0) {
+    return (
+      <View style={styles.resultCenter}>
+        <Text style={styles.resultEmoji}>🌟</Text>
+        <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+        <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+          <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (finished) return <DoneScreen emoji="🌟" title={t('hwp_fillblank_done_title')} subtitle={t('hwp_pron_done_sub').replace('{n}', String(prompts.length))} />;
 
   return (
@@ -1016,6 +1085,21 @@ function ReadingPart({
     );
   }
 
+  // Admin hali matn/gaplarni kiritmagan (bo'sh qism-shabloni) bo'lsa —
+  // tarjima qilinadigan hech narsa yo'q, crash o'rniga "hali tayyor emas"
+  // holatini ko'rsatamiz.
+  if (status === 'draft' && !paragraph.russianText.trim() && sentences.length === 0) {
+    return (
+      <View style={styles.resultCenter}>
+        <Text style={styles.resultEmoji}>📖</Text>
+        <Text style={styles.resultSubtitle}>{t('ex_content_pending')}</Text>
+        <Pressable style={styles.resultBtn} onPress={() => router.back()}>
+          <Text style={styles.resultBtnText}>{t('ex_back_btn')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (status === 'graded') {
     return (
       <View style={styles.stepContent}>
@@ -1068,10 +1152,15 @@ function ReadingPart({
           multiline
         />
         <Pressable
-          style={[styles.continueBtn, !paragraphTranslation.trim() && styles.continueBtnDisabled]}
-          disabled={!paragraphTranslation.trim()}
-          onPress={() => setStep(0)}>
-          <Text style={styles.continueBtnText}>{t('common_keyingi')}</Text>
+          style={[styles.continueBtn, (!paragraphTranslation.trim() || submitting) && styles.continueBtnDisabled]}
+          disabled={!paragraphTranslation.trim() || submitting}
+          // Admin hali alohida gaplarni kiritmagan bo'lishi mumkin (faqat
+          // matn qismi to'ldirilgan) — bunday holda 2-qismga o'tmasdan,
+          // to'g'ridan-to'g'ri yuboramiz.
+          onPress={() => (sentences.length > 0 ? setStep(0) : submit())}>
+          <Text style={styles.continueBtnText}>
+            {sentences.length > 0 ? t('common_keyingi') : submitting ? t('hwp_creative_sending') : t('hwp_reading_submit_btn')}
+          </Text>
         </Pressable>
       </ScrollView>
     );
