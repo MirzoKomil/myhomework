@@ -18607,6 +18607,12 @@ function updateLeadInStorage(lang, leadId, updater) {
     const prevManagerId = list[idx].managerId;
     const oldStatus = normalizeLeadStatus(list[idx].status);
     list[idx] = normalizeLeadExtras(updater({ ...list[idx] }));
+    // Voronka statistikasi lid yaratilgan/yangilangan sana bilan emas,
+    // menejerga haqiqatan biriktirilgan vaqt bilan hisoblanadi. Qiymat
+    // localStorage va API ga yuborishdan oldin yozilishi shart.
+    if (list[idx].managerId !== prevManagerId) {
+        list[idx].managerAssignedAt = list[idx].managerId ? new Date().toISOString() : null;
+    }
     leads[lang] = list;
     const newStatus = normalizeLeadStatus(list[idx].status);
     // SLA uchun har bir yangi etapning boshlanish vaqti alohida saqlanadi.
@@ -18629,7 +18635,6 @@ function updateLeadInStorage(lang, leadId, updater) {
         // filtri uchun — lid biriktirilgan haqiqiy sana shu yerda qayd
         // etiladi (bo'shatilganda emas, faqat haqiqiy menejerga
         // biriktirilganda).
-        if (list[idx].managerId) list[idx].managerAssignedAt = new Date().toISOString();
     }
     return list[idx];
 }

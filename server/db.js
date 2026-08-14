@@ -1122,6 +1122,15 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
     // PATCH qisman obyekt yuborsa ham mavjud maydonlar bo'shab ketmasin.
     const merged = existingRow ? { ...before, ...lead, id: existingRow.id } : lead;
 
+    // Biriktirilgan vaqtni server ham boshqaradi: API/import orqali menejer
+    // o'zgarsa, statistika hech qachon lid yaratilgan yoki yangilangan sanaga
+    // tayanmaydi. Menejer olib tashlansa, faol biriktirish sanasi ham tozalanadi.
+    if (existingRow && String(before?.managerId || '') !== String(merged.managerId || '')) {
+        merged.managerAssignedAt = merged.managerId ? new Date().toISOString() : null;
+    } else if (!existingRow && merged.managerId && !merged.managerAssignedAt) {
+        merged.managerAssignedAt = new Date().toISOString();
+    }
+
     // Telegram/CSV kabi tarixiy manbadan tiklangan lidlar eski sanasi bilan
     // import qilinadi. Avvalgi menejer va etap noma'lum paytda ularga SLA
     // yuborilmaydi (`recoveryPending=true`). Foydalanuvchi menejer biriktirsa
