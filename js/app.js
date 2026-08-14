@@ -13592,6 +13592,85 @@ function buildFunnelSVG(stagesData) {
     </svg>`;
 }
 
+// 5-vazifa: "Muvaffaqiyatsiz sotuv" ustunida saqlangan sabablar uchun
+// alohida donut diagramma. Eski yozuvlarda sabab faqat izoh ichida qolgan
+// bo'lishi mumkin, shu sabab `failedSaleReason` bo'lmasa oxirgi failed-sale
+// izohidagi sababdan ham foydalanamiz.
+function getFailedSaleReasonLabel(lead) {
+    const savedReason = lead?.failedSaleReason || lead?.failedReason || lead?.muvaffaqiyatsizReason;
+    if (typeof savedReason === 'string' && savedReason.trim()) return savedReason.trim();
+    if (savedReason && typeof savedReason === 'object') {
+        const label = savedReason.label || savedReason.reason || savedReason.name;
+        if (typeof label === 'string' && label.trim()) return label.trim();
+    }
+
+    const failedSaleComment = Array.isArray(lead?.comments)
+        ? [...lead.comments].reverse().find(comment => comment?.type === 'failed-sale' && (comment.reason || comment.text))
+        : null;
+    if (typeof failedSaleComment?.reason === 'string' && failedSaleComment.reason.trim()) {
+        return failedSaleComment.reason.trim();
+    }
+    if (typeof failedSaleComment?.text === 'string' && failedSaleComment.text.trim()) {
+        return failedSaleComment.text.replace(/^Muvaffaqiyatsiz sotuv\s*:\s*/i, '').trim() || 'Sabab ko\'rsatilmagan';
+    }
+    return 'Sabab ko\'rsatilmagan';
+}
+
+function buildFailedSaleReasonsChart(reasonRows) {
+    const total = reasonRows.reduce((sum, row) => sum + row.count, 0);
+    if (!total) {
+        return `
+        <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+            <h2 style="font-size:18px;margin:0 0 6px">Muvaffaqiyatsiz sotuv sabablari</h2>
+            <p style="margin:0;color:var(--text-muted)">Tanlangan filtrlar bo'yicha muvaffaqiyatsiz sotuvlar yo'q.</p>
+        </div>`;
+    }
+
+    const palette = ['#DC2626', '#F97316', '#F59E0B', '#8B5CF6', '#0EA5E9', '#14B8A6', '#EC4899', '#64748B', '#84CC16'];
+    const radius = 72;
+    const circumference = 2 * Math.PI * radius;
+    let offset = 0;
+    const arcs = reasonRows.map((row, index) => {
+        const arcLength = (row.count / total) * circumference;
+        const visibleLength = Math.max(0, arcLength - 2.5);
+        const svg = `<circle cx="100" cy="100" r="${radius}" fill="none" stroke="${palette[index % palette.length]}" stroke-width="28" stroke-dasharray="${visibleLength.toFixed(2)} ${(circumference - visibleLength).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 100 100)"/>`;
+        offset += arcLength;
+        return svg;
+    }).join('');
+
+    const legend = reasonRows.map((row, index) => {
+        const share = (row.count / total) * 100;
+        const shareText = `${share % 1 === 0 ? share.toFixed(0) : share.toFixed(1)}%`;
+        return `
+            <div style="display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border,#e2e8f0)">
+                <span style="width:10px;height:10px;border-radius:50%;background:${palette[index % palette.length]}"></span>
+                <span style="font-size:14px;font-weight:600;line-height:1.3">${escapeHtml(row.label)}</span>
+                <span style="white-space:nowrap;font-size:13px;color:var(--text-muted)">${row.count} ta · <strong style="color:${palette[index % palette.length]}">${shareText}</strong></span>
+            </div>`;
+    }).join('');
+
+    return `
+    <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+        <div style="margin-bottom:18px">
+            <h2 style="font-size:18px;margin:0 0 5px">Muvaffaqiyatsiz sotuv sabablari</h2>
+            <p style="margin:0;color:var(--text-muted);font-size:14px">Tanlangan filtrlar bo'yicha sabablar taqsimoti</p>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap">
+            <div style="position:relative;width:200px;height:200px;flex:0 0 200px">
+                <svg viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Muvaffaqiyatsiz sotuv sabablari diagrammasi">
+                    <circle cx="100" cy="100" r="${radius}" fill="none" stroke="var(--bg-secondary,#eef2f7)" stroke-width="28"/>
+                    ${arcs}
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+                    <strong style="font-size:30px;line-height:1">${total}</strong>
+                    <span style="color:var(--text-muted);font-size:12px;margin-top:5px">muvaffaqiyatsiz sotuv</span>
+                </div>
+            </div>
+            <div style="width:min(100%,520px);min-width:min(100%,280px)">${legend}</div>
+        </div>
+    </div>`;
+}
+
 function renderSalesFunnel() {
     const panel = document.querySelector('[data-sales-panel="sales-stats"]');
     if (!panel) return;
@@ -13689,6 +13768,20 @@ function renderSalesFunnel() {
         const count = filteredLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length;
         return { ...s, count, share: totalCount > 0 ? Math.round((count / totalCount) * 100) : 0 };
     });
+
+    // 5-vazifa: faqat "Muvaffaqiyatsiz sotuv" ustunidagi lidlarning saqlangan
+    // sabablari. `filteredLeads` ishlatilgani uchun menejer va ikkala sana
+    // filtri pie chartga ham aynan voronka jadvalidagidek qo'llanadi.
+    const failedReasonCounts = new Map();
+    filteredLeads
+        .filter(lead => normalizeLeadStatus(lead.status) === 'muvaffaqiyatsiz-sotuv')
+        .forEach(lead => {
+            const label = getFailedSaleReasonLabel(lead);
+            failedReasonCounts.set(label, (failedReasonCounts.get(label) || 0) + 1);
+        });
+    const failedReasonRows = [...failedReasonCounts.entries()]
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'uz'));
 
     const langLabel = lang === 'russian' ? 'Rus tili' : 'Ingliz tili';
 
@@ -13799,7 +13892,8 @@ function renderSalesFunnel() {
             </tbody>
         </table>
         </div>
-    </div>`;
+    </div>
+    ${buildFailedSaleReasonsChart(failedReasonRows)}`;
 
     // 3-vazifa: menejer ko'p-tanlovli (checkbox) ochiladigan ro'yxati.
     // Ochiq/yopiq holati alohida bayroqda saqlanadi — aks holda har bir
