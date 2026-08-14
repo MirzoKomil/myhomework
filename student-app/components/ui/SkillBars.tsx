@@ -23,6 +23,17 @@ const SKILL_LABEL_KEYS: Record<SkillProgress['key'], TranslationKey> = {
   writing: 'skill_writing',
 };
 
+// 12-vazifa: rus tili kursini o'qiyotgan o'quvchi interfeysni o'zbekcha
+// tanlaganda ko'nikmalar kursga mos atamalar bilan ko'rinadi. Ingliz tili
+// kursi va ruscha interfeysning mavjud tarjimalari o'zgarmaydi.
+const RUSSIAN_COURSE_UZ_SKILL_LABELS: Record<SkillProgress['key'], string> = {
+  vocabulary: "So'zlar",
+  speaking: 'Muloqot',
+  listening: 'Eshitish',
+  grammar: 'Gramatika',
+  writing: 'Yozish',
+};
+
 type SkillBarsProps = {
   skills: SkillProgress[];
 };
@@ -36,7 +47,7 @@ const GRADIENTS: Record<SkillProgress['key'], [string, string]> = {
 };
 
 function SkillBar({ skill, progressAnim }: { skill: SkillProgress; progressAnim: Animated.Value }) {
-  const { t } = useLang();
+  const { t, lang, courseLang } = useLang();
   const [displayPercent, setDisplayPercent] = useState(0);
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -65,6 +76,10 @@ function SkillBar({ skill, progressAnim }: { skill: SkillProgress; progressAnim:
     outputRange: [BAR_HEIGHT, -SHIMMER_HEIGHT],
   });
 
+  const label = lang === 'uz' && courseLang === 'russian'
+    ? RUSSIAN_COURSE_UZ_SKILL_LABELS[skill.key]
+    : t(SKILL_LABEL_KEYS[skill.key]);
+
   return (
     <View style={styles.col}>
       <Text style={styles.percent}>{displayPercent}%</Text>
@@ -87,7 +102,7 @@ function SkillBar({ skill, progressAnim }: { skill: SkillProgress; progressAnim:
         </Animated.View>
       </View>
       <Ionicons name={skill.icon} size={15} color={theme.colors.textMuted} style={styles.icon} />
-      <Text style={styles.label}>{t(SKILL_LABEL_KEYS[skill.key])}</Text>
+      <Text style={styles.label}>{label}</Text>
     </View>
   );
 }
