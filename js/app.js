@@ -18762,7 +18762,10 @@ function updateLeadInStorage(lang, leadId, updater) {
     leads[lang] = list;
     setItem(STORAGE_KEYS.leads, leads);
     persistLeadChange(lang, list[idx]).catch(() => {});
-    if (newStatus === 'tolov-jarayonida' && oldStatus !== 'tolov-jarayonida') {
+    // Kitob yetkazish kartochkasi to'lov jarayoni boshlanishi bilan ochiladi.
+    // Lid eski ma'lumotlardan yoki qo'lda to'g'ridan-to'g'ri "To'lov yopildi"
+    // ga o'tkazilgan bo'lsa ham kartochkasiz qolmasligi kerak.
+    if (LEAD_STATUSES_NEED_SERIAL.has(newStatus) && oldStatus !== newStatus) {
         autoSyncLeadToBookRoadmap(lang, list[idx]);
         autoAddLeadAsStudent(lang, list[idx]); // 7-ish
     }
@@ -21051,8 +21054,25 @@ initHrEmployeeTabs();
 
 function autoSyncLeadToBookRoadmap(lang, lead) {
     const items = getItem(STORAGE_KEYS.bookRoadmap, []);
-    const alreadyExists = items.some(i => i.leadRef && i.leadRef.id === lead.id && i.leadRef.lang === lang);
-    if (alreadyExists) return;
+    const existingIndex = items.findIndex(i => i.leadRef && i.leadRef.id === lead.id && i.leadRef.lang === lang);
+    if (existingIndex !== -1) {
+        // To'lov yopilganda yoki manzil/menejer keyinroq aniqlanganda mavjud
+        // kartochkadagi ma'lumotlar yangilanadi. Status va izohlar esa
+        // yetkazib berish xodimi ishlayotgan holicha saqlanadi.
+        const existing = items[existingIndex];
+        items[existingIndex] = {
+            ...existing,
+            name: lead.name || lead.fullName || existing.name || '',
+            studentId: lead.serialCode || lead.studentId || existing.studentId || '',
+            phone: lead.phone || existing.phone || '',
+            region: lead.region || existing.region || '',
+            managerId: lead.managerId || '',
+            managerPhoto: lead.managerPhoto || null,
+            address: lead.paymentOnboarding?.bookAddress || existing.address || ''
+        };
+        setItem(STORAGE_KEYS.bookRoadmap, items);
+        return;
+    }
 
     // Copy existing lead comments + add a summary note with lead data
     const leadComments = Array.isArray(lead.comments) ? lead.comments : [];
@@ -21076,7 +21096,7 @@ function autoSyncLeadToBookRoadmap(lang, lead) {
         id: crypto.randomUUID(),
         leadRef: { lang, id: lead.id },
         name: lead.name || lead.fullName || '',
-        studentId: lead.studentId || '',
+        studentId: lead.serialCode || lead.studentId || '',
         phone: lead.phone || '',
         region: lead.region || (lead.connectedSurvey?.region ? '' : ''),
         managerId: lead.managerId || '',
@@ -21300,8 +21320,15 @@ function renderBookRoadmapCard(item) {
         ? `<span class="lead-card-serial">#${escapeHtml(item.studentId)}</span>`
         : '';
 
-    const moveItems = BOOK_ROADMAP_COLUMNS.map(col =>
-        `<button type="button" class="lead-card-menu-item" data-br-move="${item.id}" data-br-status="${col.id}">${escapeHtml(col.label)}</button>`
+    const paymentGate = getBookRoadmapPaymentGate(item);
+    const paymentHoldBadge = !paymentGate.allowed
+        ? `<span class="lead-card-serial" style="color:#B91C1C;background:#FEF2F2;border-color:#FECACA" title="${escapeHtml(paymentGate.message)}">${escapeHtml(paymentGate.message)}</span>`
+        : '';
+
+    const moveItems = BOOK_ROADMAP_COLUMNS.map(col => {
+        const blocked = !canMoveBookRoadmapItemToStatus(item, col.id);
+        return `<button type="button" class="lead-card-menu-item" data-br-move="${item.id}" data-br-status="${col.id}"${blocked ? ` disabled title="${escapeHtml(paymentGate.message)}"` : ''}>${escapeHtml(col.label)}</button>`;
+    }
     ).join('');
 
     const deleteItem = !_isSalesManager
@@ -21320,6 +21347,7 @@ function renderBookRoadmapCard(item) {
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(item.date || '')}</span>
                     ${studentIdBadge}
+                    ${paymentHoldBadge}
                 </div>
             </div>
             <div class="lead-card-top-actions">
@@ -21437,12 +21465,64 @@ const BOOK_ROADMAP_STAGE_MAP = {
     'mijoz-qabul-qildi': 'delivered',
 };
 
+// To'lov jarayoniga o'tgan lid darhol Kitob yetkazish ro'yxatida ko'rinadi.
+// Ammo qisman to'lov, qarzdor yoki hali to'lov turi tasdiqlanmagan holatda
+// kitob pochta xizmatiga topshirilmasligi kerak. To'liq to'lov/Nasiya yoki
+// "To'lov yopildi" bosqichidan keyingina jo'natish mumkin bo'ladi.
+const BOOK_ROADMAP_SHIPPING_STATUSES = new Set([
+    'pochtaga-topshirildi',
+    'pochta-yetib-bordi',
+    'mijoz-qabul-qildi'
+]);
+
+function getBookRoadmapLead(item) {
+    if (!item?.leadRef?.id || !item?.leadRef?.lang) return null;
+    return getLeadById(item.leadRef.lang, item.leadRef.id);
+}
+
+function getBookRoadmapPaymentGate(item) {
+    const lead = getBookRoadmapLead(item);
+    // Qo'lda qo'shilgan eski yozuvlar hamda lid topilmagan tarixiy yozuvlar
+    // avvalgi ishlash tartibida qoladi.
+    if (!lead) return { allowed: true, message: '' };
+
+    if (normalizeLeadStatus(lead.status) === 'tolov-yopildi') {
+        return { allowed: true, message: '' };
+    }
+
+    const paymentType = lead.paymentSurvey?.paymentType;
+    if (paymentType === 'full' || paymentType === 'installment') {
+        return { allowed: true, message: '' };
+    }
+
+    const message = paymentType === 'partial'
+        ? "Qisman to'lov — to'liq to'lov kutilmoqda"
+        : paymentType === 'debtor'
+            ? "Qarzdorlik bor — to'liq to'lov kutilmoqda"
+            : "To'lov tasdiqlanishi kutilmoqda";
+    return { allowed: false, message };
+}
+
+function canMoveBookRoadmapItemToStatus(item, nextStatus) {
+    if (!BOOK_ROADMAP_SHIPPING_STATUSES.has(nextStatus)) return true;
+    return getBookRoadmapPaymentGate(item).allowed;
+}
+
+function showBookRoadmapPaymentHold(item) {
+    const gate = getBookRoadmapPaymentGate(item);
+    showMiniToast(gate.message || "Kitobni jo'natishdan oldin to'lovni tasdiqlang");
+}
+
 function updateBrInStorage(id, updater) {
     const items = getItem(STORAGE_KEYS.bookRoadmap, []);
     const idx = items.findIndex(i => i.id === id);
     if (idx !== -1) {
         const prevStatus = items[idx].status;
         let updated = updater(items[idx]);
+        if (updated.status !== prevStatus && !canMoveBookRoadmapItemToStatus(items[idx], updated.status)) {
+            showBookRoadmapPaymentHold(items[idx]);
+            return false;
+        }
         // Bosqich appdagi "dispatched"/"delivered"ga birinchi marta
         // yetganda haqiqiy sanani avtomatik belgilaydi (faqat bir marta —
         // qayta orqaga qaytarilsa ham eski sana o'chirilmaydi).
@@ -21459,6 +21539,7 @@ function updateBrInStorage(id, updater) {
         items[idx] = updated;
     }
     setItem(STORAGE_KEYS.bookRoadmap, items);
+    return true;
 }
 
 function openBookRoadmapModal(existing = null) {
@@ -21565,6 +21646,10 @@ function openBookRoadmapModal(existing = null) {
             dispatchedAt, deliveredAt,
             comments: existing?.comments || [],
         };
+        if (existing && existing.status !== data.status && !canMoveBookRoadmapItemToStatus(existing, data.status)) {
+            showBookRoadmapPaymentHold(existing);
+            return;
+        }
         const items = getItem(STORAGE_KEYS.bookRoadmap, []);
         if (isEdit) {
             const idx = items.findIndex(i => i.id === data.id);
