@@ -13889,7 +13889,16 @@ function getLeadDemographicData(lead) {
         label: labelFrom(survey.learningGoalLabel, typeof LEAD_LEARNING_GOALS === 'undefined' ? [] : LEAD_LEARNING_GOALS, goalRaw)
     };
 
-    return { gender, age: ageData, region, learningGoal };
+    const studyReasonRaw = asText(
+        survey.studyReason || survey.reason || lead?.studyReason || lead?.reason ||
+        extras?.studyReason || extras?.reason || goalRaw
+    );
+    const studyReason = {
+        key: normalKey(studyReasonRaw) || '__empty__',
+        label: labelFrom(survey.studyReasonLabel || survey.reasonLabel || survey.learningGoalLabel, typeof LEAD_LEARNING_GOALS === 'undefined' ? [] : LEAD_LEARNING_GOALS, studyReasonRaw)
+    };
+
+    return { gender, age: ageData, region, learningGoal, studyReason };
 }
 
 function buildDemographicRows(items, field) {
@@ -13981,6 +13990,102 @@ function buildLeadDemographicsStats(leads) {
             <h3 style="font-size:15px;margin:0 0 5px">Yosh bo'yicha batafsil statistika</h3>
             <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px">Har bir yosh uchun lidlar soni va tanlangan lidlardagi ulushi</p>
             <div class="table-responsive" style="max-height:360px;overflow:auto"><table class="sdp-table" style="min-width:360px"><thead><tr><th>Yosh</th><th style="text-align:right">Lidlar soni</th><th style="text-align:right">Ulush</th></tr></thead><tbody>${ageTableRows}</tbody></table></div>
+        </section>
+    </div>`;
+}
+
+// 11-vazifa: faqat kursni sotib olish jarayoniga o'tgan lidlar. Bu yerda
+// "To'lov jarayonida" ham, "To'lov yopildi" ham xaridor sifatida olinadi.
+// Kiruvchi `leads` renderSalesFunnel ichidagi umumiy filtrlangan ro'yxatdir,
+// shu bois menejer va ikkala sana filtri bu blokka ham bir xil amal qiladi.
+function getLeadBuyerStatData(lead) {
+    const demographics = getLeadDemographicData(lead);
+    const extras = lead?.extraData || lead?.extra_data || lead?.metadata || lead?.meta || {};
+    const payment = lead?.paymentSurvey || lead?.payment_survey || extras?.paymentSurvey || extras?.payment_survey || {};
+    const asText = value => value === null || value === undefined ? '' : String(value).trim();
+    const tariffRaw = asText(payment.tariff || lead?.tariff || extras?.tariff);
+    const tariffOptions = typeof LEAD_TARIFFS === 'undefined' ? [] : LEAD_TARIFFS;
+    const tariffLabel = asText(payment.tariffLabel) || tariffOptions.find(option => option.id === tariffRaw)?.label || tariffRaw || "Ko'rsatilmagan";
+
+    return {
+        ...demographics,
+        tariff: {
+            key: tariffRaw || '__empty__',
+            label: tariffLabel
+        }
+    };
+}
+
+function buildBuyerRows(items, field) {
+    const grouped = new Map();
+    items.forEach(item => {
+        const value = item.stats[field];
+        const row = grouped.get(value.key) || { key: value.key, label: value.label, count: 0 };
+        row.count += 1;
+        grouped.set(value.key, row);
+    });
+    return [...grouped.values()].sort((a, b) => {
+        if (field === 'age') {
+            const aAge = Number(a.key);
+            const bAge = Number(b.key);
+            if (Number.isFinite(aAge) && Number.isFinite(bAge)) return aAge - bAge;
+            if (Number.isFinite(aAge)) return -1;
+            if (Number.isFinite(bAge)) return 1;
+        }
+        return b.count - a.count || a.label.localeCompare(b.label, 'uz');
+    });
+}
+
+function buildCourseBuyersStats(leads) {
+    const buyers = leads.filter(lead => {
+        const status = normalizeLeadStatus(lead.status);
+        return status === 'tolov-jarayonida' || status === 'tolov-yopildi';
+    });
+    const items = buyers.map(lead => ({ lead, stats: getLeadBuyerStatData(lead) }));
+    const total = items.length;
+    const rows = {
+        gender: buildBuyerRows(items, 'gender'),
+        age: buildBuyerRows(items, 'age'),
+        region: buildBuyerRows(items, 'region'),
+        learningGoal: buildBuyerRows(items, 'learningGoal'),
+        studyReason: buildBuyerRows(items, 'studyReason'),
+        tariff: buildBuyerRows(items, 'tariff')
+    };
+    const barRows = (list, color) => !list.length
+        ? `<p style="margin:4px 0;color:var(--text-muted);font-size:13px">Tanlangan filtrlar bo'yicha xaridor ma'lumoti yo'q.</p>`
+        : list.map(row => {
+            const percent = total ? (row.count / total) * 100 : 0;
+            const percentText = percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(1);
+            return `<div style="display:grid;grid-template-columns:minmax(110px,1fr) auto;gap:8px;align-items:center;margin:10px 0">
+                <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(row.label)}">${escapeHtml(row.label)}</span>
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">${row.count} ta &middot; ${percentText}%</span>
+                <div style="grid-column:1 / -1;height:7px;border-radius:999px;background:var(--bg-secondary,#eef2f7);overflow:hidden"><i style="display:block;width:${percent}%;min-width:${row.count ? '5px' : '0'};height:100%;border-radius:inherit;background:${color}"></i></div>
+            </div>`;
+        }).join('');
+    const ageRows = rows.age.length
+        ? rows.age.map(row => `<tr><td><strong>${escapeHtml(row.label)}</strong></td><td style="text-align:right;font-weight:700">${row.count}</td><td style="text-align:right;color:#7C3AED;font-weight:700">${formatQualityPercent(row.count, total)}</td></tr>`).join('')
+        : `<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">Xaridorlarning yosh ma'lumoti yo'q.</td></tr>`;
+
+    return `
+    <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+        <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px">
+            <div>
+                <h2 style="font-size:18px;margin:0 0 5px">Kursni sotib olganlar statistikasi</h2>
+                <p style="margin:0;color:var(--text-muted);font-size:14px">To'lov jarayonida va To'lov yopildi bosqichidagi lidlar asosida</p>
+            </div>
+            <div style="padding:8px 11px;border-radius:10px;background:#ECFDF5;color:#047857;font-size:13px;font-weight:700">${total} ta xaridor</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;align-items:start">
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">Jinsi</h3>${barRows(rows.gender, '#2563EB')}</section>
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">Yashash hududi</h3>${barRows(rows.region, '#0F766E')}</section>
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">Maqsadi</h3>${barRows(rows.learningGoal, '#7C3AED')}</section>
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">O'qish sababi</h3>${barRows(rows.studyReason, '#EA580C')}</section>
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">Tanlagan tarifi</h3>${barRows(rows.tariff, '#0891B2')}</section>
+        </div>
+        <section style="margin-top:16px;padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px">
+            <h3 style="font-size:15px;margin:0 0 5px">Yoshi bo'yicha batafsil statistika</h3>
+            <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px">Har bir yoshdagi kurs xaridorlari soni va ulushi</p>
+            <div class="table-responsive" style="max-height:360px;overflow:auto"><table class="sdp-table" style="min-width:360px"><thead><tr><th>Yosh</th><th style="text-align:right">Xaridorlar soni</th><th style="text-align:right">Ulush</th></tr></thead><tbody>${ageRows}</tbody></table></div>
         </section>
     </div>`;
 }
@@ -14289,7 +14394,8 @@ function renderSalesFunnel() {
         centerLabel: 'sifatsiz lid'
     })}
     ${buildLeadQualityConversionStats(filteredLeads)}
-    ${buildLeadDemographicsStats(filteredLeads)}`;
+    ${buildLeadDemographicsStats(filteredLeads)}
+    ${buildCourseBuyersStats(filteredLeads)}`;
 
     // 3-vazifa: menejer ko'p-tanlovli (checkbox) ochiladigan ro'yxati.
     // Ochiq/yopiq holati alohida bayroqda saqlanadi — aks holda har bir
