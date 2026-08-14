@@ -13949,6 +13949,7 @@ const SIFATSIZ_LID_REASONS = [
     { id: 'spam',           label: 'Spam / Bot' },
     { id: 'wrong-service',  label: 'Noto\'g\'ri xizmat bo\'yicha murojaat' },
     { id: 'age-mismatch',   label: 'Yosh talablarga umuman mos kelmaydi' },
+    { id: 'under-21',       label: '21 yoshdan kichik arizachi' },
 ];
 
 function needsSifatsizLidPrompt(fromStatus, toStatus) {
