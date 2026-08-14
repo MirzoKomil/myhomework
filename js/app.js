@@ -13789,6 +13789,45 @@ function buildLeadQualityChart(leads) {
     </div>`;
 }
 
+// 9-vazifa: sifat mezonlari bo'yicha yakuniy ko'rsatkichlar. Sotuv deb
+// "To'lov jarayonida" va "To'lov yopildi" ustunlaridagi lidlar olinadi.
+// `leads` renderSalesFunnel ichidagi filtrlangan massiv bo'lgani uchun bu
+// blok menejer, biriktirish sanasi va CRMga kelgan sana filtrlariga ham
+// avtomatik ravishda bir xil tarzda amal qiladi.
+function buildLeadQualityConversionStats(leads) {
+    const today = new Date();
+    const total = leads.length;
+    const lowQuality = leads.filter(lead => isSifatsizLeadForQualityStats(lead, today)).length;
+    const quality = total - lowQuality;
+    const sales = leads.filter(lead => {
+        const status = normalizeLeadStatus(lead.status);
+        return status === 'tolov-jarayonida' || status === 'tolov-yopildi';
+    }).length;
+    const metrics = [
+        { label: 'Sifatsiz lidlar foizi', value: formatQualityPercent(lowQuality, total), detail: `${lowQuality} ta lid`, color: '#DC2626', bg: '#FEF2F2' },
+        { label: 'Sifatsiz lidlar soni', value: `${lowQuality} ta`, detail: `Jami ${total} ta liddan`, color: '#DC2626', bg: '#FEF2F2' },
+        { label: 'Sifatli lidlar foizi', value: formatQualityPercent(quality, total), detail: `${quality} ta lid`, color: '#16A34A', bg: '#F0FDF4' },
+        { label: 'Sifatli lidlar soni', value: `${quality} ta`, detail: `Jami ${total} ta liddan`, color: '#16A34A', bg: '#F0FDF4' },
+        { label: 'Sifatli lidlardan konversiya', value: formatQualityPercent(sales, quality), detail: `${sales} ta sotuv / ${quality} ta sifatli lid`, color: '#2563EB', bg: '#EFF6FF' },
+        { label: 'Umumiy lidlardan konversiya', value: formatQualityPercent(sales, total), detail: `${sales} ta sotuv / ${total} ta jami lid`, color: '#7C3AED', bg: '#F5F3FF' }
+    ];
+    return `
+    <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+        <div style="margin-bottom:18px">
+            <h2 style="font-size:18px;margin:0 0 5px">Sifatsiz lidlar bo'yicha statistika</h2>
+            <p style="margin:0;color:var(--text-muted);font-size:14px">Sotuvlar: To'lov jarayonida va To'lov yopildi bosqichidagi lidlar</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
+            ${metrics.map(metric => `
+            <div style="padding:16px;border-radius:14px;background:${metric.bg};border:1px solid ${metric.color}22">
+                <div style="font-size:13px;color:var(--text-muted);font-weight:600;line-height:1.35">${metric.label}</div>
+                <strong style="display:block;margin:8px 0 4px;font-size:26px;color:${metric.color}">${metric.value}</strong>
+                <div style="font-size:12px;color:var(--text-muted)">${metric.detail}</div>
+            </div>`).join('')}
+        </div>
+    </div>`;
+}
+
 function buildReasonsChart(reasonRows, { title, emptyText, centerLabel }) {
     const total = reasonRows.reduce((sum, row) => sum + row.count, 0);
     if (!total) {
@@ -14091,7 +14130,8 @@ function renderSalesFunnel() {
         title: 'Sifatsiz lid sabablari',
         emptyText: "Tanlangan filtrlar bo'yicha sifatsiz lidlar yo'q.",
         centerLabel: 'sifatsiz lid'
-    })}`;
+    })}
+    ${buildLeadQualityConversionStats(filteredLeads)}`;
 
     // 3-vazifa: menejer ko'p-tanlovli (checkbox) ochiladigan ro'yxati.
     // Ochiq/yopiq holati alohida bayroqda saqlanadi — aks holda har bir
