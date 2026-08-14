@@ -13636,6 +13636,159 @@ function getSifatsizLidReasonLabel(lead) {
     return 'Sabab ko\'rsatilmagan';
 }
 
+// 8-vazifa: lid sifati birgina ustun bilan emas, uning yoshi, to'lovga
+// yetgan-yetmagani va CRMga tushgan kunidan beri o'tgan vaqt orqali ham
+// aniqlanadi. Bu funksiya statistikadagi barcha hisoblar uchun yagona
+// manba bo'lib xizmat qiladi.
+function getLeadCrmDateKey(lead) {
+    const raw = lead?.createdAt || lead?.date;
+    if (!raw) return null;
+    const rawText = String(raw).trim();
+    // YYYY-MM-DD bilan boshlanadigan saqlangan qiymatni vaqt zonasi sabab
+    // oldingi/kelgusi kunga siljitmasdan ishlatamiz.
+    if (/^\d{4}-\d{2}-\d{2}/.test(rawText)) return rawText.slice(0, 10);
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return null;
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+}
+
+function getLeadSurveyAge(lead) {
+    const candidates = [
+        lead?.connectedSurvey?.age,
+        lead?.survey?.age,
+        lead?.leadSurvey?.age,
+        lead?.age
+    ];
+    for (const value of candidates) {
+        const age = Number(value);
+        if (Number.isFinite(age) && age > 0) return age;
+    }
+    return null;
+}
+
+function getLeadCrmAgeInDays(lead, today = new Date()) {
+    const dateKey = getLeadCrmDateKey(lead);
+    if (!dateKey) return null;
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const leadDay = new Date(year, month - 1, day);
+    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diff = Math.floor((currentDay - leadDay) / 86400000);
+    return Number.isFinite(diff) ? Math.max(0, diff) : null;
+}
+
+function isSifatsizLeadForQualityStats(lead, today = new Date()) {
+    const status = normalizeLeadStatus(lead?.status);
+    // To'lov jarayoniga o'tgan yoki to'lovi yopilgan mijoz yoshidan va
+    // avvalgi sifatsiz belgisidan qat'i nazar sifatli lid hisoblanadi.
+    if (status === 'tolov-jarayonida' || status === 'tolov-yopildi') return false;
+    if (status === 'sifatsiz-lidlar') return true;
+    if (getLeadSurveyAge(lead) !== null && getLeadSurveyAge(lead) < 21) return true;
+    // "Bog'lanishga urinilmoqda"dagi lid faqat CRMga tushgan kunidan beri
+    // hali 4 kun o'tmagan bo'lsa sifatsiz lid sanog'iga kiradi.
+    if (status === 'boglanishga-urinilmoqda') {
+        const crmAgeInDays = getLeadCrmAgeInDays(lead, today);
+        return crmAgeInDays !== null && crmAgeInDays < 4;
+    }
+    return false;
+}
+
+function formatQualityPercent(value, total) {
+    if (!total) return '0%';
+    const percent = (value / total) * 100;
+    return `${percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(1)}%`;
+}
+
+function buildLeadQualityChart(leads) {
+    const today = new Date();
+    const byDay = new Map();
+    leads.forEach(lead => {
+        const day = getLeadCrmDateKey(lead);
+        if (!day) return;
+        const row = byDay.get(day) || { date: day, total: 0, quality: 0, lowQuality: 0 };
+        row.total += 1;
+        if (isSifatsizLeadForQualityStats(lead, today)) row.lowQuality += 1;
+        else row.quality += 1;
+        byDay.set(day, row);
+    });
+    const rows = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+    const totals = rows.reduce((sum, row) => ({
+        total: sum.total + row.total,
+        quality: sum.quality + row.quality,
+        lowQuality: sum.lowQuality + row.lowQuality
+    }), { total: 0, quality: 0, lowQuality: 0 });
+
+    if (!rows.length) {
+        return `
+        <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+            <h2 style="font-size:18px;margin:0 0 6px">Sifatli lidlar statistikasi</h2>
+            <p style="margin:0;color:var(--text-muted)">Tanlangan filtrlar bo'yicha CRMga kelib tushgan sanasi mavjud lidlar yo'q.</p>
+        </div>`;
+    }
+
+    const width = 820;
+    const height = 330;
+    const left = 56;
+    const right = 24;
+    const top = 24;
+    const bottom = 70;
+    const chartWidth = width - left - right;
+    const chartHeight = height - top - bottom;
+    const maximum = Math.max(1, ...rows.map(row => Math.max(row.total, row.quality, row.lowQuality)));
+    const xFor = index => rows.length === 1 ? left + chartWidth / 2 : left + (index / (rows.length - 1)) * chartWidth;
+    const yFor = value => top + chartHeight - (value / maximum) * chartHeight;
+    const series = [
+        { key: 'total', label: 'Umumiy lidlar', color: '#64748B' },
+        { key: 'quality', label: 'Sifatli lidlar', color: '#16A34A' },
+        { key: 'lowQuality', label: 'Sifatsiz lidlar', color: '#DC2626' }
+    ];
+    const grid = Array.from({ length: 5 }, (_, index) => {
+        const value = Math.round((maximum / 4) * index);
+        const y = yFor(value);
+        return `<g><line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}" stroke="var(--border,#dbe2ea)" stroke-dasharray="4 5"/><text x="${left - 10}" y="${y + 4}" text-anchor="end" fill="#64748B" font-size="11" font-family="Inter,system-ui,sans-serif">${value}</text></g>`;
+    }).join('');
+    const paths = series.map(seriesItem => {
+        const points = rows.map((row, index) => `${xFor(index).toFixed(1)},${yFor(row[seriesItem.key]).toFixed(1)}`).join(' ');
+        const dots = rows.map((row, index) => `
+            <circle cx="${xFor(index).toFixed(1)}" cy="${yFor(row[seriesItem.key]).toFixed(1)}" r="4" fill="${seriesItem.color}" stroke="white" stroke-width="2">
+                <title>${row.date}\n${seriesItem.label}: ${row[seriesItem.key]} ta</title>
+            </circle>`).join('');
+        return `<polyline points="${points}" fill="none" stroke="${seriesItem.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+    }).join('');
+    const labelStep = Math.max(1, Math.ceil(rows.length / 7));
+    const xLabels = rows.map((row, index) => {
+        if (index !== 0 && index !== rows.length - 1 && index % labelStep !== 0) return '';
+        return `<text x="${xFor(index).toFixed(1)}" y="${height - 30}" text-anchor="middle" fill="#64748B" font-size="11" font-family="Inter,system-ui,sans-serif">${row.date.slice(5).replace('-', '.')}</text>`;
+    }).join('');
+    const dailyRows = rows.map(row => `<tr>
+        <td>${escapeHtml(row.date)}</td>
+        <td style="text-align:right">${row.total}</td>
+        <td style="text-align:right;color:#16A34A;font-weight:700">${row.quality} <small style="color:var(--text-muted);font-weight:500">(${formatQualityPercent(row.quality, row.total)})</small></td>
+        <td style="text-align:right;color:#DC2626;font-weight:700">${row.lowQuality} <small style="color:var(--text-muted);font-weight:500">(${formatQualityPercent(row.lowQuality, row.total)})</small></td>
+    </tr>`).join('');
+
+    return `
+    <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px">
+            <div>
+                <h2 style="font-size:18px;margin:0 0 5px">Sifatli lidlar statistikasi</h2>
+                <p style="margin:0;color:var(--text-muted);font-size:14px">CRMga kelib tushgan sana kesimida lidlar sifati</p>
+            </div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;font-weight:600">
+                ${series.map(item => `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:10px;height:10px;border-radius:50%;background:${item.color}"></i>${item.label}</span>`).join('')}
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:12px;margin-bottom:20px">
+            <div style="padding:13px;border-radius:12px;background:var(--bg-secondary,#f8fafc)"><small style="color:var(--text-muted)">Umumiy lidlar</small><strong style="display:block;font-size:24px;margin-top:3px">${totals.total}</strong></div>
+            <div style="padding:13px;border-radius:12px;background:#f0fdf4"><small style="color:#15803d">Sifatli lidlar</small><strong style="display:block;font-size:24px;margin-top:3px;color:#16A34A">${totals.quality} <span style="font-size:13px;font-weight:600">(${formatQualityPercent(totals.quality, totals.total)})</span></strong></div>
+            <div style="padding:13px;border-radius:12px;background:#fef2f2"><small style="color:#b91c1c">Sifatsiz lidlar</small><strong style="display:block;font-size:24px;margin-top:3px;color:#DC2626">${totals.lowQuality} <span style="font-size:13px;font-weight:600">(${formatQualityPercent(totals.lowQuality, totals.total)})</span></strong></div>
+        </div>
+        <div style="overflow-x:auto"><svg viewBox="0 0 ${width} ${height}" width="100%" style="display:block;min-width:620px" role="img" aria-label="Umumiy, sifatli va sifatsiz lidlar chiziqli diagrammasi">${grid}${paths}${xLabels}</svg></div>
+        <div class="table-responsive" style="margin-top:12px;max-height:280px;overflow:auto">
+            <table class="sdp-table" style="min-width:520px"><thead><tr><th>Sana</th><th style="text-align:right">Umumiy</th><th style="text-align:right">Sifatli</th><th style="text-align:right">Sifatsiz</th></tr></thead><tbody>${dailyRows}</tbody></table>
+        </div>
+    </div>`;
+}
+
 function buildReasonsChart(reasonRows, { title, emptyText, centerLabel }) {
     const total = reasonRows.reduce((sum, row) => sum + row.count, 0);
     if (!total) {
@@ -13928,6 +14081,7 @@ function renderSalesFunnel() {
         </table>
         </div>
     </div>
+    ${buildLeadQualityChart(filteredLeads)}
     ${buildReasonsChart(failedReasonRows, {
         title: 'Muvaffaqiyatsiz sotuv sabablari',
         emptyText: "Tanlangan filtrlar bo'yicha muvaffaqiyatsiz sotuvlar yo'q.",
