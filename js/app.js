@@ -13523,6 +13523,15 @@ let _salesFunnelAssignedTo = '';
 // mustaqil, ikkalasi ham yoqilsa BIRGALIKDA (AND) qo'llaniladi.
 let _salesFunnelCreatedFrom = '';
 let _salesFunnelCreatedTo = '';
+// 10-vazifa: lidlarning so'rov ma'lumotlari bo'yicha qo'shimcha kesimlar.
+// Bu filtrlar faqat demografik statistika blokiga qo'llanadi; ular yuqoridagi
+// menejer va ikkita sana filtridan o'tgan lidlar ichida ishlaydi.
+let _salesFunnelDemographicFilters = {
+    gender: '',
+    age: '',
+    region: '',
+    learningGoal: ''
+};
 
 const FUNNEL_STAGES = [
     { id: 'yangi-lidlar',             label: 'Yangi lidlar',             color: '#3B82F6' },
@@ -13825,6 +13834,154 @@ function buildLeadQualityConversionStats(leads) {
                 <div style="font-size:12px;color:var(--text-muted)">${metric.detail}</div>
             </div>`).join('')}
         </div>
+    </div>`;
+}
+
+// 10-vazifa: lid karta/anketasida yig'iladigan demografik ma'lumotlarni
+// bitta izchil formatga keltiramiz. Eski lidlarning ba'zilarida qiymatlar
+// to'g'ridan-to'g'ri lidda, yangilarida esa `connectedSurvey` ichida bo'ladi.
+function getLeadDemographicData(lead) {
+    const extras = lead?.extraData || lead?.extra_data || lead?.metadata || lead?.meta || {};
+    const survey = lead?.connectedSurvey || lead?.survey || lead?.leadSurvey || extras?.connectedSurvey || extras?.survey || {};
+    const asText = value => value === null || value === undefined ? '' : String(value).trim();
+    const labelFrom = (savedLabel, options, key) => {
+        const direct = asText(savedLabel);
+        if (direct) return direct;
+        const found = Array.isArray(options) ? options.find(option => option.id === key)?.label : '';
+        return found || key || "Ko'rsatilmagan";
+    };
+    const normalKey = value => asText(value).toLocaleLowerCase('uz');
+
+    const genderRaw = asText(survey.gender || lead?.gender || lead?.jinsi || extras?.gender || extras?.jinsi);
+    const gender = {
+        key: normalKey(genderRaw) || '__empty__',
+        label: labelFrom(survey.genderLabel, typeof LEAD_GENDERS === 'undefined' ? [] : LEAD_GENDERS, genderRaw)
+    };
+
+    const surveyAge = getLeadSurveyAge(lead);
+    const extraAge = Number(extras?.age || extras?.yosh);
+    const age = surveyAge ?? (Number.isFinite(extraAge) && extraAge > 0 ? extraAge : null);
+    const ageData = {
+        key: age === null ? '__empty__' : String(age),
+        label: age === null ? "Ko'rsatilmagan" : `${age} yosh`
+    };
+
+    const regionKey = asText(
+        survey.region || survey.country || lead?.region || lead?.country || lead?.location || lead?.hudud ||
+        extras?.region || extras?.country || extras?.location || extras?.hudud
+    );
+    const regionRaw = asText(
+        survey.residenceLabel || survey.regionLabel || survey.countryLabel ||
+        regionKey
+    );
+    const regionOptions = [
+        ...(typeof LEAD_UZ_REGIONS === 'undefined' ? [] : LEAD_UZ_REGIONS),
+        ...(typeof LEAD_FOREIGN_COUNTRIES === 'undefined' ? [] : LEAD_FOREIGN_COUNTRIES)
+    ];
+    const region = {
+        key: normalKey(regionKey || regionRaw) || '__empty__',
+        label: labelFrom(survey.residenceLabel || survey.regionLabel || survey.countryLabel, regionOptions, regionKey || regionRaw)
+    };
+
+    const goalRaw = asText(survey.learningGoal || lead?.learningGoal || lead?.studyGoal || lead?.goal || lead?.reason || extras?.learningGoal || extras?.studyGoal || extras?.goal || extras?.reason);
+    const learningGoal = {
+        key: normalKey(goalRaw) || '__empty__',
+        label: labelFrom(survey.learningGoalLabel, typeof LEAD_LEARNING_GOALS === 'undefined' ? [] : LEAD_LEARNING_GOALS, goalRaw)
+    };
+
+    return { gender, age: ageData, region, learningGoal };
+}
+
+function buildDemographicRows(items, field) {
+    const grouped = new Map();
+    items.forEach(item => {
+        const value = item.demographics[field];
+        const row = grouped.get(value.key) || { key: value.key, label: value.label, count: 0 };
+        row.count += 1;
+        grouped.set(value.key, row);
+    });
+    return [...grouped.values()].sort((a, b) => {
+        if (field === 'age') {
+            const aAge = Number(a.key);
+            const bAge = Number(b.key);
+            if (Number.isFinite(aAge) && Number.isFinite(bAge)) return aAge - bAge;
+            if (Number.isFinite(aAge)) return -1;
+            if (Number.isFinite(bAge)) return 1;
+        }
+        return b.count - a.count || a.label.localeCompare(b.label, 'uz');
+    });
+}
+
+function buildLeadDemographicsStats(leads) {
+    const items = leads.map(lead => ({ lead, demographics: getLeadDemographicData(lead) }));
+    const filters = _salesFunnelDemographicFilters;
+    const filterOptions = {
+        gender: buildDemographicRows(items, 'gender'),
+        age: buildDemographicRows(items, 'age'),
+        region: buildDemographicRows(items, 'region'),
+        learningGoal: buildDemographicRows(items, 'learningGoal')
+    };
+    const selectedItems = items.filter(item => Object.entries(filters).every(([field, selected]) =>
+        !selected || item.demographics[field].key === selected
+    ));
+    const selectedTotal = selectedItems.length;
+    const rows = {
+        gender: buildDemographicRows(selectedItems, 'gender'),
+        age: buildDemographicRows(selectedItems, 'age'),
+        region: buildDemographicRows(selectedItems, 'region'),
+        learningGoal: buildDemographicRows(selectedItems, 'learningGoal')
+    };
+
+    const selectHtml = (id, label, field, allLabel) => `
+        <label style="display:grid;gap:5px;min-width:170px;flex:1">
+            <span style="font-size:12px;font-weight:700;color:var(--text-muted)">${label}</span>
+            <select id="${id}" class="form-control-sm" style="width:100%">
+                <option value="">${allLabel}</option>
+                ${filterOptions[field].map(row => `<option value="${escapeHtml(row.key)}" ${filters[field] === row.key ? 'selected' : ''}>${escapeHtml(row.label)} (${row.count})</option>`).join('')}
+            </select>
+        </label>`;
+    const barRows = (list, color) => !list.length
+        ? `<p style="margin:4px 0;color:var(--text-muted);font-size:13px">Tanlangan filtrlar bo'yicha ma'lumot yo'q.</p>`
+        : list.map(row => {
+            const percent = selectedTotal ? (row.count / selectedTotal) * 100 : 0;
+            const percentText = percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(1);
+            return `<div style="display:grid;grid-template-columns:minmax(110px,1fr) auto;gap:8px;align-items:center;margin:10px 0">
+                <span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(row.label)}">${escapeHtml(row.label)}</span>
+                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">${row.count} ta · ${percentText}%</span>
+                <div style="grid-column:1 / -1;height:7px;border-radius:999px;background:var(--bg-secondary,#eef2f7);overflow:hidden"><i style="display:block;width:${percent}%;min-width:${row.count ? '5px' : '0'};height:100%;border-radius:inherit;background:${color}"></i></div>
+            </div>`;
+        }).join('');
+    const ageTableRows = rows.age.length
+        ? rows.age.map(row => `<tr><td><strong>${escapeHtml(row.label)}</strong></td><td style="text-align:right;font-weight:700">${row.count}</td><td style="text-align:right;color:#7C3AED;font-weight:700">${formatQualityPercent(row.count, selectedTotal)}</td></tr>`).join('')
+        : `<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">Tanlangan filtrlar bo'yicha yosh ma'lumoti yo'q.</td></tr>`;
+    const hasActiveFilter = Object.values(filters).some(Boolean);
+
+    return `
+    <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+        <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px">
+            <div>
+                <h2 style="font-size:18px;margin:0 0 5px">Lidlar demografiyasi va o'qish maqsadi</h2>
+                <p style="margin:0;color:var(--text-muted);font-size:14px">Mavjud lidlar anketasidagi jins, yosh, hudud va o'qish sababi bo'yicha statistika</p>
+            </div>
+            <div style="padding:8px 11px;border-radius:10px;background:#F5F3FF;color:#6D28D9;font-size:13px;font-weight:700">${selectedTotal} ta lid tanlandi</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:14px;border-radius:14px;background:var(--bg-secondary,#f8fafc);margin-bottom:18px">
+            ${selectHtml('funnelDemographicGender', 'Jinsi', 'gender', 'Barcha jinslar')}
+            ${selectHtml('funnelDemographicAge', 'Yoshi', 'age', 'Barcha yoshlar')}
+            ${selectHtml('funnelDemographicRegion', 'Hudud', 'region', 'Barcha hududlar')}
+            ${selectHtml('funnelDemographicGoal', "O'qish sababi", 'learningGoal', "Barcha sabablar")}
+            ${hasActiveFilter ? '<button type="button" id="funnelDemographicClear" class="btn-ghost" style="font-size:12px;padding:7px 11px">Tozalash</button>' : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;align-items:start">
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">Lidlarning jinsi</h3>${barRows(rows.gender, '#2563EB')}</section>
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">Qayerdan ekani</h3>${barRows(rows.region, '#0F766E')}</section>
+            <section style="padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px"><h3 style="font-size:15px;margin:0 0 8px">O'qish sabablari</h3>${barRows(rows.learningGoal, '#EA580C')}</section>
+        </div>
+        <section style="margin-top:16px;padding:16px;border:1px solid var(--border,#e2e8f0);border-radius:14px">
+            <h3 style="font-size:15px;margin:0 0 5px">Yosh bo'yicha batafsil statistika</h3>
+            <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px">Har bir yosh uchun lidlar soni va tanlangan lidlardagi ulushi</p>
+            <div class="table-responsive" style="max-height:360px;overflow:auto"><table class="sdp-table" style="min-width:360px"><thead><tr><th>Yosh</th><th style="text-align:right">Lidlar soni</th><th style="text-align:right">Ulush</th></tr></thead><tbody>${ageTableRows}</tbody></table></div>
+        </section>
     </div>`;
 }
 
@@ -14131,7 +14288,8 @@ function renderSalesFunnel() {
         emptyText: "Tanlangan filtrlar bo'yicha sifatsiz lidlar yo'q.",
         centerLabel: 'sifatsiz lid'
     })}
-    ${buildLeadQualityConversionStats(filteredLeads)}`;
+    ${buildLeadQualityConversionStats(filteredLeads)}
+    ${buildLeadDemographicsStats(filteredLeads)}`;
 
     // 3-vazifa: menejer ko'p-tanlovli (checkbox) ochiladigan ro'yxati.
     // Ochiq/yopiq holati alohida bayroqda saqlanadi — aks holda har bir
@@ -14197,6 +14355,22 @@ function renderSalesFunnel() {
     document.getElementById('funnelCreatedDateClear')?.addEventListener('click', () => {
         _salesFunnelCreatedFrom = '';
         _salesFunnelCreatedTo = '';
+        renderSalesFunnel();
+    });
+    const demographicFilterBindings = [
+        ['funnelDemographicGender', 'gender'],
+        ['funnelDemographicAge', 'age'],
+        ['funnelDemographicRegion', 'region'],
+        ['funnelDemographicGoal', 'learningGoal']
+    ];
+    demographicFilterBindings.forEach(([id, field]) => {
+        document.getElementById(id)?.addEventListener('change', event => {
+            _salesFunnelDemographicFilters[field] = event.target.value;
+            renderSalesFunnel();
+        });
+    });
+    document.getElementById('funnelDemographicClear')?.addEventListener('click', () => {
+        _salesFunnelDemographicFilters = { gender: '', age: '', region: '', learningGoal: '' };
         renderSalesFunnel();
     });
 }
