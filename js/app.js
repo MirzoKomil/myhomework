@@ -13616,13 +13616,33 @@ function getFailedSaleReasonLabel(lead) {
     return 'Sabab ko\'rsatilmagan';
 }
 
-function buildFailedSaleReasonsChart(reasonRows) {
+function getSifatsizLidReasonLabel(lead) {
+    const savedReason = lead?.sifatsizReason || lead?.unqualifiedReason || lead?.lowQualityReason;
+    if (typeof savedReason === 'string' && savedReason.trim()) return savedReason.trim();
+    if (savedReason && typeof savedReason === 'object') {
+        const label = savedReason.label || savedReason.reason || savedReason.name;
+        if (typeof label === 'string' && label.trim()) return label.trim();
+    }
+
+    const sifatsizComment = Array.isArray(lead?.comments)
+        ? [...lead.comments].reverse().find(comment => comment?.type === 'sifatsiz-lid' && (comment.reason || comment.text))
+        : null;
+    if (typeof sifatsizComment?.reason === 'string' && sifatsizComment.reason.trim()) {
+        return sifatsizComment.reason.trim();
+    }
+    if (typeof sifatsizComment?.text === 'string' && sifatsizComment.text.trim()) {
+        return sifatsizComment.text.replace(/^Sifatsiz lid\s*:\s*/i, '').trim() || 'Sabab ko\'rsatilmagan';
+    }
+    return 'Sabab ko\'rsatilmagan';
+}
+
+function buildReasonsChart(reasonRows, { title, emptyText, centerLabel }) {
     const total = reasonRows.reduce((sum, row) => sum + row.count, 0);
     if (!total) {
         return `
         <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
-            <h2 style="font-size:18px;margin:0 0 6px">Muvaffaqiyatsiz sotuv sabablari</h2>
-            <p style="margin:0;color:var(--text-muted)">Tanlangan filtrlar bo'yicha muvaffaqiyatsiz sotuvlar yo'q.</p>
+            <h2 style="font-size:18px;margin:0 0 6px">${escapeHtml(title)}</h2>
+            <p style="margin:0;color:var(--text-muted)">${escapeHtml(emptyText)}</p>
         </div>`;
     }
 
@@ -13652,18 +13672,18 @@ function buildFailedSaleReasonsChart(reasonRows) {
     return `
     <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
         <div style="margin-bottom:18px">
-            <h2 style="font-size:18px;margin:0 0 5px">Muvaffaqiyatsiz sotuv sabablari</h2>
+            <h2 style="font-size:18px;margin:0 0 5px">${escapeHtml(title)}</h2>
             <p style="margin:0;color:var(--text-muted);font-size:14px">Tanlangan filtrlar bo'yicha sabablar taqsimoti</p>
         </div>
         <div style="display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap">
             <div style="position:relative;width:200px;height:200px;flex:0 0 200px">
-                <svg viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Muvaffaqiyatsiz sotuv sabablari diagrammasi">
+                <svg viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="${escapeHtml(title)} diagrammasi">
                     <circle cx="100" cy="100" r="${radius}" fill="none" stroke="var(--bg-secondary,#eef2f7)" stroke-width="28"/>
                     ${arcs}
                 </svg>
                 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
                     <strong style="font-size:30px;line-height:1">${total}</strong>
-                    <span style="color:var(--text-muted);font-size:12px;margin-top:5px">muvaffaqiyatsiz sotuv</span>
+                    <span style="color:var(--text-muted);font-size:12px;margin-top:5px">${escapeHtml(centerLabel)}</span>
                 </div>
             </div>
             <div style="width:min(100%,520px);min-width:min(100%,280px)">${legend}</div>
@@ -13783,6 +13803,21 @@ function renderSalesFunnel() {
         .map(([label, count]) => ({ label, count }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'uz'));
 
+    // 6-vazifa: xuddi muvaffaqiyatsiz sotuv diagrammasi kabi, faqat
+    // "Sifatsiz lidlar" ustunida saqlangan sabablarni hisoblaydi. Shu umumiy
+    // `filteredLeads` massivi sababli yuqoridagi menejer va sana filtrlari
+    // bu statistikaga ham to'liq qo'llanadi.
+    const sifatsizReasonCounts = new Map();
+    filteredLeads
+        .filter(lead => normalizeLeadStatus(lead.status) === 'sifatsiz-lidlar')
+        .forEach(lead => {
+            const label = getSifatsizLidReasonLabel(lead);
+            sifatsizReasonCounts.set(label, (sifatsizReasonCounts.get(label) || 0) + 1);
+        });
+    const sifatsizReasonRows = [...sifatsizReasonCounts.entries()]
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'uz'));
+
     const langLabel = lang === 'russian' ? 'Rus tili' : 'Ingliz tili';
 
     // 3-vazifa: "Menejer" filtri endi Lidlar bo'limidagi "Ustunlar filtri"
@@ -13893,7 +13928,16 @@ function renderSalesFunnel() {
         </table>
         </div>
     </div>
-    ${buildFailedSaleReasonsChart(failedReasonRows)}`;
+    ${buildReasonsChart(failedReasonRows, {
+        title: 'Muvaffaqiyatsiz sotuv sabablari',
+        emptyText: "Tanlangan filtrlar bo'yicha muvaffaqiyatsiz sotuvlar yo'q.",
+        centerLabel: 'muvaffaqiyatsiz sotuv'
+    })}
+    ${buildReasonsChart(sifatsizReasonRows, {
+        title: 'Sifatsiz lid sabablari',
+        emptyText: "Tanlangan filtrlar bo'yicha sifatsiz lidlar yo'q.",
+        centerLabel: 'sifatsiz lid'
+    })}`;
 
     // 3-vazifa: menejer ko'p-tanlovli (checkbox) ochiladigan ro'yxati.
     // Ochiq/yopiq holati alohida bayroqda saqlanadi — aks holda har bir
