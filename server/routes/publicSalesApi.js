@@ -1,10 +1,10 @@
-// "platformaga API chiqazib ber" — Sotuv bo'limining statistikasini
-// (sotuv voronkasi, bosqichlar bo'yicha taqsimot) tashqi tomonga (masalan
-// Meta Ads tahlil qilish uchun) FAQAT O'QISH tartibida ochib beradigan API.
-// Hech qanday yozish/o'zgartirish endpointi yo'q — atayin. Xom lidlar
-// ro'yxati (ism/telefon) ham qaytarilmaydi, faqat yig'ma (aggregate)
-// sonlar — bu tashqi tahlil uchun yetarli va shaxsiy ma'lumotni
-// keraksiz oshkor qilmaydi.
+// "platformaga API chiqazib ber" — Sotuv bo'limining statistikasi
+// (sotuv voronkasi) VA lidlar ro'yxatini tashqi tomonga (masalan Meta Ads
+// tahlil qilish uchun) FAQAT O'QISH tartibida ochib beradigan API. Hech
+// qanday yozish/o'zgartirish endpointi yo'q — atayin. Lidning ismi/telefoni
+// (4-vazifa) foydalanuvchining aniq so'rovi bilan qaytariladi — izohlar
+// (comments) va biriktirilgan fayllar esa hamon chiqarilmaydi (ichki
+// muzokara tafsilotlari, tashqi tahlil uchun zarur emas).
 const express = require('express');
 const router = express.Router();
 
@@ -56,11 +56,16 @@ function resolveDateRange(fromRaw, toRaw) {
     return from ? { from, to } : null;
 }
 
-function computeFunnel(leads, filters) {
+// /funnel va /leads ikkalasi ham BIR XIL filtr qoidalaridan foydalanadi —
+// CRM'dagi "Sotuv voronkasi"da o'rnatilgan filtr shu yerda ham aynan bir
+// xil natija berishi shart.
+function applyLeadFilters(leads, filters) {
     let filtered = leads;
-
     if (filters.managerIds) {
         filtered = filtered.filter(l => filters.managerIds.has(l.managerId));
+    }
+    if (filters.statusIds) {
+        filtered = filtered.filter(l => filters.statusIds.has(normalizeLeadStatus(l.status)));
     }
     if (filters.assignedRange) {
         filtered = filtered.filter(l => {
@@ -79,6 +84,11 @@ function computeFunnel(leads, filters) {
             return createdDate >= filters.createdRange.from && createdDate <= filters.createdRange.to;
         });
     }
+    return filtered;
+}
+
+function computeFunnel(leads, filters) {
+    const filtered = applyLeadFilters(leads, filters);
 
     const total = filtered.length;
     const stageCounts = new Map();
@@ -134,6 +144,92 @@ router.get('/funnel', async (req, res) => {
         });
     } catch (err) {
         console.error('GET /api/public/sales/funnel', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+const STAGE_LABEL_BY_ID = new Map([...FUNNEL_STAGES, ...EXTRA_STAGES].map(s => [s.id, s.label]));
+
+const LEADS_PAGE_SIZE_DEFAULT = 100;
+const LEADS_PAGE_SIZE_MAX = 500;
+
+function clampPageSize(raw) {
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n) || n <= 0) return LEADS_PAGE_SIZE_DEFAULT;
+    return Math.min(n, LEADS_PAGE_SIZE_MAX);
+}
+
+function clampPage(raw) {
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n > 1 ? n : 1;
+}
+
+// 4-vazifa: "Lidlar" bo'limining o'zi — ism/telefon ham qaytariladi
+// (foydalanuvchining aniq so'rovi bo'yicha). Izohlar/fayllar chiqarilmaydi.
+// Ko'p sonli lid bo'lgani uchun sahifalab (pagination) qaytariladi.
+router.get('/leads', async (req, res) => {
+    try {
+        const allLeads = await getLeads();
+        const employees = await getHrEmployeesData();
+        const managerNameById = new Map(employees.map(e => [e.id, e.name]));
+
+        const filters = {
+            managerIds: parseCsvParam(req.query.managerIds),
+            statusIds: parseCsvParam(req.query.status),
+            assignedRange: resolveDateRange(req.query.assignedFrom, req.query.assignedTo),
+            createdRange: resolveDateRange(req.query.createdFrom, req.query.createdTo),
+        };
+
+        const langParam = req.query.lang === 'russian' || req.query.lang === 'english' ? req.query.lang : null;
+        const pool = langParam === 'russian' ? (allLeads.russian || [])
+            : langParam === 'english' ? (allLeads.english || [])
+                : [...(allLeads.english || []), ...(allLeads.russian || [])];
+
+        const filtered = applyLeadFilters(pool, filters);
+        const total = filtered.length;
+        const pageSize = clampPageSize(req.query.pageSize);
+        const page = clampPage(req.query.page);
+        const start = (page - 1) * pageSize;
+        const pageItems = filtered.slice(start, start + pageSize);
+
+        const leads = pageItems.map(l => {
+            const statusId = normalizeLeadStatus(l.status);
+            return {
+                id: l.id,
+                name: l.name || '',
+                phone: l.phone || '',
+                phone2: l.phone2 || '',
+                email: l.email || '',
+                language: l.language,
+                status: statusId,
+                statusLabel: STAGE_LABEL_BY_ID.get(statusId) || statusId,
+                source: l.source || '',
+                leadType: l.leadType || '',
+                managerId: l.managerId || null,
+                managerName: l.managerId ? (managerNameById.get(l.managerId) || null) : null,
+                date: l.date || null,
+                createdAt: l.createdAt || null,
+                managerAssignedAt: l.managerAssignedAt || null,
+            };
+        });
+
+        res.json({
+            generatedAt: new Date().toISOString(),
+            filters: {
+                lang: langParam || 'all',
+                managerIds: filters.managerIds ? [...filters.managerIds] : null,
+                status: filters.statusIds ? [...filters.statusIds] : null,
+                assignedRange: filters.assignedRange,
+                createdRange: filters.createdRange,
+            },
+            total,
+            page,
+            pageSize,
+            pageCount: Math.max(1, Math.ceil(total / pageSize)),
+            leads,
+        });
+    } catch (err) {
+        console.error('GET /api/public/sales/leads', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });
