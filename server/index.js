@@ -13,6 +13,7 @@ const telephonyRoutes = require('./routes/telephony');
 const smsRoutes = require('./routes/sms');
 const metaRoutes = require('./routes/meta');
 const telegramRoutes = require('./routes/telegram');
+const publicSalesApiRoutes = require('./routes/publicSalesApi');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -96,6 +97,13 @@ const corsOptionsDelegate = (req, cb) => {
     if (req.path === '/api/leads' || req.path.startsWith('/api/leads/')) {
         return cb(null, { origin: true, credentials: false });
     }
+    // /api/public/* — tashqi (server-to-server) tahlil vositalari uchun,
+    // brauzer cookie/sessiyasiga bog'liq emas — X-Api-Key orqali
+    // himoyalangan (server/middleware/publicApiKey.js), shu sabab domen
+    // bo'yicha CHEKLANMAYDI.
+    if (req.path.startsWith('/api/public/')) {
+        return cb(null, { origin: true, credentials: false });
+    }
     const origin = req.headers.origin;
     if (!origin || ALLOWED_ORIGINS.includes(origin)) {
         return cb(null, { origin: true, credentials: true });
@@ -133,6 +141,17 @@ const webhookLimit = rateLimit({
     message: { error: 'Webhook so\'rovlar haddan oshdi.' },
 });
 
+// Tashqi read-only API (/api/public/*): minutiga 30 so'rov — davriy so'rov
+// yuboradigan bitta tashqi tahlil vositasi uchun yetarli, lekin ma'lumotni
+// haddan tashqari tez-tez so'rab, DB'ga ortiqcha yuklama bermaydi.
+const publicApiLimit = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    message: { error: 'So\'rovlar haddan oshdi. Biroz kuting.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 app.use(express.json({
     limit: '6mb',
     // Meta webhook imzosini tekshirish uchun aynan kelgan baytlarni saqlaymiz.
@@ -150,6 +169,7 @@ app.use('/api/leads', webhookLimit);
 app.use('/api/telephony', webhookLimit);
 app.use('/api/meta', webhookLimit);
 app.use('/api/telegram', webhookLimit);
+app.use('/api/public', publicApiLimit);
 app.use('/api', apiLimit);
 
 app.use('/api/auth', authRoutes);
@@ -160,6 +180,7 @@ app.use('/api/telephony', telephonyRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/meta', metaRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/public/sales', publicSalesApiRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 
