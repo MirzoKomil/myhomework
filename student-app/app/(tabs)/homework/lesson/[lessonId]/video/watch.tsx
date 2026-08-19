@@ -51,7 +51,7 @@ export default function WatchVideoScreen() {
         <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <View style={styles.fixedHeader}>
         {isBonus && (
           <View style={styles.bonusBadge}>
             <Text style={styles.bonusBadgeText}>🎁 {t('bonus_banner_tag')}</Text>
@@ -71,14 +71,16 @@ export default function WatchVideoScreen() {
           )}
         </View>
 
-        <View style={styles.titleRow}>
+        <View style={[styles.titleRow, { marginBottom: 0 }]}>
           <Text style={styles.unitTitle}>{content.unitTitle}</Text>
           <Pressable style={styles.commentsPill} onPress={() => setShowComments(true)}>
             <Ionicons name="chatbubble-ellipses-outline" size={15} color={theme.colors.purple} />
             <Text style={styles.commentsPillText}>{t('common_izohlar')}</Text>
           </Pressable>
         </View>
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t('common_konspekt')}</Text>
           <Text style={styles.body}>{content.konspekt}</Text>
@@ -111,7 +113,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   topTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text },
-  scroll: { padding: 20, paddingBottom: 100 },
+  fixedHeader: { paddingHorizontal: 20, paddingTop: 20 },
+  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 100 },
   bonusBadge: {
     alignSelf: 'flex-start',
     backgroundColor: '#FEF3C7',
