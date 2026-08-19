@@ -522,6 +522,92 @@ async function getMultipleChoiceIssues() {
     return { leftAtZero, outOfRange };
 }
 
+// migrateMultipleChoiceCorrectIndex avtomatik hal qila olmagan (correctIndex
+// === 0 yoki variantlar sonidan tashqarida) 27 ta savol qo'lda (ruscha/
+// inglizcha grammatikasini har birini alohida tekshirib) tasdiqlangan
+// to'g'ri javob bilan bir martalik moslashtiriladi. Har bir yozuv
+// (contentId, partId, variantlar ro'yxati, hozirgi noto'g'ri correctIndex)
+// bo'yicha aniq mos kelgan holatdagina qo'llaniladi — mos kelmasa
+// (ma'lumot allaqachon boshqacha tuzatilgan bo'lsa) o'sha yozuv o'tkazib
+// yuboriladi, hech narsa noto'g'ri bosilib yozilmaydi.
+const MC_MANUAL_FIXES = [
+    { contentId: 'l1782765128275', partId: 'C', options: ['Important', 'Improve', 'Idea', 'Income'], oldIndex: 0, newIndex: 0 },
+    { contentId: 'l1782765128275', partId: 'C', options: ['plays', 'play', 'playing', 'played'], oldIndex: 0, newIndex: 1 },
+    { contentId: 'l1782765128275', partId: 'C', options: ['Weak', 'Strong', 'Soft', 'Slow'], oldIndex: 0, newIndex: 1 },
+    { contentId: 'l1782765128275', partId: 'C', options: ['has', 'have', 'having', 'had'], oldIndex: 0, newIndex: 1 },
+    { contentId: 'l1783004411232', partId: 'multipleChoice-1786963272697', options: ['Привет', 'Меня', 'Как', 'Добрый'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1783004411232', partId: 'multipleChoice-1786963272697', options: ['[мужчина]', '[мучина]', '[мужкина]', '[мущина]'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-1', partId: 'multipleChoice-1786954734196', options: ['учитесь', 'живёте', 'читаете', 'зовут'], oldIndex: 0, newIndex: 1 },
+    { contentId: 'l1784055280406-1', partId: 'multipleChoice-1786954734196', options: ['машына', 'жызнь', 'машина', 'кныга'], oldIndex: 4, newIndex: 2 },
+    { contentId: 'l1784055280406-1', partId: 'multipleChoice-1786954734196', options: ['год', 'года', 'лет', 'зовут'], oldIndex: 4, newIndex: 2 },
+    { contentId: 'l1784055280406-2', partId: 'multipleChoice-1786955819445', options: ['Ты', 'Я', 'Он', 'Мы'], oldIndex: 0, newIndex: 1 },
+    { contentId: 'l1784055280406-2', partId: 'multipleChoice-1786955819445', options: ['Она', 'Ты', 'Они', 'Я'], oldIndex: 4, newIndex: 2 },
+    { contentId: 'l1784055280406-2', partId: 'multipleChoice-1786955819445', options: ['Мы', 'Они', 'Вы', 'Он'], oldIndex: 4, newIndex: 2 },
+    { contentId: 'l1784055280406-2', partId: 'multipleChoice-1786955819445', options: ['У нас', 'У них', 'У него', 'У тебя'], oldIndex: 4, newIndex: 2 },
+    { contentId: 'l1784055280406-2', partId: 'multipleChoice-1786955819445', options: ['У меня', 'У тебя', 'У вас', 'У неё'], oldIndex: 4, newIndex: 2 },
+    { contentId: 'l1784055280406-2', partId: 'multipleChoice-1786956477307', options: ['у тебя', 'я', 'у меня'], oldIndex: 3, newIndex: 2 },
+    { contentId: 'l1784055280406-2', partId: 'multipleChoice-1786956477307', options: ['у вас', 'мы', 'у нас'], oldIndex: 3, newIndex: 2 },
+    { contentId: 'l1784055280406-3', partId: 'multipleChoice-1786954734196', options: ['я', 'тебя', 'него', 'меня'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-3', partId: 'multipleChoice-1786954734196', options: ['книга', 'машина', 'собака', 'ноутбук'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-4', partId: 'multipleChoice-1786962004202', options: ['понимаешь', 'понимаю', 'понимаете'], oldIndex: 3, newIndex: 2 },
+    { contentId: 'l1784055280406-4', partId: 'multipleChoice-1786962004202', options: ['играет', 'играешь', 'играют'], oldIndex: 3, newIndex: 2 },
+    { contentId: 'l1784055280406-4', partId: 'multipleChoice-1786962004202', options: ['гуляешь', 'гуляют', 'гуляете'], oldIndex: 3, newIndex: 2 },
+    { contentId: 'l1784055280406-5', partId: 'multipleChoice-1786954734196', options: ['работаем', 'работают', 'работаешь', 'работает'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-5', partId: 'multipleChoice-1786954734196', options: ['думаешь', 'думают', 'думаю', 'думает'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-5', partId: 'multipleChoice-1786954734196', options: ['отдыхают', 'отдыхаешь', 'отдыхаем', 'отдыхаете'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-5', partId: 'multipleChoice-1786954734196', options: ['я', 'мы', 'она', 'он'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-5', partId: 'multipleChoice-1786965601889', options: ['работаем', 'работают', 'работаешь', 'работает'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-5', partId: 'multipleChoice-1786965601889', options: ['гуляешь', 'гуляют', 'гуляю', 'гуляете'], oldIndex: 4, newIndex: 3 },
+    { contentId: 'l1784055280406-5', partId: 'multipleChoice-1786965601889', options: ['думаешь', 'думают', 'думаю', 'думает'], oldIndex: 4, newIndex: 3 },
+];
+
+async function migrateMultipleChoiceManualFixes() {
+    const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
+    if (!row) return;
+    const mc = row.data;
+    if (mc._correctIndexManualFixedAt) return; // bir marta ishlaydi
+
+    let appliedCount = 0;
+    let skippedCount = 0;
+
+    function applyTo(contentId, partId, questions) {
+        (questions || []).forEach(q => {
+            const match = MC_MANUAL_FIXES.find(fx =>
+                fx.contentId === contentId && fx.partId === partId &&
+                q.correctIndex === fx.oldIndex &&
+                Array.isArray(q.options) && q.options.length === fx.options.length &&
+                q.options.every((opt, i) => opt === fx.options[i])
+            );
+            if (!match) return;
+            q.correctIndex = match.newIndex;
+            appliedCount++;
+        });
+    }
+
+    for (const store of [mc.lessonContents, mc.examContents]) {
+        if (!store) continue;
+        for (const [contentId, content] of Object.entries(store)) {
+            (content.homeworkParts || []).forEach(part => {
+                if (part.kind === 'multipleChoice') applyTo(contentId, part.id, part.questions);
+            });
+            if (Array.isArray(content.questions)) {
+                applyTo(contentId, null, content.questions.filter(q => q.kind === 'multipleChoice'));
+            }
+        }
+    }
+    skippedCount = MC_MANUAL_FIXES.length - appliedCount;
+
+    await pool.query(
+        `INSERT INTO mobile_content_backups (reason, data) VALUES ($1, $2)`,
+        ['pre-correctIndex-manual-fix', JSON.stringify(row.data)]
+    );
+
+    mc._correctIndexManualFixedAt = new Date().toISOString();
+    mc._correctIndexManualFixStats = { appliedCount, skippedCount };
+    await saveMobileContentData(pool, mc);
+    console.log(`[DB] Qo'lda tasdiqlangan test javoblari: ${appliedCount} ta qo'llandi, ${skippedCount} ta mos kelmadi (o'tkazib yuborildi).`);
+}
+
 async function seedIfEmpty() {
     const row = await q1('SELECT COUNT(*) AS c FROM users');
     const count = parseInt(row.c, 10);
@@ -3621,6 +3707,7 @@ async function init() {
     await initSchema();
     await seedIfEmpty();
     await migrateMultipleChoiceCorrectIndex().catch(err => console.error('[DB] correctIndex tuzatishda xatolik:', err.message));
+    await migrateMultipleChoiceManualFixes().catch(err => console.error('[DB] correctIndex qo\'lda tuzatishda xatolik:', err.message));
 }
 
 // ── "Hisoblangan" (computed/auto) eslatmalarni push orqali yetkazish ────────
