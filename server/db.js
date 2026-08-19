@@ -483,6 +483,45 @@ async function getCorrectIndexFixStatus() {
     return { fixedAt: data._correctIndexFixedAt || null, stats: data._correctIndexFixStats || null };
 }
 
+// Vaqtinchalik diagnostika: migratsiya avtomatik tuzata olmagan (correctIndex
+// === 0 yoki variantlar sonidan tashqarida) savollarni ro'yxatlab beradi,
+// shunda admin ularni CRM'da qo'lda tekshirib to'g'irlashi mumkin.
+async function getMultipleChoiceIssues() {
+    const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
+    if (!row) return { leftAtZero: [], outOfRange: [] };
+    const mc = row.data;
+    const leftAtZero = [];
+    const outOfRange = [];
+
+    function scan(storeLabel, contentId, part, questions) {
+        (questions || []).forEach(q => {
+            const optCount = (q.options || []).length;
+            if (typeof q.correctIndex !== 'number' || !optCount) return;
+            const entry = {
+                store: storeLabel, contentId, partId: part ? part.id : null,
+                question: (q.question || '').slice(0, 80),
+                options: q.options, correctIndex: q.correctIndex,
+            };
+            if (q.correctIndex < 0 || q.correctIndex >= optCount) outOfRange.push(entry);
+            else if (q.correctIndex === 0) leftAtZero.push(entry);
+        });
+    }
+
+    for (const [storeLabel, store] of [['lessonContents', mc.lessonContents], ['examContents', mc.examContents]]) {
+        if (!store) continue;
+        for (const [contentId, content] of Object.entries(store)) {
+            (content.homeworkParts || []).forEach(part => {
+                if (part.kind === 'multipleChoice') scan(storeLabel, contentId, part, part.questions);
+            });
+            if (Array.isArray(content.questions)) {
+                scan(storeLabel, contentId, null, content.questions.filter(q => q.kind === 'multipleChoice'));
+            }
+        }
+    }
+
+    return { leftAtZero, outOfRange };
+}
+
 async function seedIfEmpty() {
     const row = await q1('SELECT COUNT(*) AS c FROM users');
     const count = parseInt(row.c, 10);
@@ -3740,7 +3779,7 @@ const TRIAL_SMS_CHECK_INTERVAL_MS = 60 * 1000;
 setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
-    pool, DATA_DIR, getCorrectIndexFixStatus,
+    pool, DATA_DIR, getCorrectIndexFixStatus, getMultipleChoiceIssues,
     getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
