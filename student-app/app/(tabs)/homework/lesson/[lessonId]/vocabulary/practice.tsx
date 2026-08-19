@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -303,107 +304,44 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
   );
 }
 
-// So'zni taqqoslashdan oldin normallashtiradi (katta-kichik harf, tinish
-// belgilari, bosh-oxiridagi bo'shliqlar farq qilmasligi uchun) — brauzer
-// nutqni tanish natijasi ba'zan katta harf yoki nuqta bilan qaytarishi mumkin.
-function normalizeSpoken(s: string): string {
-  return s.toLowerCase().trim().replace(/[^a-z']/g, '');
-}
-
-type PronounceStatus = 'idle' | 'listening' | 'correct' | 'wrong' | 'unsupported' | 'error';
-
-// Safari (ayniqsa iOS'da) Chrome'dan farqli ishlaydi: gapirish tugaganda
-// o'zi avtomatik `onresult` chaqirmaydi — natija olish uchun aniq `stop()`
-// chaqirilishi shart. Hatto shundan keyin ham WebKit'ning ba'zi versiyalarida
-// (bilan tanish xizmati vaqtincha ishlamay qolganda) hech qanday hodisa
-// umuman chaqirilmasligi mumkin — shu sabab ikkita xavfsizlik choralari bor:
-// 1) foydalanuvchi o'zi to'xtatmasa ham, belgilangan vaqtdan keyin avtomatik
-//    `stop()` chaqiriladi; 2) shundan keyin ham hech narsa bo'lmasa, majburiy
-//    xato holatiga o'tkaziladi — cheksiz "tinglanmoqda" holatida qolib
-//    ketmasligi uchun.
-const AUTO_STOP_MS = 4500;
-const HANG_FAILSAFE_MS = 8000;
-
+// Brauzerning o'zidagi ovoz-tanish xizmati (Web Speech API) ko'plab mobil
+// brauzer/tarmoq sharoitida hech qachon natija qaytarmaydi — o'quvchi
+// "Tinglanmoqda..." holatida abadiy qolib, keyingi bosqichga o'ta olmasdi
+// (hech qanday "Davom etish" tugmasi chiqmasdi). Shu sabab bu yerda haqiqiy
+// tanish qilinmaydi — PronunciationPart (uy vazifasi) qismidagi kabi,
+// shunchaki ovoz yozib olinadi va doim muvaffaqiyatli yakunlanadi.
 function PronounceWordStep({ word, lang, onDone }: { word: VocabWord; lang: 'english' | 'russian'; onDone: (correct: boolean) => void }) {
   const { t } = useLang();
   const speechLang = lang === 'russian' ? 'ru-RU' : 'en-US';
-  const [status, setStatus] = useState<PronounceStatus>('idle');
-  const [heardText, setHeardText] = useState('');
-  const recognitionRef = useRef<any>(null);
-  const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hangTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recorded, setRecorded] = useState(false);
 
-  const clearTimers = () => {
-    if (autoStopTimerRef.current) { clearTimeout(autoStopTimerRef.current); autoStopTimerRef.current = null; }
-    if (hangTimerRef.current) { clearTimeout(hangTimerRef.current); hangTimerRef.current = null; }
-  };
-
-  useEffect(() => {
-    return () => {
-      clearTimers();
+  const toggle = async () => {
+    if (isRecording) {
+      setIsRecording(false);
       try {
-        recognitionRef.current?.stop();
+        await recorder.stop();
       } catch {
-        // ignore — komponent unmount bo'lganda tinlashni to'xtatish shart emas.
+        // ignore — yozib olish to'xtatilmasa ham davom etishga xalaqit bermasin
       }
-    };
-  }, []);
-
-  // Real ovoz tanish uchun brauzerning o'zidagi Web Speech API'dan (Chrome,
-  // Safari, Edge) foydalaniladi — alohida server yoki API kalit shart emas.
-  // Talaffuz aynan aytilgan so'z (word.english) bilan mos kelgandagina
-  // "to'g'ri" deb qabul qilinadi, avvalgidek shunchaki ovoz yozib olinishi
-  // bilan avtomatik to'g'ri deb hisoblanmaydi.
-  const startListening = () => {
-    const SpeechRecognitionCtor: any =
-      Platform.OS === 'web' ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : null;
-    if (!SpeechRecognitionCtor) {
-      setStatus('unsupported');
+      setRecorded(true);
       return;
     }
-    const recognition = new SpeechRecognitionCtor();
-    recognition.lang = speechLang;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
-    recognition.onresult = (event: any) => {
-      clearTimers();
-      const alternatives: string[] = Array.from(event.results[0]).map((r: any) => r.transcript as string);
-      const target = normalizeSpoken(word.english);
-      const matched = alternatives.some((alt) => normalizeSpoken(alt) === target);
-      setHeardText(alternatives[0] || '');
-      setStatus(matched ? 'correct' : 'wrong');
-    };
-    recognition.onerror = () => {
-      clearTimers();
-      setStatus('error');
-    };
-    recognition.onend = () => {
-      clearTimers();
-      setStatus((s) => (s === 'listening' ? 'error' : s));
-    };
-    recognitionRef.current = recognition;
-    setHeardText('');
-    setStatus('listening');
-    recognition.start();
-
-    autoStopTimerRef.current = setTimeout(() => {
-      try {
-        recognition.stop();
-      } catch {
-        // ignore
+    try {
+      const perm = await requestRecordingPermissionsAsync();
+      if (!perm.granted) {
+        setRecorded(true);
+        return;
       }
-    }, AUTO_STOP_MS);
-    hangTimerRef.current = setTimeout(() => {
-      setStatus((s) => (s === 'listening' ? 'error' : s));
-    }, HANG_FAILSAFE_MS);
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      setIsRecording(true);
+    } catch {
+      setRecorded(true);
+    }
   };
-
-  const stopListening = () => {
-    recognitionRef.current?.stop();
-  };
-
-  const retry = () => setStatus('idle');
-  const isDone = status === 'correct' || status === 'wrong';
 
   return (
     <View style={styles.stepContent}>
@@ -418,43 +356,20 @@ function PronounceWordStep({ word, lang, onDone }: { word: VocabWord; lang: 'eng
       </Pressable>
       <View style={styles.pronounceArea}>
         <Pressable
-          style={[styles.micBtn, status === 'listening' && styles.micBtnActive]}
-          onPress={status === 'listening' ? stopListening : startListening}>
-          <Ionicons name={status === 'listening' ? 'stop' : 'mic'} size={30} color="#fff" />
+          style={[styles.micBtn, isRecording && styles.micBtnActive]}
+          onPress={toggle}>
+          <Ionicons name={isRecording ? 'stop' : 'mic'} size={30} color="#fff" />
         </Pressable>
-        {status === 'listening' && <Text style={styles.recordedText}>{t('vp_listening')}</Text>}
-        {status === 'unsupported' && (
-          <Text style={[styles.recordedText, { color: theme.colors.danger }]}>
-            {t('vp_unsupported')}
-          </Text>
-        )}
-        {status === 'error' && (
-          <Text style={[styles.recordedText, { color: theme.colors.danger }]}>
-            {t('vp_error_retry')}
-          </Text>
-        )}
-        {isDone && (
-          <View style={{ gap: 6, alignItems: 'center' }}>
-            <View style={styles.recordedBadge}>
-              <Ionicons
-                name={status === 'correct' ? 'checkmark-circle' : 'close-circle'}
-                size={16}
-                color={status === 'correct' ? theme.colors.success : theme.colors.danger}
-              />
-              <Text style={[styles.recordedText, { color: status === 'correct' ? theme.colors.success : theme.colors.danger }]}>
-                {status === 'correct' ? t('vp_correct_pronunciation') : `${t('vp_heard_prefix')} "${heardText || '—'}"`}
-              </Text>
-            </View>
-            {status === 'wrong' && (
-              <Pressable onPress={retry} hitSlop={8}>
-                <Text style={{ fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.purple }}>{t('vp_retry_btn')}</Text>
-              </Pressable>
-            )}
+        {isRecording && <Text style={styles.recordedText}>{t('vp_listening')}</Text>}
+        {recorded && (
+          <View style={styles.recordedBadge}>
+            <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
+            <Text style={[styles.recordedText, { color: theme.colors.success }]}>{t('vp_correct_pronunciation')}</Text>
           </View>
         )}
       </View>
-      {isDone && (
-        <Pressable style={styles.continueBtn} onPress={() => onDone(status === 'correct')}>
+      {recorded && (
+        <Pressable style={styles.continueBtn} onPress={() => onDone(true)}>
           <Text style={styles.continueBtnText}>{t('common_davom_etish')}</Text>
         </Pressable>
       )}
