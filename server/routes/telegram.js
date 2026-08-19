@@ -1,6 +1,7 @@
 const express = require('express');
 const { insertLead } = require('../db');
 const { authRequired } = require('../middleware/auth');
+const { sendLeadToCapi } = require('../services/capiWebhook');
 
 const router = express.Router();
 
@@ -169,6 +170,11 @@ router.post('/lead-webhook', async (req, res) => {
         console.log(result.duplicate
             ? `[telegram-lead] DUBLIKAT  message_id=${message.message_id} id=${result.id}`
             : `[telegram-lead] LID YARATILDI  message_id=${message.message_id} id=${result.id} ism="${parsed.name}"`);
+
+        // Bu yo'ldan UTM/fbclid ma'lumoti kelmaydi (Telegram xabari orqali
+        // uzatilmaydi) — CAPI.uz shunday bo'lsa ham telefon bo'yicha
+        // moslashtirishga urinadi (sifatliroq atributsiya uchun emas).
+        if (!result.duplicate && result.lead) sendLeadToCapi(result.lead);
 
         return res.sendStatus(200);
     } catch (err) {

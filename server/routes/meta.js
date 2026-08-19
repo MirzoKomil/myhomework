@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const express = require('express');
 const { insertLead, getLeads } = require('../db');
 const { authRequired } = require('../middleware/auth');
+const { sendLeadToCapi } = require('../services/capiWebhook');
 
 const router = express.Router();
 const GRAPH_API_VERSION = process.env.META_GRAPH_API_VERSION || 'v23.0';
@@ -106,6 +107,9 @@ async function importLead(leadgenId, expectedPageId, config) {
         throw new Error('Webhook boshqa Facebook Page uchun keldi');
     }
     const contact = mapFieldData(metaLead.field_data);
+    // fbLeadId — CAPI.uz'ning "Facebook Lead Ads (instant forma)" uchun
+    // maxsus atributsiya maydoni (server/services/capiWebhook.js orqali
+    // Meta Conversions API'ga yuboriladi).
     const result = await insertLead({
         ...contact,
         language: languageForForm(metaLead.form_id),
@@ -115,6 +119,7 @@ async function importLead(leadgenId, expectedPageId, config) {
         leadType: 'target',
         createdAt: metaLead.created_time,
         date: formatMetaDate(metaLead.created_time),
+        fbLeadId: metaLead.id || leadgenId,
     });
     return result;
 }
@@ -472,6 +477,9 @@ router.post('/webhook', async (req, res) => {
                 console.log(natija?.duplicate
                     ? `[meta] DUBLIKAT  leadgen=${change.value.leadgen_id} id=${natija.id}`
                     : `[meta] LID YARATILDI  leadgen=${change.value.leadgen_id} id=${natija?.id}`);
+                // CRM javobini kutmasdan (otib yuborish) — CAPI.uz sekin
+                // ishlasa ham Meta webhook javobi kechikmaydi.
+                if (!natija?.duplicate && natija?.lead) sendLeadToCapi(natija.lead);
             }
         }
         return res.status(200).send('EVENT_RECEIVED');

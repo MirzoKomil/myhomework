@@ -5,6 +5,7 @@ const {
 } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const { webhookSecretRequired } = require('../middleware/webhook');
+const { sendLeadToCapi } = require('../services/capiWebhook');
 
 const router = express.Router();
 
@@ -65,13 +66,26 @@ router.post('/', webhookSecretRequired, async (req, res) => {
             body.preferredTime || body.preferred_time || ''
         ).trim();
 
+        // CAPI.uz (Meta Conversions API) integratsiyasi uchun — "target"
+        // (reklama) tomonidan yuborilsa, shu maydonlar orqali lid qaysi
+        // reklamadan kelganini keyinchalik Meta'ga to'g'ri bog'lab
+        // beramiz. Kelmasa ham lid oddiy yaratilaveradi.
+        const utmSource = body.utmSource || body.utm_source;
+        const utmCampaign = body.utmCampaign || body.utm_campaign;
+        const utmContent = body.utmContent || body.utm_content;
+        const fbclid = body.fbclid;
+        const fbLeadId = body.fbLeadId || body.fb_lead_id || body.leadId || body.lead_id;
+        const ctwaClid = body.ctwaClid || body.ctwa_clid;
+        const igUsername = body.igUsername || body.ig_username;
+
         const result = await insertLead({
             name: name.trim(), phone: String(phone).trim(),
             email: String(body.email || body.mail || '').trim(),
             language, source: sourceResult.value, externalId,
             date: body.date, status: body.status,
             leadType: body.leadType || body.lead_type || body.type,
-            contactTime
+            contactTime,
+            utmSource, utmCampaign, utmContent, fbclid, fbLeadId, ctwaClid, igUsername,
         });
         if (result.duplicate) {
             console.log(`[leads] DUBLIKAT  id=${result.id} manba=${sourceResult.value}`);
@@ -79,6 +93,9 @@ router.post('/', webhookSecretRequired, async (req, res) => {
         }
         console.log(`[leads] YARATILDI  id=${result.id} manba=${sourceResult.value} til=${language || '-'}`);
         res.status(201).json({ ok: true, id: result.id, lead: result.lead });
+        // Javobdan keyin — CAPI.uz sekin ishlasa ham landing page/webhook
+        // javobi kechikmaydi (CRM'ning asosiy oqimiga bog'liq emas).
+        if (result.lead) sendLeadToCapi(result.lead);
     } catch (err) {
         console.error('POST /api/leads', err);
         res.status(500).json({ error: 'Lidni saqlashda xatolik' });
@@ -174,6 +191,11 @@ router.patch('/:id', authRequired, leadMutationRequired, leadOwnershipRequired, 
         }
         const saved = await upsertLead({ ...lead, id: req.params.id }, language, req.user);
         res.json({ ok: true, lead: saved });
+        // Har bir saqlashda yuboriladi (faqat status o'zgarganda emas) —
+        // CAPI.uz bir xil externalId+stage takrorlansa ham xato bermaydi
+        // (hujjatga qarang), shuning uchun bu yerda soddalik uchun har
+        // qanday o'zgarishda (status, telefon, summa va h.k.) yuboriladi.
+        sendLeadToCapi(saved);
     } catch (err) {
         console.error('PATCH /api/leads/:id', err);
         res.status(err.status || 400).json({ error: err.message || 'Lidni saqlashda xatolik', code: err.code });

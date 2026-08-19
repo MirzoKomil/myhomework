@@ -3189,7 +3189,14 @@ function normalizeLeadSource(val) {
     return val;
 }
 
-async function insertLead({ name, phone, phone2, email, language, source, externalId, date, status, leadType, contactTime, note, createdAt }) {
+async function insertLead({
+    name, phone, phone2, email, language, source, externalId, date, status, leadType, contactTime, note, createdAt,
+    // CAPI.uz (Meta Conversions API) atributsiyasi uchun — lid qaysi
+    // reklamadan kelganini bildiradi. Bo'lmasa ham lid yaratilaveradi,
+    // faqat keyinchalik CAPI orqali reklama optimizatsiyasi sifatliroq
+    // ishlamaydi (faqat telefon/email bo'yicha moslashtirishga tushadi).
+    utmSource, utmCampaign, utmContent, fbclid, fbLeadId, ctwaClid, igUsername,
+}) {
     const src = normalizeLeadSource(source);
     const lang = languageForSource(src, language);
     const extId = externalId ? String(externalId) : null;
@@ -3242,20 +3249,33 @@ async function insertLead({ name, phone, phone2, email, language, source, extern
     const created = createdAt && !Number.isNaN(new Date(createdAt).getTime())
         ? new Date(createdAt)
         : new Date();
+
+    // Faqat haqiqatan berilgan atributsiya maydonlari saqlanadi — bo'sh
+    // qiymatlar bilan extra_data'ni "iflos" qilib qo'ymaslik uchun.
+    const extra = {};
+    if (utmSource) extra.utmSource = String(utmSource).slice(0, 255);
+    if (utmCampaign) extra.utmCampaign = String(utmCampaign).slice(0, 255);
+    if (utmContent) extra.utmContent = String(utmContent).slice(0, 255);
+    if (fbclid) extra.fbclid = String(fbclid).slice(0, 500);
+    if (fbLeadId) extra.fbLeadId = String(fbLeadId).slice(0, 255);
+    if (ctwaClid) extra.ctwaClid = String(ctwaClid).slice(0, 500);
+    if (igUsername) extra.igUsername = String(igUsername).slice(0, 255);
+
     const lead = {
         id, name, phone: phone || '', phone2: phone2 || '', email: email || '', source: src,
         language: lang, date: dateStr, externalId: extId,
         status: statusNorm, leadType: leadTypeNorm, comments: initialComments,
-        attachments: [], createdAt: created
+        attachments: [], createdAt: created, ...extra
     };
     await tx(async client => {
         await client.query(
             `INSERT INTO leads
                 (id, name, phone, phone2, email, source, language, date, external_id,
-                 status, lead_type, comments, attachments, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())`,
+                 status, lead_type, comments, attachments, created_at, updated_at, extra_data)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),$15)`,
             [id, name, phone || '', phone2 || '', email || '', src, lang, dateStr, extId,
-             statusNorm, leadTypeNorm, JSON.stringify(initialComments), '[]', created]
+             statusNorm, leadTypeNorm, JSON.stringify(initialComments), '[]', created,
+             JSON.stringify(extra)]
         );
         await appendLeadAudit(client, id, 'created', { name: 'Tizim' }, lead);
     });
