@@ -160,14 +160,8 @@ app.use(express.json({
 
 // ── API routes ────────────────────────────────────────────────────────────────
 
-app.get('/api/health', async (req, res) => {
-    const correctIndexFix = await getCorrectIndexFixStatus().catch(() => null);
-    res.json({ status: 'ok', service: 'Myhomework.uz API', version: '1.0.0', correctIndexFix });
-});
-
-app.get('/api/health/mc-issues', async (req, res) => {
-    const issues = await getMultipleChoiceIssues().catch(() => null);
-    res.json(issues);
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', service: 'Myhomework.uz API', version: '1.0.0' });
 });
 
 app.use(['/api/auth/login', '/api/auth/student-login'], loginLimit);
@@ -265,7 +259,7 @@ app.use((err, req, res, next) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-const { init, getCorrectIndexFixStatus, getMultipleChoiceIssues } = require('./db');
+const { init } = require('./db');
 
 // Ishga tushishda default secretlar haqida ogohlantirish
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'myhomework-dev-secret-change-in-production') {
