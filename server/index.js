@@ -160,8 +160,9 @@ app.use(express.json({
 
 // ── API routes ────────────────────────────────────────────────────────────────
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'Myhomework.uz API', version: '1.0.0' });
+app.get('/api/health', async (req, res) => {
+    const correctIndexFix = await getCorrectIndexFixStatus().catch(() => null);
+    res.json({ status: 'ok', service: 'Myhomework.uz API', version: '1.0.0', correctIndexFix });
 });
 
 app.use(['/api/auth/login', '/api/auth/student-login'], loginLimit);
@@ -259,7 +260,7 @@ app.use((err, req, res, next) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-const { init } = require('./db');
+const { init, getCorrectIndexFixStatus } = require('./db');
 
 // Ishga tushishda default secretlar haqida ogohlantirish
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'myhomework-dev-secret-change-in-production') {

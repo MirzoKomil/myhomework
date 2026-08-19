@@ -477,6 +477,12 @@ async function migrateMultipleChoiceCorrectIndex() {
     console.log(`[DB] Test javoblarini tuzatish: ${fixedCount} ta tuzatildi, ${leftAtZeroCount} ta 0-indeks holida qoldirildi (qo'lda tekshiring), ${outOfRangeCount} ta noto'g'ri (variantlar sonidan tashqarida) topildi. Zaxira: mobile_content_backups jadvali.`);
 }
 
+async function getCorrectIndexFixStatus() {
+    const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
+    const data = row ? row.data : {};
+    return { fixedAt: data._correctIndexFixedAt || null, stats: data._correctIndexFixStats || null };
+}
+
 async function seedIfEmpty() {
     const row = await q1('SELECT COUNT(*) AS c FROM users');
     const count = parseInt(row.c, 10);
@@ -3734,7 +3740,7 @@ const TRIAL_SMS_CHECK_INTERVAL_MS = 60 * 1000;
 setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
-    pool, DATA_DIR,
+    pool, DATA_DIR, getCorrectIndexFixStatus,
     getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
