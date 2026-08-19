@@ -253,6 +253,13 @@ async function initSchema() {
             data JSONB NOT NULL DEFAULT '{"videos":[],"documents":[],"courses":[],"lessons":[]}'
         );
 
+        CREATE TABLE IF NOT EXISTS mobile_content_backups (
+            id SERIAL PRIMARY KEY,
+            reason TEXT NOT NULL,
+            data JSONB NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS json_data (
             key TEXT PRIMARY KEY,
             data JSONB NOT NULL DEFAULT '[]'
@@ -406,6 +413,68 @@ async function migrateAdminPassword() {
             [bcrypt.hashSync(target, 10), admin.id]);
         console.log('[DB] Admin paroli yangilandi');
     }
+}
+
+// CRM'da "To'g'ri variant raqami (0 dan boshlab)" maydoni oddiy son kiritish
+// edi — odamlar tabiiy ravishda 1-variantni "1" deb yozgan (0 emas), shu
+// sabab deyarli barcha mavjud test savollarida to'g'ri javob sifatida
+// haqiqiy to'g'ri variantdan BITTA KEYINGI variant belgilangan edi (o'quvchi
+// to'g'ri javobni tanlasa ham "noto'g'ri" chiqardi). CRM maydoni endi variant
+// matnini tanlash uchun select'ga almashtirildi (yangi savollarda bu xato
+// mumkin emas), bu funksiya esa MAVJUD saqlangan savollarni bir martalik
+// tuzatadi: correctIndex >= 1 bo'lgan har bir savolda 1 ga kamaytiriladi
+// (correctIndex === 0 bo'lganlar — ehtimol allaqachon to'g'ri kiritilgan —
+// tegilmaydi, chunki ularni kamaytirish -1 kabi noto'g'ri holatga olib
+// keladi). Tuzatishdan oldin butun mobile_content qatori
+// mobile_content_backups'ga saqlanadi, shunda xato bo'lsa qaytarish mumkin.
+async function migrateMultipleChoiceCorrectIndex() {
+    const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
+    if (!row) return;
+    const mc = row.data;
+    if (mc._correctIndexFixedAt) return; // bir marta ishlaydi
+
+    let fixedCount = 0;
+    let leftAtZeroCount = 0;
+    let outOfRangeCount = 0;
+
+    function fixQuestions(questions) {
+        (questions || []).forEach(q => {
+            const optCount = (q.options || []).length;
+            if (typeof q.correctIndex !== 'number' || !optCount) return;
+            if (q.correctIndex < 0 || q.correctIndex >= optCount) { outOfRangeCount++; return; }
+            if (q.correctIndex === 0) { leftAtZeroCount++; return; }
+            q.correctIndex -= 1;
+            fixedCount++;
+        });
+    }
+
+    for (const store of [mc.lessonContents, mc.examContents]) {
+        if (!store) continue;
+        for (const content of Object.values(store)) {
+            (content.homeworkParts || []).forEach(part => {
+                if (part.kind === 'multipleChoice') fixQuestions(part.questions);
+            });
+            if (Array.isArray(content.questions)) {
+                fixQuestions(content.questions.filter(q => q.kind === 'multipleChoice'));
+            }
+        }
+    }
+
+    if (fixedCount === 0 && leftAtZeroCount === 0 && outOfRangeCount === 0) {
+        mc._correctIndexFixedAt = new Date().toISOString();
+        await saveMobileContentData(pool, mc);
+        return;
+    }
+
+    await pool.query(
+        `INSERT INTO mobile_content_backups (reason, data) VALUES ($1, $2)`,
+        ['pre-correctIndex-fix', JSON.stringify(row.data)]
+    );
+
+    mc._correctIndexFixedAt = new Date().toISOString();
+    mc._correctIndexFixStats = { fixedCount, leftAtZeroCount, outOfRangeCount };
+    await saveMobileContentData(pool, mc);
+    console.log(`[DB] Test javoblarini tuzatish: ${fixedCount} ta tuzatildi, ${leftAtZeroCount} ta 0-indeks holida qoldirildi (qo'lda tekshiring), ${outOfRangeCount} ta noto'g'ri (variantlar sonidan tashqarida) topildi. Zaxira: mobile_content_backups jadvali.`);
 }
 
 async function seedIfEmpty() {
@@ -3506,6 +3575,7 @@ async function init() {
     }
     await initSchema();
     await seedIfEmpty();
+    await migrateMultipleChoiceCorrectIndex().catch(err => console.error('[DB] correctIndex tuzatishda xatolik:', err.message));
 }
 
 // ── "Hisoblangan" (computed/auto) eslatmalarni push orqali yetkazish ────────

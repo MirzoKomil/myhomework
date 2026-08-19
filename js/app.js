@@ -1562,6 +1562,17 @@ function renderEditableList(container, opts) {
                     <option value="no"${!isYes ? ' selected' : ''}>Yo'q</option>
                 </select></div>`;
             }
+            if (f.type === 'optionIndexSelect') {
+                // Raqam qo'lda kiritilmaydi — admin variant MATNINI ro'yxatdan
+                // tanlaydi, shu bilan "0 dan boshlab" chalkashligidan kelib
+                // chiqadigan noto'g'ri to'g'ri-javob xatolarining oldi olinadi.
+                const sourceTexts = Array.isArray(item[f.sourceKey]) ? item[f.sourceKey] : [];
+                const currentIdx = raw !== undefined ? Number(raw) : -1;
+                const opts = sourceTexts.length
+                    ? sourceTexts.map((t, i) => `<option value="${i}"${i === currentIdx ? ' selected' : ''}>${escapeHtml(t)}</option>`).join('')
+                    : `<option value="0">— avval variantlarni kiriting —</option>`;
+                return `<div class="form-group"><label>${f.label}${req}</label><select id="lcField_${f.key}" class="form-select">${opts}</select></div>`;
+            }
             if (f.type === 'image' || f.type === 'audio') {
                 const url = val ? String(val) : '';
                 return `<div class="form-group">
@@ -1607,6 +1618,21 @@ function renderEditableList(container, opts) {
             removeBtn.addEventListener('click', () => setUrl(''));
         });
 
+        opts.fields.filter(f => f.type === 'optionIndexSelect').forEach(f => {
+            const sourceInput = document.getElementById(`lcField_${f.sourceKey}`);
+            const select = document.getElementById(`lcField_${f.key}`);
+            if (!sourceInput || !select) return;
+            const rebuild = () => {
+                const texts = sourceInput.value.split(',').map(s => s.trim()).filter(Boolean);
+                const prevVal = select.value;
+                select.innerHTML = texts.length
+                    ? texts.map((t, i) => `<option value="${i}">${escapeHtml(t)}</option>`).join('')
+                    : `<option value="0">— avval variantlarni kiriting —</option>`;
+                if (texts.length && prevVal !== '' && Number(prevVal) < texts.length) select.value = prevVal;
+            };
+            sourceInput.addEventListener('input', rebuild);
+        });
+
         document.getElementById('lcSaveItem').onclick = () => {
             const next = {};
             let ok = true;
@@ -1614,7 +1640,7 @@ function renderEditableList(container, opts) {
                 const raw = document.getElementById(`lcField_${f.key}`).value.trim();
                 if (f.required && !raw) ok = false;
                 if (f.type === 'csv') next[f.key] = raw.split(',').map(s => s.trim()).filter(Boolean);
-                else if (f.type === 'number') next[f.key] = Number(raw) || 0;
+                else if (f.type === 'number' || f.type === 'optionIndexSelect') next[f.key] = Number(raw) || 0;
                 else if (f.type === 'boolean') next[f.key] = raw === 'yes';
                 else next[f.key] = raw;
             });
@@ -2089,11 +2115,11 @@ function _renderLcHomework(body, lesson, content, dayType) {
     } else if (part.kind === 'multipleChoice') {
         renderEditableList(partBody, {
             title: 'Testlar', addLabel: "+ Savol qo'shish", items: part.questions || [], idPrefix: 'q',
-            renderRow: (x) => `${escapeHtml(x.question || '')}<br><span style="color:var(--text-muted)">Variantlar: ${escapeHtml((x.options || []).join(', '))} · To'g'ri: #${x.correctIndex}</span>`,
+            renderRow: (x) => `${escapeHtml(x.question || '')}<br><span style="color:var(--text-muted)">Variantlar: ${escapeHtml((x.options || []).join(', '))} · To'g'ri javob: ${escapeHtml((x.options || [])[x.correctIndex] ?? '—')}</span>`,
             fields: [
                 { key: 'question', label: 'Savol', type: 'textarea', required: true },
                 { key: 'options', label: 'Variantlar (vergul bilan)', type: 'csv', required: true },
-                { key: 'correctIndex', label: "To'g'ri variant raqami (0 dan boshlab)", type: 'number', required: true },
+                { key: 'correctIndex', label: "To'g'ri javob", type: 'optionIndexSelect', sourceKey: 'options', required: true },
             ],
             onChange: (items) => { persistPart({ ...part, questions: items }); showMiniToast('Saqlandi'); },
         });
@@ -3174,11 +3200,11 @@ function renderExamDetailTab(container, examId) {
         renderEditableList(document.getElementById('examMcList'), {
             title: 'Test savollari (multiple choice)', addLabel: "+ Savol qo'shish",
             items: content.questions.filter(q => q.kind === 'multipleChoice'), idPrefix: 'emc',
-            renderRow: (x) => `${escapeHtml(x.question || '')}<br><span style="color:var(--text-muted)">Variantlar: ${escapeHtml((x.options || []).join(', '))} · To'g'ri: #${x.correctIndex}</span>`,
+            renderRow: (x) => `${escapeHtml(x.question || '')}<br><span style="color:var(--text-muted)">Variantlar: ${escapeHtml((x.options || []).join(', '))} · To'g'ri javob: ${escapeHtml((x.options || [])[x.correctIndex] ?? '—')}</span>`,
             fields: [
                 { key: 'question', label: 'Savol', type: 'textarea', required: true },
                 { key: 'options', label: 'Variantlar (vergul bilan)', type: 'csv', required: true },
-                { key: 'correctIndex', label: "To'g'ri variant raqami (0 dan boshlab)", type: 'number', required: true },
+                { key: 'correctIndex', label: "To'g'ri javob", type: 'optionIndexSelect', sourceKey: 'options', required: true },
             ],
             onChange: (newItems) => {
                 content.questions = [
