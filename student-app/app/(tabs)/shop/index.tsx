@@ -84,7 +84,7 @@ export default function ShopScreen() {
               <Image source={{ uri: product.imageUrl }} style={styles.cardImage} resizeMode="cover" />
             ) : (
               <View style={[styles.cardIconWrap, { backgroundColor: product.bg }]}>
-                <Ionicons name={product.icon} size={30} color={product.color} />
+                <Ionicons name={product.icon} size={40} color={product.color} />
               </View>
             )}
             <Text style={styles.cardName} numberOfLines={2}>
@@ -127,7 +127,7 @@ export default function ShopScreen() {
                 <Image source={{ uri: dialog.product.imageUrl }} style={styles.dialogImage} resizeMode="cover" />
               ) : (
                 <View style={[styles.dialogIconWrap, { backgroundColor: dialog.product.bg }]}>
-                  <Ionicons name={dialog.product.icon} size={30} color={dialog.product.color} />
+                  <Ionicons name={dialog.product.icon} size={44} color={dialog.product.color} />
                 </View>
               )}
               <Text style={styles.dialogTitle}>{dialog.product.name}</Text>
@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
     gap: 8,
     ...theme.shadow.card,
   },
-  cardIconWrap: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  cardImage: { width: 64, height: 64, borderRadius: 18, backgroundColor: theme.colors.bg },
+  cardIconWrap: { width: 88, height: 88, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  cardImage: { width: 88, height: 88, borderRadius: 18, backgroundColor: theme.colors.bg },
   cardName: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.text, textAlign: 'center' },
   cardDelivered: { fontFamily: theme.fonts.regular, fontSize: 10, color: theme.colors.textMuted, marginTop: -4 },
 
@@ -249,8 +249,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  dialogIconWrap: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  dialogImage: { width: 64, height: 64, borderRadius: 18, backgroundColor: theme.colors.bg, marginBottom: 4 },
+  dialogIconWrap: { width: 96, height: 96, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  dialogImage: { width: 96, height: 96, borderRadius: 20, backgroundColor: theme.colors.bg, marginBottom: 4 },
   dialogTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text, textAlign: 'center' },
   dialogSubtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center' },
   dialogPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
