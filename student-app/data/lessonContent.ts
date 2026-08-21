@@ -415,6 +415,49 @@ export async function getCourseOverallProgress(): Promise<{
   };
 }
 
+// 5-vazifa: "So'zlar" ro'yxati o'ziga xos qattiq yozilgan "faqat birinchi 3
+// dars ochiq" qoidasidan foydalanardi — bu asosiy "Darslar yo'li"dagi
+// haqiqiy (progress/davomatga asoslangan) qulf holatidan butunlay farq
+// qilardi. Endi ikkalasi ham AYNAN shu bitta hisoblashdan (getCourseOverallProgress
+// bilan bir xil mantiq) foydalanadi, shunda qaysi dars asosiy yo'lda ochiq
+// bo'lsa, so'zlar ro'yxatida ham xuddi shu dars ochiq bo'ladi.
+export async function getLessonLockMap(): Promise<Record<string, boolean>> {
+  const mc = await fetchMobileContent();
+  const course = mc.courses[0];
+  const map: Record<string, boolean> = {};
+  if (!course) return map;
+
+  await loadLessonProgress();
+  const adminLessons = mc.lessons.filter((l) => l.courseId === course.id);
+  const resolvedCourseLang: 'english' | 'russian' = course.lang === 'russian' ? 'russian' : 'english';
+
+  let prevPercent = 100;
+  for (let i = 0; i < COURSE_TOTAL_LESSONS; i++) {
+    const l = adminLessons[i];
+    const id = l?.id ?? String(i + 1);
+    const isVideoDay = i % 2 === 0;
+
+    let locked: boolean;
+    if (isVideoDay) {
+      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_DEFAULT_UNLOCK_PERCENT) : COURSE_DEFAULT_UNLOCK_PERCENT;
+      locked = i >= 1 && prevPercent < requiredPercent;
+    } else {
+      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_LIVE_LESSON_UNLOCK_PERCENT) : COURSE_LIVE_LESSON_UNLOCK_PERCENT;
+      locked = i >= 1 && (!l?.attendanceTaken || prevPercent < requiredPercent);
+    }
+    map[id] = locked;
+
+    const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
+    const content = mergeLessonContent(getLessonContent(id, i, resolvedCourseLang), mc.lessonContents[id]);
+    const percent = Math.round(
+      (getCategoryProgress(id, videoCategory) + getCategoryProgress(id, 'vocabulary') +
+        getCategoryProgress(id, 'homework', content.homeworkParts.length)) / 3
+    );
+    prevPercent = percent;
+  }
+  return map;
+}
+
 export const VOCAB_PRACTICE_STEPS = ['translation', 'construct', 'pronounce'] as const;
 export type VocabPracticeStep = (typeof VOCAB_PRACTICE_STEPS)[number];
 export const VOCAB_PRACTICE_SIZE = 8;

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { getLessonContent, mergeLessonContent } from '@/data/lessonContent';
+import { getLessonContent, getLessonLockMap, mergeLessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 
 type LessonFolder = {
@@ -18,7 +18,6 @@ type LessonFolder = {
 };
 
 const TOTAL_LESSONS = 72;
-const UNLOCKED_COUNT = 3;
 const BONUS_TOTAL = 18;
 const BONUS_UNLOCKED = 1;
 
@@ -29,8 +28,12 @@ export default function VocabularyHubScreen() {
   const [showLockedNotice, setShowLockedNotice] = useState(false);
 
   useEffect(() => {
-    fetchMobileContent()
-      .then((mc) => {
+    // Bu yerdagi qulf holati endi "Darslar yo'li"dagi bilan AYNAN bir xil
+    // (getLessonLockMap) — qaysi dars asosiy yo'lda ochiq bo'lsa, so'zlar
+    // ro'yxatida ham shu dars ochiq bo'ladi (avval qattiq "faqat 3 ta dars"
+    // qoidasi bo'lgani sabab bu ikkisi mos kelmasdi).
+    Promise.all([fetchMobileContent(), getLessonLockMap()])
+      .then(([mc, lockMap]) => {
         const course = mc.courses[0];
         const courseLang: 'english' | 'russian' = course?.lang === 'russian' ? 'russian' : 'english';
         const adminLessons = course ? mc.lessons.filter((l) => l.courseId === course.id) : [];
@@ -40,7 +43,7 @@ export default function VocabularyHubScreen() {
           return {
             id,
             name: l?.name ?? `${i + 1}-dars`,
-            locked: i >= UNLOCKED_COUNT,
+            locked: lockMap[id] ?? true,
             wordCount: mergeLessonContent(getLessonContent(id, i, courseLang), mc.lessonContents[id]).vocabulary.length,
           };
         });
