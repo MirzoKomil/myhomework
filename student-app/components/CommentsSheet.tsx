@@ -15,7 +15,23 @@ import {
 
 import { theme } from '@/constants/theme';
 import { profileStats } from '@/data/mock';
-import { addContentComment, ContentComment, fetchContentComments } from '@/services/contentApi';
+import { addContentComment, ContentComment, fetchContentComments, fetchDemoStudentProfile } from '@/services/contentApi';
+
+// Har bir foydalanuvchi ismidan avatar rangini va bosh harflarini chiqaradi
+// — haqiqiy rasm (avatar) o'quvchilar uchun mavjud emas, shu sabab ism
+// asosida barqaror (har doim bir xil ismga bir xil rang/harf) doiraviy
+// avatar ko'rsatiladi.
+const AVATAR_COLORS = ['#7B61FF', '#2563EB', '#DB2777', '#059669', '#D97706', '#DC2626', '#0EA5E9', '#9333EA'];
+function avatarColorFor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((p) => p[0]).join('');
+  return (initials || '?').toUpperCase();
+}
 
 type Props = {
   visible: boolean;
@@ -50,7 +66,15 @@ function CommentRow({
 }) {
   return (
     <View style={[styles.row, isReply && styles.rowReply]}>
-      <Text style={styles.rowEmoji}>{comment.isAdmin ? '🛠️' : '🙂'}</Text>
+      {comment.isAdmin ? (
+        <View style={styles.avatarAdmin}>
+          <Text style={styles.avatarAdminEmoji}>🛠️</Text>
+        </View>
+      ) : (
+        <View style={[styles.avatarCircle, { backgroundColor: avatarColorFor(comment.authorName) }]}>
+          <Text style={styles.avatarInitials}>{initialsOf(comment.authorName)}</Text>
+        </View>
+      )}
       <View style={styles.rowBody}>
         <Text style={styles.rowText}>
           <Text style={styles.rowAuthor}>{comment.authorName}</Text>
@@ -92,6 +116,16 @@ export function CommentsSheet({ visible, onClose, category, itemId, itemLabel }:
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  // Ilgari bu doim hardcode qilingan namuna ismi (profileStats.name =
+  // "Shahzoda Mavlonova") bilan yuborilardi — har bir o'quvchining izohi
+  // bir xil ism bilan chiqardi. Endi haqiqiy (CRM'da tanlangan yoki real
+  // login qilgan) o'quvchining o'z ismi yuklanadi.
+  const [authorName, setAuthorName] = useState(profileStats.name);
+  useEffect(() => {
+    fetchDemoStudentProfile()
+      .then((p) => { if (p?.name) setAuthorName(p.name); })
+      .catch(() => {});
+  }, []);
 
   const load = () => {
     setLoading(true);
@@ -122,7 +156,7 @@ export function CommentsSheet({ visible, onClose, category, itemId, itemLabel }:
     const trimmed = text.trim();
     if (!trimmed || submitting) return;
     setSubmitting(true);
-    addContentComment(category, itemId, itemLabel, profileStats.name, trimmed)
+    addContentComment(category, itemId, itemLabel, authorName, trimmed)
       .then(() => {
         setText('');
         load();
@@ -135,7 +169,7 @@ export function CommentsSheet({ visible, onClose, category, itemId, itemLabel }:
     const trimmed = replyText.trim();
     if (!trimmed || submitting) return;
     setSubmitting(true);
-    addContentComment(category, itemId, itemLabel, profileStats.name, trimmed, parentId)
+    addContentComment(category, itemId, itemLabel, authorName, trimmed, parentId)
       .then(() => {
         setReplyText('');
         setReplyingTo(null);
@@ -237,7 +271,18 @@ const styles = StyleSheet.create({
   empty: { fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center', paddingVertical: 24 },
   row: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   rowReply: { marginLeft: 28, marginTop: 4, marginBottom: 4 },
-  rowEmoji: { fontSize: 18 },
+  avatarCircle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarInitials: { fontFamily: theme.fonts.bold, fontSize: 11, color: '#fff' },
+  avatarAdmin: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    backgroundColor: theme.colors.purpleLight,
+  },
+  avatarAdminEmoji: { fontSize: 14 },
   rowBody: { flex: 1 },
   rowText: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.text, lineHeight: 19 },
   rowAuthor: { fontFamily: theme.fonts.bold },
