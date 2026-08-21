@@ -3470,6 +3470,12 @@ function renderMobileCourseDetailTab(container, course) {
         </div>`;
     }
 
+    // Dars/qism ustiga bosilganda faqat shu akkordeon qayta chiziladi (butun
+    // panel emas) — aks holda eski scroll joyi yo'qolib, har safar ro'yxat
+    // qayta tepaga sakrardi. Qayta chizishdan oldin joriy scroll pozitsiyasi
+    // saqlab, tugagach tiklanadi.
+    const prevScrollTop = document.getElementById('courseAccordion')?.scrollTop || 0;
+
     container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden';
     container.innerHTML = `
     <div style="flex-shrink:0;padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface)">
@@ -3487,6 +3493,8 @@ function renderMobileCourseDetailTab(container, course) {
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 6H3M3 12h5M3 18h5"/><path d="M13 12h8M17 8v8"/></svg>
         Dars qo'shish
     </button>`;
+
+    if (prevScrollTop) document.getElementById('courseAccordion').scrollTop = prevScrollTop;
 
     document.getElementById('backToCourses').addEventListener('click', () => {
         _activeCourseId = null;
