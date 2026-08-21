@@ -225,10 +225,20 @@ export async function authedFetch(url: string, options: RequestInit = {}): Promi
 }
 
 let _cache: MobileContent | null = null;
+let _cacheFetchedAt = 0;
 let _fetchPromise: Promise<MobileContent> | null = null;
 
+// O'quvchi ilovani bir marta ochib, uni kunlar davomida fon rejimida ochiq
+// qoldirishi mumkin (mobil qurilmalar ilovani o'chirmaydi, faqat fon
+// rejimiga o'tkazadi) — shunday uzoq sessiyalarda kesh muddati bo'lmasa,
+// CRM'da kiritilgan HECH QANDAY yangilanish (masalan test to'g'ri javobini
+// tuzatish) o'sha sessiyaga umuman yetib bormaydi. Shu sabab kesh
+// belgilangan vaqtdan keyin eskirgan deb hisoblanadi va avtomatik qayta
+// yuklanadi — o'quvchi hech narsa qilishi shart emas.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 export async function fetchMobileContent(): Promise<MobileContent> {
-  if (_cache) return _cache;
+  if (_cache && Date.now() - _cacheFetchedAt < CACHE_TTL_MS) return _cache;
   if (_fetchPromise) return _fetchPromise;
 
   _fetchPromise = authedFetch(API_BASE)
@@ -255,6 +265,7 @@ export async function fetchMobileContent(): Promise<MobileContent> {
           books: data.library?.books ?? [],
         },
       };
+      _cacheFetchedAt = Date.now();
       return _cache;
     })
     .finally(() => { _fetchPromise = null; });
@@ -264,6 +275,7 @@ export async function fetchMobileContent(): Promise<MobileContent> {
 
 export function invalidateCache() {
   _cache = null;
+  _cacheFetchedAt = 0;
 }
 
 // CRM'da darsga biriktirilgan video va boshqa fayllarni (pdf/word/rasm/matn)

@@ -9,8 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { AppState, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
@@ -19,6 +19,7 @@ import { theme } from '@/constants/theme';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { getToken, loadAuth } from '@/services/studentAuthStore';
+import { invalidateCache } from '@/services/contentApi';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -72,6 +73,21 @@ export default function RootLayout() {
   // bilanoq shu yerda bir marta yuklab qo'yiladi.
   useEffect(() => {
     loadAuth();
+  }, []);
+
+  // O'quvchi ilovani fon rejimiga o'tkazib, keyin qaytib ochganda (masalan
+  // boshqa ilovaga o'tib qaytgach) dars/test ma'lumotlari darhol yangi
+  // bo'lishi kerak — aks holda CRM'dagi tuzatishlar (masalan test to'g'ri
+  // javobi) uzoq ochiq turgan eski sessiyalarga yetib bormay qoladi.
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (appStateRef.current.match(/inactive|background/) && next === 'active') {
+        invalidateCache();
+      }
+      appStateRef.current = next;
+    });
+    return () => sub.remove();
   }, []);
 
   // 151-ish (qayta ish): standalone brauzerdan (haqiqiy foydalanuvchi)
