@@ -1651,6 +1651,12 @@ function renderEditableList(container, opts) {
             else newItems.push(merged);
             closeModal();
             opts.onChange(newItems);
+            // Ro'yxat shu yerdagi (yopilgan) `items` closure'iga tayanadi —
+            // saqlangandan keyin qayta chizib qo'yilmasa, keyingi qo'shish/
+            // tahrirlash ESKI ro'yxatdan foydalanib, hozirgina saqlangan
+            // yozuvni "yo'q qilib" qayta yozib yuborardi (har bir savoldan
+            // keyin sahifadan chiqib-kirishga majbur qilgan xato shu edi).
+            renderEditableList(container, { ...opts, items: newItems });
         };
     }
 
@@ -1664,6 +1670,7 @@ function renderEditableList(container, opts) {
         if (!confirm("O'chirilsinmi?")) return;
         const newItems = items.filter((_, i) => i !== Number(btn.dataset.lcDel));
         opts.onChange(newItems);
+        renderEditableList(container, { ...opts, items: newItems });
     }));
     if (opts.onRowClick) {
         container.querySelectorAll('[data-lc-row]').forEach(row => row.addEventListener('click', () => {
