@@ -95,13 +95,17 @@ export type ProgressCategory = 'video' | 'speaking' | 'vocabulary' | 'homework';
 
 export function getCategoryProgress(lessonId: string, category: ProgressCategory, totalHomeworkParts = 0): number {
   const p = getLessonProgress(lessonId);
+  // 52/3-vazifa: mashqlar (grammatika/nutq) "Uyga vazifa" qismiga
+  // ko'chirilgani sabab, "Videodars"/"Speaking ko'rgazmalari" endi
+  // to'g'ridan-to'g'ri video/slaydlarni ko'rish ekraniga olib boradi —
+  // alohida "mashqlar" bosqichi yo'q. Shu sabab bu ikkalasi videoExercises/
+  // speakingExercises bilan emas, faqat ko'rilgan-ko'rilmaganiga qarab
+  // hisoblanadi (aks holda hech qachon 100%ga yetmasdi).
   if (category === 'video') {
-    const done = [p.videoWatch, p.videoExercises].filter(Boolean).length;
-    return Math.round((done / 2) * 100);
+    return p.videoWatch ? 100 : 0;
   }
   if (category === 'speaking') {
-    const done = [p.slidesWatch, p.speakingExercises].filter(Boolean).length;
-    return Math.round((done / 2) * 100);
+    return p.slidesWatch ? 100 : 0;
   }
   if (category === 'vocabulary') {
     const done = [p.vocabList, p.vocabPractice].filter(Boolean).length;
