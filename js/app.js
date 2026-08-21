@@ -3380,38 +3380,16 @@ function renderMobileCourseDetailTab(container, course) {
                 </div>
                 <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(false)}</div>
             </div>`;
-        const mediaRowExpanded = _expandedSectionRows.has(`${l.id}:media`);
-        const videoRow = expanded && isVideoDay ? `
-            <div data-toggle-section-row="${escapeHtml(l.id)}:media" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
-                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">🎬</div>
-                <div style="flex:1;min-width:0">
-                    <div style="font-weight:600;font-size:13px;color:var(--text)">Videodars</div>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${escapeHtml(lcContent.videoUrl ? "Video, konspekt va grammatika mashqlari — video qo'yilgan" : "Video, konspekt va grammatika mashqlari — video hali qo'yilmagan")}</div>
-                </div>
-                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(mediaRowExpanded)}</div>
-            </div>
-            ${mediaRowExpanded ? `
-            <div>
-                ${subRow('▶️', "Videodarsni ko'rish", 'Video + konspekt + izohlar', 'konspekt')}
-                ${subRow('✏️', 'Mashqlarni bajarish', 'Grammar vazifalar', 'main')}
-            </div>` : ''}` : '';
-        // Ilovada "Speaking ko'rgazmalari" ochilganda ham xuddi shunday ikkita qism
-        // ko'rsatiladi: Slaydlarni ko'rish (slaydlar + PDF yuklash shu yerda) va
-        // Mashqlarni bajarish (Nutq mashqlari — alohida).
-        const speakingRow = expanded && !isVideoDay ? `
-            <div data-toggle-section-row="${escapeHtml(l.id)}:media" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);cursor:pointer;transition:background 0.12s" onmouseover="this.style.background='var(--bg,#f9fafb)'" onmouseout="this.style.background=''">
-                <div style="width:36px;height:36px;border-radius:8px;background:var(--bg,#f9fafb);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">🗣️</div>
-                <div style="flex:1;min-width:0">
-                    <div style="font-weight:600;font-size:13px;color:var(--text)">Speaking ko'rgazmalari</div>
-                    <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Slaydlar va speaking mashqlari</div>
-                </div>
-                <div style="color:var(--text-muted);flex-shrink:0">${chevronSvg(mediaRowExpanded)}</div>
-            </div>
-            ${mediaRowExpanded ? `
-            <div>
-                ${subRow('🖼️', "Slaydlarni ko'rish", "Ko'rgazmali slaydlar + konspekt", 'main')}
-                ${subRow('🎤', 'Mashqlarni bajarish', 'Speaking vazifalar', 'practice')}
-            </div>` : ''}` : '';
+        // Mashqlar (grammatika/nutq) endi Uyga vazifa qismiga ko'chirilgan —
+        // shu sabab "Videodars"/"Speaking ko'rgazmalari" ustiga bosilganda
+        // oraliq (Ko'rish/Mashqlar) tanlov qilinmasdan, to'g'ridan-to'g'ri shu
+        // qismning tahrirlash oynasi ochiladi.
+        const videoRow = expanded && isVideoDay
+            ? sectionRow('🎬', 'Videodars', lcContent.videoUrl ? "Video, konspekt va grammatika — video qo'yilgan" : "Video, konspekt va grammatika — video hali qo'yilmagan", 'konspekt')
+            : '';
+        const speakingRow = expanded && !isVideoDay
+            ? sectionRow('🗣️', 'Speaking ko\'rgazmalari', "Slaydlar va konspekt", 'main')
+            : '';
 
         // Ilovada "Yangi so'zlar" ochilganda ham ikkita qism ko'rsatiladi: "Yangi
         // so'zlar ro'yxati" (so'zlarni ko'rish/tinglash) va "O'rganish, yodlash,
