@@ -9274,7 +9274,11 @@ function openAddToPlatformModal(sid) {
     if (!student) return;
 
     const mc = getItem(STORAGE_KEYS.mobileContent, {});
-    const courses = mc.courses || [];
+    // O'quvchi qaysi tilda o'qiyotgan bo'lsa (subject), faqat o'sha tildagi
+    // kurslar ko'rsatiladi — rus tili o'quvchisiga ingliz tili kursi (yoki
+    // aksincha) tasodifan biriktirilib qo'yilmasligi uchun.
+    const studentLang = student.subject === 'russian' ? 'russian' : 'english';
+    const courses = (mc.courses || []).filter(c => (c.lang || 'english') === studentLang);
 
     if (courses.length === 0) {
         openModal(
@@ -9282,7 +9286,7 @@ function openAddToPlatformModal(sid) {
             `<div style="text-align:center;padding:24px 0">
                 <div style="font-size:36px;margin-bottom:10px">📚</div>
                 <div style="font-size:14px;font-weight:600;margin-bottom:6px">Kurslar mavjud emas</div>
-                <div style="font-size:13px;color:var(--text-muted)">Avval "Mobil ilova" bo'limida kurs yarating</div>
+                <div style="font-size:13px;color:var(--text-muted)">Avval "Mobil ilova" bo'limida (${studentLang === 'russian' ? 'Rus tili' : 'Ingliz tili'}) kurs yarating</div>
             </div>`,
             `<button class="btn-secondary" onclick="closeModal()">Yopish</button>`
         );
@@ -9290,7 +9294,11 @@ function openAddToPlatformModal(sid) {
     }
 
     const currentCourseId = student.platformCourseId || '';
-    const currentCourse = courses.find(c => c.id === currentCourseId);
+    // To'liq (filtrlanmagan) ro'yxatdan qidiriladi — agar avval xato tilda
+    // kurs biriktirilgan bo'lsa ham, admin buni "Hozirgi kurs" yozuvida
+    // ko'rib, to'g'irlashi mumkin bo'lsin (pastdagi ro'yxatda esa faqat
+    // to'g'ri tildagi kurslar tanlov uchun chiqadi).
+    const currentCourse = (mc.courses || []).find(c => c.id === currentCourseId);
     const currentLabel = currentCourse
         ? `<div style="margin-bottom:14px;padding:10px 14px;background:var(--bg);border-radius:8px;font-size:13px;border:1px solid var(--border)">
                <span style="color:var(--text-muted)">Hozirgi kurs:</span>

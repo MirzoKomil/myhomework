@@ -563,6 +563,27 @@ async function migrateMultipleChoiceManualFixes() {
     console.log(`[DB] Qo'lda tasdiqlangan test javoblari: ${appliedCount} ta qo'llandi, ${skippedCount} ta mos kelmadi (o'tkazib yuborildi).`);
 }
 
+// 1-vazifa: CRM'da tasodifiy/joyni to'ldirish uchun kiritilgan kurs nomi
+// ("Kdkslamdnc") to'g'ri nomga bir martalik almashtiriladi.
+async function migrateRenameGarbledCourse() {
+    const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
+    if (!row) return;
+    const mc = row.data;
+    if (mc._courseRenameFixedAt) return; // bir marta ishlaydi
+
+    const course = (mc.courses || []).find(c => c.lang === 'russian' && c.name === 'Kdkslamdnc');
+    if (course) {
+        course.name = "Rus tilida 90 kunda gapiring";
+        mc._courseRenameFixedAt = new Date().toISOString();
+        await saveMobileContentData(pool, mc);
+        console.log('[DB] Kurs nomi tuzatildi: "Kdkslamdnc" -> "Rus tilida 90 kunda gapiring"');
+    } else {
+        mc._courseRenameFixedAt = new Date().toISOString();
+        await saveMobileContentData(pool, mc);
+        console.log('[DB] Kurs nomi tuzatish: "Kdkslamdnc" topilmadi (ehtimol allaqachon o\'zgartirilgan).');
+    }
+}
+
 async function seedIfEmpty() {
     const row = await q1('SELECT COUNT(*) AS c FROM users');
     const count = parseInt(row.c, 10);
@@ -3663,6 +3684,7 @@ async function init() {
     await seedIfEmpty();
     await migrateMultipleChoiceCorrectIndex().catch(err => console.error('[DB] correctIndex tuzatishda xatolik:', err.message));
     await migrateMultipleChoiceManualFixes().catch(err => console.error('[DB] correctIndex qo\'lda tuzatishda xatolik:', err.message));
+    await migrateRenameGarbledCourse().catch(err => console.error('[DB] Kurs nomini tuzatishda xatolik:', err.message));
 }
 
 // ── "Hisoblangan" (computed/auto) eslatmalarni push orqali yetkazish ────────
