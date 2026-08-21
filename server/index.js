@@ -164,13 +164,6 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'Myhomework.uz API', version: '1.0.0' });
 });
 
-app.get('/api/health/shop-debug', async (req, res) => {
-    const { pool } = require('./db');
-    const row = (await pool.query('SELECT data FROM mobile_content WHERE singleton = 1')).rows[0];
-    const mc = row ? row.data : {};
-    res.json({ shopOverrides: mc.shopOverrides || {}, shop: (mc.shop || []).map(p => ({ id: p.id, name: p.name, imageUrl: p.imageUrl })) });
-});
-
 app.use(['/api/auth/login', '/api/auth/student-login'], loginLimit);
 app.use('/api/leads', webhookLimit);
 app.use('/api/telephony', webhookLimit);

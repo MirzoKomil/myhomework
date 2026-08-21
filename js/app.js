@@ -1591,6 +1591,13 @@ function renderEditableList(container, opts) {
             `<button type="button" class="btn-ghost" onclick="closeModal()">Bekor qilish</button><button type="button" class="btn-primary-sm" id="lcSaveItem">Saqlash</button>`,
             { wide: true });
 
+        // Fayl yuklanayotgan payt (ayniqsa sekin mobil internetda bir necha
+        // soniya davom etishi mumkin) "Saqlash" bosilsa, hali bo'sh turgan
+        // qiymat saqlanib qolar, yuklash tugagach esa modal allaqachon yopiq
+        // bo'lardi — natija hech qachon ko'rinmasdi. Shu sabab yuklanayotganda
+        // "Saqlash" bloklanadi va tugma holati aniq ko'rsatiladi.
+        let _pendingUploads = 0;
+        const saveBtn = document.getElementById('lcSaveItem');
         opts.fields.filter(f => f.type === 'image' || f.type === 'audio').forEach(f => {
             const hiddenInput = document.getElementById(`lcField_${f.key}`);
             const fileInput = document.getElementById(`lcFieldFile_${f.key}`);
@@ -1608,11 +1615,20 @@ function renderEditableList(container, opts) {
                 const file = fileInput.files && fileInput.files[0];
                 fileInput.value = '';
                 if (!file) return;
+                _pendingUploads++;
+                btn.disabled = true;
+                btn.textContent = 'Yuklanmoqda...';
+                if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; }
                 try {
                     const uploaded = await apiUploadFile(file);
                     setUrl(uploaded.url);
                 } catch (err) {
                     alert('Yuklashda xatolik: ' + (err.message || err));
+                    btn.textContent = hiddenInput.value ? 'Almashtirish' : 'Yuklash';
+                } finally {
+                    _pendingUploads--;
+                    btn.disabled = false;
+                    if (_pendingUploads === 0 && saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = ''; }
                 }
             });
             removeBtn.addEventListener('click', () => setUrl(''));
@@ -1634,6 +1650,7 @@ function renderEditableList(container, opts) {
         });
 
         document.getElementById('lcSaveItem').onclick = () => {
+            if (_pendingUploads > 0) { alert("Fayl hali yuklanmoqda, biroz kuting"); return; }
             const next = {};
             let ok = true;
             opts.fields.forEach(f => {
