@@ -310,17 +310,55 @@ const MILESTONE_GIFTS_RU: NonNullable<LessonNode['milestone']>[] = [
   { emoji: '🏆', title: 'Вы справились с этим!', fact: 'Поздравляем, вы почти достигли цели! Английский — это язык глобального общения (Lingua Franca). Завершив эти уроки, вы стали человеком, который может найти друзей, партнёров и новые возможности в любой точке мира!' },
 ];
 
+// 9-vazifa: rus tili kursidagi o'quvchiga ingliz tili haqidagi faktlar
+// (yuqoridagi ikkita massiv) ko'rsatilishi mantiqsiz edi — bu kurs bo'yicha
+// endi RUS TILI haqidagi qiziqarli faktlar ko'rsatiladi. MILESTONE_GIFTS
+// bilan bir xil tartib/emoji (13-o'rindan boshqa: 🍊 o'rniga 🌈).
+const MILESTONE_GIFTS_RUSSIAN_COURSE: NonNullable<LessonNode['milestone']>[] = [
+  { emoji: '🚀', title: 'Koinot tili', fact: 'Xalqaro kosmik stansiyada (XKS) ishlaydigan barcha xorijiy fazogirlar rus tilini bilishlari shart. Chunki kosmik kema favqulodda qo\'nganida barcha boshqaruv tizimlari rus tilida ishlaydi. Rus tili — koinotni zabt etgan til!' },
+  { emoji: '🔥', title: 'Yevroosiyo kaliti', fact: 'Rus tili — Yevropada eng ko\'p odam ona tili sifatida gaplashadigan 1-raqamli tildir. Dunyo bo\'yicha esa 250 milliondan ortiq inson bu tilda muloqot qiladi. Siz ulkan bir mintaqa bilan bog\'lanmoqdasiz!' },
+  { emoji: '💡', title: '"B" bilan boshlanmaydigan til siri', fact: 'Rus tilining qadimiy qoidalariga ko\'ra, asl ruscha so\'zlar deyarli hech qachon "A" yoki "F" harflari bilan boshlanmagan. Masalan, арбуз, апельсин yoki флаг kabi so\'zlarning barchasi boshqa tillardan kirib kelgan!' },
+  { emoji: '🌐', title: 'Runet qudrati', fact: 'Rus tili internetda tarqalganligi bo\'yicha dunyoda ingliz tilidan keyin 2-o\'rinda turadi. Bu tildagi maqolalar, dasturlar, video darsliklar va kontentlar hajmi millionlab foydali ma\'lumotlarni beradi!' },
+  { emoji: '⚡️', title: '33 harfli boylik', fact: 'Rus alifbosidagi eng noodatiy harf — "Ё" (Yo) harfidir. U 1783-yilda o\'ylab topilgan, lekin hozirgi kunda ko\'pincha "Е" bilan almashtirib yoziladi. Ulyanovsk shahrida hatto bu harfga bag\'ishlangan haykal ham bor!' },
+  { emoji: '🧠', title: 'Ko\'p ma\'nolilik sehri', fact: 'Rus tilida so\'zlarning o\'rnini xohlagancha o\'zgartirsangiz ham gapning ma\'nosi yo\'qolmaydi, faqat urg\'u o\'zgaradi: "Я тебя люблю", "Люблю я тебя", "Тебя я люблю". Bu miyani moslashuvchan va fikrlashni erkin qiladi!' },
+  { emoji: '🔬', title: 'BMT rasmiy tili', fact: 'Birlashgan Millatlar Tashkilotining (BMT) faqat 6 ta rasmiy ishchi tili bor va rus tili ulardan biri. Bu til butun dunyo diplomatiyasi va siyosatida hal qiluvchi kuchga ega.' },
+  { emoji: '✍️', title: 'Adabiyot xazinasi', fact: 'Tolstoy, Dostoyevskiy, Chexov va Pushkin asarlarini asliyatda (rus tilida) o\'qish orqali inson so\'z boyligini va dunyoqarashini eng yuqori darajaga ko\'tarish mumkin. Dunyo bo\'ylab millionlab odamlar ularni aslida o\'qish uchungina bu tilni o\'rganishadi!' },
+  { emoji: '🔤', title: 'Gigant so\'zlar', fact: 'Ginnesning rekordlar kitobiga kirgan eng uzun ruscha so\'z — "Превысокомногорассмотрительствующий" (35 ta harf). Lekin xavotir olmang, kundalik hayotda bunday so\'zlar ishlatilmaydi!' },
+  { emoji: '🐕', title: 'Yagona sirli so\'z', fact: 'Rus tilida ildizsiz (ildiz qismi bo\'lmagan) faqat bitta so\'z bor, u ham bo\'lsa — "вынуть" fe\'li. Unda old qo\'shimcha (вы-), suffiks (-ну-) va qo\'shimcha (-ть) bor, lekin an\'anaviy ildiz yo\'q!' },
+  { emoji: '💼', title: 'MDH bozorida katta imkoniyat', fact: 'MDH davlatlarida biznes, savdo va IT sohasida rus tilini biladigan mutaxassislarga talab doimo yuqori. Bu til orqali siz o\'nlab davlatlar bozoriga to\'g\'ridan-to\'g\'ri chiqish imkoniyatiga ega bo\'lasiz.' },
+  { emoji: '👻', title: 'Qor rangi haqida jumboq', fact: 'Rus tilida ko\'k va havorang uchun alohida mustaqil so\'zlar bor (синий va голубой), holbuki ingliz tilida ikkalasi ham "blue" deyiladi. Olimlarning aniqlashicha, rus tilida gapiruvchilar rang tuslarini tezroq va aniqroq ajrata oladilar!' },
+  { emoji: '🌈', title: 'Harfsiz tovushlar', fact: 'Rus alifbosidagi "Ъ" (qattiqlik belgisi) va "Ь" (yumshatish belgisi) o\'zlari alohida hech qanday tovush chiqarmaydi, lekin yonidagi harflarning talaffuzini va so\'zning ma\'nosini butunlay o\'zgartirib yuboradi!' },
+  { emoji: '🏆', title: 'Siz cho\'qqiga yetdingiz!', fact: 'Rus tili dunyodagi eng murakkab, ammo eng boy va ohangdor tillardan biri hisoblanadi. Siz bu murakkab yo\'lni bosib o\'tdingiz va endi erkin muloqot qila olasiz. Bu sizning ulkan yutug\'ingiz!' },
+];
+
 // 147-ish: darsni ochganda ko'rsatiladigan tabrik sarlavhalari — xilma-xillik
 // uchun juft/toq marralarda almashtirib turiladi.
 const MILESTONE_CELEBRATION_TITLE_KEYS: TranslationKey[] = ['roadmap_celebration_title_1', 'roadmap_celebration_title_2'];
 
 // ─── Milestone badge ──────────────────────────────────────────────────────────
-function MilestoneBadge({ badge, locked }: { badge: NonNullable<LessonNode['milestone']>; locked: boolean }) {
+function MilestoneBadge({
+  badge,
+  locked,
+  courseLang = 'english',
+}: {
+  badge: NonNullable<LessonNode['milestone']>;
+  locked: boolean;
+  courseLang?: 'english' | 'russian';
+}) {
   const { t, lang } = useLang();
   const [showModal, setShowModal] = useState(false);
   const wobble = useRef(new Animated.Value(0)).current;
   const giftIndex = MILESTONE_GIFTS.indexOf(badge);
-  const localizedGift = lang === 'ru' && giftIndex >= 0 ? MILESTONE_GIFTS_RU[giftIndex] : badge;
+  // Rus tili kursidagi o'quvchiga ingliz tili haqidagi faktlar ko'rsatilishi
+  // mantiqsiz edi — bu kurs uchun endi rus tili haqidagi faktlar chiqadi
+  // (interfeys tili — lang — bilan aralashtirilmasin: bu kurs TILI, ya'ni
+  // qaysi darsni o'qiyotgani).
+  const localizedGift =
+    courseLang === 'russian' && giftIndex >= 0
+      ? MILESTONE_GIFTS_RUSSIAN_COURSE[giftIndex]
+      : lang === 'ru' && giftIndex >= 0
+        ? MILESTONE_GIFTS_RU[giftIndex]
+        : badge;
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -439,13 +477,13 @@ function LessonRow({
             <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} courseLang={courseLang} />
           </View>
           <View style={ss.badgeWrap}>
-            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
+            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} courseLang={courseLang} />}
           </View>
         </>
       ) : (
         <>
           <View style={ss.badgeWrap}>
-            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} />}
+            {lesson.milestone && <MilestoneBadge badge={lesson.milestone} locked={lesson.locked} courseLang={courseLang} />}
           </View>
           <View style={ss.cardWrap}>
             <LessonCard lesson={lesson} isActive={isActive} index={index} adminContent={adminContent} courseLang={courseLang} />
