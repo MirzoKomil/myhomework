@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -23,13 +23,21 @@ function shareApp() {
 
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { student } = useAuth();
   const { t } = useLang();
 
-  const handleLogout = async () => {
+  // 16-vazifa: ilgari "/" (bosh sahifa) ga qaytarardi — u yerda token
+  // yo'qligini faqat ilova birinchi ochilganda (bir martalik useEffect)
+  // tekshirilgani uchun, chiqishdan keyin ham eski "namuna o'quvchi"
+  // ma'lumotlari bilan ishlashda davom etardi (xuddi boshqa demo
+  // akkauntga o'tib qolgandek ko'rinardi). Endi to'g'ridan-to'g'ri login
+  // ekraniga o'tkaziladi.
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
     await clearAuth();
     invalidateCache();
-    router.replace('/');
+    router.replace('/login' as never);
   };
 
   const group1: Row[] = [
@@ -96,9 +104,9 @@ export default function SettingsScreen() {
         {renderGroup(group2)}
 
         {student ? (
-          <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+          <Pressable style={styles.logoutBtn} onPress={() => setShowLogoutConfirm(true)}>
             <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
-            <Text style={styles.logoutText}>{t('settings_logout')} ({student.name})</Text>
+            <Text style={styles.logoutText}>{t('settings_logout')}</Text>
           </Pressable>
         ) : (
           <Pressable style={styles.loginBtn} onPress={() => router.push('/login' as never)}>
@@ -107,6 +115,25 @@ export default function SettingsScreen() {
           </Pressable>
         )}
       </ScrollView>
+
+      <Modal visible={showLogoutConfirm} animationType="fade" transparent onRequestClose={() => setShowLogoutConfirm(false)}>
+        <View style={styles.dialogBackdrop}>
+          <Pressable style={styles.dialogBackdropTap} onPress={() => setShowLogoutConfirm(false)} />
+          <View style={styles.dialogCard}>
+            <Ionicons name="log-out-outline" size={36} color={theme.colors.danger} />
+            <Text style={styles.dialogTitle}>Chiqishni tasdiqlaysizmi?</Text>
+            <Text style={styles.dialogSubtitle}>Ilovadan to'liq chiqasiz, qayta kirish uchun login/parol kerak bo'ladi.</Text>
+            <View style={styles.dialogBtnRow}>
+              <Pressable style={styles.dialogCancelBtn} onPress={() => setShowLogoutConfirm(false)}>
+                <Text style={styles.dialogCancelText}>Bekor qilish</Text>
+              </Pressable>
+              <Pressable style={styles.dialogConfirmBtn} onPress={confirmLogout}>
+                <Text style={styles.dialogConfirmText}>Chiqish</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -144,4 +171,35 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   loginText: { fontFamily: theme.fonts.semiBold, fontSize: 15, color: theme.colors.purple },
+
+  dialogBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  dialogBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+  dialogTitle: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text, textAlign: 'center' },
+  dialogSubtitle: { fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center' },
+  dialogBtnRow: { flexDirection: 'row', gap: 10, marginTop: 10, width: '100%' },
+  dialogCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.bg,
+    alignItems: 'center',
+  },
+  dialogCancelText: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.textMuted },
+  dialogConfirmBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.danger,
+    alignItems: 'center',
+  },
+  dialogConfirmText: { fontFamily: theme.fonts.bold, fontSize: 14, color: '#fff' },
 });
