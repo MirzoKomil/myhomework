@@ -39,17 +39,38 @@ export default function SlidesScreen() {
   // qulayroq) — slidePage'ning gorizontal padding'ini (20+20) hisobga olib,
   // balandlik shu nisbatga qarab dinamik hisoblanadi.
   const slideAreaWidth = width - 40;
-  const slideAreaHeight = (slideAreaWidth * 4) / 5;
+  const fallbackSlideAreaHeight = (slideAreaWidth * 4) / 5;
   const [content, setContent] = useState<LessonContent | null>(null);
   const [materials, setMaterials] = useState<LessonMaterials | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const [showComments, setShowComments] = useState(false);
+  // 17-vazifa: rasm qat'iy 5:4 nisbatga majburlangan quti ichida "contain"
+  // rejimida ko'rsatilardi — rasmning haqiqiy nisbati bundan farq qilsa,
+  // pastida katta bo'sh joy (letterboxing) qolib ketardi. Endi har bir
+  // rasmning o'zining haqiqiy o'lchami (Image.getSize) asosida quti
+  // balandligi hisoblanadi, shu bilan bo'sh joy qolmaydi.
+  const [aspectRatios, setAspectRatios] = useState<Record<string, number>>({});
 
   useEffect(() => {
     getResolvedLessonContent(String(lessonId), 1).then(setContent);
     fetchMobileContent().then((mc) => setMaterials(getLessonMaterials(mc, String(lessonId))));
   }, [lessonId]);
+
+  useEffect(() => {
+    if (!content) return;
+    content.slides.forEach((s) => {
+      if (!s.imageUrl || aspectRatios[s.id]) return;
+      Image.getSize(
+        s.imageUrl,
+        (w, h) => {
+          if (w > 0 && h > 0) setAspectRatios((prev) => ({ ...prev, [s.id]: w / h }));
+        },
+        () => {}
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
 
   useEffect(() => {
     markDone(String(lessonId), 'slidesWatch');
@@ -102,18 +123,22 @@ export default function SlidesScreen() {
         scrollEventThrottle={16}
         onMomentumScrollEnd={onScrollEnd}
         onScrollEndDrag={onScrollEnd}>
-        {slides.map((slide) => (
-          <View key={slide.id} style={[styles.slidePage, { width }]}>
-            {slide.imageUrl ? (
-              <Image source={{ uri: slide.imageUrl }} style={[styles.slideImage, { height: slideAreaHeight }]} resizeMode="contain" />
-            ) : (
-              <View style={[styles.slideVisual, { height: slideAreaHeight }]}>
-                <Ionicons name="easel-outline" size={48} color="#fff" />
-                <Text style={styles.slideVisualTitle}>{slide.title}</Text>
-              </View>
-            )}
-          </View>
-        ))}
+        {slides.map((slide) => {
+          const ratio = slide.imageUrl ? aspectRatios[slide.id] : undefined;
+          const slideAreaHeight = ratio ? slideAreaWidth / ratio : fallbackSlideAreaHeight;
+          return (
+            <View key={slide.id} style={[styles.slidePage, { width }]}>
+              {slide.imageUrl ? (
+                <Image source={{ uri: slide.imageUrl }} style={[styles.slideImage, { height: slideAreaHeight }]} resizeMode="contain" />
+              ) : (
+                <View style={[styles.slideVisual, { height: slideAreaHeight }]}>
+                  <Ionicons name="easel-outline" size={48} color="#fff" />
+                  <Text style={styles.slideVisualTitle}>{slide.title}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
 
       <View style={styles.progressRow}>
