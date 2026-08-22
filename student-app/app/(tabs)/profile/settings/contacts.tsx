@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { profileStats } from '@/data/mock';
+import { fetchDemoStudentProfile } from '@/services/contentApi';
 
-const SUPPORT_EMAIL = 'support@myhomework.uz';
+const ADMIN_TELEGRAM_URL = 'https://t.me/Domwork_admin';
 
 const SOCIALS: { icon: keyof typeof Ionicons.glyphMap; label: string; url: string }[] = [
   { icon: 'paper-plane-outline', label: 'Telegram', url: 'https://t.me/myhomeworkuz' },
@@ -22,6 +23,20 @@ export default function ContactsScreen() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [showThanks, setShowThanks] = useState(false);
+  // 15-vazifa: yuqoridagi telefon qatori ilgari hardcode qilingan namuna
+  // raqam edi — endi o'quvchini o'ziga aylantirgan sotuv menejerining ismi
+  // ko'rsatiladi, bosilganda esa uning haqiqiy raqamiga qo'ng'iroq qilinadi.
+  const [managerName, setManagerName] = useState('');
+  const [managerPhone, setManagerPhone] = useState('');
+  useEffect(() => {
+    fetchDemoStudentProfile()
+      .then((p) => {
+        if (!p) return;
+        setManagerName(p.salesManagerName);
+        setManagerPhone(p.salesManagerPhone);
+      })
+      .catch(() => {});
+  }, []);
 
   const submit = () => {
     if (!name.trim() || !message.trim()) return;
@@ -36,13 +51,15 @@ export default function ContactsScreen() {
       <ScreenHeader title="Kontaktlar" showBack />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.group}>
-          <Pressable style={[styles.row, styles.rowBorder]} onPress={() => Linking.openURL(`tel:${profileStats.phone}`)}>
+          <Pressable
+            style={[styles.row, styles.rowBorder]}
+            onPress={() => Linking.openURL(`tel:${managerPhone || profileStats.phone}`)}>
             <Ionicons name="call-outline" size={20} color={theme.colors.purple} />
-            <Text style={styles.rowLabel}>{profileStats.phone}</Text>
+            <Text style={styles.rowLabel}>{managerName || 'Sotuv menejeri'}</Text>
           </Pressable>
-          <Pressable style={styles.row} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}>
-            <Ionicons name="mail-outline" size={20} color={theme.colors.purple} />
-            <Text style={styles.rowLabel}>{SUPPORT_EMAIL}</Text>
+          <Pressable style={styles.row} onPress={() => Linking.openURL(ADMIN_TELEGRAM_URL)}>
+            <Ionicons name="paper-plane-outline" size={20} color={theme.colors.purple} />
+            <Text style={styles.rowLabel}>@Domwork_admin</Text>
           </Pressable>
         </View>
 

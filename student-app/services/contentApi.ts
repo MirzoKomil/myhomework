@@ -409,6 +409,10 @@ export type DemoProfileResponse = {
   mainTeacherPhone: string;
   assistantTeacherName: string;
   assistantTeacherPhone: string;
+  // 15-vazifa: "Kontaktlar" ekrani uchun — o'quvchini o'ziga aylantirgan
+  // sotuv menejeri.
+  salesManagerName: string;
+  salesManagerPhone: string;
 };
 
 export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | null> {
@@ -430,6 +434,8 @@ export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | n
     mainTeacherPhone: data.mainTeacherPhone ?? '',
     assistantTeacherName: data.assistantTeacherName ?? '',
     assistantTeacherPhone: data.assistantTeacherPhone ?? '',
+    salesManagerName: data.salesManagerName ?? '',
+    salesManagerPhone: data.salesManagerPhone ?? '',
   };
 }
 

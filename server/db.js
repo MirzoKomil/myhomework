@@ -1832,11 +1832,32 @@ async function getDemoStudentProfile(studentId) {
         : [];
     const mainTeacher = teacherRows.find(t => t.id === student.teacherId);
     const assistantTeacher = teacherRows.find(t => t.id === student.assistantTeacherId);
+
+    // 15-vazifa: "Sozlamalar > Kontaktlar" ekranidagi telefon qatori ilgari
+    // hardcode qilingan namuna raqam edi — endi o'quvchini o'ziga aylantirgan
+    // sotuv menejerining (asl lid orqali) ismi/telefoni qaytariladi.
+    let salesManagerName = '';
+    let salesManagerPhone = '';
+    const linkedLeadId = student.leadRef?.id;
+    if (linkedLeadId) {
+        const leadRow = await q1('SELECT manager_id FROM leads WHERE id = $1', [linkedLeadId]);
+        if (leadRow?.manager_id) {
+            const mgrRow = await q1(
+                'SELECT sm.name AS name, he.phone AS phone FROM sales_managers sm LEFT JOIN hr_employees he ON he.id = sm.id WHERE sm.id = $1',
+                [leadRow.manager_id]
+            );
+            salesManagerName = mgrRow?.name || '';
+            salesManagerPhone = mgrRow?.phone || '';
+        }
+    }
+
     return {
         mainTeacherName: mainTeacher?.name || '',
         mainTeacherPhone: mainTeacher?.phone || '',
         assistantTeacherName: assistantTeacher?.name || '',
         assistantTeacherPhone: assistantTeacher?.phone || '',
+        salesManagerName,
+        salesManagerPhone,
         name: student.name || '',
         // CRM jadvalidagi "ID" ustuni bilan aynan bir xil ko'rinadigan ID.
         // Texnik `students.id` (masalan s178...) hech qachon ilovaga uzatilmaydi.
