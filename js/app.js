@@ -1962,11 +1962,15 @@ function _renderLcSlides(body, lesson, content) {
             ${s.imageUrl
                 ? `<img src="${escapeHtml(s.imageUrl)}" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)">`
                 : `<div style="width:52px;height:52px;border-radius:6px;flex-shrink:0;background:var(--bg,#f9fafb);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px">🖼️</div>`}
-            <div style="min-width:0"><b>${escapeHtml(s.title || '')}</b><br><span style="color:var(--text-muted)">${escapeHtml(s.body || '')}</span></div>
+            <div style="min-width:0"><b>${escapeHtml(s.title || '')}</b><br>${
+                s.body
+                    ? `<span style="color:var(--text-muted)">${escapeHtml(s.body)}</span>`
+                    : `<span style="color:var(--danger,#ef4444)">⚠️ Matn kiritilmagan — "Tahrirlash" bosib qo'shing (ilovada slayd tagida Konspekt sifatida chiqadi)</span>`
+            }</div>
         </div>`,
         fields: [
             { key: 'title', label: 'Slayd sarlavhasi', required: true },
-            { key: 'body', label: 'Matn', type: 'textarea', required: true },
+            { key: 'body', label: "Matn (ilovada slayd tagida 'Konspekt' sifatida chiqadi)", type: 'textarea', required: true },
         ],
         onChange: (newItems) => { content.slides = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); renderSlidesList(); },
     });
