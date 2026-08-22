@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -70,13 +70,9 @@ export default function MemoryMatchGame() {
   const [chipIds, setChipIds] = useState<string[]>([]);
   const [moves, setMoves] = useState(0);
   const [seconds, setSeconds] = useState(0);
-  const [dragChip, setDragChip] = useState<{ id: string; word: string; x: number; y: number } | null>(null);
   const [selectedChipId, setSelectedChipId] = useState<string | null>(null);
   const [rewardCoins, setRewardCoins] = useState(0);
 
-  const slotRefs = useRef<Record<string, View | null>>({});
-  const slotRects = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
-  const chipSize = useRef({ w: 100, h: 44 });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -96,6 +92,14 @@ export default function MemoryMatchGame() {
         ? [...pool, ...fallbackItems.filter((fallback) => !uniq.has(fallback.word))]
         : fallbackItems;
       const picked = shuffle(source)
+        .slice(0, ITEM_COUNT)
+        .map((p, i) => ({ id: `item-${i}-${p.word}`, word: p.word, icon: p.icon }));
+      setItems(picked);
+    }).catch(() => {
+      // Tarmoq xatosi bo'lsa (masalan sekin internet) o'yin abadiy "yuklanmoqda"
+      // holatida qolib ketmasin — zaxira so'zlar bilan baribir boshlanadi.
+      if (cancelled) return;
+      const picked = shuffle(fallbackItems)
         .slice(0, ITEM_COUNT)
         .map((p, i) => ({ id: `item-${i}-${p.word}`, word: p.word, icon: p.icon }));
       setItems(picked);
@@ -152,54 +156,16 @@ export default function MemoryMatchGame() {
     }
   };
 
-  const snapshotSlotRects = (onDone: () => void) => {
-    if (!items || items.length === 0) {
-      onDone();
-      return;
-    }
-    let remaining = items.length;
-    items.forEach((it) => {
-      const ref = slotRefs.current[it.id];
-      if (!ref) {
-        remaining--;
-        if (remaining === 0) onDone();
-        return;
-      }
-      ref.measureInWindow((x, y, w, h) => {
-        slotRects.current[it.id] = { x, y, w, h };
-        remaining--;
-        if (remaining === 0) onDone();
-      });
-    });
+  // 21-vazifa: PanResponder asosidagi sudrab-tashlash (drag-and-drop) real
+  // qurilmalarda barqaror ishlamadi (masalan react-native-web'da PanResponder
+  // touch koordinatalari va measureInWindow o'lchamlari ba'zi brauzerlarda
+  // to'g'ri kelmaydi) — natijada so'z hech qachon katakka "yopishmasdi".
+  // Ilovaning boshqa moslashtirish (matching) mashqlarida ishlatiladigan,
+  // ishonchli usulga o'tildi: avval so'z bosiladi (tanlanadi), keyin mos
+  // katakka bosiladi — hech qanday sudrash/koordinata hisob-kitobi kerak emas.
+  const selectChip = (chipId: string) => {
+    setSelectedChipId((prev) => (prev === chipId ? null : chipId));
   };
-
-  const makePanResponder = (chipId: string, word: string) =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (_evt, gestureState) => {
-        const { moveX, moveY, x0, y0 } = gestureState;
-        const px = moveX || x0;
-        const py = moveY || y0;
-        setSelectedChipId(chipId);
-        setDragChip({ id: chipId, word, x: px - chipSize.current.w / 2, y: py - chipSize.current.h / 2 });
-        snapshotSlotRects(() => {});
-      },
-      onPanResponderMove: (_evt, gestureState) => {
-        const { moveX, moveY } = gestureState;
-        setDragChip((d) => (d ? { ...d, x: moveX - chipSize.current.w / 2, y: moveY - chipSize.current.h / 2 } : d));
-      },
-      onPanResponderRelease: (_evt, gestureState) => {
-        setDragChip(null);
-        snapshotSlotRects(() => {
-          const droppedOn = Object.entries(slotRects.current).find(([, rect]) =>
-            gestureState.moveX >= rect.x && gestureState.moveX <= rect.x + rect.w &&
-            gestureState.moveY >= rect.y && gestureState.moveY <= rect.y + rect.h,
-          )?.[0];
-          if (droppedOn) placeChipInSlot(chipId, droppedOn);
-        });
-      },
-    });
 
   const placeChipInSlot = (chipId: string, slotId: string) => {
     if (!items || slotFill[slotId]) return;
@@ -295,9 +261,6 @@ export default function MemoryMatchGame() {
                     </Text>
                   ) : (
                     <Pressable
-                      ref={(r) => {
-                        slotRefs.current[it.id] = r;
-                      }}
                       onPress={() => {
                         if (selectedChipId) placeChipInSlot(selectedChipId, it.id);
                       }}
@@ -337,27 +300,19 @@ export default function MemoryMatchGame() {
               <View style={styles.chipBank}>
                 {chipIds.map((chipId) => {
                   const item = items.find((it) => it.id === chipId)!;
-                  const responder = makePanResponder(chipId, item.word);
-                  const isDragging = dragChip?.id === chipId;
                   return (
-                    <View
+                    <Pressable
                       key={chipId}
-                      style={[styles.chip, isDragging && styles.chipGhost, selectedChipId === chipId && styles.chipSelected]}
-                      {...responder.panHandlers}>
+                      onPress={() => selectChip(chipId)}
+                      style={[styles.chip, selectedChipId === chipId && styles.chipSelected]}>
                       <Text style={[styles.chipText, selectedChipId === chipId && styles.chipTextSelected]}>{item.word}</Text>
-                    </View>
+                    </Pressable>
                   );
                 })}
               </View>
             </>
           )}
         </>
-      )}
-
-      {dragChip && (
-        <View pointerEvents="none" style={[styles.dragOverlay, { left: dragChip.x, top: dragChip.y }]}>
-          <Text style={styles.chipText}>{dragChip.word}</Text>
-        </View>
       )}
     </SafeAreaView>
   );
@@ -451,29 +406,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...theme.shadow.card,
-    // Veb'da so'zni sudrab tashlashga harakat qilinganda brauzer standart
-    // matn tanlash (text-selection) xatti-harakatini boshlab yuborishi va
-    // PanResponder'ning tortish (drag) jestini "o'g'irlab ketishi" mumkin —
-    // shuning uchun chip matnini tanlab bo'lmaydigan qilib qo'yamiz.
     userSelect: 'none',
-    touchAction: 'none',
   } as any,
-  chipGhost: { opacity: 0.25 },
   chipSelected: { backgroundColor: theme.colors.purple, borderWidth: 2, borderColor: '#fff' },
   chipText: { fontFamily: theme.fonts.semiBold, fontSize: 13, color: theme.colors.purple, userSelect: 'none' } as any,
   chipTextSelected: { color: '#fff' },
-  dragOverlay: {
-    position: 'absolute',
-    minWidth: 100,
-    height: 44,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: theme.colors.purple,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadow.card,
-    zIndex: 999,
-  },
   resultWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
   resultEmoji: { fontSize: 56, marginBottom: 14 },
   resultTitle: { fontFamily: theme.fonts.extraBold, fontSize: 22, color: theme.colors.text, marginBottom: 6 },

@@ -310,7 +310,7 @@ export const translations = {
     mm_time_moves_result: '{time} ichida, {moves} ta urinishda yakunladingiz',
     mm_memorize_hint: "Bu so'zlar va rasmlarni eslab qoling",
     mm_memorized_btn: 'ESLAB QOLDIM!',
-    mm_drag_hint: "So'zlarni bo'sh kataklarga sudrab qo'ying",
+    mm_drag_hint: "So'zni bosing, so'ng mos katakka bosing",
 
     // Sirli so'z
     mw_rules_title: "Qanday o'ynash kerak?",
@@ -749,7 +749,7 @@ export const translations = {
     mm_time_moves_result: 'Вы завершили за {time}, с {moves} попытками',
     mm_memorize_hint: 'Запомните эти слова и картинки',
     mm_memorized_btn: 'Я ЗАПОМНИЛ(А)!',
-    mm_drag_hint: 'Перетащите слова в пустые ячейки',
+    mm_drag_hint: 'Нажмите на слово, затем на нужную ячейку',
 
     mw_rules_title: 'Как играть?',
     mw_rules_intro: 'Чтобы угадать скрытое английское слово из {n} букв, у вас есть {m} попыток. После каждой попытки цвет букв покажет, насколько вы близки к ответу:',
