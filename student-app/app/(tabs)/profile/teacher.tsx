@@ -10,7 +10,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { profileStats } from '@/data/mock';
 import { TEACHER_PROFILES, TeacherProfile } from '@/data/teacherProfiles';
-import { fetchDemoGrades } from '@/services/contentApi';
+import { fetchDemoGrades, fetchDemoStudentProfile } from '@/services/contentApi';
 
 const TELEGRAM_GROUP_URL = 'https://t.me/myhomeworkuz';
 
@@ -84,19 +84,45 @@ function TeacherCard({ profile, onMessage, onGroup, onHelp, onComments }: Teache
 
 export default function TeacherScreen() {
   const videoTeacher = TEACHER_PROFILES.find((t) => t.id === 'video-teacher')!;
-  const assistantTeacher = TEACHER_PROFILES.find((t) => t.id === 'assistant-teacher')!;
 
-  // Asosiy ustozning reytingi endi o'quvchilar CRM orqali haqiqatda bergan
-  // "Siz ustozni baholang" baholarining o'rtachasi — hali haqiqiy baho
-  // bo'lmasa, mock qiymatga tushadi.
+  // 13-vazifa: asosiy/yordamchi ustoz kartochkalari ilgari doim hardcode
+  // qilingan namuna ism ko'rsatardi (Asilbek Asqarov / Nozima Ergasheva) —
+  // aslida kim biriktirilgan bo'lmasin. Endi CRM'da o'quvchiga haqiqatan
+  // biriktirilgan ustozning ismi (va "Yordam" tugmasi uchun telefoni)
+  // ko'rsatiladi. Boshqa (daraja/reyting/iqtibos kabi) bezak ma'lumotlari
+  // hali haqiqiy manbaga ega emas, o'zgarishsiz qoladi.
   const mainTeacherBase = TEACHER_PROFILES.find((t) => t.id === 'main-teacher')!;
+  const assistantTeacherBase = TEACHER_PROFILES.find((t) => t.id === 'assistant-teacher')!;
   const [realRating, setRealRating] = useState<number | null>(null);
+  const [mainTeacherName, setMainTeacherName] = useState<string | null>(null);
+  const [mainTeacherPhone, setMainTeacherPhone] = useState('');
+  const [assistantTeacherName, setAssistantTeacherName] = useState<string | null>(null);
+  const [assistantTeacherPhone, setAssistantTeacherPhone] = useState('');
+
   useEffect(() => {
     fetchDemoGrades()
       .then(({ teacherRating }) => setRealRating(teacherRating))
       .catch(() => {});
+    fetchDemoStudentProfile()
+      .then((p) => {
+        if (!p) return;
+        if (p.mainTeacherName) setMainTeacherName(p.mainTeacherName);
+        setMainTeacherPhone(p.mainTeacherPhone);
+        if (p.assistantTeacherName) setAssistantTeacherName(p.assistantTeacherName);
+        setAssistantTeacherPhone(p.assistantTeacherPhone);
+      })
+      .catch(() => {});
   }, []);
-  const mainTeacher = realRating !== null ? { ...mainTeacherBase, rating: realRating } : mainTeacherBase;
+
+  const mainTeacher = {
+    ...mainTeacherBase,
+    ...(realRating !== null ? { rating: realRating } : {}),
+    ...(mainTeacherName ? { name: mainTeacherName } : {}),
+  };
+  const assistantTeacher = {
+    ...assistantTeacherBase,
+    ...(assistantTeacherName ? { name: assistantTeacherName } : {}),
+  };
 
   const [activeSheet, setActiveSheet] = useState<'main' | 'assistant' | null>(null);
   const activeTeacher = activeSheet === 'main' ? mainTeacher : activeSheet === 'assistant' ? assistantTeacher : null;
@@ -110,14 +136,14 @@ export default function TeacherScreen() {
           profile={mainTeacher}
           onMessage={() => router.push(`/messages/${mainTeacher.chatId}` as never)}
           onGroup={() => Linking.openURL(TELEGRAM_GROUP_URL)}
-          onHelp={() => Linking.openURL(`tel:${profileStats.phone}`)}
+          onHelp={() => Linking.openURL(`tel:${mainTeacherPhone || profileStats.phone}`)}
           onComments={() => setActiveSheet('main')}
         />
         <TeacherCard
           profile={assistantTeacher}
           onMessage={() => router.push(`/messages/${assistantTeacher.chatId}` as never)}
           onGroup={() => Linking.openURL(TELEGRAM_GROUP_URL)}
-          onHelp={() => Linking.openURL(`tel:${profileStats.phone}`)}
+          onHelp={() => Linking.openURL(`tel:${assistantTeacherPhone || profileStats.phone}`)}
           onComments={() => setActiveSheet('assistant')}
         />
       </ScrollView>

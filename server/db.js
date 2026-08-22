@@ -1822,7 +1822,21 @@ async function getDemoStudentProfile(studentId) {
     const student = rows[0] ? rowToStudent(rows[0]) : null;
     if (!student) return {};
     const { attendanceRate, hoursSpent } = await getDemoStudentAttendanceStats(id);
+    // 13-vazifa: "Mening ustozim" ekrani ilgari doim hardcode qilingan
+    // namuna ustoz ismlarini ko'rsatardi — endi o'quvchiga CRM'da
+    // haqiqatan biriktirilgan asosiy/yordamchi ustozning ismi (va telefoni,
+    // "Yordam" tugmasi uchun) qaytariladi.
+    const teacherIds = [student.teacherId, student.assistantTeacherId].filter(Boolean);
+    const teacherRows = teacherIds.length
+        ? await q('SELECT id, name, phone FROM teachers WHERE id = ANY($1)', [teacherIds])
+        : [];
+    const mainTeacher = teacherRows.find(t => t.id === student.teacherId);
+    const assistantTeacher = teacherRows.find(t => t.id === student.assistantTeacherId);
     return {
+        mainTeacherName: mainTeacher?.name || '',
+        mainTeacherPhone: mainTeacher?.phone || '',
+        assistantTeacherName: assistantTeacher?.name || '',
+        assistantTeacherPhone: assistantTeacher?.phone || '',
         name: student.name || '',
         // CRM jadvalidagi "ID" ustuni bilan aynan bir xil ko'rinadigan ID.
         // Texnik `students.id` (masalan s178...) hech qachon ilovaga uzatilmaydi.

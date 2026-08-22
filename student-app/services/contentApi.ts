@@ -403,6 +403,12 @@ export type DemoProfileResponse = {
   age: number | null;
   gender: 'erkak' | 'ayol' | '';
   address: string;
+  // 13-vazifa: "Mening ustozim" ekrani uchun — o'quvchiga CRM'da
+  // haqiqatan biriktirilgan asosiy/yordamchi ustoz.
+  mainTeacherName: string;
+  mainTeacherPhone: string;
+  assistantTeacherName: string;
+  assistantTeacherPhone: string;
 };
 
 export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | null> {
@@ -420,6 +426,10 @@ export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | n
     age: data.age != null ? Number(data.age) : null,
     gender: data.gender === 'erkak' || data.gender === 'ayol' ? data.gender : '',
     address: data.address ?? '',
+    mainTeacherName: data.mainTeacherName ?? '',
+    mainTeacherPhone: data.mainTeacherPhone ?? '',
+    assistantTeacherName: data.assistantTeacherName ?? '',
+    assistantTeacherPhone: data.assistantTeacherPhone ?? '',
   };
 }
 

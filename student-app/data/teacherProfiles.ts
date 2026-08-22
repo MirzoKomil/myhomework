@@ -18,7 +18,7 @@ export const TEACHER_PROFILES: TeacherProfile[] = [
   {
     id: 'video-teacher',
     categoryLabel: 'Videodarslardagi ustoz',
-    name: 'Muhammadali Yusupov',
+    name: 'Abdulaziz Yakubov',
     emoji: '👨‍🏫',
     flag: '🇺🇿',
     level: 'C2 daraja',
