@@ -584,6 +584,64 @@ async function migrateRenameGarbledCourse() {
     }
 }
 
+// 20-vazifa: hamjamiyatga "ko'rgazma uchun" qo'yilgan 4 ta soxta (seed)
+// post (p0-p3, izohlari c1-c5) endi olib tashlanadi — faqat real
+// o'quvchilar real profildan yozgan postlar qolishi kerak. Shu bilan bir
+// vaqtda, oldingi kod xatosi tufayli barcha post/izohlar CRM'dagi namuna
+// ismi ("Shahzoda Mavlonova") bilan yozilardi — bu ostida yashiringan
+// HAQIQIY postlar (masalan hozirgi namuna o'quvchining o'zi yozgan)
+// o'chirilmaydi, aksincha o'sha o'quvchining haqiqiy ismiga to'g'irlanadi.
+// Xavfsizlik uchun o'zgartirishdan oldin butun massiv json_data'ga backup
+// sifatida saqlanadi.
+async function migrateCommunityRemoveFakeSeed() {
+    const row = await q1("SELECT data FROM json_data WHERE key = 'communityPosts'");
+    if (!row) return;
+    const posts = row.data;
+    const flagRow = await q1("SELECT data FROM json_data WHERE key = 'communityFakeSeedRemovedAt'");
+    if (flagRow) return; // bir marta ishlaydi
+
+    await pool.query(
+        `INSERT INTO json_data (key, data) VALUES ('communityPosts_backup_preFakeSeedRemoval', $1) ON CONFLICT (key) DO UPDATE SET data = $1`,
+        [JSON.stringify(posts)]
+    );
+
+    const FAKE_SEED_POST_IDS = new Set(['p0', 'p1', 'p2', 'p3']);
+    let realNameFixCount = 0;
+    let realName = '';
+    try {
+        const demoStudentId = await getJsonData('demoStudentId');
+        if (demoStudentId) {
+            const profile = await getDemoStudentProfile(demoStudentId);
+            realName = profile?.name || '';
+        }
+    } catch { /* profil topilmasa, faqat soxta postlar tozalanadi */ }
+
+    const cleaned = posts
+        .filter(p => !FAKE_SEED_POST_IDS.has(p.id))
+        .map(p => {
+            if (realName && p.authorName === 'Shahzoda Mavlonova') {
+                p.authorName = realName;
+                realNameFixCount++;
+            }
+            if (Array.isArray(p.comments)) {
+                p.comments.forEach(c => {
+                    if (realName && c.authorName === 'Shahzoda Mavlonova') {
+                        c.authorName = realName;
+                        realNameFixCount++;
+                    }
+                });
+            }
+            return p;
+        });
+
+    await tx(async (client) => { await saveJsonData(client, 'communityPosts', cleaned); });
+    await pool.query(
+        `INSERT INTO json_data (key, data) VALUES ('communityFakeSeedRemovedAt', $1) ON CONFLICT (key) DO NOTHING`,
+        [JSON.stringify(new Date().toISOString())]
+    );
+    console.log(`[DB] Hamjamiyat: ${FAKE_SEED_POST_IDS.size} ta soxta namuna post olib tashlandi, ${realNameFixCount} ta real post/izoh ismi to'g'irlandi.`);
+}
+
 async function seedIfEmpty() {
     const row = await q1('SELECT COUNT(*) AS c FROM users');
     const count = parseInt(row.c, 10);
@@ -2691,11 +2749,19 @@ async function getComputedDemoNotifications(studentId) {
 // maydonlari yagona haqiqiy foydalanuvchi — namuna o'quvchi — nuqtai
 // nazaridan yoziladi.
 
-async function getCommunityPosts() {
-    return await getJsonData('communityPosts');
+// 20-vazifa: hamjamiyat lentasi endi kurs tiliga (ingliz/rus) qarab
+// filtrlanadi — ingliz tili appida faqat ingliz tili o'quvchilari postlari,
+// rus tili appida faqat rus tili o'quvchilari postlari ko'rinadi. Eski
+// (bu funksiyadan oldingi, "lang" belgisi bo'lmagan) postlar ikkalasida
+// ham ko'rinaveradi — ular haqiqiy postlar bo'lsa, biror tomonga majburan
+// yashirib qo'ymaslik uchun.
+async function getCommunityPosts(lang) {
+    const posts = await getJsonData('communityPosts');
+    if (!lang) return posts;
+    return posts.filter(p => !p.lang || p.lang === lang);
 }
 
-async function addCommunityPost(text, authorName, authorEmoji, imageUri) {
+async function addCommunityPost(text, authorName, authorEmoji, imageUri, lang) {
     const trimmed = String(text || '').trim();
     if (!trimmed) throw new Error("Post matni bo'sh bo'lishi mumkin emas");
     const posts = await getJsonData('communityPosts');
@@ -2708,6 +2774,7 @@ async function addCommunityPost(text, authorName, authorEmoji, imageUri) {
         imageUri: imageUri || null,
         likeCount: 0, likedByMe: false, shareCount: 0, viewCount: 0,
         comments: [], me: true,
+        lang: lang === 'russian' ? 'russian' : 'english',
     };
     posts.unshift(post);
     await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
@@ -3785,6 +3852,7 @@ async function init() {
     await migrateMultipleChoiceCorrectIndex().catch(err => console.error('[DB] correctIndex tuzatishda xatolik:', err.message));
     await migrateMultipleChoiceManualFixes().catch(err => console.error('[DB] correctIndex qo\'lda tuzatishda xatolik:', err.message));
     await migrateRenameGarbledCourse().catch(err => console.error('[DB] Kurs nomini tuzatishda xatolik:', err.message));
+    await migrateCommunityRemoveFakeSeed().catch(err => console.error('[DB] Hamjamiyat soxta postlarini tozalashda xatolik:', err.message));
 }
 
 // ── "Hisoblangan" (computed/auto) eslatmalarni push orqali yetkazish ────────
@@ -3966,7 +4034,7 @@ module.exports = {
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
-    syncStudentProgress, getRealLeaderboard,
+    syncStudentProgress, getRealLeaderboard, resolveStudentSubjectLang,
     getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,
     getCommunityPosts, addCommunityPost, toggleCommunityPostLike,
     addCommunityComment, toggleCommunityCommentLike,

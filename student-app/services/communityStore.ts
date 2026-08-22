@@ -4,6 +4,23 @@ import { useEffect, useState } from 'react';
 import { profileStats } from '@/data/mock';
 import { addCoins } from '@/services/coinsStore';
 import { useAvatarUri } from '@/services/avatarStore';
+import { authedFetch, fetchDemoStudentProfile } from '@/services/contentApi';
+
+// 20-vazifa: post/izoh yozganda doim hardcode qilingan namuna ism
+// (profileStats.name = "Shahzoda Mavlonova") bilan yuborilardi — kim
+// yozishidan qat'iy nazar. Endi haqiqiy (CRM'da tanlangan yoki real login
+// qilgan) o'quvchining o'z ismi yuklanadi va shu ish bilan yuboriladi.
+let myRealName: string | null = null;
+async function ensureMyRealName(): Promise<string> {
+  if (myRealName) return myRealName;
+  try {
+    const p = await fetchDemoStudentProfile();
+    if (p?.name) myRealName = p.name;
+  } catch {
+    // tarmoq xatosi bo'lsa, quyida namuna ismga tushiladi
+  }
+  return myRealName || profileStats.name;
+}
 
 // Hamjamiyat (Community) — ilgari faqat qurilma xotirasida (AsyncStorage)
 // yashagan postlar endi serverda saqlanadi: bitta umumiy lenta, namuna
@@ -103,7 +120,7 @@ export function getPost(postId: string): CommunityPost | undefined {
 // qaytganda darhol yangilangan holatni ko'radi.
 export async function loadPosts(): Promise<void> {
   try {
-    const res = await fetch(API_BASE);
+    const res = await authedFetch(API_BASE);
     const data = await res.json();
     if (Array.isArray(data.posts)) posts = data.posts;
   } catch {
@@ -158,7 +175,7 @@ export async function addPost(
   }
   const imageUploadFailed = !!imageUri && !uploadedImageUrl;
   try {
-    const res = await fetch(`${API_BASE}/posts`, {
+    const res = await authedFetch(`${API_BASE}/posts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, authorName, authorEmoji, imageUri: uploadedImageUrl }),
@@ -204,11 +221,12 @@ export async function toggleLikeComment(postId: string, commentId: string): Prom
 }
 
 export async function addComment(postId: string, text: string, parentId: string | null): Promise<void> {
+  const fullName = await ensureMyRealName();
   try {
     const res = await fetch(`${API_BASE}/posts/${encodeURIComponent(postId)}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, parentId, authorName: profileStats.name.split(' ')[0], authorEmoji: '🙂' }),
+      body: JSON.stringify({ text, parentId, authorName: fullName.split(' ')[0], authorEmoji: '🙂' }),
     });
     const data = await res.json();
     if (data.comment) {
@@ -240,7 +258,11 @@ export function usePost(postId: string): CommunityPost | undefined {
 
 export function useMyIdentity(): { name: string; emoji: string; avatarUri: string | null } {
   const avatarUri = useAvatarUri();
-  return { name: profileStats.name, emoji: '🙂', avatarUri };
+  const [name, setName] = useState(myRealName || profileStats.name);
+  useEffect(() => {
+    ensureMyRealName().then(setName);
+  }, []);
+  return { name, emoji: '🙂', avatarUri };
 }
 
 export type CommunityActivity = {

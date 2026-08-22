@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments, resolveStudentSubjectLang,
 getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
@@ -647,19 +647,24 @@ router.get('/creative-submissions/student/:studentId', authRequired, async (req,
 // post/izoh qo'shish va like bosish ham public (ilovada login yo'q — yagona
 // haqiqiy foydalanuvchi namuna o'quvchi); FAQAT o'chirish operatsiyalari
 // admin autentifikatsiyasini talab qiladi.
-router.get('/community', async (req, res) => {
+// 20-vazifa: kurs tiliga (ingliz/rus) qarab filtrlash uchun so'rovchi
+// o'quvchining tili studentAuthOptional orqali aniqlanadi (login bo'lmasa
+// req.studentId bo'sh qoladi — bu holda getCommunityPosts hammasini qaytaradi).
+router.get('/community', studentAuthOptional, async (req, res) => {
     try {
-        res.json({ posts: await getCommunityPosts() });
+        const lang = await resolveStudentSubjectLang(req.studentId);
+        res.json({ posts: await getCommunityPosts(lang) });
     } catch (err) {
         console.error('GET /api/state/community', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });
 
-router.post('/community/posts', async (req, res) => {
+router.post('/community/posts', studentAuthOptional, async (req, res) => {
     try {
         const { text, authorName, authorEmoji, imageUri } = req.body || {};
-        const post = await addCommunityPost(text, authorName, authorEmoji, imageUri);
+        const lang = await resolveStudentSubjectLang(req.studentId);
+        const post = await addCommunityPost(text, authorName, authorEmoji, imageUri, lang);
         res.json({ ok: true, post });
     } catch (err) {
         console.error('POST /api/state/community/posts', err);
