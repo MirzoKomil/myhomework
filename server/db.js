@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const webpush = require('web-push');
-const { generateContractPdfBuffer } = require('./services/contractPdf');
+const { generateContractPdfBuffer, generateRussianContractPdfBuffer } = require('./services/contractPdf');
 const eskiz = require('./services/eskiz');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
@@ -1934,30 +1934,50 @@ async function getOrCreateStudentContract(studentId) {
     if (!realId) return null;
     const row = await q1('SELECT * FROM students WHERE id = $1', [realId]);
     if (!row) return null;
+    const student = rowToStudent(row);
     let extra = {};
     try {
         extra = typeof row.extra_data === 'object' ? row.extra_data : JSON.parse(row.extra_data || '{}');
     } catch { extra = {}; }
     if (extra.contract && extra.contract.number) {
-        return { number: extra.contract.number, date: extra.contract.date, studentName: row.name };
+        return {
+            number: extra.contract.number, date: extra.contract.date, studentName: row.name,
+            phone: student.phone, lessonDuration: student.lessonDuration,
+        };
     }
     const contract = { number: await getNextContractNumber(), date: new Date().toISOString().slice(0, 10) };
     extra = { ...extra, contract };
     await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), realId]);
-    return { number: contract.number, date: contract.date, studentName: row.name };
+    return {
+        number: contract.number, date: contract.date, studentName: row.name,
+        phone: student.phone, lessonDuration: student.lessonDuration,
+    };
 }
 
 // Mobil ilovaning "To'lovlar" ekranidagi "Shartnoma faylini ko'rish (PDF)"
 // tugmasi shu yerga chiqadi — namuna shartnoma matnini haqiqiy o'quvchi
 // ismi va shartnoma raqami/sanasi bilan qayta generatsiya qiladi.
+// 14-vazifa: rus tili kursidagi o'quvchiga YANGI ("Domwork") shartnoma
+// matni ko'rsatiladi — ingliz tili kursi eski matndan foydalanishda davom
+// etadi.
 async function getStudentContractPdf(studentId) {
     const contract = await getOrCreateStudentContract(studentId);
     if (!contract) return null;
-    const buffer = await generateContractPdfBuffer({
-        contractNumber: contract.number,
-        studentFullName: contract.studentName || "O'quvchi",
-        contractDate: contract.date
-    });
+    const realId = await resolveStudentId(studentId);
+    const lang = await resolveStudentSubjectLang(realId);
+    const buffer = lang === 'russian'
+        ? await generateRussianContractPdfBuffer({
+            contractNumber: contract.number,
+            studentFullName: contract.studentName || "O'quvchi",
+            studentPhone: contract.phone,
+            lessonDuration: contract.lessonDuration,
+            contractDate: contract.date,
+        })
+        : await generateContractPdfBuffer({
+            contractNumber: contract.number,
+            studentFullName: contract.studentName || "O'quvchi",
+            contractDate: contract.date
+        });
     return { buffer, filename: `shartnoma-${contract.number.replace(/[^\w-]/g, '')}.pdf` };
 }
 
