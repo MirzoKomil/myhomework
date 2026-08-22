@@ -492,6 +492,9 @@ export type LeaderboardEntryResponse = {
   lessonsCompleted: number;
   rank: number;
   isMe: boolean;
+  // 12-vazifa: o'quvchi o'zi qo'ygan profil rasmi (bo'lsa) — bo'lmasa
+  // bo'sh, ilova ism asosidagi avatarga tushadi.
+  avatarUrl?: string;
 };
 
 export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'alltime';

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 
@@ -11,11 +11,138 @@ import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningIcon, LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { fetchLeaderboard, LeaderboardEntryResponse, LeaderboardPeriod } from '@/services/contentApi';
+import { fetchLeaderboard, LeaderboardEntryResponse, LeaderboardPeriod, sendDemoPeerMessage } from '@/services/contentApi';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
 import { useLightning } from '@/services/lightningStore';
+
+// 12-vazifa: o'quvchining o'zi qo'ygan haqiqiy rasmi (avatarUrl) bo'lmasa,
+// hammaga bir xil 🙂 emoji o'rniga ism asosida barqaror rang/bosh
+// harflardan iborat shaxsiy avatar ko'rsatiladi (CommentsSheet'dagi bilan
+// bir xil naqsh).
+const AVATAR_COLORS = ['#7B61FF', '#2563EB', '#DB2777', '#059669', '#D97706', '#DC2626', '#0EA5E9', '#9333EA'];
+function avatarColorFor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((p) => p[0]).join('');
+  return (initials || '?').toUpperCase();
+}
+
+function EntryAvatar({
+  entry,
+  myAvatarUri,
+  size,
+  fontSize,
+}: {
+  entry: LeaderboardEntryResponse;
+  myAvatarUri: string | null;
+  size: number;
+  fontSize: number;
+}) {
+  const uri = entry.isMe && myAvatarUri ? myAvatarUri : entry.avatarUrl;
+  if (uri) {
+    return <Image source={{ uri }} style={{ width: size, height: size, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />;
+  }
+  return (
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: avatarColorFor(entry.name), alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ fontFamily: theme.fonts.bold, fontSize, color: '#fff' }}>{initialsOf(entry.name)}</Text>
+    </View>
+  );
+}
+
+// 12-vazifa: reytingdagi o'quvchi ustiga bosilganda uning HAQIQIY ma'lumoti
+// (nom, o'rin, chaqmoq/tanga, yakunlangan darslar) ko'rsatiladi, o'zi
+// bo'lmasa — haqiqiy, serverda saqlanadigan xabar yozish imkoni bilan
+// (sendDemoPeerMessage — CRM "Maqsaddoshlar" bo'limida ko'rinadi).
+function StudentInfoModal({ entry, onClose }: { entry: LeaderboardEntryResponse | null; onClose: () => void }) {
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const myAvatarUri = useAvatarUri();
+
+  const handleClose = () => {
+    setText('');
+    setSent(false);
+    onClose();
+  };
+
+  const send = () => {
+    if (!entry || !text.trim() || sending) return;
+    setSending(true);
+    sendDemoPeerMessage(entry.id, entry.name, text.trim())
+      .then(() => {
+        setText('');
+        setSent(true);
+      })
+      .catch(() => {})
+      .finally(() => setSending(false));
+  };
+
+  return (
+    <Modal visible={entry !== null} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView style={styles.infoBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Pressable style={styles.modalBackdropTap} onPress={handleClose} />
+        {entry && (
+          <View style={styles.infoSheet}>
+            <View style={styles.infoHandle} />
+            <View style={styles.infoHeaderRow}>
+              <View style={styles.infoAvatar}>
+                <EntryAvatar entry={entry} myAvatarUri={myAvatarUri} size={56} fontSize={20} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoName}>{entry.name}</Text>
+                <Text style={styles.infoRank}>#{entry.rank} o'rin</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoStatsRow}>
+              <View style={styles.infoStatCard}>
+                <LightningIcon size={16} />
+                <Text style={styles.infoStatValue}>{entry.lightning.toLocaleString('uz-UZ')}</Text>
+                <Text style={styles.infoStatLabel}>Chaqmoq</Text>
+              </View>
+              <View style={styles.infoStatCard}>
+                <CoinIcon size={14} />
+                <Text style={styles.infoStatValue}>{entry.coins.toLocaleString('uz-UZ')}</Text>
+                <Text style={styles.infoStatLabel}>Tanga</Text>
+              </View>
+              <View style={styles.infoStatCard}>
+                <Ionicons name="book-outline" size={16} color={theme.colors.purple} />
+                <Text style={styles.infoStatValue}>{entry.lessonsCompleted}</Text>
+                <Text style={styles.infoStatLabel}>Dars</Text>
+              </View>
+            </View>
+
+            {!entry.isMe && (
+              <>
+                <Text style={styles.infoSectionTitle}>Xabar yozish</Text>
+                {sent && <Text style={styles.infoSentText}>Xabar yuborildi ✓</Text>}
+                <View style={styles.infoComposeRow}>
+                  <TextInput
+                    style={styles.infoComposeInput}
+                    value={text}
+                    onChangeText={setText}
+                    placeholder={`${entry.name}ga xabar yozing...`}
+                    placeholderTextColor={theme.colors.textLight}
+                    onSubmitEditing={send}
+                  />
+                  <Pressable onPress={send} disabled={sending || !text.trim()} hitSlop={8}>
+                    <Ionicons name="send" size={22} color={sending || !text.trim() ? theme.colors.textLight : theme.colors.purple} />
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
 
 // 36-vazifa: Leaderboard ilgari to'liq o'ylab topilgan (fake) o'quvchilar
 // ro'yxati edi (davr/hudud bo'yicha sun'iy ko'paytirilgan). Endi FAQAT
@@ -48,6 +175,7 @@ export default function LeaderboardScreen() {
   const [showCoinInfo, setShowCoinInfo] = useState(false);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<'period' | 'scope' | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<LeaderboardEntryResponse | null>(null);
 
   const load = useCallback((s: Scope, p: LeaderboardPeriod) => {
     setLoading(true);
@@ -159,7 +287,10 @@ export default function LeaderboardScreen() {
               {/* order visually as 2nd, 1st, 3rd */}
               {[top3[1], top3[0], top3[2]].map((entry, i) =>
                 entry ? (
-                  <View key={entry.id} style={[styles.podiumCol, i === 1 && styles.podiumColCenter]}>
+                  <Pressable
+                    key={entry.id}
+                    style={[styles.podiumCol, i === 1 && styles.podiumColCenter]}
+                    onPress={() => setSelectedEntry(entry)}>
                     {i === 1 && (
                       <Animated.Text
                         style={[
@@ -175,11 +306,7 @@ export default function LeaderboardScreen() {
                         { backgroundColor: PODIUM_COLORS[i === 1 ? 0 : i === 0 ? 1 : 2] },
                         i === 1 && styles.podiumAvatarCenter,
                       ]}>
-                      {entry.isMe && myAvatarUri ? (
-                        <Image source={{ uri: myAvatarUri }} style={styles.podiumAvatarImage} />
-                      ) : (
-                        <Text style={styles.podiumEmoji}>🙂</Text>
-                      )}
+                      <EntryAvatar entry={entry} myAvatarUri={myAvatarUri} size={i === 1 ? 72 : 56} fontSize={i === 1 ? 24 : 18} />
                       <View style={styles.podiumShimmerClip} pointerEvents="none">
                         <Animated.View
                           style={[
@@ -207,7 +334,7 @@ export default function LeaderboardScreen() {
                       <CoinIcon size={9} />
                       <Text style={styles.podiumCoinText}>{entry.coins.toLocaleString('uz-UZ')}</Text>
                     </View>
-                  </View>
+                  </Pressable>
                 ) : (
                   <View key={`empty-${i}`} style={styles.podiumCol} />
                 )
@@ -216,14 +343,13 @@ export default function LeaderboardScreen() {
 
             <View style={styles.list}>
               {rest.map((entry) => (
-                <View key={entry.id} style={[styles.listRow, entry.isMe && styles.listRowMe]}>
+                <Pressable
+                  key={entry.id}
+                  style={[styles.listRow, entry.isMe && styles.listRowMe]}
+                  onPress={() => setSelectedEntry(entry)}>
                   <Text style={[styles.listRank, entry.isMe && styles.listRankMe]}>{entry.rank}</Text>
                   <View style={styles.listAvatar}>
-                    {entry.isMe && myAvatarUri ? (
-                      <Image source={{ uri: myAvatarUri }} style={styles.listAvatarImage} />
-                    ) : (
-                      <Text style={styles.listAvatarEmoji}>🙂</Text>
-                    )}
+                    <EntryAvatar entry={entry} myAvatarUri={myAvatarUri} size={40} fontSize={14} />
                   </View>
                   <View style={styles.listInfo}>
                     <Text style={[styles.listName, entry.isMe && styles.listNameMe]}>{entry.name}</Text>
@@ -239,7 +365,7 @@ export default function LeaderboardScreen() {
                       <Text style={styles.listCoin}>{entry.coins.toLocaleString('uz-UZ')}</Text>
                     </View>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </View>
           </>
@@ -248,6 +374,7 @@ export default function LeaderboardScreen() {
 
       <CoinInfoModal visible={showCoinInfo} onClose={() => setShowCoinInfo(false)} />
       <LightningInfoModal visible={showLightningInfo} onClose={() => setShowLightningInfo(false)} />
+      <StudentInfoModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
 
       <Modal visible={activeDropdown !== null} transparent animationType="fade" onRequestClose={() => setActiveDropdown(null)}>
         <Pressable style={styles.dropdownBackdrop} onPress={() => setActiveDropdown(null)}>
@@ -354,8 +481,6 @@ const styles = StyleSheet.create({
   podiumAvatarCenter: { width: 72, height: 72, borderRadius: 36 },
   podiumShimmerClip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   podiumShimmerSweep: { position: 'absolute', top: -20, bottom: -20, width: 30 },
-  podiumEmoji: { fontSize: 26 },
-  podiumAvatarImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   podiumRankBadge: {
     width: 22,
     height: 22,
@@ -407,8 +532,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  listAvatarImage: { width: 40, height: 40 },
-  listAvatarEmoji: { fontSize: 18 },
   listInfo: { flex: 1 },
   listName: { fontFamily: theme.fonts.semiBold, fontSize: 14, color: theme.colors.text },
   listNameMe: { color: theme.colors.purple },
@@ -417,4 +540,44 @@ const styles = StyleSheet.create({
   listXpRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   listXp: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.text },
   listCoin: { fontFamily: theme.fonts.medium, fontSize: 11, color: theme.colors.textMuted },
+
+  infoBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalBackdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  infoSheet: {
+    backgroundColor: theme.colors.bg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+  },
+  infoHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.border, alignSelf: 'center', marginBottom: 14 },
+  infoHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  infoAvatar: { width: 56, height: 56, borderRadius: 18, overflow: 'hidden' },
+  infoName: { fontFamily: theme.fonts.bold, fontSize: 17, color: theme.colors.text },
+  infoRank: { fontFamily: theme.fonts.regular, fontSize: 12, color: theme.colors.textMuted, marginTop: 2 },
+  infoStatsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  infoStatCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.sm,
+    paddingVertical: 14,
+    ...theme.shadow.card,
+  },
+  infoStatValue: { fontFamily: theme.fonts.bold, fontSize: 15, color: theme.colors.text },
+  infoStatLabel: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textMuted },
+  infoSectionTitle: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 },
+  infoSentText: { fontFamily: theme.fonts.medium, fontSize: 12, color: theme.colors.success, marginBottom: 8 },
+  infoComposeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  infoComposeInput: { flex: 1, fontFamily: theme.fonts.regular, fontSize: 13, color: theme.colors.text },
 });

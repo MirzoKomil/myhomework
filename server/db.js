@@ -1795,6 +1795,7 @@ async function getRealLeaderboard(studentId, scope, period = 'alltime') {
             lightning,
             lessonsCompleted: stats.lessonsCompleted,
             isMe: row.id === id,
+            avatarUrl: s.avatarUrl || '',
         };
     }));
 
@@ -1836,7 +1837,25 @@ async function getDemoStudentProfile(studentId) {
         age: student.age || calculateAgeFromBirthDate(student.birthDate),
         gender: student.gender || '',
         address: student.address || '',
+        avatarUrl: student.avatarUrl || '',
     };
+}
+
+// 12-vazifa: o'quvchi ilovadan o'zi profil rasmini qo'yganda, bu server
+// tomonda saqlanadi — shu bilan boshqa o'quvchilar (masalan Leaderboard'da)
+// ham uning haqiqiy rasmini ko'ra oladi (avval faqat qurilma xotirasida
+// saqlanardi, boshqa hech kim ko'ra olmasdi).
+async function setDemoStudentAvatarUrl(studentId, avatarUrl) {
+    const realId = await resolveStudentId(studentId);
+    if (!realId) throw new Error("O'quvchi aniqlanmadi");
+    const row = await q1('SELECT extra_data FROM students WHERE id = $1', [realId]);
+    if (!row) throw new Error("O'quvchi topilmadi");
+    let extra = {};
+    try {
+        extra = typeof row.extra_data === 'object' ? row.extra_data : JSON.parse(row.extra_data || '{}');
+    } catch { extra = {}; }
+    extra = { ...extra, avatarUrl: String(avatarUrl || '').slice(0, 500) };
+    await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), realId]);
 }
 
 function isCanonicalStudentSerial(value) {
@@ -3867,7 +3886,7 @@ module.exports = {
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     getHrEmployeesData, getHrEmployeeById, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
-    getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
+    getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,
     getDemoStudentAssistantRatings, submitDemoStudentAssistantRating,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,

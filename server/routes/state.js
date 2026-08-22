@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, getDemoStudentPayments,
+const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,
 getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
@@ -26,6 +26,18 @@ router.get('/demo-profile', studentAuthOptional, async (req, res) => {
     } catch (err) {
         console.error('GET /api/state/demo-profile', err);
         res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// 12-vazifa: o'quvchi ilovadan o'z profil rasmini qo'yadi — bu saqlanib,
+// Leaderboard'da boshqa o'quvchilarga ham ko'rinadi.
+router.post('/demo-profile/avatar', studentAuthOptional, async (req, res) => {
+    try {
+        await setDemoStudentAvatarUrl(req.studentId, req.body?.avatarUrl);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/state/demo-profile/avatar', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });
 
