@@ -1762,9 +1762,16 @@ async function getRealLeaderboard(studentId, scope, period = 'alltime') {
     ]);
     const me = id ? studentRows.find((r) => r.id === id) : null;
     const meRegion = me ? (rowToStudent(me).region || '').trim().toLowerCase() : '';
+    // 19-vazifa: reyting ilgari BARCHA o'quvchilarni (kurs tilidan qat'iy
+    // nazar) aralashtirib ko'rsatardi — ingliz tili appida rus tili
+    // o'quvchilari (va aksincha) ko'rinib qolardi. Endi faqat so'rovchi
+    // o'quvchi bilan BIR XIL kursdagi (til) o'quvchilar ko'rsatiladi.
+    const meLang = await resolveStudentSubjectLang(id);
 
     const candidates = [];
     studentRows.forEach((row) => {
+        const rowLang = rowToStudent(row).subject === 'russian' ? 'russian' : 'english';
+        if (rowLang !== meLang) return;
         let coins = 0;
         let lightning = 0;
         if (range) {
