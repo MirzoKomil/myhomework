@@ -27,6 +27,7 @@ export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const [lessonName, setLessonName] = useState(t('hw_lesson_fallback_title'));
   const [content, setContent] = useState<LessonContent | null>(null);
+  const [courseLang, setCourseLang] = useState<'english' | 'russian'>('english');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function LessonScreen() {
         const dayIndex = Math.max(0, courseLessons.findIndex((l) => l.id === lessonId));
         const course = lesson ? mc.courses.find((c) => c.id === lesson.courseId) : undefined;
         const lang: 'english' | 'russian' = course?.lang === 'russian' ? 'russian' : 'english';
+        setCourseLang(lang);
         setContent(mergeLessonContent(getLessonContent(String(lessonId), dayIndex, lang), mc.lessonContents[String(lessonId)]));
       })
       .finally(() => {
@@ -101,8 +103,11 @@ export default function LessonScreen() {
       : [
           {
             key: 'speaking',
-            title: t('hw_cat_speaking_title'),
-            subtitle: t('hw_cat_speaking_sub'),
+            // 10-vazifa: rus tili kursida "Speaking" (ingliz tili so'zi)
+            // o'rniga darsning o'zida ishlatilgan "Razgovor" atamasi bilan
+            // mos qilib ko'rsatiladi.
+            title: courseLang === 'russian' ? "Razgovor ko'rgazmalari" : t('hw_cat_speaking_title'),
+            subtitle: courseLang === 'russian' ? 'Slaydlar va razgovor mashqlari' : t('hw_cat_speaking_sub'),
             icon: 'easel-outline',
             color: theme.colors.pink,
             bg: theme.colors.pinkBg,
