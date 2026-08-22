@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,20 +10,33 @@ import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { profileStats } from '@/data/mock';
+import { DemoProfileResponse, fetchDemoStudentProfile } from '@/services/contentApi';
 import { setAvatarUri, useAvatarUri } from '@/services/avatarStore';
 
-const DETAIL_ROWS: { label: string; value: string }[] = [
-  { label: 'Ism-familiya', value: profileStats.name },
-  { label: 'Student ID', value: profileStats.studentId },
-  { label: 'Yoshi', value: `${profileStats.age}` },
-  { label: 'Jinsi', value: profileStats.gender },
-  { label: 'Manzil', value: profileStats.address },
-  { label: 'Telefon raqami', value: profileStats.phone },
-];
+const NOT_SET = 'Kiritilmagan';
+
+function buildDetailRows(profile: DemoProfileResponse | null): { label: string; value: string }[] {
+  return [
+    { label: 'Ism-familiya', value: profile?.name || NOT_SET },
+    { label: 'Student ID', value: profile?.studentId || NOT_SET },
+    { label: 'Yoshi', value: profile?.age ? String(profile.age) : NOT_SET },
+    { label: 'Jinsi', value: profile?.gender === 'erkak' ? 'Erkak' : profile?.gender === 'ayol' ? 'Ayol' : NOT_SET },
+    { label: 'Manzil', value: profile?.address || NOT_SET },
+    { label: 'Telefon raqami', value: profile?.phone || NOT_SET },
+  ];
+}
 
 export default function EditProfileScreen() {
   const avatarUri = useAvatarUri();
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
+  // 11-vazifa: bu ekran ilgari doim hardcode qilingan namuna ma'lumot
+  // (Shahzoda Mavlonova va h.k.) ko'rsatardi — endi CRM'da haqiqatan
+  // saqlangan o'quvchi ma'lumotlari yuklanadi.
+  const [profile, setProfile] = useState<DemoProfileResponse | null>(null);
+  useEffect(() => {
+    fetchDemoStudentProfile().then(setProfile).catch(() => {});
+  }, []);
+  const detailRows = buildDetailRows(profile);
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -66,7 +79,7 @@ export default function EditProfileScreen() {
             bizga murojaat qiling — tez orada to'g'irlab beramiz.
           </Text>
           <View style={styles.noticeActions}>
-            <Pressable style={styles.noticeActionBtn} onPress={() => Linking.openURL(`tel:${profileStats.phone}`)}>
+            <Pressable style={styles.noticeActionBtn} onPress={() => Linking.openURL(`tel:${profile?.phone || profileStats.phone}`)}>
               <Ionicons name="call-outline" size={18} color={theme.colors.purple} />
               <Text style={styles.noticeActionText}>Qo'ng'iroq qilish</Text>
             </Pressable>
@@ -79,7 +92,7 @@ export default function EditProfileScreen() {
 
         <Text style={styles.sectionTitle}>Shaxsiy ma'lumotlar</Text>
         <Card style={styles.detailsCard}>
-          {DETAIL_ROWS.map((row) => (
+          {detailRows.map((row) => (
             <View key={row.label} style={styles.detailRow}>
               <Text style={styles.detailLabel}>{row.label}</Text>
               <Text style={styles.detailValue} numberOfLines={2}>

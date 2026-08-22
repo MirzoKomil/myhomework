@@ -1802,6 +1802,18 @@ async function getRealLeaderboard(studentId, scope, period = 'alltime') {
     return entries.map((e, i) => ({ ...e, rank: i + 1 }));
 }
 
+// CRM'dagi Student Detail panelidagi (js/app.js) calculateAge bilan bir xil hisoblash.
+function calculateAgeFromBirthDate(birthDate) {
+    if (!birthDate) return null;
+    const b = new Date(birthDate);
+    if (isNaN(b.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - b.getFullYear();
+    const m = now.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+    return age > 0 ? age : null;
+}
+
 async function getDemoStudentProfile(studentId) {
     const id = await resolveStudentId(studentId);
     if (!id) return {};
@@ -1817,6 +1829,13 @@ async function getDemoStudentProfile(studentId) {
         lang: await resolveStudentSubjectLang(id),
         attendanceRate,
         hoursSpent,
+        // 11-vazifa: "Mening profilim" ekrani ilgari doim hardcode qilingan
+        // namuna ma'lumot (yosh/jins/manzil/telefon) ko'rsatardi — endi CRM'da
+        // haqiqatan saqlangan qiymatlar qaytariladi.
+        phone: student.phone || '',
+        age: student.age || calculateAgeFromBirthDate(student.birthDate),
+        gender: student.gender || '',
+        address: student.address || '',
     };
 }
 

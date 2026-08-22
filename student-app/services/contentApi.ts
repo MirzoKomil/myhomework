@@ -397,6 +397,12 @@ export type DemoProfileResponse = {
   // yozuvlaridan hisoblangan foiz va soat (namuna qiymatlar emas).
   attendanceRate: number;
   hoursSpent: number;
+  // 11-vazifa: "Profilni tahrirlash" ekrani uchun — CRM'da saqlangan
+  // haqiqiy qiymatlar (namuna ma'lumot emas).
+  phone: string;
+  age: number | null;
+  gender: 'erkak' | 'ayol' | '';
+  address: string;
 };
 
 export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | null> {
@@ -410,6 +416,10 @@ export async function fetchDemoStudentProfile(): Promise<DemoProfileResponse | n
     lang: data.lang === 'russian' ? 'russian' : 'english',
     attendanceRate: Number(data.attendanceRate) || 0,
     hoursSpent: Number(data.hoursSpent) || 0,
+    phone: data.phone ?? '',
+    age: data.age != null ? Number(data.age) : null,
+    gender: data.gender === 'erkak' || data.gender === 'ayol' ? data.gender : '',
+    address: data.address ?? '',
   };
 }
 
