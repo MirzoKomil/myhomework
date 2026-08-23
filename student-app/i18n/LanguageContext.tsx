@@ -123,6 +123,29 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [token]);
 
+  // 5-vazifa: telefon "Bosh ekranga qo'shish" qilinganda ilova nomi va
+  // ikonkasi kursga (ingliz/rus) mos chiqishi kerak — "Homework" ingliz
+  // tili uchun, "Domwork" rus tili uchun. Bitta web build ikkala kursga
+  // ham xizmat qilgani uchun bu build vaqtida emas, courseLang aniqlangan
+  // zahoti shu yerda DOM'dagi manifest/ikonka/nom teglarini almashtirib
+  // qo'yish orqali amalga oshiriladi — Android "Bosh ekranga qo'shish"
+  // (manifest.webmanifest) va iOS Safari (apple-touch-icon/apple-mobile-
+  // web-app-title) shu tegning JOriy (dinamik yangilangan) qiymatini
+  // o'qiydi, sahifa birinchi yuklangandagi qiymatni emas.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const isRussian = courseLang === 'russian';
+    const appName = isRussian ? 'Domwork' : 'Homework';
+    const manifestHref = isRussian ? '/student/manifest-russian.webmanifest' : '/student/manifest-english.webmanifest';
+    const iconHref = isRussian ? '/student/pwa-icon-domwork.png' : '/student/pwa-icon-homework.jpg';
+
+    document.querySelector('link[rel="manifest"]')?.setAttribute('href', manifestHref);
+    document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', iconHref);
+    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', appName);
+    document.querySelector('meta[name="application-name"]')?.setAttribute('content', appName);
+    document.title = appName;
+  }, [courseLang]);
+
   const setLang = useCallback((l: AppLang) => {
     setLangState(l);
     AsyncStorage.setItem(LANG_PREFERENCE_KEY, l).catch(() => {});

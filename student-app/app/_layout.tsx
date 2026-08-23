@@ -58,11 +58,11 @@ export default function RootLayout() {
     if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
 
-  useEffect(() => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      document.title = 'Myhomework — O\'quvchi';
-    }
-  }, []);
+  // 5-vazifa: document.title endi bu yerda emas, i18n/LanguageContext'da
+  // courseLang'ga ("Homework"/"Domwork") qarab dinamik belgilanadi — bu
+  // yerda ham qo'yilsa, mount effektlari tartibi sababli har doim
+  // KEYIN ishga tushib, o'sha to'g'ri nomni qayta eskisiga qaytarib
+  // yuborardi.
 
   // 6-vazifa (qayta ish): haqiqiy o'quvchi tokeni avval faqat Sozlamalar
   // ekrani ochilganda useAuth() orqali AsyncStorage'dan yuklanardi — shu

@@ -23,6 +23,10 @@ export default function Root({ children }: { children: ReactNode }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="Myhomework" />
         <meta name="description" content="O'quv markaz o'quvchilari uchun mobil veb ilova" />
+        {/* 5-vazifa: JS hali yuklanmagan/hydratsiya bo'lmagan lahzadagi
+            standart sarlavha — courseLang aniqlangach LanguageContext buni
+            "Homework"/"Domwork" ga almashtiradi. */}
+        <title>Homework</title>
         <link rel="manifest" href="/student/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/student/assets/images/icon.png" />
         <link rel="preload" href="/student/fonts/onest-400.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />

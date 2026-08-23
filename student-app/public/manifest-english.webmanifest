@@ -1,0 +1,20 @@
+{
+  "name": "Homework",
+  "short_name": "Homework",
+  "description": "Homework — ingliz tili kursi o'quvchilari uchun mobil veb ilova",
+  "start_url": "/student/",
+  "scope": "/student/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0F2F8",
+  "theme_color": "#7B61FF",
+  "lang": "uz",
+  "icons": [
+    {
+      "src": "/student/pwa-icon-homework.jpg",
+      "sizes": "891x894",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
