@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { useLang } from '@/i18n/LanguageContext';
+import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
 import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
@@ -55,7 +55,7 @@ function pickAnswer(pool: string[]) {
 // birinchi marta ochilganda avtomatik chiqadi, keyin ham (i) tugmasi
 // orqali istalgan payt qayta ko'rish mumkin.
 function RulesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { t } = useLang();
+  const { t, lang, courseLang } = useLang();
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.rulesBackdrop}>
@@ -65,7 +65,9 @@ function RulesModal({ visible, onClose }: { visible: boolean; onClose: () => voi
           </Pressable>
           <Text style={styles.rulesTitle}>{t('mw_rules_title')}</Text>
           <Text style={styles.rulesText}>
-            {t('mw_rules_intro').replace('{n}', String(WORD_LENGTH)).replace('{m}', String(MAX_TRIES))}
+            {localizeCourseWording(t('mw_rules_intro'), lang, courseLang)
+              .replace('{n}', String(WORD_LENGTH))
+              .replace('{m}', String(MAX_TRIES))}
           </Text>
 
           <View style={styles.rulesLegendRow}>

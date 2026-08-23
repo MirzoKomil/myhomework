@@ -53,7 +53,7 @@ function readQueryCourseLang(): CourseLang | null {
 // o'quvchi ilova menyusini o'zbekcha ko'rishni tanlashi mumkin, lekin Radio
 // bo'limi baribir rus radiolarini ko'rsatishi kerak — shu sababli bu ikkitasi
 // aralashtirilmasligi kerak.
-type CourseLang = 'english' | 'russian';
+export type CourseLang = 'english' | 'russian';
 
 type Ctx = {
   lang: AppLang;
@@ -140,4 +140,24 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
 export function useLang(): Ctx {
   return useContext(LanguageContext);
+}
+
+// 3-vazifa: ba'zi tushuntiruvchi matnlar ("90 kunda ingliz tilida
+// gapiring", "Speaking topiklar" kabi) doim ingliz tili kursiga xos
+// so'zlar bilan yozib qo'yilgan — Rus tili kursida o'qiyotgan o'quvchiga
+// (o'zbekcha interfeysda) chiqqanda noto'g'ri/chalkash bo'lib qolardi.
+// Faqat aynan shu holatda (o'zbekcha interfeys + rus tili kursi) shu
+// so'zlarni almashtiradi; boshqa hech qanday holatga (ruscha interfeys,
+// ingliz tili kursi) ta'sir qilmaydi.
+export function localizeCourseWording(text: string, lang: AppLang, courseLang: CourseLang): string {
+  if (lang !== 'uz' || courseLang !== 'russian') return text;
+  return text
+    .replace(/Vocabulary Book/g, 'Daftar')
+    .replace(/Coursebook|Course book/g, 'Kurs kitobi')
+    .replace(/Homework Shop/g, 'Domwork magazin')
+    .replace(/Homework/g, 'Domwork')
+    .replace(/Speaking/g, 'Razgovor')
+    .replace(/speaking/g, 'razgovor')
+    .replace(/ingliz tili/g, 'rus tili')
+    .replace(/inglizcha/g, 'ruscha');
 }

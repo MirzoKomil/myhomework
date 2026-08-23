@@ -15,10 +15,16 @@ import { useLang } from '@/i18n/LanguageContext';
 
 type Category = 'books' | 'shop';
 
-const CATEGORY_LABELS: Record<Category, string> = {
-  books: 'Kitob yetkazish',
-  shop: 'Homework Shop',
-};
+// 3-vazifa: bu ekran matnlari doim o'zbekcha va "Homework Shop"/
+// "Coursebook"/"Vocabulary Book" kabi ingliz tili kursiga xos so'zlarni
+// hardcode qilib qo'ygan edi — Rus tili kursidagi o'quvchiga chalkash
+// bo'lardi, shu sabab kurs tiliga qarab almashtiriladi.
+function categoryLabels(isRussianCourse: boolean): Record<Category, string> {
+  return {
+    books: 'Kitob yetkazish',
+    shop: isRussianCourse ? 'Domwork magazin' : 'Homework Shop',
+  };
+}
 
 const RUSSIAN_BOOK_DELIVERIES: BookDelivery[] = [
   { ...bookDeliveries[0], id: 'russian-coursebook', title: 'Русский язык — учебник', emoji: '📕' },
@@ -140,9 +146,10 @@ export default function BookDeliveryScreen() {
       .finally(() => setDeliveryLoaded(true));
   }, []);
 
+  const isRussianCourse = realDelivery?.lang === 'russian' || courseLang === 'russian';
+
   const displayedBooks: BookDelivery[] = useMemo(() => {
     if (!realDelivery) return [];
-    const isRussianCourse = realDelivery.lang === 'russian' || courseLang === 'russian';
     const courseBooks = isRussianCourse ? RUSSIAN_BOOK_DELIVERIES : bookDeliveries;
     return courseBooks.map((b) => ({
       ...b,
@@ -151,7 +158,7 @@ export default function BookDeliveryScreen() {
       dispatchedDate: realDelivery.dispatchedDate ?? undefined,
       deliveredDate: realDelivery.deliveredDate ?? undefined,
     }));
-  }, [courseLang, realDelivery]);
+  }, [isRussianCourse, realDelivery]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -172,7 +179,7 @@ export default function BookDeliveryScreen() {
             style={[styles.categoryChip, category === c && styles.categoryChipActive]}
             onPress={() => setCategory(c)}>
             <Text style={[styles.categoryChipText, category === c && styles.categoryChipTextActive]}>
-              {CATEGORY_LABELS[c]}
+              {categoryLabels(isRussianCourse)[c]}
             </Text>
           </Pressable>
         ))}
@@ -195,7 +202,9 @@ export default function BookDeliveryScreen() {
           </>
         ) : (
           <>
-            <Text style={styles.subtitle}>Homework Shop'dan sotib olgan tovarlaringiz yetkazib berish jarayoni</Text>
+            <Text style={styles.subtitle}>
+              {isRussianCourse ? 'Domwork magazin' : 'Homework Shop'}'dan sotib olgan tovarlaringiz yetkazib berish jarayoni
+            </Text>
             {orders.length === 0 ? (
               <View style={styles.empty}>
                 <Ionicons name="bag-handle-outline" size={40} color={theme.colors.textMuted} />
@@ -215,9 +224,10 @@ export default function BookDeliveryScreen() {
             <Ionicons name="gift-outline" size={36} color={theme.colors.purple} />
             <Text style={styles.dialogTitle}>Yetkazib berish xizmati nima uchun kerak?</Text>
             <Text style={styles.dialogSubtitle}>
-              Kursni sotib olganingiz uchun bonus sifatida sizga Coursebook va Vocabulary Book darsliklari bepul
-              yetkazib beriladi. Bundan tashqari, Homework Shop'dan coinlaringizga sotib olgan tovarlaringiz ham
-              shu yerda kuzatib borilishi mumkin.
+              Kursni sotib olganingiz uchun bonus sifatida sizga {isRussianCourse ? 'Kurs kitobi' : 'Coursebook'} va{' '}
+              {isRussianCourse ? 'Daftar' : 'Vocabulary Book'} darsliklari bepul
+              yetkazib beriladi. Bundan tashqari, {isRussianCourse ? 'Domwork magazin' : 'Homework Shop'}'dan
+              coinlaringizga sotib olgan tovarlaringiz ham shu yerda kuzatib borilishi mumkin.
             </Text>
             <Pressable style={styles.dialogBtn} onPress={() => setShowInfo(false)}>
               <Text style={styles.dialogBtnText}>Tushunarli</Text>

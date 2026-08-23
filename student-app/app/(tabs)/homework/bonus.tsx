@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { useLang } from '@/i18n/LanguageContext';
+import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 import { BONUS_CATEGORIES } from '@/data/lessonContent';
 import { courseEnrollment } from '@/data/mock';
 import { firstWeekdayOnOrAfter, UZ_MONTHS } from '@/data/scheduleCalendar';
@@ -41,7 +41,7 @@ function overallProgress(bonusId: string): number {
 }
 
 export default function BonusLessonsScreen() {
-  const { t } = useLang();
+  const { t, lang, courseLang } = useLang();
   const [, forceUpdate] = useState(0);
   const [showLockedNotice, setShowLockedNotice] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -130,7 +130,7 @@ export default function BonusLessonsScreen() {
             <Text style={styles.dialogEmoji}>🎁</Text>
             <Text style={styles.dialogTitle}>{t('bonus_info_title')}</Text>
             <Text style={[styles.dialogSubtitle, styles.dialogSubtitleLeft]}>
-              {t('bonus_info_body')}
+              {localizeCourseWording(t('bonus_info_body'), lang, courseLang)}
             </Text>
             <Pressable style={styles.dialogConfirmBtn} onPress={() => setShowInfo(false)}>
               <Text style={styles.dialogConfirmText}>{t('common_tushunarli')}</Text>

@@ -5,11 +5,11 @@ import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
-import { useLang } from '@/i18n/LanguageContext';
+import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 
 export default function ResourcesScreen() {
   const [showInfo, setShowInfo] = useState(false);
-  const { t } = useLang();
+  const { t, lang, courseLang } = useLang();
 
   const libraryShimmer = useRef(new Animated.Value(0)).current;
   const gamesShimmer = useRef(new Animated.Value(0)).current;
@@ -109,8 +109,8 @@ export default function ResourcesScreen() {
             <Text style={styles.dialogEmoji}>💡</Text>
             <Text style={styles.dialogTitle}>{t('res_hub_info_title')}</Text>
             <Text style={styles.dialogSubtitle}>
-              {t('res_hub_info_intro')} {'\n\n'}
-              📚 <Text style={styles.dialogBold}>{t('res_hub_library_title')}</Text> — {t('res_hub_info_library_desc')}{'\n\n'}
+              {localizeCourseWording(t('res_hub_info_intro'), lang, courseLang)} {'\n\n'}
+              📚 <Text style={styles.dialogBold}>{t('res_hub_library_title')}</Text> — {localizeCourseWording(t('res_hub_info_library_desc'), lang, courseLang)}{'\n\n'}
               🎮 <Text style={styles.dialogBold}>{t('res_hub_games_title')}</Text> — {t('res_hub_info_games_desc')}{'\n\n'}
               👥 <Text style={styles.dialogBold}>{t('res_hub_community_title')}</Text> — {t('res_hub_info_community_desc')}
             </Text>

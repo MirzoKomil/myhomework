@@ -22,7 +22,7 @@ import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
-import { useLang } from '@/i18n/LanguageContext';
+import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
 import { LessonNode, LessonType } from '@/data/mock';
 import { getLessonContent, getLessonPossibleCoins, mergeLessonContent } from '@/data/lessonContent';
@@ -496,7 +496,7 @@ function LessonRow({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function RoadmapScreen() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const totalCoins = useCoins();
   const totalLightning = useLightning();
@@ -703,9 +703,9 @@ export default function RoadmapScreen() {
           <Pressable style={ss.dialogBackdropTap} onPress={() => setShowCourseInfo(false)} />
           <View style={ss.dialogCard}>
             <Text style={ss.dialogEmoji}>🚀</Text>
-            <Text style={ss.dialogTitle}>{t('roadmap_course_dialog_title')}</Text>
+            <Text style={ss.dialogTitle}>{localizeCourseWording(t('roadmap_course_dialog_title'), lang, courseLang)}</Text>
             <Text style={ss.dialogSubtitle}>
-              {t('roadmap_course_dialog_body')}
+              {localizeCourseWording(t('roadmap_course_dialog_body'), lang, courseLang)}
             </Text>
             <Pressable style={ss.dialogConfirmBtn} onPress={() => setShowCourseInfo(false)}>
               <Text style={ss.dialogConfirmText}>{t('roadmap_course_dialog_btn')}</Text>
