@@ -12,20 +12,23 @@ type Props = {
   onClose: () => void;
 };
 
-// 58-vazifa: so'z ustiga bosilganda ochiladigan yarim oyna — rasm, so'z,
-// tarjima, talaffuz tugmasi va (bo'lsa) misol gapni ko'rsatadi. Rasm va
-// misol gap CRM'dan (admin) kiritiladi — kiritilmagan bo'lsa rasm o'rniga
-// zaxira icon ko'rsatiladi, misol gap qismi esa umuman chiqmaydi.
+// 58-vazifa (4-vazifa qoshimcha: pastdan chiqadigan yarim oyna o'rniga,
+// ilovadagi boshqa ma'lumot oynachalari — masalan "Yetkazib berish
+// xizmati" — bilan bir xil uslubda EKRAN O'RTASIDA chiqadigan kartaga
+// almashtirildi, ko'rinishi izchil bo'lishi uchun) — so'z ustiga bosilganda
+// ochilib, rasm, so'z, tarjima, talaffuz tugmasi va (bo'lsa) misol gapni
+// ko'rsatadi. Rasm va misol gap CRM'dan (admin) kiritiladi — kiritilmagan
+// bo'lsa rasm o'rniga zaxira icon ko'rsatiladi, misol gap qismi esa
+// umuman chiqmaydi.
 export function VocabWordSheet({ word, lang, onClose }: Props) {
   const { t } = useLang();
   const speechLang = lang === 'russian' ? 'ru-RU' : 'en-US';
 
   return (
-    <Modal visible={!!word} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={!!word} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <Pressable style={styles.backdropTap} onPress={onClose} />
         <View style={styles.sheet}>
-          <View style={styles.handle} />
           <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={8}>
             <Ionicons name="close" size={22} color={theme.colors.textMuted} />
           </Pressable>
@@ -66,17 +69,17 @@ export function VocabWordSheet({ word, lang, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  backdropTap: { flex: 1 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  backdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   sheet: {
+    width: '100%',
+    maxWidth: 340,
     backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: theme.radius.lg,
-    borderTopRightRadius: theme.radius.lg,
-    padding: 20,
-    paddingBottom: 36,
+    borderRadius: theme.radius.lg,
+    padding: 24,
     gap: 8,
+    ...theme.shadow.card,
   },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.border, alignSelf: 'center', marginBottom: 10 },
   closeBtn: { position: 'absolute', top: 14, right: 14, zIndex: 1 },
   imageWrap: { alignItems: 'center', marginBottom: 6 },
   image: { width: 140, height: 140, borderRadius: theme.radius.md, backgroundColor: theme.colors.surface },
