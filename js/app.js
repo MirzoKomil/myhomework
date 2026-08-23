@@ -324,20 +324,26 @@ function applyRoleBasedAccess(user) {
     }
 }
 
-const HR_ROLES_SYNCED_KEY = 'mh_hr_roles_synced_v1';
-
-// 4-vazifa: ilgari (create-user'dagi ROP/ustoz rol-mapping bug tufayli)
+// 6-vazifa: ilgari (create-user'dagi ROP/ustoz rol-mapping bug tufayli)
 // "employee" bo'lib qolib ketgan xodim login hisoblari uchun — admin
-// panelga kirganda BIR MARTA (shu brauzerda) barcha xodimlarning login
-// rolini HR yozuvidagi haqiqiy rolidan qayta hisoblab, parolga tegmasdan
-// serverga sinxronlaydi. Masalan, ustoz kabinetiga kirilganda faqat
-// "Mobil ilova" ko'rinib, dars jadvali/o'quvchilari/davomati yo'qolib
-// qolishining sababi aynan shu edi.
-async function syncHrLoginRolesOnce(currentUser) {
+// panelga kirganda barcha xodimlarning login rolini HR yozuvidagi
+// haqiqiy rolidan qayta hisoblab, parolga tegmasdan serverga sinxronlaydi.
+// Masalan, ustoz kabinetiga kirilganda faqat "Mobil ilova" ko'rinib,
+// dars jadvali/o'quvchilari/davomati yo'qolib qolishining sababi aynan
+// shu edi. Ilgari bu tekshiruv har bir admin brauzerida FAQAT BIR MARTA
+// (localStorage bayrog'i orqali) ishga tushardi — shu sabab bayroq
+// allaqachon qo'yilgan brauzerda ishlayotgan admin uchun, o'sha bayroqdan
+// KEYIN yaratilgan yangi ustoz/xodim hisoblari hech qachon
+// tekshirilmay, xuddi shu buzuq holatda muzlab qolar edi (yangi ustozga
+// akkaunt ochilganda uning kabineti "integratsiya qilinmagan" bo'lib
+// ko'rinishining sababi shu). Bu tekshiruv server tomonida ham faqat
+// HAQIQATAN farq qilgan maydonlarnigina yangilaydigan, parolga hech qachon
+// tegmaydigan xavfsiz operatsiya (server/routes/auth.js sync-roles) —
+// shu sabab endi HAR BIR admin sessiyasida (bayroqsiz) qayta ishga
+// tushiriladi, shunda yangi qo'shilgan xodimlar ham darhol to'g'ri
+// integratsiya qilinadi.
+async function syncHrLoginRoles(currentUser) {
     if (currentUser?.role !== 'admin') return;
-    try {
-        if (localStorage.getItem(HR_ROLES_SYNCED_KEY)) return;
-    } catch { return; }
 
     const employees = getItem(STORAGE_KEYS.hrEmployees, []);
     const entries = employees.filter(e => e.login).map(e => ({
@@ -352,7 +358,6 @@ async function syncHrLoginRolesOnce(currentUser) {
 
     try {
         if (entries.length) await apiSyncHrRoles(entries);
-        localStorage.setItem(HR_ROLES_SYNCED_KEY, '1');
     } catch (err) {
         console.warn('Login rollarini sinxronlashda xatolik:', err.message);
     }
@@ -555,7 +560,7 @@ async function bootApp() {
 
     setUiLang(getUiLang());
     initUserUI(currentUser);
-    syncHrLoginRolesOnce(currentUser);
+    syncHrLoginRoles(currentUser);
     renderDashboard();
     renderCalendarWidget();
     startLeadsPolling();
@@ -6563,7 +6568,7 @@ function initTimetableControls() {
         const ownTeacher = linkedTeacherId ? resolveTeacherWithVirtual(linkedTeacherId) : null;
         teacherEl.innerHTML = ownTeacher
             ? `<option value="${escapeHtml(ownTeacher.id)}">${escapeHtml(ownTeacher.name)}</option>`
-            : '<option value="">— Sizga hali dars jadvali biriktirilmagan —</option>';
+            : '<option value="">— Hisobingiz ustoz yozuviga ulanmagan (adminga murojaat qiling) —</option>';
         const teacherWrap = teacherEl.closest('.form-group') || teacherEl.parentElement;
         if (teacherWrap) teacherWrap.style.display = 'none';
     } else {
@@ -6934,7 +6939,7 @@ function renderTimetable() {
     if (_cuTimetable?.role === 'teacher') {
         const ownTeacher = _cuTimetable.linkedTeacherId ? resolveTeacherWithVirtual(_cuTimetable.linkedTeacherId) : null;
         if (!ownTeacher) {
-            container.innerHTML = '<p class="text-muted" style="padding:24px">Sizga hali dars jadvali biriktirilmagan.</p>';
+            container.innerHTML = '<p class="text-muted" style="padding:24px">Sizning hisobingiz hali biror ustoz yozuviga ulanmagan — bu texnik muammo, iltimos administratorga murojaat qiling.</p>';
             return;
         }
         const ownEntries = collectWeeklyScheduleEntries({ ...filters, teacherId: ownTeacher.id, lang: null }, ttMonthDays);
@@ -8292,8 +8297,18 @@ function renderMainAttendance() {
     const subject = getSelectedSubject('mainAttSubjectTabs');
     const teacherId = document.getElementById('mainAttTeacher').value;
     if (!teacherId) {
-        document.getElementById('mainAttendanceContainer').innerHTML =
-            `<p class="text-muted">${getSubjectLabel(subject)} bo'yicha asosiy ustozlar yo'q.</p>`;
+        // 6-vazifa: ustoz o'zi kirganda "hech qanday ustoz yo'q" degan
+        // umumiy (admin uchun mo'ljallangan) xabar chiqib, ustiga ustama
+        // ravishda subject 'english'ga standart qilib qo'yilgani sabab
+        // haqiqatan Rus tili ustozi bo'lsa ham "Ingliz tili bo'yicha..."
+        // deb noto'g'ri chiqib turardi — bu ustoz hisobi biror ustoz
+        // yozuviga hali ULANMAGANI (texnik integratsiya muammosi)
+        // sababli edi, "til bo'yicha ustoz yo'q" bilan aslo bog'liq emas.
+        // Endi bu ikki holat aniq ajratiladi.
+        const msg = isTeacherRole
+            ? "Sizning hisobingiz hali biror ustoz yozuviga ulanmagan — bu texnik muammo, iltimos administratorga murojaat qiling."
+            : `${getSubjectLabel(subject)} bo'yicha asosiy ustozlar yo'q.`;
+        document.getElementById('mainAttendanceContainer').innerHTML = `<p class="text-muted">${msg}</p>`;
         document.getElementById('mainAttSummary').innerHTML = '';
         return;
     }
@@ -9163,7 +9178,11 @@ function renderStudents() {
                 </div>
             </td>
         </tr>`;
-    }).join('') || `<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--text-muted)">O'quvchilar yo'q</td></tr>`;
+    }).join('') || `<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--text-muted)">${
+        isTeacherRole && !ownTeacherForFilter
+            ? "Hisobingiz hali biror ustoz yozuviga ulanmagan — bu texnik muammo, iltimos administratorga murojaat qiling."
+            : "O'quvchilar yo'q"
+    }</td></tr>`;
 
     // Ism ustiga bosib detail panel ochish
     tbody.querySelectorAll('[data-student-row]').forEach(row => {
