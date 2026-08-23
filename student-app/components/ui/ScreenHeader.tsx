@@ -7,13 +7,18 @@ type ScreenHeaderProps = {
   title: string;
   showBack?: boolean;
   rightAction?: React.ReactNode;
+  // 2-vazifa: Speaking Battle kabi o'yin ekranlarida orqaga tugmasi
+  // to'g'ridan-to'g'ri chiqib ketishdan oldin tasdiqlash so'rashi kerak —
+  // shu sabab standart router.back() ni ixtiyoriy ravishda almashtirish
+  // imkoniyati qo'shildi (berilmasa, avvalgi xatti-harakat saqlanadi).
+  onBack?: () => void;
 };
 
-export function ScreenHeader({ title, showBack = false, rightAction }: ScreenHeaderProps) {
+export function ScreenHeader({ title, showBack = false, rightAction, onBack }: ScreenHeaderProps) {
   return (
     <View style={styles.header}>
       {showBack ? (
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
+        <Pressable onPress={onBack ?? (() => router.back())} style={styles.backBtn} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </Pressable>
       ) : (

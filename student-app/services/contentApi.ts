@@ -113,6 +113,14 @@ const LEADERBOARD_API_BASE =
     ? '/api/state/leaderboard'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/leaderboard';
 
+// 2-vazifa: Speaking Battle'dagi "Tasodifiy o'yinchi" — HAQIQIY, bir vaqtda
+// navbatda turgan boshqa o'quvchi bilan bog'lanadi (avval mahalliy soxta
+// simulyatsiya edi).
+const BATTLE_API_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/battle'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/battle';
+
 export type AdminCourse = {
   id: string;
   name: string;
@@ -523,6 +531,64 @@ export async function fetchLeaderboard(
   if (!r.ok) return [];
   const data = await r.json();
   return Array.isArray(data?.entries) ? data.entries : [];
+}
+
+export type BattleWordPayload = { word: string; translation: string; options: string[] };
+
+export type BattleMatchStatus = {
+  status: 'waiting' | 'playing' | 'finished' | 'abandoned' | 'not_found';
+  matchId?: string;
+  opponentName?: string;
+  opponentAvatarUrl?: string;
+  words?: BattleWordPayload[];
+  currentRound?: number;
+  totalRounds?: number;
+  roundStartedAt?: string;
+  scores?: { me: number; opponent: number };
+  lastRoundResult?: { round: number; iWon: boolean; draw: boolean } | null;
+  opponentLeft?: boolean;
+};
+
+export async function joinBattleQueue(words: BattleWordPayload[]): Promise<BattleMatchStatus> {
+  const r = await authedFetch(`${BATTLE_API_BASE}/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ words }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Xatolik');
+  return data;
+}
+
+export async function leaveBattleQueue(): Promise<void> {
+  await authedFetch(`${BATTLE_API_BASE}/leave`, { method: 'POST' }).catch(() => {});
+}
+
+export async function fetchBattleStatus(matchId?: string): Promise<BattleMatchStatus> {
+  const url = matchId ? `${BATTLE_API_BASE}/status?matchId=${encodeURIComponent(matchId)}` : `${BATTLE_API_BASE}/status`;
+  const r = await authedFetch(url);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Xatolik');
+  return data;
+}
+
+export async function submitBattleAnswer(matchId: string, round: number, correct: boolean, elapsedMs: number): Promise<BattleMatchStatus> {
+  const r = await authedFetch(`${BATTLE_API_BASE}/answer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ matchId, round, correct, elapsedMs }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Xatolik');
+  return data;
+}
+
+export async function abandonBattleMatch(matchId: string): Promise<void> {
+  await authedFetch(`${BATTLE_API_BASE}/abandon`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ matchId }),
+  }).catch(() => {});
 }
 
 export async function fetchDemoSchedule(): Promise<DemoScheduleResponse> {

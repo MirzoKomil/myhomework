@@ -1534,7 +1534,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory' || key === 'assistantWeeklyRatings') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory' || key === 'assistantWeeklyRatings' || key === 'battleMatches') ? {} : [];
     }
     return row.data;
 }
@@ -1879,6 +1879,198 @@ async function getRealLeaderboard(studentId, scope, period = 'alltime') {
 
     entries.sort((a, b) => b.lightning - a.lightning);
     return entries.map((e, i) => ({ ...e, rank: i + 1 }));
+}
+
+// ── Speaking Battle — haqiqiy real-vaqt raqib qidiruvi ──────────────────────
+// 2-vazifa: "Tasodifiy o'yinchi" rejimi ilgari to'liq soxta edi — mahalliy
+// "bot" bilan aynan bir xil kodni ishlatib, faqat ismi/avatari tasodifiy
+// ko'rsatilardi. Endi ikkita HAQIQIY o'quvchi bir vaqtning o'zida navbatga
+// tursa, ular bog'lanadi va bir xil so'zlar to'plami ustida musobaqalashadi.
+// Loyihada websocket yo'q (Muloqot bo'limi ham xuddi shunday — pollingga
+// asoslangan), shuning uchun bu yerda ham bir xil yondashuv: klient har
+// 1.5-2 soniyada holatni so'raydi, server esa har so'rovda joriy raundni
+// "tekshirib" (tickBattleMatch) ikkala tomon ham javob bergan yoki vaqt
+// (grace bilan) tugagan bo'lsa g'olibni aniqlab, keyingi raundga o'tkazadi.
+const BATTLE_QUEUE_TTL_MS = 60 * 1000;
+const BATTLE_MATCH_TTL_MS = 10 * 60 * 1000;
+const BATTLE_ROUND_MS = 8000; // student-app/data/mock.ts BATTLE_ROUND_SECONDS bilan mos
+const BATTLE_ROUND_GRACE_MS = 5000;
+
+async function lockJsonRow(client, key, defaultValue) {
+    const existing = await client.query('SELECT data FROM json_data WHERE key = $1 FOR UPDATE', [key]);
+    if (existing.rows[0]) return existing.rows[0].data;
+    await client.query(
+        `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
+        [key, JSON.stringify(defaultValue)]
+    );
+    const retry = await client.query('SELECT data FROM json_data WHERE key = $1 FOR UPDATE', [key]);
+    return retry.rows[0]?.data ?? defaultValue;
+}
+
+function sanitizeBattleMatch(match, studentId) {
+    const opponentId = match.players.find((id) => id !== studentId);
+    return {
+        status: match.status,
+        matchId: match.id,
+        opponentName: match.names[opponentId] || 'Hamkurs',
+        opponentAvatarUrl: match.avatars[opponentId] || '',
+        words: match.words,
+        currentRound: match.currentRound,
+        totalRounds: match.words.length,
+        roundStartedAt: match.roundStartedAt,
+        scores: { me: match.scores[studentId] || 0, opponent: match.scores[opponentId] || 0 },
+        lastRoundResult: match.lastRoundResult
+            ? { round: match.lastRoundResult.round, iWon: match.lastRoundResult.winner === studentId, draw: !match.lastRoundResult.winner }
+            : null,
+        opponentLeft: match.status === 'abandoned' && match.abandonedBy === opponentId,
+    };
+}
+
+// Joriy raundni "tekshiradi": ikkala o'yinchi ham javob bergan (yoki grace
+// muddati o'tib, javob bermagan taraf "vaqt tugadi" deb hisoblangan) bo'lsa
+// g'olibni aniqlaydi, ballarni yangilaydi va keyingi raundga o'tkazadi.
+function tickBattleMatch(match) {
+    if (match.status !== 'playing') return match;
+    const [p1, p2] = match.players;
+    const round = match.currentRound;
+    const a1 = match.answers[p1]?.[round];
+    const a2 = match.answers[p2]?.[round];
+    const roundStartedAt = new Date(match.roundStartedAt).getTime();
+    const graceExpired = Date.now() - roundStartedAt > BATTLE_ROUND_MS + BATTLE_ROUND_GRACE_MS;
+
+    if (!a1 && !a2 && !graceExpired) return match;
+    const effA1 = a1 || (graceExpired ? { correct: false, elapsedMs: BATTLE_ROUND_MS, auto: true } : null);
+    const effA2 = a2 || (graceExpired ? { correct: false, elapsedMs: BATTLE_ROUND_MS, auto: true } : null);
+    if (!effA1 || !effA2) return match;
+
+    let winner = null;
+    if (effA1.correct && effA2.correct) winner = effA1.elapsedMs <= effA2.elapsedMs ? p1 : p2;
+    else if (effA1.correct) winner = p1;
+    else if (effA2.correct) winner = p2;
+
+    if (winner) match.scores[winner] = (match.scores[winner] || 0) + 1;
+    match.lastRoundResult = { round, winner };
+    if (!a1) match.answers[p1] = { ...match.answers[p1], [round]: effA1 };
+    if (!a2) match.answers[p2] = { ...match.answers[p2], [round]: effA2 };
+
+    const nextRound = round + 1;
+    if (nextRound >= match.words.length) {
+        match.status = 'finished';
+    } else {
+        match.currentRound = nextRound;
+        match.roundStartedAt = new Date().toISOString();
+    }
+    return match;
+}
+
+async function joinBattleQueue(studentId, words) {
+    if (!studentId) throw new Error("Bu funksiya faqat haqiqiy tizimga kirgan o'quvchilar uchun");
+    if (!Array.isArray(words) || words.length < 1) throw new Error("So'zlar to'plami bo'sh");
+    const profile = await getDemoStudentProfile(studentId);
+    if (!profile?.name) throw new Error("O'quvchi profili topilmadi");
+
+    return tx(async (client) => {
+        const now = Date.now();
+        let queue = await lockJsonRow(client, 'battleQueue', []);
+        queue = queue.filter((q) => q.studentId !== studentId && now - new Date(q.joinedAt).getTime() < BATTLE_QUEUE_TTL_MS);
+
+        if (queue.length > 0) {
+            const opponent = queue[0];
+            const remaining = queue.slice(1);
+            await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(remaining)]);
+
+            const matches = await lockJsonRow(client, 'battleMatches', {});
+            Object.entries(matches).forEach(([id, m]) => {
+                if (now - new Date(m.createdAt).getTime() > BATTLE_MATCH_TTL_MS) delete matches[id];
+            });
+            const matchId = 'battle-' + now.toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+            const match = {
+                id: matchId,
+                players: [opponent.studentId, studentId],
+                names: { [opponent.studentId]: opponent.name, [studentId]: profile.name },
+                avatars: { [opponent.studentId]: opponent.avatarUrl || '', [studentId]: profile.avatarUrl || '' },
+                words: opponent.words,
+                scores: { [opponent.studentId]: 0, [studentId]: 0 },
+                answers: {},
+                currentRound: 0,
+                roundStartedAt: new Date().toISOString(),
+                lastRoundResult: null,
+                status: 'playing',
+                createdAt: new Date().toISOString(),
+            };
+            matches[matchId] = match;
+            await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleMatches'`, [JSON.stringify(matches)]);
+            return sanitizeBattleMatch(match, studentId);
+        }
+
+        queue.push({ studentId, name: profile.name, avatarUrl: profile.avatarUrl || '', words, joinedAt: new Date().toISOString() });
+        await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(queue)]);
+        return { status: 'waiting' };
+    });
+}
+
+async function leaveBattleQueue(studentId) {
+    if (!studentId) return;
+    await tx(async (client) => {
+        const queue = await lockJsonRow(client, 'battleQueue', []);
+        const next = queue.filter((q) => q.studentId !== studentId);
+        if (next.length !== queue.length) {
+            await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(next)]);
+        }
+    });
+}
+
+async function getBattleStatus(studentId, matchId) {
+    if (!studentId) throw new Error("Bu funksiya faqat haqiqiy tizimga kirgan o'quvchilar uchun");
+    return tx(async (client) => {
+        const matches = await lockJsonRow(client, 'battleMatches', {});
+        let match = matchId ? matches[matchId] : Object.values(matches).find((m) => m.players.includes(studentId));
+        if (!match || !match.players.includes(studentId)) {
+            const queue = await lockJsonRow(client, 'battleQueue', []);
+            const stillWaiting = queue.some((q) => q.studentId === studentId);
+            return { status: stillWaiting ? 'waiting' : 'not_found' };
+        }
+        match = tickBattleMatch(match);
+        matches[match.id] = match;
+        await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleMatches'`, [JSON.stringify(matches)]);
+        return sanitizeBattleMatch(match, studentId);
+    });
+}
+
+async function submitBattleAnswer(studentId, matchId, round, correct, elapsedMs) {
+    if (!studentId) throw new Error("Bu funksiya faqat haqiqiy tizimga kirgan o'quvchilar uchun");
+    return tx(async (client) => {
+        const matches = await lockJsonRow(client, 'battleMatches', {});
+        const match = matches[matchId];
+        if (!match || !match.players.includes(studentId)) throw new Error("O'yin topilmadi");
+        if (match.status === 'playing' && match.currentRound === round && !match.answers[studentId]?.[round]) {
+            match.answers[studentId] = {
+                ...match.answers[studentId],
+                [round]: { correct: !!correct, elapsedMs: Math.max(0, Number(elapsedMs) || 0) },
+            };
+        }
+        const ticked = tickBattleMatch(match);
+        matches[matchId] = ticked;
+        await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleMatches'`, [JSON.stringify(matches)]);
+        return sanitizeBattleMatch(ticked, studentId);
+    });
+}
+
+// O'yin davomida foydalanuvchi boshqa sahifaga o'tishni tasdiqlasa
+// chaqiriladi — qolgan tomon keyingi pollingda "raqib chiqib ketdi" deb
+// ko'radi va hozirgi hisob bilan natija ekraniga o'tadi.
+async function abandonBattleMatch(studentId, matchId) {
+    if (!studentId || !matchId) return;
+    await tx(async (client) => {
+        const matches = await lockJsonRow(client, 'battleMatches', {});
+        const match = matches[matchId];
+        if (match && match.players.includes(studentId) && match.status === 'playing') {
+            match.status = 'abandoned';
+            match.abandonedBy = studentId;
+            matches[matchId] = match;
+            await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleMatches'`, [JSON.stringify(matches)]);
+        }
+    });
 }
 
 // CRM'dagi Student Detail panelidagi (js/app.js) calculateAge bilan bir xil hisoblash.
@@ -4049,6 +4241,7 @@ module.exports = {
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
     syncStudentProgress, getRealLeaderboard, resolveStudentSubjectLang,
+    joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch,
     getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,
     getCommunityPosts, addCommunityPost, toggleCommunityPostLike,
     addCommunityComment, toggleCommunityCommentLike,

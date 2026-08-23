@@ -1,6 +1,6 @@
 const express = require('express');
 const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments, resolveStudentSubjectLang,
-getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
+getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -590,6 +590,58 @@ router.get('/leaderboard', studentAuthOptional, async (req, res) => {
     } catch (err) {
         console.error('GET /api/state/leaderboard', err);
         res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// 2-vazifa: Speaking Battle'dagi "Tasodifiy o'yinchi" rejimi — ikkita
+// haqiqiy tizimga kirgan o'quvchini bir-biriga bog'laydi (avval to'liq
+// soxta/mahalliy edi). Demo/login qilinmagan holatda (req.studentId=null)
+// ishlamaydi — klient buni 400 xatolik orqali bilib, darhol "mavjud emas"
+// xabarini ko'rsatadi (navbatda kutmasdan).
+router.post('/battle/join', studentAuthOptional, async (req, res) => {
+    try {
+        const data = await joinBattleQueue(req.studentId, req.body?.words);
+        res.json(data);
+    } catch (err) {
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/battle/leave', studentAuthOptional, async (req, res) => {
+    try {
+        await leaveBattleQueue(req.studentId);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.get('/battle/status', studentAuthOptional, async (req, res) => {
+    try {
+        const data = await getBattleStatus(req.studentId, req.query?.matchId ? String(req.query.matchId) : null);
+        res.json(data);
+    } catch (err) {
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/battle/answer', studentAuthOptional, async (req, res) => {
+    try {
+        const { matchId, round, correct, elapsedMs } = req.body || {};
+        if (!matchId || typeof round !== 'number') return res.status(400).json({ error: "Noto'g'ri so'rov" });
+        const data = await submitBattleAnswer(req.studentId, matchId, round, !!correct, elapsedMs);
+        res.json(data);
+    } catch (err) {
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+router.post('/battle/abandon', studentAuthOptional, async (req, res) => {
+    try {
+        await abandonBattleMatch(req.studentId, req.body?.matchId);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });
 
