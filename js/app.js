@@ -8954,9 +8954,11 @@ function renderStudents() {
     // bo'lim ro'yxati doim bir-biriga mos kelishini kafolatlaydi — Sotuv
     // bo'limida yo'q o'quvchi bu yerda ham ko'rinmaydi.
     const _leadsForActiveFilter = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const _allLeadIdSet = new Set();
     const _activeLeadIdSet = new Set();
     ['english', 'russian'].forEach(lang => {
         (_leadsForActiveFilter[lang] || []).forEach(l => {
+            _allLeadIdSet.add(l.id);
             if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) _activeLeadIdSet.add(l.id);
         });
     });
@@ -8964,7 +8966,20 @@ function renderStudents() {
     // arxivga o'tishi yoki boshqa CRM bosqichida bo'lishi o'quvchini
     // ustozdan yashirib qo'ymasligi kerak.
     if (!isTeacherRole) {
-        students = students.filter(s => s.leadRef?.id && _activeLeadIdSet.has(s.leadRef.id));
+        // 4-vazifa: yuqoridagi qoida faqat lid HAQIQATAN topilib, uning
+        // bosqichi noto'g'ri bo'lganda ishlashi kerak edi — lekin
+        // `leadRef.id` bazadagi HECH QANDAY lidga to'g'ri kelmasa (masalan
+        // leadRef umuman yo'q eski/qo'lda yaratilgan yozuv, yoki unga
+        // bog'langan lid biror sabab bilan — 2026-08-01'dagi ma'lumot
+        // yo'qolish hodisasi kabi — bazadan yo'qolgan bo'lsa) o'quvchi
+        // shartsiz butunlay ko'rinmas bo'lib qolardi, garchi ilovada haqiqiy
+        // dostupi bo'lsa ham. Endi FAQAT lid haqiqatan topilib, aniq boshqa
+        // (to'lovga aloqasiz) bosqichda turgan holatdagina yashiriladi.
+        students = students.filter(s => {
+            const refId = s.leadRef?.id;
+            if (!refId || !_allLeadIdSet.has(refId)) return true;
+            return _activeLeadIdSet.has(refId);
+        });
     }
 
     // Search filter
