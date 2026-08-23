@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { BOOK_LEVEL_LABELS, BOOK_STORIES, BookStory } from '@/data/bookStories';
+import { markBookListened } from '@/services/bookProgressStore';
 import { fetchMobileContent } from '@/services/contentApi';
 
 export default function BookStoryScreen() {
@@ -47,6 +48,10 @@ export default function BookStoryScreen() {
   const speakParagraph = (index: number, onDone?: () => void) => {
     const p = story.paragraphs[index];
     setPlayingIndex(index);
+    // 1-vazifa: "Eshitish" ko'nikma progressi shu kitob TINGLANGANMI-yo'qmi
+    // ekaniga qaraydi — birinchi marta istalgan paragraf tinglanganida
+    // shu kitob "eshitib o'rganilgan" deb belgilanadi.
+    void markBookListened(story.id);
     Speech.speak(p.en, {
       language: speechLang,
       rate: 0.95,

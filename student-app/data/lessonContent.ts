@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 
+import { BOOK_STORIES } from '@/data/bookStories';
 import { AdminLessonContent, fetchMobileContent } from '@/services/contentApi';
-import { getCategoryProgress, loadLessonProgress, ProgressCategory } from '@/services/lessonProgressStore';
+import { getListenedBookIds } from '@/services/bookProgressStore';
+import { getCategoryProgress, getLessonProgress, loadLessonProgress, ProgressCategory } from '@/services/lessonProgressStore';
 
 export type LessonDayType = 'grammar' | 'speaking' | 'bonus';
 
@@ -344,7 +346,7 @@ export async function getResolvedLessonContent(lessonId: string, dayIndex: numbe
   return mergeLessonContent(base, mc.lessonContents[lessonId]);
 }
 
-const COURSE_TOTAL_LESSONS = 72;
+export const COURSE_TOTAL_LESSONS = 72;
 // 8-vazifa/32-vazifa: Bosh sahifa/Darslar yo'li'dagi bilan bir xil qoida -
 // birinchi dars har doim ochiq, keyingi VIDEO dars oldingi (speaking)
 // darsning bajarilishi kamida shu foizga yetganda, keyingi SPEAKING dars
@@ -412,6 +414,76 @@ export async function getCourseOverallProgress(): Promise<{
     percent: Math.round((unlockedCount / COURSE_TOTAL_LESSONS) * 100),
     homeworkCompleted,
     courseId: course.id,
+  };
+}
+
+export type SkillsProgress = {
+  vocabulary: number;
+  speaking: number;
+  listening: number;
+  grammar: number;
+};
+
+// 1-vazifa: Bosh sahifadagi "Ko'nikmalar progressi" paneli ilgari doim
+// qattiq yozilgan namuna foizlarni (62%/45%/70%/38%) ko'rsatardi. Endi har
+// biri haqiqiy ma'lumotdan hisoblanadi:
+// - So'zlar: 72 ta dars tarkibidagi JAMI so'zlar soni 100% — shundan
+//   "Yangi so'zlar" mashqi to'g'ri javob bilan yakunlangan (vocabPractice)
+//   darslardagi so'zlar soni ulushi (har darsda faqat birinchi
+//   VOCAB_PRACTICE_SIZE ta so'z amalda mashq qilinadi).
+// - Muloqot: 36 ta razgovor (speaking) darsning nechtasini ustoz "dars
+//   o'tdim" deb belgilagani (attendanceTaken) ulushi.
+// - Eshitish: Kutubxona > Kitoblar bo'limidagi audiokitoblardan nechtasi
+//   haqiqatan tinglanganini (bookProgressStore) ulushi.
+// - Gramatika: 36 ta videodars ichida uyga vazifasi 100% bajarilgan deb
+//   hisoblanganlar ulushi.
+export async function getSkillsProgress(): Promise<SkillsProgress> {
+  const empty: SkillsProgress = { vocabulary: 0, speaking: 0, listening: 0, grammar: 0 };
+  const mc = await fetchMobileContent();
+  const course = mc.courses[0];
+  if (!course) return empty;
+
+  await loadLessonProgress();
+  const adminLessons = mc.lessons.filter((l) => l.courseId === course.id);
+  const resolvedCourseLang: 'english' | 'russian' = course.lang === 'russian' ? 'russian' : 'english';
+
+  let totalWords = 0;
+  let learnedWords = 0;
+  let speakingLessons = 0;
+  let speakingDone = 0;
+  let videoLessons = 0;
+  let videoHomeworkDone = 0;
+
+  for (let i = 0; i < COURSE_TOTAL_LESSONS; i++) {
+    const l = adminLessons[i];
+    const id = l?.id ?? String(i + 1);
+    const isVideoDay = i % 2 === 0;
+    const content = mergeLessonContent(getLessonContent(id, i, resolvedCourseLang), mc.lessonContents[id]);
+
+    totalWords += content.vocabulary.length;
+    if (content.vocabulary.length > 0 && getLessonProgress(id).vocabPractice) {
+      learnedWords += Math.min(VOCAB_PRACTICE_SIZE, content.vocabulary.length);
+    }
+
+    if (isVideoDay) {
+      videoLessons++;
+      const homeworkPercent = getCategoryProgress(id, 'homework', content.homeworkParts.length);
+      if (content.homeworkParts.length > 0 && homeworkPercent >= 100) videoHomeworkDone++;
+    } else {
+      speakingLessons++;
+      if (l?.attendanceTaken) speakingDone++;
+    }
+  }
+
+  const listenedIds = await getListenedBookIds();
+  const books = mc.library.books.length ? mc.library.books : BOOK_STORIES;
+  const listenedCount = books.filter((b) => listenedIds.has(b.id)).length;
+
+  return {
+    vocabulary: totalWords > 0 ? Math.round((learnedWords / totalWords) * 100) : 0,
+    speaking: speakingLessons > 0 ? Math.round((speakingDone / speakingLessons) * 100) : 0,
+    listening: books.length > 0 ? Math.round((listenedCount / books.length) * 100) : 0,
+    grammar: videoLessons > 0 ? Math.round((videoHomeworkDone / videoLessons) * 100) : 0,
   };
 }
 
