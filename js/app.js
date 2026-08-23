@@ -14224,17 +14224,26 @@ function renderSalesFunnel() {
 
     // 1-vazifa: "Lid biriktirilgan kun bo'yicha" — lid ANIQ sotuv menejeriga
     // biriktirilgan kunga qarab (managerAssignedAt), lid CRM'ga kelib
-    // tushgan yoki oxirgi yangilangan sanasiga emas. Eski (bu funksiya
-    // joriy qilinishidan oldingi) biriktirishlar uchun bu maydon
-    // bo'lmasligi mumkin — bunday lidlar sana filtri yoqilganda
-    // ko'rinmaydi (haqiqiy biriktirilgan sana noma'lum bo'lgani uchun).
+    // tushgan yoki oxirgi yangilangan sanasiga emas.
+    // 5-vazifa qoshimcha: `managerAssignedAt` maydoni faqat shu funksiya
+    // JORIY QILINGANDAN KEYINGI biriktirishlarda mavjud — mavjud (eski)
+    // 1700+ lidning deyarli barchasida bu maydon umuman yo'q edi, shu
+    // sabab sana filtri yoqilganda deyarli HAMMA lid "ko'rinmas" bo'lib,
+    // statistika 0 ko'rsatib qolardi (garchi filtrsiz holatda ma'lumot
+    // to'liq bo'lsa ham). Endi bu maydon bo'lmagan (eski) lidlar uchun
+    // CRM'ga kelib tushgan sana (createdAt/date) taxminiy o'rinbosar
+    // sifatida ishlatiladi — 100% aniq bo'lmasa-da, tarixiy ma'lumotni
+    // butunlay yo'qotib yubormaydi.
     const _assignedFrom = _salesFunnelAssignedFrom || _salesFunnelAssignedTo;
     const _assignedTo = _salesFunnelAssignedTo || _salesFunnelAssignedFrom;
     const assignedFilteredLeads = !_assignedFrom
         ? mgrFilteredLeads
         : mgrFilteredLeads.filter(l => {
-            if (!l.managerAssignedAt) return false;
-            const assignedDate = String(l.managerAssignedAt).slice(0, 10);
+            const raw = l.managerAssignedAt || l.createdAt || l.date;
+            if (!raw) return false;
+            const assigned = new Date(raw);
+            if (Number.isNaN(assigned.getTime())) return false;
+            const assignedDate = assigned.toISOString().slice(0, 10);
             return assignedDate >= _assignedFrom && assignedDate <= _assignedTo;
         });
 
