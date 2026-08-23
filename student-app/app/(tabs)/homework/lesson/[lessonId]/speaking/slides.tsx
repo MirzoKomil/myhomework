@@ -101,6 +101,14 @@ export default function SlidesScreen() {
   };
 
   const current = slides[activeIndex];
+  // 17-vazifa qoshimcha: gorizontal ScrollView barcha slaydlarni bir vaqtda
+  // render qilgani uchun, agar unga alohida balandlik berilmasa, u ENG
+  // BALAND slayd bo'yicha o'lchamga cho'ziladi — natijada rasmi past
+  // slaydlar ostida katta bo'sh joy (boshliq) qolib, pastki qism (nuqtalar,
+  // Konspekt) pastda qolib ketardi. Endi konteyner balandligi FAQAT hozir
+  // ko'rinib turgan slaydga qarab hisoblanadi.
+  const activeRatio = current.imageUrl ? aspectRatios[current.id] : undefined;
+  const activeSlideHeight = activeRatio ? slideAreaWidth / activeRatio : fallbackSlideAreaHeight;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -119,6 +127,7 @@ export default function SlidesScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        style={{ height: activeSlideHeight }}
         onScroll={onScrollEnd}
         scrollEventThrottle={16}
         onMomentumScrollEnd={onScrollEnd}

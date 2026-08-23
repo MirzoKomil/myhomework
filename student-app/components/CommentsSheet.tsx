@@ -266,7 +266,11 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   title: { fontFamily: theme.fonts.extraBold, fontSize: 16, color: theme.colors.text },
-  list: { paddingHorizontal: 20 },
+  // 17-vazifa: ScrollView'ga flex berilmagani sabab u butun ro'yxat
+  // balandligicha cho'zilib, sarlavha/yozish qatori bilan birga pastga
+  // surilib ketardi — endi faqat shu ro'yxat o'zi (sheet'ning maxHeight'i
+  // ichida) skrol bo'ladi, sarlavha va pastki yozish qatori joyida qotadi.
+  list: { flex: 1, paddingHorizontal: 20 },
   listContent: { paddingVertical: 12, gap: 14 },
   empty: { fontFamily: theme.fonts.medium, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center', paddingVertical: 24 },
   row: { flexDirection: 'row', gap: 8, marginBottom: 10 },
