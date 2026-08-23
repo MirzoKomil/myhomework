@@ -204,7 +204,7 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
   if (tooLow !== null) return <RetryScreen percent={tooLow} onRetry={retry} />;
 
   return (
-    <View style={styles.stepContent}>
+    <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
       <Text style={styles.instruction}>{t('hwp_matching_instruction')}</Text>
       <View style={styles.matchColumns}>
         <View style={styles.matchColumn}>
@@ -242,7 +242,7 @@ function MatchingPart({ pairs, onDone, lessonId }: { pairs: MatchPair[]; onDone:
       <Text style={styles.matchProgress}>
         {t('hwp_matching_progress').replace('{matched}', String(matched.size)).replace('{total}', String(pairs.length))}
       </Text>
-    </View>
+    </ScrollView>
   );
 }
 
