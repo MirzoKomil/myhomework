@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { CoinIcon } from '@/components/ui/CoinIcon';
 import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
@@ -11,10 +11,12 @@ import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningIcon, LightningPill } from '@/components/ui/LightningIcon';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
-import { fetchLeaderboard, LeaderboardEntryResponse, LeaderboardPeriod, sendDemoPeerMessage } from '@/services/contentApi';
+import { fetchLeaderboard, LeaderboardEntryResponse, LeaderboardPeriod } from '@/services/contentApi';
+import { getStudentProfile } from '@/data/studentProfiles';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
+import { openThread, sendMessage as sendStudentMessage } from '@/services/studentChatStore';
 import { useLightning } from '@/services/lightningStore';
 
 // 12-vazifa: o'quvchining o'zi qo'ygan haqiqiy rasmi (avatarUrl) bo'lmasa,
@@ -57,13 +59,19 @@ function EntryAvatar({
 
 // 12-vazifa: reytingdagi o'quvchi ustiga bosilganda uning HAQIQIY ma'lumoti
 // (nom, o'rin, chaqmoq/tanga, yakunlangan darslar) ko'rsatiladi, o'zi
-// bo'lmasa — haqiqiy, serverda saqlanadigan xabar yozish imkoni bilan
-// (sendDemoPeerMessage — CRM "Maqsaddoshlar" bo'limida ko'rinadi).
+// bo'lmasa — haqiqiy, serverda saqlanadigan xabar yozish imkoni bilan.
+// 12-vazifa qoshimcha: xabar yozish endi bir martalik "yubordim-unutdim"
+// oynacha emas — studentChatStore orqali HAQIQIY, davom etadigan suhbat
+// ochiladi (Muloqot > Maqsaddoshlar'da ko'rinadi, admin javobi 15 soniyada
+// yangilanadi), shu bilan birga o'sha o'quvchining ustozlari ham (asosiy/
+// yordamchi/video) — avval mavjud bo'lgan, keyin yo'qolib qolgan detal —
+// qayta ko'rsatiladi.
 function StudentInfoModal({ entry, onClose }: { entry: LeaderboardEntryResponse | null; onClose: () => void }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const myAvatarUri = useAvatarUri();
+  const profile = entry ? getStudentProfile(entry.name) : null;
 
   const handleClose = () => {
     setText('');
@@ -72,15 +80,22 @@ function StudentInfoModal({ entry, onClose }: { entry: LeaderboardEntryResponse 
   };
 
   const send = () => {
-    if (!entry || !text.trim() || sending) return;
+    if (!entry || !profile || !text.trim() || sending) return;
     setSending(true);
-    sendDemoPeerMessage(entry.id, entry.name, text.trim())
+    sendStudentMessage(profile, text.trim())
       .then(() => {
         setText('');
         setSent(true);
       })
       .catch(() => {})
       .finally(() => setSending(false));
+  };
+
+  const openFullChat = () => {
+    if (!profile) return;
+    const p = profile;
+    handleClose();
+    openThread(p).then(() => router.push(`/messages/student-${p.id}` as never));
   };
 
   return (
@@ -118,10 +133,42 @@ function StudentInfoModal({ entry, onClose }: { entry: LeaderboardEntryResponse 
               </View>
             </View>
 
-            {!entry.isMe && (
+            {profile && (
               <>
-                <Text style={styles.infoSectionTitle}>Xabar yozish</Text>
-                {sent && <Text style={styles.infoSentText}>Xabar yuborildi ✓</Text>}
+                <Text style={styles.infoSectionTitle}>Ustozlari</Text>
+                <View style={styles.infoTeacherCard}>
+                  <View style={styles.infoTeacherRow}>
+                    <Ionicons name="person-outline" size={15} color={theme.colors.purple} />
+                    <Text style={styles.infoTeacherLabel}>Asosiy ustoz</Text>
+                    <Text style={styles.infoTeacherValue} numberOfLines={1}>{profile.mainTeacher}</Text>
+                  </View>
+                  <View style={styles.infoTeacherRow}>
+                    <Ionicons name="people-outline" size={15} color={theme.colors.purple} />
+                    <Text style={styles.infoTeacherLabel}>Yordamchi ustoz</Text>
+                    <Text style={styles.infoTeacherValue} numberOfLines={1}>{profile.assistantTeacher}</Text>
+                  </View>
+                  <View style={styles.infoTeacherRow}>
+                    <Ionicons name="videocam-outline" size={15} color={theme.colors.purple} />
+                    <Text style={styles.infoTeacherLabel}>Video ustoz</Text>
+                    <Text style={styles.infoTeacherValue} numberOfLines={1}>{profile.videoTeacher}</Text>
+                  </View>
+                </View>
+              </>
+            )}
+
+            {!entry.isMe && profile && (
+              <>
+                <View style={styles.infoSectionTitleRow}>
+                  <Text style={styles.infoSectionTitle}>Xabar yozish</Text>
+                  <Pressable onPress={openFullChat} hitSlop={8}>
+                    <Text style={styles.infoFullChatLink}>To'liq suhbat →</Text>
+                  </Pressable>
+                </View>
+                {sent && (
+                  <Pressable onPress={openFullChat}>
+                    <Text style={styles.infoSentText}>Xabar yuborildi ✓ — suhbatni ko'rish uchun bosing</Text>
+                  </Pressable>
+                )}
                 <View style={styles.infoComposeRow}>
                   <TextInput
                     style={styles.infoComposeInput}
@@ -569,6 +616,18 @@ const styles = StyleSheet.create({
   infoStatValue: { fontFamily: theme.fonts.bold, fontSize: 15, color: theme.colors.text },
   infoStatLabel: { fontFamily: theme.fonts.regular, fontSize: 11, color: theme.colors.textMuted },
   infoSectionTitle: { fontFamily: theme.fonts.bold, fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 },
+  infoSectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  infoFullChatLink: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.purple, marginBottom: 8 },
+  infoTeacherCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.sm,
+    padding: 4,
+    marginBottom: 20,
+    ...theme.shadow.card,
+  },
+  infoTeacherRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 9 },
+  infoTeacherLabel: { flex: 1, fontFamily: theme.fonts.medium, fontSize: 12, color: theme.colors.textMuted },
+  infoTeacherValue: { fontFamily: theme.fonts.semiBold, fontSize: 12, color: theme.colors.text, maxWidth: 150, textAlign: 'right' },
   infoSentText: { fontFamily: theme.fonts.medium, fontSize: 12, color: theme.colors.success, marginBottom: 8 },
   infoComposeRow: {
     flexDirection: 'row',
