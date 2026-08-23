@@ -422,11 +422,12 @@ export type SkillsProgress = {
   speaking: number;
   listening: number;
   grammar: number;
+  writing: number;
 };
 
 // 1-vazifa: Bosh sahifadagi "Ko'nikmalar progressi" paneli ilgari doim
-// qattiq yozilgan namuna foizlarni (62%/45%/70%/38%) ko'rsatardi. Endi har
-// biri haqiqiy ma'lumotdan hisoblanadi:
+// qattiq yozilgan namuna foizlarni (62%/45%/70%/38%/55%) ko'rsatardi. Endi
+// har biri haqiqiy ma'lumotdan hisoblanadi:
 // - So'zlar: 72 ta dars tarkibidagi JAMI so'zlar soni 100% — shundan
 //   "Yangi so'zlar" mashqi to'g'ri javob bilan yakunlangan (vocabPractice)
 //   darslardagi so'zlar soni ulushi (har darsda faqat birinchi
@@ -437,8 +438,11 @@ export type SkillsProgress = {
 //   haqiqatan tinglanganini (bookProgressStore) ulushi.
 // - Gramatika: 36 ta videodars ichida uyga vazifasi 100% bajarilgan deb
 //   hisoblanganlar ulushi.
+// - Yozish: 72 ta dars uyga vazifalari ichidagi JAMI "O'qib tarjima
+//   qilish mashqi" (kind: 'reading') soni 100% — shulardan nechtasi
+//   bajarilgan (homeworkParts[id] belgilangan) ulushi.
 export async function getSkillsProgress(): Promise<SkillsProgress> {
-  const empty: SkillsProgress = { vocabulary: 0, speaking: 0, listening: 0, grammar: 0 };
+  const empty: SkillsProgress = { vocabulary: 0, speaking: 0, listening: 0, grammar: 0, writing: 0 };
   const mc = await fetchMobileContent();
   const course = mc.courses[0];
   if (!course) return empty;
@@ -453,6 +457,8 @@ export async function getSkillsProgress(): Promise<SkillsProgress> {
   let speakingDone = 0;
   let videoLessons = 0;
   let videoHomeworkDone = 0;
+  let totalReadingParts = 0;
+  let doneReadingParts = 0;
 
   for (let i = 0; i < COURSE_TOTAL_LESSONS; i++) {
     const l = adminLessons[i];
@@ -473,6 +479,13 @@ export async function getSkillsProgress(): Promise<SkillsProgress> {
       speakingLessons++;
       if (l?.attendanceTaken) speakingDone++;
     }
+
+    const readingParts = content.homeworkParts.filter((p) => p.kind === 'reading');
+    if (readingParts.length > 0) {
+      const doneMap = getLessonProgress(id).homeworkParts;
+      totalReadingParts += readingParts.length;
+      doneReadingParts += readingParts.filter((p) => doneMap[p.id]).length;
+    }
   }
 
   const listenedIds = await getListenedBookIds();
@@ -484,6 +497,7 @@ export async function getSkillsProgress(): Promise<SkillsProgress> {
     speaking: speakingLessons > 0 ? Math.round((speakingDone / speakingLessons) * 100) : 0,
     listening: books.length > 0 ? Math.round((listenedCount / books.length) * 100) : 0,
     grammar: videoLessons > 0 ? Math.round((videoHomeworkDone / videoLessons) * 100) : 0,
+    writing: totalReadingParts > 0 ? Math.round((doneReadingParts / totalReadingParts) * 100) : 0,
   };
 }
 

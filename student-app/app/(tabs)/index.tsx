@@ -33,8 +33,8 @@ export default function HomeScreen() {
   // ochilgan darslar sonidan hisoblanadi.
   const [courseProgress, setCourseProgress] = useState({ done: 0, total: 72, percent: 0 });
   // 1-vazifa: "Ko'nikmalar progressi" ilgari doim qattiq yozilgan namuna
-  // foizlarni (62%/45%/70%/38%) ko'rsatardi — endi haqiqiy ma'lumotdan
-  // hisoblanadi (Yozish hozircha manba yo'qligi sabab namuna qiymatida qoladi).
+  // foizlarni (62%/45%/70%/38%/55%) ko'rsatardi — endi barchasi haqiqiy
+  // ma'lumotdan hisoblanadi (getSkillsProgress).
   const [skillsData, setSkillsData] = useState(skillProgress);
   const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
   // 37-vazifa: ilgari bu yerda hech qachon o'chmaydigan namuna (fake)
@@ -103,13 +103,7 @@ export default function HomeScreen() {
       getCourseOverallProgress().then(setCourseProgress).catch(() => {});
       getSkillsProgress()
         .then((sp) => {
-          setSkillsData((prev) =>
-            prev.map((s) =>
-              s.key === 'vocabulary' || s.key === 'speaking' || s.key === 'listening' || s.key === 'grammar'
-                ? { ...s, progress: sp[s.key] }
-                : s
-            )
-          );
+          setSkillsData((prev) => prev.map((s) => ({ ...s, progress: sp[s.key] })));
         })
         .catch(() => {});
 
