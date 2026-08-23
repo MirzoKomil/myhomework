@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
@@ -39,7 +39,11 @@ export default function VocabularyFolderScreen() {
             <Card style={styles.card}>
               <View style={styles.row}>
                 <View style={styles.iconWrap}>
-                  <Ionicons name={word.icon} size={26} color={theme.colors.purple} />
+                  {word.imageUrl ? (
+                    <Image source={{ uri: word.imageUrl }} style={styles.wordImage} resizeMode="cover" />
+                  ) : (
+                    <Ionicons name={word.icon} size={26} color={theme.colors.purple} />
+                  )}
                 </View>
                 <View style={styles.info}>
                   <View style={styles.headRow}>
@@ -72,7 +76,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.purpleLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  wordImage: { width: '100%', height: '100%' },
   info: { flex: 1 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   english: { fontFamily: theme.fonts.bold, fontSize: 16, color: theme.colors.text },
