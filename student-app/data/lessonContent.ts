@@ -146,28 +146,6 @@ export const GRAMMAR_POOL: GrammarBlank[] = [
   { id: 'g12', sentence: 'He ___ to the gym twice a week.', answer: 'goes', options: ['go', 'goes', 'going', 'went'] },
 ];
 
-// ─── Rus tili kursi, 1-dars uchun Video Quiz ────────────────────────────────
-const RU_LESSON1_GRAMMAR: GrammarBlank[] = [
-  {
-    id: 'ru1-q1',
-    sentence: '"О" harfiga urg\'u tushganda va tushmaganda qanday o\'qiladi?',
-    answer: "Urg'u tushsa [O], urg'usiz bo'lsa [A]",
-    options: ['Har doim [O] deb', "Urg'u tushsa [O], urg'usiz bo'lsa [A]", 'Har doim [A] deb'],
-  },
-  {
-    id: 'ru1-q2',
-    sentence: '"Сегодня" so\'zidagi "го" birikmasi qanday talaffuz qilinadi?',
-    answer: '[сиводня]',
-    options: ['[сегодня]', '[сиводня]', '[сеходня]'],
-  },
-  {
-    id: 'ru1-q3',
-    sentence: "Yoshingizni aytayotganda 1 yosh uchun qaysi so'z ishlatiladi? (masalan: Мне 21 ...)",
-    answer: 'Год',
-    options: ['Год', 'Года', 'Лет'],
-  },
-];
-
 // ─── Rus tili kursi, 1-dars uchun Uyga vazifa ───────────────────────────────
 // 54-vazifa: uyga vazifada endi faqat 3 turdagi mashq qoladi — (1) Grammatika
 // mashqi (bu yerda emas, video kunlar uchun content.grammarBlanks'dan
@@ -310,7 +288,13 @@ export function getLessonContent(
     lang,
     slides: [],
     vocabulary: isRussianLesson1 ? RU_LESSON1_VOCAB : [],
-    grammarBlanks: isRussianLesson1 ? RU_LESSON1_GRAMMAR : [],
+    // 3-vazifa: bu darsning haqiqiy "Gramatika mashqi"si endi CRM'da
+    // alohida Uyga vazifa qismi sifatida (homeworkParts) kiritilgan — shu
+    // sabab bu yerdagi eski 3 ta savoldan iborat qattiq yozilgan namuna
+    // butunlay olib tashlandi (aks holda u ustiga qo'shimcha "virtual"
+    // Gramatika mashqi qatori bo'lib chiqaverardi, garchi admin uni CRM'da
+    // hech qachon kiritmagan bo'lsa ham).
+    grammarBlanks: [],
     speakingPractice: [],
     // 61-vazifa: o'quvchi tomonida bo'sh (hali admin to'ldirmagan) qism
     // ko'rsatmaslik kerak — 60-vazifadagi standart bo'sh-qism-shakli faqat
