@@ -12,7 +12,7 @@
   "icons": [
     {
       "src": "/student/pwa-icon-homework.jpg",
-      "sizes": "891x894",
+      "sizes": "1080x1080",
       "type": "image/jpeg",
       "purpose": "any"
     }

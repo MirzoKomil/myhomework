@@ -11,9 +11,9 @@
   "lang": "uz",
   "icons": [
     {
-      "src": "/student/pwa-icon-domwork.png",
-      "sizes": "1086x1092",
-      "type": "image/png",
+      "src": "/student/pwa-icon-domwork.jpg",
+      "sizes": "1254x1254",
+      "type": "image/jpeg",
       "purpose": "any"
     }
   ]

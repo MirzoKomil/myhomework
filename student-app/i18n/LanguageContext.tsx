@@ -137,7 +137,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const isRussian = courseLang === 'russian';
     const appName = isRussian ? 'Domwork' : 'Homework';
     const manifestHref = isRussian ? '/student/manifest-russian.webmanifest' : '/student/manifest-english.webmanifest';
-    const iconHref = isRussian ? '/student/pwa-icon-domwork.png' : '/student/pwa-icon-homework.jpg';
+    const iconHref = isRussian ? '/student/pwa-icon-domwork.jpg' : '/student/pwa-icon-homework.jpg';
 
     document.querySelector('link[rel="manifest"]')?.setAttribute('href', manifestHref);
     document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', iconHref);
