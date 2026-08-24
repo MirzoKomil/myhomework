@@ -8434,6 +8434,45 @@ function renderCrmPeerChatDetail(container, studentId, peerId) {
     });
 }
 
+// 11-vazifa: "Davomat" va "Yordamchi ustoz davomati" bir-birining
+// ma'lumotini FAQAT KO'RISH rejimida yonma-yon ko'rsatishi uchun umumiy
+// hamroh jadval. Har bir o'quvchi uchun QARSHI TOMON (`counterpartField`
+// — 'assistantTeacherId' yoki 'teacherId') ustozini topib, uning shu
+// oydagi (`counterpartStorageKey`) belgilagan kunlarini ko'rsatadi.
+// Checkboxlar doim `disabled` va hech qanday CSS klassga (`.att-check`/
+// `.asst-att-check`) tegishli emas — shuning uchun mavjud tahrirlash
+// event-listenerlariga umuman tushmaydi, tasodifiy o'zgartirish imkonsiz.
+// Maqsad: "bu ustoz dars o'tdi, u o'tmadi" bahslarini oldini olish —
+// ikkala tomon ham bir xil o'quvchi bo'yicha ikkalasini ko'ra oladi.
+function renderCompanionAttendanceHtml(students, counterpartField, counterpartStorageKey, monthVal, days, label) {
+    const store = getItem(counterpartStorageKey, {});
+    let html = `<div class="page-title-bar" style="margin:24px 0 8px"><h3 style="font-size:14px;font-weight:700">${escapeHtml(label)} <span style="font-size:12px;font-weight:400;color:var(--text-muted)">(faqat ko'rish)</span></h3></div>`;
+    html += '<div class="table-responsive"><table class="table attendance-table"><thead><tr>';
+    html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Ustoz</th><th>Darslar</th>';
+    for (let d = 1; d <= days; d++) html += `<th class="att-day">${d}</th>`;
+    html += '</tr></thead><tbody>';
+
+    if (!students.length) {
+        html += `<tr><td colspan="${days + 4}" class="text-muted">O'quvchilar yo'q.</td></tr>`;
+    }
+
+    students.forEach((s, i) => {
+        const counterpartId = s[counterpartField];
+        const counterpartTeacher = counterpartId ? resolveTeacherWithVirtual(counterpartId) : null;
+        const block = counterpartId ? (store[`${monthVal}_${counterpartId}`]?.[s.id] || {}) : {};
+        const count = Object.values(block).filter(Boolean).length;
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name)}</td><td style="white-space:nowrap">${escapeHtml(counterpartTeacher?.name || '—')}</td><td>${counterpartTeacher ? count : '—'}</td>`;
+        for (let d = 1; d <= days; d++) {
+            const marked = block[d];
+            html += `<td class="att-cell ${marked ? 'att-present' : ''}"><input type="checkbox" disabled ${marked ? 'checked' : ''}></td>`;
+        }
+        html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    return html;
+}
+
 function renderMainAttendance() {
     initMainAttControls();
     _populateDemoStudentSelect();
@@ -8515,7 +8554,12 @@ function renderMainAttendance() {
     });
 
     html += '</tbody></table>';
-    document.getElementById('mainAttendanceContainer').innerHTML = html;
+    // 11-vazifa: qarshi tomon (yordamchi↔asosiy) davomatini yonida ko'rish
+    // uchun hamroh jadval qo'shiladi.
+    const companionHtml = isAssistantTeacher
+        ? renderCompanionAttendanceHtml(students, 'teacherId', STORAGE_KEYS.mainAttendance, monthVal, days, 'Asosiy ustoz davomati')
+        : renderCompanionAttendanceHtml(students, 'assistantTeacherId', STORAGE_KEYS.assistantAttendance, monthVal, days, 'Yordamchi ustoz davomati');
+    document.getElementById('mainAttendanceContainer').innerHTML = html + companionHtml;
 
     const kpi = calculateKpiSalary(teacher, monthVal, attendance, students);
     renderKpiSummary('mainAttSummary', kpi, teacher.name);
@@ -8644,7 +8688,10 @@ function renderAssistantAttendance() {
     });
 
     html += '</tbody></table>';
-    document.getElementById('assistantAttendanceContainer').innerHTML = html;
+    // 11-vazifa: admin bitta ekranda ikkalasini (yordamchi + asosiy)
+    // yonma-yon ko'rsin — bahsli holatlarni tekshirish uchun.
+    const companionHtml = renderCompanionAttendanceHtml(students, 'teacherId', STORAGE_KEYS.mainAttendance, monthVal, days, 'Asosiy ustoz davomati');
+    document.getElementById('assistantAttendanceContainer').innerHTML = html + companionHtml;
 
     const kpi = calculateKpiSalary(teacher, monthVal, attendance, students);
     renderKpiSummary('asstAttSummary', kpi, teacher.name);
