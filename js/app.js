@@ -10122,6 +10122,22 @@ function renderTeachersSection() {
     const cu = getCurrentUser();
     const restrictedToCabinet = cu?.role === 'rop' || cu?.role === 'teacher';
     const restrictedAllowed = new Set(['attendance', 'cabinet']);
+    // 9-vazifa: ustoz (ROP emas — bu so'rov faqat ustoz kabineti haqida)
+    // endi o'zining kursiga tegishli materiallarni (Darslik) va Elektron
+    // doskani ham ko'ra oladi — faqat ko'rish huquqi bilan (material
+    // qo'shish/o'chirish tugmalari renderTpTextbookSection'da readOnly
+    // rejimda umuman render qilinmaydi, serverda ham mobileContent'ni
+    // ustoz allaqachon PATCH qila olmaydi, server/routes/state.js).
+    if (cu?.role === 'teacher') {
+        restrictedAllowed.add('textbook');
+        restrictedAllowed.add('whiteboard');
+        // Darslik ustozning o'z tiliga (til almashtirish tugmalari
+        // ustozga yashirin bo'lgani uchun) majburan bog'lanadi — aks holda
+        // _teachersLang modul darajasidagi standart ('english') qiymatda
+        // qolib, rus tili ustoziga noto'g'ri (yoki bo'sh) materiallar
+        // ko'rsatilardi.
+        _teachersLang = cu.linkedTeacherLang === 'russian' ? 'russian' : 'english';
+    }
     document.querySelectorAll('[data-teachers-section]').forEach(btn => {
         btn.style.display = (!restrictedToCabinet || restrictedAllowed.has(btn.dataset.teachersSection)) ? '' : 'none';
     });
@@ -10299,6 +10315,11 @@ let _tpTextbookSection = 'kurs-rejasi';
 function renderTpTextbook() {
     const container = document.getElementById('tpTextbook');
     if (!container) return;
+    // 9-vazifa: ustoz uchun Darslik faqat KO'RISH rejimida — material
+    // qo'shish/o'chirish tugmalari umuman render qilinmaydi, va materiallar
+    // ustozning o'z kursiga (_teachersLang, renderTeachersSection'da uning
+    // linkedTeacherLang'iga majburan tenglashtiriladi) cheklanadi.
+    const isTeacher = getCurrentUser()?.role === 'teacher';
 
     const tabButtons = TB_SECTIONS.map(s =>
         `<button type="button" class="tp-tb-tab${_tpTextbookSection === s.id ? ' active' : ''}" data-tb-sec="${s.id}">
@@ -10318,35 +10339,48 @@ function renderTpTextbook() {
         btn.addEventListener('click', () => {
             _tpTextbookSection = btn.dataset.tbSec;
             container.querySelectorAll('[data-tb-sec]').forEach(b => b.classList.toggle('active', b.dataset.tbSec === _tpTextbookSection));
-            renderTpTextbookSection(_tpTextbookSection);
+            renderTpTextbookSection(_tpTextbookSection, { readOnly: isTeacher });
         });
     });
 
-    renderTpTextbookSection(_tpTextbookSection);
+    renderTpTextbookSection(_tpTextbookSection, { readOnly: isTeacher });
 }
 
-function renderTpTextbookSection(secId) {
+function renderTpTextbookSection(secId, { readOnly = false } = {}) {
     const body = document.getElementById('tpTbBody');
     if (!body) return;
     const sec = TB_SECTIONS.find(s => s.id === secId) || TB_SECTIONS[0];
     const mc = getMobileContent();
-    const docs = (mc.documents || []).filter(d => d.tbSection === secId);
+    // 9-vazifa: readOnly (ustoz) holatda materiallar uning o'z kursiga
+    // (_teachersLang) cheklanadi — lekin hali "lang" tegi qo'yilmagan eski
+    // materiallar HAR IKKALA til uchun ham ko'rsatiladi, aks holda mavjud
+    // materiallar birortasiga ham til belgilanmagani uchun ustozlarga
+    // butunlay ko'rinmay qolar edi.
+    const docs = (mc.documents || []).filter(d =>
+        d.tbSection === secId && (!readOnly || !d.lang || d.lang === _teachersLang)
+    );
 
     const cards = docs.length ? docs.map(d => {
         const sizeLabel = d.fileSize > 0 ? (d.fileSize > 1048576 ? (d.fileSize/1048576).toFixed(1)+' MB' : (d.fileSize/1024).toFixed(0)+' KB') : '';
         const isYt = ytVideoId(d.fileUrl);
         const thumb = isYt ? `<img src="https://img.youtube.com/vi/${isYt}/mqdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:28px">${sec.icon}</div>`;
+        // 9-vazifa: readOnly (ustoz) rejimida PDF fayllar oddiy yangi tab
+        // o'rniga sahifama-sahifa ko'rish + ustida chizish modalida ochiladi.
+        const isPdf = /\.pdf($|\?)/i.test(d.fileUrl || '');
+        const openLink = (readOnly && isPdf)
+            ? `<a href="#" data-tp-open-pdf="${escapeHtml(d.id)}" class="mac-content-link">Ochish (sahifama-sahifa) →</a>`
+            : `<a href="${escapeHtml(d.fileUrl)}" target="_blank" rel="noopener" class="mac-content-link">Ochish / Yuklab olish →</a>`;
         return `<div class="mac-content-card">
             <div class="mac-content-thumb">${thumb}</div>
             <div class="mac-content-info">
                 <div class="mac-content-title">${escapeHtml(d.title)}</div>
                 <div class="mac-content-meta">${sizeLabel ? sizeLabel + ' · ' : ''}${escapeHtml(d.createdAt||'')}</div>
                 ${d.description ? `<div class="mac-content-desc">${escapeHtml(d.description)}</div>` : ''}
-                <a href="${escapeHtml(d.fileUrl)}" target="_blank" rel="noopener" class="mac-content-link">Ochish / Yuklab olish →</a>
+                ${openLink}
             </div>
-            <div class="mac-content-actions">
+            ${readOnly ? '' : `<div class="mac-content-actions">
                 <button type="button" class="btn-danger-sm" data-tp-del-doc="${escapeHtml(d.id)}">O'chirish</button>
-            </div>
+            </div>`}
         </div>`;
     }).join('') : `<div class="mac-empty">${sec.icon} ${sec.label} uchun hali material qo'shilmagan</div>`;
 
@@ -10354,13 +10388,24 @@ function renderTpTextbookSection(secId) {
     <div style="padding:20px;overflow-y:auto;flex:1">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
             <h2 style="font-size:16px;font-weight:700">${sec.icon} ${sec.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted)">(${docs.length} ta)</span></h2>
-            <div style="display:flex;gap:8px">
+            ${readOnly ? '' : `<div style="display:flex;gap:8px">
                 <button type="button" class="btn-secondary-sm" id="tpTbAddLink">+ Havola / YouTube</button>
                 <button type="button" class="btn-primary-sm" id="tpTbAddFile">📁 Fayl yuklash</button>
-            </div>
+            </div>`}
         </div>
         <div class="mac-content-list">${cards}</div>
     </div>`;
+
+    // 9-vazifa: PDF'ni sahifama-sahifa ko'rish + ustida chizish (faqat readOnly/ustoz)
+    body.querySelectorAll('[data-tp-open-pdf]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const doc = docs.find(d => d.id === link.dataset.tpOpenPdf);
+            if (doc) openPdfSlideViewer(doc.title, doc.fileUrl);
+        });
+    });
+
+    if (readOnly) return;
 
     // Fayl yuklash
     body.querySelector('#tpTbAddFile')?.addEventListener('click', () => {
@@ -10388,6 +10433,8 @@ function renderTpTextbookSection(secId) {
                     id: 'd' + Date.now(), title,
                     fileUrl: res.url, fileName: res.fileName, fileSize: res.fileSize,
                     type: 'textbook', tbSection: secId,
+                    // 9-vazifa: ustoz kabinetida o'z tiliga cheklash uchun.
+                    lang: _teachersLang,
                     description: document.getElementById('tpTbDesc').value.trim(),
                     createdAt: new Date().toISOString().slice(0, 10)
                 });
@@ -10419,6 +10466,7 @@ function renderTpTextbookSection(secId) {
                 id: 'd' + Date.now(), title,
                 fileUrl: url, fileName: title, fileSize: 0,
                 type: 'textbook', tbSection: secId,
+                lang: _teachersLang,
                 description: document.getElementById('tpTbLDesc').value.trim(),
                 createdAt: new Date().toISOString().slice(0, 10)
             });
@@ -10474,17 +10522,38 @@ function renderTpWhiteboard() {
         </div>
     </div>`;
 
-    initWhiteboard();
+    initWhiteboardCanvas({
+        canvas: document.getElementById('wbCanvas'),
+        toolbarEl: document.getElementById('wbToolbar'),
+        colorInput: document.getElementById('wbColor'),
+        sizeSelect: document.getElementById('wbSize'),
+        undoBtn: document.getElementById('wbUndo'),
+        clearBtn: document.getElementById('wbClear'),
+        saveBtn: document.getElementById('wbSave')
+    });
 }
 
-function initWhiteboard() {
-    const canvas = document.getElementById('wbCanvas');
+// 9-vazifa: avval faqat standalone "Elektron doska" tabi uchun qattiq
+// ID'larga (#wbCanvas va h.k.) bog'langan edi — endi parametrlashtirilgan,
+// shu bilan PDF sahifasi ustida chizish (openPdfSlideViewer) uchun ham
+// qayta ishlatiladi. `toolbarEl` orqali asboblar shu konteyner ichida
+// qidiriladi (global emas) — ikkala instansiya bir vaqtda DOMda bo'lsa ham
+// bir-biriga xalaqit bermaydi.
+// `onReset` berilsa "Tozalash" oq fon o'rniga shuni chaqiradi (PDF holida —
+// sahifani qayta chizish); `paintInitial:false` bo'lsa boshlang'ich oq fon
+// chizilmaydi (chaqiruvchi allaqachon canvasga PDF sahifasini chizgan);
+// `autoSize:false` bo'lsa canvas.width/height chaqiruvchi tomonidan
+// (PDF viewport'iga mos) allaqachon o'rnatilgan deb hisoblanadi.
+function initWhiteboardCanvas({ canvas, toolbarEl, colorInput, sizeSelect, undoBtn, clearBtn, saveBtn, onReset, paintInitial = true, autoSize = true }) {
     if (!canvas) return;
-    canvas.width = canvas.offsetWidth || 900;
+    if (autoSize) canvas.width = canvas.offsetWidth || 900;
 
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function paintBlank() {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    if (paintInitial) paintBlank();
 
     let tool = 'pen', color = '#1e293b', size = 4;
     let drawing = false, startX = 0, startY = 0;
@@ -10557,30 +10626,127 @@ function initWhiteboard() {
     canvas.addEventListener('touchmove', draw, { passive: false });
     canvas.addEventListener('touchend', stopDraw);
 
-    document.querySelectorAll('.wb-tool-btn').forEach(btn => {
+    (toolbarEl || document).querySelectorAll('.wb-tool-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
+            (toolbarEl || document).querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             tool = btn.dataset.wbTool;
         });
     });
-    document.getElementById('wbColor').addEventListener('input', e => { color = e.target.value; });
-    document.getElementById('wbSize').addEventListener('change', e => { size = parseInt(e.target.value); });
-    document.getElementById('wbUndo').addEventListener('click', () => {
+    colorInput?.addEventListener('input', e => { color = e.target.value; });
+    sizeSelect?.addEventListener('change', e => { size = parseInt(e.target.value); });
+    undoBtn?.addEventListener('click', () => {
         if (history.length) ctx.putImageData(history.pop(), 0, 0);
     });
-    document.getElementById('wbClear').addEventListener('click', () => {
+    clearBtn?.addEventListener('click', () => {
         if (!confirm("Doskani tozalaysizmi?")) return;
         saveHistory();
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (onReset) onReset();
+        else paintBlank();
     });
-    document.getElementById('wbSave').addEventListener('click', () => {
+    saveBtn?.addEventListener('click', () => {
         const link = document.createElement('a');
         link.download = `doska-${new Date().toISOString().slice(0,10)}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
     });
+}
+
+// 9-vazifa: ustoz kabinetidagi Darslikda PDF materialni sahifama-sahifa
+// ko'rish + har bir sahifa ustida chizish/o'chirish/belgilash uchun modal.
+// pdf.js allaqachon `_pdfFileToSlideImages` (js/app.js:~1868) orqali
+// vendor qilingan — bu yerda esa fayl serverga qayta yuklanmaydi, mavjud
+// URL to'g'ridan-to'g'ri pdf.js'ga beriladi, faqat KO'RISH uchun.
+function _pdfWbStageHtml() {
+    return `
+        <div id="pdfWbToolbar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
+            <button type="button" class="wb-tool-btn active" data-wb-tool="pen" title="Qalam">✏️</button>
+            <button type="button" class="wb-tool-btn" data-wb-tool="eraser" title="O'chirish">🧹</button>
+            <button type="button" class="wb-tool-btn" data-wb-tool="line" title="Chiziq">📏</button>
+            <button type="button" class="wb-tool-btn" data-wb-tool="rect" title="To'rtburchak">⬜</button>
+            <button type="button" class="wb-tool-btn" data-wb-tool="circle" title="Doira">⭕</button>
+            <div style="width:1px;height:28px;background:var(--border)"></div>
+            <input type="color" id="pdfWbColor" value="#dc2626" title="Rang" style="width:32px;height:32px;border:none;cursor:pointer;border-radius:4px">
+            <select id="pdfWbSize" title="Qalinlik" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+                <option value="2">Ingichka</option>
+                <option value="4" selected>O'rta</option>
+                <option value="8">Qalin</option>
+                <option value="14">Juda qalin</option>
+            </select>
+            <div style="width:1px;height:28px;background:var(--border)"></div>
+            <button type="button" class="btn-secondary-sm" id="pdfWbUndo">↩ Orqaga</button>
+            <button type="button" class="btn-secondary-sm" id="pdfWbClear">🗑 Tozalash</button>
+            <button type="button" class="btn-primary-sm" id="pdfWbSave">💾 Saqlash (PNG)</button>
+        </div>
+        <div style="position:relative;max-width:100%;overflow:auto;text-align:center">
+            <canvas id="pdfWbCanvas" style="border:1px solid var(--border);border-radius:10px;cursor:crosshair;max-width:100%;touch-action:none"></canvas>
+        </div>`;
+}
+
+async function openPdfSlideViewer(title, fileUrl) {
+    openModal(title, `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+            <div id="pdfWbStage" style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%">
+                <div style="padding:40px;color:var(--text-muted)">Yuklanmoqda...</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+                <button type="button" class="btn-secondary-sm" id="pdfWbPrev">← Oldingi</button>
+                <span id="pdfWbPageIndicator" style="font-size:13px;color:var(--text-muted);min-width:60px;text-align:center">— / —</span>
+                <button type="button" class="btn-secondary-sm" id="pdfWbNext">Keyingi →</button>
+            </div>
+        </div>`,
+        `<button type="button" class="btn-ghost" id="pdfWbClose">Yopish</button>`,
+        { wide: true }
+    );
+    document.getElementById('pdfWbClose').onclick = () => closeModal();
+
+    const stage = document.getElementById('pdfWbStage');
+    const pageIndicatorEl = document.getElementById('pdfWbPageIndicator');
+
+    let pdfDoc = null, currentPage = 1, totalPages = 1;
+
+    // 9-vazifa (tuzatish): har safar sahifa almashganda toolbar+canvas
+    // butunlay QAYTA yaratiladi (innerHTML orqali) — aks holda bir xil
+    // tugma/canvas elementlariga initWhiteboardCanvas() qayta-qayta
+    // event listener qo'shib borardi (chizish bir necha marta takrorlanib
+    // ketardi) va eski sahifaning undo-tarixi keyingi sahifaga aralashib
+    // qolardi.
+    async function loadPage(n) {
+        currentPage = n;
+        stage.innerHTML = _pdfWbStageHtml();
+        const canvas = document.getElementById('pdfWbCanvas');
+        const page = await pdfDoc.getPage(currentPage);
+        const viewport = page.getViewport({ scale: 1.5 });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        pageIndicatorEl.textContent = `${currentPage} / ${totalPages}`;
+        initWhiteboardCanvas({
+            canvas,
+            toolbarEl: document.getElementById('pdfWbToolbar'),
+            colorInput: document.getElementById('pdfWbColor'),
+            sizeSelect: document.getElementById('pdfWbSize'),
+            undoBtn: document.getElementById('pdfWbUndo'),
+            clearBtn: document.getElementById('pdfWbClear'),
+            saveBtn: document.getElementById('pdfWbSave'),
+            paintInitial: false,
+            autoSize: false,
+            onReset: () => { loadPage(currentPage); }
+        });
+    }
+
+    document.getElementById('pdfWbPrev').onclick = () => { if (currentPage > 1) loadPage(currentPage - 1); };
+    document.getElementById('pdfWbNext').onclick = () => { if (currentPage < totalPages) loadPage(currentPage + 1); };
+
+    try {
+        await _ensurePdfJsLoaded();
+        pdfDoc = await window.pdfjsLib.getDocument(fileUrl).promise;
+        totalPages = pdfDoc.numPages;
+        await loadPage(1);
+    } catch (e) {
+        stage.innerHTML = `<div style="padding:40px;color:var(--danger)">PDF yuklab bo'lmadi: ${escapeHtml(e.message)}</div>`;
+    }
 }
 
 function fillStudentTeacherOptions(subject, suffix) {
