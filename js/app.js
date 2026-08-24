@@ -8470,6 +8470,11 @@ function renderMainAttendance() {
     const pattern = teacher.schedulePattern || 'mwf';
     const lessonDays = getLessonDaysInMonth(year, month, pattern);
     const isAssistantTeacher = teacher.type === 'yordamchi';
+    // 10-vazifa: yordamchi ustoz haftalik patternga (toq/juft kunlar)
+    // bog'lanmagan — istalgan kunni belgilay oladi, faqat oyiga avtomatik
+    // hisoblangan chegaradan (getFlexibleAttendanceCap) oshmasligi kerak
+    // (maosh shu songa bog'liq, calculateKpiSalary).
+    const flexCap = isAssistantTeacher ? getFlexibleAttendanceCap(year, month) : null;
     const attendanceStorageKey = isAssistantTeacher
         ? STORAGE_KEYS.assistantAttendance
         : STORAGE_KEYS.mainAttendance;
@@ -8485,8 +8490,8 @@ function renderMainAttendance() {
     let html = '<table class="table attendance-table"><thead><tr>';
     html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
     for (let d = 1; d <= days; d++) {
-        const isLesson = isLessonDay(year, month, d, pattern);
-        html += `<th class="att-day ${isLesson ? 'lesson-day-col' : ''}" title="${isLesson ? 'Dars kuni' : ''}">${d}</th>`;
+        const isLesson = isAssistantTeacher || isLessonDay(year, month, d, pattern);
+        html += `<th class="att-day ${isLesson ? 'lesson-day-col' : ''}" title="${isAssistantTeacher ? '' : (isLesson ? 'Dars kuni' : '')}">${d}</th>`;
     }
     html += '</tr></thead><tbody>';
 
@@ -8496,13 +8501,14 @@ function renderMainAttendance() {
 
     students.forEach((s, i) => {
         const studentAttendance = attendanceForTeacher[s.id] || {};
+        const markedCount = isAssistantTeacher ? Object.values(studentAttendance).filter(Boolean).length : 0;
         html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = studentAttendance[d];
-            const isLesson = isLessonDay(year, month, d, pattern);
-            const disabled = !isLesson ? 'disabled' : '';
+            const isLesson = isAssistantTeacher || isLessonDay(year, month, d, pattern);
+            const disabled = isAssistantTeacher ? (!marked && markedCount >= flexCap) : !isLesson;
             html += `<td class="att-cell ${isLesson ? 'lesson-day-col' : ''} ${marked ? 'att-present' : ''}">
-                <input type="checkbox" class="att-check" data-att-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${disabled}>
+                <input type="checkbox" class="att-check" data-att-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
             </td>`;
         }
         html += '</tr>';
@@ -8554,8 +8560,10 @@ function renderMainAttendance() {
     document.querySelectorAll('.lesson-count').forEach(cell => {
         const sid = cell.dataset.student;
         const att = getItem(attendanceStorageKey, {})[attKey]?.[sid] || {};
-        const count = lessonDays.filter(d => att[d]).length;
-        cell.textContent = count;
+        const count = isAssistantTeacher
+            ? Object.values(att).filter(Boolean).length
+            : lessonDays.filter(d => att[d]).length;
+        cell.textContent = isAssistantTeacher ? `${count} / ${flexCap}` : count;
     });
 }
 
@@ -8599,8 +8607,10 @@ function renderAssistantAttendance() {
 
     const [year, month] = monthVal.split('-').map(Number);
     const days = getDaysInMonth(year, month);
-    const pattern = teacher.schedulePattern || 'mwf';
-    const lessonDays = getLessonDaysInMonth(year, month, pattern);
+    // 10-vazifa: yordamchi ustoz uchun kunlar haftalik patternga
+    // bog'lanmagan — istalgan kunni belgilay oladi, faqat oyiga avtomatik
+    // hisoblangan chegaradan (getFlexibleAttendanceCap) oshmasligi kerak.
+    const flexCap = getFlexibleAttendanceCap(year, month);
     const students = getItem(STORAGE_KEYS.students, []).filter(s =>
         s.assistantTeacherId === teacherId && (s.subject || 'english') === subject
     );
@@ -8611,8 +8621,7 @@ function renderAssistantAttendance() {
     let html = '<table class="table attendance-table"><thead><tr>';
     html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
     for (let d = 1; d <= days; d++) {
-        const isLesson = isLessonDay(year, month, d, pattern);
-        html += `<th class="att-day ${isLesson ? 'lesson-day-col' : ''}">${d}</th>`;
+        html += `<th class="att-day lesson-day-col">${d}</th>`;
     }
     html += '</tr></thead><tbody>';
 
@@ -8622,12 +8631,13 @@ function renderAssistantAttendance() {
 
     students.forEach((s, i) => {
         const studentAttendance = attendanceForTeacher[s.id] || {};
+        const markedCount = Object.values(studentAttendance).filter(Boolean).length;
         html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="asst-lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = studentAttendance[d];
-            const isLesson = isLessonDay(year, month, d, pattern);
-            html += `<td class="att-cell ${isLesson ? 'lesson-day-col' : ''} ${marked ? 'att-present' : ''}">
-                <input type="checkbox" class="asst-att-check" data-att-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${!isLesson ? 'disabled' : ''}>
+            const disabled = !marked && markedCount >= flexCap;
+            html += `<td class="att-cell lesson-day-col ${marked ? 'att-present' : ''}">
+                <input type="checkbox" class="asst-att-check" data-att-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
             </td>`;
         }
         html += '</tr>';
@@ -8657,7 +8667,8 @@ function renderAssistantAttendance() {
     document.querySelectorAll('.asst-lesson-count').forEach(cell => {
         const sid = cell.dataset.student;
         const att = getItem(STORAGE_KEYS.assistantAttendance, {})[attKey]?.[sid] || {};
-        cell.textContent = lessonDays.filter(d => att[d]).length;
+        const count = Object.values(att).filter(Boolean).length;
+        cell.textContent = `${count} / ${flexCap}`;
     });
 }
 

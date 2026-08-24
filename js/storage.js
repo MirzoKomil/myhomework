@@ -431,6 +431,16 @@ function isLessonDay(year, month, day, patternKey) {
     return pattern.days.includes(dow);
 }
 
+// 10-vazifa: yordamchi ustoz uchun dars kunlari qat'iy haftalik patternga
+// (mwf/tts) bog'lanmagan — istalgan kunni belgilay oladi. Lekin maosh
+// shu songa bog'liq bo'lgani uchun (calculateKpiSalary) oyiga qancha kun
+// belgilash mumkinligiga baribir chegara kerak — bu chegara asosiy
+// ustozning haftalik (3 kun/hafta) patterni o'sha oyda necha kun bersa,
+// aynan shunga (taxminan 12-13) teng qilib avtomatik hisoblanadi.
+function getFlexibleAttendanceCap(year, month) {
+    return Math.round(getDaysInMonth(year, month) * 3 / 7);
+}
+
 function getMonthlyBaseSalary(duration) {
     return SALARY_RATES[duration] || SALARY_RATES[15];
 }
@@ -459,8 +469,15 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     const pattern = teacher.schedulePattern || 'mwf';
     const duration = teacher.lessonDuration || 15;
     const monthlyBase = getMonthlyBaseSalary(duration);
-    const lessonDays = getLessonDaysInMonth(year, month, pattern);
-    const expectedPerStudent = lessonDays.length;
+    // 10-vazifa: yordamchi ustoz istalgan kunni belgilay oladi (haftalik
+    // patternga bog'lanmagan), shuning uchun "kutilgan darslar soni" ham
+    // pattern kunlaridan emas, avtomatik oylik chegaradan olinadi — va har
+    // bir o'quvchi uchun HAQIQIY belgilangan (istalgan kundagi) darslar
+    // soni shu chegarada cheklanadi (UI cheklovi chetlab o'tilsa ham,
+    // maosh hech qachon normadan oshmasligi uchun).
+    const isAssistant = teacher.type === 'yordamchi';
+    const lessonDays = isAssistant ? null : getLessonDaysInMonth(year, month, pattern);
+    const expectedPerStudent = isAssistant ? getFlexibleAttendanceCap(year, month) : lessonDays.length;
     const attBlock = attendanceStore[`${monthVal}_${teacher.id}`] || {};
     const perLesson = expectedPerStudent > 0 ? monthlyBase / expectedPerStudent : 0;
 
@@ -468,7 +485,10 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     let total = 0;
     let totalLessons = 0;
     const perStudent = studentList.map(s => {
-        const lessons = countStudentLessons(attBlock, s.id, lessonDays);
+        const rawLessons = isAssistant
+            ? Object.values(attBlock[s.id] || {}).filter(Boolean).length
+            : countStudentLessons(attBlock, s.id, lessonDays);
+        const lessons = Math.min(rawLessons, expectedPerStudent);
         const earned = Math.round(perLesson * lessons);
         total += earned;
         totalLessons += lessons;
@@ -488,10 +508,10 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
         maxPossible,
         kpiPercent,
         perStudent,
-        lessonDays,
+        lessonDays: lessonDays || [],
         duration,
-        pattern,
-        patternLabel: SCHEDULE_PATTERNS[pattern]?.label || ''
+        pattern: isAssistant ? null : pattern,
+        patternLabel: isAssistant ? `Istalgan kun (oyiga ${expectedPerStudent} tagacha)` : (SCHEDULE_PATTERNS[pattern]?.label || '')
     };
 }
 
