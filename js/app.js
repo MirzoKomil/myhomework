@@ -363,6 +363,101 @@ async function syncHrLoginRoles(currentUser) {
     }
 }
 
+// 7-vazifa: xodimning haqiqiy til/kurs yo'nalishini aniqlaydi — asosiy
+// ustozlarda til rolning o'zida ("ingliz-oqituvchi"/"rus-oqituvchi"),
+// boshqa barcha rollarda (yordamchi, sotuv menejeri, ROP, marketolog va
+// h.k.) esa alohida "lang" maydonida saqlanadi (bootApp'dagi
+// detectedTeacherLang mantig'i bilan bir xil, js/app.js:552-554).
+function resolveHrEmployeeSubject(employee) {
+    if (employee?.role === 'rus-oqituvchi') return 'russian';
+    if (employee?.role === 'ingliz-oqituvchi' || employee?.role === 'oqituvchi') return 'english';
+    return employee?.lang === 'russian' ? 'russian' : 'english';
+}
+
+// Berilgan ustoz (yoki uning nusxalari — getTeacherAssignmentIds) nomiga
+// biriktirilgan HAQIQIY (demo bo'lmagan) o'quvchilar sonini sanaydi.
+function _countRealStudentsForTeacher(teacherId, students, field) {
+    const ids = getTeacherAssignmentIds(teacherId);
+    return students.filter(s => !s.isStaffDemo && ids.has(String(s[field] || ''))).length;
+}
+
+// Demo o'quvchi uchun berilgan tildagi eng ko'p (haqiqiy) o'quvchisi bor
+// ustoz/yordamchi ustozni tanlaydi — "support ustoz" talabi ham shu orqali
+// (type='yordamchi') qoplanadi, chunki bazada alohida "support" tushunchasi
+// yo'q.
+function pickBusiestTeacherForDemo(subject, type, students) {
+    const candidates = filterTeachersByTypeAndSubject(type, subject);
+    if (!candidates.length) return null;
+    const field = type === 'yordamchi' ? 'assistantTeacherId' : 'teacherId';
+    let best = null, bestCount = -1;
+    candidates.forEach(t => {
+        const count = _countRealStudentsForTeacher(t.id, students, field);
+        if (count > bestCount) { bestCount = count; best = t; }
+    });
+    return best ? best.id : null;
+}
+
+function pickBusiestManagerForDemo(subject, students) {
+    const candidates = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
+        (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') &&
+        e.status !== 'inactive' &&
+        resolveHrEmployeeSubject(e) === subject
+    );
+    if (!candidates.length) return null;
+    let best = null, bestCount = -1;
+    candidates.forEach(m => {
+        const count = students.filter(s => !s.isStaffDemo && s.managerId === m.id).length;
+        if (count > bestCount) { bestCount = count; best = m; }
+    });
+    return best ? best.id : null;
+}
+
+// Bitta xodim uchun "soxta o'quvchi" yozuvini yasaydi — u orqali xodim
+// mobil ilovani real o'quvchi ma'lumotlariga tegmasdan, o'z nomi bilan
+// ko'ra oladi (login = telefon, parol = raqamning oxirgi 4 xonasi). Toq
+// kunlar/soat 02:00 barcha demo hisoblar uchun bir xil — ular haqiqatan
+// "qatnashmaydi", faqat ilovani ko'rish uchun.
+function buildStaffDemoStudent(employee, students) {
+    const subject = resolveHrEmployeeSubject(employee);
+    const login = normalizeEmployeePhoneLogin(employee.phone);
+    return {
+        id: 'demo_' + employee.id,
+        name: employee.name,
+        phone: employee.phone || '',
+        login,
+        password: login.slice(-4),
+        subject,
+        teacherId: pickBusiestTeacherForDemo(subject, 'asosiy', students) || null,
+        assistantTeacherId: pickBusiestTeacherForDemo(subject, 'yordamchi', students) || null,
+        managerId: pickBusiestManagerForDemo(subject, students) || '',
+        lessonDayOfWeek: 1,
+        lessonTime: '02:00',
+        lessonDuration: 15,
+        telegramGroupLink: 'https://t.me/+Q6Lrqx9LjIBjYmQy',
+        debtAmount: 0,
+        paidAmount: 0,
+        isStaffDemo: true,
+        demoForEmployeeId: employee.id
+    };
+}
+
+// Mavjud VA yangi qo'shilgan xodimlar uchun demo o'quvchi hisobini
+// avtomatik ta'minlaydi — syncHrLoginRoles bilan bir xil patternda, har
+// bir admin sessiyasida ishga tushadi, lekin allaqachon hisobi bor
+// xodimlarni qayta yaratmaydi (demoForEmployeeId orqali idempotent).
+function ensureStaffDemoStudents(currentUser) {
+    if (currentUser?.role !== 'admin') return;
+    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
+    const students = getItem(STORAGE_KEYS.students, []);
+    const existingIds = new Set(students.filter(s => s.isStaffDemo).map(s => s.demoForEmployeeId));
+    const missing = employees.filter(e =>
+        e.status !== 'inactive' && !existingIds.has(e.id) && normalizeEmployeePhoneLogin(e.phone)
+    );
+    if (!missing.length) return;
+    const newDemos = missing.map(e => buildStaffDemoStudent(e, students));
+    setItem(STORAGE_KEYS.students, [...students, ...newDemos]);
+}
+
 async function bootApp() {
     const currentUser = getCurrentUser();
     if (!currentUser || !getToken()) {
@@ -561,6 +656,7 @@ async function bootApp() {
     setUiLang(getUiLang());
     initUserUI(currentUser);
     syncHrLoginRoles(currentUser);
+    ensureStaffDemoStudents(currentUser);
     renderDashboard();
     renderCalendarWidget();
     startLeadsPolling();
@@ -1090,6 +1186,26 @@ const SHOP_CATEGORY_OPTIONS = [
 // avtomatik biriktiriladi.
 let _activeShopProductCategory = 'merch';
 
+// 7-vazifa: xodimning demo o'quvchi tokenini bir marta (sessiyada) olib,
+// /student/ ilovasi bilan bir xil origin'dagi localStorage'ga yozadi —
+// shu orqali iframe hech qanday login talab qilmasdan xodimning O'Z demo
+// hisobini ko'rsatadi (student-app/services/studentAuthStore.ts shu
+// kalitlarni o'qiydi: mh_student_token / mh_student_info).
+let _staffDemoTokenPromise = null;
+function _ensureStaffDemoToken() {
+    if (!_staffDemoTokenPromise) {
+        _staffDemoTokenPromise = apiGetMyDemoToken().then(res => {
+            if (res?.token && res?.student) {
+                localStorage.setItem('mh_student_token', res.token);
+                localStorage.setItem('mh_student_info', JSON.stringify(res.student));
+            }
+        }).catch(err => {
+            console.warn('Demo hisob tokenini olishda xatolik:', err.message);
+        });
+    }
+    return _staffDemoTokenPromise;
+}
+
 function renderStudentApp() {
     const cu = getCurrentUser();
     const isAdmin = cu && (cu.role === 'admin' || cu.role === 'boshliq');
@@ -1119,7 +1235,9 @@ function renderStudentApp() {
         if (viewPanel) viewPanel.classList.add('active');
         const frame = document.getElementById('studentAppFrame');
         const previewUrl = _studentAppPreviewUrl();
-        if (frame && !frame.src.includes(`course=${previewLang}`)) frame.src = previewUrl;
+        if (frame && !frame.src.includes(`course=${previewLang}`)) {
+            _ensureStaffDemoToken().finally(() => { frame.src = previewUrl; });
+        }
         return;
     }
 
@@ -6262,6 +6380,11 @@ function initProfileNav() {
         logoutBtn.addEventListener('click', async () => {
             if (confirm('Tizimdan chiqasizmi?')) {
                 await apiLogout();
+                // 7-vazifa: umumiy kompyuterda keyingi xodim oldingisining
+                // demo o'quvchi sessiyasini (Mobil ilova iframe'i uchun
+                // yozilgan) meros qilib olmasligi uchun tozalanadi.
+                localStorage.removeItem('mh_student_token');
+                localStorage.removeItem('mh_student_info');
                 window.location.href = 'login.html';
             }
         });
@@ -6297,7 +6420,11 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 
 // --- Dashboard ---
 function renderDashboard() {
-    const students = getItem(STORAGE_KEYS.students, []);
+    // 7-vazifa: har bir xodim uchun avtomatik yaratilgan demo o'quvchi
+    // hisoblari (isStaffDemo) statistikaga umuman qo'shilmasligi kerak —
+    // ular haqiqiy o'quvchi emas, faqat xodimning o'ziga ilovani ko'rsatish
+    // uchun.
+    const students = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo);
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const currentUser = getCurrentUser();
@@ -8817,10 +8944,14 @@ function filterStudentsForSalesManager(students, currentUser) {
         ...(allLeads.english || []).filter(l => l.managerId === managerId).map(l => l.id),
         ...(allLeads.russian || []).filter(l => l.managerId === managerId).map(l => l.id)
     ]);
-    return students.filter(s =>
+    // 7-vazifa: xodimlar uchun avtomatik yaratilgan demo o'quvchi hisoblari
+    // (isStaffDemo) statistika to'liqligi uchun managerId'ga ega bo'lishi
+    // mumkin, lekin sotuv menejerining o'z kabinetida HECH QACHON
+    // ko'rinmasligi kerak.
+    return students.filter(s => !s.isStaffDemo && (
         (s.managerId && s.managerId === managerId) ||
         (s.leadRef && managerLeadIds.has(s.leadRef.id))
-    );
+    ));
 }
 
 // Ustozlar HR xodimlari ro'yxatidan virtual yozuv sifatida ham, ilgari
@@ -9154,7 +9285,8 @@ function renderStudents() {
             <td>
                 <div style="display:flex;align-items:center;gap:8px;min-width:120px">
                     <div class="student-avatar-mini">${escapeHtml(initials)}</div>
-                    <span style="font-weight:500">${escapeHtml(s.name || '—')}</span>
+                    <span style="font-weight:500${s.isStaffDemo ? ';color:var(--text-muted)' : ''}">${escapeHtml(s.name || '—')}</span>
+                    ${s.isStaffDemo ? `<span class="badge" style="background:#EDE9FE;color:#7C3AED;font-size:10px;font-weight:600" title="Xodim uchun avtomatik yaratilgan demo hisob">DEMO</span>` : ''}
                 </div>
             </td>
             <td><span class="student-id-badge">#${escapeHtml(s.serialCode || String(s.id).slice(-6))}</span></td>
@@ -12570,7 +12702,7 @@ function hbAttendanceStats(period) {
 }
 
 function hbRetentionRate() {
-    const students = getItem(STORAGE_KEYS.students, []);
+    const students = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo);
     const total = students.length;
     const active = students.filter(s => !s.frozen).length;
     return total > 0 ? (active / total * 100) : 0;
@@ -13271,15 +13403,20 @@ function fillSmsPlaceholders(text, ctx) {
 }
 
 function _smsGetAudienceList(audience) {
+    // 7-vazifa: xodimlar uchun avtomatik yaratilgan demo o'quvchi hisoblari
+    // xodimning HAQIQIY telefon raqamini o'z ichiga oladi — ular ommaviy
+    // SMS auditoriyasiga umuman tushmasligi kerak, aks holda "barcha
+    // o'quvchilarga" SMS yuborilganda xodimlarning shaxsiy raqamiga ham
+    // marketing xabari borib qolar edi.
     if (audience === 'oquvchilar') {
-        return getItem(STORAGE_KEYS.students, []).filter(s => s.phone).map(s => ({
+        return getItem(STORAGE_KEYS.students, []).filter(s => s.phone && !s.isStaffDemo).map(s => ({
             id: s.id, type: 'student', name: s.name || '(ismsiz)', phone: s.phone, sub: s.group || '',
             teacherId: s.teacherId || ''
         }));
     }
     if (audience === 'qarzdorlar') {
         return getItem(STORAGE_KEYS.students, [])
-            .filter(s => s.phone && (Number(s.debtAmount || 0) > 0 || s.paymentDueDate))
+            .filter(s => s.phone && !s.isStaffDemo && (Number(s.debtAmount || 0) > 0 || s.paymentDueDate))
             .map(s => ({
                 id: s.id, type: 'debtor', name: s.name || '(ismsiz)', phone: s.phone,
                 sub: Number(s.debtAmount || 0) > 0 ? `${Number(s.debtAmount).toLocaleString()} so'm qarz` : (s.paymentDueDate || ''),
@@ -24573,6 +24710,7 @@ function renderDebtorsTable(containerId) {
         .filter(m => !_debtorsRopLang || (m.lang || 'english') === _debtorsRopLang);
 
     let debtors = allStudents.filter(s => {
+        if (s.isStaffDemo) return false;
         const debt = Number(s.debtAmount || 0);
         if (_debtorsRopLang && (s.subject || 'english') !== _debtorsRopLang) return false;
         if (_debtorsSalesManagerLang && (s.subject || 'english') !== _debtorsSalesManagerLang) return false;

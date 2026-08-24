@@ -860,6 +860,17 @@ async function getHrEmployeeById(id) {
     return q1('SELECT id, name, login, phone FROM hr_employees WHERE id = $1', [id]);
 }
 
+// 7-vazifa: login akkaunti (`users.id`) va hrEmployees yozuvi (`hr_employees.id`)
+// ikki xil ID — ular faqat `login` (ikkalasida ham bir xil normallashtirilgan
+// qiymat) orqali bog'lanadi. Xodimning o'zi CRM'da autentifikatsiyadan
+// o'tganda (`req.user.email` = login) shu orqali o'zining hrEmployees
+// yozuvini (demak, unga bog'langan demo o'quvchini) topish uchun kerak.
+async function getHrEmployeeByLogin(login) {
+    const trimmed = String(login || '').trim();
+    if (!trimmed) return null;
+    return q1('SELECT id, name, login, phone FROM hr_employees WHERE login = $1', [trimmed]);
+}
+
 async function setHrEmployeeLogin(id, login) {
     if (!id) return false;
     const result = await pool.query('UPDATE hr_employees SET login = $2 WHERE id = $1', [id, login]);
@@ -2419,6 +2430,17 @@ async function findStudentByLogin(login) {
     if (!trimmed) return null;
     const rows = await q('SELECT * FROM students');
     const match = rows.map(rowToStudent).find(s => String(s.login || '').trim().toLowerCase() === trimmed);
+    return match || null;
+}
+
+// 7-vazifa: har bir xodim uchun avtomatik yaratilgan "demo o'quvchi"
+// (isStaffDemo, demoForEmployeeId — students.extra_data) hisobini shu
+// xodimning hrEmployees ID'si orqali topadi — CRM "Mobil ilova" bo'limini
+// xodimning O'ZI uchun avtomatik (login talab qilinmasdan) ochish uchun.
+async function findDemoStudentByEmployeeId(employeeId) {
+    if (!employeeId) return null;
+    const rows = await q('SELECT * FROM students');
+    const match = rows.map(rowToStudent).find(s => s.isStaffDemo && s.demoForEmployeeId === employeeId);
     return match || null;
 }
 
@@ -4221,7 +4243,7 @@ module.exports = {
     getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
-    getHrEmployeesData, getHrEmployeeById, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
+    getHrEmployeesData, getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, findDemoStudentByEmployeeId, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,
     getDemoStudentAssistantRatings, submitDemoStudentAssistantRating,
     getDemoStudentMessages, sendDemoStudentMessage,

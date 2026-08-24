@@ -6,8 +6,8 @@ const {
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     createSession, getSessionsByUserId, getSessionById,
     deleteSession, deleteSessionByJti, deleteOtherSessions, DATA_DIR,
-    findStudentByLogin, getStudentPublicId, setSalesManagerUserLink,
-    getHrEmployeeById, setHrEmployeeLogin
+    findStudentByLogin, findDemoStudentByEmployeeId, getStudentPublicId, setSalesManagerUserLink,
+    getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
 
@@ -191,6 +191,39 @@ router.post('/student-login', async (req, res) => {
         } });
     } catch (err) {
         console.error('POST /student-login', err);
+        res.status(500).json({ error: 'Server xatoligi' });
+    }
+});
+
+// 7-vazifa: har bir xodim CRM ichidagi "Mobil ilova" bo'limini o'zining
+// (avtomatik yaratilgan) demo o'quvchi hisobi bilan, login talab qilinmasdan
+// ko'rishi uchun — bu token frontendda `mh_student_token`ga yoziladi va
+// /student/ iframe'i uni haqiqiy o'quvchi tokeni sifatida o'qiydi (bir xil
+// origin, `student-app/services/studentAuthStore.ts`). ID emas, faqat
+// authRequired orqali tasdiqlangan foydalanuvchining O'ZINING hrEmployees
+// yozuvi orqali topilgan demo hisob qaytariladi — boshqa xodimning demo
+// profilini so'rab bo'lmaydi.
+router.get('/my-demo-token', authRequired, async (req, res) => {
+    try {
+        if (req.user.role === 'admin' || req.user.role === 'boshliq')
+            return res.status(403).json({ error: 'Admin uchun mavjud emas' });
+        const employee = await getHrEmployeeByLogin(req.user.email);
+        if (!employee) return res.status(404).json({ error: 'Xodim topilmadi' });
+        const student = await findDemoStudentByEmployeeId(employee.id);
+        if (!student) return res.status(404).json({ error: 'Demo hisob hali yaratilmagan' });
+        const { token, jti } = signToken({ id: student.id, email: student.login, role: 'student' });
+        const userAgent = req.headers['user-agent'] || '';
+        const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
+        await createSession({ userId: student.id, jti, userAgent, ip });
+        res.json({ token, student: {
+            id: student.id,
+            studentId: await getStudentPublicId(student),
+            name: student.name,
+            login: student.login,
+            lang: student.subject === 'russian' ? 'russian' : 'english'
+        } });
+    } catch (err) {
+        console.error('GET /my-demo-token', err);
         res.status(500).json({ error: 'Server xatoligi' });
     }
 });

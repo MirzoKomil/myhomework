@@ -184,6 +184,13 @@ async function apiSyncHrRoles(entries) {
     });
 }
 
+// 7-vazifa: xodimning o'ziga avtomatik yaratilgan demo o'quvchi hisobi
+// uchun token — CRM "Mobil ilova" iframe'ini login talab qilinmasdan
+// xodimning o'z nomiga ochish uchun ishlatiladi.
+async function apiGetMyDemoToken() {
+    return apiFetch('/api/auth/my-demo-token');
+}
+
 async function apiGetSessions() {
     return apiFetch('/api/auth/sessions');
 }
