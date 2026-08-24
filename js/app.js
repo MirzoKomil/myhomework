@@ -1238,6 +1238,24 @@ function renderStudentApp() {
         if (frame && !frame.src.includes(`course=${previewLang}`)) {
             _ensureStaffDemoToken().finally(() => { frame.src = previewUrl; });
         }
+        // 8-vazifa: "Alohida ko'rish" — /student/ni YANGI, iframe bo'lmagan
+        // oynada ochadi. _layout.tsx'dagi mavjud mantiq (iframe emas + token
+        // yo'q => /login'ga yo'naltiradi) shu orqali ishga tushishi uchun
+        // umumiy (bir xil origin) localStorage'dagi demo tokenini ataylab
+        // tozalaymiz — aks holda yangi oyna ham iframe kabi avtomatik
+        // xodimning demo hisobiga kirib ketardi, login shakli ko'rinmasdi.
+        const actions = document.getElementById('mobileEmployeeViewActions');
+        if (actions) actions.style.display = '';
+        const separateBtn = document.getElementById('mobileOpenSeparateBtn');
+        if (separateBtn && !separateBtn.dataset.bound) {
+            separateBtn.dataset.bound = '1';
+            separateBtn.addEventListener('click', () => {
+                localStorage.removeItem('mh_student_token');
+                localStorage.removeItem('mh_student_info');
+                _staffDemoTokenPromise = null;
+                window.open('/student/', '_blank', 'noopener');
+            });
+        }
         return;
     }
 
