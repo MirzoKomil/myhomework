@@ -39,12 +39,22 @@ async function authRequired(req, res, next) {
     next();
 }
 
-// 150-ish: o'quvchi tokeni bo'lsa haqiqiy o'quvchini aniqlaydi, lekin HECH
-// QACHON so'rovni rad etmaydi (token yo'q/eskirgan/noto'g'ri rol/sessiya
-// bekor qilingan — barchasida shunchaki req.studentId = null qoladi va
-// keyingi kod eski "Namuna o'quvchi" xatti-harakatiga tushadi). Shu tufayli
-// CRM'ning "O'quvchi ilovasi" ko'rib chiqish (iframe) tabidagi mavjud demo
-// tajriba hech qanday o'zgarishsiz ishlashda davom etadi.
+// 150-ish: o'quvchi tokeni bo'lsa haqiqiy o'quvchini aniqlaydi. TOKEN
+// UMUMAN YO'Q bo'lgandagina (masalan CRM'ning "O'quvchi ilovasi" ko'rib
+// chiqish iframe'i, yoki hali hech qachon login qilmagan yangi tashrif)
+// jim ravishda eski "Namuna o'quvchi" (demo) xatti-harakatiga tushadi —
+// bu ataylab, mavjud CRM preview tajribasi uchun saqlanadi.
+//
+// LEKIN token BOR bo'lib, u yaroqsiz/eskirgan/sessiyasi tugagan bo'lsa —
+// bu boshqacha holat: foydalanuvchi ONGLI ravishda o'z hisobiga kirgan
+// va o'z ma'lumotini kutmoqda. Bunday holatda ilgari ham jim ravishda
+// demo rejimga (global "namuna o'quvchi" — bazada bugungi kunda haqiqiy,
+// pul to'lagan o'quvchi bo'lishi mumkin) tushirilardi — bu esa
+// MAXFIYLIK muammosi edi: bitta haqiqiy o'quvchining shaxsiy profili/
+// baholari/davomat ma'lumoti tokeni eskirgan/yaroqsiz bo'lgan BOSHQA
+// har qanday haqiqiy o'quvchiga ko'rsatilib qo'yilishi mumkin edi. Endi
+// bunday holatda aniq 401 qaytariladi — ilova qayta kirishni so'rashi
+// kerak, boshqa birovning ma'lumotini hech qachon ko'rsatmaydi.
 async function studentAuthOptional(req, res, next) {
     req.studentId = null;
     const header = req.headers.authorization || '';
@@ -57,27 +67,26 @@ async function studentAuthOptional(req, res, next) {
     if (!token && typeof req.query?.token === 'string') token = req.query.token;
     if (!token) return next();
 
+    let payload;
     try {
-        const payload = jwt.verify(token, JWT_SECRET);
-        if (payload.role !== 'student') return next();
-        if (payload.jti) {
-            const { findSessionByJti, touchSession } = require('../db');
-            const session = await findSessionByJti(payload.jti);
-            if (!session) return next();
-            const age = Date.now() - new Date(session.last_seen).getTime();
-            if (age > 5 * 60 * 1000) await touchSession(payload.jti).catch(() => {});
-        }
-        // O'quvchi arxivga o'tkazilgan/o'chirilgan bo'lsa, uning eski tokeni
-        // boshqa "namuna o'quvchi" ma'lumotlariga tushib ketmasligi kerak.
-        // Har bir student token CRM'da haqiqatan mavjud o'quvchiga tegishli
-        // ekanini tekshiramiz.
-        const { getDemoStudentProfile } = require('../db');
-        const profile = await getDemoStudentProfile(payload.id);
-        if (!profile?.name) return res.status(401).json({ error: 'O\'quvchi akkaunti mavjud emas' });
-        req.studentId = payload.id;
+        payload = jwt.verify(token, JWT_SECRET);
     } catch {
-        // token yaroqsiz/eskirgan — jim ravishda demo rejimga qaytiladi
+        return res.status(401).json({ error: 'Sessiya tugagan, qaytadan kiring' });
     }
+    if (payload.role !== 'student') return next();
+    if (payload.jti) {
+        const { findSessionByJti, touchSession } = require('../db');
+        const session = await findSessionByJti(payload.jti);
+        if (!session) return res.status(401).json({ error: 'Sessiya yakunlangan, qaytadan kiring' });
+        const age = Date.now() - new Date(session.last_seen).getTime();
+        if (age > 5 * 60 * 1000) await touchSession(payload.jti).catch(() => {});
+    }
+    // O'quvchi arxivga o'tkazilgan/o'chirilgan bo'lsa, uning eski tokeni
+    // boshqa "namuna o'quvchi" ma'lumotlariga tushib ketmasligi kerak.
+    const { getDemoStudentProfile } = require('../db');
+    const profile = await getDemoStudentProfile(payload.id);
+    if (!profile?.name) return res.status(401).json({ error: "O'quvchi akkaunti mavjud emas" });
+    req.studentId = payload.id;
     next();
 }
 
