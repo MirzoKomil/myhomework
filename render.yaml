@@ -40,3 +40,6 @@ services:
         generateValue: true
       - key: PUBLIC_CRM_API_KEY
         generateValue: true
+      # CAPI.uz tokeni — dashboardda qo'lda kiritiladi, repoda saqlanmaydi.
+      - key: CAPI_UZ_TOKEN
+        sync: false
