@@ -25,15 +25,23 @@
  * kontenti bilan TO'LIQ almashtiring (yoki shu faylni alohida
  * <script src="homeworkuz-fix.js"></script> sifatida ulang).
  *
- * DIQQAT — WEBHOOK_SECRET: pastdagi qiymat serverdagi standart (dev)
- * qiymat. Agar Railway'da LEADS_WEBHOOK_SECRET boshqa qiymatga
- * o'rnatilgan bo'lsa, shu yerdagi qiymatni ham o'sha bilan almashtiring
- * — aks holda so'rov 401 xatosi bilan qaytadi (forma o'zi baribir
- * ishlayveradi, faqat CRM'ga tushmaydi).
+ * DIQQAT — WEBHOOK_SECRET: pastdagi qiymat O'RINBOSAR (placeholder), uni
+ * Railway → Variables → LEADS_WEBHOOK_SECRET dagi haqiqiy qiymat bilan
+ * ALMASHTIRISH SHART — aks holda so'rov 401 xatosi bilan qaytadi (forma
+ * o'zi baribir ishlayveradi, faqat CRM'ga tushmaydi — ya'ni xatolik JIM
+ * bo'ladi, lid esa yo'qoladi).
+ *
+ * Ilgari bu yerda serverning standart (dev) kaliti yozilgan edi. U ochiq
+ * kodda turgani uchun himoya hisoblanmasdi va iste'moldan chiqarildi.
+ *
+ * Server bir vaqtning o'zida bir nechta kalitni qabul qila oladi
+ * (LEADS_WEBHOOK_SECRET=<YANGI>,<ESKI>) — shu sabab kalitni almashtirish
+ * paytida bironta lid yo'qolmaydi: avval ikkalasi yoqiladi, keyin shu
+ * sahifa yangilanadi, eng oxirida eskisi o'chiriladi.
  */
 
 const CRM_API_URL = 'https://myhomework.uz/api/leads';
-const CRM_WEBHOOK_SECRET = 'myhomework-leads-dev-secret'; // Railway'dagi haqiqiy qiymat bilan tekshiring
+const CRM_WEBHOOK_SECRET = 'RAILWAY_DAGI_LEADS_WEBHOOK_SECRET_QIYMATI'; // ← Railway'dagi qiymat bilan ALMASHTIRING
 
 document.querySelectorAll('.opt').forEach(o => {
   o.addEventListener('click', () => {

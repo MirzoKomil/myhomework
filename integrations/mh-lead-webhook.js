@@ -8,7 +8,11 @@
 (function (global) {
     const config = {
         apiUrl: 'http://localhost:3000/api/leads',
-        secret: 'myhomework-leads-dev-secret',
+        // Railway → Variables → LEADS_WEBHOOK_SECRET dagi qiymat.
+        // Ilgari bu yerda serverning standart (dev) kaliti turardi — u
+        // ochiq kodda bo'lgani uchun himoya hisoblanmasdi va iste'moldan
+        // chiqarildi. Haqiqiy qiymatni shu yerga qo'ying.
+        secret: 'RAILWAY_DAGI_LEADS_WEBHOOK_SECRET_QIYMATI',
         source: 'domwork'
     };
 
