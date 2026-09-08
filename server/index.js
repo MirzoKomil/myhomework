@@ -14,6 +14,7 @@ const smsRoutes = require('./routes/sms');
 const metaRoutes = require('./routes/meta');
 const telegramRoutes = require('./routes/telegram');
 const publicSalesApiRoutes = require('./routes/publicSalesApi');
+const publicCrmApiRoutes = require('./routes/publicCrmApi');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -181,6 +182,7 @@ app.use('/api/sms', smsRoutes);
 app.use('/api/meta', metaRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/public/sales', publicSalesApiRoutes);
+app.use('/api/public/crm', publicCrmApiRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 

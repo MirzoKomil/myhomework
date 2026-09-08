@@ -29,6 +29,8 @@ Brauzer: [http://localhost:3000/login.html](http://localhost:3000/login.html)
 | `GET /api/state` | Barcha ma'lumotlar |
 | `PATCH /api/state` | Ma'lumotlarni saqlash |
 | `POST /api/leads` | Domwork/Homework lid webhook |
+| `GET /api/public/sales/*` | Tashqi read-only: sotuv voronkasi va lidlar |
+| `GET /api/public/crm/*` | Tashqi read-only: CRM'ning barcha bo'limlari ([API-HUJJAT.md](API-HUJJAT.md)) |
 
 ## Lidlar
 
