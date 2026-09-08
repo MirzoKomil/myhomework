@@ -44,14 +44,20 @@ function toAmount(value) {
 // Meta odamni telefon bo'yicha topadi — raqam qanchalik standart bo'lsa,
 // moslashtirish (match rate) shuncha yaxshi. CRM'da raqamlar har xil
 // ko'rinishda saqlanadi: "+998901234567", "901234567", "90 123 45 67".
+//
+// server/routes/telegram.js'dagi normalizeLeadPhone()'ga o'xshaydi, lekin
+// ATAYIN bir xil emas: u KIRUVCHI lidni qabul qiladi va nimaki kelgan
+// bo'lsa saqlab qolishi kerak (to'liq bo'lmagan raqam ham sotuv menejeriga
+// kerak). Bu esa CHIQUVCHI — Meta'ga yuboriladi, shuning uchun ishonchsiz
+// (9 raqamdan qisqa) qiymat umuman yuborilmaydi: yaroqsiz raqam match
+// rate'ni oshirmaydi, aksincha statistikani ifloslantiradi.
+const MIN_PHONE_DIGITS = 9;
+
 function toE164(raw) {
-    const trimmed = String(raw || '').trim();
-    if (!trimmed) return '';
-    const digits = trimmed.replace(/\D/g, '');
-    if (!digits) return '';
+    const digits = String(raw || '').trim().replace(/\D/g, '');
+    if (digits.length < MIN_PHONE_DIGITS) return '';
     if (digits.length === 9) return `+998${digits}`;
-    if (digits.length === 12 && digits.startsWith('998')) return `+${digits}`;
-    return trimmed.startsWith('+') ? `+${digits}` : `+${digits}`;
+    return `+${digits}`;
 }
 
 function uniqNonEmpty(list) {
