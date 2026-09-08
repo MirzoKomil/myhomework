@@ -32,6 +32,8 @@ Brauzer: [http://localhost:3000/login.html](http://localhost:3000/login.html)
 | `GET /api/public/sales/*` | Tashqi read-only: sotuv voronkasi va lidlar |
 | `GET /api/public/crm/*` | Tashqi read-only: CRM'ning barcha bo'limlari ([API-HUJJAT.md](API-HUJJAT.md)) |
 
+Railway'da sozlash: [RAILWAY-SOZLASH.md](RAILWAY-SOZLASH.md)
+
 ## Lidlar
 
 - **Domwork** → Rus tili

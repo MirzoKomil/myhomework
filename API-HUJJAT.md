@@ -146,10 +146,47 @@ curl -H "X-Api-Key: $KEY" \
 
 ---
 
-## 5. Bo'limlar ro'yxati (25 ta)
+## 5. Bo'limlar va ustunlar (25 ta)
 
-| `id` | Bo'lim | CRM'dagi joyi | Manba |
-|---|---|---|---|
+Quyidagi jadval — CRM'ning butun ochilgan sirti. `Ustunlar` ustuni aynan
+`rows` ichida keladigan kalitlarni ko'rsatadi.
+
+_(dinamik)_ deb belgilangan bo'limlarda CRM ma'lumotni erkin shaklda
+saqlaydi — ustunlar haqiqiy yozuvlardan chiqariladi, shuning uchun ular
+`/sections` javobida ko'rinadi (bo'lim bo'sh bo'lsa ustunlar ham bo'sh).
+
+| `id` | Bo'lim | CRM'dagi joyi | Ustunlar | Yashirilgan |
+|---|---|---|---|---|
+| `teachers` | Ustozlar | Akademik bo'lim | `id`, `name`, `type`, `subject`, `schedulePattern`, `lessonDuration` | phone |
+| `students` | O'quvchilar | O'quvchilar | `id`, `name`, `group`, `subject`, `teacherId`, `assistantTeacherId`, `lessonDayOfWeek`, `lessonTime`, `lessonDuration` | phone |
+| `timetable` | Dars jadvali | Dars jadvali | `slotKey`, `date`, `time`, `viewKey`, `teacherId`, `salesManagerId`, `studentId`, `completed` | — |
+| `attendance-main` | Davomat — asosiy ustoz | Akademik bo'lim → Davomat | `attKey`, `studentId`, `day`, `present` | — |
+| `attendance-assistant` | Davomat — yordamchi ustoz | Akademik bo'lim → Davomat | `attKey`, `studentId`, `day`, `present` | — |
+| `live-grades` | Baholar (jonli) | Akademik bo'lim → Reyting | _(dinamik)_ | — |
+| `sales-managers` | Sotuv menejerlari | Sotuv bo'limi | `id`, `name` | — |
+| `leads` | Lidlar | Sotuv bo'limi → Lidlar | `id`, `name`, `phone`, `phone2`, `email`, `language`, `status`, `statusLabel`, `source`, `leadType`, `managerId`, `date`, `externalId`, `createdAt`, `updatedAt` | — |
+| `book-roadmap` | Kitob yetkazish | Sotuv bo'limi → Kitob yetkazish | `id`, `name`, `studentId`, `region`, `managerId`, `kind`, `status`, `date`, `lang`, `dispatchedAt`, `deliveredAt`, `createdAt` | phone, address |
+| `scripts` | Skriptlar | Sotuv bo'limi → Skriptlar | _(dinamik)_ | — |
+| `sales-plan` | Sotuv rejasi (jamoaviy) | Sotuv bo'limi → Sotuv rejasi | _(dinamik)_ | — |
+| `individual-sales-plans` | Sotuv rejasi (individual) | Sotuv bo'limi → Sotuv rejasi | _(dinamik)_ | — |
+| `bonus-history` | Berilgan bonuslar tarixi | Sotuv bo'limi → Reyting | _(dinamik)_ | — |
+| `bonus-data` | Bonus ta'riflari | Sotuv bo'limi → Reyting | _(dinamik)_ | — |
+| `target-monitoring-plan` | Target monitoringi rejasi | Marketing bo'limi → Target Monitoringi | _(dinamik)_ | — |
+| `target-daily-ad-spend` | Kunlik reklama xarajati | Marketing bo'limi → Target Monitoringi | _(dinamik)_ | — |
+| `payments` | To'lovlar | Moliya → To'lovlar | `id`, `studentId`, `platform`, `book`, `paid`, `debt`, `date` | — |
+| `cash-flow` | Cash Flow | Moliya → Cash Flow | _(dinamik)_ | — |
+| `manual-metrics` | Qo'lda kiritilgan ko'rsatkichlar | Analitika → Xodimlar analitikasi | _(dinamik)_ | — |
+| `hr-employees` | Xodimlar | HR → Xodimlar | `id`, `name`, `firstName`, `lastName`, `role`, `department`, `status`, `joinDate`, `startDate`, `gender`, `lang` | phone, email, login, avatar, birthDate, cardNumber, passportSeries, pinfl, address |
+| `org-chart` | Org struktura | HR → Org Struktura | _(dinamik)_ | — |
+| `guides` | Yo'riqnomalar | Yo'riqnomalar | _(dinamik)_ | — |
+| `shop-orders` | Do'kon buyurtmalari | Mobil ilova → Do'kon | _(dinamik)_ | — |
+| `mobile-content` | Mobil ilova kontenti | Mobil ilova → Tahrirlash | `group`, `count` | — |
+| `archive` | Arxiv | Sozlamalar → Arxiv | _(dinamik)_ | — |
+
+> `Yashirilgan` — maxfiylik sababli javobga umuman qo'shilmaydigan
+> ustunlar (6-bo'limga qarang).
+
+---|---|---|---|
 | `students` | O'quvchilar | O'quvchilar | `students` |
 | `teachers` | Ustozlar | Akademik bo'lim | `teachers` |
 | `timetable` | Dars jadvali | Dars jadvali | `timetable` |
