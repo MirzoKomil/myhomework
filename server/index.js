@@ -15,6 +15,7 @@ const metaRoutes = require('./routes/meta');
 const telegramRoutes = require('./routes/telegram');
 const publicSalesApiRoutes = require('./routes/publicSalesApi');
 const publicCrmApiRoutes = require('./routes/publicCrmApi');
+const hrRoutes = require('./routes/hr');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -142,6 +143,17 @@ const webhookLimit = rateLimit({
     message: { error: 'Webhook so\'rovlar haddan oshdi.' },
 });
 
+// HR boti webhooki: minutiga 120 update. Bir nechta nomzod bir vaqtda
+// anketa to'ldirsa ham yetadi (har bir javob = 1 update). Chegaradan oshsa
+// Telegram o'sha update'ni keyinroq qayta yuboradi — ariza yo'qolmaydi.
+const hrBotLimit = rateLimit({
+    windowMs: 60 * 1000,
+    max: 120,
+    message: { error: 'So\'rovlar haddan oshdi.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Tashqi read-only API (/api/public/*): minutiga 30 so'rov — davriy so'rov
 // yuboradigan bitta tashqi tahlil vositasi uchun yetarli, lekin ma'lumotni
 // haddan tashqari tez-tez so'rab, DB'ga ortiqcha yuklama bermaydi.
@@ -170,6 +182,7 @@ app.use('/api/leads', webhookLimit);
 app.use('/api/telephony', webhookLimit);
 app.use('/api/meta', webhookLimit);
 app.use('/api/telegram', webhookLimit);
+app.use('/api/hr/bot-webhook', hrBotLimit);
 app.use('/api/public', publicApiLimit);
 app.use('/api', apiLimit);
 
@@ -183,6 +196,7 @@ app.use('/api/meta', metaRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/public/sales', publicSalesApiRoutes);
 app.use('/api/public/crm', publicCrmApiRoutes);
+app.use('/api/hr', hrRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 
@@ -271,7 +285,14 @@ if (!process.env.LEADS_WEBHOOK_SECRET || process.env.LEADS_WEBHOOK_SECRET === 'm
     console.warn('[XAVFSIZLIK] LEADS_WEBHOOK_SECRET .env da o\'rnatilmagan!');
 }
 
-init().then(() => {
+const { initHrSchema } = require('./services/hrCandidates');
+
+init().then(async () => {
+    // HR Vakansiya jadvallari (18-vazifa) — o'z sxemasini o'zi yaratadi,
+    // db.js ga tegilmagan. Xato bo'lsa ham server ko'tariladi: qolgan
+    // bo'limlar HR bo'limi tufayli to'xtab qolmasligi kerak.
+    await initHrSchema().catch(err =>
+        console.error('[hr] Jadval yaratilmadi:', err.message));
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Myhomework.uz server: port ${PORT}`);
     });
