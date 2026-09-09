@@ -34,6 +34,8 @@ Brauzer: [http://localhost:3000/login.html](http://localhost:3000/login.html)
 
 Railway'da sozlash: [RAILWAY-SOZLASH.md](RAILWAY-SOZLASH.md)
 
+HR Vakansiya boti: [HR-BOT-SOZLASH.md](HR-BOT-SOZLASH.md)
+
 ## Lidlar
 
 - **Domwork** → Rus tili
