@@ -8157,3 +8157,95 @@ body.modal-open {
     cursor: pointer; line-height: 1; vertical-align: middle; margin-left: 4px;
 }
 .an-manual-add-btn:hover { background: var(--purple); color: #fff; }
+
+/* ── HR → Vakansiya voronkasi (18-vazifa) ─────────────────────────────────── */
+/* .hr-panel'da overflow-y:auto turibdi — kanban ichida o'z scrolli bo'lgani
+   uchun bu yerda o'chiriladi, aks holda ikkita scroll bir-biriga xalaqit
+   beradi (ustunlar cho'zilib ketadi). */
+.hr-panel[data-hr-panel="vakansiya"].active {
+    overflow: hidden;
+}
+
+.hr-vac-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.hr-vac-total {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.hr-vac-card-vacancy {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    background: rgba(124, 58, 237, 0.10);
+    border-radius: 6px;
+    padding: 2px 7px;
+    display: inline-block;
+    margin-top: 6px;
+}
+
+.hr-vac-card-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.hr-vac-media {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.hr-vac-chip {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--surface-2, rgba(148, 163, 184, 0.16));
+    color: var(--text-muted);
+}
+
+/* Nomzod kartochkasi — sudrab ko'chirilayotganda */
+.hr-vac-card.is-dragging {
+    opacity: 0.45;
+}
+
+.lead-column.hr-vac-drop {
+    outline: 2px dashed var(--primary);
+    outline-offset: -4px;
+}
+
+/* Nomzod tafsilotlari oynasi */
+.hr-vac-detail-grid {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 8px 14px;
+    font-size: 13px;
+}
+
+.hr-vac-detail-grid dt {
+    color: var(--text-muted);
+}
+
+.hr-vac-detail-grid dd {
+    margin: 0;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.hr-vac-photo {
+    max-width: 220px;
+    border-radius: 10px;
+    display: block;
+    margin-bottom: 12px;
+}

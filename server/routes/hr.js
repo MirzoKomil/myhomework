@@ -9,6 +9,7 @@ const {
     getMedia, insertCandidate,
 } = require('../services/hrCandidates');
 const { HR_STAGES, normalizeHrStage, VACANCIES } = require('../services/hrStages');
+const { VACANCY_QUESTIONS } = require('../services/hrQuestions');
 const hrBot = require('../services/hrBot');
 
 // ── Telegram bot webhooki ───────────────────────────────────────────────────
@@ -66,7 +67,16 @@ router.post('/bot-webhook/setup', authRequired, async (req, res) => {
 // Ustunlar ta'rifi + vakansiyalar ro'yxati — frontend ularni qattiq
 // yozmasin, serverdagi bitta manbadan olsin.
 router.get('/meta', authRequired, (req, res) => {
-    res.json({ stages: HR_STAGES, vacancies: VACANCIES });
+    // Savol matnlari ham beriladi: nomzod kartochkasida javob yonida
+    // "sales_experience" emas, haqiqiy savol ko'rinsin. Frontend ularni
+    // qattiq yozib qo'ymasligi uchun manba bitta joyda qoladi.
+    const questionLabels = {};
+    for (const v of VACANCIES) {
+        for (const q of (VACANCY_QUESTIONS[v.id] || [])) {
+            questionLabels[q.key] = q.text.split('\n')[0];
+        }
+    }
+    res.json({ stages: HR_STAGES, vacancies: VACANCIES, questionLabels });
 });
 
 router.get('/candidates', authRequired, async (req, res) => {

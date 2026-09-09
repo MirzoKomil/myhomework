@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20260811a">
+    <link rel="stylesheet" href="css/styles.css?v=20260909a">
 </head>
 
 <body>
@@ -1280,11 +1280,17 @@
                         </div>
 
                         <div class="hr-panel" data-hr-panel="vakansiya" id="hrPanel-vakansiya">
-                            <div class="mac-empty" style="padding:80px 0">
-                                <div style="font-size:40px;margin-bottom:12px">💼</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Vakansiya</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
+                            <div class="hr-vac-toolbar">
+                                <div class="leads-filter-box leads-filter-box--select">
+                                    <span class="leads-filter-display" id="hrVacFilterDisplay">Barcha vakansiyalar</span>
+                                    <select id="hrVacFilter" class="leads-filter-select-overlay" aria-label="Vakansiya">
+                                        <option value="all">Barcha vakansiyalar</option>
+                                    </select>
+                                </div>
+                                <span class="hr-vac-total" id="hrVacTotal"></span>
+                                <button type="button" class="btn-outline-sm" id="hrVacRefresh">Yangilash</button>
                             </div>
+                            <div class="leads-kanban" id="hrVacBoard"></div>
                         </div>
 
                         <div class="hr-panel" data-hr-panel="davomat" id="hrPanel-davomat">
@@ -1611,7 +1617,7 @@
     <script src="js/storage.js?v=20260825a"></script>
     <script src="js/notifications.js?v=20260801b"></script>
     <script src="js/lessonDefaults.js?v=20260812b"></script>
-    <script src="js/app.js?v=20260825c"></script>
+    <script src="js/app.js?v=20260909a"></script>
 </body>
 
 </html>

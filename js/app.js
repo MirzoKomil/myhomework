@@ -12530,9 +12530,15 @@ function switchHrSection(section) {
     document.querySelectorAll('.hr-panel').forEach(panel => {
         panel.classList.toggle('active', panel.dataset.hrPanel === section);
     });
+    // Vakansiya bo'limi til bo'yicha bo'linmaydi (nomzod kursga emas, ish
+    // o'rniga ariza beradi) — 18-vazifa TZ. Shu sabab Ingliz/Rus tanlovi
+    // faqat shu bo'limda yashiriladi.
+    const hrLangFilter = document.getElementById('hrPinnedLangFilter');
+    if (hrLangFilter) hrLangFilter.style.display = section === 'vakansiya' ? 'none' : '';
     if (section === 'xodimlar') renderHrEmployees();
     if (section === 'org-struktura') renderOrgStruktura();
     if (section === 'yoriqnomalar') renderGuides();
+    if (section === 'vakansiya') renderHrVacancy();
     persistCurrentTab();
 }
 
@@ -25523,6 +25529,253 @@ function openOrgNodeModal(parentId, existing = null) {
             closeModal();
             renderOrgStruktura();
         };
+    }
+}
+
+// ===== HR → Vakansiya voronkasi (18-vazifa) =====
+// Sotuv voronkasidan mustaqil: o'z API'si (/api/hr/*), o'z ustunlari va
+// til bo'yicha bo'linmaydi (nomzod kursga emas, ish o'rniga ariza beradi).
+// Ustunlar/vakansiyalar ro'yxati SERVERDAN olinadi (hrStages.js) — bu yerda
+// qattiq yozilmaydi, aks holda ikki joyda bir-biridan farq qilib ketardi.
+
+let _hrVacStages = [];
+let _hrVacVacancies = [];
+let _hrVacQuestionLabels = {};
+let _hrVacCandidates = [];
+let _hrVacFilter = 'all';
+let _hrVacMetaLoaded = false;
+
+function hrVacMediaUrl(id, kind) {
+    // <img>/<audio>/<video> maxsus sarlavha yubora olmaydi — token
+    // query orqali beriladi (server/routes/hr.js aynan shuni qabul qiladi).
+    return '/api/hr/candidates/' + encodeURIComponent(id) + '/media/' + kind
+        + '?token=' + encodeURIComponent(getToken() || '');
+}
+
+async function hrVacLoadMeta() {
+    if (_hrVacMetaLoaded) return;
+    const meta = await apiFetch('/api/hr/meta');
+    _hrVacStages = meta.stages || [];
+    _hrVacVacancies = meta.vacancies || [];
+    _hrVacQuestionLabels = meta.questionLabels || {};
+    _hrVacMetaLoaded = true;
+
+    const select = document.getElementById('hrVacFilter');
+    if (select) {
+        select.innerHTML = '<option value="all">Barcha vakansiyalar</option>'
+            + _hrVacVacancies.map(v =>
+                `<option value="${escapeHtml(v.label)}">${escapeHtml(v.label)}</option>`).join('');
+    }
+}
+
+async function hrVacLoadCandidates() {
+    const data = await apiFetch('/api/hr/candidates');
+    _hrVacCandidates = data.candidates || [];
+}
+
+function hrVacVisibleCandidates() {
+    if (_hrVacFilter === 'all') return _hrVacCandidates;
+    return _hrVacCandidates.filter(c => c.vacancyName === _hrVacFilter);
+}
+
+function hrVacCardHtml(c) {
+    const phone = c.contactPhone || c.telegramPhone || '';
+    const chips = [];
+    if (c.media.includes('photo')) chips.push('🖼 Rasm');
+    if (c.media.includes('voice')) chips.push('🎤 Ovoz');
+    if (c.media.includes('video')) chips.push('🎬 Video');
+    const date = c.createdAt ? String(c.createdAt).slice(0, 10) : '';
+    const chipsHtml = chips.length
+        ? `<div class="hr-vac-media">${chips.map(t =>
+            `<span class="hr-vac-chip">${escapeHtml(t)}</span>`).join('')}</div>`
+        : '';
+
+    return `
+        <div class="lead-card hr-vac-card" draggable="true" data-hr-vac-id="${escapeHtml(c.id)}">
+            <div class="lead-card-top">
+                <div class="lead-card-title-wrap">
+                    <strong>${escapeHtml(c.fullName)}</strong>
+                </div>
+            </div>
+            ${date ? `<div class="hr-vac-card-row">${escapeHtml(date)}</div>` : ''}
+            ${phone ? `<div class="hr-vac-card-row">📞 ${escapeHtml(phone)}</div>` : ''}
+            ${c.vacancyName ? `<div class="hr-vac-card-vacancy">${escapeHtml(c.vacancyName)}</div>` : ''}
+            ${chipsHtml}
+        </div>`;
+}
+
+function hrVacRenderBoard() {
+    const board = document.getElementById('hrVacBoard');
+    if (!board) return;
+    const list = hrVacVisibleCandidates();
+
+    board.innerHTML = _hrVacStages.map(stage => {
+        const cards = list.filter(c => c.stage === stage.id);
+        const cardsHtml = cards.length
+            ? cards.map(hrVacCardHtml).join('')
+            : '<div class="lead-column-empty">Bo\'sh</div>';
+        return `
+            <div class="lead-column" data-hr-vac-stage="${escapeHtml(stage.id)}"
+                 style="background:${stage.bg};border-color:${stage.border}">
+                <div class="lead-column-header" style="background:${stage.headerBg}">
+                    <span class="lead-column-title" style="color:${stage.title}">${escapeHtml(stage.label)}</span>
+                    <span class="lead-column-count" style="color:${stage.count}">${cards.length}</span>
+                </div>
+                <div class="lead-column-cards">${cardsHtml}</div>
+            </div>`;
+    }).join('');
+
+    const total = document.getElementById('hrVacTotal');
+    if (total) total.textContent = `Jami: ${list.length} ta nomzod`;
+
+    hrVacBindBoard();
+}
+
+function hrVacBindBoard() {
+    document.querySelectorAll('[data-hr-vac-id]').forEach(card => {
+        card.addEventListener('click', () => openHrVacDetail(card.dataset.hrVacId));
+        card.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', card.dataset.hrVacId);
+            e.dataTransfer.effectAllowed = 'move';
+            card.classList.add('is-dragging');
+        });
+        card.addEventListener('dragend', () => card.classList.remove('is-dragging'));
+    });
+
+    document.querySelectorAll('[data-hr-vac-stage]').forEach(col => {
+        col.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            col.classList.add('hr-vac-drop');
+        });
+        col.addEventListener('dragleave', () => col.classList.remove('hr-vac-drop'));
+        col.addEventListener('drop', e => {
+            e.preventDefault();
+            col.classList.remove('hr-vac-drop');
+            const id = e.dataTransfer.getData('text/plain');
+            if (id) hrVacMove(id, col.dataset.hrVacStage);
+        });
+    });
+}
+
+async function hrVacMove(id, stage) {
+    const candidate = _hrVacCandidates.find(c => c.id === id);
+    if (!candidate || candidate.stage === stage) return;
+    const oldStage = candidate.stage;
+    // Avval ekranda ko'chiramiz (harakat tez his qilinsin), server rad
+    // etsa eski holatga qaytariladi — nomzod noto'g'ri ustunda qolmaydi.
+    candidate.stage = stage;
+    hrVacRenderBoard();
+    try {
+        await apiFetch('/api/hr/candidates/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            body: JSON.stringify({ stage }),
+        });
+    } catch (err) {
+        candidate.stage = oldStage;
+        hrVacRenderBoard();
+        alert('Bosqichni saqlab bo\'lmadi: ' + (err.message || 'xatolik'));
+    }
+}
+
+function hrVacRow(label, value) {
+    if (value === null || value === undefined || value === '') return '';
+    return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value))}</dd>`;
+}
+
+async function openHrVacDetail(id) {
+    const c = _hrVacCandidates.find(x => x.id === id);
+    if (!c) return;
+
+    const bool = v => v === true ? 'Ha' : v === false ? 'Yo\'q' : '';
+    const stageLabel = (_hrVacStages.find(s => s.id === c.stage) || {}).label || c.stage;
+    const tgLink = c.telegramUsername
+        ? `<a href="https://t.me/${encodeURIComponent(c.telegramUsername)}" target="_blank" rel="noopener">@${escapeHtml(c.telegramUsername)}</a>`
+        : '';
+
+    // Vakansiyaga xos javoblar — savol matni bilan (server bergan lug'atdan).
+    // Media javoblari ("yuborildi") bu yerda ko'rsatilmaydi, ular yuqorida
+    // haqiqiy rasm/ovoz/video sifatida chiqadi.
+    const answerRows = Object.entries(c.answers || {})
+        .filter(([, v]) => v !== 'yuborildi')
+        .map(([k, v]) => hrVacRow(_hrVacQuestionLabels[k] || k, v)).join('');
+
+    const media = [];
+    if (c.media.includes('photo')) {
+        media.push(`<img class="hr-vac-photo" src="${hrVacMediaUrl(c.id, 'photo')}" alt="Nomzod rasmi">`);
+    }
+    if (c.media.includes('voice')) {
+        media.push(`<audio controls preload="none" style="width:100%;margin-bottom:10px" src="${hrVacMediaUrl(c.id, 'voice')}"></audio>`);
+    }
+    if (c.media.includes('video')) {
+        media.push(`<video controls preload="none" style="width:100%;max-width:320px;border-radius:10px" src="${hrVacMediaUrl(c.id, 'video')}"></video>`);
+    }
+
+    const stageOptions = _hrVacStages.map(s =>
+        `<option value="${escapeHtml(s.id)}"${s.id === c.stage ? ' selected' : ''}>${escapeHtml(s.label)}</option>`
+    ).join('');
+
+    const createdAt = c.createdAt ? String(c.createdAt).slice(0, 16).replace('T', ' ') : '';
+
+    openModal(c.fullName, `
+        ${media.join('')}
+        <dl class="hr-vac-detail-grid">
+            ${hrVacRow('Vakansiya', c.vacancyName)}
+            ${hrVacRow('Bosqich', stageLabel)}
+            ${hrVacRow('Telegram raqami', c.telegramPhone)}
+            ${hrVacRow('Qo\'shimcha raqam', c.contactPhone)}
+            ${tgLink ? `<dt>Telegram</dt><dd>${tgLink}</dd>` : ''}
+            ${hrVacRow('Manzil', c.address)}
+            ${hrVacRow('Tug\'ilgan yil', c.birthYear)}
+            ${hrVacRow('Shaxsiy noutbuk', bool(c.hasLaptop))}
+            ${hrVacRow('Ofisga tayyor', bool(c.readyForOffice))}
+            ${hrVacRow('Manba (utm)', c.utmSource)}
+            ${hrVacRow('Ariza sanasi', createdAt)}
+            ${answerRows}
+        </dl>
+        <div class="form-group" style="margin-top:16px">
+            <label>Bosqichni o'zgartirish</label>
+            <select id="hrVacStageSelect" class="form-control">${stageOptions}</select>
+        </div>
+    `, '<button class="btn-ghost" id="hrVacClose">Yopish</button>', { wide: true });
+
+    document.getElementById('hrVacClose').onclick = closeModal;
+    document.getElementById('hrVacStageSelect').onchange = async (e) => {
+        await hrVacMove(c.id, e.target.value);
+        closeModal();
+    };
+}
+
+async function renderHrVacancy() {
+    const board = document.getElementById('hrVacBoard');
+    if (!board) return;
+    board.innerHTML = '<div class="lead-column-empty" style="padding:40px">Yuklanmoqda…</div>';
+    try {
+        await hrVacLoadMeta();
+        await hrVacLoadCandidates();
+        hrVacRenderBoard();
+    } catch (err) {
+        board.innerHTML = '<div class="lead-column-empty" style="padding:40px">'
+            + 'Ma\'lumot yuklanmadi: ' + escapeHtml(err.message || 'xatolik') + '</div>';
+        return;
+    }
+
+    const select = document.getElementById('hrVacFilter');
+    if (select && !select.dataset.bound) {
+        select.dataset.bound = '1';
+        select.addEventListener('change', () => {
+            _hrVacFilter = select.value;
+            const display = document.getElementById('hrVacFilterDisplay');
+            if (display) {
+                display.textContent = select.value === 'all' ? 'Barcha vakansiyalar' : select.value;
+            }
+            hrVacRenderBoard();
+        });
+    }
+    const refresh = document.getElementById('hrVacRefresh');
+    if (refresh && !refresh.dataset.bound) {
+        refresh.dataset.bound = '1';
+        refresh.addEventListener('click', () => renderHrVacancy());
     }
 }
 
