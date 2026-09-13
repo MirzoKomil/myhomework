@@ -139,11 +139,37 @@ Tana — TZ 5.2-bandidagi JSON (`full_name` majburiy):
   "birth_year": "2001",
   "has_laptop": true,
   "ready_for_office": true,
+  "vacancy_id": "sotuv-menejeri",
   "vacancy_name": "Sotuv menejeri",
-  "answers": { "sales_experience": "Ha, tajribam bor" },
+  "answers": { "sales_experience": "Ha, tajribam bor", "voice": "yuborildi" },
   "utm_source": "target_instagram"
 }
 ```
+
+`vacancy_id` — `server/services/hrStages.js` dagi id. Berilsa, vakansiya nomi
+CRM'dagi nom bilan aynan bir xil yoziladi (vakansiya filtri nom bo'yicha
+ishlaydi). Javob `{"ok":true,"id":"<nomzod id>"}`.
+
+Rasm, ovoz va videoni esa nomzod yaratilgach **alohida** yuboring — fayl
+baytlari so'rov tanasining o'zida (base64 emas):
+
+```
+POST https://myhomework.uz/api/hr/candidates/<nomzod id>/media/photo   (photo | voice | video)
+X-Webhook-Secret: <HR_WEBHOOK_SECRET>
+Content-Type: image/jpeg
+X-File-Name: file_12.jpg
+<fayl baytlari, 20 MB gacha>
+```
+
+Kalit tanadan oldin tekshiriladi. Javoblar: `200` saqlandi, `401` kalit
+noto'g'ri, `404` nomzod topilmadi, `400` tur noto'g'ri yoki fayl bo'sh,
+`413` fayl 20 MB dan katta.
+
+Bu yo'lni `D:\mavr-school\hr-bot` dagi bot ishlatadi
+(`brands/homework/.env` da `CRM_API=myhomework`). Bot alohida serverda long
+polling bilan ishlagani uchun **`TELEGRAM_HR_BOT_TOKEN` ga o'sha botning
+tokenini qo'ymang va `bot-webhook/setup` ni chaqirmang** — webhook o'rnatilsa,
+serverdagi bot ishlamay qoladi.
 
 ## Muammolar
 

@@ -6,9 +6,9 @@ const { authRequired, JWT_SECRET } = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
 const {
     listCandidates, getCandidateById, updateCandidate, deleteCandidate,
-    getMedia, insertCandidate,
+    getMedia, insertCandidate, addMedia, MAX_MEDIA_BYTES,
 } = require('../services/hrCandidates');
-const { HR_STAGES, normalizeHrStage, VACANCIES } = require('../services/hrStages');
+const { HR_STAGES, normalizeHrStage, VACANCIES, VACANCY_BY_ID } = require('../services/hrStages');
 const { VACANCY_QUESTIONS } = require('../services/hrQuestions');
 const hrBot = require('../services/hrBot');
 
@@ -42,6 +42,7 @@ router.get('/bot-webhook/status', authRequired, (req, res) => {
             HR_BOT_CHANNEL_URL: bor(process.env.HR_BOT_CHANNEL_URL),
             HR_BOT_CONTACT_USERNAME: bor(process.env.HR_BOT_CONTACT_USERNAME),
             HR_BOT_ABOUT_VIDEO_URL: bor(process.env.HR_BOT_ABOUT_VIDEO_URL),
+            HR_WEBHOOK_SECRET: bor(process.env.HR_WEBHOOK_SECRET),
         },
     });
 });
@@ -166,20 +167,36 @@ router.get('/candidates/:id/media/:kind', async (req, res) => {
 
 // ── Tashqi webhook: bot boshqa serverda ishlasa ham ariza qabul qilinadi ────
 // (TZ, 5.1-band). Ichki bot bilan bir xil natija beradi.
-router.post('/candidates', async (req, res) => {
+//
+// Kalit — HR_WEBHOOK_SECRET: "X-Webhook-Secret: <kalit>" yoki
+// "Authorization: Bearer <kalit>" ko'rinishida yuboriladi.
+function hrWebhookAuthorized(req, res) {
     const expected = process.env.HR_WEBHOOK_SECRET || '';
-    if (!expected) return res.status(503).json({ error: 'HR_WEBHOOK_SECRET o\'rnatilmagan' });
+    if (!expected) {
+        res.status(503).json({ error: 'HR_WEBHOOK_SECRET o\'rnatilmagan' });
+        return false;
+    }
     const got = req.headers['x-webhook-secret']
         || (req.headers.authorization || '').replace(/^Bearer\s+/, '');
     if (got !== expected) {
-        console.warn('[hr] Tashqi ariza RAD ETILDI: kalit mos kelmadi');
-        return res.status(401).json({ error: 'Kalit noto\'g\'ri' });
+        console.warn('[hr] Tashqi so\'rov RAD ETILDI: kalit mos kelmadi');
+        res.status(401).json({ error: 'Kalit noto\'g\'ri' });
+        return false;
     }
+    return true;
+}
+
+router.post('/candidates', async (req, res) => {
+    if (!hrWebhookAuthorized(req, res)) return;
     try {
         const b = req.body || {};
         if (!String(b.full_name || '').trim()) {
             return res.status(400).json({ error: 'full_name majburiy' });
         }
+        // vacancy_id ixtiyoriy. Ma'lum vakansiya bo'lsa nomi shu yerdan
+        // olinadi — CRM'dagi vakansiya filtri nom bo'yicha ishlaydi, nom
+        // bir harfga farq qilsa ham nomzod filtrda ko'rinmay qolardi.
+        const vacancy = VACANCY_BY_ID.get(String(b.vacancy_id || ''));
         const candidate = await insertCandidate({
             telegramUserId: b.telegram_user_id,
             telegramUsername: b.telegram_username,
@@ -190,7 +207,8 @@ router.post('/candidates', async (req, res) => {
             birthYear: b.birth_year,
             hasLaptop: typeof b.has_laptop === 'boolean' ? b.has_laptop : undefined,
             readyForOffice: typeof b.ready_for_office === 'boolean' ? b.ready_for_office : undefined,
-            vacancyName: b.vacancy_name,
+            vacancyId: vacancy ? vacancy.id : '',
+            vacancyName: vacancy ? vacancy.label : b.vacancy_name,
             answers: b.answers || {},
             utmSource: b.utm_source,
         });
@@ -198,6 +216,44 @@ router.post('/candidates', async (req, res) => {
         res.json({ ok: true, id: candidate.id });
     } catch (err) {
         console.error('POST /api/hr/candidates', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+// Tashqi bot nomzod yaratgach, uning rasmi/ovozi/videosini shu yerga
+// alohida yuboradi — fayl baytlari so'rov tanasining o'zida:
+//
+//   POST /api/hr/candidates/<id>/media/photo     (photo | voice | video)
+//   X-Webhook-Secret: <HR_WEBHOOK_SECRET>
+//   Content-Type: image/jpeg                     (fayl turi)
+//   X-File-Name: file_12.jpg                     (ixtiyoriy)
+//
+// JSON ichida base64 qilinmaydi: 20 MB video base64'da ~27 MB bo'ladi va
+// umumiy express.json chegarasidan (6 MB) oshib ketardi. Kalit tana
+// o'qilishidan OLDIN tekshiriladi — begona so'rov 20 MB yuklay olmaydi.
+const rawMediaBody = express.raw({ type: () => true, limit: MAX_MEDIA_BYTES });
+
+router.post('/candidates/:id/media/:kind', (req, res, next) => {
+    if (!hrWebhookAuthorized(req, res)) return;
+    if (!MEDIA_KINDS.has(req.params.kind)) {
+        return res.status(400).json({ error: 'Media turi noto\'g\'ri' });
+    }
+    next();
+}, rawMediaBody, async (req, res) => {
+    try {
+        const candidate = await getCandidateById(req.params.id);
+        if (!candidate) return res.status(404).json({ error: 'Nomzod topilmadi' });
+        if (!Buffer.isBuffer(req.body) || !req.body.length) {
+            return res.status(400).json({ error: 'Fayl bo\'sh' });
+        }
+        const mime = String(req.headers['content-type'] || '').split(';')[0].trim();
+        const fileName = String(req.headers['x-file-name'] || '').slice(0, 200);
+        const mediaId = await addMedia(candidate.id, req.params.kind, req.body, mime, fileName);
+        if (!mediaId) return res.status(400).json({ error: 'Fayl saqlanmadi' });
+        console.log(`[hr] Tashqi media qabul qilindi nomzod=${candidate.id} tur=${req.params.kind} hajm=${req.body.length}`);
+        res.json({ ok: true, id: mediaId });
+    } catch (err) {
+        console.error('POST /api/hr/candidates/:id/media', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 });
