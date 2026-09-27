@@ -565,6 +565,112 @@ async function migrateMultipleChoiceManualFixes() {
 
 // 1-vazifa: CRM'da tasodifiy/joyni to'ldirish uchun kiritilgan kurs nomi
 // ("Kdkslamdnc") to'g'ri nomga bir martalik almashtiriladi.
+// 2026-09-28: yuqoridagi ikki migratsiya birgalikda test javoblarini buzib qo'ygan edi —
+// birinchisi BARCHA indeksdan 1 ayirdi (0 dan sanalgan, ya'ni allaqachon to'g'ri savollarni
+// ham), ikkinchisi esa savolni ESKI indeks bo'yicha qidirgani uchun 28 tadan 18 tasiga
+// yetib bormadi. Natijada rus tili kursidagi 49 ta savolda "to'g'ri javob" bir variant
+// yuqorida qolib ketdi va o'quvchining to'g'ri javobi qizil bo'lib ko'rinardi.
+//
+// Quyidagi ro'yxat har bir savol (savol matni, o'zbekcha tarjimasi va variantlar) qo'lda
+// tekshirilib tuzildi. Muhim farq: moslashtirish INDEKSGA emas, savol id si va variantlar
+// matniga qarab bajariladi — shuning uchun hozirgi qiymat qanday bo'lishidan qat'i nazar
+// to'g'ri javob o'rnatiladi va eski xato takrorlanmaydi. Kontent CRM'da o'zgartirilgan
+// bo'lsa (variantlar boshqacha bo'lsa) o'sha savol o'tkazib yuboriladi.
+const MC_AUDIT_FIXES = [
+    { contentId: 'l1784055280406-2', questionId: 'q-1786955970147', options: ['Она', 'Ты', 'Они', 'Я'], newIndex: 2 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956020531', options: ['Он', 'Ты', 'Она', 'Мы'], newIndex: 1 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956082123', options: ['Мы', 'Они', 'Вы', 'Он'], newIndex: 2 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956137315', options: ['У тебя', 'У меня', 'У вас', 'У них'], newIndex: 1 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956166572', options: ['У меня', 'У тебя', 'У него', 'У нас'], newIndex: 1 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956191035', options: ['У нас', 'У них', 'У него', 'У тебя'], newIndex: 2 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956235803', options: ['У вас', 'У нас', 'У них', 'У него'], newIndex: 1 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956263115', options: ['У меня', 'У тебя', 'У вас', 'У неё'], newIndex: 2 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956285587', options: ['У нас', 'У них', 'У вас', 'У него'], newIndex: 1 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956780635', options: ['Кто', 'У кого', 'Кому'], newIndex: 1 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956834163', options: ['у тебя', 'я', 'у меня'], newIndex: 2 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956871331', options: ['она', 'неё', 'её'], newIndex: 1 },
+    { contentId: 'l1784055280406-2', questionId: 'q-1786956931699', options: ['у вас', 'мы', 'у нас'], newIndex: 2 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959397170', options: ['У тебя', 'У меня', 'У вас', 'У них'], newIndex: 1 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959472971', options: ['У него', 'У неё', 'У меня', 'У вас'], newIndex: 1 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959494546', options: ['У вас', 'У нас', 'У них', 'У него'], newIndex: 1 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959512370', options: ['У меня', 'У тебя', 'У вас', 'У неё'], newIndex: 2 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959534434', options: ['У нас', 'У них', 'У вас', 'У него'], newIndex: 1 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959638706', options: ['я', 'тебя', 'него', 'меня'], newIndex: 3 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959667834', options: ['книга', 'машина', 'собака', 'ноутбук'], newIndex: 3 },
+    { contentId: 'l1784055280406-3', questionId: 'q-1786959728693', options: ['чай', 'ключи', 'ручка', 'ноутбук'], newIndex: 2 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786961390586', options: ['понимает', 'понимаешь', 'понимаю', 'понимают'], newIndex: 1 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786961438730', options: ['работают', 'работаешь', 'работает', 'работаем'], newIndex: 2 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786961479698', options: ['знаю', 'знает', 'знаете', 'знают'], newIndex: 2 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786961502810', options: ['играет', 'играют', 'играем', 'играешь'], newIndex: 1 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786962416594', options: ['понимаешь', 'понимаю', 'понимаете'], newIndex: 2 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786962507650', options: ['играет', 'играешь', 'играют'], newIndex: 2 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786962573089', options: ['знает', 'знаешь', 'знаем'], newIndex: 1 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786962625097', options: ['гуляешь', 'гуляют', 'гуляете'], newIndex: 2 },
+    { contentId: 'l1784055280406-4', questionId: 'q-1786962680089', options: ['делает', 'делают', 'делаешь'], newIndex: 1 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965244969', options: ['читаешь', 'читают', 'читаю', 'читает'], newIndex: 2 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965285874', options: ['работаем', 'работают', 'работаешь', 'работает'], newIndex: 3 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965302985', options: ['гуляю', 'гуляем', 'гуляет', 'гуляете'], newIndex: 1 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965322121', options: ['знают', 'знаю', 'знаете', 'знает'], newIndex: 2 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965351017', options: ['думаешь', 'думают', 'думаю', 'думает'], newIndex: 3 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965365505', options: ['знаешь', 'знаю', 'знает', 'знаем'], newIndex: 1 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965402497', options: ['слушаю', 'слушают', 'слушаем', 'слушаешь'], newIndex: 2 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965415673', options: ['отдыхают', 'отдыхаешь', 'отдыхаем', 'отдыхаете'], newIndex: 3 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965430721', options: ['Я', 'У меня', 'У тебя', 'У него'], newIndex: 1 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965449137', options: ['Вы', 'Они', 'Мы', 'Он'], newIndex: 2 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965465617', options: ['я', 'мы', 'она', 'он'], newIndex: 3 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965634177', options: ['читаешь', 'читают', 'читаю', 'читает'], newIndex: 2 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965668433', options: ['работаем', 'работают', 'работаешь', 'работает'], newIndex: 3 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965683624', options: ['играет', 'играют', 'играем', 'играешь'], newIndex: 1 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965699377', options: ['знают', 'знаю', 'знаешь', 'знает'], newIndex: 2 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965740705', options: ['гуляешь', 'гуляют', 'гуляю', 'гуляете'], newIndex: 3 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965755737', options: ['отдыхаешь', 'отдыхаете', 'отдыхают', 'отдыхаю'], newIndex: 1 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965769425', options: ['делает', 'делаешь', 'делают', 'делаем'], newIndex: 2 },
+    { contentId: 'l1784055280406-5', questionId: 'q-1786965788105', options: ['думаешь', 'думают', 'думаю', 'думает'], newIndex: 3 },
+];
+
+async function migrateMultipleChoiceAuditFixes() {
+    const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
+    if (!row) return;
+    const mc = row.data;
+    if (mc._correctIndexAuditFixedAt) return; // bir marta ishlaydi
+
+    let appliedCount = 0;
+    let alreadyOkCount = 0;
+    const missing = [];
+
+    const sameOptions = (a, b) => Array.isArray(a) && a.length === b.length && a.every((opt, i) => opt === b[i]);
+
+    for (const fix of MC_AUDIT_FIXES) {
+        const content = mc.lessonContents?.[fix.contentId];
+        if (!content) { missing.push(fix.questionId); continue; }
+        let found = false;
+        const visit = questions => {
+            (questions || []).forEach(q => {
+                if (q?.id !== fix.questionId || !sameOptions(q.options, fix.options)) return;
+                found = true;
+                if (q.correctIndex === fix.newIndex) { alreadyOkCount++; return; }
+                q.correctIndex = fix.newIndex;
+                appliedCount++;
+            });
+        };
+        (content.homeworkParts || []).forEach(part => {
+            if (part.kind === 'multipleChoice') visit(part.questions);
+        });
+        if (Array.isArray(content.questions)) visit(content.questions);
+        if (!found) missing.push(fix.questionId);
+    }
+
+    await pool.query(
+        `INSERT INTO mobile_content_backups (reason, data) VALUES ($1, $2)`,
+        ['pre-correctIndex-audit-fix', JSON.stringify(row.data)]
+    );
+
+    mc._correctIndexAuditFixedAt = new Date().toISOString();
+    mc._correctIndexAuditFixStats = { appliedCount, alreadyOkCount, missingCount: missing.length, missing: missing.slice(0, 20) };
+    await saveMobileContentData(pool, mc);
+    console.log(`[DB] Test javoblari auditi: ${appliedCount} ta tuzatildi, ${alreadyOkCount} ta allaqachon to'g'ri, ${missing.length} ta topilmadi. Zaxira: mobile_content_backups.`);
+}
+
 async function migrateRenameGarbledCourse() {
     const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
     if (!row) return;
@@ -4078,6 +4184,7 @@ async function init() {
     await seedIfEmpty();
     await migrateMultipleChoiceCorrectIndex().catch(err => console.error('[DB] correctIndex tuzatishda xatolik:', err.message));
     await migrateMultipleChoiceManualFixes().catch(err => console.error('[DB] correctIndex qo\'lda tuzatishda xatolik:', err.message));
+    await migrateMultipleChoiceAuditFixes().catch(err => console.error('[DB] Test javoblari auditida xatolik:', err.message));
     await migrateRenameGarbledCourse().catch(err => console.error('[DB] Kurs nomini tuzatishda xatolik:', err.message));
     await migrateCommunityRemoveFakeSeed().catch(err => console.error('[DB] Hamjamiyat soxta postlarini tozalashda xatolik:', err.message));
     await migrateCommunityRemoveUnverifiedLegacyPosts().catch(err => console.error('[DB] Hamjamiyat muallifi tasdiqlanmagan postlarni tozalashda xatolik:', err.message));

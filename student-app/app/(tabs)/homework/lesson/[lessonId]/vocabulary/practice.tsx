@@ -251,7 +251,11 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
 
   const builtWord = built.map((i) => letters[i]).join('');
   const isComplete = built.length === letters.length;
-  const isCorrect = builtWord === word.english;
+  // Harf plitalari HAMMASI bosh harf bilan ko'rsatiladi (textTransform: 'uppercase'),
+  // shu sabab "Кошка" kabi so'zda К va к plitalari bir xil ko'rinadi — o'quvchi to'g'ri
+  // yig'sa ham katta-kichik harf farqi tufayli javob noto'g'ri deb baholanardi.
+  const normalizeWord = (value: string) => value.replace(/\s+/g, '').toLowerCase();
+  const isCorrect = normalizeWord(builtWord) === normalizeWord(word.english);
 
   return (
     <View style={styles.stepContent}>
