@@ -260,6 +260,12 @@ async function initSchema() {
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS student_lesson_progress (
+            student_id TEXT PRIMARY KEY,
+            data JSONB NOT NULL DEFAULT '{}',
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS json_data (
             key TEXT PRIMARY KEY,
             data JSONB NOT NULL DEFAULT '[]'
@@ -1758,6 +1764,86 @@ async function getDemoStudentAttendanceStats(studentId) {
 // (all-time) summa ishlatiladi.
 function tashkentDateKey(tashkentDate) {
     return `${tashkentDate.getUTCFullYear()}-${String(tashkentDate.getUTCMonth() + 1).padStart(2, '0')}-${String(tashkentDate.getUTCDate()).padStart(2, '0')}`;
+}
+
+const LESSON_PROGRESS_BOOLEAN_KEYS = [
+    'videoWatch',
+    'videoExercises',
+    'slidesWatch',
+    'speakingExercises',
+    'vocabList',
+    'vocabPractice',
+];
+const UNSAFE_PROGRESS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+// Qurilma yuborgan progressga ishonib, ixtiyoriy JSON'ni bazaga yozmaymiz.
+// Faqat ilova tushunadigan boolean maydonlar va uyga-vazifa ID'lari olinadi.
+function normalizeLessonProgressStore(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const normalized = {};
+    Object.entries(raw).slice(0, 1000).forEach(([lessonId, value]) => {
+        if (!lessonId || lessonId.length > 160 || UNSAFE_PROGRESS_KEYS.has(lessonId)
+            || !value || typeof value !== 'object' || Array.isArray(value)) return;
+        const lesson = { homeworkParts: {} };
+        LESSON_PROGRESS_BOOLEAN_KEYS.forEach(key => { lesson[key] = value[key] === true; });
+        const parts = value.homeworkParts;
+        if (parts && typeof parts === 'object' && !Array.isArray(parts)) {
+            Object.entries(parts).slice(0, 500).forEach(([partId, done]) => {
+                if (partId && partId.length <= 160 && !UNSAFE_PROGRESS_KEYS.has(partId) && done === true) {
+                    lesson.homeworkParts[partId] = true;
+                }
+            });
+        }
+        normalized[lessonId] = lesson;
+    });
+    return normalized;
+}
+
+function mergeLessonProgressStores(serverRaw, deviceRaw) {
+    const server = normalizeLessonProgressStore(serverRaw);
+    const device = normalizeLessonProgressStore(deviceRaw);
+    const merged = {};
+    new Set([...Object.keys(server), ...Object.keys(device)]).forEach(lessonId => {
+        const a = server[lessonId] || {};
+        const b = device[lessonId] || {};
+        const lesson = { homeworkParts: { ...(a.homeworkParts || {}), ...(b.homeworkParts || {}) } };
+        LESSON_PROGRESS_BOOLEAN_KEYS.forEach(key => { lesson[key] = a[key] === true || b[key] === true; });
+        merged[lessonId] = lesson;
+    });
+    return merged;
+}
+
+async function getStudentLessonProgress(studentId) {
+    if (!studentId) return {};
+    const row = await q1('SELECT data FROM student_lesson_progress WHERE student_id = $1', [studentId]);
+    return normalizeLessonProgressStore(row?.data);
+}
+
+// Monotonik merge: biror qurilma eski/bo'sh holat yuborsa ham serverdagi
+// bajarilgan bosqichni false holatiga qaytara olmaydi. Row lock bir o'quvchi
+// ikki qurilmada bir vaqtda ishlaganda yangilanish yo'qolishining oldini oladi.
+async function mergeStudentLessonProgress(studentId, deviceProgress) {
+    if (!studentId) throw new Error("O'quvchi avtorizatsiyasi talab qilinadi");
+    const incoming = normalizeLessonProgressStore(deviceProgress);
+    let merged = {};
+    await tx(async client => {
+        await client.query(
+            `INSERT INTO student_lesson_progress (student_id, data)
+             VALUES ($1, '{}'::jsonb)
+             ON CONFLICT (student_id) DO NOTHING`,
+            [studentId]
+        );
+        const { rows } = await client.query(
+            'SELECT data FROM student_lesson_progress WHERE student_id = $1 FOR UPDATE',
+            [studentId]
+        );
+        merged = mergeLessonProgressStores(rows[0]?.data, incoming);
+        await client.query(
+            'UPDATE student_lesson_progress SET data = $2::jsonb, updated_at = NOW() WHERE student_id = $1',
+            [studentId, JSON.stringify(merged)]
+        );
+    });
+    return merged;
 }
 
 async function syncStudentProgress(studentId, { coins, lightning, coinsDelta, lightningDelta } = {}) {
@@ -4263,6 +4349,7 @@ module.exports = {
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
     syncStudentProgress, getRealLeaderboard, resolveStudentSubjectLang,
+    getStudentLessonProgress, mergeStudentLessonProgress,
     joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch,
     getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,
     getCommunityPosts, addCommunityPost, toggleCommunityPostLike,

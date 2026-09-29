@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
 import { invalidateCache } from '@/services/contentApi';
+import { loadLessonProgress } from '@/services/lessonProgressStore';
 import { setAuth } from '@/services/studentAuthStore';
 
 const LOGIN_API_BASE =
@@ -46,6 +47,9 @@ export default function LoginScreen() {
         return;
       }
       await setAuth(data.token, data.student);
+      // Shu qurilmada oldin bajarilgan darslarni yangi akkauntga bir marta
+      // yuklaydi va boshqa qurilmalardagi server progressi bilan birlashtiradi.
+      await loadLessonProgress(true);
       invalidateCache();
       router.replace('/');
     } catch {

@@ -1,6 +1,6 @@
 const express = require('express');
 const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments, resolveStudentSubjectLang,
-getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
+getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getStudentLessonProgress, mergeStudentLessonProgress, joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -574,6 +574,31 @@ router.post('/sync-progress', studentAuthOptional, async (req, res) => {
         res.json({ ok: true });
     } catch (err) {
         console.error('POST /api/state/sync-progress', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// Darslarning bajarilgan bosqichlari akkaunt bo'yicha serverda saqlanadi.
+// Token majburiy: login qilmagan CRM preview progressi global demo akkauntga
+// yozilib, haqiqiy o'quvchilar bilan aralashib ketmasligi kerak.
+router.get('/lesson-progress', studentAuthOptional, async (req, res) => {
+    if (!req.studentId) return res.status(401).json({ error: "O'quvchi avtorizatsiyasi talab qilinadi" });
+    try {
+        const progress = await getStudentLessonProgress(req.studentId);
+        res.json({ progress });
+    } catch (err) {
+        console.error('GET /api/state/lesson-progress', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+router.post('/lesson-progress', studentAuthOptional, async (req, res) => {
+    if (!req.studentId) return res.status(401).json({ error: "O'quvchi avtorizatsiyasi talab qilinadi" });
+    try {
+        const progress = await mergeStudentLessonProgress(req.studentId, req.body?.progress);
+        res.json({ ok: true, progress });
+    } catch (err) {
+        console.error('POST /api/state/lesson-progress', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
     }
 });
