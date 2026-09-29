@@ -16,6 +16,22 @@ router.get('/mobile-content', studentAuthOptional, async (req, res) => {
     }
 });
 
+// CRM admin paneli uchun mobile_content'ning til bo'yicha kesilmagan,
+// serverdagi asl nusxasi. Student endpointi login qilgan o'quvchining
+// tiligagina mos kurslarni qaytaradi; admin esa ilgari yuklangan Ingliz va
+// Rus kurslarini bir vaqtda qayta ko'ra olishi kerak.
+router.get('/mobile-content/admin', authRequired, async (req, res) => {
+    if (!['admin', 'rop', 'boshliq'].includes(req.user?.role)) {
+        return res.status(403).json({ error: 'Mobil ilova kontentiga ruxsat yo\'q' });
+    }
+    try {
+        res.json(await getMobileContentData(undefined, { crmMode: true }));
+    } catch (err) {
+        console.error('GET /api/state/mobile-content/admin', err);
+        res.status(500).json({ error: 'Mobil ilova kontentini yuklashda xatolik' });
+    }
+});
+
 // Public endpoint — faqat CRM'da "Namuna o'quvchi" deb belgilangan bitta
 // o'quvchining CRM'da admin kiritgan haqiqiy parolini qaytaradi (profil
 // ekranidagi "Parol" bosilganda ko'rsatish uchun).

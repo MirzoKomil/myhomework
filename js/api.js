@@ -81,6 +81,13 @@ async function apiLoadState() {
     return apiFetch('/api/state');
 }
 
+// Admin paneldagi darslar ro'yxatini umumiy CRM snapshotidan mustaqil
+// ravishda serverdagi mobile_content qatoridan yangilaydi. Javob ikkala
+// tilni ham o'z ichiga oladi; student endpointidagi til filtri qo'llanmaydi.
+async function apiFetchAdminMobileContent() {
+    return apiFetch('/api/state/mobile-content/admin');
+}
+
 async function apiPatchState(partial) {
     return apiFetch('/api/state', {
         method: 'PATCH',

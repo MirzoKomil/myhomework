@@ -1140,6 +1140,8 @@ let _mobileLang = 'english';
 let _activeCourseId = null;
 let _activeLessonId = null;
 let _activeModuleId = null;
+let _mobileContentRefreshPromise = null;
+let _mobileContentRefreshedAt = 0;
 let _expandedLessonIds = new Set();
 let _expandedSectionRows = new Set();
 let _lessonContentTab = 'konspekt';
@@ -1204,6 +1206,59 @@ function _ensureStaffDemoToken() {
         });
     }
     return _staffDemoTokenPromise;
+}
+
+// Mobil ilova bo'limiga kirilganda admin keshida qolgan eski nusxaga
+// ishonmaymiz: serverdagi til bo'yicha kesilmagan mobile_content'ni qayta
+// olamiz. Bu faqat o'qiydi — admin biror narsani tahrir qilib saqlamaguncha
+// serverga PATCH yuborilmaydi.
+async function refreshMobileContentFromServer({ force = false } = {}) {
+    if (_mobileContentRefreshPromise) return _mobileContentRefreshPromise;
+    if (!force && Date.now() - _mobileContentRefreshedAt < 30_000) return null;
+
+    const btn = document.getElementById('mobileRefreshContentBtn');
+    const originalText = btn?.textContent || '↻ Serverdan yangilash';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Yuklanmoqda...';
+    }
+
+    _mobileContentRefreshPromise = apiFetchAdminMobileContent()
+        .then(mobileContent => {
+            setCachedItem(STORAGE_KEYS.mobileContent, mobileContent);
+            _mobileContentRefreshedAt = Date.now();
+
+            // Serverda qolmagan eski tanlovlar yangi ma'lumotni ko'rsatishga
+            // xalaqit bermasin; mavjud bo'lsa ochiq sahifa saqlanib qoladi.
+            if (_activeCourseId && !(mobileContent.courses || []).some(c => c.id === _activeCourseId)) {
+                _activeCourseId = null;
+                _activeLessonId = null;
+                _activeModuleId = null;
+            }
+
+            const langCourses = (mobileContent.courses || []).filter(c => (c.lang || 'english') === _mobileLang);
+            const courseIds = new Set(langCourses.map(c => c.id));
+            const lessonCount = (mobileContent.lessons || []).filter(l => courseIds.has(l.courseId)).length;
+            if (btn) btn.title = `Serverdan olindi: ${langCourses.length} ta kurs, ${lessonCount} ta dars`;
+
+            if (_mobileSection === 'edit') renderMobileEditPanel();
+            else if (_mobileSection === 'stats') renderMobileStatsPanel();
+            return mobileContent;
+        })
+        .catch(err => {
+            console.error('Mobil kontentni serverdan yangilashda xatolik:', err);
+            showSaveError(err.message);
+            throw err;
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+            _mobileContentRefreshPromise = null;
+        });
+
+    return _mobileContentRefreshPromise;
 }
 
 function renderStudentApp() {
@@ -1290,6 +1345,16 @@ function renderStudentApp() {
         b.classList.toggle('active', b.dataset.mobileLang === _mobileLang)
     );
 
+    const refreshBtn = document.getElementById('mobileRefreshContentBtn');
+    if (refreshBtn && !refreshBtn.dataset.bound) {
+        refreshBtn.dataset.bound = '1';
+        refreshBtn.addEventListener('click', () => {
+            refreshMobileContentFromServer({ force: true })
+                .then(() => showMiniToast('Serverdagi darslar yangilandi'))
+                .catch(() => {});
+        });
+    }
+
     document.querySelectorAll('[data-mobile-sub]').forEach(btn => {
         if (btn.dataset.msubBound) return;
         btn.dataset.msubBound = '1';
@@ -1303,6 +1368,7 @@ function renderStudentApp() {
     _syncMobileSubNavUI();
 
     switchMobileSection(_mobileSection);
+    refreshMobileContentFromServer().catch(() => {});
 }
 
 // "Dars" tugmasi endi Bonus darslar/Imtihonlarni ham o'z ichiga olgan guruh
