@@ -189,8 +189,8 @@ router.patch('/:id', authRequired, leadMutationRequired, leadOwnershipRequired, 
         if (!['english', 'russian'].includes(language)) {
             return res.status(400).json({ error: 'Til english yoki russian bo\'lishi kerak' });
         }
-        const saved = await upsertLead({ ...lead, id: req.params.id }, language, req.user);
-        res.json({ ok: true, lead: saved });
+        const { lead: saved, platformAccess } = await upsertLead({ ...lead, id: req.params.id }, language, req.user);
+        res.json({ ok: true, lead: saved, platformAccess });
         // Har bir saqlashda yuboriladi (faqat status o'zgarganda emas) —
         // CAPI.uz bir xil externalId+stage takrorlansa ham xato bermaydi
         // (hujjatga qarang), shuning uchun bu yerda soddalik uchun har

@@ -7187,81 +7187,6 @@ function renderTimetable() {
     wireTimetableCells();
 }
 
-function promoteStudentFromOnboarding(lang, onboarding, lead) {
-    if (onboarding.becomeStudent !== 'yes') return;
-    if (!onboarding.telegramGroupLink) return;
-    const students = getItem(STORAGE_KEYS.students, []);
-    const existing = students.find(s =>
-        s.name === onboarding.studentFullName && s.teacherId === onboarding.teacherId
-    );
-    const leadSurvey = lead?.paymentSurvey;
-    // 25-ish: to'lov so'rovnomasida "Qisman to'lov" javobi berilgan bo'lsa,
-    // qolgan qarz shu yerda o'quvchi yozuviga o'tkaziladi — shu orqali
-    // o'quvchi hali "To'lov jarayonida" bosqichida turgan paytdayoq
-    // "Qarzdorlar" ro'yxatida (renderDebtorsTable qarz>0 bo'yicha filtrlaydi)
-    // avtomatik ko'rinadi.
-    const debtAmount = leadSurvey?.debtAmount || 0;
-    const paidAmount = leadSurvey?.paidAmount || 0;
-    const paymentDueDate = leadSurvey?.nextPaymentDate || '';
-    // 41-vazifa: "Oxirgi to'lov" sanasi ham xuddi debtAmount/paidAmount
-    // kabi to'lov so'rovnomasidan ko'chiriladi — ilgari bu yerda olib
-    // qolinmagani sabab Qarzdorlar jadvalidagi "Oxirgi to'lov" ustuni
-    // doim "—" bo'lib qolardi.
-    const lastPaymentDate = leadSurvey?.lastPaymentDate || '';
-    if (existing) {
-        updateStudent(existing.id, {
-            lessonDayOfWeek: onboarding.lessonDayOfWeek,
-            lessonTime: onboarding.lessonTime,
-            lessonDuration: onboarding.lessonDuration || 15,
-            assistantTeacherId: onboarding.assistantTeacherId || null,
-            telegramGroupLink: onboarding.telegramGroupLink || '',
-            source: 'lead',
-            debtAmount, paidAmount, paymentDueDate, lastPaymentDate,
-            // 8-vazifa: sotuv bo'limi lidga bergan ID (serialCode) o'quvchiga
-            // aylanganda ham saqlanib qolishi kerak — mavjud bo'lsa ustidan
-            // yozilmaydi, yo'q bo'lsa lid'nikidan olinadi.
-            serialCode: existing.serialCode || lead?.serialCode || undefined,
-            // 6-vazifa: agar bu o'quvchida shartnoma allaqachon bo'lsa,
-            // uni ustidan yozib qo'ymaymiz — faqat yo'q bo'lsa beriladi.
-            contract: existing.contract || (onboarding.contractNumber
-                ? { number: onboarding.contractNumber, date: onboarding.contractDate }
-                : undefined)
-        });
-        return existing.id;
-    }
-    const duration = leadSurvey?.tariff ? parseInt(leadSurvey.tariff, 10) : 15;
-    const id = 's' + Date.now();
-    students.push({
-        id,
-        // 8-vazifa: lid to'lov jarayoniga o'tganda olgan ID (masalan AA391)
-        // o'quvchilar bo'limida ham xuddi shu holicha ko'rinishi uchun.
-        serialCode: lead?.serialCode || undefined,
-        name: onboarding.studentFullName,
-        phone: lead?.phone || '',
-        group: onboarding.courseLevelLabel || '',
-        subject: lang === 'russian' ? 'russian' : 'english',
-        teacherId: onboarding.teacherId,
-        assistantTeacherId: onboarding.assistantTeacherId || null,
-        lessonDayOfWeek: onboarding.lessonDayOfWeek,
-        lessonTime: onboarding.lessonTime,
-        lessonDuration: duration,
-        telegramGroupLink: onboarding.telegramGroupLink || '',
-        startDate: new Date().toISOString().slice(0, 10),
-        source: 'lead',
-        managerId: lead?.managerId || '',
-        leadRef: lead?.id ? { lang, id: lead.id } : undefined,
-        debtAmount, paidAmount, paymentDueDate, lastPaymentDate,
-        // 6-vazifa: lid o'quvchiga aylanganda mijoz shartnomasi shu yerda
-        // avtomatik biriktiriladi — mobil ilova "Shartnoma faylini ko'rish
-        // (PDF)" tugmasi shu raqam/sana bilan real PDF generatsiya qiladi.
-        contract: onboarding.contractNumber
-            ? { number: onboarding.contractNumber, date: onboarding.contractDate }
-            : undefined
-    });
-    setItem(STORAGE_KEYS.students, students);
-    return id;
-}
-
 function renderKpiSummary(containerId, kpi, teacherName) {
     const el = document.getElementById(containerId);
     if (!el) return;
@@ -15903,81 +15828,28 @@ async function backfillAllTeacherSubjectsFromHr() {
     }
 }
 
-// 11-vazifa (qayta ish): "To'lov jarayonida"/"To'lov yopildi" bosqichidagi
-// HAR BIR lid uchun mos o'quvchi yozuvi borligini kafolatlaydi. Odatda bu
-// promoteStudentFromOnboarding/promoteStudentFromClosed orqali avtomatik
-// bo'ladi, lekin ba'zi lidlar (masalan to'liq onboarding so'rovnomasidan
-// o'tmasdan, boshqa yo'l bilan shu bosqichga kelib qolgan bo'lsa) hech
-// qachon o'quvchiga aylantirilmagan bo'lishi mumkin edi — natijada Sotuv
-// bo'limida ko'rinib, O'quvchilar bo'limida umuman yo'q bo'lib qolardi.
-// Shu funksiya har bir bunday "yetim" faol lid uchun kamida minimal
-// o'quvchi yozuvini avtomatik yaratadi, shunda ikki bo'lim doim to'liq
-// mos keladi.
+// Missing student creation now belongs to the server's lead transaction.
+// Keep only the legacy cache repair for already linked students here.
 function backfillMissingStudentsFromActiveLeads() {
+    // Legacy financial repair is cache-only. Reading CRM must not create
+    // phantom accounts or overwrite another manager's new students.
     const students = getItem(STORAGE_KEYS.students, []);
-    const studentByLeadId = new Map();
-    students.forEach(s => { if (s.leadRef?.id) studentByLeadId.set(s.leadRef.id, s); });
-    const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const newStudents = [];
-    let repaired = false;
-    let counter = 0;
-    ['english', 'russian'].forEach(lang => {
-        (leadsData[lang] || []).forEach(l => {
-            if (!LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) return;
-            const ps = l.paymentSurvey;
-            const isPartial = ps?.paymentType === 'partial';
-            const existing = studentByLeadId.get(l.id);
-            if (existing) {
-                // 5-vazifa (qayta ish): agar bu o'quvchi ilgari aynan shu
-                // backfill orqali (to'lov ma'lumotisiz) yaratilgan bo'lsa-yu,
-                // keyinchalik hech qachon qo'lda tahrirlanmagan bo'lsa
-                // (debtAmount/paidAmount hali umuman yozilmagan holicha),
-                // lidning to'lov so'rovnomasidagi qisman to'lov/qarz summasi
-                // endi shu yerda sinxronlanadi — aks holda bunday o'quvchi
-                // Qarzdorlar ro'yxatida hech qachon ko'rinmay qolardi.
-                if (isPartial && existing.debtAmount == null && existing.paidAmount == null) {
-                    existing.paidAmount = Number(ps.paidAmount) || 0;
-                    existing.debtAmount = Number(ps.debtAmount) || 0;
-                    existing.paymentDueDate = ps.nextPaymentDate || '';
-                    existing.lastPaymentDate = ps.lastPaymentDate || '';
-                    repaired = true;
-                } else if (isPartial && existing.lastPaymentDate == null && ps.lastPaymentDate) {
-                    // 41-vazifa: bu o'quvchining debtAmount/paidAmount avvalroq
-                    // (yuqoridagi shart orqali yoki qo'lda) allaqachon
-                    // to'ldirilgan, lekin "Oxirgi to'lov" sanasi hali umuman
-                    // yozilmagan bo'lishi mumkin — bu holatda faqat o'sha
-                    // bitta maydon alohida sinxronlanadi.
-                    existing.lastPaymentDate = ps.lastPaymentDate;
-                    repaired = true;
-                }
-                return;
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    for (const lang of ['english', 'russian']) {
+        for (const lead of leads[lang] || []) {
+            if (!studentAccess.PAYMENT_STAGES.has(normalizeLeadStatus(lead.status))) continue;
+            const existing = studentAccess.findStudentForLead(students, lead, lang);
+            const ps = lead.paymentSurvey;
+            if (!existing || ps?.paymentType !== 'partial' || lead.status === 'tolov-yopildi') continue;
+            if (existing.debtAmount == null && existing.paidAmount == null) {
+                existing.paidAmount = Number(ps.paidAmount) || 0;
+                existing.debtAmount = Number(ps.debtAmount) || 0;
+                existing.paymentDueDate = ps.nextPaymentDate || '';
             }
-            const onboarding = l.paymentOnboarding || {};
-            counter += 1;
-            newStudents.push({
-                id: 's' + Date.now() + '_' + counter,
-                serialCode: l.serialCode,
-                leadRef: { lang, id: l.id },
-                name: l.name || '',
-                phone: l.phone || '',
-                subject: lang,
-                teacherId: onboarding.teacherId || null,
-                assistantTeacherId: onboarding.assistantTeacherId || null,
-                lessonDayOfWeek: onboarding.lessonDayOfWeek ?? null,
-                lessonTime: onboarding.lessonTime || '',
-                lessonDuration: getLeadLessonDuration(l, null),
-                telegramGroupLink: onboarding.telegramGroupLink || '',
-                startDate: new Date().toISOString().slice(0, 10),
-                source: 'lead-sync',
-                managerId: l.managerId || '',
-                paidAmount: isPartial ? (Number(ps.paidAmount) || 0) : (Number(ps?.totalAmount) || 0),
-                debtAmount: isPartial ? (Number(ps.debtAmount) || 0) : 0,
-                paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : '',
-                lastPaymentDate: isPartial ? (ps.lastPaymentDate || '') : ''
-            });
-        });
-    });
-    if (newStudents.length || repaired) setItem(STORAGE_KEYS.students, [...students, ...newStudents]);
+            if (existing.lastPaymentDate == null && ps.lastPaymentDate) existing.lastPaymentDate = ps.lastPaymentDate;
+        }
+    }
+    setCachedItem(STORAGE_KEYS.students, students);
 }
 
 function leadHasTeacherSchedule(lead) {
@@ -18078,9 +17950,6 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
             return;
         }
 
-        const leadAfter = getLeadById(lang, leadId);
-        promoteStudentFromOnboarding(lang, onboarding, leadAfter);
-
         closeModal();
         if (chainTo === 'tolov-yopildi') {
             openPaymentClosedModal(lang, leadId);
@@ -18682,68 +18551,10 @@ function finalizePaymentClosed(lang, leadId, closedSurveyData, scheduleData) {
 
     if (!updated) { alert('Lid topilmadi'); return; }
 
-    const leadAfter = getLeadById(lang, leadId);
-    let promotedStudentId = null;
-    if (leadAfter && scheduleData?.teacherId) {
-        promotedStudentId = promoteStudentFromClosed(lang, leadAfter, scheduleData);
-    } else if (leadAfter?.paymentOnboarding?.becomeStudent === 'yes') {
-        promotedStudentId = promoteStudentFromOnboarding(lang, leadAfter.paymentOnboarding, leadAfter);
-    }
-
-    // 25-ish: "To'lov yopildi" tasdiqlanganda (bu yerga yetguncha "O'quvchi
-    // haqiqatdan ham qarzdor emas" tasdiqlangan bo'ladi) bog'liq o'quvchi
-    // Qarzdorlar ro'yxatidan avtomatik chiqib ketishi uchun qarzi tozalanadi.
-    if (!promotedStudentId) {
-        const linked = getItem(STORAGE_KEYS.students, []).find(s => s.leadRef?.id === leadId);
-        if (linked) promotedStudentId = linked.id;
-    }
-    if (promotedStudentId) {
-        updateStudent(promotedStudentId, { debtAmount: 0, paymentDueDate: '' });
-    }
+    // Student debt is cleared in the same server transaction as the closed lead.
 
     renderLeads();
     if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
-}
-
-function promoteStudentFromClosed(lang, lead, scheduleData) {
-    if (!scheduleData?.teacherId || scheduleData.lessonDayOfWeek == null || !scheduleData.lessonTime || !scheduleData.telegramGroupLink) return;
-    const students = getItem(STORAGE_KEYS.students, []);
-    const existing = students.find(s => s.name === lead.name && s.teacherId === scheduleData.teacherId);
-    const ps = lead.paymentSurvey;
-    const duration = ps?.tariff ? parseInt(ps.tariff, 10) : 15;
-    if (existing) {
-        updateStudent(existing.id, {
-            lessonDayOfWeek: scheduleData.lessonDayOfWeek,
-            lessonTime: scheduleData.lessonTime,
-            lessonDuration: duration,
-            telegramGroupLink: scheduleData.telegramGroupLink,
-            source: 'lead-closed',
-            // 8-vazifa: sotuv bo'limidagi lid ID'si o'quvchiga ham o'tishi kerak.
-            serialCode: existing.serialCode || lead?.serialCode || undefined
-        });
-        return existing.id;
-    }
-    const id = 's' + Date.now();
-    students.push({
-        id,
-        serialCode: lead?.serialCode || undefined,
-        name: lead.name,
-        phone: lead.phone || '',
-        group: '',
-        subject: lang === 'russian' ? 'russian' : 'english',
-        teacherId: scheduleData.teacherId,
-        assistantTeacherId: null,
-        lessonDayOfWeek: scheduleData.lessonDayOfWeek,
-        lessonTime: scheduleData.lessonTime,
-        lessonDuration: duration,
-        telegramGroupLink: scheduleData.telegramGroupLink,
-        startDate: new Date().toISOString().slice(0, 10),
-        source: 'lead-closed',
-        managerId: lead?.managerId || '',
-        leadRef: lead?.id ? { lang, id: lead.id } : undefined
-    });
-    setItem(STORAGE_KEYS.students, students);
-    return id;
 }
 
 function formatEnhancedPaymentClosedComment(closedSurvey, scheduleData) {
@@ -19577,7 +19388,7 @@ function updateCachedLeadVersion(lang, leadId, updatedAt) {
     setItem(STORAGE_KEYS.leads, leads);
 }
 
-function persistLeadChange(lang, lead) {
+function persistLeadChange(lang, lead, onSaved) {
     if (!lead?.id) return Promise.reject(new Error('Lid ID topilmadi'));
     const leadId = String(lead.id);
     const snapshot = typeof structuredClone === 'function'
@@ -19594,10 +19405,12 @@ function persistLeadChange(lang, lead) {
         if (latestVersion) snapshot.updatedAt = latestVersion;
         const result = await apiSaveLead(lang, snapshot);
         const saved = result.lead || snapshot;
+        cacheProvisionedStudent(result.platformAccess?.student);
         if (saved.updatedAt) {
             _leadServerVersions.set(leadId, saved.updatedAt);
             updateCachedLeadVersion(lang, leadId, saved.updatedAt);
         }
+        if (onSaved) onSaved(saved, result.platformAccess);
         return saved;
     }).catch(async err => {
         console.error('Lidni saqlash xatoligi:', err.message);
@@ -19655,7 +19468,7 @@ function sendAutoSmsMessages(lead, messages) {
     if (!messages || !messages.length || !lead.phone) return;
     const recipient = { id: lead.id, type: 'lead', name: lead.name || '', phone: lead.phone };
     messages.forEach(text => {
-        console.log('[26-vazifa] SMS yuborilmoqda ->', lead.phone, '|', text.slice(0, 60) + '...');
+        console.log('[26-vazifa] Avtomatik SMS yuborilmoqda');
         apiSendSms([recipient], text, 'auto')
             .then(res => console.log('[26-vazifa] SMS natijasi:', res))
             .catch(err => {
@@ -19667,42 +19480,15 @@ function sendAutoSmsMessages(lead, messages) {
     });
 }
 
-// Lidga bog'liq o'quvchi yozuvini topadi (yo'q bo'lsa minimal yozuv
-// yaratadi) va agar hali login/parol berilmagan bo'lsa, yangisini
-// generatsiya qilib qaytaradi. Allaqachon bor bo'lsa — null (qayta
-// yubormaslik uchun).
-function ensureStudentLoginForLead(lang, lead) {
-    const students = getItem(STORAGE_KEYS.students, []);
-    let idx = students.findIndex(s =>
-        (s.leadRef && s.leadRef.id === lead.id) ||
-        (s.phone && s.phone === lead.phone && s.name === lead.name)
-    );
-    if (idx === -1) {
-        students.unshift({
-            id: 's' + Date.now(),
-            leadRef: { lang, id: lead.id },
-            name: lead.name || '', phone: lead.phone || '',
-            group: '', subject: lead.language || lang || 'english',
-            teacherId: lead.paymentOnboarding?.teacherId || '',
-            assistantTeacherId: null, source: 'lead', managerId: lead.managerId || ''
-        });
-        idx = 0;
-    }
-    if (students[idx].login) return null;
-    const login = String(lead.phone || '').replace(/\s/g, '');
-    const password = generatePasswordFromPhone(lead.phone);
-    students[idx] = { ...students[idx], login, password };
-    setItem(STORAGE_KEYS.students, students);
-    // 49-vazifa: SMS matni uchun parol yuqorida qaytarib yuborilgach,
-    // mijoz xotirasida oddiy matn holida QOLIB KETMASLIGI kerak — aks
-    // holda shu o'quvchi keyingi har qanday (unga aloqasi bo'lmagan)
-    // saqlashda ham eski parolni qayta yuborib, uni doim o'sha qiymatga
-    // "qaytarib" turaverardi.
-    delete students[idx].password;
-    return { login, password };
+// SMS credentials are derived only after the server confirms a new account.
+function ensureStudentLoginForLead(lang, lead, platformAccess) {
+    // Announce only credentials confirmed as newly created by the server.
+    if (!platformAccess?.credentialsCreated || !platformAccess.student?.login) return null;
+    const phone = studentAccess.phoneLogin(lead.phone);
+    return phone ? { login: platformAccess.student.login, password: phone.replace(/\D/g, '').slice(-4) } : null;
 }
 
-function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus) {
+function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess) {
     console.log(`[26-vazifa] tekshirilyapti: lang=${lang} oldStatus=${oldStatus} newStatus=${newStatus} tel=${lead?.phone || '(yoq)'}`);
     if (lang !== 'russian') { console.log('[26-vazifa] otkazib yuborildi: til rus emas'); return; }
     if (oldStatus === newStatus) { console.log('[26-vazifa] otkazib yuborildi: status ozgarmadi'); return; }
@@ -19732,13 +19518,13 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus) {
             msg += ` Qolgan qismni kelishilgandek ${formatUzShortDate(ps.nextPaymentDate)} kuni qilib berish yoddan chiqmasin.`;
         }
         messages.push(msg);
-        const creds = ensureStudentLoginForLead(lang, lead);
+        const creds = ensureStudentLoginForLead(lang, lead, platformAccess);
         if (creds) {
             messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: https://myhomework.uz/student/`);
         }
     } else if (newStatus === 'tolov-yopildi') {
         messages.push(`Tabriklaymiz, siz kurs uchun to'lovlarni to'liq qildingiz, endi mazza qilib kursdan bahramand bo'lishingiz mumkin!`);
-        const creds = ensureStudentLoginForLead(lang, lead);
+        const creds = ensureStudentLoginForLead(lang, lead, platformAccess);
         if (creds) {
             messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: https://myhomework.uz/student/`);
         }
@@ -19749,7 +19535,7 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus) {
         return;
     }
 
-    console.log(`[26-vazifa] tayyor xabarlar soni: ${messages.length}`, messages);
+    console.log(`[26-vazifa] tayyor xabarlar soni: ${messages.length}`);
     if (messages.length) sendAutoSmsMessages(lead, messages);
 }
 
@@ -19776,15 +19562,15 @@ function updateLeadInStorage(lang, leadId, updater) {
     }
     leads[lang] = list;
     setItem(STORAGE_KEYS.leads, leads);
-    persistLeadChange(lang, list[idx]).catch(() => {});
+    persistLeadChange(lang, list[idx], (saved, access) => {
+        maybeSendAutoStageSms(lang, saved, oldStatus, newStatus, access);
+    }).catch(() => {});
     // Kitob yetkazish kartochkasi to'lov jarayoni boshlanishi bilan ochiladi.
     // Lid eski ma'lumotlardan yoki qo'lda to'g'ridan-to'g'ri "To'lov yopildi"
     // ga o'tkazilgan bo'lsa ham kartochkasiz qolmasligi kerak.
     if (LEAD_STATUSES_NEED_SERIAL.has(newStatus) && oldStatus !== newStatus) {
         autoSyncLeadToBookRoadmap(lang, list[idx]);
-        autoAddLeadAsStudent(lang, list[idx]); // 7-ish
     }
-    maybeSendAutoStageSms(lang, list[idx], oldStatus, newStatus); // 26-vazifa
     // Menejeri o'zgarganda book roadmap'ni ham yangilash
     if (list[idx].managerId !== prevManagerId) {
         syncLeadManagerToBookRoadmap(lang, leadId, list[idx].managerId);
@@ -19796,50 +19582,19 @@ function updateLeadInStorage(lang, leadId, updater) {
     return list[idx];
 }
 
-// 7-ish: lid tolov-jarayonida ga o'tganda o'quvchilar ro'yxatiga avtomatik qo'shish
-function autoAddLeadAsStudent(lang, lead) {
+// Refresh CRM from the row-level response without a second database write.
+function cacheProvisionedStudent(student) {
+    if (!student?.id) return;
     const students = getItem(STORAGE_KEYS.students, []);
-    const alreadyExists = students.some(s =>
-        (s.leadRef && s.leadRef.id === lead.id) ||
-        (s.phone && s.phone === lead.phone && s.name === lead.name)
-    );
-    if (alreadyExists) return;
-
-    const subject = lead.language || lang || 'english';
-    const onboarding = lead.paymentOnboarding || {};
-    const teacherId = onboarding.teacherId || '';
-
-    // 5-vazifa: to'lov so'rovnomasida qisman to'lov ("partial") tanlangan
-    // bo'lsa, qarz/to'langan summa shu yerdan avtomatik ko'chiriladi —
-    // aks holda bunday o'quvchi Qarzdorlar ro'yxatida umuman ko'rinmay
-    // qolardi (debtAmount/paidAmount hech qachon yozilmagani uchun).
-    const ps = lead.paymentSurvey;
-    const isPartial = ps?.paymentType === 'partial';
-
-    // 7-vazifa: onboarding (sinov darsi/ustoz biriktirish) bosqichida
-    // belgilangan dars kuni/vaqti shu yerda ko'chirilmasa, o'quvchi "Dars
-    // jadvali"da hech qachon band bo'lib chiqmaydi (collectWeeklyScheduleEntries
-    // faqat lessonDayOfWeek/lessonTime bor o'quvchilarni hisoblaydi).
-    students.unshift({
-        id: 's' + Date.now(),
-        leadRef: { lang, id: lead.id },
-        name: lead.name || '',
-        phone: lead.phone || '',
-        group: '',
-        subject,
-        teacherId,
-        assistantTeacherId: onboarding.assistantTeacherId || null,
-        lessonDayOfWeek: onboarding.lessonDayOfWeek ?? null,
-        lessonTime: onboarding.lessonTime || '',
-        source: 'lead',
-        managerId: lead.managerId || '',  // 11-ish uchun
-        paidAmount: isPartial ? (Number(ps.paidAmount) || 0) : (Number(ps?.totalAmount) || 0),
-        debtAmount: isPartial ? (Number(ps.debtAmount) || 0) : 0,
-        paymentDueDate: isPartial ? (ps.nextPaymentDate || '') : '',
-        lastPaymentDate: isPartial ? (ps.lastPaymentDate || '') : '',
-        lessonDuration: ps?.tariff ? (Number(ps.tariff) || 15) : (onboarding.lessonDuration || 15)
-    });
-    setItem(STORAGE_KEYS.students, students);
+    const idx = students.findIndex(s => s.id === student.id);
+    const previous = idx >= 0 ? students[idx] : {};
+    const merged = { ...previous, ...student };
+    delete merged.password;
+    if (idx >= 0) students[idx] = merged;
+    else students.unshift(merged);
+    setCachedItem(STORAGE_KEYS.students, students);
+    if (document.getElementById('tab-students')?.classList.contains('active')) renderStudents();
+    if (document.getElementById('tab-timetable')?.classList.contains('active')) renderTimetable();
 }
 
 function formatCommentTime(ts) {

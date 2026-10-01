@@ -931,7 +931,7 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
         // baholarini saqlashi mumkin - boshqa hech qanday CRM maydonini
         // o'zgartira olmaydi.
         const allowed = isFullAccess ? [
-            'teachers', 'students', 'salesManagers', 'timetable',
+            'teachers', 'students', 'removedStudentIds', 'salesManagers', 'timetable',
             'mainAttendance', 'assistantAttendance', 'payments', 'hrEmployees',
             'bookRoadmap', 'mobileContent',
             'scripts', 'bonusHistory', 'bonusData', 'salesPlan', 'cashFlow', 'orgChart', 'manualMetrics',
@@ -946,6 +946,11 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
         if (isFullAccess) allowed.push('archive');
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });
+        if (partial.removedStudentIds !== undefined && (!Array.isArray(partial.students)
+            || !Array.isArray(partial.removedStudentIds)
+            || partial.removedStudentIds.some(id => typeof id !== 'string'))) {
+            return res.status(400).json({ error: 'O‘quvchini o‘chirish uchun ro‘yxat va IDlar yuborilishi shart' });
+        }
         if (!Object.keys(partial).length)
             return res.status(400).json({ error: 'Yangilash uchun ma\'lumot yuborilmadi' });
         await patchState(partial);

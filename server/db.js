@@ -8,6 +8,8 @@ const { generateContractPdfBuffer, generateRussianContractPdfBuffer } = require(
 const eskiz = require('./services/eskiz');
 const { sanitizeMobileContent } = require('../js/mobileContentPolicy');
 const { migrateMobileContentPolicy } = require('./services/mobileContentMigration');
+const studentAccess = require('../js/studentAccess');
+const { provisionLeadStudent, STUDENT_PROVISION_LOCK } = require('./services/leadStudentProvisioning');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -1026,11 +1028,11 @@ function resolveLangScopedContent(mc, studentLang) {
 // davom etadi. Bu qatlam kurslar ro'yxatini emas, dars/modul/fayl va saqlangan
 // lesson contentni ham kesib tashlaydi — boshqa til materialiga URL orqali
 // tasodifan kirib qolishning oldi olinadi.
-function scopeMobileContentToStudentLanguage(mc, studentLang) {
+function scopeMobileContentToStudentLanguage(mc, studentLang, assignedCourseId) {
     const lang = studentLang === 'russian' ? 'russian' : 'english';
     const matchesLang = item => (item?.lang || 'english') === lang;
 
-    const courses = (mc.courses || []).filter(matchesLang);
+    const courses = (mc.courses || []).filter(c => matchesLang(c) && (!assignedCourseId || c.id === assignedCourseId));
     const courseIds = new Set(courses.map(c => c.id));
     const lessons = (mc.lessons || []).filter(l => courseIds.has(l.courseId));
     const lessonIds = new Set(lessons.map(l => l.id));
@@ -1066,7 +1068,13 @@ async function getMobileContentData(studentId, { crmMode = false, previewLang } 
     if (!crmMode) {
         mc.courseLang = studentLang;
         resolveLangScopedContent(mc, studentLang);
-        scopeMobileContentToStudentLanguage(mc, studentLang);
+        let assignedCourseId;
+        if (studentId) {
+            const studentRow = await q1('SELECT extra_data FROM students WHERE id = $1', [studentId]);
+            const candidate = studentRow?.extra_data?.platformCourseId;
+            if ((mc.courses || []).some(c => c.id === candidate && (c.lang || 'english') === studentLang)) assignedCourseId = candidate;
+        }
+        scopeMobileContentToStudentLanguage(mc, studentLang, assignedCourseId);
     }
     return applyShopOverrides(mc);
 }
@@ -1184,8 +1192,17 @@ async function saveTeachers(client, teachers) {
 
 const BCRYPT_HASH_RE = /^\$2[aby]\$\d{2}\$/;
 
-async function saveStudents(client, students) {
+async function saveStudents(client, students, removedStudentIds = []) {
     if (!isUsableList(students, 'saveStudents')) return;
+    await client.query(STUDENT_PROVISION_LOCK);
+    const { rows: existingRows } = await client.query('SELECT * FROM students FOR UPDATE');
+    const existingById = new Map(existingRows.map(r => [r.id, rowToStudent(r)]));
+    const ids = new Set(students.map(s => s.id));
+    const removed = new Set(Array.isArray(removedStudentIds) ? removedStudentIds : []);
+    // A stale/older CRM snapshot must not delete an account just created by
+    // a sales manager's lead transaction. Explicit CRM deletions remain possible.
+    students = [...students, ...existingRows.map(rowToStudent).filter(s =>
+        s.autoProvisionedFromLead && !ids.has(s.id) && !removed.has(s.id))];
     await guardBulkDelete(client, 'students', "O'quvchilar", students);
     await client.query('DELETE FROM students');
     for (const s of students) {
@@ -1198,7 +1215,17 @@ async function saveStudents(client, students) {
         // `extra` ichida allaqachon bor va o'zgarishsiz qoladi.
         if (password) {
             extra.passwordHash = BCRYPT_HASH_RE.test(password) ? password : bcrypt.hashSync(password, 10);
+        } else if (existingById.get(id)?.passwordHash) {
+            extra.passwordHash = existingById.get(id).passwordHash;
         }
+        if (existingById.get(id)?.autoProvisionedFromLead) {
+            extra.autoProvisionedFromLead = true;
+            if (!extra.platformCourseId) extra.platformCourseId = existingById.get(id).platformCourseId;
+            if (!extra.login) extra.login = existingById.get(id).login;
+            if (!extra.leadRef) extra.leadRef = existingById.get(id).leadRef;
+            if (!extra.leadPaymentSyncKey) extra.leadPaymentSyncKey = existingById.get(id).leadPaymentSyncKey;
+        }
+        delete extra.hasPassword;
         await client.query(
             `INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration, extra_data)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
@@ -1490,8 +1517,12 @@ async function saveLeads(client, leads) {
 
 async function upsertLead(lead, language, actor = {}) {
     let saved;
-    await tx(async client => { saved = await upsertLeadWithClient(client, lead, language, { actor }); });
-    return saved;
+    let platformAccess;
+    await tx(async client => {
+        saved = await upsertLeadWithClient(client, lead, language, { actor });
+        platformAccess = await provisionLeadStudent(client, saved);
+    });
+    return { lead: saved, platformAccess };
 }
 
 async function softDeleteLead(id, actor = {}) {
@@ -2521,11 +2552,12 @@ async function sendDemoStudentMessage(threadId, text, studentId) {
 // saqlanadi, shuning uchun indekslab bo'lmaydi — `findRealStudentIdByFirstName`
 // bilan bir xil to'liq skanerlash patterni.
 async function findStudentByLogin(login) {
-    const trimmed = String(login || '').trim().toLowerCase();
+    const trimmed = studentAccess.loginKey(login);
     if (!trimmed) return null;
     const rows = await q('SELECT * FROM students');
-    const match = rows.map(rowToStudent).find(s => String(s.login || '').trim().toLowerCase() === trimmed);
-    return match || null;
+    const matches = rows.map(rowToStudent).filter(s => s.login && studentAccess.loginKey(s.login) === trimmed);
+    // Never silently log in to a different pupil when historical data has duplicates.
+    return matches.length === 1 ? matches[0] : null;
 }
 
 // 7-vazifa: har bir xodim uchun avtomatik yaratilgan "demo o'quvchi"
@@ -3656,7 +3688,7 @@ async function patchState(partial) {
     await detectPatchStateNotificationEvents(partial);
     await tx(async (client) => {
         if (partial.teachers)           await saveTeachers(client, partial.teachers);
-        if (partial.students)           await saveStudents(client, partial.students);
+        if (partial.students)           await saveStudents(client, partial.students, partial.removedStudentIds);
         if (partial.salesManagers)      await saveSalesManagers(client, partial.salesManagers);
         if (partial.timetable)          await saveTimetable(client, partial.timetable);
         if (partial.mainAttendance)     await saveAttendanceTable(client, 'main_attendance', partial.mainAttendance);
