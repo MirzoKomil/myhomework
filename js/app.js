@@ -14966,6 +14966,7 @@ const FAILED_SALE_REASON_GROUPS = [
             { id: 'no-pickup-6', label: 'Telefonini ko\'tarmadi (6+ urinishdan so\'ng)' },
             { id: 'wrong-number', label: 'Noto\'g\'ri raqam ekan' },
             { id: 'no-response-6', label: 'Javob bermadi (6+ urinishdan so\'ng)' },
+            { id: 'stopped-answering', label: 'Telefonini olmay qo\'ydi' },
         ]
     },
     {
@@ -14978,6 +14979,7 @@ const FAILED_SALE_REASON_GROUPS = [
             { id: 'time-mismatch', label: 'Vaqti mos emas' },
             { id: 'chose-online', label: 'Boshqa onlayn maktabni tanladi' },
             { id: 'chose-offline', label: 'Oflayn o\'quv markazni tanladi' },
+            { id: 'stopped-answering', label: 'Telefonini olmay qo\'ydi' },
         ]
     },
     {
@@ -14991,6 +14993,7 @@ const FAILED_SALE_REASON_GROUPS = [
             { id: 'later', label: 'Keyinroq o\'qimoqchiligini aytdi' },
             { id: 'wants-offline', label: 'Oflayn o\'qimoqchi' },
             { id: 'needs-cefr-prep', label: 'CEFR sertifikatiga tayyorlov kerak' },
+            { id: 'stopped-answering', label: 'Telefonini olmay qo\'ydi' },
         ]
     },
     {
@@ -15000,6 +15003,7 @@ const FAILED_SALE_REASON_GROUPS = [
             { id: 'no-money', label: 'Pul yo\'q / kechiktirdi' },
             { id: 'debt-unpaid', label: 'Qarzdorlik yopilmadi' },
             { id: 'installment-refused', label: 'Nasiya savdoni rad etildi' },
+            { id: 'stopped-answering', label: 'Telefonini olmay qo\'ydi' },
         ]
     },
 ];
