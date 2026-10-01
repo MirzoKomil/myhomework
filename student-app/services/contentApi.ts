@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 
-import { getToken, ready } from '@/services/studentAuthStore';
+import { getStudent, getToken, ready } from '@/services/studentAuthStore';
+import { createSessionContentCache } from '@/services/sessionContentCache';
+import { allowedVideoUrl, supportedHomeworkParts } from '@/services/lessonContentPolicy';
 import type { GrammarBlank, HomeworkPart, SlideContent, SpeakingPrompt, VocabWord } from '@/data/lessonContent';
 import type { ShopProduct } from '@/data/shopProducts';
 import type { GrammarTopic } from '@/data/grammarGuide';
@@ -201,6 +203,7 @@ export type LibraryContent = {
 };
 
 export type MobileContent = {
+  courseLang?: 'english' | 'russian';
   courses: AdminCourse[];
   lessons: AdminLesson[];
   modules: AdminModule[];
@@ -232,9 +235,6 @@ export async function authedFetch(url: string, options: RequestInit = {}): Promi
   return fetch(url, { ...options, headers });
 }
 
-let _cache: MobileContent | null = null;
-let _cacheFetchedAt = 0;
-let _fetchPromise: Promise<MobileContent> | null = null;
 
 // O'quvchi ilovani bir marta ochib, uni kunlar davomida fon rejimida ochiq
 // qoldirishi mumkin (mobil qurilmalar ilovani o'chirmaydi, faqat fon
@@ -245,45 +245,64 @@ let _fetchPromise: Promise<MobileContent> | null = null;
 // yuklanadi — o'quvchi hech narsa qilishi shart emas.
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-export async function fetchMobileContent(): Promise<MobileContent> {
-  if (_cache && Date.now() - _cacheFetchedAt < CACHE_TTL_MS) return _cache;
-  if (_fetchPromise) return _fetchPromise;
+function previewCourse(): string {
+  if (getToken() || Platform.OS !== 'web' || typeof window === 'undefined' || window.self === window.top) return '';
+  const course = new URLSearchParams(window.location.search).get('course');
+  return course === 'russian' || course === 'english' ? course : '';
+}
 
-  _fetchPromise = authedFetch(API_BASE)
-    .then((r) => {
+const contentCache = createSessionContentCache<MobileContent>(
+  () => JSON.stringify([getToken(), previewCourse()]),
+  async (identity) => {
+      const [token, course] = JSON.parse(identity) as [string | null, string];
+      const r = await fetch(API_BASE + (course ? `?course=${course}` : ''), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        cache: 'no-store',
+      });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
-    })
-    .then((data: MobileContent) => {
-      _cache = {
+      const data: MobileContent = await r.json();
+      const expectedLang = token ? getStudent()?.lang : course;
+      if (expectedLang && (data.courses ?? []).some(c => (c.lang || 'english') !== expectedLang)) {
+        throw new Error('Kurs tili akkauntga mos emas. Qayta kiring.');
+      }
+      const lessonContents = Object.fromEntries(Object.entries(data.lessonContents ?? {}).map(([id, content]) => [id, {
+        ...content,
+        videoUrl: allowedVideoUrl(content.videoUrl),
+        ...(content.homeworkParts ? { homeworkParts: supportedHomeworkParts(content.homeworkParts) } : {}),
+      }]));
+      return {
+        courseLang: data.courseLang,
         courses: data.courses ?? [],
         lessons: data.lessons ?? [],
         modules: data.modules ?? [],
         moduleContents: data.moduleContents ?? [],
-        lessonContents: data.lessonContents ?? {},
+        lessonContents,
         examContents: data.examContents ?? {},
         certificateTemplateUrl: data.certificateTemplateUrl,
         shop: data.shop ?? [],
         library: {
           grammar: data.library?.grammar ?? [],
           words: data.library?.words ?? [],
-          pronunciation: data.library?.pronunciation ?? [],
+          pronunciation: [],
           speaking: data.library?.speaking ?? [],
           podcasts: data.library?.podcasts ?? [],
           books: data.library?.books ?? [],
         },
       };
-      _cacheFetchedAt = Date.now();
-      return _cache;
-    })
-    .finally(() => { _fetchPromise = null; });
+  },
+  CACHE_TTL_MS
+);
 
-  return _fetchPromise;
+export async function fetchMobileContent(): Promise<MobileContent> {
+  await ready();
+  if (!getToken() && (Platform.OS !== 'web' || (typeof window !== 'undefined' && window.self === window.top))) {
+    throw new Error('Darslarni ko‘rish uchun hisobingizga kiring.');
+  }
+  return contentCache.get();
 }
 
 export function invalidateCache() {
-  _cache = null;
-  _cacheFetchedAt = 0;
+  contentCache.invalidate();
 }
 
 // CRM'da darsga biriktirilgan video va boshqa fayllarni (pdf/word/rasm/matn)
@@ -296,10 +315,10 @@ export type LessonMaterials = {
 export function getLessonMaterials(mc: MobileContent, lessonId: string): LessonMaterials {
   const moduleIds = new Set(mc.modules.filter((m) => m.lessonId === lessonId).map((m) => m.id));
   const contents = mc.moduleContents.filter((c) => moduleIds.has(c.moduleId));
-  const videoContent = contents.find((c) => c.type === 'video' && c.url);
+  const videoContent = contents.find((c) => c.type === 'video' && allowedVideoUrl(c.url));
   // "Videodars" bo'limida to'g'ridan-to'g'ri kiritilgan videoUrl — eski modul-asosli
   // videodan ustun turadi, chunki endi toq raqamli darslarda video shu yerdan boshqariladi.
-  const videoUrl = mc.lessonContents[lessonId]?.videoUrl || videoContent?.url;
+  const videoUrl = allowedVideoUrl(mc.lessonContents[lessonId]?.videoUrl) || allowedVideoUrl(videoContent?.url);
   const files = contents.filter((c) => c.id !== videoContent?.id);
   return { videoUrl, files };
 }

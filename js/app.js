@@ -1958,7 +1958,7 @@ async function _pdfFileToSlideImages(file, onProgress) {
 // boshqa (hali tahrirlanmagan) darsning tahrirlash formasiga "shablon"
 // sifatida ko'chirish uchun.
 function _homeworkPartsShapeTemplate(parts) {
-    return (parts || []).map(p => {
+    return (parts || []).filter(p => !mobileContentPolicy.isPronunciationPart(p)).map(p => {
         const shell = { id: p.id, kind: p.kind, title: p.title };
         if (p.kind === 'matching') shell.pairs = [];
         else if (p.kind === 'fillBlank') shell.blanks = [];
@@ -2249,12 +2249,12 @@ function _openAddHomeworkPartModal(lesson, content, dayType, body) {
     openModal("Uyga vazifa qismi qo'shish",
         `<div class="form-group">
             <label>Qism nomi</label>
-            <input id="hwpTitle" class="form-control" placeholder="Masalan: Talaffuz mashqi">
+            <input id="hwpTitle" class="form-control" placeholder="Masalan: Moslashtirish mashqi">
          </div>
          <div class="form-group">
             <label>Turi</label>
             <select id="hwpKind" class="form-control">
-                <option value="matching">Talaffuz mashqi (Moslashtirish)</option>
+                <option value="matching">Moslashtirish mashqi</option>
                 <option value="multipleChoice">Dialog (Test, 4 variant)</option>
                 <option value="reading">O'qib tarjima qilish mashqi</option>
             </select>
@@ -4105,7 +4105,7 @@ const MOBILE_CATS = [
 ];
 
 function getMobileContent() {
-    const mc = getItem(STORAGE_KEYS.mobileContent, {});
+    const mc = mobileContentPolicy.sanitizeMobileContent(getItem(STORAGE_KEYS.mobileContent, {}));
     mc.videos = mc.videos || [];
     mc.documents = mc.documents || [];
     mc.courses = mc.courses || [];
@@ -4872,7 +4872,6 @@ function renderMobileResourcesLandingTab(container) {
 const MOBILE_LIBRARY_ITEMS = [
     { catKey: 'grammar', icon: '📘', title: "Grammatik qo'llanma" },
     { catKey: 'words', icon: '📋', title: "So'zlar ro'yxati" },
-    { catKey: 'pronunciation', icon: '🎤', title: 'Talaffuz' },
     { catKey: 'speaking', icon: '💬', title: 'Speaking topiklar' },
     { catKey: 'podcasts', icon: '🎧', title: 'Podkastlar' },
     { catKey: 'books', icon: '📖', title: 'Kitoblar' },

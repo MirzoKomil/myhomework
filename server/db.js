@@ -6,6 +6,8 @@ const bcrypt = require('bcryptjs');
 const webpush = require('web-push');
 const { generateContractPdfBuffer, generateRussianContractPdfBuffer } = require('./services/contractPdf');
 const eskiz = require('./services/eskiz');
+const { sanitizeMobileContent } = require('../js/mobileContentPolicy');
+const { migrateMobileContentPolicy } = require('./services/mobileContentMigration');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -925,6 +927,10 @@ function buildLibraryForLang(overridesByLang, lang) {
     const langOverrides = overridesByLang[lang] || {};
     const library = {};
     for (const cat of Object.keys(defaults)) {
+        if (cat === 'pronunciation') {
+            library[cat] = [];
+            continue;
+        }
         const catOverrides = langOverrides[cat] || {};
         const defaultIds = new Set();
         const merged = defaults[cat].map(item => {
@@ -1046,17 +1052,19 @@ function scopeMobileContentToStudentLanguage(mc, studentLang) {
     return mc;
 }
 
-async function getMobileContentData(studentId, { crmMode = false } = {}) {
+async function getMobileContentData(studentId, { crmMode = false, previewLang } = {}) {
     const row = await q1('SELECT data FROM mobile_content WHERE singleton = 1');
-    const mc = row ? row.data : { videos: [], documents: [], courses: [], lessons: [] };
+    const mc = sanitizeMobileContent(row ? row.data : { videos: [], documents: [], courses: [], lessons: [] });
     const [liveGrades, demoStudentId] = await Promise.all([
         getJsonData('liveGrades'),
         resolveStudentId(studentId),
     ]);
     applyComputedLessonAttendance(mc, liveGrades, demoStudentId);
-    const studentLang = crmMode ? undefined : await resolveStudentSubjectLang(demoStudentId);
+    const studentLang = crmMode ? undefined : (!studentId && ['english', 'russian'].includes(previewLang)
+        ? previewLang : await resolveStudentSubjectLang(demoStudentId));
     applyLibraryOverrides(mc, studentLang);
     if (!crmMode) {
+        mc.courseLang = studentLang;
         resolveLangScopedContent(mc, studentLang);
         scopeMobileContentToStudentLanguage(mc, studentLang);
     }
@@ -1064,6 +1072,7 @@ async function getMobileContentData(studentId, { crmMode = false } = {}) {
 }
 
 async function saveMobileContentData(client, data) {
+    sanitizeMobileContent(data);
     await client.query(
         `INSERT INTO mobile_content (singleton, data) VALUES (1, $1)
          ON CONFLICT (singleton) DO UPDATE SET data = EXCLUDED.data`,
@@ -4162,6 +4171,7 @@ async function init() {
     }
     await initSchema();
     await seedIfEmpty();
+    await tx(migrateMobileContentPolicy);
     await migrateMultipleChoiceCorrectIndex().catch(err => console.error('[DB] correctIndex tuzatishda xatolik:', err.message));
     await migrateMultipleChoiceManualFixes().catch(err => console.error('[DB] correctIndex qo\'lda tuzatishda xatolik:', err.message));
     await migrateRenameGarbledCourse().catch(err => console.error('[DB] Kurs nomini tuzatishda xatolik:', err.message));

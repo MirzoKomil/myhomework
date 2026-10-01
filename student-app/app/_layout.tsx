@@ -7,9 +7,9 @@ import {
 } from '@expo-google-fonts/onest';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -18,7 +18,7 @@ import { TeacherRatingModal } from '@/components/TeacherRatingModal';
 import { theme } from '@/constants/theme';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { LanguageProvider } from '@/i18n/LanguageContext';
-import { getToken, loadAuth } from '@/services/studentAuthStore';
+import { loadAuth, useAuth } from '@/services/studentAuthStore';
 import { invalidateCache } from '@/services/contentApi';
 
 export { ErrorBoundary } from 'expo-router';
@@ -49,14 +49,18 @@ const webFonts = {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts(Platform.OS === 'web' ? webFonts : nativeFonts);
+  const [authLoaded, setAuthLoaded] = useState(false);
+  const { token } = useAuth();
+  const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
+  const canViewStudent = !!token || isEmbedded;
 
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
+    if (loaded && authLoaded) SplashScreen.hideAsync();
+  }, [loaded, authLoaded]);
 
   // 5-vazifa: document.title endi bu yerda emas, i18n/LanguageContext'da
   // courseLang'ga ("Homework"/"Domwork") qarab dinamik belgilanadi — bu
@@ -72,7 +76,9 @@ export default function RootLayout() {
   // xato ravishda "Namuna o'quvchi"ga tushib qolardi. Endi ilova ochilishi
   // bilanoq shu yerda bir marta yuklab qo'yiladi.
   useEffect(() => {
-    loadAuth();
+    let cancelled = false;
+    loadAuth().then(() => { if (!cancelled) setAuthLoaded(true); });
+    return () => { cancelled = true; };
   }, []);
 
   // O'quvchi ilovani fon rejimiga o'tkazib, keyin qaytib ochganda (masalan
@@ -90,39 +96,18 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  // 151-ish (qayta ish): standalone brauzerdan (haqiqiy foydalanuvchi)
-  // /student/ manziliga to'g'ridan-to'g'ri kirilganda token bo'lmasa
-  // login sahifasiga yo'naltiramiz. CRM'ning o'z "O'quvchi ilovasi"
-  // ko'rib chiqish tabi /student/'ni bir xil origin'dagi iframe'da
-  // ochadi (js/app.js) — shu holatda hech qanday yo'naltirish qilinmaydi,
-  // 150-ish arxitekturasidagi demo tajriba o'zgarishsiz qoladi.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    let cancelled = false;
-    (async () => {
-      await loadAuth();
-      if (cancelled) return;
-      const isEmbedded = typeof window !== 'undefined' && window.self !== window.top;
-      if (isEmbedded) return;
-      if (getToken()) return;
-      if (typeof window !== 'undefined' && window.location.pathname.includes('login')) return;
-      router.replace('/login' as never);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!loaded) return null;
+  if (!loaded || !authLoaded) return null;
 
   return (
     <LanguageProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }}>
-        <Stack.Screen name="(tabs)" />
+        <Stack.Protected guard={canViewStudent}>
+          <Stack.Screen name="(tabs)" />
+        </Stack.Protected>
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
       </Stack>
-      <TeacherRatingModal />
+      {canViewStudent && <TeacherRatingModal key={token || 'preview'} />}
     </LanguageProvider>
   );
 }

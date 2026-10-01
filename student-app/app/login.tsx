@@ -46,6 +46,7 @@ export default function LoginScreen() {
         setLoading(false);
         return;
       }
+      invalidateCache();
       await setAuth(data.token, data.student);
       // Shu qurilmada oldin bajarilgan darslarni yangi akkauntga bir marta
       // yuklaydi va boshqa qurilmalardagi server progressi bilan birlashtiradi.

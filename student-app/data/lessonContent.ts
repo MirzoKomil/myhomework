@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { BOOK_STORIES } from '@/data/bookStories';
 import { AdminLessonContent, fetchMobileContent } from '@/services/contentApi';
+import { supportedHomeworkParts } from '@/services/lessonContentPolicy';
 import { getListenedBookIds } from '@/services/bookProgressStore';
 import { getCategoryProgress, getLessonProgress, loadLessonProgress, ProgressCategory } from '@/services/lessonProgressStore';
 
@@ -301,7 +302,7 @@ export function getLessonContent(
     // CRM'ning tahrirlash formasini oldindan to'ldirish uchun (admin qaysi
     // qismlarni kiritishi kerakligini bilishi uchun), studentga esa faqat
     // admin haqiqatan saqlagan kontent (mergeLessonContent orqali) ko'rinadi.
-    homeworkParts: isRussianLesson1 ? RU_LESSON1_HOMEWORK : [],
+    homeworkParts: [],
   };
 }
 
@@ -317,16 +318,18 @@ export function mergeLessonContent(base: LessonContent, admin?: AdminLessonConte
     grammarBlanks: admin.grammarBlanks && admin.grammarBlanks.length ? admin.grammarBlanks : base.grammarBlanks,
     slides: admin.slides && admin.slides.length ? admin.slides : base.slides,
     speakingPractice: admin.speakingPractice && admin.speakingPractice.length ? admin.speakingPractice : base.speakingPractice,
-    homeworkParts: admin.homeworkParts && admin.homeworkParts.length ? admin.homeworkParts : base.homeworkParts,
+    homeworkParts: supportedHomeworkParts(admin.homeworkParts ?? base.homeworkParts),
   };
 }
 
 export async function getResolvedLessonContent(lessonId: string, dayIndex: number): Promise<LessonContent> {
   const mc = await fetchMobileContent();
   const lesson = mc.lessons.find((l) => l.id === lessonId);
+  if (!lesson && !/^bonus-\d+$/.test(lessonId)) throw new Error('Dars bu kursga tegishli emas.');
   const course = lesson ? mc.courses.find((c) => c.id === lesson.courseId) : undefined;
-  const lang: 'english' | 'russian' = course?.lang === 'russian' ? 'russian' : 'english';
-  const base = getLessonContent(lessonId, dayIndex, lang);
+  const lang: 'english' | 'russian' = (course?.lang || mc.courseLang) === 'russian' ? 'russian' : 'english';
+  const actualIndex = lesson ? mc.lessons.filter(l => l.courseId === lesson.courseId).findIndex(l => l.id === lessonId) : dayIndex;
+  const base = getLessonContent(lessonId, actualIndex, lang);
   return mergeLessonContent(base, mc.lessonContents[lessonId]);
 }
 

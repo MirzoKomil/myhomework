@@ -12,7 +12,6 @@ import type { TranslationKey } from '@/i18n/translations';
 const libraryItems = [
   { icon: 'book' as const, titleKey: 'res_lib_item_grammar_title' as TranslationKey, countKey: 'res_lib_item_grammar_count' as TranslationKey, color: theme.colors.blue, bg: theme.colors.blueLight, route: '/resources/library/grammar' },
   { icon: 'list' as const, titleKey: 'res_lib_item_words_title' as TranslationKey, countKey: 'res_lib_item_words_count' as TranslationKey, color: theme.colors.purple, bg: theme.colors.purpleLight, route: '/resources/library/words' },
-  { icon: 'mic' as const, titleKey: 'res_lib_item_pron_title' as TranslationKey, countKey: 'res_lib_item_pron_count' as TranslationKey, color: theme.colors.pink, bg: theme.colors.pinkBg, route: '/resources/pronunciation' },
   { icon: 'chatbubbles' as const, titleKey: 'res_lib_item_speaking_title' as TranslationKey, countKey: 'res_lib_item_speaking_count' as TranslationKey, color: theme.colors.warning, bg: theme.colors.warningBg, route: '/resources/speaking' },
   { icon: 'headset' as const, titleKey: 'res_lib_item_podcasts_title' as TranslationKey, countKey: 'res_lib_item_podcasts_count' as TranslationKey, color: theme.colors.success, bg: theme.colors.successBg, route: '/resources/podcasts' },
   { icon: 'library' as const, titleKey: 'res_lib_item_books_title' as TranslationKey, countKey: 'res_lib_item_books_count' as TranslationKey, color: theme.colors.blue, bg: theme.colors.blueLight, route: '/resources/books' },

@@ -8,7 +8,8 @@ const router = express.Router();
 // Public endpoint — student app uchun, auth talab qilmaydi
 router.get('/mobile-content', studentAuthOptional, async (req, res) => {
     try {
-        const mc = await getMobileContentData(req.studentId);
+        const mc = await getMobileContentData(req.studentId, { previewLang: req.query.course });
+        res.set('Cache-Control', 'private, no-store');
         res.json(mc);
     } catch (err) {
         console.error('GET /api/state/mobile-content', err);
@@ -25,6 +26,7 @@ router.get('/mobile-content/admin', authRequired, async (req, res) => {
         return res.status(403).json({ error: 'Mobil ilova kontentiga ruxsat yo\'q' });
     }
     try {
+        res.set('Cache-Control', 'private, no-store');
         res.json(await getMobileContentData(undefined, { crmMode: true }));
     } catch (err) {
         console.error('GET /api/state/mobile-content/admin', err);

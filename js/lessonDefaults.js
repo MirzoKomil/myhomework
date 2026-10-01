@@ -252,7 +252,7 @@ function getDefaultExamContent(examId) {
 function ldDefaultHomeworkParts(isVideoDay) {
     const readingPart = { id: 'reading', kind: 'reading', title: "O'qib tarjima qilish mashqi", paragraph: { id: 'p1', russianText: '' }, sentences: [] };
     return isVideoDay
-        ? [{ id: 'talaffuz', kind: 'matching', title: 'Talaffuz mashqi', pairs: [] }, readingPart]
+        ? [readingPart]
         : [{ id: 'dialog', kind: 'multipleChoice', title: 'Dialog', questions: [] }, readingPart];
 }
 
@@ -274,6 +274,6 @@ function getDefaultLessonContent(lessonId, dayIndex, lang) {
         vocabulary: isRussianLesson1 ? LD_RU_LESSON1_VOCAB : [],
         grammarBlanks: isRussianLesson1 ? LD_RU_LESSON1_GRAMMAR : [],
         speakingPractice: [],
-        homeworkParts: isRussianLesson1 ? LD_RU_LESSON1_HOMEWORK : ldDefaultHomeworkParts(dayType === 'grammar'),
+        homeworkParts: isRussianLesson1 ? LD_RU_LESSON1_HOMEWORK.filter(p => !mobileContentPolicy.isPronunciationPart(p)) : ldDefaultHomeworkParts(dayType === 'grammar'),
     };
 }

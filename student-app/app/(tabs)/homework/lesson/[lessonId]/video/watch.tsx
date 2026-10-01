@@ -20,14 +20,25 @@ export default function WatchVideoScreen() {
   const [content, setContent] = useState<LessonContent | null>(null);
   const [materials, setMaterials] = useState<LessonMaterials | null>(null);
   const [showComments, setShowComments] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getResolvedLessonContent(String(lessonId), 0).then(setContent);
-    fetchMobileContent().then((mc) => setMaterials(getLessonMaterials(mc, String(lessonId))));
+    let cancelled = false;
+    setContent(null);
+    setMaterials(null);
+    setError(null);
+    Promise.all([
+      getResolvedLessonContent(String(lessonId), 0),
+      fetchMobileContent().then((mc) => getLessonMaterials(mc, String(lessonId))),
+    ]).then(([nextContent, nextMaterials]) => {
+      if (!cancelled) { setContent(nextContent); setMaterials(nextMaterials); }
+    }).catch(() => {
+      if (!cancelled) setError('Darsni yuklab bo‘lmadi. Hisobingizga qayta kiring.');
+    });
+    return () => { cancelled = true; };
   }, [lessonId]);
 
   useEffect(() => {
-    markDone(String(lessonId), 'videoWatch');
     saveLastPosition({ lessonId: String(lessonId), section: 'video/watch', label: t('hw_cat_video_title') });
   }, [lessonId]);
 
@@ -35,7 +46,7 @@ export default function WatchVideoScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={theme.colors.purple} />
+          {error ? <><Text>{error}</Text><Pressable onPress={() => router.back()}><Text>Orqaga</Text></Pressable></> : <ActivityIndicator size="large" color={theme.colors.purple} />}
         </View>
       </SafeAreaView>
     );
@@ -87,7 +98,8 @@ export default function WatchVideoScreen() {
         </View>
       </ScrollView>
 
-      <Pressable style={styles.doneBtn} onPress={() => router.back()}>
+      <Pressable style={[styles.doneBtn, !materials?.videoUrl && { opacity: 0.5 }]} disabled={!materials?.videoUrl}
+        onPress={async () => { await markDone(String(lessonId), 'videoWatch'); router.back(); }}>
         <Text style={styles.doneText}>{t('video_seen_btn')}</Text>
       </Pressable>
 

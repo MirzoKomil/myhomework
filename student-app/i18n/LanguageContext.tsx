@@ -3,7 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { Platform } from 'react-native';
 
 import { fetchDemoStudentProfile } from '@/services/contentApi';
-import { useAuth } from '@/services/studentAuthStore';
+import { getToken, useAuth } from '@/services/studentAuthStore';
 import { translations, AppLang, TranslationKey } from './translations';
 
 // Bu kalit faqat o'quvchi Sozlamalardan o'zi tanlagan interfeys tilini
@@ -38,6 +38,7 @@ function readQueryLang(): AppLang | null {
 // tilidan alohida ravishda aynan qaysi dars kontenti ko'rinishini belgilaydi.
 function readQueryCourseLang(): CourseLang | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  if (getToken() || window.self === window.top) return null;
   try {
     const v = (new URLSearchParams(window.location.search).get('course') || '').toLowerCase();
     if (v === 'russian' || v === 'ru') return 'russian';
@@ -109,18 +110,20 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // Kurs tili UI tilidan mustaqil. Rus guruhidagi o'quvchi menyularni
   // o'zbekcha ko'radi, ammo unga ruscha dars va kursga tegishli kontent keladi.
   useEffect(() => {
-    if (!queryCourseOverride.current && student?.lang) {
+    if (student?.lang) {
       setCourseLang(student.lang === 'russian' ? 'russian' : 'english');
     }
   }, [student?.lang]);
 
   useEffect(() => {
     if (token || queryCourseOverride.current) return;
+    let cancelled = false;
     fetchDemoStudentProfile()
       .then((profile) => {
-        if (profile?.lang) setCourseLang(profile.lang === 'russian' ? 'russian' : 'english');
+        if (!cancelled && !getToken() && profile?.lang) setCourseLang(profile.lang === 'russian' ? 'russian' : 'english');
       })
       .catch(() => {});
+    return () => { cancelled = true; };
   }, [token]);
 
   // 5-vazifa: telefon "Bosh ekranga qo'shish" qilinganda ilova nomi va
