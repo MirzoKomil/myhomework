@@ -953,7 +953,7 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
         }
         if (!Object.keys(partial).length)
             return res.status(400).json({ error: 'Yangilash uchun ma\'lumot yuborilmadi' });
-        await patchState(partial);
+        await patchState(partial, req.user);
         res.json({ ok: true, state: await getStateForUser(req.user) });
     } catch (err) {
         console.error('PATCH /api/state', err);

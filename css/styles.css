@@ -3825,6 +3825,55 @@ body {
 }
 
 .lead-column-header--trial { flex-wrap: wrap; }
+.payroll-toolbar, .payroll-heading { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding-top: 16px; }
+.payroll-toolbar label, .payroll-config label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.payroll-toolbar input, .payroll-toolbar select { max-width: 190px; }
+.payroll-toolbar .btn-secondary-sm, .payroll-config .btn-secondary-sm, .payroll-table .btn-secondary-sm {
+    padding: 8px 12px; min-height: 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--purple); cursor: pointer;
+}
+.payroll-table button:disabled, .payroll-config button:disabled { opacity: .5; cursor: not-allowed; }
+.payroll-heading { justify-content: space-between; align-items: center; padding: 0; margin: 16px 0; }
+.payroll-heading h3 { margin: 0; }
+.payroll-note { font-size: 12px; color: var(--text-muted); margin: 12px 0; line-height: 1.6; }
+.payroll-message { margin: 12px 0; font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
+.payroll-message--error, .payroll-alert { color: var(--danger); }
+.payroll-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.payroll-table-wrap table.payroll-table { display: table; width: 100%; min-width: 950px; border-collapse: collapse; color: var(--text); }
+.payroll-table-wrap table.payroll-table thead { display: table-header-group; }
+.payroll-table-wrap table.payroll-table tbody { display: table-row-group; }
+.payroll-table-wrap table.payroll-table tr { display: table-row; }
+.payroll-table-wrap table.payroll-table th, .payroll-table-wrap table.payroll-table td { display: table-cell; padding: 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); font-size: 12px; line-height: 1.7; }
+.payroll-table small, .payroll-person small { display: block; color: var(--text-muted); }
+.payroll-person { display: flex; align-items: center; gap: 10px; min-width: 160px; }
+.payroll-person img, .payroll-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.payroll-avatar { display: grid; place-items: center; background: var(--purple-light); }
+.payroll-table button { display: block; margin-top: 8px; }
+.payroll-config-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+.payroll-config { padding: 20px; min-width: 0; }
+.payroll-config h3 { margin-bottom: 16px; }
+.payroll-config label { margin-bottom: 12px; }
+.payroll-config label:has([type="checkbox"]) { flex-direction: row; align-items: center; }
+.payroll-tier { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--border); }
+.payroll-tier label { flex: 1; min-width: 95px; }
+.payroll-tier input { width: 100%; }
+.payroll-plan { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.8; }
+.payroll-plan button { display: block; margin: 8px 0; }
+.payroll-audit { padding: 16px; margin-top: 16px; }
+.payroll-audit details { margin: 10px 0; }
+.payroll-audit pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+.payroll-config [hidden], .payroll-toolbar [hidden] { display: none; }
+@media (max-width: 640px) {
+    .payroll-config-grid { grid-template-columns: 1fr; }
+    .payroll-toolbar label { flex: 1 1 140px; }
+    .payroll-toolbar input, .payroll-toolbar select { width: 100%; max-width: none; }
+    .payroll-table-wrap { border: 0; background: transparent; overflow: visible; }
+    .payroll-table-wrap table.payroll-table, .payroll-table-wrap table.payroll-table tbody { display: block; width: 100%; min-width: 0; }
+    .payroll-table-wrap table.payroll-table thead { display: none; }
+    .payroll-table-wrap table.payroll-table tr { display: block; padding: 12px; margin-bottom: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .payroll-table-wrap table.payroll-table td { display: block; width: 100%; padding: 8px 0; }
+    .payroll-table-wrap table.payroll-table td::before { content: attr(data-label); display: block; color: var(--text-muted); font-size: 11px; }
+    .payroll-table-wrap table.payroll-table td:last-child { border-bottom: 0; }
+}
 .lead-contact-filter-toggle {
     display: inline-flex;
     align-items: center;

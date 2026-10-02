@@ -1,6 +1,7 @@
 // Myhomework.uz — ma'lumotlar (API + cache)
 
 const STORAGE_KEYS = {
+    payrollRates: 'mh_payroll_rates',
     users: 'mh_users',
     currentUser: 'mh_currentUser',
     teachers: 'mh_teachers',
@@ -37,6 +38,7 @@ const STORAGE_KEYS = {
 };
 
 const CACHE_KEY_MAP = {
+    [STORAGE_KEYS.payrollRates]: 'payrollRates',
     [STORAGE_KEYS.teachers]: 'teachers',
     [STORAGE_KEYS.salesManagers]: 'salesManagers',
     [STORAGE_KEYS.students]: 'students',
@@ -443,8 +445,11 @@ function getFlexibleAttendanceCap(year, month) {
     return Math.round(getDaysInMonth(year, month) * 3 / 7);
 }
 
-function getMonthlyBaseSalary(duration) {
-    return SALARY_RATES[duration] || SALARY_RATES[15];
+function getMonthlyBaseSalary(duration, teacher = {}) {
+    const config = getItem(STORAGE_KEYS.payrollRates, {})[teacher.subject || 'english'];
+    if (teacher.type === 'yordamchi') return config?.assistant?.rate ?? 50000;
+    const rates = config?.teacher?.rates || SALARY_RATES;
+    return rates[duration] ?? rates[15];
 }
 
 function countStudentLessons(attBlock, studentId, lessonDays) {
@@ -470,7 +475,7 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     const [year, month] = monthVal.split('-').map(Number);
     const pattern = teacher.schedulePattern || 'mwf';
     const duration = teacher.lessonDuration || 15;
-    const monthlyBase = getMonthlyBaseSalary(duration);
+    const monthlyBase = getMonthlyBaseSalary(duration, teacher);
     // 10-vazifa: yordamchi ustoz istalgan kunni belgilay oladi (haftalik
     // patternga bog'lanmagan), shuning uchun "kutilgan darslar soni" ham
     // pattern kunlaridan emas, avtomatik oylik chegaradan olinadi — va har
@@ -479,25 +484,35 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     // maosh hech qachon normadan oshmasligi uchun).
     const isAssistant = teacher.type === 'yordamchi';
     const lessonDays = isAssistant ? null : getLessonDaysInMonth(year, month, pattern);
-    const expectedPerStudent = isAssistant ? getFlexibleAttendanceCap(year, month) : lessonDays.length;
+    const payrollConfig = getItem(STORAGE_KEYS.payrollRates, {})[teacher.subject || 'english'];
+    const lessonLimit = (isAssistant ? payrollConfig?.assistant : payrollConfig?.teacher)?.maxLessons || 0;
+    const calendarExpected = isAssistant ? getFlexibleAttendanceCap(year, month) : getLessonDaysInMonth(year, month, pattern).length;
+    const expectedPerStudent = lessonLimit > 0 ? Math.min(calendarExpected, lessonLimit) : calendarExpected;
     const attBlock = attendanceStore[`${monthVal}_${teacher.id}`] || {};
     const perLesson = expectedPerStudent > 0 ? monthlyBase / expectedPerStudent : 0;
 
     const studentList = students || getStudentsForTeacher(teacher);
+    const employee = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === teacher.id) || {};
+    const hireDate = payrollEngine.date(employee.startDate || employee.joinDate);
     let total = 0;
     let totalLessons = 0;
     const perStudent = studentList.map(s => {
-        const rawLessons = isAssistant
-            ? Object.values(attBlock[s.id] || {}).filter(Boolean).length
-            : countStudentLessons(attBlock, s.id, lessonDays);
+        const studentStart = payrollEngine.date(s.startDate || s.joinDate);
+        const rawLessons = Object.entries(attBlock[s.id] || {}).filter(([day, present]) => {
+            const date = payrollEngine.date(monthVal + '-' + String(day).padStart(2, '0'));
+            return (present === 1 || present === true) && date && (!hireDate || date >= hireDate)
+                && (!studentStart || date >= studentStart)
+                && (isAssistant || lessonDays.includes(Number(day)));
+        }).length;
         const lessons = Math.min(rawLessons, expectedPerStudent);
-        const earned = Math.round(perLesson * lessons);
+        const studentBase = getMonthlyBaseSalary(s.lessonDuration || duration, teacher);
+        const earned = Math.round(studentBase / expectedPerStudent * lessons);
         total += earned;
         totalLessons += lessons;
-        return { id: s.id, name: s.name, lessons, earned, maxEarned: monthlyBase };
+        return { id: s.id, name: s.name, lessons, earned, maxEarned: studentBase };
     });
 
-    const maxPossible = monthlyBase * studentList.length;
+    const maxPossible = perStudent.reduce((sum, s) => sum + s.maxEarned, 0);
     const kpiPercent = maxPossible > 0 ? Math.round((total / maxPossible) * 100) : 0;
 
     return {

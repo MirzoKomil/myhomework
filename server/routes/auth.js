@@ -60,7 +60,8 @@ router.post('/create-user', authRequired, async (req, res) => {
                 login: targetLogin,
                 passwordHash,
                 userRole,
-                salesManagerId
+                salesManagerId,
+                actor: req.user
             });
             return res.status(201).json({ ok: true, user: publicUser(user) });
         }
@@ -95,6 +96,7 @@ router.post('/create-user', authRequired, async (req, res) => {
         console.error('POST /create-user', err);
         if (err.code === 'AMBIGUOUS_LOGIN') return res.status(409).json({ error: err.message });
         if (err.code === 'HR_EMPLOYEE_NOT_FOUND') return res.status(404).json({ error: err.message });
+        if (err.status === 400) return res.status(400).json({ error: err.message });
         res.status(500).json({ error: 'Server xatoligi' });
     }
 });

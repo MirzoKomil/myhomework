@@ -17,6 +17,7 @@ const publicSalesApiRoutes = require('./routes/publicSalesApi');
 const publicCrmApiRoutes = require('./routes/publicCrmApi');
 const hrRoutes = require('./routes/hr');
 const trialLessonsRoutes = require('./routes/trialLessons');
+const payrollRoutes = require('./routes/payroll');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -199,6 +200,7 @@ app.use('/api/public/sales', publicSalesApiRoutes);
 app.use('/api/public/crm', publicCrmApiRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/trial-lessons', trialLessonsRoutes);
+app.use('/api/payroll', payrollRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 

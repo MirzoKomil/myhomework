@@ -281,7 +281,10 @@ function applyRoleBasedAccess(user) {
         return;
     }
 
-    const allowed = ROLE_TABS[role] ?? ROLE_TABS.employee;
+    const financeEmployee = role === 'employee' && getItem(STORAGE_KEYS.hrEmployees, []).some(e =>
+        String(e.login || '').trim().toLowerCase() === String(user.email || '').trim().toLowerCase()
+        && ['moliya', 'finance'].includes(String(e.department || '').toLowerCase()));
+    const allowed = financeEmployee ? ['finance', 'student-app', 'guides'] : (ROLE_TABS[role] ?? ROLE_TABS.employee);
     const allowedSet = new Set(allowed);
 
     // Barcha elementlarni yashir (Sozlamalar guruhi bundan mustasno)
@@ -11969,6 +11972,7 @@ function switchFinanceSection(section) {
     });
     applyFinanceLang();
     if (section === 'cashflow') renderCashFlow();
+    if (section === 'maoshlar' || section === 'kpi') payrollUI.render(section);
     persistCurrentTab();
 }
 
@@ -11987,6 +11991,7 @@ function renderFinance() {
                 b.classList.toggle('active', b.dataset.financeLang === _financeLang)
             );
             applyFinanceLang();
+            if (['maoshlar', 'kpi'].includes(_tabContext.financeSection)) payrollUI.render(_tabContext.financeSection);
         });
     });
     document.querySelectorAll('[data-finance-lang]').forEach(b =>
@@ -12388,6 +12393,9 @@ function openCashFlowModal(editId) {
     const existing = editId ? getCashFlowTx().find(t => t.id === editId) : null;
     const today = new Date().toISOString().slice(0, 10);
     const category = existing?.category || 'sotuv';
+    const allLeadData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const refundLeads = ['english', 'russian'].flatMap(lang => (allLeadData[lang] || [])
+        .filter(l => l.paymentClosedSurvey || l.status === 'tolov-yopildi').map(l => ({ ...l, language: lang })));
 
     const body = `
         <div class="form-group"><label>Turi</label>
@@ -12405,6 +12413,12 @@ function openCashFlowModal(editId) {
         </div>
         <div class="form-group"><label>Maqsad</label>
             <select id="cfTxPurpose" class="form-control">${cfPurposeOptions(category)}</select>
+        </div>
+        <div class="form-group" id="cfRefundWrap" style="display:none">
+            <label>Qaytarilgan bitim (KPI dan chegirish uchun)</label>
+            <select id="cfRefundLead" class="form-control"><option value="">— Bitimni tanlang —</option>${refundLeads.map(l => `<option value="${escapeHtml(l.id)}" ${existing?.leadId === l.id ? 'selected' : ''}>${escapeHtml(l.name)} · ${l.language === 'russian' ? 'Rus tili' : 'Ingliz tili'}</option>`).join('')}</select>
+            <label>KPI tili</label><select id="cfRefundLanguage" class="form-control"><option value="english" ${existing?.language !== 'russian' ? 'selected' : ''}>Ingliz tili</option><option value="russian" ${existing?.language === 'russian' ? 'selected' : ''}>Rus tili</option></select>
+            <small>Bitim tanlanmasa, sotuv menejerini tanlash shart. Eski bog‘lanmagan refundlarni tahrirlab ulang.</small>
         </div>
         <div class="form-group"><label>To'lov usuli</label>
             <select id="cfTxMethod" class="form-control">
@@ -12439,17 +12453,26 @@ function openCashFlowModal(editId) {
     const purposeSelect = document.getElementById('cfTxPurpose');
     const managerWrap = document.getElementById('cfTxManagerWrap');
     const employeeWrap = document.getElementById('cfTxEmployeeWrap');
+    const refundWrap = document.getElementById('cfRefundWrap');
 
     function syncConditionalFields() {
         const cat = categorySelect.value;
         managerWrap.style.display = (cat === 'sotuv' || cat === 'ichki-sotuv') ? '' : 'none';
         employeeWrap.style.display = purposeSelect.value === CASH_FLOW_SALARY_PURPOSE ? '' : 'none';
+        refundWrap.style.display = purposeSelect.value === CASH_FLOW_REFUND_PURPOSE ? '' : 'none';
     }
     categorySelect.addEventListener('change', () => {
         purposeSelect.innerHTML = cfPurposeOptions(categorySelect.value);
         syncConditionalFields();
     });
     purposeSelect.addEventListener('change', syncConditionalFields);
+    document.getElementById('cfRefundLead').onchange = event => {
+        const lead = refundLeads.find(l => l.id === event.target.value);
+        if (lead) {
+            document.getElementById('cfRefundLanguage').value = lead.language;
+            document.getElementById('cfTxManager').value = lead.managerId || '';
+        }
+    };
     if (existing?.purpose) purposeSelect.value = existing.purpose;
     syncConditionalFields();
 
@@ -12458,6 +12481,10 @@ function openCashFlowModal(editId) {
         const amount = Number(document.getElementById('cfTxAmount').value.replace(/,/g, '')) || 0;
         const date = document.getElementById('cfTxDate').value || today;
         if (amount <= 0) { alert("Summani to'g'ri kiriting"); return; }
+        const isRefund = purposeSelect.value === CASH_FLOW_REFUND_PURPOSE;
+        const refundLead = refundLeads.find(l => l.id === document.getElementById('cfRefundLead').value);
+        if (isRefund && (!refundLead && !document.getElementById('cfTxManager').value)) { alert('Qaytarilgan bitim yoki sotuv menejerini tanlang'); return; }
+        if (isRefund && document.getElementById('cfTxType').value !== 'chiqim') { alert('Pul qaytarish uchun Chiqim turini tanlang'); return; }
         const tx = {
             id: existing?.id || ('cf' + Date.now()),
             type: document.getElementById('cfTxType').value,
@@ -12466,7 +12493,8 @@ function openCashFlowModal(editId) {
             category: categorySelect.value,
             purpose: purposeSelect.value,
             paymentMethod: document.getElementById('cfTxMethod').value,
-            managerId: document.getElementById('cfTxManager').value || null,
+            managerId: isRefund ? (refundLead?.managerId || document.getElementById('cfTxManager').value || null) : (document.getElementById('cfTxManager').value || null),
+            ...(isRefund ? { leadId: refundLead?.id || '', language: refundLead?.language || document.getElementById('cfRefundLanguage').value } : {}),
             employeeId: document.getElementById('cfTxEmployee').value || null,
             person: document.getElementById('cfTxPerson').value.trim(),
             notes: document.getElementById('cfTxNotes').value.trim(),
@@ -21184,7 +21212,8 @@ const HR_ROLE_MAP_MODAL = {
     'yordamchi': "Yordamchi o'qituvchi",
     'marketolog': 'Marketolog',
     'targetolog': 'Targetolog',
-    'head-of-teachers': 'Head of Teachers'
+    'head-of-teachers': 'Head of Teachers',
+    'buxgalter': 'Buxgalter (Moliya)'
 };
 
 // 24-vazifa: har bir asosiy o'qituvchi o'zining sinov darsi Telegram guruhiga
@@ -21386,7 +21415,7 @@ function resolveRopLang() {
     return (checked && checked.value === 'russian') ? 'russian' : 'english';
 }
 
-const HR_DEPARTMENTS = ['Sotuv', 'Akademik', 'Marketing', 'HR', 'IT'];
+const HR_DEPARTMENTS = ['Sotuv', 'Akademik', 'Marketing', 'Moliya', 'HR', 'IT'];
 
 function getHrEmployees() {
     // Server cache ustunlik (initStorage dan keyin to'ldiriladi)
@@ -21697,6 +21726,7 @@ function openEditEmployeeModal(empId) {
             <label>Lavozim (rol) <span style="color:var(--danger)">*</span></label>
             <select id="editEmpRole" class="form-control">${roleOptions}</select>
         </div>
+        ${payrollUI.employeeField(displayRole, emp.kpiTemplateId)}
         ${teacherLangHtml(preselectedLang)}
         ${trialGroupLinkHtml(emp.trialGroupLink || '')}
         ${managerLangHtml(emp.lang || 'english')}
@@ -21768,6 +21798,7 @@ function openEditEmployeeModal(empId) {
     bindTrialGroupToggle('editEmpRole');
     bindManagerLangToggle('editEmpRole');
     bindRopLangToggle('editEmpRole');
+    payrollUI.bindEmployee('editEmpRole');
 
     // Avatar preview (agar mavjud bo'lsa, DOM orqali src o'rnatamiz)
     if (emp.avatar) {
@@ -21829,6 +21860,7 @@ function openEditEmployeeModal(empId) {
             birthDate: document.getElementById('editEmpBirthDate').value,
             startDate: document.getElementById('editEmpStartDate').value,
             role: resolvedRole,
+            kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             phone,
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
@@ -21956,6 +21988,7 @@ function openAddEmployeeModal() {
             <label>Lavozim (rol) <span style="color:var(--danger)">*</span></label>
             <select id="empRole" class="form-control">${roleOptions}</select>
         </div>
+        ${payrollUI.employeeField('')}
         ${teacherLangHtml()}
         ${trialGroupLinkHtml()}
         ${managerLangHtml()}
@@ -22034,6 +22067,8 @@ function openAddEmployeeModal() {
     bindTrialGroupToggle('empRole');
     bindManagerLangToggle('empRole');
     bindRopLangToggle('empRole');
+    payrollUI.bindEmployee('empRole');
+    document.getElementById('empRole').dispatchEvent(new Event('change'));
 
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
 
@@ -22080,6 +22115,7 @@ function openAddEmployeeModal() {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
             role, phone, email, department, status, login,
+            kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
             lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : 'english'
@@ -24519,6 +24555,7 @@ function renderLeaderboardSection() {
     const _cuRating = getCurrentUser();
     const _ratingLangFilter = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const allSalesManagers = getSalesManagers(_ratingLangFilter);
+    const payrollIncome = payrollUI.leaderboardIncome(_ratingLangFilter, _ratingPeriod);
     const managers = _cuRating && _cuRating.role === 'rop'
         ? allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english'))
         : allSalesManagers;
@@ -24581,14 +24618,14 @@ function renderLeaderboardSection() {
                         <th style="text-align:right">Bitimlar</th>
                         <th style="text-align:right">Bajarildi</th>
                         <th style="text-align:right">Reja</th>
-                        <th style="text-align:right">Daromad (10%)</th>
+                        <th style="text-align:right">Daromad (KPI)</th>
                         <th style="min-width:140px">Rejaga yetish</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${ranked.length ? ranked.map((m, i) => {
                         const pct = Math.min(100, m.target > 0 ? Math.round((m.sales / m.target) * 100) : 0);
-                        const commission = Math.round(m.sales * 0.1);
+                        const commission = payrollIncome[m.id];
                         const medal = i < 3 ? podiumMedals[i] : `<span style="color:var(--text-muted);font-weight:700">${i + 1}</span>`;
                         const barColor = pctToPlanColor(pct);
                         return `<tr>
@@ -24605,7 +24642,7 @@ function renderLeaderboardSection() {
                             <td style="text-align:right;font-weight:700;color:#059669">${m.deals} ta</td>
                             <td style="text-align:right;font-weight:700;color:#6366f1">${fmtMoney(m.sales)}</td>
                             <td style="text-align:right;color:var(--text-muted)">${fmtMoney(m.target)}</td>
-                            <td style="text-align:right;color:#16a34a;font-weight:600">${fmtMoney(commission)}</td>
+                            <td style="text-align:right;color:#16a34a;font-weight:600">${commission == null ? '—' : payrollUI.money(commission)}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
@@ -25058,6 +25095,11 @@ function openAddBonusHistoryModal() {
                 <select id="bhBonus" class="form-control">${bonusOpts}</select>
             </div>
             <div>
+                <label class="form-label">Pul bonusi (so‘m, ixtiyoriy)</label>
+                <input id="bhAmount" class="form-control" inputmode="numeric" placeholder="KPI shablonidan olinadi">
+                <small>Bo‘sh qolsa Moliya → KPI dagi qiymat olinadi. Sovg‘a va dollar qiymatini so‘mda aniq kiriting.</small>
+            </div>
+            <div>
                 <label class="form-label">Sana</label>
                 <input id="bhDate" type="date" lang="en-GB" class="form-control" value="${today}">
             </div>
@@ -25078,7 +25120,10 @@ function openAddBonusHistoryModal() {
         const note = document.getElementById('bhNote')?.value || '';
         if (!managerId || !bonusId) { alert('Menejer va bonusni tanlang'); return; }
         const hist = getItem(STORAGE_KEYS.bonusHistory, []);
-        hist.unshift({ id: 'bh_' + Date.now(), managerId, bonusId, date, note });
+        const amountText = document.getElementById('bhAmount')?.value.trim() || '';
+        const amount = Number(amountText.replace(/[\s,]/g, ''));
+        if (amountText && (!Number.isFinite(amount) || amount < 0)) { alert('Bonus summasi noto‘g‘ri'); return; }
+        hist.unshift({ id: 'bh_' + Date.now(), managerId, bonusId, date, note, ...(amountText ? { amount } : {}) });
         setItem(STORAGE_KEYS.bonusHistory, hist);
         closeModal();
         renderBonusHistorySection();

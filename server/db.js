@@ -14,6 +14,7 @@ const leadWorkflow = require('../js/leadWorkflow');
 const { migrateMergedLeadStage } = require('./services/leadWorkflowMigration');
 const trialWorkflow = require('../js/trialWorkflow');
 const trialLessons = require('./services/trialLessons');
+const payroll = require('./services/payroll');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -311,6 +312,7 @@ async function initSchema() {
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
     // 24-vazifa: asosiy o'qituvchining sinov darsi Telegram guruhi havolasi
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS trial_group_link TEXT DEFAULT ''`).catch(() => {});
+    await payroll.initSchema(pool);
 
     // Migration: leads va students jadvallariga extra_data qo'shish
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
@@ -865,7 +867,8 @@ async function getHrEmployeesData() {
         cardNumber: r.card_number || '', passportSeries: r.passport_series || '',
         pinfl: r.pinfl || '', address: r.address || '',
         lang: r.lang || 'english',
-        trialGroupLink: r.trial_group_link || ''
+        trialGroupLink: r.trial_group_link || '',
+        kpiTemplateId: r.kpi_template_id || ''
     }));
 }
 
@@ -1146,7 +1149,8 @@ async function getFullState() {
         payments: paymentRows.map(rowToPayment),
         leads, hrEmployees, bookRoadmap, mobileContent,
         scripts, bonusHistory, bonusData, salesPlan, cashFlow, orgChart, manualMetrics,
-        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans, targetMonitoringPlan, targetDailyAdSpend, archive
+        liveGrades, demoStudentId, studentMessages, peerMessages, studentActivity, shopOrders, guides, individualSalesPlans, targetMonitoringPlan, targetDailyAdSpend, archive,
+        payrollRates: Object.fromEntries((await q('SELECT language,data FROM salary_kpi_settings')).map(r => [r.language, { teacher: r.data.teacher, assistant: r.data.assistant }]))
     };
 }
 
@@ -1594,23 +1598,32 @@ async function restoreLead(id, actor = {}) {
     return restored;
 }
 
-async function saveHrEmployeesData(client, employees) {
+async function saveHrEmployeesData(client, employees, actor = {}) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
     await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
+    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id FROM hr_employees')).rows;
+    for (const e of employees) {
+        const matchedRole = require('../js/payrollEngine').role(e);
+        if (e.kpiTemplateId && e.kpiTemplateId !== matchedRole) throw Object.assign(new Error('KPI shabloni lavozimga mos emas'), { status: 400 });
+        const old = oldEmployees.find(r => r.id === e.id);
+        const before = old ? { role: old.role, startDate: old.start_date || old.join_date, kpiTemplateId: old.kpi_template_id || '' } : null;
+        const after = { role: e.role, startDate: e.startDate || e.joinDate || '', kpiTemplateId: e.kpiTemplateId || '' };
+        if (JSON.stringify(before) !== JSON.stringify(after)) await payroll.audit(client, actor, 'employee-kpi', e.id, before, after);
+    }
     await client.query('DELETE FROM hr_employees');
     for (const e of (employees || [])) {
         await client.query(
             `INSERT INTO hr_employees
                 (id, name, first_name, last_name, role, login, phone, email,
                  department, status, join_date, gender, birth_date, start_date,
-                 card_number, passport_series, pinfl, address, lang, trial_group_link)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
             [e.id, e.name, e.firstName || '', e.lastName || '',
              e.role || 'employee', e.login || '', e.phone || '', e.email || '',
              e.department || '', e.status || 'active', e.joinDate || '',
              e.gender || '', e.birthDate || '', e.startDate || '',
              e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '',
-             e.lang || 'english', e.trialGroupLink || '']
+             e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '']
         );
     }
 }
@@ -3712,9 +3725,13 @@ const SHOP_ORDER_STAGE_LABELS = {
     delivered: 'Yetkazildi',
 };
 
-async function patchState(partial) {
+async function patchState(partial, actor = {}) {
     await detectPatchStateNotificationEvents(partial);
     await tx(async (client) => {
+        for (const key of ['salesPlan', 'bonusData']) if (partial[key] !== undefined) {
+            const previous = (await client.query('SELECT data FROM json_data WHERE key=$1', [key])).rows[0]?.data;
+            if (JSON.stringify(previous) !== JSON.stringify(partial[key])) await payroll.audit(client, actor, key, key, previous, partial[key]);
+        }
         if (partial.teachers)           await saveTeachers(client, partial.teachers);
         if (partial.students)           await saveStudents(client, partial.students, partial.removedStudentIds);
         if (partial.salesManagers)      await saveSalesManagers(client, partial.salesManagers);
@@ -3723,7 +3740,7 @@ async function patchState(partial) {
         if (partial.assistantAttendance) await saveAttendanceTable(client, 'assistant_attendance', partial.assistantAttendance);
         if (partial.payments)           await savePayments(client, partial.payments);
         if (partial.leads)              await saveLeads(client, partial.leads);
-        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees);
+        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor);
         if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap);
         if (partial.mobileContent)      await saveMobileContentData(client, partial.mobileContent);
         if (partial.scripts !== undefined)     await saveJsonData(client, 'scripts', partial.scripts);
@@ -4063,7 +4080,11 @@ async function createUser({ name, email, passwordHash, role }) {
 // Yangi xodim va uning kirish hisobini bitta tranzaksiyada yaratadi.
 // Shunda users yozuvi yaralib, hr_employees yozuvi saqlanmay qolishi (yoki
 // aksincha) mumkin emas.
-async function createHrUserAccount({ employee, login, passwordHash, userRole, salesManagerId }) {
+async function createHrUserAccount({ employee, login, passwordHash, userRole, salesManagerId, actor = {} }) {
+    const matchedRole = require('../js/payrollEngine').role(employee);
+    if (employee.kpiTemplateId && employee.kpiTemplateId !== matchedRole) {
+        throw Object.assign(new Error('KPI shabloni lavozimga mos emas'), { status: 400 });
+    }
     const accountId = randomUUID();
     await tx(async client => {
         await client.query(
@@ -4083,15 +4104,19 @@ async function createHrUserAccount({ employee, login, passwordHash, userRole, sa
             `INSERT INTO hr_employees
                 (id, name, first_name, last_name, role, login, phone, email,
                  department, status, join_date, gender, birth_date, start_date,
-                 card_number, passport_series, pinfl, address, lang, trial_group_link)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
             [employee.id, employee.name, employee.firstName || '', employee.lastName || '',
              employee.role || 'employee', login, employee.phone || '', employee.email || '',
              employee.department || '', employee.status || 'active', employee.joinDate || '',
              employee.gender || '', employee.birthDate || '', employee.startDate || '',
              employee.cardNumber || '', employee.passportSeries || '', employee.pinfl || '',
-             employee.address || '', employee.lang || 'english', employee.trialGroupLink || '']
+             employee.address || '', employee.lang || 'english', employee.trialGroupLink || '', employee.kpiTemplateId || '']
         );
+        await payroll.audit(client, actor, 'employee-kpi', employee.id, null, {
+            role: employee.role, startDate: employee.startDate || employee.joinDate || '',
+            kpiTemplateId: employee.kpiTemplateId || ''
+        });
     });
     return findUserById(accountId);
 }
