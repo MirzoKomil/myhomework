@@ -3810,6 +3810,25 @@ body {
     white-space: nowrap;
 }
 
+.lead-card-deferred-dates {
+    display: grid;
+    gap: 5px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-left: 3px solid #6366f1;
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.lead-card-deferred-dates time {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .lead-card-footer {
     display: flex;
     align-items: center;

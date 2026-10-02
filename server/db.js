@@ -10,6 +10,8 @@ const { sanitizeMobileContent } = require('../js/mobileContentPolicy');
 const { migrateMobileContentPolicy } = require('./services/mobileContentMigration');
 const studentAccess = require('../js/studentAccess');
 const { provisionLeadStudent, STUDENT_PROVISION_LOCK } = require('./services/leadStudentProvisioning');
+const leadWorkflow = require('../js/leadWorkflow');
+const { migrateMergedLeadStage } = require('./services/leadWorkflowMigration');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -1383,7 +1385,7 @@ function leadDbPayload(lead, language, existingCreatedAt = null) {
         language: normalizeStoredLeadLanguage(language || _language),
         date: date || '',
         externalId: externalId || null,
-        status: status || 'yangi-lidlar',
+        status: leadWorkflow.canonicalStatus(status),
         leadType: leadType === 'target' ? 'target' : 'organic',
         comments: Array.isArray(comments) ? comments : [],
         attachments,
@@ -1421,6 +1423,13 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
 
     // PATCH qisman obyekt yuborsa ham mavjud maydonlar bo'shab ketmasin.
     const merged = existingRow ? { ...before, ...lead, id: existingRow.id } : lead;
+    const stageValidation = leadWorkflow.validateStageChange(before, merged);
+    if (stageValidation) {
+        const err = new Error(stageValidation.error);
+        err.status = 400;
+        err.code = 'LEAD_SURVEY_REQUIRED';
+        throw err;
+    }
 
     // Biriktirilgan vaqtni server ham boshqaradi: API/import orqali menejer
     // o'zgarsa, statistika hech qachon lid yaratilgan yoki yangilangan sanaga
@@ -1439,10 +1448,10 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
     const recoveryPending = before?.recoveryPending === true
         || String(before?.recoveryPending || '').toLowerCase() === 'true';
     if (existingRow && recoveryPending) {
-        const importedStatus = String(before.recoveryImportedStatus || before.status || 'yangi-lidlar');
+        const importedStatus = leadWorkflow.canonicalStatus(before.recoveryImportedStatus || before.status || 'yangi-lidlar');
         const managerAssigned = !String(before.managerId || '').trim()
             && Boolean(String(merged.managerId || '').trim());
-        const statusChanged = String(merged.status || 'yangi-lidlar') !== importedStatus;
+        const statusChanged = leadWorkflow.canonicalStatus(merged.status) !== importedStatus;
         if (managerAssigned || statusChanged) {
             const reviewedAt = new Date().toISOString();
             merged.recoveryPending = false;
@@ -4203,6 +4212,9 @@ async function init() {
     }
     await initSchema();
     await seedIfEmpty();
+    let mergedLeadCount = 0;
+    await tx(async client => { mergedLeadCount = await migrateMergedLeadStage(client, rowToLead); });
+    if (mergedLeadCount) console.log(`[DB] Ma’lumot berildi → Bog‘lanildi: ${mergedLeadCount} ta lid ko‘chirildi (audit saqlandi)`);
     await tx(migrateMobileContentPolicy);
     await migrateMultipleChoiceCorrectIndex().catch(err => console.error('[DB] correctIndex tuzatishda xatolik:', err.message));
     await migrateMultipleChoiceManualFixes().catch(err => console.error('[DB] correctIndex qo\'lda tuzatishda xatolik:', err.message));

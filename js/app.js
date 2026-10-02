@@ -9945,7 +9945,8 @@ function renderSdpSales(s) {
         'yangi-lidlar': 'Yangi lid',
         'boglanishga-urinilmoqda': 'Bog\'lanishga urinilmoqda',
         'boglanildi': 'Bog\'lanildi',
-        'malumot-berildi': 'Ma\'lumot berildi',
+        'malumot-berildi': 'Bog\'lanildi',
+        'keyin-sotib-olmoqchi': 'Keyin sotib olmoqchi',
         'qaror-jarayonida': 'Qaror jarayonida',
         'qaror-tolov': 'Qaror/To\'lov',
         'sinov-darsida': 'Sinov darsida',
@@ -9956,10 +9957,10 @@ function renderSdpSales(s) {
     };
 
     const allSteps = [
-        'yangi-lidlar','boglanishga-urinilmoqda','boglanildi','malumot-berildi',
-        'qaror-jarayonida','qaror-tolov','sinov-darsida','tolov-jarayonida','tolov-yopildi'
+        'yangi-lidlar','boglanishga-urinilmoqda','boglanildi','sinov-darsida',
+        'qaror-jarayonida','keyin-sotib-olmoqchi','tolov-jarayonida','tolov-yopildi'
     ];
-    const currentIdx = allSteps.indexOf(lead.status);
+    const currentIdx = allSteps.indexOf(normalizeLeadStatus(lead.status));
 
     const steps = allSteps.map((step, i) => {
         const done = i <= currentIdx;
@@ -13994,9 +13995,9 @@ const FUNNEL_STAGES = [
     { id: 'yangi-lidlar',             label: 'Yangi lidlar',             color: '#3B82F6' },
     { id: 'boglanishga-urinilmoqda',  label: "Bog'lanishga urinilmoqda", color: '#7C3AED' },
     { id: 'boglanildi',               label: "Bog'lanildi",              color: '#0891B2' },
-    { id: 'malumot-berildi',          label: "Ma'lumot berildi",         color: '#4F46E5' },
-    { id: 'qaror-jarayonida',         label: 'Qaror jarayonida',         color: '#EA580C' },
     { id: 'sinov-darsida',            label: 'Sinov darsida',            color: '#16A34A' },
+    { id: 'qaror-jarayonida',         label: 'Qaror jarayonida',         color: '#EA580C' },
+    { id: 'keyin-sotib-olmoqchi',     label: 'Keyin sotib olmoqchi',     color: '#4F46E5' },
     { id: 'tolov-jarayonida',         label: "To'lov jarayonida",        color: '#D97706' },
     { id: 'tolov-yopildi',            label: "To'lov yopildi",           color: '#059669' },
 ];
@@ -14967,6 +14968,12 @@ const FAILED_SALE_REASON_GROUPS = [
             { id: 'wrong-number', label: 'Noto\'g\'ri raqam ekan' },
             { id: 'no-response-6', label: 'Javob bermadi (6+ urinishdan so\'ng)' },
             { id: 'stopped-answering', label: 'Telefonini olmay qo\'ydi' },
+            { id: 'price-expensive', label: 'Narx qimmat' },
+            { id: 'parents-refused', label: 'Ota-onasi ruxsat bermadi' },
+            { id: 'family-refused', label: 'Uydagi boshqalar ruxsat bermadi' },
+            { id: 'time-mismatch', label: 'Vaqti mos emas' },
+            { id: 'chose-online', label: 'Boshqa onlayn maktabni tanladi' },
+            { id: 'chose-offline', label: 'Oflayn o\'quv markazni tanladi' },
         ]
     },
     {
@@ -15022,6 +15029,7 @@ const FAILED_SALE_FROM_COLUMN_MAP = {
     'qaror-jarayonida':        ['qaror-tolov'],
     'tolov-jarayonida':        ['qaror-tolov'],
     'tolov-yopildi':           ['qaror-tolov'],
+    'keyin-sotib-olmoqchi':    ['qaror-tolov'],
 };
 
 const SIFATSIZ_LID_REASONS = [
@@ -15299,7 +15307,7 @@ const LEAD_LEARNING_GOALS = [
 ];
 
 function needsConnectedSurveyPrompt(toStatus) {
-    return toStatus === 'boglanildi';
+    return normalizeLeadStatus(toStatus) === 'boglanildi';
 }
 
 function needsInfoProvidedPrompt(fromStatus, toStatus) {
@@ -15307,8 +15315,7 @@ function needsInfoProvidedPrompt(fromStatus, toStatus) {
 }
 
 function needsConnectedSurveyBeforeInfo(fromStatus, lead) {
-    if (fromStatus === 'boglanildi') return false;
-    return !lead?.connectedSurvey;
+    return !leadWorkflow.hasCombinedSurvey(lead);
 }
 
 function openMalumotBerildiFlow(lang, leadId, fromStatus) {
@@ -15328,13 +15335,11 @@ function needsDecisionPrompt(fromStatus, toStatus) {
 }
 
 function needsConnectedSurveyBeforeDecision(fromStatus, lead) {
-    if (fromStatus === 'boglanildi' || fromStatus === 'malumot-berildi') return false;
-    return !lead?.connectedSurvey;
+    return !leadWorkflow.hasCombinedSurvey(lead);
 }
 
 function needsInfoProvidedBeforeDecision(fromStatus, lead) {
-    if (fromStatus === 'malumot-berildi') return false;
-    return !lead?.infoProvidedSurvey;
+    return !leadWorkflow.hasInfoSurvey(lead);
 }
 
 function openQarorJarayonidaFlow(lang, leadId, fromStatus) {
@@ -15357,6 +15362,91 @@ function needsPaymentPrompt(fromStatus, toStatus) {
     return toStatus === 'tolov-jarayonida';
 }
 
+function collectDeferredPurchaseData(modalBody) {
+    const selected = modalBody.querySelector('[data-deferred-reason]:checked');
+    const survey = {
+        reasonId: selected?.value || '',
+        otherReason: selected?.value === 'other' ? (modalBody.querySelector('#deferredOtherReason')?.value || '').trim() : '',
+        purchaseDate: modalBody.querySelector('#deferredPurchaseDate')?.value || '',
+        contactDate: modalBody.querySelector('#deferredContactDate')?.value || ''
+    };
+    const validation = leadWorkflow.validateDeferredSurvey(survey);
+    if (validation) return validation;
+    survey.reasonLabel = leadWorkflow.DEFERRED_REASONS.find(r => r.id === survey.reasonId).label;
+    return { data: survey };
+}
+
+function openDeferredPurchaseModal(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const previous = lead.deferredPurchaseSurvey || {};
+    const options = leadWorkflow.DEFERRED_REASONS.map(r => `
+        <label class="lead-reason-option">
+            <input type="radio" name="deferredReason" value="${r.id}" data-deferred-reason ${previous.reasonId === r.id ? 'checked' : ''}>
+            <span>${escapeHtml(r.label)}</span>
+        </label>`).join('');
+    openModal(`${escapeHtml(lead.name)} — Keyin sotib olmoqchi`, `
+        <div class="lead-survey">
+            <section class="lead-survey-section">
+                <h4 class="lead-survey-title">Kursni sotib olishni nega kechiktirdi?</h4>
+                <div class="lead-reason-list">${options}</div>
+                <div class="form-group" id="deferredOtherBlock" hidden>
+                    <label for="deferredOtherReason">Boshqa sabab (majburiy)</label>
+                    <textarea id="deferredOtherReason" class="form-control" rows="3">${escapeHtml(previous.otherReason || '')}</textarea>
+                </div>
+            </section>
+            <div class="form-group">
+                <label for="deferredPurchaseDate">Qachon sotib olmoqchi? (majburiy)</label>
+                <input type="date" id="deferredPurchaseDate" class="form-control" value="${escapeHtml(previous.purchaseDate || '')}" required>
+            </div>
+            <div class="form-group">
+                <label for="deferredContactDate">Qachon xabarlashishga kelishib olindi? (majburiy)</label>
+                <input type="date" id="deferredContactDate" class="form-control" value="${escapeHtml(previous.contactDate || '')}" required>
+            </div>
+        </div>`, `
+        <button type="button" class="btn-danger-sm" id="cancelDeferredPurchase">Bekor qilish</button>
+        <button type="button" class="btn-primary-sm" id="confirmDeferredPurchase">Saqlash va ko‘chirish</button>`);
+    const modalBody = document.getElementById('modalBody');
+    wireLeadModalValidationClear(modalBody);
+    const syncOtherReason = () => {
+        const isOther = modalBody.querySelector('[data-deferred-reason]:checked')?.value === 'other';
+        modalBody.querySelector('#deferredOtherBlock').hidden = !isOther;
+        modalBody.querySelector('#deferredOtherReason').required = isOther;
+    };
+    modalBody.querySelectorAll('[data-deferred-reason]').forEach(radio => radio.addEventListener('change', syncOtherReason));
+    syncOtherReason();
+    document.getElementById('cancelDeferredPurchase').onclick = () => { closeModal(); renderLeads(); };
+    document.getElementById('confirmDeferredPurchase').onclick = () => {
+        const result = collectDeferredPurchaseData(modalBody);
+        if (result.error) { showLeadModalValidation(modalBody, result); return; }
+        const survey = { ...result.data, submittedAt: new Date().toISOString() };
+        const text = ['Keyin sotib olmoqchi:',
+            `• Sabab: ${survey.reasonLabel}${survey.otherReason ? ': ' + survey.otherReason : ''}`,
+            `• Sotib olish sanasi: ${leadWorkflow.displayDate(survey.purchaseDate)}`,
+            `• Xabarlashish sanasi: ${leadWorkflow.displayDate(survey.contactDate)}`].join('\n');
+        const updated = updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return { ...base, status: leadWorkflow.DEFERRED_STATUS, deferredPurchaseSurvey: survey,
+                comments: [...base.comments, createLeadComment({ type: 'deferred-purchase', text,
+                    author: getCurrentUser()?.name || 'Admin', reason: survey.reasonLabel })] };
+        });
+        if (!updated) { alert('Lid topilmadi'); return; }
+        closeModal();
+        renderLeads();
+    };
+}
+
+function renderDeferredPurchaseDates(lead) {
+    if (normalizeLeadStatus(lead.status) !== leadWorkflow.DEFERRED_STATUS) return '';
+    const survey = lead.deferredPurchaseSurvey || {};
+    const purchase = leadWorkflow.displayDate(survey.purchaseDate);
+    const contact = leadWorkflow.displayDate(survey.contactDate);
+    return `<div class="lead-card-deferred-dates">
+        ${purchase ? `<div><strong>Sotib oladi:</strong> <time datetime="${escapeHtml(survey.purchaseDate)}">${purchase}</time></div>` : ''}
+        ${contact ? `<div><span>Xabarlashish:</span> <time datetime="${escapeHtml(survey.contactDate)}">${contact}</time></div>` : ''}
+    </div>`;
+}
+
 function getLeadColumnIndex(status) {
     const id = normalizeLeadStatus(status);
     const idx = LEAD_COLUMNS.findIndex(c => c.id === id);
@@ -15366,7 +15456,7 @@ function getLeadColumnIndex(status) {
 // ── Tashlab ketilgan ustunlar so'rovnomasi (cascade) ─────────────────────────
 // Qoidalar:
 //  - Faqat oldinga harakatda ishlaydi (fromIdx < toIdx)
-//  - boglanildi / malumot-berildi oraliqda qolsa — ularning so'rovnomalari chiqadi
+//  - boglanildi oraliqda qolsa — birlashtirilgan so'rovnoma chiqadi
 //  - qaror-jarayonida so'rovnomasi bu cascade orqali CHIQMAYDI —
 //    faqat lid TO'G'RIDAN-TO'G'RI qaror-jarayonida ustuniga ko'chirilganda chiqadi
 // Foydalanish: startMvCascade → continueMvCascade (har bir so'rovnoma tasdiqlanganida)
@@ -15386,8 +15476,7 @@ function getSkippedSurveySteps(fromStatus, toStatus, lead) {
     for (const col of LEAD_COLUMNS) {
         const idx = getLeadColumnIndex(col.id);
         if (idx <= fromIdx || idx >= toIdx) continue;
-        if (col.id === 'boglanildi'     && !lead?.connectedSurvey)    steps.push('connected');
-        else if (col.id === 'malumot-berildi' && !lead?.infoProvidedSurvey) steps.push('info');
+        if (col.id === 'boglanildi' && !leadWorkflow.hasCombinedSurvey(lead)) steps.push('connected');
     }
     return steps;
 }
@@ -15420,6 +15509,7 @@ function continueMvCascade() {
 }
 
 function dispatchLeadTargetFlow(lang, leadId, fromStatus, toStatus) {
+    if (toStatus === leadWorkflow.DEFERRED_STATUS) { openDeferredPurchaseModal(lang, leadId); return; }
     if (toStatus === 'sinov-darsida') { openTrialLessonFlow(lang, leadId, fromStatus); return; }
     if (toStatus === 'tolov-yopildi') { openTolovYopildiFlow(lang, leadId, fromStatus); return; }
     if (needsFailedSalePrompt(fromStatus, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus); return; }
@@ -15446,14 +15536,15 @@ function getPendingSurveyStepsBeforePayment(fromStatus) {
         if (idx <= fromIdx || idx >= paymentIdx) continue;
         if (col.id === 'sinov-darsida') continue;
         if (col.id === 'boglanildi') steps.push('connected');
-        else if (col.id === 'malumot-berildi') steps.push('info');
     }
     return steps;
 }
 
 function getNextSurveyStepBeforePayment(fromStatus, lead) {
+    if (['boglanildi', leadWorkflow.DEFERRED_STATUS].includes(normalizeLeadStatus(fromStatus))
+        && !leadWorkflow.hasCombinedSurvey(lead)) return 'connected';
     for (const step of getPendingSurveyStepsBeforePayment(fromStatus)) {
-        if (step === 'connected' && lead.connectedSurvey) continue;
+        if (step === 'connected' && leadWorkflow.hasCombinedSurvey(lead)) continue;
         if (step === 'info' && lead.infoProvidedSurvey) continue;
         if (step === 'decision' && lead.decisionSurvey) continue;
         return step;
@@ -15912,16 +16003,18 @@ function getPendingSurveyStepsBeforePaymentClosed(fromStatus) {
         if (PAYMENT_CLOSED_SKIP_COLUMNS.has(col.id)) continue;
         if (col.id === 'boglanishga-urinilmoqda') steps.push('contact-fail');
         else if (col.id === 'boglanildi') steps.push('connected');
-        else if (col.id === 'malumot-berildi') steps.push('info');
-        else if (col.id === 'qaror-jarayonida') steps.push('decision');
+        else if (col.id === 'qaror-jarayonida'
+            && fromIdx < getLeadColumnIndex('sinov-darsida')) steps.push('decision');
     }
     return steps;
 }
 
 function getNextSurveyStepBeforePaymentClosed(fromStatus, lead) {
+    if (['boglanildi', leadWorkflow.DEFERRED_STATUS].includes(normalizeLeadStatus(fromStatus))
+        && !leadWorkflow.hasCombinedSurvey(lead)) return 'connected';
     for (const step of getPendingSurveyStepsBeforePaymentClosed(fromStatus)) {
         if (step === 'contact-fail' && leadHasContactFailSurvey(lead)) continue;
-        if (step === 'connected' && lead.connectedSurvey) continue;
+        if (step === 'connected' && leadWorkflow.hasCombinedSurvey(lead)) continue;
         if (step === 'info' && lead.infoProvidedSurvey) continue;
         if (step === 'decision' && lead.decisionSurvey) continue;
         return step;
@@ -16027,6 +16120,9 @@ function collectConnectedSurveyData(modalBody) {
     if (!languageLevel) return { error: 'Til darajasini tanlang', target: '[data-survey-field="languageLevel"]' };
     if (!applicant) return { error: 'Ariza kim tomonidan qoldirilganini tanlang', target: '[data-survey-field="applicant"]' };
     if (!ageInput) return { error: 'Yoshni tanlang', target: '#leadSurveyAge' };
+    if (!Number.isFinite(Number(ageInput.value)) || Number(ageInput.value) < 7 || Number(ageInput.value) > 70) {
+        return { error: 'Yosh 7 dan 70 gacha bo‘lishi kerak', target: '#leadSurveyAge' };
+    }
     if (!gender) return { error: 'Jinsini tanlang', target: '[data-survey-field="gender"]' };
     if (!residenceType) return { error: 'Hudud turini tanlang', target: '[data-survey-field="residenceType"]' };
     if (!learningGoal) return { error: 'O\'rganish maqsadini tanlang', target: '[data-survey-field="learningGoal"]' };
@@ -16128,6 +16224,11 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
             <h4 class="lead-survey-title">O'rganish maqsadi</h4>
             ${renderSurveyCarousel('learningGoal', LEAD_LEARNING_GOALS)}
         </section>
+        <section class="lead-survey-section">
+            <h4 class="lead-survey-title">Kurs haqida ma’lumot berish</h4>
+            <div class="lead-info-validation-summary" role="alert" aria-live="polite" hidden></div>
+            ${renderInfoProvidedQuestions()}
+        </section>
     </div>`;
 
     openModal(
@@ -16140,7 +16241,22 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
 
     const modalBody = document.getElementById('modalBody');
     wireLeadModalValidationClear(modalBody);
+    const previous = lead.connectedSurvey || {};
+    const values = { ...previous, uzRegion: previous.region, foreignCountry: previous.country };
+    modalBody.querySelectorAll('[data-survey-field]').forEach(radio => {
+        const value = values[radio.dataset.surveyField];
+        if (value != null) radio.checked = String(value) === radio.value;
+        if (radio.checked) radio.closest('.lead-carousel-item')?.classList.add('is-selected');
+    });
+    modalBody.querySelectorAll('[data-info-field]').forEach(radio => {
+        const answer = (Array.isArray(lead.infoProvidedSurvey) ? lead.infoProvidedSurvey : []).find(a => a.id === radio.dataset.infoField);
+        if (answer) radio.checked = answer.answer === radio.value;
+    });
+    modalBody.addEventListener('change', event => {
+        if (event.target.matches('[data-info-field]')) clearInfoProvidedValidation(modalBody);
+    });
     const ageInput = modalBody.querySelector('#leadSurveyAge');
+    if (ageInput && previous.age != null) ageInput.value = previous.age;
     const ageOutput = modalBody.querySelector('#leadSurveyAgeValue');
     const syncAgeSlider = () => {
         if (!ageInput) return;
@@ -16154,15 +16270,17 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
     ageInput?.addEventListener('input', syncAgeSlider);
     syncAgeSlider();
 
+    const syncResidence = () => {
+        const isUz = modalBody.querySelector('[data-survey-field="residenceType"][value="uz"]')?.checked;
+        const regionBlock = modalBody.querySelector('#surveyRegionBlock');
+        const countryBlock = modalBody.querySelector('#surveyCountryBlock');
+        if (regionBlock) regionBlock.hidden = !isUz;
+        if (countryBlock) countryBlock.hidden = isUz;
+    };
     modalBody.querySelectorAll('[data-survey-field="residenceType"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            const isUz = modalBody.querySelector('[data-survey-field="residenceType"][value="uz"]')?.checked;
-            const regionBlock = modalBody.querySelector('#surveyRegionBlock');
-            const countryBlock = modalBody.querySelector('#surveyCountryBlock');
-            if (regionBlock) regionBlock.hidden = !isUz;
-            if (countryBlock) countryBlock.hidden = isUz;
-        });
+        radio.addEventListener('change', syncResidence);
     });
+    syncResidence();
 
     initSurveyCarousels(modalBody);
 
@@ -16178,6 +16296,9 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
             return;
         }
 
+        const infoResult = collectInfoProvidedData(modalBody);
+        if (infoResult.error) { showInfoProvidedValidation(modalBody, infoResult); return; }
+
         const user = getCurrentUser();
         const author = user?.name || 'Admin';
         const survey = result.data;
@@ -16187,15 +16308,20 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
             const base = normalizeLeadExtras(l);
             const next = {
                 ...base,
-                connectedSurvey: survey,
+                connectedSurvey: { ...(base.connectedSurvey || {}), ...survey },
+                infoProvidedSurvey: infoResult.data,
                 comments: [...base.comments, createLeadComment({
                     type: 'connected-survey',
                     text: commentText,
                     author
+                }), createLeadComment({
+                    type: 'info-provided',
+                    text: formatInfoProvidedComment(infoResult.data),
+                    author
                 })]
             };
             if (!chainTo) {
-                next.status = toStatus;
+                next.status = normalizeLeadStatus(toStatus);
             }
             return next;
         });
@@ -16208,7 +16334,7 @@ function openConnectedSurveyModal(lang, leadId, toStatus, options = {}) {
         closeModal();
         if (chainTo === '__cascade__') { continueMvCascade(); return; }
         if (chainTo === 'malumot-berildi') {
-            openInfoProvidedModal(lang, leadId);
+            moveLeadToStatus(lang, leadId, 'boglanildi');
             return;
         }
         if (chainTo === 'qaror-jarayonida') {
@@ -16269,7 +16395,7 @@ function collectInfoProvidedData(modalBody) {
     const hasNo = LEAD_INFO_PROVIDED_QUESTIONS.some(q => answers[q.id] === 'no');
     if (hasNo) {
         return {
-            error: 'Barcha bandlar uchun «Ha» javobi kerak. Ma\'lumot berildi ustuniga ko\'chirish mumkin emas.'
+            error: 'Barcha bandlar uchun «Ha» javobi kerak. Bog\'lanildi ustuniga ko\'chirish mumkin emas.'
         };
     }
 
@@ -16388,85 +16514,8 @@ function formatInfoProvidedComment(answers) {
 }
 
 function openInfoProvidedModal(lang, leadId, options = {}) {
-    const { chainTo = null } = options;
-    const lead = getLeadById(lang, leadId);
-    if (!lead) return;
-
-    const bodyHtml = `<div class="lead-survey lead-survey--info">
-        <div class="lead-info-validation-summary" role="alert" aria-live="polite" hidden></div>
-        ${renderInfoProvidedQuestions()}
-    </div>`;
-
-    openModal(
-        `${escapeHtml(lead.name)} — Ma'lumot berildi`,
-        bodyHtml,
-        `<button type="button" class="btn-danger-sm" id="cancelInfoProvided">Bekor qilish</button>
-         <button type="button" class="btn-primary-sm" id="confirmInfoProvided">${chainTo ? 'Keyingi bosqich' : "Saqlash va ko'chirish"}</button>`,
-        { wide: true }
-    );
-
-    document.getElementById('cancelInfoProvided').onclick = () => {
-        closeModal();
-        renderLeads();
-    };
-
-    const modalBody = document.getElementById('modalBody');
-    modalBody.addEventListener('change', event => {
-        if (event.target.matches('[data-info-field]')) clearInfoProvidedValidation(modalBody);
-    });
-
-    document.getElementById('confirmInfoProvided').onclick = () => {
-        const result = collectInfoProvidedData(modalBody);
-        if (result.error) {
-            showInfoProvidedValidation(modalBody, result);
-            return;
-        }
-
-        const user = getCurrentUser();
-        const author = user?.name || 'Admin';
-        const answers = result.data;
-        const commentText = formatInfoProvidedComment(answers);
-
-        const updated = updateLeadInStorage(lang, leadId, l => {
-            const base = normalizeLeadExtras(l);
-            const next = {
-                ...base,
-                infoProvidedSurvey: answers,
-                comments: [...base.comments, createLeadComment({
-                    type: 'info-provided',
-                    text: commentText,
-                    author
-                })]
-            };
-            if (!chainTo) {
-                next.status = 'malumot-berildi';
-            }
-            return next;
-        });
-
-        if (!updated) {
-            alert('Lid topilmadi');
-            return;
-        }
-
-        closeModal();
-        if (chainTo === '__cascade__') { continueMvCascade(); return; }
-        if (chainTo === 'qaror-jarayonida') {
-            openDecisionProcessModal(lang, leadId);
-            return;
-        }
-        if (chainTo === 'tolov-jarayonida') {
-            const current = getLeadById(lang, leadId);
-            openTolovJarayonidaFlow(lang, leadId, current?.status);
-            return;
-        }
-        if (chainTo === 'tolov-yopildi') {
-            const current = getLeadById(lang, leadId);
-            openTolovYopildiFlow(lang, leadId, current?.status);
-            return;
-        }
-        renderLeads();
-    };
+    // Historical cascades also use the combined survey; no removed stage is saved.
+    return openConnectedSurveyModal(lang, leadId, 'boglanildi', options);
 }
 
 const LEAD_DECISION_REASONS = [
@@ -18592,9 +18641,9 @@ const LEAD_COLUMNS = [
     { id: 'yangi-lidlar', label: 'Yangi lidlar', bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
     { id: 'boglanishga-urinilmoqda', label: "Bog'lanishga urinilmoqda", bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
     { id: 'boglanildi', label: "Bog'lanildi", bg: '#ECFEFF', border: '#67E8F9', headerBg: 'rgba(6,182,212,0.12)', title: '#0E7490', count: '#0891B2' },
-    { id: 'malumot-berildi', label: "Ma'lumot berildi", bg: '#EEF2FF', border: '#A5B4FC', headerBg: 'rgba(79,70,229,0.12)', title: '#3730A3', count: '#4F46E5' },
-    { id: 'qaror-jarayonida', label: 'Qaror jarayonida', bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)', title: '#C2410C', count: '#EA580C' },
     { id: 'sinov-darsida', label: 'Sinov darsida', bg: '#F0FDF4', border: '#86EFAC', headerBg: 'rgba(22,163,74,0.12)', title: '#166534', count: '#16A34A' },
+    { id: 'qaror-jarayonida', label: 'Qaror jarayonida', bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)', title: '#C2410C', count: '#EA580C' },
+    { id: 'keyin-sotib-olmoqchi', label: 'Keyin sotib olmoqchi', bg: '#EEF2FF', border: '#A5B4FC', headerBg: 'rgba(79,70,229,0.12)', title: '#3730A3', count: '#4F46E5' },
     { id: 'tolov-jarayonida', label: "To'lov jarayonida", bg: '#FFFBEB', border: '#FCD34D', headerBg: 'rgba(217,119,6,0.12)', title: '#B45309', count: '#D97706' },
     { id: 'tolov-yopildi', label: "To'lov yopildi", bg: '#ECFDF5', border: '#6EE7B7', headerBg: 'rgba(5,150,105,0.12)', title: '#047857', count: '#059669' },
     { id: 'muvaffaqiyatsiz-sotuv', label: 'Muvaffaqiyatsiz sotuv', bg: '#FEF2F2', border: '#FCA5A5', headerBg: 'rgba(220,38,38,0.12)', title: '#B91C1C', count: '#DC2626' },
@@ -18604,6 +18653,7 @@ const LEAD_COLUMNS = [
 const LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));
 
 function normalizeLeadStatus(status) {
+    if (status === 'malumot-berildi') return 'boglanildi';
     if (!status || status === 'new') return 'yangi-lidlar';
     if (status === 'organic' || status === 'target') return 'yangi-lidlar';
     return LEAD_STATUS_IDS.has(status) ? status : 'yangi-lidlar';
@@ -18622,12 +18672,8 @@ const LEAD_SLA_RULES = {
         rop: { after: 1440, text: "⚠️ Lid muzlayapti: {name} bilan 24 soat ichida bog'lanib bo'linmadi. Menejer lidni yo'qotyapti." }
     },
     'boglanildi': {
-        manager: [{ after: 0, text: "💬 Mijoz ehtiyojini aniqlang: maqsad va muammosini CRM'ga yozing, keyin unga mos taklif yoki prezentatsiya yuboring!" }],
+        manager: [{ after: 0, text: "💬 Mijoz ehtiyojini aniqlang: maqsad va muammosini CRM'ga yozing, keyin unga mos taklif yoki prezentatsiya yuboring!" }, { after: 720, text: "📩 Feedback oling: Mijoz material bilan tanishdimi? Qayta aloqaga chiqing va sinov darsiga taklif qiling!" }],
         rop: { after: 360, text: "⚠️ Harakat yo'q: 'Bog'lanildi' etapida lid 6 soatdan beri turibdi, keyingi qadam belgilanmadi." }
-    },
-    'malumot-berildi': {
-        manager: [{ after: 720, text: "📩 Feedback oling: Ma'lumot yuborilganiga 12 soat bo'ldi. Mijoz material bilan tanishdimi? Qayta aloqaga chiqing va sinov darsiga taklif qiling!" }],
-        rop: { after: 1440, text: "⚠️ Natija yo'q: Ma'lumot berilgan, lekin 24 soatdan beri qayta aloqa qilinmagan." }
     },
     'qaror-jarayonida': {
         manager: [{ after: 1440, text: "🤔 E'tirozlar bilan ishlang: Mijoz nimada ikkilanmoqda? Natijalar va keyslarni yuboring!" }, { after: 2160, text: "🎁 Trigger qo'llang: Chegirma yoki bonus muddati tugayotganini eslatib qo'ying." }],
@@ -18805,7 +18851,11 @@ function loadVisibleColumnIds() {
         const raw = localStorage.getItem(LEADS_COLUMN_VISIBILITY_KEY);
         const saved = raw ? JSON.parse(raw) : null;
         if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
-            return LEAD_COLUMNS.filter(col => saved[col.id] === true).map(col => col.id);
+            return LEAD_COLUMNS.filter(col => {
+                if (col.id === 'boglanildi' && saved['malumot-berildi'] === true) return true;
+                if (!Object.prototype.hasOwnProperty.call(saved, col.id)) return !LEAD_COLUMNS_HIDDEN_BY_DEFAULT.has(col.id);
+                return saved[col.id] === true;
+            }).map(col => col.id);
         }
     } catch {
         /* default */
@@ -19080,7 +19130,7 @@ function normalizeLeadExtras(lead) {
         managerId: lead.managerId || '',
         comments,
         managerPhoto,
-        attachments: managerPhoto ? [managerPhoto] : []
+        attachments: managerPhoto ? [...new Set([managerPhoto, ...attachments])] : attachments
     };
 }
 
@@ -19505,7 +19555,7 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess)
 
     if (newStatus === 'boglanishga-urinilmoqda') {
         messages.push(`Assalomu alaykum, ${ism}! Sizga Domwork onlayn rus tili maktabidan qo'ng'iroq qildik, bog'lana olmadik. Savollaringiz bo'lsa telegram orqali https://t.me/domwork_admin ga yozishingiz mumkin.`);
-    } else if (newStatus === 'malumot-berildi') {
+    } else if (newStatus === 'boglanildi') {
         messages.push(`Hurmatli ${ism}! Onlayn rus tili kursi bo'yicha barcha batafsil ma'lumotlar sizga Telegramdan yuborildi. Savollaringiz bo'lsa javob berishdan mamnun bo'lamiz. https://t.me/domwork_admin`);
     } else if (newStatus === 'qaror-jarayonida') {
         messages.push(`${ism}! Domwork onlayn rus tili kursiga bugun yozilsangiz, 15% chegirma, mobil ilova va darslik kitoblari bepul beriladi. Imkoniyatni boy bermang!`);
@@ -19836,6 +19886,7 @@ function renderLeadCard(lead, langKey) {
                 <span>${escapeHtml(phone2)}</span>
             </div>
         </div>
+        ${renderDeferredPurchaseDates(normalized)}
         <div class="lead-card-footer">
             <div class="lead-card-actions">
                 <button type="button" class="lead-card-action lead-card-action--mgr${_manager ? ' lead-card-action--active' : ''}" data-lead-manager-photo="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="${escapeHtml(_manager?.name || 'Menejer biriktirilmagan')}">
@@ -20370,6 +20421,8 @@ function renderLeads() {
             const from = normalizeLeadStatus(lead.status);
             if (from === toStatus) return;
 
+            if (toStatus === leadWorkflow.DEFERRED_STATUS) { openDeferredPurchaseModal(lang, leadId); return; }
+
             if (needsContactFailPrompt(from, toStatus)) { openContactFailModal(lang, leadId, toStatus); return; }
             // Sifatsiz lid cascade'dan oldin tekshiriladi — cascade survey ko'rsatilmasin
             if (needsSifatsizLidPrompt(from, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
@@ -20457,6 +20510,8 @@ function initLeadDragDrop(board) {
 
             const fromStatus = payload.fromStatus || '';
             if (fromStatus === toStatus) return;
+
+            if (toStatus === leadWorkflow.DEFERRED_STATUS) { openDeferredPurchaseModal(payload.lang, payload.id); return; }
 
             if (needsContactFailPrompt(fromStatus, toStatus)) {
                 openContactFailModal(payload.lang, payload.id, toStatus);
