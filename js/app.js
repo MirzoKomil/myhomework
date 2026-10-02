@@ -15339,6 +15339,7 @@ function openContactFailModal(lang, leadId, toStatus, options = {}) {
                     type: 'contact-fail',
                     text: `Qo'ng'iroq qilindi, lekin: ${reason.label}`,
                     reason: reason.label,
+                    reasonId: reason.id,
                     author
                 })]
             };
@@ -19237,6 +19238,7 @@ function normalizeLeadExtras(lead) {
             comments.push({
                 id: 'cf-' + (lead.contactFailAt || Date.now()),
                 type: 'contact-fail',
+                legacyContactFail: true,
                 text: `Qo'ng'iroq qilindi, lekin: ${reason}`,
                 reason,
                 author: 'Admin',
@@ -19788,13 +19790,14 @@ function formatCommentTime(ts) {
     });
 }
 
-function createLeadComment({ text, author, type, reason }) {
+function createLeadComment({ text, author, type, reason, reasonId }) {
     return {
         id: 'c' + Date.now(),
         text,
         author: author || 'Admin',
         type: type || 'manual',
         reason: reason || null,
+        ...(reasonId ? { reasonId } : {}),
         createdAt: new Date().toISOString()
     };
 }
@@ -19905,6 +19908,124 @@ function refreshLeadRecordingCounts() {
         .catch(() => {});
 }
 
+let _leadContactReasonFilters = {};
+let _leadContactFilterOpen = false;
+let _leadContactFilterDismissBound = false;
+
+function resolveLeadContactReason(value) {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().replace(/[‘’ʻʼ`]/g, "'").replace(/\s+/g, ' ').toLowerCase();
+    return LEAD_CONTACT_FAIL_REASONS.find(r => r.id === normalized || r.label.toLowerCase() === normalized) || null;
+}
+
+function getLeadContactReason(lead) {
+    const comments = (Array.isArray(lead?.comments) ? lead.comments : []).filter(c => c?.type === 'contact-fail');
+    // Migration-only notes must not replace a real, later call attempt.
+    const actual = comments.filter(c => !c.legacyContactFail && !String(c.id || '').startsWith('cf-'));
+    const events = actual.length ? actual : comments;
+    const latest = events.reduce((previous, current) => {
+        if (!previous) return current;
+        const a = new Date(previous.createdAt).getTime();
+        const b = new Date(current.createdAt).getTime();
+        return Number.isFinite(a) && Number.isFinite(b) && a > b ? previous : current;
+    }, null);
+    if (latest) {
+        const reason = resolveLeadContactReason(latest.reasonId) || resolveLeadContactReason(latest.reason);
+        if (reason) return reason;
+        const text = typeof latest.text === 'string' ? latest.text.replace(/[‘’ʻʼ`]/g, "'").trim() : '';
+        const match = text.match(/^Qo'ng'iroq qilindi, lekin:\s*(.+)$/i);
+        return match ? resolveLeadContactReason(match[1]) : null;
+    }
+    return resolveLeadContactReason(Array.isArray(lead?.contactFailReasons) ? lead.contactFailReasons[0] : null);
+}
+
+function normalizeLeadContactReasonFilters(value) {
+    return LEAD_CONTACT_FAIL_REASONS.filter(r => Array.isArray(value) && value.includes(r.id)).map(r => r.id);
+}
+
+function getLeadContactReasonFilter(lang) {
+    const language = lang === 'russian' ? 'russian' : 'english';
+    try {
+        const saved = localStorage.getItem('mh_contact_reason_filter_v1_' + language);
+        if (saved !== null) return normalizeLeadContactReasonFilters(JSON.parse(saved));
+    } catch {}
+    return normalizeLeadContactReasonFilters(_leadContactReasonFilters[language]);
+}
+
+function setLeadContactReasonFilter(lang, values) {
+    const language = lang === 'russian' ? 'russian' : 'english';
+    const selected = normalizeLeadContactReasonFilters(values);
+    _leadContactReasonFilters[language] = selected;
+    try { localStorage.setItem('mh_contact_reason_filter_v1_' + language, JSON.stringify(selected)); } catch {}
+}
+
+function leadMatchesContactReasonFilter(lead, selected) {
+    return !selected.length || selected.includes(getLeadContactReason(lead)?.id);
+}
+
+function renderLeadContactReasonBadge(lead) {
+    if (normalizeLeadStatus(lead.status) !== 'boglanishga-urinilmoqda') return '';
+    const reason = getLeadContactReason(lead);
+    return reason ? `<span class="lead-contact-reason-badge">${escapeHtml(reason.label)}</span>` : '';
+}
+
+function renderLeadContactReasonFilter(leads, shownCount, lang) {
+    const selected = getLeadContactReasonFilter(lang);
+    const counts = {};
+    leads.forEach(lead => {
+        const id = getLeadContactReason(lead)?.id;
+        if (id) counts[id] = (counts[id] || 0) + 1;
+    });
+    const options = [{ id: 'all', label: 'Barchasi' }, ...LEAD_CONTACT_FAIL_REASONS];
+    return `<div id="leadContactFilterPanel" class="lead-contact-filter-panel" role="group" aria-label="Bog‘lanish sabablari" ${_leadContactFilterOpen ? '' : 'hidden'}>
+        ${options.map(r => `<label class="lead-contact-filter-option">
+            <input type="checkbox" data-contact-reason-filter="${r.id}" ${r.id === 'all' ? (!selected.length ? 'checked' : '') : (selected.includes(r.id) ? 'checked' : '')}>
+            <span>${escapeHtml(r.label)}</span><b>${r.id === 'all' ? leads.length : (counts[r.id] || 0)}</b>
+        </label>`).join('')}
+        <div class="lead-contact-filter-summary" aria-live="polite">${shownCount} / ${leads.length} ta lid ko‘rsatilmoqda</div>
+    </div>`;
+}
+
+function setLeadContactFilterOpen(open) {
+    _leadContactFilterOpen = !!open;
+    const panel = document.getElementById('leadContactFilterPanel');
+    const button = document.getElementById('leadContactFilterButton');
+    if (panel) panel.hidden = !_leadContactFilterOpen;
+    if (button) button.setAttribute('aria-expanded', String(_leadContactFilterOpen));
+}
+
+function wireLeadContactReasonFilter(board, lang) {
+    const button = board.querySelector('#leadContactFilterButton');
+    if (!button) { _leadContactFilterOpen = false; return; }
+    button.addEventListener('click', event => {
+        event.stopPropagation();
+        setLeadContactFilterOpen(!_leadContactFilterOpen);
+    });
+    board.querySelectorAll('[data-contact-reason-filter]').forEach(input => {
+        input.addEventListener('change', () => {
+            const id = input.dataset.contactReasonFilter;
+            let selected = getLeadContactReasonFilter(lang);
+            selected = id === 'all' ? [] : (input.checked ? [...selected, id] : selected.filter(value => value !== id));
+            setLeadContactReasonFilter(lang, selected);
+            _leadContactFilterOpen = true;
+            renderLeads();
+            document.querySelector(`[data-contact-reason-filter="${id}"]`)?.focus({ preventScroll: true });
+        });
+    });
+    if (!_leadContactFilterDismissBound) {
+        _leadContactFilterDismissBound = true;
+        document.addEventListener('pointerdown', event => {
+            if (_leadContactFilterOpen && !event.target.closest('.lead-column-header--contact')) setLeadContactFilterOpen(false);
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && _leadContactFilterOpen) {
+                setLeadContactFilterOpen(false);
+                document.getElementById('leadContactFilterButton')?.focus({ preventScroll: true });
+            }
+        });
+    }
+}
+
 let _trialAttendanceFilter = 'all';
 
 function getTrialAttendanceFilter() {
@@ -20008,6 +20129,7 @@ function renderLeadCard(lead, langKey) {
             ${checkboxHtml}
             <div class="lead-card-title-wrap">
                 <h4 class="lead-card-name">${escapeHtml(normalized.name)}</h4>
+                ${renderLeadContactReasonBadge(lead)}
                 ${renderLeadTrialStatus(normalized)}
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
@@ -20407,16 +20529,18 @@ function renderLeads() {
     }
 
     board.innerHTML = visibleColumns.map(col => {
-        const items = tagged.filter(l => normalizeLeadStatus(l.status) === col.id
-            && (col.id !== 'sinov-darsida' || trialWorkflow.matchesFilter(l, getTrialAttendanceFilter())));
+        const columnItems = tagged.filter(l => normalizeLeadStatus(l.status) === col.id);
+        const items = columnItems.filter(l => (col.id !== 'sinov-darsida' || trialWorkflow.matchesFilter(l, getTrialAttendanceFilter()))
+            && (col.id !== 'boglanishga-urinilmoqda' || leadMatchesContactReasonFilter(l, getLeadContactReasonFilter(lang))));
         const cards = items.length
             ? items.map(l => renderLeadCard(l, l._lang)).join('')
             : '<div class="lead-column-empty">Lidlar yo\'q</div>';
 
         return `<div class="lead-column" data-status="${col.id}" style="background:${col.bg};border-color:${col.border}">
-            <div class="lead-column-header${col.id === 'sinov-darsida' ? ' lead-column-header--trial' : ''}" style="background:${col.headerBg}">
+            <div class="lead-column-header${col.id === 'sinov-darsida' ? ' lead-column-header--trial' : ''}${col.id === 'boglanishga-urinilmoqda' ? ' lead-column-header--contact' : ''}" style="background:${col.headerBg}">
                 <h3 class="lead-column-title" style="color:${col.title}">${col.label}</h3>
                 <span class="lead-column-count" style="color:${col.count}">${items.length}</span>
+                ${col.id === 'boglanishga-urinilmoqda' ? `<button type="button" id="leadContactFilterButton" class="lead-contact-filter-toggle" aria-label="Bog‘lanish sababi bo‘yicha filtr" aria-expanded="${_leadContactFilterOpen}" aria-controls="leadContactFilterPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>${renderLeadContactReasonFilter(columnItems, items.length, lang)}` : ''}
                 ${col.id === 'sinov-darsida' ? renderTrialAttendanceFilter() : ''}
             </div>
             <div class="lead-column-cards" data-drop-status="${col.id}">${cards}</div>
@@ -20424,6 +20548,7 @@ function renderLeads() {
     }).join('');
 
     initLeadDragDrop(board);
+    wireLeadContactReasonFilter(board, lang);
     board.querySelectorAll('[data-trial-filter]').forEach(button => {
         button.addEventListener('click', () => {
             _trialAttendanceFilter = button.dataset.trialFilter;

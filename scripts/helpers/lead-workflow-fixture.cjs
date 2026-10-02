@@ -16,11 +16,12 @@ function constant(name) {
   if (!match) throw new Error('Missing constant: ' + name);
   return match[0];
 }
-const constants = ['LEAD_COLUMNS', 'FUNNEL_STAGES', 'LEAD_LANGUAGE_LEVELS', 'LEAD_APPLICANTS', 'LEAD_GENDERS',
+const constants = ['LEAD_COLUMNS', 'FUNNEL_STAGES', 'LEAD_CONTACT_FAIL_REASONS', 'LEAD_LANGUAGE_LEVELS', 'LEAD_APPLICANTS', 'LEAD_GENDERS',
   'LEAD_UZ_REGIONS', 'LEAD_FOREIGN_COUNTRIES', 'LEAD_LEARNING_GOALS', 'LEAD_INFO_PROVIDED_QUESTIONS'];
 function appContext(names, globals = {}) {
   const context = vm.createContext({ leadWorkflow: require('../../js/leadWorkflow'), trialWorkflow: require('../../js/trialWorkflow'), ...globals });
-  if (names.includes('renderLeadCard')) names = [...new Set([...names, 'renderTrialAttendanceBadge', 'renderLeadTrialStatus'])];
+  if (names.includes('renderLeadCard')) names = [...new Set([...names, 'renderTrialAttendanceBadge', 'renderLeadTrialStatus',
+    'renderLeadContactReasonBadge', 'getLeadContactReason', 'resolveLeadContactReason'])];
   vm.runInContext(constants.map(constant).join('\n') + '\nconst LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));\n'
     + names.map(name => functionSource('js/app.js', name)).join('\n'), context);
   return context;
@@ -31,7 +32,8 @@ function browserBundle(extraNames = []) {
     'renderInfoProvidedQuestions', 'collectInfoProvidedData', 'clearInfoProvidedValidation', 'showInfoProvidedValidation',
     'clearLeadModalValidation', 'findFirstLeadModalIncompleteTarget', 'showLeadModalValidation', 'wireLeadModalValidationClear',
     'formatInfoProvidedComment', 'openConnectedSurveyModal', 'collectDeferredPurchaseData', 'openDeferredPurchaseModal',
-    'renderDeferredPurchaseDates', 'renderTrialAttendanceBadge', 'renderLeadTrialStatus', 'renderLeadCard', ...extraNames];
+    'renderDeferredPurchaseDates', 'renderTrialAttendanceBadge', 'renderLeadTrialStatus', 'renderLeadContactReasonBadge',
+    'getLeadContactReason', 'resolveLeadContactReason', 'renderLeadCard', ...extraNames];
   return {
     code: fs.readFileSync(path.join(root, 'js/leadWorkflow.js'), 'utf8') + '\n'
       + fs.readFileSync(path.join(root, 'js/trialWorkflow.js'), 'utf8') + '\n' + constants.map(constant).join('\n')
