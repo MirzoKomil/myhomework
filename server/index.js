@@ -16,6 +16,7 @@ const telegramRoutes = require('./routes/telegram');
 const publicSalesApiRoutes = require('./routes/publicSalesApi');
 const publicCrmApiRoutes = require('./routes/publicCrmApi');
 const hrRoutes = require('./routes/hr');
+const trialLessonsRoutes = require('./routes/trialLessons');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -197,6 +198,7 @@ app.use('/api/telegram', telegramRoutes);
 app.use('/api/public/sales', publicSalesApiRoutes);
 app.use('/api/public/crm', publicCrmApiRoutes);
 app.use('/api/hr', hrRoutes);
+app.use('/api/trial-lessons', trialLessonsRoutes);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 

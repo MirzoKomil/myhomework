@@ -12,6 +12,8 @@ const studentAccess = require('../js/studentAccess');
 const { provisionLeadStudent, STUDENT_PROVISION_LOCK } = require('./services/leadStudentProvisioning');
 const leadWorkflow = require('../js/leadWorkflow');
 const { migrateMergedLeadStage } = require('./services/leadWorkflowMigration');
+const trialWorkflow = require('../js/trialWorkflow');
+const trialLessons = require('./services/trialLessons');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -1430,6 +1432,11 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
         err.code = 'LEAD_SURVEY_REQUIRED';
         throw err;
     }
+    if (merged.status === 'sinov-darsida' || before?.trialRequest
+        || Object.prototype.hasOwnProperty.call(lead, 'trialRequest')
+        || Object.prototype.hasOwnProperty.call(lead, 'trialHistory')) {
+        Object.assign(merged, trialWorkflow.syncSchedule(before, merged, randomUUID, new Date().toISOString()));
+    }
 
     // Biriktirilgan vaqtni server ham boshqaradi: API/import orqali menejer
     // o'zgarsa, statistika hech qachon lid yaratilgan yoki yangilangan sanaga
@@ -1532,6 +1539,18 @@ async function upsertLead(lead, language, actor = {}) {
         platformAccess = await provisionLeadStudent(client, saved);
     });
     return { lead: saved, platformAccess };
+}
+
+async function getTeacherTrialLessons(actor) {
+    return trialLessons.listTrialLessons(pool, actor, rowToLead);
+}
+
+async function saveTeacherTrialLesson(actor, leadId, payload) {
+    let saved;
+    await tx(async client => {
+        saved = await trialLessons.updateTrialLesson(client, actor, leadId, payload, rowToLead, appendLeadAudit);
+    });
+    return saved;
 }
 
 async function softDeleteLead(id, actor = {}) {
@@ -4382,6 +4401,7 @@ module.exports = {
     pool, DATA_DIR,
     getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
+    getTeacherTrialLessons, saveTeacherTrialLesson,
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     getHrEmployeesData, getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, findDemoStudentByEmployeeId, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,

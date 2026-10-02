@@ -19,20 +19,22 @@ function constant(name) {
 const constants = ['LEAD_COLUMNS', 'FUNNEL_STAGES', 'LEAD_LANGUAGE_LEVELS', 'LEAD_APPLICANTS', 'LEAD_GENDERS',
   'LEAD_UZ_REGIONS', 'LEAD_FOREIGN_COUNTRIES', 'LEAD_LEARNING_GOALS', 'LEAD_INFO_PROVIDED_QUESTIONS'];
 function appContext(names, globals = {}) {
-  const context = vm.createContext({ leadWorkflow: require('../../js/leadWorkflow'), ...globals });
+  const context = vm.createContext({ leadWorkflow: require('../../js/leadWorkflow'), trialWorkflow: require('../../js/trialWorkflow'), ...globals });
+  if (names.includes('renderLeadCard')) names = [...new Set([...names, 'renderTrialAttendanceBadge', 'renderLeadTrialStatus'])];
   vm.runInContext(constants.map(constant).join('\n') + '\nconst LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));\n'
     + names.map(name => functionSource('js/app.js', name)).join('\n'), context);
   return context;
 }
-function browserBundle() {
+function browserBundle(extraNames = []) {
   const names = ['normalizeLeadStatus', 'normalizeLeadExtras', 'renderSurveyRadioGroup', 'renderSurveyCarousel',
     'initSurveyCarousels', 'getSurveyOptionLabel', 'collectConnectedSurveyData', 'formatConnectedSurveyComment',
     'renderInfoProvidedQuestions', 'collectInfoProvidedData', 'clearInfoProvidedValidation', 'showInfoProvidedValidation',
     'clearLeadModalValidation', 'findFirstLeadModalIncompleteTarget', 'showLeadModalValidation', 'wireLeadModalValidationClear',
     'formatInfoProvidedComment', 'openConnectedSurveyModal', 'collectDeferredPurchaseData', 'openDeferredPurchaseModal',
-    'renderDeferredPurchaseDates', 'renderLeadCard'];
+    'renderDeferredPurchaseDates', 'renderTrialAttendanceBadge', 'renderLeadTrialStatus', 'renderLeadCard', ...extraNames];
   return {
-    code: fs.readFileSync(path.join(root, 'js/leadWorkflow.js'), 'utf8') + '\n' + constants.map(constant).join('\n')
+    code: fs.readFileSync(path.join(root, 'js/leadWorkflow.js'), 'utf8') + '\n'
+      + fs.readFileSync(path.join(root, 'js/trialWorkflow.js'), 'utf8') + '\n' + constants.map(constant).join('\n')
       + '\nconst LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));\n' + names.map(name => functionSource('js/app.js', name)).join('\n')
       + '\nwindow.fixtureColumns = LEAD_COLUMNS;',
     css: fs.readFileSync(path.join(root, 'css/styles.css'), 'utf8').replace(/^@import[^\r\n]*(?:\r?\n|$)/, '')

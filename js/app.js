@@ -17,7 +17,8 @@ const TAB_TITLES = {
     'finance': "Moliya",
     'hr-employees': 'Xodimlar',
     'analitika': 'Analitika',
-    'teachers-section': "Akademik bo'lim"
+    'teachers-section': "Akademik bo'lim",
+    'trial-lessons': 'Sinov darslari'
 };
 
 const SALES_SECTIONS = {
@@ -213,7 +214,7 @@ const ROLE_TABS = {
     // ko'chirildi. renderTeachersSection() ustoz/ROP uchun sub-navigatsiyani
     // faqat shu ikki bo'limga (Davomat, O'quvchini tekshirish) cheklaydi,
     // avvalgi tor ruxsat saqlanib qoladi.
-    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'guides', 'student-app'],
+    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'trial-lessons', 'guides', 'student-app'],
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
 };
@@ -238,6 +239,9 @@ function applyRoleBasedAccess(user) {
         sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
             el.style.display = '';
         });
+        // The teacher inbox has an ownership-scoped API, not general CRM access.
+        const trialMenu = document.getElementById('menuItemTrialLessons');
+        if (trialMenu) trialMenu.style.display = 'none';
         // 16-ish / 1-ish: ROP uchun Akademik bo'lim, Moliya, HR Bo'limi va
         // Analitika yashiriladi. ("Moliya" avval alohida
         // getElementById('menuGroupMoliya') orqali yashirilardi, lekin
@@ -703,6 +707,7 @@ function getLeadPollFingerprint(leads) {
 }
 
 function startLeadsPolling() {
+    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'targetolog'].includes(getCurrentUser()?.role)) return;
     if (_leadsPollTimer) return;
     _leadsPollTimer = setInterval(async () => {
         try {
@@ -802,6 +807,11 @@ function updateSidebarActiveState(tab, ctx) {
 }
 
 function switchTab(tab, ctx = {}) {
+    if (tab !== 'trial-lessons' && _teacherTrialPollTimer) {
+        clearInterval(_teacherTrialPollTimer);
+        _teacherTrialPollTimer = null;
+        _teacherTrialLoadGeneration++;
+    }
     if (tab === 'leads') {
         tab = 'sales';
         ctx.salesSection = ctx.salesSection || 'leads';
@@ -1118,6 +1128,7 @@ function renderTab(tab) {
         case 'placeholder': renderPlaceholder(); break;
         case 'student-app': renderStudentApp(); break;
         case 'teachers-section': renderTeachersSection(); break;
+        case 'trial-lessons': renderTeacherTrialLessons(); break;
         case 'hr-employees': renderHrEmployees(); break;
         case 'hr': renderHr(); break;
         case 'finance': renderFinance(); break;
@@ -10222,6 +10233,119 @@ function getAllTeachersForSection() {
 }
 
 // --- Sinov darsi ---
+let _teacherTrialLessons = [];
+let _teacherTrialPollTimer = null;
+let _teacherTrialLoadGeneration = 0;
+let _teacherTrialSaving = false;
+
+function teacherTrialStatus(request) {
+    if (request?.state === 'completed') return request.attended ? 'Qatnashdi' : 'Qatnashmadi';
+    if (request?.state === 'accepted') return 'Tasdiqlandi — natija kutilmoqda';
+    return 'Tasdiqlash kutilmoqda';
+}
+
+function renderTeacherTrialRows(lessons) {
+    const rows = lessons.map(lesson => {
+        const request = lesson.trialRequest;
+        const actions = request?.state === 'pending'
+            ? `<button type="button" class="btn-primary-sm" data-trial-accept="${escapeHtml(lesson.id)}">Tasdiqlash</button>`
+            : request?.state === 'accepted'
+            ? `<button type="button" class="btn-primary-sm" data-trial-outcome="${escapeHtml(lesson.id)}">Natijani belgilash</button>` : '';
+        const history = (lesson.comments || []).map(c => `<div class="trial-history-note"><strong>${escapeHtml(c.author || '')}:</strong> ${escapeHtml(c.text || '')}</div>`).join('');
+        const date = new Date(request?.scheduledAt);
+        const when = Number.isFinite(date.getTime()) ? date.toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' }) : '—';
+        return `<tr><td><strong>${escapeHtml(lesson.name)}</strong><div>${escapeHtml(lesson.phone || '—')}</div></td>
+            <td>${lesson.language === 'russian' ? 'Rus tili' : 'Ingliz tili'}</td>
+            <td>${escapeHtml(when)}<div>${request?.daysCount || 1} kun</div></td>
+            <td><span class="trial-status${request?.attended ? ' is-attended' : ''}">${request?.attended ? '✓ ' : ''}${teacherTrialStatus(request)}</span>
+                ${request?.reasonLabel ? `<div>${escapeHtml(request.reasonLabel)}</div>` : ''}
+                <details class="trial-history"><summary>Sinov darsi izohlari</summary>${history || 'Izohlar yo‘q'}</details></td>
+            <td>${actions}</td></tr>`;
+    }).join('');
+    return `<div class="page-title-bar"><h2>Sinov darslari</h2><button type="button" class="btn-primary-sm" id="refreshTeacherTrials">Yangilash</button></div>
+        <p class="text-muted">Faqat sizga biriktirilgan sinov darslari. Vaqt Toshkent bo‘yicha.</p>
+        <div class="card table-responsive trial-table-wrap"><table class="table trial-table"><thead><tr><th>Lid</th><th>Til</th><th>Vaqt</th><th>Holat</th><th>Amal</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5">Sizga biriktirilgan sinov darslari yo‘q</td></tr>'}</tbody></table></div>`;
+}
+
+async function renderTeacherTrialLessons(refresh = false) {
+    const container = document.getElementById('teacherTrialLessonsContent');
+    if (!container || getCurrentUser()?.role !== 'teacher' || _teacherTrialSaving) return;
+    const generation = ++_teacherTrialLoadGeneration;
+    if (!refresh) container.innerHTML = '<p class="text-muted">Sinov darslari yuklanmoqda…</p>';
+    try {
+        const result = await apiFetchTeacherTrialLessons();
+        if (generation !== _teacherTrialLoadGeneration || _teacherTrialSaving) return;
+        _teacherTrialLessons = result.lessons || [];
+        container.innerHTML = renderTeacherTrialRows(_teacherTrialLessons);
+        container.querySelector('#refreshTeacherTrials').onclick = () => renderTeacherTrialLessons(true);
+        container.querySelectorAll('[data-trial-accept]').forEach(button => {
+            button.onclick = () => saveTeacherTrialAction(button.dataset.trialAccept, { action: 'accept' }, button);
+        });
+        container.querySelectorAll('[data-trial-outcome]').forEach(button => {
+            button.onclick = () => openTeacherTrialOutcome(button.dataset.trialOutcome);
+        });
+    } catch (err) {
+        if (generation !== _teacherTrialLoadGeneration) return;
+        container.innerHTML = `<p class="text-muted">${escapeHtml(err.message)}</p><button type="button" class="btn-primary-sm" id="retryTeacherTrials">Qayta urinish</button>`;
+        container.querySelector('#retryTeacherTrials').onclick = () => renderTeacherTrialLessons();
+    }
+    if (!_teacherTrialPollTimer && document.getElementById('tab-trial-lessons')?.classList.contains('active')) {
+        _teacherTrialPollTimer = setInterval(() => renderTeacherTrialLessons(true), 30000);
+    }
+}
+
+async function saveTeacherTrialAction(id, payload, button) {
+    if (_teacherTrialSaving) return false;
+    const lesson = _teacherTrialLessons.find(l => l.id === id);
+    if (!lesson?.trialRequest) return false;
+    _teacherTrialSaving = true;
+    _teacherTrialLoadGeneration++;
+    if (button) button.disabled = true;
+    try {
+        await apiSaveTeacherTrialLesson(id, { ...payload, requestId: payload.requestId || lesson.trialRequest.id });
+        showMiniToast('Sinov darsi saqlandi');
+        return true;
+    } catch (err) {
+        showMiniToast(err.message || 'Saqlashda xatolik');
+        return false;
+    } finally {
+        _teacherTrialSaving = false;
+        if (button) button.disabled = false;
+        renderTeacherTrialLessons(true);
+    }
+}
+
+function openTeacherTrialOutcome(id) {
+    const lesson = _teacherTrialLessons.find(l => l.id === id);
+    if (!lesson || lesson.trialRequest?.state !== 'accepted') return;
+    const requestId = lesson.trialRequest.id;
+    const reasons = trialWorkflow.REASONS.map(r => `<label class="lead-reason-option"><input type="radio" name="teacherTrialReason" value="${r.id}" data-teacher-trial-reason><span>${escapeHtml(r.label)}</span></label>`).join('');
+    openModal(`${escapeHtml(lesson.name)} — sinov darsi natijasi`, `<div class="lead-reason-list">
+        <label class="lead-reason-option"><input type="radio" name="teacherTrialAttended" value="yes" data-trial-present><span>Qatnashdi</span></label>
+        <label class="lead-reason-option"><input type="radio" name="teacherTrialAttended" value="no" data-trial-present><span>Qatnashmadi / dars o‘tilmadi</span></label></div>
+        <section id="teacherTrialReasonBlock" hidden><h4>Nima uchun sinov darsi o‘tilmadi?</h4><div class="lead-reason-list">${reasons}</div></section>`,
+        '<button type="button" class="btn-danger-sm" id="cancelTeacherTrial">Bekor qilish</button><button type="button" class="btn-primary-sm" id="confirmTeacherTrial">Saqlash</button>');
+    const body = document.getElementById('modalBody');
+    wireLeadModalValidationClear(body);
+    body.querySelectorAll('[data-trial-present]').forEach(radio => radio.addEventListener('change', () => {
+        body.querySelector('#teacherTrialReasonBlock').hidden = body.querySelector('[data-trial-present]:checked')?.value !== 'no';
+    }));
+    const cancel = document.getElementById('cancelTeacherTrial');
+    cancel.onclick = () => { if (!_teacherTrialSaving) closeModal(); };
+    const confirm = document.getElementById('confirmTeacherTrial');
+    confirm.onclick = async () => {
+        const selected = body.querySelector('[data-trial-present]:checked');
+        if (!selected) { showLeadModalValidation(body, { error: 'Qatnashganini belgilang', target: '[data-trial-present]' }); return; }
+        const reasonId = body.querySelector('[data-teacher-trial-reason]:checked')?.value || '';
+        if (selected.value === 'no' && !reasonId) { showLeadModalValidation(body, { error: 'Sababni tanlang', target: '[data-teacher-trial-reason]' }); return; }
+        cancel.disabled = true;
+        const saved = await saveTeacherTrialAction(id, { action: 'outcome', requestId, attended: selected.value === 'yes', reasonId }, confirm);
+        cancel.disabled = false;
+        if (saved) closeModal();
+    };
+}
+
 function renderTpTrial() {
     const container = document.getElementById('tpTrial');
     if (!container) return;
@@ -10231,16 +10355,16 @@ function renderTpTrial() {
     const teachers = getAllTeachersForSection();
 
     const rows = trialLeads.map(l => {
-        const tId = l.trialLesson?.teacherId || l.paymentOnboarding?.teacherId || '';
+        const tId = trialWorkflow.request(l)?.teacherId || '';
         const teacher = teachers.find(t => t.id === tId);
-        const trialDate = l.trialLesson?.date || l.trialLesson?.time || '';
+        const trialDate = l.trialLessonAt || l.trialLesson?.date || l.trialLesson?.time || '';
         return `<tr>
             <td style="font-weight:500">${escapeHtml(l.name||'—')}</td>
             <td>${escapeHtml(l.phone||'—')}</td>
             <td>${l._lang === 'russian' ? '🇷🇺 Rus' : '🇬🇧 Ingliz'}</td>
             <td>${escapeHtml(teacher?.name||'—')}</td>
             <td>${escapeHtml(trialDate||'—')}</td>
-            <td><span class="badge" style="background:#fef3c7;color:#92400e">Sinov darsida</span></td>
+            <td><span class="trial-status">${teacherTrialStatus(trialWorkflow.request(l))}</span></td>
         </tr>`;
     }).join('') || `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Hozirda sinov darsida o'quvchi yo'q</td></tr>`;
 
@@ -15562,13 +15686,7 @@ function openTrialLessonFlow(lang, leadId, fromStatus) {
 
 // 23-vazifa: qayta sinov darsi qo'yishdan oldin, avvalgi sinov darsi bilan
 // nima yuz berganini so'rash uchun.
-const TRIAL_LESSON_OUTCOME_REASONS = [
-    { id: 'teacher-late', label: "Ustoz vaqtida o'tmadi" },
-    { id: 'student-missed', label: "O'quvchi vaqtida qatnashmadi" },
-    { id: 'student-rescheduled', label: "O'quvchi boshqa vaqtga ko'chirdi" },
-    { id: 'teacher-rescheduled', label: "Ustoz boshqa vaqtga ko'chirdi" },
-    { id: 'attended-wants-other-teacher', label: "Qatnashdi, boshqa ustozni ham ko'rmoqchi" },
-];
+const TRIAL_LESSON_OUTCOME_REASONS = trialWorkflow.REASONS;
 
 // 22-vazifa: lid allaqachon "Sinov darsida" ustunida turganda, izohlar
 // oynasidagi "Qayta sinov darsi qo'yish" tugmasi orqali yangi sana/vaqt/
@@ -15660,7 +15778,7 @@ function openTrialScheduleModal(lang, leadId, options = {}) {
             return;
         }
 
-        const onboarding = lead.paymentOnboarding || {};
+        const onboarding = { ...(lead.paymentOnboarding || {}) };
         onboarding.teacherId = teacherId;
         onboarding.lessonDayOfWeek = parseInt(day, 10);
         onboarding.lessonTime = time;
@@ -15673,6 +15791,10 @@ function openTrialScheduleModal(lang, leadId, options = {}) {
         const trialLessonAt = dateKey
             ? new Date(`${dateKey}T${time}:00`).toISOString()
             : getTrialLessonTimestamp(day, time);
+        const scheduleRevision = globalThis.crypto?.randomUUID?.()
+            || 'trial-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        const newTrialRequest = { id: scheduleRevision, teacherId, scheduledAt: trialLessonAt,
+            daysCount: count, state: 'pending', requestedAt: new Date().toISOString() };
 
         const teacherName = teachers.find(t => t.id === teacherId)?.name || '—';
         const dayLabel = DAYS_UZ[parseInt(day, 10) - 1] || '';
@@ -15695,10 +15817,13 @@ function openTrialScheduleModal(lang, leadId, options = {}) {
                 paymentOnboarding: onboarding,
                 // Sinov darsi uchun SLA darsning aniq rejalashtirilgan vaqtiga bog'liq.
                 trialLessonAt,
+                trialScheduleRevision: scheduleRevision,
+                trialRequest: newTrialRequest,
                 comments: [...base.comments, createLeadComment({
                     type: 'trial-lesson',
                     text: commentText,
-                    author
+                    author,
+                    reason: prevOutcome?.label || ''
                 })]
             };
         });
@@ -19723,7 +19848,7 @@ function renderLeadCommentItem(c) {
     const isPaymentProcess = c.type === 'payment-process';
     const isPaymentOnboarding = c.type === 'payment-onboarding';
     const isFollowUpReminder = c.type === 'follow-up-reminder';
-    const isTrialLesson = c.type === 'trial-lesson';
+    const isTrialLesson = c.type === 'trial-lesson' || c.type === 'trial-teacher';
     let badge = '';
     if (isContactFail) badge = '<span class="lead-comment-badge">Bog\'lanish sababi</span>';
     if (isConnectedSurvey) badge = '<span class="lead-comment-badge lead-comment-badge--survey">Anketa</span>';
@@ -19732,7 +19857,7 @@ function renderLeadCommentItem(c) {
     if (isPaymentProcess) badge = '<span class="lead-comment-badge lead-comment-badge--payment">To\'lov</span>';
     if (isPaymentOnboarding) badge = '<span class="lead-comment-badge lead-comment-badge--onboard">O\'quvchi</span>';
     if (isFollowUpReminder) badge = '<span class="lead-comment-badge lead-comment-badge--reminder">Bog\'lanish eslatmasi</span>';
-    if (isTrialLesson) badge = '<span class="lead-comment-badge lead-comment-badge--onboard">Sinov darsi</span>';
+    if (isTrialLesson) badge = `<span class="lead-comment-badge lead-comment-badge--onboard">${c.type === 'trial-teacher' ? 'Ustoz — sinov darsi' : 'Sinov darsi'}</span>`;
     const bodyText = c.text || (isContactFail && c.reason ? `Qo'ng'iroq qilindi, lekin: ${c.reason}` : '');
     const itemClass = isContactFail
         ? ' lead-comment-item--contact-fail'
@@ -19778,6 +19903,36 @@ function refreshLeadRecordingCounts() {
             });
         })
         .catch(() => {});
+}
+
+let _trialAttendanceFilter = 'all';
+
+function getTrialAttendanceFilter() {
+    try {
+        const saved = localStorage.getItem('mh_trial_attendance_filter_v1');
+        if (['not-attended', 'all', 'attended'].includes(saved)) return saved;
+    } catch {}
+    return _trialAttendanceFilter;
+}
+
+function renderTrialAttendanceFilter() {
+    const selected = getTrialAttendanceFilter();
+    return `<div class="trial-attendance-filter" role="group" aria-label="Sinov darsi qatnashuv filtri">
+        ${[['not-attended', 'Hali qatnashmaganlar'], ['all', 'Hamma'], ['attended', 'Qatnashganlar']].map(([id, label]) =>
+            `<button type="button" data-trial-filter="${id}" aria-pressed="${selected === id}" class="${selected === id ? 'active' : ''}">${label}</button>`).join('')}
+    </div>`;
+}
+
+function renderTrialAttendanceBadge(lead) {
+    if (!trialWorkflow.attended(lead)) return '';
+    return '<span class="lead-trial-attended" role="img" aria-label="Sinov darsida qatnashdi" title="Sinov darsida qatnashdi">✓</span>';
+}
+
+function renderLeadTrialStatus(lead) {
+    if (normalizeLeadStatus(lead.status) !== 'sinov-darsida') return '';
+    const request = trialWorkflow.request(lead);
+    return `<div class="lead-card-trial-status" title="${escapeHtml(request?.reasonLabel || '')}">${request?.state === 'completed'
+        ? (request.attended ? 'Qatnashdi' : 'Qatnashmadi') : 'Hali qatnashmagan'}</div>`;
 }
 
 function renderLeadCard(lead, langKey) {
@@ -19853,12 +20008,14 @@ function renderLeadCard(lead, langKey) {
             ${checkboxHtml}
             <div class="lead-card-title-wrap">
                 <h4 class="lead-card-name">${escapeHtml(normalized.name)}</h4>
+                ${renderLeadTrialStatus(normalized)}
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
                     ${serialHtml}
                 </div>
             </div>
             <div class="lead-card-top-actions">
+                ${renderTrialAttendanceBadge(normalized)}
                 <button type="button" class="lead-card-notify${unreadAlertCount ? ' has-unread is-ringing' : ''}" data-lead-notify="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="${unreadAlertCount ? `${unreadAlertCount} ta o'qilmagan bildirishnoma` : 'Bildirishnomalar'}" aria-label="${unreadAlertCount ? `${unreadAlertCount} ta o'qilmagan bildirishnoma` : 'Bildirishnomalar'}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                     ${unreadAlertCount ? `<span class="lead-card-notify-badge">${unreadAlertCount > 9 ? '9+' : unreadAlertCount}</span>` : ''}
@@ -20250,21 +20407,30 @@ function renderLeads() {
     }
 
     board.innerHTML = visibleColumns.map(col => {
-        const items = tagged.filter(l => normalizeLeadStatus(l.status) === col.id);
+        const items = tagged.filter(l => normalizeLeadStatus(l.status) === col.id
+            && (col.id !== 'sinov-darsida' || trialWorkflow.matchesFilter(l, getTrialAttendanceFilter())));
         const cards = items.length
             ? items.map(l => renderLeadCard(l, l._lang)).join('')
             : '<div class="lead-column-empty">Lidlar yo\'q</div>';
 
         return `<div class="lead-column" data-status="${col.id}" style="background:${col.bg};border-color:${col.border}">
-            <div class="lead-column-header" style="background:${col.headerBg}">
+            <div class="lead-column-header${col.id === 'sinov-darsida' ? ' lead-column-header--trial' : ''}" style="background:${col.headerBg}">
                 <h3 class="lead-column-title" style="color:${col.title}">${col.label}</h3>
                 <span class="lead-column-count" style="color:${col.count}">${items.length}</span>
+                ${col.id === 'sinov-darsida' ? renderTrialAttendanceFilter() : ''}
             </div>
             <div class="lead-column-cards" data-drop-status="${col.id}">${cards}</div>
         </div>`;
     }).join('');
 
     initLeadDragDrop(board);
+    board.querySelectorAll('[data-trial-filter]').forEach(button => {
+        button.addEventListener('click', () => {
+            _trialAttendanceFilter = button.dataset.trialFilter;
+            try { localStorage.setItem('mh_trial_attendance_filter_v1', _trialAttendanceFilter); } catch {}
+            renderLeads();
+        });
+    });
     refreshLeadRecordingCounts();
 
     board.querySelectorAll('[data-lead-notify]').forEach(btn => {

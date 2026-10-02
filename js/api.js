@@ -108,6 +108,16 @@ async function apiFetchLeads() {
     return apiFetch('/api/leads');
 }
 
+async function apiFetchTeacherTrialLessons() {
+    return apiFetch('/api/trial-lessons');
+}
+
+async function apiSaveTeacherTrialLesson(id, payload) {
+    return apiFetch(`/api/trial-lessons/${encodeURIComponent(id)}`, {
+        method: 'POST', body: JSON.stringify(payload)
+    });
+}
+
 async function apiFetchDeletedLeads() {
     return apiFetch('/api/leads/deleted');
 }
