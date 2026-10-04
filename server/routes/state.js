@@ -4,6 +4,7 @@ getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudent
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
+const { getTeacherScopedState, findUserById } = require('../db');
 
 // Public endpoint — student app uchun, auth talab qilmaydi
 router.get('/mobile-content', studentAuthOptional, async (req, res) => {
@@ -851,6 +852,15 @@ function crmStateRequired(req, res, next) {
     next();
 }
 
+async function crmStateIdentity(req, res, next) {
+    try {
+        const current = await findUserById(req.user.id);
+        if (!current) return res.status(401).json({ error: 'Akkaunt topilmadi' });
+        req.user = { ...req.user, role: current.role, name: current.name, email: current.email };
+        next();
+    } catch (err) { res.status(503).json({ error: 'Akkaunt ruxsatini tekshirib bo‘lmadi' }); }
+}
+
 function crmStateMutationRequired(req, res, next) {
     // 23-vazifa: Targetolog Marketing bo'limidagi kunlik reklama
     // ma'lumotlarini (targetDailyAdSpend) va rejani (targetMonitoringPlan)
@@ -872,6 +882,7 @@ function crmStateMutationRequired(req, res, next) {
 }
 
 async function getStateForUser(user) {
+    if (user.role === 'teacher') return getTeacherScopedState(user);
     const state = await getFullState();
     if (user.role === 'sales_manager') {
         // Menejerlar reytingi uchun PII'siz umumiy ko'rsatkichlar qoladi;
@@ -911,16 +922,17 @@ async function getStateForUser(user) {
     return state;
 }
 
-router.get('/', authRequired, crmStateRequired, async (req, res) => {
+router.get('/', authRequired, crmStateIdentity, crmStateRequired, async (req, res) => {
     try {
         res.json(await getStateForUser(req.user));
     } catch (err) {
         console.error('GET /api/state', err);
-        res.status(500).json({ error: 'Ma\'lumotlarni yuklashda xatolik' });
+        res.status(err.status || 500).json({ error: err.status ? err.message : 'Ma\'lumotlarni yuklashda xatolik' });
     }
 });
 
-router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
+router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, async (req, res) => {
+    if (req.user.role === 'teacher') return res.status(403).json({ error: 'Davomatni faqat maxsus davomat oynasidan o‘zgartirish mumkin' });
     try {
         const body = req.body || {};
         const isFullAccess = ['admin', 'rop', 'boshliq'].includes(req.user.role);
@@ -964,12 +976,12 @@ router.patch('/', authRequired, crmStateMutationRequired, async (req, res) => {
 // 32-vazifa: ustoz davomatni umumiy CRM snapshotini yozmasdan, faqat o'z
 // o'quvchisi uchun saqlaydi. Shu orqali boshqa ustoz davomatini tasodifan
 // almashtirish ham, "faqat admin yoki ROP" xatosi ham bartaraf bo'ladi.
-router.post('/teacher-attendance', authRequired, async (req, res) => {
+router.post('/teacher-attendance', authRequired, crmStateIdentity, async (req, res) => {
     try {
         if (!['admin', 'rop', 'boshliq', 'teacher'].includes(req.user?.role)) {
             return res.status(403).json({ error: 'Davomat belgilashga ruxsat yo\'q' });
         }
-        const result = await recordTeacherAttendance({ actor: req.user, ...(req.body || {}) });
+        const result = await recordTeacherAttendance({ ...(req.body || {}), actor: req.user });
         res.json({ ok: true, ...result });
     } catch (err) {
         console.error('POST /api/state/teacher-attendance', err);

@@ -111,7 +111,7 @@ async function sources(db, p) {
     };
     const json = (await db.query("SELECT key,data FROM json_data WHERE key=ANY($1::text[])", [['salesPlan', 'bonusHistory', 'bonusData', 'cashFlow']])).rows;
     const blob = Object.fromEntries(json.map(r => [r.key, r.data]));
-    return { paymentRecords, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar,
+    return { academicPolicy: 'dual-role-v1', paymentRecords, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
         status: r.status, startDate: r.start_date, joinDate: r.join_date, kpiTemplateId: r.kpi_template_id })),
         teachers: teachers.map(r => ({ id: r.id, schedulePattern: r.schedule_pattern, lessonDuration: r.lesson_duration })),
         students: students.map(r => ({ ...(r.extra_data || {}), id: r.id, name: r.name, subject: r.subject,
@@ -131,10 +131,11 @@ function hash(value) { return createHash('sha256').update(stableJson(value)).dig
 function createBasis(source, config, confirmation, row, rows) {
     const ids = row.role === 'rop' ? source.hrEmployees.filter(e => engine.role(e) === 'sales' && engine.language(e) === engine.language(source.hrEmployees.find(e => e.id === row.employeeId) || {})).map(e => e.id) : [];
     ids.push(row.employeeId);
-    const students = source.students.filter(s => row.role === 'teacher' ? s.teacherId === row.employeeId : row.role === 'assistant' ? s.assistantTeacherId === row.employeeId : false)
+    const students = source.students.filter(s => row.role === 'teacher' ? s.teacherId === row.employeeId
+        || (source.academicPolicy === 'dual-role-v1' && s.assistantTeacherId === row.employeeId) : row.role === 'assistant' ? s.assistantTeacherId === row.employeeId : false)
         .map(s => ({ id: s.id, name: s.name, subject: s.subject, teacherId: s.teacherId, assistantTeacherId: s.assistantTeacherId,
             lessonDuration: s.lessonDuration, startDate: s.startDate, joinDate: s.joinDate }));
-    return { version: 2, paymentPolicy: Array.isArray(source.paymentRecords) ? 'receipts-v1' : 'closed-deals-v1', settings: config.data, revision: config.revision, confirmation,
+    return { version: 2, academicPolicy: source.academicPolicy, paymentPolicy: Array.isArray(source.paymentRecords) ? 'receipts-v1' : 'closed-deals-v1', settings: config.data, revision: config.revision, confirmation,
         hrEmployees: source.hrEmployees.filter(e => ids.includes(e.id)).map(({ avatar, ...e }) => e),
         teachers: source.teachers.filter(t => t.id === row.employeeId), students,
         salesPlan: source.salesPlan, bonusData: source.bonusData,
@@ -175,7 +176,7 @@ async function correctionProposals(db, p, lang) {
         if (!cache.has(key)) cache.set(key, await sources(db, sourcePeriod));
         const current = cache.get(key);
         // Employment contracts, tariffs and assignments are historical, not today's replacements.
-        const history = { ...current, hrEmployees: basis.hrEmployees, teachers: basis.teachers || [],
+        const history = { ...current, academicPolicy: basis.academicPolicy, hrEmployees: basis.hrEmployees, teachers: basis.teachers || [],
             students: basis.students || [], salesPlan: basis.salesPlan || {}, bonusData: basis.bonusData || {} };
         if (basis.paymentPolicy !== 'receipts-v1') delete history.paymentRecords;
         const recalculated = engine.calculate(history, basis.settings, sourcePeriod, lang, basis.confirmation, [], basis.incoming || {});

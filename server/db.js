@@ -16,6 +16,7 @@ const trialWorkflow = require('../js/trialWorkflow');
 const trialLessons = require('./services/trialLessons');
 const payroll = require('./services/payroll');
 const inflow = require('./services/inflow');
+const teacherDuties = require('./services/teacherDuties');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -313,6 +314,7 @@ async function initSchema() {
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS lang TEXT DEFAULT 'english'`).catch(() => {});
     // 24-vazifa: asosiy o'qituvchining sinov darsi Telegram guruhi havolasi
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS trial_group_link TEXT DEFAULT ''`).catch(() => {});
+    await teacherDuties.initSchema(pool);
     await payroll.initSchema(pool);
 
     // Migration: leads va students jadvallariga extra_data qo'shish
@@ -871,7 +873,7 @@ async function getHrEmployeesData() {
         pinfl: r.pinfl || '', address: r.address || '',
         lang: r.lang || 'english',
         trialGroupLink: r.trial_group_link || '',
-        kpiTemplateId: r.kpi_template_id || ''
+        kpiTemplateId: r.kpi_template_id || '', dualRole: r.dual_role === true
     }));
 }
 
@@ -1217,6 +1219,7 @@ async function saveStudents(client, students, removedStudentIds = []) {
     await guardBulkDelete(client, 'students', "O'quvchilar", students);
     await client.query('DELETE FROM students');
     for (const s of students) {
+        await teacherDuties.validateAssignment(client, s, existingById.get(s.id));
         const { id, name, phone, group, subject, teacherId, assistantTeacherId,
                 lessonDayOfWeek, lessonTime, lessonDuration, password, ...extra } = s;
         // 150-ish: parol endi hech qachon oddiy matn holida saqlanmaydi —
@@ -1615,13 +1618,16 @@ async function restoreLead(id, actor = {}) {
 async function saveHrEmployeesData(client, employees, actor = {}) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
     await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
-    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id FROM hr_employees')).rows;
+    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id,dual_role FROM hr_employees')).rows;
     for (const e of employees) {
+        if (e.dualRole !== undefined && typeof e.dualRole !== 'boolean') throw Object.assign(new Error('Ikkilamchi rol boolean bo‘lishi kerak'), { status: 400 });
+        if (e.dualRole === true && !require('../js/teacherRoles').isMain(e)) throw Object.assign(new Error('Ikkilamchi rol faqat asosiy ustozga beriladi'), { status: 400 });
         const matchedRole = require('../js/payrollEngine').role(e);
         if (e.kpiTemplateId && e.kpiTemplateId !== matchedRole) throw Object.assign(new Error('KPI shabloni lavozimga mos emas'), { status: 400 });
         const old = oldEmployees.find(r => r.id === e.id);
-        const before = old ? { role: old.role, startDate: old.start_date || old.join_date, kpiTemplateId: old.kpi_template_id || '' } : null;
-        const after = { role: e.role, startDate: e.startDate || e.joinDate || '', kpiTemplateId: e.kpiTemplateId || '' };
+        if (e.dualRole === undefined) e.dualRole = old?.dual_role === true && require('../js/teacherRoles').isMain(e);
+        const before = old ? { role: old.role, startDate: old.start_date || old.join_date, kpiTemplateId: old.kpi_template_id || '', dualRole: old.dual_role === true } : null;
+        const after = { role: e.role, startDate: e.startDate || e.joinDate || '', kpiTemplateId: e.kpiTemplateId || '', dualRole: e.dualRole === true };
         if (JSON.stringify(before) !== JSON.stringify(after)) await payroll.audit(client, actor, 'employee-kpi', e.id, before, after);
     }
     await client.query('DELETE FROM hr_employees');
@@ -1630,14 +1636,14 @@ async function saveHrEmployeesData(client, employees, actor = {}) {
             `INSERT INTO hr_employees
                 (id, name, first_name, last_name, role, login, phone, email,
                  department, status, join_date, gender, birth_date, start_date,
-                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id, dual_role)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
             [e.id, e.name, e.firstName || '', e.lastName || '',
              e.role || 'employee', e.login || '', e.phone || '', e.email || '',
              e.department || '', e.status || 'active', e.joinDate || '',
              e.gender || '', e.birthDate || '', e.startDate || '',
              e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '',
-             e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '']
+             e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '', e.dualRole === true]
         );
     }
 }
@@ -3740,6 +3746,7 @@ const SHOP_ORDER_STAGE_LABELS = {
 };
 
 async function patchState(partial, actor = {}) {
+    if (actor.role === 'teacher') throw Object.assign(new Error('Ustoz faqat o‘z davomatini maxsus endpoint orqali saqlaydi'), { status: 403 });
     await detectPatchStateNotificationEvents(partial);
     await tx(async (client) => {
         for (const key of ['salesPlan', 'bonusData']) if (partial[key] !== undefined) {
@@ -3783,7 +3790,14 @@ async function patchState(partial, actor = {}) {
 // Ustozning bitta o'quvchi/bitta jonli dars uchun davomatini saqlash.
 // Bu umumiy state snapshotini o'chirib-qayta yozmaydi: faqat kerakli qatordan
 // UPSERT qiladi va ustoz faqat o'ziga biriktirilgan o'quvchini baholay oladi.
-async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade }) {
+async function getTeacherScopedState(actor) {
+    const own = await teacherDuties.teacherForActor(pool, actor);
+    return teacherDuties.stateForTeacher(await getFullState(), own);
+}
+
+async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType }) {
+    if (typeof present !== 'boolean') throw Object.assign(new Error('Davomat boolean bo‘lishi kerak'), { status: 400 });
+    if (attendanceType !== undefined && !['main', 'assistant'].includes(attendanceType)) throw new Error('Davomat roli noto‘g‘ri');
     const safeTeacherId = String(teacherId || '').trim();
     const safeStudentId = String(studentId || '').trim();
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ''));
@@ -3824,28 +3838,19 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         if (!teacher) throw new Error('Ustoz yozuvi topilmadi');
 
         if (!isStaffWithFullAccess) {
-            // Teacher akkaunti HR loginiga biriktirilgan bo'lishi kerak. Eski
-            // yozuvlarda login bo'sh qolgan bo'lsa, faqat o'z ismiga mos
-            // yozuvni fallback sifatida qabul qilamiz.
-            const owner = await client.query(
-                `SELECT 1
-                 FROM users u
-                 JOIN hr_employees he ON (
-                     LOWER(TRIM(COALESCE(he.login, ''))) = LOWER(TRIM(u.email))
-                     OR (COALESCE(TRIM(he.login), '') = '' AND LOWER(TRIM(he.name)) = LOWER(TRIM(u.name)))
-                 )
-                 WHERE u.id = $1 AND he.id = $2
-                 LIMIT 1`,
-                [actor.id, safeTeacherId]
-            );
-            if (!owner.rowCount) {
+            const owner = await teacherDuties.teacherForActor(client, actor);
+            if (owner.id !== safeTeacherId) {
                 throw new Error("Siz faqat o'zingizga biriktirilgan ustoz davomatini belgilashingiz mumkin");
             }
+            teacher.subject = require('../js/teacherRoles').language(owner);
+            teacher.type = owner.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
         }
 
-        const assignmentColumn = teacher.type === 'yordamchi' ? 'assistant_teacher_id' : 'teacher_id';
+        const selectedType = attendanceType || (teacher.type === 'yordamchi' ? 'assistant' : 'main');
+        if (selectedType === 'main' && teacher.type === 'yordamchi') throw new Error('Yordamchi ustoz asosiy davomatni o‘zgartira olmaydi');
+        const assignmentColumn = selectedType === 'assistant' ? 'assistant_teacher_id' : 'teacher_id';
         const studentResult = await client.query(
-            `SELECT id, subject FROM students WHERE id = $1 AND ${assignmentColumn} = $2`,
+            `SELECT id, subject FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
             [safeStudentId, safeTeacherId]
         );
         const student = studentResult.rows[0];
@@ -3856,7 +3861,12 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
             throw new Error("O'quvchi va ustoz fan yo'nalishi mos emas");
         }
 
-        const tableName = teacher.type === 'yordamchi' ? 'assistant_attendance' : 'main_attendance';
+        if (selectedType === 'assistant') {
+            result = await teacherDuties.recordAssistantAttendance(client, { actor, teacherId: safeTeacherId,
+                studentId: safeStudentId, date, present });
+            return;
+        }
+        const tableName = 'main_attendance';
         const attendanceKey = `${match[1]}-${match[2]}_${safeTeacherId}`;
 
         if (present) {
@@ -4440,7 +4450,7 @@ setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
     pool, DATA_DIR,
-    getFullState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
+    getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, saveTeacherTrialLesson,
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,

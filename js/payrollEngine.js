@@ -98,12 +98,13 @@
         const weekdays = pattern === 'tts' ? [2, 4, 6] : [1, 3, 5];
         return Array.from({ length: last }, (_, i) => i + 1).filter(day => weekdays.includes(new Date(Date.UTC(y, m, day)).getUTCDay()));
     }
-    function teacherPay(employee, source, p, settings) {
-        const assistant = role(employee) === 'assistant';
+    function teacherPay(employee, source, p, settings, dutyRole = role(employee)) {
+        const assistant = dutyRole === 'assistant';
         const teacher = source.teachers.find(t => t.id === employee.id) || employee;
         const pattern = teacher.schedulePattern || 'mwf';
         const attendance = assistant ? source.assistantAttendance : source.mainAttendance;
-        const students = source.students.filter(s => (assistant ? s.assistantTeacherId : s.teacherId) === employee.id && language(s) === language(employee));
+        const students = source.students.filter(s => (assistant ? s.assistantTeacherId : s.teacherId) === employee.id && language(s) === language(employee)
+            && !(assistant && role(employee) === 'teacher' && s.teacherId === employee.id));
         let total = 0, lessons = 0;
         const breakdown = [];
         for (const s of students) for (const block of months(p)) {
@@ -208,7 +209,18 @@
                 fixed = fixedPay(tier.fixed, p, e);
                 commission = money(turnover * settings.sales.commission / 100);
                 bonus = money(facts.bonusByManager[e.id] || 0);
-            } else academic = teacherPay(e, source, p, settings);
+            } else {
+                academic = teacherPay(e, source, p, settings);
+                if (r === 'teacher' && (e.dualRole === true || source.academicPolicy === 'dual-role-v1')) {
+                    const main = academic, assistant = teacherPay(e, source, p, settings, 'assistant');
+                    const studentIds = new Set([...main.breakdown, ...assistant.breakdown].map(b => b.studentId));
+                    academic = { total: main.total + assistant.total, lessons: main.lessons + assistant.lessons,
+                        studentCount: studentIds.size, mainTotal: main.total, assistantTotal: assistant.total,
+                        mainLessons: main.lessons, assistantLessons: assistant.lessons,
+                        breakdown: [...main.breakdown.map(b => ({ ...b, dutyRole: 'main' })),
+                            ...assistant.breakdown.map(b => ({ ...b, dutyRole: 'assistant' }))] };
+                }
+            }
             if (e._correctionOnly) { fixed = 0; commission = 0; bonus = 0; turnover = 0; academic = {}; }
             const row = { employeeId: e.id, name: e.name, avatar: e.avatar || '', role: r, roleLabel: ROLES[r],
                 fixed, turnover, commission, bonus, ...academic, total: fixed + commission + bonus + (academic.total || 0) };

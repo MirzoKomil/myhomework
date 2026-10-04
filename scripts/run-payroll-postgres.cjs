@@ -25,7 +25,7 @@ async function main() {
     run('initdb', ['-D', data, '-U', 'payroll_test', '--auth=trust', '--encoding=UTF8', '--locale=C']);
     run('pg_ctl', ['-D', data, '-l', path.join(cluster, 'postgres.log'), '-o', `-h 127.0.0.1 -p ${port}`, '-w', 'start']);
     started = true;
-    for (const testFile of ['scripts/payroll-postgres.test.cjs', 'scripts/inflow-postgres.test.cjs']) {
+    for (const testFile of ['scripts/payroll-postgres.test.cjs', 'scripts/inflow-postgres.test.cjs', 'scripts/teacher-dual-role-postgres.test.cjs']) {
     const database = 'payroll_test_' + randomUUID().replaceAll('-', '');
     const client = new Client({ host: '127.0.0.1', port, user: 'payroll_test', database: 'postgres' });
     await client.connect();

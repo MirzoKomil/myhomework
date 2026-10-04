@@ -512,7 +512,10 @@ async function bootApp() {
         };
         const findOwn = list => list.find(isOwn);
 
-        let linked = findOwn(teachers);
+        // Prefer the server-scoped HR identity over a colleague with the same
+        // display name in the limited counterpart teacher list.
+        let linked = getItem(STORAGE_KEYS.hrEmployees, []).find(e =>
+            (e.login || '').trim().toLowerCase() === myLogin && !!myLogin) || findOwn(teachers);
         // 29-vazifa: ustoz hali "Ustoz ish jadvalini sozlash" orqali
         // haqiqiy STORAGE_KEYS.teachers yozuviga aylanmagan, faqat HR
         // xodimlar ro'yxatida "virtual" ustoz sifatida mavjud bo'lsa,
@@ -594,9 +597,9 @@ async function bootApp() {
                         schedulePattern: 'mwf',
                         lessonDuration: 15
                     }];
-                await apiPatchState({ teachers: updated }).then(() => {
-                    _cache.teachers = updated;
-                }).catch(err => console.error('Ustoz subject tuzatishda xatolik:', err.message));
+                // Teacher state is server-scoped. Do not upload a partial teacher
+                // list as a global CRM snapshot; virtual settings are local only.
+                _cache.teachers = updated;
             }
         }
     }
@@ -8479,6 +8482,7 @@ function renderCompanionAttendanceHtml(students, counterpartField, counterpartSt
 }
 
 function renderMainAttendance() {
+    if (getCurrentUser()?.role === 'teacher') return teacherDutyUI.render();
     initMainAttControls();
     _populateDemoStudentSelect();
     const currentUser = getCurrentUser();
@@ -10941,6 +10945,7 @@ function fillStudentTeacherOptions(subject, suffix) {
         aSel.innerHTML = '<option value="">— Tanlanmagan —</option>' +
             yordamchi.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
     }
+    teacherDutyUI.bindAssignment(tSel, aSel);
 }
 
 function studentFormHtml(sfx, defaults) {
@@ -11204,6 +11209,7 @@ function openEditStudentModal(studentId) {
     if (tSel && s.teacherId) tSel.value = s.teacherId;
     const aSel = document.getElementById('mStAsstTeacherE');
     if (aSel && s.assistantTeacherId) aSel.value = s.assistantTeacherId;
+    teacherDutyUI.bindAssignment(tSel, aSel);
     document.getElementById('mStSubjectE').addEventListener('change', e => {
         fillStudentTeacherOptions(e.target.value, 'E');
     });
@@ -16814,11 +16820,13 @@ function applyTeacherAttendanceResult(result) {
     const attendance = { ...allAttendance };
     const dayMap = { ...(attendance[result.attendanceKey] || {}) };
     const studentDays = { ...(dayMap[result.studentId] || {}) };
-    if (result.present) studentDays[result.day] = 1;
+    if (result.attendanceType === 'assistant') studentDays[result.day] = result.present ? 1 : 0;
+    else if (result.present) studentDays[result.day] = 1;
     else delete studentDays[result.day];
     dayMap[result.studentId] = studentDays;
     attendance[result.attendanceKey] = dayMap;
     setCachedItem(attendanceKey, attendance);
+    if (result.attendanceType === 'assistant') return;
 
     const allGrades = getItem(STORAGE_KEYS.liveGrades, {});
     const grades = { ...allGrades };
@@ -17866,6 +17874,7 @@ function initPaymentOnboardingForm(modalBody, options = {}) {
     const { lead = null } = options;
     wireTeacherSchedulePicker(modalBody, { lead });
     wireFirstLessonDatePattern(modalBody);
+    teacherDutyUI.bindAssignment(modalBody.querySelector('#onboardTeacherId'), modalBody.querySelector('#onboardAssistantTeacherId'));
 
     const contractNumberBlock = modalBody.querySelector('#onboardContractNumberBlock');
     const syncContractNumber = () => {
@@ -17933,6 +17942,7 @@ function collectPaymentOnboardingData(modalBody) {
     const teachers = getItem(STORAGE_KEYS.teachers, []);
     const assistantTeacherId = getVal('onboardAssistantTeacherId');
     if (!assistantTeacherId) return { error: "Yordamchi o'qituvchini tanlang", target: '#onboardAssistantTeacherId' };
+    if (teacherRoles.conflict(teacherId, assistantTeacherId)) return { error: 'Asosiy va yordamchi ustoz boshqa shaxslar bo‘lishi kerak', target: '#onboardAssistantTeacherId' };
     const contractLabel = getSurveyOptionLabel(LEAD_CONTRACT_TYPES, contractType.value);
     const courseLevelLabel = getSurveyOptionLabel(LEAD_COURSE_LEVELS, courseLevel.value);
     const teacherName = teachers.find(t => t.id === teacherId)?.name || '';
@@ -21402,12 +21412,14 @@ function resolveGuideAudienceTags(user) {
 
     const findLinkedEmployee = () => {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
-        return hrEmployees.find(e => e.name?.trim().toLowerCase() === user.name?.trim().toLowerCase());
+        return hrEmployees.find(e => e.id === user.linkedTeacherId || (e.login && e.login === user.email))
+            || hrEmployees.find(e => e.name?.trim().toLowerCase() === user.name?.trim().toLowerCase());
     };
 
     if (role === 'teacher') {
         const linked = findLinkedEmployee();
-        return linked?.role === 'yordamchi' ? ['teacher_assistant'] : ['teacher_main'];
+        return linked?.role === 'yordamchi' ? ['teacher_assistant']
+            : linked?.dualRole === true ? ['teacher_main', 'teacher_assistant'] : ['teacher_main'];
     }
     if (role === 'employee') {
         const linked = findLinkedEmployee();
@@ -21793,6 +21805,7 @@ function openEditEmployeeModal(empId) {
             <select id="editEmpRole" class="form-control">${roleOptions}</select>
         </div>
         ${payrollUI.employeeField(displayRole, emp.kpiTemplateId)}
+        ${teacherDutyUI.employeeField(emp.dualRole === true)}
         ${teacherLangHtml(preselectedLang)}
         ${trialGroupLinkHtml(emp.trialGroupLink || '')}
         ${managerLangHtml(emp.lang || 'english')}
@@ -21865,6 +21878,7 @@ function openEditEmployeeModal(empId) {
     bindManagerLangToggle('editEmpRole');
     bindRopLangToggle('editEmpRole');
     payrollUI.bindEmployee('editEmpRole');
+    teacherDutyUI.bindEmployee('editEmpRole');
 
     // Avatar preview (agar mavjud bo'lsa, DOM orqali src o'rnatamiz)
     if (emp.avatar) {
@@ -21926,6 +21940,7 @@ function openEditEmployeeModal(empId) {
             birthDate: document.getElementById('editEmpBirthDate').value,
             startDate: document.getElementById('editEmpStartDate').value,
             role: resolvedRole,
+            dualRole: teacherRoles.isMain({ role: resolvedRole }) && document.getElementById('employeeDualRole').checked,
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             phone,
             email: document.getElementById('editEmpEmail').value.trim(),
@@ -22055,6 +22070,7 @@ function openAddEmployeeModal() {
             <select id="empRole" class="form-control">${roleOptions}</select>
         </div>
         ${payrollUI.employeeField('')}
+        ${teacherDutyUI.employeeField()}
         ${teacherLangHtml()}
         ${trialGroupLinkHtml()}
         ${managerLangHtml()}
@@ -22134,6 +22150,7 @@ function openAddEmployeeModal() {
     bindManagerLangToggle('empRole');
     bindRopLangToggle('empRole');
     payrollUI.bindEmployee('empRole');
+    teacherDutyUI.bindEmployee('empRole');
     document.getElementById('empRole').dispatchEvent(new Event('change'));
 
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
@@ -22181,6 +22198,7 @@ function openAddEmployeeModal() {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
             role, phone, email, department, status, login,
+            dualRole: teacherRoles.isMain({ role }) && document.getElementById('employeeDualRole').checked,
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),

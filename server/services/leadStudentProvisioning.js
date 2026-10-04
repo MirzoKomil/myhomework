@@ -29,6 +29,7 @@ async function provisionLeadStudent(client, lead) {
     const result = await client.query('SELECT data FROM mobile_content WHERE singleton = 1');
     const courses = result.rows[0]?.data?.courses || [];
     const student = access.buildStudentForLead(lead, lang, existing, courses, new Date().toISOString().slice(0, 10));
+    await require('./teacherDuties').validateAssignment(client, student, existing);
     if (!existing && students.some(s => s.id === student.id)) {
         throw new Error('O‘quvchi IDsi band. Admin bog‘langan lidni tekshirishi kerak.');
     }

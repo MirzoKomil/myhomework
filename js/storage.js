@@ -370,50 +370,12 @@ function getSubjectLabel(key) {
 }
 
 function filterTeachersByTypeAndSubject(type, subject) {
+    if (type === 'asosiy' || type === 'yordamchi') {
+        return teacherRoles.pool(getItem(STORAGE_KEYS.hrEmployees, []), getItem(STORAGE_KEYS.teachers, []), type, subject);
+    }
     const stored = getItem(STORAGE_KEYS.teachers, []).filter(t =>
         t.type === type && (t.subject || 'english') === subject
     );
-
-    // Faqat "Xodimlar ro'yxati"da bor ustozlarni ko'rsatamiz
-    if (type === 'asosiy') {
-        const hrRole = subject === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi';
-        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, [])
-            .filter(e => e.role === hrRole && e.status !== 'inactive');
-        const hrIds = new Set(hrEmployees.map(e => e.id));
-        const storedInHr = stored.filter(t => hrIds.has(t.id));
-        const storedIds = new Set(storedInHr.map(t => t.id));
-        const hrTeachers = hrEmployees.map(e => ({
-            id: e.id,
-            name: e.name,
-            type: 'asosiy',
-            subject,
-            phone: e.phone || '',
-            login: e.login || '',
-            _fromHr: true
-        }));
-        return [...storedInHr, ...hrTeachers.filter(t => !storedIds.has(t.id))];
-    }
-
-    if (type === 'yordamchi') {
-        // 31-ish: yordamchi o'qituvchi ham til bo'yicha alohida-alohida
-        // bo'lishi kerak — "lang" maydoni orqali ajratiladi (asosiy
-        // o'qituvchidagi kabi alohida rol satri emas).
-        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, [])
-            .filter(e => e.role === 'yordamchi' && e.status !== 'inactive' && (e.lang || 'english') === subject);
-        const hrIds = new Set(hrEmployees.map(e => e.id));
-        const storedInHr = stored.filter(t => hrIds.has(t.id));
-        const storedIds = new Set(storedInHr.map(t => t.id));
-        const hrTeachers = hrEmployees.map(e => ({
-            id: e.id,
-            name: e.name,
-            type: 'yordamchi',
-            subject,
-            phone: e.phone || '',
-            login: e.login || '',
-            _fromHr: true
-        }));
-        return [...storedInHr, ...hrTeachers.filter(t => !storedIds.has(t.id))];
-    }
 
     return stored;
 }

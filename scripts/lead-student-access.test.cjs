@@ -177,7 +177,7 @@ test('stale CRM snapshots keep newly provisioned accounts; explicit deletion wor
   const hash = db.rows[0].extra_data.passwordHash;
   const s = fromRow(db.rows[0]);
   const { saveStudents } = loadFunctions('server/db.js', ['saveStudents'], {
-    STUDENT_PROVISION_LOCK, rowToStudent: fromRow, isUsableList: Array.isArray,
+    STUDENT_PROVISION_LOCK, rowToStudent: fromRow, isUsableList: Array.isArray, teacherDuties: require('../server/services/teacherDuties'),
     guardBulkDelete: async () => {}, BCRYPT_HASH_RE: /^\$2[aby]\$\d{2}\$/, bcrypt
   });
   await saveStudents(db, []);
