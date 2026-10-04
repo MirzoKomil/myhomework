@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const L = require('../js/paymentLedger');
 const engine = require('../js/payrollEngine');
 const access = require('../js/studentAccess');
-const { appContext } = require('./helpers/lead-workflow-fixture.cjs');
+const { appContext, functionSource } = require('./helpers/lead-workflow-fixture.cjs');
 const lead = (overrides = {}) => ({ id: 'l', language: 'english', status: 'tolov-yopildi',
     paymentSurvey: { paymentType: 'partial', paidAmount: 600000, totalAmount: 2000000, debtAmount: 1400000, lastPaymentDate: '2026-09-30', tariff: '30' },
     paymentClosedSurvey: { actualAmount: 2000000, closedDate: '2026-10-04' }, ...overrides });
@@ -85,12 +85,52 @@ test('Cash Flow periods and trends use Tashkent accounting dates rather than bro
 });
 test('derived cash receipts cannot be saved/deleted as independent manual cash rows', () => {
     let saved;
-    const generated = L.cashFlow(records), manual = [{ id: 'expense', type: 'chiqim', amount: 123 }, { id: 'duplicate', paymentRecordId: 'a', amount: 600000 }];
-    const c = appContext(['getCashFlowTx', 'saveCashFlowTx', 'deleteCashFlowTx'], { inflowUI: { cashRows: () => generated },
+    const manual = [{ id: 'expense', type: 'chiqim', amount: 123 }, { id: 'duplicate', paymentRecordId: 'a', amount: 600000 }];
+    const decisions = [{ cashId: 'duplicate', recordId: 'a', decision: 'linked', snapshot: L.stable(manual[1]) }];
+    const c = appContext(['getCashFlowTx', 'saveCashFlowTx', 'deleteCashFlowTx'], { inflowUI: { cashProjection: () => L.projectCash(manual, records, decisions) },
         STORAGE_KEYS: { cashFlow: 'cash' }, getItem: () => manual, setItem: (_key, list) => { saved = list; } });
     assert.equal(c.getCashFlowTx().length, 4); // Three receipts + independent manual expense.
-    c.saveCashFlowTx(c.getCashFlowTx()); assert.equal(saved.length, 1); assert.equal(saved[0].id, 'expense');
+    c.saveCashFlowTx(c.getCashFlowTx()); assert.equal(saved.length, 2); assert.equal(saved[0].id, 'expense');
+    assert.equal(saved[1].id, 'duplicate'); // Archival source survives, excluded from effective balance.
     saved = null; c.deleteCashFlowTx('inflow:a'); assert.equal(saved, null);
+});
+
+test('cash duplicates are quarantined until finance decides, independent income and unrelated accounts survive', () => {
+    const old = { id: 'old', type: 'kirim', category: 'sotuv', purpose: "Kurs to'lovi", date: '2026-09-30', amount: 600000, paymentMethod: 'Karta' };
+    const pending = L.projectCash([old], [records[0]]);
+    assert.equal(pending.pending.length, 1);
+    assert.equal(pending.rows.reduce((sum,r) => sum+r.amount, 0), 600000);
+    for (const decision of ['linked','independent']) {
+        const result = L.projectCash([old], [records[0]], [{ cashId:'old', decision, recordId:'a', snapshot:L.stable(old) }]);
+        assert.equal(result.pending.length, 0);
+        assert.equal(result.rows.reduce((sum,r) => sum+r.amount, 0), decision === 'linked' ? 600000 : 1200000);
+    }
+    assert.equal(L.projectCash([{ ...old, paymentMethod:'Naqd pul' }], [records[0]]).pending.length, 0);
+    assert.equal(L.projectCash([{ ...old, lang:'russian' }], [records[0]]).pending.length, 0);
+    assert.equal(L.projectCash([{ ...old, type:'chiqim' }], [records[0]]).pending.length, 0);
+    const stale = [{ cashId:'old', decision:'independent', snapshot:L.stable({ ...old, notes:'old' }) }];
+    assert.equal(L.projectCash([old], [records[0]], stale).pending.length, 1);
+});
+
+test('student payment history uses canonical receipts and keeps unmatched old rows outside the confirmed total', async () => {
+    const history = require('../server/services/paymentHistory');
+    const db = { query: async sql => ({ rows: sql.includes('FROM payment_records') ?
+        [{ id:'receipt',source_key:'academic:p1',amount:'600000',method:'card',tariff:30,date:'2026-09-30',debt_snapshot:'1400000',receipt_url:'/uploads/a.png' }] :
+        [{ id:'p1',paid:600000,date:'2026-09-30' },{ id:'ambiguous',paid:100000,date:'' }] }) };
+    const result = await history.forStudent(db, { id:'s',subject:'english',debtAmount:1400000 });
+    assert.equal(result.history.length, 1); assert.equal(result.summary.amount, 600000);
+    assert.equal(result.legacyHistory.length, 1); assert.equal(result.legacyHistory[0].id, 'ambiguous');
+    assert.equal(result.summary.debt, 1400000);
+});
+
+test('old payment screen redirects to the ledger and legacy payment writes fail before any state mutation', async () => {
+    const visited = [];
+    const c = appContext(['renderPayments'], { switchTab: value => visited.push(value), switchFinanceSection: value => visited.push(value),
+        document: { getElementById: () => ({ addEventListener() {} }) } });
+    c.renderPayments(); assert.deepEqual(visited, ['finance','tolovlar']);
+    const vm = require('node:vm'), context = vm.createContext({});
+    vm.runInContext(functionSource('server/db.js','patchState'), context);
+    await assert.rejects(context.patchState({ payments: [] }, { role:'admin' }), { status:409 });
 });
 test('new zero-money closure of a paid-price course is rejected, without inserting a receipt', async () => {
     const service = require('../server/services/inflow'); let writes = 0;

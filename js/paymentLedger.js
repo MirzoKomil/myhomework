@@ -64,5 +64,37 @@
             date: r.paidDate, time: r.paidTime || '', paymentMethod: { cash: 'Naqd pul', bank: 'Bank hisob raqami', payme: 'Bank hisob raqami', click: 'Bank hisob raqami' }[r.method] || METHODS[r.method],
             lang: r.language, managerId: r.managerId, leadId: r.leadId, description: r.name, notes: r.name + (r.legacyReview ? ' · Eski ma’lumot — tekshirish kerak' : ''), receiptUrl: r.receiptUrl }));
     }
-    return { METHODS, TARIFFS, money, date, today, method, receipt, leadEvents, filter, summary, cashFlow };
+    function stable(value) {
+        if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
+        if (value && typeof value === 'object') return '{' + Object.keys(value).sort().filter(k => value[k] !== undefined)
+            .map(k => JSON.stringify(k) + ':' + stable(value[k])).join(',') + '}';
+        return JSON.stringify(value);
+    }
+    function cashCandidates(cash, records) {
+        if (cash.type !== 'kirim' || cash.ledgerGenerated) return [];
+        if (!cash.paymentRecordId && !cash.leadId && !cash.studentId && !/kurs.*to.lov/i.test(cash.purpose || '')
+            && !['sotuv','ichki-sotuv'].includes(cash.category)) return [];
+        const account = value => ['bank','payme','click'].includes(method(value)) ? 'bank' : method(value);
+        return records.filter(r => money(cash.amount) === r.amount && date(cash.date) === r.paidDate
+            && (!cash.lang || cash.lang === r.language)
+            && (!cash.leadId || cash.leadId === r.leadId)
+            && (!cash.studentId || cash.studentId === r.studentId)
+            && (account(cash.paymentMethod) === 'unknown' || r.method === 'unknown' || account(cash.paymentMethod) === account(r.method)));
+    }
+    function projectCash(manual, records, decisions = []) {
+        const rows = [], pending = [], excludedIds = [], byId = new Map(records.map(r => [r.id, r]));
+        for (const cash of manual) {
+            if (cash.ledgerGenerated) continue;
+            const decision = decisions.find(d => d.cashId === cash.id && d.snapshot === stable(cash));
+            if (decision?.decision === 'linked' && byId.has(decision.recordId)) { excludedIds.push(cash.id); continue; }
+            const candidates = cashCandidates(cash, records);
+            if (decision?.decision !== 'independent' && candidates.length) {
+                pending.push({ cash, candidates }); excludedIds.push(cash.id); continue;
+            }
+            rows.push(cash);
+        }
+        return { rows: [...rows, ...cashFlow(records)], pending, excludedIds };
+    }
+    return { METHODS, TARIFFS, money, date, today, method, receipt, leadEvents, filter, summary, cashFlow,
+        stable, cashCandidates, projectCash };
 });

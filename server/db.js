@@ -16,6 +16,8 @@ const trialWorkflow = require('../js/trialWorkflow');
 const trialLessons = require('./services/trialLessons');
 const payroll = require('./services/payroll');
 const inflow = require('./services/inflow');
+const paymentHistory = require('./services/paymentHistory');
+const paymentCash = require('./services/paymentCash');
 const teacherDuties = require('./services/teacherDuties');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
@@ -362,6 +364,7 @@ async function initSchema() {
     `).catch(() => {});
 
     await inflow.initSchema(pool);
+    await paymentCash.initSchema(pool);
 
     // Boshlang'ich mobile_content qatori
     await pool.query(
@@ -2536,26 +2539,22 @@ async function getDemoStudentPayments(studentId) {
     }
 
     const paymentRows = await q('SELECT * FROM payments WHERE student_id = $1 ORDER BY date DESC', [id]);
+    const receiptHistory = await paymentHistory.forStudent(pool, student);
     const tariffRaw = String(student.tariff || 'standard');
     const tariffLabel = tariffRaw.charAt(0).toUpperCase() + tariffRaw.slice(1);
-    const history = paymentRows.map((p) => ({
-        id: p.id,
-        date: p.date || '',
-        amount: (p.platform || 0) + (p.book || 0),
-        paid: p.paid || 0,
-        debt: p.debt || 0,
-        tariffLabel,
-    }));
+    const history = receiptHistory.history;
 
     return {
         tariffLabel,
         lessonDuration: student.lessonDuration || 15,
-        monthlyAmount: history[0]?.amount || 0,
+        // Course receipts are not a monthly tariff: never infer it from a deposit.
+        monthlyAmount: (paymentRows[0]?.platform || 0) + (paymentRows[0]?.book || 0),
         courseStartDate: student.startDate || null,
         salesManagerName,
         debtAmount: Number(student.debtAmount) || 0,
         paymentDueDate: student.paymentDueDate || null,
         history,
+        legacyHistory: receiptHistory.legacyHistory,
     };
 }
 
@@ -3746,6 +3745,7 @@ const SHOP_ORDER_STAGE_LABELS = {
 };
 
 async function patchState(partial, actor = {}) {
+    if (partial.payments !== undefined) throw Object.assign(new Error('Eski to‘lov jadvali arxiv. Yangi tushumni To‘lovlar reyestridan qabul qiling'), { status: 409 });
     if (actor.role === 'teacher') throw Object.assign(new Error('Ustoz faqat o‘z davomatini maxsus endpoint orqali saqlaydi'), { status: 403 });
     await detectPatchStateNotificationEvents(partial);
     await tx(async (client) => {
@@ -3759,7 +3759,6 @@ async function patchState(partial, actor = {}) {
         if (partial.timetable)          await saveTimetable(client, partial.timetable);
         if (partial.mainAttendance)     await saveAttendanceTable(client, 'main_attendance', partial.mainAttendance);
         if (partial.assistantAttendance) await saveAttendanceTable(client, 'assistant_attendance', partial.assistantAttendance);
-        if (partial.payments)           await savePayments(client, partial.payments);
         if (partial.leads)              await saveLeads(client, partial.leads);
         if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor);
         if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap);
@@ -3768,7 +3767,7 @@ async function patchState(partial, actor = {}) {
         if (partial.bonusHistory !== undefined) await saveJsonData(client, 'bonusHistory', partial.bonusHistory);
         if (partial.bonusData !== undefined)   await saveJsonData(client, 'bonusData', partial.bonusData);
         if (partial.salesPlan !== undefined)   await saveJsonData(client, 'salesPlan', partial.salesPlan);
-        if (partial.cashFlow !== undefined)    await saveJsonData(client, 'cashFlow', partial.cashFlow);
+        if (partial.cashFlow !== undefined)    await paymentCash.saveCash(client, partial.cashFlow);
         if (partial.orgChart !== undefined)    await saveJsonData(client, 'orgChart', partial.orgChart);
         if (partial.manualMetrics !== undefined) await saveJsonData(client, 'manualMetrics', partial.manualMetrics);
         if (partial.liveGrades !== undefined)    await saveJsonData(client, 'liveGrades', partial.liveGrades);

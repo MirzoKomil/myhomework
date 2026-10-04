@@ -9335,8 +9335,6 @@ function renderStudents() {
         students = students.filter(s => (s.lessonDuration || 15) === dur);
     }
 
-    const payments = getItem(STORAGE_KEYS.payments, []);
-
     const totalLabel = document.getElementById('studentsTotalLabel');
     if (totalLabel) totalLabel.textContent = `Jami: ${students.length} ta`;
 
@@ -9353,9 +9351,8 @@ function renderStudents() {
         const endDate = addCourseDays(startDate, 90);
         const attended = countStudentAttendance(s.id, s.teacherId);
 
-        const studentPayments = payments.filter(p => p.studentId === s.id);
-        const totalDebt = studentPayments.reduce((sum, p) => sum + (p.debt || 0), 0);
-        const statusHtml = studentPayments.length === 0
+        const totalDebt = Number(s.debtAmount) || 0;
+        const statusHtml = s.debtAmount == null
             ? `<span class="badge" style="background:#f3f4f6;color:#6b7280">—</span>`
             : totalDebt > 0
                 ? `<span class="badge badge-danger">Qarzdor</span>`
@@ -9664,6 +9661,7 @@ function renderSdpTab(tab, studentId) {
     else if (tab === 'platform') html = renderSdpPlatform(s);
     else if (tab === 'sales') html = renderSdpSales(s);
     body.innerHTML = `<div class="sdp-body-inner">${html}</div>`;
+    if (tab === 'payments') inflowUI.renderHistory(body.querySelector('[data-inflow-history]'), studentId);
 }
 
 function renderSdpProfile(s) {
@@ -9679,9 +9677,8 @@ function renderSdpProfile(s) {
     const endDate = addCourseDays(s.startDate, 90);
     const attended = countStudentAttendance(s.id, s.teacherId);
 
-    const payments = getItem(STORAGE_KEYS.payments, []).filter(p => p.studentId === s.id);
-    const totalDebt = payments.reduce((sum, p) => sum + (p.debt || 0), 0);
-    const statusHtml = payments.length === 0
+    const totalDebt = Number(s.debtAmount) || 0;
+    const statusHtml = s.debtAmount == null
         ? `<span class="badge" style="background:#f3f4f6;color:#6b7280">—</span>`
         : totalDebt > 0
             ? `<span class="badge badge-danger">Qarzdor: ${formatMoney(totalDebt)}</span>`
@@ -9724,38 +9721,13 @@ function renderSdpProfile(s) {
         <div class="sdp-stat-grid">
             <div class="sdp-stat-card"><div class="sdp-stat-value">${attended||0}</div><div class="sdp-stat-label">Kelgan darslar</div></div>
             <div class="sdp-stat-card"><div class="sdp-stat-value">${s.grade||'—'}</div><div class="sdp-stat-label">Baho</div></div>
-            <div class="sdp-stat-card"><div class="sdp-stat-value">${payments.length}</div><div class="sdp-stat-label">To'lovlar soni</div></div>
+            <div class="sdp-stat-card"><div class="sdp-stat-value">${s.paymentCount ?? '—'}</div><div class="sdp-stat-label">To'lovlar soni</div></div>
         </div>
     </div>`;
 }
 
 function renderSdpPayments(s) {
-    const payments = getItem(STORAGE_KEYS.payments, []).filter(p => p.studentId === s.id);
-    if (!payments.length) return `<div class="sdp-empty">To'lovlar tarixi yo'q</div>`;
-    const rows = payments.map(p => `
-        <tr>
-            <td>${p.date ? formatDateShort(p.date) : '—'}</td>
-            <td>${formatMoney(p.platform||0)}</td>
-            <td>${formatMoney(p.book||0)}</td>
-            <td>${formatMoney(p.paid||0)}</td>
-            <td><span class="badge ${p.debt>0?'badge-danger':'badge-success'}">${formatMoney(p.debt||0)}</span></td>
-        </tr>`).join('');
-    const total = payments.reduce((sum,p)=>sum+(p.paid||0),0);
-    const debt = payments.reduce((sum,p)=>sum+(p.debt||0),0);
-    return `
-    <div class="sdp-section">
-        <div class="sdp-stat-grid" style="grid-template-columns:1fr 1fr">
-            <div class="sdp-stat-card"><div class="sdp-stat-value" style="font-size:16px">${formatMoney(total)}</div><div class="sdp-stat-label">Jami to'langan</div></div>
-            <div class="sdp-stat-card"><div class="sdp-stat-value" style="font-size:16px;color:${debt>0?'var(--danger)':'#22c55e'}">${formatMoney(debt)}</div><div class="sdp-stat-label">Qarz</div></div>
-        </div>
-    </div>
-    <div class="sdp-section">
-        <p class="sdp-section-title">To'lovlar tarixi</p>
-        <table class="sdp-table">
-            <thead><tr><th>Sana</th><th>Platforma</th><th>Kitob</th><th>To'langan</th><th>Qarz</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>
-    </div>`;
+    return `<div data-inflow-history="${escapeHtml(s.id)}" role="status">To‘lovlar serverdan yuklanmoqda…</div>`;
 }
 
 function renderSdpAttendance(s) {
@@ -11274,63 +11246,12 @@ function openEditStudentModal(studentId) {
 
 // --- To'lovlar ---
 function renderPayments() {
-    const payments = getItem(STORAGE_KEYS.payments, []);
-    const students = getItem(STORAGE_KEYS.students, []);
-    const tbody = document.getElementById('paymentsBody');
-
-    tbody.innerHTML = payments.map(p => {
-        const student = students.find(s => s.id === p.studentId);
-        return `<tr>
-            <td>${student?.name || '—'}</td>
-            <td>${formatMoney(p.platform || 0)}</td>
-            <td>${formatMoney(p.book || 0)}</td>
-            <td>${formatMoney(p.paid || 0)}</td>
-            <td><span class="badge ${p.debt > 0 ? 'badge-danger' : 'badge-success'}">${formatMoney(p.debt || 0)}</span></td>
-            <td>${p.date || '—'}</td>
-            <td><button class="btn-danger-sm" data-delete-payment="${p.id}">O'chirish</button></td>
-        </tr>`;
-    }).join('') || '<tr><td colspan="7" class="text-muted">To\'lovlar yo\'q</td></tr>';
-
-    document.querySelectorAll('[data-delete-payment]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.dataset.deletePayment;
-            setItem(STORAGE_KEYS.payments, getItem(STORAGE_KEYS.payments, []).filter(p => p.id !== id));
-            renderPayments();
-        });
-    });
+    switchTab('finance');
+    switchFinanceSection('tolovlar');
 }
 
 document.getElementById('addPaymentBtn').addEventListener('click', () => {
-    const students = getItem(STORAGE_KEYS.students, []);
-    if (!students.length) { alert('Avval o\'quvchi qo\'shing.'); return; }
-    openModal("To'lov qo'shish",
-        `<div class="form-group"><label>O'quvchi</label>
-            <select id="mPayStudent" class="form-select">${students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select>
-         </div>
-         <div class="form-group"><label>Platforma to'lovi (so'm)</label><input type="text" inputmode="numeric" id="mPayPlatform" class="form-control" data-money-input value="0"></div>
-         <div class="form-group"><label>Kitob to'lovi (so'm)</label><input type="text" inputmode="numeric" id="mPayBook" class="form-control" data-money-input value="0"></div>
-         <div class="form-group"><label>To'langan (so'm)</label><input type="text" inputmode="numeric" id="mPayPaid" class="form-control" data-money-input value="0"></div>
-         <div class="form-group"><label>Sana</label><input type="date" lang="en-GB" id="mPayDate" class="form-control" value="${new Date().toISOString().split('T')[0]}"></div>`,
-        `<button class="btn-primary-sm" id="savePayment">Saqlash</button>`
-    );
-    wireMoneyInputs();
-    document.getElementById('savePayment').onclick = () => {
-        const platform = parseInt(document.getElementById('mPayPlatform').value.replace(/,/g, '')) || 0;
-        const book = parseInt(document.getElementById('mPayBook').value.replace(/,/g, '')) || 0;
-        const paid = parseInt(document.getElementById('mPayPaid').value.replace(/,/g, '')) || 0;
-        const total = platform + book;
-        const payments = getItem(STORAGE_KEYS.payments, []);
-        payments.push({
-            id: 'p' + Date.now(),
-            studentId: document.getElementById('mPayStudent').value,
-            platform, book, paid,
-            debt: Math.max(0, total - paid),
-            date: document.getElementById('mPayDate').value
-        });
-        setItem(STORAGE_KEYS.payments, payments);
-        closeModal();
-        renderPayments();
-    };
+    inflowUI.openStudentPayment();
 });
 
 // --- Marketing: Target Monitoringi ---
@@ -12033,12 +11954,14 @@ const CF_DONUT_COLORS = ['#7B61FF', '#4F8CFF', '#34D399', '#FBBF24', '#F472B6', 
 let _cfNetPeriod = 'kunlik';
 
 function getCashFlowTx() {
-    const generated = inflowUI.cashRows(), ids = new Set(generated.map(r => r.paymentRecordId));
-    return [...getItem(STORAGE_KEYS.cashFlow, []).filter(r => !r.ledgerGenerated && (!r.paymentRecordId || !ids.has(r.paymentRecordId))), ...generated];
+    return inflowUI.cashProjection().rows;
 }
 
 function saveCashFlowTx(list) {
-    setItem(STORAGE_KEYS.cashFlow, list.filter(r => !r.ledgerGenerated));
+    const excluded = new Set(inflowUI.cashProjection().excludedIds);
+    const next = list.filter(r => !r.ledgerGenerated);
+    for (const old of getItem(STORAGE_KEYS.cashFlow, [])) if (excluded.has(old.id) && !next.some(r => r.id === old.id)) next.push(old);
+    return setItem(STORAGE_KEYS.cashFlow, next);
 }
 
 function deleteCashFlowTx(id) {
@@ -12155,6 +12078,7 @@ function cfTrend(list, days = 14) {
 function renderCashFlow() {
     const panel = document.querySelector('[data-finance-panel="cashflow"]');
     if (!panel) return;
+    inflowUI.renderReconciliation();
 
     renderCfKpis();
     renderCfNetCashFlow();
@@ -12390,7 +12314,7 @@ function renderCfTxTable() {
             <td>${escapeHtml(person)}</td>
             <td>${escapeHtml(t.notes || '—')}</td>
             <td>
-                ${t.ledgerGenerated ? '<span class="text-muted">To‘lovlar reyestri (avtomatik)</span>' : `<button type="button" class="cf-row-action" data-cf-edit="${t.id}" title="Tahrirlash">✏️</button>
+                ${t.ledgerGenerated || inflowUI.isCashLocked(t.id) ? '<span class="text-muted">To‘lovlar reyestri / moliya tasdig‘i</span>' : `<button type="button" class="cf-row-action" data-cf-edit="${t.id}" title="Tahrirlash">✏️</button>
                 <button type="button" class="cf-row-action" data-cf-delete="${t.id}" title="O'chirish">🗑️</button>`}
             </td>
         </tr>`;
@@ -12403,7 +12327,7 @@ function cfPurposeOptions(category) {
 
 function openCashFlowModal(editId) {
     const existing = editId ? getCashFlowTx().find(t => t.id === editId) : null;
-    if (existing?.ledgerGenerated) return;
+    if (existing?.ledgerGenerated || inflowUI.isCashLocked(existing?.id)) return;
     const today = new Date().toISOString().slice(0, 10);
     const category = existing?.category || 'sotuv';
     const allLeadData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });

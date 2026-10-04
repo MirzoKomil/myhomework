@@ -8447,6 +8447,11 @@ body.modal-open {
 .inflow-amount { color:#129168; font-weight:700; }
 .inflow-mobile { display:none; }
 .inflow-proof { display:flex; flex-direction:column; gap:14px; }
+.inflow-proof [hidden] { display:none !important; }
+.inflow-review-box { border:1px solid #e1bb68; border-radius:12px; padding:16px; margin:12px 0; background:var(--card-bg); overflow-wrap:anywhere; }
+.inflow-review-row { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--border); }
+.inflow-review-row span { flex:1; min-width:180px; }
+.inflow-review-row button { min-height:44px; }
 @media(max-width:768px) {
  .inflow-kpis { grid-template-columns:1fr; gap:8px; }
  .inflow-stat { padding:14px; }

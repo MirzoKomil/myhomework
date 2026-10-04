@@ -1,6 +1,6 @@
 (function () {
     'use strict';
-    const L = PaymentLedger, state = { rows: { english: [], russian: [] }, loaded: false, seq: 0, timer: null, issues: 0, issueList: [] };
+    const L = PaymentLedger, state = { rows: { english: [], russian: [] }, decisions: [], loaded: false, seq: 0, timer: null, issues: 0, issueList: [] };
     const esc = value => escapeHtml(String(value ?? ''));
     const money = value => Number(value || 0).toLocaleString('en-US').replaceAll(',', ' ') + ' UZS';
     const opts = (items, all) => `<option value="">${all}</option>` + items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
@@ -45,11 +45,14 @@
         const msg = root?.querySelector('[data-inflow-message]') || document.querySelector('[data-inflow-cash-message]');
         if (msg) msg.textContent = 'Serverdan yuklanmoqda…';
         try {
-            const results = await Promise.all(['english', 'russian'].map(language => apiFetch('/api/inflow?language=' + language)));
+            const results = await Promise.all([...['english', 'russian'].map(language => apiFetch('/api/inflow?language=' + language)), apiFetch('/api/inflow/cash-reconciliation')]);
             if (seq !== state.seq) return;
             state.rows = { english: results[0].records, russian: results[1].records }; state.loaded = true; state.issues = results[0].migrationIssueCount; state.issueList = results[0].migrationIssues || [];
+            state.decisions = results[2].decisions;
+            setCachedItem(STORAGE_KEYS.cashFlow, results[2].manual);
             if (root) { fillPeople(root); draw(root); }
             if (msg) msg.textContent = '';
+            renderReconciliation();
             if (document.querySelector('[data-finance-panel="cashflow"].active')) renderCashFlow();
         } catch (e) { if (seq === state.seq && msg) msg.textContent = 'Yuklashda xatolik: ' + e.message; }
     }
@@ -64,7 +67,7 @@
             <label class="inflow-search">Ism yoki telefon<input type="search" data-inflow="search" placeholder="Ism yoki telefon raqami" autocomplete="off" data-lpignore="true" data-1p-ignore="true"></label>
             <label>Menejer<select data-inflow="manager"></select></label><label>Ustoz<select data-inflow="teacher"></select></label><label>Tarif<select data-inflow="tariff">${opts(Object.entries(L.TARIFFS), 'Barcha tariflar')}</select></label><label>Usul<select data-inflow="method">${opts(Object.entries(L.METHODS), 'Barcha usullar')}</select></label>
             <label>To‘lov shakli<select data-inflow="form">${opts([['full', 'To‘liq'], ['partial', 'Yarim (Zaklad)']], 'Barchasi')}</select></label><label>Saralash<select data-inflow="sort">${[['date-down', 'Sana: yangi → eski'], ['date-up', 'Sana: eski → yangi'], ['amount-down', 'Summa: katta → kichik'], ['amount-up', 'Summa: kichik → katta']].map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label></div>
-            <p class="text-muted" data-inflow-note></p><div data-inflow-issues></div><p role="status" data-inflow-message></p><div data-inflow-content></div>`;
+            <p class="text-muted" data-inflow-note></p><div data-inflow-issues></div><div data-inflow-cash-review></div><p role="status" data-inflow-message></p><div data-inflow-content></div>`;
         root.querySelector('[data-inflow="month"]').onchange = e => { const p = monthDates(e.target.value); if (!p) return; root.querySelector('[data-inflow="start"]').value = p.start; root.querySelector('[data-inflow="end"]').value = p.end; draw(root); };
         root.querySelectorAll('[data-inflow]').forEach(el => { if (el.dataset.inflow !== 'month') el.addEventListener(el.type === 'search' ? 'input' : 'change', () => draw(root)); });
         root.querySelectorAll('[data-inflow-quick]').forEach(btn => { btn.onclick = () => {
@@ -138,6 +141,61 @@
             };
         } catch (e) { alert(e.message); }
     }
+    function cashProjection() {
+        return L.projectCash(getItem(STORAGE_KEYS.cashFlow, []), [...state.rows.english, ...state.rows.russian], state.decisions);
+    }
+    function renderReconciliation() {
+        const pending = cashProjection().pending;
+        document.querySelectorAll('[data-inflow-cash-review]').forEach(root => {
+            root.innerHTML = !pending.length ? '' : `<section class="inflow-review-box"><h3>Eski kirimlarni solishtirish: ${pending.length} ta</h3>
+                <p role="alert">Balans vaqtinchalik: quyidagi shubhali qo‘lda kiritilgan kirimlar moliya tasdig‘igacha balans va Excel jami summasiga qo‘shilmagan. Asl yozuvlar saqlangan.</p>
+                ${pending.slice(0, 100).map(({cash}) => `<div class="inflow-review-row"><span>${esc(cash.date)} · ${money(cash.amount)} · ${esc(cash.notes || cash.person || cash.id)}</span>
+                <button type="button" class="btn-secondary-sm" data-reconcile-cash="${esc(cash.id)}">Solishtirish</button></div>`).join('')}</section>`;
+            root.querySelectorAll('[data-reconcile-cash]').forEach(btn => { btn.onclick = () => openReconciliation(btn.dataset.reconcileCash); });
+        });
+    }
+    function openReconciliation(id) {
+        const pending = cashProjection().pending.find(p => p.cash.id === id); if (!pending) return;
+        const { cash, candidates } = pending;
+        openModal('Cash Flow kirimini tekshirish', `<div class="inflow-proof"><p>${esc(cash.date)} · ${money(cash.amount)} · ${esc(cash.notes || cash.person || '')}</p>
+            <p>Haqiqiy chek va manbani tekshirib tanlang. Bir xil sana/summa ikki alohida to‘lov bo‘lishi ham mumkin.</p>
+            <label>Qaror<select id="cashReviewDecision" class="form-control"><option value="">Tanlang</option><option value="linked">Reyestrdagi shu tushumning nusxasi</option><option value="independent">Bu boshqa, alohida kirim</option></select></label>
+            <label id="cashReviewRecordWrap" hidden>Qaysi tushum?<select id="cashReviewRecord" class="form-control"><option value="">Tushumni tanlang</option>${candidates.map(r => `<option value="${esc(r.id)}">${esc(r.paidDate)} · ${esc(r.name)} · ${money(r.amount)} · ${esc(L.METHODS[r.method])} · ${esc(r.id)}</option>`).join('')}</select></label>
+            <p id="cashReviewError" role="alert"></p></div>`, '<button type="button" class="btn-secondary-sm" id="cashReviewCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="cashReviewSave">Moliya tasdiqlaydi</button>');
+        document.getElementById('cashReviewDecision').onchange = e => { document.getElementById('cashReviewRecordWrap').hidden = e.target.value !== 'linked'; };
+        document.getElementById('cashReviewCancel').onclick = closeModal;
+        document.getElementById('cashReviewSave').onclick = async e => {
+            const decision = document.getElementById('cashReviewDecision').value, recordId = document.getElementById('cashReviewRecord').value;
+            const error = document.getElementById('cashReviewError');
+            if (!decision || (decision === 'linked' && !recordId)) { error.textContent = 'Qaror va kerak bo‘lsa tushumni tanlang'; return; }
+            const button = e.currentTarget; button.disabled = true;
+            try {
+                const payload = { cashId: cash.id, decision, recordId: decision === 'linked' ? recordId : '', snapshot: L.stable(cash) };
+                await apiFetch('/api/inflow/cash-reconciliation', { method: 'POST', body: JSON.stringify(payload) });
+                state.decisions = [...state.decisions.filter(d => d.cashId !== cash.id), payload];
+                closeModal(); renderReconciliation(); renderCashFlow(); refresh(document.getElementById('inflowRoot')?.dataset.inflowMounted ? document.getElementById('inflowRoot') : null);
+            } catch (err) { error.textContent = err.message; button.disabled = false; }
+        };
+    }
+    async function renderHistory(root, id) {
+        if (!root) return;
+        try {
+            const data = await apiFetch('/api/inflow/students/' + encodeURIComponent(id) + '/history');
+            if (!root.isConnected || root.dataset.inflowHistory !== id) return;
+            const proof = r => r.receiptUrl ? `<a href="${esc(r.receiptUrl)}" target="_blank" rel="noopener">Chek</a>` : '—';
+            root.innerHTML = `<p>Reyestr tushumi: <strong>${money(data.summary.amount)}</strong> · ${data.summary.count} ta. Joriy qarz: <strong>${data.summary.debt == null ? 'Aniqlanmagan' : money(data.summary.debt)}</strong></p>
+                <div class="inflow-table-wrap"><table class="inflow-table"><thead><tr><th>Sana</th><th>Tushum</th><th>Usul</th><th>O‘sha paytdagi qarz</th><th>Chek</th></tr></thead><tbody>${data.history.map(r => `<tr><td>${esc(r.date)} ${esc(r.time)}</td><td>${money(r.paid)}</td><td>${esc(L.METHODS[r.method])}</td><td>${money(r.debt)}</td><td>${proof(r)}</td></tr>`).join('') || '<tr><td colspan="5">Reyestrda tushum yo‘q</td></tr>'}</tbody></table></div>
+                <div class="inflow-mobile">${data.history.map(r => `<article class="inflow-payment"><header>${esc(r.date)} ${esc(r.time)}</header><p class="inflow-amount">${money(r.paid)}</p><p>${esc(L.METHODS[r.method])} · Qoldiq: ${money(r.debt)}</p>${proof(r)}</article>`).join('') || '<p>Reyestrda tushum yo‘q</p>'}</div>
+                ${data.legacyHistory.length ? `<details class="inflow-review-box"><summary>Tekshirilmagan eski arxiv: ${data.legacyHistory.length} ta</summary><p>Quyidagi yozuvlar yuqoridagi jami summaga qo‘shilmagan; takrorlanishi yoki sana/summasi aniqlashtirilishi mumkin.</p>${data.legacyHistory.map(r => `<p>${esc(r.date || 'Sana yo‘q')} · ${r.paid == null ? 'Summa yo‘q' : money(r.paid)} · ${esc(r.id)}</p>`).join('')}</details>` : ''}`;
+        } catch (err) { if (root.isConnected) root.textContent = 'To‘lov tarixini yuklashda xatolik: ' + err.message; }
+    }
+    function openStudentPayment() {
+        const students = getItem(STORAGE_KEYS.students, []).filter(s => Number(s.debtAmount) > 0);
+        openModal('Reyestrga to‘lov qabul qilish', `<p>Qarzi mavjud o‘quvchini tanlang. Kurs narxi yoki kitob narxini bu yerda tushum deb kiritmang.</p><select id="ledgerPaymentStudent" class="form-control">${opts(students.map(s => [s.id, s.name]), 'O‘quvchini tanlang')}</select>`, '<button type="button" class="btn-primary-sm" id="ledgerPaymentContinue">Davom etish</button>');
+        document.getElementById('ledgerPaymentContinue').onclick = () => { const id = document.getElementById('ledgerPaymentStudent').value; if (id) openPayment(id); };
+    }
     window.inflowUI = { render, refreshCash: () => refresh(null), paymentFields, collectProof, openPayment,
+        renderHistory, openStudentPayment, cashProjection, renderReconciliation,
+        isCashLocked: id => state.decisions.some(d => d.cashId === id),
         cashRows: () => L.cashFlow([...state.rows.english, ...state.rows.russian]) };
 })();
