@@ -14,6 +14,45 @@ const source = extra => ({ hrEmployees: [employee('sales', 'sotuv-menejeri')], t
 const clone = value => JSON.parse(JSON.stringify(value));
 function calculate(s, config = engine.defaults(), p = oct, confirmation = null) { return engine.calculate(s, config, p, 'english', confirmation); }
 
+test('salary adjustments consume positive credit first, cap deductions and leave inputs untouched', () => {
+  const row = { employeeId: 'sales', total: 100 }, items = [{ id: 'debt', amount: -500 }, { id: 'credit', amount: 200 }];
+  const before = clone({ row, items });
+  const result = engine.withAdjustments(row, items);
+  assert.equal(result.baseTotal, 100); assert.equal(result.total, 0); assert.equal(result.adjustmentTotal, -100);
+  assert.deepEqual(result.adjustments, [{ id: 'credit', amount: 200 }, { id: 'debt', amount: -300 }]);
+  assert.deepEqual({ row, items }, before);
+});
+
+test('multiple deductions are allocated in ledger order and never create a negative payment', () => {
+  const result = engine.withAdjustments({ total: 100 }, [{ id: 'first', amount: -60 }, { id: 'second', amount: -70 }]);
+  assert.deepEqual(result.adjustments, [{ id: 'first', amount: -60 }, { id: 'second', amount: -40 }]);
+  assert.equal(result.total, 0); assert.equal(result.unpaidDebt, 0);
+});
+
+test('negative current-period earnings close at zero and expose remaining source debt', () => {
+  const result = engine.withAdjustments({ total: -500 }, [{ id: 'credit', amount: 100 }, { id: 'debt', amount: -50 }]);
+  assert.equal(result.total, 0); assert.equal(result.unpaidDebt, 400); assert.equal(result.adjustmentTotal, 100);
+  assert.deepEqual(result.adjustments, [{ id: 'credit', amount: 100 }]);
+});
+
+test('ROP clean turnover uses the actual adjusted manager payment, not the unadjusted entitlement', () => {
+  const s = source({ hrEmployees: [employee('sales', 'sotuv-menejeri'), employee('rop', 'rop')],
+    leads: { english: [deal(20000000)], russian: [] },
+    salesPlan: { english: { managers: 1, leadsPerDay: 1, avgCheck: 1000000, conversions: { mid: 100 } } } });
+  const result = engine.calculate(s, engine.defaults(), oct, 'english', { amount: engine.salesPlan(s, 'english', oct) }, [],
+    { sales: [{ id: 'prior-debt', amount: -3000000 }] });
+  assert.equal(result.rows.find(r => r.employeeId === 'sales').total, 0);
+  assert.equal(result.cleanTurnover, 20000000);
+  assert.equal(result.rows.find(r => r.employeeId === 'rop').managerSalaries, 0);
+});
+
+test('already paid snapshots are not changed or charged again by pending adjustments', () => {
+  const paid = { employeeId: 'sales', role: 'sales', total: 777, frozen: true };
+  const result = engine.calculate(source(), engine.defaults(), oct, 'english', null, [paid],
+    { sales: [{ id: 'debt', amount: -500 }] });
+  assert.deepEqual(result.rows[0], paid);
+});
+
 test('invalid dates, reversed and overlong periods are rejected', () => {
   for (const [a, b] of [['2026-02-30', '2026-03-01'], ['bad', '2026-10-31'], ['2026-10-31', '2026-10-01'], ['2026-01-01', '2027-01-02']]) assert.throws(() => engine.period(a, b));
   assert.equal(engine.period('2024-02-01', '2024-02-29').days, 29);
@@ -156,6 +195,7 @@ function database() {
       const old = records.findIndex(r => r.employee_id === row.employee_id); if (old >= 0) records[old] = row; else records.push(row);
       return { rows: [] };
     }
+    if (sql.startsWith('SELECT *,TO_CHAR') && sql.includes("status='paid' AND period_end")) return { rows: records.filter(r => r.language === params[0] && r.status === 'paid' && r.end_key < params[1]) };
     if (sql.startsWith('SELECT *,TO_CHAR')) return { rows: records.filter(r => r.id === params[0]) };
     if (sql.startsWith('UPDATE salary_transactions SET status=')) { records.find(r => r.id === params[0]).status = 'paid'; return { rows: [] }; }
     if (sql.startsWith('INSERT INTO salary_audit')) { audits.push({ action: params[0], actor: params[2], before: params[4], after: params[5] }); return { rows: [] }; }

@@ -27,7 +27,10 @@
             <button class="btn-secondary-sm" data-payroll-refresh>Yangilash</button>
         </div><p class="text-muted payroll-note">Maosh serverdagi to‘langan bitimlar, bonuslar va davomatdan hisoblanadi. Moslashuvchan davrda ikkala sana ham hisobga olinadi.</p>
         <div class="payroll-message" role="status"></div><div data-payroll-body></div>`;
-        root.querySelector('[data-payroll-refresh]').onclick = () => load(section, true);
+        root.querySelector('[data-payroll-refresh]').onclick = () => {
+            if (root.dataset.manualDirty === '1' && !confirm('Kiritilgan qo‘lda tuzatish saqlanmagan. Oynani yangilaysizmi?')) return;
+            load(section, true);
+        };
         root.querySelector('[data-payroll-mode]').onchange = event => {
             state.mode = event.target.value;
             root.querySelectorAll('[data-payroll-start],[data-payroll-end]').forEach(el => { el.disabled = state.mode !== 'custom'; });
@@ -56,6 +59,10 @@
     async function load(section, force = false) {
         const root = rootFor(section); if (!root) return;
         toolbar(root, section);
+        if (!force && section === 'maoshlar' && root.dataset.manualDirty === '1') {
+            message(root, 'Qo‘lda tuzatish yozilmoqda. Avtomatik yangilash vaqtincha to‘xtatildi.');
+            return;
+        }
         const request = ++state.seq, lang = _financeLang;
         message(root, 'Hisoblanmoqda…');
         try {
@@ -81,6 +88,7 @@
         } catch (e) { if (request === state.seq) message(root, e.message, true); }
     }
     function renderPayroll(root, result) {
+        root.dataset.manualDirty = '';
         const body = root.querySelector('[data-payroll-body]');
         body.innerHTML = `<div class="payroll-heading"><h3>Maoshlar — ${esc(result.period.start)} – ${esc(result.period.end)}</h3>
             <button class="btn-primary-sm" data-payroll-accrue>Maoshlarni shakllantirish</button></div>
@@ -92,17 +100,58 @@
                 <td data-label="Parametrlar">Fiksa: ${money(row.fixed)}<br>${row.role === 'sales' || row.role === 'rop' ? `Aylanma: ${money(row.turnover)}<br>Ulush: ${money(row.commission)}` : `${row.studentCount || 0} o‘quvchi · ${row.lessons || 0} dars`}
                     ${row.role === 'rop' ? `<br>Toza aylanma: ${money(row.cleanTurnover)}<br>Reja: ${Number(row.completion).toFixed(1)}% · ulush ${row.rate}%${row.blocked ? '<p class="payroll-alert">Reja tasdiqlanmagan</p>' : ''}` : ''}
                     ${row.breakdown?.length ? `<details><summary>O‘quvchilar bo‘yicha</summary>${row.breakdown.map(b => `<p>${esc(b.name)} · ${esc(b.month)}: ${b.lessons}/${b.expected} dars → ${money(b.earned)}</p>`).join('')}</details>` : ''}</td>
-                <td data-label="Bonus">${money(row.bonus)}</td><td data-label="Jami"><strong>${money(row.total)}</strong>${row.frozen ? '<small>To‘langan hisob saqlangan</small>' : ''}</td>
+                <td data-label="Bonus">${money(row.bonus)}${row.adjustments?.length ? `<details><summary>Tuzatish: ${money(row.adjustmentTotal)}</summary>${row.adjustments.map(a => `<p>${esc(a.sourceStart)} – ${esc(a.sourceEnd)}: ${money(a.amount)}</p>`).join('')}</details>` : ''}</td><td data-label="Jami"><strong>${money(row.total)}</strong>${row.unpaidDebt ? `<small>Keyingi davrga qarzdorlik: ${money(row.unpaidDebt)} (hisob yopilgach tekshiriladi)</small>` : ''}${row.frozen ? '<small>To‘langan hisob saqlangan</small>' : ''}</td>
                 <td data-label="Holat"><span class="badge ${row.status === 'paid' ? 'badge-success' : ''}">${row.status === 'paid' ? 'Berildi' : 'Berilmadi'}</span>
-                    ${row.status !== 'paid' ? `<button class="btn-secondary-sm" data-payroll-paid="${esc(row.transactionId || '')}" ${!row.transactionId || row.stale || row.blocked ? 'disabled' : ''}>Berildi deb belgilash</button>${row.stale ? '<small>Qayta shakllantirish kerak</small>' : ''}` : ''}</td></tr>`).join('') || '<tr><td colspan="6">Mos xodimlar topilmadi</td></tr>'}
-            </tbody></table></div>`;
+                    ${row.status !== 'paid' ? `<button class="btn-secondary-sm" data-payroll-paid="${esc(row.transactionId || '')}" data-zero-payment="${row.total === 0}" ${!row.transactionId || row.stale || row.blocked ? 'disabled' : ''}>${row.total === 0 ? '0 so‘mlik hisobni yopish' : 'Berildi deb belgilash'}</button>${row.stale ? '<small>Qayta shakllantirish kerak</small>' : ''}` : ''}</td></tr>`).join('') || '<tr><td colspan="6">Mos xodimlar topilmadi</td></tr>'}
+            </tbody></table></div>
+            <section class="card payroll-corrections"><h3>Oldingi to‘langan davrlar tuzatishlari</h3>
+                <p class="payroll-note">Farqlar avtomatik aniqlanadi. Tasdiqlanganlari yangi davrga qo‘llanadi; eski “Berildi” hisobi o‘zgarmaydi. Chegirma maoshdan oshsa, qolgan qismi keyingi davrga qoladi. Tarif/jadvalning o‘sha paytdagi nusxasi ishlatiladi.</p>
+                <div class="payroll-correction-list">${(result.corrections || []).map(c => `<article class="payroll-correction">
+                    <div><strong>${esc(c.name)}</strong><small>${esc(c.sourceStart)} – ${esc(c.sourceEnd)}</small></div>
+                    ${c.legacy ? `<p class="payroll-alert">${esc(c.warning)}</p><form data-manual-adjustment="${esc(c.sourceTransactionId)}">
+                        <label>Tasdiqlangan farq (so‘m, chegirma uchun −)<input class="form-control-sm" name="amount" inputmode="decimal" required placeholder="Masalan: -100 000 yoki 100 000"></label>
+                        <label>Hisoblash sababi va asosi<textarea class="form-control-sm" name="reason" required minlength="10" maxlength="1000"></textarea></label>
+                        <button class="btn-secondary-sm" type="submit">Qo‘lda tekshirilgan farqni tasdiqlash</button></form>` : `<div><strong>${money(c.amount)}</strong><small>Asl baza: ${money(c.originalBase)} · qayta hisob: ${money(c.correctedTotal)} · oldin qo‘llangan: ${money(c.applied)}</small></div>
+                        <span class="badge">${c.status === 'approved' ? 'Tasdiqlangan' : c.status === 'dismissed' ? 'Rad etilgan' : 'Tekshirish kerak'}</span>
+                        ${c.warnings?.length ? `<p class="payroll-alert">${esc(c.warnings.join(' · '))}</p>` : ''}
+                        <div class="payroll-correction-actions">${c.status !== 'approved' && c.amount ? `<button class="btn-primary-sm" data-adjustment-source="${esc(c.sourceTransactionId)}" data-decision="approve">Tasdiqlash</button>` : ''}
+                            ${c.status !== 'dismissed' ? `<button class="btn-secondary-sm" data-adjustment-source="${esc(c.sourceTransactionId)}" data-decision="dismiss">${c.amount ? 'Rad etish' : 'Eski tasdiqni bekor qilish'}</button>` : ''}</div>`}
+                </article>`).join('') || '<p class="text-muted">Tuzatish talab qilinadigan oldingi hisoblar yo‘q.</p>'}</div></section>`;
         body.querySelector('[data-payroll-accrue]').onclick = event => action(root, event.currentTarget, async () => {
             await api('accrue', { ...inputBody(), sourceHash: result.sourceHash }); await load('maoshlar', true);
         });
         body.querySelectorAll('[data-payroll-paid]').forEach(button => { button.onclick = () => {
-            if (!confirm('Pul xodimga haqiqatan berildimi? Hisob bundan keyin o‘zgarmaydi. Kassadan pul yechilmaydi.')) return;
+            if (!confirm(button.dataset.zeroPayment === 'true'
+                ? '0 so‘mlik davr hisobini yopasizmi? Qarzdorlik keyingi davr uchun tuzatish sifatida tekshiriladi. Kassadan pul yechilmaydi.'
+                : 'Pul xodimga haqiqatan berildimi? Hisob bundan keyin o‘zgarmaydi. Kassadan pul yechilmaydi.')) return;
             action(root, button, async () => { await api('transactions/' + encodeURIComponent(button.dataset.payrollPaid) + '/paid', {}); await load('maoshlar', true); });
         }; });
+        body.querySelectorAll('[data-adjustment-source]').forEach(button => { button.onclick = () => {
+            const proposal = result.corrections.find(c => c.sourceTransactionId === button.dataset.adjustmentSource);
+            const approving = button.dataset.decision === 'approve';
+            if (!confirm(`${proposal.name}: ${money(proposal.amount)} tuzatishni ${approving ? 'tasdiqlaysizmi' : 'rad etasizmi'}? Haqiqiy to‘lov amalga oshirilmaydi.`)) return;
+            action(root, button, async () => {
+                await api('adjustments/' + encodeURIComponent(proposal.sourceTransactionId) + '/review', {
+                    ...inputBody(), decision: button.dataset.decision, reviewHash: proposal.reviewHash
+                });
+                await load('maoshlar', true);
+            });
+        }; });
+        body.querySelectorAll('[data-manual-adjustment]').forEach(form => {
+            form.oninput = () => { root.dataset.manualDirty = '1'; };
+            const requestKey = Array.from(crypto.getRandomValues(new Uint8Array(16)), n => n.toString(16).padStart(2, '0')).join('');
+            form.onsubmit = event => {
+                event.preventDefault();
+                const amount = Number(form.elements.amount.value.replace(/[\s,]/g, ''));
+                const reason = form.elements.reason.value.trim();
+                if (!Number.isSafeInteger(amount) || !amount || reason.length < 10) { message(root, '0 dan farqli butun summa va kamida 10 belgilik sabab kiriting.', true); return; }
+                if (!confirm(`${money(amount)} qo‘lda hisoblangan tuzatishni tasdiqlaysizmi? Eski tarif/jadvalni o‘zingiz tekshirgan bo‘lishingiz kerak. Haqiqiy pul to‘lanmaydi.`)) return;
+                action(root, form.querySelector('button'), async () => {
+                    await api('adjustments/' + encodeURIComponent(form.dataset.manualAdjustment) + '/manual', { ...inputBody(), amount, reason, requestKey });
+                    await load('maoshlar', true);
+                });
+            };
+        });
     }
     function numberInput(label, name, value, options = '') {
         const currency = label.includes('so‘m');

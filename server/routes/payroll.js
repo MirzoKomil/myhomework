@@ -23,6 +23,8 @@ router.get('/preview', handle(req => service.preview(pool, req.user, req.query))
 router.post('/confirm-plan', handle(req => service.confirmPlan(pool, req.user, req.body || {})));
 router.post('/accrue', handle(req => service.accrue(pool, req.user, req.body || {})));
 router.post('/transactions/:id/paid', handle(req => service.markPaid(pool, req.user, req.params.id)));
+router.post('/adjustments/:sourceId/review', handle(req => service.reviewAdjustment(pool, req.user, req.params.sourceId, req.body || {})));
+router.post('/adjustments/:sourceId/manual', handle(req => service.reviewManualAdjustment(pool, req.user, req.params.sourceId, req.body || {})));
 router.get('/leaderboard', handle(req => service.transaction(pool, async db => {
     const actor = await service.access(db, req.user, 'leaderboard');
     const lang = service.language(req.query.language), p = engine.period(req.query.start, req.query.end);

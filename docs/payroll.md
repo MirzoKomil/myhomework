@@ -36,12 +36,39 @@ Hisob-kitobning manbasi server, brauzer emas. `js/payrollEngine.js` sof hisoblas
 - Refundni Cash Flow oynasida bitim yoki menejer va til bilan bog‘lang. Eski aniqlanmagan refundlarda
   ogohlantirish chiqadi; ular qaysi xodimga tegishli ekanini taxmin qilib bo‘lmaydi. Bitimdagi refund
   va unga bog‘langan Cash Flow yozuvi ikki marta chegirilmaydi. Keyingi davrda qaytarilgan pul shu davr
-  aylanmasi/komissiyasidan chegiriladi. To‘langan davrga keyinchalik tuzatish zarur bo‘lsa, hisobni
-  o‘zgartirish emas, kelgusi alohida tuzatish tranzaksiyasi kerak (hozirgi modulda avtomatik clawback yo‘q).
+  aylanmasi/komissiyasidan chegiriladi. Oldingi to‘langan davrning manbalari tuzatilsa,
+  farq alohida tuzatish sifatida avtomatik aniqlanadi; asl to‘langan hisob o‘zgartirilmaydi.
+
+## To‘langan davrlarni tuzatish
+
+1. Har bir yangi shakllantirilgan hisobda o‘sha paytdagi KPI tariflari, tasdiqlangan reja va
+   xodim/o‘quvchi biriktirishlarining hisoblash uchun kerakli nusxasi (`basis`) saqlanadi.
+   Keyinchalik stavkani o‘zgartirish eski davrni yangi narxda qayta baholamaydi.
+2. Maoshlar oynasidagi **Oldingi to‘langan davrlar tuzatishlari** o‘tgan davrlarga tegishli
+   to‘lov/refund, bonus va davomat o‘zgarishlarini tekshiradi. Oynani ko‘rishning o‘zi bazaga yozmaydi.
+3. Admin yoki moliya xodimi farqni tekshirib **Tasdiqlash** yoki **Rad etish**ni tanlaydi.
+   Tasdiqlash pul to‘lamaydi: farq yangi davr hisobiga qo‘shiladi va hisob qayta shakllantiriladi.
+   Manba yana o‘zgarsa, eski tasdiq yaroqsiz bo‘ladi va yangidan tekshirish kerak.
+4. Qo‘shimcha summa maoshga qo‘shiladi. Manfiy tuzatish maoshni 0 dan pastga tushirmaydi;
+   sig‘magan qismi keyingi davrga qoladi. 0 so‘mlik hisobni yopish kassadan pul yechmaydi.
+   Davrning o‘z bazasi manfiy bo‘lsa, yopilgandan keyin qarzdorlik keyingi davrda tekshiriladi.
+5. Farq faqat yangi davr **Berildi** deb yopilganda sarflangan hisoblanadi.
+   Bir xil tuzatishni muqobil hisoblar yoki takroriy so‘rov orqali ikki marta qo‘llash bloklanadi.
+   Qisman sarflangan tuzatish o‘zgartirilsa ham ilgari qo‘llangan summa tarixda qoladi.
+6. Eski `basis` nusxasi yo‘q hisoblarda tizim tarixiy stavka/jadvalni taxmin qilmaydi.
+   Moliya xodimi eski hisobni tekshirib, musbat yoki manfiy butun farq va kamida 10 belgilik asos
+   kiritishi mumkin. Qo‘lda tasdiqlash va uning qo‘llanishi ham auditga yoziladi.
+7. HRdan olib tashlangan xodimning tarixiy tuzatishi yo‘qolmaydi: yangi davrda faqat tuzatish
+   uchun alohida, bazasi 0 bo‘lgan qator chiqishi mumkin. Bu unga yangi fiksa hisoblamaydi.
+
+Qo‘lda tuzatish yozilayotgan paytda 30 soniyalik avtomatik yangilanish forma matnini almashtirmaydi.
+Yangilanishdan oldingi to‘lanmagan hisoblar yangi hisoblash tarkibi sabab eskirgan ko‘rinishi mumkin;
+ularni **Maoshlarni shakllantirish** bilan qayta hisoblang.
 
 ## Saqlash / xavfsizlik
 
-`salary_kpi_settings`, `salary_plan_confirmations`, `salary_transactions`, `salary_audit`
+`salary_kpi_settings`, `salary_plan_confirmations`, `salary_transactions`, `salary_audit`,
+`salary_adjustments`, `salary_adjustment_applications`
 jadvallari va HRdagi `kpi_template_id` ustuni server schema migratsiyasida qo‘shiladi.
 Migration mavjud darslar, lidlar, davomat yoki maosh ma’lumotlarini o‘chirmaydi.
 
@@ -64,5 +91,11 @@ to‘lanmagan previewlarini bir vaqtda qarzdorlik jami sifatida qo‘shib hisobl
 izolyatsiya qilingan ma’lumotlar va DB test adapteri bilan tekshiriladi. Brauzer QA ham test fixture bilan;
 haqiqiy o‘quvchi yoki xodim yozuvlarini o‘zgartirmaydi.
 
-Ishlab turgan PostgreSQLda yangi migration va endpointlar deploy bosqichida alohida tekshirilishi kerak.
-Bu testlar haqiqiy DB migration sinovining o‘rnini bosmaydi.
+`node scripts/run-payroll-postgres.cjs` — alohida loopback PostgreSQL klasterini yaratib, haqiqiy SQL
+migratsiya, hisob/tuzatish, takroriy va parallel so‘rovlar, audit rollback hamda Express endpointlarini
+sinaydi. Faqat mavjud PostgreSQL binarlari ishlatiladi; `PAYROLL_PG_BIN` orqali papkasini ko‘rsatish mumkin.
+Klaster testdan keyin to‘xtatiladi; uning aniq vaqtinchalik papkasi diagnostika uchun saqlanadi.
+Loyihaning `DATABASE_URL` qiymatiga ulanmaydi va ishlab turgan bazaga tegmaydi.
+
+Jonli admin kabinetidagi tekshiruv alohida avtorizatsiyani talab qiladi. Test fixture va izolyatsiyalangan
+PostgreSQL sinovlari real xodimga pul berilganini yoki real maosh manbalarini tasdiqlamaydi.

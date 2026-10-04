@@ -170,7 +170,20 @@
         if (!Number.isFinite(Number(plan.managers)) || !Number.isFinite(Number(plan.leadsPerDay)) || !Number.isFinite(Number(plan.avgCheck)) || !Number.isFinite(Number(plan.conversions?.mid))) return null;
         return money(Math.round(amount(plan.managers) * amount(plan.leadsPerDay) * p.days * amount(plan.conversions.mid) / 100) * amount(plan.avgCheck));
     }
-    function calculate(source, settings, p, lang, confirmation = null, paidSnapshots = []) {
+    function withAdjustments(row, items = []) {
+        const positive = items.filter(a => a.amount > 0);
+        let available = Math.max(0, row.total + positive.reduce((sum, a) => sum + a.amount, 0));
+        const adjustments = positive.map(a => ({ ...a }));
+        for (const item of items.filter(a => a.amount < 0)) {
+            const deducted = Math.min(available, -item.amount);
+            if (deducted) adjustments.push({ ...item, amount: -deducted });
+            available -= deducted;
+        }
+        const adjustmentTotal = adjustments.reduce((sum, a) => sum + a.amount, 0);
+        return { ...row, baseTotal: row.total, adjustmentTotal, adjustments,
+            total: Math.max(0, row.total + adjustmentTotal), unpaidDebt: Math.max(0, -row.total - adjustmentTotal) };
+    }
+    function calculate(source, settings, p, lang, confirmation = null, paidSnapshots = [], adjustmentsByEmployee = {}) {
         settings = validateSettings(settings); p = period(p.start, p.end);
         const facts = salesFacts(source, lang, p, settings);
         const employees = source.hrEmployees.filter(e => role(e) && language(e) === lang
@@ -189,8 +202,10 @@
                 commission = money(turnover * settings.sales.commission / 100);
                 bonus = money(facts.bonusByManager[e.id] || 0);
             } else academic = teacherPay(e, source, p, settings);
-            rows.push({ employeeId: e.id, name: e.name, avatar: e.avatar || '', role: r, roleLabel: ROLES[r],
-                fixed, turnover, commission, bonus, ...academic, total: fixed + commission + bonus + (academic.total || 0) });
+            if (e._correctionOnly) { fixed = 0; commission = 0; bonus = 0; turnover = 0; academic = {}; }
+            const row = { employeeId: e.id, name: e.name, avatar: e.avatar || '', role: r, roleLabel: ROLES[r],
+                fixed, turnover, commission, bonus, ...academic, total: fixed + commission + bonus + (academic.total || 0) };
+            rows.push(withAdjustments(row, adjustmentsByEmployee[e.id]));
         }
         for (const snapshot of paidSnapshots) {
             const index = rows.findIndex(r => r.employeeId === snapshot.employeeId);
@@ -206,16 +221,17 @@
         const rate = completion >= settings.rop.minCompletion ? settings.rop.tiers.find(t => t.upTo === null || completion <= t.upTo)?.rate || 0 : 0;
         for (const e of employees.filter(e => role(e) === 'rop')) {
             if (paidSnapshots.some(r => r.employeeId === e.id)) continue;
-            const fixed = settings.rop.hasFixed ? fixedPay(settings.rop.fixed, p, e) : 0;
-            const commission = confirmed ? money(cleanTurnover * rate / 100) : 0;
-            rows.push({ employeeId: e.id, name: e.name, avatar: e.avatar || '', role: 'rop', roleLabel: ROLES.rop,
+            const fixed = !e._correctionOnly && settings.rop.hasFixed ? fixedPay(settings.rop.fixed, p, e) : 0;
+            const commission = !e._correctionOnly && confirmed ? money(cleanTurnover * rate / 100) : 0;
+            const row = { employeeId: e.id, name: e.name, avatar: e.avatar || '', role: 'rop', roleLabel: ROLES.rop,
                 fixed, turnover: facts.turnover, cleanTurnover, managerSalaries, targetSalary, completion, rate,
-                commission, bonus: 0, total: fixed + commission, blocked: !confirmed });
+                commission, bonus: 0, total: fixed + commission, blocked: !e._correctionOnly && !confirmed };
+            rows.push(withAdjustments(row, adjustmentsByEmployee[e.id]));
         }
         return { period: p, language: lang, rows, warnings: [...new Set(facts.warnings)],
             plan: { current: currentPlan, confirmed, confirmation }, turnover: facts.turnover, cleanTurnover,
             total: rows.reduce((sum, r) => sum + r.total, 0) };
     }
     return { ROLES, defaults, validateSettings, date, period, inPeriod, months, fixedPay, role, language,
-        expectedDays, teacherPay, salesFacts, salesPlan, calculate };
+        expectedDays, teacherPay, salesFacts, salesPlan, withAdjustments, calculate };
 }));

@@ -3828,7 +3828,7 @@ body {
 .payroll-toolbar, .payroll-heading { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding-top: 16px; }
 .payroll-toolbar label, .payroll-config label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
 .payroll-toolbar input, .payroll-toolbar select { max-width: 190px; }
-.payroll-toolbar .btn-secondary-sm, .payroll-config .btn-secondary-sm, .payroll-table .btn-secondary-sm {
+.payroll-toolbar .btn-secondary-sm, .payroll-config .btn-secondary-sm, .payroll-table .btn-secondary-sm, .payroll-corrections .btn-secondary-sm {
     padding: 8px 12px; min-height: 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--purple); cursor: pointer;
 }
 .payroll-table button:disabled, .payroll-config button:disabled { opacity: .5; cursor: not-allowed; }
@@ -8405,3 +8405,11 @@ body.modal-open {
     display: block;
     margin-bottom: 12px;
 }
+.payroll-corrections { margin-top: 20px; padding: 18px; }
+.payroll-correction-list { display: grid; gap: 12px; }
+.payroll-correction { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+.payroll-correction > div { flex: 1 1 180px; min-width: 0; }
+.payroll-correction small { display: block; margin-top: 4px; color: var(--text-muted); overflow-wrap: anywhere; }
+.payroll-correction-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.payroll-correction form { display: grid; gap: 8px; flex: 1 1 100%; min-width: 0; }
+.payroll-correction form label { display: grid; gap: 4px; }
