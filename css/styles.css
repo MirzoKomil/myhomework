@@ -578,6 +578,9 @@ body {
     color: var(--text-light);
 }
 
+.lead-search-status { position: absolute; left: 0; top: calc(100% + 4px); z-index: 20; max-width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-muted); box-shadow: var(--shadow); font-size: 11px; }
+.search-box input:disabled { cursor: not-allowed; opacity: .6; }
+
 .header-actions {
     display: flex;
     align-items: center;
@@ -8413,3 +8416,12 @@ body.modal-open {
 .payroll-correction-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .payroll-correction form { display: grid; gap: 8px; flex: 1 1 100%; min-width: 0; }
 .payroll-correction form label { display: grid; gap: 4px; }
+
+@media (max-width: 768px) {
+    .top-header { flex-wrap: wrap; }
+    .top-header > .lead-search-box { display: block; order: 2; flex: 1 1 100%; min-width: 0; max-width: none; }
+    .lead-search-box input { min-height: 44px; }
+    .lead-search-box > svg { top: 22px; }
+    .top-header .header-actions { margin-left: auto; }
+    .lead-search-box .lead-search-status:not([hidden]) { display: block; position: static; margin-top: 4px; }
+}

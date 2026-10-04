@@ -113,6 +113,7 @@ function syncHeaderAvatar(user) {
 
 function initUserUI(currentUser) {
     syncHeaderAvatar(currentUser);
+    initLeadSearch();
     document.getElementById('welcomeName').textContent = `Xush kelibsiz, ${currentUser.name.split(' ')[0]}!`;
     initWelcomeBannerCarousel(currentUser);
 
@@ -18993,6 +18994,80 @@ let _leadsLangFilter = (() => {
     }
 })();
 let _leadsManagerFilter = 'all';
+let _leadSearchQuery = '';
+
+function normalizeLeadSearchText(value) {
+    return String(value ?? '').normalize('NFKC').toLowerCase()
+        .replace(/['‘’ʻʼ`]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function leadMatchesSearch(lead, query = _leadSearchQuery) {
+    const text = normalizeLeadSearchText(query);
+    if (!text) return true;
+    if (/^[+\d\s().-]+$/.test(text)) {
+        const digits = text.replace(/\D/g, '');
+        return !!digits && [lead.phone, lead.phone2].some(phone => String(phone ?? '').replace(/\D/g, '').includes(digits));
+    }
+    const name = normalizeLeadSearchText(lead.name);
+    return text.split(' ').every(part => name.includes(part));
+}
+
+function canSearchLeads(user = getCurrentUser()) {
+    return !!user && (FULL_ACCESS_ROLES.has(user.role) || ['sales_manager', 'targetolog'].includes(user.role));
+}
+
+function updateLeadSearchStatus(count) {
+    const status = document.getElementById('leadSearchStatus');
+    if (!status) return;
+    status.hidden = !_leadSearchQuery;
+    status.textContent = _leadSearchQuery
+        ? `${count} ta lid topildi. Joriy til, menejer va ustun ichidagi filtrlar hisobga olinadi.` : '';
+}
+
+function initLeadSearch() {
+    const input = document.getElementById('globalSearch');
+    if (!input || input.dataset.searchBound) return;
+    input.dataset.searchBound = '1';
+    input.value = ''; input.defaultValue = ''; _leadSearchQuery = '';
+    input.disabled = !canSearchLeads();
+    let editing = false, timer, pendingQuery = null;
+    const resetAutofill = () => {
+        if (!editing) { input.value = _leadSearchQuery; input.readOnly = true; }
+    };
+    const unlock = () => {
+        if (input.disabled) return;
+        resetAutofill(); editing = true; input.readOnly = false;
+    };
+    input.addEventListener('pointerdown', unlock);
+    input.addEventListener('focus', unlock);
+    const search = () => {
+        if (!canSearchLeads()) return;
+        // Do not treat a password manager's late login autofill as a search.
+        if (pendingQuery === null && document.activeElement !== input) { input.value = _leadSearchQuery; return; }
+        _leadSearchQuery = (pendingQuery ?? input.value).trim(); pendingQuery = null;
+        if (document.querySelector('#tab-sales.active') && _tabContext.salesSection === 'leads') renderLeads();
+        else if (_leadSearchQuery) switchTab('sales', { salesSection: 'leads' });
+        else updateLeadSearchStatus(0);
+    };
+    input.addEventListener('input', event => {
+        clearTimeout(timer);
+        if (document.activeElement !== input) { input.value = _leadSearchQuery; return; }
+        pendingQuery = input.value;
+        if (!event.isComposing) timer = setTimeout(search, 150);
+    });
+    input.addEventListener('compositionend', () => { clearTimeout(timer); pendingQuery = input.value; timer = setTimeout(search, 150); });
+    input.addEventListener('search', () => { clearTimeout(timer); search(); });
+    input.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); clearTimeout(timer); search(); }
+        if (event.key === 'Escape') { clearTimeout(timer); pendingQuery = ''; input.value = ''; search(); }
+    });
+    input.addEventListener('blur', () => {
+        clearTimeout(timer); if (pendingQuery !== null) search();
+        input.value = _leadSearchQuery; editing = false; input.readOnly = true;
+    });
+    window.addEventListener('pageshow', resetAutofill);
+    [0, 250, 1000].forEach(delay => setTimeout(resetAutofill, delay));
+}
 
 function getDefaultVisibleColumnIds() {
     return LEAD_COLUMNS
@@ -19156,6 +19231,8 @@ function initLeadsColumnsFilter() {
 }
 
 function filterLeadsByManager(leads) {
+    const user = getCurrentUser();
+    if (user?.role === 'sales_manager') return leads.filter(l => !!user.linkedManagerId && String(l.managerId) === String(user.linkedManagerId));
     if (_leadsManagerFilter === 'all') return leads;
     if (_leadsManagerFilter === 'unassigned') return leads.filter(l => !l.managerId);
     return leads.filter(l => l.managerId === _leadsManagerFilter);
@@ -20547,9 +20624,15 @@ function renderLeads() {
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const tagged = filterLeadsByManager(
         (leadsData[lang] || []).map(l => ({ ...l, _lang: lang }))
-    );
+    ).filter(l => leadMatchesSearch(l));
 
-    const visibleColumns = getVisibleLeadColumns();
+    // Search may temporarily reveal a matching hidden column; never overwrite saved visibility.
+    const visibleColumns = _leadSearchQuery
+        ? LEAD_COLUMNS.filter(col => _leadsVisibleColumns.has(col.id) || tagged.some(l => normalizeLeadStatus(l.status) === col.id))
+        : getVisibleLeadColumns();
+    updateLeadSearchStatus(tagged.filter(l =>
+        (normalizeLeadStatus(l.status) !== 'sinov-darsida' || trialWorkflow.matchesFilter(l, getTrialAttendanceFilter()))
+        && (normalizeLeadStatus(l.status) !== 'boglanishga-urinilmoqda' || leadMatchesContactReasonFilter(l, getLeadContactReasonFilter(lang)))).length);
 
     if (!visibleColumns.length) {
         board.innerHTML = '<div class="lead-column-empty leads-kanban-empty">Kamida bitta ustunni tanlang</div>';

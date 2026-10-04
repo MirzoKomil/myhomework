@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20261004">
+    <link rel="stylesheet" href="css/styles.css?v=20261004g">
 </head>
 
 <body>
@@ -159,12 +159,13 @@
                         <path d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
-                <div class="search-box">
+                <div class="search-box lead-search-box">
                     <svg viewBox="0 0 24 24">
                         <circle cx="11" cy="11" r="8" />
                         <path d="M21 21l-4.35-4.35" />
                     </svg>
-                    <input type="text" placeholder="Qidirish.." id="globalSearch" autocomplete="off" name="global-search-not-a-login-field">
+                    <input type="search" placeholder="Lid: ism yoki telefon" id="globalSearch" aria-label="Lidlarni ism yoki telefon bo‘yicha qidirish" aria-describedby="leadSearchStatus" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly>
+                    <span id="leadSearchStatus" class="lead-search-status" role="status" hidden></span>
                 </div>
                 <div class="header-actions">
                     <div class="live-badge"><span class="live-dot"></span> Live</div>
@@ -1467,7 +1468,7 @@
     <script src="js/lessonDefaults.js?v=20261001"></script>
     <script src="js/payrollEngine.js?v=20261004"></script>
     <script src="js/payrollUI.js?v=20261004"></script>
-    <script src="js/app.js?v=20261002f"></script>
+    <script src="js/app.js?v=20261004g"></script>
 </body>
 
 </html>
