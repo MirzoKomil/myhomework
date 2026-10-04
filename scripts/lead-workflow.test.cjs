@@ -192,9 +192,7 @@ test('new deferred dates render only in their own column with safe date-only for
 test('skipping the optional deferred column never asks its survey; deferred leads still cannot bypass missing connected answers before payment', () => {
   const context = appContext(['normalizeLeadStatus', 'getLeadColumnIndex', 'getSkippedSurveySteps',
     'getPendingSurveyStepsBeforePayment', 'getNextSurveyStepBeforePayment',
-    'getPendingSurveyStepsBeforePaymentClosed', 'getNextSurveyStepBeforePaymentClosed', 'leadHasContactFailSurvey'], {
-    PAYMENT_CLOSED_SKIP_COLUMNS: new Set(['sinov-darsida', 'tolov-jarayonida'])
-  });
+    'getPendingSurveyStepsBeforePaymentClosed', 'getNextSurveyStepBeforePaymentClosed']);
   assert.equal(context.getNextSurveyStepBeforePayment('qaror-jarayonida', combinedLead()), 'payment');
   assert.equal(context.getNextSurveyStepBeforePayment(workflow.DEFERRED_STATUS, {}), 'connected');
   assert.equal(context.getNextSurveyStepBeforePaymentClosed(workflow.DEFERRED_STATUS, {}), 'connected');
@@ -230,12 +228,15 @@ test('Deferred is not a payment stage and never creates a student platform accou
 });
 
 for (const lang of ['english', 'russian']) {
-  test(`${lang}: combined modal saves both surveys atomically and blocks missing information answers`, () => {
+  for (const chainTo of [null, 'tolov-yopildi', '__cascade__']) {
+  test(`${lang}: combined modal (${chainTo || 'direct'}) saves both surveys atomically and blocks missing information answers`, () => {
     let lead = { id: 'fixture', name: 'Fixture', status: 'yangi-lidlar', custom: 'keep', comments: [{ id: 'original' }],
       attachments: ['photo.png', 'contract.pdf'], connectedSurvey: { customAnswer: 'keep' } };
     let writes = 0;
     let html;
     let error;
+    let continued = 0;
+    let cancelled = 0;
     const answers = {};
     const fields = { languageLevel: 'zero', applicant: 'self', gender: 'male', learningGoal: 'work', residenceType: 'uz', uzRegion: 'toshkent-sh' };
     const age = { value: '27', min: '7', max: '70', style: { setProperty() {} }, addEventListener() {} };
@@ -258,21 +259,32 @@ for (const lang of ['english', 'russian']) {
       openModal: (_title, body) => { html = body; }, wireLeadModalValidationClear() {}, initSurveyCarousels() {},
       showLeadModalValidation: (_body, result) => { error = result.error; },
       showInfoProvidedValidation: (_body, result) => { error = result.error; },
-      closeModal() {}, renderLeads() {}, getCurrentUser: () => ({ name: 'Fixture admin' }), createLeadComment: c => c,
+      closeModal() { cancelled++; }, renderLeads() {}, getCurrentUser: () => ({ name: 'Fixture admin' }), createLeadComment: c => c,
+      openTolovYopildiFlow(language, id, status) {
+        assert.equal(language, lang); assert.equal(id, 'fixture'); assert.equal(status, 'yangi-lidlar');
+        assert.equal(workflow.hasCombinedSurvey(lead), true); continued++;
+      },
+      continueMvCascade() { assert.equal(workflow.hasCombinedSurvey(lead), true); continued++; },
       updateLeadInStorage: (language, id, updater) => {
         assert.equal(language, lang); assert.equal(id, 'fixture'); writes++; lead = updater(lead); return lead;
       }
     });
-    context.openConnectedSurveyModal(lang, 'fixture', 'boglanildi');
+    context.openConnectedSurveyModal(lang, 'fixture', chainTo ? 'tolov-yopildi' : 'boglanildi', { chainTo });
     assert.ok(html.includes('Til darajasi'));
     for (const question of ['platform', 'price', 'format', 'terms', 'trial']) assert.ok(html.includes(`data-info-question="${question}"`));
+    elements.cancelConnectedSurvey.onclick();
+    assert.equal(cancelled, 1);
+    assert.equal(writes, 0);
+    assert.equal(continued, 0);
+    assert.equal(lead.status, 'yangi-lidlar');
     elements.confirmConnectedSurvey.onclick();
     assert.equal(writes, 0);
     assert.ok(error);
     for (const question of ['platform', 'price', 'format', 'terms', 'trial']) answers[question] = 'yes';
     elements.confirmConnectedSurvey.onclick();
     assert.equal(writes, 1);
-    assert.equal(lead.status, 'boglanildi');
+    assert.equal(lead.status, chainTo ? 'yangi-lidlar' : 'boglanildi');
+    assert.equal(continued, chainTo ? 1 : 0);
     assert.equal(workflow.hasCombinedSurvey(lead), true);
     assert.equal(lead.connectedSurvey.customAnswer, 'keep');
     assert.equal(lead.comments[0].id, 'original');
@@ -280,6 +292,7 @@ for (const lang of ['english', 'russian']) {
     assert.equal(lead.custom, 'keep');
     assert.equal(lead.comments.length, 3);
   });
+  }
 
   test(`${lang}: deferred modal requires Other text and both dates, saves survey/history and can be cancelled`, () => {
     let lead = { id: 'fixture', name: 'Fixture', status: 'qaror-jarayonida', comments: [{ id: 'original' }] };

@@ -16143,44 +16143,16 @@ function beginTolovJarayonidaPaymentFlow(lang, leadId) {
     openPaymentProcessModal(lang, leadId);
 }
 
-const PAYMENT_CLOSED_SKIP_COLUMNS = new Set([
-    'sinov-darsida',
-    'tolov-jarayonida'
-]);
-
-function leadHasContactFailSurvey(lead) {
-    return Array.isArray(lead?.comments)
-        && lead.comments.some(c => c.type === 'contact-fail');
-}
-
 function getPendingSurveyStepsBeforePaymentClosed(fromStatus) {
-    const fromIdx = getLeadColumnIndex(fromStatus);
-    const closedIdx = getLeadColumnIndex('tolov-yopildi');
-    const steps = [];
-
-    for (const col of LEAD_COLUMNS) {
-        const idx = getLeadColumnIndex(col.id);
-        if (idx <= fromIdx || idx >= closedIdx) continue;
-        if (PAYMENT_CLOSED_SKIP_COLUMNS.has(col.id)) continue;
-        if (col.id === 'boglanishga-urinilmoqda') steps.push('contact-fail');
-        else if (col.id === 'boglanildi') steps.push('connected');
-        else if (col.id === 'qaror-jarayonida'
-            && fromIdx < getLeadColumnIndex('sinov-darsida')) steps.push('decision');
-    }
-    return steps;
+    // Direct closure needs the same combined questionnaire as payment entry.
+    // Skipping contact attempts, trial, decision or deferred purchase must not
+    // invent failed calls or ask why a customer who is paying has postponed.
+    return getPendingSurveyStepsBeforePayment(fromStatus);
 }
 
 function getNextSurveyStepBeforePaymentClosed(fromStatus, lead) {
-    if (['boglanildi', leadWorkflow.DEFERRED_STATUS].includes(normalizeLeadStatus(fromStatus))
-        && !leadWorkflow.hasCombinedSurvey(lead)) return 'connected';
-    for (const step of getPendingSurveyStepsBeforePaymentClosed(fromStatus)) {
-        if (step === 'contact-fail' && leadHasContactFailSurvey(lead)) continue;
-        if (step === 'connected' && leadWorkflow.hasCombinedSurvey(lead)) continue;
-        if (step === 'info' && lead.infoProvidedSurvey) continue;
-        if (step === 'decision' && lead.decisionSurvey) continue;
-        return step;
-    }
-    return 'payment-closed';
+    const next = getNextSurveyStepBeforePayment(fromStatus, lead);
+    return next === 'payment' ? 'payment-closed' : next;
 }
 
 function openTolovYopildiFlow(lang, leadId, fromStatus) {
@@ -16189,20 +16161,8 @@ function openTolovYopildiFlow(lang, leadId, fromStatus) {
     const from = normalizeLeadStatus(fromStatus || lead.status);
     const next = getNextSurveyStepBeforePaymentClosed(from, lead);
 
-    if (next === 'contact-fail') {
-        openContactFailModal(lang, leadId, 'boglanishga-urinilmoqda', { chainTo: 'tolov-yopildi' });
-        return;
-    }
     if (next === 'connected') {
         openConnectedSurveyModal(lang, leadId, 'tolov-yopildi', { chainTo: 'tolov-yopildi' });
-        return;
-    }
-    if (next === 'info') {
-        openInfoProvidedModal(lang, leadId, { chainTo: 'tolov-yopildi' });
-        return;
-    }
-    if (next === 'decision') {
-        openDecisionProcessModal(lang, leadId, { chainTo: 'tolov-yopildi' });
         return;
     }
     // To'lov bosqichlari: ustoz, tarif, shartnoma
