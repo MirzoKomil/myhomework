@@ -7,7 +7,7 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20261004g">
+    <link rel="stylesheet" href="css/styles.css?v=20261004h">
 </head>
 
 <body>
@@ -897,11 +897,7 @@
 
                         <!-- To'lovlar -->
                         <div class="finance-panel active" data-finance-panel="tolovlar" id="financePanel-tolovlar">
-                            <div class="mac-empty" style="padding:80px 0">
-                                <div style="font-size:40px;margin-bottom:12px">💳</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">To'lovlar</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu bo'lim tez orada to'ldiriladi</div>
-                            </div>
+                            <div id="inflowRoot"></div>
                         </div>
 
                         <!-- Maoshlar / KPI: server-side payroll -->
@@ -912,6 +908,7 @@
                         <!-- Cash Flow -->
                         <div class="finance-panel" data-finance-panel="cashflow" id="financePanel-cashflow">
                             <div class="cf-wrap">
+                                <p role="status" data-inflow-cash-message></p>
                                 <div class="cf-toolbar">
                                     <div>
                                         <h2 class="cf-title">Cash Flow</h2>
@@ -1461,14 +1458,16 @@
     <script src="js/api.js?v=20261002d"></script>
     <script src="js/storage.js?v=20261002f"></script>
     <script src="js/notifications.js?v=20260801b"></script>
-    <script src="js/studentAccess.js?v=20261002"></script>
+    <script src="js/studentAccess.js?v=20261004h"></script>
     <script src="js/leadWorkflow.js?v=20261002c"></script>
     <script src="js/trialWorkflow.js?v=20261002d"></script>
     <script src="js/mobileContentPolicy.js?v=20261001"></script>
     <script src="js/lessonDefaults.js?v=20261001"></script>
-    <script src="js/payrollEngine.js?v=20261004"></script>
-    <script src="js/payrollUI.js?v=20261004"></script>
-    <script src="js/app.js?v=20261004g"></script>
+    <script src="js/paymentLedger.js?v=20261004h"></script>
+    <script src="js/inflowUI.js?v=20261004h"></script>
+    <script src="js/payrollEngine.js?v=20261004h"></script>
+    <script src="js/payrollUI.js?v=20261004h"></script>
+    <script src="js/app.js?v=20261004h"></script>
 </body>
 
 </html>

@@ -19,6 +19,8 @@ Hisob-kitobning manbasi server, brauzer emas. `js/payrollEngine.js` sof hisoblas
 
 ## Hisoblash siyosati
 
+8-vazifadan boshlab aylanma `payment_records` reyestridagi haqiqiy tushum sanalari bo‘yicha hisoblanadi, shu jumladan zakladlar. Yopilgan bitimning umumiy summasi qayta qo‘shilmaydi. Oldin berilgan maosh/basis o‘zgarishsiz qoladi va eski basis bo‘yicha tuzatish eski qoidadan foydalanadi. Batafsil: [To‘lovlar reyestri](inflow.md).
+
 - Sotuv menejeri: aylanma pog‘onasi bo‘yicha fiksa, ishga qabul qilingan kundan kunlik proporsiya,
   alohida sotuv foizi va bonuslar. ROP fiksa ham kunlarga proporsional.
 - Moslashuvchan davr fiksa: har bir kalendar oyidagi ulush alohida hisoblanib yig‘iladi.

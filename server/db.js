@@ -15,6 +15,7 @@ const { migrateMergedLeadStage } = require('./services/leadWorkflowMigration');
 const trialWorkflow = require('../js/trialWorkflow');
 const trialLessons = require('./services/trialLessons');
 const payroll = require('./services/payroll');
+const inflow = require('./services/inflow');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -357,6 +358,8 @@ async function initSchema() {
           )
         ON CONFLICT DO NOTHING
     `).catch(() => {});
+
+    await inflow.initSchema(pool);
 
     // Boshlang'ich mobile_content qatori
     await pool.query(
@@ -1234,6 +1237,14 @@ async function saveStudents(client, students, removedStudentIds = []) {
             if (!extra.leadPaymentSyncKey) extra.leadPaymentSyncKey = existingById.get(id).leadPaymentSyncKey;
         }
         delete extra.hasPassword;
+        const financial = existingById.get(id);
+        if (financial?.paymentLedgerManaged) {
+            // A stale bulk CRM snapshot cannot undo an independently accepted receipt.
+            for (const key of ['paidAmount', 'debtAmount', 'paymentCount', 'lastPaymentDate', 'paymentLedgerManaged', 'paymentLedgerOpeningPaid']) {
+                if (financial[key] !== undefined) extra[key] = financial[key];
+            }
+            if (Number(financial.debtAmount) === 0) extra.paymentDueDate = '';
+        }
         await client.query(
             `INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration, extra_data)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
@@ -1413,6 +1424,7 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
     const existing = await client.query('SELECT * FROM leads WHERE id = $1 FOR UPDATE', [lead.id]);
     const existingRow = existing.rows[0] || null;
     const before = existingRow ? rowToLead(existingRow) : null;
+    options.priorLead = before;
 
     // Bir xil lid ikki eski tabdan bir paytda tahrir qilinsa, kech kelgan
     // eski snapshot yangi ma'lumotni bosib yubormaydi.
@@ -1539,8 +1551,10 @@ async function upsertLead(lead, language, actor = {}) {
     let saved;
     let platformAccess;
     await tx(async client => {
-        saved = await upsertLeadWithClient(client, lead, language, { actor });
+        const options = { actor };
+        saved = await upsertLeadWithClient(client, lead, language, options);
         platformAccess = await provisionLeadStudent(client, saved);
+        await inflow.syncLead(client, saved, platformAccess, actor, false, options.priorLead);
     });
     return { lead: saved, platformAccess };
 }
@@ -4256,6 +4270,8 @@ async function init() {
     }
     await initSchema();
     await seedIfEmpty();
+    const inflowMigration = await inflow.transaction(pool, inflow.migrate);
+    if (!inflowMigration.skipped) console.log('[DB] To‘lovlar reyestri:', JSON.stringify(inflowMigration));
     let mergedLeadCount = 0;
     await tx(async client => { mergedLeadCount = await migrateMergedLeadStage(client, rowToLead); });
     if (mergedLeadCount) console.log(`[DB] Ma’lumot berildi → Bog‘lanildi: ${mergedLeadCount} ta lid ko‘chirildi (audit saqlandi)`);

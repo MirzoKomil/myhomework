@@ -11972,7 +11972,8 @@ function switchFinanceSection(section) {
         panel.classList.toggle('active', panel.dataset.financePanel === section);
     });
     applyFinanceLang();
-    if (section === 'cashflow') renderCashFlow();
+    if (section === 'cashflow') { renderCashFlow(); inflowUI.refreshCash(); }
+    if (section === 'tolovlar') inflowUI.render();
     if (section === 'maoshlar' || section === 'kpi') payrollUI.render(section);
     persistCurrentTab();
 }
@@ -11992,6 +11993,7 @@ function renderFinance() {
                 b.classList.toggle('active', b.dataset.financeLang === _financeLang)
             );
             applyFinanceLang();
+            if (_tabContext.financeSection === 'tolovlar') inflowUI.render();
             if (['maoshlar', 'kpi'].includes(_tabContext.financeSection)) payrollUI.render(_tabContext.financeSection);
         });
     });
@@ -12017,7 +12019,7 @@ const CASH_FLOW_PURPOSES = {
     operatsion: ['Oylik (xodim maoshi)', 'Marketing', 'CRM tizimi', 'Target byudjeti', 'CEO shaxsiy xarajati', 'Boshqa']
 };
 
-const CASH_FLOW_PAYMENT_METHODS = ['Naqd pul', 'Bank hisob raqami', 'Karta'];
+const CASH_FLOW_PAYMENT_METHODS = ['Naqd pul', 'Bank hisob raqami', 'Karta', 'Uzum Nasiya', 'Paylater', 'Aniqlanmagan'];
 const CASH_FLOW_SALARY_PURPOSE = 'Oylik (xodim maoshi)';
 const CASH_FLOW_REFUND_PURPOSE = 'Pul qaytarish (Refund)';
 const CF_DONUT_COLORS = ['#7B61FF', '#4F8CFF', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#94A3B8', '#22D3EE'];
@@ -12025,14 +12027,16 @@ const CF_DONUT_COLORS = ['#7B61FF', '#4F8CFF', '#34D399', '#FBBF24', '#F472B6', 
 let _cfNetPeriod = 'kunlik';
 
 function getCashFlowTx() {
-    return getItem(STORAGE_KEYS.cashFlow, []);
+    const generated = inflowUI.cashRows(), ids = new Set(generated.map(r => r.paymentRecordId));
+    return [...getItem(STORAGE_KEYS.cashFlow, []).filter(r => !r.ledgerGenerated && (!r.paymentRecordId || !ids.has(r.paymentRecordId))), ...generated];
 }
 
 function saveCashFlowTx(list) {
-    setItem(STORAGE_KEYS.cashFlow, list);
+    setItem(STORAGE_KEYS.cashFlow, list.filter(r => !r.ledgerGenerated));
 }
 
 function deleteCashFlowTx(id) {
+    if (String(id).startsWith('inflow:')) return;
     saveCashFlowTx(getCashFlowTx().filter(t => t.id !== id));
 }
 
@@ -12047,15 +12051,15 @@ function cfBalancesByMethod(list) {
 }
 
 function cfDateInPeriod(dateStr, period) {
-    const d = new Date(dateStr);
-    const now = new Date();
-    if (period === 'kunlik') return d.toDateString() === now.toDateString();
+    const key = PaymentLedger.date(dateStr), today = PaymentLedger.today();
+    if (!key) return false;
+    if (period === 'kunlik') return key === today;
     if (period === 'haftalik') {
-        const day = now.getDay() || 7;
-        const weekStart = new Date(now); weekStart.setDate(now.getDate() - day + 1); weekStart.setHours(0, 0, 0, 0);
-        return d >= weekStart && d <= now;
+        const weekStart = new Date(today + 'T12:00:00Z'), day = weekStart.getUTCDay() || 7;
+        weekStart.setUTCDate(weekStart.getUTCDate() - day + 1);
+        return key >= weekStart.toISOString().slice(0, 10) && key <= today;
     }
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return key.slice(0, 7) === today.slice(0, 7);
 }
 
 function cfKirimChiqimForPeriod(list, period) {
@@ -12079,8 +12083,7 @@ function cfInvestmentTotals(list) {
 }
 
 function cfMonthKey(dateStr) {
-    const d = new Date(dateStr);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return PaymentLedger.date(dateStr).slice(0, 7);
 }
 
 function cfMonthLabel(monthKey) {
@@ -12093,6 +12096,7 @@ function cfMonthlyPL(list) {
     const months = {};
     list.forEach(t => {
         const key = cfMonthKey(t.date);
+        if (!key) return;
         if (!months[key]) months[key] = { revenue: 0, expense: 0 };
         if (t.type === 'kirim' && (t.category === 'sotuv' || t.category === 'ichki-sotuv')) {
             months[key].revenue += Number(t.amount) || 0;
@@ -12127,9 +12131,9 @@ function cfExpenseBreakdown(list) {
 
 function cfTrend(list, days = 14) {
     const out = [];
-    const now = new Date();
+    const now = new Date(PaymentLedger.today() + 'T12:00:00Z');
     for (let i = days - 1; i >= 0; i--) {
-        const d = new Date(now); d.setDate(now.getDate() - i);
+        const d = new Date(now); d.setUTCDate(now.getUTCDate() - i);
         const dateStr = d.toISOString().slice(0, 10);
         let kirim = 0, chiqim = 0;
         list.forEach(t => {
@@ -12137,7 +12141,7 @@ function cfTrend(list, days = 14) {
             if (t.type === 'kirim') kirim += Number(t.amount) || 0;
             else chiqim += Number(t.amount) || 0;
         });
-        out.push({ date: dateStr, label: `${d.getDate()}.${d.getMonth() + 1}`, kirim, chiqim });
+        out.push({ date: dateStr, label: `${d.getUTCDate()}.${d.getUTCMonth() + 1}`, kirim, chiqim });
     }
     return out;
 }
@@ -12201,6 +12205,7 @@ function renderCfKpis() {
         { label: 'Karta', value: balances['Karta'], icon: '💳', color: 'blue' },
         { label: 'Bank hisob raqami', value: balances['Bank hisob raqami'], icon: '🏦', color: 'yellow' }
     ];
+    for (const method of ['Uzum Nasiya', 'Paylater', 'Aniqlanmagan']) if (balances[method]) cards.push({ label: method, value: balances[method], icon: '💳', color: 'purple' });
     el.innerHTML = cards.map(c => `
         <div class="stat-card">
             <div class="stat-icon ${c.color}">${c.icon}</div>
@@ -12379,8 +12384,8 @@ function renderCfTxTable() {
             <td>${escapeHtml(person)}</td>
             <td>${escapeHtml(t.notes || '—')}</td>
             <td>
-                <button type="button" class="cf-row-action" data-cf-edit="${t.id}" title="Tahrirlash">✏️</button>
-                <button type="button" class="cf-row-action" data-cf-delete="${t.id}" title="O'chirish">🗑️</button>
+                ${t.ledgerGenerated ? '<span class="text-muted">To‘lovlar reyestri (avtomatik)</span>' : `<button type="button" class="cf-row-action" data-cf-edit="${t.id}" title="Tahrirlash">✏️</button>
+                <button type="button" class="cf-row-action" data-cf-delete="${t.id}" title="O'chirish">🗑️</button>`}
             </td>
         </tr>`;
     }).join('');
@@ -12392,6 +12397,7 @@ function cfPurposeOptions(category) {
 
 function openCashFlowModal(editId) {
     const existing = editId ? getCashFlowTx().find(t => t.id === editId) : null;
+    if (existing?.ledgerGenerated) return;
     const today = new Date().toISOString().slice(0, 10);
     const category = existing?.category || 'sotuv';
     const allLeadData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
@@ -17073,7 +17079,7 @@ function collectPaymentSurveyData(modalBody) {
         const paidRaw = modalBody.querySelector('#paymentPaidAmount')?.value?.trim();
         if (!paidRaw) return { error: 'Qancha to\'laganini kiriting', target: '#paymentPaidAmount' };
         const paid = parseMoneyInput(paidRaw);
-        if (!Number.isFinite(paid) || paid <= 0) {
+        if (!Number.isSafeInteger(paid) || paid <= 0) {
             return { error: 'To\'langan summa noto\'g\'ri', target: '#paymentPaidAmount' };
         }
         if (paid > totalAmount) {
@@ -17088,6 +17094,7 @@ function collectPaymentSurveyData(modalBody) {
         const debtRaw = modalBody.querySelector('#paymentDebtAmount')?.value?.trim();
         const debtFromInput = debtRaw ? parseMoneyInput(debtRaw) : NaN;
         debtAmount = Number.isFinite(debtFromInput) ? debtFromInput : Math.max(0, totalAmount - paid);
+        if (!Number.isSafeInteger(debtAmount) || debtAmount < 0) return { error: 'Qarzdorlik summasi noto‘g‘ri', target: '#paymentDebtAmount' };
         debtAmountLabel = formatUzMoney(debtAmount);
 
         lastPaymentDate = modalBody.querySelector('#paymentLastPaymentDate')?.value || '';
@@ -18204,6 +18211,7 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
         </section>
         <section id="partialPaymentBlock" class="lead-survey-section" hidden>
             <h4 class="lead-survey-title">Qisman to'lov tafsilotlari</h4>
+            ${inflowUI.paymentFields('depositInflow')}
             <div class="lead-survey-field">
                 <label for="paymentPaidAmount">Qancha to'ladi</label>
                 <input type="text" id="paymentPaidAmount" class="form-control" inputmode="numeric" placeholder="Masalan: 500 000">
@@ -18241,12 +18249,17 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
         renderLeads();
     };
 
-    document.getElementById('confirmPaymentProcess').onclick = () => {
+    document.getElementById('confirmPaymentProcess').onclick = async () => {
         const result = collectPaymentSurveyData(modalBody);
         if (result.error) {
             showLeadModalValidation(modalBody, result);
             return;
         }
+
+        const paymentBtn = document.getElementById('confirmPaymentProcess');
+        paymentBtn.disabled = true;
+        try { Object.assign(result.data, await inflowUI.collectProof(modalBody, 'depositInflow', result.data.paymentType === 'partial')); }
+        catch (e) { paymentBtn.disabled = false; showLeadModalValidation(modalBody, { error: e.message }); return; }
 
         const user = getCurrentUser();
         const author = user?.name || 'Admin';
@@ -18528,7 +18541,7 @@ function openPaymentClosedModal(lang, leadId) {
         ${renderCloseSurveyDateField('paymentClosedDate', "To'lov yopilgan sana", 'closedDate')}
         <section class="lead-survey-section">
             <div class="form-group" style="margin-bottom:12px">
-                <label style="font-weight:600">To'lov qilingan summa (so'm)</label>
+                <label style="font-weight:600">Jami qabul qilingan summa — zaklad va oldingi to‘lovlar bilan (so'm)</label>
                 <input type="text" inputmode="numeric" id="pcActualAmount" class="form-control" data-money-input placeholder="Masalan: 500,000" style="margin-top:6px">
             </div>
             <div class="lead-info-question" style="margin-top:4px">
@@ -18541,6 +18554,7 @@ function openPaymentClosedModal(lang, leadId) {
         ${debtSection}
         ${debtorSection}
         ${installmentSection}
+        ${inflowUI.paymentFields('closingInflow')}
     </div>`;
 
     openModal(
@@ -18562,9 +18576,17 @@ function openPaymentClosedModal(lang, leadId) {
     };
 
     // 9-ish: ustoz so'ralmaydi — mavjud paymentOnboarding bilan to'g'ridan-to'g'ri yakunlaymiz
-    document.getElementById('confirmPaymentClosed').onclick = () => {
+    document.getElementById('confirmPaymentClosed').onclick = async () => {
         const result = collectEnhancedPaymentClosedData(modalBody, ps, { hasDebt, hasInstallment, hasDebtor });
         if (result.error) { showLeadModalValidation(modalBody, result); return; }
+        const paymentBtn = document.getElementById('confirmPaymentClosed');
+        paymentBtn.disabled = true;
+        const student = getItem(STORAGE_KEYS.students, []).find(s => s.leadRef?.id === leadId && s.subject === lang);
+        const alreadyPaid = Number(student?.paymentLedgerManaged ? student.paidAmount : ps?.paymentType === 'partial' ? ps.paidAmount : 0) || 0;
+        const received = !hasInstallment || result.data.installmentReceived === 'yes';
+        if (received && result.data.actualAmount < alreadyPaid) { paymentBtn.disabled = false; showLeadModalValidation(modalBody, { error: 'Jami summa oldingi tushumlardan kam bo‘lishi mumkin emas' }); return; }
+        try { Object.assign(result.data, await inflowUI.collectProof(modalBody, 'closingInflow', received && result.data.actualAmount > alreadyPaid)); }
+        catch (e) { paymentBtn.disabled = false; showLeadModalValidation(modalBody, { error: e.message }); return; }
         closeModal();
         finalizePaymentClosed(lang, leadId, result.data, lead.paymentOnboarding || null);
     };
@@ -18612,8 +18634,9 @@ function collectEnhancedPaymentClosedData(modalBody, ps, flags = {}) {
 
     // 9-ish: to'lov miqdori va qarzdor emas tasdiqlov
     const actualAmountRaw = modalBody.querySelector('#pcActualAmount')?.value?.trim() || '';
-    const actualAmount = actualAmountRaw ? parseInt(actualAmountRaw.replace(/,/g, ''), 10) : null;
+    const actualAmount = actualAmountRaw ? Number(actualAmountRaw.replace(/[\s,]/g, '')) : null;
     if (!actualAmountRaw) return { error: "To'lov qilingan summani kiriting" };
+    if (!Number.isSafeInteger(actualAmount) || actualAmount < 0) return { error: 'To‘lov summasi noto‘g‘ri' };
     const noDebtConfirmed = modalBody.querySelector('#pcNoDebtConfirm')?.checked;
     if (!noDebtConfirmed) return { error: "O'quvchi qarzdor emasligini tasdiqlang" };
 
@@ -25470,6 +25493,7 @@ function openDebtorMenu(studentId, triggerBtn) {
     menu.innerHTML = `
         <div class="ctx-item" data-action="call" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">📞 Qo'ng'iroq qilish</div>
         <div class="ctx-item" data-action="sms"  style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💬 SMS yuborish</div>
+        <div class="ctx-item" data-action="payment" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💳 To‘lov qabul qilish</div>
         <div class="ctx-item" data-action="edit" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">✏️ Qarz tahrirlash</div>
         <div class="ctx-item" data-action="delete" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center;color:#e74c3c">🗑 O'chirish</div>
     `;
@@ -25496,6 +25520,8 @@ function openDebtorMenu(studentId, triggerBtn) {
                 if (s.phone) window.open('sms:' + s.phone);
             } else if (action === 'edit') {
                 openDebtorEditModal(studentId);
+            } else if (action === 'payment') {
+                inflowUI.openPayment(studentId);
             } else if (action === 'delete') {
                 if (!confirm(`"${s.name}" ni o'chirishni tasdiqlaysizmi?`)) return;
                 const all = getItem(STORAGE_KEYS.students, []).filter(x => x.id !== studentId);
@@ -25516,13 +25542,14 @@ function openDebtorEditModal(studentId) {
 
     const body = `
         <div style="display:flex;flex-direction:column;gap:14px">
+            <p class="text-muted">Yangi tushumni kartochkadagi “To‘lov qabul qilish” orqali kiriting. Summa va tarix reyestrdan olinadi.</p>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'langan summa (so'm)</label>
-                <input type="text" inputmode="numeric" id="dePaid" data-money-input value="${s.paidAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="text" inputmode="numeric" id="dePaid" readonly data-money-input value="${s.paidAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Qarz miqdori (so'm)</label>
-                <input type="text" inputmode="numeric" id="deDebt" data-money-input value="${s.debtAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="text" inputmode="numeric" id="deDebt" readonly data-money-input value="${s.debtAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lov muddati</label>
@@ -25538,11 +25565,11 @@ function openDebtorEditModal(studentId) {
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Oxirgi to'lov sanasi</label>
-                <input type="date" lang="en-GB" id="deLastPayment" value="${s.lastPaymentDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="date" readonly lang="en-GB" id="deLastPayment" value="${s.lastPaymentDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lovlar soni</label>
-                <input type="number" id="dePayCount" value="${s.paymentCount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <input type="number" readonly id="dePayCount" value="${s.paymentCount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Izoh</label>

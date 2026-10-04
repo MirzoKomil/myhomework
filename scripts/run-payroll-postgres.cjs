@@ -25,16 +25,18 @@ async function main() {
     run('initdb', ['-D', data, '-U', 'payroll_test', '--auth=trust', '--encoding=UTF8', '--locale=C']);
     run('pg_ctl', ['-D', data, '-l', path.join(cluster, 'postgres.log'), '-o', `-h 127.0.0.1 -p ${port}`, '-w', 'start']);
     started = true;
+    for (const testFile of ['scripts/payroll-postgres.test.cjs', 'scripts/inflow-postgres.test.cjs']) {
     const database = 'payroll_test_' + randomUUID().replaceAll('-', '');
     const client = new Client({ host: '127.0.0.1', port, user: 'payroll_test', database: 'postgres' });
     await client.connect();
     try { await client.query(`CREATE DATABASE "${database}"`); } finally { await client.end(); }
-    const result = spawnSync(process.execPath, ['--test', 'scripts/payroll-postgres.test.cjs'], {
+    const result = spawnSync(process.execPath, ['--test', testFile], {
       cwd: path.resolve(__dirname, '..'), encoding: 'utf8', windowsHide: true, timeout: 180000,
       env: { ...process.env, PAYROLL_TEST_DATABASE_URL: `postgresql://payroll_test@127.0.0.1:${port}/${database}` }
     });
     process.stdout.write(result.stdout || ''); process.stderr.write(result.stderr || '');
-    process.exitCode = result.status || (result.error ? 1 : 0);
+    if (result.status || result.error) process.exitCode = 1;
+    }
   } finally {
     if (started) run('pg_ctl', ['-D', data, '-m', 'fast', '-w', 'stop']);
     // Exact generated folder retained for diagnosis; never delete an inferred/shared DB folder.

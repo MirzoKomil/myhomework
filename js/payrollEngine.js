@@ -132,7 +132,14 @@
         const refundEvents = (source.cashFlow || []).filter(t => t.type === 'chiqim' && /refund|pul qaytarish/i.test(t.purpose || ''));
         const add = (id, value) => { if (id) byManager[id] = (byManager[id] || 0) + value; };
         let turnover = 0;
-        for (const l of leads) {
+        if (Array.isArray(source.paymentRecords)) {
+            for (const r of source.paymentRecords) {
+                if (r.language !== lang || !inPeriod(r.paidDate, p)) continue;
+                add(r.managerId, amount(r.amount)); turnover += amount(r.amount);
+                if (!r.managerId) warnings.push('To‘lov menejerga bog‘lanmagan: ' + r.id);
+            }
+        }
+        for (const l of Array.isArray(source.paymentRecords) ? [] : leads) {
             const closed = l.paymentClosedSurvey || {};
             if (l.deletedAt || l.status !== 'tolov-yopildi' || l.cancelled) continue;
             if (!inPeriod(closed.closedDate || l.closedDate, p)) continue;
@@ -145,7 +152,7 @@
         for (const t of refundEvents) {
             if (!inPeriod(t.date, p)) continue;
             const linked = leads.find(l => l.id === (t.leadId || t.leadRef?.id));
-            if (linked?.cancelled && inPeriod(linked.paymentClosedSurvey?.closedDate || linked.closedDate, p)) continue;
+            if (!Array.isArray(source.paymentRecords) && linked?.cancelled && inPeriod(linked.paymentClosedSurvey?.closedDate || linked.closedDate, p)) continue;
             const linkedManager = source.hrEmployees.find(e => e.id === t.managerId);
             const transactionLang = t.lang || t.language || (linked && lang) || (linkedManager && language(linkedManager));
             if (!transactionLang) { warnings.push('Qaytarilgan pul tili/menejeri aniqlanmagan: ' + t.id); continue; }

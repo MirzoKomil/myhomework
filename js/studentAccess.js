@@ -81,6 +81,9 @@
             student.contract = { number: onboarding.contractNumber, date: onboarding.contractDate };
         }
         const course = courseForStudent(student, courses);
+        if (existing?.paymentLedgerManaged) {
+            for (const key of ['paidAmount', 'debtAmount', 'paymentDueDate', 'lastPaymentDate', 'paymentCount', 'paymentLedgerManaged', 'paymentLedgerOpeningPaid']) student[key] = existing[key];
+        }
         if (course) student.platformCourseId = course.id;
         if (!student.login) student.login = phoneLogin(lead.phone);
         return student;

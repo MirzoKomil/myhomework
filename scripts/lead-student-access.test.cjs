@@ -155,6 +155,7 @@ test('lead save and account creation share one atomic transaction; failed provis
   let committed = 0;
   const { upsertLead } = loadFunctions('server/db.js', ['upsertLead'], {
     provisionLeadStudent,
+    inflow: { syncLead: async () => {} },
     upsertLeadWithClient: async (_client, lead, language) => (savedLead = { ...lead, language }),
     tx: async fn => {
       const before = { rows: structuredClone(db.rows), lead: savedLead };

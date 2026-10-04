@@ -179,6 +179,7 @@ function database() {
   };
   const db = { release() { calls.push(['release']); }, async query(sql, params = []) {
     calls.push([sql, params]);
+    if (sql.startsWith('SELECT to_regclass')) return { rows: [{ ledger: null }] };
     if (/^SELECT u.id/.test(sql)) return { rows: [{ id: params[0], role: params[0] === 'teacher' ? 'teacher' : params[0] === 'manager' ? 'sales_manager' : 'admin', name: 'Admin' }] };
     if (sql.startsWith('SELECT he.*')) return { rows: sourceRows.employees };
     if (sql.startsWith('SELECT * FROM teachers') || sql.startsWith('SELECT * FROM students') || sql.startsWith('SELECT att_key')) return { rows: [] };

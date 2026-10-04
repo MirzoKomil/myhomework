@@ -25,7 +25,7 @@
             <label>Boshlanish<input type="date" data-payroll-start class="form-control-sm" value="${p.start}" disabled></label>
             <label>Tugash (shu kun ham)<input type="date" data-payroll-end class="form-control-sm" value="${p.end}" disabled></label>
             <button class="btn-secondary-sm" data-payroll-refresh>Yangilash</button>
-        </div><p class="text-muted payroll-note">Maosh serverdagi to‘langan bitimlar, bonuslar va davomatdan hisoblanadi. Moslashuvchan davrda ikkala sana ham hisobga olinadi.</p>
+        </div><p class="text-muted payroll-note">Maosh serverdagi haqiqiy tushumlar (zakladlar ham), bonuslar va davomatdan hisoblanadi. Moslashuvchan davrda ikkala sana ham hisobga olinadi.</p>
         <div class="payroll-message" role="status"></div><div data-payroll-body></div>`;
         root.querySelector('[data-payroll-refresh]').onclick = () => {
             if (root.dataset.manualDirty === '1' && !confirm('Kiritilgan qo‘lda tuzatish saqlanmagan. Oynani yangilaysizmi?')) return;

@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
 const { authRequired } = require('../middleware/auth');
-const { DATA_DIR } = require('../db');
+const { DATA_DIR, pool } = require('../db');
 
 const router = express.Router();
 
@@ -92,9 +92,13 @@ router.post('/creative-submission', creativeSubmissionUpload.single('file'), (re
     res.json({ url: `/uploads/${req.file.filename}` });
 });
 
-router.delete('/:filename', authRequired, (req, res) => {
+router.delete('/:filename', authRequired, async (req, res) => {
     const filename = path.basename(req.params.filename);
     const filePath = path.join(UPLOADS_DIR, filename);
+    try {
+        const used = (await pool.query('SELECT id FROM payment_records WHERE receipt_url=$1 LIMIT 1', ['/uploads/' + filename])).rows.length;
+        if (used) return res.status(409).json({ error: 'Bu fayl to‘lov cheki sifatida saqlangan; o‘chirib bo‘lmaydi' });
+    } catch { return res.status(503).json({ error: 'Faylni tekshirib bo‘lmadi. Qayta urinib ko‘ring' }); }
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fayl topilmadi' });
     fs.unlinkSync(filePath);
     res.json({ ok: true });
