@@ -47,12 +47,31 @@
         return { events, issues };
     }
     function filter(rows, f) {
-        const q = String(f.search || '').trim().toLocaleLowerCase(), digits = q.replace(/\D/g, '');
         return rows.filter(r => (!f.start || r.paidDate >= f.start) && (!f.end || r.paidDate <= f.end)
-            && (!f.manager || r.managerId === f.manager) && (!f.teacher || r.teacherId === f.teacher)
+            && (!f.manager || (f.manager === '__unassigned' ? !r.managerId : r.managerId === f.manager)) && (!f.teacher || r.teacherId === f.teacher)
             && (!f.tariff || String(r.tariff) === String(f.tariff)) && (!f.method || r.method === f.method)
-            && (!f.form || r.form === f.form)
-            && (!q || String(r.name || '').toLocaleLowerCase().includes(q) || (digits && String(r.phone || '').replace(/\D/g, '').includes(digits))));
+            && (!f.form || r.form === f.form) && (!f.review || (f.review === 'missing-manager' ? !r.managerId : r.legacyReview))
+            && searchMatches(r.name,r.phone,f.search));
+    }
+    function searchMatches(name,phone,search) {
+        const q=String(search || '').trim().toLocaleLowerCase(), digits=q.replace(/\D/g,'');
+        return !q || String(name || '').toLocaleLowerCase().includes(q)
+            || (!/[\p{L}]/u.test(q) && !!digits && String(phone || '').replace(/\D/g,'').includes(digits));
+    }
+    function rangeError(f) {
+        return (f.start && !date(f.start) || f.end && !date(f.end) || f.start && f.end && f.start > f.end)
+            ? 'Boshlanish sanasi tugash sanasidan keyin bo‘lmasligi kerak. Sana oralig‘ini tekshiring.' : '';
+    }
+    function displayDate(value) { const d = date(value); return d ? d.slice(8) + '.' + d.slice(5, 7) + '.' + d.slice(0, 4) : '—'; }
+    function excelMoneyFormat(value) {
+        const groups=Math.floor((String(Math.abs(Number(value) || 0)).length-1)/3);
+        return (groups ? '#' + '" "000'.repeat(groups) : '0') + '" UZS"';
+    }
+    function nextDate(debt, current, historical) { return money(debt) === 0 ? '' : date(current == null ? historical : current); }
+    function filterIssues(issues, language, f = {}) {
+        // Undated sources remain visible, but are explicitly NOT dated receipts.
+        return issues.filter(r => r.language === language && (!r.date || ((!f.start || r.date >= f.start) && (!f.end || r.date <= f.end)))
+            && searchMatches(r.name,r.phone,f.search));
     }
     function summary(rows) {
         const debts = new Map();
@@ -95,6 +114,6 @@
         }
         return { rows: [...rows, ...cashFlow(records)], pending, excludedIds };
     }
-    return { METHODS, TARIFFS, money, date, today, method, receipt, leadEvents, filter, summary, cashFlow,
+    return { METHODS, TARIFFS, money, date, today, method, receipt, leadEvents, filter, rangeError, displayDate, excelMoneyFormat, nextDate, filterIssues, summary, cashFlow,
         stable, cashCandidates, projectCash };
 });

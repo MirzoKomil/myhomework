@@ -37,6 +37,16 @@ Eski umumiy «To‘lovlar» oynasi yangi Moliya reyestriga yo‘naltiriladi. Esk
 - `POST /api/inflow`: haqiqiy DBdagi rol, menejer biriktirishi va til tekshiriladi. Kreditlangan menejer/language mijoz body yoki JWT rolidan olinmaydi.
 - Yangi tushum uchun serverda mavjud chek, musbat butun summa, haqiqiy (kelajak bo‘lmagan) sana majburiy. Sana Asia/Tashkent bo‘yicha talqin qilinadi; vaqt noma’lum bo‘lsa o‘ylab topilmaydi.
 
+## Dizayn va read-only aniqlashtirish (2026-10-05)
+
+CRM `--surface`/`--text` ranglari, 44px tugmalar, ekran ichiga sig‘adigan jadval, ustun orqali saralash va filtrga o‘tish qo‘llanadi. Mobil qo‘shimcha filtrlar yig‘iladigan panelda; jami doim ekran pastida. Sana oraliği noto‘g‘ri bo‘lsa, noto‘g‘ri 0 jami yoki eksport berilmaydi. Excelda pul raqamligicha qoladi, ko‘rinish formati bo‘shliq bilan ajratilgan UZS.
+
+Qarzi 0 bo‘lgan qatorlarda keyingi to‘lov sanasi **faqat ko‘rinishda** yashiriladi, eski snapshot o‘zgartirilmaydi. Migratsiya muammolari til va manbadagi ma’lum sanaga bog‘lab o‘qiladi; sanasi noma’lum manbalar ochiq belgilangan holda qoladi, tili noma’lumlari alohida hisoblanadi. Reference sana tushum isboti emas. Asl `payment_records`, `payments`, `students`, `leads` va migration issue yozuvlari bu GET orqali o‘zgarmaydi.
+
+Menejeri noma’lum tushumlar «Menejer biriktirilmagan» filtri va tekshirish panelida summa bilan ko‘rsatiladi. Kassadan o‘chirilmaydi, menejerga taxminan taqsimlanmaydi. Chek/usul yo‘qligi ham faqat ogohlantirish, yangi chek yoki sana to‘qilmaydi. Tarixiy ma’lumotlarni tuzatish uchun haqiqiy manba va alohida moliya qarori zarur.
+
+`node scripts/preview-inflow.cjs` — 127.0.0.1:8786 da DB/auth ulanmagan, faqat sun’iy ma’lumotli UI QA. Eksport ushbu fixture ichida xotirada tekshiriladi; jonli ma’lumot yozilmaydi.
+
 ## Tekshiruv
 
 `node --test scripts/inflow.test.cjs` — domen/KPI/filtrlar, tarix va kirimlarni solishtirish. `node scripts/run-payroll-postgres.cjs` — maosh, tushum va dual-role uchun uchta alohida vaqtinchalik loopback baza. Runner ishlab turgan `DATABASE_URL` ga ulanmaydi. Test fayllari diagnostika uchun saqlanadi; vaqtinchalik PostgreSQL to‘xtatiladi. Jonli serverda sinov to‘lovi kiritilmaydi.

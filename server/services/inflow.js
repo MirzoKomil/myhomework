@@ -178,7 +178,7 @@ async function migrate(db) {
 async function list(db, actor, params) {
     await access(db, actor);
     if (!['english', 'russian'].includes(params.language)) throw error(400, 'Tilni tanlang');
-    if (params.start && !ledger.date(params.start) || params.end && !ledger.date(params.end) || params.start && params.end && params.start > params.end) throw error(400, 'Sana oralig‘i noto‘g‘ri');
+    if (ledger.rangeError(params)) throw error(400, 'Sana oralig‘i noto‘g‘ri');
     const rows = (await db.query(`SELECT r.*,TO_CHAR(r.paid_date,'YYYY-MM-DD') AS date_key,
         TO_CHAR(r.paid_at AT TIME ZONE 'Asia/Tashkent','HH24:MI') AS time_key, s.extra_data AS current_student
         FROM payment_records r LEFT JOIN students s ON s.id=r.student_id WHERE r.language=$1 ORDER BY r.paid_date DESC,r.created_at DESC,r.id`, [params.language])).rows;
@@ -187,11 +187,25 @@ async function list(db, actor, params) {
     const records = rows.map(r => ({ id: r.id, leadId: r.lead_id, studentId: r.student_id, language: r.language, managerId: r.manager_id, teacherId: r.teacher_id,
         ...r.snapshot, paidDate: r.date_key, paidTime: r.time_key || '', amount: Number(r.amount), method: r.method, receiptUrl: r.receipt_url,
         tariff: r.tariff, form: r.form, debt: ledger.money(r.current_student?.debtAmount) ?? lastBalance.get(r.student_id || r.lead_id || r.id),
-        nextPaymentDate: r.current_student?.paymentDueDate || r.snapshot.nextPaymentDate || '', legacyReview: r.legacy_review }));
+        nextPaymentDate: ledger.nextDate(ledger.money(r.current_student?.debtAmount) ?? lastBalance.get(r.student_id || r.lead_id || r.id),
+            r.current_student?.paymentDueDate, r.snapshot.nextPaymentDate), legacyReview: r.legacy_review }));
     const filtered = ledger.filter(records, params);
-    const issues = (await db.query('SELECT COUNT(*) AS n FROM payment_migration_issues')).rows[0].n;
-    const migrationIssues = (await db.query('SELECT source_key,reason FROM payment_migration_issues ORDER BY source_key LIMIT 100')).rows;
-    return { records: filtered, summary: ledger.summary(filtered), migrationIssueCount: Number(issues), migrationIssues };
+    // Read-only enrichment: never rewrite migration issues or legacy financial sources.
+    const issueRows = (await db.query(`SELECT i.source_key,i.reason,
+        COALESCE(l.language,s.subject,ps.subject) AS language, COALESCE(l.name,s.name,ps.name,'') AS name,
+        COALESCE(l.phone,s.phone,ps.phone,'') AS phone, l.extra_data AS lead_data, s.extra_data AS student_data,p.date AS payment_date
+        FROM payment_migration_issues i
+        LEFT JOIN leads l ON i.source_key IN ('lead:' || l.id || ':deposit','lead:' || l.id || ':closing')
+        LEFT JOIN students s ON i.source_key='student:' || s.id
+        LEFT JOIN payments p ON i.source_key='academic:' || p.id
+        LEFT JOIN students ps ON ps.id=p.student_id ORDER BY i.source_key`)).rows;
+    const annotated = issueRows.map(r => ({ source_key:r.source_key,reason:r.reason,language:r.language,name:r.name,phone:r.phone,
+        date:ledger.date(r.source_key.endsWith(':deposit') ? r.lead_data?.paymentSurvey?.lastPaymentDate
+            : r.source_key.endsWith(':closing') ? r.lead_data?.paymentClosedSurvey?.installmentReceivedDate || r.lead_data?.paymentClosedSurvey?.closedDate
+                : r.payment_date || r.student_data?.lastPaymentDate), dateIsReference:true }));
+    const migrationIssues = ledger.filterIssues(annotated, params.language, params);
+    return { records: filtered, summary: ledger.summary(filtered), migrationIssueCount:migrationIssues.length, migrationIssues,
+        unscopedIssueCount:annotated.filter(r=>!r.language).length };
 }
 async function receive(pool, actor, body) {
     if (!/^[a-zA-Z0-9-]{16,80}$/.test(body.requestKey || '')) throw error(400, 'So‘rov identifikatori noto‘g‘ri');

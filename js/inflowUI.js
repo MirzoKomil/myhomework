@@ -1,16 +1,18 @@
 (function () {
     'use strict';
-    const L = PaymentLedger, state = { rows: { english: [], russian: [] }, decisions: [], loaded: false, seq: 0, timer: null, issues: 0, issueList: [] };
+    const L = PaymentLedger, state = { rows: { english: [], russian: [] }, decisions: [], loaded: false, seq: 0, timer: null, issueLists: { english: [], russian: [] }, unscoped: 0 };
     const esc = value => escapeHtml(String(value ?? ''));
     const money = value => Number(value || 0).toLocaleString('en-US').replaceAll(',', ' ') + ' UZS';
     const opts = (items, all) => `<option value="">${all}</option>` + items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
+    const dateText = value => L.displayDate(value);
+    const methodBadge = r => `<span class="inflow-method" title="${esc(L.METHODS[r.method] || 'Aniqlanmagan')}"><span aria-hidden="true">${({cash:'💵',bank:'🏦',card:'💳',uzum:'💳',paylater:'💳',payme:'🏦',click:'🏦',unknown:'?'})[r.method] || '?'}</span> ${esc(r.method==='unknown' ? 'Noma’lum' : L.METHODS[r.method] || 'Aniqlanmagan')}</span>`;
     function monthDates(month) {
         if (!/^\d{4}-\d{2}$/.test(month)) return null;
         const [y, m] = month.split('-').map(Number);
         return { start: month + '-01', end: new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10) };
     }
     function filters(root) {
-        return Object.fromEntries(['start', 'end', 'search', 'manager', 'teacher', 'tariff', 'method', 'form', 'sort'].map(k => [k, root.querySelector(`[data-inflow="${k}"]`)?.value || '']));
+        return Object.fromEntries(['start', 'end', 'search', 'manager', 'teacher', 'tariff', 'method', 'form', 'sort', 'review'].map(k => [k, root.querySelector(`[data-inflow="${k}"]`)?.value || '']));
     }
     function rows(root) {
         const f = filters(root);
@@ -18,23 +20,47 @@
             : f.sort === 'date-up' ? a.paidDate.localeCompare(b.paidDate) || a.paidTime.localeCompare(b.paidTime) : b.paidDate.localeCompare(a.paidDate) || b.paidTime.localeCompare(a.paidTime));
     }
     function draw(root) {
-        const list = rows(root), summary = L.summary(list), content = root.querySelector('[data-inflow-content]');
+        const f = filters(root), invalid = L.rangeError(f), content = root.querySelector('[data-inflow-content]');
+        const alert = root.querySelector('[data-inflow-validation]'); alert.textContent = invalid; alert.hidden = !invalid;
+        root.querySelector('[data-inflow-export]').disabled = !!invalid || !state.loaded;
+        root.querySelectorAll('[data-inflow="start"],[data-inflow="end"]').forEach(e => e.setAttribute('aria-invalid', String(!!invalid)));
+        if (invalid) { root.querySelector('[data-inflow-kpis]').innerHTML = ''; root.querySelector('[data-inflow-issues]').innerHTML=''; content.innerHTML = '<p class="inflow-empty">Hisobni ko‘rish uchun sana oralig‘ini to‘g‘rilang.</p>'; return; }
+        const list = rows(root), summary = L.summary(list);
+        root.querySelector('[data-inflow-filter-count]').textContent = ['manager','teacher','tariff','method','form','review'].filter(k=>f[k]).length ? '· '+['manager','teacher','tariff','method','form','review'].filter(k=>f[k]).length+' faol' : '';
         root.querySelector('[data-inflow-kpis]').innerHTML = [['Jami tushum (fakt)', money(summary.amount)], ['Kutilayotgan qoldiq qarz', money(summary.debt)], ['Tranzaksiyalar soni', summary.count]]
             .map(([label, v]) => `<div class="inflow-stat"><span>${label}</span><strong>${v}</strong></div>`).join('');
-        root.querySelector('[data-inflow-note]').textContent = 'Har bir tushum alohida. Qoldiq qarz har bir o‘quvchi bo‘yicha bir marta sanaladi.' + (state.issues ? ` Jami ${state.issues} ta eski manba bo‘yicha aniq ma’lumot yetishmaydi yoki takrorlanish ehtimoli bor; moliya tekshirishi kerak.` : '');
-        root.querySelector('[data-inflow-issues]').innerHTML = state.issueList.length ? `<details><summary>Tekshirish kerak bo‘lgan eski yozuvlar (${state.issueList.length} tasi)</summary><ul>${state.issueList.map(r => `<li><code>${esc(r.source_key)}</code> — ${esc(r.reason)}</li>`).join('')}</ul><p>Summa/sana taxmin qilinmagan. Manbani tasdiqlamasdan qayta to‘lov kiritmang.</p></details>` : '';
-        const cell = r => {
-            const proof = r.receiptUrl ? `<a href="${esc(r.receiptUrl)}" target="_blank" rel="noopener">Chekni ko‘rish</a>` : 'Chek yo‘q';
-            return proof + (r.legacyReview ? '<small class="inflow-review">Eski ma’lumot — tekshirish kerak</small>' : '');
+        root.querySelector('[data-inflow-note]').textContent = 'Qoldiq qarz har bir o‘quvchi bo‘yicha bir marta sanaladi. Eski asl yozuvlar o‘zgartirilmaydi.';
+        const issues = L.filterIssues(state.issueLists[_financeLang], _financeLang, f);
+        const missing = list.filter(r => !r.managerId), legacy = list.filter(r => r.legacyReview);
+        root.querySelector('[data-inflow-issues]').innerHTML = issues.length || missing.length || legacy.length || state.unscoped ? `<details class="inflow-review-box"><summary>Tekshirish: ${new Set([...legacy,...missing].map(r=>r.id)).size} ta tushum · ${issues.length} ta manba</summary>
+            <p>Bu ro‘yxat tanlangan til va davrga mos. Sanasi noma’lum manbalar alohida belgilangan. Chek, usul yoki menejer taxmin bilan kiritilmaydi.</p>
+            ${missing.length ? `<p class="inflow-review">Menejerga bog‘lanmagan: ${money(L.summary(missing).amount)}. Bu tushumlar kassada bor, lekin menejer KPI’siga taqsimlanmagan. Asl yozuvlarni o‘zgartirmasdan moliya aniqlashtirishi kerak.</p>` : ''}
+            ${legacy.length ? '<p>Eski cheki/usuli yetishmayotgan tushumlarni «Qo‘shimcha filtrlar → Tekshirish» orqali ajrating.</p>' : ''}
+            <ul>${issues.slice(0,100).map(r => `<li><strong>${esc(r.name || 'Nomi aniqlanmagan')}</strong> ${esc(r.phone)} · ${r.date ? dateText(r.date)+' (manba sanasi, tushum tasdiqlanmagan)' : 'Sana aniqlanmagan'} — ${esc(r.reason)}<small>${esc(r.source_key)}</small></li>`).join('')}</ul>
+            ${issues.length>100 ? `<p>${issues.length} ta manbadan birinchi 100 tasi ko‘rsatildi.</p>` : ''}${state.unscoped ? `<p>Tilini aniqlab bo‘lmagan ${state.unscoped} ta manba bor; ular tilga taxmin bilan qo‘shilmadi.</p>` : ''}</details>` : '';
+        const cell = (r,compact=false) => {
+            const proof = r.receiptUrl ? `<a href="${esc(r.receiptUrl)}" target="_blank" rel="noopener" title="Chekni ko‘rish">${compact?'Ko‘rish':'Chekni ko‘rish'}</a>` : compact ? '<span title="Chek yo‘q">—</span>' : 'Chek yo‘q';
+            return proof + (r.legacyReview ? `<small class="inflow-review" title="Eski ma’lumot — chek yoki usulni tekshirish kerak">${compact?'Tekshir':'Tekshirish kerak'}</small>` : '');
         };
-        const tr = list.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.paidDate)}<small>${esc(r.paidTime || 'Vaqt qayd etilmagan')}</small></td><td>${esc(r.name)}</td><td>${esc(r.phone)}</td><td>${esc(L.TARIFFS[r.tariff] || 'Aniqlanmagan')}</td><td>${esc(L.METHODS[r.method])}</td><td>${r.form === 'full' ? 'To‘liq' : 'Yarim (Zaklad)'}</td><td class="inflow-amount">${money(r.amount)}</td><td>${money(r.debt)}</td><td>${esc(r.nextPaymentDate || '—')}</td><td>${esc(r.managerName || 'Aniqlanmagan')}</td><td>${esc(r.teacherName || 'Aniqlanmagan')}</td><td>${cell(r)}</td></tr>`).join('');
-        content.innerHTML = `<div class="inflow-table-wrap"><table class="inflow-table"><thead><tr>${['№', 'Sana / vaqt', 'Ism Familiya', 'Telefon', 'Tarif', 'To‘lov usuli', 'To‘lov shakli', 'To‘lov summasi', 'Qoldiq qarz', 'Keyingi to‘lov', 'Menejer', 'O‘qituvchi', 'Chek'].map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tr || '<tr><td colspan="13">Tanlangan filtrlar bo‘yicha to‘lov yo‘q</td></tr>'}</tbody><tfoot><tr><td colspan="7">Jami (filtrlangan): ${summary.count} ta</td><td>${money(summary.amount)}</td><td>${money(summary.debt)}</td><td colspan="4">Qarz takroran sanalmaydi</td></tr></tfoot></table></div>
-            <div class="inflow-mobile">${list.map(r => `<article class="inflow-payment"><header><strong>${esc(r.name)}</strong><span>${esc(r.paidDate)} ${esc(r.paidTime)}</span></header><p>${esc(r.phone)}</p><div class="inflow-amount">${money(r.amount)} <span>${esc(L.METHODS[r.method])}</span></div><dl><dt>Menejer</dt><dd>${esc(r.managerName || '—')}</dd><dt>Ustoz</dt><dd>${esc(r.teacherName || '—')}</dd><dt>Tarif</dt><dd>${esc(L.TARIFFS[r.tariff] || '—')}</dd><dt>To‘lov</dt><dd>${r.form === 'full' ? 'To‘liq' : 'Yarim (Zaklad)'}</dd><dt>Qoldiq qarz</dt><dd>${money(r.debt)}</dd><dt>Keyingi to‘lov</dt><dd>${esc(r.nextPaymentDate || '—')}</dd></dl>${cell(r)}</article>`).join('') || '<p>To‘lovlar topilmadi</p>'}<div class="inflow-mobile-summary">Jami: ${money(summary.amount)} · Qarz: ${money(summary.debt)} · ${summary.count} ta</div></div>`;
+        const tr = list.map((r, i) => `<tr><td>${i + 1}</td><td>${dateText(r.paidDate)}<small>${esc(r.paidTime || 'Vaqt noma’lum')}</small></td><td>${esc(r.name)}</td><td>${esc(r.phone)}</td><td>${esc(L.TARIFFS[r.tariff] || 'Aniqlanmagan')}</td><td>${methodBadge(r)}</td><td>${r.form === 'full' ? 'To‘liq' : 'Yarim (Zaklad)'}</td><td class="inflow-amount">${money(r.amount)}</td><td>${money(r.debt)}</td><td>${dateText(L.nextDate(r.debt,r.nextPaymentDate))}</td><td>${esc(r.managerName || 'Biriktirilmagan')}</td><td>${esc(r.teacherName || 'Aniqlanmagan')}</td><td>${cell(r,true)}</td></tr>`).join('');
+        const headings = ['№','Sana / vaqt','Ism Familiya','Telefon','Tarif','To‘lov usuli','To‘lov shakli','To‘lov summasi','Qoldiq qarz','Keyingi to‘lov','Menejer','O‘qituvchi','Chek'];
+        const focusFilters={2:'search',3:'search',4:'tariff',5:'method',6:'form',10:'manager',11:'teacher',12:'review'};
+        const sortable = (label, key) => `<button type="button" data-inflow-sort="${key}" title="${label} bo‘yicha saralash">${label} <span aria-hidden="true">${f.sort.startsWith(key+'-') ? f.sort.endsWith('up') ? '↑' : '↓' : '↕'}</span></button>`;
+        content.innerHTML = `<div class="inflow-table-wrap"><table class="inflow-table inflow-ledger-table"><colgroup>${[3,9,12,9,6,7,6,9,8,7,9,10,5].map(n=>`<col style="width:${n}%">`).join('')}</colgroup><thead><tr>${headings.map((h,i)=>`<th${i===1||i===7 ? ` aria-sort="${f.sort.startsWith((i===1?'date':'amount')+'-') ? f.sort.endsWith('up')?'ascending':'descending':'none'}"` : ''}>${i===1||i===7 ? sortable(h,i===1?'date':'amount') : focusFilters[i] ? `<button type="button" data-inflow-focus="${focusFilters[i]}" title="${h} bo‘yicha filtrlash">${h} <span aria-hidden="true">⌄</span></button>` : h}</th>`).join('')}</tr></thead><tbody>${tr || '<tr><td colspan="13">Tanlangan filtrlar bo‘yicha to‘lov yo‘q</td></tr>'}</tbody><tfoot><tr><td colspan="7">Jami: ${summary.count} ta</td><td>${money(summary.amount)}</td><td>${money(summary.debt)}</td><td colspan="4">Qarz o‘quvchi bo‘yicha bir marta</td></tr></tfoot></table></div>
+            <div class="inflow-mobile">${list.map(r => `<article class="inflow-payment"><header><strong>${esc(r.name)}</strong><span>${dateText(r.paidDate)} ${esc(r.paidTime || 'Vaqt noma’lum')}</span></header><p>${esc(r.phone)}</p><div class="inflow-payment-total"><strong class="inflow-amount">${money(r.amount)}</strong>${methodBadge(r)}</div><dl><dt>Menejer</dt><dd>${esc(r.managerName || 'Biriktirilmagan')}</dd><dt>Ustoz</dt><dd>${esc(r.teacherName || '—')}</dd><dt>Tarif</dt><dd>${esc(L.TARIFFS[r.tariff] || '—')}</dd><dt>To‘lov</dt><dd>${r.form === 'full' ? 'To‘liq' : 'Yarim (Zaklad)'}</dd><dt>Qoldiq qarz</dt><dd>${money(r.debt)}</dd>${r.debt>0 ? `<dt>Keyingi to‘lov</dt><dd>${dateText(r.nextPaymentDate)}</dd>` : ''}</dl>${cell(r)}</article>`).join('') || '<p class="inflow-empty">To‘lovlar topilmadi</p>'}<div class="inflow-mobile-summary"><span>${summary.count} ta · Jami: <strong>${money(summary.amount)}</strong></span><span>Qarz: ${money(summary.debt)}</span></div></div>`;
+        content.querySelectorAll('[data-inflow-sort]').forEach(button => button.onclick = () => {
+            root.querySelector('[data-inflow="sort"]').value = button.dataset.inflowSort + (f.sort === button.dataset.inflowSort+'-down' ? '-up' : '-down'); draw(root);
+        });
+        content.querySelectorAll('[data-inflow-focus]').forEach(button=>button.onclick=()=>{
+            if(button.dataset.inflowFocus!=='search')root.querySelector('.inflow-filter-panel').open=true;
+            root.querySelector(`[data-inflow="${button.dataset.inflowFocus}"]`).focus();
+        });
     }
     function fillPeople(root) {
         for (const kind of ['manager', 'teacher']) {
             const el = root.querySelector(`[data-inflow="${kind}"]`), selected = el.value;
             const values = new Map(state.rows[_financeLang].filter(r => r[kind + 'Id']).map(r => [r[kind + 'Id'], r[kind + 'Name'] || r[kind + 'Id']]));
+            if (kind === 'manager' && state.rows[_financeLang].some(r=>!r.managerId)) values.set('__unassigned','Menejer biriktirilmagan');
             el.innerHTML = opts([...values].sort((a, b) => a[1].localeCompare(b[1])), kind === 'manager' ? 'Barcha menejerlar' : 'Barcha ustozlar');
             if (values.has(selected)) el.value = selected;
         }
@@ -47,7 +73,8 @@
         try {
             const results = await Promise.all([...['english', 'russian'].map(language => apiFetch('/api/inflow?language=' + language)), apiFetch('/api/inflow/cash-reconciliation')]);
             if (seq !== state.seq) return;
-            state.rows = { english: results[0].records, russian: results[1].records }; state.loaded = true; state.issues = results[0].migrationIssueCount; state.issueList = results[0].migrationIssues || [];
+            state.rows = { english: results[0].records, russian: results[1].records }; state.loaded = true;
+            state.issueLists = { english: results[0].migrationIssues || [], russian: results[1].migrationIssues || [] }; state.unscoped = results[0].unscopedIssueCount || 0;
             state.decisions = results[2].decisions;
             setCachedItem(STORAGE_KEYS.cashFlow, results[2].manual);
             if (root) { fillPeople(root); draw(root); }
@@ -60,16 +87,29 @@
         if (root.dataset.inflowMounted) return;
         root.dataset.inflowMounted = '1';
         const month = L.today().slice(0, 7), period = monthDates(month);
-        root.innerHTML = `<div class="inflow-toolbar"><h2>To‘lovlar</h2><button type="button" class="btn-secondary-sm" data-inflow-refresh>Yangilash</button><button type="button" class="btn-primary-sm" data-inflow-export>Excelga yuklash (.xlsx)</button></div>
-            <div class="inflow-kpis" data-inflow-kpis></div><div class="inflow-filters">
-            <label>Oy<input type="month" data-inflow="month" value="${month}"></label><label>Boshlanish<input type="date" data-inflow="start" value="${period.start}"></label><label>Tugash<input type="date" data-inflow="end" value="${period.end}"></label>
+        root.innerHTML = `<div class="inflow-toolbar"><h2>To‘lovlar</h2><button type="button" class="btn-secondary-sm" data-inflow-refresh>Yangilash</button><button type="button" class="btn-primary-sm" data-inflow-export aria-label="Excelga yuklash (.xlsx)"><span class="inflow-export-full">Excelga yuklash (.xlsx)</span><span class="inflow-export-mobile">Excel (.xlsx)</span></button></div>
+            <div class="inflow-kpis" data-inflow-kpis></div><div class="inflow-filters inflow-basic-filters">
+            <label>Hisoblash oyi<div class="inflow-month-control"><button type="button" data-inflow-month-step="-1" aria-label="Oldingi oy">‹</button><input type="month" data-inflow="month" value="${month}"><button type="button" data-inflow-month-step="1" aria-label="Keyingi oy">›</button></div></label>
             <div class="inflow-quick">${[['today', 'Bugun'], ['yesterday', 'Kecha'], ['month', 'Joriy oy']].map(([v, t]) => `<button type="button" class="btn-secondary-sm" data-inflow-quick="${v}">${t}</button>`).join('')}</div>
-            <label class="inflow-search">Ism yoki telefon<input type="search" data-inflow="search" placeholder="Ism yoki telefon raqami" autocomplete="off" data-lpignore="true" data-1p-ignore="true"></label>
+            <label class="inflow-search"><span>Ism yoki telefon</span><input type="search" aria-label="Ism yoki telefon" data-inflow="search" placeholder="Ism yoki telefon raqami" autocomplete="off" data-lpignore="true" data-1p-ignore="true"></label></div>
+            <details class="inflow-filter-panel"><summary>Qo‘shimcha filtrlar <span data-inflow-filter-count></span></summary><div class="inflow-filters inflow-filter-fields"><label>Boshlanish<input type="date" data-inflow="start" value="${period.start}"></label><label>Tugash<input type="date" data-inflow="end" value="${period.end}"></label>
             <label>Menejer<select data-inflow="manager"></select></label><label>Ustoz<select data-inflow="teacher"></select></label><label>Tarif<select data-inflow="tariff">${opts(Object.entries(L.TARIFFS), 'Barcha tariflar')}</select></label><label>Usul<select data-inflow="method">${opts(Object.entries(L.METHODS), 'Barcha usullar')}</select></label>
-            <label>To‘lov shakli<select data-inflow="form">${opts([['full', 'To‘liq'], ['partial', 'Yarim (Zaklad)']], 'Barchasi')}</select></label><label>Saralash<select data-inflow="sort">${[['date-down', 'Sana: yangi → eski'], ['date-up', 'Sana: eski → yangi'], ['amount-down', 'Summa: katta → kichik'], ['amount-up', 'Summa: kichik → katta']].map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label></div>
-            <p class="text-muted" data-inflow-note></p><div data-inflow-issues></div><div data-inflow-cash-review></div><p role="status" data-inflow-message></p><div data-inflow-content></div>`;
+            <label>To‘lov shakli<select data-inflow="form">${opts([['full', 'To‘liq'], ['partial', 'Yarim (Zaklad)']], 'Barchasi')}</select></label><label>Saralash<select data-inflow="sort">${[['date-down', 'Sana: yangi → eski'], ['date-up', 'Sana: eski → yangi'], ['amount-down', 'Summa: katta → kichik'], ['amount-up', 'Summa: kichik → katta']].map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
+            <label>Tekshirish<select data-inflow="review">${opts([['legacy','Chek/usulni tekshirish'],['missing-manager','Menejer biriktirilmagan']], 'Barcha yozuvlar')}</select></label><button type="button" class="btn-secondary-sm" data-inflow-reset>Filtrlarni tozalash</button></div></details>
+            <p class="text-muted" data-inflow-note></p><div data-inflow-issues></div><div data-inflow-cash-review></div><p role="status" data-inflow-message></p><p role="alert" data-inflow-validation hidden></p><div data-inflow-content></div>`;
         root.querySelector('[data-inflow="month"]').onchange = e => { const p = monthDates(e.target.value); if (!p) return; root.querySelector('[data-inflow="start"]').value = p.start; root.querySelector('[data-inflow="end"]').value = p.end; draw(root); };
         root.querySelectorAll('[data-inflow]').forEach(el => { if (el.dataset.inflow !== 'month') el.addEventListener(el.type === 'search' ? 'input' : 'change', () => draw(root)); });
+        root.querySelectorAll('[data-inflow="start"],[data-inflow="end"]').forEach(el=>el.addEventListener('change',()=>{root.querySelector('[data-inflow="month"]').value='';}));
+        root.querySelectorAll('[data-inflow-month-step]').forEach(btn=>btn.onclick=()=>{
+            const input=root.querySelector('[data-inflow="month"]'),current=input.value || root.querySelector('[data-inflow="start"]').value.slice(0,7) || L.today().slice(0,7);
+            const [y,m]=current.split('-').map(Number),next=new Date(Date.UTC(y,m-1+Number(btn.dataset.inflowMonthStep),1));
+            input.value=next.toISOString().slice(0,7);input.dispatchEvent(new Event('change',{bubbles:true}));
+        });
+        root.querySelector('[data-inflow-reset]').onclick=()=>{
+            ['manager','teacher','tariff','method','form','search','review'].forEach(k=>root.querySelector(`[data-inflow="${k}"]`).value='');
+            root.querySelector('[data-inflow="sort"]').value='date-down';root.querySelector('[data-inflow="month"]').value=L.today().slice(0,7);
+            root.querySelector('[data-inflow="month"]').dispatchEvent(new Event('change',{bubbles:true}));
+        };
         root.querySelectorAll('[data-inflow-quick]').forEach(btn => { btn.onclick = () => {
             const now = L.today(), d = new Date(now + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
             const p = btn.dataset.inflowQuick === 'month' ? monthDates(now.slice(0, 7)) : { start: btn.dataset.inflowQuick === 'today' ? now : d.toISOString().slice(0, 10), end: btn.dataset.inflowQuick === 'today' ? now : d.toISOString().slice(0, 10) };
@@ -79,12 +119,15 @@
         root.querySelector('[data-inflow-refresh]').onclick = () => refresh(root);
         root.querySelector('[data-inflow-export]').onclick = async () => {
             try {
+                if (L.rangeError(filters(root))) throw Error(L.rangeError(filters(root)));
+                if (!state.loaded) throw Error('Avval server ma’lumotlari yuklanishini kuting');
                 await loadXlsxLib();
                 const list = rows(root), sum = L.summary(list), str = v => /^[=+@-]/.test(String(v || '')) ? "'" + v : String(v || '');
                 const sheet = XLSX.utils.aoa_to_sheet([['№', 'Sana', 'Vaqt', 'Ism Familiya', 'Telefon', 'Tarif', 'To‘lov usuli', 'To‘lov', 'To‘lov summasi (UZS)', 'Qoldiq qarz (UZS)', 'Keyingi to‘lov', 'Menejer', 'O‘qituvchi', 'Tekshirish', 'Chek'],
-                    ...list.map((r, i) => [i + 1, r.paidDate, r.paidTime, str(r.name), str(r.phone), L.TARIFFS[r.tariff] || '', L.METHODS[r.method], r.form === 'full' ? 'To‘liq' : 'Yarim', r.amount, r.debt, r.nextPaymentDate, str(r.managerName), str(r.teacherName), r.legacyReview ? 'Tekshirish kerak' : '', r.receiptUrl]),
+                    ...list.map((r, i) => [i + 1, dateText(r.paidDate), r.paidTime, str(r.name), str(r.phone), L.TARIFFS[r.tariff] || '', L.METHODS[r.method], r.form === 'full' ? 'To‘liq' : 'Yarim', r.amount, r.debt, dateText(L.nextDate(r.debt,r.nextPaymentDate)), str(r.managerName || 'Biriktirilmagan'), str(r.teacherName), r.legacyReview ? 'Tekshirish kerak' : '', r.receiptUrl]),
                     ['Jami (qarz o‘quvchi bo‘yicha 1 marta)', '', '', '', '', '', '', '', sum.amount, sum.debt]]);
                 sheet['!cols'] = [6, 14, 10, 26, 20, 22, 18, 14, 23, 23, 16, 26, 26, 24, 40].map(wch => ({ wch }));
+                for (let n=2;n<=list.length+2;n++) for (const column of ['I','J']) if(sheet[column+n]) sheet[column+n].z=L.excelMoneyFormat(sheet[column+n].v);
                 const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, 'To‘lovlar'); XLSX.writeFile(book, `tolovlar-${_financeLang}-${filters(root).start || 'barchasi'}.xlsx`);
             } catch (e) { root.querySelector('[data-inflow-message]').textContent = e.message; }
         };

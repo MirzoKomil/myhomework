@@ -55,11 +55,32 @@ test('real PostgreSQL inflow integration', { skip: !url }, async t => {
             assert.equal((await service.receive(pool, manager, receipt('debt'))).duplicate, true);
             const list = await service.transaction(pool, db => service.list(db, admin, { language: 'english' }));
             assert.equal(list.records.length, 2); assert.equal(list.summary.amount, 2000000); assert.equal(list.summary.debt, 0);
+            assert.ok(list.records.every(r=>r.nextPaymentDate===''));
             assert.equal((await pool.query('SELECT COUNT(*) AS n FROM payment_audit')).rows[0].n, '2');
             const comments = JSON.parse((await pool.query("SELECT comments FROM leads WHERE id='l'")).rows[0].comments);
             assert.equal(comments[0].author, 'Sales'); assert.equal(comments.length, 1);
             const october = await payroll.preview(pool, admin, { language: 'english', start: '2026-10-01', end: '2026-10-31' });
             assert.equal(october.turnover, 1400000); assert.equal(october.rows.find(r => r.employeeId === 'm').commission, 70000);
+        });
+        await t.test('display corrections and scoped issues are read-only for all historical financial sources',async()=>{
+            await reset();await migrate();
+            await pool.query("UPDATE students SET extra_data=extra_data || '{\"debtAmount\":0,\"paymentDueDate\":\"\"}'::jsonb WHERE id='s'");
+            await pool.query("INSERT INTO payment_migration_issues(source_key,reason) VALUES('lead:l:deposit','Missing proof'),('student:s','Uncertain cumulative amount'),('student:deleted','Unknown source')");
+            const snapshot=async()=>JSON.stringify((await pool.query(`SELECT
+                (SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM payment_records r) AS receipts,
+                (SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM payments p) AS archive,
+                (SELECT jsonb_agg(to_jsonb(s) ORDER BY id) FROM students s) AS students,
+                (SELECT jsonb_agg(to_jsonb(l) ORDER BY id) FROM leads l) AS leads,
+                (SELECT jsonb_agg(to_jsonb(i) ORDER BY source_key) FROM payment_migration_issues i) AS issues`)).rows);
+            const before=await snapshot();
+            const english=await service.transaction(pool,db=>service.list(db,admin,{language:'english'}));
+            assert.equal(english.migrationIssueCount,2);assert.equal(english.unscopedIssueCount,1);
+            assert.equal(english.records[0].nextPaymentDate,'');
+            const russian=await service.transaction(pool,db=>service.list(db,admin,{language:'russian'}));
+            assert.equal(russian.migrationIssueCount,0);
+            const october=await service.transaction(pool,db=>service.list(db,admin,{language:'english',start:'2026-10-01',end:'2026-10-31'}));
+            assert.equal(october.migrationIssueCount,1); // Undated cumulative source remains visible.
+            assert.equal(before,await snapshot());
         });
         await t.test('permissions use persisted role, manager link and language, not spoofed JWT/body', async () => {
             await reset(); await migrate();

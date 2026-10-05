@@ -40,10 +40,50 @@ const records = [
     { id: 'b', studentId: 's', name: 'Aziza', phone: '+998901234567', paidDate: '2026-10-04', amount: 1400000, debt: 0, method: 'cash', managerId: 'm', teacherId: 't', tariff: 30, form: 'full', language: 'english' },
     { id: 'c', studentId: 's2', name: 'Komil', phone: '+998 91 765 43 21', paidDate: '2026-10-04', amount: 300000, debt: 1000000, method: 'uzum', managerId: 'm2', teacherId: 't2', tariff: 15, form: 'partial', language: 'russian' }
 ];
+test('date presentation and next-payment display do not mutate historical receipt dates', () => {
+    const old={debt:0,nextPaymentDate:'2026-09-30'};
+    assert.equal(L.nextDate(old.debt,undefined,old.nextPaymentDate),'');
+    assert.equal(L.nextDate(100000,'','2026-09-30'),'');
+    assert.equal(L.nextDate(100000,undefined,'2026-09-30'),'2026-09-30');
+    assert.equal(L.displayDate('2026-09-30'),'30.09.2026');
+    assert.deepEqual(old,{debt:0,nextPaymentDate:'2026-09-30'});
+});
+test('invalid ranges are explicit, rather than a misleading zero-income report',()=>{
+    assert.ok(L.rangeError({start:'2026-10-05',end:'2026-10-01'}));
+    assert.ok(L.rangeError({start:'2026-02-30'}));
+    assert.equal(L.rangeError({start:'2026-10-05',end:'2026-10-05'}),'');
+});
+test('Excel money stays numeric and renders every thousands group with a space',()=>{
+    const X=require('../js/vendor/xlsx.full.min.js');
+    for(const n of [0,999,1000,600000,2100000,21460000,Number.MAX_SAFE_INTEGER]) {
+        assert.equal(X.SSF.format(L.excelMoneyFormat(n),n),n.toLocaleString('en-US').replaceAll(',',' ')+' UZS');
+    }
+    const ws=X.utils.aoa_to_sheet([[2100000]]);ws.A1.z=L.excelMoneyFormat(ws.A1.v);
+    const book=X.utils.book_new();X.utils.book_append_sheet(book,ws,'Tushum');
+    const roundtrip=X.read(X.write(book,{type:'buffer',bookType:'xlsx'}),{type:'buffer',cellNF:true});
+    assert.equal(roundtrip.Sheets.Tushum.A1.t,'n');assert.equal(roundtrip.Sheets.Tushum.A1.v,2100000);
+    assert.equal(roundtrip.Sheets.Tushum.A1.w,'2 100 000 UZS');
+});
+test('legacy review and unassigned-manager filters retain original receipts and amounts',()=>{
+    const data=[...records,{...records[0],id:'unassigned',managerId:'',legacyReview:true}];
+    const before=JSON.stringify(data);
+    assert.equal(L.summary(L.filter(data,{manager:'__unassigned'})).amount,600000);
+    assert.equal(L.filter(data,{review:'missing-manager'}).length,1);
+    assert.equal(L.filter(data,{review:'legacy'}).length,1);
+    assert.equal(JSON.stringify(data),before);
+});
+test('old issues are scoped by known language and reference date, undated facts stay explicit',()=>{
+    const issues=[{language:'english',date:'2026-09-30',name:'Aziza'}, {language:'russian',date:'2026-09-30'},
+        {language:'english',date:''}, {language:null,date:''}];
+    assert.equal(L.filterIssues(issues,'english',{start:'2026-10-01',end:'2026-10-31'}).length,1);
+    assert.equal(L.filterIssues(issues,'english',{start:'2026-09-01',end:'2026-09-30',search:'aziza'}).length,1);
+    assert.equal(L.filterIssues(issues,'russian').length,1);
+});
 test('all filters compose and date end is inclusive', () => {
     assert.deepEqual(L.filter(records, { start: '2026-10-04', end: '2026-10-04', search: 'AZIZA', manager: 'm', teacher: 't', tariff: '30', method: 'cash', form: 'full' }).map(r => r.id), ['b']);
     assert.equal(L.filter(records, { search: '90 123 45' }).length, 2);
     assert.equal(L.filter(records, { method: 'bank' }).length, 0);
+    assert.equal(L.filter(records,{search:'Komil 1'}).length,0); // A number in a name is not a phone query.
 });
 test('summary counts distinct student debts, not one debt per receipt', () => {
     const rs = records.map(r => ({ ...r, debt: r.studentId === 's' ? 100000 : r.debt }));
