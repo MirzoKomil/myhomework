@@ -1,6 +1,13 @@
-import { Stack } from 'expo-router';
+import { Redirect, Stack, useGlobalSearchParams, useSegments } from 'expo-router';
+import { hiddenStudentSectionRedirect } from '@/constants/studentFeatures';
+import { useLang } from '@/i18n/LanguageContext';
 
 export default function HomeworkLayout() {
+  const { courseLang } = useLang();
+  const segments = useSegments();
+  const { lessonId } = useGlobalSearchParams<{ lessonId?: string | string[] }>();
+  const redirect = hiddenStudentSectionRedirect(courseLang, segments, lessonId);
+  if (redirect) return <Redirect href={redirect} />;
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />

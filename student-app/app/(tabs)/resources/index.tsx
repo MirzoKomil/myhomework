@@ -5,11 +5,13 @@ import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/constants/theme';
+import { studentFeaturesForCourse } from '@/constants/studentFeatures';
 import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 
 export default function ResourcesScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const { t, lang, courseLang } = useLang();
+  const { library: showLibrary } = studentFeaturesForCourse(courseLang);
 
   const libraryShimmer = useRef(new Animated.Value(0)).current;
   const gamesShimmer = useRef(new Animated.Value(0)).current;
@@ -47,7 +49,7 @@ export default function ResourcesScreen() {
       </View>
 
       <View style={styles.wrap}>
-        <Pressable style={styles.cardWrap} onPress={() => router.push('/resources/library' as never)}>
+        {showLibrary && <Pressable style={styles.cardWrap} onPress={() => router.push('/resources/library' as never)}>
           <LinearGradient colors={['#6FA8FF', '#4F8CFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
             <Text style={styles.emoji}>📚</Text>
             <Text style={styles.title}>{t('res_hub_library_title')}</Text>
@@ -63,7 +65,7 @@ export default function ResourcesScreen() {
               </Animated.View>
             </View>
           </LinearGradient>
-        </Pressable>
+        </Pressable>}
 
         <Pressable style={styles.cardWrap} onPress={() => router.push('/resources/games' as never)}>
           <LinearGradient colors={['#F0807D', '#D65656']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
@@ -109,8 +111,8 @@ export default function ResourcesScreen() {
             <Text style={styles.dialogEmoji}>💡</Text>
             <Text style={styles.dialogTitle}>{t('res_hub_info_title')}</Text>
             <Text style={styles.dialogSubtitle}>
-              {localizeCourseWording(t('res_hub_info_intro'), lang, courseLang)} {'\n\n'}
-              📚 <Text style={styles.dialogBold}>{t('res_hub_library_title')}</Text> — {localizeCourseWording(t('res_hub_info_library_desc'), lang, courseLang)}{'\n\n'}
+              {localizeCourseWording(t(showLibrary ? 'res_hub_info_intro' : 'res_hub_info_intro_no_library'), lang, courseLang)} {'\n\n'}
+              {showLibrary && <>📚 <Text style={styles.dialogBold}>{t('res_hub_library_title')}</Text> — {localizeCourseWording(t('res_hub_info_library_desc'), lang, courseLang)}{'\n\n'}</>}
               🎮 <Text style={styles.dialogBold}>{t('res_hub_games_title')}</Text> — {t('res_hub_info_games_desc')}{'\n\n'}
               👥 <Text style={styles.dialogBold}>{t('res_hub_community_title')}</Text> — {t('res_hub_info_community_desc')}
             </Text>

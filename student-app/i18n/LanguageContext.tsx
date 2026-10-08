@@ -71,9 +71,11 @@ const LanguageContext = createContext<Ctx>({
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<AppLang>('uz');
-  const [courseLang, setCourseLang] = useState<CourseLang>('english');
   const { student, token } = useAuth();
+  const [lang, setLangState] = useState<AppLang>('uz');
+  // Auth is loaded by RootLayout before this provider mounts. Use the actual
+  // course immediately so hidden Domwork sections never flash on first render.
+  const [courseLang, setCourseLang] = useState<CourseLang>(student?.lang === 'russian' ? 'russian' : 'english');
   // URL orqali aniq til tanlangan bo'lsa, boshqa manbalar (real o'quvchi,
   // namuna o'quvchi) uni bekor qilmasligi kerak.
   const queryOverride = useRef<AppLang | null>(null);

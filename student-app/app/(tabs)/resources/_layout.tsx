@@ -1,6 +1,12 @@
-import { Stack } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
+import { hiddenStudentSectionRedirect } from '@/constants/studentFeatures';
+import { useLang } from '@/i18n/LanguageContext';
 
 export default function ResourcesLayout() {
+  const { courseLang } = useLang();
+  const segments = useSegments();
+  const redirect = hiddenStudentSectionRedirect(courseLang, segments);
+  if (redirect) return <Redirect href={redirect} />;
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />

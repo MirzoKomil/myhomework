@@ -22,6 +22,7 @@ import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
+import { studentFeaturesForCourse } from '@/constants/studentFeatures';
 import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
 import { LessonNode, LessonType } from '@/data/mock';
@@ -671,6 +672,7 @@ export default function RoadmapScreen() {
   }
 
   const courseTitle = t('roadmap_course_title');
+  const { bonusLessons: showBonusLessons } = studentFeaturesForCourse(courseLang);
 
   return (
     <SafeAreaView style={ss.safe} edges={['top']}>
@@ -705,7 +707,7 @@ export default function RoadmapScreen() {
             <Text style={ss.dialogEmoji}>🚀</Text>
             <Text style={ss.dialogTitle}>{localizeCourseWording(t('roadmap_course_dialog_title'), lang, courseLang)}</Text>
             <Text style={ss.dialogSubtitle}>
-              {localizeCourseWording(t('roadmap_course_dialog_body'), lang, courseLang)}
+              {localizeCourseWording(t(showBonusLessons ? 'roadmap_course_dialog_body' : 'roadmap_course_dialog_body_no_bonus'), lang, courseLang)}
             </Text>
             <Pressable style={ss.dialogConfirmBtn} onPress={() => setShowCourseInfo(false)}>
               <Text style={ss.dialogConfirmText}>{t('roadmap_course_dialog_btn')}</Text>
@@ -719,10 +721,10 @@ export default function RoadmapScreen() {
         <View style={ss.sectionHeader}>
           <Text style={ss.sectionTitle}>{t('roadmap_section_title')}</Text>
           <View style={ss.sectionBtnRow}>
-            <Pressable style={ss.bonusBtn} onPress={() => router.push('/homework/bonus' as never)}>
+            {showBonusLessons && <Pressable style={ss.bonusBtn} onPress={() => router.push('/homework/bonus' as never)}>
               <Ionicons name="gift-outline" size={16} color="#D97706" />
               <Text style={ss.bonusBtnText}>{t('bonus_title')}</Text>
-            </Pressable>
+            </Pressable>}
             <Pressable style={ss.examsBtn} onPress={() => router.push('/homework/exams' as never)}>
               <Ionicons name="school-outline" size={16} color={theme.colors.blue} />
               <Text style={ss.examsBtnText}>{t('exams_title')}</Text>
