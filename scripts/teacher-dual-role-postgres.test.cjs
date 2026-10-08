@@ -82,6 +82,43 @@ test('real PostgreSQL dual-role identity, attendance, HR and payroll integration
       assert.equal((await pool.query('SELECT COUNT(*) FROM assistant_attendance WHERE present=1')).rows[0].count, '2');
       await pool.query("UPDATE salary_kpi_settings SET data=jsonb_set(data,'{assistant,maxLessons}','0') WHERE language='english'");
     });
+    await t.test('any valid primary date is markable, editable and removable without changing other teachers or days', async () => {
+      const content = { courses: [{ id: 'en', lang: 'english' }], lessons: [{ id: 'video', courseId: 'en' }, { id: 'speaking', courseId: 'en' }] };
+      await pool.query('INSERT INTO mobile_content VALUES(1,$1)', [JSON.stringify(content)]);
+      const other = { teacherId: 'b', date: '2026-10-04', scores: { speaking: 2 } };
+      await pool.query("UPDATE json_data SET data=jsonb_set(data,'{main}',$1) WHERE key='liveGrades'", [JSON.stringify([other])]);
+      const markGrade = (date, score) => context.recordTeacherAttendance({ actor, teacherId: 'a', studentId: 'main',
+        attendanceType: 'main', date, present: true, grade: { lessonId: 'speaking', scores: Object.fromEntries(['attendance','activity','speaking','understanding','discipline'].map(k => [k, score])) } });
+      await markGrade('2026-10-04', 3); // Sunday, outside the mwf schedule.
+      await markGrade('2026-10-31', 4);
+      await markGrade('2026-10-04', 5);
+      const salary = (await payroll.preview(pool, admin, { start: '2026-10-01', end: '2026-10-31', language: 'english' })).rows.find(r => r.employeeId === 'a');
+      assert.equal(salary.mainTotal, Math.round(150000 * 2 / 13));
+      let grades = (await pool.query("SELECT data FROM json_data WHERE key='liveGrades'")).rows[0].data.main;
+      assert.equal(grades.filter(g => g.teacherId === 'a' && g.date === '2026-10-04').length, 1);
+      assert.equal(grades.find(g => g.teacherId === 'a' && g.date === '2026-10-04').scores.speaking, 5);
+      assert.deepEqual(grades.find(g => g.teacherId === 'b'), other);
+      assert.equal((await mark('main', 'main', 4, null)).present, null);
+      grades = (await pool.query("SELECT data FROM json_data WHERE key='liveGrades'")).rows[0].data.main;
+      assert.equal(grades.some(g => g.teacherId === 'a' && g.date === '2026-10-04'), false);
+      assert.deepEqual(grades.find(g => g.teacherId === 'b'), other);
+      assert.equal((await pool.query("SELECT COUNT(*) FROM main_attendance WHERE att_key='2026-10_a' AND day=31")).rows[0].count, '1');
+      await mark('main', 'main', 31, null);
+      await assert.rejects(context.recordTeacherAttendance({ actor, teacherId: 'a', studentId: 'main', date: '2026-02-30', present: null }), /sana/);
+      await assert.rejects(mark('assist', 'main', 1, null), /biriktirilmagan/);
+    });
+    await t.test('assistant absence and presence can be cleared exactly, audited and persisted without affecting primary grades', async () => {
+      const before = (await pool.query("SELECT data FROM json_data WHERE key='liveGrades'")).rows[0].data;
+      await mark('assist', 'assistant', 2, null);
+      await mark('assist', 'assistant', 31);
+      await mark('assist', 'assistant', 31, false);
+      await mark('assist', 'assistant', 31, null);
+      assert.equal((await pool.query('SELECT COUNT(*) FROM assistant_attendance WHERE day IN (2,31)')).rows[0].count, '0');
+      assert.equal((await pool.query('SELECT COUNT(*) FROM assistant_attendance WHERE present=1')).rows[0].count, '2');
+      assert.deepEqual((await pool.query("SELECT data FROM json_data WHERE key='liveGrades'")).rows[0].data, before);
+      const audit = (await pool.query("SELECT after_data FROM salary_audit WHERE action='assistant-attendance' AND entity_id='2026-10_a:assist:31' ORDER BY created_at DESC,id DESC LIMIT 1")).rows[0];
+      assert.equal(audit.after_data.present, null);
+    });
     await t.test('main marks retain required grade validation; one payroll row includes both duties and historical basis', async () => {
       await assert.rejects(mark('main', 'main', 2), /baholar/);
       await pool.query("INSERT INTO main_attendance VALUES('2026-10_a','main',2,1)");
@@ -94,7 +131,24 @@ test('real PostgreSQL dual-role identity, attendance, HR and payroll integration
       await payroll.accrue(pool, admin, { start: '2026-10-01', end: '2026-10-31', language: 'english', sourceHash: result.sourceHash });
       const basis = (await pool.query("SELECT basis FROM salary_transactions WHERE employee_id='a'")).rows[0].basis;
       assert.equal(basis.academicPolicy, 'dual-role-v1');
+      assert.equal(basis.teacherAttendancePolicy, 'all-days-v1');
       assert.deepEqual(basis.students.map(s => s.id), ['assist', 'main']);
+    });
+    await t.test('paid all-day policy corrections require finance; older salary policies never get silently repriced', async () => {
+      const original = (await pool.query("SELECT id,basis,amount FROM salary_transactions WHERE employee_id='a'")).rows[0];
+      await payroll.markPaid(pool, admin, original.id);
+      const grade = { lessonId: 'speaking', scores: { attendance: 5, activity: 5, speaking: 5, understanding: 5, discipline: 5 } };
+      await context.recordTeacherAttendance({ actor, teacherId: 'a', studentId: 'main', attendanceType: 'main', date: '2026-10-04', present: true, grade });
+      const next = { start: '2026-11-01', end: '2026-11-30', language: 'english' };
+      const corrections = (await payroll.preview(pool, admin, next)).corrections;
+      assert.equal(corrections.find(c => c.employeeId === 'a').status, 'pending');
+      assert.ok(corrections.find(c => c.employeeId === 'a').amount > 0);
+      assert.equal((await pool.query('SELECT amount FROM salary_transactions WHERE id=$1', [original.id])).rows[0].amount, original.amount);
+      // Emulate an old snapshot without the new policy, solely in this disposable fixture.
+      await pool.query("UPDATE salary_transactions SET basis=basis-'teacherAttendancePolicy' WHERE id=$1", [original.id]);
+      assert.equal((await payroll.preview(pool, admin, next)).corrections.some(c => c.employeeId === 'a'), false);
+      await pool.query('UPDATE salary_transactions SET basis=$1 WHERE id=$2', [JSON.stringify(original.basis), original.id]);
+      await mark('main', 'main', 4, null);
     });
     await t.test('attendance write and its audit roll back together', async () => {
       await pool.query("CREATE FUNCTION reject_duty_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='assistant-attendance' THEN RAISE EXCEPTION 'Audit failure'; END IF; RETURN NEW; END; $$; CREATE TRIGGER reject_duty_audit BEFORE INSERT ON salary_audit FOR EACH ROW EXECUTE FUNCTION reject_duty_audit();");

@@ -438,12 +438,9 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     const pattern = teacher.schedulePattern || 'mwf';
     const duration = teacher.lessonDuration || 15;
     const monthlyBase = getMonthlyBaseSalary(duration, teacher);
-    // 10-vazifa: yordamchi ustoz istalgan kunni belgilay oladi (haftalik
-    // patternga bog'lanmagan), shuning uchun "kutilgan darslar soni" ham
-    // pattern kunlaridan emas, avtomatik oylik chegaradan olinadi — va har
-    // bir o'quvchi uchun HAQIQIY belgilangan (istalgan kundagi) darslar
-    // soni shu chegarada cheklanadi (UI cheklovi chetlab o'tilsa ham,
-    // maosh hech qachon normadan oshmasligi uchun).
+    // Both duties count actual lessons on any day. The timetable still sets
+    // the primary monthly norm; assistants use their flexible monthly cap.
+    // Paid salary snapshots keep their historical policy in the finance service.
     const isAssistant = teacher.type === 'yordamchi';
     const lessonDays = isAssistant ? null : getLessonDaysInMonth(year, month, pattern);
     const payrollConfig = getItem(STORAGE_KEYS.payrollRates, {})[teacher.subject || 'english'];
@@ -463,8 +460,7 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
         const rawLessons = Object.entries(attBlock[s.id] || {}).filter(([day, present]) => {
             const date = payrollEngine.date(monthVal + '-' + String(day).padStart(2, '0'));
             return (present === 1 || present === true) && date && (!hireDate || date >= hireDate)
-                && (!studentStart || date >= studentStart)
-                && (isAssistant || lessonDays.includes(Number(day)));
+                && (!studentStart || date >= studentStart);
         }).length;
         const lessons = Math.min(rawLessons, expectedPerStudent);
         const studentBase = getMonthlyBaseSalary(s.lessonDuration || duration, teacher);

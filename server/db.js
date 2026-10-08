@@ -3795,7 +3795,7 @@ async function getTeacherScopedState(actor) {
 }
 
 async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType }) {
-    if (typeof present !== 'boolean') throw Object.assign(new Error('Davomat boolean bo‘lishi kerak'), { status: 400 });
+    if (typeof present !== 'boolean' && present !== null) throw Object.assign(new Error('Davomat boolean yoki olib tashlash uchun null bo‘lishi kerak'), { status: 400 });
     if (attendanceType !== undefined && !['main', 'assistant'].includes(attendanceType)) throw new Error('Davomat roli noto‘g‘ri');
     const safeTeacherId = String(teacherId || '').trim();
     const safeStudentId = String(studentId || '').trim();
@@ -3905,7 +3905,8 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
                 lessonId: String(grade.lessonId), lessonName: String(grade.lessonName || ''),
                 scores: Object.fromEntries(criteria.map(key => [key, Number(grade.scores[key])]))
             };
-            allGrades[safeStudentId] = (allGrades[safeStudentId] || []).filter(item => item.date !== date);
+            allGrades[safeStudentId] = (allGrades[safeStudentId] || []).filter(item => item.date !== date
+                || (item.teacherId && item.teacherId !== safeTeacherId));
             allGrades[safeStudentId].push(entry);
             await saveJsonData(client, 'liveGrades', allGrades);
             savedGrade = entry;
@@ -3919,14 +3920,16 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
                 ? gradesResult.rows[0].data
                 : {};
             if (allGrades[safeStudentId]) {
-                allGrades[safeStudentId] = allGrades[safeStudentId].filter(item => item.date !== date);
+                allGrades[safeStudentId] = allGrades[safeStudentId].filter(item => item.date !== date
+                    || (item.teacherId && item.teacherId !== safeTeacherId));
                 await saveJsonData(client, 'liveGrades', allGrades);
             }
         }
 
         result = {
             attendanceKey, attendanceType: teacher.type === 'yordamchi' ? 'assistant' : 'main',
-            studentId: safeStudentId, date: String(date), day, present: Boolean(present), grade: savedGrade
+            teacherId: safeTeacherId, studentId: safeStudentId, date: String(date), day,
+            present: present === null ? null : Boolean(present), grade: savedGrade
         };
     });
     return result;

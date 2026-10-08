@@ -8524,20 +8524,57 @@ body.modal-open {
 .teacher-dual-toggle input:checked { background:var(--primary, #7b5bff); }
 .teacher-dual-toggle input::after { content:''; position:absolute; width:20px; height:20px; border-radius:50%; background:white; top:3px; left:3px; transition:transform .15s; }
 .teacher-dual-toggle input:checked::after { transform:translateX(18px); }
-.teacher-dual-toggle input:focus-visible, .teacher-duty-tabs button:focus-visible, .teacher-duty-day button:focus-visible { outline:2px solid var(--primary, #7b5bff); outline-offset:3px; }
+.teacher-dual-toggle input:focus-visible, .teacher-owned-attendance button:focus-visible { outline:2px solid var(--primary, #7b5bff); outline-offset:3px; }
 .teacher-duty-tabs { display:flex; gap:6px; padding:6px; border:1px solid var(--border); border-radius:12px; margin:12px 0; }
 .teacher-duty-tabs button { flex:1; min-height:44px; border:0; border-radius:8px; background:var(--surface); color:var(--text); padding:8px; font:inherit; cursor:pointer; }
 .teacher-duty-tabs button[aria-selected="true"] { background:var(--primary, #7b5bff); color:white; }
-.teacher-duty-students { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%, 340px),1fr)); gap:16px; margin-top:12px; }
-.teacher-duty-card { background:var(--surface); color:var(--text); padding:16px; border:1px solid var(--border); border-radius:12px; min-width:0; }
-.teacher-duty-card h4 { margin:0 0 8px; overflow-wrap:anywhere; }
-.teacher-duty-card p { margin:6px 0; overflow-wrap:anywhere; }
-.teacher-duty-days { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin-top:12px; }
-.teacher-duty-day { display:grid; gap:4px; padding:6px; background:var(--bg, #f4f4fa); border-radius:8px; }
-.teacher-duty-day time { font-weight:600; }
-.teacher-duty-day button { min-height:44px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); cursor:pointer; font:inherit; }
-.teacher-duty-day button[data-present="true"][aria-pressed="true"] { background:#ddf8e8; color:#17623d; border-color:#17623d; }
-.teacher-duty-day button[data-present="false"][aria-pressed="true"] { background:#fde7e7; color:#982c2c; border-color:#982c2c; }
+.teacher-duty-hidden { display:none !important; }
+.teacher-owned-panel .info-banner { display:none; }
+.teacher-owned-attendance .card-header { flex-wrap:wrap; gap:12px; }
+.teacher-owned-attendance .toolbar { margin-left:auto; }
+.teacher-owned-attendance .table-responsive { overflow:visible; padding:0 20px 16px; }
+.teacher-owned-attendance #mainAttSummary { display:none; }
+.teacher-duty-help { color:var(--text-secondary, #6b7280); font-size:13px; line-height:1.6; }
+.teacher-duty-help p { margin:8px 0; }
+.teacher-duty-legend { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:16px; }
+.teacher-duty-legend span { display:flex; align-items:center; gap:6px; }
+.teacher-duty-legend i { width:18px; height:18px; border-radius:5px; font-style:normal; text-align:center; line-height:18px; }
+.teacher-duty-legend .duty-planned { background:var(--purple-light, #ede9fe); border:1px solid var(--purple, #7b5bff); }
+.teacher-duty-legend .duty-present { background:#ddf8e8; color:#17623d; }
+.teacher-duty-legend .duty-absent { background:#fde7e7; color:#982c2c; }
+.teacher-duty-students { display:grid; gap:10px; max-width:900px; margin:12px auto 0; }
+.teacher-duty-card { background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:12px; min-width:0; overflow:hidden; }
+.teacher-duty-student { display:flex; justify-content:space-between; align-items:center; gap:12px; width:100%; padding:16px; background:transparent; border:0; text-align:left; font:inherit; color:inherit; cursor:pointer; }
+.teacher-duty-student strong, .teacher-duty-student small { display:block; overflow-wrap:anywhere; }
+.teacher-duty-student small { margin-top:4px; color:var(--text-secondary, #6b7280); font-size:12px; }
+.teacher-duty-count { flex-shrink:0; color:var(--text-secondary, #6b7280); font-size:13px; }
+.teacher-duty-count [aria-hidden] { margin-left:8px; }
+.teacher-duty-calendar { padding:0 16px 16px; max-width:520px; margin:auto; }
+.teacher-duty-calendar[hidden] { display:none; }
+.teacher-duty-primary { font-size:12px; color:var(--text-secondary, #6b7280); margin:0 0 12px; }
+.teacher-duty-weekdays, .teacher-duty-days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.teacher-duty-weekdays { text-align:center; color:var(--text-secondary, #6b7280); font-size:12px; padding:8px 0; }
+.teacher-duty-day { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:52px; gap:2px; padding:4px 0; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); cursor:pointer; font:inherit; }
+.teacher-duty-day time { font-weight:600; font-size:14px; }
+.teacher-duty-day > span { min-height:14px; line-height:14px; font-size:12px; }
+.teacher-duty-day.duty-scheduled { background:var(--purple-light, #ede9fe); color:var(--text); border-color:var(--purple, #7b5bff); }
+.teacher-duty-day[data-status="present"] { background:#ddf8e8; color:#17623d; border-color:#17623d; }
+.teacher-duty-day[data-status="absent"] { background:#fde7e7; color:#982c2c; border-color:#982c2c; }
 .teacher-duty-card button:disabled { opacity:.6; cursor:wait; }
+.teacher-duty-actions { display:flex; flex-wrap:wrap; gap:8px; width:100%; }
+.teacher-duty-actions button { min-height:44px; flex:1 1 160px; }
+.teacher-duty-remove { color:var(--danger, #b92a2a); }
+.teacher-duty-empty { padding:20px; text-align:center; color:var(--text-secondary, #6b7280); }
 [data-duty-error] { color:var(--danger, #b92a2a); }
-@media(max-width:600px) { .teacher-duty-tabs { position:sticky; top:0; z-index:1; background:var(--surface); } .teacher-duty-tabs button { font-size:12px; } .teacher-duty-card { padding:12px; } }
+@media(max-width:600px) {
+    .teacher-owned-panel > div { padding:10px !important; }
+    .teacher-owned-attendance .card-header { display:flex; flex-direction:column; align-items:stretch; padding:14px 12px; }
+    .teacher-owned-attendance .toolbar { margin:0; width:100%; }
+    .teacher-owned-attendance #mainAttMonth { width:100%; min-height:44px; }
+    .teacher-owned-attendance .table-responsive { padding:0 12px 12px; }
+    .teacher-duty-tabs button { font-size:12px; }
+    .teacher-duty-student { padding:12px; }
+    .teacher-duty-calendar { padding:0 10px 12px; }
+    .teacher-duty-days, .teacher-duty-weekdays { gap:4px; }
+    .teacher-duty-day { min-height:48px; }
+}

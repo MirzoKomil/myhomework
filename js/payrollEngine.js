@@ -120,7 +120,8 @@
             const days = Object.entries(entries).filter(([day, present]) => {
                 const d = date(block.key + '-' + String(day).padStart(2, '0'));
                 return (present === 1 || present === true) && d && inPeriod(d, p) && d >= block.start && d <= block.end
-                    && (!hire || d >= hire) && (!studentStart || d >= studentStart) && (assistant || expected.includes(Number(day)));
+                    && (!hire || d >= hire) && (!studentStart || d >= studentStart)
+                    && (assistant || source.teacherAttendancePolicy === 'all-days-v1' || expected.includes(Number(day)));
             }).length;
             const count = Math.min(days, expectedCount), earned = money((tariff || 0) * count / expectedCount);
             total += earned; lessons += count;

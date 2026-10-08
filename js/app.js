@@ -6510,8 +6510,10 @@ function closeModal() {
     const overlay = document.getElementById('modalOverlay');
     const modal = overlay?.querySelector('.modal');
     if (modal) modal.classList.remove('modal--wide');
+    const wasOpen = overlay && overlay.style.display !== 'none';
     if (overlay) overlay.style.display = 'none';
     document.body.classList.remove('modal-open');
+    if (wasOpen) overlay.dispatchEvent(new Event('crm:modal-closed'));
 }
 
 document.getElementById('modalClose').addEventListener('click', closeModal);
@@ -7394,7 +7396,7 @@ const LIVE_GRADE_CRITERIA = [
 // O'quvchini darsga "qatnashdi" deb belgilashdan oldin ustozdan majburiy
 // ravishda: (1) bugun qaysi dars o'tilgani va (2) 5 ta mezon bo'yicha baho
 // so'raladi — bekor qilinsa, davomat belgisi ham qo'yilmaydi.
-function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCancel) {
+function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCancel, initialGrade) {
     const lessonOptionsHtml = lessonOptions.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.label)}</option>`).join('');
     const critHtml = LIVE_GRADE_CRITERIA.map(c => `
         <div class="form-group">
@@ -7405,7 +7407,7 @@ function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCanc
             </select>
         </div>`).join('');
 
-    openModal(`${escapeHtml(studentName)} — davomat tasdiqlash (${dateStr})`,
+    openModal(`${studentName} — davomat tasdiqlash (${dateStr})`,
         `<div class="form-group">
             <label>Bugun qaysi dars o'tildi? <span style="color:var(--danger)">*</span></label>
             <select id="lgLesson" class="form-control"><option value="">Tanlang</option>${lessonOptionsHtml}</select>
@@ -7415,11 +7417,19 @@ function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCanc
         { wide: true }
     );
 
-    let cancelled = false;
+    if (initialGrade) {
+        document.getElementById('lgLesson').value = initialGrade.lessonId || '';
+        LIVE_GRADE_CRITERIA.forEach(c => { document.getElementById(`lg_${c.key}`).value = initialGrade.scores?.[c.key] || ''; });
+    }
+    const overlay = document.getElementById('modalOverlay');
+    let settled = false;
+    const onClosed = () => {
+        overlay.removeEventListener('crm:modal-closed', onClosed);
+        if (!settled) { settled = true; onCancel(); }
+    };
+    overlay.addEventListener('crm:modal-closed', onClosed);
     document.getElementById('lgCancelBtn').addEventListener('click', () => {
-        cancelled = true;
         closeModal();
-        onCancel();
     });
     document.getElementById('lgSaveBtn').addEventListener('click', () => {
         const lessonSel = document.getElementById('lgLesson');
@@ -7433,20 +7443,10 @@ function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCanc
             scores[c.key] = Number(v) || 0;
         });
         if (!ok) { alert("Barcha maydonlarni to'ldiring — dars va barcha 5 ta mezon majburiy."); return; }
+        settled = true;
         closeModal();
         onSave({ lessonId, lessonName, scores });
     });
-
-    // Modal tashqarisiga bosilganda ham "bekor qilish" bilan bir xil — checkbox ortga qaytariladi.
-    const overlay = document.getElementById('modalOverlay');
-    const onOverlayClick = (e) => {
-        if (e.target.id === 'modalOverlay' && !cancelled) {
-            cancelled = true;
-            overlay.removeEventListener('click', onOverlayClick);
-            onCancel();
-        }
-    };
-    if (overlay) overlay.addEventListener('click', onOverlayClick);
 }
 
 // ─── O'quvchi ↔ ustoz/admin muloqoti (121-ish) ───────────────────────────────
@@ -16744,7 +16744,8 @@ function applyTeacherAttendanceResult(result) {
     const attendance = { ...allAttendance };
     const dayMap = { ...(attendance[result.attendanceKey] || {}) };
     const studentDays = { ...(dayMap[result.studentId] || {}) };
-    if (result.attendanceType === 'assistant') studentDays[result.day] = result.present ? 1 : 0;
+    if (result.present === null) delete studentDays[result.day];
+    else if (result.attendanceType === 'assistant') studentDays[result.day] = result.present ? 1 : 0;
     else if (result.present) studentDays[result.day] = 1;
     else delete studentDays[result.day];
     dayMap[result.studentId] = studentDays;
@@ -16754,7 +16755,8 @@ function applyTeacherAttendanceResult(result) {
 
     const allGrades = getItem(STORAGE_KEYS.liveGrades, {});
     const grades = { ...allGrades };
-    const current = (grades[result.studentId] || []).filter(item => item.date !== result.date);
+    const current = (grades[result.studentId] || []).filter(item => item.date !== result.date
+        || (result.teacherId && item.teacherId && item.teacherId !== result.teacherId));
     if (result.present && result.grade) current.push(result.grade);
     grades[result.studentId] = current;
     setCachedItem(STORAGE_KEYS.liveGrades, grades);

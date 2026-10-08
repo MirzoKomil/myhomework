@@ -81,10 +81,14 @@ async function recordAssistantAttendance(db, { actor, teacherId, studentId, date
     const cap = limit > 0 ? Math.min(Math.round(days * 3 / 7), limit) : Math.round(days * 3 / 7);
     if (present && !previous.some(r => r.day === day && r.present === 1)
         && previous.filter(r => r.present === 1).length >= cap) throw error(400, 'Yordamchi davomatning oylik dars chegarasi to‘lgan');
-    await db.query(`INSERT INTO assistant_attendance(att_key,student_id,day,present) VALUES($1,$2,$3,$4)
-        ON CONFLICT(att_key,student_id,day) DO UPDATE SET present=EXCLUDED.present`, [key, studentId, day, present ? 1 : 0]);
+    if (present === null) {
+        await db.query('DELETE FROM assistant_attendance WHERE att_key=$1 AND student_id=$2 AND day=$3', [key, studentId, day]);
+    } else {
+        await db.query(`INSERT INTO assistant_attendance(att_key,student_id,day,present) VALUES($1,$2,$3,$4)
+            ON CONFLICT(att_key,student_id,day) DO UPDATE SET present=EXCLUDED.present`, [key, studentId, day, present ? 1 : 0]);
+    }
     await require('./payroll').audit(db, actor, 'assistant-attendance', `${key}:${studentId}:${day}`,
-        { present: previous.find(r => r.day === day)?.present ?? null }, { present: present ? 1 : 0 });
-    return { attendanceKey: key, attendanceType: 'assistant', studentId, date, day, present, grade: null };
+        { present: previous.find(r => r.day === day)?.present ?? null }, { present: present === null ? null : present ? 1 : 0 });
+    return { attendanceKey: key, attendanceType: 'assistant', teacherId, studentId, date, day, present, grade: null };
 }
 module.exports = { initSchema, employee, teacherForActor, validateAssignment, stateForTeacher, recordAssistantAttendance };
