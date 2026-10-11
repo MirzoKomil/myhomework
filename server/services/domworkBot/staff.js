@@ -79,11 +79,9 @@ async function action(db, identity, actionId, options={}) {
             .map(r => `${safe(r.name)} · ${safe(r.phone)}${actionId === 'debtors' ? '\nQarz: '+money(r.extra_data.debtAmount)+' · '+safe(r.extra_data.paymentDueDate) : ''}`).join('\n\n') || none;
     }
     if (actionId === 'groups' && identity.role === 'teacher') {
-        const links = [];
-        for (const type of ['trial','classroom']) {
-            const group = await groups.defaultForTeacher(db,type,identity.employeeId);
-            if (group) links.push(`${type === 'trial' ? 'Sinov' : 'Asosiy'}: ${group.inviteLink}`);
-        }
+        const rows=(await db.query(`SELECT name,type,invite_link FROM domwork_learning_groups
+            WHERE teacher_id=$1 AND NOT archived ORDER BY type,name,id`,[identity.employeeId])).rows;
+        const links=rows.map(g=>`${g.type==='trial'?'Sinov':'Asosiy'} — ${safe(g.name)}: ${g.invite_link || 'Guruh havolasini admin kiritadi'}`);
         return links.join('\n') || none;
     }
     if (actionId === 'schedule' && ['teacher','assistant'].includes(identity.role)) {

@@ -47,8 +47,9 @@ and HR bots use their own credentials and are not changed.
 
 These are required before claiming Task 3 is complete:
 
-- Explicit verification/binding of the user's ten groups. Invite hashes alone do
-  not reveal chat IDs; production Redis/token readiness and webhook setup passed.
+- The user's ten supplied groups were explicitly bound and permission-checked on
+  2026-10-11 (five departments and five teacher-specific trial groups). Actual main
+  class groups and per-student membership/assignment still require admin acceptance.
 - Milestone congratulations, employee onboarding/release notifications, daily/weekly/monthly
   awards and full academic admin digest.
 - Accurate assistant rating attribution/history and free-slot presentation; existing
@@ -98,6 +99,51 @@ retains the old association in audit history and deletes only that single bot li
 Students, leads, lessons, HR, groups and bot sessions/history are not rewritten.
 The new Telegram account must still provide its own verified contact to reconnect.
 
+## Automatic group discovery and per-student main-class routing
+
+CRM → Settings → Telegram groups → **Automatic discovery and student groups**.
+The bot records `my_chat_member` / admin-selected chats in an additive discovery inbox.
+Its worker reads live chat details and bot/admin memberships, then maps registered
+Telegram administrators to current Russian CRM teacher identities. Titles never grant
+ownership. No match or several teachers requires an explicit admin choice. If the
+teacher registers later, unconfirmed discoveries are rescanned. Existing chat IDs may
+also be selected through the bot to refresh older observations; Telegram cannot list
+all previously joined chats or all chat members through the Bot API.
+
+Admins review the teacher AND trial/classroom type, select up to 50 chats and confirm.
+Confirmation verifies live bot privileges (including restriction privilege for trials),
+checks candidate revision/freshness, locks the database and atomically creates groups
+with audit entries. Existing learning/department bindings and defaults are never
+replaced. A duplicate chat, stale revision or audit failure rolls back the entire batch.
+Invites absent from Telegram are left empty, not fabricated or generated externally.
+Admins can add an invite later; students without one get an explicit unavailable notice.
+
+For active paid Russian students, known verified Telegram identities are probed against
+verified classroom groups of their current main teacher. Only membership evidence is
+proposed; no automatic assignment or broadcast occurs. Several matches stay ambiguous,
+unregistered students remain manually assignable. Student registration and membership
+changes trigger another probe; the admin rescan refreshes proposals on demand.
+
+Admins explicitly approve up to 100 student/group pairs, or manually select a group
+of the student's main teacher. Store/audit: `domwork_student_group_links` and
+`domwork_student_group_audit`. Student cards, historical links, teacher IDs, leads, HR
+and trial-group data are not rewritten. Existing new assignments are shown and may
+only be replaced with an explicit confirmation and matching revision.
+
+Student-app schedule API, main-class bot menus, assignment notifications and lesson reminders route through the
+student's explicit group, never a teacher-wide default. Unassigned learners get no
+guessed group reminder. Historical explicit personal links remain visible only when
+there is no new approved assignment. Before delivery, queued messages recheck the
+student's current group/teacher and bot permissions; changing a group cancels obsolete
+queued links/reminders. Archive or teacher mismatch stops routing but retains history.
+Teachers' group menu lists all of their non-archived groups. No automation setting is
+enabled by discovery, group approval or student assignment.
+
+Discovery performs only Telegram reads. Errors are held for explicit rescan. The
+database-backed pending/scanning lease resumes after worker restart. Old member lists
+and private phone numbers are not scraped. Without the bot's admin rights, membership
+proposals cannot be trusted and are not produced.
+
 ## Local verification
 
 Do not start/import `server/db.js` or the full server against production for tests.
@@ -105,6 +151,7 @@ Do not start/import `server/db.js` or the full server against production for tes
 ```powershell
 node --test scripts/domwork-bot.test.cjs scripts/domwork-groups.test.cjs
 node scripts/run-payroll-postgres.cjs scripts/domwork-bot-postgres.test.cjs
+node scripts/run-payroll-postgres.cjs scripts/domwork-discovery-postgres.test.cjs
 ```
 
 The verification runs passed 275 unit tests and 88 distinct PostgreSQL checks,

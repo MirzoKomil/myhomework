@@ -14,10 +14,24 @@ CREATE TABLE IF NOT EXISTS domwork_learning_groups (
  CHECK(NOT (archived AND is_default))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS domwork_learning_default ON domwork_learning_groups(type,teacher_id) WHERE is_default AND NOT archived;
-CREATE UNIQUE INDEX IF NOT EXISTS domwork_learning_invite ON domwork_learning_groups(invite_link) WHERE NOT archived;
+-- Empty invites are allowed for discovered chats; never manufacture a URL.
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='domwork_learning_invite' AND indexdef NOT LIKE '%<>%') THEN
+  DROP INDEX domwork_learning_invite;
+ END IF;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS domwork_learning_invite ON domwork_learning_groups(invite_link) WHERE NOT archived AND invite_link<>'';
 CREATE UNIQUE INDEX IF NOT EXISTS domwork_learning_chat ON domwork_learning_groups(chat_id) WHERE chat_id<>'' AND NOT archived;
 CREATE TABLE IF NOT EXISTS domwork_learning_group_audit (
  id BIGSERIAL PRIMARY KEY, group_id TEXT NOT NULL, actor_id TEXT NOT NULL, action TEXT NOT NULL,
+ before_data JSONB, after_data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS domwork_student_group_links (
+ student_id TEXT PRIMARY KEY, group_id TEXT NOT NULL REFERENCES domwork_learning_groups(id),
+ revision INTEGER NOT NULL DEFAULT 1, updated_by TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS domwork_student_group_audit (
+ id BIGSERIAL PRIMARY KEY, student_id TEXT NOT NULL, actor_id TEXT NOT NULL,
  before_data JSONB, after_data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );`;
 const fail = (status, message) => Object.assign(new Error(message), { status });
@@ -44,7 +58,7 @@ function input(body) {
     if (typeof body.isDefault !== 'boolean') throw fail(400, 'Standart guruh belgisi noto‘g‘ri');
     const chatId = body.chatId == null ? '' : String(body.chatId).trim();
     if (chatId && (!/^-[1-9]\d{4,15}$/.test(chatId) || !Number.isSafeInteger(Number(chatId)))) throw fail(400, 'Guruh chat_id qiymati manfiy butun son bo‘lishi kerak');
-    return { type: body.type, name, teacherId, inviteLink: inviteLink(body.inviteLink), chatId, isDefault: body.isDefault };
+    return { type: body.type, name, teacherId, inviteLink: body.inviteLink === '' && chatId ? '' : inviteLink(body.inviteLink), chatId, isDefault: body.isDefault };
 }
 function revision(raw) {
     if (!Number.isSafeInteger(raw) || raw < 1) throw fail(400, 'Yozuv versiyasi talab qilinadi');
@@ -94,6 +108,9 @@ async function save(pool, actor, id, body) {
         if (id && !before) throw fail(404, 'Guruh topilmadi');
         if (id && before.revision !== revision(body.revision)) throw fail(409, 'Guruh boshqa oynada o‘zgartirilgan. Ro‘yxatni yangilang');
         if (before?.archived) throw fail(409, 'Avval guruhni arxivdan qaytaring');
+        if (before && (before.teacher_id !== data.teacherId || before.type !== data.type)
+            && (await db.query('SELECT 1 FROM domwork_student_group_links WHERE group_id=$1 LIMIT 1',[id])).rows.length)
+            throw fail(409, 'Guruhda o‘quvchilar bor. Ustoz yoki dars turini almashtirishdan oldin ularni alohida qayta biriktiring');
         if (!(await db.query(`SELECT id FROM hr_employees WHERE id=$1 AND role IN ('oqituvchi','rus-oqituvchi')
             AND (role='rus-oqituvchi' OR lang='russian') AND COALESCE(status,'active')<>'inactive'`, [data.teacherId])).rows.length)
             throw fail(400, 'Faol rus tili ustozi topilmadi');
@@ -144,4 +161,62 @@ async function defaultForTeacher(db, type, teacherId, { delivery = false } = {})
         AND COALESCE(h.status,'active')<>'inactive' AND ($3=false OR g.verified_at IS NOT NULL)`, [type, teacherId, delivery])).rows[0];
     return row ? dto(row) : null;
 }
-module.exports = { SCHEMA, initSchema, inviteLink, input, revision, dto, admin, list, save, archive, defaultForTeacher };
+// Main-class routing never falls back to a teacher-wide default or another student's group.
+async function forStudent(db, studentId, { delivery = false } = {}) {
+    const row = (await db.query(`SELECT g.* FROM domwork_student_group_links l
+        JOIN students s ON s.id=l.student_id JOIN domwork_learning_groups g ON g.id=l.group_id
+        JOIN hr_employees h ON h.id=g.teacher_id
+        WHERE s.id=$1 AND s.subject='russian' AND s.teacher_id=g.teacher_id AND g.type='classroom' AND NOT g.archived
+        AND h.role IN ('oqituvchi','rus-oqituvchi') AND (h.role='rus-oqituvchi' OR h.lang='russian')
+        AND COALESCE(h.status,'active')<>'inactive' AND ($2=false OR g.verified_at IS NOT NULL)`,[studentId,delivery])).rows[0];
+    return row ? dto(row) : null;
+}
+async function studentInvite(db,studentId,language,legacy='') {
+    if(language!=='russian') return legacy;
+    const group=await forStudent(db,studentId);
+    if(group) return group.inviteLink;
+    // Explicit old personal link remains intact only if no new link was approved.
+    const assigned=(await db.query('SELECT 1 FROM domwork_student_group_links WHERE student_id=$1',[studentId])).rows.length;
+    return assigned?'':legacy;
+}
+async function studentsList(db, actor) {
+    await admin(db, actor);
+    const rows=(await db.query(`SELECT s.id,s.name,s.phone,s.teacher_id,s.extra_data,
+        h.name AS teacher_name,l.group_id,COALESCE(l.revision,0) AS revision
+        FROM students s LEFT JOIN hr_employees h ON h.id=s.teacher_id
+        LEFT JOIN domwork_student_group_links l ON l.student_id=s.id WHERE s.subject='russian' ORDER BY s.name,s.id`)).rows;
+    return rows.filter(require('./domworkBot/policy').activeStudent).map(s=>({id:s.id,name:s.name,phone:s.phone,
+        teacherId:s.teacher_id,teacherName:s.teacher_name,groupId:s.group_id || '',revision:s.revision}));
+}
+async function assignStudents(pool, actor, items) {
+    if(!Array.isArray(items) || !items.length || items.length>100 || new Set(items.map(i=>i?.studentId)).size!==items.length)
+        throw fail(400,'1–100 ta takrorlanmagan o‘quvchini tanlang');
+    return transaction(pool,async db=>{
+        await admin(db,actor);
+        await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-learning-groups'))");
+        const result=[];
+        for(const item of [...items].sort((a,b)=>String(a.studentId).localeCompare(String(b.studentId)))) {
+            if(typeof item?.studentId!=='string' || typeof item.groupId!=='string' || !Number.isSafeInteger(item.revision) || item.revision<0)
+                throw fail(400,'O‘quvchi, guruh va yozuv versiyasini kiriting');
+            const student=(await db.query("SELECT * FROM students WHERE id=$1 AND subject='russian' FOR UPDATE",[item.studentId])).rows[0];
+            if(!require('./domworkBot/policy').activeStudent(student)) throw fail(400,'Faol rus tili o‘quvchisi topilmadi');
+            const group=(await db.query(`SELECT g.* FROM domwork_learning_groups g JOIN hr_employees h ON h.id=g.teacher_id
+                WHERE g.id=$1 AND g.type='classroom' AND NOT g.archived AND g.teacher_id=$2
+                AND h.role IN ('oqituvchi','rus-oqituvchi') AND (h.role='rus-oqituvchi' OR h.lang='russian')
+                AND COALESCE(h.status,'active')<>'inactive' FOR UPDATE OF g`,[item.groupId,student.teacher_id])).rows[0];
+            if(!group) throw fail(400,'Guruh o‘quvchining asosiy ustoziga tegishli bo‘lishi kerak');
+            const before=(await db.query('SELECT * FROM domwork_student_group_links WHERE student_id=$1 FOR UPDATE',[student.id])).rows[0];
+            if((before?.revision || 0)!==item.revision) throw fail(409,'O‘quvchi guruhi boshqa oynada o‘zgargan. Yangilang');
+            if(before?.group_id===group.id) {result.push(before);continue;}
+            const after=(await db.query(`INSERT INTO domwork_student_group_links(student_id,group_id,updated_by) VALUES($1,$2,$3)
+                ON CONFLICT(student_id) DO UPDATE SET group_id=EXCLUDED.group_id,revision=domwork_student_group_links.revision+1,
+                updated_by=EXCLUDED.updated_by,updated_at=NOW() RETURNING *`,[student.id,group.id,actor.id])).rows[0];
+            await db.query('INSERT INTO domwork_student_group_audit(student_id,actor_id,before_data,after_data) VALUES($1,$2,$3,$4)',
+                [student.id,actor.id,before?JSON.stringify(before):null,JSON.stringify(after)]);
+            result.push(after);
+        }
+        return {links:result};
+    });
+}
+module.exports = { SCHEMA, initSchema, inviteLink, input, revision, dto, admin, list, save, archive, defaultForTeacher,
+    forStudent, studentInvite, studentsList, assignStudents, transaction, audit };

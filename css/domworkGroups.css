@@ -38,6 +38,10 @@
 .domwork-groups .dg-error { color:var(--danger); }
 .domwork-groups :focus-visible { outline:2px solid var(--purple); outline-offset:3px; }
 .domwork-groups button:disabled { opacity:.6; cursor:wait; }
+.dg-discovery { margin:16px 0; }
+.dg-discovery .dg-list { margin:16px 0; }
+.dg-discovery .dg-card label { margin-bottom:12px; }
+.dg-discovery select { text-overflow:ellipsis; }
 @media (max-width:600px) {
  .domwork-groups { margin:12px 0; }
  .dg-header { align-items:stretch; flex-direction:column; }

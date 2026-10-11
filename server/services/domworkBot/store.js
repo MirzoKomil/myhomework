@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS domwork_bot_penalties (
  created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 `;
-async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); }
+async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); await require('./discovery').init(db); }
 const USER_SQL = `SELECT u.id,u.name,u.email,u.role,u.phone,he.id AS employee_id,he.role AS employee_role,
  he.status AS employee_status,he.lang,he.dual_role,COALESCE(link.manager_id,he.id) AS manager_id
  FROM users u LEFT JOIN user_sales_manager_links link ON link.user_id=u.id

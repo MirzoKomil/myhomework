@@ -25,7 +25,7 @@ async function main() {
     run('initdb', ['-D', data, '-U', 'payroll_test', '--auth=trust', '--encoding=UTF8', '--locale=C']);
     run('pg_ctl', ['-D', data, '-l', path.join(cluster, 'postgres.log'), '-o', `-h 127.0.0.1 -p ${port}`, '-w', 'start']);
     started = true;
-    const allowedFiles = ['scripts/payroll-postgres.test.cjs', 'scripts/inflow-postgres.test.cjs', 'scripts/teacher-dual-role-postgres.test.cjs', 'scripts/domwork-groups-postgres.test.cjs', 'scripts/domwork-bot-postgres.test.cjs'];
+    const allowedFiles = ['scripts/payroll-postgres.test.cjs', 'scripts/inflow-postgres.test.cjs', 'scripts/teacher-dual-role-postgres.test.cjs', 'scripts/domwork-groups-postgres.test.cjs', 'scripts/domwork-bot-postgres.test.cjs', 'scripts/domwork-discovery-postgres.test.cjs'];
     const requestedFiles = process.argv.slice(2);
     if (requestedFiles.some(file => !allowedFiles.includes(file))) throw Error('Only known disposable database tests are allowed');
     for (const testFile of requestedFiles.length ? requestedFiles : allowedFiles) {

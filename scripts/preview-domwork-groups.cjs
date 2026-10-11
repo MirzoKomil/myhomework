@@ -24,6 +24,8 @@ app.get('/', (_req, res) => {
           fixtureCalls.push({url,...options});await new Promise(resolve=>setTimeout(resolve,50));
           if(fixtureFail)throw Error('Test: server bilan aloqa yo‘q');
           if(url.includes('/api/domwork/bot')) {
+            if(url.endsWith('/discovery'))return {candidates:Array.from({length:50},(_,n)=>({chatId:String(-1005000000-n),title:'Asosiy guruh '+(n+1),state:n===0?'pending':'ready',revision:1,evidence:{title:'Asosiy guruh '+(n+1),teachers:n===1?[]:[{id:'b',name:'Mohinur Testova'}],inviteLink:''}}))};
+            if(url.endsWith('/student-groups'))return {students:Array.from({length:120},(_,n)=>({id:'s'+n,name:'O‘quvchi '+n,phone:'+998901234567',teacherId:'b',teacherName:'Mohinur Testova',revision:0,groupId:'',discovery:{state:'ready',reason:'unique',groups:[{id:'main',name:'Asosiy dars | Mohinur'}]}}))};
             if(url.endsWith('/settings'))return {data:{eventsEnabled:true,remindersEnabled:true,reportsEnabled:true},revision:1};
             if(url.endsWith('/bindings'))return {groups:[]};
             if(url.endsWith('/observed-chats'))return {chats:[{chat_id:'-100123456',title:'Mayoq Test'}]};
@@ -42,6 +44,6 @@ app.get('/', (_req, res) => {
           if(group.isDefault)fixture.groups.forEach(g=>{if(g.id!==group.id&&g.type===group.type&&g.teacherId===group.teacherId)g.isDefault=false;});
           return{group};
         }
-        </script><script src="/js/domworkBotUI.js"></script><script src="/js/domworkGroupsUI.js"></script><script>domworkGroupsUI.render();</script></body></html>`);
+        </script><script src="/js/domworkBotUI.js"></script><script src="/js/domworkDiscoveryUI.js"></script><script src="/js/domworkGroupsUI.js"></script><script>domworkGroupsUI.render();</script></body></html>`);
 });
 app.listen(8788, '127.0.0.1', () => process.stdout.write('Isolated Domwork groups QA: http://127.0.0.1:8788\n'));

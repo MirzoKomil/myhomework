@@ -6,6 +6,7 @@ const groups = require('../domworkGroups');
 const trial = require('../../../js/trialWorkflow');
 const callbacks = require('./callbacks');
 const controls = require('./controls');
+const discovery = require('./discovery');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g, ' ') + ' UZS';
 const text = value => String(value ?? '').slice(0, 200);
 const empty = 'Hozircha ma’lumot yo‘q.';
@@ -31,8 +32,10 @@ function createHandler({ crm }) {
             const change=update.chat_member, user=change.new_chat_member?.user;
             const joined=['member','administrator','creator'].includes(change.new_chat_member?.status)
                 && !['member','administrator','creator'].includes(change.old_chat_member?.status);
-            if(!joined || user?.is_bot) return;
+            if(user?.is_bot) return;
             const identity=await store.identity(db,String(user?.id || ''));
+            if(identity?.kind==='student') {await discovery.requestStudent(db,identity.id);return;}
+            if(!joined) return;
             if(identity?.kind!=='lead') return;
             const row=(await db.query("SELECT * FROM leads WHERE id=$1 AND language='russian' AND status='sinov-darsida' AND deleted_at IS NULL",[identity.id])).rows[0];
             const lead=row && {...row.extra_data,id:row.id,name:row.name,status:row.status};
@@ -51,6 +54,7 @@ function createHandler({ crm }) {
             await db.query(`INSERT INTO domwork_bot_seen_chats(chat_id,title,bot_status) VALUES($1,$2,$3)
                 ON CONFLICT(chat_id) DO UPDATE SET title=EXCLUDED.title,bot_status=EXCLUDED.bot_status,observed_at=NOW()`,
                 [String(change.chat.id), text(change.chat.title), change.new_chat_member?.status || 'unknown']);
+            await discovery.observe(db,String(change.chat.id),text(change.chat.title));
             // Membership observation never binds a CRM department or teacher by title.
             if (change.new_chat_member?.status !== 'administrator') {
                 await db.query('UPDATE domwork_learning_groups SET verified_at=NULL WHERE chat_id=$1', [String(change.chat.id)]);
@@ -77,6 +81,7 @@ function createHandler({ crm }) {
         try {
             if (message.contact) {
                 identity = await store.linkContact(db, message);
+                await discovery.contactLinked(db,identity);
                 return await reply(`Assalomu alaykum, ${text(identity.name)}!\nDomwork shaxsiy kabinetingiz ochildi.`);
             }
             const command = String(message.text || '').trim();
@@ -88,6 +93,7 @@ function createHandler({ crm }) {
                 { reply_markup: { keyboard: [[{ text: '📱 Telefon raqamni yuborish', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } });
             if (command === '/start' || command === '/menu') {
                 await db.query('UPDATE domwork_bot_links SET paused=false WHERE telegram_id=$1', [sender]);
+                if(identity.kind==='student') await discovery.requestStudent(db,identity.id);
                 await store.setSession(db, sender, null);
                 return await reply(`Assalomu alaykum, ${text(identity.name)}! Kerakli bo‘limni tanlang.`);
             }
@@ -102,6 +108,7 @@ function createHandler({ crm }) {
                 if(!/^-[1-9]\d{4,15}$/.test(chatId)) throw policy.error(400,'Guruhni tanlang');
                 await db.query(`INSERT INTO domwork_bot_seen_chats(chat_id,title,bot_status) VALUES($1,$2,'shared')
                     ON CONFLICT(chat_id) DO UPDATE SET title=EXCLUDED.title,observed_at=NOW()`,[chatId,text(message.chat_shared.title)]);
+                await discovery.observe(db,chatId,text(message.chat_shared.title));
                 await store.setSession(db,sender,null);
                 return await reply(`Tanlangan guruh: ${text(message.chat_shared.title)}\nchat_id: ${chatId}\nCRM → Sozlamalar → Telegram guruhlari → Bot boshqaruvida aniq bo‘lim yoki ustozga biriktiring. Hali xabar yuborilmaydi.`);
             }
@@ -257,11 +264,11 @@ function createHandler({ crm }) {
                     const result = await crm.getDemoStudentSchedule(identity.id);
                     if (action === 'schedule') return await reply(`Dars vaqti: ${text(result.lessonTime || 'Belgilanmagan')}\nKeyingi dars: `
                         + (result.startsAt ? new Date(result.startsAt).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})+`\nQolgan vaqt: ${Math.max(0,Math.ceil((new Date(result.startsAt).getTime()-Date.now())/60000))} daqiqa` : 'Belgilanmagan'));
-                    const student = (await db.query('SELECT teacher_id,extra_data FROM students WHERE id=$1', [identity.id])).rows[0];
-                    const group = await groups.defaultForTeacher(db, 'classroom', student?.teacher_id);
-                    // The student's historical, explicit group takes priority; never overwrite it.
-                    const link = result.telegramGroupLink || group?.inviteLink;
-                    return await reply([link ? `Dars guruhi: ${link}` : 'Dars guruhi belgilanmagan.', config.officialChannel ? `Rasmiy kanal: ${config.officialChannel}` : ''].filter(Boolean).join('\n'));
+                    const group = await groups.forStudent(db, identity.id);
+                    // An explicit admin-approved assignment wins without rewriting the historical link.
+                    const link = await groups.studentInvite(db,identity.id,'russian',result.telegramGroupLink || '');
+                    return await reply([link ? `Dars guruhi: ${link}` : 'Dars guruhi havolasini administrator belgilaydi.', config.officialChannel ? `Rasmiy kanal: ${config.officialChannel}` : ''].filter(Boolean).join('\n'),
+                        group?{_studentGroup:{studentId:identity.id,groupId:group.id}}:{});
                 }
             }
             // Staff integrations are intentionally separate from student/data access.

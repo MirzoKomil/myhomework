@@ -12,7 +12,7 @@
     }
     function busy(value) {
         state.busy = value;
-        root()?.querySelectorAll('button,input,select').forEach(el => { if(!el.closest('[data-dg-bot-root]'))el.disabled = value; });
+        root()?.querySelectorAll('button,input,select').forEach(el => { if(!el.closest('[data-dg-bot-root],[data-dg-discovery-root]'))el.disabled = value; });
     }
     function cards() {
         const el = root(); if (!el) return;
@@ -25,7 +25,7 @@
         el.querySelector('[data-dg-list]').innerHTML = rows.length ? rows.map(g => `<article class="dg-card">
             <div class="dg-card-heading"><h4>${esc(g.name)}</h4><span class="dg-tag">${esc(types[g.type])}</span></div>
             <p>Ustoz: ${esc(g.teacherName || 'CRMdagi ustoz yozuvi topilmadi')}</p>
-            <a href="${esc(g.inviteLink)}" target="_blank" rel="noopener noreferrer">${esc(g.inviteLink)}</a>
+            ${g.inviteLink?`<a href="${esc(g.inviteLink)}" target="_blank" rel="noopener noreferrer">${esc(g.inviteLink)}</a>`:'<p>Guruh havolasi hali kiritilmagan.</p>'}
             <p class="dg-state">${g.archived ? 'Arxivda' : g.isDefault ? 'Standart guruh' : 'Qo‘shimcha guruh'} · ${g.botVerified ? 'Bot bog‘lanishi tekshirilgan' : 'Bot bog‘lanishi hali tekshirilmagan'}</p>
             <div class="dg-actions">${!g.archived ? `<button type="button" class="btn-secondary-sm" data-dg-edit="${esc(g.id)}">Tahrirlash</button>` : ''}
             ${!g.archived && g.chatId ? `<button type="button" class="btn-secondary-sm" data-dg-verify="${esc(g.id)}">Bot ruxsatlarini tekshirish</button>` : ''}
@@ -77,7 +77,7 @@
                     <label>Guruh nomi<input class="form-control" name="name" maxlength="120" required placeholder="Sinov darsi | Ustoz ismi"></label>
                     <label>Dars turi<select class="form-control" name="type"><option value="trial">Sinov darsi</option><option value="classroom">Asosiy dars</option></select></label>
                     <label>Rus tili ustozi<select class="form-control" name="teacherId" required><option value="">Ustozni tanlang</option></select></label>
-                    <label>Telegram guruh havolasi<input class="form-control" name="inviteLink" type="url" maxlength="300" required placeholder="https://t.me/+..."></label>
+                    <label>Telegram guruh havolasi<input class="form-control" name="inviteLink" type="url" maxlength="300" placeholder="https://t.me/+..."></label>
                 </div><details class="dg-advanced"><summary>Bot bog‘lanishi — ixtiyoriy chat_id</summary>
                     <label>Telegram chat_id<input class="form-control" name="chatId" inputmode="text" placeholder="-100..."></label>
                     <p>Bilmasangiz bo‘sh qoldiring. Havoladan chat_id avtomatik aniqlanmaydi. Keyin bot integratsiyasi orqali tekshiriladi.</p></details>
@@ -90,8 +90,10 @@
                 <label>Holat<select class="form-control" data-dg-status><option value="active">Faol</option><option value="archived">Arxivda</option><option value="all">Barchasi</option></select></label>
                 <button type="button" class="btn-secondary-sm" data-dg-refresh>Yangilash</button></div>
             <p data-dg-count></p><div class="dg-list" data-dg-list></div>
+            <details><summary>Avtomatik topish va o‘quvchi guruhlari</summary><button type="button" data-dg-discovery>Guruhlarni avtomatik topish oynasini ochish</button><div data-dg-discovery-root></div></details>
             <details><summary>Bot boshqaruvi — bo‘lim guruhlari, xabarlar va sozlamalar</summary><button type="button" class="btn-primary" data-dg-bot>Bot boshqaruvini ochish</button><div data-dg-bot-root></div></details></div>`;
         el.querySelector('[data-dg-bot]').onclick=()=>window.domworkBotUI?.render(el.querySelector('[data-dg-bot-root]'));
+        el.querySelector('[data-dg-discovery]').onclick=()=>window.domworkDiscoveryUI?.mount(el.querySelector('[data-dg-discovery-root]'),load);
         el.querySelector('[data-dg-add]').onclick = () => edit();
         el.querySelector('[data-dg-cancel]').onclick = () => { el.querySelector('[data-dg-form]').hidden = true; state.editing = null; };
         el.querySelector('[data-dg-search]').oninput = cards;

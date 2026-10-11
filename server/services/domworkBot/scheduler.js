@@ -48,11 +48,12 @@ async function run(db,now=new Date()) {
             const at=scheduledToday(student,now);
             if(!at) continue;
             const atText=at.toISOString(), identity=await events.linked(db,'student',student.id);
-            const group=await groups.defaultForTeacher(db,'classroom',student.teacher_id,{delivery:true});
+            const group=await groups.forStudent(db,student.id,{delivery:true});
             for(const minute of [30,5]) if(checkpoint(at,minute,now)) await once(db,`class:${student.id}:${atText}:${minute}`,async()=>{
                 const message=`Darsingiz ${minute} daqiqadan keyin boshlanadi.${group?'\nGuruh: '+group.inviteLink:''}`;
-                await events.privateMessage(db,`reminder:${student.id}:${atText}:${minute}`,identity,message,{_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText}});
-                await learningMessage(db,`group-class:${group?.id}:${atText}:${minute}`,group,`Dars boshlanishiga ${minute} daqiqa qoldi.`,{_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText,teacherId:student.teacher_id}});
+                const groupGuard=group?{_studentGroup:{studentId:student.id,groupId:group.id}}:{};
+                await events.privateMessage(db,`reminder:${student.id}:${atText}:${minute}`,identity,message,{_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText},...groupGuard});
+                await learningMessage(db,`group-class:${group?.id}:${atText}:${minute}`,group,`Dars boshlanishiga ${minute} daqiqa qoldi.`,{_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText,teacherId:student.teacher_id},...groupGuard});
             });
             const end=new Date(at.getTime()+(Number(student.lesson_duration)||15)*60000);
             if(checkpoint(end,-15,now)) await once(db,`missing-attendance:${student.id}:${atText}`,async()=>{

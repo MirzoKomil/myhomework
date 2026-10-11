@@ -4,6 +4,7 @@ const store = require('../services/domworkBot/store');
 const queue = require('../services/domworkBot/queue');
 const groups = require('../services/domworkGroups');
 const controls = require('../services/domworkBot/controls');
+const discovery = require('../services/domworkBot/discovery');
 module.exports = function createRouter({ pool, runtime, authRequired }) {
     const router = express.Router();
     router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
@@ -22,6 +23,11 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
         catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Bot xizmatida xatolik' }); }
     });
     router.get('/status', handle(() => runtime.status()));
+    router.get('/discovery',handle(req=>discovery.list(pool,req.user)));
+    router.post('/discovery/rescan',handle(req=>queue.transaction(pool,db=>discovery.rescan(db,req.user))));
+    router.post('/discovery/confirm',handle(req=>discovery.confirm(pool,req.user,req.body?.items,(id,options)=>runtime.verifyChat(id,options))));
+    router.get('/student-groups',handle(req=>discovery.studentCandidates(pool,req.user)));
+    router.post('/student-groups/confirm',handle(req=>groups.assignStudents(pool,req.user,req.body?.items)));
     router.get('/my-telegram-link', handle(req => store.ownAdminLink(pool, req.user)));
     router.post('/my-telegram-link/unlink', handle(req => queue.transaction(pool, db => store.unlinkOwnAdmin(db, req.user, req.body))));
     router.get('/settings', handle(() => store.settings(pool)));

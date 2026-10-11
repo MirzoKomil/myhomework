@@ -5,13 +5,15 @@ const queue = require('./queue');
 const store = require('./store');
 const events = require('./events');
 const scheduler = require('./scheduler');
+const discovery = require('./discovery');
+const groups = require('../domworkGroups');
 const { createHandler } = require('./handlers');
 
 function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFactory, autoTick = true }) {
     let config, invalid = false;
     try { config = configuration(env); }
     catch { config = configuration({ ...env, DOMWORK_BOT_ENABLED: 'false' }); invalid = true; }
-    let redis, telegram, botId, timer, busy = false, stopped = false, lastSchedule=0;
+    let redis, telegram, botId, timer, discoveryTimer, busy = false, discoveryBusy = false, stopped = false, lastSchedule=0;
     let state = invalid ? 'failed' : config.enabled ? 'starting' : 'disabled';
     const handler = createHandler({ crm });
     async function call(method, payload) {
@@ -47,6 +49,13 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 const student=(await db.query("SELECT teacher_id,assistant_teacher_id FROM students WHERE id=$1 AND subject='russian'",[guard.studentId])).rows[0];
                 if(!student || (guard.duty==='assistant'?student.assistant_teacher_id:student.teacher_id)!==guard.teacherId) return false;
             }
+            if(row.payload._studentGroup) {
+                const guard=row.payload._studentGroup;
+                const current=await groups.forStudent(db,guard.studentId,{delivery:row.target_kind==='group'});
+                if(!current || current.id!==guard.groupId || (row.target_kind==='group' && current.chatId!==row.target_id)) return false;
+            }
+            // Cancel old queued teacher-default reminders after enabling per-student routing.
+            if(row.target_kind==='group' && row.payload._schedule?.studentId && !row.payload._studentGroup) return false;
             if(row.payload._attendance) {
                 const guard=row.payload._attendance;
                 const mark=(await db.query('SELECT present,teacher_id FROM domwork_bot_attendance_marks WHERE student_id=$1 AND date=$2 AND duty=$3',[guard.studentId,guard.date,guard.duty])).rows[0];
@@ -126,6 +135,13 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         } catch (error) { console.error('[domwork-bot] worker failed:', error.code || error.name); }
         finally { busy = false; }
     }
+    async function tickDiscovery() {
+        if(discoveryBusy || stopped || !redis?.ready) return;
+        discoveryBusy=true;
+        try {await discovery.processOne(pool,(method,payload)=>telegram.callApi(method,payload,{signal:AbortSignal.timeout(5000)}),botId);}
+        catch(error){console.error('[domwork-bot] discovery failed:',error.code || error.name);}
+        finally{discoveryBusy=false;}
+    }
     return {
         async start() {
             if (!config.enabled) return;
@@ -140,13 +156,16 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 const me = await call('getMe', {});
                 if (me.username?.toLowerCase() !== 'domworkuz_bot' || !me.is_bot) throw Error('Unexpected bot identity');
                 botId = me.id; state = 'ready';
-                if (autoTick) { timer = setInterval(tick, 500); timer.unref(); }
+                if (autoTick) {
+                    timer = setInterval(tick, 500); timer.unref();
+                    discoveryTimer = setInterval(tickDiscovery, 1000); discoveryTimer.unref();
+                }
             } catch (error) {
                 state = 'failed'; await redis?.close().catch(() => {});
                 console.error('[domwork-bot] startup failed:', error.code || error.name);
             }
         },
-        async stop() { stopped = true; clearInterval(timer); await redis?.close(); state = 'stopped'; },
+        async stop() { stopped = true; clearInterval(timer); clearInterval(discoveryTimer); await redis?.close(); state = 'stopped'; },
         status() { return { enabled: config.enabled, state, redisReady: !!redis?.ready, webhookPath: '/api/domwork/bot/webhook' }; },
         async receive(update, secret) {
             if (!require('./policy').secretMatches(config.secret, secret)) throw Object.assign(Error('Webhook secret noto‘g‘ri'), { status: 401 });
@@ -175,7 +194,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 throw Object.assign(Error('Bot guruhda administrator bo‘lishi kerak; sinov guruhida a’zolarni chiqarish huquqi ham kerak'), { status: 400 });
             return { chatId: String(chat.id), title: String(chat.title || '').slice(0,200) };
         },
-        tick, deliverOne
+        tick, tickDiscovery, deliverOne
     };
 }
 module.exports = { createRuntime };

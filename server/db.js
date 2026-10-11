@@ -2488,6 +2488,7 @@ async function getDemoStudentSchedule(studentId) {
     const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
     if (!row) return empty;
     const student = rowToStudent(row);
+    const telegramGroupLink = await require('./services/domworkGroups').studentInvite(pool,demoStudentId,row.subject,student.telegramGroupLink || '');
 
     // 123-ish: "Jadval va davomat" ekrani o'quvchining haqiqiy o'qish
     // boshlagan kuni va o'zining asosiy ustozining haftalik dars kunlari
@@ -2502,14 +2503,14 @@ async function getDemoStudentSchedule(studentId) {
 
     if (student.lessonDayOfWeek == null || !student.lessonTime) {
         return {
-            telegramGroupLink: student.telegramGroupLink || '', topic: '', startsAt: null,
+            telegramGroupLink, topic: '', startsAt: null,
             courseStartDate, schedulePattern, lessonDayOfWeek: null, lessonTime: ''
         };
     }
     const startsAt = computeNextWeeklyOccurrence(student.lessonDayOfWeek, student.lessonTime, student.lessonDuration);
     const topic = student.group ? `Speaking Club: ${student.group}` : 'Speaking Club';
     return {
-        telegramGroupLink: student.telegramGroupLink || '', topic, startsAt,
+        telegramGroupLink, topic, startsAt,
         courseStartDate, schedulePattern,
         lessonDayOfWeek: student.lessonDayOfWeek, lessonTime: student.lessonTime
     };

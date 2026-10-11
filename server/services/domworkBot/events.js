@@ -108,9 +108,10 @@ async function processOne(db) {
             const student=(await db.query("SELECT id,name,teacher_id,assistant_teacher_id FROM students WHERE id=$1 AND subject='russian'",[row.reference_id])).rows[0];
             const teacherId=student && (row.data.duty==='assistant'?student.assistant_teacher_id:student.teacher_id);
             if(teacherId===row.data.teacherId) {
-                const group=await groups.defaultForTeacher(db,'classroom',student.teacher_id);
+                const group=await groups.forStudent(db,student.id);
                 const message=`Yangi o‘quvchi biriktirildi: ${student.name}${group?'\nDars guruhi: '+group.inviteLink:''}`;
-                await privateMessage(db,key+':teacher',await employee(db,teacherId),message,{_assignment:{studentId:student.id,teacherId,duty:row.data.duty}});
+                await privateMessage(db,key+':teacher',await employee(db,teacherId),message,{_assignment:{studentId:student.id,teacherId,duty:row.data.duty},
+                    ...(group?{_studentGroup:{studentId:student.id,groupId:group.id}}:{})});
                 await groupMessage(db,key+':teachers','teachers',`Yangi o‘quvchi ustozga biriktirildi. Muvaffaqiyatli darslar tilaymiz!`);
             }
         }
