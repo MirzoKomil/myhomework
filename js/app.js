@@ -13674,10 +13674,14 @@ function switchSettingsSection(section) {
     });
     if (section === 'archive') renderSettingsArchivePanel();
     else if (section === 'notifications' && typeof renderNotificationPanel === 'function') renderNotificationPanel();
+    else if (section === 'telegram-groups') domworkGroupsUI.render();
     persistCurrentTab();
 }
 
 function renderSettings() {
+    const groupButton = document.querySelector('[data-settings-section="telegram-groups"]');
+    if (groupButton) groupButton.hidden = getCurrentUser()?.role !== 'admin';
+    if (_tabContext.settingsSection === 'telegram-groups' && getCurrentUser()?.role !== 'admin') _tabContext.settingsSection = 'archive';
     document.querySelectorAll('[data-settings-section]').forEach(btn => {
         if (btn.dataset.setBound) return;
         btn.dataset.setBound = '1';

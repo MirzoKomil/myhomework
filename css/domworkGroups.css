@@ -1,0 +1,42 @@
+.domwork-groups { width:100%; max-width: 1200px; margin: 16px auto; color: var(--text); }
+.domwork-groups [hidden] { display: none !important; }
+[data-settings-section="telegram-groups"][hidden] { display:none !important; }
+.dg-header,.dg-card-heading,.dg-actions { display:flex; align-items:center; gap:12px; justify-content:space-between; }
+.dg-header h3,.dg-card h4 { margin:0; }
+.dg-header p,.dg-state,.dg-note,.dg-advanced p { color:var(--text-muted); font-size:13px; line-height:1.6; }
+.dg-note { margin:16px 0; }
+.dg-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:16px; }
+.dg-card,.dg-form-wrap { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; min-width:0; }
+.dg-card p { margin:12px 0; }
+.dg-card a { display:block; color:var(--purple); overflow-wrap:anywhere; }
+.dg-card-heading { align-items:flex-start; flex-wrap:wrap; }
+.dg-card h4 { overflow-wrap:anywhere; }
+.dg-tag { background:var(--purple-light); color:var(--purple); border-radius:20px; font-size:12px; padding:6px 10px; white-space:nowrap; }
+.dg-actions { justify-content:flex-start; flex-wrap:wrap; }
+.dg-fields,.dg-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.dg-filters { grid-template-columns:minmax(160px,2fr) repeat(2,minmax(120px,1fr)) auto; align-items:end; margin:24px 0 12px; }
+.domwork-groups label { display:grid; gap:8px; font-size:13px; font-weight:500; min-width:0; }
+.domwork-groups .form-control { width:100%; min-width:0; box-sizing:border-box; }
+.domwork-groups .dg-checkbox { display:flex; align-items:center; margin:18px 0; }
+.dg-checkbox input { width:20px; height:20px; flex-shrink:0; accent-color:var(--purple); }
+.dg-advanced { margin-top:16px; }
+.dg-advanced summary { cursor:pointer; padding:10px 0; }
+.dg-form-wrap { margin-top:16px; }
+.dg-form-wrap h4 { margin:0 0 20px; }
+.domwork-groups button,.domwork-groups input,.domwork-groups select { min-height:44px; }
+.domwork-groups button { border:1px solid var(--border); border-radius:12px; padding:10px 16px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; background:var(--surface); color:var(--text); }
+.domwork-groups .btn-primary { background:var(--purple-gradient); color:#fff; border-color:transparent; }
+.domwork-groups .btn-primary:hover { filter:brightness(.96); }
+.domwork-groups .btn-secondary-sm:hover { background:var(--purple-light); color:var(--purple); }
+.domwork-groups input[type=checkbox] { min-height:20px; }
+.domwork-groups [data-dg-message] { min-height:24px; margin:12px 0; overflow-wrap:anywhere; }
+.domwork-groups .dg-error { color:var(--danger); }
+.domwork-groups :focus-visible { outline:2px solid var(--purple); outline-offset:3px; }
+.domwork-groups button:disabled { opacity:.6; cursor:wait; }
+@media (max-width:600px) {
+ .domwork-groups { margin:12px 0; }
+ .dg-header { align-items:stretch; flex-direction:column; }
+ .dg-fields,.dg-filters { grid-template-columns:1fr; }
+ .dg-card,.dg-form-wrap { padding:16px; }
+ .dg-actions button { flex:1; }
+}
