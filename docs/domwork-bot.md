@@ -40,6 +40,23 @@ and HR bots use their own credentials and are not changed.
   transactions/savepoints never populate the cache; cached state never grants permissions.
 - Individual sales plans and bonus history use existing CRM data. Marketing distinguishes
   common CRM advertising spend from Russian spend; unscoped spend is not invented Russian CPL.
+- Four Monday-based weekly and three calendar-month target-lead cohort reports use
+  persisted lead-audit statuses only, as of the respective period end. Current periods
+  stop today; current column totals do not fabricate historical conversion. Audit
+  coverage and retained soft-deleted leads are explicitly explained.
+- Admin academic digest counts unique Russian student-days for both duties, separates
+  contradictory marks and does not infer absence from missing marks. Paid course starts
+  use existing explicit start dates. Month-to-date signed receipts and a still-current
+  confirmed sales plan are shown together. Admin-only read-only acceptance preview:
+  `GET /api/domwork/bot/reports/preview`; it sends no messages or changes.
+- Teacher/assistant seven-day calendar shows dated and recurring reservations and
+  schedule-unoccupied intervals in the existing CRM 08:00–24:00 window. Only configured
+  workday patterns and durations permit free intervals; incomplete reservations fail
+  closed. Other-language reservations block time without exposing pupil identities.
+  Primary lesson times are never treated as assistant lesson times. No auto-booking.
+- Teacher ratings use explicit historical teacher ownership and Russian pupils only.
+  Assistant ratings without historical ownership return an honest unavailable notice,
+  never the main-teacher score. Already-queued private reports recheck reportsEnabled.
 - Pending notifications recheck account/role, booking, assignment, attendance correction,
   lesson time and relevant automation switch before delivery.
 
@@ -50,11 +67,11 @@ These are required before claiming Task 3 is complete:
 - The user's ten supplied groups were explicitly bound and permission-checked on
   2026-10-11 (five departments and five teacher-specific trial groups). Actual main
   class groups and per-student membership/assignment still require admin acceptance.
-- Milestone congratulations, employee onboarding/release notifications, daily/weekly/monthly
-  awards and full academic admin digest.
-- Accurate assistant rating attribution/history and free-slot presentation; existing
+- Milestone congratulations, employee onboarding/release notifications and daily/weekly/monthly
+  awards.
+- Accurate assistant rating attribution/history; existing
   assistant ratings lack historical employee ownership, which must not be guessed.
-- Expanded weekly/monthly marketing conversion views and Russian-scoped advertising spend.
+- Russian-scoped advertising spend input/integration (unscoped historical spend remains intact).
 - Live role-by-role acceptance verification of the enabled bot in production.
 - Face ID adapter and integration require the user's later service documentation.
 - Course/platform/results media and official channel require actual admin content.
@@ -182,12 +199,21 @@ Do not start/import `server/db.js` or the full server against production for tes
 node --test scripts/domwork-bot.test.cjs scripts/domwork-groups.test.cjs
 node scripts/run-payroll-postgres.cjs scripts/domwork-bot-postgres.test.cjs
 node scripts/run-payroll-postgres.cjs scripts/domwork-discovery-postgres.test.cjs
+node --test scripts/domwork-reports.test.cjs
+node scripts/run-payroll-postgres.cjs scripts/domwork-reports-postgres.test.cjs
 ```
 
 The verification runs passed 275 unit tests and 88 distinct PostgreSQL checks,
 including rolling report SQL and main/assistant reminder cancellation. The mobile synthetic UI at 390px had no horizontal
 overflow and 44px action buttons. All eight roles have real PostgreSQL authentication
 fixtures; this is not a claim of complete live role-by-role acceptance testing.
+
+Task 3 reporting follow-up: 35 selected unit cases cover reporting, scheduling,
+role isolation, discovery and student Telegram linking. Five new PostgreSQL checks
+(plus their suite) cover actual cohort/attendance SQL, signed receipt/plan integration,
+private calendar scoping and the admin preview. They assert source rows/settings are
+unchanged and no outbox messages are created. 21:00 comparison now targets ROP only;
+admin/marketing do not receive a mislabeled repeat of their daily report.
 
 The database runner accepts only the listed fixture tests, creates disposable loopback
 PostgreSQL databases and always stops the test cluster. Redis and Telegram are mocked

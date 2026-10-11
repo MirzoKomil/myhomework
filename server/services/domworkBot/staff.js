@@ -2,6 +2,7 @@
 const policy = require('./policy');
 const payroll = require('../payroll');
 const groups = require('../domworkGroups');
+const reports = require('./reports');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g,' ') + ' UZS';
 const safe = value => String(value ?? '').slice(0,200);
 const none = 'Hozircha ma’lumot yo‘q.';
@@ -22,6 +23,16 @@ function personalPlan(raw,id,month) {
 }
 async function action(db, identity, actionId, options={}) {
     policy.requireAction(identity, actionId);
+    if (identity.role==='marketing' && actionId==='history') return reports.marketingHistory(db,options.now);
+    if(actionId==='ranking' && ['teacher','assistant'].includes(identity.role)) {
+        if(identity.role==='assistant') return 'Yordamchi ustoz reytingi uchun eski haftalik baholarda ustoz IDsi saqlanmagan. Ular hozirgi ustozga taxminan biriktirilmaydi. Asosiy ustoz reytingi yordamchi reytingi sifatida ko‘rsatilmaydi.';
+        const main=await json(db,'liveGrades');
+        const russianIds=new Set((await db.query("SELECT id FROM students WHERE subject='russian'")).rows.map(r=>r.id));
+        const scores=Object.entries(main).filter(([id])=>russianIds.has(id)).flatMap(([,entries])=>Array.isArray(entries)?entries:[])
+            .filter(g=>g.teacherId===identity.employeeId && typeof g.studentRatingOfTeacher?.overall==='number')
+            .map(g=>g.studentRatingOfTeacher.overall).filter(n=>Number.isFinite(n) && n>=1 && n<=5);
+        return scores.length?`O‘quvchilar bahosi: ${(scores.reduce((s,n)=>s+n,0)/scores.length).toFixed(1)}\nBaholar soni: ${scores.length}`:none;
+    }
     if(actionId==='reports' && identity.role==='rop' && options.comparison) return comparison(db,options.now || new Date());
     if (['salary','ranking','plan','bonuses','managers'].includes(actionId) && ['sales','rop','teacher','assistant'].includes(identity.role)) {
         const period = policy.monthPeriod(options.now);
@@ -29,12 +40,6 @@ async function action(db, identity, actionId, options={}) {
         const own = calculation.rows.find(r => r.employeeId === identity.employeeId || (identity.role === 'sales' && r.employeeId === identity.managerId));
         if (actionId === 'salary') return `Davr: ${period.start} — ${period.end}\n` + salary(own);
         if (actionId === 'ranking') {
-            if (identity.role !== 'sales') {
-                const main = (await db.query("SELECT data FROM json_data WHERE key='liveGrades'")).rows[0]?.data || {};
-                const scores = Object.values(main).flat().filter(g => g.teacherId === identity.employeeId)
-                    .map(g => Number(g.studentRatingOfTeacher?.overall)).filter(Number.isFinite);
-                return scores.length ? `O‘quvchilar bahosi: ${(scores.reduce((s,n)=>s+n,0)/scores.length).toFixed(1)}\nBaholar soni: ${scores.length}` : none;
-            }
             const ranked = calculation.rows.filter(r => r.role === 'sales').sort((a,b)=>b.turnover-a.turnover);
             const index = ranked.findIndex(r => r.employeeId === own?.employeeId);
             return index < 0 ? none : `O‘rningiz: ${index+1}/${ranked.length}\nAylanmangiz: ${money(own.turnover)}\nDaromadingiz: ${money(own.total)}`;
@@ -85,8 +90,7 @@ async function action(db, identity, actionId, options={}) {
         return links.join('\n') || none;
     }
     if (actionId === 'schedule' && ['teacher','assistant'].includes(identity.role)) {
-        const rows = (await db.query('SELECT date,time FROM timetable WHERE teacher_id=$1 ORDER BY date,time LIMIT 100', [identity.employeeId || ''])).rows;
-        return rows.map(r => `${safe(r.date)} · ${safe(r.time)}`).join('\n') || none;
+        return require('./schedule').ownSchedule(db,identity,options.now);
     }
     if (actionId === 'trial-lessons' && ['teacher','rop'].includes(identity.role)) {
         const rows = (await db.query("SELECT name,extra_data FROM leads WHERE language='russian' AND status='sinov-darsida' AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 200")).rows;
@@ -102,6 +106,18 @@ async function action(db, identity, actionId, options={}) {
         let output=`Davr: ${start} — ${end}\nKirim: ${money(totals.amount)}\nTranzaksiyalar: ${totals.count}\n`+counts.map(r => `${safe(r.status)}: ${r.count}`).join('\n');
         const debt=(await db.query("SELECT extra_data FROM students WHERE subject='russian'")).rows.reduce((sum,r)=>sum+Math.max(0,Number(r.extra_data?.debtAmount)||0),0);
         output+=`\nQoldiq qarz: ${money(debt)}`;
+        if(identity.role==='admin' && actionId==='digest') {
+            output+='\n\n'+await reports.academicDigest(db,start,end);
+            const confirmed=(await db.query(`SELECT amount FROM salary_plan_confirmations WHERE language='russian'
+                AND period_start=$1::date AND period_end=$2::date`,[period.start,period.end])).rows[0];
+            const monthTotal=(await db.query(`SELECT COALESCE(SUM(amount),0) AS amount FROM payment_records
+                WHERE language='russian' AND paid_date BETWEEN $1::date AND $2::date`,[period.start,today])).rows[0];
+            const currentPlan=require('../../../js/payrollEngine').salesPlan({salesPlan:await json(db,'salesPlan')},'russian',
+                {...period,days:Number(period.end.slice(8))});
+            const plan=Number(confirmed?.amount)===currentPlan?Number(currentPlan)||0:0, actual=Number(monthTotal.amount)||0;
+            output+=`\n\nOylik tasdiqlangan sotuv rejasi: ${plan>0?money(plan):'Tasdiqlanmagan'}\nOylik kirim: ${money(actual)}`
+                +(plan>0?`\nReja bajarilishi: ${(actual/plan*100).toFixed(1)}%\nReja qoldig‘i: ${money(Math.max(0,plan-actual))}`:'');
+        }
         if(actionId==='reports') {
             const rows=(await db.query(`SELECT h.id,h.name,
                 (SELECT COUNT(*) FROM leads l WHERE l.language='russian' AND l.manager_id=h.id AND l.deleted_at IS NULL AND (l.created_at AT TIME ZONE 'Asia/Tashkent')::date BETWEEN $1::date AND $2::date) AS new_leads,

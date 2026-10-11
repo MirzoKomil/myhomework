@@ -97,12 +97,12 @@ async function run(db,now=new Date()) {
     if(settings.reportsEnabled && (reached('20:00') || reached('21:00'))) {
         const type=reached('20:00')?'daily':'comparison';
         await once(db,'report:'+clock.date+':'+type,async()=>{
-            for(const identity of await roles(db,['admin','rop','marketing'])) {
+            for(const identity of await roles(db,type==='daily'?['admin','rop','marketing']:['rop'])) {
                 const action=identity.role==='admin'?'digest':identity.role==='rop'?'reports':'daily';
                 const value=await staff.action(db,identity,action,{now,daily:true,comparison:type==='comparison'});
-                await events.privateMessage(db,'report:'+clock.date+':'+type+':'+identity.telegramId,identity,`${clock.date} · ${type==='daily'?'Kunlik hisobot':'24 soatlik taqqoslama'}\n${value}`,{_expiresAt:new Date(now.getTime()+3600000).toISOString()});
+                await events.privateMessage(db,'report:'+clock.date+':'+type+':'+identity.telegramId,identity,`${clock.date} · ${type==='daily'?'Kunlik hisobot':'24 soatlik taqqoslama'}\n${value}`,{_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
             }
-            for(const [department,role,action] of [['sales','rop','reports'],['marketing','marketing','daily']]) {
+            for(const [department,role,action] of type==='daily'?[['sales','rop','reports'],['marketing','marketing','daily']]:[]) {
                 const value=await staff.action(db,{role,language:'russian'},action,{now,daily:true,comparison:type==='comparison'});
                 await events.groupMessage(db,'department-report:'+clock.date+':'+type+':'+department,department,value,{_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
             }

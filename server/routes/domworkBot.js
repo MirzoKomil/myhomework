@@ -23,6 +23,11 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
         catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Bot xizmatida xatolik' }); }
     });
     router.get('/status', handle(() => runtime.status()));
+    // Read-only acceptance preview; does not enable automation or queue messages.
+    router.get('/reports/preview', handle(req => queue.transaction(pool,async db=>({
+        digest:await require('../services/domworkBot/staff').action(db,{role:'admin',id:req.user.id},'digest',{daily:true}),
+        marketingHistory:await require('../services/domworkBot/reports').marketingHistory(db)
+    }))));
     router.get('/discovery',handle(req=>discovery.list(pool,req.user)));
     router.post('/discovery/rescan',handle(req=>queue.transaction(pool,db=>discovery.rescan(db,req.user))));
     router.post('/discovery/confirm',handle(req=>discovery.confirm(pool,req.user,req.body?.items,(id,options)=>runtime.verifyChat(id,options))));
