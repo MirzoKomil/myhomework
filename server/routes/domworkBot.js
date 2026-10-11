@@ -22,6 +22,8 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
         catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Bot xizmatida xatolik' }); }
     });
     router.get('/status', handle(() => runtime.status()));
+    router.get('/my-telegram-link', handle(req => store.ownAdminLink(pool, req.user)));
+    router.post('/my-telegram-link/unlink', handle(req => queue.transaction(pool, db => store.unlinkOwnAdmin(db, req.user, req.body))));
     router.get('/settings', handle(() => store.settings(pool)));
     router.put('/settings', handle(req => queue.transaction(pool,db => controls.saveSettings(db,req.user,req.body))));
     router.get('/bindings', handle(async () => ({groups:(await pool.query('SELECT id,type,chat_id,invite_link,active,revision,title FROM domwork_bot_groups ORDER BY type')).rows})));

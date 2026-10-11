@@ -47,14 +47,14 @@ and HR bots use their own credentials and are not changed.
 
 These are required before claiming Task 3 is complete:
 
-- Live Redis/Telegram checks, webhook activation and explicit verification/binding of
-  the user's ten groups. Invite hashes alone do not reveal chat IDs.
+- Explicit verification/binding of the user's ten groups. Invite hashes alone do
+  not reveal chat IDs; production Redis/token readiness and webhook setup passed.
 - Milestone congratulations, employee onboarding/release notifications, daily/weekly/monthly
   awards and full academic admin digest.
 - Accurate assistant rating attribution/history and free-slot presentation; existing
   assistant ratings lack historical employee ownership, which must not be guessed.
 - Expanded weekly/monthly marketing conversion views and Russian-scoped advertising spend.
-- Acceptance verification of the enabled bot in production and deliberate webhook activation.
+- Live role-by-role acceptance verification of the enabled bot in production.
 - Face ID adapter and integration require the user's later service documentation.
 - Course/platform/results media and official channel require actual admin content.
 
@@ -83,9 +83,20 @@ CRM path: Settings → Telegram groups → Bot controls. Operational groups are 
 selected by department, learning groups by teacher and trial/classroom type. A single
 chat ID cannot be both. Existing group history is retained when archived.
 
-At the last configuration check, the myhomework service had no DOMWORK_BOT variables;
-the browser reviewer blocked the New Variable action even after explicit user approval.
-No unrelated secret was revealed and no alternate path was used to bypass that block.
+On 2026-10-11, only the three approved DOMWORK_BOT variables were applied to the
+myhomework service through Railway. Production reported enabled/ready with Redis
+connected, and explicit webhook setup succeeded without replacing another webhook.
+Automation remains off. The user assisted with browser controls blocked by review;
+no unrelated secret was revealed and no alternate path bypassed those blocks.
+
+Phone changes do not silently transfer Telegram ownership. An authenticated CRM
+admin can inspect only their own association through `GET /api/domwork/bot/my-telegram-link`
+and explicitly revoke it through `POST /api/domwork/bot/my-telegram-link/unlink` with
+`currentPhone`, `expectedTelegramId` and the exact `expectedRevision` from that preview.
+This requires the current stored admin role and phone, serializes with contact linking,
+retains the old association in audit history and deletes only that single bot link.
+Students, leads, lessons, HR, groups and bot sessions/history are not rewritten.
+The new Telegram account must still provide its own verified contact to reconnect.
 
 ## Local verification
 

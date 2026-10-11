@@ -186,4 +186,33 @@ async function currentAdmin(db, actor) {
     if (row?.role !== 'admin') throw policy.error(403, 'Faqat CRM administratori');
     return row;
 }
-module.exports = { SCHEMA, initSchema, staff, student, phoneCandidates, audit, linkContact, identity, session, setSession, enqueue, callback, settings, currentAdmin };
+// Recovery is self-service through an authenticated CRM admin, never a phone-only
+// Telegram takeover. No other account, CRM record or bot history is deleted.
+async function ownAdminLink(db, actor) {
+    await currentAdmin(db, actor);
+    const account = (await db.query('SELECT id,name,phone FROM users WHERE id=$1', [actor.id])).rows[0];
+    const link = (await db.query(`SELECT telegram_id,phone,updated_at::text AS revision FROM domwork_bot_links
+        WHERE account_kind='user' AND account_id=$1`, [actor.id])).rows[0];
+    return { account, link: link || null };
+}
+async function unlinkOwnAdmin(db, actor, input = {}) {
+    await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-bot-links'))");
+    const account = (await db.query('SELECT id,role,phone FROM users WHERE id=$1 FOR UPDATE', [actor?.id])).rows[0];
+    if (account?.role !== 'admin') throw policy.error(403, 'Faqat CRM administratori');
+    const number = policy.phone(input.currentPhone);
+    if (!number || number !== policy.phone(account.phone)) throw policy.error(409, 'Profil telefon raqami o‘zgargan. Qayta tekshiring');
+    const expectedId = policy.telegramId(input.expectedTelegramId);
+    if (!expectedId || typeof input.expectedRevision !== 'string' || !input.expectedRevision)
+        throw policy.error(400, 'Avval o‘zingizning mavjud Telegram bog‘lanishingizni tekshiring');
+    const before = (await db.query(`SELECT *,updated_at::text AS revision FROM domwork_bot_links
+        WHERE account_kind='user' AND account_id=$1 FOR UPDATE`, [actor.id])).rows[0];
+    if (!before || before.telegram_id !== expectedId || before.revision !== input.expectedRevision)
+        throw policy.error(409, 'Telegram bog‘lanishi o‘zgargan. Qayta tekshiring');
+    const result = await db.query(`DELETE FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1
+        AND telegram_id=$2 RETURNING telegram_id`, [actor.id, expectedId]);
+    if (result.rows.length !== 1) throw policy.error(409, 'Bog‘lanishni qayta tekshiring');
+    // Retain the exact previous association for administrator-led recovery/audit.
+    await audit(db, actor.id, 'self-telegram-unlinked', actor.id, { before, currentPhone: number });
+    return { ok: true, requiresOwnContact: true };
+}
+module.exports = { SCHEMA, initSchema, staff, student, phoneCandidates, audit, linkContact, identity, session, setSession, enqueue, callback, settings, currentAdmin, ownAdminLink, unlinkOwnAdmin };
