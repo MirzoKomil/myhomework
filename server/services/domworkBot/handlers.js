@@ -79,6 +79,12 @@ function createHandler({ crm }) {
                 payload: { chat_id: sender, text: part, ...(identity ? { reply_markup: keyboard(identity) } : {}), ...extra } });
         }
         try {
+            if(message._studentLinkHash || require('./studentLink').startHash(message.text)){
+                await require('./studentLink').claim(db,message);
+                await store.enqueue(db,{key:`u:${update.update_id}:student-link`,targetId:sender,
+                    payload:{chat_id:sender,text:'Endi student appdagi “Telegram botga ulash” oynasiga qayting. “Holatni tekshirish”ni bosib, o‘z Telegram hisobingizni tasdiqlang.'}});
+                return;
+            }
             if (message.contact) {
                 identity = await store.linkContact(db, message);
                 await discovery.contactLinked(db,identity);

@@ -144,7 +144,37 @@ database-backed pending/scanning lease resumes after worker restart. Old member 
 and private phone numbers are not scraped. Without the bot's admin rights, membership
 proposals cannot be trusted and are not produced.
 
-## Local verification
+## Student app Telegram linking without matching phone numbers
+
+Russian student app → Profile → **Telegram botga ulash**. Only a real active paid
+Russian student with a valid live student session may create a link; anonymous,
+CRM admin/teacher preview, English, frozen and staff-demo accounts are rejected.
+`/api/domwork/student-telegram` provides owner-only status, create, confirm and cancel.
+No student ID is accepted from the client as the account to bind.
+
+The student creates a 256-bit one-time link (5-minute expiry), opens it in Telegram,
+presses Start, returns to the original authenticated app session, checks the Telegram
+name/username/ID and explicitly confirms. Until that final approval, the bot gets no
+student identity or private CRM details. A different phone number needs no CRM edits.
+Raw link credentials are hashed before the durable bot inbox persists the update;
+public hash commands cannot claim a request. Expiry, cancellation, session revocation,
+competing accounts and reused requests are checked transactionally.
+
+New additive tables: `domwork_student_telegram_requests`,
+`domwork_student_telegram_proofs`. Existing links are never replaced or disconnected.
+Existing student cards, CRM phone/login, results, payments, HR, leads and group
+assignments are not rewritten. A confirmed platform proof resolves the student by
+account ID regardless of phone, but current Russian/active/paid checks still apply.
+Approval records audit, queues membership discovery and sends only that student's
+menu, atomically; it does not enable broadcasts, assign a group or alter bot settings.
+
+Verification: `scripts/student-telegram.test.cjs` and
+`scripts/student-telegram-postgres.test.cjs`. Synthetic mobile UI covers create →
+claimed → explicit approval → linked; no real student or Telegram was used for tests.
+The Expo web export succeeds. Full TypeScript checking has existing diagnostics in
+the unchanged tabs layout and ExternalLink; no diagnostics in the new link files.
+
+## Local verification commands
 
 Do not start/import `server/db.js` or the full server against production for tests.
 

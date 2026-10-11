@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS domwork_bot_penalties (
  created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 `;
-async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); await require('./discovery').init(db); }
+async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); await require('./discovery').init(db); await require('./studentLink').init(db); }
 const USER_SQL = `SELECT u.id,u.name,u.email,u.role,u.phone,he.id AS employee_id,he.role AS employee_role,
  he.status AS employee_status,he.lang,he.dual_role,COALESCE(link.manager_id,he.id) AS manager_id
  FROM users u LEFT JOIN user_sales_manager_links link ON link.user_id=u.id
@@ -110,18 +110,23 @@ async function linkContact(db, message) {
     // One lock covers phone and Telegram identity races, including lead upgrades.
     await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-bot-links'))");
     const existing = (await db.query('SELECT * FROM domwork_bot_links WHERE telegram_id=$1 FOR UPDATE', [contact.telegramId])).rows[0];
-    const identity = policy.choose(await phoneCandidates(db, contact.phone));
-    if (existing && (existing.account_kind !== identity.kind || existing.account_id !== identity.id)) {
-        const upgrade = existing.account_kind === 'lead' && identity.kind === 'student' && existing.phone === contact.phone;
+    if(existing?.account_kind==='student' && (await db.query('SELECT 1 FROM domwork_student_telegram_proofs WHERE student_id=$1 AND telegram_id=$2',[existing.account_id,contact.telegramId])).rows.length){
+        const current=await identity(db,contact.telegramId);
+        if(!current)throw policy.error(403,'Faol o‘quvchi akkaunti topilmadi');
+        return current;
+    }
+    const selected = policy.choose(await phoneCandidates(db, contact.phone));
+    if (existing && (existing.account_kind !== selected.kind || existing.account_id !== selected.id)) {
+        const upgrade = existing.account_kind === 'lead' && selected.kind === 'student' && existing.phone === contact.phone;
         if (!upgrade) throw policy.error(409, 'Telegram akkaunti boshqa CRM profiliga bog‘langan. Administrator ajratsin');
     }
-    const used = (await db.query('SELECT telegram_id FROM domwork_bot_links WHERE account_kind=$1 AND account_id=$2', [identity.kind, identity.id])).rows[0];
+    const used = (await db.query('SELECT telegram_id FROM domwork_bot_links WHERE account_kind=$1 AND account_id=$2', [selected.kind, selected.id])).rows[0];
     if (used && used.telegram_id !== contact.telegramId) throw policy.error(409, 'CRM akkaunti boshqa Telegram hisobiga bog‘langan');
     await db.query(`INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES($1,$2,$3,$4)
         ON CONFLICT(telegram_id) DO UPDATE SET account_kind=EXCLUDED.account_kind,account_id=EXCLUDED.account_id,phone=EXCLUDED.phone,paused=false,updated_at=NOW()`,
-        [contact.telegramId, identity.kind, identity.id, contact.phone]);
-    await audit(db, contact.telegramId, 'contact-link', identity.id, { kind: identity.kind, role: identity.role });
-    return { ...identity, telegramId: contact.telegramId, paused: false };
+        [contact.telegramId, selected.kind, selected.id, contact.phone]);
+    await audit(db, contact.telegramId, 'contact-link', selected.id, { kind: selected.kind, role: selected.role });
+    return { ...selected, telegramId: contact.telegramId, paused: false };
 }
 async function identity(db, telegramId) {
     if (!policy.telegramId(telegramId)) return null;
@@ -136,7 +141,8 @@ async function identity(db, telegramId) {
         if (!matches.length) return null;
         current = staff(rows[0], link.phone);
     } else if (link.account_kind === 'student') {
-        const row = (await db.query('SELECT id,name,phone,subject,extra_data FROM students WHERE id=$1 AND domwork_phone(phone)=$2', [link.account_id, link.phone])).rows[0];
+        const row = (await db.query(`SELECT id,name,phone,subject,extra_data FROM students WHERE id=$1 AND
+            (domwork_phone(phone)=$2 OR EXISTS(SELECT 1 FROM domwork_student_telegram_proofs p WHERE p.student_id=students.id AND p.telegram_id=$3))`, [link.account_id, link.phone,link.telegram_id])).rows[0];
         current = row && student(row, link.phone);
     } else {
         // Lead -> paid student is the only automatic identity migration; no staff escalation.

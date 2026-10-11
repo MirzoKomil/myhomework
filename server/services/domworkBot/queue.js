@@ -11,7 +11,7 @@ function validUpdate(update) {
 async function receive(db, update) {
     validUpdate(update);
     const result = await db.query(`INSERT INTO domwork_bot_updates(update_id,payload) VALUES($1,$2)
-        ON CONFLICT(update_id) DO NOTHING RETURNING update_id`, [update.update_id, JSON.stringify(update)]);
+        ON CONFLICT(update_id) DO NOTHING RETURNING update_id`, [update.update_id, JSON.stringify(require('./studentLink').redact(update))]);
     return { accepted: true, duplicate: result.rows.length === 0 };
 }
 async function transaction(pool, fn) {

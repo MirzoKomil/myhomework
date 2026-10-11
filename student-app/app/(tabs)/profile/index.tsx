@@ -54,7 +54,7 @@ export default function ProfileScreen() {
   }, [coins, lightning]);
   const levelProgress = getLevelProgress(lightning);
   const [showLightningInfo, setShowLightningInfo] = useState(false);
-  const { t } = useLang();
+  const { t, courseLang, lang } = useLang();
 
   // 40-vazifa: ilgari doim mock namuna ism/ID ko'rsatilardi — endi CRM'da
   // tanlangan (yoki real login qilgan) o'quvchining o'z ma'lumoti
@@ -250,6 +250,12 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.menu}>
+          {courseLang === 'russian' && <Pressable accessibilityRole="button" style={styles.menuItem}
+            onPress={() => router.push('/profile/telegram' as never)}>
+            <View style={styles.menuIcon}><Ionicons name="paper-plane-outline" size={20} color={theme.colors.purple} /></View>
+            <Text style={styles.menuLabel}>{lang === 'ru' ? 'Подключить Telegram-бота' : 'Telegram botga ulash'}</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textLight} />
+          </Pressable>}
           {menuItems.map((item) => (
             <Pressable
               key={item.route}

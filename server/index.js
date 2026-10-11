@@ -211,6 +211,8 @@ app.use('/api/trial-lessons', trialLessonsRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/inflow', inflowRoutes);
 app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require('./middleware/auth').authRequired));
+app.use('/api/domwork/student-telegram', require('./routes/studentTelegram')({pool:crmDb.pool,runtime:domworkBot,
+    authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domworkBot,
     authRequired: require('./middleware/auth').authRequired }));
 
