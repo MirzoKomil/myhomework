@@ -37,7 +37,8 @@ test('real PostgreSQL dual-role identity, attendance, HR and payroll integration
       INSERT INTO teachers VALUES('a','A','asosiy','english','mwf',30),('b','B','asosiy','english','mwf',60);
       INSERT INTO students VALUES('main','Main','english','a','b',30,'{}'),('assist','Assist','english','b','a',60,'{}');`);
     await duties.initSchema(pool); await payroll.initSchema(pool);
-    const requireSafe = name => name === '../js/teacherRoles' ? roles : name === '../js/payrollEngine' ? engine : (() => { throw Error(name); })();
+    const requireSafe = name => name === '../js/teacherRoles' ? roles : name === '../js/payrollEngine' ? engine
+      : name === './services/domworkBot/events' ? require('../server/services/domworkBot/events') : (() => { throw Error(name); })();
     const context = vm.createContext({ tx, teacherDuties: duties, require: requireSafe, payroll,
       isUsableList: Array.isArray, guardBulkDelete: async () => {},
       saveJsonData: async (db, key, data) => db.query('INSERT INTO json_data(key,data) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET data=EXCLUDED.data', [key, JSON.stringify(data)]) });

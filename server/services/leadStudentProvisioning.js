@@ -51,6 +51,7 @@ async function provisionLeadStudent(client, lead) {
         lesson_day_of_week=EXCLUDED.lesson_day_of_week, lesson_time=EXCLUDED.lesson_time,
         lesson_duration=EXCLUDED.lesson_duration, extra_data=EXCLUDED.extra_data`,
     [id, name, phone, group, subject, teacherId, assistantTeacherId, lessonDayOfWeek, lessonTime, lessonDuration, JSON.stringify(extra)]);
+    await require('./domworkBot/events').assignments(client,existing,student);
     return { student: safeStudent(student), credentialsCreated };
 }
 

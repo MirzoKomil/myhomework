@@ -161,6 +161,7 @@ test('actual assistant endpoint validates role ownership and assignment before w
     throw Error('Unexpected SQL: ' + sql);
   } };
   const context = vm.createContext({ teacherDuties: duties, require: name => {
+    if (name === './services/domworkBot/events') return require('../server/services/domworkBot/events');
     if (name === '../js/teacherRoles') return roles; throw Error(name);
   }, tx: async fn => fn(db) });
   vm.runInContext(functionSource('server/db.js', 'recordTeacherAttendance'), context);

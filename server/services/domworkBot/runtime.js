@@ -3,13 +3,15 @@ const { configuration } = require('./config');
 const { createRedis } = require('./redis');
 const queue = require('./queue');
 const store = require('./store');
+const events = require('./events');
+const scheduler = require('./scheduler');
 const { createHandler } = require('./handlers');
 
 function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFactory, autoTick = true }) {
     let config, invalid = false;
     try { config = configuration(env); }
     catch { config = configuration({ ...env, DOMWORK_BOT_ENABLED: 'false' }); invalid = true; }
-    let redis, telegram, botId, timer, busy = false, stopped = false;
+    let redis, telegram, botId, timer, busy = false, stopped = false, lastSchedule=0;
     let state = invalid ? 'failed' : config.enabled ? 'starting' : 'disabled';
     const handler = createHandler({ crm });
     async function call(method, payload) {
@@ -17,6 +19,46 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
     }
     async function permitted(row) {
         return queue.transaction(pool, async db => {
+            if (row.payload._expiresAt && Date.now()>new Date(row.payload._expiresAt).getTime()) return false;
+            if(row.payload._setting && !(await store.settings(db)).data[row.payload._setting]) return false;
+            if (row.payload._admin) {
+                try { await store.currentAdmin(db,{id:row.payload._admin}); } catch { return false; }
+            }
+            if (row.payload._broadcast) {
+                const broadcast=(await db.query('SELECT state FROM domwork_bot_broadcasts WHERE id=$1',[row.payload._broadcast])).rows[0];
+                if(broadcast?.state!=='queued') return false;
+            }
+            if(row.payload._schedule) {
+                const guard=row.payload._schedule;
+                const student=(await db.query("SELECT * FROM students WHERE id=$1 AND subject='russian'",[guard.studentId])).rows[0];
+                const at=new Date(guard.at);
+                if(!student || !require('./policy').activeStudent(student) || !Number.isFinite(at.getTime())
+                    || scheduler.scheduledToday(student,at)?.toISOString()!==guard.at
+                    || (guard.teacherId && student.teacher_id!==guard.teacherId)) return false;
+            }
+            if(row.payload._trial) {
+                const guard=row.payload._trial;
+                const lead=(await db.query("SELECT extra_data FROM leads WHERE id=$1 AND language='russian' AND status='sinov-darsida' AND deleted_at IS NULL",[guard.leadId])).rows[0];
+                const trial=lead?.extra_data?.trialRequest;
+                if(!trial || trial.id!==guard.requestId || trial.teacherId!==guard.teacherId || trial.state!==guard.state) return false;
+            }
+            if(row.payload._assignment) {
+                const guard=row.payload._assignment;
+                const student=(await db.query("SELECT teacher_id,assistant_teacher_id FROM students WHERE id=$1 AND subject='russian'",[guard.studentId])).rows[0];
+                if(!student || (guard.duty==='assistant'?student.assistant_teacher_id:student.teacher_id)!==guard.teacherId) return false;
+            }
+            if(row.payload._attendance) {
+                const guard=row.payload._attendance;
+                const mark=(await db.query('SELECT present,teacher_id FROM domwork_bot_attendance_marks WHERE student_id=$1 AND date=$2 AND duty=$3',[guard.studentId,guard.date,guard.duty])).rows[0];
+                if(!mark || mark.present!==false || mark.teacher_id!==guard.teacherId) return false;
+            }
+            if(row.payload._missingAttendance) {
+                const guard=row.payload._missingAttendance;
+                if(!['main','assistant'].includes(guard.duty) || !/^\d{4}-\d{2}-\d{2}$/.test(guard.date)) return false;
+                const mark=(await db.query(`SELECT present FROM ${guard.duty==='main'?'main_attendance':'assistant_attendance'} WHERE att_key=$1 AND student_id=$2 AND day=$3`,
+                    [guard.date.slice(0,7)+'_'+guard.teacherId,guard.studentId,Number(guard.date.slice(8))])).rows[0];
+                if(mark) return false;
+            }
             if (Date.now() - new Date(row.created_at).getTime() > 15 * 60000 && !row.payload._automation) return false;
             if (row.target_kind === 'private') {
                 if (!row.role) return ['sendMessage','answerCallbackQuery'].includes(row.method) && !row.payload._automation;
@@ -29,12 +71,26 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             // Binding + settings are rechecked at delivery, not just when queued.
             const settings = (await store.settings(db)).data;
             if (!settings.groupNotificationsEnabled) return false;
-            const found = (await db.query(`SELECT chat_id FROM domwork_learning_groups WHERE chat_id=$1 AND NOT archived AND verified_at IS NOT NULL
-                UNION ALL SELECT chat_id FROM domwork_bot_groups WHERE chat_id=$1 AND active`, [row.target_id])).rows;
-            if (found.length !== 1 || !['sendMessage','sendPhoto','sendVideo','sendVoice'].includes(row.method)) return false;
+            const found = (await db.query(`SELECT id,chat_id,type,teacher_id FROM domwork_learning_groups WHERE chat_id=$1 AND NOT archived AND verified_at IS NOT NULL
+                UNION ALL SELECT id,chat_id,type,NULL FROM domwork_bot_groups WHERE chat_id=$1 AND active`, [row.target_id])).rows;
+            if (found.length !== 1 || (row.payload._binding && row.payload._binding!==found[0].id)
+                || !['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','unbanChatMember'].includes(row.method)) return false;
             // Live Telegram permission check; stale verification never grants rights.
             const member = await call('getChatMember', { chat_id: row.target_id, user_id: botId });
-            return member.status === 'administrator';
+            if(member.status!=='administrator') return false;
+            if(row.method==='unbanChatMember') {
+                const guard=row.payload._remove;
+                if(!settings.trialRemovalEnabled || !member.can_restrict_members || found[0].type!=='trial' || !guard
+                    || String(row.payload.user_id)!==guard.telegramId || row.payload.only_if_banned!==false) return false;
+                const lead=(await db.query("SELECT extra_data FROM leads WHERE id=$1 AND language='russian' AND status='sinov-darsida' AND deleted_at IS NULL",[guard.leadId])).rows[0];
+                const booking=lead?.extra_data?.trialRequest;
+                const joined=(await db.query('SELECT request_id,lead_id FROM domwork_bot_trial_members WHERE chat_id=$1 AND telegram_id=$2',[row.target_id,guard.telegramId])).rows[0];
+                if(booking?.id!==guard.requestId || booking.state!=='completed' || !booking.attended || booking.teacherId!==found[0].teacher_id
+                    || joined?.request_id!==guard.requestId || joined?.lead_id!==guard.leadId) return false;
+                const learner=await store.identity(db,guard.telegramId);
+                if(!learner || learner.kind!=='lead' || learner.id!==guard.leadId) return false;
+            }
+            return true;
         });
     }
     async function deliverOne() {
@@ -63,7 +119,9 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         if (busy || stopped || !redis?.ready) return;
         busy = true;
         try {
-            for (let n = 0; n < 5; n++) if (!await queue.processOne(pool, handler)) break;
+            for (let n = 0; n < 5; n++) if (!await queue.processOne(pool, async(db,update)=>{db.domworkRedis=redis;return handler(db,update);})) break;
+            for (let n = 0; n < 5; n++) if (!await queue.transaction(pool,events.processOne)) break;
+            if(Date.now()-lastSchedule>30000) { await queue.transaction(pool,db=>scheduler.run(db)); lastSchedule=Date.now(); }
             for (let n = 0; n < 5; n++) if (!await deliverOne()) break;
         } catch (error) { console.error('[domwork-bot] worker failed:', error.code || error.name); }
         finally { busy = false; }
@@ -73,7 +131,10 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             if (!config.enabled) return;
             try {
                 await store.initSchema(pool);
-                redis = createRedis(config.redisUrl, redisFactory); await redis.connect();
+                redis = createRedis(config.redisUrl, redisFactory);
+                let startupTimeout;
+                try { await Promise.race([redis.connect(),new Promise((_,reject)=>{startupTimeout=setTimeout(()=>reject(Error('Redis startup timeout')),15000);})]); }
+                finally { clearTimeout(startupTimeout); }
                 const factory = telegramFactory || (token => new (require('telegraf').Telegram)(token, { webhookReply: false }));
                 telegram = factory(config.token);
                 const me = await call('getMe', {});

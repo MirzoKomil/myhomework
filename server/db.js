@@ -1260,6 +1260,7 @@ async function saveStudents(client, students, removedStudentIds = []) {
              s.lessonTime || '', s.lessonDuration || 15,
              JSON.stringify(extra)]
         );
+        await require('./services/domworkBot/events').assignments(client,existingById.get(s.id),s);
     }
 }
 
@@ -1561,6 +1562,7 @@ async function upsertLead(lead, language, actor = {}) {
         saved = await upsertLeadWithClient(client, lead, language, options);
         platformAccess = await provisionLeadStudent(client, saved);
         await inflow.syncLead(client, saved, platformAccess, actor, false, options.priorLead);
+        await require('./services/domworkBot/events').afterLead(client,options.priorLead,saved);
     });
     return { lead: saved, platformAccess };
 }
@@ -3863,6 +3865,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         if (selectedType === 'assistant') {
             result = await teacherDuties.recordAssistantAttendance(client, { actor, teacherId: safeTeacherId,
                 studentId: safeStudentId, date, present });
+            await require('./services/domworkBot/events').attendance(client,{studentId:safeStudentId,date,duty:'assistant',teacherId:safeTeacherId,present});
             return;
         }
         const tableName = 'main_attendance';
@@ -3931,6 +3934,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
             teacherId: safeTeacherId, studentId: safeStudentId, date: String(date), day,
             present: present === null ? null : Boolean(present), grade: savedGrade
         };
+        await require('./services/domworkBot/events').attendance(client,{studentId:safeStudentId,date,duty:'main',teacherId:safeTeacherId,present});
     });
     return result;
 }
@@ -4455,6 +4459,7 @@ module.exports = {
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, saveTeacherTrialLesson,
+    botTrialAction: (client,actor,leadId,payload) => trialLessons.updateTrialLesson(client,actor,leadId,payload,rowToLead,appendLeadAudit),
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     getHrEmployeesData, getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, findDemoStudentByEmployeeId, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
     getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,

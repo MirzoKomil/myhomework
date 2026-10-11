@@ -10219,6 +10219,7 @@ let _teacherTrialLoadGeneration = 0;
 let _teacherTrialSaving = false;
 
 function teacherTrialStatus(request) {
+    if (request?.state === 'rejected') return 'Ustoz rad etdi — qayta tashkil qilish kerak';
     if (request?.state === 'completed') return request.attended ? 'Qatnashdi' : 'Qatnashmadi';
     if (request?.state === 'accepted') return 'Tasdiqlandi — natija kutilmoqda';
     return 'Tasdiqlash kutilmoqda';

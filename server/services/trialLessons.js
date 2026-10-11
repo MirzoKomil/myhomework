@@ -34,6 +34,7 @@ async function updateTrialLesson(client, actor, leadId, payload, rowToLead, appe
     const next = workflow.transition(current, payload, actor, now);
     if (!next) return summary(before, teacher);
     const text = payload.action === 'accept' ? 'Sinov darsi so‘rovi ustoz tomonidan tasdiqlandi.'
+        : payload.action === 'reject' ? `Sinov darsi so‘rovi ustoz tomonidan rad etildi.\nSabab: ${next.reasonLabel}`
         : `Sinov darsi: ${next.attended ? 'qatnashdi' : 'qatnashmadi'}.${next.reasonLabel ? '\nSabab: ' + next.reasonLabel : ''}`;
     const comments = [...(before.comments || []), { id: randomUUID(), type: 'trial-teacher', text,
         author: teacher.name, authorId: actor.id, authorRole: 'teacher', createdAt: now,
@@ -43,6 +44,8 @@ async function updateTrialLesson(client, actor, leadId, payload, rowToLead, appe
         WHERE id = $1 RETURNING *`, [leadId, JSON.stringify({ ...extra, trialRequest: next }), JSON.stringify(comments)]);
     const after = rowToLead(updated.rows[0]);
     await appendAudit(client, leadId, 'trial-' + payload.action, { ...actor, name: teacher.name }, { before, after });
+    if (after.language === 'russian') await require('./domworkBot/events').capture(client,'trial-result',leadId,
+        {requestId:next.id},`trial-result:${leadId}:${next.id}:${next.state}`);
     return summary(after, teacher);
 }
 module.exports = { teacherForActor, summary, listTrialLessons, updateTrialLesson };

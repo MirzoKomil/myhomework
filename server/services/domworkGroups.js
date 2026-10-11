@@ -87,6 +87,9 @@ async function save(pool, actor, id, body) {
         const data = input(body);
         // Serializes edits and default changes across ALL groups for the same teacher.
         await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-learning-groups'))");
+        if(data.chatId && (await db.query("SELECT to_regclass('domwork_bot_groups') AS relation")).rows[0]?.relation
+            && (await db.query('SELECT id FROM domwork_bot_groups WHERE chat_id=$1',[data.chatId])).rows.length)
+            throw fail(409,'Bu chat_id botning bo‘lim guruhiga biriktirilgan');
         const before = id ? (await db.query('SELECT * FROM domwork_learning_groups WHERE id=$1 FOR UPDATE', [id])).rows[0] : null;
         if (id && !before) throw fail(404, 'Guruh topilmadi');
         if (id && before.revision !== revision(body.revision)) throw fail(409, 'Guruh boshqa oynada o‘zgartirilgan. Ro‘yxatni yangilang');

@@ -96,3 +96,48 @@ test('Redis rate control and token release use atomic scripts without exposing U
     const token=await redis.lease('worker'); await redis.release('worker',token); await redis.close();
     assert.ok(calls.at(-1).script.includes('ARGV[1]')); assert.equal(calls.at(-1).args.arguments[0],token);
 });
+test('broadcast content accepts only Telegram media IDs, not remote URLs or paths',()=>{
+    const c=require('../server/services/domworkBot/controls');
+    assert.deepEqual(c.contentInput({text:'Hello'}),{method:'sendMessage',payload:{text:'Hello'}});
+    for(const fileId of ['https://example.com/a','C:/secret/file',''])assert.throws(()=>c.contentInput({method:'sendPhoto',fileId}));
+    assert.equal(c.contentInput({method:'sendVoice',fileId:'abc_1234567890',text:'caption'}).payload.voice,'abc_1234567890');
+    assert.throws(()=>c.contentInput({text:'x'.repeat(3501)}));
+});
+test('admin settings reject unknown URLs, invalid booleans and promotions without real content',()=>{
+    const c=require('../server/services/domworkBot/controls');
+    assert.throws(()=>c.settingsInput({promotionsEnabled:true},{}));
+    assert.throws(()=>c.settingsInput({eventsEnabled:'true'},{}));
+    assert.throws(()=>c.settingsInput({officialChannel:'https://example.com/'},{}));
+    assert.equal(c.settingsInput({promotionText:'Actual text',promotionsEnabled:true},{}).promotionIntervalMinutes,1440);
+    assert.throws(()=>c.settingsInput({promotionTime:'25:00'},{}));
+});
+test('operational bindings require explicit department, safe chat ID and active boolean',()=>{
+    const c=require('../server/services/domworkBot/controls');
+    for(const body of [{type:'trial',chatId:'-10012345',active:true},{type:'sales',chatId:'12345',active:true},{type:'sales',chatId:'-10012345',active:'true'}])assert.throws(()=>c.bindingInput(body));
+    assert.equal(c.bindingInput({type:'sales',chatId:'-10012345',active:true}).type,'sales');
+});
+test('scheduler uses Tashkent, real weekly patterns and narrow notification windows',()=>{
+    const s=require('../server/services/domworkBot/scheduler'), now=new Date('2026-10-12T04:30:00Z');
+    assert.deepEqual(s.localClock(now),{date:'2026-10-12',hour:9,minute:30,day:1});
+    const student={lesson_day_of_week:3,lesson_time:'10:00',extra_data:{}};
+    assert.equal(s.scheduledToday(student,now).toISOString(),'2026-10-12T05:00:00.000Z');
+    assert.equal(s.scheduledToday({...student,lesson_day_of_week:2},now),null);
+    assert.equal(s.scheduledToday({...student,lesson_time:'99:00'},now),null);
+    assert.equal(s.scheduledToday({...student,extra_data:{startDate:'2026-11-01'}},now),null);
+    assert.equal(s.checkpoint('2026-10-12T05:00:00Z',30,now),true);
+    assert.equal(s.checkpoint('2026-10-12T05:00:00Z',5,now),false);
+});
+test('individual sales plan carries only prior months, never a future plan',()=>{
+    const {personalPlan}=require('../server/services/domworkBot/staff');
+    const raw={m:{'2026-09':{totalAmount:100},'2026-11':{totalAmount:300}}};
+    assert.equal(personalPlan(raw,'m','2026-10').totalAmount,100);
+    assert.equal(personalPlan(raw,'m','2026-08'),null);
+    assert.equal(personalPlan({m:{totalAmount:500}},'m','2026-10').totalAmount,500);
+});
+test('trial rejection requires a reason and cannot change an accepted or completed request',()=>{
+    const w=require('../js/trialWorkflow'), current={id:'r',state:'pending'};
+    assert.throws(()=>w.transition(current,{requestId:'r',action:'reject'},{id:'t'},'now'));
+    const rejected=w.transition(current,{requestId:'r',action:'reject',reasonId:'teacher-rescheduled'},{id:'t'},'now');
+    assert.equal(rejected.state,'rejected');assert.equal(rejected.attended,false);
+    assert.throws(()=>w.transition({...current,state:'accepted'},{requestId:'r',action:'reject',reasonId:'teacher-rescheduled'},{id:'t'},'now'));
+});

@@ -66,11 +66,12 @@ CREATE TABLE IF NOT EXISTS domwork_bot_penalties (
  created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 `;
-async function initSchema(db) { await db.query(SCHEMA); }
+async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); }
 const USER_SQL = `SELECT u.id,u.name,u.email,u.role,u.phone,he.id AS employee_id,he.role AS employee_role,
  he.status AS employee_status,he.lang,he.dual_role,COALESCE(link.manager_id,he.id) AS manager_id
- FROM users u LEFT JOIN hr_employees he ON LOWER(TRIM(he.login))=LOWER(TRIM(u.email))
- LEFT JOIN user_sales_manager_links link ON link.user_id=u.id`;
+ FROM users u LEFT JOIN user_sales_manager_links link ON link.user_id=u.id
+ LEFT JOIN hr_employees he ON (link.manager_id IS NOT NULL AND u.role IN ('sales_manager','sales','sotuv-menejeri','sotuvchi') AND he.id=link.manager_id)
+ OR ((link.manager_id IS NULL OR u.role NOT IN ('sales_manager','sales','sotuv-menejeri','sotuvchi')) AND LOWER(TRIM(he.login))=LOWER(TRIM(u.email)))`;
 function staff(row, number) {
     const role = policy.staffRole(row);
     const language = row.employee_role === 'rus-oqituvchi' ? 'russian' : row.employee_role === 'ingliz-oqituvchi' ? 'english' : row.lang;
@@ -130,7 +131,7 @@ async function identity(db, telegramId) {
     if (link.account_kind === 'user') {
         const rows = (await db.query(USER_SQL + ' WHERE u.id=$1', [link.account_id])).rows;
         if (rows.length !== 1) return null;
-        const matches = (await db.query(`SELECT u.id FROM users u LEFT JOIN hr_employees he ON LOWER(TRIM(he.login))=LOWER(TRIM(u.email))
+        const matches = (await db.query(USER_SQL + `
             WHERE u.id=$1 AND (domwork_phone(u.phone)=$2 OR domwork_phone(u.email)=$2 OR domwork_phone(he.phone)=$2)`, [link.account_id, link.phone])).rows;
         if (!matches.length) return null;
         current = staff(rows[0], link.phone);
@@ -154,9 +155,14 @@ async function identity(db, telegramId) {
     return current ? { ...current, telegramId: String(telegramId), paused: link.paused } : null;
 }
 async function session(db, telegramId) {
-    return (await db.query('SELECT state FROM domwork_bot_sessions WHERE telegram_id=$1 AND expires_at>NOW()', [String(telegramId)])).rows[0]?.state || null;
+    // PostgreSQL remains authoritative inside transactions. Redis FSM is a
+    // post-commit mirror: a stale cache never grants a role or changes an action.
+    const value=(await db.query('SELECT state FROM domwork_bot_sessions WHERE telegram_id=$1 AND expires_at>NOW()', [String(telegramId)])).rows[0]?.state || null;
+    if(db.domworkRedis && db.domworkAfterCommit) db.domworkAfterCommit(()=>db.domworkRedis.session(String(telegramId),value));
+    return value;
 }
 async function setSession(db, telegramId, state) {
+    if(db.domworkRedis && db.domworkAfterCommit) db.domworkAfterCommit(()=>db.domworkRedis.session(String(telegramId),state));
     if (!state) return db.query('DELETE FROM domwork_bot_sessions WHERE telegram_id=$1', [String(telegramId)]);
     await db.query(`INSERT INTO domwork_bot_sessions VALUES($1,$2,NOW()+INTERVAL '30 minutes')
         ON CONFLICT(telegram_id) DO UPDATE SET state=EXCLUDED.state,expires_at=EXCLUDED.expires_at`, [String(telegramId), JSON.stringify(state)]);

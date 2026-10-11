@@ -155,6 +155,7 @@ test('lead save and account creation share one atomic transaction; failed provis
   let committed = 0;
   const { upsertLead } = loadFunctions('server/db.js', ['upsertLead'], {
     provisionLeadStudent,
+    require: name => { if(name==='./services/domworkBot/events') return require('../server/services/domworkBot/events'); throw Error(name); },
     inflow: { syncLead: async () => {} },
     upsertLeadWithClient: async (_client, lead, language) => (savedLead = { ...lead, language }),
     tx: async fn => {
@@ -178,6 +179,7 @@ test('stale CRM snapshots keep newly provisioned accounts; explicit deletion wor
   const s = fromRow(db.rows[0]);
   const { saveStudents } = loadFunctions('server/db.js', ['saveStudents'], {
     STUDENT_PROVISION_LOCK, rowToStudent: fromRow, isUsableList: Array.isArray, teacherDuties: require('../server/services/teacherDuties'),
+    require: name => { if(name==='./services/domworkBot/events') return require('../server/services/domworkBot/events'); throw Error(name); },
     guardBulkDelete: async () => {}, BCRYPT_HASH_RE: /^\$2[aby]\$\d{2}\$/, bcrypt
   });
   await saveStudents(db, []);

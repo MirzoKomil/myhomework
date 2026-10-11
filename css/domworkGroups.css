@@ -30,6 +30,11 @@
 .domwork-groups .btn-secondary-sm:hover { background:var(--purple-light); color:var(--purple); }
 .domwork-groups input[type=checkbox] { min-height:20px; }
 .domwork-groups [data-dg-message] { min-height:24px; margin:12px 0; overflow-wrap:anywhere; }
+.domwork-groups [data-db-message] { min-height:24px; margin:12px 0; overflow-wrap:anywhere; }
+.domwork-groups details { margin:16px 0; }
+.domwork-groups summary { cursor:pointer; padding:12px 0; font-weight:600; }
+.domwork-groups textarea { resize:vertical; margin-bottom:16px; }
+.domwork-groups fieldset { border:1px solid var(--border); border-radius:12px; margin:16px 0; min-width:0; }
 .domwork-groups .dg-error { color:var(--danger); }
 .domwork-groups :focus-visible { outline:2px solid var(--purple); outline-offset:3px; }
 .domwork-groups button:disabled { opacity:.6; cursor:wait; }

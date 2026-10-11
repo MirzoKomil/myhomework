@@ -12,7 +12,7 @@
     }
     function busy(value) {
         state.busy = value;
-        root()?.querySelectorAll('button,input,select').forEach(el => { el.disabled = value; });
+        root()?.querySelectorAll('button,input,select').forEach(el => { if(!el.closest('[data-dg-bot-root]'))el.disabled = value; });
     }
     function cards() {
         const el = root(); if (!el) return;
@@ -28,6 +28,7 @@
             <a href="${esc(g.inviteLink)}" target="_blank" rel="noopener noreferrer">${esc(g.inviteLink)}</a>
             <p class="dg-state">${g.archived ? 'Arxivda' : g.isDefault ? 'Standart guruh' : 'Qo‘shimcha guruh'} · ${g.botVerified ? 'Bot bog‘lanishi tekshirilgan' : 'Bot bog‘lanishi hali tekshirilmagan'}</p>
             <div class="dg-actions">${!g.archived ? `<button type="button" class="btn-secondary-sm" data-dg-edit="${esc(g.id)}">Tahrirlash</button>` : ''}
+            ${!g.archived && g.chatId ? `<button type="button" class="btn-secondary-sm" data-dg-verify="${esc(g.id)}">Bot ruxsatlarini tekshirish</button>` : ''}
             <button type="button" class="btn-secondary-sm" data-dg-archive="${esc(g.id)}">${g.archived ? 'Arxivdan qaytarish' : 'Arxivlash'}</button></div>
         </article>`).join('') : '<p class="dg-empty">Tanlangan filtr bo‘yicha guruhlar yo‘q.</p>';
         el.querySelector('[data-dg-count]').textContent = `${rows.length} ta guruh`;
@@ -69,7 +70,7 @@
             <header class="dg-header"><div><h3>Domwork — Telegram guruhlari</h3><p>Rus tili · sinov va asosiy dars guruhlari</p></div>
                 <button type="button" class="btn-primary" data-dg-add>+ Guruh qo‘shish</button></header>
             <p class="dg-note">Bir ustozga bir nechta guruh qo‘shish mumkin. Har bir dars turi uchun standart guruhni belgilang.
-                Havolani saqlash botni guruhga avtomatik bog‘lamaydi: chat_id va bot ruxsatlari alohida tekshiriladi. Bu oynadan xabar yuborilmaydi.</p>
+                Havolani saqlash botni guruhga avtomatik bog‘lamaydi: chat_id va bot ruxsatlari alohida tekshiriladi. Xabar tarqatish pastdagi Bot boshqaruvida alohida tasdiqlanadi.</p>
             <div role="status" aria-live="polite" data-dg-message></div>
             <section class="dg-form-wrap" data-dg-form hidden><h4 data-dg-form-title>Yangi guruh</h4>
                 <form autocomplete="off"><div class="dg-fields">
@@ -88,7 +89,9 @@
                 <label>Dars turi<select class="form-control" data-dg-type><option value="">Barcha turlar</option><option value="trial">Sinov darsi</option><option value="classroom">Asosiy dars</option></select></label>
                 <label>Holat<select class="form-control" data-dg-status><option value="active">Faol</option><option value="archived">Arxivda</option><option value="all">Barchasi</option></select></label>
                 <button type="button" class="btn-secondary-sm" data-dg-refresh>Yangilash</button></div>
-            <p data-dg-count></p><div class="dg-list" data-dg-list></div></div>`;
+            <p data-dg-count></p><div class="dg-list" data-dg-list></div>
+            <details><summary>Bot boshqaruvi — bo‘lim guruhlari, xabarlar va sozlamalar</summary><button type="button" class="btn-primary" data-dg-bot>Bot boshqaruvini ochish</button><div data-dg-bot-root></div></details></div>`;
+        el.querySelector('[data-dg-bot]').onclick=()=>window.domworkBotUI?.render(el.querySelector('[data-dg-bot-root]'));
         el.querySelector('[data-dg-add]').onclick = () => edit();
         el.querySelector('[data-dg-cancel]').onclick = () => { el.querySelector('[data-dg-form]').hidden = true; state.editing = null; };
         el.querySelector('[data-dg-search]').oninput = cards;
@@ -115,8 +118,14 @@
         };
         el.querySelector('[data-dg-list]').onclick = async event => {
             if (state.busy) return;
-            const button = event.target.closest('[data-dg-edit],[data-dg-archive]'); if (!button) return;
-            const group = state.groups.find(g => g.id === (button.dataset.dgEdit || button.dataset.dgArchive)); if (!group) return;
+            const button = event.target.closest('[data-dg-edit],[data-dg-archive],[data-dg-verify]'); if (!button) return;
+            const group = state.groups.find(g => g.id === (button.dataset.dgEdit || button.dataset.dgArchive || button.dataset.dgVerify)); if (!group) return;
+            if(button.dataset.dgVerify) {
+                busy(true);
+                try {await apiFetch('/api/domwork/bot/learning-groups/'+encodeURIComponent(group.id)+'/verify',{method:'POST',body:'{}'});
+                    if(await load())message('Botning guruh huquqlari tekshirildi.');
+                } catch(error){message(error.message,true);} finally {busy(false);} return;
+            }
             if (button.dataset.dgEdit) { edit(group); return; }
             if (!confirm(group.archived ? 'Guruhni arxivdan qaytarasizmi? Standart guruh alohida belgilanadi.' : 'Guruhni arxivlaysizmi? Guruh, o‘quvchilar va yozishmalar o‘chirilmaydi.')) return;
             busy(true);

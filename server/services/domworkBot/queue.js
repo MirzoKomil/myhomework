@@ -16,9 +16,14 @@ async function receive(db, update) {
 }
 async function transaction(pool, fn) {
     const db = await pool.connect();
-    try { await db.query('BEGIN'); const result = await fn(db); await db.query('COMMIT'); return result; }
+    const postCommit=[];
+    db.domworkCommitTasks=postCommit;
+    db.domworkAfterCommit=fn=>postCommit.push(fn);
+    try { await db.query('BEGIN'); const result = await fn(db); await db.query('COMMIT');
+        for(const work of postCommit) { try {await work();} catch { /* Cache failure cannot undo a committed CRM transaction. */ } }
+        return result; }
     catch (error) { await db.query('ROLLBACK'); throw error; }
-    finally { db.release(); }
+    finally { delete db.domworkAfterCommit; delete db.domworkRedis; delete db.domworkCommitTasks; db.release(); }
 }
 // A single session advisory lock serializes all inbound updates across replicas.
 // The claim, CRM changes, session state and response outbox commit together.
@@ -31,11 +36,13 @@ async function processOne(pool, handler) {
         if (!row) return false;
         // Roll back all handler writes on retry, including callbacks and replies.
         await db.query('SAVEPOINT bot_handler');
+        const cacheTasks=db.domworkCommitTasks.length;
         try {
             await handler(db, row.payload);
             await db.query("UPDATE domwork_bot_updates SET state='done',payload='{}',attempts=attempts+1 WHERE update_id=$1", [row.update_id]);
         } catch (error) {
             await db.query('ROLLBACK TO SAVEPOINT bot_handler');
+            db.domworkCommitTasks.splice(cacheTasks);
             const failed = row.attempts >= 4;
             await db.query(`UPDATE domwork_bot_updates SET attempts=attempts+1,state=$2,
                 next_attempt=NOW()+INTERVAL '30 seconds',payload=CASE WHEN $2='failed' THEN '{}'::jsonb ELSE payload END

@@ -22,22 +22,39 @@ and HR bots use their own credentials and are not changed.
 - Observed Telegram groups do not bind themselves by title. Existing teacher group
   management supports multiple trial/classroom groups and explicit defaults.
 - Admin-only status, webhook setup and learning-group bot-permission verification APIs.
+- Teacher trial accept/reject/result inline callbacks use the existing CRM transaction,
+  exact booking and current assigned teacher; manager and teacher notes are preserved.
+- Responsive CRM bot controls: operational bindings, live permission verification,
+  automation/material settings, broadcast preview/confirmation and leave review.
+- Text/photo/video/voice broadcasts from Telegram, text broadcasts from CRM, future
+  scheduling, frozen audience, owner-bound confirmation, cancellation and delivery status.
+- Transactional source events for new Russian receipts, assignments, trial requests/results
+  and attendance; historical imports do not generate sales celebrations.
+- Student/trial reminders, missing primary/assistant-attendance reminders, daily trial promotion,
+  20:00 calendar-day reports and 21:00 audit-based rolling 24-hour ROP comparison.
+  Unknown historical receipt times are excluded from the rolling comparison, not guessed.
+- Group digests, configurable family/methodical posts and Sunday platform reminders.
+- Trial removal is opt-in and requires live restriction permission, exact completed booking
+  and a proven membership update for the linked learner; it does not permanently ban them.
+- Redis throttling and post-commit FSM mirror; PostgreSQL remains authoritative. Failed
+  transactions/savepoints never populate the cache; cached state never grants permissions.
+- Individual sales plans and bonus history use existing CRM data. Marketing distinguishes
+  common CRM advertising spend from Russian spend; unscoped spend is not invented Russian CPL.
+- Pending notifications recheck account/role, booking, assignment, attendance correction,
+  lesson time and relevant automation switch before delivery.
 
 ## Not complete / not activated
 
 These are required before claiming Task 3 is complete:
 
-- Trial accept/reject/result inline callbacks synchronized with CRM and Mayoq.
-- Operational group binding UI for sales, marketing, teachers, family and Mayoq.
-- Broadcast editor, audience preview/confirmation, media and scheduled sending.
-- Admin leave approval/rejection and employee notification.
-- Transactional CRM event hooks: payment, assignment, trial and attendance.
-- Schedule/attendance reminders, once-daily trial promotion, 20:00/21:00 reports,
-  department digests and safely gated trial-group removal.
-- Exact marketing budget/CPL, individual sales plan and bonus-history presentation.
-- Redis FSM/cache layer (current Redis usage is throttling; PostgreSQL stores sessions).
-- End-to-end live Redis/Telegram checks, group verification and Russian role-account tests.
-- Production deployment and deliberate webhook activation.
+- Live Redis/Telegram checks, webhook activation and explicit verification/binding of
+  the user's ten groups. Invite hashes alone do not reveal chat IDs.
+- Milestone congratulations, employee onboarding/release notifications, daily/weekly/monthly
+  awards and full academic admin digest.
+- Accurate assistant rating attribution/history and free-slot presentation; existing
+  assistant ratings lack historical employee ownership, which must not be guessed.
+- Expanded weekly/monthly marketing conversion views and Russian-scoped advertising spend.
+- Acceptance verification of the enabled bot in production and deliberate webhook activation.
 - Face ID adapter and integration require the user's later service documentation.
 - Course/platform/results media and official channel require actual admin content.
 
@@ -62,6 +79,13 @@ updates are never dropped. An existing different webhook needs explicit replacem
 Automation defaults off. Adding a group/link/chat ID does not start broadcasting.
 Learning-group verification uses `POST /api/domwork/bot/learning-groups/:id/verify`;
 trial groups require bot admin and restriction permission. Delivery rechecks permissions.
+CRM path: Settings → Telegram groups → Bot controls. Operational groups are explicitly
+selected by department, learning groups by teacher and trial/classroom type. A single
+chat ID cannot be both. Existing group history is retained when archived.
+
+At the last configuration check, the myhomework service had no DOMWORK_BOT variables;
+the browser reviewer blocked the New Variable action even after explicit user approval.
+No unrelated secret was revealed and no alternate path was used to bypass that block.
 
 ## Local verification
 
@@ -71,6 +95,11 @@ Do not start/import `server/db.js` or the full server against production for tes
 node --test scripts/domwork-bot.test.cjs scripts/domwork-groups.test.cjs
 node scripts/run-payroll-postgres.cjs scripts/domwork-bot-postgres.test.cjs
 ```
+
+The verification runs passed 275 unit tests and 88 distinct PostgreSQL checks,
+including rolling report SQL and main/assistant reminder cancellation. The mobile synthetic UI at 390px had no horizontal
+overflow and 44px action buttons. All eight roles have real PostgreSQL authentication
+fixtures; this is not a claim of complete live role-by-role acceptance testing.
 
 The database runner accepts only the listed fixture tests, creates disposable loopback
 PostgreSQL databases and always stops the test cluster. Redis and Telegram are mocked

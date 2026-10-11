@@ -23,6 +23,15 @@ app.get('/', (_req, res) => {
         async function apiFetch(url,options={}){
           fixtureCalls.push({url,...options});await new Promise(resolve=>setTimeout(resolve,50));
           if(fixtureFail)throw Error('Test: server bilan aloqa yo‘q');
+          if(url.includes('/api/domwork/bot')) {
+            if(url.endsWith('/settings'))return {data:{eventsEnabled:true,remindersEnabled:true,reportsEnabled:true},revision:1};
+            if(url.endsWith('/bindings'))return {groups:[]};
+            if(url.endsWith('/observed-chats'))return {chats:[{chat_id:'-100123456',title:'Mayoq Test'}]};
+            if(url.endsWith('/status'))return {state:'disabled',redisReady:false};
+            if(url.endsWith('/leave-requests'))return {requests:[{id:'leave1',name:'Ustoz Test',reason:'Sinov sabab',start_date:'2026-10-12',end_date:'2026-10-13',state:'pending'}]};
+            if(url.endsWith('/delivery-status'))return {counts:[{state:'sent',count:5}],failures:[]};
+            return {ok:true};
+          }
           if(!options.body)return structuredClone(fixture);
           const data=JSON.parse(options.body),id=url.split('/').pop();
           if(url.endsWith('/archive')){const group=fixture.groups.find(g=>g.id===url.split('/').at(-2));group.archived=data.archived;group.isDefault=false;group.revision++;return{group};}
@@ -33,6 +42,6 @@ app.get('/', (_req, res) => {
           if(group.isDefault)fixture.groups.forEach(g=>{if(g.id!==group.id&&g.type===group.type&&g.teacherId===group.teacherId)g.isDefault=false;});
           return{group};
         }
-        </script><script src="/js/domworkGroupsUI.js"></script><script>domworkGroupsUI.render();</script></body></html>`);
+        </script><script src="/js/domworkBotUI.js"></script><script src="/js/domworkGroupsUI.js"></script><script>domworkGroupsUI.render();</script></body></html>`);
 });
 app.listen(8788, '127.0.0.1', () => process.stdout.write('Isolated Domwork groups QA: http://127.0.0.1:8788\n'));

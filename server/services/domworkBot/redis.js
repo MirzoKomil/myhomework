@@ -9,6 +9,15 @@ function createRedis(url, factory) {
         async connect() { await client.connect(); },
         get ready() { return client.isReady; },
         async close() { if (client.isOpen) await client.destroy(); },
+        async session(sender,state) {
+            const key='domwork:fsm:'+sender;
+            if(state) await client.set(key,JSON.stringify(state),{EX:1800});
+            else await client.del(key);
+        },
+        async readSession(sender) {
+            const raw=await client.get('domwork:fsm:'+sender);
+            return raw?JSON.parse(raw):null;
+        },
         async allow(sender) {
             const count = await client.eval(`local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],60) end; return n`,
                 { keys: ['domwork:request:' + sender], arguments: [] });

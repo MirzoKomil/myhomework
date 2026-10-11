@@ -6,7 +6,7 @@ const store = require('../server/services/domworkBot/store');
 const groups = require('../server/services/domworkGroups');
 const queue = require('../server/services/domworkBot/queue');
 const { createHandler } = require('../server/services/domworkBot/handlers');
-const { createRuntime } = require('../server/services/domworkBot/runtime');
+    const { createRuntime } = require('../server/services/domworkBot/runtime');
 const createRouter = require('../server/routes/domworkBot');
 const url = process.env.PAYROLL_TEST_DATABASE_URL;
 if (url) {
@@ -18,7 +18,10 @@ test('Domwork bot on disposable PostgreSQL (no real Telegram or Redis)', {skip: 
     const contact=(id,phone)=>({from:{id},chat:{id,type:'private'},contact:{user_id:id,phone_number:phone}});
     const msg=(id,text,extra={})=>({from:{id},chat:{id,type:'private'},text,...extra});
     const calls=[], reads=[];
-    const crm={async getDemoStudentGrades(id){reads.push(id);return {grades:[{date:'2026-10-11',score:90}]};},async getStudentContractPdf(id){reads.push(id);return {buffer:Buffer.from('fixture'),filename:'fixture.pdf'};}};
+    const crm={async getDemoStudentGrades(id){reads.push(id);return {grades:[{date:'2026-10-11',score:90}]};},async getStudentContractPdf(id){reads.push(id);return {buffer:Buffer.from('fixture'),filename:'fixture.pdf'};},
+        botTrialAction:(db,actor,id,payload)=>require('../server/services/trialLessons').updateTrialLesson(db,actor,id,payload,
+            r=>({...r.extra_data,id:r.id,name:r.name,status:r.status,language:r.language,comments:r.comments || []}),
+            (db,id,action,actor,snapshot)=>store.audit(db,actor.id,action,id,snapshot))};
     const handler=createHandler({crm});
     let runtime;
     try {
@@ -118,5 +121,168 @@ test('Domwork bot on disposable PostgreSQL (no real Telegram or Redis)', {skip: 
             } finally {await new Promise(resolve=>server.close(resolve));}
         });
         await t.test('all old student data remain unchanged',async()=>{assert.deepEqual((await pool.query('SELECT * FROM students ORDER BY id')).rows,studentsBefore);});
+        await pool.query(`ALTER TABLE leads ADD COLUMN extra_data JSONB NOT NULL DEFAULT '{}'; ALTER TABLE leads ADD COLUMN comments JSONB NOT NULL DEFAULT '[]';
+            ALTER TABLE leads ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(); ALTER TABLE leads ADD COLUMN manager_id TEXT;
+            UPDATE leads SET extra_data='{"paymentOnboarding":{"teacherId":"he"},"trialLessonAt":"2026-10-12T10:00:00+05:00","trialRequest":{"id":"r1","teacherId":"he","scheduledAt":"2026-10-12T10:00:00+05:00","daysCount":1,"state":"pending"},"custom":"keep"}',comments='[{"text":"Manager note"}]' WHERE id='lead';`);
+        const controls=require('../server/services/domworkBot/controls');
+        const callbackUpdate=(updateId,user,data,chat={id:user,type:'private'})=>({update_id:updateId,callback_query:{id:'cb'+updateId,from:{id:user},data,message:{chat,message_id:1}}});
+        await t.test('admin settings require current role and exact revision, audit changes atomically',async()=>{
+            const current=await store.settings(pool);
+            await assert.rejects(queue.transaction(pool,db=>controls.saveSettings(db,{id:'t'},{revision:current.revision,eventsEnabled:true})),e=>e.status===403);
+            await queue.transaction(pool,db=>controls.saveSettings(db,{id:'a'},{revision:current.revision,eventsEnabled:true}));
+            await assert.rejects(queue.transaction(pool,db=>controls.saveSettings(db,{id:'a'},{revision:current.revision,eventsEnabled:false})),e=>e.status===409);
+            assert.equal((await store.settings(pool)).data.eventsEnabled,true);
+        });
+        await t.test('teacher callbacks use exact assignment/request, preserve comments/custom fields and duplicate acceptance is safe',async()=>{
+            const data=await store.callback(pool,{type:'trial',leadId:'lead',requestId:'r1',teacherId:'he',action:'accept'});
+            await queue.transaction(pool,db=>handler(db,callbackUpdate(10,102,data)));
+            assert.equal((await pool.query("SELECT extra_data FROM leads WHERE id='lead'")).rows[0].extra_data.trialRequest.state,'pending');
+            await queue.transaction(pool,db=>handler(db,callbackUpdate(11,101,data)));
+            await queue.transaction(pool,db=>handler(db,callbackUpdate(12,101,data)));
+            const row=(await pool.query("SELECT extra_data,comments FROM leads WHERE id='lead'")).rows[0];
+            assert.equal(row.extra_data.custom,'keep');assert.equal(row.extra_data.trialRequest.state,'accepted');assert.equal(row.comments.length,2);assert.equal(row.comments[0].text,'Manager note');
+        });
+        await t.test('stale trial callback and non-Mayoq group cannot mutate a lead',async()=>{
+            const stale=await store.callback(pool,{type:'trial',leadId:'lead',requestId:'old',teacherId:'he',action:'outcome',attended:true});
+            await queue.transaction(pool,db=>handler(db,callbackUpdate(13,101,stale)));
+            const good=await store.callback(pool,{type:'trial',leadId:'lead',requestId:'r1',teacherId:'he',action:'outcome',attended:true});
+            await queue.transaction(pool,db=>handler(db,callbackUpdate(14,101,good,{id:-10099999,type:'supergroup'})));
+            assert.equal((await pool.query("SELECT extra_data FROM leads WHERE id='lead'")).rows[0].extra_data.trialRequest.state,'accepted');
+            await queue.transaction(pool,db=>handler(db,callbackUpdate(15,101,good)));
+            assert.equal((await pool.query("SELECT extra_data FROM leads WHERE id='lead'")).rows[0].extra_data.trialRequest.attended,true);
+        });
+        await t.test('broadcast preview freezes verified audience; confirmation requires owner and hash; retries create one row per account',async()=>{
+            const preview=await queue.transaction(pool,db=>controls.draft(db,{id:'a'},{segment:'student',content:{text:'Safe fixture'}}));
+            assert.equal(preview.count,1);
+            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE payload->>'_broadcast'=$1",[preview.id])).rows[0].count,'0');
+            await assert.rejects(queue.transaction(pool,db=>controls.confirmBroadcast(db,{id:'t'},preview.id,preview.fingerprint)),e=>e.status===403);
+            await assert.rejects(queue.transaction(pool,db=>controls.confirmBroadcast(db,{id:'a'},preview.id,'forged')),e=>e.status===409);
+            await queue.transaction(pool,db=>controls.confirmBroadcast(db,{id:'a'},preview.id,preview.fingerprint));
+            await queue.transaction(pool,db=>controls.confirmBroadcast(db,{id:'a'},preview.id,preview.fingerprint));
+            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE payload->>'_broadcast'=$1",[preview.id])).rows[0].count,'1');
+            await queue.transaction(pool,db=>controls.confirmBroadcast(db,{id:'a'},preview.id,preview.fingerprint,true));
+            assert.equal((await pool.query('SELECT state FROM domwork_bot_broadcasts WHERE id=$1',[preview.id])).rows[0].state,'cancelled');
+        });
+        await t.test('paused identities and English/unpaid accounts do not enter broadcasts',async()=>{
+            await pool.query("UPDATE domwork_bot_links SET paused=true WHERE telegram_id='102'");
+            await assert.rejects(queue.transaction(pool,db=>controls.draft(db,{id:'a'},{segment:'student',content:{text:'Not queued'}})),e=>e.status===409);
+            await pool.query("UPDATE domwork_bot_links SET paused=false WHERE telegram_id='102'");
+        });
+        await t.test('leave review is admin-only, final decision immutable, author notified exactly once',async()=>{
+            await pool.query("INSERT INTO domwork_bot_leave_requests(id,employee_id,user_id,reason,start_date,end_date) VALUES('l1','he','t','Fixture','2026-10-12','2026-10-13')");
+            await assert.rejects(queue.transaction(pool,db=>controls.reviewLeave(db,{id:'t'},'l1','approved')),e=>e.status===403);
+            await queue.transaction(pool,db=>controls.reviewLeave(db,{id:'a'},'l1','approved'));
+            await queue.transaction(pool,db=>controls.reviewLeave(db,{id:'a'},'l1','approved'));
+            await assert.rejects(queue.transaction(pool,db=>controls.reviewLeave(db,{id:'a'},'l1','rejected')),e=>e.status===409);
+            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE unique_key='leave:l1:approved'")).rows[0].count,'1');
+        });
+        await t.test('operational bindings are explicit, verified and revision-safe',async()=>{
+            await queue.transaction(pool,db=>controls.saveBinding(db,{id:'a'},{type:'beacon',chatId:'-10022222',active:true,revision:0},{chatId:'-10022222',title:'Mayoq Fixture'}));
+            await assert.rejects(queue.transaction(pool,db=>controls.saveBinding(db,{id:'a'},{type:'beacon',chatId:'-10033333',active:true,revision:0},{chatId:'-10033333',title:'Other'})),e=>e.status===409);
+            assert.equal((await pool.query("SELECT chat_id FROM domwork_bot_groups WHERE type='beacon'")).rows[0].chat_id,'-10022222');
+        });
+        await t.test('scheduled jobs are idempotent across workers and roll back with their outbox',async()=>{
+            const scheduler=require('../server/services/domworkBot/scheduler');let executions=0;
+            for(let n=0;n<2;n++)await queue.transaction(pool,db=>scheduler.once(db,'fixture-job',async()=>{executions++;}));
+            assert.equal(executions,1);
+            await assert.rejects(queue.transaction(pool,db=>scheduler.once(db,'failed-job',async()=>{throw Error('fixture');})));
+            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_jobs WHERE key='failed-job'")).rows[0].count,'0');
+        });
+        await t.test('all eight roles authenticate from current CRM records; explicit sales identity link wins over login coincidence',async()=>{
+            for(const [id,userRole,hrRole,expected,phone] of [['rop','rop','rop','rop','998900000201'],['sales','sales_manager','sotuv-menejeri','sales','998900000202'],['marketing','targetolog','targetolog','marketing','998900000203'],['assistant','teacher','yordamchi','assistant','998900000204']]) {
+                await pool.query('INSERT INTO users VALUES($1,$1,$2,$3,$4)',[id,id+'-login',userRole,phone]);
+                await pool.query('INSERT INTO hr_employees(id,name,login,role,status,lang,phone) VALUES($1,$1,$2,$3,\'active\',\'russian\',$4)',['hr-'+id,id==='sales'?'different-login':id+'-login',hrRole,phone]);
+                if(id==='sales')await pool.query("INSERT INTO user_sales_manager_links VALUES('sales','hr-sales')");
+                const identity=await queue.transaction(pool,db=>store.linkContact(db,contact(Number(phone.slice(-3))+1000,phone)));
+                assert.equal(identity.role,expected);assert.equal(identity.employeeId,'hr-'+id);
+                assert.equal((await store.identity(pool,identity.telegramId)).role,expected);
+            }
+        });
+        await t.test('Redis FSM mirrors only committed session changes, never failed handlers or transactions',async()=>{
+            const mirrors=[];const fake={session:async(id,value)=>mirrors.push({id,value})};
+            await queue.transaction(pool,async db=>{db.domworkRedis=fake;await store.setSession(db,'100',{step:'committed'});assert.equal(mirrors.length,0);});
+            assert.equal(mirrors.length,1);assert.equal(mirrors[0].value.step,'committed');
+            await assert.rejects(queue.transaction(pool,async db=>{db.domworkRedis=fake;await store.setSession(db,'100',{step:'rollback'});throw Error('fixture');}));
+            await queue.receive(pool,{update_id:500,message:msg(100,'fixture')});
+            await queue.processOne(pool,async db=>{db.domworkRedis=fake;await store.setSession(db,'100',{step:'savepoint-rollback'});throw Error('fixture');});
+            assert.equal(mirrors.length,1);assert.equal((await store.session(pool,'100')).step,'committed');
+        });
+        await t.test('a chat cannot become both a learning and an operational group, in either order',async()=>{
+            const body={type:'trial',name:'Conflict fixture',teacherId:'he',inviteLink:'https://t.me/+fixture12345',chatId:'-10022222',isDefault:true};
+            await assert.rejects(groups.save(pool,{id:'a'},null,body),e=>e.status===409);
+            const learning=await groups.save(pool,{id:'a'},null,{...body,chatId:'-10077777'});
+            await assert.rejects(queue.transaction(pool,db=>controls.saveBinding(db,{id:'a'},{type:'sales',chatId:'-10077777',active:true,revision:0},{chatId:'-10077777',title:'Not sales'})),e=>e.status===409);
+            assert.equal((await pool.query('SELECT id FROM domwork_learning_groups WHERE id=$1',[learning.id])).rows.length,1);
+        });
+        await t.test('changed schedules cancel pending reminders instead of sending obsolete lesson times',async()=>{
+            await pool.query("ALTER TABLE students ADD COLUMN lesson_day_of_week INTEGER; ALTER TABLE students ADD COLUMN lesson_time TEXT; UPDATE students SET lesson_day_of_week=1,lesson_time='10:00' WHERE id='s'");
+            await pool.query("UPDATE domwork_bot_outbox SET state='cancelled',payload='{}' WHERE state='pending'");
+            await store.enqueue(pool,{key:'obsolete-schedule',targetId:'102',role:'student',account:{kind:'student',id:'s'},payload:{chat_id:'102',text:'Must not send',_automation:true,_schedule:{studentId:'s',at:'2026-10-12T06:00:00.000Z'}}});
+            const count=calls.filter(c=>c.method==='sendMessage').length;
+            await runtime.deliverOne();assert.equal(calls.filter(c=>c.method==='sendMessage').length,count);
+            assert.equal((await pool.query("SELECT state FROM domwork_bot_outbox WHERE unique_key='obsolete-schedule'")).rows[0].state,'cancelled');
+        });
+        await t.test('actual scheduler creates one reminder per checkpoint and ignores future-start students',async()=>{
+            const scheduler=require('../server/services/domworkBot/scheduler');
+            await pool.query("ALTER TABLE students ADD COLUMN assistant_teacher_id TEXT; ALTER TABLE students ADD COLUMN lesson_duration INTEGER; CREATE TABLE main_attendance(att_key TEXT,student_id TEXT,day INTEGER,present INTEGER)");
+            await pool.query("UPDATE domwork_bot_settings SET data=data || '{\"remindersEnabled\":true}'::jsonb");
+            const now=new Date('2026-10-12T04:30:00Z');
+            await queue.transaction(pool,db=>scheduler.run(db,now));
+            await queue.transaction(pool,db=>scheduler.run(db,now));
+            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE unique_key='reminder:s:2026-10-12T05:00:00.000Z:30'")).rows[0].count,'1');
+            await pool.query("UPDATE students SET extra_data=extra_data || '{\"startDate\":\"2026-12-01\"}'::jsonb WHERE id='s'");
+            await queue.transaction(pool,db=>scheduler.run(db,new Date('2026-10-14T04:30:00Z')));
+            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE unique_key LIKE 'reminder:s:2026-10-14%'")).rows[0].count,'0');
+            await pool.query("UPDATE students SET extra_data=extra_data-'startDate' WHERE id='s'");
+        });
+        await t.test('CRM events roll back with source changes; corrected attendance cancels stale absence notice',async()=>{
+            const events=require('../server/services/domworkBot/events'),policy=require('../server/services/domworkBot/policy');
+            const original=process.env.DOMWORK_BOT_ENABLED;process.env.DOMWORK_BOT_ENABLED='true';
+            try {
+                await assert.rejects(queue.transaction(pool,async db=>{await events.capture(db,'assignment','s',{},'rolled-back-event');throw Error('fixture');}));
+                assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_events WHERE event_key='rolled-back-event'")).rows[0].count,'0');
+                await pool.query("UPDATE domwork_bot_outbox SET state='cancelled',payload='{}' WHERE state='pending'");
+                const mark={studentId:'s',date:policy.today(),duty:'main',teacherId:'he',present:false};
+                await queue.transaction(pool,db=>events.attendance(db,mark));
+                await queue.transaction(pool,events.processOne);
+                const queued=(await pool.query("SELECT id FROM domwork_bot_outbox WHERE payload ? '_attendance' AND state='pending'")).rows[0];
+                assert.ok(queued);
+                await queue.transaction(pool,db=>events.attendance(db,{...mark,present:true}));
+                const count=calls.filter(c=>c.method==='sendMessage').length;await runtime.deliverOne();
+                assert.equal(calls.filter(c=>c.method==='sendMessage').length,count);
+                assert.equal((await pool.query('SELECT state FROM domwork_bot_outbox WHERE id=$1',[queued.id])).rows[0].state,'cancelled');
+            } finally {if(original===undefined)delete process.env.DOMWORK_BOT_ENABLED;else process.env.DOMWORK_BOT_ENABLED=original;}
+        });
+        await t.test('24-hour ROP report counts actual transitions and assignments, not current column totals',async()=>{
+            await pool.query(`ALTER TABLE leads ADD COLUMN created_at TIMESTAMPTZ DEFAULT '2026-10-01T10:00:00Z';
+                CREATE TABLE lead_audit(lead_id TEXT,actor_id TEXT,snapshot JSONB,created_at TIMESTAMPTZ);
+                CREATE TABLE payment_records(manager_id TEXT,language TEXT,amount BIGINT,paid_at TIMESTAMPTZ);
+                INSERT INTO leads(id,name,phone,language,status,manager_id,created_at) VALUES('new-report','Fixture','','russian','tolov-yopildi','hr-sales','2026-10-12T10:00:00Z');
+                INSERT INTO payment_records VALUES('hr-sales','russian',100,'2026-10-12T12:00:00Z'),('hr-sales','russian',900,'2026-10-10T12:00:00Z'),('hr-sales','english',500,'2026-10-12T12:00:00Z'),('hr-sales','russian',700,NULL);`);
+            const snapshots=[['new-report',null,{managerId:'hr-sales',status:'yangi-lidlar'}],['lead',{managerId:'other',status:'yangi-lidlar'},{managerId:'hr-sales',status:'yangi-lidlar'}],
+                ['new-report',{managerId:'hr-sales',status:'yangi-lidlar'},{managerId:'hr-sales',status:'sinov-darsida'}],['new-report',{managerId:'hr-sales',status:'sinov-darsida'},{managerId:'hr-sales',status:'tolov-yopildi'}]];
+            for(const [id,before,after] of snapshots)await pool.query("INSERT INTO lead_audit VALUES($1,'sales',$2,'2026-10-12T12:00:00Z')",[id,JSON.stringify({before,after})]);
+            const report=await require('../server/services/domworkBot/staff').comparison(pool,new Date('2026-10-12T16:00:00Z'));
+            for(const value of ['Yangi biriktirilgan: 1','Eski biriktirilgan: 1','Ishlangan: 2','Sinovga yozilgan: 1','Yopilgan: 1','Vaqti aniq tushum: 100 UZS'])assert.ok(report.includes(value),report);
+        });
+        await t.test('completed main attendance cancels an already queued missing-mark reminder',async()=>{
+            await pool.query("UPDATE domwork_bot_outbox SET state='cancelled',payload='{}' WHERE state='pending'");
+            await store.enqueue(pool,{key:'marked-main-reminder',targetId:'101',role:'teacher',account:{kind:'user',id:'t'},payload:{chat_id:'101',text:'Must not send',_automation:true,_missingAttendance:{studentId:'s',teacherId:'he',duty:'main',date:'2026-10-12'}}});
+            await pool.query("INSERT INTO main_attendance VALUES('2026-10_he','s',12,1)");
+            await runtime.deliverOne();assert.equal((await pool.query("SELECT state FROM domwork_bot_outbox WHERE unique_key='marked-main-reminder'")).rows[0].state,'cancelled');
+        });
+        await t.test('assistant daily reminder is own-assignment scoped, deduplicated and cancelled when marked',async()=>{
+            await pool.query('CREATE TABLE assistant_attendance(att_key TEXT,student_id TEXT,day INTEGER,present INTEGER)');
+            await pool.query("UPDATE students SET assistant_teacher_id='hr-assistant' WHERE id='s'");
+            await pool.query("UPDATE domwork_bot_outbox SET state='cancelled',payload='{}' WHERE state='pending'");
+            const scheduler=require('../server/services/domworkBot/scheduler'),now=new Date('2026-10-12T16:00:00Z');
+            await queue.transaction(pool,db=>scheduler.run(db,now));await queue.transaction(pool,db=>scheduler.run(db,now));
+            const rows=(await pool.query("SELECT * FROM domwork_bot_outbox WHERE unique_key='assistant-attendance:s:2026-10-12'")).rows;
+            assert.equal(rows.length,1);assert.equal(rows[0].target_id,'1204');assert.equal(rows[0].role,'assistant');
+            // Refresh only this fixture expiry so delivery tests the attendance guard, not wall-clock date.
+            await pool.query("UPDATE domwork_bot_outbox SET payload=payload-'_expiresAt' WHERE id=$1",[rows[0].id]);
+            await pool.query("INSERT INTO assistant_attendance VALUES('2026-10_hr-assistant','s',12,0)");
+            await runtime.deliverOne();assert.equal((await pool.query('SELECT state FROM domwork_bot_outbox WHERE id=$1',[rows[0].id])).rows[0].state,'cancelled');
+        });
     } finally {await runtime?.stop();await pool.end();}
 });

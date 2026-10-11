@@ -54,6 +54,14 @@
             if (current.state !== 'pending') throw Object.assign(new Error('Bu sinov darsi natijasi allaqachon belgilangan'), { status: 409 });
             return { ...current, state: 'accepted', acceptedAt: now, acceptedBy: actor.id };
         }
+        if (payload.action === 'reject') {
+            if (current.state === 'rejected') return null;
+            if (current.state !== 'pending') throw Object.assign(new Error('So‘rov allaqachon ko‘rib chiqilgan'), { status: 409 });
+            const reason = REASONS.find(r => r.id === payload.reasonId);
+            if (!reason) throw Object.assign(new Error('Rad etish sababini tanlang'), { status: 400 });
+            return { ...current, state: 'rejected', attended: false, reasonId: reason.id,
+                reasonLabel: reason.label, rejectedAt: now, rejectedBy: actor.id };
+        }
         if (payload.action !== 'outcome' || typeof payload.attended !== 'boolean') {
             throw Object.assign(new Error('Sinov darsi natijasini tanlang'), { status: 400 });
         }

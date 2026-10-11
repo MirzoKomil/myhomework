@@ -4,6 +4,8 @@ const policy = require('./policy');
 const store = require('./store');
 const groups = require('../domworkGroups');
 const trial = require('../../../js/trialWorkflow');
+const callbacks = require('./callbacks');
+const controls = require('./controls');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g, ' ') + ' UZS';
 const text = value => String(value ?? '').slice(0, 200);
 const empty = 'Hozircha ma’lumot yo‘q.';
@@ -24,6 +26,25 @@ function actionFor(identity, value) { return policy.menu(identity).find(([, labe
 function createHandler({ crm }) {
     if (!crm) throw Error('CRM adapter required');
     return async function handle(db, update) {
+        if (update.callback_query) return callbacks.handle(db,update,crm);
+        if(update.chat_member) {
+            const change=update.chat_member, user=change.new_chat_member?.user;
+            const joined=['member','administrator','creator'].includes(change.new_chat_member?.status)
+                && !['member','administrator','creator'].includes(change.old_chat_member?.status);
+            if(!joined || user?.is_bot) return;
+            const identity=await store.identity(db,String(user?.id || ''));
+            if(identity?.kind!=='lead') return;
+            const row=(await db.query("SELECT * FROM leads WHERE id=$1 AND language='russian' AND status='sinov-darsida' AND deleted_at IS NULL",[identity.id])).rows[0];
+            const lead=row && {...row.extra_data,id:row.id,name:row.name,status:row.status};
+            const booking=lead && trial.request(lead);
+            const group=booking && await groups.defaultForTeacher(db,'trial',booking.teacherId,{delivery:true});
+            if(!group || group.chatId!==String(change.chat?.id) || booking.state==='completed') return;
+            await db.query(`INSERT INTO domwork_bot_trial_members(chat_id,telegram_id,lead_id,request_id) VALUES($1,$2,$3,$4)
+                ON CONFLICT(chat_id,telegram_id) DO UPDATE SET lead_id=EXCLUDED.lead_id,request_id=EXCLUDED.request_id,joined_at=NOW()`,[group.chatId,identity.telegramId,identity.id,booking.id]);
+            if((await store.settings(db)).data.groupNotificationsEnabled) await store.enqueue(db,{key:`u:${update.update_id}:welcome`,targetKind:'group',targetId:group.chatId,
+                payload:{chat_id:group.chatId,text:`Assalomu alaykum, ${text(identity.name)}! Domwork sinov darsiga xush kelibsiz!`,_automation:true,_binding:group.id}});
+            return;
+        }
         if (update.my_chat_member) {
             const change = update.my_chat_member;
             if (!['group','supergroup'].includes(change.chat?.type)) return;
@@ -73,6 +94,17 @@ function createHandler({ crm }) {
             if (command === '/cancel') {
                 await store.setSession(db, sender, null); return await reply('Bekor qilindi.');
             }
+            if(message.chat_shared) {
+                policy.requireAction(identity,'bindings');
+                const pending=await store.session(db,sender);
+                if(pending?.type!=='choose-chat' || pending.requestId!==message.chat_shared.request_id) throw policy.error(409,'Guruh tanlash so‘rovi eskirgan');
+                const chatId=String(message.chat_shared.chat_id);
+                if(!/^-[1-9]\d{4,15}$/.test(chatId)) throw policy.error(400,'Guruhni tanlang');
+                await db.query(`INSERT INTO domwork_bot_seen_chats(chat_id,title,bot_status) VALUES($1,$2,'shared')
+                    ON CONFLICT(chat_id) DO UPDATE SET title=EXCLUDED.title,observed_at=NOW()`,[chatId,text(message.chat_shared.title)]);
+                await store.setSession(db,sender,null);
+                return await reply(`Tanlangan guruh: ${text(message.chat_shared.title)}\nchat_id: ${chatId}\nCRM → Sozlamalar → Telegram guruhlari → Bot boshqaruvida aniq bo‘lim yoki ustozga biriktiring. Hali xabar yuborilmaydi.`);
+            }
             const pending = await store.session(db, sender);
             if (pending?.type === 'leave') {
                 policy.requireAction(identity, 'leave');
@@ -88,12 +120,76 @@ function createHandler({ crm }) {
                 await store.setSession(db, sender, null);
                 return await reply('Ruxsat arizasi administratorga yuborildi. Hali tasdiqlanmagan.');
             }
+            if (pending?.type === 'broadcast') {
+                policy.requireAction(identity,'broadcast');
+                if (pending.step === 'segment') {
+                    if (!['all','trial','student','sales','teacher','assistant','rop','marketing','admin'].includes(command))
+                        return await reply('Auditoriya: all, trial, student, sales, teacher, assistant, rop, marketing yoki admin. /cancel');
+                    await store.setSession(db,sender,{type:'broadcast',step:'content',segment:command});
+                    return await reply('Matn yoki rasm/video/voice/faylni yuboring. Keyin ko‘rib tasdiqlaysiz. /cancel');
+                }
+                if (pending.step === 'content') {
+                    const media=message.photo?.at(-1) || message.video || message.voice || message.document;
+                    const method=message.photo?'sendPhoto':message.video?'sendVideo':message.voice?'sendVoice':message.document?'sendDocument':'sendMessage';
+                    const content={method,text:media?(message.caption || ''):command,fileId:media?.file_id};
+                    controls.contentInput(content);
+                    await store.setSession(db,sender,{type:'broadcast',step:'time',segment:pending.segment,content});
+                    return await reply('Yuborish vaqti: now yoki YYYY-MM-DD HH:MM (Toshkent vaqti). /cancel');
+                }
+                if (pending.step === 'time') {
+                    if (command !== 'now' && !/^\d{4}-\d{2}-\d{2} ([01]\d|2[0-3]):[0-5]\d$/.test(command)) return await reply('now yoki YYYY-MM-DD HH:MM kiriting.');
+                    const scheduledAt=command==='now'?undefined:command.replace(' ','T')+':00+05:00';
+                    const preview=await controls.draft(db,{id:identity.id},{segment:pending.segment,content:pending.content,scheduledAt});
+                    const buttons=[];
+                    for (const cancel of [false,true]) buttons.push({text:cancel?'Bekor qilish':'Tasdiqlash va yuborish',
+                        callback_data:await store.callback(db,{type:'broadcast',id:preview.id,fingerprint:preview.fingerprint,cancel})});
+                    await store.setSession(db,sender,null);
+                    return await reply(`Xabar ko‘rinishi:\n${pending.content.text}\nTur: ${pending.content.method}\nAuditoriya: ${pending.segment}\nQabul qiluvchilar: ${preview.count}\nVaqt: ${new Date(preview.scheduledAt).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})}\nTasdiqlanmaguncha yuborilmaydi.`,
+                        {reply_markup:{inline_keyboard:[buttons]}});
+                }
+            }
             const action = actionFor(identity, command);
             if (!action) return await reply('Menyudan bo‘limni tanlang. Bekor qilish: /cancel');
             policy.requireAction(identity, action);
             const config = (await store.settings(db)).data;
+            if(action==='bindings') {
+                const requestId=Number(update.update_id)%2147483647;
+                await store.setSession(db,sender,{type:'choose-chat',requestId});
+                return await reply('Guruhni tanlang. Keyin CRMda aniq ustoz yoki bo‘limga biriktiring.',{reply_markup:{keyboard:[[{text:'📌 Guruhni tanlash',request_chat:{request_id:requestId,chat_is_channel:false,bot_is_member:true,request_title:true}}]],resize_keyboard:true,one_time_keyboard:true}});
+            }
+            if (action === 'broadcast') {
+                await store.setSession(db,sender,{type:'broadcast',step:'segment'});
+                return await reply('Auditoriyani kiriting: all, trial, student, sales, teacher, assistant, rop, marketing yoki admin. Guruhlar uchun CRM → Telegram guruhlari → Bot boshqaruvi. /cancel');
+            }
+            if (action === 'trial-lessons' && identity.role === 'teacher') {
+                const rows=(await db.query("SELECT * FROM leads WHERE language='russian' AND status='sinov-darsida' AND deleted_at IS NULL ORDER BY updated_at DESC")).rows;
+                let found=0;
+                for(const row of rows) {
+                    const lead={...row.extra_data,id:row.id,name:row.name,status:row.status,language:row.language};
+                    const booking=trial.request(lead);
+                    if(booking?.teacherId!==identity.employeeId) continue;
+                    if(++found>30) break;
+                    await reply(`${lead.name}\n${booking.scheduledAt}\nHolat: ${booking.state}${booking.reasonLabel?'\nSabab: '+booking.reasonLabel:''}`,
+                        {reply_markup:await callbacks.trialButtons(db,lead,booking),_trial:{leadId:lead.id,requestId:booking.id,teacherId:booking.teacherId,state:booking.state}});
+                }
+                if(!found) await reply(empty);
+                return;
+            }
+            if (action === 'leave-review') {
+                const rows=(await db.query(`SELECT l.*,h.name FROM domwork_bot_leave_requests l LEFT JOIN hr_employees h ON h.id=l.employee_id
+                    WHERE l.state='pending' ORDER BY l.created_at LIMIT 30`)).rows;
+                for(const row of rows) await reply(`${text(row.name)}\n${row.reason}\n${policy.today(new Date(row.start_date))} — ${policy.today(new Date(row.end_date))}`,
+                    {reply_markup:await callbacks.leaveButtons(db,row.id)});
+                if(!rows.length) await reply(empty);
+                return;
+            }
             if (action === 'contact') return await reply('Qo‘llab-quvvatlash: https://t.me/domwork_admin');
-            if (['course','platform','results'].includes(action)) return await reply(config[action + 'Text'] || 'Materiallar administrator tomonidan hali kiritilmagan. https://t.me/domwork_admin');
+            if (['course','platform','results'].includes(action)) {
+                const media=config[action+'Media'];
+                if(media) await store.enqueue(db,{key:`u:${update.update_id}:material`,targetId:sender,role:identity.role,account:identity,
+                    method:media.method,payload:{...media.payload,chat_id:sender}});
+                return await reply(config[action + 'Text'] || (media?'Material yuborildi.':'Materiallar administrator tomonidan hali kiritilmagan. https://t.me/domwork_admin'));
+            }
             if (action === 'leave') {
                 await store.setSession(db, sender, { type: 'leave' });
                 return await reply('Boshlanish sanasi, tugash sanasi va sababni kiriting:\n2026-10-12 2026-10-13 Oilaviy sabab\nBekor qilish: /cancel');
@@ -160,7 +256,7 @@ function createHandler({ crm }) {
                 if (action === 'groups' || action === 'schedule') {
                     const result = await crm.getDemoStudentSchedule(identity.id);
                     if (action === 'schedule') return await reply(`Dars vaqti: ${text(result.lessonTime || 'Belgilanmagan')}\nKeyingi dars: `
-                        + (result.startsAt ? new Date(result.startsAt).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'}) : 'Belgilanmagan'));
+                        + (result.startsAt ? new Date(result.startsAt).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})+`\nQolgan vaqt: ${Math.max(0,Math.ceil((new Date(result.startsAt).getTime()-Date.now())/60000))} daqiqa` : 'Belgilanmagan'));
                     const student = (await db.query('SELECT teacher_id,extra_data FROM students WHERE id=$1', [identity.id])).rows[0];
                     const group = await groups.defaultForTeacher(db, 'classroom', student?.teacher_id);
                     // The student's historical, explicit group takes priority; never overwrite it.
