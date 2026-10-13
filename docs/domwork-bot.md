@@ -249,6 +249,9 @@ Monday–Sunday week: matching assistant-attendance owner evidence is required, 
 merely today's assignment. Ambiguous/reassigned/missing evidence fails closed; old
 anonymous ratings and already-rated weeks are not overwritten or reattributed.
 Assistant/dual-role bot views read only their own attributed ratings.
+Explicit `rus-oqituvchi` roles remain Russian even when the historical HR `lang`
+field says English; this matches existing teacher-pool logic without editing HR.
+Explicit English teacher roles are not treated as Russian assistants.
 
 CRM → Telegram groups → Bot management exposes separate, OFF-by-default controls:
 20/40/60-million monthly net receipt milestones, daily winners, weekly/monthly

@@ -38,8 +38,7 @@ async function rateAssistant(db,studentId,week,ratings,now=new Date()) {
     if(!policy.activeStudent(s) || !s.assistant_teacher_id || s.assistant_teacher_id===s.teacher_id)
         throw policy.error(403,'Faol yordamchi ustoz biriktirilmagan');
     const teacher=(await db.query('SELECT role,lang,status,dual_role FROM hr_employees WHERE id=$1',[s.assistant_teacher_id])).rows[0];
-    if(!teacher || teacher.status==='inactive' || teacher.lang!=='russian'
-        || !(teacher.role==='yordamchi' || (teacher.dual_role && ['rus-oqituvchi','oqituvchi'].includes(teacher.role))))
+    if(!teacher || !require('../../../js/teacherRoles').eligible({...teacher,dualRole:teacher.dual_role===true},'yordamchi','russian'))
         throw policy.error(403,'Yordamchi ustoz faol emas');
     if(s.extra_data?.startDate && s.extra_data.startDate>today) throw policy.error(403,'O‘qish hali boshlanmagan');
     // The app rates the last completed week. Current assignment alone is NOT historical proof.

@@ -32,15 +32,16 @@ test('Domwork recognition, assistant ownership and Russian advertising; no real 
             CREATE TABLE json_data(key TEXT PRIMARY KEY,data JSONB);
             INSERT INTO users VALUES('admin','Admin','admin','admin','+998901111111'),('target','Target','target','targetolog','+998902222222'),
                 ('teacher','Teacher','teacher','teacher','+998903333333'),('en-target','English target','en-target','targetolog','+998904444444');
-            INSERT INTO hr_employees VALUES('t','Teacher','teacher','rus-oqituvchi','active','russian',true,''),('a','Assistant','assistant','yordamchi','active','russian',false,''),
+            INSERT INTO hr_employees VALUES('t','Teacher','teacher','rus-oqituvchi','active','english',true,''),('a','Assistant','assistant','yordamchi','active','russian',false,''),
                 ('target','Target','target','targetolog','active','russian',false,''),('en-target','English target','en-target','targetolog','active','english',false,''),
                 ('m','Sales','sales','sotuv-menejeri','active','russian',false,''),('m2','Sales two','sales2','sotuv-menejeri','active','russian',false,''),
                 ('en','English','english','ingliz-oqituvchi','active','english',false,'');
             INSERT INTO students VALUES('s','Student','+998905555555','russian','t','a','{"passwordHash":"hash","paidAmount":100}'),
                 ('s2','Other student','+998906666666','russian','t','a','{"passwordHash":"hash","paidAmount":100}'),
-                ('en','English student','+998907777777','english','en','a','{"passwordHash":"hash","paidAmount":100}');
+                ('en','English student','+998907777777','english','en','a','{"passwordHash":"hash","paidAmount":100}'),
+                ('dual','Dual-role student','+998908888888','russian','different','t','{"passwordHash":"hash","paidAmount":100}');
             INSERT INTO leads VALUES('l','Lead','','m','russian','tolov-yopildi',NULL,'{}');
-            INSERT INTO assistant_attendance VALUES('2026-10_a','s',6,1),('2026-10_a','s2',6,1);
+            INSERT INTO assistant_attendance VALUES('2026-10_a','s',6,1),('2026-10_a','s2',6,1),('2026-10_t','dual',6,1);
             INSERT INTO main_attendance VALUES('2026-10_t','s',13,1),('2026-10_t','s2',13,1),('2026-10_en','en',13,1),('2026-02_t','s',31,1);
             INSERT INTO json_data VALUES('assistantWeeklyRatings','{"s":{"2026-09-28":{"overall":1}}}'),
                 ('targetDailyAdSpend','{"2026-10":{"2026-10-13":{"budget":999}}}'),('targetMonitoringPlan','{"2026-10":{"budget":9999}}'),
@@ -62,7 +63,7 @@ test('Domwork recognition, assistant ownership and Russian advertising; no real 
             await assert.rejects(write(d=>insights.rateAssistant(d,'s','2026-10-05',{...rating,overall:6},now)),e=>e.status===400);
             await db.query("INSERT INTO assistant_attendance VALUES('2026-10_t','s',7,1)");
             await assert.rejects(write(d=>insights.rateAssistant(d,'s','2026-10-05',rating,now)),e=>e.status===409);
-            await db.query("DELETE FROM assistant_attendance WHERE att_key='2026-10_t'");
+            await db.query("DELETE FROM assistant_attendance WHERE att_key='2026-10_t' AND student_id='s'");
             assert.deepEqual(await write(d=>insights.rateAssistant(d,'s','2026-10-05',rating,now)),rating);
             assert.deepEqual(await insights.assistantHistory(db,'s'),{'2026-10-05':rating});
             await assert.rejects(write(d=>insights.rateAssistant(d,'s','2026-10-05',rating,now)),e=>e.status===409);
@@ -80,6 +81,12 @@ test('Domwork recognition, assistant ownership and Russian advertising; no real 
             const results=await Promise.allSettled([write(d=>insights.rateAssistant(d,'s2','2026-10-05',rating,now)),write(d=>insights.rateAssistant(d,'s2','2026-10-05',rating,now))]);
             assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
             assert.equal((await db.query("SELECT COUNT(*) FROM domwork_insights_audit WHERE entity_id='s2:2026-10-05'")).rows[0].count,'1');
+        });
+        await t.test('explicit Russian main role overrides legacy English language without rewriting HR or misclassifying English teachers',async()=>{
+            assert.deepEqual(await write(d=>insights.rateAssistant(d,'dual','2026-10-05',rating,now)),rating);
+            assert.ok((await insights.assistantRanking(db,'t')).includes('5.0'));
+            assert.equal((await db.query("SELECT lang FROM hr_employees WHERE id='t'")).rows[0].lang,'english');
+            assert.equal((await recognition.teachers(db,'2026-10-13','2026-10-13')).rows[0].id,'t');
         });
         await t.test('Russian ad entry has persisted RBAC, validation, atomic audit and stale-write prevention',async()=>{
             const body={kind:'day',date:'2026-10-13',revision:0,data:{budget:0,leadCount:2}};

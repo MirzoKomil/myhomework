@@ -28,7 +28,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 if(!row.payload._settings.every(key=>settings[key]===true))return false;
             }
             if(row.payload._employee) {
-                if(!(await db.query("SELECT id FROM hr_employees WHERE id=$1 AND lang='russian' AND COALESCE(status,'active')<>'inactive'",[row.payload._employee])).rows.length)return false;
+                if(!(await db.query("SELECT id FROM hr_employees WHERE id=$1 AND (role='rus-oqituvchi' OR (role<>'ingliz-oqituvchi' AND lang='russian')) AND COALESCE(status,'active')<>'inactive'",[row.payload._employee])).rows.length)return false;
             }
             if(row.payload._milestone) {
                 const g=row.payload._milestone, today=require('./policy').today();

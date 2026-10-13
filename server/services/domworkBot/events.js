@@ -135,7 +135,7 @@ async function processOne(db) {
         }
     }
     if(settings.eventsEnabled && row.type==='employee' && settings.employeeWelcomeEnabled) {
-        const employee=(await db.query("SELECT name,role FROM hr_employees WHERE id=$1 AND lang='russian' AND COALESCE(status,'active')<>'inactive'",[row.reference_id])).rows[0];
+        const employee=(await db.query("SELECT name,role FROM hr_employees WHERE id=$1 AND (role='rus-oqituvchi' OR (role<>'ingliz-oqituvchi' AND lang='russian')) AND COALESCE(status,'active')<>'inactive'",[row.reference_id])).rows[0];
         if(employee) await groupMessage(db,key+':family','family',`Jamoamizga yangi xodim qo‘shildi: ${employee.name}. Xush kelibsiz!`,
             {_setting:'employeeWelcomeEnabled',_settings:['eventsEnabled'],_employee:row.reference_id,_expiresAt:new Date(Date.now()+3600000).toISOString()});
     }

@@ -1651,7 +1651,7 @@ async function saveHrEmployeesData(client, employees, actor = {}) {
              e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '',
              e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '', e.dualRole === true]
         );
-        if (!oldEmployees.some(old => old.id === e.id) && e.lang === 'russian' && e.status !== 'inactive') {
+        if (!oldEmployees.some(old => old.id === e.id) && require('../js/teacherRoles').language(e) === 'russian' && e.status !== 'inactive') {
             await require('./services/domworkBot/events').capture(client, 'employee', e.id, {}, 'employee:' + e.id);
         }
     }

@@ -34,7 +34,7 @@ async function milestones(db,payment,now=new Date()) {
 async function teachers(db,start,end) {
     const marks=(await db.query(`SELECT a.att_key,a.student_id,a.day,a.present FROM main_attendance a
         JOIN students s ON s.id=a.student_id AND s.subject='russian' WHERE LEFT(a.att_key,7) BETWEEN LEFT($1,7) AND LEFT($2,7)`,[start,end])).rows;
-    const employees=(await db.query("SELECT id,name,role,lang,status FROM hr_employees WHERE lang='russian' AND COALESCE(status,'active')<>'inactive'")).rows;
+    const employees=(await db.query("SELECT id,name,role,lang,status FROM hr_employees WHERE (role='rus-oqituvchi' OR (role<>'ingliz-oqituvchi' AND lang='russian')) AND COALESCE(status,'active')<>'inactive'")).rows;
     const eligible=new Map(employees.filter(e=>engine.role(e)==='teacher').map(e=>[e.id,e]));
     const days=new Map();
     for(const mark of marks) {
