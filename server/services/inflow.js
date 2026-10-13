@@ -57,6 +57,8 @@ function student(row) {
 }
 function safeStudent(s) { const { password, passwordHash, ...out } = s; return { ...out, hasPassword: !!passwordHash }; }
 async function insert(db, event, context, actor, legacy = false) {
+    // Concurrent receipts must not miss a crossed milestone. No locking/writing of legacy imports.
+    if (!legacy && context.language === 'russian') await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-new-receipts'))");
     const existing = (await db.query('SELECT * FROM payment_records WHERE source_key=$1', [event.sourceKey])).rows[0];
     if (existing) {
         if (Number(existing.amount) !== event.amount || dateKey(existing.paid_date) !== event.paidDate) throw error(409, 'Saqlangan tushumni o‘zgartirib bo‘lmaydi. Moliya bilan tekshiring');
@@ -79,7 +81,7 @@ async function insert(db, event, context, actor, legacy = false) {
             JSON.stringify(snapshot), review, actor.id || 'system']);
     await db.query('INSERT INTO payment_audit(record_id,action,actor_id,actor_name,data) VALUES($1,$2,$3,$4,$5)',
         [id, legacy ? 'legacy-import' : 'accepted', actor.id || 'system', actor.name || 'System', JSON.stringify({ ...event, ...context, legacyReview: review })]);
-    if (!legacy && context.language === 'russian') await require('./domworkBot/events').capture(db,'payment',id,{},'payment:'+id);
+    if (!legacy && context.language === 'russian') await require('./domworkBot/events').payment(db,id);
     return { id, inserted: true };
 }
 async function context(db, lead, s) {

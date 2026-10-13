@@ -56,8 +56,8 @@ test('new staff views remain forbidden to students and assistants cannot request
 });
 test('assistant ratings never borrow primary teacher scores; Russian primary scores require explicit owner and finite 1–5 values',async()=>{
     const staff=require('../server/services/domworkBot/staff');
-    const unavailable=await staff.action({query(){throw Error('must not read primary ratings');}},{role:'assistant',employeeId:'t'},'ranking');
-    assert.ok(unavailable.includes('IDsi saqlanmagan'));
+    const unavailable=await staff.action({async query(sql,params){assert.ok(sql.includes('domwork_assistant_ratings'));assert.deepEqual(params,['t']);return {rows:[]};}},{role:'assistant',employeeId:'t'},'ranking');
+    assert.ok(unavailable.includes('ustoz IDsi yo‘q'));
     const db={async query(sql){return {rows:sql.includes('json_data')?[{data:{s:[{teacherId:'t',studentRatingOfTeacher:{overall:4}},
         {teacherId:'other',studentRatingOfTeacher:{overall:1}},{teacherId:'t',studentRatingOfTeacher:{overall:null}},
         {teacherId:'t',studentRatingOfTeacher:{overall:999}}],english:[{teacherId:'t',studentRatingOfTeacher:{overall:1}}]}}]:[{id:'s'}]};}};

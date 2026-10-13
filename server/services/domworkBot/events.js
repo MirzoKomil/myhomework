@@ -17,6 +17,11 @@ async function linked(db,kind,id) {
     const row=(await db.query('SELECT telegram_id FROM domwork_bot_links WHERE account_kind=$1 AND account_id=$2',[kind,id])).rows[0];
     return row && await store.identity(db,row.telegram_id);
 }
+async function payment(db,id) {
+    if(process.env.DOMWORK_BOT_ENABLED!=='true' || !(await db.query("SELECT to_regclass('domwork_bot_events') AS present")).rows[0]?.present) return;
+    const record=(await db.query("SELECT *,TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date FROM payment_records WHERE id=$1 AND language='russian' AND NOT legacy_review",[id])).rows[0];
+    if(record) await capture(db,'payment',id,{month:policy.today().slice(0,7),milestones:await require('./recognition').milestones(db,record)},'payment:'+id);
+}
 async function employee(db,id) {
     const rows=(await db.query(`SELECT l.telegram_id FROM domwork_bot_links l JOIN users u ON u.id=l.account_id
         LEFT JOIN user_sales_manager_links m ON m.user_id=u.id
@@ -102,6 +107,13 @@ async function processOne(db) {
                 await groupMessage(db,key+':sales','sales',summary);
                 await privateMessage(db,key+':manager',await employee(db,payment.manager_id),summary);
                 if(payment.student_id) await privateMessage(db,key+':student',await linked(db,'student',payment.student_id),`To‘lovingiz qabul qilindi: ${money(payment.amount)}.`,{_studentId:payment.student_id});
+                if(settings.milestonesEnabled && row.data.month===policy.today().slice(0,7)) for(const threshold of row.data.milestones || []) {
+                    if(!require('./recognition').MILESTONES.includes(threshold))continue;
+                    const month=policy.today().slice(0,7), milestoneKey=`milestone:${payment.manager_id}:${month}:${threshold}`;
+                    await require('./scheduler').once(db,milestoneKey,()=>groupMessage(db,milestoneKey,'sales',
+                        `🎉 ${payment.snapshot.managerName} oylik sof tushumda ${money(threshold)} pog‘onasiga chiqdi! Tabriklaymiz!`,
+                        {_setting:'milestonesEnabled',_settings:['eventsEnabled'],_milestone:{managerId:payment.manager_id,month,threshold},_expiresAt:new Date(Date.now()+3600000).toISOString()}));
+                }
             }
         }
         if(row.type==='assignment') {
@@ -122,7 +134,15 @@ async function processOne(db) {
                     {_attendance:{studentId:student.id,...row.data}});
         }
     }
+    if(settings.eventsEnabled && row.type==='employee' && settings.employeeWelcomeEnabled) {
+        const employee=(await db.query("SELECT name,role FROM hr_employees WHERE id=$1 AND lang='russian' AND COALESCE(status,'active')<>'inactive'",[row.reference_id])).rows[0];
+        if(employee) await groupMessage(db,key+':family','family',`Jamoamizga yangi xodim qo‘shildi: ${employee.name}. Xush kelibsiz!`,
+            {_setting:'employeeWelcomeEnabled',_settings:['eventsEnabled'],_employee:row.reference_id,_expiresAt:new Date(Date.now()+3600000).toISOString()});
+    }
+    if(settings.eventsEnabled && row.type==='release' && settings.releaseNotesEnabled && row.reference_id===require('./recognition').RELEASE.id)
+        await groupMessage(db,key+':family','family',require('./recognition').RELEASE.text,
+            {_setting:'releaseNotesEnabled',_settings:['eventsEnabled'],_expiresAt:new Date(Date.now()+3600000).toISOString()});
     await db.query("UPDATE domwork_bot_events SET state='done',data='{}' WHERE event_key=$1",[row.event_key]);
     return true;
 }
-module.exports={capture,linked,employee,privateMessage,groupMessage,afterLead,assignments,attendance,processOne};
+module.exports={capture,payment,linked,employee,privateMessage,groupMessage,afterLead,assignments,attendance,processOne};

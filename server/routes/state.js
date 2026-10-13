@@ -114,7 +114,7 @@ router.post('/demo-assistant-ratings', studentAuthOptional, async (req, res) => 
         res.json({ ok: true, ratings: saved });
     } catch (err) {
         console.error('POST /api/state/demo-assistant-ratings', err);
-        res.status(400).json({ error: err.message || 'Xatolik' });
+        res.status(err.status || 400).json({ error: err.message || 'Xatolik' });
     }
 });
 

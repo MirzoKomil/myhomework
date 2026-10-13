@@ -25,7 +25,7 @@ async function action(db, identity, actionId, options={}) {
     policy.requireAction(identity, actionId);
     if (identity.role==='marketing' && actionId==='history') return reports.marketingHistory(db,options.now);
     if(actionId==='ranking' && ['teacher','assistant'].includes(identity.role)) {
-        if(identity.role==='assistant') return 'Yordamchi ustoz reytingi uchun eski haftalik baholarda ustoz IDsi saqlanmagan. Ular hozirgi ustozga taxminan biriktirilmaydi. Asosiy ustoz reytingi yordamchi reytingi sifatida ko‘rsatilmaydi.';
+        if(identity.role==='assistant') return require('./insights').assistantRanking(db,identity.employeeId);
         const main=await json(db,'liveGrades');
         const russianIds=new Set((await db.query("SELECT id FROM students WHERE subject='russian'")).rows.map(r=>r.id));
         const scores=Object.entries(main).filter(([id])=>russianIds.has(id)).flatMap(([,entries])=>Array.isArray(entries)?entries:[])
@@ -74,6 +74,7 @@ async function action(db, identity, actionId, options={}) {
                 const attendance=(await db.query(`SELECT student_id,day,present FROM assistant_attendance WHERE att_key=$1 AND student_id=ANY($2::text[]) ORDER BY day`,
                     [period.start.slice(0,7)+'_'+identity.employeeId,rows.map(r=>r.id)])).rows;
                 output+=`\n\nYordamchi ustozlik daromadi: ${money(own?.assistantTotal)}\n`+attendance.map(r=>`${safe(rows.find(s=>s.id===r.student_id)?.name)} · ${r.day}-kun · ${r.present===1?'Qatnashdi':'Kelmadi'}`).join('\n');
+                output+='\n\n'+await require('./insights').assistantRanking(db,identity.employeeId);
             }
             return output;
         }
@@ -171,18 +172,11 @@ async function comparison(db,now) {
         +'\nAudit tarixi yoki to‘lov vaqti yo‘q bo‘lgan eski yozuvlar 24 soatlik hisobotga taxminan qo‘shilmaydi.';
 }
 async function marketing(db,start,end) {
-    const raw=await json(db,'targetDailyAdSpend'), plans=await json(db,'targetMonitoringPlan');
-    const languageScoped=!!raw.russian, data=raw.russian || raw;
-    let total=0, known=false;
-    for(const [month,days] of Object.entries(data)) for(const [day,item] of Object.entries(days || {})) {
-        const date=/^\d{4}-\d{2}-\d{2}$/.test(day)?day:month+'-'+String(day).padStart(2,'0');
-        if(date>=start && date<=end && Number.isFinite(Number(item?.budget))) {total+=Number(item.budget);known=true;}
-    }
+    const {total,known,plan}=await require('./insights').advertising(db,start,end);
     const leads=Number((await db.query(`SELECT COUNT(*) AS count FROM leads WHERE language='russian' AND lead_type='target' AND deleted_at IS NULL
         AND (created_at AT TIME ZONE 'Asia/Tashkent')::date BETWEEN $1::date AND $2::date`,[start,end])).rows[0].count);
-    const plan=(plans.russian || plans)[start.slice(0,7)];
-    return `Target lidlar: ${leads}\n${languageScoped?'Rus tili':'CRM umumiy'} reklama sarfi: ${known?total.toFixed(2)+' USD':'Kiritilmagan'}\n`
+    return `Target lidlar: ${leads}\nRus tili reklama sarfi: ${known?total.toFixed(2)+' USD':'Kiritilmagan'}\n`
         +`Reklama rejasi: ${plan?.budget!=null?Number(plan.budget).toFixed(2)+' USD':'Belgilanmagan'}\n`
-        +`Rus tili CPL: ${languageScoped && known && leads?(total/leads).toFixed(2)+' USD':'Sarf til bo‘yicha ajratilmaguncha taxmin qilinmaydi'}`;
+        +`Rus tili CPL: ${known && leads?(total/leads).toFixed(2)+' USD':'Sarf til bo‘yicha ajratilmaguncha taxmin qilinmaydi'}`;
 }
 module.exports = { action, salary, personalPlan, marketing, comparison };

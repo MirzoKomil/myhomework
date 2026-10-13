@@ -27,6 +27,7 @@ app.get('/', (_req, res) => {
             if(url.endsWith('/discovery'))return {candidates:Array.from({length:50},(_,n)=>({chatId:String(-1005000000-n),title:'Asosiy guruh '+(n+1),state:n===0?'pending':'ready',revision:1,evidence:{title:'Asosiy guruh '+(n+1),teachers:n===1?[]:[{id:'b',name:'Mohinur Testova'}],inviteLink:''}}))};
             if(url.endsWith('/student-groups'))return {students:Array.from({length:120},(_,n)=>({id:'s'+n,name:'O‘quvchi '+n,phone:'+998901234567',teacherId:'b',teacherName:'Mohinur Testova',revision:0,groupId:'',discovery:{state:'ready',reason:'unique',groups:[{id:'main',name:'Asosiy dars | Mohinur'}]}}))};
             if(url.endsWith('/settings'))return {data:{eventsEnabled:true,remindersEnabled:true,reportsEnabled:true},revision:1};
+            if(url.endsWith('/awards/preview'))return {sales:{text:'🏆 Kun sotuvchisi\\nDavr: 2026-10-13\\nTest menejer: 20 000 000 UZS'},teachers:{text:'🏆 Kun ustozi\\nTest ustoz: 5 ta tasdiqlangan dars · Baho 4.8 (3)'}};
             if(url.endsWith('/bindings'))return {groups:[]};
             if(url.endsWith('/observed-chats'))return {chats:[{chat_id:'-100123456',title:'Mayoq Test'}]};
             if(url.endsWith('/status'))return {state:'disabled',redisReady:false};

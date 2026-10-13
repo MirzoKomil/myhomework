@@ -229,3 +229,46 @@ API documentation:
 [Telegram Bot API](https://core.telegram.org/bots/api),
 [Telegraf Telegram client](https://telegraf.js.org/classes/Telegram.html),
 [node-redis](https://redis.io/docs/latest/develop/clients/nodejs/).
+
+## Recognition, Russian advertising and exact assistant ratings
+
+New additive tables: `domwork_assistant_ratings`, `domwork_ad_entries`,
+`domwork_insights_audit`. Existing ratings, advertising JSON, HR, payments, students,
+attendance and group assignments are not migrated, overwritten or deleted.
+
+Russian Marketing → Target monitoring now saves daily USD spend and monthly plans
+through `/api/domwork/marketing`. Current persisted admin/Russian-targetolog access,
+revision checks and transactional audits prevent stale or forged writes. Existing
+unscoped spend remains untouched and is NOT used as Russian CPL/plan. Previously
+explicitly Russian-scoped entries are read without migration; new entries override
+the same day's value in reports, never double-count it. Zero is a valid known spend.
+
+The existing student rating endpoint stores new authenticated Russian submissions
+with the exact assistant ID in the separate table. The app rates the last completed
+Monday–Sunday week: matching assistant-attendance owner evidence is required, not
+merely today's assignment. Ambiguous/reassigned/missing evidence fails closed; old
+anonymous ratings and already-rated weeks are not overwritten or reattributed.
+Assistant/dual-role bot views read only their own attributed ratings.
+
+CRM → Telegram groups → Bot management exposes separate, OFF-by-default controls:
+20/40/60-million monthly net receipt milestones, daily winners, weekly/monthly
+awards, new Russian employee greetings and actual release announcements. Weekly
+and monthly awards additionally require a selected criterion (net sales or main
+teacher confirmed lessons with same-period rating as tie-breaker). They confer no
+money or payroll bonus. Ties name all winners; missing evidence never invents one.
+Daily/weekly/monthly awards run at a configurable Tashkent time (default 20:00).
+Missing ticks are not backfilled. A read-only preview queues no Telegram messages.
+
+Milestones capture only a new real receipt crossing a threshold while opted in,
+subtract actual refunds using the same payroll sales-facts engine, and send once
+per manager/month/threshold. Concurrent new Russian receipts are serialized. Old
+imports do not capture milestones. Employee events capture only new HR IDs, never
+startup bootstrap records; releases use an explicit versioned changelog ID once.
+Disabled events are consumed without replay. Delivery rechecks flags, group rights,
+employee status, milestone balance and award evidence; stale messages cancel.
+
+Verify with `node scripts/run-payroll-postgres.cjs scripts/domwork-insights-postgres.test.cjs`.
+Telegram/Redis are mocked. Real role-by-role delivery acceptance still requires
+registered users, confirmed classroom assignments and explicit opt-in. Face ID
+provider docs, real course/promotional materials and business award-policy choices
+remain external inputs; this addition does not claim those are complete.

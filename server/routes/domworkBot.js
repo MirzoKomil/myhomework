@@ -29,6 +29,10 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
         marketingHistory:await require('../services/domworkBot/reports').marketingHistory(db)
     }))));
     router.get('/discovery',handle(req=>discovery.list(pool,req.user)));
+    router.get('/awards/preview',handle(()=>queue.transaction(pool,async db=>{
+        const day=require('../services/domworkBot/policy').today(),recognition=require('../services/domworkBot/recognition');
+        return {sales:await recognition.summary(db,'sales',day,day,'Kun sotuvchisi'),teachers:await recognition.summary(db,'lessons',day,day,'Kun ustozi')};
+    })));
     router.post('/discovery/rescan',handle(req=>queue.transaction(pool,db=>discovery.rescan(db,req.user))));
     router.post('/discovery/confirm',handle(req=>discovery.confirm(pool,req.user,req.body?.items,(id,options)=>runtime.verifyChat(id,options))));
     router.get('/student-groups',handle(req=>discovery.studentCandidates(pool,req.user)));

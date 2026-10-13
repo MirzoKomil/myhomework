@@ -11439,7 +11439,9 @@ function computeTargetDailyBreakdown(langLeads, monthKey) {
     });
 }
 
-function renderMarketingTargetPanel() {
+let _domworkAdsMonth = null;
+let _targetRenderGeneration = 0;
+async function renderMarketingTargetPanel() {
     const el = document.getElementById('marketingPanel-target');
     if (!el) return;
 
@@ -11448,6 +11450,14 @@ function renderMarketingTargetPanel() {
     // formatda) bo'lsa, joriy oyga o'rnatiladi.
     const joriyTm = currentMonthKey();
     if (!MONTH_KEY_RE.test(String(_targetMonth || ''))) _targetMonth = joriyTm;
+    const generation = ++_targetRenderGeneration, selectedMonth = _targetMonth, selectedLang = _marketingLang;
+    let domworkAds = null;
+    if (selectedLang === 'russian') {
+        try { domworkAds = await apiFetch('/api/domwork/marketing?month=' + encodeURIComponent(selectedMonth)); }
+        catch (error) { if (generation === _targetRenderGeneration) el.textContent = error.message; return; }
+        if (generation !== _targetRenderGeneration || selectedLang !== _marketingLang || selectedMonth !== _targetMonth) return;
+        _domworkAdsMonth = { month: selectedMonth, ...domworkAds };
+    }
 
     const data = TARGET_DATA[_targetMonth] || EMPTY_TARGET_MONTH_DATA;
     const r = data.reklama;
@@ -11464,9 +11474,9 @@ function renderMarketingTargetPanel() {
     const allLeadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const langLeads = allLeadsData[langKey] || [];
     const dailyAdSpendAll = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
-    const dailyAdSpendMonth = dailyAdSpendAll[_targetMonth] || {};
+    const dailyAdSpendMonth = domworkAds ? domworkAds.days : dailyAdSpendAll[_targetMonth] || {};
 
-    const budgetFaktUSD = Object.values(dailyAdSpendMonth).reduce((sum, e) => sum + (Number(e?.budget) || 0), 0);
+    const budgetFaktUSD = domworkAds && !Object.keys(dailyAdSpendMonth).length ? null : Object.values(dailyAdSpendMonth).reduce((sum, e) => sum + (Number(e?.budget) || 0), 0);
     const allTargetMonthLeads = langLeads.filter(l => getLeadKind(l) === 'target' && _tmLeadCreatedInMonth(l, _targetMonth));
     const lidSoniFakt = allTargetMonthLeads.length;
     const kvalLidSoniFakt = allTargetMonthLeads.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
@@ -11483,7 +11493,7 @@ function renderMarketingTargetPanel() {
 
     function fmtPct(v) { return v ? (v * 1).toFixed(1) + '%' : '—'; }
     function fmtNum(v) { return (v || v === 0) && v !== null ? v : '—'; }
-    function fmtUSD(v) { return v ? '$' + (+v).toFixed(2) : '—'; }
+    function fmtUSD(v) { return v === 0 && domworkAds ? '$0.00' : v ? '$' + (+v).toFixed(2) : '—'; }
     function fmtMln(v) { return v ? v + ' M' : '—'; }
 
     const progressBar = (pct) => {
@@ -11511,7 +11521,7 @@ function renderMarketingTargetPanel() {
     // 10-vazifa: "Rejani kiritish" orqali saqlangan reja (bu oy uchun) —
     // lid narxi/kval. lid narxi budjetdan avtomatik hisoblanadi, qattiq
     // yozilgan eski TARGET_DATA rejasi endi ishlatilmaydi.
-    const _tmPlan = getItem(STORAGE_KEYS.targetMonitoringPlan, {})[_targetMonth] || null;
+    const _tmPlan = domworkAds ? domworkAds.plan?.data || null : getItem(STORAGE_KEYS.targetMonitoringPlan, {})[_targetMonth] || null;
     const planBudget = _tmPlan?.budget || null;
     const planLidSoni = _tmPlan?.lidSoni || null;
     const planKvalLidSoni = _tmPlan?.kvalLidSoni || null;
@@ -11769,8 +11779,10 @@ function renderMarketingTargetPanel() {
 // kiritish/tahrirlash oynasi.
 function openTargetDailyAdSpendModal(dateKey) {
     const monthKey = dateKey.slice(0, 7);
+    const russian = _marketingLang === 'russian';
     const all = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
-    const existing = (all[monthKey] || {})[dateKey] || {};
+    if (russian && _domworkAdsMonth?.month !== monthKey) { showMiniToast('Oynani yangilang'); return; }
+    const existing = russian ? _domworkAdsMonth.days[dateKey] || {} : (all[monthKey] || {})[dateKey] || {};
     const [y, m, d] = dateKey.split('-').map(Number);
     const dateLabel = `${d}-${['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'][m - 1]} ${y}`;
 
@@ -11792,9 +11804,20 @@ function openTargetDailyAdSpendModal(dateKey) {
     openModal(`Kunlik reklama ma'lumoti — ${dateLabel}`, body, footer);
 
     document.getElementById('tmAdSpendCancel').onclick = closeModal;
-    document.getElementById('tmAdSpendSave').onclick = () => {
+    document.getElementById('tmAdSpendSave').onclick = async () => {
+        if (russian && ['tmAdSpendBudget','tmAdSpendLeadCount'].some(id => document.getElementById(id).value.trim() === '')) {
+            alert('Rus tili sarfi va lidlar sonini aniq kiriting. Nol bo‘lsa 0 yozing.'); return;
+        }
         const budget = Number(document.getElementById('tmAdSpendBudget').value) || 0;
         const leadCount = Number(document.getElementById('tmAdSpendLeadCount').value) || 0;
+        if (russian) {
+            const button = document.getElementById('tmAdSpendSave'); button.disabled = true;
+            try {
+                await apiFetch('/api/domwork/marketing', {method:'PUT',body:JSON.stringify({kind:'day',date:dateKey,revision:existing.revision || 0,data:{budget,leadCount}})});
+                closeModal(); await renderMarketingTargetPanel(); showMiniToast('Rus tili sarfi serverga saqlandi');
+            } catch (error) { alert(error.message); if (button.isConnected) button.disabled = false; }
+            return;
+        }
 
         const current = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
         const monthEntries = { ...(current[monthKey] || {}) };
@@ -11811,7 +11834,10 @@ function openTargetDailyAdSpendModal(dateKey) {
 // reja. Lid narxi / Kval. lid narxi qo'lda kiritilmaydi, byudjet va soni
 // asosida avtomatik (jonli, kiritish paytida) hisoblanadi.
 function openTargetPlanModal(monthKey) {
-    const existing = getItem(STORAGE_KEYS.targetMonitoringPlan, {})[monthKey] || {};
+    const russian = _marketingLang === 'russian';
+    if (russian && _domworkAdsMonth?.month !== monthKey) { showMiniToast('Oynani yangilang'); return; }
+    const existing = russian ? _domworkAdsMonth.plan?.data || {} : getItem(STORAGE_KEYS.targetMonitoringPlan, {})[monthKey] || {};
+    const revision = russian ? _domworkAdsMonth.plan?.revision || 0 : 0;
     const body = `
     <div style="display:flex;flex-direction:column;gap:14px">
         <div class="form-group">
@@ -11862,12 +11888,23 @@ function openTargetPlanModal(monthKey) {
     updatePreviews();
 
     document.getElementById('tmPlanCancel').onclick = closeModal;
-    document.getElementById('tmPlanSave').onclick = () => {
+    document.getElementById('tmPlanSave').onclick = async () => {
+        if (russian && ['tmPlanBudget','tmPlanLidSoni','tmPlanKvalSoni'].some(id => document.getElementById(id).value.trim() === '')) {
+            alert('Rus tili rejasi summasi va sonlarini aniq kiriting. Nol bo‘lsa 0 yozing.'); return;
+        }
         const budget = Number(document.getElementById('tmPlanBudget').value) || 0;
         const lidSoni = Number(document.getElementById('tmPlanLidSoni').value) || 0;
         const kvalLidSoni = Number(document.getElementById('tmPlanKvalSoni').value) || 0;
         const kvalLidPctRaw = document.getElementById('tmPlanKvalPct').value;
         const kvalLidPct = kvalLidPctRaw === '' ? null : Number(kvalLidPctRaw);
+        if (russian) {
+            const button = document.getElementById('tmPlanSave'); button.disabled = true;
+            try {
+                await apiFetch('/api/domwork/marketing', {method:'PUT',body:JSON.stringify({kind:'plan',date:monthKey,revision,data:{budget,lidSoni,kvalLidSoni,kvalLidPct}})});
+                closeModal(); await renderMarketingTargetPanel(); showMiniToast('Rus tili rejasi serverga saqlandi');
+            } catch (error) { alert(error.message); if (button.isConnected) button.disabled = false; }
+            return;
+        }
 
         const all = getItem(STORAGE_KEYS.targetMonitoringPlan, {});
         setItem(STORAGE_KEYS.targetMonitoringPlan, {

@@ -41,6 +41,7 @@ async function run(db,now=new Date()) {
     const lock=(await db.query("SELECT pg_try_advisory_xact_lock(hashtext('domwork-bot-scheduler')) AS locked")).rows[0];
     if(!lock.locked) return;
     const settings=(await store.settings(db)).data, clock=localClock(now);
+    await require('./recognition').run(db,settings,clock,now,once);
     const expires=()=>new Date(now.getTime()+3*60000).toISOString();
     if(settings.remindersEnabled) {
         const students=(await db.query("SELECT * FROM students WHERE subject='russian'")).rows.filter(policy.activeStudent);

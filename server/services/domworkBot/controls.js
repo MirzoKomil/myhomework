@@ -26,7 +26,7 @@ async function init(db) { await db.query(SCHEMA); }
 const fail = policy.error;
 function settingsInput(body, previous) {
     const out = { ...previous };
-    for (const key of ['promotionsEnabled','trialRemovalEnabled','groupNotificationsEnabled','remindersEnabled','reportsEnabled','eventsEnabled']) {
+    for (const key of ['promotionsEnabled','trialRemovalEnabled','groupNotificationsEnabled','remindersEnabled','reportsEnabled','eventsEnabled','milestonesEnabled','dailyAwardsEnabled','weeklyAwardsEnabled','monthlyAwardsEnabled','employeeWelcomeEnabled','releaseNotesEnabled']) {
         if (Object.hasOwn(body,key)) {
             if (typeof body[key] !== 'boolean') throw fail(400,'Sozlama boolean bo‘lsin');
             out[key] = body[key];
@@ -39,13 +39,21 @@ function settingsInput(body, previous) {
         }
     }
     if (Object.hasOwn(body,'officialChannel')) out.officialChannel = body.officialChannel ? groups.inviteLink(body.officialChannel) : '';
-    for (const key of ['promotionTime','familyTime']) {
+    for (const key of ['promotionTime','familyTime','awardsTime']) {
         if (Object.hasOwn(body,key)) {
             if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(body[key])) throw fail(400,'Vaqt HH:MM shaklida bo‘lsin');
             out[key] = body[key];
         }
     }
     out.promotionIntervalMinutes = 1440;
+    for(const period of ['weekly','monthly']) {
+        const key=period+'AwardCriterion';
+        if(Object.hasOwn(body,key)) {
+            if(!['','sales','lessons'].includes(body[key]))throw fail(400,'Mukofot mezoni noto‘g‘ri');
+            out[key]=body[key];
+        }
+        if(out[period+'AwardsEnabled'] && !out[key])throw fail(400,'Mukofot mezonini avval tanlang');
+    }
     for(const key of ['courseMedia','platformMedia','resultsMedia']) {
         if(Object.hasOwn(body,key)) out[key]=body[key]?contentInput(body[key]):null;
     }

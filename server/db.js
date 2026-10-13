@@ -318,6 +318,7 @@ async function initSchema() {
     await pool.query(`ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS trial_group_link TEXT DEFAULT ''`).catch(() => {});
     await teacherDuties.initSchema(pool);
     await payroll.initSchema(pool);
+    await require('./services/domworkBot/insights').init(pool);
 
     // Migration: leads va students jadvallariga extra_data qo'shish
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
@@ -1650,6 +1651,9 @@ async function saveHrEmployeesData(client, employees, actor = {}) {
              e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '',
              e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '', e.dualRole === true]
         );
+        if (!oldEmployees.some(old => old.id === e.id) && e.lang === 'russian' && e.status !== 'inactive') {
+            await require('./services/domworkBot/events').capture(client, 'employee', e.id, {}, 'employee:' + e.id);
+        }
     }
 }
 
@@ -1728,10 +1732,14 @@ async function getDemoStudentAssistantRatings(studentId) {
     const demoStudentId = await resolveStudentId(studentId);
     if (!demoStudentId) return {};
     const all = await getJsonData('assistantWeeklyRatings');
-    return all[demoStudentId] || {};
+    return { ...(all[demoStudentId] || {}), ...await require('./services/domworkBot/insights').assistantHistory(pool, demoStudentId) };
 }
 
 async function submitDemoStudentAssistantRating(weekKey, ratings, studentId) {
+    if (!studentId && await resolveStudentSubjectLang(await resolveStudentId()) === 'russian') throw Object.assign(new Error('O‘quvchi hisobiga kiring'), {status:401});
+    if (studentId && await resolveStudentSubjectLang(studentId) === 'russian') {
+        return tx(client => require('./services/domworkBot/insights').rateAssistant(client, studentId, weekKey, ratings));
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(weekKey || ''))) throw new Error("Noto'g'ri hafta");
     if (!ASSISTANT_RATING_KEYS.every((k) => Number.isFinite(Number(ratings?.[k])) && ratings[k] >= 1 && ratings[k] <= 5)) {
         throw new Error("Barcha mezonlar bo'yicha 1-5 baho kerak");

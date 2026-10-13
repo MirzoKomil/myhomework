@@ -3,7 +3,7 @@
     const esc=v=>escapeHtml(String(v ?? ''));
     const types={sales:'Sotuv',marketing:'Marketing',teachers:'Ustozlar',family:'Family',beacon:'Mayoq'};
     const roles={all:'Barchaga',trial:'Sinov o‘quvchilari',student:'Faol o‘quvchilar',sales:'Sotuv menejerlari',teacher:'Asosiy ustozlar',assistant:'Yordamchi ustozlar',rop:'ROP',marketing:'Targetolog',admin:'Admin',groups:'Tanlangan guruhlar'};
-    const switches={eventsEnabled:'CRM voqealari xabarlari',remindersEnabled:'Dars va davomat eslatmalari',reportsEnabled:'20:00 / 21:00 hisobotlar',groupNotificationsEnabled:'Guruhlarga xabar yuborish',promotionsEnabled:'Sinov o‘quvchilariga kuniga bir xabar',trialRemovalEnabled:'O‘tilgan sinov darsidan keyin guruhdan chiqarish'};
+    const switches={eventsEnabled:'CRM voqealari xabarlari',remindersEnabled:'Dars va davomat eslatmalari',reportsEnabled:'20:00 / 21:00 hisobotlar',groupNotificationsEnabled:'Guruhlarga xabar yuborish',promotionsEnabled:'Sinov o‘quvchilariga kuniga bir xabar',trialRemovalEnabled:'O‘tilgan sinov darsidan keyin guruhdan chiqarish',milestonesEnabled:'20 / 40 / 60 mln sof tushum pog‘onalari tabrigi',dailyAwardsEnabled:'Kun sotuvchisi va kun ustozi',weeklyAwardsEnabled:'Hafta yetakchisi',monthlyAwardsEnabled:'Oy yetakchisi',employeeWelcomeEnabled:'Yangi rus tili xodimiga jamoa tabrigi',releaseNotesEnabled:'Jamoaga CRM yangilanishlari'};
     const texts={courseText:'Kurs haqida',platformText:'Platforma haqida',resultsText:'Natijalar',promotionText:'Kunlik sotuv xabari',familyText:'Jamoa xabari',methodicalText:'Haftalik ustozlar posti'};
     let generation=0;
     const api=(path,body,method='POST')=>apiFetch('/api/domwork/bot'+path,body?{method,body:JSON.stringify(body)}:{});
@@ -37,9 +37,13 @@
                 <div class="dg-fields">${Object.entries(switches).map(([key,label])=>`<label class="dg-checkbox"><input type="checkbox" name="${key}" ${settings.data[key]?'checked':''}>${esc(label)}</label>`).join('')}
                 <label>Kunlik sotuv xabari vaqti<input class="form-control" type="time" name="promotionTime" value="${esc(settings.data.promotionTime || '10:00')}"></label>
                 <label>Jamoa xabari vaqti<input class="form-control" type="time" name="familyTime" value="${esc(settings.data.familyTime || '10:00')}"></label>
+                <label>G‘oliblar xabari vaqti (Toshkent)<input class="form-control" type="time" name="awardsTime" value="${esc(settings.data.awardsTime || '20:00')}"></label>
+                ${['weekly','monthly'].map(p=>`<label>${p==='weekly'?'Haftalik':'Oylik'} mukofot mezoni<select class="form-control" name="${p}AwardCriterion">${[['','Tanlanmagan'],['sales','Sof sotuv tushumi (menejerlar)'],['lessons','Tasdiqlangan darslar, teng bo‘lsa baho (asosiy ustozlar)']].map(([v,label])=>`<option value="${v}" ${settings.data[p+'AwardCriterion']===v?'selected':''}>${label}</option>`).join('')}</select></label>`).join('')}
                 <label>Rasmiy kanal<input class="form-control" name="officialChannel" type="url" value="${esc(settings.data.officialChannel)}"></label></div>
                 ${Object.entries(texts).map(([key,label])=>`<label>${esc(label)}<textarea class="form-control" name="${key}" maxlength="3500" rows="3">${esc(settings.data[key])}</textarea></label>`).join('')}
-                <button class="btn-primary" type="submit">Sozlamalarni saqlash</button></form></details>
+                <p class="dg-note">Yangi xabarlar o‘chiq. Kun sotuvchisi sof tushumdan, kun ustozi tasdiqlangan darslar va shu davr baholaridan olinadi. Teng natijada barcha g‘oliblar ko‘rsatiladi. Bog‘lanmagan refundlar bo‘lsa sotuv g‘olibi e’lon qilinmaydi. Haftalik/oylik mukofot mezoni tanlanishi shart. Tab­riklar uchun CRM voqealari va guruh xabarlari ham yoqilgan bo‘lishi kerak. Eski voqealar qayta yuborilmaydi.</p>
+                <button class="btn-primary" type="submit">Sozlamalarni saqlash</button></form>
+                <button type="button" class="btn-secondary-sm" data-db-awards>Bugungi g‘oliblarni xabar yubormasdan ko‘rish</button><div data-db-awards-preview></div></details>
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -67,9 +71,13 @@
         });
         el.querySelector('[data-db-settings]').onsubmit=e=>{e.preventDefault();const form=e.currentTarget;work(async()=>{
             const body={revision:settings.revision};for(const key of Object.keys(switches))body[key]=form.elements[key].checked;
-            for(const key of [...Object.keys(texts),'promotionTime','familyTime','officialChannel'])body[key]=form.elements[key].value;
+            for(const key of [...Object.keys(texts),'promotionTime','familyTime','awardsTime','weeklyAwardCriterion','monthlyAwardCriterion','officialChannel'])body[key]=form.elements[key].value;
             const saved=await api('/settings',body,'PUT');settings=saved;notify('Sozlamalar serverga saqlandi.');
         });};
+        el.querySelector('[data-db-awards]').onclick=()=>work(async()=>{
+            const value=await api('/awards/preview');el.querySelector('[data-db-awards-preview]').innerHTML=
+                [value.sales,value.teachers].map(v=>`<p style="white-space:pre-wrap">${esc(v.text)}</p>`).join('');
+        });
         el.querySelector('[data-db-broadcast]').onsubmit=e=>{e.preventDefault();const form=e.currentTarget;work(async()=>{
             const preview=await api('/broadcasts/preview',{segment:form.elements.segment.value,content:{method:'sendMessage',text:form.elements.text.value},
                 groupIds:[...form.querySelectorAll('[name="group"]:checked')].map(n=>n.value),scheduledAt:form.elements.time.value?form.elements.time.value+':00+05:00':undefined});

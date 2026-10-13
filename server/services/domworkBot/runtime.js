@@ -23,6 +23,23 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         return queue.transaction(pool, async db => {
             if (row.payload._expiresAt && Date.now()>new Date(row.payload._expiresAt).getTime()) return false;
             if(row.payload._setting && !(await store.settings(db)).data[row.payload._setting]) return false;
+            if(row.payload._settings) {
+                const settings=(await store.settings(db)).data;
+                if(!row.payload._settings.every(key=>settings[key]===true))return false;
+            }
+            if(row.payload._employee) {
+                if(!(await db.query("SELECT id FROM hr_employees WHERE id=$1 AND lang='russian' AND COALESCE(status,'active')<>'inactive'",[row.payload._employee])).rows.length)return false;
+            }
+            if(row.payload._milestone) {
+                const g=row.payload._milestone, today=require('./policy').today();
+                if(g.month!==today.slice(0,7))return false;
+                const actual=await require('./recognition').sales(db,g.month+'-01',today);
+                if(actual.warnings.length || (actual.rows.find(r=>r.id===g.managerId)?.value || 0)<g.threshold)return false;
+            }
+            if(row.payload._award) {
+                const g=row.payload._award, actual=await require('./recognition').summary(db,g.criterion,g.start,g.end,'');
+                if(JSON.stringify(actual.winners)!==JSON.stringify(g.winners))return false;
+            }
             if (row.payload._admin) {
                 try { await store.currentAdmin(db,{id:row.payload._admin}); } catch { return false; }
             }
@@ -156,6 +173,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 const me = await call('getMe', {});
                 if (me.username?.toLowerCase() !== 'domworkuz_bot' || !me.is_bot) throw Error('Unexpected bot identity');
                 botId = me.id; state = 'ready';
+                await queue.transaction(pool,db=>require('./recognition').release(db));
                 if (autoTick) {
                     timer = setInterval(tick, 500); timer.unref();
                     discoveryTimer = setInterval(tickDiscovery, 1000); discoveryTimer.unref();
