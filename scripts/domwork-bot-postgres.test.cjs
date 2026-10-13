@@ -322,5 +322,98 @@ test('Domwork bot on disposable PostgreSQL (no real Telegram or Redis)', {skip: 
             assert.equal(linked.role,'admin');assert.equal(linked.id,'reset-admin');
             assert.equal((await store.identity(pool,'90002')).id,'reset-admin');assert.equal(await store.identity(pool,'90001'),null);
         });
+        const navigationReads=[];
+        // Report SQL has its own real PostgreSQL suite. This adapter verifies
+        // that navigation reaches the selected, current-role staff action.
+        const navigationHandler=createHandler({crm:{...crm,async staffAction(db,identity,action){
+            navigationReads.push({id:identity.id,role:identity.role,action});
+            if(action==='configuration')return require('../server/services/domworkBot/staff').action(db,identity,action);
+            return 'Fixture report: '+action;
+        }}});
+        let navigationUpdateId=10000;
+        const navigate=async(id,label,extra={})=>{
+            const updateId=navigationUpdateId++;
+            await queue.transaction(pool,db=>navigationHandler(db,{update_id:updateId,message:msg(id,label,extra)}));
+            return (await pool.query('SELECT payload FROM domwork_bot_outbox WHERE unique_key=$1',['u:'+updateId+':r:0'])).rows[0]?.payload;
+        };
+        const navigationSnapshot=async()=>Object.fromEntries(await Promise.all([
+            'users','hr_employees','students','leads','domwork_bot_links','domwork_bot_settings',
+            'domwork_learning_groups','domwork_student_group_links','domwork_bot_groups',
+            'domwork_bot_broadcasts','domwork_bot_leave_requests'
+        ].map(async table=>[table,(await pool.query(`SELECT * FROM ${table} ORDER BY 1`)).rows])));
+        await t.test('all broadcast stages yield to allowed admin buttons without cancel; other sessions and saved records are preserved',async()=>{
+            const before=await navigationSnapshot(),otherSession={type:'leave',fixture:'other user'};
+            await store.setSession(pool,'101',otherSession);
+            const buttons=[['🔗 Guruhlarni bog‘lash','Guruhni tanlang','choose-chat'],
+                ['📝 Ruxsat arizalari','Hozircha',null],['📊 Umumiy hisobot','Fixture report: digest',null],
+                ['⚙️ Bot sozlamalari','Kunlik sotuv xabarlari',null]];
+            for(const step of ['segment','content','time'])for(const [label,expected,nextType]of buttons){
+                await store.setSession(pool,'100',{type:'broadcast',step,segment:'student',content:{method:'sendMessage',text:'Unsent fixture'}});
+                const response=await navigate(100,label);
+                assert.ok(response.text.includes(expected),step+' → '+label+': '+response.text);
+                const pending=await store.session(pool,'100');
+                assert.equal(pending?.type||null,nextType);
+                if(nextType==='choose-chat'){
+                    assert.ok(response.reply_markup.keyboard.flat().some(button=>button.request_chat));
+                    assert.ok(response.reply_markup.keyboard.flat().some(button=>button.text==='📊 Umumiy hisobot'));
+                }
+                assert.deepEqual(await store.session(pool,'101'),otherSession);
+            }
+            assert.deepEqual(await navigationSnapshot(),before);
+            assert.ok(navigationReads.some(x=>x.id==='a'&&x.role==='admin'&&x.action==='digest'));
+        });
+        await t.test('leave workflow yields to teacher menu, and pressing leave again starts a fresh request',async()=>{
+            const before=await navigationSnapshot();
+            await store.setSession(pool,'101',{type:'leave'});
+            const response=await navigate(101,'⚠️ Jarimalarim');
+            assert.equal(response.text,'Hozircha ma’lumot yo‘q.');
+            assert.equal(await store.session(pool,'101'),null);
+            await store.setSession(pool,'101',{type:'leave',fixture:'unfinished'});
+            const restarted=await navigate(101,'📝 Ruxsat so‘rash');
+            assert.ok(restarted.text.includes('Boshlanish sanasi'));
+            assert.deepEqual(await store.session(pool,'101'),{type:'leave'});
+            assert.deepEqual(await navigationSnapshot(),before);
+        });
+        await t.test('unavailable role buttons and ordinary replies do not clear or escalate an unfinished workflow',async()=>{
+            const before=await navigationSnapshot(),pending={type:'leave',fixture:'keep'};
+            await store.setSession(pool,'101',pending);
+            for(const label of ['📣 Xabar tarqatish','📊 Umumiy hisobot','ordinary text']){
+                const response=await navigate(101,label);
+                assert.ok(response.text.includes('Sana va sabab'));
+                assert.deepEqual(await store.session(pool,'101'),pending);
+            }
+            assert.deepEqual(await navigationSnapshot(),before);
+        });
+        await t.test('leaving a group chooser cancels only its pending request and rejects the old shared-chat response',async()=>{
+            const before=await navigationSnapshot(),seen=(await pool.query('SELECT * FROM domwork_bot_seen_chats ORDER BY chat_id')).rows;
+            await store.setSession(pool,'100',{type:'choose-chat',requestId:314});
+            const response=await navigate(100,'📊 Umumiy hisobot');
+            assert.equal(response.text,'Fixture report: digest');
+            assert.equal(await store.session(pool,'100'),null);
+            const stale=await navigate(100,undefined,{chat_shared:{request_id:314,chat_id:-10088888,title:'Stale chooser'}});
+            assert.ok(stale.text.includes('so‘rovi eskirgan'));
+            assert.deepEqual((await pool.query('SELECT * FROM domwork_bot_seen_chats ORDER BY chat_id')).rows,seen);
+            assert.deepEqual(await navigationSnapshot(),before);
+        });
+        await t.test('broadcast answers/media still advance normally, menu button restarts, and cancel/menu commands remain supported',async()=>{
+            const before=await navigationSnapshot();
+            await navigate(100,'📣 Xabar tarqatish');
+            assert.deepEqual(await store.session(pool,'100'),{type:'broadcast',step:'segment'});
+            await navigate(100,'student');
+            assert.equal((await store.session(pool,'100')).step,'content');
+            await navigate(100,undefined,{photo:[{file_id:'fixture_photo_123456789'}],caption:'📊 Umumiy hisobot'});
+            const content=await store.session(pool,'100');
+            assert.equal(content.step,'time');assert.equal(content.content.text,'📊 Umumiy hisobot');
+            await navigate(100,'📣 Xabar tarqatish');
+            assert.deepEqual(await store.session(pool,'100'),{type:'broadcast',step:'segment'});
+            const cancelled=await navigate(100,'/cancel');
+            assert.equal(cancelled.text,'Bekor qilindi.');assert.equal(await store.session(pool,'100'),null);
+            for(const command of ['/menu','/start']){
+                await store.setSession(pool,'100',{type:'broadcast',step:'segment'});
+                assert.ok((await navigate(100,command)).text.includes('Kerakli bo‘limni tanlang'));
+                assert.equal(await store.session(pool,'100'),null);
+            }
+            assert.deepEqual(await navigationSnapshot(),before);
+        });
     } finally {await runtime?.stop();await pool.end();}
 });

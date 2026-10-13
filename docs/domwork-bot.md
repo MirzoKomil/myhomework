@@ -59,6 +59,12 @@ and HR bots use their own credentials and are not changed.
   never the main-teacher score. Already-queued private reports recheck reportsEnabled.
 - Pending notifications recheck account/role, booking, assignment, attendance correction,
   lesson time and relevant automation switch before delivery.
+- Authorized private menu buttons take precedence over unfinished broadcast, leave
+  and group-chooser sessions. Selecting a button abandons only that user's unfinished
+  workflow and opens the selected section without `/cancel`. Saved broadcasts,
+  applications, CRM records and other users' sessions are preserved. Free-text/media
+  workflow answers still work; old group-chooser replies are rejected after navigation.
+  The group chooser retains the admin menu alongside its Telegram chat-picker button.
 
 ## Not complete / not activated
 

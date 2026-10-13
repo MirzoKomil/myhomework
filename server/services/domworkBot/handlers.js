@@ -118,7 +118,16 @@ function createHandler({ crm }) {
                 await store.setSession(db,sender,null);
                 return await reply(`Tanlangan guruh: ${text(message.chat_shared.title)}\nchat_id: ${chatId}\nCRM → Sozlamalar → Telegram guruhlari → Bot boshqaruvida aniq bo‘lim yoki ustozga biriktiring. Hali xabar yuborilmaydi.`);
             }
-            const pending = await store.session(db, sender);
+            // An allowed menu button is navigation, never a workflow answer or
+            // broadcast content. Only abandon this sender's unfinished FSM;
+            // persisted broadcasts, leave requests and CRM records stay intact.
+            const action = actionFor(identity, command);
+            if (action) policy.requireAction(identity, action);
+            let pending = await store.session(db, sender);
+            if (action && pending) {
+                await store.setSession(db, sender, null);
+                pending = null;
+            }
             if (pending?.type === 'leave') {
                 policy.requireAction(identity, 'leave');
                 const match = /^(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\s+([\s\S]{5,1000})$/.exec(command);
@@ -161,14 +170,13 @@ function createHandler({ crm }) {
                         {reply_markup:{inline_keyboard:[buttons]}});
                 }
             }
-            const action = actionFor(identity, command);
             if (!action) return await reply('Menyudan bo‘limni tanlang. Bekor qilish: /cancel');
             policy.requireAction(identity, action);
             const config = (await store.settings(db)).data;
             if(action==='bindings') {
                 const requestId=Number(update.update_id)%2147483647;
                 await store.setSession(db,sender,{type:'choose-chat',requestId});
-                return await reply('Guruhni tanlang. Keyin CRMda aniq ustoz yoki bo‘limga biriktiring.',{reply_markup:{keyboard:[[{text:'📌 Guruhni tanlash',request_chat:{request_id:requestId,chat_is_channel:false,bot_is_member:true,request_title:true}}]],resize_keyboard:true,one_time_keyboard:true}});
+                return await reply('Guruhni tanlang. Keyin CRMda aniq ustoz yoki bo‘limga biriktiring.',{reply_markup:{keyboard:[[{text:'📌 Guruhni tanlash',request_chat:{request_id:requestId,chat_is_channel:false,bot_is_member:true,request_title:true}}],...keyboard(identity).keyboard],resize_keyboard:true}});
             }
             if (action === 'broadcast') {
                 await store.setSession(db,sender,{type:'broadcast',step:'segment'});
