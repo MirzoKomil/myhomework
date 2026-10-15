@@ -1,0 +1,9 @@
+# Local deployment outputs and verification evidence; never publish these.
+/production-build/
+/production-backup/
+*.zip
+
+# Netlify state and private environment values belong outside Git.
+**/.netlify/
+**/.env
+**/.env.*
