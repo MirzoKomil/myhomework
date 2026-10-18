@@ -1,9 +1,7 @@
 /**
  * v2 pastki menyu (dizayn: 02 · Bosh sahifa).
  *
- * Hozircha v2'da faqat Bosh sahifa bor — qolgan bo'limlar eski ilova
- * ekranlariga olib boradi. Har bir bo'lim v2'da qurilgach, shu yerdagi
- * `href` almashtiriladi.
+ * Hamma bo'limlar v2 manzillariga olib boradi (constants/v2/routes.ts).
  */
 import { router, type Href } from 'expo-router';
 import type { ReactNode } from 'react';
@@ -16,12 +14,12 @@ import { V2Text } from './Text';
 
 export type TabKey = 'home' | 'lessons' | 'practice' | 'league' | 'profile';
 
-const TABS: { key: TabKey; label: string; href: Href; icon: (color: string, active: boolean) => ReactNode }[] = [
+const TABS: { key: TabKey; label: string; href: string; icon: (color: string, active: boolean) => ReactNode }[] = [
   { key: 'home', label: 'Asosiy', href: '/v2', icon: (c, a) => <HomeIcon color={c} filled={a} /> },
-  { key: 'lessons', label: 'Darslar', href: '/homework', icon: (c, a) => <PathIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
-  { key: 'practice', label: 'Mashq', href: '/resources', icon: (c, a) => <StarIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
-  { key: 'league', label: 'Liga', href: '/profile/leaderboard', icon: (c, a) => <TrophyIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
-  { key: 'profile', label: 'Profil', href: '/profile', icon: (c, a) => <UserIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
+  { key: 'lessons', label: 'Darslar', href: '/v2/darslar', icon: (c, a) => <PathIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
+  { key: 'practice', label: 'Mashq', href: '/v2/mashq', icon: (c, a) => <StarIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
+  { key: 'league', label: 'Liga', href: '/v2/liga', icon: (c, a) => <TrophyIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
+  { key: 'profile', label: 'Profil', href: '/v2/profil', icon: (c, a) => <UserIcon color={c} strokeWidth={a ? 2.4 : 2} /> },
 ];
 
 export function TabBar({ active }: { active: TabKey }) {
@@ -37,7 +35,7 @@ export function TabBar({ active }: { active: TabKey }) {
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={tab.label}
-            onPress={() => { if (!isActive) router.push(tab.href); }}
+            onPress={() => { if (!isActive) router.push(tab.href as Href); }}
             style={styles.item}
           >
             {tab.icon(color, isActive)}
