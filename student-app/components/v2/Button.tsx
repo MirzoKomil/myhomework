@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type Vi
 import { colors, radius, touchTarget } from '@/constants/v2/tokens';
 import { V2Text } from './Text';
 
-type Variant = 'primary' | 'inverse' | 'secondary' | 'coin';
+type Variant = 'primary' | 'inverse' | 'secondary' | 'coin' | 'telegram';
 type Size = 'lg' | 'md';
 
 type ButtonProps = {
@@ -28,6 +28,8 @@ const palette: Record<Variant, { bg: string; bgPressed: string; fg: string }> = 
   inverse: { bg: colors.surface, bgPressed: colors.cobaltSoft, fg: colors.ink },
   secondary: { bg: colors.track, bgPressed: colors.border, fg: colors.ink },
   coin: { bg: colors.coinSoft, bgPressed: '#FFE9A8', fg: colors.coinText },
+  // Telegram ko'kida oq matn kontrasti yetmaydi (2.6:1) — siyoh rang.
+  telegram: { bg: colors.telegram, bgPressed: '#1E96D4', fg: colors.ink },
 };
 
 const sizes: Record<Size, { height: number; radius: number; variant: 'bodyLarge' | 'bodyStrong' }> = {
