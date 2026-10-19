@@ -249,6 +249,9 @@ app.get(['/student', '/student/*'], (req, res, next) => {
     });
 });
 
+// Kitobdagi audio dialog QR-kodlari: /audio/L05-1 → /audio/L05_d1.mp3
+app.get(/^\/audio\/L\d{1,2}-[1-3]\/?$/i, require('./routes/bookAudio').bookAudioHandler(ROOT));
+
 app.use(express.static(ROOT, {
     index: false,
     extensions: ['html'],
