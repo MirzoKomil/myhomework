@@ -11,7 +11,7 @@ import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bounce } from '@/components/v2/motion';
 import { playSfx } from '@/services/sfx';
-import { speak } from '@/services/voicePraise';
+import { speak, stopVoice } from '@/services/voicePraise';
 
 import { ChevronRight, CloseIcon, Coin } from '@/components/v2/homework/icons';
 import { partLabel, partQuestionCount } from '@/components/v2/homework/lib';
@@ -49,6 +49,7 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
     playSfx('unlock');
     // "Barakalla" faqat yaxshi natijada; past natijada — yumshoq dalda.
     speak(pct >= 70 ? 'homework' : 'wrong', 700);
+    return () => stopVoice();
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (href: string) => {

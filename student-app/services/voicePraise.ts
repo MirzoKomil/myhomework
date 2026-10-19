@@ -2,10 +2,10 @@
  * O'zbekcha ovozli maqtov va dalda (v2).
  *
  * Har javobda maqtov aytilsa tez jonga tegadi — shuning uchun:
- *  - to'g'ri javob: ketma-ket 3-, 5-, 8-, 12-, keyin har 4-to'g'ri javobda
+ *  - to'g'ri javob: ketma-ket 2-, 4-, 7-, 10-, keyin har 4-to'g'ri javobda
  *    (va kamida 8 soniyada bir marta) turli jumlalardan biri aytiladi;
- *  - xato javob: faqat to'g'ri javobdan keyingi BIRINCHI xatoda yumshoq dalda
- *    (ketma-ket xatolarda jim — o'quvchi kayfiyati tushmasin);
+ *  - xato javob: faqat kamida 2 ta ketma-ket to'g'ri javobdan keyingi xatoda,
+ *    bir qismda ko'pi bilan BIR marta yumshoq dalda (maqtov ustun bo'lsin);
  *  - katta lahzalar (dars tugadi, yangi daraja, o'yinda g'alaba) — har doim,
  *    lekin fanfara tugagandan keyin;
  *  - bir vaqtda faqat BITTA jumla: yangisi oldingisini to'xtatadi; ilova
@@ -23,9 +23,11 @@ import { enqueuePrime, hasUserGesture, isSpeechBusy } from './audioUnlock';
 import { VOICE_SOURCES, type VoiceGroup } from './voiceClips';
 
 const STORAGE_KEY = 'v2.voicePraiseEnabled';
-/** Maqtov aytiladigan ketma-ket to'g'ri javoblar soni (12 dan keyin — har 4-da). */
-const PRAISE_AT = [3, 5, 8, 12];
+/** Maqtov aytiladigan ketma-ket to'g'ri javoblar soni (10 dan keyin — har 4-da). */
+const PRAISE_AT = [2, 4, 7, 10];
 const MIN_GAP_MS = 8000;
+/** To'g'ri javob chimi (0–780 ms) va coin (220–820 ms) tugagach gapiradi. */
+const PRAISE_DELAY_MS = 850;
 
 let enabled = true;
 let loaded = false;
@@ -34,7 +36,7 @@ const players: Record<string, AudioPlayer> = {};
 const lastIndex: Partial<Record<VoiceGroup, number>> = {};
 let lastSpokenAt = 0;
 let correctRun = 0;
-let lastWasCorrect = true;
+let wrongSpoken = false;
 let current: AudioPlayer | null = null;
 let pending: ReturnType<typeof setTimeout> | null = null;
 
@@ -126,25 +128,31 @@ export function praiseAnswer(correct: boolean) {
   const now = Date.now();
   if (correct) {
     correctRun += 1;
-    const due = PRAISE_AT.includes(correctRun) || (correctRun > 12 && correctRun % 4 === 0);
-    if (due && now - lastSpokenAt > MIN_GAP_MS) speak('correct');
-    lastWasCorrect = true;
+    const due = PRAISE_AT.includes(correctRun) || (correctRun > 10 && (correctRun - 10) % 4 === 0);
+    if (due && now - lastSpokenAt > MIN_GAP_MS) speak('correct', PRAISE_DELAY_MS);
     return;
   }
-  // Xato: faqat to'g'ri javoblardan keyingi birinchi xatoda dalda.
-  if (lastWasCorrect && now - lastSpokenAt > MIN_GAP_MS) speak('wrong', 550);
+  // Xato: yaxshi ketayotgan seriya uzilganda, bir qismda bir marta dalda.
+  if (correctRun >= 2 && !wrongSpoken && now - lastSpokenAt > MIN_GAP_MS) {
+    wrongSpoken = true;
+    speak('wrong', 650);
+  }
   correctRun = 0;
-  lastWasCorrect = false;
 }
 
 /** Yangi mashq/qism boshlanganda hisoblagichni nolga qaytarish. */
 export function resetPraiseRun() {
   correctRun = 0;
-  lastWasCorrect = true;
+  wrongSpoken = false;
 }
 
 /** Safari/iOS (web): jumla pleerlarini bosishlar ichida "ochish" (audioUnlock.ts). Effektlardan keyin navbatga qo'yiladi. */
 export function primeVoiceOnFirstGesture() {
-  const order: VoiceGroup[] = ['correct', 'wrong', 'complete', 'homework', 'levelup', 'gameWin', 'gameLose'];
-  enqueuePrime(order.flatMap((g) => VOICE_SOURCES[g].map((_, i) => ({ key: `voice:${g}:${i}`, get: () => player(g, i) }))));
+  // Katta lahzalar (dars tugadi, daraja, vazifa) birinchi bosishdayoq ochiladi.
+  const prio: Record<VoiceGroup, number> = { complete: 1, levelup: 1, homework: 1, correct: 2, wrong: 2, retry: 2, gameWin: 2, gameLose: 2 };
+  enqueuePrime(
+    (Object.keys(VOICE_SOURCES) as VoiceGroup[]).flatMap((g) =>
+      VOICE_SOURCES[g].map((_, i) => ({ key: `voice:${g}:${i}`, prio: prio[g], get: () => player(g, i) })),
+    ),
+  );
 }

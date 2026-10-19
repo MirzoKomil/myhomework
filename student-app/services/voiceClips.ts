@@ -4,7 +4,7 @@
  * Ovoz: ElevenLabs "Sardor" (eleven_v4), Abdulloh tanlovi. Fayllar: assets/sounds/v2/voice/*.mp3.
  * Har fayl yonida — aytiladigan matn.
  */
-export type VoiceGroup = 'correct' | 'wrong' | 'complete' | 'levelup' | 'gameWin' | 'gameLose' | 'homework';
+export type VoiceGroup = 'correct' | 'wrong' | 'retry' | 'complete' | 'levelup' | 'gameWin' | 'gameLose' | 'homework';
 
 export const VOICE_SOURCES: Record<VoiceGroup, number[]> = {
   correct: [
@@ -16,9 +16,13 @@ export const VOICE_SOURCES: Record<VoiceGroup, number[]> = {
     require('@/assets/sounds/v2/voice/correct_molodes.mp3'), // Molodes!
     require('@/assets/sounds/v2/voice/correct_ajoyib.mp3'), // Ajoyib, shunday davom eting!
   ],
+  // Javobdan keyingi dalda (qayta urinish bo'lmasa ham mos keladi).
   wrong: [
-    require('@/assets/sounds/v2/voice/wrong_hechqisi.mp3'), // Hechqisi yo'q, yana bir urinib ko'ring.
     require('@/assets/sounds/v2/voice/wrong_organish.mp3'), // Xato qilish ham o'rganishning bir qismi.
+  ],
+  // Qayta urinish imkoni bor joylar (qism 65% dan past — "Qayta urinish").
+  retry: [
+    require('@/assets/sounds/v2/voice/wrong_hechqisi.mp3'), // Hechqisi yo'q, yana bir urinib ko'ring.
   ],
   complete: [
     require('@/assets/sounds/v2/voice/complete_tugadi.mp3'), // Dars tugadi! Zo'r ishladingiz!

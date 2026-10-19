@@ -8,15 +8,16 @@
  * - iOS'da har audio element bir marta foydalanuvchi bosishi ichida chalinsa,
  *   keyin bosishsiz ham (masalan ekran ochilganda) chalina oladi. Shuning uchun
  *   pleerlar navbatga qo'yiladi va har bosishda bir nechtasi jim holda
- *   "ochiladi" — birinchi bosishda eng kerakli effektlar, qolganlari keyingi
- *   bosishlarda (arzon telefonlarda bir zumda 30 ta faylni dekodlamaslik uchun).
+ *   "ochiladi" — birinchi bosishda eng kerakli effektlar va katta lahzalar
+ *   jumlalari, qolganlari keyingi 2 bosishda (arzon telefonlarda bir zumda 30 ta faylni dekodlamaslik uchun).
  * - Faqat haqiqiy faollashtiruvchi hodisalar tinglanadi: click, touchend,
  *   keydown (spec bo'yicha sensorli pointerdown faollashtirmaydi).
  */
 import type { AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 
-type Entry = { key: string; get: () => AudioPlayer | null };
+/** prio: kichigi oldin ochiladi (0 — eng kerakli effektlar). */
+type Entry = { key: string; prio: number; get: () => AudioPlayer | null };
 
 const queue: Entry[] = [];
 const primed = new Set<string>();
@@ -44,7 +45,7 @@ export function isSpeechBusy(): boolean {
 
 function onGesture() {
   gestured = true;
-  const n = batches === 0 ? 8 : 5;
+  const n = batches === 0 ? 12 : 8;
   batches += 1;
   let done = 0;
   while (queue.length && done < n) {
@@ -72,12 +73,11 @@ function stopListening() {
   EVENTS.forEach((ev) => document.removeEventListener(ev, onGesture, true));
 }
 
-/** Pleerlarni ochish navbatiga qo'shish (`front` — navbat boshiga). */
-export function enqueuePrime(entries: Entry[], front = false) {
+/** Pleerlarni ochish navbatiga qo'shish (navbat `prio` bo'yicha tartiblanadi). */
+export function enqueuePrime(entries: Entry[]) {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-  const fresh = entries.filter((e) => !primed.has(e.key));
-  if (front) queue.unshift(...fresh);
-  else queue.push(...fresh);
+  queue.push(...entries.filter((e) => !primed.has(e.key)));
+  queue.sort((a, b) => a.prio - b.prio);
   if (!listening && queue.length) {
     listening = true;
     EVENTS.forEach((ev) => document.addEventListener(ev, onGesture, true));

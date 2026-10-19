@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Bounce, Confetti, Pop } from '@/components/v2/motion';
-import { speak } from '@/services/voicePraise';
+import { speak, stopVoice } from '@/services/voicePraise';
 
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -62,7 +62,10 @@ export function GameResult({ show, win, title, subtitle, stats, coins, lightning
       setOpen(true);
       speak(win ? 'gameWin' : 'gameLose', win ? 1550 : 1050);
     }, 700);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      stopVoice();
+    };
   }, [show]);
 
   const again = () => {

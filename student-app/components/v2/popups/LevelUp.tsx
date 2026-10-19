@@ -9,7 +9,7 @@
  */
 import { useEffect } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { speak } from '@/services/voicePraise';
+import { speak, stopVoice } from '@/services/voicePraise';
 
 import { Bounce, Confetti, Pop } from '@/components/v2/motion';
 import { playSfx } from '@/services/sfx';
@@ -52,10 +52,10 @@ export function LevelUpPopup({ visible, onClose, levelIndex = V2_TOP_LEVEL }: Pr
   const name = levelName(idx, courseLang);
   const total = fmt(level.min);
   useEffect(() => {
-    if (visible) {
-      playSfx('levelup');
-      speak('levelup', 2050);
-    }
+    if (!visible) return;
+    playSfx('levelup');
+    speak('levelup', 2050);
+    return () => stopVoice();
   }, [visible]);
 
   return (

@@ -18,7 +18,7 @@ import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-ro
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { speak } from '@/services/voicePraise';
+import { speak, stopVoice } from '@/services/voicePraise';
 
 import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { fullDay, loadCourseData, pad, scheduleDates, splitTitle, type CourseData } from '@/components/v2/lessons/data';
@@ -31,7 +31,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoSchedule, fetchLeaderboard, type LeaderboardEntryResponse } from '@/services/contentApi';
 import { useLessonCoins } from '@/services/coinsStore';
-import { AnimatedFill, Bounce, Confetti, CountUp, FadeInUp, Flicker } from '@/components/v2/motion';
+import { AnimatedFill, Bounce, Confetti, CountUp, FadeInUp } from '@/components/v2/motion';
 import { playSfx, playSfxLater } from '@/services/sfx';
 
 /** Kunlik chaqmoq maqsadi — bosh ekrandagi bilan bir xil (sozlanadigan maqsad hali yo'q). */
@@ -86,7 +86,9 @@ export default function CompleteScreen() {
   // Bayram: konfetti + fanfara; coin bo'lsa — sanash tugaganda "jiring".
   useEffect(() => {
     playSfx('complete');
-    speak('complete', 1550);
+    // Fanfara (0–1.44 s) va coin "jiring"i (1.1–1.7 s) tugagach.
+    speak('complete', 1800);
+    return () => stopVoice();
   }, []);
   useEffect(() => {
     if (coins > 0) playSfxLater('coin', 1100);
@@ -116,9 +118,7 @@ export default function CompleteScreen() {
           </View>
           <FadeInUp delay={220} style={{ alignSelf: 'stretch' }}>
           <View accessibilityLabel="Streak" style={styles.streak}>
-            <Flicker>
-              <FlameIcon />
-            </Flicker>
+            <FlameIcon />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.streakTitle}>Streak: 0 kun</Text>
               <Text style={styles.small}>Ertaga ham davom eting!</Text>

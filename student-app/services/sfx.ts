@@ -124,5 +124,8 @@ const FIRST: SfxName[] = ['correct', 'wrong', 'coin', 'select', 'flip', 'match',
 /** Safari/iOS (web): pleerlarni foydalanuvchi bosishlari ichida "ochish" (audioUnlock.ts). */
 export function primeSfxOnFirstGesture() {
   const rest = (Object.keys(SOURCES) as SfxName[]).filter((n) => !FIRST.includes(n));
-  enqueuePrime([...FIRST, ...rest].map((n) => ({ key: `sfx:${n}`, get: () => player(n) })), true);
+  enqueuePrime([
+    ...FIRST.map((n) => ({ key: `sfx:${n}`, prio: 0, get: () => player(n) })),
+    ...rest.map((n) => ({ key: `sfx:${n}`, prio: 3, get: () => player(n) })),
+  ]);
 }
