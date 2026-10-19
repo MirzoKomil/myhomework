@@ -55,10 +55,10 @@ const FAQ: { q: string; a: string; sample?: boolean }[] = [
 
 export default function V2Faq() {
   const insets = useSafeAreaInsets();
-  const [open, setOpen] = useState<number | null>(4);
+  const [open, setOpen] = useState<number | null>(4); // dizayndagi kabi "Seriya uzilsa..." ochiq
   // Dizayndagidek StreakLost namunasi shu ekran ustida ochiladi; ?popup=lost — skrinshot uchun.
   const { popup } = useLocalSearchParams<{ popup?: string }>();
-  const [lostOpen, setLostOpen] = useState(popup === 'lost'); // dizayndagi kabi "Seriya uzilsa..." ochiq
+  const [lostOpen, setLostOpen] = useState(popup === 'lost');
 
   return (
     <View style={styles.screen}>

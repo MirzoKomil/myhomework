@@ -161,7 +161,7 @@ const st = StyleSheet.create({
   paid: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#5C4300' },
   body: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, lineHeight: 21, color: '#4A5468' },
   method: {
-    minHeight: 63, borderRadius: 18, borderWidth: 1.5, borderColor: '#E4E8F0', paddingLeft: 10, paddingRight: 14,
+    minHeight: 62, borderRadius: 18, borderWidth: 1.5, borderColor: '#E4E8F0', paddingLeft: 10, paddingRight: 14,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   methodIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

@@ -139,21 +139,25 @@ async function writeList<T>(key: string, list: T[]) {
   }
 }
 
-export type MyWord = { word: string; translation?: string };
+// source — so'z qayerdan qo'shilgani (eski yozuvlarda bo'lmaydi).
+export type MyWordSource = 'story' | 'translator' | 'reading' | 'lesson' | 'search';
+export type MyWord = { word: string; translation?: string; source?: MyWordSource };
 const MY_WORDS_KEY = 'mh_v2_my_words';
 export const getMyWords = () => readList<MyWord>(MY_WORDS_KEY);
-export async function addMyWord(w: MyWord) {
+export async function addMyWord(w: MyWord, source?: MyWordSource) {
   const list = await getMyWords();
   if (list.some((x) => x.word.toLowerCase() === w.word.toLowerCase())) return;
-  await writeList(MY_WORDS_KEY, [w, ...list].slice(0, 500));
+  const entry: MyWord = source ?? w.source ? { ...w, source: source ?? w.source } : w;
+  await writeList(MY_WORDS_KEY, [entry, ...list].slice(0, 500));
 }
 
 /** Yozish davomida avtomatik saqlangan oraliq so'zni yakuniy shakli bilan almashtiradi. */
-export async function replaceMyWord(prevWord: string | null, w: MyWord) {
+export async function replaceMyWord(prevWord: string | null, w: MyWord, source?: MyWordSource) {
   const list = (await getMyWords()).filter(
     (x) => x.word.toLowerCase() !== w.word.toLowerCase() && (prevWord == null || x.word !== prevWord),
   );
-  await writeList(MY_WORDS_KEY, [w, ...list].slice(0, 500));
+  const entry: MyWord = source ?? w.source ? { ...w, source: source ?? w.source } : w;
+  await writeList(MY_WORDS_KEY, [entry, ...list].slice(0, 500));
 }
 
 // ─── Uyga vazifa xatolari (Lug'atim: "N xato") ───────────────────────────

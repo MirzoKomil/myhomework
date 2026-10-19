@@ -114,7 +114,7 @@ export default function TranslatorScreen() {
     const prev = lastSaved.current;
     // Matn davom ettirilayotgan bo'lsa (bir-birining boshi), oldingi oraliq yozuv almashtiriladi.
     const editing = prev && (src.startsWith(prev.src) || prev.src.startsWith(src));
-    await replaceMyWord(editing ? prev.word : null, { word: otherText, translation: uzText });
+    await replaceMyWord(editing ? prev.word : null, { word: otherText, translation: uzText }, 'translator');
     lastSaved.current = { src, word: otherText };
     setSaved(true);
   };

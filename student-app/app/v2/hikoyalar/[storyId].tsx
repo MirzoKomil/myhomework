@@ -202,7 +202,7 @@ export default function BookScreen() {
   // Bosilgan so'z shaxsiy lug'atga qo'shiladi (dizayn: "Lugʻatga qoʻshildi").
   useEffect(() => {
     if (!selKey) return;
-    void addMyWord({ word: selVocab?.english ?? selKey, translation: selVocab?.translation });
+    void addMyWord({ word: selVocab?.english ?? selKey, translation: selVocab?.translation }, 'story');
   }, [selKey, selVocab]);
 
   if (!story) {

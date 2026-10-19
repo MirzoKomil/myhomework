@@ -110,7 +110,7 @@ export default function SearchScreen() {
 
   // Yangi dizaynda bu — Lug'atga havola: so'z qo'shiladi va Lug'at ochiladi.
   const addWord = async () => {
-    await addMyWord({ word: query.trim() });
+    await addMyWord({ word: query.trim() }, 'search');
     go(R.lugat);
   };
 
