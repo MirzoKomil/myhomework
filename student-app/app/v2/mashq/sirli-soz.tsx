@@ -17,7 +17,7 @@ import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
-import { playLoseSound, playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -108,17 +108,18 @@ export default function MysteryScreen() {
     const st = evaluate(cur, answer);
     const next = [...guesses, { word: cur, st }];
     setGuesses(next);
+    if (cur !== answer && next.length < MAX_TRIES) playSfx('flip');
     setCur('');
     setMsg(null);
     if (cur === answer) {
       addCoins(1);
       addLightning(1);
       setOver('won');
-      playWinSound();
+      playSfx('complete');
       saveRecords({ mystery: { tries: next.length, max: MAX_TRIES } });
     } else if (next.length >= MAX_TRIES) {
       setOver('lost');
-      playLoseSound();
+      playSfx('lose');
       saveRecords({ mystery: { tries: next.length, max: MAX_TRIES } });
     }
   };

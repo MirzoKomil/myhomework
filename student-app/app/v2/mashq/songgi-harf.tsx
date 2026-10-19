@@ -20,7 +20,7 @@ import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
 import COMMON_RUSSIAN_WORDS from '@/data/commonRussianWords.json';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
-import { playLoseSound, playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -124,8 +124,8 @@ export default function WordChainScreen() {
   const finish = () => {
     setRecordBefore(rec.wordChain);
     setFinished(true);
-    if (score > 0) playWinSound();
-    else playLoseSound();
+    if (score > 0) playSfx('complete');
+    else playSfx('lose');
     if (score > rec.wordChain) saveRecords({ wordChain: score }).then(reload);
   };
 
@@ -146,8 +146,12 @@ export default function WordChainScreen() {
     if (finished || !bank) return;
     const word = plainWord(letter + input.trim()).toLowerCase();
     if (word.length < 2) return;
-    if (!bank.includes(word)) return setError("Bu so'z ro'yxatda yo'q, boshqasini urinib ko'ring");
+    if (!bank.includes(word)) {
+      playSfx('wrong');
+      return setError("Bu so'z ro'yxatda yo'q, boshqasini urinib ko'ring");
+    }
     if (chain.includes(word)) return setError("Bu so'z allaqachon ishlatilgan");
+    playSfx('correct');
     accept(word, lessonWords.includes(word) ? 2 : 1);
   };
 

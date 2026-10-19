@@ -18,7 +18,7 @@ import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
-import { playWinSound } from '@/services/gameSounds';
+import { playSfx, playSfxLater } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -127,7 +127,7 @@ export default function MemoryScreen() {
   useEffect(() => {
     if (!won || !words) return;
     setBestBefore(rec.memorySeconds);
-    playWinSound();
+    playSfx('complete');
     addCoins(words.length);
     addLightning(words.length);
     if (rec.memorySeconds == null || seconds < rec.memorySeconds) saveRecords({ memorySeconds: seconds }).then(reload);
@@ -138,12 +138,14 @@ export default function MemoryScreen() {
     if (lockRef.current || won || open.includes(card.id) || matched.has(card.pair)) return;
     if (!started) setStarted(true);
     setLast(card);
+    playSfx('flip');
     const next = [...open, card.id];
     if (next.length < 2) return setOpen(next);
     setOpen(next);
     const a = deck.find((c) => c.id === next[0])!;
     if (a.pair === card.pair && a.kind !== card.kind) {
       setMatched((m) => new Set(m).add(card.pair));
+      playSfxLater('match', 120);
       setOpen([]);
       return;
     }

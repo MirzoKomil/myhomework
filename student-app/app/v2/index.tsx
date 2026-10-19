@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import { FadeInUp, Flicker } from '@/components/v2/motion';
 
 import { HomeNav } from '@/components/v2/home/HomeNav';
 import { ArrowRight, BellIcon, BoltIcon, ChevronRightIcon, CoinIcon, FlameIcon, TelegramIcon } from '@/components/v2/home/icons';
@@ -200,7 +201,7 @@ export default function V2Home() {
   return (
     <View style={[styles.screen, { backgroundColor: p.bg }]}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) + 10 }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.column}>
+        <FadeInUp style={styles.column} distance={8} duration={320}>
           {/* Sarlavha */}
           <View style={styles.header}>
             <Pressable accessibilityRole="link" accessibilityLabel="Profil" onPress={() => router.push(R.profile as Href)} style={[styles.avatar, { backgroundColor: p.avatarBg }]}>
@@ -215,7 +216,13 @@ export default function V2Home() {
               <Text style={[styles.pillText, { color: p.coinText }]}>{coins}</Text>
             </Pressable>
             <Pressable accessibilityRole="link" accessibilityLabel={`Seriya ${streak} kun, holat`} onPress={() => router.push(R.streak as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 3 }]}>
-              <FlameIcon />
+              {streak > 0 ? (
+                <Flicker>
+                  <FlameIcon />
+                </Flicker>
+              ) : (
+                <FlameIcon />
+              )}
               <Text style={[styles.pillText, { color: p.streakText }]}>{streak}</Text>
             </Pressable>
             <Pressable
@@ -386,7 +393,7 @@ export default function V2Home() {
               </Pressable>
             </View>
           )}
-        </View>
+        </FadeInUp>
       </ScrollView>
       <HomeNav p={p} />
       <BotConnectPopup

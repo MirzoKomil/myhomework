@@ -20,6 +20,8 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { primeSfxOnFirstGesture } from '@/services/sfx';
+import { primeVoiceOnFirstGesture } from '@/services/voicePraise';
 
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { colors, fontFiles } from '@/constants/v2/tokens';
@@ -47,6 +49,11 @@ export default function V2Layout() {
   useEffect(() => {
     recordV2Path(pathname);
   }, [pathname]);
+  // Safari/iOS: ovoz effektlari birinchi bosishda "ochiladi" (sfx.ts).
+  useEffect(() => {
+    primeSfxOnFirstGesture();
+    primeVoiceOnFirstGesture();
+  }, []);
 
   if (!loaded) {
     return (

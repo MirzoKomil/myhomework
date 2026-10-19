@@ -6,8 +6,12 @@
  * tugaganda scoreStore'ga yozilgan haqiqiy natijalar.
  */
 import { router, type Href } from 'expo-router';
+import { useEffect } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Bounce } from '@/components/v2/motion';
+import { playSfx } from '@/services/sfx';
+import { speak } from '@/services/voicePraise';
 
 import { ChevronRight, CloseIcon, Coin } from '@/components/v2/homework/icons';
 import { partLabel, partQuestionCount } from '@/components/v2/homework/lib';
@@ -28,6 +32,12 @@ type Props = {
 };
 
 export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, parts = [], scores = {} }: Props) {
+  useEffect(() => {
+    if (visible) {
+      playSfx('unlock');
+      speak('homework', 700);
+    }
+  }, [visible]);
   const insets = useSafeAreaInsets();
   const rows = parts.map((p) => {
     const total = partQuestionCount(p);
@@ -58,12 +68,14 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
               </Pressable>
             </View>
             <View style={st.hero}>
-              <Image
-                source={designImages['81a355f68578bf95c65fc6772f9124c9']}
-                accessibilityLabel="Barmogʻini koʻtargan Domik"
-                resizeMode="contain"
-                style={{ width: 124, height: 130 }}
-              />
+              <Bounce delay={250}>
+                <Image
+                  source={designImages['81a355f68578bf95c65fc6772f9124c9']}
+                  accessibilityLabel="Barmogʻini koʻtargan Domik"
+                  resizeMode="contain"
+                  style={{ width: 124, height: 130 }}
+                />
+              </Bounce>
               <Txt f="display" size={26} lh={28.6} style={{ letterSpacing: -0.52, textAlign: 'center' }} accessibilityRole="header">
                 Vazifa tekshirildi
               </Txt>

@@ -38,7 +38,7 @@ import {
   leaveBattleQueue,
   submitBattleAnswer,
 } from '@/services/contentApi';
-import { playLoseSound, playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
 import { useAuth } from '@/services/studentAuthStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
@@ -372,8 +372,8 @@ export default function BattleScreen() {
         if (ok) addCoins(V2_BATTLE_WIN_COINS);
         setWinPaid(ok);
       }).catch(() => setWinPaid(false));
-      playWinSound();
-    } else if (playerScore < opponentScore) playLoseSound();
+      playSfx('complete');
+    } else if (playerScore < opponentScore) playSfx('lose');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -385,6 +385,7 @@ export default function BattleScreen() {
     if (timeoutSubmitRef.current) clearTimeout(timeoutSubmitRef.current);
     setSelectedOption(option);
     const correct = option === currentWord.translation;
+    playSfx(correct ? 'correct' : 'wrong');
     if (matchId) {
       submitBattleAnswer(matchId, round, correct, (BATTLE_ROUND_SECONDS - timeLeft) * 1000).catch(() => {});
       return;

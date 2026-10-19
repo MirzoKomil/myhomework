@@ -65,6 +65,16 @@ export function MoonIcon({ size = 20, color = '#2F5BFF', strokeWidth = 2 }: P) {
   );
 }
 
+/** Ovoz effektlari (karnay). */
+export function SpeakerIcon({ size = 20, color = '#2F5BFF', strokeWidth = 2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" {...line(color, strokeWidth)} />
+      <Path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}
+
 /** Sozlamalar qatoridagi Telegram belgisi (to'ldirilgan). */
 export function TelegramRowIcon({ size = 20, color = '#1B6FA8' }: P) {
   return (

@@ -8,6 +8,7 @@
  */
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { resetPraiseRun } from '@/services/voicePraise';
 
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
@@ -54,6 +55,7 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
   const score = useRef<PartScore>({ answered: 0, correct: 0, total, coins: 0, mistakes: [], finished: false });
 
   useEffect(() => {
+    resetPraiseRun();
     let cancelled = false;
     Promise.all([loadScores(), loadLessonProgress()]).then(() => {
       if (cancelled) return;

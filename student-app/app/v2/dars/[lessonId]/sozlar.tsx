@@ -15,6 +15,8 @@ import * as Speech from 'expo-speech';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedFill, FadeInUp } from '@/components/v2/motion';
+import { playSfx } from '@/services/sfx';
 
 import { learnedWordIds, markWordSeen, useSeenWords } from '@/components/v2/lessons/data';
 import { ArrowRight, SpeakerIcon } from '@/components/v2/lessons/icons';
@@ -99,7 +101,7 @@ export default function VocabScreen() {
           accessibilityLabel={`Takrorlash: ${total} tadan ${position}-soʻz`}
           accessibilityValue={{ min: 0, max: total, now: position }}
         >
-          <View style={[styles.fill, { width: `${total ? (position / total) * 100 : 0}%` }]} />
+          <AnimatedFill pct={total ? (position / total) * 100 : 0} color="#12A06B" height={8} radius={4} />
         </View>
       </View>
     </View>
@@ -125,6 +127,7 @@ export default function VocabScreen() {
       <Column>
         {header}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <FadeInUp key={idx} distance={8} duration={260} style={{ flex: 1 }}>
           <View style={styles.card}>
             <View style={styles.imgCircle}>
               {word.imageUrl ? (
@@ -152,6 +155,7 @@ export default function VocabScreen() {
               </View>
             )}
           </View>
+          </FadeInUp>
           <View accessibilityLabel={`${number ?? ''}-dars soʻzlari: ${learned.size} / ${total} oʻrganilgan`} style={styles.chips}>
             {words.map((x, i) => {
               const isCur = i === cur;
@@ -168,7 +172,10 @@ export default function VocabScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Keyingi soʻz: ${words[nextIdx]?.english ?? ''}`}
-            onPress={() => setIdx(nextIdx)}
+            onPress={() => {
+              playSfx('flip');
+              setIdx(nextIdx);
+            }}
             style={({ pressed }) => [styles.again, pressed && { opacity: 0.85 }]}
           >
             <Text style={styles.againText}>Keyingi soʻz</Text>

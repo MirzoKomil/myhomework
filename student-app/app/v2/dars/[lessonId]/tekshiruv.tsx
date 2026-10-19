@@ -13,6 +13,9 @@ import * as Speech from 'expo-speech';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FadeInUp } from '@/components/v2/motion';
+import { playSfx } from '@/services/sfx';
+import { praiseAnswer } from '@/services/voicePraise';
 
 import {
   buildQuickCheck,
@@ -153,7 +156,11 @@ export default function QuickCheckScreen() {
                     accessibilityRole="radio"
                     accessibilityState={{ checked: picked === k, disabled: answered }}
                     disabled={answered}
-                    onPress={() => setPicked(k)}
+                    onPress={() => {
+                      setPicked(k);
+                      playSfx(k === q.correct ? 'correct' : 'wrong');
+                      praiseAnswer(k === q.correct);
+                    }}
                     style={[styles.opt, isRight && styles.optRight, isWrong && styles.optWrong]}
                   >
                     <Text style={[styles.optText, isRight && { fontFamily: fonts.bodyHeavy, color: '#075E3A' }, isWrong && { color: '#B42318' }]}>{opt}</Text>
@@ -169,6 +176,7 @@ export default function QuickCheckScreen() {
           </View>
 
           {answered && (
+            <FadeInUp key={qi}>
             <View accessibilityRole="alert" style={[styles.status, !right && { backgroundColor: '#FDECEC' }]}>
               <View style={[styles.okDot, !right && { backgroundColor: '#B42318' }]}>
                 {right ? <CheckAlt /> : <CloseIcon size={14} color="#FFFFFF" strokeWidth={3.2} />}
@@ -180,6 +188,7 @@ export default function QuickCheckScreen() {
                 </Text>
               </View>
             </View>
+            </FadeInUp>
           )}
 
           {answered && (

@@ -15,9 +15,10 @@
  * holati saqlanmaydi — 0.
  */
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { speak } from '@/services/voicePraise';
 
 import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { fullDay, loadCourseData, pad, scheduleDates, splitTitle, type CourseData } from '@/components/v2/lessons/data';
@@ -30,6 +31,8 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoSchedule, fetchLeaderboard, type LeaderboardEntryResponse } from '@/services/contentApi';
 import { useLessonCoins } from '@/services/coinsStore';
+import { AnimatedFill, Bounce, Confetti, CountUp, FadeInUp, Flicker } from '@/components/v2/motion';
+import { playSfx, playSfxLater } from '@/services/sfx';
 
 /** Kunlik chaqmoq maqsadi — bosh ekrandagi bilan bir xil (sozlanadigan maqsad hali yo'q). */
 const DAILY_GOAL = 50;
@@ -80,6 +83,14 @@ export default function CompleteScreen() {
   const liveTime = ownDate ? `${pad(ownDate.getHours())}:${pad(ownDate.getMinutes())}` : (schedule.lessonTime.match(/^\d{1,2}:\d{2}/)?.[0] ?? '');
   const mistakes = Object.values(scores ?? {}).reduce((a, p) => a + (p.mistakes?.length ?? 0), 0);
   const goalDone = today >= DAILY_GOAL;
+  // Bayram: konfetti + fanfara; coin bo'lsa — sanash tugaganda "jiring".
+  useEffect(() => {
+    playSfx('complete');
+    speak('complete', 1300);
+  }, []);
+  useEffect(() => {
+    if (coins > 0) playSfxLater('coin', 1100);
+  }, [coins > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <View style={styles.screen}>
@@ -89,7 +100,9 @@ export default function CompleteScreen() {
             <HeaderButton kind="close" label="Yopish" fallback={R.home} />
           </View>
           <View style={styles.hero}>
-            <Image source={designImages.cd192c1f07c6ae01a6b80b26d84e0ec7} style={{ width: 146, height: 136 }} resizeMode="contain" accessibilityLabel="Domik bayram qilmoqda" />
+            <Bounce>
+              <Image source={designImages.cd192c1f07c6ae01a6b80b26d84e0ec7} style={{ width: 146, height: 136 }} resizeMode="contain" accessibilityLabel="Domik bayram qilmoqda" />
+            </Bounce>
           </View>
           <View style={{ alignItems: 'center', gap: 4 }}>
             <Text accessibilityRole="header" style={styles.h1}>{lesson ? `${lesson.number}-dars tugadi!` : 'Dars tugadi!'}</Text>
@@ -101,42 +114,50 @@ export default function CompleteScreen() {
               </View>
             )}
           </View>
+          <FadeInUp delay={220} style={{ alignSelf: 'stretch' }}>
           <View accessibilityLabel="Streak" style={styles.streak}>
-            <FlameIcon />
+            <Flicker>
+              <FlameIcon />
+            </Flicker>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.streakTitle}>Streak: 0 kun</Text>
               <Text style={styles.small}>Ertaga ham davom eting!</Text>
             </View>
             <Text style={styles.streakNum}>0</Text>
           </View>
+          </FadeInUp>
+          <FadeInUp delay={320} style={{ alignSelf: 'stretch' }}>
           <View style={styles.grid}>
             <View style={styles.stat}>
               <CoinIcon />
               <View style={styles.statText}>
-                <Text style={[styles.statNum, { color: '#7A5300' }]}>+{coins} coin</Text>
+                <CountUp value={coins} delay={450} prefix="+" suffix=" coin" style={[styles.statNum, { color: '#7A5300' }]} />
                 <Text style={styles.statLabel} numberOfLines={1}>+{coins} vazifa · +0 dars</Text>
               </View>
             </View>
             <View style={styles.stat}>
               <BoltIcon />
               <View style={styles.statText}>
-                <Text style={[styles.statNum, { color: '#5A2FD6' }]}>+{coins}</Text>
+                <CountUp value={coins} delay={450} prefix="+" style={[styles.statNum, { color: '#5A2FD6' }]} />
                 <Text style={styles.statLabel}>chaqmoq</Text>
               </View>
             </View>
           </View>
+          </FadeInUp>
+          <FadeInUp delay={420} style={{ alignSelf: 'stretch' }}>
           <View accessibilityLabel="Kunlik maqsad" style={styles.goal}>
             <View style={styles.goalHead}>
               <Text style={styles.goalTitle}>{goalDone ? 'Kunlik maqsad bajarildi' : 'Kunlik maqsad'}</Text>
               <Text style={styles.goalNum}>{today} / {DAILY_GOAL} chaqmoq</Text>
             </View>
             <View style={styles.goalTrack}>
-              <View style={[styles.goalFill, { width: `${Math.min(100, (today / DAILY_GOAL) * 100)}%` }]} />
+              <AnimatedFill pct={Math.min(100, (today / DAILY_GOAL) * 100)} color="#12A06B" height={8} radius={4} delay={520} fromZero />
             </View>
             <Text style={styles.goalSub}>
               Liga: {week?.lightning ?? 0} chaqmoq · {TIERS[0].name} liga{week ? `, ${week.rank}-oʻrin` : ''}
             </Text>
           </View>
+          </FadeInUp>
           <Pressable
             accessibilityRole="link"
             accessibilityLabel={`Bugungi xatolar, ${mistakes} ta: takrorlandi 0 / ${mistakes}. Qayta koʻrish`}
@@ -168,6 +189,7 @@ export default function CompleteScreen() {
           </Pressable>
         </BottomBar>
       </Column>
+      <Confetti />
     </View>
   );
 }
