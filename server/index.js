@@ -244,7 +244,12 @@ app.use('/student', express.static(studentWebDist, {
 }));
 app.get(['/student', '/student/*'], (req, res, next) => {
     if (path.extname(req.path)) return next();
-    res.sendFile(path.join(studentWebDist, 'index.html'), err => {
+    // Yangi ilova (v2) sahifalari o'z <head>'i bilan (manifest, nom, ikonka)
+    // borishi kerak — aks holda iPhone'da "Bosh ekranga qo'shish" eski
+    // ilovani ochadi. Dinamik yo'llar (/student/v2/dars/...) ham shunga.
+    const isV2 = /^\/student\/v2(\/|$)/.test(req.path);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(studentWebDist, isV2 ? 'v2/index.html' : 'index.html'), err => {
         if (err) res.status(404).send('O\'quvchi ilovasi topilmadi.');
     });
 });
