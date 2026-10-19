@@ -17,6 +17,7 @@ import { GameHeader, fmtTime, plainWord, reset, saveRecords, useCurrentLesson, u
 import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
+import { loadMixContext, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { addCoins } from '@/services/coinsStore';
 import { playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
@@ -91,27 +92,40 @@ export default function MemoryScreen() {
   const [last, setLast] = useState<Card | null>(null);
   const lockRef = useRef(false);
 
+  // Butun so'z to'plami va aralash konteksti — "Qaytadan" har safar yangi so'zlar oladi.
+  const poolRef = useRef<Word[]>([]);
+  const mixRef = useRef<MixContext | null>(null);
+  const dealWords = () => {
+    const pool = poolRef.current;
+    const picked = pickMix(pool, PAIRS, (w) => w.word, mixRef.current);
+    const have = new Set(picked.map((w) => plainWord(w.word)));
+    const fallback = (isRu ? FALLBACK_RU : FALLBACK_EN).filter((f) => !have.has(plainWord(f.word)));
+    const all = [...picked, ...shuffle(fallback)].slice(0, PAIRS);
+    rememberShown(picked.map((w) => w.word));
+    setWords(all);
+    setDeck(buildDeck(all));
+  };
+
   useEffect(() => {
     let off = false;
-    const letterRe = isRu ? /^[а-яё]+$/i : /^[a-z]+$/i;
-    getAccumulatedVocabulary()
-      .catch(() => [])
-      .then((vocab) => {
+    // Bitta so'z yoki ikki so'zli qisqa ibora (kartaga sig'adigan).
+    const letterRe = isRu ? /^[а-яё]+( [а-яё]+)?$/i : /^[a-z]+( [a-z]+)?$/i;
+    Promise.all([getAccumulatedVocabulary().catch(() => []), loadMixContext().catch(() => null)])
+      .then(([vocab, ctx]) => {
         if (off) return;
         const uniq = new Map<string, Word>();
         for (const v of vocab) {
           // Kalit urg'usiz, kartada esa kontentdagi shakl (urg'u bilan bo'lsa — urg'u bilan).
-          const orig = v.english.toLowerCase();
+          const orig = v.english.toLowerCase().replace(/[?!.,«»"]/g, '').trim();
           const k = plainWord(orig);
-          if (letterRe.test(k) && !uniq.has(k)) uniq.set(k, { word: orig, translation: shortTr(v.translation), icon: v.icon, imageUrl: v.imageUrl });
+          if (letterRe.test(k) && k.length <= 12 && !uniq.has(k)) uniq.set(k, { word: orig, translation: shortTr(v.translation), icon: v.icon, imageUrl: v.imageUrl });
         }
-        const fallback = (isRu ? FALLBACK_RU : FALLBACK_EN).filter((f) => !uniq.has(plainWord(f.word)));
-        const picked = shuffle([...uniq.values()]).slice(0, PAIRS);
-        const all = [...picked, ...shuffle(fallback)].slice(0, PAIRS);
-        setWords(all);
-        setDeck(buildDeck(all));
+        poolRef.current = [...uniq.values()];
+        mixRef.current = ctx;
+        dealWords();
       });
     return () => { off = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRu]);
 
   const won = !!words && matched.size === words.length;
@@ -156,7 +170,7 @@ export default function MemoryScreen() {
 
   const restart = () => {
     if (!words) return;
-    setDeck(buildDeck(shuffle(words)));
+    dealWords();
     setOpen([]);
     setMatched(new Set());
     setSeconds(0);

@@ -22,6 +22,7 @@ import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
 import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
+import { loadMixContext, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const TURN_SECONDS = 15;
@@ -61,13 +62,22 @@ export default function WordChainScreen() {
 
   const letterRe = isRu ? /^[а-яё]+$/i : /^[a-z]+$/;
 
+  // Boshlang'ich so'z — aqlli aralash (joriy dars / takrorlash / eski darslar).
+  const mixRef = useRef<MixContext | null>(null);
+  const vocabRef = useRef<string[]>([]);
+  const startWord = (vocab: string[], all: string[]) => {
+    const w = vocab.length >= MIN_BANK_SIZE ? pickMix(vocab, 1, (x) => x, mixRef.current)[0] : undefined;
+    if (w) rememberShown([w]);
+    return w ?? pick(vocab.length >= MIN_BANK_SIZE ? vocab : all);
+  };
+
   useEffect(() => {
     let off = false;
     const common = (isRu ? COMMON_RUSSIAN_WORDS : COMMON_ENGLISH_WORDS) as string[];
-    getAccumulatedVocabulary()
-      .catch(() => [])
-      .then((words) => {
+    Promise.all([getAccumulatedVocabulary().catch(() => []), loadMixContext().catch(() => null)])
+      .then(([words, ctx]) => {
         if (off) return;
+        mixRef.current = ctx;
         const tr: Record<string, string> = {};
         const disp: Record<string, string> = {};
         const vocab: string[] = [];
@@ -84,7 +94,8 @@ export default function WordChainScreen() {
         setTranslations(tr);
         setDisplay(disp);
         setBank(all);
-        setChain([pick(vocab.length >= MIN_BANK_SIZE ? vocab : all)]);
+        vocabRef.current = vocab;
+        setChain([startWord(vocab, all)]);
       });
     return () => { off = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,7 +182,7 @@ export default function WordChainScreen() {
 
   const restart = () => {
     if (!bank) return;
-    setChain([pick(bank)]);
+    setChain([startWord(vocabRef.current, bank)]);
     setScore(0);
     setBolts(0);
     setInput('');
