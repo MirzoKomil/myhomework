@@ -8,7 +8,7 @@
  * bookProgressStore.markBookListened (Bosh sahifadagi "Eshitish" ko'nikmasi).
  *
  * So'zga bosilganda: tarjima o'quvchining dars lug'atidan (getAccumulatedVocabulary)
- * olinadi; topilmasa — paragrafning o'zbekcha tarjimasi ko'rsatiladi.
+ * olinadi; topilmasa — "Tarjima lug'atda yo'q" (so'zma-so'z lug'at yo'q).
  * "+ Lug'atga": shaxsiy lug'at saqlagichi hozircha yo'q.
  */
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -241,14 +241,23 @@ export default function BookScreen() {
                   accessibilityLabel={`${w.text}, tarjima`}
                   style={[{ height: lineH, justifyContent: 'center' }]}
                 >
-                  <T
-                    w={isSel ? 800 : past || now ? 700 : 600}
-                    size={fontSize}
-                    color={isSel ? '#1E3FD1' : now || past ? '#0B1220' : '#5B6478'}
-                    style={[now && styles.nowWord, isSel && styles.selWord]}
-                  >
-                    {w.text}
-                  </T>
+                  {(() => {
+                    // Tinish belgisi so'z ostidagi chiziq va rangga kirmasin.
+                    const m = /^(.*?)([.,!?;:…»"')]*)$/u.exec(w.text) ?? [w.text, w.text, ''];
+                    return (
+                      <T w={past || now ? 700 : 600} size={fontSize} color={now || past ? '#0B1220' : '#5B6478'}>
+                        <T
+                          w={isSel ? 800 : past || now ? 700 : 600}
+                          size={fontSize}
+                          color={isSel ? '#1E3FD1' : now || past ? '#0B1220' : '#5B6478'}
+                          style={[now && styles.nowWord, isSel && styles.selWord]}
+                        >
+                          {m[1]}
+                        </T>
+                        {m[2]}
+                      </T>
+                    );
+                  })()}
                 </Pressable>
               );
             })}
@@ -257,7 +266,7 @@ export default function BookScreen() {
                 <View style={[styles.tipArrow, { left: Math.max(14, selBox.x - tipLeft + selBox.w / 2 - 7) }]} />
                 <View style={{ flex: 1 }}>
                   <T w={800} size={16} color="#FFFFFF">{selVocab?.english ?? selKey}</T>
-                  <T w={600} size={14} color="#B8C1D6" lh={1.3}>{selVocab?.translation ?? story.paragraphs[sel.para].uz}</T>
+                  <T w={600} size={14} color="#B8C1D6" lh={1.3}>{selVocab?.translation ?? 'Tarjima lugʻatda yoʻq'}</T>
                 </View>
                 <Pressable accessibilityRole="button" onPress={() => setAddNote(true)} style={styles.addBtn}>
                   <T w={800} size={13} color="#FFFFFF">{addNote ? 'Tez orada' : '+ Lugʻatga'}</T>

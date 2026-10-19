@@ -30,7 +30,6 @@ import {
 } from '@/components/v2/lessons/data';
 import { Check, LockIcon, PencilIcon, PlayIcon } from '@/components/v2/lessons/icons';
 import { TabBar } from '@/components/v2/TabBar';
-import { studentFeaturesForCourse } from '@/constants/studentFeatures';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -78,7 +77,6 @@ export default function PathScreen() {
   const monthDone = monthLessons.filter((l) => l.completed).length;
   const examAfter = active ? Math.ceil(active.number / EXAM_INTERVAL) * EXAM_INTERVAL : EXAM_INTERVAL;
   const dates = schedule.startsAt && data ? scheduleDates(schedule.startsAt, schedule.pattern, data.activeIndex, monthStart + MONTH_SIZE) : {};
-  const showBonus = data ? studentFeaturesForCourse(data.lang).bonusLessons : false;
   const scrollTarget = active ? Math.max(monthStart, active.index - 2) : -1;
 
   return (
@@ -98,11 +96,31 @@ export default function PathScreen() {
             </Pressable>
             <Pressable accessibilityRole="tab" accessibilityState={{ selected: false }} onPress={() => router.push(R.bonus as Href)} style={styles.tab}>
               <Text style={styles.tabText}>Bonus</Text>
-              {showBonus && <View accessibilityLabel="yangi" style={styles.newDot} />}
+              <View accessibilityLabel="yangi" style={styles.newDot} />
             </Pressable>
           </View>
         </View>
 
+        {data && (
+          <View style={styles.monthWrap}>
+            <View style={styles.month}>
+              <View style={styles.monthIcon}>
+                <Image source={designImages.d9b3ac63886f3fdd8214701a31f0956a} style={{ width: 42, height: 42 }} resizeMode="contain" />
+              </View>
+              <View style={styles.monthBody}>
+                <Text style={styles.monthTitle} numberOfLines={1}>
+                  {monthNo}-oy{MONTH_TITLES[monthNo] ? ` · ${MONTH_TITLES[monthNo]}` : ''} ({monthStart + 1}–{monthStart + monthLessons.length})
+                </Text>
+                <View style={styles.monthTrack}>
+                  <View style={[styles.monthFill, { width: `${Math.round((monthDone / Math.max(1, monthLessons.length)) * 100)}%` }]} />
+                </View>
+                <Text style={styles.monthSub}>
+                  {monthDone} / {monthLessons.length} dars · imtihon {examAfter}-darsdan keyin
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
         <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {error && !data ? (
             <Text style={styles.sub}>Darslarni yuklab boʻlmadi. Internetni tekshirib, qayta urinib koʻring.</Text>
@@ -110,30 +128,13 @@ export default function PathScreen() {
             <Text style={styles.sub}>Yuklanmoqda…</Text>
           ) : (
             <>
-              <View style={styles.month}>
-                <View style={styles.monthIcon}>
-                  <Image source={designImages.d9b3ac63886f3fdd8214701a31f0956a} style={{ width: 42, height: 42 }} resizeMode="contain" />
-                </View>
-                <View style={styles.monthBody}>
-                  <Text style={styles.monthTitle} numberOfLines={1}>
-                    {monthNo}-oy{MONTH_TITLES[monthNo] ? ` · ${MONTH_TITLES[monthNo]}` : ''} ({monthStart + 1}–{monthStart + monthLessons.length})
-                  </Text>
-                  <View style={styles.monthTrack}>
-                    <View style={[styles.monthFill, { width: `${Math.round((monthDone / Math.max(1, monthLessons.length)) * 100)}%` }]} />
-                  </View>
-                  <Text style={styles.monthSub}>
-                    {monthDone} / {monthLessons.length} dars · imtihon {examAfter}-darsdan keyin
-                  </Text>
-                </View>
-              </View>
-
               {monthLessons.map((l, i) => (
                 <View
                   key={l.id}
                   onLayout={(e) => {
                     if (l.index === scrollTarget && !scrolled.current) {
                       scrolled.current = true;
-                      const y = e.nativeEvent.layout.y - 82;
+                      const y = e.nativeEvent.layout.y;
                       if (y > 0) scrollRef.current?.scrollTo({ y, animated: false });
                     }
                   }}
@@ -314,6 +315,7 @@ const styles = StyleSheet.create({
   tabText: { fontFamily: fonts.bodyBold, fontSize: 14, color: '#4A5468', fontWeight: 'normal' },
   newDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF7A1A' },
   content: { paddingHorizontal: 20, paddingBottom: 20 },
+  monthWrap: { paddingHorizontal: 20 },
   month: { backgroundColor: '#0B1220', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
   monthIcon: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#FFF4D1', alignItems: 'center', justifyContent: 'center' },
   monthBody: { flex: 1, gap: 6, minWidth: 0 },
