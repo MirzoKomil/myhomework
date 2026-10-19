@@ -8,6 +8,8 @@
  */
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { playSfx } from '@/services/sfx';
+import { resetPraiseRun, speak, stopVoice } from '@/services/voicePraise';
 
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
@@ -54,6 +56,7 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
   const score = useRef<PartScore>({ answered: 0, correct: 0, total, coins: 0, mistakes: [], finished: false });
 
   useEffect(() => {
+    resetPraiseRun();
     let cancelled = false;
     Promise.all([loadScores(), loadLessonProgress()]).then(() => {
       if (cancelled) return;
@@ -73,6 +76,8 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
     });
     return () => {
       cancelled = true;
+      // Qismdan chiqilganda kechiktirilgan maqtov boshqa ekranda aytilmasin.
+      stopVoice();
     };
   }, [lessonId, part.id, total]);
 
@@ -113,6 +118,8 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
       return;
     }
     if (accuracy < PASS_THRESHOLD) {
+      playSfx('lose');
+      speak('retry', 1000);
       setTooLow(Math.round(accuracy * 100));
       return;
     }
@@ -124,7 +131,9 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
     const progress = getLessonProgress(lessonId);
     const scores = getLessonScores(lessonId);
     const allDone = allParts.filter((p) => !isTeacherGraded(p)).every((p) => progress.homeworkParts[p.id] || scores[p.id]?.finished);
-    router.replace((allDone ? `${R.homework(lessonId)}?yuborildi=1` : R.homework(lessonId)) as Href);
+    // Bayram ovozi va konfetti — qaytilgan ekranda (vazifa/index ?bajarildi=1
+    // yoki "Vazifa tekshirildi" oynasi).
+    router.replace((allDone ? `${R.homework(lessonId)}?yuborildi=1` : `${R.homework(lessonId)}?bajarildi=1`) as Href);
   };
 
   const next = () => {

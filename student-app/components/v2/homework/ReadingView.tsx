@@ -9,6 +9,7 @@
  * so'z shaxsiy lug'atga (Lug'atim) qo'shiladi.
  */
 import * as Speech from 'expo-speech';
+import { stopVoice } from '@/services/voicePraise';
 import { router, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -120,6 +121,7 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
       return;
     }
     setSpeaking(true);
+    stopVoice();
     Speech.speak(listenText, { language: 'ru-RU', onDone: () => setSpeaking(false), onStopped: () => setSpeaking(false), onError: () => setSpeaking(false) });
   };
 

@@ -9,6 +9,7 @@
  * (skrinshot uchun: ?popup=live).
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,6 +39,7 @@ import {
   fetchDemoSchedule,
   submitAbsenceReason,
   type DemoNotification,
+  markNotificationsReadOnServer,
 } from '@/services/contentApi';
 
 const ATTENDANCE_OPTIONS = ['Darsga kirdim', 'Darsga kira olmadim', 'Dars yarmida tugadi'];
@@ -151,7 +153,15 @@ export default function V2Notifications() {
     setFailed(false);
     setList(null);
     Promise.all([fetchDemoNotifications(), getReadIds()])
-      .then(([items, read]) => { setReadIds(read); setList(items); })
+      .then(([items, read]) => {
+        setReadIds(read);
+        setList(items);
+        // Ro'yxat ochildi — ko'rsatilganlar o'qilgan bo'ladi (nuqtalar shu
+        // safar ko'rinib turadi, keyingi kirishda son 0 bo'ladi).
+        const ids = items.filter((n) => n.unread && !read.has(n.id)).map((n) => n.id);
+        void markAllRead(ids);
+        void markNotificationsReadOnServer(ids);
+      })
       .catch(() => setFailed(true));
     fetchDemoSchedule().then((s) => setGroupLink(s.telegramGroupLink || '')).catch(() => {});
   }, []);
@@ -175,10 +185,11 @@ export default function V2Notifications() {
   const readAll = async () => {
     const ids = (list ?? []).map((n) => n.id);
     await markAllRead(ids);
+    void markNotificationsReadOnServer(ids);
     setReadIds(new Set([...readIds, ...ids]));
   };
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(R.home));
+  const back = () => v2Back(R.home);
 
   if (failed) return <ServerError onRetry={load} />;
   if (!list) return <Loading withNav={false} />;

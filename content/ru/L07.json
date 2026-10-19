@@ -1,0 +1,670 @@
+{
+ "n": 7,
+ "lessonId": "l1784055280406-6",
+ "type": "video",
+ "id": "l1784055280406-6",
+ "topic": "Rod va egalik olmoshlari",
+ "title": "Rod (jins) va egalik olmoshlari",
+ "title_ru": "Род существи́тельных и притяжа́тельные местоиме́ния",
+ "videoUrl": "https://youtu.be/WaYWyAnyaaI",
+ "cando": "So'zning rodini aniqlay olaman va «meniki, seniki, uniki, bizniki» deya olaman: мой дом, моя́ су́мка, моё окно́, мои́ ключи́.",
+ "review": [
+  {
+   "q": "Я ___ (чита́ть) кни́гу.",
+   "a": "чита́ю"
+  },
+  {
+   "q": "Ты ___ (понима́ть) по-ру́сски?",
+   "a": "понима́ешь"
+  },
+  {
+   "q": "Он ___ (рабо́тать) в ба́нке.",
+   "a": "рабо́тает"
+  },
+  {
+   "q": "Мы ___ (гуля́ть) в па́рке.",
+   "a": "гуля́ем"
+  },
+  {
+   "q": "Что вы ___ (де́лать)?",
+   "a": "де́лаете"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "окно́",
+   "tr": "[aknó]",
+   "uz": "deraza",
+   "ex": "Э́то моё окно́. (Bu mening derazam.)",
+   "img": "cards/окно.jpg",
+   "icon": "",
+   "gender": "ср.",
+   "vocabId": "v-7-1",
+   "media": "media/ru/L07/w_v-7-1.jpg"
+  },
+  {
+   "ru": "ко́мната",
+   "tr": "[kómnata]",
+   "uz": "xona",
+   "ex": "Э́то моя́ ко́мната. (Bu mening xonam.)",
+   "img": "cards/комната.jpg",
+   "icon": "",
+   "gender": "ж.",
+   "vocabId": "v-7-2",
+   "media": "media/ru/L07/w_v-7-2.jpg"
+  },
+  {
+   "ru": "су́мка",
+   "tr": "[súmka]",
+   "uz": "sumka",
+   "ex": "Чья э́то су́мка? — Э́то моя́ су́мка. (Bu kimning sumkasi? — Bu mening sumkam.)",
+   "img": "cards/сумка.jpg",
+   "icon": "bag-outline",
+   "gender": "ж.",
+   "vocabId": "v-7-3",
+   "media": "media/ru/L07/w_v-7-3.jpg"
+  },
+  {
+   "ru": "па́спорт",
+   "tr": "[pásport]",
+   "uz": "pasport",
+   "ex": "Э́то мой па́спорт. (Bu mening pasportim.)",
+   "img": "cards/паспорт.jpg",
+   "icon": "id-card-outline",
+   "gender": "м.",
+   "vocabId": "v-7-4",
+   "media": "media/ru/L07/w_v-7-4.jpg"
+  },
+  {
+   "ru": "письмо́",
+   "tr": "[pis'mó]",
+   "uz": "xat",
+   "ex": "Э́то на́ше письмо́. (Bu bizning xatimiz.)",
+   "img": "cards/письмо.jpg",
+   "icon": "mail-outline",
+   "gender": "ср.",
+   "vocabId": "v-7-5",
+   "media": "media/ru/L07/w_v-7-5.jpg"
+  },
+  {
+   "ru": "ключ",
+   "tr": "[klyuch]",
+   "uz": "kalit",
+   "ex": "Где твой ключ? (Sening kaliting qayerda?)",
+   "img": "cards/ключ.jpg",
+   "icon": "key-outline",
+   "gender": "м.",
+   "vocabId": "v-7-6",
+   "media": "media/ru/L07/w_v-7-6.jpg"
+  },
+  {
+   "ru": "ключи́",
+   "tr": "[klyuchí]",
+   "uz": "kalitlar",
+   "ex": "Э́то мои́ ключи́. (Bu mening kalitlarim.)",
+   "img": "cards/ключи.jpg",
+   "icon": "key-outline",
+   "gender": "мн.",
+   "vocabId": "v-7-7",
+   "media": "media/ru/L07/w_v-7-7.jpg"
+  },
+  {
+   "ru": "фо́то",
+   "tr": "[fóta]",
+   "uz": "surat, foto",
+   "ex": "Э́то на́ше фо́то. (Bu bizning suratimiz.)",
+   "img": "cards/фото.jpg",
+   "icon": "image-outline",
+   "gender": "ср.",
+   "vocabId": "v-7-8",
+   "media": "media/ru/L07/w_v-7-8.jpg"
+  },
+  {
+   "ru": "го́род",
+   "tr": "[górat]",
+   "uz": "shahar",
+   "ex": "Э́то наш го́род. (Bu bizning shahrimiz.)",
+   "img": "cards/город.jpg",
+   "icon": "business-outline",
+   "gender": "м.",
+   "vocabId": "v-7-9",
+   "media": "media/ru/L07/w_v-7-9.jpg"
+  },
+  {
+   "ru": "я́блоко",
+   "tr": "[yáblaka]",
+   "uz": "olma",
+   "ex": "Чьё э́то я́блоко? (Bu kimning olmasi?)",
+   "img": "cards/яблоко.jpg",
+   "icon": "nutrition-outline",
+   "gender": "ср.",
+   "vocabId": "v-7-10",
+   "media": "media/ru/L07/w_v-7-10.jpg"
+  },
+  {
+   "ru": "ме́сто",
+   "tr": "[mésta]",
+   "uz": "joy, o'rin",
+   "ex": "Э́то ва́ше ме́сто. (Bu sizning joyingiz.)",
+   "img": "cards/место.jpg",
+   "icon": "location-outline",
+   "gender": "ср.",
+   "vocabId": "v-7-11",
+   "media": "media/ru/L07/w_v-7-11.jpg"
+  },
+  {
+   "ru": "и́мя",
+   "tr": "[ímya]",
+   "uz": "ism",
+   "ex": "Э́то его́ и́мя. (Bu uning ismi.)",
+   "img": "cards/имя.jpg",
+   "icon": "person-outline",
+   "gender": "ср.",
+   "vocabId": "v-7-12",
+   "media": "media/ru/L07/w_v-7-12.jpg"
+  },
+  {
+   "ru": "биле́т",
+   "tr": "[bilét]",
+   "uz": "chipta, bilet",
+   "ex": "Э́то твой биле́т. (Bu sening chiptang.)",
+   "img": "cards/билет.jpg",
+   "icon": "ticket-outline",
+   "gender": "м.",
+   "vocabId": "v-7-13",
+   "media": "media/ru/L07/w_v-7-13.jpg"
+  },
+  {
+   "ru": "ку́ртка",
+   "tr": "[kúrtka]",
+   "uz": "kurtka",
+   "ex": "Э́то её ку́ртка. (Bu uning kurtkasi.)",
+   "img": "cards/куртка.jpg",
+   "icon": "shirt-outline",
+   "gender": "ж.",
+   "vocabId": "v-7-14",
+   "media": "media/ru/L07/w_v-7-14.jpg"
+  },
+  {
+   "ru": "мо́ре",
+   "tr": "[móre]",
+   "uz": "dengiz",
+   "ex": "Э́то си́нее мо́ре. (Bu ko'k dengiz.)",
+   "img": "cards/море.jpg",
+   "icon": "water-outline",
+   "gender": "ср.",
+   "vocabId": "v-7-15",
+   "media": "media/ru/L07/w_v-7-15.jpg"
+  },
+  {
+   "ru": "ве́щи",
+   "tr": "[véshchi]",
+   "uz": "narsalar, buyumlar",
+   "ex": "Где ва́ши ве́щи? (Sizning narsalaringiz qayerda?)",
+   "img": "cards/вещи.jpg",
+   "icon": "cube-outline",
+   "gender": "мн.",
+   "vocabId": "v-7-16",
+   "media": "media/ru/L07/w_v-7-16.jpg"
+  }
+ ],
+ "konspekt": "7-DARS: Rod (jins) va egalik olmoshlari\n(Род существи́тельных и притяжа́тельные местоиме́ния)\n\nBu darsdan keyin siz: so'zning rodini (jinsini) aniqlay olasiz va «meniki / seniki / uniki / bizniki / sizniki / ularniki» deya olasiz.\n\n---\n\n1. Rod (Род) nima?\n\nO'zbek tilida rod yo'q. Rus tilida har bir ot uchta roddan biriga kiradi. Rodni bilmasangiz — egalik olmoshini, sifatni, o'tgan zamonni to'g'ri qo'ya olmaysiz. Shuning uchun rod — rus tilining poydevori.\n\nRodni so'zning OXIRGI HARFI aytadi:\n\n* Мужско́й род (m.r.) — undosh harf yoki -й: дом, телефо́н, брат, стол, па́спорт, музе́й, геро́й\n* Же́нский род (j.r.) — -а yoki -я: ма́ма, су́мка, кни́га, маши́на, семья́, ко́мната\n* Сре́дний род (s.r.) — -о yoki -е: окно́, письмо́, фо́то, ме́сто, мо́ре, кино́\n* -мя bilan tugagan so'zlar ham сре́дний: и́мя, вре́мя\n\nIstisnolar (yodlang): па́па, дя́дя, де́душка, ю́ноша — -а bilan tugasa ham мужско́й род, chunki ular erkak kishi.\n\n-ь bilan tugagan so'zlar ikki xil bo'ladi: слова́рь, день — мужско́й; тетра́дь, ночь — же́нский. Bularni lug'atdan yodlab olamiz.\n\nKo'plik (мн. число́): -ы yoki -и: столы́, кни́ги, о́кна (ko'plikda rod farqi yo'q).\n\n---\n\n2. Egalik olmoshlari (Притяжа́тельные местоиме́ния)\n\nMuhim qoida: olmosh so'zlovchining jinsiga qarab EMAS, narsaning rodiga qarab tanlanadi. Erkak kishi ham «моя́ су́мка» deydi, chunki су́мка — же́нский род.\n\nЯ → мой / моя́ / моё / мои́\n* мой дом, мой телефо́н, мой брат\n* моя́ су́мка, моя́ кни́га, моя́ сестра́\n* моё окно́, моё письмо́, моё ме́сто\n* мои́ ключи́, мои́ друзья́, мои́ ве́щи\n\nТы → твой / твоя́ / твоё / твои́\n* твой биле́т, твоя́ ку́ртка, твоё окно́, твои́ друзья́\n\nМы → наш / на́ша / на́ше / на́ши\n* наш класс, на́ша семья́, на́ше окно́, на́ши докуме́нты\n\nВы → ваш / ва́ша / ва́ше / ва́ши\n* ваш биле́т, ва́ша су́мка, ва́ше ме́сто, ва́ши ключи́\n\n---\n\n3. Его́, её, их — o'zgarmaydi!\n\nUchinchi shaxs olmoshlari rodga ham, songa ham qarab o'zgarmaydi:\n* его́ (uning — erkak): его́ дом, его́ кни́га, его́ письмо́, его́ друзья́\n* её (uning — ayol): её дом, её кни́га, её письмо́, её друзья́\n* их (ularning): их дом, их кни́га, их письмо́, их друзья́\n\nTalaffuz: его́ → [йиВО] (1-dars qoidasi: -его́ → [во]).\n\n---\n\n4. Savol: Чей? Чья? Чьё? Чьи? — Kimniki?\n\n* Чей э́то телефо́н? — Э́то мой телефо́н. (m.r.)\n* Чья э́то су́мка? — Э́то моя́ су́мка. (j.r.)\n* Чьё э́то фо́то? — Э́то на́ше фо́то. (s.r.)\n* Чьи э́то ключи́? — Э́то мои́ ключи́. (ko'plik)\n\n---\n\n5. Mini-dialog\n\n— Чей э́то па́спорт? (Bu kimning pasporti?)\n— Э́то мой па́спорт. (Bu mening pasportim.)\n— А чья э́то су́мка? (Bu kimning sumkasi?)\n— Э́то её су́мка. Э́то су́мка Нигоры́. (Bu uning sumkasi. Bu Nigoraning sumkasi.)\n\n---\n\nDars xulosasi:\n1. Oxirgi harfga qarang: undosh/-й → м.р.; -а/-я → ж.р.; -о/-е/-мя → с.р.\n2. Мой/моя́/моё/мои́ — narsaning rodiga qarab.\n3. Его́, её, их — hech qachon o'zgarmaydi.\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — ustoz bilan jonli dars: «Чей э́то предме́т?» o'yini.",
+ "text": {
+  "title": "Моя́ семья́ и мой дом",
+  "ru": "Меня́ зову́т Абдулази́з. Э́то мой дом. Э́то моя́ ко́мната: моё окно́, мой стол и мой стул.\nЭ́то моя́ жена́. Её зову́т Нигора́. Э́то её су́мка и её телефо́н.\nЭ́то наш сын. Его́ зову́т Сардо́р. Э́то его́ кни́га и его́ ру́чка.\nЭ́то на́ша дочь. Её зову́т Маржона́. Э́то её фо́то.\nЭ́то на́ши ключи́ и на́ша маши́на. Наш го́род — Андижа́н.",
+  "uz": "Mening ismim Abdulaziz. Bu mening uyim. Bu mening xonam: mening derazam, mening stolim va mening stulim.\nBu mening xotinim. Uning ismi Nigora. Bu uning sumkasi va uning telefoni.\nBu bizning o'g'limiz. Uning ismi Sardor. Bu uning kitobi va uning ruchkasi.\nBu bizning qizimiz. Uning ismi Marjona. Bu uning surati.\nBu bizning kalitlarimiz va bizning mashinamiz. Bizning shahrimiz — Andijon.",
+  "questions": [
+   {
+    "q": "Чей э́то дом?",
+    "opts": [
+     "Их дом (сосе́дей)",
+     "Его́ дом (Абдулази́за)",
+     "Её дом (Нигоры́)"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Чья э́то су́мка?",
+    "opts": [
+     "Её су́мка (Нигоры́)",
+     "Его́ су́мка",
+     "На́ша су́мка"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Чья э́то кни́га?",
+    "opts": [
+     "Её кни́га (Маржоны́)",
+     "Моя́ кни́га",
+     "Его́ кни́га (Сардо́ра)"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Чьё э́то фо́то?",
+    "opts": [
+     "Её фо́то (Маржоны́)",
+     "Ва́ше фо́то",
+     "Его́ фо́то"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Чей э́то го́род?",
+    "opts": [
+     "Наш го́род",
+     "Их го́род",
+     "Твой го́род"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "dialog": {
+  "title": "В аэропорту́",
+  "lines": [
+   {
+    "who": "Сотру́дник",
+    "ru": "Здра́вствуйте! Чей э́то па́спорт?",
+    "uz": "Assalomu alaykum! Bu kimning pasporti?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Э́то мой па́спорт.",
+    "uz": "Bu mening pasportim."
+   },
+   {
+    "who": "Сотру́дник",
+    "ru": "А чья э́то су́мка?",
+    "uz": "Bu kimning sumkasi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Э́то её су́мка. Э́то моя́ сестра́.",
+    "uz": "Bu uning sumkasi. Bu mening singlim."
+   },
+   {
+    "who": "Сотру́дник",
+    "ru": "Чьи э́то докуме́нты?",
+    "uz": "Bu kimning hujjatlari?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Э́то на́ши докуме́нты. Вот на́ши биле́ты.",
+    "uz": "Bu bizning hujjatlarimiz. Mana bizning chiptalarimiz."
+   },
+   {
+    "who": "Сотру́дник",
+    "ru": "Спаси́бо. Ва́ше ме́сто — 12А.",
+    "uz": "Rahmat. Sizning joyingiz — 12A."
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "окно́",
+    "deraza"
+   ],
+   [
+    "ко́мната",
+    "xona"
+   ],
+   [
+    "су́мка",
+    "sumka"
+   ],
+   [
+    "па́спорт",
+    "pasport"
+   ],
+   [
+    "письмо́",
+    "xat"
+   ],
+   [
+    "ключи́",
+    "kalitlar"
+   ],
+   [
+    "го́род",
+    "shahar"
+   ],
+   [
+    "я́блоко",
+    "olma"
+   ],
+   [
+    "ме́сто",
+    "joy"
+   ],
+   [
+    "ве́щи",
+    "narsalar"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Э́то ___ дом. (Bu mening uyim.)",
+    "o": [
+     "моё",
+     "моя́",
+     "мои́",
+     "мой"
+    ],
+    "a": "мой"
+   },
+   {
+    "s": "Где ___ кни́га? (Sening kitobing qayerda?)",
+    "o": [
+     "твоё",
+     "твои́",
+     "твоя́",
+     "твой"
+    ],
+    "a": "твоя́"
+   },
+   {
+    "s": "Э́то ___ окно́. (Bu bizning derazamiz.)",
+    "o": [
+     "на́ше",
+     "на́ши",
+     "наш",
+     "на́ша"
+    ],
+    "a": "на́ше"
+   },
+   {
+    "s": "Где ___ докуме́нты? (Sizning hujjatlaringiz qayerda?)",
+    "o": [
+     "ва́ша",
+     "ваш",
+     "ва́ше",
+     "ва́ши"
+    ],
+    "a": "ва́ши"
+   },
+   {
+    "s": "Э́то Анто́н и ___ маши́на. (Bu Anton va uning mashinasi.)",
+    "o": [
+     "мой",
+     "его́",
+     "её",
+     "их"
+    ],
+    "a": "его́"
+   },
+   {
+    "s": "Нигора́ до́ма, э́то ___ ко́мната. (Nigora uyda, bu uning xonasi.)",
+    "o": [
+     "его́",
+     "наш",
+     "их",
+     "её"
+    ],
+    "a": "её"
+   },
+   {
+    "s": "Э́то студе́нты и ___ преподава́тель. (Bu talabalar va ularning o'qituvchisi.)",
+    "o": [
+     "ваш",
+     "его́",
+     "её",
+     "их"
+    ],
+    "a": "их"
+   },
+   {
+    "s": "Чьё э́то я́блоко? — Э́то ___ я́блоко. (Bu mening olmam.)",
+    "o": [
+     "мои́",
+     "моё",
+     "моя́",
+     "мой"
+    ],
+    "a": "моё"
+   },
+   {
+    "s": "Где ___ су́мка? (Sening sumkang qayerda?)",
+    "o": [
+     "твоя́",
+     "твоё",
+     "твои́",
+     "твой"
+    ],
+    "a": "твоя́"
+   },
+   {
+    "s": "Э́то ___ го́род. (Bu bizning shahrimiz.)",
+    "o": [
+     "на́ше",
+     "на́ша",
+     "наш",
+     "на́ши"
+    ],
+    "a": "наш"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "— Чей э́то телефо́н?\n— Э́то ___ телефо́н.",
+    "o": [
+     "моя́",
+     "мой",
+     "моё"
+    ],
+    "a": 1
+   },
+   {
+    "q": "— Чья э́то маши́на?\n— Э́то ___ маши́на.",
+    "o": [
+     "моё",
+     "моя́",
+     "мой"
+    ],
+    "a": 1
+   },
+   {
+    "q": "— Чьё э́то я́блоко?\n— Э́то ___ я́блоко.",
+    "o": [
+     "твоя́",
+     "твоё",
+     "твой"
+    ],
+    "a": 1
+   },
+   {
+    "q": "— Чьи э́то кни́ги?\n— Э́то ___ кни́ги.",
+    "o": [
+     "на́ша",
+     "наш",
+     "на́ши"
+    ],
+    "a": 2
+   },
+   {
+    "q": "— Э́то су́мка Нигоры́?\n— Да, э́то ___ су́мка.",
+    "o": [
+     "её",
+     "их",
+     "его́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "— Где слова́рь Бобу́ра?\n— Вот ___ слова́рь.",
+    "o": [
+     "её",
+     "их",
+     "его́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "— Э́то ваш класс?\n— Да, э́то ___ класс.",
+    "o": [
+     "на́ша",
+     "на́ше",
+     "наш"
+    ],
+    "a": 2
+   },
+   {
+    "q": "— Чьи э́то докуме́нты?\n— Э́то ___ докуме́нты.",
+    "o": [
+     "ва́ша",
+     "ваш",
+     "ва́ши"
+    ],
+    "a": 2
+   },
+   {
+    "q": "— Где оте́ль тури́стов?\n— Вот ___ оте́ль.",
+    "o": [
+     "её",
+     "их",
+     "его́"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Qaysi so'z сре́дний род?",
+    "o": [
+     "па́спорт",
+     "су́мка",
+     "письмо́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Qaysi so'z же́нский род?",
+    "o": [
+     "ку́ртка",
+     "ме́сто",
+     "го́род"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Па́па» so'zi qaysi rodda?",
+    "o": [
+     "мужско́й",
+     "же́нский",
+     "сре́дний"
+    ],
+    "a": 0
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "мой",
+     "Э́то",
+     "па́спорт"
+    ],
+    "a": [
+     "Э́то",
+     "мой",
+     "па́спорт"
+    ],
+    "t": "Bu mening pasportim."
+   },
+   {
+    "w": [
+     "су́мка",
+     "Э́то",
+     "моя́"
+    ],
+    "a": [
+     "Э́то",
+     "моя́",
+     "су́мка"
+    ],
+    "t": "Bu mening sumkam."
+   },
+   {
+    "w": [
+     "окно́",
+     "на́ше",
+     "Э́то"
+    ],
+    "a": [
+     "Э́то",
+     "на́ше",
+     "окно́"
+    ],
+    "t": "Bu bizning derazamiz."
+   },
+   {
+    "w": [
+     "ключи́",
+     "твои́",
+     "Где",
+     "?"
+    ],
+    "a": [
+     "Где",
+     "твои́",
+     "ключи́",
+     "?"
+    ],
+    "t": "Sening kalitlaring qayerda?"
+   },
+   {
+    "w": [
+     "э́то",
+     "Чья",
+     "ку́ртка",
+     "?"
+    ],
+    "a": [
+     "Чья",
+     "э́то",
+     "ку́ртка",
+     "?"
+    ],
+    "t": "Bu kimning kurtkasi?"
+   },
+   {
+    "w": [
+     "её",
+     "Э́то",
+     "фо́то"
+    ],
+    "a": [
+     "Э́то",
+     "её",
+     "фо́то"
+    ],
+    "t": "Bu uning surati."
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Э́то мой дом и моя́ семья́.",
+   "uz": "Bu mening uyim va mening oilam."
+  },
+  {
+   "ru": "Э́то моя́ су́мка и мои́ ключи́.",
+   "uz": "Bu mening sumkam va mening kalitlarim."
+  },
+  {
+   "ru": "Чей э́то телефо́н? — Э́то его́ телефо́н.",
+   "uz": "Bu kimning telefoni? — Bu uning telefoni."
+  },
+  {
+   "ru": "Чья э́то ку́ртка? — Э́то её ку́ртка.",
+   "uz": "Bu kimning kurtkasi? — Bu uning kurtkasi."
+  },
+  {
+   "ru": "Э́то наш го́род. Э́то на́ше ме́сто.",
+   "uz": "Bu bizning shahrimiz. Bu bizning joyimiz."
+  },
+  {
+   "ru": "Где ва́ши докуме́нты? — Вот на́ши докуме́нты.",
+   "uz": "Sizning hujjatlaringiz qayerda? — Mana bizning hujjatlarimiz."
+  }
+ ]
+}

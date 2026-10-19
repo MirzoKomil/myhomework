@@ -14,7 +14,6 @@ import { AppState, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { TeacherRatingModal } from '@/components/TeacherRatingModal';
 import { theme } from '@/constants/theme';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { LanguageProvider } from '@/i18n/LanguageContext';
@@ -110,7 +109,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
         <Stack.Screen name="v2" />
       </Stack>
-      {canViewStudent && !isNative && <TeacherRatingModal key={token || 'preview'} />}
+      {/* Ustozni baholash oynasi o'chirildi (2026-10-20) — o'quvchidan baho so'ralmaydi. */}
     </LanguageProvider>
   );
 }

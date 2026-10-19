@@ -38,17 +38,21 @@ import {
   leaveBattleQueue,
   submitBattleAnswer,
 } from '@/services/contentApi';
-import { playLoseSound, playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
+import { speak, stopVoice } from '@/services/voicePraise';
+import { Confetti } from '@/components/v2/motion';
 import { addLightning } from '@/services/lightningStore';
 import { useAuth } from '@/services/studentAuthStore';
+import { loadMixContext, markMistake, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
 const MY_AVATAR = img('93faebd4826b1da6adaee5d0dcda6209');
 const OPP_AVATAR = img('6fbb4a0364e41f76fd238e0c91d0228b');
 const MIN_POOL_SIZE = 4;
-const QUEUE_WAIT_SECONDS = 60;
-const NOT_FOUND = "Hozircha boshqa oʻyinchi navbatda emas. Qayta urinib koʻring yoki Bot bilan mashq qiling.";
+// Shuncha soniyada odam topilmasa — "Bot bilan o'ynaysizmi?" so'raladi.
+const QUEUE_WAIT_SECONDS = 30;
+const NOT_FOUND = "Hozir boʻsh oʻquvchi topilmadi. Bot bilan oʻynab mashq qilishingiz yoki yana qidirishingiz mumkin.";
 
 type Phase = 'matching' | 'notFound' | 'playing' | 'result';
 type RoundWinner = 'player' | 'opponent' | 'draw' | null;
@@ -128,6 +132,14 @@ export default function BattleScreen() {
 
   const currentWord = roundWords[round];
 
+  // Raund so'zlari — aqlli aralash (joriy dars / takrorlash kerak / eski darslar).
+  const mixRef = useRef<MixContext | null>(null);
+  const pickRounds = () => {
+    const w = pickMix(battleWordsRef.current, BATTLE_ROUNDS, (x) => x.word, mixRef.current);
+    rememberShown(w.map((x) => x.word));
+    return w;
+  };
+
   const stopPolling = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     if (queueCountdownRef.current) { clearInterval(queueCountdownRef.current); queueCountdownRef.current = null; }
@@ -164,10 +176,13 @@ export default function BattleScreen() {
   }, [phase, opponentName]);
 
   const enterMatch = (status: BattleMatchStatus) => {
+    // Server o'yin bermasa (bo'sh javob) — soxta "raqib" bilan o'ynalmaydi.
+    if (!status || !status.matchId) return notFound();
     stopPolling();
-    const words = status.words && status.words.length ? status.words : shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS);
+    const words = status.words && status.words.length ? status.words : pickRounds();
     setMatchId(status.matchId ?? null);
-    setOpponentName(status.opponentName || 'Hamkurs');
+    // Haqiqiy raqibning ismi (birinchi so'zi); server bermasa — umumiy "Raqib".
+    setOpponentName((status.opponentName || '').trim().split(/\s+/)[0] || 'Raqib');
     setOpponentAvatarUrl(status.opponentAvatarUrl || '');
     setRoundWords(words);
     setTotalRounds(status.totalRounds ?? words.length);
@@ -278,7 +293,7 @@ export default function BattleScreen() {
     if (type === 'bot') {
       setOpponentName('Bot');
       setOpponentAvatarUrl('');
-      const words = shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS);
+      const words = pickRounds();
       setRoundWords(words);
       setTotalRounds(words.length);
       setRound(0);
@@ -290,7 +305,7 @@ export default function BattleScreen() {
     setOpponentAvatarUrl('');
     setPhase('matching');
     setQueueSecondsLeft(QUEUE_WAIT_SECONDS);
-    joinBattleQueue(shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS))
+    joinBattleQueue(pickRounds())
       .then((status) => {
         if (status.status === 'waiting') startQueuePolling();
         else if (status.status === 'not_found') notFound();
@@ -301,9 +316,10 @@ export default function BattleScreen() {
 
   // Ekran ochilganda: so'zlar yuklanadi va darhol raqib qidiriladi.
   useEffect(() => {
-    wordsReady.current = getAccumulatedVocabulary()
-      .then((w) => { battleWordsRef.current = buildBattleWords(w); })
-      .catch(() => {});
+    wordsReady.current = Promise.all([
+      getAccumulatedVocabulary().then((w) => { battleWordsRef.current = buildBattleWords(w); }),
+      loadMixContext().then((c) => { mixRef.current = c; }),
+    ]).then(() => {}).catch(() => {});
     startMatch('random');
     return () => { clearTimers(); stopPolling(); Speech.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -372,8 +388,13 @@ export default function BattleScreen() {
         if (ok) addCoins(V2_BATTLE_WIN_COINS);
         setWinPaid(ok);
       }).catch(() => setWinPaid(false));
-      playWinSound();
-    } else if (playerScore < opponentScore) playLoseSound();
+      playSfx('complete');
+      speak('gameWin', 1550);
+    } else if (playerScore < opponentScore) {
+      playSfx('lose');
+      speak('gameLose', 1050);
+    }
+    return () => stopVoice();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -385,6 +406,9 @@ export default function BattleScreen() {
     if (timeoutSubmitRef.current) clearTimeout(timeoutSubmitRef.current);
     setSelectedOption(option);
     const correct = option === currentWord.translation;
+    playSfx(correct ? 'correct' : 'wrong');
+    // Xato javob — so'z "So'z takrorlash"da ertaga chiqadi.
+    if (!correct) markMistake(currentWord.word);
     if (matchId) {
       submitBattleAnswer(matchId, round, correct, (BATTLE_ROUND_SECONDS - timeLeft) * 1000).catch(() => {});
       return;
@@ -532,7 +556,7 @@ export default function BattleScreen() {
               </>
             ) : (
               <>
-                <Text style={styles.prompt}>{phase === 'matching' ? 'Raqib qidirilmoqda…' : 'Raqib topilmadi'}</Text>
+                <Text style={styles.prompt}>{phase === 'matching' ? 'Raqib qidirilmoqda…' : 'Bot bilan oʻynaysizmi?'}</Text>
                 <View style={styles.speak}><SpeakerIcon /></View>
                 <Text style={[styles.hiddenText, { textAlign: 'center' }]}>
                   {phase === 'matching' ? 'Boshqa oʻquvchi navbatga qoʻshilishi kutilmoqda' : queueMessage}
@@ -574,10 +598,10 @@ export default function BattleScreen() {
           ) : phase === 'notFound' ? (
             <View style={styles.options}>
               <Pressable accessibilityRole="button" onPress={() => startMatch('random')} style={styles.option}>
-                <Text style={styles.optionText}>Qayta urinish</Text>
+                <Text style={styles.optionText}>Yana qidirish</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" onPress={() => startMatch('bot')} style={styles.option}>
-                <Text style={styles.optionText}>Bot bilan</Text>
+              <Pressable accessibilityRole="button" onPress={() => startMatch('bot')} style={[styles.option, { backgroundColor: '#2F5BFF', borderColor: '#6F8DFF' }]}>
+                <Text style={styles.optionText}>Bot bilan oʻynash</Text>
               </Pressable>
             </View>
           ) : null}
@@ -615,6 +639,7 @@ export default function BattleScreen() {
           <Text style={styles.footerText}>oladi</Text>
         </View>
       </View>
+      {phase === 'result' && playerScore > opponentScore && <Confetti count={34} />}
     </View>
   );
 }

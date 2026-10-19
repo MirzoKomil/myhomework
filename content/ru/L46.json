@@ -1,0 +1,304 @@
+{
+ "n": 46,
+ "lessonId": "l1784055280406-45",
+ "type": "live",
+ "id": "l1784055280406-45",
+ "topic": "Shifokor va dorixona",
+ "title": "Jonli dars: «Что вас беспоко́ит?» — shifokorda va dorixonada",
+ "cando": "Shifokorga yozilaman, shikoyatimni tushuntiraman, maslahatni tushunaman va dorixonada dori so'rayman.",
+ "vocab": [
+  {
+   "ru": "врач",
+   "tr": "[vrach]",
+   "uz": "shifokor",
+   "ex": "Мне ну́жно к врачу́.",
+   "img": "cards/врач.jpg",
+   "icon": "",
+   "vocabId": "v-46-1",
+   "media": "media/ru/L46/w_v-46-1.jpg"
+  },
+  {
+   "ru": "записа́ться (к врачу́)",
+   "tr": "[zapisátsa]",
+   "uz": "(qabulga) yozilmoq",
+   "ex": "Мо́жно записа́ться к врачу́ на за́втра?",
+   "img": "cards/записаться.jpg",
+   "icon": "",
+   "vocabId": "v-46-2",
+   "media": "media/ru/L46/w_v-46-2.jpg"
+  },
+  {
+   "ru": "медсестра́",
+   "tr": "[mitsistrá]",
+   "uz": "hamshira",
+   "ex": "Медсестра́ изме́рила температу́ру.",
+   "img": "cards/медсестра.jpg",
+   "icon": "",
+   "vocabId": "v-46-3",
+   "media": "media/ru/L46/w_v-46-3.jpg"
+  },
+  {
+   "ru": "реце́пт",
+   "tr": "[ritsépt]",
+   "uz": "retsept",
+   "ex": "Врач вы́писал реце́пт.",
+   "img": "cards/рецепт.jpg",
+   "icon": "",
+   "vocabId": "v-46-4",
+   "media": "media/ru/L46/w_v-46-4.jpg"
+  },
+  {
+   "ru": "лека́рство",
+   "tr": "[likárstva]",
+   "uz": "dori",
+   "ex": "Принима́йте лека́рство три ра́за в день.",
+   "img": "cards/лекарство.jpg",
+   "icon": "",
+   "vocabId": "v-46-5",
+   "media": "media/ru/L46/w_v-46-5.jpg"
+  },
+  {
+   "ru": "табле́тка",
+   "tr": "[tablyétka]",
+   "uz": "tabletka",
+   "ex": "Да́йте, пожа́луйста, табле́тки от головы́.",
+   "img": "cards/таблетка.jpg",
+   "icon": "",
+   "vocabId": "v-46-6",
+   "media": "media/ru/L46/w_v-46-6.jpg"
+  },
+  {
+   "ru": "апте́ка",
+   "tr": "[aptyéka]",
+   "uz": "dorixona",
+   "ex": "Где ближа́йшая апте́ка?",
+   "img": "cards/аптека.jpg",
+   "icon": "",
+   "vocabId": "v-46-7",
+   "media": "media/ru/L46/w_v-46-7.jpg"
+  },
+  {
+   "ru": "Бу́дьте здоро́вы!",
+   "tr": "[bút'ti zdaróvy]",
+   "uz": "Sog' bo'ling!",
+   "ex": "Спаси́бо, до́ктор! — Бу́дьте здоро́вы!",
+   "img": "cards/будьте здоровы.jpg",
+   "icon": "",
+   "vocabId": "v-46-8",
+   "media": "media/ru/L46/w_v-46-8.jpg"
+  }
+ ],
+ "konspekt": "46-DARS (jonli dars): Shifokor va dorixona — «Что вас беспоко́ит?»\n\nBugun ustoz bilan 45-dars mavzusini (у меня́ боли́т…, мне пло́хо) shifokor qabulida va dorixonada mashq qildik.\n\nQabulga yozilish:\n* Мо́жно записа́ться к врачу́ на за́втра? — Ertaga shifokorga yozilsa bo'ladimi?\n* На како́е вре́мя? — Soat nechaga? · На де́сять часо́в.\n\nShifokorda:\n* Врач: Что вас беспоко́ит? — Sizni nima bezovta qilyapti?\n* Пацие́нт: У меня́ боли́т го́рло и голова́. У меня́ температу́ра.\n* Врач: Как давно́? — Qachondan beri? · Пацие́нт: Три дня.\n* Врач: Откро́йте рот. Скажи́те «а-а». Ды́шите. — Og'zingizni oching. Nafas oling.\n* Врач: У вас просту́да / грипп. Вот реце́пт.\n\nMaslahat (buyruq mayli — 41-dars!):\n* Принима́йте лека́рство три ра́за в день. — Dorini kuniga uch marta iching.\n* Пе́йте мно́го воды́ и горя́чий чай. · Лежи́те до́ма. · Не выходи́те на у́лицу.\n\nDorixonada:\n* Да́йте, пожа́луйста, что́-нибудь от ка́шля / от головно́й бо́ли. — Yo'tal / bosh og'rig'iga biror narsa bering.\n* Вот реце́пт. · Как принима́ть? — Qanday ichish kerak? · Ско́лько сто́ит?\n* Бу́дьте здоро́вы! — Sog' bo'ling! (xayrlashganda; aksirgan odamga ham shunday deyiladi)\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: shifokor qabulida. Keyingi dars — videodars: ob-havo va qiyoslash (лу́чше, бо́льше, чем).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Мо́жно ___ к врачу́ на за́втра?",
+    "o": [
+     "за́пись",
+     "записа́л",
+     "записа́ться"
+    ],
+    "a": "записа́ться"
+   },
+   {
+    "s": "Что вас ___ ?",
+    "o": [
+     "беспоко́йно",
+     "беспоко́ю",
+     "беспоко́ит"
+    ],
+    "a": "беспоко́ит"
+   },
+   {
+    "s": "У меня́ ___ го́рло.",
+    "o": [
+     "боли́т",
+     "бо́льно",
+     "боля́т"
+    ],
+    "a": "боли́т"
+   },
+   {
+    "s": "Откро́йте ___ , пожа́луйста.",
+    "o": [
+     "рука́",
+     "у́хо",
+     "рот"
+    ],
+    "a": "рот"
+   },
+   {
+    "s": "Врач вы́писал ___ .",
+    "o": [
+     "реце́пт",
+     "медсестру́",
+     "апте́ку"
+    ],
+    "a": "реце́пт"
+   },
+   {
+    "s": "___ табле́тки три ра́за в день.",
+    "o": [
+     "Принима́йте",
+     "Принима́ю",
+     "Приня́ть вчера́"
+    ],
+    "a": "Принима́йте"
+   },
+   {
+    "s": "Пе́йте мно́го ___ .",
+    "o": [
+     "вода́",
+     "во́ду",
+     "воды́"
+    ],
+    "a": "воды́"
+   },
+   {
+    "s": "Да́йте, пожа́луйста, что-нибудь от ___ .",
+    "o": [
+     "ка́шель",
+     "ка́шлем",
+     "ка́шля"
+    ],
+    "a": "ка́шля"
+   },
+   {
+    "s": "Как ___ э́то лека́рство?",
+    "o": [
+     "принима́ть",
+     "при́нял",
+     "принима́ю"
+    ],
+    "a": "принима́ть"
+   },
+   {
+    "s": "Бу́дьте ___ !",
+    "o": [
+     "здоро́вый",
+     "здоро́вы",
+     "здоро́вье"
+    ],
+    "a": "здоро́вы"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Sizni nima bezovta qilyapti?»",
+    "o": [
+     "Кем вы рабо́таете?",
+     "Что вас беспоко́ит?",
+     "Где вы живёте?"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Shifokorga yozilmoqchiman»",
+    "o": [
+     "Я хочу́ врач",
+     "Я был врачо́м",
+     "Я хочу́ записа́ться к врачу́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«hamshira»",
+    "o": [
+     "апте́ка",
+     "медсестра́",
+     "врач"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«dori»",
+    "o": [
+     "реце́пт",
+     "лека́рство",
+     "больни́ца"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Qachondan beri?»",
+    "o": [
+     "Как давно́?",
+     "Как до́лго е́хать?",
+     "Как ча́сто?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Shifokor maslahati:",
+    "o": [
+     "Лежа́л до́ма",
+     "Лежу́ до́ма вчера́",
+     "Лежи́те до́ма"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Qanday ichish kerak?»",
+    "o": [
+     "Ско́лько сто́ит?",
+     "Где апте́ка?",
+     "Как принима́ть?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Bosh og'rig'iga biror narsa bering»",
+    "o": [
+     "Да́йте го́лову",
+     "У меня́ голова́",
+     "Да́йте что-нибудь от головно́й бо́ли"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Dorini qayerda sotib olamiz?",
+    "o": [
+     "На вокза́ле",
+     "В ка́ссе",
+     "В апте́ке"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Sog' bo'ling!»",
+    "o": [
+     "Боле́йте!",
+     "Вы́здоровел!",
+     "Бу́дьте здоро́вы!"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Мо́жно записа́ться к врачу́ на за́втра?",
+   "uz": "Ertaga shifokorga yozilsa bo'ladimi?"
+  },
+  {
+   "ru": "У меня́ боли́т го́рло и голова́.",
+   "uz": "Tomog'im va boshim og'riyapti."
+  },
+  {
+   "ru": "У меня́ температу́ра уже́ два дня.",
+   "uz": "Ikki kundan beri isitmam bor."
+  },
+  {
+   "ru": "Да́йте, пожа́луйста, что-нибудь от ка́шля.",
+   "uz": "Iltimos, yo'talga biror narsa bering."
+  },
+  {
+   "ru": "Как принима́ть э́то лека́рство?",
+   "uz": "Bu dorini qanday ichish kerak?"
+  },
+  {
+   "ru": "Спаси́бо, до́ктор!",
+   "uz": "Rahmat, doktor!"
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "Domwork",
+  "short_name": "Domwork",
+  "description": "Domwork — rus tili kursi o'quvchilari uchun mobil veb ilova",
+  "start_url": "/student/v2",
+  "scope": "/student/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0F2F8",
+  "theme_color": "#7B61FF",
+  "lang": "uz",
+  "icons": [
+    {
+      "src": "/student/domik-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/student/domik-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/student/domik-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/student/v2/"
+}

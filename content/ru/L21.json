@@ -1,0 +1,571 @@
+{
+ "n": 21,
+ "lessonId": "l1784055280406-20",
+ "type": "video",
+ "id": "l1784055280406-20",
+ "topic": "Vinitelniy padej: Кого́? Что? Куда́?",
+ "title": "Vinitelniy padej: Кого́? Что? — Я чита́ю кни́гу. Куда́? — Я иду́ в банк",
+ "title_ru": "Вини́тельный паде́ж: объе́кт и направле́ние",
+ "videoUrl": "https://youtu.be/kgW3CLEOZEw",
+ "cando": "Nimani / kimni ko'rayotganimni, sotib olayotganimni aytaman (Я чита́ю кни́гу, я ви́жу ма́му) va qayerga ketayotganimni aytaman (Я иду́ в банк, на рабо́ту).",
+ "review": [
+  {
+   "q": "Vinitelniy padej savollari?",
+   "a": "Кого́? Что? (o'zbekcha -ni: kitobNI o'qiyapman) — va Куда́? (qayerga)"
+  },
+  {
+   "q": "же́нский -а → ?",
+   "a": "-у (кни́га → кни́гу), -я → -ю (семья́ → семью́)"
+  },
+  {
+   "q": "Jonsiz мужско́й/сре́дний o'zgaradimi?",
+   "a": "Yo'q: Я покупа́ю телефо́н, я́блоко"
+  },
+  {
+   "q": "Jonli мужско́й (брат) → ?",
+   "a": "+а: бра́та; друг → дру́га; учи́тель → учи́теля"
+  },
+  {
+   "q": "«Ishga boryapman» ruschasi?",
+   "a": "Я иду́ на рабо́ту (на — chunki Где? на рабо́те)"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "кого́? что?",
+   "tr": "[kavó / shto]",
+   "uz": "kimni? nimani?",
+   "ex": "Кого́ ты ви́дишь? Что ты чита́ешь?",
+   "img": "cards/кого что.jpg",
+   "icon": "",
+   "vocabId": "v-21-1",
+   "media": "media/ru/L21/w_v-21-1.jpg"
+  },
+  {
+   "ru": "куда́?",
+   "tr": "[kudá]",
+   "uz": "qayerga?",
+   "ex": "Куда́ ты идёшь? — В банк.",
+   "img": "cards/куда.jpg",
+   "icon": "",
+   "vocabId": "v-21-2",
+   "media": "media/ru/L21/w_v-21-2.jpg"
+  },
+  {
+   "ru": "идти́ (иду́, идёшь, иду́т)",
+   "tr": "[ittí]",
+   "uz": "bormoq (piyoda, hozir)",
+   "ex": "Я иду́ в магази́н.",
+   "img": "cards/идти (иду идёшь идут).jpg",
+   "icon": "",
+   "vocabId": "v-21-3",
+   "media": "media/ru/L21/w_v-21-3.jpg"
+  },
+  {
+   "ru": "е́хать (е́ду, е́дешь, е́дут)",
+   "tr": "[yéxat']",
+   "uz": "bormoq (transportda)",
+   "ex": "Мы е́дем в Ташке́нт.",
+   "img": "cards/ехать (еду едешь едут).jpg",
+   "icon": "",
+   "vocabId": "v-21-4",
+   "media": "media/ru/L21/w_v-21-4.jpg"
+  },
+  {
+   "ru": "покупа́ть",
+   "tr": "[pakupát']",
+   "uz": "sotib olmoq",
+   "ex": "Я покупа́ю но́вую кни́гу.",
+   "img": "cards/покупать.jpg",
+   "icon": "",
+   "vocabId": "v-21-5",
+   "media": "media/ru/L21/w_v-21-5.jpg"
+  },
+  {
+   "ru": "ждать (жду, ждёшь, ждут)",
+   "tr": "[jdat']",
+   "uz": "kutmoq",
+   "ex": "Анто́н ждёт бра́та.",
+   "img": "cards/ждать (жду ждёшь ждут).jpg",
+   "icon": "",
+   "vocabId": "v-21-6",
+   "media": "media/ru/L21/w_v-21-6.jpg"
+  },
+  {
+   "ru": "есть (ем, ешь, едя́т)",
+   "tr": "[yest']",
+   "uz": "yemoq",
+   "ex": "Я ем самсу́.",
+   "img": "cards/есть (ем ешь едят).jpg",
+   "icon": "",
+   "vocabId": "v-21-7",
+   "media": "media/ru/L21/w_v-21-7.jpg"
+  },
+  {
+   "ru": "брать (беру́, берёшь)",
+   "tr": "[brat']",
+   "uz": "olmoq",
+   "ex": "Бобу́р берёт сок.",
+   "img": "cards/брать (беру берёшь).jpg",
+   "icon": "",
+   "vocabId": "v-21-8",
+   "media": "media/ru/L21/w_v-21-8.jpg"
+  },
+  {
+   "ru": "звать (зову́, зовёшь)",
+   "tr": "[zvat']",
+   "uz": "chaqirmoq",
+   "ex": "Ма́ма зовёт до́чку домо́й.",
+   "img": "cards/звать (зову зовёшь).jpg",
+   "icon": "",
+   "vocabId": "v-21-9",
+   "media": "media/ru/L21/w_v-21-9.jpg"
+  },
+  {
+   "ru": "в банк / в шко́лу / в центр",
+   "tr": "[v bank / f shkólu / f tsentr]",
+   "uz": "bankka / maktabga / markazga",
+   "ex": "Я иду́ в банк. Де́ти бегу́т в шко́лу.",
+   "img": "cards/банк.jpg",
+   "icon": "",
+   "vocabId": "v-21-10",
+   "media": "media/ru/L21/w_v-21-10.jpg"
+  },
+  {
+   "ru": "на рабо́ту / на мо́ре / на конце́рт",
+   "tr": "[na rabótu / na móre / na kantsért]",
+   "uz": "ishga / dengizga / konsertga",
+   "ex": "Мы идём на конце́рт.",
+   "img": "cards/на работу - на море - на концерт.jpg",
+   "icon": "",
+   "vocabId": "v-21-11",
+   "media": "media/ru/L21/w_v-21-11.jpg"
+  },
+  {
+   "ru": "домо́й",
+   "tr": "[damóy]",
+   "uz": "uyga",
+   "ex": "Ве́чером мы идём домо́й.",
+   "img": "cards/домой.jpg",
+   "icon": "",
+   "vocabId": "v-21-12",
+   "media": "media/ru/L21/w_v-21-12.jpg"
+  },
+  {
+   "ru": "самса́ / плов",
+   "tr": "[samsá / plof]",
+   "uz": "somsa / palov",
+   "ex": "Я ем самсу́. Мы еди́м плов.",
+   "img": "cards/самса - плов.jpg",
+   "icon": "",
+   "vocabId": "v-21-13",
+   "media": "media/ru/L21/w_v-21-13.jpg"
+  },
+  {
+   "ru": "газе́та / журна́л",
+   "tr": "[gazéta / jurnál]",
+   "uz": "gazeta / jurnal",
+   "ex": "Он чита́ет газе́ту и журна́л.",
+   "img": "cards/газета - журнал.jpg",
+   "icon": "",
+   "vocabId": "v-21-14",
+   "media": "media/ru/L21/w_v-21-14.jpg"
+  },
+  {
+   "ru": "пло́щадь",
+   "tr": "[plóshchat']",
+   "uz": "maydon",
+   "ex": "Тури́сты иду́т на пло́щадь.",
+   "img": "cards/площадь.jpg",
+   "icon": "",
+   "vocabId": "v-21-15",
+   "media": "media/ru/L21/w_v-21-15.jpg"
+  },
+  {
+   "ru": "пиро́г",
+   "tr": "[pirók]",
+   "uz": "pirog",
+   "ex": "Анто́н заказа́л све́жий пиро́г.",
+   "img": "cards/пирог.jpg",
+   "icon": "",
+   "vocabId": "v-21-16",
+   "media": "media/ru/L21/w_v-21-16.jpg"
+  }
+ ],
+ "konspekt": "21-DARS: Vinitelniy padej — Кого́? Что? Куда́?\n(Вини́тельный паде́ж: объе́кт и направле́ние)\n\nBu darsdan keyin siz: «nimani / kimni» (Я чита́ю кни́гу) va «qayerga» (Я иду́ в банк) deb ayta olasiz.\n\n---\n\n1. Vinitelniy — «eng chalkash» padej? Yo'q!\n\nO'zbek tilidagi -NI qo'shimchasiga to'g'ri keladi: somsaNI yeyapman, kitobNI o'qiyapman.\nSavollar: Кого́? (kimni?) Что? (nimani?)\nVinitelniyni talab qiluvchi fe'llar: чита́ть, знать, покупа́ть, писа́ть, ви́деть, люби́ть, есть, пить, ждать, слу́шать, смотре́ть, брать, звать.\n\n2. Qo'shimchalar (narsalar — jonsiz)\n\n* мужско́й va сре́дний — O'ZGARMAYDI: Я покупа́ю телефо́н / чай / компью́тер / я́блоко / молоко́.\n* ko'plik jonsiz — o'zgarmaydi: Я ви́жу телефо́ны, ру́чки.\n* же́нский -а → -у: кни́га → кни́гу, ру́чка → ру́чку, газе́та → газе́ту, му́зыка → му́зыку; -я → -ю: семья́ → семью́; -ь → o'zgarmaydi: тетра́дь → тетра́дь.\n* ко́фе — o'zgarmaydi (chet so'z): У́тром я пью ко́фе.\n\nQiyoslang: Я чита́ю кни́гу (-а → -у) / Я чита́ю журна́л (o'zgarmadi — м.р. jonsiz).\n\n3. Odamlar (jonli)\n\n* мужско́й jonli → +а / +я: брат → бра́та, друг → дру́га, учи́тель → учи́теля, геро́й → геро́я, врач → врача́.\n* же́нский jonli -а → -у: сестра́ → сестру́, ма́ма → ма́му, А́нна → А́нну.\nMisollar: Я ви́жу ма́му. Анто́н ждёт бра́та. Студе́нт слу́шает учи́теля. Я зна́ю э́того студе́нта.\n\n4. Куда́? (qayerga) — yo'nalish\n\nBu videoda yo'q, lekin juda muhim! Vinitelniy padej yo'nalishni ham bildiradi: в / на + Vinitelniy.\n* Где? (qayerda) — predlojniy: в ба́нке, на рабо́те, в шко́ле (11-dars)\n* Куда́? (qayerga) — vinitelniy: в банк, на рабо́ту, в шко́лу\n\nQo'shimchalar xuddi yuqoridagidek: м.р./с.р. o'zgarmaydi (в банк, в центр, на мо́ре, на конце́рт), ж.р. -а → -у (в шко́лу, в апте́ку, на рабо́ту, на вы́ставку).\nMisollar: Я иду́ в магази́н. Де́ти бегу́т в шко́лу. Мы е́дем в Ташке́нт. Семья́ е́дет на мо́ре. Ве́чером они́ иду́т в теа́тр. Я иду́ домо́й (uyga — predlogsiz).\n\nQaysi predlog? Xuddi Где? dagi kabi: в шко́ле → в шко́лу; на рабо́те → на рабо́ту; на конце́рте → на конце́рт.\n\nFe'llar: идти́ (piyoda, hozir): иду́, идёшь, идёт, идём, идёте, иду́т. е́хать (transportda): е́ду, е́дешь, е́дет, е́дем, е́дете, е́дут.\n\n---\n\nDars xulosasi\n* Кого́? Что? = -NI. ж.р. -а → -у; jonli м.р. +а.\n* Куда́? = в / на + vinitelniy: в банк, в шко́лу, на рабо́ту.\n* Где? в ба́нке (joy) ≠ Куда́? в банк (yo'nalish).\n\nUyga vazifa platformada: matn «Пое́здка в центр», 15 test. Yordamchi ustoz bilan gapirish. Keyingi dars — jonli dars: «Куда́ ты идёшь и кого́ ты ви́дишь?».",
+ "text": {
+  "title": "Пое́здка в центр",
+  "ru": "Сего́дня у́тром Анто́н идёт в большо́й магази́н. Он берёт су́мку и бы́стро идёт на авто́бусную остано́вку.\nНа остано́вке Анто́н встреча́ет своего́ ста́рого дру́га Бобу́ра. Друзья́ е́дут в центр.\nВ це́нтре Анто́н покупа́ет интере́сную кни́гу и вку́сный чай, а Бобу́р покупа́ет но́вый телефо́н.\nПото́м они́ иду́т в ую́тное кафе́. Там Анто́н берёт горя́чий ко́фе и све́жий пиро́г, а Бобу́р берёт сок.\nОни́ до́лго разгова́ривают, а пото́м вме́сте иду́т на краси́вую пло́щадь.",
+  "uz": "Bugun ertalab Anton katta do'konga boryapti. U sumkasini oladi va tez avtobus bekatiga boradi.\nBekatda Anton eski do'sti Boburni uchratadi. Do'stlar markazga borishadi.\nMarkazda Anton qiziqarli kitob va mazali choy sotib oladi, Bobur esa yangi telefon sotib oladi.\nKeyin ular shinam kafega borishadi. U yerda Anton issiq kofe va yangi pirog oladi, Bobur esa sharbat oladi.\nUlar uzoq gaplashishadi, keyin birga chiroyli maydonga borishadi.",
+  "questions": [
+   {
+    "q": "Куда́ идёт Анто́н у́тром?",
+    "opts": [
+     "В парк",
+     "В большо́й магази́н",
+     "На рабо́ту"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Кого́ встреча́ет Анто́н на остано́вке?",
+    "opts": [
+     "Дру́га Бобу́ра",
+     "Учи́теля",
+     "Сестру́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что покупа́ет Бобу́р?",
+    "opts": [
+     "Чай",
+     "Но́вый телефо́н",
+     "Кни́гу"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Куда́ иду́т друзья́ по́сле кафе́?",
+    "opts": [
+     "На остано́вку",
+     "На краси́вую пло́щадь",
+     "В кинотеа́тр"
+    ],
+    "a": 1
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Куда́ ты идёшь? (Qayerga boryapsan?)",
+  "lines": [
+   {
+    "who": "Нигора́",
+    "ru": "Абдулази́з, куда́ ты идёшь?",
+    "uz": "Abdulaziz, qayerga boryapsan?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Я иду́ в банк, а пото́м на рабо́ту.",
+    "uz": "Bankka, keyin ishga boryapman."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Купи́, пожа́луйста, хлеб и молоко́.",
+    "uz": "Iltimos, non va sut sotib ol."
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Хорошо́. Что ещё? Газе́ту?",
+    "uz": "Yaxshi. Yana nima? Gazeta?"
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Да, и све́жую газе́ту. Ве́чером мы идём в теа́тр!",
+    "uz": "Ha, yangi gazeta ham. Kechqurun teatrga boramiz!"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Отли́чно! Я жду тебя́ до́ма в шесть.",
+    "uz": "A'lo! Soat oltida uyda kutaman."
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "кни́га → чита́ю …",
+    "кни́гу"
+   ],
+   [
+    "сестра́ → жду …",
+    "сестру́"
+   ],
+   [
+    "брат → ви́жу …",
+    "бра́та"
+   ],
+   [
+    "учи́тель → слу́шаю …",
+    "учи́теля"
+   ],
+   [
+    "телефо́н → покупа́ю …",
+    "телефо́н"
+   ],
+   [
+    "шко́ла → иду́ в …",
+    "шко́лу"
+   ],
+   [
+    "рабо́та → иду́ на …",
+    "рабо́ту"
+   ],
+   [
+    "банк → иду́ в …",
+    "банк"
+   ],
+   [
+    "мо́ре → е́дем на …",
+    "мо́ре"
+   ],
+   [
+    "дом → иду́ …",
+    "домо́й"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "За́втра Ви́ктор идёт в ___. (bankka)",
+    "o": [
+     "банк",
+     "ба́нка",
+     "ба́нке"
+    ],
+    "a": "банк"
+   },
+   {
+    "s": "А́нна встре́тила в па́рке ___. (do'stini)",
+    "o": [
+     "друг",
+     "дру́гу",
+     "дру́га"
+    ],
+    "a": "дру́га"
+   },
+   {
+    "s": "Куда́ вы идёте ве́чером? — Мы идём на ___. (konsertga)",
+    "o": [
+     "конце́рт",
+     "конце́рта",
+     "конце́рте"
+    ],
+    "a": "конце́рт"
+   },
+   {
+    "s": "Студе́нт слу́шает ___. (o'qituvchini)",
+    "o": [
+     "учи́тель",
+     "учи́теля",
+     "учи́телю"
+    ],
+    "a": "учи́теля"
+   },
+   {
+    "s": "Что ты покупа́ешь? — Я покупа́ю но́вую ___. (kitob)",
+    "o": [
+     "кни́гу",
+     "кни́га",
+     "кни́ге"
+    ],
+    "a": "кни́гу"
+   },
+   {
+    "s": "Де́ти бегу́т в ___. (maktabga)",
+    "o": [
+     "шко́ла",
+     "шко́ле",
+     "шко́лу"
+    ],
+    "a": "шко́лу"
+   },
+   {
+    "s": "Ма́рия зовёт свою́ ___. (singlisini)",
+    "o": [
+     "сестра́",
+     "сестру́",
+     "сестре́"
+    ],
+    "a": "сестру́"
+   },
+   {
+    "s": "Семья́ е́дет ле́том на ___. (dengizga)",
+    "o": [
+     "мо́рю",
+     "мо́ре",
+     "моря́"
+    ],
+    "a": "мо́ре"
+   },
+   {
+    "s": "Мы ждём ___. (shifokorni)",
+    "o": [
+     "враче́",
+     "врач",
+     "врача́"
+    ],
+    "a": "врача́"
+   },
+   {
+    "s": "Куда́ ты идёшь? — Я иду́ в ___. (dorixonaga)",
+    "o": [
+     "апте́ка",
+     "апте́ку",
+     "апте́ке"
+    ],
+    "a": "апте́ку"
+   },
+   {
+    "s": "У́тром я пью ___.",
+    "o": [
+     "ко́фе",
+     "кофя",
+     "кофу"
+    ],
+    "a": "ко́фе"
+   },
+   {
+    "s": "Ве́чером мы идём ___. (uyga)",
+    "o": [
+     "дом",
+     "до́ма",
+     "домо́й"
+    ],
+    "a": "домо́й"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Vinitelniy savollari:",
+    "o": [
+     "Где?",
+     "Кто? Что?",
+     "Кого́? Что?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Я чита́ю журна́л» — nega o'zgarmadi?",
+    "o": [
+     "м.р. jonsiz",
+     "ж.р.",
+     "ko'plik"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Я ви́жу ма́му» — nega -у?",
+    "o": [
+     "ж.р. -а → -у",
+     "м.р.",
+     "o'zgarmaydi"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Где?» — «в ба́нке», «Куда́?» —",
+    "o": [
+     "в банк",
+     "в ба́нка",
+     "в ба́нке"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Ishga boryapman»:",
+    "o": [
+     "Я иду́ на рабо́те.",
+     "Я иду́ в рабо́ту.",
+     "Я иду́ на рабо́ту."
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Мы е́дем в Ташке́нт» — «е́дем» —",
+    "o": [
+     "yashaymiz",
+     "piyoda boramiz",
+     "transportda boramiz"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "иду́",
+     "Я",
+     "в",
+     "магази́н"
+    ],
+    "a": "Я иду́ в магази́н",
+    "t": "Men do'konga boryapman"
+   },
+   {
+    "w": [
+     "ждёт",
+     "Анто́н",
+     "бра́та"
+    ],
+    "a": "Анто́н ждёт бра́та",
+    "t": "Anton akasini kutyapti"
+   },
+   {
+    "w": [
+     "е́дем",
+     "Мы",
+     "в",
+     "Ташке́нт"
+    ],
+    "a": "Мы е́дем в Ташке́нт",
+    "t": "Biz Toshkentga ketyapmiz"
+   },
+   {
+    "w": [
+     "чита́ет",
+     "Она́",
+     "интере́сную",
+     "кни́гу"
+    ],
+    "a": "Она́ чита́ет интере́сную кни́гу",
+    "t": "U qiziqarli kitob o'qiyapti"
+   },
+   {
+    "w": [
+     "иду́т",
+     "Де́ти",
+     "на",
+     "стадио́н"
+    ],
+    "a": "Де́ти иду́т на стадио́н",
+    "t": "Bolalar stadionga borishyapti"
+   },
+   {
+    "w": [
+     "покупа́ет",
+     "Оте́ц",
+     "но́вую",
+     "маши́ну"
+    ],
+    "a": "Оте́ц покупа́ет но́вую маши́ну",
+    "t": "Ota yangi mashina sotib olyapti"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Я иду́ в банк, а пото́м на рабо́ту.",
+   "uz": "Bankka, keyin ishga boryapman."
+  },
+  {
+   "ru": "Я чита́ю кни́гу и пью ко́фе.",
+   "uz": "Kitob o'qiyapman va kofe ichyapman."
+  },
+  {
+   "ru": "Я ви́жу ма́му и жду бра́та.",
+   "uz": "Onamni ko'ryapman va akamni kutyapman."
+  },
+  {
+   "ru": "Куда́ ты идёшь? — Я иду́ домо́й.",
+   "uz": "Qayerga boryapsan? — Uyga."
+  },
+  {
+   "ru": "Ле́том мы е́дем на мо́ре.",
+   "uz": "Yozda dengizga boramiz."
+  },
+  {
+   "ru": "Я покупа́ю хлеб, молоко́ и све́жую газе́ту.",
+   "uz": "Non, sut va yangi gazeta sotib olaman."
+  }
+ ]
+}

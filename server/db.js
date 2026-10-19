@@ -85,8 +85,11 @@ async function tx(fn) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await fn(client);
+        // Natija qaytariladi: Yuzma-yuz (battle) funksiyalari `return tx(...)`
+        // qiladi — ilgari undefined qaytib, haqiqiy juftlash umuman ishlamas edi.
+        const result = await fn(client);
         await client.query('COMMIT');
+        return result;
     } catch (e) {
         await client.query('ROLLBACK');
         throw e;
@@ -1661,7 +1664,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory' || key === 'assistantWeeklyRatings' || key === 'battleMatches') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory' || key === 'assistantWeeklyRatings' || key === 'battleMatches' || key === 'notificationReads') ? {} : [];
     }
     return row.data;
 }
@@ -1996,6 +1999,44 @@ async function syncStudentProgress(studentId, { coins, lightning, coinsDelta, li
     });
 }
 
+// O'quvchining serverdagi tanga/chaqmoq summasi va ketma-ket faol kunlari.
+// Ilova ochilganda shu bilan o'z xotirasini tiklaydi: yangi telefon yoki
+// bosh ekrandagi yangi ikonka 0 dan boshlamasin va 0 ni serverga yozib,
+// haqiqiy summani o'chirib yubormasin.
+async function getStudentProgress(studentId) {
+    if (!studentId) return null;
+    const [all, history] = await Promise.all([
+        getJsonData('studentProgress'),
+        getJsonData('studentProgressHistory'),
+    ]);
+    const row = all[studentId] || {};
+    const days = history[studentId] || {};
+    const active = (key) => {
+        const d = days[key];
+        return !!d && ((Number(d.coins) || 0) > 0 || (Number(d.lightning) || 0) > 0);
+    };
+    // Streak: bugun (yoki hali faol bo'lmagan bo'lsa, kechadan) orqaga
+    // uzluksiz faol kunlar soni.
+    const now = tashkentNow();
+    const dayMs = 24 * 60 * 60 * 1000;
+    let cursor = new Date(now.getTime());
+    if (!active(tashkentDateKey(cursor))) cursor = new Date(cursor.getTime() - dayMs);
+    let streak = 0;
+    while (streak < 3650 && active(tashkentDateKey(cursor))) {
+        streak++;
+        cursor = new Date(cursor.getTime() - dayMs);
+    }
+    const today = days[tashkentDateKey(now)] || {};
+    return {
+        coins: Math.max(0, Math.round(Number(row.coins) || 0)),
+        lightning: Math.max(0, Math.round(Number(row.lightning) || 0)),
+        updatedAt: row.updatedAt || null,
+        streak,
+        todayCoins: Math.max(0, Math.round(Number(today.coins) || 0)),
+        todayLightning: Math.max(0, Math.round(Number(today.lightning) || 0)),
+    };
+}
+
 const LEADERBOARD_PERIODS = ['daily', 'weekly', 'monthly', 'alltime'];
 
 function sumProgressHistoryInRange(entries, fromKey, toKey) {
@@ -2103,6 +2144,10 @@ async function getRealLeaderboard(studentId, scope, period = 'alltime') {
 // "tekshirib" (tickBattleMatch) ikkala tomon ham javob bergan yoki vaqt
 // (grace bilan) tugagan bo'lsa g'olibni aniqlab, keyingi raundga o'tkazadi.
 const BATTLE_QUEUE_TTL_MS = 60 * 1000;
+// Navbatdagi o'quvchi shuncha vaqt status so'ramasa — ilovadan chiqib ketgan hisoblanadi.
+const BATTLE_QUEUE_ALIVE_MS = 8 * 1000;
+// Navbatda turgan o'quvchi uchun yaratilgan o'yin shu vaqt ichida olinadi.
+const BATTLE_JOIN_PICKUP_MS = 30 * 1000;
 const BATTLE_MATCH_TTL_MS = 10 * 60 * 1000;
 const BATTLE_ROUND_MS = 8000; // student-app/data/mock.ts BATTLE_ROUND_SECONDS bilan mos
 const BATTLE_ROUND_GRACE_MS = 5000;
@@ -2183,11 +2228,19 @@ async function joinBattleQueue(studentId, words) {
     return tx(async (client) => {
         const now = Date.now();
         let queue = await lockJsonRow(client, 'battleQueue', []);
-        queue = queue.filter((q) => q.studentId !== studentId && now - new Date(q.joinedAt).getTime() < BATTLE_QUEUE_TTL_MS);
+        // Faqat hozir ham ekranda kutib turgan (har 1.5 s so'rab turgan) o'quvchi
+        // bilan juftlanadi: ilovani yopib ketgan "arvoh" yozuv bilan emas.
+        // Bir o'quvchi o'zi bilan (boshqa qurilmasidan) juftlanmasin.
+        queue = queue.filter((q) => String(q.studentId) !== String(studentId)
+            && (!q.pid || !profile.studentId || String(q.pid) !== String(profile.studentId))
+            && now - new Date(q.joinedAt).getTime() < BATTLE_QUEUE_TTL_MS
+            && now - new Date(q.lastSeen || q.joinedAt).getTime() < BATTLE_QUEUE_ALIVE_MS);
+        // Rus tili o'quvchisi faqat rus tili o'quvchisi bilan (so'zlar bir kursdan).
+        const candidates = queue.filter((q) => !q.lang || !profile.lang || q.lang === profile.lang);
 
-        if (queue.length > 0) {
-            const opponent = queue[0];
-            const remaining = queue.slice(1);
+        if (candidates.length > 0) {
+            const opponent = candidates[0];
+            const remaining = queue.filter((q) => q !== opponent);
             await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(remaining)]);
 
             const matches = await lockJsonRow(client, 'battleMatches', {});
@@ -2214,7 +2267,8 @@ async function joinBattleQueue(studentId, words) {
             return sanitizeBattleMatch(match, studentId);
         }
 
-        queue.push({ studentId, name: profile.name, avatarUrl: profile.avatarUrl || '', words, joinedAt: new Date().toISOString() });
+        const nowIso = new Date().toISOString();
+        queue.push({ studentId, pid: profile.studentId || null, lang: profile.lang || null, name: profile.name, avatarUrl: profile.avatarUrl || '', words, joinedAt: nowIso, lastSeen: nowIso });
         await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(queue)]);
         return { status: 'waiting' };
     });
@@ -2235,11 +2289,23 @@ async function getBattleStatus(studentId, matchId) {
     if (!studentId) throw new Error("Bu funksiya faqat haqiqiy tizimga kirgan o'quvchilar uchun");
     return tx(async (client) => {
         const matches = await lockJsonRow(client, 'battleMatches', {});
-        let match = matchId ? matches[matchId] : Object.values(matches).find((m) => m.players.includes(studentId));
+        // matchId'siz so'rov (navbatda kutish) — faqat hozirgina yaratilgan,
+        // davom etayotgan o'yin. Avvalgi tugagan o'yin qayta ochilib qolmasin.
+        let match = matchId
+            ? matches[matchId]
+            : Object.values(matches)
+                .filter((m) => m.players.includes(studentId) && m.status === 'playing'
+                    && Date.now() - new Date(m.createdAt).getTime() < BATTLE_JOIN_PICKUP_MS)
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
         if (!match || !match.players.includes(studentId)) {
             const queue = await lockJsonRow(client, 'battleQueue', []);
-            const stillWaiting = queue.some((q) => q.studentId === studentId);
-            return { status: stillWaiting ? 'waiting' : 'not_found' };
+            const me = queue.find((q) => q.studentId === studentId);
+            if (me) {
+                // Navbatdagi o'quvchi hali ekranda — "tirik" belgisi yangilanadi.
+                me.lastSeen = new Date().toISOString();
+                await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(queue)]);
+            }
+            return { status: me ? 'waiting' : 'not_found' };
         }
         match = tickBattleMatch(match);
         matches[match.id] = match;
@@ -2842,24 +2908,36 @@ async function deleteManualNotification(id) {
 // o'tish, yetkazib berish, Ma'muriyat xabari, hamjamiyat yurakchasi). Qoida
 // matni voqea sodir bo'lgan lahzada "suratga olinadi" — keyinroq qoida
 // tahrirlansa ham, eski yozuvlar o'zgarmaydi.
-async function addSystemNotification(ruleId, vars) {
+// Tizim voqealari (daraja, imtihon, reyting, yetkazish...) — SHAXSIY: faqat
+// o'sha o'quvchiga ko'rinadi. Avval bitta umumiy ro'yxat bo'lib, bir
+// o'quvchining darajasi hamma o'quvchiga (va hammaning telefoniga push) ketardi.
+async function addSystemNotification(ruleId, vars, studentId) {
     const rules = await getNotificationRules();
     const rule = rules[ruleId];
     if (!rule?.enabled) return null;
+    if (!studentId) return null;
     const all = await getJsonData('systemNotifications');
     const notification = {
         id: 'sys-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
         ruleId,
+        studentId: String(studentId),
         title: fillNotificationTemplate(rule.title, vars || {}),
         message: fillNotificationTemplate(rule.message, vars || {}),
         createdAt: new Date().toISOString(),
     };
     all.unshift(notification);
-    if (all.length > 100) all.length = 100;
-    await tx(async (client) => {
-        await saveJsonData(client, 'systemNotifications', all);
+    // Har o'quvchiga oxirgi 30 tasi; eski (egasiz) yozuvlar tashlanadi.
+    const perStudent = {};
+    const kept = all.filter((n) => {
+        if (!n.studentId) return false;
+        perStudent[n.studentId] = (perStudent[n.studentId] || 0) + 1;
+        return perStudent[n.studentId] <= 30;
     });
-    sendPushToAll(notification.title, notification.message).catch(() => {});
+    await tx(async (client) => {
+        await saveJsonData(client, 'systemNotifications', kept.slice(0, 2000));
+    });
+    // Push obunalari o'quvchiga bog'lanmagan — shaxsiy voqea hammaga push
+    // qilinmasin (avval sendPushToAll edi).
     return notification;
 }
 
@@ -3030,7 +3108,9 @@ async function getComputedDemoNotifications(studentId) {
     }
 
     // ── Ustozni baholash (dars tugagach) ────────────────────────────────────
-    if (rules.teacherRatingPrompt?.enabled) {
+    // Ustozni baholash so'rovi o'chirildi (Abdulloh qarori, 2026-10-20) —
+    // o'quvchidan baho so'ralmaydi.
+    if (false && rules.teacherRatingPrompt?.enabled) {
         const { grades } = await getDemoStudentGrades(studentId);
         const unrated = grades.find(g => !g.studentRatingOfTeacher);
         if (unrated) {
@@ -3056,7 +3136,7 @@ async function getComputedDemoNotifications(studentId) {
             // Video mashqlari yakunlangani — videoni ko'rib chiqqanining eng
             // yaqin serverda kuzatiladigan belgisi (mashqlarni bajarish uchun
             // avval video ko'rilishi kerak).
-            const activity = await getDemoStudentActivity();
+            const activity = await getDemoStudentActivity(studentId);
             const watchedToday = activity.some(a => a.type === 'video' && a.time.slice(0, 10) === todayStr);
             if (!watchedToday) {
                 const nowHour = now.getUTCHours();
@@ -3082,7 +3162,7 @@ async function getComputedDemoNotifications(studentId) {
         const now = tashkentNow();
         if (now.getUTCHours() >= 9 && now.getUTCHours() < 22) {
             const todayStr = now.toISOString().slice(0, 10);
-            const activity = await getDemoStudentActivity();
+            const activity = await getDemoStudentActivity(studentId);
             const todaysHomework = activity.filter(a => a.type === 'homework' && a.time.slice(0, 10) === todayStr);
             const completedToday = todaysHomework.some(a => (a.scorePercent || 0) >= 100);
             if (!completedToday) {
@@ -3147,7 +3227,9 @@ async function getComputedDemoNotifications(studentId) {
 
     // ── Tizim voqealari + qo'lda yuborilgan xabarlar ────────────────────────
     const system = await getJsonData('systemNotifications');
+    const me = student?.id ? String(student.id) : String((await resolveStudentId(studentId)) || '');
     for (const n of system) {
+        if (!n.studentId || String(n.studentId) !== me) continue;
         notifications.push({
             id: n.id, category: 'news', source: 'system',
             title: n.title, message: n.message,
@@ -3165,7 +3247,28 @@ async function getComputedDemoNotifications(studentId) {
     }
 
     notifications.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // O'qilganlar serverda saqlanadi (eski va yangi ilova, har qanday telefon).
+    if (me) {
+        const reads = await getJsonData('notificationReads');
+        const readSet = new Set(Array.isArray(reads?.[me]) ? reads[me] : []);
+        for (const n of notifications) if (readSet.has(n.id)) n.unread = false;
+    }
     return notifications;
+}
+
+async function markNotificationsRead(studentId, ids) {
+    const id = studentId ? String(studentId) : null;
+    if (!id) return;
+    const list = (Array.isArray(ids) ? ids : []).map((x) => String(x || '').slice(0, 120)).filter(Boolean).slice(0, 300);
+    if (!list.length) return;
+    const raw = await getJsonData('notificationReads');
+    const all = raw && !Array.isArray(raw) && typeof raw === 'object' ? raw : {};
+    const prev = Array.isArray(all[id]) ? all[id] : [];
+    const merged = [...new Set([...prev, ...list])];
+    all[id] = merged.slice(-500);
+    await tx(async (client) => {
+        await saveJsonData(client, 'notificationReads', all);
+    });
 }
 
 // ── Hamjamiyat (Community) ───────────────────────────────────────────────────
@@ -3214,7 +3317,7 @@ async function toggleCommunityPostLike(postId) {
     post.likeCount = Math.max(0, (post.likeCount || 0) + (post.likedByMe ? 1 : -1));
     await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
     if (post.likedByMe) {
-        await addSystemNotification('communityLike', {});
+        // Hamjamiyat yoqtirishi bildirishnoma bermaydi (bo'lim olib tashlangan).
     }
     return post;
 }
@@ -3628,7 +3731,7 @@ async function addDemoStudentActivity(entry, studentId) {
         await saveJsonData(client, 'studentActivity', all);
     });
     if (type === 'exam' && record.passed === true) {
-        await addSystemNotification('examPassed', { label: record.label || 'Imtihon' });
+        await addSystemNotification('examPassed', { label: record.label || 'Imtihon' }, demoStudentId);
     }
     return record;
 }
@@ -3729,7 +3832,7 @@ async function detectPatchStateNotificationEvents(partial) {
             const newMsgs = newThreads[threadId] || [];
             const hasNewAdminMsg = newMsgs.some(m => !oldIds.has(m.id) && m.sender !== 'student');
             if (hasNewAdminMsg) {
-                await addSystemNotification('muloqotMessage', {});
+                await addSystemNotification('muloqotMessage', {}, demoStudentId);
                 break;
             }
         }
@@ -3742,7 +3845,7 @@ async function detectPatchStateNotificationEvents(partial) {
             if (order.studentId !== demoStudentId) continue;
             const oldStage = oldStageById.get(order.id);
             if (oldStage !== undefined && oldStage !== order.stage) {
-                await addSystemNotification('deliveryUpdated', { stage: SHOP_ORDER_STAGE_LABELS[order.stage] || order.stage });
+                await addSystemNotification('deliveryUpdated', { stage: SHOP_ORDER_STAGE_LABELS[order.stage] || order.stage }, order.studentId);
             }
         }
     }
@@ -4479,7 +4582,7 @@ module.exports = {
     getNotificationRules, saveNotificationRules,
     getManualNotifications, addManualNotification, deleteManualNotification,
     addSystemNotification, submitAbsenceReason,
-    getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY,
+    getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY, markNotificationsRead,
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
     getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording, handleBeelineWebhook,
@@ -4489,7 +4592,7 @@ module.exports = {
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
-    syncStudentProgress, getRealLeaderboard, resolveStudentSubjectLang,
+    syncStudentProgress, getStudentProgress, getRealLeaderboard, resolveStudentSubjectLang,
     getStudentLessonProgress, mergeStudentLessonProgress,
     joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch,
     getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,

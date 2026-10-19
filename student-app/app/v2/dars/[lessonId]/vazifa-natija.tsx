@@ -8,12 +8,14 @@
  * ?qism=<partId> bilan boshqa avtomatik qism ham ko'rsatiladi.
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { BackIcon, Check, CloseIcon } from '@/components/v2/homework/icons';
+import { FadeInUp, useCountUp } from '@/components/v2/motion';
 import { isTeacherGraded, loadLessonInfo, partLabel, type LessonInfo } from '@/components/v2/homework/lib';
 import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { Txt, webShadow } from '@/components/v2/homework/ui';
@@ -38,8 +40,9 @@ function questionsOf(p: HomeworkPart): { prompt: string; correct: string }[] {
 const mistakeKey = (p: HomeworkPart, i: number) =>
   p.kind === 'multipleChoice' ? p.questions[i]?.question : p.kind === 'fillBlank' ? p.blanks[i]?.sentence : p.kind === 'sentenceBuild' ? p.items[i]?.translation : '';
 
-function Ring({ pct }: { pct: number }) {
+function Ring({ pct: target }: { pct: number }) {
   // conic-gradient(#087A4A 0 pct, #FDECEC pct 100%) — 60px halqa, ichida 46px oq doira.
+  const pct = useCountUp(target, { duration: 800, delay: 150 });
   const r = 26.5;
   const c = 2 * Math.PI * r;
   return (
@@ -73,7 +76,7 @@ export default function TestReviewScreen() {
     };
   }, [id]);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(`${R.homework(id)}?yuborildi=1` as Href));
+  const back = () => v2Back(`${R.homework(id)}?yuborildi=1`);
 
   const parts = info?.content.homeworkParts.filter((p) => !isTeacherGraded(p) && questionsOf(p).length > 0) ?? [];
   const part = parts.find((p) => p.id === qism) ?? parts.find((p) => p.kind === 'multipleChoice') ?? parts[0];
@@ -123,7 +126,7 @@ export default function TestReviewScreen() {
           </View>
         ) : (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={[st.body, { paddingBottom: Math.max(20, insets.bottom + 14) }]} showsVerticalScrollIndicator={false}>
-            <View style={st.summary}>
+            <FadeInUp style={st.summary}>
               <Ring pct={pct} />
               <View style={{ flex: 1, gap: 3 }}>
                 <Txt f="display" size={22}>
@@ -136,10 +139,11 @@ export default function TestReviewScreen() {
                   </Txt>
                 </Txt>
               </View>
-            </View>
+            </FadeInUp>
 
-            {wrongRows.map((r) => (
-              <View key={r.n} accessibilityLabel={`${r.n}-savol, notoʻgʻri`} style={[st.wrongCard, webShadow('inset 0 0 0 2px #F4B4AE', { borderWidth: 2, borderColor: '#F4B4AE' })]}>
+            {wrongRows.map((r, k) => (
+              <FadeInUp key={r.n} delay={90 + Math.min(k, 5) * 70}>
+              <View accessibilityLabel={`${r.n}-savol, notoʻgʻri`} style={[st.wrongCard, webShadow('inset 0 0 0 2px #F4B4AE', { borderWidth: 2, borderColor: '#F4B4AE' })]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <Txt f="bodyHeavy" size={13} color="#B42318" style={{ width: 22 }}>
                     {r.n}
@@ -168,9 +172,11 @@ export default function TestReviewScreen() {
                   </Txt>
                 </View>
               </View>
+              </FadeInUp>
             ))}
 
             {okRows.length > 0 && (
+              <FadeInUp delay={90 + Math.min(wrongRows.length, 5) * 70}>
               <View accessibilityLabel="Qolgan savollar" style={st.list}>
                 {okRows.map((r, k) => (
                   <View key={r.n} style={[st.li, k > 0 && { borderTopWidth: 1, borderTopColor: '#EEF1F7' }]}>
@@ -191,6 +197,7 @@ export default function TestReviewScreen() {
                   </View>
                 ))}
               </View>
+              </FadeInUp>
             )}
           </ScrollView>
         )}

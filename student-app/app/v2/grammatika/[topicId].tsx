@@ -13,11 +13,13 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RichText } from '@/components/RichText';
+import { Konspekt } from '@/components/v2/library/Konspekt';
 import { loadGrammarRows, type GrammarRow } from '@/components/v2/library/grammar';
 import { BackButton, Check, Column, Display, go, PlayRounded, T } from '@/components/v2/library/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
+import { resolveMediaUrl } from '@/services/contentApi';
 
 export default function GrammarTopicScreen() {
   const insets = useSafeAreaInsets();
@@ -55,6 +57,8 @@ export default function GrammarTopicScreen() {
   }
 
   const { topic, lesson, learned, code } = row;
+  // Kitobdan kelgan (rus tili) mavzu — konspekt tartibli ko'rsatiladi.
+  const isBook = !!topic.lessonId;
   const examples = topic.examples ?? [];
 
   return (
@@ -79,7 +83,7 @@ export default function GrammarTopicScreen() {
                     <T w={800} size={12} color="#0B1220">{lesson.number}-dars</T>
                   </View>
                 )}
-                <Display size={24} ls={-0.01} color="#FFFFFF">{lesson?.lesson.name || topic.title}</Display>
+                <Display size={24} ls={-0.01} color="#FFFFFF">{topic.title}</Display>
                 {!!topic.formula && (
                   <T w={700} size={13} color="#FFFFFF" lh={1.35}><RichText inline style={{ fontFamily: fonts.bodyBold }} text={topic.formula} /></T>
                 )}
@@ -91,7 +95,25 @@ export default function GrammarTopicScreen() {
           </View>
 
           <View style={styles.body}>
-            {(!!topic.description || !!topic.formula) && (
+            {/* Darsning slaydlari (kitobdagi rasmlar) — bosilsa to'liq ekran. */}
+            {!!topic.images?.length && lesson && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                {topic.images.map((uri, i) => (
+                  <Pressable
+                    key={uri}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={`${i + 1}-slayd, kattalashtirish`}
+                    onPress={() => go(`${R.slideViewer(lesson.lesson.id)}?i=${i}`)}
+                  >
+                    <Image source={{ uri: resolveMediaUrl(uri) ?? uri }} style={styles.slide} resizeMode="cover" />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+
+            {isBook && !!topic.description ? (
+              <Konspekt text={topic.description} />
+            ) : (!!topic.description || !!topic.formula) && (
               <View style={styles.tableCard}>
                 <T w={800} size={12} color="#4A5468" style={{ paddingTop: 2, paddingBottom: 6 }}>{topic.title}</T>
                 {!!topic.description && (
@@ -121,7 +143,7 @@ export default function GrammarTopicScreen() {
 
       {lesson && (
         <Column style={{ paddingTop: 10, paddingHorizontal: 20, paddingBottom: insets.bottom + 34 }}>
-          <Pressable accessibilityRole="button" onPress={() => go(R.video(lesson.lesson.id))} style={({ pressed }) => [styles.cta, pressed && { backgroundColor: '#1E3FD1' }]}>
+          <Pressable accessibilityRole="button" onPress={() => go(R.lesson(lesson.lesson.id))} style={({ pressed }) => [styles.cta, pressed && { backgroundColor: '#1E3FD1' }]}>
             <PlayRounded size={20} />
             <T w={800} size={17} color="#FFFFFF">Darsga oʻtish · {lesson.number}-dars</T>
           </Pressable>
@@ -144,5 +166,6 @@ const styles = StyleSheet.create({
   tableRow: { borderTopWidth: 1, borderTopColor: '#EEF1F7', paddingVertical: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   exCard: { width: '48.5%', flexGrow: 1, flexBasis: '45%', backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
+  slide: { width: 240, aspectRatio: 16 / 9, borderRadius: 14, backgroundColor: '#E8EEFF' },
   cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
 });

@@ -1,0 +1,611 @@
+{
+ "n": 59,
+ "lessonId": "l1784055280406-58",
+ "type": "video",
+ "id": "l1784055280406-58",
+ "topic": "Shart mayli: е́сли бы, хоте́л бы",
+ "title": "Shart mayli: е́сли бы…, хоте́л бы, мог бы, на твоём ме́сте",
+ "title_ru": "Усло́вное наклоне́ние: е́сли бы, хоте́л бы",
+ "videoUrl": "",
+ "cando": "Orzu va xayolimni (Е́сли бы у меня́ был миллио́н, я бы…), muloyim iltimos (Я хоте́л бы…) va maslahatni (На твоём ме́сте я бы…) aytaman.",
+ "review": [
+  {
+   "q": "«Moskvada yashaydigan do'st»",
+   "a": "друг, кото́рый живёт в Москве́"
+  },
+  {
+   "q": "«Ishlash uchun o'rganyapman»",
+   "a": "Я учу́, что́бы рабо́тать."
+  },
+  {
+   "q": "«U qanday ko'rinishda?»",
+   "a": "Как он вы́глядит?"
+  },
+  {
+   "q": "«O'g'il dadasiga o'xshaydi»",
+   "a": "Сын похо́ж на па́пу."
+  },
+  {
+   "q": "«Agar iliq bo'lsa, boramiz»",
+   "a": "Е́сли бу́дет тепло́, мы пое́дем."
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "е́сли бы…, (я) бы…",
+   "tr": "[yésli by]",
+   "uz": "agar … bo'lganida edi, … qilardim",
+   "ex": "Е́сли бы у меня́ бы́ло вре́мя, я бы пое́хал.",
+   "img": "cards/желание.jpg",
+   "icon": "",
+   "vocabId": "v-59-1",
+   "media": "media/ru/L59/w_v-59-1.jpg"
+  },
+  {
+   "ru": "я хоте́л(а) бы",
+   "tr": "[ya xatyél by]",
+   "uz": "… istardim",
+   "ex": "Я хоте́л бы заказа́ть сто́лик.",
+   "img": "cards/мечта.jpg",
+   "icon": "",
+   "vocabId": "v-59-2",
+   "media": "media/ru/L59/w_v-59-2.jpg"
+  },
+  {
+   "ru": "я мог(ла́) бы",
+   "tr": "[ya mok by]",
+   "uz": "… qila olardim",
+   "ex": "Вы могли́ бы мне помо́чь?",
+   "img": "cards/помочь.jpg",
+   "icon": "",
+   "vocabId": "v-59-3",
+   "media": "media/ru/L59/w_v-59-3.jpg"
+  },
+  {
+   "ru": "на твоём / ва́шем ме́сте",
+   "tr": "[na tvayóm myésti]",
+   "uz": "sening / sizning o'rningizda",
+   "ex": "На твоём ме́сте я бы отдохну́л.",
+   "img": "cards/совет.jpg",
+   "icon": "",
+   "vocabId": "v-59-4",
+   "media": "media/ru/L59/w_v-59-4.jpg"
+  },
+  {
+   "ru": "лу́чше бы",
+   "tr": "[lúchshe by]",
+   "uz": "yaxshisi …",
+   "ex": "Лу́чше бы ты позвони́л!",
+   "img": "cards/хороший - плохой.jpg",
+   "icon": "",
+   "vocabId": "v-59-5",
+   "media": "media/ru/L59/w_v-59-5.jpg"
+  },
+  {
+   "ru": "миллио́н",
+   "tr": "[milión]",
+   "uz": "million",
+   "ex": "Е́сли бы у меня́ был миллио́н…",
+   "img": "cards/миллион.jpg",
+   "icon": "",
+   "vocabId": "v-59-6",
+   "media": "media/ru/L59/w_v-59-6.jpg"
+  },
+  {
+   "ru": "бога́тый",
+   "tr": "[bagátyy]",
+   "uz": "boy",
+   "ex": "Е́сли бы я был бога́тым, я бы помога́л лю́дям.",
+   "img": "cards/богатый.jpg",
+   "icon": "",
+   "vocabId": "v-59-7",
+   "media": "media/ru/L59/w_v-59-7.jpg"
+  },
+  {
+   "ru": "о́стров",
+   "tr": "[óstraf]",
+   "uz": "orol",
+   "ex": "Я бы жил на о́строве.",
+   "img": "cards/остров.jpg",
+   "icon": "",
+   "vocabId": "v-59-8",
+   "media": "media/ru/L59/w_v-59-8.jpg"
+  },
+  {
+   "ru": "откры́ть би́знес",
+   "tr": "[atkrýt' bíznis]",
+   "uz": "biznes ochmoq",
+   "ex": "Я бы откры́л свой би́знес.",
+   "img": "cards/открыть бизнес.jpg",
+   "icon": "",
+   "vocabId": "v-59-9",
+   "media": "media/ru/L59/w_v-59-9.jpg"
+  },
+  {
+   "ru": "путеше́ствовать по ми́ру",
+   "tr": "[putishéstvavat' pa míru]",
+   "uz": "dunyo bo'ylab sayohat qilmoq",
+   "ex": "Я бы путеше́ствовал по ми́ру.",
+   "img": "cards/страны.jpg",
+   "icon": "",
+   "vocabId": "v-59-10",
+   "media": "media/ru/L59/w_v-59-10.jpg"
+  },
+  {
+   "ru": "постро́ить",
+   "tr": "[pastróit']",
+   "uz": "qurmoq",
+   "ex": "Я бы постро́ил большо́й дом.",
+   "img": "cards/строить.jpg",
+   "icon": "",
+   "vocabId": "v-59-11",
+   "media": "media/ru/L59/w_v-59-11.jpg"
+  },
+  {
+   "ru": "жаль",
+   "tr": "[jal']",
+   "uz": "afsus",
+   "ex": "Жаль, что ты не пришёл!",
+   "img": "cards/жаль.jpg",
+   "icon": "",
+   "vocabId": "v-59-12",
+   "media": "media/ru/L59/w_v-59-12.jpg"
+  },
+  {
+   "ru": "счастли́вый",
+   "tr": "[shchástlivyy]",
+   "uz": "baxtli",
+   "ex": "Я был бы о́чень счастли́в.",
+   "img": "cards/счастливый.jpg",
+   "icon": "",
+   "vocabId": "v-59-13",
+   "media": "media/ru/L59/w_v-59-13.jpg"
+  },
+  {
+   "ru": "мечта́ть (о чём?)",
+   "tr": "[michtát']",
+   "uz": "orzu qilmoq",
+   "ex": "Я мечта́ю о своём до́ме.",
+   "img": "cards/мечта.jpg",
+   "icon": "",
+   "vocabId": "v-59-14",
+   "media": "media/ru/L59/w_v-59-14.jpg"
+  },
+  {
+   "ru": "сове́товать (кому́?)",
+   "tr": "[savyétavat']",
+   "uz": "maslahat bermoq",
+   "ex": "Я сове́тую тебе́ отдохну́ть.",
+   "img": "cards/совет.jpg",
+   "icon": "",
+   "vocabId": "v-59-15",
+   "media": "media/ru/L59/w_v-59-15.jpg"
+  },
+  {
+   "ru": "иде́я",
+   "tr": "[idyéya]",
+   "uz": "g'oya",
+   "ex": "Хоро́шая иде́я!",
+   "img": "cards/по-моему.jpg",
+   "icon": "",
+   "vocabId": "v-59-16",
+   "media": "media/ru/L59/w_v-59-16.jpg"
+  }
+ ],
+ "konspekt": "59-DARS: Shart mayli — е́сли бы, хоте́л бы\n(Усло́вное наклоне́ние)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: orzu va xayol, muloyim iltimos va maslahatni ifodalaysiz.\n\n---\n\n1. Qanday yasaladi? — O'TGAN ZAMON + БЫ\n\nJuda oson: fe'lning o'tgan zamon shakli + бы:\n* я хоте́л бы / я хоте́ла бы · мы пое́хали бы · он купи́л бы\nZamon yo'q! Bu shakl hozir, o'tgan va kelasi uchun bir xil.\nO'zbekchada: «…ardim», «…gan bo'lardim».\n\n---\n\n2. Haqiqiy bo'lmagan shart: Е́СЛИ БЫ…, (я) БЫ…\n\n* Е́сли бы у меня́ был миллио́н, я бы купи́л дом. — Agar bir millionim bo'lganida, uy sotib olardim.\n* Е́сли бы я знал, я бы сказа́л. — Bilganimda aytardim.\n* Е́сли бы была́ хоро́шая пого́да, мы бы пое́хали в го́ры.\nFarq: Е́сли бу́дет тепло́, мы пое́дем (real) ↔ Е́сли бы бы́ло тепло́, мы бы пое́хали (xayol/afsus).\n\n---\n\n3. Muloyim iltimos va istak\n\n* Я хоте́л бы заказа́ть сто́лик. — Stol band qilmoqchi edim. (Я хочу́ dan muloyimroq!)\n* Вы не могли́ бы мне помо́чь? — Menga yordam bera olmaysizmi?\n* Я бы вы́пил ча́ю. — Choy ichardim.\n\n---\n\n4. Maslahat\n\n* На твоём ме́сте я бы отдохну́л. — Sening o'rningda men dam olardim.\n* Я бы сове́товал тебе́ пойти́ к врачу́.\n* Лу́чше бы ты позвони́л! — Yaxshisi qo'ng'iroq qilganingda edi!\n\n---\n\n5. Afsus: жаль\n\n* Жаль, что ты не пришёл. · Жаль, что у меня́ нет вре́мени.\n\n---\n\nDars xulosasi:\n1. O'tgan shakl + бы: хоте́л бы, купи́л бы.\n2. Е́сли бы…, (я) бы… — xayol.\n3. Я хоте́л бы… · Вы не могли́ бы…? — muloyim.\n4. На твоём ме́сте я бы…\n5. Жаль, что…\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: «Agar menda … bo'lganida».",
+ "text": {
+  "title": "Е́сли бы у меня́ был миллио́н…",
+  "ru": "Учи́тель спроси́л студе́нтов: «Что бы вы сде́лали, е́сли бы у вас был миллио́н до́лларов?»\nТиму́р сказа́л: «Я бы откры́л свой би́знес — IT-компа́нию. И я бы купи́л ма́ме но́вый дом».\nДильно́за отве́тила: «Я бы путеше́ствовала по ми́ру. Я бы пое́хала в Япо́нию, в Ита́лию и в Брази́лию».\nБобу́р поду́мал и сказа́л: «Е́сли бы я был бога́тым, я бы постро́ил шко́лу в своём родно́м го́роде. Я бы помога́л де́тям, у кото́рых нет де́нег на учёбу».\nУчи́тель улыбну́лся: «Отли́чные иде́и! Жаль, что у нас нет миллио́на. Но е́сли вы бу́дете мно́го рабо́тать, всё бу́дет!»",
+  "uz": "O'qituvchi talabalardan so'radi: «Agar bir million dollaringiz bo'lganida, nima qilardingiz?»\nTimur dedi: «Men o'z biznesimni — IT-kompaniya ochardim. Va onamga yangi uy sotib olardim».\nDilnoza javob berdi: «Men dunyo bo'ylab sayohat qilardim. Yaponiya, Italiya va Braziliyaga borardim».\nBobur o'ylab dedi: «Agar boy bo'lganimda, o'z shahrimda maktab qurardim. O'qishga puli yo'q bolalarga yordam berardim».\nO'qituvchi jilmaydi: «Ajoyib g'oyalar! Afsus, bizda million yo'q. Lekin agar ko'p ishlasangiz, hammasi bo'ladi!»",
+  "questions": [
+   {
+    "q": "Что спроси́л учи́тель?",
+    "opts": [
+     "Что бы вы сде́лали с миллио́ном?",
+     "Где вы живёте?",
+     "Кем вы рабо́таете?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что бы сде́лал Тиму́р?",
+    "opts": [
+     "Постро́ил бы шко́лу",
+     "Откры́л бы би́знес",
+     "Путеше́ствовал бы"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что бы купи́л Тиму́р ма́ме?",
+    "opts": [
+     "Маши́ну",
+     "Телефо́н",
+     "Но́вый дом"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Что бы де́лала Дильно́за?",
+    "opts": [
+     "Путеше́ствовала бы по ми́ру",
+     "Рабо́тала бы",
+     "Учи́лась бы"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что бы постро́ил Бобу́р?",
+    "opts": [
+     "Шко́лу",
+     "Больни́цу",
+     "Дом"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что сказа́л учи́тель в конце́?",
+    "opts": [
+     "Э́то плохи́е иде́и",
+     "У меня́ есть миллио́н",
+     "Е́сли вы бу́дете мно́го рабо́тать, всё бу́дет"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "На твоём ме́сте… (Sening o'rningda…)",
+  "lines": [
+   {
+    "who": "Нигора́",
+    "ru": "Абдулази́з, ты тако́й уста́вший! Что случи́лось?",
+    "uz": "Abdulaziz, juda charchagansan! Nima bo'ldi?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Мно́го рабо́ты. Я бы хоте́л отдохну́ть, но нет вре́мени.",
+    "uz": "Ish ko'p. Dam olgim kelardi, lekin vaqt yo'q."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "На твоём ме́сте я бы взяла́ о́тпуск.",
+    "uz": "Sening o'rningda men ta'til olardim."
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Е́сли бы нача́льник разреши́л, я бы взял.",
+    "uz": "Agar boshliq ruxsat bersa edi, olardim."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "А ты спроси́л? Ты мог бы поговори́ть с ним.",
+    "uz": "So'radingmi? U bilan gaplashib ko'rsang bo'lardi."
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Ты права́. За́втра обяза́тельно спрошу́!",
+    "uz": "Haqsan. Ertaga albatta so'rayman!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "хоте́ть",
+    "хоте́л бы"
+   ],
+   [
+    "мочь",
+    "мог бы"
+   ],
+   [
+    "купи́ть",
+    "купи́л бы"
+   ],
+   [
+    "пое́хать",
+    "пое́хал бы"
+   ],
+   [
+    "сде́лать",
+    "сде́лал бы"
+   ],
+   [
+    "е́сли бы",
+    "agar … bo'lganida"
+   ],
+   [
+    "на твоём ме́сте",
+    "sening o'rningda"
+   ],
+   [
+    "жаль",
+    "afsus"
+   ],
+   [
+    "о́стров",
+    "orol"
+   ],
+   [
+    "бога́тый",
+    "boy"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Е́сли бы у меня́ был миллио́н, я ___ купи́л дом.",
+    "o": [
+     "был",
+     "бы",
+     "бу́дет"
+    ],
+    "a": "бы"
+   },
+   {
+    "s": "Я ___ бы заказа́ть сто́лик. (istardim)",
+    "o": [
+     "хоте́л",
+     "хочу́",
+     "хоте́ть"
+    ],
+    "a": "хоте́л"
+   },
+   {
+    "s": "Вы не ___ бы мне помо́чь?",
+    "o": [
+     "мо́жете",
+     "мочь",
+     "могли́"
+    ],
+    "a": "могли́"
+   },
+   {
+    "s": "На твоём ___ я бы отдохну́л.",
+    "o": [
+     "ме́сто",
+     "ме́сте",
+     "места́"
+    ],
+    "a": "ме́сте"
+   },
+   {
+    "s": "Е́сли бы я ___ , я бы сказа́л. (bilganimda)",
+    "o": [
+     "знал",
+     "зна́ю",
+     "бу́ду знать"
+    ],
+    "a": "знал"
+   },
+   {
+    "s": "Е́сли бы была́ хоро́шая пого́да, мы бы ___ в го́ры.",
+    "o": [
+     "е́дем",
+     "пое́дем",
+     "пое́хали"
+    ],
+    "a": "пое́хали"
+   },
+   {
+    "s": "___ , что ты не пришёл.",
+    "o": [
+     "Рад",
+     "Жаль",
+     "Хорошо́"
+    ],
+    "a": "Жаль"
+   },
+   {
+    "s": "Я бы ___ по ми́ру. (sayohat qilardim)",
+    "o": [
+     "путеше́ствую",
+     "бу́ду путеше́ствовать",
+     "путеше́ствовал"
+    ],
+    "a": "путеше́ствовал"
+   },
+   {
+    "s": "Она́ ___ бы стать врачо́м. (istardi)",
+    "o": [
+     "хоте́л",
+     "хо́чет",
+     "хоте́ла"
+    ],
+    "a": "хоте́ла"
+   },
+   {
+    "s": "Е́сли бы я был ___ , я бы помога́л лю́дям.",
+    "o": [
+     "бога́тым",
+     "бога́того",
+     "бога́тый"
+    ],
+    "a": "бога́тым"
+   },
+   {
+    "s": "Я бы ___ свой би́знес.",
+    "o": [
+     "откры́л",
+     "откро́ю",
+     "открыва́ю"
+    ],
+    "a": "откры́л"
+   },
+   {
+    "s": "Е́сли бу́дет тепло́, мы ___ . (real shart)",
+    "o": [
+     "бы пое́хали",
+     "пое́хали бы",
+     "пое́дем"
+    ],
+    "a": "пое́дем"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Agar vaqtim bo'lganida, borardim»",
+    "o": [
+     "Е́сли у меня́ бу́дет вре́мя, я пое́ду",
+     "Е́сли у меня́ вре́мя, я е́хал",
+     "Е́сли бы у меня́ бы́ло вре́мя, я бы пое́хал"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Muloyimroq iltimos:",
+    "o": [
+     "Я хочу́!",
+     "Дай!",
+     "Я хоте́л бы…"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Sening o'rningda men…»",
+    "o": [
+     "На твоём ме́сте я бы…",
+     "На моём ме́сте ты…",
+     "В твоём ме́сте я…"
+    ],
+    "a": 0
+   },
+   {
+    "q": "бы bilan qaysi zamon shakli ishlatiladi?",
+    "o": [
+     "hozirgi zamon",
+     "kelasi zamon",
+     "o'tgan zamon"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Menga yordam bera olmaysizmi?»",
+    "o": [
+     "Вы мне помогли́?",
+     "Вы помо́жете вчера́?",
+     "Вы не могли́ бы мне помо́чь?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Afsus, sen kelmading»",
+    "o": [
+     "Хорошо́, что ты пришёл",
+     "Жаль, что ты не пришёл",
+     "Рад, что ты не пришёл"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Ayol: «Men Italiyaga borardim»",
+    "o": [
+     "Я пое́ду бы в Ита́лию",
+     "Я бы пое́хал в Ита́лию",
+     "Я бы пое́хала в Ита́лию"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«baxtli»",
+    "o": [
+     "бога́тый",
+     "счастли́вый",
+     "весёлый"
+    ],
+    "a": 1
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "бы",
+     "Я",
+     "хоте́л",
+     "отдохну́ть"
+    ],
+    "a": "Я бы хоте́л отдохну́ть",
+    "t": "Dam olmoqchi edim"
+   },
+   {
+    "w": [
+     "ме́сте",
+     "На",
+     "твоём",
+     "я",
+     "бы",
+     "отдохну́л"
+    ],
+    "a": "На твоём ме́сте я бы отдохну́л",
+    "t": "Sening o'rningda dam olardim"
+   },
+   {
+    "w": [
+     "не",
+     "Вы",
+     "могли́",
+     "бы",
+     "помо́чь"
+    ],
+    "a": "Вы не могли́ бы помо́чь",
+    "t": "Yordam bera olmaysizmi?"
+   },
+   {
+    "w": [
+     "бы",
+     "Я",
+     "откры́л",
+     "би́знес"
+    ],
+    "a": "Я бы откры́л би́знес",
+    "t": "Biznes ochardim"
+   },
+   {
+    "w": [
+     "что",
+     "Жаль",
+     "ты",
+     "не пришёл"
+    ],
+    "a": "Жаль что ты не пришёл",
+    "t": "Afsus, kelmading"
+   },
+   {
+    "w": [
+     "бы",
+     "Е́сли",
+     "я",
+     "знал"
+    ],
+    "a": "Е́сли бы я знал",
+    "t": "Bilganimda edi"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Е́сли бы у меня́ был миллио́н, я бы купи́л дом ма́ме.",
+   "uz": "Bir millionim bo'lganida, onamga uy olardim."
+  },
+  {
+   "ru": "Я хоте́л бы пое́хать в Москву́.",
+   "uz": "Moskvaga borishni istardim."
+  },
+  {
+   "ru": "Вы не могли́ бы говори́ть ме́дленнее?",
+   "uz": "Sekinroq gapira olmaysizmi?"
+  },
+  {
+   "ru": "На твоём ме́сте я бы пошёл к врачу́.",
+   "uz": "Sening o'rningda shifokorga borardim."
+  },
+  {
+   "ru": "Е́сли бы я знал, я бы сказа́л.",
+   "uz": "Bilganimda, aytardim."
+  },
+  {
+   "ru": "Жаль, что у меня́ нет вре́мени.",
+   "uz": "Afsus, vaqtim yo'q."
+  }
+ ]
+}

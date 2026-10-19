@@ -21,7 +21,15 @@ export type ShopProduct = {
   // CRM'da mahsulotga haqiqiy rasm yuklansa shu maydon to'ldiriladi — mavjud
   // bo'lsa icon/color/bg o'rniga shu rasm ko'rsatiladi.
   imageUrl?: string;
+  // Qaysi kurs o'quvchilariga ko'rinadi ('russian' — Domwork, 'english' —
+  // Homework). Bo'sh bo'lsa — eski mahsulotlar kabi faqat ingliz tili kursida.
+  course?: 'russian' | 'english';
 };
+
+/** Mahsulot shu kurs o'quvchisiga ko'rinadimi (kurs belgilanmagan — ingliz tili). */
+export function productForCourse(p: { course?: string }, courseLang: string) {
+  return (p.course || 'english') === (courseLang === 'russian' ? 'russian' : 'english');
+}
 
 export const SHOP_PRODUCTS: ShopProduct[] = [
   { id: 'merch-tshirt', name: 'Homework futbolkasi', category: 'merch', price: 600, icon: 'shirt-outline', color: '#7B61FF', bg: '#EDE9FE', delivered: true },

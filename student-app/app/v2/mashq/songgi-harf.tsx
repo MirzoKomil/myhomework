@@ -14,13 +14,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BulbIcon, InfoIcon, LockIcon, StopwatchIcon } from '@/components/v2/practice/icons';
 import { GameHeader, displayRu, plainWord, reset, saveRecords, stressLetters, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
 import { designImages } from '@/constants/v2/designImages';
+import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
 import COMMON_RUSSIAN_WORDS from '@/data/commonRussianWords.json';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
-import { playLoseSound, playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
+import { loadMixContext, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const TURN_SECONDS = 15;
@@ -60,13 +62,22 @@ export default function WordChainScreen() {
 
   const letterRe = isRu ? /^[а-яё]+$/i : /^[a-z]+$/;
 
+  // Boshlang'ich so'z — aqlli aralash (joriy dars / takrorlash / eski darslar).
+  const mixRef = useRef<MixContext | null>(null);
+  const vocabRef = useRef<string[]>([]);
+  const startWord = (vocab: string[], all: string[]) => {
+    const w = vocab.length >= MIN_BANK_SIZE ? pickMix(vocab, 1, (x) => x, mixRef.current)[0] : undefined;
+    if (w) rememberShown([w]);
+    return w ?? pick(vocab.length >= MIN_BANK_SIZE ? vocab : all);
+  };
+
   useEffect(() => {
     let off = false;
     const common = (isRu ? COMMON_RUSSIAN_WORDS : COMMON_ENGLISH_WORDS) as string[];
-    getAccumulatedVocabulary()
-      .catch(() => [])
-      .then((words) => {
+    Promise.all([getAccumulatedVocabulary().catch(() => []), loadMixContext().catch(() => null)])
+      .then(([words, ctx]) => {
         if (off) return;
+        mixRef.current = ctx;
         const tr: Record<string, string> = {};
         const disp: Record<string, string> = {};
         const vocab: string[] = [];
@@ -83,7 +94,8 @@ export default function WordChainScreen() {
         setTranslations(tr);
         setDisplay(disp);
         setBank(all);
-        setChain([pick(vocab.length >= MIN_BANK_SIZE ? vocab : all)]);
+        vocabRef.current = vocab;
+        setChain([startWord(vocab, all)]);
       });
     return () => { off = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,10 +129,14 @@ export default function WordChainScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
+  // Natija oynasi uchun: shu o'yindagi chaqmoq va o'yindan oldingi rekord.
+  const [bolts, setBolts] = useState(0);
+  const [recordBefore, setRecordBefore] = useState(0);
   const finish = () => {
+    setRecordBefore(rec.wordChain);
     setFinished(true);
-    if (score > 0) playWinSound();
-    else playLoseSound();
+    if (score > 0) playSfx('complete');
+    else playSfx('lose');
     if (score > rec.wordChain) saveRecords({ wordChain: score }).then(reload);
   };
 
@@ -132,6 +148,7 @@ export default function WordChainScreen() {
       setScore((s) => s + points);
       addCoins(points);
       addLightning(1);
+      setBolts((b) => b + 1);
     }
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
   };
@@ -140,8 +157,12 @@ export default function WordChainScreen() {
     if (finished || !bank) return;
     const word = plainWord(letter + input.trim()).toLowerCase();
     if (word.length < 2) return;
-    if (!bank.includes(word)) return setError("Bu so'z ro'yxatda yo'q, boshqasini urinib ko'ring");
+    if (!bank.includes(word)) {
+      playSfx('wrong');
+      return setError("Bu so'z ro'yxatda yo'q, boshqasini urinib ko'ring");
+    }
     if (chain.includes(word)) return setError("Bu so'z allaqachon ishlatilgan");
+    playSfx('correct');
     accept(word, lessonWords.includes(word) ? 2 : 1);
   };
 
@@ -165,8 +186,9 @@ export default function WordChainScreen() {
 
   const restart = () => {
     if (!bank) return;
-    setChain([pick(bank)]);
+    setChain([startWord(vocabRef.current, bank)]);
     setScore(0);
+    setBolts(0);
     setInput('');
     setError(null);
     setFinished(false);
@@ -296,6 +318,20 @@ export default function WordChainScreen() {
           </Pressable>
         </View>
       </View>
+      <GameResult
+        show={finished}
+        win={score > 0}
+        title={score > 0 ? 'Vaqt tugadi — zoʻr!' : 'Vaqt tugadi'}
+        subtitle={score > 0 ? `Zanjirga ${score} ta soʻz qoʻshdingiz` : 'Keyingi safar albatta chiqadi'}
+        stats={[
+          { value: String(score), label: 'soʻz' },
+          { value: String(record), label: 'rekord' },
+        ]}
+        coins={score}
+        lightning={bolts}
+        newRecord={score > 0 && score > recordBefore}
+        onAgain={restart}
+      />
     </View>
   );
 }

@@ -1,0 +1,617 @@
+{
+ "n": 71,
+ "lessonId": "l1784055280406-70",
+ "type": "video",
+ "id": "l1784055280406-70",
+ "topic": "O'zlashtirma gap",
+ "title": "O'zlashtirma gap: Он сказа́л, что…; Она́ спроси́ла, где… / ли…; Он попроси́л, что́бы…",
+ "title_ru": "Ко́свенная речь",
+ "videoUrl": "",
+ "cando": "Boshqa odamning gapini, savolini va iltimosini o'z so'zim bilan yetkazaman: «U … dedi», «U … deb so'radi», «U … ni so'radi (iltimos qildi)».",
+ "review": [
+  {
+   "q": "«Bir kuni kalitlarni yo'qotdim»",
+   "a": "Одна́жды я потеря́л ключи́."
+  },
+  {
+   "q": "«Ko'chada ketayotgan edim, birdan…»",
+   "a": "Я шёл по у́лице, и вдруг…"
+  },
+  {
+   "q": "«1995-yilda tug'ilganman»",
+   "a": "Я роди́лся в 1995 году́."
+  },
+  {
+   "q": "«Oilam bilan faxrlanaman»",
+   "a": "Я горжу́сь свое́й семьёй."
+  },
+  {
+   "q": "«Maqsadim — ruscha erkin gapirish»",
+   "a": "Моя́ цель — свобо́дно говори́ть по-ру́сски."
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "сказа́ть (, что…)",
+   "tr": "[skazát']",
+   "uz": "aytmoq (…, deb)",
+   "ex": "Он сказа́л, что придёт.",
+   "img": "cards/говорить.jpg",
+   "icon": "",
+   "vocabId": "v-71-1",
+   "media": "media/ru/L71/w_v-71-1.jpg"
+  },
+  {
+   "ru": "спроси́ть",
+   "tr": "[sprasít']",
+   "uz": "so'ramoq",
+   "ex": "Она́ спроси́ла, где я живу́.",
+   "img": "cards/спрашивать.jpg",
+   "icon": "",
+   "vocabId": "v-71-2",
+   "media": "media/ru/L71/w_v-71-2.jpg"
+  },
+  {
+   "ru": "отве́тить",
+   "tr": "[atvyétit']",
+   "uz": "javob bermoq",
+   "ex": "Я отве́тил, что не зна́ю.",
+   "img": "cards/отвечать.jpg",
+   "icon": "",
+   "vocabId": "v-71-3",
+   "media": "media/ru/L71/w_v-71-3.jpg"
+  },
+  {
+   "ru": "попроси́ть (, что́бы…)",
+   "tr": "[papras'ít']",
+   "uz": "iltimos qilmoq",
+   "ex": "Ма́ма попроси́ла, что́бы я позвони́л.",
+   "img": "cards/попросить.jpg",
+   "icon": "",
+   "vocabId": "v-71-4",
+   "media": "media/ru/L71/w_v-71-4.jpg"
+  },
+  {
+   "ru": "объясни́ть",
+   "tr": "[ab'yasnít']",
+   "uz": "tushuntirmoq",
+   "ex": "Учи́тель объясни́л, что э́то зна́чит.",
+   "img": "cards/объяснить.jpg",
+   "icon": "",
+   "vocabId": "v-71-5",
+   "media": "media/ru/L71/w_v-71-5.jpg"
+  },
+  {
+   "ru": "переда́ть",
+   "tr": "[piridát']",
+   "uz": "yetkazmoq",
+   "ex": "Переда́йте ему́, что я звони́л.",
+   "img": "cards/передать.jpg",
+   "icon": "",
+   "vocabId": "v-71-6",
+   "media": "media/ru/L71/w_v-71-6.jpg"
+  },
+  {
+   "ru": "сообщи́ть / сообще́ние",
+   "tr": "[saapshchít']",
+   "uz": "xabar bermoq / xabar",
+   "ex": "Мне сообщи́ли, что по́езд опа́здывает.",
+   "img": "cards/сообщение.jpg",
+   "icon": "",
+   "vocabId": "v-71-7",
+   "media": "media/ru/L71/w_v-71-7.jpg"
+  },
+  {
+   "ru": "посове́товать",
+   "tr": "[pasavyétavat']",
+   "uz": "maslahat bermoq",
+   "ex": "Врач посове́товал бо́льше гуля́ть.",
+   "img": "cards/совет.jpg",
+   "icon": "",
+   "vocabId": "v-71-8",
+   "media": "media/ru/L71/w_v-71-8.jpg"
+  },
+  {
+   "ru": "пообеща́ть",
+   "tr": "[paabishchát']",
+   "uz": "va'da bermoq",
+   "ex": "Он пообеща́л, что не опозда́ет.",
+   "img": "cards/пообещать.jpg",
+   "icon": "",
+   "vocabId": "v-71-9",
+   "media": "media/ru/L71/w_v-71-9.jpg"
+  },
+  {
+   "ru": "узна́ть",
+   "tr": "[uznát']",
+   "uz": "bilib olmoq",
+   "ex": "Я узна́л, что он жени́лся.",
+   "img": "cards/узнать.jpg",
+   "icon": "",
+   "vocabId": "v-71-10",
+   "media": "media/ru/L71/w_v-71-10.jpg"
+  },
+  {
+   "ru": "поблагодари́ть",
+   "tr": "[pablagadarít']",
+   "uz": "minnatdorchilik bildirmoq",
+   "ex": "Я поблагодари́л его́ за по́мощь.",
+   "img": "cards/поблагодарить.jpg",
+   "icon": "",
+   "vocabId": "v-71-11",
+   "media": "media/ru/L71/w_v-71-11.jpg"
+  },
+  {
+   "ru": "предложи́ть",
+   "tr": "[pridlajýt']",
+   "uz": "taklif qilmoq",
+   "ex": "Друг предложи́л пойти́ в кино́.",
+   "img": "cards/предложить.jpg",
+   "icon": "",
+   "vocabId": "v-71-12",
+   "media": "media/ru/L71/w_v-71-12.jpg"
+  },
+  {
+   "ru": "ли (…ли)",
+   "tr": "[li]",
+   "uz": "…mi (so'roq yuklamasi)",
+   "ex": "Он спроси́л, приду́ ли я.",
+   "img": "cards/вопрос.jpg",
+   "icon": "",
+   "vocabId": "v-71-13",
+   "media": "media/ru/L71/w_v-71-13.jpg"
+  },
+  {
+   "ru": "но́вость",
+   "tr": "[nóvast']",
+   "uz": "yangilik",
+   "ex": "У меня́ хоро́шая но́вость!",
+   "img": "cards/новости.jpg",
+   "icon": "",
+   "vocabId": "v-71-14",
+   "media": "media/ru/L71/w_v-71-14.jpg"
+  },
+  {
+   "ru": "пригласи́ть",
+   "tr": "[priglasít']",
+   "uz": "taklif qilmoq (mehmonga)",
+   "ex": "Бобу́р пригласи́л нас на сва́дьбу.",
+   "img": "cards/приглашать.jpg",
+   "icon": "",
+   "vocabId": "v-71-15",
+   "media": "media/ru/L71/w_v-71-15.jpg"
+  },
+  {
+   "ru": "слы́шать (я слы́шал, что…)",
+   "tr": "[slýshat']",
+   "uz": "eshitmoq",
+   "ex": "Я слы́шал, что ты перее́хал.",
+   "img": "cards/слышать.jpg",
+   "icon": "",
+   "vocabId": "v-71-16",
+   "media": "media/ru/L71/w_v-71-16.jpg"
+  }
+ ],
+ "konspekt": "71-DARS: O'zlashtirma gap\n(Ко́свенная речь)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: boshqa odamning gapini, savolini va iltimosini o'z so'zingiz bilan yetkazasiz. Suhbatda bu juda ko'p kerak bo'ladi: telefon xabarini yetkazish, yangilikni aytib berish, «u nima dedi?» savoliga javob.\n\n---\n\n1. Darak gap → , что…\n\n* Бобу́р говори́т: «Я за́нят». → Бобу́р говори́т, что он за́нят.\n* Нигора́ сказа́ла: «Я приду́ ве́чером». → Нигора́ сказа́ла, что придёт ве́чером.\n* Анто́н сказа́л: «Я рабо́таю в ба́нке». → Анто́н сказа́л, что рабо́тает в ба́нке.\n\nDIQQAT: rus tilida zamon O'ZGARMAYDI! U «ishlayman» degan bo'lsa — сказа́л, что рабо́тает (hozirgi zamon qoladi). Faqat olmosh o'zgaradi: «я» → он / она́.\n\n---\n\n2. So'roq so'zli savol → so'roq so'z o'zi bog'laydi\n\n* «Где ты живёшь?» → Он спроси́л, где я живу́.\n* «Когда́ начина́ется уро́к?» → Она́ спроси́ла, когда́ начина́ется уро́к.\n* «Ско́лько э́то сто́ит?» → Я спроси́л, ско́лько э́то сто́ит.\n* «Почему́ ты опозда́л?» → Учи́тель спроси́л, почему́ я опозда́л.\n\n---\n\n3. «Ha / yo'q» savoli → … ли\n\n«Ли» so'roq qilinayotgan so'zdan keyin keladi (o'zbekcha «…mi»):\n* «Ты придёшь?» → Он спроси́л, приду́ ли я. — U kelamanmi, deb so'radi.\n* «У вас есть сда́ча?» → Я спроси́л, есть ли у них сда́ча.\n* «Вы зна́ете Анто́на?» → Она́ спроси́ла, зна́ю ли я Анто́на.\n\n---\n\n4. Iltimos va buyruq → что́бы + o'tgan zamon shakli / infinitiv\n\n* «Позвони́ мне!» → Ма́ма попроси́ла, что́бы я позвони́л ей. = Ма́ма попроси́ла позвони́ть ей.\n* «Не опа́здывайте!» → Нача́льник сказа́л, что́бы мы не опа́здывали.\n* «Купи́ хлеб» → Жена́ попроси́ла, что́бы я купи́л хлеб.\n\n(57-darsni eslang: что́бы + o'tgan zamon shakli.)\n\n---\n\n5. Xabar yetkazish\n\n* Переда́йте, пожа́луйста, Анто́ну, что я звони́л. — Antonga men qo'ng'iroq qilganimni yetkazing.\n* Он проси́л переда́ть, что́бы вы перезвони́ли. — U sizdan qayta qo'ng'iroq qilishingizni so'radi.\n* Я слы́шал, что… / Я узна́л, что… — Eshitdimki… / Bilib oldimki…\n* Что он сказа́л? — Он сказа́л, что…\n\n---\n\nDars xulosasi:\n1. Он сказа́л, что рабо́тает (zamon o'zgarmaydi).\n2. Она́ спроси́ла, где / когда́ / почему́…\n3. Он спроси́л, приду́ ли я (ha/yo'q savoli → ли).\n4. Ма́ма попроси́ла, что́бы я позвони́л.\n5. Переда́йте, что я звони́л. Я слы́шал, что…\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: «Моя́ жизнь» taqdimoti va erkin suhbat.",
+ "text": {
+  "title": "Кто что сказа́л?",
+  "ru": "Ве́чером Абдулази́з пришёл домо́й с рабо́ты. Нигора́ сказа́ла, что сего́дня бы́ло мно́го звонко́в.\n— Звони́ла ма́ма. Она́ спроси́ла, как мы живём и когда́ прие́дем к ней. Я отве́тила, что мы прие́дем в суббо́ту.\n— А ещё кто звони́л?\n— Бобу́р. Он сказа́л, что прие́хал из Москвы́ и хо́чет нас уви́деть. Он пригласи́л нас в рестора́н в пя́тницу. Ещё он спроси́л, свобо́ден ли ты в пя́тницу ве́чером.\n— Да, свобо́ден. А что сказа́л Тиму́р?\n— Тиму́р сообщи́л, что сдал экза́мен! Он попроси́л, что́бы ты ему́ позвони́л.\nАбдулази́з сра́зу позвони́л Тиму́ру и поблагодари́л Нигору́: «Спаси́бо, что всё передала́!»",
+  "uz": "Kechqurun Abdulaziz ishdan uyga keldi. Nigora bugun qo'ng'iroqlar ko'p bo'lganini aytdi.\n— Onam qo'ng'iroq qildi. U qanday yashayotganimizni va qachon uning oldiga borishimizni so'radi. Men shanba kuni boramiz, deb javob berdim.\n— Yana kim qo'ng'iroq qildi?\n— Bobur. U Moskvadan kelganini va bizni ko'rmoqchi ekanini aytdi. U bizni juma kuni restoranga taklif qildi. Yana u sen juma kuni kechqurun bo'shmisan, deb so'radi.\n— Ha, bo'shman. Timur nima dedi?\n— Timur imtihondan o'tganini xabar qildi! U senga qo'ng'iroq qilishingni so'radi.\nAbdulaziz darhol Timurga qo'ng'iroq qildi va Nigoraga rahmat aytdi: «Hammasini yetkazganing uchun rahmat!»",
+  "questions": [
+   {
+    "q": "Что спроси́ла ма́ма?",
+    "opts": [
+     "Как они́ живу́т и когда́ прие́дут",
+     "Что они́ купи́ли",
+     "Где они́ рабо́тают"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Когда́ они́ прие́дут к ма́ме?",
+    "opts": [
+     "В воскресе́нье",
+     "В суббо́ту",
+     "В пя́тницу"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Отку́да прие́хал Бобу́р?",
+    "opts": [
+     "Из Каза́ни",
+     "Из Москвы́",
+     "Из Самарка́нда"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Куда́ Бобу́р пригласи́л их?",
+    "opts": [
+     "В кино́",
+     "В рестора́н",
+     "На сва́дьбу"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что сообщи́л Тиму́р?",
+    "opts": [
+     "Что сдал экза́мен",
+     "Что перее́хал",
+     "Что жени́лся"
+    ],
+    "a": 0
+   },
+   {
+    "q": "О чём попроси́л Тиму́р?",
+    "opts": [
+     "Что́бы Абдулази́з позвони́л ему́",
+     "Что́бы Нигора́ прие́хала",
+     "Что́бы они́ купи́ли торт"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Переда́йте, пожа́луйста… (Iltimos, yetkazing…)",
+  "lines": [
+   {
+    "who": "Анто́н",
+    "ru": "Здра́вствуйте! Мо́жно поговори́ть с Дильно́зой?",
+    "uz": "Assalomu alaykum! Dilnoza bilan gaplashsam bo'ladimi?"
+   },
+   {
+    "who": "Секрета́рь",
+    "ru": "К сожале́нию, её нет. Она́ сказа́ла, что вернётся по́сле обе́да.",
+    "uz": "Afsuski, u yo'q. Tushlikdan keyin qaytishini aytdi."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Переда́йте, пожа́луйста, что звони́л Анто́н из IT-отде́ла.",
+    "uz": "Iltimos, IT-bo'limidan Anton qo'ng'iroq qilganini yetkazing."
+   },
+   {
+    "who": "Секрета́рь",
+    "ru": "Хорошо́. Что ещё переда́ть?",
+    "uz": "Yaxshi. Yana nima yetkazay?"
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Скажи́те, что докуме́нты гото́вы, и попроси́те, что́бы она́ мне перезвони́ла.",
+    "uz": "Hujjatlar tayyor ekanini ayting va menga qayta qo'ng'iroq qilishini so'rang."
+   },
+   {
+    "who": "Секрета́рь",
+    "ru": "Обяза́тельно переда́м. А у неё есть ваш но́мер?",
+    "uz": "Albatta yetkazaman. Sizning raqamingiz unda bormi?"
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Есть. До свида́ния!",
+    "uz": "Bor. Xayr!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "сказа́ть",
+    "aytmoq"
+   ],
+   [
+    "спроси́ть",
+    "so'ramoq"
+   ],
+   [
+    "отве́тить",
+    "javob bermoq"
+   ],
+   [
+    "попроси́ть",
+    "iltimos qilmoq"
+   ],
+   [
+    "переда́ть",
+    "yetkazmoq"
+   ],
+   [
+    "пообеща́ть",
+    "va'da bermoq"
+   ],
+   [
+    "узна́ть",
+    "bilib olmoq"
+   ],
+   [
+    "посове́товать",
+    "maslahat bermoq"
+   ],
+   [
+    "предложи́ть",
+    "taklif qilmoq"
+   ],
+   [
+    "но́вость",
+    "yangilik"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Он сказа́л, ___ он уста́л.",
+    "o": [
+     "что́бы",
+     "что",
+     "ли"
+    ],
+    "a": "что"
+   },
+   {
+    "s": "Анто́н сказа́л: «Я рабо́таю в ба́нке». → Анто́н сказа́л, что ___ в ба́нке.",
+    "o": [
+     "рабо́таю",
+     "рабо́тает",
+     "рабо́тал"
+    ],
+    "a": "рабо́тает"
+   },
+   {
+    "s": "«Где ты живёшь?» → Она́ спроси́ла, ___ я живу́.",
+    "o": [
+     "что",
+     "ли",
+     "где"
+    ],
+    "a": "где"
+   },
+   {
+    "s": "«Ты придёшь?» → Он спроси́л, приду́ ___ я.",
+    "o": [
+     "ли",
+     "что",
+     "где"
+    ],
+    "a": "ли"
+   },
+   {
+    "s": "«Позвони́ мне!» → Ма́ма попроси́ла, ___ я позвони́л.",
+    "o": [
+     "что́бы",
+     "ли",
+     "что"
+    ],
+    "a": "что́бы"
+   },
+   {
+    "s": "Ма́ма попроси́ла, что́бы я ___ хлеб.",
+    "o": [
+     "куплю́",
+     "покупа́ю",
+     "купи́л"
+    ],
+    "a": "купи́л"
+   },
+   {
+    "s": "Переда́йте, пожа́луйста, что я ___ . (qo'ng'iroq qildim)",
+    "o": [
+     "звоню́",
+     "звони́л",
+     "позвоню́"
+    ],
+    "a": "звони́л"
+   },
+   {
+    "s": "Учи́тель спроси́л, ___ я опозда́л.",
+    "o": [
+     "почему́",
+     "что́бы",
+     "что"
+    ],
+    "a": "почему́"
+   },
+   {
+    "s": "Я спроси́л, есть ___ у них сда́ча.",
+    "o": [
+     "что",
+     "где",
+     "ли"
+    ],
+    "a": "ли"
+   },
+   {
+    "s": "Нача́льник сказа́л, что́бы мы не ___ .",
+    "o": [
+     "опа́здывали",
+     "опа́здывать бу́дем",
+     "опа́здываем"
+    ],
+    "a": "опа́здывали"
+   },
+   {
+    "s": "Я ___ , что ты перее́хал. Э́то пра́вда?",
+    "o": [
+     "слы́шал",
+     "услы́шу",
+     "слы́шу"
+    ],
+    "a": "слы́шал"
+   },
+   {
+    "s": "Он ___ , что бо́льше не опозда́ет. (va'da berdi)",
+    "o": [
+     "спроси́л",
+     "попроси́л",
+     "пообеща́л"
+    ],
+    "a": "пообеща́л"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«U kelishini aytdi»",
+    "o": [
+     "Он сказа́л, что придёт",
+     "Он спроси́л, придёт",
+     "Он сказа́л, что́бы придёт"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Qayerda yashashimni so'radi»",
+    "o": [
+     "Он спроси́л, где я живу́",
+     "Он спроси́л, что я живу́",
+     "Он сказа́л, где живу́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Kelasanmi, deb so'radi»",
+    "o": [
+     "Он спроси́л, придёшь ли ты",
+     "Он спроси́л, что ты придёшь",
+     "Он сказа́л ли придёшь"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Onam qo'ng'iroq qilishimni so'radi»",
+    "o": [
+     "Ма́ма спроси́ла, позвоню́",
+     "Ма́ма попроси́ла, что́бы я позвони́л",
+     "Ма́ма попроси́ла, что я позвони́л"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Men qo'ng'iroq qilganimni yetkazing»",
+    "o": [
+     "Переда́йте, что́бы я звони́л",
+     "Переда́йте, что я звони́л",
+     "Скажи́те ли я звони́л"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Antonning so'zi: «Я живу́ в Ташке́нте». To'g'ri o'zlashtirma:",
+    "o": [
+     "Анто́н сказа́л, что жил в Ташке́нте",
+     "Анто́н сказа́л, что живёт в Ташке́нте",
+     "Анто́н сказа́л, что я живу́ в Ташке́нте"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«yangilik»",
+    "o": [
+     "сове́т",
+     "но́вость",
+     "вопро́с"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«U nima dedi?»",
+    "o": [
+     "Что он сказа́л?",
+     "Что он спроси́л ли?",
+     "Что сказа́л ли он?"
+    ],
+    "a": 0
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "сказа́л",
+     "что",
+     "Он",
+     "уста́л"
+    ],
+    "a": "Он сказа́л что уста́л",
+    "t": "U charchaganini aytdi"
+   },
+   {
+    "w": [
+     "спроси́ла",
+     "где",
+     "Она́",
+     "живу́",
+     "я"
+    ],
+    "a": "Она́ спроси́ла где я живу́",
+    "t": "U qayerda yashashimni so'radi"
+   },
+   {
+    "w": [
+     "ли",
+     "Он",
+     "приду́",
+     "спроси́л",
+     "я"
+    ],
+    "a": "Он спроси́л приду́ ли я",
+    "t": "U kelamanmi, deb so'radi"
+   },
+   {
+    "w": [
+     "что́бы",
+     "попроси́ла",
+     "Ма́ма",
+     "позвони́л",
+     "я"
+    ],
+    "a": "Ма́ма попроси́ла что́бы я позвони́л",
+    "t": "Onam qo'ng'iroq qilishimni so'radi"
+   },
+   {
+    "w": [
+     "что",
+     "Переда́йте",
+     "звони́л",
+     "я"
+    ],
+    "a": "Переда́йте что я звони́л",
+    "t": "Qo'ng'iroq qilganimni yetkazing"
+   },
+   {
+    "w": [
+     "слы́шал",
+     "что",
+     "Я",
+     "ты",
+     "перее́хал"
+    ],
+    "a": "Я слы́шал что ты перее́хал",
+    "t": "Ko'chib o'tganingni eshitdim"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Он сказа́л, что придёт ве́чером.",
+   "uz": "U kechqurun kelishini aytdi."
+  },
+  {
+   "ru": "Она́ спроси́ла, где я рабо́таю.",
+   "uz": "U qayerda ishlashimni so'radi."
+  },
+  {
+   "ru": "Он спроси́л, свобо́ден ли я в суббо́ту.",
+   "uz": "U shanba kuni bo'shmanmi, deb so'radi."
+  },
+  {
+   "ru": "Ма́ма попроси́ла, что́бы я ей позвони́л.",
+   "uz": "Onam unga qo'ng'iroq qilishimni so'radi."
+  },
+  {
+   "ru": "Переда́йте, пожа́луйста, что я звони́л.",
+   "uz": "Iltimos, qo'ng'iroq qilganimni yetkazing."
+  },
+  {
+   "ru": "Я слы́шал, что ты перее́хал в Москву́.",
+   "uz": "Moskvaga ko'chib o'tganingni eshitdim."
+  }
+ ]
+}

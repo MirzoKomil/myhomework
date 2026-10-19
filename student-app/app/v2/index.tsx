@@ -13,6 +13,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import { CountUp, FadeInUp, Flicker } from '@/components/v2/motion';
+import { playSfxLater } from '@/services/sfx';
 
 import { HomeNav } from '@/components/v2/home/HomeNav';
 import { ArrowRight, BellIcon, BoltIcon, ChevronRightIcon, CoinIcon, FlameIcon, TelegramIcon } from '@/components/v2/home/icons';
@@ -21,6 +23,7 @@ import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/c
 import { buildSession, loadReviews } from '@/components/v2/home/reviewStore';
 import { currentStep as firstOpenStep, lessonSteps, stepsDone, useListened } from '@/components/v2/lessons/data';
 import { displayFont, getReadIds } from '@/components/v2/home/shared';
+import { groupFromTopic } from '@/components/v2/profile/shared';
 import { BotConnectPopup } from '@/components/v2/popups/BotConnect';
 import { Loading } from '@/components/v2/states/Loading';
 import { ServerError } from '@/components/v2/states/ServerError';
@@ -29,7 +32,8 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { useAvatarUri } from '@/services/avatarStore';
-import { useCoins } from '@/services/coinsStore';
+import { getTotalCoins, useCoins } from '@/services/coinsStore';
+import { fetchMyProgress } from '@/services/progressSync';
 import {
   fetchDemoNotifications,
   fetchDemoSchedule,
@@ -39,9 +43,12 @@ import {
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
 import { telegramLinkStatus } from '@/services/telegramLinkApi';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
+import { useCachedState } from '@/services/v2Cache';
 
 /** Kunlik chaqmoq maqsadi — dizayndagi qiymat (sozlanadigan maqsad hali yo'q). */
 const DAILY_GOAL = 50;
+/** Bosh ekrandan oxirgi chiqilgandagi coin — qaytganda o'sgan bo'lsa pill sanab ko'rsatadi. */
+let coinsSeenOnHome: number | null = null;
 const RING_C = 2 * Math.PI * 23; // ≈144.5, dizayndagi dasharray
 
 type LiveLesson = { startsAt: Date; topic: string; link: string };
@@ -90,23 +97,47 @@ export default function V2Home() {
   const p: HomePalette = scheme === 'dark' ? darkHome : lightHome;
   const { token, student } = useAuth();
   const coins = useCoins();
+  const [coinFrom, setCoinFrom] = useState<number | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      const seen = coinsSeenOnHome;
+      setCoinFrom(seen);
+      const cancelCoin = seen !== null && getTotalCoins() > seen ? playSfxLater('coin', 450) : undefined;
+      return () => {
+        cancelCoin?.();
+        coinsSeenOnHome = getTotalCoins();
+      };
+    }, []),
+  );
   const avatarUri = useAvatarUri();
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
 
-  const [name, setName] = useState(student?.name?.split(' ')[0] ?? '');
-  const [unread, setUnread] = useState(0);
-  const [lesson, setLesson] = useState<CurrentLesson | null | undefined>(undefined);
+  const [name, setName] = useCachedState('home.name', student?.name?.split(' ')[0] ?? '');
+  const [unread, setUnread] = useCachedState('home.unread', 0);
+  const [lesson, setLesson] = useCachedState<CurrentLesson | null | undefined>('home.lesson', undefined);
   const [lessonError, setLessonError] = useState(false);
-  const [live, setLive] = useState<LiveLesson | null>(null);
+  const [live, setLive] = useCachedState<LiveLesson | null>('home.live', null);
   const [now, setNow] = useState(() => new Date());
-  const [botLinked, setBotLinked] = useState(true);
+  const [botLinked, setBotLinked] = useCachedState('home.botLinked', true);
   const [botOpen, setBotOpen] = useState(false);
-  const [todayLightning, setTodayLightning] = useState(0);
-  const [wordCount, setWordCount] = useState<number | null>(null);
+  const [todayLightning, setTodayLightning] = useCachedState('home.todayLightning', 0);
+  const [wordCount, setWordCount] = useCachedState<number | null>('home.wordCount', null);
   // Lesson ekrani bilan bir xil 5 qadam uchun tinglangan dialoglar.
   const listened = useListened(lesson?.id ?? '');
-  // Streak serverda hisoblanmaydi — nol holat (dizayn elementlari saqlanadi).
-  const streak = 0;
+  // Streak — serverdagi kunlik tanga/chaqmoq tarixidan (ketma-ket faol kunlar).
+  const [streak, setStreak] = useCachedState('home.streak', 0);
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    fetchMyProgress()
+      .then((p) => {
+        if (!cancelled && p) setStreak(p.streak);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (!token && !isEmbedded) return;
@@ -185,7 +216,7 @@ export default function V2Home() {
   return (
     <View style={[styles.screen, { backgroundColor: p.bg }]}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) + 10 }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.column}>
+        <FadeInUp style={styles.column} distance={8} duration={320}>
           {/* Sarlavha */}
           <View style={styles.header}>
             <Pressable accessibilityRole="link" accessibilityLabel="Profil" onPress={() => router.push(R.profile as Href)} style={[styles.avatar, { backgroundColor: p.avatarBg }]}>
@@ -197,10 +228,20 @@ export default function V2Home() {
             </View>
             <Pressable accessibilityRole="link" accessibilityLabel={`${coins} coin, doʻkon`} onPress={() => router.push(R.shop as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 4 }]}>
               <CoinIcon />
-              <Text style={[styles.pillText, { color: p.coinText }]}>{coins}</Text>
+              {coinFrom !== null && coins > coinFrom ? (
+                <CountUp key={coinFrom} value={coins} from={coinFrom} duration={700} delay={350} style={[styles.pillText, { color: p.coinText }]} />
+              ) : (
+                <Text style={[styles.pillText, { color: p.coinText }]}>{coins}</Text>
+              )}
             </Pressable>
             <Pressable accessibilityRole="link" accessibilityLabel={`Seriya ${streak} kun, holat`} onPress={() => router.push(R.streak as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 3 }]}>
-              <FlameIcon />
+              {streak > 0 ? (
+                <Flicker>
+                  <FlameIcon />
+                </Flicker>
+              ) : (
+                <FlameIcon />
+              )}
               <Text style={[styles.pillText, { color: p.streakText }]}>{streak}</Text>
             </Pressable>
             <Pressable
@@ -289,7 +330,9 @@ export default function V2Home() {
                     {formatCountdown(msLeft)}
                   </Text>
                 )}
-                {!!live.topic && <Text style={styles.liveTopic} numberOfLines={1}>{live.topic}</Text>}
+                {/* Server guruhsiz o'quvchiga "Speaking Club" deb beradi — u ma'nosiz;
+                    faqat haqiqiy guruh nomi bo'lsa ko'rsatiladi. */}
+                {!!groupFromTopic(live.topic) && <Text style={styles.liveTopic} numberOfLines={1}>Guruh: {groupFromTopic(live.topic)}</Text>}
               </View>
               <Pressable accessibilityRole="link" accessibilityLabel={groupName(live.topic) ? `${groupName(live.topic)} Telegram guruhiga oʻtish` : 'Telegram guruhiga oʻtish'} onPress={() => Linking.openURL(live.link)} style={styles.group}>
                 <TelegramIcon color={p.telegramText} />
@@ -369,7 +412,7 @@ export default function V2Home() {
               </Pressable>
             </View>
           )}
-        </View>
+        </FadeInUp>
       </ScrollView>
       <HomeNav p={p} />
       <BotConnectPopup

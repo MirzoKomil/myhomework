@@ -17,11 +17,16 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { installPressFeedback } from '@/services/pressFeedback';
+import { primeSfxOnFirstGesture } from '@/services/sfx';
+import { primeVoiceOnFirstGesture } from '@/services/voicePraise';
 
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { colors, fontFiles } from '@/constants/v2/tokens';
+import { recordV2Path } from '@/services/v2Nav';
 
 const nativeFonts = {
   BricolageGrotesque_600SemiBold,
@@ -40,6 +45,17 @@ const webFonts = Object.fromEntries(
 
 export default function V2Layout() {
   const [loaded] = useFonts(Platform.OS === 'web' ? webFonts : nativeFonts);
+  const pathname = usePathname();
+  // "‹" tugmalari eski ilovaga chiqib ketmasligi uchun v2 tarixini yozamiz.
+  useEffect(() => {
+    recordV2Path(pathname);
+  }, [pathname]);
+  // Safari/iOS: ovoz effektlari bosishlar ichida "ochiladi" (audioUnlock.ts); tugmalarga bosish effekti.
+  useEffect(() => {
+    installPressFeedback();
+    primeSfxOnFirstGesture();
+    primeVoiceOnFirstGesture();
+  }, []);
 
   if (!loaded) {
     return (
@@ -49,5 +65,10 @@ export default function V2Layout() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      {/* Seriya oynasi — ochilgan sahifa ustida (orqada bosh sahifa ko'rinadi, bo'sh kulrang fon emas). */}
+      <Stack.Screen name="streak" options={{ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }} />
+    </Stack>
+  );
 }

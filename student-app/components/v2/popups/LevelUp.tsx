@@ -7,7 +7,12 @@
  * bilan ochiladi ("Namuna" belgisi o'quvchiga ko'rsatilmaydi — egasi
  * qarori); yopish va "Darajalarga qaytish" Darajalar ekraniga qaytaradi.
  */
+import { useEffect } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { speak, stopVoice } from '@/services/voicePraise';
+
+import { Bounce, Confetti, Pop } from '@/components/v2/motion';
+import { playSfx } from '@/services/sfx';
 
 import { BoltFill, CloseIcon } from '@/components/v2/rewards/icons';
 import { fmt } from '@/components/v2/rewards/parts';
@@ -46,6 +51,12 @@ export function LevelUpPopup({ visible, onClose, levelIndex = V2_TOP_LEVEL }: Pr
   const isTop = idx === V2_TOP_LEVEL;
   const name = levelName(idx, courseLang);
   const total = fmt(level.min);
+  useEffect(() => {
+    if (!visible) return;
+    playSfx('levelup');
+    speak('levelup', 2050);
+    return () => stopVoice();
+  }, [visible]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -63,8 +74,12 @@ export function LevelUpPopup({ visible, onClose, levelIndex = V2_TOP_LEVEL }: Pr
               </Pressable>
             </View>
             <View style={styles.art}>
-              <Image source={designImages.cd192c1f07c6ae01a6b80b26d84e0ec7} accessibilityLabel="Quvonayotgan Domik" style={styles.domik} resizeMode="contain" />
-              <Image source={LEVEL_BADGES[idx]} accessibilityLabel={`${idx + 1}-daraja nishoni`} style={styles.badge} resizeMode="contain" />
+              <Bounce delay={100} style={StyleSheet.absoluteFill}>
+                <Image source={designImages.cd192c1f07c6ae01a6b80b26d84e0ec7} accessibilityLabel="Quvonayotgan Domik" style={styles.domik} resizeMode="contain" />
+              </Bounce>
+              <Pop delay={420} from={0.2} style={styles.badgeWrap}>
+                <Image source={LEVEL_BADGES[idx]} accessibilityLabel={`${idx + 1}-daraja nishoni`} style={{ width: 104, height: 91 }} resizeMode="contain" />
+              </Pop>
             </View>
             <View style={{ gap: 4, alignItems: 'center' }}>
               <Text style={styles.over}>Yangi daraja!</Text>
@@ -97,6 +112,7 @@ export function LevelUpPopup({ visible, onClose, levelIndex = V2_TOP_LEVEL }: Pr
             </Pressable>
           </View>
         </View>
+        {visible && <Confetti />}
       </View>
     </Modal>
   );
@@ -126,7 +142,7 @@ const styles = StyleSheet.create({
   close: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF1F7', alignItems: 'center', justifyContent: 'center' },
   art: { width: 250, height: 190, marginTop: -8 },
   domik: { position: 'absolute', left: 0, top: 0, width: 196, height: 188 },
-  badge: { position: 'absolute', right: -4, bottom: 0, width: 104, height: 91 },
+  badgeWrap: { position: 'absolute', right: -4, bottom: 0, width: 104, height: 91 },
   over: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, letterSpacing: 1.04, textTransform: 'uppercase', color: '#5A2FD6' },
   title: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 28, lineHeight: 31, letterSpacing: -0.56, color: '#0B1220', textAlign: 'center' },
   desc: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, lineHeight: 20, color: '#4A5468', textAlign: 'center' },

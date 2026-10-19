@@ -3,11 +3,15 @@
  * dizaynlaridagi takrorlanuvchi qismlar (sarlavha, natija paneli, pastki menyu).
  */
 import { router, type Href } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { praiseAnswer } from '@/services/voicePraise';
 
+import { AnimatedFill, CoinGhost, FloatUp, Pop, Shake, SlideUp } from '@/components/v2/motion';
 import { R } from '@/constants/v2/routes';
+import { playSfx, playSfxLater } from '@/services/sfx';
+import { v2Back } from '@/services/v2Nav';
 import { fonts } from '@/constants/v2/tokens';
 import { ArrowRight, Check, CloseIcon, Coin, NavHome, NavPath, NavStar, NavTrophy, NavUser } from './icons';
 
@@ -46,7 +50,7 @@ export function CloseButton({ bg = '#FFFFFF', onPress }: { bg?: string; onPress?
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Yopish"
-      onPress={onPress ?? (() => (router.canGoBack() ? router.back() : null))}
+      onPress={onPress ?? (() => v2Back(R.home))}
       style={({ pressed }) => [s.close, { backgroundColor: bg }, pressed && s.pressed]}
     >
       <CloseIcon />
@@ -102,7 +106,7 @@ export function LabelHeader({
             : null)}
           style={{ height: 8, borderRadius: 4, backgroundColor: '#E2E6EE', overflow: 'hidden' }}
         >
-          <View style={{ width: `${pct}%`, height: 8, borderRadius: 4, backgroundColor: color }} />
+          <AnimatedFill pct={pct} color={color} height={8} radius={4} />
         </View>
       </View>
     </View>
@@ -121,7 +125,7 @@ export function BarHeader({ current, total, color, label, onClose }: { current: 
         accessibilityValue={{ min: 0, max: total, now: current }}
         style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: '#E7EBF3', overflow: 'hidden' }}
       >
-        <View style={{ width: `${pct}%`, height: 12, borderRadius: 6, backgroundColor: color }} />
+        <AnimatedFill pct={pct} color={color} height={12} radius={6} />
       </View>
       <Txt f="bodyHeavy" size={15} color="#4A5468">
         {current} / {total}
@@ -173,15 +177,32 @@ export function FeedbackSheet({
   checkStroke?: number;
 }) {
   const insets = useSafeAreaInsets();
+  // Natija paneli chiqqanda: to'g'ri — jiringlash (+ coin), xato — past ohang.
+  useEffect(() => {
+    playSfx(correct ? 'correct' : 'wrong');
+    if (correct && coin) playSfxLater('coin', 220);
+    praiseAnswer(correct);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const c = correct
     ? { bg: '#E3F7EE', icon: '#087A4A', title: '#075E3A', text: '#075E3A', btn: '#087A4A', btnShadow: '#075E3A' }
     : { bg: '#FDECEC', icon: '#D92D20', title: '#B42318', text: '#7A1C14', btn: '#D92D20', btnShadow: '#B42318' };
   return (
-    <View accessibilityRole="alert" style={[s.sheet, { backgroundColor: c.bg, paddingBottom: Math.max(padBottom, insets.bottom + 14) }]}>
+    <SlideUp style={[s.sheet, { backgroundColor: c.bg, paddingBottom: Math.max(padBottom, insets.bottom + 14) }]}>
+     <View accessibilityRole="alert" style={{ gap: 14 }}>
       <View style={[s.sheetRow, { alignItems: correct && !alignTop ? 'center' : 'flex-start' }]}>
-        <View style={[s.sheetIcon, { backgroundColor: c.icon }]}>
-          {correct ? <Check size={checkSize} color="#FFFFFF" strokeWidth={checkStroke} /> : <CloseIcon size={20} color="#FFFFFF" />}
-        </View>
+        {correct ? (
+          <Pop delay={90}>
+            <View style={[s.sheetIcon, { backgroundColor: c.icon }]}>
+              <Check size={checkSize} color="#FFFFFF" strokeWidth={checkStroke} />
+            </View>
+          </Pop>
+        ) : (
+          <Shake>
+            <View style={[s.sheetIcon, { backgroundColor: c.icon }]}>
+              <CloseIcon size={20} color="#FFFFFF" />
+            </View>
+          </Shake>
+        )}
         <View style={{ flex: 1, gap: correct && !alignTop ? 2 : 4 }}>
           <Txt f="display" size={22} color={c.title}>
             {title ?? (correct ? 'Toʻgʻri!' : 'Notoʻgʻri')}
@@ -195,12 +216,19 @@ export function FeedbackSheet({
           )}
         </View>
         {coin && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Coin size={16} />
-            <Txt f="bodyHeavy" size={15} color="#7A5300">
-              +1
-            </Txt>
-          </View>
+          <FloatUp delay={180}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Coin size={16} />
+              <Txt f="bodyHeavy" size={15} color="#7A5300">
+                +1
+              </Txt>
+              <CoinGhost play>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Coin size={16} />
+                </View>
+              </CoinGhost>
+            </View>
+          </FloatUp>
         )}
       </View>
       <Pressable
@@ -213,7 +241,8 @@ export function FeedbackSheet({
         </Txt>
         {correct && <ArrowRight />}
       </Pressable>
-    </View>
+     </View>
+    </SlideUp>
   );
 }
 
@@ -241,7 +270,8 @@ export function OptionRow({
       : state === 'wrong'
         ? { bg: '#FDECEC', border: '#D92D20', fg: '#B42318' }
         : { bg: '#FFFFFF', border: '#E2E6EE', fg: '#4A5468' };
-  return (
+  // Xato variant silkinadi, to'g'risi bir "sakraydi" — yakuniy holat o'zgarmaydi.
+  const row = (
     <Pressable
       accessibilityRole={radio ? 'radio' : 'button'}
       accessibilityState={radio ? { checked: state !== 'idle', disabled } : { selected: state !== 'idle', disabled }}
@@ -252,9 +282,19 @@ export function OptionRow({
       <Txt f="bodyHeavy" size={18} color={c.fg} lang="ru" style={{ flex: 1 }}>
         {label}
       </Txt>
-      {state === 'correct' && <Check size={20} color="#087A4A" />}
+      {state === 'correct' && (
+        <Pop from={0.2}>
+          <Check size={20} color="#087A4A" />
+        </Pop>
+      )}
       {state === 'wrong' && <CloseIcon size={18} color="#B42318" />}
     </Pressable>
+  );
+  // Doim o'ralgan — holat o'zgarganda Pressable qayta yaratilmaydi (klaviatura fokusi saqlanadi).
+  return (
+    <Shake trigger={state === 'wrong'} onlyWhenTruthy>
+      {row}
+    </Shake>
   );
 }
 

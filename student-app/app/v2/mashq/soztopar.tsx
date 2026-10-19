@@ -13,12 +13,14 @@ import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon, HandIcon, TimerIcon } from '@/components/v2/practice/icons';
-import { GameHeader, displayRu, plainWord, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
+import { GameHeader, displayRu, fmtTime, plainWord, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
+import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
-import { playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
+import { loadMixContext, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const SIZE = 7;
@@ -84,8 +86,11 @@ export default function WordSearchScreen() {
   // Urg'usiz katta harfli so'z → chipda ko'rsatiladigan asl shakl (urg'u bilan).
   const displayRef = useRef<Record<string, string>>({});
 
+  const mixRef = useRef<MixContext | null>(null);
   const newBoard = (pool: string[]) => {
-    const picked = [...pool].sort(() => Math.random() - 0.5).slice(0, WORD_COUNT).sort((a, b) => b.length - a.length);
+    // Aqlli aralash: joriy dars, takrorlash kerak bo'lganlar, eski darslar.
+    const picked = pickMix(pool, WORD_COUNT, (w) => w, mixRef.current).sort((a, b) => b.length - a.length);
+    rememberShown(picked);
     setBoard(buildGrid(picked, isRu ? 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ' : 'ETAOINSHRDLUCMFWYPVBGK'));
     setPath([]);
     setFound([]);
@@ -95,15 +100,16 @@ export default function WordSearchScreen() {
 
   useEffect(() => {
     const re = isRu ? /^[А-ЯЁ]+$/ : /^[A-Z]+$/;
-    getAccumulatedVocabulary()
-      .catch(() => [])
-      .then((vocab) => {
+    Promise.all([getAccumulatedVocabulary().catch(() => []), loadMixContext().catch(() => null)])
+      .then(([vocab, ctx]) => {
+        mixRef.current = ctx;
         const disp: Record<string, string> = { ...FALLBACK_RU_STRESS };
         for (const w of vocab) disp[plainWord(w.english).toUpperCase()] = w.english.toLowerCase();
         displayRef.current = disp;
         const pool = Array.from(new Set(vocab.map((w) => plainWord(w.english).toUpperCase()).filter((w) => re.test(w) && w.length >= 3 && w.length <= SIZE)));
         const fb = isRu ? FALLBACK_RU : FALLBACK_EN;
-        poolRef.current = pool.length >= MIN_POOL ? [...pool, ...fb.filter((f) => !pool.includes(f))] : fb;
+        // Zaxira so'zlar faqat o'tilgan so'zlar taxtaga yetmaganda qo'shiladi.
+        poolRef.current = pool.length >= WORD_COUNT ? pool : pool.length >= MIN_POOL ? [...pool, ...fb.filter((f) => !pool.includes(f))] : fb;
         newBoard(poolRef.current);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,7 +128,7 @@ export default function WordSearchScreen() {
   useEffect(() => {
     if (!board) return;
     saveRecords({ wordSearch: { found: found.length, total: words.length } });
-    if (won) playWinSound();
+    if (won) playSfx('complete');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [found.length, board]);
 
@@ -142,6 +148,7 @@ export default function WordSearchScreen() {
     );
     if (hit) {
       setFound((f) => [...f, hit.word]);
+      playSfx('match');
       setPath([]);
       addCoins(1);
       addLightning(1);
@@ -171,8 +178,9 @@ export default function WordSearchScreen() {
       setTimeout(() => check(next), 0);
       if (next.length > 1 && !words.some((w) => !found.includes(w.word) && w.word.startsWith(next.map((p) => board.grid[p.r][p.c]).join('')))) {
         setFlash(true);
+        playSfx('wrong');
         setTimeout(() => setFlash(false), 300);
-      }
+      } else playSfx('pop');
       return next;
     });
   };
@@ -274,6 +282,19 @@ export default function WordSearchScreen() {
           </View>
         </View>
       </View>
+      <GameResult
+        show={won}
+        win
+        title="Barakalla!"
+        subtitle={`${words.length} ta soʻzning hammasi topildi`}
+        stats={[
+          { value: fmtTime(seconds), label: 'vaqt' },
+          { value: `${words.length} / ${words.length}`, label: 'soʻz' },
+        ]}
+        coins={words.length}
+        lightning={words.length}
+        onAgain={() => newBoard(poolRef.current)}
+      />
     </View>
   );
 }

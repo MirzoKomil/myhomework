@@ -4,7 +4,10 @@
  * dizayndagi inline uslublardan aynan olingan.
  */
 import { router, type Href } from 'expo-router';
-import type { ReactNode } from 'react';
+
+import { v2Back } from '@/services/v2Nav';
+import { useEffect, type ReactNode } from 'react';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Linking, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,8 +21,7 @@ export const SUPPORT_TELEGRAM_URL = 'https://t.me/Domwork_admin';
 
 /** Orqaga: tarix bo'lsa ortga, bo'lmasa (to'g'ridan-to'g'ri ochilgan) ota ekranga. */
 export function goBack(fallback: string) {
-  if (router.canGoBack()) router.back();
-  else router.replace(fallback as Href);
+  v2Back(fallback);
 }
 
 export function ScreenHeader({ title, subtitle, fallback }: { title: string; subtitle?: string; fallback: string }) {
@@ -48,9 +50,16 @@ export function ScreenHeader({ title, subtitle, fallback }: { title: string; sub
 
 /** Dizayndagi 46×28 almashtirgich (faqat ko'rinish; bosish ota qatorda). */
 export function ToggleKnob({ on }: { on: boolean }) {
+  // Tugmacha chapdan (3px) o'ngga (46 − 22 − 3 = 21px) silliq suriladi.
+  const reduce = useReducedMotion();
+  const x = useSharedValue(on ? 18 : 0);
+  useEffect(() => {
+    x.value = reduce ? (on ? 18 : 0) : withTiming(on ? 18 : 0, { duration: 180 });
+  }, [on]); // eslint-disable-line react-hooks/exhaustive-deps
+  const a = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <View style={[styles.track, { backgroundColor: on ? '#2F5BFF' : '#C9D0DC' }]}>
-      <View style={[styles.knob, on ? { right: 3 } : { left: 3 }]} />
+      <Animated.View style={[styles.knob, { left: 3 }, a]} />
     </View>
   );
 }

@@ -99,7 +99,8 @@ export default function V2Shop() {
   const nearest = products ? nearestProduct(products, coins) : null;
   const brand = localizeCourseWording('Homework', lang, courseLang);
 
-  const groups = ORDER.map((cat) => ({ cat, items: (products ?? []).filter((p) => p.category === cat) })).filter((g) => g.items.length);
+  // Dizayndagi tartib: arzonidan qimmatiga.
+  const groups = ORDER.map((cat) => ({ cat, items: (products ?? []).filter((p) => p.category === cat).sort((a, b) => a.price - b.price) })).filter((g) => g.items.length);
 
   return (
     <View style={styles.screen}>

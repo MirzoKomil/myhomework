@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 
 import { getLevelForLightning } from '@/data/levels';
 import { syncStudentProgress } from '@/services/contentApi';
+import { clearDirty, fetchMyProgress, firstHydration, isDirty, markDirty, markHydrated } from '@/services/progressSync';
+import { getToken, subscribe as subscribeAuth } from '@/services/studentAuthStore';
 
 const TOTAL_KEY = 'mh_lightning_total';
 
@@ -38,12 +40,43 @@ async function ensureLoaded(): Promise<void> {
       .catch(() => {
         total = 0;
       })
+      .then(() => hydrateFromServer())
       .finally(() => {
         loaded = true;
       });
   }
   return loadPromise;
 }
+
+let pending = 0;
+let hydratedFor: string | null = null;
+
+// Telefon xotirasini serverdagi summa bilan moslash (progressSync.ts ga qarang).
+async function hydrateFromServer(): Promise<void> {
+  const token = getToken();
+  if (!token || hydratedFor === token) return;
+  const srv = await fetchMyProgress();
+  if (!srv) return;
+  hydratedFor = token;
+  if (await isDirty('lightning')) {
+    if (await syncStudentProgress({ lightning: total })) await clearDirty('lightning');
+    return;
+  }
+  await clearDirty('lightning');
+  if (pending > 0) return;
+  if (await firstHydration('lightning') && total > srv.lightning) {
+    if (await syncStudentProgress({ lightning: total })) await markHydrated('lightning');
+    return;
+  }
+  await markHydrated('lightning');
+  total = srv.lightning;
+  await persist();
+}
+
+subscribeAuth(() => {
+  if (!loaded || !getToken()) return;
+  hydrateFromServer().then(notify).catch(() => {});
+});
 
 async function persist() {
   try {
@@ -72,7 +105,13 @@ export async function addLightning(amount = 1) {
   // 36/37-vazifa: Leaderboard (jumladan Kunlik/Haftalik/Oylik) haqiqiy
   // bo'lishi uchun jamlanma summa VA shu chaqiruvda qo'shilgan miqdor
   // (delta) serverga ham yuboriladi.
-  void syncStudentProgress({ lightning: total, lightningDelta: amount });
+  pending++;
+  await markDirty('lightning');
+  const synced = syncStudentProgress({ lightning: total, lightningDelta: amount }).then(async (ok) => {
+    pending--;
+    if (ok && pending === 0) await clearDirty('lightning');
+  });
+  void synced;
 
   // 142-ish qayta ish 8: daraja (Uchqun→Shogird→... ) o'zgargani — chaqmoq
   // butunlay qurilmada saqlangani sababli, o'tishni shu yerda aniqlab
@@ -80,9 +119,11 @@ export async function addLightning(amount = 1) {
   // ro'yxatida ko'rinishi uchun).
   const newLevel = getLevelForLightning(total);
   if (newLevel.key !== prevLevel.key) {
+    // Token bilan — bildirishnoma faqat shu o'quvchining o'ziga yoziladi.
+    const tok = getToken();
     fetch(LEVEL_UP_API_BASE, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
       body: JSON.stringify({ level: newLevel.name }),
     }).catch(() => {
       // Tarmoq xatoligi bo'lsa jim o'tkazib yuboramiz — daraja o'zi to'g'ri saqlandi.

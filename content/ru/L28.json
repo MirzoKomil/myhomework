@@ -1,0 +1,304 @@
+{
+ "n": 28,
+ "lessonId": "l1784055280406-27",
+ "type": "live",
+ "id": "l1784055280406-27",
+ "topic": "Oilam va uyim",
+ "title": "Jonli dars: «Моя́ семья́» — kimda nima bor, kimda nima yo'q",
+ "cando": "Oilam haqida gapiraman: kim bor, kim yo'q, kimning nimasi; boshqalardan oilasi haqida so'rayman.",
+ "vocab": [
+  {
+   "ru": "роди́тели",
+   "tr": "[radítili]",
+   "uz": "ota-ona",
+   "ex": "Мои́ роди́тели живу́т в Андижа́не.",
+   "img": "cards/родители.jpg",
+   "icon": "",
+   "vocabId": "v-28-1",
+   "media": "media/ru/L28/w_v-28-1.jpg"
+  },
+  {
+   "ru": "муж / жена́",
+   "tr": "[mush / jiná]",
+   "uz": "er / xotin",
+   "ex": "У Нигоры́ есть муж.",
+   "img": "cards/муж - жена.jpg",
+   "icon": "",
+   "vocabId": "v-28-2",
+   "media": "media/ru/L28/w_v-28-2.jpg"
+  },
+  {
+   "ru": "ба́бушка / де́душка",
+   "tr": "[bábushka / dyédushka]",
+   "uz": "buvi / buva",
+   "ex": "У ба́бушки есть сад.",
+   "img": "cards/бабушка - дедушка.jpg",
+   "icon": "",
+   "vocabId": "v-28-3",
+   "media": "media/ru/L28/w_v-28-3.jpg"
+  },
+  {
+   "ru": "дя́дя / тётя",
+   "tr": "[dyádya / tyótya]",
+   "uz": "amaki, tog'a / amma, xola",
+   "ex": "Э́то дом дя́ди.",
+   "img": "cards/дядя - тётя.jpg",
+   "icon": "",
+   "vocabId": "v-28-4",
+   "media": "media/ru/L28/w_v-28-4.jpg"
+  },
+  {
+   "ru": "ста́рший / мла́дший",
+   "tr": "[stárshiy / mládshiy]",
+   "uz": "katta / kichik (yoshda)",
+   "ex": "У меня́ есть ста́рший брат.",
+   "img": "cards/старший - младший.jpg",
+   "icon": "",
+   "vocabId": "v-28-5",
+   "media": "media/ru/L28/w_v-28-5.jpg"
+  },
+  {
+   "ru": "внук / вну́чка",
+   "tr": "[vnuk / vnúchka]",
+   "uz": "nevara (o'g'il / qiz)",
+   "ex": "У де́душки три вну́ка.",
+   "img": "cards/внук - внучка.jpg",
+   "icon": "",
+   "vocabId": "v-28-6",
+   "media": "media/ru/L28/w_v-28-6.jpg"
+  },
+  {
+   "ru": "ребёнок / де́ти",
+   "tr": "[ribyónak / dyéti]",
+   "uz": "bola / bolalar",
+   "ex": "У них дво́е дете́й.",
+   "img": "cards/ребёнок - дети.jpg",
+   "icon": "",
+   "vocabId": "v-28-7",
+   "media": "media/ru/L28/w_v-28-7.jpg"
+  },
+  {
+   "ru": "жена́т / за́мужем",
+   "tr": "[jinát / zámujem]",
+   "uz": "uylangan / turmushga chiqqan",
+   "ex": "Брат жена́т, а сестра́ не за́мужем.",
+   "img": "cards/женат - замужем.jpg",
+   "icon": "",
+   "vocabId": "v-28-8",
+   "media": "media/ru/L28/w_v-28-8.jpg"
+  }
+ ],
+ "konspekt": "28-DARS (jonli dars): «Моя́ семья́» — oilam va uyim\n\nBugun ustoz bilan 27-dars mavzusini (роди́тельный: у кого́? нет чего́?) oila mavzusida mashq qildik.\n\nOila haqida so'rash:\n* У тебя́ есть брат и́ли сестра́? — Ukang yoki opang bormi?\n* У вас больша́я семья́? — Oilangiz kattami?\n* Ты жена́т? / Вы за́мужем? — Uylanganmisan? / Turmushga chiqqanmisiz?\n* Где живу́т твои́ роди́тели? — Ota-onang qayerda yashaydi?\n\nJavob berish:\n* У меня́ есть ста́рший брат и мла́дшая сестра́. — Akam va singlim bor.\n* У меня́ нет бра́та. — Akam (ukam) yo'q.\n* Э́то дом де́душки. Э́то маши́на дя́ди. — Bu buvamning uyi. Bu amakimning mashinasi.\n* Мой брат жена́т. Моя́ сестра́ не за́мужем.\n\nEslatma: жена́т — erkak uchun, за́мужем — ayol uchun.\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: oilangiz haqida 6 gap. Keyingi dars — videodars: sonlar va narx (ско́лько сто́ит?).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "У меня́ есть ста́рший ___ . (aka)",
+    "o": [
+     "брат",
+     "бра́ту",
+     "бра́та"
+    ],
+    "a": "брат"
+   },
+   {
+    "s": "У меня́ нет ___ . (singil)",
+    "o": [
+     "сестра́",
+     "сестры́",
+     "сестру́"
+    ],
+    "a": "сестры́"
+   },
+   {
+    "s": "Э́то дом ___ . (buvam)",
+    "o": [
+     "де́душке",
+     "де́душки",
+     "де́душка"
+    ],
+    "a": "де́душки"
+   },
+   {
+    "s": "Мой брат ___ . (uylangan)",
+    "o": [
+     "жена́т",
+     "жена́",
+     "за́мужем"
+    ],
+    "a": "жена́т"
+   },
+   {
+    "s": "Моя́ сестра́ не ___ .",
+    "o": [
+     "за́мужем",
+     "жена́т",
+     "муж"
+    ],
+    "a": "за́мужем"
+   },
+   {
+    "s": "У них нет ___ . (bolalar)",
+    "o": [
+     "де́ти",
+     "дете́й",
+     "де́тям"
+    ],
+    "a": "дете́й"
+   },
+   {
+    "s": "Где живу́т твои́ ___ ? (ota-ona)",
+    "o": [
+     "роди́теля",
+     "роди́телей",
+     "роди́тели"
+    ],
+    "a": "роди́тели"
+   },
+   {
+    "s": "Э́то маши́на ___ . (amakim)",
+    "o": [
+     "дя́дю",
+     "дя́ди",
+     "дя́дя"
+    ],
+    "a": "дя́ди"
+   },
+   {
+    "s": "У ___ есть три вну́ка. (buvim)",
+    "o": [
+     "ба́бушку",
+     "ба́бушки",
+     "ба́бушка"
+    ],
+    "a": "ба́бушки"
+   },
+   {
+    "s": "У тебя́ ___ брат? — Да, есть.",
+    "o": [
+     "нет",
+     "был",
+     "есть"
+    ],
+    "a": "есть"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Akam yo'q» ruschasi:",
+    "o": [
+     "У меня́ не бра́та",
+     "У меня́ нет бра́та",
+     "У меня́ нет брат"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Buvimning uyi»:",
+    "o": [
+     "дом ба́бушки",
+     "ба́бушка дом",
+     "дом ба́бушка"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Ayol uchun «turmushga chiqqan»:",
+    "o": [
+     "за́мужем",
+     "жена́т",
+     "жена́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "де́ти → нет ___",
+    "o": [
+     "де́тях",
+     "де́ти",
+     "дете́й"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«kichik (yoshda)»:",
+    "o": [
+     "мла́дший",
+     "ста́рший",
+     "ма́ленький"
+    ],
+    "a": 0
+   },
+   {
+    "q": "У ___ есть сын. (Nigora)",
+    "o": [
+     "Нигоры́",
+     "Нигора́",
+     "Нигору́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Чья э́то маши́на? — Э́то маши́на ___ .",
+    "o": [
+     "па́пы",
+     "па́пе",
+     "па́па"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«ota-ona»:",
+    "o": [
+     "де́ти",
+     "роди́тели",
+     "ро́дственники"
+    ],
+    "a": 1
+   },
+   {
+    "q": "У вас ___ семья́? (katta)",
+    "o": [
+     "большо́й",
+     "большо́е",
+     "больша́я"
+    ],
+    "a": 2
+   },
+   {
+    "q": "У де́душки три ___ . (nevara)",
+    "o": [
+     "вну́ков",
+     "внук",
+     "вну́ка"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "У меня́ больша́я семья́.",
+   "uz": "Mening oilam katta."
+  },
+  {
+   "ru": "У меня́ есть ста́рший брат и мла́дшая сестра́.",
+   "uz": "Akam va singlim bor."
+  },
+  {
+   "ru": "У меня́ нет дете́й, я не жена́т.",
+   "uz": "Bolam yo'q, uylanmaganman."
+  },
+  {
+   "ru": "Мои́ роди́тели живу́т в Андижа́не.",
+   "uz": "Ota-onam Andijonda yashaydi."
+  },
+  {
+   "ru": "Э́то дом де́душки, а э́то маши́на дя́ди.",
+   "uz": "Bu buvamning uyi, bu esa amakimning mashinasi."
+  },
+  {
+   "ru": "У тебя́ есть брат и́ли сестра́?",
+   "uz": "Aka-ukang yoki opa-singlingiz bormi?"
+  }
+ ]
+}

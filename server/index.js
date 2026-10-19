@@ -244,10 +244,18 @@ app.use('/student', express.static(studentWebDist, {
 }));
 app.get(['/student', '/student/*'], (req, res, next) => {
     if (path.extname(req.path)) return next();
-    res.sendFile(path.join(studentWebDist, 'index.html'), err => {
+    // Yangi ilova (v2) sahifalari o'z <head>'i bilan (manifest, nom, ikonka)
+    // borishi kerak — aks holda iPhone'da "Bosh ekranga qo'shish" eski
+    // ilovani ochadi. Dinamik yo'llar (/student/v2/dars/...) ham shunga.
+    const isV2 = /^\/student\/v2(\/|$)/.test(req.path);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(studentWebDist, isV2 ? 'v2/index.html' : 'index.html'), err => {
         if (err) res.status(404).send('O\'quvchi ilovasi topilmadi.');
     });
 });
+
+// Kitobdagi audio dialog QR-kodlari: /audio/L05-1 → /audio/L05_d1.mp3
+app.get(/^\/audio\/L\d{1,2}-[1-3]\/?$/i, require('./routes/bookAudio').bookAudioHandler(ROOT));
 
 app.use(express.static(ROOT, {
     index: false,

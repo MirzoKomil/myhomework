@@ -5,6 +5,8 @@
  * olinadi — bu yerda hech qanday namuna qiymat yo'q.
  */
 import { router, type Href } from 'expo-router';
+
+import { v2Back } from '@/services/v2Nav';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -190,8 +192,7 @@ export function certificateStates(examResults: Record<string, ExamResult>, lesso
 }
 
 export function goBack(fallback: string) {
-  if (router.canGoBack()) router.back();
-  else router.replace(fallback as Href);
+  v2Back(fallback);
 }
 
 export function go(href: string) {

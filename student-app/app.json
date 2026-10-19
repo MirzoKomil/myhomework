@@ -2,9 +2,9 @@
   "expo": {
     "name": "Myhomework",
     "slug": "myhomework-student",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/domik/icon.png",
     "scheme": "studentapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -13,15 +13,14 @@
     },
     "android": {
       "package": "uz.myhomework.student",
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#FFC93C",
-        "foregroundImage": "./assets/images/app/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/app/android-icon-background.png",
-        "monochromeImage": "./assets/images/app/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/domik/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/domik/android-icon-background.png",
+        "monochromeImage": "./assets/images/domik/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "icon": "./assets/images/app/icon.png"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "bundler": "metro",
@@ -39,10 +38,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/app/splash-icon.png",
-          "imageWidth": 180,
+          "image": "./assets/images/domik/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#F4F6FA"
+          "backgroundColor": "#F0F2F8",
+          "imageWidth": 180
         }
       ],
       "expo-audio"

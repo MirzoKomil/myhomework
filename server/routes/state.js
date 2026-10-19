@@ -1,6 +1,6 @@
 const express = require('express');
 const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments, resolveStudentSubjectLang,
-getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getRealLeaderboard, getStudentLessonProgress, mergeStudentLessonProgress, joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
+getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, markNotificationsRead, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getStudentProgress, getRealLeaderboard, getStudentLessonProgress, mergeStudentLessonProgress, joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
@@ -269,10 +269,22 @@ router.get('/demo-notifications', studentAuthOptional, async (req, res) => {
 // shu sabab ilovaning o'zi darajaga/reytingga chiqqanini aniqlab, shu 2 ta
 // maxsus (qattiq belgilangan ruleId'li, o'zboshimcha ruleId qabul qilmaydigan)
 // endpoint orqali xabar beradi.
+// O'quvchi bildirishnomalarni o'qidi — serverda saqlanadi.
+router.post('/notifications/read', studentAuthOptional, async (req, res) => {
+    if (!req.studentId) return res.status(401).json({ error: "O'quvchi avtorizatsiyasi talab qilinadi" });
+    try {
+        await markNotificationsRead(req.studentId, req.body?.ids);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/state/notifications/read', err);
+        res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
 router.post('/notifications/level-up', studentAuthOptional, async (req, res) => {
     try {
         const { level } = req.body || {};
-        const notification = await addSystemNotification('levelUp', { level: level || '' });
+        const notification = await addSystemNotification('levelUp', { level: level || '' }, req.studentId);
         res.json({ ok: true, notification });
     } catch (err) {
         console.error('POST /api/state/notifications/level-up', err);
@@ -282,7 +294,7 @@ router.post('/notifications/level-up', studentAuthOptional, async (req, res) => 
 
 router.post('/notifications/leaderboard-climb', studentAuthOptional, async (req, res) => {
     try {
-        const notification = await addSystemNotification('leaderboardClimb', {});
+        const notification = await addSystemNotification('leaderboardClimb', {}, req.studentId);
         res.json({ ok: true, notification });
     } catch (err) {
         console.error('POST /api/state/notifications/leaderboard-climb', err);
@@ -594,6 +606,20 @@ router.post('/sync-progress', studentAuthOptional, async (req, res) => {
     } catch (err) {
         console.error('POST /api/state/sync-progress', err);
         res.status(400).json({ error: err.message || 'Xatolik' });
+    }
+});
+
+// O'quvchining o'z tanga/chaqmoq summasi va streak'i — ilova ochilganda
+// telefon xotirasini shu bilan tiklaydi. Faqat login qilgan o'quvchi uchun
+// (aks holda namuna o'quvchining ma'lumoti ketib qoladi).
+router.get('/my-progress', studentAuthOptional, async (req, res) => {
+    if (!req.studentId) return res.status(401).json({ error: "O'quvchi avtorizatsiyasi talab qilinadi" });
+    try {
+        res.set('Cache-Control', 'private, no-store');
+        res.json(await getStudentProgress(req.studentId));
+    } catch (err) {
+        console.error('GET /api/state/my-progress', err);
+        res.status(500).json({ error: 'Xatolik' });
     }
 });
 

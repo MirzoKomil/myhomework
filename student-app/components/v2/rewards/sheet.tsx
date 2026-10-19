@@ -8,6 +8,7 @@
 import type { ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SlideUp } from '@/components/v2/motion';
 
 import { fonts } from '@/constants/v2/tokens';
 
@@ -33,12 +34,14 @@ export function BottomSheet({
       <View style={styles.backdrop}>
         <Pressable accessibilityLabel="Yopish" style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={{ flex: 1 }} pointerEvents="none" />
+        <SlideUp distance={140}>
         <View accessibilityViewIsModal accessibilityLabel={labelledBy} style={[styles.sheet, { paddingBottom: insets.bottom + paddingBottom }]}>
           <View style={styles.column}>
             <View style={styles.handle} />
             {children}
           </View>
         </View>
+        </SlideUp>
       </View>
     </Modal>
   );

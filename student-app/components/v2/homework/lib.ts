@@ -8,7 +8,8 @@ import { fetchMobileContent, type AdminLesson } from '@/services/contentApi';
 export const PASS_THRESHOLD = 0.65;
 
 /** Ustoz tekshiradigan qismlar — "Avtomatik tekshiriladi" hisobiga kirmaydi. */
-export const isTeacherGraded = (p: HomeworkPart) => p.kind === 'creative' || p.kind === 'reading';
+// O'qish endi avtomatik (ReadingAuto) — o'qituvchi tekshiradigani faqat ijodiy vazifa.
+export const isTeacherGraded = (p: HomeworkPart) => p.kind === 'creative';
 
 /**
  * Dizayndagi harflar: A · Moslash, B · Bo'sh joy, C · Test, D · Gap tuzish —
@@ -26,7 +27,11 @@ const KIND_LETTER: Partial<Record<HomeworkPart['kind'], string>> = {
   pronunciation: 'C',
 };
 
-export const partLetter = (p: HomeworkPart): string | undefined => KIND_LETTER[p.kind];
+// Harflar (A/B/C/D) endi ko'rsatilmaydi — qismlar o'z nomi va ikonkasi bilan
+// chiqadi (Abdulloh: "PART A, B…" professional ko'rinmaydi). Jadval qoldirildi,
+// kerak bo'lsa qaytarish oson.
+void KIND_LETTER;
+export const partLetter = (_p: HomeworkPart): string | undefined => undefined;
 
 /** "B · Bo'sh joyni to'ldiring" yoki harfsiz bo'lsa faqat nom. */
 export const partLabel = (p: HomeworkPart, short = false): string => {
@@ -51,7 +56,7 @@ export function partQuestionCount(part: HomeworkPart): number {
     case 'roleplay':
       return part.scenario.lines.length;
     case 'reading':
-      return 1 + part.sentences.length;
+      return 1;
     case 'creative':
       return 1;
   }
