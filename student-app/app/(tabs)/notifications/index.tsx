@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { theme } from '@/constants/theme';
 import { AppNotification, NotifCategory } from '@/data/mock';
-import { fetchDemoNotifications, submitAbsenceReason, toAppNotification } from '@/services/contentApi';
+import { fetchDemoNotifications, submitAbsenceReason, toAppNotification, markNotificationsReadOnServer } from '@/services/contentApi';
 
 const ATTENDANCE_OPTIONS = ['Darsga kirdim', 'Darsga kira olmadim', 'Dars yarmida tugadi'];
 
@@ -88,7 +88,11 @@ export default function NotificationsScreen() {
   // generatsiya kerak emas (ilgari shu yerda alohida qilingan edi).
   useEffect(() => {
     fetchDemoNotifications()
-      .then((list) => setRealNotifs(list.map(toAppNotification)))
+      .then((list) => {
+        setRealNotifs(list.map(toAppNotification));
+        // Ro'yxat ochildi — o'qilgan deb belgilanadi (keyingi kirishda son 0).
+        void markNotificationsReadOnServer(list.filter((n) => n.unread).map((n) => n.id));
+      })
       .catch(() => {});
   }, []);
 

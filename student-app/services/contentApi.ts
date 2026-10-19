@@ -831,6 +831,25 @@ export type DemoNotification = {
   lessonDate?: string;
 };
 
+const NOTIFICATIONS_READ_API =
+  Platform.OS === 'web'
+    ? '/api/state/notifications/read'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/notifications/read';
+
+/** O'qilgan bildirishnomalar serverda saqlanadi (eski/yangi ilova, har telefon). */
+export async function markNotificationsReadOnServer(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  try {
+    await authedFetch(NOTIFICATIONS_READ_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: ids.slice(0, 300) }),
+    });
+  } catch {
+    // jim — keyingi ochilishda qayta yuboriladi
+  }
+}
+
 export async function fetchDemoNotifications(): Promise<DemoNotification[]> {
   const r = await authedFetch(DEMO_NOTIFICATIONS_API_BASE);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);

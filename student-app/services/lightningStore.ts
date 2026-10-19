@@ -119,9 +119,11 @@ export async function addLightning(amount = 1) {
   // ro'yxatida ko'rinishi uchun).
   const newLevel = getLevelForLightning(total);
   if (newLevel.key !== prevLevel.key) {
+    // Token bilan — bildirishnoma faqat shu o'quvchining o'ziga yoziladi.
+    const tok = getToken();
     fetch(LEVEL_UP_API_BASE, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
       body: JSON.stringify({ level: newLevel.name }),
     }).catch(() => {
       // Tarmoq xatoligi bo'lsa jim o'tkazib yuboramiz — daraja o'zi to'g'ri saqlandi.
