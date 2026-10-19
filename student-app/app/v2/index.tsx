@@ -30,6 +30,7 @@ import { fonts } from '@/constants/v2/tokens';
 import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
+import { fetchMyProgress } from '@/services/progressSync';
 import {
   fetchDemoNotifications,
   fetchDemoSchedule,
@@ -105,8 +106,20 @@ export default function V2Home() {
   const [wordCount, setWordCount] = useState<number | null>(null);
   // Lesson ekrani bilan bir xil 5 qadam uchun tinglangan dialoglar.
   const listened = useListened(lesson?.id ?? '');
-  // Streak serverda hisoblanmaydi — nol holat (dizayn elementlari saqlanadi).
-  const streak = 0;
+  // Streak — serverdagi kunlik tanga/chaqmoq tarixidan (ketma-ket faol kunlar).
+  const [streak, setStreak] = useState(0);
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    fetchMyProgress()
+      .then((p) => {
+        if (!cancelled && p) setStreak(p.streak);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (!token && !isEmbedded) return;

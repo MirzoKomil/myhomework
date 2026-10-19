@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 import { syncStudentProgress } from '@/services/contentApi';
+import { clearDirty, fetchMyProgress, firstHydration, isDirty, markDirty, markHydrated } from '@/services/progressSync';
+import { getToken, subscribe as subscribeAuth } from '@/services/studentAuthStore';
 
 const TOTAL_KEY = 'mh_coins_total';
 const BY_LESSON_KEY = 'mh_coins_by_lesson';
@@ -60,12 +62,52 @@ async function ensureLoaded(): Promise<void> {
         todayEarned = 0;
         todayDate = todayStr();
       })
+      .then(() => hydrateFromServer())
       .finally(() => {
         loaded = true;
       });
   }
   return loadPromise;
 }
+
+let pending = 0;
+let hydratedFor: string | null = null;
+
+// Telefon xotirasini serverdagi summa bilan moslash (progressSync.ts ga qarang).
+async function hydrateFromServer(): Promise<void> {
+  const token = getToken();
+  if (!token || hydratedFor === token) return;
+  const srv = await fetchMyProgress();
+  if (!srv) return;
+  hydratedFor = token;
+  if (await isDirty('coins')) {
+    // Serverga yetmagan o'zgarish bor — telefondagisini yuboramiz.
+    if (await syncStudentProgress({ coins: total })) await clearDirty('coins');
+    return;
+  }
+  await clearDirty('coins');
+  if (pending > 0) return;
+  if (await firstHydration('coins') && total > srv.coins) {
+    // Yangilanishdan oldin serverga yetmay qolgan tangalar yo'qolmasin.
+    if (await syncStudentProgress({ coins: total })) await markHydrated('coins');
+    return;
+  }
+  await markHydrated('coins');
+  total = srv.coins;
+  const today = todayStr();
+  if (todayDate !== today) {
+    todayDate = today;
+    todayEarned = 0;
+  }
+  todayEarned = Math.max(todayEarned, srv.todayCoins);
+  await persist();
+}
+
+// Ilova login'dan oldin ochilgan bo'lsa — login bo'lishi bilan moslaymiz.
+subscribeAuth(() => {
+  if (!loaded || !getToken()) return;
+  hydrateFromServer().then(notify).catch(() => {});
+});
 
 async function persist() {
   try {
@@ -114,7 +156,12 @@ export async function addCoins(amount: number, lessonId?: string) {
   // 36/37-vazifa: Leaderboard (jumladan Kunlik/Haftalik/Oylik) haqiqiy
   // bo'lishi uchun jamlanma summa VA shu chaqiruvda qo'shilgan miqdor
   // (delta) serverga ham yuboriladi.
-  void syncStudentProgress({ coins: total, coinsDelta: amount > 0 ? amount : 0 });
+  pending++;
+  await markDirty('coins');
+  void syncStudentProgress({ coins: total, coinsDelta: amount > 0 ? amount : 0 }).then(async (ok) => {
+    pending--;
+    if (ok && pending === 0) await clearDirty('coins');
+  });
 }
 
 export function useCoins(): number {
