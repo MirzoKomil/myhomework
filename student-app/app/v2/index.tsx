@@ -41,6 +41,7 @@ import {
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
 import { telegramLinkStatus } from '@/services/telegramLinkApi';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
+import { useCachedState } from '@/services/v2Cache';
 
 /** Kunlik chaqmoq maqsadi — dizayndagi qiymat (sozlanadigan maqsad hali yo'q). */
 const DAILY_GOAL = 50;
@@ -95,20 +96,20 @@ export default function V2Home() {
   const avatarUri = useAvatarUri();
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
 
-  const [name, setName] = useState(student?.name?.split(' ')[0] ?? '');
-  const [unread, setUnread] = useState(0);
-  const [lesson, setLesson] = useState<CurrentLesson | null | undefined>(undefined);
+  const [name, setName] = useCachedState('home.name', student?.name?.split(' ')[0] ?? '');
+  const [unread, setUnread] = useCachedState('home.unread', 0);
+  const [lesson, setLesson] = useCachedState<CurrentLesson | null | undefined>('home.lesson', undefined);
   const [lessonError, setLessonError] = useState(false);
-  const [live, setLive] = useState<LiveLesson | null>(null);
+  const [live, setLive] = useCachedState<LiveLesson | null>('home.live', null);
   const [now, setNow] = useState(() => new Date());
-  const [botLinked, setBotLinked] = useState(true);
+  const [botLinked, setBotLinked] = useCachedState('home.botLinked', true);
   const [botOpen, setBotOpen] = useState(false);
-  const [todayLightning, setTodayLightning] = useState(0);
-  const [wordCount, setWordCount] = useState<number | null>(null);
+  const [todayLightning, setTodayLightning] = useCachedState('home.todayLightning', 0);
+  const [wordCount, setWordCount] = useCachedState<number | null>('home.wordCount', null);
   // Lesson ekrani bilan bir xil 5 qadam uchun tinglangan dialoglar.
   const listened = useListened(lesson?.id ?? '');
   // Streak — serverdagi kunlik tanga/chaqmoq tarixidan (ketma-ket faol kunlar).
-  const [streak, setStreak] = useState(0);
+  const [streak, setStreak] = useCachedState('home.streak', 0);
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
