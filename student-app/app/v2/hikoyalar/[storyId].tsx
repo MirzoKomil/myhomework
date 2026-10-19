@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   player: { paddingTop: 12, paddingHorizontal: 20, gap: 12, borderTopWidth: 1, borderTopColor: '#EEF1F7', backgroundColor: '#FFFFFF' },
   track: { height: 6, borderRadius: 3, backgroundColor: '#E7EBF3' },
   fill: { height: 6, borderRadius: 3, backgroundColor: '#2F5BFF' },
-  knob: { position: 'absolute', top: -5, marginLeft: -8, width: 16, height: 16, borderRadius: 8, backgroundColor: '#2F5BFF', borderWidth: 3, borderColor: '#FFFFFF', boxSizing: 'content-box' as never, transform: [{ translateX: -3 }, { translateY: -3 }] },
+  knob: { position: 'absolute', top: -8, marginLeft: -11, width: 22, height: 22, borderRadius: 11, backgroundColor: '#2F5BFF', borderWidth: 3, borderColor: '#FFFFFF' },
   times: { flexDirection: 'row', justifyContent: 'space-between' },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sideBtn: { width: 56, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: '#D5DBE7', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },

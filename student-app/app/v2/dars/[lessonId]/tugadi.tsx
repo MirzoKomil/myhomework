@@ -63,7 +63,7 @@ export default function CompleteScreen() {
           </View>
           <View style={{ alignItems: 'center', gap: 4 }}>
             <Text accessibilityRole="header" style={styles.h1}>{lesson ? `${lesson.number}-dars tugadi!` : 'Dars tugadi!'}</Text>
-            {!!lesson && <Text style={styles.sub}>{konspekt ? `${title} — ${konspekt.charAt(0).toLowerCase()}${konspekt.slice(1)}` : phrase ? `${title} — ${phrase}` : title}</Text>}
+            {!!lesson && <Text style={styles.sub}>{phrase ? `${title} — ${phrase}` : konspekt ? `${title} — ${konspekt}` : title}</Text>}
           </View>
           <View accessibilityLabel="Streak" style={styles.streak}>
             <FlameIcon />
