@@ -119,7 +119,7 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
     }
     if (accuracy < PASS_THRESHOLD) {
       playSfx('lose');
-      speak('retry', 900);
+      speak('retry', 1000);
       setTooLow(Math.round(accuracy * 100));
       return;
     }

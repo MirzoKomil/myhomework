@@ -113,13 +113,14 @@ export function playSfx(name: SfxName) {
   }
 }
 
-/** Kechikish bilan chalish (masalan animatsiya cho'qqisiga moslash). */
-export function playSfxLater(name: SfxName, ms: number) {
-  setTimeout(() => playSfx(name), ms);
+/** Kechikish bilan chalish (masalan animatsiya cho'qqisiga moslash). Bekor qilish funksiyasini qaytaradi. */
+export function playSfxLater(name: SfxName, ms: number): () => void {
+  const t = setTimeout(() => playSfx(name), ms);
+  return () => clearTimeout(t);
 }
 
 /** Birinchi bosishda ochiladigan eng kerakli effektlar; qolganlari keyin. */
-const FIRST: SfxName[] = ['correct', 'wrong', 'coin', 'select', 'flip', 'match', 'complete', 'unlock'];
+const FIRST: SfxName[] = ['correct', 'wrong', 'coin', 'select', 'flip', 'match', 'complete', 'unlock', 'levelup', 'lose'];
 
 /** Safari/iOS (web): pleerlarni foydalanuvchi bosishlari ichida "ochish" (audioUnlock.ts). */
 export function primeSfxOnFirstGesture() {

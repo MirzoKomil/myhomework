@@ -102,8 +102,9 @@ export default function V2Home() {
     useCallback(() => {
       const seen = coinsSeenOnHome;
       setCoinFrom(seen);
-      if (seen !== null && getTotalCoins() > seen) playSfxLater('coin', 450);
+      const cancelCoin = seen !== null && getTotalCoins() > seen ? playSfxLater('coin', 450) : undefined;
       return () => {
+        cancelCoin?.();
         coinsSeenOnHome = getTotalCoins();
       };
     }, []),

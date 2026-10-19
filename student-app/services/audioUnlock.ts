@@ -76,6 +76,8 @@ function stopListening() {
 /** Pleerlarni ochish navbatiga qo'shish (navbat `prio` bo'yicha tartiblanadi). */
 export function enqueuePrime(entries: Entry[]) {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  // Eslatma: navigator.audioSession.type = 'ambient' ATAYIN qo'yilmagan — u butun
+  // sahifaga ta'sir qiladi va iPhone "jim" rejimida dars audiolarini ham o'chirib qo'yadi.
   queue.push(...entries.filter((e) => !primed.has(e.key)));
   queue.sort((a, b) => a.prio - b.prio);
   if (!listening && queue.length) {

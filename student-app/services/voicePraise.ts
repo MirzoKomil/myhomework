@@ -140,6 +140,12 @@ export function speak(group: VoiceGroup, delayMs = 450) {
   }, delayMs);
 }
 
+/** Yaqinda (oraliqdan kamroq vaqt oldin) jumla aytilgan bo'lsa — jim; aks holda speak(). */
+export function speakUnlessRecent(group: VoiceGroup, delayMs = 450) {
+  if (Date.now() - lastSpokenAt < MIN_GAP_MS) return;
+  speak(group, delayMs);
+}
+
 /** Har javobdan keyin chaqiriladi (natija paneli ochilganda). */
 export function praiseAnswer(correct: boolean) {
   const now = Date.now();

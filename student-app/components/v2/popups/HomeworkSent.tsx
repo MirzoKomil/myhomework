@@ -29,9 +29,11 @@ type Props = {
   /** Avtomatik tekshiriladigan qismlar (ustoz tekshiradiganlar kirmaydi). */
   parts?: HomeworkPart[];
   scores?: Record<string, PartScore>;
+  /** Faqat birinchi ochilishda (vazifa hozirgina tugaganda) — fanfara, ovoz, konfetti. */
+  celebrate?: boolean;
 };
 
-export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, parts = [], scores = {} }: Props) {
+export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, parts = [], scores = {}, celebrate = false }: Props) {
   const insets = useSafeAreaInsets();
   const rows = parts.map((p) => {
     const total = partQuestionCount(p);
@@ -45,7 +47,7 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
   const pct = total ? Math.round((correct / total) * 100) : 0;
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !celebrate) return;
     // Butun vazifa — eng katta bayram: fanfara (+ konfetti); past natijada yumshoqroq.
     playSfx(pct >= 70 ? 'complete' : 'unlock');
     // "Barakalla" faqat yaxshi natijada; past natijada — yumshoq dalda.
@@ -144,7 +146,7 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
           </View>
         </View>
       </View>
-      {visible && pct >= 70 && <Confetti count={40} seed={5} />}
+      {visible && celebrate && pct >= 70 && <Confetti count={40} seed={5} />}
     </Modal>
   );
 }

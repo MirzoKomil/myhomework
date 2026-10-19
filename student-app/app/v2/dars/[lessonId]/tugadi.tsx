@@ -91,7 +91,7 @@ export default function CompleteScreen() {
     return () => stopVoice();
   }, []);
   useEffect(() => {
-    if (coins > 0) playSfxLater('coin', 1100);
+    if (coins > 0) return playSfxLater('coin', 1100);
   }, [coins > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
