@@ -43,10 +43,13 @@ type Props = {
 
 export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1, sample = false }: Props) {
   const { courseLang } = useLang();
-  const idx = Math.max(0, Math.min(LEVELS.length - 1, levelIndex));
+  // Namuna — dizayndagi misol aynan (5 · Domwork afsonasi, 3 001, Oltin);
+  // haqiqiy daraja oshishida — data/levels.ts dagi daraja.
+  const idx = sample ? LEVELS.length - 1 : Math.max(0, Math.min(LEVELS.length - 1, levelIndex));
   const level = LEVELS[idx];
   const isTop = idx === LEVELS.length - 1;
-  const name = levelName(idx, courseLang);
+  const name = sample ? 'Domwork afsonasi' : levelName(idx, courseLang);
+  const total = sample ? '3 001' : fmt(level.min);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -60,7 +63,7 @@ export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1,
               ) : (
                 <View style={styles.chip}>
                   <BoltFill />
-                  <Text style={styles.chipText}>{fmt(level.min)} chaqmoq</Text>
+                  <Text style={styles.chipText}>{total} chaqmoq</Text>
                 </View>
               )}
               <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={onClose} style={styles.close}>
@@ -77,14 +80,14 @@ export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1,
               <Text style={styles.desc}>
                 {isTop
                   ? 'Profilingizda oltin nishon paydo boʻladi. Endi har 1 000 chaqmoqda Afsona yulduzi olasiz.'
-                  : `${level.description}. Profilingizda yangi nishon paydo boʻladi.`}
+                  : `${level.description.replace(/'/g, 'ʻ')}.`}
               </Text>
             </View>
             <View style={styles.grid}>
               <View style={[styles.tile, { backgroundColor: '#FFF4D1' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                   <BoltFill size={20} />
-                  <Text style={[styles.tileBig, { color: '#7A5300' }]}>{fmt(level.min)}</Text>
+                  <Text style={[styles.tileBig, { color: '#7A5300' }]}>{total}</Text>
                 </View>
                 <Text style={[styles.tileSmall, { color: '#7A5300' }]}>jami chaqmoq</Text>
               </View>

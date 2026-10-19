@@ -112,9 +112,7 @@ export default function V2Orders() {
                   <Text style={styles.cardSub}>150 coin · 0 dona</Text>
                 </View>
               </View>
-              <View style={[styles.chip, { backgroundColor: '#EEF1F7' }]}>
-                <Text style={[styles.chipText, { color: '#4A5468' }]}>Hali yoʻq</Text>
-              </View>
+              {/* "✓ Ishlatildi" belgisi faqat himoya haqiqatan ishlatilganda — streak serverda yo'q, shuning uchun belgi yo'q. */}
             </View>
             <View style={styles.dates}>
               <View style={{ flex: 1 }}>

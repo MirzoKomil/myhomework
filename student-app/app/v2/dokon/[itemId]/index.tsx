@@ -87,8 +87,10 @@ export default function V2ShopItem() {
 
           <View style={styles.priceCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <CoinFill size={22} />
-              <Text style={styles.price}>{fmt(p.price)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <CoinFill size={22} />
+                <Text style={styles.price}>{fmt(p.price)}</Text>
+              </View>
               <View style={{ flex: 1 }} />
               <Text style={styles.have}>Sizda {fmt(coins)}</Text>
             </View>

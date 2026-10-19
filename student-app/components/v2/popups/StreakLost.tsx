@@ -8,7 +8,7 @@
  */
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { loadCurrentLesson } from '@/components/v2/practice/shared';
 import { CloseIcon, DropArrowIcon, ShieldIcon, TICK2, TickIcon } from '@/components/v2/rewards/icons';
@@ -44,7 +44,7 @@ export function StreakLostPopup({ visible, onClose }: Props) {
         <Image source={designImages['78f533d49645c292f499fbc1b6168dd2']} accessibilityLabel="Uxlab qolgan Domik" style={{ width: 128, height: 128 }} resizeMode="contain" />
         <Text accessibilityRole="header" style={[sheetText.title, { lineHeight: 28.6 }]}>Seriya uzildi</Text>
         <View accessible accessibilityLabel={`Seriya ${SAMPLE_STREAK} kundan 0 ga tushdi`} style={styles.drop}>
-          <Text style={[styles.big, { color: '#B54700', textDecorationLine: 'line-through' }]}>{SAMPLE_STREAK}</Text>
+          <Text style={[styles.big, styles.struck]}>{SAMPLE_STREAK}</Text>
           <DropArrowIcon />
           <Text style={styles.big}>0</Text>
           <Text style={styles.kun}>kun</Text>
@@ -82,6 +82,8 @@ const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: 8 },
   drop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   big: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 34, lineHeight: 40, color: '#0B1220' },
+  // Dizayn: line-through qalinligi 3px (web'da textDecorationThickness).
+  struck: { color: '#B54700', textDecorationLine: 'line-through', ...(Platform.OS === 'web' ? ({ textDecorationThickness: 3 } as object) : null) },
   kun: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 15, color: '#4A5468' },
   week: { backgroundColor: '#F4F6FA', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 10, flexDirection: 'row', justifyContent: 'space-between' },
   day: { alignItems: 'center', gap: 5 },
@@ -90,6 +92,6 @@ const styles = StyleSheet.create({
   dayText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
   cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', boxShadow: '0 5px 0 #1E3FD1' },
   ctaText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, color: '#FFFFFF' },
-  shop: { height: 52, borderRadius: 16, borderWidth: 1.5, borderColor: '#E4E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  shop: { height: 55, borderRadius: 16, borderWidth: 1.5, borderColor: '#E4E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   shopText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },
 });

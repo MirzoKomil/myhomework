@@ -10,7 +10,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/currentLesson';
@@ -25,6 +25,8 @@ const SHORT = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
 // Streak kuzatilmaydi — haqiqiy qiymat yo'q.
 const STREAK_DAYS = 0;
 const SHIELD_PRICE = 150;
+// Himoya ishlatilgan sana ("11.10") — ma'lumot yo'q.
+const SHIELD_USED_ON: string | null = null;
 
 export default function V2Streak() {
   const insets = useSafeAreaInsets();
@@ -52,7 +54,6 @@ export default function V2Streak() {
 
   return (
     <View style={styles.screen}>
-      <Image source={designImages.ab2ec768d6bbc330d4b36a0481eb37cf} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} resizeMode="cover" accessibilityElementsHidden importantForAccessibility="no" />
       <Pressable style={{ flex: 1 }} accessibilityLabel="Yopish" onPress={() => goBack(R.home)} />
       <View accessibilityViewIsModal style={[styles.sheet, { paddingBottom: insets.bottom + 30 }]}>
         <View style={styles.column}>
@@ -80,7 +81,8 @@ export default function V2Streak() {
                   {isToday ? (
                     <View style={[styles.circle, styles.today]}><Text style={styles.todayNum}>{STREAK_DAYS + 1}</Text></View>
                   ) : (
-                    <View style={[styles.circle, styles.empty]} />
+                    // Belgilanmagan kun: dizayndagi doira o'lchami, ichi bo'sh (halqasiz).
+                    <View style={styles.circle} />
                   )}
                   <Text style={[styles.dayText, isToday && { fontFamily: fonts.bodyHeavy, color: '#0B1220' }]}>{isToday ? 'Bugun' : SHORT[d.getDay()]}</Text>
                 </View>
@@ -88,13 +90,15 @@ export default function V2Streak() {
             })}
           </View>
 
-          {/* Himoya ishlatilgan kun — streak kuzatilmagani uchun sana yo'q (—). */}
-          <View style={styles.used}>
-            <ClockIcon />
-            <Text style={styles.usedText}>
-              <Text style={{ fontFamily: fonts.bodyHeavy, color: '#0B1220' }}>—</Text> · himoya hali ishlatilmagan
-            </Text>
-          </View>
+          {/* "11.10 · himoya ishlatildi, seriya saqlandi" — faqat himoya haqiqatan ishlatilgan kun bo'lsa (hozir streak kuzatilmaydi). */}
+          {SHIELD_USED_ON && (
+            <View style={styles.used}>
+              <ClockIcon />
+              <Text style={styles.usedText}>
+                <Text style={{ fontFamily: fonts.bodyHeavy, color: '#0B1220' }}>{SHIELD_USED_ON}</Text> · himoya ishlatildi, seriya saqlandi
+              </Text>
+            </View>
+          )}
 
           <Pressable accessibilityRole="link" onPress={() => router.push(R.shop as never)} style={({ pressed }) => [styles.link, pressed && { opacity: 0.8 }]}>
             <ShieldIcon size={20} color="#6B7489" strokeWidth={2} />
@@ -129,7 +133,12 @@ export default function V2Streak() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0B1220' },
+  // Fon: dizayndagi xira surat o'rniga — qorong'i qatlam + 3px xiralashtirish (LogoutConfirm kabi).
+  screen: {
+    flex: 1,
+    backgroundColor: 'rgba(11,18,32,0.69)',
+    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' } as object) : null),
+  },
   sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingTop: 12, paddingHorizontal: 20, boxShadow: '0 -12px 40px rgba(0,0,0,.25)' },
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: 14 },
   handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#D5DAE4', alignSelf: 'center' },
@@ -139,7 +148,6 @@ const styles = StyleSheet.create({
   desc: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 15, lineHeight: 22, color: '#4A5468', textAlign: 'center' },
   week: { backgroundColor: '#F4F6FA', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 10, flexDirection: 'row', justifyContent: 'space-between' },
   circle: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  empty: { borderWidth: 2, borderColor: '#E4E8F0' },
   today: { borderWidth: 2.5, borderColor: '#FF7A1A' },
   todayNum: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#B54700' },
   dayText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 14.4, color: '#4A5468', textAlign: 'center' },

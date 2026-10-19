@@ -52,7 +52,7 @@ async function loadLessonIndex(): Promise<Map<string, LessonWord>> {
   return map;
 }
 
-type Row = { key: string; word: string; transcript?: string; translation?: string; chip?: 'lesson' | 'translator'; lesson?: number; image?: string; icon?: VocabWord['icon'] };
+type Row = { key: string; word: string; transcript?: string; translation?: string; chip?: 'lesson' | 'translator' | 'story'; lesson?: number; image?: string; icon?: VocabWord['icon'] };
 
 export default function V2Lugat() {
   const insets = useSafeAreaInsets();
@@ -79,13 +79,15 @@ export default function V2Lugat() {
     () =>
       words.map((w) => {
         const m = index.get(plainWord(w.word).trim().toLowerCase());
+        // Manba (ixtiyoriy, eski yozuvlarda yo'q): 'story' — Hikoyalardan saqlangan.
+        const source = (w as { source?: unknown }).source;
         return {
           key: w.word,
           // Dars lug'atidagi shakl (urg'u belgisi bilan), bo'lmasa saqlangani.
           word: m?.word.english ?? w.word,
           transcript: m?.word.transcript,
           translation: w.translation ?? m?.word.translation,
-          chip: m ? 'lesson' : w.translation ? 'translator' : undefined,
+          chip: source === 'story' ? 'story' : m ? 'lesson' : source === 'translator' || w.translation ? 'translator' : undefined,
           lesson: m?.lesson,
           image: m?.word.imageUrl,
           icon: m?.word.icon,
@@ -190,6 +192,8 @@ export default function V2Lugat() {
                         {!!r.translation && <Text style={styles.trans} numberOfLines={1}>{r.translation}</Text>}
                         {r.chip === 'lesson' ? (
                           <Text style={[styles.chip, { color: '#1E3FD1', backgroundColor: '#E8EEFF' }]}>{r.lesson}-dars</Text>
+                        ) : r.chip === 'story' ? (
+                          <Text style={[styles.chip, { color: '#7A5300', backgroundColor: '#FFF4D1' }]}>Audiohikoya</Text>
                         ) : r.chip === 'translator' ? (
                           <Text style={[styles.chip, { color: '#5B2FD6', backgroundColor: '#F0EBFF' }]}>Tarjimon</Text>
                         ) : null}

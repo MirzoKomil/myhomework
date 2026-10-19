@@ -61,7 +61,8 @@ export function OrderSuccessPopup({ visible, price, onClose }: Props) {
 
 const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: 8, marginTop: -4 },
-  badge: { position: 'absolute', right: -2, bottom: 6, width: 34, height: 34, borderRadius: 17, backgroundColor: '#087A4A', borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  // Dizayn: 34×34 disk + 3px oq chegara (content-box) → tashqi 40×40.
+  badge: { position: 'absolute', right: -2, bottom: 6, width: 40, height: 40, borderRadius: 20, backgroundColor: '#087A4A', borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   okChip: { height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: '#E3F7EE', justifyContent: 'center' },
   okChipText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#075E3A' },
   cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center' },

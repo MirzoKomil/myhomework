@@ -117,8 +117,8 @@ export default function V2Levels() {
           </Pressable>
         </View>
       </ScrollView>
-      {/* Namuna: keyingi daraja (dizayndagi 4-darajadagi o'quvchi uchun — "5 · Domwork afsonasi"). */}
-      <LevelUpPopup visible={popup} onClose={() => setPopup(false)} levelIndex={Math.min(curIdx + 1, LEVELS.length - 1)} sample />
+      {/* Namuna: dizayndagi misol aynan ("5 · Domwork afsonasi"). */}
+      <LevelUpPopup visible={popup} onClose={() => setPopup(false)} sample />
     </View>
   );
 }
