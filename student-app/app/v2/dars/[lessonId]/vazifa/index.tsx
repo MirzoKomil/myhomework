@@ -79,8 +79,8 @@ export default function HomeworkScreen() {
   const parts = info.content.homeworkParts;
   const lessonScores = scores[id] ?? {};
   const isDone = (p: HomeworkPart) =>
-    p.kind === 'creative' ? creative?.status === 'graded' : p.kind === 'reading' ? reading?.status === 'graded' : !!progress.homeworkParts[p.id] || !!lessonScores[p.id]?.finished;
-  const isPending = (p: HomeworkPart) => (p.kind === 'creative' && creative?.status === 'pending') || (p.kind === 'reading' && reading?.status === 'pending');
+    p.kind === 'creative' ? creative?.status === 'graded' : !!progress.homeworkParts[p.id] || !!lessonScores[p.id]?.finished;
+  const isPending = (p: HomeworkPart) => p.kind === 'creative' && creative?.status === 'pending';
 
   // Avtomatik tekshiriladigan qismlar — "x / y savol bajarildi" va coin shulardan.
   const autoParts = parts.filter((p) => !isTeacherGraded(p));

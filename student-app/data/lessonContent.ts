@@ -71,7 +71,7 @@ export type HomeworkPart =
   // 54-vazifa: "O'qib tarjima qilish mashqi" — bitta ruscha matn (paragraf)
   // va bir nechta alohida ruscha gap, o'quvchi har birini o'zbekchaga
   // tarjima qiladi, natija ustozga tekshirish uchun boradi.
-  | { id: string; kind: 'reading'; title: string; paragraph: { id: string; russianText: string }; sentences: ReadingSentence[] };
+  | { id: string; kind: 'reading'; title: string; paragraph: { id: string; russianText: string; uzbekText?: string }; sentences: ReadingSentence[] };
 
 export type SlideContent = { id: string; title: string; body: string; imageUrl?: string };
 

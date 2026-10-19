@@ -21,7 +21,7 @@ import { FillBlankView, MultipleChoiceView } from '@/components/v2/homework/Choi
 import { isTeacherGraded, loadLessonInfo, partLabel, partLetter, partQuestionCount, type LessonInfo } from '@/components/v2/homework/lib';
 import { MatchView } from '@/components/v2/homework/MatchView';
 import { EmptyPartView } from '@/components/v2/homework/PartStates';
-import { ReadingView } from '@/components/v2/homework/ReadingView';
+import { ReadingAuto } from '@/components/v2/homework/ReadingAuto';
 import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { CreativeView, RecordView, RoleplayView } from '@/components/v2/homework/SpeakingParts';
 import { Txt } from '@/components/v2/homework/ui';
@@ -101,14 +101,14 @@ export default function HomeworkPartScreen() {
       case 'reading':
         content =
           part.paragraph.russianText.trim() || part.sentences.length ? (
-            <ReadingView
+            <ReadingAuto
               lessonId={id}
               partId={part.id}
               title={part.title}
               overline={`${info.number}-dars vazifasi${isReview ? ' · takrorlash' : ''}`}
-              vocabulary={[...info.content.vocabulary, ...(info.prev?.content.vocabulary ?? [])]}
               paragraph={part.paragraph}
               sentences={part.sentences}
+              allParts={parts}
               onClose={close}
             />
           ) : (
