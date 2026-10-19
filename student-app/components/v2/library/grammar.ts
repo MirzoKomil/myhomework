@@ -9,7 +9,10 @@ import { courseLessons, currentLesson, latestVideoLesson, titlesMatch, type Less
  * learned — mavzu o'tilgan barcha darslar videosi ko'rilgan; part — bir
  * qismi ko'rilgan (dizayndagi "Qisman oʻrganilgan" halqasi, 0..1).
  */
-export type GrammarRow = { topic: GrammarTopic; code: string; lesson: LessonRef | null; lessons: LessonRef[]; learned: boolean; part: number; where: string };
+/** Rus tili mavzusi kitobdan: bog'langan dars va o'sha darsning slayd rasmlari. */
+export type BookGrammarTopic = GrammarTopic & { lessonId?: string; images?: string[] };
+
+export type GrammarRow = { topic: BookGrammarTopic; code: string; lesson: LessonRef | null; lessons: LessonRef[]; learned: boolean; part: number; where: string };
 
 export const topicCode = (i: number) => `G${String(i + 1).padStart(2, '0')}`;
 // 72 dars ≈ 3 oy (haftasiga 3 dars × 2) → har oyga 24 dars.
@@ -40,7 +43,10 @@ export async function loadGrammarRows() {
   // u faqat ingliz tili uchun yozilgan, rus kursiga ko'rsatilmaydi.
   const topics = mc.library.grammar.length ? mc.library.grammar : mc.courseLang === 'russian' ? [] : GRAMMAR_TOPICS;
   const rows: GrammarRow[] = topics.map((topic, i) => {
-    const lessons = lessonsForTitle(mc, topic.title);
+    // Kitobdan kelgan mavzu darsga id orqali bog'langan; eski mavzular — nom bo'yicha.
+    const lid = (topic as BookGrammarTopic).lessonId;
+    const byId = lid ? courseLessons(mc).map((lesson, index) => ({ lesson, index, number: index + 1 })).filter((r) => r.lesson.id === lid) : [];
+    const lessons = byId.length ? byId : lessonsForTitle(mc, topic.title);
     const watched = lessons.filter((l) => getLessonProgress(l.lesson.id).videoWatch).length;
     const learned = lessons.length > 0 && watched === lessons.length;
     return {
