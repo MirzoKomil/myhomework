@@ -1,10 +1,9 @@
-import { getResolvedLessonContent, VocabWord } from '@/data/lessonContent';
+import { getResolvedLessonContent, lessonLockState, VocabWord } from '@/data/lessonContent';
 
 import { fetchMobileContent } from './contentApi';
 import { getCategoryProgress, loadLessonProgress, ProgressCategory } from './lessonProgressStore';
 
 const TOTAL_LESSONS = 72;
-const UNLOCKED_COUNT = 3;
 
 // O'quvchi hozirgacha ochib ulgurgan darslarning (1-darsdan joriy darsigacha)
 // birlashtirilgan lug'ati — so'z o'yinlari (word-chain, word-search,
@@ -25,7 +24,6 @@ export async function getAccumulatedVocabulary(): Promise<VocabWord[]> {
   const course = mc.courses[0];
   const adminLessons = course ? mc.lessons.filter((l) => l.courseId === course.id) : [];
 
-  let prevComplete = true;
   let prevPercent = 100;
   const seen = new Set<string>();
   const words: VocabWord[] = [];
@@ -35,12 +33,8 @@ export async function getAccumulatedVocabulary(): Promise<VocabWord[]> {
     const id = l?.id ?? String(i + 1);
     const isVideoDay = i % 2 === 0;
 
-    let locked: boolean;
-    if (l?.lock?.enabled) {
-      locked = isVideoDay ? prevPercent < (l.lock.requiredPercent ?? 100) : !l.attendanceTaken;
-    } else {
-      locked = i >= UNLOCKED_COUNT && !prevComplete;
-    }
+    // Yo'ldagi qulf bilan aynan bir xil qoida (lessonLockState).
+    const locked = lessonLockState(i, l, prevPercent).locked;
 
     const content = await getResolvedLessonContent(id, i);
     if (!locked) {
@@ -60,7 +54,6 @@ export async function getAccumulatedVocabulary(): Promise<VocabWord[]> {
         getCategoryProgress(id, 'homework', content.homeworkParts.length)) /
         3
     );
-    prevComplete = percent >= 100;
     prevPercent = percent;
   }
 

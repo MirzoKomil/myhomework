@@ -341,8 +341,36 @@ export const COURSE_TOTAL_LESSONS = 72;
 // ochiladi (roadmap/[courseId].tsx'dagi recomputeLessons bilan bir xil
 // mantiq). 51-vazifa: ikkala chegara ham 50% ga tushirildi — davomat sharti
 // Razgovor (speaking) darslar uchun o'zgarishsiz qoladi.
-const COURSE_DEFAULT_UNLOCK_PERCENT = 50;
-const COURSE_LIVE_LESSON_UNLOCK_PERCENT = 50;
+// Darsni ochish qoidasi (2026-10-19, Abdulloh qarori) — barcha ekranlar
+// (darslar yo'li, so'zlar, o'yinlar, v2) shu bitta funksiyadan foydalanadi:
+//  • videodars — oldingi dars kamida 50% bajarilganda ochiladi (avvalgidek);
+//  • jonli dars — avvalgidek ustoz davomat olgan + oldingi dars 50% bo'lsa,
+//    YOKI ustoz davomat olmagan bo'lsa ham oldingi dars 60% bajarilganda
+//    avtomatik ochiladi — ustoz davomatni unutsa o'quvchi qulfda qolmasin.
+// Hozir ochiq turgan hech bir dars bu o'zgarish bilan yopilib qolmaydi.
+// CRM'da darsga alohida foiz (lock.requiredPercent) qo'yilgan bo'lsa, o'sha amal qiladi
+// (avtomatik ochilish chegarasi undan past bo'lmaydi).
+export const LESSON_UNLOCK_PERCENT = 50;
+export const LIVE_AUTO_UNLOCK_PERCENT = 60;
+
+export function lessonLockState(
+  index: number,
+  lesson: { attendanceTaken?: boolean; lock?: { enabled?: boolean; requiredPercent?: number } } | undefined,
+  prevPercent: number,
+  alwaysOpenCount = 1
+): { locked: boolean; requiredPercent: number; reason?: 'percent' } {
+  const requiredPercent = lesson?.lock?.enabled ? (lesson.lock.requiredPercent ?? LESSON_UNLOCK_PERCENT) : LESSON_UNLOCK_PERCENT;
+  if (index < alwaysOpenCount) return { locked: false, requiredPercent };
+  const isLiveDay = index % 2 !== 0;
+  if (!isLiveDay) {
+    return prevPercent >= requiredPercent ? { locked: false, requiredPercent } : { locked: true, requiredPercent, reason: 'percent' };
+  }
+  const autoPercent = Math.max(LIVE_AUTO_UNLOCK_PERCENT, requiredPercent);
+  if (lesson?.attendanceTaken && prevPercent >= requiredPercent) return { locked: false, requiredPercent };
+  if (prevPercent >= autoPercent) return { locked: false, requiredPercent: autoPercent };
+  // Qulf xabari: davomat olingan bo'lsa — oddiy chegara, aks holda 60% (shu bilan ochiladi).
+  return { locked: true, requiredPercent: lesson?.attendanceTaken ? requiredPercent : autoPercent, reason: 'percent' };
+}
 
 // 38-vazifa: Bosh sahifadagi "Umumiy progress" kartochkasi ilgari doim
 // qattiq yozilgan namuna qiymatni (31%, 22/72 dars) ko'rsatardi. Endi
@@ -375,14 +403,7 @@ export async function getCourseOverallProgress(): Promise<{
     const id = l?.id ?? String(i + 1);
     const isVideoDay = i % 2 === 0;
 
-    let locked: boolean;
-    if (isVideoDay) {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_DEFAULT_UNLOCK_PERCENT) : COURSE_DEFAULT_UNLOCK_PERCENT;
-      locked = i >= 1 && prevPercent < requiredPercent;
-    } else {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_LIVE_LESSON_UNLOCK_PERCENT) : COURSE_LIVE_LESSON_UNLOCK_PERCENT;
-      locked = i >= 1 && (!l?.attendanceTaken || prevPercent < requiredPercent);
-    }
+    const locked = lessonLockState(i, l, prevPercent).locked;
     if (!locked) unlockedCount++;
 
     const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
@@ -510,14 +531,7 @@ export async function getLessonLockMap(): Promise<Record<string, boolean>> {
     const id = l?.id ?? String(i + 1);
     const isVideoDay = i % 2 === 0;
 
-    let locked: boolean;
-    if (isVideoDay) {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_DEFAULT_UNLOCK_PERCENT) : COURSE_DEFAULT_UNLOCK_PERCENT;
-      locked = i >= 1 && prevPercent < requiredPercent;
-    } else {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_LIVE_LESSON_UNLOCK_PERCENT) : COURSE_LIVE_LESSON_UNLOCK_PERCENT;
-      locked = i >= 1 && (!l?.attendanceTaken || prevPercent < requiredPercent);
-    }
+    const locked = lessonLockState(i, l, prevPercent).locked;
     map[id] = locked;
 
     const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
