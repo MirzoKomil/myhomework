@@ -26,7 +26,11 @@ const KIND_LETTER: Partial<Record<HomeworkPart['kind'], string>> = {
   pronunciation: 'C',
 };
 
-export const partLetter = (p: HomeworkPart): string | undefined => KIND_LETTER[p.kind];
+// Harflar (A/B/C/D) endi ko'rsatilmaydi — qismlar o'z nomi va ikonkasi bilan
+// chiqadi (Abdulloh: "PART A, B…" professional ko'rinmaydi). Jadval qoldirildi,
+// kerak bo'lsa qaytarish oson.
+void KIND_LETTER;
+export const partLetter = (_p: HomeworkPart): string | undefined => undefined;
 
 /** "B · Bo'sh joyni to'ldiring" yoki harfsiz bo'lsa faqat nom. */
 export const partLabel = (p: HomeworkPart, short = false): string => {
