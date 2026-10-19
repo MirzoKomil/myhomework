@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EyeIcon, SendOutlineIcon } from '@/components/v2/home/icons';
+import { ChevronRightIcon, EyeIcon, SendOutlineIcon } from '@/components/v2/home/icons';
 import { isOnboarded, supportUrl } from '@/components/v2/home/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -38,7 +38,7 @@ const LOGIN_API =
 
 // Kurs tiliga qarab: Domwork (rus) yoki Homework (ingliz).
 const BRAND = {
-  russian: { name: 'Domwork', tagline: 'Rus tilida 0 dan\nerkin suhbatgacha', hello: 'Привет!', letters: ['Ж', 'Я', 'Ё', 'Щ'], cyr: true },
+  russian: { name: 'Domwork', tagline: 'Rus tilida 0 dan\nerkin suhbatgacha', hello: 'Приве́т!', letters: ['Ж', 'Я', 'Ё', 'Щ'], cyr: true },
   english: { name: 'Homework', tagline: 'Ingliz tilida 0 dan\nerkin suhbatgacha', hello: 'Hello!', letters: ['W', 'Q', 'Th', 'R'], cyr: false },
 } as const;
 
@@ -118,7 +118,7 @@ export default function V2Login() {
             <Text style={styles.tagline}>{brand.tagline}</Text>
           </View>
 
-          <View style={[styles.form, { paddingBottom: Math.max(34, insets.bottom + 14) }]}>
+          <View style={[styles.form, { paddingBottom: Math.max(22, insets.bottom + 8) }]}>
             <View style={styles.brandRow}>
               <View style={styles.brandMark}>
                 <Text style={styles.brandMarkText}>{brand.name[0]}</Text>
@@ -187,13 +187,17 @@ export default function V2Login() {
               <Text style={styles.submitText}>{loading ? 'Kirilmoqda…' : 'Kirish'}</Text>
             </Pressable>
 
-            <View style={styles.help}>
-              <SendOutlineIcon />
-              <Text style={styles.helpText}>
-                Login yoʻqmi?{' '}
-                <Text accessibilityRole="link" onPress={openSupport} style={styles.helpLink}>Telegram orqali soʻrang</Text>
-              </Text>
-            </View>
+            {/* Butun karta — Telegram'dagi menejerga havola. */}
+            <Pressable accessibilityRole="link" onPress={openSupport} style={styles.help}>
+              <View style={styles.helpIcon}>
+                <SendOutlineIcon color="#0B1220" />
+              </View>
+              <View style={styles.helpBody}>
+                <Text style={styles.helpTitle}>Login va parolni menejerdan oling</Text>
+                <Text style={styles.helpSub}>Telegram orqali yozing</Text>
+              </View>
+              <ChevronRightIcon />
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -240,9 +244,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingTop: 24,
+    paddingTop: 20,
     paddingHorizontal: 24,
-    gap: 14,
+    gap: 12,
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   brandMark: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#0B1220', alignItems: 'center', justifyContent: 'center' },
@@ -273,14 +277,19 @@ const styles = StyleSheet.create({
   submitText: { fontFamily: fonts.bodyHeavy, fontSize: 17, color: '#FFFFFF', fontWeight: 'normal' },
   help: {
     marginTop: 'auto',
+    minHeight: 64,
     backgroundColor: '#F4F6FA',
     borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingRight: 14,
+    paddingBottom: 10,
+    paddingLeft: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  helpText: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 18.9, color: '#4A5468', fontWeight: 'normal' },
-  helpLink: { fontFamily: fonts.bodyHeavy, color: '#2F5BFF', textDecorationLine: 'underline' },
+  helpIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#2AABEE', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  helpBody: { flex: 1, minWidth: 0, gap: 2 },
+  helpTitle: { fontFamily: fonts.bodyHeavy, fontSize: 15, color: '#0B1220', fontWeight: 'normal' },
+  helpSub: { fontFamily: fonts.body, fontSize: 13, color: '#4A5468', fontWeight: 'normal' },
 });

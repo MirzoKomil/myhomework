@@ -16,7 +16,7 @@ export const EyeIcon = ({ size = 20, color = '#4A5468' }: P) => (
 );
 
 export const SendOutlineIcon = ({ size = 22, color = '#2F5BFF' }: P) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" {...hidden}>
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
     <Path d="M21 4 3 11l6 2.5L19 7l-7.5 8.5L18 20z" />
   </Svg>
 );
@@ -24,6 +24,12 @@ export const SendOutlineIcon = ({ size = 22, color = '#2F5BFF' }: P) => (
 export const BackIcon = ({ size = 22, color = '#0B1220' }: P) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
     <Path d="M15 6l-6 6 6 6" />
+  </Svg>
+);
+
+export const ChevronRightIcon = ({ size = 18, color = '#5B6478', strokeWidth = 2.2 }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} {...hidden}>
+    <Path d="M9 6l6 6-6 6" />
   </Svg>
 );
 
