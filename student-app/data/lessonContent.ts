@@ -343,11 +343,15 @@ export const COURSE_TOTAL_LESSONS = 72;
 // Razgovor (speaking) darslar uchun o'zgarishsiz qoladi.
 // Darsni ochish qoidasi (2026-10-19, Abdulloh qarori) — barcha ekranlar
 // (darslar yo'li, so'zlar, o'yinlar, v2) shu bitta funksiyadan foydalanadi:
-//  • har qanday dars oldingi darsdan 60% o'zlashtirilganda ochiladi;
-//  • jonli dars ustoz davomat olgan bo'lsa ham ochiladi (foizdan qat'i nazar) —
-//    ustoz davomatni unutsa o'quvchi bekorga qulfda qolmasin.
-// CRM'da darsga alohida foiz (lock.requiredPercent) qo'yilgan bo'lsa, o'sha amal qiladi.
-export const LESSON_UNLOCK_PERCENT = 60;
+//  • videodars — oldingi dars kamida 50% bajarilganda ochiladi (avvalgidek);
+//  • jonli dars — avvalgidek ustoz davomat olgan + oldingi dars 50% bo'lsa,
+//    YOKI ustoz davomat olmagan bo'lsa ham oldingi dars 60% bajarilganda
+//    avtomatik ochiladi — ustoz davomatni unutsa o'quvchi qulfda qolmasin.
+// Hozir ochiq turgan hech bir dars bu o'zgarish bilan yopilib qolmaydi.
+// CRM'da darsga alohida foiz (lock.requiredPercent) qo'yilgan bo'lsa, o'sha amal qiladi
+// (avtomatik ochilish chegarasi undan past bo'lmaydi).
+export const LESSON_UNLOCK_PERCENT = 50;
+export const LIVE_AUTO_UNLOCK_PERCENT = 60;
 
 export function lessonLockState(
   index: number,
@@ -358,9 +362,14 @@ export function lessonLockState(
   const requiredPercent = lesson?.lock?.enabled ? (lesson.lock.requiredPercent ?? LESSON_UNLOCK_PERCENT) : LESSON_UNLOCK_PERCENT;
   if (index < alwaysOpenCount) return { locked: false, requiredPercent };
   const isLiveDay = index % 2 !== 0;
-  if (prevPercent >= requiredPercent) return { locked: false, requiredPercent };
-  if (isLiveDay && lesson?.attendanceTaken) return { locked: false, requiredPercent };
-  return { locked: true, requiredPercent, reason: 'percent' };
+  if (!isLiveDay) {
+    return prevPercent >= requiredPercent ? { locked: false, requiredPercent } : { locked: true, requiredPercent, reason: 'percent' };
+  }
+  const autoPercent = Math.max(LIVE_AUTO_UNLOCK_PERCENT, requiredPercent);
+  if (lesson?.attendanceTaken && prevPercent >= requiredPercent) return { locked: false, requiredPercent };
+  if (prevPercent >= autoPercent) return { locked: false, requiredPercent: autoPercent };
+  // Qulf xabari: davomat olingan bo'lsa — oddiy chegara, aks holda 60% (shu bilan ochiladi).
+  return { locked: true, requiredPercent: lesson?.attendanceTaken ? requiredPercent : autoPercent, reason: 'percent' };
 }
 
 // 38-vazifa: Bosh sahifadagi "Umumiy progress" kartochkasi ilgari doim

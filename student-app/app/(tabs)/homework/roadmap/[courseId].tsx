@@ -523,7 +523,7 @@ export default function RoadmapScreen() {
   // bajarsa ham keyingi darsga o'tishi mumkin. Razgovor (speaking/jonli)
   // darslar uchun ustoz davomat olishi sharti (attendanceOk) o'zgarishsiz
   // qoladi — bu faqat foiz chegarasiga tegishli o'zgarish.
-  // 2026-10-19: qoida yangilandi — 60% YOKI (jonli darsda) davomat; qarang lessonLockState.
+  // 2026-10-19: jonli dars davomatsiz ham oldingi dars 60% bo'lsa ochiladi; qarang lessonLockState.
   const recomputeLessons = (mc: MobileContent, cId: string | undefined) => {
     const c = mc.courses.find((x) => x.id === cId) ?? mc.courses[0] ?? null;
     if (!c) return;
@@ -543,7 +543,7 @@ export default function RoadmapScreen() {
       const id = l?.id ?? String(lessonNum);
       const isVideoDay = i % 2 === 0;
 
-      // Qoida yagona: data/lessonContent.ts → lessonLockState (60% yoki davomat).
+      // Qoida yagona: data/lessonContent.ts → lessonLockState.
       const lockState = lessonLockState(i, l, prevPercent, UNLOCKED_COUNT);
       const locked = lockState.locked;
       const lockReason: 'percent' | 'attendance' | undefined = lockState.reason;
