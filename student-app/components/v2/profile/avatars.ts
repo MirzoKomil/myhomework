@@ -52,6 +52,12 @@ export async function savePreset(key: PresetKey | null) {
 
 /** Tayyor avatarning yuklanadigan manzili (webda /student/assets/..., native'da fayl). */
 export function presetUri(id: string): string | null {
-  const src = presetSource(id);
-  return src ? Image.resolveAssetSource(src)?.uri ?? null : null;
+  const src = presetSource(id) as unknown;
+  if (!src) return null;
+  // Webda require() natijasi tayyor manzil (satr yoki {uri}); Image.resolveAssetSource
+  // webda yo'q — chaqirilsa xato berib, "Saqlash" hech narsa saqlamasdi.
+  if (typeof src === 'string') return src;
+  if (typeof src === 'object' && src !== null && 'uri' in src) return String((src as { uri: string }).uri);
+  const resolve = (Image as { resolveAssetSource?: (s: unknown) => { uri?: string } | null }).resolveAssetSource;
+  return resolve ? resolve(src)?.uri ?? null : null;
 }
