@@ -1771,6 +1771,11 @@ function renderEditableList(container, opts) {
             const raw = isEdit ? item[f.key] : undefined;
             const val = Array.isArray(raw) ? raw.join(', ') : (raw !== undefined ? raw : '');
             const req = f.required ? ` <span style="color:var(--danger)">*</span>` : '';
+            if (f.type === 'lines') {
+                // Har qator — ro'yxatning bitta elementi (vergul ichida bo'lishi mumkin).
+                const text = Array.isArray(raw) ? raw.join('\n') : (raw || '');
+                return `<div class="form-group"><label>${f.label}${req}</label><textarea id="lcField_${f.key}" class="form-control" rows="4" placeholder="${escapeHtml(f.placeholder || '')}">${escapeHtml(String(text))}</textarea></div>`;
+            }
             if (f.type === 'textarea') {
                 // rich: true — uzun matnlar uchun formatlash paneli (qalin, rang...)
                 const toolbar = f.rich ? richTextToolbarHtml(`lcField_${f.key}`) : '';
@@ -1885,6 +1890,7 @@ function renderEditableList(container, opts) {
                 const raw = document.getElementById(`lcField_${f.key}`).value.trim();
                 if (f.required && !raw) ok = false;
                 if (f.type === 'csv') next[f.key] = raw.split(',').map(s => s.trim()).filter(Boolean);
+                else if (f.type === 'lines') next[f.key] = raw.split('\n').map(s => s.trim()).filter(Boolean);
                 else if (f.type === 'number' || f.type === 'optionIndexSelect') next[f.key] = Number(raw) || 0;
                 else if (f.type === 'boolean') next[f.key] = raw === 'yes';
                 else next[f.key] = raw;
@@ -3208,7 +3214,7 @@ function renderMobileShopProductsTab(container) {
                         : `<div style="width:40px;height:40px;border-radius:8px;flex-shrink:0;background:var(--bg,#f9fafb);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px">🛍️</div>`}
                     <div>
                         <strong>${escapeHtml(item.name || '—')}</strong>
-                        <div style="color:var(--text-muted);margin-top:2px">🪙 ${Number(item.price) || 0} coin · ${item.delivered === false ? 'Yetkazib berilmaydi' : 'Yetkazib beriladi'}</div>
+                        <div style="color:var(--text-muted);margin-top:2px">🪙 ${Number(item.price) || 0} coin · ${item.delivered === false ? 'Yetkazib berilmaydi' : 'Yetkazib beriladi'} · ${item.course === 'russian' ? 'Rus tili' : 'Ingliz tili'}</div>
                     </div>
                 </div>
             `,
@@ -3217,6 +3223,15 @@ function renderMobileShopProductsTab(container) {
                 { key: 'imageUrl', label: 'Mahsulot rasmi', type: 'image' },
                 { key: 'price', label: 'Narxi (coin)', required: true, type: 'number', placeholder: '600' },
                 { key: 'delivered', label: 'Yetkazib beriladimi?', type: 'boolean' },
+                // Yangi ilova do'koni (faqat kitoblar) uchun qo'shimcha maydonlar.
+                { key: 'course', label: 'Qaysi kurs do\'konida chiqadi', type: 'select', options: [
+                    { value: 'english', label: 'Ingliz tili (Homework)' },
+                    { value: 'russian', label: 'Rus tili (Domwork)' },
+                ] },
+                { key: 'subtitle', label: 'Kartadagi qisqa izoh', placeholder: 'Koʻchadagi iboralar' },
+                { key: 'description', label: 'Tavsif (kitob sahifasida)', type: 'textarea', placeholder: 'Koʻchada ishlatiladigan 100 ta ibora' },
+                { key: 'pages', label: 'Sahifalar soni', type: 'number', placeholder: '120' },
+                { key: 'features', label: 'Afzalliklar (har biri yangi qatorda)', type: 'lines', placeholder: 'Har bir ibora: tarjima, urgʻu va misol' },
             ],
             onChange: (newItems) => {
                 newItems.forEach(item => {
