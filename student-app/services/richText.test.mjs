@@ -35,31 +35,46 @@ t('ichma-ich: **qalin *kursiv* qalin**', () => {
     { text: ' c', italic: true },
   ]);
 });
-t('ranglar (koʻk / kok / ko\'k, qizil, yashil, sariq)', () => {
+t('ranglar: koʻk / kok, yopuvchi nom bir xil bo\'lishi shart', () => {
   assert.deepEqual(parseInline('{koʻk}x{/koʻk}'), [{ text: 'x', color: 'kok' }]);
   assert.deepEqual(parseInline('{kok}x{/kok}'), [{ text: 'x', color: 'kok' }]);
-  assert.deepEqual(parseInline("{ko'k}x{/koʻk}"), [{ text: 'x', color: 'kok' }]);
+  assert.deepEqual(parseInline('{kok}x{/koʻk}'), [{ text: '{kok}x{/koʻk}' }]);
   assert.deepEqual(parseInline('{qizil}**x**{/qizil} y'), [{ text: 'x', color: 'qizil', bold: true }, { text: ' y' }]);
-  assert.deepEqual(parseInline('{yashil}a {yashil}b{/yashil}{/yashil}'), [{ text: 'a b', color: 'yashil' }]);
   assert.equal(plain(parseInline('{sariq}s{/sariq}')), 's');
+  assert.deepEqual(parseInline('{yashil}{/yashil}a'), [{ text: 'a' }]);
+});
+t('o\'tishlar tartibi CRM bilan bir xil: rang, **, __, ==, *', () => {
+  // ** rangli bo'lak ustidan ham ishlaydi (rang avval almashtiriladi).
+  assert.deepEqual(parseInline('**a {qizil}b{/qizil} c**'), [
+    { text: 'a ', bold: true },
+    { text: 'b', bold: true, color: 'qizil' },
+    { text: ' c', bold: true },
+  ]);
+  // Noto'g'ri ichma-ichlik ham matnni yo'qotmaydi.
+  assert.equal(plain(parseInline('**a __b** c__')), 'a b c');
+  assert.deepEqual(parseInline('**a *b* c**'), [
+    { text: 'a ', bold: true },
+    { text: 'b', bold: true, italic: true },
+    { text: ' c', bold: true },
+  ]);
+  // CRM regex'idagidek: yakka * juftlari kursiv bo'ladi, bitta "___" esa o'zgarmaydi.
+  assert.deepEqual(parseInline('Я ___ студент'), [{ text: 'Я ___ студент' }]);
+  assert.deepEqual(parseInline('2 * 3 * 4'), [{ text: '2 ' }, { text: ' 3 ', italic: true }, { text: ' 4' }]);
 });
 t('juftsiz belgilar — oddiy matn, hech narsa yo\'qolmaydi', () => {
-  for (const s of ['**ochiq', 'yopiq**', '*a', '{qizil}yopilmagan', 'x{/qizil}', '{ko\'k}a{/qizil}', '__a', '==a', '{}', '{qizil}{/qizil}', '****', '** **', '* *']) {
+  for (const s of ['**ochiq', 'yopiq**', '*a', '{qizil}yopilmagan', 'x{/qizil}', '{kok}a{/qizil}', '__a', '==a', '{}', '****', '{Qizil}a{/Qizil}']) {
     assert.equal(plain(parseInline(s)), s, s);
   }
 });
-t('bo\'sh joy belgilari va matematik yulduzcha formatlanmaydi', () => {
-  assert.equal(plain(parseInline('Я ___ студент, ты ___ врач')), 'Я ___ студент, ты ___ врач');
-  assert.deepEqual(parseInline('Я ___ студент, ты ___ врач'), [{ text: 'Я ___ студент, ты ___ врач' }]);
-  assert.deepEqual(parseInline('2 * 3 * 4'), [{ text: '2 * 3 * 4' }]);
-  assert.deepEqual(parseInline('a === b === c'), [{ text: 'a === b === c' }]);
-});
-t('sarlavha va ro\'yxat qatorlari', () => {
-  const b = parseRichText('# Mavzu\n- birinchi **x**\noddiy\n\n#teg');
-  assert.deepEqual(b.map((x) => x.kind), ['h', 'li', 'p', 'p', 'p']);
+t('sarlavha, ro\'yxat va bo\'sh qator (oraliq)', () => {
+  const b = parseRichText('# Mavzu\n- birinchi **x**\noddiy\n\n#teg\n   \n-yo\'q');
+  assert.deepEqual(b.map((x) => x.kind), ['h', 'li', 'p', 'p', 'p', 'p', 'p']);
   assert.equal(plain(b[0].spans), 'Mavzu');
   assert.equal(plain(b[1].spans), 'birinchi x');
+  assert.deepEqual(b[3].spans, []);
   assert.equal(plain(b[4].spans), '#teg');
+  assert.deepEqual(b[5].spans, []);
+  assert.equal(plain(b[6].spans), "-yo'q");
 });
 t('stripRichText / speakableText', () => {
   const s = '# Salom\n- **Привет** — {koʻk}salom{/koʻk}\n==Можно меню?==';

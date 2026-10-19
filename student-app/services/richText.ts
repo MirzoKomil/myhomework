@@ -3,16 +3,21 @@
  * React/RN'ga bog'liq emas, shuning uchun node'da ham sinab ko'rsa bo'ladi
  * (services/richText.test.mjs).
  *
- * Qoidalar (har bir qator alohida tahlil qilinadi):
- *   **qalin**  *kursiv*  __tagiga chizilgan__  ==sariq fon==
- *   {koʻk}…{/koʻk} {qizil}…{/qizil} {yashil}…{/yashil} {sariq}…{/sariq}
- *   "# " bilan boshlangan qator — sarlavha, "- " bilan — ro'yxat bandi.
+ * Qoidalar CRM'dagi oldindan ko'rish (js/richText.js, formatRichText) bilan
+ * AYNAN bir xil — admin nimani ko'rsa, o'quvchi ham shuni ko'rsin:
+ *   - har bir qator alohida; "# " (# + bo'shliq) — sarlavha, "- " — ro'yxat
+ *     bandi, bo'sh qator — oraliq;
+ *   - qator ichida ketma-ket o'tishlar: avval {rang}…{/rang} (yopuvchi nom
+ *     ochuvchi bilan bir xil bo'lishi shart, rang faqat bir qator ichida),
+ *     keyin **qalin**, __tagiga chizilgan__, ==fon==, oxirida yakka *kursiv*;
+ *     har biri eng qisqa (non-greedy) moslik bilan.
  * Juftligi topilmagan belgilar oddiy matn bo'lib qoladi — matn hech qachon
  * yo'qolmaydi va xato chiqmaydi (admin xato yozsa ham o'quvchi matnni ko'radi).
  */
 
 export type RichColor = 'kok' | 'qizil' | 'yashil' | 'sariq';
 
+// Ranglar — ilova dizayn palitrasidan (CRM'dagi tuslarga yaqin).
 export const RICH_COLORS: Record<RichColor, string> = {
   kok: '#2F5BFF',
   qizil: '#D92D20',
@@ -32,58 +37,47 @@ export type RichSpan = {
 
 export type RichBlock = { kind: 'p' | 'h' | 'li'; spans: RichSpan[] };
 
-type Fmt = Omit<RichSpan, 'text'>;
+// CRM regex'lar bilan almashtiradi; biz HTML teglar o'rniga matnda uchramaydigan
+// (Private Use) belgilarni qo'yamiz, keyin ularni bo'laklarga aylantiramiz.
+// Shunday qilib keyingi o'tishlar (masalan ** rangli bo'lak ustidan) CRM'dagidek ishlaydi.
+const P = 0xe000;
+const COLOR_OPEN: Record<RichColor, string> = {
+  kok: String.fromCharCode(P + 1),
+  qizil: String.fromCharCode(P + 2),
+  yashil: String.fromCharCode(P + 3),
+  sariq: String.fromCharCode(P + 4),
+};
+const COLOR_CLOSE = String.fromCharCode(P + 5);
+type Toggle = 'bold' | 'underline' | 'highlight' | 'italic';
+const OPEN: Record<Toggle, string> = {
+  bold: String.fromCharCode(P + 6),
+  underline: String.fromCharCode(P + 8),
+  highlight: String.fromCharCode(P + 10),
+  italic: String.fromCharCode(P + 12),
+};
+const CLOSE: Record<Toggle, string> = {
+  bold: String.fromCharCode(P + 7),
+  underline: String.fromCharCode(P + 9),
+  highlight: String.fromCharCode(P + 11),
+  italic: String.fromCharCode(P + 13),
+};
+const MARKER_RE = /[-]/;
 
-// "koʻk" turli apostroflar bilan yoziladi (ʻ ' ‘ ’ `) yoki umuman apostrofsiz.
-const COLOR_TAG = /^\{(\/?)(ko[ʻ'‘’`]?k|qizil|yashil|sariq)\}/i;
+const colorKey = (name: string): RichColor => (name === 'koʻk' || name === 'kok' ? 'kok' : (name as RichColor));
 
-function colorKey(name: string): RichColor {
-  const n = name.toLowerCase();
-  return n.startsWith('ko') ? 'kok' : (n as RichColor);
+/** CRM'dagi _rtInline o'tishlari — xuddi shu tartib va shu regex'lar. */
+function markInline(line: string): string {
+  let s = line;
+  s = s.replace(/\{(koʻk|kok|qizil|yashil|sariq)\}([\s\S]*?)\{\/\1\}/g, (_, c: string, inner: string) => COLOR_OPEN[colorKey(c)] + inner + COLOR_CLOSE);
+  s = s.replace(/\*\*(.+?)\*\*/g, (_, x: string) => OPEN.bold + x + CLOSE.bold);
+  s = s.replace(/__(.+?)__/g, (_, x: string) => OPEN.underline + x + CLOSE.underline);
+  s = s.replace(/==(.+?)==/g, (_, x: string) => OPEN.highlight + x + CLOSE.highlight);
+  // Qalin (**) allaqachon almashtirilgan — bu yerda faqat yakka *.
+  s = s.replace(/\*([^*]+?)\*/g, (_, x: string) => OPEN.italic + x + CLOSE.italic);
+  return s;
 }
 
-type Toggle = { mark: string; key: 'bold' | 'italic' | 'underline' | 'highlight' };
-// Uzunroq belgi avval tekshiriladi ("**" "*" dan oldin).
-const TOGGLES: Toggle[] = [
-  { mark: '**', key: 'bold' },
-  { mark: '__', key: 'underline' },
-  { mark: '==', key: 'highlight' },
-  { mark: '*', key: 'italic' },
-];
-
-const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c);
-
-/** s[i]'dagi belgi aynan shu uzunlikdagi qatormi — "___" (bo'sh joy) yoki "===" chiziq belgi emas. */
-function exactRun(s: string, i: number, mark: string): boolean {
-  if (!s.startsWith(mark, i)) return false;
-  const ch = mark[0];
-  return s[i - 1] !== ch && s[i + mark.length] !== ch;
-}
-
-/** Yopuvchi belgini qidiradi: undan oldin bo'shliq bo'lmasligi kerak ("2 * 3" kursiv emas). */
-function findClose(s: string, from: number, mark: string): number {
-  for (let j = from; j < s.length; j++) {
-    if (exactRun(s, j, mark) && !isSpace(s[j - 1]) && j > from) return j;
-  }
-  return -1;
-}
-
-/** {rang} uchun mos {/rang}ni topadi (bir xil rang ichma-ich bo'lsa ham). */
-function findColorClose(s: string, from: number, key: RichColor): { at: number; len: number } | null {
-  let depth = 0;
-  for (let j = from; j < s.length; j++) {
-    if (s[j] !== '{') continue;
-    const m = COLOR_TAG.exec(s.slice(j));
-    if (!m || colorKey(m[2]) !== key) continue;
-    if (m[1]) {
-      if (depth === 0) return { at: j, len: m[0].length };
-      depth--;
-    } else depth++;
-  }
-  return null;
-}
-
-function pushText(out: RichSpan[], text: string, fmt: Fmt) {
+function pushText(out: RichSpan[], text: string, fmt: Omit<RichSpan, 'text'>) {
   if (!text) return;
   const last = out[out.length - 1];
   // Bir xil formatdagi qo'shni bo'laklarni birlashtiramiz (kamroq <Text>).
@@ -92,60 +86,54 @@ function pushText(out: RichSpan[], text: string, fmt: Fmt) {
   } else out.push({ text, ...fmt });
 }
 
-function parseInlineInto(s: string, fmt: Fmt, out: RichSpan[], depth: number) {
+export function parseInline(line: string): RichSpan[] {
+  const out: RichSpan[] = [];
+  const s = markInline(String(line ?? ''));
+  if (!MARKER_RE.test(s)) return s ? [{ text: s }] : [];
+  // Belgilar noto'g'ri ichma-ich bo'lishi mumkin (**a __b** c__) — brauzer
+  // kabi har bir format alohida sanaladi, shuning uchun hech narsa yo'qolmaydi.
+  const count: Record<Toggle, number> = { bold: 0, underline: 0, highlight: 0, italic: 0 };
+  const colors: RichColor[] = [];
   let buf = '';
-  let i = 0;
+  const fmt = (): Omit<RichSpan, 'text'> => {
+    const f: Omit<RichSpan, 'text'> = {};
+    if (count.bold) f.bold = true;
+    if (count.italic) f.italic = true;
+    if (count.underline) f.underline = true;
+    if (count.highlight) f.highlight = true;
+    if (colors.length) f.color = colors[colors.length - 1];
+    return f;
+  };
   const flush = () => {
-    pushText(out, buf, fmt);
+    pushText(out, buf, fmt());
     buf = '';
   };
-  while (i < s.length) {
-    const c = s[i];
-    // Juda chuqur ichma-ichlik — himoya: qolganini oddiy matn sifatida.
-    if (depth < 12 && (c === '*' || c === '_' || c === '=')) {
-      const t = TOGGLES.find((x) => exactRun(s, i, x.mark));
-      if (t && !fmt[t.key] && !isSpace(s[i + t.mark.length])) {
-        const close = findClose(s, i + t.mark.length, t.mark);
-        if (close > 0) {
-          flush();
-          parseInlineInto(s.slice(i + t.mark.length, close), { ...fmt, [t.key]: true }, out, depth + 1);
-          i = close + t.mark.length;
-          continue;
-        }
-      }
-    } else if (depth < 12 && c === '{') {
-      const m = COLOR_TAG.exec(s.slice(i));
-      if (m && !m[1]) {
-        const key = colorKey(m[2]);
-        const close = findColorClose(s, i + m[0].length, key);
-        if (close && close.at > i + m[0].length) {
-          flush();
-          parseInlineInto(s.slice(i + m[0].length, close.at), { ...fmt, color: key }, out, depth + 1);
-          i = close.at + close.len;
-          continue;
-        }
-      }
+  for (const ch of s) {
+    const code = ch.charCodeAt(0);
+    if (code < P + 1 || code > P + 13) {
+      buf += ch;
+      continue;
     }
-    buf += c;
-    i++;
+    flush();
+    if (code <= P + 4) colors.push((['kok', 'qizil', 'yashil', 'sariq'] as RichColor[])[code - P - 1]);
+    else if (code === P + 5) colors.pop();
+    else {
+      const k = (['bold', 'underline', 'highlight', 'italic'] as Toggle[])[Math.floor((code - P - 6) / 2)];
+      count[k] = Math.max(0, count[k] + ((code - P - 6) % 2 === 0 ? 1 : -1));
+    }
   }
   flush();
-}
-
-export function parseInline(s: string): RichSpan[] {
-  const out: RichSpan[] = [];
-  parseInlineInto(s, {}, out, 0);
   return out;
 }
 
 export function parseRichText(text: string): RichBlock[] {
   return String(text ?? '')
-    .split(/\r?\n/)
+    .split(/\r\n?|\n/)
     .map((line) => {
-      const h = /^\s*# (.*)$/.exec(line);
-      if (h) return { kind: 'h' as const, spans: parseInline(h[1]) };
-      const li = /^\s*- (.*)$/.exec(line);
-      if (li) return { kind: 'li' as const, spans: parseInline(li[1]) };
+      if (/^#\s+/.test(line)) return { kind: 'h' as const, spans: parseInline(line.replace(/^#\s+/, '')) };
+      if (/^-\s+/.test(line)) return { kind: 'li' as const, spans: parseInline(line.replace(/^-\s+/, '')) };
+      // Bo'sh (yoki faqat bo'shliqdan iborat) qator — oraliq.
+      if (!line.trim()) return { kind: 'p' as const, spans: [] };
       return { kind: 'p' as const, spans: parseInline(line) };
     });
 }
@@ -153,7 +141,7 @@ export function parseRichText(text: string): RichBlock[] {
 /** Matnda belgilash bo'lishi mumkinmi — yo'q bo'lsa matn avvalgidek ko'rsatiladi. */
 export function hasRichText(text: string | null | undefined): boolean {
   if (!text) return false;
-  return /\*|__|==|\{\/?(ko|qizil|yashil|sariq)/i.test(text) || /^\s*(# |- )/m.test(text);
+  return /\*|__|==|\{(koʻk|kok|qizil|yashil|sariq)\}/.test(text) || /^(#|-)\s/m.test(text);
 }
 
 export const BULLET = '• ';
