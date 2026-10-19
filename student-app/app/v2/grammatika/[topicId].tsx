@@ -12,10 +12,12 @@ import { useCallback, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { RichText } from '@/components/RichText';
 import { loadGrammarRows, type GrammarRow } from '@/components/v2/library/grammar';
 import { BackButton, Check, Column, Display, go, PlayRounded, T } from '@/components/v2/library/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
+import { fonts } from '@/constants/v2/tokens';
 
 export default function GrammarTopicScreen() {
   const insets = useSafeAreaInsets();
@@ -79,7 +81,7 @@ export default function GrammarTopicScreen() {
                 )}
                 <Display size={24} ls={-0.01} color="#FFFFFF">{lesson?.lesson.name || topic.title}</Display>
                 {!!topic.formula && (
-                  <T w={700} size={13} color="#FFFFFF" lh={1.35}>{topic.formula}</T>
+                  <T w={700} size={13} color="#FFFFFF" lh={1.35}><RichText inline style={{ fontFamily: fonts.bodyBold }} text={topic.formula} /></T>
                 )}
               </View>
               <View style={styles.heroImgBox}>
@@ -94,7 +96,7 @@ export default function GrammarTopicScreen() {
                 <T w={800} size={12} color="#4A5468" style={{ paddingTop: 2, paddingBottom: 6 }}>{topic.title}</T>
                 {!!topic.description && (
                   <View style={styles.tableRow}>
-                    <T w={700} size={14.5} lh={1.45}>{topic.description}</T>
+                    <T w={700} size={14.5} lh={1.45}><RichText inline style={{ fontFamily: fonts.bodyBold }} text={topic.description} /></T>
                   </View>
                 )}
               </View>

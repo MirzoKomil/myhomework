@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ChatThreadView } from '@/components/chat/ChatThreadView';
+import { RichText } from '@/components/RichText';
 import { fonts } from '@/constants/v2/tokens';
 import type { ChatMessage } from '@/data/mock';
 import type { RoleplayScenario, SpeakingPrompt } from '@/data/lessonContent';
@@ -185,7 +186,7 @@ export function RoleplayView({ scenario, ...b }: Base & { scenario: RoleplayScen
       <LabelHeader label={b.label} current={Math.min(line, scenario.lines.length)} total={scenario.lines.length} color="#FF7A1A" onClose={b.onClose} />
       <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
         <Txt f="body" size={13} color="#4A5468">
-          {scenario.intro}
+          <RichText inline style={{ fontFamily: fonts.body }} text={scenario.intro} />
         </Txt>
       </View>
       <ChatThreadView
@@ -302,7 +303,7 @@ export function CreativeView({ instruction, mediaType, category, ...b }: Base & 
         <>
           <ScrollView contentContainerStyle={st.body} keyboardShouldPersistTaps="handled">
             <Txt f="bodyBold" size={15} color="#4A5468">
-              {instruction}
+              <RichText inline style={{ fontFamily: fonts.bodyBold }} text={instruction} />
             </Txt>
             {mediaType === 'text' ? (
               <>

@@ -20,6 +20,7 @@ import {
   speakerColor,
   speakersOf,
   trackLines,
+  type DialogLine,
 } from '@/components/v2/lessons/data';
 import { ArrowRight, CheckAlt, CloseIcon, SpeakerOutlineIcon } from '@/components/v2/lessons/icons';
 import { BottomBar, Center, Column, HeaderButton } from '@/components/v2/lessons/parts';
@@ -27,6 +28,9 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchMobileContent, type MobileContent } from '@/services/contentApi';
+import { stripRichText } from '@/services/richText';
+
+const plainLines = (ls: DialogLine[]) => ls.map((l) => ({ ...l, ru: stripRichText(l.ru), uz: stripRichText(l.uz) }));
 
 export default function QuickCheckScreen() {
   const insets = useSafeAreaInsets();
@@ -50,8 +54,9 @@ export default function QuickCheckScreen() {
 
   const tracks = useMemo(() => (mc ? getAudioTracks(mc, id) : []), [mc, id]);
   const track = tracks[trackIdx];
-  const lines = useMemo(() => (mc && track ? trackLines(mc, track) : []), [mc, track]);
-  const pool = useMemo(() => (mc ? tracks.filter((_, k) => k !== trackIdx).flatMap((t) => trackLines(mc, t)) : []), [mc, tracks, trackIdx]);
+  // Test variantlari oddiy matn bilan solishtiriladi va o'qiladi — belgilash olib tashlanadi.
+  const lines = useMemo(() => (mc && track ? plainLines(trackLines(mc, track)) : []), [mc, track]);
+  const pool = useMemo(() => (mc ? tracks.filter((_, k) => k !== trackIdx).flatMap((t) => plainLines(trackLines(mc, t))) : []), [mc, tracks, trackIdx]);
   const questions = useMemo(() => buildQuickCheck(lines, pool), [lines, pool]);
   const speakers = speakersOf(lines);
   const q = questions[qi];

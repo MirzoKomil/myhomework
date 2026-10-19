@@ -163,6 +163,54 @@ export type AdminModuleContent = {
   createdAt?: string;
 };
 
+// CRM'dagi "Audio dialoglar" — kitob audiosi va uning matni. start —
+// replika boshlanish soniyasi (admin belgilagan bo'lsa); bo'lmasa ilova
+// replikalarni audio davomiyligiga teng bo'lib taxminlaydi.
+export type AdminAudioDialogLine = { speaker: string; ru: string; uz: string; start?: number };
+
+export type AdminAudioDialog = {
+  id: string;
+  title: string;
+  audioUrl: string;
+  coverUrl?: string;
+  bookPart?: number;
+  trackNo?: number;
+  durationSec?: number;
+  lines: AdminAudioDialogLine[];
+};
+
+// Server '/uploads/...' kabi nisbiy havola beradi: web'da shu origin'dan
+// ochiladi, native'da esa API manzili oldiga qo'shilishi kerak.
+export function resolveMediaUrl(url: string | undefined | null): string | undefined {
+  if (!url) return undefined;
+  if (Platform.OS !== 'web' && url.startsWith('/') && !url.startsWith('//')) {
+    return (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + url;
+  }
+  return url;
+}
+
+const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : undefined);
+
+// CRM ma'lumoti to'liq bo'lmasa ham ilova yiqilmasin — audiosiz dialoglar
+// tashlab yuboriladi, qatorlar matn ko'rinishiga keltiriladi.
+function normalizeAudioDialogs(list: unknown): AdminAudioDialog[] | undefined {
+  if (!Array.isArray(list)) return undefined;
+  return list
+    .filter((d): d is AdminAudioDialog => !!d && typeof d === 'object' && typeof (d as AdminAudioDialog).audioUrl === 'string' && !!(d as AdminAudioDialog).audioUrl)
+    .map((d, i) => ({
+      id: String(d.id ?? `ad-${i}`),
+      title: String(d.title ?? ''),
+      audioUrl: resolveMediaUrl(d.audioUrl)!,
+      coverUrl: resolveMediaUrl(d.coverUrl),
+      bookPart: num(d.bookPart),
+      trackNo: num(d.trackNo),
+      durationSec: num(d.durationSec),
+      lines: (Array.isArray(d.lines) ? d.lines : [])
+        .filter((l) => !!l && typeof l === 'object')
+        .map((l) => ({ speaker: String(l.speaker ?? ''), ru: String(l.ru ?? ''), uz: String(l.uz ?? ''), start: num(l.start) })),
+    }));
+}
+
 // CRM'da "Dars" tahrirlovchisi orqali kiritilgan real dars tarkibi — barcha
 // maydonlar ixtiyoriy, chunki admin hali to'ldirmagan bo'lishi mumkin.
 export type AdminLessonContent = {
@@ -173,6 +221,7 @@ export type AdminLessonContent = {
   slides?: SlideContent[];
   speakingPractice?: SpeakingPrompt[];
   homeworkParts?: HomeworkPart[];
+  audioDialogs?: AdminAudioDialog[];
   updatedAt?: string;
 };
 
@@ -269,6 +318,7 @@ const contentCache = createSessionContentCache<MobileContent>(
         ...content,
         videoUrl: allowedVideoUrl(content.videoUrl),
         ...(content.homeworkParts ? { homeworkParts: supportedHomeworkParts(content.homeworkParts) } : {}),
+        ...(content.audioDialogs ? { audioDialogs: normalizeAudioDialogs(content.audioDialogs) } : {}),
       }]));
       return {
         courseLang: data.courseLang,

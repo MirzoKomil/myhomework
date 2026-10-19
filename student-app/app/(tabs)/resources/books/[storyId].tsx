@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RichText, speakableText } from '@/components/RichText';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { BOOK_LEVEL_LABELS, BOOK_STORIES, BookStory } from '@/data/bookStories';
@@ -52,7 +53,7 @@ export default function BookStoryScreen() {
     // ekaniga qaraydi — birinchi marta istalgan paragraf tinglanganida
     // shu kitob "eshitib o'rganilgan" deb belgilanadi.
     void markBookListened(story.id);
-    Speech.speak(p.en, {
+    Speech.speak(speakableText(p.en), {
       language: speechLang,
       rate: 0.95,
       onDone: () => {
@@ -102,7 +103,7 @@ export default function BookStoryScreen() {
         )}
         <Text style={styles.heroLevel}>{BOOK_LEVEL_LABELS[story.level]} · {t('res_story_audio_label')}</Text>
         <Text style={styles.heroTitle}>{story.title}</Text>
-        <Text style={styles.heroDesc}>{story.description}</Text>
+        <RichText style={styles.heroDesc} text={story.description} />
       </LinearGradient>
 
       <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -122,8 +123,8 @@ export default function BookStoryScreen() {
                   <Text style={styles.paraBadgeText}>{i + 1}</Text>
                 </View>
                 <View style={styles.paraTextWrap}>
-                  <Text style={styles.paraEn}>{p.en}</Text>
-                  <Text style={styles.paraUz}>{p.uz}</Text>
+                  <RichText style={styles.paraEn} text={p.en} />
+                  <RichText style={styles.paraUz} text={p.uz} />
                 </View>
                 <Ionicons
                   name={active ? 'volume-high' : 'volume-medium-outline'}

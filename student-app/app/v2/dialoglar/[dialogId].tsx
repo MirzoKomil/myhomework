@@ -21,6 +21,7 @@ import { ChevronLeftWide, Column, Display, findLessonForTitle, goBack, mmss, T, 
 import { R } from '@/constants/v2/routes';
 import type { SpeakingTopic } from '@/data/speakingTopics';
 import { fetchMobileContent } from '@/services/contentApi';
+import { speakableText } from '@/services/richText';
 
 type Topic = SpeakingTopic & { coverUrl?: string };
 const SECONDS_PER_WORD = 0.55; // taxminiy o'qish tezligi (1×), Book ekranidagi bilan bir xil
@@ -134,7 +135,7 @@ function DialogView({ topic, lesson, startFrac, heard, onHeard }: { topic: Topic
       setLine(k);
       setInLine(0);
       void Speech.stop();
-      Speech.speak(lines[k].ru, {
+      Speech.speak(speakableText(lines[k].ru), {
         language: 'ru-RU',
         rate: 0.95 * speedRef.current,
         onDone: () => {

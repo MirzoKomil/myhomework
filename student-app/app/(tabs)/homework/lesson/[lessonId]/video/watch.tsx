@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CommentsSheet } from '@/components/CommentsSheet';
 import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
+import { RichText } from '@/components/RichText';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { getResolvedLessonContent, LessonContent } from '@/data/lessonContent';
@@ -94,7 +95,7 @@ export default function WatchVideoScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t('common_konspekt')}</Text>
-          <Text style={styles.body}>{content.konspekt}</Text>
+          <RichText style={styles.body} text={content.konspekt} />
         </View>
       </ScrollView>
 

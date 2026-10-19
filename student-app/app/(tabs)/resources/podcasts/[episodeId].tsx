@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RichText, speakableText } from '@/components/RichText';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { getHomeworkArtworkUri, HOMEWORK_SCHOOL_NAME } from '@/constants/nowPlaying';
@@ -53,7 +54,7 @@ export default function PodcastEpisodeScreen() {
   const speakLine = (index: number, onDone?: () => void) => {
     const line = episode.lines[index];
     setPlayingIndex(index);
-    Speech.speak(line.en, {
+    Speech.speak(speakableText(line.en), {
       language: speechLang,
       rate: 0.95,
       onDone: () => {
@@ -150,14 +151,14 @@ export default function PodcastEpisodeScreen() {
                 speakLine(i);
               }}>
               <View style={styles.lineRow}>
-                <Text style={styles.lineEn}>{line.en}</Text>
+                <RichText style={styles.lineEn} text={line.en} />
                 <Ionicons
                   name={active ? 'volume-high' : 'volume-medium-outline'}
                   size={16}
                   color={active ? theme.colors.purple : theme.colors.textLight}
                 />
               </View>
-              <Text style={styles.lineUz}>{line.uz}</Text>
+              <RichText style={styles.lineUz} text={line.uz} />
             </Pressable>
           );
         })}

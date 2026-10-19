@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RichText, speakableText } from '@/components/RichText';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { SPEAKING_TOPICS, SpeakingTopic } from '@/data/speakingTopics';
@@ -47,7 +48,7 @@ export default function SpeakingTopicScreen() {
   const speakLine = (index: number, onDone?: () => void) => {
     const line = topic.lines[index];
     setPlayingIndex(index);
-    Speech.speak(line.en, {
+    Speech.speak(speakableText(line.en), {
       language: speechLang,
       rate: 0.95,
       onDone: () => {
@@ -96,7 +97,7 @@ export default function SpeakingTopicScreen() {
           <Text style={styles.heroEmoji}>{topic.emoji}</Text>
         )}
         <Text style={styles.heroTitle}>{topic.title}</Text>
-        <Text style={styles.heroDesc}>{topic.description}</Text>
+        <RichText style={styles.heroDesc} text={topic.description} />
       </LinearGradient>
 
       <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -120,8 +121,8 @@ export default function SpeakingTopicScreen() {
                   color={active ? theme.colors.purple : theme.colors.textLight}
                 />
               </View>
-              <Text style={styles.lineEn}>{line.en}</Text>
-              <Text style={styles.lineUz}>{line.uz}</Text>
+              <RichText style={styles.lineEn} text={line.en} />
+              <RichText style={styles.lineUz} text={line.uz} />
             </Pressable>
           );
         })}
