@@ -9,6 +9,7 @@
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { v2Back } from '@/services/v2Nav';
+import { resetPraiseRun, stopVoice } from '@/services/voicePraise';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,6 +55,10 @@ export default function MistakeReviewScreen() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
+  useEffect(() => {
+    resetPraiseRun();
+    return () => stopVoice();
+  }, []);
   const scores = useHomeworkScores();
 
   useEffect(() => {

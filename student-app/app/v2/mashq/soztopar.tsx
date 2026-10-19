@@ -18,7 +18,7 @@ import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
-import { playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
 import { loadMixContext, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
@@ -128,7 +128,7 @@ export default function WordSearchScreen() {
   useEffect(() => {
     if (!board) return;
     saveRecords({ wordSearch: { found: found.length, total: words.length } });
-    if (won) playWinSound();
+    if (won) playSfx('complete');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [found.length, board]);
 
@@ -148,6 +148,7 @@ export default function WordSearchScreen() {
     );
     if (hit) {
       setFound((f) => [...f, hit.word]);
+      playSfx('match');
       setPath([]);
       addCoins(1);
       addLightning(1);
@@ -177,8 +178,9 @@ export default function WordSearchScreen() {
       setTimeout(() => check(next), 0);
       if (next.length > 1 && !words.some((w) => !found.includes(w.word) && w.word.startsWith(next.map((p) => board.grid[p.r][p.c]).join('')))) {
         setFlash(true);
+        playSfx('wrong');
         setTimeout(() => setFlash(false), 300);
-      }
+      } else playSfx('pop');
       return next;
     });
   };

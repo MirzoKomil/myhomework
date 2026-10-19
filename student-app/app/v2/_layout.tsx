@@ -20,6 +20,9 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { installPressFeedback } from '@/services/pressFeedback';
+import { primeSfxOnFirstGesture } from '@/services/sfx';
+import { primeVoiceOnFirstGesture } from '@/services/voicePraise';
 
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { colors, fontFiles } from '@/constants/v2/tokens';
@@ -47,6 +50,12 @@ export default function V2Layout() {
   useEffect(() => {
     recordV2Path(pathname);
   }, [pathname]);
+  // Safari/iOS: ovoz effektlari bosishlar ichida "ochiladi" (audioUnlock.ts); tugmalarga bosish effekti.
+  useEffect(() => {
+    installPressFeedback();
+    primeSfxOnFirstGesture();
+    primeVoiceOnFirstGesture();
+  }, []);
 
   if (!loaded) {
     return (

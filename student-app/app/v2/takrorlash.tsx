@@ -14,6 +14,8 @@ import * as Speech from 'expo-speech';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedFill, FadeInUp } from '@/components/v2/motion';
+import { playSfx } from '@/services/sfx';
 
 import { BoltIcon, CloseIcon, ReviewClockIcon, SpeakerIcon } from '@/components/v2/home/icons';
 import { buildSession, daysAgo, loadReviews, saveReview, type ReviewRecord } from '@/components/v2/home/reviewStore';
@@ -71,6 +73,7 @@ export default function V2WordReview() {
 
   const answer = async (didKnow: boolean) => {
     if (!item || busy) return;
+    playSfx(didKnow ? 'correct' : 'flip');
     setBusy(true);
     await saveReview(item.word.english, didKnow);
     void addLightning(LIGHTNING_PER_WORD);
@@ -104,13 +107,14 @@ export default function V2WordReview() {
               </View>
             </View>
             <View style={styles.track} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: total, now: position }}>
-              <View style={[styles.fill, { width: `${total ? (position / total) * 100 : 0}%` }]} />
+              <AnimatedFill pct={total ? (position / total) * 100 : 0} color="#7C4DFF" height={8} radius={4} />
             </View>
           </View>
         </View>
 
         <View style={styles.body}>
           <ScrollView style={styles.cardScroll} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+            <FadeInUp key={index} distance={8} duration={260} style={{ flexGrow: 1 }}>
             <View accessibilityLabel="Soʻz kartasi" style={styles.card}>
               {item ? (
                 <>
@@ -160,6 +164,7 @@ export default function V2WordReview() {
                 </Text>
               )}
             </View>
+            </FadeInUp>
           </ScrollView>
 
           <View accessibilityLabel="Takrorlash holati" style={styles.stats}>

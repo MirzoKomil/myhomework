@@ -17,7 +17,7 @@ import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
-import { playLoseSound, playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
 import { loadMixContext, markMistake, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
@@ -108,27 +108,36 @@ export default function MysteryScreen() {
   const type = (l: string) => {
     if (over || cur.length >= LEN) return;
     setCur((c) => c + l);
+    playSfx('tap');
     setMsg(null);
   };
-  const back = () => { if (!over) setCur((c) => c.slice(0, -1)); };
+  const back = () => {
+    if (over) return;
+    setCur((c) => c.slice(0, -1));
+    playSfx('tap');
+  };
 
   const submit = () => {
     if (over || !answer) return;
-    if (cur.length !== LEN) return setMsg(`${LEN} harfli soʻz kiriting`);
+    if (cur.length !== LEN) {
+      playSfx('wrong');
+      return setMsg(`${LEN} harfli soʻz kiriting`);
+    }
     const st = evaluate(cur, answer);
     const next = [...guesses, { word: cur, st }];
     setGuesses(next);
+    if (cur !== answer && next.length < MAX_TRIES) playSfx('flip');
     setCur('');
     setMsg(null);
     if (cur === answer) {
       addCoins(1);
       addLightning(1);
       setOver('won');
-      playWinSound();
+      playSfx('complete');
       saveRecords({ mystery: { tries: next.length, max: MAX_TRIES } });
     } else if (next.length >= MAX_TRIES) {
       setOver('lost');
-      playLoseSound();
+      playSfx('lose');
       // Topilmagan so'z — "So'z takrorlash"da ertaga chiqadi.
       if (origRef.current[answer]) markMistake(origRef.current[answer]);
       saveRecords({ mystery: { tries: next.length, max: MAX_TRIES } });

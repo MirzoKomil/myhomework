@@ -6,7 +6,11 @@
  * o'quvchiga ko'rsatilmaydi — egasi qarori).
  * Narx va balans (hozirgi → narxdan keyingi) — haqiqiy coinsStore'dan.
  */
+import { useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { Bounce, Pop } from '@/components/v2/motion';
+import { playSfx } from '@/services/sfx';
 
 import { TICK2, TickIcon } from '@/components/v2/rewards/icons';
 import { BalanceValue, BottomSheet, InfoRows, PriceValue, RowLabel, SheetTop, sheetText } from '@/components/v2/rewards/sheet';
@@ -20,15 +24,18 @@ export function OrderSuccessPopup({ visible, price, onClose }: Props) {
   const coins = useCoins();
   // Dizayndagi "Doʻkonga qaytish" / "Yopish" — Shop'ga; oyna Shop ustida ochilgani uchun yopish kifoya.
   const back = onClose;
+  useEffect(() => {
+    if (visible) playSfx('unlock');
+  }, [visible]);
 
   return (
     <BottomSheet visible={visible} onClose={back} labelledBy="Streak himoyasi sotib olindi">
       <SheetTop onClose={back} />
       <View style={styles.head}>
-        <View>
+        <Bounce delay={120}>
           <Image source={designImages.f1f2b5015be3aab0bfaac974e1e01af0} accessibilityLabel="Qalqon ushlagan Domik" style={{ width: 130, height: 129 }} resizeMode="contain" />
-          <View style={styles.badge}><TickIcon size={16} color="#FFFFFF" strokeWidth={3.2} d={TICK2} /></View>
-        </View>
+          <Pop delay={380} style={styles.badge}><TickIcon size={16} color="#FFFFFF" strokeWidth={3.2} d={TICK2} /></Pop>
+        </Bounce>
         <View style={styles.okChip}><Text style={styles.okChipText}>Buyurtma tasdiqlandi</Text></View>
         <Text accessibilityRole="header" style={[sheetText.title, { lineHeight: 28.6 }]}>Streak himoyasi sotib olindi</Text>
         <Text style={sheetText.body}>Dars qoldirgan kuni seriyangiz avtomatik saqlanadi. Himoya bir marta ishlaydi.</Text>

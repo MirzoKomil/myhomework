@@ -6,8 +6,12 @@
  * tugaganda scoreStore'ga yozilgan haqiqiy natijalar.
  */
 import { router, type Href } from 'expo-router';
+import { useEffect } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Bounce, Confetti } from '@/components/v2/motion';
+import { playSfx } from '@/services/sfx';
+import { speak, stopVoice } from '@/services/voicePraise';
 
 import { ChevronRight, CloseIcon, Coin } from '@/components/v2/homework/icons';
 import { partLabel, partQuestionCount } from '@/components/v2/homework/lib';
@@ -25,9 +29,11 @@ type Props = {
   /** Avtomatik tekshiriladigan qismlar (ustoz tekshiradiganlar kirmaydi). */
   parts?: HomeworkPart[];
   scores?: Record<string, PartScore>;
+  /** Faqat birinchi ochilishda (vazifa hozirgina tugaganda) — fanfara, ovoz, konfetti. */
+  celebrate?: boolean;
 };
 
-export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, parts = [], scores = {} }: Props) {
+export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, parts = [], scores = {}, celebrate = false }: Props) {
   const insets = useSafeAreaInsets();
   const rows = parts.map((p) => {
     const total = partQuestionCount(p);
@@ -39,6 +45,15 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
   const coins = rows.reduce((a, r) => a + r.coins, 0);
   const mistakes = rows.reduce((a, r) => a + r.mistakes, 0);
   const pct = total ? Math.round((correct / total) * 100) : 0;
+
+  useEffect(() => {
+    if (!visible || !celebrate) return;
+    // Butun vazifa — eng katta bayram: fanfara (+ konfetti); past natijada yumshoqroq.
+    playSfx(pct >= 70 ? 'complete' : 'unlock');
+    // "Barakalla" faqat yaxshi natijada; past natijada — yumshoq dalda.
+    speak(pct >= 70 ? 'homework' : 'wrong', pct >= 70 ? 1550 : 700);
+    return () => stopVoice();
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (href: string) => {
     onClose();
@@ -58,12 +73,14 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
               </Pressable>
             </View>
             <View style={st.hero}>
-              <Image
-                source={designImages['81a355f68578bf95c65fc6772f9124c9']}
-                accessibilityLabel="Barmogʻini koʻtargan Domik"
-                resizeMode="contain"
-                style={{ width: 124, height: 130 }}
-              />
+              <Bounce delay={250}>
+                <Image
+                  source={designImages['81a355f68578bf95c65fc6772f9124c9']}
+                  accessibilityLabel="Barmogʻini koʻtargan Domik"
+                  resizeMode="contain"
+                  style={{ width: 124, height: 130 }}
+                />
+              </Bounce>
               <Txt f="display" size={26} lh={28.6} style={{ letterSpacing: -0.52, textAlign: 'center' }} accessibilityRole="header">
                 Vazifa tekshirildi
               </Txt>
@@ -129,6 +146,7 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
           </View>
         </View>
       </View>
+      {visible && celebrate && pct >= 70 && <Confetti count={40} seed={5} />}
     </Modal>
   );
 }

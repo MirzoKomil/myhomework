@@ -38,7 +38,9 @@ import {
   leaveBattleQueue,
   submitBattleAnswer,
 } from '@/services/contentApi';
-import { playLoseSound, playWinSound } from '@/services/gameSounds';
+import { playSfx } from '@/services/sfx';
+import { speak, stopVoice } from '@/services/voicePraise';
+import { Confetti } from '@/components/v2/motion';
 import { addLightning } from '@/services/lightningStore';
 import { useAuth } from '@/services/studentAuthStore';
 import { loadMixContext, markMistake, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
@@ -386,8 +388,13 @@ export default function BattleScreen() {
         if (ok) addCoins(V2_BATTLE_WIN_COINS);
         setWinPaid(ok);
       }).catch(() => setWinPaid(false));
-      playWinSound();
-    } else if (playerScore < opponentScore) playLoseSound();
+      playSfx('complete');
+      speak('gameWin', 1550);
+    } else if (playerScore < opponentScore) {
+      playSfx('lose');
+      speak('gameLose', 1050);
+    }
+    return () => stopVoice();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -399,6 +406,7 @@ export default function BattleScreen() {
     if (timeoutSubmitRef.current) clearTimeout(timeoutSubmitRef.current);
     setSelectedOption(option);
     const correct = option === currentWord.translation;
+    playSfx(correct ? 'correct' : 'wrong');
     // Xato javob — so'z "So'z takrorlash"da ertaga chiqadi.
     if (!correct) markMistake(currentWord.word);
     if (matchId) {
@@ -631,6 +639,7 @@ export default function BattleScreen() {
           <Text style={styles.footerText}>oladi</Text>
         </View>
       </View>
+      {phase === 'result' && playerScore > opponentScore && <Confetti count={34} />}
     </View>
   );
 }

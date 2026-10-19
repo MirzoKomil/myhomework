@@ -28,6 +28,7 @@ import {
   QuestionIcon,
   ShieldOutlineIcon,
   TelegramRowIcon,
+  SpeakerIcon, VoiceIcon,
 } from '@/components/v2/settings/icons';
 import { Column, ScreenHeader, ToggleKnob } from '@/components/v2/settings/parts';
 import { fetchSessions } from '@/components/v2/settings/sessions';
@@ -37,6 +38,8 @@ import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { useAvatarUri } from '@/services/avatarStore';
 import { fetchDemoStudentProfile } from '@/services/contentApi';
+import { setSfxEnabled, useSfxEnabled } from '@/services/sfx';
+import { setVoicePraiseEnabled, useVoicePraiseEnabled } from '@/services/voicePraise';
 import { useAuth } from '@/services/studentAuthStore';
 import { telegramLinkStatus } from '@/services/telegramLinkApi';
 
@@ -63,6 +66,8 @@ export default function V2Settings() {
   const [deviceCount, setDeviceCount] = useState<number | null>(null);
   const [botOpen, setBotOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const sfxOn = useSfxEnabled();
+  const voiceOn = useVoicePraiseEnabled();
 
   useEffect(() => {
     if (student?.name) setName(student.name);
@@ -145,10 +150,40 @@ export default function V2Settings() {
 
             <Section label="Ilova">
               <LinkRow icon={<GlobeIcon />} label="Ilova tili" value={LANG_LABEL[lang] ?? LANG_LABEL.uz} onPress={() => go(R.language)} divider />
+              {/* Ovoz effektlari: faqat shu qurilmada saqlanadi (services/sfx.ts). */}
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityLabel="Ovoz effektlari"
+                accessibilityState={{ checked: sfxOn }}
+                aria-checked={sfxOn}
+                onPress={() => setSfxEnabled(!sfxOn)}
+                style={({ pressed }) => [styles.row, styles.divider, pressed && styles.rowPressed]}
+              >
+                <SpeakerIcon />
+                <Text style={styles.rowLabel}>Ovoz effektlari</Text>
+                <ToggleKnob on={sfxOn} />
+              </Pressable>
+              {/* O'zbekcha ovozli maqtov ("Barakalla!", "Qoyil!") — faqat shu qurilmada saqlanadi. */}
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityLabel="Ovozli maqtov"
+                accessibilityState={{ checked: voiceOn }}
+                aria-checked={voiceOn}
+                onPress={() => setVoicePraiseEnabled(!voiceOn)}
+                style={({ pressed }) => [styles.row, styles.divider, pressed && styles.rowPressed]}
+              >
+                <VoiceIcon />
+                <Text style={styles.rowLabel}>
+                  Ovozli maqtov <Text style={styles.rowHint}>«Barakalla!»</Text>
+                </Text>
+                <ToggleKnob on={voiceOn} />
+              </Pressable>
               {/* Qorong'u rejim uchun hali saqlash joyi yo'q — dizayndagi kabi o'chiq turadi, bosilsa DarkMain (bosh sahifa) */}
               <Pressable
                 accessibilityRole="switch"
+                accessibilityLabel="Qorongʻu rejim"
                 accessibilityState={{ checked: false }}
+                aria-checked={false}
                 onPress={() => go(R.home)}
                 style={({ pressed }) => [styles.row, styles.divider, pressed && styles.rowPressed]}
               >

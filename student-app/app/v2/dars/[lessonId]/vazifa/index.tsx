@@ -7,9 +7,12 @@
  * (creativeSubmissionApi). Savollar soni/coin — scoreStore (qurilmada).
  * Vazifa muddati serverda yo'q — "—" ko'rsatiladi.
  */
+import { Confetti } from '@/components/v2/motion';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { v2Back } from '@/services/v2Nav';
 import { useCallback, useEffect, useState } from 'react';
+import { playSfx } from '@/services/sfx';
+import { speakUnlessRecent } from '@/services/voicePraise';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,9 +30,11 @@ import { useLessonProgress } from '@/services/lessonProgressStore';
 
 export default function HomeworkScreen() {
   const insets = useSafeAreaInsets();
-  const { lessonId, yuborildi } = useLocalSearchParams<{
+  const { lessonId, yuborildi, bajarildi } = useLocalSearchParams<{
     lessonId: string;
     yuborildi?: string;
+    /** Bitta qism hozirgina topshirildi — kichik konfetti. */
+    bajarildi?: string;
   }>();
   const id = String(lessonId);
   const [info, setInfo] = useState<LessonInfo | null>(null);
@@ -37,6 +42,18 @@ export default function HomeworkScreen() {
   const [reading, setReading] = useState<CreativeSubmissionRecord | null>(null);
   const [creative, setCreative] = useState<CreativeSubmissionRecord | null>(null);
   const [sentOpen, setSentOpen] = useState(yuborildi === '1');
+  // "Vazifa tekshirildi" bayrami faqat bir marta (qayta ochilganda / qayta yuklanganda — jim).
+  const [celebrate, setCelebrate] = useState(yuborildi === '1');
+  // Bitta qism hozirgina topshirildi: bayram bir marta (URL'dan bayroq olib
+  // tashlanadi — qayta yuklash yoki "Orqaga"da takrorlanmasin).
+  const [burst] = useState(bajarildi === '1');
+  useEffect(() => {
+    if (yuborildi === '1') router.setParams({ yuborildi: undefined });
+    if (!burst) return;
+    playSfx('complete');
+    speakUnlessRecent('correct', 1550);
+    router.setParams({ bajarildi: undefined });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const progress = useLessonProgress(id);
   const scores = useHomeworkScores();
 
@@ -386,7 +403,13 @@ export default function HomeworkScreen() {
           </Pressable>
         </View>
       </View>
-      <HomeworkSentPopup visible={sentOpen} onClose={() => setSentOpen(false)} lessonId={id} lessonNumber={info.number} parts={autoParts} scores={lessonScores} />
+      {burst && <Confetti count={26} seed={11} />}
+      <HomeworkSentPopup visible={sentOpen} onClose={() => {
+          setSentOpen(false);
+          setCelebrate(false);
+        }}
+        celebrate={celebrate}
+        lessonId={id} lessonNumber={info.number} parts={autoParts} scores={lessonScores} />
     </View>
   );
 }

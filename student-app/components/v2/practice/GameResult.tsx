@@ -11,6 +11,8 @@ import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { Bounce, Confetti, Pop } from '@/components/v2/motion';
+import { speak, stopVoice } from '@/services/voicePraise';
 
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -56,8 +58,14 @@ export function GameResult({ show, win, title, subtitle, stats, coins, lightning
       setOpen(false);
       return;
     }
-    const t = setTimeout(() => setOpen(true), 700);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      setOpen(true);
+      speak(win ? 'gameWin' : 'gameLose', win ? 1550 : 1050);
+    }, 700);
+    return () => {
+      clearTimeout(t);
+      stopVoice();
+    };
   }, [show]);
 
   const again = () => {
@@ -74,17 +82,19 @@ export function GameResult({ show, win, title, subtitle, stats, coins, lightning
             <Close />
           </Pressable>
           <View style={[st.hero, { backgroundColor: win ? '#E3F7EE' : '#FFF1E6' }]}>
-            <Image
-              source={designImages[win ? '81a355f68578bf95c65fc6772f9124c9' : '68633deaacf537e7e92265a39c0e0949']}
-              style={{ width: 132, height: 132 }}
-              resizeMode="contain"
-              accessibilityIgnoresInvertColors
-            />
+            <Bounce height={win ? 14 : 4}>
+              <Image
+                source={designImages[win ? '81a355f68578bf95c65fc6772f9124c9' : '68633deaacf537e7e92265a39c0e0949']}
+                style={{ width: 132, height: 132 }}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+            </Bounce>
           </View>
           {newRecord && (
-            <View style={st.recordChip}>
+            <Pop delay={300} style={st.recordChip}>
               <Text style={st.recordText}>Yangi rekord!</Text>
-            </View>
+            </Pop>
           )}
           <Text accessibilityRole="header" style={st.title}>
             {title}
@@ -135,6 +145,7 @@ export function GameResult({ show, win, title, subtitle, stats, coins, lightning
             <Text style={st.secondaryText}>Boshqa oʻyinlar</Text>
           </Pressable>
         </View>
+        {open && win && <Confetti count={34} />}
       </View>
     </Modal>
   );

@@ -6,6 +6,8 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { playSfx } from '@/services/sfx';
+import { praiseAnswer } from '@/services/voicePraise';
 
 import { designImages } from '@/constants/v2/designImages';
 import type { HomeworkPart, MatchPair } from '@/data/lessonContent';
@@ -69,6 +71,8 @@ export function MatchView({ lessonId, part, pairs, allParts, overline, replaySco
       setMatched(next);
       setSelected(null);
       run.answer(true);
+      playSfx('match');
+      praiseAnswer(true);
       if (next.size === pairs.length) {
         const accuracy = pairs.length / (pairs.length + wrongCount);
         setTimeout(() => void run.finish(Math.round(accuracy * pairs.length * 1000) / 1000), 500);
@@ -76,6 +80,8 @@ export function MatchView({ lessonId, part, pairs, allParts, overline, replaySco
     } else {
       const p = pairs.find((x) => x.id === selected);
       setWrongCount((c) => c + 1);
+      playSfx('wrong');
+      praiseAnswer(false);
       if (!run.replay && p) run.answer(false, `${p.left} — ${p.right}`, false);
       setWrong({ left: selected, right: id });
       setTimeout(() => {
