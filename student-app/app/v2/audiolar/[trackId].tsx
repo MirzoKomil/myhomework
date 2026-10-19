@@ -212,7 +212,7 @@ function TrackView({ track, siblings, lines }: { track: BookTrack; siblings: Boo
           <DialogText lines={lines} current={curLine} onLine={(k) => player.seekTo(lineStart(k))} empty="Bu trekka matn qoʻshilmagan." />
 
           <View style={styles.secHead}>
-            <T w={800} size={13} color="#4A5468" style={styles.upper}>{L}-dars treklari</T>
+            <T w={800} size={13} color="#4A5468" style={styles.upperH2}>{L}-dars treklari</T>
             <T w={800} size={12} color="#4A5468">Kitob</T>
           </View>
           <View accessibilityLabel={`${L}-dars treklari`} style={styles.list}>
@@ -255,6 +255,7 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   cover: { width: 72, height: 72, borderRadius: 20, flexShrink: 0 },
   upper: { textTransform: 'uppercase', letterSpacing: 0.72 },
+  upperH2: { textTransform: 'uppercase', letterSpacing: 0.78 }, // 13px × 0.06em
   qr: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E6EE', borderRadius: 9, paddingVertical: 4, paddingHorizontal: 8 },
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: -4 },
   list: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 6 },

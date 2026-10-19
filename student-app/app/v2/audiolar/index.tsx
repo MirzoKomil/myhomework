@@ -7,7 +7,8 @@
  * tinglanganmi (darsdagi bilan umumiy belgi); "davom etmoqda · 0:21" —
  * AudioTrack ekranida to'xtatilgan joy (qurilmada). Davomiylik — modulda
  * kiritilgan bo'lsa. Kitob "qism"i serverda yo'q — "Kitob · 14-trek".
- * QR skaner: ilovada kamera kutubxonasi yo'q → "tez orada" xabari.
+ * QR skanerlash tugmasi (kamera kutubxonasi yo'q) dizayndagi havola kabi
+ * davom etayotgan / bugungi trekning AudioTrack ekranini ochadi.
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -36,7 +37,6 @@ export default function AudioListScreen() {
   const [mc, setMc] = useState<MobileContent | null>(null);
   const [cur, setCur] = useState<{ id: string; index: number } | null>(null);
   const [pos, setPos] = useState<Record<string, { t: number; d: number }>>({});
-  const [qrNote, setQrNote] = useState(false);
   // Tinglangan treklar saqlagichini yuklaydi va o'zgarganda qayta chizadi.
   const listenedTick = useListened('').length;
 
@@ -61,6 +61,13 @@ export default function AudioListScreen() {
   const groups = useMemo(() => (mc && cur ? groupByLesson(allBookTracks(mc), cur.index) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [mc, cur, pos, listenedTick]);
+  // Dizayndagi havola: davom etayotgan trek, bo'lmasa bugungi darsning birinchi treki.
+  const allTracks = groups.flatMap((g) => g.tracks);
+  const qrTarget =
+    allTracks.find((t) => pos[t.id] && !t.heard)?.id ??
+    groups.find((g) => g.lesson.id === cur?.id)?.tracks[0]?.id ??
+    allTracks[0]?.id ??
+    null;
   const shown = month === 'all' ? groups : groups.filter((g) => String(lessonMonth(g.number)) === month);
 
   return (
@@ -75,13 +82,10 @@ export default function AudioListScreen() {
           <View style={styles.qrCard}>
             <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
               <T w={800} size={15} color="#FFFFFF" lh={1.35}>Kitobdagi QR kodni skanerlang — shu trek ochiladi</T>
-              <Pressable accessibilityRole="button" onPress={() => setQrNote(true)} style={({ pressed }) => [styles.qrBtn, pressed && { opacity: 0.85 }]}>
+              <Pressable accessibilityRole="link" disabled={!qrTarget} onPress={() => qrTarget && go(R.audioTrack(qrTarget))} style={({ pressed }) => [styles.qrBtn, pressed && { opacity: 0.85 }]}>
                 <CameraIcon />
                 <T w={800} size={14} color="#0B1220">QR skanerlash</T>
               </Pressable>
-              {qrNote && (
-                <T w={700} size={13} color="#B8C1D6" accessibilityLabel="QR skaner tez orada qoʻshiladi">QR skaner tez orada qoʻshiladi — hozircha trekni roʻyxatdan tanlang.</T>
-              )}
             </View>
             <View style={styles.qrArt}>
               <Image source={designImages['32eee84d436da97eb104c837c0065230']} style={{ width: 72, height: 72 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />

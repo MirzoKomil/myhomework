@@ -98,13 +98,16 @@ export default function OfflineScreen() {
           <Display size={24} lh={1.36}>Oflayn darslar</Display>
         </View>
 
-        <View accessibilityRole="summary" accessibilityLiveRegion="polite" style={styles.status}>
-          <NoWifiIcon />
-          <T w={700} size={14} color="#FFFFFF" style={{ flex: 1, minWidth: 0 }}>{online ? 'Internet bor' : 'Internet yoʻq'}</T>
-          <Pressable accessibilityRole="button" onPress={retry} style={({ pressed }) => [styles.retry, pressed && { opacity: 0.85 }]}>
-            <T w={800} size={13} color="#FFFFFF">Qayta urinish</T>
-          </Pressable>
-        </View>
+        {/* Dizayndagi "Internet yoʻq" chipi faqat oflayn paytda ko'rinadi. */}
+        {!online && (
+          <View accessibilityRole="summary" accessibilityLiveRegion="polite" style={styles.status}>
+            <NoWifiIcon />
+            <T w={700} size={14} color="#FFFFFF" style={{ flex: 1, minWidth: 0 }}>Internet yoʻq</T>
+            <Pressable accessibilityRole="button" onPress={retry} style={({ pressed }) => [styles.retry, pressed && { opacity: 0.85 }]}>
+              <T w={800} size={13} color="#FFFFFF">Qayta urinish</T>
+            </Pressable>
+          </View>
+        )}
 
         <View style={styles.body}>
           <View style={styles.hero}>

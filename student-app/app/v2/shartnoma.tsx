@@ -214,7 +214,7 @@ const st = StyleSheet.create({
   thumbOn: { backgroundColor: '#E8EEFF', borderColor: '#C9D6FF' },
   tl: { height: 3, borderRadius: 2, backgroundColor: '#D5DAE4' },
   // Dizayndagi kabi bir qatorda (white-space: nowrap) — ustundan chiqib ketsa ham kesilmaydi.
-  pageLabel: { ...(Platform.OS === 'web' ? ({ whiteSpace: 'nowrap' } as object) : null), flexShrink: 0, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
+  pageLabel: { ...(Platform.OS === 'web' ? ({ whiteSpace: 'nowrap' } as object) : null), flexShrink: 0, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, color: '#4A5468' },
   btns: { flexDirection: 'row', gap: 10 },
   dl: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#E8EEFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   dlText: { flexShrink: 1, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, color: '#1E3FD1' },

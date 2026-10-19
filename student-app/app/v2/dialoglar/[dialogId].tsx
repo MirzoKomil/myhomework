@@ -226,7 +226,7 @@ function DialogView({ topic, lesson, startFrac, heard, onHeard }: { topic: Topic
           <DialogText lines={lines} current={line} onLine={jump} empty="Bu dialogga matn qoʻshilmagan." />
 
           <View style={styles.secHead}>
-            <T w={800} size={13} color="#4A5468" style={styles.upper}>Mavzudagi dialoglar</T>
+            <T w={800} size={13} color="#4A5468" style={styles.upperH2}>Mavzudagi dialoglar</T>
             <T w={800} size={12} color="#4A5468">{h} / {n} eshitilgan</T>
           </View>
           {/* Mavzuda boshqa dialog yo'q — ro'yxat bo'sh (CRM'da mavzu = bitta dialog). */}
@@ -245,6 +245,7 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   cover: { width: 72, height: 72, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   upper: { textTransform: 'uppercase', letterSpacing: 0.72 },
+  upperH2: { textTransform: 'uppercase', letterSpacing: 0.78 }, // 13px × 0.06em
   same: { alignSelf: 'flex-start', backgroundColor: '#E3F7EE', borderRadius: 9, paddingVertical: 4, paddingHorizontal: 8 },
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: -4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

@@ -5,13 +5,14 @@
  * uzilsa..." javobi yozilgan — qolgan javoblar
  * boshqa dizayn ekranlaridagi matnlardan (Uyga vazifa, Do'kon, Streak,
  * To'lovlar, BotConnect) yig'ilgan. Dizayndagi ochiq savol — "Seriya
- * uzilsa..." — uning "Namunani koʻrish" havolasi StreakLost oynasini ochadi.
+ * uzilsa..." — uning "Namunani koʻrish" havolasi StreakLost oynasini shu ekran ustida ochadi.
  */
-import { router, type Href } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { StreakLostPopup } from '@/components/v2/popups/StreakLost';
 import { ArrowRightIcon, ChevronDownIcon, ChevronUpIcon } from '@/components/v2/settings/icons';
 import { Column, ScreenHeader, SUPPORT_TELEGRAM_URL, TelegramButton } from '@/components/v2/settings/parts';
 import { R } from '@/constants/v2/routes';
@@ -54,7 +55,10 @@ const FAQ: { q: string; a: string; sample?: boolean }[] = [
 
 export default function V2Faq() {
   const insets = useSafeAreaInsets();
-  const [open, setOpen] = useState<number | null>(4); // dizayndagi kabi "Seriya uzilsa..." ochiq
+  const [open, setOpen] = useState<number | null>(4);
+  // Dizayndagidek StreakLost namunasi shu ekran ustida ochiladi; ?popup=lost — skrinshot uchun.
+  const { popup } = useLocalSearchParams<{ popup?: string }>();
+  const [lostOpen, setLostOpen] = useState(popup === 'lost'); // dizayndagi kabi "Seriya uzilsa..." ochiq
 
   return (
     <View style={styles.screen}>
@@ -84,7 +88,7 @@ export default function V2Faq() {
                       {item.sample && (
                         <Pressable
                           accessibilityRole="link"
-                          onPress={() => router.push(`${R.streak}?popup=lost` as Href)}
+                          onPress={() => setLostOpen(true)}
                           style={({ pressed }) => [styles.sampleLink, pressed && { opacity: 0.85 }]}
                         >
                           <Text style={styles.sampleText}>Namunani koʻrish</Text>
@@ -115,6 +119,7 @@ export default function V2Faq() {
           </View>
         </Column>
       </ScrollView>
+      <StreakLostPopup visible={lostOpen} onClose={() => setLostOpen(false)} />
     </View>
   );
 }
