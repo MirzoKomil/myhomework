@@ -17,6 +17,7 @@ import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackIcon, ChevronRight, Coin, LockSmall } from '@/components/v2/homework/icons';
+import { KindIcon } from '@/components/v2/homework/KindIcon';
 import { isTeacherGraded, KIND_SHORT, KIND_SUB, KIND_TILE, lessonLabel, loadLessonInfo, partLetter, partQuestionCount, type LessonInfo } from '@/components/v2/homework/lib';
 import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { Txt, webShadow } from '@/components/v2/homework/ui';
@@ -95,8 +96,8 @@ export default function HomeworkScreen() {
   const parts = info.content.homeworkParts;
   const lessonScores = scores[id] ?? {};
   const isDone = (p: HomeworkPart) =>
-    p.kind === 'creative' ? creative?.status === 'graded' : p.kind === 'reading' ? reading?.status === 'graded' : !!progress.homeworkParts[p.id] || !!lessonScores[p.id]?.finished;
-  const isPending = (p: HomeworkPart) => (p.kind === 'creative' && creative?.status === 'pending') || (p.kind === 'reading' && reading?.status === 'pending');
+    p.kind === 'creative' ? creative?.status === 'graded' : !!progress.homeworkParts[p.id] || !!lessonScores[p.id]?.finished;
+  const isPending = (p: HomeworkPart) => p.kind === 'creative' && creative?.status === 'pending';
 
   // Avtomatik tekshiriladigan qismlar — "x / y savol bajarildi" va coin shulardan.
   const autoParts = parts.filter((p) => !isTeacherGraded(p));
@@ -234,9 +235,13 @@ export default function HomeworkScreen() {
                   ]}
                 >
                   <View style={[st.tile, { backgroundColor: tile.bg }]}>
-                    <Txt f="display" size={20} color={tile.fg}>
-                      {letter ?? KIND_SHORT[p.kind].slice(0, 1)}
-                    </Txt>
+                    {letter ? (
+                      <Txt f="display" size={20} color={tile.fg}>
+                        {letter}
+                      </Txt>
+                    ) : (
+                      <KindIcon kind={p.kind} color={tile.fg} />
+                    )}
                   </View>
                   <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                     <Txt f="bodyHeavy" size={16}>

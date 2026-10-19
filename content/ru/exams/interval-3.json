@@ -1,0 +1,522 @@
+{
+ "title_uz": "3-oraliq imtihon: 25–36-darslar",
+ "passPercent": 70,
+ "questions": [
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q01",
+   "question": "To'g'ri gapni tanlang.",
+   "options": [
+    "Положи́ кни́гу на стол.",
+    "Положи́ кни́гу на столе́.",
+    "Я иду́ в ба́нке.",
+    "Кни́га лежи́т на стол."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q02",
+   "question": "«Bankka qanday borsa bo'ladi?» — to'g'ri savolni tanlang.",
+   "options": [
+    "Как пройти́ в ба́нке?",
+    "Как пройти́ в банк?",
+    "Как идти́ банк?",
+    "Где пройти́ банк?"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q03",
+   "question": "«Menda vaqt yo'q» — to'g'ri tarjimani tanlang.",
+   "options": [
+    "Мне нет вре́мени.",
+    "У меня́ нет вре́мени.",
+    "У меня́ нет вре́мя.",
+    "У меня́ не вре́мени."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q04",
+   "question": "«Ты жена́т?» savolini kimga berish mumkin?",
+   "options": [
+    "ayol kishiga",
+    "kichkina bolaga",
+    "ota-onaga",
+    "erkak kishiga"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q05",
+   "question": "To'g'ri shaklni tanlang: «Э́то сто́ит пять … сумо́в.»",
+   "options": [
+    "ты́сяча",
+    "ты́сяч",
+    "ты́сячи",
+    "ты́сячу"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q06",
+   "question": "To'lash paytida «Mendan qancha?» qanday so'raladi?",
+   "options": [
+    "Ско́лько мне?",
+    "Ско́лько у меня́?",
+    "Ско́лько меня́?",
+    "Ско́лько с меня́?"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q07",
+   "question": "To'g'ri shaklni tanlang: «Вы … мне помо́чь?»",
+   "options": [
+    "мо́жем",
+    "мо́жет",
+    "мо́гут",
+    "мо́жете"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q08",
+   "question": "Kafeda ofitsiantdan hisobni qanday so'raysiz?",
+   "options": [
+    "Счёт, пожа́луйста!",
+    "Меню́, пожа́луйста!",
+    "Сда́ча, пожа́луйста!",
+    "Мо́жно сесть здесь?"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q09",
+   "question": "To'g'ri gapni tanlang.",
+   "options": [
+    "Меня́ нра́вятся цветы́.",
+    "Мне нра́вятся цветы́.",
+    "Я нра́влюсь цветы́.",
+    "Мне нра́вится цветы́."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q10",
+   "question": "Tug'ilgan kun bilan to'g'ri tabriklashni tanlang.",
+   "options": [
+    "Поздравля́ю тебе́ с днём рожде́ния!",
+    "Поздравля́ю тебя́ с днём рожде́ния!",
+    "Поздравля́ю тебя́ днём рожде́ния!",
+    "Поздравля́ю тебя́ с день рожде́ния!"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q11",
+   "question": "«Кем вы рабо́таете?» savoliga to'g'ri javobni tanlang.",
+   "options": [
+    "Я рабо́таю инжене́ра.",
+    "Я рабо́таю инжене́ру.",
+    "Я рабо́таю инжене́р.",
+    "Я рабо́таю инжене́ром."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-q12",
+   "question": "«Зарпла́та» so'zining ma'nosi qaysi?",
+   "options": [
+    "boshliq",
+    "hamkasb",
+    "kasb",
+    "maosh"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q13",
+   "sentence": "Ку́ртка виси́т в ___.",
+   "answer": "шкафу́",
+   "options": [
+    "шка́фе",
+    "шкаф",
+    "шкафу́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q14",
+   "sentence": "Поверни́те ___. (o'ngga)",
+   "answer": "напра́во",
+   "options": [
+    "нале́во",
+    "напра́во",
+    "спра́ва"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q15",
+   "sentence": "Э́то дом ___. (qo'shnining)",
+   "answer": "сосе́да",
+   "options": [
+    "сосе́да",
+    "сосе́д",
+    "сосе́ду"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q16",
+   "sentence": "Моя́ сестра́ не ___.",
+   "answer": "за́мужем",
+   "options": [
+    "за́мужем",
+    "жена́",
+    "жена́т"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q17",
+   "sentence": "Да́йте, пожа́луйста, буты́лку ___.",
+   "answer": "молока́",
+   "options": [
+    "молока́",
+    "молоко́",
+    "молоку́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q18",
+   "sentence": "Здесь ___ кури́ть. (mumkin emas)",
+   "answer": "нельзя́",
+   "options": [
+    "могу́",
+    "мо́жно",
+    "нельзя́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q19",
+   "sentence": "Я звоню́ ___.",
+   "answer": "ма́ме",
+   "options": [
+    "ма́му",
+    "ма́ма",
+    "ма́ме"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q20",
+   "sentence": "Жела́ю ___ здоро́вья и сча́стья!",
+   "answer": "тебе́",
+   "options": [
+    "тебя́",
+    "ты",
+    "тебе́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q21",
+   "sentence": "Я пью чай с ___.",
+   "answer": "молоко́м",
+   "options": [
+    "молока́",
+    "молоко́м",
+    "молоко́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i3-q22",
+   "sentence": "Я хочу́ стать ___.",
+   "answer": "журнали́стом",
+   "options": [
+    "журнали́ста",
+    "журнали́стом",
+    "журнали́ст"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q23",
+   "translation": "Anna kasalxonaga shoshilyapti.",
+   "words": [
+    "спеши́т",
+    "больни́цу",
+    "в",
+    "А́нна",
+    "больни́це"
+   ],
+   "answer": [
+    "А́нна",
+    "спеши́т",
+    "в",
+    "больни́цу"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q24",
+   "translation": "Men shakarsiz choy ichaman.",
+   "words": [
+    "пью",
+    "са́хар",
+    "са́хара",
+    "Я",
+    "чай",
+    "без"
+   ],
+   "answer": [
+    "Я",
+    "пью",
+    "чай",
+    "без",
+    "са́хара"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q25",
+   "translation": "Non besh ming so'm turadi.",
+   "words": [
+    "Хлеб",
+    "пять",
+    "сто́ит",
+    "сто́ят",
+    "ты́сяч",
+    "сумо́в"
+   ],
+   "answer": [
+    "Хлеб",
+    "сто́ит",
+    "пять",
+    "ты́сяч",
+    "сумо́в"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q26",
+   "translation": "Men suzishni bilaman.",
+   "words": [
+    "уме́ет",
+    "уме́ю",
+    "Я",
+    "пла́вать"
+   ],
+   "answer": [
+    "Я",
+    "уме́ю",
+    "пла́вать"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q27",
+   "translation": "Biz buyurtma bermoqchimiz.",
+   "words": [
+    "хоти́м",
+    "хочу́",
+    "заказа́ть",
+    "Мы"
+   ],
+   "answer": [
+    "Мы",
+    "хоти́м",
+    "заказа́ть"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q28",
+   "translation": "Men do'stimga yordam beraman.",
+   "words": [
+    "дру́га",
+    "Я",
+    "дру́гу",
+    "помога́ю"
+   ],
+   "answer": [
+    "Я",
+    "помога́ю",
+    "дру́гу"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q29",
+   "translation": "Men oilam bilan yashayman.",
+   "words": [
+    "семья́",
+    "живу́",
+    "семьёй",
+    "Я",
+    "с"
+   ],
+   "answer": [
+    "Я",
+    "живу́",
+    "с",
+    "семьёй"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i3-q30",
+   "translation": "Kasbingiz nima?",
+   "words": [
+    "Кака́я",
+    "у",
+    "профе́ссия",
+    "како́й",
+    "вас"
+   ],
+   "answer": [
+    "Кака́я",
+    "у",
+    "вас",
+    "профе́ссия"
+   ]
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-s1",
+   "question": "🗣 Vaziyat: Bozorda olmaning narxini bilmoqchisiz. Sotuvchiga nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Я люблю́ я́блоки.",
+    "Чьи э́то я́блоки?",
+    "Ско́лько сто́ят я́блоки?",
+    "У вас есть я́блоки?"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-s2",
+   "question": "🗣 Vaziyat: 21-mart. Qo'shningizni bayram bilan tabriklaysiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "До́брое у́тро!",
+    "С Навру́зом!",
+    "Спаси́бо за пода́рок!",
+    "С днём рожде́ния!"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-s3",
+   "question": "🗣 Vaziyat: Kafeda bo'sh stolni ko'rdingiz va o'tirmoqchisiz. Ofitsiantdan so'raysiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Где здесь апте́ка?",
+    "Мо́жно сесть здесь?",
+    "Мо́жно меню́?",
+    "Ско́лько с меня́?"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-s4",
+   "question": "🗣 Vaziyat: Kun bo'yi ishladingiz va juda charchadingiz. Do'stingizga aytasiz:\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Я о́чень голо́дный.",
+    "Я о́чень уста́л.",
+    "Мне ве́село.",
+    "Я свобо́ден."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-r1",
+   "question": "📖 Matn: «У Нигоры́ больша́я семья́: у неё три бра́та и две сестры́. Её роди́тели живу́т в Андижа́не, а ба́бушка — в Самарка́нде. Нигора́ рабо́тает в больни́це, и ей нра́вится её рабо́та. Её муж Абдулази́з рабо́тает в ба́нке. У них есть сын и дочь. Сардо́ру семь лет, он лю́бит пла́вать и игра́ть в футбо́л. Маржоне́ пять лет, она́ лю́бит петь. По суббо́там Нигора́ хо́дит в кино́ с му́жем.»\n\nSavol: Nigoraning nechta aka-ukasi bor?",
+   "options": [
+    "ikkita",
+    "beshta",
+    "uchta",
+    "bitta"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-r2",
+   "question": "📖 Matn: «У Нигоры́ больша́я семья́: у неё три бра́та и две сестры́. Её роди́тели живу́т в Андижа́не, а ба́бушка — в Самарка́нде. Нигора́ рабо́тает в больни́це, и ей нра́вится её рабо́та. Её муж Абдулази́з рабо́тает в ба́нке. У них есть сын и дочь. Сардо́ру семь лет, он лю́бит пла́вать и игра́ть в футбо́л. Маржоне́ пять лет, она́ лю́бит петь. По суббо́там Нигора́ хо́дит в кино́ с му́жем.»\n\nSavol: Nigoraning buvisi qayerda yashaydi?",
+   "options": [
+    "Toshkentda",
+    "Samarqandda",
+    "Buxoroda",
+    "Andijonda"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-r3",
+   "question": "📖 Matn: «У Нигоры́ больша́я семья́: у неё три бра́та и две сестры́. Её роди́тели живу́т в Андижа́не, а ба́бушка — в Самарка́нде. Нигора́ рабо́тает в больни́це, и ей нра́вится её рабо́та. Её муж Абдулази́з рабо́тает в ба́нке. У них есть сын и дочь. Сардо́ру семь лет, он лю́бит пла́вать и игра́ть в футбо́л. Маржоне́ пять лет, она́ лю́бит петь. По суббо́там Нигора́ хо́дит в кино́ с му́жем.»\n\nSavol: Matnga ko'ra qaysi gap to'g'ri?",
+   "options": [
+    "Маржоне́ пять лет.",
+    "Сардо́ру пять лет.",
+    "Нигора́ рабо́тает в ба́нке.",
+    "Роди́тели Нигоры́ живу́т в Самарка́нде."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-r4",
+   "question": "📖 Matn: «Сейча́с Бобу́р живёт в Ташке́нте у бра́та и рабо́тает в о́фисе. Вчера́ он и Тиму́р обе́дали в кафе́ ря́дом с рабо́той. Официа́нт дал им меню́. Тиму́р заказа́л суп и сала́т, а Бобу́р — плов и чай с са́харом. Десе́рт они́ не хоте́ли. Пото́м Бобу́р сказа́л: „Счёт, пожа́луйста!“ Обе́д сто́ил сто со́рок ты́сяч сумо́в. Тиму́р сказа́л: „Э́то не до́рого, и о́чень вку́сно!“»\n\nSavol: Bobur Toshkentda kimnikida yashaydi?",
+   "options": [
+    "mehmonxonada",
+    "akasinikida",
+    "ota-onasinikida",
+    "Timurnikida"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-r5",
+   "question": "📖 Matn: «Сейча́с Бобу́р живёт в Ташке́нте у бра́та и рабо́тает в о́фисе. Вчера́ он и Тиму́р обе́дали в кафе́ ря́дом с рабо́той. Официа́нт дал им меню́. Тиму́р заказа́л суп и сала́т, а Бобу́р — плов и чай с са́харом. Десе́рт они́ не хоте́ли. Пото́м Бобу́р сказа́л: „Счёт, пожа́луйста!“ Обе́д сто́ил сто со́рок ты́сяч сумо́в. Тиму́р сказа́л: „Э́то не до́рого, и о́чень вку́сно!“»\n\nSavol: Bobur nima buyurtma qildi?",
+   "options": [
+    "palov va shakarli choy",
+    "sho'rva va salat",
+    "desert va kofe",
+    "salat va choy"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i3-r6",
+   "question": "📖 Matn: «Сейча́с Бобу́р живёт в Ташке́нте у бра́та и рабо́тает в о́фисе. Вчера́ он и Тиму́р обе́дали в кафе́ ря́дом с рабо́той. Официа́нт дал им меню́. Тиму́р заказа́л суп и сала́т, а Бобу́р — плов и чай с са́харом. Десе́рт они́ не хоте́ли. Пото́м Бобу́р сказа́л: „Счёт, пожа́луйста!“ Обе́д сто́ил сто со́рок ты́сяч сумо́в. Тиму́р сказа́л: „Э́то не до́рого, и о́чень вку́сно!“»\n\nSavol: Tushlik qancha turdi?",
+   "options": [
+    "две́сти со́рок ты́сяч сумо́в",
+    "сто со́рок ты́сяч сумо́в",
+    "сто четы́рнадцать ты́сяч сумо́в",
+    "со́рок ты́сяч сумо́в"
+   ],
+   "correctIndex": 1
+  }
+ ]
+}

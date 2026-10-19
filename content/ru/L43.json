@@ -1,0 +1,607 @@
+{
+ "n": 43,
+ "lessonId": "l1784055280406-42",
+ "type": "video",
+ "id": "l1784055280406-42",
+ "topic": "Transport: е́хать / е́здить",
+ "title": "Transport: е́хать / е́здить, на авто́бусе / на метро́; прие́хал / уе́хал",
+ "title_ru": "Тра́нспорт: е́хать / е́здить, на чём?",
+ "videoUrl": "",
+ "cando": "Qanday transportda borishimni (Я е́зжу на рабо́ту на метро́), qayerga ketayotganimni va kim qachon kelgan-ketganini ayta olaman.",
+ "review": [
+  {
+   "q": "«Ayting-chi, metro qayerda?»",
+   "a": "Скажи́те, пожа́луйста, где метро́?"
+  },
+  {
+   "q": "«Iltimos, sekin takrorlang»",
+   "a": "Повтори́те, пожа́луйста, ме́дленно."
+  },
+  {
+   "q": "«Kel, kinoga boramiz!»",
+   "a": "Дава́й пойдём в кино́!"
+  },
+  {
+   "q": "«Adashib qoldim»",
+   "a": "Я заблуди́лся."
+  },
+  {
+   "q": "«Kechikma!»",
+   "a": "Не опа́здывай!"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "е́хать (е́ду, е́дешь)",
+   "tr": "[yéxat']",
+   "uz": "(transportda) ketmoq — hozir, bir yo'nalish",
+   "ex": "Сейча́с я е́ду на рабо́ту.",
+   "img": "cards/ехать (еду едешь едут).jpg",
+   "icon": "",
+   "vocabId": "v-43-1",
+   "media": "media/ru/L43/w_v-43-1.jpg"
+  },
+  {
+   "ru": "е́здить (е́зжу, е́здишь)",
+   "tr": "[yézdit']",
+   "uz": "(transportda) qatnamoq — doim, borib-kelib",
+   "ex": "Я е́зжу на рабо́ту ка́ждый день.",
+   "img": "cards/машина.jpg",
+   "icon": "",
+   "vocabId": "v-43-2",
+   "media": "media/ru/L43/w_v-43-2.jpg"
+  },
+  {
+   "ru": "на авто́бусе",
+   "tr": "[na aftóbusi]",
+   "uz": "avtobusda",
+   "ex": "Я е́зжу на авто́бусе.",
+   "img": "cards/автобус.jpg",
+   "icon": "",
+   "vocabId": "v-43-3",
+   "media": "media/ru/L43/w_v-43-3.jpg"
+  },
+  {
+   "ru": "на метро́",
+   "tr": "[na mitró]",
+   "uz": "metroda",
+   "ex": "На метро́ бы́стро.",
+   "img": "cards/метро.jpg",
+   "icon": "",
+   "vocabId": "v-43-4",
+   "media": "media/ru/L43/w_v-43-4.jpg"
+  },
+  {
+   "ru": "на такси́",
+   "tr": "[na taksí]",
+   "uz": "taksida",
+   "ex": "Мы пое́дем на такси́.",
+   "img": "cards/такси.jpg",
+   "icon": "",
+   "vocabId": "v-43-5",
+   "media": "media/ru/L43/w_v-43-5.jpg"
+  },
+  {
+   "ru": "на по́езде",
+   "tr": "[na póyezdi]",
+   "uz": "poyezdda",
+   "ex": "В Самарка́нд я е́ду на по́езде.",
+   "img": "cards/поезд.jpg",
+   "icon": "",
+   "vocabId": "v-43-6",
+   "media": "media/ru/L43/w_v-43-6.jpg"
+  },
+  {
+   "ru": "лете́ть / на самолёте",
+   "tr": "[litét' / na samalyóti]",
+   "uz": "uchmoq / samolyotda",
+   "ex": "В Москву́ я лечу́ на самолёте.",
+   "img": "cards/самолёт.jpg",
+   "icon": "",
+   "vocabId": "v-43-7",
+   "media": "media/ru/L43/w_v-43-7.jpg"
+  },
+  {
+   "ru": "на велосипе́де",
+   "tr": "[na vilasipédi]",
+   "uz": "velosipedda",
+   "ex": "Ле́том он е́здит на велосипе́де.",
+   "img": "cards/велосипед.jpg",
+   "icon": "",
+   "vocabId": "v-43-8",
+   "media": "media/ru/L43/w_v-43-8.jpg"
+  },
+  {
+   "ru": "пешко́м",
+   "tr": "[pishkóm]",
+   "uz": "piyoda",
+   "ex": "Я хожу́ в магази́н пешко́м.",
+   "img": "cards/пешком.jpg",
+   "icon": "",
+   "vocabId": "v-43-9",
+   "media": "media/ru/L43/w_v-43-9.jpg"
+  },
+  {
+   "ru": "ходи́ть (хожу́)",
+   "tr": "[xadít']",
+   "uz": "(piyoda) qatnamoq",
+   "ex": "Я хожу́ в спортза́л два ра́за в неде́лю.",
+   "img": "cards/ходить хожу ходишь ходит ходим ходите ходят.jpg",
+   "icon": "",
+   "vocabId": "v-43-10",
+   "media": "media/ru/L43/w_v-43-10.jpg"
+  },
+  {
+   "ru": "прие́хать (прие́хал)",
+   "tr": "[priyéxat']",
+   "uz": "(transportda) kelmoq",
+   "ex": "Брат прие́хал из Москвы́.",
+   "img": "cards/приехать.jpg",
+   "icon": "",
+   "vocabId": "v-43-11",
+   "media": "media/ru/L43/w_v-43-11.jpg"
+  },
+  {
+   "ru": "уе́хать (уе́хал)",
+   "tr": "[uyéxat']",
+   "uz": "jo'nab ketmoq",
+   "ex": "Па́па уе́хал в командиро́вку.",
+   "img": "cards/уехать.jpg",
+   "icon": "",
+   "vocabId": "v-43-12",
+   "media": "media/ru/L43/w_v-43-12.jpg"
+  },
+  {
+   "ru": "остано́вка",
+   "tr": "[astanófka]",
+   "uz": "bekat",
+   "ex": "Где остано́вка авто́буса?",
+   "img": "cards/остановка.jpg",
+   "icon": "",
+   "vocabId": "v-43-13",
+   "media": "media/ru/L43/w_v-43-13.jpg"
+  },
+  {
+   "ru": "переса́дка",
+   "tr": "[pirisátka]",
+   "uz": "o'tish (boshqa liniyaga)",
+   "ex": "Здесь на́до сде́лать переса́дку.",
+   "img": "cards/пересадка.jpg",
+   "icon": "",
+   "vocabId": "v-43-14",
+   "media": "media/ru/L43/w_v-43-14.jpg"
+  },
+  {
+   "ru": "Ско́лько е́хать?",
+   "tr": "[skól'ka yéxat']",
+   "uz": "Qancha yuriladi?",
+   "ex": "— Ско́лько е́хать? — Два́дцать мину́т.",
+   "img": "cards/долго.jpg",
+   "icon": "",
+   "vocabId": "v-43-15",
+   "media": "media/ru/L43/w_v-43-15.jpg"
+  },
+  {
+   "ru": "води́тель",
+   "tr": "[vadítil']",
+   "uz": "haydovchi",
+   "ex": "Води́тель, останови́те, пожа́луйста!",
+   "img": "cards/водитель.jpg",
+   "icon": "",
+   "vocabId": "v-43-16",
+   "media": "media/ru/L43/w_v-43-16.jpg"
+  }
+ ],
+ "konspekt": "43-DARS: Transport — е́хать / е́здить, на чём?\n(Тра́нспорт)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: qanday transportda yurishingizni, hozir qayerga ketayotganingizni va kim kelgan-ketganini aytasiz.\n\n---\n\n1. Ikki juft harakat fe'li (1-oyda идти́ / ходи́ть ni ko'rdik)\n\nPIYODA: идти́ (hozir, bir yo'nalish) ↔ ходи́ть (doim / borib-kelib)\nTRANSPORTDA: е́хать (hozir, bir yo'nalish) ↔ е́здить (doim / borib-kelib)\n\nе́хать: е́ду, е́дешь, е́дет, е́дем, е́дете, е́дут\nе́здить: е́зжу, е́здишь, е́здит, е́здим, е́здите, е́здят\n\n* Сейча́с я е́ду на рабо́ту. — Hozir ishga ketyapman.\n* Я е́зжу на рабо́ту ка́ждый день. — Har kuni ishga qatnayman.\n* Вчера́ я е́здил в Самарка́нд. — Kecha Samarqandga borib keldim.\n\n---\n\n2. На чём? — НА + Предло́жный\n\nна авто́бусе, на метро́, на такси́, на маши́не, на по́езде, на самолёте, на велосипе́де\nLekin: пешко́м — piyoda\n* Как ты е́здишь на рабо́ту? — На метро́. А домо́й — пешко́м.\n\n---\n\n3. лете́ть — uchmoq\n\nлечу́, лети́шь, лети́т… · Я лечу́ в Москву́ на самолёте.\n\n---\n\n4. Prefiks: при- (kelmoq), у- (ketmoq)\n\n* прие́хать — transportda kelmoq: Брат прие́хал из Москвы́.\n* уе́хать — jo'nab ketmoq: Па́па уе́хал в Ташке́нт.\n* прийти́ / уйти́ — piyoda: Он пришёл домо́й. Она́ ушла́ на рабо́ту.\n(53-darsda prefikslar batafsil.)\n\n---\n\n5. Shaharda\n\n* Где остано́вка авто́буса? — Avtobus bekati qayerda?\n* Ско́лько е́хать до це́нтра? — Markazgacha qancha yuriladi?\n* Здесь ну́жно сде́лать переса́дку. — Bu yerda o'tish kerak.\n* Остано́вите, пожа́луйста, здесь! — Shu yerda to'xtating!\n\n---\n\nDars xulosasi:\n1. е́хать — hozir; е́здить — doim / borib-keldi.\n2. на авто́бусе, на метро́, на по́езде…; пешко́м.\n3. лете́ть на самолёте.\n4. прие́хал (keldi) / уе́хал (ketdi).\n5. остано́вка, переса́дка, Ско́лько е́хать?\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: sayohat (вокза́л, аэропо́рт, биле́т).",
+ "text": {
+  "title": "Как я е́зжу на рабо́ту",
+  "ru": "Меня́ зову́т Тиму́р. Я живу́ на Чиланза́ре, а рабо́таю в це́нтре. Ка́ждый день я е́зжу на рабо́ту на метро́. Э́то бы́стро — два́дцать мину́т. На ста́нции «Пахтако́р» я де́лаю переса́дку.\nОбра́тно я иногда́ хожу́ пешко́м, потому́ что люблю́ гуля́ть. Моя́ жена́ е́здит на рабо́ту на авто́бусе. Остано́вка ря́дом с на́шим до́мом.\nВчера́ мой брат прие́хал из Москвы́. Он лете́л на самолёте четы́ре часа́. За́втра мы пое́дем в Самарка́нд на по́езде, а в воскресе́нье брат уе́дет домо́й.",
+  "uz": "Mening ismim Timur. Chilonzorda yashayman, markazda ishlayman. Har kuni ishga metroda qatnayman. Bu tez — yigirma daqiqa. «Paxtakor» bekatida boshqa liniyaga o'taman.\nQaytishda ba'zan piyoda yuraman, chunki sayr qilishni yaxshi ko'raman. Xotinim ishga avtobusda qatnaydi. Bekat uyimiz yonida.\nKecha akam Moskvadan keldi. U samolyotda to'rt soat uchdi. Ertaga biz poyezdda Samarqandga boramiz, yakshanba kuni esa akam uyiga qaytib ketadi.",
+  "questions": [
+   {
+    "q": "Как Тиму́р е́здит на рабо́ту?",
+    "opts": [
+     "На авто́бусе",
+     "На метро́",
+     "На такси́"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Ско́лько е́хать?",
+    "opts": [
+     "Де́сять мину́т",
+     "Два́дцать мину́т",
+     "Час"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Как он иногда́ идёт домо́й?",
+    "opts": [
+     "На маши́не",
+     "На велосипе́де",
+     "Пешко́м"
+    ],
+    "a": 2
+   },
+   {
+    "q": "На чём е́здит жена́?",
+    "opts": [
+     "На метро́",
+     "На по́езде",
+     "На авто́бусе"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Отку́да прие́хал брат?",
+    "opts": [
+     "Из Самарка́нда",
+     "Из Бухары́",
+     "Из Москвы́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "На чём они́ пое́дут в Самарка́нд?",
+    "opts": [
+     "На по́езде",
+     "На авто́бусе",
+     "На самолёте"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Куда́ ты е́дешь? (Qayerga ketyapsan?)",
+  "lines": [
+   {
+    "who": "Анто́н",
+    "ru": "Приве́т, Бобу́р! Куда́ ты е́дешь?",
+    "uz": "Salom, Bobur! Qayerga ketyapsan?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Я е́ду в аэропо́рт. Сестра́ прилета́ет из Каза́ни.",
+    "uz": "Aeroportga ketyapman. Singlim Qozondan uchib kelyapti."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "На такси́?",
+    "uz": "Taksidami?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Нет, на авто́бусе. Я всегда́ е́зжу на авто́бусе — э́то дёшево.",
+    "uz": "Yo'q, avtobusda. Doim avtobusda qatnayman — arzon."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "А ско́лько е́хать до аэропо́рта?",
+    "uz": "Aeroportgacha qancha yuriladi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Ми́нут со́рок. Ой, мой авто́бус! Пока́!",
+    "uz": "Qirq daqiqacha. Voy, avtobusim! Xayr!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "я",
+    "е́ду / е́зжу"
+   ],
+   [
+    "ты",
+    "е́дешь / е́здишь"
+   ],
+   [
+    "они́",
+    "е́дут / е́здят"
+   ],
+   [
+    "авто́бус",
+    "на авто́бусе"
+   ],
+   [
+    "метро́",
+    "на метро́"
+   ],
+   [
+    "по́езд",
+    "на по́езде"
+   ],
+   [
+    "самолёт",
+    "на самолёте"
+   ],
+   [
+    "прие́хать",
+    "kelmoq"
+   ],
+   [
+    "уе́хать",
+    "ketmoq"
+   ],
+   [
+    "пешко́м",
+    "piyoda"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Сейча́с я ___ на рабо́ту. (hozir)",
+    "o": [
+     "е́зжу",
+     "е́ду",
+     "е́здил"
+    ],
+    "a": "е́ду"
+   },
+   {
+    "s": "Я ___ на рабо́ту ка́ждый день.",
+    "o": [
+     "пое́ду",
+     "е́зжу",
+     "е́ду"
+    ],
+    "a": "е́зжу"
+   },
+   {
+    "s": "Вчера́ мы ___ в Самарка́нд. (borib keldik)",
+    "o": [
+     "е́хали",
+     "е́здили",
+     "е́дем"
+    ],
+    "a": "е́здили"
+   },
+   {
+    "s": "Я е́зжу на ___ . (avtobus)",
+    "o": [
+     "авто́бус",
+     "авто́бусом",
+     "авто́бусе"
+    ],
+    "a": "авто́бусе"
+   },
+   {
+    "s": "В Москву́ я ___ на самолёте.",
+    "o": [
+     "лечу́",
+     "иду́",
+     "е́ду"
+    ],
+    "a": "лечу́"
+   },
+   {
+    "s": "Я хожу́ в магази́н ___ .",
+    "o": [
+     "пешко́м",
+     "пе́шкой",
+     "на пешко́м"
+    ],
+    "a": "пешко́м"
+   },
+   {
+    "s": "Брат ___ из Москвы́. (keldi)",
+    "o": [
+     "е́хал",
+     "прие́хал",
+     "уе́хал"
+    ],
+    "a": "прие́хал"
+   },
+   {
+    "s": "Па́па ___ в Ташке́нт. (ketdi)",
+    "o": [
+     "уе́хал",
+     "е́здит",
+     "прие́хал"
+    ],
+    "a": "уе́хал"
+   },
+   {
+    "s": "Где ___ авто́буса?",
+    "o": [
+     "води́тель",
+     "переса́дка",
+     "остано́вка"
+    ],
+    "a": "остано́вка"
+   },
+   {
+    "s": "Ско́лько ___ до це́нтра?",
+    "o": [
+     "е́дет",
+     "е́здил",
+     "е́хать"
+    ],
+    "a": "е́хать"
+   },
+   {
+    "s": "Куда́ ты ___ ? (hozir)",
+    "o": [
+     "е́здишь",
+     "е́здил",
+     "е́дешь"
+    ],
+    "a": "е́дешь"
+   },
+   {
+    "s": "Они́ ___ на велосипе́де ле́том. (doim)",
+    "o": [
+     "е́здят",
+     "пое́дут",
+     "е́дут"
+    ],
+    "a": "е́здят"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Hozir ishga ketyapman» (transport)",
+    "o": [
+     "Я иду́ на рабо́ту",
+     "Я е́ду на рабо́ту",
+     "Я е́зжу на рабо́ту"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Har kuni metroda qatnayman»",
+    "o": [
+     "Ка́ждый день я е́зжу на метро́",
+     "Ка́ждый день я е́ду на метро́",
+     "Ка́ждый день я в метро́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Kecha Buxoroga borib keldim»",
+    "o": [
+     "Вчера́ я е́здил в Бухару́",
+     "Вчера́ я е́ду в Бухару́",
+     "Вчера́ я е́хал в Бухару́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "На чём? — самолёт:",
+    "o": [
+     "самолётом",
+     "на самолёт",
+     "на самолёте"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«piyoda»",
+    "o": [
+     "на нога́х",
+     "ходи́ть",
+     "пешко́м"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«U Moskvadan keldi»",
+    "o": [
+     "Он е́здил в Москву́",
+     "Он уе́хал из Москвы́",
+     "Он прие́хал из Москвы́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Markazgacha qancha yuriladi?»",
+    "o": [
+     "Ско́лько е́хать до це́нтра?",
+     "Где центр?",
+     "Ско́лько сто́ит центр?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "е́здить: я ___",
+    "o": [
+     "ездю",
+     "е́ду",
+     "е́зжу"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "е́ду",
+     "Я",
+     "рабо́ту",
+     "на"
+    ],
+    "a": "Я е́ду на рабо́ту",
+    "t": "Ishga ketyapman"
+   },
+   {
+    "w": [
+     "е́зжу",
+     "на",
+     "метро́",
+     "Я"
+    ],
+    "a": "Я е́зжу на метро́",
+    "t": "Metroda qatnayman"
+   },
+   {
+    "w": [
+     "из",
+     "прие́хал",
+     "Москвы́",
+     "Брат"
+    ],
+    "a": "Брат прие́хал из Москвы́",
+    "t": "Akam Moskvadan keldi"
+   },
+   {
+    "w": [
+     "Где",
+     "авто́буса",
+     "остано́вка"
+    ],
+    "a": "Где остано́вка авто́буса",
+    "t": "Avtobus bekati qayerda?"
+   },
+   {
+    "w": [
+     "лечу́",
+     "на",
+     "самолёте",
+     "Я"
+    ],
+    "a": "Я лечу́ на самолёте",
+    "t": "Samolyotda uchyapman"
+   },
+   {
+    "w": [
+     "е́хать",
+     "Ско́лько",
+     "це́нтра",
+     "до"
+    ],
+    "a": "Ско́лько е́хать до це́нтра",
+    "t": "Markazgacha qancha yuriladi?"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Я е́зжу на рабо́ту на метро́.",
+   "uz": "Ishga metroda qatnayman."
+  },
+  {
+   "ru": "Сейча́с я е́ду домо́й на авто́бусе.",
+   "uz": "Hozir uyga avtobusda ketyapman."
+  },
+  {
+   "ru": "В магази́н я хожу́ пешко́м.",
+   "uz": "Do'konga piyoda boraman."
+  },
+  {
+   "ru": "Вчера́ мы е́здили в Самарка́нд на по́езде.",
+   "uz": "Kecha poyezdda Samarqandga borib keldik."
+  },
+  {
+   "ru": "Мой брат прие́хал из Москвы́.",
+   "uz": "Akam Moskvadan keldi."
+  },
+  {
+   "ru": "Ско́лько е́хать до це́нтра?",
+   "uz": "Markazgacha qancha yuriladi?"
+  }
+ ]
+}

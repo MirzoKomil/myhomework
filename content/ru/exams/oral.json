@@ -1,0 +1,961 @@
+{
+ "interval-1": {
+  "covers": "1–12-darslar",
+  "speaking": [
+   {
+    "type": "monolog",
+    "title_uz": "1-topshiriq. Monolog",
+    "time_min": "1–1,5",
+    "task_uz": "O'zingiz haqingizda gapirib bering (6–8 gap).",
+    "plan_uz": [
+     "ismingiz",
+     "qayerdansiz va qayerda yashaysiz",
+     "qayerda ishlaysiz yoki o'qiysiz",
+     "kimingiz / nimangiz bor (у меня́ есть…)",
+     "ertalab, kunduzi va kechqurun nima qilasiz",
+     "nima qilishni yaxshi ko'rasiz"
+    ],
+    "useful_ru": [
+     "Меня́ зову́т…",
+     "Я из…",
+     "Я живу́ в…",
+     "Я рабо́таю в… / Я учу́сь в…",
+     "У меня́ есть…",
+     "У́тром я…, ве́чером я…",
+     "Я люблю́ + infinitiv"
+    ],
+    "id": "i1-sp1"
+   },
+   {
+    "type": "roleplay",
+    "title_uz": "2-topshiriq. Rolli o'yin: Tanishuv",
+    "time_min": "2–3",
+    "situation_uz": "Ofisga yangi xodim keldi. Siz u bilan tanishasiz.",
+    "teacher_card_uz": "Siz — yangi xodim Ви́ктор. Muloyim, «вы» bilan gapirasiz. O'quvchining savollariga qisqa javob bering va o'zingiz ham 1–2 savol bering.",
+    "student_card_uz": "Siz — o'zingiz. Yangi hamkasb bilan tanishing.",
+    "student_must_uz": [
+     "salomlashing",
+     "ismingizni ayting va uning ismini so'rang",
+     "qayerdan ekanini so'rang",
+     "nima qilishni yaxshi ko'rishini so'rang",
+     "xayrlashing"
+    ],
+    "teacher_opening_ru": "Здра́вствуйте! Я но́вый сотру́дник.",
+    "teacher_lines_ru": [
+     "Меня́ зову́т Ви́ктор. А как вас зову́т?",
+     "Я из Москвы́. А вы отку́да?",
+     "Я люблю́ чита́ть и игра́ть в футбо́л. А вы?",
+     "О́чень прия́тно! До свида́ния!"
+    ],
+    "id": "i1-sp2"
+   },
+   {
+    "type": "questions",
+    "title_uz": "3-topshiriq. Ustoz savollari",
+    "time_min": "1–2",
+    "note_uz": "Ustoz savollarni ketma-ket beradi. O'quvchi har biriga kamida 2 ta to'liq gap bilan javob beradi.",
+    "questions": [
+     {
+      "ru": "Как вас зову́т?",
+      "uz": "Ismingiz nima?"
+     },
+     {
+      "ru": "Где вы живёте?",
+      "uz": "Qayerda yashaysiz?"
+     },
+     {
+      "ru": "Что вы де́лаете ве́чером?",
+      "uz": "Kechqurun nima qilasiz?"
+     },
+     {
+      "ru": "У вас есть брат и́ли сестра́?",
+      "uz": "Aka-ukangiz yoki opa-singlingiz bormi?"
+     }
+    ],
+    "id": "i1-sp3"
+   }
+  ],
+  "writing": {
+   "task_uz": "Yangi do'stingizga Telegram'da qisqa xabar yozing: o'zingiz, oilangiz va kuningiz haqida.",
+   "sentences": "5–8",
+   "time_min": 15,
+   "plan_uz": [
+    "salomlashing va ismingizni ayting",
+    "qayerdan ekaningiz va qayerda yashashingiz",
+    "ishingiz yoki o'qishingiz",
+    "oilangiz (у меня́ есть…)",
+    "ertalab / kechqurun nima qilasiz",
+    "do'stingizga bitta savol bering"
+   ],
+   "model_ru": "Приве́т! Меня́ зову́т Ази́з. Я из Андижа́на, но сейча́с я живу́ в Ташке́нте. Я рабо́таю в о́фисе. У меня́ есть жена́ и сын. У́тром я пью чай и чита́ю но́вости. Ве́чером я гуля́ю в па́рке и́ли смотрю́ фи́льмы. А что ты лю́бишь де́лать?",
+   "id": "i1-w1"
+  },
+  "listening": [
+   {
+    "dialog": "L07-d2",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Anton Dilnozaga qanday murojaat qiladi — «ты» yoki «вы»?",
+      "a": "«вы» (Э́то ва́ше фо́то?)"
+     },
+     {
+      "q": "Suratda Dilnozaning kimlari bor?",
+      "a": "akasi va akasining xotini"
+     },
+     {
+      "q": "Suratdagi shahar qaysi?",
+      "a": "Andijon — Dilnozaning shahri"
+     }
+    ]
+   },
+   {
+    "dialog": "L12-d2",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Timur qayerda?",
+      "a": "stadionda"
+     },
+     {
+      "q": "Timur u yerda nima qilyapti?",
+      "a": "(do'stlari bilan) futbol o'ynayapti"
+     },
+     {
+      "q": "Dilnoza qayerda va nega tez xayrlashdi?",
+      "a": "kursda, darsda; darsda telefonda gaplashib bo'lmaydi"
+     }
+    ]
+   }
+  ]
+ },
+ "interval-2": {
+  "covers": "13–24-darslar",
+  "speaking": [
+   {
+    "type": "monolog",
+    "title_uz": "1-topshiriq. Monolog",
+    "time_min": "1–1,5",
+    "task_uz": "Kun tartibingiz va kechagi kuningiz haqida gapirib bering (7–9 gap).",
+    "plan_uz": [
+     "soat nechada turasiz va nonushta qilasiz",
+     "ishga / o'qishga qanday borasiz (пешко́м, на авто́бусе)",
+     "soat nechadan nechagacha ishlaysiz",
+     "kechqurun odatda nima qilasiz",
+     "kecha nima qildingiz (o'tgan zamon)",
+     "dam olish kuni odatda qayerga borasiz (хожу́ в…)"
+    ],
+    "useful_ru": [
+     "Я встаю́ в … часо́в.",
+     "Я рабо́таю с … до …",
+     "Обы́чно я хожу́ в…",
+     "Вчера́ я был(а́)…",
+     "Снача́ла…, пото́м…",
+     "Ве́чером я иду́ домо́й."
+    ],
+    "id": "i2-sp1"
+   },
+   {
+    "type": "roleplay",
+    "title_uz": "2-topshiriq. Rolli o'yin: Ko'chada uchrashuv",
+    "time_min": "2–3",
+    "situation_uz": "Siz ko'chada do'stingizni uchratdingiz. Kechqurun birga kinoga borishni kelishib olasiz.",
+    "teacher_card_uz": "Siz — o'quvchining do'sti. Avval bugun kechqurun band ekaningizni ayting (bankka borasiz), keyin boshqa kunga rozi bo'ling.",
+    "student_card_uz": "Siz — o'zingiz. Do'stingizni kinoga taklif qiling va vaqtni kelishing.",
+    "student_must_uz": [
+     "salomlashing va qayerga ketayotganini so'rang",
+     "o'zingiz qayerga ketayotganingizni ayting",
+     "kinoga taklif qiling",
+     "kun va soatni kelishing (Во ско́лько?)",
+     "xayrlashing"
+    ],
+    "teacher_opening_ru": "Приве́т! Как дела́?",
+    "teacher_lines_ru": [
+     "Я иду́ на рабо́ту. А ты куда́ идёшь?",
+     "Сего́дня ве́чером я не могу́: я иду́ в банк.",
+     "А в суббо́ту? Во ско́лько?",
+     "Хорошо́! Пока́!"
+    ],
+    "id": "i2-sp2"
+   },
+   {
+    "type": "questions",
+    "title_uz": "3-topshiriq. Ustoz savollari",
+    "time_min": "1–2",
+    "note_uz": "Ustoz savollarni ketma-ket beradi. O'quvchi har biriga kamida 2 ta to'liq gap bilan javob beradi.",
+    "questions": [
+     {
+      "ru": "Во ско́лько вы обы́чно встаёте?",
+      "uz": "Odatda soat nechada turasiz?"
+     },
+     {
+      "ru": "Что вы де́лали вчера́ ве́чером?",
+      "uz": "Kecha kechqurun nima qildingiz?"
+     },
+     {
+      "ru": "Как ча́сто вы хо́дите в парк и́ли в спортза́л?",
+      "uz": "Parkka yoki sport zaliga qanchalik tez-tez borasiz?"
+     },
+     {
+      "ru": "Како́й ваш го́род? Он большо́й и́ли ма́ленький?",
+      "uz": "Shahringiz qanday? Kattami yoki kichikmi?"
+     }
+    ],
+    "id": "i2-sp3"
+   }
+  ],
+  "writing": {
+   "task_uz": "Kechagi kuningiz haqida yozing (o'tgan zamonda).",
+   "sentences": "5–8",
+   "time_min": 15,
+   "plan_uz": [
+    "soat nechada turdingiz",
+    "nonushta va ishga / o'qishga borish",
+    "ish yoki dars vaqti (с … до …)",
+    "tushlik qayerda bo'ldi",
+    "kechqurun nima qildingiz, kimni uchratdingiz",
+    "kun qanday o'tdi (Како́й был день?)"
+   ],
+   "model_ru": "Вчера́ я встал в семь часо́в. Я за́втракал и пил чай. Пото́м я пошёл на рабо́ту пешко́м. Я рабо́тал с девяти́ до шести́. Днём я обе́дал в кафе́. Ве́чером я встре́тил дру́га, и мы гуля́ли в па́рке. Пото́м я смотре́л но́вый фильм. Фильм был о́чень интере́сный!",
+   "id": "i2-w1"
+  },
+  "listening": [
+   {
+    "dialog": "L21-d2",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Dilnoza qayerga ketyapti?",
+      "a": "maktabga"
+     },
+     {
+      "q": "Bobur kechqurun qayerga boradi?",
+      "a": "bankka, keyin uyga"
+     },
+     {
+      "q": "Ular qachon kinoga borishadi?",
+      "a": "shanba kuni"
+     }
+    ]
+   },
+   {
+    "dialog": "L23-d3",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Dilnoza dam olish kuni odatda qayerga boradi?",
+      "a": "muzeyga yoki parkka"
+     },
+     {
+      "q": "Teatrga qanchalik tez-tez boradi?",
+      "a": "kamdan-kam (ре́дко)"
+     },
+     {
+      "q": "Hozir Dilnoza qayerga shoshyapti va bu soat nechada?",
+      "a": "ma'ruzaga; soat uchda"
+     }
+    ]
+   }
+  ]
+ },
+ "interval-3": {
+  "covers": "25–36-darslar",
+  "speaking": [
+   {
+    "type": "monolog",
+    "title_uz": "1-topshiriq. Monolog",
+    "time_min": "1–1,5",
+    "task_uz": "Oilangiz va ishingiz haqida gapirib bering (8–10 gap).",
+    "plan_uz": [
+     "oilangizda kimlar bor, kim yo'q (у меня́ есть / нет…)",
+     "ular kim bo'lib ishlaydi (рабо́тает + kim? — instrumental)",
+     "kim bilan yashaysiz (с кем?)",
+     "sizga nima yoqadi (мне нра́вится…)",
+     "nima qila olasiz (уме́ю / могу́…)",
+     "kim bo'lishni xohlaysiz (хочу́ стать…)"
+    ],
+    "useful_ru": [
+     "У меня́ есть… / У меня́ нет…",
+     "Мой брат рабо́тает врачо́м.",
+     "Я живу́ с…",
+     "Мне нра́вится…",
+     "Я уме́ю…",
+     "Я хочу́ стать…"
+    ],
+    "id": "i3-sp1"
+   },
+   {
+    "type": "roleplay",
+    "title_uz": "2-topshiriq. Rolli o'yin: Bozorda xarid",
+    "time_min": "2–3",
+    "situation_uz": "Siz bozordasiz. Meva va non sotib olasiz.",
+    "teacher_card_uz": "Siz — sotuvchi. Narxlar: olma — 1 kg 15 000 so'm, non — 4 000 so'm. Chegirma haqida avval «yo'q» deng, keyin 1 000 so'm kamaytiring.",
+    "student_card_uz": "Siz — xaridor. 2 kg olma va bitta non sotib oling.",
+    "student_must_uz": [
+     "salomlashing",
+     "olma va nonning narxini so'rang",
+     "2 kg olma va bitta non so'rang (Да́йте, пожа́луйста…)",
+     "chegirma so'rang",
+     "jami qancha ekanini so'rang (Ско́лько с меня́?) va rahmat ayting"
+    ],
+    "teacher_opening_ru": "Здра́вствуйте! Что вы хоти́те?",
+    "teacher_lines_ru": [
+     "Я́блоки — пятна́дцать ты́сяч за килогра́мм.",
+     "Хлеб — четы́ре ты́сячи.",
+     "Ски́дка? Ну хорошо́, ты́сяча сумо́в ски́дка.",
+     "С вас три́дцать три ты́сячи. Вот сда́ча!"
+    ],
+    "id": "i3-sp2"
+   },
+   {
+    "type": "questions",
+    "title_uz": "3-topshiriq. Ustoz savollari",
+    "time_min": "1–2",
+    "note_uz": "Ustoz savollarni ketma-ket beradi. O'quvchi har biriga kamida 2 ta to'liq gap bilan javob beradi.",
+    "questions": [
+     {
+      "ru": "У вас больша́я семья́?",
+      "uz": "Oilangiz kattami?"
+     },
+     {
+      "ru": "Кем вы рабо́таете и́ли кем хоти́те стать?",
+      "uz": "Kim bo'lib ishlaysiz yoki kim bo'lmoqchisiz?"
+     },
+     {
+      "ru": "С кем вы живёте?",
+      "uz": "Kim bilan yashaysiz?"
+     },
+     {
+      "ru": "Что вы обы́чно зака́зываете в кафе́?",
+      "uz": "Kafeda odatda nima buyurtma qilasiz?"
+     }
+    ],
+    "id": "i3-sp3"
+   }
+  ],
+  "writing": {
+   "task_uz": "Do'stingizni tug'ilgan kuni bilan tabriklab, qisqa xat (otkritka) yozing va uni kafega taklif qiling.",
+   "sentences": "5–8",
+   "time_min": 15,
+   "plan_uz": [
+    "murojaat (Дорого́й… / Дорога́я…)",
+    "tabrik (Поздравля́ю тебя́ с…)",
+    "tilak (Жела́ю тебе́…)",
+    "sovg'a haqida",
+    "kafega taklif: kun va joy (ря́дом с…, напро́тив…)",
+    "imzo"
+   ],
+   "model_ru": "Дорого́й Тиму́р! Поздравля́ю тебя́ с днём рожде́ния! Жела́ю тебе́ здоро́вья и сча́стья! Я хочу́ подари́ть тебе́ интере́сную кни́гу. Ты свобо́ден в суббо́ту? Я хочу́ пригласи́ть тебя́ в кафе́. Кафе́ нахо́дится ря́дом с ба́нком, напро́тив па́рка. Там о́чень вку́сный плов! Твой друг Ази́з.",
+   "id": "i3-w1"
+  },
+  "listening": [
+   {
+    "dialog": "L28-d2",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Nigoraning oilasida kimlar bor?",
+      "a": "eri, o'g'li va qizi"
+     },
+     {
+      "q": "Nigoraning erining nechta aka-ukasi va opa-singlisi bor?",
+      "a": "ikkita aka-ukasi va uchta opa-singlisi"
+     },
+     {
+      "q": "Timurning akasi qayerda yashaydi?",
+      "a": "Moskvada"
+     }
+    ]
+   },
+   {
+    "dialog": "L32-d3",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Timurga ovqat yoqdimi?",
+      "a": "ha, juda mazali bo'ldi"
+     },
+     {
+      "q": "Hisob qancha?",
+      "a": "120 000 (bir yuz yigirma ming)"
+     },
+     {
+      "q": "Timur qanday to'ladi va nega?",
+      "a": "naqd pulda, chunki bugun karta bilan to'lab bo'lmaydi"
+     }
+    ]
+   }
+  ]
+ },
+ "interval-4": {
+  "covers": "37–48-darslar",
+  "speaking": [
+   {
+    "type": "monolog",
+    "title_uz": "1-topshiriq. Monolog",
+    "time_min": "1–1,5",
+    "task_uz": "Dam olish yoki ta'til rejalaringiz haqida gapirib bering (8–10 gap, kelasi zamon).",
+    "plan_uz": [
+     "qachon va qayerga borasiz (пое́ду / пойду́…)",
+     "nima bilan borasiz (на по́езде, на самолёте…)",
+     "kim bilan borasiz",
+     "u yerda nima qilasiz (бу́ду + infinitiv)",
+     "u yerda ob-havo qanday bo'ladi",
+     "qaysi fasl sizga ko'proq yoqadi va nega (лу́чше, чем…)"
+    ],
+    "useful_ru": [
+     "Ле́том я пое́ду в…",
+     "Я бу́ду отдыха́ть / пла́вать…",
+     "Мы пое́дем на по́езде.",
+     "Там бу́дет жа́рко / тепло́.",
+     "Я люблю́ весну́, потому́ что…",
+     "Мо́ре лу́чше, чем го́ры."
+    ],
+    "id": "i4-sp1"
+   },
+   {
+    "type": "roleplay",
+    "title_uz": "2-topshiriq. Rolli o'yin: Shifokor qabulida",
+    "time_min": "2–3",
+    "situation_uz": "Sizni ikki kundan beri bosh og'rig'i va yo'tal bezovta qilyapti. Siz shifokordasiz.",
+    "teacher_card_uz": "Siz — shifokor. Simptomlarni so'rang, retsept bering: dorini kuniga 3 marta ichish, 3 kun uyda dam olish.",
+    "student_card_uz": "Siz — bemor. Shikoyatlaringizni ayting va maslahat oling.",
+    "student_must_uz": [
+     "nima og'riyotganini ayting (2 ta simptom)",
+     "qachondan beri kasal ekaningizni ayting",
+     "dorini qanday ichishni so'rang",
+     "ishga borsa bo'ladimi, so'rang",
+     "rahmat ayting va xayrlashing"
+    ],
+    "teacher_opening_ru": "Здра́вствуйте! Проходи́те, сади́тесь. Что вас беспоко́ит?",
+    "teacher_lines_ru": [
+     "Температу́ра есть?",
+     "Вот реце́пт. Принима́йте лека́рство три ра́за в день.",
+     "Нет, на рабо́ту нельзя́. Три дня отдыха́йте до́ма.",
+     "Бу́дьте здоро́вы!"
+    ],
+    "id": "i4-sp2"
+   },
+   {
+    "type": "questions",
+    "title_uz": "3-topshiriq. Ustoz savollari",
+    "time_min": "1–2",
+    "note_uz": "Ustoz savollarni ketma-ket beradi. O'quvchi har biriga kamida 2 ta to'liq gap bilan javob beradi.",
+    "questions": [
+     {
+      "ru": "Что вы бу́дете де́лать в выходны́е?",
+      "uz": "Dam olish kunlari nima qilasiz?"
+     },
+     {
+      "ru": "Как вы е́здите на рабо́ту и́ли на учёбу?",
+      "uz": "Ishga yoki o'qishga qanday qatnaysiz?"
+     },
+     {
+      "ru": "Что вы сего́дня уже́ успе́ли сде́лать?",
+      "uz": "Bugun nimalarni qilib ulgurdingiz?"
+     },
+     {
+      "ru": "Како́е вре́мя го́да вы лю́бите? Почему́?",
+      "uz": "Qaysi faslni yaxshi ko'rasiz? Nega?"
+     }
+    ],
+    "id": "i4-sp3"
+   }
+  ],
+  "writing": {
+   "task_uz": "Do'stingizga xabar yozing: shanba kungi rejangiz, ob-havo va uni o'zingiz bilan borishga taklif qiling.",
+   "sentences": "5–8",
+   "time_min": 15,
+   "plan_uz": [
+    "salomlashing",
+    "shanba kuni nima qilasiz (kelasi zamon)",
+    "qayerga va nima bilan borasiz",
+    "ob-havo prognozi",
+    "do'stingizni taklif qiling (Дава́й…)",
+    "maslahat bering (Возьми́…)"
+   ],
+   "model_ru": "Приве́т, Тиму́р! Что ты бу́дешь де́лать в суббо́ту? Я пое́ду на да́чу с семьёй. Мы бу́дем гото́вить плов и игра́ть в футбо́л. Прогно́з пого́ды хоро́ший: бу́дет со́лнечно и тепло́. Дава́й пое́дем вме́сте! Мы пое́дем на маши́не в де́вять часо́в. Возьми́ ку́ртку, ве́чером бу́дет прохла́дно.",
+   "id": "i4-w1"
+  },
+  "listening": [
+   {
+    "dialog": "L43-d3",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Timurning akasi qachon va qayerdan keldi?",
+      "a": "kecha, Moskvadan"
+     },
+     {
+      "q": "U qachon ketadi?",
+      "a": "bir haftadan keyin"
+     },
+     {
+      "q": "Nigora Samarqandga odatda nimada boradi?",
+      "a": "poyezdda"
+     }
+    ]
+   },
+   {
+    "dialog": "L46-d2",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Timurni nimalar bezovta qilyapti?",
+      "a": "tomoq og'rig'i, isitma va yo'tal"
+     },
+     {
+      "q": "U qachondan beri kasal?",
+      "a": "uch kundan beri"
+     },
+     {
+      "q": "Shifokor nima berdi va nima dedi?",
+      "a": "retsept berdi; dorini kuniga uch marta ichish kerak"
+     }
+    ]
+   }
+  ]
+ },
+ "interval-5": {
+  "covers": "49–60-darslar",
+  "speaking": [
+   {
+    "type": "monolog",
+    "title_uz": "1-topshiriq. Monolog",
+    "time_min": "1–1,5",
+    "task_uz": "Bir sayohatingiz haqida hikoya qiling (8–10 gap).",
+    "plan_uz": [
+     "qachon va qayerga borgansiz (е́здил / е́здила в…)",
+     "nima bilan va kim bilan borgansiz",
+     "u yerda avval, keyin, nihoyat nima qildingiz",
+     "qaysi diqqatga sazovor joylarni ko'rdingiz",
+     "sizga yoqdimi va nega (потому́ что…)",
+     "yana borarmidingiz (е́сли бы…)"
+    ],
+    "useful_ru": [
+     "В про́шлом году́ я е́здил(а) в…",
+     "Снача́ла…, пото́м…, наконе́ц…",
+     "Мы посмотре́ли…",
+     "Мне о́чень понра́вилось, потому́ что…",
+     "Е́сли бы у меня́ бы́ло вре́мя, я бы…"
+    ],
+    "id": "i5-sp1"
+   },
+   {
+    "type": "roleplay",
+    "title_uz": "2-topshiriq. Rolli o'yin: Fikr almashish",
+    "time_min": "2–3",
+    "situation_uz": "Do'stingiz bilan qayerda yashash yaxshiroq ekanini muhokama qilyapsiz: katta shahardami yoki kichik shahardami.",
+    "teacher_card_uz": "Siz — do'st. Katta shahar tarafdorisiz (ish ko'p, joylar qiziq). O'quvchiga e'tiroz bildiring va uning fikrini so'rang.",
+    "student_card_uz": "Siz — o'zingiz. O'z fikringizni ayting va asoslang.",
+    "student_must_uz": [
+     "o'z fikringizni ayting (Я ду́маю, что… / По-моему́…)",
+     "kamida 2 ta sabab keltiring (потому́ что…)",
+     "do'stingizning bir fikriga qo'shiling yoki e'tiroz bildiring (Я согла́сен / Извини́, но…)",
+     "unga savol bering",
+     "xulosa qiling"
+    ],
+    "teacher_opening_ru": "По-моему́, жить в большо́м го́роде лу́чше. Там бо́льше рабо́ты и интере́сных мест. А ты как ду́маешь?",
+    "teacher_lines_ru": [
+     "Но в ма́леньком го́роде ску́чно!",
+     "А где лу́чше рабо́тать?",
+     "Хорошо́, ты прав, но…"
+    ],
+    "id": "i5-sp2"
+   },
+   {
+    "type": "questions",
+    "title_uz": "3-topshiriq. Ustoz savollari",
+    "time_min": "1–2",
+    "note_uz": "Ustoz savollarni ketma-ket beradi. O'quvchi har biriga kamida 2 ta to'liq gap bilan javob beradi.",
+    "questions": [
+     {
+      "ru": "Чем вы занима́етесь в свобо́дное вре́мя?",
+      "uz": "Bo'sh vaqtingizda nima bilan shug'ullanasiz?"
+     },
+     {
+      "ru": "Что есть в ва́шем райо́не?",
+      "uz": "Mahallangizda nimalar bor?"
+     },
+     {
+      "ru": "Заче́м вы у́чите ру́сский язы́к?",
+      "uz": "Rus tilini nima uchun o'rganyapsiz?"
+     },
+     {
+      "ru": "Что бы вы сде́лали, е́сли бы у вас был миллио́н?",
+      "uz": "Agar sizda million bo'lsa, nima qilardingiz?"
+     }
+    ],
+    "id": "i5-sp3"
+   }
+  ],
+  "writing": {
+   "task_uz": "Rossiyalik do'stingizga shahringiz (mahallangiz) haqida yozing va uni mehmonga chaqiring.",
+   "sentences": "5–8",
+   "time_min": 15,
+   "plan_uz": [
+    "shahringiz qanday (katta / kichik, shinam…)",
+    "unda nimalar bor (ko'plik: мно́го магази́нов…)",
+    "sizga nima yoqadi va nega",
+    "do'stingiz kelsa, qayerlarga olib borasiz (кото́рый…)",
+    "taklif (Я хочу́, что́бы ты…)"
+   ],
+   "model_ru": "Приве́т, Анто́н! Я живу́ в Андижа́не. Э́то небольшо́й, но о́чень ую́тный го́род. В на́шем райо́не мно́го магази́нов, есть парк, бассе́йн и большо́й база́р. Мне нра́вится наш го́род, потому́ что лю́ди здесь до́брые и весёлые. Е́сли ты прие́дешь, мы снача́ла пойдём на база́р, кото́рый нахо́дится в це́нтре. Пото́м мы пойдём в рестора́н, где гото́вят са́мый вку́сный плов. Я о́чень хочу́, что́бы ты прие́хал!",
+   "id": "i5-w1"
+  },
+  "listening": [
+   {
+    "dialog": "L54-d1",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Timur Samarqandga nimada va qancha vaqt yo'l yurdi?",
+      "a": "«Afrosiyob» poyezdida, 2 soat"
+     },
+     {
+      "q": "Registondan keyin ular nima qilishdi?",
+      "a": "gid tarix haqida gapirib berdi, keyin palov tatib ko'rishdi"
+     },
+     {
+      "q": "Timur safarni qanday baholadi?",
+      "a": "zo'r, unutilmas (Отли́чно! Незабыва́емо!)"
+     }
+    ]
+   },
+   {
+    "dialog": "L58-d1",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Kim va qachon uchib keladi?",
+      "a": "Antonning akasi, ertaga"
+     },
+     {
+      "q": "Akasining tashqi ko'rinishini ayting (kamida 2 belgi).",
+      "a": "baland bo'yli, ozg'in, sochi och rangli, ko'zlari moviy, ko'zoynak taqadi"
+     },
+     {
+      "q": "Nega Nigora uni albatta taniyman deydi?",
+      "a": "chunki u Antonga juda o'xshaydi"
+     }
+    ]
+   }
+  ]
+ },
+ "interval-6": {
+  "covers": "61–72-darslar",
+  "speaking": [
+   {
+    "type": "monolog",
+    "title_uz": "1-topshiriq. Monolog",
+    "time_min": "2–3",
+    "task_uz": "«Моя́ жизнь» — o'zingiz haqingizda taqdimot (2–3 daqiqa, 10–12 gap).",
+    "plan_uz": [
+     "qachon va qayerda tug'ilgansiz (роди́лся / родила́сь…)",
+     "ta'lim: maktab, universitet (око́нчил, поступи́л)",
+     "ish tajribasi (рабо́тал с … по …)",
+     "oilangiz",
+     "hobbi va nima bilan faxrlanasiz (горжу́сь…)",
+     "kelajak rejalari",
+     "yakun: Спаси́бо за внима́ние!"
+    ],
+    "useful_ru": [
+     "Я роди́лся / родила́сь … в … году́.",
+     "В … году́ я око́нчил(а)…",
+     "С … по … я рабо́тал(а)…",
+     "Я горжу́сь…",
+     "В сле́дующем году́ я хочу́…",
+     "Спаси́бо за внима́ние!"
+    ],
+    "id": "i6-sp1"
+   },
+   {
+    "type": "roleplay",
+    "title_uz": "2-topshiriq. Rolli o'yin: Kvartira ijarasi (telefonda)",
+    "time_min": "2–3",
+    "situation_uz": "Siz e'lonni ko'rdingiz va uy egasiga qo'ng'iroq qilyapsiz.",
+    "teacher_card_uz": "Siz — uy egasi. Kvartira: 2 xonali, 4-qavat, lift bor, oyiga 4 mln so'm, kommunal xizmatlar alohida, garov — bir oylik. Ertaga soat 6 da ko'rsatishingiz mumkin.",
+    "student_card_uz": "Siz — ijarachi. Kvartira haqida bilib oling va ko'rishga vaqt belgilang.",
+    "student_must_uz": [
+     "e'lon bo'yicha qo'ng'iroq qilayotganingizni ayting",
+     "xonalar soni va qavatni so'rang",
+     "narx va kommunal xizmatlarni so'rang",
+     "mebel bor-yo'qligini so'rang",
+     "ko'rish vaqtini kelishing va xayrlashing"
+    ],
+    "teacher_opening_ru": "Алло́, слу́шаю вас.",
+    "teacher_lines_ru": [
+     "Да, кварти́ра свобо́дна.",
+     "Две ко́мнаты, четвёртый эта́ж, есть лифт.",
+     "Четы́ре миллио́на в ме́сяц, коммуна́льные отде́льно.",
+     "Приходи́те за́втра в шесть.",
+     "Всего́ до́брого!"
+    ],
+    "id": "i6-sp2"
+   },
+   {
+    "type": "questions",
+    "title_uz": "3-topshiriq. Ustoz savollari",
+    "time_min": "1–2",
+    "note_uz": "Ustoz savollarni ketma-ket beradi. O'quvchi har biriga kamida 2 ta to'liq gap bilan javob beradi.",
+    "questions": [
+     {
+      "ru": "Где вы роди́лись и где учи́лись?",
+      "uz": "Qayerda tug'ilgansiz va qayerda o'qigansiz?"
+     },
+     {
+      "ru": "Како́й у вас о́пыт рабо́ты?",
+      "uz": "Ish tajribangiz qanday?"
+     },
+     {
+      "ru": "Каки́е у вас си́льные сто́роны?",
+      "uz": "Kuchli tomonlaringiz qanday?"
+     },
+     {
+      "ru": "Что вам сказа́л ваш друг и́ли колле́га вчера́?",
+      "uz": "Kecha do'stingiz yoki hamkasbingiz sizga nima dedi? (o'zlashtirma gap bilan)"
+     }
+    ],
+    "id": "i6-sp3"
+   }
+  ],
+  "writing": {
+   "task_uz": "Ish uchun qisqa avtobiografiya (rezyume xati) yozing.",
+   "sentences": "5–8",
+   "time_min": 15,
+   "plan_uz": [
+    "ism",
+    "tug'ilgan sana va joy",
+    "ta'lim (око́нчил / поступи́л)",
+    "ish tajribasi (с … по …)",
+    "kuchli tomonlar va tillar",
+    "nega aynan shu kompaniyada ishlamoqchisiz"
+   ],
+   "model_ru": "Меня́ зову́т Ази́з. Я роди́лся 5 ма́я 1997 го́да в Андижа́не. В 2014 году́ я око́нчил шко́лу и поступи́л в университе́т. С 2019 по 2022 год я рабо́тал ме́неджером в магази́не. Сейча́с я рабо́таю в ба́нке. Мои́ си́льные сто́роны — отве́тственность и пунктуа́льность. Я хорошо́ говорю́ по-узбе́кски и по-ру́сски. Я хоте́л бы рабо́тать в ва́шей компа́нии, потому́ что у вас интере́сная рабо́та и хоро́ший коллекти́в.",
+   "id": "i6-w1"
+  },
+  "listening": [
+   {
+    "dialog": "L64-d1",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Timur universitetni qachon tugatgan?",
+      "a": "2019-yilda (в девятна́дцатом году́)"
+     },
+     {
+      "q": "Timur qayerda, kim bo'lib va necha yil ishlagan?",
+      "a": "bankda menejer bo'lib, uch yil"
+     },
+     {
+      "q": "Timurning kuchli tomonlari qanday?",
+      "a": "mas'uliyatli va jamoada ishlay oladi"
+     }
+    ]
+   },
+   {
+    "dialog": "L71-d2",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Majlis soat nechada bo'ladi?",
+      "a": "soat uchda"
+     },
+     {
+      "q": "Bobur boshliqqa nima deb javob berdi?",
+      "a": "Dilnoza shifokorda bo'lganini"
+     },
+     {
+      "q": "Boshliq nimani so'radi va nimani iltimos qildi?",
+      "a": "hujjatlar tayyormi, deb so'radi va ularni olib kelishni iltimos qildi"
+     }
+    ]
+   }
+  ]
+ },
+ "final": {
+  "covers": "1–72-darslar",
+  "speaking": [
+   {
+    "type": "monolog",
+    "title_uz": "1-topshiriq. Monolog",
+    "time_min": "3",
+    "task_uz": "Rus tilini o'rganish yo'lingiz va rejalaringiz haqida gapirib bering (3 daqiqa, 12–15 gap).",
+    "plan_uz": [
+     "rus tilini nima uchun o'rganyapsiz (что́бы…)",
+     "ilgari nima qila olmasdingiz, endi nima qila olasiz (Ра́ньше я не мог…, а сейча́с…)",
+     "qaysi mavzu qiyin, qaysi oson bo'ldi va nega",
+     "bir qiziq voqea (одна́жды, вдруг, снача́ла, пото́м)",
+     "rus tilini kelajakda qayerda ishlatasiz",
+     "agar Rossiyaga borsangiz, nima qilardingiz (е́сли бы…)"
+    ],
+    "useful_ru": [
+     "Я учу́ ру́сский язы́к, что́бы…",
+     "Ра́ньше я не мог(ла́)…, а сейча́с я могу́…",
+     "Мне бы́ло тру́дно…, потому́ что…",
+     "Одна́жды…",
+     "Е́сли бы я пое́хал(а) в Москву́, я бы…"
+    ],
+    "id": "f-sp1"
+   },
+   {
+    "type": "roleplay",
+    "title_uz": "2-topshiriq. Rolli o'yin: Bankda muammo",
+    "time_min": "2–3",
+    "situation_uz": "Kartangiz bloklandi va pul yecha olmayapsiz. Bankka keldingiz.",
+    "teacher_card_uz": "Siz — bank xodimi. Pasportni so'rang, sababini tushuntiring (PIN-kod 3 marta noto'g'ri kiritilgan), ariza yozishni ayting; karta ertaga ishlaydi.",
+    "student_card_uz": "Siz — mijoz. Muammoni tushuntiring va hal qiling.",
+    "student_must_uz": [
+     "muammoni ayting",
+     "nima bo'lganini qisqa hikoya qiling (o'tgan zamon)",
+     "nima qilish kerakligini so'rang",
+     "qachon tayyor bo'lishini so'rang",
+     "rahmat ayting"
+    ],
+    "teacher_opening_ru": "Здра́вствуйте! Чем могу́ помо́чь?",
+    "teacher_lines_ru": [
+     "Ваш па́спорт, пожа́луйста.",
+     "Вы три ра́за ввели́ непра́вильный пин-код.",
+     "Напиши́те заявле́ние, пожа́луйста.",
+     "За́втра ка́рта бу́дет рабо́тать."
+    ],
+    "id": "f-sp2"
+   },
+   {
+    "type": "questions",
+    "title_uz": "3-topshiriq. Ustoz savollari",
+    "time_min": "1–2",
+    "note_uz": "Ustoz savollarni ketma-ket beradi. O'quvchi har biriga kamida 2 ta to'liq gap bilan javob beradi.",
+    "questions": [
+     {
+      "ru": "Что вы де́лали вчера́ и что бу́дете де́лать за́втра?",
+      "uz": "Kecha nima qildingiz va ertaga nima qilasiz?"
+     },
+     {
+      "ru": "Что вам сказа́л ваш учи́тель на после́днем уро́ке?",
+      "uz": "Oxirgi darsda ustozingiz sizga nima dedi? (o'zlashtirma gap)"
+     },
+     {
+      "ru": "В како́м го́роде вы хоте́ли бы жить? Почему́?",
+      "uz": "Qaysi shaharda yashashni xohlardingiz? Nega?"
+     },
+     {
+      "ru": "Како́й сове́т вы да́ли бы но́вому студе́нту?",
+      "uz": "Yangi o'quvchiga qanday maslahat berardingiz?"
+     }
+    ],
+    "id": "f-sp3"
+   }
+  ],
+  "writing": {
+   "task_uz": "Kursni tugatgan bo'lib, yangi o'quvchiga xat yozing: kurs haqida taassurotlaringiz, nimani o'rgandingiz va maslahatlaringiz.",
+   "sentences": "6–8",
+   "time_min": 15,
+   "plan_uz": [
+    "salomlashing va o'zingizni tanishtiring",
+    "qachon va nega o'qishni boshladingiz",
+    "nimalarni o'rgandingiz (Ра́ньше…, а сейча́с…)",
+    "nima qiyin bo'ldi",
+    "2 ta maslahat (На твоём ме́сте я бы… / Не забыва́й…)",
+    "tilak bilan yakunlang"
+   ],
+   "model_ru": "Приве́т! Меня́ зову́т Ази́з, и я то́лько что око́нчил курс ру́сского языка́. Я на́чал учи́ть ру́сский, что́бы рабо́тать в большо́й компа́нии. Ра́ньше я не мог сказа́ть да́же два сло́ва, а сейча́с я могу́ рассказа́ть о себе́ и поговори́ть по телефо́ну. Мне бы́ло тру́дно учи́ть падежи́, но ну́жно мно́го повторя́ть. На твоём ме́сте я бы ка́ждый день слу́шал диало́ги и учи́л но́вые слова́. Не бо́йся говори́ть, да́же е́сли ты де́лаешь оши́бки! Жела́ю тебе́ успе́хов!",
+   "id": "f-w1"
+  },
+  "listening": [
+   {
+    "dialog": "L68-d1",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Nigoraning muammosi nima?",
+      "a": "kartasi bloklangan, pul yecha olmayapti"
+     },
+     {
+      "q": "Nega karta bloklangan?",
+      "a": "PIN-kodni uch marta noto'g'ri kiritgan"
+     },
+     {
+      "q": "Nima qilish kerak va karta qachon tayyor bo'ladi?",
+      "a": "ariza yozish kerak; ertaga (bir kunda)"
+     }
+    ]
+   },
+   {
+    "dialog": "L72-d2",
+    "plays": 2,
+    "questions": [
+     {
+      "q": "Nega Dilnoza Boburning taqdimotini eshitmadi?",
+      "a": "darsga kech qoldi"
+     },
+     {
+      "q": "Bobur qayerda ishlaydi va nimani orzu qiladi?",
+      "a": "bankda; kafe ochishni orzu qiladi"
+     },
+     {
+      "q": "Ustoz nimani so'radi va Bobur nima deb javob berdi?",
+      "a": "rus tilini o'rganish qiyinmidi — qiyin, lekin juda qiziq"
+     }
+    ]
+   }
+  ]
+ },
+ "rubric": {
+  "scale": "har bir mezon 0–5 ball; gapirish (speaking) — 4 mezon × 5 = 20 ball; yozish (writing) — 4 mezon × 5 = 20 ball",
+  "criteria": [
+   {
+    "id": "task",
+    "name_uz": "Vazifa bajarilishi",
+    "levels": {
+     "5": "Barcha punktlar to'liq bajarilgan; javoblar mavzuga mos, kerakli hajmda; suhbatdoshga mos murojaat (ты/вы).",
+     "4": "Deyarli barcha punktlar bajarilgan; 1 ta punkt qisqa yoki chala.",
+     "3": "Asosiy qism bajarilgan, lekin 2 ta punkt tushib qolgan yoki hajm kam.",
+     "2": "Vazifaning yarmidan kami bajarilgan; javoblar qisqa (1–2 so'z).",
+     "1": "Faqat alohida so'zlar yoki yod olingan iboralar; vazifa deyarli bajarilmagan.",
+     "0": "Javob yo'q yoki mavzuga umuman mos emas."
+    }
+   },
+   {
+    "id": "grammar",
+    "name_uz": "Grammatika",
+    "levels": {
+     "5": "Shu bosqichda o'tilgan grammatika (fe'l shakllari, kelishiklar, zamonlar) deyarli xatosiz; xatolar tushunishga xalaqit bermaydi.",
+     "4": "Bir nechta xato bor (kelishik/rod), lekin o'zi tuzatadi yoki ma'no saqlanadi.",
+     "3": "Xatolar sezilarli, ammo asosiy gap qoliplari to'g'ri; ma'no tushunarli.",
+     "2": "Ko'p xato; tuslanish va kelishiklar ko'pincha noto'g'ri, ba'zi gaplar tushunarsiz.",
+     "1": "Deyarli barcha gaplar xato; faqat tayyor iboralar to'g'ri.",
+     "0": "Baholash uchun yetarli matn yo'q."
+    }
+   },
+   {
+    "id": "vocab",
+    "name_uz": "Leksika",
+    "levels": {
+     "5": "So'z boyligi mavzuga to'liq yetarli, o'tilgan so'zlar xilma-xil va o'rinli ishlatilgan.",
+     "4": "So'zlar yetarli, 1–2 ta noaniq tanlov yoki takror.",
+     "3": "So'z boyligi cheklangan, takrorlar ko'p, ba'zan o'zbekcha so'z qo'shib yuboradi.",
+     "2": "So'zlar juda kam; ko'p joyda so'z topa olmaydi.",
+     "1": "Faqat alohida tanish so'zlar.",
+     "0": "Baholash uchun yetarli matn yo'q."
+    }
+   },
+   {
+    "id": "fluency",
+    "name_uz": "Talaffuz / ravonlik",
+    "levels": {
+     "5": "Gapirish: talaffuz va urg'u aniq, akanie (o → a) to'g'ri, tabiiy tezlik, uzoq pauzalarsiz. Yozish: matn bog'liq (снача́ла, пото́м, потому́ что…), imlo va bosh harflar to'g'ri.",
+     "4": "Gapirish: urg'u/talaffuzda kam xato, qisqa pauzalar. Yozish: matn bog'liq, 1–3 ta imlo xatosi.",
+     "3": "Gapirish: ba'zi so'zlar noto'g'ri urg'u bilan, pauzalar sezilarli, lekin tushunarli. Yozish: gaplar alohida-alohida, imlo xatolari bor.",
+     "2": "Gapirish: tez-tez to'xtaydi, ustoz bir necha marta qayta so'raydi. Yozish: matn uzuq-yuluq, imlo xatolari ko'p.",
+     "1": "Gapirish: juda sekin, ko'p so'zlarni tushunib bo'lmaydi. Yozish: o'qish qiyin.",
+     "0": "Javob yo'q."
+    }
+   }
+  ],
+  "speaking_note_uz": "Gapirish uchun 3 topshiriq birgalikda bitta umumiy baho bilan baholanadi (4 mezon × 5 = 20). Ustoz har topshiriqdan keyin qisqa qayd yozadi, oxirida yakuniy ball qo'yadi.",
+  "writing_note_uz": "Yozishda 4-mezon «talaffuz» o'rniga «ravonlik»: matnning bog'liqligi va imlo. Urg'u belgilari yozishda talab qilinmaydi. Namuna javob — faqat ustoz uchun yo'riqnoma, o'quvchiga oldindan ko'rsatilmaydi.",
+  "listening_note_uz": "Tinglash: har dialog 2 marta eshittiriladi; har savol 1 ball (jami 6). Javob o'zbekcha yoki ruscha bo'lishi mumkin; mazmun to'g'ri bo'lsa, to'liq ball. Qisman to'g'ri — 0,5 ball."
+ },
+ "grading_uz": "YAKUNIY BAHO = ilova testi × 60% + og'zaki/yozma qism × 40%. O'tish chegarasi — umumiy 70%.\n1) Ilova testi (avtomatik, foiz) — o'quvchi ilovadagi imtihonni topshiradi (ilovaning o'z chegarasi passPercent = 70 o'zgarmaydi).\n2) Og'zaki/yozma qism (ustoz, 100 ballik shkalaga keltiriladi): gapirish 20 ball → 50%, yozish 20 ball → 30%, tinglash 6 ball → 20%.\n   Og'zaki % = (gapirish/20 × 50) + (yozish/20 × 30) + (tinglash/6 × 20).\n3) Umumiy % = 0,6 × ilova % + 0,4 × og'zaki %. 70% va undan yuqori — o'tdi.\n   Baho: 90–100% — a'lo; 80–89% — yaxshi; 70–79% — qoniqarli; 70% dan past — qayta topshirish (1 hafta ichida, faqat zaif qism).\nMisol: ilova 80%; gapirish 15/20, yozish 14/20, tinglash 5/6 → og'zaki = 37,5 + 21 + 16,7 = 75,2% → umumiy = 48 + 30,1 = 78,1% → o'tdi (qoniqarli).\nTavsiya: og'zaki qismdan 50% dan past olgan o'quvchi umumiy foizi 70% dan yuqori bo'lsa ham gapirish bo'yicha qo'shimcha mashg'ulotga yuboriladi.\nTartib va vaqt (1 o'quvchiga ~25 daqiqa): tinglash 5 daq → gapirish 10 daq (monolog, rolli o'yin, savollar) → yozish 15 daq (guruh bilan birga yozish mumkin). Ustoz monolog uchun 1 daqiqa tayyorgarlik vaqti beradi; lug'at va telefondan foydalanilmaydi."
+}

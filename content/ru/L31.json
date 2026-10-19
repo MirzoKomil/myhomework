@@ -1,0 +1,602 @@
+{
+ "n": 31,
+ "lessonId": "l1784055280406-30",
+ "type": "video",
+ "id": "l1784055280406-30",
+ "topic": "хоте́ть, мочь, ну́жно, мо́жно",
+ "title": "Fe'llar хоте́ть va мочь; ну́жно / на́до / мо́жно / нельзя́",
+ "title_ru": "Хоте́ть и мочь. Ну́жно, на́до, мо́жно, нельзя́",
+ "videoUrl": "",
+ "cando": "Xohishimni (Я хочу́ пить), imkoniyatimni (Я могу́ прийти́), zarurat va ruxsatni (Мне ну́жно рабо́тать, Здесь нельзя́ кури́ть) ayta olaman.",
+ "review": [
+  {
+   "q": "«Non qancha turadi?»",
+   "a": "Ско́лько сто́ит хлеб?"
+  },
+  {
+   "q": "2 / 5 рубль → ?",
+   "a": "два рубля́ / пять рубле́й"
+  },
+  {
+   "q": "500 ruschasi?",
+   "a": "пятьсо́т"
+  },
+  {
+   "q": "«bir shisha suv»?",
+   "a": "буты́лка воды́"
+  },
+  {
+   "q": "«Arzonroq bo'ladimi?»",
+   "a": "Мо́жно деше́вле?"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "хоте́ть (хочу́, хо́чешь)",
+   "tr": "[xatyét']",
+   "uz": "xohlamoq",
+   "ex": "Я хочу́ пить.",
+   "img": "cards/хотеть.jpg",
+   "icon": "",
+   "vocabId": "v-31-1",
+   "media": "media/ru/L31/w_v-31-1.jpg"
+  },
+  {
+   "ru": "мочь (могу́, мо́жешь)",
+   "tr": "[moch]",
+   "uz": "qila olmoq",
+   "ex": "Ты мо́жешь прийти́ за́втра?",
+   "img": "cards/мочь.jpg",
+   "icon": "",
+   "vocabId": "v-31-2",
+   "media": "media/ru/L31/w_v-31-2.jpg"
+  },
+  {
+   "ru": "уме́ть (уме́ю)",
+   "tr": "[uméť]",
+   "uz": "bilmoq (ko'nikma)",
+   "ex": "Я уме́ю пла́вать.",
+   "img": "cards/уметь.jpg",
+   "icon": "",
+   "vocabId": "v-31-3",
+   "media": "media/ru/L31/w_v-31-3.jpg"
+  },
+  {
+   "ru": "ну́жно / на́до",
+   "tr": "[nújna / náda]",
+   "uz": "kerak",
+   "ex": "Мне ну́жно рабо́тать.",
+   "img": "cards/нужно.jpg",
+   "icon": "",
+   "vocabId": "v-31-4",
+   "media": "media/ru/L31/w_v-31-4.jpg"
+  },
+  {
+   "ru": "мо́жно",
+   "tr": "[mójna]",
+   "uz": "mumkin",
+   "ex": "Мо́жно войти́?",
+   "img": "cards/можно.jpg",
+   "icon": "",
+   "vocabId": "v-31-5",
+   "media": "media/ru/L31/w_v-31-5.jpg"
+  },
+  {
+   "ru": "нельзя́",
+   "tr": "[nil'zyá]",
+   "uz": "mumkin emas",
+   "ex": "Здесь нельзя́ кури́ть.",
+   "img": "cards/нельзя.jpg",
+   "icon": "",
+   "vocabId": "v-31-6",
+   "media": "media/ru/L31/w_v-31-6.jpg"
+  },
+  {
+   "ru": "пла́вать",
+   "tr": "[plávat']",
+   "uz": "suzmoq",
+   "ex": "Ле́том я пла́ваю в мо́ре.",
+   "img": "cards/плавать.jpg",
+   "icon": "",
+   "vocabId": "v-31-7",
+   "media": "media/ru/L31/w_v-31-7.jpg"
+  },
+  {
+   "ru": "води́ть маши́ну",
+   "tr": "[vadít' mashýnu]",
+   "uz": "mashina haydamoq",
+   "ex": "Мой брат уме́ет води́ть маши́ну.",
+   "img": "cards/водить машину.jpg",
+   "icon": "",
+   "vocabId": "v-31-8",
+   "media": "media/ru/L31/w_v-31-8.jpg"
+  },
+  {
+   "ru": "рисова́ть",
+   "tr": "[risavát']",
+   "uz": "rasm chizmoq",
+   "ex": "Дочь хорошо́ рису́ет.",
+   "img": "cards/рисовать.jpg",
+   "icon": "",
+   "vocabId": "v-31-9",
+   "media": "media/ru/L31/w_v-31-9.jpg"
+  },
+  {
+   "ru": "игра́ть на гита́ре",
+   "tr": "[igrát' na gitárye]",
+   "uz": "gitara chalmoq",
+   "ex": "Ты уме́ешь игра́ть на гита́ре?",
+   "img": "cards/гитара.jpg",
+   "icon": "",
+   "vocabId": "v-31-10",
+   "media": "media/ru/L31/w_v-31-10.jpg"
+  },
+  {
+   "ru": "уста́л / уста́ла",
+   "tr": "[ustál]",
+   "uz": "charchadi(m)",
+   "ex": "Я уста́л, я хочу́ спать.",
+   "img": "cards/устал.jpg",
+   "icon": "",
+   "vocabId": "v-31-11",
+   "media": "media/ru/L31/w_v-31-11.jpg"
+  },
+  {
+   "ru": "голо́дный",
+   "tr": "[galódnyy]",
+   "uz": "och (qorni)",
+   "ex": "Я голо́дный, я хочу́ есть.",
+   "img": "cards/голодный.jpg",
+   "icon": "",
+   "vocabId": "v-31-12",
+   "media": "media/ru/L31/w_v-31-12.jpg"
+  },
+  {
+   "ru": "кури́ть",
+   "tr": "[kurít']",
+   "uz": "chekmoq",
+   "ex": "Здесь нельзя́ кури́ть.",
+   "img": "cards/нельзя.jpg",
+   "icon": "",
+   "vocabId": "v-31-13",
+   "media": "media/ru/L31/w_v-31-13.jpg"
+  },
+  {
+   "ru": "войти́ / вы́йти",
+   "tr": "[vaytí / výyti]",
+   "uz": "kirmoq / chiqmoq",
+   "ex": "Мо́жно войти́? — Да, входи́те!",
+   "img": "cards/войти.jpg",
+   "icon": "",
+   "vocabId": "v-31-14",
+   "media": "media/ru/L31/w_v-31-14.jpg"
+  },
+  {
+   "ru": "помо́чь",
+   "tr": "[pamóch]",
+   "uz": "yordam bermoq",
+   "ex": "Вы мо́жете мне помо́чь?",
+   "img": "cards/помочь.jpg",
+   "icon": "",
+   "vocabId": "v-31-15",
+   "media": "media/ru/L31/w_v-31-15.jpg"
+  },
+  {
+   "ru": "за́нят / свобо́ден",
+   "tr": "[zányat / svabódin]",
+   "uz": "band / bo'sh",
+   "ex": "Извини́, я за́нят. За́втра я свобо́ден.",
+   "img": "cards/занят.jpg",
+   "icon": "",
+   "vocabId": "v-31-16",
+   "media": "media/ru/L31/w_v-31-16.jpg"
+  }
+ ],
+ "konspekt": "31-DARS: хоте́ть, мочь, уме́ть; ну́жно / на́до / мо́жно / нельзя́\n(Хоте́ть и мочь. Ну́жно, на́до, мо́жно, нельзя́)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: xohishingizni, nima qila olishingizni, nima kerakligini va nima mumkin/mumkin emasligini aytasiz. Bu — kundalik nutqning eng kerakli qolipi!\n\n---\n\n1. хоте́ть — xohlamoq (aralash tuslanish, yodlang!)\n\nя хочу́ · ты хо́чешь · он/она́ хо́чет · мы хоти́м · вы хоти́те · они́ хотя́т\n(birlikda 1-tur, ko'plikda 2-tur)\n\n* Я хочу́ пить / есть / спать. — Ichgim / yegim / uxlagim keldi.\n* Я хочу́ чай. Мы хоти́м пойти́ в кино́.\n* Что ты хо́чешь? — Nima xohlaysan?\n\n---\n\n2. мочь — qila olmoq (imkoniyat)\n\nя могу́ · ты мо́жешь · он мо́жет · мы мо́жем · вы мо́жете · они́ мо́гут\n(o'tgan zamon — 19-darsda: мог, могла́, могли́)\n\n* Я могу́ прийти́ за́втра. — Ertaga kela olaman.\n* Вы мо́жете мне помо́чь? — Menga yordam bera olasizmi?\n* Извини́, я не могу́, я за́нят. — Kechir, qila olmayman, bandman.\n\nуме́ть — bilmoq (o'rganilgan ko'nikma): я уме́ю пла́вать / води́ть маши́ну / игра́ть на гита́ре.\nFarq: Я уме́ю пла́вать (suzishni bilaman), но сего́дня не могу́ — я бо́лен (bugun suza olmayman).\n\n---\n\n3. Fe'l + infinitiv (-ть)\n\nхочу́ / могу́ / уме́ю / люблю́ + infinitiv: Я хочу́ рабо́тать. Он мо́жет говори́ть по-ру́сски. Она́ уме́ет рисова́ть.\n\n---\n\n4. ну́жно / на́до — kerak; мо́жно — mumkin; нельзя́ — mumkin emas\n\nKim uchun? → Да́тельный (33-darsda to'liq): мне, тебе́, ему́, ей, нам, вам, им\n* Мне ну́жно рабо́тать. — Men ishlashim kerak.\n* Тебе́ на́до отдыха́ть. — Sen dam olishing kerak.\n* Нам ну́жно купи́ть хлеб. — Biz non olishimiz kerak.\n* Мо́жно войти́? — Kirsam bo'ladimi? — Да, мо́жно. / Нет, нельзя́.\n* Здесь нельзя́ кури́ть. — Bu yerda chekish mumkin emas.\n* Мо́жно ваш телефо́н? — Telefoningizni bersangiz? (iltimos)\n\n---\n\n5. Mini-dialog\n\n— Тиму́р, ты мо́жешь сего́дня прийти́?\n— Извини́, не могу́. Мне ну́жно рабо́тать.\n— А за́втра?\n— За́втра могу́. Я хочу́ посмотре́ть но́вый фильм.\n\n---\n\nDars xulosasi:\n1. хочу́, хо́чешь, хо́чет, хоти́м, хоти́те, хотя́т.\n2. могу́, мо́жешь, мо́жет, мо́жем, мо́жете, мо́гут.\n3. уме́ю — bilaman (ko'nikma), могу́ — qila olaman (imkoniyat).\n4. Мне ну́жно / на́до + fe'l; Мо́жно? — Да, мо́жно / Нет, нельзя́.\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: kafe va restoranda.",
+ "text": {
+  "title": "Свобо́дный ве́чер",
+  "ru": "Сего́дня пя́тница. Дильно́за о́чень уста́ла, она́ хо́чет отдохну́ть. Но ей ну́жно купи́ть проду́кты.\nВе́чером звони́т Анто́н: «Дильно́за, ты мо́жешь пойти́ в кино́?» — «Извини́, сего́дня не могу́. Мне на́до гото́вить у́жин. А за́втра я свобо́дна».\nВ суббо́ту они́ иду́т в парк. Анто́н уме́ет игра́ть на гита́ре, а Дильно́за хорошо́ рису́ет. В па́рке нельзя́ е́здить на маши́не, но мо́жно ката́ться на велосипе́де. Друзья́ о́чень дово́льны.",
+  "uz": "Bugun juma. Dilnoza juda charchagan, u dam olib olishni xohlaydi. Lekin unga oziq-ovqat olish kerak.\nKechqurun Anton qo'ng'iroq qiladi: «Dilnoza, kinoga bora olasanmi?» — «Kechir, bugun bora olmayman. Kechki ovqat tayyorlashim kerak. Ertaga esa bo'shman».\nShanba kuni ular parkka borishadi. Anton gitara chalishni biladi, Dilnoza esa yaxshi rasm chizadi. Parkda mashinada yurish mumkin emas, lekin velosipedda uchish mumkin. Do'stlar juda xursand.",
+  "questions": [
+   {
+    "q": "Что хо́чет Дильно́за в пя́тницу?",
+    "opts": [
+     "Отдыха́ть",
+     "Пла́вать",
+     "Рабо́тать"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Почему́ Дильно́за не мо́жет пойти́ в кино́?",
+    "opts": [
+     "Она́ не лю́бит кино́",
+     "У неё нет де́нег",
+     "Ей на́до гото́вить у́жин"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Когда́ Дильно́за свобо́дна?",
+    "opts": [
+     "В понеде́льник",
+     "В суббо́ту",
+     "В пя́тницу"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что уме́ет Анто́н?",
+    "opts": [
+     "Рисова́ть",
+     "Води́ть маши́ну",
+     "Игра́ть на гита́ре"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Что нельзя́ де́лать в па́рке?",
+    "opts": [
+     "Ката́ться на велосипе́де",
+     "Е́здить на маши́не",
+     "Гуля́ть"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Куда́ они́ иду́т в суббо́ту?",
+    "opts": [
+     "На база́р",
+     "В кино́",
+     "В парк"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Ты мо́жешь прийти́? (Kela olasanmi?)",
+  "lines": [
+   {
+    "who": "Абдулази́з",
+    "ru": "Бобу́р, ты мо́жешь сего́дня прийти́ ко мне?",
+    "uz": "Bobur, bugun menikiga kela olasanmi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Извини́, не могу́. Мне ну́жно рабо́тать.",
+    "uz": "Kechir, kela olmayman. Ishlashim kerak."
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "А за́втра? Ты свобо́ден?",
+    "uz": "Ertaga-chi? Bo'shmisan?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "За́втра могу́. Что ты хо́чешь де́лать?",
+    "uz": "Ertaga kela olaman. Nima qilmoqchisan?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Я хочу́ посмотре́ть футбо́л. Ты уме́ешь игра́ть в ша́хматы?",
+    "uz": "Futbol ko'rmoqchiman. Shaxmat o'ynashni bilasanmi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Коне́чно, уме́ю! До за́втра!",
+    "uz": "Albatta bilaman! Ertagacha!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "я хочу́",
+    "men xohlayman"
+   ],
+   [
+    "ты мо́жешь",
+    "sen qila olasan"
+   ],
+   [
+    "они́ хотя́т",
+    "ular xohlaydi"
+   ],
+   [
+    "мы мо́жем",
+    "biz qila olamiz"
+   ],
+   [
+    "я уме́ю",
+    "men bilaman (ko'nikma)"
+   ],
+   [
+    "мне ну́жно",
+    "menga kerak"
+   ],
+   [
+    "мо́жно",
+    "mumkin"
+   ],
+   [
+    "нельзя́",
+    "mumkin emas"
+   ],
+   [
+    "уста́л",
+    "charchadim"
+   ],
+   [
+    "свобо́ден",
+    "bo'shman"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Я ___ пить. (xohlayman)",
+    "o": [
+     "хоти́м",
+     "хо́чет",
+     "хочу́"
+    ],
+    "a": "хочу́"
+   },
+   {
+    "s": "Что ты ___ ?",
+    "o": [
+     "хо́чет",
+     "хо́чешь",
+     "хоти́те"
+    ],
+    "a": "хо́чешь"
+   },
+   {
+    "s": "Они́ ___ пойти́ в кино́.",
+    "o": [
+     "хотя́т",
+     "хоти́м",
+     "хочут"
+    ],
+    "a": "хотя́т"
+   },
+   {
+    "s": "Вы ___ мне помо́чь?",
+    "o": [
+     "мо́жете",
+     "мо́жешь",
+     "мо́гут"
+    ],
+    "a": "мо́жете"
+   },
+   {
+    "s": "Извини́, я не ___ .",
+    "o": [
+     "мо́жет",
+     "могу́",
+     "мо́жем"
+    ],
+    "a": "могу́"
+   },
+   {
+    "s": "Мой брат ___ води́ть маши́ну. (biladi)",
+    "o": [
+     "мо́жет",
+     "уме́ет",
+     "хо́чет"
+    ],
+    "a": "уме́ет"
+   },
+   {
+    "s": "Мне ___ рабо́тать. (kerak)",
+    "o": [
+     "ну́жно",
+     "нельзя́",
+     "мо́жно"
+    ],
+    "a": "ну́жно"
+   },
+   {
+    "s": "___ войти́? — Да, входи́те.",
+    "o": [
+     "Мо́жно",
+     "Ну́жно",
+     "Нельзя́"
+    ],
+    "a": "Мо́жно"
+   },
+   {
+    "s": "Здесь ___ кури́ть.",
+    "o": [
+     "ну́жно",
+     "мо́жно",
+     "нельзя́"
+    ],
+    "a": "нельзя́"
+   },
+   {
+    "s": "Мы ___ прийти́ за́втра.",
+    "o": [
+     "мо́жете",
+     "мо́жем",
+     "мо́гут"
+    ],
+    "a": "мо́жем"
+   },
+   {
+    "s": "Я уста́л, я хочу́ ___ .",
+    "o": [
+     "спит",
+     "сплю",
+     "спать"
+    ],
+    "a": "спать"
+   },
+   {
+    "s": "Тебе́ ___ отдыха́ть. (kerak)",
+    "o": [
+     "на́до",
+     "нельзя́",
+     "мо́жно"
+    ],
+    "a": "на́до"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "хоте́ть: «мы ___»",
+    "o": [
+     "хотя́т",
+     "хочем",
+     "хоти́м"
+    ],
+    "a": 2
+   },
+   {
+    "q": "мочь: «они́ ___»",
+    "o": [
+     "можут",
+     "мо́гут",
+     "мо́жем"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Suzishni bilaman»",
+    "o": [
+     "Я уме́ю пла́вать",
+     "Я хочу́ пла́вать",
+     "Я могу́ пла́вать"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Kirsam bo'ladimi?»",
+    "o": [
+     "Мо́жно войти́?",
+     "Хочу́ войти́?",
+     "Ну́жно войти́?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Men ishlashim kerak»",
+    "o": [
+     "Мне ну́жно рабо́тать",
+     "Меня́ ну́жно рабо́тать",
+     "Я ну́жно рабо́тать"
+    ],
+    "a": 0
+   },
+   {
+    "q": "хочу́ / могу́ / уме́ю dan keyin fe'l shakli:",
+    "o": [
+     "infinitiv (-ть)",
+     "buyruq",
+     "o'tgan zamon"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Bandman» (erkak):",
+    "o": [
+     "Я свобо́ден",
+     "Я за́нят",
+     "Я уста́л"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Здесь ___ кури́ть! (mumkin emas)",
+    "o": [
+     "на́до",
+     "мо́жно",
+     "нельзя́"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "пить",
+     "Я",
+     "хочу́"
+    ],
+    "a": "Я хочу́ пить",
+    "t": "Ichgim keldi"
+   },
+   {
+    "w": [
+     "мне",
+     "Вы",
+     "помо́чь",
+     "мо́жете"
+    ],
+    "a": "Вы мо́жете мне помо́чь",
+    "t": "Menga yordam bera olasizmi?"
+   },
+   {
+    "w": [
+     "рабо́тать",
+     "Мне",
+     "ну́жно"
+    ],
+    "a": "Мне ну́жно рабо́тать",
+    "t": "Men ishlashim kerak"
+   },
+   {
+    "w": [
+     "войти́",
+     "Мо́жно"
+    ],
+    "a": "Мо́жно войти́",
+    "t": "Kirsam bo'ladimi?"
+   },
+   {
+    "w": [
+     "кури́ть",
+     "Здесь",
+     "нельзя́"
+    ],
+    "a": "Здесь нельзя́ кури́ть",
+    "t": "Bu yerda chekish mumkin emas"
+   },
+   {
+    "w": [
+     "пла́вать",
+     "уме́ю",
+     "Я"
+    ],
+    "a": "Я уме́ю пла́вать",
+    "t": "Men suzishni bilaman"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Я хочу́ пить. Я хочу́ есть. Я хочу́ спать.",
+   "uz": "Ichgim / yegim / uxlagim kelyapti."
+  },
+  {
+   "ru": "Вы мо́жете мне помо́чь?",
+   "uz": "Menga yordam bera olasizmi?"
+  },
+  {
+   "ru": "Извини́, я не могу́, мне ну́жно рабо́тать.",
+   "uz": "Kechir, qila olmayman, ishlashim kerak."
+  },
+  {
+   "ru": "Я уме́ю пла́вать и води́ть маши́ну.",
+   "uz": "Men suzishni va mashina haydashni bilaman."
+  },
+  {
+   "ru": "Мо́жно войти́? — Да, мо́жно.",
+   "uz": "Kirsam bo'ladimi? — Ha, mumkin."
+  },
+  {
+   "ru": "Здесь нельзя́ кури́ть.",
+   "uz": "Bu yerda chekish mumkin emas."
+  }
+ ]
+}

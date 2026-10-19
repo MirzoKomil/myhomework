@@ -1,0 +1,304 @@
+{
+ "n": 68,
+ "lessonId": "l1784055280406-67",
+ "type": "live",
+ "id": "l1784055280406-67",
+ "topic": "Bank va pochta roleplay",
+ "title": "Jonli dars: «Чем могу́ помо́чь?» — bank va pochtada muammoni hal qilish",
+ "cando": "Bank va pochtada xizmatni so'rayman, muammoni tushuntiraman (ка́рта заблоки́рована, посы́лка не пришла́) va hujjat masalasini hal qilaman.",
+ "vocab": [
+  {
+   "ru": "Чем могу́ помо́чь?",
+   "tr": "[chem magú pamóch]",
+   "uz": "Qanday yordam bera olaman?",
+   "ex": "Здра́вствуйте! Чем могу́ помо́чь?",
+   "img": "cards/помочь.jpg",
+   "icon": "",
+   "vocabId": "v-68-1",
+   "media": "media/ru/L68/w_v-68-1.jpg"
+  },
+  {
+   "ru": "о́чередь / тало́н",
+   "tr": "[óchirit' / talón]",
+   "uz": "navbat / talon",
+   "ex": "Возьми́те тало́н, ва́ша о́чередь — со́рок пять.",
+   "img": "cards/очередь.jpg",
+   "icon": "",
+   "vocabId": "v-68-2",
+   "media": "media/ru/L68/w_v-68-2.jpg"
+  },
+  {
+   "ru": "заблоки́рована (ка́рта)",
+   "tr": "[zablakíravana]",
+   "uz": "bloklangan (karta)",
+   "ex": "Моя́ ка́рта заблоки́рована.",
+   "img": "cards/банковская карта.jpg",
+   "icon": "",
+   "vocabId": "v-68-3",
+   "media": "media/ru/L68/w_v-68-3.jpg"
+  },
+  {
+   "ru": "потеря́ть ка́рту",
+   "tr": "[patiryát' kártu]",
+   "uz": "kartani yo'qotmoq",
+   "ex": "Я потеря́л ка́рту. Что де́лать?",
+   "img": "cards/потерять.jpg",
+   "icon": "",
+   "vocabId": "v-68-4",
+   "media": "media/ru/L68/w_v-68-4.jpg"
+  },
+  {
+   "ru": "посы́лка не пришла́",
+   "tr": "[pasýlka ni prishlá]",
+   "uz": "posilka kelmadi",
+   "ex": "Посы́лка не пришла́ уже́ две неде́ли.",
+   "img": "cards/посылка.jpg",
+   "icon": "",
+   "vocabId": "v-68-5",
+   "media": "media/ru/L68/w_v-68-5.jpg"
+  },
+  {
+   "ru": "трек-но́мер",
+   "tr": "[trek-nómir]",
+   "uz": "trek-raqam",
+   "ex": "Вот трек-но́мер посы́лки.",
+   "img": "cards/сообщение.jpg",
+   "icon": "",
+   "vocabId": "v-68-6",
+   "media": "media/ru/L68/w_v-68-6.jpg"
+  },
+  {
+   "ru": "заявле́ние",
+   "tr": "[zayivlyéniye]",
+   "uz": "ariza",
+   "ex": "Напиши́те заявле́ние.",
+   "img": "cards/заполнить анкету.jpg",
+   "icon": "",
+   "vocabId": "v-68-7",
+   "media": "media/ru/L68/w_v-68-7.jpg"
+  },
+  {
+   "ru": "квита́нция / чек",
+   "tr": "[kvitántsiya / chek]",
+   "uz": "kvitansiya / chek",
+   "ex": "Сохрани́те квита́нцию.",
+   "img": "cards/чек.jpg",
+   "icon": "",
+   "vocabId": "v-68-8",
+   "media": "media/ru/L68/w_v-68-8.jpg"
+  }
+ ],
+ "konspekt": "68-DARS (jonli dars): Bank va pochta — «Чем могу́ помо́чь?»\n\nBugun ustoz bilan 67-dars mavzusini (hisob, karta, o'tkazma, posilka, anketa) real muammolar roleplayida mashq qildik.\n\nXodim:\n* Здра́вствуйте! Чем могу́ помо́чь? — Qanday yordam bera olaman?\n* Возьми́те тало́н. Ва́ша о́чередь — со́рок пять.\n* Что случи́лось? — Nima bo'ldi?\n* Напиши́те заявле́ние. Сохрани́те квита́нцию.\n\nBankdagi muammolar:\n* Моя́ ка́рта заблоки́рована. — Kartam bloklangan.\n* Я потеря́л(а) ка́рту. Заблоки́руйте её, пожа́луйста! — Kartani yo'qotdim. Bloklab qo'ying!\n* Банкома́т не вы́дал де́ньги, но де́ньги списа́ли. — Bankomat pul bermadi, lekin pul yechildi.\n* Перево́д не пришёл. — O'tkazma kelmadi.\n\nPochtadagi muammolar:\n* Посы́лка не пришла́ уже́ две неде́ли. Вот трек-но́мер. — Posilka ikki haftadan beri kelmadi. Mana trek-raqam.\n* Посы́лка пришла́ повреждённая. — Posilka shikastlangan holda keldi.\n\nHal qilish:\n* Что мне ну́жно сде́лать? — Nima qilishim kerak?\n* Ско́лько э́то займёт вре́мени? — Bu qancha vaqt oladi?\n* Когда́ бу́дет гото́во? · Мо́жно получи́ть но́вую ка́рту?\n* Спаси́бо за по́мощь! — Yordam uchun rahmat!\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: muammoni tushuntirish. Keyingi dars — videodars: hikoya qilish (снача́ла, пото́м, вдруг, наконе́ц).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Здра́вствуйте! Чем могу́ ___ ?",
+    "o": [
+     "помога́ю",
+     "помо́чь",
+     "помогу́"
+    ],
+    "a": "помо́чь"
+   },
+   {
+    "s": "Возьми́те ___ и подожди́те.",
+    "o": [
+     "чек",
+     "тало́н",
+     "о́чередь"
+    ],
+    "a": "тало́н"
+   },
+   {
+    "s": "Моя́ ка́рта ___ .",
+    "o": [
+     "заблоки́рована",
+     "заблоки́ровать",
+     "блок"
+    ],
+    "a": "заблоки́рована"
+   },
+   {
+    "s": "Я ___ ка́рту. Что де́лать?",
+    "o": [
+     "потеря́л",
+     "теря́ть",
+     "потеря́ю"
+    ],
+    "a": "потеря́л"
+   },
+   {
+    "s": "Банкома́т не ___ де́ньги.",
+    "o": [
+     "выдаёт вчера́",
+     "вы́дал",
+     "вы́дать"
+    ],
+    "a": "вы́дал"
+   },
+   {
+    "s": "Посы́лка не ___ уже́ две неде́ли.",
+    "o": [
+     "пришёл",
+     "придёт",
+     "пришла́"
+    ],
+    "a": "пришла́"
+   },
+   {
+    "s": "Вот ___ посы́лки.",
+    "o": [
+     "а́дрес-но́мер",
+     "но́мер-трек",
+     "трек-но́мер"
+    ],
+    "a": "трек-но́мер"
+   },
+   {
+    "s": "Напиши́те, пожа́луйста, ___ .",
+    "o": [
+     "заявле́ние",
+     "заяви́л",
+     "заявля́ть"
+    ],
+    "a": "заявле́ние"
+   },
+   {
+    "s": "Что мне ну́жно ___ ?",
+    "o": [
+     "сде́лать",
+     "сде́лаю",
+     "сде́лал"
+    ],
+    "a": "сде́лать"
+   },
+   {
+    "s": "Сохрани́те ___ .",
+    "o": [
+     "квита́нцию",
+     "квита́нции",
+     "квита́нция"
+    ],
+    "a": "квита́нцию"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Qanday yordam bera olaman?»",
+    "o": [
+     "Чем могу́ помо́чь?",
+     "Что вы хоти́те?",
+     "Где по́мощь?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Kartam bloklangan»",
+    "o": [
+     "Моя́ ка́рта откры́та",
+     "Я блоки́рую ка́рту",
+     "Моя́ ка́рта заблоки́рована"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Kartani bloklab qo'ying!»",
+    "o": [
+     "Заблоки́руйте ка́рту!",
+     "Да́йте ка́рту!",
+     "Откро́йте ка́рту!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Posilka kelmadi»",
+    "o": [
+     "Посы́лка не отпра́вил",
+     "Посы́лка не пришла́",
+     "Посы́лка не ушла́"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Nima qilishim kerak?»",
+    "o": [
+     "Что мне ну́жно сде́лать?",
+     "Где мне?",
+     "Что я сде́лал?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«ariza»",
+    "o": [
+     "догово́р",
+     "объявле́ние",
+     "заявле́ние"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Bu qancha vaqt oladi?»",
+    "o": [
+     "Ско́лько э́то займёт вре́мени?",
+     "Кото́рый час?",
+     "Ско́лько э́то сто́ит?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Yordam uchun rahmat!»",
+    "o": [
+     "Спаси́бо за по́мощь!",
+     "Помоги́те!",
+     "Спаси́бо, по́мощь!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Bankomat pul bermadi»",
+    "o": [
+     "Банкома́т дал де́ньги",
+     "Де́ньги в банкома́те",
+     "Банкома́т не вы́дал де́ньги"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«kvitansiya»",
+    "o": [
+     "квита́нция",
+     "ка́рта",
+     "кварти́ра"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Здра́вствуйте! У меня́ пробле́ма: моя́ ка́рта заблоки́рована.",
+   "uz": "Assalomu alaykum! Muammom bor: kartam bloklangan."
+  },
+  {
+   "ru": "Я потеря́л ка́рту. Заблоки́руйте её, пожа́луйста!",
+   "uz": "Kartani yo'qotdim. Iltimos, bloklab qo'ying!"
+  },
+  {
+   "ru": "Посы́лка не пришла́ уже́ две неде́ли. Вот трек-но́мер.",
+   "uz": "Posilka ikki haftadan beri kelmadi. Mana trek-raqam."
+  },
+  {
+   "ru": "Что мне ну́жно сде́лать?",
+   "uz": "Nima qilishim kerak?"
+  },
+  {
+   "ru": "Ско́лько э́то займёт вре́мени?",
+   "uz": "Bu qancha vaqt oladi?"
+  },
+  {
+   "ru": "Спаси́бо за по́мощь!",
+   "uz": "Yordam uchun rahmat!"
+  }
+ ]
+}

@@ -1,0 +1,605 @@
+{
+ "n": 53,
+ "lessonId": "l1784055280406-52",
+ "type": "video",
+ "id": "l1784055280406-52",
+ "topic": "Prefiksli harakat fe'llari",
+ "title": "Prefiksli harakat fe'llari: при-, у-, в-, вы-, пере́-, до-, под-, за-",
+ "title_ru": "Глаго́лы движе́ния с приста́вками",
+ "videoUrl": "",
+ "cando": "Kelish-ketishni aniq aytaman: Я пришёл домо́й. Он вы́шел из о́фиса. Перейди́те у́лицу. Как дойти́ до метро́? Я зайду́ в магази́н.",
+ "review": [
+  {
+   "q": "«Do'stlarim ko'p»",
+   "a": "У меня́ мно́го друзе́й."
+  },
+  {
+   "q": "«Nechta farzandingiz bor?»",
+   "a": "Ско́лько у вас дете́й?"
+  },
+  {
+   "q": "«Bolalar bilan sayr qilaman»",
+   "a": "Я гуля́ю с детьми́."
+  },
+  {
+   "q": "«Shahrimizda parklar ko'p»",
+   "a": "В на́шем го́роде мно́го па́рков."
+  },
+  {
+   "q": "«Yettida uyg'onaman»",
+   "a": "Я просыпа́юсь в семь."
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "прийти́ / прие́хать",
+   "tr": "[priytí / priyéxat']",
+   "uz": "kelmoq (piyoda / transportda)",
+   "ex": "Го́сти пришли́ в семь.",
+   "img": "cards/прийти.jpg",
+   "icon": "",
+   "vocabId": "v-53-1",
+   "media": "media/ru/L53/w_v-53-1.jpg"
+  },
+  {
+   "ru": "уйти́ / уе́хать",
+   "tr": "[uytí / uyéxat']",
+   "uz": "ketmoq",
+   "ex": "Па́па уже́ ушёл на рабо́ту.",
+   "img": "cards/уехать.jpg",
+   "icon": "",
+   "vocabId": "v-53-2",
+   "media": "media/ru/L53/w_v-53-2.jpg"
+  },
+  {
+   "ru": "войти́ (в)",
+   "tr": "[vaytí]",
+   "uz": "kirmoq",
+   "ex": "Войди́те, пожа́луйста!",
+   "img": "cards/войти.jpg",
+   "icon": "",
+   "vocabId": "v-53-3",
+   "media": "media/ru/L53/w_v-53-3.jpg"
+  },
+  {
+   "ru": "вы́йти (из)",
+   "tr": "[výyti]",
+   "uz": "chiqmoq",
+   "ex": "Он вы́шел из о́фиса в шесть.",
+   "img": "cards/выйти.jpg",
+   "icon": "",
+   "vocabId": "v-53-4",
+   "media": "media/ru/L53/w_v-53-4.jpg"
+  },
+  {
+   "ru": "перейти́ (че́рез)",
+   "tr": "[piriytí]",
+   "uz": "kesib o'tmoq",
+   "ex": "Перейди́те у́лицу на светофо́ре.",
+   "img": "cards/перейти.jpg",
+   "icon": "",
+   "vocabId": "v-53-5",
+   "media": "media/ru/L53/w_v-53-5.jpg"
+  },
+  {
+   "ru": "дойти́ / дое́хать (до)",
+   "tr": "[daytí / dayéxat']",
+   "uz": "yetib bormoq",
+   "ex": "Как дойти́ до метро́?",
+   "img": "cards/дойти.jpg",
+   "icon": "",
+   "vocabId": "v-53-6",
+   "media": "media/ru/L53/w_v-53-6.jpg"
+  },
+  {
+   "ru": "подойти́ (к)",
+   "tr": "[padaytí]",
+   "uz": "yaqinlashmoq",
+   "ex": "Подойди́те к окну́ но́мер три.",
+   "img": "cards/подойти.jpg",
+   "icon": "",
+   "vocabId": "v-53-7",
+   "media": "media/ru/L53/w_v-53-7.jpg"
+  },
+  {
+   "ru": "зайти́ (в / к)",
+   "tr": "[zaytí]",
+   "uz": "kirib o'tmoq",
+   "ex": "По доро́ге я зайду́ в магази́н.",
+   "img": "cards/зайти.jpg",
+   "icon": "",
+   "vocabId": "v-53-8",
+   "media": "media/ru/L53/w_v-53-8.jpg"
+  },
+  {
+   "ru": "пройти́",
+   "tr": "[praytí]",
+   "uz": "o'tmoq, bormoq",
+   "ex": "Как пройти́ к вокза́лу?",
+   "img": "cards/как пройти.jpg",
+   "icon": "",
+   "vocabId": "v-53-9",
+   "media": "media/ru/L53/w_v-53-9.jpg"
+  },
+  {
+   "ru": "верну́ться",
+   "tr": "[virnútsa]",
+   "uz": "qaytib kelmoq",
+   "ex": "Я верну́сь в во́семь.",
+   "img": "cards/возвращаться.jpg",
+   "icon": "",
+   "vocabId": "v-53-10",
+   "media": "media/ru/L53/w_v-53-10.jpg"
+  },
+  {
+   "ru": "прилете́ть / улете́ть",
+   "tr": "[prilitét' / ulitét']",
+   "uz": "uchib kelmoq / uchib ketmoq",
+   "ex": "Самолёт прилете́л во́время.",
+   "img": "cards/рейс.jpg",
+   "icon": "",
+   "vocabId": "v-53-11",
+   "media": "media/ru/L53/w_v-53-11.jpg"
+  },
+  {
+   "ru": "принести́ (что? кому́?)",
+   "tr": "[prinistí]",
+   "uz": "olib kelmoq",
+   "ex": "Принеси́, пожа́луйста, во́ду.",
+   "img": "cards/принести.jpg",
+   "icon": "",
+   "vocabId": "v-53-12",
+   "media": "media/ru/L53/w_v-53-12.jpg"
+  },
+  {
+   "ru": "пошёл / пое́хал",
+   "tr": "[pashól / payéxal]",
+   "uz": "jo'nadi (yo'lga chiqdi)",
+   "ex": "Он пошёл в магази́н.",
+   "img": "cards/шёл - шла - шли.jpg",
+   "icon": "",
+   "vocabId": "v-53-13",
+   "media": "media/ru/L53/w_v-53-13.jpg"
+  },
+  {
+   "ru": "из (отку́да?) / в (куда́?)",
+   "tr": "[is / f]",
+   "uz": "…dan / …ga",
+   "ex": "Я вы́шел из до́ма и пошёл в парк.",
+   "img": "cards/из Узбекистана.jpg",
+   "icon": "",
+   "vocabId": "v-53-14",
+   "media": "media/ru/L53/w_v-53-14.jpg"
+  },
+  {
+   "ru": "до (чего́?) / к (кому́?)",
+   "tr": "[da / k]",
+   "uz": "…gacha / …ning oldiga",
+   "ex": "Я дое́хал до це́нтра и зашёл к дру́гу.",
+   "img": "cards/направление.jpg",
+   "icon": "",
+   "vocabId": "v-53-15",
+   "media": "media/ru/L53/w_v-53-15.jpg"
+  },
+  {
+   "ru": "че́рез (что?)",
+   "tr": "[chéris]",
+   "uz": "orqali, kesib",
+   "ex": "Мы перешли́ че́рез мост.",
+   "img": "cards/перекрёсток.jpg",
+   "icon": "",
+   "vocabId": "v-53-16",
+   "media": "media/ru/L53/w_v-53-16.jpg"
+  }
+ ],
+ "konspekt": "53-DARS: Prefiksli harakat fe'llari\n(Глаго́лы движе́ния с приста́вками)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: kirish-chiqish, kelish-ketish, kesib o'tish, yetib borishni aniq aytasiz.\n\n---\n\n1. Asos: идти́ (piyoda) / е́хать (transportda) + prefiks\n\nPrefiks harakat YO'NALISHINI beradi. Prefiksli fe'llar СВ (natija) bo'ladi:\nидти́ → -йти́: прийти́, уйти́, войти́, вы́йти, перейти́, дойти́, подойти́, зайти́, пройти́\nе́хать → -е́хать: прие́хать, уе́хать, въе́хать, вы́ехать, перее́хать, дое́хать, подъе́хать, зае́хать\n\n---\n\n2. Prefikslar ma'nosi\n\n* ПРИ- — kelmoq: Го́сти пришли́. Брат прие́хал из Москвы́.\n* У- — ketmoq: Па́па ушёл на рабо́ту. Она́ уе́хала в Ташке́нт.\n* В- — kirmoq (в + В.п.): Он вошёл в ко́мнату.\n* ВЫ- — chiqmoq (из + Р.п.): Я вы́шел из до́ма в во́семь.\n* ПЕРЕ́- — kesib o'tmoq (че́рез): Перейди́те у́лицу. Мы перее́хали в но́вую кварти́ру (ko'chib o'tdik).\n* ДО- — yetib bormoq (до + Р.п.): Как дойти́ до метро́? Я дое́хал до рабо́ты за 20 мину́т.\n* ПОД- — yaqinlashmoq (к + Д.п.): Подойди́те к ка́ссе.\n* ЗА- — kirib o'tmoq (в / к): Я зайду́ в апте́ку. Зайди́ ко мне!\n* ПРО- — o'tmoq: Как пройти́ к вокза́лу?\n\n---\n\n3. Tuslanish (kelasi zamon, СВ)\n\nприйти́: приду́, придёшь, придёт, придём, придёте, приду́т\nO'tgan: пришёл, пришла́, пришли́ · вы́шел, вы́шла · ушёл, ушла́\n\n---\n\n4. Predlog juftlari\n\nв (куда́?) ↔ из (отку́да?) · на ↔ с · к (кому́?) ↔ от (кого́?)\n* Я вы́шел из до́ма и пошёл в парк. · Я пришёл с рабо́ты. · Я подошёл к дру́гу.\n\n---\n\n5. Boshqa harakat fe'llari ham: принести́ (olib kelmoq), прилете́ть (uchib kelmoq)\n\n---\n\nDars xulosasi:\n1. при- keldi, у- ketdi, в- kirdi, вы- chiqdi.\n2. пере́- kesib o'tdi, до- yetib bordi, под- yaqinlashdi, за- kirib o'tdi.\n3. -йти (piyoda), -е́хать (transport).\n4. в ↔ из, на ↔ с, к ↔ от.\n5. пришёл, пришла́, пришли́.\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: sayohat hikoyasi.",
+ "text": {
+  "title": "У́тро Тиму́ра",
+  "ru": "У́тром Тиму́р вы́шел из до́ма в во́семь часо́в. Он дошёл до остано́вки и сел на авто́бус. Че́рез пятна́дцать мину́т он дое́хал до це́нтра.\nОн вы́шел из авто́буса, перешёл че́рез у́лицу и зашёл в кафе́ за ко́фе. Пото́м он подошёл к большо́му зда́нию и вошёл в о́фис.\nВ де́вять пришёл нача́льник. «Тиму́р, сего́дня к нам прие́дут го́сти из Москвы́. Принеси́, пожа́луйста, докуме́нты». Го́сти прилете́ли в де́сять. В шесть они́ уе́хали в гости́ницу, а Тиму́р ушёл домо́й.",
+  "uz": "Ertalab Timur soat sakkizda uydan chiqdi. U bekatgacha yetib bordi va avtobusga o'tirdi. O'n besh daqiqadan keyin markazga yetib keldi.\nU avtobusdan tushdi, ko'chani kesib o'tdi va qahva olish uchun kafega kirib o'tdi. Keyin katta binoga yaqinlashdi va ofisga kirdi.\nTo'qqizda boshliq keldi. «Timur, bugun bizga Moskvadan mehmonlar keladi. Iltimos, hujjatlarni olib kel». Mehmonlar o'nda uchib kelishdi. Oltida ular mehmonxonaga ketishdi, Timur esa uyiga ketdi.",
+  "questions": [
+   {
+    "q": "Когда́ Тиму́р вы́шел из до́ма?",
+    "opts": [
+     "В де́вять",
+     "В во́семь",
+     "В семь"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Куда́ он зашёл за ко́фе?",
+    "opts": [
+     "В кафе́",
+     "В магази́н",
+     "В о́фис"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Как он дое́хал до це́нтра?",
+    "opts": [
+     "На метро́",
+     "На авто́бусе",
+     "Пешко́м"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Когда́ пришёл нача́льник?",
+    "opts": [
+     "В во́семь",
+     "В де́сять",
+     "В де́вять"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Отку́да прие́дут го́сти?",
+    "opts": [
+     "Из Самарка́нда",
+     "Из Бухары́",
+     "Из Москвы́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Куда́ уе́хали го́сти в шесть?",
+    "opts": [
+     "В гости́ницу",
+     "Домо́й",
+     "В аэропо́рт"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Ты где? (Qayerdasan?)",
+  "lines": [
+   {
+    "who": "Нигора́",
+    "ru": "Абдулази́з, ты где? Ты уже́ вы́шел с рабо́ты?",
+    "uz": "Abdulaziz, qayerdasan? Ishdan chiqdingmi?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Да, вы́шел. Сейча́с дойду́ до метро́.",
+    "uz": "Ha, chiqdim. Hozir metrogacha yetib boraman."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Зайди́, пожа́луйста, в магази́н и купи́ хлеб.",
+    "uz": "Iltimos, do'konga kirib non olib kel."
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Хорошо́. А ма́ма уже́ прие́хала?",
+    "uz": "Xo'p. Onam keldilarmi?"
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Нет ещё. Она́ прие́дет в семь.",
+    "uz": "Hali yo'q. Yettida keladilar."
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Отли́чно, я приду́ ра́ньше. Бу́ду до́ма че́рез полчаса́!",
+    "uz": "Zo'r, men oldinroq kelaman. Yarim soatdan keyin uyda bo'laman!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "при-",
+    "kelmoq"
+   ],
+   [
+    "у-",
+    "ketmoq"
+   ],
+   [
+    "в-",
+    "kirmoq"
+   ],
+   [
+    "вы-",
+    "chiqmoq"
+   ],
+   [
+    "пере́-",
+    "kesib o'tmoq"
+   ],
+   [
+    "до-",
+    "yetib bormoq"
+   ],
+   [
+    "под-",
+    "yaqinlashmoq"
+   ],
+   [
+    "за-",
+    "kirib o'tmoq"
+   ],
+   [
+    "в",
+    "из"
+   ],
+   [
+    "к",
+    "от"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Го́сти ___ в семь. (keldi, piyoda)",
+    "o": [
+     "вы́шли",
+     "пришли́",
+     "ушли́"
+    ],
+    "a": "пришли́"
+   },
+   {
+    "s": "Па́па уже́ ___ на рабо́ту. (ketdi)",
+    "o": [
+     "пришёл",
+     "ушёл",
+     "вошёл"
+    ],
+    "a": "ушёл"
+   },
+   {
+    "s": "Он ___ из о́фиса в шесть.",
+    "o": [
+     "вошёл",
+     "вы́шел",
+     "подошёл"
+    ],
+    "a": "вы́шел"
+   },
+   {
+    "s": "___ у́лицу на светофо́ре!",
+    "o": [
+     "Уйди́те",
+     "Вы́йдите",
+     "Перейди́те"
+    ],
+    "a": "Перейди́те"
+   },
+   {
+    "s": "Как ___ до метро́?",
+    "o": [
+     "вы́йти",
+     "уйти́",
+     "дойти́"
+    ],
+    "a": "дойти́"
+   },
+   {
+    "s": "___ к окну́ но́мер три.",
+    "o": [
+     "Подойди́те",
+     "Перейди́те",
+     "Уйди́те"
+    ],
+    "a": "Подойди́те"
+   },
+   {
+    "s": "По доро́ге я ___ в апте́ку.",
+    "o": [
+     "уйду́",
+     "зайду́",
+     "вы́йду"
+    ],
+    "a": "зайду́"
+   },
+   {
+    "s": "Брат ___ из Москвы́. (keldi, transport)",
+    "o": [
+     "прие́хал",
+     "уе́хал",
+     "пришёл"
+    ],
+    "a": "прие́хал"
+   },
+   {
+    "s": "Я вы́шел ___ до́ма.",
+    "o": [
+     "из",
+     "в",
+     "к"
+    ],
+    "a": "из"
+   },
+   {
+    "s": "Я подошёл ___ дру́гу.",
+    "o": [
+     "в",
+     "к",
+     "из"
+    ],
+    "a": "к"
+   },
+   {
+    "s": "Самолёт ___ во́время.",
+    "o": [
+     "прилете́л",
+     "пришёл",
+     "прие́хал"
+    ],
+    "a": "прилете́л"
+   },
+   {
+    "s": "___ , пожа́луйста, во́ду. (olib kel)",
+    "o": [
+     "Принеси́",
+     "Приезжа́й",
+     "Приди́"
+    ],
+    "a": "Принеси́"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Uydan chiqdim»",
+    "o": [
+     "Я ушёл в дом",
+     "Я вы́шел из до́ма",
+     "Я вошёл в дом"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Xonaga kirdi»",
+    "o": [
+     "Он вы́шел из ко́мнаты",
+     "Он вошёл в ко́мнату",
+     "Он пришёл ко́мнату"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Metrogacha qanday borsa bo'ladi?»",
+    "o": [
+     "Как дойти́ до метро́?",
+     "Как уйти́ в метро́?",
+     "Как вы́йти из метро́?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Ko'chani kesib o'ting»",
+    "o": [
+     "Вы́йдите у́лицу",
+     "Перейди́те у́лицу",
+     "Подойди́те у́лицу"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Do'konga kirib o'taman»",
+    "o": [
+     "Я зайду́ в магази́н",
+     "Я уйду́ в магази́н",
+     "Я вы́йду в магази́н"
+    ],
+    "a": 0
+   },
+   {
+    "q": "прийти́: я ___ (kelasi)",
+    "o": [
+     "прийду",
+     "приходю",
+     "приду́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«U (ayol) Toshkentga ketdi»",
+    "o": [
+     "Она́ уе́хала в Ташке́нт",
+     "Она́ уе́хал в Ташке́нт",
+     "Она́ прие́хала в Ташке́нт"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Biz yangi kvartiraga ko'chib o'tdik»",
+    "o": [
+     "Мы прие́хали но́вую кварти́ру",
+     "Мы перее́хали в но́вую кварти́ру",
+     "Мы уе́хали в кварти́ру"
+    ],
+    "a": 1
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "из",
+     "вы́шел",
+     "Я",
+     "до́ма"
+    ],
+    "a": "Я вы́шел из до́ма",
+    "t": "Uydan chiqdim"
+   },
+   {
+    "w": [
+     "до",
+     "Как",
+     "метро́",
+     "дойти́"
+    ],
+    "a": "Как дойти́ до метро́",
+    "t": "Metrogacha qanday borsa bo'ladi?"
+   },
+   {
+    "w": [
+     "у́лицу",
+     "Перейди́те"
+    ],
+    "a": "Перейди́те у́лицу",
+    "t": "Ko'chani kesib o'ting"
+   },
+   {
+    "w": [
+     "в",
+     "зайду́",
+     "Я",
+     "магази́н"
+    ],
+    "a": "Я зайду́ в магази́н",
+    "t": "Do'konga kirib o'taman"
+   },
+   {
+    "w": [
+     "Москвы́",
+     "прие́хал",
+     "Брат",
+     "из"
+    ],
+    "a": "Брат прие́хал из Москвы́",
+    "t": "Akam Moskvadan keldi"
+   },
+   {
+    "w": [
+     "к",
+     "Подойди́те",
+     "ка́ссе"
+    ],
+    "a": "Подойди́те к ка́ссе",
+    "t": "Kassaga yaqinlashing"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "У́тром я вы́шел из до́ма в во́семь.",
+   "uz": "Ertalab soat sakkizda uydan chiqdim."
+  },
+  {
+   "ru": "Я дошёл до метро́ за пять мину́т.",
+   "uz": "Metrogacha besh daqiqada yetib bordim."
+  },
+  {
+   "ru": "По доро́ге я зашёл в магази́н.",
+   "uz": "Yo'lda do'konga kirib o'tdim."
+  },
+  {
+   "ru": "Перейди́те у́лицу и иди́те пря́мо.",
+   "uz": "Ko'chani kesib o'ting va to'g'ri boring."
+  },
+  {
+   "ru": "Го́сти прие́дут в семь.",
+   "uz": "Mehmonlar yettida kelishadi."
+  },
+  {
+   "ru": "Я верну́сь домо́й че́рез час.",
+   "uz": "Bir soatdan keyin uyga qaytaman."
+  }
+ ]
+}

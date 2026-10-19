@@ -185,8 +185,8 @@ export function FillBlankView({ blanks, part, vocabulary, phrases, ...c }: Commo
           )}
         </View>
         <ResultsCard
-          label={`${letter} qism natijalari`}
-          title={`${letter} · natijalar`}
+          label={`${letter ? `${letter} qism` : part.title} natijalari`}
+          title={`${letter || part.title} · natijalar`}
           right={line.text}
           rightColor={line.color}
           states={states}
@@ -281,7 +281,7 @@ export function MultipleChoiceView({ questions, part, ...c }: Common & { questio
           <Pressable accessibilityRole="link" onPress={openResult} style={({ pressed }) => [st.resultLink, pressed && { opacity: 0.85 }]}>
             <ClockIcon />
             <Txt f="bodyBold" size={12} color="#5B6478" style={{ flex: 1 }}>
-              {letter} qism tugagach ({questions.length} / {questions.length}):{' '}
+              {letter ? `${letter} qism` : 'Qism'} tugagach ({questions.length} / {questions.length}):{' '}
               <Txt f="bodyHeavy" size={12} color="#4A5468" style={st.underline}>
                 Natijani koʻrish
               </Txt>

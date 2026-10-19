@@ -1,0 +1,582 @@
+{
+ "n": 11,
+ "lessonId": "l1784055280406-10",
+ "type": "video",
+ "id": "l1784055280406-10",
+ "topic": "Predlojniy padej: Где? в / на",
+ "title": "Predlojniy padej: Где? — в / на + -е. Kun vaqti",
+ "title_ru": "Предло́жный паде́ж (Где? В / На). Вре́мя су́ток",
+ "videoUrl": "https://youtu.be/ulLWCkcPdek",
+ "cando": "«Qayerda?» savoliga javob beraman: Я рабо́таю в о́фисе. Я гуля́ю на у́лице. Kun vaqtini aytaman: у́тром, днём, ве́чером, но́чью.",
+ "review": [
+  {
+   "q": "Rus tilida nechta padej bor?",
+   "a": "6 ta; predlojniy — eng osoni"
+  },
+  {
+   "q": "Predlojniy padej savoli?",
+   "a": "Где? (qayerda?) — doim predlog bilan: в / на"
+  },
+  {
+   "q": "«в» va «на» farqi?",
+   "a": "в — yopiq joy/ichida (в шко́ле), на — ochiq joy/ustida va tadbirlar (на у́лице, на рабо́те, на уро́ке)"
+  },
+  {
+   "q": "Росси́я → где?",
+   "a": "в Росси́и (-ия → -ии)"
+  },
+  {
+   "q": "«Ertalab» ruschasi?",
+   "a": "у́тром (predlogsiz)"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "где",
+   "tr": "[gde]",
+   "uz": "qayerda",
+   "ex": "Где ты рабо́таешь? — В о́фисе.",
+   "img": "cards/где.jpg",
+   "icon": "",
+   "vocabId": "v-11-1",
+   "media": "media/ru/L11/w_v-11-1.jpg"
+  },
+  {
+   "ru": "в шко́ле",
+   "tr": "[f shkóle]",
+   "uz": "maktabda",
+   "ex": "Де́ти у́чатся в шко́ле.",
+   "img": "cards/школа.jpg",
+   "icon": "",
+   "vocabId": "v-11-2",
+   "media": "media/ru/L11/w_v-11-2.jpg"
+  },
+  {
+   "ru": "в о́фисе",
+   "tr": "[v ófise]",
+   "uz": "ofisda",
+   "ex": "Я рабо́таю в о́фисе.",
+   "img": "cards/офис.jpg",
+   "icon": "",
+   "vocabId": "v-11-3",
+   "media": "media/ru/L11/w_v-11-3.jpg"
+  },
+  {
+   "ru": "в па́рке",
+   "tr": "[f párke]",
+   "uz": "parkda",
+   "ex": "Днём я гуля́ю в па́рке.",
+   "img": "cards/парк.jpg",
+   "icon": "",
+   "vocabId": "v-11-4",
+   "media": "media/ru/L11/w_v-11-4.jpg"
+  },
+  {
+   "ru": "в магази́не",
+   "tr": "[v magazíne]",
+   "uz": "do'konda",
+   "ex": "Ма́ма в магази́не.",
+   "img": "cards/магазин.jpg",
+   "icon": "",
+   "vocabId": "v-11-5",
+   "media": "media/ru/L11/w_v-11-5.jpg"
+  },
+  {
+   "ru": "в больни́це",
+   "tr": "[v bal'nítse]",
+   "uz": "kasalxonada",
+   "ex": "Нигора́ рабо́тает в больни́це.",
+   "img": "cards/больница.jpg",
+   "icon": "",
+   "vocabId": "v-11-6",
+   "media": "media/ru/L11/w_v-11-6.jpg"
+  },
+  {
+   "ru": "в университе́те",
+   "tr": "[v universitéte]",
+   "uz": "universitetda",
+   "ex": "Мы у́чимся в университе́те.",
+   "img": "cards/университет.jpg",
+   "icon": "",
+   "vocabId": "v-11-7",
+   "media": "media/ru/L11/w_v-11-7.jpg"
+  },
+  {
+   "ru": "на рабо́те",
+   "tr": "[na rabóte]",
+   "uz": "ishda",
+   "ex": "Па́па на рабо́те.",
+   "img": "cards/работа.jpg",
+   "icon": "",
+   "vocabId": "v-11-8",
+   "media": "media/ru/L11/w_v-11-8.jpg"
+  },
+  {
+   "ru": "на у́лице",
+   "tr": "[na úlitse]",
+   "uz": "ko'chada",
+   "ex": "Де́ти игра́ют на у́лице.",
+   "img": "cards/улица.jpg",
+   "icon": "",
+   "vocabId": "v-11-9",
+   "media": "media/ru/L11/w_v-11-9.jpg"
+  },
+  {
+   "ru": "на уро́ке",
+   "tr": "[na uróke]",
+   "uz": "darsda",
+   "ex": "Студе́нты на уро́ке.",
+   "img": "cards/урок.jpg",
+   "icon": "",
+   "vocabId": "v-11-10",
+   "media": "media/ru/L11/w_v-11-10.jpg"
+  },
+  {
+   "ru": "на столе́",
+   "tr": "[na stalé]",
+   "uz": "stolda (ustida)",
+   "ex": "Ключи́ лежа́т на столе́.",
+   "img": "cards/на столе.jpg",
+   "icon": "",
+   "vocabId": "v-11-11",
+   "media": "media/ru/L11/w_v-11-11.jpg"
+  },
+  {
+   "ru": "до́ма",
+   "tr": "[dóma]",
+   "uz": "uyda",
+   "ex": "Ве́чером я до́ма.",
+   "img": "cards/дома.jpg",
+   "icon": "",
+   "vocabId": "v-11-12",
+   "media": "media/ru/L11/w_v-11-12.jpg"
+  },
+  {
+   "ru": "у́тром",
+   "tr": "[útram]",
+   "uz": "ertalab",
+   "ex": "У́тром я пью чай.",
+   "img": "cards/утро.jpg",
+   "icon": "",
+   "vocabId": "v-11-13",
+   "media": "media/ru/L11/w_v-11-13.jpg"
+  },
+  {
+   "ru": "днём",
+   "tr": "[dnyom]",
+   "uz": "kunduzi",
+   "ex": "Днём я рабо́таю.",
+   "img": "cards/день.jpg",
+   "icon": "",
+   "vocabId": "v-11-14",
+   "media": "media/ru/L11/w_v-11-14.jpg"
+  },
+  {
+   "ru": "ве́чером",
+   "tr": "[vécheram]",
+   "uz": "kechqurun",
+   "ex": "Ве́чером мы смо́трим фильм.",
+   "img": "cards/вечер.jpg",
+   "icon": "",
+   "vocabId": "v-11-15",
+   "media": "media/ru/L11/w_v-11-15.jpg"
+  },
+  {
+   "ru": "но́чью",
+   "tr": "[nóch'yu]",
+   "uz": "tunda",
+   "ex": "Но́чью я сплю.",
+   "img": "cards/ночь.jpg",
+   "icon": "",
+   "vocabId": "v-11-16",
+   "media": "media/ru/L11/w_v-11-16.jpg"
+  },
+  {
+   "ru": "ме́сяц",
+   "tr": "[mésyats]",
+   "uz": "oy",
+   "ex": "В ма́е, в январе́, в э́том ме́сяце.",
+   "img": "cards/месяц.jpg",
+   "icon": "",
+   "vocabId": "v-11-17",
+   "media": "media/ru/L11/w_v-11-17.jpg"
+  }
+ ],
+ "konspekt": "11-DARS: Predlojniy padej — Где? в / на + -е. Kun vaqti\n(Предло́жный паде́ж. Вре́мя су́ток)\n\nBu darsdan keyin siz: qayerda ekaningizni va nima qilayotganingizni aytasiz: Я рабо́таю в о́фисе. У́тром я гуля́ю в па́рке.\n\n---\n\n1. Padej nima?\n\nRus tilida 6 padej bor. Predlojniy (предло́жный) — eng osoni. Savoli: Где? (qayerda?). Doim predlog bilan ishlatiladi: в yoki на.\n\n2. в yoki на?\n\n* в — yopiq joy, ichida: в шко́ле, в до́ме, в музе́е, в коро́бке (qutida)\n* на — ochiq joy, ustida, hamda tadbir/jarayon: на у́лице, на столе́ (stol ustida), на рабо́те, на конце́рте, на уро́ке\n\nTaqqoslang: ру́чка на па́рте (parta ustida) — ру́чка в коро́бке (quti ichida).\n\n3. Qo'shimchalar (-е)\n\n* мужско́й (undosh, -й, -ь) → +е: дом → в до́ме, музе́й → в музе́е, слова́рь → в словаре́\n* же́нский -а/-я → -е: шко́ла → в шко́ле, ко́мната → в ко́мнате; -ь → -и: тетра́дь → в тетра́ди\n* сре́дний -о/-е → -е: окно́ → в окне́, мо́ре → на мо́ре\n* -ия/-ие/-ий → -ии: Росси́я → в Росси́и, Андижа́н → в Андижа́не, lekin Аме́рика → в Аме́рике\n* ko'plik: -ах/-ях: в су́мках, о друзья́х\n\nFormula: в / на + joy + -е.\n* Я рабо́таю в о́фисе. — Men ofisda ishlayman.\n* Я гуля́ю на у́лице. — Men ko'chada sayr qilaman.\n* Ключи́ лежа́т на столе́. — Kalitlar stolda yotibdi.\n* Мы у́чимся в университе́те.\n\nIstisno: до́ма (uyda) — predlogsiz: Я до́ма.\n\n4. Kun vaqti (predlogsiz!)\n\n* у́тром — ertalab: У́тром я де́лаю заря́дку.\n* днём — kunduzi: Днём я гуля́ю в па́рке.\n* ве́чером — kechqurun: Ве́чером мы смо́трим фильм.\n* но́чью — tunda: Но́чью я сплю.\n\n5. Oylar va yillar\n\nOylar — мужско́й rod, -ь bilan: в январе́, в феврале́, в ма́е, в ию́не…\nв э́том году́ (bu yil), в про́шлом ме́сяце (o'tgan oy), в бу́дущем году́ (kelasi yil).\n\n---\n\nDars xulosasi\n* Где? → в / на + so'z + -е (Росси́я → в Росси́и).\n* в — ichida, на — ustida / tadbir.\n* до́ма — predlogsiz; у́тром, днём, ве́чером, но́чью — predlogsiz.\n\nUyga vazifa platformada: matn «Мой день», 15 test. Yordamchi ustoz bilan gapirish. Keyingi dars — jonli dars: «День наоборо́т» o'yini.",
+ "text": {
+  "title": "Мой день",
+  "ru": "Меня́ зову́т Абдулази́з. Я живу́ в Андижа́не.\nУ́тром я де́лаю заря́дку и пью чай. Пото́м я рабо́таю в о́фисе.\nМоя́ жена́ Нигора́ рабо́тает в больни́це. Наш сын у́чится в шко́ле.\nДнём я обе́даю в кафе́. Ве́чером мы гуля́ем в па́рке и́ли смо́трим фильм до́ма.\nМой друг Бобу́р живёт в Москве́. Он рабо́тает в магази́не.\nНо́чью мы спим. Ключи́ и телефо́н лежа́т на столе́.",
+  "uz": "Mening ismim Abdulaziz. Men Andijonda yashayman.\nErtalab men badantarbiya qilaman va choy ichaman. Keyin ofisda ishlayman.\nXotinim Nigora kasalxonada ishlaydi. Bolalarimiz maktabda o'qiydi.\nKunduzi men kafeda tushlik qilaman. Kechqurun biz parkda sayr qilamiz yoki uyda film ko'ramiz.\nDo'stim Bobur Moskvada yashaydi. U zavodda ishlaydi.\nTunda biz uxlaymiz. Kalitlar va telefon stolda yotibdi.",
+  "questions": [
+   {
+    "q": "Где рабо́тает Абдулази́з?",
+    "opts": [
+     "В о́фисе",
+     "В больни́це",
+     "На заво́де"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Где рабо́тает Нигора́?",
+    "opts": [
+     "В шко́ле",
+     "В больни́це",
+     "В кафе́"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что они́ де́лают ве́чером?",
+    "opts": [
+     "Спят",
+     "Рабо́тают",
+     "Гуля́ют в па́рке и́ли смо́трят фильм"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Где живёт Бобу́р?",
+    "opts": [
+     "В Андижа́не",
+     "В Ташке́нте",
+     "В Москве́"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Где ты? (Qayerdasan?)",
+  "lines": [
+   {
+    "who": "Нигора́",
+    "ru": "Алло́, Абдулази́з! Где ты?",
+    "uz": "Allo, Abdulaziz! Qayerdasan?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Я в о́фисе. Я рабо́таю. А ты где?",
+    "uz": "Men ofisdaman. Ishlayapman. Sen qayerdasan?"
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Я в магази́не. А где де́ти?",
+    "uz": "Men do'kondaman. Bolalar qayerda?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Сардо́р в шко́ле, а Маржона́ до́ма.",
+    "uz": "Sardor maktabda, Marjona esa uyda."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Хорошо́. Ве́чером мы гуля́ем в па́рке?",
+    "uz": "Yaxshi. Kechqurun parkda sayr qilamizmi?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Да! Ве́чером я бу́ду до́ма в шесть.",
+    "uz": "Ha! Kechqurun soat oltida uyda bo'laman."
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "в шко́ле",
+    "maktabda"
+   ],
+   [
+    "на рабо́те",
+    "ishda"
+   ],
+   [
+    "на у́лице",
+    "ko'chada"
+   ],
+   [
+    "в о́фисе",
+    "ofisda"
+   ],
+   [
+    "до́ма",
+    "uyda"
+   ],
+   [
+    "у́тром",
+    "ertalab"
+   ],
+   [
+    "днём",
+    "kunduzi"
+   ],
+   [
+    "ве́чером",
+    "kechqurun"
+   ],
+   [
+    "но́чью",
+    "tunda"
+   ],
+   [
+    "в па́рке",
+    "parkda"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Где ты живёшь? — Я живу́ ___ Ташке́нте.",
+    "o": [
+     "в",
+     "на",
+     "из"
+    ],
+    "a": "в"
+   },
+   {
+    "s": "Мы отдыха́ем ___ па́рке.",
+    "o": [
+     "на",
+     "в",
+     "к"
+    ],
+    "a": "в"
+   },
+   {
+    "s": "Студе́нты занима́ются ___ уро́ке.",
+    "o": [
+     "в",
+     "на",
+     "за"
+    ],
+    "a": "на"
+   },
+   {
+    "s": "Что ты де́лаешь ___? (kechqurun)",
+    "o": [
+     "ве́чер",
+     "в ве́чер",
+     "ве́чером"
+    ],
+    "a": "ве́чером"
+   },
+   {
+    "s": "Я обы́чно сплю ___. (tunda)",
+    "o": [
+     "в ночь",
+     "но́чью",
+     "ночь"
+    ],
+    "a": "но́чью"
+   },
+   {
+    "s": "Где рабо́тает А́нна? — Она́ рабо́тает ___ заво́де.",
+    "o": [
+     "в",
+     "из",
+     "на"
+    ],
+    "a": "на"
+   },
+   {
+    "s": "___ я пью ко́фе. (Ertalab)",
+    "o": [
+     "В у́тро",
+     "У́тром",
+     "У́тро"
+    ],
+    "a": "У́тром"
+   },
+   {
+    "s": "Кни́га лежи́т ___ столе́.",
+    "o": [
+     "под",
+     "в",
+     "на"
+    ],
+    "a": "на"
+   },
+   {
+    "s": "Мы у́чимся ___ университе́те.",
+    "o": [
+     "в",
+     "на",
+     "из"
+    ],
+    "a": "в"
+   },
+   {
+    "s": "Бобу́р живёт в ___. (Росси́я)",
+    "o": [
+     "Росси́и",
+     "Россие",
+     "Росси́я"
+    ],
+    "a": "Росси́и"
+   },
+   {
+    "s": "Ве́чером я ___. (uyda)",
+    "o": [
+     "в до́ме",
+     "до́ма",
+     "на до́ме"
+    ],
+    "a": "до́ма"
+   },
+   {
+    "s": "Ру́чка лежи́т в ___. (тетра́дь)",
+    "o": [
+     "тетра́дь",
+     "тетра́ди",
+     "тетра́де"
+    ],
+    "a": "тетра́ди"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Predlojniy padej savoli:",
+    "o": [
+     "Что?",
+     "Кто?",
+     "Где?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Ko'chada» ruschasi:",
+    "o": [
+     "в у́лице",
+     "на у́лице",
+     "у́лицей"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Андижа́н» → где?",
+    "o": [
+     "на Андижа́не",
+     "в Андижа́ни",
+     "в Андижа́не"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Kalitlar stol ustida» —",
+    "o": [
+     "Ключи́ на столе́.",
+     "Ключи́ в столе́.",
+     "Ключи́ стол."
+    ],
+    "a": 0
+   },
+   {
+    "q": "Qaysi so'z predlogsiz ishlatiladi?",
+    "o": [
+     "па́рке",
+     "у́тром",
+     "шко́ле"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«в ма́е» — bu…",
+    "o": [
+     "may kuni",
+     "mayga",
+     "may oyida"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "рабо́таю",
+     "Я",
+     "в",
+     "о́фисе"
+    ],
+    "a": "Я рабо́таю в о́фисе",
+    "t": "Men ofisda ishlayman"
+   },
+   {
+    "w": [
+     "игра́ют",
+     "Де́ти",
+     "на",
+     "у́лице"
+    ],
+    "a": "Де́ти игра́ют на у́лице",
+    "t": "Bolalar ko'chada o'ynashyapti"
+   },
+   {
+    "w": [
+     "я",
+     "У́тром",
+     "пью",
+     "чай"
+    ],
+    "a": "У́тром я пью чай",
+    "t": "Ertalab men choy ichaman"
+   },
+   {
+    "w": [
+     "лежа́т",
+     "Ключи́",
+     "на",
+     "столе́"
+    ],
+    "a": "Ключи́ лежа́т на столе́",
+    "t": "Kalitlar stolda yotibdi"
+   },
+   {
+    "w": [
+     "живу́т",
+     "Они́",
+     "в",
+     "Узбекиста́не"
+    ],
+    "a": "Они́ живу́т в Узбекиста́не",
+    "t": "Ular O'zbekistonda yashaydi"
+   },
+   {
+    "w": [
+     "мы",
+     "Ве́чером",
+     "смо́трим",
+     "фильм"
+    ],
+    "a": "Ве́чером мы смо́трим фильм",
+    "t": "Kechqurun biz film ko'ramiz"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Я живу́ в Андижа́не и рабо́таю в о́фисе.",
+   "uz": "Men Andijonda yashayman va ofisda ishlayman."
+  },
+  {
+   "ru": "У́тром я пью чай, днём я рабо́таю.",
+   "uz": "Ertalab choy ichaman, kunduzi ishlayman."
+  },
+  {
+   "ru": "Ве́чером мы гуля́ем в па́рке.",
+   "uz": "Kechqurun biz parkda sayr qilamiz."
+  },
+  {
+   "ru": "Где ты? — Я до́ма. / Я на рабо́те.",
+   "uz": "Qayerdasan? — Uydaman. / Ishdaman."
+  },
+  {
+   "ru": "Де́ти у́чатся в шко́ле и игра́ют на у́лице.",
+   "uz": "Bolalar maktabda o'qiydi va ko'chada o'ynaydi."
+  },
+  {
+   "ru": "Но́чью я сплю. Телефо́н лежи́т на столе́.",
+   "uz": "Tunda uxlayman. Telefon stolda yotibdi."
+  }
+ ]
+}

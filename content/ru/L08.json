@@ -1,0 +1,259 @@
+{
+ "n": 8,
+ "lessonId": "l1784055280406-7",
+ "type": "live",
+ "id": "l1784055280406-7",
+ "topic": "Чей? Чья? Чьё? Чьи?",
+ "title": "Jonli dars: «Чей э́то предме́т?»",
+ "cando": "Narsa kimniki ekanini so'ray va ayta olaman: Чей э́то телефо́н? — Э́то мой телефо́н.",
+ "vocab": [
+  {
+   "ru": "чей",
+   "tr": "[chey]",
+   "uz": "kimning (m.r.)",
+   "ex": "Чей э́то па́спорт? (Bu kimning pasporti?)",
+   "img": "cards/чей.jpg",
+   "icon": "",
+   "vocabId": "v-8-1",
+   "media": "media/ru/L08/w_v-8-1.jpg"
+  },
+  {
+   "ru": "чья",
+   "tr": "[ch'ya]",
+   "uz": "kimning (j.r.)",
+   "ex": "Чья э́то су́мка? (Bu kimning sumkasi?)",
+   "img": "cards/чья.jpg",
+   "icon": "",
+   "vocabId": "v-8-2",
+   "media": "media/ru/L08/w_v-8-2.jpg"
+  },
+  {
+   "ru": "чьё",
+   "tr": "[ch'yo]",
+   "uz": "kimning (s.r.)",
+   "ex": "Чьё э́то фо́то? (Bu kimning surati?)",
+   "img": "cards/чьё.jpg",
+   "icon": "",
+   "vocabId": "v-8-3",
+   "media": "media/ru/L08/w_v-8-3.jpg"
+  },
+  {
+   "ru": "чьи",
+   "tr": "[ch'yi]",
+   "uz": "kimning (ko'plik)",
+   "ex": "Чьи э́то ключи́? (Bu kimning kalitlari?)",
+   "img": "cards/чьи.jpg",
+   "icon": "",
+   "vocabId": "v-8-4",
+   "media": "media/ru/L08/w_v-8-4.jpg"
+  },
+  {
+   "ru": "докуме́нты",
+   "tr": "[dakuménty]",
+   "uz": "hujjatlar",
+   "ex": "Э́то на́ши докуме́нты. (Bu bizning hujjatlarimiz.)",
+   "img": "cards/документы.jpg",
+   "icon": "document-text-outline",
+   "vocabId": "v-8-5",
+   "media": "media/ru/L08/w_v-8-5.jpg"
+  },
+  {
+   "ru": "предме́т",
+   "tr": "[pridmét]",
+   "uz": "buyum, narsa",
+   "ex": "Чей э́то предме́т? (Bu kimning buyumi?)",
+   "img": "cards/предмет.jpg",
+   "icon": "",
+   "vocabId": "v-8-6",
+   "media": "media/ru/L08/w_v-8-6.jpg"
+  },
+  {
+   "ru": "оте́ль",
+   "tr": "[atél']",
+   "uz": "mehmonxona",
+   "ex": "Там их оте́ль. (U yerda ularning mehmonxonasi.)",
+   "img": "cards/отель.jpg",
+   "icon": "",
+   "vocabId": "v-8-7",
+   "media": "media/ru/L08/w_v-8-7.jpg"
+  },
+  {
+   "ru": "тури́ст",
+   "tr": "[turíst]",
+   "uz": "sayyoh, turist",
+   "ex": "Э́то тури́сты и их оте́ль. (Bu sayyohlar va ularning mehmonxonasi.)",
+   "img": "cards/турист.jpg",
+   "icon": "",
+   "vocabId": "v-8-8",
+   "media": "media/ru/L08/w_v-8-8.jpg"
+  }
+ ],
+ "konspekt": "8-DARS (jonli dars): «Чей э́то предме́т?»\n\nBugun ustoz bilan 7-dars mavzusini jonli mashq qildik: rod va egalik olmoshlari.\n\nAsosiy savol-javob qolipi:\n* Чей э́то телефо́н? — Э́то мой телефо́н. (m.r.)\n* Чья э́то су́мка? — Э́то моя́ су́мка. (j.r.)\n* Чьё э́то фо́то? — Э́то на́ше фо́то. (s.r.)\n* Чьи э́то ключи́? — Э́то мои́ ключи́. (ko'plik)\n\nUchinchi shaxs — o'zgarmaydi: его́ телефо́н, её су́мка, их докуме́нты.\n\nEslab qoling:\n* Rodni oxirgi harf aytadi: undosh/-й → м.р., -а/-я → ж.р., -о/-е → с.р.\n* Olmosh so'zlovchiga emas, narsaga qarab tanlanadi: erkak kishi ham «моя́ су́мка» deydi.\n* Inkor: Нет, э́то не моя́ су́мка. (Yo'q, bu mening sumkam emas.)\n\nDarsda ishlatgan so'zlar: па́спорт, су́мка, письмо́, фо́то, докуме́нты, телефо́н, маши́на, я́блоко, ключ, кни́ги, семья́, предме́т, оте́ль, тури́ст.\n\nUyga vazifa platformada: 15 ta savol. Yordamchi ustoz bilan gapirish. Keyingi dars — videodars: fe'llarning 2-tur tuslanishi (говори́ть, смотре́ть, ви́деть).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Э́то ___ па́спорт. (Bu mening pasportim.)",
+    "o": [
+     "мои́",
+     "моя́",
+     "мой",
+     "моё"
+    ],
+    "a": "мой"
+   },
+   {
+    "s": "Чья э́то су́мка? — Э́то ___ су́мка. (Bu sizning sumkangiz.)",
+    "o": [
+     "ва́ше",
+     "ваш",
+     "ва́ша",
+     "ва́ши"
+    ],
+    "a": "ва́ша"
+   },
+   {
+    "s": "Чьё э́то фо́то? — Э́то ___ фо́то. (Bu bizning suratimiz.)",
+    "o": [
+     "наш",
+     "на́ши",
+     "на́ша",
+     "на́ше"
+    ],
+    "a": "на́ше"
+   },
+   {
+    "s": "Чьи э́то ключи́? — Э́то ___ ключи́. (Bu mening kalitlarim.)",
+    "o": [
+     "мои́",
+     "моя́",
+     "мой",
+     "моё"
+    ],
+    "a": "мои́"
+   },
+   {
+    "s": "Э́то телефо́н Анто́на. Э́то ___ телефо́н.",
+    "o": [
+     "их",
+     "его́",
+     "её"
+    ],
+    "a": "его́"
+   },
+   {
+    "s": "Э́то маши́на Нигоры́. Э́то ___ маши́на.",
+    "o": [
+     "его́",
+     "её",
+     "их"
+    ],
+    "a": "её"
+   },
+   {
+    "s": "Э́то кни́ги дете́й. Э́то ___ кни́ги.",
+    "o": [
+     "её",
+     "их",
+     "его́"
+    ],
+    "a": "их"
+   },
+   {
+    "s": "Э́то ва́ша су́мка? — Нет, э́то ___ моя́ су́мка.",
+    "o": [
+     "не",
+     "ни",
+     "нет"
+    ],
+    "a": "не"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Qaysi savol to'g'ri? (су́мка)",
+    "o": [
+     "Чей э́то су́мка?",
+     "Чьё э́то су́мка?",
+     "Чья э́то су́мка?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Qaysi savol to'g'ri? (окно́)",
+    "o": [
+     "Чей э́то окно́?",
+     "Чья э́то окно́?",
+     "Чьё э́то окно́?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Qaysi savol to'g'ri? (докуме́нты)",
+    "o": [
+     "Чьи э́то докуме́нты?",
+     "Чей э́то докуме́нты?",
+     "Чьё э́то докуме́нты?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "— Э́то твой ключ?\n— Да, э́то ___ ключ.",
+    "o": [
+     "его́",
+     "мой",
+     "твой"
+    ],
+    "a": 1
+   },
+   {
+    "q": "— Где оте́ль тури́стов?\n— Вот ___ оте́ль.",
+    "o": [
+     "его́",
+     "её",
+     "их"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Де́душка» so'zi qaysi rodda?",
+    "o": [
+     "же́нский",
+     "сре́дний",
+     "мужско́й"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«И́мя» so'zi qaysi rodda?",
+    "o": [
+     "сре́дний",
+     "же́нский",
+     "мужско́й"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Чей э́то па́спорт? — Э́то мой па́спорт.",
+   "uz": "Bu kimning pasporti? — Bu mening pasportim."
+  },
+  {
+   "ru": "Чья э́то су́мка? — Э́то её су́мка.",
+   "uz": "Bu kimning sumkasi? — Bu uning sumkasi."
+  },
+  {
+   "ru": "Чьё э́то фо́то? — Э́то на́ше фо́то.",
+   "uz": "Bu kimning surati? — Bu bizning suratimiz."
+  },
+  {
+   "ru": "Чьи э́то докуме́нты? — Э́то их докуме́нты.",
+   "uz": "Bu kimning hujjatlari? — Bu ularning hujjatlari."
+  },
+  {
+   "ru": "Э́то ва́ша су́мка? — Нет, э́то не моя́ су́мка.",
+   "uz": "Bu sizning sumkangizmi? — Yo'q, bu mening sumkam emas."
+  }
+ ]
+}

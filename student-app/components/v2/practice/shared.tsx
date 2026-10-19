@@ -19,7 +19,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type VocabWord } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
-import { getLastPosition } from '@/services/progressStore';
+import { currentLessonIndex } from '@/components/v2/home/currentLesson';
 
 import { CloseIcon, NavHome, NavPath, NavStar, NavTrophy, NavUser } from './icons';
 import { v2Tab } from '@/services/v2Nav';
@@ -53,17 +53,15 @@ export function goBack(fallback: string = R.practice) {
 // ─── Joriy dars ────────────────────────────────────────────────────────────
 export type CurrentLesson = { id: string; number: number; name: string; vocab: VocabWord[] };
 
-// Bosh sahifadagi bilan bir xil: oxirgi ochilgan dars, bo'lmasa faol dars.
+// Bosh sahifadagi bilan bir xil: ochilgan darslarning eng oxirgisi.
 export async function loadCurrentLesson(): Promise<CurrentLesson | null> {
   const mc = await fetchMobileContent();
   const course = mc.courses[0];
   if (!course) return null;
   const lessons = mc.lessons.filter((l) => l.courseId === course.id);
   if (!lessons.length) return null;
-  const last = await getLastPosition();
-  let idx = last ? lessons.findIndex((l) => l.id === last.lessonId) : -1;
-  if (idx < 0) idx = lessons.findIndex((l) => l.isActive);
-  if (idx < 0) idx = 0;
+  // Bosh sahifa va Darslar yo'li bilan bir xil joriy dars.
+  const idx = await currentLessonIndex(lessons);
   const lesson = lessons[idx];
   const content = await getResolvedLessonContent(lesson.id, idx).catch(() => null);
   return { id: lesson.id, number: idx + 1, name: lesson.name, vocab: content?.vocabulary ?? [] };

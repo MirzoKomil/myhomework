@@ -17,6 +17,7 @@ import { GameHeader, fmtTime, plainWord, reset, saveRecords, useCurrentLesson, u
 import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
+import { loadMixContext, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { addCoins } from '@/services/coinsStore';
 import { playSfx, playSfxLater } from '@/services/sfx';
 import { addLightning } from '@/services/lightningStore';
@@ -91,27 +92,40 @@ export default function MemoryScreen() {
   const [last, setLast] = useState<Card | null>(null);
   const lockRef = useRef(false);
 
+  // Butun so'z to'plami va aralash konteksti — "Qaytadan" har safar yangi so'zlar oladi.
+  const poolRef = useRef<Word[]>([]);
+  const mixRef = useRef<MixContext | null>(null);
+  const dealWords = () => {
+    const pool = poolRef.current;
+    const picked = pickMix(pool, PAIRS, (w) => w.word, mixRef.current);
+    const have = new Set(picked.map((w) => plainWord(w.word)));
+    const fallback = (isRu ? FALLBACK_RU : FALLBACK_EN).filter((f) => !have.has(plainWord(f.word)));
+    const all = [...picked, ...shuffle(fallback)].slice(0, PAIRS);
+    rememberShown(picked.map((w) => w.word));
+    setWords(all);
+    setDeck(buildDeck(all));
+  };
+
   useEffect(() => {
     let off = false;
-    const letterRe = isRu ? /^[а-яё]+$/i : /^[a-z]+$/i;
-    getAccumulatedVocabulary()
-      .catch(() => [])
-      .then((vocab) => {
+    // Bitta so'z yoki ikki so'zli qisqa ibora (kartaga sig'adigan).
+    const letterRe = isRu ? /^[а-яё]+( [а-яё]+)?$/i : /^[a-z]+( [a-z]+)?$/i;
+    Promise.all([getAccumulatedVocabulary().catch(() => []), loadMixContext().catch(() => null)])
+      .then(([vocab, ctx]) => {
         if (off) return;
         const uniq = new Map<string, Word>();
         for (const v of vocab) {
           // Kalit urg'usiz, kartada esa kontentdagi shakl (urg'u bilan bo'lsa — urg'u bilan).
-          const orig = v.english.toLowerCase();
+          const orig = v.english.toLowerCase().replace(/[?!.,«»"]/g, '').trim();
           const k = plainWord(orig);
-          if (letterRe.test(k) && !uniq.has(k)) uniq.set(k, { word: orig, translation: shortTr(v.translation), icon: v.icon, imageUrl: v.imageUrl });
+          if (letterRe.test(k) && k.length <= 12 && !uniq.has(k)) uniq.set(k, { word: orig, translation: shortTr(v.translation), icon: v.icon, imageUrl: v.imageUrl });
         }
-        const fallback = (isRu ? FALLBACK_RU : FALLBACK_EN).filter((f) => !uniq.has(plainWord(f.word)));
-        const picked = shuffle([...uniq.values()]).slice(0, PAIRS);
-        const all = [...picked, ...shuffle(fallback)].slice(0, PAIRS);
-        setWords(all);
-        setDeck(buildDeck(all));
+        poolRef.current = [...uniq.values()];
+        mixRef.current = ctx;
+        dealWords();
       });
     return () => { off = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRu]);
 
   const won = !!words && matched.size === words.length;
@@ -158,7 +172,7 @@ export default function MemoryScreen() {
 
   const restart = () => {
     if (!words) return;
-    setDeck(buildDeck(shuffle(words)));
+    dealWords();
     setOpen([]);
     setMatched(new Set());
     setSeconds(0);
@@ -226,8 +240,8 @@ export default function MemoryScreen() {
                       <WordImage w={w} size={84} />
                     ) : (
                       <>
-                        <Text style={[styles.cardWord, !isMatched && { color: '#0B1220' }]} numberOfLines={1} adjustsFontSizeToFit>{w.word}</Text>
-                        <Text style={[styles.cardTr, !isMatched && { color: '#4A5468' }]} numberOfLines={1}>{w.translation}</Text>
+                        <Text style={[styles.cardWord, fitWord(w.word), !isMatched && { color: '#0B1220' }]} numberOfLines={2}>{w.word}</Text>
+                        <Text style={[styles.cardTr, !isMatched && { color: '#4A5468' }]} numberOfLines={2}>{w.translation}</Text>
                       </>
                     )}
                     {isMatched && (
@@ -284,6 +298,14 @@ export default function MemoryScreen() {
   );
 }
 
+// Karta ichki kengligi ~96px: uzun so'z ("знакомство") kesilib qolmasin —
+// shrift eng uzun bo'lak uzunligiga qarab kichrayadi (21 → 13), ibora 2 qatorga o'tadi.
+function fitWord(word: string) {
+  const longest = Math.max(...word.split(/\s+/).map((t) => t.replace(/\u0301/g, '').length), 1);
+  const size = Math.max(13, Math.min(21, Math.floor(96 / (longest * 0.64))));
+  return { fontSize: size, lineHeight: Math.round(size * 1.3), textAlign: 'center' as const };
+}
+
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 const styles = StyleSheet.create({
@@ -309,7 +331,7 @@ const styles = StyleSheet.create({
   ok: { boxShadow: 'inset 0 0 0 3px #087A4A, 0 4px 0 #CDEFDD' } as object,
   openRing: { boxShadow: 'inset 0 0 0 3px #2F5BFF, 0 4px 0 #C9D6FF' } as object,
   cardWord: { fontFamily: fonts.bodyHeavy, fontSize: 21, lineHeight: 29, color: '#075E3A', paddingHorizontal: 6, ...reset },
-  cardTr: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 16, color: '#075E3A', paddingHorizontal: 6, ...reset },
+  cardTr: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 15, color: '#075E3A', paddingHorizontal: 6, textAlign: 'center', ...reset },
   badge: { position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10, backgroundColor: '#087A4A', alignItems: 'center', justifyContent: 'center' },
 
   hint: { marginHorizontal: 20, backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },

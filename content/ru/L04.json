@@ -1,0 +1,279 @@
+{
+ "n": 4,
+ "lessonId": "l1784055280406-3",
+ "type": "live",
+ "id": "l1784055280406-3",
+ "topic": "У кого́ есть…?",
+ "title": "Jonli dars: «У кого́ есть…?»",
+ "cando": "Kimda nima borligini so'ray va ayta olaman: У вас есть ру́чка? — Да, у меня́ есть ру́чка.",
+ "vocab": [
+  {
+   "ru": "вот",
+   "tr": "[vot]",
+   "uz": "mana, ana",
+   "ex": "Вот Бобу́р. Вот его́ телефо́н.",
+   "img": "cards/вот.jpg",
+   "icon": "",
+   "vocabId": "v-4-1",
+   "media": "media/ru/L04/w_v-4-1.jpg"
+  },
+  {
+   "ru": "там / здесь",
+   "tr": "[tam / zdes']",
+   "uz": "u yerda / bu yerda",
+   "ex": "Они́ там. А мы здесь.",
+   "img": "cards/там - здесь.jpg",
+   "icon": "",
+   "vocabId": "v-4-2",
+   "media": "media/ru/L04/w_v-4-2.jpg"
+  },
+  {
+   "ru": "слова́рь",
+   "tr": "[slavár']",
+   "uz": "lug'at",
+   "ex": "У вас есть слова́рь?",
+   "img": "cards/словарь.jpg",
+   "icon": "",
+   "vocabId": "v-4-3",
+   "media": "media/ru/L04/w_v-4-3.jpg"
+  },
+  {
+   "ru": "гость / го́сти",
+   "tr": "[gost' / gósti]",
+   "uz": "mehmon / mehmonlar",
+   "ex": "Вы — го́сти. У вас есть чай.",
+   "img": "cards/гости.jpg",
+   "icon": "",
+   "vocabId": "v-4-4",
+   "media": "media/ru/L04/w_v-4-4.jpg"
+  },
+  {
+   "ru": "чай / сок",
+   "tr": "[chay / sok]",
+   "uz": "choy / sharbat",
+   "ex": "У нас есть чай и сок.",
+   "img": "cards/чай.jpg",
+   "icon": "",
+   "vocabId": "v-4-5",
+   "media": "media/ru/L04/w_v-4-5.jpg"
+  },
+  {
+   "ru": "стол / стул",
+   "tr": "[stol / stul]",
+   "uz": "stol / stul",
+   "ex": "У нас есть стол и стул.",
+   "img": "cards/стол - стул.jpg",
+   "icon": "",
+   "vocabId": "v-4-6",
+   "media": "media/ru/L04/w_v-4-6.jpg"
+  },
+  {
+   "ru": "компью́тер",
+   "tr": "[kamp'yúter]",
+   "uz": "kompyuter",
+   "ex": "У меня́ есть компью́тер.",
+   "img": "cards/компьютер.jpg",
+   "icon": "",
+   "vocabId": "v-4-7",
+   "media": "media/ru/L04/w_v-4-7.jpg"
+  },
+  {
+   "ru": "вре́мя",
+   "tr": "[vrémya]",
+   "uz": "vaqt",
+   "ex": "У вас есть вре́мя? (Vaqtingiz bormi?)",
+   "img": "cards/время.jpg",
+   "icon": "",
+   "vocabId": "v-4-8",
+   "media": "media/ru/L04/w_v-4-8.jpg"
+  },
+  {
+   "ru": "де́ньги",
+   "tr": "[dén'gi]",
+   "uz": "pul",
+   "ex": "У них есть де́ньги.",
+   "img": "cards/деньги.jpg",
+   "icon": "",
+   "vocabId": "v-4-9",
+   "media": "media/ru/L04/w_v-4-9.jpg"
+  },
+  {
+   "ru": "вопро́с",
+   "tr": "[vaprós]",
+   "uz": "savol",
+   "ex": "У вас есть вопро́сы? — Да, у меня́ есть вопро́с.",
+   "img": "cards/вопрос.jpg",
+   "icon": "",
+   "vocabId": "v-4-10",
+   "media": "media/ru/L04/w_v-4-10.jpg"
+  }
+ ],
+ "konspekt": "4-DARS (jonli dars): «У кого́ есть…?»\n\nBugun ustoz bilan 3-dars mavzusini jonli mashq qildik: kishilik olmoshlari va «у меня́ есть».\n\nAsosiy qolip:\n* У меня́ есть телефо́н. — Menda telefon bor.\n* У тебя́ есть ру́чка? — Senda ruchka bormi?\n* У него́ есть маши́на. / У неё есть кни́га.\n* У нас есть уро́к. / У вас есть вре́мя? / У них есть де́ти.\n\nSavol turlari:\n* У вас есть слова́рь? ↑ — Да, есть. / Нет.\n* У кого́ есть слова́рь? — У меня́. / У Анто́на.\n* Inkor: Нет, у меня́ нет маши́ны. (hozircha shunchaki yodlab oling: нет + so'z o'zgaradi)\n\nКто э́то? — Э́то Бобу́р. (kim) · Что э́то? — Э́то стол. (nima)\n\nEslab qoling:\n* notanish odamga — вы; do'stga — ты.\n* вот — mana (ko'rsatganda): Вот Нигора́. Вот её су́мка.\n\nDarsda ishlatgan so'zlar: слова́рь, го́сти, чай, сок, стол, стул, компью́тер, вре́мя, де́ньги, вопро́с, соба́ка, кот.\n\nUyga vazifa platformada: 15 ta savol. Yordamchi ustoz bilan gapirish. Keyingi dars — videodars: hozirgi zamon fe'llari, 1-tur (чита́ть → я чита́ю).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "___ есть ключи́. (Sizda kalitlar bor.)",
+    "o": [
+     "У вас",
+     "У тебя́",
+     "У меня́"
+    ],
+    "a": "У вас"
+   },
+   {
+    "s": "___ есть де́ти. (Ularda bolalar bor.)",
+    "o": [
+     "У нас",
+     "У них",
+     "У вас"
+    ],
+    "a": "У них"
+   },
+   {
+    "s": "___ есть телефо́н. (Senda telefon bor.)",
+    "o": [
+     "У тебя́",
+     "У меня́",
+     "У него́"
+    ],
+    "a": "У тебя́"
+   },
+   {
+    "s": "У вас есть вопро́сы? — Да, ___ есть вопро́с.",
+    "o": [
+     "у нас",
+     "мы",
+     "у вас"
+    ],
+    "a": "у нас"
+   },
+   {
+    "s": "Где кни́га? — ___ у него́!",
+    "o": [
+     "Она́",
+     "Он",
+     "Оно́"
+    ],
+    "a": "Она́"
+   },
+   {
+    "s": "___ есть тетра́дь? — У Анто́на есть тетра́дь.",
+    "o": [
+     "Что",
+     "Кто",
+     "У кого́"
+    ],
+    "a": "У кого́"
+   },
+   {
+    "s": "Вот Нигора́. ___ — подру́га.",
+    "o": [
+     "Она́",
+     "Он",
+     "Они́"
+    ],
+    "a": "Она́"
+   },
+   {
+    "s": "___ хорошо́ говори́шь по-ру́сски. (Sen ruscha yaxshi gapirasan.)",
+    "o": [
+     "Вы",
+     "Ты",
+     "Он"
+    ],
+    "a": "Ты"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Вы — го́сти» — gapdagi «вы» kim?",
+    "o": [
+     "bir kishi, hurmat",
+     "ko'p kishi (sizlar)",
+     "men"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Кто э́то?» — javob:",
+    "o": [
+     "Э́то чай.",
+     "Э́то Тиму́р.",
+     "Э́то телефо́н."
+    ],
+    "a": 1
+   },
+   {
+    "q": "«У кого́ есть соба́ка?» — javob:",
+    "o": [
+     "Э́то соба́ка.",
+     "Соба́ка там.",
+     "У них есть соба́ка."
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Mana mening do'stim» ruschasi:",
+    "o": [
+     "Там мой друг.",
+     "Кто мой друг?",
+     "Вот мой друг."
+    ],
+    "a": 2
+   },
+   {
+    "q": "U (ayol)da kitob bor:",
+    "o": [
+     "У него́ есть кни́га.",
+     "У них есть кни́га.",
+     "У неё есть кни́га."
+    ],
+    "a": 2
+   },
+   {
+    "q": "Qaysi gap to'g'ri?",
+    "o": [
+     "У вас есть ру́чка?",
+     "Вы есть ру́чка?",
+     "Вы ру́чка есть?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Оно́» qaysi so'z uchun?",
+    "o": [
+     "ма́ма",
+     "окно́",
+     "Бобу́р"
+    ],
+    "a": 1
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "У меня́ есть телефо́н, кни́га и ру́чка.",
+   "uz": "Menda telefon, kitob va ruchka bor."
+  },
+  {
+   "ru": "У вас есть слова́рь? — Да, есть.",
+   "uz": "Sizda lug'at bormi? — Ha, bor."
+  },
+  {
+   "ru": "У кого́ есть ключи́? — У меня́.",
+   "uz": "Kimda kalitlar bor? — Menda."
+  },
+  {
+   "ru": "Вот Бобу́р. У него́ есть маши́на.",
+   "uz": "Mana Bobur. Unda mashina bor."
+  },
+  {
+   "ru": "Вот Нигора́. У неё есть кни́га и тетра́дь.",
+   "uz": "Mana Nigora. Unda kitob va daftar bor."
+  },
+  {
+   "ru": "У нас есть дом, а у них есть соба́ка.",
+   "uz": "Bizda uy bor, ularda esa it bor."
+  }
+ ]
+}

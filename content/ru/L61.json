@@ -1,0 +1,600 @@
+{
+ "n": 61,
+ "lessonId": "l1784055280406-60",
+ "type": "video",
+ "id": "l1784055280406-60",
+ "topic": "Telefon va rasmiy nutq",
+ "title": "Telefonda gaplashish va rasmiy nutq: Алло́, мо́жно…? Перезвони́те; вы-shakl",
+ "title_ru": "Разгово́р по телефо́ну. Официа́льная речь",
+ "videoUrl": "",
+ "cando": "Telefonda salomlashaman, kerakli odamni so'rayman, xabar qoldiraman, qayta qo'ng'iroq qilishni so'rayman va rasmiy «Вы» shaklida muloyim gaplashaman.",
+ "review": [
+  {
+   "q": "«Agar millionim bo'lganida…»",
+   "a": "Е́сли бы у меня́ был миллио́н…"
+  },
+  {
+   "q": "«Stol band qilmoqchi edim» (muloyim)",
+   "a": "Я хоте́л бы заказа́ть сто́лик."
+  },
+  {
+   "q": "«Sening o'rningda…»",
+   "a": "На твоём ме́сте я бы…"
+  },
+  {
+   "q": "«Afsus, kelmading»",
+   "a": "Жаль, что ты не пришёл."
+  },
+  {
+   "q": "«Yordam bera olmaysizmi?»",
+   "a": "Вы не могли́ бы помо́чь?"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "Алло́!",
+   "tr": "[alló]",
+   "uz": "Allo!",
+   "ex": "Алло́! Слу́шаю вас.",
+   "img": "cards/телефон.jpg",
+   "icon": "",
+   "vocabId": "v-61-1",
+   "media": "media/ru/L61/w_v-61-1.jpg"
+  },
+  {
+   "ru": "Слу́шаю (вас)",
+   "tr": "[slúshayu]",
+   "uz": "Eshitaman (sizni)",
+   "ex": "— Алло́! — Слу́шаю.",
+   "img": "cards/слушать.jpg",
+   "icon": "",
+   "vocabId": "v-61-2",
+   "media": "media/ru/L61/w_v-61-2.jpg"
+  },
+  {
+   "ru": "Мо́жно (позва́ть)…?",
+   "tr": "[mójna pazvát']",
+   "uz": "…ni chaqirsangiz bo'ladimi?",
+   "ex": "Мо́жно Тиму́ра?",
+   "img": "cards/позвать к телефону.jpg",
+   "icon": "",
+   "vocabId": "v-61-3",
+   "media": "media/ru/L61/w_v-61-3.jpg"
+  },
+  {
+   "ru": "Его́ / её нет",
+   "tr": "[yivó / yiyó nyet]",
+   "uz": "U yo'q",
+   "ex": "Извини́те, его́ сейча́с нет.",
+   "img": "cards/его нет.jpg",
+   "icon": "",
+   "vocabId": "v-61-4",
+   "media": "media/ru/L61/w_v-61-4.jpg"
+  },
+  {
+   "ru": "перезвони́ть",
+   "tr": "[pirizvanít']",
+   "uz": "qayta qo'ng'iroq qilmoq",
+   "ex": "Перезвони́те, пожа́луйста, че́рез час.",
+   "img": "cards/перезвонить.jpg",
+   "icon": "",
+   "vocabId": "v-61-5",
+   "media": "media/ru/L61/w_v-61-5.jpg"
+  },
+  {
+   "ru": "переда́ть (что? кому́?)",
+   "tr": "[piridát']",
+   "uz": "yetkazmoq",
+   "ex": "Переда́йте ему́, что звони́л Бобу́р.",
+   "img": "cards/передать.jpg",
+   "icon": "",
+   "vocabId": "v-61-6",
+   "media": "media/ru/L61/w_v-61-6.jpg"
+  },
+  {
+   "ru": "сообще́ние",
+   "tr": "[saapshchéniye]",
+   "uz": "xabar",
+   "ex": "Я отпра́влю вам сообще́ние.",
+   "img": "cards/сообщение.jpg",
+   "icon": "",
+   "vocabId": "v-61-7",
+   "media": "media/ru/L61/w_v-61-7.jpg"
+  },
+  {
+   "ru": "за́нято",
+   "tr": "[zánita]",
+   "uz": "band (liniya)",
+   "ex": "Я звони́л, но бы́ло за́нято.",
+   "img": "cards/занято.jpg",
+   "icon": "",
+   "vocabId": "v-61-8",
+   "media": "media/ru/L61/w_v-61-8.jpg"
+  },
+  {
+   "ru": "нет свя́зи",
+   "tr": "[nyet svyázi]",
+   "uz": "aloqa yo'q",
+   "ex": "Пло́хо слы́шно, нет свя́зи.",
+   "img": "cards/нет связи.jpg",
+   "icon": "",
+   "vocabId": "v-61-9",
+   "media": "media/ru/L61/w_v-61-9.jpg"
+  },
+  {
+   "ru": "ошиби́ться но́мером",
+   "tr": "[ashibítsa nómiram]",
+   "uz": "raqamni adashtirmoq",
+   "ex": "Извини́те, вы оши́блись но́мером.",
+   "img": "cards/ошибиться номером.jpg",
+   "icon": "",
+   "vocabId": "v-61-10",
+   "media": "media/ru/L61/w_v-61-10.jpg"
+  },
+  {
+   "ru": "но́мер телефо́на",
+   "tr": "[nómir tilifóna]",
+   "uz": "telefon raqami",
+   "ex": "Како́й у вас но́мер телефо́на?",
+   "img": "cards/звонить.jpg",
+   "icon": "",
+   "vocabId": "v-61-11",
+   "media": "media/ru/L61/w_v-61-11.jpg"
+  },
+  {
+   "ru": "Говори́те гро́мче",
+   "tr": "[gavaríti grómche]",
+   "uz": "Balandroq gapiring",
+   "ex": "Пло́хо слы́шно, говори́те гро́мче!",
+   "img": "cards/громко - тихо.jpg",
+   "icon": "",
+   "vocabId": "v-61-12",
+   "media": "media/ru/L61/w_v-61-12.jpg"
+  },
+  {
+   "ru": "Вас беспоко́ит…",
+   "tr": "[vas bispakóit]",
+   "uz": "Sizni … bezovta qilyapti (rasmiy)",
+   "ex": "Вас беспоко́ит Абдулази́з из ба́нка.",
+   "img": "cards/начальник.jpg",
+   "icon": "",
+   "vocabId": "v-61-13",
+   "media": "media/ru/L61/w_v-61-13.jpg"
+  },
+  {
+   "ru": "Кто спра́шивает?",
+   "tr": "[kto sprashivayet]",
+   "uz": "Kim so'rayapti?",
+   "ex": "— Мо́жно дире́ктора? — Кто спра́шивает?",
+   "img": "cards/спрашивать.jpg",
+   "icon": "",
+   "vocabId": "v-61-14",
+   "media": "media/ru/L61/w_v-61-14.jpg"
+  },
+  {
+   "ru": "Мину́точку!",
+   "tr": "[minútachku]",
+   "uz": "Bir daqiqa!",
+   "ex": "Мину́точку, сейча́с позову́.",
+   "img": "cards/ждать.jpg",
+   "icon": "",
+   "vocabId": "v-61-15",
+   "media": "media/ru/L61/w_v-61-15.jpg"
+  },
+  {
+   "ru": "Всего́ до́брого!",
+   "tr": "[fsivó dóbrava]",
+   "uz": "Hammasi yaxshi bo'lsin! (xayrlashuv)",
+   "ex": "Спаси́бо! Всего́ до́брого!",
+   "img": "cards/до свидания.jpg",
+   "icon": "",
+   "vocabId": "v-61-16",
+   "media": "media/ru/L61/w_v-61-16.jpg"
+  }
+ ],
+ "konspekt": "61-DARS: Telefon va rasmiy nutq\n(Разгово́р по телефо́ну)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: telefonda muloyim gaplashasiz, odamni so'raysiz, xabar qoldirasiz va rasmiy vaziyatda «Вы» bilan gapirasiz.\n\n---\n\n1. Boshlash\n\nJavob beruvchi: Алло́! · Слу́шаю (вас). · Компа́ния «…», здра́вствуйте!\nQo'ng'iroq qiluvchi:\n* Здра́вствуйте! Мо́жно Тиму́ра? — Timurni chaqirsangiz bo'ladimi?\n* Э́то Ни́на? — Bu Ninami?\n* Вас беспоко́ит Абдулази́з из компа́нии… — (rasmiy) Sizni … kompaniyasidan Abdulaziz bezovta qilyapti.\n\n---\n\n2. Odam yo'q bo'lsa\n\n* Мину́точку, сейча́с позову́. — Bir daqiqa, hozir chaqiraman.\n* Извини́те, его́ / её сейча́с нет. Он вы́шел. — Hozir yo'q, chiqib ketdi.\n* Перезвони́те, пожа́луйста, че́рез час. — Bir soatdan keyin qayta qo'ng'iroq qiling.\n* Что ему́ переда́ть? — Unga nima yetkazay?\n* Переда́йте, пожа́луйста, что звони́л Бобу́р. — Bobur qo'ng'iroq qilganini aytib qo'ying.\n\n---\n\n3. Muammolar\n\n* Пло́хо слы́шно. Говори́те гро́мче! — Yaxshi eshitilmayapti. Balandroq gapiring!\n* Нет свя́зи. · Бы́ло за́нято. · Вы оши́блись но́мером.\n\n---\n\n4. Rasmiy nutq: «Вы»\n\n* Notanish odam, katta yoshli, ishxona, rasmiy joy — doim Вы (bosh harf bilan yozishda).\n* Fe'l: Вы зна́ете, Вы мо́жете, Вы могли́ бы…\n* Ism-sharif: А́нна Петро́вна, Ива́н Серге́евич — rasmiy murojaat.\n* Muloyim so'zlar: Бу́дьте добры́… (Iltimos…) · Не могли́ бы Вы… · Благодарю́! (rasmiy «rahmat»)\n\n---\n\n5. Tugatish\n\n* Спаси́бо, до свида́ния! · Всего́ до́брого! · Хоро́шего дня!\n\n---\n\nDars xulosasi:\n1. Алло́! Слу́шаю. Мо́жно…?\n2. Его́ нет. Перезвони́те. Что переда́ть?\n3. Пло́хо слы́шно, нет свя́зи, за́нято.\n4. Вы-shakl: Бу́дьте добры́, Не могли́ бы Вы…\n5. Всего́ до́брого!\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: telefon orqali bron qilish va yozilish.",
+ "text": {
+  "title": "Звоно́к в о́фис",
+  "ru": "— Алло́! Компа́ния «Ташке́нт-Тревел», здра́вствуйте!\n— Здра́вствуйте! Вас беспоко́ит Нигора́ Кари́мова. Бу́дьте добры́, мо́жно А́нну Петро́вну?\n— Мину́точку… Извини́те, А́нны Петро́вны сейча́с нет. Она́ на встре́че. Что ей переда́ть?\n— Переда́йте, пожа́луйста, что звони́ла Нигора́ по по́воду тура́ в Самарка́нд. Пусть она́ мне перезвони́т.\n— Хорошо́. Како́й ваш но́мер телефо́на?\n— Девяно́сто, сто два́дцать три, со́рок пять, шестьдеся́т семь.\n— Записа́ла. Она́ перезвони́т вам по́сле обе́да.\n— Большо́е спаси́бо! Всего́ до́брого!",
+  "uz": "— Allo! «Toshkent-Trevel» kompaniyasi, assalomu alaykum!\n— Assalomu alaykum! Sizni Nigora Karimova bezovta qilyapti. Iltimos, Anna Petrovnani chaqirsangiz?\n— Bir daqiqa… Kechirasiz, Anna Petrovna hozir yo'q. U uchrashuvda. Unga nima yetkazay?\n— Iltimos, Nigora Samarqand turi bo'yicha qo'ng'iroq qilganini aytib qo'ying. Menga qayta qo'ng'iroq qilsinlar.\n— Yaxshi. Telefon raqamingiz qanday?\n— To'qson, bir yuz yigirma uch, qirq besh, oltmish yetti.\n— Yozib oldim. U sizga tushlikdan keyin qo'ng'iroq qiladi.\n— Katta rahmat! Hammasi yaxshi bo'lsin!",
+  "questions": [
+   {
+    "q": "Куда́ звони́т Нигора́?",
+    "opts": [
+     "В банк",
+     "В компа́нию «Ташке́нт-Тревел»",
+     "В больни́цу"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Кого́ она́ спра́шивает?",
+    "opts": [
+     "А́нну Петро́вну",
+     "Дире́ктора",
+     "Тиму́ра"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Где сейча́с А́нна Петро́вна?",
+    "opts": [
+     "До́ма",
+     "В о́тпуске",
+     "На встре́че"
+    ],
+    "a": 2
+   },
+   {
+    "q": "По како́му по́воду звони́т Нигора́?",
+    "opts": [
+     "По по́воду тура́ в Самарка́нд",
+     "По по́воду биле́та в Москву́",
+     "По по́воду рабо́ты"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что попроси́ла Нигора́?",
+    "opts": [
+     "Что́бы ей перезвони́ли",
+     "Что́бы ей присла́ли биле́т",
+     "Что́бы ей написа́ли письмо́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Когда́ перезвони́т А́нна Петро́вна?",
+    "opts": [
+     "За́втра",
+     "По́сле обе́да",
+     "У́тром"
+    ],
+    "a": 1
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Мо́жно Тиму́ра? (Timurni chaqirsangiz?)",
+  "lines": [
+   {
+    "who": "Ма́ма Тиму́ра",
+    "ru": "Алло́! Слу́шаю.",
+    "uz": "Allo! Eshitaman."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Здра́вствуйте! Э́то Анто́н. Мо́жно Тиму́ра?",
+    "uz": "Assalomu alaykum! Bu Anton. Timurni chaqirsangiz bo'ladimi?"
+   },
+   {
+    "who": "Ма́ма Тиму́ра",
+    "ru": "Здра́вствуй, Анто́н! Его́ нет, он вы́шел в магази́н.",
+    "uz": "Salom, Anton! U yo'q, do'konga chiqib ketdi."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "А когда́ он вернётся?",
+    "uz": "Qachon qaytadi?"
+   },
+   {
+    "who": "Ма́ма Тиму́ра",
+    "ru": "Че́рез полчаса́. Что ему́ переда́ть?",
+    "uz": "Yarim soatdan keyin. Unga nima yetkazay?"
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Переда́йте, пожа́луйста, что́бы он мне перезвони́л. Спаси́бо, всего́ до́брого!",
+    "uz": "Iltimos, menga qayta qo'ng'iroq qilsin, deb ayting. Rahmat, xayr!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "Алло́!",
+    "Allo!"
+   ],
+   [
+    "Слу́шаю",
+    "Eshitaman"
+   ],
+   [
+    "Его́ нет",
+    "U yo'q"
+   ],
+   [
+    "перезвони́ть",
+    "qayta qo'ng'iroq qilmoq"
+   ],
+   [
+    "переда́ть",
+    "yetkazmoq"
+   ],
+   [
+    "за́нято",
+    "band"
+   ],
+   [
+    "нет свя́зи",
+    "aloqa yo'q"
+   ],
+   [
+    "Мину́точку!",
+    "Bir daqiqa!"
+   ],
+   [
+    "Бу́дьте добры́",
+    "Iltimos (rasmiy)"
+   ],
+   [
+    "Всего́ до́брого!",
+    "Hammasi yaxshi bo'lsin!"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "— Алло́! — ___ вас.",
+    "o": [
+     "Слы́шу",
+     "Слу́шаю",
+     "Слу́шать"
+    ],
+    "a": "Слу́шаю"
+   },
+   {
+    "s": "___ Тиму́ра? (chaqirsangiz bo'ladimi)",
+    "o": [
+     "Нельзя́",
+     "Мо́жно",
+     "Ну́жно"
+    ],
+    "a": "Мо́жно"
+   },
+   {
+    "s": "Извини́те, ___ сейча́с нет. (u — erkak)",
+    "o": [
+     "он",
+     "его́",
+     "ему́"
+    ],
+    "a": "его́"
+   },
+   {
+    "s": "___ , пожа́луйста, че́рез час.",
+    "o": [
+     "Перезвоню́",
+     "Перезвони́ть",
+     "Перезвони́те"
+    ],
+    "a": "Перезвони́те"
+   },
+   {
+    "s": "Что ему́ ___ ?",
+    "o": [
+     "переда́ть",
+     "переда́йте",
+     "переда́л"
+    ],
+    "a": "переда́ть"
+   },
+   {
+    "s": "Переда́йте, что ___ Бобу́р.",
+    "o": [
+     "звони́л",
+     "звони́т",
+     "позвони́т"
+    ],
+    "a": "звони́л"
+   },
+   {
+    "s": "Пло́хо слы́шно, говори́те ___ !",
+    "o": [
+     "ти́ше",
+     "гро́мко",
+     "гро́мче"
+    ],
+    "a": "гро́мче"
+   },
+   {
+    "s": "Я звони́л, но бы́ло ___ .",
+    "o": [
+     "свобо́дно",
+     "за́нят",
+     "за́нято"
+    ],
+    "a": "за́нято"
+   },
+   {
+    "s": "Извини́те, вы ___ но́мером.",
+    "o": [
+     "оши́блись",
+     "оши́бка",
+     "ошиба́етесь"
+    ],
+    "a": "оши́блись"
+   },
+   {
+    "s": "___ добры́, мо́жно дире́ктора?",
+    "o": [
+     "Быть",
+     "Бу́дьте",
+     "Будь"
+    ],
+    "a": "Бу́дьте"
+   },
+   {
+    "s": "Вас ___ Абдулази́з из ба́нка.",
+    "o": [
+     "беспоко́ит",
+     "беспоко́ить",
+     "беспоко́ю"
+    ],
+    "a": "беспоко́ит"
+   },
+   {
+    "s": "Спаси́бо! ___ до́брого!",
+    "o": [
+     "Всего́",
+     "Весь",
+     "Все"
+    ],
+    "a": "Всего́"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Telefonni ko'targanda:",
+    "o": [
+     "Пока́!",
+     "Алло́! Слу́шаю.",
+     "Дава́й!"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Bir daqiqa, hozir chaqiraman»",
+    "o": [
+     "Подожди́те, я за́нят",
+     "Мину́та, я ушёл",
+     "Мину́точку, сейча́с позову́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Unga nima yetkazay?»",
+    "o": [
+     "Кто ему́ звони́л?",
+     "Что ему́ дать?",
+     "Что ему́ переда́ть?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Raqamni adashtirdingiz»",
+    "o": [
+     "Вы пра́вы",
+     "Но́мер за́нят",
+     "Вы оши́блись но́мером"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Rasmiy murojaat:",
+    "o": [
+     "Не могли́ бы Вы…",
+     "Дай…",
+     "Эй, ты…"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Aloqa yo'q»",
+    "o": [
+     "Нет номера́",
+     "Нет звонка́",
+     "Нет свя́зи"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Rasmiy «rahmat»:",
+    "o": [
+     "Дава́й!",
+     "Благодарю́!",
+     "Пока́!"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Anna Petrovna hozir yo'q»",
+    "o": [
+     "А́нне Петро́вне нет",
+     "А́нна Петро́вна сейча́с нет",
+     "А́нны Петро́вны сейча́с нет"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "Тиму́ра",
+     "Мо́жно"
+    ],
+    "a": "Мо́жно Тиму́ра",
+    "t": "Timurni chaqirsangiz?"
+   },
+   {
+    "w": [
+     "нет",
+     "сейча́с",
+     "Его́"
+    ],
+    "a": "Его́ сейча́с нет",
+    "t": "U hozir yo'q"
+   },
+   {
+    "w": [
+     "че́рез",
+     "Перезвони́те",
+     "час"
+    ],
+    "a": "Перезвони́те че́рез час",
+    "t": "Bir soatdan keyin qo'ng'iroq qiling"
+   },
+   {
+    "w": [
+     "переда́ть",
+     "Что",
+     "ему́"
+    ],
+    "a": "Что ему́ переда́ть",
+    "t": "Unga nima yetkazay?"
+   },
+   {
+    "w": [
+     "гро́мче",
+     "Говори́те",
+     "пожа́луйста"
+    ],
+    "a": "Говори́те гро́мче пожа́луйста",
+    "t": "Balandroq gapiring, iltimos"
+   },
+   {
+    "w": [
+     "до́брого",
+     "Всего́"
+    ],
+    "a": "Всего́ до́брого",
+    "t": "Hammasi yaxshi bo'lsin"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Алло́! Здра́вствуйте! Мо́жно А́нну Петро́вну?",
+   "uz": "Allo! Assalomu alaykum! Anna Petrovnani chaqirsangiz?"
+  },
+  {
+   "ru": "Вас беспоко́ит Абдулази́з из ба́нка.",
+   "uz": "Sizni bankdan Abdulaziz bezovta qilyapti."
+  },
+  {
+   "ru": "Извини́те, его́ сейча́с нет. Что ему́ переда́ть?",
+   "uz": "Kechirasiz, u hozir yo'q. Unga nima yetkazay?"
+  },
+  {
+   "ru": "Переда́йте, пожа́луйста, что́бы он мне перезвони́л.",
+   "uz": "Iltimos, menga qayta qo'ng'iroq qilsin, deb ayting."
+  },
+  {
+   "ru": "Пло́хо слы́шно. Говори́те гро́мче, пожа́луйста.",
+   "uz": "Yaxshi eshitilmayapti. Balandroq gapiring, iltimos."
+  },
+  {
+   "ru": "Спаси́бо! Всего́ до́брого!",
+   "uz": "Rahmat! Hammasi yaxshi bo'lsin!"
+  }
+ ]
+}

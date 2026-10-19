@@ -1,0 +1,642 @@
+{
+ "n": 1,
+ "lessonId": "l1783004411232",
+ "type": "video",
+ "id": "l1783004411232",
+ "topic": "Alifbo, talaffuz, tanishuv",
+ "title": "Alifbo, talaffuz qoidalari va tanishuv",
+ "title_ru": "Алфави́т, пра́вила чте́ния, знако́мство",
+ "videoUrl": "https://youtu.be/yTRiBmSrdh4",
+ "cando": "Rus harflarini to'g'ri o'qiyman; o'zimni tanishtira olaman: ism, yosh, shahar, ish, hobbi.",
+ "review": [
+  {
+   "q": "Rus alifbosida nechta harf bor?",
+   "a": "33"
+  },
+  {
+   "q": "«молоко́» so'zida qaysi «о» [о] deb o'qiladi?",
+   "a": "oxirgisi (urg'uli)"
+  },
+  {
+   "q": "«что» qanday o'qiladi?",
+   "a": "[што]"
+  },
+  {
+   "q": "«его́» qanday o'qiladi?",
+   "a": "[йиво]"
+  },
+  {
+   "q": "Rasmiy salom qaysi: приве́т yoki здра́вствуйте?",
+   "a": "здра́вствуйте"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "здра́вствуйте",
+   "tr": "[zdrástvuyte]",
+   "uz": "assalomu alaykum (rasmiy)",
+   "ex": "Здра́вствуйте! Как вас зову́т? (Assalomu alaykum! Ismingiz nima?)",
+   "img": "cards/здравствуйте.jpg",
+   "icon": "",
+   "vocabId": "v-1-1",
+   "media": "media/ru/L01/w_v-1-1.jpg"
+  },
+  {
+   "ru": "приве́т",
+   "tr": "[privét]",
+   "uz": "salom (do'stona)",
+   "ex": "Приве́т, Бобу́р! (Salom, Bobur!)",
+   "img": "cards/привет.jpg",
+   "icon": "",
+   "vocabId": "v-1-2",
+   "media": "media/ru/L01/w_v-1-2.jpg"
+  },
+  {
+   "ru": "до́брое у́тро",
+   "tr": "[dóbraye útra]",
+   "uz": "xayrli tong",
+   "ex": "До́брое у́тро, Нигора́! (Xayrli tong, Nigora!)",
+   "img": "cards/доброе утро.jpg",
+   "icon": "",
+   "vocabId": "v-1-3",
+   "media": "media/ru/L01/w_v-1-3.jpg"
+  },
+  {
+   "ru": "до́брый день",
+   "tr": "[dóbryy den']",
+   "uz": "xayrli kun",
+   "ex": "До́брый день! (Xayrli kun!)",
+   "img": "cards/добрый день.jpg",
+   "icon": "",
+   "vocabId": "v-1-4",
+   "media": "media/ru/L01/w_v-1-4.jpg"
+  },
+  {
+   "ru": "до свида́ния",
+   "tr": "[da svidániya]",
+   "uz": "xayr (rasmiy)",
+   "ex": "До свида́ния! До за́втра! (Xayr! Ertagacha!)",
+   "img": "cards/до свидания.jpg",
+   "icon": "",
+   "vocabId": "v-1-5",
+   "media": "media/ru/L01/w_v-1-5.jpg"
+  },
+  {
+   "ru": "пока́",
+   "tr": "[paká]",
+   "uz": "xayr (do'stona)",
+   "ex": "Пока́, Бобу́р! (Xayr, Bobur!)",
+   "img": "cards/пока.jpg",
+   "icon": "",
+   "vocabId": "v-1-6",
+   "media": "media/ru/L01/w_v-1-6.jpg"
+  },
+  {
+   "ru": "спаси́бо",
+   "tr": "[spasíba]",
+   "uz": "rahmat",
+   "ex": "Спаси́бо большо́е! (Katta rahmat!)",
+   "img": "cards/спасибо.jpg",
+   "icon": "",
+   "vocabId": "v-1-7",
+   "media": "media/ru/L01/w_v-1-7.jpg"
+  },
+  {
+   "ru": "пожа́луйста",
+   "tr": "[pajálusta]",
+   "uz": "marhamat / iltimos",
+   "ex": "Пожа́луйста! (Marhamat!)",
+   "img": "cards/пожалуйста.jpg",
+   "icon": "",
+   "vocabId": "v-1-8",
+   "media": "media/ru/L01/w_v-1-8.jpg"
+  },
+  {
+   "ru": "да / нет",
+   "tr": "[da / net]",
+   "uz": "ha / yo'q",
+   "ex": "Вы студе́нт? — Да. / Нет. (Siz talabamisiz? — Ha. / Yo'q.)",
+   "img": "cards/да - нет.jpg",
+   "icon": "",
+   "vocabId": "v-1-9",
+   "media": "media/ru/L01/w_v-1-9.jpg"
+  },
+  {
+   "ru": "и́мя",
+   "tr": "[ímya]",
+   "uz": "ism",
+   "ex": "Как вас зову́т? — Меня́ зову́т Ази́з. (Ismingiz nima? — Mening ismim Aziz.)",
+   "img": "cards/имя.jpg",
+   "icon": "",
+   "vocabId": "v-1-10",
+   "media": "media/ru/L01/w_v-1-10.jpg"
+  },
+  {
+   "ru": "год / го́да / лет",
+   "tr": "[got / góda / let]",
+   "uz": "yosh (1 / 2–4 / 5+)",
+   "ex": "Мне 21 год. Мне 23 го́да. Мне 30 лет. (Men 21 / 23 / 30 yoshdaman.)",
+   "img": "cards/год - года - лет.jpg",
+   "icon": "",
+   "vocabId": "v-1-11",
+   "media": "media/ru/L01/w_v-1-11.jpg"
+  },
+  {
+   "ru": "го́род",
+   "tr": "[górat]",
+   "uz": "shahar",
+   "ex": "Андижа́н — мой го́род. (Andijon — mening shahrim.)",
+   "img": "cards/город.jpg",
+   "icon": "",
+   "vocabId": "v-1-12",
+   "media": "media/ru/L01/w_v-1-12.jpg"
+  },
+  {
+   "ru": "жить",
+   "tr": "[jyt']",
+   "uz": "yashamoq",
+   "ex": "Я живу́ в Ташке́нте. (Men Toshkentda yashayman.)",
+   "img": "cards/жить.jpg",
+   "icon": "home-outline",
+   "vocabId": "v-1-13",
+   "media": "media/ru/L01/w_v-1-13.jpg"
+  },
+  {
+   "ru": "рабо́тать",
+   "tr": "[rabótat']",
+   "uz": "ishlamoq",
+   "ex": "Я рабо́таю в о́фисе. (Men ofisda ishlayman.)",
+   "img": "cards/работать.jpg",
+   "icon": "",
+   "vocabId": "v-1-14",
+   "media": "media/ru/L01/w_v-1-14.jpg"
+  },
+  {
+   "ru": "учи́ться",
+   "tr": "[uchítsa]",
+   "uz": "o'qimoq (talaba bo'lmoq)",
+   "ex": "Я учу́сь в университе́те. (Men universitetda o'qiyman.)",
+   "img": "cards/учиться.jpg",
+   "icon": "",
+   "vocabId": "v-1-15",
+   "media": "media/ru/L01/w_v-1-15.jpg"
+  },
+  {
+   "ru": "хо́бби",
+   "tr": "[xóbbi]",
+   "uz": "hobbi, sevimli mashg'ulot",
+   "ex": "Моё хо́бби — футбо́л. (Mening hobbim — futbol.)",
+   "img": "cards/хобби.jpg",
+   "icon": "",
+   "vocabId": "v-1-16",
+   "media": "media/ru/L01/w_v-1-16.jpg"
+  }
+ ],
+ "konspekt": "1-DARS: Alifbo, talaffuz qoidalari va tanishuv\n(Алфави́т, пра́вила чте́ния, знако́мство)\n\nBu darsdan keyin siz: rus harflarini to'g'ri o'qiysiz va o'zingizni tanishtira olasiz — ism, yosh, shahar, ish, hobbi.\n\n---\n\n1. Rus alifbosi — 33 harf\n\nА а, Б б, В в, Г г, Д д, Е е, Ё ё, Ж ж, З з, И и, Й й, К к, Л л, М м, Н н, О о, П п, Р р, С с, Т т, У у, Ф ф, Х х, Ц ц, Ч ч, Ш ш, Щ щ, Ъ ъ, Ы ы, Ь ь, Э э, Ю ю, Я я\n\n---\n\n2. O'zbeklar xato qiladigan harflar\n\n* О — urg'u tushsa [о], tushmasa [а]: дом → [дом], молоко́ → [малако́], спаси́бо → [спасиба]. Urg'u — so'zning kuchli bo'g'ini; lug'atda belgilangan: молоко́.\n* Й — qisqa [й], o'zbekcha «y»: мой, май, музе́й, Андре́й.\n* Ш va Щ — Ш qattiq [ш] (ша́рик), Щ yumshoq, cho'ziq [щ] — ikkita «ш» deb tasavvur qiling (о́бщий, ещё, щи).\n* Е va Э — Э = o'zbekcha «e» (э́то, Эми́р). Е so'z boshida va unlidan keyin [йэ] (е́хать, Еле́на), undoshdan keyin yumshoq [е] (нет, ле́то).\n* Ь (yumshoq belgi) — oldidagi undoshni yumshatadi: мат → мать, сол → соль. Ъ (ajratish belgisi) — o'zbekcha tutuq belgisi kabi: съезд, объе́кт.\n* Ы — o'zbekchada yo'q. «И» emas! Og'izni «ы» holatida kengroq oching: мы, ты, сын, ры́ба.\n\n---\n\n3. 7 ta harf qoidasi\n\nК, Г, Х, Ж, Ш, Ч, Щ dan keyin «ы» yozilmaydi, faqat «и»: жить, маши́на, кни́ги, ру́чки. (Ж, Ш dan keyin [ы] eshitilsa ham «и» yoziladi.)\n\n---\n\n4. Harf birikmalari\n\n* ЧТ → [шт]: что → [што], что-нибудь, что́бы\n* ЖЧ, СЧ → [щ]: мужчи́на → [мущина], сча́стье → [щастье], счёт → [щот]\n* -О́ГО / -ЕГО́ → [о́во / ево]: его́ → [йиво], краси́вого → [красивава], сего́дня → [сиводня]\n\n---\n\n5. Tanishuv (Знако́мство)\n\nSalomlashish:\n* Здра́вствуйте! — Assalomu alaykum! (rasmiy, notanish odamga)\n* Приве́т! — Salom! (do'stga)\n* До́брое у́тро! / До́брый день! / До́брый ве́чер! — Xayrli tong / kun / kech!\n\nIsm:\n* Как вас зову́т? — Ismingiz nima? (siz)\n* Как тебя́ зову́т? — Isming nima? (sen)\n* Меня́ зову́т Абдулази́з. — Mening ismim Abdulaziz.\n\nYosh:\n* Ско́лько вам лет? / Ско́лько тебе́ лет? — Yoshingiz nechada? / Yoshing nechada?\n* Мне 21 год. — 1, 21, 31… → год\n* Мне 23 го́да. — 2, 3, 4, 22, 23, 24… → го́да\n* Мне 25 лет. — 5–20, 25–30… → лет\n\nShahar:\n* Где вы живёте? / Где ты живёшь? — Qayerda yashaysiz / yashaysan?\n* Я живу́ в Ташке́нте. Я живу́ в Андижа́не. — Men Toshkentda / Andijonda yashayman. (в + shahar + -е)\n\nIsh yoki o'qish:\n* Вы рабо́таете и́ли у́читесь? — Ishlaysizmi yoki o'qiysizmi?\n* Я рабо́таю в о́фисе. / Я рабо́таю в ба́нке. — Men ofisda / bankda ishlayman.\n* Я учу́сь в университе́те. — Men universitetda o'qiyman.\n\nHobbi:\n* Како́е у вас хо́бби? — Hobbingiz nima?\n* Моё хо́бби — футбо́л / му́зыка / кни́ги. — Mening hobbim — futbol / musiqa / kitoblar.\n* Моё хо́бби — чита́ть кни́ги / слу́шать му́зыку / рисова́ть. — Mening hobbim — kitob o'qish / musiqa tinglash / rasm chizish.\n\nXayrlashish:\n* До свида́ния! — Xayr! (rasmiy)   * Пока́! — Xayr! (do'stona)\n\n---\n\nDars xulosasi:\n1. Urg'usiz «о» → [а]. 2. Ы — «и» emas. 3. что → [што], его́ → [йиво].\n4. Yosh: 1 → год, 2–4 → го́да, 5+ → лет.\n5. Tanishuv: Меня́ зову́т… Мне … лет. Я живу́ в… Я рабо́таю в… Моё хо́бби — …\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — ustoz bilan jonli dars: tanishuv amaliyoti.",
+ "text": {
+  "title": "Меня́ зову́т Абдулази́з",
+  "ru": "Здра́вствуйте! Меня́ зову́т Абдулази́з. Мне 28 лет.\nЯ живу́ в Андижа́не. Андижа́н — мой го́род.\nЯ рабо́таю в о́фисе. Моя́ жена́ Нигора́ рабо́тает в больни́це.\nМой друг Бобу́р живёт в Москве́. Он рабо́тает и у́чится.\nМоё хо́бби — футбо́л и кни́ги. А како́е у вас хо́бби?",
+  "uz": "Assalomu alaykum! Mening ismim Abdulaziz. Men 28 yoshdaman.\nMen Andijonda yashayman. Andijon — mening shahrim.\nMen ofisda ishlayman. Mening xotinim Nigora kasalxonada ishlaydi.\nMening do'stim Bobur Moskvada yashaydi. U ishlaydi va o'qiydi.\nMening hobbim — futbol va kitoblar. Sizning hobbingiz nima?",
+  "questions": [
+   {
+    "q": "Ско́лько лет Абдулази́зу?",
+    "opts": [
+     "38 лет",
+     "28 лет",
+     "18 лет"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Где живёт Абдулази́з?",
+    "opts": [
+     "В Ташке́нте",
+     "В Москве́",
+     "В Андижа́не"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Где рабо́тает Нигора́?",
+    "opts": [
+     "В шко́ле",
+     "В больни́це",
+     "В о́фисе"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Где живёт Бобу́р?",
+    "opts": [
+     "В Андижа́не",
+     "В Самарка́нде",
+     "В Москве́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Како́е хо́бби у Абдулази́за?",
+    "opts": [
+     "Футбо́л и кни́ги",
+     "Му́зыка",
+     "Рисова́ть"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Знако́мство (Tanishuv)",
+  "lines": [
+   {
+    "who": "Анто́н",
+    "ru": "Здра́вствуйте! Меня́ зову́т Анто́н. А как вас зову́т?",
+    "uz": "Assalomu alaykum! Mening ismim Anton. Sizning ismingiz nima?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "О́чень прия́тно! Меня́ зову́т Бобу́р.",
+    "uz": "Tanishganimdan xursandman! Mening ismim Bobur."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Бобу́р, ско́лько вам лет?",
+    "uz": "Bobur, yoshingiz nechada?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Мне 24 го́да. А вам?",
+    "uz": "Men 24 yoshdaman. Siz-chi?"
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Мне 31 год. Где вы живёте?",
+    "uz": "Men 31 yoshdaman. Qayerda yashaysiz?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Я живу́ в Москве́. Я рабо́таю в магази́не.",
+    "uz": "Men Moskvada yashayman. Men do'konda ishlayman."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Како́е у вас хо́бби?",
+    "uz": "Hobbingiz nima?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Моё хо́бби — футбо́л. До свида́ния, Анто́н!",
+    "uz": "Mening hobbim — futbol. Xayr, Anton!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "Здра́вствуйте!",
+    "Assalomu alaykum!"
+   ],
+   [
+    "До́брое у́тро!",
+    "Xayrli tong!"
+   ],
+   [
+    "До свида́ния!",
+    "Xayr! (rasmiy)"
+   ],
+   [
+    "Спаси́бо!",
+    "Rahmat!"
+   ],
+   [
+    "Как вас зову́т?",
+    "Ismingiz nima?"
+   ],
+   [
+    "Ско́лько вам лет?",
+    "Yoshingiz nechada?"
+   ],
+   [
+    "Где вы живёте?",
+    "Qayerda yashaysiz?"
+   ],
+   [
+    "Како́е у вас хо́бби?",
+    "Hobbingiz nima?"
+   ],
+   [
+    "О́чень прия́тно!",
+    "Tanishganimdan xursandman!"
+   ],
+   [
+    "Пожа́луйста!",
+    "Marhamat!"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Меня́ ___ Нигора́.",
+    "o": [
+     "зову́т",
+     "год",
+     "живу́",
+     "лет"
+    ],
+    "a": "зову́т"
+   },
+   {
+    "s": "Мне 21 ___.",
+    "o": [
+     "лет",
+     "го́да",
+     "год"
+    ],
+    "a": "год"
+   },
+   {
+    "s": "Мне 24 ___.",
+    "o": [
+     "лет",
+     "го́да",
+     "год"
+    ],
+    "a": "го́да"
+   },
+   {
+    "s": "Мне 35 ___.",
+    "o": [
+     "лет",
+     "год",
+     "го́да"
+    ],
+    "a": "лет"
+   },
+   {
+    "s": "Я ___ в Андижа́не.",
+    "o": [
+     "рабо́таю",
+     "учу́сь",
+     "живу́",
+     "зову́т"
+    ],
+    "a": "живу́"
+   },
+   {
+    "s": "Я ___ в университе́те.",
+    "o": [
+     "учу́сь",
+     "лет",
+     "живу́",
+     "зову́т"
+    ],
+    "a": "учу́сь"
+   },
+   {
+    "s": "Моё ___ — му́зыка.",
+    "o": [
+     "хо́бби",
+     "и́мя",
+     "год",
+     "го́род"
+    ],
+    "a": "хо́бби"
+   },
+   {
+    "s": "___ вас зову́т?",
+    "o": [
+     "Как",
+     "Где",
+     "Ско́лько",
+     "Что"
+    ],
+    "a": "Как"
+   },
+   {
+    "s": "___ вы живёте?",
+    "o": [
+     "Где",
+     "Ско́лько",
+     "Как",
+     "Кто"
+    ],
+    "a": "Где"
+   },
+   {
+    "s": "___ вам лет?",
+    "o": [
+     "Ско́лько",
+     "Что",
+     "Как",
+     "Где"
+    ],
+    "a": "Ско́лько"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Молоко́» so'zi qanday o'qiladi?",
+    "o": [
+     "[молоко́]",
+     "[молако]",
+     "[малако́]"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Что» so'zi qanday o'qiladi?",
+    "o": [
+     "[шо]",
+     "[што]",
+     "[что]"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Его́» so'zi qanday o'qiladi?",
+    "o": [
+     "[йиво]",
+     "[э́го]",
+     "[его́]"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Сего́дня» so'zi qanday o'qiladi?",
+    "o": [
+     "[сего́дня]",
+     "[сегодна]",
+     "[сиводня]"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Мужчи́на» so'zi qanday o'qiladi?",
+    "o": [
+     "[муши́на]",
+     "[мущина]",
+     "[мужчи́на]"
+    ],
+    "a": 1
+   },
+   {
+    "q": "To'g'ri yozilgan so'z qaysi? (жи-ши qoidasi)",
+    "o": [
+     "машына",
+     "машена",
+     "маши́на"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Rasmiy salomlashish:",
+    "o": [
+     "Здра́вствуйте!",
+     "Приве́т!",
+     "Пока́!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Do'stingiz bilan xayrlashasiz:",
+    "o": [
+     "Пока́!",
+     "До́брое у́тро!",
+     "До свида́ния!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "— Спаси́бо! — ___",
+    "o": [
+     "Пожа́луйста!",
+     "Приве́т!",
+     "Да!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Notanish odamga qaysi savol to'g'ri?",
+    "o": [
+     "Как тебя́ зову́т?",
+     "Как вас зову́т?",
+     "Как зову́т?"
+    ],
+    "a": 1
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "зову́т",
+     "Меня́",
+     "Нигора́"
+    ],
+    "a": [
+     "Меня́",
+     "зову́т",
+     "Нигора́"
+    ],
+    "t": "Mening ismim Nigora."
+   },
+   {
+    "w": [
+     "лет",
+     "Мне",
+     "25"
+    ],
+    "a": [
+     "Мне",
+     "25",
+     "лет"
+    ],
+    "t": "Men 25 yoshdaman."
+   },
+   {
+    "w": [
+     "в",
+     "Я",
+     "Ташке́нте",
+     "живу́"
+    ],
+    "a": [
+     "Я",
+     "живу́",
+     "в",
+     "Ташке́нте"
+    ],
+    "t": "Men Toshkentda yashayman."
+   },
+   {
+    "w": [
+     "в",
+     "рабо́таю",
+     "ба́нке",
+     "Я"
+    ],
+    "a": [
+     "Я",
+     "рабо́таю",
+     "в",
+     "ба́нке"
+    ],
+    "t": "Men bankda ishlayman."
+   },
+   {
+    "w": [
+     "хо́бби",
+     "Моё",
+     "—",
+     "футбо́л"
+    ],
+    "a": [
+     "Моё",
+     "хо́бби",
+     "—",
+     "футбо́л"
+    ],
+    "t": "Mening hobbim — futbol."
+   },
+   {
+    "w": [
+     "вас",
+     "Как",
+     "зову́т",
+     "?"
+    ],
+    "a": [
+     "Как",
+     "вас",
+     "зову́т",
+     "?"
+    ],
+    "t": "Ismingiz nima?"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Здра́вствуйте! Меня́ зову́т …",
+   "uz": "Assalomu alaykum! Mening ismim …"
+  },
+  {
+   "ru": "Мне … лет.",
+   "uz": "Men … yoshdaman."
+  },
+  {
+   "ru": "Я живу́ в Андижа́не.",
+   "uz": "Men Andijonda yashayman."
+  },
+  {
+   "ru": "Я рабо́таю в о́фисе. / Я учу́сь в университе́те.",
+   "uz": "Men ofisda ishlayman. / Men universitetda o'qiyman."
+  },
+  {
+   "ru": "Моё хо́бби — футбо́л.",
+   "uz": "Mening hobbim — futbol."
+  },
+  {
+   "ru": "О́чень прия́тно! До свида́ния!",
+   "uz": "Tanishganimdan xursandman! Xayr!"
+  }
+ ]
+}

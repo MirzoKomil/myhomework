@@ -1,0 +1,577 @@
+{
+ "n": 23,
+ "lessonId": "l1784055280406-22",
+ "type": "video",
+ "id": "l1784055280406-22",
+ "topic": "идти́ yoki ходи́ть?",
+ "title": "Harakat fe'llari: идти́ (hozir) va ходи́ть (odatda)",
+ "title_ru": "Глаго́лы движе́ния: идти́ и ходи́ть",
+ "videoUrl": "",
+ "cando": "«Hozir boryapman» (Я иду́) va «odatda boraman» (Я хожу́) ni farqlayman: Сейча́с я иду́ в банк. Ка́ждый день я хожу́ на рабо́ту пешко́м.",
+ "review": [
+  {
+   "q": "«идти́» qachon?",
+   "a": "hozir, shu paytda, bir yo'nalishda: Сейча́с я иду́ в магази́н"
+  },
+  {
+   "q": "«ходи́ть» qachon?",
+   "a": "odatda, har kuni, tez-tez, ko'p marta: Я ка́ждый день хожу́ на рабо́ту"
+  },
+  {
+   "q": "идти́ tuslanishi?",
+   "a": "иду́, идёшь, идёт, идём, идёте, иду́т"
+  },
+  {
+   "q": "ходи́ть tuslanishi?",
+   "a": "хожу́, хо́дишь, хо́дит, хо́дим, ходи́те, хо́дят"
+  },
+  {
+   "q": "«Смотри́! Куда́ ___ А́нна?»",
+   "a": "идёт (hozir, ko'rib turibmiz)"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "идти́: иду́, идёшь, идёт, идём, идёте, иду́т",
+   "tr": "[ittí — idú, idyósh, idyót]",
+   "uz": "bormoq, ketmoq (hozir, bir marta)",
+   "ex": "Сейча́с я иду́ в магази́н.",
+   "img": "cards/идти (иду идёшь идут).jpg",
+   "icon": "",
+   "vocabId": "v-23-1",
+   "media": "media/ru/L23/w_v-23-1.jpg"
+  },
+  {
+   "ru": "ходи́ть: хожу́, хо́дишь, хо́дит, хо́дим, хо́дите, хо́дят",
+   "tr": "[xadít' — xajú, xódish, xódit]",
+   "uz": "bormoq (odatda, har doim, ko'p marta)",
+   "ex": "Я ка́ждый день хожу́ на рабо́ту пешко́м.",
+   "img": "cards/ходить хожу ходишь ходит ходим ходите ходят.jpg",
+   "icon": "",
+   "vocabId": "v-23-2",
+   "media": "media/ru/L23/w_v-23-2.jpg"
+  },
+  {
+   "ru": "сейча́с",
+   "tr": "[sichás]",
+   "uz": "hozir → идти",
+   "ex": "Сейча́с я иду́ домо́й.",
+   "img": "cards/сейчас.jpg",
+   "icon": "",
+   "vocabId": "v-23-3",
+   "media": "media/ru/L23/w_v-23-3.jpg"
+  },
+  {
+   "ru": "смотри́!",
+   "tr": "[smatrí]",
+   "uz": "qara! → идти",
+   "ex": "Смотри́! Куда́ идёт А́нна?",
+   "img": "cards/смотри.jpg",
+   "icon": "",
+   "vocabId": "v-23-4",
+   "media": "media/ru/L23/w_v-23-4.jpg"
+  },
+  {
+   "ru": "ка́ждый день",
+   "tr": "[kájdy den']",
+   "uz": "har kuni → ходить",
+   "ex": "Он ка́ждый день хо́дит на рабо́ту.",
+   "img": "cards/каждый день.jpg",
+   "icon": "",
+   "vocabId": "v-23-5",
+   "media": "media/ru/L23/w_v-23-5.jpg"
+  },
+  {
+   "ru": "обы́чно",
+   "tr": "[abýchna]",
+   "uz": "odatda → ходить",
+   "ex": "Обы́чно мы хо́дим в э́тот парк.",
+   "img": "cards/обычно.jpg",
+   "icon": "",
+   "vocabId": "v-23-6",
+   "media": "media/ru/L23/w_v-23-6.jpg"
+  },
+  {
+   "ru": "ча́сто / иногда́ / ре́дко",
+   "tr": "[chásta / inagdá / rétka]",
+   "uz": "tez-tez / ba'zan / kamdan-kam → ходить",
+   "ex": "Мой брат ча́сто хо́дит в спортза́л.",
+   "img": "cards/часто - иногда - редко.jpg",
+   "icon": "",
+   "vocabId": "v-23-7",
+   "media": "media/ru/L23/w_v-23-7.jpg"
+  },
+  {
+   "ru": "по суббо́там / по воскресе́ньям",
+   "tr": "[pa subbótam / pa vaskrisén'yam]",
+   "uz": "shanba kunlari / yakshanba kunlari",
+   "ex": "Мы хо́дим в парк по суббо́там.",
+   "img": "cards/по субботам - по воскресеньям.jpg",
+   "icon": "",
+   "vocabId": "v-23-8",
+   "media": "media/ru/L23/w_v-23-8.jpg"
+  },
+  {
+   "ru": "два ра́за в неде́лю",
+   "tr": "[dva ráza v nidélyu]",
+   "uz": "haftada ikki marta",
+   "ex": "Мы хо́дим в бассе́йн два ра́за в неде́лю.",
+   "img": "cards/два раза в неделю.jpg",
+   "icon": "",
+   "vocabId": "v-23-9",
+   "media": "media/ru/L23/w_v-23-9.jpg"
+  },
+  {
+   "ru": "спортза́л / бассе́йн",
+   "tr": "[spartzál / bassyéyn]",
+   "uz": "sport zali / basseyn",
+   "ex": "Брат хо́дит в спортза́л.",
+   "img": "cards/спортзал - бассейн.jpg",
+   "icon": "",
+   "vocabId": "v-23-10",
+   "media": "media/ru/L23/w_v-23-10.jpg"
+  },
+  {
+   "ru": "библиоте́ка / музе́й",
+   "tr": "[bibliatéka / muzyéy]",
+   "uz": "kutubxona / muzey",
+   "ex": "Де́ти иногда́ хо́дят в библиоте́ку.",
+   "img": "cards/библиотека - музей.jpg",
+   "icon": "",
+   "vocabId": "v-23-11",
+   "media": "media/ru/L23/w_v-23-11.jpg"
+  },
+  {
+   "ru": "ле́кция / заня́тия",
+   "tr": "[léktsiya / zanyátiya]",
+   "uz": "ma'ruza / mashg'ulotlar",
+   "ex": "Студе́нты иду́т на ле́кцию.",
+   "img": "cards/лекция - занятия.jpg",
+   "icon": "",
+   "vocabId": "v-23-12",
+   "media": "media/ru/L23/w_v-23-12.jpg"
+  },
+  {
+   "ru": "опа́здывать",
+   "tr": "[apázdyvat']",
+   "uz": "kechikmoq",
+   "ex": "Мы опа́здываем! Идём бы́стро!",
+   "img": "cards/опаздывать.jpg",
+   "icon": "",
+   "vocabId": "v-23-13",
+   "media": "media/ru/L23/w_v-23-13.jpg"
+  },
+  {
+   "ru": "ско́ро",
+   "tr": "[skóra]",
+   "uz": "tez orada",
+   "ex": "Я уже́ иду́ домо́й. Ско́ро бу́ду.",
+   "img": "cards/скоро.jpg",
+   "icon": "",
+   "vocabId": "v-23-14",
+   "media": "media/ru/L23/w_v-23-14.jpg"
+  },
+  {
+   "ru": "выходно́й",
+   "tr": "[vyxadnóy]",
+   "uz": "dam olish kuni",
+   "ex": "Сего́дня выходно́й.",
+   "img": "cards/выходной.jpg",
+   "icon": "",
+   "vocabId": "v-23-15",
+   "media": "media/ru/L23/w_v-23-15.jpg"
+  },
+  {
+   "ru": "лю́ди",
+   "tr": "[lyúdi]",
+   "uz": "odamlar",
+   "ex": "В па́рке всегда́ гуля́ют лю́ди.",
+   "img": "cards/люди.jpg",
+   "icon": "",
+   "vocabId": "v-23-16",
+   "media": "media/ru/L23/w_v-23-16.jpg"
+  }
+ ],
+ "konspekt": "23-DARS: Harakat fe'llari — идти́ (hozir) va ходи́ть (odatda)\n(Глаго́лы движе́ния: идти́ и ходи́ть)\n\nBu darsda video o'rniga — konspekt va slaydlar. Diqqat bilan o'qing: mavzu qisqa, lekin juda muhim.\n\nBu darsdan keyin siz: «hozir boryapman» va «odatda boraman» ni farqlaysiz.\n\n---\n\n1. Ikki fe'l — bitta ma'no, ikki holat\n\nO'zbek tilida «bormoq» bitta. Rus tilida piyoda borish uchun IKKITA fe'l bor:\n* идти́ — HOZIR, shu paytda, bir yo'nalishda ketyapman.\n* ходи́ть — ODATDA, har doim, ko'p marta, u yoqqa-bu yoqqa yuraman.\n\n2. Tuslanish\n\nидти́ (1-tur): я иду́, ты идёшь, он идёт, мы идём, вы идёте, они́ иду́т\nходи́ть (2-tur): я хожу́, ты хо́дишь, он хо́дит, мы хо́дим, вы хо́дите, они́ хо́дят\n\n3. Signal so'zlar\n\n→ идти́: сейча́с (hozir), смотри́! (qara!), куда́? (hozir qayerga?)\n* Сейча́с я иду́ в магази́н. — Hozir do'konga boryapman.\n* Смотри́! Куда́ идёт А́нна? — Qara! Anna qayerga boryapti?\n* Студе́нты иду́т на ле́кцию. — Talabalar ma'ruzaga borishyapti (hozir).\n\n→ ходи́ть: ка́ждый день, обы́чно, ча́сто, иногда́, ре́дко, всегда́, по суббо́там, два ра́за в неде́лю\n* Ка́ждый день Анто́н хо́дит на рабо́ту пешко́м. — Har kuni Anton ishga piyoda boradi.\n* Обы́чно мы хо́дим в э́тот парк по воскресе́ньям.\n* Мой брат ча́сто хо́дит в спортза́л.\n* Вы ре́дко хо́дите в теа́тр?\n\n4. Taqqoslang\n\n* Я сейча́с иду́ в банк. (hozir, yo'lda) — Я ка́ждый день хожу́ в банк. (odat)\n* Смотри́, Бобу́р идёт в центр. — Бобу́р ча́сто хо́дит в центр.\n* Де́ти иду́т в шко́лу. (hozir yo'lda) — Де́ти хо́дят в шко́лу. (maktabda o'qiydi, har kuni boradi)\n\n5. Dialoglar\n\n— Куда́ ты сейча́с идёшь? — Я иду́ в банк.\n— Как ча́сто вы хо́дите в бассе́йн? — Мы хо́дим два ра́за в неде́лю.\n— Алло́, ты где? — Я уже́ иду́ домо́й. Ско́ро бу́ду.\n— Ты обы́чно хо́дишь на рабо́ту на метро́? — Нет, я всегда́ хожу́ пешко́м.\n\n6. Куда́? bilan (21-darsdan)\n\nIkkala fe'l ham Куда́? + vinitelniy bilan: в банк, в шко́лу, на рабо́ту, на ле́кцию, домо́й.\n\n---\n\nDars xulosasi\n* идти́ = hozir (сейча́с, смотри́!) — иду́, идёшь, идёт.\n* ходи́ть = odatda (ка́ждый день, ча́сто, обы́чно) — хожу́, хо́дишь, хо́дит.\n* Ikkalasi ham в/на + Куда́?\n\nUyga vazifa platformada: matn «Выходно́й день», 15 test. Yordamchi ustoz bilan gapirish. Keyingi dars — jonli dars: «Сейча́с и́ли обы́чно?» o'yini.",
+ "text": {
+  "title": "Выходно́й день",
+  "ru": "Сего́дня отли́чная пого́да. Сего́дня выходно́й, и мы с дру́гом идём в большо́й городско́й парк.\nОбы́чно мы хо́дим в э́тот парк по суббо́там, но сего́дня воскресе́нье. В па́рке всегда́ гуля́ют лю́ди.\nВот идёт наш учи́тель. Он то́же ча́сто хо́дит сюда́ у́тром.\nДнём мы идём в центр, потому́ что там рабо́тает вы́ставка. Обы́чно мы хо́дим в музе́й и́ли на вы́ставку вме́сте.\nВе́чером мы идём домо́й: ну́жно де́лать дома́шнее зада́ние.",
+  "uz": "Bugun ob-havo a'lo. Bugun dam olish kuni, va biz do'stim bilan katta shahar parkiga boryapmiz.\nOdatda biz bu parkka shanba kunlari boramiz, lekin bugun yakshanba. Parkda har doim odamlar sayr qiladi.\nAna, o'qituvchimiz kelyapti. U ham ertalab bu yerga tez-tez boradi.\nKunduzi biz markazga boramiz, chunki u yerda ko'rgazma ishlayapti. Odatda biz muzeyga yoki ko'rgazmaga birga boramiz.\nKechqurun uyga boramiz: uy vazifasini qilish kerak.",
+  "questions": [
+   {
+    "q": "Куда́ друзья́ иду́т сейча́с?",
+    "opts": [
+     "В магази́н",
+     "На рабо́ту",
+     "В большо́й городско́й парк"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Когда́ они́ обы́чно хо́дят в э́тот парк?",
+    "opts": [
+     "По воскресе́ньям",
+     "Ка́ждый день",
+     "По суббо́там"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Кого́ они́ ви́дят в па́рке?",
+    "opts": [
+     "Врача́",
+     "Своего́ учи́теля",
+     "Бра́та"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Куда́ они́ иду́т ве́чером?",
+    "opts": [
+     "В рестора́н",
+     "Домо́й",
+     "В музе́й"
+    ],
+    "a": 1
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Ты где? (Qayerdasan?)",
+  "lines": [
+   {
+    "who": "Нигора́",
+    "ru": "Алло́, Абдулази́з, ты где?",
+    "uz": "Allo, Abdulaziz, qayerdasan?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Я иду́ домо́й. Ско́ро бу́ду.",
+    "uz": "Uyga ketyapman. Tez orada bo'laman."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Ты идёшь пешко́м?",
+    "uz": "Piyoda ketyapsanmi?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Да, я всегда́ хожу́ с рабо́ты пешко́м. Э́то поле́зно.",
+    "uz": "Ha, men ishdan doim piyoda qaytaman. Bu foydali."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "А де́ти? Они́ уже́ иду́т из шко́лы?",
+    "uz": "Bolalar-chi? Ular maktabdan kelishyaptimi?"
+   },
+   {
+    "who": "Абдулази́з",
+    "ru": "Да, смотри́ — вот они́ иду́т!",
+    "uz": "Ha, qara — ana ular kelishyapti!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "сейча́с",
+    "hozir → идти́"
+   ],
+   [
+    "ка́ждый день",
+    "har kuni → ходи́ть"
+   ],
+   [
+    "обы́чно",
+    "odatda → ходи́ть"
+   ],
+   [
+    "смотри́!",
+    "qara! → идти́"
+   ],
+   [
+    "по суббо́там",
+    "shanba kunlari"
+   ],
+   [
+    "два ра́за в неде́лю",
+    "haftada ikki marta"
+   ],
+   [
+    "пешко́м",
+    "piyoda"
+   ],
+   [
+    "ско́ро",
+    "tez orada"
+   ],
+   [
+    "выходно́й",
+    "dam olish kuni"
+   ],
+   [
+    "опа́здывать",
+    "kechikmoq"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Ка́ждый день Анто́н ___ на рабо́ту пешко́м.",
+    "o": [
+     "идёт",
+     "иду́т",
+     "хо́дит"
+    ],
+    "a": "хо́дит"
+   },
+   {
+    "s": "Смотри́! Куда́ сейча́с ___ А́нна?",
+    "o": [
+     "идёт",
+     "хо́дит",
+     "хо́дят"
+    ],
+    "a": "идёт"
+   },
+   {
+    "s": "Мы обы́чно ___ в э́тот парк по воскресе́ньям.",
+    "o": [
+     "хо́дим",
+     "идёт",
+     "идём"
+    ],
+    "a": "хо́дим"
+   },
+   {
+    "s": "Где вы? — Мы сейча́с ___ в университе́т.",
+    "o": [
+     "хо́дим",
+     "идём",
+     "иду́"
+    ],
+    "a": "идём"
+   },
+   {
+    "s": "Мой брат ча́сто ___ в спортза́л.",
+    "o": [
+     "иду́т",
+     "идёт",
+     "хо́дит"
+    ],
+    "a": "хо́дит"
+   },
+   {
+    "s": "Я сейча́с не могу́ говори́ть, я ___ в магази́н.",
+    "o": [
+     "идёт",
+     "хожу́",
+     "иду́"
+    ],
+    "a": "иду́"
+   },
+   {
+    "s": "Де́ти иногда́ ___ в библиоте́ку.",
+    "o": [
+     "иду́т",
+     "хо́дят",
+     "идёт"
+    ],
+    "a": "хо́дят"
+   },
+   {
+    "s": "Сейча́с во́семь часо́в. Студе́нты ___ на ле́кцию.",
+    "o": [
+     "идёт",
+     "хо́дят",
+     "иду́т"
+    ],
+    "a": "иду́т"
+   },
+   {
+    "s": "Вы ре́дко ___ в теа́тр?",
+    "o": [
+     "идёте",
+     "иду́т",
+     "ходи́те"
+    ],
+    "a": "ходи́те"
+   },
+   {
+    "s": "Алло́, ты где? — Я уже́ ___ домо́й.",
+    "o": [
+     "идёт",
+     "иду́",
+     "хожу́"
+    ],
+    "a": "иду́"
+   },
+   {
+    "s": "Как ча́сто вы ___ в бассе́йн? — Два ра́за в неде́лю.",
+    "o": [
+     "ходи́те",
+     "хо́дят",
+     "идёте"
+    ],
+    "a": "ходи́те"
+   },
+   {
+    "s": "Ва́ша дочь уже́ ___ в шко́лу? — Да, во второ́й класс.",
+    "o": [
+     "иду́т",
+     "идёт",
+     "хо́дит"
+    ],
+    "a": "хо́дит"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«идти́» — qaysi holat?",
+    "o": [
+     "odatda, ko'p marta",
+     "o'tgan zamon",
+     "hozir, bir yo'nalishda"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«ходи́ть» — qaysi holat?",
+    "o": [
+     "hozir",
+     "odatda, har kuni",
+     "kelasi zamon"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«мы» + идти́:",
+    "o": [
+     "иду́т",
+     "хо́дим",
+     "идём"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«они́» + ходи́ть:",
+    "o": [
+     "хо́дят",
+     "хо́дит",
+     "иду́т"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Де́ти хо́дят в шко́лу» — ma'nosi:",
+    "o": [
+     "Bolalar maktabda o'qiydi (har kuni boradi).",
+     "Bolalar maktabda.",
+     "Bolalar hozir maktabga ketyapti."
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Почему́ вы идёте так бы́стро?» — javob:",
+    "o": [
+     "Потому́ что мы ча́сто хо́дим.",
+     "Потому́ что мы опа́здываем!",
+     "Потому́ что выходно́й."
+    ],
+    "a": 1
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "иду́",
+     "Сейча́с",
+     "я",
+     "в",
+     "магази́н"
+    ],
+    "a": "Сейча́с я иду́ в магази́н",
+    "t": "Hozir do'konga boryapman"
+   },
+   {
+    "w": [
+     "хо́дит",
+     "Он",
+     "ка́ждый",
+     "день",
+     "пешко́м"
+    ],
+    "a": "Он ка́ждый день хо́дит пешко́м",
+    "t": "U har kuni piyoda boradi"
+   },
+   {
+    "w": [
+     "хо́дим",
+     "Мы",
+     "ча́сто",
+     "в",
+     "кафе́"
+    ],
+    "a": "Мы ча́сто хо́дим в кафе́",
+    "t": "Biz tez-tez kafega boramiz"
+   },
+   {
+    "w": [
+     "идёте",
+     "Куда́",
+     "вы",
+     "сейча́с",
+     "?"
+    ],
+    "a": "Куда́ вы сейча́с идёте ?",
+    "t": "Hozir qayerga boryapsizlar?"
+   },
+   {
+    "w": [
+     "иду́т",
+     "Они́",
+     "на",
+     "стадио́н"
+    ],
+    "a": "Они́ иду́т на стадио́н",
+    "t": "Ular stadionga borishyapti"
+   },
+   {
+    "w": [
+     "хожу́",
+     "Я",
+     "ре́дко",
+     "в",
+     "кинотеа́тр"
+    ],
+    "a": "Я ре́дко хожу́ в кинотеа́тр",
+    "t": "Men kinoteatrga kamdan-kam boraman"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Сейча́с я иду́ в магази́н.",
+   "uz": "Hozir do'konga boryapman."
+  },
+  {
+   "ru": "Ка́ждый день я хожу́ на рабо́ту пешко́м.",
+   "uz": "Har kuni ishga piyoda boraman."
+  },
+  {
+   "ru": "Куда́ ты сейча́с идёшь? — Я иду́ домо́й, ско́ро бу́ду.",
+   "uz": "Hozir qayerga boryapsan? — Uyga, tez orada bo'laman."
+  },
+  {
+   "ru": "Мы ча́сто хо́дим в кафе́, а в теа́тр хо́дим ре́дко.",
+   "uz": "Biz kafega tez-tez, teatrga kamdan-kam boramiz."
+  },
+  {
+   "ru": "Смотри́, Бобу́р идёт в центр!",
+   "uz": "Qara, Bobur markazga ketyapti!"
+  },
+  {
+   "ru": "Де́ти хо́дят в шко́лу, а сейча́с они́ иду́т домо́й.",
+   "uz": "Bolalar maktabga boradi, hozir esa uyga ketishyapti."
+  }
+ ]
+}
