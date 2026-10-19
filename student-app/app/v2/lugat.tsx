@@ -101,6 +101,9 @@ export default function V2Lugat() {
   const q = query.trim().toLowerCase();
   const visible = tab === 'words' && q ? rows.filter((r) => plainWord(r.word).toLowerCase().includes(q) || (r.translation ?? '').toLowerCase().includes(q)) : rows;
 
+  // Xatolar ro'yxati — "Xatolar ustida ishlash" ekranida (joriy dars); bu yerda alohida ro'yxat yo'q.
+  const openMistakes = () => router.push((lessonId ? R.mistakes(lessonId) : R.path) as never);
+
   const speak = (text: string) => {
     Speech.stop();
     Speech.speak(plainWord(text), { language: courseLang === 'russian' ? 'ru-RU' : 'en-US', rate: 0.9 });
@@ -124,7 +127,7 @@ export default function V2Lugat() {
             {(['words', 'mistakes'] as const).map((t) => {
               const active = tab === t;
               return (
-                <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: active }} onPress={() => setTab(t)} style={[styles.tab, active && styles.tabActive]}>
+                <Pressable key={t} accessibilityRole="tab" accessibilityState={{ selected: active }} onPress={() => (t === 'mistakes' ? openMistakes() : setTab(t))} style={[styles.tab, active && styles.tabActive]}>
                   <Text style={[styles.tabText, active && { color: '#0B1220' }]}>{t === 'words' ? 'Soʻzlarim' : 'Xatolarim'}</Text>
                   <View style={[styles.count, t === 'words' ? { backgroundColor: '#2F5BFF' } : { backgroundColor: '#FDECEC' }]}>
                     <Text style={[styles.countText, { color: t === 'words' ? '#FFFFFF' : '#B42318' }]}>{t === 'words' ? words.length : MISTAKES}</Text>
@@ -148,7 +151,7 @@ export default function V2Lugat() {
 
           <Pressable
             accessibilityRole="link"
-            onPress={() => router.push((lessonId ? R.mistakes(lessonId) : R.path) as never)}
+            onPress={openMistakes}
             style={({ pressed }) => [styles.mistake, pressed && { opacity: 0.85 }]}
           >
             <MistakeRepeatIcon />
@@ -169,9 +172,7 @@ export default function V2Lugat() {
               <Text style={styles.listCount}>{tab === 'words' ? visible.length : MISTAKES} ta</Text>
             </View>
             <View style={styles.card}>
-              {tab === 'mistakes' ? (
-                <Text style={styles.empty}>Hozircha xato yoʻq. Vazifa tugagach xatolaringiz shu yerda chiqadi.</Text>
-              ) : visible.length === 0 ? (
+              {visible.length === 0 ? (
                 <Text style={styles.empty}>
                   {q ? 'Hech narsa topilmadi.' : 'Hali soʻz saqlanmagan. Tarjimon yoki qidiruvdan soʻzni lugʻatga qoʻshing.'}
                 </Text>
