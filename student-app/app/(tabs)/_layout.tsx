@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs, type Href } from 'expo-router';
 import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
 
 import Colors from '@/constants/Colors';
@@ -23,7 +23,14 @@ function TabIcon({ name, color, focused }: { name: TabIconName; color: string; f
   );
 }
 
+// Android/iOS ilovasi faqat yangi dizayn (/v2) bilan ishlaydi. Eski ilova
+// hozircha faqat brauzerda (myhomework.uz/student) qoladi.
 export default function TabLayout() {
+  if (Platform.OS !== 'web') return <Redirect href={'/v2' as Href} />;
+  return <WebTabLayout />;
+}
+
+function WebTabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   // 151-ish: keng brauzer oynasida (kompyuterdan kirilganda) pastki

@@ -53,6 +53,7 @@ export default function RootLayout() {
   const { token } = useAuth();
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
   const canViewStudent = !!token || isEmbedded;
+  const isNative = Platform.OS !== 'web';
 
   useEffect(() => {
     if (error) throw error;
@@ -102,12 +103,14 @@ export default function RootLayout() {
     <LanguageProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }}>
-        <Stack.Protected guard={canViewStudent}>
+        {/* Telefonda (tabs) faqat /v2 ga yo'naltiradi; kirishni v2 o'zi tekshiradi. */}
+        <Stack.Protected guard={canViewStudent || isNative}>
           <Stack.Screen name="(tabs)" />
         </Stack.Protected>
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="v2" />
       </Stack>
-      {canViewStudent && <TeacherRatingModal key={token || 'preview'} />}
+      {canViewStudent && !isNative && <TeacherRatingModal key={token || 'preview'} />}
     </LanguageProvider>
   );
 }
