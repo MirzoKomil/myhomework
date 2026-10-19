@@ -148,10 +148,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     // bo'lgan alohida manifest.
     const v2 = /^\/v2(\/|$)/.test(pathname || '');
     const manifestHref = `/student/manifest-${isRussian ? 'russian' : 'english'}${v2 ? '-v2' : ''}.webmanifest`;
-    const iconHref = isRussian ? '/student/pwa-icon-domwork.jpg' : '/student/pwa-icon-homework.jpg';
+    const iconHref = isRussian ? (v2 ? '/student/domik-icon-180.png' : '/student/pwa-icon-domwork.jpg') : '/student/pwa-icon-homework.jpg';
 
     document.querySelector('link[rel="manifest"]')?.setAttribute('href', manifestHref);
     document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', iconHref);
+    document.querySelector('link[rel="icon"]')?.setAttribute('href', v2 && isRussian ? '/student/domik-icon-32.png' : '/student/favicon.ico');
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', appName);
     document.querySelector('meta[name="application-name"]')?.setAttribute('content', appName);
     document.title = appName;

@@ -17,7 +17,8 @@ const root = path.join(dist, 'v2');
 const REPLACE = [
   [/<link rel="manifest" href="[^"]*"\/?>/, '<link rel="manifest" href="/student/manifest-russian-v2.webmanifest"/>'],
   [/<meta name="apple-mobile-web-app-title" content="[^"]*"\/?>/, '<meta name="apple-mobile-web-app-title" content="Domwork"/>'],
-  [/<link rel="apple-touch-icon" href="[^"]*"\/?>/, '<link rel="apple-touch-icon" href="/student/pwa-icon-domwork.jpg"/>'],
+  [/<link rel="apple-touch-icon" href="[^"]*"\/?>/, '<link rel="apple-touch-icon" href="/student/domik-icon-180.png"/>'],
+  [/<link rel="icon" href="[^"]*" ?\/?>/, '<link rel="icon" type="image/png" sizes="32x32" href="/student/domik-icon-32.png"/>'],
 ];
 
 function walk(dir, out = []) {

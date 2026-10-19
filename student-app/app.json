@@ -4,7 +4,7 @@
     "slug": "myhomework-student",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/domik/icon.png",
     "scheme": "studentapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -15,10 +15,9 @@
       "package": "uz.myhomework.student",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#7B61FF",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FFC93C",
+        "foregroundImage": "./assets/images/domik/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/domik/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -38,7 +37,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/domik/splash-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#F0F2F8"
         }
