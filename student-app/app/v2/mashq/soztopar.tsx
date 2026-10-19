@@ -20,6 +20,7 @@ import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
 import { playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
+import { loadMixContext, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const SIZE = 7;
@@ -85,8 +86,11 @@ export default function WordSearchScreen() {
   // Urg'usiz katta harfli so'z → chipda ko'rsatiladigan asl shakl (urg'u bilan).
   const displayRef = useRef<Record<string, string>>({});
 
+  const mixRef = useRef<MixContext | null>(null);
   const newBoard = (pool: string[]) => {
-    const picked = [...pool].sort(() => Math.random() - 0.5).slice(0, WORD_COUNT).sort((a, b) => b.length - a.length);
+    // Aqlli aralash: joriy dars, takrorlash kerak bo'lganlar, eski darslar.
+    const picked = pickMix(pool, WORD_COUNT, (w) => w, mixRef.current).sort((a, b) => b.length - a.length);
+    rememberShown(picked);
     setBoard(buildGrid(picked, isRu ? 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ' : 'ETAOINSHRDLUCMFWYPVBGK'));
     setPath([]);
     setFound([]);
@@ -96,15 +100,16 @@ export default function WordSearchScreen() {
 
   useEffect(() => {
     const re = isRu ? /^[А-ЯЁ]+$/ : /^[A-Z]+$/;
-    getAccumulatedVocabulary()
-      .catch(() => [])
-      .then((vocab) => {
+    Promise.all([getAccumulatedVocabulary().catch(() => []), loadMixContext().catch(() => null)])
+      .then(([vocab, ctx]) => {
+        mixRef.current = ctx;
         const disp: Record<string, string> = { ...FALLBACK_RU_STRESS };
         for (const w of vocab) disp[plainWord(w.english).toUpperCase()] = w.english.toLowerCase();
         displayRef.current = disp;
         const pool = Array.from(new Set(vocab.map((w) => plainWord(w.english).toUpperCase()).filter((w) => re.test(w) && w.length >= 3 && w.length <= SIZE)));
         const fb = isRu ? FALLBACK_RU : FALLBACK_EN;
-        poolRef.current = pool.length >= MIN_POOL ? [...pool, ...fb.filter((f) => !pool.includes(f))] : fb;
+        // Zaxira so'zlar faqat o'tilgan so'zlar taxtaga yetmaganda qo'shiladi.
+        poolRef.current = pool.length >= WORD_COUNT ? pool : pool.length >= MIN_POOL ? [...pool, ...fb.filter((f) => !pool.includes(f))] : fb;
         newBoard(poolRef.current);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps

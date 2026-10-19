@@ -41,6 +41,7 @@ import {
 import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
 import { useAuth } from '@/services/studentAuthStore';
+import { loadMixContext, markMistake, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
@@ -129,6 +130,14 @@ export default function BattleScreen() {
 
   const currentWord = roundWords[round];
 
+  // Raund so'zlari — aqlli aralash (joriy dars / takrorlash kerak / eski darslar).
+  const mixRef = useRef<MixContext | null>(null);
+  const pickRounds = () => {
+    const w = pickMix(battleWordsRef.current, BATTLE_ROUNDS, (x) => x.word, mixRef.current);
+    rememberShown(w.map((x) => x.word));
+    return w;
+  };
+
   const stopPolling = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     if (queueCountdownRef.current) { clearInterval(queueCountdownRef.current); queueCountdownRef.current = null; }
@@ -168,7 +177,7 @@ export default function BattleScreen() {
     // Server o'yin bermasa (bo'sh javob) — soxta "raqib" bilan o'ynalmaydi.
     if (!status || !status.matchId) return notFound();
     stopPolling();
-    const words = status.words && status.words.length ? status.words : shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS);
+    const words = status.words && status.words.length ? status.words : pickRounds();
     setMatchId(status.matchId ?? null);
     // Haqiqiy raqibning ismi (birinchi so'zi); server bermasa — umumiy "Raqib".
     setOpponentName((status.opponentName || '').trim().split(/\s+/)[0] || 'Raqib');
@@ -282,7 +291,7 @@ export default function BattleScreen() {
     if (type === 'bot') {
       setOpponentName('Bot');
       setOpponentAvatarUrl('');
-      const words = shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS);
+      const words = pickRounds();
       setRoundWords(words);
       setTotalRounds(words.length);
       setRound(0);
@@ -294,7 +303,7 @@ export default function BattleScreen() {
     setOpponentAvatarUrl('');
     setPhase('matching');
     setQueueSecondsLeft(QUEUE_WAIT_SECONDS);
-    joinBattleQueue(shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS))
+    joinBattleQueue(pickRounds())
       .then((status) => {
         if (status.status === 'waiting') startQueuePolling();
         else if (status.status === 'not_found') notFound();
@@ -305,9 +314,10 @@ export default function BattleScreen() {
 
   // Ekran ochilganda: so'zlar yuklanadi va darhol raqib qidiriladi.
   useEffect(() => {
-    wordsReady.current = getAccumulatedVocabulary()
-      .then((w) => { battleWordsRef.current = buildBattleWords(w); })
-      .catch(() => {});
+    wordsReady.current = Promise.all([
+      getAccumulatedVocabulary().then((w) => { battleWordsRef.current = buildBattleWords(w); }),
+      loadMixContext().then((c) => { mixRef.current = c; }),
+    ]).then(() => {}).catch(() => {});
     startMatch('random');
     return () => { clearTimers(); stopPolling(); Speech.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,6 +399,8 @@ export default function BattleScreen() {
     if (timeoutSubmitRef.current) clearTimeout(timeoutSubmitRef.current);
     setSelectedOption(option);
     const correct = option === currentWord.translation;
+    // Xato javob — so'z "So'z takrorlash"da ertaga chiqadi.
+    if (!correct) markMistake(currentWord.word);
     if (matchId) {
       submitBattleAnswer(matchId, round, correct, (BATTLE_ROUND_SECONDS - timeLeft) * 1000).catch(() => {});
       return;

@@ -7,7 +7,7 @@
  * klaviaturasi bor (4 qator: 11+11+11 harf, oxirida Ё va OK); "Maslahat"
  * 10 coin evaziga bitta harfni ochadi. So'zdagi urg'u belgisi o'yinda olib tashlanadi.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,7 @@ import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
 import { playLoseSound, playWinSound } from '@/services/gameSounds';
 import { addLightning } from '@/services/lightningStore';
+import { loadMixContext, markMistake, pickMix, rememberShown, type MixContext } from '@/components/v2/practice/wordMix';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 const LEN = 5;
@@ -73,15 +74,24 @@ export default function MysteryScreen() {
   const [over, setOver] = useState<'won' | 'lost' | null>(null);
 
   const re = isRu ? /^[а-яё]+$/ : /^[a-z]+$/;
+  // Aqlli aralash: avval joriy dars / takrorlash kerak bo'lgan so'z.
+  const mixRef = useRef<MixContext | null>(null);
+  const origRef = useRef<Record<string, string>>({});
+  const nextAnswer = (p: string[]) => {
+    const a = pickMix(p, 1, (w) => w, mixRef.current)[0] ?? p[Math.floor(Math.random() * p.length)];
+    rememberShown([a]);
+    return a;
+  };
 
   useEffect(() => {
-    getAccumulatedVocabulary()
-      .catch(() => [])
-      .then((words) => {
+    Promise.all([getAccumulatedVocabulary().catch(() => []), loadMixContext().catch(() => null)])
+      .then(([words, ctx]) => {
+        mixRef.current = ctx;
+        for (const w of words) origRef.current[plainWord(w.english).toLowerCase()] = w.english;
         const p = Array.from(new Set(words.map((w) => plainWord(w.english).toLowerCase()).filter((w) => w.length === LEN && re.test(w))));
         const final = p.length >= MIN_POOL ? p : isRu ? FALLBACK_RU : FALLBACK_EN;
         setPool(final);
-        setAnswer(final[Math.floor(Math.random() * final.length)]);
+        setAnswer(nextAnswer(final));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRu]);
@@ -119,6 +129,8 @@ export default function MysteryScreen() {
     } else if (next.length >= MAX_TRIES) {
       setOver('lost');
       playLoseSound();
+      // Topilmagan so'z — "So'z takrorlash"da ertaga chiqadi.
+      if (origRef.current[answer]) markMistake(origRef.current[answer]);
       saveRecords({ mystery: { tries: next.length, max: MAX_TRIES } });
     }
   };
@@ -147,7 +159,7 @@ export default function MysteryScreen() {
 
   const restart = () => {
     if (!pool) return;
-    setAnswer(pool[Math.floor(Math.random() * pool.length)]);
+    setAnswer(nextAnswer(pool));
     setGuesses([]);
     setCur('');
     setHints({});
