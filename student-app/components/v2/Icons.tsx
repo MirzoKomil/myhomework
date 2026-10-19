@@ -121,14 +121,15 @@ export function BoltOutlineIcon({ size = 21, color = colors.successText, strokeW
   );
 }
 
-export function HomeIcon({ size = 24, color = colors.ink, filled }: IconProps & { filled?: boolean }) {
+export function HomeIcon({ size = 24, color = colors.ink, filled, strokeWidth = 2 }: IconProps & { filled?: boolean }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
       <Path
         d="M3 10.3 12 3l9 7.3V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1z"
         fill={filled ? color : 'none'}
         stroke={filled ? 'none' : color}
-        strokeWidth={2}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </Svg>

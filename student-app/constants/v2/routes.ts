@@ -2,13 +2,15 @@
  * v2 manzillari — dizayndagi har bir ekran (artboard) qaysi manzilda.
  * Ekranlar bir-biriga faqat shu yerdagi manzillar orqali bog'lanadi.
  * Popup'lar (BotConnect, ContactSheet, HomeworkSent, DebtReminder,
- * LogoutConfirm, LevelUp) alohida manzil emas — components/v2/popups/.
+ * LogoutConfirm, LevelUp, LessonLocked, LiveNow, StreakLost, StreakConfirm,
+ * OrderSuccess) alohida manzil emas — components/v2/popups/.
  */
 export const R = {
   login: '/v2/login', // 01 Login
   onboarding: '/v2/onboarding', // 02 Onboarding
   home: '/v2', // 03 MainNoBot · 04 Main · 06 DarkMain (qorong'u rejimda)
   notifications: '/v2/bildirishnomalar', // 05 Notifications
+  wordReview: '/v2/takrorlash', // 07 WordReview
 
   path: '/v2/darslar', // 07 Path
   lesson: (id: string) => `/v2/dars/${id}`, // 08 Lesson
@@ -18,11 +20,18 @@ export const R = {
   video: (id: string) => `/v2/dars/${id}/video`, // 12 Video
   homework: (id: string) => `/v2/dars/${id}/vazifa`, // 13 Homework
   homeworkPart: (id: string, part: string) => `/v2/dars/${id}/vazifa/${part}`, // 14 Exercise · 15 Test · 17 Reading · 18 Match · 19 Build
-  complete: (id: string) => `/v2/dars/${id}/tugadi`, // 16 Complete
+  complete: (id: string) => `/v2/dars/${id}/tugadi`, // 18 Complete
+  wordList: (id: string) => `/v2/dars/${id}/soz-royxati`, // 14 WordList
+  quickCheck: (id: string) => `/v2/dars/${id}/tekshiruv`, // 77 QuickCheck
+  slideViewer: (id: string) => `/v2/dars/${id}/slaydlar-toliq`, // 84 SlideViewer
+  testReview: (id: string) => `/v2/dars/${id}/vazifa-natija`, // 75 TestReview
+  mistakes: (id: string) => `/v2/dars/${id}/xatolar`, // 83 MistakeReview
 
   exams: '/v2/imtihonlar', // 20 Exams
-  bonus: '/v2/bonus', // 21 Bonus
-  certificates: '/v2/sertifikatlar', // 22 Certificates
+  bonus: '/v2/bonus', // 23 Bonus
+  bonusPlayer: (id: string) => `/v2/bonus/${id}`, // 27 BonusPlayer
+  certificates: '/v2/sertifikatlar', // 24 Certificates
+  certificate: (id: string) => `/v2/sertifikatlar/${id}`, // 28 CertificateView
   schedule: '/v2/jadval', // 23 Schedule
   progress: '/v2/natijalar', // 24 Progress
 
@@ -35,8 +44,10 @@ export const R = {
 
   grammarList: '/v2/grammatika', // 31 GrammarList
   grammar: (id: string) => `/v2/grammatika/${id}`, // 32 Grammar
-  audioList: '/v2/audiolar', // 33 AudioList
-  dialogList: '/v2/dialoglar', // 34 DialogList
+  audioList: '/v2/audiolar', // 37 AudioList
+  audioTrack: (id: string) => `/v2/audiolar/${id}`, // 76 AudioTrack
+  dialogList: '/v2/dialoglar', // 38 DialogList
+  dialog: (id: string) => `/v2/dialoglar/${id}`, // 41 AudioDialogLib
   storyList: '/v2/hikoyalar', // 35 StoryList
   book: (id: string) => `/v2/hikoyalar/${id}`, // 36 Book
   translator: '/v2/tarjimon', // 37 Translator
@@ -44,7 +55,8 @@ export const R = {
 
   league: '/v2/liga', // 39 Leaderboard
   leagueResult: '/v2/liga/natija', // 40 LeagueResult
-  levels: '/v2/darajalar', // 41 Levels
+  levels: '/v2/darajalar', // 46 Levels
+  lugat: '/v2/lugat', // 48 Lugat
 
   shop: '/v2/dokon', // 43 Shop
   shopItem: (id: string) => `/v2/dokon/${id}`, // 44 ShopItem
