@@ -172,7 +172,7 @@ export default function BookScreen() {
 
   if (!story) {
     return (
-      <View style={[styles.root, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.root, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
         <Column style={{ paddingHorizontal: 20, gap: 16 }}>
           <BackButton fallback={R.storyList} bg="#F4F6FA" />
           {loaded && <T w={700} size={15} color="#4A5468">Hikoya topilmadi</T>}
@@ -198,7 +198,7 @@ export default function BookScreen() {
   return (
     <View style={styles.root}>
       <Column style={{ flex: 1 }}>
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
           <BackButton fallback={R.storyList} bg="#F4F6FA" />
           <T w={800} size={13} color="#4A5468" style={{ flex: 1, textAlign: 'center' }}>Audiohikoya · {index + 1} / {stories.length}</T>
           <Pressable accessibilityRole="button" accessibilityLabel="Matn oʻlchami" onPress={() => setSizeIdx((i) => (i + 1) % SIZES.length)} style={styles.aa}>

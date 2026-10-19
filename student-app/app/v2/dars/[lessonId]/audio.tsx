@@ -161,7 +161,7 @@ export default function AudioDialogScreen() {
   return (
     <View style={styles.screen}>
       <Column>
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
           <HeaderButton kind="close" label="Yopish" fallback={R.lesson(id)} />
           <View style={{ flex: 1, gap: 6 }}>
             <View style={styles.headRow}>

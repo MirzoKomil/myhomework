@@ -67,7 +67,7 @@ export default function V2League() {
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.hero, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.hero, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
         <View style={[styles.column, { gap: 12 }]}>
           <View style={styles.heroTop}>
             <View style={{ flex: 1, minWidth: 0, gap: 10 }}>

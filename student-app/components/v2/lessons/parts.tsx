@@ -30,7 +30,7 @@ export function HeaderButton({ kind, label, fallback }: { kind: 'back' | 'close'
 export function TitleHeader({ title, subtitle, fallback }: { title: string; subtitle?: string; fallback: string }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+    <View style={[s.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
       <HeaderButton kind="back" label="Orqaga" fallback={fallback} />
       <View style={s.titleCol}>
         <Text accessibilityRole="header" style={[s.title, { fontFamily: displayFont(title) }]} numberOfLines={2}>

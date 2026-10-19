@@ -121,7 +121,7 @@ export default function V2Profile() {
 
   return (
     <View style={st.screen}>
-      <ScrollView contentContainerStyle={[st.content, { paddingTop: insets.top + 12 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[st.content, { paddingTop: Math.max(insets.top, 44) + 12 }]} showsVerticalScrollIndicator={false}>
         <Column style={st.col}>
           <View style={st.header}>
             <Pressable accessibilityRole="link" accessibilityLabel="Profil va avatarni tahrirlash" onPress={() => go(R.profileEdit)} style={st.avatarWrap}>

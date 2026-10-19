@@ -25,7 +25,7 @@ export function goBack(fallback: string) {
 export function ScreenHeader({ title, subtitle, fallback }: { title: string; subtitle?: string; fallback: string }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
       <View style={styles.headerRow}>
         <Pressable
           accessibilityRole="button"

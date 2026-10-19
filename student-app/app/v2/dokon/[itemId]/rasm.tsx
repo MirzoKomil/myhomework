@@ -30,7 +30,7 @@ export default function V2ImageViewer() {
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.top, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.top, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={() => goBack(R.shopItem(itemId ?? ''))} style={styles.close}>
           <CloseIcon color="#FFFFFF" />
         </Pressable>

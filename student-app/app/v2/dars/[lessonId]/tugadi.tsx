@@ -54,7 +54,7 @@ export default function CompleteScreen() {
   return (
     <View style={styles.screen}>
       <Column>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) + 10 }]} showsVerticalScrollIndicator={false}>
           <View style={styles.closeRow}>
             <HeaderButton kind="close" label="Yopish" fallback={R.home} />
           </View>

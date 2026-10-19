@@ -207,7 +207,7 @@ export default function V2Home() {
 
   return (
     <View style={[styles.screen, { backgroundColor: p.bg }]}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) + 10 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.column}>
           {/* Sarlavha */}
           <View style={styles.header}>

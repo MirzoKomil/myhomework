@@ -29,7 +29,7 @@ export function fmt(n: number) {
 export function ScreenHeader({ title, fallback, right, overline }: { title: string; fallback: string; right?: ReactNode; overline?: string }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
       <View style={styles.column}>
         <View style={styles.row}>
           <Pressable

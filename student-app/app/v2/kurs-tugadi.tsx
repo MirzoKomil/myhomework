@@ -43,7 +43,7 @@ export default function V2Expired() {
 
   return (
     <View style={st.screen}>
-      <ScrollView contentContainerStyle={[st.content, { paddingTop: insets.top + 10, paddingBottom: Math.max(26, insets.bottom + 14) }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[st.content, { paddingTop: Math.max(insets.top, 44) + 10, paddingBottom: Math.max(26, insets.bottom + 14) }]} showsVerticalScrollIndicator={false}>
         <Column style={st.col}>
           <View style={st.top}>
             <View style={st.date}><Text style={st.dateText}>{end ? dmy(end) : ''}</Text></View>

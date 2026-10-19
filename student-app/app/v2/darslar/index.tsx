@@ -82,7 +82,7 @@ export default function PathScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.column}>
-        <View style={[styles.top, { paddingTop: insets.top + 14 }]}>
+        <View style={[styles.top, { paddingTop: Math.max(insets.top, 44) + 14 }]}>
           <View style={styles.titleRow}>
             <Text accessibilityRole="header" style={styles.h1}>Darslar</Text>
             <Text style={styles.count}>{doneCount} / {lessons.length || 72} tugadi</Text>

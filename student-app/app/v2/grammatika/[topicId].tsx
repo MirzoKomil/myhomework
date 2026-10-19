@@ -43,7 +43,7 @@ export default function GrammarTopicScreen() {
 
   if (!row) {
     return (
-      <View style={[styles.root, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.root, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
         <Column style={{ paddingHorizontal: 20, gap: 16 }}>
           <BackButton fallback={R.grammarList} />
           {loaded && <T w={700} size={15} color="#4A5468">Mavzu topilmadi</T>}
@@ -57,7 +57,7 @@ export default function GrammarTopicScreen() {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 10 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingTop: Math.max(insets.top, 44) + 10 }} showsVerticalScrollIndicator={false}>
         <Column>
           <View style={styles.top}>
             <View style={styles.headRow}>

@@ -63,7 +63,7 @@ export default function V2Foundation() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 40 }]}
+      contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) + 24, paddingBottom: insets.bottom + 40 }]}
     >
       <View style={styles.column}>
         <View style={styles.intro}>

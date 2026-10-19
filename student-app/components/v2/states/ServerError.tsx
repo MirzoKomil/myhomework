@@ -19,7 +19,7 @@ export function ServerError({ onRetry, code = 503 }: { onRetry: () => void; code
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
         <View style={styles.column}>
-          <View style={[styles.center, { paddingTop: insets.top + 10 }]}>
+          <View style={[styles.center, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
             <View style={styles.art}>
               {/* radial-gradient(circle at 50% 55%, #FFF 0, #FFF 40%, transparent 70%) */}
               <Svg width={240} height={230} style={StyleSheet.absoluteFill} accessible={false}>

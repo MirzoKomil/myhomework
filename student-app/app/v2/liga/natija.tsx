@@ -32,7 +32,7 @@ export default function V2LeagueResult() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         <View style={[styles.column, { flex: 1 }]}>
-          <View style={[styles.top, { paddingTop: insets.top + 10 }]}>
+          <View style={[styles.top, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
             <View style={styles.weekPill}><Text style={styles.weekText}>Oʻtgan hafta · {week}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={() => goBack(R.league)} style={styles.close}>
               <CloseIcon color="#FFFFFF" />

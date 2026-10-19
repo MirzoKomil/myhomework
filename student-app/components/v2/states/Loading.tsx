@@ -36,7 +36,7 @@ export function Loading({ withNav = true }: { withNav?: boolean }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.screen} accessibilityState={{ busy: true }}>
-      <ScrollView scrollEnabled={false} contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <ScrollView scrollEnabled={false} contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 44) + 10 }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <View style={styles.column}>
           <View style={styles.header}>
             <Bone w={44} h={44} r={22} />

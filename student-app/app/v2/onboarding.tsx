@@ -75,7 +75,7 @@ export default function V2Onboarding() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={[styles.column, { paddingTop: insets.top + 10 }]}>
+        <View style={[styles.column, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
           <View style={styles.topRow}>
             <Pressable accessibilityRole="button" accessibilityLabel="Orqaga" onPress={back} style={styles.back}>
               <BackIcon />

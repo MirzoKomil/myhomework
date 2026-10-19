@@ -84,7 +84,7 @@ export default function OfflineScreen() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 34 }} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.root} contentContainerStyle={{ paddingTop: Math.max(insets.top, 44) + 10, paddingBottom: insets.bottom + 34 }} showsVerticalScrollIndicator={false}>
       <Column>
         <View style={styles.header}>
           <BackButton fallback={R.settings} />

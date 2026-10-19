@@ -218,7 +218,7 @@ export function Header({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+    <View style={[s.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Orqaga" onPress={() => goBack(fallback)} style={s.back}>
         {variant === 'b' ? <BackIcon2 /> : <BackIcon />}
       </Pressable>

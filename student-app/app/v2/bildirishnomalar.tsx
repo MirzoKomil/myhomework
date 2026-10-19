@@ -166,7 +166,7 @@ export default function V2Notifications() {
   return (
     <View style={styles.screen}>
       <View style={[styles.column, { flex: 1 }]}>
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Orqaga" onPress={back} style={styles.headBtn}>
             <BackIcon />
           </Pressable>
