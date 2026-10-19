@@ -105,6 +105,8 @@ export type AudioTrack = {
   durationSec?: number;
   bookPart?: number;
   trackNo?: number;
+  /** Kitob audiosi: "Endi takrorlang" bo'limi boshlanishi (soniya). */
+  repeatFrom?: number;
   lines?: DialogLine[];
 };
 
@@ -118,6 +120,7 @@ export function getAudioTracks(mc: MobileContent, lessonId: string): AudioTrack[
     durationSec: d.durationSec,
     bookPart: d.bookPart,
     trackNo: d.trackNo,
+    repeatFrom: d.repeatFrom,
     lines: d.lines,
   }));
   const modules = mc.modules.filter((m) => m.lessonId === lessonId);
@@ -204,7 +207,7 @@ export function learnedWordIds(lessonId: string, wordIds: string[], seen: string
 // Dialog matni — CRM audio dialogida tayyor replikalar (speaker/ru/uz, start);
 // eski usulda — audio bilan bir moduldagi "Matn" kontenti: "Ism: ruscha gap"
 // qatoridan keyingi qator — o'zbekcha tarjimasi.
-export type DialogLine = { speaker: string; ru: string; uz: string; start?: number };
+export type DialogLine = { speaker: string; ru: string; uz: string; start?: number; repeatStart?: number };
 
 export const SPEAKER_COLORS = ['#B34700', '#0B1220', '#1E3FD1', '#087A4A'];
 
@@ -262,6 +265,31 @@ export function lineStarts(lines: DialogLine[], duration: number): number[] {
 export function lineAt(starts: number[], t: number): number {
   let cur = -1;
   for (let k = 0; k < starts.length; k++) if (starts[k] <= t + 0.05) cur = k;
+  return cur;
+}
+
+/**
+ * Pleer vaqt chizig'i: har bir replika boshlanishi (dialog qismi) va kitob
+ * audiosidagi "Endi takrorlang" qismidagi qayta boshlanishi — vaqt bo'yicha.
+ */
+export type LineEvent = { t: number; k: number; repeat: boolean };
+
+export function lineTimeline(lines: DialogLine[], starts: number[]): LineEvent[] {
+  const ev: LineEvent[] = starts.map((t, k) => ({ t, k, repeat: false }));
+  lines.forEach((l, k) => {
+    if (typeof l.repeatStart === 'number' && Number.isFinite(l.repeatStart)) ev.push({ t: Math.max(0, l.repeatStart), k, repeat: true });
+  });
+  return ev.sort((a, b) => a.t - b.t);
+}
+
+/**
+ * Joriy hodisa indeksi (-1 — kirish so'zi yoki "Endi takrorlang" diktori
+ * gapirayotgan payt: hech bir replika belgilanmaydi).
+ */
+export function eventAt(events: LineEvent[], t: number, repeatFrom?: number): number {
+  let cur = -1;
+  for (let i = 0; i < events.length; i++) if (events[i].t <= t + 0.05) cur = i;
+  if (typeof repeatFrom === 'number' && t + 0.05 >= repeatFrom && (cur < 0 || events[cur].t < repeatFrom)) return -1;
   return cur;
 }
 

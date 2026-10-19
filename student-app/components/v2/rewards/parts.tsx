@@ -3,6 +3,8 @@
  * raqam formati ("1 000"), do'kon mahsulotlari va liga yordamchilari.
  */
 import { router, type Href } from 'expo-router';
+
+import { v2Back } from '@/services/v2Nav';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
@@ -17,8 +19,7 @@ import { BackIcon } from './icons';
 
 /** Orqaga: tarix bo'lsa ortga, bo'lmasa (to'g'ridan-to'g'ri ochilgan) ota ekranga. */
 export function goBack(fallback: string) {
-  if (router.canGoBack()) router.back();
-  else router.replace(fallback as Href);
+  v2Back(fallback);
 }
 
 /** Dizayndagi raqam ko'rinishi: 1 000, 1 014 (ingichka bo'shliq bilan). */

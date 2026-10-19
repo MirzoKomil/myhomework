@@ -24,10 +24,11 @@ import {
   bookPart,
   bookTrackNo,
   buildQuickCheck,
+  eventAt,
   fmtTime,
   getAudioTracks,
-  lineAt,
   lineStarts,
+  lineTimeline,
   loadCourseData,
   markListened,
   speakerColor,
@@ -97,6 +98,12 @@ export default function AudioDialogScreen() {
   const [speedIdx, setSpeedIdx] = useState(1);
   const [pausedAfter, setPausedAfter] = useState<number | null>(null);
   const lastLine = useRef(-1);
+  // O'qilayotgan replika ekrandan chiqib ketsa, matnni o'zi suramiz.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const viewH = useRef(0);
+  const textY = useRef(0);
+  const lineBox = useRef<{ y: number; h: number }[]>([]);
   const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [barW, setBarW] = useState(0);
 
@@ -104,7 +111,22 @@ export default function AudioDialogScreen() {
   const t = status.currentTime || 0;
   const frac = duration > 0 ? Math.min(1, t / duration) : 0;
   const starts = useMemo(() => lineStarts(lines, duration), [lines, duration]);
-  const curLine = lines.length && duration > 0 ? lineAt(starts, t) : -1;
+  // Kitob audiosida "Endi takrorlang" qismi va pauzalar mp3 ning o'zida bor:
+  // ilova o'z pauzasini qo'shmaydi, replikani esa ikkala qismda ham belgilaydi.
+  const builtInRepeat = typeof track?.repeatFrom === 'number';
+  const events = useMemo(() => lineTimeline(lines, starts), [lines, starts]);
+  const rawEv = lines.length && duration > 0 ? eventAt(events, t) : -1;
+  const evIdx = lines.length && duration > 0 ? eventAt(events, t, track?.repeatFrom) : -1;
+  const curLine = evIdx >= 0 ? events[evIdx].k : -1;
+  const inRepeat = builtInRepeat && duration > 0 && t + 0.05 >= (track?.repeatFrom ?? Infinity);
+  useEffect(() => {
+    const box = curLine >= 0 ? lineBox.current[curLine] : undefined;
+    if (!box || !viewH.current) return;
+    const top = textY.current + box.y;
+    const bottom = top + box.h + 56;
+    if (bottom > scrollY.current + viewH.current - 40) scrollRef.current?.scrollTo({ y: bottom - viewH.current + 80, animated: true });
+    else if (top < scrollY.current) scrollRef.current?.scrollTo({ y: Math.max(0, top - 16), animated: true });
+  }, [curLine]);
 
   // Yangi trekka o'tganda holatni tozalaymiz.
   useEffect(() => {
@@ -122,7 +144,7 @@ export default function AudioDialogScreen() {
 
   // Replika tugashi bilan 3 soniya takrorlash pauzasi.
   useEffect(() => {
-    if (!status.playing || curLine < 0) return;
+    if (builtInRepeat || !status.playing || curLine < 0) return;
     if (lastLine.current >= 0 && curLine > lastLine.current) {
       const done = lastLine.current;
       player.pause();
@@ -133,7 +155,7 @@ export default function AudioDialogScreen() {
       }, PAUSE_MS);
     }
     lastLine.current = curLine;
-  }, [curLine, status.playing, player]);
+  }, [curLine, status.playing, player, builtInRepeat]);
 
   useEffect(() => {
     if (status.didJustFinish && track) {
@@ -158,13 +180,14 @@ export default function AudioDialogScreen() {
       player.play();
     }
   };
-  // Replika boshlanishi — aniq (start) yoki taxminiy (lineStarts).
-  const lineStart = (k: number) => (lines.length && duration ? (starts[Math.max(0, Math.min(lines.length - 1, k))] ?? 0) : 0);
-  const seekLine = (k: number) => {
-    if (!track || !duration) return;
+  // Oldingi / keyingi / takrorlash — vaqt chizig'idagi hodisalar bo'yicha
+  // (kitob audiosida "Endi takrorlang" qismidagi replikalar ham kiradi).
+  const seekEvent = (i: number) => {
+    if (!track || !duration || !events.length) return;
     clearPause();
     lastLine.current = -1;
-    player.seekTo(lineStart(k)).then(() => player.play());
+    const e = events[Math.max(0, Math.min(events.length - 1, i))];
+    player.seekTo(e.t).then(() => player.play());
   };
   const cycleSpeed = () => {
     const n = (speedIdx + 1) % SPEEDS.length;
@@ -218,7 +241,15 @@ export default function AudioDialogScreen() {
         </View>
 
         <View style={{ flex: 1, position: 'relative' }}>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={64}
+            onScroll={(e) => (scrollY.current = e.nativeEvent.contentOffset.y)}
+            onLayout={(e) => (viewH.current = e.nativeEvent.layout.height)}
+          >
             <View style={styles.top}>
               <Image
                 source={track?.coverUrl ? { uri: track.coverUrl } : designImages.d9c9d8d26328b24384a9840cf989fb7b}
@@ -263,22 +294,22 @@ export default function AudioDialogScreen() {
                 <Pressable accessibilityRole="button" accessibilityLabel={`Tezlik: ${speedLabel} (0.75× / 1× / 1.25×)`} onPress={cycleSpeed} style={styles.speed}>
                   <Text style={styles.speedText}>{speedLabel}</Text>
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="Oldingi replika" onPress={() => seekLine(curLine - 1)} style={styles.round}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Oldingi replika" onPress={() => seekEvent(rawEv - 1)} style={styles.round}>
                   <SkipPrevIcon />
                 </Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel={playing ? 'Pauza' : 'Ijro etish'} disabled={!track} onPress={togglePlay} style={[styles.play, !track && { opacity: 0.5 }]}>
                   {playing ? <PauseIcon /> : <PlayIcon size={26} color="#FFFFFF" />}
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="Keyingi replika" onPress={() => seekLine(curLine + 1)} style={styles.round}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Keyingi replika" onPress={() => seekEvent(rawEv + 1)} style={styles.round}>
                   <SkipNextIcon />
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="Replikani takrorlash" onPress={() => seekLine(Math.max(0, curLine))} style={styles.speed}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Replikani takrorlash" onPress={() => seekEvent(Math.max(0, rawEv))} style={styles.speed}>
                   <RepeatOneIcon />
                 </Pressable>
               </View>
             </View>
 
-            <View accessibilityLabel="Matn" style={styles.text}>
+            <View accessibilityLabel="Matn" style={styles.text} onLayout={(e) => (textY.current = e.nativeEvent.layout.y)}>
               <View style={styles.textHead}>
                 <View style={{ gap: 1, minWidth: 0, flexShrink: 1 }}>
                   <Text style={styles.textOver}>Matn</Text>
@@ -308,7 +339,7 @@ export default function AudioDialogScreen() {
                   const isCur = k === curLine && pausedAfter === null;
                   const future = curLine >= 0 && k > curLine;
                   return (
-                    <View key={k}>
+                    <View key={k} onLayout={(e) => (lineBox.current[k] = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height })}>
                       <View style={[styles.line, isCur && styles.lineCur]}>
                         <View style={[styles.avatar, { backgroundColor: speakerColor(speakers, l.speaker) }]} accessibilityRole="image" accessibilityLabel={l.speaker}>
                           <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
@@ -318,11 +349,11 @@ export default function AudioDialogScreen() {
                           {showUz && !!l.uz && <RichText style={styles.uz} text={l.uz} />}
                         </View>
                       </View>
-                      {pausedAfter === k && (
+                      {(pausedAfter === k || (inRepeat && k === curLine)) && (
                         <View accessibilityRole="alert" style={styles.repeatBox}>
                           <PauseIcon size={16} color="#7A5300" />
                           <Text style={styles.repeatText}>Endi takrorlang</Text>
-                          <Text style={styles.repeatSub}>pauza 3 s</Text>
+                          <Text style={styles.repeatSub}>{inRepeat ? 'ovoz chiqarib' : 'pauza 3 s'}</Text>
                         </View>
                       )}
                     </View>

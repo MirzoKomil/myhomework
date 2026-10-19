@@ -9,6 +9,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import * as Speech from 'expo-speech';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -53,7 +54,7 @@ export default function V2WordReview() {
     };
   }, []);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace(R.home as Href));
+  const close = () => v2Back(R.home);
   const speak = (text: string) => {
     Speech.stop();
     Speech.speak(text, { language: courseLang === 'russian' ? 'ru-RU' : 'en-US', rate: 0.9 });

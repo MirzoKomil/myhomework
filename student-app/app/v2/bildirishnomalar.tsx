@@ -9,6 +9,7 @@
  * (skrinshot uchun: ?popup=live).
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -178,7 +179,7 @@ export default function V2Notifications() {
     setReadIds(new Set([...readIds, ...ids]));
   };
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(R.home));
+  const back = () => v2Back(R.home);
 
   if (failed) return <ServerError onRetry={load} />;
   if (!list) return <Loading withNav={false} />;

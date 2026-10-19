@@ -8,6 +8,7 @@
  * davomiyligi va bonus uchun coin serverda yo'q — 0 ko'rsatiladi.
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -62,7 +63,7 @@ export default function BonusPlayerScreen() {
     : [];
   const posterTitle = phrases[0]?.ru;
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(R.bonus as Href));
+  const back = () => v2Back(R.bonus);
   const play = () => {
     if (!videoUrl) return;
     setPlaying(true);

@@ -7,6 +7,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,7 +72,7 @@ export default function V2Onboarding() {
     router.replace(R.home);
   };
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(R.login));
+  const back = () => v2Back(R.login);
   const langName = courseLang === 'russian' ? 'Rus tili' : 'Ingliz tili';
 
   return (

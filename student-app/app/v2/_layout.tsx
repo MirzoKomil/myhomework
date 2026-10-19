@@ -17,11 +17,13 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { colors, fontFiles } from '@/constants/v2/tokens';
+import { recordV2Path } from '@/services/v2Nav';
 
 const nativeFonts = {
   BricolageGrotesque_600SemiBold,
@@ -40,6 +42,11 @@ const webFonts = Object.fromEntries(
 
 export default function V2Layout() {
   const [loaded] = useFonts(Platform.OS === 'web' ? webFonts : nativeFonts);
+  const pathname = usePathname();
+  // "‹" tugmalari eski ilovaga chiqib ketmasligi uchun v2 tarixini yozamiz.
+  useEffect(() => {
+    recordV2Path(pathname);
+  }, [pathname]);
 
   if (!loaded) {
     return (

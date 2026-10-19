@@ -11,6 +11,7 @@
  * markHomeworkPartDone mantig'i eski homework/[part].tsx'dan olingan.
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,7 +48,7 @@ export default function HomeworkPartScreen() {
     };
   }, [id]);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace(R.homework(id) as Href));
+  const close = () => v2Back(R.homework(id));
   const parts = info?.content.homeworkParts ?? [];
   const part = parts.find((p) => p.id === partId);
   const done = () => markHomeworkPartDone(id, String(partId));

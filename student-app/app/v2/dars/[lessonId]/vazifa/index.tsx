@@ -8,6 +8,7 @@
  * Vazifa muddati serverda yo'q — "—" ko'rsatiladi.
  */
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -132,7 +133,7 @@ export default function HomeworkScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Orqaga"
-              onPress={() => (router.canGoBack() ? router.back() : router.replace(R.lesson(id) as Href))}
+              onPress={() => v2Back(R.lesson(id))}
               style={({ pressed }) => [st.back, pressed && st.pressed]}
             >
               <BackIcon />

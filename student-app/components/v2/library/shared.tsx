@@ -4,6 +4,8 @@
  * ma'lumot yordamchilari. Qiymatlar dizayndagi inline stillardan olingan.
  */
 import { router, type Href } from 'expo-router';
+
+import { v2Back } from '@/services/v2Nav';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
@@ -58,8 +60,7 @@ export const go = (href: string) => router.push(href as Href);
 
 /** Orqaga: tarix bo'lsa — orqaga, bo'lmasa dizayndagi ekranga. */
 export function goBack(fallback: string) {
-  if (router.canGoBack()) router.back();
-  else router.replace(fallback as Href);
+  v2Back(fallback);
 }
 
 export function BackButton({ fallback, bg = '#FFFFFF' }: { fallback: string; bg?: string }) {

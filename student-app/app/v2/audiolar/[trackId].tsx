@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { allBookTracks, bare, getTrackPositions, parseDur, saveTrackPosition, type BookTrack } from '@/components/v2/library/data';
 import { DarkPlayer, DialogText, SPEEDS, type DLine } from '@/components/v2/library/player';
 import { ChevronLeftWide, Column, Display, goBack, PauseTall, PlaySmall, QrIcon, T } from '@/components/v2/library/shared';
-import { lineAt, lineStarts, markListened, trackLines, useListened } from '@/components/v2/lessons/data';
+import { eventAt, lineStarts, lineTimeline, markListened, trackLines, useListened } from '@/components/v2/lessons/data';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fetchMobileContent, type MobileContent } from '@/services/contentApi';
@@ -86,7 +86,10 @@ function TrackView({ track, siblings, lines }: { track: BookTrack; siblings: Boo
   const n = lines.length;
   // Hali boshlanmagan bo'lsa replika belgilanmaydi.
   const starts = useMemo(() => lineStarts(lines, d), [lines, d]);
-  const curLine = n && d > 0 && (t > 0 || status.playing) ? lineAt(starts, t) : -1;
+  // Kitob audiosida "Endi takrorlang" qismidagi replikalar ham belgilanadi.
+  const events = useMemo(() => lineTimeline(lines, starts), [lines, starts]);
+  const ev = n && d > 0 && (t > 0 || status.playing) ? eventAt(events, t, track.repeatFrom) : -1;
+  const curLine = ev >= 0 ? events[ev].k : -1;
   const lineStart = (k: number) => (d > 0 && n ? (starts[Math.max(0, Math.min(n - 1, k))] ?? 0) : 0);
   last.current = { t, d };
 
