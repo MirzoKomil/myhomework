@@ -1,44 +1,57 @@
 /**
- * v2 Bosh sahifa (dizayn: 02 · Bosh sahifa).
+ * v2 Bosh sahifa (dizayn: Main.dc.html, MainNoBot.dc.html, DarkMain.dc.html).
  *
- * Faqat haqiqiy ma'lumot ko'rsatiladi. Dizayndagi streak va kunlik
- * chaqmoq maqsadi hozircha serverda yo'q (xarita: "Server tomonda kerak
- * bo'ladigan ishlar"), shuning uchun ular o'rniga soxta raqam
- * ko'rsatilmaydi — kurs progressi kartasi turibdi.
+ * - Telegram bot ulanmagan bo'lsa (telegramLinkStatus().linked === false)
+ *   "Telegram botni ulang" kartasi chiqadi va BotConnect oynasi ochiladi.
+ * - Qurilma qorong'u rejimda bo'lsa DarkMain ranglari ishlatiladi.
+ * - Faqat haqiqiy ma'lumot: joriy dars va bosqichlari, jonli dars taymeri,
+ *   coin (qurilmada), bugungi chaqmoq (kunlik reyting), bildirishnomalar.
+ *   Streak va haftalik kunlar uchun serverda ma'lumot yo'q — nol holat.
  */
-import { Redirect, router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 
-import {
-  ArrowRightIcon,
-  BellIcon,
-  BoltOutlineIcon,
-  Button,
-  Card,
-  CardsIcon,
-  Chip,
-  IconCircleButton,
-  ProgressRing,
-  SegmentedProgress,
-  StatPill,
-  TelegramIcon,
-  V2Text,
-} from '@/components/v2';
-import { TabBar } from '@/components/v2/TabBar';
-import { colors, fonts, radius, space } from '@/constants/v2/tokens';
-import { getCourseOverallProgress, getResolvedLessonContent } from '@/data/lessonContent';
-import { fetchDemoNotifications, fetchDemoSchedule, fetchDemoStudentProfile, fetchMobileContent } from '@/services/contentApi';
+import { HomeNav } from '@/components/v2/home/HomeNav';
+import { ArrowRight, BellIcon, BoltIcon, CoinIcon, FlameIcon, TelegramIcon } from '@/components/v2/home/icons';
+import { darkHome, lightHome, type HomePalette } from '@/components/v2/home/palette';
+import { displayFont, getReadIds } from '@/components/v2/home/shared';
+import { BotConnectPopup } from '@/components/v2/popups/BotConnect';
+import { Loading } from '@/components/v2/states/Loading';
+import { ServerError } from '@/components/v2/states/ServerError';
+import { designImages } from '@/constants/v2/designImages';
+import { R } from '@/constants/v2/routes';
+import { fonts } from '@/constants/v2/tokens';
+import { BATTLE_WIN_COINS } from '@/data/mock';
+import { getResolvedLessonContent } from '@/data/lessonContent';
+import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
+import {
+  fetchDemoNotifications,
+  fetchDemoSchedule,
+  fetchDemoStudentProfile,
+  fetchLeaderboard,
+  fetchMobileContent,
+} from '@/services/contentApi';
 import { getCategoryProgress, loadLessonProgress } from '@/services/lessonProgressStore';
 import { getLastPosition } from '@/services/progressStore';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
+import { telegramLinkStatus } from '@/services/telegramLinkApi';
+import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
-const domik = require('@/assets/images/v2/domik-wave.png');
+/** Kunlik chaqmoq maqsadi — dizayndagi qiymat (sozlanadigan maqsad hali yo'q). */
+const DAILY_GOAL = 50;
+const RING_C = 2 * Math.PI * 23; // ≈144.5, dizayndagi dasharray
 
-type CurrentLesson = { id: string; name: string; number: number; stepsDone: number; stepsTotal: number; resumePath: string };
+type Step = { percent: number };
+type CurrentLesson = { id: string; name: string; number: number; isVideoDay: boolean; phrase: string; meta: string; steps: Step[] };
 type LiveLesson = { startsAt: Date; topic: string; link: string };
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const DAY_SHORT = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
+const DAY_FULL = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
 
 function greeting(now: Date) {
   const h = now.getHours();
@@ -47,8 +60,6 @@ function greeting(now: Date) {
   if (h >= 17 && h < 23) return 'Xayrli kech';
   return 'Xayrli tun';
 }
-
-const pad = (n: number) => String(n).padStart(2, '0');
 
 function formatCountdown(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -62,13 +73,12 @@ function spokenCountdown(ms: number) {
 }
 
 const WEEKDAYS = ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba'];
-
 function whenLabel(date: Date, now: Date) {
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffDays = Math.round((new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() - day.getTime()) / 86400000);
-  if (diffDays === 0) return `bugun ${time}`;
-  if (diffDays === 1) return `ertaga ${time}`;
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(date) - day(now)) / 86400000);
+  if (diff === 0) return `bugun ${time}`;
+  if (diff === 1) return `ertaga ${time}`;
   return `${WEEKDAYS[date.getDay()]} ${time}`;
 }
 
@@ -87,63 +97,90 @@ async function resolveCurrentLesson(): Promise<CurrentLesson | null> {
   await loadLessonProgress();
   const content = await getResolvedLessonContent(lesson.id, idx);
   const isVideoDay = idx % 2 === 0;
-  const parts = [
-    getCategoryProgress(lesson.id, isVideoDay ? 'video' : 'speaking'),
-    getCategoryProgress(lesson.id, 'vocabulary'),
-    getCategoryProgress(lesson.id, 'homework', content.homeworkParts.length),
+  const steps: Step[] = [
+    { percent: getCategoryProgress(lesson.id, isVideoDay ? 'video' : 'speaking') },
+    { percent: getCategoryProgress(lesson.id, 'vocabulary') },
+    { percent: getCategoryProgress(lesson.id, 'homework', content.homeworkParts.length) },
   ];
+  // Dizayndagi "8 soʻz · 3 audio · vazifa" qatori — darsda bor narsalardan.
+  const meta: string[] = [];
+  if (content.vocabulary.length) meta.push(`${content.vocabulary.length} soʻz`);
+  if (isVideoDay) meta.push('video');
+  else if (content.slides.length) meta.push(`${content.slides.length} slayd`);
+  if (content.homeworkParts.length) meta.push('vazifa');
+  const first = content.vocabulary[0]?.english?.trim();
   return {
     id: lesson.id,
     name: lesson.name,
     number: idx + 1,
-    stepsDone: parts.filter((p) => p >= 100).length,
-    stepsTotal: parts.length,
-    resumePath: last && last.lessonId === lesson.id ? `/homework/lesson/${lesson.id}/${last.section}` : `/homework/lesson/${lesson.id}`,
+    isVideoDay,
+    phrase: first ? `«${first}»` : '',
+    meta: meta.join(' · '),
+    steps,
   };
 }
 
 export default function V2Home() {
   const insets = useSafeAreaInsets();
+  const scheme = useColorScheme();
+  const p: HomePalette = scheme === 'dark' ? darkHome : lightHome;
   const { token, student } = useAuth();
   const coins = useCoins();
+  const avatarUri = useAvatarUri();
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
 
   const [name, setName] = useState(student?.name?.split(' ')[0] ?? '');
   const [unread, setUnread] = useState(0);
-  const [lesson, setLesson] = useState<CurrentLesson | null>(null);
+  const [lesson, setLesson] = useState<CurrentLesson | null | undefined>(undefined);
   const [lessonError, setLessonError] = useState(false);
-  const [course, setCourse] = useState<{ done: number; total: number; percent: number } | null>(null);
   const [live, setLive] = useState<LiveLesson | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const [botLinked, setBotLinked] = useState(true);
+  const [botOpen, setBotOpen] = useState(false);
+  const [todayLightning, setTodayLightning] = useState(0);
+  const [wordCount, setWordCount] = useState<number | null>(null);
+  // Streak serverda hisoblanmaydi — nol holat (dizayn elementlari saqlanadi).
+  const streak = 0;
 
   useEffect(() => {
     if (!token && !isEmbedded) return;
     fetchDemoStudentProfile()
-      .then((p) => {
-        if (p?.name) setName(p.name.split(' ')[0]);
+      .then((pr) => {
+        if (pr?.name) setName(pr.name.split(' ')[0]);
         else if (token) void clearAuth();
       })
-      .catch(() => {});
-    fetchDemoNotifications()
-      .then((list) => setUnread(list.filter((n) => n.unread).length))
       .catch(() => {});
     fetchDemoSchedule()
       .then((s) => {
         if (s.startsAt && s.telegramGroupLink) setLive({ startsAt: new Date(s.startsAt), topic: s.topic, link: s.telegramGroupLink });
       })
       .catch(() => {});
+    getAccumulatedVocabulary().then((w) => setWordCount(w.length)).catch(() => {});
   }, [token, isEmbedded]);
+
+  const loadLesson = useCallback(() => {
+    setLessonError(false);
+    resolveCurrentLesson().then(setLesson).catch(() => setLessonError(true));
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       if (!token && !isEmbedded) return;
-      setLessonError(false);
-      resolveCurrentLesson().then(setLesson).catch(() => setLessonError(true));
-      getCourseOverallProgress().then(setCourse).catch(() => {});
-    }, [token, isEmbedded]),
+      loadLesson();
+      Promise.all([fetchDemoNotifications(), getReadIds()])
+        .then(([list, read]) => setUnread(list.filter((n) => n.unread && !read.has(n.id)).length))
+        .catch(() => {});
+      // Bugungi chaqmoq — kunlik reytingdagi o'quvchining o'z qatori.
+      fetchLeaderboard('country', 'daily')
+        .then((entries) => setTodayLightning(entries.find((e) => e.isMe)?.lightning ?? 0))
+        .catch(() => {});
+      // Bot holati: faqat aniq "ulanmagan" javobi kelganda karta ko'rsatiladi.
+      if (token) {
+        telegramLinkStatus().then((s) => setBotLinked(s.linked)).catch(() => setBotLinked(true));
+      }
+    }, [token, isEmbedded, loadLesson]),
   );
 
-  // Jonli dars taymeri faqat dars 24 soatdan kam qolganda yangilanadi.
   const msLeft = live ? live.startsAt.getTime() - now.getTime() : -1;
   const showTimer = msLeft > 0 && msLeft < 24 * 3600 * 1000;
   useEffect(() => {
@@ -152,158 +189,309 @@ export default function V2Home() {
     return () => clearInterval(id);
   }, [live, showTimer]);
 
-  if (!token && !isEmbedded) return <Redirect href="/v2/login" />;
+  if (!token && !isEmbedded) return <Redirect href={R.login as Href} />;
+  if (lessonError) return <ServerError onRetry={loadLesson} />;
+  if (lesson === undefined) return <Loading />;
 
-  const liveVisible = live && msLeft > -2 * 3600 * 1000; // dars boshlangach 2 soat ko'rinib turadi
+  const liveVisible = !!live && msLeft > -2 * 3600 * 1000;
+  const goal = Math.min(todayLightning, DAILY_GOAL);
+  const totalSteps = lesson?.steps.length ?? 0;
+  const doneSteps = lesson?.steps.filter((s) => s.percent >= 100).length ?? 0;
+  const currentStep = Math.min(doneSteps + 1, totalSteps);
+
+  // Haftalik qator: oxirgi 6 kun + bugun (dizayndagi tartib).
+  const days = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - i));
+    return { short: DAY_SHORT[d.getDay()], full: `${DAY_FULL[d.getDay()]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}` };
+  });
 
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 14 }]} showsVerticalScrollIndicator={false}>
+    <View style={[styles.screen, { backgroundColor: p.bg }]}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.column}>
+          {/* Sarlavha */}
           <View style={styles.header}>
-            <Button
-              label={name ? name[0].toUpperCase() : '?'}
-              accessibilityLabel="Profil"
-              onPress={() => router.push('/profile')}
-              style={styles.avatar}
-            />
+            <Pressable accessibilityRole="link" accessibilityLabel="Profil" onPress={() => router.push(R.profile as Href)} style={[styles.avatar, { backgroundColor: p.avatarBg }]}>
+              <Image source={avatarUri ? { uri: avatarUri } : designImages['93faebd4826b1da6adaee5d0dcda6209']} style={styles.avatarImg} />
+            </Pressable>
             <View style={styles.hello}>
-              <V2Text variant="caption" color={colors.textMuted}>{greeting(now)}</V2Text>
-              <V2Text variant="subheading" numberOfLines={1}>{name || ' '}</V2Text>
+              <Text style={[styles.greet, { color: p.muted }]}>{greeting(now)}</Text>
+              <Text style={[styles.name, { color: p.text }]} numberOfLines={1}>{name || ' '}</Text>
             </View>
-            <StatPill kind="coin" value={coins} onPress={() => router.push('/shop')} />
-            <IconCircleButton accessibilityLabel="Bildirishnomalar" badge={unread} onPress={() => router.push('/notifications')}>
-              <BellIcon />
-            </IconCircleButton>
+            <Pressable accessibilityRole="link" accessibilityLabel={`${coins} coin, doʻkon`} onPress={() => router.push(R.shop as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 4 }]}>
+              <CoinIcon />
+              <Text style={[styles.pillText, { color: p.coinText }]}>{coins}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="link" accessibilityLabel={`Streak ${streak} kun, natijalar`} onPress={() => router.push(R.progress as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 3 }]}>
+              <FlameIcon />
+              <Text style={[styles.pillText, { color: p.streakText }]}>{streak}</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={unread ? `Bildirishnomalar, ${unread} ta yangi` : 'Bildirishnomalar'}
+              onPress={() => router.push(R.notifications as Href)}
+              style={[styles.bell, { backgroundColor: p.pillBg }]}
+            >
+              <BellIcon color={p.bellStroke} />
+              {unread > 0 && (
+                <View style={[styles.badge, { borderColor: p.badgeBorder }]}>
+                  <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
+                </View>
+              )}
+            </Pressable>
           </View>
 
-          <Card tone="cobalt" rounded="hero" padding={20} style={styles.hero}>
-            <Image source={domik} style={styles.heroMascot} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
-            <View style={styles.row}>
-              <Chip label="Bugungi dars" tone="onCobalt" />
-              {lesson && <V2Text variant="caption" color={colors.cobaltSoft}>{lesson.number}-dars</V2Text>}
-            </View>
-            {lesson ? (
-              <>
-                <View style={{ gap: 10 }}>
-                  <V2Text variant="heading" color={colors.textOnDark} style={styles.heroTitle} numberOfLines={3}>
-                    {lesson.name}
-                  </V2Text>
-                  <View style={styles.heroSteps}>
-                    <SegmentedProgress
-                      total={lesson.stepsTotal}
-                      done={lesson.stepsDone}
-                      color={colors.successBright}
-                      accessibilityLabel={`Dars bosqichlari: ${lesson.stepsTotal} dan ${lesson.stepsDone}`}
-                    />
-                  </View>
-                </View>
-                <Button
-                  label={lesson.stepsDone >= lesson.stepsTotal ? "Darsni ko'rish" : `Davom etish · ${lesson.stepsDone} / ${lesson.stepsTotal}`}
-                  variant="inverse"
-                  trailing={<ArrowRightIcon />}
-                  onPress={() => router.push(lesson.resumePath as never)}
-                />
-              </>
-            ) : (
-              <View style={{ gap: 12 }}>
-                <V2Text variant="bodySmall" color={colors.cobaltSoft} style={styles.heroTitle}>
-                  {lessonError ? "Darsni yuklab bo'lmadi. Internetni tekshirib, qayta urinib ko'ring." : 'Dars yuklanmoqda…'}
-                </V2Text>
-                {lessonError && (
-                  <Button label="Darslar ro'yxati" variant="inverse" onPress={() => router.push('/homework')} />
-                )}
+          {/* Telegram bot ulanmagan (MainNoBot) */}
+          {!botLinked && (
+            <View accessibilityLabel="Telegram bot ulanmagan" style={styles.bot}>
+              <View style={styles.botCircle} />
+              <View style={styles.botIcon}>
+                <TelegramIcon size={24} color="#FFFFFF" />
+                <View style={styles.botDot} />
               </View>
-            )}
-          </Card>
+              <View style={styles.botText}>
+                <Text style={styles.botTitle}>Telegram botni ulang</Text>
+                <Text style={styles.botSub}>Dars eslatmalari va bildirishnomalar botga keladi</Text>
+              </View>
+              <Pressable accessibilityRole="button" onPress={() => setBotOpen(true)} style={styles.botBtn}>
+                <Text style={styles.botBtnText}>Ulash</Text>
+              </Pressable>
+            </View>
+          )}
 
+          {/* Bugungi dars */}
+          {lesson && (
+            <View accessibilityLabel="Bugungi dars" style={styles.hero}>
+              <View style={styles.heroCircle} />
+              <Image source={designImages.c04932e65803a7f5c40ff5868fd21516} style={styles.heroImg} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
+              <View style={styles.heroTop}>
+                <View style={[styles.chip, { backgroundColor: p.chipBg }]}>
+                  <Text style={[styles.chipText, { color: p.chipText }]}>Bugungi dars</Text>
+                </View>
+                <Text style={styles.heroLabel}>{lesson.number}-dars · {lesson.isVideoDay ? 'Videodars' : 'Jonli dars'}</Text>
+              </View>
+              <View style={styles.heroBody}>
+                <Text style={[styles.heroTitle, { fontFamily: displayFont(lesson.name) }]} numberOfLines={3}>{lesson.name}</Text>
+                {!!lesson.phrase && <Text style={styles.heroPhrase} numberOfLines={2}>{lesson.phrase}</Text>}
+                {!!lesson.meta && <Text style={styles.heroMeta}>{lesson.meta}</Text>}
+              </View>
+              <View style={styles.segments} accessibilityLabel={`${totalSteps} qadamdan ${doneSteps} tasi bajarildi`}>
+                {lesson.steps.map((s, i) => (
+                  <View key={i} style={styles.segment}>
+                    <View style={[styles.segmentFill, { width: `${Math.max(0, Math.min(100, s.percent))}%` }]} />
+                  </View>
+                ))}
+              </View>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push(R.lesson(lesson.id) as Href)}
+                style={[styles.continue, { backgroundColor: p.continueBg }]}
+              >
+                <Text style={[styles.continueText, { color: p.continueText }]}>
+                  {doneSteps >= totalSteps ? 'Darsni koʻrish' : `Davom etish · ${currentStep} / ${totalSteps}`}
+                </Text>
+                <ArrowRight color={p.continueText} />
+              </Pressable>
+            </View>
+          )}
+
+          {/* Jonli dars */}
           {liveVisible && live && (
-            <Card tone="ink" padding={14} style={styles.liveCard}>
-              <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
-                <View style={styles.row}>
+            <View accessibilityLabel="Jonli dars" style={[styles.live, { backgroundColor: p.liveBg }]}>
+              <View style={styles.liveInfo}>
+                <View style={styles.liveHead}>
                   <View style={styles.liveDot} />
-                  <V2Text variant="overline" color={colors.liveText}>
-                    {msLeft <= 0
-                      ? 'Jonli dars boshlandi'
-                      : showTimer
-                        ? `Jonli dars · ${pad(live.startsAt.getHours())}:${pad(live.startsAt.getMinutes())}`
-                        : `Jonli dars · ${whenLabel(live.startsAt, now)}`}
-                  </V2Text>
+                  <Text style={styles.liveOver}>
+                    {msLeft <= 0 ? 'Jonli dars boshlandi' : `Jonli dars · ${whenLabel(live.startsAt, now)}`}
+                  </Text>
                 </View>
                 {showTimer && (
-                  <V2Text
-                    variant="title"
-                    color={colors.textOnDark}
-                    accessibilityLabel={`Jonli darsgacha ${spokenCountdown(msLeft)}`}
-                    style={styles.timer}
-                  >
+                  <Text accessibilityRole="timer" accessibilityLabel={`Jonli darsgacha ${spokenCountdown(msLeft)}`} style={styles.timer}>
                     {formatCountdown(msLeft)}
-                  </V2Text>
+                  </Text>
                 )}
-                {!!live.topic && (
-                  <V2Text variant="caption" color={colors.textOnDarkMuted} numberOfLines={1}>{live.topic}</V2Text>
-                )}
+                {!!live.topic && <Text style={styles.liveTopic} numberOfLines={1}>{live.topic}</Text>}
               </View>
-              <Button
-                label="Guruhga"
-                accessibilityLabel="Telegram guruhiga o'tish"
-                size="md"
-                variant="telegram"
-                leading={<TelegramIcon />}
-                onPress={() => Linking.openURL(live.link)}
-                style={styles.telegram}
-              />
-            </Card>
+              <Pressable accessibilityRole="link" accessibilityLabel="Telegram guruhiga oʻtish" onPress={() => Linking.openURL(live.link)} style={styles.group}>
+                <TelegramIcon color={p.telegramText} />
+                <Text style={[styles.groupText, { color: p.telegramText }]}>Guruhga</Text>
+              </Pressable>
+            </View>
           )}
 
-          {course && (
-            <Card style={styles.row}>
-              <ProgressRing value={course.percent / 100} color={colors.cobalt} accessibilityLabel={`Kurs: ${course.percent} foiz`}>
-                <V2Text variant="caption" style={{ fontFamily: fonts.bodyHeavy }}>{course.percent}%</V2Text>
-              </ProgressRing>
+          {/* Kunlik maqsad va streak */}
+          <View accessibilityLabel="Kunlik maqsad va streak" style={[styles.goalCard, { backgroundColor: p.card }]}>
+            <View style={styles.goalRow}>
+              <View style={styles.ring}>
+                <Svg width={52} height={52} viewBox="0 0 56 56" accessibilityRole="image" accessibilityLabel={`Kunlik maqsad: ${DAILY_GOAL} dan ${goal} chaqmoq`}>
+                  <Circle cx="28" cy="28" r="23" fill="none" stroke="#EEF1F7" strokeWidth={7} />
+                  {goal > 0 && (
+                    <Circle
+                      cx="28" cy="28" r="23" fill="none" stroke="#7C4DFF" strokeWidth={7} strokeLinecap="round"
+                      strokeDasharray={`${(goal / DAILY_GOAL) * RING_C} ${RING_C}`}
+                      transform="rotate(-90 28 28)"
+                    />
+                  )}
+                </Svg>
+                <View style={styles.ringBolt}><BoltIcon /></View>
+              </View>
               <View style={{ flex: 1, gap: 2 }}>
-                <V2Text variant="bodyStrong">Kurs yo'li</V2Text>
-                <V2Text variant="bodySmall" color={colors.textMuted}>{course.done} / {course.total} dars ochilgan</V2Text>
+                <Text style={[styles.goalTitle, { color: p.text }]}>Kunlik maqsad</Text>
+                <Text style={[styles.goalSub, { color: p.muted }]}>{todayLightning} / {DAILY_GOAL} chaqmoq · yana {DAILY_GOAL - goal} ta</Text>
               </View>
-            </Card>
-          )}
-
-          <View style={styles.quickGrid}>
-            <Card onPress={() => router.push('/vocabulary')} accessibilityLabel="So'zlarni takrorlash" rounded="xl" style={styles.quick}>
-              <View style={[styles.quickIcon, { backgroundColor: colors.lightningSoft }]}><CardsIcon /></View>
-              <V2Text variant="bodyStrong" style={{ fontSize: 15 }}>So'zlarni takrorlash</V2Text>
-              <V2Text variant="caption" color={colors.textMuted}>O'tilgan darslar so'zlari</V2Text>
-            </Card>
-            <Card onPress={() => router.push('/battle')} accessibilityLabel="Yuzma-yuz o'yin" rounded="xl" style={styles.quick}>
-              <View style={[styles.quickIcon, { backgroundColor: colors.successSoft }]}><BoltOutlineIcon /></View>
-              <V2Text variant="bodyStrong" style={{ fontSize: 15 }}>Yuzma-yuz o'yin</V2Text>
-              <V2Text variant="caption" color={colors.textMuted}>Boshqa o'quvchi bilan bellash</V2Text>
-            </Card>
+            </View>
+            <View style={styles.days}>
+              {days.map((d) => (
+                <View key={d.full} accessibilityLabel={`${d.full}: bajarilmagan`} style={styles.day}>
+                  <View style={[styles.dayCircle, { backgroundColor: p.emptyDay }]} />
+                  <Text style={[styles.dayLabel, { color: p.dayLabel }]}>{d.short}</Text>
+                </View>
+              ))}
+              <View style={styles.day} accessibilityLabel={`Bugun, streak ${streak} kun`}>
+                <View style={[styles.dayCircle, styles.today, { backgroundColor: p.todayBg }]}>
+                  <Text style={styles.todayNum}>{streak + 1}</Text>
+                </View>
+                <Text style={[styles.dayLabel, { color: p.todayLabel, fontFamily: fonts.bodyHeavy }]}>Bugun</Text>
+              </View>
+            </View>
           </View>
+
+          {/* Mashqlar */}
+          {botLinked && (
+            <View accessibilityLabel="Mashqlar" style={styles.quickRow}>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push((lesson ? R.vocab(lesson.id) : R.practice) as Href)}
+                style={[styles.quick, { backgroundColor: p.card }]}
+              >
+                <View style={[styles.quickIcon, { backgroundColor: p.vocabIconBg }]}>
+                  <Image source={designImages.f7ed25f8b468b4cb6172a58adcd09f1f} style={styles.quickImg} resizeMode="contain" />
+                </View>
+                <View style={styles.quickText}>
+                  <Text style={[styles.quickTitle, { color: p.text }]}>Soʻzlarni takrorlash</Text>
+                  <Text style={[styles.quickSub, { color: p.muted }]}>{wordCount ?? 0} ta soʻz</Text>
+                </View>
+              </Pressable>
+              <Pressable accessibilityRole="link" onPress={() => router.push(R.battle as Href)} style={[styles.quick, { backgroundColor: p.card }]}>
+                <View style={[styles.quickIcon, { backgroundColor: p.battleIconBg }]}>
+                  <Image source={designImages['11ac32c8e5b061e3779348e3afc56d83']} style={styles.quickImg} resizeMode="contain" />
+                </View>
+                <View style={styles.quickText}>
+                  <Text style={[styles.quickTitle, { color: p.text }]}>Yuzma-yuz oʻyin</Text>
+                  <Text style={[styles.quickSub, { color: p.muted }]}>+{BATTLE_WIN_COINS} coin</Text>
+                </View>
+              </Pressable>
+            </View>
+          )}
         </View>
       </ScrollView>
-      <TabBar active="home" />
+      <HomeNav p={p} />
+      <BotConnectPopup
+        visible={botOpen}
+        onClose={() => {
+          setBotOpen(false);
+          telegramLinkStatus().then((s) => setBotLinked(s.linked)).catch(() => {});
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: space.screen, paddingBottom: 24 },
+  screen: { flex: 1 },
+  content: { paddingHorizontal: 20, paddingBottom: 12 },
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  avatar: { width: 44, height: 44, minHeight: 44, paddingHorizontal: 0, borderRadius: 22, backgroundColor: colors.ink },
+
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  avatar: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
+  avatarImg: { width: 44, height: 44, borderRadius: 22 },
   hello: { flex: 1, minWidth: 0 },
-  hero: { gap: 14, overflow: 'hidden', position: 'relative' },
-  heroMascot: { position: 'absolute', right: 2, top: 6, width: 118, height: 118 },
-  heroTitle: { maxWidth: 220 },
-  heroSteps: { maxWidth: 200 },
-  liveCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.xxl },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
-  timer: { fontVariant: ['tabular-nums'] },
-  telegram: { height: 52 },
-  quickGrid: { flexDirection: 'row', gap: 12 },
-  quick: { flex: 1, gap: 10 },
-  quickIcon: { width: 40, height: 40, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
+  greet: { fontFamily: fonts.body, fontSize: 13, fontWeight: 'normal' },
+  name: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.4, fontWeight: 'normal' },
+  pill: { flexDirection: 'row', alignItems: 'center', height: 44, paddingHorizontal: 10, borderRadius: 22 },
+  pillText: { fontFamily: fonts.bodyHeavy, fontSize: 15, fontWeight: 'normal' },
+  bell: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 2,
+    borderRadius: 9,
+    backgroundColor: '#D92D20',
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { fontFamily: fonts.bodyHeavy, fontSize: 11, lineHeight: 13, color: '#FFFFFF', fontWeight: 'normal' },
+
+  bot: {
+    backgroundColor: '#1B6FA8',
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingRight: 14,
+    paddingLeft: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    overflow: 'hidden',
+  },
+  botCircle: { position: 'absolute', right: -30, bottom: -40, width: 120, height: 120, borderRadius: 60, backgroundColor: '#2380BF' },
+  botIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#2AABEE', alignItems: 'center', justifyContent: 'center' },
+  botDot: { position: 'absolute', top: -3, right: -3, width: 14, height: 14, borderRadius: 7, backgroundColor: '#FF7A1A', borderWidth: 2.5, borderColor: '#1B6FA8' },
+  botText: { flex: 1, minWidth: 0, gap: 3 },
+  botTitle: { fontFamily: fonts.bodyHeavy, fontSize: 16, lineHeight: 19.2, color: '#FFFFFF', fontWeight: 'normal' },
+  botSub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 17.55, color: '#FFFFFF', fontWeight: 'normal' },
+  botBtn: { height: 48, paddingHorizontal: 16, borderRadius: 15, backgroundColor: '#FFFFFF', justifyContent: 'center' },
+  botBtnText: { fontFamily: fonts.bodyHeavy, fontSize: 15, color: '#155A8A', fontWeight: 'normal' },
+
+  hero: { backgroundColor: '#2F5BFF', borderRadius: 28, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 20, overflow: 'hidden', gap: 12 },
+  heroCircle: { position: 'absolute', right: -36, top: -40, width: 190, height: 190, borderRadius: 95, backgroundColor: '#4A71FF' },
+  heroImg: { position: 'absolute', right: 6, top: 34, width: 120, height: 112 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chip: { paddingVertical: 5, paddingHorizontal: 9, borderRadius: 9 },
+  chipText: { fontFamily: fonts.bodyHeavy, fontSize: 11, letterSpacing: 0.88, textTransform: 'uppercase', fontWeight: 'normal' },
+  heroLabel: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#FFFFFF', fontWeight: 'normal', flexShrink: 1 },
+  heroBody: { maxWidth: 214, gap: 2 },
+  heroTitle: { fontSize: 25, lineHeight: 26.25, letterSpacing: -0.5, color: '#FFFFFF', fontWeight: 'normal' },
+  heroPhrase: { fontFamily: fonts.bodyHeavy, fontSize: 18, color: '#FFFFFF', fontWeight: 'normal' },
+  heroMeta: { marginTop: 4, fontFamily: fonts.body, fontSize: 13, color: '#F0F3FF', fontWeight: 'normal' },
+  segments: { flexDirection: 'row', gap: 5 },
+  segment: { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#6D8BFF', overflow: 'hidden' },
+  segmentFill: { height: 6, backgroundColor: '#FFFFFF' },
+  continue: { height: 54, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  continueText: { fontFamily: fonts.bodyHeavy, fontSize: 17, fontWeight: 'normal' },
+
+  live: { borderRadius: 24, paddingVertical: 14, paddingRight: 14, paddingLeft: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  liveInfo: { flex: 1, minWidth: 0, gap: 3 },
+  liveHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF5A5F' },
+  liveOver: { fontFamily: fonts.bodyHeavy, fontSize: 12, letterSpacing: 0.72, textTransform: 'uppercase', color: '#FF9A9E', fontWeight: 'normal', flexShrink: 1 },
+  timer: { fontFamily: fonts.display, fontSize: 30, lineHeight: 31.5, color: '#FFFFFF', fontVariant: ['tabular-nums'], fontWeight: 'normal' },
+  liveTopic: { fontFamily: fonts.body, fontSize: 13, color: '#B8C1D6', fontWeight: 'normal' },
+  group: { height: 52, paddingHorizontal: 14, borderRadius: 16, backgroundColor: '#2AABEE', flexDirection: 'row', alignItems: 'center', gap: 7 },
+  groupText: { fontFamily: fonts.bodyHeavy, fontSize: 14, fontWeight: 'normal' },
+
+  goalCard: { borderRadius: 24, paddingVertical: 14, paddingHorizontal: 12, gap: 12 },
+  goalRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
+  ring: { width: 52, height: 52 },
+  ringBolt: { position: 'absolute', left: 17, top: 17 },
+  goalTitle: { fontFamily: fonts.bodyHeavy, fontSize: 16, fontWeight: 'normal' },
+  goalSub: { fontFamily: fonts.body, fontSize: 14, fontWeight: 'normal' },
+  days: { flexDirection: 'row', gap: 2 },
+  day: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44 },
+  dayCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  today: { borderWidth: 2.5, borderColor: '#FF7A1A' },
+  todayNum: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#B34700', fontWeight: 'normal' },
+  dayLabel: { fontFamily: fonts.bodyBold, fontSize: 12, fontWeight: 'normal' },
+
+  quickRow: { flexDirection: 'row', gap: 12 },
+  quick: { flex: 1, minWidth: 0, borderRadius: 22, paddingVertical: 12, paddingRight: 12, paddingLeft: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  quickIcon: { width: 54, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  quickImg: { width: 50, height: 50 },
+  quickText: { flex: 1, minWidth: 0, gap: 2 },
+  quickTitle: { fontFamily: fonts.bodyHeavy, fontSize: 14, lineHeight: 16.8, fontWeight: 'normal' },
+  quickSub: { fontFamily: fonts.bodyBold, fontSize: 12, fontWeight: 'normal' },
 });
+

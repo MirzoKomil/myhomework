@@ -1,17 +1,31 @@
 /**
- * v2 Kirish ekrani (dizayn: 01 · Kirish).
+ * v2 Kirish ekrani (dizayn: Login.dc.html).
  *
  * Login mantig'i eski `app/login.tsx` bilan bir xil: o'sha API, o'sha
- * token saqlash joyi. Shuning uchun v2'da kirgan o'quvchi eski ilovada
- * ham kirgan hisoblanadi va aksincha.
+ * token saqlash joyi. Kirgandan keyin onboarding shu qurilmada hali
+ * o'tilmagan bo'lsa — Onboarding'ga, aks holda Bosh sahifaga.
  */
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Input, V2Text } from '@/components/v2';
-import { colors, radius } from '@/constants/v2/tokens';
+import { EyeIcon, SendOutlineIcon } from '@/components/v2/home/icons';
+import { isOnboarded, supportUrl } from '@/components/v2/home/shared';
+import { designImages } from '@/constants/v2/designImages';
+import { R } from '@/constants/v2/routes';
+import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { invalidateCache } from '@/services/contentApi';
 import { loadLessonProgress } from '@/services/lessonProgressStore';
@@ -22,43 +36,32 @@ const LOGIN_API =
     ? '/api/auth/student-login'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/auth/student-login';
 
-const domik = require('@/assets/images/v2/domik-wave.png');
-
-type Tile = { char: string; bg: string; fg: string; left: number; top: number; size: number; rotate: string; round?: boolean };
-
 // Kurs tiliga qarab: Domwork (rus) yoki Homework (ingliz).
 const BRAND = {
-  russian: {
-    name: 'Domwork',
-    tagline: 'Rus tilida 0 dan\nerkin suhbatgacha',
-    hello: 'Привет!',
-    letters: ['Ж', 'Я', 'Ё', 'Щ'],
-  },
-  english: {
-    name: 'Homework',
-    tagline: 'Ingliz tilida 0 dan\nerkin suhbatgacha',
-    hello: 'Hello!',
-    letters: ['W', 'Q', 'Th', 'R'],
-  },
+  russian: { name: 'Domwork', tagline: 'Rus tilida 0 dan\nerkin suhbatgacha', hello: 'Привет!', letters: ['Ж', 'Я', 'Ё', 'Щ'], cyr: true },
+  english: { name: 'Homework', tagline: 'Ingliz tilida 0 dan\nerkin suhbatgacha', hello: 'Hello!', letters: ['W', 'Q', 'Th', 'R'], cyr: false },
 } as const;
+
+const TILES = [
+  { left: 18, top: 70, size: 78, radius: 24, bg: '#FFFFFF', fg: '#2F5BFF', rotate: '-10deg', font: 46 },
+  { left: 292, top: 58, size: 74, radius: 37, bg: '#FFC93C', fg: '#0B1220', rotate: '8deg', font: 42 },
+  { left: 30, top: 196, size: 70, radius: 22, bg: '#FF7A1A', fg: '#0B1220', rotate: '9deg', font: 40 },
+  { left: 300, top: 186, size: 72, radius: 22, bg: '#0B1220', fg: '#FFFFFF', rotate: '-8deg', font: 42 },
+];
 
 export default function V2Login() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const brand = BRAND[courseLang === 'russian' ? 'russian' : 'english'];
+  const letterFont = brand.cyr ? fonts.displayCyrillic : fonts.display;
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [hidden, setHidden] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const tiles: Tile[] = [
-    { char: brand.letters[0], bg: colors.surface, fg: colors.cobalt, left: 18, top: 70, size: 78, rotate: '-10deg' },
-    { char: brand.letters[1], bg: colors.sunflower, fg: colors.ink, left: 292, top: 58, size: 74, rotate: '8deg', round: true },
-    { char: brand.letters[2], bg: colors.streak, fg: colors.ink, left: 30, top: 196, size: 70, rotate: '9deg' },
-    { char: brand.letters[3], bg: colors.ink, fg: colors.textOnDark, left: 300, top: 186, size: 72, rotate: '-8deg' },
-  ];
-
   const submit = async () => {
+    if (loading) return;
     if (!login.trim() || !password) {
       setError('Login va parolni kiriting');
       return;
@@ -81,93 +84,116 @@ export default function V2Login() {
       await setAuth(data.token, data.student);
       await loadLessonProgress(true);
       invalidateCache();
-      router.replace('/v2');
+      // Onboarding savoli bir marta so'raladi — javob qurilmada saqlanadi.
+      router.replace((await isOnboarded()) ? R.home : R.onboarding);
     } catch {
       setError('Internet aloqasini tekshiring');
       setLoading(false);
     }
   };
 
+  const openSupport = () => Linking.openURL(supportUrl(courseLang));
+
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
-        <View style={[styles.hero, { paddingTop: insets.top }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <View style={styles.stage}>
-            {tiles.map((t) => (
+        <View style={styles.column}>
+          {/* Dizayndagi 380px sahna status bar joyini ham o'z ichiga oladi. */}
+          <View style={[styles.hero, { marginTop: Math.max(0, insets.top - 20) }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {TILES.map((t, i) => (
               <View
-                key={t.char}
+                key={i}
                 style={[
                   styles.tile,
-                  {
-                    left: t.left,
-                    top: t.top,
-                    width: t.size,
-                    height: t.size,
-                    borderRadius: t.round ? t.size / 2 : 22,
-                    backgroundColor: t.bg,
-                    transform: [{ rotate: t.rotate }],
-                  },
+                  { left: t.left, top: t.top, width: t.size, height: t.size, borderRadius: t.radius, backgroundColor: t.bg, transform: [{ rotate: t.rotate }] },
                 ]}
               >
-                <V2Text variant="hero" color={t.fg} cyrillic={courseLang === 'russian'} style={{ fontSize: t.size * 0.56, lineHeight: t.size * 0.66 }}>
-                  {t.char}
-                </V2Text>
+                <Text style={[styles.tileChar, { fontFamily: letterFont, fontSize: t.font, color: t.fg }]}>{brand.letters[i]}</Text>
               </View>
             ))}
-            <Image source={domik} style={styles.mascot} resizeMode="contain" />
+            <Image source={designImages.b924b8ccc546d63f781f9ea1bd9db221} style={styles.mascot} resizeMode="contain" />
             <View style={styles.bubble}>
-              <V2Text variant="subheading" cyrillic={courseLang === 'russian'} style={{ fontSize: 18 }}>
-                {brand.hello}
-              </V2Text>
+              <Text style={[styles.bubbleText, { fontFamily: letterFont }]}>{brand.hello}</Text>
             </View>
-            <V2Text variant="hero" color={colors.textOnDark} style={styles.tagline}>
-              {brand.tagline}
-            </V2Text>
-          </View>
-        </View>
-
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 32 }]}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <V2Text variant="subheading" color={colors.textOnDark} style={{ fontSize: 18 }}>
-                {brand.name[0]}
-              </V2Text>
-            </View>
-            <View>
-              <V2Text variant="subheading" accessibilityRole="header">{brand.name}</V2Text>
-              <V2Text variant="caption" color={colors.textMuted}>Hisobingizga kiring</V2Text>
-            </View>
+            <Text style={styles.tagline}>{brand.tagline}</Text>
           </View>
 
-          <Input
-            label="Login"
-            placeholder="Login yoki telefon raqam"
-            value={login}
-            onChangeText={(v) => { setLogin(v); setError(null); }}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="username"
-            returnKeyType="next"
-          />
-          <Input
-            label="Parol"
-            placeholder="Parolingiz"
-            value={password}
-            onChangeText={(v) => { setPassword(v); setError(null); }}
-            secure
-            autoCapitalize="none"
-            autoComplete="current-password"
-            returnKeyType="go"
-            onSubmitEditing={submit}
-            error={error ?? undefined}
-          />
+          <View style={[styles.form, { paddingBottom: Math.max(34, insets.bottom + 14) }]}>
+            <View style={styles.brandRow}>
+              <View style={styles.brandMark}>
+                <Text style={styles.brandMarkText}>{brand.name[0]}</Text>
+              </View>
+              <View>
+                <Text style={styles.brandName} accessibilityRole="header">{brand.name}</Text>
+                <Text style={styles.brandSub}>Hisobingizga kiring</Text>
+              </View>
+            </View>
 
-          <Button label="Kirish" onPress={submit} loading={loading} style={{ marginTop: 4 }} />
+            <View style={styles.field}>
+              <Text style={styles.label} nativeID="login-label">Login</Text>
+              <TextInput
+                accessibilityLabel="Login"
+                placeholder="Masalan: AA424"
+                placeholderTextColor="#6B7489"
+                value={login}
+                onChangeText={(v) => { setLogin(v); setError(null); }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="username"
+                returnKeyType="next"
+                style={[styles.input, !!error && styles.inputError]}
+              />
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.label}>Parol</Text>
+              <View>
+                <TextInput
+                  accessibilityLabel="Parol"
+                  placeholder="Parolingiz"
+                  placeholderTextColor="#6B7489"
+                  value={password}
+                  onChangeText={(v) => { setPassword(v); setError(null); }}
+                  secureTextEntry={hidden}
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  returnKeyType="go"
+                  onSubmitEditing={submit}
+                  style={[styles.input, styles.inputPass, !!error && styles.inputError]}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={hidden ? 'Parolni koʻrsatish' : 'Parolni yashirish'}
+                  onPress={() => setHidden((h) => !h)}
+                  style={styles.eye}
+                >
+                  <EyeIcon />
+                </Pressable>
+              </View>
+              {/* Xato matni dizaynda yo'q — login mantig'i uchun shart. */}
+              {!!error && (
+                <Text style={styles.error} accessibilityLiveRegion="polite" accessibilityRole="alert">{error}</Text>
+              )}
+            </View>
 
-          <View style={styles.help}>
-            <V2Text variant="bodySmall" color={colors.textMuted}>
-              Login va parolni ustozingiz yoki menejeringizdan olasiz.
-            </V2Text>
+            <Pressable accessibilityRole="link" onPress={openSupport} style={styles.forgot}>
+              <Text style={styles.forgotText}>Parolni unutdingizmi?</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ busy: loading, disabled: loading }}
+              onPress={submit}
+              style={({ pressed }) => [styles.submit, (pressed || loading) && { backgroundColor: '#1E3FD1' }]}
+            >
+              <Text style={styles.submitText}>{loading ? 'Kirilmoqda…' : 'Kirish'}</Text>
+            </Pressable>
+
+            <View style={styles.help}>
+              <SendOutlineIcon />
+              <Text style={styles.helpText}>
+                Login yoʻqmi?{' '}
+                <Text accessibilityRole="link" onPress={openSupport} style={styles.helpLink}>Telegram orqali soʻrang</Text>
+              </Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -176,42 +202,85 @@ export default function V2Login() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cobalt },
-  hero: { alignItems: 'center' },
-  stage: { width: 390, height: 380, position: 'relative' },
+  screen: { flex: 1, backgroundColor: '#2F5BFF' },
+  column: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  hero: { height: 380, width: 390, alignSelf: 'center', position: 'relative' },
   tile: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  tileChar: { fontWeight: 'normal', includeFontPadding: false },
   mascot: { position: 'absolute', left: 105, top: 62, width: 190, height: 205 },
   bubble: {
     position: 'absolute',
-    left: 236,
-    top: 46,
+    left: 112,
+    top: 22,
     height: 38,
     paddingHorizontal: 14,
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 19,
     borderTopRightRadius: 19,
-    borderBottomRightRadius: 19,
-    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
+    borderBottomLeftRadius: 19,
+    boxShadow: '0 4px 12px rgba(11,18,32,0.18)',
   },
-  tagline: { position: 'absolute', left: 30, right: 30, top: 300 },
-  sheet: {
+  bubbleText: { fontSize: 18, color: '#0B1220', fontWeight: 'normal' },
+  tagline: {
+    position: 'absolute',
+    left: 30,
+    right: 30,
+    top: 300,
+    fontFamily: fonts.display,
+    fontSize: 32,
+    lineHeight: 33.6,
+    letterSpacing: -0.64,
+    color: '#FFFFFF',
+    fontWeight: 'normal',
+  },
+  form: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.sheet,
-    borderTopRightRadius: radius.sheet,
-    paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     paddingTop: 24,
+    paddingHorizontal: 24,
     gap: 14,
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandMark: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
+  brandMark: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#0B1220', alignItems: 'center', justifyContent: 'center' },
+  brandMarkText: { fontFamily: fonts.display, fontSize: 18, color: '#FFFFFF', fontWeight: 'normal' },
+  brandName: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.2, color: '#0B1220', fontWeight: 'normal' },
+  brandSub: { fontFamily: fonts.body, fontSize: 13, color: '#4A5468', fontWeight: 'normal' },
+  field: { gap: 7 },
+  label: { fontFamily: fonts.bodyBold, fontSize: 14, color: '#0B1220', fontWeight: 'normal' },
+  input: {
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#D5DBE7',
+    backgroundColor: '#F7F9FC',
+    paddingHorizontal: 16,
+    fontFamily: fonts.body,
+    fontSize: 16,
+    color: '#0B1220',
+    fontWeight: 'normal',
   },
-  help: { marginTop: 'auto', backgroundColor: colors.bg, borderRadius: radius.lg, padding: 16 },
+  inputPass: { paddingRight: 52 },
+  inputError: { borderColor: '#D92D20' },
+  eye: { position: 'absolute', right: 4, top: 4, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  error: { fontFamily: fonts.body, fontSize: 13, color: '#B42318', fontWeight: 'normal' },
+  forgot: { alignSelf: 'flex-end', height: 44, marginTop: -8, marginBottom: -6, justifyContent: 'center' },
+  forgotText: { fontFamily: fonts.bodyHeavy, fontSize: 14, color: '#2F5BFF', fontWeight: 'normal' },
+  submit: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', marginTop: 4, alignItems: 'center', justifyContent: 'center' },
+  submitText: { fontFamily: fonts.bodyHeavy, fontSize: 17, color: '#FFFFFF', fontWeight: 'normal' },
+  help: {
+    marginTop: 'auto',
+    backgroundColor: '#F4F6FA',
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  helpText: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 18.9, color: '#4A5468', fontWeight: 'normal' },
+  helpLink: { fontFamily: fonts.bodyHeavy, color: '#2F5BFF', textDecorationLine: 'underline' },
 });
