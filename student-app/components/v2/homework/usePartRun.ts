@@ -8,7 +8,8 @@
  */
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { resetPraiseRun } from '@/services/voicePraise';
+import { playSfx } from '@/services/sfx';
+import { resetPraiseRun, speak } from '@/services/voicePraise';
 
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
@@ -115,6 +116,8 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
       return;
     }
     if (accuracy < PASS_THRESHOLD) {
+      playSfx('lose');
+      speak('wrong', 900);
       setTooLow(Math.round(accuracy * 100));
       return;
     }
@@ -126,7 +129,12 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
     const progress = getLessonProgress(lessonId);
     const scores = getLessonScores(lessonId);
     const allDone = allParts.filter((p) => !isTeacherGraded(p)).every((p) => progress.homeworkParts[p.id] || scores[p.id]?.finished);
-    router.replace((allDone ? `${R.homework(lessonId)}?yuborildi=1` : R.homework(lessonId)) as Href);
+    // Hammasi tugagan bo'lsa "Vazifa tekshirildi" oynasi o'z ovozini chaladi.
+    if (!allDone) {
+      playSfx('complete');
+      speak('correct', 1550);
+    }
+    router.replace((allDone ? `${R.homework(lessonId)}?yuborildi=1` : `${R.homework(lessonId)}?bajarildi=1`) as Href);
   };
 
   const next = () => {

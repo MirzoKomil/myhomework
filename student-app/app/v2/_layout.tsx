@@ -20,6 +20,7 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { installPressFeedback } from '@/services/pressFeedback';
 import { primeSfxOnFirstGesture } from '@/services/sfx';
 import { primeVoiceOnFirstGesture } from '@/services/voicePraise';
 
@@ -49,8 +50,9 @@ export default function V2Layout() {
   useEffect(() => {
     recordV2Path(pathname);
   }, [pathname]);
-  // Safari/iOS: ovoz effektlari birinchi bosishda "ochiladi" (sfx.ts).
+  // Safari/iOS: ovoz effektlari bosishlar ichida "ochiladi" (audioUnlock.ts); tugmalarga bosish effekti.
   useEffect(() => {
+    installPressFeedback();
     primeSfxOnFirstGesture();
     primeVoiceOnFirstGesture();
   }, []);

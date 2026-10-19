@@ -2,11 +2,14 @@
  * O'zbekcha ovozli maqtov va dalda (v2).
  *
  * Har javobda maqtov aytilsa tez jonga tegadi — shuning uchun:
- *  - to'g'ri javob: ketma-ket 2-, 4-, 6-… to'g'ri javobda (va kamida 4 soniyada
- *    bir marta) turli jumlalardan biri aytiladi;
+ *  - to'g'ri javob: ketma-ket 3-, 5-, 8-, 12-, keyin har 4-to'g'ri javobda
+ *    (va kamida 8 soniyada bir marta) turli jumlalardan biri aytiladi;
  *  - xato javob: faqat to'g'ri javobdan keyingi BIRINCHI xatoda yumshoq dalda
  *    (ketma-ket xatolarda jim — o'quvchi kayfiyati tushmasin);
- *  - katta lahzalar (dars tugadi, yangi daraja, o'yinda g'alaba) — har doim.
+ *  - katta lahzalar (dars tugadi, yangi daraja, o'yinda g'alaba) — har doim,
+ *    lekin fanfara tugagandan keyin;
+ *  - bir vaqtda faqat BITTA jumla: yangisi oldingisini to'xtatadi; ilova
+ *    o'zi ruscha so'z o'qiyotgan bo'lsa (expo-speech) — jim turadi.
  *
  * Ovozlar oldindan yozib olingan qisqa mp3 fayllar (assets/sounds/v2/voice).
  * O'quvchi Sozlamalar → "Ovozli maqtov" orqali o'chirishi mumkin; sozlama
@@ -16,10 +19,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { useEffect, useState } from 'react';
 
+import { enqueuePrime, hasUserGesture, isSpeechBusy } from './audioUnlock';
 import { VOICE_SOURCES, type VoiceGroup } from './voiceClips';
 
 const STORAGE_KEY = 'v2.voicePraiseEnabled';
-const VOLUME = 0.95;
+/** Maqtov aytiladigan ketma-ket to'g'ri javoblar soni (12 dan keyin — har 4-da). */
+const PRAISE_AT = [3, 5, 8, 12];
+const MIN_GAP_MS = 8000;
 
 let enabled = true;
 let loaded = false;
@@ -29,6 +35,8 @@ const lastIndex: Partial<Record<VoiceGroup, number>> = {};
 let lastSpokenAt = 0;
 let correctRun = 0;
 let lastWasCorrect = true;
+let current: AudioPlayer | null = null;
+let pending: ReturnType<typeof setTimeout> | null = null;
 
 AsyncStorage.getItem(STORAGE_KEY)
   .then((v) => {
@@ -45,6 +53,7 @@ export function setVoicePraiseEnabled(on: boolean) {
   AsyncStorage.setItem(STORAGE_KEY, on ? '1' : '0').catch(() => {});
   listeners.forEach((fn) => fn(on));
   if (on) speak('correct', 0);
+  else stopVoice();
 }
 
 export function useVoicePraiseEnabled(): boolean {
@@ -59,6 +68,33 @@ export function useVoicePraiseEnabled(): boolean {
   return on;
 }
 
+function player(group: VoiceGroup, i: number): AudioPlayer | null {
+  const key = `${group}:${i}`;
+  try {
+    let p = players[key];
+    if (!p) {
+      p = createAudioPlayer(VOICE_SOURCES[group][i]);
+      players[key] = p;
+    }
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+/** Kutilayotgan yoki chalinayotgan jumlani to'xtatish (masalan ruscha so'z o'qilishidan oldin). */
+export function stopVoice() {
+  if (pending) {
+    clearTimeout(pending);
+    pending = null;
+  }
+  try {
+    if (current?.playing) current.pause();
+  } catch {
+    // e'tiborsiz
+  }
+}
+
 /** Guruhdan tasodifiy (oldingisidan farqli) jumla tanlab, kechikish bilan aytadi. */
 export function speak(group: VoiceGroup, delayMs = 450) {
   if (!enabled) return;
@@ -67,16 +103,15 @@ export function speak(group: VoiceGroup, delayMs = 450) {
   let i = Math.floor(Math.random() * list.length);
   if (list.length > 1 && i === lastIndex[group]) i = (i + 1) % list.length;
   lastIndex[group] = i;
-  const key = `${group}:${i}`;
   lastSpokenAt = Date.now() + delayMs;
-  setTimeout(() => {
+  stopVoice();
+  pending = setTimeout(() => {
+    pending = null;
+    if (!enabled || !hasUserGesture() || isSpeechBusy()) return;
+    const p = player(group, i);
+    if (!p) return;
     try {
-      let p = players[key];
-      if (!p) {
-        p = createAudioPlayer(list[i]);
-        p.volume = VOLUME;
-        players[key] = p;
-      }
+      current = p;
       p.muted = false;
       p.seekTo(0);
       p.play();
@@ -91,13 +126,13 @@ export function praiseAnswer(correct: boolean) {
   const now = Date.now();
   if (correct) {
     correctRun += 1;
-    const due = correctRun >= 2 && correctRun % 2 === 0;
-    if (due && now - lastSpokenAt > 4000) speak('correct');
+    const due = PRAISE_AT.includes(correctRun) || (correctRun > 12 && correctRun % 4 === 0);
+    if (due && now - lastSpokenAt > MIN_GAP_MS) speak('correct');
     lastWasCorrect = true;
     return;
   }
   // Xato: faqat to'g'ri javoblardan keyingi birinchi xatoda dalda.
-  if (lastWasCorrect && now - lastSpokenAt > 4000) speak('wrong', 550);
+  if (lastWasCorrect && now - lastSpokenAt > MIN_GAP_MS) speak('wrong', 550);
   correctRun = 0;
   lastWasCorrect = false;
 }
@@ -108,34 +143,8 @@ export function resetPraiseRun() {
   lastWasCorrect = true;
 }
 
-/** Safari/iOS (web): birinchi bosishda jumla pleerlarini jim holda "ochib" qo'yish (sfx.ts dagi kabi). */
-let primed = false;
+/** Safari/iOS (web): jumla pleerlarini bosishlar ichida "ochish" (audioUnlock.ts). Effektlardan keyin navbatga qo'yiladi. */
 export function primeVoiceOnFirstGesture() {
-  if (primed || typeof document === 'undefined') return;
-  primed = true;
-  const prime = () => {
-    document.removeEventListener('pointerdown', prime, true);
-    document.removeEventListener('keydown', prime, true);
-    (Object.keys(VOICE_SOURCES) as VoiceGroup[]).forEach((group) => {
-      VOICE_SOURCES[group].forEach((src, i) => {
-        const key = `${group}:${i}`;
-        try {
-          let p = players[key];
-          if (!p) {
-            p = createAudioPlayer(src);
-            players[key] = p;
-          }
-          if (p.playing) return;
-          p.volume = VOLUME;
-          // Jim holda oxirigacha chalinadi (pause() yo'q — konsolda xato chiqmasin).
-          p.muted = true;
-          p.play();
-        } catch {
-          // e'tiborsiz
-        }
-      });
-    });
-  };
-  document.addEventListener('pointerdown', prime, true);
-  document.addEventListener('keydown', prime, true);
+  const order: VoiceGroup[] = ['correct', 'wrong', 'complete', 'homework', 'levelup', 'gameWin', 'gameLose'];
+  enqueuePrime(order.flatMap((g) => VOICE_SOURCES[g].map((_, i) => ({ key: `voice:${g}:${i}`, get: () => player(g, i) }))));
 }

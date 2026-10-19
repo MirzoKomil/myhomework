@@ -28,7 +28,7 @@ import {
   QuestionIcon,
   ShieldOutlineIcon,
   TelegramRowIcon,
-  SpeakerIcon,
+  SpeakerIcon, VoiceIcon,
 } from '@/components/v2/settings/icons';
 import { Column, ScreenHeader, ToggleKnob } from '@/components/v2/settings/parts';
 import { fetchSessions } from '@/components/v2/settings/sessions';
@@ -155,6 +155,7 @@ export default function V2Settings() {
                 accessibilityRole="switch"
                 accessibilityLabel="Ovoz effektlari"
                 accessibilityState={{ checked: sfxOn }}
+                aria-checked={sfxOn}
                 onPress={() => setSfxEnabled(!sfxOn)}
                 style={({ pressed }) => [styles.row, styles.divider, pressed && styles.rowPressed]}
               >
@@ -167,10 +168,11 @@ export default function V2Settings() {
                 accessibilityRole="switch"
                 accessibilityLabel="Ovozli maqtov"
                 accessibilityState={{ checked: voiceOn }}
+                aria-checked={voiceOn}
                 onPress={() => setVoicePraiseEnabled(!voiceOn)}
                 style={({ pressed }) => [styles.row, styles.divider, pressed && styles.rowPressed]}
               >
-                <SpeakerIcon />
+                <VoiceIcon />
                 <Text style={styles.rowLabel}>
                   Ovozli maqtov <Text style={styles.rowHint}>«Barakalla!»</Text>
                 </Text>
@@ -180,6 +182,7 @@ export default function V2Settings() {
               <Pressable
                 accessibilityRole="switch"
                 accessibilityState={{ checked: false }}
+                aria-checked={false}
                 onPress={() => go(R.home)}
                 style={({ pressed }) => [styles.row, styles.divider, pressed && styles.rowPressed]}
               >

@@ -15,7 +15,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp } from '@/components/v2/motion';
 import { playSfx } from '@/services/sfx';
-import { praiseAnswer } from '@/services/voicePraise';
+import { praiseAnswer, resetPraiseRun, stopVoice } from '@/services/voicePraise';
 
 import {
   buildQuickCheck,
@@ -66,8 +66,13 @@ export default function QuickCheckScreen() {
   const answered = picked !== null;
   const right = answered && picked === q?.correct;
 
+  useEffect(() => {
+    resetPraiseRun();
+  }, [trackIdx]);
+
   const listen = () => {
     if (!q) return;
+    stopVoice();
     Speech.stop();
     Speech.speak(q.answer.ru, { language: 'ru-RU', rate: 0.9 });
   };

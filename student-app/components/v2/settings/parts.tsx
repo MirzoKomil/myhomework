@@ -6,7 +6,8 @@
 import { router, type Href } from 'expo-router';
 
 import { v2Back } from '@/services/v2Nav';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Linking, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -49,9 +50,16 @@ export function ScreenHeader({ title, subtitle, fallback }: { title: string; sub
 
 /** Dizayndagi 46×28 almashtirgich (faqat ko'rinish; bosish ota qatorda). */
 export function ToggleKnob({ on }: { on: boolean }) {
+  // Tugmacha chapdan (3px) o'ngga (46 − 22 − 3 = 21px) silliq suriladi.
+  const reduce = useReducedMotion();
+  const x = useSharedValue(on ? 18 : 0);
+  useEffect(() => {
+    x.value = reduce ? (on ? 18 : 0) : withTiming(on ? 18 : 0, { duration: 180 });
+  }, [on]); // eslint-disable-line react-hooks/exhaustive-deps
+  const a = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <View style={[styles.track, { backgroundColor: on ? '#2F5BFF' : '#C9D0DC' }]}>
-      <View style={[styles.knob, on ? { right: 3 } : { left: 3 }]} />
+      <Animated.View style={[styles.knob, { left: 3 }, a]} />
     </View>
   );
 }

@@ -18,7 +18,6 @@ export const VOICE_SOURCES: Record<VoiceGroup, number[]> = {
   ],
   wrong: [
     require('@/assets/sounds/v2/voice/wrong_hechqisi.mp3'), // Hechqisi yo'q, yana bir urinib ko'ring.
-    require('@/assets/sounds/v2/voice/wrong_adashmang.mp3'), // Adashmang, diqqat bilan qarang.
     require('@/assets/sounds/v2/voice/wrong_organish.mp3'), // Xato qilish ham o'rganishning bir qismi.
   ],
   complete: [

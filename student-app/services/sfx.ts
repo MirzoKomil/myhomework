@@ -8,11 +8,15 @@
  * - O'quvchi Sozlamalar → "Ovoz effektlari" orqali o'chirib qo'yishi mumkin.
  *   Sozlama faqat qurilmada (AsyncStorage) saqlanadi — serverga hech narsa
  *   yuborilmaydi.
+ * - Nisbiy balandlik fayllarning o'ziga yozilgan (iOS `volume` ni e'tiborsiz
+ *   qoldiradi) — pleer balandligi doim 1.
  * - Ovoz chalinmasa ham ilova ishlashi to'xtamaydi (hamma xato yutiladi).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { useEffect, useState } from 'react';
+
+import { enqueuePrime, hasUserGesture } from './audioUnlock';
 
 const SOURCES = {
   tap: require('@/assets/sounds/v2/tap.mp3'),
@@ -23,7 +27,6 @@ const SOURCES = {
   match: require('@/assets/sounds/v2/match.mp3'),
   flip: require('@/assets/sounds/v2/flip.mp3'),
   unlock: require('@/assets/sounds/v2/unlock.mp3'),
-  streak: require('@/assets/sounds/v2/streak.mp3'),
   complete: require('@/assets/sounds/v2/complete.mp3'),
   levelup: require('@/assets/sounds/v2/levelup.mp3'),
   pop: require('@/assets/sounds/v2/pop.mp3'),
@@ -31,23 +34,6 @@ const SOURCES = {
 } as const;
 
 export type SfxName = keyof typeof SOURCES;
-
-/** Har ovozning nisbiy balandligi — hammasi bir xil "quloqqa" eshitilsin. */
-const VOLUME: Record<SfxName, number> = {
-  tap: 0.35,
-  select: 0.45,
-  correct: 0.7,
-  wrong: 0.6,
-  coin: 0.55,
-  match: 0.6,
-  flip: 0.4,
-  unlock: 0.6,
-  streak: 0.7,
-  complete: 0.75,
-  levelup: 0.75,
-  pop: 0.4,
-  lose: 0.55,
-};
 
 const STORAGE_KEY = 'v2.sfxEnabled';
 
@@ -91,6 +77,19 @@ export function useSfxEnabled(): boolean {
   return on;
 }
 
+function player(name: SfxName): AudioPlayer | null {
+  try {
+    let p = players[name];
+    if (!p) {
+      p = createAudioPlayer(SOURCES[name]);
+      players[name] = p;
+    }
+    return p;
+  } catch {
+    return null;
+  }
+}
+
 // Diqqat: setAudioModeAsync bu yerda chaqirilmaydi — u butun ilovaning audio
 // sozlamasini (dars audiolarini ham) o'zgartirib yuboradi.
 
@@ -99,17 +98,13 @@ export function useSfxEnabled(): boolean {
  * qoldiriladi (tez-tez bosishda "shitirlash" bo'lmasin).
  */
 export function playSfx(name: SfxName) {
-  if (!enabled) return;
+  if (!enabled || !hasUserGesture()) return;
   const now = Date.now();
   if ((lastPlayed[name] ?? 0) > now - 60) return;
   lastPlayed[name] = now;
+  const p = player(name);
+  if (!p) return;
   try {
-    let p = players[name];
-    if (!p) {
-      p = createAudioPlayer(SOURCES[name]);
-      p.volume = VOLUME[name];
-      players[name] = p;
-    }
     p.muted = false;
     p.seekTo(0);
     p.play();
@@ -123,40 +118,11 @@ export function playSfxLater(name: SfxName, ms: number) {
   setTimeout(() => playSfx(name), ms);
 }
 
-/**
- * Safari/iOS (web): audio element faqat foydalanuvchi bosishi ichida birinchi
- * marta chalinsa "ochiladi". Shuning uchun birinchi bosishda hamma effekt
- * pleerlarini jim holda bir lahza chalib, darhol to'xtatamiz — keyin ular
- * ekran almashganda ham (masalan "Dars tugadi" ochilganda) chalinadi.
- */
-let primed = false;
+/** Birinchi bosishda ochiladigan eng kerakli effektlar; qolganlari keyin. */
+const FIRST: SfxName[] = ['correct', 'wrong', 'coin', 'select', 'flip', 'match', 'complete', 'unlock'];
+
+/** Safari/iOS (web): pleerlarni foydalanuvchi bosishlari ichida "ochish" (audioUnlock.ts). */
 export function primeSfxOnFirstGesture() {
-  if (primed || typeof document === 'undefined') return;
-  primed = true;
-  const prime = () => {
-    document.removeEventListener('pointerdown', prime, true);
-    document.removeEventListener('keydown', prime, true);
-    const at = Date.now();
-    (Object.keys(SOURCES) as SfxName[]).forEach((name) => {
-      try {
-        let p = players[name];
-        if (!p) {
-          p = createAudioPlayer(SOURCES[name]);
-          players[name] = p;
-        }
-        // Shu bosishning o'zi effekt chaqirgan bo'lsa — unga tegmaymiz.
-        if ((lastPlayed[name] ?? 0) >= at) return;
-        p.volume = VOLUME[name];
-        // Jim holda oxirigacha chalinib qoladi (pause() qilinmaydi — aks holda
-        // brauzer "play() interrupted" xatosini konsolga chiqaradi). Keyingi
-        // playSfx muted=false + seekTo(0) qiladi.
-        p.muted = true;
-        p.play();
-      } catch {
-        // e'tiborsiz
-      }
-    });
-  };
-  document.addEventListener('pointerdown', prime, true);
-  document.addEventListener('keydown', prime, true);
+  const rest = (Object.keys(SOURCES) as SfxName[]).filter((n) => !FIRST.includes(n));
+  enqueuePrime([...FIRST, ...rest].map((n) => ({ key: `sfx:${n}`, get: () => player(n) })), true);
 }

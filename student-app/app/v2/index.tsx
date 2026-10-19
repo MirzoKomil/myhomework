@@ -13,7 +13,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
-import { FadeInUp, Flicker } from '@/components/v2/motion';
+import { CountUp, FadeInUp, Flicker } from '@/components/v2/motion';
+import { playSfxLater } from '@/services/sfx';
 
 import { HomeNav } from '@/components/v2/home/HomeNav';
 import { ArrowRight, BellIcon, BoltIcon, ChevronRightIcon, CoinIcon, FlameIcon, TelegramIcon } from '@/components/v2/home/icons';
@@ -31,7 +32,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { useAvatarUri } from '@/services/avatarStore';
-import { useCoins } from '@/services/coinsStore';
+import { getTotalCoins, useCoins } from '@/services/coinsStore';
 import { fetchMyProgress } from '@/services/progressSync';
 import {
   fetchDemoNotifications,
@@ -46,6 +47,8 @@ import { useCachedState } from '@/services/v2Cache';
 
 /** Kunlik chaqmoq maqsadi — dizayndagi qiymat (sozlanadigan maqsad hali yo'q). */
 const DAILY_GOAL = 50;
+/** Bosh ekrandan oxirgi chiqilgandagi coin — qaytganda o'sgan bo'lsa pill sanab ko'rsatadi. */
+let coinsSeenOnHome: number | null = null;
 const RING_C = 2 * Math.PI * 23; // ≈144.5, dizayndagi dasharray
 
 type LiveLesson = { startsAt: Date; topic: string; link: string };
@@ -94,6 +97,17 @@ export default function V2Home() {
   const p: HomePalette = scheme === 'dark' ? darkHome : lightHome;
   const { token, student } = useAuth();
   const coins = useCoins();
+  const [coinFrom, setCoinFrom] = useState<number | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      const seen = coinsSeenOnHome;
+      setCoinFrom(seen);
+      if (seen !== null && getTotalCoins() > seen) playSfxLater('coin', 450);
+      return () => {
+        coinsSeenOnHome = getTotalCoins();
+      };
+    }, []),
+  );
   const avatarUri = useAvatarUri();
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
 
@@ -213,7 +227,11 @@ export default function V2Home() {
             </View>
             <Pressable accessibilityRole="link" accessibilityLabel={`${coins} coin, doʻkon`} onPress={() => router.push(R.shop as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 4 }]}>
               <CoinIcon />
-              <Text style={[styles.pillText, { color: p.coinText }]}>{coins}</Text>
+              {coinFrom !== null && coins > coinFrom ? (
+                <CountUp key={coinFrom} value={coins} from={coinFrom} duration={700} delay={350} style={[styles.pillText, { color: p.coinText }]} />
+              ) : (
+                <Text style={[styles.pillText, { color: p.coinText }]}>{coins}</Text>
+              )}
             </Pressable>
             <Pressable accessibilityRole="link" accessibilityLabel={`Seriya ${streak} kun, holat`} onPress={() => router.push(R.streak as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 3 }]}>
               {streak > 0 ? (

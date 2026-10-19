@@ -70,7 +70,7 @@ export function MatchView({ lessonId, part, pairs, allParts, overline, replaySco
       setMatched(next);
       setSelected(null);
       run.answer(true);
-      playSfx(next.size === pairs.length ? 'complete' : 'match');
+      playSfx('match');
       if (next.size === pairs.length) {
         const accuracy = pairs.length / (pairs.length + wrongCount);
         setTimeout(() => void run.finish(Math.round(accuracy * pairs.length * 1000) / 1000), 500);

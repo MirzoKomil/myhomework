@@ -98,13 +98,21 @@ export default function MysteryScreen() {
   const type = (l: string) => {
     if (over || cur.length >= LEN) return;
     setCur((c) => c + l);
+    playSfx('tap');
     setMsg(null);
   };
-  const back = () => { if (!over) setCur((c) => c.slice(0, -1)); };
+  const back = () => {
+    if (over) return;
+    setCur((c) => c.slice(0, -1));
+    playSfx('tap');
+  };
 
   const submit = () => {
     if (over || !answer) return;
-    if (cur.length !== LEN) return setMsg(`${LEN} harfli soʻz kiriting`);
+    if (cur.length !== LEN) {
+      playSfx('wrong');
+      return setMsg(`${LEN} harfli soʻz kiriting`);
+    }
     const st = evaluate(cur, answer);
     const next = [...guesses, { word: cur, st }];
     setGuesses(next);

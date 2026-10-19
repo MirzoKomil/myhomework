@@ -54,7 +54,7 @@ export function LevelUpPopup({ visible, onClose, levelIndex = V2_TOP_LEVEL }: Pr
   useEffect(() => {
     if (visible) {
       playSfx('levelup');
-      speak('levelup', 1500);
+      speak('levelup', 2050);
     }
   }, [visible]);
 

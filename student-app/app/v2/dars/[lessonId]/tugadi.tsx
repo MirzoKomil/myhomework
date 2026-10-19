@@ -86,7 +86,7 @@ export default function CompleteScreen() {
   // Bayram: konfetti + fanfara; coin bo'lsa — sanash tugaganda "jiring".
   useEffect(() => {
     playSfx('complete');
-    speak('complete', 1300);
+    speak('complete', 1550);
   }, []);
   useEffect(() => {
     if (coins > 0) playSfxLater('coin', 1100);

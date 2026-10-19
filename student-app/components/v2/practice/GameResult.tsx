@@ -60,7 +60,7 @@ export function GameResult({ show, win, title, subtitle, stats, coins, lightning
     }
     const t = setTimeout(() => {
       setOpen(true);
-      speak(win ? 'gameWin' : 'gameLose', 300);
+      speak(win ? 'gameWin' : 'gameLose', win ? 1550 : 1050);
     }, 700);
     return () => clearTimeout(t);
   }, [show]);

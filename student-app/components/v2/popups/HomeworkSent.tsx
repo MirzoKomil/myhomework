@@ -32,12 +32,6 @@ type Props = {
 };
 
 export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, parts = [], scores = {} }: Props) {
-  useEffect(() => {
-    if (visible) {
-      playSfx('unlock');
-      speak('homework', 700);
-    }
-  }, [visible]);
   const insets = useSafeAreaInsets();
   const rows = parts.map((p) => {
     const total = partQuestionCount(p);
@@ -49,6 +43,13 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
   const coins = rows.reduce((a, r) => a + r.coins, 0);
   const mistakes = rows.reduce((a, r) => a + r.mistakes, 0);
   const pct = total ? Math.round((correct / total) * 100) : 0;
+
+  useEffect(() => {
+    if (!visible) return;
+    playSfx('unlock');
+    // "Barakalla" faqat yaxshi natijada; past natijada — yumshoq dalda.
+    speak(pct >= 70 ? 'homework' : 'wrong', 700);
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = (href: string) => {
     onClose();

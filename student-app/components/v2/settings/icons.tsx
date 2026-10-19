@@ -75,6 +75,16 @@ export function SpeakerIcon({ size = 20, color = '#2F5BFF', strokeWidth = 2 }: P
   );
 }
 
+/** "Ovozli maqtov" qatori — gapirayotgan nutq pufakchasi. */
+export function VoiceIcon({ size = 20, color = '#2F5BFF', strokeWidth = 2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-8l-4.5 3.5v-3.5H5A1.5 1.5 0 0 1 3.5 15V7A1.5 1.5 0 0 1 5 5.5z" {...line(color, strokeWidth)} />
+      <Path d="M8.5 11h.01M12 11h.01M15.5 11h.01" {...line(color, strokeWidth + 1)} />
+    </Svg>
+  );
+}
+
 /** Sozlamalar qatoridagi Telegram belgisi (to'ldirilgan). */
 export function TelegramRowIcon({ size = 20, color = '#1B6FA8' }: P) {
   return (

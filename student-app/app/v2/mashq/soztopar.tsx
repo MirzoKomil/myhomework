@@ -173,8 +173,9 @@ export default function WordSearchScreen() {
       setTimeout(() => check(next), 0);
       if (next.length > 1 && !words.some((w) => !found.includes(w.word) && w.word.startsWith(next.map((p) => board.grid[p.r][p.c]).join('')))) {
         setFlash(true);
+        playSfx('wrong');
         setTimeout(() => setFlash(false), 300);
-      }
+      } else playSfx('pop');
       return next;
     });
   };

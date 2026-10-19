@@ -7,7 +7,7 @@
  * hamma narsa darhol yakuniy holatda chiziladi.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -54,7 +54,7 @@ export function SlideUp({ children, style, distance = 80 }: { children: ReactNod
   const reduce = useReducedMotion();
   const p = useSharedValue(reduce ? 1 : 0);
   useEffect(() => {
-    if (!reduce) p.value = withSpring(1, { damping: 18, stiffness: 220, mass: 0.8 });
+    if (!reduce) p.value = withSpring(1, { damping: 18, stiffness: 220, mass: 0.8, overshootClamping: true });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const a = useAnimatedStyle(() => ({ opacity: Math.min(1, p.value * 1.6), transform: [{ translateY: (1 - p.value) * distance }] }));
   return <Animated.View style={[style, a]}>{children}</Animated.View>;
@@ -159,6 +159,8 @@ export function AnimatedFill({
 }) {
   const reduce = useReducedMotion();
   const w = useSharedValue(fromZero && !reduce ? 0 : pct);
+  // Kenglik emas, translateX animatsiya qilinadi (native'da har kadrda layout qayta hisoblanmasin).
+  const tw = useSharedValue(0);
   useEffect(() => {
     if (reduce) {
       w.value = pct;
@@ -166,30 +168,25 @@ export function AnimatedFill({
     }
     w.value = withDelay(delay, withTiming(pct, { duration: 520, easing: ease.out }));
   }, [pct]); // eslint-disable-line react-hooks/exhaustive-deps
-  const a = useAnimatedStyle(() => ({ width: `${Math.max(0, Math.min(100, w.value))}%` }));
-  return <Animated.View style={[{ height, borderRadius: radius, backgroundColor: color }, a]} />;
+  const onLayout = (e: LayoutChangeEvent) => {
+    const v = e.nativeEvent.layout.width;
+    tw.value = v;
+  };
+  const a = useAnimatedStyle(() => {
+    const k = Math.max(0, Math.min(100, w.value)) / 100;
+    return tw.value
+      ? { width: '100%', transform: [{ translateX: -(1 - k) * tw.value }] }
+      : { width: `${k * 100}%`, transform: [{ translateX: 0 }] };
+  });
+  return (
+    <View onLayout={onLayout} style={{ height, borderRadius: radius, overflow: 'hidden', alignSelf: 'stretch' }}>
+      <Animated.View style={[{ height, borderRadius: radius, backgroundColor: color }, a]} />
+    </View>
+  );
 }
 
-/** Raqam 0 dan (yoki `from` dan) qiymatgacha sanaladi: "+28 coin", "472". */
-export function CountUp({
-  value,
-  from = 0,
-  duration = 900,
-  delay = 0,
-  prefix = '',
-  suffix = '',
-  format = (n: number) => String(n),
-  style,
-}: {
-  value: number;
-  from?: number;
-  duration?: number;
-  delay?: number;
-  prefix?: string;
-  suffix?: string;
-  format?: (n: number) => string;
-  style?: StyleProp<TextStyle>;
-}) {
+/** Raqamni 0 dan (yoki `from` dan) qiymatgacha silliq sanaydigan hook (CountUp, foiz halqalari). */
+export function useCountUp(value: number, { from = 0, duration = 900, delay = 0 }: { from?: number; duration?: number; delay?: number } = {}) {
   const reduce = useReducedMotion();
   const [n, setN] = useState(reduce ? value : from);
   useEffect(() => {
@@ -215,6 +212,30 @@ export function CountUp({
       cancelAnimationFrame(raf);
     };
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  return n;
+}
+
+/** Raqam 0 dan (yoki `from` dan) qiymatgacha sanaladi: "+28 coin", "472". */
+export function CountUp({
+  value,
+  from = 0,
+  duration = 900,
+  delay = 0,
+  prefix = '',
+  suffix = '',
+  format = (n: number) => String(n),
+  style,
+}: {
+  value: number;
+  from?: number;
+  duration?: number;
+  delay?: number;
+  prefix?: string;
+  suffix?: string;
+  format?: (n: number) => string;
+  style?: StyleProp<TextStyle>;
+}) {
+  const n = useCountUp(value, { from, duration, delay });
   return <Text style={style}>{`${prefix}${format(n)}${suffix}`}</Text>;
 }
 
@@ -235,8 +256,11 @@ export function Bounce({ children, delay = 0, style, height = 14 }: { children: 
   const reduce = useReducedMotion();
   const y = useSharedValue(0);
   const sc = useSharedValue(reduce ? 1 : 0.6);
+  const op = useSharedValue(reduce ? 1 : 0);
   useEffect(() => {
     if (reduce) return;
+    // Kechikish paytida kichraygan rasm ko'rinib turmasin — u ham shaffofdan chiqadi.
+    op.value = withDelay(delay, withTiming(1, { duration: 160 }));
     sc.value = withDelay(delay, withSpring(1, { damping: 8, stiffness: 200 }));
     y.value = withDelay(
       delay + 120,
@@ -248,7 +272,7 @@ export function Bounce({ children, delay = 0, style, height = 14 }: { children: 
       ),
     );
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const a = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }, { scale: sc.value }] }));
+  const a = useAnimatedStyle(() => ({ opacity: op.value, transform: [{ translateY: y.value }, { scale: sc.value }] }));
   return <Animated.View style={[style, a]}>{children}</Animated.View>;
 }
 
@@ -291,29 +315,27 @@ function ConfettiPiece({ p, height, width }: { p: Piece; height: number; width: 
   return <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: p.w, height: p.round ? p.w : p.h, borderRadius: p.round ? p.w / 2 : 2, backgroundColor: p.color }, a]} />;
 }
 
-/** Bir martalik konfetti yomg'iri (dars tugadi, yangi daraja). Bezak — bosishlarni to'smaydi. */
-export function Confetti({ count = 46, width = 390, height = 844, seed = 7 }: { count?: number; width?: number; height?: number; seed?: number }) {
+/** Bir martalik konfetti yomg'iri (dars tugadi, yangi daraja). Bezak — bosishlarni to'smaydi. O'lcham — joylashgan konteynerdan. */
+export function Confetti({ count = 46, seed = 7 }: { count?: number; seed?: number }) {
   const reduce = useReducedMotion();
-  const pieces = useMemo(() => makePieces(count, seed), [count, seed]);
+  const win = useWindowDimensions();
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const n = size && size.w > 700 ? Math.round(count * 1.8) : count;
+  const pieces = useMemo(() => makePieces(n, seed), [n, seed]);
   if (reduce) return null;
+  const w = size?.w ?? win.width;
+  const h = size?.h ?? win.height;
   return (
-    <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFill, { overflow: 'hidden', zIndex: 50 }]}>
-      {pieces.map((p, i) => (
-        <ConfettiPiece key={i} p={p} width={width} height={height} />
-      ))}
+    <View
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+      style={[StyleSheet.absoluteFill, { overflow: 'hidden', zIndex: 50 }]}
+    >
+      {size ? pieces.map((p, i) => <ConfettiPiece key={i} p={p} width={w} height={h} />) : null}
     </View>
   );
-}
-
-/** Bosilganda yengil kichrayish (Pressable ichidagi kontent uchun). */
-export function usePressScale(pressed: boolean) {
-  const reduce = useReducedMotion();
-  const s = useSharedValue(1);
-  useEffect(() => {
-    if (reduce) return;
-    s.value = withTiming(pressed ? 0.97 : 1, { duration: pressed ? 80 : 160 });
-  }, [pressed]); // eslint-disable-line react-hooks/exhaustive-deps
-  return useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
 }
 
 export { Animated };
