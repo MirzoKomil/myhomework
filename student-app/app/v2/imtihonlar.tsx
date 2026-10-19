@@ -138,7 +138,8 @@ export default function ExamsScreen() {
               const i = indexOf(e);
               const from = e.requiredLessons - 12;
               const inRange = Math.max(0, Math.min(12, lessonsDone - from));
-              const left = Math.max(0, e.requiredLessons - lessonsDone);
+              // Dizayndagidek: bugungi darsdan imtihon darsigacha qolgan darslar (36 − 32 = 4).
+              const left = Math.max(0, e.requiredLessons - (today ?? lessonsDone));
               const open = unlocked(e);
               return (
                 <Pressable accessibilityRole="button" disabled={!open} onPress={() => openExam(e)} style={({ pressed }) => [st.next, pressed && st.pressed]}>
