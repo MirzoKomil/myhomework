@@ -217,8 +217,9 @@ const styles = StyleSheet.create({
   chip: { height: 28, paddingHorizontal: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 3 },
   chipText: { fontFamily: fonts.bodyHeavy, fontSize: 12, fontWeight: 'normal' },
   btns: { paddingTop: 14, flexDirection: 'row', gap: 10 },
-  again: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  // Dizayndagi <button> brauzerning standart 6px yon paddingi bilan chiziladi (eni 158 : 182) — shu aynan takrorlanadi.
+  again: { flexGrow: 1, flexBasis: 12, paddingHorizontal: 6, height: 56, borderRadius: 18, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   againText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#0B1220', fontWeight: 'normal' },
-  know: { flex: 1.25, height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 5px 0 #1E3FD1' } as object,
+  know: { flexGrow: 1.25, flexBasis: 0, height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 5px 0 #1E3FD1' } as object,
   knowText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#FFFFFF', fontWeight: 'normal' },
 });

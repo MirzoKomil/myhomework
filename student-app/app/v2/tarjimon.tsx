@@ -246,12 +246,12 @@ const styles = StyleSheet.create({
   swap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center' },
 
   srcCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, gap: 10 },
-  label: { fontFamily: fonts.bodyHeavy, fontSize: 12, lineHeight: 16, letterSpacing: 0.72, textTransform: 'uppercase', color: '#4A5468', ...reset },
-  src: { minHeight: 27, fontFamily: fonts.bodyBold, fontSize: 20, lineHeight: 27, color: '#0B1220', padding: 0, textAlignVertical: 'top', outlineStyle: 'none' } as object,
+  label: { fontFamily: fonts.bodyHeavy, fontSize: 12, lineHeight: 16.4, letterSpacing: 0.72, textTransform: 'uppercase', color: '#4A5468', ...reset },
+  src: { minHeight: 27.3, fontFamily: fonts.bodyBold, fontSize: 20, lineHeight: 27.3, color: '#0B1220', padding: 0, textAlignVertical: 'top', outlineStyle: 'none' } as object,
 
   outCard: { backgroundColor: '#0B1220', borderRadius: 24, padding: 18, gap: 8 },
   out: { fontFamily: displayRu, fontSize: 28, lineHeight: 32.2, color: '#FFFFFF', ...reset },
-  translit: { fontFamily: fonts.body, fontSize: 15, lineHeight: 20, color: '#B8C1D6', ...reset },
+  translit: { fontFamily: fonts.body, fontSize: 15, lineHeight: 20.5, color: '#B8C1D6', ...reset },
   outActions: { flexDirection: 'row', gap: 8, marginTop: 6 },
   listen: { height: 44, paddingHorizontal: 14, borderRadius: 14, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', gap: 6 },
   savedChip: { height: 44, paddingHorizontal: 14, borderRadius: 14, backgroundColor: 'rgba(46, 204, 138, 0.16)', flexDirection: 'row', alignItems: 'center', gap: 6 },

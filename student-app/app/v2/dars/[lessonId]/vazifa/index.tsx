@@ -131,7 +131,7 @@ export default function HomeworkScreen() {
 
   return (
     <View style={st.screen}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         <View style={[st.column, { paddingTop: Math.max(insets.top, 44) + 10, flexGrow: 1 }]}>
           <View style={st.header}>
             <Pressable
@@ -268,7 +268,7 @@ export default function HomeworkScreen() {
                   const others = b.options.filter((o) => o !== b.answer);
                   return (
                     <View key={b.id} style={st.rememberRow}>
-                      <Txt f="bodyHeavy" size={15} lang="ru" style={{ flexShrink: 1 }}>
+                      <Txt f="bodyHeavy" size={15} lang="ru" style={{ flex: 1 }}>
                         {before}
                         <Txt f="bodyHeavy" size={15} color="#1E3FD1">
                           {b.answer}
@@ -276,7 +276,7 @@ export default function HomeworkScreen() {
                         {rest.join(b.answer)}
                       </Txt>
                       {others.length > 0 && (
-                        <Txt f="body" size={13} color="#4A5468">
+                        <Txt f="body" size={13} color="#4A5468" style={{ flexShrink: 0, maxWidth: '45%' }}>
                           (
                           <Txt f="body" size={13} color="#4A5468" lang="ru">
                             {others.join(', ')}
@@ -318,7 +318,11 @@ export default function HomeworkScreen() {
               </View>
             )}
           </View>
+        </View>
+      </ScrollView>
 
+      {/* Pastki tugmalar dizayndagidek doim ko'rinadi (ro'yxat ustida aylanmaydi). */}
+      <View style={st.column}>
           <View style={[st.footer, { paddingBottom: Math.max(28, insets.bottom + 14) }]}>
             <Pressable
               accessibilityRole="button"
@@ -343,8 +347,7 @@ export default function HomeworkScreen() {
               </Txt>
             </Pressable>
           </View>
-        </View>
-      </ScrollView>
+      </View>
       <HomeworkSentPopup
         visible={sentOpen}
         onClose={() => setSentOpen(false)}
@@ -363,7 +366,7 @@ const st = StyleSheet.create({
   pressed: { opacity: 0.85 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20 },
   back: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  body: { flex: 1, paddingTop: 16, paddingHorizontal: 20, gap: 10 },
+  body: { flex: 1, paddingTop: 16, paddingHorizontal: 20, paddingBottom: 10, gap: 10 },
   deadline: { backgroundColor: '#0B1220', borderRadius: 24, paddingVertical: 16, paddingHorizontal: 18, gap: 10 },
   coinPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1B2438', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 },
   seg: { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#26304A', overflow: 'hidden' },

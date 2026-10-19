@@ -107,14 +107,14 @@ export default function CompleteScreen() {
           <View style={styles.grid}>
             <View style={styles.stat}>
               <CoinIcon />
-              <View>
+              <View style={styles.statText}>
                 <Text style={[styles.statNum, { color: '#7A5300' }]}>+{coins} coin</Text>
                 <Text style={styles.statLabel} numberOfLines={1}>+{coins} vazifa · +0 dars</Text>
               </View>
             </View>
             <View style={styles.stat}>
               <BoltIcon />
-              <View>
+              <View style={styles.statText}>
                 <Text style={[styles.statNum, { color: '#5A2FD6' }]}>+{coins}</Text>
                 <Text style={styles.statLabel}>chaqmoq</Text>
               </View>
@@ -174,14 +174,16 @@ const styles = StyleSheet.create({
   hero: { width: 156, height: 128, borderRadius: 78, backgroundColor: '#FFF4D1', alignItems: 'center', justifyContent: 'center', marginTop: -30 },
   attended: { alignSelf: 'center', marginTop: 4, height: 32, paddingHorizontal: 12, borderRadius: 16, backgroundColor: '#E3F7EE', flexDirection: 'row', alignItems: 'center', gap: 6 },
   attendedText: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#075E3A', fontWeight: 'normal' },
-  h1: { fontFamily: fonts.display, fontSize: 32, lineHeight: 38, letterSpacing: -0.64, color: '#0B1220', textAlign: 'center', fontWeight: 'normal' },
-  sub: { fontFamily: fonts.body, fontSize: 15, lineHeight: 20, color: '#4A5468', textAlign: 'center', fontWeight: 'normal' },
+  h1: { fontFamily: fonts.display, fontSize: 32, lineHeight: 40, letterSpacing: -0.64, color: '#0B1220', textAlign: 'center', fontWeight: 'normal' },
+  sub: { fontFamily: fonts.body, fontSize: 15, lineHeight: 20.5, color: '#4A5468', textAlign: 'center', fontWeight: 'normal' },
   streak: { alignSelf: 'stretch', backgroundColor: '#FFF1E6', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
   streakTitle: { fontFamily: fonts.bodyHeavy, fontSize: 17, color: '#0B1220', fontWeight: 'normal' },
   small: { fontFamily: fonts.body, fontSize: 13, color: '#4A5468', fontWeight: 'normal' },
   streakNum: { fontFamily: fonts.display, fontSize: 34, color: '#B34700', fontWeight: 'normal' },
   grid: { alignSelf: 'stretch', flexDirection: 'row', gap: 12 },
-  stat: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // Dizayndagi "1fr 1fr" to'r: matn sig'masa ustun kengayadi (min-width: auto).
+  stat: { flexGrow: 1, flexBasis: 0, minWidth: 'auto', backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  statText: { minWidth: 'auto' },
   statNum: { fontFamily: fonts.display, fontSize: 24, lineHeight: 28, fontWeight: 'normal' },
   statLabel: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#4A5468', fontWeight: 'normal' },
   goal: { alignSelf: 'stretch', backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 12, paddingHorizontal: 16, gap: 8 },

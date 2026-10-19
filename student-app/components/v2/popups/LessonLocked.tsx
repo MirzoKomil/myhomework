@@ -84,7 +84,7 @@ export function LessonLockedPopup({
       <View style={st.root}>
         <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={onClose} style={[StyleSheet.absoluteFill, st.backdrop]} />
         <View style={st.column}>
-          <View accessibilityViewIsModal style={[st.sheet, { paddingBottom: Math.max(34, insets.bottom + 12) }]}>
+          <View accessibilityViewIsModal style={[st.sheet, { paddingBottom: Math.max(29, insets.bottom + 12) }]}>
             <ScrollView bounces={false} contentContainerStyle={st.inner} showsVerticalScrollIndicator={false}>
               <View style={st.grip} />
               <View style={st.closeRow}>
@@ -169,7 +169,7 @@ const st = StyleSheet.create({
   body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21.75, color: '#4A5468', fontWeight: 'normal' },
   bodyBold: { fontFamily: fonts.bodyHeavy, color: '#0B1220' },
   list: { padding: 6, backgroundColor: '#F4F6FA', borderRadius: 18, gap: 2 },
-  row: { borderRadius: 12, minHeight: 40, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  row: { borderRadius: 12, minHeight: 48, paddingVertical: 4, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
   circle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   circleTodo: { borderWidth: 2, borderColor: '#C9D0DC' },
   num: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#4A5468', fontWeight: 'normal' },

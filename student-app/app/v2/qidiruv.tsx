@@ -188,7 +188,8 @@ export default function SearchScreen() {
                 </View>
               )}
 
-              <View style={[styles.block, { marginTop: noResults ? 20 : 0 }]}>
+              {/* Dizaynda ustun gap 12 + margin-top 20 = 32 */}
+              <View style={[styles.block, { marginTop: noResults ? 32 : 0 }]}>
                 <Text accessibilityRole="header" style={styles.h2}>BALKI SHULAR KERAKDIR</Text>
                 <View style={styles.chips}>
                   <Pressable accessibilityRole="link" onPress={() => go(R.grammarList)} style={styles.chip}>
@@ -211,7 +212,7 @@ export default function SearchScreen() {
               </View>
 
               {recent.length > 0 && (
-                <View style={[styles.block, { marginTop: 18 }]}>
+                <View style={[styles.block, { marginTop: 30 }]}>
                   <Text accessibilityRole="header" style={styles.h2}>OXIRGI QIDIRUVLAR</Text>
                   <View style={styles.list}>
                     {recent.map((r, i) => (
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: 12 },
   mascotRing: { width: 176, height: 176, borderRadius: 88, backgroundColor: '#E8EEFF', alignItems: 'center', justifyContent: 'center' },
   mascot: { width: 140, height: 140 },
-  h1: { marginTop: 8, fontFamily: fonts.display, fontSize: 26, lineHeight: 34, letterSpacing: -0.52, color: '#0B1220', textAlign: 'center', ...reset },
+  h1: { marginTop: 8, fontFamily: fonts.display, fontSize: 26, lineHeight: 31, letterSpacing: -0.52, color: '#0B1220', textAlign: 'center', ...reset },
   p: { maxWidth: 310, fontFamily: fonts.body, fontSize: 15, lineHeight: 22.5, color: '#4A5468', textAlign: 'center', ...reset },
 
   block: { gap: 10 },

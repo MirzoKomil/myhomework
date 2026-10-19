@@ -202,8 +202,9 @@ const styles = StyleSheet.create({
   kRu: { fontFamily: fonts.bodyHeavy, fontSize: 15, lineHeight: 21, color: '#0B1220', fontWeight: 'normal' },
   kUz: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: '#4A5468', fontWeight: 'normal' },
   btns: { flexDirection: 'row', gap: 10 },
-  secondary: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  secondary: { flexGrow: 1, flexBasis: 0, height: 56, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   secondaryText: { fontFamily: fonts.bodyHeavy, fontSize: 15, color: '#0B1220', fontWeight: 'normal' },
-  primary: { flex: 1.4, height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  // Dizayndagi <button> brauzerning standart 6px yon paddingi bilan chiziladi (eni 137 : 203) — shu aynan takrorlanadi.
+  primary: { flexGrow: 1.4, flexBasis: 12, paddingHorizontal: 6, height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   primaryText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#FFFFFF', fontWeight: 'normal' },
 });

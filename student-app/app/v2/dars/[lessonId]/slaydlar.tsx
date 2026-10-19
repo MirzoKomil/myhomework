@@ -23,12 +23,13 @@ import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
 export default function SlidesScreen() {
-  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  const { lessonId, i: start } = useLocalSearchParams<{ lessonId: string; i?: string }>();
   const id = String(lessonId);
   const [content, setContent] = useState<LessonContent | null>(null);
   const [info, setInfo] = useState<{ number: number; isVideo: boolean } | null>(null);
   const [error, setError] = useState(false);
-  const [active, setActive] = useState(0);
+  // ?i=<raqam> — shu slayddan ochish (to'liq ekrandan qaytganda ham).
+  const [active, setActive] = useState(() => Math.max(0, Number(start) || 0));
   const [live, setLive] = useState<{ startsAt: Date | null; link: string }>({ startsAt: null, link: '' });
   const thumbsRef = useRef<ScrollView>(null);
 
@@ -59,7 +60,7 @@ export default function SlidesScreen() {
 
   const slides = content?.slides ?? [];
   const total = slides.length;
-  const cur = slides[active];
+  const cur = slides[Math.min(active, Math.max(0, total - 1))];
   const go = (i: number) => {
     const n = Math.max(0, Math.min(total - 1, i));
     setActive(n);

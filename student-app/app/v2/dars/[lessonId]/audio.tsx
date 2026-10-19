@@ -336,7 +336,8 @@ export default function AudioDialogScreen() {
               onPress={() => goTrack(trackIdx + 1)}
               style={({ pressed }) => [styles.cta, pressed && { backgroundColor: '#1E3FD1' }]}
             >
-              <Text style={styles.ctaText} numberOfLines={1}>Keyingi dialog · {nextTrack.title}</Text>
+              <Text style={styles.ctaText}>Keyingi dialog ·</Text>
+              <Text style={styles.ctaText} numberOfLines={1}>{nextTrack.title}</Text>
               <ArrowRight strokeWidth={2.6} />
             </Pressable>
           ) : (

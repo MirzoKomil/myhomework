@@ -112,7 +112,8 @@ export const fonts = {
   display: isWeb
     ? webStack('BricolageGrotesque_800ExtraBold', 'Manrope_800ExtraBold')
     : 'BricolageGrotesque_800ExtraBold',
-  displayCyrillic: 'Manrope_800ExtraBold',
+  // Webda system-ui zaxira: Manrope'da urg'u belgisi (U+0301) yo'q.
+  displayCyrillic: isWeb ? webStack('Manrope_800ExtraBold', 'Manrope_800ExtraBold') : 'Manrope_800ExtraBold',
   body: isWeb ? webStack('Manrope_600SemiBold', 'Manrope_600SemiBold') : 'Manrope_600SemiBold',
   bodyMedium: isWeb ? webStack('Manrope_500Medium', 'Manrope_500Medium') : 'Manrope_500Medium',
   bodyBold: isWeb ? webStack('Manrope_700Bold', 'Manrope_700Bold') : 'Manrope_700Bold',

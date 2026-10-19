@@ -103,7 +103,7 @@ export default function DialogListScreen() {
                 <View style={styles.heroTag}>
                   <T w={800} size={11} color="#1E3FD1" style={{ textTransform: 'uppercase', letterSpacing: 0.55 }}>Bugungi dars bilan bogʻliq</T>
                 </View>
-                <Display size={22} ls={-0.01} lh={1.36} color="#FFFFFF">{related.title}</Display>
+                <Display size={22} ls={-0.01} lh={1.2} color="#FFFFFF">{related.title}</Display>
                 <T w={700} size={13} color="#F0F3FF" lh={1.35}>
                   {LEVEL[related.level]} · {h} / {n} eshitilgan{going ? `\n${h + 1}-dialog davom etmoqda` : ''}
                 </T>
