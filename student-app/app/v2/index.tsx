@@ -27,7 +27,7 @@ import { ServerError } from '@/components/v2/states/ServerError';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import { BATTLE_WIN_COINS } from '@/data/mock';
+import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import {
@@ -364,7 +364,7 @@ export default function V2Home() {
                 </View>
                 <View style={styles.quickText}>
                   <Text style={[styles.quickTitle, { color: p.text }]}>Yuzma-yuz oʻyin</Text>
-                  <Text style={[styles.quickSub, { color: p.muted }]}>+{BATTLE_WIN_COINS} coin</Text>
+                  <Text style={[styles.quickSub, { color: p.muted }]}>+{V2_BATTLE_WIN_COINS} coin</Text>
                 </View>
               </Pressable>
             </View>

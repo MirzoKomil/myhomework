@@ -2,8 +2,8 @@
  * "Streak himoyasi sotib olindi" (dizayn: 55 · Popup · xarid tasdiqlandi).
  *
  * StreakConfirm → "Tasdiqlash" dan keyin ochiladi. Streak himoyasi
- * serverda YO'Q — shuning uchun oyna dizayndagidek "Namuna: xarid
- * tasdiqlanganda" belgisi bilan ko'rsatiladi va coin yechilmaydi.
+ * serverda YO'Q — shuning uchun coin yechilmaydi ("Namuna" belgisi
+ * o'quvchiga ko'rsatilmaydi — egasi qarori).
  * Narx va balans (hozirgi → narxdan keyingi) — haqiqiy coinsStore'dan.
  */
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -23,7 +23,7 @@ export function OrderSuccessPopup({ visible, price, onClose }: Props) {
 
   return (
     <BottomSheet visible={visible} onClose={back} labelledBy="Streak himoyasi sotib olindi">
-      <SheetTop sample="Namuna: xarid tasdiqlanganda" onClose={back} />
+      <SheetTop onClose={back} />
       <View style={styles.head}>
         <View>
           <Image source={designImages.f1f2b5015be3aab0bfaac974e1e01af0} accessibilityLabel="Qalqon ushlagan Domik" style={{ width: 130, height: 129 }} resizeMode="contain" />

@@ -54,6 +54,7 @@ import {
 } from '@/services/contentApi';
 import { useExamResults } from '@/services/examStore';
 import { useLightning } from '@/services/lightningStore';
+import { useV2Level } from '@/constants/v2/levels';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
 
 const formatStudentId = (value?: string) => {
@@ -79,6 +80,8 @@ export default function V2Profile() {
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
   const avatarUri = useAvatarUri();
   const lightning = useLightning();
+  // Daraja — v2 oraliqlari, hech qachon pasaymaydi (constants/v2/levels).
+  const v2Level = useV2Level();
   const examResults = useExamResults();
   const coins = useCoins();
 
@@ -112,7 +115,7 @@ export default function V2Profile() {
 
   if (!token && !isEmbedded) return <Redirect href="/v2/login" />;
 
-  const lvl = levelInfo(lightning);
+  const lvl = levelInfo(v2Level);
   const live = liveAttendance(schedule, grades);
   const avg = gradeAverage(grades);
   const certs = certificateStates(examResults, lessonsDone);

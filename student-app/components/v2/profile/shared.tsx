@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { fonts } from '@/constants/v2/tokens';
 import { CERTIFICATES } from '@/data/certificates';
-import { getLevelProgress } from '@/data/levels';
+import type { V2LevelProgress } from '@/constants/v2/levels';
 import type { DemoScheduleResponse, LiveGradeEntry } from '@/services/contentApi';
 import type { ExamResult } from '@/services/examStore';
 
@@ -87,11 +87,10 @@ export const LEVEL_UI = [
   { name: 'Domwork afsonasi', img: 'f561781d559c63b7ef26fcbf36820493' },
 ] as const;
 
-export function levelInfo(lightning: number) {
-  const p = getLevelProgress(lightning);
-  const keys = ['spark', 'apprentice', 'scholar', 'master', 'legend'];
-  const idx = Math.max(0, keys.indexOf(p.level.key));
-  return { ...p, index: idx, ui: LEVEL_UI[idx], nextUi: idx < 4 ? LEVEL_UI[idx + 1] : null };
+/** v2 daraja (useV2Level — yangi oraliqlar + "pasaytirmaslik") → dizayn nomi/nishoni. */
+export function levelInfo(p: V2LevelProgress) {
+  const idx = Math.max(0, Math.min(LEVEL_UI.length - 1, p.index));
+  return { ...p, index: idx, ui: LEVEL_UI[idx], nextUi: idx < LEVEL_UI.length - 1 ? LEVEL_UI[idx + 1] : null };
 }
 
 /*

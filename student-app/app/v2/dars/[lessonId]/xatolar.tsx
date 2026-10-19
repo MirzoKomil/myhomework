@@ -120,9 +120,6 @@ export default function MistakeReviewScreen() {
           <>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={st.body} showsVerticalScrollIndicator={false}>
               <View style={{ gap: 4 }}>
-                <Txt f="bodyHeavy" size={12} color="#4A5468" style={st.chip}>
-                  Namuna: vazifa topshirilgach
-                </Txt>
                 <Txt f="display" size={26} lh={28.6} style={{ letterSpacing: -0.52 }} accessibilityRole="header">
                   Xatolar ustida ishlash · {total} ta
                 </Txt>
@@ -242,7 +239,6 @@ const st = StyleSheet.create({
   column: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   body: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 20, gap: 14 },
-  chip: { alignSelf: 'flex-start', backgroundColor: '#E2E6EE', paddingVertical: 3, paddingHorizontal: 10, borderRadius: 10, overflow: 'hidden' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   prevRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
   nextCard: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },

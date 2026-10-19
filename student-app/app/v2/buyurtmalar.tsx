@@ -26,7 +26,8 @@ import { CoinBar, ProductImage } from '@/components/v2/rewards/shopParts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import { BATTLE_WIN_COINS, DELIVERY_STAGE_LABELS } from '@/data/mock';
+import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
+import { DELIVERY_STAGE_LABELS } from '@/data/mock';
 import { useCoins } from '@/services/coinsStore';
 import { useOrders, type ShopOrder } from '@/services/shopStore';
 
@@ -34,7 +35,7 @@ import { useOrders, type ShopOrder } from '@/services/shopStore';
 const EARN: [string, string][] = [
   ['Uyga vazifa', EARN_HOMEWORK],
   ['Dars yakuni', `+${EARN_LESSON_DONE}`],
-  ['Yuzma-yuz gʻalaba', `+${BATTLE_WIN_COINS}`],
+  ['Yuzma-yuz gʻalaba', `+${V2_BATTLE_WIN_COINS}`],
   ['Bonus dars', `+${EARN_BONUS_LESSON}`],
   ['Doʻst taklifi', `+${EARN_REFERRAL}`],
   ['Liga top-5', `+${EARN_LEAGUE_TOP5}`],

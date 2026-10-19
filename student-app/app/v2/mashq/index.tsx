@@ -17,7 +17,7 @@ import { PracticeNav, fmtTime, getMyWords, reset, useCurrentLesson, useMistakeCo
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import { BATTLE_WIN_COINS } from '@/data/mock';
+import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { fetchMobileContent } from '@/services/contentApi';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
@@ -120,7 +120,7 @@ export default function PracticeScreen() {
             </View>
             <Text style={styles.battleTitle}>Yuzma-yuz</Text>
             <Text style={styles.battleSub}>
-              {lesson ? `${lesson.number}-dars soʻzlari` : 'Dars soʻzlari'} · gʻolib +{BATTLE_WIN_COINS} coin
+              {lesson ? `${lesson.number}-dars soʻzlari` : 'Dars soʻzlari'} · gʻolib +{V2_BATTLE_WIN_COINS} coin
             </Text>
             <View style={styles.findBtn}>
               <Text style={styles.findText}>Raqib topish</Text>

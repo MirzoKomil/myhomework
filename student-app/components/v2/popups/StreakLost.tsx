@@ -2,7 +2,7 @@
  * "Seriya uzildi" (dizayn: 80 · Popup · seriya uzildi).
  *
  * FAQ'dagi "seriya uzilsa nima bo'ladi?" havolasidan ochiladigan
- * NAMUNA oyna (dizayndagi "Namuna: dars qoldirilganda" belgisi bilan):
+ * namuna oyna ("Namuna" belgisi o'quvchiga ko'rsatilmaydi — egasi qarori):
  * streak serverda kuzatilmaydi, shuning uchun raqamlar (6 kun → 0)
  * o'quvchining emas — dizayndagi tushuntirish misoli. Host: /v2/streak?popup=lost.
  */
@@ -39,7 +39,7 @@ export function StreakLostPopup({ visible, onClose }: Props) {
 
   return (
     <BottomSheet visible={visible} onClose={onClose} paddingBottom={34} labelledBy="Seriya uzildi">
-      <SheetTop sample="Namuna: dars qoldirilganda" onClose={onClose} />
+      <SheetTop onClose={onClose} />
       <View style={styles.head}>
         <Image source={designImages['78f533d49645c292f499fbc1b6168dd2']} accessibilityLabel="Uxlab qolgan Domik" style={{ width: 128, height: 128 }} resizeMode="contain" />
         <Text accessibilityRole="header" style={[sheetText.title, { lineHeight: 28.6 }]}>Seriya uzildi</Text>

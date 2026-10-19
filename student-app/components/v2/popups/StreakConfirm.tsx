@@ -4,7 +4,7 @@
  * Do'kondagi "Ilova bonusi → 150" tugmasidan ochiladi, "Tasdiqlash" →
  * OrderSuccess. Balans — haqiqiy coinsStore. Streak himoyasi serverda
  * YO'Q (streak kuzatilmaydi), shuning uchun tasdiqlash coin yechmaydi —
- * keyingi oyna dizayndagidek "Namuna" sifatida ko'rsatiladi. Coin
+ * keyingi oyna (OrderSuccess) "Namuna" belgisisiz ochiladi. Coin
  * yetmasa tugma ShopItem'dagidek qulflangan holatda bo'ladi.
  */
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';

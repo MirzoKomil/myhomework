@@ -1,12 +1,12 @@
 /**
  * v2 Darajalar (dizayn: 41 · Levels).
  *
- * Eski profile/levels.tsx bilan bir xil manba: chaqmoq soni
- * (lightningStore) va data/levels.ts dagi oraliqlar. "Taxminan N kun" —
+ * Chaqmoq soni — lightningStore; oraliqlar — v2 (constants/v2/levels),
+ * daraja hech qachon pasaymaydi (qurilmada saqlangan eng yuqori daraja). "Taxminan N kun" —
  * dizayndagi "Kunlik maqsad: 50 ta" stavkasidan hisoblanadi.
  * "Afsona yulduzlari" (eng yuqori darajadan keyin har 1 000 chaqmoqda
  * +1 ★) — eng yuqori darajaga yetguncha qulflangan.
- * ?popup=levelup — "Darajaga chiqqanda nima bo'ladi?" namuna oynasi.
+ * ?popup=levelup — "Darajaga chiqqanda nima bo'ladi?" oynasi (keyingi daraja bilan).
  */
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -17,23 +17,22 @@ import { BoltFill, ChevronRightIcon, LockIcon, StarFill, TICK2, TickIcon } from 
 import { fmt, ScreenHeader } from '@/components/v2/rewards/parts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import { getLevelProgress, LEVELS } from '@/data/levels';
+import { useV2Level, V2_LEVELS, V2_TOP_LEVEL } from '@/constants/v2/levels';
 import { useLang } from '@/i18n/LanguageContext';
-import { useLightning } from '@/services/lightningStore';
 
 const PER_DAY = 50;
 
 export default function V2Levels() {
-  const lightning = useLightning();
   const { courseLang } = useLang();
-  const progress = getLevelProgress(lightning);
-  const curIdx = LEVELS.findIndex((l) => l.key === progress.level.key);
+  const progress = useV2Level();
+  const { lightning } = progress;
+  const curIdx = progress.index;
   const [popup, setPopup] = useState(false);
   const params = useLocalSearchParams<{ popup?: string }>();
   useEffect(() => {
     if (params.popup === 'levelup') setPopup(true);
   }, [params.popup]);
-  const legendReached = curIdx === LEVELS.length - 1;
+  const legendReached = curIdx === V2_TOP_LEVEL;
 
   return (
     <View style={styles.screen}>
@@ -72,8 +71,9 @@ export default function V2Levels() {
           </View>
 
           <View style={styles.list}>
-            {LEVELS.map((l, i) => {
-              const reached = lightning >= l.min;
+            {V2_LEVELS.map((l, i) => {
+              // Saqlangan (pasaymaydigan) daraja ham erishilgan hisoblanadi.
+              const reached = i <= curIdx || lightning >= l.min;
               const current = i === curIdx;
               return (
                 <View key={l.key} style={[styles.row, styles.rowBorder, current && { backgroundColor: '#F0EBFF' }]}>
@@ -117,8 +117,8 @@ export default function V2Levels() {
           </Pressable>
         </View>
       </ScrollView>
-      {/* Namuna: dizayndagi misol aynan ("5 · Domwork afsonasi"). */}
-      <LevelUpPopup visible={popup} onClose={() => setPopup(false)} sample />
+      {/* O'quvchining keyingi darajasi (eng yuqorida — o'zi). */}
+      <LevelUpPopup visible={popup} onClose={() => setPopup(false)} levelIndex={Math.min(curIdx + 1, V2_TOP_LEVEL)} />
     </View>
   );
 }

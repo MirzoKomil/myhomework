@@ -1,20 +1,19 @@
 /**
  * "Yangi daraja!" oynasi (dizayn: 42 · LevelUp).
  *
- * Darajalar eski data/levels.ts dan (chaqmoq oralig'i bo'yicha). Birinchi
- * kartada — shu darajaning boshlang'ich "jami chaqmoq" qiymati. Darajalar
- * ekranidan "Darajaga chiqqanda nima bo'ladi?" orqali NAMUNA sifatida
- * ochiladi (sample — "Namuna: yangi darajaga chiqqanda" belgisi); yopish va
- * "Darajalarga qaytish" Darajalar ekraniga qaytaradi (oyna o'sha ekran ustida).
+ * Darajalar — v2 oraliqlari (constants/v2/levels). Birinchi kartada — shu
+ * darajaning boshlang'ich "jami chaqmoq" qiymati. Darajalar ekranidan
+ * "Darajaga chiqqanda nima bo'ladi?" orqali o'quvchining KEYINGI darajasi
+ * bilan ochiladi ("Namuna" belgisi o'quvchiga ko'rsatilmaydi — egasi
+ * qarori); yopish va "Darajalarga qaytish" Darajalar ekraniga qaytaradi.
  */
 import { Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BoltFill, CloseIcon } from '@/components/v2/rewards/icons';
 import { fmt } from '@/components/v2/rewards/parts';
-import { SampleChip } from '@/components/v2/rewards/sheet';
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
-import { LEVELS } from '@/data/levels';
+import { V2_LEVELS, V2_TOP_LEVEL } from '@/constants/v2/levels';
 import { useLang } from '@/i18n/LanguageContext';
 
 /** Har bir daraja nishoni — dizayn rasmlari (1..5). */
@@ -28,8 +27,8 @@ export const LEVEL_BADGES = [
 
 /** Daraja nomi: oxirgisi kurs brendiga qarab (Domwork / Homework afsonasi). */
 export function levelName(index: number, courseLang: string) {
-  if (index === LEVELS.length - 1) return `${courseLang === 'russian' ? 'Domwork' : 'Homework'} afsonasi`;
-  return LEVELS[index].name;
+  if (index === V2_TOP_LEVEL) return `${courseLang === 'russian' ? 'Domwork' : 'Homework'} afsonasi`;
+  return V2_LEVELS[index].name;
 }
 
 type Props = {
@@ -37,19 +36,16 @@ type Props = {
   onClose: () => void;
   /** Ko'rsatiladigan daraja (0..4); berilmasa eng yuqori daraja. */
   levelIndex?: number;
-  /** Namuna rejimi (Darajalar ekranidan "nima bo'ladi?" ko'rinishi). */
-  sample?: boolean;
 };
 
-export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1, sample = false }: Props) {
+export function LevelUpPopup({ visible, onClose, levelIndex = V2_TOP_LEVEL }: Props) {
   const { courseLang } = useLang();
-  // Namuna — dizayndagi misol aynan (5 · Domwork afsonasi, 3 001, Oltin);
-  // haqiqiy daraja oshishida — data/levels.ts dagi daraja.
-  const idx = sample ? LEVELS.length - 1 : Math.max(0, Math.min(LEVELS.length - 1, levelIndex));
-  const level = LEVELS[idx];
-  const isTop = idx === LEVELS.length - 1;
-  const name = sample ? 'Domwork afsonasi' : levelName(idx, courseLang);
-  const total = sample ? '3 001' : fmt(level.min);
+  // Har doim haqiqiy v2 darajasi (oldindan ko'rishda — keyingi daraja).
+  const idx = Math.max(0, Math.min(V2_TOP_LEVEL, levelIndex));
+  const level = V2_LEVELS[idx];
+  const isTop = idx === V2_TOP_LEVEL;
+  const name = levelName(idx, courseLang);
+  const total = fmt(level.min);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -58,14 +54,10 @@ export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1,
         <View style={styles.wrap} pointerEvents="box-none">
           <View accessibilityViewIsModal style={styles.card}>
             <View style={styles.top}>
-              {sample ? (
-                <SampleChip label="Namuna: yangi darajaga chiqqanda" />
-              ) : (
-                <View style={styles.chip}>
-                  <BoltFill />
-                  <Text style={styles.chipText}>{total} chaqmoq</Text>
-                </View>
-              )}
+              <View style={styles.chip}>
+                <BoltFill />
+                <Text style={styles.chipText}>{total} chaqmoq</Text>
+              </View>
               <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={onClose} style={styles.close}>
                 <CloseIcon />
               </Pressable>

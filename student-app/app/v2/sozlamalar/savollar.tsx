@@ -6,9 +6,12 @@
  * boshqa dizayn ekranlaridagi matnlardan (Uyga vazifa, Do'kon, Streak,
  * To'lovlar, BotConnect) yig'ilgan. Dizayndagi ochiq savol — "Seriya
  * uzilsa..." — uning "Namunani koʻrish" havolasi StreakLost oynasini shu ekran ustida ochadi.
+ * Jonli dars javobi — o'quvchining haqiqiy guruh jadvali (fetchDemoSchedule)
+ * va tarif davomiyligi (fetchDemoStudentPayments, LiveNow'dagidek); ma'lumot
+ * bo'lmasa raqamsiz umumiy jumla. Coin javobi — v2 mukofot konstantalaridan.
  */
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,15 +19,33 @@ import { StreakLostPopup } from '@/components/v2/popups/StreakLost';
 import { ArrowRightIcon, ChevronDownIcon, ChevronUpIcon } from '@/components/v2/settings/icons';
 import { Column, ScreenHeader, SUPPORT_TELEGRAM_URL, TelegramButton } from '@/components/v2/settings/parts';
 import { R } from '@/constants/v2/routes';
-// Yuzma-yuz o'yin mukofoti ilovadagi haqiqiy qiymatdan olinadi (matn eskirmasligi uchun).
-import { BATTLE_WIN_COINS } from '@/data/mock';
+// Yuzma-yuz mukofoti v2 konstantalaridan (matn eskirmasligi uchun).
+import { V2_BATTLE_DAILY_COIN_WINS, V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { fonts } from '@/constants/v2/tokens';
+import { fetchDemoSchedule, fetchDemoStudentPayments, type DemoPaymentsResponse, type DemoScheduleResponse } from '@/services/contentApi';
+
+// Ustoz dars kunlari (CRM pattern) — to'liq nomlar bilan.
+const PATTERN_DAYS: Record<'mwf' | 'tts', string> = {
+  mwf: 'dushanba, chorshanba va juma',
+  tts: 'seshanba, payshanba va shanba',
+};
+
+/** Jonli dars javobi — faqat mavjud ma'lumotdan; yo'q bo'lsa raqamsiz. */
+function liveAnswer(sc: DemoScheduleResponse | null, pay: DemoPaymentsResponse | null) {
+  const time = sc?.lessonTime ? /^\d{1,2}:\d{2}/.exec(sc.lessonTime)?.[0] ?? '' : '';
+  const when = sc
+    ? `${PATTERN_DAYS[sc.schedulePattern]} kunlari${time ? ` soat ${time} da` : ''}`
+    : 'guruhingiz jadvali boʻyicha';
+  const dur = pay?.lessonDuration ? ` ${pay.tariffLabel} tarifingizda dars ${pay.lessonDuration} daqiqa.` : '';
+  return `Jonli darslar ${when} Telegram guruhda oʻtadi.${dur} Havola 15 daqiqa oldin ilovada va @Domworkuz_bot da chiqadi.`;
+}
 
 const FAQ: { q: string; a: string; sample?: boolean }[] = [
   // Dizayndagi savollar
   {
     q: 'Jonli dars qachon boʻladi?',
-    a: 'Jonli darslar seshanba, payshanba va shanba kunlari soat 19:00 da Telegram guruhda oʻtadi. Standard tarifda dars 30 daqiqa. Havola 15 daqiqa oldin ilovada va @Domworkuz_bot da chiqadi.',
+    // Haqiqiy jadval yuklangach V2Faq ichida almashtiriladi.
+    a: liveAnswer(null, null),
   },
   {
     q: 'Uyga vazifa qanday tekshiriladi?',
@@ -32,7 +53,7 @@ const FAQ: { q: string; a: string; sample?: boolean }[] = [
   },
   {
     q: 'Coin nima va nimaga sarflanadi?',
-    a: `Coin uyga vazifa (+60), yuzma-yuz oʻyin (+${BATTLE_WIN_COINS}) va doʻst taklifi (+100) uchun beriladi. Uni Domwork doʻkonida qoʻshimcha kitoblar va streak himoyasiga sarflaysiz.`,
+    a: `Coin uyga vazifadagi har bir toʻgʻri javob uchun (+1) va yuzma-yuz oʻyindagi gʻalaba uchun (+${V2_BATTLE_WIN_COINS}, kuniga birinchi ${V2_BATTLE_DAILY_COIN_WINS} ta gʻalaba) beriladi. Uni Domwork doʻkonida qoʻshimcha kitoblar va streak himoyasiga sarflaysiz.`,
   },
   {
     q: 'Streak himoyasi qanday ishlaydi?',
@@ -59,6 +80,14 @@ export default function V2Faq() {
   // Dizayndagidek StreakLost namunasi shu ekran ustida ochiladi; ?popup=lost — skrinshot uchun.
   const { popup } = useLocalSearchParams<{ popup?: string }>();
   const [lostOpen, setLostOpen] = useState(popup === 'lost');
+  const [live, setLive] = useState(FAQ[0].a);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchDemoSchedule().catch(() => null), fetchDemoStudentPayments().catch(() => null)]).then(([sc, pay]) => {
+      if (!cancelled) setLive(liveAnswer(sc, pay));
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <View style={styles.screen}>
@@ -84,7 +113,7 @@ export default function V2Faq() {
                   </Pressable>
                   {expanded && (
                     <View style={[styles.answerBox, { paddingBottom: item.sample ? 8 : 16 }]}>
-                      <Text style={styles.answer}>{item.a}</Text>
+                      <Text style={styles.answer}>{i === 0 ? live : item.a}</Text>
                       {item.sample && (
                         <Pressable
                           accessibilityRole="link"

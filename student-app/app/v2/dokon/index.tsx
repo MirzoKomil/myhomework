@@ -31,7 +31,7 @@ import { CoinBar, ProductCover } from '@/components/v2/rewards/shopParts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import { BATTLE_WIN_COINS } from '@/data/mock';
+import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { SHOP_CATEGORY_LABELS, type ShopCategory } from '@/data/shopProducts';
 import { useLang, localizeCourseWording } from '@/i18n/LanguageContext';
 import { useCoins } from '@/services/coinsStore';
@@ -44,7 +44,7 @@ const STREAK_SHIELD_PRICE = 150;
 const EARN_ROWS: { label: string; note?: string; value: string }[] = [
   { label: 'Uyga vazifa', value: EARN_HOMEWORK },
   { label: 'Dars yakuni', value: `+${EARN_LESSON_DONE}` },
-  { label: 'Yuzma-yuz gʻalaba', value: `+${BATTLE_WIN_COINS}` },
+  { label: 'Yuzma-yuz gʻalaba', value: `+${V2_BATTLE_WIN_COINS}` },
   { label: 'Bonus dars', note: '(oxirigacha)', value: `+${EARN_BONUS_LESSON}` },
   { label: 'Liga top-5', note: '(hafta)', value: `+${EARN_LEAGUE_TOP5}` },
   { label: 'Doʻst taklifi', value: `+${EARN_REFERRAL}` },

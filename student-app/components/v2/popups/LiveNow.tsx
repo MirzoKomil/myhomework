@@ -5,8 +5,7 @@
  * Ma'lumot: ustoz — fetchDemoStudentProfile (asosiy ustoz), vaqt va guruh
  * havolasi — fetchDemoSchedule, dars davomiyligi — fetchDemoStudentPayments,
  * dars raqami/nomi/ibora va slaydlar soni — joriy dars (resolveCurrentLesson).
- * Dars hali boshlanmagan bo'lsa "Namuna: dars boshlanganda" belgisi chiqadi —
- * oyna dars boshlanganda qanday ko'rinishini oldindan ko'rsatadi.
+ * "Namuna" belgisi o'quvchiga ko'rsatilmaydi (egasi qarori).
  */
 import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -14,7 +13,7 @@ import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/currentLesson';
-import { ChevronRightIcon, CloseIcon, EyeSmallIcon, ScreenIcon, TelegramIcon } from '@/components/v2/home/icons';
+import { ChevronRightIcon, CloseIcon, ScreenIcon, TelegramIcon } from '@/components/v2/home/icons';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoSchedule, fetchDemoStudentPayments, fetchDemoStudentProfile } from '@/services/contentApi';
@@ -59,7 +58,6 @@ export function LiveNowPopup({ visible, onClose }: { visible: boolean; onClose: 
     return () => { cancelled = true; };
   }, [visible]);
 
-  const preview = !d?.startsAt || d.startsAt.getTime() > Date.now();
   const lesson = d?.lesson ?? null;
   // "32-dars · Kafe va restoranda «Мо́жно меню́?» · 30 daqiqa" — bor qismlardan.
   const lessonLine = [
@@ -83,12 +81,6 @@ export function LiveNowPopup({ visible, onClose }: { visible: boolean; onClose: 
             <ScrollView bounces={false} contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
               <View style={styles.grip} />
               <View style={styles.topRow}>
-                {preview ? (
-                  <View style={styles.sample}>
-                    <EyeSmallIcon />
-                    <Text style={styles.sampleText}>Namuna: dars boshlanganda</Text>
-                  </View>
-                ) : <View />}
                 <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={onClose} style={styles.close}>
                   <CloseIcon />
                 </Pressable>
@@ -161,9 +153,7 @@ const styles = StyleSheet.create({
   },
   inner: { gap: 14 },
   grip: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#D5DAE4', alignSelf: 'center' },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: -10 },
-  sample: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: '#EEF1F7', flexDirection: 'row', alignItems: 'center', gap: 5 },
-  sampleText: { fontFamily: fonts.bodyHeavy, fontSize: 12, color: '#4A5468', fontWeight: 'normal' },
+  topRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: -10 },
   close: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF1F7', alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center', gap: 10 },
   avatarWrap: { width: 84, height: 84 },

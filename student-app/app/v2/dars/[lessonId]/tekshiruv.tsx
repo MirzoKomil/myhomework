@@ -119,9 +119,6 @@ export default function QuickCheckScreen() {
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
               <View style={styles.introTop}>
                 <Text style={styles.over}>Tinglab tushunish</Text>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>Namuna: dialog tugagach</Text>
-                </View>
               </View>
               <Text style={styles.introSub}>Tinglang va toʻgʻri javobni tanlang</Text>
             </View>
@@ -223,8 +220,6 @@ const styles = StyleSheet.create({
   intro: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   introTop: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   over: { fontFamily: fonts.bodyHeavy, fontSize: 12, letterSpacing: 0.72, textTransform: 'uppercase', color: '#1E3FD1', fontWeight: 'normal' },
-  tag: { height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: '#FFF4D1', justifyContent: 'center' },
-  tagText: { fontFamily: fonts.bodyHeavy, fontSize: 12, color: '#7A5300', fontWeight: 'normal' },
   introSub: { fontFamily: fonts.body, fontSize: 14, lineHeight: 18.9, color: '#4A5468', fontWeight: 'normal' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 16, gap: 12 },
   context: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F4F6FA', borderRadius: 14, paddingVertical: 8, paddingRight: 10, paddingLeft: 12 },

@@ -16,12 +16,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CoinIcon, SpeakerIcon } from '@/components/v2/practice/icons';
 import { GameHeader, goBack, reset, useCurrentLesson } from '@/components/v2/practice/shared';
+import { claimBattleWinCoins, V2_BATTLE_DAILY_COIN_WINS, V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
 import {
   BATTLE_ROUNDS,
   BATTLE_ROUND_SECONDS,
-  BATTLE_WIN_COINS,
   type BattleOpponentType,
   type BattleWord,
   battleWords as FALLBACK_BATTLE_WORDS,
@@ -93,6 +93,8 @@ export default function BattleScreen() {
   const [queueSecondsLeft, setQueueSecondsLeft] = useState(QUEUE_WAIT_SECONDS);
   const [queueMessage, setQueueMessage] = useState<string | null>(null);
   const [resultNote, setResultNote] = useState<string | null>(null);
+  // G'alaba coin berdimi: null — hali aniqlanmagan, false — bugungi limit tugagan.
+  const [winPaid, setWinPaid] = useState<boolean | null>(null);
   const [round, setRound] = useState(0);
   const [totalRounds, setTotalRounds] = useState(BATTLE_ROUNDS);
   const [playerScore, setPlayerScore] = useState(0);
@@ -174,6 +176,7 @@ export default function BattleScreen() {
     serverRoundRef.current = status.currentRound ?? 0;
     matchFinishedRef.current = false;
     setResultNote(null);
+    setWinPaid(null);
     setHistory([]);
     setRound(status.currentRound ?? 0);
     setRoundWinner(null);
@@ -263,6 +266,7 @@ export default function BattleScreen() {
     setOpponentType(type);
     setQueueMessage(null);
     setResultNote(null);
+    setWinPaid(null);
     setHistory([]);
     matchFinishedRef.current = false;
     setMatchId(null);
@@ -363,7 +367,11 @@ export default function BattleScreen() {
   useEffect(() => {
     if (phase !== 'result') return;
     if (playerScore > opponentScore) {
-      addCoins(BATTLE_WIN_COINS);
+      // Kuniga faqat birinchi 3 ta g'alaba coin beradi (Toshkent sanasi).
+      claimBattleWinCoins().then((ok) => {
+        if (ok) addCoins(V2_BATTLE_WIN_COINS);
+        setWinPaid(ok);
+      }).catch(() => setWinPaid(false));
       playWinSound();
     } else if (playerScore < opponentScore) playLoseSound();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -512,8 +520,11 @@ export default function BattleScreen() {
                 </Text>
                 <Text style={styles.hiddenText}>
                   Siz {playerScore} — {opponentScore} {oppLabel}
-                  {playerScore > opponentScore ? ` · +${BATTLE_WIN_COINS} coin` : ''}
+                  {playerScore > opponentScore && winPaid ? ` · +${V2_BATTLE_WIN_COINS} coin` : ''}
                 </Text>
+                {playerScore > opponentScore && winPaid === false && (
+                  <Text style={styles.hiddenText}>{`Bugungi coinli gʻalabalar tugadi (${V2_BATTLE_DAILY_COIN_WINS}/${V2_BATTLE_DAILY_COIN_WINS})`}</Text>
+                )}
                 {!!resultNote && <Text style={styles.hiddenText}>{resultNote}</Text>}
                 <Pressable accessibilityRole="button" onPress={() => startMatch('random')} style={styles.cta}>
                   <Text style={styles.ctaText}>Yana oʻynash</Text>
@@ -599,7 +610,7 @@ export default function BattleScreen() {
           <Text style={styles.footerText}>Gʻolib</Text>
           <View style={styles.coin}>
             <CoinIcon />
-            <Text style={styles.coinText}>{BATTLE_WIN_COINS} coin</Text>
+            <Text style={styles.coinText}>{V2_BATTLE_WIN_COINS} coin</Text>
           </View>
           <Text style={styles.footerText}>oladi</Text>
         </View>
