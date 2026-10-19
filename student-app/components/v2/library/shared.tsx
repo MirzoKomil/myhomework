@@ -38,7 +38,7 @@ export function T({
   return (
     <Text
       {...rest}
-      style={[{ fontFamily: weightFont[w], fontSize: size, color, fontWeight: 'normal' }, lh ? { lineHeight: Math.round(size * lh) } : null, style]}
+      style={[{ fontFamily: weightFont[w], fontSize: size, color, fontWeight: 'normal' }, lh ? { lineHeight: size * lh } : null, style]}
     >
       {children}
     </Text>
@@ -48,7 +48,7 @@ export function T({
 /** Dizayndagi "h1" — Bricolage (kirillda Manrope'ga tushadi). */
 export function Display({ size, ls = -0.02, lh = 1.1, color = '#0B1220', style, children }: { size: number; ls?: number; lh?: number; color?: string; style?: StyleProp<TextStyle>; children: ReactNode }) {
   return (
-    <Text accessibilityRole="header" style={[{ fontFamily: fonts.display, fontSize: size, letterSpacing: size * ls, lineHeight: Math.round(size * lh), color, fontWeight: 'normal' }, style]}>
+    <Text accessibilityRole="header" style={[{ fontFamily: fonts.display, fontSize: size, letterSpacing: size * ls, lineHeight: size * lh, color, fontWeight: 'normal' }, style]}>
       {children}
     </Text>
   );

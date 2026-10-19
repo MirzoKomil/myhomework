@@ -168,11 +168,13 @@ const styles = StyleSheet.create({
   heroFill: { height: 6, backgroundColor: '#FFFFFF' },
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
-  tile: { width: '48.9%', minHeight: 80, backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 8, paddingLeft: 8, paddingRight: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // Dizayn CSS'ida min-height 80, lekin brauzer gridi qatorlarni 95px qilib chizadi
+  // (ref-png'da plitka 95) — ko'rinish 1:1 bo'lishi uchun chizilgan balandlik.
+  tile: { width: '48.9%', minHeight: 95, backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 8, paddingLeft: 8, paddingRight: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
   thumb: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   emoji: { fontSize: 26 },
   tileProg: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tileTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: '#E7EBF3', overflow: 'hidden' },
   tileFill: { height: 5, borderRadius: 3 },
-  more: { width: '48.9%', minHeight: 80, paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  more: { width: '48.9%', minHeight: 95, paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', gap: 2 },
 });
