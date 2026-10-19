@@ -43,7 +43,8 @@ export default function V2LeagueResult() {
             <View style={styles.glowWrap}>
               <Svg width={250} height={236} style={StyleSheet.absoluteFill} accessibilityElementsHidden importantForAccessibility="no">
                 <Defs>
-                  <RadialGradient id="g" cx="50%" cy="52%" rx="50%" ry="50%">
+                  {/* CSS "circle at 50% 52%" — radius = eng uzoq burchakkacha (≈175px). */}
+                  <RadialGradient id="g" cx="125" cy="122.72" r="175" gradientUnits="userSpaceOnUse">
                     <Stop offset="0" stopColor="#FFF8E3" />
                     <Stop offset="0.38" stopColor="#FFF1C9" />
                     <Stop offset="0.58" stopColor="#FFC93C" stopOpacity={0.35} />
