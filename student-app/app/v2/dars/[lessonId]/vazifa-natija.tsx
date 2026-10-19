@@ -8,6 +8,7 @@
  * ?qism=<partId> bilan boshqa avtomatik qism ham ko'rsatiladi.
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,7 +74,7 @@ export default function TestReviewScreen() {
     };
   }, [id]);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace(`${R.homework(id)}?yuborildi=1` as Href));
+  const back = () => v2Back(`${R.homework(id)}?yuborildi=1`);
 
   const parts = info?.content.homeworkParts.filter((p) => !isTeacherGraded(p) && questionsOf(p).length > 0) ?? [];
   const part = parts.find((p) => p.id === qism) ?? parts.find((p) => p.kind === 'multipleChoice') ?? parts[0];

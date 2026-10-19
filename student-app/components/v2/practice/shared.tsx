@@ -8,6 +8,8 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, type Href } from 'expo-router';
+
+import { v2Back } from '@/services/v2Nav';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,8 +46,7 @@ export function stressLetters(w: string): string[] {
 
 /** Orqaga: tarix bo'lsa ortga, bo'lmasa Mashq sahifasiga. */
 export function goBack(fallback: string = R.practice) {
-  if (router.canGoBack()) router.back();
-  else router.replace(fallback as Href);
+  v2Back(fallback);
 }
 
 // ─── Joriy dars ────────────────────────────────────────────────────────────

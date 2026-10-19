@@ -166,7 +166,9 @@ export type AdminModuleContent = {
 // CRM'dagi "Audio dialoglar" — kitob audiosi va uning matni. start —
 // replika boshlanish soniyasi (admin belgilagan bo'lsa); bo'lmasa ilova
 // replikalarni audio davomiyligiga teng bo'lib taxminlaydi.
-export type AdminAudioDialogLine = { speaker: string; ru: string; uz: string; start?: number };
+// start — replikaning dialogdagi boshlanishi (soniya); repeatStart — kitob
+// audiosidagi "Endi takrorlang" qismida shu replika qayta boshlanadigan joy.
+export type AdminAudioDialogLine = { speaker: string; ru: string; uz: string; start?: number; repeatStart?: number };
 
 export type AdminAudioDialog = {
   id: string;
@@ -176,6 +178,8 @@ export type AdminAudioDialog = {
   bookPart?: number;
   trackNo?: number;
   durationSec?: number;
+  /** Kitob audiosi: "Endi takrorlang" bo'limi shu soniyadan boshlanadi (ilova o'z pauzasini qo'shmaydi). */
+  repeatFrom?: number;
   lines: AdminAudioDialogLine[];
 };
 
@@ -205,9 +209,10 @@ function normalizeAudioDialogs(list: unknown): AdminAudioDialog[] | undefined {
       bookPart: num(d.bookPart),
       trackNo: num(d.trackNo),
       durationSec: num(d.durationSec),
+      repeatFrom: num(d.repeatFrom),
       lines: (Array.isArray(d.lines) ? d.lines : [])
         .filter((l) => !!l && typeof l === 'object')
-        .map((l) => ({ speaker: String(l.speaker ?? ''), ru: String(l.ru ?? ''), uz: String(l.uz ?? ''), start: num(l.start) })),
+        .map((l) => ({ speaker: String(l.speaker ?? ''), ru: String(l.ru ?? ''), uz: String(l.uz ?? ''), start: num(l.start), repeatStart: num(l.repeatStart) })),
     }));
 }
 

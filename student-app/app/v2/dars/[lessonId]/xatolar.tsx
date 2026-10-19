@@ -8,6 +8,7 @@
  * va natija o'zgarmaydi. HomeworkSent, Complete va Lug'atdan ochiladi.
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { v2Back } from '@/services/v2Nav';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,7 +76,7 @@ export default function MistakeReviewScreen() {
     setItems(parts.flatMap((p) => mistakesOf(p, lessonScores?.[p.id])));
   }, [info, items, lessonScores]);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace(`${R.homework(id)}?yuborildi=1` as Href));
+  const close = () => v2Back(`${R.homework(id)}?yuborildi=1`);
   const list = items ?? [];
   const total = list.length;
   const item = list[step];

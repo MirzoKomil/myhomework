@@ -4,6 +4,8 @@
  * dizayndagi inline uslublardan aynan olingan.
  */
 import { router, type Href } from 'expo-router';
+
+import { v2Back } from '@/services/v2Nav';
 import type { ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,8 +20,7 @@ export const SUPPORT_TELEGRAM_URL = 'https://t.me/Domwork_admin';
 
 /** Orqaga: tarix bo'lsa ortga, bo'lmasa (to'g'ridan-to'g'ri ochilgan) ota ekranga. */
 export function goBack(fallback: string) {
-  if (router.canGoBack()) router.back();
-  else router.replace(fallback as Href);
+  v2Back(fallback);
 }
 
 export function ScreenHeader({ title, subtitle, fallback }: { title: string; subtitle?: string; fallback: string }) {

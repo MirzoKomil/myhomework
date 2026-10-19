@@ -8,6 +8,7 @@ import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextS
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { R } from '@/constants/v2/routes';
+import { v2Back } from '@/services/v2Nav';
 import { fonts } from '@/constants/v2/tokens';
 import { ArrowRight, Check, CloseIcon, Coin, NavHome, NavPath, NavStar, NavTrophy, NavUser } from './icons';
 
@@ -46,7 +47,7 @@ export function CloseButton({ bg = '#FFFFFF', onPress }: { bg?: string; onPress?
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Yopish"
-      onPress={onPress ?? (() => (router.canGoBack() ? router.back() : null))}
+      onPress={onPress ?? (() => v2Back(R.home))}
       style={({ pressed }) => [s.close, { backgroundColor: bg }, pressed && s.pressed]}
     >
       <CloseIcon />
