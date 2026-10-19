@@ -165,7 +165,7 @@ export function GameHeader({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Oʻyindan chiqish"
