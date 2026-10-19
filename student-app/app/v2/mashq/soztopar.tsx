@@ -13,7 +13,8 @@ import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon, HandIcon, TimerIcon } from '@/components/v2/practice/icons';
-import { GameHeader, displayRu, plainWord, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
+import { GameHeader, displayRu, fmtTime, plainWord, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
+import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
@@ -274,6 +275,19 @@ export default function WordSearchScreen() {
           </View>
         </View>
       </View>
+      <GameResult
+        show={won}
+        win
+        title="Barakalla!"
+        subtitle={`${words.length} ta soʻzning hammasi topildi`}
+        stats={[
+          { value: fmtTime(seconds), label: 'vaqt' },
+          { value: `${words.length} / ${words.length}`, label: 'soʻz' },
+        ]}
+        coins={words.length}
+        lightning={words.length}
+        onAgain={() => newBoard(poolRef.current)}
+      />
     </View>
   );
 }
