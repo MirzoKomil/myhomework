@@ -10,7 +10,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Redirect, router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BotConnectPopup } from '@/components/v2/popups/BotConnect';
@@ -20,6 +20,7 @@ import {
   CheckMarkIcon,
   ChevronRightIcon,
   DownloadIcon,
+  ExternalLinkIcon,
   GlobeIcon,
   LogoutIcon,
   MoonIcon,
@@ -42,6 +43,8 @@ import { telegramLinkStatus } from '@/services/telegramLinkApi';
 const REMINDERS_KEY = 'mh_v2_reminders';
 type ReminderKey = 'lesson' | 'live' | 'streak';
 const DEFAULT_REMINDERS: Record<ReminderKey, boolean> = { lesson: true, live: true, streak: true };
+
+const BOT_URL = 'https://t.me/Domworkuz_bot';
 
 const LANG_LABEL = { uz: 'Oʻzbekcha', ru: 'Русский' } as const;
 
@@ -153,9 +156,16 @@ export default function V2Settings() {
                 <Text style={styles.rowLabel}>Qorongʻu rejim</Text>
                 <ToggleKnob on={false} />
               </Pressable>
+              {/* Ulangan bo'lsa dizayndagi kabi botning o'zi Telegramda ochiladi; ulanmagan
+                  holat dizaynda yo'q — ulash uchun avvalgidek BotConnect oynasi ochiladi. */}
               <Pressable
-                accessibilityRole="button"
-                onPress={() => setBotOpen(true)}
+                accessibilityRole={botLinked ? 'link' : 'button'}
+                accessibilityLabel={
+                  botLinked
+                    ? 'Telegram bot @Domworkuz_bot, ulangan — Telegramda ochish'
+                    : 'Telegram bot @Domworkuz_bot'
+                }
+                onPress={() => (botLinked ? Linking.openURL(BOT_URL).catch(() => {}) : setBotOpen(true))}
                 style={({ pressed }) => [styles.row, styles.divider, pressed && styles.rowPressed]}
               >
                 <TelegramRowIcon />
@@ -168,7 +178,7 @@ export default function V2Settings() {
                     <CheckMarkIcon />
                   </View>
                 ) : null}
-                <ChevronRightIcon />
+                {botLinked ? <ExternalLinkIcon /> : <ChevronRightIcon />}
               </Pressable>
               <LinkRow
                 icon={<PhoneIcon />}
@@ -193,7 +203,7 @@ export default function V2Settings() {
                   style={({ pressed }) => [styles.helpBtn, pressed && styles.pressed]}
                 >
                   <QuestionIcon />
-                  <Text style={styles.helpText}>FAQ</Text>
+                  <Text style={styles.helpText}>Savol-javoblar</Text>
                 </Pressable>
                 <Pressable
                   accessibilityRole="link"
@@ -302,7 +312,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyHeavy,
     fontWeight: 'normal',
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 17,
     letterSpacing: 0.72,
     textTransform: 'uppercase',
     color: '#4A5468',

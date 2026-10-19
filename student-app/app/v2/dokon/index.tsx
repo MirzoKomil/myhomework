@@ -7,12 +7,27 @@
  * kategoriyasi; boshqa kategoriyalar ham (eski do'konda bor edi) xuddi shu
  * ko'rinishda pastroqda chiqadi. "Streak himoyasi" bonusi serverda yo'q.
  */
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BagIcon, CoinFill } from '@/components/v2/rewards/icons';
-import { fmt, HeaderPill, nearestProduct, ScreenHeader, useShopProducts, type ShopProductV2 } from '@/components/v2/rewards/parts';
-import { CoinBar, ProductImage } from '@/components/v2/rewards/shopParts';
+import { OrderSuccessPopup } from '@/components/v2/popups/OrderSuccess';
+import { StreakConfirmPopup } from '@/components/v2/popups/StreakConfirm';
+import {
+  EARN_BONUS_LESSON,
+  EARN_HOMEWORK,
+  EARN_LEAGUE_TOP5,
+  EARN_LESSON_DONE,
+  EARN_REFERRAL,
+  fmt,
+  HeaderPill,
+  nearestProduct,
+  ScreenHeader,
+  useShopProducts,
+  type ShopProductV2,
+} from '@/components/v2/rewards/parts';
+import { CoinBar, ProductCover } from '@/components/v2/rewards/shopParts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -25,6 +40,16 @@ const ORDER: ShopCategory[] = ['books', 'merch', 'gadgets', 'stationery'];
 // Streak himoyasi narxi — dizayndagi qiymat (bonus hali sotilmaydi).
 const STREAK_SHIELD_PRICE = 150;
 
+// "Qanday yig'iladi" ro'yxati — dizayndagi tartibda; izoh (oxirigacha/hafta) kulrang.
+const EARN_ROWS: { label: string; note?: string; value: string }[] = [
+  { label: 'Uyga vazifa', value: EARN_HOMEWORK },
+  { label: 'Dars yakuni', value: `+${EARN_LESSON_DONE}` },
+  { label: 'Yuzma-yuz gʻalaba', value: `+${BATTLE_WIN_COINS}` },
+  { label: 'Bonus dars', note: '(oxirigacha)', value: `+${EARN_BONUS_LESSON}` },
+  { label: 'Liga top-5', note: '(hafta)', value: `+${EARN_LEAGUE_TOP5}` },
+  { label: 'Doʻst taklifi', value: `+${EARN_REFERRAL}` },
+];
+
 function ProductCard({ p, coins, nearest }: { p: ShopProductV2; coins: number; nearest: boolean }) {
   const missing = Math.max(0, p.price - coins);
   return (
@@ -34,8 +59,8 @@ function ProductCard({ p, coins, nearest }: { p: ShopProductV2; coins: number; n
       onPress={() => router.push(R.shopItem(p.id) as never)}
       style={({ pressed }) => [styles.card, nearest && { borderColor: '#087A4A' }, pressed && { opacity: 0.85 }]}
     >
-      <View style={styles.cardImgWrap}>
-        <ProductImage product={p} style={StyleSheet.absoluteFill} />
+      <View style={[styles.cardImgWrap, { backgroundColor: p.coverBg ?? '#EAE4DF' }]}>
+        <ProductCover product={p} size={104} bg={p.coverBg ?? '#EAE4DF'} fade={0.16} />
         {nearest && (
           <View style={styles.nearest}><Text style={styles.nearestText}>Eng yaqini</Text></View>
         )}
@@ -59,8 +84,16 @@ function ProductCard({ p, coins, nearest }: { p: ShopProductV2; coins: number; n
   );
 }
 
+type Popup = null | 'streak-confirm' | 'order-success';
+
 export default function V2Shop() {
   const coins = useCoins();
+  // ?popup=streak-confirm | order-success — popup'ni to'g'ridan-to'g'ri ochish (ko'rib chiqish uchun).
+  const params = useLocalSearchParams<{ popup?: string }>();
+  const [popup, setPopup] = useState<Popup>(null);
+  useEffect(() => {
+    if (params.popup === 'streak-confirm' || params.popup === 'order-success') setPopup(params.popup);
+  }, [params.popup]);
   const products = useShopProducts();
   const { lang, courseLang } = useLang();
   const nearest = products ? nearestProduct(products, coins) : null;
@@ -74,29 +107,37 @@ export default function V2Shop() {
         title="Doʻkon"
         overline={brand}
         fallback={R.home}
-        right={<HeaderPill label="Buyurtmalar" icon={<BagIcon />} onPress={() => router.push(R.orders as never)} />}
+        right={<HeaderPill label="Buyurtmalarim" icon={<BagIcon />} onPress={() => router.push(R.orders as never)} />}
       />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.column}>
           <View style={styles.balance}>
-            <View style={{ flex: 1, gap: 2 }}>
+            <View style={{ width: 104, gap: 2 }}>
               <Text style={styles.balLabel}>Balansingiz</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <CoinFill size={26} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <CoinFill size={24} />
                 <Text style={styles.balValue}>{fmt(coins)}</Text>
               </View>
               <Text style={styles.balLabelSm}>coin</Text>
             </View>
             <View style={styles.howTo}>
               <Text style={[styles.howText, { color: '#FFFFFF', fontFamily: fonts.bodyHeavy }]}>Qanday yigʻiladi:</Text>
-              <Text style={styles.howText}>Uyga vazifa <Text style={styles.howNum}>+60</Text></Text>
-              <Text style={styles.howText}>Yuzma-yuz oʻyin <Text style={styles.howNum}>+{BATTLE_WIN_COINS}</Text></Text>
-              <Text style={styles.howText}>Doʻst taklifi <Text style={styles.howNum}>+100</Text></Text>
+              <View style={{ gap: 1 }}>
+                {EARN_ROWS.map((r) => (
+                  <View key={r.label} style={styles.howRow}>
+                    <Text style={styles.howText} numberOfLines={1}>
+                      {r.label}
+                      {r.note ? <Text style={styles.howNote}> {r.note}</Text> : null}
+                    </Text>
+                    <Text style={[styles.howText, styles.howNum]} numberOfLines={1}>{r.value}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
 
           {groups.map((g, gi) => (
-            <View key={g.cat} style={{ gap: 10, marginTop: gi === 0 ? 4 : 6 }}>
+            <View key={g.cat} style={{ gap: 10, marginTop: gi === 0 ? 0 : 6 }}>
               <View style={styles.sectionHead}>
                 <Text accessibilityRole="header" style={styles.h2}>{g.cat === 'books' ? 'Qoʻshimcha kitoblar' : localizeCourseWording(SHOP_CATEGORY_LABELS[g.cat], lang, courseLang)}</Text>
                 {g.items.every((p) => p.delivered) && <Text style={styles.sectionNote}>{g.cat === 'books' ? 'Bosma · uyga bepul' : 'Uyga bepul'}</Text>}
@@ -125,7 +166,7 @@ export default function V2Shop() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Streak himoyasini ${STREAK_SHIELD_PRICE} coinga olish`}
-              onPress={() => router.push(R.orders as never)}
+              onPress={() => setPopup('streak-confirm')}
               style={({ pressed }) => [styles.bonusBtn, pressed && { opacity: 0.85 }]}
             >
               <CoinFill size={16} />
@@ -134,6 +175,13 @@ export default function V2Shop() {
           </View>
         </View>
       </ScrollView>
+      <StreakConfirmPopup
+        visible={popup === 'streak-confirm'}
+        price={STREAK_SHIELD_PRICE}
+        onClose={() => setPopup(null)}
+        onConfirm={() => setPopup('order-success')}
+      />
+      <OrderSuccessPopup visible={popup === 'order-success'} price={STREAK_SHIELD_PRICE} onClose={() => setPopup(null)} />
     </View>
   );
 }
@@ -146,18 +194,20 @@ const styles = StyleSheet.create({
   balLabel: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#B8C1D6' },
   balLabelSm: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#B8C1D6' },
   balValue: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 32, lineHeight: 35, color: '#FFFFFF' },
-  howTo: { gap: 3, borderLeftWidth: 1, borderLeftColor: '#263048', paddingLeft: 12 },
-  howText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 17, color: '#C9D0DE' },
-  howNum: { fontFamily: fonts.bodyHeavy, color: '#FFC93C' },
+  howTo: { flex: 1, minWidth: 0, gap: 3, borderLeftWidth: 1, borderLeftColor: '#263048', paddingLeft: 12 },
+  howRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 },
+  howText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16.2, color: '#C9D0DE', flexShrink: 1 },
+  howNote: { fontFamily: fonts.body, color: '#A9B3C8' },
+  howNum: { fontFamily: fonts.bodyHeavy, color: '#FFC93C', flexShrink: 0 },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 2 },
   h2: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 17, color: '#0B1220' },
   sectionNote: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, color: '#4A5468' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, rowGap: 10 },
   gridCell: { width: '50%', paddingHorizontal: 5 },
   card: { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#FFFFFF', borderRadius: 22, paddingTop: 6, paddingHorizontal: 6, paddingBottom: 10, gap: 7, flex: 1 },
-  cardImgWrap: { height: 112, borderRadius: 17, overflow: 'hidden', backgroundColor: '#ECECEE' },
+  cardImgWrap: { height: 104, borderRadius: 17, overflow: 'hidden', backgroundColor: '#EAE4DF' },
   nearest: { position: 'absolute', bottom: 8, left: 8, height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: '#087A4A', justifyContent: 'center' },
-  nearestText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 11, color: '#FFFFFF' },
+  nearestText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#FFFFFF' },
   cardTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, lineHeight: 19, color: '#0B1220' },
   cardSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, lineHeight: 17, color: '#4A5468' },
   cardFoot: { flexDirection: 'row', alignItems: 'center', gap: 4 },

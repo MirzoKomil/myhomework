@@ -18,6 +18,7 @@ import {
   CalendarIcon,
   CardIcon,
   ChartIcon,
+  BagIcon,
   ChevronIcon,
   GearIcon,
   PencilIcon,
@@ -41,6 +42,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { getCourseOverallProgress } from '@/data/lessonContent';
 import { useAvatarUri } from '@/services/avatarStore';
+import { useCoins } from '@/services/coinsStore';
 import {
   fetchDemoGrades,
   fetchDemoSchedule,
@@ -78,6 +80,7 @@ export default function V2Profile() {
   const avatarUri = useAvatarUri();
   const lightning = useLightning();
   const examResults = useExamResults();
+  const coins = useCoins();
 
   const [name, setName] = useState(student?.name ?? '');
   const [studentId, setStudentId] = useState(formatStudentId(student?.studentId || student?.id));
@@ -147,20 +150,26 @@ export default function V2Profile() {
               <View style={st.levelLeft}>
                 <Image source={designImages[lvl.ui.img]} accessibilityLabel={`${lvl.index + 1}-daraja nishoni`} style={st.badge} resizeMode="contain" />
                 <View style={{ gap: 2 }}>
-                  <Text style={st.levelOver}>{`DARAJA ${lvl.index + 1} / 5`}</Text>
+                  <Text style={st.levelOver}>{`DARAJA ${lvl.index + 1}`}</Text>
                   <Text style={st.levelName}>{lvl.ui.name}</Text>
                 </View>
               </View>
               <View style={st.boltRow}>
                 <BoltIcon />
-                <Text style={st.boltNum}>{lightning}</Text>
+                <Text style={st.boltNum}>{money(lightning)}</Text>
               </View>
             </View>
             <View style={st.levelTrack}><View style={[st.levelFill, { width: `${lvl.progressPercent}%` }]} /></View>
             <View style={st.levelFoot}>
               <Text style={st.levelFootText} numberOfLines={1}>
-                {lvl.nextUi ? `«${lvl.nextUi.name}»gacha yana ${lvl.remaining} chaqmoq` : 'Eng yuqori daraja'}
+                {lvl.nextUi ? `Keyingi: ${lvl.index + 2} · ${lvl.nextUi.name}` : 'Eng yuqori daraja'}
               </Text>
+              {!!lvl.nextUi && (
+                <View style={st.levelRemain} accessible accessibilityLabel={`yana ${money(lvl.remaining)} chaqmoq`}>
+                  <Text style={st.levelRemainText}>{`yana ${money(lvl.remaining)}`}</Text>
+                  <BoltIcon size={12} color="#FFC21A" />
+                </View>
+              )}
               <ChevronIcon size={16} color="#FFFFFF" />
             </View>
           </Pressable>
@@ -198,6 +207,17 @@ export default function V2Profile() {
                 label="Toʻlovlar va tarif"
                 right={debt > 0 ? <View style={st.debt}><Text style={st.debtText}>{`Qarz ${money(debt)}`}</Text></View> : undefined}
                 onPress={() => go(R.payments)}
+              />
+              <MenuRow
+                icon={<BagIcon />}
+                label="Doʻkon va buyurtmalarim"
+                right={
+                  <View style={st.coinRow}>
+                    <View style={st.coinDot} />
+                    <Text style={st.rowValue}>{coins}</Text>
+                  </View>
+                }
+                onPress={() => go(R.shop)}
                 last
               />
             </View>
@@ -239,6 +259,9 @@ const st = StyleSheet.create({
   levelTrack: { height: 8, borderRadius: 4, backgroundColor: '#5A2FD6', overflow: 'hidden' },
   levelFill: { height: 8, borderRadius: 4, backgroundColor: '#FFC93C' },
   levelFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Dizayn: "yana N ⚡" o'ngga suriladi (margin-left: auto; padding-left: 8px)
+  levelRemain: { marginLeft: 'auto', paddingLeft: 8, flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  levelRemainText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#FFFFFF' },
   levelFootText: { flexShrink: 1, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#FFFFFF' },
   stats: { flexDirection: 'row', gap: 10 },
   stat: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 12, gap: 2 },
@@ -254,6 +277,9 @@ const st = StyleSheet.create({
   rowBorder: { borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
   rowLabel: { flex: 1, minWidth: 0, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },
   rowValue: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#4A5468' },
+  coinRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // Coin: 14px sariq doira + ichki 2.5px och-sariq halqa (box-shadow inset)
+  coinDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#F5B70A', borderWidth: 2.5, borderColor: '#FFD75E' },
   debt: { height: 24, paddingHorizontal: 8, borderRadius: 12, backgroundColor: '#FDECEC', justifyContent: 'center' },
   debtText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#B42318' },
 });

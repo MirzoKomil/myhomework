@@ -2,8 +2,9 @@
  * v2 Liga (dizayn: 39 · Leaderboard).
  *
  * Reyting ro'yxati haqiqiy: eski profile/leaderboard.tsx dagi
- * fetchLeaderboard (/api/state/leaderboard) — "Haftalik" = weekly,
- * "Doimiy" = alltime davri, chaqmoq bo'yicha. Haftalik liga
+ * fetchLeaderboard (/api/state/leaderboard), joriy hafta (weekly),
+ * chaqmoq bo'yicha. Yangi dizaynda Haftalik/Doimiy tanlovi yo'q —
+ * tepada joriy hafta oralig'i ("Hafta · 12–18 oktabr"). Haftalik liga
  * (Bronza→Olmos zinapoyasi, ko'tarilish, o'tgan hafta natijasi) serverda
  * YO'Q — shuning uchun hamma boshlang'ich (Bronza) holatda, o'tgan hafta
  * natijasi bo'sh. Streak ham kuzatilmaydi — 0 kun.
@@ -14,12 +15,12 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArrowUpIcon, BoltFill, ChevronRightIcon, TickIcon, TimerIcon } from '@/components/v2/rewards/icons';
-import { fallbackAvatar, fmt, TIERS, timeLeftLabel, weekEnd } from '@/components/v2/rewards/parts';
+import { currentWeekLabel, fallbackAvatar, fmt, TIERS, timeLeftLabel, weekEnd } from '@/components/v2/rewards/parts';
 import { TabBar } from '@/components/v2/TabBar';
 import { R } from '@/constants/v2/routes';
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
-import { fetchLeaderboard, type LeaderboardEntryResponse, type LeaderboardPeriod } from '@/services/contentApi';
+import { fetchLeaderboard, type LeaderboardEntryResponse } from '@/services/contentApi';
 import { useAvatarUri } from '@/services/avatarStore';
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
 
@@ -31,7 +32,7 @@ const RANK_COLORS: Record<number, string> = { 1: '#9A6A00', 2: '#4A5468', 3: '#8
 export default function V2League() {
   const insets = useSafeAreaInsets();
   const myAvatar = useAvatarUri();
-  const [period, setPeriod] = useState<LeaderboardPeriod>('weekly');
+  const period = 'weekly' as const;
   const [entries, setEntries] = useState<LeaderboardEntryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
@@ -44,17 +45,19 @@ export default function V2League() {
         .then((e) => alive && setEntries(e))
         .catch(() => alive && setEntries([]))
         .finally(() => alive && setLoading(false));
+      // Eski ekrandagi kabi: "10 pog'ona ko'tarildingiz" bildirishnomasi faqat
+      // umumiy (alltime) o'rin bo'yicha — ro'yxat ko'rinmasa ham fonda tekshiriladi.
+      fetchLeaderboard('country', 'alltime')
+        .then((all) => {
+          const me = all.find((e) => e.isMe);
+          if (me) checkLeaderboardClimb(me.rank);
+        })
+        .catch(() => {});
       return () => {
         alive = false;
       };
     }, [period]),
   );
-
-  // Eski ekrandagi kabi: o'rin ko'tarilishi faqat "Doimiy" ro'yxatda kuzatiladi.
-  useEffect(() => {
-    const me = entries.find((e) => e.isMe);
-    if (period === 'alltime' && me) checkLeaderboardClimb(me.rank);
-  }, [entries, period]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60000);
@@ -71,22 +74,7 @@ export default function V2League() {
         <View style={[styles.column, { gap: 12 }]}>
           <View style={styles.heroTop}>
             <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
-              <View accessibilityRole="tablist" accessibilityLabel="Reyting turi" style={styles.tabs}>
-                {(['weekly', 'alltime'] as const).map((p) => {
-                  const active = p === period;
-                  return (
-                    <Pressable
-                      key={p}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: active }}
-                      onPress={() => setPeriod(p)}
-                      style={[styles.tab, active && styles.tabActive]}
-                    >
-                      <Text style={[styles.tabText, active ? styles.tabTextActive : null]}>{p === 'weekly' ? 'Haftalik' : 'Doimiy'}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <Text style={styles.week}>Hafta · {currentWeekLabel(now)}</Text>
               <Text accessibilityRole="header" style={styles.h1}>{tier.name} liga</Text>
               <View style={styles.timerRow}>
                 <View style={{ marginTop: 1 }}><TimerIcon /></View>
@@ -115,7 +103,7 @@ export default function V2League() {
                 ) : (
                   <View style={[styles.dot, styles.dotFuture, { borderColor: t.color }]} />
                 )}
-                <Text style={[styles.stepText, { color: i === CURRENT_TIER ? '#FFFFFF' : t.color }, i === CURRENT_TIER && { fontFamily: fonts.bodyHeavy }]} numberOfLines={1}>
+                <Text style={[styles.stepText, { color: i === CURRENT_TIER ? '#FFFFFF' : t.color }, i === CURRENT_TIER && styles.stepTextMe]} numberOfLines={1}>
                   {i === CURRENT_TIER ? `${t.name} · siz` : t.name}
                 </Text>
               </View>
@@ -135,7 +123,7 @@ export default function V2League() {
             <Text style={styles.listHeadText}>Oʻquvchi · {entries.length} nafar</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
               <BoltFill />
-              <Text style={styles.listHeadText}>{period === 'weekly' ? 'Shu hafta' : 'Jami'}</Text>
+              <Text style={styles.listHeadText}>Shu hafta</Text>
             </View>
           </View>
 
@@ -166,7 +154,7 @@ export default function V2League() {
                   </View>
                   <Text style={[styles.score, me && { color: '#FFFFFF' }]}>{fmt(e.lightning)}</Text>
                 </View>
-                {period === 'weekly' && i === PROMOTE_TOP - 1 && entries.length > PROMOTE_TOP && next && (
+                {i === PROMOTE_TOP - 1 && entries.length > PROMOTE_TOP && next && (
                   <View style={styles.promote} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <View style={styles.promoteLine} />
                     <ArrowUpIcon />
@@ -189,11 +177,7 @@ const styles = StyleSheet.create({
   column: { width: '100%', maxWidth: 480, alignSelf: 'center' },
   hero: { backgroundColor: '#0B1220', paddingHorizontal: 20, paddingBottom: 16, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  tabs: { flexDirection: 'row', alignSelf: 'flex-start', backgroundColor: '#1B2438', borderRadius: 14, padding: 3, gap: 3 },
-  tab: { height: 44, paddingHorizontal: 14, borderRadius: 11, justifyContent: 'center' },
-  tabActive: { backgroundColor: '#FFFFFF' },
-  tabText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, color: '#B8C1D6' },
-  tabTextActive: { fontFamily: fonts.bodyHeavy, color: '#0B1220' },
+  week: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, letterSpacing: 0.96, textTransform: 'uppercase', color: '#B8C1D6' },
   h1: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 30, lineHeight: 32, letterSpacing: -0.6, color: '#FFFFFF' },
   timerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   timerBig: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, lineHeight: 20, color: '#FFFFFF' },
@@ -205,7 +189,9 @@ const styles = StyleSheet.create({
   step: { flex: 1, alignItems: 'center', gap: 7 },
   dot: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   dotFuture: { backgroundColor: '#1B2438', borderWidth: 2 },
-  stepText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 11, lineHeight: 15 },
+  stepText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16 },
+  // "Kumush · siz" — dizaynda white-space: nowrap (ustundan chiqib ketsa ham bir qatorda).
+  stepTextMe: { fontFamily: fonts.bodyHeavy, overflow: 'visible', width: 120, textAlign: 'center' },
   lastWeek: { height: 44, borderRadius: 14, backgroundColor: '#1B2438', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14 },
   lastWeekText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, color: '#FFD66B', flexShrink: 1 },
   listWrap: { paddingTop: 12, paddingHorizontal: 20, paddingBottom: 16 },

@@ -27,7 +27,9 @@ export type PartRun = {
   /** Takrorlash rejimida ko'rsatiladigan avvalgi coin / jami. */
   replayCoins: number;
   tooLow: number | null;
-  answer: (isCorrect: boolean, mistake?: string, countAsAnswered?: boolean) => void;
+  /** Shu urinishdagi har savol natijasi (davom ettirilganda saqlangandan tiklanadi). */
+  results: boolean[];
+  answer: (isCorrect: boolean, mistake?: string, countAsAnswered?: boolean, pick?: string) => void;
   next: () => void;
   retry: () => void;
   /** Moslashtirishda aniqlik boshqacha hisoblanadi — to'g'ridan-to'g'ri yakunlash. */
@@ -48,6 +50,7 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
   const [replay, setReplay] = useState(false);
   const [replayCoins, setReplayCoins] = useState(0);
   const [tooLow, setTooLow] = useState<number | null>(null);
+  const [results, setResults] = useState<boolean[]>([]);
   const score = useRef<PartScore>({ answered: 0, correct: 0, total, coins: 0, mistakes: [], finished: false });
 
   useEffect(() => {
@@ -64,6 +67,7 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
         score.current = { ...saved, total };
         setIndex(saved.answered);
         setCorrect(saved.correct);
+        setResults((saved.results ?? []).slice(0, saved.answered));
       }
       setReady(true);
     });
@@ -72,18 +76,27 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
     };
   }, [lessonId, part.id, total]);
 
-  const answer = (isCorrect: boolean, mistake?: string, countAsAnswered = true) => {
+  const answer = (isCorrect: boolean, mistake?: string, countAsAnswered = true, pick?: string) => {
+    if (countAsAnswered) setResults((r) => [...r, isCorrect]);
     if (replay) {
       if (isCorrect) setCorrect((c) => c + 1);
       return;
     }
     const sc = score.current;
+    const at = sc.answered;
+    const withAt = <T,>(arr: T[] | undefined, v: T, fill: T) => {
+      const a = [...(arr ?? [])];
+      while (a.length < at) a.push(fill);
+      a[at] = v;
+      return a;
+    };
     score.current = {
       ...sc,
       answered: sc.answered + (countAsAnswered ? 1 : 0),
       correct: sc.correct + (isCorrect ? 1 : 0),
       coins: sc.coins + (isCorrect ? 1 : 0),
       mistakes: !isCorrect && mistake ? [...sc.mistakes, mistake] : sc.mistakes,
+      ...(countAsAnswered ? { results: withAt(sc.results, isCorrect, true), picks: withAt(sc.picks, pick ?? '', '') } : null),
     };
     if (isCorrect) {
       setCorrect((c) => c + 1);
@@ -123,12 +136,13 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
   };
 
   const retry = () => {
-    score.current = { answered: 0, correct: 0, total, coins: score.current.coins, mistakes: [], finished: false };
+    score.current = { answered: 0, correct: 0, total, coins: score.current.coins, mistakes: [], finished: false, results: [], picks: [] };
     void savePartScore(lessonId, part.id, score.current);
     setIndex(0);
     setCorrect(0);
+    setResults([]);
     setTooLow(null);
   };
 
-  return { ready, index, correct, replay, replayCoins, tooLow, answer, next, retry, finish };
+  return { ready, index, correct, replay, replayCoins, tooLow, results, answer, next, retry, finish };
 }

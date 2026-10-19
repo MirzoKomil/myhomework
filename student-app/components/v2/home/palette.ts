@@ -25,6 +25,8 @@ export type HomePalette = {
   emptyDay: string;
   todayBg: string;
   todayLabel: string;
+  todayNum: string;
+  goalChevron: string;
   vocabIconBg: string;
   battleIconBg: string;
   navBg: string;
@@ -56,6 +58,8 @@ export const lightHome: HomePalette = {
   emptyDay: '#EEF1F7',
   todayBg: '#FFFFFF',
   todayLabel: '#0B1220',
+  todayNum: '#B34700',
+  goalChevron: '#5B6478',
   vocabIconBg: '#F0EBFF',
   battleIconBg: '#FFF1E6',
   navBg: '#FFFFFF',
@@ -71,7 +75,7 @@ export const darkHome: HomePalette = {
   avatarBg: '#3A2414',
   pillBg: '#161E31',
   coinText: '#FFD66B',
-  streakText: '#B34700',
+  streakText: '#FF9A4D',
   bellStroke: '#F2F4F8',
   badgeBorder: '#0B1220',
   chipBg: '#161E31',
@@ -79,13 +83,15 @@ export const darkHome: HomePalette = {
   continueBg: '#161E31',
   continueText: '#F2F4F8',
   liveBg: '#1B2438',
-  telegramText: '#F2F4F8',
+  telegramText: '#0B1220',
   card: '#161E31',
   shieldLabel: '#8FA8FF',
   dayLabel: '#AEB6C8',
   emptyDay: '#24304A',
   todayBg: '#161E31',
   todayLabel: '#F2F4F8',
+  todayNum: '#FF9A4D',
+  goalChevron: '#8A93A6',
   vocabIconBg: '#2A2350',
   battleIconBg: '#3A2414',
   navBg: '#161E31',

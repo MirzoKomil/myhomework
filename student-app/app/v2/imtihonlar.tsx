@@ -11,7 +11,7 @@ import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Check, LockIcon, MedalIcon } from '@/components/v2/homework/icons';
+import { Check, ChevronRight, LockIcon, MedalIcon } from '@/components/v2/homework/icons';
 import { LessonsTop } from '@/components/v2/homework/LessonsTop';
 import { LessonsNav, Txt } from '@/components/v2/homework/ui';
 import { loadCourseData } from '@/components/v2/lessons/data';
@@ -21,7 +21,10 @@ import { R } from '@/constants/v2/routes';
 import { getResolvedExams, type Exam } from '@/data/exams';
 import { useExamResults } from '@/services/examStore';
 
-// Har bir oraliq imtihonning rasmi (dizayndagi tartibda).
+// Topshirilgan imtihon va navbatdagi (qora karta) imtihon rasmlari — dizayndagidek.
+const PASSED_IMAGE = 'cf6928439e1c0659517514deec13bdf1';
+const NEXT_IMAGE = 'd9b3ac63886f3fdd8214701a31f0956a';
+// Qulflangan guruhdagi imtihonlar rasmi (dizayndagi tartibda, indeks bo'yicha).
 const EXAM_IMAGES = [
   'cf6928439e1c0659517514deec13bdf1',
   'd9b3ac63886f3fdd8214701a31f0956a',
@@ -39,6 +42,7 @@ export default function ExamsScreen() {
   const [done, setDone] = useState<number | null>(null);
   const [today, setToday] = useState<number | null>(null);
   const [bonusDot, setBonusDot] = useState(false);
+  const [lessonWords, setLessonWords] = useState<number[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -50,6 +54,8 @@ export default function ExamsScreen() {
         .then((d) => {
           if (cancelled || !d) return;
           setDone(d.lessons.filter((l) => l.completed).length);
+          // Har darsning lug'atidagi so'zlar soni — "3-imtihonga tayyorgarlik" kartasi uchun.
+          setLessonWords(d.lessons.map((l) => l.content.vocabulary.length));
           setToday(d.activeIndex + 1);
           // Path ekranidagidek: bonus darslar faqat shu kursda bo'lsa nuqta chiqadi.
           setBonusDot(studentFeaturesForCourse(d.lang).bonusLessons);
@@ -108,11 +114,12 @@ export default function ExamsScreen() {
               <Pressable
                 key={exam.id}
                 accessibilityRole="button"
+                accessibilityLabel={r.passed ? `${i + 1}-oraliq imtihon sertifikatlari` : undefined}
                 onPress={() => (r.passed ? router.push(R.certificates as Href) : openExam(exam))}
                 style={({ pressed }) => [st.row, pressed && st.pressed]}
               >
                 <View style={[st.iconBox, { backgroundColor: r.passed ? '#E3F7EE' : '#FDECEC' }]}>
-                  <Image source={designImages[EXAM_IMAGES[i % EXAM_IMAGES.length]]} resizeMode="contain" style={{ width: 42, height: 42 }} />
+                  <Image source={designImages[PASSED_IMAGE]} resizeMode="contain" style={{ width: 42, height: 42 }} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
                   <Txt f="bodyHeavy" size={15}>
@@ -145,7 +152,7 @@ export default function ExamsScreen() {
                 <Pressable accessibilityRole="button" disabled={!open} onPress={() => openExam(e)} style={({ pressed }) => [st.next, pressed && st.pressed]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={[st.iconBox, { backgroundColor: '#FFF4D1' }]}>
-                      <Image source={designImages[EXAM_IMAGES[i % EXAM_IMAGES.length]]} resizeMode="contain" style={{ width: 42, height: 42 }} />
+                      <Image source={designImages[NEXT_IMAGE]} resizeMode="contain" style={{ width: 42, height: 42 }} />
                     </View>
                     <View style={{ flex: 1, gap: 1 }}>
                       <Txt f="bodyHeavy" size={16} color="#FFFFFF">
@@ -166,6 +173,32 @@ export default function ExamsScreen() {
                     {today ? `${today}-dars bugun · ` : ''}
                     {open ? 'imtihonni boshlash mumkin' : `imtihon ${e.requiredLessons}-darsdan keyin ochiladi`}
                   </Txt>
+                </Pressable>
+              );
+            })()}
+
+          {next &&
+            (() => {
+              // Navbatdagi imtihon oralig'idagi o'tilgan darslar (masalan 25–31) va ulardagi so'zlar.
+              const e = next.exam;
+              const i = indexOf(e);
+              const from = e.requiredLessons - 11;
+              const to = Math.min(e.requiredLessons, Math.max(from, lessonsDone));
+              const words = lessonWords.slice(from - 1, to).reduce((a, n) => a + n, 0);
+              return (
+                <Pressable accessibilityRole="link" onPress={() => router.push(R.wordReview as Href)} style={({ pressed }) => [st.prep, pressed && st.pressed]}>
+                  <View style={st.prepIcon}>
+                    <Image source={designImages['f7ed25f8b468b4cb6172a58adcd09f1f']} resizeMode="contain" style={{ width: 40, height: 40 }} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                    <Txt f="bodyHeavy" size={15}>
+                      {i + 1}-imtihonga tayyorgarlik
+                    </Txt>
+                    <Txt f="body" size={13} color="#4A5468">
+                      {from === to ? `${from}-dars` : `${from}–${to}-darslar`} · {words} ta soʻz · bugun 0 ta takrorlash
+                    </Txt>
+                  </View>
+                  <ChevronRight color="#5A2FD6" />
                 </Pressable>
               );
             })()}
@@ -239,6 +272,8 @@ const st = StyleSheet.create({
   iconBox: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, paddingHorizontal: 10, borderRadius: 11 },
   next: { backgroundColor: '#0B1220', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
+  prep: { backgroundColor: '#F0EBFF', borderRadius: 20, paddingVertical: 10, paddingLeft: 10, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  prepIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   stackBox: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#EEF1F7', borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   final: { backgroundColor: '#FFF4D1', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   finalIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F5B70A', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

@@ -1,12 +1,13 @@
 /**
  * v2 Do'kon — rasmni kattalashtirish (dizayn: 45 · ImageViewer).
  *
- * Rasmlar mahsulotning CRM rasmi(lari)dan. Masshtab tugmalari 100–300%
- * oralig'ida 50% qadam bilan ishlaydi; ochilganda 100% (asl o'lcham).
+ * Rasmlar mahsulotning CRM rasmi(lari)dan, to'liq ("contain") ko'rinadi.
+ * Masshtab tugmalari (pastda) 100–300% oralig'ida 50% qadam bilan
+ * ishlaydi; ochilganda 100% — "Kichiklashtirish" o'chiq (xira).
  */
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageStyle } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CloseIcon, MinusIcon, PlusIcon } from '@/components/v2/rewards/icons';
@@ -44,23 +45,37 @@ export default function V2ImageViewer() {
             <Image
               source={{ uri }}
               accessibilityLabel={`«${p?.name}» ${pageLabel(index)}, kattalashtirilgan`}
-              style={[{ width: '100%', height: '100%', transform: [{ scale: zoom }] }, { objectPosition: '50% 45%' } as ImageStyle]}
-              resizeMode="cover"
+              style={{ width: '100%', height: '100%', transform: [{ scale: zoom }] }}
+              resizeMode="contain"
             />
           ) : null}
-        </View>
-        <View accessibilityRole="toolbar" accessibilityLabel="Masshtab" style={styles.zoom}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Kattalashtirish" onPress={() => setZoomIdx((z) => Math.min(ZOOMS.length - 1, z + 1))} style={styles.zoomBtn}>
-            <PlusIcon />
-          </Pressable>
-          <Text style={styles.zoomText}>{Math.round(zoom * 100)}%</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Kichiklashtirish" onPress={() => setZoomIdx((z) => Math.max(0, z - 1))} style={styles.zoomBtn}>
-            <MinusIcon />
-          </Pressable>
         </View>
       </View>
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 34 }]}>
+        <View accessibilityRole="toolbar" accessibilityLabel="Masshtab" style={styles.zoom}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Kichiklashtirish"
+            accessibilityState={{ disabled: zoomIdx === 0 }}
+            disabled={zoomIdx === 0}
+            onPress={() => setZoomIdx((z) => Math.max(0, z - 1))}
+            style={[styles.zoomBtn, zoomIdx === 0 && { opacity: 0.45 }]}
+          >
+            <MinusIcon />
+          </Pressable>
+          <Text style={styles.zoomText}>{Math.round(zoom * 100)}%</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Kattalashtirish"
+            accessibilityState={{ disabled: zoomIdx === ZOOMS.length - 1 }}
+            disabled={zoomIdx === ZOOMS.length - 1}
+            onPress={() => setZoomIdx((z) => Math.min(ZOOMS.length - 1, z + 1))}
+            style={[styles.zoomBtn, zoomIdx === ZOOMS.length - 1 && { opacity: 0.45 }]}
+          >
+            <PlusIcon />
+          </Pressable>
+        </View>
         <View accessibilityRole="tablist" accessibilityLabel="Rasmlar" style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
           {images.map((_, i) => (
             <Pressable
@@ -90,10 +105,10 @@ const styles = StyleSheet.create({
   count: { width: 44, textAlign: 'center', fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, color: '#C3CAD9' },
   frame: { width: '100%', maxWidth: 480, height: 520, overflow: 'hidden' },
   stage: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center', paddingVertical: 10 },
-  zoom: { position: 'absolute', right: 14, bottom: 18, alignItems: 'center', gap: 6, padding: 6, borderRadius: 30, backgroundColor: 'rgba(11,18,32,0.72)' },
-  zoomBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
-  zoomText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#FFFFFF' },
-  bottom: { paddingTop: 6, paddingHorizontal: 20, alignItems: 'center', gap: 12 },
+  zoom: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 4, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.08)' },
+  zoomBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  zoomText: { minWidth: 48, textAlign: 'center', fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#FFFFFF' },
+  bottom: { paddingTop: 6, paddingHorizontal: 20, alignItems: 'center', gap: 10 },
   tab: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#6B7489' },
   dotActive: { width: 22, backgroundColor: '#FFFFFF' },

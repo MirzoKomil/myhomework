@@ -11,9 +11,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { designImages } from '@/constants/v2/designImages';
 import type { HomeworkPart, SentenceBuildQ } from '@/data/lessonContent';
 
-import { BulbIcon } from './icons';
+import { BulbIcon, Check, CloseIcon } from './icons';
 import { shuffle } from './lib';
 import { RetryView } from './PartStates';
+import { getPartScore } from './scoreStore';
 import { BarHeader, FeedbackSheet, Overline, Txt } from './ui';
 import { usePartRun } from './usePartRun';
 
@@ -23,10 +24,12 @@ type Props = {
   items: SentenceBuildQ[];
   allParts: HomeworkPart[];
   overline: string;
+  /** "46 / 50 · 46 coin" — takrorlash rejimidagi dars natijasi. */
+  replayScore: string;
   onClose: () => void;
 };
 
-export function BuildView({ lessonId, part, items, allParts, overline, onClose }: Props) {
+export function BuildView({ lessonId, part, items, allParts, overline, replayScore, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const run = usePartRun(lessonId, part, items.length, allParts);
   const [result, setResult] = useState<{ correct: boolean } | null>(null);
@@ -38,6 +41,11 @@ export function BuildView({ lessonId, part, items, allParts, overline, onClose }
 
   if (!run.ready) return null;
   if (run.tooLow !== null) return <RetryView percent={run.tooLow} onRetry={() => { setResult(null); setBuilt([]); run.retry(); }} />;
+
+  // Bankda qolgan so'zlar — hammasi joylashtirilmaguncha "Tekshirish" qulflangan.
+  const left = words.length - built.length;
+  const saved = getPartScore(lessonId, part.id);
+  const doneOk = (i: number) => run.results[i] ?? !(saved?.mistakes ?? []).includes(items[i].translation);
 
   const check = () => {
     const ok = built.map((i) => words[i]).join(' ') === item.answer.join(' ');
@@ -103,6 +111,54 @@ export function BuildView({ lessonId, part, items, allParts, overline, onClose }
             Eslatma: soʻzni bosib gapga qoʻshing, gapdagi soʻzni bosib qaytaring.
           </Txt>
         </View>
+        <View style={{ gap: 8 }}>
+          <Txt f="bodyHeavy" size={12} color="#4A5468" style={{ letterSpacing: 0.72, textTransform: 'uppercase' }}>
+            Tuzilgan gaplar
+          </Txt>
+          {items.slice(0, run.index).map((it, i) => {
+            const ok = doneOk(i);
+            const fg = ok ? '#075E3A' : '#B42318';
+            return (
+              <View key={it.id} style={[st.doneRow, !ok && { backgroundColor: '#FDECEC' }]}>
+                <View style={[st.doneDot, !ok && { backgroundColor: '#D92D20' }]}>
+                  {ok ? <Check size={12} color="#FFFFFF" strokeWidth={3.2} /> : <CloseIcon size={12} color="#FFFFFF" strokeWidth={3.2} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Txt f="bodyHeavy" size={15} color={fg} lang="ru">
+                    {it.answer.join(' ')}
+                  </Txt>
+                  <Txt f="bodyBold" size={12} color={fg}>
+                    {it.translation}
+                  </Txt>
+                </View>
+                <Txt f="bodyHeavy" size={12} color={fg}>
+                  {i + 1} / {items.length}
+                </Txt>
+              </View>
+            );
+          })}
+          <View style={st.nowRow}>
+            <View style={st.nowDot}>
+              <Txt f="bodyHeavy" size={12} color="#1E3FD1">
+                {run.index + 1}
+              </Txt>
+            </View>
+            <Txt f="bodyBold" size={14} color="#4A5468" style={{ flex: 1 }}>
+              {'Hozirgi gap · '}
+              <Txt f="bodyHeavy" size={14} lang="ru">
+                {[...built.map((i) => words[i]), '…'].join(' ')}
+              </Txt>
+            </Txt>
+            <Txt f="bodyHeavy" size={12} color="#1E3FD1">
+              {run.index + 1} / {items.length}
+            </Txt>
+          </View>
+          {run.replay && (
+            <Txt f="bodyBold" size={12} color="#4A5468">
+              Takrorlash rejimi · vazifa topshirilgan: {replayScore}
+            </Txt>
+          )}
+        </View>
       </ScrollView>
       {result ? (
         <FeedbackSheet
@@ -122,16 +178,21 @@ export function BuildView({ lessonId, part, items, allParts, overline, onClose }
           }}
         />
       ) : (
-        <View style={{ paddingTop: 14, paddingHorizontal: 20, paddingBottom: Math.max(34, insets.bottom + 14) }}>
+        <View style={{ paddingTop: 12, paddingHorizontal: 20, paddingBottom: Math.max(28, insets.bottom + 14) }}>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: built.length === 0 }}
-            disabled={built.length === 0}
+            accessibilityState={{ disabled: left > 0 }}
+            disabled={left > 0}
             onPress={check}
-            style={({ pressed }) => [st.check, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [st.check, left > 0 && { backgroundColor: '#E7EBF3' }, pressed && { opacity: 0.85 }]}
           >
-            <Txt f="bodyHeavy" size={17} color="#FFFFFF">
+            <Txt f="bodyHeavy" size={17} color={left > 0 ? '#4A5468' : '#FFFFFF'}>
               Tekshirish
+              {left > 0 && (
+                <Txt f="bodyBold" size={14} color="#4A5468">
+                  {` · ${left} ta soʻz qoldi`}
+                </Txt>
+              )}
             </Txt>
           </Pressable>
         </View>
@@ -149,5 +210,9 @@ const st = StyleSheet.create({
   word: { height: 48, paddingHorizontal: 14, borderRadius: 14, borderWidth: 2, borderBottomWidth: 4, borderColor: '#D5DBE7', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   slot: { height: 48, borderRadius: 14, backgroundColor: '#EEF1F7' },
   hint: { backgroundColor: '#FFF4D1', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  doneRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#E3F7EE', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14 },
+  doneDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#087A4A', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  nowRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 2, borderStyle: 'dashed', borderColor: '#C9D3F5', borderRadius: 16, paddingVertical: 8, paddingHorizontal: 12, minHeight: 48 },
+  nowDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#E8EEFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   check: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center' },
 });

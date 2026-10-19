@@ -15,6 +15,7 @@ import { ChipBellIcon, ChipCheckIcon, ChipVideoIcon, CloseIcon, TelegramAltIcon 
 import { BOT_URL } from '@/components/v2/home/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
+import { fetchDemoSchedule } from '@/services/contentApi';
 import { useAuth } from '@/services/studentAuthStore';
 import {
   confirmTelegramLink,
@@ -32,6 +33,17 @@ export function BotConnectPopup({ visible, onClose }: { visible: boolean; onClos
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const alive = useRef(true);
+  // "Jonli darsga havola (19:00)" — o'quvchining haqiqiy dars vaqti (jadvaldan).
+  const [lessonTime, setLessonTime] = useState('');
+  useEffect(() => {
+    if (!visible || !token) return;
+    fetchDemoSchedule()
+      .then((s) => {
+        const t = s.startsAt ? new Date(s.startsAt) : null;
+        setLessonTime(t ? `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}` : (s.lessonTime || ''));
+      })
+      .catch(() => {});
+  }, [visible, token]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -112,10 +124,10 @@ export function BotConnectPopup({ visible, onClose }: { visible: boolean; onClos
                 </Pressable>
               </View>
               <Text style={styles.body}>Muhim xabarlar Telegramga keladi — ilovani ochmasangiz ham hech narsani oʻtkazib yubormaysiz.</Text>
-              <View style={styles.chips}>
-                <View style={styles.chip}><ChipBellIcon /><Text style={styles.chipText}>Dars eslatmalari</Text></View>
-                <View style={styles.chip}><ChipVideoIcon /><Text style={styles.chipText}>Jonli darsga chaqiruv</Text></View>
-                <View style={styles.chip}><ChipCheckIcon /><Text style={styles.chipText}>Baho va vazifa xabarlari</Text></View>
+              <View style={styles.list} accessibilityRole="list">
+                <View style={styles.item}><ChipBellIcon size={18} color="#1B6FA8" /><Text style={styles.itemText}>Darsdan oldin eslatma</Text></View>
+                <View style={styles.item}><ChipVideoIcon size={18} color="#1B6FA8" /><Text style={styles.itemText}>{lessonTime ? `Jonli darsga havola (${lessonTime})` : 'Jonli darsga havola'}</Text></View>
+                <View style={styles.item}><ChipCheckIcon size={18} color="#1B6FA8" /><Text style={styles.itemText}>Baho va vazifa natijalari</Text></View>
               </View>
               <View style={styles.steps}>
                 {STEPS.map((s, i) => (
@@ -177,9 +189,9 @@ const styles = StyleSheet.create({
   handle: { fontFamily: fonts.bodyHeavy, fontSize: 15, color: '#1B6FA8', fontWeight: 'normal' },
   close: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF1F7', alignItems: 'center', justifyContent: 'center' },
   body: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20.3, color: '#4A5468', fontWeight: 'normal' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: '#E6F5FD', flexDirection: 'row', alignItems: 'center', gap: 5 },
-  chipText: { fontFamily: fonts.bodyHeavy, fontSize: 12, color: '#1B5E8C', fontWeight: 'normal' },
+  list: { marginTop: -2, paddingHorizontal: 2, gap: 8 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  itemText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 18.9, color: '#0B1220', fontWeight: 'normal' },
   steps: { backgroundColor: '#F4F6FA', borderRadius: 20, padding: 14, gap: 12 },
   step: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepNum: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#0B1220', alignItems: 'center', justifyContent: 'center' },

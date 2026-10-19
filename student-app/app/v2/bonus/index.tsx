@@ -4,9 +4,10 @@
  * Ma'lumot eski homework/bonus.tsx bilan bir xil: 18 ta bonus dars,
  * turi BONUS_CATEGORIES'dan, sanasi — kurs boshlanganidan keyingi har
  * yakshanba, ochilganlar soni UNLOCKED_COUNT (eski ekrandagi qoida).
- * "Ko'rildi" — lessonProgressStore'dagi videoWatch. Bonus darsning o'zi
- * v2'da yo'q — eski /homework/bonusLesson/[id] ochiladi. Bonus vaqti
- * (soat) serverda yo'q, shuning uchun faqat sana ko'rsatiladi.
+ * "Ko'rildi" — lessonProgressStore'dagi videoWatch. Bonus dars — v2
+ * BonusPlayer (bonus/[bonusId].tsx). Bonus vaqti (soat) serverda yo'q,
+ * shuning uchun faqat sana ko'rsatiladi. Eslatma tugmasi — shu qurilmadagi
+ * sozlama (bonusData.ts), serverga hech narsa yuborilmaydi.
  */
 import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -18,33 +19,8 @@ import { LessonsNav, Txt } from '@/components/v2/homework/ui';
 import { loadCourseData } from '@/components/v2/lessons/data';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
-import { BONUS_CATEGORIES } from '@/data/lessonContent';
-import { courseEnrollment } from '@/data/mock';
-import { firstWeekdayOnOrAfter } from '@/data/scheduleCalendar';
+import { BONUS_LESSONS, TOTAL, UNLOCKED_COUNT, short, useBonusReminder, whenLabel } from '@/components/v2/homework/bonusData';
 import { getLessonProgress, loadLessonProgress, subscribe } from '@/services/lessonProgressStore';
-
-const TOTAL = 18;
-const UNLOCKED_COUNT = 1;
-const FIRST_BONUS_DATE = firstWeekdayOnOrAfter(courseEnrollment.courseStartDate, 0);
-const WEEKDAYS = ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba'];
-const pad = (n: number) => String(n).padStart(2, '0');
-
-const BONUS_LESSONS = Array.from({ length: TOTAL }, (_, i) => {
-  const date = new Date(FIRST_BONUS_DATE);
-  date.setDate(date.getDate() + i * 7);
-  return { id: `bonus-${i + 1}`, number: i + 1, category: BONUS_CATEGORIES[i % BONUS_CATEGORIES.length], date };
-});
-
-const short = (d: Date) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
-
-function whenLabel(d: Date) {
-  const now = new Date();
-  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  const diff = Math.round((day(d) - day(now)) / 86400000);
-  const rel = diff === 0 ? 'Bugun, ' : diff === 1 ? 'Ertaga, ' : '';
-  const wd = WEEKDAYS[d.getDay()];
-  return `${rel}${rel ? wd : wd[0].toUpperCase() + wd.slice(1)} ${short(d)}`;
-}
 
 export default function BonusScreen() {
   const [, setTick] = useState(0);
@@ -63,7 +39,8 @@ export default function BonusScreen() {
   const next = BONUS_LESSONS[UNLOCKED_COUNT];
   // Ochilgan bonuslar — eng yangisi tepada.
   const past = BONUS_LESSONS.slice(0, UNLOCKED_COUNT).reverse();
-  const open = (id: string) => router.push(`/homework/bonusLesson/${id}` as Href);
+  const open = (id: string) => router.push(R.bonusPlayer(id) as Href);
+  const [reminder, setReminder] = useBonusReminder();
 
   return (
     <View style={st.screen}>
@@ -91,14 +68,24 @@ export default function BonusScreen() {
                 </Txt>
               </View>
               <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push(R.notifications as Href)}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: reminder }}
+                accessibilityLabel={`Eslatma: ${short(next.date)}`}
+                onPress={() => setReminder(!reminder)}
                 style={({ pressed }) => [st.remind, pressed && st.pressed]}
               >
                 <BellIcon />
-                <Txt f="bodyHeavy" size={15} color="#5A2FD6">
-                  Eslatma yoqilgan
-                </Txt>
+                <View style={{ flex: 1 }}>
+                  <Txt f="bodyHeavy" size={15} lh={17.25} color="#5A2FD6">
+                    Eslatma
+                  </Txt>
+                  <Txt f="bodyBold" size={12} lh={13.8} color="#4A5468">
+                    30 daqiqa oldin · Telegram bot
+                  </Txt>
+                </View>
+                <View style={[st.track, !reminder && { backgroundColor: '#D5DBE7' }]}>
+                  <View style={[st.knob, reminder ? { right: 3 } : { left: 3 }]} />
+                </View>
               </Pressable>
             </View>
           )}
@@ -122,8 +109,8 @@ export default function BonusScreen() {
                     <PlayIcon />
                   </View>
                   <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                    <Txt f="bodyHeavy" size={15}>
-                      {b.number}-bonus dars
+                    <Txt f="bodyHeavy" size={15} numberOfLines={1}>
+                      {b.number}-bonus · {b.category.label}
                     </Txt>
                     <Txt f="bodyBold" size={13} color="#9A3D00">
                       {short(b.date)} · hali koʻrish mumkin
@@ -143,9 +130,14 @@ export default function BonusScreen() {
                     {b.number}-bonus dars
                   </Txt>
                   <Txt f="body" size={12} color="#4A5468">
-                    {short(b.date)} · {seen ? 'koʻrildi' : 'hali koʻrish mumkin'}
+                    {seen ? short(b.date) : `${short(b.date)} · hali koʻrish mumkin`}
                   </Txt>
                 </View>
+                {seen && (
+                  <Txt f="bodyHeavy" size={12} color="#075E3A" style={{ flexShrink: 0 }}>
+                    Koʻrildi ✓
+                  </Txt>
+                )}
               </Pressable>
             );
           })}
@@ -164,10 +156,12 @@ const st = StyleSheet.create({
   hero: { backgroundColor: '#7C4DFF', borderRadius: 24, paddingVertical: 16, paddingHorizontal: 18, overflow: 'hidden', gap: 8 },
   heroImg: { position: 'absolute', right: 2, top: 6, width: 116, height: 104 },
   chip: { alignSelf: 'flex-start', letterSpacing: 0.88, textTransform: 'uppercase', backgroundColor: '#FFFFFF', paddingVertical: 5, paddingHorizontal: 9, borderRadius: 9, overflow: 'hidden' },
-  remind: { height: 48, borderRadius: 15, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 2 },
+  remind: { height: 52, borderRadius: 15, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 10, marginTop: 2 },
+  track: { width: 48, height: 28, borderRadius: 14, backgroundColor: '#7C4DFF', flexShrink: 0 },
+  knob: { position: 'absolute', top: 3, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF' },
   section: { textTransform: 'uppercase', letterSpacing: 0.78, paddingTop: 4, paddingHorizontal: 2 },
   current: { backgroundColor: '#FFF1E6', borderRadius: 18, paddingVertical: 10, paddingLeft: 14, paddingRight: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   play: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FF7A1A', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  row: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  row: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 8, paddingLeft: 14, paddingRight: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   dot: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E3F7EE', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

@@ -6,13 +6,14 @@
  * tepadan pastga joylashtiriladi. Dizayn bo'yicha 7×7 to'r va 6 so'z.
  * Tanlash: harflarni ketma-ket bosib (yoki barmoqni surib) borasiz —
  * tanlangan harflar so'zga to'g'ri kelsa, so'z o'z rangi bilan belgilanadi.
+ * Holat qatori: o'yin boshlanganidan beri o'tgan vaqt va topilgan so'zlar.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CheckIcon, HandIcon } from '@/components/v2/practice/icons';
-import { GameHeader, displayRu, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
+import { CheckIcon, HandIcon, TimerIcon } from '@/components/v2/practice/icons';
+import { GameHeader, displayRu, plainWord, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
@@ -24,6 +25,10 @@ const SIZE = 7;
 const WORD_COUNT = 6;
 const MIN_POOL = 3;
 const FALLBACK_RU = ['ДОМ', 'КОТ', 'СОК', 'ЧАЙ', 'НОЖ', 'ДЕНЬ', 'УТРО', 'ОКНО', 'ХЛЕБ', 'РЫБА', 'ПТИЦА', 'ШКОЛА', 'ГОРОД'];
+// Zaxira so'zlarning chipdagi urg'uli shakli (bir bo'g'inlilarga urg'u qo'yilmaydi).
+const FALLBACK_RU_STRESS: Record<string, string> = {
+  'УТРО': 'у́тро', 'ОКНО': 'окно́', 'РЫБА': 'ры́ба', 'ПТИЦА': 'пти́ца', 'ШКОЛА': 'шко́ла', 'ГОРОД': 'го́род',
+};
 const FALLBACK_EN = ['CAT', 'DOG', 'SUN', 'RAIN', 'BOOK', 'MILK', 'TEA', 'BREAD'];
 // Topilgan so'zlar ranglari (dizayndagi tartibda), keyin takrorlanadi.
 const FOUND_COLORS = [
@@ -62,6 +67,7 @@ function buildGrid(words: string[], filler: string) {
 }
 
 const key = (p: Cell) => `${p.r}-${p.c}`;
+const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
 export default function WordSearchScreen() {
   const insets = useSafeAreaInsets();
@@ -74,12 +80,16 @@ export default function WordSearchScreen() {
   const [found, setFound] = useState<string[]>([]);
   const [flash, setFlash] = useState(false);
   const gridBox = useRef({ w: 0, h: 0 });
+  const [seconds, setSeconds] = useState(0);
+  // Urg'usiz katta harfli so'z → chipda ko'rsatiladigan asl shakl (urg'u bilan).
+  const displayRef = useRef<Record<string, string>>({});
 
   const newBoard = (pool: string[]) => {
     const picked = [...pool].sort(() => Math.random() - 0.5).slice(0, WORD_COUNT).sort((a, b) => b.length - a.length);
     setBoard(buildGrid(picked, isRu ? 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ' : 'ETAOINSHRDLUCMFWYPVBGK'));
     setPath([]);
     setFound([]);
+    setSeconds(0);
   };
   const poolRef = useRef<string[]>([]);
 
@@ -88,7 +98,10 @@ export default function WordSearchScreen() {
     getAccumulatedVocabulary()
       .catch(() => [])
       .then((vocab) => {
-        const pool = Array.from(new Set(vocab.map((w) => w.english.toUpperCase()).filter((w) => re.test(w) && w.length >= 3 && w.length <= SIZE)));
+        const disp: Record<string, string> = { ...FALLBACK_RU_STRESS };
+        for (const w of vocab) disp[plainWord(w.english).toUpperCase()] = w.english.toLowerCase();
+        displayRef.current = disp;
+        const pool = Array.from(new Set(vocab.map((w) => plainWord(w.english).toUpperCase()).filter((w) => re.test(w) && w.length >= 3 && w.length <= SIZE)));
         const fb = isRu ? FALLBACK_RU : FALLBACK_EN;
         poolRef.current = pool.length >= MIN_POOL ? [...pool, ...fb.filter((f) => !pool.includes(f))] : fb;
         newBoard(poolRef.current);
@@ -98,6 +111,13 @@ export default function WordSearchScreen() {
 
   const words = board?.placed ?? [];
   const won = words.length > 0 && found.length === words.length;
+
+  // O'yin vaqti: taxta tayyor bo'lgach boshlanadi, hammasi topilganda to'xtaydi.
+  useEffect(() => {
+    if (!board || won) return;
+    const id = setInterval(() => setSeconds((x) => x + 1), 1000);
+    return () => clearInterval(id);
+  }, [board, won]);
 
   useEffect(() => {
     if (!board) return;
@@ -157,6 +177,7 @@ export default function WordSearchScreen() {
     });
   };
 
+  const total = words.length || WORD_COUNT;
   const selecting = board && path.length ? path.map((p) => board.grid[p.r][p.c]).join('') : '';
 
   return (
@@ -216,7 +237,7 @@ export default function WordSearchScreen() {
           <View style={styles.chips}>
             {words.map((w) => {
               const i = found.indexOf(w.word);
-              const word = w.word.toLowerCase();
+              const word = displayRef.current[w.word] ?? w.word.toLowerCase();
               if (i < 0) {
                 return (
                   <View key={w.word} style={styles.chipTodo}>
@@ -232,6 +253,20 @@ export default function WordSearchScreen() {
                 </View>
               );
             })}
+          </View>
+          <View
+            accessibilityRole="summary"
+            accessibilityLabel={`Oʻyin holati: ${total} tadan ${found.length} ta soʻz topildi, ${Math.floor(seconds / 60)} daqiqa ${seconds % 60} soniya`}
+            style={styles.state}
+          >
+            <View style={styles.stateTime}>
+              <TimerIcon />
+              <Text style={styles.stateTimeText}>{mmss(seconds)}</Text>
+            </View>
+            <View style={styles.stateTrack}>
+              <View style={[styles.stateFill, { width: `${(found.length / total) * 100}%` }]} />
+            </View>
+            <Text style={styles.stateCount}>{found.length} / {total} soʻz</Text>
           </View>
           <View style={[styles.tip, { marginBottom: Math.max(insets.bottom, 34) }]}>
             <HandIcon />
@@ -264,6 +299,12 @@ const styles = StyleSheet.create({
   chipDone: { height: 40, paddingLeft: 10, paddingRight: 14, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 5 },
   chipTodo: { height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 2, borderStyle: 'dashed', borderColor: '#C9B8FF', justifyContent: 'center' },
   chipText: { fontFamily: fonts.bodyHeavy, fontSize: 15, color: '#0B1220', ...reset },
+  state: { marginTop: 6, backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stateTime: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  stateTimeText: { fontFamily: fonts.bodyHeavy, fontSize: 15, color: '#3B2A73', fontVariant: ['tabular-nums'], ...reset },
+  stateTrack: { flex: 1, height: 8, borderRadius: 4, backgroundColor: '#E6DEFF', overflow: 'hidden' },
+  stateFill: { height: 8, borderRadius: 4, backgroundColor: '#6A3CF0' },
+  stateCount: { flexShrink: 0, fontFamily: fonts.bodyHeavy, fontSize: 14, color: '#3B2A73', ...reset },
   tip: { marginTop: 'auto', backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 10, alignItems: 'center' },
   tipText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 19, color: '#26304A', ...reset },
 });

@@ -21,6 +21,13 @@ export type PartScore = {
   /** Xato qilingan savollar matni — "Xatolar" ro'yxati uchun. */
   mistakes: string[];
   finished: boolean;
+  /**
+   * Har savol bo'yicha natija (tartib bo'yicha) — Exercise/Test'dagi
+   * "B · natijalar" chiziqlari uchun. Eski yozuvlarda bo'lmasligi mumkin.
+   */
+  results?: boolean[];
+  /** O'quvchi tanlagan/yozgan javob (tartib bo'yicha) — TestReview, MistakeReview uchun. */
+  picks?: string[];
 };
 
 type Store = Record<string, Record<string, PartScore>>;

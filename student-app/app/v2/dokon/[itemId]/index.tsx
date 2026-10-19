@@ -3,19 +3,23 @@
  *
  * Mahsulot eski do'kondagi manbadan (mobile-content `shop`). Tavsif,
  * afzalliklar va qo'shimcha rasmlar CRM'da kiritilgan bo'lsa chiqadi,
- * bo'lmasa faqat bor ma'lumot. Buyurtma "Yetkazish" (Checkout) ekranida
- * eski shopStore.placeOrder orqali beriladi.
+ * bo'lmasa faqat bor ma'lumot. Buyurtma Checkout ekranida eski
+ * shopStore.placeOrder orqali beriladi; coin yetmaganda ham manzilni
+ * "Yetkazish manzilini oldindan kiriting" qatori orqali oldindan kiritish mumkin.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CoinFill, LockIcon, TapIcon, TICK2, TickIcon, TruckIcon } from '@/components/v2/rewards/icons';
+import { BagIcon, ChevronThinIcon, CoinFill, LockIcon, TapIcon, TICK2, TickIcon, TruckSmallIcon } from '@/components/v2/rewards/icons';
 import { fmt, HeaderPill, lessonsFor, productDescription, productImages, ScreenHeader, useShopProducts } from '@/components/v2/rewards/parts';
-import { CoinBar, ProductImage } from '@/components/v2/rewards/shopParts';
+import { CoinBar, ProductCover } from '@/components/v2/rewards/shopParts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { useCoins } from '@/services/coinsStore';
+
+// Muqova foni — dizayndagi qiymat (rasm cheti shu rangga singib ketadi).
+const HERO_BG = '#E1DAD4';
 
 export default function V2ShopItem() {
   const insets = useSafeAreaInsets();
@@ -44,14 +48,14 @@ export default function V2ShopItem() {
       <ScreenHeader
         title={p.category === 'books' ? 'Kitob' : 'Mahsulot'}
         fallback={R.shop}
-        right={<HeaderPill label="Yetkazish" icon={<TruckIcon />} onPress={() => router.push(R.checkout(p.id) as never)} />}
+        right={<HeaderPill label="Buyurtmalarim" icon={<BagIcon />} onPress={() => router.push(R.orders as never)} />}
       />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 22 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 34 }]} showsVerticalScrollIndicator={false}>
         <View style={[styles.column, { flex: 1 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Rasmni kattalashtirish" disabled={!images.length} onPress={openViewer} style={styles.hero}>
-            <ProductImage product={p} style={StyleSheet.absoluteFill} iconSize={96} position="50% 45%" />
+            <ProductCover product={p} size={190} bg={HERO_BG} fade={0.14} iconSize={96} />
             {images.length > 0 && (
-              <>
+              <View style={styles.heroBar}>
                 <View style={styles.tapPill}>
                   <TapIcon />
                   <Text style={styles.tapText}>Kattalashtirish uchun bosing</Text>
@@ -61,7 +65,7 @@ export default function V2ShopItem() {
                     <View key={i} accessibilityLabel={i === 0 ? 'Muqova' : `Ichki sahifa ${i}`} style={[styles.dot, i === 0 && styles.dotActive]} />
                   ))}
                 </View>
-              </>
+              </View>
             )}
           </Pressable>
 
@@ -71,7 +75,7 @@ export default function V2ShopItem() {
           </View>
 
           {!!p.features?.length && (
-            <View style={{ gap: 8, paddingHorizontal: 2 }}>
+            <View style={{ gap: 5, paddingHorizontal: 2 }}>
               {p.features.map((f) => (
                 <View key={f} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
                   <View style={styles.tick}><TickIcon size={13} color="#087A4A" strokeWidth={3.2} d={TICK2} /></View>
@@ -90,9 +94,16 @@ export default function V2ShopItem() {
             </View>
             <CoinBar value={coins / Math.max(1, p.price)} height={8} />
             <Text style={styles.need}>{missing > 0 ? `yana ${fmt(missing)} coin · ~${lessonsFor(missing)} dars` : 'Coin yetarli — buyurtma bera olasiz'}</Text>
+            {missing > 0 && (
+              <Pressable accessibilityRole="link" onPress={() => router.push(R.checkout(p.id) as never)} style={({ pressed }) => [styles.addr, pressed && { opacity: 0.8 }]}>
+                <TruckSmallIcon />
+                <Text style={styles.addrText}>Yetkazish manzilini oldindan kiriting</Text>
+                <ChevronThinIcon />
+              </Pressable>
+            )}
           </View>
 
-          <View style={{ flex: 1, minHeight: 20 }} />
+          <View style={{ flex: 1 }} />
           <View style={{ gap: 4 }}>
             {missing > 0 ? (
               <View accessibilityRole="button" accessibilityState={{ disabled: true }} style={[styles.cta, { backgroundColor: '#E4E8F0' }]}>
@@ -104,7 +115,7 @@ export default function V2ShopItem() {
                 <Text style={[styles.ctaText, { color: '#FFFFFF' }]}>Buyurtma berish</Text>
               </Pressable>
             )}
-            <Pressable accessibilityRole="link" onPress={() => router.push(R.home as never)} style={styles.howBtn}>
+            <Pressable accessibilityRole="link" onPress={() => router.push(R.shop as never)} style={styles.howBtn}>
               <Text style={styles.howText}>Coin qanday yigʻiladi?</Text>
             </Pressable>
           </View>
@@ -117,11 +128,12 @@ export default function V2ShopItem() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6FA' },
   content: { flexGrow: 1, paddingTop: 14, paddingHorizontal: 20 },
-  column: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: 12 },
-  hero: { height: 262, borderRadius: 26, overflow: 'hidden', backgroundColor: '#ECECEE' },
-  tapPill: { position: 'absolute', left: 12, bottom: 12, height: 34, paddingLeft: 10, paddingRight: 12, borderRadius: 17, backgroundColor: 'rgba(255,255,255,.94)', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  column: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: 11 },
+  hero: { borderRadius: 26, overflow: 'hidden', backgroundColor: HERO_BG },
+  heroBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, paddingBottom: 8 },
+  tapPill: { height: 34, paddingLeft: 10, paddingRight: 12, borderRadius: 17, backgroundColor: 'rgba(255,255,255,.94)', flexDirection: 'row', alignItems: 'center', gap: 6 },
   tapText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#0B1220' },
-  dots: { position: 'absolute', right: 14, bottom: 12, height: 34, paddingHorizontal: 10, borderRadius: 17, backgroundColor: 'rgba(255,255,255,.94)', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dots: { height: 34, paddingHorizontal: 10, borderRadius: 17, backgroundColor: 'rgba(255,255,255,.94)', flexDirection: 'row', alignItems: 'center', gap: 5 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#B4BCCB' },
   dotActive: { width: 20, backgroundColor: '#0B1220' },
   title: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 26, lineHeight: 29, letterSpacing: -0.52, color: '#0B1220' },
@@ -134,6 +146,8 @@ const styles = StyleSheet.create({
   need: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#7A5300' },
   cta: { height: 56, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   ctaText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16 },
+  addr: { minHeight: 44, marginHorizontal: -6, marginBottom: -6, paddingHorizontal: 8, borderRadius: 12, backgroundColor: '#F4F6FA', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  addrText: { flex: 1, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#0B1220' },
   howBtn: { height: 46, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   howText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#1E3FD1' },
 });

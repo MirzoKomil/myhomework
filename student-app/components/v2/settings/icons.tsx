@@ -185,3 +185,30 @@ export function CloseIcon({ size = 20, color = '#0B1220', strokeWidth = 2.4 }: P
     </Svg>
   );
 }
+
+/** Tashqi havola belgisi (Sozlamalar → Telegram bot qatori). */
+export function ExternalLinkIcon({ size = 18, color = '#6B7489', strokeWidth = 2.2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}
+
+/** Ko'z belgisi (Ilova tili → "Hozirgi koʻrinish" kartasi). */
+export function EyeIcon({ size = 20, color = '#4A5468', strokeWidth = 2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" {...line(color, strokeWidth)} />
+      <Circle cx="12" cy="12" r="3" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}
+
+export function ArrowRightIcon({ size = 16, color = '#1E3FD1', strokeWidth = 2.4 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M5 12h14M13 6l6 6-6 6" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}

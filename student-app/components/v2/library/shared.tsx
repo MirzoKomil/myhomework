@@ -75,6 +75,8 @@ export function Column({ children, style }: { children: ReactNode; style?: Style
 }
 
 export type TabStyle = { height: number; padX: number; gap: number; inactiveBorder?: string; inactiveColor: string; inactiveWeight: 700 | 800 };
+/** Bo'sh (0 ta) tab ko'rinishi — dizayndagi "Qiyin · 0": uzuq chegara, kulrang fon. */
+const DISABLED_TAB = { bg: '#EEF1F7', border: '#D5DBE7', color: '#586175' };
 
 export function FilterTabs<K extends string>({
   tabs,
@@ -84,7 +86,7 @@ export function FilterTabs<K extends string>({
   look,
   style,
 }: {
-  tabs: { key: K; label: string }[];
+  tabs: { key: K; label: string; disabled?: boolean; hint?: string }[];
   value: K;
   onChange: (k: K) => void;
   label: string;
@@ -95,6 +97,32 @@ export function FilterTabs<K extends string>({
     <View accessibilityRole="tablist" accessibilityLabel={label} style={[{ flexDirection: 'row', gap: look.gap }, style]}>
       {tabs.map((t) => {
         const on = t.key === value;
+        if (t.disabled && !on) {
+          return (
+            <View
+              key={t.key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: false, disabled: true }}
+              accessibilityHint={t.hint}
+              style={{
+                height: look.height,
+                paddingHorizontal: look.padX,
+                borderRadius: look.height / 2,
+                backgroundColor: DISABLED_TAB.bg,
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: DISABLED_TAB.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <T w={800} size={14} color={DISABLED_TAB.color} numberOfLines={1}>
+                {t.label}
+              </T>
+            </View>
+          );
+        }
         return (
           <Pressable
             key={t.key}
@@ -103,7 +131,8 @@ export function FilterTabs<K extends string>({
             onPress={() => onChange(t.key)}
             style={{
               height: look.height,
-              paddingHorizontal: look.padX - (on || !look.inactiveBorder ? 0 : 1.5),
+              // Dizayndagi tugma: padding + chegara (chegara padding ichiga kirmaydi).
+              paddingHorizontal: look.padX,
               borderRadius: look.height / 2,
               backgroundColor: on ? '#0B1220' : '#FFFFFF',
               borderWidth: on || !look.inactiveBorder ? 0 : 1.5,
@@ -113,7 +142,7 @@ export function FilterTabs<K extends string>({
               flexShrink: 0,
             }}
           >
-            <T w={on ? 800 : look.inactiveWeight} size={14} color={on ? '#FFFFFF' : look.inactiveColor}>
+            <T w={on ? 800 : look.inactiveWeight} size={14} color={on ? '#FFFFFF' : look.inactiveColor} numberOfLines={1}>
               {t.label}
             </T>
           </Pressable>
@@ -238,6 +267,65 @@ export function LiveIcon() {
     <Svg {...hidden} width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#4A5468" strokeWidth={2} strokeLinejoin="round">
       <Rect x={2} y={6} width={14} height={12} rx={3} />
       <Path d="M16 10l6-3v10l-6-3" />
+    </Svg>
+  );
+}
+
+/** Dizayndagi "‹" (AudioTrack/AudioDialogLib sarlavhasi): 20px, M15 5l-7 7 7 7. */
+export function ChevronLeftWide() {
+  return (
+    <Svg {...hidden} width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#0B1220" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M15 5l-7 7 7 7" />
+    </Svg>
+  );
+}
+export function QrIcon() {
+  return (
+    <Svg {...hidden} width={13} height={13} viewBox="0 0 24 24" fill="#4A5468">
+      <Path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm2 2h2v2h-2zm-2 2h2v2h-2zm2 2h2v2h-2zm2-4h2v2h-2zm0 4h2v2h-2z" />
+    </Svg>
+  );
+}
+/** Qorong'u pleer: pauza (rx 1.5, 4..20). */
+export function PauseTall({ size = 26, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg {...hidden} width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={6} y={4} width={4.2} height={16} rx={1.5} fill={color} />
+      <Rect x={13.8} y={4} width={4.2} height={16} rx={1.5} fill={color} />
+    </Svg>
+  );
+}
+/** Ro'yxatdagi kichik "ijro" uchburchagi (fill #2F5BFF). */
+export function PlaySmall({ size = 13, color = '#2F5BFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg {...hidden} width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z" fill={color} />
+    </Svg>
+  );
+}
+export function PrevIcon() {
+  return (
+    <Svg {...hidden} width={20} height={20} viewBox="0 0 24 24">
+      <Path d="M6 5h2.4v14H6zM20 5.5v13a.8.8 0 0 1-1.2.7L9.6 12.7a.8.8 0 0 1 0-1.4l9.2-6.5a.8.8 0 0 1 1.2.7z" fill="#FFFFFF" />
+    </Svg>
+  );
+}
+export function NextIcon() {
+  return (
+    <Svg {...hidden} width={20} height={20} viewBox="0 0 24 24">
+      <Path d="M15.6 5H18v14h-2.4zM4 5.5v13a.8.8 0 0 0 1.2.7l9.2-6.5a.8.8 0 0 0 0-1.4L5.2 4.8A.8.8 0 0 0 4 5.5z" fill="#FFFFFF" />
+    </Svg>
+  );
+}
+/** "Replikani / gapni takrorlash" — ichida "1" bor takrorlash belgisi. */
+export function RepeatOneIcon({ color = '#FFFFFF' }: { color?: string }) {
+  return (
+    <Svg {...hidden} width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M17 2l3 3-3 3" />
+      <Path d="M4 11V9a4 4 0 0 1 4-4h16" />
+      <Path d="M7 22l-3-3 3-3" />
+      <Path d="M20 13v2a4 4 0 0 1-4 4H4" />
+      <Path d="M11 10.5l1.6-1V15" strokeWidth={2} />
     </Svg>
   );
 }

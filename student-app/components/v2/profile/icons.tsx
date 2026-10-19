@@ -149,6 +149,16 @@ export function CardIcon({ size = 20, color = '#2F5BFF', strokeWidth = 2 }: P) {
   );
 }
 
+/** Profil "Doʻkon va buyurtmalarim" qatori — sumka. */
+export function BagIcon({ size = 20, color = '#2F5BFF', strokeWidth = 2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z" {...line(color, strokeWidth)} />
+      <Path d="M9 8V6.5a3 3 0 0 1 6 0V8" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}
+
 export function CheckIcon({ size = 12, color = '#FFFFFF', strokeWidth = 3.6 }: P) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
@@ -285,6 +295,34 @@ export function BookIcon({ size = 18, color = '#2F5BFF', strokeWidth = 2 }: P) {
     <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
       <Path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" {...line(color, strokeWidth)} />
       <Path d="M4 21V5M8 7h7" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}
+
+/** O'ngga strelka (Payments pastki tugmasi, Contract, DebtReminder). */
+export function ArrowRightIcon({ size = 18, color = '#FFFFFF', strokeWidth = 2.4 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M5 12h14M13 6l6 6-6 6" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}
+
+/** Expired "Yopiladi" ro'yxatidagi qulf (to'rtburchak balandligi 9). */
+export function LockIcon3({ size = 16, color = '#B42318', strokeWidth = 2.2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Rect x="5" y="11" width="14" height="9" rx="2" {...line(color, strokeWidth)} />
+      <Path d="M8 11V8a4 4 0 0 1 8 0v3" {...line(color, strokeWidth)} />
+    </Svg>
+  );
+}
+
+/** Sertifikatlar pastidagi QR belgisi (to'ldirilgan). */
+export function QrIcon({ size = 18, color = '#1E3FD1' }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm10-2h2v2h-2zm2 2h2v2h-2zm-2 2h2v2h-2zm2 2h2v2h-2zm2-4h2v2h-2zm0 4h2v2h-2z" fill={color} />
     </Svg>
   );
 }

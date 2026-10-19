@@ -5,22 +5,30 @@
  * saqlangan: sarlavha + tinglash tugmasi, matn, kulrang "SAVOL n / N"
  * kartasi, pastda "Oldingi" / "Keyingi savol". Dizayndagi variantli savol
  * o'rnida — tarjima maydoni, chunki bu turda savol-variant ma'lumoti yo'q.
+ * Matndagi dars lug'atidagi so'z bosilsa — pastda tarjima kartasi chiqadi va
+ * so'z shaxsiy lug'atga (Lug'atim) qo'shiladi.
  */
 import * as Speech from 'expo-speech';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { router, type Href } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { addMyWord } from '@/components/v2/practice/shared';
+import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import type { ReadingSentence } from '@/data/lessonContent';
+import type { ReadingSentence, VocabWord } from '@/data/lessonContent';
 import { addCoins } from '@/services/coinsStore';
 import { fetchCreativeSubmission, submissionKey, submitCreativeSubmission } from '@/services/creativeSubmissionApi';
 import { fetchMobileContent } from '@/services/contentApi';
 import { addLightning } from '@/services/lightningStore';
 import { markHomeworkPartDone } from '@/services/lessonProgressStore';
 
-import { SpeakerIcon } from './icons';
-import { CloseButton, Txt } from './ui';
+import { CheckAlt, CloseIcon, SpeakerIcon } from './icons';
+import { CloseButton, Txt, webShadow } from './ui';
+
+/** Urg'u va ё farqisiz kichik harf — matndagi so'zni lug'at bilan solishtirish uchun. */
+const norm = (s: string) => s.normalize('NFD').replace(/\u0301/g, '').normalize('NFC').toLowerCase().replace(/ё/g, 'е');
 
 type Status = 'checking' | 'draft' | 'pending' | 'graded';
 
@@ -31,10 +39,12 @@ type Props = {
   overline: string;
   paragraph: { id: string; russianText: string };
   sentences: ReadingSentence[];
+  /** Dars (va oldingi dars) lug'ati — matndagi so'z tarjimasi uchun. */
+  vocabulary: VocabWord[];
   onClose: () => void;
 };
 
-export function ReadingView({ lessonId, partId, title, overline, paragraph, sentences, onClose }: Props) {
+export function ReadingView({ lessonId, partId, title, overline, paragraph, sentences, vocabulary, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const key = submissionKey(lessonId, 'reading');
   const [status, setStatus] = useState<Status>('checking');
@@ -45,6 +55,21 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
   const [submitting, setSubmitting] = useState(false);
   const [graded, setGraded] = useState<{ score: number | null; feedback: string | null } | null>(null);
   const total = 1 + sentences.length;
+  // Tanlangan so'z: matndagi o'rni (token indeksi) va lug'atdagi yozuvi.
+  const [sel, setSel] = useState<{ at: number; word: VocabWord; shown: string } | null>(null);
+  const vocabMap = useMemo(() => {
+    const m = new Map<string, VocabWord>();
+    vocabulary.forEach((w) => {
+      const k = norm(w.english.trim());
+      if (k && !m.has(k)) m.set(k, w);
+    });
+    return m;
+  }, [vocabulary]);
+  const tokens = useMemo(() => paragraph.russianText.split(/([\p{L}\u0301-]+)/u), [paragraph.russianText]);
+  const pickWord = (at: number, shown: string, word: VocabWord) => {
+    setSel({ at, word, shown });
+    void addMyWord({ word: word.english, translation: word.translation });
+  };
 
   const done = () => markHomeworkPartDone(lessonId, partId);
 
@@ -182,8 +207,27 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
     <View style={{ flex: 1 }}>
       {header}
       <ScrollView contentContainerStyle={st.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Txt f="body" size={16.5} lh={30} lang="ru">
-          {paragraph.russianText}
+        <Txt f="body" size={16} lh={23.36} lang="ru">
+          {tokens.map((t, i) => {
+            const w = i % 2 === 1 ? vocabMap.get(norm(t)) : undefined;
+            if (!w) return t;
+            const active = sel?.at === i;
+            return (
+              <Text
+                key={i}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                onPress={() => pickWord(i, t, w)}
+                style={[
+                  { fontFamily: active ? fonts.bodyHeavy : fonts.body, fontWeight: 'normal', color: active ? '#1E3FD1' : '#0B1220' },
+                  active && st.wordActive,
+                  active && webShadow('inset 0 -2px 0 #2F5BFF'),
+                ]}
+              >
+                {t}
+              </Text>
+            );
+          })}
         </Txt>
         <View style={st.card}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -210,7 +254,46 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
           />
         </View>
       </ScrollView>
-      <View style={[st.footer, { paddingBottom: Math.max(34, insets.bottom + 14) }]}>
+      <View style={[st.footerCol, { paddingBottom: Math.max(34, insets.bottom + 14) }]}>
+        {sel && (
+          <View role="dialog" accessibilityLabel={`Soʻz tarjimasi: ${sel.shown}`} style={st.wordCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={st.wordBar} />
+              <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                  <Txt f="bodyHeavy" size={17} lang="ru">
+                    {sel.word.english}
+                  </Txt>
+                  {!!sel.word.transcript && (
+                    <Txt f="bodyBold" size={12} color="#4A5468">
+                      [{sel.word.transcript.replace(/^\[|\]$/g, '')}]
+                    </Txt>
+                  )}
+                </View>
+                <Txt f="body" size={14} color="#4A5468">
+                  {sel.word.translation}
+                </Txt>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Tarjimani yopish" onPress={() => setSel(null)} style={({ pressed }) => [st.wordClose, pressed && { opacity: 0.85 }]}>
+                <CloseIcon size={16} />
+              </Pressable>
+            </View>
+            <View style={st.wordFoot}>
+              <View accessibilityLiveRegion="polite" style={st.addedChip}>
+                <CheckAlt size={16} />
+                <Txt f="bodyHeavy" size={13} color="#075E3A">
+                  Lugʻatga qoʻshildi
+                </Txt>
+              </View>
+              <Pressable accessibilityRole="link" onPress={() => router.push(R.lugat as Href)} style={({ pressed }) => [st.openLugat, pressed && { opacity: 0.85 }]}>
+                <Txt f="bodyHeavy" size={13} color="#1E3FD1">
+                  Lugʻatimni ochish →
+                </Txt>
+              </Pressable>
+            </View>
+          </View>
+        )}
+        <View style={{ flexDirection: 'row', gap: 10 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ disabled: step === 0 }}
@@ -233,6 +316,7 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
             {isLast ? (submitting ? 'Yuborilmoqda...' : 'Yuborish') : 'Keyingi savol'}
           </Txt>
         </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -242,8 +326,26 @@ const st = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20 },
   listen: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  body: { paddingTop: 14, paddingHorizontal: 20, paddingBottom: 20, gap: 12 },
-  card: { backgroundColor: '#F4F6FA', borderRadius: 22, padding: 14, gap: 8 },
+  body: { paddingTop: 12, paddingHorizontal: 20, paddingBottom: 20, gap: 10 },
+  card: { backgroundColor: '#F4F6FA', borderRadius: 22, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 12, gap: 6 },
+  wordActive: { backgroundColor: '#E8EEFF', borderRadius: 4, paddingHorizontal: 2 },
+  footerCol: { paddingTop: 10, paddingHorizontal: 20, gap: 10 },
+  wordCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E6EE',
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingRight: 8,
+    paddingLeft: 14,
+    gap: 6,
+    ...webShadow('0 8px 24px rgba(11, 18, 32, 0.12)', { shadowColor: '#0B1220', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 6 }),
+  },
+  wordBar: { width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: '#2F5BFF', marginLeft: -6 },
+  wordClose: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F4F6FA', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  wordFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderTopWidth: 1, borderTopColor: '#EEF1F7', paddingTop: 4 },
+  addedChip: { height: 44, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#E3F7EE', flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  openLugat: { height: 44, paddingLeft: 10, paddingRight: 4, borderRadius: 12, justifyContent: 'center', flexShrink: 0 },
   badge: { backgroundColor: '#E3F7EE', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8, overflow: 'hidden' },
   input: {
     minHeight: 96,

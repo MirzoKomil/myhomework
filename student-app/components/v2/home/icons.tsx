@@ -200,3 +200,42 @@ export const NavUserIcon = ({ color }: { color: string }) => (
     <Path d="M4 21a8 8 0 0 1 16 0" />
   </Svg>
 );
+
+// LiveNow: "Namuna" chipidagi ko'z (EyeIcon'dan yo'li biroz farqli: 3.5).
+export const EyeSmallIcon = ({ size = 14, color = '#4A5468' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} {...hidden}>
+    <Path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+    <Circle cx="12" cy="12" r="3" />
+  </Svg>
+);
+
+// LiveNow: "Slaydlar tayyor" — ekran ikonkasi.
+export const ScreenIcon = ({ size = 20, color = '#2F5BFF' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" {...hidden}>
+    <Rect x="3" y="4" width="18" height="12" rx="2" />
+    <Path d="M12 16v4M8 20h8" />
+  </Svg>
+);
+
+// Notifications: jonli dars sarlavhasi yonidagi strelka (M9 5l7 7-7 7).
+export const ChevronNarrowIcon = ({ size = 16, color = '#1E3FD1' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} {...hidden}>
+    <Path d="M9 5l7 7-7 7" />
+  </Svg>
+);
+
+// WordReview: karnay (talaffuzni tinglash).
+export const SpeakerIcon = ({ size = 22, color = '#2F5BFF' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
+    <Path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill={color} />
+    <Path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" />
+  </Svg>
+);
+
+// WordReview: "Lugʻatimdan" belgisidagi soat (stroke 2.4, linejoin round).
+export const ReviewClockIcon = ({ size = 13, color = '#9A3D00' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
+    <Circle cx="12" cy="12" r="9" />
+    <Path d="M12 7v5l3 2" />
+  </Svg>
+);

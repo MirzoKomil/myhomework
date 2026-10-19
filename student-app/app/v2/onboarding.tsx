@@ -22,10 +22,12 @@ type Goal = { key: string; title: string; sub: string; img: ImageSourcePropType;
 
 const GOALS: Goal[] = [
   { key: 'work', title: 'Ish va safar', sub: 'Safar, ish joyi, hujjatlar', img: designImages['542e0ea22dfa5f9dd6265acfd73e3ca2'], posX: 0.5 },
-  { key: 'daily', title: 'Kundalik muloqot', sub: 'Kafe, doʻkon, tanishuv', img: designImages.b3fe02724ceeae9be8b9aec48cfff965, posX: 0 },
+  { key: 'daily', title: 'Kundalik muloqot', sub: 'Kafe, doʻkon, tanishuv', img: designImages.d9c9d8d26328b24384a9840cf989fb7b, posX: 0 },
   { key: 'business', title: 'Savdo va biznes', sub: 'Bozor, narx, mijozlar', img: designImages['3280a48481f2201f4e7135fe1267b5eb'], posX: 0.4 },
-  { key: 'services', title: 'Sogʻliq va xizmatlar', sub: 'Shifokor, bank, pochta', img: designImages.b59a8e75b4074718c21f6aa9ff731483, posX: 0 },
+  { key: 'services', title: 'Sogʻliq va xizmatlar', sub: 'Shifokor, bank, pochta', img: designImages['2ed4977b1c6c69d1bb27827f54a0ac54'], posX: 0 },
 ];
+
+const IMG_H = 174;
 
 /** CSS `background: url() X% 50% / 135% auto` ning RN ko'rinishi. */
 function CoverImage({ source, posX }: { source: ImageSourcePropType; posX: number }) {
@@ -36,7 +38,7 @@ function CoverImage({ source, posX }: { source: ImageSourcePropType; posX: numbe
       {w > 0 && (
         <Image
           source={source}
-          style={{ position: 'absolute', width: size, height: size, left: (w - size) * posX, top: (150 - size) / 2 }}
+          style={{ position: 'absolute', width: size, height: size, left: (w - size) * posX, top: (IMG_H - size) / 2 }}
           accessibilityElementsHidden
           importantForAccessibility="no"
         />
@@ -124,7 +126,6 @@ export default function V2Onboarding() {
               <Text style={styles.ctaText}>Davom etish</Text>
               <ArrowRight />
             </Pressable>
-            <Text style={styles.note}>Keyin sozlamalarda oʻzgartirish mumkin</Text>
           </View>
         </View>
       </ScrollView>
@@ -138,14 +139,14 @@ const styles = StyleSheet.create({
   topRow: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#F4F6FA', alignItems: 'center', justifyContent: 'center' },
   topText: { fontFamily: fonts.bodyBold, fontSize: 14, color: '#4A5468', fontWeight: 'normal' },
-  head: { paddingTop: 22, paddingHorizontal: 20, gap: 6 },
+  head: { paddingTop: 24, paddingHorizontal: 20, gap: 6 },
   h1: { fontFamily: fonts.display, fontSize: 28, lineHeight: 30.8, letterSpacing: -0.56, color: '#0B1220', fontWeight: 'normal' },
   sub: { fontFamily: fonts.body, fontSize: 15, color: '#4A5468', fontWeight: 'normal' },
   grid: { paddingTop: 18, paddingHorizontal: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   card: { width: '47.5%', flexGrow: 1, flexBasis: '40%', borderRadius: 22, borderWidth: 2.5, overflow: 'hidden', position: 'relative' },
   cardOn: { borderColor: '#2F5BFF', backgroundColor: '#E8EEFF' },
   cardOff: { borderColor: '#E4E8F0', backgroundColor: '#FFFFFF' },
-  imgBox: { width: '100%', height: 150, overflow: 'hidden' },
+  imgBox: { width: '100%', height: IMG_H, overflow: 'hidden' },
   check: {
     position: 'absolute',
     top: 8,
@@ -165,5 +166,4 @@ const styles = StyleSheet.create({
   bottom: { marginTop: 'auto', paddingTop: 14, paddingHorizontal: 20, gap: 6 },
   cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   ctaText: { fontFamily: fonts.bodyHeavy, fontSize: 17, color: '#FFFFFF', fontWeight: 'normal' },
-  note: { textAlign: 'center', fontFamily: fonts.body, fontSize: 13, color: '#4A5468', fontWeight: 'normal' },
 });

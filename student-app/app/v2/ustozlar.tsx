@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ChatBubbleIcon, ClockIcon, TelegramIcon } from '@/components/v2/profile/icons';
+import { ClockIcon, TelegramIcon, TelegramIcon2 } from '@/components/v2/profile/icons';
 import {
   addMinutes,
   Column,
@@ -47,6 +47,12 @@ import {
 const VIDEO_TEACHER = TEACHER_PROFILES.find((t) => t.id === 'video-teacher')!;
 
 const open = (url: string) => Linking.openURL(url).catch(() => {});
+
+/** Jo'nalish kelishigi: Asilbek → Asilbekka, Ulug'beq → -qa, boshqalar → -ga. */
+const dative = (name: string) => {
+  const last = name.slice(-1).toLowerCase();
+  return name + (last === 'k' ? 'ka' : last === 'q' ? 'qa' : 'ga');
+};
 
 function Tag({ label, bg, fg }: { label: string; bg: string; fg: string }) {
   return (
@@ -104,6 +110,7 @@ export default function V2Teachers() {
   const isToday = !!next?.isToday;
   const mainName = profile?.mainTeacherName ?? '';
   const asstName = profile?.assistantTeacherName ?? '';
+  const mainFirst = mainName.trim().split(/\s+/)[0] ?? '';
   const practiceAt = time ? addMinutes(time, (duration || 30) + 5) : '';
 
   const subtitle = [group ? `${group} guruhi` : '', tariff ? `${tariff} tarif` : ''].filter(Boolean).join(' · ');
@@ -111,7 +118,7 @@ export default function V2Teachers() {
   return (
     <View style={st.screen}>
       <Header title="Ustozlarim" subtitle={subtitle} subtitleWeight="bold" fallback={R.profile} variant="teacher" />
-      <ScrollView contentContainerStyle={[st.content, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
         <Column style={st.col}>
           {/* Asosiy ustoz */}
           <View style={[st.card, { gap: 14 }]}>
@@ -141,24 +148,6 @@ export default function V2Teachers() {
                 <Text style={st.statNum}>{time || '—'}</Text>
                 <Text style={st.statLabel}>{isToday ? 'bugungi dars' : 'keyingi dars'}</Text>
               </View>
-            </View>
-            <View style={st.btns}>
-              <Pressable
-                accessibilityRole="link"
-                onPress={() => open(tgByPhone(profile?.mainTeacherPhone ?? '', support))}
-                style={({ pressed }) => [st.btn, { backgroundColor: '#2F5BFF' }, pressed && st.pressed]}
-              >
-                <ChatBubbleIcon />
-                <Text style={[st.btnText, { color: '#FFFFFF' }]}>Savol</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="link"
-                onPress={() => open(schedule?.telegramGroupLink || support)}
-                style={({ pressed }) => [st.btn, { backgroundColor: '#2AABEE' }, pressed && st.pressed]}
-              >
-                <TelegramIcon color="#0B1220" />
-                <Text style={[st.btnText, { color: '#0B1220' }]} numberOfLines={1}>{group ? `${group} guruhi` : 'Guruh'}</Text>
-              </Pressable>
             </View>
           </View>
 
@@ -198,12 +187,39 @@ export default function V2Teachers() {
             <TgCircle label={`${VIDEO_TEACHER.name}ga Telegramda savol berish`} url={support} />
           </View>
 
-          <View style={st.foot}>
-            <Image source={designImages.f639c30e1400761df83230b833ba42b2} style={st.footImg} resizeMode="contain" />
-            <Text style={st.footText}>Barcha savollar Telegram orqali. Ustozlar odatda 1–2 soat ichida javob beradi.</Text>
+          <View style={st.info2}>
+            <Image source={designImages.f639c30e1400761df83230b833ba42b2} style={st.infoImg} resizeMode="contain" />
+            <View style={st.infoCol}>
+              <Text style={st.infoTitle}>Savollar — Telegram orqali</Text>
+              <Text style={st.infoText}>Ustozlar odatda 1–2 soat ichida javob beradi.</Text>
+            </View>
           </View>
         </Column>
       </ScrollView>
+
+      {/* Pastki panel: asosiy ustozga savol va guruh (dizayndagi footer) */}
+      <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 20) + 14 }]}>
+        <Column style={st.btns}>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => open(tgByPhone(profile?.mainTeacherPhone ?? '', support))}
+            style={({ pressed }) => [st.btn, { backgroundColor: '#2F5BFF' }, pressed && st.pressed]}
+          >
+            <TelegramIcon2 size={18} color="#FFFFFF" />
+            <Text style={[st.btnText, { color: '#FFFFFF' }]} numberOfLines={1}>
+              {mainFirst ? `${dative(mainFirst)} savol` : 'Ustozga savol'}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => open(schedule?.telegramGroupLink || support)}
+            style={({ pressed }) => [st.btn, { backgroundColor: '#2AABEE' }, pressed && st.pressed]}
+          >
+            <TelegramIcon color="#0B1220" />
+            <Text style={[st.btnText, { color: '#0B1220' }]} numberOfLines={1}>{group ? `${group} guruhi` : 'Guruh'}</Text>
+          </Pressable>
+        </Column>
+      </View>
     </View>
   );
 }
@@ -213,8 +229,8 @@ const patternDay = (d: Date) => DAY_NAMES[d.getDay()];
 
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6FA' },
-  content: { paddingHorizontal: 20, paddingTop: 16 },
-  col: { gap: 12 },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 },
+  col: { gap: 14 },
   pressed: { opacity: 0.85 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 14 },
@@ -239,7 +255,13 @@ const st = StyleSheet.create({
   tgCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#2AABEE', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   practice: { backgroundColor: '#F0EBFF', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   practiceText: { flex: 1, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#3B2A73' },
-  foot: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 4, paddingHorizontal: 4 },
-  footImg: { width: 64, height: 60, flexShrink: 0 },
-  footText: { flex: 1, fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18.2, color: '#4A5468' },
+  info2: { backgroundColor: '#E8EEFF', borderRadius: 24, paddingVertical: 12, paddingRight: 16, paddingLeft: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  infoImg: { width: 84, height: 78, flexShrink: 0 },
+  infoCol: { flex: 1, minWidth: 0, gap: 4 },
+  infoTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, lineHeight: 20, color: '#0B1220' },
+  infoText: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18.2, color: '#34405A' },
+  footer: {
+    flexShrink: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 14, paddingHorizontal: 20,
+    boxShadow: '0 -6px 20px rgba(11,18,32,0.06)',
+  },
 });

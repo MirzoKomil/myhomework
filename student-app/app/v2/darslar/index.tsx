@@ -5,9 +5,11 @@
  * qulf holati getLessonLockMap'dan, foiz — lessonProgressStore'dan.
  * Ro'yxat joriy oy (24 dars) bo'yicha ko'rsatiladi va joriy darsdan ikki
  * dars oldingi joyga aylantiriladi — dizayndagi ko'rinish shu.
+ * Yopiq dars bosilsa — "dars yopiq" oynasi (LessonLocked); ?popup=locked
+ * bilan ochilsa, joriy darsdan keyingi birinchi yopiq dars uchun ochiladi.
  */
-import { router, useFocusEffect, type Href } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,6 +31,7 @@ import {
   type LessonInfo,
 } from '@/components/v2/lessons/data';
 import { Check, LockIcon, PencilIcon, PlayIcon } from '@/components/v2/lessons/icons';
+import { LessonLockedPopup } from '@/components/v2/popups/LessonLocked';
 import { TabBar } from '@/components/v2/TabBar';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -49,6 +52,8 @@ export default function PathScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const scrolled = useRef(false);
   const scores = useHomeworkScores();
+  const { popup } = useLocalSearchParams<{ popup?: string }>();
+  const [lockedIdx, setLockedIdx] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,6 +83,14 @@ export default function PathScreen() {
   const examAfter = active ? Math.ceil(active.number / EXAM_INTERVAL) * EXAM_INTERVAL : EXAM_INTERVAL;
   const dates = schedule.startsAt && data ? scheduleDates(schedule.startsAt, schedule.pattern, data.activeIndex, monthStart + MONTH_SIZE) : {};
   const scrollTarget = active ? Math.max(monthStart, active.index - 2) : -1;
+  const lockedLesson = lockedIdx !== null ? lessons[lockedIdx] : undefined;
+
+  // ?popup=locked — oynani to'g'ridan-to'g'ri ochish (skrinshot/havola uchun).
+  useEffect(() => {
+    if (popup !== 'locked' || !data) return;
+    const first = data.lessons.find((l) => l.index > data.activeIndex && l.locked);
+    if (first) setLockedIdx(first.index);
+  }, [popup, data]);
 
   return (
     <View style={styles.screen}>
@@ -148,6 +161,7 @@ export default function PathScreen() {
                     grade={grades.find((g) => g.lessonId === l.id)}
                     date={dates[l.index]}
                     score={scores[l.id]}
+                    onLocked={() => setLockedIdx(l.index)}
                   />
                 </View>
               ))}
@@ -156,6 +170,14 @@ export default function PathScreen() {
         </ScrollView>
       </View>
       <TabBar active="lessons" />
+      <LessonLockedPopup
+        visible={!!lockedLesson}
+        onClose={() => setLockedIdx(null)}
+        data={data}
+        lesson={lockedLesson ?? null}
+        date={lockedLesson ? dates[lockedLesson.index] : undefined}
+        activeLiveAt={active && !active.isVideo ? dates[active.index] : undefined}
+      />
     </View>
   );
 }
@@ -169,6 +191,7 @@ function PathRow({
   grade,
   date,
   score,
+  onLocked,
 }: {
   lesson: LessonInfo;
   isActive: boolean;
@@ -178,6 +201,7 @@ function PathRow({
   grade?: LiveGradeEntry;
   date?: Date;
   score?: Record<string, { correct: number; total: number; finished: boolean }>;
+  onLocked: () => void;
 }) {
   const coins = useLessonCoins(lesson.id);
   const kind = lesson.isVideo ? 'Videodars' : 'Jonli dars';
@@ -237,7 +261,12 @@ function PathRow({
   if (lesson.locked) {
     const when = date ? ` · ${shortDay(date)}` : '';
     return (
-      <View style={styles.row}>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`${lesson.number}-dars, yopiq: nima uchun?`}
+        onPress={onLocked}
+        style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
+      >
         <View style={styles.rail}>
           <View style={[styles.dot, { backgroundColor: '#E7EBF3' }]}><LockIcon /></View>
           {!isLast && <View style={[styles.line, { backgroundColor: '#D5DBE7' }]} />}
@@ -246,7 +275,7 @@ function PathRow({
           <Text style={[styles.overline, { color: '#5B6478' }]}>{lesson.number}-dars · {kind}{when}</Text>
           <Text style={[styles.name, { color: '#4A5468' }]}>{lesson.name}</Text>
         </View>
-      </View>
+      </Pressable>
     );
   }
 

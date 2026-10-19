@@ -1,24 +1,26 @@
 /**
- * v2 Audiolar (dizayn: 33 AudioList).
+ * v2 Audiolar (dizayn: 37 AudioList).
  *
- * Darslik audio treklari ilovada alohida ma'lumot sifatida yo'q (QR,
- * trek raqami, davomiylik serverda saqlanmaydi). Shu sabab har bir
- * darsning real audio dialoglari — CRM'dagi rolli dialoglar — trek
- * sifatida ko'rsatiladi; bosilganda o'sha darsning audio dialog ekrani
- * ochiladi. Davomiylik va "davom etmoqda" joyi ma'lumoti yo'q — ko'rsatilmaydi.
+ * Treklar — darslikning audio fayllari: CRM'da dars modullariga biriktirilgan
+ * audio (dars ichidagi "Audio dialoglar" bilan bir manba, getAudioTracks).
+ * Trek raqami — kurs bo'yicha ketma-ket; "eshitilgan" — o'sha audio oxirigacha
+ * tinglanganmi (darsdagi bilan umumiy belgi); "davom etmoqda · 0:21" —
+ * AudioTrack ekranida to'xtatilgan joy (qurilmada). Davomiylik — modulda
+ * kiritilgan bo'lsa. Kitob "qism"i serverda yo'q — "Kitob · 14-trek".
  * QR skaner: ilovada kamera kutubxonasi yo'q → "tez orada" xabari.
  */
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { loadLessonTracks, type LessonTracks } from '@/components/v2/library/data';
+import { allBookTracks, bare, getTrackPositions, groupByLesson, type BookTrack } from '@/components/v2/library/data';
 import { lessonMonth } from '@/components/v2/library/grammar';
-import { BackButton, CameraIcon, Check, Column, currentLesson, Display, FilterTabs, go, PlayRounded, T } from '@/components/v2/library/shared';
+import { BackButton, CameraIcon, Check, Column, currentLesson, Display, FilterTabs, go, mmss, PlayRounded, T } from '@/components/v2/library/shared';
+import { useListened } from '@/components/v2/lessons/data';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
-import { fetchMobileContent } from '@/services/contentApi';
+import { fetchMobileContent, type MobileContent } from '@/services/contentApi';
 
 type Month = 'all' | '1' | '2' | '3';
 const TABS: { key: Month; label: string }[] = [
@@ -31,21 +33,24 @@ const TABS: { key: Month; label: string }[] = [
 export default function AudioListScreen() {
   const insets = useSafeAreaInsets();
   const [month, setMonth] = useState<Month>('all');
-  const [groups, setGroups] = useState<LessonTracks[]>([]);
-  const [todayId, setTodayId] = useState<string | null>(null);
+  const [mc, setMc] = useState<MobileContent | null>(null);
+  const [cur, setCur] = useState<{ id: string; index: number } | null>(null);
+  const [pos, setPos] = useState<Record<string, { t: number; d: number }>>({});
   const [qrNote, setQrNote] = useState(false);
+  // Tinglangan treklar saqlagichini yuklaydi va o'zgarganda qayta chizadi.
+  const listenedTick = useListened('').length;
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       (async () => {
-        const mc = await fetchMobileContent();
-        const cur = await currentLesson(mc);
-        if (!cur) return;
-        const g = await loadLessonTracks(mc, cur.index);
+        const m = await fetchMobileContent();
+        const c = await currentLesson(m);
+        const p = await getTrackPositions();
         if (!alive) return;
-        setTodayId(cur.lesson.id);
-        setGroups(g);
+        setMc(m);
+        setCur(c ? { id: c.lesson.id, index: c.index } : null);
+        setPos(p);
       })().catch(() => {});
       return () => {
         alive = false;
@@ -53,6 +58,9 @@ export default function AudioListScreen() {
     }, []),
   );
 
+  const groups = useMemo(() => (mc && cur ? groupByLesson(allBookTracks(mc), cur.index) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mc, cur, pos, listenedTick]);
   const shown = month === 'all' ? groups : groups.filter((g) => String(lessonMonth(g.number)) === month);
 
   return (
@@ -91,8 +99,7 @@ export default function AudioListScreen() {
 
         <View style={styles.list}>
           {shown.map((g) => {
-            const isToday = g.lesson.id === todayId;
-            const activeIdx = isToday ? g.tracks.findIndex((t) => !t.heard) : -1;
+            const isToday = g.lesson.id === cur?.id;
             return (
               <View key={g.lesson.id} style={{ gap: 10 }}>
                 <View style={styles.secHead}>
@@ -105,32 +112,9 @@ export default function AudioListScreen() {
                   <T w={700} size={13} color="#4A5468" style={{ flexShrink: 1 }} numberOfLines={1}>{g.lesson.name}</T>
                 </View>
                 <View style={styles.card}>
-                  {g.tracks.map((t, i) => {
-                    const active = i === activeIdx;
-                    const circle = active ? ['#2F5BFF', '#FFFFFF'] : t.heard ? ['#E3F7EE', '#075E3A'] : ['#E8EEFF', '#1E3FD1'];
-                    return (
-                      <Pressable
-                        key={t.partId}
-                        accessibilityRole="link"
-                        onPress={() => go(R.audioDialog(g.lesson.id))}
-                        style={({ pressed }) => [styles.row, i < g.tracks.length - 1 && styles.rowBorder, pressed && { opacity: 0.85 }]}
-                      >
-                        <View style={[styles.play, { backgroundColor: circle[0] }]}>
-                          <PlayRounded color={circle[1]} />
-                        </View>
-                        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                          <T w={800} size={15}>{t.title}</T>
-                          <T w={600} size={12} color="#4A5468">Kitob · {g.number}-dars · {t.trackNo}-trek</T>
-                        </View>
-                        {t.heard && (
-                          <View style={styles.heard}>
-                            <Check size={12} color="#075E3A" sw={3.4} />
-                            <T w={800} size={11} color="#075E3A">eshitilgan</T>
-                          </View>
-                        )}
-                      </Pressable>
-                    );
-                  })}
+                  {g.tracks.map((t, i) => (
+                    <TrackRow key={t.id} t={t} pos={pos[t.id]} last={i === g.tracks.length - 1} />
+                  ))}
                 </View>
               </View>
             );
@@ -138,6 +122,51 @@ export default function AudioListScreen() {
         </View>
       </Column>
     </ScrollView>
+  );
+}
+
+function TrackRow({ t, pos, last }: { t: BookTrack; pos?: { t: number; d: number }; last: boolean }) {
+  // Davom etayotgan trek: to'xtatilgan joy saqlangan va hali oxirigacha eshitilmagan.
+  const going = !!pos && !t.heard;
+  const dur = t.duration || (pos?.d ? mmss(pos.d) : '');
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`${bare(t.title)}, ${t.no}-trek${dur ? `, ${dur}` : ''}${t.heard ? ', eshitilgan' : ''}`}
+      onPress={() => go(R.audioTrack(t.id))}
+      style={({ pressed }) => [styles.row, !last && styles.rowBorder, pressed && { opacity: 0.85 }]}
+    >
+      {going ? (
+        <View style={styles.play}>
+          <PlayRounded color="#FFFFFF" />
+        </View>
+      ) : (
+        <View style={[styles.num, { backgroundColor: t.heard ? '#E3F7EE' : '#EEF1F7' }]}>
+          <T w={800} size={14} color={t.heard ? '#075E3A' : '#4A5468'}>{t.no}</T>
+        </View>
+      )}
+      <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+        <T w={800} size={15}>{bare(t.title)}</T>
+        <T w={600} size={12} color="#4A5468" numberOfLines={1}>Kitob · {t.no}-trek</T>
+        {going && pos && (
+          <View style={styles.progRow}>
+            <View style={styles.progTrack}>
+              <View style={[styles.progFill, { width: `${pos.d ? Math.min(100, (pos.t / pos.d) * 100) : 0}%` }]} />
+            </View>
+            <T w={800} size={12} color="#1E3FD1" numberOfLines={1}>davom etmoqda · {mmss(pos.t)}</T>
+          </View>
+        )}
+      </View>
+      <View style={styles.right}>
+        {!!dur && <T w={800} size={13} color="#4A5468">{dur}</T>}
+        {t.heard && (
+          <View style={styles.heard}>
+            <Check size={12} color="#075E3A" sw={3.4} />
+            <T w={800} size={12} color="#075E3A">eshitilgan</T>
+          </View>
+        )}
+      </View>
+    </Pressable>
   );
 }
 
@@ -154,6 +183,11 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#FFFFFF', borderRadius: 20 },
   row: { paddingVertical: 10, paddingLeft: 12, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
-  play: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  heard: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  play: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  num: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  progRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  progTrack: { flex: 1, height: 5, borderRadius: 3, backgroundColor: '#E8EEFF', overflow: 'hidden' },
+  progFill: { height: 5, borderRadius: 3, backgroundColor: '#2F5BFF' },
+  right: { alignItems: 'flex-end', gap: 2, flexShrink: 0 },
+  heard: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 });

@@ -5,21 +5,21 @@
  * mos imtihondan o'tilgan bo'lsa ochiladi (examStore natijalari +
  * getCourseOverallProgress). O'tish bali va savollar soni — CRM'da
  * tahrirlangan imtihondan (getResolvedExams). Dizaynda 7 ta: 6 oraliq +
- * 1 yakuniy (bonus sertifikati dizaynda yo'q).
+ * 1 yakuniy (bonus sertifikati dizaynda yo'q). Olingan sertifikat
+ * tugmasi uni CertificateView'da ochadi (R.certificate).
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DownloadIcon, LockIcon2, RibbonIcon } from '@/components/v2/profile/icons';
+import { DownloadIcon, LockIcon2, QrIcon, RibbonIcon } from '@/components/v2/profile/icons';
 import { certificateStates, Column, go, Header } from '@/components/v2/profile/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { EXAM_PASS_PERCENT, getResolvedExams } from '@/data/exams';
 import { getCourseOverallProgress } from '@/data/lessonContent';
-import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { useExamResults } from '@/services/examStore';
 
 export default function V2Certificates() {
@@ -28,7 +28,6 @@ export default function V2Certificates() {
   const [lessonsDone, setLessonsDone] = useState(0);
   const [passPercent, setPassPercent] = useState(EXAM_PASS_PERCENT);
   const [finalQuestions, setFinalQuestions] = useState(0);
-  const [name, setName] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -44,18 +43,11 @@ export default function V2Certificates() {
         if (fin) setFinalQuestions(fin.exam.questions.length);
       })
       .catch(() => {});
-    fetchDemoStudentProfile().then((p) => setName(p?.name ?? '')).catch(() => {});
   }, []);
 
   const certs = certificateStates(examResults, lessonsDone);
   const done = certs.filter((c) => c.passed).length;
   const firstLocked = certs.find((c) => !c.passed);
-
-  const exportCert = (title: string, range: string, score: number) => {
-    // Eski ekrandagi kabi: webda chop etish/PDF, telefonda ulashish.
-    if (Platform.OS === 'web') window.print();
-    else void Share.share({ message: `${title}\n${name}\n${range}\nNatija ${score}%` });
-  };
 
   return (
     <View style={st.screen}>
@@ -84,9 +76,9 @@ export default function V2Certificates() {
                     <Text style={st.doneSub}>{`${isFinal ? `${finalQuestions} savol` : range} · natija ${c.score}%`}</Text>
                   </View>
                   <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={isFinal ? 'Kurs sertifikatini yuklab olish' : `${c.index + 1}-oraliq sertifikatni yuklab olish`}
-                    onPress={() => exportCert(title, range, c.score)}
+                    accessibilityRole="link"
+                    accessibilityLabel={isFinal ? 'Kurs sertifikatini ochish' : `${c.index + 1}-oraliq sertifikatni ochish`}
+                    onPress={() => go(R.certificate(c.cert.id))}
                     style={({ pressed }) => [st.dl, pressed && st.pressed]}
                   >
                     <DownloadIcon size={18} color="#2F5BFF" strokeWidth={2.4} />
@@ -113,6 +105,13 @@ export default function V2Certificates() {
               </Pressable>
             );
           })}
+
+          <View style={st.note}>
+            <View style={{ marginTop: 1 }}><QrIcon /></View>
+            <Text style={st.noteText}>
+              Har bir sertifikat PDF koʻrinishida yuklanadi. Undagi QR kod orqali ish beruvchi yoki oʻqish joyi haqiqiyligini tekshira oladi.
+            </Text>
+          </View>
         </Column>
       </ScrollView>
     </View>
@@ -143,5 +142,7 @@ const st = StyleSheet.create({
   locked: { backgroundColor: '#EEF1F7', borderRadius: 18, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   lockIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   lockTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#4A5468' },
+  note: { marginTop: 6, flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 18, backgroundColor: '#E8EEFF' },
+  noteText: { flex: 1, minWidth: 0, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18.2, color: '#1E3FD1' },
   lockSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
 });

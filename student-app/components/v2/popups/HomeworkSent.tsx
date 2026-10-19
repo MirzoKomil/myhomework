@@ -9,7 +9,7 @@ import { router, type Href } from 'expo-router';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CloseIcon, Coin } from '@/components/v2/homework/icons';
+import { ChevronRight, CloseIcon, Coin } from '@/components/v2/homework/icons';
 import { partLabel, partQuestionCount } from '@/components/v2/homework/lib';
 import type { PartScore } from '@/components/v2/homework/scoreStore';
 import { Txt, webShadow } from '@/components/v2/homework/ui';
@@ -40,9 +40,9 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
   const mistakes = rows.reduce((a, r) => a + r.mistakes, 0);
   const pct = total ? Math.round((correct / total) * 100) : 0;
 
-  const finish = () => {
+  const go = (href: string) => {
     onClose();
-    if (lessonId) router.push(R.complete(lessonId) as Href);
+    router.push(href as Href);
   };
 
   return (
@@ -91,21 +91,40 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
                   </Txt>
                 </View>
               ))}
-              <Txt f="body" size={13} color="#4A5468" lh={18.2}>
-                {mistakes > 0 ? `${mistakes} ta xato «Xatolar» roʻyxatiga qoʻshildi — takrorlashda yana chiqadi.` : 'Xato yoʻq — barakalla!'}
-              </Txt>
+              <Pressable accessibilityRole="link" onPress={() => go(R.lugat)} style={({ pressed }) => [st.mistakesRow, pressed && st.pressed]}>
+                <View style={st.mistakesBadge}>
+                  <Txt f="bodyHeavy" size={13} color="#B42318">
+                    {mistakes}
+                  </Txt>
+                </View>
+                <Txt f="bodyBold" size={13} color="#4A5468" lh={17.55} style={{ flex: 1 }}>
+                  {'xato '}
+                  <Txt f="bodyHeavy" size={13}>
+                    Xatolarim
+                  </Txt>
+                  {' roʻyxatiga qoʻshildi'}
+                </Txt>
+                <ChevronRight size={16} />
+              </Pressable>
             </View>
             <View style={{ gap: 6 }}>
-              <Pressable accessibilityRole="button" onPress={finish} style={({ pressed }) => [st.primary, pressed && st.pressed]}>
+              <Pressable accessibilityRole="button" onPress={() => lessonId && go(R.mistakes(lessonId))} style={({ pressed }) => [st.primary, pressed && st.pressed]}>
                 <Txt f="bodyHeavy" size={16} color="#FFFFFF">
-                  Darsni yakunlash
+                  Xatolarni takrorlash · {mistakes} ta
                 </Txt>
               </Pressable>
-              <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [st.secondary, pressed && st.pressed]}>
-                <Txt f="bodyHeavy" size={16} color="#1E3FD1">
-                  Javoblarimni koʻrish
-                </Txt>
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable accessibilityRole="button" onPress={() => lessonId && go(R.testReview(lessonId))} style={({ pressed }) => [st.secondary, { backgroundColor: '#EEF1F7' }, pressed && st.pressed]}>
+                  <Txt f="bodyHeavy" size={15} color="#1E3FD1">
+                    Javoblarimni koʻrish
+                  </Txt>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={() => lessonId && go(R.complete(lessonId))} style={({ pressed }) => [st.secondary, pressed && st.pressed]}>
+                  <Txt f="bodyHeavy" size={15} color="#4A5468">
+                    Oʻtkazib yuborish
+                  </Txt>
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
@@ -140,5 +159,7 @@ const st = StyleSheet.create({
   result: { backgroundColor: '#F4F6FA', borderRadius: 20, padding: 14, gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 28 },
   primary: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center' },
-  secondary: { height: 46, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  secondary: { flex: 1, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  mistakesRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 },
+  mistakesBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FDECEC', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

@@ -123,3 +123,50 @@ export const NavUser = ({ color }: { color: string }) => (
     <Path d="M4 21a8 8 0 0 1 16 0" />
   </Svg>
 );
+
+// ─── 2026-10-19 yangilanishi: yangi dizayn ikonkalari ───────────────────────
+
+/** Homework "Topshirish · n savol qoldi", Build/TypeAnswer "Tekshirish" qulfi. */
+export const LockSmall = ({ size = 16, color = '#4A5468' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
+    <Rect x="5" y="11" width="14" height="10" rx="2" />
+    <Path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </Svg>
+);
+
+/** Exercise eslatmasidagi lampochka (Build'dagidan yo'li biroz boshqa). */
+export const BulbSimple = ({ size = 18, color = '#7A5300' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
+    <Path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z" />
+  </Svg>
+);
+
+/** TypeAnswer "Birinchi harf" tugmasidagi lampochka. */
+export const BulbHint = ({ size = 16, color = '#0B1220' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" {...hidden}>
+    <Path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z" />
+  </Svg>
+);
+
+/** Test "C qism tugagach" qatoridagi soat. */
+export const ClockIcon = ({ size = 14, color = '#5B6478' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
+    <Circle cx="12" cy="12" r="9" />
+    <Path d="M12 7v5l3 2" />
+  </Svg>
+);
+
+/** TypeAnswer klaviaturasidagi "O'chirish". */
+export const BackspaceIcon = ({ size = 20, color = '#0B1220' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" {...hidden}>
+    <Path d="M21 5H8l-6 7 6 7h13z" />
+    <Path d="M12 9l6 6M18 9l-6 6" />
+  </Svg>
+);
+
+/** BonusPlayer "To'liq ekran". */
+export const FullscreenIcon = ({ size = 18, color = '#FFFFFF' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" {...hidden}>
+    <Path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </Svg>
+);

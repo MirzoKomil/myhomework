@@ -4,6 +4,8 @@
  * Chiqish mantig'i eski Sozlamalar bilan bir xil: clearAuth + kesh
  * tozalanadi, keyin to'g'ridan-to'g'ri login ekraniga o'tiladi (bosh
  * sahifaga qaytsa eski o'quvchi ma'lumoti ko'rinib qolardi).
+ * Dizayndagi fon rasmi — Sozlamalar ekranining xiralashtirilgan surati;
+ * bu yerda oyna haqiqiy Sozlamalar ustida ochiladi va fon xiralashtiriladi.
  */
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
@@ -59,7 +61,7 @@ export function LogoutConfirmPopup({ visible, onClose }: { visible: boolean; onC
               Hisobdan chiqasizmi?
             </Text>
             <Text style={styles.body}>
-              Oflayn yuklangan darslar oʻchmaydi. Qayta kirish uchun telefon raqamingiz kerak boʻladi.
+              Oflayn yuklangan darslar oʻchmaydi. Qayta kirish uchun login va parolingiz kerak boʻladi.
             </Text>
             <View style={styles.buttons}>
               <Pressable
@@ -91,7 +93,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     backgroundColor: 'rgba(11,18,32,0.69)',
-    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as object) : null),
+    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' } as object) : null),
   },
   column: { width: '100%', maxWidth: 432, alignSelf: 'center' },
   card: {

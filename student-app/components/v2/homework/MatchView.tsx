@@ -23,11 +23,12 @@ type Props = {
   pairs: MatchPair[];
   allParts: HomeworkPart[];
   overline: string;
-  replayNote: string;
+  /** "46 / 50 · 46 coin" — dars vazifasining umumiy natijasi (takrorlash rejimi uchun). */
+  replayScore: string;
   onClose: () => void;
 };
 
-export function MatchView({ lessonId, part, pairs, allParts, overline, replayNote, onClose }: Props) {
+export function MatchView({ lessonId, part, pairs, allParts, overline, replayScore, onClose }: Props) {
   const run = usePartRun(lessonId, part, pairs.length, allParts);
   const [matched, setMatched] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
@@ -147,8 +148,12 @@ export function MatchView({ lessonId, part, pairs, allParts, overline, replayNot
               <>
                 <Txt f="bodyHeavy" size={13}>
                   Takrorlash rejimi.
-                </Txt>{' '}
-                {replayNote}
+                </Txt>
+                {' Vazifa topshirilgan: '}
+                <Txt f="bodyBold" size={13} color="#4A5468" style={st.nowrap}>
+                  {replayScore}
+                </Txt>
+                {' — ball oʻzgarmaydi.'}
               </>
             ) : (
               'Har toʻgʻri juftlik +1 coin.'
@@ -162,8 +167,9 @@ export function MatchView({ lessonId, part, pairs, allParts, overline, replayNot
 
 const st = StyleSheet.create({
   intro: { paddingTop: 22, paddingHorizontal: 20, gap: 6 },
-  grid: { paddingTop: 20, paddingHorizontal: 20, gap: 10 },
-  gridRow: { flexDirection: 'row', gap: 10 },
-  tile: { flex: 1, minHeight: 60, borderRadius: 16, borderWidth: 2, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
+  grid: { paddingTop: 20, paddingHorizontal: 20, gap: 12 },
+  gridRow: { flexDirection: 'row', gap: 12 },
+  nowrap: { ...({ whiteSpace: 'nowrap' } as object) },
+  tile: { flex: 1, minHeight: 72, borderRadius: 16, borderWidth: 2, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
   status: { marginHorizontal: 20, marginBottom: 34, marginTop: 16, backgroundColor: '#F4F6FA', borderRadius: 18, paddingVertical: 12, paddingLeft: 8, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

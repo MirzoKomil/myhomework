@@ -14,12 +14,13 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getLessonScores } from '@/components/v2/homework/scoreStore';
-import { BackIcon2, CheckThinIcon, CloseIcon, NextIcon } from '@/components/v2/profile/icons';
+import { BackIcon2, CalendarIcon, CheckThinIcon, ChevronIcon, CloseIcon, NextIcon } from '@/components/v2/profile/icons';
 import {
   Column,
   courseDay,
   DAY_SHORT,
   fmtGrade,
+  go,
   gradeAverage,
   groupFromTopic,
   Header,
@@ -27,6 +28,7 @@ import {
   liveAttendance,
   MONTHS_LOWER,
   parseIso,
+  patternLabel,
   startOfDay,
   type CourseDay,
 } from '@/components/v2/profile/shared';
@@ -133,15 +135,35 @@ export default function V2Schedule() {
 
   const end = start ? (() => { const e = new Date(start); e.setMonth(e.getMonth() + 3); return e; })() : null;
   const canPrev = !!start && weekStart > mondayOf(start);
-  const canNext = !!end && weekStart < mondayOf(end);
+  // Kelajak haftalar hali ochilmagan — faqat joriy haftagacha yuriladi (dizayn).
+  const thisWeek = mondayOf(today);
+  const canNext = !!end && weekStart < mondayOf(end) && weekStart < thisWeek;
   const shift = (n: number) => setWeekStart((w) => { const x = new Date(w); x.setDate(x.getDate() + 7 * n); return x; });
+
+  // Joriy haftadan keyingi hafta: darslar oralig'i va jonli dars kunlari.
+  const nextWeek = useMemo(() => {
+    if (!start || !schedule) return null;
+    const mon = new Date(thisWeek);
+    mon.setDate(mon.getDate() + 7);
+    const lessons = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mon);
+      d.setDate(d.getDate() + i);
+      return courseDay(d, start, schedule.schedulePattern, new Set()).lesson;
+    }).filter((n): n is number => n !== null);
+    if (!lessons.length) return null;
+    const a = Math.min(...lessons);
+    const b = Math.max(...lessons);
+    return { label: weekLabel(mon), range: a === b ? `${a}` : `${a}–${b}` };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedule, start?.getTime(), thisWeek.getTime()]);
+  const isThisWeek = weekStart.getTime() === thisWeek.getTime();
 
   const bonusIndex = (d: Date) => (start ? Math.floor((d.getTime() - start.getTime()) / (7 * 86400000)) : 0);
 
   return (
     <View style={st.screen}>
       <Header title="Dars jadvali" subtitle={subtitle} subtitleWeight="bold" fallback={R.profile} variant="b" />
-      <ScrollView contentContainerStyle={[st.content, { paddingBottom: insets.bottom + 30 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[st.content, { paddingBottom: insets.bottom + 22 }]} showsVerticalScrollIndicator={false}>
         <Column style={st.col}>
           <View style={st.summary}>
             <Image source={designImages.a8e6d559a994195b7358a2fd3f477f6c} style={st.mascot} resizeMode="contain" />
@@ -157,12 +179,26 @@ export default function V2Schedule() {
           </View>
 
           <View style={st.weekNav}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Oldingi hafta" disabled={!canPrev} onPress={() => shift(-1)} style={[st.navBtn, !canPrev && st.disabled]}>
-              <BackIcon2 size={18} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Oldingi hafta"
+              accessibilityState={{ disabled: !canPrev }}
+              disabled={!canPrev}
+              onPress={() => shift(-1)}
+              style={[st.navBtn, !canPrev && st.disabled]}
+            >
+              <BackIcon2 size={18} color={canPrev ? '#0B1220' : '#9AA3B5'} />
             </Pressable>
             <Text style={st.weekLabel}>{weekLabel(weekStart)}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Keyingi hafta" disabled={!canNext} onPress={() => shift(1)} style={[st.navBtn, !canNext && st.disabled]}>
-              <NextIcon />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={canNext ? 'Keyingi hafta' : 'Keyingi hafta (hali ochilmagan)'}
+              accessibilityState={{ disabled: !canNext }}
+              disabled={!canNext}
+              onPress={() => shift(1)}
+              style={[st.navBtn, !canNext && st.disabled]}
+            >
+              <NextIcon color={canNext ? '#0B1220' : '#9AA3B5'} />
             </Pressable>
           </View>
 
@@ -211,6 +247,31 @@ export default function V2Schedule() {
               } else sub = d.isPast ? 'Koʻrilmadi' : 'Videodars';
             }
             const active = d.isToday;
+            const lessonId = d.lesson !== null ? lessonIds[d.lesson - 1] : undefined;
+            if (active) {
+              // Bugungi dars — darsga olib boradi (dizaynda Lesson'ga havola).
+              return (
+                <Pressable
+                  key={key}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Bugun, ${d.lesson}-dars, ${isLive ? `jonli dars${time ? ` ${time}` : ''}` : 'videodars'}`}
+                  disabled={!lessonId}
+                  onPress={() => lessonId && go(R.lesson(lessonId))}
+                  style={({ pressed }) => [st.row, { backgroundColor: '#2F5BFF' }, pressed && { opacity: 0.9 }]}
+                >
+                  <View style={[st.date, { backgroundColor: '#1E3FD1' }]}>
+                    <Text style={[st.dow, { color: '#FFFFFF' }]}>{dayName}</Text>
+                    <Text style={[st.dnum, { color: '#FFFFFF' }]}>{d.date.getDate()}</Text>
+                  </View>
+                  <View style={st.info}>
+                    <Text style={[st.title, { color: '#FFFFFF' }]}>{title}</Text>
+                    <Text style={[st.sub, { color: '#FFFFFF' }]} numberOfLines={1}>{sub}</Text>
+                  </View>
+                  <View style={[st.chip, { backgroundColor: '#FFFFFF' }]}><Text style={[st.chipText, { color: '#1E3FD1' }]}>Bugun</Text></View>
+                  <View style={{ marginLeft: -4 }}><ChevronIcon size={18} color="#FFFFFF" strokeWidth={2.4} /></View>
+                </Pressable>
+              );
+            }
             return (
               <View key={key} style={[st.row, active && { backgroundColor: '#2F5BFF' }]}>
                 <View style={[st.date, active && { backgroundColor: '#1E3FD1' }]}>
@@ -233,6 +294,18 @@ export default function V2Schedule() {
               </View>
             );
           })}
+
+          {isThisWeek && !!nextWeek && (
+            <View style={st.nextWeek}>
+              <CalendarIcon color="#4A5468" />
+              <View style={st.info}>
+                <Text style={st.nextTitle}>{`Keyingi hafta · ${nextWeek.label}`}</Text>
+                <Text style={st.sub} numberOfLines={1}>
+                  {`${nextWeek.range}-dars${schedule ? ` · jonli: ${patternLabel(schedule.schedulePattern)}${time ? ` ${time}` : ''}` : ''}`}
+                </Text>
+              </View>
+            </View>
+          )}
         </Column>
       </ScrollView>
     </View>
@@ -252,16 +325,18 @@ const st = StyleSheet.create({
   summarySub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#4A5468' },
   weekNav: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   navBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  disabled: { opacity: 0.4 },
+  disabled: { backgroundColor: '#EEF1F7' },
   weekLabel: { flex: 1, textAlign: 'center', fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, color: '#0B1220' },
   row: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 8, paddingLeft: 8, paddingRight: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   date: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#F4F6FA', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  dow: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 11, lineHeight: 15, color: '#4A5468' },
+  dow: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
   dnum: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 17, lineHeight: 17, color: '#0B1220' },
   info: { flex: 1, minWidth: 0, gap: 1 },
   title: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, lineHeight: 20, color: '#0B1220' },
   sub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#4A5468' },
   ok: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#E3F7EE', alignItems: 'center', justifyContent: 'center' },
+  nextWeek: { backgroundColor: '#EEF1F7', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  nextTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#0B1220' },
   chip: { height: 26, paddingHorizontal: 9, borderRadius: 9, justifyContent: 'center' },
   chipText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12 },
 });

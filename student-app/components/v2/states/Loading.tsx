@@ -107,7 +107,7 @@ export function Loading({ withNav = true }: { withNav?: boolean }) {
         </View>
       </View>
 
-      {withNav && <HomeNav inactiveColor="#6B7489" homeStroke={2} />}
+      {withNav && <HomeNav />}
     </View>
   );
 }

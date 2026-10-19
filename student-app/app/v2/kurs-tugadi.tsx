@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BookIcon, ChevronIcon, CloseIcon, ShieldCheckIcon, TelegramIcon2 } from '@/components/v2/profile/icons';
+import { CheckIcon, ChevronIcon, CloseIcon, LockIcon3, ShieldCheckIcon, TelegramIcon2 } from '@/components/v2/profile/icons';
 import { Column, courseEnd, dm, dmy, goBack, parseIso, supportUrl, tgByPhone } from '@/components/v2/profile/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -87,11 +87,33 @@ export default function V2Expired() {
                 );
               })}
             </View>
-            <View style={st.lib}>
-              <BookIcon />
-              <Text style={st.libText}>Kutubxona va tarjimon ochiq qoladi</Text>
+            {/* Kurs tugagach nima ochiq qoladi / nima yopiladi */}
+            <View style={st.access}>
+              <View style={st.accCol}>
+                <Text style={[st.accTitle, { color: '#075E3A' }]}>Ochiq qoladi</Text>
+                <View style={st.accList}>
+                  {['Natija, sertifikat', 'Lugʻat, oʻyinlar', 'Tarjimon'].map((t) => (
+                    <View key={t} style={st.accItem}>
+                      <CheckIcon size={16} color="#087A4A" strokeWidth={2.6} />
+                      <Text style={st.accText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              <View style={st.accDivider} />
+              <View style={st.accCol}>
+                <Text style={[st.accTitle, { color: '#B42318' }]}>Yopiladi</Text>
+                <View style={st.accList}>
+                  {['Yangi darslar', 'Jonli darslar', 'Vazifa, imtihon'].map((t) => (
+                    <View key={t} style={st.accItem}>
+                      <LockIcon3 />
+                      <Text style={st.accText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             </View>
-            <View style={{ flex: 1, minHeight: 12 }} />
+            <View style={{ height: 6 }} />
             <Pressable accessibilityRole="link" onPress={open} style={({ pressed }) => [st.cta, pressed && st.pressed]}>
               <TelegramIcon2 />
               <Text style={st.ctaText}>Menejer bilan bogʻlanish</Text>
@@ -131,10 +153,15 @@ const st = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center' },
   name: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 15, lineHeight: 20, color: '#0B1220' },
   prev: { height: 22, paddingHorizontal: 8, marginLeft: 4, borderRadius: 11, backgroundColor: '#E8EEFF', justifyContent: 'center' },
-  prevText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 11, color: '#1E3FD1' },
+  prevText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#1E3FD1' },
   desc: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
-  lib: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 },
-  libText: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, color: '#4A5468' },
+  access: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', gap: 12 },
+  accCol: { flex: 1, minWidth: 0, gap: 8 },
+  accTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, letterSpacing: 0.72, textTransform: 'uppercase' },
+  accList: { gap: 7 },
+  accItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  accText: { flexShrink: 1, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#0B1220' },
+  accDivider: { width: 1, backgroundColor: '#EEF1F7' },
   cta: { height: 56, borderRadius: 18, backgroundColor: '#2AABEE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   ctaText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, color: '#0B1220' },
 });

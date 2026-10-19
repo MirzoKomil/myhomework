@@ -5,7 +5,7 @@
  * kutubxona (grammatika mavzulari, so'z to'plamlari, audio/podkastlar,
  * hikoyalar) va o'quvchi ochgan darslar lug'ati. Natija bo'lmasa dizayndagi
  * holat aynan ko'rsatiladi. Oxirgi qidiruvlar va "lug'atga qo'shish"
- * shu qurilmada saqlanadi (serverda joy yo'q).
+ * shu qurilmada saqlanadi (serverda joy yo'q); qo'shgach Lug'at ekrani ochiladi.
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -39,7 +39,6 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(typeof params.q === 'string' ? params.q : '');
   const [index, setIndex] = useState<Item[]>([]);
   const [recent, setRecent] = useState<RecentSearch[]>([]);
-  const [added, setAdded] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -109,9 +108,10 @@ export default function SearchScreen() {
   const go = (href: string) => router.push(href as Href);
   const noResults = !!q && results.length === 0;
 
+  // Yangi dizaynda bu — Lug'atga havola: so'z qo'shiladi va Lug'at ochiladi.
   const addWord = async () => {
     await addMyWord({ word: query.trim() });
-    setAdded(query.trim());
+    go(R.lugat);
   };
 
   return (
@@ -124,9 +124,9 @@ export default function SearchScreen() {
           <View style={styles.field}>
             <SearchIcon size={20} color="#2F5BFF" strokeWidth={2.2} />
             <TextInput
-              accessibilityLabel="Kutubxonadan qidirish"
+              accessibilityLabel="Mashqdan qidirish"
               value={query}
-              onChangeText={(t) => { setQuery(t); setAdded(null); }}
+              onChangeText={setQuery}
               placeholder="Qidirish"
               placeholderTextColor="#9AA4BC"
               autoFocus={Platform.OS === 'web'}
@@ -200,10 +200,10 @@ export default function SearchScreen() {
                     <Text style={styles.chipText}>Audiolar</Text>
                   </Pressable>
                   {noResults && (
-                    <Pressable accessibilityRole="button" disabled={added === query.trim()} onPress={addWord} style={styles.addChip}>
+                    <Pressable accessibilityRole="link" onPress={addWord} style={styles.addChip}>
                       <PlusIcon />
                       <Text style={[styles.chipText, { color: '#FFFFFF', flexShrink: 1 }]}>
-                        {added === query.trim() ? `«${query.trim()}» lugʻatga qoʻshildi` : `«${query.trim()}» soʻzini lugʻatga qoʻshish`}
+                        {`«${query.trim()}» soʻzini lugʻatga qoʻshish`}
                       </Text>
                     </Pressable>
                   )}

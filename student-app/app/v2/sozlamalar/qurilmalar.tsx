@@ -4,22 +4,36 @@
  * Eski ekran namuna ro'yxat ko'rsatardi; endi serverdagi haqiqiy
  * sessiyalar (`/api/auth/sessions`) chiqadi. Serverda shahar aniqlanmaydi,
  * shuning uchun joylashuv qatorida sessiyaning IP manzili ko'rsatiladi.
+ * "Oxirgi kirishlar" — shu sessiyalarning yaratilgan (login) vaqti bo'yicha.
+ * "N / 3" dagi 3 — dizayndagi limit matni (serverda hozircha cheklov yo'q).
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ClockIcon, LaptopIcon, PhoneIcon, PinIcon, ShieldAlertIcon } from '@/components/v2/settings/icons';
 import { Column, ScreenHeader, SUPPORT_TELEGRAM_URL, TelegramButton } from '@/components/v2/settings/parts';
-import { fetchSessions, lastSeenLabel, parseUserAgent, type DeviceSession } from '@/components/v2/settings/sessions';
-import { designImages } from '@/constants/v2/designImages';
+import {
+  fetchSessions,
+  lastSeenLabel,
+  loginTimeLabel,
+  parseUserAgent,
+  type DeviceSession,
+} from '@/components/v2/settings/sessions';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
+
+// Dizayndagi limit: bir vaqtda 3 ta qurilma.
+const DEVICE_LIMIT = 3;
 
 export default function V2Devices() {
   const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
+
+  // Oxirgi kirishlar: eng yangi login birinchi.
+  const logins = [...sessions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const used = Math.min(sessions.length, DEVICE_LIMIT);
 
   useFocusEffect(
     useCallback(() => {
@@ -30,7 +44,7 @@ export default function V2Devices() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 34 }]}
         showsVerticalScrollIndicator={false}
       >
         <Column style={styles.fill}>
@@ -85,6 +99,38 @@ export default function V2Devices() {
               })}
             </View>
 
+            <View style={styles.box}>
+              <View style={styles.countRow}>
+                <Text style={styles.boxTitle}>Faol qurilmalar soni</Text>
+                <Text style={styles.count}>
+                  {sessions.length} <Text style={{ color: '#5B6478' }}>/ {DEVICE_LIMIT}</Text>
+                </Text>
+              </View>
+              <View style={styles.segs} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {Array.from({ length: DEVICE_LIMIT }, (_, i) => (
+                  <View key={i} style={[styles.seg, { backgroundColor: i < used ? '#2F5BFF' : '#E7EBF3' }]} />
+                ))}
+              </View>
+              <Text style={styles.limitText}>
+                Limit — bir vaqtda 3 ta qurilma. Yangi qurilmadan kirsangiz, eng eski qurilma avtomatik chiqariladi.
+              </Text>
+            </View>
+
+            <View style={styles.logins}>
+              <Text style={[styles.boxTitle, { marginBottom: 2 }]}>Oxirgi kirishlar</Text>
+              {logins.map((s, i) => {
+                const d = parseUserAgent(s.userAgent);
+                return (
+                  <View key={s.id} style={[styles.loginRow, i < logins.length - 1 && styles.loginDivider]}>
+                    <Text style={styles.loginTime}>{loginTimeLabel(s.createdAt)}</Text>
+                    <Text style={styles.loginWhere} numberOfLines={1}>
+                      {s.ip ? `${d.name} · ${s.ip}` : d.name}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
             <View style={styles.warn}>
               <View style={styles.warnRow}>
                 <View style={{ marginTop: 1 }}>
@@ -100,15 +146,6 @@ export default function V2Devices() {
               <TelegramButton label="Menejerga yozish" url={SUPPORT_TELEGRAM_URL} height={48} radius={14} fontSize={14} />
             </View>
 
-            <View style={styles.mascotWrap}>
-              <Image
-                source={designImages['f1f2b5015be3aab0bfaac974e1e01af0']}
-                resizeMode="contain"
-                style={styles.mascot}
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              />
-            </View>
           </View>
         </Column>
       </ScrollView>
@@ -120,9 +157,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6FA' },
   scroll: { flexGrow: 1 },
   fill: { flex: 1 },
-  body: { flex: 1, paddingTop: 16, paddingHorizontal: 20, gap: 12 },
+  body: { flex: 1, paddingTop: 14, paddingHorizontal: 20, gap: 10 },
   list: { gap: 10 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 16, flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   iconBox: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   info: { flex: 1, minWidth: 0, gap: 4 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
@@ -139,6 +176,25 @@ const styles = StyleSheet.create({
   warnTexts: { flex: 1, gap: 3 },
   warnTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, lineHeight: 21, color: '#0B1220' },
   warnBody: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18.2, color: '#4A5468' },
-  mascotWrap: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
-  mascot: { width: 170, height: 170 },
+  box: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
+  countRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+  boxTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, lineHeight: 20, color: '#0B1220' },
+  count: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 26, color: '#0B1220' },
+  segs: { flexDirection: 'row', gap: 6 },
+  seg: { flex: 1, height: 8, borderRadius: 4 },
+  limitText: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18.2, color: '#4A5468' },
+  logins: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 4 },
+  loginRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  loginDivider: { borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
+  loginTime: {
+    width: 92,
+    flexShrink: 0,
+    fontFamily: fonts.bodyHeavy,
+    fontWeight: 'normal',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#0B1220',
+    fontVariant: ['tabular-nums'],
+  },
+  loginWhere: { flex: 1, minWidth: 0, fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#4A5468' },
 });

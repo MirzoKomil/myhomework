@@ -2,7 +2,8 @@
  * v2 Ilova tili (dizayn: 56 · Language).
  *
  * Til eski ekrandagi kabi LanguageContext orqali saqlanadi. Tanlov
- * "Saqlash" bosilgandagina qo'llanadi (dizayndagi tugma). Ilova
+ * "Saqlash" bosilgandagina qo'llanadi; boshqa til tanlanmaguncha tugma
+ * o'chiq (dizayndagi kulrang holat). Ilova
  * tarjimalari hozircha faqat uz va ru — English qatori dizayndagi kabi
  * ko'rinadi, lekin tarjima yo'qligi sababli tanlab bo'lmaydi.
  */
@@ -10,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CheckMarkIcon } from '@/components/v2/settings/icons';
+import { CheckMarkIcon, EyeIcon } from '@/components/v2/settings/icons';
 import { Column, goBack, ScreenHeader } from '@/components/v2/settings/parts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -22,7 +23,7 @@ type Option = { code: AppLang | 'en'; badge: string; name: string; sub: string; 
 
 const OPTIONS: Option[] = [
   { code: 'uz', badge: 'UZ', name: 'Oʻzbekcha', sub: 'Lotin yozuvi', available: true },
-  { code: 'ru', badge: 'RU', name: 'Русский', sub: 'Rus tili', lang: 'ru', available: true },
+  { code: 'ru', badge: 'RU', name: 'Ру́сский', sub: 'Rus tili', lang: 'ru', available: true },
   { code: 'en', badge: 'EN', name: 'English', sub: 'Ingliz tili', lang: 'en', available: false },
 ];
 
@@ -33,7 +34,12 @@ export default function V2Language() {
 
   useEffect(() => setSelected(lang), [lang]);
 
+  // Hozirgi tildan farqli til tanlanganda gina saqlash mumkin.
+  const changed = selected !== lang;
+  const currentName = OPTIONS.find((o) => o.code === lang)?.name ?? OPTIONS[0].name;
+
   const save = () => {
+    if (!changed) return;
     if (selected === 'uz' || selected === 'ru') setLang(selected);
     goBack(R.settings);
   };
@@ -41,7 +47,7 @@ export default function V2Language() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 22 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 34 }]}
         showsVerticalScrollIndicator={false}
       >
         <Column style={styles.fill}>
@@ -90,14 +96,29 @@ export default function V2Language() {
                 );
               })}
             </View>
-            <View style={styles.fill} />
-            <Pressable
-              accessibilityRole="button"
-              onPress={save}
-              style={({ pressed }) => [styles.save, pressed && styles.savePressed]}
-            >
-              <Text style={styles.saveText}>Saqlash</Text>
-            </Pressable>
+            <View style={styles.preview}>
+              <View style={{ marginTop: 1 }}>
+                <EyeIcon />
+              </View>
+              <View style={styles.previewTexts}>
+                <Text style={styles.previewTitle}>Hozirgi koʻrinish · {currentName}</Text>
+                <Text style={styles.previewBody}>
+                  «Bugungi dars» · «Uyga vazifa» · «Davom etish». Mashqlardagi ruscha soʻzlar va tarjimalar oʻzgarmaydi.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.footer}>
+              <Text style={styles.hint}>Boshqa til tanlasangiz, «Saqlash» faollashadi</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !changed }}
+                disabled={!changed}
+                onPress={save}
+                style={({ pressed }) => [changed ? styles.save : styles.saveOff, changed && pressed && styles.savePressed]}
+              >
+                <Text style={[styles.saveText, !changed && { color: '#4A5468' }]}>Saqlash</Text>
+              </Pressable>
+            </View>
           </View>
         </Column>
       </ScrollView>
@@ -109,9 +130,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6FA' },
   scroll: { flexGrow: 1 },
   fill: { flex: 1 },
-  body: { flex: 1, paddingTop: 8, paddingHorizontal: 20, gap: 14 },
+  body: { flex: 1, paddingTop: 20, paddingHorizontal: 20, gap: 16 },
   heroWrap: { flexDirection: 'row', justifyContent: 'center' },
-  hero: { width: 150, height: 150 },
+  hero: { width: 200, height: 200 },
   note: {
     fontFamily: fonts.body,
     fontWeight: 'normal',
@@ -160,6 +181,32 @@ const styles = StyleSheet.create({
       ? ({ boxShadow: '0 4px 0 #1E3FD1' } as object)
       : { shadowColor: '#1E3FD1', shadowOpacity: 1, shadowRadius: 0, shadowOffset: { width: 0, height: 4 }, elevation: 2 }),
   },
+  saveOff: {
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: '#E4E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    ...(Platform.OS === 'web' ? ({ cursor: 'not-allowed' } as object) : null),
+  },
+  preview: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#D5DBE7',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  previewTexts: { flex: 1, gap: 3 },
+  previewTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#0B1220' },
+  previewBody: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 18.85, color: '#4A5468' },
+  footer: { gap: 8, flexShrink: 0, marginTop: 'auto' },
+  hint: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468', textAlign: 'center' },
   savePressed: { transform: [{ translateY: 2 }] },
   saveText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 17, lineHeight: 22, color: '#FFFFFF' },
 });

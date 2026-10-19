@@ -5,9 +5,10 @@
  * fetchDemoNotifications (CRM qoidalari + tizim voqealari + qo'lda yuborilgan).
  * Server "o'qildi" belgisini saqlamaydi — "Hammasini oʻqilgan qilish"
  * qurilmada eslab qolinadi. Davomat so'rovnomasi va ustozni baholash
- * eski ekrandagi kabi ishlaydi.
+ * eski ekrandagi kabi ishlaydi. Jonli dars sarlavhasi LiveNow oynasini ochadi
+ * (skrinshot uchun: ?popup=live).
  */
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,14 +18,17 @@ import {
   BackIcon,
   ChatIcon,
   CheckIcon,
+  ChevronNarrowIcon,
   DoubleCheckIcon,
   GiftIcon,
+  TelegramAltIcon,
   TelegramIcon,
   TrophyIcon,
   VideoIcon,
 } from '@/components/v2/home/icons';
 import { getReadIds, markAllRead } from '@/components/v2/home/shared';
 import { ContactSheetPopup } from '@/components/v2/popups/ContactSheet';
+import { LiveNowPopup } from '@/components/v2/popups/LiveNow';
 import { Loading } from '@/components/v2/states/Loading';
 import { ServerError } from '@/components/v2/states/ServerError';
 import { R } from '@/constants/v2/routes';
@@ -126,6 +130,8 @@ export default function V2Notifications() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [groupLink, setGroupLink] = useState('');
   const [contactOpen, setContactOpen] = useState(false);
+  const { popup } = useLocalSearchParams<{ popup?: string }>();
+  const [liveOpen, setLiveOpen] = useState(popup === 'live');
 
   const load = useCallback(() => {
     setFailed(false);
@@ -195,8 +201,15 @@ export default function V2Notifications() {
                   <>
                     <View style={[styles.icon, { backgroundColor: ICON[kind].bg }]}>{ICON[kind].node}</View>
                     <View style={styles.body}>
-                      <View style={styles.titleRow}>
-                        <Text style={styles.title}>{n.title}</Text>
+                      <View style={[styles.titleRow, kind === 'live' && { alignItems: 'center' }]}>
+                        {kind === 'live' ? (
+                          <Pressable accessibilityRole="link" onPress={() => setLiveOpen(true)} style={styles.liveTitle}>
+                            <Text style={[styles.title, styles.liveTitleText]} numberOfLines={1}>{n.title}</Text>
+                            <ChevronNarrowIcon />
+                          </Pressable>
+                        ) : (
+                          <Text style={styles.title}>{n.title}</Text>
+                        )}
                         <Text style={styles.time}>{pad(d.getHours())}:{pad(d.getMinutes())}</Text>
                         {unread && <View accessibilityRole="image" accessibilityLabel="Oʻqilmagan" style={styles.dot} />}
                       </View>
@@ -236,12 +249,13 @@ export default function V2Notifications() {
             onPress={() => setContactOpen(true)}
             style={({ pressed }) => [styles.cta, pressed && { backgroundColor: '#1E3FD1' }]}
           >
-            <ChatIcon />
+            <TelegramAltIcon color="#FFFFFF" />
             <Text style={styles.ctaText}>Ustozga yozish</Text>
           </Pressable>
         </View>
       </View>
       <ContactSheetPopup visible={contactOpen} onClose={() => setContactOpen(false)} />
+      <LiveNowPopup visible={liveOpen} onClose={() => setLiveOpen(false)} />
     </View>
   );
 }
@@ -274,6 +288,9 @@ const styles = StyleSheet.create({
   body: { flex: 1, minWidth: 0, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   title: { flex: 1, minWidth: 0, fontFamily: fonts.bodyHeavy, fontSize: 15, lineHeight: 19.5, color: '#0B1220', fontWeight: 'normal' },
+  // Dizayn: min-height 44, margin -11px 0 — bosish maydoni kattaroq, qator balandligi o'zgarmaydi.
+  liveTitle: { flex: 1, minWidth: 0, minHeight: 44, marginVertical: -11, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  liveTitleText: { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' },
   time: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#5B6478', fontWeight: 'normal' },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#2F5BFF', alignSelf: 'center' },
   message: { fontFamily: fonts.body, fontSize: 14, lineHeight: 18.9, color: '#4A5468', fontWeight: 'normal' },

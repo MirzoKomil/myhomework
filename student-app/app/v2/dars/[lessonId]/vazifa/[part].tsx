@@ -1,6 +1,7 @@
 /**
- * v2 Uyga vazifa qismi (dizayn: 14 Exercise · 15 Test · 17 Reading ·
- * 18 Match · 19 Build).
+ * v2 Uyga vazifa qismi (dizayn: 14 Exercise · 82 TypeAnswer · 15 Test ·
+ * 17 Reading · 18 Match · 19 Build). TypeAnswer — B qism (fillBlank)
+ * ichidagi har 5-savol (ChoiceParts → TypeAnswer.tsx).
  *
  * Har bir haqiqiy mashq turi o'z dizayniga mos ko'rinishda chiqadi:
  * fillBlank → Exercise, multipleChoice → Test, matching → Match,
@@ -16,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BuildView } from '@/components/v2/homework/BuildView';
 import { FillBlankView, MultipleChoiceView } from '@/components/v2/homework/ChoiceParts';
-import { loadLessonInfo, partLabel, partLetter, partQuestionCount, type LessonInfo } from '@/components/v2/homework/lib';
+import { isTeacherGraded, loadLessonInfo, partLabel, partLetter, partQuestionCount, type LessonInfo } from '@/components/v2/homework/lib';
 import { MatchView } from '@/components/v2/homework/MatchView';
 import { EmptyPartView } from '@/components/v2/homework/PartStates';
 import { ReadingView } from '@/components/v2/homework/ReadingView';
@@ -76,7 +77,13 @@ export default function HomeworkPartScreen() {
     const letter = partLetter(part);
     const overline = `${info.number}-dars vazifasi${isReview ? ' · takrorlash' : ''}${letter ? ` · ${letter} qism` : ''}`;
     const common = { lessonId: id, allParts: parts, onClose: close };
-    const replayNote = `Vazifa allaqachon topshirilgan (${sc?.coins ?? 0} / ${partQuestionCount(part)} coin) — ball oʻzgarmaydi.`;
+    // Takrorlash rejimidagi "46 / 50 · 46 coin" — butun dars vazifasi (avtomatik qismlar) bo'yicha.
+    const lessonScores = scores[id] ?? {};
+    const auto = parts.filter((p) => !isTeacherGraded(p));
+    const lessonTotal = auto.reduce((a, p) => a + partQuestionCount(p), 0);
+    const lessonCorrect = auto.reduce((a, p) => a + Math.min(partQuestionCount(p), lessonScores[p.id]?.correct ?? 0), 0);
+    const lessonCoins = auto.reduce((a, p) => a + (lessonScores[p.id]?.coins ?? 0), 0);
+    const replayScore = `${lessonCorrect} / ${lessonTotal} · ${lessonCoins} coin`;
     switch (part.kind) {
       case 'fillBlank':
         content = part.blanks.length ? <FillBlankView {...common} part={part} blanks={part.blanks} label={partLabel(part)} /> : <EmptyPartView onClose={close} />;
@@ -85,10 +92,10 @@ export default function HomeworkPartScreen() {
         content = part.questions.length ? <MultipleChoiceView {...common} part={part} questions={part.questions} label={partLabel(part)} /> : <EmptyPartView onClose={close} />;
         break;
       case 'matching':
-        content = part.pairs.length ? <MatchView {...common} part={part} pairs={part.pairs} overline={overline} replayNote={replayNote} /> : <EmptyPartView onClose={close} />;
+        content = part.pairs.length ? <MatchView {...common} part={part} pairs={part.pairs} overline={overline} replayScore={replayScore} /> : <EmptyPartView onClose={close} />;
         break;
       case 'sentenceBuild':
-        content = part.items.length ? <BuildView {...common} part={part} items={part.items} overline={overline} /> : <EmptyPartView onClose={close} />;
+        content = part.items.length ? <BuildView {...common} part={part} items={part.items} overline={overline} replayScore={replayScore} /> : <EmptyPartView onClose={close} />;
         break;
       case 'reading':
         content =
@@ -98,6 +105,7 @@ export default function HomeworkPartScreen() {
               partId={part.id}
               title={part.title}
               overline={`${info.number}-dars vazifasi${isReview ? ' · takrorlash' : ''}`}
+              vocabulary={[...info.content.vocabulary, ...(info.prev?.content.vocabulary ?? [])]}
               paragraph={part.paragraph}
               sentences={part.sentences}
               onClose={close}

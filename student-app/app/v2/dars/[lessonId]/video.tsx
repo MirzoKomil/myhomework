@@ -6,6 +6,8 @@
  * markDone('videoWatch'). Ko'rilgan bo'lsa tugma "Qayta ko'rish" bo'ladi.
  * Konspekt iboralari — darsning speakingPractice (gap + tarjima) ro'yxati,
  * bo'lmasa konspekt matni. Video davomiyligi serverda yo'q — ko'rsatilmaydi.
+ * Dars mavzusi nomi (dizayndagi "Modal so'zlar") serverda yo'q — ko'rsatilmaydi.
+ * Coin — shu darsda yig'ilgan haqiqiy coinlar (coinsStore.useLessonCoins).
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -20,6 +22,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent, getLessonMaterials } from '@/services/contentApi';
+import { useLessonCoins } from '@/services/coinsStore';
 import { markDone, useLessonProgress } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
@@ -33,6 +36,7 @@ export default function VideoScreen() {
   const [playing, setPlaying] = useState(false);
   const progress = useLessonProgress(id);
   const scores = useHomeworkScores()[id];
+  const coins = useLessonCoins(id);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +83,8 @@ export default function VideoScreen() {
   const total = parts.reduce((a, p) => a + p.total, 0);
   const meta = [
     content.vocabulary.length ? `${content.vocabulary.length} ta soʻz` : '',
-    total ? `vazifa ${correct} / ${total} toʻgʻri` : '',
+    total ? `vazifa ${correct} / ${total}` : '',
+    total || coins ? `+${coins} coin` : '',
   ].filter(Boolean).join(' · ');
   const phrases = content.speakingPractice;
 
@@ -160,6 +165,7 @@ export default function VideoScreen() {
           </Pressable>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={watched ? 'Videoni qayta koʻrish' : undefined}
             disabled={!videoUrl}
             onPress={onPrimary}
             style={({ pressed }) => [styles.primary, !videoUrl && { opacity: 0.5 }, pressed && { backgroundColor: '#1E3FD1' }]}

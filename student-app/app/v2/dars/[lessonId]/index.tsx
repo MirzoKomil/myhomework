@@ -5,24 +5,34 @@
  * dars nomi (mobile-content), so'zlar soni, uyga vazifa qismlari va
  * lessonProgressStore'dagi bajarilish belgilari. Qadamlar tartibi
  * dizayndagidek: so'zlar → audio dialoglar → jonli dars/videodars → vazifa → yakun.
+ * Jonli dars davomiyligi — to'lov ma'lumotidagi tarif (lessonDuration).
+ * "Mukofot" qatori: har to'g'ri javob +1 coin va +1 chaqmoq beradi, shuning
+ * uchun eng ko'pi — avtomatik tekshiriladigan savollar soni. Streak serverda
+ * yo'q — 0 kun.
  */
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import {
   currentStep,
   getAudioTracks,
   hasCyrillic,
+  homeworkSummary,
+  learnedWordIds,
   lessonSteps,
   loadCourseData,
+  pad,
   useListened,
+  useSeenWords,
   whenLabel,
   type CourseData,
   type Step,
 } from '@/components/v2/lessons/data';
 import {
   ArrowRight,
+  BoltIcon,
   CameraIcon,
   CardsIcon,
   Check,
@@ -33,13 +43,14 @@ import {
   PencilIcon,
   PlayIcon,
   ScreenIcon,
+  SmallFlameIcon,
   TelegramIcon,
 } from '@/components/v2/lessons/icons';
 import { BottomBar, Center, Column, TitleHeader } from '@/components/v2/lessons/parts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import { fetchDemoSchedule } from '@/services/contentApi';
+import { fetchDemoSchedule, fetchDemoStudentPayments } from '@/services/contentApi';
 import { useLessonProgress } from '@/services/lessonProgressStore';
 
 type Live = { startsAt: Date | null; link: string };
@@ -52,6 +63,9 @@ export default function LessonScreen() {
   const [live, setLive] = useState<Live>({ startsAt: null, link: '' });
   useLessonProgress(id); // progress o'zgarsa qayta chiziladi
   const listened = useListened(id);
+  const seen = useSeenWords(id);
+  const scores = useHomeworkScores();
+  const [duration, setDuration] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,6 +73,9 @@ export default function LessonScreen() {
       loadCourseData().then((d) => !cancelled && setData(d)).catch(() => !cancelled && setError(true));
       fetchDemoSchedule()
         .then((s) => !cancelled && setLive({ startsAt: s.startsAt ? new Date(s.startsAt) : null, link: s.telegramGroupLink }))
+        .catch(() => {});
+      fetchDemoStudentPayments()
+        .then((p) => !cancelled && p && setDuration(p.lessonDuration))
         .catch(() => {});
       return () => {
         cancelled = true;
@@ -94,10 +111,25 @@ export default function LessonScreen() {
   })();
   // "Darsdan keyin: ..." — CRM'dagi konspekt (dars maqsadi). Bo'lmasa blok ko'rinmaydi.
   const adminKonspekt = data.mc.lessonContents[id]?.konspekt?.trim();
-  const hwParts = lesson.content.homeworkParts;
-  const hwQuestions = hwParts.reduce((a, p) => a + partSize(p), 0);
+  const hw = homeworkSummary(lesson, scores[id]);
   const vocabCount = lesson.content.vocabulary.length;
+  const learned = learnedWordIds(id, lesson.content.vocabulary.map((w) => w.id), seen).size;
   const slidesCount = lesson.content.slides.length;
+  // Hozir tinglanayotgan dialog — birinchi tinglanmagani.
+  const dialogNo = tracks.length ? Math.min(tracks.length, heard + (steps[1].done ? 0 : 1)) : 0;
+  // Jonli dars: bugun bo'lsa faqat soat (sarlavhada "bugun" bor), aks holda kun bilan.
+  const liveTime = isNextLive
+    ? whenText.startsWith('bugun')
+      ? `${pad(live.startsAt!.getHours())}:${pad(live.startsAt!.getMinutes())}`
+      : capital(whenText)
+    : '';
+  const liveSub = liveTime
+    ? `${liveTime}${duration ? ` · ${duration} daq` : ''}`
+    : lesson.attendanceTaken
+      ? 'Qatnashdingiz'
+      : 'Ustoz bilan';
+  const hwStatus = hw.done ? 'bajarildi' : hw.answered > 0 ? 'davom etmoqda' : 'avtomatik tekshiriladi';
+  const hwSub = [hw.letters.length ? hw.letters.join(' + ') : '', `${hw.answered} / ${hw.total}`, hwStatus].filter(Boolean).join(' · ');
 
   const stepState = (k: number): 'done' | 'current' | 'todo' => (steps[k].done ? 'done' : k === cur ? 'current' : 'todo');
 
@@ -133,15 +165,19 @@ export default function LessonScreen() {
             icon={stepState(0) === 'done' ? <Check size={20} color="#087A4A" strokeWidth={3} /> : <CardsMini active={stepState(0) === 'current'} />}
             iconBg={stepState(0) === 'done' ? '#E3F7EE' : stepState(0) === 'current' ? '#2F5BFF' : '#F0EBFF'}
             title="Yangi soʻzlar"
-            sub={`${vocabCount} ta soʻz · ${steps[0].done ? 'bajarildi' : stepState(0) === 'current' ? 'hozir shu yerda' : 'kutmoqda'}`}
-            onPress={() => router.push(R.vocab(id) as Href)}
+            sub={steps[0].done ? `${vocabCount} / ${vocabCount} · takrorlash` : `${learned} / ${vocabCount}${stepState(0) === 'current' ? ' · hozir shu yerda' : ''}`}
+            onPress={() => router.push(R.wordList(id) as Href)}
           />
           <StepRow
             state={stepState(1)}
             icon={stepState(1) === 'done' ? <Check size={20} color="#087A4A" strokeWidth={3} /> : <HeadphonesIcon color={stepState(1) === 'current' ? '#FFFFFF' : '#1E3FD1'} />}
             iconBg={stepState(1) === 'done' ? '#E3F7EE' : stepState(1) === 'current' ? '#2F5BFF' : '#E8EEFF'}
             title="Audio dialoglar"
-            sub={`${heard} / ${tracks.length} tinglandi${stepState(1) === 'current' ? ' · hozir shu yerda' : steps[1].done && tracks.length ? ' · bajarildi' : ''}`}
+            sub={
+              stepState(1) === 'current' && tracks.length
+                ? `${dialogNo}-dialog tinglanmoqda · ${dialogNo} / ${tracks.length}`
+                : `${heard} / ${tracks.length} tinglandi${steps[1].done && tracks.length ? ' · bajarildi' : ''}`
+            }
             onPress={() => router.push(R.audioDialog(id) as Href)}
           />
           {lesson.isVideo ? (
@@ -161,7 +197,7 @@ export default function LessonScreen() {
                 </View>
                 <View style={styles.stepText}>
                   <Text style={styles.stepTitle}>Jonli dars</Text>
-                  <Text style={styles.stepSub}>{whenText ? capital(whenText) : lesson.attendanceTaken ? 'Qatnashdingiz' : 'Ustoz bilan'}</Text>
+                  <Text style={styles.stepSub}>{liveSub}</Text>
                 </View>
               </View>
               <Pressable
@@ -190,7 +226,7 @@ export default function LessonScreen() {
             icon={stepState(3) === 'done' ? <Check size={20} color="#087A4A" strokeWidth={3} /> : <PencilIcon color={stepState(3) === 'current' ? '#FFFFFF' : '#7A5300'} />}
             iconBg={stepState(3) === 'done' ? '#E3F7EE' : stepState(3) === 'current' ? '#2F5BFF' : '#FFF4D1'}
             title="Uyga vazifa"
-            sub={`${hwParts.length} qism · ${hwQuestions} savol · avtomatik tekshiriladi`}
+            sub={hwSub}
             onPress={() => router.push(R.homework(id) as Href)}
           />
           {allDone ? (
@@ -203,17 +239,32 @@ export default function LessonScreen() {
               onPress={() => router.push(R.complete(id) as Href)}
             />
           ) : (
-            <View style={[styles.step, { backgroundColor: '#EEF1F7' }]} accessibilityLabel="Darsni yakunlash, vazifadan keyin ochiladi">
+            <View style={[styles.step, { backgroundColor: '#EEF1F7' }]} accessibilityLabel="Darsni yakunlash, uyga vazifadan keyin ochiladi" accessibilityState={{ disabled: true }}>
               <View style={styles.stepMain}>
                 <View style={[styles.stepIcon, { backgroundColor: '#E2E6EE' }]}><FlagIcon /></View>
                 <View style={styles.stepText}>
                   <Text style={[styles.stepTitle, { color: '#4A5468' }]}>Darsni yakunlash</Text>
-                  <Text style={styles.stepSub}>Vazifadan keyin ochiladi</Text>
+                  <Text style={styles.stepSub}>Uyga vazifadan keyin ochiladi</Text>
                 </View>
               </View>
               <LockIcon />
             </View>
           )}
+          <View accessibilityLabel="Dars mukofoti" style={styles.reward}>
+            <Text style={styles.rewardLabel}>Mukofot:</Text>
+            <View style={styles.rewardItem}>
+              <View style={styles.coinDot} />
+              <Text style={[styles.rewardText, { color: '#7A5300' }]}>+{hw.total} coin gacha</Text>
+            </View>
+            <View style={[styles.rewardItem, { gap: 3 }]}>
+              <BoltIcon size={15} />
+              <Text style={[styles.rewardText, { color: '#6A3CF0' }]}>+{hw.total}</Text>
+            </View>
+            <View style={[styles.rewardItem, { gap: 3 }]}>
+              <SmallFlameIcon />
+              <Text style={[styles.rewardText, { color: '#B34700' }]}>0 kun</Text>
+            </View>
+          </View>
         </ScrollView>
         <BottomBar>
           <Pressable accessibilityRole="link" onPress={cta.onPress} style={({ pressed }) => [styles.cta, pressed && { backgroundColor: '#1E3FD1' }]}>
@@ -228,20 +279,6 @@ export default function LessonScreen() {
 
 function capital(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function partSize(p: CourseData['lessons'][number]['content']['homeworkParts'][number]): number {
-  switch (p.kind) {
-    case 'matching': return p.pairs.length;
-    case 'fillBlank': return p.blanks.length;
-    case 'multipleChoice': return p.questions.length;
-    case 'sentenceBuild': return p.items.length;
-    case 'record':
-    case 'pronunciation': return p.prompts.length;
-    case 'roleplay': return p.scenario.lines.length;
-    case 'reading': return 1 + p.sentences.length;
-    default: return 1;
-  }
 }
 
 function ctaFor(step: Step, isVideo: boolean, id: string): { label: string; onPress: () => void } {
@@ -276,16 +313,16 @@ function StepRow({
   onPress: () => void;
 }) {
   return (
-    <View style={[styles.step, state === 'current' && styles.stepCurrent]}>
-      <Pressable accessibilityRole="link" onPress={onPress} style={styles.stepMain}>
+    <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed }) => [styles.step, state === 'current' && styles.stepCurrent, pressed && { opacity: 0.85 }]}>
+      <View style={styles.stepMain}>
         <View style={[styles.stepIcon, { backgroundColor: iconBg }]}>{icon}</View>
         <View style={styles.stepText}>
           <Text style={styles.stepTitle}>{title}</Text>
           <Text style={styles.stepSub}>{sub}</Text>
         </View>
-      </Pressable>
+      </View>
       <ChevronRight color={state === 'current' ? '#2F5BFF' : '#5B6478'} />
-    </View>
+    </Pressable>
   );
 }
 
@@ -311,6 +348,11 @@ const styles = StyleSheet.create({
   slidesBtn: { height: 44, paddingHorizontal: 10, borderRadius: 13, backgroundColor: '#F4F6FA', flexDirection: 'row', alignItems: 'center', gap: 5 },
   slidesText: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#0B1220', fontWeight: 'normal' },
   tgBtn: { width: 44, height: 44, borderRadius: 13, backgroundColor: '#2AABEE', alignItems: 'center', justifyContent: 'center' },
+  reward: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D5DBE7', borderRadius: 18, paddingVertical: 10, paddingHorizontal: 14 },
+  rewardLabel: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#4A5468', fontWeight: 'normal' },
+  rewardItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rewardText: { fontFamily: fonts.bodyHeavy, fontSize: 14, fontWeight: 'normal' },
+  coinDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#F5B70A', boxShadow: 'inset 0 -2px 0 #C98F00' } as object,
   cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 6px 0 #1E3FD1' } as object,
   ctaText: { fontFamily: fonts.bodyHeavy, fontSize: 17, color: '#FFFFFF', fontWeight: 'normal' },
 });

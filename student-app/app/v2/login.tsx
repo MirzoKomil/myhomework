@@ -53,7 +53,8 @@ export default function V2Login() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const brand = BRAND[courseLang === 'russian' ? 'russian' : 'english'];
-  const letterFont = brand.cyr ? fonts.displayCyrillic : fonts.display;
+  // Webda display steki kirill va urg'u belgisini o'zi to'g'ri ko'rsatadi (Приве́т).
+  const letterFont = brand.cyr && Platform.OS !== 'web' ? fonts.displayCyrillic : fonts.display;
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [hidden, setHidden] = useState(true);

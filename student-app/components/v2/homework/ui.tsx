@@ -54,9 +54,31 @@ export function CloseButton({ bg = '#FFFFFF', onPress }: { bg?: string; onPress?
   );
 }
 
-/** Exercise/Test sarlavhasi: X + "B · ..." + "4 / 10" + 8px chiziq. */
-export function LabelHeader({ label, current, total, color, onClose }: { label: string; current: number; total: number; color: string; onClose: () => void }) {
-  const pct = total ? Math.min(100, (current / total) * 100) : 0;
+/**
+ * Exercise/Test/TypeAnswer/MistakeReview sarlavhasi: X + "B · ..." + "4 / 10" +
+ * 8px chiziq. TypeAnswer'da chiziq ustida kichik izoh ("Yozib javob bering").
+ */
+export function LabelHeader({
+  label,
+  current,
+  total,
+  color,
+  onClose,
+  sub,
+  barValue,
+  progressLabel,
+}: {
+  label: string;
+  current: number;
+  total: number;
+  color: string;
+  onClose: () => void;
+  sub?: string;
+  /** Chiziq to'lishi raqamdan farq qilsa (TypeAnswer: 5 / 10, chiziq 40%). */
+  barValue?: number;
+  progressLabel?: string;
+}) {
+  const pct = total ? Math.min(100, ((barValue ?? current) / total) * 100) : 0;
   return (
     <View style={s.header}>
       <CloseButton onPress={onClose} />
@@ -69,7 +91,17 @@ export function LabelHeader({ label, current, total, color, onClose }: { label: 
             {current} / {total}
           </Txt>
         </View>
-        <View style={{ height: 8, borderRadius: 4, backgroundColor: '#E2E6EE', overflow: 'hidden' }}>
+        {sub ? (
+          <Txt f="body" size={12} color="#4A5468" style={{ marginTop: -4 }}>
+            {sub}
+          </Txt>
+        ) : null}
+        <View
+          {...(progressLabel
+            ? { accessibilityRole: 'progressbar' as const, accessibilityLabel: progressLabel, accessibilityValue: { min: 0, max: total, now: current } }
+            : null)}
+          style={{ height: 8, borderRadius: 4, backgroundColor: '#E2E6EE', overflow: 'hidden' }}
+        >
           <View style={{ width: `${pct}%`, height: 8, borderRadius: 4, backgroundColor: color }} />
         </View>
       </View>
@@ -117,26 +149,34 @@ export function FeedbackSheet({
   coin,
   buttonLabel,
   onPress,
+  padBottom = 34,
+  title,
+  btnGap = 8,
 }: {
   correct: boolean;
   detail: ReactNode;
   coin: boolean;
   buttonLabel: string;
   onPress: () => void;
+  /** Dizayndagi pastki ichki bo'shliq: Exercise — 28, Test — 34. */
+  padBottom?: number;
+  /** MistakeReview: "To'g'ri! Bu safar topdingiz". */
+  title?: string;
+  btnGap?: number;
 }) {
   const insets = useSafeAreaInsets();
   const c = correct
     ? { bg: '#E3F7EE', icon: '#087A4A', title: '#075E3A', text: '#075E3A', btn: '#087A4A', btnShadow: '#075E3A' }
     : { bg: '#FDECEC', icon: '#D92D20', title: '#B42318', text: '#7A1C14', btn: '#D92D20', btnShadow: '#B42318' };
   return (
-    <View accessibilityRole="alert" style={[s.sheet, { backgroundColor: c.bg, paddingBottom: Math.max(34, insets.bottom + 14) }]}>
+    <View accessibilityRole="alert" style={[s.sheet, { backgroundColor: c.bg, paddingBottom: Math.max(padBottom, insets.bottom + 14) }]}>
       <View style={[s.sheetRow, { alignItems: correct ? 'center' : 'flex-start' }]}>
         <View style={[s.sheetIcon, { backgroundColor: c.icon }]}>
           {correct ? <Check size={22} color="#FFFFFF" strokeWidth={3.2} /> : <CloseIcon size={20} color="#FFFFFF" />}
         </View>
         <View style={{ flex: 1, gap: correct ? 2 : 4 }}>
           <Txt f="display" size={22} color={c.title}>
-            {correct ? 'Toʻgʻri!' : 'Notoʻgʻri'}
+            {title ?? (correct ? 'Toʻgʻri!' : 'Notoʻgʻri')}
           </Txt>
           {typeof detail === 'string' ? (
             <Txt f={correct ? 'bodyBold' : 'body'} size={correct ? 15 : 14} color={c.text} lh={correct ? undefined : 20}>
@@ -158,7 +198,7 @@ export function FeedbackSheet({
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
-        style={({ pressed }) => [s.sheetBtn, { backgroundColor: c.btn }, webShadow(`0 5px 0 ${c.btnShadow}`), pressed && s.pressed]}
+        style={({ pressed }) => [s.sheetBtn, { backgroundColor: c.btn, gap: btnGap }, webShadow(`0 5px 0 ${c.btnShadow}`), pressed && s.pressed]}
       >
         <Txt f="bodyHeavy" size={17} color="#FFFFFF">
           {buttonLabel}
@@ -170,7 +210,23 @@ export function FeedbackSheet({
 }
 
 /** Variant tugmasi (Exercise/Test): oq / yashil ✓ / qizil ✗. */
-export function OptionRow({ label, state, onPress, disabled }: { label: string; state: 'idle' | 'correct' | 'wrong'; onPress: () => void; disabled?: boolean }) {
+export function OptionRow({
+  label,
+  state,
+  onPress,
+  disabled,
+  minHeight = 56,
+  radio,
+}: {
+  label: string;
+  state: 'idle' | 'correct' | 'wrong';
+  onPress: () => void;
+  disabled?: boolean;
+  /** Exercise — 52, Test/MistakeReview — 56. */
+  minHeight?: number;
+  /** MistakeReview: role="radio". */
+  radio?: boolean;
+}) {
   const c =
     state === 'correct'
       ? { bg: '#E3F7EE', border: '#087A4A', fg: '#075E3A' }
@@ -179,11 +235,11 @@ export function OptionRow({ label, state, onPress, disabled }: { label: string; 
         : { bg: '#FFFFFF', border: '#E2E6EE', fg: '#4A5468' };
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: state !== 'idle', disabled }}
+      accessibilityRole={radio ? 'radio' : 'button'}
+      accessibilityState={radio ? { checked: state !== 'idle', disabled } : { selected: state !== 'idle', disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={[s.option, { backgroundColor: c.bg, borderColor: c.border }]}
+      style={[s.option, { minHeight, backgroundColor: c.bg, borderColor: c.border }]}
     >
       <Txt f="bodyHeavy" size={18} color={c.fg} lang="ru" style={{ flex: 1 }}>
         {label}
@@ -191,6 +247,51 @@ export function OptionRow({ label, state, onPress, disabled }: { label: string; 
       {state === 'correct' && <Check size={20} color="#087A4A" />}
       {state === 'wrong' && <CloseIcon size={18} color="#B42318" />}
     </Pressable>
+  );
+}
+
+/**
+ * Exercise "B · natijalar" / Test "C · Test natijalari" kartasi: sarlavha,
+ * o'ngda hisob va har savol uchun 8px chiziqcha (yashil/qizil/kulrang).
+ */
+export function ResultsCard({
+  title,
+  right,
+  rightColor,
+  states,
+  radius,
+  pad,
+  gap,
+  label,
+  children,
+}: {
+  title: string;
+  right: string;
+  rightColor: string;
+  states: (boolean | undefined)[];
+  radius: number;
+  pad: { v: number; h: number };
+  gap: number;
+  label: string;
+  children?: ReactNode;
+}) {
+  return (
+    <View accessibilityLabel={label} style={{ backgroundColor: '#FFFFFF', borderRadius: radius, paddingVertical: pad.v, paddingHorizontal: pad.h, gap }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+        <Txt f="bodyHeavy" size={13}>
+          {title}
+        </Txt>
+        <Txt f="bodyHeavy" size={13} color={rightColor}>
+          {right}
+        </Txt>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 4 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {states.map((r, i) => (
+          <View key={i} style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: r === undefined ? '#E2E6EE' : r ? '#087A4A' : '#D92D20' }} />
+        ))}
+      </View>
+      {children}
+    </View>
   );
 }
 
@@ -224,7 +325,7 @@ export function LessonsNav() {
             {it.key === 'practice' && <NavStar color={c} />}
             {it.key === 'league' && <NavTrophy color={c} />}
             {it.key === 'profile' && <NavUser color={c} />}
-            <Txt f={active ? 'bodyHeavy' : 'bodyBold'} size={11} color={c}>
+            <Txt f={active ? 'bodyHeavy' : 'bodyBold'} size={12} color={c}>
               {it.label}
             </Txt>
           </Pressable>
@@ -242,7 +343,7 @@ export const s = StyleSheet.create({
   sheetRow: { flexDirection: 'row', gap: 12 },
   sheetIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   sheetBtn: { height: 56, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  option: { minHeight: 56, borderRadius: 18, borderWidth: 2, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  option: { borderRadius: 18, borderWidth: 2, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
   nav: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E4E8F0', paddingTop: 8, paddingHorizontal: 6 },
   navItem: { flex: 1, minHeight: 53, alignItems: 'center', justifyContent: 'center', gap: 3 },
 });

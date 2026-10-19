@@ -13,7 +13,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon, HouseCardIcon, StopwatchIcon } from '@/components/v2/practice/icons';
-import { GameHeader, fmtTime, reset, saveRecords, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
+import { GameHeader, fmtTime, plainWord, reset, saveRecords, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
@@ -30,13 +30,13 @@ const PAIRS = 6;
 // Eski memory-match'dagi zaxira so'zlar (tarjimasi bilan).
 const FALLBACK_RU: Word[] = [
   { word: 'дом', translation: 'uy', icon: 'home-outline' },
-  { word: 'книга', translation: 'kitob', icon: 'book-outline' },
-  { word: 'вода', translation: 'suv', icon: 'water-outline' },
+  { word: 'кни́га', translation: 'kitob', icon: 'book-outline' },
+  { word: 'вода́', translation: 'suv', icon: 'water-outline' },
   { word: 'друг', translation: 'doʻst', icon: 'people-outline' },
-  { word: 'телефон', translation: 'telefon', icon: 'phone-portrait-outline' },
-  { word: 'учитель', translation: 'oʻqituvchi', icon: 'school-outline' },
-  { word: 'собака', translation: 'it', icon: 'paw-outline' },
-  { word: 'погода', translation: 'ob-havo', icon: 'partly-sunny-outline' },
+  { word: 'телефо́н', translation: 'telefon', icon: 'phone-portrait-outline' },
+  { word: 'учи́тель', translation: 'oʻqituvchi', icon: 'school-outline' },
+  { word: 'соба́ка', translation: 'it', icon: 'paw-outline' },
+  { word: 'пого́да', translation: 'ob-havo', icon: 'partly-sunny-outline' },
 ];
 const FALLBACK_EN: Word[] = [
   { word: 'apple', translation: 'olma', icon: 'restaurant-outline' },
@@ -99,10 +99,12 @@ export default function MemoryScreen() {
         if (off) return;
         const uniq = new Map<string, Word>();
         for (const v of vocab) {
-          const k = v.english.toLowerCase();
-          if (letterRe.test(k) && !uniq.has(k)) uniq.set(k, { word: k, translation: shortTr(v.translation), icon: v.icon, imageUrl: v.imageUrl });
+          // Kalit urg'usiz, kartada esa kontentdagi shakl (urg'u bilan bo'lsa — urg'u bilan).
+          const orig = v.english.toLowerCase();
+          const k = plainWord(orig);
+          if (letterRe.test(k) && !uniq.has(k)) uniq.set(k, { word: orig, translation: shortTr(v.translation), icon: v.icon, imageUrl: v.imageUrl });
         }
-        const fallback = (isRu ? FALLBACK_RU : FALLBACK_EN).filter((f) => !uniq.has(f.word));
+        const fallback = (isRu ? FALLBACK_RU : FALLBACK_EN).filter((f) => !uniq.has(plainWord(f.word)));
         const picked = shuffle([...uniq.values()]).slice(0, PAIRS);
         const all = [...picked, ...shuffle(fallback)].slice(0, PAIRS);
         setWords(all);

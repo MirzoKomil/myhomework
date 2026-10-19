@@ -4,14 +4,15 @@
  * Eski resources/games/mystery-word.tsx mantig'i: 5 harfli yashirin so'z
  * (o'quvchi lug'atidan, yetmasa — zaxira), 6 urinish, harf holatlari
  * (o'z joyida / bor, joyi boshqa / yo'q). Dizayn bo'yicha o'z ekran
- * klaviaturasi bor; "Maslahat" 10 coin evaziga bitta harfni ochadi.
+ * klaviaturasi bor (4 qator: 11+11+11 harf, oxirida Ё va OK); "Maslahat"
+ * 10 coin evaziga bitta harfni ochadi. So'zdagi urg'u belgisi o'yinda olib tashlanadi.
  */
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackspaceIcon, BulbIcon, CheckIcon } from '@/components/v2/practice/icons';
-import { GameHeader, displayRu, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
+import { GameHeader, displayRu, plainWord, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
@@ -26,10 +27,12 @@ const MIN_POOL = 3;
 const FALLBACK_RU = ['время', 'слово', 'книга', 'земля', 'белый', 'синий', 'осень', 'улица', 'дверь', 'жизнь', 'ответ', 'парта'];
 const FALLBACK_EN = ['apple', 'grape', 'house', 'water', 'plant', 'chair', 'brave', 'smile', 'dance', 'light'];
 
+// Dizayndagi tartib: har qatorda 11 ta katak, 3-qator oxirida "O'chirish",
+// alohida pastki qatorda Ё (1 katak) va OK (10 katak).
 const KB_RU = [
-  ['й', 'ц', 'у', 'к', 'е', 'н', 'г', 'ш', 'щ', 'з', 'х', 'ъ'],
+  ['й', 'ц', 'у', 'к', 'е', 'н', 'г', 'ш', 'щ', 'з', 'х'],
   ['ф', 'ы', 'в', 'а', 'п', 'р', 'о', 'л', 'д', 'ж', 'э'],
-  ['я', 'ч', 'с', 'м', 'и', 'т', 'ь', 'б', 'ю'],
+  ['я', 'ч', 'с', 'м', 'и', 'т', 'ь', 'ъ', 'б', 'ю'],
 ];
 const KB_EN = [
   ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
@@ -74,7 +77,7 @@ export default function MysteryScreen() {
     getAccumulatedVocabulary()
       .catch(() => [])
       .then((words) => {
-        const p = Array.from(new Set(words.map((w) => w.english.toLowerCase()).filter((w) => w.length === LEN && re.test(w))));
+        const p = Array.from(new Set(words.map((w) => plainWord(w.english).toLowerCase()).filter((w) => w.length === LEN && re.test(w))));
         const final = p.length >= MIN_POOL ? p : isRu ? FALLBACK_RU : FALLBACK_EN;
         setPool(final);
         setAnswer(final[Math.floor(Math.random() * final.length)]);
@@ -237,7 +240,7 @@ export default function MysteryScreen() {
           ) : (
             <Pressable accessibilityRole="button" onPress={hint} style={styles.hintBtn}>
               <BulbIcon />
-              <Text style={styles.hintBtnText}>Maslahat · {HINT_PRICE} coin</Text>
+              <Text style={styles.hintBtnText}>Maslahat · −{HINT_PRICE} coin</Text>
             </Pressable>
           )}
           <View style={styles.topic}>
@@ -247,33 +250,48 @@ export default function MysteryScreen() {
 
         <View accessibilityLabel={isRu ? 'Kirill klaviaturasi' : 'Klaviatura'} style={[styles.kb, { paddingBottom: Math.max(insets.bottom, 30) }]}>
           {kb.map((row, ri) => (
-            <View key={ri} style={[styles.kbRow, ri === 1 && { paddingHorizontal: 12 }]}>
-              {ri === 2 && (
-                <Pressable accessibilityRole="button" onPress={submit} style={[styles.key, styles.wideKey, { backgroundColor: '#087A4A' }]}>
-                  <Text style={[styles.keyText, { fontSize: 13, color: '#FFFFFF' }]}>OK</Text>
-                </Pressable>
-              )}
+            <View key={ri} style={styles.kbRow}>
               {row.map((l) => {
-                const s = keyState[l];
+                const st = keyState[l];
                 return (
                   <Pressable
                     key={l}
                     accessibilityRole="button"
                     accessibilityLabel={l}
                     onPress={() => type(l)}
-                    style={[styles.key, s && { backgroundColor: ST_BG[s] }, s === 'present' && styles.present]}
+                    style={[styles.key, st && { backgroundColor: ST_BG[st] }, st === 'present' && styles.keyPresent]}
                   >
-                    <Text style={[styles.keyText, s && { color: '#FFFFFF' }]}>{l.toUpperCase()}</Text>
+                    <Text style={[styles.keyText, st && { color: '#FFFFFF' }]}>{l.toUpperCase()}</Text>
                   </Pressable>
                 );
               })}
-              {ri === 2 && (
-                <Pressable accessibilityRole="button" accessibilityLabel="Oʻchirish" onPress={back} style={[styles.key, styles.wideKey]}>
+              {ri === kb.length - 1 && (
+                <Pressable accessibilityRole="button" accessibilityLabel="Oʻchirish" onPress={back} style={styles.key}>
                   <BackspaceIcon />
                 </Pressable>
               )}
             </View>
           ))}
+          <View style={styles.kbRow}>
+            {isRu && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="ё"
+                onPress={() => type('ё')}
+                style={[styles.key, styles.lastKey, { flex: 1 }, keyState['ё'] && { backgroundColor: ST_BG[keyState['ё']] }, keyState['ё'] === 'present' && styles.keyPresent]}
+              >
+                <Text style={[styles.keyText, keyState['ё'] && { color: '#FFFFFF' }]}>Ё</Text>
+              </Pressable>
+            )}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Javobni tekshirish"
+              onPress={submit}
+              style={[styles.key, styles.lastKey, { flex: 10, borderRadius: 9, backgroundColor: '#087A4A' }]}
+            >
+              <Text style={[styles.keyText, { fontSize: 13, color: '#FFFFFF' }]}>OK</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>
@@ -288,7 +306,7 @@ const styles = StyleSheet.create({
 
   board: { paddingTop: 16, paddingHorizontal: 40, gap: 6 },
   row: { flexDirection: 'row', gap: 6 },
-  tile: { flex: 1, height: 63, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  tile: { flex: 1, height: 57, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   tileText: { fontFamily: displayRu, fontSize: 26, color: '#FFFFFF', ...reset },
   present: { borderWidth: 2.5, borderStyle: 'dashed', borderColor: '#FFE7A6' },
   tick: { position: 'absolute', top: 4, right: 4 },
@@ -304,14 +322,15 @@ const styles = StyleSheet.create({
   legendText: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#26304A', ...reset },
 
   actions: { paddingTop: 12, paddingHorizontal: 20, flexDirection: 'row', gap: 8 },
-  hintBtn: { flex: 1, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  hintBtn: { flex: 1, flexBasis: 0, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   hintBtnText: { fontFamily: fonts.bodyHeavy, fontSize: 14, color: '#0B1220', ...reset },
-  topic: { flex: 1, height: 44, borderRadius: 14, backgroundColor: '#CDEFDD', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  topic: { flex: 1, flexBasis: 0, minWidth: 0, height: 44, borderRadius: 14, backgroundColor: '#CDEFDD', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   topicText: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#075E3A', ...reset },
 
-  kb: { marginTop: 'auto', paddingHorizontal: 6, gap: 6 },
-  kbRow: { flexDirection: 'row', gap: 3 },
-  key: { flex: 1, height: 53, borderRadius: 9, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  wideKey: { flex: 1.6 },
+  kb: { marginTop: 'auto', paddingHorizontal: 4, gap: 6 },
+  kbRow: { flexDirection: 'row', gap: 2 },
+  key: { flex: 1, height: 46, borderRadius: 8, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  keyPresent: { borderWidth: 2, borderStyle: 'dashed', borderColor: '#FFE7A6' },
+  lastKey: { height: 48 },
   keyText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#0B1220', ...reset },
 });

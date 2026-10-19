@@ -25,6 +25,22 @@ export const displayRu = Platform.OS === 'web' ? fonts.display : fonts.displayCy
 
 export const reset = { fontWeight: 'normal' as const };
 
+// ─── Urg'u belgisi (U+0301, «меню́») ────────────────────────────────────────
+// Dizayn rus so'zlarini urg'u bilan ko'rsatadi. O'yin mantig'i (harf
+// solishtirish) urg'usiz shakl bilan ishlaydi, ekranda esa kontentdagi
+// asl shakl (urg'u bo'lsa — urg'u bilan) chiqadi.
+const STRESS_RE = /́/g;
+export const plainWord = (w: string) => w.replace(STRESS_RE, '');
+/** So'zni harflarga bo'ladi; urg'u belgisi o'zidan oldingi harfga qo'shilib qoladi. */
+export function stressLetters(w: string): string[] {
+  const out: string[] = [];
+  for (const ch of w) {
+    if (ch === '́' && out.length) out[out.length - 1] += ch;
+    else out.push(ch);
+  }
+  return out;
+}
+
 /** Orqaga: tarix bo'lsa ortga, bo'lmasa Mashq sahifasiga. */
 export function goBack(fallback: string = R.practice) {
   if (router.canGoBack()) router.back();
@@ -131,6 +147,14 @@ export async function addMyWord(w: MyWord) {
   await writeList(MY_WORDS_KEY, [w, ...list].slice(0, 500));
 }
 
+/** Yozish davomida avtomatik saqlangan oraliq so'zni yakuniy shakli bilan almashtiradi. */
+export async function replaceMyWord(prevWord: string | null, w: MyWord) {
+  const list = (await getMyWords()).filter(
+    (x) => x.word.toLowerCase() !== w.word.toLowerCase() && (prevWord == null || x.word !== prevWord),
+  );
+  await writeList(MY_WORDS_KEY, [w, ...list].slice(0, 500));
+}
+
 export type RecentTranslation = { source: string; target: string; dir: 'uz-other' | 'other-uz' };
 const RECENT_TR_KEY = 'mh_v2_recent_translations';
 export const getRecentTranslations = () => readList<RecentTranslation>(RECENT_TR_KEY);
@@ -202,7 +226,7 @@ export function PracticeNav() {
     >
       {NAV.map((it) => {
         const active = it.key === 'practice';
-        const c = active ? '#2F5BFF' : '#6B7489';
+        const c = active ? '#2F5BFF' : '#5B6478';
         return (
           <Pressable
             key={it.key}
@@ -214,7 +238,7 @@ export function PracticeNav() {
           >
             {it.key === 'home' && <NavHome color={c} />}
             {it.key === 'lessons' && <NavPath color={c} />}
-            {it.key === 'practice' && <NavStar color={c} filled />}
+            {it.key === 'practice' && <NavStar color={c} strokeWidth={active ? 2.4 : 2} />}
             {it.key === 'league' && <NavTrophy color={c} />}
             {it.key === 'profile' && <NavUser color={c} />}
             <Text style={[styles.navLabel, { color: c, fontFamily: active ? fonts.bodyHeavy : fonts.bodyBold }]}>{it.label}</Text>
@@ -241,5 +265,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, minHeight: 48 },
-  navLabel: { fontSize: 11, lineHeight: 15, ...reset },
+  navLabel: { fontSize: 12, lineHeight: 16, ...reset },
 });

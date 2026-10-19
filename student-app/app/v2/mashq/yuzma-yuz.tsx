@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
   option: {
     flexBasis: '47%',
     flexGrow: 1,
-    height: 76,
+    height: 100,
     borderRadius: 20,
     borderWidth: 2,
     borderBottomWidth: 5,

@@ -1,6 +1,6 @@
 /**
  * Bosh sahifaning pastki menyusi — Main/DarkMain/Loading dizaynidagi nav
- * aynan (faol "Asosiy" ikonkasi to'ldirilgan + chiziqli, qorong'u rejim ranglari).
+ * aynan (faol "Asosiy" ikonkasi chiziqli 2.4, qorong'u rejim ranglari).
  * Umumiy TabBar qorong'u rejimni bilmagani uchun shu yerda alohida.
  */
 import { router, type Href } from 'expo-router';
@@ -41,7 +41,7 @@ export function HomeNav({ p = lightHome, inactiveColor, homeStroke = 2.4 }: { p?
             onPress={() => { if (!active) router.push(it.href as Href); }}
             style={styles.item}
           >
-            {it.key === 'home' && <NavHomeIcon color={c} fill="#2F5BFF" strokeWidth={homeStroke} />}
+            {it.key === 'home' && <NavHomeIcon color={c} fill="none" strokeWidth={homeStroke} />}
             {it.key === 'lessons' && <NavPathIcon color={c} />}
             {it.key === 'practice' && <NavStarIcon color={c} />}
             {it.key === 'league' && <TrophyIcon size={24} color={c} />}
@@ -57,5 +57,5 @@ export function HomeNav({ p = lightHome, inactiveColor, homeStroke = 2.4 }: { p?
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 8, paddingHorizontal: 6 },
   item: { flex: 1, minHeight: 53, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  label: { fontSize: 11, fontWeight: 'normal' },
+  label: { fontSize: 12, fontWeight: 'normal' },
 });

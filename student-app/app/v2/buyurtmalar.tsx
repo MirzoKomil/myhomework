@@ -10,14 +10,35 @@ import { router } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronRightIcon, CoinFill, LongArrowIcon, TICK2, TickIcon } from '@/components/v2/rewards/icons';
-import { fmt, lessonsFor, nearestProduct, ScreenHeader, useShopProducts } from '@/components/v2/rewards/parts';
+import {
+  EARN_BONUS_LESSON,
+  EARN_HOMEWORK,
+  EARN_LEAGUE_TOP5,
+  EARN_LESSON_DONE,
+  EARN_REFERRAL,
+  fmt,
+  lessonsFor,
+  nearestProduct,
+  ScreenHeader,
+  useShopProducts,
+} from '@/components/v2/rewards/parts';
 import { CoinBar, ProductImage } from '@/components/v2/rewards/shopParts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
-import { DELIVERY_STAGE_LABELS } from '@/data/mock';
+import { BATTLE_WIN_COINS, DELIVERY_STAGE_LABELS } from '@/data/mock';
 import { useCoins } from '@/services/coinsStore';
 import { useOrders, type ShopOrder } from '@/services/shopStore';
+
+// "Coin qanday yig'iladi" katakchalari — dizayndagi tartibda (2 ustun: 1.3fr / 1fr).
+const EARN: [string, string][] = [
+  ['Uyga vazifa', EARN_HOMEWORK],
+  ['Dars yakuni', `+${EARN_LESSON_DONE}`],
+  ['Yuzma-yuz gʻalaba', `+${BATTLE_WIN_COINS}`],
+  ['Bonus dars', `+${EARN_BONUS_LESSON}`],
+  ['Doʻst taklifi', `+${EARN_REFERRAL}`],
+  ['Liga top-5', `+${EARN_LEAGUE_TOP5}`],
+];
 
 const DAYS = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -114,7 +135,7 @@ export default function V2Orders() {
             books.map((o) => <OrderCard key={o.id} o={o} />)
           ) : (
             <View style={styles.empty}>
-              <Image source={designImages.e57b4e5aeb29652a1e91b899a8e24693} accessibilityLabel="Kitob oʻqiyotgan Domik" style={{ width: 150, height: 141 }} resizeMode="contain" />
+              <Image source={designImages.e57b4e5aeb29652a1e91b899a8e24693} accessibilityLabel="Kitob oʻqiyotgan Domik" style={{ width: 104, height: 98 }} resizeMode="contain" />
               <Text style={styles.emptyTitle}>Hali kitob buyurtma qilinmagan</Text>
               {nearest ? (
                 <>
@@ -144,6 +165,26 @@ export default function V2Orders() {
               {others.map((o) => <OrderCard key={o.id} o={o} />)}
             </>
           )}
+
+          <View style={styles.earn}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <CoinFill size={18} />
+              <Text accessibilityRole="header" style={styles.earnTitle}>Coin qanday yigʻiladi</Text>
+              <Text style={styles.earnBal}>Balans: {fmt(coins)}</Text>
+            </View>
+            <View style={styles.earnGrid}>
+              {[0, 2, 4].map((r) => (
+                <View key={r} style={{ flexDirection: 'row', gap: 6 }}>
+                  {EARN.slice(r, r + 2).map(([label, value], i) => (
+                    <View key={label} style={[styles.earnCell, { flex: i === 0 ? 1.3 : 1 }]}>
+                      <Text style={styles.earnLabel} numberOfLines={1}>{label}</Text>
+                      <Text style={styles.earnValue} numberOfLines={1}>{value}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -166,7 +207,14 @@ const styles = StyleSheet.create({
   dates: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F4F6FA', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12 },
   dateLabel: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
   dateVal: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#0B1220' },
-  empty: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 18, alignItems: 'center', gap: 10 },
+  empty: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingTop: 14, paddingHorizontal: 18, paddingBottom: 18, alignItems: 'center', gap: 8 },
+  earn: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 14, gap: 10 },
+  earnTitle: { flex: 1, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },
+  earnBal: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, color: '#4A5468' },
+  earnGrid: { gap: 6 },
+  earnCell: { flexBasis: 0, minWidth: 0, minHeight: 34, paddingHorizontal: 9, borderRadius: 12, backgroundColor: '#F4F6FA', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  earnLabel: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, color: '#26304A', flexShrink: 1 },
+  earnValue: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#7A5300' },
   emptyTitle: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 24, color: '#0B1220', textAlign: 'center' },
   emptyText: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, lineHeight: 20, color: '#4A5468', textAlign: 'center' },
   ratio: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#0B1220' },

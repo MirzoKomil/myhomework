@@ -3,8 +3,8 @@
  *
  * To'lovlar ekranidagi "Qarzni to'lash" tugmasidan ochiladi. Raqamlar
  * props orqali beriladi (fetchDemoStudentPayments dan hisoblangan);
- * berilmasa oyna o'zi yuklaydi. Click/Payme ilovada to'g'ridan-to'g'ri
- * integratsiya yo'q — dizayndagi kabi menejer (Telegram) orqali.
+ * berilmasa oyna o'zi yuklaydi. Click/Payme — dizayndagi kabi to'lov
+ * tizimlari saytlariga (my.click.uz, payme.uz) havola; menejer — Telegram.
  */
 import { useEffect, useState } from 'react';
 import { Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -104,7 +104,7 @@ export function DebtReminderPopup({
               </Text>
 
               <View style={{ gap: 8 }}>
-                <Pressable accessibilityRole="link" onPress={() => open(managerUrl)} style={({ pressed }) => [st.method, pressed && st.pressed]}>
+                <Pressable accessibilityRole="link" onPress={() => open('https://my.click.uz')} style={({ pressed }) => [st.method, pressed && st.pressed]}>
                   <View style={[st.methodIcon, { backgroundColor: '#1E3FD1' }]}><Text style={st.methodLetter}>C</Text></View>
                   <View style={st.methodText}>
                     <Text style={st.methodTitle}>Click orqali toʻlash</Text>
@@ -112,7 +112,7 @@ export function DebtReminderPopup({
                   </View>
                   <ChevronIcon />
                 </Pressable>
-                <Pressable accessibilityRole="link" onPress={() => open(managerUrl)} style={({ pressed }) => [st.method, pressed && st.pressed]}>
+                <Pressable accessibilityRole="link" onPress={() => open('https://payme.uz')} style={({ pressed }) => [st.method, pressed && st.pressed]}>
                   <View style={[st.methodIcon, { backgroundColor: '#087A4A' }]}><Text style={st.methodLetter}>P</Text></View>
                   <View style={st.methodText}>
                     <Text style={st.methodTitle}>Payme orqali toʻlash</Text>
@@ -152,13 +152,13 @@ const st = StyleSheet.create({
   mascot: { width: 64, height: 64, flexShrink: 0 },
   title: { flex: 1, fontFamily: fonts.display, fontWeight: 'normal', fontSize: 24, lineHeight: 33, letterSpacing: -0.48, color: '#0B1220' },
   close: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF1F7', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  box: { backgroundColor: '#FFF1E6', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, gap: 4 },
-  over: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, letterSpacing: 0.6, textTransform: 'uppercase', color: '#B42318' },
-  amount: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 30, lineHeight: 33, color: '#B42318' },
-  due: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#7A2E0E' },
+  box: { backgroundColor: '#FFF4D1', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, gap: 4 },
+  over: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, letterSpacing: 0.6, textTransform: 'uppercase', color: '#8A5A00' },
+  amount: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 30, lineHeight: 33, color: '#8A5A00' },
+  due: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#5C4300' },
   track: { height: 6, borderRadius: 3, backgroundColor: '#FFFFFF', overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3, backgroundColor: '#087A4A' },
-  paid: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#7A2E0E' },
+  paid: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#5C4300' },
   body: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, lineHeight: 21, color: '#4A5468' },
   method: {
     minHeight: 60, borderRadius: 18, borderWidth: 1.5, borderColor: '#E4E8F0', paddingLeft: 10, paddingRight: 14,

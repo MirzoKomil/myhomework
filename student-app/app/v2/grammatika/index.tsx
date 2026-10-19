@@ -3,13 +3,16 @@
  *
  * Mavzular — CRM'dagi kutubxona grammatikasi (mc.library.grammar, eski
  * resources/library/grammar bilan bir xil manba). Mavzuda darsga havola
- * yo'q, shuning uchun dars nom bo'yicha topiladi; "o'rganilgan" — o'sha
- * videodars ko'rilganmi (lessonProgressStore).
+ * yo'q, shuning uchun darslar nom bo'yicha topiladi; "o'rganilgan" — o'sha
+ * darslar videosi ko'rilganmi (lessonProgressStore), bir qismi ko'rilgan
+ * bo'lsa — "Qisman oʻrganilgan" halqasi. O'rganilmagan qatorda belgi yo'q
+ * (dizayndagidek); qator bosilsa mavzu ochiladi.
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import {
   BackButton,
@@ -21,12 +24,14 @@ import {
   T,
 } from '@/components/v2/library/shared';
 import { R } from '@/constants/v2/routes';
-import { lessonMonth, loadGrammarRows, type GrammarRow as Row } from '@/components/v2/library/grammar';
+import { loadGrammarRows, type GrammarRow as Row } from '@/components/v2/library/grammar';
+import type { LessonRef } from '@/components/v2/library/shared';
 
 export default function GrammarListScreen() {
   const insets = useSafeAreaInsets();
   const [rows, setRows] = useState<Row[]>([]);
   const [related, setRelated] = useState<Row | null>(null);
+  const [today, setToday] = useState<LessonRef | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,6 +41,7 @@ export default function GrammarListScreen() {
           if (!alive) return;
           setRows(d.rows);
           setRelated(d.related);
+          setToday(d.today);
         })
         .catch(() => {});
       return () => {
@@ -72,7 +78,7 @@ export default function GrammarListScreen() {
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <T w={800} size={11} color="#FFFFFF" style={styles.upper}>Bugungi mavzu bilan bogʻliq</T>
                 <T w={800} size={15} color="#FFFFFF" lh={1.3}>
-                  {related.lesson ? `${related.lesson.lesson.name} · ${related.lesson.number}-dars` : related.topic.title}
+                  {today ? `${today.lesson.name} · ${today.number}-dars` : related.topic.title}
                 </T>
                 {!!related.topic.formula && (
                   <T w={700} size={13} color="#FFFFFF" lh={1.3}>{related.topic.formula}</T>
@@ -105,28 +111,40 @@ export default function GrammarListScreen() {
                 onPress={() => go(R.grammar(r.topic.id))}
                 style={({ pressed }) => [styles.row, i < rows.length - 1 && styles.rowBorder, pressed && styles.pressed]}
               >
-                <View style={[styles.code, { backgroundColor: r.learned ? '#E3F7EE' : '#EEF1F7' }]}>
-                  <T w={800} size={13} color={r.learned ? '#075E3A' : '#4A5468'}>{r.code}</T>
+                <View style={[styles.code, { backgroundColor: r.learned ? '#E3F7EE' : r.part > 0 ? '#FFF4D1' : '#EEF1F7' }]}>
+                  <T w={800} size={13} color={r.learned ? '#075E3A' : r.part > 0 ? '#7A5300' : '#4A5468'}>{r.code}</T>
                 </View>
                 <T w={800} size={15} lh={1.3} style={{ flex: 1, minWidth: 0 }}>{r.topic.title}</T>
-                {r.lesson && (
-                  <T w={700} size={12} color="#5B6478" style={{ flexShrink: 0 }}>
-                    {r.learned ? `${lessonMonth(r.lesson.number)}-oy` : `${r.lesson.number}-dars`}
-                  </T>
-                )}
+                <T w={700} size={12} color="#5B6478" numberOfLines={1} style={{ flexShrink: 0 }}>{r.where}</T>
                 {r.learned ? (
                   <View accessibilityLabel="Oʻrganilgan" style={styles.done}>
                     <Check />
                   </View>
-                ) : (
-                  <ChevronRight />
-                )}
+                ) : r.part > 0 ? (
+                  <PartRing part={r.part} />
+                ) : null}
               </Pressable>
             ))}
           </View>
         </View>
       </Column>
     </ScrollView>
+  );
+}
+
+/** "Qisman oʻrganilgan": kulrang halqada yashil ulush (dizayndagi conic-gradient). */
+function PartRing({ part }: { part: number }) {
+  const a = Math.min(0.999, part) * 2 * Math.PI;
+  const x = 13 + 13 * Math.sin(a);
+  const y = 13 - 13 * Math.cos(a);
+  return (
+    <View accessibilityLabel="Qisman oʻrganilgan" style={{ width: 26, height: 26, flexShrink: 0 }}>
+      <Svg width={26} height={26} viewBox="0 0 26 26">
+        <Circle cx={13} cy={13} r={13} fill="#E4E8F0" />
+        <Path d={`M13 13 L13 0 A13 13 0 ${a > Math.PI ? 1 : 0} 1 ${x} ${y} Z`} fill="#087A4A" />
+        <Circle cx={13} cy={13} r={8} fill="#FFFFFF" />
+      </Svg>
+    </View>
   );
 }
 

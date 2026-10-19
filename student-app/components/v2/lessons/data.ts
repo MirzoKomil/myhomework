@@ -7,7 +7,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
-import { COURSE_TOTAL_LESSONS, getLessonContent, getLessonLockMap, mergeLessonContent, type LessonContent } from '@/data/lessonContent';
+import { isTeacherGraded, partLetter, partQuestionCount } from '@/components/v2/homework/lib';
+import { COURSE_TOTAL_LESSONS, getLessonContent, getLessonLockMap, mergeLessonContent, type HomeworkPart, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent, type AdminModuleContent, type MobileContent } from '@/services/contentApi';
 import { getCategoryProgress, getLessonProgress, loadLessonProgress } from '@/services/lessonProgressStore';
 import { getStudent, ready as authReady } from '@/services/studentAuthStore';
@@ -108,60 +109,116 @@ export function getAudioTracks(mc: MobileContent, lessonId: string): AudioTrack[
   return tracks;
 }
 
-// Tinglangan dialoglar — serverda bunday belgi yo'q, shuning uchun
-// qurilmada (o'quvchi bo'yicha alohida kalitda) saqlanadi.
-const LISTENED_KEY = 'mh_v2_audio_listened';
-let listened: Record<string, string[]> = {};
-let listenedLoaded: Promise<void> | null = null;
-let listenedKey = LISTENED_KEY;
-const listeners = new Set<() => void>();
-
-function loadListened() {
-  if (!listenedLoaded) {
-    listenedLoaded = (async () => {
-      await authReady();
-      const sid = getStudent()?.id;
-      listenedKey = sid ? `${LISTENED_KEY}:${sid}` : LISTENED_KEY;
-      try {
-        const raw = await AsyncStorage.getItem(listenedKey);
-        listened = raw ? JSON.parse(raw) : {};
-      } catch {
-        listened = {};
-      }
-    })();
-  }
-  return listenedLoaded;
+// Serverda saqlanmaydigan kichik belgilar (tinglangan dialoglar, ko'rilgan
+// so'z kartalari) — qurilmada, o'quvchi bo'yicha alohida kalitda saqlanadi.
+function makeLocalSets(baseKey: string) {
+  let data: Record<string, string[]> = {};
+  let loaded: Promise<void> | null = null;
+  let key = baseKey;
+  const subs = new Set<() => void>();
+  const load = () => {
+    if (!loaded) {
+      loaded = (async () => {
+        await authReady();
+        const sid = getStudent()?.id;
+        key = sid ? `${baseKey}:${sid}` : baseKey;
+        try {
+          const raw = await AsyncStorage.getItem(key);
+          data = raw ? JSON.parse(raw) : {};
+        } catch {
+          data = {};
+        }
+      })();
+    }
+    return loaded;
+  };
+  const get = (lessonId: string): string[] => data[lessonId] ?? [];
+  const mark = async (lessonId: string, itemId: string) => {
+    await load();
+    const cur = new Set(data[lessonId] ?? []);
+    if (cur.has(itemId)) return;
+    cur.add(itemId);
+    data = { ...data, [lessonId]: [...cur] };
+    subs.forEach((l) => l());
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(data));
+    } catch {
+      // Xotiraga yozib bo'lmasa jim o'tamiz.
+    }
+  };
+  const useSet = (lessonId: string): string[] => {
+    const [, setTick] = useState(0);
+    useEffect(() => {
+      load().then(() => setTick((t) => t + 1));
+      const l = () => setTick((t) => t + 1);
+      subs.add(l);
+      return () => {
+        subs.delete(l);
+      };
+    }, [lessonId]);
+    return get(lessonId);
+  };
+  return { load, get, mark, useSet };
 }
 
-export function getListened(lessonId: string): string[] {
-  return listened[lessonId] ?? [];
+const listenedStore = makeLocalSets('mh_v2_audio_listened');
+export const getListened = listenedStore.get;
+export const markListened = listenedStore.mark;
+export const useListened = listenedStore.useSet;
+
+// Ko'rilgan so'z kartalari — "8 / 8 o'rganildi" va kartochkadagi belgi shundan.
+const seenWordsStore = makeLocalSets('mh_v2_vocab_seen');
+export const getSeenWords = seenWordsStore.get;
+export const markWordSeen = seenWordsStore.mark;
+export const useSeenWords = seenWordsStore.useSet;
+
+/** O'rganilgan so'zlar: so'zlar qadami bajarilgan bo'lsa — hammasi, aks holda kartasi ochilganlari. */
+export function learnedWordIds(lessonId: string, wordIds: string[], seen: string[]): Set<string> {
+  if (getCategoryProgress(lessonId, 'vocabulary') >= 100) return new Set(wordIds);
+  return new Set(wordIds.filter((w) => seen.includes(w)));
 }
 
-export async function markListened(lessonId: string, trackId: string) {
-  await loadListened();
-  const cur = new Set(listened[lessonId] ?? []);
-  if (cur.has(trackId)) return;
-  cur.add(trackId);
-  listened = { ...listened, [lessonId]: [...cur] };
-  listeners.forEach((l) => l());
-  try {
-    await AsyncStorage.setItem(listenedKey, JSON.stringify(listened));
-  } catch {
-    // Xotiraga yozib bo'lmasa jim o'tamiz.
-  }
+// ─── Dialog matni ──────────────────────────────────────────────────────────
+// Dialog matni — audio bilan bir moduldagi "Matn" kontenti: "Ism: ruscha gap"
+// qatoridan keyingi qator — o'zbekcha tarjimasi.
+export type DialogLine = { speaker: string; ru: string; uz: string };
+
+export const SPEAKER_COLORS = ['#B34700', '#0B1220', '#1E3FD1', '#087A4A'];
+
+export function parseDialog(text: string): DialogLine[] {
+  const out: DialogLine[] = [];
+  text
+    .split(/\r?\n/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .forEach((row) => {
+      const m = row.match(/^([^:]{1,24}):\s*(.+)$/);
+      if (m) out.push({ speaker: m[1].trim(), ru: m[2].trim(), uz: '' });
+      else if (out.length && !out[out.length - 1].uz) out[out.length - 1].uz = row;
+    });
+  return out;
 }
 
-export function useListened(lessonId: string): string[] {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    loadListened().then(() => setTick((t) => t + 1));
-    const l = () => setTick((t) => t + 1);
-    listeners.add(l);
-    return () => {
-      listeners.delete(l);
-    };
-  }, [lessonId]);
-  return getListened(lessonId);
+export function trackLines(mc: MobileContent, track: AudioTrack): DialogLine[] {
+  const content = mc.moduleContents.find((c) => c.id === track.id);
+  if (!content) return [];
+  const text = mc.moduleContents.find((c) => c.moduleId === content.moduleId && c.type === 'text' && c.text)?.text;
+  return text ? parseDialog(text) : [];
+}
+
+/** Gapirayotganlar ro'yxati (tartib bilan) — avatar rangi shu tartibdan. */
+export const speakersOf = (lines: DialogLine[]) => Array.from(new Set(lines.map((l) => l.speaker)));
+export const speakerColor = (speakers: string[], name: string) => SPEAKER_COLORS[Math.max(0, speakers.indexOf(name)) % SPEAKER_COLORS.length];
+
+/** Kitob qismi — har oy (24 dars) kitobning bir qismi. */
+export const bookPart = (index: number) => Math.floor(index / MONTH_SIZE) + 1;
+
+/** Trekning kitob qismidagi tartib raqami — shu qismdagi oldingi darslar audiolari ham sanaladi. */
+export function bookTrackNo(mc: MobileContent, lessons: Pick<LessonInfo, 'id' | 'index'>[], lessonIndex: number, trackIdx: number) {
+  const start = (bookPart(lessonIndex) - 1) * MONTH_SIZE;
+  let n = 0;
+  for (const l of lessons) if (l.index >= start && l.index < lessonIndex) n += getAudioTracks(mc, l.id).length;
+  return n + trackIdx + 1;
 }
 
 // ─── Dars qadamlari (dizayn: 5 qadam) ───────────────────────────────────────
@@ -242,3 +299,54 @@ const SHORT = ['Yak', 'Du', 'Se', 'Chor', 'Pay', 'Ju', 'Sha'];
 const FULL = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
 export const shortDay = (d: Date) => `${SHORT[d.getDay()]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
 export const fullDay = (d: Date) => `${FULL[d.getDay()]} ${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
+
+// ─── Uyga vazifa xulosasi (Dars, Yo'l va "dars yopiq" oynasi uchun) ────────
+// Vazifa ekranidagi hisob bilan bir xil: avtomatik tekshiriladigan qismlar
+// savollari, javob berilganlari (scoreStore) va bajarilgan qismlar (progress).
+export type HwSummary = { letters: string[]; answered: number; total: number; done: boolean };
+
+export function homeworkSummary(
+  lesson: Pick<LessonInfo, 'id' | 'content'>,
+  scores: Record<string, { answered?: number; finished?: boolean }> | undefined,
+): HwSummary {
+  const p = getLessonProgress(lesson.id);
+  const auto = lesson.content.homeworkParts.filter((x) => !isTeacherGraded(x));
+  const isDone = (x: HomeworkPart) => !!p.homeworkParts[x.id] || !!scores?.[x.id]?.finished;
+  let answered = 0;
+  let total = 0;
+  auto.forEach((x) => {
+    const n = partQuestionCount(x);
+    total += n;
+    answered += isDone(x) ? n : Math.min(n, scores?.[x.id]?.answered ?? 0);
+  });
+  // Hali tugamagan qismlar harflari ("B + C"); hammasi tugagan bo'lsa — barcha harflar.
+  const open = auto.filter((x) => !isDone(x));
+  const letters = (open.length ? open : auto).map((x) => partLetter(x)).filter((l): l is string => !!l);
+  return { letters, answered, total, done: auto.length > 0 && open.length === 0 };
+}
+
+// ─── Tez tekshiruv (dialog tugagach) ───────────────────────────────────────
+// Savollar dialogning o'zidan tuziladi: oldingi replika kontekst sifatida
+// ko'rsatiladi, keyingi replika — to'g'ri javob; noto'g'ri variantlar —
+// shu darsdagi boshqa replikalar. Tartib har safar bir xil (tasodifiy emas).
+export const QUICK_CHECK_MAX = 4;
+
+export type QuickQuestion = { context: DialogLine; answer: DialogLine; options: string[]; correct: number };
+
+export function buildQuickCheck(lines: DialogLine[], pool: DialogLine[]): QuickQuestion[] {
+  const out: QuickQuestion[] = [];
+  for (let k = 1; k < lines.length && out.length < QUICK_CHECK_MAX; k++) {
+    const answer = lines[k];
+    const context = lines[k - 1];
+    const others = [...lines, ...pool]
+      .map((l) => l.ru)
+      .filter((ru, i, arr) => ru !== answer.ru && ru !== context.ru && arr.indexOf(ru) === i);
+    const distract = [others[(k * 2) % Math.max(1, others.length)], others[(k * 2 + 1) % Math.max(1, others.length)]]
+      .filter((x, i, arr): x is string => !!x && arr.indexOf(x) === i);
+    const correct = k % (distract.length + 1);
+    const options = [...distract];
+    options.splice(correct, 0, answer.ru);
+    out.push({ context, answer, options, correct });
+  }
+  return out;
+}

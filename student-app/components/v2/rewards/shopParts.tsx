@@ -3,6 +3,7 @@
  * bo'lmasa eski do'kondagi kabi ikonka), coin progress chizig'i.
  */
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image, StyleSheet, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { ShopProductV2 } from './parts';
@@ -25,6 +26,31 @@ export function ProductImage({ product, style, iconSize = 44, index = 0, positio
   return (
     <View style={[styles.box, { backgroundColor: product.bg, alignItems: 'center', justifyContent: 'center' }, style]}>
       <Ionicons name={product.icon} size={iconSize} color={product.color} />
+    </View>
+  );
+}
+
+/**
+ * Kitob muqovasi dizayndagidek: kvadrat, "contain", chap/o'ng chetlari
+ * fon rangiga silliq singib ketadi (dizayndagi mask-image o'rniga — fon
+ * bir xil rangli, shuning uchun ustidan fon rangidagi gradient bir xil
+ * natija beradi va native'da ham ishlaydi).
+ */
+export function ProductCover({ product, size, bg, fade, index = 0, iconSize = 44 }: { product: ShopProductV2; size: number; bg: string; fade: number; index?: number; iconSize?: number }) {
+  const uri = productImages(product)[index];
+  if (!uri) {
+    return (
+      <View style={{ width: size, height: size, alignSelf: 'center', alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={product.icon} size={iconSize} color={product.color} />
+      </View>
+    );
+  }
+  const edge = Math.round(size * fade);
+  return (
+    <View style={{ width: size, height: size, alignSelf: 'center' }}>
+      <Image source={{ uri }} accessibilityLabel={`«${product.name}» kitobining muqovasi`} style={{ width: size, height: size }} resizeMode="contain" />
+      <LinearGradient colors={[bg, `${bg}00`]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: edge }} pointerEvents="none" />
+      <LinearGradient colors={[`${bg}00`, bg]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: edge }} pointerEvents="none" />
     </View>
   );
 }

@@ -3,7 +3,7 @@
  *
  * Mantiq eski resources/games/word-chain.tsx'dan: so'z banki = o'quvchi
  * ochgan darslar lug'ati + tilning eng ko'p ishlatiladigan so'zlari.
- * Dizayndagi navbat taymeri (15 s), "Yordam" (10 coin — mos so'zni yozib
+ * Dizayndagi navbat taymeri (15 s), "Maslahat" (−10 coin — mos so'zni yozib
  * beradi) va "Oʻtkazib yuborish" (navbatni so'z bilan to'ldirib, ballsiz
  * o'tadi) qo'shildi. Joriy dars so'zi ×2 ball beradi.
  */
@@ -11,8 +11,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BulbIcon, LockIcon, StopwatchIcon } from '@/components/v2/practice/icons';
-import { GameHeader, displayRu, reset, saveRecords, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
+import { BulbIcon, InfoIcon, LockIcon, StopwatchIcon } from '@/components/v2/practice/icons';
+import { GameHeader, displayRu, plainWord, reset, saveRecords, stressLetters, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
 import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
@@ -48,6 +48,8 @@ export default function WordChainScreen() {
 
   const [bank, setBank] = useState<string[] | null>(null);
   const [translations, setTranslations] = useState<Record<string, string>>({});
+  // Urg'usiz kalit → kontentdagi asl yozilish (urg'u bilan bo'lsa ham).
+  const [display, setDisplay] = useState<Record<string, string>>({});
   const [chain, setChain] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +68,20 @@ export default function WordChainScreen() {
       .then((words) => {
         if (off) return;
         const tr: Record<string, string> = {};
+        const disp: Record<string, string> = {};
         const vocab: string[] = [];
         for (const w of words) {
-          const k = w.english.toLowerCase();
+          const orig = w.english.toLowerCase();
+          const k = plainWord(orig);
           if (letterRe.test(k)) {
             vocab.push(k);
             tr[k] = w.translation;
+            disp[k] = orig;
           }
         }
         const all = Array.from(new Set([...vocab, ...common]));
         setTranslations(tr);
+        setDisplay(disp);
         setBank(all);
         setChain([pick(vocab.length >= MIN_BANK_SIZE ? vocab : all)]);
       });
@@ -84,10 +90,15 @@ export default function WordChainScreen() {
   }, [isRu]);
 
   // Joriy dars so'zlari (×2 ball).
-  const lessonWords = useMemo(
-    () => (lesson?.vocab ?? []).map((w) => w.english.toLowerCase()).filter((w) => letterRe.test(w)),
+  const lessonDisplay = useMemo(
+    () => (lesson?.vocab ?? []).map((w) => w.english.toLowerCase()).filter((w) => letterRe.test(plainWord(w))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [lesson, isRu],
+  );
+  const lessonWords = useMemo(
+    () => lessonDisplay.map(plainWord),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lessonDisplay],
   );
 
   const last = chain[chain.length - 1] ?? '';
@@ -127,7 +138,7 @@ export default function WordChainScreen() {
 
   const submit = () => {
     if (finished || !bank) return;
-    const word = (letter + input.trim()).toLowerCase();
+    const word = plainWord(letter + input.trim()).toLowerCase();
     if (word.length < 2) return;
     if (!bank.includes(word)) return setError("Bu so'z ro'yxatda yo'q, boshqasini urinib ko'ring");
     if (chain.includes(word)) return setError("Bu so'z allaqachon ishlatilgan");
@@ -140,7 +151,7 @@ export default function WordChainScreen() {
     if (finished) return;
     const options = candidates();
     if (!options.length) return setError("Bu harfga so'z qolmadi — oʻtkazib yuboring");
-    if (getTotalCoins() < HINT_PRICE) return setError(`Yordam uchun ${HINT_PRICE} coin kerak`);
+    if (getTotalCoins() < HINT_PRICE) return setError(`Maslahat uchun ${HINT_PRICE} coin kerak`);
     await addCoins(-HINT_PRICE);
     setInput(pick(options).slice(1));
     setError(null);
@@ -200,13 +211,16 @@ export default function WordChainScreen() {
           <ScrollView ref={scrollRef} style={styles.chainScroll} contentContainerStyle={styles.chain} accessibilityLabel="Zanjir">
             {chain.map((w, i) => {
               const li = chainLetterIndex(w, isRu);
+              // Harflar urg'u bilan (agar kontentda bo'lsa) — indekslar urg'usiz so'z bilan bir xil.
+              const d = display[w];
+              const ls = d && plainWord(d) === w ? stressLetters(d) : Array.from(w);
               return (
                 <View key={`${w}-${i}`} style={styles.link}>
                   <Text style={styles.linkWord}>
-                    {i > 0 ? <Text style={styles.blue}>{w[0]}</Text> : w[0]}
-                    {w.slice(1, li)}
-                    {li > 0 && <Text style={[styles.blue, styles.underline]}>{w[li]}</Text>}
-                    {w.slice(li + 1)}
+                    {i > 0 ? <Text style={styles.blue}>{ls[0]}</Text> : ls[0]}
+                    {ls.slice(1, li).join('')}
+                    {li > 0 && <Text style={[styles.blue, styles.underline]}>{ls[li]}</Text>}
+                    {ls.slice(li + 1).join('')}
                   </Text>
                   <Text style={styles.linkTr} numberOfLines={1}>{translations[w] ?? ''}</Text>
                 </View>
@@ -243,11 +257,23 @@ export default function WordChainScreen() {
             <View style={styles.actions}>
               <Pressable accessibilityRole="button" onPress={useHelp} style={styles.helpBtn}>
                 <BulbIcon />
-                <Text style={styles.helpText}>Yordam · {HINT_PRICE} coin</Text>
+                <Text style={styles.helpText}>Maslahat · −{HINT_PRICE} coin</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={skip} style={styles.skipBtn}>
                 <Text style={styles.skipText}>Oʻtkazib yuborish</Text>
               </Pressable>
+            </View>
+          )}
+
+          {isRu && (
+            <View style={styles.note}>
+              <View style={{ marginTop: 1 }}>
+                <InfoIcon />
+              </View>
+              <Text style={styles.noteText}>
+                Soʻz <Text style={styles.noteBold}>ь</Text>, <Text style={styles.noteBold}>ъ</Text> yoki{' '}
+                <Text style={styles.noteBold}>ы</Text> bilan tugasa — undan oldingi harfdan boshlang.
+              </Text>
             </View>
           )}
 
@@ -258,7 +284,7 @@ export default function WordChainScreen() {
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.bonusTitle}>{lesson ? `${lesson.number}-dars soʻzi` : 'Dars soʻzi'} = ×2 ball</Text>
               <Text style={styles.bonusSub} numberOfLines={1}>
-                {lessonWords.length ? `${lessonWords.slice(0, 4).join(', ')}${lessonWords.length > 4 ? '…' : ''}` : '—'}
+                {lessonDisplay.length ? `${lessonDisplay.slice(0, 4).join(', ')}${lessonDisplay.length > 4 ? '…' : ''}` : '—'}
               </Text>
             </View>
           </View>
@@ -279,7 +305,7 @@ const styles = StyleSheet.create({
   column: { flex: 1, maxWidth: 480, alignSelf: 'center', width: '100%' },
   scoreBox: { height: 44, paddingHorizontal: 12, borderRadius: 15, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 8 },
   scoreNum: { fontFamily: fonts.display, fontSize: 22, color: '#0B1220', ...reset },
-  scoreLabel: { fontFamily: fonts.bodyHeavy, fontSize: 11, lineHeight: 12.65, color: '#4A5468', ...reset },
+  scoreLabel: { fontFamily: fonts.bodyHeavy, fontSize: 12, lineHeight: 13.8, color: '#4A5468', ...reset },
 
   timerRow: { paddingTop: 18, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
   track: { flex: 1, height: 10, borderRadius: 5, backgroundColor: '#FFFFFF', overflow: 'hidden' },
@@ -324,6 +350,10 @@ const styles = StyleSheet.create({
   helpText: { fontFamily: fonts.bodyHeavy, fontSize: 14, color: '#0B1220', ...reset },
   skipBtn: { height: 44, paddingHorizontal: 14, borderRadius: 14, justifyContent: 'center' },
   skipText: { fontFamily: fonts.bodyHeavy, fontSize: 14, color: '#1E3FD1', ...reset },
+
+  note: { backgroundColor: '#D9E2FF', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  noteText: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 13, lineHeight: 18.2, color: '#1E3FD1', ...reset },
+  noteBold: { fontFamily: fonts.bodyHeavy },
 
   bonus: { marginTop: 'auto', backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 10, paddingLeft: 10, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   bonusIcon: { width: 52, height: 52, borderRadius: 15, backgroundColor: '#FFF4D1', alignItems: 'center', justifyContent: 'center' },

@@ -3,15 +3,16 @@
  *
  * Slaydlar eski speaking/slides.tsx kabi getResolvedLessonContent'dan;
  * ekran ochilganda markDone('slidesWatch') qo'yiladi (eski ilova bilan bir xil).
- * Slayd sarlavhasi "Takrorlash — хочу · могу · можно" ko'rinishida bo'lsa,
- * "—" dan oldingisi overline, keyingisi katta qator bo'ladi.
+ * Hisoblagich yonidagi qisqa nom — slayd sarlavhasining ":"/"—" dan oldingi qismi.
+ * Rasm yoki "To'liq ekran" bosilsa — SlideViewer (?i=<raqam>).
+ * "Darsga tayyorlaning" savollari — darsning speakingPractice (gap + tarjima) ro'yxati.
  */
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { pad, splitTitle } from '@/components/v2/lessons/data';
-import { BackIcon, ChevronRight, TelegramIcon } from '@/components/v2/lessons/icons';
+import { pad } from '@/components/v2/lessons/data';
+import { BackIcon, ChevronRight, FullscreenIcon, TelegramIcon } from '@/components/v2/lessons/icons';
 import { BottomBar, Center, Column, TitleHeader } from '@/components/v2/lessons/parts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -65,7 +66,9 @@ export default function SlidesScreen() {
     thumbsRef.current?.scrollTo({ x: Math.max(0, n * 104 - 104), animated: true });
   };
   const subtitle = info ? `${info.number}-dars · ${info.isVideo ? 'Videodars' : 'Jonli dars'} · ${total} ta slayd` : '';
-  const { title: overTitle, phrase } = cur ? splitTitle(cur.title) : { title: '', phrase: '' };
+  const short = cur ? shortTitle(cur.title) : '';
+  const openViewer = () => router.push(`${R.slideViewer(id)}?i=${active}` as Href);
+  const questions = content?.speakingPractice ?? [];
   const liveLabel = live.startsAt ? liveWhen(live.startsAt) : '';
 
   if (!content || !cur) {
@@ -87,30 +90,34 @@ export default function SlidesScreen() {
         <TitleHeader title="Slaydlar" subtitle={subtitle} fallback={R.lesson(id)} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.figure}>
-            {cur.imageUrl ? (
-              <Image source={{ uri: cur.imageUrl }} style={styles.slideImg} resizeMode="cover" accessibilityLabel={`${active + 1}-slayd: ${cur.title}`} />
-            ) : (
-              <View style={[styles.slideImg, styles.slideEmpty]}>
-                <Text style={styles.slideEmptyText}>{cur.title}</Text>
-              </View>
-            )}
-          </View>
-          <View style={{ gap: 2 }}>
-            <Text style={styles.overline}>{active + 1}-slayd{phrase ? ` · ${overTitle}` : ''}</Text>
-            <Text style={styles.big}>{phrase || cur.title}</Text>
+            <Pressable accessibilityRole="link" accessibilityLabel={`${active + 1}-slaydni toʻliq ekranda ochish`} onPress={openViewer} style={{ borderRadius: 14 }}>
+              {cur.imageUrl ? (
+                <Image source={{ uri: cur.imageUrl }} style={styles.slideImg} resizeMode="cover" accessibilityLabel={`${active + 1}-slayd: ${cur.title}`} />
+              ) : (
+                <View style={[styles.slideImg, styles.slideEmpty]}>
+                  <Text style={styles.slideEmptyText}>{cur.title}</Text>
+                </View>
+              )}
+            </Pressable>
           </View>
           <View style={styles.nav}>
             <Pressable accessibilityRole="button" accessibilityLabel="Oldingi slayd" disabled={active === 0} onPress={() => go(active - 1)} style={[styles.navBtn, { backgroundColor: '#FFFFFF' }, active === 0 && { opacity: 0.5 }]}>
               <BackIcon />
             </Pressable>
             <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-              <Text accessibilityLabel={`${total} dan ${active + 1}-slayd`} style={styles.counter}>{active + 1} / {total}</Text>
+              <View accessibilityLabel={`${total} dan ${active + 1}-slayd${short ? `: ${short}` : ''}`} style={styles.counterRow}>
+                <Text style={styles.counter}>{active + 1} / {total}</Text>
+                {!!short && <Text style={styles.counterName} numberOfLines={1}>· {short}</Text>}
+              </View>
               <View style={{ flexDirection: 'row', gap: 4 }}>
                 {slides.map((s, i) => (
                   <View key={s.id} style={[styles.dot, i === active && styles.dotOn]} />
                 ))}
               </View>
             </View>
+            <Pressable accessibilityRole="link" accessibilityLabel="Toʻliq ekran" onPress={openViewer} style={({ pressed }) => [styles.fullBtn, pressed && { opacity: 0.85 }]}>
+              <FullscreenIcon />
+            </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Keyingi slayd" disabled={active === total - 1} onPress={() => go(active + 1)} style={[styles.navBtn, { backgroundColor: '#2F5BFF' }, active === total - 1 && { opacity: 0.5 }]}>
               <ChevronRight size={20} color="#FFFFFF" />
             </Pressable>
@@ -119,14 +126,21 @@ export default function SlidesScreen() {
             {slides.map((s, i) => {
               const on = i === active;
               if (!s.imageUrl) {
+                // Rasmsiz slayd — dizayndagi sxematik kichik ko'rinish (rangli sarlavha, sariq progress).
+                const acc = THUMB_ACCENTS[(i + 4) % THUMB_ACCENTS.length];
                 return (
-                  <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={`${i + 1}-slayd`} onPress={() => go(i)} style={[styles.thumb, styles.thumbEmpty, on && styles.thumbOn]}>
-                    <Text style={styles.thumbEmptyText}>{i + 1}</Text>
+                  <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={`${i + 1}-slayd: ${s.title}`} accessibilityState={{ selected: on }} onPress={() => go(i)} style={[styles.thumb, on ? styles.thumbOn : styles.thumbOff]}>
+                    <View style={[styles.tBand, { backgroundColor: acc }]} />
+                    <View style={[styles.tBar, { backgroundColor: acc }]} />
+                    <View style={[styles.tProg, { width: `${((i + 1) / total) * 100}%` }]} />
+                    <View style={[styles.thumbNo, { bottom: 5, backgroundColor: on ? '#2F5BFF' : '#0B1220' }]}>
+                      <Text style={styles.thumbNoText}>{i + 1}</Text>
+                    </View>
                   </Pressable>
                 );
               }
               return (
-                <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={`${i + 1}-slayd`} accessibilityState={{ selected: on }} onPress={() => go(i)} style={[styles.thumb, on ? styles.thumbOn : styles.thumbOff]}>
+                <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={`${i + 1}-slayd: ${s.title}`} accessibilityState={{ selected: on }} onPress={() => go(i)} style={[styles.thumb, on ? styles.thumbOn : styles.thumbOff]}>
                   <Image source={{ uri: s.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                   <View style={[styles.thumbNo, { backgroundColor: on ? '#2F5BFF' : '#0B1220' }]}>
                     <Text style={styles.thumbNoText}>{i + 1}</Text>
@@ -136,8 +150,17 @@ export default function SlidesScreen() {
             })}
           </ScrollView>
           <View style={styles.tip}>
-            <Image source={designImages.f639c30e1400761df83230b833ba42b2} style={{ width: 64, height: 60 }} resizeMode="contain" />
-            <Text style={styles.tipText}>Ustoz jonli darsda shu slaydlarni koʻrsatadi. Darsdan keyin istalgan vaqt qayta koʻring.</Text>
+            <Image source={designImages.f639c30e1400761df83230b833ba42b2} style={{ width: 44, height: 40 }} resizeMode="contain" />
+            <Text style={styles.tipText}>Ustoz jonli darsda shu slaydlarni koʻrsatadi. Darsdan keyin ham ochiq.</Text>
+          </View>
+          <View accessibilityLabel="Slayddagi savollar" style={styles.qs}>
+            <Text style={styles.qsTitle}>Darsga tayyorlaning · {questions.length} ta savol</Text>
+            {questions.map((q, k) => (
+              <View key={q.id} style={styles.qRow}>
+                <Text style={styles.qRu}>{k + 1}. {q.sentence}</Text>
+                {!!q.translation && <Text style={styles.qUz}>{q.translation}</Text>}
+              </View>
+            ))}
           </View>
         </ScrollView>
         {!!live.link && (
@@ -153,6 +176,14 @@ export default function SlidesScreen() {
   );
 }
 
+// Rasmsiz slayd kichik ko'rinishlari ranglari — dizayndagi tartibda.
+const THUMB_ACCENTS = ['#2F5BFF', '#FF7A1A', '#7C4DFF', '#087A4A', '#FF7A1A', '#2F5BFF', '#7C4DFF'];
+
+/** "Takrorlash: хочу · могу" → "Takrorlash". */
+function shortTitle(t: string) {
+  return t.split(/\s*[:—–]\s*/)[0].trim();
+}
+
 function liveWhen(d: Date) {
   const now = new Date();
   const t = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -165,16 +196,17 @@ function liveWhen(d: Date) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6FA' },
   muted: { fontFamily: fonts.body, fontSize: 14, color: '#4A5468', textAlign: 'center' },
-  content: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
+  content: { paddingTop: 14, paddingHorizontal: 20, paddingBottom: 12, gap: 10 },
   figure: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 8, boxShadow: '0 10px 30px rgba(11,18,32,0.10)' } as object,
   slideImg: { width: '100%', aspectRatio: 334 / 188, borderRadius: 14 },
   slideEmpty: { backgroundColor: '#E8EEFF', alignItems: 'center', justifyContent: 'center', padding: 16 },
   slideEmptyText: { fontFamily: fonts.bodyHeavy, fontSize: 18, color: '#1E3FD1', textAlign: 'center' },
-  overline: { fontFamily: fonts.bodyHeavy, fontSize: 12, letterSpacing: 0.72, textTransform: 'uppercase', color: '#1E3FD1', fontWeight: 'normal' },
-  big: { fontFamily: fonts.bodyHeavy, fontSize: 20, lineHeight: 27, color: '#0B1220', fontWeight: 'normal' },
   nav: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   navBtn: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  counter: { fontFamily: fonts.display, fontSize: 22, color: '#0B1220', fontVariant: ['tabular-nums'], fontWeight: 'normal' },
+  counterRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4, maxWidth: '100%' },
+  counter: { fontFamily: fonts.display, fontSize: 22, lineHeight: 24.2, color: '#0B1220', fontVariant: ['tabular-nums'], fontWeight: 'normal' },
+  counterName: { flexShrink: 1, fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#1E3FD1', fontWeight: 'normal' },
+  fullBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#D5DBE7', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#C9D0DE' },
   dotOn: { width: 16, backgroundColor: '#2F5BFF' },
   thumbs: { marginHorizontal: -20, flexGrow: 0 },
@@ -182,12 +214,18 @@ const styles = StyleSheet.create({
   thumb: { width: 96, height: 54, borderRadius: 10, overflow: 'hidden', backgroundColor: '#FFFFFF', position: 'relative' },
   thumbOff: { borderWidth: 1, borderColor: '#D5DBE7' },
   thumbOn: { borderWidth: 3, borderColor: '#2F5BFF' },
-  thumbEmpty: { backgroundColor: '#E7EBF3', alignItems: 'center', justifyContent: 'center' },
-  thumbEmptyText: { fontFamily: fonts.bodyHeavy, fontSize: 15, color: '#4A5468', fontWeight: 'normal' },
+  tBand: { position: 'absolute', left: 0, right: 0, top: 0, height: 22, opacity: 0.22 },
+  tBar: { position: 'absolute', left: 8, top: 8, width: 30, height: 6, borderRadius: 3 },
+  tProg: { position: 'absolute', left: 0, bottom: 0, height: 3, backgroundColor: '#FFC93C' },
   thumbNo: { position: 'absolute', left: 4, bottom: 3, minWidth: 18, height: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
-  thumbNoText: { fontFamily: fonts.bodyHeavy, fontSize: 11, color: '#FFFFFF', fontWeight: 'normal' },
-  tip: { backgroundColor: '#FFF4D1', borderRadius: 20, paddingVertical: 14, paddingRight: 16, paddingLeft: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  tipText: { flex: 1, fontFamily: fonts.body, fontSize: 14, lineHeight: 20.3, color: '#4A3200', fontWeight: 'normal' },
+  thumbNoText: { fontFamily: fonts.bodyHeavy, fontSize: 12, color: '#FFFFFF', fontWeight: 'normal' },
+  tip: { backgroundColor: '#FFF4D1', borderRadius: 20, paddingVertical: 6, paddingRight: 14, paddingLeft: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  tipText: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 17.55, color: '#4A3200', fontWeight: 'normal' },
+  qs: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 4 },
+  qsTitle: { fontFamily: fonts.bodyHeavy, fontSize: 12, color: '#4A5468', textTransform: 'uppercase', letterSpacing: 0.72, paddingBottom: 3, fontWeight: 'normal' },
+  qRow: { paddingVertical: 5, borderTopWidth: 1, borderTopColor: '#EEF1F7' },
+  qRu: { fontFamily: fonts.bodyHeavy, fontSize: 15, lineHeight: 19.5, color: '#0B1220', fontWeight: 'normal' },
+  qUz: { fontFamily: fonts.body, fontSize: 13, lineHeight: 16.9, color: '#4A5468', fontWeight: 'normal' },
   tg: { height: 56, borderRadius: 18, backgroundColor: '#2AABEE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   tgText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#0B1220', fontWeight: 'normal' },
 });

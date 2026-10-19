@@ -24,10 +24,10 @@ export function ChevronRightIcon({ size = 16, color = '#FFD66B', strokeWidth = 2
   );
 }
 
-export function CloseIcon({ size = 20, color = '#0B1220' }: P) {
+export function CloseIcon({ size = 20, color = '#0B1220', strokeWidth = 2.4 }: P) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
-      <Path d="M6 6l12 12M18 6 6 18" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+      <Path d="M6 6l12 12M18 6 6 18" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -161,6 +161,113 @@ export function ShieldIcon({ size = 18, color = '#FFFFFF', strokeWidth = 2.4 }: 
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
       <Path d="M12 3l7 3v5.5c0 4.3-2.9 8-7 9.5-4.1-1.5-7-5.2-7-9.5V6z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** "Namuna" belgisidagi ko'z ikonkasi. */
+export function EyeIcon({ size = 14, color = '#4A5468' }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** ShopItem'dagi yetkazish qatori — yopiq yuk mashinasi yo'li, kichikroq g'ildirak. */
+export function TruckSmallIcon({ size = 18, color = '#1E3FD1' }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="7" cy="18" r="1.8" stroke={color} strokeWidth={2} />
+      <Circle cx="17" cy="18" r="1.8" stroke={color} strokeWidth={2} />
+    </Svg>
+  );
+}
+
+export function ChevronThinIcon({ size = 16, color = '#5B6478', strokeWidth = 2.4 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Path d="M9 5l7 7-7 7" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function ClockIcon({ size = 20, color = '#2F5BFF' }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={2} />
+      <Path d="M12 7v5l3 2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function StarFill({ size = 26, color = '#F5A300' }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z" fill={color} />
+    </Svg>
+  );
+}
+
+/** Balans o'zgarishi strelkasi (16×10, viewBox 28×10). */
+export function SmallArrowIcon({ width = 16, height = 10 }: { width?: number; height?: number }) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 28 10" {...hidden}>
+      <Path d="M0 5h24M20 1l4 4-4 4" fill="none" stroke="#9AA3B5" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Seriya uzildi: 6 → 0 strelkasi (28×14). */
+export function DropArrowIcon() {
+  return (
+    <Svg width={28} height={14} viewBox="0 0 28 14" {...hidden}>
+      <Path d="M1 7h24M19 1l6 6-6 6" fill="none" stroke="#5B6478" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function SearchIcon({ size = 19, color = '#5B6478' }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+      <Path d="M20 20l-3.5-3.5" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Lug'at: xatolarni takrorlash (ikki yarim aylana). */
+export function MistakeRepeatIcon({ size = 20, color = '#B42318' }: P) {
+  const s = { stroke: color, strokeWidth: 2.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" {...s} />
+      <Path d="M18 3v4h-4M6 21v-4h4" {...s} />
+    </Svg>
+  );
+}
+
+/** Lug'at: "Takrorlashni boshlash" tugmasidagi aylanish ikonkasi. */
+export function ReviewIcon({ size = 20, color = '#FFFFFF' }: P) {
+  const s = { stroke: color, strokeWidth: 2.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Path d="M4 12a8 8 0 0 1 13.7-5.6L20 9" {...s} />
+      <Path d="M20 4v5h-5" {...s} />
+      <Path d="M20 12a8 8 0 0 1-13.7 5.6L4 15" {...s} />
+      <Path d="M4 20v-5h5" {...s} />
+    </Svg>
+  );
+}
+
+export function SpeakerIcon({ size = 20, color = '#1E3FD1' }: P) {
+  const s = { stroke: color, strokeWidth: 2.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Path d="M4 9v6h4l5 4V5L8 9z" {...s} />
+      <Path d="M16.5 8.5a5 5 0 0 1 0 7" {...s} />
     </Svg>
   );
 }

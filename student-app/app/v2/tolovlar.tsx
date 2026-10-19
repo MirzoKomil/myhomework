@@ -7,13 +7,14 @@
  * 3 oy — tugash sanasi boshlanishdan 3 oy keyin. Tariflar ro'yxati CRM'dagi
  * (js/paymentLedger.js TARIFFS) bilan bir xil: Start 15, Standard 30, VIP 60.
  */
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DebtReminderPopup } from '@/components/v2/popups/DebtReminder';
 import { fetchContractPdfInfo, formatSize } from '@/components/v2/profile/contract';
-import { CheckIcon, ChevronIcon, DocIcon } from '@/components/v2/profile/icons';
+import { ArrowRightIcon, CheckIcon, ChevronIcon, DocIcon } from '@/components/v2/profile/icons';
 import {
   Column,
   courseEnd,
@@ -45,7 +46,9 @@ export default function V2Payments() {
   const [p, setP] = useState<DemoPaymentsResponse | null>(null);
   const [profile, setProfile] = useState<DemoProfileResponse | null>(null);
   const [pdf, setPdf] = useState<string>('');
-  const [debtOpen, setDebtOpen] = useState(false);
+  // ?popup=debt — eslatma oynasini to'g'ridan-to'g'ri ochish (skrinshot/havola uchun).
+  const { popup } = useLocalSearchParams<{ popup?: string }>();
+  const [debtOpen, setDebtOpen] = useState(popup === 'debt');
 
   useEffect(() => {
     fetchDemoStudentPayments().then(setP).catch(() => {});
@@ -75,7 +78,7 @@ export default function V2Payments() {
   return (
     <View style={st.screen}>
       <Header title="Toʻlovlar va tarif" fallback={R.profile} />
-      <ScrollView contentContainerStyle={[st.content, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[st.content, { paddingBottom: debt > 0 ? 12 : insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         <Column style={st.col}>
           <View style={st.hero}>
             <View style={st.heroTop}>
@@ -119,12 +122,13 @@ export default function V2Payments() {
                 <View style={{ flex: 1, gap: 1 }}>
                   <Text style={st.debtOver}>Qarzdorlik</Text>
                   <Text style={st.debtAmount}>{`${money(debt)} soʻm`}</Text>
-                  {!!due && <Text style={st.debtSub}>{`Muddat ${dmy(due)}`}</Text>}
-                  {dueLeft !== null && dueLeft >= 0 && <Text style={st.debtSub}>{`${dueLeft} kun qoldi`}</Text>}
                 </View>
-                <Pressable accessibilityRole="button" onPress={() => setDebtOpen(true)} style={({ pressed }) => [st.payBtn, pressed && st.pressed]}>
-                  <Text style={st.payText}>Qarzni toʻlash</Text>
-                </Pressable>
+                <View style={st.debtRight}>
+                  {!!due && <Text style={st.debtSub}>{`Muddat ${dmy(due)}`}</Text>}
+                  {dueLeft !== null && dueLeft >= 0 && (
+                    <View style={st.debtPill}><Text style={st.debtPillText}>{`${dueLeft} kun qoldi`}</Text></View>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -170,6 +174,17 @@ export default function V2Payments() {
           </Pressable>
         </Column>
       </ScrollView>
+      {debt > 0 && (
+        // Pastki asosiy tugma — qarz eslatmasini ochadi (dizayn: DebtReminder'ga havola).
+        <View style={[st.bottom, { paddingBottom: Math.max(insets.bottom, 20) + 14 }]}>
+          <Column>
+            <Pressable accessibilityRole="button" onPress={() => setDebtOpen(true)} style={({ pressed }) => [st.payBtn, pressed && st.pressed]}>
+              <Text style={st.payText} numberOfLines={1}>{`Qarzni toʻlash · ${money(debt)} soʻm`}</Text>
+              <ArrowRightIcon />
+            </Pressable>
+          </Column>
+        </View>
+      )}
       <DebtReminderPopup
         visible={debtOpen}
         onClose={() => setDebtOpen(false)}
@@ -182,7 +197,7 @@ export default function V2Payments() {
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6FA' },
   content: { paddingHorizontal: 20, paddingTop: 14 },
-  col: { gap: 10 },
+  col: { gap: 12 },
   pressed: { opacity: 0.85 },
   hero: { backgroundColor: '#2F5BFF', borderRadius: 24, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
@@ -191,7 +206,7 @@ const st = StyleSheet.create({
   heroSub: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#FFFFFF' },
   left: { alignItems: 'flex-end', backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10 },
   leftNum: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 22, color: '#1E3FD1' },
-  leftLabel: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 11, lineHeight: 15, color: '#1E3FD1' },
+  leftLabel: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#1E3FD1' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.16)', justifyContent: 'center' },
   chipText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#FFFFFF' },
@@ -206,12 +221,16 @@ const st = StyleSheet.create({
   billValue: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },
   billTrack: { height: 6, borderRadius: 3, backgroundColor: '#EEF1F7', overflow: 'hidden' },
   billFill: { height: 6, borderRadius: 3, backgroundColor: '#087A4A' },
-  debt: { backgroundColor: '#FFF1E6', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  debtOver: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, letterSpacing: 0.48, textTransform: 'uppercase', color: '#B42318' },
-  debtAmount: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 23, color: '#B42318' },
-  debtSub: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#7A2E0E' },
-  payBtn: { height: 46, paddingHorizontal: 14, borderRadius: 14, backgroundColor: '#D92D20', justifyContent: 'center', flexShrink: 0 },
-  payText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, color: '#FFFFFF' },
+  debt: { backgroundColor: '#FFF4D1', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  debtOver: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, letterSpacing: 0.48, textTransform: 'uppercase', color: '#8A5A00' },
+  debtAmount: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 23, color: '#8A5A00' },
+  debtRight: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+  debtSub: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#5C4300' },
+  debtPill: { height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: '#FFFFFF', justifyContent: 'center' },
+  debtPillText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#8A5A00' },
+  bottom: { flexShrink: 0, paddingTop: 12, paddingHorizontal: 20 },
+  payBtn: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  payText: { flexShrink: 1, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, color: '#FFFFFF' },
   tHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 2 },
   tTitle: { paddingLeft: 2, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, letterSpacing: 0.72, textTransform: 'uppercase', color: '#4A5468' },
   tLink: { height: 44, justifyContent: 'center' },
@@ -221,9 +240,9 @@ const st = StyleSheet.create({
   tariffMine: { borderColor: '#2F5BFF', backgroundColor: '#E8EEFF' },
   tName: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#0B1220' },
   tMin: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, lineHeight: 18, color: '#4A5468' },
-  tNote: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 11, lineHeight: 15, color: '#5B6478' },
+  tNote: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#5B6478' },
   youRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  you: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 11, lineHeight: 15, color: '#1E3FD1' },
+  you: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#1E3FD1' },
   group: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden' },
   row: { minHeight: 50, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowLabel: { flex: 1, minWidth: 0, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },

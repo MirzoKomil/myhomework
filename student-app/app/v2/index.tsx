@@ -15,8 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { HomeNav } from '@/components/v2/home/HomeNav';
-import { ArrowRight, BellIcon, BoltIcon, CoinIcon, FlameIcon, TelegramIcon } from '@/components/v2/home/icons';
+import { ArrowRight, BellIcon, BoltIcon, ChevronRightIcon, CoinIcon, FlameIcon, TelegramIcon } from '@/components/v2/home/icons';
 import { darkHome, lightHome, type HomePalette } from '@/components/v2/home/palette';
+import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/currentLesson';
 import { displayFont, getReadIds } from '@/components/v2/home/shared';
 import { BotConnectPopup } from '@/components/v2/popups/BotConnect';
 import { Loading } from '@/components/v2/states/Loading';
@@ -25,7 +26,6 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { BATTLE_WIN_COINS } from '@/data/mock';
-import { getResolvedLessonContent } from '@/data/lessonContent';
 import { useAvatarUri } from '@/services/avatarStore';
 import { useCoins } from '@/services/coinsStore';
 import {
@@ -33,10 +33,7 @@ import {
   fetchDemoSchedule,
   fetchDemoStudentProfile,
   fetchLeaderboard,
-  fetchMobileContent,
 } from '@/services/contentApi';
-import { getCategoryProgress, loadLessonProgress } from '@/services/lessonProgressStore';
-import { getLastPosition } from '@/services/progressStore';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
 import { telegramLinkStatus } from '@/services/telegramLinkApi';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
@@ -45,8 +42,6 @@ import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 const DAILY_GOAL = 50;
 const RING_C = 2 * Math.PI * 23; // ≈144.5, dizayndagi dasharray
 
-type Step = { percent: number };
-type CurrentLesson = { id: string; name: string; number: number; isVideoDay: boolean; phrase: string; meta: string; steps: Step[] };
 type LiveLesson = { startsAt: Date; topic: string; link: string };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -80,44 +75,6 @@ function whenLabel(date: Date, now: Date) {
   if (diff === 0) return `bugun ${time}`;
   if (diff === 1) return `ertaga ${time}`;
   return `${WEEKDAYS[date.getDay()]} ${time}`;
-}
-
-async function resolveCurrentLesson(): Promise<CurrentLesson | null> {
-  const mc = await fetchMobileContent();
-  const course = mc.courses[0];
-  if (!course) return null;
-  const lessons = mc.lessons.filter((l) => l.courseId === course.id);
-  if (!lessons.length) return null;
-  const last = await getLastPosition();
-  let idx = last ? lessons.findIndex((l) => l.id === last.lessonId) : -1;
-  if (idx < 0) idx = lessons.findIndex((l) => l.isActive);
-  if (idx < 0) idx = 0;
-  const lesson = lessons[idx];
-
-  await loadLessonProgress();
-  const content = await getResolvedLessonContent(lesson.id, idx);
-  const isVideoDay = idx % 2 === 0;
-  const steps: Step[] = [
-    { percent: getCategoryProgress(lesson.id, isVideoDay ? 'video' : 'speaking') },
-    { percent: getCategoryProgress(lesson.id, 'vocabulary') },
-    { percent: getCategoryProgress(lesson.id, 'homework', content.homeworkParts.length) },
-  ];
-  // Dizayndagi "8 soʻz · 3 audio · vazifa" qatori — darsda bor narsalardan.
-  const meta: string[] = [];
-  if (content.vocabulary.length) meta.push(`${content.vocabulary.length} soʻz`);
-  if (isVideoDay) meta.push('video');
-  else if (content.slides.length) meta.push(`${content.slides.length} slayd`);
-  if (content.homeworkParts.length) meta.push('vazifa');
-  const first = content.vocabulary[0]?.english?.trim();
-  return {
-    id: lesson.id,
-    name: lesson.name,
-    number: idx + 1,
-    isVideoDay,
-    phrase: first ? `«${first}»` : '',
-    meta: meta.join(' · '),
-    steps,
-  };
 }
 
 export default function V2Home() {
@@ -222,7 +179,7 @@ export default function V2Home() {
               <CoinIcon />
               <Text style={[styles.pillText, { color: p.coinText }]}>{coins}</Text>
             </Pressable>
-            <Pressable accessibilityRole="link" accessibilityLabel={`Streak ${streak} kun, natijalar`} onPress={() => router.push(R.progress as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 3 }]}>
+            <Pressable accessibilityRole="link" accessibilityLabel={`Seriya ${streak} kun, holat`} onPress={() => router.push(R.streak as Href)} style={[styles.pill, { backgroundColor: p.pillBg, gap: 3 }]}>
               <FlameIcon />
               <Text style={[styles.pillText, { color: p.streakText }]}>{streak}</Text>
             </Pressable>
@@ -244,14 +201,16 @@ export default function V2Home() {
           {/* Telegram bot ulanmagan (MainNoBot) */}
           {!botLinked && (
             <View accessibilityLabel="Telegram bot ulanmagan" style={styles.bot}>
-              <View style={styles.botCircle} />
+              {/* Bezak doira alohida qatlamda kesiladi — karta o'zi kesilmaydi (dizayn). */}
+              <View style={styles.botDeco} pointerEvents="none">
+                <View style={styles.botCircle} />
+              </View>
               <View style={styles.botIcon}>
                 <TelegramIcon size={24} color="#FFFFFF" />
-                <View style={styles.botDot} />
               </View>
               <View style={styles.botText}>
                 <Text style={styles.botTitle}>Telegram botni ulang</Text>
-                <Text style={styles.botSub}>Dars eslatmalari va bildirishnomalar botga keladi</Text>
+                <Text style={styles.botSub}>Dars eslatmalari Telegramga keladi</Text>
               </View>
               <Pressable accessibilityRole="button" onPress={() => setBotOpen(true)} style={styles.botBtn}>
                 <Text style={styles.botBtnText}>Ulash</Text>
@@ -320,7 +279,13 @@ export default function V2Home() {
           )}
 
           {/* Kunlik maqsad va streak */}
-          <View accessibilityLabel="Kunlik maqsad va streak" style={[styles.goalCard, { backgroundColor: p.card }]}>
+          {/* Butun karta natijalarga olib boradi (dizayndagi ustki havola qatlami). */}
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={`Kunlik maqsad: ${todayLightning} / ${DAILY_GOAL} chaqmoq — natijalarni ochish`}
+            onPress={() => router.push(R.progress as Href)}
+            style={[styles.goalCard, { backgroundColor: p.card }]}
+          >
             <View style={styles.goalRow}>
               <View style={styles.ring}>
                 <Svg width={52} height={52} viewBox="0 0 56 56" accessibilityRole="image" accessibilityLabel={`Kunlik maqsad: ${DAILY_GOAL} dan ${goal} chaqmoq`}>
@@ -339,6 +304,7 @@ export default function V2Home() {
                 <Text style={[styles.goalTitle, { color: p.text }]}>Kunlik maqsad</Text>
                 <Text style={[styles.goalSub, { color: p.muted }]}>{todayLightning} / {DAILY_GOAL} chaqmoq · yana {DAILY_GOAL - goal} ta</Text>
               </View>
+              <ChevronRightIcon size={20} color={p.goalChevron} strokeWidth={2.4} />
             </View>
             <View style={styles.days}>
               {days.map((d) => (
@@ -349,19 +315,19 @@ export default function V2Home() {
               ))}
               <View style={styles.day} accessibilityLabel={`Bugun, streak ${streak} kun`}>
                 <View style={[styles.dayCircle, styles.today, { backgroundColor: p.todayBg }]}>
-                  <Text style={styles.todayNum}>{streak + 1}</Text>
+                  <Text style={[styles.todayNum, { color: p.todayNum }]}>{streak + 1}</Text>
                 </View>
                 <Text style={[styles.dayLabel, { color: p.todayLabel, fontFamily: fonts.bodyHeavy }]}>Bugun</Text>
               </View>
             </View>
-          </View>
+          </Pressable>
 
           {/* Mashqlar */}
           {botLinked && (
             <View accessibilityLabel="Mashqlar" style={styles.quickRow}>
               <Pressable
                 accessibilityRole="link"
-                onPress={() => router.push((lesson ? R.vocab(lesson.id) : R.practice) as Href)}
+                onPress={() => router.push(R.wordReview as Href)}
                 style={[styles.quick, { backgroundColor: p.card }]}
               >
                 <View style={[styles.quickIcon, { backgroundColor: p.vocabIconBg }]}>
@@ -415,16 +381,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2,
     right: -2,
-    minWidth: 18,
-    height: 18,
+    minWidth: 20,
+    height: 20,
     paddingHorizontal: 2,
-    borderRadius: 9,
+    borderRadius: 10,
     backgroundColor: '#D92D20',
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { fontFamily: fonts.bodyHeavy, fontSize: 11, lineHeight: 13, color: '#FFFFFF', fontWeight: 'normal' },
+  badgeText: { fontFamily: fonts.bodyHeavy, fontSize: 12, lineHeight: 14, color: '#FFFFFF', fontWeight: 'normal' },
 
   bot: {
     backgroundColor: '#1B6FA8',
@@ -435,11 +401,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    overflow: 'hidden',
   },
+  botDeco: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: 24, overflow: 'hidden' },
   botCircle: { position: 'absolute', right: -30, bottom: -40, width: 120, height: 120, borderRadius: 60, backgroundColor: '#2380BF' },
   botIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#2AABEE', alignItems: 'center', justifyContent: 'center' },
-  botDot: { position: 'absolute', top: -3, right: -3, width: 14, height: 14, borderRadius: 7, backgroundColor: '#FF7A1A', borderWidth: 2.5, borderColor: '#1B6FA8' },
   botText: { flex: 1, minWidth: 0, gap: 3 },
   botTitle: { fontFamily: fonts.bodyHeavy, fontSize: 16, lineHeight: 19.2, color: '#FFFFFF', fontWeight: 'normal' },
   botSub: { fontFamily: fonts.body, fontSize: 13, lineHeight: 17.55, color: '#FFFFFF', fontWeight: 'normal' },
@@ -483,7 +448,7 @@ const styles = StyleSheet.create({
   day: { flex: 1, alignItems: 'center', gap: 6, minHeight: 44 },
   dayCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   today: { borderWidth: 2.5, borderColor: '#FF7A1A' },
-  todayNum: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#B34700', fontWeight: 'normal' },
+  todayNum: { fontFamily: fonts.bodyHeavy, fontSize: 13, fontWeight: 'normal' },
   dayLabel: { fontFamily: fonts.bodyBold, fontSize: 12, fontWeight: 'normal' },
 
   quickRow: { flexDirection: 'row', gap: 12 },

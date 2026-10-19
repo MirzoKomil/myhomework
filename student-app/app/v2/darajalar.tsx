@@ -3,13 +3,17 @@
  *
  * Eski profile/levels.tsx bilan bir xil manba: chaqmoq soni
  * (lightningStore) va data/levels.ts dagi oraliqlar. "Taxminan N kun" —
- * dizayndagi "kuniga o'rtacha ~50 ta" stavkasidan hisoblanadi.
+ * dizayndagi "Kunlik maqsad: 50 ta" stavkasidan hisoblanadi.
+ * "Afsona yulduzlari" (eng yuqori darajadan keyin har 1 000 chaqmoqda
+ * +1 ★) — eng yuqori darajaga yetguncha qulflangan.
+ * ?popup=levelup — "Darajaga chiqqanda nima bo'ladi?" namuna oynasi.
  */
-import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { LEVEL_BADGES, LevelUpPopup, levelName } from '@/components/v2/popups/LevelUp';
-import { BoltFill, ChevronRightIcon, LockIcon, TICK2, TickIcon } from '@/components/v2/rewards/icons';
+import { BoltFill, ChevronRightIcon, LockIcon, StarFill, TICK2, TickIcon } from '@/components/v2/rewards/icons';
 import { fmt, ScreenHeader } from '@/components/v2/rewards/parts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -25,6 +29,11 @@ export default function V2Levels() {
   const progress = getLevelProgress(lightning);
   const curIdx = LEVELS.findIndex((l) => l.key === progress.level.key);
   const [popup, setPopup] = useState(false);
+  const params = useLocalSearchParams<{ popup?: string }>();
+  useEffect(() => {
+    if (params.popup === 'levelup') setPopup(true);
+  }, [params.popup]);
+  const legendReached = curIdx === LEVELS.length - 1;
 
   return (
     <View style={styles.screen}>
@@ -67,7 +76,7 @@ export default function V2Levels() {
               const reached = lightning >= l.min;
               const current = i === curIdx;
               return (
-                <View key={l.key} style={[styles.row, i < LEVELS.length - 1 && styles.rowBorder, current && { backgroundColor: '#F0EBFF' }]}>
+                <View key={l.key} style={[styles.row, styles.rowBorder, current && { backgroundColor: '#F0EBFF' }]}>
                   <Image source={LEVEL_BADGES[i]} accessibilityLabel={`${i + 1}-daraja nishoni`} style={[{ width: 46, height: 46 }, !reached && { opacity: 0.55 }]} resizeMode="contain" />
                   <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
                     <Text style={styles.rowTitle}>{i + 1} · {levelName(i, courseLang)}</Text>
@@ -83,11 +92,23 @@ export default function V2Levels() {
                 </View>
               );
             })}
+            <View style={styles.starRow}>
+              <View style={styles.starIcon}><StarFill /></View>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text style={styles.rowTitle}>Afsona yulduzlari</Text>
+                <Text style={[styles.rowSub, { lineHeight: 16.2 }]}>Har 1 000 chaqmoqda +1 ★</Text>
+              </View>
+              {legendReached ? (
+                <View style={styles.done}><TickIcon size={15} color="#087A4A" strokeWidth={3} d={TICK2} /></View>
+              ) : (
+                <LockIcon />
+              )}
+            </View>
           </View>
 
           <View style={styles.note}>
             <BoltFill size={20} />
-            <Text style={styles.noteText}>Chaqmoq — dars, vazifa, mashq va jonli darsdan. Kuniga oʻrtacha ~50 ta.</Text>
+            <Text style={styles.noteText}>Chaqmoq — dars, vazifa, mashq va jonli darsdan. Kunlik maqsad: {PER_DAY} ta.</Text>
           </View>
 
           <Pressable accessibilityRole="button" onPress={() => setPopup(true)} style={({ pressed }) => [styles.link, pressed && { opacity: 0.8 }]}>
@@ -96,7 +117,8 @@ export default function V2Levels() {
           </Pressable>
         </View>
       </ScrollView>
-      <LevelUpPopup visible={popup} onClose={() => setPopup(false)} levelIndex={Math.min(curIdx + 1, LEVELS.length - 1)} />
+      {/* Namuna: keyingi daraja (dizayndagi 4-darajadagi o'quvchi uchun — "5 · Domwork afsonasi"). */}
+      <LevelUpPopup visible={popup} onClose={() => setPopup(false)} levelIndex={Math.min(curIdx + 1, LEVELS.length - 1)} sample />
     </View>
   );
 }
@@ -118,7 +140,9 @@ const styles = StyleSheet.create({
   rowTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, lineHeight: 20, color: '#0B1220' },
   rowSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
   here: { height: 26, paddingHorizontal: 9, borderRadius: 13, backgroundColor: '#6A3CF0', justifyContent: 'center' },
-  hereText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 11, color: '#FFFFFF' },
+  hereText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#FFFFFF' },
+  starRow: { minHeight: 72, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFF7DD' },
+  starIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFE9A8', alignItems: 'center', justifyContent: 'center' },
   done: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#E3F7EE', alignItems: 'center', justifyContent: 'center' },
   note: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingHorizontal: 4 },
   noteText: { flex: 1, fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 19, color: '#4A5468' },

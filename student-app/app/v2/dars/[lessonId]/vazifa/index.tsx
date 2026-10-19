@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackIcon, ChevronRight, Coin } from '@/components/v2/homework/icons';
+import { BackIcon, ChevronRight, Coin, LockSmall } from '@/components/v2/homework/icons';
 import {
   isTeacherGraded,
   KIND_SHORT,
@@ -103,6 +103,7 @@ export default function HomeworkScreen() {
   const totalQ = autoParts.reduce((a, p) => a + partQuestionCount(p), 0);
   const answeredQ = autoParts.reduce((a, p) => a + answeredOf(p), 0);
   const earned = autoParts.reduce((a, p) => a + (lessonScores[p.id]?.coins ?? 0), 0);
+  const correctQ = autoParts.reduce((a, p) => a + Math.min(partQuestionCount(p), lessonScores[p.id]?.correct ?? 0), 0);
   const allAutoDone = autoParts.length > 0 && autoParts.every(isDone);
 
   // Birinchi bajarilmagan qism — "davom ettirish" tugmasi va ko'k ramka shu qismda.
@@ -115,6 +116,14 @@ export default function HomeworkScreen() {
   const prevAuto = prev ? prev.content.homeworkParts.filter((p) => !isTeacherGraded(p)) : [];
   const prevTotal = prevAuto.reduce((a, p) => a + partQuestionCount(p), 0);
   const prevCorrect = prevAuto.reduce((a, p) => a + (prevScores[p.id]?.correct ?? 0), 0);
+
+  // "Yodda tuting": shu darsning bo'sh joy savollaridan ikkitasi (avval xato qilinganlari),
+  // to'g'ri shakli ajratilgan va ishlatilmaydigan variantlar bilan.
+  const remember = parts
+    .flatMap((p) => (p.kind === 'fillBlank' ? p.blanks.map((b) => ({ b, wrong: (lessonScores[p.id]?.mistakes ?? []).includes(b.sentence) })) : []))
+    .sort((x, y) => Number(y.wrong) - Number(x.wrong))
+    .slice(0, 2)
+    .map(({ b }) => b);
 
   const continueLabel = current
     ? `${partLetter(current) ? `${partLetter(current)} qismni` : `«${current.title}»ni`} ${lessonScores[current.id]?.answered ? 'davom ettirish' : 'boshlash'}`
@@ -172,7 +181,7 @@ export default function HomeworkScreen() {
                 })}
               </View>
               <Txt f="body" size={13} color="#B8C1D6">
-                {answeredQ} / {totalQ} savol bajarildi · har toʻgʻri javob +1 coin
+                {answeredQ} / {totalQ} savol javob berildi · {correctQ} ta toʻgʻri = {earned} coin
               </Txt>
             </View>
 
@@ -222,8 +231,10 @@ export default function HomeworkScreen() {
                         <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: '#E7EBF3', overflow: 'hidden' }}>
                           <View style={{ width: `${(answered / Math.max(1, total)) * 100}%`, height: 6, borderRadius: 3, backgroundColor: tile.bar }} />
                         </View>
-                        <Txt f="bodyHeavy" size={12} color={tile.fg}>
+                        <Txt f="bodyHeavy" size={12} color={tile.fg} numberOfLines={1}>
                           {answered} / {total}
+                          {/* Boshlangan, lekin hozirgi (ko'k ramkali) bo'lmagan qism. */}
+                          {focused ? '' : ' · davom etmoqda'}
                         </Txt>
                       </View>
                     ) : (
@@ -237,17 +248,47 @@ export default function HomeworkScreen() {
               );
             })}
 
-            <View style={st.infoCard}>
-              <Image source={designImages['81a355f68578bf95c65fc6772f9124c9']} resizeMode="contain" style={{ width: 60, height: 58, flexShrink: 0 }} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Txt f="bodyHeavy" size={15}>
+            <View style={st.autoCard}>
+              <Image source={designImages['81a355f68578bf95c65fc6772f9124c9']} resizeMode="contain" style={{ width: 40, height: 40, flexShrink: 0 }} />
+              <Txt f="body" size={13} color="#4A5468" lh={17.55} style={{ flex: 1 }}>
+                <Txt f="bodyHeavy" size={13}>
                   Avtomatik tekshiriladi
                 </Txt>
-                <Txt f="body" size={13} color="#4A5468" lh={18.2}>
-                  Topshirganingizdan keyin natija darhol chiqadi va coin hisobingizga tushadi.
-                </Txt>
-              </View>
+                {` · ${totalQ}/${totalQ} boʻlgach topshirasiz, natija va coin darhol chiqadi.`}
+              </Txt>
             </View>
+
+            {remember.length > 0 && (
+              <View accessibilityLabel="Yodda tuting" style={st.remember}>
+                <Txt f="bodyHeavy" size={12} color="#4A5468" style={{ textTransform: 'uppercase', letterSpacing: 0.72, paddingBottom: 4 }}>
+                  Yodda tuting
+                </Txt>
+                {remember.map((b) => {
+                  const [before, ...rest] = b.sentence.split(/_{2,}/);
+                  const others = b.options.filter((o) => o !== b.answer);
+                  return (
+                    <View key={b.id} style={st.rememberRow}>
+                      <Txt f="bodyHeavy" size={15} lang="ru" style={{ flexShrink: 1 }}>
+                        {before}
+                        <Txt f="bodyHeavy" size={15} color="#1E3FD1">
+                          {b.answer}
+                        </Txt>
+                        {rest.join(b.answer)}
+                      </Txt>
+                      {others.length > 0 && (
+                        <Txt f="body" size={13} color="#4A5468">
+                          (
+                          <Txt f="body" size={13} color="#4A5468" lang="ru">
+                            {others.join(', ')}
+                          </Txt>{' '}
+                          emas)
+                        </Txt>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
             {prev && (
               <View style={st.repeat}>
@@ -278,18 +319,7 @@ export default function HomeworkScreen() {
             )}
           </View>
 
-          <View style={[st.footer, { paddingBottom: Math.max(34, insets.bottom + 14) }]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Topshirish — ikkala qism tugagach"
-              accessibilityState={{ disabled: !allAutoDone }}
-              onPress={() => allAutoDone && setSentOpen(true)}
-              style={({ pressed }) => [st.submit, allAutoDone && { backgroundColor: '#E3F7EE' }, pressed && st.pressed]}
-            >
-              <Txt f="bodyHeavy" size={15} color={allAutoDone ? '#075E3A' : '#4A5468'}>
-                Topshirish
-              </Txt>
-            </Pressable>
+          <View style={[st.footer, { paddingBottom: Math.max(28, insets.bottom + 14) }]}>
             <Pressable
               accessibilityRole="button"
               onPress={() => (current ? openPart(current) : allAutoDone ? setSentOpen(true) : undefined)}
@@ -297,6 +327,19 @@ export default function HomeworkScreen() {
             >
               <Txt f="bodyHeavy" size={16} color="#FFFFFF" numberOfLines={1}>
                 {continueLabel}
+              </Txt>
+            </Pressable>
+            {/* Barcha avtomatik savollar javoblanmaguncha "Topshirish" qulflangan. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !allAutoDone }}
+              disabled={!allAutoDone}
+              onPress={() => setSentOpen(true)}
+              style={({ pressed }) => [st.submit, allAutoDone && { backgroundColor: '#E3F7EE' }, pressed && st.pressed]}
+            >
+              {!allAutoDone && <LockSmall />}
+              <Txt f="bodyHeavy" size={14} color={allAutoDone ? '#075E3A' : '#4A5468'}>
+                {allAutoDone ? 'Topshirish' : `Topshirish · ${Math.max(0, totalQ - answeredQ)} savol qoldi`}
               </Txt>
             </Pressable>
           </View>
@@ -328,9 +371,12 @@ const st = StyleSheet.create({
   partFocused: { borderWidth: 2, borderColor: '#2F5BFF', padding: 12 },
   tile: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   infoCard: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 12, paddingLeft: 10, paddingRight: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  autoCard: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 6, paddingLeft: 8, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  remember: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingTop: 10, paddingHorizontal: 14, paddingBottom: 4 },
+  rememberRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, paddingVertical: 7, borderTopWidth: 1, borderTopColor: '#EEF1F7' },
   repeat: { borderRadius: 16, backgroundColor: '#E3F7EE', paddingVertical: 10, paddingHorizontal: 12, gap: 8 },
   repeatBtn: { flex: 1, height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  footer: { paddingTop: 12, paddingHorizontal: 20, flexDirection: 'row', gap: 10 },
-  submit: { height: 56, paddingHorizontal: 18, borderRadius: 18, backgroundColor: '#E7EBF3', alignItems: 'center', justifyContent: 'center' },
-  cta: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  footer: { paddingTop: 10, paddingHorizontal: 20, gap: 8 },
+  submit: { height: 44, borderRadius: 14, backgroundColor: '#E7EBF3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
 });

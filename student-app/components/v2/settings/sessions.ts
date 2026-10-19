@@ -89,3 +89,12 @@ export function lastSeenLabel(iso: string, now = new Date()): string {
   if (days <= 0) return `Bugun faol edi · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   return `${days} kun oldin faol edi · ${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
 }
+
+/** Oxirgi kirishlar: "Bugun · 08:12" yoki "15.10 · 21:40". */
+export function loginTimeLabel(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  return sameDay ? `Bugun · ${time}` : `${pad(d.getDate())}.${pad(d.getMonth() + 1)} · ${time}`;
+}

@@ -77,6 +77,8 @@ export type ShopProductV2 = ShopProduct & {
   features?: string[];
   images?: string[];
   pages?: number;
+  /** Do'kon kartasidagi muqova foni (CRM bersa); bo'lmasa dizayndagi #EAE4DF. */
+  coverBg?: string;
 };
 
 let cached: ShopProductV2[] | null = null;
@@ -125,9 +127,24 @@ export function nearestProduct(list: ShopProductV2[], coins: number): ShopProduc
   return missing[0] ?? null;
 }
 
-/** Dizayndagi "Uyga vazifa +60" stavkasidan: taxminan necha dars kerak. */
-export const COINS_PER_LESSON = 60;
-export const lessonsFor = (coins: number) => Math.max(1, Math.ceil(coins / COINS_PER_LESSON));
+/**
+ * Taxminan necha dars kerak — oraliq ("2–3"). Bir dars ≈ vazifa (+1 har
+ * to'g'ri javob, odatda 30–50 ta) + dars yakuni +10 → 40–60 coin.
+ */
+const LESSON_COINS_MIN = 40;
+const LESSON_COINS_MAX = 60;
+export function lessonsFor(coins: number) {
+  const lo = Math.max(1, Math.ceil(coins / LESSON_COINS_MAX));
+  const hi = Math.max(1, Math.ceil(coins / LESSON_COINS_MIN));
+  return lo === hi ? String(lo) : `${lo}–${hi}`;
+}
+
+/** Dizayndagi "Qanday yig'iladi" stavkalari (Do'kon, Buyurtmalar va Checkout'da bir xil). */
+export const EARN_HOMEWORK = '+1 / toʻgʻri javob';
+export const EARN_LESSON_DONE = 10;
+export const EARN_BONUS_LESSON = 10;
+export const EARN_LEAGUE_TOP5 = 50;
+export const EARN_REFERRAL = 100;
 
 // ---------- Liga ----------
 
@@ -167,6 +184,11 @@ export function timeLeftLabel(ms: number) {
 }
 
 const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+
+/** Joriy hafta oralig'i: "12–18 oktabr". */
+export function currentWeekLabel(now = new Date()) {
+  return lastWeekLabel(new Date(now.getTime() + 7 * 86400000));
+}
 
 /** O'tgan hafta oralig'i: "5–11 oktabr". */
 export function lastWeekLabel(now = new Date()) {

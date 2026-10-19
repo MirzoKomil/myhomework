@@ -179,7 +179,36 @@ export function ClockIcon({ size = 18, color = '#5B6478' }: P) {
   );
 }
 
-// Pastki menyu ikonkalari (Practice dizayni: faol "Mashq" yulduzi to'ldirilgan).
+// Ma'lumot belgisi (So'nggi harf: ь/ъ/ы qoidasi).
+export function InfoIcon({ size = 18, color = '#1E3FD1', strokeWidth = 2.2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M12 11v6M12 7.5v.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// Soʻztopar holat qatoridagi taymer (yo'li StopwatchIcon'dan farq qiladi).
+export function TimerIcon({ size = 18, color = '#5A2FD6', strokeWidth = 2.2 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Circle cx="12" cy="13" r="8" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M12 9v4l2.5 2M9.5 2.5h5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+// Tarjimon: "Lug'atga qo'shildi" belgisi.
+export function SavedCheckIcon({ size = 16, color = '#7BE0B0', strokeWidth = 3 }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...hidden}>
+      <Path d="M5 12.5l4.5 4.5L19 7.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+// Pastki menyu ikonkalari (yangi dizayn: faol "Mashq" yulduzi to'ldirilmagan, chiziq 2.4).
 export function NavHome({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" {...hidden}>
@@ -196,14 +225,14 @@ export function NavPath({ color }: { color: string }) {
     </Svg>
   );
 }
-export function NavStar({ color, filled }: { color: string; filled?: boolean }) {
+export function NavStar({ color, filled, strokeWidth = 2 }: { color: string; filled?: boolean; strokeWidth?: number }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" {...hidden}>
       <Path
         d="M12 3l2.2 5.3L20 9l-4.4 3.8L17 18.5 12 15.6 7 18.5l1.4-5.7L4 9l5.8-.7z"
         fill={filled ? color : 'none'}
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

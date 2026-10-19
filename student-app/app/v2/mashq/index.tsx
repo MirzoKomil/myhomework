@@ -4,14 +4,16 @@
  * Ma'lumot: joriy dars (oxirgi ochilgan / faol dars) mobile-content'dan,
  * o'yin rekordlari shu qurilmadagi o'yinlardan, materiallar soni
  * kutubxonadan. Onlayn o'quvchilar soni serverda yo'q — 0 ko'rsatiladi.
+ * Lug'atim: so'zlar soni — shu qurilmadagi shaxsiy lug'at (getMyWords);
+ * xatolar ro'yxati hech qayerda saqlanmaydi — 0 ko'rsatiladi.
  */
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ArrowIcon, ChevronRightIcon, SearchIcon } from '@/components/v2/practice/icons';
-import { PracticeNav, fmtTime, reset, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
+import { ArrowIcon, SearchIcon } from '@/components/v2/practice/icons';
+import { PracticeNav, fmtTime, getMyWords, reset, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -27,6 +29,7 @@ function Tile({
   title,
   sub,
   titleLh = 17.5,
+  nowrap,
 }: {
   href: string;
   bg: string;
@@ -34,6 +37,7 @@ function Tile({
   title: string;
   sub: string;
   titleLh?: number;
+  nowrap?: boolean;
 }) {
   return (
     <Pressable
@@ -46,8 +50,8 @@ function Tile({
         <Image source={img(image)} style={styles.tileImg} resizeMode="contain" />
       </View>
       <View style={styles.tileText}>
-        <Text style={[styles.tileTitle, { lineHeight: titleLh }]}>{title}</Text>
-        <Text style={styles.tileSub}>{sub}</Text>
+        <Text style={[styles.tileTitle, { lineHeight: titleLh }]} numberOfLines={nowrap ? 1 : undefined}>{title}</Text>
+        <Text style={styles.tileSub} numberOfLines={nowrap ? 1 : undefined}>{sub}</Text>
       </View>
     </Pressable>
   );
@@ -57,14 +61,24 @@ export default function PracticeScreen() {
   const insets = useSafeAreaInsets();
   const lesson = useCurrentLesson();
   const { rec, reload } = useRecords();
-  const [counts, setCounts] = useState<{ grammar: number; stories: number }>({ grammar: 0, stories: 0 });
+  const [counts, setCounts] = useState<{ grammar: number; stories: number; dialogs: number }>({ grammar: 0, stories: 0, dialogs: 0 });
+  const [myWords, setMyWords] = useState(0);
+  // Xatolar ro'yxati uchun ma'lumot manbai yo'q — bo'sh holat (0).
+  const mistakes = 0;
 
-  // O'yindan qaytganda yangi rekord darhol ko'rinsin.
-  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+  // O'yindan/tarjimondan qaytganda rekord va lug'at soni darhol yangilansin.
+  useFocusEffect(useCallback(() => {
+    reload();
+    getMyWords().then((l) => setMyWords(l.length));
+  }, [reload]));
 
   useEffect(() => {
     fetchMobileContent()
-      .then((mc) => setCounts({ grammar: mc.library.grammar.length, stories: mc.library.books.length }))
+      .then((mc) => setCounts({
+        grammar: mc.library.grammar.length,
+        stories: mc.library.books.length,
+        dialogs: mc.library.speaking.length,
+      }))
       .catch(() => {});
   }, []);
 
@@ -144,26 +158,13 @@ export default function PracticeScreen() {
             <Text style={styles.sectionMeta}>Kitob va maʼlumotnoma</Text>
           </View>
 
-          <Pressable
-            accessibilityRole="link"
-            onPress={() => router.push(R.dialogList as Href)}
-            style={({ pressed }) => [styles.wide, pressed && styles.pressed]}
-          >
-            <View style={[styles.wideIcon, { backgroundColor: '#F0EBFF' }]}>
-              <Image source={img('2770f303e2a36a9ec52c3a0b44e9b032')} style={styles.wideImg} resizeMode="contain" />
-            </View>
-            <View style={styles.tileText}>
-              <Text style={styles.wideTitle}>Dialoglar</Text>
-              <Text style={styles.wideSub}>Eng kerakli mavzularda dialoglar va audiolari</Text>
-            </View>
-            <ChevronRightIcon />
-          </Pressable>
-
           <View style={styles.grid}>
-            <Tile href={R.grammarList} bg="#E3F7EE" image="f639c30e1400761df83230b833ba42b2" title="Grammatika" sub={`${counts.grammar} mavzu · darslik tartibida`} titleLh={16.8} />
-            <Tile href={R.audioList} bg="#FDECEC" image="32eee84d436da97eb104c837c0065230" title="Audiolar" sub="Kitobdagi treklar · QR" titleLh={16.8} />
-            <Tile href={R.storyList} bg="#FFF4D1" image="e57b4e5aeb29652a1e91b899a8e24693" title={'Audio­hikoyalar'} sub={`${counts.stories} ta hikoya`} titleLh={16.8} />
-            <Tile href={R.translator} bg="#E8EEFF" image="cc0d95446730f059d25d989e2c9845ad" title="Tarjimon" sub="rus ↔ oʻzbek" titleLh={16.8} />
+            <Tile href={R.dialogList} bg="#F0EBFF" image="2770f303e2a36a9ec52c3a0b44e9b032" title="Dialoglar" sub={`${counts.dialogs} mavzu`} titleLh={16.8} nowrap />
+            <Tile href={R.lugat} bg="#FFF1E6" image="41f0bc38557c05d400bc4af482b8ae13" title="Lugʻatim" sub={`${myWords} soʻz · ${mistakes} xato`} titleLh={16.8} nowrap />
+            <Tile href={R.grammarList} bg="#E3F7EE" image="f639c30e1400761df83230b833ba42b2" title="Grammatika" sub={`${counts.grammar} mavzu`} titleLh={16.8} nowrap />
+            <Tile href={R.audioList} bg="#FDECEC" image="32eee84d436da97eb104c837c0065230" title="Audiolar" sub="Kitob treklari" titleLh={16.8} nowrap />
+            <Tile href={R.storyList} bg="#FFF4D1" image="e57b4e5aeb29652a1e91b899a8e24693" title="Hikoyalar" sub={`${counts.stories} ta audiohikoya`} titleLh={16.8} nowrap />
+            <Tile href={R.translator} bg="#E8EEFF" image="cc0d95446730f059d25d989e2c9845ad" title="Tarjimon" sub="rus ↔ oʻzbek" titleLh={16.8} nowrap />
           </View>
         </View>
       </ScrollView>
@@ -234,20 +235,4 @@ const styles = StyleSheet.create({
   tileText: { flex: 1, minWidth: 0, gap: 1 },
   tileTitle: { fontFamily: fonts.bodyHeavy, fontSize: 14, color: '#0B1220', ...reset },
   tileSub: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 15, color: '#4A5468', ...reset },
-
-  wide: {
-    minHeight: 80,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingLeft: 8,
-    paddingRight: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  wideIcon: { width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  wideImg: { width: 46, height: 46 },
-  wideTitle: { fontFamily: fonts.bodyHeavy, fontSize: 15, lineHeight: 20, color: '#0B1220', ...reset },
-  wideSub: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 15.6, color: '#4A5468', ...reset },
 });

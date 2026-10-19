@@ -1,50 +1,52 @@
 /**
- * v2 Yangi so'zlar (dizayn: 09 Vocab) — kartochkalar.
+ * v2 Yangi so'zlar (dizayn: 09 Vocab) — so'z kartasi.
  *
  * So'zlar eski vocabulary/list.tsx'dagi kabi getResolvedLessonContent'dan.
  * Ekran ochilganda eski ro'yxat ekrani kabi markDone('vocabList') qo'yiladi.
- * "Bildim" — keyingi so'z; "Yana ko'rsat" — so'z navbat oxiriga qaytadi.
- * Hamma so'z bilingach eski 3 bosqichli mashqqa (vocabulary/practice)
- * o'tiladi — vocabPractice belgisi faqat o'sha yerda qo'yiladi (eski ilova bilan bir xil).
+ * Ochilgan har karta qurilmada "ko'rildi" deb belgilanadi (markWordSeen);
+ * darsning hamma so'zi ko'rilgach so'zlar qadami bajariladi (vocabPractice) —
+ * yangi dizaynda alohida mashq ekrani yo'q, "Keyingi so'z" bilan aylanadi.
+ * ?w=<raqam> — ro'yxatda bosilgan so'zdan boshlash.
+ * So'z turkumi/rod va misol tarjimasi serverda yo'q — ko'rsatilmaydi.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import * as Speech from 'expo-speech';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { learnedWordIds, markWordSeen, useSeenWords } from '@/components/v2/lessons/data';
 import { ArrowRight, SpeakerIcon } from '@/components/v2/lessons/icons';
 import { BottomBar, Center, Column, HeaderButton } from '@/components/v2/lessons/parts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type LessonContent, type VocabWord } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
-import { markDone } from '@/services/lessonProgressStore';
+import { getCategoryProgress, markDone, useLessonProgress } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
 
 export default function VocabScreen() {
   const insets = useSafeAreaInsets();
-  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  const { lessonId, w } = useLocalSearchParams<{ lessonId: string; w?: string }>();
   const id = String(lessonId);
   const [content, setContent] = useState<LessonContent | null>(null);
   const [number, setNumber] = useState<number | null>(null);
   const [error, setError] = useState(false);
-  // Navbat: hali "bildim" deyilmagan so'zlar (indekslar).
-  const [queue, setQueue] = useState<number[]>([]);
-  const [known, setKnown] = useState<Set<number>>(new Set());
+  const [idx, setIdx] = useState(() => Math.max(0, Number(w) || 0));
+  const seen = useSeenWords(id);
+  useLessonProgress(id); // so'zlar qadami bajarilsa qayta chiziladi
 
   useEffect(() => {
     let cancelled = false;
     fetchMobileContent()
       .then(async (mc) => {
         const lesson = mc.lessons.find((l) => l.id === id);
-        const idx = lesson ? mc.lessons.filter((l) => l.courseId === lesson.courseId).findIndex((l) => l.id === id) : 0;
-        const c = await getResolvedLessonContent(id, Math.max(0, idx));
+        const i = lesson ? mc.lessons.filter((l) => l.courseId === lesson.courseId).findIndex((l) => l.id === id) : 0;
+        const c = await getResolvedLessonContent(id, Math.max(0, i));
         if (cancelled) return;
-        setNumber(idx + 1);
+        setNumber(i + 1);
         setContent(c);
-        setQueue(c.vocabulary.map((_, i) => i));
       })
       .catch(() => !cancelled && setError(true));
     return () => {
@@ -59,49 +61,44 @@ export default function VocabScreen() {
 
   const words = content?.vocabulary ?? [];
   const total = words.length;
-  const curIdx = queue[0];
-  const word: VocabWord | undefined = curIdx !== undefined ? words[curIdx] : undefined;
-  const position = Math.min(total, known.size + 1);
+  const cur = total ? Math.min(idx, total - 1) : 0;
+  const word: VocabWord | undefined = words[cur];
+  const learned = learnedWordIds(id, words.map((x) => x.id), seen);
+  const reviewing = getCategoryProgress(id, 'vocabulary') >= 100;
+  const position = total ? cur + 1 : 0;
   const speechLang = content?.lang === 'russian' ? 'ru-RU' : 'en-US';
   const speak = (text: string) => {
     Speech.stop();
     Speech.speak(text, { language: speechLang, rate: 0.9 });
   };
 
-  // Pastdagi so'zlar qatori: joriy so'z atrofidagi 4 ta so'z va "…".
-  const chips = useMemo(() => {
-    if (!total || curIdx === undefined) return [] as number[];
-    const start = Math.max(0, Math.min(curIdx - 2, total - 4));
-    return Array.from({ length: Math.min(4, total) }, (_, k) => start + k);
-  }, [curIdx, total]);
-
-  const next = (didKnow: boolean) => {
-    if (curIdx === undefined) return;
-    const rest = queue.slice(1);
-    if (didKnow) {
-      const k = new Set(known);
-      k.add(curIdx);
-      setKnown(k);
-      if (!rest.length) {
-        // Hamma so'z ko'rildi — eski mashq ekraniga (vocabPractice o'sha yerda belgilanadi).
-        router.replace(`/homework/lesson/${id}/vocabulary/practice` as Href);
-        return;
-      }
-      setQueue(rest);
-    } else {
-      setQueue(rest.length ? [...rest, curIdx] : [curIdx]);
+  // Karta ochildi — "ko'rildi"; hammasi ko'rilsa so'zlar qadami bajariladi.
+  useEffect(() => {
+    if (!word) return;
+    markWordSeen(id, word.id);
+    const all = new Set([...seen, word.id]);
+    if (total && words.every((x) => all.has(x.id)) && getCategoryProgress(id, 'vocabulary') < 100) {
+      markDone(id, 'vocabPractice');
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [word?.id, id]);
+
+  const nextIdx = total ? (cur + 1) % total : 0;
 
   const header = (
     <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
-      <HeaderButton kind="close" label="Yopish" fallback={R.lesson(id)} />
+      <HeaderButton kind="close" label="Yopish" fallback={R.wordList(id)} />
       <View style={{ flex: 1, gap: 6 }}>
         <View style={styles.headRow}>
           <Text style={styles.headText}>Yangi soʻzlar{number ? ` · ${number}-dars` : ''}</Text>
-          <Text style={styles.headText}>{total ? `${position} / ${total}` : '0 / 0'}</Text>
+          <Text style={[styles.headText, { color: '#087A4A' }]}>{position} / {total}{reviewing ? ' · takrorlash' : ''}</Text>
         </View>
-        <View style={styles.track} accessibilityLabel={`${position} / ${total}`}>
+        <View
+          style={styles.track}
+          accessibilityRole="progressbar"
+          accessibilityLabel={`Takrorlash: ${total} tadan ${position}-soʻz`}
+          accessibilityValue={{ min: 0, max: total, now: position }}
+        >
           <View style={[styles.fill, { width: `${total ? (position / total) * 100 : 0}%` }]} />
         </View>
       </View>
@@ -155,29 +152,29 @@ export default function VocabScreen() {
               </View>
             )}
           </View>
-          <View accessibilityLabel="Soʻzlar" style={styles.chips}>
-            {chips.map((i) => {
-              const isCur = i === curIdx;
-              const isKnown = known.has(i);
+          <View accessibilityLabel={`${number ?? ''}-dars soʻzlari: ${learned.size} / ${total} oʻrganilgan`} style={styles.chips}>
+            {words.map((x, i) => {
+              const isCur = i === cur;
+              const isKnown = learned.has(x.id);
               return (
-                <View key={i} style={[styles.chip, { backgroundColor: isCur ? '#7C4DFF' : isKnown ? '#E3F7EE' : '#E7EBF3' }]}>
-                  <Text style={[styles.chipText, { color: isCur ? '#FFFFFF' : isKnown ? '#075E3A' : '#4A5468' }]} numberOfLines={1}>{words[i].english}</Text>
+                <View key={x.id} style={[styles.chip, { backgroundColor: isCur ? '#7C4DFF' : isKnown ? '#E3F7EE' : '#E7EBF3' }]}>
+                  <Text style={[styles.chipText, { color: isCur ? '#FFFFFF' : isKnown ? '#075E3A' : '#4A5468' }]} numberOfLines={1}>{x.english}</Text>
                 </View>
               );
             })}
-            {total > chips.length && (
-              <View style={[styles.chip, { backgroundColor: '#E7EBF3' }]}>
-                <Text style={[styles.chipText, { color: '#4A5468' }]}>…</Text>
-              </View>
-            )}
           </View>
         </ScrollView>
         <BottomBar style={styles.btns}>
-          <Pressable accessibilityRole="button" onPress={() => next(false)} style={({ pressed }) => [styles.again, pressed && { opacity: 0.85 }]}>
-            <Text style={styles.againText}>Yana koʻrsat</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Keyingi soʻz: ${words[nextIdx]?.english ?? ''}`}
+            onPress={() => setIdx(nextIdx)}
+            style={({ pressed }) => [styles.again, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={styles.againText}>Keyingi soʻz</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={() => next(true)} style={({ pressed }) => [styles.know, pressed && { backgroundColor: '#5A2FD6' }]}>
-            <Text style={styles.knowText}>Bildim</Text>
+          <Pressable accessibilityRole="link" onPress={() => router.push(R.audioDialog(id) as Href)} style={({ pressed }) => [styles.know, pressed && { backgroundColor: '#1E3FD1' }]}>
+            <Text style={styles.knowText}>Dialoglarga</Text>
             <ArrowRight />
           </Pressable>
         </BottomBar>
@@ -192,7 +189,7 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', justifyContent: 'space-between' },
   headText: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#4A5468', fontWeight: 'normal' },
   track: { height: 8, borderRadius: 4, backgroundColor: '#E2E6EE', overflow: 'hidden' },
-  fill: { height: 8, borderRadius: 4, backgroundColor: '#7C4DFF' },
+  fill: { height: 8, borderRadius: 4, backgroundColor: '#12A06B' },
   muted: { fontFamily: fonts.body, fontSize: 14, color: '#4A5468', textAlign: 'center' },
   content: { flexGrow: 1, paddingTop: 18, paddingHorizontal: 20, gap: 14 },
   card: {
@@ -216,12 +213,12 @@ const styles = StyleSheet.create({
   example: { marginTop: 10, width: '100%', backgroundColor: '#F4F6FA', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
   exampleRu: { fontFamily: fonts.bodyHeavy, fontSize: 17, lineHeight: 23, color: '#0B1220', fontWeight: 'normal' },
   exampleBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  chips: { flexDirection: 'row', gap: 6, justifyContent: 'center' },
-  chip: { height: 28, paddingHorizontal: 9, borderRadius: 10, justifyContent: 'center', flexShrink: 1 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  chip: { height: 28, paddingHorizontal: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 3 },
   chipText: { fontFamily: fonts.bodyHeavy, fontSize: 12, fontWeight: 'normal' },
   btns: { paddingTop: 14, flexDirection: 'row', gap: 10 },
-  again: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  again: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   againText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#0B1220', fontWeight: 'normal' },
-  know: { flex: 1, height: 56, borderRadius: 18, backgroundColor: '#7C4DFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 5px 0 #5A2FD6' } as object,
+  know: { flex: 1.25, height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 5px 0 #1E3FD1' } as object,
   knowText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#FFFFFF', fontWeight: 'normal' },
 });

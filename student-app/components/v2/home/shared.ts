@@ -3,6 +3,7 @@
  * havolasi va bildirishnomalarni qurilmada "o'qilgan" deb belgilash.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 import { fonts } from '@/constants/v2/tokens';
 
@@ -50,4 +51,9 @@ export async function markAllRead(ids: string[]): Promise<void> {
 
 /** Kirill harfi bormi — Bricolage'da kirill yo'q, Manrope ExtraBold'ga o'tamiz. */
 export const hasCyrillic = (s: string) => /[Ѐ-ӿ]/.test(s);
-export const displayFont = (s: string) => (hasCyrillic(s) ? fonts.displayCyrillic : fonts.display);
+/**
+ * Webda display steki o'zi Manrope/system-ui'ga o'tadi — urg'u belgisi (U+0301,
+ * Manrope'da yo'q) ham to'g'ri joylashadi. Native'da kirill uchun Manrope.
+ */
+export const displayFont = (s: string) =>
+  Platform.OS !== 'web' && hasCyrillic(s) ? fonts.displayCyrillic : fonts.display;

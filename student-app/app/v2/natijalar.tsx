@@ -7,14 +7,17 @@
  * grades.tsx hisobi), chaqmoq/coin — lightningStore/coinsStore,
  * ko'nikmalar — getSkillsProgress. Streak va kunlik chaqmoq tarixi hali
  * hech qayerda saqlanmaydi — shu sabab ular 0 / bo'sh holatda.
+ * Imtihonga tayyorgarlik — keyingi topshirilmagan oraliq imtihon
+ * (examStore) va o'sha darslar so'zlari (getExamPrep).
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
-import { BoltIcon, CoinIcon, FlameIcon } from '@/components/v2/profile/icons';
+import { getExamPrep, type ExamPrep } from '@/components/v2/profile/examPrep';
+import { BoltIcon, CoinIcon, FlameIcon, NextIcon } from '@/components/v2/profile/icons';
 import {
   Column,
   courseEnd,
@@ -22,9 +25,11 @@ import {
   daysBetween,
   dmy,
   fmtGrade,
+  go,
   gradeAverage,
   Header,
   liveAttendance,
+  money,
   parseIso,
 } from '@/components/v2/profile/shared';
 import { R } from '@/constants/v2/routes';
@@ -39,6 +44,7 @@ import {
   type DemoScheduleResponse,
   type LiveGradeEntry,
 } from '@/services/contentApi';
+import { useExamResults } from '@/services/examStore';
 import { useLightning } from '@/services/lightningStore';
 
 const R_ = 35;
@@ -49,6 +55,8 @@ export default function V2Progress() {
   const insets = useSafeAreaInsets();
   const lightning = useLightning();
   const coins = useCoins();
+  const examResults = useExamResults();
+  const [prep, setPrep] = useState<ExamPrep | null>(null);
   const [course, setCourse] = useState({ done: 0, total: 72, percent: 0 });
   const [courseName, setCourseName] = useState('');
   const [startIso, setStartIso] = useState<string | null>(null);
@@ -68,6 +76,10 @@ export default function V2Progress() {
     fetchDemoSchedule().then(setSchedule).catch(() => {});
     fetchDemoGrades().then((g) => setGrades(g.grades)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    getExamPrep(examResults, course.done).then(setPrep).catch(() => {});
+  }, [examResults, course.done]);
 
   const start = parseIso(startIso ?? schedule?.courseStartDate);
   const end = start ? courseEnd(start) : null;
@@ -119,7 +131,7 @@ export default function V2Progress() {
 
           <View style={st.stats}>
             <View style={st.stat}><FlameIcon /><Text style={st.statNum}>0 kun</Text><Text style={st.statLabel}>streak</Text></View>
-            <View style={st.stat}><BoltIcon size={20} color="#7C4DFF" /><Text style={st.statNum}>{lightning}</Text><Text style={st.statLabel}>chaqmoq</Text></View>
+            <View style={st.stat}><BoltIcon size={20} color="#7C4DFF" /><Text style={st.statNum}>{money(lightning)}</Text><Text style={st.statLabel}>chaqmoq</Text></View>
             <View style={st.stat}><CoinIcon /><Text style={st.statNum}>{coins}</Text><Text style={st.statLabel}>coin</Text></View>
           </View>
 
@@ -155,6 +167,31 @@ export default function V2Progress() {
               </View>
             ))}
           </View>
+
+          {!!prep && (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={`Imtihonga tayyorgarlik: ${prep.index + 1}-oraliq, ${prep.from}–${prep.to}-darslar, ${prep.words} ta soʻz, ${prep.percent}% tayyor`}
+              onPress={() => go(R.exams)}
+              style={({ pressed }) => [st.prep, pressed && { opacity: 0.85 }]}
+            >
+              <View style={st.prepIcon}>
+                <Svg width={19} height={19} viewBox="0 0 24 24">
+                  <Path d="M9 4h6l1 2h3v14H5V6h3z" fill="none" stroke="#FFFFFF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                  <Path d="M9 13l2 2 4-4" fill="none" stroke="#FFFFFF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+              </View>
+              <View style={st.prepText}>
+                <Text style={st.prepTitle} numberOfLines={1}>Imtihonga tayyorgarlik</Text>
+                <Text style={st.prepSub} numberOfLines={1}>{`${prep.index + 1}-oraliq (${prep.from}–${prep.to}) · ${prep.words} ta soʻz`}</Text>
+              </View>
+              <View style={st.prepPct}>
+                <Text style={st.prepPctNum}>{`${prep.percent}%`}</Text>
+                <Text style={st.prepPctLabel}>tayyor</Text>
+              </View>
+              <NextIcon size={16} color="#5A2FD6" />
+            </Pressable>
+          )}
         </Column>
       </ScrollView>
     </View>
@@ -182,14 +219,22 @@ const st = StyleSheet.create({
   weekTotal: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#5A2FD6' },
   bars: { flexDirection: 'row', gap: 4 },
   barCol: { flex: 1, alignItems: 'center', gap: 4 },
-  barVal: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 11, lineHeight: 15, color: '#4A5468' },
+  barVal: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
   barBox: { height: BAR_H, justifyContent: 'flex-end', alignItems: 'center' },
   bar: { width: 26, borderRadius: 8 },
   barDay: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
   barToday: { fontFamily: fonts.bodyHeavy, color: '#0B1220' },
-  skills: { backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
+  skills: { backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 12, paddingHorizontal: 16, gap: 8 },
   skillHead: { flexDirection: 'row', justifyContent: 'space-between' },
   skillLabel: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#0B1220' },
   skillTrack: { height: 8, borderRadius: 4, backgroundColor: '#EEF1F7', overflow: 'hidden' },
   skillFill: { height: 8, borderRadius: 4 },
+  prep: { backgroundColor: '#F0EBFF', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  prepIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#7C4DFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  prepText: { flex: 1, minWidth: 0, gap: 1 },
+  prepTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, lineHeight: 19, color: '#0B1220' },
+  prepSub: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
+  prepPct: { alignItems: 'flex-end', flexShrink: 0 },
+  prepPctNum: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, lineHeight: 22, color: '#5A2FD6' },
+  prepPctLabel: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#5A2FD6' },
 });

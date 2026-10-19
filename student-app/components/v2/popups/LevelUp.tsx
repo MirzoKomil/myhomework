@@ -1,17 +1,18 @@
 /**
  * "Yangi daraja!" oynasi (dizayn: 42 · LevelUp).
  *
- * Darajalar eski data/levels.ts dan (chaqmoq oralig'i bo'yicha). Daraja
- * oshganda coin sovg'asi serverda/ilovada YO'Q — shuning uchun coin
- * kartasi 0 ko'rsatadi (coinReward berilmasa), soxta raqam yo'q.
+ * Darajalar eski data/levels.ts dan (chaqmoq oralig'i bo'yicha). Birinchi
+ * kartada — shu darajaning boshlang'ich "jami chaqmoq" qiymati. Darajalar
+ * ekranidan "Darajaga chiqqanda nima bo'ladi?" orqali NAMUNA sifatida
+ * ochiladi (sample — "Namuna: yangi darajaga chiqqanda" belgisi); yopish va
+ * "Darajalarga qaytish" Darajalar ekraniga qaytaradi (oyna o'sha ekran ustida).
  */
-import { router } from 'expo-router';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BoltFill, CloseIcon, CoinFill } from '@/components/v2/rewards/icons';
+import { BoltFill, CloseIcon } from '@/components/v2/rewards/icons';
 import { fmt } from '@/components/v2/rewards/parts';
+import { SampleChip } from '@/components/v2/rewards/sheet';
 import { designImages } from '@/constants/v2/designImages';
-import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { LEVELS } from '@/data/levels';
 import { useLang } from '@/i18n/LanguageContext';
@@ -36,11 +37,11 @@ type Props = {
   onClose: () => void;
   /** Ko'rsatiladigan daraja (0..4); berilmasa eng yuqori daraja. */
   levelIndex?: number;
-  /** Daraja oshganda beriladigan coin — hozir bunday sovg'a yo'q, shuning uchun 0. */
-  coinReward?: number;
+  /** Namuna rejimi (Darajalar ekranidan "nima bo'ladi?" ko'rinishi). */
+  sample?: boolean;
 };
 
-export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1, coinReward = 0 }: Props) {
+export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1, sample = false }: Props) {
   const { courseLang } = useLang();
   const idx = Math.max(0, Math.min(LEVELS.length - 1, levelIndex));
   const level = LEVELS[idx];
@@ -54,10 +55,14 @@ export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1,
         <View style={styles.wrap} pointerEvents="box-none">
           <View accessibilityViewIsModal style={styles.card}>
             <View style={styles.top}>
-              <View style={styles.chip}>
-                <BoltFill />
-                <Text style={styles.chipText}>{fmt(level.min)} chaqmoq</Text>
-              </View>
+              {sample ? (
+                <SampleChip label="Namuna: yangi darajaga chiqqanda" />
+              ) : (
+                <View style={styles.chip}>
+                  <BoltFill />
+                  <Text style={styles.chipText}>{fmt(level.min)} chaqmoq</Text>
+                </View>
+              )}
               <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={onClose} style={styles.close}>
                 <CloseIcon />
               </Pressable>
@@ -71,17 +76,17 @@ export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1,
               <Text accessibilityRole="header" style={styles.title}>{idx + 1} · {name}</Text>
               <Text style={styles.desc}>
                 {isTop
-                  ? 'Siz eng yuqori darajaga chiqdingiz. Profilingizda oltin nishon paydo boʻladi.'
+                  ? 'Profilingizda oltin nishon paydo boʻladi. Endi har 1 000 chaqmoqda Afsona yulduzi olasiz.'
                   : `${level.description}. Profilingizda yangi nishon paydo boʻladi.`}
               </Text>
             </View>
             <View style={styles.grid}>
               <View style={[styles.tile, { backgroundColor: '#FFF4D1' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <CoinFill size={20} />
-                  <Text style={[styles.tileBig, { color: '#7A5300' }]}>+{fmt(coinReward)}</Text>
+                  <BoltFill size={20} />
+                  <Text style={[styles.tileBig, { color: '#7A5300' }]}>{fmt(level.min)}</Text>
                 </View>
-                <Text style={[styles.tileSmall, { color: '#7A5300' }]}>coin sovgʻa</Text>
+                <Text style={[styles.tileSmall, { color: '#7A5300' }]}>jami chaqmoq</Text>
               </View>
               <View style={[styles.tile, { backgroundColor: '#F0EBFF' }]}>
                 <Text style={[styles.tileBig, { color: '#5A2FD6' }]} numberOfLines={1}>{isTop ? 'Oltin' : level.name}</Text>
@@ -90,13 +95,10 @@ export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1,
             </View>
             <Pressable
               accessibilityRole="button"
-              onPress={() => {
-                onClose();
-                router.push(R.home as never);
-              }}
+              onPress={onClose}
               style={({ pressed }) => [styles.cta, pressed && { backgroundColor: '#1E3FD1' }]}
             >
-              <Text style={styles.ctaText}>Davom etish</Text>
+              <Text style={styles.ctaText}>Darajalarga qaytish</Text>
             </Pressable>
           </View>
         </View>

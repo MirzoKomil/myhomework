@@ -6,6 +6,8 @@
  * POST qilinadi. Server manzil maydonini qabul qilmaydi, shuning uchun
  * manzil faqat qurilmada saqlanadi ("Manzil saqlanadi" — keyingi
  * buyurtmada qayta to'ldiriladi). Qabul qiluvchi va telefon — profildan.
+ * Coin yetmasa — sariq "Yana N coin · ~2–3 dars" qatori joriy dars
+ * vazifasiga olib boradi (bosh sahifadagi joriy dars).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -13,8 +15,9 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CoinFill, LockIcon, PhoneIcon, TruckIcon } from '@/components/v2/rewards/icons';
-import { fmt, ScreenHeader, useShopProducts } from '@/components/v2/rewards/parts';
+import { loadCurrentLesson } from '@/components/v2/practice/shared';
+import { BagIcon, ChevronRightIcon, CoinFill, LockIcon, PhoneIcon, TruckIcon } from '@/components/v2/rewards/icons';
+import { EARN_HOMEWORK, EARN_LESSON_DONE, fmt, lessonsFor, ScreenHeader, useShopProducts } from '@/components/v2/rewards/parts';
 import { ProductImage } from '@/components/v2/rewards/shopParts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -64,6 +67,13 @@ export default function V2Checkout() {
   const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lessonId, setLessonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadCurrentLesson()
+      .then((l) => setLessonId(l?.id ?? null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(ADDRESS_KEY)
@@ -111,8 +121,16 @@ export default function V2Checkout() {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScreenHeader title="Buyurtma berish" fallback={R.shopItem(p.id)} />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 26 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScreenHeader
+        title="Buyurtma berish"
+        fallback={R.shopItem(p.id)}
+        right={
+          <Pressable accessibilityRole="link" accessibilityLabel="Buyurtmalarim" onPress={() => router.push(R.orders as never)} style={({ pressed }) => [styles.ordersBtn, pressed && { opacity: 0.75 }]}>
+            <BagIcon size={21} />
+          </Pressable>
+        }
+      />
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 27 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={[styles.column, { flex: 1 }]}>
           <View style={styles.product}>
             <ProductImage product={p} style={styles.thumb} iconSize={30} />
@@ -126,7 +144,7 @@ export default function V2Checkout() {
             </View>
           </View>
 
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: 12 }}>
             <Text style={styles.section}>Yetkazib berish manzili</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Field label="Viloyat" value={addr.region} onChange={set('region')} flex={1} />
@@ -151,6 +169,21 @@ export default function V2Checkout() {
               <Text style={{ fontFamily: fonts.bodyHeavy, color: '#087A4A' }}>Bepul yetkazish</Text> · 2–4 ish kuni. Kuryer kelishdan oldin qoʻngʻiroq qiladi.
             </Text>
           </View>
+
+          {missing > 0 && (
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push((lessonId ? R.homework(lessonId) : R.path) as never)}
+              style={({ pressed }) => [styles.earn, pressed && { opacity: 0.85 }]}
+            >
+              <View style={styles.earnIcon}><CoinFill size={20} /></View>
+              <View style={{ flex: 1, gap: 1 }}>
+                <Text style={styles.earnTitle}>Yana {fmt(missing)} coin · ~{lessonsFor(missing)} dars</Text>
+                <Text style={styles.earnSub}>Vazifa {EARN_HOMEWORK}, dars yakuni +{EARN_LESSON_DONE}</Text>
+              </View>
+              <ChevronRightIcon size={18} color="#7A5300" strokeWidth={2.2} />
+            </Pressable>
+          )}
 
           <View style={{ flex: 1, minHeight: 16 }} />
           <View style={{ gap: 10 }}>
@@ -191,8 +224,13 @@ export default function V2Checkout() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6FA' },
-  content: { flexGrow: 1, paddingTop: 14, paddingHorizontal: 20 },
-  column: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: 12 },
+  content: { flexGrow: 1, paddingTop: 16, paddingHorizontal: 20 },
+  column: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: 14 },
+  ordersBtn: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  earn: { minHeight: 60, backgroundColor: '#FFF4D1', borderRadius: 20, paddingVertical: 8, paddingLeft: 10, paddingRight: 12, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
+  earnIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  earnTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },
+  earnSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, color: '#5C4300' },
   product: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 8, paddingLeft: 8, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   thumb: { width: 64, height: 64, borderRadius: 14 },
   pName: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, color: '#0B1220' },

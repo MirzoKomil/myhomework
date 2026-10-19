@@ -55,6 +55,12 @@ export default function V2ProfileEdit() {
       : presetSource(PRESETS.find((p) => p.key === shown.key)!.id);
   const shownLabel = shown.kind === 'custom' ? 'oʻz rasmingiz' : PRESETS.find((p) => p.key === shown.key)!.label.toLowerCase();
 
+  // Yangi avatar tanlanmaguncha «Saqlash» o'chiq (dizayndagi holat).
+  const dirty =
+    choice !== null &&
+    (choice.kind !== current.kind ||
+      (choice.kind === 'custom' ? choice.uri !== (current as { uri: string }).uri : choice.key !== (current as { key: PresetKey }).key));
+
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
@@ -64,7 +70,7 @@ export default function V2ProfileEdit() {
   };
 
   const save = async () => {
-    if (saving) return;
+    if (saving || !dirty) return;
     setSaving(true);
     try {
       if (choice?.kind === 'custom') {
@@ -95,7 +101,7 @@ export default function V2ProfileEdit() {
 
   return (
     <View style={st.screen}>
-      <Header title="Profil" fallback={R.profile} />
+      <Header title="Profilni tahrirlash" fallback={R.profile} />
       <ScrollView contentContainerStyle={[st.content, { paddingBottom: Math.max(22, insets.bottom + 12) }]} showsVerticalScrollIndicator={false}>
         <Column style={st.col}>
           <View style={st.top}>
@@ -182,9 +188,18 @@ export default function V2ProfileEdit() {
           </View>
 
           <View style={{ flex: 1, minHeight: 8 }} />
-          <Pressable accessibilityRole="button" onPress={save} disabled={saving} style={({ pressed }) => [st.save, pressed && st.savePressed]}>
-            <Text style={st.saveText}>Saqlash</Text>
-          </Pressable>
+          <View style={st.saveWrap}>
+            {!dirty && <Text style={st.saveHint}>Yangi avatar tanlasangiz, «Saqlash» faollashadi</Text>}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !dirty || saving }}
+              onPress={save}
+              disabled={!dirty || saving}
+              style={({ pressed }) => [dirty ? st.save : st.saveOff, pressed && dirty && st.savePressed]}
+            >
+              <Text style={[st.saveText, !dirty && st.saveTextOff]}>Saqlash</Text>
+            </Pressable>
+          </View>
         </Column>
       </ScrollView>
       <AvatarCropModal
@@ -250,5 +265,9 @@ const st = StyleSheet.create({
     borderBottomWidth: 4, borderBottomColor: '#1E3FD1',
   },
   savePressed: { opacity: 0.9 },
+  saveWrap: { gap: 8, flexShrink: 0 },
+  saveHint: { textAlign: 'center', fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
+  saveOff: { height: 56, borderRadius: 18, backgroundColor: '#E4E8F0', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  saveTextOff: { color: '#4A5468' },
   saveText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 17, color: '#FFFFFF' },
 });

@@ -61,9 +61,14 @@ export function TelegramButton({
   height,
   radius,
   fontSize,
+  gap = 7,
+  accessibilityLabel,
   style,
 }: {
   label: string;
+  /** Dizaynda aria-label alohida berilgan bo'lsa (masalan FAQ "Yozish"). */
+  accessibilityLabel?: string;
+  gap?: number;
   url: string;
   height: number;
   radius: number;
@@ -73,9 +78,9 @@ export function TelegramButton({
   return (
     <Pressable
       accessibilityRole="link"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       onPress={() => Linking.openURL(url).catch(() => {})}
-      style={({ pressed }) => [styles.tgBtn, { height, borderRadius: radius }, pressed && styles.pressed, style]}
+      style={({ pressed }) => [styles.tgBtn, { height, borderRadius: radius, gap }, pressed && styles.pressed, style]}
     >
       <TelegramButtonIcon />
       <Text style={[styles.tgText, { fontSize, lineHeight: fontSize + 6 }]} numberOfLines={1}>
