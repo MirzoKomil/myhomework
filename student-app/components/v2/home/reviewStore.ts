@@ -45,3 +45,18 @@ export async function saveReview(word: string, known: boolean): Promise<void> {
 export function daysAgo(t: number, now = Date.now()) {
   return Math.max(0, Math.round((startOfDay(now) - startOfDay(t)) / DAY));
 }
+
+/** Bir seansdagi so'zlar soni (dizayndagi "3 / 12"). */
+export const SESSION_SIZE = 12;
+
+/**
+ * Bugungi takrorlash seansi: avval muddati o'tganlar (eng eskisi birinchi),
+ * keyin hali ko'rilmaganlar, ko'pi bilan SESSION_SIZE ta. Bosh sahifadagi
+ * "N ta soʻz" ham shu sondan olinadi.
+ */
+export function buildSession<W extends { english: string }>(words: W[], reviews: ReviewMap, now = Date.now()) {
+  const all = words.map((w) => ({ word: w, record: reviews[wordKey(w.english)] as ReviewRecord | undefined }));
+  const due = all.filter((x) => x.record && x.record.due <= now).sort((a, b) => a.record!.due - b.record!.due);
+  const fresh = all.filter((x) => !x.record);
+  return [...due, ...fresh].slice(0, SESSION_SIZE);
+}

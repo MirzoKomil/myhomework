@@ -235,6 +235,8 @@ export default function MemoryScreen() {
             })}
         </ScrollView>
 
+        {/* Dizaynda maslahat kartasi faqat karta ochilgandan keyin bor — boshida bo'sh joy. */}
+        {won || (last && lastWord && !matched.has(last.pair)) ? (
         <Pressable
           disabled={!won}
           onPress={restart}
@@ -246,16 +248,17 @@ export default function MemoryScreen() {
           <Text style={styles.hintText}>
             {won ? (
               <>Hammasi topildi — {fmtTime(seconds)}! <Text style={styles.hintStrong}>Qaytadan oʻynash</Text></>
-            ) : last && lastWord && !matched.has(last.pair) ? (
+            ) : lastWord ? (
               <>
                 {cap(lastWord.translation)} ochildi — endi <Text style={styles.hintStrong}>«{lastWord.word}»</Text>{' '}
                 {last?.kind === 'img' ? 'soʻzini' : 'rasmini'} toping
               </>
-            ) : (
-              'Kartani oching va uning juftini toping'
-            )}
+            ) : null}
           </Text>
         </Pressable>
+        ) : (
+          <View style={{ height: Math.max(insets.bottom, 34) }} />
+        )}
       </View>
     </View>
   );

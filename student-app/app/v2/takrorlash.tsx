@@ -15,7 +15,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BoltIcon, CloseIcon, ReviewClockIcon, SpeakerIcon } from '@/components/v2/home/icons';
-import { daysAgo, loadReviews, saveReview, wordKey, type ReviewRecord } from '@/components/v2/home/reviewStore';
+import { buildSession, daysAgo, loadReviews, saveReview, type ReviewRecord } from '@/components/v2/home/reviewStore';
 import { displayFont } from '@/components/v2/home/shared';
 import { Loading } from '@/components/v2/states/Loading';
 import { R } from '@/constants/v2/routes';
@@ -25,8 +25,6 @@ import { useLang } from '@/i18n/LanguageContext';
 import { addLightning } from '@/services/lightningStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
-/** Bir seansdagi so'zlar soni (dizayndagi "3 / 12"). */
-const SESSION_SIZE = 12;
 /** Har bir so'z uchun chaqmoq (dizayndagi "+2 har soʻz"). */
 const LIGHTNING_PER_WORD = 2;
 
@@ -47,12 +45,7 @@ export default function V2WordReview() {
     Promise.all([getAccumulatedVocabulary(), loadReviews()])
       .then(([words, reviews]) => {
         if (cancelled) return;
-        const now = Date.now();
-        const all = words.map((w) => ({ word: w, record: reviews[wordKey(w.english)] }));
-        // Avval muddati o'tgan takrorlanadiganlar (eng eskisi birinchi), keyin hali ko'rilmaganlar.
-        const due = all.filter((x) => x.record && x.record.due <= now).sort((a, b) => a.record!.due - b.record!.due);
-        const fresh = all.filter((x) => !x.record);
-        setItems([...due, ...fresh].slice(0, SESSION_SIZE));
+        setItems(buildSession(words, reviews));
       })
       .catch(() => !cancelled && setFailed(true));
     return () => {
@@ -132,7 +125,7 @@ export default function V2WordReview() {
                     )}
                   </View>
                   <View style={styles.wordRow}>
-                    <Text style={[styles.word, { fontSize: wordSize, lineHeight: Math.round(wordSize * 1.1), letterSpacing: -wordSize / 100 }]} numberOfLines={3}>{item.word.english}</Text>
+                    <Text style={[styles.word, { fontSize: wordSize, lineHeight: wordSize, letterSpacing: -wordSize / 100 }]} numberOfLines={3}>{item.word.english}</Text>
                     <Pressable accessibilityRole="button" accessibilityLabel="Talaffuzni tinglash" onPress={() => speak(item.word.english)} style={({ pressed }) => [styles.speak, pressed && { opacity: 0.8 }]}>
                       <SpeakerIcon />
                     </Pressable>
@@ -259,7 +252,7 @@ const styles = StyleSheet.create({
   divider: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10 },
   line: { flex: 1, height: 1, backgroundColor: '#E2E6EE' },
   dividerText: { fontFamily: fonts.bodyHeavy, fontSize: 12, letterSpacing: 0.72, textTransform: 'uppercase', color: '#5B6478', fontWeight: 'normal' },
-  translation: { fontSize: 26, lineHeight: 28, color: '#5A2FD6', textAlign: 'center', fontWeight: 'normal' },
+  translation: { fontSize: 26, lineHeight: 26, color: '#5A2FD6', textAlign: 'center', fontWeight: 'normal' },
   example: { marginTop: 4, width: '100%', backgroundColor: '#F4F6FA', borderRadius: 18, paddingVertical: 11, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
   exampleText: { fontFamily: fonts.bodyHeavy, fontSize: 16, color: '#0B1220', fontWeight: 'normal' },
   exampleBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },

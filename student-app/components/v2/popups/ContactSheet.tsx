@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: {
     backgroundColor: 'rgba(11,18,32,0.35)',
-    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(6px)' } as object) : null),
+    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(3px)' } as object) : null),
   },
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', maxHeight: '100%' },
   sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 20 },
@@ -126,7 +126,8 @@ const styles = StyleSheet.create({
   sub: { fontFamily: fonts.body, fontSize: 14, color: '#4A5468', fontWeight: 'normal' },
   close: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#F4F6FA', alignItems: 'center', justifyContent: 'center' },
   list: { gap: 8 },
-  row: { minHeight: 72, borderRadius: 20, backgroundColor: '#F4F6FA', paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // Dizayn: min-height 72 + padding 12 (content-box) — jami 96.
+  row: { minHeight: 96, borderRadius: 20, backgroundColor: '#F4F6FA', paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: fonts.bodyHeavy, fontSize: 17, color: '#FFFFFF', fontWeight: 'normal' },
   rowText: { flex: 1, minWidth: 0, gap: 2 },

@@ -18,6 +18,8 @@ import { HomeNav } from '@/components/v2/home/HomeNav';
 import { ArrowRight, BellIcon, BoltIcon, ChevronRightIcon, CoinIcon, FlameIcon, TelegramIcon } from '@/components/v2/home/icons';
 import { darkHome, lightHome, type HomePalette } from '@/components/v2/home/palette';
 import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/currentLesson';
+import { buildSession, loadReviews } from '@/components/v2/home/reviewStore';
+import { currentStep as firstOpenStep, lessonSteps, stepsDone, useListened } from '@/components/v2/lessons/data';
 import { displayFont, getReadIds } from '@/components/v2/home/shared';
 import { BotConnectPopup } from '@/components/v2/popups/BotConnect';
 import { Loading } from '@/components/v2/states/Loading';
@@ -54,6 +56,11 @@ function greeting(now: Date) {
   if (h >= 11 && h < 17) return 'Xayrli kun';
   if (h >= 17 && h < 23) return 'Xayrli kech';
   return 'Xayrli tun';
+}
+
+/** Jadval mavzusidagi guruh nomi ("32-dars · R-14 guruh" → "R-14"); topilmasa ''. */
+function groupName(topic: string) {
+  return topic.match(/\b([A-Za-zА-Яа-я]{1,4}-\d+)\b/)?.[1] ?? '';
 }
 
 function formatCountdown(ms: number) {
@@ -96,6 +103,8 @@ export default function V2Home() {
   const [botOpen, setBotOpen] = useState(false);
   const [todayLightning, setTodayLightning] = useState(0);
   const [wordCount, setWordCount] = useState<number | null>(null);
+  // Lesson ekrani bilan bir xil 5 qadam uchun tinglangan dialoglar.
+  const listened = useListened(lesson?.id ?? '');
   // Streak serverda hisoblanmaydi — nol holat (dizayn elementlari saqlanadi).
   const streak = 0;
 
@@ -112,7 +121,6 @@ export default function V2Home() {
         if (s.startsAt && s.telegramGroupLink) setLive({ startsAt: new Date(s.startsAt), topic: s.topic, link: s.telegramGroupLink });
       })
       .catch(() => {});
-    getAccumulatedVocabulary().then((w) => setWordCount(w.length)).catch(() => {});
   }, [token, isEmbedded]);
 
   const loadLesson = useCallback(() => {
@@ -124,6 +132,10 @@ export default function V2Home() {
     useCallback(() => {
       if (!token && !isEmbedded) return;
       loadLesson();
+      // "N ta soʻz" — WordReview seansining o'zi (muddati kelgan + yangi, ko'pi bilan 12).
+      Promise.all([getAccumulatedVocabulary(), loadReviews()])
+        .then(([w, r]) => setWordCount(buildSession(w, r).length))
+        .catch(() => {});
       Promise.all([fetchDemoNotifications(), getReadIds()])
         .then(([list, read]) => setUnread(list.filter((n) => n.unread && !read.has(n.id)).length))
         .catch(() => {});
@@ -152,9 +164,17 @@ export default function V2Home() {
 
   const liveVisible = !!live && msLeft > -2 * 3600 * 1000;
   const goal = Math.min(todayLightning, DAILY_GOAL);
-  const totalSteps = lesson?.steps.length ?? 0;
-  const doneSteps = lesson?.steps.filter((s) => s.percent >= 100).length ?? 0;
-  const currentStep = Math.min(doneSteps + 1, totalSteps);
+  // Qadamlar — Lesson ekranidagi lessonSteps bilan aynan bir xil (5 ta).
+  const steps = lesson
+    ? lessonSteps(
+        { id: lesson.id, isVideo: lesson.isVideoDay, content: lesson.content },
+        lesson.trackIds.length,
+        listened.filter((x) => lesson.trackIds.includes(x)).length,
+      )
+    : [];
+  const totalSteps = steps.length;
+  const doneSteps = stepsDone(steps);
+  const currentStep = firstOpenStep(steps) + 1;
 
   // Haftalik qator: oxirgi 6 kun + bugun (dizayndagi tartib).
   const days = Array.from({ length: 6 }, (_, i) => {
@@ -235,9 +255,9 @@ export default function V2Home() {
                 {!!lesson.meta && <Text style={styles.heroMeta}>{lesson.meta}</Text>}
               </View>
               <View style={styles.segments} accessibilityLabel={`${totalSteps} qadamdan ${doneSteps} tasi bajarildi`}>
-                {lesson.steps.map((s, i) => (
+                {steps.map((s, i) => (
                   <View key={i} style={styles.segment}>
-                    <View style={[styles.segmentFill, { width: `${Math.max(0, Math.min(100, s.percent))}%` }]} />
+                    <View style={[styles.segmentFill, { width: `${Math.max(0, Math.min(100, s.fraction * 100))}%` }]} />
                   </View>
                 ))}
               </View>
@@ -271,7 +291,7 @@ export default function V2Home() {
                 )}
                 {!!live.topic && <Text style={styles.liveTopic} numberOfLines={1}>{live.topic}</Text>}
               </View>
-              <Pressable accessibilityRole="link" accessibilityLabel="Telegram guruhiga oʻtish" onPress={() => Linking.openURL(live.link)} style={styles.group}>
+              <Pressable accessibilityRole="link" accessibilityLabel={groupName(live.topic) ? `${groupName(live.topic)} Telegram guruhiga oʻtish` : 'Telegram guruhiga oʻtish'} onPress={() => Linking.openURL(live.link)} style={styles.group}>
                 <TelegramIcon color={p.telegramText} />
                 <Text style={[styles.groupText, { color: p.telegramText }]}>Guruhga</Text>
               </Pressable>

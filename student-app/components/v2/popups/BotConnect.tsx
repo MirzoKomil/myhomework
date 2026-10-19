@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: {
     backgroundColor: 'rgba(11,18,32,0.35)',
-    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(6px)' } as object) : null),
+    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(3px)' } as object) : null),
   },
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', maxHeight: '100%' },
   sheet: {

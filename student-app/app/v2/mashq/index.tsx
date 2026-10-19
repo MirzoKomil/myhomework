@@ -5,7 +5,7 @@
  * o'yin rekordlari shu qurilmadagi o'yinlardan, materiallar soni
  * kutubxonadan. Onlayn o'quvchilar soni serverda yo'q — 0 ko'rsatiladi.
  * Lug'atim: so'zlar soni — shu qurilmadagi shaxsiy lug'at (getMyWords);
- * xatolar ro'yxati hech qayerda saqlanmaydi — 0 ko'rsatiladi.
+ * xatolar — uyga vazifa natijalaridan (scoreStore, useMistakeCount).
  */
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -13,7 +13,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourceP
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArrowIcon, SearchIcon } from '@/components/v2/practice/icons';
-import { PracticeNav, fmtTime, getMyWords, reset, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
+import { PracticeNav, fmtTime, getMyWords, reset, useCurrentLesson, useMistakeCount, useRecords } from '@/components/v2/practice/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -63,8 +63,8 @@ export default function PracticeScreen() {
   const { rec, reload } = useRecords();
   const [counts, setCounts] = useState<{ grammar: number; stories: number; dialogs: number }>({ grammar: 0, stories: 0, dialogs: 0 });
   const [myWords, setMyWords] = useState(0);
-  // Xatolar ro'yxati uchun ma'lumot manbai yo'q — bo'sh holat (0).
-  const mistakes = 0;
+  // Uyga vazifa xatolari (scoreStore) — barcha darslar bo'yicha.
+  const mistakes = useMistakeCount();
 
   // O'yindan/tarjimondan qaytganda rekord va lug'at soni darhol yangilansin.
   useFocusEffect(useCallback(() => {

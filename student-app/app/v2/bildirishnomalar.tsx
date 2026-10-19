@@ -44,7 +44,7 @@ const ATTENDANCE_OPTIONS = ['Darsga kirdim', 'Darsga kira olmadim', 'Dars yarmid
 const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
 const pad = (n: number) => String(n).padStart(2, '0');
 
-type Kind = 'live' | 'video' | 'done' | 'trophy' | 'gift' | 'rating' | 'telegram';
+type Kind = 'live' | 'video' | 'done' | 'trophy' | 'gift' | 'rating' | 'grade' | 'telegram';
 
 const ICON: Record<Kind, { bg: string; node: ReactNode }> = {
   live: { bg: '#FDECEC', node: <VideoIcon /> },
@@ -53,12 +53,24 @@ const ICON: Record<Kind, { bg: string; node: ReactNode }> = {
   trophy: { bg: '#F0EBFF', node: <TrophyIcon /> },
   gift: { bg: '#FFF1E6', node: <GiftIcon /> },
   rating: { bg: '#E8EEFF', node: <ChatIcon color="#1E3FD1" /> },
+  // Baho: ball bo'lsa ikonka o'rnida ball matni chiziladi (gradeScore).
+  grade: { bg: '#E8EEFF', node: <ChatIcon color="#1E3FD1" /> },
   telegram: { bg: '#E1F3FC', node: <TelegramIcon size={20} color="#1B6FA8" /> },
 };
+
+/** Dars bahosi xabari ("30-dars bahosi · 4.8/5") — ustozni baholash taklifi emas. */
+const isGrade = (n: DemoNotification) => n.interactive !== 'rate-teacher' && /bahosi|baho:/i.test(n.title);
+/** Xabardagi haqiqiy ball ("4.8/5" → "4.8"); bo'lmasa null. */
+function gradeScore(n: DemoNotification): string | null {
+  const m = `${n.title} ${n.message}`.match(/(\d+(?:[.,]\d+)?)\s*\/\s*5\b/);
+  return m ? m[1].replace(',', '.') : null;
+}
+const isBotLinked = (n: DemoNotification) => /telegram bot/i.test(n.title);
 
 // Server qaysi qoidadan kelganini id orqali beradi (auto-<qoida>-...).
 function kindOf(n: DemoNotification): Kind {
   const id = n.id;
+  if (isGrade(n)) return 'grade';
   if (id.startsWith('auto-lessonReminder')) return 'live';
   if (id.startsWith('auto-videoLesson')) return 'video';
   if (id.startsWith('auto-homeworkIncomplete') || id.startsWith('auto-absenceSurvey')) return 'done';
@@ -72,15 +84,17 @@ function kindOf(n: DemoNotification): Kind {
 function targetOf(n: DemoNotification): Href | null {
   const id = n.id;
   if (n.interactive === 'rate-teacher') return R.teachers as Href;
+  if (isGrade(n)) return R.schedule as Href;
+  if (isBotLinked(n)) return R.settings as Href;
   if (id.startsWith('auto-videoLesson') || id.startsWith('auto-homeworkIncomplete')) return R.path as Href;
   if (id.startsWith('auto-bonusLesson')) return R.bonus as Href;
   if (id.startsWith('auto-paymentDebt')) return R.payments as Href;
   if (/daraja/i.test(n.title)) return R.levels as Href;
   if (/reyting/i.test(n.title)) return R.league as Href;
   if (/imtihon/i.test(n.title)) return R.exams as Href;
-  if (id.startsWith('auto-lessonReminder')) return null;
-  // Qo'lda/tizim xabarlari — eski ilovadagi to'liq matn sahifasi.
-  return `/notifications/${n.id}` as Href;
+  // Qolganlari (jonli dars, qo'lda/tizim xabarlari) — v2 da alohida sahifa yo'q,
+  // eski ilova sahifasiga o'tkazilmaydi: matn shu yerning o'zida to'liq ko'rinadi.
+  return null;
 }
 
 function dayLabel(d: Date, now: Date) {
@@ -199,7 +213,9 @@ export default function V2Notifications() {
                 const withOptions = n.interactive === 'attendance';
                 const content = (
                   <>
-                    <View style={[styles.icon, { backgroundColor: ICON[kind].bg }]}>{ICON[kind].node}</View>
+                    <View style={[styles.icon, { backgroundColor: ICON[kind].bg }]}>
+                      {kind === 'grade' && gradeScore(n) ? <Text style={styles.score}>{gradeScore(n)}</Text> : ICON[kind].node}
+                    </View>
                     <View style={styles.body}>
                       <View style={[styles.titleRow, kind === 'live' && { alignItems: 'center' }]}>
                         {kind === 'live' ? (
@@ -289,6 +305,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   title: { flex: 1, minWidth: 0, fontFamily: fonts.bodyHeavy, fontSize: 15, lineHeight: 19.5, color: '#0B1220', fontWeight: 'normal' },
   // Dizayn: min-height 44, margin -11px 0 — bosish maydoni kattaroq, qator balandligi o'zgarmaydi.
+  score: { fontFamily: fonts.display, fontSize: 15, color: '#1E3FD1', fontWeight: 'normal' },
   liveTitle: { flex: 1, minWidth: 0, minHeight: 44, marginVertical: -11, flexDirection: 'row', alignItems: 'center', gap: 4 },
   liveTitleText: { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' },
   time: { fontFamily: fonts.bodyBold, fontSize: 12, color: '#5B6478', fontWeight: 'normal' },

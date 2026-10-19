@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowRightIcon, ChevronDownIcon, ChevronUpIcon } from '@/components/v2/settings/icons';
 import { Column, ScreenHeader, SUPPORT_TELEGRAM_URL, TelegramButton } from '@/components/v2/settings/parts';
 import { R } from '@/constants/v2/routes';
+// Yuzma-yuz o'yin mukofoti ilovadagi haqiqiy qiymatdan olinadi (matn eskirmasligi uchun).
+import { BATTLE_WIN_COINS } from '@/data/mock';
 import { fonts } from '@/constants/v2/tokens';
 
 const FAQ: { q: string; a: string; sample?: boolean }[] = [
@@ -29,7 +31,7 @@ const FAQ: { q: string; a: string; sample?: boolean }[] = [
   },
   {
     q: 'Coin nima va nimaga sarflanadi?',
-    a: 'Coin uyga vazifa (+60), yuzma-yuz oʻyin (+25) va doʻst taklifi (+100) uchun beriladi. Uni Domwork doʻkonida qoʻshimcha kitoblar va streak himoyasiga sarflaysiz.',
+    a: `Coin uyga vazifa (+60), yuzma-yuz oʻyin (+${BATTLE_WIN_COINS}) va doʻst taklifi (+100) uchun beriladi. Uni Domwork doʻkonida qoʻshimcha kitoblar va streak himoyasiga sarflaysiz.`,
   },
   {
     q: 'Streak himoyasi qanday ishlaydi?',

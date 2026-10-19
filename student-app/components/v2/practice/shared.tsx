@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useHomeworkScores, type PartScore } from '@/components/v2/homework/scoreStore';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type VocabWord } from '@/data/lessonContent';
@@ -155,12 +156,33 @@ export async function replaceMyWord(prevWord: string | null, w: MyWord) {
   await writeList(MY_WORDS_KEY, [w, ...list].slice(0, 500));
 }
 
+// ─── Uyga vazifa xatolari (Lug'atim: "N xato") ───────────────────────────
+// Manba — components/v2/homework/scoreStore (faqat o'qiladi). Xatolar ekrani
+// (dars/[lessonId]/xatolar) bilan bir xil hisob: results bo'lsa — false'lar,
+// eski yozuvlarda — mistakes ro'yxati.
+export function countMistakes(store: Record<string, Record<string, PartScore>>): number {
+  let n = 0;
+  for (const lesson of Object.values(store ?? {}))
+    for (const sc of Object.values(lesson ?? {})) {
+      if (!sc) continue;
+      n += sc.results ? sc.results.filter((r) => r === false).length : (sc.mistakes?.length ?? 0);
+    }
+  return n;
+}
+
+/** Barcha darslardagi uyga vazifa xatolari soni; natija o'zgarsa yangilanadi. */
+export function useMistakeCount(): number {
+  return countMistakes(useHomeworkScores());
+}
+
 export type RecentTranslation = { source: string; target: string; dir: 'uz-other' | 'other-uz' };
 const RECENT_TR_KEY = 'mh_v2_recent_translations';
-export const getRecentTranslations = () => readList<RecentTranslation>(RECENT_TR_KEY);
+// Eski yozuvlarda 5 tagacha bo'lishi mumkin — har doim 3 ta qaytariladi.
+export const getRecentTranslations = async () => (await readList<RecentTranslation>(RECENT_TR_KEY)).slice(0, 3);
 export async function pushRecentTranslation(t: RecentTranslation) {
   const list = (await getRecentTranslations()).filter((x) => x.source !== t.source);
-  await writeList(RECENT_TR_KEY, [t, ...list].slice(0, 5));
+  // Dizaynda "Oxirgilar"da 3 ta qator.
+  await writeList(RECENT_TR_KEY, [t, ...list].slice(0, 3));
 }
 
 export type RecentSearch = { query: string; meta: string; href: string };

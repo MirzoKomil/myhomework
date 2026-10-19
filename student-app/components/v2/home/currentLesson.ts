@@ -2,12 +2,12 @@
  * Joriy dars (bosh sahifa "Bugungi dars" kartasi va LiveNow oynasi uchun):
  * oxirgi ochilgan dars, bo'lmasa CRM'dagi faol dars, bo'lmasa 1-dars.
  */
-import { getResolvedLessonContent } from '@/data/lessonContent';
+import { getAudioTracks } from '@/components/v2/lessons/data';
+import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
-import { getCategoryProgress, loadLessonProgress } from '@/services/lessonProgressStore';
+import { loadLessonProgress } from '@/services/lessonProgressStore';
 import { getLastPosition } from '@/services/progressStore';
 
-export type Step = { percent: number };
 export type CurrentLesson = {
   id: string;
   name: string;
@@ -15,7 +15,10 @@ export type CurrentLesson = {
   isVideoDay: boolean;
   phrase: string;
   meta: string;
-  steps: Step[];
+  /** lessonSteps uchun dars mazmuni (Lesson ekrani bilan bir xil 5 qadam). */
+  content: LessonContent;
+  /** Shu darsning audio dialoglari (getAudioTracks) — id'lari. */
+  trackIds: string[];
   slidesCount: number;
 };
 
@@ -34,16 +37,11 @@ export async function resolveCurrentLesson(): Promise<CurrentLesson | null> {
   await loadLessonProgress();
   const content = await getResolvedLessonContent(lesson.id, idx);
   const isVideoDay = idx % 2 === 0;
-  const steps: Step[] = [
-    { percent: getCategoryProgress(lesson.id, isVideoDay ? 'video' : 'speaking') },
-    { percent: getCategoryProgress(lesson.id, 'vocabulary') },
-    { percent: getCategoryProgress(lesson.id, 'homework', content.homeworkParts.length) },
-  ];
-  // Dizayndagi "8 soʻz · 3 audio · vazifa" qatori — darsda bor narsalardan.
+  const tracks = getAudioTracks(mc, lesson.id);
+  // Dizayndagi "8 soʻz · 3 audio · vazifa" qatori — darsdagi haqiqiy sonlar.
   const meta: string[] = [];
   if (content.vocabulary.length) meta.push(`${content.vocabulary.length} soʻz`);
-  if (isVideoDay) meta.push('video');
-  else if (content.slides.length) meta.push(`${content.slides.length} slayd`);
+  if (tracks.length) meta.push(`${tracks.length} audio`);
   if (content.homeworkParts.length) meta.push('vazifa');
   const first = content.vocabulary[0]?.english?.trim();
   return {
@@ -53,7 +51,8 @@ export async function resolveCurrentLesson(): Promise<CurrentLesson | null> {
     isVideoDay,
     phrase: first ? `«${first}»` : '',
     meta: meta.join(' · '),
-    steps,
+    content,
+    trackIds: tracks.map((t) => t.id),
     slidesCount: content.slides.length,
   };
 }
