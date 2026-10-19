@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BulbIcon, InfoIcon, LockIcon, StopwatchIcon } from '@/components/v2/practice/icons';
 import { GameHeader, displayRu, plainWord, reset, saveRecords, stressLetters, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
 import { designImages } from '@/constants/v2/designImages';
+import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import COMMON_ENGLISH_WORDS from '@/data/commonEnglishWords.json';
 import COMMON_RUSSIAN_WORDS from '@/data/commonRussianWords.json';
@@ -117,7 +118,11 @@ export default function WordChainScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
+  // Natija oynasi uchun: shu o'yindagi chaqmoq va o'yindan oldingi rekord.
+  const [bolts, setBolts] = useState(0);
+  const [recordBefore, setRecordBefore] = useState(0);
   const finish = () => {
+    setRecordBefore(rec.wordChain);
     setFinished(true);
     if (score > 0) playWinSound();
     else playLoseSound();
@@ -132,6 +137,7 @@ export default function WordChainScreen() {
       setScore((s) => s + points);
       addCoins(points);
       addLightning(1);
+      setBolts((b) => b + 1);
     }
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
   };
@@ -167,6 +173,7 @@ export default function WordChainScreen() {
     if (!bank) return;
     setChain([pick(bank)]);
     setScore(0);
+    setBolts(0);
     setInput('');
     setError(null);
     setFinished(false);
@@ -296,6 +303,20 @@ export default function WordChainScreen() {
           </Pressable>
         </View>
       </View>
+      <GameResult
+        show={finished}
+        win={score > 0}
+        title={score > 0 ? 'Vaqt tugadi — zoʻr!' : 'Vaqt tugadi'}
+        subtitle={score > 0 ? `Zanjirga ${score} ta soʻz qoʻshdingiz` : 'Keyingi safar albatta chiqadi'}
+        stats={[
+          { value: String(score), label: 'soʻz' },
+          { value: String(record), label: 'rekord' },
+        ]}
+        coins={score}
+        lightning={bolts}
+        newRecord={score > 0 && score > recordBefore}
+        onAgain={restart}
+      />
     </View>
   );
 }

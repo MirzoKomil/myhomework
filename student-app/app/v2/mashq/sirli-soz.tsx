@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackspaceIcon, BulbIcon, CheckIcon } from '@/components/v2/practice/icons';
 import { GameHeader, displayRu, plainWord, reset, saveRecords, useCurrentLesson } from '@/components/v2/practice/shared';
+import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins, getTotalCoins } from '@/services/coinsStore';
@@ -294,6 +295,16 @@ export default function MysteryScreen() {
           </View>
         </View>
       </View>
+      <GameResult
+        show={!!over}
+        win={over === 'won'}
+        title={over === 'won' ? 'Topdingiz!' : 'Bu safar topilmadi'}
+        subtitle={over === 'won' ? `Soʻz: ${answer.toUpperCase()}` : `Javob: ${answer.toUpperCase()}`}
+        stats={[{ value: `${guesses.length} / ${MAX_TRIES}`, label: 'urinish' }]}
+        coins={over === 'won' ? 1 : 0}
+        lightning={over === 'won' ? 1 : 0}
+        onAgain={restart}
+      />
     </View>
   );
 }

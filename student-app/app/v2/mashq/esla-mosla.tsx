@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckIcon, HouseCardIcon, StopwatchIcon } from '@/components/v2/practice/icons';
 import { GameHeader, fmtTime, plainWord, reset, saveRecords, useCurrentLesson, useRecords } from '@/components/v2/practice/shared';
+import { GameResult } from '@/components/v2/practice/GameResult';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { addCoins } from '@/services/coinsStore';
@@ -121,8 +122,11 @@ export default function MemoryScreen() {
     return () => clearInterval(id);
   }, [started, won]);
 
+  // Natija oynasidagi rekord: yutishdan oldingi eng yaxshi vaqt (saqlash uni o'zgartiradi).
+  const [bestBefore, setBestBefore] = useState<number | null>(null);
   useEffect(() => {
     if (!won || !words) return;
+    setBestBefore(rec.memorySeconds);
     playWinSound();
     addCoins(words.length);
     addLightning(words.length);
@@ -260,6 +264,20 @@ export default function MemoryScreen() {
           <View style={{ height: Math.max(insets.bottom, 34) }} />
         )}
       </View>
+      <GameResult
+        show={won}
+        win
+        title="Barakalla!"
+        subtitle={`Hammasi topildi — ${total} juft`}
+        stats={[
+          { value: fmtTime(seconds), label: 'vaqt' },
+          { value: bestBefore == null ? fmtTime(seconds) : fmtTime(Math.min(bestBefore, seconds)), label: 'eng yaxshi' },
+        ]}
+        coins={total}
+        lightning={total}
+        newRecord={bestBefore != null && seconds < bestBefore}
+        onAgain={restart}
+      />
     </View>
   );
 }
