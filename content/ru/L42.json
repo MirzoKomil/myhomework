@@ -1,0 +1,304 @@
+{
+ "n": 42,
+ "lessonId": "l1784055280406-41",
+ "type": "live",
+ "id": "l1784055280406-41",
+ "topic": "Yordam so'rash",
+ "title": "Jonli dars: «Помоги́те, пожа́луйста!» — yordam so'rash va taklif",
+ "cando": "Qiyin vaziyatda yordam so'rayman (Помоги́те, пожа́луйста! Я потеря́л…), tushunmasam qayta so'rayman va o'zim yordam taklif qilaman.",
+ "vocab": [
+  {
+   "ru": "Помоги́те!",
+   "tr": "[pamagíti]",
+   "uz": "Yordam bering!",
+   "ex": "Помоги́те, пожа́луйста, я заблуди́лся.",
+   "img": "cards/помочь.jpg",
+   "icon": "",
+   "vocabId": "v-42-1",
+   "media": "media/ru/L42/w_v-42-1.jpg"
+  },
+  {
+   "ru": "Подскажи́те…",
+   "tr": "[patskajíti]",
+   "uz": "Ayting-chi… (yo'l-yo'riq)",
+   "ex": "Подскажи́те, как пройти́ к метро́?",
+   "img": "cards/как пройти.jpg",
+   "icon": "",
+   "vocabId": "v-42-2",
+   "media": "media/ru/L42/w_v-42-2.jpg"
+  },
+  {
+   "ru": "объясни́ть (объясни́те)",
+   "tr": "[abyisnít']",
+   "uz": "tushuntirmoq",
+   "ex": "Объясни́те, пожа́луйста, ещё раз.",
+   "img": "cards/объяснить.jpg",
+   "icon": "",
+   "vocabId": "v-42-3",
+   "media": "media/ru/L42/w_v-42-3.jpg"
+  },
+  {
+   "ru": "потеря́ть",
+   "tr": "[patiryát']",
+   "uz": "yo'qotmoq",
+   "ex": "Я потеря́л кошелёк.",
+   "img": "cards/потерять.jpg",
+   "icon": "",
+   "vocabId": "v-42-4",
+   "media": "media/ru/L42/w_v-42-4.jpg"
+  },
+  {
+   "ru": "слома́ться",
+   "tr": "[slamátsa]",
+   "uz": "buzilmoq, sinmoq",
+   "ex": "У меня́ слома́лся телефо́н.",
+   "img": "cards/сломаться.jpg",
+   "icon": "",
+   "vocabId": "v-42-5",
+   "media": "media/ru/L42/w_v-42-5.jpg"
+  },
+  {
+   "ru": "заблуди́ться",
+   "tr": "[zabludítsa]",
+   "uz": "adashib qolmoq",
+   "ex": "Извини́те, я заблуди́лся.",
+   "img": "cards/заблудиться.jpg",
+   "icon": "",
+   "vocabId": "v-42-6",
+   "media": "media/ru/L42/w_v-42-6.jpg"
+  },
+  {
+   "ru": "о́чередь",
+   "tr": "[óchirit']",
+   "uz": "navbat",
+   "ex": "Кто после́дний в о́череди?",
+   "img": "cards/очередь.jpg",
+   "icon": "",
+   "vocabId": "v-42-7",
+   "media": "media/ru/L42/w_v-42-7.jpg"
+  },
+  {
+   "ru": "Повтори́те, пожа́луйста",
+   "tr": "[paftaríti, pajálusta]",
+   "uz": "Takrorlang, iltimos",
+   "ex": "Я не по́нял. Повтори́те, пожа́луйста.",
+   "img": "cards/повторите пожалуйста.jpg",
+   "icon": "",
+   "vocabId": "v-42-8",
+   "media": "media/ru/L42/w_v-42-8.jpg"
+  }
+ ],
+ "konspekt": "42-DARS (jonli dars): Yordam so'rash — «Помоги́те, пожа́луйста!»\n\nBugun ustoz bilan 41-dars mavzusini (buyruq mayli: скажи́те, помоги́те, дава́йте…) real vaziyatlarda mashq qildik.\n\nDiqqatni tortish:\n* Извини́те, пожа́луйста… · Прости́те, мо́жно вас?\n\nYordam so'rash:\n* Помоги́те, пожа́луйста! — Iltimos, yordam bering!\n* Подскажи́те, как пройти́ к метро́? — Ayting-chi, metroga qanday borsa bo'ladi?\n* Покажи́те на ка́рте, пожа́луйста. — Xaritada ko'rsating.\n* Вы не зна́ете, где здесь банк? — Bu yerda bank qayerdaligini bilmaysizmi?\n\nMuammo:\n* Я потеря́л(а) кошелёк / па́спорт. — Hamyon / pasportimni yo'qotdim.\n* У меня́ слома́лся телефо́н. — Telefonim buzildi.\n* Я заблуди́лся (заблуди́лась). — Adashib qoldim.\n\nTushunmasam:\n* Повтори́те, пожа́луйста, ме́дленно. · Объясни́те ещё раз. · Напиши́те, пожа́луйста.\n\nNavbat:\n* Кто после́дний? — Navbatda oxirgi kim? · Я за ва́ми. — Men sizdan keyin.\n\nYordam taklif qilish:\n* Дава́йте я вам помогу́! — Keling, yordam beray! · Вам помо́чь? — Yordam kerakmi?\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: shaharda yordam so'rash. Keyingi dars — videodars: transport (е́хать / е́здить, на авто́бусе).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "___ , пожа́луйста! Я заблуди́лся.",
+    "o": [
+     "Помоги́те",
+     "Помогу́",
+     "Помога́ть"
+    ],
+    "a": "Помоги́те"
+   },
+   {
+    "s": "___ , как пройти́ к вокза́лу?",
+    "o": [
+     "Подскажу́",
+     "Подскажи́те",
+     "Подсказа́ть"
+    ],
+    "a": "Подскажи́те"
+   },
+   {
+    "s": "Я ___ кошелёк. (yo'qotdim)",
+    "o": [
+     "теря́ть",
+     "потеря́ю",
+     "потеря́л"
+    ],
+    "a": "потеря́л"
+   },
+   {
+    "s": "У меня́ ___ телефо́н.",
+    "o": [
+     "лома́ть",
+     "слома́лся",
+     "слома́л"
+    ],
+    "a": "слома́лся"
+   },
+   {
+    "s": "Извини́те, я ___ . (adashib qoldim)",
+    "o": [
+     "заблужу́сь",
+     "заблуди́лся",
+     "заблуди́ться"
+    ],
+    "a": "заблуди́лся"
+   },
+   {
+    "s": "___ , пожа́луйста, ещё раз. (tushuntiring)",
+    "o": [
+     "Объясни́ть",
+     "Объясни́те",
+     "Объясню́"
+    ],
+    "a": "Объясни́те"
+   },
+   {
+    "s": "Кто после́дний в ___ ?",
+    "o": [
+     "о́череди",
+     "о́чередь",
+     "о́чередью"
+    ],
+    "a": "о́череди"
+   },
+   {
+    "s": "— Кто после́дний? — Я. — Я за ___ .",
+    "o": [
+     "вас",
+     "вам",
+     "ва́ми"
+    ],
+    "a": "ва́ми"
+   },
+   {
+    "s": "Дава́йте я вам ___ !",
+    "o": [
+     "помо́г",
+     "помогу́",
+     "помога́ть"
+    ],
+    "a": "помогу́"
+   },
+   {
+    "s": "Вам ___ ? (yordam kerakmi)",
+    "o": [
+     "помо́чь",
+     "помоги́те",
+     "помо́г"
+    ],
+    "a": "помо́чь"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Yordam bering!»",
+    "o": [
+     "Помо́г!",
+     "Помога́ю!",
+     "Помоги́те!"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Adashib qoldim»",
+    "o": [
+     "Я потеря́л",
+     "Я заблуди́лся",
+     "Я слома́лся"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Telefonim buzildi»",
+    "o": [
+     "У меня́ слома́лся телефо́н",
+     "Я забы́л телефо́н",
+     "Я потеря́л телефо́н"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«navbat»",
+    "o": [
+     "объясне́ние",
+     "остано́вка",
+     "о́чередь"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Tushunmasangiz:",
+    "o": [
+     "Дава́йте пойдём",
+     "До свида́ния",
+     "Повтори́те, пожа́луйста"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Keling, yordam beray!»",
+    "o": [
+     "Дава́йте я вам помогу́!",
+     "Я помога́л вам",
+     "Помоги́те мне!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Xaritada ko'rsating»",
+    "o": [
+     "Покажи́те на ка́рте",
+     "Посмотри́те на ка́рте",
+     "Найди́те ка́рту"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Diqqatni tortish:",
+    "o": [
+     "Извини́те, пожа́луйста…",
+     "Пока́!",
+     "Дава́й!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Pasportimni yo'qotdim»",
+    "o": [
+     "Я нашёл па́спорт",
+     "Я потеря́л па́спорт",
+     "Я слома́л па́спорт"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Bu yerda bank qayerdaligini bilmaysizmi?»",
+    "o": [
+     "Вы банк?",
+     "Где ваш банк?",
+     "Вы не зна́ете, где здесь банк?"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Извини́те, помоги́те, пожа́луйста!",
+   "uz": "Kechirasiz, yordam bering!"
+  },
+  {
+   "ru": "Подскажи́те, как пройти́ к метро́?",
+   "uz": "Ayting-chi, metroga qanday borsa bo'ladi?"
+  },
+  {
+   "ru": "Я потеря́л кошелёк.",
+   "uz": "Hamyonimni yo'qotdim."
+  },
+  {
+   "ru": "Повтори́те, пожа́луйста, ме́дленно.",
+   "uz": "Iltimos, sekin takrorlang."
+  },
+  {
+   "ru": "Кто после́дний в о́череди?",
+   "uz": "Navbatda oxirgi kim?"
+  },
+  {
+   "ru": "Дава́йте я вам помогу́!",
+   "uz": "Keling, yordam beray!"
+  }
+ ]
+}

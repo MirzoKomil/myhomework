@@ -1,0 +1,304 @@
+{
+ "n": 32,
+ "lessonId": "l1784055280406-31",
+ "type": "live",
+ "id": "l1784055280406-31",
+ "topic": "Kafe va restoranda",
+ "title": "Jonli dars: «Мо́жно меню́?» — kafe va restoranda buyurtma",
+ "cando": "Kafe va restoranda joy so'rayman, buyurtma beraman (Я хочу́… / Мне, пожа́луйста…) va hisobni so'rayman.",
+ "vocab": [
+  {
+   "ru": "меню́",
+   "tr": "[minyú]",
+   "uz": "menyu",
+   "ex": "Мо́жно меню́, пожа́луйста?",
+   "img": "cards/меню.jpg",
+   "icon": "",
+   "vocabId": "v-32-1",
+   "media": "media/ru/L32/w_v-32-1.jpg"
+  },
+  {
+   "ru": "официа́нт",
+   "tr": "[afitsiánt]",
+   "uz": "ofitsiant",
+   "ex": "Официа́нт, мо́жно вас?",
+   "img": "cards/официант.jpg",
+   "icon": "",
+   "vocabId": "v-32-2",
+   "media": "media/ru/L32/w_v-32-2.jpg"
+  },
+  {
+   "ru": "заказа́ть",
+   "tr": "[zakazát']",
+   "uz": "buyurtma bermoq",
+   "ex": "Мы хоти́м заказа́ть.",
+   "img": "cards/заказать.jpg",
+   "icon": "",
+   "vocabId": "v-32-3",
+   "media": "media/ru/L32/w_v-32-3.jpg"
+  },
+  {
+   "ru": "суп",
+   "tr": "[sup]",
+   "uz": "sho'rva",
+   "ex": "Мне, пожа́луйста, суп.",
+   "img": "cards/суп.jpg",
+   "icon": "",
+   "vocabId": "v-32-4",
+   "media": "media/ru/L32/w_v-32-4.jpg"
+  },
+  {
+   "ru": "сала́т",
+   "tr": "[salát]",
+   "uz": "salat",
+   "ex": "Како́й сала́т вы хоти́те?",
+   "img": "cards/салат.jpg",
+   "icon": "",
+   "vocabId": "v-32-5",
+   "media": "media/ru/L32/w_v-32-5.jpg"
+  },
+  {
+   "ru": "десе́рт",
+   "tr": "[disért]",
+   "uz": "shirinlik",
+   "ex": "А на десе́рт — моро́женое.",
+   "img": "cards/десерт.jpg",
+   "icon": "",
+   "vocabId": "v-32-6",
+   "media": "media/ru/L32/w_v-32-6.jpg"
+  },
+  {
+   "ru": "вода́ (с га́зом / без га́за)",
+   "tr": "[vadá]",
+   "uz": "suv (gazli / gazsiz)",
+   "ex": "Во́ду без га́за, пожа́луйста.",
+   "img": "cards/бутылка.jpg",
+   "icon": "",
+   "vocabId": "v-32-7",
+   "media": "media/ru/L32/w_v-32-7.jpg"
+  },
+  {
+   "ru": "счёт",
+   "tr": "[shchot]",
+   "uz": "hisob (to'lov)",
+   "ex": "Счёт, пожа́луйста!",
+   "img": "cards/счёт.jpg",
+   "icon": "",
+   "vocabId": "v-32-8",
+   "media": "media/ru/L32/w_v-32-8.jpg"
+  }
+ ],
+ "konspekt": "32-DARS (jonli dars): Kafe va restoranda — «Мо́жно меню́?»\n\nBugun ustoz bilan 31-dars mavzusini (хоте́ть, мочь, мо́жно) kafe vaziyatida mashq qildik.\n\nKafega kirganda:\n* Здра́вствуйте! У вас есть свобо́дный стол? — Bo'sh stol bormi?\n* Мо́жно сесть здесь? — Shu yerga o'tirsak bo'ladimi?\n* Мо́жно меню́, пожа́луйста? — Menyu bersangiz?\n\nBuyurtma (зака́з):\n* Мы хоти́м заказа́ть. — Buyurtma bermoqchimiz.\n* Я хочу́ суп и сала́т. — Sho'rva va salat xohlayman.\n* Мне, пожа́луйста, плов и чай. — Menga palov va choy, iltimos.\n* Что вы посове́туете? — Nimani tavsiya qilasiz?\n* Во́ду без га́за, пожа́луйста. — Gazsiz suv, iltimos.\n\nOfitsiant:\n* Что вы бу́дете? — Nima olasiz?\n* Что бу́дете пить? — Nima ichasiz?\n* Что́-нибудь ещё? — Yana nimadir?\n\nHisob:\n* Счёт, пожа́луйста! — Hisobni bering!\n* Мо́жно ка́ртой? — Karta bilan mumkinmi?\n* Спаси́бо, бы́ло о́чень вку́сно! — Rahmat, juda mazali edi!\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: kafeda buyurtma. Keyingi dars — videodars: да́тельный паде́ж (кому́? мне нра́вится).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Мо́жно ___ , пожа́луйста? (menyu)",
+    "o": [
+     "счёт",
+     "суп",
+     "меню́"
+    ],
+    "a": "меню́"
+   },
+   {
+    "s": "У вас есть ___ стол?",
+    "o": [
+     "свобо́дный",
+     "за́нят",
+     "голо́дный"
+    ],
+    "a": "свобо́дный"
+   },
+   {
+    "s": "___ , пожа́луйста, суп и сала́т.",
+    "o": [
+     "Меня́",
+     "Мне",
+     "Я"
+    ],
+    "a": "Мне"
+   },
+   {
+    "s": "Мы хоти́м ___ .",
+    "o": [
+     "заказа́ли",
+     "зака́з",
+     "заказа́ть"
+    ],
+    "a": "заказа́ть"
+   },
+   {
+    "s": "Что вы ___ на десе́рт?",
+    "o": [
+     "сове́тую",
+     "посове́туете",
+     "сове́туем"
+    ],
+    "a": "посове́туете"
+   },
+   {
+    "s": "Во́ду ___ га́за, пожа́луйста.",
+    "o": [
+     "из",
+     "с",
+     "без"
+    ],
+    "a": "без"
+   },
+   {
+    "s": "Что вы бу́дете ___ ?",
+    "o": [
+     "пить",
+     "пил",
+     "пьёте"
+    ],
+    "a": "пить"
+   },
+   {
+    "s": "___ , пожа́луйста! (hisob)",
+    "o": [
+     "Счёт",
+     "Меню́",
+     "Сда́ча"
+    ],
+    "a": "Счёт"
+   },
+   {
+    "s": "Мо́жно ___ ? (karta bilan)",
+    "o": [
+     "ка́рта",
+     "ка́ртой",
+     "ка́рту"
+    ],
+    "a": "ка́ртой"
+   },
+   {
+    "s": "Спаси́бо, бы́ло о́чень ___ !",
+    "o": [
+     "вку́сно",
+     "вкус",
+     "вку́сный"
+    ],
+    "a": "вку́сно"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Ofitsiant: «Nima olasiz?»",
+    "o": [
+     "Что вы бу́дете?",
+     "Мо́жно меню́?",
+     "Ско́лько с меня́?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Hisobni bering!»",
+    "o": [
+     "Меню́, пожа́луйста!",
+     "Счёт, пожа́луйста!",
+     "Сда́ча, пожа́луйста!"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Menga palov, iltimos»",
+    "o": [
+     "Меня́, пожа́луйста, плов",
+     "Мне, пожа́луйста, плов",
+     "Я, пожа́луйста, плов"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«shirinlik»",
+    "o": [
+     "десе́рт",
+     "сала́т",
+     "суп"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«gazsiz suv»",
+    "o": [
+     "вода́ без га́за",
+     "вода́ из га́за",
+     "вода́ с га́зом"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Nimani tavsiya qilasiz?»",
+    "o": [
+     "Что вы хоти́те?",
+     "Что вы пьёте?",
+     "Что вы посове́туете?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Bo'sh stol bormi?»",
+    "o": [
+     "Где стол?",
+     "У вас нет стола́?",
+     "У вас есть свобо́дный стол?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«ofitsiant»",
+    "o": [
+     "официа́нт",
+     "по́вар",
+     "продаве́ц"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Juda mazali edi!»",
+    "o": [
+     "Бы́ло о́чень до́рого!",
+     "Бы́ло о́чень вку́сно!",
+     "Бы́ло о́чень мно́го!"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Я ___ заказа́ть суп.",
+    "o": [
+     "хоти́м",
+     "хотя́т",
+     "хочу́"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Здра́вствуйте! У вас есть свобо́дный стол?",
+   "uz": "Assalomu alaykum! Bo'sh stol bormi?"
+  },
+  {
+   "ru": "Мо́жно меню́, пожа́луйста?",
+   "uz": "Menyu bersangiz?"
+  },
+  {
+   "ru": "Мне, пожа́луйста, суп и сала́т.",
+   "uz": "Menga sho'rva va salat, iltimos."
+  },
+  {
+   "ru": "Что вы посове́туете на десе́рт?",
+   "uz": "Shirinlikka nima tavsiya qilasiz?"
+  },
+  {
+   "ru": "Счёт, пожа́луйста! Мо́жно ка́ртой?",
+   "uz": "Hisob, iltimos! Karta bilan mumkinmi?"
+  },
+  {
+   "ru": "Спаси́бо, бы́ло о́чень вку́сно!",
+   "uz": "Rahmat, juda mazali edi!"
+  }
+ ]
+}

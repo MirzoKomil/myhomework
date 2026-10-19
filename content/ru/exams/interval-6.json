@@ -1,0 +1,524 @@
+{
+ "title_uz": "6-oraliq imtihon: 61–72-darslar",
+ "passPercent": 70,
+ "questions": [
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q01",
+   "question": "Telefonda Timurni so'rashdi, lekin u hozir yo'q. Nima deysiz?",
+   "options": [
+    "Алло́, мо́жно Тиму́ра?",
+    "Извини́те, его́ сейча́с нет.",
+    "Говори́те гро́мче!",
+    "Вы оши́блись но́мером."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q02",
+   "question": "«Сто́лик на двои́х» — ma'nosini tanlang.",
+   "options": [
+    "ikki kishilik stol",
+    "ikkinchi stol",
+    "ikkita stol",
+    "ikki soatga stol"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q03",
+   "question": "«1995-yilda» — to'g'ri variantni tanlang.",
+   "options": [
+    "в ты́сяча девятьсо́т девяно́сто пя́тый год",
+    "в ты́сяча девятьсо́т девяно́сто пя́том году́",
+    "в ты́сяча девятьсо́т девяно́сто пять году́",
+    "в ты́сяча девятьсо́т девяно́сто пя́того го́да"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q04",
+   "question": "Ish suhbatida «Расскажи́те о себе́» nimani anglatadi?",
+   "options": [
+    "O'zingiz haqingizda gapirib bering.",
+    "Qancha maosh kutyapsiz?",
+    "Ish jadvalini ayting.",
+    "Bizga savol bering."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q05",
+   "question": "To'g'ri gapni tanlang.",
+   "options": [
+    "Положи́ ключи́ на столе́.",
+    "Ключи́ лежа́т на стол.",
+    "Положи́ ключи́ на стол.",
+    "Ключи́ лежи́т на столе́."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q06",
+   "question": "«Я звоню́ по объявле́нию» — ma'nosini tanlang.",
+   "options": [
+    "E'lon bo'yicha qo'ng'iroq qilyapman.",
+    "Shartnoma bo'yicha qo'ng'iroq qilaman.",
+    "Qo'shnilarga qo'ng'iroq qilyapman.",
+    "Rieltorga qo'ng'iroq qilyapman."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q07",
+   "question": "Bankda dollar almashtirmoqchisiz. Qanday so'raysiz?",
+   "options": [
+    "Где мо́жно обменя́ть до́ллары?",
+    "Где мо́жно снять кварти́ру?",
+    "Где мо́жно отпра́вить посы́лку?",
+    "Где мо́жно купи́ть биле́т?"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q08",
+   "question": "Xodim so'radi: «Чем могу́ помо́чь?» Muammoingizni ayting.",
+   "options": [
+    "Возьми́те тало́н.",
+    "Сохрани́те квита́нцию.",
+    "Напиши́те заявле́ние.",
+    "Моя́ ка́рта заблоки́рована."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q09",
+   "question": "Hikoyada «birdan, to'satdan» ma'nosidagi so'z qaysi?",
+   "options": [
+    "пото́м",
+    "вдруг",
+    "наконе́ц",
+    "одна́жды"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q10",
+   "question": "To'g'ri shaklni tanlang: «Я горжу́сь … семьёй.»",
+   "options": [
+    "свою́",
+    "свое́й",
+    "своя́",
+    "свой"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q11",
+   "question": "«Ты придёшь?» — o'zlashtirma gapga to'g'ri aylantirilganini tanlang.",
+   "options": [
+    "Он спроси́л, что я приду́.",
+    "Он спроси́л, приду́ ли я.",
+    "Он спроси́л, ли я приду́.",
+    "Он спроси́л, приду́ я ли."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-q12",
+   "question": "«Мо́жно зада́ть вопро́с?» — ma'nosini tanlang.",
+   "options": [
+    "Javob bera olasizmi?",
+    "Yaxshi savol!",
+    "Savollar bormi?",
+    "Savol bersam bo'ladimi?"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q13",
+   "sentence": "Перезвони́те, пожа́луйста, ___ час.",
+   "answer": "че́рез",
+   "options": [
+    "по́сле",
+    "по",
+    "че́рез"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q14",
+   "sentence": "Я роди́лся пя́того ___.",
+   "answer": "ма́я",
+   "options": [
+    "ма́я",
+    "май",
+    "ма́е"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q15",
+   "sentence": "Мои́ ___ сто́роны — отве́тственность и пунктуа́льность.",
+   "answer": "си́льные",
+   "options": [
+    "си́льные",
+    "си́льная",
+    "си́льный"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q16",
+   "sentence": "Коммуна́льные услу́ги вхо́дят в ___?",
+   "answer": "це́ну",
+   "options": [
+    "цена́",
+    "це́ну",
+    "цене́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q17",
+   "sentence": "Я хочу́ ___ посы́лку в Москву́.",
+   "answer": "отпра́вить",
+   "options": [
+    "отпра́вил",
+    "отпра́вить",
+    "отпра́влю"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q18",
+   "sentence": "Посы́лка не ___ уже́ две неде́ли.",
+   "answer": "пришла́",
+   "options": [
+    "пришла́",
+    "пришло́",
+    "пришёл"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q19",
+   "sentence": "Я ___ по у́лице, и вдруг встре́тил дру́га.",
+   "answer": "шёл",
+   "options": [
+    "хо́дит",
+    "иду́",
+    "шёл"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q20",
+   "sentence": "Я ___ в университе́т в 2015 году́.",
+   "answer": "поступи́л",
+   "options": [
+    "поступи́л",
+    "учи́лся",
+    "око́нчил"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q21",
+   "sentence": "Анто́н сказа́л: «Я рабо́таю в ба́нке». → Анто́н сказа́л, что ___ в ба́нке.",
+   "answer": "рабо́тает",
+   "options": [
+    "рабо́тает",
+    "рабо́таю",
+    "рабо́тать"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i6-q22",
+   "sentence": "Нигора́ сказа́ла, что ___ в Андижа́не.",
+   "answer": "родила́сь",
+   "options": [
+    "родило́сь",
+    "роди́лся",
+    "родила́сь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q23",
+   "translation": "Unga nima yetkazay?",
+   "words": [
+    "ему́",
+    "Что",
+    "его́",
+    "переда́ть"
+   ],
+   "answer": [
+    "Что",
+    "ему́",
+    "переда́ть"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q24",
+   "translation": "Men bronni bekor qilmoqchiman.",
+   "words": [
+    "отмени́ть",
+    "отменю́",
+    "бронь",
+    "хочу́",
+    "Я"
+   ],
+   "answer": [
+    "Я",
+    "хочу́",
+    "отмени́ть",
+    "бронь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q25",
+   "translation": "Qachon tug'ilgansiz?",
+   "words": [
+    "Когда́",
+    "родили́сь",
+    "роди́лся",
+    "вы"
+   ],
+   "answer": [
+    "Когда́",
+    "вы",
+    "родили́сь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q26",
+   "translation": "Biz markazda kvartira ijaraga olamiz.",
+   "words": [
+    "кварти́ре",
+    "снима́ем",
+    "в",
+    "Мы",
+    "це́нтре",
+    "кварти́ру"
+   ],
+   "answer": [
+    "Мы",
+    "снима́ем",
+    "кварти́ру",
+    "в",
+    "це́нтре"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q27",
+   "translation": "Men hisob ochmoqchiman.",
+   "words": [
+    "хочу́",
+    "откры́ть",
+    "Я",
+    "откро́ю",
+    "счёт"
+   ],
+   "answer": [
+    "Я",
+    "хочу́",
+    "откры́ть",
+    "счёт"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q28",
+   "translation": "Bir kuni men Moskvaga bordim.",
+   "words": [
+    "Одна́жды",
+    "Москву́",
+    "пое́хал",
+    "в",
+    "я",
+    "Москве́"
+   ],
+   "answer": [
+    "Одна́жды",
+    "я",
+    "пое́хал",
+    "в",
+    "Москву́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q29",
+   "translation": "E'tiboringiz uchun rahmat!",
+   "words": [
+    "внима́ние",
+    "внима́ния",
+    "Спаси́бо",
+    "за"
+   ],
+   "answer": [
+    "Спаси́бо",
+    "за",
+    "внима́ние"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i6-q30",
+   "translation": "U qayerda yashashimni so'radi.",
+   "words": [
+    "я",
+    "Он",
+    "где",
+    "спроси́л",
+    "ли",
+    "живу́"
+   ],
+   "answer": [
+    "Он",
+    "спроси́л",
+    "где",
+    "я",
+    "живу́"
+   ]
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-s1",
+   "question": "🗣 Vaziyat: Telefonda suhbatdoshingizni yaxshi eshitmayapsiz. Nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Мину́точку!",
+    "Пло́хо слы́шно! Говори́те гро́мче, пожа́луйста.",
+    "Вы оши́блись но́мером.",
+    "Всего́ до́брого!"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-s2",
+   "question": "🗣 Vaziyat: Restoranga qo'ng'iroq qilib, shanba kuniga 4 kishilik stol bron qilmoqchisiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Я хоте́л бы заброни́ровать но́мер на четверы́х.",
+    "Я хоте́л бы отмени́ть бронь на суббо́ту.",
+    "Я хоте́л бы заброни́ровать сто́лик на четверы́х на суббо́ту.",
+    "Я хоте́л бы заброни́ровать сто́лик на двои́х на суббо́ту."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-s3",
+   "question": "🗣 Vaziyat: Ish suhbati tugadi. Rahmat aytib, xayrlashasiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Расскажи́те о себе́.",
+    "Кто спра́шивает?",
+    "Спаси́бо за встре́чу! Всего́ до́брого!",
+    "Я звоню́ по объявле́нию."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-s4",
+   "question": "🗣 Vaziyat: Bankomatdan pul yechmoqchi edingiz, lekin pul chiqmadi. Bank xodimiga aytasiz:\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Где мо́жно обменя́ть до́ллары?",
+    "Я хочу́ откры́ть счёт.",
+    "Банкома́т не вы́дал де́ньги.",
+    "Како́й сего́дня курс?"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-r1",
+   "question": "📖 Matn: «Абдулази́з и Нигора́ сня́ли двухко́мнатную кварти́ру в це́нтре Ташке́нта. Кварти́ра на пя́том этаже́, в до́ме есть лифт. Она́ све́тлая, есть балко́н и больша́я ку́хня. Ме́бели ма́ло: то́лько дива́н и шкаф. Кварти́ра сто́ит пять миллио́нов сумо́в в ме́сяц, а коммуна́льные услу́ги они́ пла́тят са́ми. Хозя́ин кварти́ры — хоро́ший челове́к. Де́тям о́чень нра́вится балко́н.»\n\nSavol: Kvartira nechanchi qavatda?",
+   "options": [
+    "to'qqizinchi",
+    "beshinchi",
+    "ikkinchi",
+    "uchinchi"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-r2",
+   "question": "📖 Matn: «Абдулази́з и Нигора́ сня́ли двухко́мнатную кварти́ру в це́нтре Ташке́нта. Кварти́ра на пя́том этаже́, в до́ме есть лифт. Она́ све́тлая, есть балко́н и больша́я ку́хня. Ме́бели ма́ло: то́лько дива́н и шкаф. Кварти́ра сто́ит пять миллио́нов сумо́в в ме́сяц, а коммуна́льные услу́ги они́ пла́тят са́ми. Хозя́ин кварти́ры — хоро́ший челове́к. Де́тям о́чень нра́вится балко́н.»\n\nSavol: Kvartirada qanday mebel bor?",
+   "options": [
+    "hamma kerakli mebel bor",
+    "faqat stol va stullar",
+    "mebel umuman yo'q",
+    "faqat divan va shkaf"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-r3",
+   "question": "📖 Matn: «Абдулази́з и Нигора́ сня́ли двухко́мнатную кварти́ру в це́нтре Ташке́нта. Кварти́ра на пя́том этаже́, в до́ме есть лифт. Она́ све́тлая, есть балко́н и больша́я ку́хня. Ме́бели ма́ло: то́лько дива́н и шкаф. Кварти́ра сто́ит пять миллио́нов сумо́в в ме́сяц, а коммуна́льные услу́ги они́ пла́тят са́ми. Хозя́ин кварти́ры — хоро́ший челове́к. Де́тям о́чень нра́вится балко́н.»\n\nSavol: Kommunal xizmatlar uchun kim to'laydi?",
+   "options": [
+    "bank",
+    "hech kim — ijara narxiga kiradi",
+    "uy egasi",
+    "Abdulaziz va Nigoraning o'zlari"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-r4",
+   "question": "📖 Matn: «Бобу́р роди́лся в 2002 году́ в Андижа́не. Там он око́нчил шко́лу. Пото́м он рабо́тал в магази́не в Москве́ и в Андижа́не, а пото́м перее́хал в Ташке́нт. Он всегда́ мечта́л рабо́тать в ба́нке, и сейча́с он ме́неджер в ба́нке, где рабо́тает Анто́н. Вчера́ Бобу́р сказа́л Абдулази́зу, что хо́чет откры́ть своё кафе́. Абдулази́з спроси́л, есть ли у него́ де́ньги. Бобу́р отве́тил, что уже́ ко́пит де́ньги.»\n\nSavol: Bobur qachon tug'ilgan?",
+   "options": [
+    "1998-yilda",
+    "2002-yilda",
+    "2012-yilda",
+    "2000-yilda"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-r5",
+   "question": "📖 Matn: «Бобу́р роди́лся в 2002 году́ в Андижа́не. Там он око́нчил шко́лу. Пото́м он рабо́тал в магази́не в Москве́ и в Андижа́не, а пото́м перее́хал в Ташке́нт. Он всегда́ мечта́л рабо́тать в ба́нке, и сейча́с он ме́неджер в ба́нке, где рабо́тает Анто́н. Вчера́ Бобу́р сказа́л Абдулази́зу, что хо́чет откры́ть своё кафе́. Абдулази́з спроси́л, есть ли у него́ де́ньги. Бобу́р отве́тил, что уже́ ко́пит де́ньги.»\n\nSavol: Bobur hozir qayerda ishlaydi?",
+   "options": [
+    "bankda, menejer",
+    "o'z kafesida",
+    "do'konda",
+    "ofisda"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i6-r6",
+   "question": "📖 Matn: «Бобу́р роди́лся в 2002 году́ в Андижа́не. Там он око́нчил шко́лу. Пото́м он рабо́тал в магази́не в Москве́ и в Андижа́не, а пото́м перее́хал в Ташке́нт. Он всегда́ мечта́л рабо́тать в ба́нке, и сейча́с он ме́неджер в ба́нке, где рабо́тает Анто́н. Вчера́ Бобу́р сказа́л Абдулази́зу, что хо́чет откры́ть своё кафе́. Абдулази́з спроси́л, есть ли у него́ де́ньги. Бобу́р отве́тил, что уже́ ко́пит де́ньги.»\n\nSavol: Abdulaziz Boburdan nimani so'radi?",
+   "options": [
+    "Moskvaga borgan-bormaganini",
+    "puli bor-yo'qligini",
+    "qayerda ishlashini",
+    "kafeni qachon ochishini"
+   ],
+   "correctIndex": 1
+  }
+ ]
+}

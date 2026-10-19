@@ -1,0 +1,567 @@
+{
+ "n": 9,
+ "lessonId": "l1784055280406-8",
+ "type": "video",
+ "id": "l1784055280406-8",
+ "topic": "Fe'llar: 2-tur tuslanish",
+ "title": "Fe'llarning 2-tur tuslanishi va istisnolar",
+ "title_ru": "Глаго́лы 2-го спряже́ния и глаго́лы-исключе́ния",
+ "videoUrl": "https://youtu.be/B3kcge9F4uI",
+ "cando": "-ить fe'llarini (говори́ть, учи́ть) va istisno fe'llarni (смотре́ть, ви́деть, слы́шать) hozirgi zamonda to'g'ri tuslayman.",
+ "review": [
+  {
+   "q": "2-tur fe'llarda nechta harf olib tashlanadi?",
+   "a": "3 ta (-ить): говори́ть → говор-"
+  },
+  {
+   "q": "2-tur qo'shimchalari?",
+   "a": "-ю/-у, -ишь, -ит, -им, -и́те, -ят/-ат"
+  },
+  {
+   "q": "«держа́ть» — nega держу́, де́ржат (ю/я emas)?",
+   "a": "ж dan keyin ю/я yozilmaydi (7 harf qoidasi: к г х ж ш ч щ)"
+  },
+  {
+   "q": "-еть bilan tugab 2-turga kiruvchi fe'llar?",
+   "a": "смотре́ть, ви́деть, ненави́деть, зави́сеть, терпе́ть, оби́деть, верте́ть"
+  },
+  {
+   "q": "«брить» qaysi tur?",
+   "a": "1-tur (бре́ю, бре́ешь) — istisno"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "говори́ть",
+   "tr": "[gavarít']",
+   "uz": "gapirmoq: говорю́, говори́шь, говоря́т",
+   "ex": "Я хорошо́ говорю́ по-ру́сски.",
+   "img": "cards/говорить.jpg",
+   "icon": "",
+   "vocabId": "v-9-1",
+   "media": "media/ru/L09/w_v-9-1.jpg"
+  },
+  {
+   "ru": "смотре́ть",
+   "tr": "[smatrét']",
+   "uz": "qaramoq, ko'rmoq: смотрю́, смо́тришь, смо́трят",
+   "ex": "Они́ смо́трят телеви́зор.",
+   "img": "cards/смотреть.jpg",
+   "icon": "",
+   "vocabId": "v-9-2",
+   "media": "media/ru/L09/w_v-9-2.jpg"
+  },
+  {
+   "ru": "ви́деть",
+   "tr": "[vídet']",
+   "uz": "ko'rmoq: ви́жу, ви́дишь, ви́дят",
+   "ex": "Ты ви́дишь меня́? — Да, я тебя́ ви́жу!",
+   "img": "cards/видеть.jpg",
+   "icon": "",
+   "vocabId": "v-9-3",
+   "media": "media/ru/L09/w_v-9-3.jpg"
+  },
+  {
+   "ru": "слы́шать",
+   "tr": "[slýshat']",
+   "uz": "eshitmoq: слы́шу, слы́шишь, слы́шат",
+   "ex": "Он слы́шит но́вую пе́сню.",
+   "img": "cards/слышать.jpg",
+   "icon": "",
+   "vocabId": "v-9-4",
+   "media": "media/ru/L09/w_v-9-4.jpg"
+  },
+  {
+   "ru": "учи́ть",
+   "tr": "[uchít']",
+   "uz": "o'rganmoq, yodlamoq: учу́, у́чишь, у́чат",
+   "ex": "Студе́нты у́чат но́вые слова́.",
+   "img": "cards/учить.jpg",
+   "icon": "",
+   "vocabId": "v-9-5",
+   "media": "media/ru/L09/w_v-9-5.jpg"
+  },
+  {
+   "ru": "учи́ться",
+   "tr": "[uchítsa]",
+   "uz": "o'qimoq (joyda): учу́сь, у́чишься, у́чатся",
+   "ex": "Ты у́чишься в шко́ле и́ли в университе́те?",
+   "img": "cards/учиться.jpg",
+   "icon": "",
+   "vocabId": "v-9-6",
+   "media": "media/ru/L09/w_v-9-6.jpg"
+  },
+  {
+   "ru": "люби́ть",
+   "tr": "[lyubít']",
+   "uz": "sevmoq, yaxshi ko'rmoq: люблю́, лю́бишь, лю́бят",
+   "ex": "Мой сын лю́бит спорт.",
+   "img": "cards/любить.jpg",
+   "icon": "",
+   "vocabId": "v-9-7",
+   "media": "media/ru/L09/w_v-9-7.jpg"
+  },
+  {
+   "ru": "звони́ть",
+   "tr": "[zvanít']",
+   "uz": "qo'ng'iroq qilmoq: звоню́, звони́шь, звоня́т",
+   "ex": "Друг ча́сто звони́т мне.",
+   "img": "cards/звонить.jpg",
+   "icon": "",
+   "vocabId": "v-9-8",
+   "media": "media/ru/L09/w_v-9-8.jpg"
+  },
+  {
+   "ru": "спеши́ть",
+   "tr": "[spishít']",
+   "uz": "shoshilmoq: спешу́, спеши́шь, спеша́т",
+   "ex": "Мы спеши́м на уро́к.",
+   "img": "cards/спешить.jpg",
+   "icon": "",
+   "vocabId": "v-9-9",
+   "media": "media/ru/L09/w_v-9-9.jpg"
+  },
+  {
+   "ru": "держа́ть",
+   "tr": "[derját']",
+   "uz": "ushlab turmoq: держу́, де́ржишь, де́ржат",
+   "ex": "Я держу́ телефо́н.",
+   "img": "cards/держать.jpg",
+   "icon": "",
+   "vocabId": "v-9-10",
+   "media": "media/ru/L09/w_v-9-10.jpg"
+  },
+  {
+   "ru": "иска́ть",
+   "tr": "[iskát']",
+   "uz": "qidirmoq (1-tur): ищу́, и́щешь, и́щут",
+   "ex": "Он и́щет рабо́ту.",
+   "img": "cards/искать.jpg",
+   "icon": "",
+   "vocabId": "v-9-11",
+   "media": "media/ru/L09/w_v-9-11.jpg"
+  },
+  {
+   "ru": "жить",
+   "tr": "[jyt']",
+   "uz": "yashamoq (1-tur): живу́, живёшь, живу́т",
+   "ex": "Мы живём в Ташке́нте.",
+   "img": "cards/жить.jpg",
+   "icon": "",
+   "vocabId": "v-9-12",
+   "media": "media/ru/L09/w_v-9-12.jpg"
+  },
+  {
+   "ru": "писа́ть",
+   "tr": "[pisát']",
+   "uz": "yozmoq (1-tur): пишу́, пи́шешь, пи́шут",
+   "ex": "Вы пи́шете письмо́?",
+   "img": "cards/писать.jpg",
+   "icon": "",
+   "vocabId": "v-9-13",
+   "media": "media/ru/L09/w_v-9-13.jpg"
+  },
+  {
+   "ru": "пить",
+   "tr": "[pit']",
+   "uz": "ichmoq (1-tur): пью, пьёшь, пьют",
+   "ex": "Мы пьём чай у́тром.",
+   "img": "cards/пить.jpg",
+   "icon": "",
+   "vocabId": "v-9-14",
+   "media": "media/ru/L09/w_v-9-14.jpg"
+  },
+  {
+   "ru": "ча́сто",
+   "tr": "[chásta]",
+   "uz": "tez-tez",
+   "ex": "Он ча́сто звони́т.",
+   "img": "cards/часто.jpg",
+   "icon": "",
+   "vocabId": "v-9-15",
+   "media": "media/ru/L09/w_v-9-15.jpg"
+  },
+  {
+   "ru": "по-ру́сски",
+   "tr": "[pa-rúski]",
+   "uz": "ruscha",
+   "ex": "Я говорю́ по-ру́сски.",
+   "img": "cards/по-русски.jpg",
+   "icon": "",
+   "vocabId": "v-9-16",
+   "media": "media/ru/L09/w_v-9-16.jpg"
+  }
+ ],
+ "konspekt": "9-DARS: Fe'llarning 2-tur tuslanishi va istisnolar\n(Глаго́лы 2-го спряже́ния и глаго́лы-исключе́ния)\n\nBu darsdan keyin siz: -ить fe'llarini va asosiy istisno fe'llarni to'g'ri tuslaysiz.\n\n---\n\n1. 2-tur fe'llar (-ить)\n\nQoida: oxirgi 3 harf (-ить) olib tashlanadi, qo'shimcha qo'shiladi:\n* я -ю (-у)\n* ты -ишь\n* он/она́ -ит\n* мы -им\n* вы -и́те\n* они́ -ят (-ат)\n\nговори́ть: говорю́, говори́шь, говори́т, говори́м, говори́те, говоря́т\nзвони́ть: звоню́, звони́шь, звони́т, звони́м, звони́те, звоня́т\nучи́ть: учу́, у́чишь, у́чит, у́чим, у́чите, у́чат\n\n1-tur bilan solishtiring: чита́ть → -ю, -ешь, -ет, -ем, -е́те, -ют. Farq: 2-turda И harfi (говорИ́шь, говорИ́т, говорИ́м, говорИ́те) va они́ — -ят.\n\n2. 7 harf qoidasi\n\nк г х ж ш ч щ dan keyin ю va я yozilmaydi → у va а:\n* держа́ть → держу́, де́ржат (держю emas!)\n* учи́ть → учу́, у́чат\n* слы́шать → слы́шу, слы́шат\n* спеши́ть → спешу́, спеша́т\n\n3. Istisno fe'llar (2-turga kiradi)\n\n-ать: гнать, держа́ть, дыша́ть, слы́шать\n-еть: смотре́ть, ви́деть, ненави́деть, зави́сеть, терпе́ть, оби́деть, верте́ть\n\nсмотре́ть: смотрю́, смо́тришь, смо́трит, смо́трим, смо́трите, смо́трят\nви́деть: ви́жу, ви́дишь, ви́дит, ви́дим, ви́дите, ви́дят (д → ж: ви́жу)\n\nTeskari istisno: брить, стели́ть — -ить, lekin 1-tur: бре́ю, бре́ешь.\n\n4. Boshqacha o'zgaradigan fe'llar (yodlang)\n\n* люби́ть: люблю́, лю́бишь, лю́бит, лю́бим, лю́бите, лю́бят (б → бл faqat «я» da)\n* учи́ться: учу́сь, у́чишься, у́чится, у́чимся, у́читесь, у́чатся\n* жить (1-tur): живу́, живёшь, живёт, живём, живёте, живу́т\n* писа́ть (1-tur): пишу́, пи́шешь, пи́шет, пи́шем, пи́шете, пи́шут\n* пить (1-tur): пью, пьёшь, пьёт, пьём, пьёте, пьют\n* иска́ть (1-tur): ищу́, и́щешь, и́щет, и́щем, и́щете, и́щут\n\n---\n\nDars xulosasi\n* -ить → 3 harf ketadi + -ю/-ишь/-ит/-им/-и́те/-ят.\n* к г х ж ш ч щ dan keyin: у / а.\n* смотре́ть, ви́деть, слы́шать, держа́ть — 2-tur (istisno).\n* люблю́, живу́, пишу́, пью — yodlanadi.\n\nUyga vazifa platformada: matn «Семья́ и увлече́ния», 15 test. Yordamchi ustoz bilan gapirish. Keyingi dars — jonli dars: ikkala tur bilan «Pantomima».",
+ "text": {
+  "title": "Семья́ и увлече́ния",
+  "ru": "Меня́ зову́т Абдулази́з. Я живу́ в Андижа́не. У меня́ есть семья́: жена́ Нигора́, сын Сардо́р и дочь Маржона́. У нас есть дом.\nМоя́ жена́ — учи́тель. Она́ чита́ет кни́ги и пи́шет пи́сьма. Мой сын лю́бит спорт. Он смо́трит футбо́л и де́лает заря́дку. Моя́ дочь лю́бит му́зыку и хорошо́ поёт.\nУ меня́ есть друг. Его́ зову́т Бобу́р. Он ча́сто звони́т мне. Мы смо́трим футбо́л, слу́шаем му́зыку и мно́го говори́м.",
+  "uz": "Mening ismim Abdulaziz. Men Andijonda yashayman. Mening oilam bor: xotinim Nigora, o'g'lim Sardor va qizim Marjona. Bizning uyimiz bor.\nXotinim — o'qituvchi. U kitoblar o'qiydi va xatlar yozadi. O'g'lim sportni yaxshi ko'radi. U futbol ko'radi va badantarbiya qiladi. Qizim musiqani yaxshi ko'radi va yaxshi kuylaydi.\nMening do'stim bor. Uning ismi Bobur. U menga tez-tez qo'ng'iroq qiladi. Biz futbol ko'ramiz, musiqa tinglaymiz va ko'p gapiramiz.",
+  "questions": [
+   {
+    "q": "Кто жена́ Абдулази́за по профе́ссии?",
+    "opts": [
+     "Музыка́нт",
+     "Учи́тель",
+     "Врач"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что лю́бит сын?",
+    "opts": [
+     "Спорт",
+     "Кни́ги",
+     "Му́зыку"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что де́лает друг Бобу́р?",
+    "opts": [
+     "Ча́сто звони́т",
+     "Гото́вит",
+     "Пи́шет кни́ги"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что друзья́ де́лают вме́сте?",
+    "opts": [
+     "Спят",
+     "Смо́трят футбо́л и говоря́т",
+     "Рабо́тают"
+    ],
+    "a": 1
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Ты меня́ ви́дишь? (Meni ko'ryapsanmi?)",
+  "lines": [
+   {
+    "who": "Анто́н",
+    "ru": "Алло́, Бобу́р! Ты меня́ слы́шишь?",
+    "uz": "Allo, Bobur! Meni eshityapsanmi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Да, я тебя́ слы́шу. А ты меня́ ви́дишь?",
+    "uz": "Ha, eshityapman. Sen meni ko'ryapsanmi?"
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Нет, не ви́жу. Что ты де́лаешь?",
+    "uz": "Yo'q, ko'rmayapman. Nima qilyapsan?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Я учу́ но́вые слова́. Я учу́сь в шко́ле «Домворк».",
+    "uz": "Yangi so'zlarni yodlayapman. Men «Domwork» maktabida o'qiyman."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Ты уже́ хорошо́ говори́шь по-ру́сски!",
+    "uz": "Sen allaqachon ruscha yaxshi gapirasan!"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Спаси́бо! Я люблю́ ру́сский язы́к.",
+    "uz": "Rahmat! Men rus tilini yaxshi ko'raman."
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "говори́ть",
+    "gapirmoq"
+   ],
+   [
+    "смотре́ть",
+    "ko'rmoq, qaramoq"
+   ],
+   [
+    "ви́деть",
+    "ko'rmoq"
+   ],
+   [
+    "слы́шать",
+    "eshitmoq"
+   ],
+   [
+    "учи́ть",
+    "yodlamoq"
+   ],
+   [
+    "люби́ть",
+    "yaxshi ko'rmoq"
+   ],
+   [
+    "звони́ть",
+    "qo'ng'iroq qilmoq"
+   ],
+   [
+    "спеши́ть",
+    "shoshilmoq"
+   ],
+   [
+    "иска́ть",
+    "qidirmoq"
+   ],
+   [
+    "пить",
+    "ichmoq"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Я хорошо́ ___ по-ру́сски. (Men ruscha yaxshi gapiraman.)",
+    "o": [
+     "говорю́",
+     "говори́шь",
+     "говори́т"
+    ],
+    "a": "говорю́"
+   },
+   {
+    "s": "Что ты ___? (Sen nima ko'ryapsan?)",
+    "o": [
+     "ви́дит",
+     "ви́жу",
+     "ви́дишь"
+    ],
+    "a": "ви́дишь"
+   },
+   {
+    "s": "Он ___ но́вую пе́сню. (U yangi qo'shiqni eshityapti.)",
+    "o": [
+     "слы́шит",
+     "слы́шат",
+     "слы́шу"
+    ],
+    "a": "слы́шит"
+   },
+   {
+    "s": "Мы ___ в Ташке́нте. (Biz Toshkentda yashaymiz.)",
+    "o": [
+     "живём",
+     "живёте",
+     "живу́т"
+    ],
+    "a": "живём"
+   },
+   {
+    "s": "Вы ___ письмо́? (Siz xat yozyapsizmi?)",
+    "o": [
+     "пи́шут",
+     "пи́шете",
+     "пишу́"
+    ],
+    "a": "пи́шете"
+   },
+   {
+    "s": "Они́ ___ телеви́зор. (Ular televizor ko'rishyapti.)",
+    "o": [
+     "смо́трит",
+     "смо́трят",
+     "смо́трим"
+    ],
+    "a": "смо́трят"
+   },
+   {
+    "s": "Она́ ___ слова́ в словаре́. (U lug'atda so'zlarni qidiryapti.)",
+    "o": [
+     "и́щут",
+     "и́щешь",
+     "и́щет"
+    ],
+    "a": "и́щет"
+   },
+   {
+    "s": "Ты ___ в шко́ле и́ли в университе́те?",
+    "o": [
+     "у́чишься",
+     "у́чится",
+     "у́чимся"
+    ],
+    "a": "у́чишься"
+   },
+   {
+    "s": "Мы ___ чай у́тром. (Biz ertalab choy ichamiz.)",
+    "o": [
+     "пьёшь",
+     "пьют",
+     "пьём"
+    ],
+    "a": "пьём"
+   },
+   {
+    "s": "Студе́нты ___ пра́вило. (Talabalar qoidani o'rganishyapti.)",
+    "o": [
+     "у́чит",
+     "у́чим",
+     "у́чат"
+    ],
+    "a": "у́чат"
+   },
+   {
+    "s": "Я ___ ру́сский язы́к. (Men rus tilini yaxshi ko'raman.)",
+    "o": [
+     "любю",
+     "люблю́",
+     "лю́бит"
+    ],
+    "a": "люблю́"
+   },
+   {
+    "s": "Я ___ телефо́н. (Men telefonni ushlab turibman.)",
+    "o": [
+     "держу́",
+     "де́ржит",
+     "держю"
+    ],
+    "a": "держу́"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Qaysi fe'l 2-tur?",
+    "o": [
+     "гуля́ть",
+     "чита́ть",
+     "говори́ть"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«смотре́ть» -еть bilan tugaydi, lekin…",
+    "o": [
+     "1-tur",
+     "2-tur (istisno)",
+     "tuslanmaydi"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«они́ го́вор___»",
+    "o": [
+     "-ут",
+     "-ют",
+     "-ят"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«ты смотр___»",
+    "o": [
+     "-ешь",
+     "-ёшь",
+     "-ишь"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«я ви́жу» — nega ж?",
+    "o": [
+     "д → ж almashinuvi",
+     "xato",
+     "7 harf qoidasi"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Мы спеши́м на уро́к» — tarjimasi:",
+    "o": [
+     "Biz darsni yaxshi ko'ramiz.",
+     "Biz darsda o'qiymiz.",
+     "Biz darsga shoshilyapmiz."
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "говорю́",
+     "Я",
+     "по-ру́сски"
+    ],
+    "a": "Я говорю́ по-ру́сски",
+    "t": "Men ruscha gapiraman"
+   },
+   {
+    "w": [
+     "смо́трит",
+     "Он",
+     "фильм"
+    ],
+    "a": "Он смо́трит фильм",
+    "t": "U film ko'ryapti"
+   },
+   {
+    "w": [
+     "живём",
+     "Мы",
+     "в",
+     "го́роде"
+    ],
+    "a": "Мы живём в го́роде",
+    "t": "Biz shaharda yashaymiz"
+   },
+   {
+    "w": [
+     "учи́те",
+     "Вы",
+     "слова́"
+    ],
+    "a": "Вы у́чите слова́",
+    "t": "Siz so'zlarni o'rganyapsiz"
+   },
+   {
+    "w": [
+     "ви́жу",
+     "Я",
+     "дру́га"
+    ],
+    "a": "Я ви́жу дру́га",
+    "t": "Men do'stimni ko'ryapman"
+   },
+   {
+    "w": [
+     "пьют",
+     "Они́",
+     "ко́фе"
+    ],
+    "a": "Они́ пьют ко́фе",
+    "t": "Ular kofe ichishyapti"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Я говорю́ по-ру́сски. Я учу́ но́вые слова́.",
+   "uz": "Men ruscha gapiraman. Yangi so'zlarni yodlayman."
+  },
+  {
+   "ru": "Ты меня́ слы́шишь? — Да, я тебя́ слы́шу.",
+   "uz": "Meni eshityapsanmi? — Ha, eshityapman."
+  },
+  {
+   "ru": "Я ви́жу дру́га. Он смо́трит фильм.",
+   "uz": "Men do'stimni ko'ryapman. U film ko'ryapti."
+  },
+  {
+   "ru": "Мы живём в Андижа́не и у́чимся в шко́ле «Домворк».",
+   "uz": "Biz Andijonda yashaymiz va «Domwork» maktabida o'qiymiz."
+  },
+  {
+   "ru": "Я люблю́ му́зыку. У́тром я пью чай.",
+   "uz": "Men musiqani yaxshi ko'raman. Ertalab choy ichaman."
+  },
+  {
+   "ru": "Он и́щет рабо́ту и ча́сто звони́т.",
+   "uz": "U ish qidiryapti va tez-tez qo'ng'iroq qiladi."
+  }
+ ]
+}

@@ -1,0 +1,259 @@
+{
+ "n": 10,
+ "lessonId": "l1784055280406-9",
+ "type": "live",
+ "id": "l1784055280406-9",
+ "topic": "1-tur va 2-tur fe'llar",
+ "title": "Jonli dars: «Что ты лю́бишь де́лать?»",
+ "cando": "Ikkala tur fe'llarini suhbatda aralash ishlataman: Я чита́ю и смотрю́. Ты говори́шь по-ру́сски?",
+ "vocab": [
+  {
+   "ru": "де́лать заря́дку",
+   "tr": "[délat' zaryátku]",
+   "uz": "badantarbiya qilmoq",
+   "ex": "У́тром я де́лаю заря́дку.",
+   "img": "cards/зарядка.jpg",
+   "icon": "",
+   "vocabId": "v-10-1",
+   "media": "media/ru/L10/w_v-10-1.jpg"
+  },
+  {
+   "ru": "спорт",
+   "tr": "[sport]",
+   "uz": "sport",
+   "ex": "Мой сын лю́бит спорт.",
+   "img": "cards/спорт.jpg",
+   "icon": "",
+   "vocabId": "v-10-2",
+   "media": "media/ru/L10/w_v-10-2.jpg"
+  },
+  {
+   "ru": "фильм",
+   "tr": "[fil'm]",
+   "uz": "film",
+   "ex": "Он смо́трит фильм.",
+   "img": "cards/фильм.jpg",
+   "icon": "",
+   "vocabId": "v-10-3",
+   "media": "media/ru/L10/w_v-10-3.jpg"
+  },
+  {
+   "ru": "но́вости",
+   "tr": "[nóvasti]",
+   "uz": "yangiliklar",
+   "ex": "Вы смо́трите но́вости?",
+   "img": "cards/новости.jpg",
+   "icon": "",
+   "vocabId": "v-10-4",
+   "media": "media/ru/L10/w_v-10-4.jpg"
+  },
+  {
+   "ru": "пе́сня",
+   "tr": "[pésnya]",
+   "uz": "qo'shiq",
+   "ex": "Она́ слы́шит но́вую пе́сню.",
+   "img": "cards/песня.jpg",
+   "icon": "",
+   "vocabId": "v-10-5",
+   "media": "media/ru/L10/w_v-10-5.jpg"
+  },
+  {
+   "ru": "ко́фе",
+   "tr": "[kófe]",
+   "uz": "kofe",
+   "ex": "Они́ пьют ко́фе.",
+   "img": "cards/кофе.jpg",
+   "icon": "",
+   "vocabId": "v-10-6",
+   "media": "media/ru/L10/w_v-10-6.jpg"
+  },
+  {
+   "ru": "дикта́нт",
+   "tr": "[diktánt]",
+   "uz": "diktant",
+   "ex": "Я пишу́ дикта́нт.",
+   "img": "cards/диктант.jpg",
+   "icon": "",
+   "vocabId": "v-10-7",
+   "media": "media/ru/L10/w_v-10-7.jpg"
+  },
+  {
+   "ru": "сове́т",
+   "tr": "[savét]",
+   "uz": "maslahat",
+   "ex": "Друг про́сит сове́т.",
+   "img": "cards/совет.jpg",
+   "icon": "",
+   "vocabId": "v-10-8",
+   "media": "media/ru/L10/w_v-10-8.jpg"
+  }
+ ],
+ "konspekt": "10-DARS (jonli dars): «Что ты лю́бишь де́лать?»\n\nBugun ustoz bilan 5- va 9-dars mavzularini jonli mashq qildik: 1-tur va 2-tur fe'llar aralash.\n\nTaqqoslash:\n* 1-tur (чита́ть): чита́ю, чита́ешь, чита́ет, чита́ем, чита́ете, чита́ют\n* 2-tur (говори́ть): говорю́, говори́шь, говори́т, говори́м, говори́те, говоря́т\n\nIstisnolar: смотрю́ — смо́тришь — смо́трят; ви́жу — ви́дишь — ви́дят; слы́шу — слы́шишь — слы́шат.\nBoshqacha: люблю́ — лю́бишь — лю́бят; живу́ — живёшь — живу́т; пишу́ — пи́шешь — пи́шут; пью — пьёшь — пьют.\n\nFoydali qolip: Я люблю́ + fe'l (infinitiv): Я люблю́ чита́ть. Я люблю́ смотре́ть футбо́л. Что ты лю́бишь де́лать?\n\nDarsda ishlatgan so'zlar: де́лать заря́дку, спорт, фильм, но́вости, пе́сня, ко́фе, дикта́нт, сове́т.\n\nUyga vazifa platformada: 15 ta savol. Yordamchi ustoz bilan gapirish. Keyingi dars — videodars: predlojniy padej — Где? в / на + -е.",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Ты ___ по-ру́сски? — Да, я хорошо́ говорю́.",
+    "o": [
+     "говори́т",
+     "говорю́",
+     "говори́шь"
+    ],
+    "a": "говори́шь"
+   },
+   {
+    "s": "Что он де́лает? — Он ___ фильм.",
+    "o": [
+     "смо́трит",
+     "смо́трят",
+     "смотрю́"
+    ],
+    "a": "смо́трит"
+   },
+   {
+    "s": "Где вы ___? — Мы живём в Самарка́нде.",
+    "o": [
+     "живёте",
+     "живёшь",
+     "живу́т"
+    ],
+    "a": "живёте"
+   },
+   {
+    "s": "Что ты ___? — Я пишу́ письмо́.",
+    "o": [
+     "пи́шет",
+     "пи́шут",
+     "пи́шешь"
+    ],
+    "a": "пи́шешь"
+   },
+   {
+    "s": "Что де́лают де́ти? — Они́ ___ чай.",
+    "o": [
+     "пьёт",
+     "пьём",
+     "пьют"
+    ],
+    "a": "пьют"
+   },
+   {
+    "s": "Вы ___ э́ту пе́сню? — Да, мы всё слы́шим.",
+    "o": [
+     "слы́шишь",
+     "слы́шат",
+     "слы́шите"
+    ],
+    "a": "слы́шите"
+   },
+   {
+    "s": "Ты ___ меня́? — Да, я тебя́ ви́жу!",
+    "o": [
+     "ви́дят",
+     "ви́дит",
+     "ви́дишь"
+    ],
+    "a": "ви́дишь"
+   },
+   {
+    "s": "Где ___ А́нна? — Она́ у́чится в институ́те.",
+    "o": [
+     "у́чатся",
+     "у́чится",
+     "у́чишься"
+    ],
+    "a": "у́чится"
+   },
+   {
+    "s": "Что вы ___? — Мы и́щем ключи́.",
+    "o": [
+     "и́щешь",
+     "и́щут",
+     "и́щете"
+    ],
+    "a": "и́щете"
+   },
+   {
+    "s": "Я ___ чита́ть кни́ги. (yaxshi ko'raman)",
+    "o": [
+     "люблю́",
+     "лю́бит",
+     "лю́бишь"
+    ],
+    "a": "люблю́"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Что ты лю́бишь де́лать?» — javob:",
+    "o": [
+     "Я люблю́ кни́га.",
+     "Я люблю́ чита́ть.",
+     "Я чита́ю."
+    ],
+    "a": 1
+   },
+   {
+    "q": "Qaysi gap to'g'ri?",
+    "o": [
+     "Он смо́трит фильм.",
+     "Он смотрет фильм.",
+     "Он смотрют фильм."
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Мы мно́го говори́м» — tarjimasi:",
+    "o": [
+     "Biz ko'p o'qiymiz.",
+     "Biz ko'p gapiramiz.",
+     "Biz ko'p ko'ramiz."
+    ],
+    "a": 1
+   },
+   {
+    "q": "«де́лать заря́дку» —",
+    "o": [
+     "kofe ichmoq",
+     "diktant yozmoq",
+     "badantarbiya qilmoq"
+    ],
+    "a": 2
+   },
+   {
+    "q": "2-tur fe'lni toping:",
+    "o": [
+     "звони́ть",
+     "гуля́ть",
+     "чита́ть"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "У́тром я пью чай и смотрю́ но́вости.",
+   "uz": "Ertalab men choy ichaman va yangiliklar ko'raman."
+  },
+  {
+   "ru": "Я люблю́ чита́ть кни́ги и слу́шать му́зыку.",
+   "uz": "Men kitob o'qishni va musiqa tinglashni yaxshi ko'raman."
+  },
+  {
+   "ru": "Что ты лю́бишь де́лать? — Я люблю́ игра́ть в футбо́л.",
+   "uz": "Nima qilishni yaxshi ko'rasan? — Futbol o'ynashni."
+  },
+  {
+   "ru": "Мой друг ча́сто звони́т, и мы мно́го говори́м.",
+   "uz": "Do'stim tez-tez qo'ng'iroq qiladi va biz ko'p gaplashamiz."
+  },
+  {
+   "ru": "Де́ти де́лают заря́дку, а ма́ма гото́вит.",
+   "uz": "Bolalar badantarbiya qilishyapti, oyim esa ovqat pishiryapti."
+  },
+  {
+   "ru": "Я учу́сь в шко́ле «Домворк» и учу́ но́вые слова́.",
+   "uz": "Men «Domwork» maktabida o'qiyman va yangi so'zlarni yodlayman."
+  }
+ ]
+}

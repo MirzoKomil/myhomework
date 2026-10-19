@@ -1,0 +1,524 @@
+{
+ "title_uz": "4-oraliq imtihon: 37–48-darslar",
+ "passPercent": 70,
+ "questions": [
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q01",
+   "question": "Xato gapni toping.",
+   "options": [
+    "За́втра я бу́ду рабо́тать.",
+    "Я сде́лаю э́то за́втра.",
+    "Я позвоню́ тебе́ ве́чером.",
+    "Я бу́ду сде́лать э́то за́втра."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q02",
+   "question": "Do'stingiz so'radi: «Пойдёшь с на́ми в кино́?» Rozilik bildiring.",
+   "options": [
+    "С пра́здником!",
+    "Счёт, пожа́луйста!",
+    "Бу́дьте здоро́вы!",
+    "С удово́льствием!"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q03",
+   "question": "Jarayon (НСВ) yoki natija (СВ)? «Вчера́ я до́лго … кни́гу.»",
+   "options": [
+    "прочита́л",
+    "чита́л",
+    "чита́ю",
+    "прочита́ю"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q04",
+   "question": "«Я забы́л позвони́ть ма́ме» — ma'nosini tanlang.",
+   "options": [
+    "Onamga qo'ng'iroq qilishni unutibman.",
+    "Onamga qo'ng'iroq qilishga ulgurdim.",
+    "Onam menga qo'ng'iroq qildi.",
+    "Onamga qo'ng'iroq qilaman."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q05",
+   "question": "«Писа́ть» fe'lining buyruq shakli (вы) qaysi?",
+   "options": [
+    "писите",
+    "писа́йте",
+    "пиши́те",
+    "пи́шете"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q06",
+   "question": "Siz shaharda adashib qoldingiz. Nima deysiz?",
+   "options": [
+    "У меня́ слома́лся телефо́н.",
+    "Я за ва́ми.",
+    "Я потеря́л кошелёк.",
+    "Я заблуди́лся."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q07",
+   "question": "«Har kuni ishga (transportda) qatnayman» — to'g'ri gapni tanlang.",
+   "options": [
+    "Я е́зжу на рабо́ту ка́ждый день.",
+    "Я е́зжу на рабо́те ка́ждый день.",
+    "Я е́ду на рабо́ту вчера́.",
+    "Я ездю на рабо́ту ка́ждый день."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q08",
+   "question": "Kassada: «Samarqandgacha bitta chipta, iltimos» — to'g'risini tanlang.",
+   "options": [
+    "Оди́н биле́т до Самарка́нд, пожа́луйста.",
+    "Одна́ биле́т до Самарка́нда, пожа́луйста.",
+    "Оди́н биле́т до Самарка́нда, пожа́луйста.",
+    "Оди́н биле́т в Самарка́нде, пожа́луйста."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q09",
+   "question": "To'g'ri gapni tanlang.",
+   "options": [
+    "У меня́ боли́т зу́бы.",
+    "У меня́ боля́т зу́бы.",
+    "Я боля́т зу́бы.",
+    "У меня́ боля́т зуб."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q10",
+   "question": "Shifokor so'radi: «Что вас беспоко́ит?» Mos javobni tanlang.",
+   "options": [
+    "Принима́йте лека́рство.",
+    "Бу́дьте здоро́вы!",
+    "Вот реце́пт.",
+    "У меня́ боли́т го́рло."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q11",
+   "question": "«Хоро́ший» so'zining qiyosiy darajasi qaysi?",
+   "options": [
+    "лу́чше",
+    "бо́льше",
+    "хоро́шее",
+    "ху́же"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-q12",
+   "question": "Ertaga yomg'ir yog'adi. Do'stingizga nima deysiz?",
+   "options": [
+    "Возьми́ зонт!",
+    "Пое́дем на мо́ре!",
+    "Возьми́ очки́!",
+    "Не бери́ ку́ртку!"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q13",
+   "sentence": "Что ты ___ де́лать в суббо́ту?",
+   "answer": "бу́дешь",
+   "options": [
+    "бу́дешь",
+    "бу́ду",
+    "бу́дет"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q14",
+   "sentence": "Ле́том я пое́ду на ___.",
+   "answer": "да́чу",
+   "options": [
+    "да́ча",
+    "да́че",
+    "да́чу"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q15",
+   "sentence": "Я ___ э́ту кни́гу за два дня.",
+   "answer": "прочита́л",
+   "options": [
+    "чита́ют",
+    "чита́ть",
+    "прочита́л"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q16",
+   "sentence": "Я не ___ пригото́вить у́жин.",
+   "answer": "успе́л",
+   "options": [
+    "успева́ет",
+    "успе́л",
+    "успе́ть"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q17",
+   "sentence": "Не ___! Уро́к начина́ется в де́вять.",
+   "answer": "опа́здывай",
+   "options": [
+    "опа́здывать",
+    "опа́здываешь",
+    "опа́здывай"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q18",
+   "sentence": "Я ___ па́спорт. Что де́лать?",
+   "answer": "потеря́л",
+   "options": [
+    "потеря́ли",
+    "потеря́л",
+    "потеря́ть"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q19",
+   "sentence": "Я е́зжу на рабо́ту на ___.",
+   "answer": "авто́бусе",
+   "options": [
+    "авто́бусом",
+    "авто́бусе",
+    "авто́бус"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q20",
+   "sentence": "Мо́жно ме́сто у ___?",
+   "answer": "окна́",
+   "options": [
+    "окне́",
+    "окна́",
+    "окно́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q21",
+   "sentence": "Принима́йте лека́рство три ___ в день.",
+   "answer": "ра́за",
+   "options": [
+    "раз",
+    "ра́за",
+    "разы́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i4-q22",
+   "sentence": "Са́мый жа́ркий ме́сяц — ___.",
+   "answer": "ию́ль",
+   "options": [
+    "ию́ль",
+    "дека́брь",
+    "янва́рь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q23",
+   "translation": "Yozda biz dengizga boramiz.",
+   "words": [
+    "мо́ре",
+    "мы",
+    "пое́дем",
+    "пое́ду",
+    "на",
+    "Ле́том"
+   ],
+   "answer": [
+    "Ле́том",
+    "мы",
+    "пое́дем",
+    "на",
+    "мо́ре"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q24",
+   "translation": "Men onamga qo'ng'iroq qildim.",
+   "words": [
+    "позвони́л",
+    "звоню́",
+    "Я",
+    "ма́ме"
+   ],
+   "answer": [
+    "Я",
+    "позвони́л",
+    "ма́ме"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q25",
+   "translation": "Keling, kinoga boramiz!",
+   "words": [
+    "пойду́",
+    "кино́",
+    "пойдём",
+    "Дава́й",
+    "в"
+   ],
+   "answer": [
+    "Дава́й",
+    "пойдём",
+    "в",
+    "кино́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q26",
+   "translation": "Akam Moskvadan keldi.",
+   "words": [
+    "Брат",
+    "Москву́",
+    "прие́хал",
+    "из",
+    "Москвы́"
+   ],
+   "answer": [
+    "Брат",
+    "прие́хал",
+    "из",
+    "Москвы́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q27",
+   "translation": "Mening boshim og'riyapti.",
+   "words": [
+    "меня́",
+    "У",
+    "боли́т",
+    "боля́т",
+    "голова́"
+   ],
+   "answer": [
+    "У",
+    "меня́",
+    "боли́т",
+    "голова́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q28",
+   "translation": "Men shifokorga yozilmoqchiman.",
+   "words": [
+    "хочу́",
+    "врача́",
+    "к",
+    "врачу́",
+    "записа́ться",
+    "Я"
+   ],
+   "answer": [
+    "Я",
+    "хочу́",
+    "записа́ться",
+    "к",
+    "врачу́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q29",
+   "translation": "Bugun yomg'ir yog'yapti.",
+   "words": [
+    "идёт",
+    "дождя́",
+    "дождь",
+    "Сего́дня"
+   ],
+   "answer": [
+    "Сего́дня",
+    "идёт",
+    "дождь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i4-q30",
+   "translation": "Poyezd samolyotdan arzonroq.",
+   "words": [
+    "чем",
+    "По́езд",
+    "деше́вле",
+    "самолёт",
+    "дешёвый"
+   ],
+   "answer": [
+    "По́езд",
+    "деше́вле",
+    "чем",
+    "самолёт"
+   ]
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-s1",
+   "question": "🗣 Vaziyat: Taksiga o'tirdingiz, vokzalga borishingiz kerak. Haydovchiga nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Вокза́л, спаси́бо.",
+    "Оди́н биле́т, пожа́луйста.",
+    "Где здесь такси́?",
+    "До вокза́ла, пожа́луйста."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-s2",
+   "question": "🗣 Vaziyat: O'qituvchi juda tez gapiryapti, siz tushunmayapsiz. Iltimos qiling.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Говори́те, пожа́луйста, ме́дленнее.",
+    "Не говори́те, пожа́луйста.",
+    "Пиши́те, пожа́луйста.",
+    "Говори́те, пожа́луйста, быстре́е."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-s3",
+   "question": "🗣 Vaziyat: Do'stingizni shanba kuni piknikka taklif qilasiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Ты лю́бишь пикни́к?",
+    "Где был пикни́к?",
+    "Я был на пикни́ке в суббо́ту.",
+    "Дава́й пое́дем на пикни́к в суббо́ту!"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-s4",
+   "question": "🗣 Vaziyat: Hamkasbingiz aksirdi. Unga nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Договори́лись!",
+    "С удово́льствием!",
+    "Бу́дьте здоро́вы!",
+    "Поздравля́ю!"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-r1",
+   "question": "📖 Matn: «За́втра Анто́н лети́т в Москву́ на самолёте. Он бу́дет там рабо́тать пять дней. Сейча́с в Ташке́нте тепло́ и со́лнечно, плюс два́дцать два гра́дуса. А в Москве́ хо́лодно и идёт дождь: то́лько плюс во́семь. Жена́ говори́т Анто́ну: „Возьми́ тёплую ку́ртку и зонт!“ В Москве́ Анто́н обяза́тельно встре́тится с бра́том. В суббо́ту он бу́дет до́ма.»\n\nSavol: Anton Moskvaga nima bilan boradi?",
+   "options": [
+    "avtobusda",
+    "mashinada",
+    "poyezdda",
+    "samolyotda"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-r2",
+   "question": "📖 Matn: «За́втра Анто́н лети́т в Москву́ на самолёте. Он бу́дет там рабо́тать пять дней. Сейча́с в Ташке́нте тепло́ и со́лнечно, плюс два́дцать два гра́дуса. А в Москве́ хо́лодно и идёт дождь: то́лько плюс во́семь. Жена́ говори́т Анто́ну: „Возьми́ тёплую ку́ртку и зонт!“ В Москве́ Анто́н обяза́тельно встре́тится с бра́том. В суббо́ту он бу́дет до́ма.»\n\nSavol: Hozir Moskvada ob-havo qanday?",
+   "options": [
+    "sovuq, yomg'ir yog'yapti",
+    "juda issiq",
+    "qor yog'yapti",
+    "iliq va quyoshli"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-r3",
+   "question": "📖 Matn: «За́втра Анто́н лети́т в Москву́ на самолёте. Он бу́дет там рабо́тать пять дней. Сейча́с в Ташке́нте тепло́ и со́лнечно, плюс два́дцать два гра́дуса. А в Москве́ хо́лодно и идёт дождь: то́лько плюс во́семь. Жена́ говори́т Анто́ну: „Возьми́ тёплую ку́ртку и зонт!“ В Москве́ Анто́н обяза́тельно встре́тится с бра́том. В суббо́ту он бу́дет до́ма.»\n\nSavol: Anton Moskvada kim bilan uchrashadi?",
+   "options": [
+    "akasi bilan",
+    "xotini bilan",
+    "singlisi bilan",
+    "Bobur bilan"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-r4",
+   "question": "📖 Matn: «Вчера́ Сардо́р заболе́л. У него́ боле́ла голова́ и была́ температу́ра — три́дцать во́семь. Нигора́ записа́ла сы́на к врачу́. Врач посмотре́л Сардо́ра и сказа́л: „Э́то просту́да. Вот реце́пт. Принима́йте табле́тки три ра́за в день и пе́йте мно́го ча́я. Три дня не ходи́те в шко́лу“. Сего́дня Сардо́ру уже́ лу́чше, но он до́ма. Он рису́ет и игра́ет с сестро́й.»\n\nSavol: Kecha Sardorning nimasi og'ridi?",
+   "options": [
+    "boshi",
+    "qorni",
+    "tomog'i",
+    "tishi"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-r5",
+   "question": "📖 Matn: «Вчера́ Сардо́р заболе́л. У него́ боле́ла голова́ и была́ температу́ра — три́дцать во́семь. Нигора́ записа́ла сы́на к врачу́. Врач посмотре́л Сардо́ра и сказа́л: „Э́то просту́да. Вот реце́пт. Принима́йте табле́тки три ра́за в день и пе́йте мно́го ча́я. Три дня не ходи́те в шко́лу“. Сего́дня Сардо́ру уже́ лу́чше, но он до́ма. Он рису́ет и игра́ет с сестро́й.»\n\nSavol: Tabletkalarni qanday ichish kerak?",
+   "options": [
+    "kuniga bir marta",
+    "haftada uch marta",
+    "kuniga ikki marta",
+    "kuniga uch marta"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i4-r6",
+   "question": "📖 Matn: «Вчера́ Сардо́р заболе́л. У него́ боле́ла голова́ и была́ температу́ра — три́дцать во́семь. Нигора́ записа́ла сы́на к врачу́. Врач посмотре́л Сардо́ра и сказа́л: „Э́то просту́да. Вот реце́пт. Принима́йте табле́тки три ра́за в день и пе́йте мно́го ча́я. Три дня не ходи́те в шко́лу“. Сего́дня Сардо́ру уже́ лу́чше, но он до́ма. Он рису́ет и игра́ет с сестро́й.»\n\nSavol: Bugun Sardor nima qilyapti?",
+   "options": [
+    "hovlida futbol o'ynayapti",
+    "uyda rasm chizyapti va singlisi bilan o'ynayapti",
+    "yana shifokorga boryapti",
+    "maktabda o'qiyapti"
+   ],
+   "correctIndex": 1
+  }
+ ]
+}

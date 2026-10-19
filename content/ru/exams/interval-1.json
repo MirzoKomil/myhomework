@@ -1,0 +1,516 @@
+{
+ "title_uz": "1-oraliq imtihon: 1–12-darslar",
+ "passPercent": 70,
+ "questions": [
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q01",
+   "question": "«Молоко́» so'zi qanday o'qiladi?",
+   "options": [
+    "[малако]",
+    "[молако]",
+    "[малоко]",
+    "[молоко]"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q02",
+   "question": "Siz gapni tushunmadingiz. Suhbatdoshga nima deysiz?",
+   "options": [
+    "О́чень прия́тно!",
+    "Повтори́те, пожа́луйста.",
+    "До свида́ния!",
+    "Как дела́?"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q03",
+   "question": "«Unda (ayolda) kitob bor» — to'g'ri tarjimani tanlang.",
+   "options": [
+    "У неё есть кни́га.",
+    "У её есть кни́га.",
+    "У него́ есть кни́га.",
+    "У она́ есть кни́га."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q04",
+   "question": "«Вот» so'zining ma'nosi qaysi?",
+   "options": [
+    "vaqt",
+    "bu yerda",
+    "u yerda",
+    "mana, ana"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q05",
+   "question": "To'g'ri shaklni tanlang: «Что вы … сейча́с?»",
+   "options": [
+    "де́лают",
+    "де́лает",
+    "де́лаете",
+    "де́лаем"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q06",
+   "question": "«Он поёт» — bu qaysi fe'lning shakli?",
+   "options": [
+    "писа́ть",
+    "петь",
+    "полива́ть",
+    "пить"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q07",
+   "question": "Qaysi so'z сре́дний род (o'rta jins)?",
+   "options": [
+    "па́спорт",
+    "су́мка",
+    "ко́мната",
+    "окно́"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q08",
+   "question": "Mos so'roq so'zini tanlang: «… э́то фо́то?»",
+   "options": [
+    "Чья",
+    "Чьё",
+    "Чьи",
+    "Чей"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q09",
+   "question": "Xato gapni toping.",
+   "options": [
+    "Я держю су́мку.",
+    "Я ви́жу дом.",
+    "Они́ смо́трят фильм.",
+    "Ты ча́сто звони́шь?"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q10",
+   "question": "«Что ты лю́бишь де́лать?» savoliga to'g'ri javobni tanlang.",
+   "options": [
+    "Я люби́ть чита́ть.",
+    "Я лю́бит чита́ть.",
+    "Я люблю́ чита́ть.",
+    "Я люблю́ чита́ю."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q11",
+   "question": "Mos predlogni tanlang: «Я гуля́ю … у́лице.»",
+   "options": [
+    "у",
+    "на",
+    "в",
+    "из"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-q12",
+   "question": "«Где ты?» savoliga to'g'ri javobni tanlang.",
+   "options": [
+    "Я на остано́вке.",
+    "Я остано́вке.",
+    "Я в остано́вке.",
+    "Я на остано́вка."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q13",
+   "sentence": "Мне 23 ___.",
+   "answer": "го́да",
+   "options": [
+    "го́да",
+    "лет",
+    "год"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q14",
+   "sentence": "Как ___? — Хорошо́!",
+   "answer": "дела́",
+   "options": [
+    "дела́",
+    "де́ло",
+    "де́лать"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q15",
+   "sentence": "У ___ есть маши́на? — Да, у меня́ есть маши́на.",
+   "answer": "тебя́",
+   "options": [
+    "тебя́",
+    "твой",
+    "ты"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q16",
+   "sentence": "Они́ ___ в футбо́л.",
+   "answer": "игра́ют",
+   "options": [
+    "игра́ет",
+    "игра́ют",
+    "игра́ешь"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q17",
+   "sentence": "Я не ___, я отдыха́ю.",
+   "answer": "рабо́таю",
+   "options": [
+    "рабо́таю",
+    "рабо́тает",
+    "рабо́тать"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q18",
+   "sentence": "Э́то ___ су́мка.",
+   "answer": "моя́",
+   "options": [
+    "мой",
+    "моё",
+    "моя́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q19",
+   "sentence": "Э́то А́нна и Бобу́р. Э́то ___ докуме́нты.",
+   "answer": "их",
+   "options": [
+    "его́",
+    "её",
+    "их"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q20",
+   "sentence": "Мы ___ чай.",
+   "answer": "пьём",
+   "options": [
+    "пьём",
+    "пьют",
+    "пью"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q21",
+   "sentence": "Мы у́чимся в ___.",
+   "answer": "университе́те",
+   "options": [
+    "университе́т",
+    "университе́те",
+    "университе́та"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i1-q22",
+   "sentence": "Днём я обе́даю в ___.",
+   "answer": "кафе́",
+   "options": [
+    "ка́фу",
+    "кафы",
+    "кафе́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q23",
+   "translation": "Mening ismim Aziz.",
+   "words": [
+    "Мне",
+    "Меня́",
+    "зову́т",
+    "Ази́з"
+   ],
+   "answer": [
+    "Меня́",
+    "зову́т",
+    "Ази́з"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q24",
+   "translation": "Men Andijondanman.",
+   "words": [
+    "Я",
+    "Андижа́на",
+    "из",
+    "в"
+   ],
+   "answer": [
+    "Я",
+    "из",
+    "Андижа́на"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q25",
+   "translation": "Sizda vaqt bormi?",
+   "words": [
+    "вре́мя",
+    "вы",
+    "вас",
+    "есть",
+    "У"
+   ],
+   "answer": [
+    "У",
+    "вас",
+    "есть",
+    "вре́мя"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q26",
+   "translation": "Sen nima qilyapsan?",
+   "words": [
+    "де́лает",
+    "Что",
+    "де́лаешь",
+    "ты"
+   ],
+   "answer": [
+    "Что",
+    "ты",
+    "де́лаешь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q27",
+   "translation": "Bu mening kalitlarim.",
+   "words": [
+    "мои́",
+    "Э́то",
+    "ключи́",
+    "мой"
+   ],
+   "answer": [
+    "Э́то",
+    "мои́",
+    "ключи́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q28",
+   "translation": "Men film ko'rishni yaxshi ko'raman.",
+   "words": [
+    "смотрю́",
+    "Я",
+    "люблю́",
+    "фи́льмы",
+    "смотре́ть"
+   ],
+   "answer": [
+    "Я",
+    "люблю́",
+    "смотре́ть",
+    "фи́льмы"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q29",
+   "translation": "Men ofisda ishlayman.",
+   "words": [
+    "на",
+    "Я",
+    "в",
+    "рабо́таю",
+    "о́фисе"
+   ],
+   "answer": [
+    "Я",
+    "рабо́таю",
+    "в",
+    "о́фисе"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i1-q30",
+   "translation": "Ertalab men choy ichaman.",
+   "words": [
+    "чай",
+    "пьёт",
+    "пью",
+    "я",
+    "У́тром"
+   ],
+   "answer": [
+    "У́тром",
+    "я",
+    "пью",
+    "чай"
+   ]
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-s1",
+   "question": "🗣 Vaziyat: Ertalab ishxonaga keldingiz. Hamkasbingiz bilan salomlashasiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Спаси́бо!",
+    "Пока́!",
+    "До свида́ния!",
+    "До́брое у́тро!"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-s2",
+   "question": "🗣 Vaziyat: Yangi odam bilan tanishdingiz, u o'z ismini aytdi. Nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "До свида́ния!",
+    "Пло́хо.",
+    "Прости́те!",
+    "О́чень прия́тно!"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-s3",
+   "question": "🗣 Vaziyat: Do'stingizga qo'ng'iroq qildingiz. U hozir qayerda ekanini bilmoqchisiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Чей э́то?",
+    "Кто ты?",
+    "Как ты?",
+    "Где ты?"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-s4",
+   "question": "🗣 Vaziyat: Darsda ruchkangiz yo'q. Sinfdoshingizdan so'raysiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "У тебя́ есть ру́чка?",
+    "Где твоя́ су́мка?",
+    "У меня́ есть ру́чка.",
+    "Чья э́то кни́га?"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-r1",
+   "question": "📖 Matn: «Приве́т! Меня́ зову́т Абдулази́з. Мне 28 лет. Я живу́ в Андижа́не и рабо́таю в ба́нке. Моя́ жена́ — Нигора́. Она́ рабо́тает в больни́це. У нас есть сын и дочь. Мой сын — Сардо́р, он у́чится в шко́ле. Моя́ дочь — Маржона́, она́ о́чень лю́бит петь. У́тром я пью чай и чита́ю но́вости. Ве́чером мы до́ма: я чита́ю кни́гу, а Нигора́ слу́шает му́зыку.»\n\nSavol: Abdulaziz qayerda ishlaydi?",
+   "options": [
+    "bankda",
+    "maktabda",
+    "kasalxonada",
+    "do'konda"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-r2",
+   "question": "📖 Matn: «Приве́т! Меня́ зову́т Абдулази́з. Мне 28 лет. Я живу́ в Андижа́не и рабо́таю в ба́нке. Моя́ жена́ — Нигора́. Она́ рабо́тает в больни́це. У нас есть сын и дочь. Мой сын — Сардо́р, он у́чится в шко́ле. Моя́ дочь — Маржона́, она́ о́чень лю́бит петь. У́тром я пью чай и чита́ю но́вости. Ве́чером мы до́ма: я чита́ю кни́гу, а Нигора́ слу́шает му́зыку.»\n\nSavol: Kim maktabda o'qiydi?",
+   "options": [
+    "Маржона́",
+    "Абдулази́з",
+    "Сардо́р",
+    "Нигора́"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-r3",
+   "question": "📖 Matn: «Приве́т! Меня́ зову́т Абдулази́з. Мне 28 лет. Я живу́ в Андижа́не и рабо́таю в ба́нке. Моя́ жена́ — Нигора́. Она́ рабо́тает в больни́це. У нас есть сын и дочь. Мой сын — Сардо́р, он у́чится в шко́ле. Моя́ дочь — Маржона́, она́ о́чень лю́бит петь. У́тром я пью чай и чита́ю но́вости. Ве́чером мы до́ма: я чита́ю кни́гу, а Нигора́ слу́шает му́зыку.»\n\nSavol: Kechqurun Nigora nima qiladi?",
+   "options": [
+    "musiqa tinglaydi",
+    "yangiliklarni o'qiydi",
+    "qo'shiq aytadi",
+    "kitob o'qiydi"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-r4",
+   "question": "📖 Matn: «Приве́т! Меня́ зову́т Бобу́р. Я из Андижа́на, но сейча́с я живу́ в Москве́. Я рабо́таю в магази́не. Днём я на рабо́те, а ве́чером я до́ма: я чита́ю, смотрю́ фи́льмы и учу́ слова́. Я понима́ю по-ру́сски, но говорю́ пло́хо. Я люблю́ спорт и ча́сто игра́ю в футбо́л на стадио́не. А ты? Что ты лю́бишь де́лать?»\n\nSavol: Bobur hozir qayerda yashaydi?",
+   "options": [
+    "Moskvada",
+    "Andijonda",
+    "Samarqandda",
+    "Toshkentda"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-r5",
+   "question": "📖 Matn: «Приве́т! Меня́ зову́т Бобу́р. Я из Андижа́на, но сейча́с я живу́ в Москве́. Я рабо́таю в магази́не. Днём я на рабо́те, а ве́чером я до́ма: я чита́ю, смотрю́ фи́льмы и учу́ слова́. Я понима́ю по-ру́сски, но говорю́ пло́хо. Я люблю́ спорт и ча́сто игра́ю в футбо́л на стадио́не. А ты? Что ты лю́бишь де́лать?»\n\nSavol: Bobur qayerda ishlaydi?",
+   "options": [
+    "do'konda",
+    "kasalxonada",
+    "bankda",
+    "stadionda"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i1-r6",
+   "question": "📖 Matn: «Приве́т! Меня́ зову́т Бобу́р. Я из Андижа́на, но сейча́с я живу́ в Москве́. Я рабо́таю в магази́не. Днём я на рабо́те, а ве́чером я до́ма: я чита́ю, смотрю́ фи́льмы и учу́ слова́. Я понима́ю по-ру́сски, но говорю́ пло́хо. Я люблю́ спорт и ча́сто игра́ю в футбо́л на стадио́не. А ты? Что ты лю́бишь де́лать?»\n\nSavol: Bobur ruscha qanday gapiradi?",
+   "options": [
+    "о́чень хорошо́",
+    "пло́хо",
+    "норма́льно",
+    "хорошо́"
+   ],
+   "correctIndex": 1
+  }
+ ]
+}
