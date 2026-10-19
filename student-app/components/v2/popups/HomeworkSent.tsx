@@ -9,7 +9,7 @@ import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bounce } from '@/components/v2/motion';
+import { Bounce, Confetti } from '@/components/v2/motion';
 import { playSfx } from '@/services/sfx';
 import { speak, stopVoice } from '@/services/voicePraise';
 
@@ -46,9 +46,10 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
 
   useEffect(() => {
     if (!visible) return;
-    playSfx('unlock');
+    // Butun vazifa — eng katta bayram: fanfara (+ konfetti); past natijada yumshoqroq.
+    playSfx(pct >= 70 ? 'complete' : 'unlock');
     // "Barakalla" faqat yaxshi natijada; past natijada — yumshoq dalda.
-    speak(pct >= 70 ? 'homework' : 'wrong', 700);
+    speak(pct >= 70 ? 'homework' : 'wrong', pct >= 70 ? 1550 : 700);
     return () => stopVoice();
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -143,6 +144,7 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
           </View>
         </View>
       </View>
+      {visible && pct >= 70 && <Confetti count={40} seed={5} />}
     </Modal>
   );
 }

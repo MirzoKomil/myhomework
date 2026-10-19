@@ -181,6 +181,7 @@ export default function V2Settings() {
               {/* Qorong'u rejim uchun hali saqlash joyi yo'q — dizayndagi kabi o'chiq turadi, bosilsa DarkMain (bosh sahifa) */}
               <Pressable
                 accessibilityRole="switch"
+                accessibilityLabel="Qorongʻu rejim"
                 accessibilityState={{ checked: false }}
                 aria-checked={false}
                 onPress={() => go(R.home)}

@@ -39,6 +39,8 @@ import {
   submitBattleAnswer,
 } from '@/services/contentApi';
 import { playSfx } from '@/services/sfx';
+import { speak, stopVoice } from '@/services/voicePraise';
+import { Confetti } from '@/components/v2/motion';
 import { addLightning } from '@/services/lightningStore';
 import { useAuth } from '@/services/studentAuthStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
@@ -377,7 +379,12 @@ export default function BattleScreen() {
         setWinPaid(ok);
       }).catch(() => setWinPaid(false));
       playSfx('complete');
-    } else if (playerScore < opponentScore) playSfx('lose');
+      speak('gameWin', 1550);
+    } else if (playerScore < opponentScore) {
+      playSfx('lose');
+      speak('gameLose', 1050);
+    }
+    return () => stopVoice();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -620,6 +627,7 @@ export default function BattleScreen() {
           <Text style={styles.footerText}>oladi</Text>
         </View>
       </View>
+      {phase === 'result' && playerScore > opponentScore && <Confetti count={34} />}
     </View>
   );
 }

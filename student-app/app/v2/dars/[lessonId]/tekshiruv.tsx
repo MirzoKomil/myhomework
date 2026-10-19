@@ -69,6 +69,7 @@ export default function QuickCheckScreen() {
   useEffect(() => {
     resetPraiseRun();
   }, [trackIdx]);
+  useEffect(() => () => stopVoice(), []);
 
   const listen = () => {
     if (!q) return;

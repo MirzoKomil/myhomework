@@ -85,11 +85,22 @@ export function Pop({
 }
 
 /** Xato javobda yonma-yon silkinish. `trigger` o'zgarganda (yoki mount'da) ishlaydi. */
-export function Shake({ children, trigger = 0, style }: { children: ReactNode; trigger?: number | string | boolean; style?: StyleProp<ViewStyle> }) {
+export function Shake({
+  children,
+  trigger = 0,
+  onlyWhenTruthy = false,
+  style,
+}: {
+  children: ReactNode;
+  trigger?: number | string | boolean;
+  /** Faqat `trigger` rost bo'lganda silkinadi (doim o'ralgan elementlar uchun — fokus yo'qolmasin). */
+  onlyWhenTruthy?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
   const reduce = useReducedMotion();
   const x = useSharedValue(0);
   useEffect(() => {
-    if (reduce) return;
+    if (reduce || (onlyWhenTruthy && !trigger)) return;
     x.value = withSequence(
       withTiming(-9, { duration: 50 }),
       withTiming(8, { duration: 60 }),

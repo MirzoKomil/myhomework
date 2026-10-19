@@ -17,6 +17,8 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import * as Speech from 'expo-speech';
+import { Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 
 import { enqueuePrime, hasUserGesture, isSpeechBusy } from './audioUnlock';
@@ -25,7 +27,7 @@ import { VOICE_SOURCES, type VoiceGroup } from './voiceClips';
 const STORAGE_KEY = 'v2.voicePraiseEnabled';
 /** Maqtov aytiladigan ketma-ket to'g'ri javoblar soni (10 dan keyin — har 4-da). */
 const PRAISE_AT = [2, 4, 7, 10];
-const MIN_GAP_MS = 8000;
+const MIN_GAP_MS = 6000;
 /** To'g'ri javob chimi (0–780 ms) va coin (220–820 ms) tugagach gapiradi. */
 const PRAISE_DELAY_MS = 850;
 
@@ -37,8 +39,12 @@ const lastIndex: Partial<Record<VoiceGroup, number>> = {};
 let lastSpokenAt = 0;
 let correctRun = 0;
 let wrongSpoken = false;
+/** Maqtov vaqti kelgan, lekin oraliq sabab aytilmagan — keyingi to'g'ri javobda aytiladi. */
+let praiseOwed = false;
 let current: AudioPlayer | null = null;
 let pending: ReturnType<typeof setTimeout> | null = null;
+/** stopVoice()/yangi speak() oldingi kutilayotgan chalishni bekor qilishi uchun. */
+let seq = 0;
 
 AsyncStorage.getItem(STORAGE_KEY)
   .then((v) => {
@@ -86,6 +92,7 @@ function player(group: VoiceGroup, i: number): AudioPlayer | null {
 
 /** Kutilayotgan yoki chalinayotgan jumlani to'xtatish (masalan ruscha so'z o'qilishidan oldin). */
 export function stopVoice() {
+  seq += 1;
   if (pending) {
     clearTimeout(pending);
     pending = null;
@@ -107,19 +114,29 @@ export function speak(group: VoiceGroup, delayMs = 450) {
   lastIndex[group] = i;
   lastSpokenAt = Date.now() + delayMs;
   stopVoice();
+  const my = seq;
   pending = setTimeout(() => {
     pending = null;
     if (!enabled || !hasUserGesture() || isSpeechBusy()) return;
-    const p = player(group, i);
-    if (!p) return;
-    try {
-      current = p;
-      p.muted = false;
-      p.seekTo(0);
-      p.play();
-    } catch {
-      // Ovoz chalinmasa ham hech narsa buzilmasin.
-    }
+    const play = () => {
+      if (my !== seq) return;
+      const p = player(group, i);
+      if (!p) return;
+      try {
+        current = p;
+        p.muted = false;
+        p.seekTo(0);
+        p.play();
+      } catch {
+        // Ovoz chalinmasa ham hech narsa buzilmasin.
+      }
+    };
+    // Native: ilova ruscha so'z o'qiyotgan bo'lsa (expo-speech) — jim turamiz.
+    if (Platform.OS === 'web') play();
+    else
+      Speech.isSpeakingAsync()
+        .then((busy) => !busy && play())
+        .catch(play);
   }, delayMs);
 }
 
@@ -129,7 +146,12 @@ export function praiseAnswer(correct: boolean) {
   if (correct) {
     correctRun += 1;
     const due = PRAISE_AT.includes(correctRun) || (correctRun > 10 && (correctRun - 10) % 4 === 0);
-    if (due && now - lastSpokenAt > MIN_GAP_MS) speak('correct', PRAISE_DELAY_MS);
+    if (due || praiseOwed) {
+      if (now - lastSpokenAt > MIN_GAP_MS) {
+        praiseOwed = false;
+        speak('correct', PRAISE_DELAY_MS);
+      } else praiseOwed = true;
+    }
     return;
   }
   // Xato: yaxshi ketayotgan seriya uzilganda, bir qismda bir marta dalda.
@@ -138,12 +160,14 @@ export function praiseAnswer(correct: boolean) {
     speak('wrong', 650);
   }
   correctRun = 0;
+  praiseOwed = false;
 }
 
 /** Yangi mashq/qism boshlanganda hisoblagichni nolga qaytarish. */
 export function resetPraiseRun() {
   correctRun = 0;
   wrongSpoken = false;
+  praiseOwed = false;
 }
 
 /** Safari/iOS (web): jumla pleerlarini bosishlar ichida "ochish" (audioUnlock.ts). Effektlardan keyin navbatga qo'yiladi. */

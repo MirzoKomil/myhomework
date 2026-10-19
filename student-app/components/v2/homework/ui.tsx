@@ -290,8 +290,12 @@ export function OptionRow({
       {state === 'wrong' && <CloseIcon size={18} color="#B42318" />}
     </Pressable>
   );
-  if (state === 'wrong') return <Shake>{row}</Shake>;
-  return row;
+  // Doim o'ralgan — holat o'zgarganda Pressable qayta yaratilmaydi (klaviatura fokusi saqlanadi).
+  return (
+    <Shake trigger={state === 'wrong'} onlyWhenTruthy>
+      {row}
+    </Shake>
+  );
 }
 
 /**

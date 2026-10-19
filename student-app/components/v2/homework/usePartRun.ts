@@ -9,7 +9,7 @@
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { playSfx } from '@/services/sfx';
-import { resetPraiseRun, speak } from '@/services/voicePraise';
+import { resetPraiseRun, speak, stopVoice } from '@/services/voicePraise';
 
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
@@ -76,6 +76,8 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
     });
     return () => {
       cancelled = true;
+      // Qismdan chiqilganda kechiktirilgan maqtov boshqa ekranda aytilmasin.
+      stopVoice();
     };
   }, [lessonId, part.id, total]);
 
@@ -129,11 +131,8 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
     const progress = getLessonProgress(lessonId);
     const scores = getLessonScores(lessonId);
     const allDone = allParts.filter((p) => !isTeacherGraded(p)).every((p) => progress.homeworkParts[p.id] || scores[p.id]?.finished);
-    // Hammasi tugagan bo'lsa "Vazifa tekshirildi" oynasi o'z ovozini chaladi.
-    if (!allDone) {
-      playSfx('complete');
-      speak('correct', 1550);
-    }
+    // Bayram ovozi va konfetti — qaytilgan ekranda (vazifa/index ?bajarildi=1
+    // yoki "Vazifa tekshirildi" oynasi).
     router.replace((allDone ? `${R.homework(lessonId)}?yuborildi=1` : `${R.homework(lessonId)}?bajarildi=1`) as Href);
   };
 
