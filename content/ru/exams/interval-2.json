@@ -1,0 +1,528 @@
+{
+ "title_uz": "2-oraliq imtihon: 13–24-darslar",
+ "passPercent": 70,
+ "questions": [
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q01",
+   "question": "«Ско́лько вре́мени?» savolining ma'nosi qaysi?",
+   "options": [
+    "Necha yoshdasiz?",
+    "Qancha turadi?",
+    "Qachon?",
+    "Soat necha?"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q02",
+   "question": "«Я рабо́таю с девяти́ до шести́» — ma'nosini tanlang.",
+   "options": [
+    "Men 9 soat ishlayman.",
+    "Men 9 dan 6 gacha ishlayman.",
+    "Men 9 da va 6 da ishlayman.",
+    "Men 6 dan 9 gacha ishlayman."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q03",
+   "question": "«Бы́стро» so'zining antonimini tanlang.",
+   "options": [
+    "ти́хо",
+    "ме́дленно",
+    "гро́мко",
+    "хорошо́"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q04",
+   "question": "«К сожале́нию» ma'nosi qaysi?",
+   "options": [
+    "yana",
+    "afsuski",
+    "nega",
+    "yonida"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q05",
+   "question": "To'g'ri birikmani tanlang.",
+   "options": [
+    "си́нее мо́ре",
+    "си́ний мо́ре",
+    "си́няя мо́ре",
+    "си́ние мо́ре"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q06",
+   "question": "Sifat yoki ravish? To'g'ri gapni tanlang.",
+   "options": [
+    "Он пи́шет краси́во.",
+    "Э́то краси́во дом.",
+    "Он пи́шет краси́вый.",
+    "Он пи́шет краси́вая."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q07",
+   "question": "To'g'ri shaklni tanlang: «Вчера́ А́нна … фильм.»",
+   "options": [
+    "смотре́л",
+    "смотре́ли",
+    "смотре́ло",
+    "смотре́ла"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q08",
+   "question": "«Прийти́» fe'lining o'tgan zamon shakli (ayol uchun) qaysi?",
+   "options": [
+    "пришли́",
+    "пришёл",
+    "пришла́",
+    "прие́хала"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q09",
+   "question": "To'g'ri gapni tanlang.",
+   "options": [
+    "Я чита́ю кни́ге.",
+    "Я чита́ю кни́гой.",
+    "Я чита́ю кни́гу.",
+    "Я чита́ю кни́га."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q10",
+   "question": "«Куда́ вы е́дете ле́том?» savoliga to'g'ri javobni tanlang.",
+   "options": [
+    "Мы е́дем на мо́ре.",
+    "Мы живём на мо́ре.",
+    "Мы е́дем на мо́рем.",
+    "Мы е́дем мо́рю."
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q11",
+   "question": "Signal so'zga qarab fe'lni tanlang: «Ка́ждый день Анто́н … на рабо́ту пешко́м.»",
+   "options": [
+    "идёт",
+    "хо́дит",
+    "идти́",
+    "ходи́ть"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-q12",
+   "question": "«Как ча́сто вы хо́дите в бассе́йн?» savoliga mos javobni tanlang.",
+   "options": [
+    "Пешко́м.",
+    "В бассе́йне.",
+    "Сейча́с.",
+    "Два ра́за в неде́лю."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q13",
+   "sentence": "Я ___ в во́семь часо́в.",
+   "answer": "за́втракаю",
+   "options": [
+    "за́втрак",
+    "за́втракает",
+    "за́втракаю"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q14",
+   "sentence": "Ве́чером я иду́ ___.",
+   "answer": "домо́й",
+   "options": [
+    "домо́й",
+    "дом",
+    "до́ма"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q15",
+   "sentence": "Апте́ка спра́ва, ___ ба́нка.",
+   "answer": "о́коло",
+   "options": [
+    "почему́",
+    "недалеко́",
+    "о́коло"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q16",
+   "sentence": "Кака́я сего́дня пого́да? — Сего́дня ___ пого́да.",
+   "answer": "хоро́шая",
+   "options": [
+    "хорошо́",
+    "хоро́ший",
+    "хоро́шая"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q17",
+   "sentence": "Нигора́, где ты ___ вчера́?",
+   "answer": "была́",
+   "options": [
+    "была́",
+    "бы́ли",
+    "был"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q18",
+   "sentence": "Письмо́ ___ у́тром.",
+   "answer": "пришло́",
+   "options": [
+    "пришла́",
+    "пришло́",
+    "пришёл"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q19",
+   "sentence": "Анто́н ждёт ___.",
+   "answer": "бра́та",
+   "options": [
+    "бра́ту",
+    "брат",
+    "бра́та"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q20",
+   "sentence": "Я иду́ на ___.",
+   "answer": "рабо́ту",
+   "options": [
+    "рабо́та",
+    "рабо́ту",
+    "рабо́те"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q21",
+   "sentence": "Смотри́! А́нна ___ в парк.",
+   "answer": "идёт",
+   "options": [
+    "хо́дит",
+    "хо́дят",
+    "идёт"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i2-q22",
+   "sentence": "Куда́ ты сейча́с ___? — В банк.",
+   "answer": "идёшь",
+   "options": [
+    "идёт",
+    "хо́дишь",
+    "идёшь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q23",
+   "translation": "Dars soat to'qqizda boshlanadi.",
+   "words": [
+    "начина́ет",
+    "в",
+    "де́вять",
+    "Уро́к",
+    "начина́ется"
+   ],
+   "answer": [
+    "Уро́к",
+    "начина́ется",
+    "в",
+    "де́вять"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q24",
+   "translation": "Sen ruscha qanday gapirasan?",
+   "words": [
+    "говори́шь",
+    "Как",
+    "говори́т",
+    "ты",
+    "по-ру́сски"
+   ],
+   "answer": [
+    "Как",
+    "ты",
+    "говори́шь",
+    "по-ру́сски"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q25",
+   "translation": "Bu katta shahar.",
+   "words": [
+    "большо́й",
+    "больша́я",
+    "Э́то",
+    "го́род"
+   ],
+   "answer": [
+    "Э́то",
+    "большо́й",
+    "го́род"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q26",
+   "translation": "Ilgari biz Samarqandda yashaganmiz.",
+   "words": [
+    "Самарка́нде",
+    "живём",
+    "жи́ли",
+    "мы",
+    "в",
+    "Ра́ньше"
+   ],
+   "answer": [
+    "Ра́ньше",
+    "мы",
+    "жи́ли",
+    "в",
+    "Самарка́нде"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q27",
+   "translation": "Kecha men do'stimni uchratdim.",
+   "words": [
+    "дру́гу",
+    "Вчера́",
+    "встре́тил",
+    "я",
+    "дру́га"
+   ],
+   "answer": [
+    "Вчера́",
+    "я",
+    "встре́тил",
+    "дру́га"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q28",
+   "translation": "Men bankka boryapman.",
+   "words": [
+    "иду́",
+    "Я",
+    "в",
+    "банк",
+    "ба́нке"
+   ],
+   "answer": [
+    "Я",
+    "иду́",
+    "в",
+    "банк"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q29",
+   "translation": "Mening akam tez-tez sport zaliga boradi.",
+   "words": [
+    "ча́сто",
+    "Мой",
+    "идёт",
+    "брат",
+    "хо́дит",
+    "в",
+    "спортза́л"
+   ],
+   "answer": [
+    "Мой",
+    "брат",
+    "ча́сто",
+    "хо́дит",
+    "в",
+    "спортза́л"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i2-q30",
+   "translation": "Men hech qachon kechikmayman.",
+   "words": [
+    "опа́здываю",
+    "никогда́",
+    "Я",
+    "не",
+    "опа́здывает"
+   ],
+   "answer": [
+    "Я",
+    "никогда́",
+    "не",
+    "опа́здываю"
+   ]
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-s1",
+   "question": "🗣 Vaziyat: Ko'chada soat necha bo'lganini bilmoqchisiz. O'tkinchiga nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Прости́те, как дела́?",
+    "Прости́те, где вы живёте?",
+    "Прости́те, ско́лько вам лет?",
+    "Прости́те, кото́рый час?"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-s2",
+   "question": "🗣 Vaziyat: Do'stingiz kechqurun kinoga taklif qildi, lekin siz kechqurun ishlaysiz. Muloyim rad eting.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Фильм был интере́сный.",
+    "К сожале́нию, ве́чером я рабо́таю.",
+    "Хорошо́, я иду́!",
+    "Я люблю́ кино́!"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-s3",
+   "question": "🗣 Vaziyat: Dorixonani qidiryapsiz. O'tkinchidan so'raysiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Прости́те, вы врач?",
+    "Прости́те, куда́ вы идёте?",
+    "Прости́те, апте́ка больша́я?",
+    "Прости́те, где апте́ка?"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-s4",
+   "question": "🗣 Vaziyat: Do'stingizdan kecha nima qilganini so'ramoqchisiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Что ты де́лал вчера́?",
+    "Что ты де́лаешь сейча́с?",
+    "Что ты лю́бишь де́лать?",
+    "Куда́ ты идёшь?"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-r1",
+   "question": "📖 Matn: «Нигора́ рабо́тает в больни́це. Она́ встаёт ра́но, в шесть часо́в. В семь часо́в она́ за́втракает, а пото́м идёт на рабо́ту. Больни́ца недалеко́, и Нигора́ всегда́ хо́дит туда́ пешко́м. Она́ рабо́тает с восьми́ до пяти́. Ве́чером она́ гото́вит у́жин, и они́ у́жинают вме́сте. Вчера́ Нигора́ не рабо́тала: она́ и де́ти бы́ли в па́рке, а пото́м они́ ходи́ли в кафе́.»\n\nSavol: Nigora soat nechada turadi?",
+   "options": [
+    "soat oltida",
+    "soat yettida",
+    "soat sakkizda",
+    "soat beshda"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-r2",
+   "question": "📖 Matn: «Нигора́ рабо́тает в больни́це. Она́ встаёт ра́но, в шесть часо́в. В семь часо́в она́ за́втракает, а пото́м идёт на рабо́ту. Больни́ца недалеко́, и Нигора́ всегда́ хо́дит туда́ пешко́м. Она́ рабо́тает с восьми́ до пяти́. Ве́чером она́ гото́вит у́жин, и они́ у́жинают вме́сте. Вчера́ Нигора́ не рабо́тала: она́ и де́ти бы́ли в па́рке, а пото́м они́ ходи́ли в кафе́.»\n\nSavol: Nigora ishga qanday boradi?",
+   "options": [
+    "avtobusda",
+    "piyoda",
+    "mashinada",
+    "taksida"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-r3",
+   "question": "📖 Matn: «Нигора́ рабо́тает в больни́це. Она́ встаёт ра́но, в шесть часо́в. В семь часо́в она́ за́втракает, а пото́м идёт на рабо́ту. Больни́ца недалеко́, и Нигора́ всегда́ хо́дит туда́ пешко́м. Она́ рабо́тает с восьми́ до пяти́. Ве́чером она́ гото́вит у́жин, и они́ у́жинают вме́сте. Вчера́ Нигора́ не рабо́тала: она́ и де́ти бы́ли в па́рке, а пото́м они́ ходи́ли в кафе́.»\n\nSavol: Kecha Nigora va bolalar qayerda bo'lishdi?",
+   "options": [
+    "kasalxonada",
+    "parkda, keyin kafeda",
+    "kun bo'yi uyda",
+    "do'konda va bankda"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-r4",
+   "question": "📖 Matn: «Тиму́р живёт в Ташке́нте и рабо́тает в о́фисе. Ка́ждый день он хо́дит на рабо́ту пешко́м, потому́ что о́фис бли́зко. По суббо́там он хо́дит в спортза́л, а по воскресе́ньям игра́ет в футбо́л. Вчера́ Тиму́р не ходи́л в спортза́л. Он встре́тил дру́га, и они́ пошли́ в кафе́. Там они́ заказа́ли плов и чай. Пото́м Тиму́р купи́л но́вую кни́гу. Сейча́с он идёт домо́й.»\n\nSavol: Shanba kunlari Timur qayerga boradi?",
+   "options": [
+    "ishga",
+    "basseynga",
+    "sport zaliga",
+    "kinoga"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-r5",
+   "question": "📖 Matn: «Тиму́р живёт в Ташке́нте и рабо́тает в о́фисе. Ка́ждый день он хо́дит на рабо́ту пешко́м, потому́ что о́фис бли́зко. По суббо́там он хо́дит в спортза́л, а по воскресе́ньям игра́ет в футбо́л. Вчера́ Тиму́р не ходи́л в спортза́л. Он встре́тил дру́га, и они́ пошли́ в кафе́. Там они́ заказа́ли плов и чай. Пото́м Тиму́р купи́л но́вую кни́гу. Сейча́с он идёт домо́й.»\n\nSavol: Kecha Timur do'sti bilan nima qildi?",
+   "options": [
+    "kafeda palov va choy buyurtma qildi",
+    "kinoteatrda film ko'rdi",
+    "sport zalida shug'ullandi",
+    "futbol o'ynadi"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i2-r6",
+   "question": "📖 Matn: «Тиму́р живёт в Ташке́нте и рабо́тает в о́фисе. Ка́ждый день он хо́дит на рабо́ту пешко́м, потому́ что о́фис бли́зко. По суббо́там он хо́дит в спортза́л, а по воскресе́ньям игра́ет в футбо́л. Вчера́ Тиму́р не ходи́л в спортза́л. Он встре́тил дру́га, и они́ пошли́ в кафе́. Там они́ заказа́ли плов и чай. Пото́м Тиму́р купи́л но́вую кни́гу. Сейча́с он идёт домо́й.»\n\nSavol: Hozir Timur nima qilyapti?",
+   "options": [
+    "sport zaliga ketyapti",
+    "kafeda o'tiribdi",
+    "kitob sotib olyapti",
+    "uyga ketyapti"
+   ],
+   "correctIndex": 3
+  }
+ ]
+}

@@ -1,0 +1,304 @@
+{
+ "n": 66,
+ "lessonId": "l1784055280406-65",
+ "type": "live",
+ "id": "l1784055280406-65",
+ "topic": "Kvartira ijarasi dialogi",
+ "title": "Jonli dars: «Я по объявле́нию» — kvartira ijarasi",
+ "cando": "E'lon bo'yicha qo'ng'iroq qilaman, kvartira haqida batafsil so'rayman (narx, kommunal, zalog, mebel), ko'rishga kelishaman va shartnoma shartlarini muhokama qilaman.",
+ "vocab": [
+  {
+   "ru": "объявле́ние",
+   "tr": "[abyivlyéniye]",
+   "uz": "e'lon",
+   "ex": "Я звоню́ по объявле́нию.",
+   "img": "cards/объявление.jpg",
+   "icon": "",
+   "vocabId": "v-66-1",
+   "media": "media/ru/L66/w_v-66-1.jpg"
+  },
+  {
+   "ru": "риэ́лтор",
+   "tr": "[riéltar]",
+   "uz": "rieltor",
+   "ex": "Риэ́лтор показа́л нам кварти́ру.",
+   "img": "cards/риелтор.jpg",
+   "icon": "",
+   "vocabId": "v-66-2",
+   "media": "media/ru/L66/w_v-66-2.jpg"
+  },
+  {
+   "ru": "посмотре́ть кварти́ру",
+   "tr": "[pasmatryét' kvartíru]",
+   "uz": "kvartirani ko'rmoq",
+   "ex": "Мо́жно посмотре́ть кварти́ру сего́дня?",
+   "img": "cards/квартира.jpg",
+   "icon": "",
+   "vocabId": "v-66-3",
+   "media": "media/ru/L66/w_v-66-3.jpg"
+  },
+  {
+   "ru": "коммуна́льные услу́ги",
+   "tr": "[kamunál'nyye uslúgi]",
+   "uz": "kommunal xizmatlar",
+   "ex": "Коммуна́льные услу́ги вхо́дят в це́ну?",
+   "img": "cards/коммунальные услуги.jpg",
+   "icon": "",
+   "vocabId": "v-66-4",
+   "media": "media/ru/L66/w_v-66-4.jpg"
+  },
+  {
+   "ru": "зало́г",
+   "tr": "[zalók]",
+   "uz": "zalog, garov puli",
+   "ex": "Ну́жен зало́г за оди́н ме́сяц.",
+   "img": "cards/деньги.jpg",
+   "icon": "",
+   "vocabId": "v-66-5",
+   "media": "media/ru/L66/w_v-66-5.jpg"
+  },
+  {
+   "ru": "догово́р",
+   "tr": "[dagavór]",
+   "uz": "shartnoma",
+   "ex": "Дава́йте подпи́шем догово́р.",
+   "img": "cards/договор.jpg",
+   "icon": "",
+   "vocabId": "v-66-6",
+   "media": "media/ru/L66/w_v-66-6.jpg"
+  },
+  {
+   "ru": "ключи́",
+   "tr": "[klyuchí]",
+   "uz": "kalitlar",
+   "ex": "Вот ва́ши ключи́!",
+   "img": "cards/ключи.jpg",
+   "icon": "",
+   "vocabId": "v-66-7",
+   "media": "media/ru/L66/w_v-66-7.jpg"
+  },
+  {
+   "ru": "сосе́ди",
+   "tr": "[sasyédi]",
+   "uz": "qo'shnilar",
+   "ex": "Каки́е здесь сосе́ди?",
+   "img": "cards/сосед.jpg",
+   "icon": "",
+   "vocabId": "v-66-8",
+   "media": "media/ru/L66/w_v-66-8.jpg"
+  }
+ ],
+ "konspekt": "66-DARS (jonli dars): Kvartira ijarasi — «Я по объявле́нию»\n\nBugun ustoz bilan 65-dars mavzusini (снима́ть кварти́ру, эта́ж, поста́вить / положи́ть) ijara dialogida mashq qildik.\n\nQo'ng'iroq:\n* Здра́вствуйте! Я звоню́ по объявле́нию. Кварти́ра ещё свобо́дна? — E'lon bo'yicha qo'ng'iroq qilyapman. Kvartira hali bo'shmi?\n\nSo'raladigan narsalar:\n* Ско́лько ко́мнат? На како́м этаже́? Есть лифт?\n* Ско́лько сто́ит в ме́сяц? Коммуна́льные услу́ги вхо́дят в це́ну? — Kommunal narxga kiradimi?\n* Ну́жен зало́г? — Zalog kerakmi?\n* Кварти́ра с ме́белью? Есть стира́льная маши́на / интерне́т?\n* Мо́жно с детьми́ / с живо́тными?\n* На како́й срок? — Qancha muddatga? · Мы хоти́м снять на год.\n* Когда́ мо́жно посмотре́ть кварти́ру? — Qachon ko'rsa bo'ladi?\n\nKo'rishda:\n* Здесь о́чень светло́ и ую́тно. · Ку́хня немно́го ма́ленькая.\n* А каки́е здесь сосе́ди? Ти́хо?\n\nKelishuv:\n* Мы согла́сны. Дава́йте подпи́шем догово́р. — Rozimiz. Shartnoma imzolaylik.\n* Когда́ мо́жно перее́хать? — Qachon ko'chsa bo'ladi?\n* Вот ва́ши ключи́! — Mana kalitlaringiz!\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: e'lon bo'yicha qo'ng'iroq. Keyingi dars — videodars: bank va pochta.",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Я звоню́ по ___ .",
+    "o": [
+     "объявле́нию",
+     "объявле́ние",
+     "объявле́ния"
+    ],
+    "a": "объявле́нию"
+   },
+   {
+    "s": "Кварти́ра ещё ___ ?",
+    "o": [
+     "свобо́дна",
+     "свобо́дно",
+     "свобо́дный"
+    ],
+    "a": "свобо́дна"
+   },
+   {
+    "s": "Коммуна́льные услу́ги ___ в це́ну?",
+    "o": [
+     "войти́",
+     "вхо́дит",
+     "вхо́дят"
+    ],
+    "a": "вхо́дят"
+   },
+   {
+    "s": "Ну́жен ___ за оди́н ме́сяц.",
+    "o": [
+     "догово́р",
+     "ключ",
+     "зало́г"
+    ],
+    "a": "зало́г"
+   },
+   {
+    "s": "Мо́жно ___ кварти́ру сего́дня?",
+    "o": [
+     "посмотре́ть",
+     "смотре́л",
+     "посмотри́те"
+    ],
+    "a": "посмотре́ть"
+   },
+   {
+    "s": "Дава́йте подпи́шем ___ .",
+    "o": [
+     "риэ́лтор",
+     "догово́р",
+     "объявле́ние"
+    ],
+    "a": "догово́р"
+   },
+   {
+    "s": "Вот ва́ши ___ !",
+    "o": [
+     "ключи́",
+     "ключ",
+     "ключе́й"
+    ],
+    "a": "ключи́"
+   },
+   {
+    "s": "Мы хоти́м снять кварти́ру на ___ .",
+    "o": [
+     "го́да",
+     "год",
+     "году́"
+    ],
+    "a": "год"
+   },
+   {
+    "s": "Мо́жно немно́го ___ ? (arzonroq)",
+    "o": [
+     "дешёвый",
+     "де́шево",
+     "деше́вле"
+    ],
+    "a": "деше́вле"
+   },
+   {
+    "s": "Каки́е здесь ___ ? (qo'shnilar)",
+    "o": [
+     "сосе́дей",
+     "сосе́д",
+     "сосе́ди"
+    ],
+    "a": "сосе́ди"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«E'lon bo'yicha qo'ng'iroq qilyapman»",
+    "o": [
+     "Я объявля́ю",
+     "Я звоню́ по объявле́нию",
+     "Я звоню́ на объявле́ние"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«zalog»",
+    "o": [
+     "зало́г",
+     "нало́г",
+     "догово́р"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«shartnoma»",
+    "o": [
+     "объявле́ние",
+     "догово́р",
+     "разгово́р"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Qachon ko'chsa bo'ladi?»",
+    "o": [
+     "Когда́ мо́жно перее́хать?",
+     "Когда́ мо́жно прие́хать?",
+     "Когда́ мо́жно уе́хать?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Bolalar bilan mumkinmi?»",
+    "o": [
+     "Мо́жно де́ти?",
+     "Мо́жно с детьми́?",
+     "Мо́жно дете́й?"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Qancha muddatga?»",
+    "o": [
+     "Ско́лько сро́ков?",
+     "Како́й срок?",
+     "На како́й срок?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Kommunal — alohida»",
+    "o": [
+     "Коммуна́льные — вме́сте",
+     "Коммуна́льные — отде́льно",
+     "Коммуна́льные — беспла́тно"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«rieltor»",
+    "o": [
+     "сосе́д",
+     "хозя́ин",
+     "риэ́лтор"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Biroz arzonroq bo'ladimi?»",
+    "o": [
+     "Мо́жно доро́же?",
+     "Мо́жно беспла́тно?",
+     "Мо́жно немно́го деше́вле?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Mana kalitlaringiz!»",
+    "o": [
+     "Вот ва́ши ключи́!",
+     "Где ва́ши ключи́?",
+     "Да́йте ключи́!"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Здра́вствуйте! Я звоню́ по объявле́нию.",
+   "uz": "Assalomu alaykum! E'lon bo'yicha qo'ng'iroq qilyapman."
+  },
+  {
+   "ru": "Ско́лько сто́ит кварти́ра в ме́сяц?",
+   "uz": "Kvartira oyiga qancha turadi?"
+  },
+  {
+   "ru": "Коммуна́льные услу́ги вхо́дят в це́ну?",
+   "uz": "Kommunal xizmatlar narxga kiradimi?"
+  },
+  {
+   "ru": "Когда́ мо́жно посмотре́ть кварти́ру?",
+   "uz": "Kvartirani qachon ko'rsa bo'ladi?"
+  },
+  {
+   "ru": "Мо́жно немно́го деше́вле?",
+   "uz": "Biroz arzonroq bo'ladimi?"
+  },
+  {
+   "ru": "Дава́йте подпи́шем догово́р.",
+   "uz": "Shartnoma imzolaylik."
+  }
+ ]
+}

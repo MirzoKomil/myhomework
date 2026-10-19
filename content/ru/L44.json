@@ -1,0 +1,304 @@
+{
+ "n": 44,
+ "lessonId": "l1784055280406-43",
+ "type": "live",
+ "id": "l1784055280406-43",
+ "topic": "Sayohat: vokzal va aeroport",
+ "title": "Jonli dars: «Оди́н биле́т до Самарка́нда» — vokzal, aeroport, taksi",
+ "cando": "Vokzal va aeroportda chipta olaman (Оди́н биле́т до…, туда́ и обра́тно), vaqt va joyni so'rayman, taksida manzilni aytaman.",
+ "vocab": [
+  {
+   "ru": "вокза́л",
+   "tr": "[vagzál]",
+   "uz": "vokzal",
+   "ex": "Как дое́хать до вокза́ла?",
+   "img": "cards/вокзал.jpg",
+   "icon": "",
+   "vocabId": "v-44-1",
+   "media": "media/ru/L44/w_v-44-1.jpg"
+  },
+  {
+   "ru": "аэропо́рт",
+   "tr": "[aerapórt]",
+   "uz": "aeroport",
+   "ex": "Мы е́дем в аэропо́рт на такси́.",
+   "img": "cards/аэропорт.jpg",
+   "icon": "",
+   "vocabId": "v-44-2",
+   "media": "media/ru/L44/w_v-44-2.jpg"
+  },
+  {
+   "ru": "биле́т (туда́ и обра́тно)",
+   "tr": "[bilyét (tudá i abrátna)]",
+   "uz": "chipta (borish-qaytish)",
+   "ex": "Оди́н биле́т туда́ и обра́тно, пожа́луйста.",
+   "img": "cards/туда и обратно.jpg",
+   "icon": "",
+   "vocabId": "v-44-3",
+   "media": "media/ru/L44/w_v-44-3.jpg"
+  },
+  {
+   "ru": "чемода́н",
+   "tr": "[chimadán]",
+   "uz": "chamadon",
+   "ex": "У меня́ оди́н чемода́н.",
+   "img": "cards/чемодан.jpg",
+   "icon": "",
+   "vocabId": "v-44-4",
+   "media": "media/ru/L44/w_v-44-4.jpg"
+  },
+  {
+   "ru": "рейс",
+   "tr": "[reys]",
+   "uz": "reys",
+   "ex": "Наш рейс в во́семь часо́в.",
+   "img": "cards/рейс.jpg",
+   "icon": "",
+   "vocabId": "v-44-5",
+   "media": "media/ru/L44/w_v-44-5.jpg"
+  },
+  {
+   "ru": "поса́дка",
+   "tr": "[pasátka]",
+   "uz": "chiqish (samolyot/poyezdga)",
+   "ex": "Поса́дка начина́ется в семь.",
+   "img": "cards/посадка.jpg",
+   "icon": "",
+   "vocabId": "v-44-6",
+   "media": "media/ru/L44/w_v-44-6.jpg"
+  },
+  {
+   "ru": "ме́сто",
+   "tr": "[myésta]",
+   "uz": "o'rin, joy",
+   "ex": "У меня́ ме́сто у окна́.",
+   "img": "cards/место.jpg",
+   "icon": "",
+   "vocabId": "v-44-7",
+   "media": "media/ru/L44/w_v-44-7.jpg"
+  },
+  {
+   "ru": "такси́",
+   "tr": "[taksí]",
+   "uz": "taksi",
+   "ex": "Такси́, пожа́луйста, до вокза́ла!",
+   "img": "cards/такси.jpg",
+   "icon": "",
+   "vocabId": "v-44-8",
+   "media": "media/ru/L44/w_v-44-8.jpg"
+  }
+ ],
+ "konspekt": "44-DARS (jonli dars): Sayohat — «Оди́н биле́т до Самарка́нда»\n\nBugun ustoz bilan 43-dars mavzusini (е́хать / е́здить, на чём?, прие́хал / уе́хал) vokzal, aeroport va taksi vaziyatlarida mashq qildik.\n\nKassada:\n* Оди́н биле́т до Самарка́нда, пожа́луйста. — Samarqandgacha bitta chipta.\n* Туда́ и обра́тно. / То́лько туда́. — Borish-qaytish. / Faqat borish.\n* Когда́ отправля́ется по́езд? — Poyezd qachon jo'naydi?\n* Когда́ он прибыва́ет в Самарка́нд? — Samarqandga qachon yetib boradi?\n* Ско́лько сто́ит биле́т? — Chipta qancha turadi?\n* Мо́жно ме́сто у окна́? — Deraza yonidagi joy bo'ladimi?\n\nAeroportda:\n* Где регистра́ция на рейс в Москву́? — Moskva reysiga ro'yxatdan o'tish qayerda?\n* Когда́ поса́дка? — Chiqish qachon?\n* Вот мой па́спорт и биле́т. · У меня́ оди́н чемода́н.\n\nTaksida:\n* До вокза́ла, пожа́луйста. — Vokzalgacha, iltimos.\n* Ско́лько е́хать? · Ско́лько с меня́? — Qancha bo'ldi?\n* Останови́те здесь, пожа́луйста.\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: chipta olish. Keyingi dars — videodars: sog'liq (у меня́ боли́т…).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Оди́н биле́т ___ Бухары́, пожа́луйста.",
+    "o": [
+     "до",
+     "в",
+     "на"
+    ],
+    "a": "до"
+   },
+   {
+    "s": "Туда́ и ___ .",
+    "o": [
+     "наза́д",
+     "обра́тно",
+     "сюда́"
+    ],
+    "a": "обра́тно"
+   },
+   {
+    "s": "Когда́ ___ по́езд?",
+    "o": [
+     "отправля́ется",
+     "отпра́вил",
+     "отправля́ю"
+    ],
+    "a": "отправля́ется"
+   },
+   {
+    "s": "Мо́жно ме́сто у ___ ?",
+    "o": [
+     "окно́",
+     "о́кна",
+     "окно́м"
+    ],
+    "a": "о́кна"
+   },
+   {
+    "s": "Наш ___ в Москву́ в во́семь часо́в.",
+    "o": [
+     "биле́т",
+     "рейс",
+     "вокза́л"
+    ],
+    "a": "рейс"
+   },
+   {
+    "s": "___ начина́ется в семь. (samolyotga chiqish)",
+    "o": [
+     "Поса́дка",
+     "Переса́дка",
+     "Остано́вка"
+    ],
+    "a": "Поса́дка"
+   },
+   {
+    "s": "У меня́ оди́н ___ . (chamadon)",
+    "o": [
+     "биле́т",
+     "чемода́н",
+     "па́спорт"
+    ],
+    "a": "чемода́н"
+   },
+   {
+    "s": "До ___ , пожа́луйста. (vokzal)",
+    "o": [
+     "вокза́л",
+     "вокза́ла",
+     "вокза́ле"
+    ],
+    "a": "вокза́ла"
+   },
+   {
+    "s": "Ско́лько ___ меня́?",
+    "o": [
+     "у",
+     "для",
+     "с"
+    ],
+    "a": "с"
+   },
+   {
+    "s": "___ здесь, пожа́луйста! (to'xtating)",
+    "o": [
+     "Останови́те",
+     "Остановлю́",
+     "Остана́вливать"
+    ],
+    "a": "Останови́те"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Samarqandgacha bitta chipta»",
+    "o": [
+     "Биле́т Самарка́нд",
+     "Оди́н биле́т в Самарка́нд был",
+     "Оди́н биле́т до Самарка́нда"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«borish-qaytish»",
+    "o": [
+     "туда́ и обра́тно",
+     "сюда́ и туда́",
+     "то́лько туда́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Poyezd qachon jo'naydi?»",
+    "o": [
+     "Когда́ отправля́ется по́езд?",
+     "Где по́езд?",
+     "Ско́лько сто́ит по́езд?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Qancha bo'ldi?» (taksida)",
+    "o": [
+     "Ско́лько с меня́?",
+     "Ско́лько мне лет?",
+     "Ско́лько е́хать?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«reys»",
+    "o": [
+     "вокза́л",
+     "рейс",
+     "ка́сса"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Deraza yonidagi joy»",
+    "o": [
+     "окно́ места́",
+     "ме́сто у две́ри",
+     "ме́сто у окна́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Samolyot … dan uchadi:",
+    "o": [
+     "из аэропо́рта",
+     "из вокза́ла",
+     "из остано́вки"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Poyezd … dan jo'naydi:",
+    "o": [
+     "с вокза́ла",
+     "с ре́йса",
+     "с аэропо́рта"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Mana pasportim va chiptam»",
+    "o": [
+     "У меня́ нет биле́та",
+     "Вот мой па́спорт и биле́т",
+     "Где мой па́спорт?"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Shu yerda to'xtating»",
+    "o": [
+     "Езжа́йте пря́мо",
+     "Поверни́те нале́во",
+     "Останови́те здесь"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Оди́н биле́т до Самарка́нда, пожа́луйста.",
+   "uz": "Samarqandgacha bitta chipta, iltimos."
+  },
+  {
+   "ru": "Туда́ и обра́тно. Мо́жно ме́сто у окна́?",
+   "uz": "Borish-qaytish. Deraza yonidagi joy bo'ladimi?"
+  },
+  {
+   "ru": "Когда́ отправля́ется по́езд?",
+   "uz": "Poyezd qachon jo'naydi?"
+  },
+  {
+   "ru": "Где регистра́ция на рейс в Москву́?",
+   "uz": "Moskva reysiga ro'yxatdan o'tish qayerda?"
+  },
+  {
+   "ru": "До аэропо́рта, пожа́луйста.",
+   "uz": "Aeroportgacha, iltimos."
+  },
+  {
+   "ru": "Ско́лько с меня́? Останови́те здесь.",
+   "uz": "Qancha bo'ldi? Shu yerda to'xtating."
+  }
+ ]
+}

@@ -1,0 +1,304 @@
+{
+ "n": 26,
+ "lessonId": "l1784055280406-25",
+ "type": "live",
+ "id": "l1784055280406-25",
+ "topic": "Shaharda: yo'l so'rash",
+ "title": "Jonli dars: «Как пройти́ в…?» — shaharda yo'l so'rash",
+ "cando": "Shaharda joy qayerdaligini so'rayman va yo'lni tushuntiraman: пря́мо, нале́во, напра́во, ря́дом с…, напро́тив…",
+ "vocab": [
+  {
+   "ru": "Как пройти́ в / на…?",
+   "tr": "[kak praytí]",
+   "uz": "…ga qanday borsa bo'ladi? (piyoda)",
+   "ex": "Извини́те, как пройти́ в банк?",
+   "img": "cards/как пройти.jpg",
+   "icon": "",
+   "vocabId": "v-26-1",
+   "media": "media/ru/L26/w_v-26-1.jpg"
+  },
+  {
+   "ru": "нахо́дится",
+   "tr": "[naxóditsa]",
+   "uz": "joylashgan",
+   "ex": "Где нахо́дится апте́ка?",
+   "img": "cards/находиться.jpg",
+   "icon": "",
+   "vocabId": "v-26-2",
+   "media": "media/ru/L26/w_v-26-2.jpg"
+  },
+  {
+   "ru": "пря́мо",
+   "tr": "[pryáma]",
+   "uz": "to'g'riga",
+   "ex": "Иди́те пря́мо.",
+   "img": "cards/прямо.jpg",
+   "icon": "",
+   "vocabId": "v-26-3",
+   "media": "media/ru/L26/w_v-26-3.jpg"
+  },
+  {
+   "ru": "нале́во / напра́во",
+   "tr": "[nalyéva / naprávo]",
+   "uz": "chapga / o'ngga",
+   "ex": "Пото́м поверни́те нале́во.",
+   "img": "cards/налево - направо.jpg",
+   "icon": "",
+   "vocabId": "v-26-4",
+   "media": "media/ru/L26/w_v-26-4.jpg"
+  },
+  {
+   "ru": "ря́дом (с)",
+   "tr": "[ryádam]",
+   "uz": "yonida",
+   "ex": "Апте́ка ря́дом с ба́нком.",
+   "img": "cards/рядом.jpg",
+   "icon": "",
+   "vocabId": "v-26-5",
+   "media": "media/ru/L26/w_v-26-5.jpg"
+  },
+  {
+   "ru": "напро́тив",
+   "tr": "[naprótif]",
+   "uz": "qarshisida",
+   "ex": "Кафе́ напро́тив па́рка.",
+   "img": "cards/напротив.jpg",
+   "icon": "",
+   "vocabId": "v-26-6",
+   "media": "media/ru/L26/w_v-26-6.jpg"
+  },
+  {
+   "ru": "перекрёсток",
+   "tr": "[pirikryóstak]",
+   "uz": "chorraha",
+   "ex": "На перекрёстке поверни́те напра́во.",
+   "img": "cards/перекрёсток.jpg",
+   "icon": "",
+   "vocabId": "v-26-7",
+   "media": "media/ru/L26/w_v-26-7.jpg"
+  },
+  {
+   "ru": "светофо́р",
+   "tr": "[svitafór]",
+   "uz": "svetofor",
+   "ex": "Иди́те до светофо́ра.",
+   "img": "cards/светофор.jpg",
+   "icon": "",
+   "vocabId": "v-26-8",
+   "media": "media/ru/L26/w_v-26-8.jpg"
+  }
+ ],
+ "konspekt": "26-DARS (jonli dars): Shaharda yo'l so'rash — «Как пройти́ в…?»\n\nBugun ustoz bilan 25-dars mavzusini (Где? / Куда́?) shahar vaziyatida mashq qildik.\n\nYo'l so'rash:\n* Извини́те, где нахо́дится апте́ка? — Kechirasiz, dorixona qayerda joylashgan?\n* Извини́те, как пройти́ в банк / на вокза́л? — …ga qanday borsa bo'ladi?\n* Э́то далеко́? — Нет, бли́зко. / Да, далеко́. — Uzoqmi? — Yo'q, yaqin.\n\nYo'lni tushuntirish (buyruq shakli — keyinchalik 41-darsda to'liq):\n* Иди́те пря́мо. — To'g'riga yuring.\n* Поверни́те нале́во / напра́во. — Chapga / o'ngga buriling.\n* Иди́те до светофо́ра / до перекрёстка. — Svetofor / chorrahagacha yuring.\n* Апте́ка ря́дом с ба́нком. — Dorixona bank yonida.\n* Кафе́ напро́тив па́рка. — Kafe park qarshisida.\n\nEslatma: Где? — Апте́ка на углу́ / в це́нтре. Куда́? — Как пройти́ в апте́ку / на пло́щадь?\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: uyingizdan do'konga yo'lni tushuntiring. Keyingi dars — videodars: роди́тельный паде́ж (у кого́? нет чего́?).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Извини́те, как пройти́ ___ банк?",
+    "o": [
+     "в",
+     "до",
+     "на"
+    ],
+    "a": "в"
+   },
+   {
+    "s": "Извини́те, как пройти́ ___ вокза́л?",
+    "o": [
+     "в",
+     "до",
+     "на"
+    ],
+    "a": "на"
+   },
+   {
+    "s": "Где ___ апте́ка?",
+    "o": [
+     "нахо́дится",
+     "находи́ться",
+     "нахо́дятся"
+    ],
+    "a": "нахо́дится"
+   },
+   {
+    "s": "Иди́те ___ до светофо́ра.",
+    "o": [
+     "ря́дом",
+     "напро́тив",
+     "пря́мо"
+    ],
+    "a": "пря́мо"
+   },
+   {
+    "s": "Пото́м поверни́те ___ . (o'ngga)",
+    "o": [
+     "напра́во",
+     "пря́мо",
+     "нале́во"
+    ],
+    "a": "напра́во"
+   },
+   {
+    "s": "Апте́ка ря́дом ___ ба́нком.",
+    "o": [
+     "с",
+     "в",
+     "на"
+    ],
+    "a": "с"
+   },
+   {
+    "s": "Кафе́ напро́тив ___ .",
+    "o": [
+     "па́рка",
+     "парк",
+     "па́рке"
+    ],
+    "a": "па́рка"
+   },
+   {
+    "s": "Иди́те до ___ .",
+    "o": [
+     "перекрёстка",
+     "перекрёсток",
+     "перекрёстке"
+    ],
+    "a": "перекрёстка"
+   },
+   {
+    "s": "Э́то далеко́? — Нет, ___ .",
+    "o": [
+     "бли́зко",
+     "пря́мо",
+     "далеко́"
+    ],
+    "a": "бли́зко"
+   },
+   {
+    "s": "Мы сейча́с ___ пло́щади.",
+    "o": [
+     "до",
+     "в",
+     "на"
+    ],
+    "a": "на"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«To'g'riga yuring» ruschasi:",
+    "o": [
+     "Иди́те нале́во",
+     "Иди́те ря́дом",
+     "Иди́те пря́мо"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«qarshisida» ruschasi:",
+    "o": [
+     "пря́мо",
+     "напро́тив",
+     "ря́дом"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Как пройти́ ___ пло́щадь?",
+    "o": [
+     "в",
+     "у",
+     "на"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Где нахо́дится ___? (dorixona)",
+    "o": [
+     "апте́ке",
+     "апте́ка",
+     "апте́ку"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Я иду́ ___ . (bankka)",
+    "o": [
+     "банк",
+     "в ба́нке",
+     "в банк"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Сейча́с я ___ . (bankda)",
+    "o": [
+     "в ба́нке",
+     "на банк",
+     "в банк"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Chorraha» ruschasi:",
+    "o": [
+     "перекрёсток",
+     "пло́щадь",
+     "светофо́р"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Э́то далеко́? — Да, ___ .",
+    "o": [
+     "далеко́",
+     "бли́зко",
+     "ря́дом"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Поверни́те ___ . (chapga)",
+    "o": [
+     "нале́во",
+     "напра́во",
+     "пря́мо"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Кафе́ ___ с ба́нком. (yonida)",
+    "o": [
+     "ря́дом",
+     "напро́тив",
+     "до"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Извини́те, где нахо́дится апте́ка?",
+   "uz": "Kechirasiz, dorixona qayerda?"
+  },
+  {
+   "ru": "Извини́те, как пройти́ на вокза́л?",
+   "uz": "Kechirasiz, vokzalga qanday borsa bo'ladi?"
+  },
+  {
+   "ru": "Иди́те пря́мо до светофо́ра.",
+   "uz": "Svetoforgacha to'g'riga yuring."
+  },
+  {
+   "ru": "Пото́м поверни́те нале́во.",
+   "uz": "Keyin chapga buriling."
+  },
+  {
+   "ru": "Апте́ка ря́дом с ба́нком, напро́тив па́рка.",
+   "uz": "Dorixona bank yonida, park qarshisida."
+  },
+  {
+   "ru": "Э́то бли́зко, пять мину́т пешко́м.",
+   "uz": "Bu yaqin, piyoda besh daqiqa."
+  }
+ ]
+}

@@ -1,0 +1,603 @@
+{
+ "n": 67,
+ "lessonId": "l1784055280406-66",
+ "type": "video",
+ "id": "l1784055280406-66",
+ "topic": "Bank va pochta",
+ "title": "Rasmiy joylar: банк, по́чта — откры́ть счёт, отпра́вить посы́лку, запо́лнить анке́ту",
+ "title_ru": "Банк и по́чта",
+ "videoUrl": "",
+ "cando": "Bankda hisob ochaman, karta va pul o'tkazmasi haqida so'rayman, pochtada posilka jo'nataman va anketani to'ldiraman.",
+ "review": [
+  {
+   "q": "«Kvartira ijaraga olyapmiz»",
+   "a": "Мы снима́ем кварти́ру."
+  },
+  {
+   "q": "«E'lon bo'yicha qo'ng'iroq qilyapman»",
+   "a": "Я звоню́ по объявле́нию."
+  },
+  {
+   "q": "«Kalitlarni stolga qo'y»",
+   "a": "Положи́ ключи́ на стол."
+  },
+  {
+   "q": "«Zalog kerakmi?»",
+   "a": "Ну́жен зало́г?"
+  },
+  {
+   "q": "«Shartnoma imzolaylik»",
+   "a": "Дава́йте подпи́шем догово́р."
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "банк",
+   "tr": "[bank]",
+   "uz": "bank",
+   "ex": "Мне ну́жно в банк.",
+   "img": "cards/банк.jpg",
+   "icon": "",
+   "vocabId": "v-67-1",
+   "media": "media/ru/L67/w_v-67-1.jpg"
+  },
+  {
+   "ru": "откры́ть счёт",
+   "tr": "[atkrýt' shchot]",
+   "uz": "hisob ochmoq",
+   "ex": "Я хочу́ откры́ть счёт.",
+   "img": "cards/открыть счёт.jpg",
+   "icon": "",
+   "vocabId": "v-67-2",
+   "media": "media/ru/L67/w_v-67-2.jpg"
+  },
+  {
+   "ru": "ка́рта (ба́нковская)",
+   "tr": "[kárta]",
+   "uz": "(bank) kartasi",
+   "ex": "Мо́жно заказа́ть ка́рту?",
+   "img": "cards/банковская карта.jpg",
+   "icon": "",
+   "vocabId": "v-67-3",
+   "media": "media/ru/L67/w_v-67-3.jpg"
+  },
+  {
+   "ru": "банкома́т",
+   "tr": "[bankamát]",
+   "uz": "bankomat",
+   "ex": "Где ближа́йший банкома́т?",
+   "img": "cards/банкомат.jpg",
+   "icon": "",
+   "vocabId": "v-67-4",
+   "media": "media/ru/L67/w_v-67-4.jpg"
+  },
+  {
+   "ru": "снять де́ньги",
+   "tr": "[snyat' dyén'gi]",
+   "uz": "pul yechmoq",
+   "ex": "Я снял де́ньги в банкома́те.",
+   "img": "cards/банкомат.jpg",
+   "icon": "",
+   "vocabId": "v-67-5",
+   "media": "media/ru/L67/w_v-67-5.jpg"
+  },
+  {
+   "ru": "перево́д (перевести́ де́ньги)",
+   "tr": "[pirivót]",
+   "uz": "pul o'tkazmasi",
+   "ex": "Я хочу́ перевести́ де́ньги ма́ме.",
+   "img": "cards/перевод денег.jpg",
+   "icon": "",
+   "vocabId": "v-67-6",
+   "media": "media/ru/L67/w_v-67-6.jpg"
+  },
+  {
+   "ru": "обменя́ть де́ньги",
+   "tr": "[abminyát' dyén'gi]",
+   "uz": "pul almashtirmoq",
+   "ex": "Где мо́жно обменя́ть до́ллары?",
+   "img": "cards/обменять деньги.jpg",
+   "icon": "",
+   "vocabId": "v-67-7",
+   "media": "media/ru/L67/w_v-67-7.jpg"
+  },
+  {
+   "ru": "курс (валю́т)",
+   "tr": "[kurs valyút]",
+   "uz": "valyuta kursi",
+   "ex": "Како́й сего́дня курс до́ллара?",
+   "img": "cards/курс валют.jpg",
+   "icon": "",
+   "vocabId": "v-67-8",
+   "media": "media/ru/L67/w_v-67-8.jpg"
+  },
+  {
+   "ru": "по́чта",
+   "tr": "[póchta]",
+   "uz": "pochta",
+   "ex": "По́чта откры́та до шести́.",
+   "img": "cards/почта.jpg",
+   "icon": "",
+   "vocabId": "v-67-9",
+   "media": "media/ru/L67/w_v-67-9.jpg"
+  },
+  {
+   "ru": "посы́лка",
+   "tr": "[pasýlka]",
+   "uz": "posilka",
+   "ex": "Я хочу́ отпра́вить посы́лку в Москву́.",
+   "img": "cards/посылка.jpg",
+   "icon": "",
+   "vocabId": "v-67-10",
+   "media": "media/ru/L67/w_v-67-10.jpg"
+  },
+  {
+   "ru": "отпра́вить / получи́ть",
+   "tr": "[atprávit' / paluchít']",
+   "uz": "jo'natmoq / olmoq",
+   "ex": "Я получи́л посы́лку от ма́мы.",
+   "img": "cards/отправлять.jpg",
+   "icon": "",
+   "vocabId": "v-67-11",
+   "media": "media/ru/L67/w_v-67-11.jpg"
+  },
+  {
+   "ru": "конве́рт",
+   "tr": "[kanvyért]",
+   "uz": "konvert",
+   "ex": "Да́йте, пожа́луйста, конве́рт.",
+   "img": "cards/конверт.jpg",
+   "icon": "",
+   "vocabId": "v-67-12",
+   "media": "media/ru/L67/w_v-67-12.jpg"
+  },
+  {
+   "ru": "а́дрес",
+   "tr": "[ádris]",
+   "uz": "manzil",
+   "ex": "Напиши́те а́дрес здесь.",
+   "img": "cards/адрес.jpg",
+   "icon": "",
+   "vocabId": "v-67-13",
+   "media": "media/ru/L67/w_v-67-13.jpg"
+  },
+  {
+   "ru": "запо́лнить анке́ту / бланк",
+   "tr": "[zapólnit' ankyétu]",
+   "uz": "anketa / blankani to'ldirmoq",
+   "ex": "Запо́лните, пожа́луйста, анке́ту.",
+   "img": "cards/заполнить анкету.jpg",
+   "icon": "",
+   "vocabId": "v-67-14",
+   "media": "media/ru/L67/w_v-67-14.jpg"
+  },
+  {
+   "ru": "по́дпись (подписа́ть)",
+   "tr": "[pótpis']",
+   "uz": "imzo (imzolamoq)",
+   "ex": "Поста́вьте по́дпись здесь.",
+   "img": "cards/подпись.jpg",
+   "icon": "",
+   "vocabId": "v-67-15",
+   "media": "media/ru/L67/w_v-67-15.jpg"
+  },
+  {
+   "ru": "па́спорт",
+   "tr": "[páspart]",
+   "uz": "pasport",
+   "ex": "Ваш па́спорт, пожа́луйста.",
+   "img": "cards/паспорт.jpg",
+   "icon": "",
+   "vocabId": "v-67-16",
+   "media": "media/ru/L67/w_v-67-16.jpg"
+  }
+ ],
+ "konspekt": "67-DARS: Bank va pochta\n(Банк и по́чта)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: bankda va pochtada kerakli xizmatni so'raysiz, anketani to'ldirasiz va xodimning ko'rsatmalarini tushunasiz.\n\n---\n\n1. Bankda\n\n* Я хочу́ откры́ть счёт / заказа́ть ка́рту. — Hisob ochmoqchi / karta buyurtma qilmoqchiman.\n* Я хочу́ перевести́ де́ньги (кому́? куда́?). — Pul o'tkazmoqchiman.\n* Где мо́жно обменя́ть до́ллары? Како́й сего́дня курс? — Dollarni qayerda almashtirsa bo'ladi? Bugun kurs qanday?\n* Где ближа́йший банкома́т? — Eng yaqin bankomat qayerda?\n* Банкома́т не вы́дал де́ньги / «съел» ка́рту. — Bankomat pul bermadi / kartani yutib yubordi.\n\n---\n\n2. Pochtada\n\n* Я хочу́ отпра́вить посы́лку / письмо́ в Москву́. — Moskvaga posilka / xat jo'natmoqchiman.\n* Ско́лько сто́ит отпра́вить? Ско́лько дней идёт? — Jo'natish qancha? Necha kun boradi?\n* Мне пришло́ извеще́ние. Я хочу́ получи́ть посы́лку. — Menga xabarnoma keldi. Posilkani olmoqchiman.\n* Да́йте, пожа́луйста, конве́рт и ма́рку.\n\n---\n\n3. Xodim nima deydi (buyruq mayli, rasmiy «Вы»)\n\n* Ваш па́спорт, пожа́луйста. — Pasportingiz.\n* Запо́лните анке́ту / бланк. — Anketani to'ldiring.\n* Напиши́те а́дрес и и́ндекс. — Manzil va indeksni yozing.\n* Поста́вьте по́дпись здесь. — Shu yerga imzo qo'ying.\n* Возьми́те тало́н и подожди́те. — Talon oling va kuting.\n* Подойди́те к око́шку но́мер три. — 3-darchaga keling.\n\n---\n\n4. Anketa maydonlari (анке́та)\n\nФами́лия (familiya) · И́мя (ism) · О́тчество (otasining ismi) · Да́та рожде́ния · А́дрес · Телефо́н · Па́спорт (се́рия, но́мер) · По́дпись\n\n---\n\nDars xulosasi:\n1. откры́ть счёт, заказа́ть ка́рту, перевести́ де́ньги.\n2. обменя́ть де́ньги, курс, банкома́т.\n3. отпра́вить / получи́ть посы́лку, конве́рт, а́дрес.\n4. Запо́лните анке́ту. Поста́вьте по́дпись.\n5. Фами́лия, и́мя, о́тчество, да́та рожде́ния.\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: bank / pochta roleplay.",
+ "text": {
+  "title": "Оди́н день в ба́нке и на по́чте",
+  "ru": "Вчера́ Бобу́р пошёл в банк, потому́ что хоте́л откры́ть счёт. Сотру́дница сказа́ла: «Возьми́те тало́н и подожди́те». Че́рез де́сять мину́т его́ позва́ли к око́шку но́мер три.\n— Я хочу́ откры́ть счёт и заказа́ть ка́рту.\n— Хорошо́. Ваш па́спорт, пожа́луйста. Запо́лните анке́ту: фами́лия, и́мя, о́тчество, да́та рожде́ния, а́дрес. И поста́вьте по́дпись здесь.\nЧе́рез полчаса́ у Бобу́ра был счёт. Ка́рту он получи́т че́рез неде́лю.\nПото́м Бобу́р пошёл на по́чту. Он отпра́вил посы́лку дру́гу в Москву́. Посы́лка сто́ила сто два́дцать ты́сяч сумо́в и бу́дет идти́ де́сять дней. Ещё он купи́л конве́рт и отпра́вил письмо́ ба́бушке.",
+  "uz": "Kecha Bobur bankka bordi, chunki hisob ochmoqchi edi. Xodima dedi: «Talon oling va kuting». O'n daqiqadan keyin uni 3-darchaga chaqirishdi.\n— Hisob ochmoqchi va karta buyurtma qilmoqchiman.\n— Yaxshi. Pasportingiz, iltimos. Anketani to'ldiring: familiya, ism, otasining ismi, tug'ilgan sana, manzil. Va shu yerga imzo qo'ying.\nYarim soatdan keyin Boburning hisobi tayyor edi. Kartani bir haftadan keyin oladi.\nKeyin Bobur pochtaga bordi. Moskvadagi do'stiga posilka jo'natdi. Posilka bir yuz yigirma ming so'm turdi va o'n kun boradi. Yana u konvert sotib olib, buvisiga xat jo'natdi.",
+  "questions": [
+   {
+    "q": "Заче́м Бобу́р пошёл в банк?",
+    "opts": [
+     "Откры́ть счёт",
+     "Обменя́ть де́ньги",
+     "Снять де́ньги"
+    ],
+    "a": 0
+   },
+   {
+    "q": "К како́му око́шку его́ позва́ли?",
+    "opts": [
+     "К пе́рвому",
+     "К тре́тьему",
+     "К пя́тому"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что он запо́лнил?",
+    "opts": [
+     "Анке́ту",
+     "Догово́р",
+     "Резюме́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Когда́ он получи́т ка́рту?",
+    "opts": [
+     "Че́рез ме́сяц",
+     "Че́рез неде́лю",
+     "Сего́дня"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Кому́ он отпра́вил посы́лку?",
+    "opts": [
+     "Ма́ме",
+     "Дру́гу в Москву́",
+     "Ба́бушке"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Ско́лько дней бу́дет идти́ посы́лка?",
+    "opts": [
+     "Два́дцать",
+     "Пять",
+     "Де́сять"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "На по́чте (Pochtada)",
+  "lines": [
+   {
+    "who": "Нигора́",
+    "ru": "Здра́вствуйте! Я хочу́ отпра́вить посы́лку в Каза́нь.",
+    "uz": "Assalomu alaykum! Qozonga posilka jo'natmoqchiman."
+   },
+   {
+    "who": "Сотру́дник",
+    "ru": "Хорошо́. Поста́вьте посы́лку на весы́. Два килогра́мма.",
+    "uz": "Yaxshi. Posilkani tarozi ustiga qo'ying. Ikki kilogramm."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Ско́лько сто́ит и ско́лько дней идёт?",
+    "uz": "Qancha turadi va necha kun boradi?"
+   },
+   {
+    "who": "Сотру́дник",
+    "ru": "Сто ты́сяч сумо́в, приме́рно неде́лю. Запо́лните бланк: а́дрес и и́ндекс.",
+    "uz": "Yuz ming so'm, taxminan bir hafta. Blankani to'ldiring: manzil va indeks."
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Гото́во. Мо́жно оплати́ть ка́ртой?",
+    "uz": "Tayyor. Karta bilan to'lasa bo'ladimi?"
+   },
+   {
+    "who": "Сотру́дник",
+    "ru": "Да, коне́чно. Поста́вьте по́дпись здесь. Вот ваш чек!",
+    "uz": "Ha, albatta. Shu yerga imzo qo'ying. Mana chekingiz!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "откры́ть счёт",
+    "hisob ochmoq"
+   ],
+   [
+    "снять де́ньги",
+    "pul yechmoq"
+   ],
+   [
+    "перевести́ де́ньги",
+    "pul o'tkazmoq"
+   ],
+   [
+    "обменя́ть де́ньги",
+    "pul almashtirmoq"
+   ],
+   [
+    "банкома́т",
+    "bankomat"
+   ],
+   [
+    "посы́лка",
+    "posilka"
+   ],
+   [
+    "конве́рт",
+    "konvert"
+   ],
+   [
+    "а́дрес",
+    "manzil"
+   ],
+   [
+    "по́дпись",
+    "imzo"
+   ],
+   [
+    "анке́та",
+    "anketa"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Я хочу́ ___ счёт в ба́нке.",
+    "o": [
+     "откры́ть",
+     "откры́л",
+     "откро́ю"
+    ],
+    "a": "откры́ть"
+   },
+   {
+    "s": "Где ближа́йший ___ ?",
+    "o": [
+     "курс",
+     "банк",
+     "банкома́т"
+    ],
+    "a": "банкома́т"
+   },
+   {
+    "s": "Я ___ де́ньги в банкома́те. (yechdim)",
+    "o": [
+     "снял",
+     "снима́ю",
+     "снять"
+    ],
+    "a": "снял"
+   },
+   {
+    "s": "Я хочу́ ___ де́ньги ма́ме. (o'tkazmoq)",
+    "o": [
+     "перевести́",
+     "перево́д",
+     "перевёл"
+    ],
+    "a": "перевести́"
+   },
+   {
+    "s": "Како́й сего́дня ___ до́ллара?",
+    "o": [
+     "чек",
+     "курс",
+     "счёт"
+    ],
+    "a": "курс"
+   },
+   {
+    "s": "Я хочу́ ___ посы́лку в Москву́.",
+    "o": [
+     "отпра́вка",
+     "отпра́вить",
+     "отпра́вил"
+    ],
+    "a": "отпра́вить"
+   },
+   {
+    "s": "Я ___ посы́лку от ма́мы. (oldim)",
+    "o": [
+     "получа́ю",
+     "получи́ть",
+     "получи́л"
+    ],
+    "a": "получи́л"
+   },
+   {
+    "s": "___ , пожа́луйста, анке́ту.",
+    "o": [
+     "Запо́лню",
+     "Запо́лните",
+     "Запо́лнить"
+    ],
+    "a": "Запо́лните"
+   },
+   {
+    "s": "Поста́вьте ___ здесь.",
+    "o": [
+     "подписа́ть",
+     "подписа́л",
+     "по́дпись"
+    ],
+    "a": "по́дпись"
+   },
+   {
+    "s": "Ваш ___ , пожа́луйста.",
+    "o": [
+     "па́спорт",
+     "па́спортом",
+     "паспорта́"
+    ],
+    "a": "па́спорт"
+   },
+   {
+    "s": "Напиши́те ___ и и́ндекс.",
+    "o": [
+     "а́дрес",
+     "а́дресом",
+     "а́дреса"
+    ],
+    "a": "а́дрес"
+   },
+   {
+    "s": "Подойди́те к око́шку ___ три.",
+    "o": [
+     "но́мером",
+     "номера́",
+     "но́мер"
+    ],
+    "a": "но́мер"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Hisob ochmoqchiman»",
+    "o": [
+     "Я хочу́ закры́ть счёт",
+     "Я хочу́ откры́ть счёт",
+     "Я хочу́ счёт"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Dollarni qayerda almashtirsa bo'ladi?»",
+    "o": [
+     "Где мо́жно обменя́ть до́ллары?",
+     "Где до́ллары?",
+     "Ско́лько до́лларов?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«posilka»",
+    "o": [
+     "письмо́",
+     "конве́рт",
+     "посы́лка"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Necha kun boradi?»",
+    "o": [
+     "Ско́лько дней идёт?",
+     "Ско́лько сто́ит?",
+     "Когда́ откры́то?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Shu yerga imzo qo'ying»",
+    "o": [
+     "Пиши́те а́дрес",
+     "Положи́те по́дпись",
+     "Поста́вьте по́дпись здесь"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«otasining ismi»",
+    "o": [
+     "и́мя",
+     "фами́лия",
+     "о́тчество"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Talon oling va kuting»",
+    "o": [
+     "Тало́н взял",
+     "Да́йте тало́н",
+     "Возьми́те тало́н и подожди́те"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Bankomat kartani yutib yubordi»",
+    "o": [
+     "Ка́рта в ба́нке",
+     "Банкома́т дал ка́рту",
+     "Банкома́т «съел» ка́рту"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "откры́ть",
+     "Я",
+     "хочу́",
+     "счёт"
+    ],
+    "a": "Я хочу́ откры́ть счёт",
+    "t": "Hisob ochmoqchiman"
+   },
+   {
+    "w": [
+     "анке́ту",
+     "Запо́лните"
+    ],
+    "a": "Запо́лните анке́ту",
+    "t": "Anketani to'ldiring"
+   },
+   {
+    "w": [
+     "посы́лку",
+     "Я",
+     "отпра́вить",
+     "хочу́"
+    ],
+    "a": "Я хочу́ отпра́вить посы́лку",
+    "t": "Posilka jo'natmoqchiman"
+   },
+   {
+    "w": [
+     "курс",
+     "Како́й",
+     "сего́дня"
+    ],
+    "a": "Како́й сего́дня курс",
+    "t": "Bugun kurs qanday?"
+   },
+   {
+    "w": [
+     "здесь",
+     "Поста́вьте",
+     "по́дпись"
+    ],
+    "a": "Поста́вьте по́дпись здесь",
+    "t": "Shu yerga imzo qo'ying"
+   },
+   {
+    "w": [
+     "ближа́йший",
+     "Где",
+     "банкома́т"
+    ],
+    "a": "Где ближа́йший банкома́т",
+    "t": "Eng yaqin bankomat qayerda?"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Здра́вствуйте! Я хочу́ откры́ть счёт и заказа́ть ка́рту.",
+   "uz": "Assalomu alaykum! Hisob ochib, karta buyurtma qilmoqchiman."
+  },
+  {
+   "ru": "Где мо́жно обменя́ть до́ллары?",
+   "uz": "Dollarni qayerda almashtirsa bo'ladi?"
+  },
+  {
+   "ru": "Я хочу́ перевести́ де́ньги ма́ме.",
+   "uz": "Onamga pul o'tkazmoqchiman."
+  },
+  {
+   "ru": "Я хочу́ отпра́вить посы́лку в Москву́.",
+   "uz": "Moskvaga posilka jo'natmoqchiman."
+  },
+  {
+   "ru": "Ско́лько сто́ит и ско́лько дней идёт?",
+   "uz": "Qancha turadi va necha kun boradi?"
+  },
+  {
+   "ru": "Где поста́вить по́дпись?",
+   "uz": "Qayerga imzo qo'yay?"
+  }
+ ]
+}

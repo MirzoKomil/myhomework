@@ -1,0 +1,538 @@
+{
+ "title_uz": "5-oraliq imtihon: 49–60-darslar",
+ "passPercent": 70,
+ "questions": [
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q01",
+   "question": "To'g'ri shaklni tanlang: «Ве́чером я … спо́ртом.»",
+   "options": [
+    "занима́ю",
+    "занимаюся",
+    "занима́ется",
+    "занима́юсь"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q02",
+   "question": "To'g'ri gapni tanlang.",
+   "options": [
+    "Я игра́ю на гита́ру.",
+    "Я игра́ю в гита́ре.",
+    "Я игра́ю на гита́ре.",
+    "Я игра́ю гита́ру."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q03",
+   "question": "To'g'ri shaklni tanlang: «У меня́ мно́го …»",
+   "options": [
+    "другов",
+    "друзья́",
+    "друзе́й",
+    "друзья́м"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q04",
+   "question": "«Достопримеча́тельность» so'zining ma'nosi qaysi?",
+   "options": [
+    "diqqatga sazovor joy",
+    "mehmonxona",
+    "ko'prik",
+    "haykal"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q05",
+   "question": "Mos fe'lni tanlang: «У́тром я … из до́ма в во́семь.»",
+   "options": [
+    "вошёл",
+    "перешёл",
+    "подошёл",
+    "вы́шел"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q06",
+   "question": "Hikoyada «nihoyat» ma'nosidagi so'z qaysi?",
+   "options": [
+    "пото́м",
+    "наконе́ц",
+    "снача́ла",
+    "одна́жды"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q07",
+   "question": "Mos bog'lovchini tanlang: «Я боле́ю, … я до́ма.»",
+   "options": [
+    "потому́ что",
+    "хотя́",
+    "поэ́тому",
+    "е́сли"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q08",
+   "question": "Muloyim norozilik bildiradigan gapni tanlang.",
+   "options": [
+    "Ты прав!",
+    "Абсолю́тно!",
+    "Извини́, но я ду́маю по-друго́му.",
+    "Я согла́сен."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q09",
+   "question": "Mos so'zni tanlang: «Э́то кни́га, … я чита́ю.»",
+   "options": [
+    "кото́рую",
+    "кото́рой",
+    "кото́рый",
+    "кото́рая"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q10",
+   "question": "To'g'ri shaklni tanlang: «Сын похо́ж на …»",
+   "options": [
+    "па́пе",
+    "па́пу",
+    "па́пой",
+    "па́па"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q11",
+   "question": "Xayoliy (real bo'lmagan) shartni to'g'ri ifodalagan gapni tanlang.",
+   "options": [
+    "Е́сли бы у меня́ бу́дет миллио́н, я бы купи́л дом.",
+    "Е́сли у меня́ был бы миллио́н, я куплю́ дом.",
+    "Е́сли бы у меня́ был миллио́н, я куплю́ дом.",
+    "Е́сли бы у меня́ был миллио́н, я бы купи́л дом."
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-q12",
+   "question": "«Что бы ты сде́лал, е́сли бы…?» — ma'nosini tanlang.",
+   "options": [
+    "Nima qilishing kerak?",
+    "Agar … bo'lsa, nima qilarding?",
+    "Kecha nima qilding?",
+    "Ertaga nima qilasan?"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q13",
+   "sentence": "Фильм ___ в во́семь.",
+   "answer": "начина́ется",
+   "options": [
+    "начина́юсь",
+    "начина́ется",
+    "начина́ет"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q14",
+   "sentence": "В на́шем го́роде мно́го ___.",
+   "answer": "па́рков",
+   "options": [
+    "па́рки",
+    "па́рков",
+    "па́рка"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q15",
+   "sentence": "Как ___ до метро́?",
+   "answer": "дойти́",
+   "options": [
+    "вы́йти",
+    "дойти́",
+    "войти́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q16",
+   "sentence": "Мне о́чень ___ э́тот го́род!",
+   "answer": "понра́вился",
+   "options": [
+    "понра́вился",
+    "понра́вилась",
+    "понра́вилось"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q17",
+   "sentence": "Е́сли ___ тепло́, мы пое́дем в го́ры.",
+   "answer": "бу́дет",
+   "options": [
+    "есть",
+    "бы́ло",
+    "бу́дет"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q18",
+   "sentence": "Я ___, что э́то хоро́шая иде́я.",
+   "answer": "ду́маю",
+   "options": [
+    "ду́маю",
+    "ду́мает",
+    "ду́мать"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q19",
+   "sentence": "Я учу́ ру́сский, ___ рабо́тать в Москве́.",
+   "answer": "что́бы",
+   "options": [
+    "кото́рый",
+    "потому́ что",
+    "что́бы"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q20",
+   "sentence": "У неё ___ глаза́.",
+   "answer": "голубы́е",
+   "options": [
+    "голуба́я",
+    "голубо́й",
+    "голубы́е"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q21",
+   "sentence": "Я ___ бы заказа́ть сто́лик.",
+   "answer": "хоте́л",
+   "options": [
+    "хоте́ть",
+    "хоте́л",
+    "хочу́"
+   ]
+  },
+  {
+   "kind": "fillBlank",
+   "id": "i5-q22",
+   "sentence": "Е́сли бы я мог лета́ть, я бы ___ в ко́смос.",
+   "answer": "полете́л",
+   "options": [
+    "полете́л",
+    "лете́ть",
+    "полечу́"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q23",
+   "translation": "Men soat yettida uyg'onaman.",
+   "words": [
+    "семь",
+    "Я",
+    "просыпа́ется",
+    "в",
+    "просыпа́юсь"
+   ],
+   "answer": [
+    "Я",
+    "просыпа́юсь",
+    "в",
+    "семь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q24",
+   "translation": "Qaysi jamoaga muxlislik qilasan?",
+   "words": [
+    "ты",
+    "кака́я",
+    "кома́нду",
+    "За",
+    "боле́ешь",
+    "каку́ю"
+   ],
+   "answer": [
+    "За",
+    "каку́ю",
+    "кома́нду",
+    "ты",
+    "боле́ешь"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q25",
+   "translation": "Mening do'stlarim ko'p.",
+   "words": [
+    "У",
+    "друзе́й",
+    "мно́го",
+    "друзья́",
+    "меня́"
+   ],
+   "answer": [
+    "У",
+    "меня́",
+    "мно́го",
+    "друзе́й"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q26",
+   "translation": "Shahringizda nima bor?",
+   "words": [
+    "ва́шем",
+    "в",
+    "есть",
+    "Что",
+    "ваш",
+    "го́роде"
+   ],
+   "answer": [
+    "Что",
+    "есть",
+    "в",
+    "ва́шем",
+    "го́роде"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q27",
+   "translation": "U xonaga kirdi.",
+   "words": [
+    "ко́мнате",
+    "вошёл",
+    "Он",
+    "ко́мнату",
+    "в"
+   ],
+   "answer": [
+    "Он",
+    "вошёл",
+    "в",
+    "ко́мнату"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q28",
+   "translation": "Men uydaman, chunki kasalman.",
+   "words": [
+    "боле́ю",
+    "что",
+    "поэ́тому",
+    "Я",
+    "потому́",
+    "до́ма"
+   ],
+   "answer": [
+    "Я",
+    "до́ма",
+    "потому́",
+    "что",
+    "боле́ю"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q29",
+   "translation": "Bu men tug'ilgan shahar.",
+   "words": [
+    "кото́ром",
+    "го́род",
+    "роди́лся",
+    "кото́рая",
+    "в",
+    "я",
+    "Э́то"
+   ],
+   "answer": [
+    "Э́то",
+    "го́род",
+    "в",
+    "кото́ром",
+    "я",
+    "роди́лся"
+   ]
+  },
+  {
+   "kind": "sentenceBuild",
+   "id": "i5-q30",
+   "translation": "Sening o'rningda men dam olardim.",
+   "words": [
+    "отдохну́",
+    "ме́сте",
+    "твоём",
+    "На",
+    "бы",
+    "отдохну́л",
+    "я"
+   ],
+   "answer": [
+    "На",
+    "твоём",
+    "ме́сте",
+    "я",
+    "бы",
+    "отдохну́л"
+   ]
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-s1",
+   "question": "🗣 Vaziyat: Do'stingiz «Bu film zo'r!» dedi. Siz ham shunday fikrdasiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "По-моему́, фильм ску́чный.",
+    "Я не смотре́л э́тот фильм.",
+    "Я не согла́сен.",
+    "Я согла́сен, фильм отли́чный!"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-s2",
+   "question": "🗣 Vaziyat: Restoranda ofitsiantga muloyimlik bilan buyurtma berasiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Я заказа́л плов вчера́.",
+    "Плов был вку́сный.",
+    "Я хоте́л бы заказа́ть плов.",
+    "Вы лю́бите плов?"
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-s3",
+   "question": "🗣 Vaziyat: Do'stingiz imtihondan muvaffaqiyatli o'tdi. Nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Ты опозда́л!",
+    "Поздравля́ю! Молоде́ц!",
+    "Бу́дьте здоро́вы!",
+    "Мне о́чень жаль."
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-s4",
+   "question": "🗣 Vaziyat: Do'stingiz bankda ishlashni orzu qiladi va sizdan maslahat so'radi. Maslahat bering.\n\nTo'g'ri ruscha javobni tanlang.",
+   "options": [
+    "Ты рабо́тал вчера́?",
+    "Где ты рабо́таешь?",
+    "На твоём ме́сте я бы иска́л рабо́ту в ба́нке.",
+    "Я рабо́таю в ба́нке."
+   ],
+   "correctIndex": 2
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-r1",
+   "question": "📖 Matn: «Дильно́за рабо́тает в ба́нке. Её рабо́чий день начина́ется в де́вять и зака́нчивается в шесть. Ве́чером она́ занима́ется йо́гой и́ли пла́ванием. По суббо́там она́ хо́дит в бассе́йн с подру́гами. Ещё Дильно́за лю́бит рисова́ть и игра́ть на гита́ре. Она́ у́чит англи́йский язы́к, потому́ что хо́чет пое́хать в Ло́ндон. Она́ говори́т: „Е́сли бы у меня́ бы́ло бо́льше свобо́дного вре́мени, я бы рисова́ла ка́ждый день“.»\n\nSavol: Dilnoza nega ingliz tilini o'rganyapti?",
+   "options": [
+    "Londonga bormoqchi",
+    "imtihon topshiradi",
+    "dugonalari ingliz",
+    "ishida kerak"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-r2",
+   "question": "📖 Matn: «Дильно́за рабо́тает в ба́нке. Её рабо́чий день начина́ется в де́вять и зака́нчивается в шесть. Ве́чером она́ занима́ется йо́гой и́ли пла́ванием. По суббо́там она́ хо́дит в бассе́йн с подру́гами. Ещё Дильно́за лю́бит рисова́ть и игра́ть на гита́ре. Она́ у́чит англи́йский язы́к, потому́ что хо́чет пое́хать в Ло́ндон. Она́ говори́т: „Е́сли бы у меня́ бы́ло бо́льше свобо́дного вре́мени, я бы рисова́ла ка́ждый день“.»\n\nSavol: Shanba kunlari Dilnoza qayerga boradi?",
+   "options": [
+    "bankka, ishga",
+    "dugonalari bilan basseynga",
+    "gitara darsiga",
+    "sport zaliga"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-r3",
+   "question": "📖 Matn: «Дильно́за рабо́тает в ба́нке. Её рабо́чий день начина́ется в де́вять и зака́нчивается в шесть. Ве́чером она́ занима́ется йо́гой и́ли пла́ванием. По суббо́там она́ хо́дит в бассе́йн с подру́гами. Ещё Дильно́за лю́бит рисова́ть и игра́ть на гита́ре. Она́ у́чит англи́йский язы́к, потому́ что хо́чет пое́хать в Ло́ндон. Она́ говори́т: „Е́сли бы у меня́ бы́ло бо́льше свобо́дного вре́мени, я бы рисова́ла ка́ждый день“.»\n\nSavol: Vaqti ko'proq bo'lsa, Dilnoza nima qilardi?",
+   "options": [
+    "har kuni rasm chizardi",
+    "har kuni suzardi",
+    "Londonga borardi",
+    "gitara chalishni o'rganardi"
+   ],
+   "correctIndex": 0
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-r4",
+   "question": "📖 Matn: «В про́шлом ме́сяце Абдулази́з и Нигора́ е́здили в Самарка́нд. Они́ е́хали на по́езде два часа́. Снача́ла они́ пошли́ в гости́ницу, кото́рая нахо́дится ря́дом с Региста́ном. Пото́м они́ гуля́ли по го́роду и смотре́ли достопримеча́тельности. Гид рассказа́л им об исто́рии го́рода. Нигора́ купи́ла сувени́ры де́тям. Ве́чером они́ бы́ли у ба́бушки Нигоры́. Э́то была́ незабыва́емая пое́здка!»\n\nSavol: Ular Samarqandga nima bilan borishdi?",
+   "options": [
+    "samolyotda",
+    "avtobusda",
+    "mashinada",
+    "poyezdda"
+   ],
+   "correctIndex": 3
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-r5",
+   "question": "📖 Matn: «В про́шлом ме́сяце Абдулази́з и Нигора́ е́здили в Самарка́нд. Они́ е́хали на по́езде два часа́. Снача́ла они́ пошли́ в гости́ницу, кото́рая нахо́дится ря́дом с Региста́ном. Пото́м они́ гуля́ли по го́роду и смотре́ли достопримеча́тельности. Гид рассказа́л им об исто́рии го́рода. Нигора́ купи́ла сувени́ры де́тям. Ве́чером они́ бы́ли у ба́бушки Нигоры́. Э́то была́ незабыва́емая пое́здка!»\n\nSavol: Mehmonxona qayerda joylashgan?",
+   "options": [
+    "buvisining uyi yonida",
+    "Registon yonida",
+    "shahar tashqarisida",
+    "vokzal yonida"
+   ],
+   "correctIndex": 1
+  },
+  {
+   "kind": "multipleChoice",
+   "id": "i5-r6",
+   "question": "📖 Matn: «В про́шлом ме́сяце Абдулази́з и Нигора́ е́здили в Самарка́нд. Они́ е́хали на по́езде два часа́. Снача́ла они́ пошли́ в гости́ницу, кото́рая нахо́дится ря́дом с Региста́ном. Пото́м они́ гуля́ли по го́роду и смотре́ли достопримеча́тельности. Гид рассказа́л им об исто́рии го́рода. Нигора́ купи́ла сувени́ры де́тям. Ве́чером они́ бы́ли у ба́бушки Нигоры́. Э́то была́ незабыва́емая пое́здка!»\n\nSavol: Kechqurun ular qayerda bo'lishdi?",
+   "options": [
+    "mehmonxonada",
+    "Registonda",
+    "restoranda",
+    "Nigoraning buvisinikida"
+   ],
+   "correctIndex": 3
+  }
+ ]
+}

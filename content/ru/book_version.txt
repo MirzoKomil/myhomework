@@ -1,0 +1,8 @@
+Domwork — «Rus tilida 90 kunda gapiring» (rus tili, 72 dars)
+Kitob versiyasi: 2026-10-20 (3-xolis auditdan keyingi tuzatishlar + yangi 2 betlik ilova yo'riqnomasi)
+Manba: domwork_1oy/src (kitob PDF lari shu JSON lardan yig'iladi — matn 1:1 bir xil)
+PDF lar (D:\111 domwork):
+2080774d23fb11cb4501e1fee69d4617  Domwork_rus_tili_1-qism_1-oy.pdf
+22f75dd62fbf58194b0a8777dde89a4e  Domwork_rus_tili_2-qism_2-oy.pdf
+dc62ea97976c221b49e81eb5758a7011  Domwork_rus_tili_3-qism_3-oy.pdf
+Imtihonlar: oraliq 1–6 — 40 savoldan, yakuniy — 50 savol, o'tish bali 70%. oral.json — og'zaki qism (ustoz o'tkazadi, platformaga emas).

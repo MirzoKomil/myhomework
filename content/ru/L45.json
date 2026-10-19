@@ -1,0 +1,604 @@
+{
+ "n": 45,
+ "lessonId": "l1784055280406-44",
+ "type": "video",
+ "id": "l1784055280406-44",
+ "topic": "Sog'liq: у меня́ боли́т…",
+ "title": "Sog'liq: tana a'zolari, у меня́ боли́т…, мне пло́хо / лу́чше",
+ "title_ru": "Здоро́вье: у меня́ боли́т…",
+ "videoUrl": "",
+ "cando": "Qayerim og'riyotganini (У меня́ боли́т голова́), o'zimni qanday his qilayotganimni (Мне пло́хо / лу́чше) aytaman va boshqalardan so'rayman.",
+ "review": [
+  {
+   "q": "«Samarqandgacha bitta chipta»",
+   "a": "Оди́н биле́т до Самарка́нда."
+  },
+  {
+   "q": "«Borish-qaytish»",
+   "a": "Туда́ и обра́тно."
+  },
+  {
+   "q": "Как ты е́здишь на рабо́ту?",
+   "a": "Я е́зжу на метро́."
+  },
+  {
+   "q": "«Akam Moskvadan keldi»",
+   "a": "Брат прие́хал из Москвы́."
+  },
+  {
+   "q": "«Qancha bo'ldi?» (taksida)",
+   "a": "Ско́лько с меня́?"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "боле́ть (у меня́ боли́т)",
+   "tr": "[balyét' / bal'ít]",
+   "uz": "og'rimoq (… og'riyapti)",
+   "ex": "У меня́ боли́т голова́.",
+   "img": "cards/голова болит.jpg",
+   "icon": "",
+   "vocabId": "v-45-1",
+   "media": "media/ru/L45/w_v-45-1.jpg"
+  },
+  {
+   "ru": "голова́",
+   "tr": "[galavá]",
+   "uz": "bosh",
+   "ex": "У меня́ боли́т голова́.",
+   "img": "cards/голова болит.jpg",
+   "icon": "",
+   "vocabId": "v-45-2",
+   "media": "media/ru/L45/w_v-45-2.jpg"
+  },
+  {
+   "ru": "го́рло",
+   "tr": "[górla]",
+   "uz": "tomoq",
+   "ex": "У неё боли́т го́рло.",
+   "img": "cards/горло.jpg",
+   "icon": "",
+   "vocabId": "v-45-3",
+   "media": "media/ru/L45/w_v-45-3.jpg"
+  },
+  {
+   "ru": "живо́т",
+   "tr": "[jivót]",
+   "uz": "qorin",
+   "ex": "У ребёнка боли́т живо́т.",
+   "img": "cards/живот.jpg",
+   "icon": "",
+   "vocabId": "v-45-4",
+   "media": "media/ru/L45/w_v-45-4.jpg"
+  },
+  {
+   "ru": "спина́",
+   "tr": "[spiná]",
+   "uz": "bel, orqa",
+   "ex": "У па́пы боли́т спина́.",
+   "img": "cards/спина.jpg",
+   "icon": "",
+   "vocabId": "v-45-5",
+   "media": "media/ru/L45/w_v-45-5.jpg"
+  },
+  {
+   "ru": "зуб (зу́бы)",
+   "tr": "[zup (zúby)]",
+   "uz": "tish",
+   "ex": "У меня́ боли́т зуб.",
+   "img": "cards/зуб.jpg",
+   "icon": "",
+   "vocabId": "v-45-6",
+   "media": "media/ru/L45/w_v-45-6.jpg"
+  },
+  {
+   "ru": "нога́ (но́ги)",
+   "tr": "[nagá]",
+   "uz": "oyoq",
+   "ex": "У него́ боли́т нога́.",
+   "img": "cards/нога.jpg",
+   "icon": "",
+   "vocabId": "v-45-7",
+   "media": "media/ru/L45/w_v-45-7.jpg"
+  },
+  {
+   "ru": "рука́ (ру́ки)",
+   "tr": "[ruká]",
+   "uz": "qo'l",
+   "ex": "У меня́ боли́т рука́.",
+   "img": "cards/рука.jpg",
+   "icon": "",
+   "vocabId": "v-45-8",
+   "media": "media/ru/L45/w_v-45-8.jpg"
+  },
+  {
+   "ru": "глаз (глаза́)",
+   "tr": "[glas (glazá)]",
+   "uz": "ko'z",
+   "ex": "У меня́ боля́т глаза́.",
+   "img": "cards/глаз.jpg",
+   "icon": "",
+   "vocabId": "v-45-9",
+   "media": "media/ru/L45/w_v-45-9.jpg"
+  },
+  {
+   "ru": "у́хо (у́ши)",
+   "tr": "[úxa (úshi)]",
+   "uz": "quloq",
+   "ex": "У ребёнка боли́т у́хо.",
+   "img": "cards/ухо.jpg",
+   "icon": "",
+   "vocabId": "v-45-10",
+   "media": "media/ru/L45/w_v-45-10.jpg"
+  },
+  {
+   "ru": "температу́ра",
+   "tr": "[timpiratúra]",
+   "uz": "harorat, isitma",
+   "ex": "У меня́ высо́кая температу́ра.",
+   "img": "cards/температура.jpg",
+   "icon": "",
+   "vocabId": "v-45-11",
+   "media": "media/ru/L45/w_v-45-11.jpg"
+  },
+  {
+   "ru": "ка́шель",
+   "tr": "[káshil']",
+   "uz": "yo'tal",
+   "ex": "У меня́ си́льный ка́шель.",
+   "img": "cards/кашель.jpg",
+   "icon": "",
+   "vocabId": "v-45-12",
+   "media": "media/ru/L45/w_v-45-12.jpg"
+  },
+  {
+   "ru": "на́сморк",
+   "tr": "[násmark]",
+   "uz": "tumov",
+   "ex": "У меня́ на́сморк.",
+   "img": "cards/насморк.jpg",
+   "icon": "",
+   "vocabId": "v-45-13",
+   "media": "media/ru/L45/w_v-45-13.jpg"
+  },
+  {
+   "ru": "мне пло́хо",
+   "tr": "[mne plóxa]",
+   "uz": "o'zimni yomon his qilyapman",
+   "ex": "Мне пло́хо, я заболе́л.",
+   "img": "cards/мне плохо.jpg",
+   "icon": "",
+   "vocabId": "v-45-14",
+   "media": "media/ru/L45/w_v-45-14.jpg"
+  },
+  {
+   "ru": "мне лу́чше",
+   "tr": "[mne lúchshe]",
+   "uz": "menga yaxshiroq",
+   "ex": "Спаси́бо, мне уже́ лу́чше.",
+   "img": "cards/мне лучше.jpg",
+   "icon": "",
+   "vocabId": "v-45-15",
+   "media": "media/ru/L45/w_v-45-15.jpg"
+  },
+  {
+   "ru": "заболе́ть / боле́ть",
+   "tr": "[zabalyét']",
+   "uz": "kasal bo'lib qolmoq / kasal bo'lmoq",
+   "ex": "Я заболе́л и не пошёл на рабо́ту.",
+   "img": "cards/температура.jpg",
+   "icon": "",
+   "vocabId": "v-45-16",
+   "media": "media/ru/L45/w_v-45-16.jpg"
+  }
+ ],
+ "konspekt": "45-DARS: Sog'liq — у меня́ боли́т…\n(Здоро́вье)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: qayeringiz og'riyotganini, o'zingizni qanday his qilayotganingizni aytasiz va boshqalarning ahvolini so'raysiz.\n\n---\n\n1. Tana a'zolari\n\nголова́ (bosh) · го́рло (tomoq) · живо́т (qorin) · спина́ (bel) · зуб (tish) · нога́ (oyoq) · рука́ (qo'l) · глаз (ko'z) · у́хо (quloq) · се́рдце (yurak)\nKo'plik: но́ги, ру́ки, глаза́, у́ши, зу́бы\n\n---\n\n2. У меня́ боли́т / боля́т — «… og'riyapti»\n\n27-darsdagi «у кого́?» qolipi + боле́ть:\n* У меня́ боли́т голова́. (birlik → боли́т)\n* У меня́ боля́т зу́бы. (ko'plik → боля́т)\n* У ма́мы боли́т спина́. · У ребёнка боли́т у́хо.\nO'tgan zamon: Вчера́ у меня́ боле́ла голова́. (голова́ — ж.р. → боле́ла)\n\n---\n\n3. Ahvol: мне + so'z (33-dars, да́тельный)\n\n* Мне пло́хо. — Ahvolim yomon.\n* Мне лу́чше. — Yaxshiroqman.\n* Мне хо́лодно / жа́рко. · Ему́ пло́хо.\n\n---\n\n4. Kasallik belgilari: у меня́ (есть)…\n\n* У меня́ температу́ра (высо́кая температу́ра). — Isitmam bor.\n* У меня́ ка́шель и на́сморк. — Yo'tal va tumovim bor.\n* Я заболе́л(а). — Kasal bo'lib qoldim. · Я боле́ю. — Kasalman.\n\n---\n\n5. So'rash va tilak\n\n* Как вы себя́ чу́вствуете? — O'zingizni qanday his qilyapsiz?\n* Что у вас боли́т? — Qayeringiz og'riyapti?\n* Что с тобо́й? — Senga nima bo'ldi?\n* Выздора́вливай(те)! — Tezroq tuzal(ing)! · Будь здоро́в! — Sog' bo'l!\n\n---\n\nDars xulosasi:\n1. голова́, го́рло, живо́т, спина́, зуб, нога́, рука́, глаз, у́хо.\n2. У меня́ боли́т (birlik) / боля́т (ko'plik).\n3. Мне пло́хо / лу́чше / хо́лодно.\n4. температу́ра, ка́шель, на́сморк; Я заболе́л.\n5. Как вы себя́ чу́вствуете? Выздора́вливай!\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: shifokor va dorixona.",
+ "text": {
+  "title": "Бобу́р заболе́л",
+  "ru": "Вчера́ Бобу́р весь день гуля́л в па́рке. Бы́ло хо́лодно и шёл дождь. У́тром он просну́лся и почу́вствовал, что ему́ пло́хо. У него́ боле́ли голова́ и го́рло, был си́льный ка́шель и на́сморк.\nМа́ма изме́рила температу́ру — три́дцать во́семь! «Ты заболе́л, — сказа́ла ма́ма. — Сего́дня ты не пойдёшь на рабо́ту».\nБобу́р позвони́л нача́льнику и сказа́л: «Извини́те, я заболе́л». Нача́льник отве́тил: «Выздора́вливайте!»\nМа́ма дала́ ему́ лека́рство и горя́чий чай с лимо́ном. Ве́чером ему́ бы́ло уже́ лу́чше.",
+  "uz": "Kecha Bobur kun bo'yi parkda sayr qildi. Sovuq edi va yomg'ir yog'di. Ertalab u uyg'onib, ahvoli yomonligini sezdi. Boshi va tomog'i og'riyotgan edi, kuchli yo'tal va tumovi bor edi.\nOnasi haroratini o'lchadi — o'ttiz sakkiz! «Sen kasal bo'lib qolding, — dedi onasi. — Bugun ishga bormaysan».\nBobur boshlig'iga qo'ng'iroq qilib dedi: «Kechirasiz, kasal bo'lib qoldim». Boshliq javob berdi: «Tezroq tuzaling!»\nOnasi unga dori va limonli issiq choy berdi. Kechqurun uning ahvoli allaqachon yaxshiroq edi.",
+  "questions": [
+   {
+    "q": "Где Бобу́р гуля́л вчера́?",
+    "opts": [
+     "В гора́х",
+     "В го́роде",
+     "В па́рке"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Кака́я была́ пого́да?",
+    "opts": [
+     "Жа́рко",
+     "Снег",
+     "Хо́лодно и дождь"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Что у него́ боле́ло?",
+    "opts": [
+     "Живо́т",
+     "Голова́ и го́рло",
+     "Нога́ и рука́"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Кака́я была́ температу́ра?",
+    "opts": [
+     "Три́дцать во́семь",
+     "Соро́к",
+     "Три́дцать шесть"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Кому́ позвони́л Бобу́р?",
+    "opts": [
+     "Нача́льнику",
+     "Дру́гу",
+     "Врачу́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Как он чу́вствовал себя́ ве́чером?",
+    "opts": [
+     "О́чень пло́хо",
+     "Ещё ху́же",
+     "Уже́ лу́чше"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Что с тобо́й? (Senga nima bo'ldi?)",
+  "lines": [
+   {
+    "who": "Дильно́за",
+    "ru": "Тиму́р, что с тобо́й? Ты тако́й бле́дный.",
+    "uz": "Timur, senga nima bo'ldi? Rangingiz o'chib ketgan."
+   },
+   {
+    "who": "Тиму́р",
+    "ru": "Мне пло́хо. У меня́ боли́т голова́ и го́рло.",
+    "uz": "Ahvolim yomon. Boshim va tomog'im og'riyapti."
+   },
+   {
+    "who": "Дильно́за",
+    "ru": "А температу́ра есть?",
+    "uz": "Isitma bormi?"
+   },
+   {
+    "who": "Тиму́р",
+    "ru": "Да, три́дцать семь и пять. И ещё ка́шель.",
+    "uz": "Ha, o'ttiz yetti yarim. Yana yo'tal ham bor."
+   },
+   {
+    "who": "Дильно́за",
+    "ru": "Иди́ домо́й и пей горя́чий чай! За́втра иди́ к врачу́.",
+    "uz": "Uyga bor va issiq choy ich! Ertaga shifokorga bor."
+   },
+   {
+    "who": "Тиму́р",
+    "ru": "Спаси́бо. — Выздора́вливай!",
+    "uz": "Rahmat. — Tezroq tuzal!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "голова́",
+    "bosh"
+   ],
+   [
+    "го́рло",
+    "tomoq"
+   ],
+   [
+    "живо́т",
+    "qorin"
+   ],
+   [
+    "спина́",
+    "bel"
+   ],
+   [
+    "зуб",
+    "tish"
+   ],
+   [
+    "нога́",
+    "oyoq"
+   ],
+   [
+    "рука́",
+    "qo'l"
+   ],
+   [
+    "глаз",
+    "ko'z"
+   ],
+   [
+    "у́хо",
+    "quloq"
+   ],
+   [
+    "ка́шель",
+    "yo'tal"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "У меня́ ___ голова́.",
+    "o": [
+     "боля́т",
+     "боле́л",
+     "боли́т"
+    ],
+    "a": "боли́т"
+   },
+   {
+    "s": "У меня́ ___ зу́бы.",
+    "o": [
+     "боли́т",
+     "боля́т",
+     "бо́ли"
+    ],
+    "a": "боля́т"
+   },
+   {
+    "s": "У ___ боли́т спина́. (dadam)",
+    "o": [
+     "па́пе",
+     "па́пы",
+     "па́па"
+    ],
+    "a": "па́пы"
+   },
+   {
+    "s": "Вчера́ у меня́ ___ голова́.",
+    "o": [
+     "боле́л",
+     "боле́ла",
+     "боли́т"
+    ],
+    "a": "боле́ла"
+   },
+   {
+    "s": "___ пло́хо. (menga)",
+    "o": [
+     "Меня́",
+     "Я",
+     "Мне"
+    ],
+    "a": "Мне"
+   },
+   {
+    "s": "Спаси́бо, мне уже́ ___ .",
+    "o": [
+     "лу́чший",
+     "лу́чше",
+     "хорошо́ был"
+    ],
+    "a": "лу́чше"
+   },
+   {
+    "s": "У меня́ высо́кая ___ .",
+    "o": [
+     "температу́ра",
+     "на́сморк",
+     "ка́шель"
+    ],
+    "a": "температу́ра"
+   },
+   {
+    "s": "Я ___ и не пошёл на рабо́ту.",
+    "o": [
+     "боли́т",
+     "заболе́л",
+     "боле́ю вчера́"
+    ],
+    "a": "заболе́л"
+   },
+   {
+    "s": "Как вы себя́ ___ ?",
+    "o": [
+     "чу́вствую",
+     "чу́вство",
+     "чу́вствуете"
+    ],
+    "a": "чу́вствуете"
+   },
+   {
+    "s": "Что у вас ___ ?",
+    "o": [
+     "боли́т",
+     "бо́лен",
+     "бо́льно"
+    ],
+    "a": "боли́т"
+   },
+   {
+    "s": "Что с ___ ? (senga)",
+    "o": [
+     "тобо́й",
+     "тебя́",
+     "тебе́"
+    ],
+    "a": "тобо́й"
+   },
+   {
+    "s": "У ребёнка боли́т ___ . (quloq)",
+    "o": [
+     "уха́",
+     "у́хо",
+     "у́ши"
+    ],
+    "a": "у́хо"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Boshim og'riyapti»",
+    "o": [
+     "Я боли́т голова́",
+     "Мне боли́т голова́",
+     "У меня́ боли́т голова́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Ko'zlarim og'riyapti»",
+    "o": [
+     "У меня́ боли́т глаза́",
+     "Я боля́т глаза́",
+     "У меня́ боля́т глаза́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Ahvolim yomon»",
+    "o": [
+     "Мне пло́хо",
+     "Я пло́хо",
+     "Меня́ пло́хо"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«tumov»",
+    "o": [
+     "ка́шель",
+     "на́сморк",
+     "температу́ра"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«O'zingizni qanday his qilyapsiz?»",
+    "o": [
+     "Как вы себя́ чу́вствуете?",
+     "Как дела́ на рабо́те?",
+     "Как вас зову́т?"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Tezroq tuzal!»",
+    "o": [
+     "Заболе́й!",
+     "Боле́й!",
+     "Выздора́вливай!"
+    ],
+    "a": 2
+   },
+   {
+    "q": "нога́ → ko'plik:",
+    "o": [
+     "но́гы",
+     "но́ги",
+     "ногов"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Kasal bo'lib qoldim»",
+    "o": [
+     "Я боли́т",
+     "Мне боли́т",
+     "Я заболе́л"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "боли́т",
+     "меня́",
+     "У",
+     "голова́"
+    ],
+    "a": "У меня́ боли́т голова́",
+    "t": "Boshim og'riyapti"
+   },
+   {
+    "w": [
+     "пло́хо",
+     "Мне"
+    ],
+    "a": "Мне пло́хо",
+    "t": "Ahvolim yomon"
+   },
+   {
+    "w": [
+     "температу́ра",
+     "У",
+     "высо́кая",
+     "меня́"
+    ],
+    "a": "У меня́ высо́кая температу́ра",
+    "t": "Isitmam baland"
+   },
+   {
+    "w": [
+     "себя́",
+     "Как",
+     "чу́вствуете",
+     "вы"
+    ],
+    "a": "Как вы себя́ чу́вствуете",
+    "t": "O'zingizni qanday his qilyapsiz?"
+   },
+   {
+    "w": [
+     "уже́",
+     "Мне",
+     "лу́чше"
+    ],
+    "a": "Мне уже́ лу́чше",
+    "t": "Allaqachon yaxshiroqman"
+   },
+   {
+    "w": [
+     "заболе́л",
+     "Я",
+     "вчера́"
+    ],
+    "a": "Я заболе́л вчера́",
+    "t": "Kecha kasal bo'lib qoldim"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "У меня́ боли́т голова́ и го́рло.",
+   "uz": "Boshim va tomog'im og'riyapti."
+  },
+  {
+   "ru": "У меня́ температу́ра и ка́шель.",
+   "uz": "Isitma va yo'talim bor."
+  },
+  {
+   "ru": "Мне пло́хо. Я заболе́л.",
+   "uz": "Ahvolim yomon. Kasal bo'lib qoldim."
+  },
+  {
+   "ru": "Спаси́бо, мне уже́ лу́чше.",
+   "uz": "Rahmat, allaqachon yaxshiroqman."
+  },
+  {
+   "ru": "Как вы себя́ чу́вствуете?",
+   "uz": "O'zingizni qanday his qilyapsiz?"
+  },
+  {
+   "ru": "Выздора́вливай!",
+   "uz": "Tezroq tuzal!"
+  }
+ ]
+}

@@ -1,0 +1,304 @@
+{
+ "n": 56,
+ "lessonId": "l1784055280406-55",
+ "type": "live",
+ "id": "l1784055280406-55",
+ "topic": "Fikr bildirish",
+ "title": "Jonli dars: «Я ду́маю, что…» — fikr bildirish va asoslash",
+ "cando": "Fikrimni bildiraman va asoslayman (По-моему́…, Я ду́маю, что…, потому́ что…), rozi yoki norozi ekanimni muloyim aytaman.",
+ "vocab": [
+  {
+   "ru": "ду́мать (Я ду́маю, что…)",
+   "tr": "[dúmat']",
+   "uz": "o'ylamoq (Menimcha…)",
+   "ex": "Я ду́маю, что э́то хоро́шая иде́я.",
+   "img": "cards/думать.jpg",
+   "icon": "",
+   "vocabId": "v-56-1",
+   "media": "media/ru/L56/w_v-56-1.jpg"
+  },
+  {
+   "ru": "счита́ть",
+   "tr": "[shchitát']",
+   "uz": "hisoblamoq, deb bilmoq",
+   "ex": "Я счита́ю, что спорт — э́то ва́жно.",
+   "img": "cards/считать.jpg",
+   "icon": "",
+   "vocabId": "v-56-2",
+   "media": "media/ru/L56/w_v-56-2.jpg"
+  },
+  {
+   "ru": "по-мо́ему",
+   "tr": "[pa-móyimu]",
+   "uz": "menimcha",
+   "ex": "По-моему́, э́тот фильм ску́чный.",
+   "img": "cards/по-моему.jpg",
+   "icon": "",
+   "vocabId": "v-56-3",
+   "media": "media/ru/L56/w_v-56-3.jpg"
+  },
+  {
+   "ru": "мне́ние",
+   "tr": "[mnyéniye]",
+   "uz": "fikr",
+   "ex": "Како́е ва́ше мне́ние?",
+   "img": "cards/мнение.jpg",
+   "icon": "",
+   "vocabId": "v-56-4",
+   "media": "media/ru/L56/w_v-56-4.jpg"
+  },
+  {
+   "ru": "согла́сен / согла́сна",
+   "tr": "[saglásin / saglásna]",
+   "uz": "roziman",
+   "ex": "Я с тобо́й согла́сен.",
+   "img": "cards/согласен.jpg",
+   "icon": "",
+   "vocabId": "v-56-5",
+   "media": "media/ru/L56/w_v-56-5.jpg"
+  },
+  {
+   "ru": "не согла́сен",
+   "tr": "[ni saglásin]",
+   "uz": "rozi emasman",
+   "ex": "Извини́, но я не согла́сна.",
+   "img": "cards/не согласен.jpg",
+   "icon": "",
+   "vocabId": "v-56-6",
+   "media": "media/ru/L56/w_v-56-6.jpg"
+  },
+  {
+   "ru": "прав / права́",
+   "tr": "[praf / pravá]",
+   "uz": "haq",
+   "ex": "Ты прав! / Она́ права́.",
+   "img": "cards/прав.jpg",
+   "icon": "",
+   "vocabId": "v-56-7",
+   "media": "media/ru/L56/w_v-56-7.jpg"
+  },
+  {
+   "ru": "спо́рить",
+   "tr": "[spórit']",
+   "uz": "bahslashmoq",
+   "ex": "Не бу́дем спо́рить!",
+   "img": "cards/спорить.jpg",
+   "icon": "",
+   "vocabId": "v-56-8",
+   "media": "media/ru/L56/w_v-56-8.jpg"
+  }
+ ],
+ "konspekt": "56-DARS (jonli dars): Fikr bildirish — «Я ду́маю, что…»\n\nBugun ustoz bilan 55-dars mavzusini (потому́ что, поэ́тому, е́сли, хотя́) fikr bildirish va bahsda mashq qildik.\n\nFikr so'rash:\n* Как ты ду́маешь? — Sen qanday o'ylaysan?\n* Како́е твоё / ва́ше мне́ние? — Fikringiz qanday?\n* А ты что ду́маешь об э́том? — Bu haqda nima deb o'ylaysan?\n\nFikr bildirish:\n* Я ду́маю, что… · Я счита́ю, что… · По-моему́,… · Мне ка́жется, что… (menga tuyuladi)\n* Asoslash: …, потому́ что… · Наприме́р,… (masalan)\n\nRozilik:\n* Я согла́сен / согла́сна. · Ты прав(а́)! · Абсолю́тно! · Коне́чно!\n\nNorozilik (muloyim):\n* Я не совсе́м согла́сен. — Unchalik rozi emasman.\n* Извини́, но я ду́маю по-друго́му. — Kechir, lekin men boshqacha o'ylayman.\n* С одно́й стороны́…, с друго́й стороны́… — Bir tomondan…, ikkinchi tomondan…\n\nBahsni yakunlash:\n* Не бу́дем спо́рить! · У ка́ждого своё мне́ние. — Har kimning o'z fikri bor.\n\nUyga vazifa platformada: 10 ta bo'sh joy + 10 test. Yordamchi ustoz bilan gapirish: mening fikrim. Keyingi dars — videodars: кото́рый va что́бы.",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Я ___ , что э́то хоро́шая иде́я.",
+    "o": [
+     "ду́мает",
+     "ду́маю",
+     "ду́мать"
+    ],
+    "a": "ду́маю"
+   },
+   {
+    "s": "___ , э́тот фильм интере́сный. (menimcha)",
+    "o": [
+     "Моему́",
+     "По-моему́",
+     "Мой"
+    ],
+    "a": "По-моему́"
+   },
+   {
+    "s": "Я ___ , что спорт — э́то ва́жно.",
+    "o": [
+     "счита́ет",
+     "счита́ть",
+     "счита́ю"
+    ],
+    "a": "счита́ю"
+   },
+   {
+    "s": "Како́е ва́ше ___ ?",
+    "o": [
+     "мне́ния",
+     "мне́ние",
+     "ду́мать"
+    ],
+    "a": "мне́ние"
+   },
+   {
+    "s": "Я с тобо́й ___ . (erkak)",
+    "o": [
+     "согла́сие",
+     "согла́сна",
+     "согла́сен"
+    ],
+    "a": "согла́сен"
+   },
+   {
+    "s": "Извини́, но я не ___ . (ayol)",
+    "o": [
+     "согла́сен",
+     "согла́сна",
+     "согла́сны"
+    ],
+    "a": "согла́сна"
+   },
+   {
+    "s": "Ты ___ ! (erkakka)",
+    "o": [
+     "пра́вы",
+     "прав",
+     "права́"
+    ],
+    "a": "прав"
+   },
+   {
+    "s": "Не бу́дем ___ !",
+    "o": [
+     "спо́рим",
+     "спо́рить",
+     "спо́рил"
+    ],
+    "a": "спо́рить"
+   },
+   {
+    "s": "Мне ___ , что он прав.",
+    "o": [
+     "ду́маю",
+     "счита́ю",
+     "ка́жется"
+    ],
+    "a": "ка́жется"
+   },
+   {
+    "s": "С одно́й ___ , да. С друго́й ___ , нет.",
+    "o": [
+     "сторона́",
+     "сто́рону",
+     "сто́роны"
+    ],
+    "a": "сто́роны"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Menimcha»",
+    "o": [
+     "по-тво́ему",
+     "мой",
+     "по-мо́ему"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Fikringiz qanday?»",
+    "o": [
+     "Кто ва́ше мне́ние?",
+     "Где ва́ше мне́ние?",
+     "Како́е ва́ше мне́ние?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Roziman» (ayol)",
+    "o": [
+     "Я согла́сие",
+     "Я согла́сен",
+     "Я согла́сна"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Muloyim norozilik:",
+    "o": [
+     "Нет и всё",
+     "Ты не прав, всё!",
+     "Я не совсе́м согла́сен"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Haqsan!»",
+    "o": [
+     "Ты прав!",
+     "Ты пра́вда!",
+     "Ты пра́во!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Bir tomondan… ikkinchi tomondan…»",
+    "o": [
+     "Снача́ла… пото́м…",
+     "С одно́й стороны́… с друго́й стороны́…",
+     "Е́сли… то…"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Masalan»",
+    "o": [
+     "наконе́ц",
+     "наве́рное",
+     "наприме́р"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Menga tuyuladi»",
+    "o": [
+     "Мне показа́л",
+     "Я кажу́сь",
+     "Мне ка́жется"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Bahslashmaylik»",
+    "o": [
+     "Бу́дем спо́рить",
+     "Мы спо́рили",
+     "Не бу́дем спо́рить"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Har kimning o'z fikri bor»",
+    "o": [
+     "Все одно́ мне́ние",
+     "У ка́ждого своё мне́ние",
+     "Ка́ждый мне́ние"
+    ],
+    "a": 1
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Я ду́маю, что ру́сский язы́к о́чень поле́зный.",
+   "uz": "Menimcha, rus tili juda foydali."
+  },
+  {
+   "ru": "По-моему́, лу́чше жить в го́роде.",
+   "uz": "Menimcha, shaharda yashash yaxshiroq."
+  },
+  {
+   "ru": "Я согла́сен с тобо́й.",
+   "uz": "Men sen bilan roziman."
+  },
+  {
+   "ru": "Извини́, но я ду́маю по-друго́му.",
+   "uz": "Kechir, lekin men boshqacha o'ylayman."
+  },
+  {
+   "ru": "С одно́й стороны́, э́то до́рого, с друго́й стороны́ — удо́бно.",
+   "uz": "Bir tomondan bu qimmat, boshqa tomondan — qulay."
+  },
+  {
+   "ru": "Како́е ва́ше мне́ние?",
+   "uz": "Fikringiz qanday?"
+  }
+ ]
+}

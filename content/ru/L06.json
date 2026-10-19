@@ -1,0 +1,259 @@
+{
+ "n": 6,
+ "lessonId": "l1784055280406-5",
+ "type": "live",
+ "id": "l1784055280406-5",
+ "topic": "Что ты де́лаешь?",
+ "title": "Jonli dars: «Что ты де́лаешь?»",
+ "cando": "Men va boshqalar hozir nima qilayotganini aytaman va so'rayman: Что вы де́лаете? — Мы гуля́ем.",
+ "vocab": [
+  {
+   "ru": "гото́вить",
+   "tr": "[gatóvit']",
+   "uz": "ovqat pishirmoq (2-tur: я готовлю, он готовит)",
+   "ex": "Абдулази́з гото́вит плов.",
+   "img": "cards/готовить.jpg",
+   "icon": "",
+   "vocabId": "v-6-1",
+   "media": "media/ru/L06/w_v-6-1.jpg"
+  },
+  {
+   "ru": "полива́ть",
+   "tr": "[palivát']",
+   "uz": "sug'ormoq",
+   "ex": "Маржона́ полива́ет цветы́.",
+   "img": "cards/поливать.jpg",
+   "icon": "",
+   "vocabId": "v-6-2",
+   "media": "media/ru/L06/w_v-6-2.jpg"
+  },
+  {
+   "ru": "петь",
+   "tr": "[pet']",
+   "uz": "kuylamoq (я пою, он поёт)",
+   "ex": "Кудра́т поёт и игра́ет на гита́ре.",
+   "img": "cards/петь.jpg",
+   "icon": "",
+   "vocabId": "v-6-3",
+   "media": "media/ru/L06/w_v-6-3.jpg"
+  },
+  {
+   "ru": "писа́ть",
+   "tr": "[pisát']",
+   "uz": "yozmoq (я пишу, он пишет)",
+   "ex": "Бобу́р пи́шет слова́.",
+   "img": "cards/писать.jpg",
+   "icon": "",
+   "vocabId": "v-6-4",
+   "media": "media/ru/L06/w_v-6-4.jpg"
+  },
+  {
+   "ru": "смотре́ть",
+   "tr": "[smatrét']",
+   "uz": "qaramoq, ko'rmoq (он смотрит)",
+   "ex": "Он смо́трит фильм.",
+   "img": "cards/смотреть.jpg",
+   "icon": "",
+   "vocabId": "v-6-5",
+   "media": "media/ru/L06/w_v-6-5.jpg"
+  },
+  {
+   "ru": "спать",
+   "tr": "[spat']",
+   "uz": "uxlamoq (он спит)",
+   "ex": "Кот спит.",
+   "img": "cards/спать.jpg",
+   "icon": "",
+   "vocabId": "v-6-6",
+   "media": "media/ru/L06/w_v-6-6.jpg"
+  },
+  {
+   "ru": "танцева́ть",
+   "tr": "[tántsevat']",
+   "uz": "raqs tushmoq (я танцую)",
+   "ex": "Де́ти танцу́ют.",
+   "img": "cards/танцевать.jpg",
+   "icon": "",
+   "vocabId": "v-6-7",
+   "media": "media/ru/L06/w_v-6-7.jpg"
+  },
+  {
+   "ru": "цветы́",
+   "tr": "[tsvetý]",
+   "uz": "gullar",
+   "ex": "Она́ полива́ет цветы́.",
+   "img": "cards/цветы.jpg",
+   "icon": "",
+   "vocabId": "v-6-8",
+   "media": "media/ru/L06/w_v-6-8.jpg"
+  }
+ ],
+ "konspekt": "6-DARS (jonli dars): «Что ты де́лаешь?»\n\nBugun ustoz bilan 5-dars mavzusini jonli mashq qildik: hozirgi zamon, 1-tur fe'llar.\n\nAsosiy qolip:\n* Что ты де́лаешь? — Я чита́ю. / Я рабо́таю.\n* Что вы де́лаете? — Мы гуля́ем.\n* Что он де́лает? — Он отдыха́ет.\n* Ты рабо́таешь? ↑ — Да, рабо́таю. / Нет, я не рабо́таю, я отдыха́ю.\n\nQo'shimchalar: -ю, -ешь, -ет, -ем, -е́те, -ют.\n\nPantomima o'yinida ishlatgan fe'llar: чита́ть, писа́ть, слу́шать, игра́ть, гуля́ть, рабо́тать, отдыха́ть, ду́мать, обе́дать, спать, танцева́ть, гото́вить, полива́ть, петь, смотре́ть.\n\nEslab qoling:\n* Ba'zi fe'llar boshqacha o'zgaradi (писа́ть → пишу́, пи́шет; петь → пою́, поёт; гото́вить → гото́влю, гото́вит) — ularni 9-darsda o'rganamiz, hozircha shunchaki eslab qoling.\n* Inkor: не + fe'l: Я не чита́ю.\n\nUyga vazifa platformada: 15 ta savol. Yordamchi ustoz bilan gapirish. Keyingi dars — videodars: otlarning rodi (мой / моя́ / моё).",
+ "exercises": {
+  "fillBlank": [
+   {
+    "s": "Я ___ ру́сский язы́к. (Men rus tilini bilaman.)",
+    "o": [
+     "зна́ет",
+     "зна́ешь",
+     "зна́ю"
+    ],
+    "a": "зна́ю"
+   },
+   {
+    "s": "Мы ___ му́зыку. (Biz musiqa tinglayapmiz.)",
+    "o": [
+     "слу́шаю",
+     "слу́шаем",
+     "слу́шают"
+    ],
+    "a": "слу́шаем"
+   },
+   {
+    "s": "Вы ___ ле́том? (Siz yozda dam olasizmi?)",
+    "o": [
+     "отдыха́ешь",
+     "отдыха́ете",
+     "отдыха́ют"
+    ],
+    "a": "отдыха́ете"
+   },
+   {
+    "s": "___ есть кни́га и тетра́дь. (Menda kitob va daftar bor.)",
+    "o": [
+     "У меня́",
+     "Я",
+     "У тебя́"
+    ],
+    "a": "У меня́"
+   },
+   {
+    "s": "___ рабо́таем вме́сте. (Biz birga ishlaymiz.)",
+    "o": [
+     "Мы",
+     "Они́",
+     "Вы"
+    ],
+    "a": "Мы"
+   },
+   {
+    "s": "Где ___ рабо́тает? (U (erkak) qayerda ishlaydi?)",
+    "o": [
+     "он",
+     "я",
+     "мы"
+    ],
+    "a": "он"
+   },
+   {
+    "s": "Что де́лают студе́нты? — Они́ ___ текст.",
+    "o": [
+     "чита́ет",
+     "чита́ю",
+     "чита́ют"
+    ],
+    "a": "чита́ют"
+   },
+   {
+    "s": "Что де́лает А́нна? — Она́ ___ му́зыку.",
+    "o": [
+     "слу́шают",
+     "слу́шаю",
+     "слу́шает"
+    ],
+    "a": "слу́шает"
+   },
+   {
+    "s": "Ты ___ сего́дня ве́чером? — Нет, сего́дня я рабо́таю.",
+    "o": [
+     "отдыха́ешь",
+     "отдыха́ю",
+     "отдыха́ет"
+    ],
+    "a": "отдыха́ешь"
+   },
+   {
+    "s": "О чём вы ___? — Мы ду́маем о прое́кте.",
+    "o": [
+     "ду́мают",
+     "ду́маете",
+     "ду́маешь"
+    ],
+    "a": "ду́маете"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Маржона́ ___ цветы́.",
+    "o": [
+     "полива́ет",
+     "полива́ют",
+     "полива́ю"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Кудра́т ___ на гита́ре.",
+    "o": [
+     "игра́ю",
+     "игра́ет",
+     "игра́ем"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Вы спи́те?» — javob:",
+    "o": [
+     "Да, мы гуля́ем.",
+     "Да, я сплю.",
+     "Да, я чита́ю."
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Nima qilyapsiz?» ruschasi:",
+    "o": [
+     "Что ты де́лаешь?",
+     "Что они́ де́лают?",
+     "Что вы де́лаете?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Qaysi gap noto'g'ri?",
+    "o": [
+     "Мы гуля́ем.",
+     "Они́ гуля́ют.",
+     "Я гуля́ет."
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "У́тром я чита́ю, днём я рабо́таю.",
+   "uz": "Ertalab men o'qiyman, kunduzi ishlayman."
+  },
+  {
+   "ru": "Ве́чером мы гуля́ем и слу́шаем му́зыку.",
+   "uz": "Kechqurun biz sayr qilamiz va musiqa tinglaymiz."
+  },
+  {
+   "ru": "Что вы де́лаете? — Мы отдыха́ем.",
+   "uz": "Nima qilyapsizlar? — Dam olyapmiz."
+  },
+  {
+   "ru": "Ты танцу́ешь? — Нет, я не танцу́ю, я гуля́ю.",
+   "uz": "Raqs tushyapsanmi? — Yo'q, sayr qilyapman."
+  },
+  {
+   "ru": "Абдулази́з гото́вит, а Маржона́ полива́ет цветы́.",
+   "uz": "Abdulaziz ovqat pishiryapti, Marjona esa gul sug'oryapti."
+  },
+  {
+   "ru": "Я изуча́ю ру́сский язы́к ка́ждый день.",
+   "uz": "Men har kuni rus tilini o'rganaman."
+  }
+ ]
+}

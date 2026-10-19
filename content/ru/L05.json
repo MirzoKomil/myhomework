@@ -1,0 +1,574 @@
+{
+ "n": 5,
+ "lessonId": "l1784055280406-4",
+ "type": "video",
+ "id": "l1784055280406-4",
+ "topic": "Hozirgi zamon fe'llari, 1-tur",
+ "title": "Hozirgi zamon fe'llari: 1-tur tuslanish",
+ "title_ru": "Глаго́лы настоя́щего вре́мени. 1-е спряже́ние",
+ "videoUrl": "https://youtu.be/EVnWQvXzgrM",
+ "cando": "-ать/-ять fe'llarini hozirgi zamonda tuslayman (я чита́ю, ты чита́ешь…) va «Что ты де́лаешь?» savoliga javob beraman.",
+ "review": [
+  {
+   "q": "Rus tilida nechta zamon bor?",
+   "a": "3: hozirgi, o'tgan, kelasi"
+  },
+  {
+   "q": "1-tur fe'llarda nima olib tashlanadi?",
+   "a": "-ть (чита́ть → чита́-)"
+  },
+  {
+   "q": "«они́» uchun qo'shimcha?",
+   "a": "-ют (чита́ют)"
+  },
+  {
+   "q": "«Ты чита́ешь?» — inkor javob?",
+   "a": "Нет, я не чита́ю."
+  },
+  {
+   "q": "«Что вы де́лаете?» — tarjimasi?",
+   "a": "Siz nima qilyapsiz?"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "чита́ть",
+   "tr": "[chitát']",
+   "uz": "o'qimoq",
+   "ex": "Я чита́ю кни́гу. (Men kitob o'qiyapman.)",
+   "img": "cards/читать.jpg",
+   "icon": "",
+   "vocabId": "v-5-1",
+   "media": "media/ru/L05/w_v-5-1.jpg"
+  },
+  {
+   "ru": "де́лать",
+   "tr": "[délat']",
+   "uz": "qilmoq",
+   "ex": "Что ты де́лаешь? (Nima qilyapsan?)",
+   "img": "cards/делать.jpg",
+   "icon": "",
+   "vocabId": "v-5-2",
+   "media": "media/ru/L05/w_v-5-2.jpg"
+  },
+  {
+   "ru": "рабо́тать",
+   "tr": "[rabótat']",
+   "uz": "ishlamoq",
+   "ex": "Он рабо́тает в фи́рме.",
+   "img": "cards/работать.jpg",
+   "icon": "",
+   "vocabId": "v-5-3",
+   "media": "media/ru/L05/w_v-5-3.jpg"
+  },
+  {
+   "ru": "понима́ть",
+   "tr": "[panimát']",
+   "uz": "tushunmoq",
+   "ex": "Ты понима́ешь по-ру́сски?",
+   "img": "cards/понимать.jpg",
+   "icon": "",
+   "vocabId": "v-5-4",
+   "media": "media/ru/L05/w_v-5-4.jpg"
+  },
+  {
+   "ru": "знать",
+   "tr": "[znat']",
+   "uz": "bilmoq",
+   "ex": "Вы зна́ете э́то пра́вило?",
+   "img": "cards/знать.jpg",
+   "icon": "",
+   "vocabId": "v-5-5",
+   "media": "media/ru/L05/w_v-5-5.jpg"
+  },
+  {
+   "ru": "игра́ть",
+   "tr": "[igrát']",
+   "uz": "o'ynamoq",
+   "ex": "Они́ игра́ют в футбо́л.",
+   "img": "cards/играть.jpg",
+   "icon": "",
+   "vocabId": "v-5-6",
+   "media": "media/ru/L05/w_v-5-6.jpg"
+  },
+  {
+   "ru": "гуля́ть",
+   "tr": "[gulyát']",
+   "uz": "sayr qilmoq",
+   "ex": "Мы гуля́ем в па́рке.",
+   "img": "cards/гулять.jpg",
+   "icon": "",
+   "vocabId": "v-5-7",
+   "media": "media/ru/L05/w_v-5-7.jpg"
+  },
+  {
+   "ru": "ду́мать",
+   "tr": "[dúmat']",
+   "uz": "o'ylamoq",
+   "ex": "Она́ ду́мает о бу́дущем.",
+   "img": "cards/думать.jpg",
+   "icon": "",
+   "vocabId": "v-5-8",
+   "media": "media/ru/L05/w_v-5-8.jpg"
+  },
+  {
+   "ru": "слу́шать",
+   "tr": "[slúshat']",
+   "uz": "tinglamoq",
+   "ex": "Мы слу́шаем му́зыку.",
+   "img": "cards/слушать.jpg",
+   "icon": "",
+   "vocabId": "v-5-9",
+   "media": "media/ru/L05/w_v-5-9.jpg"
+  },
+  {
+   "ru": "отдыха́ть",
+   "tr": "[atdyxát']",
+   "uz": "dam olmoq",
+   "ex": "Вы отдыха́ете ле́том?",
+   "img": "cards/отдыхать.jpg",
+   "icon": "",
+   "vocabId": "v-5-10",
+   "media": "media/ru/L05/w_v-5-10.jpg"
+  },
+  {
+   "ru": "обе́дать",
+   "tr": "[abédat']",
+   "uz": "tushlik qilmoq",
+   "ex": "Ве́чером мы вме́сте у́жинаем.",
+   "img": "cards/обедать.jpg",
+   "icon": "",
+   "vocabId": "v-5-11",
+   "media": "media/ru/L05/w_v-5-11.jpg"
+  },
+  {
+   "ru": "изуча́ть",
+   "tr": "[izuchát']",
+   "uz": "o'rganmoq",
+   "ex": "Я изуча́ю ру́сский язы́к.",
+   "img": "cards/изучать.jpg",
+   "icon": "",
+   "vocabId": "v-5-12",
+   "media": "media/ru/L05/w_v-5-12.jpg"
+  },
+  {
+   "ru": "сейча́с",
+   "tr": "[sichás]",
+   "uz": "hozir",
+   "ex": "Что ты де́лаешь сейча́с?",
+   "img": "cards/сейчас.jpg",
+   "icon": "",
+   "vocabId": "v-5-13",
+   "media": "media/ru/L05/w_v-5-13.jpg"
+  },
+  {
+   "ru": "то́же",
+   "tr": "[tóje]",
+   "uz": "ham",
+   "ex": "Он то́же отдыха́ет. (U ham dam olyapti.)",
+   "img": "cards/тоже.jpg",
+   "icon": "",
+   "vocabId": "v-5-14",
+   "media": "media/ru/L05/w_v-5-14.jpg"
+  },
+  {
+   "ru": "вме́сте",
+   "tr": "[vméste]",
+   "uz": "birga",
+   "ex": "Мы рабо́таем вме́сте.",
+   "img": "cards/вместе.jpg",
+   "icon": "",
+   "vocabId": "v-5-15",
+   "media": "media/ru/L05/w_v-5-15.jpg"
+  },
+  {
+   "ru": "му́зыка",
+   "tr": "[múzyka]",
+   "uz": "musiqa",
+   "ex": "Они́ слу́шают му́зыку.",
+   "img": "cards/музыка.jpg",
+   "icon": "",
+   "vocabId": "v-5-16",
+   "media": "media/ru/L05/w_v-5-16.jpg"
+  }
+ ],
+ "konspekt": "5-DARS: Hozirgi zamon fe'llari — 1-tur tuslanish\n(Глаго́лы настоя́щего вре́мени. 1-е спряже́ние)\n\nBu darsdan keyin siz: -ать/-ять fe'llarini tuslaysiz va «Что ты де́лаешь?» savoliga javob berasiz.\n\n---\n\n1. Zamonlar\n\nRus tilida 3 zamon bor: hozirgi (настоя́щее), o'tgan (проше́дшее), kelasi (бу́дущее). Bugun — hozirgi zamon.\n\n2. 1-tur fe'llar (-ать, -ять)\n\nQoida: -ть olib tashlanadi, shaxsga qarab qo'shimcha qo'shiladi.\n\nчита́ть (o'qimoq):\n* я чита́ю — men o'qiyman\n* ты чита́ешь — sen o'qiysan\n* он / она́ чита́ет — u o'qiydi\n* мы чита́ем — biz o'qiymiz\n* вы чита́ете — siz o'qiysiz\n* они́ чита́ют — ular o'qiydi\n\nQo'shimchalar: -ю, -ешь, -ет, -ем, -е́те, -ют. Xuddi shunday: де́лать → де́лаю, рабо́тать → рабо́таю, игра́ть → игра́ю, гуля́ть → гуля́ю, знать → зна́ю, понима́ть → понима́ю, ду́мать → ду́маю, слу́шать → слу́шаю, отдыха́ть → отдыха́ю.\n\nMuhim: oxirgi harflarni to'liq ayting — «де́лаете» (вы) va «де́лает» (он) farqi bitta harfda!\n\n3. Savol va javob\n\n* Что ты де́лаешь? — Я чита́ю кни́гу.\n* Что вы де́лаете? — Мы отдыха́ем.\n* Что они́ де́лают? — Они́ игра́ют в футбо́л.\n\nHa/yo'q savol — ohang bilan: Ты чита́ешь? ↑\n* Да, я чита́ю.\n* Нет, я рабо́таю.\n* Нет, я не чита́ю. (inkor: не + fe'l)\n\n4. Dialoglar\n\n— Приве́т! Что ты де́лаешь?\n— Я рабо́таю. А ты?\n— Я чита́ю кни́гу.\n\n— Что вы де́лаете сейча́с?\n— Мы отдыха́ем.\n— А он? Он то́же отдыха́ет?\n— Нет, он рабо́тает.\n\n5. Mashq (videodagi)\n\n* Мы (чита́ть) кни́ги → чита́ем\n* Что они́ (де́лать)? → де́лают\n* Я (понима́ть) тебя́ → понима́ю\n* Ты (рабо́тать)? → рабо́таешь\n\nQo'shimchaga qarab olmoshni toping: -ем → мы, -ют → они́, -ю → я, -ешь → ты, -е́те → вы, -ет → он/она́.\n\n---\n\nDars xulosasi\n* -ать/-ять → -ть ketadi + -ю/-ешь/-ет/-ем/-е́те/-ют.\n* Savol: Что ты де́лаешь? Inkor: Я не чита́ю.\n* Gap tartibi: kim + fe'l + nima: Бекзо́д чита́ет кни́гу.\n\nUyga vazifa platformada: matn «Студе́нты и рабо́та», 15 test. Yordamchi ustoz bilan gapirish. Keyingi dars — jonli dars: «Pantomima» o'yini.",
+ "text": {
+  "title": "Студе́нты и рабо́та",
+  "ru": "Меня́ зову́т Абдулази́з. Я учу́ ру́сский язы́к. У меня́ есть жена́. Её зову́т Нигора́. У нас есть кни́га и тетра́дь.\nЯ зна́ю текст и де́лаю зада́ния. Нигора́ чита́ет пра́вила и пи́шет слова́. Мы хорошо́ понима́ем ру́сский язы́к.\nУ нас есть друг. Его́ зову́т Бобу́р. Он рабо́тает. Днём мы отдыха́ем, а он рабо́тает.\nВе́чером мы вме́сте у́жинаем, слу́шаем му́зыку и гуля́ем.",
+  "uz": "Mening ismim Abdulaziz. Men rus tilini o'rganyapman. Mening xotinim bor. Uning ismi Nigora. Bizda kitob va daftar bor.\nMen matnni bilaman va topshiriqlarni qilaman. Nigora qoidalarni o'qiydi va so'zlarni yozadi. Biz rus tilini yaxshi tushunamiz.\nBizda do'st bor. Uning ismi Bobur. U ishlaydi. Kunduzi biz dam olamiz, u esa ishlaydi.\nKechqurun biz birga kechki ovqat qilamiz, musiqa tinglaymiz va sayr qilamiz.",
+  "questions": [
+   {
+    "q": "Кто Абдулази́з?",
+    "opts": [
+     "Врач",
+     "Студе́нт",
+     "Учи́тель"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что де́лает Нигора́?",
+    "opts": [
+     "Рабо́тает",
+     "Де́лает зада́ния",
+     "Чита́ет пра́вила и пи́шет слова́"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Что де́лает Бобу́р?",
+    "opts": [
+     "Рабо́тает",
+     "Гуля́ет",
+     "Отдыха́ет"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что они́ де́лают ве́чером вме́сте?",
+    "opts": [
+     "Пи́шут слова́",
+     "Рабо́тают",
+     "Обе́дают, слу́шают му́зыку и гуля́ют"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Что ты де́лаешь? (Nima qilyapsan?)",
+  "lines": [
+   {
+    "who": "Бобу́р",
+    "ru": "Приве́т, Нигора́! Что ты де́лаешь?",
+    "uz": "Salom, Nigora! Nima qilyapsan?"
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Приве́т! Я чита́ю кни́гу. А ты?",
+    "uz": "Salom! Men kitob o'qiyapman. Sen-chi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Я рабо́таю. А что де́лает Абдулази́з?",
+    "uz": "Men ishlayapman. Abdulaziz nima qilyapti?"
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Он отдыха́ет и слу́шает му́зыку.",
+    "uz": "U dam olyapti va musiqa tinglayapti."
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Вы ве́чером гуля́ете?",
+    "uz": "Sizlar kechqurun sayr qilasizlarmi?"
+   },
+   {
+    "who": "Нигора́",
+    "ru": "Да, мы гуля́ем в па́рке. Ты то́же?",
+    "uz": "Ha, biz parkda sayr qilamiz. Sen ham-mi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Нет, я не гуля́ю, я рабо́таю.",
+    "uz": "Yo'q, men sayr qilmayman, men ishlayman."
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "чита́ть",
+    "o'qimoq"
+   ],
+   [
+    "де́лать",
+    "qilmoq"
+   ],
+   [
+    "рабо́тать",
+    "ishlamoq"
+   ],
+   [
+    "понима́ть",
+    "tushunmoq"
+   ],
+   [
+    "знать",
+    "bilmoq"
+   ],
+   [
+    "игра́ть",
+    "o'ynamoq"
+   ],
+   [
+    "гуля́ть",
+    "sayr qilmoq"
+   ],
+   [
+    "ду́мать",
+    "o'ylamoq"
+   ],
+   [
+    "слу́шать",
+    "tinglamoq"
+   ],
+   [
+    "отдыха́ть",
+    "dam olmoq"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Я ___ интере́сную кни́гу. (Men qiziqarli kitob o'qiyapman.)",
+    "o": [
+     "чита́ешь",
+     "чита́ет",
+     "чита́ю"
+    ],
+    "a": "чита́ю"
+   },
+   {
+    "s": "Ты ___ по-ру́сски? (Sen ruscha tushunasanmi?)",
+    "o": [
+     "понима́ет",
+     "понима́ешь",
+     "понима́ю"
+    ],
+    "a": "понима́ешь"
+   },
+   {
+    "s": "Он ___ в фи́рме. (U firmada ishlaydi.)",
+    "o": [
+     "рабо́тает",
+     "рабо́тают",
+     "рабо́таем"
+    ],
+    "a": "рабо́тает"
+   },
+   {
+    "s": "Мы ___ в па́рке. (Biz parkda sayr qilyapmiz.)",
+    "o": [
+     "гуля́ем",
+     "гуля́ет",
+     "гуля́ю"
+    ],
+    "a": "гуля́ем"
+   },
+   {
+    "s": "Вы ___ э́то пра́вило? (Siz bu qoidani bilasizmi?)",
+    "o": [
+     "зна́ют",
+     "зна́ете",
+     "зна́ю"
+    ],
+    "a": "зна́ете"
+   },
+   {
+    "s": "Они́ ___ в футбо́л во дворе́. (Ular hovlida futbol o'ynashyapti.)",
+    "o": [
+     "игра́ем",
+     "игра́ют",
+     "игра́ет"
+    ],
+    "a": "игра́ют"
+   },
+   {
+    "s": "Она́ ___ о бу́дущем. (U kelajak haqida o'ylayapti.)",
+    "o": [
+     "ду́маешь",
+     "ду́мают",
+     "ду́мает"
+    ],
+    "a": "ду́мает"
+   },
+   {
+    "s": "Что ты ___? (Sen nima qilyapsan?)",
+    "o": [
+     "де́лаю",
+     "де́лаешь",
+     "де́лает"
+    ],
+    "a": "де́лаешь"
+   },
+   {
+    "s": "Мы ___ му́зыку. (Biz musiqa tinglayapmiz.)",
+    "o": [
+     "слу́шаем",
+     "слу́шают",
+     "слу́шаю"
+    ],
+    "a": "слу́шаем"
+   },
+   {
+    "s": "Вы ___ ле́том? (Siz yozda dam olasizmi?)",
+    "o": [
+     "отдыха́ешь",
+     "отдыха́ете",
+     "отдыха́ют"
+    ],
+    "a": "отдыха́ете"
+   },
+   {
+    "s": "Ты чита́ешь? — Нет, я ___ чита́ю.",
+    "o": [
+     "не",
+     "нет",
+     "ни"
+    ],
+    "a": "не"
+   },
+   {
+    "s": "Что студе́нты ___ на уро́ке? — Они́ чита́ют текст.",
+    "o": [
+     "де́лают",
+     "де́лаешь",
+     "де́лает"
+    ],
+    "a": "де́лают"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«-ют» qo'shimchasi qaysi olmoshga?",
+    "o": [
+     "вы",
+     "они́",
+     "мы"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«-е́те» qo'shimchasi qaysi olmoshga?",
+    "o": [
+     "он",
+     "вы",
+     "ты"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Что вы де́лаете?» — javob:",
+    "o": [
+     "Они́ игра́ют.",
+     "Мы отдыха́ем.",
+     "Я чита́ю."
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Он то́же отдыха́ет» — tarjimasi:",
+    "o": [
+     "U dam olmayapti.",
+     "U ham dam olyapti.",
+     "U ishlayapti."
+    ],
+    "a": 1
+   },
+   {
+    "q": "Qaysi gap to'g'ri?",
+    "o": [
+     "Я чита́ю кни́гу.",
+     "Я чита́ют кни́гу.",
+     "Я чита́ет кни́гу."
+    ],
+    "a": 0
+   },
+   {
+    "q": "«рабо́таем» — kim?",
+    "o": [
+     "вы",
+     "мы",
+     "они́"
+    ],
+    "a": 1
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "чита́ю",
+     "Я",
+     "кни́гу"
+    ],
+    "a": "Я чита́ю кни́гу",
+    "t": "Men kitob o'qiyapman"
+   },
+   {
+    "w": [
+     "ты",
+     "Что",
+     "де́лаешь",
+     "?"
+    ],
+    "a": "Что ты де́лаешь ?",
+    "t": "Nima qilyapsan?"
+   },
+   {
+    "w": [
+     "в",
+     "Мы",
+     "па́рке",
+     "гуля́ем"
+    ],
+    "a": "Мы гуля́ем в па́рке",
+    "t": "Biz parkda sayr qilyapmiz"
+   },
+   {
+    "w": [
+     "рабо́тает",
+     "Он",
+     "в",
+     "о́фисе"
+    ],
+    "a": "Он рабо́тает в о́фисе",
+    "t": "U ofisda ishlaydi"
+   },
+   {
+    "w": [
+     "не",
+     "Я",
+     "чита́ю"
+    ],
+    "a": "Я не чита́ю",
+    "t": "Men o'qimayapman"
+   },
+   {
+    "w": [
+     "му́зыку",
+     "Они́",
+     "слу́шают"
+    ],
+    "a": "Они́ слу́шают му́зыку",
+    "t": "Ular musiqa tinglashyapti"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Что ты де́лаешь? — Я чита́ю кни́гу.",
+   "uz": "Nima qilyapsan? — Men kitob o'qiyapman."
+  },
+  {
+   "ru": "Я рабо́таю в о́фисе. Я изуча́ю ру́сский язы́к.",
+   "uz": "Men ofisda ishlayman. Men rus tilini o'rganyapman."
+  },
+  {
+   "ru": "Ты понима́ешь по-ру́сски? — Да, я понима́ю.",
+   "uz": "Ruscha tushunasanmi? — Ha, tushunaman."
+  },
+  {
+   "ru": "Ве́чером мы вме́сте у́жинаем и слу́шаем му́зыку.",
+   "uz": "Kechqurun birga kechki ovqat qilamiz va musiqa tinglaymiz."
+  },
+  {
+   "ru": "Он отдыха́ет, а она́ рабо́тает.",
+   "uz": "U dam olyapti, u (ayol) esa ishlayapti."
+  },
+  {
+   "ru": "Нет, я не гуля́ю, я рабо́таю.",
+   "uz": "Yo'q, men sayr qilmayapman, ishlayapman."
+  }
+ ]
+}

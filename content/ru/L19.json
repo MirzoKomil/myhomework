@@ -1,0 +1,571 @@
+{
+ "n": 19,
+ "lessonId": "l1784055280406-18",
+ "type": "video",
+ "id": "l1784055280406-18",
+ "topic": "O'tgan zamon: -л, -ла, -ло, -ли",
+ "title": "O'tgan zamon: чита́л, чита́ла, чита́ло, чита́ли",
+ "title_ru": "Проше́дшее вре́мя глаго́лов",
+ "videoUrl": "https://youtu.be/Q_3F9IXnOOE",
+ "cando": "Kecha nima qilganimni aytaman: Вчера́ я чита́л кни́гу. Она́ рабо́тала. Мы смотре́ли фильм.",
+ "review": [
+  {
+   "q": "O'tgan zamon qanday yasaladi?",
+   "a": "-ть olib tashlanadi, -л qo'shiladi (1-tur yoki 2-tur — farqi yo'q)"
+  },
+  {
+   "q": "O'tgan zamon shaxsga qaraydimi?",
+   "a": "Yo'q — RODga: он -л, она́ -ла, оно́ -ло, они́/мы/вы -ли"
+  },
+  {
+   "q": "Ayol kishi o'zi haqida: «Я чита́л» yoki «Я чита́ла»?",
+   "a": "Я чита́ла"
+  },
+  {
+   "q": "«идти́» o'tgan zamoni?",
+   "a": "шёл, шла, шло, шли"
+  },
+  {
+   "q": "«Вчера́ ра́дио рабо́тало весь день» — nega -ло?",
+   "a": "ра́дио — сре́дний rod"
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "вчера́",
+   "tr": "[fchirá]",
+   "uz": "kecha",
+   "ex": "Вчера́ я чита́л журна́л.",
+   "img": "cards/вчера.jpg",
+   "icon": "",
+   "vocabId": "v-19-1",
+   "media": "media/ru/L19/w_v-19-1.jpg"
+  },
+  {
+   "ru": "ра́ньше",
+   "tr": "[rán'she]",
+   "uz": "ilgari",
+   "ex": "Ра́ньше мы жи́ли в Самарка́нде.",
+   "img": "cards/раньше.jpg",
+   "icon": "",
+   "vocabId": "v-19-2",
+   "media": "media/ru/L19/w_v-19-2.jpg"
+  },
+  {
+   "ru": "в про́шлом году́",
+   "tr": "[f próshlam gadú]",
+   "uz": "o'tgan yili",
+   "ex": "В про́шлом году́ я учи́лся в шко́ле.",
+   "img": "cards/в прошлом году.jpg",
+   "icon": "",
+   "vocabId": "v-19-3",
+   "media": "media/ru/L19/w_v-19-3.jpg"
+  },
+  {
+   "ru": "был / была́ / бы́ло / бы́ли",
+   "tr": "[byl / bylá / býla / býli]",
+   "uz": "edi, bo'ldi",
+   "ex": "Где ты был вчера́? — Я был до́ма.",
+   "img": "cards/был - была - было - были.jpg",
+   "icon": "",
+   "vocabId": "v-19-4",
+   "media": "media/ru/L19/w_v-19-4.jpg"
+  },
+  {
+   "ru": "чита́л / чита́ла / чита́ли",
+   "tr": "[chitál / chitála / chitáli]",
+   "uz": "o'qidi (u / u ayol / ular)",
+   "ex": "Анто́н чита́л. А́нна чита́ла. Они́ чита́ли.",
+   "img": "cards/читал - читала - читали.jpg",
+   "icon": "",
+   "vocabId": "v-19-5",
+   "media": "media/ru/L19/w_v-19-5.jpg"
+  },
+  {
+   "ru": "смотре́л / смотре́ла",
+   "tr": "[smatrél / smatréla]",
+   "uz": "ko'rdi",
+   "ex": "Вчера́ мы смотре́ли фильм.",
+   "img": "cards/смотрел - смотрела.jpg",
+   "icon": "",
+   "vocabId": "v-19-6",
+   "media": "media/ru/L19/w_v-19-6.jpg"
+  },
+  {
+   "ru": "рабо́тал / рабо́тала / рабо́тало",
+   "tr": "[rabótal / rabótala / rabótala]",
+   "uz": "ishladi",
+   "ex": "Вчера́ ра́дио рабо́тало весь день.",
+   "img": "cards/работал - работала - работало.jpg",
+   "icon": "",
+   "vocabId": "v-19-7",
+   "media": "media/ru/L19/w_v-19-7.jpg"
+  },
+  {
+   "ru": "жил / жила́ / жи́ли",
+   "tr": "[jyl / jylá / jýli]",
+   "uz": "yashadi, yashagan",
+   "ex": "Мой друг ра́ньше жил в Самарка́нде.",
+   "img": "cards/жить.jpg",
+   "icon": "",
+   "vocabId": "v-19-8",
+   "media": "media/ru/L19/w_v-19-8.jpg"
+  },
+  {
+   "ru": "шёл / шла / шли",
+   "tr": "[shol / shla / shli]",
+   "uz": "bordi, ketdi (piyoda) — идти",
+   "ex": "Когда́ я шёл домо́й, я ви́дел дру́га.",
+   "img": "cards/шёл - шла - шли.jpg",
+   "icon": "",
+   "vocabId": "v-19-9",
+   "media": "media/ru/L19/w_v-19-9.jpg"
+  },
+  {
+   "ru": "мог / могла́ / могли́",
+   "tr": "[mok / maglá / maglí]",
+   "uz": "… ola oldi — мочь",
+   "ex": "Вчера́ я не мог рабо́тать.",
+   "img": "cards/мог - могла - могли.jpg",
+   "icon": "",
+   "vocabId": "v-19-10",
+   "media": "media/ru/L19/w_v-19-10.jpg"
+  },
+  {
+   "ru": "купи́л / купи́ла",
+   "tr": "[kupíl / kupíla]",
+   "uz": "sotib oldi (tugallangan)",
+   "ex": "Вчера́ Ма́рия купи́ла но́вое пла́тье.",
+   "img": "cards/купил - купила.jpg",
+   "icon": "",
+   "vocabId": "v-19-11",
+   "media": "media/ru/L19/w_v-19-11.jpg"
+  },
+  {
+   "ru": "вы́пил / встал / пошёл",
+   "tr": "[výpil / fstal / pashól]",
+   "uz": "ichdi / turdi / ketdi (tugallangan)",
+   "ex": "Анто́н встал, вы́пил ко́фе и пошёл на рабо́ту.",
+   "img": "cards/выпил - встал - пошёл.jpg",
+   "icon": "",
+   "vocabId": "v-19-12",
+   "media": "media/ru/L19/w_v-19-12.jpg"
+  },
+  {
+   "ru": "до́лго",
+   "tr": "[dólga]",
+   "uz": "uzoq (vaqt)",
+   "ex": "Мы до́лго гуля́ли в па́рке.",
+   "img": "cards/долго.jpg",
+   "icon": "",
+   "vocabId": "v-19-13",
+   "media": "media/ru/L19/w_v-19-13.jpg"
+  },
+  {
+   "ru": "весь день",
+   "tr": "[ves' den']",
+   "uz": "kun bo'yi",
+   "ex": "Ра́дио рабо́тало весь день.",
+   "img": "cards/весь день.jpg",
+   "icon": "",
+   "vocabId": "v-19-14",
+   "media": "media/ru/L19/w_v-19-14.jpg"
+  },
+  {
+   "ru": "рестора́н",
+   "tr": "[ristarán]",
+   "uz": "restoran",
+   "ex": "Они́ у́жинали в рестора́не.",
+   "img": "cards/ресторан.jpg",
+   "icon": "",
+   "vocabId": "v-19-15",
+   "media": "media/ru/L19/w_v-19-15.jpg"
+  },
+  {
+   "ru": "пла́тье",
+   "tr": "[plát'ye]",
+   "uz": "ko'ylak (ayollar)",
+   "ex": "Она́ купи́ла но́вое пла́тье.",
+   "img": "cards/платье.jpg",
+   "icon": "",
+   "vocabId": "v-19-16",
+   "media": "media/ru/L19/w_v-19-16.jpg"
+  }
+ ],
+ "konspekt": "19-DARS: O'tgan zamon — чита́л, чита́ла, чита́ло, чита́ли\n(Проше́дшее вре́мя глаго́лов)\n\nBu darsdan keyin siz: kecha va ilgari nima qilganingizni aytasiz.\n\n---\n\n1. Qoida — juda oson!\n\nO'tgan zamon 1-tur / 2-tur tuslanishga QARAMAYDI. Faqat: -ть ketadi, -л keladi.\n* чита́ть → чита́л · рабо́тать → рабо́тал · говори́ть → говори́л · смотре́ть → смотре́л\n\n2. Shaxsga emas — RODga qarab\n\nHozirgi zamonda shaxsga qarab o'zgarardi (я чита́ю, ты чита́ешь). O'tgan zamonda — kim gapirayotganining RODiga qarab:\n* мужско́й → -л: Анто́н чита́л. Я чита́л (erkak).\n* же́нский → -ла: А́нна чита́ла. Я чита́ла (ayol).\n* сре́дний → -ло: Ра́дио рабо́тало.\n* ko'plik (мы, вы, они́) → -ли: Мы чита́ли. Они́ смотре́ли. Вы рабо́тали.\n\nMisollar:\n* Анто́н смотре́л фильм. · А́нна смотре́ла фильм. · Вчера́ ра́дио рабо́тало весь день. · Вчера́ мы смотре́ли фильм.\n* Erkak: Я чита́л кни́гу. Ayol: Я чита́ла кни́гу. Boshqa odam haqida — uning jinsiga qarab: Дурдо́на игра́ла, Кудра́т игра́л.\n\nSavollar ham rodga qarab: Что де́лал? Что де́лала? Что де́лало? Что де́лали?\n\n3. Gap tartibi\n\nSignal so'z boshida: Вчера́ / Ра́ньше / В про́шлом году́ + kim + harakat.\nВчера́ Анто́н смотре́л фильм. · Ра́ньше мы жи́ли в Самарка́нде.\n\n4. быть (edi): был, была́, бы́ло, бы́ли\n\n* Где ты был вчера́? — Я был до́ма.\n* Где была́ А́нна? — Она́ была́ в музе́е.\n* Вчера́ был отли́чный день.\n\n5. Istisnolar (yodlang)\n\n* идти́ → шёл, шла, шло, шли: Когда́ я шёл домо́й, я ви́дел дру́га.\n* мочь → мог, могла́, могло́, могли́\n* умере́ть → у́мер, умерла́, у́мерли\n\n6. Tugallangan tur (qisqa izoh)\n\nMatnlarda uchraydi: встал (turdi), вы́пил (ichib bo'ldi), пошёл (ketdi), купи́л (sotib oldi), пришло́ (keldi). Bular «bir marta, tugallangan» harakat. Hozircha shunchaki tanib oling va yodlang — bu mavzuni keyinroq to'liq o'rganamiz.\n\n---\n\nDars xulosasi\n* -ть → -л / -ла / -ло / -ли.\n* Rodga qarab, shaxsga emas: я чита́л (erkak), я чита́ла (ayol).\n* был / была́ / бы́ло / бы́ли.\n* шёл / шла / шли — istisno.\n\nUyga vazifa platformada: matn «Вчера́шний день Анто́на», 15 test. Yordamchi ustoz bilan gapirish. Keyingi dars — jonli dars: «Что ты де́лал вчера́?».",
+ "text": {
+  "title": "Вчера́шний день Анто́на",
+  "ru": "Вчера́ был отли́чный день. У́тром в во́семь часо́в Анто́н встал, вы́пил горя́чий ко́фе и бы́стро пошёл на рабо́ту.\nОн рабо́тает в большо́м ба́нке в це́нтре го́рода. Днём он мно́го рабо́тал и писа́л ва́жные докуме́нты.\nВе́чером в семь часо́в Анто́н встре́тил дру́га. Они́ вме́сте у́жинали в ую́тном рестора́не, гро́мко разгова́ривали и до́лго отдыха́ли.\nДомо́й Анто́н прие́хал по́здно но́чью.",
+  "uz": "Kecha ajoyib kun bo'ldi. Ertalab soat sakkizda Anton turdi, issiq kofe ichdi va tez ishga ketdi.\nU shahar markazidagi katta bankda ishlaydi. Kunduzi u ko'p ishladi va muhim hujjatlar yozdi.\nKechqurun soat yettida Anton do'stini uchratdi. Ular birga shinam restoranda kechki ovqat yeyishdi, baland ovozda gaplashishdi va uzoq dam olishdi.\nUyga Anton tunda kech keldi.",
+  "questions": [
+   {
+    "q": "Како́й ко́фе вы́пил Анто́н у́тром?",
+    "opts": [
+     "Холо́дный",
+     "Горя́чий",
+     "Сла́дкий"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что де́лал Анто́н днём?",
+    "opts": [
+     "Отдыха́л в па́рке",
+     "Писа́л ва́жные докуме́нты",
+     "Слу́шал му́зыку"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Где Анто́н и его́ друг у́жинали?",
+    "opts": [
+     "До́ма",
+     "В о́фисе",
+     "В ую́тном рестора́не"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Когда́ Анто́н прие́хал домо́й?",
+    "opts": [
+     "Ве́чером",
+     "У́тром",
+     "По́здно но́чью"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Что ты де́лал вчера́? (Kecha nima qilding?)",
+  "lines": [
+   {
+    "who": "Анто́н",
+    "ru": "Бобу́р, что ты де́лал вчера́ ве́чером?",
+    "uz": "Bobur, kecha kechqurun nima qilding?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Я рабо́тал, а пото́м смотре́л футбо́л. А ты?",
+    "uz": "Ishladim, keyin futbol ko'rdim. Sen-chi?"
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Я чита́л кни́гу и пил чай. Где была́ Нигора́?",
+    "uz": "Men kitob o'qidim va choy ichdim. Nigora qayerda edi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Она́ была́ до́ма. Она́ гото́вила у́жин и слу́шала му́зыку.",
+    "uz": "U uyda edi. Kechki ovqat tayyorladi va musiqa tingladi."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "А де́ти?",
+    "uz": "Bolalar-chi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Де́ти игра́ли во дворе́, а пото́м учи́ли слова́.",
+    "uz": "Bolalar hovlida o'ynashdi, keyin so'z yodlashdi."
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "чита́л",
+    "o'qidi (erkak)"
+   ],
+   [
+    "чита́ла",
+    "o'qidi (ayol)"
+   ],
+   [
+    "чита́ли",
+    "o'qishdi"
+   ],
+   [
+    "был",
+    "edi (erkak)"
+   ],
+   [
+    "была́",
+    "edi (ayol)"
+   ],
+   [
+    "бы́ли",
+    "edilar"
+   ],
+   [
+    "вчера́",
+    "kecha"
+   ],
+   [
+    "ра́ньше",
+    "ilgari"
+   ],
+   [
+    "шёл",
+    "ketayotgan edi (erkak)"
+   ],
+   [
+    "до́лго",
+    "uzoq vaqt"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Вчера́ Ви́ктор ___ интере́сную кни́гу.",
+    "o": [
+     "чита́л",
+     "чита́ла",
+     "чита́ли"
+    ],
+    "a": "чита́л"
+   },
+   {
+    "s": "А́нна вчера́ не ___ на рабо́ту.",
+    "o": [
+     "ходи́л",
+     "ходи́ла",
+     "ходи́ли"
+    ],
+    "a": "ходи́ла"
+   },
+   {
+    "s": "Где вы ___ про́шлым ле́том?",
+    "o": [
+     "отдыха́л",
+     "отдыха́ла",
+     "отдыха́ли"
+    ],
+    "a": "отдыха́ли"
+   },
+   {
+    "s": "Со́лнце вчера́ ___ о́чень я́рко.",
+    "o": [
+     "свети́л",
+     "свети́ло",
+     "свети́ла"
+    ],
+    "a": "свети́ло"
+   },
+   {
+    "s": "Что ты ___ вчера́ ве́чером? (erkakka)",
+    "o": [
+     "де́лали",
+     "де́лала",
+     "де́лал"
+    ],
+    "a": "де́лал"
+   },
+   {
+    "s": "Мы ___ э́тот фильм в кинотеа́тре.",
+    "o": [
+     "смотре́ла",
+     "смотре́ли",
+     "смотре́л"
+    ],
+    "a": "смотре́ли"
+   },
+   {
+    "s": "Вчера́ Ма́рия ___ но́вое пла́тье.",
+    "o": [
+     "купи́л",
+     "купи́ли",
+     "купи́ла"
+    ],
+    "a": "купи́ла"
+   },
+   {
+    "s": "У́тром ра́дио ___ гро́мко.",
+    "o": [
+     "рабо́тала",
+     "рабо́тало",
+     "рабо́тал"
+    ],
+    "a": "рабо́тало"
+   },
+   {
+    "s": "Мой друг ра́ньше ___ в Самарка́нде.",
+    "o": [
+     "жил",
+     "жи́ли",
+     "жила́"
+    ],
+    "a": "жил"
+   },
+   {
+    "s": "Где ты был вчера́? — Я ___ до́ма. (ayol javob beradi)",
+    "o": [
+     "был",
+     "была́",
+     "бы́ли"
+    ],
+    "a": "была́"
+   },
+   {
+    "s": "Когда́ я ___ домо́й, я ви́дел дру́га. (erkak)",
+    "o": [
+     "шла",
+     "шёл",
+     "шли"
+    ],
+    "a": "шёл"
+   },
+   {
+    "s": "Студе́нты ___ в музе́е.",
+    "o": [
+     "был",
+     "бы́ли",
+     "была́"
+    ],
+    "a": "бы́ли"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "O'tgan zamon qo'shimchasi:",
+    "o": [
+     "-л",
+     "-ть",
+     "-ю"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Она́» uchun:",
+    "o": [
+     "чита́ли",
+     "чита́ла",
+     "чита́л"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Они́» uchun:",
+    "o": [
+     "чита́л",
+     "чита́ли",
+     "чита́ло"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Ayol o'zi haqida:",
+    "o": [
+     "Я рабо́тала.",
+     "Я рабо́тали.",
+     "Я рабо́тал."
+    ],
+    "a": 0
+   },
+   {
+    "q": "«ра́дио» — rodi? → o'tgan zamon:",
+    "o": [
+     "рабо́тала",
+     "рабо́тал",
+     "рабо́тало"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Вчера́ мы смотре́ли фильм» — tarjimasi:",
+    "o": [
+     "Bugun biz film ko'ramiz.",
+     "Ertaga film ko'ramiz.",
+     "Kecha biz film ko'rdik."
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "чита́л",
+     "Вчера́",
+     "я",
+     "журна́л"
+    ],
+    "a": "Вчера́ я чита́л журна́л",
+    "t": "Kecha men jurnal o'qidim"
+   },
+   {
+    "w": [
+     "смотре́ла",
+     "А́нна",
+     "фильм"
+    ],
+    "a": "А́нна смотре́ла фильм",
+    "t": "Anna film ko'rdi"
+   },
+   {
+    "w": [
+     "гуля́ли",
+     "Мы",
+     "в",
+     "па́рке"
+    ],
+    "a": "Мы гуля́ли в па́рке",
+    "t": "Biz parkda sayr qildik"
+   },
+   {
+    "w": [
+     "был",
+     "Где",
+     "ты",
+     "вчера́",
+     "?"
+    ],
+    "a": "Где ты был вчера́ ?",
+    "t": "Kecha qayerda eding?"
+   },
+   {
+    "w": [
+     "жи́ли",
+     "Они́",
+     "в",
+     "Ташке́нте"
+    ],
+    "a": "Они́ жи́ли в Ташке́нте",
+    "t": "Ular Toshkentda yashashgan"
+   },
+   {
+    "w": [
+     "рабо́тало",
+     "Ра́дио",
+     "гро́мко"
+    ],
+    "a": "Ра́дио рабо́тало гро́мко",
+    "t": "Radio baland ovozda ishladi"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Вчера́ я рабо́тал, а ве́чером смотре́л футбо́л.",
+   "uz": "Kecha ishladim, kechqurun esa futbol ko'rdim."
+  },
+  {
+   "ru": "Что ты де́лал вчера́? — Я чита́л кни́гу и пил чай.",
+   "uz": "Kecha nima qilding? — Kitob o'qidim va choy ichdim."
+  },
+  {
+   "ru": "Где была́ Нигора́? — Она́ была́ до́ма, гото́вила у́жин.",
+   "uz": "Nigora qayerda edi? — Uyda edi, kechki ovqat tayyorladi."
+  },
+  {
+   "ru": "Ра́ньше мы жи́ли в Самарка́нде, а тепе́рь живём в Андижа́не.",
+   "uz": "Ilgari Samarqandda yashardik, hozir Andijonda yashaymiz."
+  },
+  {
+   "ru": "Вчера́ был отли́чный день: мы до́лго гуля́ли.",
+   "uz": "Kecha ajoyib kun bo'ldi: uzoq sayr qildik."
+  },
+  {
+   "ru": "Де́ти игра́ли во дворе́ и учи́ли но́вые слова́.",
+   "uz": "Bolalar hovlida o'ynashdi va yangi so'zlarni yodlashdi."
+  }
+ ]
+}

@@ -1,0 +1,397 @@
+{
+ "n": 2,
+ "lessonId": "l1784055280406-1",
+ "type": "live",
+ "id": "l1784055280406-1",
+ "topic": "Знако́мство",
+ "title": "Jonli dars: «Дава́йте познако́мимся!»",
+ "cando": "O'zimni tanishtiraman va suhbatdoshimdan ism, yosh, shahar, ish va hobbini so'ray olaman.",
+ "vocab": [
+  {
+   "ru": "знако́мство",
+   "tr": "[znakómstva]",
+   "uz": "tanishuv",
+   "ex": "Прия́тное знако́мство! (Yoqimli tanishuv!)",
+   "img": "cards/знакомство.jpg",
+   "icon": "",
+   "vocabId": "v-2-1",
+   "media": "media/ru/L02/w_v-2-1.jpg"
+  },
+  {
+   "ru": "о́чень прия́тно",
+   "tr": "[óchen' priyátna]",
+   "uz": "tanishganimdan xursandman",
+   "ex": "Я Бобу́р. — О́чень прия́тно!",
+   "img": "cards/очень приятно.jpg",
+   "icon": "",
+   "vocabId": "v-2-2",
+   "media": "media/ru/L02/w_v-2-2.jpg"
+  },
+  {
+   "ru": "как дела́?",
+   "tr": "[kak dilá]",
+   "uz": "ishlar qalay?",
+   "ex": "Приве́т! Как дела́? — Хорошо́, спаси́бо.",
+   "img": "cards/как дела.jpg",
+   "icon": "",
+   "vocabId": "v-2-3",
+   "media": "media/ru/L02/w_v-2-3.jpg"
+  },
+  {
+   "ru": "хорошо́",
+   "tr": "[xarashó]",
+   "uz": "yaxshi",
+   "ex": "Как дела́? — Хорошо́!",
+   "img": "cards/хорошо.jpg",
+   "icon": "",
+   "vocabId": "v-2-4",
+   "media": "media/ru/L02/w_v-2-4.jpg"
+  },
+  {
+   "ru": "норма́льно",
+   "tr": "[narmál'na]",
+   "uz": "normal, yaxshi",
+   "ex": "Как дела́? — Норма́льно.",
+   "img": "cards/нормально.jpg",
+   "icon": "",
+   "vocabId": "v-2-5",
+   "media": "media/ru/L02/w_v-2-5.jpg"
+  },
+  {
+   "ru": "пло́хо",
+   "tr": "[plóxa]",
+   "uz": "yomon",
+   "ex": "Сего́дня пло́хо: я боле́ю.",
+   "img": "cards/плохо.jpg",
+   "icon": "",
+   "vocabId": "v-2-6",
+   "media": "media/ru/L02/w_v-2-6.jpg"
+  },
+  {
+   "ru": "отку́да",
+   "tr": "[atkúda]",
+   "uz": "qayerdan",
+   "ex": "Отку́да вы? — Я из Андижа́на.",
+   "img": "cards/откуда.jpg",
+   "icon": "",
+   "vocabId": "v-2-7",
+   "media": "media/ru/L02/w_v-2-7.jpg"
+  },
+  {
+   "ru": "из Узбекиста́на",
+   "tr": "[iz uzbekistána]",
+   "uz": "O'zbekistondan",
+   "ex": "Я из Узбекиста́на, из Андижа́на.",
+   "img": "cards/из Узбекистана.jpg",
+   "icon": "",
+   "vocabId": "v-2-8",
+   "media": "media/ru/L02/w_v-2-8.jpg"
+  },
+  {
+   "ru": "семья́",
+   "tr": "[sim'yá]",
+   "uz": "oila",
+   "ex": "У меня́ больша́я семья́.",
+   "img": "cards/семья.jpg",
+   "icon": "",
+   "vocabId": "v-2-9",
+   "media": "media/ru/L02/w_v-2-9.jpg"
+  },
+  {
+   "ru": "друг / подру́га",
+   "tr": "[druk / padrúga]",
+   "uz": "do'st (erkak) / dugona",
+   "ex": "Э́то мой друг Бобу́р. Э́то моя́ подру́га Нигора́.",
+   "img": "cards/друг.jpg",
+   "icon": "",
+   "vocabId": "v-2-10",
+   "media": "media/ru/L02/w_v-2-10.jpg"
+  },
+  {
+   "ru": "прости́те / извини́те",
+   "tr": "[prastíte / izviníte]",
+   "uz": "kechirasiz",
+   "ex": "Извини́те, как вас зову́т?",
+   "img": "cards/простите - извините.jpg",
+   "icon": "",
+   "vocabId": "v-2-11",
+   "media": "media/ru/L02/w_v-2-11.jpg"
+  },
+  {
+   "ru": "повтори́те, пожа́луйста",
+   "tr": "[paftaríte pajálusta]",
+   "uz": "iltimos, qaytaring",
+   "ex": "Я не по́нял. Повтори́те, пожа́луйста.",
+   "img": "cards/повторите пожалуйста.jpg",
+   "icon": "",
+   "vocabId": "v-2-12",
+   "media": "media/ru/L02/w_v-2-12.jpg"
+  }
+ ],
+ "konspekt": "2-DARS (jonli dars): «Дава́йте познако́мимся!»\n\nBugun ustoz bilan 1-dars mavzusini jonli mashq qildik: alifbo, o'qish qoidalari va tanishuv.\n\nTanishuv dialogi — 6 savol:\n* Как вас зову́т? — Меня́ зову́т Бобу́р.\n* Ско́лько вам лет? — Мне 25 лет.\n* Отку́да вы? — Я из Андижа́на.\n* Где вы живёте? — Я живу́ в Ташке́нте.\n* Вы рабо́таете и́ли у́читесь? — Я рабо́таю в о́фисе.\n* Како́е у вас хо́бби? — Моё хо́бби — футбо́л.\n\nQisqa javoblar: Как дела́? — Хорошо́! / Норма́льно. / Пло́хо.\n\nTalaffuz eslatmasi (1-darsdan):\n* urg'usiz о → [а]: молоко́ [малако́], спаси́бо [спаси́ба]\n* что → [што], его́ → [йиво́], сего́дня → [сиво́дня]\n* жи / ши → [жы / шы]: жить, маши́на\n\nFoydali iboralar: О́чень прия́тно! · Извини́те · Повтори́те, пожа́луйста · Я не по́нял(а).\n\nUyga vazifa platformada: tanishuv dialogi + 10 test. Yordamchi ustoz bilan gapirish: o'zingiz haqingizda 6 gap. Keyingi dars — videodars: kishilik olmoshlari (я, ты, он…) va «У меня́ есть…».",
+ "text": {
+  "title": "Знако́мство в по́езде",
+  "ru": "Анто́н е́дет в Ташке́нт. В по́езде он говори́т: «Здра́вствуйте! Меня́ зову́т Анто́н».\nБобу́р говори́т: «О́чень прия́тно! Меня́ зову́т Бобу́р. Я из Андижа́на».\nАнто́н из Москвы́. Он рабо́тает. Бобу́р то́же рабо́тает.\nБобу́р спра́шивает: «Извини́те, повтори́те, пожа́луйста: как вас зову́т?»\n«Анто́н», — говори́т Анто́н. «О́чень прия́тно, Бобу́р!»",
+  "uz": "Anton Toshkentga ketyapti. Poyezdda u: «Assalomu alaykum! Mening ismim Anton», — deydi.\nBobur: «Tanishganimdan xursandman! Mening ismim Bobur. Men Andijondanman», — deydi.\nAnton Moskvadan. U ishlaydi. Bobur ham ishlaydi.\nBobur so'raydi: «Kechirasiz, qaytaring, iltimos: ismingiz nima?»\n«Anton», — deydi Anton. «Tanishganimdan xursandman, Bobur!»",
+  "questions": [
+   {
+    "q": "Куда́ е́дет Анто́н?",
+    "opts": [
+     "В Москву́",
+     "В Андижа́н",
+     "В Ташке́нт"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Отку́да Бобу́р?",
+    "opts": [
+     "Из Москвы́",
+     "Из Ташке́нта",
+     "Из Андижа́на"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Что говори́т Бобу́р, когда́ не по́нял?",
+    "opts": [
+     "До свида́ния",
+     "Пло́хо",
+     "Повтори́те, пожа́луйста"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "Как дела́?",
+    "Ishlar qalay?"
+   ],
+   [
+    "О́чень прия́тно!",
+    "Tanishganimdan xursandman!"
+   ],
+   [
+    "Отку́да вы?",
+    "Qayerdansiz?"
+   ],
+   [
+    "Повтори́те, пожа́луйста.",
+    "Iltimos, qaytaring."
+   ],
+   [
+    "Извини́те.",
+    "Kechirasiz."
+   ],
+   [
+    "Норма́льно.",
+    "Yomon emas."
+   ],
+   [
+    "семья́",
+    "oila"
+   ],
+   [
+    "подру́га",
+    "dugona"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Как вас ___? — Меня́ зову́т Нигора́.",
+    "o": [
+     "лет",
+     "живёте",
+     "зову́т"
+    ],
+    "a": "зову́т"
+   },
+   {
+    "s": "Мне 21 ___.",
+    "o": [
+     "лет",
+     "год",
+     "го́да"
+    ],
+    "a": "год"
+   },
+   {
+    "s": "Мне 24 ___.",
+    "o": [
+     "лет",
+     "год",
+     "го́да"
+    ],
+    "a": "го́да"
+   },
+   {
+    "s": "Мне 30 ___.",
+    "o": [
+     "лет",
+     "го́да",
+     "год"
+    ],
+    "a": "лет"
+   },
+   {
+    "s": "___ вы? — Я из Андижа́на.",
+    "o": [
+     "Как",
+     "Где",
+     "Отку́да"
+    ],
+    "a": "Отку́да"
+   },
+   {
+    "s": "Я ___ в университе́те. (Men universitetda o'qiyman.)",
+    "o": [
+     "живу́",
+     "рабо́таю",
+     "учу́сь"
+    ],
+    "a": "учу́сь"
+   },
+   {
+    "s": "Как дела́? — ___, спаси́бо.",
+    "o": [
+     "Хорошо́",
+     "Здра́вствуйте",
+     "Отку́да"
+    ],
+    "a": "Хорошо́"
+   },
+   {
+    "s": "Я не по́нял. ___, пожа́луйста.",
+    "o": [
+     "Повтори́те",
+     "Зову́т",
+     "Живу́"
+    ],
+    "a": "Повтори́те"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«спаси́бо» so'zida qaysi «о» [о] deb o'qiladi?",
+    "o": [
+     "ikkinchisi (urg'uli)",
+     "hech qaysi",
+     "birinchisi"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Do'stingizga salom:",
+    "o": [
+     "До свида́ния",
+     "Здра́вствуйте",
+     "Приве́т"
+    ],
+    "a": 2
+   },
+   {
+    "q": "— Меня́ зову́т Анто́н. — ___",
+    "o": [
+     "О́чень прия́тно!",
+     "Пло́хо.",
+     "Пока́!"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Э́то мой друг» — друг kim?",
+    "o": [
+     "aka",
+     "dugona",
+     "do'st (erkak)"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Ско́лько вам лет?» — javob:",
+    "o": [
+     "Я из Андижа́на.",
+     "Я рабо́таю.",
+     "Мне 25 лет."
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "зову́т",
+     "Меня́",
+     "Бобу́р"
+    ],
+    "a": "Меня́ зову́т Бобу́р",
+    "t": "Mening ismim Bobur"
+   },
+   {
+    "w": [
+     "живу́",
+     "в",
+     "Я",
+     "Ташке́нте"
+    ],
+    "a": "Я живу́ в Ташке́нте",
+    "t": "Men Toshkentda yashayman"
+   },
+   {
+    "w": [
+     "из",
+     "Я",
+     "Андижа́на"
+    ],
+    "a": "Я из Андижа́на",
+    "t": "Men Andijondanman"
+   },
+   {
+    "w": [
+     "у",
+     "Како́е",
+     "хо́бби",
+     "вас"
+    ],
+    "a": "Како́е у вас хо́бби",
+    "t": "Hobbingiz nima"
+   },
+   {
+    "w": [
+     "Повтори́те",
+     "пожа́луйста"
+    ],
+    "a": "Повтори́те пожа́луйста",
+    "t": "Iltimos, qaytaring"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Здра́вствуйте! Как дела́? — Хорошо́, спаси́бо!",
+   "uz": "Assalomu alaykum! Ishlar qalay? — Yaxshi, rahmat!"
+  },
+  {
+   "ru": "Меня́ зову́т … Мне … лет.",
+   "uz": "Mening ismim … Men … yoshdaman."
+  },
+  {
+   "ru": "Я из Узбекиста́на, из Андижа́на.",
+   "uz": "Men O'zbekistondan, Andijondanman."
+  },
+  {
+   "ru": "Я живу́ в Ташке́нте. Я рабо́таю в о́фисе.",
+   "uz": "Men Toshkentda yashayman. Men ofisda ishlayman."
+  },
+  {
+   "ru": "Извини́те, повтори́те, пожа́луйста.",
+   "uz": "Kechirasiz, iltimos, qaytaring."
+  },
+  {
+   "ru": "О́чень прия́тно! До свида́ния!",
+   "uz": "Tanishganimdan xursandman! Xayr!"
+  }
+ ]
+}

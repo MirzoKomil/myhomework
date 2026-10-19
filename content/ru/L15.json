@@ -1,0 +1,567 @@
+{
+ "n": 15,
+ "lessonId": "l1784055280406-14",
+ "type": "video",
+ "id": "l1784055280406-14",
+ "topic": "Ravish: Как? Где? Когда́? Ско́лько?",
+ "title": "Ravish: Как? Где? Когда́? Ско́лько?",
+ "title_ru": "Наре́чия",
+ "videoUrl": "https://youtu.be/KInY1H9MlE8",
+ "cando": "Harakatni tasvirlayman: Он говори́т хорошо́. Она́ чита́ет бы́стро. Joy va vaqt ravishlarini ishlataman: здесь, там, до́ма, сего́дня, за́втра.",
+ "review": [
+  {
+   "q": "Ravish o'zgaradimi (rod, son, zamon)?",
+   "a": "Yo'q — o'zgarmas so'z turkumi"
+  },
+  {
+   "q": "Ravish savollari?",
+   "a": "как? где? когда́? куда́? отку́да? ско́лько?"
+  },
+  {
+   "q": "«Bolalar baland ovozda o'ynashyapti» ruschasi?",
+   "a": "Де́ти игра́ют гро́мко."
+  },
+  {
+   "q": "«мно́го» va «ма́ло»?",
+   "a": "ko'p va kam"
+  },
+  {
+   "q": "«Men hozir uydaman» ruschasi?",
+   "a": "Я сейча́с до́ма."
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "хорошо́ / пло́хо",
+   "tr": "[xarashó / plóxa]",
+   "uz": "yaxshi / yomon",
+   "ex": "Он говори́т хорошо́, а я — пло́хо.",
+   "img": "cards/хорошо - плохо.jpg",
+   "icon": "",
+   "vocabId": "v-15-1",
+   "media": "media/ru/L15/w_v-15-1.jpg"
+  },
+  {
+   "ru": "бы́стро / ме́дленно",
+   "tr": "[býstra / médlenna]",
+   "uz": "tez / sekin",
+   "ex": "А́нна чита́ет бы́стро. Студе́нты пи́шут ме́дленно.",
+   "img": "cards/быстро - медленно.jpg",
+   "icon": "",
+   "vocabId": "v-15-2",
+   "media": "media/ru/L15/w_v-15-2.jpg"
+  },
+  {
+   "ru": "гро́мко / ти́хо",
+   "tr": "[grómka / tíxa]",
+   "uz": "baland ovozda / past ovozda",
+   "ex": "Де́ти игра́ют гро́мко. Говори́те ти́хо!",
+   "img": "cards/громко - тихо.jpg",
+   "icon": "",
+   "vocabId": "v-15-3",
+   "media": "media/ru/L15/w_v-15-3.jpg"
+  },
+  {
+   "ru": "краси́во",
+   "tr": "[krasíva]",
+   "uz": "chiroyli (tarzda)",
+   "ex": "Она́ поёт о́чень краси́во.",
+   "img": "cards/красиво.jpg",
+   "icon": "",
+   "vocabId": "v-15-4",
+   "media": "media/ru/L15/w_v-15-4.jpg"
+  },
+  {
+   "ru": "отли́чно",
+   "tr": "[atlíchna]",
+   "uz": "a'lo, ajoyib",
+   "ex": "Он отли́чно понима́ет по-ру́сски.",
+   "img": "cards/отлично.jpg",
+   "icon": "",
+   "vocabId": "v-15-5",
+   "media": "media/ru/L15/w_v-15-5.jpg"
+  },
+  {
+   "ru": "поня́тно",
+   "tr": "[panyátna]",
+   "uz": "tushunarli",
+   "ex": "Всё поня́тно! (Hammasi tushunarli!)",
+   "img": "cards/понятно.jpg",
+   "icon": "",
+   "vocabId": "v-15-6",
+   "media": "media/ru/L15/w_v-15-6.jpg"
+  },
+  {
+   "ru": "мно́го / ма́ло",
+   "tr": "[mnóga / mála]",
+   "uz": "ko'p / kam",
+   "ex": "Мы рабо́таем мно́го, а они́ — ма́ло.",
+   "img": "cards/много - мало.jpg",
+   "icon": "",
+   "vocabId": "v-15-7",
+   "media": "media/ru/L15/w_v-15-7.jpg"
+  },
+  {
+   "ru": "о́чень",
+   "tr": "[óchen']",
+   "uz": "juda",
+   "ex": "Он говори́т о́чень хорошо́.",
+   "img": "cards/очень.jpg",
+   "icon": "",
+   "vocabId": "v-15-8",
+   "media": "media/ru/L15/w_v-15-8.jpg"
+  },
+  {
+   "ru": "здесь / там",
+   "tr": "[zdes' / tam]",
+   "uz": "bu yerda / u yerda",
+   "ex": "Я здесь, а он там.",
+   "img": "cards/там - здесь.jpg",
+   "icon": "",
+   "vocabId": "v-15-9",
+   "media": "media/ru/L15/w_v-15-9.jpg"
+  },
+  {
+   "ru": "до́ма / домо́й",
+   "tr": "[dóma / damóy]",
+   "uz": "uyda / uyga",
+   "ex": "Я до́ма. Я иду́ домо́й.",
+   "img": "cards/дома - домой.jpg",
+   "icon": "",
+   "vocabId": "v-15-10",
+   "media": "media/ru/L15/w_v-15-10.jpg"
+  },
+  {
+   "ru": "сле́ва / спра́ва",
+   "tr": "[sléva / správa]",
+   "uz": "chapda / o'ngda",
+   "ex": "Апте́ка спра́ва, кафе́ сле́ва.",
+   "img": "cards/слева - справа.jpg",
+   "icon": "",
+   "vocabId": "v-15-11",
+   "media": "media/ru/L15/w_v-15-11.jpg"
+  },
+  {
+   "ru": "бли́зко / далеко́",
+   "tr": "[blíska / dalikó]",
+   "uz": "yaqin / uzoq",
+   "ex": "Магази́н бли́зко, а банк далеко́.",
+   "img": "cards/близко - далеко.jpg",
+   "icon": "",
+   "vocabId": "v-15-12",
+   "media": "media/ru/L15/w_v-15-12.jpg"
+  },
+  {
+   "ru": "сего́дня / за́втра / вчера́",
+   "tr": "[sivódnya / záftra / fchirá]",
+   "uz": "bugun / ertaga / kecha",
+   "ex": "Сего́дня я рабо́таю, за́втра отдыха́ю.",
+   "img": "cards/сегодня - завтра - вчера.jpg",
+   "icon": "",
+   "vocabId": "v-15-13",
+   "media": "media/ru/L15/w_v-15-13.jpg"
+  },
+  {
+   "ru": "всегда́ / иногда́ / никогда́",
+   "tr": "[fsigdá / inagdá / nikagdá]",
+   "uz": "har doim / ba'zan / hech qachon",
+   "ex": "Я всегда́ встаю́ ра́но.",
+   "img": "cards/всегда - иногда - никогда.jpg",
+   "icon": "",
+   "vocabId": "v-15-14",
+   "media": "media/ru/L15/w_v-15-14.jpg"
+  },
+  {
+   "ru": "как?",
+   "tr": "[kak]",
+   "uz": "qanday?",
+   "ex": "Как ты говори́шь по-ру́сски? — Хорошо́!",
+   "img": "cards/как.jpg",
+   "icon": "",
+   "vocabId": "v-15-15",
+   "media": "media/ru/L15/w_v-15-15.jpg"
+  },
+  {
+   "ru": "разгова́ривать",
+   "tr": "[razgavárivat']",
+   "uz": "suhbatlashmoq, gaplashmoq",
+   "ex": "Мы гро́мко разгова́риваем.",
+   "img": "cards/разговаривать.jpg",
+   "icon": "",
+   "vocabId": "v-15-16",
+   "media": "media/ru/L15/w_v-15-16.jpg"
+  }
+ ],
+ "konspekt": "15-DARS: Ravish — Как? Где? Когда́? Ско́лько?\n(Наре́чия)\n\nBu darsdan keyin siz: harakatni tasvirlaysiz (qanday? qayerda? qachon? qancha?).\n\n---\n\n1. Ravish nima?\n\nRavish (наре́чие) — o'zgarmas so'z turkumi: rod, son, padej, zamonga qarab O'ZGARMAYDI. Harakatni tasvirlaydi va fe'l bilan keladi:\n* Он говори́т хорошо́. — U yaxshi gapiradi.\n* Она́ чита́ет бы́стро. — U tez o'qiydi.\n\n2. Savollar va guruhlar\n\n* Как? (qanday?) — harakat tarzi: хорошо́, пло́хо, бы́стро, ме́дленно, гро́мко, ти́хо, краси́во, отли́чно, поня́тно\n* Где? (qayerda?) — joy: здесь, там, до́ма, сле́ва, спра́ва, бли́зко, далеко́\n* Когда́? (qachon?) — vaqt: сего́дня, за́втра, вчера́, у́тром, ве́чером, всегда́, иногда́, ча́сто, ре́дко\n* Куда́? (qayerga?) — домо́й, туда́ · Отку́да? (qayerdan?) — отсю́да, отту́да\n* Ско́лько? (qancha?) — мно́го, ма́ло, немно́го\n\n3. Juftliklar (antonimlar)\n\nбы́стро ↔ ме́дленно · гро́мко ↔ ти́хо · хорошо́ ↔ пло́хо · мно́го ↔ ма́ло · сле́ва ↔ спра́ва · бли́зко ↔ далеко́ · здесь ↔ там · всегда́ ↔ никогда́\n\n4. Kuchaytirish: о́чень (juda)\n\nОн говори́т о́чень хорошо́. Де́ти игра́ют о́чень гро́мко. Она́ поёт о́чень краси́во.\n\n5. Savol tuzish\n\n* Как ты говори́шь по-ру́сски? — Я говорю́ хорошо́.\n* Как рабо́тает Бобу́р? — Он рабо́тает бы́стро.\n* Где ты сейча́с? — Я до́ма. / Я здесь.\n* Ско́лько вы рабо́таете? — Мы рабо́таем мно́го.\n\n6. до́ма va домо́й\n\n* до́ма — uyda (Где?): Я до́ма.\n* домо́й — uyga (Куда́?): Я иду́ домо́й.\n\nEslatma: videoda «краси́вый — краси́во» (sifat — ravish) haqida qisqa aytilgan. Sifatlarni 17-darsda to'liq o'rganamiz; hozircha: краси́вый — narsa haqida (краси́вый го́род), краси́во — harakat haqida (поёт краси́во).\n\n---\n\nDars xulosasi\n* Ravish o'zgarmaydi: хорошо́, бы́стро, гро́мко.\n* Как? Где? Когда́? Ско́лько?\n* о́чень + ravish: о́чень хорошо́.\n\nUyga vazifa platformada: matn «День Абдулази́за», 15 test. Yordamchi ustoz bilan gapirish. Keyingi dars — jonli dars: «Antonimlar» o'yini.",
+ "text": {
+  "title": "День Абдулази́за",
+  "ru": "Здра́вствуйте! Меня́ зову́т Абдулази́з. Я живу́ и рабо́таю в Андижа́не. У меня́ есть семья́: жена́ Нигора́, сын и дочь. Наш дом бли́зко от це́нтра.\nУ́тром в семь часо́в я встаю́, бы́стро де́лаю заря́дку и пью чай. Мой сын у́чится в шко́ле, а на́ша дочь ещё ма́ленькая. У́тром, в де́вять часо́в я уже́ рабо́таю в о́фисе. Я хорошо́ зна́ю англи́йский язы́к, отли́чно понима́ю по-ру́сски и ча́сто пишу́ пи́сьма. Моя́ жена́ рабо́тает в больни́це.\nВе́чером в шесть часо́в мы встреча́емся до́ма. На́ша семья́ вме́сте у́жинает и отдыха́ет. Мы гро́мко разгова́риваем, смо́трим фильм и́ли слу́шаем му́зыку. По́здно ве́чером, в оди́ннадцать часо́в, мы уже́ спим.",
+  "uz": "Assalomu alaykum! Mening ismim Abdulaziz. Men Andijonda yashayman va ishlayman. Mening oilam bor: xotinim Nigora, o'g'lim va qizim. Uyimiz markazga yaqin.\nErtalab soat yettida turaman, tez badantarbiya qilaman va choy ichaman. O'g'lim maktabda o'qiydi, qizimiz esa hali kichkina. Ertalab soat to'qqizda men allaqachon ofisda ishlayman. Men ingliz tilini yaxshi bilaman, ruschani a'lo tushunaman va tez-tez xatlar yozaman. Xotinim kasalxonada ishlaydi.\nKechqurun soat oltida biz uyda uchrashamiz. Oilamiz birga kechki ovqat yeydi va dam oladi. Biz baland ovozda gaplashamiz, film ko'ramiz yoki musiqa tinglaymiz. Tunda, soat o'n birda, biz allaqachon uxlaymiz.",
+  "questions": [
+   {
+    "q": "Как он де́лает заря́дку у́тром?",
+    "opts": [
+     "Бы́стро",
+     "Ме́дленно",
+     "Гро́мко"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Как он понима́ет по-ру́сски?",
+    "opts": [
+     "Ма́ло",
+     "Пло́хо",
+     "Отли́чно"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Где рабо́тает Нигора́?",
+    "opts": [
+     "В шко́ле",
+     "В ба́нке",
+     "В больни́це"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Как семья́ разгова́ривает ве́чером?",
+    "opts": [
+     "Ти́хо",
+     "Ме́дленно",
+     "Гро́мко"
+    ],
+    "a": 2
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Как ты говори́шь по-ру́сски? (Ruscha qanday gapirasan?)",
+  "lines": [
+   {
+    "who": "Анто́н",
+    "ru": "Бобу́р, как ты говори́шь по-ру́сски?",
+    "uz": "Bobur, ruscha qanday gapirasan?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Я говорю́ хорошо́, но ме́дленно.",
+    "uz": "Yaxshi, lekin sekin gapiraman."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "А понима́ешь?",
+    "uz": "Tushunasanmi?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Понима́ю отли́чно! То́лько говори́, пожа́луйста, не бы́стро.",
+    "uz": "A'lo tushunaman! Faqat, iltimos, tez gapirmang."
+   },
+   {
+    "who": "Анто́н",
+    "ru": "Хорошо́. Где ты сейча́с?",
+    "uz": "Yaxshi. Hozir qayerdasan?"
+   },
+   {
+    "who": "Бобу́р",
+    "ru": "Я до́ма. Де́ти игра́ют о́чень гро́мко!",
+    "uz": "Uydaman. Bolalar juda baland ovozda o'ynashyapti!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "бы́стро",
+    "tez"
+   ],
+   [
+    "ме́дленно",
+    "sekin"
+   ],
+   [
+    "гро́мко",
+    "baland ovozda"
+   ],
+   [
+    "ти́хо",
+    "past ovozda"
+   ],
+   [
+    "хорошо́",
+    "yaxshi"
+   ],
+   [
+    "пло́хо",
+    "yomon"
+   ],
+   [
+    "мно́го",
+    "ko'p"
+   ],
+   [
+    "ма́ло",
+    "kam"
+   ],
+   [
+    "сле́ва",
+    "chapda"
+   ],
+   [
+    "спра́ва",
+    "o'ngda"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "Как он говори́т по-ру́сски? — Он говори́т о́чень ___. (yaxshi)",
+    "o": [
+     "пло́хо",
+     "хорошо́",
+     "гро́мко"
+    ],
+    "a": "хорошо́"
+   },
+   {
+    "s": "А́нна чита́ет кни́гу о́чень ___. (tez)",
+    "o": [
+     "ме́дленно",
+     "ти́хо",
+     "бы́стро"
+    ],
+    "a": "бы́стро"
+   },
+   {
+    "s": "Где ты сейча́с? — Я сейча́с ___. (uyda)",
+    "o": [
+     "спра́ва",
+     "там",
+     "до́ма"
+    ],
+    "a": "до́ма"
+   },
+   {
+    "s": "Студе́нты занима́ются о́чень ___. (sekin)",
+    "o": [
+     "мно́го",
+     "бы́стро",
+     "ме́дленно"
+    ],
+    "a": "ме́дленно"
+   },
+   {
+    "s": "Пожа́луйста, говори́те ___! (pastroq)",
+    "o": [
+     "мно́го",
+     "ти́хо",
+     "гро́мко"
+    ],
+    "a": "ти́хо"
+   },
+   {
+    "s": "Де́ти игра́ют на у́лице о́чень ___. (baland ovozda)",
+    "o": [
+     "гро́мко",
+     "ти́хо",
+     "ма́ло"
+    ],
+    "a": "гро́мко"
+   },
+   {
+    "s": "Мы рабо́таем ___, а они́ отдыха́ют. (ko'p)",
+    "o": [
+     "мно́го",
+     "ма́ло",
+     "пло́хо"
+    ],
+    "a": "мно́го"
+   },
+   {
+    "s": "Мой друг пи́шет по-ру́сски о́чень ___. (chiroyli)",
+    "o": [
+     "бы́стро",
+     "краси́во",
+     "пло́хо"
+    ],
+    "a": "краси́во"
+   },
+   {
+    "s": "Где стои́т апте́ка? — Она́ стои́т ___. (o'ngda)",
+    "o": [
+     "до́ма",
+     "сле́ва",
+     "спра́ва"
+    ],
+    "a": "спра́ва"
+   },
+   {
+    "s": "Почему́ он занима́ется так ___? (kam)",
+    "o": [
+     "мно́го",
+     "ма́ло",
+     "хорошо́"
+    ],
+    "a": "ма́ло"
+   },
+   {
+    "s": "Ты понима́ешь текст? — Да, всё о́чень ___. (tushunarli)",
+    "o": [
+     "ма́ло",
+     "ти́хо",
+     "поня́тно"
+    ],
+    "a": "поня́тно"
+   },
+   {
+    "s": "Я иду́ ___. (uyga)",
+    "o": [
+     "дом",
+     "домо́й",
+     "до́ма"
+    ],
+    "a": "домо́й"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "Ravish…",
+    "o": [
+     "rodga qarab o'zgaradi",
+     "faqat ko'plikda keladi",
+     "o'zgarmaydi"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Как?» savoliga javob:",
+    "o": [
+     "бы́стро",
+     "за́втра",
+     "до́ма"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Когда́?» savoliga javob:",
+    "o": [
+     "сего́дня",
+     "гро́мко",
+     "здесь"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Где?» savoliga javob:",
+    "o": [
+     "там",
+     "мно́го",
+     "пло́хо"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Он говори́т о́чень хорошо́» — «о́чень» nima?",
+    "o": [
+     "juda (kuchaytiradi)",
+     "kam",
+     "yomon"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«бли́зко» antonimi:",
+    "o": [
+     "спра́ва",
+     "ти́хо",
+     "далеко́"
+    ],
+    "a": 2
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "говори́т",
+     "Он",
+     "хорошо́",
+     "по-ру́сски"
+    ],
+    "a": "Он хорошо́ говори́т по-ру́сски",
+    "t": "U ruscha yaxshi gapiradi"
+   },
+   {
+    "w": [
+     "чита́ет",
+     "А́нна",
+     "бы́стро"
+    ],
+    "a": "А́нна чита́ет бы́стро",
+    "t": "Anna tez o'qiydi"
+   },
+   {
+    "w": [
+     "игра́ют",
+     "Де́ти",
+     "гро́мко"
+    ],
+    "a": "Де́ти игра́ют гро́мко",
+    "t": "Bolalar baland ovozda o'ynashyapti"
+   },
+   {
+    "w": [
+     "сейча́с",
+     "Я",
+     "до́ма"
+    ],
+    "a": "Я сейча́с до́ма",
+    "t": "Men hozir uydaman"
+   },
+   {
+    "w": [
+     "стои́т",
+     "Апте́ка",
+     "спра́ва"
+    ],
+    "a": "Апте́ка стои́т спра́ва",
+    "t": "Dorixona o'ngda"
+   },
+   {
+    "w": [
+     "рабо́таем",
+     "Мы",
+     "мно́го"
+    ],
+    "a": "Мы рабо́таем мно́го",
+    "t": "Biz ko'p ishlaymiz"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Я говорю́ по-ру́сски хорошо́, но ме́дленно.",
+   "uz": "Men ruscha yaxshi, lekin sekin gapiraman."
+  },
+  {
+   "ru": "Говори́те, пожа́луйста, ти́хо и не бы́стро.",
+   "uz": "Iltimos, past ovozda va tez gapirmang."
+  },
+  {
+   "ru": "Де́ти игра́ют о́чень гро́мко!",
+   "uz": "Bolalar juda baland ovozda o'ynashyapti!"
+  },
+  {
+   "ru": "Магази́н бли́зко, спра́ва. Банк далеко́.",
+   "uz": "Do'kon yaqin, o'ngda. Bank uzoq."
+  },
+  {
+   "ru": "Сего́дня я рабо́таю мно́го, а за́втра отдыха́ю.",
+   "uz": "Bugun ko'p ishlayman, ertaga esa dam olaman."
+  },
+  {
+   "ru": "Я всегда́ встаю́ ра́но и бы́стро де́лаю заря́дку.",
+   "uz": "Men har doim erta turaman va tez badantarbiya qilaman."
+  }
+ ]
+}

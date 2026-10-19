@@ -1,0 +1,608 @@
+{
+ "n": 69,
+ "lessonId": "l1784055280406-68",
+ "type": "video",
+ "id": "l1784055280406-68",
+ "topic": "Hikoya qilish",
+ "title": "Hikoya qilish: снача́ла, пото́м, наконе́ц; одна́жды, вдруг; o'tgan zamon narrativi",
+ "title_ru": "Как рассказа́ть исто́рию",
+ "videoUrl": "",
+ "cando": "Bo'lib o'tgan voqeani ketma-ket, qiziqarli qilib aytaman: qachon bo'ldi, avval nima, keyin nima, birdan nima bo'ldi va oxiri qanday tugadi.",
+ "review": [
+  {
+   "q": "«Hisob ochmoqchiman»",
+   "a": "Я хочу́ откры́ть счёт."
+  },
+  {
+   "q": "«Moskvaga posilka jo'natmoqchiman»",
+   "a": "Я хочу́ отпра́вить посы́лку в Москву́."
+  },
+  {
+   "q": "«Anketani to'ldiring»",
+   "a": "Запо́лните анке́ту."
+  },
+  {
+   "q": "«Bankomat kartani yutib yubordi»",
+   "a": "Банкома́т «съел» ка́рту."
+  },
+  {
+   "q": "«Shu yerga imzo qo'ying»",
+   "a": "Поста́вьте по́дпись здесь."
+  }
+ ],
+ "vocab": [
+  {
+   "ru": "одна́жды",
+   "tr": "[adnájdy]",
+   "uz": "bir kuni, bir safar",
+   "ex": "Одна́жды я потеря́л ключи́.",
+   "img": "cards/однажды.jpg",
+   "icon": "",
+   "vocabId": "v-69-1",
+   "media": "media/ru/L69/w_v-69-1.jpg"
+  },
+  {
+   "ru": "вдруг",
+   "tr": "[vdruk]",
+   "uz": "birdan, to'satdan",
+   "ex": "Вдруг зазвони́л телефо́н.",
+   "img": "cards/вдруг.jpg",
+   "icon": "",
+   "vocabId": "v-69-2",
+   "media": "media/ru/L69/w_v-69-2.jpg"
+  },
+  {
+   "ru": "случи́ться",
+   "tr": "[sluchít'sa]",
+   "uz": "sodir bo'lmoq, yuz bermoq",
+   "ex": "Что случи́лось?",
+   "img": "cards/случиться.jpg",
+   "icon": "",
+   "vocabId": "v-69-3",
+   "media": "media/ru/L69/w_v-69-3.jpg"
+  },
+  {
+   "ru": "испуга́ться",
+   "tr": "[ispugát'sa]",
+   "uz": "qo'rqib ketmoq",
+   "ex": "Я о́чень испуга́лся.",
+   "img": "cards/испугаться.jpg",
+   "icon": "",
+   "vocabId": "v-69-4",
+   "media": "media/ru/L69/w_v-69-4.jpg"
+  },
+  {
+   "ru": "реши́ть",
+   "tr": "[rishýt']",
+   "uz": "qaror qilmoq; yechmoq",
+   "ex": "Я реши́л учи́ть ру́сский.",
+   "img": "cards/решить.jpg",
+   "icon": "",
+   "vocabId": "v-69-5",
+   "media": "media/ru/L69/w_v-69-5.jpg"
+  },
+  {
+   "ru": "вспо́мнить",
+   "tr": "[fspómnit']",
+   "uz": "eslamoq",
+   "ex": "Вдруг я вспо́мнил её и́мя.",
+   "img": "cards/вспомнить.jpg",
+   "icon": "",
+   "vocabId": "v-69-6",
+   "media": "media/ru/L69/w_v-69-6.jpg"
+  },
+  {
+   "ru": "рассказа́ть",
+   "tr": "[rasskazát']",
+   "uz": "aytib bermoq, hikoya qilmoq",
+   "ex": "Расскажи́, что случи́лось!",
+   "img": "cards/рассказать.jpg",
+   "icon": "",
+   "vocabId": "v-69-7",
+   "media": "media/ru/L69/w_v-69-7.jpg"
+  },
+  {
+   "ru": "де́тство",
+   "tr": "[dyétstva]",
+   "uz": "bolalik",
+   "ex": "В де́тстве я жил в Самарка́нде.",
+   "img": "cards/детство.jpg",
+   "icon": "",
+   "vocabId": "v-69-8",
+   "media": "media/ru/L69/w_v-69-8.jpg"
+  },
+  {
+   "ru": "потеря́ть",
+   "tr": "[patiryát']",
+   "uz": "yo'qotmoq",
+   "ex": "Я потеря́л телефо́н в авто́бусе.",
+   "img": "cards/потерять.jpg",
+   "icon": "",
+   "vocabId": "v-69-9",
+   "media": "media/ru/L69/w_v-69-9.jpg"
+  },
+  {
+   "ru": "заблуди́ться",
+   "tr": "[zabludít'sa]",
+   "uz": "adashib qolmoq",
+   "ex": "Мы заблуди́лись в гора́х.",
+   "img": "cards/заблудиться.jpg",
+   "icon": "",
+   "vocabId": "v-69-10",
+   "media": "media/ru/L69/w_v-69-10.jpg"
+  },
+  {
+   "ru": "встре́тить",
+   "tr": "[fstryétit']",
+   "uz": "uchratmoq",
+   "ex": "На у́лице я встре́тил дру́га.",
+   "img": "cards/встретить.jpg",
+   "icon": "",
+   "vocabId": "v-69-11",
+   "media": "media/ru/L69/w_v-69-11.jpg"
+  },
+  {
+   "ru": "верну́ться",
+   "tr": "[virnút'sa]",
+   "uz": "qaytmoq",
+   "ex": "Ве́чером мы верну́лись домо́й.",
+   "img": "cards/возвращаться.jpg",
+   "icon": "",
+   "vocabId": "v-69-12",
+   "media": "media/ru/L69/w_v-69-12.jpg"
+  },
+  {
+   "ru": "успе́ть",
+   "tr": "[uspyét']",
+   "uz": "ulgurmoq",
+   "ex": "Я успе́л на по́езд.",
+   "img": "cards/успеть.jpg",
+   "icon": "",
+   "vocabId": "v-69-13",
+   "media": "media/ru/L69/w_v-69-13.jpg"
+  },
+  {
+   "ru": "стать (кем?)",
+   "tr": "[stat']",
+   "uz": "bo'lmoq, aylanmoq",
+   "ex": "Он стал врачо́м.",
+   "img": "cards/стать.jpg",
+   "icon": "",
+   "vocabId": "v-69-14",
+   "media": "media/ru/L69/w_v-69-14.jpg"
+  },
+  {
+   "ru": "перее́хать",
+   "tr": "[piriyéxat']",
+   "uz": "ko'chib o'tmoq",
+   "ex": "В 2020 году́ мы перее́хали в Ташке́нт.",
+   "img": "cards/переехать.jpg",
+   "icon": "",
+   "vocabId": "v-69-15",
+   "media": "media/ru/L69/w_v-69-15.jpg"
+  },
+  {
+   "ru": "впечатле́ние",
+   "tr": "[fpichatlyénie]",
+   "uz": "taassurot",
+   "ex": "У меня́ бы́ло мно́го впечатле́ний.",
+   "img": "cards/впечатление.jpg",
+   "icon": "",
+   "vocabId": "v-69-16",
+   "media": "media/ru/L69/w_v-69-16.jpg"
+  }
+ ],
+ "konspekt": "69-DARS: Hikoya qilish\n(Как рассказа́ть исто́рию)\n\nBu darsda video o'rniga — konspekt va slaydlar.\n\nBu darsdan keyin siz: bo'lib o'tgan voqeani boshidan oxirigacha ketma-ket aytib bera olasiz. Bu — 70- va 72-darslardagi «Моя́ жизнь» nutqi uchun eng muhim ko'nikma.\n\n---\n\n1. Hikoya «skeleti» — 5 qadam\n\n* Когда́? — Одна́жды… / Два го́да наза́д… / Когда́ мне бы́ло де́сять лет… / В 2019 году́…\n* Снача́ла… — Avval…\n* Пото́м… / Зате́м… / По́сле э́того… — Keyin… / Shundan keyin…\n* Вдруг… — Birdan… (eng qiziq joy!)\n* Наконе́ц… / В конце́ концо́в… — Nihoyat… / Oxir-oqibat…\n\nMisol: Одна́жды я пое́хал в Москву́. Снача́ла всё бы́ло хорошо́. Пото́м я пошёл гуля́ть. Вдруг я по́нял, что заблуди́лся! Наконе́ц я спроси́л доро́гу и верну́лся в гости́ницу.\n\n---\n\n2. Fe'l turi hikoyada (39-darsni eslang)\n\n* Ketma-ket harakatlar — TUGALLANGAN tur (сов. вид): встал → поза́втракал → вы́шел → сел в авто́бус.\n* Fon, jarayon (nima bo'layotgan edi?) — TUGALLANMAGAN tur (несов. вид): Я шёл по у́лице, шёл дождь…\n* Fon + birdan bo'lgan voqea: Я шёл по у́лице, и вдруг встре́тил дру́га. — Ko'chada ketayotgan edim, birdan do'stimni uchratdim.\n\n---\n\n3. Vaqtni aytish\n\n* Когда́ мне бы́ло 7 лет… — 7 yoshimda…\n* В де́тстве… — Bolaligimda…\n* В 2015 году́… — 2015-yilda…\n* Три го́да наза́д… — Uch yil oldin…\n* Че́рез год… / Че́рез неде́лю… — Bir yildan keyin… / Bir haftadan keyin…\n* Ра́ньше я…, а тепе́рь я… — Avval men…, endi esa…\n\n---\n\n4. Hissiyot va reaksiya\n\n* Я испуга́лся / испуга́лась. — Qo'rqib ketdim.\n* Я обра́довался / обра́довалась. — Xursand bo'ldim.\n* Я удиви́лся / удиви́лась. — Hayron qoldim.\n* Э́то был лу́чший день в мое́й жи́зни! — Bu hayotimdagi eng yaxshi kun edi!\n* Я никогда́ не забу́ду э́тот день. — Bu kunni hech qachon unutmayman.\n\n---\n\n5. Tinglovchi nima deydi\n\n* Что случи́лось? — Nima bo'ldi?\n* И что пото́м? — Keyin-chi?\n* Не мо́жет быть! — Bo'lishi mumkin emas!\n* Как интере́сно! / Како́й у́жас! — Qiziq ekan! / Dahshat!\n\n---\n\nDars xulosasi:\n1. Одна́жды… Снача́ла… Пото́м… Вдруг… Наконе́ц…\n2. Ketma-ket harakat — сов. вид: встал, вы́шел, сел.\n3. Fon — несов. вид: Я шёл по у́лице, и вдруг…\n4. Когда́ мне бы́ло 10 лет… / Три го́да наза́д… / Че́рез год…\n5. Что случи́лось? И что пото́м? Не мо́жет быть!\nYangi so'zlar va uyga vazifa platformada. Keyingi dars — jonli dars: «Mening hayotim» taqdimotiga tayyorgarlik.",
+ "text": {
+  "title": "Как я заблуди́лся в Москве́",
+  "ru": "Одна́жды, три го́да наза́д, я пое́хал в Москву́ к бра́ту. Э́то была́ моя́ пе́рвая пое́здка в Росси́ю. Снача́ла всё бы́ло хорошо́: брат встре́тил меня́ в аэропорту́, и мы пое́хали к нему́ домо́й.\nНа сле́дующий день брат ушёл на рабо́ту, а я реши́л погуля́ть оди́н. Снача́ла я посмотре́л Кра́сную пло́щадь, пото́м зашёл в музе́й, а по́сле э́того пообе́дал в кафе́. Бы́ло о́чень интере́сно!\nВе́чером я хоте́л верну́ться домо́й. Я шёл по большо́й у́лице и вдруг по́нял, что не зна́ю, где я. Я заблуди́лся! Телефо́н то́же сел. Я о́чень испуга́лся.\nТогда́ я вспо́мнил ру́сские фра́зы из уро́ка. Я подошёл к же́нщине и спроси́л: «Прости́те, как пройти́ к метро́?» Она́ всё объясни́ла. Наконе́ц я нашёл метро́ и верну́лся домо́й.\nБрат засмея́лся: «Ну, ты молоде́ц! Ты говори́шь по-ру́сски!» Я никогда́ не забу́ду э́тот день.",
+  "uz": "Bir kuni, uch yil oldin, men Moskvaga akamnikiga bordim. Bu mening Rossiyaga birinchi safarim edi. Avval hammasi yaxshi edi: akam meni aeroportda kutib oldi va biz uning uyiga bordik.\nErtasi kuni akam ishga ketdi, men esa yolg'iz sayr qilishga qaror qildim. Avval Qizil maydonni ko'rdim, keyin muzeyga kirdim, shundan so'ng kafeda tushlik qildim. Juda qiziq edi!\nKechqurun uyga qaytmoqchi edim. Katta ko'chada ketayotgan edim va birdan qayerdaligimni bilmasligimni tushundim. Adashib qoldim! Telefonim ham o'chib qoldi. Juda qo'rqib ketdim.\nShunda darsdagi ruscha iboralarni esladim. Bir ayolga yaqinlashib so'radim: «Kechirasiz, metroga qanday borsa bo'ladi?» U hammasini tushuntirdi. Nihoyat metroni topdim va uyga qaytdim.\nAkam kulib yubordi: «Barakalla! Ruscha gapirayapsan-ku!» Bu kunni hech qachon unutmayman.",
+  "questions": [
+   {
+    "q": "Когда́ он пое́хал в Москву́?",
+    "opts": [
+     "Три го́да наза́д",
+     "В де́тстве",
+     "Год наза́д"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Кто встре́тил его́ в аэропорту́?",
+    "opts": [
+     "Друг",
+     "Брат",
+     "Ма́ма"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что он сде́лал снача́ла?",
+    "opts": [
+     "Посмотре́л Кра́сную пло́щадь",
+     "Зашёл в музе́й",
+     "Пообе́дал в кафе́"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Что случи́лось ве́чером?",
+    "opts": [
+     "Он потеря́л па́спорт",
+     "Он опозда́л на по́езд",
+     "Он заблуди́лся"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Почему́ он не позвони́л бра́ту?",
+    "opts": [
+     "Брат был на рабо́те",
+     "Телефо́н сел",
+     "Он забы́л но́мер"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Что он спроси́л у же́нщины?",
+    "opts": [
+     "Как пройти́ к метро́?",
+     "Ско́лько сто́ит биле́т?",
+     "Где рестора́н?"
+    ],
+    "a": 0
+   }
+  ]
+ },
+ "dialog": {
+  "title": "Что случи́лось? (Nima bo'ldi?)",
+  "lines": [
+   {
+    "who": "Дильно́за",
+    "ru": "Тиму́р, почему́ ты вчера́ не пришёл? Что случи́лось?",
+    "uz": "Timur, kecha nega kelmading? Nima bo'ldi?"
+   },
+   {
+    "who": "Тиму́р",
+    "ru": "Ой, э́то це́лая исто́рия! Снача́ла я опозда́л на авто́бус.",
+    "uz": "Voy, bu butun boshli hikoya! Avval avtobusga kech qoldim."
+   },
+   {
+    "who": "Дильно́за",
+    "ru": "И что пото́м?",
+    "uz": "Keyin-chi?"
+   },
+   {
+    "who": "Тиму́р",
+    "ru": "Пото́м я взял такси́, но вдруг такси́ слома́лось!",
+    "uz": "Keyin taksi oldim, lekin birdan taksi buzilib qoldi!"
+   },
+   {
+    "who": "Дильно́за",
+    "ru": "Не мо́жет быть! Како́й у́жас!",
+    "uz": "Bo'lishi mumkin emas! Dahshat!"
+   },
+   {
+    "who": "Тиму́р",
+    "ru": "Наконе́ц я пришёл, но бы́ло уже́ по́здно. Все ушли́!",
+    "uz": "Nihoyat yetib keldim, lekin allaqachon kech edi. Hamma ketib qolgan edi!"
+   }
+  ]
+ },
+ "exercises": {
+  "matching": [
+   [
+    "одна́жды",
+    "bir kuni"
+   ],
+   [
+    "вдруг",
+    "birdan"
+   ],
+   [
+    "снача́ла",
+    "avval"
+   ],
+   [
+    "пото́м",
+    "keyin"
+   ],
+   [
+    "наконе́ц",
+    "nihoyat"
+   ],
+   [
+    "случи́ться",
+    "sodir bo'lmoq"
+   ],
+   [
+    "испуга́ться",
+    "qo'rqib ketmoq"
+   ],
+   [
+    "вспо́мнить",
+    "eslamoq"
+   ],
+   [
+    "заблуди́ться",
+    "adashib qolmoq"
+   ],
+   [
+    "де́тство",
+    "bolalik"
+   ]
+  ],
+  "fillBlank": [
+   {
+    "s": "___ я потеря́л ключи́ от кварти́ры. (bir kuni)",
+    "o": [
+     "Пото́м",
+     "Наконе́ц",
+     "Одна́жды"
+    ],
+    "a": "Одна́жды"
+   },
+   {
+    "s": "Я шёл по у́лице, и ___ пошёл дождь. (birdan)",
+    "o": [
+     "вдруг",
+     "снача́ла",
+     "наконе́ц"
+    ],
+    "a": "вдруг"
+   },
+   {
+    "s": "___ я поза́втракал, пото́м пошёл на рабо́ту.",
+    "o": [
+     "Снача́ла",
+     "Наконе́ц",
+     "Вдруг"
+    ],
+    "a": "Снача́ла"
+   },
+   {
+    "s": "Мы до́лго иска́ли, и ___ нашли́ доро́гу. (nihoyat)",
+    "o": [
+     "одна́жды",
+     "наконе́ц",
+     "снача́ла"
+    ],
+    "a": "наконе́ц"
+   },
+   {
+    "s": "Что ___ ? Почему́ ты пла́чешь?",
+    "o": [
+     "случи́ться",
+     "случи́тся",
+     "случи́лось"
+    ],
+    "a": "случи́лось"
+   },
+   {
+    "s": "Когда́ мне ___ де́сять лет, мы перее́хали.",
+    "o": [
+     "бы́ло",
+     "была́",
+     "был"
+    ],
+    "a": "бы́ло"
+   },
+   {
+    "s": "Мы ___ в гора́х и о́чень испуга́лись.",
+    "o": [
+     "заблу́димся",
+     "заблуди́ться",
+     "заблуди́лись"
+    ],
+    "a": "заблуди́лись"
+   },
+   {
+    "s": "Вчера́ я ___ , пое́л и вы́шел из до́ма. (ketma-ket)",
+    "o": [
+     "встаю́",
+     "встал",
+     "встава́л"
+    ],
+    "a": "встал"
+   },
+   {
+    "s": "Я ___ по па́рку, и вдруг уви́дел дру́га. (fon)",
+    "o": [
+     "шёл",
+     "дошёл",
+     "пошёл"
+    ],
+    "a": "шёл"
+   },
+   {
+    "s": "Три го́да ___ я на́чал учи́ть ру́сский.",
+    "o": [
+     "наза́д",
+     "пото́м",
+     "че́рез"
+    ],
+    "a": "наза́д"
+   },
+   {
+    "s": "В ___ я жил в дере́вне.",
+    "o": [
+     "де́тства",
+     "де́тство",
+     "де́тстве"
+    ],
+    "a": "де́тстве"
+   },
+   {
+    "s": "Он око́нчил университе́т и ___ врачо́м.",
+    "o": [
+     "ста́нет",
+     "стать",
+     "стал"
+    ],
+    "a": "стал"
+   }
+  ],
+  "multipleChoice": [
+   {
+    "q": "«Nima bo'ldi?»",
+    "o": [
+     "Что пото́м?",
+     "Кто э́то?",
+     "Что случи́лось?"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Keyin-chi?»",
+    "o": [
+     "Что снача́ла?",
+     "И что пото́м?",
+     "Когда́?"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«birdan»",
+    "o": [
+     "одна́жды",
+     "наконе́ц",
+     "вдруг"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Bolaligimda…»",
+    "o": [
+     "В де́тство…",
+     "Де́тство…",
+     "В де́тстве…"
+    ],
+    "a": 2
+   },
+   {
+    "q": "«Qo'rqib ketdim» (ayol)",
+    "o": [
+     "Я испуга́лась",
+     "Я испуга́юсь",
+     "Я испуга́лся"
+    ],
+    "a": 0
+   },
+   {
+    "q": "«Bu kunni hech qachon unutmayman»",
+    "o": [
+     "Я по́мню день",
+     "Я никогда́ не забу́ду э́тот день",
+     "Я забы́л э́тот день"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Ketma-ket harakatlar uchun qaysi tur?",
+    "o": [
+     "Farqi yo'q",
+     "Tugallangan (встал, вы́шел)",
+     "Tugallanmagan (встава́л)"
+    ],
+    "a": 1
+   },
+   {
+    "q": "«Bo'lishi mumkin emas!»",
+    "o": [
+     "Не мо́жет быть!",
+     "Нельзя́!",
+     "Не мо́жет!"
+    ],
+    "a": 0
+   }
+  ],
+  "sentenceBuild": [
+   {
+    "w": [
+     "я",
+     "Одна́жды",
+     "ключи́",
+     "потеря́л"
+    ],
+    "a": "Одна́жды я потеря́л ключи́",
+    "t": "Bir kuni kalitlarni yo'qotdim"
+   },
+   {
+    "w": [
+     "случи́лось",
+     "Что"
+    ],
+    "a": "Что случи́лось",
+    "t": "Nima bo'ldi?"
+   },
+   {
+    "w": [
+     "я",
+     "Вдруг",
+     "заблуди́лся",
+     "по́нял",
+     "что"
+    ],
+    "a": "Вдруг я по́нял что заблуди́лся",
+    "t": "Birdan adashganimni tushundim"
+   },
+   {
+    "w": [
+     "нашёл",
+     "Наконе́ц",
+     "я",
+     "метро́"
+    ],
+    "a": "Наконе́ц я нашёл метро́",
+    "t": "Nihoyat metroni topdim"
+   },
+   {
+    "w": [
+     "де́тстве",
+     "В",
+     "жил",
+     "я",
+     "в",
+     "Самарка́нде"
+    ],
+    "a": "В де́тстве я жил в Самарка́нде",
+    "t": "Bolaligimda Samarqandda yashaganman"
+   },
+   {
+    "w": [
+     "пото́м",
+     "что",
+     "И"
+    ],
+    "a": "И что пото́м",
+    "t": "Keyin-chi?"
+   }
+  ]
+ },
+ "speaking": [
+  {
+   "ru": "Одна́жды со мной случи́лась интере́сная исто́рия.",
+   "uz": "Bir kuni men bilan qiziq voqea bo'ldi."
+  },
+  {
+   "ru": "Снача́ла всё бы́ло хорошо́, но пото́м…",
+   "uz": "Avval hammasi yaxshi edi, lekin keyin…"
+  },
+  {
+   "ru": "Я шёл по у́лице, и вдруг…",
+   "uz": "Ko'chada ketayotgan edim, birdan…"
+  },
+  {
+   "ru": "Я о́чень испуга́лся, но пото́м вспо́мнил…",
+   "uz": "Juda qo'rqib ketdim, lekin keyin esladim…"
+  },
+  {
+   "ru": "Наконе́ц всё зако́нчилось хорошо́.",
+   "uz": "Nihoyat hammasi yaxshi tugadi."
+  },
+  {
+   "ru": "Я никогда́ не забу́ду э́тот день.",
+   "uz": "Bu kunni hech qachon unutmayman."
+  }
+ ]
+}
