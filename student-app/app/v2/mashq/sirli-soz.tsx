@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   actions: { paddingTop: 12, paddingHorizontal: 20, flexDirection: 'row', gap: 8 },
   hintBtn: { flex: 1, flexBasis: 0, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   hintBtnText: { fontFamily: fonts.bodyHeavy, fontSize: 14, color: '#0B1220', ...reset },
-  topic: { flex: 1, flexBasis: 0, minWidth: 0, height: 44, borderRadius: 14, backgroundColor: '#CDEFDD', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  topic: { flex: 1, flexBasis: 0, minWidth: 0, height: 44, borderRadius: 14, backgroundColor: '#CDEFDD', alignItems: 'center', justifyContent: 'center' },
   topicText: { fontFamily: fonts.bodyHeavy, fontSize: 13, color: '#075E3A', ...reset },
 
   kb: { marginTop: 'auto', paddingHorizontal: 4, gap: 6 },

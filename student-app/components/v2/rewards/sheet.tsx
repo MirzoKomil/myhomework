@@ -70,7 +70,7 @@ export function InfoRows({ rows, minHeight }: { rows: ReactNode[]; minHeight: nu
   return (
     <View style={styles.rows}>
       {rows.map((r, i) => (
-        <View key={i} style={[styles.row, { minHeight }, i < rows.length - 1 && styles.rowBorder]}>
+        <View key={i} style={[styles.row, { minHeight: minHeight + (i < rows.length - 1 ? 1 : 0) }, i < rows.length - 1 && styles.rowBorder]}>
           {r}
         </View>
       ))}
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(11,18,32,0.45)',
-    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } as object) : null),
+    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' } as object) : null),
   },
   sheet: {
     backgroundColor: '#FFFFFF',

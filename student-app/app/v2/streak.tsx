@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   dayText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 14.4, color: '#4A5468', textAlign: 'center' },
   used: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4 },
   usedText: { flex: 1, fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, color: '#4A5468' },
-  link: { minHeight: 56, borderRadius: 16, borderWidth: 1.5, borderColor: '#E4E8F0', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  link: { minHeight: 59, borderRadius: 16, borderWidth: 1.5, borderColor: '#E4E8F0', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
   linkTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 14, color: '#0B1220' },
   linkSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, color: '#4A5468' },
   cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center' },

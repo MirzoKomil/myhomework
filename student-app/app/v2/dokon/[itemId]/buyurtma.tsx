@@ -170,6 +170,7 @@ export default function V2Checkout() {
             </Text>
           </View>
 
+          {/* Dizayndagi min-height 60 + padding 8 (content-box) = 76. */}
           {missing > 0 && (
             <Pressable
               accessibilityRole="link"
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingTop: 16, paddingHorizontal: 20 },
   column: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: 14 },
   ordersBtn: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  earn: { minHeight: 60, backgroundColor: '#FFF4D1', borderRadius: 20, paddingVertical: 8, paddingLeft: 10, paddingRight: 12, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
+  earn: { minHeight: 76, backgroundColor: '#FFF4D1', borderRadius: 20, paddingVertical: 8, paddingLeft: 10, paddingRight: 12, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
   earnIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   earnTitle: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },
   earnSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 12, color: '#5C4300' },

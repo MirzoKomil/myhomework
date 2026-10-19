@@ -7,7 +7,7 @@
  * ochiladi (sample — "Namuna: yangi darajaga chiqqanda" belgisi); yopish va
  * "Darajalarga qaytish" Darajalar ekraniga qaytaradi (oyna o'sha ekran ustida).
  */
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BoltFill, CloseIcon } from '@/components/v2/rewards/icons';
 import { fmt } from '@/components/v2/rewards/parts';
@@ -108,7 +108,12 @@ export function LevelUpPopup({ visible, onClose, levelIndex = LEVELS.length - 1,
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(11,18,32,0.35)' },
+  // Dizayndagi fon — ostidagi ekranning xira, qorong'ilashtirilgan surati + .35 qatlam.
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(11,18,32,0.62)',
+    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' } as object) : null),
+  },
   wrap: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, width: '100%', maxWidth: 480, alignSelf: 'center' },
   card: {
     backgroundColor: '#FFFFFF',

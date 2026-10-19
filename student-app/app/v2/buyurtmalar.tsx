@@ -7,7 +7,7 @@
  * holatida. Buyurtma bo'lmasa — dizayndagi bo'sh holat (eng yaqin mahsulot).
  */
 import { router } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronRightIcon, CoinFill, LongArrowIcon, TICK2, TickIcon } from '@/components/v2/rewards/icons';
 import {
@@ -172,11 +172,12 @@ export default function V2Orders() {
               <Text accessibilityRole="header" style={styles.earnTitle}>Coin qanday yigʻiladi</Text>
               <Text style={styles.earnBal}>Balans: {fmt(coins)}</Text>
             </View>
+            {/* Dizayndagi grid (1.3fr / 1fr, matn bir qatorda): ustun matnidan tor bo'lmaydi. */}
             <View style={styles.earnGrid}>
-              {[0, 2, 4].map((r) => (
-                <View key={r} style={{ flexDirection: 'row', gap: 6 }}>
-                  {EARN.slice(r, r + 2).map(([label, value], i) => (
-                    <View key={label} style={[styles.earnCell, { flex: i === 0 ? 1.3 : 1 }]}>
+              {[0, 1].map((c) => (
+                <View key={c} style={[styles.earnCol, { flexGrow: c === 0 ? 1.3 : 1 }]}>
+                  {EARN.filter((_, i) => i % 2 === c).map(([label, value]) => (
+                    <View key={label} style={styles.earnCell}>
                       <Text style={styles.earnLabel} numberOfLines={1}>{label}</Text>
                       <Text style={styles.earnValue} numberOfLines={1}>{value}</Text>
                     </View>
@@ -211,8 +212,9 @@ const styles = StyleSheet.create({
   earn: { backgroundColor: '#FFFFFF', borderRadius: 22, padding: 14, gap: 10 },
   earnTitle: { flex: 1, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 15, color: '#0B1220' },
   earnBal: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, color: '#4A5468' },
-  earnGrid: { gap: 6 },
-  earnCell: { flexBasis: 0, minWidth: 0, minHeight: 34, paddingHorizontal: 9, borderRadius: 12, backgroundColor: '#F4F6FA', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  earnGrid: { flexDirection: 'row', gap: 6 },
+  earnCol: { flexBasis: 0, gap: 6, ...(Platform.OS === 'web' ? ({ minWidth: 'min-content' } as object) : { minWidth: 0 }) },
+  earnCell: { minHeight: 34, paddingHorizontal: 9, borderRadius: 12, backgroundColor: '#F4F6FA', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
   earnLabel: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, color: '#26304A', flexShrink: 1 },
   earnValue: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#7A5300' },
   emptyTitle: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 24, color: '#0B1220', textAlign: 'center' },
