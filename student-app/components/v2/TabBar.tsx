@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '@/constants/v2/tokens';
 import { HomeIcon, PathIcon, StarIcon, TrophyIcon, UserIcon } from './Icons';
 import { V2Text } from './Text';
+import { v2Tab } from '@/services/v2Nav';
 
 export type TabKey = 'home' | 'lessons' | 'practice' | 'league' | 'profile';
 
@@ -35,7 +36,7 @@ export function TabBar({ active }: { active: TabKey }) {
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={tab.label}
-            onPress={() => { if (!isActive) router.push(tab.href as Href); }}
+            onPress={() => { if (!isActive) v2Tab(tab.href); }}
             style={styles.item}
           >
             {tab.icon(color, isActive)}

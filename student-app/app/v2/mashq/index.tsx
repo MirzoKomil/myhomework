@@ -19,6 +19,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { fetchMobileContent } from '@/services/contentApi';
+import { useCachedState } from '@/services/v2Cache';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
 
@@ -61,8 +62,8 @@ export default function PracticeScreen() {
   const insets = useSafeAreaInsets();
   const lesson = useCurrentLesson();
   const { rec, reload } = useRecords();
-  const [counts, setCounts] = useState<{ grammar: number; stories: number; dialogs: number }>({ grammar: 0, stories: 0, dialogs: 0 });
-  const [myWords, setMyWords] = useState(0);
+  const [counts, setCounts] = useCachedState<{ grammar: number; stories: number; dialogs: number }>('mashq.counts', { grammar: 0, stories: 0, dialogs: 0 });
+  const [myWords, setMyWords] = useCachedState('mashq.myWords', 0);
   // Uyga vazifa xatolari (scoreStore) — barcha darslar bo'yicha.
   const mistakes = useMistakeCount();
 

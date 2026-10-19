@@ -11,6 +11,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { NavHomeIcon, NavPathIcon, NavStarIcon, NavUserIcon, TrophyIcon } from './icons';
 import { lightHome, type HomePalette } from './palette';
+import { v2Tab } from '@/services/v2Nav';
 
 const ITEMS = [
   { key: 'home', label: 'Asosiy', href: R.home },
@@ -38,7 +39,7 @@ export function HomeNav({ p = lightHome, inactiveColor, homeStroke = 2.4 }: { p?
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             accessibilityLabel={it.label}
-            onPress={() => { if (!active) router.push(it.href as Href); }}
+            onPress={() => { if (!active) v2Tab(it.href); }}
             style={styles.item}
           >
             {it.key === 'home' && <NavHomeIcon color={c} fill="none" strokeWidth={homeStroke} />}

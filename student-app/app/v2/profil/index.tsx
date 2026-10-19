@@ -56,6 +56,7 @@ import { useExamResults } from '@/services/examStore';
 import { useLightning } from '@/services/lightningStore';
 import { useV2Level } from '@/constants/v2/levels';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
+import { useCachedState } from '@/services/v2Cache';
 
 const formatStudentId = (value?: string) => {
   const id = String(value || '').trim();
@@ -85,12 +86,12 @@ export default function V2Profile() {
   const examResults = useExamResults();
   const coins = useCoins();
 
-  const [name, setName] = useState(student?.name ?? '');
+  const [name, setName] = useCachedState('profil.name', student?.name ?? '');
   const [studentId, setStudentId] = useState(formatStudentId(student?.studentId || student?.id));
-  const [schedule, setSchedule] = useState<DemoScheduleResponse | null>(null);
-  const [grades, setGrades] = useState<LiveGradeEntry[]>([]);
-  const [payments, setPayments] = useState<DemoPaymentsResponse | null>(null);
-  const [lessonsDone, setLessonsDone] = useState(0);
+  const [schedule, setSchedule] = useCachedState<DemoScheduleResponse | null>('profil.schedule', null);
+  const [grades, setGrades] = useCachedState<LiveGradeEntry[]>('profil.grades', []);
+  const [payments, setPayments] = useCachedState<DemoPaymentsResponse | null>('profil.payments', null);
+  const [lessonsDone, setLessonsDone] = useCachedState('profil.lessonsDone', 0);
 
   useEffect(() => {
     if (!token && !isEmbedded) return;

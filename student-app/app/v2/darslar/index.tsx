@@ -38,6 +38,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoGrades, fetchDemoSchedule, type LiveGradeEntry } from '@/services/contentApi';
 import { useLessonCoins } from '@/services/coinsStore';
+import { useCachedState } from '@/services/v2Cache';
 
 // Oylar nomi serverda yo'q — dizayndagi nomlar (1-oy "Tanishuv", 2-oy
 // "Kundalik hayot"). 3-oy nomi dizaynda yo'q, shuning uchun faqat raqam.
@@ -45,10 +46,10 @@ const MONTH_TITLES: Record<number, string> = { 1: 'Tanishuv', 2: 'Kundalik hayot
 
 export default function PathScreen() {
   const insets = useSafeAreaInsets();
-  const [data, setData] = useState<CourseData | null>(null);
+  const [data, setData] = useCachedState<CourseData | null>('darslar.data', null);
   const [error, setError] = useState(false);
-  const [grades, setGrades] = useState<LiveGradeEntry[]>([]);
-  const [schedule, setSchedule] = useState<{ startsAt: Date | null; pattern: 'mwf' | 'tts' }>({ startsAt: null, pattern: 'mwf' });
+  const [grades, setGrades] = useCachedState<LiveGradeEntry[]>('darslar.grades', []);
+  const [schedule, setSchedule] = useCachedState<{ startsAt: Date | null; pattern: 'mwf' | 'tts' }>('darslar.schedule', { startsAt: null, pattern: 'mwf' });
   const scrollRef = useRef<ScrollView>(null);
   const scrolled = useRef(false);
   const scores = useHomeworkScores();

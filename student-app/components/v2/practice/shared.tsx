@@ -22,6 +22,7 @@ import { fetchMobileContent } from '@/services/contentApi';
 import { getLastPosition } from '@/services/progressStore';
 
 import { CloseIcon, NavHome, NavPath, NavStar, NavTrophy, NavUser } from './icons';
+import { v2Tab } from '@/services/v2Nav';
 
 /** Rus harflari Bricolage'da yo'q: native'da Manrope'ga o'tiladi, webda stack o'zi tushadi. */
 export const displayRu = Platform.OS === 'web' ? fonts.display : fonts.displayCyrillic;
@@ -260,7 +261,7 @@ export function PracticeNav() {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             accessibilityLabel={it.label}
-            onPress={() => { if (!active) router.push(it.href as Href); }}
+            onPress={() => { if (!active) v2Tab(it.href); }}
             style={styles.navItem}
           >
             {it.key === 'home' && <NavHome color={c} />}

@@ -23,6 +23,7 @@ import { fonts } from '@/constants/v2/tokens';
 import { fetchLeaderboard, type LeaderboardEntryResponse } from '@/services/contentApi';
 import { useAvatarUri } from '@/services/avatarStore';
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
+import { hasCached, useCachedState } from '@/services/v2Cache';
 
 // Haftalik liga serverda yo'q — hamma Bronza (0-pog'ona) dan boshlaydi.
 const CURRENT_TIER = 0;
@@ -33,8 +34,8 @@ export default function V2League() {
   const insets = useSafeAreaInsets();
   const myAvatar = useAvatarUri();
   const period = 'weekly' as const;
-  const [entries, setEntries] = useState<LeaderboardEntryResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useCachedState<LeaderboardEntryResponse[]>('liga.entries', []);
+  const [loading, setLoading] = useState(() => !hasCached('liga.entries'));
   const [now, setNow] = useState(() => new Date());
 
   useFocusEffect(
