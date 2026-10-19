@@ -26,7 +26,7 @@ import { studentFeaturesForCourse } from '@/constants/studentFeatures';
 import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 import type { TranslationKey } from '@/i18n/translations';
 import { LessonNode, LessonType } from '@/data/mock';
-import { getLessonContent, getLessonPossibleCoins, mergeLessonContent } from '@/data/lessonContent';
+import { getLessonContent, getLessonPossibleCoins, lessonLockState, mergeLessonContent } from '@/data/lessonContent';
 import { AdminLessonContent, fetchMobileContent, invalidateCache, MobileContent } from '@/services/contentApi';
 import { useCoins, useLessonCoins } from '@/services/coinsStore';
 import { useLightning } from '@/services/lightningStore';
@@ -523,6 +523,7 @@ export default function RoadmapScreen() {
   // bajarsa ham keyingi darsga o'tishi mumkin. Razgovor (speaking/jonli)
   // darslar uchun ustoz davomat olishi sharti (attendanceOk) o'zgarishsiz
   // qoladi — bu faqat foiz chegarasiga tegishli o'zgarish.
+  // 2026-10-19: qoida yangilandi — 60% YOKI (jonli darsda) davomat; qarang lessonLockState.
   const recomputeLessons = (mc: MobileContent, cId: string | undefined) => {
     const c = mc.courses.find((x) => x.id === cId) ?? mc.courses[0] ?? null;
     if (!c) return;
@@ -534,12 +535,6 @@ export default function RoadmapScreen() {
     // 1-dars ochiq turishi kerak edi — avval bu 3 ta bo'lgani sabab 2- va
     // 3-darslar ham hech qanday progress bo'lmasa ham ochiq ko'rinardi.
     const UNLOCKED_COUNT = 1;
-    const DEFAULT_UNLOCK_PERCENT = 50;
-    // 32-vazifa: jonli (speaking) darsning o'zi ochilishi uchun IKKI shart
-    // BIRGALIKDA bajarilishi shart — ustoz shu darsga davomat olgan
-    // bo'lishi VA undan oldingi videodars vazifalari kamida shu % bajarilgan
-    // bo'lishi. Bittasi yetarli emas.
-    const LIVE_LESSON_UNLOCK_PERCENT = 50;
     let prevPercent = 100;
     const mapped: LessonNode[] = [];
     for (let i = 0; i < TOTAL_LESSONS; i++) {
@@ -548,28 +543,11 @@ export default function RoadmapScreen() {
       const id = l?.id ?? String(lessonNum);
       const isVideoDay = i % 2 === 0;
 
-      // Video (toq) kunlar oldingi (speaking) darsning kerakli % ga
-      // yetishi bilan ochiladi. Speaking/jonli (juft) kunlar esa — ustoz
-      // shu darsga davomat OLGAN bo'lishi VA undan oldingi videodarsning
-      // kerakli % ga yetgan bo'lishi ikkisi HAM bajarilgandagina ochiladi
-      // (ilgari standart holatda davomat umuman tekshirilmasdi — shu sabab
-      // ustoz hech qachon davomat olmagan bo'lsa ham jonli dars "ochiq"
-      // ko'rinib qolardi). CRM'da lesson.lock.requiredPercent bilan har bir
-      // dars uchun bu foizni alohida belgilab qo'yish mumkinligicha qoladi.
-      let locked: boolean;
-      let lockReason: 'percent' | 'attendance' | undefined;
-      let requiredPercent: number;
-      if (isVideoDay) {
-        requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? DEFAULT_UNLOCK_PERCENT) : DEFAULT_UNLOCK_PERCENT;
-        locked = i >= UNLOCKED_COUNT && prevPercent < requiredPercent;
-        if (locked) lockReason = 'percent';
-      } else {
-        requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? LIVE_LESSON_UNLOCK_PERCENT) : LIVE_LESSON_UNLOCK_PERCENT;
-        const attendanceOk = !!l?.attendanceTaken;
-        const percentOk = prevPercent >= requiredPercent;
-        locked = i >= UNLOCKED_COUNT && (!attendanceOk || !percentOk);
-        if (locked) lockReason = !attendanceOk ? 'attendance' : 'percent';
-      }
+      // Qoida yagona: data/lessonContent.ts → lessonLockState (60% yoki davomat).
+      const lockState = lessonLockState(i, l, prevPercent, UNLOCKED_COUNT);
+      const locked = lockState.locked;
+      const lockReason: 'percent' | 'attendance' | undefined = lockState.reason;
+      const requiredPercent = lockState.requiredPercent;
 
       const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
       const content = mergeLessonContent(getLessonContent(id, i, resolvedCourseLang), mc.lessonContents[id]);

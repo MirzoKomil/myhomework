@@ -341,8 +341,27 @@ export const COURSE_TOTAL_LESSONS = 72;
 // ochiladi (roadmap/[courseId].tsx'dagi recomputeLessons bilan bir xil
 // mantiq). 51-vazifa: ikkala chegara ham 50% ga tushirildi — davomat sharti
 // Razgovor (speaking) darslar uchun o'zgarishsiz qoladi.
-const COURSE_DEFAULT_UNLOCK_PERCENT = 50;
-const COURSE_LIVE_LESSON_UNLOCK_PERCENT = 50;
+// Darsni ochish qoidasi (2026-10-19, Abdulloh qarori) — barcha ekranlar
+// (darslar yo'li, so'zlar, o'yinlar, v2) shu bitta funksiyadan foydalanadi:
+//  • har qanday dars oldingi darsdan 60% o'zlashtirilganda ochiladi;
+//  • jonli dars ustoz davomat olgan bo'lsa ham ochiladi (foizdan qat'i nazar) —
+//    ustoz davomatni unutsa o'quvchi bekorga qulfda qolmasin.
+// CRM'da darsga alohida foiz (lock.requiredPercent) qo'yilgan bo'lsa, o'sha amal qiladi.
+export const LESSON_UNLOCK_PERCENT = 60;
+
+export function lessonLockState(
+  index: number,
+  lesson: { attendanceTaken?: boolean; lock?: { enabled?: boolean; requiredPercent?: number } } | undefined,
+  prevPercent: number,
+  alwaysOpenCount = 1
+): { locked: boolean; requiredPercent: number; reason?: 'percent' } {
+  const requiredPercent = lesson?.lock?.enabled ? (lesson.lock.requiredPercent ?? LESSON_UNLOCK_PERCENT) : LESSON_UNLOCK_PERCENT;
+  if (index < alwaysOpenCount) return { locked: false, requiredPercent };
+  const isLiveDay = index % 2 !== 0;
+  if (prevPercent >= requiredPercent) return { locked: false, requiredPercent };
+  if (isLiveDay && lesson?.attendanceTaken) return { locked: false, requiredPercent };
+  return { locked: true, requiredPercent, reason: 'percent' };
+}
 
 // 38-vazifa: Bosh sahifadagi "Umumiy progress" kartochkasi ilgari doim
 // qattiq yozilgan namuna qiymatni (31%, 22/72 dars) ko'rsatardi. Endi
@@ -375,14 +394,7 @@ export async function getCourseOverallProgress(): Promise<{
     const id = l?.id ?? String(i + 1);
     const isVideoDay = i % 2 === 0;
 
-    let locked: boolean;
-    if (isVideoDay) {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_DEFAULT_UNLOCK_PERCENT) : COURSE_DEFAULT_UNLOCK_PERCENT;
-      locked = i >= 1 && prevPercent < requiredPercent;
-    } else {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_LIVE_LESSON_UNLOCK_PERCENT) : COURSE_LIVE_LESSON_UNLOCK_PERCENT;
-      locked = i >= 1 && (!l?.attendanceTaken || prevPercent < requiredPercent);
-    }
+    const locked = lessonLockState(i, l, prevPercent).locked;
     if (!locked) unlockedCount++;
 
     const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
@@ -510,14 +522,7 @@ export async function getLessonLockMap(): Promise<Record<string, boolean>> {
     const id = l?.id ?? String(i + 1);
     const isVideoDay = i % 2 === 0;
 
-    let locked: boolean;
-    if (isVideoDay) {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_DEFAULT_UNLOCK_PERCENT) : COURSE_DEFAULT_UNLOCK_PERCENT;
-      locked = i >= 1 && prevPercent < requiredPercent;
-    } else {
-      const requiredPercent = l?.lock?.enabled ? (l.lock.requiredPercent ?? COURSE_LIVE_LESSON_UNLOCK_PERCENT) : COURSE_LIVE_LESSON_UNLOCK_PERCENT;
-      locked = i >= 1 && (!l?.attendanceTaken || prevPercent < requiredPercent);
-    }
+    const locked = lessonLockState(i, l, prevPercent).locked;
     map[id] = locked;
 
     const videoCategory: ProgressCategory = isVideoDay ? 'video' : 'speaking';
