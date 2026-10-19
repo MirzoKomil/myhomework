@@ -25,7 +25,7 @@ const TABS: { key: TabKey; label: string; href: string; icon: (color: string, ac
 export function TabBar({ active }: { active: TabKey }) {
   const insets = useSafeAreaInsets();
   return (
-    <View accessibilityRole="tablist" style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+    <View accessibilityRole="tablist" accessibilityLabel="Asosiy menyu" style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
       {TABS.map((tab) => {
         const isActive = tab.key === active;
         const color = isActive ? colors.cobalt : colors.textSubtle;
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 6,
   },
-  item: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  item: { flex: 1, minHeight: 53, alignItems: 'center', justifyContent: 'center', gap: 3 },
   // Dizayn (2026-10-19 versiyasi): menyu yozuvi 12px.
   label: { fontSize: 12, lineHeight: 15 },
   activeLabel: { fontFamily: fonts.bodyHeavy },

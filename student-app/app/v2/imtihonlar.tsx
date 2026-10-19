@@ -15,7 +15,6 @@ import { Check, ChevronRight, LockIcon, MedalIcon } from '@/components/v2/homewo
 import { LessonsTop } from '@/components/v2/homework/LessonsTop';
 import { LessonsNav, Txt } from '@/components/v2/homework/ui';
 import { loadCourseData } from '@/components/v2/lessons/data';
-import { studentFeaturesForCourse } from '@/constants/studentFeatures';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { getResolvedExams, type Exam } from '@/data/exams';
@@ -41,7 +40,6 @@ export default function ExamsScreen() {
   const [exams, setExams] = useState<Resolved[] | null>(null);
   const [done, setDone] = useState<number | null>(null);
   const [today, setToday] = useState<number | null>(null);
-  const [bonusDot, setBonusDot] = useState(false);
   const [lessonWords, setLessonWords] = useState<number[]>([]);
 
   useFocusEffect(
@@ -57,8 +55,6 @@ export default function ExamsScreen() {
           // Har darsning lug'atidagi so'zlar soni — "3-imtihonga tayyorgarlik" kartasi uchun.
           setLessonWords(d.lessons.map((l) => l.content.vocabulary.length));
           setToday(d.activeIndex + 1);
-          // Path ekranidagidek: bonus darslar faqat shu kursda bo'lsa nuqta chiqadi.
-          setBonusDot(studentFeaturesForCourse(d.lang).bonusLessons);
         })
         .catch(() => {});
       return () => {
@@ -88,7 +84,7 @@ export default function ExamsScreen() {
   return (
     <View style={st.screen}>
       <View style={st.column}>
-        <LessonsTop active="exams" done={done} total={72} bonusDot={bonusDot} />
+        <LessonsTop active="exams" done={done} total={72} bonusDot />  {/* Darslar yo'li bilan bir xil: "yangi" nuqtasi doim ko'rinadi. */}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
           {first && (
             <View style={st.intro}>
