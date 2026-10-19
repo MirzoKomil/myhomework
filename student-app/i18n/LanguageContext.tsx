@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { usePathname } from 'expo-router';
 import { Platform } from 'react-native';
 
 import { fetchDemoStudentProfile } from '@/services/contentApi';
@@ -128,6 +129,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [token]);
 
+  const pathname = usePathname();
   // 5-vazifa: telefon "Bosh ekranga qo'shish" qilinganda ilova nomi va
   // ikonkasi kursga (ingliz/rus) mos chiqishi kerak — "Homework" ingliz
   // tili uchun, "Domwork" rus tili uchun. Bitta web build ikkala kursga
@@ -141,7 +143,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     const isRussian = courseLang === 'russian';
     const appName = isRussian ? 'Domwork' : 'Homework';
-    const manifestHref = isRussian ? '/student/manifest-russian.webmanifest' : '/student/manifest-english.webmanifest';
+    // Yangi ilova (/v2) ichidan "Bosh ekranga qo'shish" qilinsa, ikonka
+    // eski ilovani emas, aynan v2'ni ochishi kerak — start_url'i /student/v2
+    // bo'lgan alohida manifest.
+    const v2 = /^\/v2(\/|$)/.test(pathname || '');
+    const manifestHref = `/student/manifest-${isRussian ? 'russian' : 'english'}${v2 ? '-v2' : ''}.webmanifest`;
     const iconHref = isRussian ? '/student/pwa-icon-domwork.jpg' : '/student/pwa-icon-homework.jpg';
 
     document.querySelector('link[rel="manifest"]')?.setAttribute('href', manifestHref);
@@ -149,7 +155,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', appName);
     document.querySelector('meta[name="application-name"]')?.setAttribute('content', appName);
     document.title = appName;
-  }, [courseLang]);
+  }, [courseLang, pathname]);
 
   const setLang = useCallback((l: AppLang) => {
     setLangState(l);
