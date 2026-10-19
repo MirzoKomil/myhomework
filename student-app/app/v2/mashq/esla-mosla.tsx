@@ -238,8 +238,8 @@ export default function MemoryScreen() {
                       <WordImage w={w} size={84} />
                     ) : (
                       <>
-                        <Text style={[styles.cardWord, !isMatched && { color: '#0B1220' }]} numberOfLines={1} adjustsFontSizeToFit>{w.word}</Text>
-                        <Text style={[styles.cardTr, !isMatched && { color: '#4A5468' }]} numberOfLines={1}>{w.translation}</Text>
+                        <Text style={[styles.cardWord, fitWord(w.word), !isMatched && { color: '#0B1220' }]} numberOfLines={2}>{w.word}</Text>
+                        <Text style={[styles.cardTr, !isMatched && { color: '#4A5468' }]} numberOfLines={2}>{w.translation}</Text>
                       </>
                     )}
                     {isMatched && (
@@ -296,6 +296,14 @@ export default function MemoryScreen() {
   );
 }
 
+// Karta ichki kengligi ~96px: uzun so'z ("знакомство") kesilib qolmasin —
+// shrift eng uzun bo'lak uzunligiga qarab kichrayadi (21 → 13), ibora 2 qatorga o'tadi.
+function fitWord(word: string) {
+  const longest = Math.max(...word.split(/\s+/).map((t) => t.replace(/\u0301/g, '').length), 1);
+  const size = Math.max(13, Math.min(21, Math.floor(96 / (longest * 0.64))));
+  return { fontSize: size, lineHeight: Math.round(size * 1.3), textAlign: 'center' as const };
+}
+
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 const styles = StyleSheet.create({
@@ -321,7 +329,7 @@ const styles = StyleSheet.create({
   ok: { boxShadow: 'inset 0 0 0 3px #087A4A, 0 4px 0 #CDEFDD' } as object,
   openRing: { boxShadow: 'inset 0 0 0 3px #2F5BFF, 0 4px 0 #C9D6FF' } as object,
   cardWord: { fontFamily: fonts.bodyHeavy, fontSize: 21, lineHeight: 29, color: '#075E3A', paddingHorizontal: 6, ...reset },
-  cardTr: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 16, color: '#075E3A', paddingHorizontal: 6, ...reset },
+  cardTr: { fontFamily: fonts.bodyBold, fontSize: 12, lineHeight: 15, color: '#075E3A', paddingHorizontal: 6, textAlign: 'center', ...reset },
   badge: { position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10, backgroundColor: '#087A4A', alignItems: 'center', justifyContent: 'center' },
 
   hint: { marginHorizontal: 20, backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
