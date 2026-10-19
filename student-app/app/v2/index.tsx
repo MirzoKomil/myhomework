@@ -21,6 +21,7 @@ import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/c
 import { buildSession, loadReviews } from '@/components/v2/home/reviewStore';
 import { currentStep as firstOpenStep, lessonSteps, stepsDone, useListened } from '@/components/v2/lessons/data';
 import { displayFont, getReadIds } from '@/components/v2/home/shared';
+import { groupFromTopic } from '@/components/v2/profile/shared';
 import { BotConnectPopup } from '@/components/v2/popups/BotConnect';
 import { Loading } from '@/components/v2/states/Loading';
 import { ServerError } from '@/components/v2/states/ServerError';
@@ -302,7 +303,9 @@ export default function V2Home() {
                     {formatCountdown(msLeft)}
                   </Text>
                 )}
-                {!!live.topic && <Text style={styles.liveTopic} numberOfLines={1}>{live.topic}</Text>}
+                {/* Server guruhsiz o'quvchiga "Speaking Club" deb beradi — u ma'nosiz;
+                    faqat haqiqiy guruh nomi bo'lsa ko'rsatiladi. */}
+                {!!groupFromTopic(live.topic) && <Text style={styles.liveTopic} numberOfLines={1}>Guruh: {groupFromTopic(live.topic)}</Text>}
               </View>
               <Pressable accessibilityRole="link" accessibilityLabel={groupName(live.topic) ? `${groupName(live.topic)} Telegram guruhiga oʻtish` : 'Telegram guruhiga oʻtish'} onPress={() => Linking.openURL(live.link)} style={styles.group}>
                 <TelegramIcon color={p.telegramText} />
