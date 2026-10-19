@@ -14,6 +14,7 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/currentLesson';
+import { currentStep as firstOpenStep, lessonSteps, useListened } from '@/components/v2/lessons/data';
 import { StreakLostPopup } from '@/components/v2/popups/StreakLost';
 import { ChevronRightIcon, ClockIcon, CloseIcon, ShieldIcon } from '@/components/v2/rewards/icons';
 import { goBack } from '@/components/v2/rewards/parts';
@@ -33,6 +34,7 @@ export default function V2Streak() {
   const params = useLocalSearchParams<{ popup?: string }>();
   const [lost, setLost] = useState(false);
   const [lesson, setLesson] = useState<CurrentLesson | null>(null);
+  const listened = useListened(lesson?.id ?? '');
 
   useEffect(() => {
     if (params.popup === 'lost') setLost(true);
@@ -48,9 +50,16 @@ export default function V2Streak() {
     d.setDate(today.getDate() - (6 - i));
     return d;
   });
-  const total = lesson?.steps.length ?? 0;
-  const done = lesson?.steps.filter((s) => s.percent >= 100).length ?? 0;
-  const current = Math.min(done + 1, total);
+  // Qadamlar — bosh sahifa va Lesson ekranidagi lessonSteps bilan aynan bir xil.
+  const steps = lesson
+    ? lessonSteps(
+        { id: lesson.id, isVideo: lesson.isVideoDay, content: lesson.content },
+        lesson.trackIds.length,
+        listened.filter((x) => lesson.trackIds.includes(x)).length,
+      )
+    : [];
+  const total = steps.length;
+  const current = Math.min(firstOpenStep(steps) + 1, total);
 
   return (
     <View style={styles.screen}>

@@ -7,8 +7,9 @@
  * (mobile-content → getResolvedLessonContent) bilan solishtiriladi: topilsa
  * transkripsiya, rasm va "N-dars" belgisi chiqadi; Tarjimondan qo'shilgan
  * (tarjimasi bor) so'zga "Tarjimon" belgisi.
- * Xatolar ro'yxati va takrorlash jadvali hech qayerda saqlanmaydi —
- * "Xatolarim" 0, "bugun 0 tasi takrorlanadi", tugmada 0.
+ * Xatolar soni — useMistakeCount (uyga vazifa natijalari). Takrorlash
+ * jadvali saqlanmaydi — "bugun 0 tasi takrorlanadi", tugmada 0.
+ * Manba belgisi: source 'story' → "Audiohikoya".
  */
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getMyWords, loadCurrentLesson, plainWord, type MyWord } from '@/components/v2/practice/shared';
+import { getMyWords, loadCurrentLesson, plainWord, useMistakeCount, type MyWord } from '@/components/v2/practice/shared';
 import { BackIcon, ChevronThinIcon, MistakeRepeatIcon, ReviewIcon, SearchIcon, SpeakerIcon } from '@/components/v2/rewards/icons';
 import { goBack } from '@/components/v2/rewards/parts';
 import { R } from '@/constants/v2/routes';
@@ -27,9 +28,8 @@ import { getResolvedLessonContent, type VocabWord } from '@/data/lessonContent';
 import { useLang } from '@/i18n/LanguageContext';
 import { fetchMobileContent } from '@/services/contentApi';
 
-// Takrorlash jadvali va xatolar saqlanmaydi — 0 holat.
+// Takrorlash jadvali saqlanmaydi — 0 holat.
 const DUE_TODAY = 0;
-const MISTAKES = 0;
 
 // Rasm qutisi fonlari — dizayndagi ranglar navbat bilan.
 const BOX_BG = ['#FFF4D1', '#E8EEFF', '#FFF1E6', '#E3F7EE'];
@@ -57,6 +57,8 @@ type Row = { key: string; word: string; transcript?: string; translation?: strin
 export default function V2Lugat() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
+  // Xatolar soni — uyga vazifa natijalaridan (Mashq plitkasi bilan bir xil manba).
+  const MISTAKES = useMistakeCount();
   const [words, setWords] = useState<MyWord[]>([]);
   const [index, setIndex] = useState<Map<string, LessonWord>>(new Map());
   const [tab, setTab] = useState<'words' | 'mistakes'>('words');
@@ -80,7 +82,7 @@ export default function V2Lugat() {
       words.map((w) => {
         const m = index.get(plainWord(w.word).trim().toLowerCase());
         // Manba (ixtiyoriy, eski yozuvlarda yo'q): 'story' — Hikoyalardan saqlangan.
-        const source = (w as { source?: unknown }).source;
+        const source = w.source;
         return {
           key: w.word,
           // Dars lug'atidagi shakl (urg'u belgisi bilan), bo'lmasa saqlangani.
