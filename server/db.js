@@ -85,8 +85,11 @@ async function tx(fn) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await fn(client);
+        // Natija qaytariladi: Yuzma-yuz (battle) funksiyalari `return tx(...)`
+        // qiladi — ilgari undefined qaytib, haqiqiy juftlash umuman ishlamas edi.
+        const result = await fn(client);
         await client.query('COMMIT');
+        return result;
     } catch (e) {
         await client.query('ROLLBACK');
         throw e;
@@ -2141,6 +2144,10 @@ async function getRealLeaderboard(studentId, scope, period = 'alltime') {
 // "tekshirib" (tickBattleMatch) ikkala tomon ham javob bergan yoki vaqt
 // (grace bilan) tugagan bo'lsa g'olibni aniqlab, keyingi raundga o'tkazadi.
 const BATTLE_QUEUE_TTL_MS = 60 * 1000;
+// Navbatdagi o'quvchi shuncha vaqt status so'ramasa — ilovadan chiqib ketgan hisoblanadi.
+const BATTLE_QUEUE_ALIVE_MS = 8 * 1000;
+// Navbatda turgan o'quvchi uchun yaratilgan o'yin shu vaqt ichida olinadi.
+const BATTLE_JOIN_PICKUP_MS = 30 * 1000;
 const BATTLE_MATCH_TTL_MS = 10 * 60 * 1000;
 const BATTLE_ROUND_MS = 8000; // student-app/data/mock.ts BATTLE_ROUND_SECONDS bilan mos
 const BATTLE_ROUND_GRACE_MS = 5000;
@@ -2221,11 +2228,19 @@ async function joinBattleQueue(studentId, words) {
     return tx(async (client) => {
         const now = Date.now();
         let queue = await lockJsonRow(client, 'battleQueue', []);
-        queue = queue.filter((q) => q.studentId !== studentId && now - new Date(q.joinedAt).getTime() < BATTLE_QUEUE_TTL_MS);
+        // Faqat hozir ham ekranda kutib turgan (har 1.5 s so'rab turgan) o'quvchi
+        // bilan juftlanadi: ilovani yopib ketgan "arvoh" yozuv bilan emas.
+        // Bir o'quvchi o'zi bilan (boshqa qurilmasidan) juftlanmasin.
+        queue = queue.filter((q) => String(q.studentId) !== String(studentId)
+            && (!q.pid || !profile.studentId || String(q.pid) !== String(profile.studentId))
+            && now - new Date(q.joinedAt).getTime() < BATTLE_QUEUE_TTL_MS
+            && now - new Date(q.lastSeen || q.joinedAt).getTime() < BATTLE_QUEUE_ALIVE_MS);
+        // Rus tili o'quvchisi faqat rus tili o'quvchisi bilan (so'zlar bir kursdan).
+        const candidates = queue.filter((q) => !q.lang || !profile.lang || q.lang === profile.lang);
 
-        if (queue.length > 0) {
-            const opponent = queue[0];
-            const remaining = queue.slice(1);
+        if (candidates.length > 0) {
+            const opponent = candidates[0];
+            const remaining = queue.filter((q) => q !== opponent);
             await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(remaining)]);
 
             const matches = await lockJsonRow(client, 'battleMatches', {});
@@ -2252,7 +2267,8 @@ async function joinBattleQueue(studentId, words) {
             return sanitizeBattleMatch(match, studentId);
         }
 
-        queue.push({ studentId, name: profile.name, avatarUrl: profile.avatarUrl || '', words, joinedAt: new Date().toISOString() });
+        const nowIso = new Date().toISOString();
+        queue.push({ studentId, pid: profile.studentId || null, lang: profile.lang || null, name: profile.name, avatarUrl: profile.avatarUrl || '', words, joinedAt: nowIso, lastSeen: nowIso });
         await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(queue)]);
         return { status: 'waiting' };
     });
@@ -2273,11 +2289,23 @@ async function getBattleStatus(studentId, matchId) {
     if (!studentId) throw new Error("Bu funksiya faqat haqiqiy tizimga kirgan o'quvchilar uchun");
     return tx(async (client) => {
         const matches = await lockJsonRow(client, 'battleMatches', {});
-        let match = matchId ? matches[matchId] : Object.values(matches).find((m) => m.players.includes(studentId));
+        // matchId'siz so'rov (navbatda kutish) — faqat hozirgina yaratilgan,
+        // davom etayotgan o'yin. Avvalgi tugagan o'yin qayta ochilib qolmasin.
+        let match = matchId
+            ? matches[matchId]
+            : Object.values(matches)
+                .filter((m) => m.players.includes(studentId) && m.status === 'playing'
+                    && Date.now() - new Date(m.createdAt).getTime() < BATTLE_JOIN_PICKUP_MS)
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
         if (!match || !match.players.includes(studentId)) {
             const queue = await lockJsonRow(client, 'battleQueue', []);
-            const stillWaiting = queue.some((q) => q.studentId === studentId);
-            return { status: stillWaiting ? 'waiting' : 'not_found' };
+            const me = queue.find((q) => q.studentId === studentId);
+            if (me) {
+                // Navbatdagi o'quvchi hali ekranda — "tirik" belgisi yangilanadi.
+                me.lastSeen = new Date().toISOString();
+                await client.query(`UPDATE json_data SET data = $1 WHERE key = 'battleQueue'`, [JSON.stringify(queue)]);
+            }
+            return { status: me ? 'waiting' : 'not_found' };
         }
         match = tickBattleMatch(match);
         matches[match.id] = match;

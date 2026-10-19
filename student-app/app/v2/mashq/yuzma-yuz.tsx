@@ -47,8 +47,9 @@ const img = (id: string) => (designImages as Record<string, ImageSourcePropType>
 const MY_AVATAR = img('93faebd4826b1da6adaee5d0dcda6209');
 const OPP_AVATAR = img('6fbb4a0364e41f76fd238e0c91d0228b');
 const MIN_POOL_SIZE = 4;
-const QUEUE_WAIT_SECONDS = 60;
-const NOT_FOUND = "Hozircha boshqa oʻyinchi navbatda emas. Qayta urinib koʻring yoki Bot bilan mashq qiling.";
+// Shuncha soniyada odam topilmasa — "Bot bilan o'ynaysizmi?" so'raladi.
+const QUEUE_WAIT_SECONDS = 30;
+const NOT_FOUND = "Hozir boʻsh oʻquvchi topilmadi. Bot bilan oʻynab mashq qilishingiz yoki yana qidirishingiz mumkin.";
 
 type Phase = 'matching' | 'notFound' | 'playing' | 'result';
 type RoundWinner = 'player' | 'opponent' | 'draw' | null;
@@ -164,10 +165,13 @@ export default function BattleScreen() {
   }, [phase, opponentName]);
 
   const enterMatch = (status: BattleMatchStatus) => {
+    // Server o'yin bermasa (bo'sh javob) — soxta "raqib" bilan o'ynalmaydi.
+    if (!status || !status.matchId) return notFound();
     stopPolling();
     const words = status.words && status.words.length ? status.words : shuffle(battleWordsRef.current).slice(0, BATTLE_ROUNDS);
     setMatchId(status.matchId ?? null);
-    setOpponentName(status.opponentName || 'Hamkurs');
+    // Haqiqiy raqibning ismi (birinchi so'zi); server bermasa — umumiy "Raqib".
+    setOpponentName((status.opponentName || '').trim().split(/\s+/)[0] || 'Raqib');
     setOpponentAvatarUrl(status.opponentAvatarUrl || '');
     setRoundWords(words);
     setTotalRounds(status.totalRounds ?? words.length);
@@ -533,7 +537,7 @@ export default function BattleScreen() {
               </>
             ) : (
               <>
-                <Text style={styles.prompt}>{phase === 'matching' ? 'Raqib qidirilmoqda…' : 'Raqib topilmadi'}</Text>
+                <Text style={styles.prompt}>{phase === 'matching' ? 'Raqib qidirilmoqda…' : 'Bot bilan oʻynaysizmi?'}</Text>
                 <View style={styles.speak}><SpeakerIcon /></View>
                 <Text style={[styles.hiddenText, { textAlign: 'center' }]}>
                   {phase === 'matching' ? 'Boshqa oʻquvchi navbatga qoʻshilishi kutilmoqda' : queueMessage}
@@ -575,10 +579,10 @@ export default function BattleScreen() {
           ) : phase === 'notFound' ? (
             <View style={styles.options}>
               <Pressable accessibilityRole="button" onPress={() => startMatch('random')} style={styles.option}>
-                <Text style={styles.optionText}>Qayta urinish</Text>
+                <Text style={styles.optionText}>Yana qidirish</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" onPress={() => startMatch('bot')} style={styles.option}>
-                <Text style={styles.optionText}>Bot bilan</Text>
+              <Pressable accessibilityRole="button" onPress={() => startMatch('bot')} style={[styles.option, { backgroundColor: '#2F5BFF', borderColor: '#6F8DFF' }]}>
+                <Text style={styles.optionText}>Bot bilan oʻynash</Text>
               </Pressable>
             </View>
           ) : null}
