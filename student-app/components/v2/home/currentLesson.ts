@@ -1,12 +1,14 @@
 /**
  * Joriy dars (bosh sahifa "Bugungi dars" kartasi va LiveNow oynasi uchun):
- * oxirgi ochilgan dars, bo'lmasa CRM'dagi faol dars, bo'lmasa 1-dars.
+ * "Darslar" yo'lidagi bilan AYNAN bir xil — ochilgan darslarning eng oxirgisi
+ * (qulflash qoidasi getLessonLockMap). Ilgari "oxirgi ochilgan" dars olinardi:
+ * o'quvchi 7-darsda bo'lsa ham 1-darsni qayta ko'rsa, bosh sahifa 1-darsni
+ * "Bugungi dars" deb ko'rsatardi.
  */
 import { getAudioTracks } from '@/components/v2/lessons/data';
-import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
+import { COURSE_TOTAL_LESSONS, getLessonLockMap, getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 import { loadLessonProgress } from '@/services/lessonProgressStore';
-import { getLastPosition } from '@/services/progressStore';
 
 export type CurrentLesson = {
   id: string;
@@ -28,10 +30,7 @@ export async function resolveCurrentLesson(): Promise<CurrentLesson | null> {
   if (!course) return null;
   const lessons = mc.lessons.filter((l) => l.courseId === course.id);
   if (!lessons.length) return null;
-  const last = await getLastPosition();
-  let idx = last ? lessons.findIndex((l) => l.id === last.lessonId) : -1;
-  if (idx < 0) idx = lessons.findIndex((l) => l.isActive);
-  if (idx < 0) idx = 0;
+  const idx = await currentLessonIndex(lessons);
   const lesson = lessons[idx];
 
   await loadLessonProgress();
@@ -55,4 +54,15 @@ export async function resolveCurrentLesson(): Promise<CurrentLesson | null> {
     trackIds: tracks.map((t) => t.id),
     slidesCount: content.slides.length,
   };
+}
+
+/** Joriy dars indeksi — Darslar yo'lidagi `activeIndex` bilan bir xil qoida. */
+export async function currentLessonIndex(lessons: { id: string }[]): Promise<number> {
+  const lock = await getLessonLockMap().catch(() => ({}) as Record<string, boolean>);
+  let last = 0;
+  const n = Math.min(lessons.length, COURSE_TOTAL_LESSONS);
+  let unlocked = 0;
+  for (let i = 0; i < n; i++) if (!lock[lessons[i].id]) unlocked++;
+  last = Math.max(0, unlocked - 1);
+  return Math.min(last, lessons.length - 1);
 }

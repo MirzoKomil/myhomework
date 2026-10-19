@@ -12,7 +12,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { fonts } from '@/constants/v2/tokens';
 import type { AdminLesson, MobileContent } from '@/services/contentApi';
-import { getLastPosition } from '@/services/progressStore';
+import { currentLessonIndex } from '@/components/v2/home/currentLesson';
 
 const hidden = { accessible: false, importantForAccessibility: 'no-hide-descendants' as const };
 
@@ -341,14 +341,11 @@ export function courseLessons(mc: MobileContent): AdminLesson[] {
   return course ? mc.lessons.filter((l) => l.courseId === course.id) : [];
 }
 
-/** Joriy dars: oxirgi ochilgan → faol (isActive) → birinchi. Bosh sahifadagi qoida. */
+/** Joriy dars — bosh sahifa va Darslar yo'li bilan bir xil (ochilgan darslarning eng oxirgisi). */
 export async function currentLesson(mc: MobileContent): Promise<LessonRef | null> {
   const lessons = courseLessons(mc);
   if (!lessons.length) return null;
-  const last = await getLastPosition().catch(() => null);
-  let idx = last ? lessons.findIndex((l) => l.id === last.lessonId) : -1;
-  if (idx < 0) idx = lessons.findIndex((l) => l.isActive);
-  if (idx < 0) idx = 0;
+  const idx = await currentLessonIndex(lessons);
   return { lesson: lessons[idx], index: idx, number: idx + 1 };
 }
 
