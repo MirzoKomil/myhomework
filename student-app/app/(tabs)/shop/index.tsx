@@ -9,7 +9,8 @@ import { CoinInfoModal } from '@/components/ui/CoinInfoModal';
 import { LightningInfoModal } from '@/components/ui/LightningInfoModal';
 import { LightningPill } from '@/components/ui/LightningIcon';
 import { theme } from '@/constants/theme';
-import { SHOP_CATEGORY_LABELS, SHOP_PRODUCTS, ShopCategory, ShopProduct } from '@/data/shopProducts';
+import { productForCourse, SHOP_CATEGORY_LABELS, SHOP_PRODUCTS, ShopCategory, ShopProduct } from '@/data/shopProducts';
+import { useLang } from '@/i18n/LanguageContext';
 import { useCoins } from '@/services/coinsStore';
 import { fetchMobileContent } from '@/services/contentApi';
 import { useLightning } from '@/services/lightningStore';
@@ -37,7 +38,9 @@ export default function ShopScreen() {
       .catch(() => {});
   }, []);
 
-  const products = allProducts.filter((p) => p.category === category);
+  // Boshqa kurs (masalan rus tili) kitoblari bu kurs do'konida chiqmasin.
+  const { courseLang } = useLang();
+  const products = allProducts.filter((p) => p.category === category && productForCourse(p, courseLang));
 
   const confirmPurchase = async () => {
     if (!dialog || dialog.type !== 'confirm') return;

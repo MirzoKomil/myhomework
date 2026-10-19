@@ -6,13 +6,14 @@ import { router, type Href } from 'expo-router';
 
 import { v2Back } from '@/services/v2Nav';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
-import { SHOP_PRODUCTS, type ShopProduct } from '@/data/shopProducts';
+import { productForCourse, SHOP_PRODUCTS, type ShopProduct } from '@/data/shopProducts';
+import { useLang } from '@/i18n/LanguageContext';
 import { fetchMobileContent } from '@/services/contentApi';
 
 import { BackIcon } from './icons';
@@ -95,7 +96,12 @@ export async function loadShopProducts(): Promise<ShopProductV2[]> {
   return cached;
 }
 
+/**
+ * Yangi ilova do'koni faqat kitob sotadi (dizayndagi kelishuv): faqat
+ * `books` turidagi va o'quvchining kursiga tegishli mahsulotlar.
+ */
 export function useShopProducts(): ShopProductV2[] | null {
+  const { courseLang } = useLang();
   const [list, setList] = useState<ShopProductV2[] | null>(cached);
   useEffect(() => {
     let alive = true;
@@ -104,7 +110,10 @@ export function useShopProducts(): ShopProductV2[] | null {
       alive = false;
     };
   }, []);
-  return list;
+  return useMemo(
+    () => (list ? list.filter((p) => p.category === 'books' && productForCourse(p, courseLang)) : null),
+    [list, courseLang],
+  );
 }
 
 export function productImages(p: ShopProductV2): string[] {
@@ -114,8 +123,9 @@ export function productImages(p: ShopProductV2): string[] {
 
 /** Tavsif: CRM'dagi matn, bo'lmasa bor maydonlardan yig'iladi. */
 export function productDescription(p: { description?: string; category: string; pages?: number; delivered?: boolean }) {
-  if (p.description) return p.description;
+  // Dizayndagi qator: "<tavsif> · 120 bet · bosma kitob · uyga yetkaziladi".
   const parts: string[] = [];
+  if (p.description) parts.push(p.description);
   if (p.pages) parts.push(`${p.pages} bet`);
   if (p.category === 'books') parts.push('bosma kitob');
   if (p.delivered) parts.push('uyga yetkaziladi');
