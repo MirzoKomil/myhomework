@@ -570,15 +570,17 @@ export async function syncStudentProgress(partial: {
   // QANCHA qo'shilgani (umumiy summa emas).
   coinsDelta?: number;
   lightningDelta?: number;
-}): Promise<void> {
+}): Promise<boolean> {
   try {
-    await authedFetch(SYNC_PROGRESS_API_BASE, {
+    const res = await authedFetch(SYNC_PROGRESS_API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(partial),
     });
+    return res.ok;
   } catch {
     // ignore — keyingi o'zgarishda qayta urinilaveradi.
+    return false;
   }
 }
 

@@ -1996,6 +1996,44 @@ async function syncStudentProgress(studentId, { coins, lightning, coinsDelta, li
     });
 }
 
+// O'quvchining serverdagi tanga/chaqmoq summasi va ketma-ket faol kunlari.
+// Ilova ochilganda shu bilan o'z xotirasini tiklaydi: yangi telefon yoki
+// bosh ekrandagi yangi ikonka 0 dan boshlamasin va 0 ni serverga yozib,
+// haqiqiy summani o'chirib yubormasin.
+async function getStudentProgress(studentId) {
+    if (!studentId) return null;
+    const [all, history] = await Promise.all([
+        getJsonData('studentProgress'),
+        getJsonData('studentProgressHistory'),
+    ]);
+    const row = all[studentId] || {};
+    const days = history[studentId] || {};
+    const active = (key) => {
+        const d = days[key];
+        return !!d && ((Number(d.coins) || 0) > 0 || (Number(d.lightning) || 0) > 0);
+    };
+    // Streak: bugun (yoki hali faol bo'lmagan bo'lsa, kechadan) orqaga
+    // uzluksiz faol kunlar soni.
+    const now = tashkentNow();
+    const dayMs = 24 * 60 * 60 * 1000;
+    let cursor = new Date(now.getTime());
+    if (!active(tashkentDateKey(cursor))) cursor = new Date(cursor.getTime() - dayMs);
+    let streak = 0;
+    while (streak < 3650 && active(tashkentDateKey(cursor))) {
+        streak++;
+        cursor = new Date(cursor.getTime() - dayMs);
+    }
+    const today = days[tashkentDateKey(now)] || {};
+    return {
+        coins: Math.max(0, Math.round(Number(row.coins) || 0)),
+        lightning: Math.max(0, Math.round(Number(row.lightning) || 0)),
+        updatedAt: row.updatedAt || null,
+        streak,
+        todayCoins: Math.max(0, Math.round(Number(today.coins) || 0)),
+        todayLightning: Math.max(0, Math.round(Number(today.lightning) || 0)),
+    };
+}
+
 const LEADERBOARD_PERIODS = ['daily', 'weekly', 'monthly', 'alltime'];
 
 function sumProgressHistoryInRange(entries, fromKey, toKey) {
@@ -4489,7 +4527,7 @@ module.exports = {
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
     addDemoShopOrder, getDemoShopOrders,
     getDemoStudentActivity, addDemoStudentActivity,
-    syncStudentProgress, getRealLeaderboard, resolveStudentSubjectLang,
+    syncStudentProgress, getStudentProgress, getRealLeaderboard, resolveStudentSubjectLang,
     getStudentLessonProgress, mergeStudentLessonProgress,
     joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch,
     getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission,
