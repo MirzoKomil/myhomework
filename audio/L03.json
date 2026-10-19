@@ -1,0 +1,295 @@
+{
+ "n": 3,
+ "topic_uz": "Kishilik olmoshlari, «Кто э́то?» va «У меня́ есть…»",
+ "scene": "In a classroom, a young woman Dilnoza asks a young man Timur for a pen; another student sits nearby with notebooks.",
+ "dialogs": [
+  {
+   "id": "L03-d1",
+   "title_ru": "На уро́ке",
+   "title_uz": "Darsda",
+   "intro_uz": "Birinchi dialog. Dilnoza darsda. Unga ruchka kerak. Kimda nima bor? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, у тебя́ есть ру́чка?",
+     "uz": "Timur, senda ruchka bormi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, у меня́ есть ру́чка. Пожа́луйста.",
+     "uz": "Ha, menda ruchka bor. Marhamat."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо! А кто э́то?",
+     "uz": "Rahmat! Bu kim?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Э́то Бобу́р. Он студе́нт.",
+     "uz": "Bu Bobur. U talaba."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "У него́ есть тетра́дь?",
+     "uz": "Unda daftar bormi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, у него́ есть тетра́дь и кни́га.",
+     "uz": "Ha, unda daftar va kitob bor."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnozaga nima kerak?",
+     "opts": [
+      "kitob",
+      "ruchka",
+      "telefon"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur kim?",
+     "opts": [
+      "talaba",
+      "o'qituvchi",
+      "sotuvchi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Boburda nima bor?",
+     "opts": [
+      "mashina va it",
+      "telefon",
+      "daftar va kitob"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "ру́чка",
+     "alts": [
+      "кни́га",
+      "тетра́дь",
+      "телефо́н"
+     ]
+    },
+    {
+     "base": "у него́",
+     "alts": [
+      "у неё",
+      "у них",
+      "у вас"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: do'stingizdan ruchka yoki daftar so'rang."
+  },
+  {
+   "id": "L03-d2",
+   "title_ru": "Кто э́то?",
+   "title_uz": "Bu kim?",
+   "intro_uz": "Ikkinchi dialog. Nigora suratga qarayapti va Abdulazizdan so'raydi: bu kim? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, кто э́то?",
+     "uz": "Abdulaziz, bu kim?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Э́то Анто́н. Он мой колле́га.",
+     "uz": "Bu Anton. U mening hamkasbim."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "У него́ есть маши́на?",
+     "uz": "Uning mashinasi bormi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, у него́ есть маши́на.",
+     "uz": "Ha, uning mashinasi bor."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А соба́ка у него́ есть?",
+     "uz": "Iti-chi, iti bormi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет. Но у него́ есть кот.",
+     "uz": "Yo'q. Lekin uning mushugi bor."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton kim?",
+     "opts": [
+      "Abdulazizning hamkasbi",
+      "Nigoraning akasi",
+      "o'qituvchi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Antonda nima bor?",
+     "opts": [
+      "velosiped",
+      "mashina",
+      "uy"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Antonning qaysi hayvoni bor?",
+     "opts": [
+      "it",
+      "ot",
+      "mushuk"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "маши́на",
+     "alts": [
+      "телефо́н",
+      "компью́тер",
+      "кни́га"
+     ]
+    },
+    {
+     "base": "кот",
+     "alts": [
+      "соба́ка",
+      "дом",
+      "да́ча"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: do'stingizni tanishtiring va unda nima borligini ayting."
+  },
+  {
+   "id": "L03-d3",
+   "title_ru": "В магази́не",
+   "title_uz": "Do'konda",
+   "intro_uz": "Uchinchi dialog. Anton kanselyariya do'konida. Unga ruchka va daftar kerak. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Продаве́ц",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Здра́вствуйте! У вас есть ру́чки?",
+     "uz": "Assalomu alaykum! Sizlarda ruchka bormi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Да, у нас есть ру́чки.",
+     "uz": "Ha, bizda ruchkalar bor."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А тетра́ди у вас есть?",
+     "uz": "Daftarlar-chi, bormi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Да, есть. Пожа́луйста.",
+     "uz": "Ha, bor. Marhamat."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо! А что э́то?",
+     "uz": "Rahmat! Bu nima?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Э́то кни́га. А э́то телефо́н.",
+     "uz": "Bu kitob. Bu esa telefon."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton nima so'radi?",
+     "opts": [
+      "kitob",
+      "ruchka va daftar",
+      "telefon"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Do'konda daftar bormi?",
+     "opts": [
+      "yo'q",
+      "bilmaydi",
+      "ha, bor"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton «Bu nima?» deb so'raganda, sotuvchi nima dedi?",
+     "opts": [
+      "kitob va telefon",
+      "ruchka va daftar",
+      "it va mushuk"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "ру́чки",
+     "alts": [
+      "кни́ги",
+      "тетра́ди",
+      "телефо́ны"
+     ]
+    },
+    {
+     "base": "у нас",
+     "alts": [
+      "у меня́",
+      "у них",
+      "у неё"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: do'konda kitob yoki daftar bormi, so'rang."
+  }
+ ]
+}

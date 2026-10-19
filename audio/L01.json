@@ -1,0 +1,295 @@
+{
+ "n": 1,
+ "topic_uz": "Tanishuv: ism, shahar, yosh, ish va hobbi",
+ "scene": "Anton, a Russian man, and Nigora, an Uzbek woman, shake hands and smile in a bright modern office.",
+ "dialogs": [
+  {
+   "id": "L01-d1",
+   "title_ru": "В о́фисе",
+   "title_uz": "Ofisda",
+   "intro_uz": "Birinchi dialog. Anton va Nigora ofisda birinchi marta uchrashishdi. Ular qayerda yashaydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Здра́вствуйте! Меня́ зову́т Анто́н.",
+     "uz": "Assalomu alaykum! Mening ismim Anton."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте! Меня́ зову́т Нигора́.",
+     "uz": "Assalomu alaykum! Mening ismim Nigora."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "О́чень прия́тно! Где вы живёте?",
+     "uz": "Tanishganimdan xursandman! Qayerda yashaysiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я живу́ в Андижа́не. А вы?",
+     "uz": "Men Andijonda yashayman. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я живу́ в Ташке́нте. Я рабо́таю в ба́нке.",
+     "uz": "Men Toshkentda yashayman. Men bankda ishlayman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А я рабо́таю в больни́це.",
+     "uz": "Men esa kasalxonada ishlayman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Ayolning ismi nima?",
+     "opts": [
+      "Dilnoza",
+      "Nigora",
+      "Anna"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qayerda yashaydi?",
+     "opts": [
+      "Andijonda",
+      "Toshkentda",
+      "Moskvada"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton qayerda ishlaydi?",
+     "opts": [
+      "maktabda",
+      "do'konda",
+      "bankda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Андижа́не",
+     "alts": [
+      "в Ташке́нте",
+      "в Самарка́нде",
+      "в Ферга́не"
+     ]
+    },
+    {
+     "base": "в ба́нке",
+     "alts": [
+      "в магази́не",
+      "в о́фисе",
+      "в шко́ле"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: ismingizni, qayerda yashashingizni va ishlashingizni ayting."
+  },
+  {
+   "id": "L01-d2",
+   "title_ru": "На ку́рсах",
+   "title_uz": "Kursda",
+   "intro_uz": "Ikkinchi dialog. Bobur til kursiga keldi. Ustoz undan ismi, yoshi va hobbisini so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Учи́тельница",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Учи́тельница",
+     "ru": "Здра́вствуйте! Как вас зову́т?",
+     "uz": "Assalomu alaykum! Ismingiz nima?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Меня́ зову́т Бобу́р.",
+     "uz": "Mening ismim Bobur."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Бобу́р, ско́лько вам лет?",
+     "uz": "Bobur, yoshingiz nechada?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Мне два́дцать четы́ре го́да.",
+     "uz": "Men yigirma to'rt yoshdaman."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Вы рабо́таете и́ли учи́тесь?",
+     "uz": "Ishlaysizmi yoki o'qiysizmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Я учу́сь. Моё хо́бби — футбо́л.",
+     "uz": "Men o'qiyman. Mening hobbim — futbol."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur necha yoshda?",
+     "opts": [
+      "20",
+      "22",
+      "25"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bobur ishlaydimi yoki o'qiydimi?",
+     "opts": [
+      "o'qiydi",
+      "ishlaydi",
+      "ikkalasi ham"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Boburning hobbisi nima?",
+     "opts": [
+      "musiqa",
+      "futbol",
+      "kitob"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "два́дцать пять лет",
+     "alts": [
+      "два́дцать лет",
+      "три́дцать лет",
+      "два́дцать два го́да"
+     ]
+    },
+    {
+     "base": "футбо́л",
+     "alts": [
+      "му́зыка",
+      "кни́ги",
+      "спорт"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: ismingizni, yoshingizni va hobbingizni ayting."
+  },
+  {
+   "id": "L01-d3",
+   "title_ru": "В по́езде",
+   "title_uz": "Poyezdda",
+   "intro_uz": "Uchinchi dialog. Shahzod va Kamila poyezdda yonma-yon o'tirishibdi. Ular tanishadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Шахзо́д",
+     "gender": "m"
+    },
+    {
+     "name": "Ками́ла",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Шахзо́д",
+     "ru": "До́брый день! Меня́ зову́т Шахзо́д.",
+     "uz": "Xayrli kun! Mening ismim Shahzod."
+    },
+    {
+     "who": "Ками́ла",
+     "ru": "До́брый день! А меня́ зову́т Ками́ла.",
+     "uz": "Xayrli kun! Mening ismim esa Kamila."
+    },
+    {
+     "who": "Шахзо́д",
+     "ru": "О́чень прия́тно! Где вы живёте?",
+     "uz": "Tanishganimdan xursandman! Qayerda yashaysiz?"
+    },
+    {
+     "who": "Ками́ла",
+     "ru": "Я живу́ в Ферга́не. А вы?",
+     "uz": "Men Farg'onada yashayman. Siz-chi?"
+    },
+    {
+     "who": "Шахзо́д",
+     "ru": "Я живу́ в Андижа́не. Я рабо́таю.",
+     "uz": "Men Andijonda yashayman. Men ishlayman."
+    },
+    {
+     "who": "Ками́ла",
+     "ru": "А я учу́сь. Моё хо́бби — му́зыка.",
+     "uz": "Men esa o'qiyman. Mening hobbim — musiqa."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kamila qayerda yashaydi?",
+     "opts": [
+      "Andijonda",
+      "Farg'onada",
+      "Toshkentda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Shahzod nima qiladi?",
+     "opts": [
+      "o'qiydi",
+      "dam oladi",
+      "ishlaydi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Kamilaning hobbisi nima?",
+     "opts": [
+      "musiqa",
+      "futbol",
+      "kino"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "До́брый день",
+     "alts": [
+      "Здра́вствуйте",
+      "Приве́т",
+      "До́брое у́тро"
+     ]
+    },
+    {
+     "base": "в Ферга́не",
+     "alts": [
+      "в Наманга́не",
+      "в Бухаре́",
+      "в Москве́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Kamila o'rniga gapiring: salomlashing, ismingizni va hobbingizni ayting."
+  }
+ ]
+}

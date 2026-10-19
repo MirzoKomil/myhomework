@@ -1,0 +1,300 @@
+{
+ "n": 2,
+ "topic_uz": "Tanishuv: qayerdansiz, qandaysiz, ishlaysizmi yoki o'qiysizmi",
+ "scene": "At a language course, Anton (a Russian man) talks with Nigora (an Uzbek woman) at a small table with tea cups.",
+ "dialogs": [
+  {
+   "id": "L02-d1",
+   "title_ru": "Отку́да вы?",
+   "title_uz": "Qayerdansiz?",
+   "intro_uz": "Birinchi dialog. Anton va Nigora kursda tanishishyapti. Ular qayerdan? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Здра́вствуйте! Меня́ зову́т Анто́н.",
+     "uz": "Assalomu alaykum! Mening ismim Anton."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "О́чень прия́тно! Я Нигора́. Отку́да вы?",
+     "uz": "Tanishganimdan xursandman! Men Nigoraman. Qayerdansiz?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я из Росси́и, из Москвы́. А вы?",
+     "uz": "Men Rossiyadanman, Moskvadan. Siz-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я из Узбекиста́на, из Андижа́на.",
+     "uz": "Men O'zbekistondanman, Andijondan."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Вы рабо́таете и́ли учи́тесь?",
+     "uz": "Ishlaysizmi yoki o'qiysizmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я рабо́таю. А вы?",
+     "uz": "Men ishlayman. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А я то́же рабо́таю. В ба́нке.",
+     "uz": "Men esa ham ishlayman. Bankda."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton qayerdan?",
+     "opts": [
+      "O'zbekistondan",
+      "Rossiyadan",
+      "Qozog'istondan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qaysi shahardan?",
+     "opts": [
+      "Andijondan",
+      "Toshkentdan",
+      "Moskvadan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton kim?",
+     "opts": [
+      "o'qituvchi",
+      "sotuvchi",
+      "talaba"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "из Андижа́на",
+     "alts": [
+      "из Ташке́нта",
+      "из Самарка́нда",
+      "из Наманга́на"
+     ]
+    },
+    {
+     "base": "Я студе́нт",
+     "alts": [
+      "Я учи́тель",
+      "Я врач",
+      "Я ме́неджер"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: qayerdan ekaningizni va ishlashingizni ayting."
+  },
+  {
+   "id": "L02-d2",
+   "title_ru": "Как дела́?",
+   "title_uz": "Ishlar qalay?",
+   "intro_uz": "Ikkinchi dialog. Timur va Dilnoza ko'chada ko'rishib qolishdi. Ularning hobbisi nima? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Приве́т, Дильно́за! Как дела́?",
+     "uz": "Salom, Dilnoza! Ishlar qalay?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Приве́т! Хорошо́, спаси́бо. А ты как?",
+     "uz": "Salom! Yaxshi, rahmat. O'zing-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Норма́льно. Како́е у тебя́ хо́бби?",
+     "uz": "Yomon emas. Hobbing nima?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Моё хо́бби — му́зыка. А у тебя́?",
+     "uz": "Mening hobbim — musiqa. Seniki-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Моё хо́бби — футбо́л.",
+     "uz": "Mening hobbim — futbol."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́! Пока́, Тиму́р!",
+     "uz": "Yaxshi! Xayr, Timur!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnozaning ishlari qanday?",
+     "opts": [
+      "yomon",
+      "yaxshi",
+      "normal"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnozaning hobbisi nima?",
+     "opts": [
+      "futbol",
+      "kitob",
+      "musiqa"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timurning hobbisi nima?",
+     "opts": [
+      "futbol",
+      "musiqa",
+      "kino"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "Хорошо́",
+     "alts": [
+      "Норма́льно",
+      "Пло́хо",
+      "Отли́чно"
+     ]
+    },
+    {
+     "base": "му́зыка",
+     "alts": [
+      "кни́ги",
+      "кино́",
+      "спорт"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: «Как дела́?» deb so'rang va hobbingizni ayting."
+  },
+  {
+   "id": "L02-d3",
+   "title_ru": "Но́вый сотру́дник",
+   "title_uz": "Yangi xodim",
+   "intro_uz": "Uchinchi dialog. Ulug'bek yangi ishga keldi. Administrator undan savollar so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Администра́тор",
+     "gender": "f"
+    },
+    {
+     "name": "Улугбе́к",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Администра́тор",
+     "ru": "Здра́вствуйте! Как вас зову́т?",
+     "uz": "Assalomu alaykum! Ismingiz nima?"
+    },
+    {
+     "who": "Улугбе́к",
+     "ru": "Меня́ зову́т Улугбе́к.",
+     "uz": "Mening ismim Ulug'bek."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Ско́лько вам лет?",
+     "uz": "Yoshingiz nechada?"
+    },
+    {
+     "who": "Улугбе́к",
+     "ru": "Мне три́дцать лет.",
+     "uz": "Men o'ttiz yoshdaman."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Отку́да вы?",
+     "uz": "Qayerdansiz?"
+    },
+    {
+     "who": "Улугбе́к",
+     "ru": "Я из Андижа́на. Но живу́ в Ташке́нте.",
+     "uz": "Men Andijondanman. Lekin Toshkentda yashayman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Ulug'bek necha yoshda?",
+     "opts": [
+      "25",
+      "30",
+      "35"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ulug'bek qayerdan?",
+     "opts": [
+      "Andijondan",
+      "Toshkentdan",
+      "Farg'onadan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ulug'bek hozir qayerda yashaydi?",
+     "opts": [
+      "Andijonda",
+      "Moskvada",
+      "Toshkentda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "три́дцать лет",
+     "alts": [
+      "два́дцать лет",
+      "соро́к лет",
+      "два́дцать оди́н год"
+     ]
+    },
+    {
+     "base": "из Андижа́на",
+     "alts": [
+      "из Бухары́",
+      "из Ферга́ны",
+      "из Хоре́зма"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Ulug'bek o'rniga gapiring: ismingiz, yoshingiz va qayerdan ekaningizni ayting."
+  }
+ ]
+}
