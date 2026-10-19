@@ -20,7 +20,7 @@ export function LessonsTop({ active, done, total, bonusDot }: { active: Tab; don
     { key: 'bonus', label: 'Bonus', href: R.bonus },
   ];
   return (
-    <View style={[st.top, { paddingTop: insets.top + 14 }]}>
+    <View style={[st.top, { paddingTop: Math.max(insets.top, 44) + 14 }]}>
       <View style={st.titleRow}>
         <Txt f="display" size={30} lh={30} style={{ letterSpacing: -0.6 }} accessibilityRole="header">
           Darslar

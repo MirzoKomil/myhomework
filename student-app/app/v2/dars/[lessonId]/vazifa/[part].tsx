@@ -16,15 +16,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BuildView } from '@/components/v2/homework/BuildView';
 import { FillBlankView, MultipleChoiceView } from '@/components/v2/homework/ChoiceParts';
-import { loadLessonInfo, partLabel, partLetter, type LessonInfo } from '@/components/v2/homework/lib';
+import { loadLessonInfo, partLabel, partLetter, partQuestionCount, type LessonInfo } from '@/components/v2/homework/lib';
 import { MatchView } from '@/components/v2/homework/MatchView';
 import { EmptyPartView } from '@/components/v2/homework/PartStates';
 import { ReadingView } from '@/components/v2/homework/ReadingView';
-import { getPartScore } from '@/components/v2/homework/scoreStore';
+import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { CreativeView, RecordView, RoleplayView } from '@/components/v2/homework/SpeakingParts';
 import { Txt } from '@/components/v2/homework/ui';
 import { R } from '@/constants/v2/routes';
-import { markHomeworkPartDone } from '@/services/lessonProgressStore';
+import { markHomeworkPartDone, useLessonProgress } from '@/services/lessonProgressStore';
 
 export default function HomeworkPartScreen() {
   const insets = useSafeAreaInsets();
@@ -32,6 +32,9 @@ export default function HomeworkPartScreen() {
   const id = String(lessonId);
   const [info, setInfo] = useState<LessonInfo | null>(null);
   const [error, setError] = useState(false);
+  const progress = useLessonProgress(id);
+  // Natijalar yuklanganda sarlavha/izoh yangilanishi uchun obuna.
+  const scores = useHomeworkScores();
 
   useEffect(() => {
     let cancelled = false;
@@ -68,12 +71,12 @@ export default function HomeworkPartScreen() {
     content = <EmptyPartView onClose={close} text="Bu vazifa topilmadi." />;
   } else {
     // Oldingi dars vazifasi ochilgan bo'lsa — "31-dars vazifasi · takrorlash".
-    const isReview = info.content.homeworkParts.length > 0 && !!getPartScore(id, part.id)?.finished;
+    const sc = scores[id]?.[part.id];
+    const isReview = !!progress.homeworkParts[part.id] || !!sc?.finished;
     const letter = partLetter(part);
     const overline = `${info.number}-dars vazifasi${isReview ? ' · takrorlash' : ''}${letter ? ` · ${letter} qism` : ''}`;
     const common = { lessonId: id, allParts: parts, onClose: close };
-    const sc = getPartScore(id, part.id);
-    const replayNote = `Vazifa allaqachon topshirilgan (${sc?.coins ?? 0} / ${sc?.total ?? 0} coin) — ball oʻzgarmaydi.`;
+    const replayNote = `Vazifa allaqachon topshirilgan (${sc?.coins ?? 0} / ${partQuestionCount(part)} coin) — ball oʻzgarmaydi.`;
     switch (part.kind) {
       case 'fillBlank':
         content = part.blanks.length ? <FillBlankView {...common} part={part} blanks={part.blanks} label={partLabel(part)} /> : <EmptyPartView onClose={close} />;
@@ -94,7 +97,7 @@ export default function HomeworkPartScreen() {
               lessonId={id}
               partId={part.id}
               title={part.title}
-              overline={`${info.number}-dars vazifasi`}
+              overline={`${info.number}-dars vazifasi${isReview ? ' · takrorlash' : ''}`}
               paragraph={part.paragraph}
               sentences={part.sentences}
               onClose={close}
@@ -132,7 +135,7 @@ export default function HomeworkPartScreen() {
 
   return (
     <View style={[st.screen, { backgroundColor: white ? '#FFFFFF' : '#F4F6FA' }]}>
-      <View style={[st.column, { paddingTop: insets.top + 10 }]}>{content}</View>
+      <View style={[st.column, { paddingTop: Math.max(insets.top, 44) + 10 }]}>{content}</View>
     </View>
   );
 }

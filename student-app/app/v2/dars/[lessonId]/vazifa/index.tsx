@@ -84,7 +84,11 @@ export default function HomeworkScreen() {
   const parts = info.content.homeworkParts;
   const lessonScores = scores[id] ?? {};
   const isDone = (p: HomeworkPart) =>
-    p.kind === 'creative' ? creative?.status === 'graded' : p.kind === 'reading' ? reading?.status === 'graded' : !!progress.homeworkParts[p.id];
+    p.kind === 'creative'
+      ? creative?.status === 'graded'
+      : p.kind === 'reading'
+        ? reading?.status === 'graded'
+        : !!progress.homeworkParts[p.id] || !!lessonScores[p.id]?.finished;
   const isPending = (p: HomeworkPart) =>
     (p.kind === 'creative' && creative?.status === 'pending') || (p.kind === 'reading' && reading?.status === 'pending');
 
@@ -119,7 +123,7 @@ export default function HomeworkScreen() {
   return (
     <View style={st.screen}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={[st.column, { paddingTop: insets.top + 10, flexGrow: 1 }]}>
+        <View style={[st.column, { paddingTop: Math.max(insets.top, 44) + 10, flexGrow: 1 }]}>
           <View style={st.header}>
             <Pressable
               accessibilityRole="button"

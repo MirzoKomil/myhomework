@@ -13,6 +13,8 @@ import { RetryView } from './PartStates';
 import { FeedbackSheet, LabelHeader, OptionRow, Txt } from './ui';
 import { usePartRun } from './usePartRun';
 
+const hasCyrillic = (s: string) => /[\u0400-\u04FF]/.test(s);
+
 type Common = { lessonId: string; allParts: HomeworkPart[]; label: string; onClose: () => void };
 
 /** "Мне, пожалуйста, ___" — bo'sh joy javob berilgach yashil belgi bilan to'ldiriladi. */
@@ -115,7 +117,8 @@ export function MultipleChoiceView({ questions, part, ...c }: Common & { questio
       <LabelHeader label={c.label} current={run.index + 1} total={questions.length} color="#7C4DFF" onClose={c.onClose} />
       <ScrollView contentContainerStyle={st.body} showsVerticalScrollIndicator={false}>
         <Txt f="bodyBold" size={15} color="#4A5468">
-          Toʻgʻri javobni tanlang
+          {/* Dizayndagi matn — savol o'zbekcha, variantlar ruscha bo'lganda; aks holda umumiy ko'rsatma. */}
+          {!hasCyrillic(q.question) && q.options.some(hasCyrillic) ? 'Ruschasini tanlang' : 'Toʻgʻri javobni tanlang'}
         </Txt>
         <View style={[st.card, st.cardRow]}>
           <Image source={designImages['c04932e65803a7f5c40ff5868fd21516']} resizeMode="contain" style={{ width: 92, height: 86, flexShrink: 0 }} accessibilityElementsHidden />
