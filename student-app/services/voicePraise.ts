@@ -125,19 +125,11 @@ export function primeVoiceOnFirstGesture() {
             p = createAudioPlayer(src);
             players[key] = p;
           }
-          const player = p;
-          player.muted = true;
-          player.play();
-          setTimeout(() => {
-            try {
-              player.pause();
-              player.seekTo(0);
-              player.muted = false;
-              player.volume = VOLUME;
-            } catch {
-              // e'tiborsiz
-            }
-          }, 60);
+          if (p.playing) return;
+          p.volume = VOLUME;
+          // Jim holda oxirigacha chalinadi (pause() yo'q — konsolda xato chiqmasin).
+          p.muted = true;
+          p.play();
         } catch {
           // e'tiborsiz
         }

@@ -144,21 +144,14 @@ export function primeSfxOnFirstGesture() {
           p = createAudioPlayer(SOURCES[name]);
           players[name] = p;
         }
-        const player = p;
-        player.muted = true;
-        player.play();
-        setTimeout(() => {
-          try {
-            player.muted = false;
-            // Shu bosishning o'zi effekt chaqirgan bo'lsa — uni to'xtatmaymiz.
-            if ((lastPlayed[name] ?? 0) >= at) return;
-            player.pause();
-            player.seekTo(0);
-            player.volume = VOLUME[name];
-          } catch {
-            // e'tiborsiz
-          }
-        }, 60);
+        // Shu bosishning o'zi effekt chaqirgan bo'lsa — unga tegmaymiz.
+        if ((lastPlayed[name] ?? 0) >= at) return;
+        p.volume = VOLUME[name];
+        // Jim holda oxirigacha chalinib qoladi (pause() qilinmaydi — aks holda
+        // brauzer "play() interrupted" xatosini konsolga chiqaradi). Keyingi
+        // playSfx muted=false + seekTo(0) qiladi.
+        p.muted = true;
+        p.play();
       } catch {
         // e'tiborsiz
       }
