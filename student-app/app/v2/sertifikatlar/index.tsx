@@ -126,7 +126,7 @@ const st = StyleSheet.create({
   hero: { backgroundColor: '#FFF4D1', borderRadius: 24, paddingVertical: 14, paddingRight: 16, paddingLeft: 10, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
   mascot: { width: 92, height: 96, flexShrink: 0 },
   heroText: { flex: 1, gap: 5 },
-  heroNum: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 28, lineHeight: 38, color: '#0B1220' },
+  heroNum: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 28, color: '#0B1220' },
   heroSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, lineHeight: 18.9, color: '#5C4300' },
   track: { height: 6, borderRadius: 3, backgroundColor: '#FFFFFF', overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3, backgroundColor: '#F5B70A' },

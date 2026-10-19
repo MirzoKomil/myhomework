@@ -207,7 +207,7 @@ export default function AudioDialogScreen() {
             </View>
           </View>
           <Pressable accessibilityRole="link" accessibilityLabel="Slaydlar" onPress={() => router.push(R.slides(id) as Href)} style={({ pressed }) => [styles.hbtn, pressed && { opacity: 0.85 }]}>
-            <ScreenIcon size={20} />
+            <ScreenIcon size={20} round />
           </Pressable>
         </View>
 

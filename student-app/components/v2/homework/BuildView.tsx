@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { designImages } from '@/constants/v2/designImages';
 import type { HomeworkPart, SentenceBuildQ } from '@/data/lessonContent';
 
-import { BulbIcon, Check, CloseIcon } from './icons';
+import { Check, CloseIcon } from './icons';
 import { shuffle } from './lib';
 import { RetryView } from './PartStates';
 import { getPartScore } from './scoreStore';
@@ -105,12 +105,7 @@ export function BuildView({ lessonId, part, items, allParts, overline, replaySco
             ),
           )}
         </View>
-        <View style={st.hint}>
-          <BulbIcon />
-          <Txt f="bodyBold" size={13} color="#4D3A00" lh={18.9} style={{ flex: 1 }}>
-            Eslatma: soʻzni bosib gapga qoʻshing, gapdagi soʻzni bosib qaytaring.
-          </Txt>
-        </View>
+        {/* Eslatma kartasi — darsda grammatika izohi maydoni yo'q, shu sabab ko'rsatilmaydi. */}
         <View style={{ gap: 8 }}>
           <Txt f="bodyHeavy" size={12} color="#4A5468" style={{ letterSpacing: 0.72, textTransform: 'uppercase' }}>
             Tuzilgan gaplar
@@ -209,7 +204,6 @@ const st = StyleSheet.create({
   bank: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
   word: { height: 48, paddingHorizontal: 14, borderRadius: 14, borderWidth: 2, borderBottomWidth: 4, borderColor: '#D5DBE7', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   slot: { height: 48, borderRadius: 14, backgroundColor: '#EEF1F7' },
-  hint: { backgroundColor: '#FFF4D1', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#E3F7EE', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14 },
   doneDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#087A4A', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   nowRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 2, borderStyle: 'dashed', borderColor: '#C9D3F5', borderRadius: 16, paddingVertical: 8, paddingHorizontal: 12, minHeight: 48 },

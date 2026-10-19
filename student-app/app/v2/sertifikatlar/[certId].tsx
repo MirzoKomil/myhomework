@@ -337,7 +337,7 @@ const st = StyleSheet.create({
   meta: { flexShrink: 1, gap: 2 },
   metaText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16.2, color: '#4A5468' },
   metaBold: { fontFamily: fonts.bodyHeavy, color: '#0B1220' },
-  sign: { marginTop: 2, fontFamily: fonts.display, fontWeight: 'normal', fontStyle: 'italic', fontSize: 16, lineHeight: 21.6, color: '#1E3FD1' },
+  sign: { marginTop: 2, fontFamily: fonts.display700, fontWeight: 'normal', fontStyle: 'italic', fontSize: 16, lineHeight: 21.6, color: '#1E3FD1' },
   qr: { alignItems: 'center', gap: 3, flexShrink: 0 },
   qrText: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 12, lineHeight: 16, color: '#4A5468' },
   info: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#E8EEFF', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14 },

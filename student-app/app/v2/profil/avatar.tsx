@@ -187,7 +187,7 @@ export default function V2ProfileEdit() {
             </Pressable>
           </View>
 
-          <View style={{ flex: 1, minHeight: 8 }} />
+          <View style={{ flex: 1 }} />
           <View style={st.saveWrap}>
             {!dirty && <Text style={st.saveHint}>Yangi avatar tanlasangiz, «Saqlash» faollashadi</Text>}
             <Pressable
@@ -224,7 +224,7 @@ const st = StyleSheet.create({
   bigAvatarRing: { width: 78, height: 78, borderRadius: 39, backgroundColor: '#FFFFFF', margin: -3, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   bigAvatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#FFF1E6' },
   topText: { flex: 1, minWidth: 0, gap: 2, marginLeft: 3 },
-  topTitle: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 27, letterSpacing: -0.2, color: '#0B1220' },
+  topTitle: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, letterSpacing: -0.2, color: '#0B1220' },
   topSub: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 13, lineHeight: 17.55, color: '#4A5468' },
   grid: { backgroundColor: '#FFFFFF', borderRadius: 22, paddingTop: 14, paddingHorizontal: 12, paddingBottom: 12, flexDirection: 'row', flexWrap: 'wrap', rowGap: 12 },
   cell: { width: '20%', alignItems: 'center' },

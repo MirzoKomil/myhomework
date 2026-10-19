@@ -86,7 +86,7 @@ export default function HomeworkPartScreen() {
     const replayScore = `${lessonCorrect} / ${lessonTotal} · ${lessonCoins} coin`;
     switch (part.kind) {
       case 'fillBlank':
-        content = part.blanks.length ? <FillBlankView {...common} part={part} blanks={part.blanks} label={partLabel(part)} /> : <EmptyPartView onClose={close} />;
+        content = part.blanks.length ? <FillBlankView {...common} part={part} blanks={part.blanks} label={partLabel(part)} vocabulary={info.content.vocabulary} phrases={info.content.speakingPractice} /> : <EmptyPartView onClose={close} />;
         break;
       case 'multipleChoice':
         content = part.questions.length ? <MultipleChoiceView {...common} part={part} questions={part.questions} label={partLabel(part)} /> : <EmptyPartView onClose={close} />;

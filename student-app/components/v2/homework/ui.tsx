@@ -153,6 +153,8 @@ export function FeedbackSheet({
   title,
   btnGap = 8,
   alignTop,
+  checkSize = 22,
+  checkStroke = 3.2,
 }: {
   correct: boolean;
   detail: ReactNode;
@@ -166,6 +168,9 @@ export function FeedbackSheet({
   btnGap?: number;
   /** MistakeReview: belgi yuqorida (align-items: flex-start), matnlar orasi 4. */
   alignTop?: boolean;
+  /** To'g'ri belgisi: Exercise — 22 / 3.2, MistakeReview — 20 / 3. */
+  checkSize?: number;
+  checkStroke?: number;
 }) {
   const insets = useSafeAreaInsets();
   const c = correct
@@ -175,7 +180,7 @@ export function FeedbackSheet({
     <View accessibilityRole="alert" style={[s.sheet, { backgroundColor: c.bg, paddingBottom: Math.max(padBottom, insets.bottom + 14) }]}>
       <View style={[s.sheetRow, { alignItems: correct && !alignTop ? 'center' : 'flex-start' }]}>
         <View style={[s.sheetIcon, { backgroundColor: c.icon }]}>
-          {correct ? <Check size={22} color="#FFFFFF" strokeWidth={3.2} /> : <CloseIcon size={20} color="#FFFFFF" />}
+          {correct ? <Check size={checkSize} color="#FFFFFF" strokeWidth={checkStroke} /> : <CloseIcon size={20} color="#FFFFFF" />}
         </View>
         <View style={{ flex: 1, gap: correct && !alignTop ? 2 : 4 }}>
           <Txt f="display" size={22} color={c.title}>

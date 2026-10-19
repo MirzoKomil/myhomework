@@ -24,6 +24,15 @@ export function BackIcon({ size = 20, color = '#0B1220', strokeWidth = 2.4 }: P)
   );
 }
 
+/** So'zlar ro'yxati (WordList) orqaga belgisi — 22px, boshqa yo'l. */
+export function BackChevronIcon({ size = 22, color = '#0B1220' }: P) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
+      <Path d="M15 6l-6 6 6 6" {...line(color, 2.4)} />
+    </Svg>
+  );
+}
+
 export function ChevronRight({ size = 18, color = '#5B6478', strokeWidth = 2.4 }: P) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
@@ -102,11 +111,13 @@ export function CameraIcon({ size = 19, color = '#B42318' }: P) {
   );
 }
 
-export function ScreenIcon({ size = 17, color = '#0B1220' }: P) {
+/** round — AudioDialog sarlavhasidagi variant (dizaynda stroke-linecap="round"); Lesson'da yo'q. */
+export function ScreenIcon({ size = 17, color = '#0B1220', round = false }: P & { round?: boolean }) {
+  const cap = round ? { strokeLinecap: 'round' as const } : {};
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" {...hidden}>
-      <Rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
-      <Path d="M12 16v4M8 20h8" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" />
+      <Rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" {...cap} />
+      <Path d="M12 16v4M8 20h8" fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" {...cap} />
     </Svg>
   );
 }

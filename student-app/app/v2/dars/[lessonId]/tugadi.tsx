@@ -69,6 +69,9 @@ export default function CompleteScreen() {
   const nextDate = next ? dates[next.index] : undefined;
   const { title, phrase } = splitTitle(lesson?.name ?? '');
   const konspekt = data?.mc.lessonContents[id]?.konspekt?.trim();
+  // Dars natijasi (dizayn: "… — endi buyurtma bera olasiz") — CRM konspekti ("Darsdan keyin" matni);
+  // sarlavha bilan boshlansa takrorlanmasin deb sarlavha qismi olib tashlanadi.
+  const outcome = konspekt && title && konspekt.toLowerCase().startsWith(title.toLowerCase()) ? konspekt.slice(title.length).trim() : konspekt;
   const nextShort = next ? splitTitle(next.name).title.split(':')[0] : '';
   // Jonli dars vaqti: jadvaldagi sana (bo'lsa), aks holda guruh dars vaqti.
   const ownDate = lesson && data && schedule.startsAt ? scheduleDates(schedule.startsAt, schedule.pattern, data.activeIndex, lesson.index)[lesson.index] : undefined;
@@ -88,7 +91,7 @@ export default function CompleteScreen() {
           </View>
           <View style={{ alignItems: 'center', gap: 4 }}>
             <Text accessibilityRole="header" style={styles.h1}>{lesson ? `${lesson.number}-dars tugadi!` : 'Dars tugadi!'}</Text>
-            {!!lesson && <Text style={styles.sub}>{phrase ? `${title} — ${phrase}` : konspekt ? `${title} — ${konspekt}` : title}</Text>}
+            {!!lesson && <Text style={styles.sub}>{outcome ? `${title} — ${outcome}` : phrase ? `${title} — ${phrase}` : title}</Text>}
             {!!lesson && !lesson.isVideo && lesson.attendanceTaken && (
               <View style={styles.attended}>
                 <Check size={15} color="#087A4A" strokeWidth={3} />

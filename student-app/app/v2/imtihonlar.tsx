@@ -84,7 +84,8 @@ export default function ExamsScreen() {
   return (
     <View style={st.screen}>
       <View style={st.column}>
-        <LessonsTop active="exams" done={done} total={72} bonusDot />  {/* Darslar yo'li bilan bir xil: "yangi" nuqtasi doim ko'rinadi. */}
+        {/* Darslar yo'li bilan bir xil: "yangi" nuqtasi doim ko'rinadi. */}
+        <LessonsTop active="exams" done={done} total={72} bonusDot />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
           {first && (
             <View style={st.intro}>

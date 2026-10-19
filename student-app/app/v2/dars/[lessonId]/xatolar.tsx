@@ -202,6 +202,8 @@ export default function MistakeReviewScreen() {
                 title={ok ? 'Toʻgʻri! Bu safar topdingiz' : undefined}
                 btnGap={10}
                 alignTop
+                checkSize={20}
+                checkStroke={3}
                 detail={
                   <Txt f="body" size={14} color={ok ? '#0B4D31' : '#7A1C14'} lh={20.3}>
                     {ok ? '' : 'Toʻgʻri javob: '}

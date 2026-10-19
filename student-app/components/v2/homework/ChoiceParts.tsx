@@ -11,14 +11,14 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
-import type { GrammarBlank, HomeworkPart, MultipleChoiceQ } from '@/data/lessonContent';
+import type { GrammarBlank, HomeworkPart, MultipleChoiceQ, SpeakingPrompt, VocabWord } from '@/data/lessonContent';
 import { getLessonProgress } from '@/services/lessonProgressStore';
 
 import { BulbSimple, ChevronRight, ClockIcon } from './icons';
 import { isTeacherGraded, partLetter } from './lib';
 import { RetryView } from './PartStates';
 import { getLessonScores, getPartScore } from './scoreStore';
-import { isTypedQuestion, TypeAnswerView } from './TypeAnswer';
+import { isTypedQuestion, normalizeRu, TypeAnswerView } from './TypeAnswer';
 import { FeedbackSheet, LabelHeader, OptionRow, ResultsCard, Txt } from './ui';
 import { usePartRun, type PartRun } from './usePartRun';
 
@@ -37,6 +37,19 @@ function segStates(run: PartRun, total: number, answeredNow: number, lessonId: s
     if (run.results[i] !== undefined) return run.results[i];
     return !(saved?.mistakes ?? []).includes(textOf(i));
   });
+}
+
+/**
+ * Savolga oid haqiqiy ma'lumot: javob so'zining rasmi (dars lug'atidagi
+ * imageUrl) va to'liq gapning tarjimasi (darsdagi speakingPractice'da aynan
+ * shu gap bo'lsa). Topilmasa — bo'sh (o'rnini bosuvchi rasm/matn yo'q).
+ */
+export function blankExtras(q: GrammarBlank, vocabulary: VocabWord[], phrases: SpeakingPrompt[]) {
+  const ans = normalizeRu(q.answer);
+  const imageUrl = vocabulary.find((w) => w.imageUrl && normalizeRu(w.english) === ans)?.imageUrl;
+  const full = normalizeRu(q.sentence.replace(/_{2,}/, q.answer));
+  const translation = phrases.find((p) => normalizeRu(p.sentence) === full)?.translation;
+  return { imageUrl, translation };
 }
 
 /** "4 / 4 toʻgʻri · +4 coin" — coin faqat haqiqiy (takrorlash emas) urinishda. */
@@ -74,7 +87,7 @@ function BlankSentence({ sentence, fill }: { sentence: string; fill: string | nu
   );
 }
 
-export function FillBlankView({ blanks, part, ...c }: Common & { blanks: GrammarBlank[]; part: HomeworkPart }) {
+export function FillBlankView({ blanks, part, vocabulary, phrases, ...c }: Common & { blanks: GrammarBlank[]; part: HomeworkPart; vocabulary: VocabWord[]; phrases: SpeakingPrompt[] }) {
   const run = usePartRun(c.lessonId, part, blanks.length, c.allParts);
   const [selected, setSelected] = useState<string | null>(null);
   if (!run.ready) return null;
@@ -91,6 +104,7 @@ export function FillBlankView({ blanks, part, ...c }: Common & { blanks: Grammar
         index={run.index}
         total={blanks.length}
         replay={run.replay}
+        translation={blankExtras(q, vocabulary, phrases).translation}
         onAnswer={(ok, typed) => run.answer(ok, q.sentence, true, typed)}
         onNext={() => run.next()}
         onClose={c.onClose}
@@ -104,6 +118,7 @@ export function FillBlankView({ blanks, part, ...c }: Common & { blanks: Grammar
   const states = segStates(run, blanks.length, run.index + (answered ? 1 : 0), c.lessonId, part.id, (i) => blanks[i]?.sentence ?? '');
   const line = scoreLine(states, run.replay);
   const letter = partLetter(part) ?? '';
+  const extras = blankExtras(q, vocabulary, phrases);
 
   const pick = (opt: string) => {
     if (answered) return;
@@ -119,10 +134,18 @@ export function FillBlankView({ blanks, part, ...c }: Common & { blanks: Grammar
           Gapni toʻldiring
         </Txt>
         <View style={[st.card, { paddingVertical: 14, gap: 10 }]}>
+          {/* Javob so'zining rasmi dars lug'atida bo'lsa — shu; bo'lmasa bo'sh doira. */}
           <View style={st.illustration}>
-            <Image source={designImages['81a355f68578bf95c65fc6772f9124c9']} resizeMode="contain" style={{ width: 76, height: 76 }} accessibilityElementsHidden />
+            {!!extras.imageUrl && <Image source={{ uri: extras.imageUrl }} resizeMode="contain" style={{ width: 76, height: 76 }} accessibilityElementsHidden />}
           </View>
-          <BlankSentence sentence={q.sentence} fill={answered ? q.answer : null} />
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <BlankSentence sentence={q.sentence} fill={answered ? q.answer : null} />
+            {!!extras.translation && (
+              <Txt f="body" size={14} color="#4A5468" style={{ textAlign: 'center' }}>
+                {extras.translation}
+              </Txt>
+            )}
+          </View>
         </View>
         <View style={{ gap: 10 }}>
           {q.options.map((opt) => (

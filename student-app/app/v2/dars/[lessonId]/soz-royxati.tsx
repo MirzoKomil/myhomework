@@ -12,9 +12,9 @@ import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { learnedWordIds, useSeenWords } from '@/components/v2/lessons/data';
-import { CheckAlt, SpeakerSmallIcon } from '@/components/v2/lessons/icons';
-import { BottomBar, Center, Column, HeaderButton } from '@/components/v2/lessons/parts';
+import { goBack, learnedWordIds, useSeenWords } from '@/components/v2/lessons/data';
+import { BackChevronIcon, CheckAlt, SpeakerSmallIcon } from '@/components/v2/lessons/icons';
+import { BottomBar, Center, Column, s as partStyles } from '@/components/v2/lessons/parts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
@@ -66,7 +66,9 @@ export default function WordListScreen() {
     <View style={styles.screen}>
       <Column>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) + 10 }]}>
-          <HeaderButton kind="back" label="Orqaga" fallback={R.lesson(id)} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Orqaga" onPress={() => goBack(R.lesson(id))} style={({ pressed }) => [partStyles.hbtn, pressed && partStyles.pressed]}>
+            <BackChevronIcon />
+          </Pressable>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.over}>{info ? `${info.number}-dars · ${info.isVideo ? 'Videodars' : 'Jonli dars'}` : ' '}</Text>
             <Text accessibilityRole="header" style={styles.h1}>

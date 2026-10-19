@@ -41,12 +41,14 @@ type Props = {
   index: number;
   total: number;
   replay: boolean;
+  /** Gap tarjimasi — faqat darsda haqiqiy ma'lumot bo'lsa. */
+  translation?: string;
   onAnswer: (correct: boolean, typed: string) => void;
   onNext: () => void;
   onClose: () => void;
 };
 
-export function TypeAnswerView({ blank, label, index, total, replay, onAnswer, onNext, onClose }: Props) {
+export function TypeAnswerView({ blank, label, index, total, replay, translation, onAnswer, onNext, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const [typed, setTyped] = useState('');
   const [hints, setHints] = useState(1);
@@ -124,6 +126,11 @@ export function TypeAnswerView({ blank, label, index, total, replay, onAnswer, o
               ))}
               »
             </Txt>
+            {!!translation && (
+              <Txt f="body" size={13} color="#4A5468">
+                {translation}
+              </Txt>
+            )}
           </View>
         </View>
 

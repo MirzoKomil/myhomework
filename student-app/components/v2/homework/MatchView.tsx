@@ -141,11 +141,12 @@ export function MatchView({ lessonId, part, pairs, allParts, overline, replaySco
           ))}
         </View>
         <View style={{ flex: 1 }} />
+        {/* Holat paneli faqat takrorlash rejimida (dizaynda boshqa holatda yo'q). */}
+        {run.replay && (
         <View accessibilityRole="text" style={st.status}>
           <Image source={designImages['81a355f68578bf95c65fc6772f9124c9']} resizeMode="contain" style={{ width: 56, height: 56, flexShrink: 0 }} accessibilityElementsHidden />
           <Txt f="bodyBold" size={13} color="#4A5468" lh={18.2} style={{ flex: 1 }}>
-            {run.replay ? (
-              <>
+            <>
                 <Txt f="bodyHeavy" size={13}>
                   Takrorlash rejimi.
                 </Txt>
@@ -154,12 +155,10 @@ export function MatchView({ lessonId, part, pairs, allParts, overline, replaySco
                   {replayScore}
                 </Txt>
                 {' — ball oʻzgarmaydi.'}
-              </>
-            ) : (
-              'Har toʻgʻri juftlik +1 coin.'
-            )}
+            </>
           </Txt>
         </View>
+        )}
       </ScrollView>
     </View>
   );

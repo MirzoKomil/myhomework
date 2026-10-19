@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
+import { loadGrammarRows } from '@/components/v2/library/grammar';
 import { Check, PlayIcon } from '@/components/v2/lessons/icons';
 import { BottomBar, Center, Column, TitleHeader } from '@/components/v2/lessons/parts';
 import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
@@ -37,6 +38,20 @@ export default function VideoScreen() {
   const progress = useLessonProgress(id);
   const scores = useHomeworkScores()[id];
   const coins = useLessonCoins(id);
+  // Shu darsga nomi bo'yicha mos grammatika mavzusi (kutubxonadagi bog'lanish) — bo'lmasa ro'yxat.
+  const [grammarId, setGrammarId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadGrammarRows()
+      .then(({ rows }) => {
+        const row = rows.find((r) => r.lessons.some((l) => l.lesson.id === id));
+        if (!cancelled) setGrammarId(row?.topic.id ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,7 +175,7 @@ export default function VideoScreen() {
           </View>
         </ScrollView>
         <BottomBar style={styles.btns}>
-          <Pressable accessibilityRole="link" onPress={() => router.push(R.grammarList as Href)} style={({ pressed }) => [styles.secondary, pressed && { opacity: 0.85 }]}>
+          <Pressable accessibilityRole="link" onPress={() => router.push((grammarId ? R.grammar(grammarId) : R.grammarList) as Href)} style={({ pressed }) => [styles.secondary, pressed && { opacity: 0.85 }]}>
             <Text style={styles.secondaryText}>Grammatika</Text>
           </Pressable>
           <Pressable
