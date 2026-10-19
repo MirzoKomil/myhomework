@@ -1661,7 +1661,7 @@ async function getJsonData(key) {
     const row = await q1('SELECT data FROM json_data WHERE key = $1', [key]);
     if (!row) {
         if (key === 'demoStudentId') return '';
-        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory' || key === 'assistantWeeklyRatings' || key === 'battleMatches') ? {} : [];
+        return (key === 'bonusData' || key === 'salesPlan' || key === 'liveGrades' || key === 'studentMessages' || key === 'peerMessages' || key === 'studentActivity' || key === 'notificationRules' || key === 'absenceReasons' || key === 'homeworkRadioSchedule' || key === 'creativeSubmissions' || key === 'individualSalesPlans' || key === 'trialSmsReminders' || key === 'targetMonitoringPlan' || key === 'targetDailyAdSpend' || key === 'studentProgress' || key === 'studentProgressHistory' || key === 'assistantWeeklyRatings' || key === 'battleMatches' || key === 'notificationReads') ? {} : [];
     }
     return row.data;
 }
@@ -2880,24 +2880,36 @@ async function deleteManualNotification(id) {
 // o'tish, yetkazib berish, Ma'muriyat xabari, hamjamiyat yurakchasi). Qoida
 // matni voqea sodir bo'lgan lahzada "suratga olinadi" — keyinroq qoida
 // tahrirlansa ham, eski yozuvlar o'zgarmaydi.
-async function addSystemNotification(ruleId, vars) {
+// Tizim voqealari (daraja, imtihon, reyting, yetkazish...) — SHAXSIY: faqat
+// o'sha o'quvchiga ko'rinadi. Avval bitta umumiy ro'yxat bo'lib, bir
+// o'quvchining darajasi hamma o'quvchiga (va hammaning telefoniga push) ketardi.
+async function addSystemNotification(ruleId, vars, studentId) {
     const rules = await getNotificationRules();
     const rule = rules[ruleId];
     if (!rule?.enabled) return null;
+    if (!studentId) return null;
     const all = await getJsonData('systemNotifications');
     const notification = {
         id: 'sys-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
         ruleId,
+        studentId: String(studentId),
         title: fillNotificationTemplate(rule.title, vars || {}),
         message: fillNotificationTemplate(rule.message, vars || {}),
         createdAt: new Date().toISOString(),
     };
     all.unshift(notification);
-    if (all.length > 100) all.length = 100;
-    await tx(async (client) => {
-        await saveJsonData(client, 'systemNotifications', all);
+    // Har o'quvchiga oxirgi 30 tasi; eski (egasiz) yozuvlar tashlanadi.
+    const perStudent = {};
+    const kept = all.filter((n) => {
+        if (!n.studentId) return false;
+        perStudent[n.studentId] = (perStudent[n.studentId] || 0) + 1;
+        return perStudent[n.studentId] <= 30;
     });
-    sendPushToAll(notification.title, notification.message).catch(() => {});
+    await tx(async (client) => {
+        await saveJsonData(client, 'systemNotifications', kept.slice(0, 2000));
+    });
+    // Push obunalari o'quvchiga bog'lanmagan — shaxsiy voqea hammaga push
+    // qilinmasin (avval sendPushToAll edi).
     return notification;
 }
 
@@ -3068,7 +3080,9 @@ async function getComputedDemoNotifications(studentId) {
     }
 
     // ── Ustozni baholash (dars tugagach) ────────────────────────────────────
-    if (rules.teacherRatingPrompt?.enabled) {
+    // Ustozni baholash so'rovi o'chirildi (Abdulloh qarori, 2026-10-20) —
+    // o'quvchidan baho so'ralmaydi.
+    if (false && rules.teacherRatingPrompt?.enabled) {
         const { grades } = await getDemoStudentGrades(studentId);
         const unrated = grades.find(g => !g.studentRatingOfTeacher);
         if (unrated) {
@@ -3094,7 +3108,7 @@ async function getComputedDemoNotifications(studentId) {
             // Video mashqlari yakunlangani — videoni ko'rib chiqqanining eng
             // yaqin serverda kuzatiladigan belgisi (mashqlarni bajarish uchun
             // avval video ko'rilishi kerak).
-            const activity = await getDemoStudentActivity();
+            const activity = await getDemoStudentActivity(studentId);
             const watchedToday = activity.some(a => a.type === 'video' && a.time.slice(0, 10) === todayStr);
             if (!watchedToday) {
                 const nowHour = now.getUTCHours();
@@ -3120,7 +3134,7 @@ async function getComputedDemoNotifications(studentId) {
         const now = tashkentNow();
         if (now.getUTCHours() >= 9 && now.getUTCHours() < 22) {
             const todayStr = now.toISOString().slice(0, 10);
-            const activity = await getDemoStudentActivity();
+            const activity = await getDemoStudentActivity(studentId);
             const todaysHomework = activity.filter(a => a.type === 'homework' && a.time.slice(0, 10) === todayStr);
             const completedToday = todaysHomework.some(a => (a.scorePercent || 0) >= 100);
             if (!completedToday) {
@@ -3185,7 +3199,9 @@ async function getComputedDemoNotifications(studentId) {
 
     // ── Tizim voqealari + qo'lda yuborilgan xabarlar ────────────────────────
     const system = await getJsonData('systemNotifications');
+    const me = student?.id ? String(student.id) : String((await resolveStudentId(studentId)) || '');
     for (const n of system) {
+        if (!n.studentId || String(n.studentId) !== me) continue;
         notifications.push({
             id: n.id, category: 'news', source: 'system',
             title: n.title, message: n.message,
@@ -3203,7 +3219,28 @@ async function getComputedDemoNotifications(studentId) {
     }
 
     notifications.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // O'qilganlar serverda saqlanadi (eski va yangi ilova, har qanday telefon).
+    if (me) {
+        const reads = await getJsonData('notificationReads');
+        const readSet = new Set(Array.isArray(reads?.[me]) ? reads[me] : []);
+        for (const n of notifications) if (readSet.has(n.id)) n.unread = false;
+    }
     return notifications;
+}
+
+async function markNotificationsRead(studentId, ids) {
+    const id = studentId ? String(studentId) : null;
+    if (!id) return;
+    const list = (Array.isArray(ids) ? ids : []).map((x) => String(x || '').slice(0, 120)).filter(Boolean).slice(0, 300);
+    if (!list.length) return;
+    const raw = await getJsonData('notificationReads');
+    const all = raw && !Array.isArray(raw) && typeof raw === 'object' ? raw : {};
+    const prev = Array.isArray(all[id]) ? all[id] : [];
+    const merged = [...new Set([...prev, ...list])];
+    all[id] = merged.slice(-500);
+    await tx(async (client) => {
+        await saveJsonData(client, 'notificationReads', all);
+    });
 }
 
 // ── Hamjamiyat (Community) ───────────────────────────────────────────────────
@@ -3252,7 +3289,7 @@ async function toggleCommunityPostLike(postId) {
     post.likeCount = Math.max(0, (post.likeCount || 0) + (post.likedByMe ? 1 : -1));
     await tx(async (client) => { await saveJsonData(client, 'communityPosts', posts); });
     if (post.likedByMe) {
-        await addSystemNotification('communityLike', {});
+        // Hamjamiyat yoqtirishi bildirishnoma bermaydi (bo'lim olib tashlangan).
     }
     return post;
 }
@@ -3666,7 +3703,7 @@ async function addDemoStudentActivity(entry, studentId) {
         await saveJsonData(client, 'studentActivity', all);
     });
     if (type === 'exam' && record.passed === true) {
-        await addSystemNotification('examPassed', { label: record.label || 'Imtihon' });
+        await addSystemNotification('examPassed', { label: record.label || 'Imtihon' }, demoStudentId);
     }
     return record;
 }
@@ -3767,7 +3804,7 @@ async function detectPatchStateNotificationEvents(partial) {
             const newMsgs = newThreads[threadId] || [];
             const hasNewAdminMsg = newMsgs.some(m => !oldIds.has(m.id) && m.sender !== 'student');
             if (hasNewAdminMsg) {
-                await addSystemNotification('muloqotMessage', {});
+                await addSystemNotification('muloqotMessage', {}, demoStudentId);
                 break;
             }
         }
@@ -3780,7 +3817,7 @@ async function detectPatchStateNotificationEvents(partial) {
             if (order.studentId !== demoStudentId) continue;
             const oldStage = oldStageById.get(order.id);
             if (oldStage !== undefined && oldStage !== order.stage) {
-                await addSystemNotification('deliveryUpdated', { stage: SHOP_ORDER_STAGE_LABELS[order.stage] || order.stage });
+                await addSystemNotification('deliveryUpdated', { stage: SHOP_ORDER_STAGE_LABELS[order.stage] || order.stage }, order.studentId);
             }
         }
     }
@@ -4517,7 +4554,7 @@ module.exports = {
     getNotificationRules, saveNotificationRules,
     getManualNotifications, addManualNotification, deleteManualNotification,
     addSystemNotification, submitAbsenceReason,
-    getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY,
+    getPushSubscriptions, addPushSubscription, removePushSubscription, sendPushToAll, VAPID_PUBLIC_KEY, markNotificationsRead,
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
     getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording, handleBeelineWebhook,

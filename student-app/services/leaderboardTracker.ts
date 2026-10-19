@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { getToken } from '@/services/studentAuthStore';
 
 // 142-ish qayta ish 8: "Reytingda 10 pog'ona ko'tarilganda" bildirishnomasi —
 // reyting butunlay qurilmada (mock ro'yxat + haqiqiy tanga/chaqmoq) hisoblanadi,
@@ -20,7 +21,7 @@ export async function checkLeaderboardClimb(currentRank: number): Promise<void> 
     const raw = await AsyncStorage.getItem(LAST_RANK_KEY);
     const prevRank = raw !== null ? Number(raw) : null;
     if (prevRank !== null && prevRank - currentRank >= CLIMB_THRESHOLD) {
-      fetch(CLIMB_API_BASE, { method: 'POST' }).catch(() => {
+      fetch(CLIMB_API_BASE, { method: 'POST', headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {} }).catch(() => {
         // Tarmoq xatoligi bo'lsa jim o'tkazib yuboramiz.
       });
     }
