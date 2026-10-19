@@ -1,0 +1,162 @@
+/**
+ * v2 Oflayn darslar (dizayn: 60 Offline).
+ *
+ * Ilovada darslarni yuklab olish (oflayn saqlash) funksiyasi hozircha
+ * YO'Q. Shu sabab ro'yxatda joriy darsning real materiallari (so'zlar,
+ * audio dialoglar, videodars) ko'rsatiladi, lekin hammasi "yuklanmagan"
+ * holatda va jami hajm 0 MB. Internet holati — webda navigator.onLine
+ * (native'da tarmoq kutubxonasi yo'q → doim "bor" deb hisoblanadi).
+ */
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { BackButton, Column, currentLesson, Display, go, latestVideoLesson, LiveIcon, NoWifiIcon, pad2, SavedIcon, T } from '@/components/v2/library/shared';
+import { designImages } from '@/constants/v2/designImages';
+import { R } from '@/constants/v2/routes';
+import { getResolvedLessonContent } from '@/data/lessonContent';
+import { fetchDemoSchedule, fetchMobileContent, invalidateCache } from '@/services/contentApi';
+
+type Item = { key: string; title: string; sub: string; bg: string; img: keyof typeof designImages; href: string };
+
+function isOnline() {
+  return Platform.OS !== 'web' || typeof navigator === 'undefined' ? true : navigator.onLine !== false;
+}
+
+function liveLabel(d: Date) {
+  const now = new Date();
+  const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const sameDay = d.toDateString() === now.toDateString();
+  return sameDay ? `bugun ${time}` : time;
+}
+
+export default function OfflineScreen() {
+  const insets = useSafeAreaInsets();
+  const [online, setOnline] = useState(isOnline);
+  const [items, setItems] = useState<Item[]>([]);
+  const [live, setLive] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    let alive = true;
+    (async () => {
+      const mc = await fetchMobileContent();
+      const cur = await currentLesson(mc);
+      const out: Item[] = [];
+      if (cur) {
+        const c = await getResolvedLessonContent(cur.lesson.id, cur.index);
+        const roleplays = c.homeworkParts.filter((p) => p.kind === 'roleplay').length;
+        out.push({ key: 'vocab', title: `${cur.number}-dars · soʻzlar`, sub: `${c.vocabulary.length} soʻz · talaffuz audiosi`, bg: '#FFF4D1', img: 'fbb02b72ab2658bf66887f19d3df5d58', href: R.vocab(cur.lesson.id) });
+        out.push({ key: 'audio', title: `${cur.number}-dars · audio dialoglar`, sub: `${roleplays} ta dialog`, bg: '#FDECEC', img: '32eee84d436da97eb104c837c0065230', href: R.audioDialog(cur.lesson.id) });
+      }
+      const vid = latestVideoLesson(mc, cur);
+      if (vid) {
+        out.push({ key: 'video', title: `${vid.number}-dars · videodars`, sub: vid.lesson.name, bg: '#E3F7EE', img: 'f639c30e1400761df83230b833ba42b2', href: R.video(vid.lesson.id) });
+      }
+      if (alive) setItems(out);
+    })().catch(() => {});
+    fetchDemoSchedule()
+      .then((s) => alive && setLive(s.startsAt ? liveLabel(new Date(s.startsAt)) : s.lessonTime || null))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useFocusEffect(load);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+
+  const retry = () => {
+    setOnline(isOnline());
+    invalidateCache();
+    load();
+  };
+
+  return (
+    <ScrollView style={styles.root} contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 34 }} showsVerticalScrollIndicator={false}>
+      <Column>
+        <View style={styles.header}>
+          <BackButton fallback={R.settings} />
+          <Display size={24} lh={1.36}>Oflayn darslar</Display>
+        </View>
+
+        <View accessibilityRole="summary" accessibilityLiveRegion="polite" style={styles.status}>
+          <NoWifiIcon />
+          <T w={700} size={14} color="#FFFFFF" style={{ flex: 1, minWidth: 0 }}>{online ? 'Internet bor' : 'Internet yoʻq'}</T>
+          <Pressable accessibilityRole="button" onPress={retry} style={({ pressed }) => [styles.retry, pressed && { opacity: 0.85 }]}>
+            <T w={800} size={13} color="#FFFFFF">Qayta urinish</T>
+          </Pressable>
+        </View>
+
+        <View style={styles.body}>
+          <View style={styles.hero}>
+            <Image source={designImages['78f533d49645c292f499fbc1b6168dd2']} style={{ width: 156, height: 150 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            <Display size={24} ls={-0.01} lh={1.36} style={{ textAlign: 'center' }}>Oflayn ham oʻqish mumkin</Display>
+            <T w={600} size={15} color="#4A5468" lh={1.45} style={{ maxWidth: 310, textAlign: 'center' }}>Yuklab olingan darslar ishlaydi. Natijalar internet qaytganda saqlanadi.</T>
+          </View>
+
+          <View style={styles.secHead}>
+            <T w={800} size={12} color="#4A5468" style={{ letterSpacing: 0.72, textTransform: 'uppercase' }}>Qurilmada saqlangan</T>
+            <T w={700} size={12} color="#4A5468">0 MB</T>
+          </View>
+
+          {items.map((it) => (
+            <Row key={it.key} onPress={() => go(it.href)}>
+              <View style={[styles.thumb, { backgroundColor: it.bg }]}>
+                <Image source={designImages[it.img]} style={{ width: 42, height: 42 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                <T w={800} size={15}>{it.title}</T>
+                <T w={600} size={13} color="#4A5468" numberOfLines={1}>{it.sub}</T>
+              </View>
+              <View style={styles.right}>
+                <SavedIcon done={false} />
+                <T w={700} size={12} color="#5B6478">0 MB</T>
+              </View>
+            </Row>
+          ))}
+
+          <View style={styles.liveNote}>
+            <LiveIcon />
+            <T w={600} size={13} color="#4A5468" lh={1.35} style={{ flex: 1 }}>
+              {live ? `Jonli dars (${live}) uchun internet kerak` : 'Jonli dars uchun internet kerak'}
+            </T>
+          </View>
+        </View>
+      </Column>
+    </ScrollView>
+  );
+}
+
+function Row({ children, onPress }: { children: ReactNode; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}>
+      {children}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#F4F6FA' },
+  header: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  status: { marginTop: 14, marginHorizontal: 20, backgroundColor: '#0B1220', borderRadius: 18, paddingVertical: 8, paddingRight: 8, paddingLeft: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  retry: { height: 44, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#1B2438', justifyContent: 'center', flexShrink: 0 },
+  body: { paddingTop: 18, paddingHorizontal: 20, gap: 10 },
+  hero: { alignItems: 'center', gap: 6 },
+  secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 },
+  row: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingVertical: 10, paddingLeft: 10, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  thumb: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  right: { alignItems: 'flex-end', gap: 2, flexShrink: 0 },
+  liveNote: { borderWidth: 2, borderStyle: 'dashed', borderColor: '#D5DBE7', borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+});

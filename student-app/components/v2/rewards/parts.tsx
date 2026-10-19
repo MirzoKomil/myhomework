@@ -109,6 +109,16 @@ export function productImages(p: ShopProductV2): string[] {
   return p.imageUrl ? [p.imageUrl] : [];
 }
 
+/** Tavsif: CRM'dagi matn, bo'lmasa bor maydonlardan yig'iladi. */
+export function productDescription(p: { description?: string; category: string; pages?: number; delivered?: boolean }) {
+  if (p.description) return p.description;
+  const parts: string[] = [];
+  if (p.pages) parts.push(`${p.pages} bet`);
+  if (p.category === 'books') parts.push('bosma kitob');
+  if (p.delivered) parts.push('uyga yetkaziladi');
+  return parts.join(' · ');
+}
+
 /** Coin yetmagan, eng arzon (eng yaqin) mahsulot — "Eng yaqini" belgisi uchun. */
 export function nearestProduct(list: ShopProductV2[], coins: number): ShopProductV2 | null {
   const missing = list.filter((p) => p.price > coins).sort((a, b) => a.price - b.price);
