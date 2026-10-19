@@ -69,7 +69,9 @@ export default function MistakeReviewScreen() {
   const lessonScores = scores[id];
   useEffect(() => {
     if (!info || items) return;
-    const parts = info.content.homeworkParts.filter((p) => !isTeacherGraded(p));
+    // Dizayndagidek avval test (C), keyin bo'sh joy (B) xatolari.
+    const order = (p: HomeworkPart) => (p.kind === 'multipleChoice' ? 0 : 1);
+    const parts = info.content.homeworkParts.filter((p) => !isTeacherGraded(p)).sort((a, b) => order(a) - order(b));
     setItems(parts.flatMap((p) => mistakesOf(p, lessonScores?.[p.id])));
   }, [info, items, lessonScores]);
 
@@ -199,6 +201,7 @@ export default function MistakeReviewScreen() {
                 coin={false}
                 title={ok ? 'Toʻgʻri! Bu safar topdingiz' : undefined}
                 btnGap={10}
+                alignTop
                 detail={
                   <Txt f="body" size={14} color={ok ? '#0B4D31' : '#7A1C14'} lh={20.3}>
                     {ok ? '' : 'Toʻgʻri javob: '}

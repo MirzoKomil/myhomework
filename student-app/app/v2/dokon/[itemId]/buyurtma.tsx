@@ -186,7 +186,7 @@ export default function V2Checkout() {
             </Pressable>
           )}
 
-          <View style={{ flex: 1, minHeight: 16 }} />
+          <View style={{ flex: 1 }} />
           <View style={{ gap: 10 }}>
             <View style={styles.totals}>
               <Text style={styles.totLabel}>Balans</Text>

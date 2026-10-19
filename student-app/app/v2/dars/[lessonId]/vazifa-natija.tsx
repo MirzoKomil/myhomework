@@ -213,5 +213,5 @@ const st = StyleSheet.create({
   answerBox: { borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
   strike: { textDecorationLine: 'line-through', ...({ textDecorationThickness: 2 } as object) },
   list: { backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 2, paddingHorizontal: 16 },
-  li: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  li: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
 });

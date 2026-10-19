@@ -109,7 +109,7 @@ export default function OfflineScreen() {
         <View style={styles.body}>
           <View style={styles.hero}>
             <Image source={designImages['78f533d49645c292f499fbc1b6168dd2']} style={{ width: 130, height: 124 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-            <Display size={24} ls={-0.01} lh={1.36} style={{ textAlign: 'center' }}>Oflayn ham oʻqish mumkin</Display>
+            <Display size={24} ls={-0.01} lh={1.2} style={{ textAlign: 'center' }}>Oflayn ham oʻqish mumkin</Display>
             <T w={600} size={15} color="#4A5468" lh={1.45} style={{ maxWidth: 310, textAlign: 'center' }}>Yuklab olingan darslar ishlaydi. Natijalar internet qaytganda saqlanadi.</T>
           </View>
 

@@ -117,7 +117,7 @@ export function TypeAnswerView({ blank, label, index, total, replay, onAnswer, o
                       </Txt>
                     ) : (
                       <Txt f="display" size={21} style={st.blankLine}>
-                        {'  '}
+                        {Platform.OS === 'web' ? '' : '\u2003\u2003'}
                       </Txt>
                     ))}
                 </Txt>
@@ -244,7 +244,7 @@ const st = StyleSheet.create({
   blankLine: {
     borderBottomWidth: 3,
     borderBottomColor: '#2F5BFF',
-    ...(Platform.OS === 'web' ? ({ display: 'inline-block', width: 46, verticalAlign: -2 } as object) : null),
+    ...(Platform.OS === 'web' ? ({ display: 'inline-block', width: 46, height: 0, verticalAlign: -2 } as object) : null),
   },
   input: {
     minHeight: 60,

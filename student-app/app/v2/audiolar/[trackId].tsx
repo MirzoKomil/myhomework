@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { allBookTracks, bare, parseDur, saveTrackPosition, type BookTrack } from '@/components/v2/library/data';
+import { allBookTracks, bare, getTrackPositions, parseDur, saveTrackPosition, type BookTrack } from '@/components/v2/library/data';
 import { DarkPlayer, DialogText, parseDialog, SPEEDS, type DLine } from '@/components/v2/library/player';
 import { ChevronLeftWide, Column, Display, goBack, PauseTall, PlaySmall, QrIcon, T } from '@/components/v2/library/shared';
 import { markListened, useListened } from '@/components/v2/lessons/data';
@@ -85,21 +85,36 @@ function TrackView({ track, siblings, lines }: { track: BookTrack; siblings: Boo
   const [speedIdx, setSpeedIdx] = useState(1);
   const [repeatLine, setRepeatLine] = useState<number | null>(null);
   const last = useRef({ t: 0, d: 0 });
+  const started = useRef(false);
 
   const d = status.duration || 0;
   const t = status.currentTime || 0;
   const frac = d > 0 ? Math.min(1, t / d) : 0;
   const n = lines.length;
-  const curLine = n && d > 0 ? Math.min(n - 1, Math.floor(frac * n)) : -1;
+  // Hali boshlanmagan bo'lsa replika belgilanmaydi.
+  const curLine = n && d > 0 && (t > 0 || status.playing) ? Math.min(n - 1, Math.floor(frac * n)) : -1;
   const lineStart = (k: number) => (d > 0 && n ? (k * d) / n : 0);
   last.current = { t, d };
 
+  // Avval to'xtatilgan joydan davom ettiramiz (AudioList'dagi "davom etmoqda").
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current || !status.isLoaded || d <= 0) return;
+    resumed.current = true;
+    getTrackPositions().then((p) => {
+      const at = p[track.id]?.t ?? 0;
+      if (at > 0 && at < d - 0.5) player.seekTo(at);
+    });
+  }, [status.isLoaded, d, track.id, player]);
+
   // Ekrandan chiqishda to'xtagan joyni saqlaymiz.
   useEffect(() => () => {
-    void saveTrackPosition(track.id, last.current.t, last.current.d);
+    if (started.current) void saveTrackPosition(track.id, last.current.t, last.current.d);
   }, [track.id]);
+  // Pauzada saqlaymiz — faqat ijro boshlangandan keyin (aks holda saqlangan joy o'chib ketadi).
   useEffect(() => {
-    if (!status.playing && d > 0) void saveTrackPosition(track.id, t, d);
+    if (status.playing) started.current = true;
+    else if (started.current && d > 0) void saveTrackPosition(track.id, t, d);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status.playing]);
 

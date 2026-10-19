@@ -274,7 +274,7 @@ const st = StyleSheet.create({
   next: { backgroundColor: '#0B1220', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
   prep: { backgroundColor: '#F0EBFF', borderRadius: 20, paddingVertical: 10, paddingLeft: 10, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   prepIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  stackBox: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#EEF1F7', borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  stackBox: { width: 44, height: 44, borderRadius: 13, backgroundColor: '#EEF1F7', borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   final: { backgroundColor: '#FFF4D1', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   finalIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F5B70A', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

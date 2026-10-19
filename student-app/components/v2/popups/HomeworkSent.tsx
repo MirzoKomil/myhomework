@@ -160,6 +160,6 @@ const st = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 28 },
   primary: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center' },
   secondary: { flex: 1, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  mistakesRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 },
+  mistakesRow: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 },
   mistakesBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FDECEC', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

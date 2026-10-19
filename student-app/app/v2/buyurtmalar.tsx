@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   earnLabel: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, color: '#26304A', flexShrink: 1 },
   earnValue: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#7A5300' },
   emptyTitle: { fontFamily: fonts.display, fontWeight: 'normal', fontSize: 20, lineHeight: 24, color: '#0B1220', textAlign: 'center' },
-  emptyText: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, lineHeight: 20, color: '#4A5468', textAlign: 'center' },
+  emptyText: { fontFamily: fonts.body, fontWeight: 'normal', fontSize: 14, lineHeight: 20.3, color: '#4A5468', textAlign: 'center' },
   ratio: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 13, color: '#0B1220' },
   cta: { width: '100%', height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   ctaText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 16, color: '#FFFFFF' },

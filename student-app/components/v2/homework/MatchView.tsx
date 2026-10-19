@@ -171,5 +171,5 @@ const st = StyleSheet.create({
   gridRow: { flexDirection: 'row', gap: 12 },
   nowrap: { ...({ whiteSpace: 'nowrap' } as object) },
   tile: { flex: 1, minHeight: 72, borderRadius: 16, borderWidth: 2, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
-  status: { marginHorizontal: 20, marginBottom: 34, marginTop: 16, backgroundColor: '#F4F6FA', borderRadius: 18, paddingVertical: 12, paddingLeft: 8, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  status: { marginHorizontal: 20, marginBottom: 34, marginTop: 0, backgroundColor: '#F4F6FA', borderRadius: 18, paddingVertical: 12, paddingLeft: 8, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
 });
