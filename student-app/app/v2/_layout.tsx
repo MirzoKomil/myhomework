@@ -56,5 +56,10 @@ export default function V2Layout() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      {/* Seriya oynasi — ochilgan sahifa ustida (orqada bosh sahifa ko'rinadi, bo'sh kulrang fon emas). */}
+      <Stack.Screen name="streak" options={{ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }} />
+    </Stack>
+  );
 }
