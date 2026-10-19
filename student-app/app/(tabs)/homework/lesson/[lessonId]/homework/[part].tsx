@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatThreadView } from '@/components/chat/ChatThreadView';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
+import { RichText, speakableText } from '@/components/RichText';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { ChatMessage } from '@/data/mock';
@@ -752,7 +753,7 @@ function RoleplayPart({ scenario, onDone, lessonId }: { scenario: { id: string; 
 
   return (
     <View style={{ flex: 1 }}>
-      <Text style={styles.roleplayIntro}>{scenario.intro}</Text>
+      <RichText style={styles.roleplayIntro} text={scenario.intro} />
       <ChatThreadView messages={messages} onSendText={onSendText} onSendImage={onSendImage} onSendVoice={onSendVoice} />
       {ended && (
         <Pressable style={styles.roleplayDoneBtn} onPress={() => router.back()}>
@@ -921,7 +922,7 @@ function CreativePart({
 
   return (
     <ScrollView contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.instruction}>{instruction}</Text>
+      <RichText style={styles.instruction} text={instruction} />
       {mediaType === 'text' ? (
         <>
           <TextInput
@@ -985,7 +986,8 @@ function SpeakerButton({ text }: { text: string }) {
       return;
     }
     setSpeaking(true);
-    Speech.speak(text, {
+    // Belgilash (**, {qizil}…) ovoz bilan o'qilmasin.
+    Speech.speak(speakableText(text), {
       language: 'ru-RU',
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
@@ -1139,7 +1141,7 @@ function ReadingPart({
         <Text style={styles.instruction}>{t('hwp_reading_paragraph_instruction')}</Text>
         <View style={styles.sentenceCard}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-            <Text style={[styles.sentence, { flex: 1, textAlign: 'left' }]}>{paragraph.russianText}</Text>
+            <RichText style={[styles.sentence, { flex: 1, textAlign: 'left' }]} text={paragraph.russianText} />
             <SpeakerButton text={paragraph.russianText} />
           </View>
         </View>
@@ -1178,7 +1180,7 @@ function ReadingPart({
       </Text>
       <View style={styles.sentenceCard}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={[styles.sentence, { flex: 1 }]}>{currentSentence.russianText}</Text>
+          <RichText style={[styles.sentence, { flex: 1 }]} text={currentSentence.russianText} />
           <SpeakerButton text={currentSentence.russianText} />
         </View>
       </View>

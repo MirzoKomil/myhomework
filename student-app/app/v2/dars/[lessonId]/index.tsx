@@ -47,6 +47,7 @@ import {
   TelegramIcon,
 } from '@/components/v2/lessons/icons';
 import { BottomBar, Center, Column, TitleHeader } from '@/components/v2/lessons/parts';
+import { RichText } from '@/components/RichText';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -154,7 +155,7 @@ export default function LessonScreen() {
               <View style={styles.goal}>
                 <View style={styles.goalCheck}><Check size={12} /></View>
                 <Text style={styles.goalText}>
-                  Darsdan keyin: <Text style={{ fontFamily: fonts.bodyHeavy }}>{adminKonspekt}</Text>
+                  Darsdan keyin: <Text style={{ fontFamily: fonts.bodyHeavy }}><RichText inline style={{ fontFamily: fonts.bodyHeavy }} text={adminKonspekt} /></Text>
                 </Text>
               </View>
             )}

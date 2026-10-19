@@ -1772,7 +1772,9 @@ function renderEditableList(container, opts) {
             const val = Array.isArray(raw) ? raw.join(', ') : (raw !== undefined ? raw : '');
             const req = f.required ? ` <span style="color:var(--danger)">*</span>` : '';
             if (f.type === 'textarea') {
-                return `<div class="form-group"><label>${f.label}${req}</label><textarea id="lcField_${f.key}" class="form-control" rows="3" placeholder="${escapeHtml(f.placeholder || '')}">${escapeHtml(String(val))}</textarea></div>`;
+                // rich: true — uzun matnlar uchun formatlash paneli (qalin, rang...)
+                const toolbar = f.rich ? richTextToolbarHtml(`lcField_${f.key}`) : '';
+                return `<div class="form-group"><label>${f.label}${req}</label>${toolbar}<textarea id="lcField_${f.key}" class="form-control" rows="${f.rich ? 5 : 3}" placeholder="${escapeHtml(f.placeholder || '')}">${escapeHtml(String(val))}</textarea></div>`;
             }
             if (f.type === 'select') {
                 const opts = (f.options || []).map(o =>
@@ -1823,6 +1825,7 @@ function renderEditableList(container, opts) {
         // "Saqlash" bloklanadi va tugma holati aniq ko'rsatiladi.
         let _pendingUploads = 0;
         const saveBtn = document.getElementById('lcSaveItem');
+        opts.fields.filter(f => f.type === 'textarea' && f.rich).forEach(f => attachRichTextToolbar(document.getElementById(`lcField_${f.key}`)));
         opts.fields.filter(f => f.type === 'image' || f.type === 'audio').forEach(f => {
             const hiddenInput = document.getElementById(`lcField_${f.key}`);
             const fileInput = document.getElementById(`lcFieldFile_${f.key}`);
@@ -2044,8 +2047,12 @@ function _homeworkPartItemCount(p) {
 function _renderLcKonspekt(body, lesson, content) {
     body.innerHTML = `
         <div class="form-group"><label>Video havolasi (YouTube URL)</label><input id="lcVideoUrl" class="form-control" value="${escapeHtml(content.videoUrl || '')}" placeholder="https://www.youtube.com/watch?v=..."></div>
-        <div class="form-group"><label>Konspekt matni</label><textarea id="lcKonspekt" class="form-control" rows="8" placeholder="Ushbu darsning konspekti...">${escapeHtml(content.konspekt || '')}</textarea></div>
+        <div class="form-group"><label>Konspekt matni</label>${richTextToolbarHtml('lcKonspekt')}<textarea id="lcKonspekt" class="form-control" rows="8" placeholder="Ushbu darsning konspekti...">${escapeHtml(content.konspekt || '')}</textarea></div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin:-4px 0 6px">Ilovada shunday koʻrinadi:</div>
+        <div id="lcKonspektPreview" style="border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:14px;line-height:1.55;color:var(--text);background:var(--surface);max-height:320px;overflow:auto"></div>
         <button type="button" class="btn-primary-sm" id="lcSaveKonspekt">Saqlash</button>`;
+    // Admin formatlash natijasini saqlashdan oldin ko'rib turishi uchun jonli oldindan ko'rish.
+    attachRichTextToolbar(document.getElementById('lcKonspekt'), document.getElementById('lcKonspektPreview'));
     document.getElementById('lcSaveKonspekt').addEventListener('click', () => {
         content.videoUrl = document.getElementById('lcVideoUrl').value.trim();
         content.konspekt = document.getElementById('lcKonspekt').value;
@@ -2195,7 +2202,7 @@ function _renderLcSlides(body, lesson, content) {
         </div>`,
         fields: [
             { key: 'title', label: 'Slayd sarlavhasi', required: true },
-            { key: 'body', label: "Matn (ilovada slayd tagida 'Konspekt' sifatida chiqadi)", type: 'textarea', required: true },
+            { key: 'body', label: "Matn (ilovada slayd tagida 'Konspekt' sifatida chiqadi)", type: 'textarea', required: true, rich: true },
         ],
         onChange: (newItems) => { content.slides = newItems; _saveLessonWorkingContent(lesson, content); showMiniToast('Saqlandi'); renderSlidesList(); },
     });
@@ -2398,10 +2405,11 @@ function _renderLcHomework(body, lesson, content, dayType) {
         const sc = part.scenario || { title: '', intro: '', lines: [], closing: '' };
         partBody.innerHTML = `
             <div class="form-group"><label>Ssenariy sarlavhasi</label><input id="rpTitle" class="form-control" value="${escapeHtml(sc.title || '')}"></div>
-            <div class="form-group"><label>Kirish matni</label><textarea id="rpIntro" class="form-control" rows="2">${escapeHtml(sc.intro || '')}</textarea></div>
+            <div class="form-group"><label>Kirish matni</label>${richTextToolbarHtml('rpIntro')}<textarea id="rpIntro" class="form-control" rows="3">${escapeHtml(sc.intro || '')}</textarea></div>
             <div class="form-group"><label>Suhbat qatorlari (har birini yangi qatorga yozing)</label><textarea id="rpLines" class="form-control" rows="6">${escapeHtml((sc.lines || []).join('\n'))}</textarea></div>
             <div class="form-group"><label>Yakunlovchi matn</label><textarea id="rpClosing" class="form-control" rows="2">${escapeHtml(sc.closing || '')}</textarea></div>
             <button type="button" class="btn-primary-sm" id="rpSave">Saqlash</button>`;
+        attachRichTextToolbar(document.getElementById('rpIntro'));
         document.getElementById('rpSave').addEventListener('click', () => {
             const newScenario = {
                 id: sc.id || 'roleplay-' + Date.now(),
@@ -2415,9 +2423,10 @@ function _renderLcHomework(body, lesson, content, dayType) {
         });
     } else if (part.kind === 'creative') {
         partBody.innerHTML = `
-            <div class="form-group"><label>Topshiriq matni</label><textarea id="crInstruction" class="form-control" rows="4">${escapeHtml(part.instruction || '')}</textarea></div>
+            <div class="form-group"><label>Topshiriq matni</label>${richTextToolbarHtml('crInstruction')}<textarea id="crInstruction" class="form-control" rows="4">${escapeHtml(part.instruction || '')}</textarea></div>
             <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Media turi: ${part.mediaType === 'audio' ? 'Ovozli xabar' : 'Matn'}</div>
             <button type="button" class="btn-primary-sm" id="crSave">Saqlash</button>`;
+        attachRichTextToolbar(document.getElementById('crInstruction'));
         document.getElementById('crSave').addEventListener('click', () => {
             persistPart({ ...part, instruction: document.getElementById('crInstruction').value.trim() });
             showMiniToast('Saqlandi');
@@ -2429,9 +2438,10 @@ function _renderLcHomework(body, lesson, content, dayType) {
         // ustozga tekshirish uchun boradi (o'quvchi tomonida javob
         // to'g'ri/xato deb avtomatik baholanmaydi).
         partBody.innerHTML = `
-            <div class="form-group"><label>1-qism — Matn (paragraf, ruscha)</label><textarea id="rdParagraph" class="form-control" rows="5">${escapeHtml((part.paragraph && part.paragraph.russianText) || '')}</textarea></div>
+            <div class="form-group"><label>1-qism — Matn (paragraf, ruscha)</label>${richTextToolbarHtml('rdParagraph')}<textarea id="rdParagraph" class="form-control" rows="5">${escapeHtml((part.paragraph && part.paragraph.russianText) || '')}</textarea></div>
             <button type="button" class="btn-primary-sm" id="rdParagraphSave" style="margin-bottom:18px">Matnni saqlash</button>
             <div id="rdSentences"></div>`;
+        attachRichTextToolbar(document.getElementById('rdParagraph'));
         document.getElementById('rdParagraphSave').addEventListener('click', () => {
             persistPart({ ...part, paragraph: { id: (part.paragraph && part.paragraph.id) || 'p1', russianText: document.getElementById('rdParagraph').value.trim() } });
             showMiniToast('Saqlandi');
@@ -2469,6 +2479,7 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'main' ? 'mac-tab-active' : ''}" data-lc-tab="main">${dayType === 'grammar' ? '📐 Grammatika' : '🎬 Slaydlar'}</button>
         ${dayType !== 'grammar' ? `<button type="button" class="mac-tab-btn ${_lessonContentTab === 'practice' ? 'mac-tab-active' : ''}" data-lc-tab="practice">🎤 Nutq mashqlari</button>` : ''}
         <button type="button" class="mac-tab-btn ${_lessonContentTab === 'homework' ? 'mac-tab-active' : ''}" data-lc-tab="homework">📋 Uyga vazifa</button>
+        <button type="button" class="mac-tab-btn ${_lessonContentTab === 'audioDialogs' ? 'mac-tab-active' : ''}" data-lc-tab="audioDialogs">🎧 Audio dialoglar</button>
     </div>
     <div id="lessonContentBody" style="flex:1;overflow-y:auto;padding:20px"></div>`;
 
@@ -2494,6 +2505,7 @@ function renderMobileLessonDetailTab(container, course, lesson, dayIndex) {
     else if (_lessonContentTab === 'main') { dayType === 'grammar' ? _renderLcGrammar(body, lesson, content) : _renderLcSlides(body, lesson, content); }
     else if (_lessonContentTab === 'practice') _renderLcSpeakingPractice(body, lesson, content);
     else if (_lessonContentTab === 'homework') _renderLcHomework(body, lesson, content, dayType);
+    else if (_lessonContentTab === 'audioDialogs') _renderLcAudioDialogs(body, lesson, content);
 }
 
 // Ilovaning bosh sahifasi (Asosiy oyna) bilan bog'liq bo'limlar ro'yxati —
@@ -3295,6 +3307,7 @@ function renderBonusLessonDetailTab(container, bonusIndex) {
         <button type="button" class="mac-tab-btn ${_bonusContentTab === 'vocab' ? 'mac-tab-active' : ''}" data-blc-tab="vocab">📖 Lug'at</button>
         <button type="button" class="mac-tab-btn ${_bonusContentTab === 'vocabPractice' ? 'mac-tab-active' : ''}" data-blc-tab="vocabPractice">🔄 Mashqlar</button>
         <button type="button" class="mac-tab-btn ${_bonusContentTab === 'homework' ? 'mac-tab-active' : ''}" data-blc-tab="homework">📋 Uyga vazifa</button>
+        <button type="button" class="mac-tab-btn ${_bonusContentTab === 'audioDialogs' ? 'mac-tab-active' : ''}" data-blc-tab="audioDialogs">🎧 Audio dialoglar</button>
     </div>
     <div id="bonusContentBody" style="flex:1;overflow-y:auto;padding:20px"></div>`;
 
@@ -3318,6 +3331,7 @@ function renderBonusLessonDetailTab(container, bonusIndex) {
     else if (_bonusContentTab === 'vocab') _renderLcVocab(body, lessonRef, content);
     else if (_bonusContentTab === 'vocabPractice') _renderLcVocabPractice(body, lessonRef, content);
     else if (_bonusContentTab === 'homework') _renderLcHomework(body, lessonRef, content, 'bonus');
+    else if (_bonusContentTab === 'audioDialogs') _renderLcAudioDialogs(body, lessonRef, content);
 }
 
 // ─── Imtihonlar (72 dars — har 12 tadan + yakunlovchi = 7 ta) ───────────────
@@ -5066,7 +5080,7 @@ const LIBRARY_CATEGORY_SCHEMAS = {
             { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.grammar },
             { key: 'title', label: 'Mavzu nomi', required: true },
             { key: 'formula', label: 'Formula (ixtiyoriy)', placeholder: 'Subject + Verb + Object' },
-            { key: 'description', label: 'Tavsif', type: 'textarea' },
+            { key: 'description', label: 'Tavsif', type: 'textarea', rich: true },
         ],
         itemRenderRow: (t) => `<b>${escapeHtml(t.title || '')}</b> <span style="color:var(--text-muted)">· ${escapeHtml((LIBRARY_LEVEL_OPTIONS.grammar.find(o => o.value === t.level) || {}).label || t.level || '')} · ${(t.examples || []).length} ta misol</span>`,
         nestedKey: 'examples', nestedTitle: 'Misollar', nestedAddLabel: "+ Misol qo'shish", nestedIdPrefix: 'ex',
@@ -5115,7 +5129,7 @@ const LIBRARY_CATEGORY_SCHEMAS = {
         itemFields: [
             { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.speaking },
             { key: 'title', label: 'Mavzu nomi', required: true },
-            { key: 'description', label: 'Tavsif', type: 'textarea' },
+            { key: 'description', label: 'Tavsif', type: 'textarea', rich: true },
             { key: 'emoji', label: 'Emoji', placeholder: '👋' },
             { key: 'coverUrl', label: 'Muqova rasmi (ixtiyoriy)', type: 'image' },
         ],
@@ -5152,7 +5166,7 @@ const LIBRARY_CATEGORY_SCHEMAS = {
         itemFields: [
             { key: 'level', label: 'Daraja', type: 'select', required: true, options: LIBRARY_LEVEL_OPTIONS.books },
             { key: 'title', label: 'Hikoya nomi', required: true },
-            { key: 'description', label: 'Tavsif', type: 'textarea' },
+            { key: 'description', label: 'Tavsif', type: 'textarea', rich: true },
             { key: 'emoji', label: 'Emoji', placeholder: '📖' },
             { key: 'coverUrl', label: 'Muqova rasmi (ixtiyoriy)', type: 'image' },
         ],

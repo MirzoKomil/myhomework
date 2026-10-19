@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CommentsSheet } from '@/components/CommentsSheet';
 import { MaterialsList } from '@/components/ui/MaterialsList';
+import { RichText } from '@/components/RichText';
 import { theme } from '@/constants/theme';
 import { DESKTOP_CONTENT_MAX_WIDTH } from '@/constants/web';
 import { useLang } from '@/i18n/LanguageContext';
@@ -166,7 +167,7 @@ export default function SlidesScreen() {
 
       <ScrollView style={styles.konspektSection} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionLabel}>{t('common_konspekt')}</Text>
-        <Text style={styles.body}>{current.body}</Text>
+        <RichText style={styles.body} text={current.body} />
         {materials && <MaterialsList files={materials.files} />}
       </ScrollView>
 

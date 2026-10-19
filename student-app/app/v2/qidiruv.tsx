@@ -26,11 +26,13 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchMobileContent } from '@/services/contentApi';
+import { stripRichText } from '@/services/richText';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 type Item = { title: string; sub: string; meta: string; href: string; hay: string };
 
-const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').replace(/[ʻʼ'`‘’]/g, '').trim();
+// Admin matnidagi belgilar (**, {qizil}…) qidiruvga xalaqit bermasin.
+const norm = (s: string) => stripRichText(s).toLowerCase().replace(/ё/g, 'е').replace(/[ʻʼ'`‘’]/g, '').trim();
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
@@ -49,13 +51,13 @@ export default function SearchScreen() {
         const mc = await fetchMobileContent();
         const lib = mc.library;
         lib.grammar.forEach((g, i) =>
-          items.push({ title: g.title, sub: g.formula ?? '', meta: `Grammatika · G${i + 1}`, href: R.grammar(g.id), hay: norm(`${g.title} ${g.formula ?? ''} ${g.description ?? ''}`) }),
+          items.push({ title: g.title, sub: stripRichText(g.formula ?? ''), meta: `Grammatika · G${i + 1}`, href: R.grammar(g.id), hay: norm(`${g.title} ${g.formula ?? ''} ${g.description ?? ''}`) }),
         );
         lib.podcasts.forEach((p) =>
           items.push({ title: p.title, sub: '', meta: 'Audio', href: R.audioList, hay: norm(`${p.title} ${p.lines.map((l) => `${l.en} ${l.uz}`).join(' ')}`) }),
         );
         lib.books.forEach((b) =>
-          items.push({ title: b.title, sub: b.description, meta: 'Hikoya', href: R.book(b.id), hay: norm(`${b.title} ${b.description}`) }),
+          items.push({ title: b.title, sub: stripRichText(b.description), meta: 'Hikoya', href: R.book(b.id), hay: norm(`${b.title} ${b.description}`) }),
         );
         lib.words.forEach((t) =>
           t.words.forEach((w) =>

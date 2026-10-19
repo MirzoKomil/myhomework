@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { RichText, speakableText, stripRichText } from '@/components/RichText';
 import { addMyWord } from '@/components/v2/practice/shared';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -65,7 +66,8 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
     });
     return m;
   }, [vocabulary]);
-  const tokens = useMemo(() => paragraph.russianText.split(/([\p{L}\u0301-]+)/u), [paragraph.russianText]);
+  // So'zlar bosiladigan bo'lib qolishi uchun belgilash ko'rsatilmaydi — faqat olib tashlanadi.
+  const tokens = useMemo(() => stripRichText(paragraph.russianText).split(/([\p{L}\u0301-]+)/u), [paragraph.russianText]);
   const pickWord = (at: number, shown: string, word: VocabWord) => {
     setSel({ at, word, shown });
     void addMyWord({ word: word.english, translation: word.translation });
@@ -109,7 +111,8 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, key]);
 
-  const listenText = step === 0 ? paragraph.russianText : sentences[step - 1]?.russianText ?? '';
+  // Belgilar (**, {qizil}…) ovoz bilan o'qilmasin.
+  const listenText = speakableText(step === 0 ? paragraph.russianText : sentences[step - 1]?.russianText ?? '');
   const toggleSpeech = () => {
     if (speaking) {
       Speech.stop();
@@ -241,7 +244,7 @@ export function ReadingView({ lessonId, partId, title, overline, paragraph, sent
             )}
           </View>
           <Txt f="bodyHeavy" size={16} lang="ru">
-            {step === 0 ? 'Matnni oʻzbek tiliga tarjima qiling' : sentences[step - 1].russianText}
+            {step === 0 ? 'Matnni oʻzbek tiliga tarjima qiling' : <RichText inline style={{ fontFamily: fonts.bodyHeavy }} text={sentences[step - 1].russianText} />}
           </Txt>
           <TextInput
             value={current}

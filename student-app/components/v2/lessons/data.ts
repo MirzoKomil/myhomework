@@ -89,16 +89,38 @@ export function splitTitle(name: string): { title: string; phrase: string } {
 export const hasCyrillic = (s: string) => /[Ѐ-ӿ]/.test(s);
 
 // ─── Audio dialoglar ────────────────────────────────────────────────────────
-// CRM'da darsga alohida "audio" turi yo'q — admin modulga havola sifatida
-// audio fayl (mp3/m4a/wav/ogg/aac) biriktiradi. Darsning modullaridagi
-// shunday havolalar shu darsning audio dialoglari hisoblanadi.
+// Asosiy manba — CRM'dagi "Audio dialoglar" (lessonContents[id].audioDialogs):
+// audio, matn (replikalar), kitob qismi va trek raqami bilan. Eski usul ham
+// qo'llab-quvvatlanadi: admin modulga havola sifatida audio fayl
+// (mp3/m4a/wav/ogg/aac) biriktirgan bo'lsa, u ham shu darsning dialogi.
 const AUDIO_RE = /\.(mp3|m4a|wav|ogg|oga|aac|webm)(\?|#|$)/i;
 
-export type AudioTrack = { id: string; title: string; url: string; duration?: string; coverUrl?: string };
+export type AudioTrack = {
+  id: string;
+  title: string;
+  url: string;
+  duration?: string;
+  coverUrl?: string;
+  /** Faqat CRM audio dialoglarida — aniq qiymatlar (taxminiy emas). */
+  durationSec?: number;
+  bookPart?: number;
+  trackNo?: number;
+  lines?: DialogLine[];
+};
 
 export function getAudioTracks(mc: MobileContent, lessonId: string): AudioTrack[] {
+  const tracks: AudioTrack[] = (mc.lessonContents[lessonId]?.audioDialogs ?? []).map((d) => ({
+    id: d.id,
+    title: d.title,
+    url: d.audioUrl,
+    duration: d.durationSec ? fmtTime(d.durationSec) : undefined,
+    coverUrl: d.coverUrl,
+    durationSec: d.durationSec,
+    bookPart: d.bookPart,
+    trackNo: d.trackNo,
+    lines: d.lines,
+  }));
   const modules = mc.modules.filter((m) => m.lessonId === lessonId);
-  const tracks: AudioTrack[] = [];
   modules.forEach((mod) => {
     const contents = mc.moduleContents.filter((c) => c.moduleId === mod.id);
     const cover = contents.find((c) => c.type === 'image' && c.url)?.url;
@@ -179,9 +201,10 @@ export function learnedWordIds(lessonId: string, wordIds: string[], seen: string
 }
 
 // ─── Dialog matni ──────────────────────────────────────────────────────────
-// Dialog matni — audio bilan bir moduldagi "Matn" kontenti: "Ism: ruscha gap"
+// Dialog matni — CRM audio dialogida tayyor replikalar (speaker/ru/uz, start);
+// eski usulda — audio bilan bir moduldagi "Matn" kontenti: "Ism: ruscha gap"
 // qatoridan keyingi qator — o'zbekcha tarjimasi.
-export type DialogLine = { speaker: string; ru: string; uz: string };
+export type DialogLine = { speaker: string; ru: string; uz: string; start?: number };
 
 export const SPEAKER_COLORS = ['#B34700', '#0B1220', '#1E3FD1', '#087A4A'];
 
@@ -199,11 +222,47 @@ export function parseDialog(text: string): DialogLine[] {
   return out;
 }
 
-export function trackLines(mc: MobileContent, track: AudioTrack): DialogLine[] {
+export function trackLines(mc: MobileContent, track: Pick<AudioTrack, 'id' | 'lines'>): DialogLine[] {
+  if (track.lines) return track.lines;
   const content = mc.moduleContents.find((c) => c.id === track.id);
   if (!content) return [];
   const text = mc.moduleContents.find((c) => c.moduleId === content.moduleId && c.type === 'text' && c.text)?.text;
   return text ? parseDialog(text) : [];
+}
+
+/**
+ * Replikalar boshlanish soniyalari. CRM'da start berilgan bo'lsa — shu
+ * (berilmaganlari qo'shni ma'lum vaqtlar orasida teng taqsimlanadi);
+ * umuman bo'lmasa — audio davomiyligi replikalar soniga teng bo'linadi.
+ */
+export function lineStarts(lines: DialogLine[], duration: number): number[] {
+  const n = lines.length;
+  if (!n) return [];
+  const known = lines.map((l) => (typeof l.start === 'number' && Number.isFinite(l.start) ? Math.max(0, l.start) : null));
+  if (known.every((x) => x === null)) return lines.map((_, k) => (duration > 0 ? (k / n) * duration : 0));
+  const out: number[] = [];
+  for (let k = 0; k < n; k++) {
+    const v = known[k];
+    if (v !== null) {
+      out.push(v);
+      continue;
+    }
+    let a = k - 1;
+    while (a >= 0 && known[a] === null) a--;
+    let b = k + 1;
+    while (b < n && known[b] === null) b++;
+    const t0 = a >= 0 ? known[a]! : 0;
+    const t1 = b < n ? known[b]! : duration > t0 ? duration : t0;
+    out.push(t0 + ((t1 - t0) * (k - a)) / (b - a));
+  }
+  return out;
+}
+
+/** Joriy replika: boshlanishi o'tgan oxirgi replika (aniq vaqtlarda — birinchisidan oldin -1). */
+export function lineAt(starts: number[], t: number): number {
+  let cur = -1;
+  for (let k = 0; k < starts.length; k++) if (starts[k] <= t + 0.05) cur = k;
+  return cur;
 }
 
 /** Gapirayotganlar ro'yxati (tartib bilan) — avatar rangi shu tartibdan. */

@@ -5,11 +5,12 @@
  * havolalari (getAudioTracks). Dialog matni — o'sha moduldagi "Matn"
  * kontenti: "Ism: ruscha gap" qatoridan keyingi qator — tarjimasi.
  * Pleer eski podkast ekranidagi kabi expo-audio bilan ishlaydi.
- * Replikalar vaqti serverda yo'q, shuning uchun joriy replika audio
- * davomiyligini replikalar soniga teng bo'lib taxminlanadi; har replikadan
- * keyin 3 soniya "Endi takrorlang" pauzasi qilinadi. Oldingi/keyingi
- * replika va "replikani takrorlash" ham shu taxminiy chegaralar bo'yicha.
- * Kitob qismi — oy raqami, trek raqami — shu qismdagi darslar audiolari tartibi.
+ * CRM audio dialogida replika vaqtlari (start) berilgan bo'lsa — joriy
+ * replika, oldingi/keyingi va "replikani takrorlash" shu aniq vaqtlar bo'yicha;
+ * berilmagan bo'lsa — audio davomiyligi replikalar soniga teng bo'lib
+ * taxminlanadi. Har replikadan keyin 3 soniya "Endi takrorlang" pauzasi.
+ * Kitob qismi / trek raqami — CRM'da kiritilgan bo'lsa shu, aks holda
+ * taxminiy: qism — oy raqami, trek — shu qismdagi darslar audiolari tartibi.
  * Audio yo'q bo'lsa — dizayndagi joylashuv bo'sh holatda ko'rsatiladi.
  */
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
@@ -25,6 +26,8 @@ import {
   buildQuickCheck,
   fmtTime,
   getAudioTracks,
+  lineAt,
+  lineStarts,
   loadCourseData,
   markListened,
   speakerColor,
@@ -47,6 +50,7 @@ import {
   SkipPrevIcon,
 } from '@/components/v2/lessons/icons';
 import { Column, HeaderButton } from '@/components/v2/lessons/parts';
+import { RichText } from '@/components/RichText';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -99,7 +103,8 @@ export default function AudioDialogScreen() {
   const duration = status.duration || 0;
   const t = status.currentTime || 0;
   const frac = duration > 0 ? Math.min(1, t / duration) : 0;
-  const curLine = lines.length && duration > 0 ? Math.min(lines.length - 1, Math.floor(frac * lines.length)) : -1;
+  const starts = useMemo(() => lineStarts(lines, duration), [lines, duration]);
+  const curLine = lines.length && duration > 0 ? lineAt(starts, t) : -1;
 
   // Yangi trekka o'tganda holatni tozalaymiz.
   useEffect(() => {
@@ -153,8 +158,8 @@ export default function AudioDialogScreen() {
       player.play();
     }
   };
-  // Replika boshlanishi (taxminiy) — davomiylik replikalar soniga teng bo'linadi.
-  const lineStart = (k: number) => (lines.length && duration ? (Math.max(0, Math.min(lines.length - 1, k)) / lines.length) * duration : 0);
+  // Replika boshlanishi — aniq (start) yoki taxminiy (lineStarts).
+  const lineStart = (k: number) => (lines.length && duration ? (starts[Math.max(0, Math.min(lines.length - 1, k))] ?? 0) : 0);
   const seekLine = (k: number) => {
     if (!track || !duration) return;
     clearPause();
@@ -181,7 +186,8 @@ export default function AudioDialogScreen() {
   const playing = status.playing || pausedAfter !== null;
   const dialogNo = tracks.length ? trackIdx + 1 : 0;
   const topic = lesson ? splitTitle(lesson.name).title.split(/\s+/)[0] : '';
-  const trackNo = data && lesson ? bookTrackNo(data.mc, data.lessons, lesson.index, trackIdx) : 0;
+  const trackNo = track?.trackNo ?? (data && lesson ? bookTrackNo(data.mc, data.lessons, lesson.index, trackIdx) : 0);
+  const partNo = track?.bookPart ?? (lesson ? bookPart(lesson.index) : null);
   const speedLabel = `${SPEEDS[speedIdx]}×`;
 
   return (
@@ -228,7 +234,7 @@ export default function AudioDialogScreen() {
                 <View style={styles.qr}>
                   <QrIcon />
                   <Text style={styles.qrText}>
-                    Kitob · {lesson ? bookPart(lesson.index) : '—'}-qism · {lesson?.number ?? '—'}-dars · {tracks.length ? trackNo : 0}-trek
+                    Kitob · {partNo ?? '—'}-qism · {lesson?.number ?? '—'}-dars · {tracks.length ? trackNo : 0}-trek
                   </Text>
                 </View>
               </View>
@@ -308,8 +314,8 @@ export default function AudioDialogScreen() {
                           <Text style={styles.avatarText}>{l.speaker.charAt(0).toUpperCase()}</Text>
                         </View>
                         <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                          <Text style={[styles.ru, isCur && { fontFamily: fonts.bodyHeavy }, future && { color: '#4A5468' }]}>{l.ru}</Text>
-                          {showUz && !!l.uz && <Text style={styles.uz}>{l.uz}</Text>}
+                          <RichText style={[styles.ru, isCur && { fontFamily: fonts.bodyHeavy }, future && { color: '#4A5468' }]} text={l.ru} />
+                          {showUz && !!l.uz && <RichText style={styles.uz} text={l.uz} />}
                         </View>
                       </View>
                       {pausedAfter === k && (

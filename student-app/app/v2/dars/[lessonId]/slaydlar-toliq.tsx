@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { RichText } from '@/components/RichText';
 import { goBack } from '@/components/v2/lessons/data';
 import { BackIcon, ChevronRight, CloseIcon, PinchIcon } from '@/components/v2/lessons/icons';
 import { R } from '@/constants/v2/routes';
@@ -108,7 +109,7 @@ export default function SlideViewerScreen() {
             ) : (
               <View style={[styles.img, styles.empty, { width: imgW, height: imgH }]}>
                 <Text style={styles.emptyTitle}>{cur.title}</Text>
-                {!!cur.body && <Text style={styles.emptyBody}>{cur.body}</Text>}
+                {!!cur.body && <RichText style={styles.emptyBody} text={cur.body} />}
               </View>
             )}
           </ScrollView>

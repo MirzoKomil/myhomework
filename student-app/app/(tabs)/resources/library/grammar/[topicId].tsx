@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { RichText } from '@/components/RichText';
 import { theme } from '@/constants/theme';
 import { useLang } from '@/i18n/LanguageContext';
 import { GRAMMAR_LEVEL_COLORS, GRAMMAR_LEVEL_LABELS, GRAMMAR_TOPICS, GrammarTopic } from '@/data/grammarGuide';
@@ -57,14 +58,14 @@ export default function GrammarTopicScreen() {
         {topic.formula && (
           <View style={[styles.formulaBox, { borderColor: accentColor }]}>
             <Text style={[styles.formulaLabel, { color: accentColor }]}>{t('res_formula')}</Text>
-            <Text style={styles.formulaText}>{topic.formula}</Text>
+            <RichText style={styles.formulaText} text={topic.formula} />
           </View>
         )}
 
         {topic.description && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{t('res_explanation')}</Text>
-            <Text style={styles.description}>{topic.description}</Text>
+            <RichText style={styles.description} text={topic.description} />
           </View>
         )}
 

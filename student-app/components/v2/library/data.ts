@@ -14,7 +14,8 @@ import { courseLessons, type LessonRef } from './shared';
 /* ---- Kitob audio treklari ----
  * Darslik audiosi — CRM'da dars modullariga biriktirilgan audio fayllar
  * (dars ichidagi "Audio dialoglar" bilan bir xil manba: getAudioTracks).
- * Trek raqami — kurs bo'yicha tartib raqami (1-darsdan boshlab ketma-ket).
+ * Trek raqami — CRM audio dialogida kiritilgan kitob trek raqami (bo'lsa),
+ * aks holda kurs bo'yicha tartib raqami (1-darsdan boshlab ketma-ket).
  * Kitob "qism"i (1-/2-qism) serverda yo'q — ko'rsatilmaydi.
  */
 export type BookTrack = AudioTrack & { no: number; lesson: LessonRef; heard: boolean };
@@ -25,7 +26,7 @@ export function allBookTracks(mc: MobileContent): BookTrack[] {
   courseLessons(mc).forEach((lesson, index) => {
     const heard = getListened(lesson.id);
     getAudioTracks(mc, lesson.id).forEach((t) => {
-      out.push({ ...t, no: out.length + 1, lesson: { lesson, index, number: index + 1 }, heard: heard.includes(t.id) });
+      out.push({ ...t, no: t.trackNo ?? out.length + 1, lesson: { lesson, index, number: index + 1 }, heard: heard.includes(t.id) });
     });
   });
   return out;

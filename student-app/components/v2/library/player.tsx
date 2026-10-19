@@ -6,6 +6,11 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
+import { fonts } from '@/constants/v2/tokens';
+
+import { RichText } from '@/components/RichText';
+import { parseDialog, type DialogLine } from '@/components/v2/lessons/data';
+
 import { NextIcon, PauseTall, PlayRounded, PrevIcon, RepeatOneIcon, T, mmss } from './shared';
 
 export const SPEEDS = [0.75, 1, 1.25];
@@ -102,23 +107,10 @@ export function DarkPlayer({
 
 /* ---------- Dialog matni (M — mehmon · O — ofitsiant) ---------- */
 
-export type DLine = { speaker: string; ru: string; uz: string };
+// Darsdagi audio dialog bilan bitta tur va bitta tahlilchi — ikki joyda farq qilmasin.
+export type DLine = DialogLine;
+export { parseDialog };
 const SPEAKER_COLORS = ['#B34700', '#0B1220', '#1E3FD1', '#087A4A'];
-
-/** "Ism: ruscha gap" + keyingi qator — tarjima (darsdagi audio dialog matni bilan bir xil format). */
-export function parseDialog(text: string): DLine[] {
-  const out: DLine[] = [];
-  text
-    .split(/\r?\n/)
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .forEach((row) => {
-      const m = row.match(/^([^:]{1,24}):\s*(.+)$/);
-      if (m) out.push({ speaker: m[1].trim(), ru: m[2].trim(), uz: '' });
-      else if (out.length && !out[out.length - 1].uz) out[out.length - 1].uz = row;
-    });
-  return out;
-}
 
 export function DialogText({ lines, current, onLine, empty }: { lines: DLine[]; current: number; onLine?: (i: number) => void; empty: string }) {
   const [uz, setUz] = useState(true);
@@ -153,8 +145,8 @@ export function DialogText({ lines, current, onLine, empty }: { lines: DLine[]; 
                 <T w={800} size={12} color="#FFFFFF">{l.speaker.charAt(0).toUpperCase()}</T>
               </View>
               <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-                <T w={cur ? 800 : 700} size={15} lh={1.3}>{l.ru}</T>
-                {uz && !!l.uz && <T w={600} size={13} color="#4A5468" lh={1.3}>{l.uz}</T>}
+                <T w={cur ? 800 : 700} size={15} lh={1.3}><RichText inline style={{ fontFamily: fonts.bodyBold }} text={l.ru} /></T>
+                {uz && !!l.uz && <T w={600} size={13} color="#4A5468" lh={1.3}><RichText inline style={{ fontFamily: fonts.body }} text={l.uz} /></T>}
               </View>
             </Pressable>
           );

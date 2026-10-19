@@ -16,8 +16,10 @@ import { BONUS_LESSONS, TOTAL, isPast, weekdayDate } from '@/components/v2/homew
 import { BackIcon, FullscreenIcon, PlayIcon } from '@/components/v2/homework/icons';
 import { Txt, webShadow } from '@/components/v2/homework/ui';
 import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
+import { RichText } from '@/components/RichText';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
+import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent, getLessonMaterials } from '@/services/contentApi';
 import { getLessonProgress, loadLessonProgress, markDone, subscribe } from '@/services/lessonProgressStore';
@@ -156,7 +158,7 @@ export default function BonusPlayerScreen() {
             </Txt>
             {!!content?.konspekt && (
               <Txt f="body" size={14} color="#4A5468" lh={20.3}>
-                {content.konspekt}
+                <RichText inline style={{ fontFamily: fonts.body }} text={content.konspekt} />
               </Txt>
             )}
           </View>

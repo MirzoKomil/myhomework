@@ -1,11 +1,11 @@
 /**
  * v2 Kitob audiosi — QR trek (dizayn: 76 AudioTrack).
  *
- * Trek — dars moduliga biriktirilgan audio fayl (AudioList bilan bir manba).
- * Matn — o'sha moduldagi "Matn" kontenti ("Ism: ruscha gap" + tarjima
- * qatori), darsdagi audio dialog bilan bir xil format. Replikalar vaqti
- * serverda yo'q → joriy replika audio davomiyligini replikalar soniga teng
- * bo'lib taxminlanadi. To'xtatilgan joy qurilmada saqlanadi (AudioList'dagi
+ * Trek — CRM audio dialogi yoki dars moduliga biriktirilgan audio fayl
+ * (AudioList va darsdagi audio dialog bilan bir manba — getAudioTracks).
+ * Matn — trackLines (darsdagi bilan bir xil). Replika vaqtlari (start)
+ * berilgan bo'lsa joriy replika shular bo'yicha, aks holda audio
+ * davomiyligi replikalar soniga teng bo'lib taxminlanadi. To'xtatilgan joy qurilmada saqlanadi (AudioList'dagi
  * "davom etmoqda"), oxirigacha tinglansa — "eshitilgan" (darsdagi bilan umumiy).
  * Rasm — modulga rasm biriktirilgan bo'lsa o'sha, bo'lmasa dizayndagi sahna.
  */
@@ -16,19 +16,12 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { allBookTracks, bare, getTrackPositions, parseDur, saveTrackPosition, type BookTrack } from '@/components/v2/library/data';
-import { DarkPlayer, DialogText, parseDialog, SPEEDS, type DLine } from '@/components/v2/library/player';
+import { DarkPlayer, DialogText, SPEEDS, type DLine } from '@/components/v2/library/player';
 import { ChevronLeftWide, Column, Display, goBack, PauseTall, PlaySmall, QrIcon, T } from '@/components/v2/library/shared';
-import { markListened, useListened } from '@/components/v2/lessons/data';
+import { lineAt, lineStarts, markListened, trackLines, useListened } from '@/components/v2/lessons/data';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fetchMobileContent, type MobileContent } from '@/services/contentApi';
-
-function trackLines(mc: MobileContent, trackId: string): DLine[] {
-  const content = mc.moduleContents.find((c) => c.id === trackId);
-  if (!content) return [];
-  const text = mc.moduleContents.find((c) => c.moduleId === content.moduleId && c.type === 'text' && c.text)?.text;
-  return text ? parseDialog(text) : [];
-}
 
 export default function AudioTrackScreen() {
   const insets = useSafeAreaInsets();
@@ -55,7 +48,7 @@ export default function AudioTrackScreen() {
   const all = useMemo(() => (mc ? allBookTracks(mc) : []), [mc, tick]);
   const track = all.find((t) => t.id === id) ?? null;
   const siblings = track ? all.filter((t) => t.lesson.lesson.id === track.lesson.lesson.id) : [];
-  const lines = useMemo(() => (mc && track ? trackLines(mc, track.id) : []), [mc, track]);
+  const lines = useMemo(() => (mc && track ? trackLines(mc, track) : []), [mc, track]);
 
   if (!track) {
     return (
@@ -92,8 +85,9 @@ function TrackView({ track, siblings, lines }: { track: BookTrack; siblings: Boo
   const frac = d > 0 ? Math.min(1, t / d) : 0;
   const n = lines.length;
   // Hali boshlanmagan bo'lsa replika belgilanmaydi.
-  const curLine = n && d > 0 && (t > 0 || status.playing) ? Math.min(n - 1, Math.floor(frac * n)) : -1;
-  const lineStart = (k: number) => (d > 0 && n ? (k * d) / n : 0);
+  const starts = useMemo(() => lineStarts(lines, d), [lines, d]);
+  const curLine = n && d > 0 && (t > 0 || status.playing) ? lineAt(starts, t) : -1;
+  const lineStart = (k: number) => (d > 0 && n ? (starts[Math.max(0, Math.min(n - 1, k))] ?? 0) : 0);
   last.current = { t, d };
 
   // Avval to'xtatilgan joydan davom ettiramiz (AudioList'dagi "davom etmoqda").

@@ -24,6 +24,7 @@ import { fullDay, loadCourseData, pad, scheduleDates, splitTitle, type CourseDat
 import { ArrowRight, BoltIcon, Check, ChevronRight, CircleCheckIcon, CoinIcon, FlameIcon, VideoBoxIcon } from '@/components/v2/lessons/icons';
 import { TIERS } from '@/components/v2/rewards/parts';
 import { BottomBar, Column, HeaderButton } from '@/components/v2/lessons/parts';
+import { stripRichText } from '@/components/RichText';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -68,7 +69,8 @@ export default function CompleteScreen() {
   const dates = schedule.startsAt && data && next ? scheduleDates(schedule.startsAt, schedule.pattern, data.activeIndex, next.index) : {};
   const nextDate = next ? dates[next.index] : undefined;
   const { title, phrase } = splitTitle(lesson?.name ?? '');
-  const konspekt = data?.mc.lessonContents[id]?.konspekt?.trim();
+  // Bir qatorli kichik sarlavha — belgilash ko'rsatilmaydi, faqat toza matn.
+  const konspekt = stripRichText(data?.mc.lessonContents[id]?.konspekt)?.trim();
   // Dars natijasi (dizayn: "… — endi buyurtma bera olasiz") — CRM konspekti ("Darsdan keyin" matni);
   // sarlavha bilan boshlansa takrorlanmasin deb sarlavha qismi olib tashlanadi.
   const outcome = konspekt && title && konspekt.toLowerCase().startsWith(title.toLowerCase()) ? konspekt.slice(title.length).trim() : konspekt;

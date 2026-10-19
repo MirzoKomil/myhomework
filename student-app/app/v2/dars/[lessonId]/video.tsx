@@ -17,6 +17,7 @@ import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { loadGrammarRows } from '@/components/v2/library/grammar';
 import { Check, PlayIcon } from '@/components/v2/lessons/icons';
 import { BottomBar, Center, Column, TitleHeader } from '@/components/v2/lessons/parts';
+import { RichText } from '@/components/RichText';
 import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -163,13 +164,13 @@ export default function VideoScreen() {
             {phrases.length > 0 ? (
               phrases.map((p) => (
                 <View key={p.id} style={styles.kRow}>
-                  <Text style={styles.kRu}>{p.sentence}</Text>
-                  <Text style={styles.kUz}>{p.translation}</Text>
+                  <RichText style={styles.kRu} text={p.sentence} />
+                  <RichText style={styles.kUz} text={p.translation} />
                 </View>
               ))
             ) : (
               <View style={styles.kRow}>
-                <Text style={styles.kUz}>{content.konspekt}</Text>
+                <RichText style={styles.kUz} text={content.konspekt} />
               </View>
             )}
           </View>
