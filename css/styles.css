@@ -8623,3 +8623,8 @@ body.modal-open {
 @media (max-width:900px){.mot-home{grid-template-columns:1fr}}
 @media (max-width:520px){.mot-goal{flex-direction:column;align-items:flex-start}}
 .mot-obed .mot-chip{align-self:flex-start}
+.rop-escs{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:8px}
+.rop-esc{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px;border-radius:12px;background:var(--warning-bg);border:1px solid var(--border)}
+.rop-esc--late{background:var(--danger-bg)}
+.rop-esc button{flex-shrink:0}
+@media (max-width:520px){.rop-esc{flex-direction:column;align-items:flex-start}}
