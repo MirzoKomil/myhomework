@@ -56,6 +56,7 @@ let _debtorsTeacherFilter = 'all';
 let _debtorsTariffFilter = 'all';
 let _debtorsDateFrom = '';
 let _debtorsDateTo = '';
+let _debtorsQuick = 'all'; // 'all' | 'overdue' | 'month'
 let _profileSection = 'edit';
 let _profileUser = null;
 let _profileEditing = {};
@@ -9574,29 +9575,32 @@ function renderStudents() {
         const initials = (s.name || '—').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
         const genderLabel = s.gender === 'erkak' ? 'Erkak' : s.gender === 'ayol' ? 'Ayol' : '—';
 
+        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+        const dueOk = due && !Number.isNaN(due.getTime());
+        const dueLate = dueOk && totalDebt > 0 && due < new Date(new Date().toDateString());
+        const payCell = `${statusHtml}${totalDebt > 0 ? `<div class="stx-sub">qoldiq ${escapeHtml(formatMoney(totalDebt))}</div>` : ''}${dueOk && totalDebt > 0 ? `<div class="stx-sub${dueLate ? ' stx-late' : ''}">${dueLate ? 'muddati oʻtdi · ' : 'keyingi · '}${escapeHtml(formatDateShort(s.paymentDueDate))}</div>` : ''}`;
+        const metaBits = [ageStr && ageStr !== '—' ? `${escapeHtml(ageStr)} yosh` : '', genderLabel !== '—' ? genderLabel : '', s.region ? escapeHtml(s.region) : ''].filter(Boolean).join(' · ');
+
         return `<tr data-student-row="${escapeHtml(s.id)}">
-            <td><input type="checkbox" class="student-check-input student-check" data-id="${escapeHtml(s.id)}"></td>
-            <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
+            <td><input type="checkbox" class="student-check-input student-check" data-id="${escapeHtml(s.id)}" aria-label="${escapeHtml(s.name || '')} — belgilash"></td>
             <td>
-                <div style="display:flex;align-items:center;gap:8px;min-width:120px">
+                <div class="stx-who">
                     <div class="student-avatar-mini">${escapeHtml(initials)}</div>
-                    <span style="font-weight:500${s.isStaffDemo ? ';color:var(--text-muted)' : ''}">${escapeHtml(s.name || '—')}</span>
-                    ${s.isStaffDemo ? `<span class="badge" style="background:#EDE9FE;color:#7C3AED;font-size:10px;font-weight:600" title="Xodim uchun avtomatik yaratilgan demo hisob">DEMO</span>` : ''}
+                    <div class="stx-who-txt">
+                        <span class="stx-name${s.isStaffDemo ? ' is-demo' : ''}">${escapeHtml(s.name || '—')}${s.isStaffDemo ? ` <span class="badge" style="background:#EDE9FE;color:#7C3AED;font-size:10px;font-weight:600" title="Xodim uchun avtomatik yaratilgan demo hisob">DEMO</span>` : ''}</span>
+                        <span class="stx-sub">#${escapeHtml(s.serialCode || String(s.id).slice(-6))} · ${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</span>
+                        ${metaBits ? `<span class="stx-sub">${metaBits}</span>` : ''}
+                    </div>
                 </div>
             </td>
-            <td><span class="student-id-badge">#${escapeHtml(s.serialCode || String(s.id).slice(-6))}</span></td>
-            <td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td>
-            <td>${escapeHtml(ageStr)}</td>
-            <td>${escapeHtml(genderLabel)}</td>
-            <td>${escapeHtml(s.region || '—')}</td>
-            <td>${startDate ? formatDateShort(startDate) : '—'}</td>
-            <td style="white-space:nowrap">${escapeHtml(teacher?.name || '—')}</td>
-            <td style="white-space:nowrap">${escapeHtml(asst?.name || '—')}</td>
+            <td>
+                <div class="stx-main">${escapeHtml(s.group || '—')}</div>
+                <div class="stx-sub stx-wrap">${escapeHtml(teacher?.name || 'ustoz yoʻq')}</div>${asst ? `<div class="stx-sub stx-wrap">yord. ${escapeHtml(asst.name)}</div>` : ''}
+            </td>
             <td style="white-space:nowrap">${escapeHtml(manager?.name || '—')}</td>
-            <td>${escapeHtml(endDate)}</td>
-            <td style="text-align:center">${attended || '—'}</td>
-            <td style="text-align:center">${s.grade ? escapeHtml(String(s.grade)) : '—'}</td>
-            <td>${statusHtml}</td>
+            <td style="white-space:nowrap"><div class="stx-main">${startDate ? formatDateShort(startDate) : '—'}</div><div class="stx-sub">tugash ${escapeHtml(endDate)}</div>${s.lessonTime ? `<div class="stx-sub">${escapeHtml(s.lessonTime)}${s.lessonDuration ? ` · ${escapeHtml(String(s.lessonDuration))} daq` : ''}</div>` : ''}</td>
+            <td style="text-align:center"><div class="stx-main">${attended || '—'}</div><div class="stx-sub">baho ${s.grade ? escapeHtml(String(s.grade)) : '—'}</div></td>
+            <td>${payCell}</td>
             <td>
                 <div style="position:relative;display:inline-block">
                     <button type="button" class="student-menu-btn" data-smid="${escapeHtml(s.id)}" title="Amallar">
@@ -9605,7 +9609,7 @@ function renderStudents() {
                 </div>
             </td>
         </tr>`;
-    }).join('') || `<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--text-muted)">${
+    }).join('') || `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">${
         isTeacherRole && !ownTeacherForFilter
             ? "Hisobingiz hali biror ustoz yozuviga ulanmagan — bu texnik muammo, iltimos administratorga murojaat qiling."
             : "O'quvchilar yo'q"
@@ -12592,11 +12596,11 @@ function renderCfTxTable() {
         }
         return `
         <tr>
-            <td>${escapeHtml(t.date)}</td>
+            <td style="white-space:nowrap">${escapeHtml(/^\d{4}-\d{2}-\d{2}$/.test(String(t.date || '')) ? formatDateShort(t.date) : (t.date || '—'))}</td>
             <td><span class="cf-type-badge ${t.type}">${t.type === 'kirim' ? 'Kirim' : 'Chiqim'}</span></td>
             <td>${escapeHtml(CASH_FLOW_CATEGORIES[t.category] || t.category)}</td>
             <td>${escapeHtml(t.purpose || '—')}</td>
-            <td class="${t.type === 'kirim' ? 'sp-pos' : 'sp-neg'}" style="font-weight:700">${t.type === 'kirim' ? '+' : '-'}${fmtMoney(t.amount)}</td>
+            <td class="${t.type === 'kirim' ? 'sp-pos' : 'sp-neg'}" style="font-weight:700;white-space:nowrap">${t.type === 'kirim' ? '+' : '-'}${fmtMoney(t.amount)}</td>
             <td>${escapeHtml(t.paymentMethod)}</td>
             <td>${escapeHtml(person)}</td>
             <td>${escapeHtml(t.notes || '—')}</td>
@@ -25961,15 +25965,17 @@ function renderDebtorsTable(containerId) {
         ...getItem(STORAGE_KEYS.teachers, []),
         ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
     ];
-    const managers = getItem(STORAGE_KEYS.salesManagers, [])
-        .filter(m => !_debtorsRopLang || (m.lang || 'english') === _debtorsRopLang);
+    // salesManagers jadvalida til maydoni yo'q — nomlar hammasidan olinadi,
+    // filtr ro'yxatida esa faqat shu qarzdorlarda uchraydigan menejerlar.
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
 
     let debtors = allStudents.filter(s => {
         if (s.isStaffDemo) return false;
         const debt = Number(s.debtAmount || 0);
         if (_debtorsRopLang && (s.subject || 'english') !== _debtorsRopLang) return false;
         if (_debtorsSalesManagerLang && (s.subject || 'english') !== _debtorsSalesManagerLang) return false;
-        return debt > 0 || s.paymentDueDate;
+        // To'liq to'lagan (qoldiq aniq 0) o'quvchi qarzdorlar ro'yxatiga kirmaydi.
+        return debt > 0 || (s.debtAmount == null && s.paymentDueDate);
     });
     if (_isDebtorsSalesManager) {
         debtors = filterStudentsForSalesManager(debtors, _cuDebtors);
@@ -25994,20 +26000,24 @@ function renderDebtorsTable(containerId) {
         return true;
     });
 
-    const totalDebt = filtered.reduce((sum, s) => sum + Number(s.debtAmount || 0), 0);
-    const totalPaid = filtered.reduce((sum, s) => sum + Number(s.paidAmount || 0), 0);
-    const overdueCount = filtered.filter(s => {
-        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
-        return due && due < new Date();
-    }).length;
-
+    const todayStart = new Date(new Date().toDateString());
+    const dueOf = st => { const d = st.paymentDueDate ? new Date(st.paymentDueDate) : null; return d && !Number.isNaN(d.getTime()) ? d : null; };
+    const isOverdueSt = st => { const d = dueOf(st); return !!d && d < todayStart && Number(st.debtAmount || 0) > 0; };
     const today = new Date();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const thisMonthExpected = filtered.filter(s => {
-        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
-        return due && due >= monthStart && due <= monthEnd;
-    }).reduce((sum, s) => sum + Number(s.debtAmount || 0), 0);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+    const inMonth = st => { const d = dueOf(st); return !!d && d >= monthStart && d <= monthEnd; };
+
+    const overdueList = filtered.filter(isOverdueSt);
+    const monthList = filtered.filter(st => inMonth(st) && !isOverdueSt(st));
+    const shown = _debtorsQuick === 'overdue' ? overdueList : _debtorsQuick === 'month' ? monthList : filtered;
+    shown.sort((x, y) => (dueOf(x)?.getTime() ?? Infinity) - (dueOf(y)?.getTime() ?? Infinity));
+
+    const sumDebt = list => list.reduce((sum, st) => sum + Number(st.debtAmount || 0), 0);
+    const totalDebt = sumDebt(filtered);
+    const totalPaid = filtered.reduce((sum, st) => sum + Number(st.paidAmount || 0), 0);
+    const overdueDebt = sumDebt(overdueList);
+    const thisMonthExpected = sumDebt(monthList);
 
     function teacherName(id) {
         const t = allTeachers.find(t => t.id === id);
@@ -26017,13 +26027,13 @@ function renderDebtorsTable(containerId) {
         const m = managers.find(m => m.id === id);
         return m ? m.name : '—';
     }
-
+    const usedMgrIds = new Set(debtors.map(st => st.managerId).filter(Boolean));
     const mgrOptions = `<option value="all">Barcha menejerlar</option>` +
-        managers.map(m => `<option value="${m.id}" ${_debtorsMgrFilter === m.id ? 'selected' : ''}>${m.name}</option>`).join('');
+        managers.filter(m => usedMgrIds.has(m.id) || m.id === _debtorsMgrFilter).map(m => `<option value="${escapeHtml(m.id)}" ${_debtorsMgrFilter === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
 
-    const teacherOptions = `<option value="all">Barcha o'qituvchilar</option>` +
+    const teacherOptions = `<option value="all">Barcha oʻqituvchilar</option>` +
         allTeachers.filter(t => t.type === 'asosiy' || !t.type).map(t =>
-            `<option value="${t.id}" ${_debtorsTeacherFilter === t.id ? 'selected' : ''}>${t.name}</option>`
+            `<option value="${escapeHtml(t.id)}" ${_debtorsTeacherFilter === t.id ? 'selected' : ''}>${escapeHtml(t.name)}</option>`
         ).join('');
 
     const tariffOptions = `<option value="all">Barcha tariflar</option>
@@ -26031,114 +26041,103 @@ function renderDebtorsTable(containerId) {
         <option value="premium" ${_debtorsTariffFilter === 'premium' ? 'selected' : ''}>Premium</option>
         <option value="vip" ${_debtorsTariffFilter === 'vip' ? 'selected' : ''}>VIP</option>`;
 
-    const rows = filtered.map((s, idx) => {
-        const debt = Number(s.debtAmount || 0);
-        const paid = Number(s.paidAmount || 0);
+    const dayMs = 86400000;
+    const rows = shown.map(st => {
+        const debt = Number(st.debtAmount || 0);
+        const paid = Number(st.paidAmount || 0);
         const total = debt + paid;
-        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
-        const isOverdue = due && due < new Date();
-        const dueStr = due ? due.toLocaleDateString('uz-UZ') : '—';
-        const statusBadge = s.frozen
-            ? `<span class="debtor-badge frozen">Muzlatilgan</span>`
-            : isOverdue
-                ? `<span class="debtor-badge overdue">Muddati o'tgan</span>`
-                : `<span class="debtor-badge active">Faol</span>`;
-        const dueCls = isOverdue ? 'overdue' : 'on-time';
-
+        const pct = total > 0 ? Math.round(paid / total * 100) : 0;
+        const due = dueOf(st);
+        const overdue = isOverdueSt(st);
+        const days = due ? Math.round((new Date(due.toDateString()) - todayStart) / dayMs) : null;
+        const dayTxt = days === null ? '' : days < 0 ? `${-days} kun oʻtdi` : days === 0 ? 'bugun' : `${days} kun qoldi`;
+        const badge = st.frozen ? '<span class="debtor-badge frozen">Muzlatilgan</span>'
+            : overdue ? '<span class="debtor-badge overdue">Muddati oʻtgan</span>'
+            : st.debtAmount == null ? '<span class="dbx-wait">Qarz aniqlanmagan</span>'
+            : due ? '<span class="dbx-wait">Kutilmoqda</span>' : '<span class="dbx-wait">Sana kelishilmagan</span>';
+        const initials = (st.name || '—').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+        const phoneHref = String(st.phone || '').replace(/[^\d+]/g, '');
+        const notes = [st.comment, st.note].filter(Boolean).map(x => escapeHtml(x)).join('<br>') || '—';
         return `<tr>
-            <td>${idx + 1}</td>
-            <td>${s.name || '—'}</td>
-            <td>${formatPhoneDisplay(s.phone) || '—'}</td>
-            <td>${mgrName(s.managerId)}</td>
-            <td>${teacherName(s.teacherId)}</td>
-            <td>${s.subject === 'russian' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili'}</td>
-            <td>${s.tariff || 'Standard'}</td>
-            <td>${s.group || '—'}</td>
-            <td>${s.schedulePattern === 'tts' ? 'SSh' : 'DCJ'}</td>
-            <td>${s.startDate || '—'}</td>
-            <td>${s.lessonDuration || 15} daqiqa</td>
-            <td class="paid-amount">${formatMoney(paid)}</td>
-            <td class="debt-amount">${formatMoney(debt)}</td>
-            <td>${formatMoney(total)}</td>
-            <td>${debt > 0 && total > 0 ? Math.round((paid / total) * 100) + '%' : '—'}</td>
-            <td><span class="${dueCls}">${dueStr}</span></td>
-            <td>${statusBadge}</td>
-            <td>${s.lastPaymentDate || '—'}</td>
-            <td>${s.paymentCount || 0}</td>
-            <td>${s.comment || '—'}</td>
-            <td>${s.note || '—'}</td>
-            <td style="text-align:center">
-                <button class="debtors-dot-menu-btn" data-sid="${s.id}" title="Amallar">⋯</button>
+            <td>
+                <div class="stx-who">
+                    <div class="student-avatar-mini">${escapeHtml(initials)}</div>
+                    <div class="stx-who-txt">
+                        <span class="stx-name">${escapeHtml(st.name || '—')}</span>
+                        <span class="stx-sub">#${escapeHtml(st.serialCode || String(st.id).slice(-6))} · ${escapeHtml(formatPhoneDisplay(st.phone) || '—')}</span>
+                        <span class="stx-sub">${st.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'} · ${escapeHtml(st.group || 'guruh yoʻq')} · ${st.schedulePattern === 'tts' ? 'SSh' : 'DCJ'}${st.startDate ? ` · ${escapeHtml(formatDateShort(st.startDate))} dan` : ''}</span>
+                    </div>
+                </div>
+            </td>
+            <td class="dbx-num">
+                <div class="dbx-debt">${escapeHtml(formatMoney(debt))}</div>
+                <div class="${overdue ? 'stx-late' : 'stx-main'}">${due ? escapeHtml(formatDateShort(st.paymentDueDate)) : '—'}</div>
+                ${dayTxt ? `<div class="stx-sub${overdue ? ' stx-late' : ''}">${dayTxt}</div>` : ''}
+                <div style="margin-top:4px">${badge}</div>
+            </td>
+            <td>
+                <div class="stx-main">${escapeHtml(mgrName(st.managerId))}</div>
+                <div class="stx-sub stx-wrap">${escapeHtml(teacherName(st.teacherId))} · ${escapeHtml(String(st.lessonDuration || 15))} daq · ${escapeHtml(st.tariff || 'Standard')}</div>
+            </td>
+            <td class="dbx-num">
+                <div class="stx-main">${escapeHtml(formatMoney(paid))} / ${escapeHtml(formatMoney(total))}</div>
+                <div class="dbx-bar" role="img" aria-label="${pct}% toʻlangan"><span style="width:${pct}%"></span></div>
+                <div class="stx-sub">${pct}% · ${escapeHtml(String(st.paymentCount || 0))} ta toʻlov${st.lastPaymentDate ? ` · oxirgi ${escapeHtml(formatDateShort(st.lastPaymentDate))}` : ''}</div>
+            </td>
+            <td class="dbx-note">${notes}</td>
+            <td class="dbx-acts">
+                ${phoneHref ? `<a class="dbx-call" href="tel:${escapeHtml(phoneHref)}" title="Qoʻngʻiroq qilish" aria-label="${escapeHtml(st.name || '')} — qoʻngʻiroq"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/></svg></a>` : ''}
+                <button class="debtors-dot-menu-btn" data-sid="${escapeHtml(st.id)}" title="Amallar" aria-label="Amallar">⋯</button>
             </td>
         </tr>`;
     }).join('');
 
-    const emptyRow = filtered.length === 0
-        ? `<tr><td colspan="22" style="text-align:center;padding:60px 20px;color:var(--text-muted)">Qarzdor o'quvchilar topilmadi</td></tr>`
+    const emptyRow = shown.length === 0
+        ? `<tr><td colspan="6" style="text-align:center;padding:60px 20px;color:var(--text-muted)">Bu filtr boʻyicha qarzdor oʻquvchilar yoʻq</td></tr>`
         : '';
+    const quick = [['all', 'Barchasi', filtered.length], ['overdue', 'Muddati oʻtgan', overdueList.length], ['month', 'Bu oy', monthList.length]]
+        .map(([k, l, c]) => `<button type="button" class="dbx-seg${_debtorsQuick === k ? ' is-on' : ''}" data-debt-quick="${k}" aria-pressed="${_debtorsQuick === k}">${l} <b>${c}</b></button>`).join('');
 
     container.innerHTML = `<div class="debtors-wrap">
-        <div class="debtors-stats-bar">
-            <div class="debtors-stat-card">
-                <span class="stat-label">Jami qarzdorlar</span>
-                <span class="stat-value">${filtered.length} ta</span>
-            </div>
-            <div class="debtors-stat-card">
-                <span class="stat-label">Jami qarz</span>
-                <span class="stat-value danger">${formatMoney(totalDebt)}</span>
-            </div>
-            <div class="debtors-stat-card">
-                <span class="stat-label">Bu oy kutilgan</span>
-                <span class="stat-value">${formatMoney(thisMonthExpected)}</span>
-            </div>
-            <div class="debtors-stat-card">
-                <span class="stat-label">Muddati o'tgan</span>
-                <span class="stat-value danger">${overdueCount} ta</span>
-            </div>
-            <div class="debtors-stat-card">
-                <span class="stat-label">To'langan (filtrlangan)</span>
-                <span class="stat-value">${formatMoney(totalPaid)}</span>
-            </div>
+        <p class="dbx-info">Roʻyxatda qoldigʻi bor barcha oʻquvchilar. <b>Muddati oʻtgan</b> — sotuv menejeri bilan kelishilgan sana oʻtib, qoldiq toʻlanmagan.${_isDebtorsSalesManager ? ' Siz faqat oʻz oʻquvchilaringizni koʻrasiz.' : ''}</p>
+        <div class="sfx-tiles">
+            <div class="sfx-tile"><small>Muddati oʻtgan qoldiq</small><b class="dbx-red">${escapeHtml(formatMoney(overdueDebt))}</b><span>${overdueList.length} ta oʻquvchi</span></div>
+            <div class="sfx-tile"><small>Bu oy kutilayotgan</small><b>${escapeHtml(formatMoney(thisMonthExpected))}</b><span>${monthList.length} ta oʻquvchining navbatdagi qismi</span></div>
+            <div class="sfx-tile"><small>Jami qoldiq</small><b>${escapeHtml(formatMoney(totalDebt))}</b><span>${filtered.length} ta oʻquvchi boʻlib toʻlamoqda</span></div>
+            <div class="sfx-tile"><small>Shu oʻquvchilardan toʻlangan</small><b>${escapeHtml(formatMoney(totalPaid))}</b><span>jami shartnoma ${escapeHtml(formatMoney(totalPaid + totalDebt))}</span></div>
         </div>
-        <div class="debtors-filters">
-            <input type="date" lang="en-GB" id="${uid('dateFrom')}" value="${_debtorsDateFrom}" title="Dan">
-            <span style="color:var(--text-muted);font-size:13px">—</span>
-            <input type="date" lang="en-GB" id="${uid('dateTo')}" value="${_debtorsDateTo}" title="Gacha">
-            <select id="${uid('mgrFilter')}">${mgrOptions}</select>
-            <select id="${uid('teacherFilter')}">${teacherOptions}</select>
-            <select id="${uid('tariffFilter')}">${tariffOptions}</select>
-        </div>
-        <div class="debtors-table-wrap">
-            <table class="debtors-table">
-                <thead><tr>
-                    <th>#</th>
-                    <th>Ism Familiya</th>
-                    <th>Telefon</th>
-                    <th>Menejer</th>
-                    <th>O'qituvchi</th>
-                    <th>Yo'nalish</th>
-                    <th>Tarif</th>
-                    <th>Guruh</th>
-                    <th>Jadval</th>
-                    <th>Boshlagan sana</th>
-                    <th>Dars davomiyligi</th>
-                    <th>To'langan</th>
-                    <th>Qarz</th>
-                    <th>Jami</th>
-                    <th>To'lov %</th>
-                    <th>To'lov muddati</th>
-                    <th>Holat</th>
-                    <th>Oxirgi to'lov</th>
-                    <th>To'lovlar soni</th>
-                    <th>Izoh</th>
-                    <th>Eslatma</th>
-                    <th>Amal</th>
-                </tr></thead>
-                <tbody>${rows}${emptyRow}</tbody>
-            </table>
+        <div class="dbx-card">
+            <div class="dbx-head">
+                <div class="dbx-segs" role="group" aria-label="Tezkor filtr">${quick}</div>
+                <div class="debtors-filters">
+                    <select id="${uid('mgrFilter')}" aria-label="Menejer"${_isDebtorsSalesManager ? ' hidden' : ''}>${mgrOptions}</select>
+                    <select id="${uid('teacherFilter')}" aria-label="Oʻqituvchi">${teacherOptions}</select>
+                    <select id="${uid('tariffFilter')}" aria-label="Tarif">${tariffOptions}</select>
+                    <label class="dbx-date">Sana <input type="date" lang="en-GB" id="${uid('dateFrom')}" value="${escapeHtml(_debtorsDateFrom)}" title="Dan" aria-label="Sanadan"></label>
+                    <span style="color:var(--text-muted);font-size:13px">—</span>
+                    <input type="date" lang="en-GB" id="${uid('dateTo')}" value="${escapeHtml(_debtorsDateTo)}" title="Gacha" aria-label="Sanagacha">
+                </div>
+            </div>
+            <div class="debtors-table-wrap">
+                <table class="debtors-table dbx-table">
+                    <thead><tr>
+                        <th>Oʻquvchi</th>
+                        <th class="dbx-num">Qoldiq · kelishilgan sana</th>
+                        <th>Menejer · ustoz</th>
+                        <th class="dbx-num">Toʻlangan / shartnoma</th>
+                        <th>Izoh</th>
+                        <th><span class="sr-only">Amallar</span></th>
+                    </tr></thead>
+                    <tbody>${rows}${emptyRow}</tbody>
+                </table>
+            </div>
+            <p class="dbx-foot">⋯ menyusida: Toʻlov qabul qilish, Qarzni tahrirlash, SMS. Oʻquvchini oʻchirish — faqat oʻquvchi kartasidan (arxivga).</p>
         </div>
     </div>`;
 
+    container.querySelectorAll('[data-debt-quick]').forEach(btn => {
+        btn.onclick = () => { _debtorsQuick = btn.dataset.debtQuick; refreshAllDebtorViews(); };
+    });
     document.getElementById(uid('dateFrom'))?.addEventListener('change', e => {
         _debtorsDateFrom = e.target.value;
         refreshAllDebtorViews();
@@ -26181,7 +26180,6 @@ function openDebtorMenu(studentId, triggerBtn) {
         <div class="ctx-item" data-action="sms"  style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💬 SMS yuborish</div>
         <div class="ctx-item" data-action="payment" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💳 To‘lov qabul qilish</div>
         <div class="ctx-item" data-action="edit" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">✏️ Qarz tahrirlash</div>
-        <div class="ctx-item" data-action="delete" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center;color:#e74c3c">🗑 O'chirish</div>
     `;
     document.body.appendChild(menu);
 
@@ -26208,11 +26206,6 @@ function openDebtorMenu(studentId, triggerBtn) {
                 openDebtorEditModal(studentId);
             } else if (action === 'payment') {
                 inflowUI.openPayment(studentId);
-            } else if (action === 'delete') {
-                if (!confirm(`"${s.name}" ni o'chirishni tasdiqlaysizmi?`)) return;
-                const all = getItem(STORAGE_KEYS.students, []).filter(x => x.id !== studentId);
-                setItem(STORAGE_KEYS.students, all);
-                refreshAllDebtorViews();
             }
         };
     });
