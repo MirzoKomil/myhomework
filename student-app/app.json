@@ -2,7 +2,7 @@
   "expo": {
     "name": "Domwork",
     "slug": "myhomework-student",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/domik/icon.png",
     "scheme": "studentapp",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "uz.myhomework.student",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#FFC93C",
         "foregroundImage": "./assets/images/domik/android-icon-foreground.png",

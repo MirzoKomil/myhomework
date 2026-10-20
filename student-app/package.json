@@ -1,6 +1,6 @@
 {
   "name": "student-app",
-  "main": "expo-router/entry",
+  "main": "entry.js",
   "version": "1.0.0",
   "dependencies": {
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
@@ -9,9 +9,8 @@
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~56.0.12",
-    "expo-asset": "~11.1.7",
+    "expo-asset": "~56.0.17",
     "expo-audio": "~56.0.12",
-    "expo-av": "^16.0.8",
     "expo-clipboard": "~56.0.4",
     "expo-constants": "~56.0.18",
     "expo-font": "~56.0.7",
