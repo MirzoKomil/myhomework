@@ -183,11 +183,11 @@ function renderNotifListInto(targetId, list) {
     }
 
     body.innerHTML = list.map(n => `
-        <button type="button" class="notif-item ${n.read ? 'read' : ''}" data-notif-id="${n.id}" data-notif-tab="${n.tab || ''}">
+        <button type="button" class="notif-item ${n.read ? 'read' : ''}" data-notif-id="${notifEsc(n.id)}" data-notif-tab="${notifEsc(n.tab || '')}">
             <div class="notif-icon notif-${n.type}">${notifIcon(n.type)}</div>
             <div class="notif-content">
-                <strong>${n.title}</strong>
-                <p>${n.message}</p>
+                <strong>${notifEsc(n.title)}</strong>
+                <p>${notifEsc(n.message)}</p>
                 <span class="notif-time">${formatNotifTime(n.time)}</span>
             </div>
             ${!n.read ? '<span class="notif-dot"></span>' : ''}
@@ -211,6 +211,11 @@ function renderNotifListInto(targetId, list) {
             }
         });
     });
+}
+
+// Lid ismi tashqi formalardan keladi — HTML sifatida emas, matn sifatida chiqariladi.
+function notifEsc(value) {
+    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function notifIcon(type) {

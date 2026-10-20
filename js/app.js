@@ -713,6 +713,13 @@ function getLeadPollFingerprint(leads) {
     ].join('|'))).sort().join('\n');
 }
 
+let _leadFollowUpSeen = new Set();
+let _leadFollowUpPrimed = false;
+function getDueFollowUpIdsForCurrentUser() {
+    if (typeof getLeadSlaNotificationsForCurrentUser !== 'function') return [];
+    return getLeadSlaNotificationsForCurrentUser().filter(a => a.kind === 'follow-up').map(a => a.id);
+}
+
 function startLeadsPolling() {
     if (!['admin', 'rop', 'boshliq', 'sales_manager', 'targetolog'].includes(getCurrentUser()?.role)) return;
     if (_leadsPollTimer) return;
@@ -730,7 +737,14 @@ function startLeadsPolling() {
             setItem(STORAGE_KEYS.leads, leads);
             syncLeadServerVersions(leads);
             const newCount = leads.english.length + leads.russian.length;
-            if (changed) {
+            const dueFollowUps = getDueFollowUpIdsForCurrentUser();
+            const newlyDue = dueFollowUps.filter(id => !_leadFollowUpSeen.has(id));
+            _leadFollowUpSeen = new Set(dueFollowUps);
+            if (newlyDue.length && _leadFollowUpPrimed && typeof showMiniToast === 'function') {
+                showMiniToast(newlyDue.length > 1 ? `${newlyDue.length} ta lid bilan bog'lanish vaqti keldi` : "Lid bilan bog'lanish vaqti keldi");
+            }
+            _leadFollowUpPrimed = true;
+            if (changed || newlyDue.length) {
                 if (typeof syncNotifications === 'function') syncNotifications();
                 if (document.getElementById('tab-sales')?.classList.contains('active')) renderSales();
                 if (document.getElementById('tab-dashboard')?.classList.contains('active')) renderDashboard();
@@ -19127,19 +19141,47 @@ function getLeadSlaManagerAlerts(lead) {
     });
 }
 
+// "Bog'lanish eslatmasi": menejer izohlarda belgilagan vaqt kelganda
+// bildirishnoma bo'ladi. Eslatmadan keyin lidga yangi izoh yozilgan bo'lsa
+// (ya'ni bog'lanilgan) yoki lid yopilgan bosqichda bo'lsa, eslatma chiqmaydi.
+const LEAD_FOLLOWUP_CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
+function getLeadFollowUpAlerts(lead, now = Date.now()) {
+    if (LEAD_FOLLOWUP_CLOSED.has(normalizeLeadStatus(lead.status))) return [];
+    const comments = Array.isArray(lead.comments) ? lead.comments : [];
+    return comments.filter(c => c && c.type === 'follow-up-reminder').flatMap(c => {
+        const at = parseLeadSlaTime(c.reminderAt);
+        if (!at || at > now) return [];
+        // Keyin yozilgan har qanday izoh (yangi eslatma ham) — bog'lanildi/qayta rejalashtirildi.
+        const handled = comments.some(o => o !== c && parseLeadSlaTime(o.createdAt) > at);
+        if (handled) return [];
+        return [{
+            id: `lead-followup-${lead.id}-${c.id}`,
+            audience: 'manager', type: 'warning', kind: 'follow-up',
+            author: c.author || '',
+            title: "Bog'lanish vaqti keldi",
+            message: `${lead.name || 'Mijoz'} bilan ${formatCommentTime(new Date(at).toISOString())} da bog'lanishni belgilagansiz. Qo'ng'iroq qiling va natijani izohga yozing.`,
+            time: at
+        }];
+    });
+}
+
 function getLeadSlaAlerts(lead, lang, user = getCurrentUser()) {
     if (isLeadRecoveryPending(lead)) return [];
     const status = normalizeLeadStatus(lead.status);
     const rule = LEAD_SLA_RULES[status];
-    if (!rule || !user) return [];
+    if (!user) return [];
+    const managerId = user.linkedManagerId || (typeof getDashboardManagerId === 'function' ? getDashboardManagerId(user) : '');
+    const isAssignedManager = user.role === 'sales_manager' && !!managerId && lead.managerId === managerId;
+    // Eslatma lidning menejeriga, menejer yo'q bo'lsa — uni qo'ygan xodimga.
+    const followUps = getLeadFollowUpAlerts(lead).filter(a => isAssignedManager
+        || (!lead.managerId && a.author && a.author === user.name));
+    if (!rule) return followUps;
     const now = Date.now();
     const baseTime = getLeadSlaBaseTime(lead, rule);
     const interpolate = text => text.replace('{name}', lead.name || 'Mijoz').replace('{manager}', getLeadSlaManagerName(lead));
-    const managerId = user.linkedManagerId || (typeof getDashboardManagerId === 'function' ? getDashboardManagerId(user) : '');
-    const isAssignedManager = user.role === 'sales_manager' && !!managerId && lead.managerId === managerId;
     const isLanguageRop = user.role === 'rop' && (user.linkedRopLang || 'english') === lang;
     const isMainAdmin = user.role === 'admin';
-    const alerts = [];
+    const alerts = [...followUps];
     if (isAssignedManager) alerts.push(...getLeadSlaManagerAlerts(lead));
     if (rule.rop) {
         const ropDueAt = baseTime + rule.rop.after * LEAD_SLA_MINUTE;
@@ -19161,7 +19203,7 @@ function getLeadSlaNotificationsForCurrentUser() {
 function getLeadSlaCardAlerts(lead, lang, user = getCurrentUser()) {
     const ownAlerts = getLeadSlaAlerts(lead, lang, user);
     if (user?.role !== 'admin') return ownAlerts;
-    const managerAlerts = getLeadSlaManagerAlerts(lead);
+    const managerAlerts = [...getLeadFollowUpAlerts(lead), ...getLeadSlaManagerAlerts(lead)];
     const managerIds = new Set(managerAlerts.map(alert => alert.id));
     return [...managerAlerts, ...ownAlerts.filter(alert => !managerIds.has(alert.id))];
 }
@@ -20119,7 +20161,7 @@ function openLeadFollowUpReminderModal(lang, leadId, leadName, author) {
         `<div class="form-group" style="margin-bottom:0">
             <label>Bog'lanish kuni va aniq vaqti</label>
             <input type="datetime-local" id="leadFollowUpAt" class="form-control" required>
-            <p class="text-muted" style="font-size:12px;margin:8px 0 0">Eslatma izohlar tarixida qizil rangda saqlanadi.</p>
+            <p class="text-muted" style="font-size:12px;margin:8px 0 0">Eslatma izohlar tarixida saqlanadi. Belgilangan vaqtda lid menejeriga bildirishnoma keladi; undan keyin izoh yozilsa, eslatma yopiladi.</p>
          </div>`,
         `<button type="button" class="btn-ghost" id="cancelLeadFollowUp">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="saveLeadFollowUp">Eslatmani saqlash</button>`
