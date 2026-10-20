@@ -24635,6 +24635,108 @@ function renderRating() {
     if (_ratingSection === 'bonus-history') renderBonusHistorySection();
 }
 
+// Reyting: motivatsiya bloki (banner + sovgʻalar rasmlari bilan).
+// Faqat koʻrinish: hisob-kitob mavjud getManagerSalesForPeriod() va
+// admin tahrirlaydigan bonus maʼlumotlari (getMergedBonus) asosida.
+const PRIZE_IMAGES = {
+    obed: 'prize-obed.png', obed30: 'prize-obed.png', obed60: 'prize-obed.png',
+    kitob: 'prize-book.png', kino: 'prize-cinema.png', restoran: 'prize-restaurant.png',
+    iphone: 'prize-phone.png', macbook: 'prize-laptop.png', pul2000: 'prize-cash.png', umra: 'prize-umra.png',
+};
+function _prizeImg(id, size) {
+    const file = PRIZE_IMAGES[id];
+    return file ? `<img class="mot-prize-img" src="images/prizes/${file}" alt="" width="${size}" height="${size}" loading="lazy">` : '';
+}
+function _monthDaysLeft() {
+    const now = new Date();
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return Math.max(1, last - now.getDate() + 1);
+}
+function _firstName(name) { return String(name || '').trim().split(/\s+/)[0] || ''; }
+
+function renderRatingMotivation(ranked, period) {
+    if (!ranked.length) return '';
+    const leader = ranked[0];
+    const second = ranked[1];
+    const teamSales = ranked.reduce((s, m) => s + m.sales, 0);
+    const teamTarget = ranked.reduce((s, m) => s + (m.target || 0), 0);
+    const teamPct = teamTarget > 0 ? Math.min(100, Math.round(teamSales / teamTarget * 100)) : 0;
+    const daysLeft = _monthDaysLeft();
+    const byThreshold = list => list.map(getMergedBonus).filter(b => Number(b.threshold) > 0).sort((a, b) => a.threshold - b.threshold);
+
+    let eyebrow = '', title = '', sub = '';
+    if (period === 'oylik') {
+        const next = byThreshold(MONTHLY_BONUSES).find(b => leader.sales < b.threshold);
+        eyebrow = `Oy poygasi · ${daysLeft} kun qoldi`;
+        if (next) {
+            const gap = next.threshold - leader.sales;
+            title = `${escapeHtml(_firstName(leader.name))} ${escapeHtml(next.label)} sovgʻasiga ${fmtMoney(gap)} qoldi`;
+            sub = `Kuniga ${fmtMoney(Math.ceil(gap / daysLeft))} sotsa — sovgʻa uniki.`;
+        } else {
+            title = `${escapeHtml(_firstName(leader.name))} barcha oylik sovgʻalarni oldi!`;
+        }
+    } else if (period === 'kunlik') {
+        const tiers = byThreshold(DAILY_BONUSES);
+        const got = ranked.filter(m => tiers.length && m.sales >= tiers[0].threshold).length;
+        eyebrow = 'Bugungi obed';
+        title = got ? `Bugun ${got} ta menejer obed oldi` : 'Bugun hali hech kim obed olmadi';
+        sub = tiers.length ? `Obed uchun ${fmtMoney(tiers[0].threshold)} sotish kifoya.` : '';
+    } else {
+        eyebrow = 'Hafta poygasi';
+        title = `Hafta lideri — ${escapeHtml(_firstName(leader.name))}`;
+        sub = 'Hafta yakunida 1–3-oʻrinlar sovgʻa oladi.';
+    }
+    if (second) sub += ` ${escapeHtml(_firstName(second.name))} 2-oʻrinda, farq ${fmtMoney(Math.max(0, leader.sales - second.sales))}.`;
+
+    const hero = `
+    <section class="mot-hero" aria-label="Motivatsiya">
+        <div class="mot-hero-txt">
+            <span class="mot-eyebrow">${eyebrow}</span>
+            <h2 class="mot-title">${title}</h2>
+            ${sub ? `<p class="mot-sub">${sub}</p>` : ''}
+            ${teamTarget > 0 ? `<div class="mot-team"><span>Jamoa rejasi <strong>${teamPct}%</strong></span>
+                <span class="mot-bar" role="progressbar" aria-label="Jamoa rejasi" aria-valuenow="${teamPct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${teamPct}%"></span></span>
+                <span>${fmtMoney(teamSales)} / ${fmtMoney(teamTarget)}</span></div>` : ''}
+        </div>
+    </section>`;
+
+    let cards = '';
+    if (period === 'haftalik') {
+        cards = WEEKLY_BONUSES.map(getMergedBonus).map(b => {
+            const holder = ranked[(b.rank || 1) - 1];
+            return `<li class="mot-prize">${_prizeImg(b.id, 96)}
+                <span class="mot-prize-th">${b.rank}-oʻrin</span>
+                <strong class="mot-prize-name">${escapeHtml(b.label || '')}</strong>
+                <span class="mot-prize-note">${holder ? `Hozir: <strong>${escapeHtml(_firstName(holder.name))}</strong> · ${fmtMoney(holder.sales)}` : 'Hali hech kim'}</span>
+            </li>`;
+        }).join('');
+    } else {
+        const list = byThreshold(period === 'kunlik' ? DAILY_BONUSES : MONTHLY_BONUSES);
+        cards = list.map((b, idx) => {
+            const best = ranked[0];
+            const pct = Math.min(100, Math.round(best.sales / b.threshold * 100));
+            const reachedBy = ranked.filter(m => m.sales >= b.threshold);
+            const chips = ranked.map(m => `<span class="mot-chip${m.sales >= b.threshold ? ' mot-chip--ok' : ''}">${escapeHtml(_firstName(m.name))} <strong>${Math.min(100, Math.round(m.sales / b.threshold * 100))}%</strong></span>`).join('');
+            const note = reachedBy.length
+                ? `✅ Oldi: ${reachedBy.map(m => escapeHtml(_firstName(m.name))).join(', ')}`
+                : `${escapeHtml(_firstName(best.name))}ga yana ${fmtMoney(b.threshold - best.sales)}${period === 'oylik' ? ` · kuniga ${fmtMoney(Math.ceil((b.threshold - best.sales) / daysLeft))}` : ''}`;
+            return `<li class="mot-prize${idx === 0 && !reachedBy.length ? ' mot-prize--hot' : ''}">${_prizeImg(b.id, 96)}
+                <span class="mot-prize-th">${fmtMoney(b.threshold)}</span>
+                <strong class="mot-prize-name">${escapeHtml(b.label || '')}</strong>
+                <span class="mot-bar mot-bar--light" role="progressbar" aria-label="${escapeHtml(b.label || '')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></span>
+                <span class="mot-chips">${chips}</span>
+                <span class="mot-prize-note">${note}</span>
+            </li>`;
+        }).join('');
+    }
+    const heading = period === 'kunlik' ? 'Kunlik obed bosqichlari' : period === 'haftalik' ? 'Hafta sovgʻalari' : 'Oylik sovgʻalar';
+    return `${hero}
+    <section class="mot-prizes-wrap" aria-label="${heading}">
+        <h3 class="mot-h">${heading}</h3>
+        <ol class="mot-prizes">${cards}</ol>
+    </section>`;
+}
+
 function renderLeaderboardSection() {
     const el = document.getElementById('ratingLeaderboard');
     if (!el) return;
@@ -24809,6 +24911,7 @@ function renderLeaderboardSection() {
     }
 
     el.innerHTML = `
+    ${_ratingView === 'normal' ? renderRatingMotivation(ranked, _ratingPeriod) : ''}
     ${viewToggleHTML}
     ${_ratingView === 'normal' ? podiumHTML : ''}
     ${mainContent}`;
