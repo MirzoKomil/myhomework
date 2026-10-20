@@ -21536,8 +21536,11 @@ function normalizeLeadPhoneInput(value) {
     if (!raw) return '';
     const digits = raw.replace(/\D/g, '');
     if (digits.length === 9) return '+998' + digits;
+    if (digits.length === 10 && digits.startsWith('0')) return '+998' + digits.slice(1);
     if (digits.length === 12 && digits.startsWith('998')) return '+' + digits;
-    if (raw.startsWith('+') && !digits.startsWith('998') && digits.length >= 10 && digits.length <= 15) return '+' + digits;
+    if (digits.startsWith('998')) return null; // O'zbekiston kodi bor, lekin raqam to'liq emas
+    if (digits.length === 11 && digits.startsWith('8') && !raw.startsWith('+')) return '+7' + digits.slice(1);
+    if (digits.length >= 10 && digits.length <= 15) return '+' + digits;
     return null;
 }
 
@@ -21564,7 +21567,8 @@ function findLeadPhoneDuplicates(phone) {
 function getLeadModalManagers(lang) {
     const byLang = getSalesManagers(lang);
     const known = getItem(STORAGE_KEYS.salesManagers, []);
-    if (!byLang.length) return known;
+    // HR ro'yxatida umuman sotuv menejeri bo'lmasa — eski ro'yxat; bor bo'lsa faqat shu til.
+    if (!byLang.length) return getSalesManagers().length ? [] : known;
     const knownIds = new Set(known.map(m => m.id));
     // HR ro'yxatidagi til bo'yicha menejerlar; sotuv jadvalida bor bo'lganlari afzal.
     const list = byLang.filter(m => !known.length || knownIds.has(m.id));
@@ -21581,9 +21585,9 @@ function openAddLeadModal() {
     const radio = (name, value, label, checked) => `<label class="alx-opt"><input type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}><span>${label}</span></label>`;
 
     openModal("Yangi lid qoʻshish",
-        `<p class="alx-sub">Lid "Yangi lidlar" bosqichiga tushadi. <span aria-hidden="true">*</span> — majburiy maydon.</p>
+        `<p class="alx-sub">Lid "Yangi lidlar" bosqichiga tushadi. <span aria-hidden="true">*</span> — majburiy maydon. Telefon boʻlmasa keyin qoʻshish mumkin.</p>
          <div class="form-group"><label for="mLeadName">Ism-familiya <b class="alx-req">*</b></label><input id="mLeadName" class="form-control" autocomplete="off" placeholder="Masalan: Ali Valiyev"><p class="alx-err" id="mLeadNameErr" hidden></p></div>
-         <div class="form-group"><label for="mLeadPhone">Telefon <b class="alx-req">*</b></label><input id="mLeadPhone" class="form-control" inputmode="tel" autocomplete="off" placeholder="+998 90 123 45 67"><p class="alx-err" id="mLeadPhoneErr" hidden></p></div>
+         <div class="form-group"><label for="mLeadPhone">Telefon</label><input id="mLeadPhone" class="form-control" inputmode="tel" autocomplete="off" placeholder="+998 90 123 45 67"><p class="alx-err" id="mLeadPhoneErr" hidden></p></div>
          <div class="form-group"><label for="mLeadPhone2">2-telefon <span class="alx-opt-l">(ixtiyoriy)</span></label><input id="mLeadPhone2" class="form-control" inputmode="tel" autocomplete="off" placeholder="+998 91 234 56 78"><p class="alx-err" id="mLeadPhone2Err" hidden></p></div>
          <div class="alx-dup" id="mLeadDup" hidden></div>
          <div class="form-group" ${_isSmModal ? 'style="display:none"' : ''}><label for="mLeadManagerId">Sotuv menejeri</label>
@@ -21620,20 +21624,20 @@ function openAddLeadModal() {
         const lang = document.querySelector('input[name="mLeadLang"]:checked')?.value || defaultLang;
         const leadType = document.querySelector('input[name="mLeadType"]:checked')?.value || '';
         setErr('mLeadName', name ? '' : 'Ism-familiyani kiriting');
-        setErr('mLeadPhone', phone ? '' : (document.getElementById('mLeadPhone').value.trim() ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : 'Telefon raqamini kiriting'));
+        setErr('mLeadPhone', phone === null ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : '');
         setErr('mLeadPhone2', phone2 === null ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : '');
         const typeErr = document.getElementById('mLeadTypeErr');
         if (typeErr) { typeErr.hidden = !!leadType; typeErr.textContent = leadType ? '' : 'Lid qayerdan kelganini tanlang'; }
-        if (!name || !phone || phone2 === null || !leadType) {
+        if (!name || phone === null || phone2 === null || !leadType) {
             (document.querySelector('#modalBody .is-invalid') || document.querySelector('input[name="mLeadType"]'))?.focus();
             return;
         }
-        const dups = findLeadPhoneDuplicates(phone);
-        if (dups.length && dupAcknowledged !== phone) {
+        const dups = [...findLeadPhoneDuplicates(phone), ...findLeadPhoneDuplicates(phone2)];
+        if (dups.length && dupAcknowledged !== `${phone}|${phone2}`) {
             const box = document.getElementById('mLeadDup');
             box.innerHTML = `<strong>Bu raqam bazada bor:</strong><ul>${dups.slice(0, 4).map(d => `<li>${escapeHtml(d.kind)} · ${escapeHtml(d.name || '')}${d.extra ? ` <span>(${escapeHtml(d.extra)})</span>` : ''}</li>`).join('')}</ul><span>Takroriy lid ochmaslik uchun avval mavjudini tekshiring. Baribir saqlash uchun tugmani yana bosing.</span>`;
             box.hidden = false;
-            dupAcknowledged = phone;
+            dupAcknowledged = `${phone}|${phone2}`;
             document.getElementById('saveLead').textContent = 'Baribir saqlash';
             return;
         }
@@ -21646,7 +21650,7 @@ function openAddLeadModal() {
         const newLead = {
             id: 'l' + Date.now(),
             name,
-            phone,
+            phone: phone || '',
             phone2: phone2 || '',
             managerId: _newLeadManagerId,
             source: sourceLabel,
@@ -23715,7 +23719,8 @@ function renderScripts() {
         ${reader}`;
 
     const search = document.getElementById('scriptSearch');
-    if (search) search.oninput = () => {
+    if (search) search.oninput = e => {
+        if (e && e.isComposing) return;
         _scriptQuery = search.value;
         const pos = search.selectionStart;
         renderScripts();
@@ -23751,6 +23756,8 @@ function openScriptArticle(id) {
         editBtn.style.cssText = 'background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px)';
         editBtn.onclick = () => openEditScriptModal(id);
     }
+    const delBtn = document.getElementById('scriptDeleteBtn');
+    if (delBtn) delBtn.onclick = () => deleteScript(id);
 
     body.innerHTML = `<div class="script-article-content">${renderScriptContentHtml(s.content)}</div>`;
 
@@ -23946,7 +23953,7 @@ function saveScriptFromModal(editId) {
     } else {
         const newId = 'sc_' + Date.now();
         scripts.unshift({ id: newId, title, subtitle, color, sticker, lang, content, createdAt: new Date().toISOString() });
-        _currentScriptId = newId;
+        if (isScriptsTwoPane()) _currentScriptId = newId;
     }
 
     setItem(STORAGE_KEYS.scripts, scripts);

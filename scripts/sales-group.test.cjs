@@ -39,6 +39,9 @@ test('phone input is normalized and validated', () => {
     assert.equal(f.normalizeLeadPhoneInput('998901234567'), '+998901234567');
     assert.equal(f.normalizeLeadPhoneInput('+7 916 123 45 67'), '+79161234567');
     assert.equal(f.normalizeLeadPhoneInput(''), '');
+    assert.equal(f.normalizeLeadPhoneInput('0901234567'), '+998901234567');
+    assert.equal(f.normalizeLeadPhoneInput('8 916 123 45 67'), '+79161234567');
+    assert.equal(f.normalizeLeadPhoneInput('79161234567'), '+79161234567');
     assert.equal(f.normalizeLeadPhoneInput('90 123 45'), null);
     assert.equal(f.normalizeLeadPhoneInput('+998 90 123 45'), null);
 });
