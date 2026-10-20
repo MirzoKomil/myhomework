@@ -8,9 +8,10 @@
  * (shu darsga bog'langan grammatika mavzusi) va vazifa qismlari havolalari.
  * Video davomiyligi serverda yo'q — "—". Klaviatura: Space ijro, F to'liq ekran.
  */
+import { Konspekt } from '@/components/v2/library/Konspekt';
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { RichText } from '@/components/RichText';
 import { YouTubeEmbed } from '@/components/ui/YouTubeEmbed';
@@ -234,18 +235,20 @@ export function DVideo({ id }: { id: string }) {
                 </T>
               )}
             </View>
-            {phrases.length > 0 ? (
-              phrases.map((p, k) => (
-                <View key={p.id} style={[s.kRow, k > 0 && { borderTopWidth: 1, borderTopColor: '#EEF1F7' }]}>
+            {/* Iboralar va kitobdagi to'liq konspekt — uzun bo'lsa karta ichida aylanadi. */}
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+              {phrases.map((p, k) => (
+                <View key={p.id} style={[s.kRow, !!content.konspekt?.trim() && s.kRowAuto, k > 0 && { borderTopWidth: 1, borderTopColor: '#EEF1F7' }]}>
                   <RichText style={s.kRu} text={p.sentence} />
                   <RichText style={s.kUz} text={p.translation} />
                 </View>
-              ))
-            ) : (
-              <View style={s.kRow}>
-                <RichText style={s.kUz} text={content.konspekt} />
-              </View>
-            )}
+              ))}
+              {!!content.konspekt?.trim() && (
+                <View style={[s.kRow, s.kRowAuto, phrases.length > 0 && { borderTopWidth: 1, borderTopColor: '#EEF1F7' }]}>
+                  <Konspekt text={content.konspekt} bare />
+                </View>
+              )}
+            </ScrollView>
           </View>
           {hwParts.length > 0 && (
             <View accessibilityLabel={`${info.number}-dars vazifasi`} style={s.hw}>
@@ -328,6 +331,7 @@ const s = StyleSheet.create({
   aside: { width: 340, flexShrink: 0, gap: 16 },
   konspekt: { flex: 1, minHeight: 0, backgroundColor: '#FFFFFF', borderRadius: 24, paddingTop: 20, paddingHorizontal: 20, paddingBottom: 10, justifyContent: 'space-between' },
   kRow: { flex: 1, justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 4, gap: 3 },
+  kRowAuto: { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   kRu: { fontFamily: fonts.bodyHeavy, fontSize: 18, color: '#0B1220', fontWeight: 'normal' },
   kUz: { fontFamily: fonts.body, fontSize: 15, color: '#4A5468', fontWeight: 'normal' },
   hw: { backgroundColor: '#E3F7EE', borderRadius: 24, padding: 16, justifyContent: 'center', gap: 12 },

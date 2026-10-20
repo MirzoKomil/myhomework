@@ -7,6 +7,7 @@
  * Rasm yoki "To'liq ekran" bosilsa — SlideViewer (?i=<raqam>).
  * "Darsga tayyorlaning" savollari — darsning speakingPractice (gap + tarjima) ro'yxati.
  */
+import { KonspektBlock } from '@/components/v2/lessons/KonspektBlock';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -171,6 +172,8 @@ function SlidesScreenMobile() {
               </View>
             ))}
           </View>
+          {/* Kitobdagi konspekt — slaydlar tagida, yopiq holda (kerak bo'lsa ochiladi). */}
+          {!!content?.konspekt?.trim() && <KonspektBlock text={content.konspekt} />}
         </ScrollView>
         {!!live.link && (
           <BottomBar>
