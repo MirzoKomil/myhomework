@@ -1,0 +1,315 @@
+{
+ "n": 10,
+ "topic_uz": "«Что ты лю́бишь де́лать?» — 1- va 2-tur fe'llar aralash",
+ "scene": "In a living room in the evening, a man Abdulaziz watches the news on TV while his wife Nigora holds a cup of coffee.",
+ "dialogs": [
+  {
+   "id": "L10-d1",
+   "title_ru": "Что ты лю́бишь де́лать?",
+   "title_uz": "Nima qilishni yaxshi ko'rasan?",
+   "intro_uz": "Birinchi dialog. Bobur va Dilnoza bo'sh vaqt haqida gaplashyapti. Ular nimani yaxshi ko'radi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Дильно́за, что ты лю́бишь де́лать?",
+     "uz": "Dilnoza, nima qilishni yaxshi ko'rasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я люблю́ чита́ть и гуля́ть. А ты?",
+     "uz": "Men kitob o'qish va sayr qilishni yaxshi ko'raman. Sen-chi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Я люблю́ спорт. Я люблю́ игра́ть в футбо́л.",
+     "uz": "Men sportni yaxshi ko'raman. Futbol o'ynashni yaxshi ko'raman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А заря́дку ты де́лаешь?",
+     "uz": "Badantarbiya qilasanmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, я ча́сто де́лаю заря́дку.",
+     "uz": "Ha, tez-tez badantarbiya qilaman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Молоде́ц! А я не люблю́ спорт.",
+     "uz": "Barakalla! Men esa sportni yoqtirmayman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А что ты лю́бишь смотре́ть?",
+     "uz": "Nima ko'rishni yaxshi ko'rasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я люблю́ смотре́ть фи́льмы.",
+     "uz": "Film ko'rishni yaxshi ko'raman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza nima qilishni yaxshi ko'radi?",
+     "opts": [
+      "futbol o'ynashni",
+      "kitob o'qish va sayr qilishni",
+      "ovqat pishirishni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur tez-tez nima qiladi?",
+     "opts": [
+      "film ko'radi",
+      "qo'shiq aytadi",
+      "badantarbiya qiladi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnoza nima ko'rishni yaxshi ko'radi?",
+     "opts": [
+      "filmlarni",
+      "futbolni",
+      "yangiliklarni"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "чита́ть и гуля́ть",
+     "alts": [
+      "петь и танцева́ть",
+      "гото́вить",
+      "слу́шать му́зыку"
+     ]
+    },
+    {
+     "base": "игра́ть в футбо́л",
+     "alts": [
+      "игра́ть в те́ннис",
+      "смотре́ть футбо́л",
+      "де́лать заря́дку"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: «Я люблю́…» bilan nima qilishni yaxshi ko'rishingizni ayting."
+  },
+  {
+   "id": "L10-d2",
+   "title_ru": "Ве́чером до́ма",
+   "title_uz": "Kechqurun uyda",
+   "intro_uz": "Ikkinchi dialog. Kechqurun. Abdulaziz televizor ko'ryapti. Nigora unga gapiryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Что ты смо́тришь?",
+     "uz": "Nima ko'ryapsan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я смотрю́ но́вости. Я люблю́ но́вости.",
+     "uz": "Yangiliklarni ko'ryapman. Yangiliklarni yaxshi ko'raman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А я не люблю́ но́вости. Я люблю́ фи́льмы.",
+     "uz": "Men esa yangiliklarni yoqtirmayman. Filmlarni yaxshi ko'raman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А что де́лают де́ти?",
+     "uz": "Bolalar nima qilyapti?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Сардо́р слу́шает пе́сни. Маржона́ пи́шет дикта́нт.",
+     "uz": "Sardor qo'shiq tinglayapti. Marjona diktant yozyapti."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́. Ты пьёшь чай и́ли ко́фе?",
+     "uz": "Yaxshi. Choy ichasanmi yoki qahva?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ко́фе, пожа́луйста. Я люблю́ ко́фе.",
+     "uz": "Qahva, iltimos. Men qahvani yaxshi ko'raman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz nima ko'ryapti?",
+     "opts": [
+      "yangiliklarni",
+      "filmni",
+      "futbolni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Marjona nima qilyapti?",
+     "opts": [
+      "qo'shiq tinglayapti",
+      "uxlayapti",
+      "diktant yozyapti"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora nima ichadi?",
+     "opts": [
+      "choy",
+      "qahva",
+      "sharbat"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "смотрю́ но́вости",
+     "alts": [
+      "смотрю́ футбо́л",
+      "смотрю́ фильм",
+      "чита́ю газе́ту"
+     ]
+    },
+    {
+     "base": "пи́шет дикта́нт",
+     "alts": [
+      "у́чит слова́",
+      "чита́ет кни́гу",
+      "смо́трит фильм"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: nimani yaxshi ko'rishingizni va nimani yoqtirmasligingizni ayting."
+  },
+  {
+   "id": "L10-d3",
+   "title_ru": "Вы лю́бите му́зыку?",
+   "title_uz": "Musiqani yaxshi ko'rasizmi?",
+   "intro_uz": "Uchinchi dialog. Anton va Dilnoza musiqa haqida gaplashyapti. Kim qo'shiq aytadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, вы лю́бите му́зыку?",
+     "uz": "Dilnoza, musiqani yaxshi ko'rasizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, о́чень люблю́. Я ча́сто слу́шаю пе́сни.",
+     "uz": "Ha, juda yaxshi ko'raman. Tez-tez qo'shiq tinglayman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А вы поёте?",
+     "uz": "Qo'shiq aytasizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет, я не пою́. А вы?",
+     "uz": "Yo'q, aytmayman. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я пою́, но пло́хо!",
+     "uz": "Aytaman, lekin yomon!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А что вы лю́бите смотре́ть?",
+     "uz": "Nima ko'rishni yaxshi ko'rasiz?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я люблю́ смотре́ть футбо́л.",
+     "uz": "Futbol ko'rishni yaxshi ko'raman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza tez-tez nima qiladi?",
+     "opts": [
+      "qo'shiq aytadi",
+      "qo'shiq tinglaydi",
+      "raqs tushadi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Anton qanday qo'shiq aytadi?",
+     "opts": [
+      "yomon",
+      "yaxshi",
+      "umuman aytmaydi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton nima ko'rishni yaxshi ko'radi?",
+     "opts": [
+      "filmlarni",
+      "yangiliklarni",
+      "futbolni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "слу́шаю пе́сни",
+     "alts": [
+      "слу́шаю му́зыку",
+      "смотрю́ фи́льмы",
+      "чита́ю кни́ги"
+     ]
+    },
+    {
+     "base": "смотре́ть футбо́л",
+     "alts": [
+      "смотре́ть но́вости",
+      "смотре́ть кино́",
+      "игра́ть в футбо́л"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: qo'shiq aytasizmi va nima ko'rishni yaxshi ko'rasiz — ayting."
+  }
+ ]
+}

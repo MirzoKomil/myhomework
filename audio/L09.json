@@ -1,0 +1,295 @@
+{
+ "n": 9,
+ "topic_uz": "2-tur fe'llar: говори́ть, смотре́ть, ви́деть, люби́ть",
+ "scene": "In a cozy cafe, a young man Bobur drinks coffee and a young woman Dilnoza holds a cup of tea; in the background a man talks on his phone.",
+ "dialogs": [
+  {
+   "id": "L09-d1",
+   "title_ru": "Вы говори́те по-ру́сски?",
+   "title_uz": "Ruscha gapirasizmi?",
+   "intro_uz": "Birinchi dialog. Anton Nigoradan so'rayapti: oilangiz ruscha gapiradimi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, вы говори́те по-ру́сски?",
+     "uz": "Nigora, siz ruscha gapirasizmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, говорю́. Я учу́ ру́сский.",
+     "uz": "Ha, gapiraman. Men rus tilini o'rganyapman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А Абдулази́з говори́т по-ру́сски?",
+     "uz": "Abdulaziz ruscha gapiradimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, он то́же говори́т.",
+     "uz": "Ha, u ham gapiradi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А де́ти?",
+     "uz": "Bolalar-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Де́ти то́же у́чат ру́сский. Они́ ча́сто смо́трят мультфи́льмы.",
+     "uz": "Bolalar ham rus tilini o'rganyapti. Ular tez-tez multfilm ko'rishadi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora nima qilyapti?",
+     "opts": [
+      "rus tilini o'rganyapti",
+      "ingliz tilini o'rganyapti",
+      "ishlamayapti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz ruscha gapiradimi?",
+     "opts": [
+      "yo'q",
+      "bilmaydi",
+      "ha, gapiradi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bolalar tez-tez nima ko'rishadi?",
+     "opts": [
+      "futbol",
+      "multfilm",
+      "yangiliklar"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "по-ру́сски",
+     "alts": [
+      "по-англи́йски",
+      "по-узбе́кски",
+      "по-туре́цки"
+     ]
+    },
+    {
+     "base": "смо́трят мультфи́льмы",
+     "alts": [
+      "смо́трят телеви́зор",
+      "слу́шают му́зыку",
+      "говоря́т по-ру́сски"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: o'zingiz va oilangiz qaysi tilda gapirishini ayting."
+  },
+  {
+   "id": "L09-d2",
+   "title_ru": "В кафе́",
+   "title_uz": "Kafeda",
+   "intro_uz": "Ikkinchi dialog. Bobur va Dilnoza kafeda. Ular nima ichishyapti va kimni ko'rishyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Дильно́за, что ты пьёшь?",
+     "uz": "Dilnoza, nima ichyapsan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я пью чай. Я люблю́ чай.",
+     "uz": "Choy ichyapman. Men choyni yaxshi ko'raman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А я пью ко́фе. Я ча́сто пью ко́фе.",
+     "uz": "Men esa qahva ichyapman. Men tez-tez qahva ichaman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, ты ви́дишь? Там Анто́н!",
+     "uz": "Bobur, ko'ryapsanmi? U yerda Anton!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, ви́жу. Он говори́т по телефо́ну.",
+     "uz": "Ha, ko'ryapman. U telefonda gaplashyapti."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Он ча́сто говори́т по телефо́ну!",
+     "uz": "U tez-tez telefonda gaplashadi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza nima ichyapti?",
+     "opts": [
+      "qahva",
+      "sharbat",
+      "choy"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bobur tez-tez nima ichadi?",
+     "opts": [
+      "qahva",
+      "choy",
+      "suv"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton nima qilyapti?",
+     "opts": [
+      "kitob o'qiyapti",
+      "telefonda gaplashyapti",
+      "choy ichyapti"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "я пью чай",
+     "alts": [
+      "я пью ко́фе",
+      "я пью сок",
+      "я пью во́ду"
+     ]
+    },
+    {
+     "base": "Он говори́т по телефо́ну",
+     "alts": [
+      "Он смо́трит телефо́н",
+      "Он звони́т ма́ме",
+      "Он пи́шет письмо́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: nimani yaxshi ko'rishingizni va kafeda kimni ko'rayotganingizni ayting."
+  },
+  {
+   "id": "L09-d3",
+   "title_ru": "Подру́га из Ташке́нта",
+   "title_uz": "Moskvadagi talaba",
+   "intro_uz": "Uchinchi dialog. Dilnoza Moskvada o'qiydi. Anton undan uyiga tez-tez qo'ng'iroq qiladimi, deb so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, где вы живёте?",
+     "uz": "Dilnoza, qayerda yashaysiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я живу́ в Ташке́нте. Я рабо́таю здесь.",
+     "uz": "Men Toshkentda yashayman. Shu yerda ishlayman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Вы ча́сто звони́те домо́й?",
+     "uz": "Uyingizga tez-tez qo'ng'iroq qilasizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, ча́сто. Мы говори́м по-узбе́кски.",
+     "uz": "Ha, tez-tez. Biz o'zbekcha gaplashamiz."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А по-ру́сски вы говори́те хорошо́!",
+     "uz": "Ruschani esa yaxshi gapirasiz!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо! Я учу́ слова́ и смотрю́ кино́.",
+     "uz": "Rahmat! So'z yodlayman va kino ko'raman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qayerda yashaydi?",
+     "opts": [
+      "Moskvada",
+      "Andijonda",
+      "Toshkentda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza uyiga qanchalik qo'ng'iroq qiladi?",
+     "opts": [
+      "hech qachon",
+      "tez-tez",
+      "kamdan-kam"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza ruschani qanday o'rganadi?",
+     "opts": [
+      "faqat kitob o'qiydi",
+      "radio tinglaydi",
+      "so'z yodlaydi va kino ko'radi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "звони́те домо́й",
+     "alts": [
+      "звони́те ма́ме",
+      "пи́шете домо́й",
+      "звони́те бра́ту"
+     ]
+    },
+    {
+     "base": "смотрю́ кино́",
+     "alts": [
+      "слу́шаю му́зыку",
+      "чита́ю кни́ги",
+      "смотрю́ но́вости"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: qayerda yashashingizni va rus tilini qanday o'rganishingizni ayting."
+  }
+ ]
+}

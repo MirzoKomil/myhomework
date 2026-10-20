@@ -1,0 +1,295 @@
+{
+ "n": 11,
+ "topic_uz": "«Где?» — в / на + -е; kun vaqti: у́тром, днём, ве́чером, но́чью",
+ "scene": "In an apartment hallway, a man Abdulaziz searches his jacket pockets while his wife Nigora points to a phone lying on the table.",
+ "dialogs": [
+  {
+   "id": "L11-d1",
+   "title_ru": "Где мой телефо́н?",
+   "title_uz": "Telefonim qayerda?",
+   "intro_uz": "Birinchi dialog. Abdulaziz narsalarini topolmayapti. Nigora aytadi: qayerda. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, где мой телефо́н?",
+     "uz": "Nigora, telefonim qayerda?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Твой телефо́н на столе́.",
+     "uz": "Telefoning stol ustida."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А где ключи́? В су́мке?",
+     "uz": "Kalitlar-chi? Sumkadami?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, ключи́ в ку́ртке.",
+     "uz": "Yo'q, kalitlar kurtkada."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А моя́ су́мка? Где она́?",
+     "uz": "Sumkam-chi? U qayerda?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Твоя́ су́мка в маши́не.",
+     "uz": "Sumkang mashinada."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Telefon qayerda?",
+     "opts": [
+      "sumkada",
+      "stol ustida",
+      "mashinada"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kalitlar qayerda?",
+     "opts": [
+      "kurtkada",
+      "sumkada",
+      "stol ustida"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Sumka qayerda?",
+     "opts": [
+      "uyda",
+      "ofisda",
+      "mashinada"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "на столе́",
+     "alts": [
+      "на сту́ле",
+      "в ко́мнате",
+      "на окне́"
+     ]
+    },
+    {
+     "base": "в маши́не",
+     "alts": [
+      "в ко́мнате",
+      "в о́фисе",
+      "в шкафу́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: telefon, kalit va sumka qayerda ekanini ayting."
+  },
+  {
+   "id": "L11-d2",
+   "title_ru": "Где вы рабо́таете?",
+   "title_uz": "Qayerda ishlaysiz?",
+   "intro_uz": "Ikkinchi dialog. Anton va Dilnoza tanishishyapti. Ular qayerda ishlaydi, qayerda yashaydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, где вы рабо́таете?",
+     "uz": "Dilnoza, qayerda ishlaysiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я рабо́таю в шко́ле. А вы?",
+     "uz": "Men maktabda ishlayman. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я рабо́таю в о́фисе. А где вы живёте?",
+     "uz": "Men ofisda ishlayman. Qayerda yashaysiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я живу́ в Ташке́нте, а ма́ма — в Андижа́не.",
+     "uz": "Men Toshkentda yashayman, oyim esa — Andijonda."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А где рабо́тает ваш брат?",
+     "uz": "Akangiz qayerda ishlaydi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Он рабо́тает на заво́де.",
+     "uz": "U zavodda ishlaydi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qayerda ishlaydi?",
+     "opts": [
+      "ofisda",
+      "maktabda",
+      "kasalxonada"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnozaning oyisi qayerda yashaydi?",
+     "opts": [
+      "Andijonda",
+      "Toshkentda",
+      "Moskvada"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnozaning akasi qayerda o'qiydi?",
+     "opts": [
+      "maktabda",
+      "universitetda",
+      "kollejda"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в больни́це",
+     "alts": [
+      "в шко́ле",
+      "в магази́не",
+      "в ба́нке"
+     ]
+    },
+    {
+     "base": "в университе́те",
+     "alts": [
+      "в шко́ле",
+      "в колле́дже",
+      "в Москве́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: qayerda ishlashingizni (yoki o'qishingizni) va yashashingizni ayting."
+  },
+  {
+   "id": "L11-d3",
+   "title_ru": "Ты у́тром до́ма?",
+   "title_uz": "Ertalab uydamisan?",
+   "intro_uz": "Uchinchi dialog. Bobur Nigoraga qo'ng'iroq qildi. Nigora ertalab, kunduzi va kechqurun qayerda? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Нигора́, ты у́тром до́ма?",
+     "uz": "Nigora, ertalab uydamisan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, у́тром я на рабо́те.",
+     "uz": "Yo'q, ertalab ishdaman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А днём? Ты в о́фисе?",
+     "uz": "Kunduzi-chi? Ofisdamisan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Днём я в магази́не.",
+     "uz": "Kunduzi do'kondaman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А ве́чером?",
+     "uz": "Kechqurun-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ве́чером я до́ма. А но́чью я сплю!",
+     "uz": "Kechqurun uydaman. Kechasi esa uxlayman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora ertalab qayerda?",
+     "opts": [
+      "ishda",
+      "uyda",
+      "do'konda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora kunduzi qayerda?",
+     "opts": [
+      "ofisda",
+      "parkda",
+      "do'konda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora qachon uyda bo'ladi?",
+     "opts": [
+      "ertalab",
+      "kechqurun",
+      "kunduzi"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "на рабо́те",
+     "alts": [
+      "в университе́те",
+      "на уро́ке",
+      "в шко́ле"
+     ]
+    },
+    {
+     "base": "в магази́не",
+     "alts": [
+      "в па́рке",
+      "в ба́нке",
+      "на у́лице"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: ertalab, kunduzi va kechqurun qayerda bo'lishingizni ayting."
+  }
+ ]
+}

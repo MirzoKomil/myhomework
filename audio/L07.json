@@ -1,0 +1,295 @@
+{
+ "n": 7,
+ "topic_uz": "Rod va egalik olmoshlari: мой, моя́, моё, мои́",
+ "scene": "In an Uzbek family hallway in the morning, a man Abdulaziz looks for his keys while his wife Nigora hands him a jacket.",
+ "dialogs": [
+  {
+   "id": "L07-d1",
+   "title_ru": "Где мои́ ключи́?",
+   "title_uz": "Kalitlarim qayerda?",
+   "intro_uz": "Birinchi dialog. Ertalab. Abdulaziz ishga shoshyapti va narsalarini qidiryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, где мои́ ключи́?",
+     "uz": "Nigora, kalitlarim qayerda?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Твои́ ключи́? Вот они́.",
+     "uz": "Kalitlaringmi? Mana ular."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Спаси́бо! А где моя́ ку́ртка?",
+     "uz": "Rahmat! Kurtkam qayerda?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Вот твоя́ ку́ртка.",
+     "uz": "Mana kurtkang."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А э́то мой телефо́н?",
+     "uz": "Bu mening telefonimmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, э́то мой телефо́н! Твой там.",
+     "uz": "Yo'q, bu mening telefonim! Seniki u yerda."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz birinchi nimani qidiryapti?",
+     "opts": [
+      "kurtkani",
+      "kalitlarni",
+      "sumkani"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kurtka kimniki?",
+     "opts": [
+      "Abdulazizniki",
+      "Nigoraniki",
+      "Timurniki"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz olgan telefon kimniki?",
+     "opts": [
+      "Abdulazizniki",
+      "Antonniki",
+      "Nigoraniki"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "мои́ ключи́",
+     "alts": [
+      "мой па́спорт",
+      "моя́ су́мка",
+      "моё фо́то"
+     ]
+    },
+    {
+     "base": "твоя́ ку́ртка",
+     "alts": [
+      "твой биле́т",
+      "твоё письмо́",
+      "твои́ ве́щи"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: kalitlaringiz, sumkangiz va telefoningiz qayerda, so'rang."
+  },
+  {
+   "id": "L07-d2",
+   "title_ru": "Фо́то се́мьи",
+   "title_uz": "Oilaviy surat",
+   "intro_uz": "Ikkinchi dialog. Dilnoza Antonga suratni ko'rsatyapti. Suratda kim bor? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, э́то ва́ше фо́то?",
+     "uz": "Dilnoza, bu sizning suratingizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, э́то моё фо́то. Э́то моя́ семья́.",
+     "uz": "Ha, bu mening suratim. Bu mening oilam."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А кто э́то?",
+     "uz": "Bu kim?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Э́то мой брат. А э́то его́ жена́.",
+     "uz": "Bu mening akam. Bu esa uning xotini."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А э́то ваш го́род?",
+     "uz": "Bu sizning shahringizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, э́то наш го́род — Андижа́н.",
+     "uz": "Ha, bu bizning shahrimiz — Andijon."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Surat kimniki?",
+     "opts": [
+      "Antonniki",
+      "Dilnozaniki",
+      "Boburniki"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Suratda kim bor?",
+     "opts": [
+      "akasi va uning xotini",
+      "dadasi",
+      "o'qituvchisi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Suratdagi shahar qaysi?",
+     "opts": [
+      "Toshkent",
+      "Moskva",
+      "Andijon"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "моя́ семья́",
+     "alts": [
+      "мой дом",
+      "моё окно́",
+      "мои́ друзья́"
+     ]
+    },
+    {
+     "base": "наш го́род",
+     "alts": [
+      "наш дом",
+      "на́ша у́лица",
+      "на́ше мо́ре"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: oilaviy suratingizni ko'rsating — «Э́то мой… Э́то моя́…»."
+  },
+  {
+   "id": "L07-d3",
+   "title_ru": "В гости́нице",
+   "title_uz": "Mehmonxonada",
+   "intro_uz": "Uchinchi dialog. Bobur mehmonxonaga keldi. Administrator unga kalit beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Администра́тор",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Администра́тор",
+     "ru": "Здра́вствуйте! Ваш па́спорт, пожа́луйста.",
+     "uz": "Assalomu alaykum! Pasportingizni bering, iltimos."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Здра́вствуйте. Вот мой па́спорт.",
+     "uz": "Assalomu alaykum. Mana pasportim."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Спаси́бо. Вот ваш ключ.",
+     "uz": "Rahmat. Mana kalitingiz."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Спаси́бо. А где моя́ ко́мната?",
+     "uz": "Rahmat. Xonam qayerda?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Ва́ша ко́мната там. Э́то ва́ша су́мка?",
+     "uz": "Xonangiz u yerda. Bu sizning sumkangizmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, э́то моя́ су́мка. И э́то мои́ ве́щи.",
+     "uz": "Ha, bu mening sumkam. Bular ham mening narsalarim."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Administrator birinchi nimani so'radi?",
+     "opts": [
+      "kalitni",
+      "sumkani",
+      "pasportni"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Administrator Boburga nima berdi?",
+     "opts": [
+      "kalit",
+      "bilet",
+      "xat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Sumka kimniki?",
+     "opts": [
+      "administratorniki",
+      "Boburniki",
+      "Antonniki"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "ваш ключ",
+     "alts": [
+      "ваш биле́т",
+      "ва́ше ме́сто",
+      "ва́ши докуме́нты"
+     ]
+    },
+    {
+     "base": "моя́ су́мка",
+     "alts": [
+      "моя́ ку́ртка",
+      "мой чемода́н",
+      "мои́ ключи́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: pasportingizni bering va xonangiz qayerda, so'rang."
+  }
+ ]
+}

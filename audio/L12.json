@@ -1,0 +1,300 @@
+{
+ "n": 12,
+ "topic_uz": "«Где ты? Что ты там де́лаешь?» — joy va kun vaqti",
+ "scene": "A man Abdulaziz sits in a small city cafe eating lunch and talks on the phone; at home his wife Nigora cooks dinner while holding her phone.",
+ "dialogs": [
+  {
+   "id": "L12-d1",
+   "title_ru": "Где ты?",
+   "title_uz": "Qayerdasan?",
+   "intro_uz": "Birinchi dialog. Nigora eri Abdulazizga qo'ng'iroq qildi. U qayerda va nima qilyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Алло́! Где ты?",
+     "uz": "Allo! Qayerdasan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я в кафе́, в це́нтре.",
+     "uz": "Kafedaman, markazda."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Что ты там де́лаешь?",
+     "uz": "U yerda nima qilyapsan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я обе́даю. А ты где?",
+     "uz": "Tushlik qilyapman. Sen qayerdasan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я до́ма. Я гото́влю у́жин.",
+     "uz": "Uydaman. Kechki ovqat tayyorlayapman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Отли́чно! Ве́чером я до́ма.",
+     "uz": "Zo'r! Kechqurun uyda bo'laman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz qayerda?",
+     "opts": [
+      "bankda",
+      "kafeda",
+      "ofisda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz u yerda nima qilyapti?",
+     "opts": [
+      "ishlayapti",
+      "choy ichyapti",
+      "tushlik qilyapti"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora nima qilyapti?",
+     "opts": [
+      "kechki ovqat tayyorlayapti",
+      "dam olyapti",
+      "do'konda"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в кафе́",
+     "alts": [
+      "в ба́нке",
+      "на рабо́те",
+      "в магази́не"
+     ]
+    },
+    {
+     "base": "Я обе́даю",
+     "alts": [
+      "Я рабо́таю",
+      "Я пью чай",
+      "Я отдыха́ю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: hozir qayerda ekaningizni va u yerda nima qilayotganingizni ayting."
+  },
+  {
+   "id": "L12-d2",
+   "title_ru": "На стадио́не",
+   "title_uz": "Stadionda",
+   "intro_uz": "Ikkinchi dialog. Dilnoza ukasi Timurga qo'ng'iroq qildi. Timur qayerda? Dilnoza-chi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, ты где?",
+     "uz": "Timur, qayerdasan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я на стадио́не.",
+     "uz": "Stadiondaman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Что вы там де́лаете?",
+     "uz": "U yerda nima qilyapsizlar?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Мы игра́ем в футбо́л. А ты где?",
+     "uz": "Futbol o'ynayapmiz. Sen qayerdasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я на ку́рсах, на уро́ке.",
+     "uz": "Kursdaman, darsdaman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "На уро́ке? И ты говори́шь по телефо́ну?",
+     "uz": "Darsdamisan? Va telefonda gaplashyapsanmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ой! Пока́!",
+     "uz": "Voy! Xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur qayerda?",
+     "opts": [
+      "maktabda",
+      "stadionda",
+      "uyda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur u yerda nima qilyapti?",
+     "opts": [
+      "futbol o'ynayapti",
+      "yugurayapti",
+      "dars qilyapti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza qayerda?",
+     "opts": [
+      "kafeda",
+      "bankda",
+      "kursda, darsda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "на стадио́не",
+     "alts": [
+      "в па́рке",
+      "на у́лице",
+      "в шко́ле"
+     ]
+    },
+    {
+     "base": "на уро́ке",
+     "alts": [
+      "на рабо́те",
+      "в библиоте́ке",
+      "в аудито́рии"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: qayerda ekaningizni va u yerda nima qilayotganingizni ayting."
+  },
+  {
+   "id": "L12-d3",
+   "title_ru": "У́тром, днём, ве́чером",
+   "title_uz": "Ertalab, kunduzi, kechqurun",
+   "intro_uz": "Uchinchi dialog. Anton Nigoradan so'rayapti: kuningiz qanday o'tadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, где вы обы́чно у́тром?",
+     "uz": "Nigora, odatda ertalab qayerda bo'lasiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "У́тром я на рабо́те, в больни́це.",
+     "uz": "Ertalab ishdaman, kasalxonada."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А днём? Что вы де́лаете днём?",
+     "uz": "Kunduzi-chi? Kunduzi nima qilasiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Днём я обе́даю в кафе́.",
+     "uz": "Kunduzi kafeda tushlik qilaman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А ве́чером вы до́ма?",
+     "uz": "Kechqurun uydamisiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Обы́чно да. Ве́чером я отдыха́ю.",
+     "uz": "Odatda ha. Kechqurun dam olaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora ertalab qayerda?",
+     "opts": [
+      "ofisda",
+      "uyda",
+      "kafeda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora kunduzi nima qiladi?",
+     "opts": [
+      "ishlaydi",
+      "sayr qiladi",
+      "kafeda tushlik qiladi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora kechqurun nima qiladi?",
+     "opts": [
+      "ishlaydi",
+      "dam oladi",
+      "do'konga boradi"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в о́фисе",
+     "alts": [
+      "в ба́нке",
+      "в шко́ле",
+      "в больни́це"
+     ]
+    },
+    {
+     "base": "в кафе́",
+     "alts": [
+      "в о́фисе",
+      "в рестора́не",
+      "до́ма"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: ertalab, kunduzi va kechqurun qayerda bo'lishingiz va nima qilishingizni ayting."
+  }
+ ]
+}

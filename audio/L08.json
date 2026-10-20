@@ -1,0 +1,300 @@
+{
+ "n": 8,
+ "topic_uz": "«Чей э́то?» — narsa kimniki",
+ "scene": "In an office after a meeting, a man Anton holds up a phone and a set of keys while a young woman Dilnoza picks up her bag from the table.",
+ "dialogs": [
+  {
+   "id": "L08-d1",
+   "title_ru": "Чей э́то телефо́н?",
+   "title_uz": "Bu kimning telefoni?",
+   "intro_uz": "Birinchi dialog. Majlisdan keyin stolda narsalar qoldi. Anton va Dilnoza: bu kimniki? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, чей э́то телефо́н?",
+     "uz": "Dilnoza, bu kimning telefoni?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Э́то не мой телефо́н. Мой здесь.",
+     "uz": "Bu mening telefonim emas. Meniki shu yerda."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А чья э́то су́мка?",
+     "uz": "Bu kimning sumkasi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Э́то моя́ су́мка. Спаси́бо!",
+     "uz": "Bu mening sumkam. Rahmat!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А чьи э́то ключи́?",
+     "uz": "Bu kimning kalitlari?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Не зна́ю. Э́то не мои́ ключи́.",
+     "uz": "Bilmayman. Bu mening kalitlarim emas."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А, э́то мои́ ключи́!",
+     "uz": "A, bu mening kalitlarim-ku!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Telefon Dilnozanikimi?",
+     "opts": [
+      "ha",
+      "yo'q",
+      "bilmaydi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Sumka kimniki?",
+     "opts": [
+      "Dilnozaniki",
+      "Antonniki",
+      "Boburniki"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kalitlar kimniki bo'lib chiqdi?",
+     "opts": [
+      "Dilnozaniki",
+      "Nigoraniki",
+      "Antonniki"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "телефо́н",
+     "alts": [
+      "па́спорт",
+      "биле́т",
+      "компью́тер"
+     ]
+    },
+    {
+     "base": "су́мка",
+     "alts": [
+      "ку́ртка",
+      "кни́га",
+      "ру́чка"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: «Чей…? Чья…? Чьи…?» deb uchta narsa haqida so'rang."
+  },
+  {
+   "id": "L08-d2",
+   "title_ru": "В оте́ле",
+   "title_uz": "Otelda",
+   "intro_uz": "Ikkinchi dialog. Turist otelda. Administrator so'raydi: bu narsalar kimniki? Tinglang.",
+   "speakers": [
+    {
+     "name": "Администра́тор",
+     "gender": "f"
+    },
+    {
+     "name": "Тури́ст",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Администра́тор",
+     "ru": "Извини́те, чей э́то па́спорт?",
+     "uz": "Kechirasiz, bu kimning pasporti?"
+    },
+    {
+     "who": "Тури́ст",
+     "ru": "Э́то мой па́спорт. Спаси́бо!",
+     "uz": "Bu mening pasportim. Rahmat!"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "А чьи э́то докуме́нты?",
+     "uz": "Bu kimning hujjatlari?"
+    },
+    {
+     "who": "Тури́ст",
+     "ru": "Э́то на́ши докуме́нты.",
+     "uz": "Bu bizning hujjatlarimiz."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "А чья э́то ку́ртка?",
+     "uz": "Bu kimning kurtkasi?"
+    },
+    {
+     "who": "Тури́ст",
+     "ru": "Э́то не моя́ ку́ртка. Э́то её ку́ртка.",
+     "uz": "Bu mening kurtkam emas. Bu uning kurtkasi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Pasport kimniki?",
+     "opts": [
+      "administratorniki",
+      "turistniki",
+      "bilmaymiz"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Hujjatlar kimniki?",
+     "opts": [
+      "turistlarniki — «bizniki»",
+      "otelniki",
+      "Antonniki"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kurtka kimniki?",
+     "opts": [
+      "turistniki",
+      "administratorniki",
+      "boshqa ayolniki — «uniki»"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Чей э́то па́спорт?",
+     "alts": [
+      "Чей э́то биле́т?",
+      "Чей э́то ключ?",
+      "Чей э́то чемода́н?"
+     ]
+    },
+    {
+     "base": "Чья э́то ку́ртка?",
+     "alts": [
+      "Чья э́то су́мка?",
+      "Чья э́то кни́га?",
+      "Чья э́то маши́на?"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz turist o'rniga gapiring: «Э́то мой… Э́то не моя́…» deb javob bering."
+  },
+  {
+   "id": "L08-d3",
+   "title_ru": "Чьё э́то я́блоко?",
+   "title_uz": "Bu kimning olmasi?",
+   "intro_uz": "Uchinchi dialog. Mehmonlar ketdi. Nigora uyda narsalarni yig'yapti va Sardordan so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Сардо́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Сардо́р, чьи э́то кни́ги?",
+     "uz": "Sardor, bu kimning kitoblari?"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Э́то мои́ кни́ги, ма́ма.",
+     "uz": "Bu mening kitoblarim, oyi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А чьё э́то я́блоко?",
+     "uz": "Bu kimning olmasi?"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Э́то моё я́блоко!",
+     "uz": "Bu mening olmam!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А чей э́то телефо́н?",
+     "uz": "Bu kimning telefoni?"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Э́то не мой телефо́н. Э́то твой телефо́н, ма́ма!",
+     "uz": "Bu mening telefonim emas. Bu sizning telefoningiz, oyi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kitoblar kimniki?",
+     "opts": [
+      "Marjonaniki",
+      "dadasiniki",
+      "Sardorniki"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Olma kimniki?",
+     "opts": [
+      "Sardorniki",
+      "oyisiniki",
+      "mehmonniki"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Telefon kimniki?",
+     "opts": [
+      "Sardorniki",
+      "oyisiniki",
+      "dadasiniki"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "чьё э́то я́блоко",
+     "alts": [
+      "чьё э́то фо́то",
+      "чьё э́то письмо́",
+      "чьё э́то ме́сто"
+     ]
+    },
+    {
+     "base": "мои́ кни́ги",
+     "alts": [
+      "мои́ ключи́",
+      "мои́ ве́щи",
+      "мои́ тетра́ди"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Sardor o'rniga gapiring: uydagi uchta narsa kimniki ekanini ayting."
+  }
+ ]
+}
