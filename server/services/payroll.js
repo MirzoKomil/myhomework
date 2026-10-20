@@ -378,5 +378,46 @@ async function markPaid(pool, actor, id) {
         return { ok: true };
     });
 }
-module.exports = { SCHEMA, initSchema, audit, access, language, transaction, sources, settings, calculate, preview,
+// "Mening maoshim": xodim faqat O'ZINING hisobini ko'radi. Xodim users.email
+// ↔ hr_employees.login orqali aniqlanadi; boshqa xodimlar ma'lumoti qaytmaydi.
+// Faqat o'qish — maosh qulfi (advisory lock) olinmaydi, hech narsa yozilmaydi.
+const OWN_FIELDS = ['roleLabel', 'role', 'fixed', 'turnover', 'commission', 'bonus', 'total', 'lessons', 'studentCount',
+    'mainTotal', 'mainLessons', 'assistantTotal', 'assistantLessons', 'completion', 'rate', 'adjustmentTotal', 'blocked', 'status', 'paidAt'];
+function ownView(row) {
+    if (!row) return null;
+    return Object.fromEntries(OWN_FIELDS.filter(k => row[k] !== undefined).map(k => [k, row[k]]));
+}
+function tashkentToday(now = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+function currentMonthPeriod(now = new Date()) {
+    const today = tashkentToday(now), [y, m] = today.split('-').map(Number);
+    const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    return engine.period(`${today.slice(0, 7)}-01`, end);
+}
+async function mySalary(pool, actor, now = new Date()) {
+    const db = await pool.connect();
+    try {
+        await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+        const emp = (await db.query(`SELECT he.id, he.name, he.role, he.lang FROM users u
+            JOIN hr_employees he ON LOWER(TRIM(he.login))=LOWER(TRIM(u.email)) WHERE u.id=$1 LIMIT 1`, [actor.id])).rows[0];
+        if (!emp) { await db.query('COMMIT'); return { linked: false, current: null, history: [] }; }
+        const history = (await db.query(`SELECT TO_CHAR(period_start,'YYYY-MM-DD') AS start, TO_CHAR(period_end,'YYYY-MM-DD') AS "end",
+            amount, status, paid_at FROM salary_transactions WHERE employee_id=$1 ORDER BY period_start DESC LIMIT 12`, [emp.id])).rows
+            .map(r => ({ start: r.start, end: r.end, amount: Number(r.amount), status: r.status, paidAt: r.paid_at }));
+        const p = currentMonthPeriod(now), lang = engine.language(emp);
+        let current = null;
+        try {
+            const result = await calculate(db, p, lang, false);
+            current = ownView(result.rows.find(r => r.employeeId === emp.id));
+        } catch (e) { console.error('[payroll/me]', e.message); }
+        await db.query('COMMIT');
+        return { linked: true, name: emp.name, period: p, current, history };
+    } catch (e) {
+        await db.query('ROLLBACK').catch(() => {});
+        throw e;
+    } finally { db.release(); }
+}
+
+module.exports = { mySalary, ownView, currentMonthPeriod, SCHEMA, initSchema, audit, access, language, transaction, sources, settings, calculate, preview,
     createBasis, correctionProposals, reviewAdjustment, reviewManualAdjustment, saveSettings, confirmPlan, accrue, markPaid };
