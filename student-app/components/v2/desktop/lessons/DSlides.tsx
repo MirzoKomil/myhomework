@@ -8,6 +8,7 @@
  * (jadval mavzusidan), ustoz (profil) va dars davomiyligi (tarif).
  * Klaviatura: ← → slaydlar, F to'liq ekran, Esc yopish.
  */
+import { Konspekt } from '@/components/v2/library/Konspekt';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -93,6 +94,8 @@ export function DSlides({ id }: { id: string }) {
   };
   const openViewer = () => router.push(`${R.slideViewer(id)}?i=${curIdx}` as Href);
   const questions = content?.speakingPractice ?? [];
+  const konspekt = content?.konspekt?.trim() ?? '';
+  const [tab, setTab] = useState<'savollar' | 'konspekt'>('savollar');
   const liveLabel = live.startsAt ? liveWhen(live.startsAt) : '';
   const countdown = useCountdown(live.startsAt);
   const short = cur ? shortTitle(cur.title) : '';
@@ -233,12 +236,31 @@ export function DSlides({ id }: { id: string }) {
                   Ustoz jonli darsda shu slaydlarni koʻrsatadi. Darsdan keyin ham ochiq.
                 </T>
               </View>
-              <View accessibilityLabel="Slayddagi savollar" style={s.qs}>
-                <T size={12} color="#4A5468" ls={0.96} style={{ textTransform: 'uppercase', paddingHorizontal: 2, paddingBottom: 12 }}>
-                  Darsga tayyorlaning · {questions.length} ta savol
-                </T>
+              <View accessibilityLabel={tab === 'konspekt' ? 'Dars konspekti' : 'Slayddagi savollar'} style={s.qs}>
+                {konspekt ? (
+                  // Kitobdagi konspekt slaydlar yonida — savollar bilan almashib ko'rinadi.
+                  <View style={{ flexDirection: 'row', gap: 6, paddingBottom: 12 }}>
+                    {(['savollar', 'konspekt'] as const).map((k) => (
+                      <Pressable
+                        key={k}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: tab === k }}
+                        onPress={() => setTab(k)}
+                        style={[s.tab, tab === k && s.tabOn]}
+                      >
+                        <T size={13} color={tab === k ? '#FFFFFF' : '#26304A'}>
+                          {k === 'savollar' ? `Savollar · ${questions.length}` : 'Dars konspekti'}
+                        </T>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <T size={12} color="#4A5468" ls={0.96} style={{ textTransform: 'uppercase', paddingHorizontal: 2, paddingBottom: 12 }}>
+                    Darsga tayyorlaning · {questions.length} ta savol
+                  </T>
+                )}
                 <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-                  {questions.map((q, k) => (
+                  {tab === 'konspekt' && konspekt ? <Konspekt text={konspekt} bare /> : questions.map((q, k) => (
                     <View key={q.id} style={s.qRow}>
                       <T size={17} lh={22.1}>
                         {k + 1}. {q.sentence}
@@ -295,6 +317,8 @@ const s = StyleSheet.create({
   thumbNo: { position: 'absolute', left: 5, bottom: 5, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   aside: { width: 400, flexShrink: 0, alignSelf: 'stretch', gap: 16 },
   tipCard: { backgroundColor: '#FFF4D1', borderRadius: 22, paddingVertical: 14, paddingLeft: 12, paddingRight: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  tab: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#F4F6FA' },
+  tabOn: { backgroundColor: '#2F5BFF' },
   qs: { flex: 1, minHeight: 0, backgroundColor: '#FFFFFF', borderRadius: 22, paddingTop: 18, paddingHorizontal: 18, paddingBottom: 8 },
   qRow: { flexGrow: 1, justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 2, borderTopWidth: 1, borderTopColor: '#EEF1F7', gap: 3 },
   liveCard: { backgroundColor: '#0B1220', borderRadius: 22, paddingVertical: 16, paddingHorizontal: 18, gap: 2 },

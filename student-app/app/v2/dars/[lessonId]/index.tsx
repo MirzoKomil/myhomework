@@ -10,6 +10,7 @@
  * uchun eng ko'pi — avtomatik tekshiriladigan savollar soni. Streak serverda
  * yo'q — 0 kun.
  */
+import { lessonGoal } from '@/components/v2/home/lessonGoal';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -119,7 +120,7 @@ function LessonScreenMobile() {
     return m ? [m[1], m[2]] : [lesson.name, ''];
   })();
   // "Darsdan keyin: ..." — CRM'dagi konspekt (dars maqsadi). Bo'lmasa blok ko'rinmaydi.
-  const adminKonspekt = data.mc.lessonContents[id]?.konspekt?.trim();
+  const adminKonspekt = lessonGoal(data.mc.lessonContents[id]?.konspekt);
   const hw = homeworkSummary(lesson, scores[id]);
   const vocabCount = lesson.content.vocabulary.length;
   const learned = learnedWordIds(id, lesson.content.vocabulary.map((w) => w.id), seen).size;

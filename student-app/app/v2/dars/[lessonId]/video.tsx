@@ -9,6 +9,7 @@
  * Dars mavzusi nomi (dizayndagi "Modal so'zlar") serverda yo'q — ko'rsatilmaydi.
  * Coin — shu darsda yig'ilgan haqiqiy coinlar (coinsStore.useLessonCoins).
  */
+import { Konspekt } from '@/components/v2/library/Konspekt';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -169,16 +170,16 @@ function VideoScreenMobile() {
               <Text style={styles.kTitle}>Konspekt · asosiy iboralar</Text>
               {phrases.length > 0 && <Text style={styles.kCount}>{phrases.length} ta</Text>}
             </View>
-            {phrases.length > 0 ? (
-              phrases.map((p) => (
-                <View key={p.id} style={styles.kRow}>
-                  <RichText style={styles.kRu} text={p.sentence} />
-                  <RichText style={styles.kUz} text={p.translation} />
-                </View>
-              ))
-            ) : (
-              <View style={styles.kRow}>
-                <RichText style={styles.kUz} text={content.konspekt} />
+            {phrases.map((p) => (
+              <View key={p.id} style={styles.kRow}>
+                <RichText style={styles.kRu} text={p.sentence} />
+                <RichText style={styles.kUz} text={p.translation} />
+              </View>
+            ))}
+            {/* Kitobdagi to'liq konspekt — joyi shu yerda (video tagida), dars boshida emas. */}
+            {!!content.konspekt?.trim() && (
+              <View style={[styles.kRow, { paddingBottom: 12 }]}>
+                <Konspekt text={content.konspekt} bare />
               </View>
             )}
           </View>

@@ -45,10 +45,11 @@ function parse(src: string, skipTitle: boolean): Block[] {
 
 const txt = { fontFamily: fonts.bodyBold, fontSize: 15, lineHeight: 22, color: '#0B1220', fontWeight: 'normal' as const };
 
-export function Konspekt({ text, skipTitle = true }: { text: string; skipTitle?: boolean }) {
+export function Konspekt({ text, skipTitle = true, bare = false }: { text: string; skipTitle?: boolean; bare?: boolean }) {
   const blocks = parse(text, skipTitle);
   return (
-    <View style={s.card}>
+    // bare — boshqa karta ichida (video/slayd sahifasi): o'z foni va chekkasi yo'q.
+    <View style={bare ? s.bare : s.card}>
       {blocks.map((b, i) => {
         if (b.k === 'hr') return <View key={i} style={s.hr} />;
         if (b.k === 'h')
@@ -79,6 +80,7 @@ export function Konspekt({ text, skipTitle = true }: { text: string; skipTitle?:
 
 const s = StyleSheet.create({
   card: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, gap: 8 },
+  bare: { gap: 8 },
   hr: { height: 1, backgroundColor: '#EEF1F7', marginVertical: 4 },
   goal: { backgroundColor: '#E3F7EE', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12 },
   li: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingLeft: 2 },
