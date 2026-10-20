@@ -17,6 +17,7 @@ function render(student, now = '2026-10-20T16:50:00+05:00') {
         getItem: k => store[k] || [], escapeHtml: x => String(x).replace(/</g, '&lt;'),
         formatMoney: n => n + " so'm", formatDateShort: d => d.split('-').reverse().join('.'), calculateAge: () => '18',
         addCourseDays: () => '30.12.2026', countStudentAttendance: () => 7,
+        UZ_MONTHS_SHORT: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
         DAYS_UZ: ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'],
         expandLessonPatternDays: d => ([1, 3, 5].includes(+d) ? [1, 3, 5] : [2, 4, 6].includes(+d) ? [2, 4, 6] : [+d]),
         teacherAttendanceCalendar: require('../js/teacherAttendanceCalendar.js'),

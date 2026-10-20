@@ -9934,7 +9934,8 @@ function renderSdpProfile(s) {
         const label = st === 'present' ? 'keldi' : st === 'absent' ? 'kelmadi' : c.day <= today ? 'belgilanmagan' : 'dars kutilmoqda';
         return `<span class="sdp2-day ${cls}" title="${c.day}-kun: ${label}" aria-label="${c.day}-kun: ${label}"><small>${wd}</small>${c.day}${mark}</span>`;
     }).join('');
-    const monthName = now.toLocaleString('uz-UZ', { month: 'long' });
+    // uz-UZ lokali ba'zi brauzerlarda oy nomini "M10" deb chiqaradi.
+    const monthName = UZ_MONTHS_SHORT[now.getMonth()];
 
     const row = (label, value) => `<div class="sdp2-kv"><dt>${label}</dt><dd>${value}</dd></div>`;
     return `
@@ -24581,37 +24582,76 @@ let _spIndManagerId = null;
 // 41-vazifa: individual reja kartochkasida ko'rilayotgan oy ("YYYY-MM")
 let _spIndPlanMonth = null;
 
+const SALES_PLAN_TIER_UI = {
+    min: { label: 'Minimal', chip: 'warn' },
+    mid: { label: 'Oʻrtacha', chip: 'pri' },
+    max: { label: 'Zoʻr', chip: 'ok' },
+};
+
 function renderSalesPlanTierCards(plan, activePeriod) {
     return SALES_PLAN_TIERS.map(tier => {
         const conv = plan.conversions[tier.key];
         const m = computeSalesPlanMetrics(plan, conv, activePeriod.days);
+        const ui = SALES_PLAN_TIER_UI[tier.key] || { label: tier.label, chip: 'pri' };
+        const isMain = tier.key === 'mid';
+        const num = n => Number(n || 0).toLocaleString('uz-UZ');
+        const row = (label, period, day, strong) => `<tr${strong ? ' class="spx-strong"' : ''}><th scope="row">${label}</th><td>${period}</td><td>${day}</td></tr>`;
         return `
-        <div class="sp-plan-card" style="border-top-color:${tier.color}">
-            <div class="sp-plan-header" style="background:${tier.bg};color:${tier.color}">
-                ${escapeHtml(tier.label)} <span class="sp-plan-header-conv">${fmtPct1(conv)}</span>
+        <section class="spx-card${isMain ? ' is-main' : ''}" aria-label="${escapeHtml(ui.label)} reja">
+            <div class="spx-card-head">
+                <h3>${escapeHtml(ui.label)}</h3>
+                <span class="spx-chip spx-chip--${ui.chip}">${fmtPct1(conv)}</span>
             </div>
-            <div class="sp-plan-block">
-                <div class="sp-plan-block-title">Kunlik</div>
-                <div class="sp-row"><span>Lid soni</span><b>${m.kunlik.lidSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.kunlik.konversiya)}</b></div>
-                <div class="sp-row"><span>Sotuv soni</span><b>${m.kunlik.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.kunlik.sotuvSumma)}</b></div>
-                <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.kunlik.budjet)}</b></div>
-                <div class="sp-row"><span>ROMI</span><b class="${m.kunlik.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.kunlik.romi)}</b></div>
-            </div>
-            <div class="sp-plan-block">
-                <div class="sp-plan-block-title">${escapeHtml(activePeriod.label)} <span class="text-muted" style="font-weight:500">(${m.davr.days} kun)</span></div>
-                <div class="sp-row"><span>Lid soni</span><b>${m.davr.lidSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>Lid narxi</span><b>${fmtMoney(m.davr.leadCost)}</b></div>
-                <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.davr.konversiya)}</b></div>
-                <div class="sp-row"><span>Sotuv soni</span><b>${m.davr.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(m.davr.avgCheck)}</b></div>
-                <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.davr.sotuvSumma)}</b></div>
-                <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.davr.budjet)}</b></div>
-                <div class="sp-row"><span>ROMI</span><b class="${m.davr.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.davr.romi)}</b></div>
-            </div>
-        </div>`;
+            ${isMain ? '<span class="spx-main-note">Fakt shu reja bilan solishtiriladi</span>' : ''}
+            <span class="spx-unit">Summalar soʻmda</span>
+            <table class="spx-tbl">
+                <thead><tr><th scope="col"><span class="sr-only">Koʻrsatkich</span></th><th scope="col">${escapeHtml(activePeriod.label)} · ${m.davr.days} kun</th><th scope="col">Kun</th></tr></thead>
+                <tbody>
+                    ${row('Lidlar', num(m.davr.lidSoni), num(m.kunlik.lidSoni))}
+                    ${row('Konversiya', fmtPct1(conv), '—')}
+                    ${row('Sotuvlar', num(m.davr.sotuvSoni), num(m.kunlik.sotuvSoni))}
+                    ${row('Sotuv summasi', num(m.davr.sotuvSumma), num(m.kunlik.sotuvSumma), true)}
+                    ${row('Reklama byudjeti', num(m.davr.budjet), num(m.kunlik.budjet))}
+                    ${row('ROMI', `<span class="${m.davr.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.davr.romi)}</span>`, '—')}
+                </tbody>
+            </table>
+        </section>`;
     }).join('');
+}
+
+// Fakt jadvali: shu oy boshidan bugungacha bo'lgan real natija "O'rtacha"
+// rejaning bugungacha bo'lgan ulushi bilan solishtiriladi.
+function renderSalesPlanFactTable(lang) {
+    const plan = getSalesPlan(lang);
+    const f = computeSalesPlanFactMetrics(lang).davr;
+    const days = Math.min(f.days, Math.max(1, plan.duration));
+    const p = computeSalesPlanMetrics(plan, plan.conversions.mid, days).davr;
+    const pct = (fact, target) => (target > 0 ? Math.round(fact / target * 100) : null);
+    const cls = v => (v === null ? '' : v >= 100 ? 'spx-ok' : v >= 80 ? 'spx-warn' : 'spx-bad');
+    const num = n => Number(n || 0).toLocaleString('uz-UZ');
+    const rows = [
+        ['Lidlar', num(f.lidSoni), num(p.lidSoni), pct(f.lidSoni, p.lidSoni)],
+        ['Sotuvlar', num(f.sotuvSoni), num(p.sotuvSoni), pct(f.sotuvSoni, p.sotuvSoni)],
+        ['Sotuv summasi', fmtMoney(f.sotuvSumma), fmtMoney(p.sotuvSumma), pct(f.sotuvSumma, p.sotuvSumma)],
+        ['Konversiya', fmtPct1(f.konversiya), fmtPct1(p.konversiya), pct(f.konversiya, p.konversiya)],
+        ['Oʻrtacha chek', fmtMoney(f.avgCheck), fmtMoney(p.avgCheck), pct(f.avgCheck, p.avgCheck)],
+    ];
+    const budgetDiff = p.budjet - f.budjet;
+    const monthName = UZ_MONTHS_SHORT[new Date().getMonth()];
+    return `
+    <section class="spx-fact" aria-labelledby="spxFactH">
+        <div class="spx-fact-head">
+            <h3 id="spxFactH">Fakt · 1–${f.days} ${escapeHtml(monthName)}</h3>
+            <span>Bugungacha reja = "Oʻrtacha" reja × ${days} kun</span>
+        </div>
+        <div class="spx-fact-wrap"><table class="spx-ftbl">
+            <thead><tr><th scope="col">Koʻrsatkich</th><th scope="col">Fakt</th><th scope="col">Bugungacha reja</th><th scope="col">Bajarilish</th></tr></thead>
+            <tbody>${rows.map(([l, a, b, v]) => `<tr><th scope="row">${l}</th><td><b>${a}</b></td><td>${b}</td><td class="${cls(v)}">${v === null ? '—' : v + '%'}</td></tr>`).join('')}
+                <tr><th scope="row">Reklama byudjeti · lid × lid narxi</th><td><b>${fmtMoney(f.budjet)}</b></td><td>${fmtMoney(p.budjet)}</td><td class="${budgetDiff >= 0 ? 'spx-ok' : 'spx-bad'}">${budgetDiff >= 0 ? 'rejadan ' + fmtMoney(budgetDiff) + ' kam' : 'rejadan ' + fmtMoney(-budgetDiff) + ' koʻp'}</td></tr>
+                <tr><th scope="row">ROMI</th><td><b class="${f.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(f.romi)}</b></td><td>${fmtSignedPct(p.romi)}</td><td>—</td></tr>
+            </tbody>
+        </table></div>
+    </section>`;
 }
 
 // 33-vazifa: "Sotuv rejasi" endi 2 ta pastki bo'limga ega — Jamoaviy reja
@@ -24666,6 +24706,10 @@ function renderSalesPlanTeam() {
         };
     });
 
+    // Fakt endi reja ostidagi jadvalda ko'rinadi — alohida "Fakt" tugmasi kerak emas.
+    _spJamoaviyView = 'plan';
+    const viewToggle = document.getElementById('spJamoaviyViewToggle');
+    if (viewToggle) viewToggle.style.display = 'none';
     const planView = document.getElementById('spPlanView');
     const faktView = document.getElementById('spFaktView');
     if (planView) planView.style.display = _spJamoaviyView === 'plan' ? '' : 'none';
@@ -24732,6 +24776,8 @@ function renderSalesPlanResults() {
     });
 
     gridEl.innerHTML = renderSalesPlanTierCards(plan, activePeriod);
+    const factEl = document.getElementById('spFactTable');
+    if (factEl) factEl.innerHTML = renderSalesPlanFactTable(lang);
 }
 
 // 35-vazifa: Jamoaviy reja > Fakt — shu til yo'nalishidagi BARCHA sotuv
