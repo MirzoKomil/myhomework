@@ -93,6 +93,8 @@ test('saving HR list as ROP never wipes hidden private fields', () => {
     assert.equal(out[0].pinfl, '43210987654321');
     assert.equal(out[1].cardNumber, '8600000000000000');
     assert.equal(out[2].cardNumber, '8600555566667777');
+    assert.throws(() => scope.preserveHrPrivateFields([{ id: 'e2', cardNumber: '8600123412341234' }], old,
+        { role: 'rop', email: 'bobur@x.uz' }), /faqat admin/);
     const adminOut = scope.preserveHrPrivateFields(incoming, old, { role: 'admin' });
     assert.equal(adminOut[0].cardNumber, '', 'admin edits are taken as is');
 });

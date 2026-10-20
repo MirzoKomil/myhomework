@@ -910,6 +910,7 @@ function crmStateMutationRequired(req, res, next) {
 
 async function getStateForUser(user) {
     if (user.role === 'teacher') return getTeacherScopedState(user);
+    let managerId = null;
     const state = await getFullState();
     if (user.role === 'sales_manager') {
         // Menejerlar reytingi uchun PII'siz umumiy ko'rsatkichlar qoladi;
@@ -931,7 +932,7 @@ async function getStateForUser(user) {
                 totalAmount: lead.paymentSurvey.totalAmount
             } : null
         }));
-        const managerId = await getSalesManagerIdForUser(user.id);
+        managerId = await getSalesManagerIdForUser(user.id);
         state.leads = managerId ? await getLeads({ managerId }) : { english: [], russian: [] };
         state.archive = [];
     } else if (user.role === 'targetolog') {
@@ -948,7 +949,6 @@ async function getStateForUser(user) {
     }
     // Maxfiy maydonlarni (xodimlar HR ma'lumoti, boshqalarning o'quvchi
     // telefonlari, to'lovlar, pul oqimi) rolga qarab serverning o'zida kesish.
-    const scopeManagerId = user.role === 'sales_manager' ? await getSalesManagerIdForUser(user.id) : null;
     let financeEmployee = false;
     if (user.role === 'employee' && user.email) {
         // Moliya bo'limi xodimi (department = moliya/finance) To'lovlar va Pul
@@ -958,7 +958,7 @@ async function getStateForUser(user) {
         )).rows[0]?.department;
         financeEmployee = ['moliya', 'finance'].includes(String(dept || '').toLowerCase());
     }
-    return scopeState(state, user, { managerId: scopeManagerId, financeEmployee });
+    return scopeState(state, user, { managerId, financeEmployee });
 }
 
 router.get('/', authRequired, crmStateIdentity, crmStateRequired, async (req, res) => {
@@ -1008,7 +1008,7 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
         res.json({ ok: true, state: await getStateForUser(req.user) });
     } catch (err) {
         console.error('PATCH /api/state', err);
-        res.status(500).json({ error: 'Saqlashda xatolik' });
+        res.status(err.status || 500).json({ error: err.status ? err.message : 'Saqlashda xatolik' });
     }
 });
 

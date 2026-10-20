@@ -86,7 +86,16 @@ function preserveHrPrivateFields(employees, oldRows, actor) {
         const old = byId.get(e.id);
         if (!old || sameLogin(old.login, actor?.email)) return e;
         const merged = { ...e };
-        for (const [field, col] of Object.entries(COLS)) merged[field] = old[col] || '';
+        for (const [field, col] of Object.entries(COLS)) {
+            const incoming = String(e[field] ?? '').trim();
+            // Bo'sh qiymat = "ko'rmadim" (maskalangan) — bazadagi qiymat qoladi.
+            // Bo'sh bo'lmagan, lekin bazadagidan farqli qiymat — jim
+            // tashlab yubormasdan, aniq rad etamiz.
+            if (incoming && incoming !== String(old[col] || '').trim()) {
+                throw Object.assign(new Error('Xodimning karta, pasport, PINFL, manzil va tugʻilgan sanasini faqat admin oʻzgartira oladi'), { status: 403 });
+            }
+            merged[field] = old[col] || '';
+        }
         return merged;
     });
 }
