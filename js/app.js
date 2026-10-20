@@ -9934,7 +9934,8 @@ function renderSdpProfile(s) {
         const label = st === 'present' ? 'keldi' : st === 'absent' ? 'kelmadi' : c.day <= today ? 'belgilanmagan' : 'dars kutilmoqda';
         return `<span class="sdp2-day ${cls}" title="${c.day}-kun: ${label}" aria-label="${c.day}-kun: ${label}"><small>${wd}</small>${c.day}${mark}</span>`;
     }).join('');
-    const monthName = now.toLocaleString('uz-UZ', { month: 'long' });
+    // uz-UZ lokali ba'zi brauzerlarda oy nomini "M10" deb chiqaradi.
+    const monthName = UZ_MONTHS_SHORT[now.getMonth()];
 
     const row = (label, value) => `<div class="sdp2-kv"><dt>${label}</dt><dd>${value}</dd></div>`;
     return `
@@ -15187,59 +15188,55 @@ function renderSalesFunnel() {
     const assignedDateFilterHtml = _funnelDateFilterHtml('funnelAssignedDate', "Lid biriktirilgan kun bo'yicha", _salesFunnelAssignedFrom, _salesFunnelAssignedTo);
     const createdDateFilterHtml = _funnelDateFilterHtml('funnelCreatedDate', "Lid CRMga kelib tushgan kun bo'yicha", _salesFunnelCreatedFrom, _salesFunnelCreatedTo);
 
+    const openStages = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida'];
+    const inProgress = filteredLeads.filter(l => openStages.includes(normalizeLeadStatus(l.status))).length;
+    const laterCount = stagesData.find(x => x.id === 'keyin-sotib-olmoqchi')?.count || 0;
+    const failedCount = extraStagesData[0].count;
+    const sifatsizCount = extraStagesData[1].count;
+    const maxCount = Math.max(1, ...stagesData.map(x => x.count));
+    const pctTxt = n => String(n).replace('.', ',');
+    const barRows = stagesData.map(st => `
+        <li class="sfx-row">
+            <span class="sfx-name"><i style="background:${st.color}"></i>${escapeHtml(st.label)}</span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${Math.max(st.count ? 2 : 0, Math.round(st.count / maxCount * 100))}%;background:${st.color}"></span></span>
+            <span class="sfx-val"><b>${st.count}</b> · ${st.share}%</span>
+        </li>`).join('');
+    const tiles = [
+        ['Umumiy konversiya', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
+        ['Sotildi', String(converted), 'Toʻlov yopildi bosqichida'],
+        ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
+        ['Voronkadan chiqqan', String(failedCount + sifatsizCount), `muvaffaqiyatsiz ${failedCount} · sifatsiz ${sifatsizCount}`],
+    ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('');
+
     panel.innerHTML = `
-    <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
-        <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
+    <div class="sfx-head">
+        <div><h1>Sotuv voronkasi</h1><p>${langLabel} yoʻnalishi · lidlar hozir qaysi bosqichda turgani</p></div>
+    </div>
+    <div class="sfx-filters">
         ${mgrFilterHtml}
         ${assignedDateFilterHtml}
         ${createdDateFilterHtml}
     </div>
 
-    <div class="card" style="padding:32px 24px 28px;margin-bottom:16px;flex-shrink:0">
-        <h3 style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 28px;text-align:center">${langLabel} lidlari — jami ${filteredLeads.length} ta · konversiya ${convRate}%</h3>
-        ${buildFunnelSVG(stagesData)}
-    </div>
+    <div class="sfx-tiles">${tiles}</div>
 
-    <div class="card" style="padding:0;overflow:hidden;flex-shrink:0">
-        <div class="table-responsive">
-        <table class="sdp-table" style="min-width:420px">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Bosqich</th>
-                    <th style="text-align:right">Lidlar soni</th>
-                    <th style="text-align:right">Ulush</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${stagesData.map((s, i) => `
-                <tr>
-                    <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
-                    <td>
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
-                        <strong>${escapeHtml(s.label)}</strong>
-                    </td>
-                    <td style="text-align:right;font-weight:700">${s.count}</td>
-                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.share}%</td>
-                </tr>`).join('')}
-                <tr>
-                    <td colspan="4" style="padding:8px 12px;background:var(--bg-secondary,#f8fafc);color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Voronkadan tashqarida</td>
-                </tr>
-                ${extraStagesData.map((s, i) => `
-                <tr>
-                    <td style="color:var(--text-muted);font-size:12px">${stagesData.length + i + 1}</td>
-                    <td>
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
-                        <strong>${escapeHtml(s.label)}</strong>
-                    </td>
-                    <td style="text-align:right;font-weight:700">${s.count}</td>
-                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.share}%</td>
-                </tr>`).join('')}
-            </tbody>
-        </table>
-        </div>
+    <div class="sfx-grid">
+        <section class="sfx-card" aria-labelledby="sfxFunnelH">
+            <div class="sfx-card-head"><h2 id="sfxFunnelH">Bosqichlar</h2><span>Jami <b>${totalCount}</b> lid · konversiya <b>${pctTxt(convRate)}%</b></span></div>
+            <ol class="sfx-rows">${barRows}</ol>
+        </section>
+        <section class="sfx-card" aria-labelledby="sfxOutH">
+            <div class="sfx-card-head"><h2 id="sfxOutH">Voronkadan chiqqanlar</h2></div>
+            <dl class="sfx-out">
+                <div><dt>Hali jarayonda (ochiq bosqichlarda)</dt><dd>${inProgress}</dd></div>
+                <div><dt>Keyin sotib olmoqchi</dt><dd>${laterCount}</dd></div>
+                ${extraStagesData.map(st => `<div><dt><i style="background:${st.color}"></i>${escapeHtml(st.label)}</dt><dd>${st.count} <small>· ${st.share}%</small></dd></div>`).join('')}
+                <div class="sfx-out-total"><dt>Sotildi (Toʻlov yopildi)</dt><dd>${converted}</dd></div>
+            </dl>
+            <p class="sfx-note">${converted} sotildi + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${converted + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
+        </section>
     </div>
-    ${buildLeadQualityChart(filteredLeads)}
+    <div class="sfx-2col">
     ${buildReasonsChart(failedReasonRows, {
         title: 'Muvaffaqiyatsiz sotuv sabablari',
         emptyText: "Tanlangan filtrlar bo'yicha muvaffaqiyatsiz sotuvlar yo'q.",
@@ -15250,6 +15247,8 @@ function renderSalesFunnel() {
         emptyText: "Tanlangan filtrlar bo'yicha sifatsiz lidlar yo'q.",
         centerLabel: 'sifatsiz lid'
     })}
+    </div>
+    ${buildLeadQualityChart(filteredLeads)}
     ${buildLeadQualityConversionStats(filteredLeads)}
     ${buildLeadDemographicsStats(filteredLeads)}
     ${buildCourseBuyersStats(filteredLeads)}`;
@@ -20409,10 +20408,44 @@ function renderLeadTrialStatus(lead) {
         ? (request.attended ? 'Qatnashdi' : 'Qatnashmadi') : 'Hali qatnashmagan'}</div>`;
 }
 
+// Kartochkadagi "keyingi qadam": eng so'nggi bog'lanish eslatmasi (agar
+// undan keyin izoh yozilmagan bo'lsa). Lid yopilgan bosqichda ko'rsatilmaydi.
+function getLeadNextFollowUp(lead, now = Date.now()) {
+    if (LEAD_FOLLOWUP_CLOSED.has(normalizeLeadStatus(lead.status))) return null;
+    const comments = Array.isArray(lead.comments) ? lead.comments : [];
+    const reminders = comments.filter(c => c && c.type === 'follow-up-reminder' && parseLeadSlaTime(c.reminderAt));
+    if (!reminders.length) return null;
+    const last = reminders.reduce((a, b) => (parseLeadSlaTime(b.createdAt) >= parseLeadSlaTime(a.createdAt) ? b : a));
+    const at = parseLeadSlaTime(last.reminderAt);
+    if (comments.some(o => o !== last && o.type !== 'follow-up-reminder' && parseLeadSlaTime(o.createdAt) > Math.min(at, now) && parseLeadSlaTime(o.createdAt) > parseLeadSlaTime(last.createdAt))) return null;
+    return { at, overdue: at <= now };
+}
+
+function formatLeadFollowUpWhen(at, now = Date.now()) {
+    const d = new Date(at);
+    const n = new Date(now);
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const dayDiff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000);
+    if (dayDiff === 0) return `bugun ${time}`;
+    if (dayDiff === 1) return `ertaga ${time}`;
+    if (dayDiff === -1) return `kecha ${time}`;
+    return `${d.getDate()}-${UZ_MONTHS_SHORT[d.getMonth()]} ${time}`;
+}
+
+function shortPersonName(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    return parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : parts[0];
+}
+
 function renderLeadCard(lead, langKey) {
     const normalized = normalizeLeadExtras(lead);
     const phone = formatPhoneDisplay(normalized.phone) || '—';
-    const phone2 = formatPhoneDisplay(normalized.phone2) || '—';
+    const phone2 = formatPhoneDisplay(normalized.phone2) || '';
+    const nextFollowUp = getLeadNextFollowUp(normalized);
+    const nextStepHtml = nextFollowUp
+        ? `<div class="lead-card-next${nextFollowUp.overdue ? ' is-late' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${nextFollowUp.overdue ? "Qo'ng'iroq vaqti o'tdi" : "Qo'ng'iroq"} · ${escapeHtml(formatLeadFollowUpWhen(nextFollowUp.at))}</div>`
+        : '';
     const commentCount = normalized.comments.length;
     const hasManagerPhoto = Boolean(normalized.managerPhoto);
 
@@ -20486,6 +20519,7 @@ function renderLeadCard(lead, langKey) {
                 ${renderLeadTrialStatus(normalized)}
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
+                    <span class="lead-card-kind lead-card-kind--meta">${escapeHtml(leadKindLabel(normalized))}</span>
                     ${serialHtml}
                 </div>
             </div>
@@ -20513,16 +20547,17 @@ function renderLeadCard(lead, langKey) {
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                 <span>${escapeHtml(phone)}</span>
             </div>
-            <div class="lead-card-contact">
+            ${phone2 ? `<div class="lead-card-contact">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                 <span>${escapeHtml(phone2)}</span>
-            </div>
+            </div>` : ''}
         </div>
+        ${nextStepHtml}
         ${renderDeferredPurchaseDates(normalized)}
         <div class="lead-card-footer">
             <div class="lead-card-actions">
                 <button type="button" class="lead-card-action lead-card-action--mgr${_manager ? ' lead-card-action--active' : ''}" data-lead-manager-photo="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="${escapeHtml(_manager?.name || 'Menejer biriktirilmagan')}">
-                    <span class="lead-mgr-avatar">${managerAvatarHtml}</span>
+                    <span class="lead-mgr-avatar">${managerAvatarHtml}</span>${_manager ? `<span class="lead-mgr-name">${escapeHtml(shortPersonName(_manager.name))}</span>` : ''}
                 </button>
                 <button type="button" class="lead-card-action" data-lead-comments="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Izohlar">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -20532,7 +20567,6 @@ function renderLeadCard(lead, langKey) {
                     <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                 </button>
             </div>
-            <span class="lead-card-kind">${escapeHtml(leadKindLabel(normalized))}</span>
         </div>
     </article>`;
 }
@@ -21495,65 +21529,141 @@ function openAssignManagerModal(lang, leadId) {
     };
 }
 
+// Telefonni bitta ko'rinishga keltiradi: O'zbekiston raqami "+998XXXXXXXXX",
+// xorijiy raqam "+" va 10–15 raqam. Noto'g'ri bo'lsa null.
+function normalizeLeadPhoneInput(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 9) return '+998' + digits;
+    if (digits.length === 10 && digits.startsWith('0')) return '+998' + digits.slice(1);
+    if (digits.length === 12 && digits.startsWith('998')) return '+' + digits;
+    if (digits.startsWith('998')) return null; // O'zbekiston kodi bor, lekin raqam to'liq emas
+    if (digits.length === 11 && digits.startsWith('8') && !raw.startsWith('+')) return '+7' + digits.slice(1);
+    if (digits.length >= 10 && digits.length <= 15) return '+' + digits;
+    return null;
+}
+
+// Shu raqam bilan mavjud lid yoki o'quvchini topadi (oxirgi 9 raqam bo'yicha).
+function findLeadPhoneDuplicates(phone) {
+    const key = String(phone || '').replace(/\D/g, '').slice(-9);
+    if (key.length < 9) return [];
+    const same = p => String(p || '').replace(/\D/g, '').slice(-9) === key;
+    const out = [];
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    ['english', 'russian'].forEach(lang => (leads[lang] || []).forEach(l => {
+        if (same(l.phone) || same(l.phone2)) {
+            const col = LEAD_COLUMNS.find(c => c.id === normalizeLeadStatus(l.status));
+            out.push({ kind: 'Lid', name: l.name, extra: `${col?.label || ''} · ${managers.find(m => m.id === l.managerId)?.name || 'menejer biriktirilmagan'}` });
+        }
+    }));
+    getItem(STORAGE_KEYS.students, []).forEach(st => {
+        if (!st.isStaffDemo && (same(st.phone) || same(st.parentPhone))) out.push({ kind: 'Oʻquvchi', name: st.name, extra: st.group || '' });
+    });
+    return out;
+}
+
+function getLeadModalManagers(lang) {
+    const byLang = getSalesManagers(lang);
+    const known = getItem(STORAGE_KEYS.salesManagers, []);
+    // HR ro'yxatida umuman sotuv menejeri bo'lmasa — eski ro'yxat; bor bo'lsa faqat shu til.
+    if (!byLang.length) return getSalesManagers().length ? [] : known;
+    const knownIds = new Set(known.map(m => m.id));
+    // HR ro'yxatidagi til bo'yicha menejerlar; sotuv jadvalida bor bo'lganlari afzal.
+    const list = byLang.filter(m => !known.length || knownIds.has(m.id));
+    return list.length ? list : byLang;
+}
+
 function openAddLeadModal() {
     const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const _cuModal = getCurrentUser();
     const _isSmModal = _cuModal && _cuModal.role === 'sales_manager';
-    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
-    const managers = allManagers.filter(m => (m.lang || 'english') === defaultLang);
     const autoManagerId = _isSmModal ? (_cuModal.linkedManagerId || '') : '';
-    const managerOptions = `<option value="">— Biriktirilmagan —</option>
-        ${managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === autoManagerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
+    const managerOptions = lang => `<option value="">— Biriktirilmagan —</option>
+        ${getLeadModalManagers(lang).map(m => `<option value="${escapeHtml(m.id)}"${m.id === autoManagerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
+    const radio = (name, value, label, checked) => `<label class="alx-opt"><input type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}><span>${label}</span></label>`;
 
-    openModal("Yangi lid qo'shish",
-        `<div class="form-group"><label>Ism-familiya</label><input id="mLeadName" class="form-control" placeholder="Masalan: Ali Valiyev"></div>
-         <div class="form-group"><label>Telefon</label><input id="mLeadPhone" class="form-control" placeholder="+998 90 123 45 67"></div>
-         <div class="form-group"><label>2-telefon</label><input id="mLeadPhone2" class="form-control" placeholder="+998 91 234 56 78"></div>
-         <div class="form-group" ${_isSmModal ? 'style="display:none"' : ''}><label>Sotuv menejeri</label>
-            <select id="mLeadManagerId" class="form-select">${managerOptions}</select>
+    openModal("Yangi lid qoʻshish",
+        `<p class="alx-sub">Lid "Yangi lidlar" bosqichiga tushadi. <span aria-hidden="true">*</span> — majburiy maydon. Telefon boʻlmasa keyin qoʻshish mumkin.</p>
+         <div class="form-group"><label for="mLeadName">Ism-familiya <b class="alx-req">*</b></label><input id="mLeadName" class="form-control" autocomplete="off" placeholder="Masalan: Ali Valiyev"><p class="alx-err" id="mLeadNameErr" hidden></p></div>
+         <div class="form-group"><label for="mLeadPhone">Telefon</label><input id="mLeadPhone" class="form-control" inputmode="tel" autocomplete="off" placeholder="+998 90 123 45 67"><p class="alx-err" id="mLeadPhoneErr" hidden></p></div>
+         <div class="form-group"><label for="mLeadPhone2">2-telefon <span class="alx-opt-l">(ixtiyoriy)</span></label><input id="mLeadPhone2" class="form-control" inputmode="tel" autocomplete="off" placeholder="+998 91 234 56 78"><p class="alx-err" id="mLeadPhone2Err" hidden></p></div>
+         <div class="alx-dup" id="mLeadDup" hidden></div>
+         <div class="form-group" ${_isSmModal ? 'style="display:none"' : ''}><label for="mLeadManagerId">Sotuv menejeri</label>
+            <select id="mLeadManagerId" class="form-select">${managerOptions(defaultLang)}</select>
          </div>
-         <div class="form-group"><label>Til</label>
-            <select id="mLeadLang" class="form-select">
-                <option value="english"${defaultLang === 'english' ? ' selected' : ''}>Ingliz tili</option>
-                <option value="russian"${defaultLang === 'russian' ? ' selected' : ''}>Rus tili</option>
-            </select>
-         </div>
-         <div class="form-group"><label>Lid turi</label>
-            <select id="mLeadType" class="form-select">
-                <option value="organic">Organik</option>
-                <option value="target">Target (reklama)</option>
-            </select>
-         </div>`,
-        `<button class="btn-primary-sm" id="saveLead">Saqlash</button>`
+         <fieldset class="alx-set"><legend>Til</legend><div class="alx-row">
+            ${radio('mLeadLang', 'english', 'Ingliz tili', defaultLang === 'english')}${radio('mLeadLang', 'russian', 'Rus tili', defaultLang === 'russian')}
+         </div></fieldset>
+         <fieldset class="alx-set"><legend>Lid turi <b class="alx-req">*</b> — qayerdan keldi?</legend><div class="alx-row">
+            ${radio('mLeadType', 'organic', 'Organik', false)}${radio('mLeadType', 'target', 'Target (reklama)', false)}
+         </div><p class="alx-err" id="mLeadTypeErr" hidden></p></fieldset>
+         <div class="form-group" style="margin-bottom:0"><label for="mLeadNote">Izoh <span class="alx-opt-l">(ixtiyoriy)</span></label><textarea id="mLeadNote" class="form-control" rows="2" placeholder="Masalan: IELTS kerak, kechqurun qoʻngʻiroq qilish"></textarea></div>`,
+        `<button type="button" class="btn-ghost" id="cancelLead">Bekor qilish</button><button type="button" class="btn-primary-sm" id="saveLead">Lidni saqlash</button>`
     );
+    document.getElementById('cancelLead').onclick = closeModal;
+    document.querySelectorAll('input[name="mLeadLang"]').forEach(r => r.addEventListener('change', () => {
+        const sel = document.getElementById('mLeadManagerId');
+        if (sel && !_isSmModal) { const keep = sel.value; sel.innerHTML = managerOptions(r.value); if ([...sel.options].some(o => o.value === keep)) sel.value = keep; }
+    }));
+    const setErr = (id, msg) => {
+        const el = document.getElementById(id + 'Err');
+        const input = document.getElementById(id);
+        if (el) { el.hidden = !msg; el.textContent = msg || ''; }
+        if (input) { input.classList.toggle('is-invalid', !!msg); input.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
+    };
+    let dupAcknowledged = '';
+    document.getElementById('mLeadPhone').addEventListener('input', () => { dupAcknowledged = ''; document.getElementById('mLeadDup').hidden = true; document.getElementById('saveLead').textContent = 'Lidni saqlash'; });
 
     document.getElementById('saveLead').onclick = () => {
         const name = document.getElementById('mLeadName').value.trim();
-        if (!name) return;
-        const lang = document.getElementById('mLeadLang').value;
-        const leadType = document.getElementById('mLeadType').value;
+        const phone = normalizeLeadPhoneInput(document.getElementById('mLeadPhone').value);
+        const phone2Raw = document.getElementById('mLeadPhone2').value;
+        const phone2 = normalizeLeadPhoneInput(phone2Raw);
+        const lang = document.querySelector('input[name="mLeadLang"]:checked')?.value || defaultLang;
+        const leadType = document.querySelector('input[name="mLeadType"]:checked')?.value || '';
+        setErr('mLeadName', name ? '' : 'Ism-familiyani kiriting');
+        setErr('mLeadPhone', phone === null ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : '');
+        setErr('mLeadPhone2', phone2 === null ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : '');
+        const typeErr = document.getElementById('mLeadTypeErr');
+        if (typeErr) { typeErr.hidden = !!leadType; typeErr.textContent = leadType ? '' : 'Lid qayerdan kelganini tanlang'; }
+        if (!name || phone === null || phone2 === null || !leadType) {
+            (document.querySelector('#modalBody .is-invalid') || document.querySelector('input[name="mLeadType"]'))?.focus();
+            return;
+        }
+        const dups = [...findLeadPhoneDuplicates(phone), ...findLeadPhoneDuplicates(phone2)];
+        if (dups.length && dupAcknowledged !== `${phone}|${phone2}`) {
+            const box = document.getElementById('mLeadDup');
+            box.innerHTML = `<strong>Bu raqam bazada bor:</strong><ul>${dups.slice(0, 4).map(d => `<li>${escapeHtml(d.kind)} · ${escapeHtml(d.name || '')}${d.extra ? ` <span>(${escapeHtml(d.extra)})</span>` : ''}</li>`).join('')}</ul><span>Takroriy lid ochmaslik uchun avval mavjudini tekshiring. Baribir saqlash uchun tugmani yana bosing.</span>`;
+            box.hidden = false;
+            dupAcknowledged = `${phone}|${phone2}`;
+            document.getElementById('saveLead').textContent = 'Baribir saqlash';
+            return;
+        }
         const sourceLabel = leadType === 'organic' ? 'Organik' : 'Target (reklama)';
-
         const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         leads[lang] = leads[lang] || [];
-        const _newLeadManagerId = document.getElementById('mLeadManagerId').value || '';
+        const _newLeadManagerId = _isSmModal ? autoManagerId : (document.getElementById('mLeadManagerId').value || '');
+        const note = document.getElementById('mLeadNote').value.trim();
+        const nowIso = new Date().toISOString();
         const newLead = {
             id: 'l' + Date.now(),
             name,
-            phone: document.getElementById('mLeadPhone').value.trim(),
-            phone2: document.getElementById('mLeadPhone2').value.trim(),
+            phone: phone || '',
+            phone2: phone2 || '',
             managerId: _newLeadManagerId,
             source: sourceLabel,
             leadType,
             status: 'yangi-lidlar',
-            comments: [],
+            comments: note ? [createLeadComment({ text: note, author: _cuModal?.name || 'Admin', type: 'manual' })] : [],
             managerPhoto: null,
             attachments: [],
-            createdAt: new Date().toISOString(),
-            slaStageEnteredAt: new Date().toISOString(),
+            createdAt: nowIso,
+            slaStageEnteredAt: nowIso,
             // 1-vazifa: yaratilishdayoq menejer tanlangan bo'lsa, bu ham
             // "biriktirilgan sana" hisoblanadi.
-            managerAssignedAt: _newLeadManagerId ? new Date().toISOString() : null,
+            managerAssignedAt: _newLeadManagerId ? nowIso : null,
             date: new Date().toLocaleDateString('uz-UZ')
         };
         leads[lang].push(newLead);
@@ -21561,6 +21671,7 @@ function openAddLeadModal() {
         persistLeadChange(lang, newLead).catch(() => {});
         closeModal();
         renderLeads();
+        showMiniToast(`${name} — lid qoʻshildi`);
     };
 }
 
@@ -23527,12 +23638,22 @@ function renderScriptContentHtml(content) {
 
 function stripHtmlToText(html) {
     if (!html) return '';
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return (div.textContent || '').replace(/\s+/g, ' ').trim();
+    // DOMParser hujjati rasmlarni yuklamaydi va onerror kabi kodlarni ishga tushirmaydi.
+    const doc = new DOMParser().parseFromString(String(html), 'text/html');
+    return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
 let _currentScriptId = null;
+
+let _scriptQuery = '';
+function isScriptsTwoPane() {
+    return typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 901px)').matches : true;
+}
+
+function scriptTint(color) {
+    const hex = String(color || '#6366f1').trim();
+    return /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#6366f1';
+}
 
 function renderScripts() {
     const grid = document.getElementById('scriptsGrid');
@@ -23544,36 +23665,71 @@ function renderScripts() {
     if (backBtn) backBtn.onclick = closeScriptArticle;
 
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    const scripts = getItem(STORAGE_KEYS.scripts, []).filter(s => (s.lang || 'english') === lang);
+    const all = getItem(STORAGE_KEYS.scripts, []).filter(s => (s.lang || 'english') === lang);
+    const sub = document.getElementById('scriptsSubtitle');
+    if (sub) sub.textContent = `${lang === 'russian' ? 'Rus tili' : 'Ingliz tili'} yoʻnalishi · ${all.length} ta maqola`;
+    grid.className = 'scr';
 
-    if (!scripts.length) {
+    if (!all.length) {
         grid.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--text-muted)">
-            <div style="font-size:56px;margin-bottom:16px">📚</div>
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px">Hozircha skript yo'q</h3>
-            <p style="font-size:14px;margin:0">Birinchi artikl qo'shish uchun "Artikl qo'shish" tugmasini bosing</p>
+        <div class="scr-empty">
+            <div style="font-size:48px;margin-bottom:12px">📚</div>
+            <h3>Hozircha skript yoʻq</h3>
+            <p>Birinchi maqolani qoʻshish uchun "Maqola qoʻshish" tugmasini bosing</p>
         </div>`;
         return;
     }
 
-    grid.innerHTML = scripts.map(s => {
-        const preview = stripHtmlToText(s.content || '').slice(0, 120);
-        const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('uz-UZ') : '';
-        return `
-        <div class="script-card" style="background:${escapeHtml(s.color || '#6366f1')}" onclick="openScriptArticle('${escapeHtml(s.id)}')">
-            <span class="script-card-sticker">${escapeHtml(s.sticker || '📘')}</span>
-            <h3 class="script-card-title">${escapeHtml(s.title || 'Nomsiz')}</h3>
-            ${s.subtitle ? `<p class="script-card-subtitle">${escapeHtml(s.subtitle)}</p>` : ''}
-            ${preview ? `<p class="script-card-preview">${escapeHtml(preview)}</p>` : ''}
-            <div class="script-card-footer">
-                <span class="script-card-date">${dateStr}</span>
-            </div>
-            <div class="script-card-actions" onclick="event.stopPropagation()">
-                <button class="script-card-action-btn" onclick="openEditScriptModal('${escapeHtml(s.id)}')">✏️ Tahrirlash</button>
-                <button class="script-card-action-btn" onclick="deleteScript('${escapeHtml(s.id)}')">🗑️</button>
-            </div>
-        </div>`;
-    }).join('');
+    const q = normalizeLeadSearchText(_scriptQuery);
+    const list = q ? all.filter(s => normalizeLeadSearchText(`${s.title || ''} ${s.subtitle || ''} ${stripHtmlToText(s.content || '')}`).includes(q)) : all;
+    const twoPane = isScriptsTwoPane();
+    if (twoPane && (!_currentScriptId || !all.some(s => s.id === _currentScriptId))) _currentScriptId = (list[0] || all[0]).id;
+    const fmtDate = d => (d ? new Date(d).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit' }) : '');
+
+    const items = list.map(s => {
+        const preview = s.subtitle || stripHtmlToText(s.content || '').slice(0, 90);
+        const on = twoPane && s.id === _currentScriptId;
+        return `<li><button type="button" class="scr-item${on ? ' is-on' : ''}" data-script-open="${escapeHtml(s.id)}" aria-current="${on ? 'true' : 'false'}">
+            <span class="scr-ico" style="background:${scriptTint(s.color)}">${escapeHtml(s.sticker || '📘')}</span>
+            <span class="scr-txt"><strong>${escapeHtml(s.title || 'Nomsiz')}</strong>${preview ? `<span>${escapeHtml(preview)}</span>` : ''}
+            ${s.updatedAt || s.createdAt ? `<small>${s.updatedAt ? 'Yangilangan' : 'Qoʻshilgan'} ${escapeHtml(fmtDate(s.updatedAt || s.createdAt))}</small>` : ''}</span>
+        </button></li>`;
+    }).join('') || '<li class="scr-none">Hech narsa topilmadi</li>';
+
+    const cur = twoPane ? all.find(s => s.id === _currentScriptId) : null;
+    const reader = cur ? `
+        <article class="scr-read" aria-label="${escapeHtml(cur.title || '')}">
+            <header class="scr-read-head" style="--scr-c:${scriptTint(cur.color)}">
+                <span class="scr-read-eyebrow">${escapeHtml(cur.sticker || '📘')}</span>
+                <h2>${escapeHtml(cur.title || 'Nomsiz')}</h2>
+                ${cur.subtitle ? `<p>${escapeHtml(cur.subtitle)}</p>` : ''}
+                <div class="scr-read-acts">
+                    <button type="button" class="scr-btn" data-script-edit="${escapeHtml(cur.id)}">✏️ Tahrirlash</button>
+                    <button type="button" class="scr-btn scr-btn--danger" data-script-del="${escapeHtml(cur.id)}" aria-label="Oʻchirish">🗑️</button>
+                </div>
+            </header>
+            <div class="scr-read-body script-article-content">${renderScriptContentHtml(cur.content)}</div>
+        </article>` : '';
+
+    grid.innerHTML = `
+        <aside class="scr-list">
+            <label class="scr-search"><span aria-hidden="true">🔍</span><input type="search" id="scriptSearch" placeholder="Maqola yoki iboradan qidirish" value="${escapeHtml(_scriptQuery)}" aria-label="Skriptlardan qidirish"></label>
+            <ul>${items}</ul>
+        </aside>
+        ${reader}`;
+
+    const search = document.getElementById('scriptSearch');
+    if (search) search.oninput = e => {
+        if (e && e.isComposing) return;
+        _scriptQuery = search.value;
+        const pos = search.selectionStart;
+        renderScripts();
+        const again = document.getElementById('scriptSearch');
+        if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* */ } }
+    };
+    grid.querySelectorAll('[data-script-open]').forEach(btn => { btn.onclick = () => openScriptArticle(btn.dataset.scriptOpen); });
+    grid.querySelectorAll('[data-script-edit]').forEach(btn => { btn.onclick = () => openEditScriptModal(btn.dataset.scriptEdit); });
+    grid.querySelectorAll('[data-script-del]').forEach(btn => { btn.onclick = () => deleteScript(btn.dataset.scriptDel); });
 }
 
 function openScriptArticle(id) {
@@ -23581,6 +23737,8 @@ function openScriptArticle(id) {
     const s = scripts.find(x => x.id === id);
     if (!s) return;
     _currentScriptId = id;
+    // Keng ekranda maqola o'ng tomonda ochiladi; telefonda — alohida oynada.
+    if (isScriptsTwoPane()) { renderScripts(); return; }
 
     const listView = document.getElementById('scriptsListView');
     const articleView = document.getElementById('scriptArticleView');
@@ -23588,7 +23746,7 @@ function openScriptArticle(id) {
     const meta = document.getElementById('scriptArticleMeta');
     const body = document.getElementById('scriptArticleBody');
 
-    header.style.background = s.color || '#6366f1';
+    header.style.background = scriptTint(s.color);
     meta.innerHTML = `
         <h2 style="color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.18)">${escapeHtml(s.sticker || '')} ${escapeHtml(s.title || '')}</h2>
         ${s.subtitle ? `<p style="color:rgba(255,255,255,.8)">${escapeHtml(s.subtitle)}</p>` : ''}`;
@@ -23598,6 +23756,8 @@ function openScriptArticle(id) {
         editBtn.style.cssText = 'background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px)';
         editBtn.onclick = () => openEditScriptModal(id);
     }
+    const delBtn = document.getElementById('scriptDeleteBtn');
+    if (delBtn) delBtn.onclick = () => deleteScript(id);
 
     body.innerHTML = `<div class="script-article-content">${renderScriptContentHtml(s.content)}</div>`;
 
@@ -23789,9 +23949,11 @@ function saveScriptFromModal(editId) {
 
     if (editId) {
         const idx = scripts.findIndex(s => s.id === editId);
-        if (idx >= 0) scripts[idx] = { ...scripts[idx], title, subtitle, color, sticker, lang, content };
+        if (idx >= 0) scripts[idx] = { ...scripts[idx], title, subtitle, color, sticker, lang, content, updatedAt: new Date().toISOString() };
     } else {
-        scripts.unshift({ id: 'sc_' + Date.now(), title, subtitle, color, sticker, lang, content, createdAt: new Date().toISOString() });
+        const newId = 'sc_' + Date.now();
+        scripts.unshift({ id: newId, title, subtitle, color, sticker, lang, content, createdAt: new Date().toISOString() });
+        if (isScriptsTwoPane()) _currentScriptId = newId;
     }
 
     setItem(STORAGE_KEYS.scripts, scripts);
@@ -24533,37 +24695,76 @@ let _spIndManagerId = null;
 // 41-vazifa: individual reja kartochkasida ko'rilayotgan oy ("YYYY-MM")
 let _spIndPlanMonth = null;
 
+const SALES_PLAN_TIER_UI = {
+    min: { label: 'Minimal', chip: 'warn' },
+    mid: { label: 'Oʻrtacha', chip: 'pri' },
+    max: { label: 'Zoʻr', chip: 'ok' },
+};
+
 function renderSalesPlanTierCards(plan, activePeriod) {
     return SALES_PLAN_TIERS.map(tier => {
         const conv = plan.conversions[tier.key];
         const m = computeSalesPlanMetrics(plan, conv, activePeriod.days);
+        const ui = SALES_PLAN_TIER_UI[tier.key] || { label: tier.label, chip: 'pri' };
+        const isMain = tier.key === 'mid';
+        const num = n => Number(n || 0).toLocaleString('uz-UZ');
+        const row = (label, period, day, strong) => `<tr${strong ? ' class="spx-strong"' : ''}><th scope="row">${label}</th><td>${period}</td><td>${day}</td></tr>`;
         return `
-        <div class="sp-plan-card" style="border-top-color:${tier.color}">
-            <div class="sp-plan-header" style="background:${tier.bg};color:${tier.color}">
-                ${escapeHtml(tier.label)} <span class="sp-plan-header-conv">${fmtPct1(conv)}</span>
+        <section class="spx-card${isMain ? ' is-main' : ''}" aria-label="${escapeHtml(ui.label)} reja">
+            <div class="spx-card-head">
+                <h3>${escapeHtml(ui.label)}</h3>
+                <span class="spx-chip spx-chip--${ui.chip}">${fmtPct1(conv)}</span>
             </div>
-            <div class="sp-plan-block">
-                <div class="sp-plan-block-title">Kunlik</div>
-                <div class="sp-row"><span>Lid soni</span><b>${m.kunlik.lidSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.kunlik.konversiya)}</b></div>
-                <div class="sp-row"><span>Sotuv soni</span><b>${m.kunlik.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.kunlik.sotuvSumma)}</b></div>
-                <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.kunlik.budjet)}</b></div>
-                <div class="sp-row"><span>ROMI</span><b class="${m.kunlik.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.kunlik.romi)}</b></div>
-            </div>
-            <div class="sp-plan-block">
-                <div class="sp-plan-block-title">${escapeHtml(activePeriod.label)} <span class="text-muted" style="font-weight:500">(${m.davr.days} kun)</span></div>
-                <div class="sp-row"><span>Lid soni</span><b>${m.davr.lidSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>Lid narxi</span><b>${fmtMoney(m.davr.leadCost)}</b></div>
-                <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.davr.konversiya)}</b></div>
-                <div class="sp-row"><span>Sotuv soni</span><b>${m.davr.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(m.davr.avgCheck)}</b></div>
-                <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.davr.sotuvSumma)}</b></div>
-                <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.davr.budjet)}</b></div>
-                <div class="sp-row"><span>ROMI</span><b class="${m.davr.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.davr.romi)}</b></div>
-            </div>
-        </div>`;
+            ${isMain ? '<span class="spx-main-note">Fakt shu reja bilan solishtiriladi</span>' : ''}
+            <span class="spx-unit">Summalar soʻmda</span>
+            <table class="spx-tbl">
+                <thead><tr><th scope="col"><span class="sr-only">Koʻrsatkich</span></th><th scope="col">${escapeHtml(activePeriod.label)} · ${m.davr.days} kun</th><th scope="col">Kun</th></tr></thead>
+                <tbody>
+                    ${row('Lidlar', num(m.davr.lidSoni), num(m.kunlik.lidSoni))}
+                    ${row('Konversiya', fmtPct1(conv), '—')}
+                    ${row('Sotuvlar', num(m.davr.sotuvSoni), num(m.kunlik.sotuvSoni))}
+                    ${row('Sotuv summasi', num(m.davr.sotuvSumma), num(m.kunlik.sotuvSumma), true)}
+                    ${row('Reklama byudjeti', num(m.davr.budjet), num(m.kunlik.budjet))}
+                    ${row('ROMI', `<span class="${m.davr.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(m.davr.romi)}</span>`, '—')}
+                </tbody>
+            </table>
+        </section>`;
     }).join('');
+}
+
+// Fakt jadvali: shu oy boshidan bugungacha bo'lgan real natija "O'rtacha"
+// rejaning bugungacha bo'lgan ulushi bilan solishtiriladi.
+function renderSalesPlanFactTable(lang) {
+    const plan = getSalesPlan(lang);
+    const f = computeSalesPlanFactMetrics(lang).davr;
+    const days = Math.min(f.days, Math.max(1, plan.duration));
+    const p = computeSalesPlanMetrics(plan, plan.conversions.mid, days).davr;
+    const pct = (fact, target) => (target > 0 ? Math.round(fact / target * 100) : null);
+    const cls = v => (v === null ? '' : v >= 100 ? 'spx-ok' : v >= 80 ? 'spx-warn' : 'spx-bad');
+    const num = n => Number(n || 0).toLocaleString('uz-UZ');
+    const rows = [
+        ['Lidlar', num(f.lidSoni), num(p.lidSoni), pct(f.lidSoni, p.lidSoni)],
+        ['Sotuvlar', num(f.sotuvSoni), num(p.sotuvSoni), pct(f.sotuvSoni, p.sotuvSoni)],
+        ['Sotuv summasi', fmtMoney(f.sotuvSumma), fmtMoney(p.sotuvSumma), pct(f.sotuvSumma, p.sotuvSumma)],
+        ['Konversiya', fmtPct1(f.konversiya), fmtPct1(p.konversiya), pct(f.konversiya, p.konversiya)],
+        ['Oʻrtacha chek', fmtMoney(f.avgCheck), fmtMoney(p.avgCheck), pct(f.avgCheck, p.avgCheck)],
+    ];
+    const budgetDiff = p.budjet - f.budjet;
+    const monthName = UZ_MONTHS_SHORT[new Date().getMonth()];
+    return `
+    <section class="spx-fact" aria-labelledby="spxFactH">
+        <div class="spx-fact-head">
+            <h3 id="spxFactH">Fakt · 1–${f.days} ${escapeHtml(monthName)}</h3>
+            <span>Bugungacha reja = "Oʻrtacha" reja × ${days} kun</span>
+        </div>
+        <div class="spx-fact-wrap"><table class="spx-ftbl">
+            <thead><tr><th scope="col">Koʻrsatkich</th><th scope="col">Fakt</th><th scope="col">Bugungacha reja</th><th scope="col">Bajarilish</th></tr></thead>
+            <tbody>${rows.map(([l, a, b, v]) => `<tr><th scope="row">${l}</th><td><b>${a}</b></td><td>${b}</td><td class="${cls(v)}">${v === null ? '—' : v + '%'}</td></tr>`).join('')}
+                <tr><th scope="row">Reklama byudjeti · lid × lid narxi</th><td><b>${fmtMoney(f.budjet)}</b></td><td>${fmtMoney(p.budjet)}</td><td class="${budgetDiff >= 0 ? 'spx-ok' : 'spx-bad'}">${budgetDiff >= 0 ? 'rejadan ' + fmtMoney(budgetDiff) + ' kam' : 'rejadan ' + fmtMoney(-budgetDiff) + ' koʻp'}</td></tr>
+                <tr><th scope="row">ROMI</th><td><b class="${f.romi >= 0 ? 'sp-pos' : 'sp-neg'}">${fmtSignedPct(f.romi)}</b></td><td>${fmtSignedPct(p.romi)}</td><td>—</td></tr>
+            </tbody>
+        </table></div>
+    </section>`;
 }
 
 // 33-vazifa: "Sotuv rejasi" endi 2 ta pastki bo'limga ega — Jamoaviy reja
@@ -24618,6 +24819,10 @@ function renderSalesPlanTeam() {
         };
     });
 
+    // Fakt endi reja ostidagi jadvalda ko'rinadi — alohida "Fakt" tugmasi kerak emas.
+    _spJamoaviyView = 'plan';
+    const viewToggle = document.getElementById('spJamoaviyViewToggle');
+    if (viewToggle) viewToggle.style.display = 'none';
     const planView = document.getElementById('spPlanView');
     const faktView = document.getElementById('spFaktView');
     if (planView) planView.style.display = _spJamoaviyView === 'plan' ? '' : 'none';
@@ -24684,6 +24889,8 @@ function renderSalesPlanResults() {
     });
 
     gridEl.innerHTML = renderSalesPlanTierCards(plan, activePeriod);
+    const factEl = document.getElementById('spFactTable');
+    if (factEl) factEl.innerHTML = renderSalesPlanFactTable(lang);
 }
 
 // 35-vazifa: Jamoaviy reja > Fakt — shu til yo'nalishidagi BARCHA sotuv
@@ -24995,6 +25202,7 @@ const PRIZE_IMAGES = {
     obed: 'prize-obed.png', obed30: 'prize-obed.png', obed60: 'prize-obed.png',
     kitob: 'prize-book.png', kino: 'prize-cinema.png', restoran: 'prize-restaurant.png',
     iphone: 'prize-phone.png', macbook: 'prize-laptop.png', pul2000: 'prize-cash.png', umra: 'prize-umra.png',
+    rank1: 'medals.png', rank2: 'medals.png', rank3: 'medals.png',
 };
 function _prizeImg(id, size) {
     const file = PRIZE_IMAGES[id];
@@ -25554,42 +25762,78 @@ function renderBonusHistorySection() {
         ...RANK_BONUSES.map(b => ({ ...b, period: 'O\'rinli' })),
     ];
 
+    const canEdit = ['admin', 'rop'].includes(getCurrentUser()?.role);
+    const periodLabel = _ratingPeriod === 'kunlik' ? 'Bugun' : _ratingPeriod === 'haftalik' ? 'Shu hafta' : `${UZ_MONTHS[new Date().getMonth()]} oyi`;
+    const byPeriod = { Kunlik: 0, Haftalik: 0, Oylik: 0, "O'rinli": 0 };
+    const perMgr = new Map();
+    let moneyTotal = 0;
+    filtered.forEach(h => {
+        const bonus = allBonuses.find(b => b.id === h.bonusId);
+        if (bonus) byPeriod[bonus.period] = (byPeriod[bonus.period] || 0) + 1;
+        perMgr.set(h.managerId, (perMgr.get(h.managerId) || 0) + 1);
+        if (Number.isFinite(Number(h.amount))) moneyTotal += Number(h.amount) || 0;
+    });
+    const top = [...perMgr.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topMgr = top ? managers.find(m => m.id === top[0]) : null;
+    const fmtD = d => { const x = new Date(d); return Number.isNaN(x.getTime()) ? escapeHtml(d || '') : `${x.getDate()}-${UZ_MONTHS_SHORT[x.getMonth()]}`; };
+    const hero = topMgr ? `
+        <section class="bhx-hero" aria-label="Eng koʻp bonus olgan menejer">
+            <img src="images/prizes/trophy.png" alt="" width="112" height="112">
+            <div><span class="bhx-eyebrow">${escapeHtml(periodLabel)} · eng koʻp bonus</span>
+            <h2>${escapeHtml(_firstName(topMgr.name))} — ${top[1]} ta bonus</h2>
+            <p>Navbatdagi sovgʻa sizni kutmoqda: reja va obed chegaralari Reyting → Bonuslar roʻyxatida.</p></div>
+        </section>` : `
+        <section class="bhx-hero" aria-label="Bonuslar">
+            <img src="images/prizes/trophy.png" alt="" width="112" height="112">
+            <div><span class="bhx-eyebrow">${escapeHtml(periodLabel)}</span>
+            <h2>Hali hech kim bonus olmagan — birinchi boʻling!</h2>
+            <p>Kunlik 1,8 mln sotuv — bepul obed. Hafta oxirida eng yaxshi uchtalikka sovgʻa.</p></div>
+        </section>`;
+    const tiles = [
+        ['Jami bonuslar', filtered.length, periodLabel.toLowerCase()],
+        ['Obed (kunlik)', byPeriod.Kunlik, '1,8 / 2,5 / 3,0 mln chegaralari'],
+        ['Hafta sovgʻalari', byPeriod.Haftalik, 'kitob · kino · restoran'],
+        ['Oylik va oʻrinli', byPeriod.Oylik + byPeriod["O'rinli"], 'iPhone, MacBook, Umra, $'],
+    ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('')
+        + (moneyTotal ? `<div class="sfx-tile"><small>Pul bonuslari</small><b>${escapeHtml(fmtMoney(moneyTotal))}</b><span>kiritilgan summalar</span></div>` : '');
+
     el.innerHTML = `
     <div class="page-title-bar">
-        <div><h1>Bonus olganlar</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Kim qaysi bonusni oldi</p></div>
+        <div><h1>Bonus olganlar</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Kim qaysi bonusni oldi · ${escapeHtml(periodLabel)}</p></div>
     </div>
-
-    <div class="card" style="padding:0;overflow:hidden">
-        ${filtered.length ? `<div class="table-responsive"><table class="sdp-table" style="min-width:520px">
+    ${hero}
+    <div class="sfx-tiles">${tiles}</div>
+    <div class="card bhx-card" style="padding:0;overflow:hidden">
+        ${filtered.length ? `<div class="table-responsive"><table class="sdp-table bhx-tbl" style="min-width:560px">
             <thead><tr>
-                <th>Sana</th>
-                <th>Menejer</th>
                 <th>Bonus</th>
+                <th>Menejer</th>
+                <th>Sana</th>
                 <th>Davr</th>
-                <th style="width:40px"></th>
+                ${canEdit ? '<th style="width:48px"><span class="sr-only">Amallar</span></th>' : ''}
             </tr></thead>
             <tbody>
                 ${filtered.map(h => {
                     const mgr = managers.find(m => m.id === h.managerId);
                     const bonus = allBonuses.find(b => b.id === h.bonusId);
+                    const img = _prizeImg(h.bonusId, 40);
+                    const title = bonus ? (bonus.prize && bonus.period === "O'rinli" ? `${bonus.label} · ${bonus.prize}` : bonus.label) : h.bonusId;
                     return `<tr>
-                        <td style="color:var(--text-muted);font-size:12px">${escapeHtml(h.date || '')}</td>
+                        <td><div class="bhx-prize">${img || `<span class="bhx-ico">${bonus?.icon || '🎁'}</span>`}<span><strong>${escapeHtml(title || '')}</strong>${h.note ? `<small>${escapeHtml(h.note)}</small>` : ''}${Number(h.amount) ? `<small>${escapeHtml(fmtMoney(Number(h.amount)))}</small>` : ''}</span></div></td>
                         <td>
                             <div style="display:flex;align-items:center;gap:8px">
-                                <div class="rating-avatar" style="width:28px;height:28px;font-size:11px">${managerInitials(mgr?.name)}</div>
+                                <div class="rating-avatar" style="width:30px;height:30px;font-size:11px">${managerInitials(mgr?.name)}</div>
                                 <span>${escapeHtml(mgr?.name || h.managerId)}</span>
                             </div>
                         </td>
-                        <td>${bonus ? `<span style="color:${bonus.color}">${bonus.icon} ${bonus.label}</span>` : escapeHtml(h.bonusId)}</td>
-                        <td><span class="badge" style="background:var(--bg-secondary);color:var(--text-muted)">${escapeHtml(bonus?.period || '')}</span></td>
-                        <td>
-                            <button class="icon-btn" title="O'chirish" data-delete-bh="${escapeHtml(h.id)}">🗑️</button>
-                        </td>
+                        <td class="bhx-date">${fmtD(h.date)}</td>
+                        <td><span class="bhx-badge bhx-badge--${({ Kunlik: 'd', Haftalik: 'w', Oylik: 'm' })[bonus?.period] || 'r'}">${escapeHtml(bonus?.period || '—')}</span></td>
+                        ${canEdit ? `<td><button class="icon-btn" title="Oʻchirish" aria-label="Oʻchirish" data-delete-bh="${escapeHtml(h.id)}">🗑️</button></td>` : ''}
                     </tr>`;
                 }).join('')}
             </tbody>
-        </table></div>` : `<div style="text-align:center;padding:60px;color:var(--text-muted)">
-            <div style="font-size:48px;margin-bottom:12px">🎁</div>
+        </table></div>` : `<div class="bhx-empty">
+            <img src="images/prizes/prize-obed.png" alt="" width="96" height="96">
             <p>Bu davrda bonus belgilanmagan</p>
         </div>`}
     </div>`;
