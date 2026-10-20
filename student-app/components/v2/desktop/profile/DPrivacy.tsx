@@ -83,7 +83,7 @@ export function DPrivacy() {
           </View>
         ))}
       </View>
-      <View style={[s.card, { flexBasis: 'auto' }]}>
+      <View style={[s.card, { flexGrow: 0, flexBasis: 'auto' }]}>
         <Head title="Nimani saqlamaymiz" bg="#FDECEC" icon={<ShieldIcon size={22} color="#B42318" sw={2.1} />} box={44} />
         <View accessibilityRole="list" style={{ flexDirection: 'row', gap: 12 }}>
           {NOT_STORED.map((t) => (

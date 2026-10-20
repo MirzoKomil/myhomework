@@ -53,7 +53,7 @@ export function DDialogList() {
         const list = mc.library.speaking;
         setTopics(list);
         setProg(p);
-        setRelated(cur ? list.find((t) => titlesMatch(t.title, cur.lesson.name)) ?? null : null);
+        setRelated(cur ? (list.find((t) => titlesMatch(t.title, cur.lesson.name)) ?? null) : null);
       })().catch(() => {});
       return () => {
         alive = false;
@@ -70,7 +70,13 @@ export function DDialogList() {
   const cells = shown.length + (more > 0 ? 1 : 0);
 
   return (
-    <DesktopPage title="Dialoglar" subtitle={`${topics.length} ta hayotiy mavzu · audio + matn + tarjima`} back={R.practice} scroll={false} contentStyle={{ paddingBottom: 32, gap: 16 }}>
+    <DesktopPage
+      title="Dialoglar"
+      subtitle={`${topics.length} ta hayotiy mavzu · audio + matn + tarjima`}
+      back={R.practice}
+      scroll={false}
+      contentStyle={{ paddingBottom: 32, gap: 16 }}
+    >
       <DTabs tabs={TABS} value={filter} onChange={setFilter} label="Qiyinlik" />
 
       {related &&
@@ -78,7 +84,7 @@ export function DDialogList() {
           const n = dialogCount(related);
           const h = heardOf(related);
           const going = !prog[related.id]?.heard && (prog[related.id]?.frac ?? 0) > 0;
-          const f = n ? (h + (going ? prog[related.id]?.frac ?? 0 : 0)) / n : 0;
+          const f = n ? (h + (going ? (prog[related.id]?.frac ?? 0) : 0)) / n : 0;
           return (
             <Pressable accessibilityRole="link" onPress={() => go(R.dialog(related.id))} style={({ pressed }) => [s.hero, pressed && { opacity: 0.94 }]}>
               <View pointerEvents="none" style={s.heroCircle} />
@@ -135,7 +141,7 @@ export function DDialogList() {
                 key={t.id}
                 accessibilityRole="link"
                 onPress={() => go(R.dialog(t.id))}
-                style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.tile, { height: tileH }, hovered && { boxShadow: 'inset 0 0 0 2px #D4DEFF' } as object]}
+                style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.tile, { height: tileH }, hovered && ({ boxShadow: 'inset 0 0 0 2px #D4DEFF' } as object)]}
               >
                 <View style={[s.thumb, { backgroundColor: TILE_BG[i % TILE_BG.length] }]}>
                   {t.coverUrl ? (
@@ -208,10 +214,31 @@ const s = StyleSheet.create({
   heroFill: { height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' },
   heroBtn: { height: 50, paddingHorizontal: 20, borderRadius: 16, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  tile: { flexGrow: 1, flexBasis: '22%', minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, paddingTop: 18, paddingHorizontal: 20, paddingBottom: 20, justifyContent: 'space-between', gap: 12 },
+  tile: {
+    flexGrow: 1,
+    flexBasis: '22%',
+    minWidth: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   thumb: { width: 76, height: 76, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   tileTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#E2E6EE', overflow: 'hidden' },
   tileFill: { height: 6, borderRadius: 3 },
-  more: { flexGrow: 1, flexBasis: '22%', minWidth: 0, borderRadius: 24, borderWidth: 2, borderStyle: 'dashed', borderColor: '#D5DBE7', alignItems: 'center', justifyContent: 'center' },
+  more: {
+    flexGrow: 1,
+    flexBasis: '22%',
+    minWidth: 0,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#D5DBE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   filler: { flexGrow: 1, flexBasis: '22%', minWidth: 0, height: 0 },
 });

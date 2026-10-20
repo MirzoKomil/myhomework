@@ -87,7 +87,13 @@ export function DStoryList() {
             >
               <View style={[s.cover, { backgroundColor: st.colors?.[0] ?? '#E8EEFF' }]}>
                 {st.coverUrl ? (
-                  <Image source={{ uri: st.coverUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+                  <Image
+                    source={{ uri: st.coverUrl }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  />
                 ) : (
                   <Text style={{ fontSize: 72 }}>{st.emoji}</Text>
                 )}

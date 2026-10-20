@@ -55,7 +55,19 @@ export function T({
 }
 
 /** Ustki harfli kichik sarlavha (11px, 0.08em, uppercase). */
-export function Over({ children, color = '#34405A', em = 0.08, size = 11, style }: { children: ReactNode; color?: string; em?: number; size?: number; style?: StyleProp<TextStyle> }) {
+export function Over({
+  children,
+  color = '#34405A',
+  em = 0.08,
+  size = 11,
+  style,
+}: {
+  children: ReactNode;
+  color?: string;
+  em?: number;
+  size?: number;
+  style?: StyleProp<TextStyle>;
+}) {
   return (
     <T size={size} color={color} ls={size * em} style={[{ textTransform: 'uppercase' }, style]}>
       {children}

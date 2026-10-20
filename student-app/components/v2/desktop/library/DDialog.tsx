@@ -50,9 +50,9 @@ export function DDialog() {
         const i = list.findIndex((x) => x.id === dialogId);
         const t = i >= 0 ? list[i] : null;
         setTopic(t);
-        setNext(i >= 0 ? list[i + 1] ?? null : null);
+        setNext(i >= 0 ? (list[i + 1] ?? null) : null);
         setLesson(t ? findLessonForTitle(mc, t.title) : null);
-        setStartFrac(t ? p[t.id]?.frac ?? 0 : 0);
+        setStartFrac(t ? (p[t.id]?.frac ?? 0) : 0);
         setHeard(!!(t && p[t.id]?.heard));
       })()
         .catch(() => {})
@@ -79,13 +79,30 @@ export function DDialog() {
   return <DialogView key={topic.id} topic={topic} next={next} lesson={lesson} startFrac={startFrac} heard={heard} onHeard={() => setHeard(true)} />;
 }
 
-function DialogView({ topic, next, lesson, startFrac, heard, onHeard }: { topic: Topic; next: Topic | null; lesson: LessonRef | null; startFrac: number; heard: boolean; onHeard: () => void }) {
+function DialogView({
+  topic,
+  next,
+  lesson,
+  startFrac,
+  heard,
+  onHeard,
+}: {
+  topic: Topic;
+  next: Topic | null;
+  lesson: LessonRef | null;
+  startFrac: number;
+  heard: boolean;
+  onHeard: () => void;
+}) {
   const lines = useMemo<DLine[]>(() => topic.lines.map((l) => ({ speaker: l.speaker, ru: l.en, uz: l.uz })), [topic]);
   const dur = useMemo(() => lines.map((l) => Math.max(1, words(l.ru) * SECONDS_PER_WORD)), [lines]);
   const starts = useMemo(() => dur.reduce<number[]>((a, d, i) => [...a, i ? a[i - 1] + dur[i - 1] : 0], []), [dur]);
   const total = dur.reduce((a, b) => a + b, 0);
 
-  const startLine = Math.max(0, starts.findIndex((s, i) => s + dur[i] > startFrac * total));
+  const startLine = Math.max(
+    0,
+    starts.findIndex((s, i) => s + dur[i] > startFrac * total),
+  );
   const [line, setLine] = useState(startFrac > 0 ? startLine : -1);
   const [inLine, setInLine] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -225,9 +242,17 @@ function DialogView({ topic, next, lesson, startFrac, heard, onHeard }: { topic:
             <KbdHint keys={['S']} label="tezlik" />
           </View>
           {next && (
-            <Pressable accessibilityRole="button" accessibilityLabel={`Keyingi dialog: ${next.title} (Enter)`} onPress={goNext} style={({ pressed }) => [s.cta, pressed && { backgroundColor: '#1E3FD1' }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Keyingi dialog: ${next.title} (Enter)`}
+              onPress={goNext}
+              style={({ pressed }) => [s.cta, pressed && { backgroundColor: '#1E3FD1' }]}
+            >
+              <T size={16} color="#FFFFFF">
+                Keyingi dialog ·
+              </T>
               <T size={16} color="#FFFFFF" lines={1} style={{ flexShrink: 1 }}>
-                Keyingi dialog · «{next.title}»
+                «{next.title}»
               </T>
               <IArrow size={18} color="#FFFFFF" />
               <InKbd>Enter</InKbd>
@@ -239,7 +264,7 @@ function DialogView({ topic, next, lesson, startFrac, heard, onHeard }: { topic:
       <View style={s.stage}>
         <View style={s.wrap}>
           <View style={s.left}>
-            <View style={[s.cover, { backgroundColor: topic.coverUrl ? '#EAE4DF' : topic.colors?.[0] ?? '#E8EEFF' }]}>
+            <View style={[s.cover, { backgroundColor: topic.coverUrl ? '#EAE4DF' : (topic.colors?.[0] ?? '#E8EEFF') }]}>
               {topic.coverUrl ? (
                 <Image source={{ uri: topic.coverUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" accessibilityLabel={topic.title} />
               ) : (
@@ -318,6 +343,27 @@ const s = StyleSheet.create({
   coverChip: { position: 'absolute', left: 14, top: 14, height: 30, paddingHorizontal: 11, borderRadius: 10, backgroundColor: '#FFFFFF', justifyContent: 'center' },
   same: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E3F7EE', borderRadius: 10, paddingVertical: 5, paddingHorizontal: 10 },
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginHorizontal: 4, marginBottom: 2 },
-  second: { height: 54, paddingHorizontal: 20, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#E2E6EE', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cta: { height: 54, paddingLeft: 26, paddingRight: 22, borderRadius: 17, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, boxShadow: '0 5px 0 #1E3FD1' } as object,
+  second: {
+    height: 54,
+    paddingHorizontal: 20,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E2E6EE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cta: {
+    height: 54,
+    paddingLeft: 26,
+    paddingRight: 22,
+    borderRadius: 17,
+    backgroundColor: '#2F5BFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
+    boxShadow: '0 5px 0 #1E3FD1',
+  } as object,
 });

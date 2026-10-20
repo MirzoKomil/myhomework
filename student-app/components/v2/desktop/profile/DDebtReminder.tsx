@@ -124,7 +124,8 @@ const s = StyleSheet.create({
   box: { backgroundColor: '#FFF1E6', borderRadius: 22, paddingVertical: 18, paddingHorizontal: 20, gap: 6 },
   track: { marginTop: 6, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF', overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4, backgroundColor: '#087A4A' },
-  method: { minHeight: 68, paddingHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: '#E2E6EE', flexDirection: 'row', alignItems: 'center', gap: 14 },
+  // Dizaynda min-height 68 + 1px chegara (content-box) — jami 70.
+  method: { minHeight: 70, paddingHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: '#E2E6EE', flexDirection: 'row', alignItems: 'center', gap: 14 },
   letter: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   manager: { height: 52, paddingHorizontal: 22, borderRadius: 17, backgroundColor: '#2AABEE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, flexShrink: 0 },
 });

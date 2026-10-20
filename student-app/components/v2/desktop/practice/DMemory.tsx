@@ -19,7 +19,7 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 
-import { ICheck, IHouse, IStopwatch, K, T, web } from './ui';
+import { ICheck, IHouse, IStopwatch, K, T, useAvail, web } from './ui';
 import { PAIRS, useMemoryGame, type MemoryWord } from './useMemoryGame';
 
 const COLS = 4;
@@ -30,9 +30,9 @@ function WordImage({ w, size }: { w: MemoryWord; size: number }) {
 }
 
 // Karta ichki kengligi ~176px: uzun so'z kesilmasin — shrift 36 → 18 gacha kichrayadi.
-function fitWord(word: string) {
+function fitWord(word: string, k: number) {
   const longest = Math.max(...word.split(/\s+/).map((t) => t.replace(/́/g, '').length), 1);
-  const size = Math.max(18, Math.min(36, Math.floor(176 / (longest * 0.66))));
+  const size = Math.max(16, Math.min(Math.round(36 * k), Math.floor((176 * k) / (longest * 0.66))));
   return { fontSize: size, lineHeight: Math.round(size * 1.36) };
 }
 
@@ -41,6 +41,11 @@ const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 export function DMemory() {
   const { lesson, rec, words, deck, open, matched, seconds, last, won, bestBefore, flip, restart, total, lastWord } = useMemoryGame();
   const [cursor, setCursor] = useState(0);
+  // Karta o'lchami: 1440 da dizayndagi 200×206; tor oynada to'r sig'ishi uchun kichrayadi.
+  const avail = useAvail(1100);
+  const cardW = Math.min(200, Math.floor((avail + 22 - 36 - 232 - 3 * 18) / 4));
+  const k = cardW / 200;
+  const cardSize = { width: cardW, height: Math.round(206 * k) };
   const [keyboard, setKeyboard] = useState(false);
 
   const move = (d: number) => () => {
@@ -103,7 +108,7 @@ export function DMemory() {
     >
       <View style={s.body}>
         <View style={s.wrap}>
-          <View style={s.grid}>
+          <View style={[s.grid, { width: 4 * cardW + 3 * 18 }]}>
             {words &&
               deck.map((card, idx) => {
                 const w = words[card.pair];
@@ -120,10 +125,10 @@ export function DMemory() {
                         setCursor(idx);
                         flip(card);
                       }}
-                      style={[s.card, s.closed, web({ backgroundImage: 'linear-gradient(145deg, #FF9A45, #FF7A1A)', boxShadow: '0 5px 0 #D45F08' }), ring]}
+                      style={[s.card, cardSize, s.closed, web({ backgroundImage: 'linear-gradient(145deg, #FF9A45, #FF7A1A)', boxShadow: '0 5px 0 #D45F08' }), ring]}
                     >
                       <View style={s.closedInner}>
-                        <IHouse />
+                        <IHouse size={Math.round(52 * k)} />
                       </View>
                     </Pressable>
                   );
@@ -136,16 +141,17 @@ export function DMemory() {
                     accessibilityLabel={`${cap(w.translation)} — ${isMatched ? 'topildi' : 'ochiq'}`}
                     style={[
                       s.card,
+                      cardSize,
                       { borderWidth: 3, borderColor: border, backgroundColor: card.kind === 'word' && isMatched ? '#E3F7EE' : '#FFFFFF' },
                       web({ boxShadow: `0 5px 0 ${shadow}` }),
                       ring,
                     ]}
                   >
                     {card.kind === 'img' ? (
-                      <WordImage w={w} size={isMatched ? 140 : 150} />
+                      <WordImage w={w} size={Math.round((isMatched ? 140 : 150) * k)} />
                     ) : (
                       <View style={{ alignItems: 'center', gap: 4, paddingHorizontal: 8 }}>
-                        <Text style={[s.cardWord, fitWord(w.word), !isMatched && { color: '#0B1220' }]} numberOfLines={2}>
+                        <Text style={[s.cardWord, fitWord(w.word, k), !isMatched && { color: '#0B1220' }]} numberOfLines={2}>
                           {w.word}
                         </Text>
                         <T w={700} size={16} color={isMatched ? '#075E3A' : '#4A5468'} lh={22} lines={2} style={{ textAlign: 'center' }}>
@@ -240,7 +246,7 @@ const s = StyleSheet.create({
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   timer: { height: 46, paddingHorizontal: 16, borderRadius: 15, backgroundColor: '#FFF1E6', flexDirection: 'row', alignItems: 'center', gap: 8 },
 
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 32 },
   // To'r (854) + 36 + 232 = 1122 > 1100: dizayndagi kabi chapdan boshlanadi (o'ngga 22px chiqadi).
   wrap: { width: 1100, maxWidth: '100%', flexDirection: 'row', gap: 36, alignItems: 'center', justifyContent: 'flex-start' },
   grid: { width: 4 * 200 + 3 * 18, flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, rowGap: 20 },

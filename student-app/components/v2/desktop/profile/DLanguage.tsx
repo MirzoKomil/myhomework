@@ -5,12 +5,10 @@
  * LanguageContext orqali saqlanadi, tanlov "Saqlash" bosilgandagina
  * qo'llanadi; boshqa til tanlanmaguncha tugma o'chiq. Ilova tarjimalari
  * faqat uz va ru — English kartasi ko'rinadi, lekin tanlab bo'lmaydi.
- * Klaviatura: Esc — bekor qilish, Enter — saqlash.
  */
 import { useEffect, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import { useDesktopKeys } from '@/components/v2/desktop/useDesktop';
 import { goBack } from '@/components/v2/settings/parts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -43,7 +41,6 @@ export function DLanguage() {
     if (selected === 'uz' || selected === 'ru') setLang(selected);
     goBack(R.settings);
   };
-  useDesktopKeys({ Escape: () => goBack(R.settings), Enter: changed ? save : undefined });
 
   return (
     <SettingsLayout active="language" title="Ilova tili" subtitle="Interfeys tili">
@@ -159,8 +156,9 @@ const s = StyleSheet.create({
   radioOn: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center' },
   radioOff: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#C9D0DD' },
   preview: { backgroundColor: '#F4F6FA', borderRadius: 22, padding: 26, gap: 18 },
-  chip: { height: 44, paddingHorizontal: 16, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E6EE', justifyContent: 'center' },
-  chipOn: { backgroundColor: '#2F5BFF', borderWidth: 0 },
+  // Dizaynda 44px + 1px chegara (content-box) — jami 46px; ko'k tugma chegarasiz 44px.
+  chip: { height: 46, paddingHorizontal: 16, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E6EE', justifyContent: 'center' },
+  chipOn: { height: 44, backgroundColor: '#2F5BFF', borderWidth: 0 },
   footer: { marginTop: 'auto', paddingTop: 20, borderTopWidth: 1, borderTopColor: '#EEF1F7', flexDirection: 'row', alignItems: 'center', gap: 16 },
   cancel: { height: 52, paddingHorizontal: 18, borderRadius: 17, justifyContent: 'center' },
   save: { height: 52, paddingHorizontal: 34, borderRadius: 17, justifyContent: 'center' },

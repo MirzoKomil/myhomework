@@ -19,7 +19,6 @@ import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 
 import { DesktopPage, Kbd } from '../Shell';
-import { useDesktopKeys } from '../useDesktop';
 import { IArrow, ICheck, ISpeaker, ISwap, Over, T } from './ui';
 
 type Direction = 'uz-other' | 'other-uz';
@@ -46,7 +45,10 @@ export function DTranslator() {
 
   const [dir, setDir] = useState<Direction>('uz-other');
   const [source, setSource] = useState('');
-  const [result, setResult] = useState<{ text: string; translit: string } | null>(null);
+  const [result, setResult] = useState<{
+    text: string;
+    translit: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -83,7 +85,11 @@ export function DTranslator() {
       const r = await translateText(text.trim(), from, to);
       setResult(r);
       await saveToVocab(text.trim(), r.text, to !== 'uz');
-      await pushRecentTranslation({ source: text.trim(), target: r.text, dir: d });
+      await pushRecentTranslation({
+        source: text.trim(),
+        target: r.text,
+        dir: d,
+      });
       setRecent(await getRecentTranslations());
     } catch {
       setError('Tarjima qilishda xatolik yuz berdi. Internetni tekshirib qayta urining.');
@@ -115,7 +121,10 @@ export function DTranslator() {
   const listen = () => {
     if (!result) return;
     Speech.stop();
-    Speech.speak(result.text, { language: tl === 'ru' ? 'ru-RU' : tl === 'en' ? 'en-US' : 'uz-UZ', rate: 0.9 });
+    Speech.speak(result.text, {
+      language: tl === 'ru' ? 'ru-RU' : tl === 'en' ? 'en-US' : 'uz-UZ',
+      rate: 0.9,
+    });
   };
 
   const openRecent = (r: RecentTranslation) => {
@@ -126,15 +135,25 @@ export function DTranslator() {
     run(r.source, f, t, r.dir);
   };
 
-  useDesktopKeys({ Enter: runNow });
 
   return (
-    <DesktopPage title="Tarjimon" subtitle={`${isRu ? 'rus' : 'ingliz'} ↔ oʻzbek · urgʻu va misollar bilan`} back={R.practice} scroll={false} contentStyle={{ paddingBottom: 32, gap: 16 }}>
+    <DesktopPage
+      title="Tarjimon"
+      subtitle={`${isRu ? 'rus' : 'ingliz'} ↔ oʻzbek · urgʻu va misollar bilan`}
+      back={R.practice}
+      scroll={false}
+      contentStyle={{ paddingBottom: 32, gap: 16 }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         <View style={s.lang}>
           <T size={16}>{dir === 'uz-other' ? 'Oʻzbekcha' : otherLabel}</T>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Tillarni almashtirish" onPress={swap} style={({ pressed }) => [s.swap, pressed && { backgroundColor: '#1E3FD1' }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tillarni almashtirish"
+          onPress={swap}
+          style={({ pressed }) => [s.swap, pressed && { backgroundColor: '#1E3FD1' }]}
+        >
           <ISwap />
         </Pressable>
         <View style={s.lang}>
@@ -151,12 +170,26 @@ export function DTranslator() {
               multiline
               value={source}
               onChangeText={(t) => onChange(t.slice(0, MAX))}
+              // Enter — yangi qator emas, darhol tarjima (Shift+Enter — yangi qator).
+              onKeyPress={(e) => {
+                const ne = e.nativeEvent as { key: string; shiftKey?: boolean };
+                if (ne.key === 'Enter' && !ne.shiftKey) {
+                  e.preventDefault();
+                  runNow();
+                }
+              }}
               maxLength={MAX}
               placeholder="Matn kiriting"
               placeholderTextColor="#9AA4BC"
               style={s.input}
             />
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <T w={700} size={13} color="#4A5468">
                 {source.length} / {MAX}
               </T>
@@ -246,11 +279,20 @@ export function DTranslator() {
               )}
             </View>
           </View>
-          <View style={s.tip}>
-            <Image source={designImages['cc0d95446730f059d25d989e2c9845ad']} style={{ width: 150, height: 150, flexShrink: 0 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
-            <T w={700} size={18} lh={27} color="#6B4800" style={{ flex: 1 }}>
-              Domik maslahati: soʻzni emas, butun iborani yozing — tarjima tabiiyroq chiqadi.
-            </T>
+          {/* Ichki padding flex-basis'ga qo'shilmasin — ikki ustun teng bo'lsin (grid 1fr 1fr). */}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={s.tip}>
+              <Image
+                source={designImages['cc0d95446730f059d25d989e2c9845ad']}
+                style={{ width: 150, height: 150, flexShrink: 0 }}
+                resizeMode="contain"
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+              <T w={700} size={18} lh={27} color="#6B4800" style={{ flex: 1 }}>
+                Domik maslahati: soʻzni emas, butun iborani yozing — tarjima tabiiyroq chiqadi.
+              </T>
+            </View>
           </View>
         </View>
       </View>
@@ -259,16 +301,92 @@ export function DTranslator() {
 }
 
 const s = StyleSheet.create({
-  lang: { flex: 1, height: 52, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  swap: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  src: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 26, paddingVertical: 22, paddingHorizontal: 26, gap: 10 },
-  input: { flex: 1, padding: 0, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 30, lineHeight: 39, color: '#0B1220', textAlignVertical: 'top', outlineStyle: 'none' } as object,
-  out: { flex: 1, minWidth: 0, backgroundColor: '#0B1220', borderRadius: 26, paddingVertical: 22, paddingHorizontal: 26, gap: 10 },
-  listen: { height: 50, paddingHorizontal: 20, borderRadius: 16, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', gap: 9 },
-  saved: { height: 50, paddingHorizontal: 18, borderRadius: 16, backgroundColor: '#0F2E26', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  openLugat: { marginTop: 6, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#1F2940', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  lang: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#2F5BFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  src: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    paddingVertical: 22,
+    paddingHorizontal: 26,
+    gap: 10,
+  },
+  input: {
+    flex: 1,
+    padding: 0,
+    fontFamily: fonts.bodyHeavy,
+    fontWeight: 'normal',
+    fontSize: 30,
+    lineHeight: 39,
+    color: '#0B1220',
+    textAlignVertical: 'top',
+    outlineStyle: 'none',
+  } as object,
+  out: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: '#0B1220',
+    borderRadius: 26,
+    paddingVertical: 22,
+    paddingHorizontal: 26,
+    gap: 10,
+  },
+  listen: {
+    height: 50,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#2F5BFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  saved: {
+    height: 50,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    backgroundColor: '#0F2E26',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  openLugat: {
+    marginTop: 6,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#1F2940',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   recent: { backgroundColor: '#FFFFFF', borderRadius: 22, overflow: 'hidden' },
   recentRow: { paddingVertical: 12, paddingHorizontal: 20, gap: 2 },
   divider: { borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
-  tip: { flex: 1, minWidth: 0, height: 248, flexDirection: 'row', alignItems: 'center', gap: 22, backgroundColor: '#FFF4D1', borderRadius: 26, paddingTop: 20, paddingRight: 28, paddingBottom: 20, paddingLeft: 18 },
+  tip: {
+    height: 248,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 22,
+    backgroundColor: '#FFF4D1',
+    borderRadius: 26,
+    paddingTop: 20,
+    paddingRight: 28,
+    paddingBottom: 20,
+    paddingLeft: 18,
+  },
 });

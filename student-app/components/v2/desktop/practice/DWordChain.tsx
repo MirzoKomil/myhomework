@@ -17,7 +17,7 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 
-import { H, IArrow, IBulb, IInfo, ILock, IStopwatch, K, T, web } from './ui';
+import { H, IArrow, IBulb, IInfo, ILock, IStopwatch, K, T, useAvail, web } from './ui';
 import { chainLetterIndex, HINT_PRICE, TURN_SECONDS, useWordChainGame } from './useWordChainGame';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
@@ -76,8 +76,10 @@ export function DWordChain() {
     </View>
   );
 
+  // Tor oynada pastki panel tugmalari chetga yopishmasin (32px chekka).
+  const footPad = useAvail(1100) < 1100 ? 32 : 0;
   const footer = (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: footPad }}>
       {!finished && (
         <>
           <Pressable accessibilityRole="button" onPress={g.useHelp} style={s.helpBtn}>
@@ -149,7 +151,7 @@ export function DWordChain() {
               const d = display[w];
               const ls = d && plainWord(d) === w ? stressLetters(d) : Array.from(w);
               return (
-                <View key={`${w}-${i}`} style={{ flexDirection: 'row', gap: 10 }}>
+                <View key={`${w}-${i}`} style={{ flexDirection: 'row', gap: 10, flexShrink: 1, minWidth: 0 }}>
                   {j > 0 && (
                     <View style={{ justifyContent: 'center' }}>
                       <IArrow size={22} color="#5B6478" sw={2.4} />
@@ -275,11 +277,11 @@ const s = StyleSheet.create({
   fill: { height: 8, borderRadius: 4, backgroundColor: '#2F5BFF' },
   scorePill: { height: 46, paddingHorizontal: 16, borderRadius: 15, backgroundColor: '#E8EEFF', flexDirection: 'row', alignItems: 'center', gap: 10 },
 
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 32 },
   col: { width: 1100, maxWidth: '100%', gap: 30 },
   gameIcon: { width: 84, height: 84, borderRadius: 24, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
 
-  link: { width: CARD_W, flexShrink: 1, backgroundColor: '#FFFFFF', borderRadius: 22, paddingTop: 32, paddingHorizontal: 26, paddingBottom: 30, gap: 10 },
+  link: { width: CARD_W, flexShrink: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 22, paddingTop: 32, paddingHorizontal: 26, paddingBottom: 30, gap: 10 },
   linkWord: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 40, lineHeight: 44, color: '#0B1220' },
   underline: { borderBottomWidth: 3, borderBottomColor: '#2F5BFF' },
 

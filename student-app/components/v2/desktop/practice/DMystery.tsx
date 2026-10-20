@@ -15,7 +15,7 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 
-import { H, IArrow, IBulb, ICheck, IInfo, K, KeyHints, T, web } from './ui';
+import { H, IArrow, IBulb, ICheck, IInfo, K, KeyHints, T, useAvail, web } from './ui';
 import { HINT_PRICE, LEN, MAX_TRIES, ST_LABEL, useMysteryGame, type St } from './useMysteryGame';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
@@ -41,6 +41,10 @@ const Dashed = ({ inset, width, radius }: { inset: number; width: number; radius
 export function DMystery() {
   const { isRu, lesson, answer, guesses, cur, hints, msg, over, keyState, type, submit, hint, restart, attempt } = useMysteryGame();
   const kb = isRu ? KB_RU : KB_EN;
+  // Katak: 1440 da 90px; tor oynada o'ng ustun (470) sig'ishi uchun kichrayadi.
+  const tileW = Math.min(90, Math.floor((useAvail(1040) - 60 - 470 - 4 * 10) / 5));
+  const tileSize = { width: tileW, height: tileW };
+  const tileFont = { fontSize: Math.round(40 * (tileW / 90)), lineHeight: Math.round(55 * (tileW / 90)) };
 
   const center = (
     <View style={{ width: 440, gap: 7 }}>
@@ -74,8 +78,10 @@ export function DMystery() {
     </View>
   );
 
+  // Tor oynada pastki panel tugmalari chetga yopishmasin (32px chekka).
+  const footPad = useAvail(1040) < 1040 ? 32 : 0;
   const footer = (
-    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: footPad }}>
       {over ? (
         <Pressable accessibilityRole="button" onPress={restart} style={s.helpBtn}>
           <T w={800} size={15} lh={20}>
@@ -121,9 +127,9 @@ export function DMystery() {
                     if (g) {
                       const st = g.st[ci];
                       return (
-                        <View key={ci} accessibilityLabel={`${g.word[ci].toUpperCase()} — ${ST_LABEL[st]}`} style={[s.tile, { backgroundColor: ST_BG[st] }]}>
+                        <View key={ci} accessibilityLabel={`${g.word[ci].toUpperCase()} — ${ST_LABEL[st]}`} style={[s.tile, tileSize, { backgroundColor: ST_BG[st] }]}>
                           {st === 'present' && <Dashed inset={3} width={3} radius={15} />}
-                          <Text style={s.tileText}>{g.word[ci].toUpperCase()}</Text>
+                          <Text style={[s.tileText, tileFont]}>{g.word[ci].toUpperCase()}</Text>
                           {st === 'correct' && (
                             <View style={s.tick}>
                               <ICheck />
@@ -136,23 +142,23 @@ export function DMystery() {
                       const ch = cur[ci];
                       if (ch)
                         return (
-                          <View key={ci} style={[s.tile, s.typed]}>
-                            <Text style={[s.tileText, { color: '#0B1220' }]}>{ch.toUpperCase()}</Text>
+                          <View key={ci} style={[s.tile, tileSize, s.typed]}>
+                            <Text style={[s.tileText, tileFont, { color: '#0B1220' }]}>{ch.toUpperCase()}</Text>
                           </View>
                         );
                       if (ci === cur.length)
                         return (
-                          <View key={ci} accessibilityLabel="Keyingi harf" style={[s.tile, s.caretTile]}>
-                            {hints[ci] ? <Text style={[s.tileText, { color: '#9AA4BC' }]}>{hints[ci].toUpperCase()}</Text> : <View style={s.caret} />}
+                          <View key={ci} accessibilityLabel="Keyingi harf" style={[s.tile, tileSize, s.caretTile]}>
+                            {hints[ci] ? <Text style={[s.tileText, tileFont, { color: '#9AA4BC' }]}>{hints[ci].toUpperCase()}</Text> : <View style={s.caret} />}
                           </View>
                         );
                       return (
-                        <View key={ci} style={[s.tile, s.nextEmpty]}>
-                          {!!hints[ci] && <Text style={[s.tileText, { color: '#9AA4BC' }]}>{hints[ci].toUpperCase()}</Text>}
+                        <View key={ci} style={[s.tile, tileSize, s.nextEmpty]}>
+                          {!!hints[ci] && <Text style={[s.tileText, tileFont, { color: '#9AA4BC' }]}>{hints[ci].toUpperCase()}</Text>}
                         </View>
                       );
                     }
-                    return <View key={ci} style={[s.tile, { backgroundColor: '#D3EEDF' }]} />;
+                    return <View key={ci} style={[s.tile, tileSize, { backgroundColor: '#D3EEDF' }]} />;
                   })}
                 </View>
               );
@@ -241,7 +247,7 @@ const s = StyleSheet.create({
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   topic: { height: 46, paddingHorizontal: 18, borderRadius: 15, backgroundColor: '#E3F7EE', justifyContent: 'center', maxWidth: 360 },
 
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 32 },
   wrap: { width: 1040, maxWidth: '100%', flexDirection: 'row', gap: 60, alignItems: 'center', justifyContent: 'center' },
   tile: { width: 90, height: 90, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   tileText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 40, lineHeight: 55, color: '#FFFFFF' },

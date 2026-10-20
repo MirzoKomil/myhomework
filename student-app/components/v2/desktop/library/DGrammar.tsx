@@ -63,7 +63,7 @@ export function DGrammar() {
   const { topic, lesson, learned, code } = row;
   const isBook = !!topic.lessonId;
   const examples = topic.examples ?? [];
-  const images = lesson ? topic.images ?? [] : [];
+  const images = lesson ? (topic.images ?? []) : [];
 
   return (
     <DesktopPage
@@ -98,7 +98,13 @@ export function DGrammar() {
               {!!topic.formula && <RichText text={topic.formula} style={s.formula} />}
             </View>
             <View style={s.heroImg}>
-              <Image source={designImages['f639c30e1400761df83230b833ba42b2']} style={{ width: 116, height: 116 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+              <Image
+                source={designImages['f639c30e1400761df83230b833ba42b2']}
+                style={{ width: 116, height: 116 }}
+                resizeMode="contain"
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              />
             </View>
           </View>
 
@@ -176,7 +182,19 @@ export function DGrammar() {
 
 const s = StyleSheet.create({
   learned: { height: 46, paddingHorizontal: 16, borderRadius: 15, backgroundColor: '#E3F7EE', flexDirection: 'row', alignItems: 'center', gap: 7, marginRight: 6 },
-  hero: { position: 'relative', overflow: 'hidden', backgroundColor: '#2F5BFF', borderRadius: 26, paddingTop: 16, paddingRight: 22, paddingBottom: 16, paddingLeft: 26, flexDirection: 'row', alignItems: 'center', gap: 20 },
+  hero: {
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#2F5BFF',
+    borderRadius: 26,
+    paddingTop: 16,
+    paddingRight: 22,
+    paddingBottom: 16,
+    paddingLeft: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
   lessonPill: { alignSelf: 'flex-start', height: 30, paddingHorizontal: 11, borderRadius: 10, backgroundColor: '#FFC93C', justifyContent: 'center' },
   formula: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 16, lineHeight: 22, color: '#FFFFFF' },
   heroImg: { width: 112, height: 112, borderRadius: 24, backgroundColor: '#E8EEFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -185,5 +203,14 @@ const s = StyleSheet.create({
   ex: { backgroundColor: '#FFFFFF', borderRadius: 22, paddingVertical: 14, paddingHorizontal: 22, justifyContent: 'center', gap: 4 },
   exRu: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 23, lineHeight: 31, color: '#0B1220' },
   slide: { width: '100%', aspectRatio: 16 / 9, borderRadius: 22, overflow: 'hidden', backgroundColor: '#E8EEFF' },
-  cta: { height: 56, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 5px 0 #1E3FD1' } as object,
+  cta: {
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: '#2F5BFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    boxShadow: '0 5px 0 #1E3FD1',
+  } as object,
 });

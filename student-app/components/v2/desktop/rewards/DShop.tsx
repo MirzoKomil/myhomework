@@ -32,7 +32,7 @@ import { R } from '@/constants/v2/routes';
 import { localizeCourseWording, useLang } from '@/i18n/LanguageContext';
 import { useCoins } from '@/services/coinsStore';
 
-import { HeadTitle, HeaderButton, IBag, IChevron, ICoin, ITruck, T } from './ui';
+import { NARROW_MAIN, useMainWidth, HeadTitle, HeaderButton, IBag, IChevron, ICoin, ITruck, T } from './ui';
 
 // Streak himoyasi narxi — dizayndagi qiymat (mobil kabi; bonus serverda yo'q).
 const STREAK_SHIELD_PRICE = 150;
@@ -69,6 +69,8 @@ export function DShop() {
   // Dizayndagi tartib: arzonidan qimmatiga.
   const books = (products ?? []).slice().sort((a, b) => a.price - b.price);
   const missing = nearest ? Math.max(0, nearest.price - coins) : 0;
+  // Tor oynada kitoblar 2 ustunda, balans kartasidagi rasm yashiriladi.
+  const narrow = useMainWidth() < NARROW_MAIN;
 
   return (
     <DesktopPage
@@ -144,18 +146,20 @@ export function DShop() {
             ))}
           </View>
         </View>
-        <Image
-          source={designImages['4c789e89b37702b538b456ab2b9310fa']}
-          style={{
-            width: 150,
-            height: 150,
-            marginVertical: -12,
-            marginRight: -6,
-          }}
-          resizeMode="contain"
-          accessibilityElementsHidden
-          importantForAccessibility="no"
-        />
+        {!narrow && (
+          <Image
+            source={designImages['4c789e89b37702b538b456ab2b9310fa']}
+            style={{
+              width: 150,
+              height: 150,
+              marginVertical: -12,
+              marginRight: -6,
+            }}
+            resizeMode="contain"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
+        )}
       </View>
 
       {books.length > 0 && (
@@ -178,7 +182,7 @@ export function DShop() {
           </View>
           <View style={s.grid}>
             {books.map((p) => (
-              <View key={p.id} style={s.cell}>
+              <View key={p.id} style={[s.cell, narrow && { width: '50%' }]}>
                 <BookCard p={p} coins={coins} nearest={nearest?.id === p.id} />
               </View>
             ))}
@@ -188,10 +192,10 @@ export function DShop() {
 
       <View style={{ gap: 12 }}>
         <View style={{ flexDirection: 'row', gap: 18 }}>
-          <T f="bodyHeavy" size={19} accessibilityRole="header" style={{ flex: 1 }}>
+          <T f="bodyHeavy" size={19} accessibilityRole="header" style={{ flex: 1, flexBasis: 0 }}>
             Ilova bonusi
           </T>
-          <T f="bodyHeavy" size={19} accessibilityRole="header" style={{ flex: 1 }}>
+          <T f="bodyHeavy" size={19} accessibilityRole="header" style={{ flex: 1, flexBasis: 0 }}>
             Yetkazib berish
           </T>
         </View>
@@ -229,7 +233,7 @@ export function DShop() {
           <Pressable
             accessibilityRole="link"
             onPress={() => go(R.orders)}
-            style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.wide, { paddingRight: 18 }, hovered && { backgroundColor: '#FAFBFD' }]}
+            style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.wide, { paddingRight: 14 }, hovered && { backgroundColor: '#FAFBFD' }]}
           >
             <View style={[s.wideIcon, { backgroundColor: '#FFF4D1' }]}>
               <ITruck size={28} color="#7A5300" />
@@ -242,7 +246,9 @@ export function DShop() {
                 Kitob yetkazilishi va bonuslar tarixi
               </T>
             </View>
-            <IChevron />
+            <View style={{ marginRight: 4 }}>
+              <IChevron />
+            </View>
           </Pressable>
         </View>
       </View>
@@ -375,6 +381,7 @@ const s = StyleSheet.create({
   barFill: { height: 6, borderRadius: 3, backgroundColor: '#F5B70A' },
   wide: {
     flex: 1,
+    flexBasis: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     paddingVertical: 12,

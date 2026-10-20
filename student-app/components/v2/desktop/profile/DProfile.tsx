@@ -188,7 +188,8 @@ export function DProfile() {
     >
       <View style={{ gap: 20 }}>
         <View style={s.row}>
-          {/* Shaxsiy karta (grid-column: span 7) */}
+          {/* Shaxsiy karta (grid-column: span 7). CSS grid 7/5 o'rniga flex-grow =
+              ustun kengligi − gorizontal padding (1440 da aynan dizayndagi kenglik). */}
           <View style={[s.card, { flex: 616.33 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
               <Pressable accessibilityRole="link" accessibilityLabel="Avatarni almashtirish" onPress={() => go(R.profileEdit)} style={s.avatarWrap}>

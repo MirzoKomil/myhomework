@@ -16,7 +16,7 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 
-import { H, ICheck, IMouse, IStopwatch, KeyHints, T } from './ui';
+import { H, ICheck, IMouse, IStopwatch, KeyHints, T, useAvail } from './ui';
 import { mmss, useWordSearchGame, type Cell } from './useWordSearchGame';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
@@ -45,6 +45,9 @@ export function DWordSearch() {
     return () => window.removeEventListener('mouseup', up);
   }, []);
 
+  // To'r: 1440 da 660px (katak 82px); tor oynada o'ng ustun (400) sig'ishi uchun kichrayadi.
+  const gridW = Math.min(660, useAvail(1100) - 40 - 400);
+  const k = gridW / 660;
   const n = lesson?.number;
   const center = (
     <View accessibilityLabel={`Oʻyin holati: ${total} tadan ${found.length} ta soʻz topildi, ${Math.floor(seconds / 60)} daqiqa ${seconds % 60} soniya`} style={{ width: 440, gap: 7 }}>
@@ -86,7 +89,7 @@ export function DWordSearch() {
     >
       <View style={s.body}>
         <View style={s.wrap}>
-          <View accessibilityLabel="Harflar toʻri" style={s.grid}>
+          <View accessibilityLabel="Harflar toʻri" style={[s.grid, { width: gridW, padding: Math.round(24 * k) }]}>
             {board?.grid.map((row, r) => (
               <View key={r} style={s.row}>
                 {row.map((ch, c) => {
@@ -104,9 +107,9 @@ export function DWordSearch() {
                       onHoverIn={() => {
                         if (dragging.current) cellAt({ r, c })();
                       }}
-                      style={[s.cell, fc && { backgroundColor: fc.bg }, sel && { backgroundColor: flash ? '#FDECEC' : '#D4DEFF' }, Platform.OS === 'web' && ({ userSelect: 'none' } as object)]}
+                      style={[s.cell, { height: Math.round(82 * k) }, fc && { backgroundColor: fc.bg }, sel && { backgroundColor: flash ? '#FDECEC' : '#D4DEFF' }, Platform.OS === 'web' && ({ userSelect: 'none' } as object)]}
                     >
-                      <Text style={[s.cellText, fc && { color: fc.fg }, sel && { color: '#1E3FD1' }]}>{ch}</Text>
+                      <Text style={[s.cellText, { fontSize: Math.round(36 * k), lineHeight: Math.round(49 * k) }, fc && { color: fc.fg }, sel && { color: '#1E3FD1' }]}>{ch}</Text>
                     </Pressable>
                   );
                 })}
@@ -209,7 +212,7 @@ const s = StyleSheet.create({
   fill: { height: 8, borderRadius: 4, backgroundColor: '#7C4DFF' },
   countPill: { height: 46, paddingHorizontal: 18, borderRadius: 15, backgroundColor: '#F0EBFF', justifyContent: 'center' },
 
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 32 },
   wrap: { width: 1100, maxWidth: '100%', flexDirection: 'row', gap: 40, alignItems: 'center' },
   grid: { width: 660, backgroundColor: '#FFFFFF', borderRadius: 30, padding: 24, gap: 8 },
   row: { flexDirection: 'row', gap: 8 },

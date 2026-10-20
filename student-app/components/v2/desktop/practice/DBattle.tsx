@@ -326,7 +326,7 @@ const s = StyleSheet.create({
   legendBox: { width: 10, height: 10 },
   prize: { height: 40, paddingHorizontal: 14, borderRadius: 13, backgroundColor: '#2A2310', flexDirection: 'row', alignItems: 'center', gap: 7 },
 
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 32 },
   col: { width: 1100, maxWidth: '100%', gap: 26, paddingHorizontal: 0 },
   scoreCard: { backgroundColor: '#131C30', borderRadius: 28, paddingVertical: 22, paddingHorizontal: 30, flexDirection: 'row', alignItems: 'center', gap: 20 },
   side: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 16 },

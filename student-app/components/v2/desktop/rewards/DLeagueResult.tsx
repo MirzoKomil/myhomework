@@ -157,6 +157,7 @@ const s = StyleSheet.create({
   },
   stat: {
     flex: 1,
+    flexBasis: 0,
     backgroundColor: '#F4F6FA',
     borderRadius: 18,
     paddingVertical: 14,

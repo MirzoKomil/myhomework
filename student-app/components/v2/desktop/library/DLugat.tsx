@@ -31,7 +31,16 @@ const BOX_BG = ['#FFF4D1', '#E8EEFF', '#FFF1E6', '#E3F7EE'];
 const FIRST = 9;
 
 type LessonWord = { lesson: number; word: VocabWord };
-type Row = { key: string; word: string; transcript?: string; translation?: string; chip?: 'lesson' | 'translator' | 'story'; lesson?: number; image?: string; icon?: VocabWord['icon'] };
+type Row = {
+  key: string;
+  word: string;
+  transcript?: string;
+  translation?: string;
+  chip?: 'lesson' | 'translator' | 'story';
+  lesson?: number;
+  image?: string;
+  icon?: VocabWord['icon'];
+};
 
 async function loadLessonIndex(): Promise<Map<string, LessonWord>> {
   const mc = await fetchMobileContent();
@@ -201,13 +210,22 @@ export function DLugat() {
                       {r.chip === 'lesson' ? (
                         <Chip bg="#E8EEFF" fg="#1E3FD1">{`${r.lesson}-dars`}</Chip>
                       ) : r.chip === 'story' ? (
-                        <Chip bg="#FFF4D1" fg="#7A5300">Audiohikoya</Chip>
+                        <Chip bg="#FFF4D1" fg="#7A5300">
+                          Audiohikoya
+                        </Chip>
                       ) : r.chip === 'translator' ? (
-                        <Chip bg="#F0EBFF" fg="#6A3CF0">Tarjimon</Chip>
+                        <Chip bg="#F0EBFF" fg="#6A3CF0">
+                          Tarjimon
+                        </Chip>
                       ) : null}
                     </View>
                   </View>
-                  <Pressable accessibilityRole="button" accessibilityLabel={`Tinglash: ${plainWord(r.word)}`} onPress={() => speak(r.word)} style={({ pressed }) => [s.speak, pressed && { opacity: 0.75 }]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Tinglash: ${plainWord(r.word)}`}
+                    onPress={() => speak(r.word)}
+                    style={({ pressed }) => [s.speak, pressed && { opacity: 0.75 }]}
+                  >
                     <ISpeaker size={19} color="#2F5BFF" />
                   </Pressable>
                 </View>
@@ -228,7 +246,13 @@ export function DLugat() {
           <View style={s.review}>
             <View pointerEvents="none" style={s.reviewCircle} />
             <View style={{ flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}>
-              <Image source={designImages['f7ed25f8b468b4cb6172a58adcd09f1f']} style={{ width: 170, height: 170 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
+              <Image
+                source={designImages['f7ed25f8b468b4cb6172a58adcd09f1f']}
+                style={{ width: 170, height: 170 }}
+                resizeMode="contain"
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
             </View>
             <View style={{ gap: 4 }}>
               <T f="display" size={26} lh={28.6} ls={-0.52} color="#FFFFFF">
@@ -286,20 +310,64 @@ const s = StyleSheet.create({
   tab: { flex: 1, height: 42, paddingHorizontal: 18, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   tabOn: { backgroundColor: '#FFFFFF', boxShadow: '0 2px 6px rgba(11,18,32,0.08)' } as object,
   count: { height: 24, minWidth: 24, paddingHorizontal: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  search: { flex: 1, height: 50, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8F0', flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 16, paddingRight: 14 },
+  search: {
+    flex: 1,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingLeft: 16,
+    paddingRight: 14,
+  },
   searchInput: { flex: 1, minWidth: 0, height: 44, padding: 0, fontFamily: fonts.body, fontWeight: 'normal', fontSize: 15, color: '#0B1220', outlineStyle: 'none' } as object,
   mistake: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FDECEC', borderRadius: 20, paddingVertical: 12, paddingHorizontal: 18 },
   mistakeIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   listHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 4, paddingHorizontal: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: { flexGrow: 1, flexBasis: '45%', minWidth: 0, height: 96, backgroundColor: '#FFFFFF', borderRadius: 20, paddingLeft: 12, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  card: {
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 0,
+    height: 96,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingLeft: 12,
+    paddingRight: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
   box: { width: 68, height: 68, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
   chip: { height: 22, paddingHorizontal: 8, borderRadius: 7, justifyContent: 'center', flexShrink: 0 },
   speak: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#E8EEFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  more: { flexGrow: 1, flexBasis: '45%', minWidth: 0, height: 96, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', borderColor: '#D5DBE7', alignItems: 'center', justifyContent: 'center' },
+  more: {
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 0,
+    height: 96,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#D5DBE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   empty: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24 },
   review: { flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#2F5BFF', borderRadius: 26, padding: 24, gap: 14 },
   reviewCircle: { position: 'absolute', right: -50, top: -50, width: 230, height: 230, borderRadius: 115, backgroundColor: '#4A70FF' },
-  reviewBtn: { height: 54, borderRadius: 17, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, boxShadow: '0 5px 0 #1E3FD1' } as object,
+  reviewBtn: {
+    height: 54,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+    boxShadow: '0 5px 0 #1E3FD1',
+  } as object,
   sources: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 18, paddingHorizontal: 20, gap: 14 },
 });

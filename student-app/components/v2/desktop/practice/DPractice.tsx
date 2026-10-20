@@ -10,7 +10,7 @@
  */
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View, type ImageSourcePropType, type ViewStyle } from 'react-native';
 
 import { DesktopPage, Kbd } from '@/components/v2/desktop/Shell';
 import { useDesktopKeys } from '@/components/v2/desktop/useDesktop';
@@ -27,6 +27,8 @@ import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
 import { H, IArrow, IChevron, ISearch, T } from './ui';
 
+// To'r ustunlari (12 ustunli dizayn to'ri, oraliq 16): web calc() bilan aniq kenglik.
+const col = (pct: string, minus: number) => ({ flexGrow: 0, flexShrink: 0, flexBasis: `calc(${pct} - ${minus}px)` as unknown as number, minWidth: 0 }) as ViewStyle;
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
 const go = (href: string) => router.push(href as Href);
 
@@ -59,7 +61,9 @@ function Material({
   badge,
   sub,
   meta,
+  style,
 }: {
+  style?: ViewStyle;
   href: string;
   bg: string;
   image: string;
@@ -69,7 +73,7 @@ function Material({
   meta: string;
 }) {
   return (
-    <Pressable accessibilityRole="link" accessibilityLabel={`${title}. ${meta}`} onPress={() => go(href)} style={s.mat}>
+    <Pressable accessibilityRole="link" accessibilityLabel={`${title}. ${meta}`} onPress={() => go(href)} style={[s.mat, style]}>
       <View style={[s.matIcon, { backgroundColor: bg }]}>
         <Image source={img(image)} style={{ width: 68, height: 68 }} resizeMode="contain" />
       </View>
@@ -151,6 +155,12 @@ export function DPractice() {
 
   useDesktopKeys({ '/': () => go(R.search) });
 
+  // Tor oynada (asosiy ustun < 1000px) Yuzma-yuz kartasi to'liq kenglikda, materiallar 2 ustunda.
+  const { width: winW } = useWindowDimensions();
+  const narrow = winW - 248 - 80 < 1000;
+  const half = narrow ? col('100%', 0) : col('50%', 8);
+  const third = narrow ? col('50%', 8) : col('33.333%', 10.667);
+
   const search = (
     <Pressable accessibilityRole="link" accessibilityLabel="Qidirish" onPress={() => go(R.search)} style={s.search}>
       <ISearch />
@@ -175,8 +185,8 @@ export function DPractice() {
   return (
     <DesktopPage title="Mashq" titleSlot={title} actions={search} contentStyle={s.content}>
       <Section first title="Oʻyinlar" meta={lesson ? `Mavzu: ${lesson.name} · ${lesson.number}-dars soʻzlari` : 'Mavzu: —'} />
-      <View style={s.row}>
-        <Pressable accessibilityRole="link" accessibilityLabel="Yuzma-yuz. Raqib topish" onPress={() => go(R.battle)} style={s.battle}>
+      <View style={[s.row, { flexWrap: 'wrap' }]}>
+        <Pressable accessibilityRole="link" accessibilityLabel="Yuzma-yuz. Raqib topish" onPress={() => go(R.battle)} style={[s.battle, half]}>
           <View style={s.battleCircle} />
           <Image source={img('11ac32c8e5b061e3779348e3afc56d83')} style={s.battleImg} resizeMode="contain" />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -197,7 +207,7 @@ export function DPractice() {
             <IArrow size={17} />
           </View>
         </Pressable>
-        <View style={s.tiles}>
+        <View style={[s.tiles, half]}>
           <View style={s.tileRow}>
             <GameTile href={R.wordChain} bg="#E8EEFF" image="557efc668fa6b22df51bb9270eeb827b" title="Soʻnggi harf" sub="Soʻz zanjiri" meta={`Rekord: ${rec.wordChain}`} />
             <GameTile
@@ -224,9 +234,10 @@ export function DPractice() {
       </View>
 
       <Section title="Materiallar" meta="Kitob va maʼlumotnoma" />
-      <View style={s.row}>
-        <Material href={R.dialogList} bg="#F0EBFF" image="2770f303e2a36a9ec52c3a0b44e9b032" title="Dialoglar" sub="Mavzuli dialoglar + audio" meta={`${counts.dialogs} mavzu`} />
+      <View style={[s.row, { flexWrap: 'wrap' }]}>
+        <Material style={third} href={R.dialogList} bg="#F0EBFF" image="2770f303e2a36a9ec52c3a0b44e9b032" title="Dialoglar" sub="Mavzuli dialoglar + audio" meta={`${counts.dialogs} mavzu`} />
         <Material
+          style={third}
           href={R.lugat}
           bg="#FFF1E6"
           image="41f0bc38557c05d400bc4af482b8ae13"
@@ -236,6 +247,7 @@ export function DPractice() {
           meta={`${myWords} soʻz`}
         />
         <Material
+          style={third}
           href={R.grammarList}
           bg="#E3F7EE"
           image="f639c30e1400761df83230b833ba42b2"
@@ -244,11 +256,9 @@ export function DPractice() {
           sub="Qoidalar, jadvallar va misollar"
           meta={`${counts.grammar} mavzu · Maʼlumotnoma`}
         />
-      </View>
-      <View style={s.row}>
-        <Material href={R.audioList} bg="#FDECEC" image="32eee84d436da97eb104c837c0065230" title="Audiolar" sub="Darslikdagi audio treklar" meta="Kitob treklari · QR" />
-        <Material href={R.storyList} bg="#FFF4D1" image="e57b4e5aeb29652a1e91b899a8e24693" title="Hikoyalar" sub="Audio + matn, soʻz tarjimasi" meta={`${counts.stories} ta audiohikoya`} />
-        <Material href={R.translator} bg="#E8EEFF" image="cc0d95446730f059d25d989e2c9845ad" title="Tarjimon" sub="Urgʻu va misollar bilan tarjima" meta="rus ↔ oʻzbek" />
+        <Material style={third} href={R.audioList} bg="#FDECEC" image="32eee84d436da97eb104c837c0065230" title="Audiolar" sub="Darslikdagi audio treklar" meta="Kitob treklari · QR" />
+        <Material style={third} href={R.storyList} bg="#FFF4D1" image="e57b4e5aeb29652a1e91b899a8e24693" title="Hikoyalar" sub="Audio + matn, soʻz tarjimasi" meta={`${counts.stories} ta audiohikoya`} />
+        <Material style={third} href={R.translator} bg="#E8EEFF" image="cc0d95446730f059d25d989e2c9845ad" title="Tarjimon" sub="Urgʻu va misollar bilan tarjima" meta="rus ↔ oʻzbek" />
       </View>
 
       <Section title="Takrorlash" meta="Unutmaslik uchun har kuni" />
@@ -318,10 +328,6 @@ const s = StyleSheet.create({
 
   // Dizayndagi 12 ustunli to'r: 6 + 6 (teng yarim, oraliq 16).
   battle: {
-    flexGrow: 0,
-    flexShrink: 0,
-    flexBasis: 'calc(50% - 8px)' as unknown as number,
-    minWidth: 0,
     minHeight: 268,
     backgroundColor: '#0B1220',
     borderRadius: 28,
@@ -346,14 +352,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  tiles: { flexGrow: 0, flexShrink: 0, flexBasis: 'calc(50% - 8px)' as unknown as number, minWidth: 0, gap: 16 },
+  tiles: { gap: 16 },
   tileRow: { flex: 1, flexDirection: 'row', gap: 16 },
   tile: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
   tileIcon: { width: 68, height: 68, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 
   mat: {
-    flex: 1,
-    minWidth: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingVertical: 16,

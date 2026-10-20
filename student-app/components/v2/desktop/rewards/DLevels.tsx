@@ -20,7 +20,7 @@ import { useLang } from '@/i18n/LanguageContext';
 import { fetchLeaderboard } from '@/services/contentApi';
 import { useCachedState } from '@/services/v2Cache';
 
-import { caps, IBolt, ICheck, IChevron, ILock, IStar, T, webShadow } from './ui';
+import { caps, NARROW_MAIN, useMainWidth, IBolt, ICheck, IChevron, ILock, IStar, T, webShadow } from './ui';
 
 const PER_DAY = 50;
 
@@ -43,6 +43,10 @@ export function DLevels() {
   const legendReached = curIdx === V2_TOP_LEVEL;
   const next = progress.next ? curIdx + 1 : null;
   const goal = Math.min(today, PER_DAY);
+  // Tor oynada darajalar 3 tadan ikki qatorda; "Keyingi" kartasi sig'magani uchun yashiriladi.
+  const mainW = useMainWidth();
+  const narrow = mainW < NARROW_MAIN;
+  const cardFix = narrow ? { flexGrow: 0, flexBasis: (mainW - 32) / 3 } : null;
 
   return (
     <DesktopPage title="Darajalar" subtitle={`Chaqmoq darajalari · jami ${fmt(lightning)}`} back={R.profile} contentStyle={{ paddingBottom: 32, gap: 26 }}>
@@ -111,7 +115,7 @@ export function DLevels() {
             </View>
           </View>
         </View>
-        {next !== null && (
+        {next !== null && !narrow && (
           <View style={s.next}>
             <Image source={LEVEL_BADGES[next]} style={{ width: 64, height: 64 }} resizeMode="contain" />
             <View style={{ flex: 1, gap: 2 }}>
@@ -144,13 +148,13 @@ export function DLevels() {
             Chaqmoq hech qachon kamaymaydi
           </T>
         </View>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
+        <View style={{ flexDirection: 'row', flexWrap: narrow ? 'wrap' : 'nowrap', gap: 16 }}>
           {V2_LEVELS.map((l, i) => {
             // Saqlangan (pasaymaydigan) daraja ham erishilgan hisoblanadi.
             const reached = i <= curIdx || lightning >= l.min;
             const current = i === curIdx;
             return (
-              <View key={l.key} style={[s.card, current && [{ backgroundColor: '#F0EBFF' }, webShadow('inset 0 0 0 2px #7C4DFF')]]}>
+              <View key={l.key} style={[s.card, cardFix, current && [{ backgroundColor: '#F0EBFF' }, webShadow('inset 0 0 0 2px #7C4DFF')]]}>
                 <Image source={LEVEL_BADGES[i]} accessibilityLabel={`${i + 1}-daraja nishoni`} style={{ width: 120, height: 120 }} resizeMode="contain" />
                 <View style={{ flex: 1, gap: 3, alignItems: 'center' }}>
                   <T f="bodyHeavy" size={16} lh={20} style={{ textAlign: 'center' }}>
@@ -184,7 +188,7 @@ export function DLevels() {
               </View>
             );
           })}
-          <View style={[s.card, { backgroundColor: '#FFF4D1' }]}>
+          <View style={[s.card, cardFix, { backgroundColor: '#FFF4D1' }]}>
             <View
               style={{
                 width: 120,
@@ -263,7 +267,7 @@ export function DLevels() {
           onPress={() => setPopup(true)}
           style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.link, hovered && { backgroundColor: '#E8E0FF' }]}
         >
-          <Image source={designImages.cd192c1f07c6ae01a6b80b26d84e0ec7} style={{ width: 60, height: 60 }} resizeMode="contain" />
+          <Image source={designImages.cd192c1f07c6ae01a6b80b26d84e0ec7} style={{ width: 60, height: 60, marginLeft: 2 }} resizeMode="contain" />
           <View style={{ flex: 1, gap: 2 }}>
             <T f="bodyHeavy" size={17} color="#5B2FD6">
               Darajaga chiqqanda nima boʻladi?
@@ -272,7 +276,9 @@ export function DLevels() {
               Yangi nishon, profil belgisi va yulduzlar
             </T>
           </View>
-          <IChevron size={20} color="#5B2FD6" />
+          <View style={{ marginRight: 2 }}>
+            <IChevron size={20} color="#5B2FD6" />
+          </View>
         </Pressable>
       </View>
       {/* O'quvchining keyingi darajasi (eng yuqorida — o'zi). */}
@@ -309,7 +315,8 @@ const s = StyleSheet.create({
   },
   fill: { height: 14, borderRadius: 7, backgroundColor: '#FFC93C' },
   next: {
-    width: 220,
+    // Dizaynda width 220 + padding (content-box) = 252.
+    width: 252,
     backgroundColor: '#5229C9',
     borderRadius: 22,
     paddingVertical: 14,
@@ -320,6 +327,7 @@ const s = StyleSheet.create({
   },
   card: {
     flex: 1,
+    flexBasis: 0,
     minWidth: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -347,6 +355,7 @@ const s = StyleSheet.create({
   },
   note: {
     flex: 1,
+    flexBasis: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 22,
@@ -364,10 +373,11 @@ const s = StyleSheet.create({
   },
   link: {
     flex: 1,
+    flexBasis: 0,
     backgroundColor: '#F0EBFF',
     borderRadius: 24,
-    paddingVertical: 22,
-    paddingHorizontal: 24,
+    // Chap karta bilan teng flex-basis uchun padding 22; dizayndagi 24 — ichki 2px margin.
+    padding: 22,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,

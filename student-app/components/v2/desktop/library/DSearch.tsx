@@ -45,9 +45,17 @@ export function DSearch() {
         const mc = await fetchMobileContent();
         const lib = mc.library;
         lib.grammar.forEach((g, i) =>
-          items.push({ title: g.title, sub: stripRichText(g.formula ?? ''), meta: `Grammatika · G${i + 1}`, href: R.grammar(g.id), hay: norm(`${g.title} ${g.formula ?? ''} ${g.description ?? ''}`) }),
+          items.push({
+            title: g.title,
+            sub: stripRichText(g.formula ?? ''),
+            meta: `Grammatika · G${i + 1}`,
+            href: R.grammar(g.id),
+            hay: norm(`${g.title} ${g.formula ?? ''} ${g.description ?? ''}`),
+          }),
         );
-        lib.podcasts.forEach((p) => items.push({ title: p.title, sub: '', meta: 'Audio', href: R.audioList, hay: norm(`${p.title} ${p.lines.map((l) => `${l.en} ${l.uz}`).join(' ')}`) }));
+        lib.podcasts.forEach((p) =>
+          items.push({ title: p.title, sub: '', meta: 'Audio', href: R.audioList, hay: norm(`${p.title} ${p.lines.map((l) => `${l.en} ${l.uz}`).join(' ')}`) }),
+        );
         lib.books.forEach((b) => items.push({ title: b.title, sub: stripRichText(b.description), meta: 'Hikoya', href: R.book(b.id), hay: norm(`${b.title} ${b.description}`) }));
         lib.words.forEach((t) => t.words.forEach((w) => items.push({ title: w.en, sub: w.uz, meta: `Soʻzlar · ${t.title}`, href: R.grammarList, hay: norm(`${w.en} ${w.uz}`) })));
         const course = mc.courses[0];
@@ -63,7 +71,9 @@ export function DSearch() {
       } catch {
         // Tarmoq bo'lmasa ham shaxsiy lug'at bo'yicha qidiriladi.
       }
-      (await getMyWords()).forEach((w) => items.push({ title: w.word, sub: w.translation ?? '', meta: 'Mening lugʻatim', href: R.search, hay: norm(`${w.word} ${w.translation ?? ''}`) }));
+      (await getMyWords()).forEach((w) =>
+        items.push({ title: w.word, sub: w.translation ?? '', meta: 'Mening lugʻatim', href: R.search, hay: norm(`${w.word} ${w.translation ?? ''}`) }),
+      );
       setIndex(items);
     })();
   }, []);
@@ -121,7 +131,13 @@ export function DSearch() {
         {noResults ? (
           <View style={s.main}>
             <View style={s.mascot}>
-              <Image source={designImages['cc0d95446730f059d25d989e2c9845ad']} style={{ width: 214, height: 214 }} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
+              <Image
+                source={designImages['cc0d95446730f059d25d989e2c9845ad']}
+                style={{ width: 214, height: 214 }}
+                resizeMode="contain"
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
             </View>
             <View style={{ gap: 14, flexShrink: 1 }}>
               <T f="display" size={40} lh={48} ls={-0.8} accessibilityRole="header">
@@ -134,7 +150,7 @@ export function DSearch() {
           </View>
         ) : results.length > 0 ? (
           <View style={s.results}>
-            <View style={{ paddingHorizontal: 16 }}>
+            <View style={{ paddingHorizontal: 16, height: 22, justifyContent: 'center' }}>
               <Over>Natijalar · {results.length}</Over>
             </View>
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
@@ -170,13 +186,21 @@ export function DSearch() {
           <View style={s.suggest}>
             <Over>Balki shular kerakdir</Over>
             <View style={{ flexDirection: 'row', gap: 12 }}>
-              <Pressable accessibilityRole="link" onPress={() => go(R.grammarList)} style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.chip, hovered && { borderColor: '#D4DEFF' }]}>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => go(R.grammarList)}
+                style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.chip, hovered && { borderColor: '#D4DEFF' }]}
+              >
                 <T size={18} color="#2F5BFF">
                   Аа
                 </T>
                 <T size={16}>Grammatika</T>
               </Pressable>
-              <Pressable accessibilityRole="link" onPress={() => go(R.audioList)} style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.chip, hovered && { borderColor: '#D4DEFF' }]}>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => go(R.audioList)}
+                style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.chip, hovered && { borderColor: '#D4DEFF' }]}
+              >
                 <IHeadphones />
                 <T size={16}>Audiolar</T>
               </Pressable>
@@ -192,7 +216,7 @@ export function DSearch() {
           </View>
           {recent.length > 0 && (
             <View style={s.recent}>
-              <View style={{ paddingHorizontal: 16 }}>
+              <View style={{ paddingHorizontal: 16, height: 22, justifyContent: 'center' }}>
                 <Over>Oxirgi qidiruvlar</Over>
               </View>
               <View>
@@ -240,14 +264,46 @@ const s = StyleSheet.create({
   } as object,
   input: { flex: 1, minWidth: 0, height: 44, padding: 0, fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 17, color: '#0B1220', outlineStyle: 'none' } as object,
   clear: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#EEF1F7', alignItems: 'center', justifyContent: 'center' },
-  main: { flex: 1, minHeight: 0, backgroundColor: '#FFFFFF', borderRadius: 28, paddingVertical: 40, paddingHorizontal: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 56 },
+  main: {
+    flex: 1,
+    minHeight: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    paddingVertical: 40,
+    paddingHorizontal: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 56,
+  },
   mascot: { width: 260, height: 260, borderRadius: 130, backgroundColor: '#E8EEFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   results: { flex: 1, minHeight: 0, backgroundColor: '#FFFFFF', borderRadius: 28, paddingTop: 22, paddingHorizontal: 10, paddingBottom: 10, gap: 8 },
   row: { height: 70, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
   divider: { borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
   suggest: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 26, paddingVertical: 22, paddingHorizontal: 26, gap: 16 },
-  chip: { height: 54, paddingHorizontal: 22, borderRadius: 27, backgroundColor: '#F4F6FA', borderWidth: 2, borderColor: '#E2E6EE', flexDirection: 'row', alignItems: 'center', gap: 10 },
-  add: { alignSelf: 'flex-start', maxWidth: '100%', height: 56, paddingHorizontal: 24, borderRadius: 18, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', gap: 10, boxShadow: '0 5px 0 #1E3FD1' } as object,
+  chip: {
+    height: 54,
+    paddingHorizontal: 22,
+    borderRadius: 27,
+    backgroundColor: '#F4F6FA',
+    borderWidth: 2,
+    borderColor: '#E2E6EE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  add: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    height: 56,
+    paddingHorizontal: 24,
+    borderRadius: 18,
+    backgroundColor: '#2F5BFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    boxShadow: '0 5px 0 #1E3FD1',
+  } as object,
   recent: { width: 500, flexShrink: 0, backgroundColor: '#FFFFFF', borderRadius: 26, paddingTop: 22, paddingHorizontal: 10, paddingBottom: 10, gap: 8 },
   recentRow: { height: 70, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
 });

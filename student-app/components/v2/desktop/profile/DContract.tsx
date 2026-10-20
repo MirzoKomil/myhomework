@@ -112,7 +112,7 @@ export function DContract() {
         <View style={s.desk}>
           <View accessibilityLabel="Shartnoma qisqacha" style={s.paper}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <H size={20} lh={1.36} color="#2F5BFF">
+              <H size={20} lh={1.2} color="#2F5BFF">
                 Domwork
               </H>
               <T f="bodyBold" size={13} color="#4A5468">

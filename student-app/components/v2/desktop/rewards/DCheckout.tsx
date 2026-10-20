@@ -23,7 +23,7 @@ import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { placeOrder } from '@/services/shopStore';
 import { useAuth } from '@/services/studentAuthStore';
 
-import { caps, DButton, HeaderButton, IBag, IChevron, ICoin, ILock, IPin, ITruck, LockedButton, T } from './ui';
+import { NARROW_MAIN, useMainWidth, caps, DButton, HeaderButton, IBag, IChevron, ICoin, ILock, IPin, ITruck, LockedButton, T } from './ui';
 
 // Mobil Checkout bilan bir xil kalit — manzil ikkala ko'rinishda ham saqlanadi.
 const ADDRESS_KEY = 'mh_v2_delivery_address';
@@ -68,6 +68,8 @@ export function DCheckout() {
   const products = useShopProducts();
   const coins = useCoins();
   const avatar = useAvatarUri();
+  // Tor oynada buyurtma kartasi forma ostiga tushadi.
+  const narrow = useMainWidth() < NARROW_MAIN;
   const { student } = useAuth();
   const p = products?.find((x) => x.id === itemId);
   const [addr, setAddr] = useState<Address>(EMPTY);
@@ -147,11 +149,11 @@ export function DCheckout() {
       contentStyle={{
         flex: 1,
         paddingBottom: 32,
-        flexDirection: 'row',
+        flexDirection: narrow ? 'column' : 'row',
         gap: 24,
       }}
     >
-      <View style={s.form}>
+      <View style={[s.form, narrow && { flexGrow: 0, flexBasis: 'auto' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={s.formIcon}>
             <ITruck />
@@ -162,8 +164,8 @@ export function DCheckout() {
         </View>
         <View style={{ gap: 20 }}>
           <View style={{ flexDirection: 'row', gap: 18 }}>
-            <Field label="Viloyat" value={addr.region} onChange={set('region')} style={{ flex: 1, minWidth: 0 }} />
-            <Field label="Shahar / tuman" value={addr.city} onChange={set('city')} style={{ flex: 1, minWidth: 0 }} />
+            <Field label="Viloyat" value={addr.region} onChange={set('region')} style={{ flex: 1, flexBasis: 0, minWidth: 0 }} />
+            <Field label="Shahar / tuman" value={addr.city} onChange={set('city')} style={{ flex: 1, flexBasis: 0, minWidth: 0 }} />
           </View>
           <Field label="Koʻcha, uy, xonadon" value={addr.street} onChange={set('street')} />
           <Field label="Moʻljal (ixtiyoriy)" value={addr.landmark} onChange={set('landmark')} />
@@ -211,7 +213,7 @@ export function DCheckout() {
         </View>
       </View>
 
-      <View style={s.aside}>
+      <View style={[s.aside, narrow && { width: '100%' }]}>
         <T f="bodyHeavy" size={12} color="#4A5468" style={caps()}>
           Buyurtma
         </T>
@@ -399,6 +401,7 @@ const s = StyleSheet.create({
   },
   step: {
     flex: 1,
+    flexBasis: 0,
     minWidth: 0,
     backgroundColor: '#F4F6FA',
     borderRadius: 16,
@@ -416,7 +419,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   aside: {
-    width: 400,
+    // Dizaynda width 400 + padding (content-box) = 444.
+    width: 444,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 22,

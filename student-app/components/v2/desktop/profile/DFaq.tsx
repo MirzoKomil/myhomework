@@ -6,13 +6,11 @@
  * tarif (fetchDemoSchedule, fetchDemoStudentPayments), coin javobi — v2
  * mukofot konstantalaridan, "Seriya uzilsa..." ochiq va "Namunani koʻrish"
  * StreakLost oynasini shu ekran ustida ochadi (?popup=lost).
- * Klaviatura: ↑/↓ — savollar orasida yurish.
  */
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 
-import { useDesktopKeys } from '@/components/v2/desktop/useDesktop';
 import { StreakLostPopup } from '@/components/v2/popups/StreakLost';
 import { SUPPORT_TELEGRAM_URL } from '@/components/v2/settings/parts';
 import { V2_BATTLE_DAILY_COIN_WINS, V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
@@ -78,14 +76,6 @@ export function DFaq() {
       cancelled = true;
     };
   }, []);
-  // ↑/↓ — keyingi/oldingi savolni ochish.
-  useDesktopKeys(
-    {
-      ArrowDown: () => setOpen((o) => (o === null ? 0 : Math.min(FAQ.length - 1, o + 1))),
-      ArrowUp: () => setOpen((o) => (o === null ? FAQ.length - 1 : Math.max(0, o - 1))),
-    },
-    !lostOpen,
-  );
 
   return (
     <SettingsLayout active="faq" title="Savol-javoblar" subtitle="Kurs va ilova haqida">

@@ -4,14 +4,13 @@
  * Chiqish mantig'i mobil oyna (popups/LogoutConfirm.tsx) bilan aynan bir
  * xil: clearAuth + kesh tozalanadi, keyin login ekraniga o'tiladi.
  * Markazdagi 480px karta, fon — sahifaning o'zi (xira + qoraytirilgan).
- * Esc yoki fon — yopish, Enter — chiqish.
+ * Esc yoki fon — yopish (DPopupFrame).
  */
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { DPopupFrame } from '@/components/v2/desktop/home/DPopupFrame';
-import { useDesktopKeys } from '@/components/v2/desktop/useDesktop';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { invalidateCache } from '@/services/contentApi';
@@ -33,7 +32,6 @@ export function DLogoutConfirm({ visible, onClose }: { visible: boolean; onClose
       router.replace(R.login as Href);
     }
   };
-  useDesktopKeys({ Enter: () => void confirm() }, visible);
 
   return (
     <DPopupFrame visible={visible} onClose={onClose} width={480}>

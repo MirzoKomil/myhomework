@@ -37,7 +37,11 @@ type Sentence = { para: number; first: number; last: number; end: number };
 const SIZES = [30, 34, 26]; // "Matn oʻlchami" — navbat bilan (dizayn: 30px)
 const SECONDS_PER_WORD = 0.55;
 
-const clean = (w: string) => w.toLowerCase().replace(/[^\p{L}-]/gu, '').replace(/́/g, '');
+const clean = (w: string) =>
+  w
+    .toLowerCase()
+    .replace(/[^\p{L}-]/gu, '')
+    .replace(/́/g, '');
 
 export function DBook() {
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
@@ -247,7 +251,7 @@ export function DBook() {
       <View style={s.stage}>
         <View style={s.wrap}>
           <View style={s.left}>
-            <View style={[s.cover, { backgroundColor: story.coverUrl ? '#EAE4DF' : story.colors?.[0] ?? '#E8EEFF' }]}>
+            <View style={[s.cover, { backgroundColor: story.coverUrl ? '#EAE4DF' : (story.colors?.[0] ?? '#E8EEFF') }]}>
               {story.coverUrl ? (
                 <Image source={{ uri: story.coverUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" accessibilityLabel={story.description || story.title} />
               ) : (
@@ -422,7 +426,18 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     ...(Platform.OS === 'web' ? ({ boxShadow: 'inset 0 -2.5px 0 #2F5BFF' } as object) : { borderBottomWidth: 2.5, borderBottomColor: '#2F5BFF' }),
   },
-  panel: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E6EE', borderRadius: 20, paddingTop: 14, paddingRight: 14, paddingBottom: 14, paddingLeft: 18, gap: 12, ...shadowPanel },
+  panel: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E6EE',
+    borderRadius: 20,
+    paddingTop: 14,
+    paddingRight: 14,
+    paddingBottom: 14,
+    paddingLeft: 18,
+    gap: 12,
+    ...shadowPanel,
+  },
   panelBar: { width: 4, height: 50, borderRadius: 2, backgroundColor: '#2F5BFF', flexShrink: 0 },
   close: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#F4F6FA', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   panelFoot: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: '#EEF1F7', paddingTop: 12 },

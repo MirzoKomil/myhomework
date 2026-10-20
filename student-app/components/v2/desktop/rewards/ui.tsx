@@ -4,11 +4,22 @@
  * popup ramkasi (sahifa ustida xira fon + markazdagi karta).
  */
 import type { ReactNode } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { useDesktopKeys } from '@/components/v2/desktop/useDesktop';
 import { fonts } from '@/constants/v2/tokens';
+
+/**
+ * Sahifa kontenti kengligi (oyna − yon menyu 248 − chekkalar 2×40). 1440 da 1112.
+ * Tor oynada (1024…) yon ustunlar pastga tushadi — dizayn 1440 uchun chizilgan.
+ */
+export function useMainWidth() {
+  const { width } = useWindowDimensions();
+  return width - 248 - 80;
+}
+/** Shu kenglikdan torroq bo'lsa ixcham (ustma-ust) joylashuv. */
+export const NARROW_MAIN = 1000;
 
 export const webShadow = (css: string): ViewStyle => (Platform.OS === 'web' ? ({ boxShadow: css } as object) : {}) as ViewStyle;
 
@@ -27,12 +38,19 @@ type TP = {
 
 /** Dizayndagi matn: Manrope 600/700/800 → body/bodyBold/bodyHeavy, Bricolage 800 → display. */
 export function T({ f = 'bodyBold', size, color = '#0B1220', lh, style, children, numberOfLines, ellipsizeMode, accessibilityRole }: TP) {
+  // Webda numberOfLines doim "…" qo'yadi — 'clip' uchun oddiy nowrap + overflow: hidden.
+  const clip = ellipsizeMode === 'clip' && Platform.OS === 'web';
   return (
     <Text
-      numberOfLines={numberOfLines}
+      numberOfLines={clip ? undefined : numberOfLines}
       ellipsizeMode={ellipsizeMode}
       accessibilityRole={accessibilityRole}
-      style={[{ fontFamily: fonts[f], fontWeight: 'normal', fontSize: size, color }, lh ? { lineHeight: lh } : null, style]}
+      style={[
+        { fontFamily: fonts[f], fontWeight: 'normal', fontSize: size, color },
+        lh ? { lineHeight: lh } : null,
+        clip ? ({ whiteSpace: 'nowrap', overflow: 'hidden' } as TextStyle) : null,
+        style,
+      ]}
     >
       {children}
     </Text>

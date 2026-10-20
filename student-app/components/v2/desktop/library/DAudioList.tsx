@@ -70,11 +70,11 @@ export function DAudioList() {
       <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 24 }}>
         <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
           <DTabs tabs={TABS} value={month} onChange={setMonth} label="Oy boʻyicha" />
-          <ScrollView style={{ flex: 1, marginTop: 2 }} contentContainerStyle={{ gap: 10, paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1, marginTop: 12 }} contentContainerStyle={{ gap: 10, paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
             {shown.map((g, gi) => {
               const isToday = g.lesson.id === cur?.id;
               return (
-                <View key={g.lesson.id} style={{ gap: 10, marginTop: gi ? 4 : 0 }}>
+                <View key={g.lesson.id} style={{ gap: 10, marginTop: gi ? 14 : 0 }}>
                   <View style={s.secHead}>
                     <T size={18} accessibilityLabel={isToday ? `${g.number}-dars, bugun` : undefined}>
                       {g.number}-dars
@@ -113,7 +113,12 @@ export function DAudioList() {
             <T size={21} lh={27.3} color="#FFFFFF">
               Kitobdagi QR kodni skanerlang — shu trek ochiladi
             </T>
-            <Pressable accessibilityRole="link" disabled={!qrTarget} onPress={() => qrTarget && go(R.audioTrack(qrTarget))} style={({ pressed }) => [s.qrBtn, pressed && { opacity: 0.85 }]}>
+            <Pressable
+              accessibilityRole="link"
+              disabled={!qrTarget}
+              onPress={() => qrTarget && go(R.audioTrack(qrTarget))}
+              style={({ pressed }) => [s.qrBtn, pressed && { opacity: 0.85 }]}
+            >
               <ICamera />
               <T size={16}>QR skanerlash</T>
             </Pressable>

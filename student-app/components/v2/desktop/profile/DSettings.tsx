@@ -113,8 +113,8 @@ export function DSettings() {
       <View style={{ flexDirection: 'row', gap: 20, alignItems: 'flex-start' }}>
         <View style={{ flex: 1, minWidth: 0, gap: 20 }}>
           <Section label="Eslatmalar">
-            <SwitchRow icon={<BellIcon size={21} />} label="Dars eslatmasi" hint="18:30" on={reminders.lesson} onPress={() => toggleReminder('lesson')} divider />
-            <SwitchRow icon={<VideoIcon size={21} />} label="Jonli darsdan oldin" hint="15 daq" on={reminders.live} onPress={() => toggleReminder('live')} divider />
+            <SwitchRow icon={<BellIcon size={21} />} label="Dars eslatmasi" hint="18:30" tall on={reminders.lesson} onPress={() => toggleReminder('lesson')} divider />
+            <SwitchRow icon={<VideoIcon size={21} />} label="Jonli darsdan oldin" hint="15 daq" tall on={reminders.live} onPress={() => toggleReminder('live')} divider />
             <SwitchRow icon={<FlameIcon size={21} />} label="Streak eslatmasi" hint="21:00" on={reminders.streak} onPress={() => toggleReminder('streak')} />
           </Section>
           <Section label="Hisob">
@@ -206,7 +206,8 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function SwitchRow({ icon, label, hint, on, onPress, divider, bare }: { icon: ReactNode; label: string; hint?: string; on: boolean; onPress: () => void; divider?: boolean; bare?: boolean }) {
+// tall — Eslatmalar: dizaynda tugma (76) chegarali div ichida, jami 77.
+function SwitchRow({ icon, label, hint, on, onPress, divider, bare, tall }: { icon: ReactNode; label: string; hint?: string; on: boolean; onPress: () => void; divider?: boolean; bare?: boolean; tall?: boolean }) {
   return (
     <Pressable
       accessibilityRole="switch"
@@ -214,7 +215,7 @@ function SwitchRow({ icon, label, hint, on, onPress, divider, bare }: { icon: Re
       aria-checked={on}
       accessibilityLabel={hint ? `${label} · ${hint}` : label}
       onPress={onPress}
-      style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.row, divider && s.divider, hovered && s.hover]}
+      style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.row, divider && s.divider, divider && tall && { minHeight: 77 }, hovered && s.hover]}
     >
       {icon}
       <T f="bodyBold" size={15}>

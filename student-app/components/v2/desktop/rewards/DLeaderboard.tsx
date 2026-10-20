@@ -24,7 +24,7 @@ import { fetchLeaderboard, type LeaderboardEntryResponse } from '@/services/cont
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
 import { hasCached, useCachedState } from '@/services/v2Cache';
 
-import { caps, HeadTitle, IArrow, IArrowUp, IBolt, ICheck, IChevron, IClock, ICoin, ITrophy, T, webShadow } from './ui';
+import { caps, HeadTitle, NARROW_MAIN, useMainWidth, IArrow, IArrowUp, IBolt, ICheck, IChevron, IClock, ICoin, ITrophy, T, webShadow } from './ui';
 
 // Haftalik liga serverda yo'q — hamma Bronza (0-pog'ona) dan boshlaydi (mobil kabi).
 const CURRENT_TIER = 0;
@@ -81,6 +81,11 @@ export function DLeaderboard() {
   }, []);
 
   const end = weekEnd(now);
+  // Tor oynada o'ng ustun jadval ostiga tushadi; maskot faqat joy yetsa.
+  const mainW = useMainWidth();
+  const narrow = mainW < NARROW_MAIN;
+  const heroW = narrow ? mainW : mainW - 344;
+  const railW = narrow ? (mainW - 14) / 2 : 320;
   const tier = TIERS[CURRENT_TIER];
   const next = TIERS[CURRENT_TIER + 1];
   const meIdx = entries.findIndex((e) => e.isMe);
@@ -105,7 +110,7 @@ export function DLeaderboard() {
       }
       contentStyle={{ paddingBottom: 32 }}
     >
-      <View style={{ flexDirection: 'row', gap: 24, alignItems: 'flex-start' }}>
+      <View style={{ flexDirection: narrow ? 'column' : 'row', gap: 24, alignItems: narrow ? 'stretch' : 'flex-start' }}>
         <View style={{ flex: 1, minWidth: 0, gap: 20 }}>
           {/* Liga zinapoyasi */}
           <View style={s.hero}>
@@ -171,7 +176,9 @@ export function DLeaderboard() {
                 <IChevron color="#FFC93C" />
               </Pressable>
             </View>
-            <Image source={designImages.e91544c14ad5b2b62bbbe447f02474b2} style={s.mascot} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
+            {heroW >= 760 && (
+              <Image source={designImages.e91544c14ad5b2b62bbbe447f02474b2} style={s.mascot} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
+            )}
           </View>
 
           {/* Reyting jadvali */}
@@ -279,10 +286,14 @@ export function DLeaderboard() {
         </View>
 
         {/* O'ng ustun — haftalik holat */}
-        <View accessibilityLabel="Haftalik holat" style={{ width: 320, gap: 14 }}>
-          <RankCard entries={entries} meIdx={meIdx} myAvatar={myAvatar} nextName={next?.name ?? ''} />
-          <WeekCard total={me?.lightning ?? 0} today={today} now={now} />
-          <View style={s.coinCard}>
+        <View accessibilityLabel="Haftalik holat" style={narrow ? { flexDirection: 'row', flexWrap: 'wrap', gap: 14 } : { width: 320, gap: 14 }}>
+          <View style={{ width: railW }}>
+            <RankCard entries={entries} meIdx={meIdx} myAvatar={myAvatar} nextName={next?.name ?? ''} />
+          </View>
+          <View style={{ width: railW }}>
+            <WeekCard total={me?.lightning ?? 0} today={today} now={now} />
+          </View>
+          <View style={[s.coinCard, { width: railW }]}>
             <View style={s.coinBox}>
               <ICoin size={30} />
             </View>
@@ -295,7 +306,9 @@ export function DLeaderboard() {
               </T>
             </View>
           </View>
-          <GoalCard today={today} />
+          <View style={{ width: railW }}>
+            <GoalCard today={today} />
+          </View>
         </View>
       </View>
     </DesktopPage>
@@ -389,7 +402,7 @@ function WeekCard({ total, today, now }: { total: number; today: number; now: Da
         {days.map((d, i) => {
           const isToday = i === days.length - 1;
           return (
-            <View key={d} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+            <View key={d} style={{ flex: 1, flexBasis: 0, alignItems: 'center', gap: 6 }}>
               {/* O'tgan kunlar bo'yicha taqsimot serverda yo'q — "—". */}
               <T f="bodyHeavy" size={12} color="#4A5468">
                 {isToday ? fmt(today) : '—'}

@@ -34,7 +34,7 @@ import { DELIVERY_STAGE_LABELS } from '@/data/mock';
 import { useCoins } from '@/services/coinsStore';
 import { useOrders, type ShopOrder } from '@/services/shopStore';
 
-import { caps, DButton, IBag, ICheck, IChevron, ICoin, T } from './ui';
+import { NARROW_MAIN, useMainWidth, caps, DButton, IBag, ICheck, IChevron, ICoin, T } from './ui';
 
 const SHIELD_PRICE = 150;
 // O'yinlardagi "Maslahat" narxi (mashq/sirli-soz, songgi-harf bilan bir xil).
@@ -69,6 +69,8 @@ export function DOrders() {
   const coins = useCoins();
   const products = useShopProducts();
   const [popup, setPopup] = useState<Popup>(null);
+  // Tor oynada o'ng ustun (balans, coin) jadval ostiga tushadi.
+  const narrow = useMainWidth() < NARROW_MAIN;
   const nearest = products ? nearestProduct(products, coins) : null;
   const books = orders.filter((o) => o.category === 'books');
   const others = orders.filter((o) => o.category !== 'books');
@@ -90,11 +92,11 @@ export function DOrders() {
       contentStyle={{
         flex: 1,
         paddingBottom: 32,
-        flexDirection: 'row',
+        flexDirection: narrow ? 'column' : 'row',
         gap: 24,
       }}
     >
-      <View style={{ flex: 1, minWidth: 0, gap: 22 }}>
+      <View style={[{ flex: 1, minWidth: 0, gap: 22 }, narrow && { flexGrow: 0, flexBasis: 'auto' }]}>
         <View style={{ gap: 12 }}>
           <T f="bodyHeavy" size={19} accessibilityRole="header">
             Ilova bonuslari
@@ -256,7 +258,7 @@ export function DOrders() {
         </View>
       </View>
 
-      <View style={{ width: 330, gap: 14 }}>
+      <View style={{ width: narrow ? '100%' : 330, gap: 14 }}>
         <View style={s.balance}>
           <Image source={designImages['4c789e89b37702b538b456ab2b9310fa']} style={s.balImg} resizeMode="contain" accessibilityElementsHidden importantForAccessibility="no" />
           <T size={14} color="#B8C1D6">
@@ -552,6 +554,7 @@ const s = StyleSheet.create({
   },
   shelfCard: {
     flex: 1,
+    flexBasis: 0,
     minWidth: 0,
     backgroundColor: '#F4F6FA',
     borderRadius: 18,

@@ -15,7 +15,6 @@ import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AvatarCropModal } from '@/components/AvatarCropModal';
 import { DEFAULT_PRESET, getSavedPreset, presetSource, presetUri, PRESETS, savePreset, type PresetKey } from '@/components/v2/profile/avatars';
 import { courseEnd, dm, dmy, goBack, groupFromTopic, parseIso, supportUrl, tgByPhone } from '@/components/v2/profile/shared';
-import { useDesktopKeys } from '@/components/v2/desktop/useDesktop';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { useLang } from '@/i18n/LanguageContext';
@@ -94,9 +93,6 @@ export function DProfileEdit() {
       goBack(R.profile);
     }
   };
-
-  // Esc — bekor qilish (tanlov saqlanmaydi), Enter — saqlash (faol bo'lsa).
-  useDesktopKeys({ Escape: () => goBack(R.profile), Enter: dirty ? () => void save() : undefined }, cropUri === null);
 
   const full = (profile?.name || student?.name || '').trim().split(/\s+/);
   const start = parseIso(pay?.courseStartDate);
@@ -316,7 +312,8 @@ const s = StyleSheet.create({
   saveOn: { backgroundColor: '#2F5BFF', boxShadow: '0 4px 0 #1E3FD1' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 22, overflow: 'hidden' },
   row: { minHeight: 72, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
+  // Dizaynda min-height 72 + 1px chegara (content-box) — jami 73.
+  rowBorder: { minHeight: 73, borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
   showBtn: { height: 40, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#E8EEFF', flexDirection: 'row', alignItems: 'center', gap: 6 },
   notice: { marginTop: 'auto', backgroundColor: '#E8EEFF', borderRadius: 24, padding: 22, gap: 14 },
   tg: { height: 50, paddingHorizontal: 22, borderRadius: 17, backgroundColor: '#2AABEE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },

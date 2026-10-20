@@ -15,7 +15,7 @@ import { ProductCover } from '@/components/v2/rewards/shopParts';
 import { R } from '@/constants/v2/routes';
 import { useCoins } from '@/services/coinsStore';
 
-import { caps, DButton, HeaderButton, IBag, ICheck, IChevron, ICoin, ITruck, IZoom, LockedButton, T, webShadow } from './ui';
+import { useMainWidth, caps, DButton, HeaderButton, IBag, ICheck, IChevron, ICoin, ITruck, IZoom, LockedButton, T, webShadow } from './ui';
 
 // Muqova foni (CRM bermasa) — mobil ekrandagi qiymat.
 const HERO_BG = '#E1DAD4';
@@ -27,6 +27,9 @@ export function DShopItem() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const products = useShopProducts();
   const coins = useCoins();
+  // Rasm ustuni 540px; tor oynada kontentning yarmi (o'ng ustunga joy qolsin).
+  const mainW = useMainWidth();
+  const leftW = Math.min(540, Math.round((mainW - 32) / 2));
   const p = products?.find((x) => x.id === itemId);
   const ordersBtn = <HeaderButton label="Buyurtmalarim" icon={<IBag />} onPress={() => go(R.orders)} />;
 
@@ -78,7 +81,7 @@ export function DShopItem() {
         gap: 32,
       }}
     >
-      <View style={{ width: 540, gap: 14 }}>
+      <View style={{ width: leftW, gap: 14 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Rasmni kattalashtirish"
@@ -86,7 +89,7 @@ export function DShopItem() {
           onPress={() => openViewer(0)}
           style={[s.hero, { backgroundColor: bg }]}
         >
-          <ProductCover product={p} size={520} bg={bg} fade={0.12} iconSize={140} />
+          <ProductCover product={p} size={leftW - 20} bg={bg} fade={0.12} iconSize={140} />
           {images.length > 0 && (
             <>
               <View style={[s.pill, { left: 18, paddingHorizontal: 16, gap: 8 }]}>
@@ -299,6 +302,7 @@ const s = StyleSheet.create({
   dotOn: { width: 22, backgroundColor: '#0B1220' },
   thumb: {
     flex: 1,
+    flexBasis: 0,
     height: 104,
     borderRadius: 18,
     alignItems: 'center',
@@ -315,6 +319,7 @@ const s = StyleSheet.create({
   },
   spec: {
     flex: 1,
+    flexBasis: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingVertical: 12,
@@ -346,6 +351,7 @@ const s = StyleSheet.create({
   },
   mini: {
     flex: 1,
+    flexBasis: 0,
     minWidth: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,

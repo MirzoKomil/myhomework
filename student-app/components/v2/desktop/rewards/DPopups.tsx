@@ -360,9 +360,9 @@ export function DStreakLostCard({
           label={`Himoya olish · ${shieldPrice} coin`}
           icon={<IShield size={19} color="#2F5BFF" sw={2.2} />}
           onPress={onShop}
-          style={{ flex: 1, paddingHorizontal: 14 }}
+          style={{ flex: 1, flexBasis: 0, paddingHorizontal: 14 }}
         />
-        <DButton height={54} label="Yangi seriyani boshlash" onPress={onStart} style={{ flex: 1, paddingHorizontal: 14 }} />
+        <DButton height={54} label="Yangi seriyani boshlash" onPress={onStart} style={{ flex: 1, flexBasis: 0, paddingHorizontal: 14 }} />
       </View>
     </DPopup>
   );
@@ -393,6 +393,7 @@ const s = StyleSheet.create({
   },
   tile: {
     flex: 1,
+    flexBasis: 0,
     backgroundColor: '#F4F6FA',
     borderRadius: 18,
     paddingVertical: 14,

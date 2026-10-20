@@ -51,7 +51,7 @@ export function DAudioTrack() {
   const all = useMemo(() => (mc ? allBookTracks(mc) : []), [mc, tick]);
   const track = all.find((t) => t.id === id) ?? null;
   const siblings = track ? all.filter((t) => t.lesson.lesson.id === track.lesson.lesson.id) : [];
-  const next = track ? all[all.indexOf(track) + 1] ?? null : null;
+  const next = track ? (all[all.indexOf(track) + 1] ?? null) : null;
   const lines = useMemo(() => (mc && track ? trackLines(mc, track) : []), [mc, track]);
 
   if (!track) {
@@ -217,8 +217,11 @@ function TrackView({ track, siblings, lines, next }: { track: BookTrack; sibling
               onPress={goNext}
               style={({ pressed }) => [s.cta, pressed && { backgroundColor: '#1E3FD1' }]}
             >
+              <T size={16} color="#FFFFFF">
+                Keyingi trek ·
+              </T>
               <T size={16} color="#FFFFFF" lines={1} style={{ flexShrink: 1 }}>
-                Keyingi trek · «{bare(next.title)}»
+                «{bare(next.title)}»
               </T>
               <IArrow size={18} color="#FFFFFF" />
               <InKbd>Enter</InKbd>
@@ -343,11 +346,42 @@ const s = StyleSheet.create({
   left: { width: 440, flexShrink: 0, gap: 18 },
   cover: { position: 'relative', height: 290, borderRadius: 26, overflow: 'hidden', backgroundColor: '#EAE4DF' },
   coverChip: { position: 'absolute', left: 14, top: 14, height: 30, paddingHorizontal: 11, borderRadius: 10, backgroundColor: '#FFFFFF', justifyContent: 'center' },
-  qr: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E6EE', borderRadius: 10, paddingVertical: 5, paddingHorizontal: 10 },
+  qr: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E6EE',
+    borderRadius: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginHorizontal: 4, marginBottom: 2 },
   trow: { backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   trowOn: { backgroundColor: '#E8EEFF', boxShadow: 'inset 0 0 0 2px #2F5BFF' } as object,
   dot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  second: { height: 54, paddingHorizontal: 20, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#E2E6EE', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cta: { height: 54, paddingLeft: 26, paddingRight: 22, borderRadius: 17, backgroundColor: '#2F5BFF', flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1, boxShadow: '0 5px 0 #1E3FD1' } as object,
+  second: {
+    height: 54,
+    paddingHorizontal: 20,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E2E6EE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cta: {
+    height: 54,
+    paddingLeft: 26,
+    paddingRight: 22,
+    borderRadius: 17,
+    backgroundColor: '#2F5BFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
+    boxShadow: '0 5px 0 #1E3FD1',
+  } as object,
 });

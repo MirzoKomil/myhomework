@@ -4,7 +4,7 @@
  * qorong'u — D_Battle, ko'k/yashil tugma ichidagi) va matn yordamchisi.
  */
 import type { ReactNode } from 'react';
-import { Platform, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type TextStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { fonts } from '@/constants/v2/tokens';
@@ -159,6 +159,15 @@ export function H({ size, color = '#0B1220', lh, children, style }: { size: numb
       {children}
     </Text>
   );
+}
+
+/**
+ * Fokus ekrandagi markaziy blok uchun mavjud kenglik: dizayndagi kenglik
+ * (1100/1040), tor oynada (1024…) esa oyna − 2 × 32 chekka.
+ */
+export function useAvail(designW: number) {
+  const { width } = useWindowDimensions();
+  return Math.min(designW, width - 64);
 }
 
 /** Faqat webda ishlaydigan CSS (soya, gradient, dashed outline). */

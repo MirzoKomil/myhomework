@@ -330,7 +330,8 @@ function TgCircle({ label, url }: { label: string; url: string }) {
 const s = StyleSheet.create({
   main: { backgroundColor: '#FFFFFF', borderRadius: 28, padding: 28, flexDirection: 'row', alignItems: 'center', gap: 28 },
   mainAvatar: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#2F5BFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  online: { position: 'absolute', right: 4, bottom: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: '#12B76A', borderWidth: 3, borderColor: '#FFFFFF' },
+  // Dizaynda 22px + 3px chegara (content-box) — jami 28px.
+  online: { position: 'absolute', right: 4, bottom: 4, width: 28, height: 28, borderRadius: 14, backgroundColor: '#12B76A', borderWidth: 3, borderColor: '#FFFFFF' },
   tag: { alignSelf: 'flex-start', height: 26, paddingHorizontal: 10, borderRadius: 9, justifyContent: 'center' },
   mainStat: { flex: 1, minWidth: 0, backgroundColor: '#F4F6FA', borderRadius: 18, paddingVertical: 16, paddingHorizontal: 14, gap: 2 },
   btn: { height: 52, paddingHorizontal: 22, borderRadius: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },

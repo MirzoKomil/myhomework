@@ -58,12 +58,7 @@ export function DGrammarList() {
           <View style={s.listHead}>
             <Over>Barcha mavzular</Over>
             <View style={{ flex: 1 }} />
-            <View
-              accessibilityRole="progressbar"
-              accessibilityLabel={`${learned} / ${total} oʻrganildi`}
-              accessibilityValue={{ min: 0, max: total, now: learned }}
-              style={s.track}
-            >
+            <View accessibilityRole="progressbar" accessibilityLabel={`${learned} / ${total} oʻrganildi`} accessibilityValue={{ min: 0, max: total, now: learned }} style={s.track}>
               <View style={[s.fill, { width: `${pct}%` }]} />
             </View>
             <T size={14} color="#075E3A">
@@ -219,11 +214,30 @@ const s = StyleSheet.create({
   part: { width: 28, height: 28, borderRadius: 14, borderWidth: 3, borderColor: '#087A4A', backgroundColor: '#FFFFFF', overflow: 'hidden', flexShrink: 0 },
   sbTrack: { width: 6, borderRadius: 3, backgroundColor: '#EEF1F7', marginTop: 4, marginBottom: 18, flexShrink: 0 },
   sbThumb: { position: 'absolute', left: 0, right: 0, borderRadius: 3, backgroundColor: '#C9D1E0' },
-  hero: { position: 'relative', overflow: 'hidden', backgroundColor: '#2F5BFF', borderRadius: 26, paddingVertical: 22, paddingHorizontal: 24, gap: 10, boxShadow: '0 5px 0 #1E3FD1' } as object,
+  hero: {
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#2F5BFF',
+    borderRadius: 26,
+    paddingVertical: 22,
+    paddingHorizontal: 24,
+    gap: 10,
+    boxShadow: '0 5px 0 #1E3FD1',
+  } as object,
   heroCircle: { position: 'absolute', right: -40, top: -50, width: 200, height: 200, borderRadius: 100, backgroundColor: '#4A70FF' },
   heroCode: { height: 30, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#FFC93C', justifyContent: 'center' },
   heroFormula: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 17, lineHeight: 24.65, color: '#FFFFFF' },
-  heroBtn: { alignSelf: 'flex-start', marginTop: 6, height: 46, paddingHorizontal: 18, borderRadius: 14, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    height: 46,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   preview: { flex: 1, minHeight: 0, backgroundColor: '#FFFFFF', borderRadius: 26, paddingVertical: 18, paddingHorizontal: 22, gap: 12, overflow: 'hidden' },
   learnedPill: { height: 28, paddingHorizontal: 10, borderRadius: 9, backgroundColor: '#E3F7EE', flexDirection: 'row', alignItems: 'center', gap: 5 },
   desc: { fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 15, lineHeight: 22, color: '#0B1220' },
