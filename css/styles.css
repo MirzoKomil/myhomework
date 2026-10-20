@@ -8996,3 +8996,7 @@ body.modal-open {
 .pfx-tile span{font-size:12px;color:var(--mx-muted)}
 .pfx-ok{color:#0F7A55!important}.pfx-warn{color:#8A5A00!important;font-size:18px!important}
 .payroll-avatar{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--purple-light);color:#4B33C9;font-size:12px;font-weight:800;flex:none}
+
+/* ===== Dars jadvali ===== */
+.tt-week-table th.tt-today{background:var(--purple)!important;color:#fff!important;border-radius:10px}
+.tt-week-table th.tt-today .tt-date-dow,.tt-week-table th.tt-today .tt-date-num{color:#fff!important}

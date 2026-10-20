@@ -7029,8 +7029,11 @@ function renderTimetableTeacherGrid(teacher, entries) {
     const workSlots = teacher.workSlots ? new Set(teacher.workSlots) : null;
 
     let html = `<table class="table tt-week-table"><thead><tr><th class="tt-time-col">Vaqt</th>`;
-    monthDays.forEach(({ day, dow }) => {
-        html += `<th><span class="tt-date-num">${day}</span><span class="tt-date-dow">${escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 3))}</span></th>`;
+    const _ttNow = new Date();
+    const _ttTodayKey = `${_ttNow.getFullYear()}-${String(_ttNow.getMonth() + 1).padStart(2, '0')}-${String(_ttNow.getDate()).padStart(2, '0')}`;
+    monthDays.forEach(({ day, dow, dateKey }) => {
+        const isToday = dateKey === _ttTodayKey;
+        html += `<th${isToday ? ' class="tt-today" aria-current="date"' : ''}><span class="tt-date-num">${day}</span><span class="tt-date-dow">${isToday ? 'Bugun' : escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 3))}</span></th>`;
     });
     html += '</tr></thead><tbody>';
 
@@ -7222,6 +7225,7 @@ function renderTimetable() {
         container.innerHTML = `<div class="tt-grid-header"><strong>${escapeHtml(ownTeacher.name)}</strong> · ${escapeHtml(patternLabel)}</div>`
             + renderTimetableTeacherGrid(ownTeacher, ownEntries, filters.pattern);
         wireTimetableCells();
+        scrollTimetableToToday(container);
         return;
     }
 
@@ -7251,6 +7255,18 @@ function renderTimetable() {
 
     container.innerHTML = html;
     wireTimetableCells();
+    scrollTimetableToToday(container);
+}
+
+// Oylik jadvalda bugungi ustunni ko'rinadigan joyga suradi (faqat gorizontal).
+function scrollTimetableToToday(container) {
+    container?.querySelectorAll('th.tt-today').forEach(th => {
+        let box = th.closest('table')?.parentElement;
+        while (box && box !== document.body && !(box.scrollWidth > box.clientWidth && /auto|scroll/.test(getComputedStyle(box).overflowX))) box = box.parentElement;
+        if (!box || box === document.body) return;
+        const left = th.offsetLeft - box.clientWidth / 2 + th.offsetWidth / 2;
+        box.scrollLeft = Math.max(0, left);
+    });
 }
 
 function renderKpiSummary(containerId, kpi, teacherName) {
