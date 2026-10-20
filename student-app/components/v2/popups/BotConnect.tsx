@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DBotConnect } from '@/components/v2/desktop/home/DBotConnect';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { ChipBellIcon, ChipCheckIcon, ChipVideoIcon, CloseIcon, TelegramAltIcon } from '@/components/v2/home/icons';
 import { BOT_URL } from '@/components/v2/home/shared';
 import { designImages } from '@/constants/v2/designImages';
@@ -26,7 +28,12 @@ import {
 
 const STEPS = ['Botni ochish', 'Start tugmasini bosing', 'Telefon raqamingizni yuboring — ilova avtomatik ulanadi'];
 
-export function BotConnectPopup({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function BotConnectPopup(props: { visible: boolean; onClose: () => void }) {
+  // Kompyuterda — markazdagi karta (D_BotConnect), telefonda — pastki oyna.
+  return useIsDesktop() ? <DBotConnect {...props} /> : <BotConnectPopupMobile {...props} />;
+}
+
+function BotConnectPopupMobile({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const [status, setStatus] = useState<TelegramLinkStatus | null>(null);

@@ -7,6 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, StyleSheet, Text, View, type DimensionValue, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DLoading } from '@/components/v2/desktop/home/DStates';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { HomeNav } from '@/components/v2/home/HomeNav';
 import { SpinnerIcon } from '@/components/v2/home/icons';
 import { fonts } from '@/constants/v2/tokens';
@@ -32,7 +34,12 @@ const Plain = ({ w, h, r, bg }: { w: DimensionValue; h: number; r: number; bg: s
   <View style={{ width: w, height: h, borderRadius: r, backgroundColor: bg }} />
 );
 
-export function Loading({ withNav = true }: { withNav?: boolean }) {
+export function Loading(props: { withNav?: boolean }) {
+  // Kompyuterda — D_Loading (yon menyu yonidagi joyda).
+  return useIsDesktop() ? <DLoading /> : <LoadingMobile {...props} />;
+}
+
+function LoadingMobile({ withNav = true }: { withNav?: boolean }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.screen} accessibilityState={{ busy: true }}>

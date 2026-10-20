@@ -8,6 +8,8 @@ import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
+import { DServerError } from '@/components/v2/desktop/home/DStates';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { ErrorCircleIcon, RetryIcon, TelegramIcon } from '@/components/v2/home/icons';
 import { supportUrl } from '@/components/v2/home/shared';
 import { designImages } from '@/constants/v2/designImages';
@@ -24,7 +26,12 @@ const ExternalIcon = () => (
   </Svg>
 );
 
-export function ServerError({ onRetry, code = 503 }: { onRetry: () => void; code?: number | string }) {
+export function ServerError(props: { onRetry: () => void; code?: number | string }) {
+  // Kompyuterda — D_ServerError.
+  return useIsDesktop() ? <DServerError {...props} /> : <ServerErrorMobile {...props} />;
+}
+
+function ServerErrorMobile({ onRetry, code = 503 }: { onRetry: () => void; code?: number | string }) {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const [left, setLeft] = useState(AUTO_RETRY_SEC);
