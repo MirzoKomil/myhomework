@@ -12712,7 +12712,13 @@ function renderHr() {
 }
 
 // --- Analitika ---
+// Sotuv menejeriga moliyaviy va xodimlar analitikasi ko'rsatilmaydi —
+// server bu rol uchun pul oqimi va xodimlarning shaxsiy ma'lumotini
+// bermaydi (server/services/stateScope.js).
+const ANALITIKA_HIDDEN_FOR_ROLE = { sales_manager: new Set(['moliyaviy', 'xodimlar']) };
+
 function switchAnalitikaSection(section) {
+    if ((ANALITIKA_HIDDEN_FOR_ROLE[getCurrentUser()?.role] || new Set()).has(section)) section = 'hisobotlar';
     _tabContext.analitikaSection = section;
     document.querySelectorAll('[data-analitika-section]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.analitikaSection === section);
@@ -12729,6 +12735,11 @@ function switchAnalitikaSection(section) {
 }
 
 function renderAnalitika() {
+    const hidden = ANALITIKA_HIDDEN_FOR_ROLE[getCurrentUser()?.role] || new Set();
+    document.querySelectorAll('[data-analitika-section]').forEach(btn => {
+        btn.style.display = hidden.has(btn.dataset.analitikaSection) ? 'none' : '';
+    });
+    if (hidden.has(_tabContext.analitikaSection)) _tabContext.analitikaSection = 'hisobotlar';
     document.querySelectorAll('[data-analitika-section]').forEach(btn => {
         if (btn.dataset.analitikaBound) return;
         btn.dataset.analitikaBound = '1';

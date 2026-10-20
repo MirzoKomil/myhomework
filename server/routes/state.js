@@ -5,6 +5,7 @@ const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
 const { getTeacherScopedState, findUserById } = require('../db');
+const { scopeState } = require('../services/stateScope');
 
 // Public endpoint — student app uchun, auth talab qilmaydi
 router.get('/mobile-content', studentAuthOptional, async (req, res) => {
@@ -945,7 +946,19 @@ async function getStateForUser(user) {
         state.leads = { english: [], russian: [] };
         state.archive = [];
     }
-    return state;
+    // Maxfiy maydonlarni (xodimlar HR ma'lumoti, boshqalarning o'quvchi
+    // telefonlari, to'lovlar, pul oqimi) rolga qarab serverning o'zida kesish.
+    const scopeManagerId = user.role === 'sales_manager' ? await getSalesManagerIdForUser(user.id) : null;
+    let financeEmployee = false;
+    if (user.role === 'employee' && user.email) {
+        // Moliya bo'limi xodimi (department = moliya/finance) To'lovlar va Pul
+        // oqimi bilan ishlaydi — unga moliyaviy ma'lumot kesilmaydi.
+        const dept = (await require('../db').pool.query(
+            'SELECT department FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1', [user.email]
+        )).rows[0]?.department;
+        financeEmployee = ['moliya', 'finance'].includes(String(dept || '').toLowerCase());
+    }
+    return scopeState(state, user, { managerId: scopeManagerId, financeEmployee });
 }
 
 router.get('/', authRequired, crmStateIdentity, crmStateRequired, async (req, res) => {

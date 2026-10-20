@@ -1,6 +1,7 @@
 const express = require('express');
 const { getSmsHistory, addSmsHistoryEntries } = require('../db');
 const { authRequired } = require('../middleware/auth');
+const { requireRoles } = require('../middleware/roles');
 const eskiz = require('../services/eskiz');
 
 const router = express.Router();
@@ -10,7 +11,13 @@ const router = express.Router();
 // tomonida so'rov cho'zilib ketmasligi uchun.
 const MAX_RECIPIENTS_PER_REQUEST = 500;
 
-router.get('/balance', authRequired, async (req, res) => {
+// SMS maktab hisobidan (Eskiz) pul yechadi — faqat SMS bilan ishlaydigan
+// xodimlar yubora oladi. Ilgari har qanday tokenli foydalanuvchi (ustoz,
+// oddiy xodim, hatto o'quvchi tokeni) ham yubora olardi.
+const SMS_ROLES = ['admin', 'rop', 'boshliq', 'sales_manager', 'targetolog'];
+const smsAccess = requireRoles(SMS_ROLES);
+
+router.get('/balance', authRequired, smsAccess, async (req, res) => {
     try {
         res.json(await eskiz.getBalance());
     } catch (err) {
@@ -19,9 +26,17 @@ router.get('/balance', authRequired, async (req, res) => {
     }
 });
 
-router.get('/history', authRequired, async (req, res) => {
+router.get('/history', authRequired, smsAccess, async (req, res) => {
     try {
         const limit = req.query.limit ? Number(req.query.limit) : 200;
+        if (req.user.role === 'sales_manager') {
+            // Sotuv menejeri faqat o'zi yuborgan SMS'larni (va ulardagi
+            // telefonlarni) ko'radi.
+            const me = String(req.user.email || '').toLowerCase();
+            const own = (await getSmsHistory()).filter(e =>
+                String(e.sentBy || '').toLowerCase() === me || String(e.sentBy || '') === String(req.user.id));
+            return res.json(limit ? own.slice(0, limit) : own);
+        }
         res.json(await getSmsHistory(limit));
     } catch (err) {
         console.error('GET /api/sms/history', err);
@@ -29,7 +44,7 @@ router.get('/history', authRequired, async (req, res) => {
     }
 });
 
-router.post('/send', authRequired, async (req, res) => {
+router.post('/send', authRequired, smsAccess, async (req, res) => {
     try {
         const { recipients, message, audience } = req.body || {};
         const text = String(message || '').trim();

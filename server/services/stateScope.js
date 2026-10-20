@@ -1,0 +1,94 @@
+// Rolga qarab /api/state javobidan maxfiy maydonlarni olib tashlash.
+//
+// Ilgari ROP, sotuv menejeri, targetolog va "employee" rollari serverdan
+// BARCHA xodimlarning karta raqami, pasporti, PINFL'i, manzili va tug'ilgan
+// sanasini, sotuv menejeri esa barcha o'quvchilarning telefonlari, eski
+// to'lov jadvali va pul oqimini ham olardi — filtr faqat brauzerda edi.
+// Bu modul shu ma'lumotlarni serverning o'zida kesadi. Funksiyalar sof
+// (pure): faqat berilgan state nusxasini o'zgartiradi, bazaga yozmaydi.
+
+const FULL_HR_ROLES = new Set(['admin', 'boshliq']);
+
+// Xodimning shaxsiy (HR) maydonlari — faqat admin/boshliq va xodimning o'zi ko'radi.
+const HR_PRIVATE_FIELDS = ['cardNumber', 'passportSeries', 'pinfl', 'address', 'birthDate'];
+
+// O'quvchining aloqa/shaxsiy maydonlari va qarzi (extra_data ichida ham bo'lishi mumkin).
+const STUDENT_CONTACT_RE = /phone|email|address|passport|pinfl|card|birth|telegram|parent|debt/i;
+
+function sameLogin(a, b) {
+    return String(a || '').trim().toLowerCase() !== ''
+        && String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+}
+
+function maskHrEmployees(list, user) {
+    if (!Array.isArray(list) || FULL_HR_ROLES.has(user?.role)) return list;
+    return list.map(e => {
+        if (sameLogin(e.login, user?.email)) return e; // o'z yozuvi to'liq qoladi
+        const copy = { ...e };
+        for (const key of HR_PRIVATE_FIELDS) delete copy[key];
+        return copy;
+    });
+}
+
+function stripStudentContacts(s) {
+    const copy = {};
+    for (const [key, value] of Object.entries(s || {})) {
+        if (!STUDENT_CONTACT_RE.test(key)) copy[key] = value;
+    }
+    return copy;
+}
+
+function ownStudentIdsForManager(students, leads, managerId) {
+    const ids = new Set();
+    if (!managerId) return ids;
+    const leadIds = new Set([...(leads?.english || []), ...(leads?.russian || [])]
+        .filter(l => String(l.managerId || '') === String(managerId)).map(l => l.id));
+    for (const s of students || []) {
+        if (s.isStaffDemo) continue;
+        if ((s.managerId && String(s.managerId) === String(managerId))
+            || (s.leadRef && leadIds.has(s.leadRef.id))) ids.add(s.id);
+    }
+    return ids;
+}
+
+// state — getFullState() natijasi (sotuv menejeri uchun state.leads allaqachon
+// faqat o'z lidlari bilan almashtirilgan bo'lishi kerak).
+function scopeState(state, user, { managerId, financeEmployee = false } = {}) {
+    const role = user?.role;
+    state.hrEmployees = maskHrEmployees(state.hrEmployees, user);
+
+    if (role === 'sales_manager') {
+        const own = ownStudentIdsForManager(state.students, state.leads, managerId);
+        // Boshqa menejerlarning o'quvchilari reyting/statistika uchun qoladi,
+        // lekin telefon va boshqa aloqa maydonlarisiz.
+        state.students = (state.students || []).map(s => own.has(s.id) ? s : stripStudentContacts(s));
+        state.payments = (state.payments || []).filter(p => own.has(p.studentId));
+        state.cashFlow = [];
+    } else if (role === 'employee' && !financeEmployee) {
+        state.students = (state.students || []).map(stripStudentContacts);
+        state.payments = [];
+        state.cashFlow = [];
+    } else if (role === 'targetolog') {
+        state.students = (state.students || []).map(stripStudentContacts);
+        state.payments = [];
+    }
+    return state;
+}
+
+// ROP kabi to'liq bo'lmagan rollar xodimlar ro'yxatini saqlaganda, ular
+// ko'rmagan maxfiy maydonlar bo'sh qiymat bilan USTIDAN YOZILIB KETMASLIGI
+// kerak: mavjud xodim uchun bazadagi qiymat saqlanadi.
+function preserveHrPrivateFields(employees, oldRows, actor) {
+    if (FULL_HR_ROLES.has(actor?.role) || !Array.isArray(employees)) return employees;
+    const COLS = { cardNumber: 'card_number', passportSeries: 'passport_series', pinfl: 'pinfl', address: 'address', birthDate: 'birth_date' };
+    const byId = new Map((oldRows || []).map(r => [r.id, r]));
+    return employees.map(e => {
+        const old = byId.get(e.id);
+        if (!old || sameLogin(old.login, actor?.email)) return e;
+        const merged = { ...e };
+        for (const [field, col] of Object.entries(COLS)) merged[field] = old[col] || '';
+        return merged;
+    });
+}
+
+module.exports = { scopeState, maskHrEmployees, stripStudentContacts, ownStudentIdsForManager, preserveHrPrivateFields, HR_PRIVATE_FIELDS };
