@@ -9986,6 +9986,11 @@ function renderSdpPayments(s) {
     return `<div data-inflow-history="${escapeHtml(s.id)}" role="status">To‘lovlar serverdan yuklanmoqda…</div>`;
 }
 
+function sdpAttMark(v) {
+    if (v === undefined || v === null || v === '') return 'empty';
+    return v && v !== '0' ? 'present' : 'absent';
+}
+
 function renderSdpAttendance(s) {
     const allTeachers = [
         ...getItem(STORAGE_KEYS.teachers, []),
@@ -9993,49 +9998,72 @@ function renderSdpAttendance(s) {
     ];
     const teacher = allTeachers.find(t => t.id === s.teacherId);
     const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
-    const monthKeys = Object.keys(mainAtt)
-        .filter(k => k.endsWith('_' + s.teacherId))
-        .sort().reverse().slice(0, 6);
+    const now = new Date();
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const keySet = new Set(Object.keys(mainAtt).filter(k => s.teacherId && k.endsWith('_' + s.teacherId)));
+    if (s.teacherId) keySet.add(`${curMonth}_${s.teacherId}`);
+    const monthKeys = [...keySet].sort().reverse().slice(0, 6);
+    const hasAnyMark = monthKeys.some(k => Object.keys(mainAtt[k]?.[s.id] || {}).length);
+    if (!hasAnyMark && !s.teacherId) return `<div class="sdp-empty">Davomat ma'lumotlari yo'q</div>`;
 
-    if (!monthKeys.length) return `<div class="sdp-empty">Davomat ma'lumotlari yo'q</div>`;
+    let weekdays = [];
+    try { weekdays = teacherAttendanceCalendar.weekdays(s, teacher || {}, 'main'); } catch (e) { weekdays = []; }
+    const shortDay = ['Du', 'Se', 'Chor', 'Pa', 'Ju', 'Sha', 'Ya'];
+    let sumPresent = 0, sumAbsent = 0, sumUnmarked = 0;
 
     const sections = monthKeys.map(key => {
-        const monthVal = key.replace('_' + s.teacherId, '');
+        const monthVal = key.slice(0, 7);
         const [year, month] = monthVal.split('-').map(Number);
-        const block = mainAtt[key] || {};
-        const studentAtt = block[s.id] || {};
+        const marks = mainAtt[key]?.[s.id] || {};
         const daysInMonth = new Date(year, month, 0).getDate();
-        let present = 0, absent = 0;
-
-        const days = Array.from({length: daysInMonth}, (_, i) => i+1).map(d => {
-            const attended = !!studentAtt[d];
-            const recorded = studentAtt[d] !== undefined;
-            if (recorded && attended) present++;
-            if (recorded && !attended) absent++;
-            return recorded
-                ? `<div class="sdp-att-day ${attended?'sdp-att-day--present':'sdp-att-day--absent'}" title="${d}-kuni">${d}</div>`
-                : `<div class="sdp-att-day" title="${d}-kuni">${d}</div>`;
+        let scheduled = [];
+        try { scheduled = teacherAttendanceCalendar.cells(monthVal, weekdays).filter(c => c && c.scheduled).map(c => c.day); } catch (e) { scheduled = []; }
+        // Jadval keyin o'zgargan bo'lsa (belgi jadvalda yo'q kunga tushgan),
+        // o'sha oy uchun faqat belgilangan kunlar ko'rsatiladi — aks holda
+        // eski oylarda soxta "belgilanmagan" kunlar chiqib qolardi.
+        const marked = Object.keys(marks).map(Number);
+        const schedSet = new Set(scheduled);
+        const scheduleChanged = marked.some(d => !schedSet.has(d));
+        const days = [...new Set([...(scheduleChanged ? [] : scheduled), ...marked])]
+            .filter(d => d >= 1 && d <= daysInMonth).sort((a, b) => a - b);
+        const isCur = monthVal === curMonth;
+        const isFuture = d => monthVal > curMonth || (isCur && d > now.getDate());
+        let present = 0, absent = 0, unmarked = 0;
+        const chips = days.map(d => {
+            const st = sdpAttMark(marks[d]);
+            if (st === 'present') present++;
+            else if (st === 'absent') absent++;
+            else if (!isFuture(d)) unmarked++;
+            const cls = st === 'present' ? 'sdp2-day--ok' : st === 'absent' ? 'sdp2-day--no' : isFuture(d) ? '' : 'sdp2-day--unk';
+            const label = st === 'present' ? 'keldi' : st === 'absent' ? 'kelmadi' : isFuture(d) ? 'dars kutilmoqda' : 'belgilanmagan';
+            const wd = shortDay[((new Date(year, month - 1, d).getDay() || 7) - 1)];
+            const mark = st === 'present' ? ' ✓' : st === 'absent' ? ' ✕' : '';
+            return `<span class="sdp2-day ${cls}" title="${d}-kun: ${label}" aria-label="${d}-kun: ${label}"><small>${wd}</small>${d}${mark}</span>`;
         }).join('');
-
-        const monthName = new Date(year, month-1, 1).toLocaleString('uz-UZ', {month:'long',year:'numeric'});
-        return `<div class="sdp-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <p class="sdp-section-title" style="margin:0">${escapeHtml(monthName)}</p>
-                <span style="font-size:12px;color:var(--text-muted)">✅ ${present} · ❌ ${absent}</span>
+        sumPresent += present; sumAbsent += absent; sumUnmarked += unmarked;
+        const pct = present + absent ? Math.round(present / (present + absent) * 100) : null;
+        const monthName = new Date(year, month - 1, 1).toLocaleString('uz-UZ', { month: 'long', year: 'numeric' });
+        return `<section class="sdp-section">
+            <div class="sdp3-mhead">
+                <p class="sdp-section-title" style="margin:0">${escapeHtml(monthName)}${isCur ? ' · joriy oy' : ''}</p>
+                <span class="sdp3-mstat">Keldi <b>${present}</b> · Kelmadi <b>${absent}</b>${unmarked ? ` · Belgilanmagan <b>${unmarked}</b>` : ''}${pct === null ? '' : ` · <b>${pct}%</b>`}</span>
             </div>
-            <div class="sdp-att-grid">${days}</div>
-        </div>`;
+            ${days.length ? `<div class="sdp2-days">${chips}</div>` : '<p class="sdp-empty" style="padding:8px 0">Bu oyda dars kunlari yoʻq</p>'}
+        </section>`;
     }).join('');
 
     const totalAttended = countStudentAttendance(s.id, s.teacherId);
+    const pctAll = sumPresent + sumAbsent ? Math.round(sumPresent / (sumPresent + sumAbsent) * 100) : null;
+    const pctColor = pctAll === null ? '' : pctAll >= 85 ? 'color:#0E7C66' : pctAll >= 70 ? 'color:#B45309' : 'color:#B4232C';
+    const days = weekdays.length ? weekdays.map(w => DAYS_UZ[(w + 6) % 7] || '').filter(Boolean).join(', ') : '';
     return `
-    <div class="sdp-section">
-        <div class="sdp-stat-grid" style="grid-template-columns:1fr 1fr 1fr">
-            <div class="sdp-stat-card"><div class="sdp-stat-value">${totalAttended}</div><div class="sdp-stat-label">Jami kelgan</div></div>
-            <div class="sdp-stat-card"><div class="sdp-stat-value">${escapeHtml(teacher?.name||'—')}</div><div class="sdp-stat-label">Ustoz</div></div>
-            <div class="sdp-stat-card"><div class="sdp-stat-value">${s.lessonTime||'—'}</div><div class="sdp-stat-label">Vaqt</div></div>
-        </div>
+    <div class="sdp2-stats">
+        <div class="sdp2-stat"><small>Davomat · oxirgi ${monthKeys.length} oy</small><b style="${pctColor}">${pctAll === null ? '—' : pctAll + '%'}</b><span>keldi ${sumPresent} · kelmadi ${sumAbsent}</span></div>
+        <div class="sdp2-stat"><small>Jami kelgan</small><b>${totalAttended || 0}</b><span>butun kurs davomida</span></div>
+        <div class="sdp2-stat"><small>Belgilanmagan darslar</small><b${sumUnmarked ? ' style="color:#B45309"' : ''}>${sumUnmarked}</b><span>ustoz davomat qoʻymagan</span></div>
+        <div class="sdp2-stat"><small>Ustoz</small><b style="font-size:16px">${escapeHtml(teacher?.name || '—')}</b><span>${escapeHtml(s.lessonTime || '—')}${days ? ' · ' + escapeHtml(days) : ''}</span></div>
     </div>
+    <div class="sdp3-legend-row"><span class="sdp2-legend"><i class="sdp2-day--ok"></i>Keldi <i class="sdp2-day--no"></i>Kelmadi <i class="sdp2-day--unk"></i>Belgilanmagan <i></i>Kutilmoqda</span></div>
     ${sections}`;
 }
 
