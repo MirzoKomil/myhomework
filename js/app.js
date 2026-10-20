@@ -8067,6 +8067,55 @@ function renderRopDashboardBlock(user) {
     </div>`;
 }
 
+// Ustoz bosh sahifasi: bugungi darslar (oʻz oʻquvchilari, vaqt boʻyicha) va
+// shu oydagi davomat. Telefon/toʻlov koʻrsatilmaydi. Davomat state'da faqat
+// "keldi" belgisi bilan keladi, shuning uchun qolganlari "belgilanmagan".
+function renderTeacherTodayBlock(user) {
+    if (user?.role !== 'teacher' || !user.linkedTeacherId) return '';
+    const ids = getTeacherAssignmentIds(user.linkedTeacherId);
+    if (!ids.size) return '';
+    const now = new Date();
+    const dow = now.getDay() || 7;
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const day = now.getDate();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const students = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && ids.has(String(s.teacherId || '')));
+    const att = getItem(STORAGE_KEYS.mainAttendance, {});
+    const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
+    const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
+    const today = students
+        .filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow))
+        .sort((a, b) => (toMin(a.lessonTime) ?? 9999) - (toMin(b.lessonTime) ?? 9999));
+    const monthCame = students.reduce((sum, s) => sum + Object.keys([...ids].reduce((acc, tid) => Object.assign(acc, att[`${month}_${tid}`]?.[s.id] || {}), {})).length, 0);
+    const rows = today.map(s => {
+        const start = toMin(s.lessonTime);
+        const dur = Number(s.lessonDuration) || 15;
+        const done = present(s.id, day);
+        const state = done ? ['ok', '✓ Keldi · belgilangan']
+            : start != null && nowMin >= start + dur ? ['warn', 'Dars tugadi · davomat belgilanmagan']
+            : start != null && nowMin >= start ? ['now', 'Hozir']
+            : ['wait', 'Kutilmoqda'];
+        return `<li class="tch-row tch-row--${state[0]}">
+            <b class="tch-time">${escapeHtml(s.lessonTime)}</b>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><strong>${escapeHtml(s.name || '')}</strong>
+            <span class="mot-prize-note">${dur} daqiqa · ${state[1]}</span></div>
+        </li>`;
+    }).join('');
+    const unmarked = today.filter(s => { const st = toMin(s.lessonTime); return !present(s.id, day) && st != null && nowMin >= st + (Number(s.lessonDuration) || 15); }).length;
+    return `<div class="dashboard-grid-2" id="dashboardTeacherToday">
+        <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi darslarim</h3><span>${today.length} ta dars${unmarked ? ` · ${unmarked} tasi belgilanmagan` : ''}</span></div>
+            ${today.length ? `<ul class="tch-list">${rows}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
+            <button type="button" class="btn-primary-sm" data-teacher-open-att>Davomatni ochish</button>
+        </section>
+        <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Shu oy</h3><span>${escapeHtml(month)}</span></div>
+            <div class="dashboard-target-stats">
+                <div><small>Mening oʻquvchilarim</small><b>${students.length}</b></div>
+                <div><small>Kelgan darslar (belgilangan)</small><b>${monthCame}</b></div>
+            </div>
+        </section>
+    </div>`;
+}
+
 function renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads }) {
     const container = document.getElementById('dashboardOverview');
     if (!container) return;
@@ -8149,6 +8198,7 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#128188;</span><div><small>Xodimlar soni</small><b>${employeeIds.size}</b></div></div>
         </div>`}`}
         ${renderRopDashboardBlock(currentUser)}
+        ${renderTeacherTodayBlock(currentUser)}
         <div class="dashboard-grid-2">
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
                 ${rankRows(salesRating.map(item => ({ ...item, value: item.revenue })), maxSalesRevenue, item => `${item.deals} ta · ${formatMoney(item.revenue)}`)}
@@ -8173,6 +8223,7 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
             </section>`}
         </div>`}`;
 
+    container.querySelector('[data-teacher-open-att]')?.addEventListener('click', () => switchTab('teachers-section'));
     container.querySelectorAll('[data-rop-esc-lead]').forEach(btn => {
         btn.addEventListener('click', () => openLeadNotifyModal(currentUser?.linkedRopLang || 'english', btn.dataset.ropEscLead));
     });
