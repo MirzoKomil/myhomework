@@ -8,6 +8,7 @@
  *   coin (qurilmada), bugungi chaqmoq (kunlik reyting), bildirishnomalar.
  *   Streak va haftalik kunlar uchun serverda ma'lumot yo'q — nol holat.
  */
+import { tashkentNow } from '@/components/v2/home/lessonGoal';
 import { Redirect, router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
@@ -60,7 +61,7 @@ const DAY_SHORT = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
 const DAY_FULL = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
 
 function greeting(now: Date) {
-  const h = now.getHours();
+  const h = tashkentNow(now).getHours();
   if (h >= 5 && h < 11) return 'Xayrli tong';
   if (h >= 11 && h < 17) return 'Xayrli kun';
   if (h >= 17 && h < 23) return 'Xayrli kech';

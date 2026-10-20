@@ -11,6 +11,7 @@
  * grammatika va dialog mavzusi (Mashq kutubxonasi). Serverda yo'q narsa —
  * nol holatda (o'tgan kunlar seriyasi bo'sh doira, boshqalarning seriyasi 0).
  */
+import { lessonGoal, tashkentNow } from '@/components/v2/home/lessonGoal';
 import { Redirect, router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useColorScheme, useWindowDimensions, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
@@ -153,7 +154,7 @@ type LiveInfo = { startsAt: Date; topic: string; link: string };
 type Related = { grammar: { title: string; sub: string; topicId: string | null } | null; dialog: string | null; grammarCount: number; dialogCount: number };
 
 function greeting(now: Date) {
-  const h = now.getHours();
+  const h = tashkentNow(now).getHours();
   if (h >= 5 && h < 11) return 'Xayrli tong';
   if (h >= 11 && h < 17) return 'Xayrli kun';
   if (h >= 17 && h < 23) return 'Xayrli kech';
@@ -312,7 +313,8 @@ export function DMain() {
   if (lesson === undefined) return <Loading />;
 
   const title = name ? `${greeting(now)}, ${name}!` : `${greeting(now)}!`;
-  const dateLine = [`${DAY_FULL[now.getDay()]}, ${now.getDate()}-${MONTHS_LOWER[now.getMonth()]}`, lesson ? `${lesson.number}-dars kuni` : ''].filter(Boolean).join(' · ');
+  const tn = tashkentNow(now);
+  const dateLine = [`${DAY_FULL[tn.getDay()]}, ${tn.getDate()}-${MONTHS_LOWER[tn.getMonth()]}`, lesson ? `${lesson.number}-dars kuni` : ''].filter(Boolean).join(' · ');
 
   const body = (
     <View style={s.row}>
@@ -425,7 +427,7 @@ function Hero({
   const cur = firstOpenStep(steps);
   const allDone = done >= total;
   const { title, phrase } = splitTitle(lesson.name);
-  const konspekt = course?.mc.lessonContents[lesson.id]?.konspekt?.trim();
+  const konspekt = lessonGoal(course?.mc.lessonContents[lesson.id]?.konspekt);
   // Jonli dars bugun bo'lsa — vaqti ("Jonli · 19:00").
   const st = schedule?.startsAt ? new Date(schedule.startsAt) : null;
   const liveToday = !lesson.isVideoDay && st && startOfDay(st).getTime() === startOfDay(now).getTime();
@@ -456,7 +458,7 @@ function Hero({
         </Text>
         {!!(phrase || lesson.phrase) && <Text style={s.heroPhrase}>{phrase || lesson.phrase}</Text>}
         {!!konspekt && (
-          <Text style={s.heroGoal}>
+          <Text style={s.heroGoal} numberOfLines={2}>
             Darsdan keyin: <Text style={{ fontFamily: fonts.bodyHeavy }}><RichText inline text={konspekt} /></Text>
           </Text>
         )}
