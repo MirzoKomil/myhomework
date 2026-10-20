@@ -8079,14 +8079,27 @@ function renderTeacherTodayBlock(user) {
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const students = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && ids.has(String(s.teacherId || '')));
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo);
+    const students = all.filter(s => ids.has(String(s.teacherId || '')));
+    const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
+    const asAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
+    const marks = (store, sid) => [...ids].reduce((acc, tid) => Object.assign(acc, store[`${month}_${tid}`]?.[sid] || {}), {});
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const today = students
         .filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow))
         .sort((a, b) => (toMin(a.lessonTime) ?? 9999) - (toMin(b.lessonTime) ?? 9999));
-    const monthCame = students.reduce((sum, s) => sum + Object.keys([...ids].reduce((acc, tid) => Object.assign(acc, att[`${month}_${tid}`]?.[s.id] || {}), {})).length, 0);
+    const countPresent = obj => Object.values(obj).filter(v => v === 1 || v === true).length;
+    const monthCame = students.reduce((sum, s) => sum + countPresent(marks(att, s.id)), 0);
+    const ownTeacher = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(user.linkedTeacherId) : null;
+    const kpi = (teacher, store, list) => {
+        try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; }
+    };
+    const mainKpi = ownTeacher && ownTeacher.type !== 'yordamchi' ? kpi(ownTeacher, att, students) : null;
+    const asKpi = ownTeacher ? kpi({ ...ownTeacher, type: 'yordamchi' }, asAtt, helped) : null;
+    const salary = (mainKpi?.total || 0) + (asKpi?.total || 0);
+
     const rows = today.map(s => {
         const start = toMin(s.lessonTime);
         const dur = Number(s.lessonDuration) || 15;
@@ -8102,18 +8115,31 @@ function renderTeacherTodayBlock(user) {
         </li>`;
     }).join('');
     const unmarked = today.filter(s => { const st = toMin(s.lessonTime); return !present(s.id, day) && st != null && nowMin >= st + (Number(s.lessonDuration) || 15); }).length;
-    return `<div class="dashboard-grid-2" id="dashboardTeacherToday">
-        <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi darslarim</h3><span>${today.length} ta dars${unmarked ? ` · ${unmarked} tasi belgilanmagan` : ''}</span></div>
+    const limit = asKpi?.expected || 0;
+    const helpRows = helped.map(s => {
+        const n = countPresent(marks(asAtt, s.id));
+        const pct = limit ? Math.min(100, Math.round(n / limit * 100)) : 0;
+        return `<div class="dashboard-rank-row"><div class="dashboard-rank-info"><b>${escapeHtml(s.name || '')}</b><div class="dashboard-rank-track"><i style="width:${Math.max(4, pct)}%"></i></div></div><strong>${n}${limit ? ` / ${limit}` : ''} mashgʻulot</strong></div>`;
+    }).join('');
+    const mainPanel = students.length ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi darslarim</h3><span>${today.length} ta dars${unmarked ? ` · ${unmarked} tasi belgilanmagan` : ''}</span></div>
             ${today.length ? `<ul class="tch-list">${rows}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
             <button type="button" class="btn-primary-sm" data-teacher-open-att>Davomatni ochish</button>
-        </section>
-        <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Shu oy</h3><span>${escapeHtml(month)}</span></div>
+        </section>` : '';
+    const helpPanel = helped.length ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Yordamchi mashgʻulotlarim</h3><span>${helped.length} oʻquvchi${limit ? ` · oyiga ${limit} tagacha` : ''}</span></div>
+            ${helpRows}
+            <p class="mot-prize-note">Faqat Qatnashdi/Kelmadi belgilanadi, baho asosiy ustozda.</p>
+            ${students.length ? '' : '<button type="button" class="btn-primary-sm" data-teacher-open-att>Davomatni ochish</button>'}
+        </section>` : '';
+    const monthPanel = `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Shu oy</h3><span>${escapeHtml(month)}</span></div>
             <div class="dashboard-target-stats">
-                <div><small>Mening oʻquvchilarim</small><b>${students.length}</b></div>
-                <div><small>Kelgan darslar (belgilangan)</small><b>${monthCame}</b></div>
+                ${students.length ? `<div><small>Mening oʻquvchilarim</small><b>${students.length}</b></div><div><small>Kelgan darslar (belgilangan)</small><b>${monthCame}</b></div>` : ''}
+                ${helped.length ? `<div><small>Yordamchi mashgʻulotlar</small><b>${asKpi?.completed ?? 0}</b></div>` : ''}
+                ${(mainKpi || asKpi) ? `<div><small>Hisoblangan maosh (taxminiy)</small><b>${fmtMoney(salary)}</b></div>` : ''}
             </div>
-        </section>
-    </div>`;
+            ${(mainKpi || asKpi) ? '<p class="mot-prize-note">Belgilangan davomat boʻyicha · oy yopilganda Moliya tasdiqlaydi.</p>' : ''}
+        </section>`;
+    const panels = [mainPanel, helpPanel, monthPanel].filter(Boolean);
+    return `<div class="dashboard-grid-2" id="dashboardTeacherToday">${panels.join('')}</div>`;
 }
 
 function renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads }) {

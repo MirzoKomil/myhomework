@@ -105,8 +105,11 @@ test('ROP home: open escalations (unacknowledged only) and team plan', () => {
 test('teacher home: today lessons by time with attendance state, no phones', () => {
     const c = ctx('2026-10-20T16:50:00+05:00'); // seshanba
     Object.assign(c, {
-        STORAGE_KEYS: { students: 'students', mainAttendance: 'att' },
+        STORAGE_KEYS: { students: 'students', mainAttendance: 'att', assistantAttendance: 'asatt' },
         getTeacherAssignmentIds: () => new Set(['t1']),
+        resolveTeacherWithVirtual: () => ({ id: 't1', type: 'asosiy', subject: 'english' }),
+        calculateKpiSalary: (t, m, store, list) => ({ total: 278_571, completed: 0, expected: 14 }),
+        fmtMoney: n => n + " so'm",
         expandLessonPatternDays: d => ([1, 3, 5].includes(+d) ? [1, 3, 5] : [2, 4, 6].includes(+d) ? [2, 4, 6] : [+d]),
         getItem: k => k === 'students' ? [
             { id: 's2', name: 'Doniyor', phone: '+99890', teacherId: 't1', lessonDayOfWeek: 2, lessonTime: '16:00', lessonDuration: 30 },
@@ -114,7 +117,7 @@ test('teacher home: today lessons by time with attendance state, no phones', () 
             { id: 's3', name: 'Kamila', teacherId: 't1', lessonDayOfWeek: 6, lessonTime: '17:15', lessonDuration: 15 },
             { id: 's4', name: 'Boshqa', teacherId: 't9', lessonDayOfWeek: 2, lessonTime: '10:00' },
             { id: 's5', name: 'Juma', teacherId: 't1', lessonDayOfWeek: 1, lessonTime: '10:00' },
-        ] : { '2026-10_t1': { s1: { 20: 1, 15: 1 }, s2: { 15: 1 } } },
+        ] : k === 'att' ? { '2026-10_t1': { s1: { 20: 1, 15: 1 }, s2: { 15: 1 } } } : {},
     });
     vm.runInContext(functionSource('js/app.js', 'renderTeacherTodayBlock') + '\nthis.t = renderTeacherTodayBlock;', c);
     const html = c.t({ role: 'teacher', linkedTeacherId: 't1' });
@@ -125,5 +128,32 @@ test('teacher home: today lessons by time with attendance state, no phones', () 
     assert.match(html, /Kutilmoqda/);
     assert.ok(!html.includes('Boshqa') && !html.includes('Juma') && !html.includes('+99890'));
     assert.match(html, /<b>3<\/b>/, 'kelgan darslar 3');
+    assert.match(html, /Hisoblangan maosh \(taxminiy\)<\/small><b>278571 so'm/);
+    assert.ok(!html.includes('Yordamchi mashgʻulotlarim'));
     assert.equal(c.t({ role: 'rop' }), '');
+});
+
+test('assistant home: own assisted students, monthly count vs limit, estimate', () => {
+    const c = ctx('2026-10-20T16:50:00+05:00');
+    Object.assign(c, {
+        STORAGE_KEYS: { students: 'students', mainAttendance: 'att', assistantAttendance: 'asatt' },
+        getTeacherAssignmentIds: () => new Set(['y1']),
+        expandLessonPatternDays: d => [+d],
+        resolveTeacherWithVirtual: () => ({ id: 'y1', type: 'yordamchi', subject: 'english' }),
+        calculateKpiSalary: (t, m, store, list) => ({ total: 34_615, completed: 9, expected: 13 }),
+        fmtMoney: n => n + " so'm",
+        getItem: k => k === 'students' ? [
+            { id: 'a', name: 'Abbos', teacherId: 'z', assistantTeacherId: 'y1' },
+            { id: 'b', name: 'Ilyos', teacherId: 'z', assistantTeacherId: 'y1' },
+            { id: 'c', name: 'Boshqa', teacherId: 'z', assistantTeacherId: 'y9' },
+        ] : k === 'asatt' ? { '2026-10_y1': { a: { 5: 1, 9: 0, 14: 1, 19: 1 }, b: { 7: 1, 19: 1 } } } : {},
+    });
+    vm.runInContext(functionSource('js/app.js', 'renderTeacherTodayBlock') + '\nthis.t = renderTeacherTodayBlock;', c);
+    const html = c.t({ role: 'teacher', linkedTeacherId: 'y1' });
+    assert.match(html, /Yordamchi mashgʻulotlarim/);
+    assert.match(html, /oyiga 13 tagacha/);
+    assert.match(html, /Abbos[\s\S]*3 \/ 13 mashgʻulot/);
+    assert.match(html, /Ilyos[\s\S]*2 \/ 13 mashgʻulot/);
+    assert.ok(!html.includes('Boshqa') && !html.includes('Bugungi darslarim'));
+    assert.match(html, /34615 so'm/);
 });
