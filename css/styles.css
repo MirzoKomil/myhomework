@@ -8864,3 +8864,16 @@ body.modal-open {
 .alx-dup{margin:-4px 0 14px;padding:12px 14px;border-radius:12px;background:#FFF4D6;border:1px solid #F3D27A;color:#5C3D00;font-size:13px;line-height:1.45}
 .alx-dup ul{margin:6px 0;padding-left:18px}
 .alx-dup li span{color:#7A5A1A}
+
+/* ===== Sotuv · Lidlar kanbani: kartochka ===== */
+.lead-card-next{display:flex;align-items:center;gap:6px;margin:8px 0 2px;font-size:13px;font-weight:600;color:#1E5BD8}
+.lead-card-next svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;flex:none}
+.lead-card-next.is-late{color:#C62828}
+.lead-card-action--mgr.lead-card-action--active{width:auto;max-width:150px;padding:0 10px 0 0;gap:6px;border-radius:999px;border-width:1px;background:var(--purple-light);color:#4B33C9}
+.lead-card-action--mgr.lead-card-action--active .lead-mgr-avatar{width:32px;height:32px;flex:none;border-radius:50%}
+.lead-mgr-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lead-card-name-btn{font-size:15px}
+.lead-card-footer{flex-wrap:wrap;row-gap:8px}
+.lead-card-footer .lead-card-actions{flex-wrap:wrap;min-width:0}
+.lead-card-footer .lead-card-kind{margin-left:auto}
+.lead-card-kind--meta{padding:1px 8px;border-radius:999px;background:#F1F2F7;color:#5B6076;font-size:11px;font-weight:700}

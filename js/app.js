@@ -20408,10 +20408,44 @@ function renderLeadTrialStatus(lead) {
         ? (request.attended ? 'Qatnashdi' : 'Qatnashmadi') : 'Hali qatnashmagan'}</div>`;
 }
 
+// Kartochkadagi "keyingi qadam": eng so'nggi bog'lanish eslatmasi (agar
+// undan keyin izoh yozilmagan bo'lsa). Lid yopilgan bosqichda ko'rsatilmaydi.
+function getLeadNextFollowUp(lead, now = Date.now()) {
+    if (LEAD_FOLLOWUP_CLOSED.has(normalizeLeadStatus(lead.status))) return null;
+    const comments = Array.isArray(lead.comments) ? lead.comments : [];
+    const reminders = comments.filter(c => c && c.type === 'follow-up-reminder' && parseLeadSlaTime(c.reminderAt));
+    if (!reminders.length) return null;
+    const last = reminders.reduce((a, b) => (parseLeadSlaTime(b.createdAt) >= parseLeadSlaTime(a.createdAt) ? b : a));
+    const at = parseLeadSlaTime(last.reminderAt);
+    if (comments.some(o => o !== last && o.type !== 'follow-up-reminder' && parseLeadSlaTime(o.createdAt) > Math.min(at, now) && parseLeadSlaTime(o.createdAt) > parseLeadSlaTime(last.createdAt))) return null;
+    return { at, overdue: at <= now };
+}
+
+function formatLeadFollowUpWhen(at, now = Date.now()) {
+    const d = new Date(at);
+    const n = new Date(now);
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const dayDiff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000);
+    if (dayDiff === 0) return `bugun ${time}`;
+    if (dayDiff === 1) return `ertaga ${time}`;
+    if (dayDiff === -1) return `kecha ${time}`;
+    return `${d.getDate()}-${UZ_MONTHS_SHORT[d.getMonth()]} ${time}`;
+}
+
+function shortPersonName(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    return parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : parts[0];
+}
+
 function renderLeadCard(lead, langKey) {
     const normalized = normalizeLeadExtras(lead);
     const phone = formatPhoneDisplay(normalized.phone) || '—';
-    const phone2 = formatPhoneDisplay(normalized.phone2) || '—';
+    const phone2 = formatPhoneDisplay(normalized.phone2) || '';
+    const nextFollowUp = getLeadNextFollowUp(normalized);
+    const nextStepHtml = nextFollowUp
+        ? `<div class="lead-card-next${nextFollowUp.overdue ? ' is-late' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${nextFollowUp.overdue ? "Qo'ng'iroq vaqti o'tdi" : "Qo'ng'iroq"} · ${escapeHtml(formatLeadFollowUpWhen(nextFollowUp.at))}</div>`
+        : '';
     const commentCount = normalized.comments.length;
     const hasManagerPhoto = Boolean(normalized.managerPhoto);
 
@@ -20485,6 +20519,7 @@ function renderLeadCard(lead, langKey) {
                 ${renderLeadTrialStatus(normalized)}
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
+                    <span class="lead-card-kind lead-card-kind--meta">${escapeHtml(leadKindLabel(normalized))}</span>
                     ${serialHtml}
                 </div>
             </div>
@@ -20512,16 +20547,17 @@ function renderLeadCard(lead, langKey) {
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                 <span>${escapeHtml(phone)}</span>
             </div>
-            <div class="lead-card-contact">
+            ${phone2 ? `<div class="lead-card-contact">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                 <span>${escapeHtml(phone2)}</span>
-            </div>
+            </div>` : ''}
         </div>
+        ${nextStepHtml}
         ${renderDeferredPurchaseDates(normalized)}
         <div class="lead-card-footer">
             <div class="lead-card-actions">
                 <button type="button" class="lead-card-action lead-card-action--mgr${_manager ? ' lead-card-action--active' : ''}" data-lead-manager-photo="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="${escapeHtml(_manager?.name || 'Menejer biriktirilmagan')}">
-                    <span class="lead-mgr-avatar">${managerAvatarHtml}</span>
+                    <span class="lead-mgr-avatar">${managerAvatarHtml}</span>${_manager ? `<span class="lead-mgr-name">${escapeHtml(shortPersonName(_manager.name))}</span>` : ''}
                 </button>
                 <button type="button" class="lead-card-action" data-lead-comments="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Izohlar">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -20531,7 +20567,6 @@ function renderLeadCard(lead, langKey) {
                     <svg viewBox="0 0 24 24" aria-hidden="true" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                 </button>
             </div>
-            <span class="lead-card-kind">${escapeHtml(leadKindLabel(normalized))}</span>
         </div>
     </article>`;
 }
