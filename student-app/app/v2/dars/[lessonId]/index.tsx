@@ -53,10 +53,18 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoSchedule, fetchDemoStudentPayments } from '@/services/contentApi';
 import { useLessonProgress } from '@/services/lessonProgressStore';
+import { DLesson } from '@/components/v2/desktop/lessons/DLesson';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Live = { startsAt: Date | null; link: string };
 
+// Kompyuterda (keng web oyna) — DLesson dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function LessonScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DLesson id={String(lessonId)} /> : <LessonScreenMobile />;
+}
+
+function LessonScreenMobile() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const id = String(lessonId);
   const [data, setData] = useState<CourseData | null>(null);

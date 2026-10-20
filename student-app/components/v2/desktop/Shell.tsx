@@ -256,7 +256,8 @@ export function DesktopHeaderRight() {
 }
 
 export function DesktopPage({ title, subtitle, subtitleAbove, back, actions, titleSlot, children, contentStyle, scroll = true }: PageProps) {
-  const body = <View style={[s.content, contentStyle]}>{children}</View>;
+  // Aylanmaydigan sahifada ichki ScrollView sig'ishi uchun balandlik cheklanadi.
+  const body = <View style={[s.content, !scroll && { flex: 1, minHeight: 0 }, contentStyle]}>{children}</View>;
   return (
     <View style={s.page}>
       <View style={s.header}>
