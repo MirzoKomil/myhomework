@@ -15,12 +15,18 @@ import { goBack, lastWeekLabel, TIERS } from '@/components/v2/rewards/parts';
 import { R } from '@/constants/v2/routes';
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
+import { DLeagueResult } from '@/components/v2/desktop/rewards/DLeagueResult';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Liga tizimi serverda yo'q: hamma Bronza'da, natija 0.
 const CURRENT = TIERS[0];
 const NEXT = TIERS[1];
 
 export default function V2LeagueResult() {
+  return useIsDesktop() ? <DLeagueResult /> : <V2LeagueResultMobile />;
+}
+
+function V2LeagueResultMobile() {
   const insets = useSafeAreaInsets();
   const week = lastWeekLabel();
 

@@ -32,6 +32,8 @@ import type { VocabWord } from '@/data/lessonContent';
 import { markBookListened } from '@/services/bookProgressStore';
 import { fetchMobileContent } from '@/services/contentApi';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
+import { DBook } from '@/components/v2/desktop/library/DBook';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Story = BookStory & { coverUrl?: string };
 type Word = { text: string; para: number; start: number; sent: number }; // start — paragrafdagi belgi o'rni
@@ -44,7 +46,12 @@ const COVER_POS_Y = 0.68; // dizayndagi object-position: 50% 68%
 
 const clean = (w: string) => w.toLowerCase().replace(/[^\p{L}-]/gu, '').replace(/́/g, '');
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function BookScreen() {
+  return useIsDesktop() ? <DBook /> : <BookScreenMobile />;
+}
+
+function BookScreenMobile() {
   const insets = useSafeAreaInsets();
   const { storyId } = useLocalSearchParams<{ storyId: string }>();
   const [stories, setStories] = useState<Story[]>([]);

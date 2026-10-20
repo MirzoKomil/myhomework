@@ -16,6 +16,8 @@ import { BottomSheet, SheetTop, sheetText } from '@/components/v2/rewards/sheet'
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
+import { DStreakLostCard } from '@/components/v2/desktop/rewards/DPopups';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Namuna qiymatlari (dizayndagi misol) — o'quvchi ma'lumoti emas.
 const SAMPLE_STREAK = 6;
@@ -36,6 +38,21 @@ export function StreakLostPopup({ visible, onClose }: Props) {
     onClose();
     router.push(href as never);
   };
+  const desktop = useIsDesktop();
+
+  // Kompyuterda — markazdagi karta (D_StreakLost); havolalar bir xil.
+  if (desktop) {
+    return (
+      <DStreakLostCard
+        visible={visible}
+        onClose={onClose}
+        sample={SAMPLE_STREAK}
+        shieldPrice={SHIELD_PRICE}
+        onStart={() => go(lessonId ? R.lesson(lessonId) : R.path)}
+        onShop={() => go(R.shop)}
+      />
+    );
+  }
 
   return (
     <BottomSheet visible={visible} onClose={onClose} paddingBottom={34} labelledBy="Seriya uzildi">

@@ -33,6 +33,8 @@ import { fonts } from '@/constants/v2/tokens';
 import { COURSE_TOTAL_LESSONS } from '@/data/certificates';
 import { useLang } from '@/i18n/LanguageContext';
 import { fetchDemoStudentPayments, fetchDemoStudentProfile, type DemoPaymentsResponse, type DemoProfileResponse } from '@/services/contentApi';
+import { DPayments } from '@/components/v2/desktop/profile/DPayments';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const TARIFFS = [
   { name: 'Start', minutes: 15 },
@@ -41,6 +43,10 @@ const TARIFFS = [
 ];
 
 export default function V2Payments() {
+  return useIsDesktop() ? <DPayments /> : <V2PaymentsMobile />;
+}
+
+function V2PaymentsMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const [p, setP] = useState<DemoPaymentsResponse | null>(null);

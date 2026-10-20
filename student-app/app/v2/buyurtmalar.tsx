@@ -30,6 +30,8 @@ import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { DELIVERY_STAGE_LABELS } from '@/data/mock';
 import { useCoins } from '@/services/coinsStore';
 import { useOrders, type ShopOrder } from '@/services/shopStore';
+import { DOrders } from '@/components/v2/desktop/rewards/DOrders';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // "Coin qanday yig'iladi" katakchalari — dizayndagi tartibda (2 ustun: 1.3fr / 1fr).
 const EARN: [string, string][] = [
@@ -88,6 +90,10 @@ function OrderCard({ o }: { o: ShopOrder & { createdAt?: string } }) {
 }
 
 export default function V2Orders() {
+  return useIsDesktop() ? <DOrders /> : <V2OrdersMobile />;
+}
+
+function V2OrdersMobile() {
   const orders = useOrders();
   const coins = useCoins();
   const products = useShopProducts();

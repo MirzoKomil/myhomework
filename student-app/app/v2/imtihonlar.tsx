@@ -19,6 +19,8 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { getResolvedExams, type Exam } from '@/data/exams';
 import { useExamResults } from '@/services/examStore';
+import { DExams } from '@/components/v2/desktop/course/DExams';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Topshirilgan imtihon va navbatdagi (qora karta) imtihon rasmlari — dizayndagidek.
 const PASSED_IMAGE = 'cf6928439e1c0659517514deec13bdf1';
@@ -35,7 +37,12 @@ const EXAM_IMAGES = [
 
 type Resolved = { exam: Exam; passPercent: number };
 
+// Kompyuterda (keng web oyna) — Exams kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function ExamsScreen() {
+  return useIsDesktop() ? <DExams /> : <ExamsScreenMobile />;
+}
+
+function ExamsScreenMobile() {
   const results = useExamResults();
   const [exams, setExams] = useState<Resolved[] | null>(null);
   const [done, setDone] = useState<number | null>(null);

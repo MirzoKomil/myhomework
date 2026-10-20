@@ -42,6 +42,8 @@ import { setSfxEnabled, useSfxEnabled } from '@/services/sfx';
 import { setVoicePraiseEnabled, useVoicePraiseEnabled } from '@/services/voicePraise';
 import { useAuth } from '@/services/studentAuthStore';
 import { telegramLinkStatus } from '@/services/telegramLinkApi';
+import { DSettings } from '@/components/v2/desktop/profile/DSettings';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const REMINDERS_KEY = 'mh_v2_reminders';
 type ReminderKey = 'lesson' | 'live' | 'streak';
@@ -54,6 +56,10 @@ const LANG_LABEL = { uz: 'Oʻzbekcha', ru: 'Русский' } as const;
 const go = (href: string) => router.push(href as Href);
 
 export default function V2Settings() {
+  return useIsDesktop() ? <DSettings /> : <V2SettingsMobile />;
+}
+
+function V2SettingsMobile() {
   const insets = useSafeAreaInsets();
   const { token, student } = useAuth();
   const { lang } = useLang();

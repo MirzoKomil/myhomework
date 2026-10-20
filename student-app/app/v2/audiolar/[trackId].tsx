@@ -22,8 +22,15 @@ import { eventAt, lineStarts, lineTimeline, markListened, trackLines, useListene
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fetchMobileContent, type MobileContent } from '@/services/contentApi';
+import { DAudioTrack } from '@/components/v2/desktop/library/DAudioTrack';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function AudioTrackScreen() {
+  return useIsDesktop() ? <DAudioTrack /> : <AudioTrackScreenMobile />;
+}
+
+function AudioTrackScreenMobile() {
   const insets = useSafeAreaInsets();
   const { trackId } = useLocalSearchParams<{ trackId: string }>();
   const id = String(trackId);

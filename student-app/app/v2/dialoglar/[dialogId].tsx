@@ -22,13 +22,20 @@ import { R } from '@/constants/v2/routes';
 import type { SpeakingTopic } from '@/data/speakingTopics';
 import { fetchMobileContent } from '@/services/contentApi';
 import { speakableText } from '@/services/richText';
+import { DDialog } from '@/components/v2/desktop/library/DDialog';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Topic = SpeakingTopic & { coverUrl?: string };
 const SECONDS_PER_WORD = 0.55; // taxminiy o'qish tezligi (1×), Book ekranidagi bilan bir xil
 
 const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function DialogScreen() {
+  return useIsDesktop() ? <DDialog /> : <DialogScreenMobile />;
+}
+
+function DialogScreenMobile() {
   const insets = useSafeAreaInsets();
   const { dialogId } = useLocalSearchParams<{ dialogId: string }>();
   const [topic, setTopic] = useState<Topic | null>(null);

@@ -22,6 +22,8 @@ import { useListened } from '@/components/v2/lessons/data';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fetchMobileContent, type MobileContent } from '@/services/contentApi';
+import { DAudioList } from '@/components/v2/desktop/library/DAudioList';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Month = 'all' | '1' | '2' | '3';
 const TABS: { key: Month; label: string }[] = [
@@ -31,7 +33,12 @@ const TABS: { key: Month; label: string }[] = [
   { key: '3', label: '3-oy' },
 ];
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function AudioListScreen() {
+  return useIsDesktop() ? <DAudioList /> : <AudioListScreenMobile />;
+}
+
+function AudioListScreenMobile() {
   const insets = useSafeAreaInsets();
   const [month, setMonth] = useState<Month>('all');
   const [mc, setMc] = useState<MobileContent | null>(null);

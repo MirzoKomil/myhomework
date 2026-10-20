@@ -23,11 +23,17 @@ import {
 } from '@/components/v2/settings/sessions';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
+import { DDevices } from '@/components/v2/desktop/profile/DDevices';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Dizayndagi limit: bir vaqtda 3 ta qurilma.
 const DEVICE_LIMIT = 3;
 
 export default function V2Devices() {
+  return useIsDesktop() ? <DDevices /> : <V2DevicesMobile />;
+}
+
+function V2DevicesMobile() {
   const insets = useSafeAreaInsets();
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
 

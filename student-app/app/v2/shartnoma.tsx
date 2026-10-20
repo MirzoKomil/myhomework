@@ -28,6 +28,8 @@ import {
   type DemoPaymentsResponse,
   type DemoProfileResponse,
 } from '@/services/contentApi';
+import { DContract } from '@/components/v2/desktop/profile/DContract';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Shartnoma bo'limlari (PDF shabloni tartibida); 2 va 3 — yuqorida qisqacha berilgan.
 const SECTIONS = [
@@ -47,6 +49,10 @@ function Clause({ n, text }: { n: string; text: string }) {
 }
 
 export default function V2Contract() {
+  return useIsDesktop() ? <DContract /> : <V2ContractMobile />;
+}
+
+function V2ContractMobile() {
   const insets = useSafeAreaInsets();
   const [contract, setContract] = useState<DemoContractResponse | null>(null);
   const [profile, setProfile] = useState<DemoProfileResponse | null>(null);

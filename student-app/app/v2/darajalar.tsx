@@ -19,10 +19,16 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { useV2Level, V2_LEVELS, V2_TOP_LEVEL } from '@/constants/v2/levels';
 import { useLang } from '@/i18n/LanguageContext';
+import { DLevels } from '@/components/v2/desktop/rewards/DLevels';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const PER_DAY = 50;
 
 export default function V2Levels() {
+  return useIsDesktop() ? <DLevels /> : <V2LevelsMobile />;
+}
+
+function V2LevelsMobile() {
   const { courseLang } = useLang();
   const progress = useV2Level();
   const { lightning } = progress;

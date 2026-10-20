@@ -27,6 +27,8 @@ import { getResolvedExams } from '@/data/exams';
 import { getCourseOverallProgress } from '@/data/lessonContent';
 import { fetchDemoSchedule, fetchDemoStudentProfile, fetchMobileContent, type DemoProfileResponse } from '@/services/contentApi';
 import { loadExamResults, useExamResults } from '@/services/examStore';
+import { DCertificateView } from '@/components/v2/desktop/course/DCertificateView';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const hidden = { accessible: false, importantForAccessibility: 'no-hide-descendants' as const };
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -108,7 +110,12 @@ const formatStudentId = (value?: string) => {
 /** "13–24-darslar" → "13–24". */
 const rangeNums = (label: string) => label.replace(/-darslar$/, '');
 
+// Kompyuterda (keng web oyna) — CertificateView kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function V2CertificateView() {
+  return useIsDesktop() ? <DCertificateView /> : <V2CertificateViewMobile />;
+}
+
+function V2CertificateViewMobile() {
   const insets = useSafeAreaInsets();
   const { certId } = useLocalSearchParams<{ certId: string }>();
   const examResults = useExamResults();

@@ -35,6 +35,8 @@ import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { SHOP_CATEGORY_LABELS, type ShopCategory } from '@/data/shopProducts';
 import { useLang, localizeCourseWording } from '@/i18n/LanguageContext';
 import { useCoins } from '@/services/coinsStore';
+import { DShop } from '@/components/v2/desktop/rewards/DShop';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const ORDER: ShopCategory[] = ['books', 'merch', 'gadgets', 'stationery'];
 // Streak himoyasi narxi — dizayndagi qiymat (bonus hali sotilmaydi).
@@ -87,6 +89,10 @@ function ProductCard({ p, coins, nearest }: { p: ShopProductV2; coins: number; n
 type Popup = null | 'streak-confirm' | 'order-success';
 
 export default function V2Shop() {
+  return useIsDesktop() ? <DShop /> : <V2ShopMobile />;
+}
+
+function V2ShopMobile() {
   const coins = useCoins();
   // ?popup=streak-confirm | order-success — popup'ni to'g'ridan-to'g'ri ochish (ko'rib chiqish uchun).
   const params = useLocalSearchParams<{ popup?: string }>();

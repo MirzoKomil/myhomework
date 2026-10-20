@@ -18,6 +18,8 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import type { AppLang } from '@/i18n/translations';
+import { DLanguage } from '@/components/v2/desktop/profile/DLanguage';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Option = { code: AppLang | 'en'; badge: string; name: string; sub: string; lang?: string; available: boolean };
 
@@ -28,6 +30,10 @@ const OPTIONS: Option[] = [
 ];
 
 export default function V2Language() {
+  return useIsDesktop() ? <DLanguage /> : <V2LanguageMobile />;
+}
+
+function V2LanguageMobile() {
   const insets = useSafeAreaInsets();
   const { lang, setLang } = useLang();
   const [selected, setSelected] = useState<Option['code']>(lang);

@@ -15,12 +15,18 @@ import { BalanceValue, BottomSheet, InfoRows, PriceValue, RowLabel, SheetTop, sh
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
 import { useCoins } from '@/services/coinsStore';
+import { DStreakConfirmCard } from '@/components/v2/desktop/rewards/DPopups';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Props = { visible: boolean; price: number; onClose: () => void; onConfirm: () => void };
 
 export function StreakConfirmPopup({ visible, price, onClose, onConfirm }: Props) {
   const coins = useCoins();
   const missing = Math.max(0, price - coins);
+  const desktop = useIsDesktop();
+
+  // Kompyuterda — markazdagi karta (D_StreakConfirm); mantiq bir xil.
+  if (desktop) return <DStreakConfirmCard visible={visible} onClose={onClose} onConfirm={onConfirm} price={price} coins={coins} />;
 
   return (
     <BottomSheet visible={visible} onClose={onClose} labelledBy="Streak himoyasini sotib olasizmi?">

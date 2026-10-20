@@ -20,6 +20,8 @@ import { fonts } from '@/constants/v2/tokens';
 import { V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { fetchMobileContent } from '@/services/contentApi';
 import { useCachedState } from '@/services/v2Cache';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
+import { DPractice } from '@/components/v2/desktop/practice/DPractice';
 
 const img = (id: string) => (designImages as Record<string, ImageSourcePropType>)[id];
 
@@ -59,6 +61,10 @@ function Tile({
 }
 
 export default function PracticeScreen() {
+  return useIsDesktop() ? <DPractice /> : <PracticeMobile />;
+}
+
+function PracticeMobile() {
   const insets = useSafeAreaInsets();
   const lesson = useCurrentLesson();
   const { rec, reload } = useRecords();

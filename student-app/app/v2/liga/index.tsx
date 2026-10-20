@@ -24,6 +24,8 @@ import { fetchLeaderboard, type LeaderboardEntryResponse } from '@/services/cont
 import { useAvatarUri } from '@/services/avatarStore';
 import { checkLeaderboardClimb } from '@/services/leaderboardTracker';
 import { hasCached, useCachedState } from '@/services/v2Cache';
+import { DLeaderboard } from '@/components/v2/desktop/rewards/DLeaderboard';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Haftalik liga serverda yo'q — hamma Bronza (0-pog'ona) dan boshlaydi.
 const CURRENT_TIER = 0;
@@ -31,6 +33,10 @@ const PROMOTE_TOP = 5;
 const RANK_COLORS: Record<number, string> = { 1: '#9A6A00', 2: '#4A5468', 3: '#8A5A2E' };
 
 export default function V2League() {
+  return useIsDesktop() ? <DLeaderboard /> : <V2LeagueMobile />;
+}
+
+function V2LeagueMobile() {
   const insets = useSafeAreaInsets();
   const myAvatar = useAvatarUri();
   const period = 'weekly' as const;

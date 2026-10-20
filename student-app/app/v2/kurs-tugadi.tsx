@@ -16,6 +16,8 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { fetchDemoStudentPayments, fetchDemoStudentProfile, fetchMobileContent, type DemoPaymentsResponse } from '@/services/contentApi';
+import { DExpired } from '@/components/v2/desktop/profile/DExpired';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const TARIFFS = [
   { name: 'Start', minutes: 15 },
@@ -24,6 +26,10 @@ const TARIFFS = [
 ];
 
 export default function V2Expired() {
+  return useIsDesktop() ? <DExpired /> : <V2ExpiredMobile />;
+}
+
+function V2ExpiredMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const [pay, setPay] = useState<DemoPaymentsResponse | null>(null);

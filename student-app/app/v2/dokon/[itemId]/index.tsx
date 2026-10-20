@@ -17,11 +17,17 @@ import { CoinBar, ProductCover } from '@/components/v2/rewards/shopParts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { useCoins } from '@/services/coinsStore';
+import { DShopItem } from '@/components/v2/desktop/rewards/DShopItem';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Muqova foni — dizayndagi qiymat (rasm cheti shu rangga singib ketadi).
 const HERO_BG = '#E1DAD4';
 
 export default function V2ShopItem() {
+  return useIsDesktop() ? <DShopItem /> : <V2ShopItemMobile />;
+}
+
+function V2ShopItemMobile() {
   const insets = useSafeAreaInsets();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const products = useShopProducts();

@@ -20,8 +20,15 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { resolveMediaUrl } from '@/services/contentApi';
+import { DGrammar } from '@/components/v2/desktop/library/DGrammar';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function GrammarTopicScreen() {
+  return useIsDesktop() ? <DGrammar /> : <GrammarTopicScreenMobile />;
+}
+
+function GrammarTopicScreenMobile() {
   const insets = useSafeAreaInsets();
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const [row, setRow] = useState<GrammarRow | null>(null);
