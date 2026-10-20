@@ -9011,3 +9011,17 @@ body.modal-open {
 .archive-empty{margin:0;font-size:13px;color:var(--mx-muted)}
 .employee-status{text-transform:none!important;letter-spacing:0!important}
 .sal-note{margin:10px 0 0;font-size:12px;line-height:1.5;color:var(--mx-muted)}
+
+/* ===== Lidlar · ommaviy biriktirish ===== */
+#bulkActionsBar{position:sticky;top:8px;z-index:20;gap:10px;flex-wrap:wrap;background:#1A1D2E!important;border-color:#1A1D2E!important;border-radius:14px!important;box-shadow:0 10px 30px rgba(26,29,46,.25)}
+#bulkActionsBar #bulkSelectedCount{color:#fff!important}
+#bulkActionsBar .form-control-sm{height:38px}
+#bulkSplitBtn,#bulkCancelBtn{min-height:38px;padding:6px 14px!important;border-radius:10px!important;border:1px solid rgba(255,255,255,.35)!important;background:transparent!important;color:#fff!important;font-weight:600;cursor:pointer}
+.lead-col-pick{border:1px dashed currentColor;background:rgba(255,255,255,.7);color:#4B33C9;border-radius:999px;padding:2px 10px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.lead-col-pick:hover{background:#fff}
+.bsx-list{display:flex;flex-direction:column;gap:6px}
+.bsx-row{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer}
+.bsx-row input{width:18px;height:18px;accent-color:var(--purple)}
+.bsx-row span{flex:1;font-weight:600}
+.bsx-row small{color:var(--mx-muted);font-size:12px}
+.bsx-preview{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:13px}

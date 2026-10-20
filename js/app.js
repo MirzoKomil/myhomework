@@ -21157,6 +21157,7 @@ function renderLeads() {
         return;
     }
 
+    const _canBulkLeads = typeof FULL_ACCESS_ROLES !== 'undefined' && FULL_ACCESS_ROLES.has(getCurrentUser()?.role);
     board.innerHTML = visibleColumns.map(col => {
         const columnItems = tagged.filter(l => normalizeLeadStatus(l.status) === col.id);
         const items = columnItems.filter(l => (col.id !== 'sinov-darsida' || trialWorkflow.matchesFilter(l, getTrialAttendanceFilter()))
@@ -21169,6 +21170,7 @@ function renderLeads() {
             <div class="lead-column-header${col.id === 'sinov-darsida' ? ' lead-column-header--trial' : ''}${col.id === 'boglanishga-urinilmoqda' ? ' lead-column-header--contact' : ''}" style="background:${col.headerBg}">
                 <h3 class="lead-column-title" style="color:${col.title}">${col.label}</h3>
                 <span class="lead-column-count" style="color:${col.count}">${items.length}</span>
+                ${_canBulkLeads && items.some(l => !l.managerId) ? `<button type="button" class="lead-col-pick" data-col-pick-unassigned="${col.id}" title="Shu ustundagi menejer biriktirilmagan lidlarni belgilash">Biriktirilmagan: ${items.filter(l => !l.managerId).length}</button>` : ''}
                 ${col.id === 'boglanishga-urinilmoqda' ? `<button type="button" id="leadContactFilterButton" class="lead-contact-filter-toggle" aria-label="Bog‘lanish sababi bo‘yicha filtr" aria-expanded="${_leadContactFilterOpen}" aria-controls="leadContactFilterPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>${renderLeadContactReasonFilter(columnItems, items.length, lang)}` : ''}
                 ${col.id === 'sinov-darsida' ? renderTrialAttendanceFilter() : ''}
             </div>
@@ -21224,12 +21226,13 @@ function renderLeads() {
             if (checked.length > 0) {
                 bulkBar.style.display = 'flex';
                 bulkCount.textContent = `${checked.length} ta lid tanlandi`;
-                if (!bulkSelect.dataset.populated) {
-                    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
-                    const bulkLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-                    const managers = allManagers.filter(m => (m.lang || 'english') === bulkLang);
+                // Til almashtirilganda ro'yxat yangilanadi — aks holda Rus lidlari
+                // Ingliz menejerlariga biriktirilib qolishi mumkin edi.
+                const bulkLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+                if (bulkSelect.dataset.populated !== bulkLang) {
+                    const managers = getBulkLeadManagers(bulkLang);
                     bulkSelect.innerHTML = '<option value="">— Menejerni tanlang —</option>' + managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
-                    bulkSelect.dataset.populated = '1';
+                    bulkSelect.dataset.populated = bulkLang;
                 }
             } else {
                 bulkBar.style.display = 'none';
@@ -21246,19 +21249,27 @@ function renderLeads() {
         bulkAssignBtn.onclick = () => {
             const managerId = bulkSelect.value;
             if (!managerId) return showNotification('Xatolik', 'Menejerni tanlang', 'error');
-            const checked = Array.from(bulkChecks).filter(cb => cb.checked);
-            let updated = false;
-            checked.forEach(cb => {
-                const lang = cb.dataset.lang;
-                const id = cb.dataset.id;
-                updateLeadInStorage(lang, id, l => ({ ...l, managerId }));
-                updated = true;
-            });
-            if (updated) {
-                renderLeads();
-                showNotification('Muvaffaqiyatli', `${checked.length} ta lid biriktirildi`, 'success');
-            }
+            const targets = tanlanganlar();
+            const name = bulkSelect.options[bulkSelect.selectedIndex]?.text || '';
+            if (targets.length > 30 && !confirm(`${targets.length} ta lid ${name} ga biriktiriladi. Davom etasizmi?`)) return;
+            applyBulkLeadAssignment(targets.map(t => ({ ...t, managerId })));
         };
+
+        const bulkSplitBtn = document.getElementById('bulkSplitBtn');
+        if (bulkSplitBtn) bulkSplitBtn.onclick = () => openBulkSplitModal(tanlanganlar());
+
+        board.querySelectorAll('[data-col-pick-unassigned]').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const col = btn.closest('.lead-column');
+                col?.querySelectorAll('.lead-card').forEach(card => {
+                    const lead = getLeadById(card.dataset.leadLang, card.dataset.leadId);
+                    const cb = card.querySelector('.lead-bulk-checkbox');
+                    if (cb && lead && !lead.managerId) cb.checked = true;
+                });
+                updateBulkBar();
+            });
+        });
 
         if (bulkDeleteBtn) {
             bulkDeleteBtn.onclick = async () => {
@@ -21637,6 +21648,84 @@ function openTeacherWorkScheduleModal(initialTeacherId, subject) {
     document.getElementById('cancelWorkSchedule').addEventListener('click', cleanupModal);
 
     renderGrid();
+}
+
+// ===== Lidlarni ommaviy biriktirish =====
+// getItem(salesManagers) aslida HR ro'yxatidagi sotuv menejerlari (til bilan).
+function getBulkLeadManagers(lang) {
+    return getItem(STORAGE_KEYS.salesManagers, []).filter(m => (m.lang || 'english') === lang);
+}
+
+const LEAD_OPEN_FOR_LOAD = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida']);
+function leadLoadByManager(leads, managerIds) {
+    const load = Object.fromEntries(managerIds.map(id => [id, 0]));
+    (leads || []).forEach(l => {
+        if (l.managerId in load && LEAD_OPEN_FOR_LOAD.has(normalizeLeadStatus(l.status))) load[l.managerId]++;
+    });
+    return load;
+}
+
+// Teng taqsimlash: har bir lid navbatdagi eng kam yuklangan menejerga
+// (ochiq lidlari soni + shu taqsimotda olganlari). Teng bo'lsa — tanlash tartibi.
+function planEvenLeadSplit(leadIds, managerIds, load = {}) {
+    const counts = Object.fromEntries(managerIds.map(id => [id, Number(load[id] || 0)]));
+    const plan = [];
+    leadIds.forEach(leadId => {
+        let best = null;
+        managerIds.forEach(id => { if (best === null || counts[id] < counts[best]) best = id; });
+        if (best === null) return;
+        counts[best]++;
+        plan.push({ leadId, managerId: best });
+    });
+    return plan;
+}
+
+function applyBulkLeadAssignment(items) {
+    let changed = 0;
+    items.forEach(({ lang, id, managerId }) => {
+        const before = getLeadById(lang, id);
+        if (!before || before.managerId === managerId) return;
+        if (updateLeadInStorage(lang, id, l => ({ ...l, managerId }))) changed++;
+    });
+    renderLeads();
+    if (typeof showNotification === 'function') showNotification('Muvaffaqiyatli', changed ? `${changed} ta lid biriktirildi` : 'Oʻzgarish yoʻq — lidlar allaqachon shu menejerda', changed ? 'success' : 'info');
+}
+
+function openBulkSplitModal(targets) {
+    if (!targets.length) return;
+    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const managers = getBulkLeadManagers(lang);
+    if (!managers.length) return showNotification('Xatolik', 'Bu yoʻnalishda sotuv menejeri yoʻq', 'error');
+    const allLeads = (getItem(STORAGE_KEYS.leads, { english: [], russian: [] })[lang]) || [];
+    const load = leadLoadByManager(allLeads, managers.map(m => m.id));
+    openModal('Lidlarni teng taqsimlash', `
+        <p class="text-muted" style="margin:0 0 12px;font-size:13px">${targets.length} ta lid tanlangan menejerlarga teng boʻlinadi. Kim kam band boʻlsa (ochiq lidlari kam), shunga birinchi tushadi.</p>
+        <div class="bsx-list">${managers.map(m => `<label class="bsx-row"><input type="checkbox" value="${escapeHtml(m.id)}" checked><span>${escapeHtml(m.name)}</span><small>${load[m.id] || 0} ta ochiq lid</small></label>`).join('')}</div>
+        <div class="bsx-preview" id="bsxPreview" aria-live="polite"></div>`,
+        `<button type="button" class="btn-ghost" id="bsxCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="bsxApply">Taqsimlash</button>`);
+    const body = document.getElementById('modalBody');
+    const chosen = () => [...body.querySelectorAll('.bsx-row input:checked')].map(i => i.value);
+    const preview = () => {
+        const ids = chosen();
+        const plan = planEvenLeadSplit(targets.map(t => t.id), ids, load);
+        const per = {};
+        plan.forEach(p => { per[p.managerId] = (per[p.managerId] || 0) + 1; });
+        document.getElementById('bsxPreview').innerHTML = ids.length
+            ? managers.filter(m => ids.includes(m.id)).map(m => `<span>${escapeHtml(m.name)}: <b>+${per[m.id] || 0}</b></span>`).join('')
+            : '<span>Kamida bitta menejerni tanlang</span>';
+        document.getElementById('bsxApply').disabled = !ids.length;
+        return plan;
+    };
+    body.querySelectorAll('.bsx-row input').forEach(i => i.addEventListener('change', preview));
+    preview();
+    document.getElementById('bsxCancel').onclick = closeModal;
+    document.getElementById('bsxApply').onclick = () => {
+        const plan = preview();
+        if (!plan.length) return;
+        const byId = Object.fromEntries(targets.map(t => [t.id, t.lang]));
+        closeModal();
+        applyBulkLeadAssignment(plan.map(p => ({ lang: byId[p.leadId], id: p.leadId, managerId: p.managerId })));
+    };
 }
 
 function openAssignManagerModal(lang, leadId) {
