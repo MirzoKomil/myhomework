@@ -8715,9 +8715,14 @@ body.modal-open {
 .sdp3-legend-row{display:flex;justify-content:flex-end;margin:4px 0 12px}
 .sdp2-legend i.sdp2-day--unk{background:var(--warning-bg);border-color:var(--warning)}
 
+:root{--mx-muted:#5B6076}
+[data-theme="dark"]{--mx-muted:#A9AFC4}
+[data-theme="dark"] .alx-dup{background:#3A3018;border-color:#6B5520;color:#FFE3A3}
+[data-theme="dark"] .lead-card-kind--meta{background:#262A3D}
+[data-theme="dark"] .lead-card-next{color:#7EA8FF}[data-theme="dark"] .lead-card-next.is-late{color:#FF8A8A}
 /* ===== Sotuv · Skriptlar (ro'yxat + o'qish oynasi) ===== */
 .scr{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:20px;align-items:start}
-.scr-empty{grid-column:1/-1;text-align:center;padding:72px 20px;color:#5B6076;background:var(--surface);border:1px solid var(--border);border-radius:16px}
+.scr-empty{grid-column:1/-1;text-align:center;padding:72px 20px;color:var(--mx-muted);background:var(--surface);border:1px solid var(--border);border-radius:16px}
 .scr-empty h3{font-size:18px;font-weight:700;margin:0 0 6px;color:var(--text)}
 .scr-empty p{margin:0;font-size:14px}
 .scr-list{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;position:sticky;top:12px;max-height:calc(100vh - 160px);overflow:auto}
@@ -8725,7 +8730,7 @@ body.modal-open {
 .scr-search:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px rgba(123,97,255,.15)}
 .scr-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:var(--text)}
 .scr-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
-.scr-none{padding:16px;text-align:center;color:#5B6076;font-size:13px}
+.scr-none{padding:16px;text-align:center;color:var(--mx-muted);font-size:13px}
 .scr-item{all:unset;box-sizing:border-box;width:100%;display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:12px;cursor:pointer;border-left:3px solid transparent}
 .scr-item:hover{background:var(--bg)}
 .scr-item:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
@@ -8733,13 +8738,13 @@ body.modal-open {
 .scr-ico{flex:none;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:20px}
 .scr-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .scr-txt strong{font-size:14px;line-height:19px;color:var(--text)}
-.scr-txt span{font-size:13px;line-height:17px;color:#5B6076;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.scr-txt small{font-size:12px;color:#5B6076}
+.scr-txt span{font-size:13px;line-height:17px;color:var(--mx-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scr-txt small{font-size:12px;color:var(--mx-muted)}
 .scr-read{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-width:0}
 .scr-read-head{padding:22px 24px;background:color-mix(in srgb,var(--scr-c) 12%,var(--surface));border-bottom:1px solid var(--border)}
 .scr-read-eyebrow{font-size:22px}
 .scr-read-head h2{margin:6px 0 4px;font-size:24px;line-height:30px;font-weight:800;color:var(--text)}
-.scr-read-head p{margin:0;font-size:14px;color:#5B6076}
+.scr-read-head p{margin:0;font-size:14px;color:var(--mx-muted)}
 .scr-read-acts{display:flex;gap:8px;margin-top:14px}
 .scr-btn{min-height:40px;padding:8px 14px;border:1px solid #D5D8E3;border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .scr-btn:hover{background:var(--bg)}
@@ -8752,9 +8757,9 @@ body.modal-open {
 
 /* ===== Sotuv · Sotuv rejasi ===== */
 .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.spx-formula{margin:4px 0 0;font-size:13px;color:#5B6076;font-weight:500}
+.spx-formula{margin:4px 0 0;font-size:13px;color:var(--mx-muted);font-weight:500}
 .sp-params-card .card-header{display:block}
-.sp-param label{color:#5B6076;font-size:13px}
+.sp-param label{color:var(--mx-muted);font-size:13px}
 .sp-params-grid .form-control-sm{height:44px;font-size:15px}
 .spx-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 18px 10px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .spx-card.is-main{border:2px solid var(--purple);box-shadow:0 8px 28px rgba(123,97,255,.14)}
@@ -8766,42 +8771,42 @@ body.modal-open {
 .spx-chip--ok{background:#E3F6EE;color:#0F7A55}
 .spx-main-note{align-self:flex-start;font-size:12px;font-weight:700;color:#0F7A55;background:#E3F6EE;border-radius:999px;padding:3px 10px}
 .spx-tbl{width:100%;border-collapse:collapse;font-size:14px}
-.spx-tbl thead th{font-size:12px;font-weight:600;color:#5B6076;text-align:right;padding:4px 0 6px}
+.spx-tbl thead th{font-size:12px;font-weight:600;color:var(--mx-muted);text-align:right;padding:4px 0 6px}
 .spx-tbl tbody th{text-align:left;font-weight:500;color:var(--text);padding:9px 8px 9px 0;border-top:1px solid var(--border)}
 .spx-tbl td{text-align:right;padding:9px 0 9px 10px;border-top:1px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap}
 .spx-tbl td:nth-child(2){font-weight:700;color:var(--text)}
-.spx-tbl td:nth-child(3){color:#5B6076;font-size:13px}
+.spx-tbl td:nth-child(3){color:var(--mx-muted);font-size:13px}
 .spx-tbl .spx-strong th,.spx-tbl .spx-strong td:nth-child(2){font-weight:800}
 .spx-fact{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
 .spx-fact-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;padding:18px 18px 12px}
 .spx-fact-head h3{margin:0;font-size:18px;font-weight:800}
-.spx-fact-head span{font-size:13px;color:#5B6076}
+.spx-fact-head span{font-size:13px;color:var(--mx-muted)}
 .spx-fact-wrap{overflow-x:auto}
 .spx-ftbl{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
-.spx-ftbl thead th{background:var(--bg);font-size:12px;font-weight:600;color:#5B6076;text-align:right;padding:10px 18px}
+.spx-ftbl thead th{background:var(--bg);font-size:12px;font-weight:600;color:var(--mx-muted);text-align:right;padding:10px 18px}
 .spx-ftbl thead th:first-child,.spx-ftbl tbody th{text-align:left}
 .spx-ftbl tbody th{font-weight:500;padding:12px 18px;border-top:1px solid var(--border)}
-.spx-ftbl td{text-align:right;padding:12px 18px;border-top:1px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap;color:#5B6076}
+.spx-ftbl td{text-align:right;padding:12px 18px;border-top:1px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--mx-muted)}
 .spx-ftbl td b{color:var(--text)}
 .spx-ftbl td:last-child{font-weight:800}
 .spx-ok{color:#0F7A55!important}.spx-warn{color:#8A5A00!important}.spx-bad{color:#C62828!important}
-.spx-unit{font-size:12px;color:#5B6076}
+.spx-unit{font-size:12px;color:var(--mx-muted)}
 
 /* ===== Sotuv · Statistika (voronka) ===== */
 .sfx-head h1{margin:0;font-size:24px;font-weight:800}
-.sfx-head p{margin:2px 0 0;font-size:13px;color:#5B6076}
+.sfx-head p{margin:2px 0 0;font-size:13px;color:var(--mx-muted)}
 .sfx-filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin:14px 0 16px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
-.sfx-filters label{color:#5B6076!important}
+.sfx-filters label{color:var(--mx-muted)!important}
 .sfx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
 .sfx-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
-.sfx-tile small{font-size:13px;color:#5B6076;font-weight:500}
+.sfx-tile small{font-size:13px;color:var(--mx-muted);font-weight:500}
 .sfx-tile b{font-size:26px;line-height:32px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-.sfx-tile span{font-size:12px;color:#5B6076}
+.sfx-tile span{font-size:12px;color:var(--mx-muted)}
 .sfx-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
 .sfx-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;min-width:0}
 .sfx-card-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px}
 .sfx-card-head h2{margin:0;font-size:18px;font-weight:800}
-.sfx-card-head span{font-size:13px;color:#5B6076}
+.sfx-card-head span{font-size:13px;color:var(--mx-muted)}
 .sfx-card-head b{color:var(--text)}
 .sfx-rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .sfx-row{display:grid;grid-template-columns:minmax(150px,210px) minmax(0,1fr) 92px;align-items:center;gap:14px;min-height:36px}
@@ -8809,16 +8814,16 @@ body.modal-open {
 .sfx-name i,.sfx-out i{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none;margin-right:6px}
 .sfx-track{height:24px;border-radius:8px;background:var(--bg);overflow:hidden}
 .sfx-track span{display:block;height:100%;border-radius:8px}
-.sfx-val{text-align:right;font-size:13px;color:#5B6076;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sfx-val{text-align:right;font-size:13px;color:var(--mx-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .sfx-val b{font-size:15px;color:var(--text)}
 .sfx-out{margin:0;display:flex;flex-direction:column}
 .sfx-out div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--border);font-size:14px}
 .sfx-out div:first-child{border-top:0}
 .sfx-out dt{color:var(--text);display:flex;align-items:center}
 .sfx-out dd{margin:0;font-weight:800;font-variant-numeric:tabular-nums}
-.sfx-out dd small{font-weight:500;color:#5B6076}
+.sfx-out dd small{font-weight:500;color:var(--mx-muted)}
 .sfx-out-total dd{color:#0F7A55}
-.sfx-note{margin:8px 0 0;font-size:12px;color:#5B6076}
+.sfx-note{margin:8px 0 0;font-size:12px;color:var(--mx-muted)}
 @media (max-width:1100px){.sfx-grid{grid-template-columns:1fr}}
 @media (max-width:600px){
   .sfx-row{grid-template-columns:1fr auto;grid-template-areas:"n v" "t t";gap:4px 10px}
@@ -8839,19 +8844,19 @@ body.modal-open {
 .bhx-prize{display:flex;align-items:center;gap:12px}
 .bhx-prize img{width:40px;height:40px;object-fit:contain;flex:none}
 .bhx-prize > span:last-child{display:flex;flex-direction:column;gap:1px}
-.bhx-prize small{font-size:12px;color:#5B6076}
+.bhx-prize small{font-size:12px;color:var(--mx-muted)}
 .bhx-ico{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;flex:none}
-.bhx-date{white-space:nowrap;color:#5B6076}
+.bhx-date{white-space:nowrap;color:var(--mx-muted)}
 .bhx-badge{display:inline-flex;height:24px;align-items:center;padding:0 10px;border-radius:999px;font-size:12px;font-weight:700}
 .bhx-badge--d{background:#FFF4D6;color:#8A5A00}.bhx-badge--w{background:#E8F0FF;color:#1E5BD8}.bhx-badge--m{background:var(--purple-light);color:#5B3FD6}.bhx-badge--r{background:#E3F6EE;color:#0F7A55}
-.bhx-empty{text-align:center;padding:40px 20px;color:#5B6076}
+.bhx-empty{text-align:center;padding:40px 20px;color:var(--mx-muted)}
 .bhx-empty img{width:96px;height:96px;object-fit:contain;opacity:.9}
 @media (max-width:600px){.bhx-hero{flex-direction:column;align-items:flex-start;padding:18px}.bhx-hero img{width:84px;height:84px}.bhx-hero h2{font-size:20px;line-height:26px}}
 
 /* ===== Sotuv · Lid qo'shish oynasi ===== */
-.alx-sub{margin:-4px 0 14px;font-size:13px;color:#5B6076}
+.alx-sub{margin:-4px 0 14px;font-size:13px;color:var(--mx-muted)}
 .alx-req{color:#C62828;font-weight:700}
-.alx-opt-l{font-weight:400;color:#5B6076}
+.alx-opt-l{font-weight:400;color:var(--mx-muted)}
 .alx-err{margin:6px 0 0;font-size:13px;font-weight:600;color:#C62828}
 #modalBody .form-control.is-invalid{border-color:#C62828;box-shadow:0 0 0 3px rgba(198,40,40,.12)}
 .alx-set{border:0;margin:0 0 14px;padding:0}
@@ -8863,7 +8868,7 @@ body.modal-open {
 .alx-opt:has(input:focus-visible){outline:2px solid var(--purple);outline-offset:2px}
 .alx-dup{margin:-4px 0 14px;padding:12px 14px;border-radius:12px;background:#FFF4D6;border:1px solid #F3D27A;color:#5C3D00;font-size:13px;line-height:1.45}
 .alx-dup ul{margin:6px 0;padding-left:18px}
-.alx-dup li span{color:#7A5A1A}
+.alx-dup li span{color:var(--mx-muted)}
 
 /* ===== Sotuv · Lidlar kanbani: kartochka ===== */
 .lead-card-next{display:flex;align-items:center;gap:6px;margin:8px 0 2px;font-size:13px;font-weight:600;color:#1E5BD8}
@@ -8876,4 +8881,4 @@ body.modal-open {
 .lead-card-footer{flex-wrap:wrap;row-gap:8px}
 .lead-card-footer .lead-card-actions{flex-wrap:wrap;min-width:0}
 .lead-card-footer .lead-card-kind{margin-left:auto}
-.lead-card-kind--meta{padding:1px 8px;border-radius:999px;background:#F1F2F7;color:#5B6076;font-size:11px;font-weight:700}
+.lead-card-kind--meta{padding:1px 8px;border-radius:999px;background:#F1F2F7;color:var(--mx-muted);font-size:11px;font-weight:700}
