@@ -7978,6 +7978,43 @@ function formatDashboardSessionDuration(user) {
     return hours ? `${hours} soat ${minutes % 60} daqiqa` : `${minutes} daqiqa`;
 }
 
+// Sotuv menejeri bosh sahifasi: "Sovgʻaga yoʻl" va "Bugungi obed".
+// Hisob Reyting bilan bir xil: getManagerSalesForPeriod + getMergedBonus.
+function renderManagerGoalBlock(managerId, lang) {
+    if (!managerId || typeof getManagerSalesForPeriod !== 'function') return '';
+    const month = getManagerSalesForPeriod(managerId, 'oylik');
+    const today = getManagerSalesForPeriod(managerId, 'kunlik');
+    const tiers = list => list.map(getMergedBonus).filter(b => Number(b.threshold) > 0).sort((a, b) => a.threshold - b.threshold);
+    const monthly = tiers(MONTHLY_BONUSES);
+    const daily = tiers(DAILY_BONUSES);
+    const next = monthly.find(b => month < b.threshold);
+    const daysLeft = _monthDaysLeft();
+    const ranked = getSalesManagers(lang).map(m => ({ id: m.id, name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik') }))
+        .sort((a, b) => b.sales - a.sales);
+    const place = ranked.findIndex(m => m.id === managerId) + 1;
+    const ahead = place > 1 ? ranked[place - 2] : null;
+    let goal;
+    if (next) {
+        const gap = next.threshold - month;
+        const pct = Math.min(100, Math.round(month / next.threshold * 100));
+        goal = `<section class="mot-goal" aria-label="Sovgʻaga yoʻl">${_prizeImg(next.id, 96)}
+            <div class="mot-goal-txt"><span class="mot-eyebrow">Sovgʻaga yoʻl · ${daysLeft} kun qoldi</span>
+            <h3 class="mot-goal-title">${escapeHtml(next.label || '')} uchun yana ${fmtMoney(gap)}</h3>
+            <div class="mot-team"><span><strong>${pct}%</strong></span><span class="mot-bar" role="progressbar" aria-label="${escapeHtml(next.label || '')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></span><span>${fmtMoney(month)} / ${fmtMoney(next.threshold)}</span></div>
+            <span class="mot-sub">Kuniga ${fmtMoney(Math.ceil(gap / daysLeft))}${place ? ` · reytingda ${place}-oʻrin` : ''}${ahead ? `, ${escapeHtml(_firstName(ahead.name))}dan ${fmtMoney(Math.max(0, ahead.sales - month))} orqada` : ''}</span></div></section>`;
+    } else {
+        goal = `<section class="mot-goal" aria-label="Sovgʻaga yoʻl"><div class="mot-goal-txt"><span class="mot-eyebrow">Sovgʻaga yoʻl</span><h3 class="mot-goal-title">Bu oy barcha oylik sovgʻalar olindi!</h3></div></section>`;
+    }
+    const got = daily.filter(b => today >= b.threshold).pop();
+    const nextDaily = daily.find(b => today < b.threshold);
+    const obed = `<section class="card mot-obed" aria-label="Bugungi obed">${_prizeImg('obed', 80)}
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:0"><h3 style="margin:0;font-size:16px">Bugungi obed</h3>
+        <b style="font-size:20px">${fmtMoney(today)}</b>
+        ${got ? `<span class="mot-chip mot-chip--ok">✓ ${escapeHtml(got.label || '')}</span>` : ''}
+        <span class="mot-prize-note">${nextDaily ? `“${escapeHtml(nextDaily.label || '')}” uchun yana ${fmtMoney(nextDaily.threshold - today)}` : 'Eng yuqori obed olindi 🎉'}</span></div></section>`;
+    return `<div class="mot-home">${goal}${obed}</div>`;
+}
+
 function renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads }) {
     const container = document.getElementById('dashboardOverview');
     if (!container) return;
@@ -8053,7 +8090,7 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
 
     container.innerHTML = `
         ${isTeacher ? '' : `<div class="dashboard-section-title"><h3>${isSalesManager ? 'Mening ko\'rsatkichlarim' : "Umumiy ko'rsatkichlar"}</h3><span>${isSalesManager ? 'Shaxsiy natijalar va joriy sessiya' : "CRM ma'lumotlari asosida"}</span></div>
-        ${isSalesManager ? `<div class="dashboard-kpi-grid dashboard-kpi-grid--single"><div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#9201;</span><div><small>Platformada sarflagan vaqt</small><b id="dashboardSessionDuration">${formatDashboardSessionDuration(currentUser)}</b><em>Joriy sessiya</em></div></div></div>` : `<div class="dashboard-kpi-grid">
+        ${isSalesManager ? `<div class="dashboard-kpi-grid dashboard-kpi-grid--single"><div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#9201;</span><div><small>Platformada sarflagan vaqt</small><b id="dashboardSessionDuration">${formatDashboardSessionDuration(currentUser)}</b><em>Joriy sessiya</em></div></div></div>${renderManagerGoalBlock(managerId, currentUser?.linkedManagerLang || 'english')}` : `<div class="dashboard-kpi-grid">
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon purple">&#128101;</span><div><small>O'quvchilar soni</small><b>${students.length}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon blue">&#128200;</span><div><small>Sotuvlar soni</small><b>${closedLeads.length}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon green">&#128176;</span><div><small>Sotuv summasi</small><b>${formatMoney(totalRevenue)}</b></div></div>
