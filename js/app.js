@@ -10183,71 +10183,21 @@ function renderSdpPlatform(s) {
 
 function renderSdpSales(s) {
     if (!s.leadRef) return `<div class="sdp-empty">Sotuv ma'lumotlari yo'q</div>`;
-    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const lang = s.leadRef.lang || s.subject || 'english';
-    const lead = (leads[lang] || []).find(l => l.id === s.leadRef.id);
+    const lead = getLeadById(lang, s.leadRef.id);
     if (!lead) return `<div class="sdp-empty">Lid ma'lumoti topilmadi</div>`;
 
-    const LEAD_STATUS_LABELS = {
-        'yangi-lidlar': 'Yangi lid',
-        'boglanishga-urinilmoqda': 'Bog\'lanishga urinilmoqda',
-        'boglanildi': 'Bog\'lanildi',
-        'malumot-berildi': 'Bog\'lanildi',
-        'keyin-sotib-olmoqchi': 'Keyin sotib olmoqchi',
-        'qaror-jarayonida': 'Qaror jarayonida',
-        'qaror-tolov': 'Qaror/To\'lov',
-        'sinov-darsida': 'Sinov darsida',
-        'tolov-jarayonida': 'To\'lov jarayonida',
-        'tolov-yopildi': 'To\'lov yopildi',
-        'muvaffaqiyatsiz-sotuv': 'Muvaffaqiyatsiz sotuv',
-        'sifatsiz-lidlar': 'Sifatsiz lid'
-    };
-
-    const allSteps = [
-        'yangi-lidlar','boglanishga-urinilmoqda','boglanildi','sinov-darsida',
-        'qaror-jarayonida','keyin-sotib-olmoqchi','tolov-jarayonida','tolov-yopildi'
-    ];
-    const currentIdx = allSteps.indexOf(normalizeLeadStatus(lead.status));
-
-    const steps = allSteps.map((step, i) => {
-        const done = i <= currentIdx;
-        const current = i === currentIdx;
-        return `<div class="sdp-lead-step">
-            <div class="sdp-lead-dot ${done ? 'sdp-lead-dot--closed' : ''}" style="${!done ? 'background:var(--border)' : ''}"></div>
-            <div>
-                <div style="font-size:13px;font-weight:${current?'700':'500'};color:${done?'var(--text)':'var(--text-muted)'}">${escapeHtml(LEAD_STATUS_LABELS[step]||step)}</div>
-                ${current ? `<div style="font-size:11px;color:var(--primary);margin-top:2px">Joriy holat</div>` : ''}
-            </div>
-        </div>`;
-    }).join('');
-
-    const allManagers = getItem(STORAGE_KEYS.hrEmployees, [])
-        .filter(e => e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri');
-    const mgr = allManagers.find(m => m.id === lead.managerId);
-
-    return `
-    <div class="sdp-section">
-        <p class="sdp-section-title">Lid ma'lumotlari</p>
-        <div class="sdp-info-grid">
-            <div class="sdp-info-item"><div class="sdp-info-label">Lid raqami</div><div class="sdp-info-value">#${escapeHtml(lead.serialNumber||lead.id)}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Joriy holat</div><div class="sdp-info-value">${escapeHtml(LEAD_STATUS_LABELS[lead.status]||lead.status)}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Sotuv menejeri</div><div class="sdp-info-value">${escapeHtml(mgr?.name||'—')}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Manba</div><div class="sdp-info-value">${escapeHtml(lead.source||'—')}</div></div>
-        </div>
-    </div>
-    <div class="sdp-section">
-        <p class="sdp-section-title">Sotuv bosqichlari</p>
-        <div>${steps}</div>
-    </div>
-    ${lead.paymentSurvey ? `
-    <div class="sdp-section">
-        <p class="sdp-section-title">To'lov shartnomasi</p>
-        <div class="sdp-info-grid">
-            ${lead.paymentSurvey.contractNumber ? `<div class="sdp-info-item"><div class="sdp-info-label">Shartnoma raqami</div><div class="sdp-info-value">${escapeHtml(lead.paymentSurvey.contractNumber)}</div></div>` : ''}
-            ${lead.paymentSurvey.totalAmount ? `<div class="sdp-info-item"><div class="sdp-info-label">To'lov miqdori</div><div class="sdp-info-value">${formatMoney(lead.paymentSurvey.totalAmount)}</div></div>` : ''}
-            ${lead.paymentSurvey.tariff ? `<div class="sdp-info-item"><div class="sdp-info-label">Tarif (daqiqa)</div><div class="sdp-info-value">${escapeHtml(String(lead.paymentSurvey.tariff))} daq.</div></div>` : ''}
-        </div>
-    </div>` : ''}`;
+    // Lid kartasi bilan bir xil ko'rinish: barcha izohlar, bosqich va lid
+    // qaysi menejerniki ekani shu yerda ham to'liq ko'rinadi.
+    const ps = lead.paymentSurvey;
+    const contract = ps && (ps.contractNumber || ps.totalAmount || ps.tariff) ? `
+    <section class="lov-card" style="margin-top:14px" aria-label="To'lov shartnomasi">
+        <h3 class="lov-h">To'lov shartnomasi</h3>
+        ${ps.contractNumber ? `<div class="lov-row"><span>Shartnoma raqami</span><strong>${escapeHtml(ps.contractNumber)}</strong></div>` : ''}
+        ${ps.totalAmount ? `<div class="lov-row"><span>To'lov miqdori</span><strong>${escapeHtml(formatMoney(ps.totalAmount))}</strong></div>` : ''}
+        ${ps.tariff ? `<div class="lov-row"><span>Tarif (daqiqa)</span><strong>${escapeHtml(String(ps.tariff))} daq.</strong></div>` : ''}
+    </section>` : '';
+    return renderLeadOverviewHtml(lead, lang) + contract;
 }
 
 // 9-vazifa: ustoz shunchaki almashtirilib, jadval eski ustozning kunu
@@ -20684,7 +20634,8 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
     const status = normalizeLeadStatus(lead.status);
     const col = LEAD_COLUMNS.find(c => c.id === status) || LEAD_COLUMNS[0];
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
-    const manager = managers.find(m => m.id === lead.managerId);
+    const manager = lead.managerId ? (managers.find(m => m.id === lead.managerId)
+        || getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === lead.managerId)) : null;
     const comments = Array.isArray(lead.comments) ? lead.comments : [];
     const alerts = getLeadSlaCardAlerts(lead, lang, user);
     const langLabel = lang === 'russian' ? 'Rus tili' : 'Ingliz tili';
@@ -20719,7 +20670,7 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
         ['Manba', leadSourceName(lead.source)],
         ['Lid turi', leadKindLabel(lead)],
         ['Kelgan vaqti', formatLeadTime(lead)],
-        lead.serialCode ? ['ID', '#' + lead.serialCode] : null,
+        (lead.serialCode || lead.serialNumber) ? ['ID', '#' + (lead.serialCode || lead.serialNumber)] : null,
         lead.region ? ['Hudud', lead.region] : null,
     ].filter(Boolean).map(([k, v]) => `<div class="lov-row"><span>${escapeHtml(k)}</span><strong>${escapeHtml(v)}</strong></div>`).join('');
 

@@ -15,8 +15,9 @@ const constSrc = name => {
 function render(lead, { alerts = [] } = {}) {
     const c = vm.createContext({
         Math, Number, Object, String, Array, Date,
-        STORAGE_KEYS: { salesManagers: 'salesManagers' },
-        getItem: k => (k === 'salesManagers' ? [{ id: 'm1', name: 'Aziza Tursunova' }] : []),
+        STORAGE_KEYS: { salesManagers: 'salesManagers', hrEmployees: 'hrEmployees' },
+        getItem: k => (k === 'salesManagers' ? [{ id: 'm1', name: 'Aziza Tursunova' }]
+            : k === 'hrEmployees' ? [{ id: 'h7', name: 'Shoira Komilova', role: 'sotuv-menejeri' }] : []),
         escapeHtml: x => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
         getCurrentUser: () => ({ role: 'rop' }),
         getLeadSlaCardAlerts: () => alerts,
@@ -66,4 +67,24 @@ test('stage progress and SLA alerts', () => {
     assert.ok(html.includes('SLA buzildi') && html.includes('lov-alert--danger'));
     const failed = render({ ...lead, status: 'muvaffaqiyatsiz-sotuv' });
     assert.ok(failed.includes('lov-steps is-off'));
+});
+
+test('manager known only in HR list is still shown', () => {
+    const html = render({ ...lead, managerId: 'h7' });
+    assert.ok(html.includes('Shoira Komilova'));
+    assert.ok(!html.includes('Menejer biriktirilmagan'));
+});
+
+test('student "Sotuv tarixi" tab reuses the lead card and keeps the contract', () => {
+    const c = vm.createContext({
+        escapeHtml: x => String(x ?? ''), formatMoney: n => n + " so'm",
+        getLeadById: (lang, id) => (lang === 'russian' && id === 'l1' ? { ...lead, paymentSurvey: { contractNumber: 'D-77', totalAmount: 1950000, tariff: 30 } } : null),
+        renderLeadOverviewHtml: (l, lang) => `[overview ${l.name} ${lang} ${l.comments.length}]`,
+    });
+    vm.runInContext(functionSource('js/app.js', 'renderSdpSales') + '\nthis.r = renderSdpSales;', c);
+    const html = c.r({ id: 's1', leadRef: { id: 'l1', lang: 'russian' } });
+    assert.ok(html.includes('[overview Dilnoza Karimova russian 3]'));
+    for (const t of ['D-77', "1950000 so'm", '30 daq.']) assert.ok(html.includes(t), t);
+    assert.ok(c.r({ id: 's2' }).includes("Sotuv ma'lumotlari yo'q"));
+    assert.ok(c.r({ id: 's3', leadRef: { id: 'zz', lang: 'russian' } }).includes('topilmadi'));
 });
