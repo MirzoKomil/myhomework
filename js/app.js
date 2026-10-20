@@ -9574,29 +9574,32 @@ function renderStudents() {
         const initials = (s.name || '—').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
         const genderLabel = s.gender === 'erkak' ? 'Erkak' : s.gender === 'ayol' ? 'Ayol' : '—';
 
+        const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+        const dueOk = due && !Number.isNaN(due.getTime());
+        const dueLate = dueOk && totalDebt > 0 && due < new Date(new Date().toDateString());
+        const payCell = `${statusHtml}${totalDebt > 0 ? `<div class="stx-sub">qoldiq ${escapeHtml(formatMoney(totalDebt))}</div>` : ''}${dueOk && totalDebt > 0 ? `<div class="stx-sub${dueLate ? ' stx-late' : ''}">${dueLate ? 'muddati oʻtdi · ' : 'keyingi · '}${escapeHtml(formatDateShort(s.paymentDueDate))}</div>` : ''}`;
+        const metaBits = [ageStr && ageStr !== '—' ? `${escapeHtml(ageStr)} yosh` : '', genderLabel !== '—' ? genderLabel : '', s.region ? escapeHtml(s.region) : ''].filter(Boolean).join(' · ');
+
         return `<tr data-student-row="${escapeHtml(s.id)}">
-            <td><input type="checkbox" class="student-check-input student-check" data-id="${escapeHtml(s.id)}"></td>
-            <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
+            <td><input type="checkbox" class="student-check-input student-check" data-id="${escapeHtml(s.id)}" aria-label="${escapeHtml(s.name || '')} — belgilash"></td>
             <td>
-                <div style="display:flex;align-items:center;gap:8px;min-width:120px">
+                <div class="stx-who">
                     <div class="student-avatar-mini">${escapeHtml(initials)}</div>
-                    <span style="font-weight:500${s.isStaffDemo ? ';color:var(--text-muted)' : ''}">${escapeHtml(s.name || '—')}</span>
-                    ${s.isStaffDemo ? `<span class="badge" style="background:#EDE9FE;color:#7C3AED;font-size:10px;font-weight:600" title="Xodim uchun avtomatik yaratilgan demo hisob">DEMO</span>` : ''}
+                    <div class="stx-who-txt">
+                        <span class="stx-name${s.isStaffDemo ? ' is-demo' : ''}">${escapeHtml(s.name || '—')}${s.isStaffDemo ? ` <span class="badge" style="background:#EDE9FE;color:#7C3AED;font-size:10px;font-weight:600" title="Xodim uchun avtomatik yaratilgan demo hisob">DEMO</span>` : ''}</span>
+                        <span class="stx-sub">#${escapeHtml(s.serialCode || String(s.id).slice(-6))} · ${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</span>
+                        ${metaBits ? `<span class="stx-sub">${metaBits}</span>` : ''}
+                    </div>
                 </div>
             </td>
-            <td><span class="student-id-badge">#${escapeHtml(s.serialCode || String(s.id).slice(-6))}</span></td>
-            <td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td>
-            <td>${escapeHtml(ageStr)}</td>
-            <td>${escapeHtml(genderLabel)}</td>
-            <td>${escapeHtml(s.region || '—')}</td>
-            <td>${startDate ? formatDateShort(startDate) : '—'}</td>
-            <td style="white-space:nowrap">${escapeHtml(teacher?.name || '—')}</td>
-            <td style="white-space:nowrap">${escapeHtml(asst?.name || '—')}</td>
+            <td>
+                <div class="stx-main">${escapeHtml(s.group || '—')}</div>
+                <div class="stx-sub stx-wrap">${escapeHtml(teacher?.name || 'ustoz yoʻq')}</div>${asst ? `<div class="stx-sub stx-wrap">yord. ${escapeHtml(asst.name)}</div>` : ''}
+            </td>
             <td style="white-space:nowrap">${escapeHtml(manager?.name || '—')}</td>
-            <td>${escapeHtml(endDate)}</td>
-            <td style="text-align:center">${attended || '—'}</td>
-            <td style="text-align:center">${s.grade ? escapeHtml(String(s.grade)) : '—'}</td>
-            <td>${statusHtml}</td>
+            <td style="white-space:nowrap"><div class="stx-main">${startDate ? formatDateShort(startDate) : '—'}</div><div class="stx-sub">tugash ${escapeHtml(endDate)}</div>${s.lessonTime ? `<div class="stx-sub">${escapeHtml(s.lessonTime)}${s.lessonDuration ? ` · ${escapeHtml(String(s.lessonDuration))} daq` : ''}</div>` : ''}</td>
+            <td style="text-align:center"><div class="stx-main">${attended || '—'}</div><div class="stx-sub">baho ${s.grade ? escapeHtml(String(s.grade)) : '—'}</div></td>
+            <td>${payCell}</td>
             <td>
                 <div style="position:relative;display:inline-block">
                     <button type="button" class="student-menu-btn" data-smid="${escapeHtml(s.id)}" title="Amallar">
@@ -9605,7 +9608,7 @@ function renderStudents() {
                 </div>
             </td>
         </tr>`;
-    }).join('') || `<tr><td colspan="17" style="text-align:center;padding:32px;color:var(--text-muted)">${
+    }).join('') || `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">${
         isTeacherRole && !ownTeacherForFilter
             ? "Hisobingiz hali biror ustoz yozuviga ulanmagan — bu texnik muammo, iltimos administratorga murojaat qiling."
             : "O'quvchilar yo'q"
