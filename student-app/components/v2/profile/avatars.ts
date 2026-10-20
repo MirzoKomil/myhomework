@@ -61,3 +61,9 @@ export function presetUri(id: string): string | null {
   const resolve = (Image as { resolveAssetSource?: (s: unknown) => { uri?: string } | null }).resolveAssetSource;
   return resolve ? resolve(src)?.uri ?? null : null;
 }
+
+/** Avatar manzili tayyor avatarlardan biriga tegishli bo'lsa — uning kaliti. */
+export function presetKeyForUri(uri: string | null | undefined): PresetKey | null {
+  if (!uri) return null;
+  return PRESETS.find((p) => presetUri(p.id) === uri)?.key ?? null;
+}

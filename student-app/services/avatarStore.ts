@@ -11,6 +11,10 @@ const UPLOAD_BASE =
   Platform.OS === 'web'
     ? '/api/upload/community-image'
     : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/upload/community-image';
+const PROFILE_BASE =
+  Platform.OS === 'web'
+    ? '/api/state/demo-profile'
+    : (process.env.EXPO_PUBLIC_API_URL ?? 'https://myhomework.uz') + '/api/state/demo-profile';
 const SYNC_BASE =
   Platform.OS === 'web'
     ? '/api/state/demo-profile/avatar'
@@ -76,8 +80,39 @@ async function ensureLoaded(): Promise<void> {
       .finally(() => {
         loaded = true;
       });
+
   }
   return loadPromise;
+}
+
+let serverChecked = false;
+// O'quvchi shu orada avatarni o'zi almashtirsa — eski server javobi uni bosib ketmasin.
+let localEdits = 0;
+function refreshFromServer() {
+  if (serverChecked) return;
+  serverChecked = true;
+  const editsAtStart = localEdits;
+  authedFetch(PROFILE_BASE)
+    .then((r) => {
+      if (!r.ok) throw new Error('profile ' + r.status);
+      return r.json();
+    })
+    .then(async (data) => {
+      const url = typeof data?.avatarUrl === 'string' ? data.avatarUrl.trim() : '';
+      await loadPromise;
+      if (!url || url === avatarUri || localEdits !== editsAtStart) return;
+      avatarUri = url;
+      notify();
+      AsyncStorage.setItem(AVATAR_KEY, url).catch(() => {});
+    })
+    .catch(() => {
+      serverChecked = false;
+    });
+}
+
+/** Rasm allaqachon doimiy manzilda (sayt ichidagi yoki http) — qayta yuklash shart emas. */
+function isStableUrl(uri: string) {
+  return /^(https?:)?\/\//.test(uri) || (uri.startsWith('/') && !uri.startsWith('//'));
 }
 
 export function getAvatarUri(): string | null {
@@ -86,6 +121,9 @@ export function getAvatarUri(): string | null {
 
 export async function loadAvatar(): Promise<void> {
   await ensureLoaded();
+  // Avatar faqat shu qurilmada emas, serverda ham saqlanadi — boshqa qurilmadan
+  // kirganda (yoki boshqa qurilmada almashtirilgan bo'lsa) server qiymati ustun.
+  refreshFromServer();
   notify();
 }
 
@@ -94,12 +132,21 @@ export async function setAvatarUri(uri: string): Promise<void> {
   // kutmasdan darhol ko'radi. Fon rejimida esa rasm serverga yuklanib, doimiy
   // havola bilan almashtiriladi (mahalliy vaqtinchalik uri qurilma qayta
   // ochilganda yoki boshqa o'quvchilarga ko'rsatilganda ishlamay qolar edi).
+  localEdits += 1;
   avatarUri = uri;
   notify();
   try {
     await AsyncStorage.setItem(AVATAR_KEY, uri);
   } catch {
     // Xotiraga yozib bo'lmasa jim o'tkazib yuboramiz.
+  }
+
+  // Tayyor avatar (dizayndagi rasm) sayt ichida doimiy manzilda turadi — uni
+  // nusxalab yuklamaymiz, manzilning o'zini saqlaymiz. Yuklangan fayllar server
+  // qayta ishga tushganda yo'qolishi mumkin, tayyor avatar esa yo'qolmaydi.
+  if (isStableUrl(uri)) {
+    syncAvatarToServer(uri);
+    return;
   }
 
   const uploadedUrl = await uploadAvatarImage(uri);
