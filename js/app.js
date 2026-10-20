@@ -26053,6 +26053,7 @@ function renderDebtorsTable(containerId) {
         const dayTxt = days === null ? '' : days < 0 ? `${-days} kun oʻtdi` : days === 0 ? 'bugun' : `${days} kun qoldi`;
         const badge = st.frozen ? '<span class="debtor-badge frozen">Muzlatilgan</span>'
             : overdue ? '<span class="debtor-badge overdue">Muddati oʻtgan</span>'
+            : st.debtAmount == null ? '<span class="dbx-wait">Qarz aniqlanmagan</span>'
             : due ? '<span class="dbx-wait">Kutilmoqda</span>' : '<span class="dbx-wait">Sana kelishilmagan</span>';
         const initials = (st.name || '—').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
         const phoneHref = String(st.phone || '').replace(/[^\d+]/g, '');
@@ -26205,11 +26206,6 @@ function openDebtorMenu(studentId, triggerBtn) {
                 openDebtorEditModal(studentId);
             } else if (action === 'payment') {
                 inflowUI.openPayment(studentId);
-            } else if (action === 'delete') {
-                if (!confirm(`"${s.name}" ni o'chirishni tasdiqlaysizmi?`)) return;
-                const all = getItem(STORAGE_KEYS.students, []).filter(x => x.id !== studentId);
-                setItem(STORAGE_KEYS.students, all);
-                refreshAllDebtorViews();
             }
         };
     });

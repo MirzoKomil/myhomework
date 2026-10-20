@@ -8966,3 +8966,4 @@ body.modal-open {
 #cfKpiGrid .stat-label{color:var(--mx-muted)}
 .ifx-hist-sum{margin:0 0 14px}.ifx-ok{color:#0F7A55}
 .ifx-hist-sum div{background:var(--surface);border:1px solid var(--border)}
+.ifx-table td:nth-child(4){font-size:13px}
