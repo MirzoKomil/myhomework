@@ -8847,3 +8847,20 @@ body.modal-open {
 .bhx-empty{text-align:center;padding:40px 20px;color:#5B6076}
 .bhx-empty img{width:96px;height:96px;object-fit:contain;opacity:.9}
 @media (max-width:600px){.bhx-hero{flex-direction:column;align-items:flex-start;padding:18px}.bhx-hero img{width:84px;height:84px}.bhx-hero h2{font-size:20px;line-height:26px}}
+
+/* ===== Sotuv · Lid qo'shish oynasi ===== */
+.alx-sub{margin:-4px 0 14px;font-size:13px;color:#5B6076}
+.alx-req{color:#C62828;font-weight:700}
+.alx-opt-l{font-weight:400;color:#5B6076}
+.alx-err{margin:6px 0 0;font-size:13px;font-weight:600;color:#C62828}
+#modalBody .form-control.is-invalid{border-color:#C62828;box-shadow:0 0 0 3px rgba(198,40,40,.12)}
+.alx-set{border:0;margin:0 0 14px;padding:0}
+.alx-set legend{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;padding:0}
+.alx-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.alx-opt{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border:1px solid #D5D8E3;border-radius:12px;cursor:pointer;font-size:14px;font-weight:600}
+.alx-opt input{width:18px;height:18px;accent-color:var(--purple);margin:0}
+.alx-opt:has(input:checked){border-color:var(--purple);background:var(--purple-light)}
+.alx-opt:has(input:focus-visible){outline:2px solid var(--purple);outline-offset:2px}
+.alx-dup{margin:-4px 0 14px;padding:12px 14px;border-radius:12px;background:#FFF4D6;border:1px solid #F3D27A;color:#5C3D00;font-size:13px;line-height:1.45}
+.alx-dup ul{margin:6px 0;padding-left:18px}
+.alx-dup li span{color:#7A5A1A}

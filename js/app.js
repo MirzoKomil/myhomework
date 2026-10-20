@@ -21494,65 +21494,137 @@ function openAssignManagerModal(lang, leadId) {
     };
 }
 
+// Telefonni bitta ko'rinishga keltiradi: O'zbekiston raqami "+998XXXXXXXXX",
+// xorijiy raqam "+" va 10–15 raqam. Noto'g'ri bo'lsa null.
+function normalizeLeadPhoneInput(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 9) return '+998' + digits;
+    if (digits.length === 12 && digits.startsWith('998')) return '+' + digits;
+    if (raw.startsWith('+') && !digits.startsWith('998') && digits.length >= 10 && digits.length <= 15) return '+' + digits;
+    return null;
+}
+
+// Shu raqam bilan mavjud lid yoki o'quvchini topadi (oxirgi 9 raqam bo'yicha).
+function findLeadPhoneDuplicates(phone) {
+    const key = String(phone || '').replace(/\D/g, '').slice(-9);
+    if (key.length < 9) return [];
+    const same = p => String(p || '').replace(/\D/g, '').slice(-9) === key;
+    const out = [];
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    ['english', 'russian'].forEach(lang => (leads[lang] || []).forEach(l => {
+        if (same(l.phone) || same(l.phone2)) {
+            const col = LEAD_COLUMNS.find(c => c.id === normalizeLeadStatus(l.status));
+            out.push({ kind: 'Lid', name: l.name, extra: `${col?.label || ''} · ${managers.find(m => m.id === l.managerId)?.name || 'menejer biriktirilmagan'}` });
+        }
+    }));
+    getItem(STORAGE_KEYS.students, []).forEach(st => {
+        if (!st.isStaffDemo && (same(st.phone) || same(st.parentPhone))) out.push({ kind: 'Oʻquvchi', name: st.name, extra: st.group || '' });
+    });
+    return out;
+}
+
+function getLeadModalManagers(lang) {
+    const byLang = getSalesManagers(lang);
+    const known = getItem(STORAGE_KEYS.salesManagers, []);
+    if (!byLang.length) return known;
+    const knownIds = new Set(known.map(m => m.id));
+    // HR ro'yxatidagi til bo'yicha menejerlar; sotuv jadvalida bor bo'lganlari afzal.
+    const list = byLang.filter(m => !known.length || knownIds.has(m.id));
+    return list.length ? list : byLang;
+}
+
 function openAddLeadModal() {
     const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const _cuModal = getCurrentUser();
     const _isSmModal = _cuModal && _cuModal.role === 'sales_manager';
-    const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
-    const managers = allManagers.filter(m => (m.lang || 'english') === defaultLang);
     const autoManagerId = _isSmModal ? (_cuModal.linkedManagerId || '') : '';
-    const managerOptions = `<option value="">— Biriktirilmagan —</option>
-        ${managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === autoManagerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
+    const managerOptions = lang => `<option value="">— Biriktirilmagan —</option>
+        ${getLeadModalManagers(lang).map(m => `<option value="${escapeHtml(m.id)}"${m.id === autoManagerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
+    const radio = (name, value, label, checked) => `<label class="alx-opt"><input type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}><span>${label}</span></label>`;
 
-    openModal("Yangi lid qo'shish",
-        `<div class="form-group"><label>Ism-familiya</label><input id="mLeadName" class="form-control" placeholder="Masalan: Ali Valiyev"></div>
-         <div class="form-group"><label>Telefon</label><input id="mLeadPhone" class="form-control" placeholder="+998 90 123 45 67"></div>
-         <div class="form-group"><label>2-telefon</label><input id="mLeadPhone2" class="form-control" placeholder="+998 91 234 56 78"></div>
-         <div class="form-group" ${_isSmModal ? 'style="display:none"' : ''}><label>Sotuv menejeri</label>
-            <select id="mLeadManagerId" class="form-select">${managerOptions}</select>
+    openModal("Yangi lid qoʻshish",
+        `<p class="alx-sub">Lid "Yangi lidlar" bosqichiga tushadi. <span aria-hidden="true">*</span> — majburiy maydon.</p>
+         <div class="form-group"><label for="mLeadName">Ism-familiya <b class="alx-req">*</b></label><input id="mLeadName" class="form-control" autocomplete="off" placeholder="Masalan: Ali Valiyev"><p class="alx-err" id="mLeadNameErr" hidden></p></div>
+         <div class="form-group"><label for="mLeadPhone">Telefon <b class="alx-req">*</b></label><input id="mLeadPhone" class="form-control" inputmode="tel" autocomplete="off" placeholder="+998 90 123 45 67"><p class="alx-err" id="mLeadPhoneErr" hidden></p></div>
+         <div class="form-group"><label for="mLeadPhone2">2-telefon <span class="alx-opt-l">(ixtiyoriy)</span></label><input id="mLeadPhone2" class="form-control" inputmode="tel" autocomplete="off" placeholder="+998 91 234 56 78"><p class="alx-err" id="mLeadPhone2Err" hidden></p></div>
+         <div class="alx-dup" id="mLeadDup" hidden></div>
+         <div class="form-group" ${_isSmModal ? 'style="display:none"' : ''}><label for="mLeadManagerId">Sotuv menejeri</label>
+            <select id="mLeadManagerId" class="form-select">${managerOptions(defaultLang)}</select>
          </div>
-         <div class="form-group"><label>Til</label>
-            <select id="mLeadLang" class="form-select">
-                <option value="english"${defaultLang === 'english' ? ' selected' : ''}>Ingliz tili</option>
-                <option value="russian"${defaultLang === 'russian' ? ' selected' : ''}>Rus tili</option>
-            </select>
-         </div>
-         <div class="form-group"><label>Lid turi</label>
-            <select id="mLeadType" class="form-select">
-                <option value="organic">Organik</option>
-                <option value="target">Target (reklama)</option>
-            </select>
-         </div>`,
-        `<button class="btn-primary-sm" id="saveLead">Saqlash</button>`
+         <fieldset class="alx-set"><legend>Til</legend><div class="alx-row">
+            ${radio('mLeadLang', 'english', 'Ingliz tili', defaultLang === 'english')}${radio('mLeadLang', 'russian', 'Rus tili', defaultLang === 'russian')}
+         </div></fieldset>
+         <fieldset class="alx-set"><legend>Lid turi <b class="alx-req">*</b> — qayerdan keldi?</legend><div class="alx-row">
+            ${radio('mLeadType', 'organic', 'Organik', false)}${radio('mLeadType', 'target', 'Target (reklama)', false)}
+         </div><p class="alx-err" id="mLeadTypeErr" hidden></p></fieldset>
+         <div class="form-group" style="margin-bottom:0"><label for="mLeadNote">Izoh <span class="alx-opt-l">(ixtiyoriy)</span></label><textarea id="mLeadNote" class="form-control" rows="2" placeholder="Masalan: IELTS kerak, kechqurun qoʻngʻiroq qilish"></textarea></div>`,
+        `<button type="button" class="btn-ghost" id="cancelLead">Bekor qilish</button><button type="button" class="btn-primary-sm" id="saveLead">Lidni saqlash</button>`
     );
+    document.getElementById('cancelLead').onclick = closeModal;
+    document.querySelectorAll('input[name="mLeadLang"]').forEach(r => r.addEventListener('change', () => {
+        const sel = document.getElementById('mLeadManagerId');
+        if (sel && !_isSmModal) { const keep = sel.value; sel.innerHTML = managerOptions(r.value); if ([...sel.options].some(o => o.value === keep)) sel.value = keep; }
+    }));
+    const setErr = (id, msg) => {
+        const el = document.getElementById(id + 'Err');
+        const input = document.getElementById(id);
+        if (el) { el.hidden = !msg; el.textContent = msg || ''; }
+        if (input) { input.classList.toggle('is-invalid', !!msg); input.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
+    };
+    let dupAcknowledged = '';
+    document.getElementById('mLeadPhone').addEventListener('input', () => { dupAcknowledged = ''; document.getElementById('mLeadDup').hidden = true; document.getElementById('saveLead').textContent = 'Lidni saqlash'; });
 
     document.getElementById('saveLead').onclick = () => {
         const name = document.getElementById('mLeadName').value.trim();
-        if (!name) return;
-        const lang = document.getElementById('mLeadLang').value;
-        const leadType = document.getElementById('mLeadType').value;
+        const phone = normalizeLeadPhoneInput(document.getElementById('mLeadPhone').value);
+        const phone2Raw = document.getElementById('mLeadPhone2').value;
+        const phone2 = normalizeLeadPhoneInput(phone2Raw);
+        const lang = document.querySelector('input[name="mLeadLang"]:checked')?.value || defaultLang;
+        const leadType = document.querySelector('input[name="mLeadType"]:checked')?.value || '';
+        setErr('mLeadName', name ? '' : 'Ism-familiyani kiriting');
+        setErr('mLeadPhone', phone ? '' : (document.getElementById('mLeadPhone').value.trim() ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : 'Telefon raqamini kiriting'));
+        setErr('mLeadPhone2', phone2 === null ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : '');
+        const typeErr = document.getElementById('mLeadTypeErr');
+        if (typeErr) { typeErr.hidden = !!leadType; typeErr.textContent = leadType ? '' : 'Lid qayerdan kelganini tanlang'; }
+        if (!name || !phone || phone2 === null || !leadType) {
+            (document.querySelector('#modalBody .is-invalid') || document.querySelector('input[name="mLeadType"]'))?.focus();
+            return;
+        }
+        const dups = findLeadPhoneDuplicates(phone);
+        if (dups.length && dupAcknowledged !== phone) {
+            const box = document.getElementById('mLeadDup');
+            box.innerHTML = `<strong>Bu raqam bazada bor:</strong><ul>${dups.slice(0, 4).map(d => `<li>${escapeHtml(d.kind)} · ${escapeHtml(d.name || '')}${d.extra ? ` <span>(${escapeHtml(d.extra)})</span>` : ''}</li>`).join('')}</ul><span>Takroriy lid ochmaslik uchun avval mavjudini tekshiring. Baribir saqlash uchun tugmani yana bosing.</span>`;
+            box.hidden = false;
+            dupAcknowledged = phone;
+            document.getElementById('saveLead').textContent = 'Baribir saqlash';
+            return;
+        }
         const sourceLabel = leadType === 'organic' ? 'Organik' : 'Target (reklama)';
-
         const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         leads[lang] = leads[lang] || [];
-        const _newLeadManagerId = document.getElementById('mLeadManagerId').value || '';
+        const _newLeadManagerId = _isSmModal ? autoManagerId : (document.getElementById('mLeadManagerId').value || '');
+        const note = document.getElementById('mLeadNote').value.trim();
+        const nowIso = new Date().toISOString();
         const newLead = {
             id: 'l' + Date.now(),
             name,
-            phone: document.getElementById('mLeadPhone').value.trim(),
-            phone2: document.getElementById('mLeadPhone2').value.trim(),
+            phone,
+            phone2: phone2 || '',
             managerId: _newLeadManagerId,
             source: sourceLabel,
             leadType,
             status: 'yangi-lidlar',
-            comments: [],
+            comments: note ? [createLeadComment({ text: note, author: _cuModal?.name || 'Admin', type: 'manual' })] : [],
             managerPhoto: null,
             attachments: [],
-            createdAt: new Date().toISOString(),
-            slaStageEnteredAt: new Date().toISOString(),
+            createdAt: nowIso,
+            slaStageEnteredAt: nowIso,
             // 1-vazifa: yaratilishdayoq menejer tanlangan bo'lsa, bu ham
             // "biriktirilgan sana" hisoblanadi.
-            managerAssignedAt: _newLeadManagerId ? new Date().toISOString() : null,
+            managerAssignedAt: _newLeadManagerId ? nowIso : null,
             date: new Date().toLocaleDateString('uz-UZ')
         };
         leads[lang].push(newLead);
@@ -21560,6 +21632,7 @@ function openAddLeadModal() {
         persistLeadChange(lang, newLead).catch(() => {});
         closeModal();
         renderLeads();
+        showMiniToast(`${name} — lid qoʻshildi`);
     };
 }
 
