@@ -7,7 +7,7 @@ async function teacherForActor(client, actor) {
     const { rows } = await client.query(`SELECT he.id, he.name FROM users u
         JOIN hr_employees he ON LOWER(TRIM(he.login)) = LOWER(TRIM(u.email))
         WHERE u.id = $1 AND u.role = 'teacher'
-          AND he.role IN ('ingliz-oqituvchi', 'rus-oqituvchi', 'yordamchi')`, [actor.id]);
+          AND he.role IN ('oqituvchi', 'asosiy', 'ingliz-oqituvchi', 'rus-oqituvchi', 'yordamchi')`, [actor.id]);
     if (rows.length !== 1) throw error(403, 'Ustoz akkaunti HR profiliga aniq biriktirilishi kerak');
     return rows[0];
 }

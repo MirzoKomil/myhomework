@@ -1627,7 +1627,10 @@ async function restoreLead(id, actor = {}) {
 async function saveHrEmployeesData(client, employees, actor = {}) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
     await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
-    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id,dual_role FROM hr_employees')).rows;
+    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date FROM hr_employees')).rows;
+    // Toʻliq HR huquqi boʻlmagan rol (masalan ROP) maxfiy maydonlarni koʻrmaydi —
+    // saqlaganda ular boʻsh qiymat bilan ustidan yozilib ketmasin.
+    employees = require('./services/stateScope').preserveHrPrivateFields(employees, oldEmployees, actor);
     for (const e of employees) {
         if (e.dualRole !== undefined && typeof e.dualRole !== 'boolean') throw Object.assign(new Error('Ikkilamchi rol boolean bo‘lishi kerak'), { status: 400 });
         if (e.dualRole === true && !require('../js/teacherRoles').isMain(e)) throw Object.assign(new Error('Ikkilamchi rol faqat asosiy ustozga beriladi'), { status: 400 });

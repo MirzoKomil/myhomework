@@ -3,6 +3,10 @@ const express = require('express');
 const router = express.Router();
 
 const { authRequired, JWT_SECRET } = require('../middleware/auth');
+const { requireRoles } = require('../middleware/roles');
+// Nomzodlar (ism, telefon, rasm, ovoz) — faqat HR bilan ishlaydigan rollar.
+const HR_ROLES = ['admin', 'rop', 'boshliq', 'hr'];
+const hrAccess = requireRoles(HR_ROLES);
 const jwt = require('jsonwebtoken');
 const {
     listCandidates, getCandidateById, updateCandidate, deleteCandidate,
@@ -80,7 +84,7 @@ router.get('/meta', authRequired, (req, res) => {
     res.json({ stages: HR_STAGES, vacancies: VACANCIES, questionLabels });
 });
 
-router.get('/candidates', authRequired, async (req, res) => {
+router.get('/candidates', authRequired, hrAccess, async (req, res) => {
     try {
         res.json({ candidates: await listCandidates() });
     } catch (err) {
@@ -89,7 +93,7 @@ router.get('/candidates', authRequired, async (req, res) => {
     }
 });
 
-router.get('/candidates/:id', authRequired, async (req, res) => {
+router.get('/candidates/:id', authRequired, hrAccess, async (req, res) => {
     try {
         const candidate = await getCandidateById(req.params.id);
         if (!candidate) return res.status(404).json({ error: 'Nomzod topilmadi' });
@@ -100,7 +104,7 @@ router.get('/candidates/:id', authRequired, async (req, res) => {
     }
 });
 
-router.patch('/candidates/:id', authRequired, async (req, res) => {
+router.patch('/candidates/:id', authRequired, hrAccess, async (req, res) => {
     try {
         const body = req.body || {};
         if (body.stage !== undefined && normalizeHrStage(body.stage) !== body.stage) {
@@ -143,10 +147,17 @@ router.get('/candidates/:id/media/:kind', async (req, res) => {
     let token = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (!token && typeof req.query.token === 'string') token = req.query.token;
     if (!token) return res.status(401).json({ error: 'Avtorizatsiya talab qilinadi' });
+    let payload;
     try {
-        jwt.verify(token, JWT_SECRET);
+        payload = jwt.verify(token, JWT_SECRET);
     } catch {
         return res.status(401).json({ error: 'Token yaroqsiz' });
+    }
+    try {
+        const current = await require('../db').findUserById(payload.id);
+        if (!current || !HR_ROLES.includes(current.role)) return res.status(403).json({ error: 'Bu faylga ruxsat yoʻq' });
+    } catch {
+        return res.status(503).json({ error: 'Akkaunt ruxsatini tekshirib boʻlmadi' });
     }
 
     if (!MEDIA_KINDS.has(req.params.kind)) {
