@@ -1,0 +1,295 @@
+{
+ "n": 5,
+ "topic_uz": "Hozirgi zamon: «Что ты де́лаешь?» (1-tur fe'llar)",
+ "scene": "A woman Nigora relaxes on a sofa with headphones and talks on the phone; through the window two children play together.",
+ "dialogs": [
+  {
+   "id": "L05-d1",
+   "title_ru": "По телефо́ну",
+   "title_uz": "Telefonda",
+   "intro_uz": "Birinchi dialog. Nigora eri Abdulazizga qo'ng'iroq qildi. Kim nima qilyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Алло́! Что ты де́лаешь?",
+     "uz": "Allo! Nima qilyapsan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я обе́даю. А ты что де́лаешь?",
+     "uz": "Tushlik qilyapman. Sen nima qilyapsan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я отдыха́ю и слу́шаю му́зыку.",
+     "uz": "Dam olyapman va musiqa tinglayapman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А что де́лают де́ти?",
+     "uz": "Bolalar nima qilyapti?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Они́ игра́ют вме́сте.",
+     "uz": "Ular birga o'ynashyapti."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́! Пока́!",
+     "uz": "Yaxshi! Xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz nima qilyapti?",
+     "opts": [
+      "ishlayapti",
+      "tushlik qilyapti",
+      "o'qiyapti"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora nima qilyapti?",
+     "opts": [
+      "dam olyapti, musiqa tinglayapti",
+      "ovqat qilyapti",
+      "sayr qilyapti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bolalar nima qilyapti?",
+     "opts": [
+      "o'qiyapti",
+      "uxlayapti",
+      "birga o'ynayapti"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Я обе́даю",
+     "alts": [
+      "Я рабо́таю",
+      "Я чита́ю",
+      "Я отдыха́ю"
+     ]
+    },
+    {
+     "base": "Они́ игра́ют",
+     "alts": [
+      "Они́ чита́ют",
+      "Они́ гуля́ют",
+      "Они́ обе́дают"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: hozir nima qilayotganingizni va bolalar nima qilayotganini ayting."
+  },
+  {
+   "id": "L05-d2",
+   "title_ru": "В па́рке",
+   "title_uz": "Parkda",
+   "intro_uz": "Ikkinchi dialog. Anton parkda Dilnozani ko'rib qoldi. Dilnoza rus tilini o'rganyaptimi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Приве́т, Дильно́за! Что вы здесь де́лаете?",
+     "uz": "Salom, Dilnoza! Bu yerda nima qilyapsizlar?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Приве́т! Мы гуля́ем. А вы?",
+     "uz": "Salom! Biz sayr qilyapmiz. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я то́же гуля́ю. Вы изуча́ете ру́сский?",
+     "uz": "Men ham sayr qilyapman. Siz rus tilini o'rganyapsizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, изуча́ю. Я чита́ю и слу́шаю.",
+     "uz": "Ha, o'rganyapman. O'qiyman va tinglayman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Вы меня́ понима́ете?",
+     "uz": "Meni tushunyapsizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, понима́ю! Спаси́бо.",
+     "uz": "Ha, tushunyapman! Rahmat."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza parkda nima qilyapti?",
+     "opts": [
+      "o'ynayapti",
+      "ishlayapti",
+      "sayr qilyapti"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnoza nimani o'rganyapti?",
+     "opts": [
+      "rus tilini",
+      "ingliz tilini",
+      "musiqani"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza Antonni tushunyaptimi?",
+     "opts": [
+      "yo'q",
+      "ha, tushunyapti",
+      "bilmaydi"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "гуля́ем",
+     "alts": [
+      "отдыха́ем",
+      "игра́ем",
+      "чита́ем"
+     ]
+    },
+    {
+     "base": "Вы изуча́ете ру́сский?",
+     "alts": [
+      "Вы зна́ете ру́сский?",
+      "Вы понима́ете ру́сский?",
+      "Вы чита́ете по-ру́сски?"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: hozir nima qilayotganingizni va rus tilini o'rganayotganingizni ayting."
+  },
+  {
+   "id": "L05-d3",
+   "title_ru": "До́ма",
+   "title_uz": "Uyda",
+   "intro_uz": "Uchinchi dialog. Nigora uyda o'g'li Sardordan so'rayapti: kim nima qilyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Сардо́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Сардо́р, что ты де́лаешь?",
+     "uz": "Sardor, nima qilyapsan?"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Я игра́ю, ма́ма.",
+     "uz": "O'ynayapman, oyi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А что де́лает Маржона́?",
+     "uz": "Marjona nima qilyapti?"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Она́ чита́ет кни́гу.",
+     "uz": "U kitob o'qiyapti."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А па́па? Что он де́лает?",
+     "uz": "Dadang-chi? U nima qilyapti?"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Па́па отдыха́ет. Он слу́шает му́зыку.",
+     "uz": "Dadam dam olyapti. U musiqa tinglayapti."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Sardor nima qilyapti?",
+     "opts": [
+      "o'ynayapti",
+      "o'qiyapti",
+      "uxlayapti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Marjona nima qilyapti?",
+     "opts": [
+      "sayr qilyapti",
+      "kitob o'qiyapti",
+      "ishlayapti"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dada nima qilyapti?",
+     "opts": [
+      "ishlayapti",
+      "tushlik qilyapti",
+      "dam olib, musiqa tinglayapti"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Я игра́ю",
+     "alts": [
+      "Я чита́ю",
+      "Я ду́маю",
+      "Я гуля́ю"
+     ]
+    },
+    {
+     "base": "Она́ чита́ет кни́гу",
+     "alts": [
+      "Она́ слу́шает му́зыку",
+      "Она́ отдыха́ет",
+      "Она́ обе́дает"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Sardor o'rniga gapiring: oilangizda kim hozir nima qilayotganini ayting."
+  }
+ ]
+}

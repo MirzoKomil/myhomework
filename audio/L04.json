@@ -1,0 +1,300 @@
+{
+ "n": 4,
+ "topic_uz": "«У кого́ есть…?» — kimda nima bor",
+ "scene": "In a classroom, a male teacher holds up a dictionary while a young woman Nigora raises her hand; a table and chairs are around them.",
+ "dialogs": [
+  {
+   "id": "L04-d1",
+   "title_ru": "У кого́ есть слова́рь?",
+   "title_uz": "Kimda lug'at bor?",
+   "intro_uz": "Birinchi dialog. Darsda ustoz so'raydi: kimda lug'at bor? Nigora javob beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Учи́тель",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Учи́тель",
+     "ru": "У кого́ есть слова́рь?",
+     "uz": "Kimda lug'at bor?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "У меня́ есть слова́рь. Вот он.",
+     "uz": "Menda lug'at bor. Mana u."
+    },
+    {
+     "who": "Учи́тель",
+     "ru": "Спаси́бо. У кого́ есть вопро́с?",
+     "uz": "Rahmat. Kimda savol bor?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "У меня́ есть вопро́с. Что э́то?",
+     "uz": "Menda savol bor. Bu nima?"
+    },
+    {
+     "who": "Учи́тель",
+     "ru": "Э́то стул. А э́то стол.",
+     "uz": "Bu stul. Bu esa stol."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Спаси́бо!",
+     "uz": "Rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kimda lug'at bor?",
+     "opts": [
+      "ustozda",
+      "Nigorada",
+      "hech kimda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigorada yana nima bor?",
+     "opts": [
+      "savol",
+      "ruchka",
+      "kompyuter"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ustoz qaysi so'zlarni aytdi?",
+     "opts": [
+      "choy va sharbat",
+      "kitob va daftar",
+      "stul va stol"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "слова́рь",
+     "alts": [
+      "ру́чка",
+      "компью́тер",
+      "кни́га"
+     ]
+    },
+    {
+     "base": "вопро́с",
+     "alts": [
+      "вре́мя",
+      "тетра́дь",
+      "телефо́н"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz ustoz o'rniga gapiring: «У кого́ есть…?» deb uchta narsa so'rang."
+  },
+  {
+   "id": "L04-d2",
+   "title_ru": "У нас го́сти!",
+   "title_uz": "Bizda mehmonlar!",
+   "intro_uz": "Ikkinchi dialog. Abdulaziz va Nigoraning uyiga mehmon keldi. Uyda nima bor? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, у нас го́сти!",
+     "uz": "Nigora, bizga mehmon keldi!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́! У нас есть чай?",
+     "uz": "Yaxshi! Bizda choy bormi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, есть чай и сок.",
+     "uz": "Ha, choy ham, sharbat ham bor."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Отли́чно. А кто там?",
+     "uz": "Juda yaxshi. U yerda kim?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Там Анто́н. У него́ есть торт!",
+     "uz": "U yerda Anton. Unda tort bor!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте, Анто́н! Вот чай.",
+     "uz": "Assalomu alaykum, Anton! Mana choy."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Uyda nima bor?",
+     "opts": [
+      "choy va sharbat",
+      "faqat suv",
+      "qahva"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Mehmon kim?",
+     "opts": [
+      "Bobur",
+      "Timur",
+      "Anton"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Antonda nima bor?",
+     "opts": [
+      "gul",
+      "tort",
+      "kitob"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "чай и сок",
+     "alts": [
+      "чай и вода́",
+      "ко́фе и сок",
+      "чай и хлеб"
+     ]
+    },
+    {
+     "base": "торт",
+     "alts": [
+      "цветы́",
+      "кни́га",
+      "сок"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: uyda choy, sharbat yoki non bormi, so'rang."
+  },
+  {
+   "id": "L04-d3",
+   "title_ru": "У вас есть вре́мя?",
+   "title_uz": "Vaqtingiz bormi?",
+   "intro_uz": "Uchinchi dialog. Dilnoza ofisda. Unga kompyuter kerak. Kimda kompyuter bor? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, у вас есть вре́мя?",
+     "uz": "Anton, vaqtingiz bormi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да, есть. У вас вопро́с?",
+     "uz": "Ha, bor. Savolingiz bormi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да. У вас есть компью́тер?",
+     "uz": "Ha. Sizda kompyuter bormi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Нет, у меня́ нет компью́тера.",
+     "uz": "Yo'q, menda kompyuter yo'q."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А у кого́ есть компью́тер?",
+     "uz": "Kimda kompyuter bor unda?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "У Бобу́ра. Вот он, там.",
+     "uz": "Boburda. Mana u, u yerda."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо, Анто́н!",
+     "uz": "Rahmat, Anton!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Antonning vaqti bormi?",
+     "opts": [
+      "yo'q",
+      "ha, bor",
+      "bilmaydi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnozaga nima kerak?",
+     "opts": [
+      "lug'at",
+      "pul",
+      "kompyuter"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Kimda kompyuter bor?",
+     "opts": [
+      "Boburda",
+      "Antonda",
+      "Nigorada"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "компью́тер",
+     "alts": [
+      "слова́рь",
+      "ру́чка",
+      "телефо́н"
+     ]
+    },
+    {
+     "base": "У Бобу́ра",
+     "alts": [
+      "У Анто́на",
+      "У Тиму́ра",
+      "У меня́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: hamkasbingizdan vaqti va kompyuteri bormi, so'rang."
+  }
+ ]
+}

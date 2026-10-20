@@ -1,0 +1,300 @@
+{
+ "n": 6,
+ "topic_uz": "«Что ты де́лаешь?» — inkor: «Нет, я не рабо́таю, я отдыха́ю»",
+ "scene": "In a family garden, a girl Marjona waters flowers while her father Abdulaziz watches her; their mother sings in the kitchen window.",
+ "dialogs": [
+  {
+   "id": "L06-d1",
+   "title_ru": "Ты рабо́таешь?",
+   "title_uz": "Ishlayapsanmi?",
+   "intro_uz": "Birinchi dialog. Bobur Nigoraga qo'ng'iroq qildi. Nigora ishlayaptimi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Нигора́, приве́т! Ты рабо́таешь?",
+     "uz": "Nigora, salom! Ishlayapsanmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, я не рабо́таю. Я отдыха́ю.",
+     "uz": "Yo'q, ishlamayapman. Dam olyapman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А Абдулази́з? Что он де́лает?",
+     "uz": "Abdulaziz-chi? U nima qilyapti?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он сейча́с гото́вит.",
+     "uz": "U hozir ovqat pishiryapti."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А де́ти? Они́ спят?",
+     "uz": "Bolalar-chi? Ular uxlayaptimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, они́ не спят. Они́ игра́ют.",
+     "uz": "Yo'q, ular uxlamayapti. Ular o'ynayapti."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora ishlayaptimi?",
+     "opts": [
+      "ha",
+      "yo'q, dam olyapti",
+      "bilmaymiz"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz nima qilyapti?",
+     "opts": [
+      "ovqat pishiryapti",
+      "uxlayapti",
+      "ishlayapti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bolalar nima qilyapti?",
+     "opts": [
+      "uxlayapti",
+      "o'qiyapti",
+      "o'ynayapti"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Я отдыха́ю",
+     "alts": [
+      "Я гуля́ю",
+      "Я чита́ю",
+      "Я смотрю́ фильм"
+     ]
+    },
+    {
+     "base": "Они́ игра́ют",
+     "alts": [
+      "Они́ гуля́ют",
+      "Они́ пою́т",
+      "Они́ танцу́ют"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: «Нет, я не…» deb javob bering va nima qilayotganingizni ayting."
+  },
+  {
+   "id": "L06-d2",
+   "title_ru": "В саду́",
+   "title_uz": "Bog'da",
+   "intro_uz": "Ikkinchi dialog. Marjona bog'da. Dadasi Abdulaziz so'raydi: kim nima qilyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Маржона́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Маржона́, что ты де́лаешь?",
+     "uz": "Marjona, nima qilyapsan?"
+    },
+    {
+     "who": "Маржона́",
+     "ru": "Я полива́ю цветы́.",
+     "uz": "Gullarga suv quyyapman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Молоде́ц! А Сардо́р то́же полива́ет?",
+     "uz": "Barakalla! Sardor ham suv quyyaptimi?"
+    },
+    {
+     "who": "Маржона́",
+     "ru": "Нет, он не полива́ет. Он смо́трит футбо́л.",
+     "uz": "Yo'q, u suv quymayapti. U futbol ko'ryapti."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А ма́ма? Что она́ де́лает?",
+     "uz": "Oying-chi? U nima qilyapti?"
+    },
+    {
+     "who": "Маржона́",
+     "ru": "Ма́ма гото́вит и поёт.",
+     "uz": "Oyim ovqat pishiryapti va qo'shiq aytyapti."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Marjona nima qilyapti?",
+     "opts": [
+      "gullarga suv quyyapti",
+      "o'qiyapti",
+      "raqs tushyapti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Sardor nima qilyapti?",
+     "opts": [
+      "suv quyyapti",
+      "uxlayapti",
+      "futbol ko'ryapti"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Oyisi nima qilyapti?",
+     "opts": [
+      "dam olyapti",
+      "ovqat pishiryapti va qo'shiq aytyapti",
+      "yozyapti"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "полива́ю цветы́",
+     "alts": [
+      "чита́ю кни́гу",
+      "слу́шаю му́зыку",
+      "пишу́"
+     ]
+    },
+    {
+     "base": "смо́трит футбо́л",
+     "alts": [
+      "спит",
+      "игра́ет",
+      "отдыха́ет"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Marjona o'rniga gapiring: siz, akangiz va onangiz nima qilayotganini ayting."
+  },
+  {
+   "id": "L06-d3",
+   "title_ru": "На пра́зднике",
+   "title_uz": "Bayramda",
+   "intro_uz": "Uchinchi dialog. Anton va Dilnoza to'yda. Kim raqs tushyapti, kim qo'shiq aytyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, вы танцу́ете?",
+     "uz": "Dilnoza, raqs tushasizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет, я не танцу́ю. Я слу́шаю.",
+     "uz": "Yo'q, raqs tushmayman. Tinglayapman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А что де́лают Нигора́ и Бобу́р?",
+     "uz": "Nigora va Bobur nima qilyapti?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Они́ танцу́ют вме́сте.",
+     "uz": "Ular birga raqs tushyapti."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А вы поёте?",
+     "uz": "Siz qo'shiq aytasizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, я пою́. А вы?",
+     "uz": "Ha, aytaman. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Нет, я не пою́. Я слу́шаю!",
+     "uz": "Yo'q, men aytmayman. Men tinglayman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza raqs tushyaptimi?",
+     "opts": [
+      "ha",
+      "yo'q, tinglayapti",
+      "bilmaymiz"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora va Bobur nima qilyapti?",
+     "opts": [
+      "qo'shiq aytyapti",
+      "ovqat yeyapti",
+      "raqs tushyapti"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Kim qo'shiq aytmaydi?",
+     "opts": [
+      "Anton",
+      "Dilnoza",
+      "Nigora"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "танцу́ете",
+     "alts": [
+      "поёте",
+      "отдыха́ете",
+      "игра́ете"
+     ]
+    },
+    {
+     "base": "Я слу́шаю",
+     "alts": [
+      "Я отдыха́ю",
+      "Я смотрю́",
+      "Я ду́маю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: raqs tushasizmi, qo'shiq aytasizmi — «да» yoki «нет, я не…» bilan javob bering."
+  }
+ ]
+}
