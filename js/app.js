@@ -23527,12 +23527,22 @@ function renderScriptContentHtml(content) {
 
 function stripHtmlToText(html) {
     if (!html) return '';
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return (div.textContent || '').replace(/\s+/g, ' ').trim();
+    // DOMParser hujjati rasmlarni yuklamaydi va onerror kabi kodlarni ishga tushirmaydi.
+    const doc = new DOMParser().parseFromString(String(html), 'text/html');
+    return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
 let _currentScriptId = null;
+
+let _scriptQuery = '';
+function isScriptsTwoPane() {
+    return typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 901px)').matches : true;
+}
+
+function scriptTint(color) {
+    const hex = String(color || '#6366f1').trim();
+    return /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#6366f1';
+}
 
 function renderScripts() {
     const grid = document.getElementById('scriptsGrid');
@@ -23544,36 +23554,70 @@ function renderScripts() {
     if (backBtn) backBtn.onclick = closeScriptArticle;
 
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    const scripts = getItem(STORAGE_KEYS.scripts, []).filter(s => (s.lang || 'english') === lang);
+    const all = getItem(STORAGE_KEYS.scripts, []).filter(s => (s.lang || 'english') === lang);
+    const sub = document.getElementById('scriptsSubtitle');
+    if (sub) sub.textContent = `${lang === 'russian' ? 'Rus tili' : 'Ingliz tili'} yoʻnalishi · ${all.length} ta maqola`;
+    grid.className = 'scr';
 
-    if (!scripts.length) {
+    if (!all.length) {
         grid.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--text-muted)">
-            <div style="font-size:56px;margin-bottom:16px">📚</div>
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px">Hozircha skript yo'q</h3>
-            <p style="font-size:14px;margin:0">Birinchi artikl qo'shish uchun "Artikl qo'shish" tugmasini bosing</p>
+        <div class="scr-empty">
+            <div style="font-size:48px;margin-bottom:12px">📚</div>
+            <h3>Hozircha skript yoʻq</h3>
+            <p>Birinchi maqolani qoʻshish uchun "Maqola qoʻshish" tugmasini bosing</p>
         </div>`;
         return;
     }
 
-    grid.innerHTML = scripts.map(s => {
-        const preview = stripHtmlToText(s.content || '').slice(0, 120);
-        const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('uz-UZ') : '';
-        return `
-        <div class="script-card" style="background:${escapeHtml(s.color || '#6366f1')}" onclick="openScriptArticle('${escapeHtml(s.id)}')">
-            <span class="script-card-sticker">${escapeHtml(s.sticker || '📘')}</span>
-            <h3 class="script-card-title">${escapeHtml(s.title || 'Nomsiz')}</h3>
-            ${s.subtitle ? `<p class="script-card-subtitle">${escapeHtml(s.subtitle)}</p>` : ''}
-            ${preview ? `<p class="script-card-preview">${escapeHtml(preview)}</p>` : ''}
-            <div class="script-card-footer">
-                <span class="script-card-date">${dateStr}</span>
-            </div>
-            <div class="script-card-actions" onclick="event.stopPropagation()">
-                <button class="script-card-action-btn" onclick="openEditScriptModal('${escapeHtml(s.id)}')">✏️ Tahrirlash</button>
-                <button class="script-card-action-btn" onclick="deleteScript('${escapeHtml(s.id)}')">🗑️</button>
-            </div>
-        </div>`;
-    }).join('');
+    const q = normalizeLeadSearchText(_scriptQuery);
+    const list = q ? all.filter(s => normalizeLeadSearchText(`${s.title || ''} ${s.subtitle || ''} ${stripHtmlToText(s.content || '')}`).includes(q)) : all;
+    const twoPane = isScriptsTwoPane();
+    if (twoPane && (!_currentScriptId || !all.some(s => s.id === _currentScriptId))) _currentScriptId = (list[0] || all[0]).id;
+    const fmtDate = d => (d ? new Date(d).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit' }) : '');
+
+    const items = list.map(s => {
+        const preview = s.subtitle || stripHtmlToText(s.content || '').slice(0, 90);
+        const on = twoPane && s.id === _currentScriptId;
+        return `<li><button type="button" class="scr-item${on ? ' is-on' : ''}" data-script-open="${escapeHtml(s.id)}" aria-current="${on ? 'true' : 'false'}">
+            <span class="scr-ico" style="background:${scriptTint(s.color)}">${escapeHtml(s.sticker || '📘')}</span>
+            <span class="scr-txt"><strong>${escapeHtml(s.title || 'Nomsiz')}</strong>${preview ? `<span>${escapeHtml(preview)}</span>` : ''}
+            ${s.updatedAt || s.createdAt ? `<small>${s.updatedAt ? 'Yangilangan' : 'Qoʻshilgan'} ${escapeHtml(fmtDate(s.updatedAt || s.createdAt))}</small>` : ''}</span>
+        </button></li>`;
+    }).join('') || '<li class="scr-none">Hech narsa topilmadi</li>';
+
+    const cur = twoPane ? all.find(s => s.id === _currentScriptId) : null;
+    const reader = cur ? `
+        <article class="scr-read" aria-label="${escapeHtml(cur.title || '')}">
+            <header class="scr-read-head" style="--scr-c:${scriptTint(cur.color)}">
+                <span class="scr-read-eyebrow">${escapeHtml(cur.sticker || '📘')}</span>
+                <h2>${escapeHtml(cur.title || 'Nomsiz')}</h2>
+                ${cur.subtitle ? `<p>${escapeHtml(cur.subtitle)}</p>` : ''}
+                <div class="scr-read-acts">
+                    <button type="button" class="scr-btn" data-script-edit="${escapeHtml(cur.id)}">✏️ Tahrirlash</button>
+                    <button type="button" class="scr-btn scr-btn--danger" data-script-del="${escapeHtml(cur.id)}" aria-label="Oʻchirish">🗑️</button>
+                </div>
+            </header>
+            <div class="scr-read-body script-article-content">${renderScriptContentHtml(cur.content)}</div>
+        </article>` : '';
+
+    grid.innerHTML = `
+        <aside class="scr-list">
+            <label class="scr-search"><span aria-hidden="true">🔍</span><input type="search" id="scriptSearch" placeholder="Maqola yoki iboradan qidirish" value="${escapeHtml(_scriptQuery)}" aria-label="Skriptlardan qidirish"></label>
+            <ul>${items}</ul>
+        </aside>
+        ${reader}`;
+
+    const search = document.getElementById('scriptSearch');
+    if (search) search.oninput = () => {
+        _scriptQuery = search.value;
+        const pos = search.selectionStart;
+        renderScripts();
+        const again = document.getElementById('scriptSearch');
+        if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* */ } }
+    };
+    grid.querySelectorAll('[data-script-open]').forEach(btn => { btn.onclick = () => openScriptArticle(btn.dataset.scriptOpen); });
+    grid.querySelectorAll('[data-script-edit]').forEach(btn => { btn.onclick = () => openEditScriptModal(btn.dataset.scriptEdit); });
+    grid.querySelectorAll('[data-script-del]').forEach(btn => { btn.onclick = () => deleteScript(btn.dataset.scriptDel); });
 }
 
 function openScriptArticle(id) {
@@ -23581,6 +23625,8 @@ function openScriptArticle(id) {
     const s = scripts.find(x => x.id === id);
     if (!s) return;
     _currentScriptId = id;
+    // Keng ekranda maqola o'ng tomonda ochiladi; telefonda — alohida oynada.
+    if (isScriptsTwoPane()) { renderScripts(); return; }
 
     const listView = document.getElementById('scriptsListView');
     const articleView = document.getElementById('scriptArticleView');
@@ -23588,7 +23634,7 @@ function openScriptArticle(id) {
     const meta = document.getElementById('scriptArticleMeta');
     const body = document.getElementById('scriptArticleBody');
 
-    header.style.background = s.color || '#6366f1';
+    header.style.background = scriptTint(s.color);
     meta.innerHTML = `
         <h2 style="color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.18)">${escapeHtml(s.sticker || '')} ${escapeHtml(s.title || '')}</h2>
         ${s.subtitle ? `<p style="color:rgba(255,255,255,.8)">${escapeHtml(s.subtitle)}</p>` : ''}`;
@@ -23789,9 +23835,11 @@ function saveScriptFromModal(editId) {
 
     if (editId) {
         const idx = scripts.findIndex(s => s.id === editId);
-        if (idx >= 0) scripts[idx] = { ...scripts[idx], title, subtitle, color, sticker, lang, content };
+        if (idx >= 0) scripts[idx] = { ...scripts[idx], title, subtitle, color, sticker, lang, content, updatedAt: new Date().toISOString() };
     } else {
-        scripts.unshift({ id: 'sc_' + Date.now(), title, subtitle, color, sticker, lang, content, createdAt: new Date().toISOString() });
+        const newId = 'sc_' + Date.now();
+        scripts.unshift({ id: newId, title, subtitle, color, sticker, lang, content, createdAt: new Date().toISOString() });
+        _currentScriptId = newId;
     }
 
     setItem(STORAGE_KEYS.scripts, scripts);

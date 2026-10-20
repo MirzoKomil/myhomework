@@ -8664,8 +8664,8 @@ body.modal-open {
 
 /* Lid kartasi (umumiy ko'rinish) */
 .lead-card-name-btn { all: unset; cursor: pointer; color: inherit; font: inherit; border-radius: 4px; }
-.lead-card-name-btn:hover { color: var(--primary, #2563EB); text-decoration: underline; text-underline-offset: 2px; }
-.lead-card-name-btn:focus-visible { outline: 2px solid var(--primary, #2563EB); outline-offset: 2px; }
+.lead-card-name-btn:hover { color: var(--purple, #7B61FF); text-decoration: underline; text-underline-offset: 2px; }
+.lead-card-name-btn:focus-visible { outline: 2px solid var(--purple, #7B61FF); outline-offset: 2px; }
 .lov { display: flex; flex-direction: column; gap: 14px; }
 .lov-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .lov-stage { display: inline-flex; align-items: center; padding: 4px 12px; border: 1px solid; border-radius: 999px; font-size: 13px; font-weight: 700; }
@@ -8674,7 +8674,7 @@ body.modal-open {
 .lov-step { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .lov-step-bar { height: 6px; border-radius: 999px; background: var(--border, #E2E8F0); }
 .lov-step.is-done .lov-step-bar { background: #16A34A; }
-.lov-step.is-now .lov-step-bar { background: var(--primary, #2563EB); }
+.lov-step.is-now .lov-step-bar { background: var(--purple, #7B61FF); }
 .lov-step-label { font-size: 11px; line-height: 14px; color: var(--text-muted, #64748B); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lov-step.is-now .lov-step-label { color: var(--text, #0F172A); font-weight: 700; }
 .lov-steps.is-off { opacity: .55; }
@@ -8714,3 +8714,38 @@ body.modal-open {
 .sdp3-mstat b{color:var(--text)}
 .sdp3-legend-row{display:flex;justify-content:flex-end;margin:4px 0 12px}
 .sdp2-legend i.sdp2-day--unk{background:var(--warning-bg);border-color:var(--warning)}
+
+/* ===== Sotuv · Skriptlar (ro'yxat + o'qish oynasi) ===== */
+.scr{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:20px;align-items:start}
+.scr-empty{grid-column:1/-1;text-align:center;padding:72px 20px;color:#5B6076;background:var(--surface);border:1px solid var(--border);border-radius:16px}
+.scr-empty h3{font-size:18px;font-weight:700;margin:0 0 6px;color:var(--text)}
+.scr-empty p{margin:0;font-size:14px}
+.scr-list{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;position:sticky;top:12px;max-height:calc(100vh - 160px);overflow:auto}
+.scr-search{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border:1px solid #D5D8E3;border-radius:10px;background:var(--surface)}
+.scr-search:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px rgba(123,97,255,.15)}
+.scr-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:var(--text)}
+.scr-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.scr-none{padding:16px;text-align:center;color:#5B6076;font-size:13px}
+.scr-item{all:unset;box-sizing:border-box;width:100%;display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:12px;cursor:pointer;border-left:3px solid transparent}
+.scr-item:hover{background:var(--bg)}
+.scr-item:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
+.scr-item.is-on{background:var(--purple-light);border-left-color:var(--purple)}
+.scr-ico{flex:none;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:20px}
+.scr-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.scr-txt strong{font-size:14px;line-height:19px;color:var(--text)}
+.scr-txt span{font-size:13px;line-height:17px;color:#5B6076;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scr-txt small{font-size:12px;color:#5B6076}
+.scr-read{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;min-width:0}
+.scr-read-head{padding:22px 24px;background:color-mix(in srgb,var(--scr-c) 12%,var(--surface));border-bottom:1px solid var(--border)}
+.scr-read-eyebrow{font-size:22px}
+.scr-read-head h2{margin:6px 0 4px;font-size:24px;line-height:30px;font-weight:800;color:var(--text)}
+.scr-read-head p{margin:0;font-size:14px;color:#5B6076}
+.scr-read-acts{display:flex;gap:8px;margin-top:14px}
+.scr-btn{min-height:40px;padding:8px 14px;border:1px solid #D5D8E3;border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.scr-btn:hover{background:var(--bg)}
+.scr-btn--danger{padding:8px 12px}
+.scr-read-body{padding:20px 24px 26px;font-size:15px;line-height:1.65;color:var(--text)}
+@media (max-width:900px){
+  .scr{grid-template-columns:1fr}
+  .scr-list{position:static;max-height:none}
+}
