@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AvatarCropModal } from '@/components/AvatarCropModal';
-import { DEFAULT_PRESET, getSavedPreset, presetSource, presetUri, PRESETS, savePreset, type PresetKey } from '@/components/v2/profile/avatars';
+import { DEFAULT_PRESET, getSavedPreset, presetKeyForUri, presetSource, presetUri, PRESETS, savePreset, type PresetKey } from '@/components/v2/profile/avatars';
 import { courseEnd, dm, dmy, goBack, groupFromTopic, parseIso, supportUrl, tgByPhone } from '@/components/v2/profile/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
@@ -56,7 +56,12 @@ export function DProfileEdit() {
 
   // Joriy holat: o'zi yuklagan rasm, tanlangan tayyor avatar yoki standart (tulki).
   const current: Choice =
-    avatarUri && savedPreset === null ? { kind: 'custom', uri: avatarUri } : { kind: 'preset', key: savedPreset ?? DEFAULT_PRESET.key };
+    // Serverdan kelgan manzil tayyor avatarniki bo'lsa — o'sha (boshqa qurilmada ham to'g'ri belgilanadi).
+    presetKeyForUri(avatarUri)
+      ? { kind: 'preset', key: presetKeyForUri(avatarUri)! }
+      : avatarUri && !savedPreset
+        ? { kind: 'custom', uri: avatarUri }
+        : { kind: 'preset', key: savedPreset ?? DEFAULT_PRESET.key };
   const shown = choice ?? current;
   const shownSrc = shown.kind === 'custom' ? { uri: shown.uri } : presetSource(PRESETS.find((p) => p.key === shown.key)!.id);
   const shownLabel = shown.kind === 'custom' ? 'oʻz rasmingiz' : PRESETS.find((p) => p.key === shown.key)!.label.toLowerCase();

@@ -14,7 +14,7 @@ import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarCropModal } from '@/components/AvatarCropModal';
-import { DEFAULT_PRESET, getSavedPreset, presetSource, presetUri, PRESETS, savePreset, type PresetKey } from '@/components/v2/profile/avatars';
+import { DEFAULT_PRESET, getSavedPreset, presetKeyForUri, presetSource, presetUri, PRESETS, savePreset, type PresetKey } from '@/components/v2/profile/avatars';
 import { CameraIcon, CheckIcon, EyeIcon, LockIcon, TelegramIcon } from '@/components/v2/profile/icons';
 import { Column, goBack, Header, supportUrl, tgByPhone } from '@/components/v2/profile/shared';
 import { R } from '@/constants/v2/routes';
@@ -51,9 +51,12 @@ function V2ProfileEditMobile() {
 
   // Joriy holat: o'zi yuklagan rasm, tanlangan tayyor avatar yoki standart (tulki).
   const current: Choice =
-    avatarUri && savedPreset === null
-      ? { kind: 'custom', uri: avatarUri }
-      : { kind: 'preset', key: savedPreset ?? DEFAULT_PRESET.key };
+    // Serverdan kelgan manzil tayyor avatarniki bo'lsa — o'sha (boshqa qurilmada ham to'g'ri belgilanadi).
+    presetKeyForUri(avatarUri)
+      ? { kind: 'preset', key: presetKeyForUri(avatarUri)! }
+      : avatarUri && !savedPreset
+        ? { kind: 'custom', uri: avatarUri }
+        : { kind: 'preset', key: savedPreset ?? DEFAULT_PRESET.key };
   const shown = choice ?? current;
   const shownSrc =
     shown.kind === 'custom'
