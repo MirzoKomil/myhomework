@@ -56,11 +56,19 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { saveLastPosition } from '@/services/progressStore';
+import { DAudioDialog } from '@/components/v2/desktop/lessons/DAudioDialog';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const SPEEDS = [0.75, 1, 1.25];
 const PAUSE_MS = 3000;
 
+// Kompyuterda (keng web oyna) — DAudioDialog dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function AudioDialogScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DAudioDialog id={String(lessonId)} /> : <AudioDialogScreenMobile />;
+}
+
+function AudioDialogScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId, d } = useLocalSearchParams<{ lessonId: string; d?: string }>();
   const id = String(lessonId);

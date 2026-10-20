@@ -21,8 +21,16 @@ import { getResolvedLessonContent, type LessonContent } from '@/data/lessonConte
 import { fetchDemoSchedule, fetchMobileContent } from '@/services/contentApi';
 import { markDone } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
+import { DSlides } from '@/components/v2/desktop/lessons/DSlides';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng web oyna) — DSlides dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function SlidesScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DSlides id={String(lessonId)} /> : <SlidesScreenMobile />;
+}
+
+function SlidesScreenMobile() {
   const { lessonId, i: start } = useLocalSearchParams<{ lessonId: string; i?: string }>();
   const id = String(lessonId);
   const [content, setContent] = useState<LessonContent | null>(null);

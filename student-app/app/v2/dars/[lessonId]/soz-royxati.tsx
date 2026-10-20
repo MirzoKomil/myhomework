@@ -20,6 +20,8 @@ import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
 import { useLessonProgress } from '@/services/lessonProgressStore';
+import { DWordList } from '@/components/v2/desktop/lessons/DWordList';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Kartochka rasm foni — dizayndagi tartibda aylanadi.
 const TILE_BG = ['#E8EEFF', '#FFF4D1', '#F0EBFF', '#FFF1E6', '#E3F7EE', '#FDECEC'];
@@ -27,7 +29,13 @@ const TILE_BG = ['#E8EEFF', '#FFF4D1', '#F0EBFF', '#FFF1E6', '#E3F7EE', '#FDECEC
 // Ikki ustunli to'r: [[0,1],[2,3],...].
 const pairs = (n: number) => Array.from({ length: Math.ceil(n / 2) }, (_, r) => (r * 2 + 1 < n ? [r * 2, r * 2 + 1] : [r * 2]));
 
+// Kompyuterda (keng web oyna) — DWordList dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function WordListScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DWordList id={String(lessonId)} /> : <WordListScreenMobile />;
+}
+
+function WordListScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const id = String(lessonId);

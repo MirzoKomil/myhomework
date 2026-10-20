@@ -39,12 +39,19 @@ import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoGrades, fetchDemoSchedule, type LiveGradeEntry } from '@/services/contentApi';
 import { useLessonCoins } from '@/services/coinsStore';
 import { useCachedState } from '@/services/v2Cache';
+import { DPath } from '@/components/v2/desktop/lessons/DPath';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Oylar nomi serverda yo'q — dizayndagi nomlar (1-oy "Tanishuv", 2-oy
 // "Kundalik hayot"). 3-oy nomi dizaynda yo'q, shuning uchun faqat raqam.
 const MONTH_TITLES: Record<number, string> = { 1: 'Tanishuv', 2: 'Kundalik hayot' };
 
+// Kompyuterda (keng web oyna) — DPath dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function PathScreen() {
+  return useIsDesktop() ? <DPath /> : <PathScreenMobile />;
+}
+
+function PathScreenMobile() {
   const insets = useSafeAreaInsets();
   const [data, setData] = useCachedState<CourseData | null>('darslar.data', null);
   const [error, setError] = useState(false);

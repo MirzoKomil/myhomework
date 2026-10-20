@@ -19,6 +19,8 @@ import type { PartScore } from '@/components/v2/homework/scoreStore';
 import { Txt, webShadow } from '@/components/v2/homework/ui';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
+import { DHomeworkSentCard } from '@/components/v2/desktop/homework/DHomeworkSent';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import type { HomeworkPart } from '@/data/lessonContent';
 
 type Props = {
@@ -35,6 +37,7 @@ type Props = {
 
 export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, parts = [], scores = {}, celebrate = false }: Props) {
   const insets = useSafeAreaInsets();
+  const desktop = useIsDesktop();
   const rows = parts.map((p) => {
     const total = partQuestionCount(p);
     const sc = scores[p.id];
@@ -59,6 +62,28 @@ export function HomeworkSentPopup({ visible, onClose, lessonId, lessonNumber, pa
     onClose();
     router.push(href as Href);
   };
+
+  // Kompyuterda — markazdagi karta (D_HomeworkSent); havolalar va raqamlar bir xil.
+  if (desktop) {
+    return (
+      <DHomeworkSentCard
+        visible={visible}
+        onClose={onClose}
+        lessonNumber={lessonNumber}
+        rows={rows}
+        correct={correct}
+        total={total}
+        pct={pct}
+        coins={coins}
+        mistakes={mistakes}
+        onMistakesList={() => go(R.lugat)}
+        onReview={() => lessonId && go(R.testReview(lessonId))}
+        onRepeat={() => lessonId && go(R.mistakes(lessonId))}
+        onSkip={() => lessonId && go(R.complete(lessonId))}
+        confetti={visible && celebrate && pct >= 70 ? <Confetti count={40} seed={5} /> : null}
+      />
+    );
+  }
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>

@@ -9,6 +9,8 @@
  * (skrinshot uchun: ?popup=live).
  */
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { DNotifications } from '@/components/v2/desktop/home/DNotifications';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { v2Back } from '@/services/v2Nav';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -140,6 +142,10 @@ function AttendanceOptions({ n }: { n: DemoNotification }) {
 }
 
 export default function V2Notifications() {
+  return useIsDesktop() ? <DNotifications /> : <V2NotificationsMobile />;
+}
+
+function V2NotificationsMobile() {
   const insets = useSafeAreaInsets();
   const [list, setList] = useState<DemoNotification[] | null>(null);
   const [failed, setFailed] = useState(false);

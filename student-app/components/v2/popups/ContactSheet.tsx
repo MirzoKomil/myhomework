@@ -10,6 +10,8 @@ import { useEffect, useState } from 'react';
 import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DContactSheet } from '@/components/v2/desktop/home/DContactSheet';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { ClockIcon, CloseIcon, TelegramIcon } from '@/components/v2/home/icons';
 import { supportUrl } from '@/components/v2/home/shared';
 import { fonts } from '@/constants/v2/tokens';
@@ -27,7 +29,12 @@ const tgByPhone = (phone: string, fallback: string) => {
   return digits.length >= 9 ? `https://t.me/+${digits.length === 9 ? '998' + digits : digits}` : fallback;
 };
 
-export function ContactSheetPopup({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function ContactSheetPopup(props: { visible: boolean; onClose: () => void }) {
+  // Kompyuterda — markazdagi karta (D_ContactSheet), telefonda — pastki oyna.
+  return useIsDesktop() ? <DContactSheet {...props} /> : <ContactSheetPopupMobile {...props} />;
+}
+
+function ContactSheetPopupMobile({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const support = supportUrl(courseLang);

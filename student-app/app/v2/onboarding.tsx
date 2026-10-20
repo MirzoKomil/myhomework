@@ -7,6 +7,8 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { DOnboarding } from '@/components/v2/desktop/home/DOnboarding';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { v2Back } from '@/services/v2Nav';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
@@ -49,6 +51,10 @@ function CoverImage({ source, posX }: { source: ImageSourcePropType; posX: numbe
 }
 
 export default function V2Onboarding() {
+  return useIsDesktop() ? <DOnboarding /> : <V2OnboardingMobile />;
+}
+
+function V2OnboardingMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const [goal, setGoal] = useState('work');

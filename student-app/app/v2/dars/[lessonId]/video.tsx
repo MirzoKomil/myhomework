@@ -27,8 +27,16 @@ import { fetchMobileContent, getLessonMaterials } from '@/services/contentApi';
 import { useLessonCoins } from '@/services/coinsStore';
 import { markDone, useLessonProgress } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
+import { DVideo } from '@/components/v2/desktop/lessons/DVideo';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng web oyna) — DVideo dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function VideoScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DVideo id={String(lessonId)} /> : <VideoScreenMobile />;
+}
+
+function VideoScreenMobile() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const id = String(lessonId);
   const [content, setContent] = useState<LessonContent | null>(null);

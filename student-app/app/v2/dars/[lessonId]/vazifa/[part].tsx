@@ -27,8 +27,14 @@ import { CreativeView, RecordView, RoleplayView } from '@/components/v2/homework
 import { Txt } from '@/components/v2/homework/ui';
 import { R } from '@/constants/v2/routes';
 import { markHomeworkPartDone, useLessonProgress } from '@/services/lessonProgressStore';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
+import { DHomeworkPart } from '@/components/v2/desktop/homework/DPart';
 
 export default function HomeworkPartScreen() {
+  return useIsDesktop() ? <DHomeworkPart fallback={<HomeworkPartScreenMobile />} /> : <HomeworkPartScreenMobile />;
+}
+
+function HomeworkPartScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId, part: partId } = useLocalSearchParams<{ lessonId: string; part: string }>();
   const id = String(lessonId);

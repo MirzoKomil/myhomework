@@ -12,6 +12,8 @@ import { useEffect, useState } from 'react';
 import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DLiveNow } from '@/components/v2/desktop/home/DLiveNow';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { resolveCurrentLesson, type CurrentLesson } from '@/components/v2/home/currentLesson';
 import { ChevronRightIcon, CloseIcon, ScreenIcon, TelegramIcon } from '@/components/v2/home/icons';
 import { R } from '@/constants/v2/routes';
@@ -31,7 +33,12 @@ type Data = {
   lesson: CurrentLesson | null;
 };
 
-export function LiveNowPopup({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function LiveNowPopup(props: { visible: boolean; onClose: () => void }) {
+  // Kompyuterda — markazdagi karta (D_LiveNow), telefonda — pastki oyna.
+  return useIsDesktop() ? <DLiveNow {...props} /> : <LiveNowPopupMobile {...props} />;
+}
+
+function LiveNowPopupMobile({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const [d, setD] = useState<Data | null>(null);
 

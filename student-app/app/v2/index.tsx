@@ -25,6 +25,8 @@ import { currentStep as firstOpenStep, lessonSteps, stepsDone, useListened } fro
 import { displayFont, getReadIds } from '@/components/v2/home/shared';
 import { groupFromTopic } from '@/components/v2/profile/shared';
 import { BotConnectPopup } from '@/components/v2/popups/BotConnect';
+import { DMain } from '@/components/v2/desktop/home/DMain';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { Loading } from '@/components/v2/states/Loading';
 import { ServerError } from '@/components/v2/states/ServerError';
 import { designImages } from '@/constants/v2/designImages';
@@ -92,6 +94,10 @@ function whenLabel(date: Date, now: Date) {
 }
 
 export default function V2Home() {
+  return useIsDesktop() ? <DMain /> : <V2HomeMobile />;
+}
+
+function V2HomeMobile() {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const p: HomePalette = scheme === 'dark' ? darkHome : lightHome;

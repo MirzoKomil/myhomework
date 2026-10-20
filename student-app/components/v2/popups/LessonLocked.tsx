@@ -24,6 +24,8 @@ import {
   type LessonInfo,
 } from '@/components/v2/lessons/data';
 import { ArrowRight, CheckAlt, CloseIcon, LockIcon } from '@/components/v2/lessons/icons';
+import { DLessonLocked } from '@/components/v2/desktop/lessons/DLessonLocked';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -51,6 +53,8 @@ export function LessonLockedPopup({
   const listened = useListened(active?.id ?? '');
   const seen = useSeenWords(active?.id ?? '');
   const scores = useHomeworkScores();
+  // Kompyuterda — sahifa markazidagi karta (D_LessonLocked); raqamlar o'sha hisobdan.
+  const desktop = useIsDesktop();
   if (!data || !lesson || !active) return null;
 
   const tracks = getAudioTracks(data.mc, active.id);
@@ -78,6 +82,24 @@ export function LessonLockedPopup({
     onClose();
     router.push(R.lesson(active.id) as Href);
   };
+
+  if (desktop) {
+    return (
+      <DLessonLocked
+        visible={visible}
+        onClose={onClose}
+        onContinue={go}
+        badge={`${kind}${date ? ` · ${shortDay(date)}` : ''}`}
+        title={`${lesson.number}-dars hali yopiq`}
+        sub={lesson.name}
+        activeNumber={active.number}
+        stepNo={cur}
+        stepTotal={steps.length}
+        left={steps.length - doneCount}
+        rows={rows.map((r, k) => ({ ...r, done: steps[k].done, current: k === curIdx }))}
+      />
+    );
+  }
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
