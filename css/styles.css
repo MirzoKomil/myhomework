@@ -9010,3 +9010,4 @@ body.modal-open {
 /* ===== Sozlamalar · Arxiv, HR kartalar ===== */
 .archive-empty{margin:0;font-size:13px;color:var(--mx-muted)}
 .employee-status{text-transform:none!important;letter-spacing:0!important}
+.sal-note{margin:10px 0 0;font-size:12px;line-height:1.5;color:var(--mx-muted)}

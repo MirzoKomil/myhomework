@@ -5571,6 +5571,83 @@ function setUiLang(lang) {
     document.documentElement.lang = lang === 'ru' ? 'ru' : lang === 'en' ? 'en' : 'uz';
 }
 
+// "Mening maoshim" — server hisoblagan haqiqiy ma'lumot (/api/payroll/me).
+// Ilgari bu sahifa HR yozuvidagi mavjud bo'lmagan "salary" maydonini o'qirdi
+// va doim 0 / "—" ko'rsatardi.
+function summarizeMySalary(data, now = new Date()) {
+    const months = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Des'];
+    const history = Array.isArray(data?.history) ? data.history : [];
+    const byMonth = new Map();
+    history.forEach(h => {
+        const key = String(h.start || '').slice(0, 7);
+        if (!key) return;
+        const prev = byMonth.get(key) || { amount: 0, paid: true, paidAt: null };
+        byMonth.set(key, { amount: prev.amount + Number(h.amount || 0), paid: prev.paid && h.status === 'paid', paidAt: h.paidAt || prev.paidAt });
+    });
+    const curKey = data?.period?.start ? data.period.start.slice(0, 7) : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentTotal = data?.current ? Number(data.current.total || 0) : null;
+    const last6 = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const rec = byMonth.get(key);
+        const amount = rec ? rec.amount : (key === curKey && currentTotal !== null ? currentTotal : 0);
+        const status = rec ? (rec.paid ? 'paid' : 'pending') : (key === curKey ? 'estimate' : 'none');
+        return { key, label: months[d.getMonth()], amount, status };
+    });
+    const paidTotal = history.filter(h => h.status === 'paid').reduce((a, h) => a + Number(h.amount || 0), 0);
+    return { last6, paidTotal, currentTotal };
+}
+
+async function hydrateMySalary() {
+    const curEl = document.getElementById('salCurrentValue');
+    if (!curEl) return;
+    const fmt = n => Number(n || 0).toLocaleString('uz-UZ') + ' soʻm';
+    let data;
+    try { data = await apiFetch('/api/payroll/me'); }
+    catch (e) { curEl.textContent = '—'; const note = document.getElementById('salNote'); if (note) note.textContent = 'Maosh maʼlumotini yuklab boʻlmadi: ' + e.message; return; }
+    if (!document.getElementById('salCurrentValue')) return;
+    const note = document.getElementById('salNote');
+    if (!data?.linked) {
+        curEl.textContent = '—';
+        if (note) note.textContent = 'Hisobingiz HR roʻyxatidagi xodim yozuviga ulanmagan (login = email). Administratorga murojaat qiling.';
+        return;
+    }
+    const sum = summarizeMySalary(data);
+    curEl.textContent = sum.currentTotal === null ? '—' : fmt(sum.currentTotal);
+    const paidEl = document.getElementById('salPaidValue');
+    if (paidEl) paidEl.textContent = fmt(sum.paidTotal);
+    const balEl = document.getElementById('salBalanceValue');
+    if (balEl) balEl.textContent = fmt(sum.paidTotal);
+    const balSub = document.getElementById('salBalanceSub');
+    if (balSub) balSub.textContent = sum.currentTotal === null ? '' : `Shu oy taxminiy: ${fmt(sum.currentTotal)}`;
+    const c = data.current || {};
+    if (note) {
+        const parts = [];
+        if (c.lessons !== undefined) parts.push(`${c.studentCount || 0} oʻquvchi · ${c.lessons || 0} dars`);
+        if (c.turnover !== undefined) parts.push(`aylanma ${fmt(c.turnover)}`);
+        if (c.fixed) parts.push(`fiksa ${fmt(c.fixed)}`);
+        if (c.commission) parts.push(`ulush ${fmt(c.commission)}`);
+        if (c.bonus) parts.push(`bonus ${fmt(c.bonus)}`);
+        note.textContent = (parts.length ? parts.join(' · ') + '. ' : '') + 'Joriy oy taxminiy: davomat va tushumlar boʻyicha hisoblanadi; yakuniy summa Moliya tasdiqlagach chiqadi.';
+    }
+    const max = Math.max(1, ...sum.last6.map(m => m.amount));
+    const bars = document.getElementById('salChartBars');
+    if (bars) bars.innerHTML = sum.last6.map((m, i) => `<div class="sal-chart-bar-wrap" title="${m.label}: ${fmt(m.amount)}">
+            <div class="sal-chart-bar${i === 5 ? ' sal-chart-bar--current' : ''}" style="height:${Math.round(m.amount / max * 100) || 4}%"></div>
+            <span class="sal-chart-label">${m.label}</span></div>`).join('');
+    const list = document.getElementById('salHistoryList');
+    const label = st => st === 'paid' ? 'Berilgan' : st === 'pending' ? 'Hisoblangan, hali berilmagan' : st === 'estimate' ? 'Joriy oy · taxminiy' : 'Maʼlumot yoʻq';
+    if (list) list.innerHTML = sum.last6.slice().reverse().map(m => `
+        <div class="sal-history-row">
+            <div class="sal-history-dot sal-history-dot--${m.status === 'paid' ? 'paid' : 'pending'}"></div>
+            <div class="sal-history-info">
+                <span class="sal-history-month">${m.label} ${m.key.slice(0, 4)}</span>
+                <span class="sal-history-status">${label(m.status)}</span>
+            </div>
+            <span class="sal-history-amount">${m.amount ? fmt(m.amount) : '—'}</span>
+        </div>`).join('');
+}
+
 function renderProfileSalarySection(user) {
     const emps = getHrEmployees() || [];
     const emp = emps.find(e => e.login === user.email || e.phone === user.phone) || {};
@@ -5646,8 +5723,8 @@ function renderProfileSalarySection(user) {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                         </div>
                         <div>
-                            <div class="sal-stat-label">Joriy maosh</div>
-                            <div class="sal-stat-value">${salaryAmount ? fmtUZS(salaryAmount) : '—'}</div>
+                            <div class="sal-stat-label" id="salCurrentLabel">Shu oy (taxminiy)</div>
+                            <div class="sal-stat-value" id="salCurrentValue">Yuklanmoqda…</div>
                         </div>
                     </div>
                     <div class="sal-stat-card sal-stat-card--total">
@@ -5655,8 +5732,8 @@ function renderProfileSalarySection(user) {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                         </div>
                         <div>
-                            <div class="sal-stat-label">Yil davomida</div>
-                            <div class="sal-stat-value">${fmtUZS(history.filter(h=>h.status==='paid').reduce((s,h)=>s+h.amount,0))}</div>
+                            <div class="sal-stat-label">Oxirgi 12 oyda berilgan</div>
+                            <div class="sal-stat-value" id="salPaidValue">—</div>
                         </div>
                     </div>
                 </div>
@@ -5666,16 +5743,17 @@ function renderProfileSalarySection(user) {
                         <h3>Maosh statistikasi</h3>
                         <span class="sal-chart-period">Oxirgi 6 oy</span>
                     </div>
-                    <div class="sal-chart">
+                    <div class="sal-chart" id="salChartBars">
                         ${chartBars}
                     </div>
+                    <p class="sal-note" id="salNote"></p>
                 </div>
 
                 <div class="sal-history-card">
                     <div class="sal-chart-header">
                         <h3>To'lov tarixi</h3>
                     </div>
-                    <div class="sal-history-list">
+                    <div class="sal-history-list" id="salHistoryList">
                         ${historyRows || '<p class="text-muted" style="padding:16px;text-align:center;font-size:13px">To\'lov tarixi yo\'q</p>'}
                     </div>
                 </div>
@@ -5765,9 +5843,9 @@ function renderProfileSalarySection(user) {
                 </div>
 
                 <div class="sal-balance-card">
-                    <div class="sal-balance-label">Yillik jami maosh</div>
-                    <div class="sal-balance-amount">${fmtUZS(history.filter(h=>h.status==='paid').reduce((s,h)=>s+h.amount,0))}</div>
-                    ${salaryAmount ? `<div class="sal-balance-sub">Joriy: ${fmtUZS(salaryAmount)} / oy</div>` : ''}
+                    <div class="sal-balance-label">Oxirgi 12 oyda berilgan</div>
+                    <div class="sal-balance-amount" id="salBalanceValue">—</div>
+                    <div class="sal-balance-sub" id="salBalanceSub"></div>
                 </div>
 
                 <div class="sal-notice-card">
@@ -5776,7 +5854,7 @@ function renderProfileSalarySection(user) {
                     </div>
                     <div>
                         <div class="sal-notice-title">Maosh ma'lumotlari</div>
-                        <div class="sal-notice-text">Maosh miqdori va to'lov tarixi admin tomonidan kiritiladi. Savollar bo'lsa HR bilan bog'laning.</div>
+                        <div class="sal-notice-text">Maosh Moliya bo'limidagi hisobdan olinadi: joriy oy — davomat va tushumlar bo'yicha taxminiy, o'tgan oylar — tasdiqlangan summa. Savollar bo'lsa Moliya yoki HR bilan bog'laning.</div>
                     </div>
                 </div>
 
@@ -6432,7 +6510,7 @@ function renderProfileBody() {
     let html = '';
     switch (_profileSection) {
         case 'edit': html = renderProfileEditSection(user); break;
-        case 'salary': html = renderProfileSalarySection(user); break;
+        case 'salary': html = renderProfileSalarySection(user); setTimeout(hydrateMySalary, 0); break;
         case 'security': html = renderProfileSecuritySection(); break;
         case 'notifications': html = renderProfileNotificationsSection(); break;
         case 'sessions': html = renderProfileSessionsSection(); break;

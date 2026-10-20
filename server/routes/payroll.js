@@ -10,6 +10,8 @@ const handle = fn => async (req, res) => {
     try { res.json(await fn(req)); }
     catch (e) { console.error('[payroll]', e.message); res.status(e.status || (e.code === '40001' ? 409 : 500)).json({ error: e.status ? e.message : 'Maosh hisobini bajarib bo‘lmadi. Qayta urinib ko‘ring' }); }
 };
+// Har bir xodim faqat o'z maoshini ko'radi (rol cheklovi yo'q, lekin ma'lumot faqat o'ziniki).
+router.get('/me', handle(req => service.mySalary(pool, req.user)));
 router.get('/settings', handle(req => service.transaction(pool, async db => {
     await service.access(db, req.user);
     const lang = service.language(req.query.language);
