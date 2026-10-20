@@ -7278,7 +7278,7 @@ function renderKpiSummary(containerId, kpi, teacherName) {
             <div class="kpi-breakdown-title">Har bir o'quvchi bo'yicha (max ${formatMoney(kpi.monthlyBase)} / oy)</div>
             ${kpi.perStudent.map(ps => `
                 <div class="kpi-breakdown-row">
-                    <span>${ps.name} — <strong>${ps.lessons}</strong>/${kpi.expected} dars</span>
+                    <span>${escapeHtml(ps.name || '')} — <strong>${ps.lessons}</strong>/${kpi.expected} dars</span>
                     <span>${formatMoney(ps.earned)}</span>
                 </div>
             `).join('')}
@@ -9210,7 +9210,7 @@ function renderSalaryContent() {
         grandTotal += kpi.total;
         const durLabel = kpi.duration + ' daq';
         html += `<tr>
-            <td><strong>${teacher.name}</strong><br><small>${getSubjectLabel(teacher.subject || 'english')}</small></td>
+            <td><strong>${escapeHtml(teacher.name || '')}</strong><br><small>${getSubjectLabel(teacher.subject || 'english')}</small></td>
             <td>${teacher.type === 'asosiy' ? 'Asosiy' : 'Yordamchi'}</td>
             <td>${kpi.studentCount} ta</td>
             <td>${kpi.expected} dars<br><small>${formatMoney(kpi.monthlyBase)}/o'quvchi</small></td>
@@ -9235,7 +9235,7 @@ function renderSalaryContent() {
             <p class="text-muted" style="margin-bottom:12px"><strong>Hisoblash:</strong> Har o'quvchi uchun ${formatMoney(kpi.monthlyBase)} ÷ ${kpi.expected} dars = ${formatMoney(Math.round(kpi.perLesson))} / dars</p>`;
         if (kpi.perStudent.length) {
             kpi.perStudent.forEach(ps => {
-                html += `<p class="text-muted">${ps.name}: ${ps.lessons} dars × ${formatMoney(Math.round(kpi.perLesson))} = <strong>${formatMoney(ps.earned)}</strong></p>`;
+                html += `<p class="text-muted">${escapeHtml(ps.name || '')}: ${ps.lessons} dars × ${formatMoney(Math.round(kpi.perLesson))} = <strong>${formatMoney(ps.earned)}</strong></p>`;
             });
         } else {
             html += `<p class="text-muted">O'quvchilar yo'q</p>`;
@@ -14146,7 +14146,7 @@ function _smsRenderRecipientList() {
                     <input type="checkbox" data-sms-recipient="${escapeHtml(key)}" ${checked}>
                     <div style="flex:1;min-width:0">
                         <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.name)}</div>
-                        <div style="color:var(--text-muted);font-size:12px">${escapeHtml(r.phone)}${r.sub ? ' &middot; ' + escapeHtml(String(r.sub)) : ''}</div>
+                        <div style="color:var(--text-muted);font-size:12px">${escapeHtml(formatPhoneDisplay(r.phone) || r.phone || '')}${r.sub ? ' &middot; ' + escapeHtml(String(r.sub)) : ''}</div>
                     </div>
                 </label>`;
         }).join('');
@@ -22099,9 +22099,11 @@ function renderHrEmployeeCard(emp) {
     const initials = getUserInitials(emp.name);
     const roleLabel = HR_ROLE_MAP[emp.role] || emp.role;
     const isActive = emp.status === 'active';
-    const statusLabel = isActive ? 'ACTIVE' : 'INACTIVE';
+    const statusLabel = isActive ? 'Faol' : 'Faol emas';
     const statusClass = isActive ? '' : ' inactive';
-    const joinFormatted = emp.joinDate ? new Date(emp.joinDate).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    // uz-UZ lokali qisqa oy nomini "M10" deb chiqaradi — o'z oy nomlarimiz ishlatiladi.
+    const _jd = emp.joinDate ? new Date(emp.joinDate) : null;
+    const joinFormatted = _jd && !Number.isNaN(_jd.getTime()) ? `${_jd.getDate()}-${UZ_MONTHS_SHORT[_jd.getMonth()]} ${_jd.getFullYear()}` : '—';
     const isAdmin = getCurrentUser()?.role === 'admin';
 
     return `<div class="employee-card" data-emp-id="${emp.id}">
@@ -26307,11 +26309,11 @@ function openDebtorEditModal(studentId) {
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Izoh</label>
-                <textarea id="deComment" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${s.comment || ''}</textarea>
+                <textarea id="deComment" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${escapeHtml(s.comment || '')}</textarea>
             </div>
             <div>
                 <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Eslatma</label>
-                <textarea id="deNote" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${s.note || ''}</textarea>
+                <textarea id="deNote" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${escapeHtml(s.note || '')}</textarea>
             </div>
         </div>`;
 
