@@ -9000,3 +9000,9 @@ body.modal-open {
 /* ===== Dars jadvali ===== */
 .tt-week-table th.tt-today{background:var(--purple)!important;color:#fff!important;border-radius:10px}
 .tt-week-table th.tt-today .tt-date-dow,.tt-week-table th.tt-today .tt-date-num{color:#fff!important}
+
+/* ===== Analitika ===== */
+#tab-analitika .stat-card .stat-value{white-space:nowrap;font-variant-numeric:tabular-nums}
+#tab-analitika .stat-card .stat-label{color:var(--mx-muted)}
+#tab-analitika .card .sfx-rows{padding:4px 0}
+#tab-analitika .cf-mgr-row .cf-mgr-name{color:var(--text)}
