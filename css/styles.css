@@ -8613,3 +8613,13 @@ body.modal-open {
   .mot-prizes{grid-template-columns:repeat(2,minmax(0,1fr))}
   .mot-prize{padding:12px}.mot-prize-img{width:72px;height:72px}
 }
+.mot-home{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin:16px 0}
+.mot-goal{display:flex;gap:16px;align-items:center;padding:18px 20px;border-radius:20px;color:#fff;background:linear-gradient(110deg,#4B2FD6,#7B5CFF);min-width:0}
+.mot-goal-txt{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.mot-goal-title{margin:0;font-size:20px;line-height:26px;font-weight:800;color:#fff}
+.mot-goal .mot-bar{max-width:none}
+.mot-obed{display:flex;gap:14px;align-items:center;padding:16px 18px;min-width:0}
+.mot-obed .mot-prize-img{width:80px;height:80px}
+@media (max-width:900px){.mot-home{grid-template-columns:1fr}}
+@media (max-width:520px){.mot-goal{flex-direction:column;align-items:flex-start}}
+.mot-obed .mot-chip{align-self:flex-start}

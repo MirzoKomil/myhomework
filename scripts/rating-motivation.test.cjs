@@ -56,3 +56,17 @@ test('weekly: current holders of 1–3 places', () => {
 test('empty list renders nothing', () => {
     assert.equal(ctx('2026-10-20T12:00:00+05:00').render([], 'oylik'), '');
 });
+
+test('manager home: gap to the next monthly prize, rank and today obed', () => {
+    const c = ctx('2026-10-21T10:00:00+05:00');
+    const sales = { a: { oylik: 72_800_000, kunlik: 3_150_000 }, b: { oylik: 55_250_000, kunlik: 1_950_000 } };
+    c.getManagerSalesForPeriod = (id, p) => sales[id][p];
+    c.getSalesManagers = () => [{ id: 'a', name: 'Aziza Tursunova' }, { id: 'b', name: 'Bobur Aliyev' }];
+    vm.runInContext(functionSource('js/app.js', 'renderManagerGoalBlock') + '\nthis.goal = renderManagerGoalBlock;', c);
+    const html = c.goal('b', 'english');
+    assert.match(html, /iPhone 17 Pro uchun yana 64\s750\s000/);
+    assert.match(html, /reytingda 2-oʻrin, Azizadan 17\s550\s000/);
+    assert.match(html, /✓ Obed/);
+    assert.match(html, /uchun yana 550\s000/);
+    assert.equal(c.goal('', 'english'), '');
+});
