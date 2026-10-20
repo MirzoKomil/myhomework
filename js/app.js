@@ -8015,6 +8015,58 @@ function renderManagerGoalBlock(managerId, lang) {
     return `<div class="mot-home">${goal}${obed}</div>`;
 }
 
+// ROP bosh sahifasi: koʻrib chiqilmagan SLA eskalatsiyalari va jamoa rejasi.
+// Eskalatsiyalar mavjud getLeadSlaNotificationsForCurrentUser() dan olinadi,
+// "Koʻrib chiqildi" esa lidning bildirishnomalar oynasida (openLeadNotifyModal).
+function renderRopDashboardBlock(user) {
+    if (user?.role !== 'rop') return '';
+    const lang = user.linkedRopLang || 'english';
+    let alerts = [];
+    try {
+        alerts = getLeadSlaNotificationsForCurrentUser().filter(a => a.audience === 'rop' && a.leadLang === lang);
+    } catch (e) { alerts = []; }
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] })[lang] || [];
+    const open = alerts.filter(a => {
+        const lead = leads.find(l => l.id === a.leadId);
+        return !parseLeadSlaTime(lead?.slaRopAcknowledged?.[a.stageKey]);
+    }).sort((a, b) => a.time - b.time);
+    const ago = t => {
+        const min = Math.max(0, Math.round((Date.now() - t) / 60000));
+        return min < 60 ? `${min} daq oldin` : min < 1440 ? `${Math.floor(min / 60)} soat ${min % 60} daq oldin` : `${Math.floor(min / 1440)} kun oldin`;
+    };
+    const rows = open.slice(0, 6).map(a => {
+        const lead = leads.find(l => l.id === a.leadId) || {};
+        const overdue = Date.now() - a.time >= 24 * 60 * LEAD_SLA_MINUTE;
+        return `<li class="rop-esc${overdue ? ' rop-esc--late' : ''}">
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                <strong>${escapeHtml(lead.name || 'Lid')}</strong>
+                <span class="mot-prize-note">${escapeHtml(a.message || '')}</span>
+                <span class="mot-prize-note">Menejer: ${escapeHtml(getLeadSlaManagerName(lead))} · ${ago(a.time)}${overdue ? ' · <b style="color:var(--danger)">24 soatdan oshdi — adminga xabar ketdi</b>' : ''}</span>
+            </div>
+            <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrib chiqish</button>
+        </li>`;
+    }).join('');
+    const managers = getSalesManagers(lang).map(m => ({
+        name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik'), target: getManagerPeriodTarget(m.id, 'oylik'),
+    })).sort((a, b) => b.sales - a.sales);
+    const teamSales = managers.reduce((s, m) => s + m.sales, 0);
+    const teamTarget = managers.reduce((s, m) => s + (m.target || 0), 0);
+    const teamPct = teamTarget > 0 ? Math.round(teamSales / teamTarget * 100) : 0;
+    const mrows = managers.map(m => {
+        const pct = m.target > 0 ? Math.round(m.sales / m.target * 100) : 0;
+        return `<div class="dashboard-rank-row"><div class="dashboard-rank-info"><b>${escapeHtml(m.name)}</b><div class="dashboard-rank-track"><i style="width:${Math.min(100, Math.max(4, pct))}%;background:${pctToPlanColor(Math.min(100, pct))}"></i></div></div><strong>${pct}% · ${fmtMoney(m.sales)}</strong></div>`;
+    }).join('');
+    return `<div class="dashboard-grid-2" id="dashboardRopEsc">
+        <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Eskalatsiyalar · koʻrib chiqing</h3><span>${open.length} ta ochiq</span></div>
+            ${open.length ? `<ul class="rop-escs">${rows}</ul>${open.length > 6 ? `<p class="mot-prize-note">Yana ${open.length - 6} ta — Sotuv boʻlimida</p>` : ''}` : '<p class="dashboard-empty">Ochiq eskalatsiya yoʻq 👍</p>'}
+            <p class="mot-prize-note">“Koʻrib chiqildi” bosilmasa, 24 soatdan keyin admin ogohlantiriladi.</p>
+        </section>
+        <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Jamoa rejasi · oy</h3><span>${teamPct}% · ${fmtMoney(teamSales)} / ${fmtMoney(teamTarget)}</span></div>
+            ${mrows || '<p class="dashboard-empty">Menejerlar topilmadi</p>'}
+        </section>
+    </div>`;
+}
+
 function renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads }) {
     const container = document.getElementById('dashboardOverview');
     if (!container) return;
@@ -8096,6 +8148,7 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon green">&#128176;</span><div><small>Sotuv summasi</small><b>${formatMoney(totalRevenue)}</b></div></div>
             <div class="dashboard-kpi"><span class="dashboard-kpi-icon yellow">&#128188;</span><div><small>Xodimlar soni</small><b>${employeeIds.size}</b></div></div>
         </div>`}`}
+        ${renderRopDashboardBlock(currentUser)}
         <div class="dashboard-grid-2">
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
                 ${rankRows(salesRating.map(item => ({ ...item, value: item.revenue })), maxSalesRevenue, item => `${item.deals} ta · ${formatMoney(item.revenue)}`)}
@@ -8120,6 +8173,9 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
             </section>`}
         </div>`}`;
 
+    container.querySelectorAll('[data-rop-esc-lead]').forEach(btn => {
+        btn.addEventListener('click', () => openLeadNotifyModal(currentUser?.linkedRopLang || 'english', btn.dataset.ropEscLead));
+    });
     if (isSalesManager) {
         clearInterval(window._dashboardSessionTimer);
         window._dashboardSessionTimer = setInterval(() => {
@@ -20480,6 +20536,7 @@ function openLeadNotifyModal(lang, leadId) {
         closeModal();
         if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
         renderLeads();
+        if (document.getElementById('dashboardRopEsc')) renderDashboard();
     });
 }
 

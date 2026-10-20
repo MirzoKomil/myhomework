@@ -70,3 +70,33 @@ test('manager home: gap to the next monthly prize, rank and today obed', () => {
     assert.match(html, /uchun yana 550\s000/);
     assert.equal(c.goal('', 'english'), '');
 });
+
+test('ROP home: open escalations (unacknowledged only) and team plan', () => {
+    const now = new Date('2026-10-20T16:50:00+05:00').getTime();
+    const c = ctx('2026-10-20T16:50:00+05:00');
+    Object.assign(c, {
+        LEAD_SLA_MINUTE: 60000,
+        parseLeadSlaTime: v => (v ? new Date(v).getTime() : 0),
+        getLeadSlaManagerName: l => l.managerName || '—',
+        getLeadSlaNotificationsForCurrentUser: () => [
+            { audience: 'rop', leadLang: 'english', leadId: 'l1', stageKey: 's1', message: 'Muzlayapti', time: now - 25 * 3600000 },
+            { audience: 'rop', leadLang: 'english', leadId: 'l2', stageKey: 's1', message: 'Koʻrilgan', time: now - 3600000 },
+            { audience: 'rop', leadLang: 'russian', leadId: 'l3', stageKey: 's1', message: 'Boshqa til', time: now - 3600000 },
+        ],
+        getItem: () => ({ english: [{ id: 'l1', name: 'Islom V', managerName: 'Bobur' }, { id: 'l2', name: 'Madina', slaRopAcknowledged: { s1: '2026-10-20T12:00:00Z' } }], russian: [] }),
+        STORAGE_KEYS: { leads: 'leads' },
+        getSalesManagers: () => [{ id: 'a', name: 'Aziza' }, { id: 'b', name: 'Bobur' }],
+        getManagerSalesForPeriod: id => ({ a: 72_800_000, b: 55_250_000 })[id],
+        getManagerPeriodTarget: () => 74_534_850,
+        pctToPlanColor: () => '#000',
+    });
+    vm.runInContext(functionSource('js/app.js', 'renderRopDashboardBlock') + '\nthis.rop = renderRopDashboardBlock;', c);
+    const html = c.rop({ role: 'rop', linkedRopLang: 'english' });
+    assert.match(html, /1 ta ochiq/);
+    assert.match(html, /Islom V/);
+    assert.ok(!html.includes('Madina'), 'acknowledged escalation hidden');
+    assert.ok(!html.includes('Boshqa til'), 'other direction hidden');
+    assert.match(html, /24 soatdan oshdi/);
+    assert.match(html, /86% · /);
+    assert.equal(c.rop({ role: 'admin' }), '');
+});
