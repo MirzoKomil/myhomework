@@ -74,7 +74,7 @@ export function DExpired() {
           </View>
         </View>
 
-        <View style={{ flex: 7, minWidth: 0, gap: 20 }}>
+        <View style={{ flex: 637, minWidth: 0, gap: 20 }}>
           <View style={{ gap: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 4 }}>
               <T size={18} lh={22.5} accessibilityRole="header">
@@ -150,7 +150,7 @@ function Access({ title, color, bg, head, items, icon }: { title: string; color:
 }
 
 const s = StyleSheet.create({
-  hero: { flex: 5, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 28, alignItems: 'center', gap: 14 },
+  hero: { flex: 399, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 28, alignItems: 'center', gap: 14 },
   date: { alignSelf: 'flex-start', height: 32, paddingHorizontal: 12, borderRadius: 11, backgroundColor: '#FDECEC', flexDirection: 'row', alignItems: 'center', gap: 6 },
   safe: { width: '100%', backgroundColor: '#E3F7EE', borderRadius: 18, paddingVertical: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   list: { backgroundColor: '#FFFFFF', borderRadius: 24, overflow: 'hidden' },

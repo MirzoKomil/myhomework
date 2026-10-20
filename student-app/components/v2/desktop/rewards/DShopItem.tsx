@@ -263,7 +263,7 @@ function MiniBook({ p }: { p: ShopProductV2 }) {
     >
       <View style={s.miniImg}>{uri ? <Image source={{ uri }} style={{ width: 52, height: 52 }} resizeMode="contain" /> : null}</View>
       <View style={{ gap: 2, minWidth: 0, flexShrink: 1 }}>
-        <T f="bodyHeavy" size={14} numberOfLines={1}>
+        <T f="bodyHeavy" size={14} numberOfLines={1} ellipsizeMode="clip">
           {p.name}
         </T>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

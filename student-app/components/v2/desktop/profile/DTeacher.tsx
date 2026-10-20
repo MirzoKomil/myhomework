@@ -340,9 +340,9 @@ const s = StyleSheet.create({
   avatar64: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   tgCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#2AABEE', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   strip: { height: 44, borderRadius: 14, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  week: { flex: 7, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 24, gap: 14 },
+  week: { flex: 589, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 24, gap: 14 },
   day: { flex: 1, minWidth: 0, borderRadius: 18, backgroundColor: '#F4F6FA', padding: 16, justifyContent: 'space-between', gap: 10 },
   dayToday: { borderWidth: 2, borderColor: '#2F5BFF', backgroundColor: '#F3F6FF' },
   dayIcon: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  info: { flex: 5, minWidth: 0, backgroundColor: '#E8EEFF', borderRadius: 28, padding: 24, alignItems: 'flex-start', justifyContent: 'center', gap: 14 },
+  info: { flex: 407, minWidth: 0, backgroundColor: '#E8EEFF', borderRadius: 28, padding: 24, alignItems: 'flex-start', justifyContent: 'center', gap: 14 },
 });

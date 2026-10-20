@@ -211,7 +211,7 @@ export function DImageViewer() {
 
 const s = StyleSheet.create({
   // Dizayn foni — sahifaning xira surati ustida rgba(5,8,15,0.9); ilovada bir xil to'q rang.
-  screen: { flex: 1, backgroundColor: '#0E121A' },
+  screen: { flex: 1, backgroundColor: '#11131B' },
   header: {
     height: 84,
     paddingHorizontal: 32,

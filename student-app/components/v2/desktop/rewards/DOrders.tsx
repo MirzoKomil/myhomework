@@ -441,7 +441,7 @@ function ShelfBook({ p, coins }: { p: ShopProductV2; coins: number }) {
     >
       <View style={s.shelfImg}>{uri ? <Image source={{ uri }} style={{ width: 56, height: 56 }} resizeMode="contain" /> : null}</View>
       <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <T f="bodyHeavy" size={13} numberOfLines={1}>
+        <T f="bodyHeavy" size={13} numberOfLines={1} ellipsizeMode="clip">
           {p.name}
         </T>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

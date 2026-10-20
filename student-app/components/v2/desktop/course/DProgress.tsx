@@ -276,7 +276,8 @@ const s = StyleSheet.create({
   week: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, paddingTop: 22, paddingHorizontal: 26, paddingBottom: 20, gap: 14 },
   bars: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 8, minHeight: 250, borderBottomWidth: 1, borderBottomColor: '#EEF1F7', paddingBottom: 12 },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-  skills: { width: 400, flexShrink: 0, backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 22, paddingHorizontal: 26, gap: 20 },
+  // Dizaynda content-box: 400 + 2×26 ichki chekka.
+  skills: { width: 452, flexShrink: 0, backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 22, paddingHorizontal: 26, gap: 20 },
   track: { height: 12, borderRadius: 6, backgroundColor: '#EEF1F7', overflow: 'hidden' },
   prep: { backgroundColor: '#F0EBFF', borderRadius: 24, paddingVertical: 20, paddingRight: 24, paddingLeft: 20, flexDirection: 'row', alignItems: 'center', gap: 18 },
   prepIcon: { width: 56, height: 56, borderRadius: 17, backgroundColor: '#7C4DFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

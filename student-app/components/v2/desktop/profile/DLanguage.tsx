@@ -17,7 +17,8 @@ import { R } from '@/constants/v2/routes';
 import { useLang } from '@/i18n/LanguageContext';
 import type { AppLang } from '@/i18n/translations';
 
-import { CheckIcon, H, Over, SettingsLayout, T } from './ui';
+import { SettingsLayout } from './settingsNav';
+import { CheckIcon, H, Over, T } from './ui';
 
 type Option = { code: AppLang | 'en'; badge: string; name: string; sub: string; lang?: string; available: boolean };
 

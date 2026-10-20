@@ -241,7 +241,8 @@ const s = StyleSheet.create({
   timer: { height: 46, paddingHorizontal: 16, borderRadius: 15, backgroundColor: '#FFF1E6', flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 },
-  wrap: { width: 1100, maxWidth: '100%', flexDirection: 'row', gap: 36, alignItems: 'center', justifyContent: 'center' },
+  // To'r (854) + 36 + 232 = 1122 > 1100: dizayndagi kabi chapdan boshlanadi (o'ngga 22px chiqadi).
+  wrap: { width: 1100, maxWidth: '100%', flexDirection: 'row', gap: 36, alignItems: 'center', justifyContent: 'flex-start' },
   grid: { width: 4 * 200 + 3 * 18, flexDirection: 'row', flexWrap: 'wrap', columnGap: 18, rowGap: 20 },
   card: { width: 200, height: 206, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   closed: { backgroundColor: '#FF7A1A', padding: 9 },

@@ -316,8 +316,11 @@ const s = StyleSheet.create({
   h2: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 19, lineHeight: 26, color: '#0B1220' },
   row: { flexDirection: 'row', gap: 16 },
 
+  // Dizayndagi 12 ustunli to'r: 6 + 6 (teng yarim, oraliq 16).
   battle: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'calc(50% - 8px)' as unknown as number,
     minWidth: 0,
     minHeight: 268,
     backgroundColor: '#0B1220',
@@ -343,7 +346,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  tiles: { flex: 1, minWidth: 0, gap: 16 },
+  tiles: { flexGrow: 0, flexShrink: 0, flexBasis: 'calc(50% - 8px)' as unknown as number, minWidth: 0, gap: 16 },
   tileRow: { flex: 1, flexDirection: 'row', gap: 16 },
   tile: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
   tileIcon: { width: 68, height: 68, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

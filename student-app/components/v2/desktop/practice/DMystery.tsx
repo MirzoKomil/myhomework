@@ -255,7 +255,8 @@ const s = StyleSheet.create({
   gameIcon: { width: 64, height: 64, borderRadius: 18, backgroundColor: '#E3F7EE', alignItems: 'center', justifyContent: 'center' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   legendBox: { width: 22, height: 22, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  key: { width: 36, height: 44, borderRadius: 10, backgroundColor: '#EEF1F7', alignItems: 'center', justifyContent: 'center' },
+  // 11 × 36 + 10 × 5 > 422: dizayndagi kabi tugmalar qatorga sig'guncha torayadi.
+  key: { width: 36, flexShrink: 1, minWidth: 0, height: 44, borderRadius: 10, backgroundColor: '#EEF1F7', alignItems: 'center', justifyContent: 'center' },
   keyText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 17, lineHeight: 23, color: '#0B1220' },
   info: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 14, paddingHorizontal: 18 },
 

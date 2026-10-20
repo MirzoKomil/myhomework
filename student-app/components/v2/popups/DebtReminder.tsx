@@ -16,6 +16,8 @@ import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
 import { fetchDemoStudentPayments, fetchDemoStudentProfile } from '@/services/contentApi';
+import { DDebtReminder } from '@/components/v2/desktop/profile/DDebtReminder';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 export type DebtReminderData = {
   /** Qolgan to'lov (so'm). */
@@ -31,7 +33,12 @@ export type DebtReminderData = {
   managerUrl: string;
 };
 
-export function DebtReminderPopup({
+export function DebtReminderPopup(props: { visible: boolean; onClose: () => void; data?: DebtReminderData | null }) {
+  // Kompyuterda — markazdagi karta (D_DebtReminder dizayni), telefonda — avvalgidek.
+  return useIsDesktop() ? <DDebtReminder {...props} /> : <DebtReminderPopupMobile {...props} />;
+}
+
+function DebtReminderPopupMobile({
   visible,
   onClose,
   data,

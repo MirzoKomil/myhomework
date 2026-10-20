@@ -20,14 +20,17 @@ type TP = {
   style?: StyleProp<TextStyle>;
   children?: ReactNode;
   numberOfLines?: number;
+  /** 'clip' — dizayndagi white-space: nowrap + overflow: hidden (uch nuqtasiz). */
+  ellipsizeMode?: 'tail' | 'clip';
   accessibilityRole?: 'header' | 'text';
 };
 
 /** Dizayndagi matn: Manrope 600/700/800 → body/bodyBold/bodyHeavy, Bricolage 800 → display. */
-export function T({ f = 'bodyBold', size, color = '#0B1220', lh, style, children, numberOfLines, accessibilityRole }: TP) {
+export function T({ f = 'bodyBold', size, color = '#0B1220', lh, style, children, numberOfLines, ellipsizeMode, accessibilityRole }: TP) {
   return (
     <Text
       numberOfLines={numberOfLines}
+      ellipsizeMode={ellipsizeMode}
       accessibilityRole={accessibilityRole}
       style={[{ fontFamily: fonts[f], fontWeight: 'normal', fontSize: size, color }, lh ? { lineHeight: lh } : null, style]}
     >

@@ -19,7 +19,8 @@ import { V2_BATTLE_DAILY_COIN_WINS, V2_BATTLE_WIN_COINS } from '@/constants/v2/b
 import { designImages } from '@/constants/v2/designImages';
 import { fetchDemoSchedule, fetchDemoStudentPayments, type DemoPaymentsResponse, type DemoScheduleResponse } from '@/services/contentApi';
 
-import { ArrowRightIcon, ChevronDownIcon, ChevronUpIcon, SettingsLayout, T, TgIcon } from './ui';
+import { SettingsLayout } from './settingsNav';
+import { ArrowRightIcon, ChevronDownIcon, ChevronUpIcon, T, TgIcon } from './ui';
 
 const PATTERN_DAYS: Record<'mwf' | 'tts', string> = {
   mwf: 'dushanba, chorshanba va juma',

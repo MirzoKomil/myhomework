@@ -359,6 +359,6 @@ const s = StyleSheet.create({
   allImg: { width: 120, height: 120, flexShrink: 0, marginTop: -10, marginRight: -4, marginBottom: -10, marginLeft: -8 },
   bar: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 14, paddingRight: 16, paddingLeft: 20, flexDirection: 'row', alignItems: 'center', gap: 14 },
   copy: { height: 44, paddingHorizontal: 14, borderRadius: 14, backgroundColor: '#E8EEFF', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  shareBtn: { height: 52, paddingHorizontal: 22, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E6EE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  shareBtn: { height: 52, paddingHorizontal: 22, borderRadius: 17, backgroundColor: '#FFFFFF', boxShadow: 'inset 0 0 0 1.5px #E2E6EE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 } as object,
   pdfBtn: { height: 52, paddingHorizontal: 22, borderRadius: 17, backgroundColor: '#2F5BFF', boxShadow: '0 5px 0 #1E3FD1', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 } as object,
 });

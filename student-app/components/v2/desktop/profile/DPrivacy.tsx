@@ -9,7 +9,8 @@ import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
 import { SUPPORT_TELEGRAM_URL } from '@/components/v2/settings/parts';
 
-import { ClockIcon, EyeIcon, SettingsLayout, ShieldIcon, T, TgIcon, XCircleIcon } from './ui';
+import { SettingsLayout } from './settingsNav';
+import { ClockIcon, EyeIcon, ShieldIcon, T, TgIcon, XCircleIcon } from './ui';
 
 const DbIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#1E3FD1" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">

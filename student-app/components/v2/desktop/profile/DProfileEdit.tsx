@@ -190,7 +190,7 @@ export function DProfileEdit() {
           </View>
         </View>
 
-        <View style={{ flex: 5, minWidth: 0, gap: 20 }}>
+        <View style={{ flex: 455, minWidth: 0, gap: 20 }}>
           <View style={{ gap: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
               <Over>Shaxsiy maʼlumotlar</Over>
@@ -278,7 +278,7 @@ export function DProfileEdit() {
 }
 
 const s = StyleSheet.create({
-  left: { flex: 7, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 28, gap: 22 },
+  left: { flex: 581, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 28, padding: 28, gap: 22 },
   big: { width: 132, height: 132, borderRadius: 66, backgroundColor: '#FFF1E6', flexShrink: 0 },
   grid: { backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#EEF1F7', borderRadius: 22, paddingVertical: 28, paddingHorizontal: 16, gap: 30 },
   opt: { width: 108, height: 108, borderRadius: 54, backgroundColor: '#F4F6FA' },

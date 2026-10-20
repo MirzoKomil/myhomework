@@ -154,10 +154,10 @@ export function DBonus() {
           <View style={s.reward}>
             <ICoin size={18} />
             <T f="bodyBold" size={14} color="#6B4800">
-              Bonus dars (oxirigacha){' '}
-              <T size={14} color="#7A5300">
-                +0 coin
-              </T>
+              Bonus dars (oxirigacha)
+            </T>
+            <T size={14} color="#7A5300">
+              +0 coin
             </T>
           </View>
         </View>

@@ -17,8 +17,15 @@ import { fonts } from '@/constants/v2/tokens';
 import { R } from '@/constants/v2/routes';
 import { invalidateCache } from '@/services/contentApi';
 import { clearAuth } from '@/services/studentAuthStore';
+import { DLogoutConfirm } from '@/components/v2/desktop/profile/DLogoutConfirm';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
-export function LogoutConfirmPopup({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function LogoutConfirmPopup(props: { visible: boolean; onClose: () => void }) {
+  // Kompyuterda — markazdagi karta (D_LogoutConfirm dizayni), telefonda — avvalgidek.
+  return useIsDesktop() ? <DLogoutConfirm {...props} /> : <LogoutConfirmPopupMobile {...props} />;
+}
+
+function LogoutConfirmPopupMobile({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
 
   const confirm = async () => {

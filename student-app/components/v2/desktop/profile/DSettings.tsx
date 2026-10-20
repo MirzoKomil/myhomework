@@ -26,29 +26,8 @@ import { useAuth } from '@/services/studentAuthStore';
 import { telegramLinkStatus } from '@/services/telegramLinkApi';
 import { setVoicePraiseEnabled, useVoicePraiseEnabled } from '@/services/voicePraise';
 
-import {
-  BellIcon,
-  CameraIcon,
-  CardIcon,
-  CheckIcon,
-  ChevronIcon,
-  DevicesIcon,
-  DownloadIcon,
-  FlameIcon,
-  GlobeIcon,
-  go,
-  H,
-  MoonIcon,
-  Over,
-  QuestionIcon,
-  SettingsLayout,
-  ShieldIcon,
-  T,
-  TgIcon,
-  Toggle,
-  useSettingsInfo,
-  VideoIcon,
-} from './ui';
+import { SettingsLayout, useSettingsInfo } from './settingsNav';
+import { BellIcon, CameraIcon, CardIcon, CheckIcon, ChevronIcon, DevicesIcon, DownloadIcon, FlameIcon, GlobeIcon, go, H, MoonIcon, Over, QuestionIcon, ShieldIcon, T, TgIcon, Toggle, VideoIcon } from './ui';
 
 const REMINDERS_KEY = 'mh_v2_reminders';
 type ReminderKey = 'lesson' | 'live' | 'streak';

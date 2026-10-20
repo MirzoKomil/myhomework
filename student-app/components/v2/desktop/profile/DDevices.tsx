@@ -16,7 +16,8 @@ import { SUPPORT_TELEGRAM_URL } from '@/components/v2/settings/parts';
 import { fetchSessions, lastSeenLabel, loginTimeLabel, parseUserAgent, type DeviceSession } from '@/components/v2/settings/sessions';
 import { designImages } from '@/constants/v2/designImages';
 
-import { ClockIcon, DevicesIcon, H, Over, SettingsLayout, T, TgIcon } from './ui';
+import { SettingsLayout } from './settingsNav';
+import { ClockIcon, DevicesIcon, H, Over, T, TgIcon } from './ui';
 
 const DEVICE_LIMIT = 3;
 

@@ -319,5 +319,6 @@ const s = StyleSheet.create({
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingTop: 30, paddingBottom: 30, paddingRight: 24, paddingLeft: 22, flexDirection: 'row', alignItems: 'center', gap: 18 },
   icon76: { width: 76, height: 76, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   score: { height: 44, paddingHorizontal: 14, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  stackBox: { width: 64, height: 64, borderRadius: 18, backgroundColor: '#EEF1F7', borderWidth: 3, borderColor: '#FFFFFF', marginRight: -14, alignItems: 'center', justifyContent: 'center' },
+  // content-box: 64 + 2×3 chegara.
+  stackBox: { width: 70, height: 70, borderRadius: 18, backgroundColor: '#EEF1F7', borderWidth: 3, borderColor: '#FFFFFF', marginRight: -14, alignItems: 'center', justifyContent: 'center' },
 });

@@ -21,7 +21,8 @@ import { R } from '@/constants/v2/routes';
 import { getResolvedLessonContent } from '@/data/lessonContent';
 import { fetchDemoSchedule, fetchMobileContent, invalidateCache } from '@/services/contentApi';
 
-import { ChevronIcon, go, H, Over, SettingsLayout, T, VideoIcon } from './ui';
+import { SettingsLayout } from './settingsNav';
+import { ChevronIcon, go, H, Over, T, VideoIcon } from './ui';
 
 type Item = { key: string; title: string; sub: string; bg: string; img: keyof typeof designImages; href: string };
 
@@ -214,12 +215,12 @@ const s = StyleSheet.create({
   status: { height: 64, borderRadius: 20, backgroundColor: '#0B1220', paddingLeft: 22, paddingRight: 10, flexDirection: 'row', alignItems: 'center', gap: 14 },
   retry: { height: 44, paddingHorizontal: 18, borderRadius: 14, backgroundColor: '#233049', flexDirection: 'row', alignItems: 'center', gap: 8 },
   hero: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 18, paddingLeft: 14, paddingRight: 26, flexDirection: 'row', alignItems: 'center', gap: 22 },
-  list: { flex: 1.55, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, overflow: 'hidden' },
+  list: { flex: 483.8, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, overflow: 'hidden' },
   listHead: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 18, paddingHorizontal: 22, paddingBottom: 6 },
   row: { flex: 1, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 18 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: '#EEF1F7' },
   thumb: { width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
-  mem: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, gap: 14 },
+  mem: { flex: 268.2, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, gap: 14 },
   bar: { height: 14, borderRadius: 7, backgroundColor: '#BFE8D3', overflow: 'hidden', flexDirection: 'row' },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#EEF1F7' },
   sw: { width: 12, height: 12, borderRadius: 4 },

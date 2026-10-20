@@ -189,7 +189,7 @@ export function DProfile() {
       <View style={{ gap: 20 }}>
         <View style={s.row}>
           {/* Shaxsiy karta (grid-column: span 7) */}
-          <View style={[s.card, { flex: 640.33 }]}>
+          <View style={[s.card, { flex: 616.33 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
               <Pressable accessibilityRole="link" accessibilityLabel="Avatarni almashtirish" onPress={() => go(R.profileEdit)} style={s.avatarWrap}>
                 <Image source={avatarSrc} accessibilityLabel="Avatar" style={s.avatar} />
@@ -253,7 +253,7 @@ export function DProfile() {
           </View>
 
           {/* Daraja kartasi (span 5) */}
-          <Pressable accessibilityRole="link" onPress={() => go(R.levels)} style={[s.level, { flex: 451.67 }]}>
+          <Pressable accessibilityRole="link" onPress={() => go(R.levels)} style={[s.level, { flex: 427.67 }]}>
             <View style={s.levelBlob} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <Image source={designImages[lvl.ui.img]} accessibilityLabel={`${lvl.index + 1}-daraja nishoni`} style={{ width: 84, height: 92 }} resizeMode="contain" />
