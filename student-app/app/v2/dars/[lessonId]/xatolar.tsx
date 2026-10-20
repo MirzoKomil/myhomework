@@ -21,6 +21,8 @@ import { FeedbackSheet, LabelHeader, OptionRow, Txt, webShadow } from '@/compone
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
+import { DMistakeReview } from '@/components/v2/desktop/homework/DMistakeReview';
 
 type Item = { key: string; part: HomeworkPart; n: number; prompt: string; options: string[]; correct: string; prev?: string; fill: boolean };
 
@@ -47,6 +49,10 @@ function mistakesOf(p: HomeworkPart, sc: PartScore | undefined): Item[] {
 }
 
 export default function MistakeReviewScreen() {
+  return useIsDesktop() ? <DMistakeReview /> : <MistakeReviewScreenMobile />;
+}
+
+function MistakeReviewScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const id = String(lessonId);

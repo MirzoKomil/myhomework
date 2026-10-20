@@ -27,8 +27,14 @@ import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
 import { fetchCreativeSubmission, submissionKey, type CreativeSubmissionRecord } from '@/services/creativeSubmissionApi';
 import { useLessonProgress } from '@/services/lessonProgressStore';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
+import { DHomework } from '@/components/v2/desktop/homework/DHomework';
 
 export default function HomeworkScreen() {
+  return useIsDesktop() ? <DHomework /> : <HomeworkScreenMobile />;
+}
+
+function HomeworkScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId, yuborildi, bajarildi } = useLocalSearchParams<{
     lessonId: string;

@@ -21,6 +21,8 @@ import { useHomeworkScores } from '@/components/v2/homework/scoreStore';
 import { Txt, webShadow } from '@/components/v2/homework/ui';
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
+import { DTestReview } from '@/components/v2/desktop/homework/DTestReview';
 
 type Row = { n: number; prompt: string; correct: string; pick?: string; ok: boolean };
 
@@ -59,6 +61,10 @@ function Ring({ pct: target }: { pct: number }) {
 }
 
 export default function TestReviewScreen() {
+  return useIsDesktop() ? <DTestReview /> : <TestReviewScreenMobile />;
+}
+
+function TestReviewScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId, qism } = useLocalSearchParams<{ lessonId: string; qism?: string }>();
   const id = String(lessonId);
