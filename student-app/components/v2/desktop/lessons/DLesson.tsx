@@ -10,6 +10,7 @@
  * Mukofot: mobil hisob (+savollar soni coin/chaqmoq); seriya — joriy seriya + 1.
  * Vazifa muddati serverda yo'q — ko'rsatilmaydi.
  */
+import { lessonGoal } from '@/components/v2/home/lessonGoal';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -110,7 +111,7 @@ export function DLesson({ id }: { id: string }) {
     const m = lesson.name.match(/^(.*?)\s+[—–-]\s+(.+)$/);
     return m ? [m[1], m[2]] : [lesson.name, ''];
   })();
-  const adminKonspekt = data.mc.lessonContents[id]?.konspekt?.trim();
+  const adminKonspekt = lessonGoal(data.mc.lessonContents[id]?.konspekt);
   const hw = homeworkSummary(lesson, scores[id]);
   const words = lesson.content.vocabulary;
   const learned = learnedWordIds(id, words.map((w) => w.id), seen).size;

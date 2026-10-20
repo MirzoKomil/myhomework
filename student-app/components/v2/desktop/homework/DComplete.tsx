@@ -6,6 +6,7 @@
  * Sarlavhadagi "Qadam N / 5" va pastki qator — darsning qadamlari (lessonSteps).
  * Klaviatura: Enter — "Davom etish".
  */
+import { lessonGoal } from '@/components/v2/home/lessonGoal';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
@@ -78,7 +79,7 @@ export function DComplete() {
   const dates = schedule.startsAt && data && next ? scheduleDates(schedule.startsAt, schedule.pattern, data.activeIndex, next.index) : {};
   const nextDate = next ? dates[next.index] : undefined;
   const { title, phrase } = splitTitle(lesson?.name ?? '');
-  const konspekt = stripRichText(data?.mc.lessonContents[id]?.konspekt)?.trim();
+  const konspekt = stripRichText(lessonGoal(data?.mc.lessonContents[id]?.konspekt))?.trim();
   const outcome = konspekt && title && konspekt.toLowerCase().startsWith(title.toLowerCase()) ? konspekt.slice(title.length).trim() : konspekt;
   const nextShort = next ? splitTitle(next.name).title.split(':')[0] : '';
   const ownDate = lesson && data && schedule.startsAt ? scheduleDates(schedule.startsAt, schedule.pattern, data.activeIndex, lesson.index)[lesson.index] : undefined;
