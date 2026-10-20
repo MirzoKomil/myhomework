@@ -9808,7 +9808,7 @@ function renderSdpHeader(studentId) {
         <div style="display:flex;align-items:center;gap:12px">
             <div class="sdp-avatar">${escapeHtml(initials)}</div>
             <div>
-                <p class="sdp-name">${escapeHtml(s.name || '—')}${frozenBadge}</p>
+                <p class="sdp-name">${escapeHtml(s.name || '—')}${frozenBadge}${s.frozen ? '' : ' <span class="badge badge-success" style="font-size:11px;vertical-align:middle">Faol</span>'}${Number(s.debtAmount) > 0 ? ` <span class="badge badge-danger" style="font-size:11px;vertical-align:middle">Qarzdor</span>` : s.debtAmount != null ? ' <span class="badge badge-success" style="font-size:11px;vertical-align:middle">To\'liq to\'lagan</span>' : ''}</p>
                 <p class="sdp-meta">${subjectLabel} · ${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</p>
             </div>
         </div>`;
@@ -9828,6 +9828,12 @@ function renderSdpHeader(studentId) {
                 : '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V2M4.93 4.93l14.14 14.14M2 12h20M4.93 19.07l14.14-14.14"/></svg> Muzlatish'}
         </button>`;
 
+    const _sdpRole = getCurrentUser()?.role;
+    if ((FULL_ACCESS_ROLES.has(_sdpRole) || _sdpRole === 'sales_manager') && typeof inflowUI?.openPayment === 'function') {
+        document.getElementById('sdpHeaderActions').insertAdjacentHTML('beforeend',
+            `<button type="button" class="sdp-action-btn sdp-action-btn--pay" id="sdpBtnPay">+ To'lov qabul qilish</button>`);
+        document.getElementById('sdpBtnPay').onclick = () => inflowUI.openPayment(studentId);
+    }
     document.getElementById('sdpBtnTeacher').onclick = () => openSdpTransferTeacher(s);
     document.getElementById('sdpBtnSchedule').onclick = () => openSdpChangeSchedule(s);
     document.getElementById('sdpBtnFreeze').onclick = () => {
@@ -9866,7 +9872,7 @@ function renderSdpTab(tab, studentId) {
 function renderSdpProfile(s) {
     const allTeachers = [
         ...getItem(STORAGE_KEYS.teachers, []),
-        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi')
+        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e => e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi' || e.role === 'oqituvchi')
     ];
     const allManagers = getItem(STORAGE_KEYS.hrEmployees, [])
         .filter(e => e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri');
@@ -9877,51 +9883,102 @@ function renderSdpProfile(s) {
     const attended = countStudentAttendance(s.id, s.teacherId);
 
     const totalDebt = Number(s.debtAmount) || 0;
+    const due = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+    const dueLate = due && !Number.isNaN(due.getTime()) && due < new Date(new Date().toDateString());
     const statusHtml = s.debtAmount == null
         ? `<span class="badge" style="background:#f3f4f6;color:#6b7280">—</span>`
         : totalDebt > 0
             ? `<span class="badge badge-danger">Qarzdor: ${formatMoney(totalDebt)}</span>`
             : `<span class="badge badge-success">To'liq to'lagan</span>`;
+    const dueHtml = s.paymentDueDate
+        ? `<span${dueLate ? ' style="color:var(--danger);font-weight:700"' : ''}>${escapeHtml(formatDateShort(s.paymentDueDate))}${dueLate ? ' · sana oʻtgan' : ''}</span>`
+        : '—';
 
     const genderLabel = s.gender === 'erkak' ? 'Erkak' : s.gender === 'ayol' ? 'Ayol' : '—';
     const frozenStatus = s.frozen
         ? '<span class="sdp-frozen-badge">❄️ Muzlatilgan</span>'
         : '<span class="badge badge-success">Faol</span>';
 
+    // Joriy oy davomati (asosiy ustoz) — rejadagi kunlar bilan.
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    const monthMarks = (s.teacherId && mainAtt[`${month}_${s.teacherId}`]?.[s.id]) || {};
+    let cells = [];
+    try {
+        cells = teacherAttendanceCalendar.cells(month, teacherAttendanceCalendar.weekdays(s, teacher || {}, 'main')).filter(c => c && c.scheduled);
+    } catch (e) { cells = []; }
+    const today = now.getDate();
+    const shortDay = ['Du', 'Se', 'Chor', 'Pa', 'Ju', 'Sha', 'Ya'];
+    const monthCame = Object.values(monthMarks).filter(v => v === 1 || v === true).length;
+    const passed = cells.filter(c => c.day <= today).length;
+    const chips = cells.map(c => {
+        const st = teacherAttendanceCalendar.status(monthMarks[c.day]);
+        const wd = shortDay[((new Date(`${c.date}T00:00:00`).getDay() || 7) - 1)];
+        const cls = st === 'present' ? 'sdp2-day--ok' : st === 'absent' ? 'sdp2-day--no' : c.day <= today ? 'sdp2-day--unk' : '';
+        const mark = st === 'present' ? ' ✓' : st === 'absent' ? ' ✕' : '';
+        const label = st === 'present' ? 'keldi' : st === 'absent' ? 'kelmadi' : c.day <= today ? 'belgilanmagan' : 'dars kutilmoqda';
+        return `<span class="sdp2-day ${cls}" title="${c.day}-kun: ${label}" aria-label="${c.day}-kun: ${label}"><small>${wd}</small>${c.day}${mark}</span>`;
+    }).join('');
+    const monthName = now.toLocaleString('uz-UZ', { month: 'long' });
+
+    const row = (label, value) => `<div class="sdp2-kv"><dt>${label}</dt><dd>${value}</dd></div>`;
     return `
-    <div class="sdp-section">
-        <p class="sdp-section-title">Asosiy ma'lumotlar</p>
-        <div class="sdp-info-grid">
-            <div class="sdp-info-item"><div class="sdp-info-label">Ism familiya</div><div class="sdp-info-value">${escapeHtml(s.name||'—')}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Telefon</div><div class="sdp-info-value">${escapeHtml(s.phone||'—')}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Yoshi</div><div class="sdp-info-value">${escapeHtml(s.age ? String(s.age) : calculateAge(s.birthDate))}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Jinsi</div><div class="sdp-info-value">${escapeHtml(genderLabel)}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Viloyat</div><div class="sdp-info-value">${escapeHtml(s.region||'—')}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Fan</div><div class="sdp-info-value">${s.subject==='russian'?'🇷🇺 Rus tili':'🇬🇧 Ingliz tili'}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Dars boshlagan</div><div class="sdp-info-value">${s.startDate ? formatDateShort(s.startDate) : '—'}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Kurs tugash</div><div class="sdp-info-value">${escapeHtml(endDate)}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Holati</div><div class="sdp-info-value">${frozenStatus}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">To'lov holati</div><div class="sdp-info-value">${statusHtml}</div></div>
+    <div class="sdp2">
+        <div class="sdp2-main">
+            <div class="sdp2-stats">
+                <div class="sdp2-stat"><small>Kelgan darslar · ${escapeHtml(monthName)}</small><b>${monthCame}${passed ? ` / ${passed}` : ''}</b><span>jami kursda ${attended || 0}</span></div>
+                <div class="sdp2-stat"><small>Baho</small><b>${escapeHtml(String(s.grade || '—'))}</b><span>ustoz bahosi</span></div>
+                <div class="sdp2-stat"><small>Toʻlovlar soni</small><b>${s.paymentCount ?? '—'}</b><span>toʻlov holati quyida</span></div>
+                <div class="sdp2-stat"><small>Kurs tugashi</small><b>${escapeHtml(endDate)}</b><span>${s.startDate ? 'boshlagan ' + escapeHtml(formatDateShort(s.startDate)) : 'boshlanish sanasi yoʻq'}</span></div>
+            </div>
+            <section class="sdp-section">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                    <p class="sdp-section-title" style="margin:0">Davomat · ${escapeHtml(monthName)}</p>
+                    <span class="sdp2-legend"><i class="sdp2-day--ok"></i>Keldi <i class="sdp2-day--no"></i>Kelmadi <i></i>Kutilmoqda</span>
+                </div>
+                ${cells.length ? `<div class="sdp2-days">${chips}</div>` : '<p class="sdp-empty" style="padding:8px 0">Dars kunlari belgilanmagan</p>'}
+            </section>
+            <section class="sdp-section">
+                <p class="sdp-section-title">Toʻlov</p>
+                <dl class="sdp2-kvs">
+                    ${row("To'lov holati", statusHtml)}
+                    ${row('Keyingi toʻlov · kelishilgan sana', dueHtml)}
+                </dl>
+            </section>
         </div>
-    </div>
-    <div class="sdp-section">
-        <p class="sdp-section-title">O'quv jarayoni</p>
-        <div class="sdp-info-grid">
-            <div class="sdp-info-item"><div class="sdp-info-label">Asosiy ustoz</div><div class="sdp-info-value">${escapeHtml(teacher?.name||'—')}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Yordamchi ustoz</div><div class="sdp-info-value">${escapeHtml(asst?.name||'—')}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Sotuv menejeri</div><div class="sdp-info-value">${escapeHtml(manager?.name||'—')}</div></div>
-            <div class="sdp-info-item"><div class="sdp-info-label">Kurs darajasi</div><div class="sdp-info-value">${escapeHtml(s.group||'—')}</div></div>
-            ${s.lessonDayOfWeek != null ? `<div class="sdp-info-item"><div class="sdp-info-label">Dars kuni</div><div class="sdp-info-value">${escapeHtml(DAYS_UZ[s.lessonDayOfWeek - 1] || '—')}</div></div>` : ''}
-            ${s.lessonTime ? `<div class="sdp-info-item"><div class="sdp-info-label">Dars vaqti</div><div class="sdp-info-value">${escapeHtml(s.lessonTime)}</div></div>` : ''}
-        </div>
-    </div>
-    <div class="sdp-section">
-        <p class="sdp-section-title">Statistika</p>
-        <div class="sdp-stat-grid">
-            <div class="sdp-stat-card"><div class="sdp-stat-value">${attended||0}</div><div class="sdp-stat-label">Kelgan darslar</div></div>
-            <div class="sdp-stat-card"><div class="sdp-stat-value">${s.grade||'—'}</div><div class="sdp-stat-label">Baho</div></div>
-            <div class="sdp-stat-card"><div class="sdp-stat-value">${s.paymentCount ?? '—'}</div><div class="sdp-stat-label">To'lovlar soni</div></div>
-        </div>
+        <aside class="sdp2-side">
+            <section class="sdp-section">
+                <p class="sdp-section-title">Kurs</p>
+                <dl class="sdp2-kvs">
+                    ${row('Fan', s.subject === 'russian' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili')}
+                    ${row('Kurs darajasi', escapeHtml(s.group || '—'))}
+                    ${row('Dars boshlagan', s.startDate ? escapeHtml(formatDateShort(s.startDate)) : '—')}
+                    ${row('Kurs tugash', escapeHtml(endDate))}
+                    ${s.lessonDayOfWeek != null ? row('Dars kunlari', escapeHtml(expandLessonPatternDays(s.lessonDayOfWeek).map(d => DAYS_UZ[d - 1]).filter(Boolean).join(', ') || '—')) : ''}
+                    ${s.lessonTime ? row('Dars vaqti', escapeHtml(s.lessonTime)) : ''}
+                    ${row('Holati', frozenStatus)}
+                </dl>
+            </section>
+            <section class="sdp-section">
+                <p class="sdp-section-title">Masʼul xodimlar</p>
+                <dl class="sdp2-kvs">
+                    ${row('Asosiy ustoz', escapeHtml(teacher?.name || '—'))}
+                    ${row('Yordamchi ustoz', escapeHtml(asst?.name || 'Biriktirilmagan'))}
+                    ${row('Sotuv menejeri', escapeHtml(manager?.name || '—'))}
+                </dl>
+            </section>
+            <section class="sdp-section">
+                <p class="sdp-section-title">Shaxsiy maʼlumotlar</p>
+                <dl class="sdp2-kvs">
+                    ${row('Ism familiya', escapeHtml(s.name || '—'))}
+                    ${row('Telefon', escapeHtml(s.phone || '—'))}
+                    ${row('Yoshi', escapeHtml(s.age ? String(s.age) : calculateAge(s.birthDate)))}
+                    ${row('Jinsi', escapeHtml(genderLabel))}
+                    ${row('Viloyat', escapeHtml(s.region || '—'))}
+                </dl>
+            </section>
+        </aside>
     </div>`;
 }
 
