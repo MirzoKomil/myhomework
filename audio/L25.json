@@ -1,0 +1,320 @@
+{
+ "n": 25,
+ "topic_uz": "Где? va Куда́? — qayerda va qayerga",
+ "scene": "A man in an office talks on his phone while his wife stands at a pharmacy counter with a shopping bag, split-screen style.",
+ "dialogs": [
+  {
+   "id": "L25-d1",
+   "title_ru": "Ты где?",
+   "title_uz": "Qayerdasan?",
+   "intro_uz": "Birinchi dialog. Abdulaziz Nigoraga qo'ng'iroq qilyapti. Nigora hozir qayerda va keyin qayerga boradi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Алло́, Нигора́, ты где?",
+     "uz": "Allo, Nigora, qayerdasan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я в апте́ке. А что?",
+     "uz": "Dorixonadaman. Nima edi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А пото́м куда́ ты идёшь?",
+     "uz": "Keyin qayerga borasan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Пото́м я иду́ в магази́н и домо́й. А ты где?",
+     "uz": "Keyin do'konga, so'ng uyga boraman. Sen-chi, qayerdasan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я ещё на рабо́те. Ве́чером я иду́ на стадио́н.",
+     "uz": "Hali ishdaman. Kechqurun stadionga boraman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "На стадио́н? А Бобу́р то́же идёт?",
+     "uz": "Stadionga? Bobur ham boradimi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Бобу́р уже́ на стадио́не. Он меня́ ждёт.",
+     "uz": "Bobur allaqachon stadionda. U meni kutyapti."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora hozir qayerda?",
+     "opts": [
+      "do'konda",
+      "dorixonada",
+      "ishda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz kechqurun qayerga boradi?",
+     "opts": [
+      "stadionga",
+      "vokzalga",
+      "dorixonaga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bobur hozir qayerda?",
+     "opts": [
+      "uyda",
+      "ishda",
+      "stadionda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в апте́ке",
+     "alts": [
+      "в ба́нке",
+      "на по́чте",
+      "в магази́не"
+     ]
+    },
+    {
+     "base": "на стадио́н",
+     "alts": [
+      "в кино́",
+      "в парк",
+      "на вокза́л"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: hozir qayerda ekaningizni va keyin qayerga borishingizni ayting."
+  },
+  {
+   "id": "L25-d2",
+   "title_ru": "Но́вая кварти́ра",
+   "title_uz": "Yangi kvartira",
+   "intro_uz": "Ikkinchi dialog. Timur va Dilnoza yangi kvartiraga ko'chishyapti. Divan, shkaf va kitoblar qayerda bo'ladi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, куда́ поста́вить дива́н?",
+     "uz": "Timur, divanni qayerga qo'yamiz?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "В ко́мнату. И телеви́зор то́же в ко́мнату.",
+     "uz": "Xonaga. Televizorni ham xonaga."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́. А где стои́т шкаф?",
+     "uz": "Xo'p. Shkaf qayerda turibdi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Шкаф стои́т в коридо́ре.",
+     "uz": "Shkaf koridorda turibdi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "В коридо́ре? Э́то пло́хо. Шкаф — в спа́льню!",
+     "uz": "Koridordami? Bu yomon. Shkaf — yotoqxonaga!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ла́дно. А где мои́ кни́ги?",
+     "uz": "Mayli. Kitoblarim qayerda?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Кни́ги лежа́т на дива́не.",
+     "uz": "Kitoblar divanda yotibdi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Отли́чно. Кни́ги — на по́лку!",
+     "uz": "Zo'r. Kitoblar — javonga!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Divanni qayerga qo'yishadi?",
+     "opts": [
+      "xonaga",
+      "koridorga",
+      "oshxonaga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Shkaf hozir qayerda turibdi?",
+     "opts": [
+      "yotoqxonada",
+      "koridorda",
+      "xonada"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kitoblar qayerda yotibdi?",
+     "opts": [
+      "javonda",
+      "stolda",
+      "divanda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в ко́мнату",
+     "alts": [
+      "в спа́льню",
+      "на ку́хню",
+      "в коридо́р"
+     ]
+    },
+    {
+     "base": "на дива́не",
+     "alts": [
+      "на столе́",
+      "на по́лке",
+      "на сту́ле"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: uyingizda divan, shkaf va kitoblar qayerda turganini ayting."
+  },
+  {
+   "id": "L25-d3",
+   "title_ru": "В аудито́рию",
+   "title_uz": "Auditoriyaga",
+   "intro_uz": "Uchinchi dialog. Anton va Dilnoza o'quv markazida. Dilnoza qayerga shoshyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, приве́т! Куда́ ты спеши́шь?",
+     "uz": "Dilnoza, salom! Qayerga shoshyapsan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "В аудито́рию. Уро́к в де́вять.",
+     "uz": "Auditoriyaga. Dars soat to'qqizda."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А где нахо́дится аудито́рия?",
+     "uz": "Auditoriya qayerda joylashgan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "На второ́м этаже́, ря́дом. Ты то́же идёшь на уро́к?",
+     "uz": "Ikkinchi qavatda, yaqin. Sen ham darsga boryapsanmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да. А преподава́тель уже́ в аудито́рии?",
+     "uz": "Ha. O'qituvchi allaqachon auditoriyadami?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет, он ещё в кафе́. Он пьёт ко́фе.",
+     "uz": "Yo'q, u hali kafeda. Kofe ichyapti."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "В кафе́? Я то́же иду́ в кафе́!",
+     "uz": "Kafedami? Men ham kafega boraman!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, уро́к в де́вять! Мы идём в аудито́рию.",
+     "uz": "Anton, dars soat to'qqizda! Biz auditoriyaga boramiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qayerga shoshyapti?",
+     "opts": [
+      "kafega",
+      "auditoriyaga",
+      "vokzalga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Auditoriya qayerda?",
+     "opts": [
+      "birinchi qavatda",
+      "uchinchi qavatda",
+      "ikkinchi qavatda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "O'qituvchi hozir qayerda?",
+     "opts": [
+      "kafeda",
+      "auditoriyada",
+      "uyda"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в аудито́рию",
+     "alts": [
+      "на уро́к",
+      "в библиоте́ку",
+      "в о́фис"
+     ]
+    },
+    {
+     "base": "в кафе́",
+     "alts": [
+      "в ба́нке",
+      "на у́лице",
+      "в магази́не"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: qayerga shoshayotganingizni va o'qituvchi qayerdaligini ayting."
+  }
+ ]
+}

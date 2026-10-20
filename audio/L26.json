@@ -1,0 +1,333 @@
+{
+ "n": 26,
+ "topic_uz": "Shaharda yo'l so'rash — «Как пройти́ в…?»",
+ "scene": "On a city street near a traffic light, a young Russian man with a backpack asks an Uzbek woman for directions; she points to the left.",
+ "dialogs": [
+  {
+   "id": "L26-d1",
+   "title_ru": "Где нахо́дится банк?",
+   "title_uz": "Bank qayerda?",
+   "intro_uz": "Birinchi dialog. Anton shaharda bankni qidiryapti. O'tkinchi ayol unga yo'l ko'rsatadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Прохо́жая",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Извини́те, где нахо́дится банк?",
+     "uz": "Kechirasiz, bank qayerda joylashgan?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Банк? Он ря́дом с по́чтой.",
+     "uz": "Bankmi? U pochta yonida."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А как пройти́ на по́чту?",
+     "uz": "Pochtaga qanday borsa bo'ladi?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Иди́те пря́мо до светофо́ра, пото́м нале́во.",
+     "uz": "Svetoforgacha to'g'riga yuring, keyin chapga."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Э́то далеко́?",
+     "uz": "Uzoqmi?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Нет, бли́зко. По́чта напро́тив па́рка.",
+     "uz": "Yo'q, yaqin. Pochta park qarshisida."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Зна́чит, банк то́же напро́тив па́рка?",
+     "uz": "Demak, bank ham park qarshisidami?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Да, банк ря́дом. Пять мину́т.",
+     "uz": "Ha, bank yonida. Besh daqiqa."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bank qayerda?",
+     "opts": [
+      "pochta yonida",
+      "maktab yonida",
+      "park ichida"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Svetofordan keyin qayerga burilish kerak?",
+     "opts": [
+      "o'ngga",
+      "chapga",
+      "orqaga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Pochta qayerda?",
+     "opts": [
+      "bank qarshisida",
+      "kafe yonida",
+      "park qarshisida"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "банк",
+     "alts": [
+      "апте́ка",
+      "кафе́",
+      "магази́н"
+     ]
+    },
+    {
+     "base": "на по́чту",
+     "alts": [
+      "в банк",
+      "в апте́ку",
+      "на вокза́л"
+     ]
+    },
+    {
+     "base": "напро́тив па́рка",
+     "alts": [
+      "напро́тив шко́лы",
+      "ря́дом с ба́нком",
+      "ря́дом с кафе́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: dorixona qayerdaligini va unga qanday borishni so'rang."
+  },
+  {
+   "id": "L26-d2",
+   "title_ru": "Как пройти́ на вокза́л?",
+   "title_uz": "Vokzalga qanday boriladi?",
+   "intro_uz": "Ikkinchi dialog. Nigora vokzalga ketyapti. U ko'chada bir odamdan yo'l so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Прохо́жий",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Извини́те, как пройти́ на вокза́л?",
+     "uz": "Kechirasiz, vokzalga qanday borsa bo'ladi?"
+    },
+    {
+     "who": "Прохо́жий",
+     "ru": "На вокза́л? Э́то далеко́, два́дцать мину́т.",
+     "uz": "Vokzalgami? Bu uzoq, yigirma daqiqa."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ничего́, я люблю́ ходи́ть.",
+     "uz": "Hechqisi yo'q, men yurishni yaxshi ko'raman."
+    },
+    {
+     "who": "Прохо́жий",
+     "ru": "Тогда́ иди́те пря́мо до перекрёстка.",
+     "uz": "Unda chorrahagacha to'g'riga yuring."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А пото́м? Напра́во?",
+     "uz": "Keyin-chi? O'nggami?"
+    },
+    {
+     "who": "Прохо́жий",
+     "ru": "Нет, нале́во. Вокза́л напро́тив стадио́на.",
+     "uz": "Yo'q, chapga. Vokzal stadion qarshisida."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нале́во, напро́тив стадио́на. Спаси́бо большо́е!",
+     "uz": "Chapga, stadion qarshisida. Katta rahmat!"
+    },
+    {
+     "who": "Прохо́жий",
+     "ru": "Пожа́луйста. Уда́чи!",
+     "uz": "Arzimaydi. Omad!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora qayerga bormoqchi?",
+     "opts": [
+      "vokzalga",
+      "stadionga",
+      "bankka"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Chorrahadan keyin qayerga burilish kerak?",
+     "opts": [
+      "to'g'riga",
+      "o'ngga",
+      "chapga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Vokzal qayerda?",
+     "opts": [
+      "park yonida",
+      "stadion qarshisida",
+      "bank yonida"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "на вокза́л",
+     "alts": [
+      "на ры́нок",
+      "в больни́цу",
+      "на стадио́н"
+     ]
+    },
+    {
+     "base": "до перекрёстка",
+     "alts": [
+      "до светофо́ра",
+      "до ба́нка",
+      "до па́рка"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: bozorga qanday borishni so'rang va javobni takrorlang."
+  },
+  {
+   "id": "L26-d3",
+   "title_ru": "Где здесь апте́ка?",
+   "title_uz": "Bu yerda dorixona qayerda?",
+   "intro_uz": "Uchinchi dialog. Bobur do'konda sotuvchidan dorixona qayerdaligini so'rayapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Продавщи́ца",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Де́вушка, извини́те, где здесь апте́ка?",
+     "uz": "Singlim, kechirasiz, bu yerda dorixona qayerda?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Апте́ка? Ря́дом с ба́нком, на углу́.",
+     "uz": "Dorixonami? Bank yonida, burchakda."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А как пройти́ в банк?",
+     "uz": "Bankka qanday borsa bo'ladi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Иди́те напра́во, пото́м пря́мо.",
+     "uz": "O'ngga yuring, keyin to'g'riga."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Напра́во и пря́мо. А э́то далеко́?",
+     "uz": "O'ngga va to'g'riga. Uzoqmi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Нет, о́чень бли́зко. Банк напро́тив кафе́.",
+     "uz": "Yo'q, juda yaqin. Bank kafe qarshisida."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Напро́тив кафе́... Поня́тно! Спаси́бо!",
+     "uz": "Kafe qarshisida... Tushunarli! Rahmat!"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Не за что!",
+     "uz": "Arzimaydi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dorixona qayerda?",
+     "opts": [
+      "kafe ichida",
+      "bank yonida",
+      "maktab qarshisida"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Avval qayerga yurish kerak?",
+     "opts": [
+      "o'ngga",
+      "chapga",
+      "orqaga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bank qayerda?",
+     "opts": [
+      "park yonida",
+      "vokzal qarshisida",
+      "kafe qarshisida"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "апте́ка",
+     "alts": [
+      "по́чта",
+      "остано́вка",
+      "шко́ла"
+     ]
+    },
+    {
+     "base": "в банк",
+     "alts": [
+      "в апте́ку",
+      "в кафе́",
+      "в парк"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: eng yaqin bank qayerdaligini so'rang va «uzoqmi?» deb qo'shing."
+  }
+ ]
+}

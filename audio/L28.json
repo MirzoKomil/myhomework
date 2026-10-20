@@ -1,0 +1,325 @@
+{
+ "n": 28,
+ "topic_uz": "«Моя́ семья́» — oila: kimda nima bor, nima yo'q",
+ "scene": "A young woman shows a family photo on her phone to a male colleague in a cozy living room.",
+ "dialogs": [
+  {
+   "id": "L28-d1",
+   "title_ru": "Э́то твоя́ семья́?",
+   "title_uz": "Bu sening oilangmi?",
+   "intro_uz": "Birinchi dialog. Dilnoza Antonga oilasining suratini ko'rsatyapti. Uning aka-ukasi, opa-singlisi bormi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, э́то твоя́ семья́?",
+     "uz": "Dilnoza, bu sening oilangmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да. Э́то мои́ роди́тели, а э́то ба́бушка.",
+     "uz": "Ha. Bular ota-onam, bu esa buvim."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "У тебя́ есть брат?",
+     "uz": "Aka-ukang bormi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, у меня́ есть ста́рший брат. Вот он.",
+     "uz": "Ha, akam bor. Mana u."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Он жена́т?",
+     "uz": "U uylanganmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, жена́т. У него́ есть сын и дочь.",
+     "uz": "Ha, uylangan. Uning o'g'li va qizi bor."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А сестра́ у тебя́ есть?",
+     "uz": "Opa-singling bormi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет, сестры́ у меня́ нет. Я мла́дшая.",
+     "uz": "Yo'q, opa-singlim yo'q. Men kenjaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnozaning kimi bor?",
+     "opts": [
+      "akasi",
+      "singlisi",
+      "ukasi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Akasining farzandlari bormi?",
+     "opts": [
+      "yo'q",
+      "o'g'li va qizi bor",
+      "faqat qizi bor"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza oilada kim?",
+     "opts": [
+      "eng kattasi",
+      "o'rtanchasi",
+      "kenjasi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "ста́рший брат",
+     "alts": [
+      "мла́дший брат",
+      "ста́ршая сестра́",
+      "мла́дшая сестра́"
+     ]
+    },
+    {
+     "base": "сестры́",
+     "alts": [
+      "бра́та",
+      "де́душки",
+      "дя́ди"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: oilangizda kim borligini va kim yo'qligini ayting."
+  },
+  {
+   "id": "L28-d2",
+   "title_ru": "У вас больша́я семья́?",
+   "title_uz": "Oilangiz kattami?",
+   "intro_uz": "Ikkinchi dialog. Timur hamkasbi Nigoradan oilasi haqida so'rayapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Нигора́, у вас больша́я семья́?",
+     "uz": "Nigora, oilangiz kattami?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, больша́я. У меня́ есть муж, сын и дочь.",
+     "uz": "Ha, katta. Erim, o'g'lim va qizim bor."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А где живу́т ва́ши роди́тели?",
+     "uz": "Ota-onangiz qayerda yashaydi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В Андижа́не. Они́ живу́т в до́ме де́душки.",
+     "uz": "Andijonda. Ular buvamning uyida yashashadi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А у му́жа есть брат и́ли сестра́?",
+     "uz": "Eringizning aka-ukasi yoki opa-singlisi bormi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "У му́жа есть два бра́та и три сестры́. Мла́дшая сестра́ не за́мужем.",
+     "uz": "Erimning ikki aka-ukasi va uchta opa-singlisi bor. Kenja singlisi turmushga chiqmagan."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А у меня́ нет сестры́, но есть брат — он живёт в Москве́.",
+     "uz": "Mening esa opa-singlim yo'q, lekin akam bor — u Moskvada yashaydi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ничего́! За́то у вас мно́го друзе́й.",
+     "uz": "Hechqisi yo'q! Buning o'rniga do'stlaringiz ko'p."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigoraning ota-onasi qayerda yashaydi?",
+     "opts": [
+      "Toshkentda",
+      "Andijonda",
+      "Samarqandda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigoraning erining singlisi turmushga chiqqanmi?",
+     "opts": [
+      "ha",
+      "yo'q",
+      "bilmaydi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timurning aka-ukasi bormi?",
+     "opts": [
+      "yo'q",
+      "bitta akasi bor",
+      "ukasi bor"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "мла́дшая сестра́",
+     "alts": [
+      "ста́рший брат",
+      "мла́дший брат",
+      "ста́ршая сестра́"
+     ]
+    },
+    {
+     "base": "дом де́душки",
+     "alts": [
+      "дом ба́бушки",
+      "дом дя́ди",
+      "дом роди́телей"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: oilangiz katta yoki kichikligini va ota-onangiz qayerda yashashini ayting."
+  },
+  {
+   "id": "L28-d3",
+   "title_ru": "Чья э́то маши́на?",
+   "title_uz": "Bu kimning mashinasi?",
+   "intro_uz": "Uchinchi dialog. Nigora Boburning uyi oldida. Mashina va uy kimniki? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Бобу́р, чья э́то маши́на? Твоя́?",
+     "uz": "Bobur, bu kimning mashinasi? Senikimi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Нет, моя́ маши́на до́ма. Э́то маши́на дя́ди.",
+     "uz": "Yo'q, mening mashinam uyda. Bu amakimning mashinasi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А э́тот дом? То́же дом дя́ди?",
+     "uz": "Bu uy-chi? Bu ham amakingning uyimi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Нет, э́то дом де́душки. Дя́дя живёт в Ташке́нте.",
+     "uz": "Yo'q, bu buvamning uyi. Amakim Toshkentda yashaydi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А где живёт твоя́ тётя?",
+     "uz": "Xolang qayerda yashaydi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "То́же в Ташке́нте. У них больша́я кварти́ра.",
+     "uz": "U ham Toshkentda. Ularning katta kvartirasi bor."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А у тебя́ есть кварти́ра?",
+     "uz": "Senda kvartira bormi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Пока́ нет. Я живу́ у ба́бушки.",
+     "uz": "Hozircha yo'q. Men buvimnikida yashayman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Mashina kimniki?",
+     "opts": [
+      "Boburniki",
+      "amakisiniki",
+      "buvasiniki"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Uy kimniki?",
+     "opts": [
+      "amakisiniki",
+      "xolasiniki",
+      "buvasiniki"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bobur qayerda yashaydi?",
+     "opts": [
+      "buvisinikida",
+      "Toshkentda",
+      "o'z kvartirasida"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "маши́на дя́ди",
+     "alts": [
+      "маши́на бра́та",
+      "маши́на отца́",
+      "маши́на сосе́да"
+     ]
+    },
+    {
+     "base": "у ба́бушки",
+     "alts": [
+      "у де́душки",
+      "у бра́та",
+      "у дя́ди"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: oilangizda kimning mashinasi, kimning uyi borligini ayting."
+  }
+ ]
+}

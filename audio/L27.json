@@ -1,0 +1,320 @@
+{
+ "n": 27,
+ "topic_uz": "Роди́тельный паде́ж — у кого́? нет чего́?",
+ "scene": "In an office, a young woman asks a young man at the next desk for a pen; he holds out a pencil.",
+ "dialogs": [
+  {
+   "id": "L27-d1",
+   "title_ru": "У тебя́ есть ру́чка?",
+   "title_uz": "Ruchkang bormi?",
+   "intro_uz": "Birinchi dialog. Dilnoza ishxonada ruchka qidiryapti. Kimda ruchka bor? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, у тебя́ есть ру́чка?",
+     "uz": "Bobur, senda ruchka bormi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Нет, у меня́ нет ру́чки. Есть каранда́ш.",
+     "uz": "Yo'q, menda ruchka yo'q. Qalam bor."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А у Анто́на есть ру́чка?",
+     "uz": "Antonda ruchka bormi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Нет, у него́ то́же нет ру́чки.",
+     "uz": "Yo'q, unda ham ruchka yo'q."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А где су́мка Тиму́ра? У него́ всегда́ есть ру́чки.",
+     "uz": "Timurning sumkasi qayerda? Unda doim ruchka bo'ladi."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Су́мка Тиму́ра там, на сту́ле. Но Тиму́ра сего́дня нет.",
+     "uz": "Timurning sumkasi anavi yerda, stulda. Lekin Timur bugun yo'q."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет? А где он?",
+     "uz": "Yo'qmi? U qayerda?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Он в о́тпуске. Вот каранда́ш, пожа́луйста.",
+     "uz": "U ta'tilda. Mana qalam, marhamat."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnozaga nima kerak?",
+     "opts": [
+      "ruchka",
+      "kitob",
+      "soyabon"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Antonda ruchka bormi?",
+     "opts": [
+      "bor",
+      "yo'q",
+      "ikkita bor"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur bugun qayerda?",
+     "opts": [
+      "uyda",
+      "ishda",
+      "ta'tilda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "ру́чки",
+     "alts": [
+      "зо́нта",
+      "телефо́на",
+      "бума́ги"
+     ]
+    },
+    {
+     "base": "су́мка Тиму́ра",
+     "alts": [
+      "стол Тиму́ра",
+      "кни́га Анто́на",
+      "маши́на бра́та"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: hamkasbingizdan ruchka so'rang va o'zingizda nima yo'qligini ayting."
+  },
+  {
+   "id": "L27-d2",
+   "title_ru": "Отку́да вы?",
+   "title_uz": "Qayerliksiz?",
+   "intro_uz": "Ikkinchi dialog. Nigora va Anton mehmondorchilikda tanishishyapti. Ular qayerdan? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Анто́н, вы из Москвы́?",
+     "uz": "Anton, siz Moskvadanmisiz?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Нет, я из Москвы́. Но живу́ в Ташке́нте.",
+     "uz": "Yo'q, men Moskvadanman. Lekin Toshkentda yashayman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А ва́ша жена́ то́же из Москвы́?",
+     "uz": "Rafiqangiz ham Moskvadanmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Нет, жена́ из Ташке́нта. А вы отку́да?",
+     "uz": "Yo'q, rafiqam Toshkentdan. Siz qayerliksiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я из Андижа́на. У вас есть де́ти?",
+     "uz": "Men Andijondanman. Bolalaringiz bormi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Пока́ нет. У нас нет дете́й. А у вас?",
+     "uz": "Hozircha yo'q. Bizda bola yo'q. Sizda-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "У нас сын и дочь. Вот фо́то сы́на.",
+     "uz": "Bizda o'g'il va qiz bor. Mana o'g'limning surati."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton qayerdan?",
+     "opts": [
+      "Moskvadan",
+      "Qozondan",
+      "Toshkentdan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Antonning rafiqasi qayerdan?",
+     "opts": [
+      "Toshkentdan",
+      "Andijondan",
+      "Qozondan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigoraning bolalari bormi?",
+     "opts": [
+      "yo'q",
+      "faqat o'g'li bor",
+      "o'g'li va qizi bor"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "из Каза́ни",
+     "alts": [
+      "из Москвы́",
+      "из Самарка́нда",
+      "из Бухары́"
+     ]
+    },
+    {
+     "base": "фо́то сы́на",
+     "alts": [
+      "фо́то до́чери",
+      "фо́то му́жа",
+      "фо́то бра́та"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: qayerdan ekaningizni ayting va suhbatdoshingizdan u qayerdan ekanini so'rang."
+  },
+  {
+   "id": "L27-d3",
+   "title_ru": "Без са́хара",
+   "title_uz": "Shakarsiz",
+   "intro_uz": "Uchinchi dialog. Abdulaziz va Nigora uyda choy ichishyapti. Uyda nima yo'q? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, вот твой чай.",
+     "uz": "Abdulaziz, mana choying."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Спаси́бо. А где са́хар?",
+     "uz": "Rahmat. Shakar qayerda?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Извини́, у нас нет са́хара.",
+     "uz": "Kechir, bizda shakar yo'q."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ничего́, я пью чай без са́хара. А хлеб есть?",
+     "uz": "Hechqisi yo'q, choyni shakarsiz ichaman. Non bormi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, и хле́ба нет. И молока́ нет.",
+     "uz": "Yo'q, non ham yo'q. Sut ham yo'q."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Тогда́ я иду́ в магази́н.",
+     "uz": "Unda men do'konga boraman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́. Магази́н рабо́тает до десяти́.",
+     "uz": "Xo'p. Do'kon soat o'ngacha ishlaydi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "До десяти́? Отли́чно, вре́мя есть.",
+     "uz": "O'ngachami? Zo'r, vaqt bor."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Uyda nima yo'q?",
+     "opts": [
+      "choy",
+      "shakar, non va sut",
+      "go'sht"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz choyni qanday ichadi?",
+     "opts": [
+      "shakarsiz",
+      "shakar bilan",
+      "sut bilan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Do'kon soat nechagacha ishlaydi?",
+     "opts": [
+      "to'qqizgacha",
+      "o'n birgacha",
+      "o'ngacha"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "са́хара",
+     "alts": [
+      "со́ли",
+      "ма́сла",
+      "сы́ра"
+     ]
+    },
+    {
+     "base": "до десяти́",
+     "alts": [
+      "до девяти́",
+      "до восьми́",
+      "до оди́ннадцати"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: uyingizda bugun nima yo'qligini ayting va do'konga borishingizni aytib qo'ying."
+  }
+ ]
+}
