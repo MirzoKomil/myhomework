@@ -68,7 +68,7 @@ export function DAudioList() {
   return (
     <DesktopPage title="Audiolar" subtitle="Darslikdagi audio treklar · kitob tartibida" back={R.practice} scroll={false} contentStyle={{ paddingBottom: 32 }}>
       <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 24 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
+        <View style={{ flex: 1, minWidth: 420, gap: 10 }}>
           <DTabs tabs={TABS} value={month} onChange={setMonth} label="Oy boʻyicha" />
           <ScrollView style={{ flex: 1, marginTop: 12 }} contentContainerStyle={{ gap: 10, paddingBottom: 4 }} showsVerticalScrollIndicator={false}>
             {shown.map((g, gi) => {
@@ -101,7 +101,7 @@ export function DAudioList() {
           </ScrollView>
         </View>
 
-        <View style={{ width: 320, flexShrink: 0, gap: 16 }}>
+        <View style={{ width: 320, flexShrink: 1, minWidth: 240, gap: 16 }}>
           <View style={s.qr}>
             <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={s.qrArt}>
               <View style={[s.corner, { left: 18, top: 18, borderLeftWidth: 4, borderTopWidth: 4, borderTopLeftRadius: 8 }]} />
@@ -176,10 +176,10 @@ function TrackRow({ t, pos, first, last }: { t: BookTrack; pos?: { t: number; d:
           </T>
         </View>
       )}
-      <T size={16} lines={1} style={{ flex: 1, minWidth: 0 }}>
+      <T size={16} lines={1} style={{ flex: 1, minWidth: 140 }}>
         {bare(t.title)}
       </T>
-      <T w={700} size={13} color="#4A5468" style={{ width: 160 }}>
+      <T w={700} size={13} color="#4A5468" lines={1} style={{ width: 160, flexShrink: 1 }}>
         Kitob · {t.no}-trek
       </T>
       {going && pos ? (

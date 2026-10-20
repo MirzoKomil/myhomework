@@ -84,7 +84,7 @@ export function DGrammar() {
       contentStyle={{ paddingBottom: 32 }}
     >
       <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 24 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 16 }}>
+        <View style={{ flex: 1, minWidth: 360, gap: 16 }}>
           <View style={s.hero}>
             <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
               {lesson && (
@@ -125,7 +125,7 @@ export function DGrammar() {
           </View>
         </View>
 
-        <View style={{ width: 420, flexShrink: 0, gap: 16 }}>
+        <View style={{ width: 420, flexShrink: 1, minWidth: 300, gap: 16 }}>
           {examples.length > 0 ? (
             <>
               <T size={19} accessibilityRole="header">

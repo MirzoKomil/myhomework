@@ -105,7 +105,7 @@ export function DGrammarList() {
           </BarScroll>
         </View>
 
-        <View style={{ width: 440, flexShrink: 0, gap: 16 }}>
+        <View style={{ width: 440, flexShrink: 1, minWidth: 300, gap: 16 }}>
           {related && (
             <Pressable accessibilityRole="link" onPress={() => go(R.grammar(related.topic.id))} style={({ pressed }) => [s.hero, pressed && { opacity: 0.92 }]}>
               <View pointerEvents="none" style={s.heroCircle} />
@@ -202,7 +202,7 @@ function BarScroll({ children }: { children: ReactNode }) {
 }
 
 const s = StyleSheet.create({
-  list: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 26, paddingTop: 18, paddingRight: 12, paddingLeft: 16, gap: 10, overflow: 'hidden' },
+  list: { flex: 1, minWidth: 380, backgroundColor: '#FFFFFF', borderRadius: 26, paddingTop: 18, paddingRight: 12, paddingLeft: 16, gap: 10, overflow: 'hidden' },
   listHead: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingRight: 10, paddingLeft: 6 },
   track: { width: 140, height: 8, borderRadius: 4, backgroundColor: '#E2E6EE', overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4, backgroundColor: '#087A4A' },

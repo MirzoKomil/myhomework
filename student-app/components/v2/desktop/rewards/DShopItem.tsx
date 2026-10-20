@@ -30,6 +30,7 @@ export function DShopItem() {
   // Rasm ustuni 540px; tor oynada kontentning yarmi (o'ng ustunga joy qolsin).
   const mainW = useMainWidth();
   const leftW = Math.min(540, Math.round((mainW - 32) / 2));
+  const narrowRight = mainW - 32 - leftW < 480;
   const p = products?.find((x) => x.id === itemId);
   const ordersBtn = <HeaderButton label="Buyurtmalarim" icon={<IBag />} onPress={() => go(R.orders)} />;
 
@@ -156,9 +157,10 @@ export function DShopItem() {
             ))}
           </View>
         )}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {specs.map(([l, v]) => (
-            <View key={l} style={s.spec}>
+            // Tor oynada 2×2.
+            <View key={l} style={[s.spec, narrowRight && { flexGrow: 1, flexBasis: '40%' }]}>
               <T size={13} color="#4A5468">
                 {l}
               </T>

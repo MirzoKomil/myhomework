@@ -118,7 +118,7 @@ export function DOrders() {
                     importantForAccessibility="no"
                   />
                 </View>
-                <View style={{ gap: 2 }}>
+                <View style={{ gap: 2, minWidth: 0, flexShrink: 1 }}>
                   <T f="bodyHeavy" size={16} numberOfLines={1}>
                     Streak himoyasi
                   </T>

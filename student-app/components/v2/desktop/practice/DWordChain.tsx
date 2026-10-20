@@ -12,7 +12,7 @@ import { Image, Platform, Pressable, StyleSheet, Text, TextInput, View, type Ima
 import { FocusFrame } from '@/components/v2/desktop/Shell';
 import { useDesktopKeys } from '@/components/v2/desktop/useDesktop';
 import { GameResult } from '@/components/v2/practice/GameResult';
-import { plainWord, stressLetters } from '@/components/v2/practice/shared';
+import { goBack, plainWord, stressLetters } from '@/components/v2/practice/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
@@ -203,6 +203,12 @@ export function DWordChain() {
                   setInput(t.replace(/\s/g, ''));
                   setError(null);
                 }}
+                // RN-web matn maydoni klaviatura hodisasini oynaga o'tkazmaydi — Enter/Esc shu yerda.
+                onSubmitEditing={g.submit}
+                onKeyPress={(e) => {
+                  if (e.nativeEvent.key === 'Escape') goBack(R.practice);
+                }}
+                blurOnSubmit={false}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoFocus={Platform.OS === 'web'}

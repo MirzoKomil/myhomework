@@ -54,7 +54,7 @@ export function DLevels() {
         <View style={s.heroCircle} />
         <Image source={LEVEL_BADGES[curIdx]} accessibilityLabel={`${curIdx + 1}-daraja nishoni`} style={{ width: 150, height: 150 }} resizeMode="contain" />
         <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 24 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 24, rowGap: 4 }}>
             <View style={{ gap: 2 }}>
               <T f="bodyHeavy" size={12} color="#F3EEFF" style={caps()}>
                 Hozirgi daraja

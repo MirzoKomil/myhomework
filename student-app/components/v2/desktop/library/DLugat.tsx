@@ -116,7 +116,7 @@ export function DLugat() {
   return (
     <DesktopPage title="Lugʻatim" subtitle={`Saqlangan soʻzlar · bugun ${DUE_TODAY} tasi takrorlanadi`} back={R.practice} scroll={false} contentStyle={{ paddingBottom: 32 }}>
       <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: 24 }}>
-        <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
+        <View style={{ flex: 1, minWidth: 420, gap: 14 }}>
           <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
             <View accessibilityRole="tablist" accessibilityLabel="Lugʻat boʻlimlari" style={s.tabs}>
               <View accessibilityRole="tab" accessibilityState={{ selected: true }} style={[s.tab, s.tabOn]}>
@@ -242,7 +242,7 @@ export function DLugat() {
           </ScrollView>
         </View>
 
-        <View style={{ width: 320, flexShrink: 0, gap: 16 }}>
+        <View style={{ width: 320, flexShrink: 1, minWidth: 240, gap: 16 }}>
           <View style={s.review}>
             <View pointerEvents="none" style={s.reviewCircle} />
             <View style={{ flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}>
@@ -331,7 +331,7 @@ const s = StyleSheet.create({
   card: {
     flexGrow: 1,
     flexBasis: '45%',
-    minWidth: 0,
+    minWidth: 300,
     height: 96,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -347,7 +347,7 @@ const s = StyleSheet.create({
   more: {
     flexGrow: 1,
     flexBasis: '45%',
-    minWidth: 0,
+    minWidth: 300,
     height: 96,
     borderRadius: 20,
     borderWidth: 2,

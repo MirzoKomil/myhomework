@@ -123,9 +123,9 @@ export function DShop() {
           <T f="bodyHeavy" size={15} color="#FFFFFF">
             Qanday yigʻiladi
           </T>
-          <View style={{ flexDirection: 'row', gap: 28 }}>
+          <View style={{ flexDirection: narrow ? 'column' : 'row', gap: narrow ? 0 : 28 }}>
             {[0, 1].map((c) => (
-              <View key={c} style={{ flex: 1, minWidth: 0 }}>
+              <View key={c} style={narrow ? null : { flex: 1, minWidth: 0 }}>
                 {EARN_ROWS.filter((_, i) => i % 2 === c).map((r) => (
                   <View key={r.label} style={s.earnRow}>
                     <T size={14} color="#C9D0DE" numberOfLines={1} style={{ flexShrink: 1 }}>
