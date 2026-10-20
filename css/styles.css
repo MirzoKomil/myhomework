@@ -8967,3 +8967,36 @@ body.modal-open {
 .ifx-hist-sum{margin:0 0 14px}.ifx-ok{color:#0F7A55}
 .ifx-hist-sum div{background:var(--surface);border:1px solid var(--border)}
 .ifx-table td:nth-child(4){font-size:13px}
+
+/* ===== Akademik · Davomat jadvali ===== */
+.attendance-table th.att-day{line-height:14px;padding-top:8px;padding-bottom:8px;color:var(--text)}
+.attendance-table th.att-day small{display:block;font-size:10px;font-weight:500;color:var(--mx-muted)}
+.attendance-table th.att-day:not(.lesson-day-col){color:var(--mx-muted);opacity:.7}
+.attendance-table th.att-today{background:var(--purple)!important;color:#fff!important;border-radius:8px}
+.attendance-table th.att-today small{color:rgba(255,255,255,.85)}
+.attendance-table td.sticky-col-2{font-weight:600}
+.att-check,.asst-att-check{appearance:none;-webkit-appearance:none;width:22px;height:22px;margin:0;border:1.5px solid #B9BDCB;border-radius:6px;background:var(--surface);cursor:pointer;display:inline-grid;place-content:center;vertical-align:middle;transition:background .12s,border-color .12s}
+.att-check::after,.asst-att-check::after{content:"";width:10px;height:6px;border-left:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(-45deg) translate(1px,-1px);opacity:0}
+.att-check:checked,.asst-att-check:checked{background:#0F7A55;border-color:#0F7A55}
+.att-check:checked::after,.asst-att-check:checked::after{opacity:1}
+.att-check:focus-visible,.asst-att-check:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+.att-check:disabled,.asst-att-check:disabled{cursor:not-allowed;border-color:transparent;background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 3px,transparent 3px,transparent 6px)}
+.att-check:disabled:checked,.asst-att-check:disabled:checked{background:#0F7A55;opacity:.6}
+.attendance-table td.att-present{background:transparent!important}
+.attendance-table td.lesson-day-col{background:transparent}
+.attendance-table td.lesson-day-col.att-present{background:transparent!important}
+.attendance-table td:nth-child(3){white-space:nowrap;font-size:12px;color:var(--mx-muted)}
+.attendance-table th.att-day{text-transform:none}
+
+/* ===== Moliya · Maoshlar ===== */
+.pfx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:12px 0}
+.pfx-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.pfx-tile small{font-size:13px;color:var(--mx-muted);font-weight:500}
+.pfx-tile b{font-size:22px;line-height:28px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.pfx-tile span{font-size:12px;color:var(--mx-muted)}
+.pfx-ok{color:#0F7A55!important}.pfx-warn{color:#8A5A00!important;font-size:18px!important}
+.payroll-avatar{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--purple-light);color:#4B33C9;font-size:12px;font-weight:800;flex:none}
+
+/* ===== Dars jadvali ===== */
+.tt-week-table th.tt-today{background:var(--purple)!important;color:#fff!important;border-radius:10px}
+.tt-week-table th.tt-today .tt-date-dow,.tt-week-table th.tt-today .tt-date-num{color:#fff!important}

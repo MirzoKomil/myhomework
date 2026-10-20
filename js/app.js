@@ -324,7 +324,9 @@ function applyRoleBasedAccess(user) {
     if (role === 'sales_manager') {
         setTimeout(() => switchTab(restoreTab || 'sales', restoreCtx), 50);
     } else if (role === 'teacher') {
-        setTimeout(() => switchTab(restoreTab || 'timetable', restoreCtx), 50);
+        // Ustoz yangi sessiyada "Bosh sahifa"dan boshlaydi: bugungi darslar,
+        // davomat tugmasi va oylik taxmini shu yerda (oxirgi bo'lim saqlansa — o'sha).
+        setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else if (role === 'targetolog') {
         setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else {
@@ -6598,7 +6600,7 @@ function renderTeacherCards(teachers, students) {
         return `<div class="course-card">
             <div class="course-card-top ${colors[i % 3]}">${emojis[i % 3]}</div>
             <div class="course-card-body">
-                <h4>${t.name}</h4>
+                <h4>${escapeHtml(t.name)}</h4>
                 <p>${t.type === 'asosiy' ? 'Asosiy ustoz' : 'Yordamchi ustoz'}</p>
                 <div class="course-meta"><span>👨‍🎓 ${count} o'quvchi</span></div>
                 <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
@@ -7027,8 +7029,11 @@ function renderTimetableTeacherGrid(teacher, entries) {
     const workSlots = teacher.workSlots ? new Set(teacher.workSlots) : null;
 
     let html = `<table class="table tt-week-table"><thead><tr><th class="tt-time-col">Vaqt</th>`;
-    monthDays.forEach(({ day, dow }) => {
-        html += `<th><span class="tt-date-num">${day}</span><span class="tt-date-dow">${escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 3))}</span></th>`;
+    const _ttNow = new Date();
+    const _ttTodayKey = `${_ttNow.getFullYear()}-${String(_ttNow.getMonth() + 1).padStart(2, '0')}-${String(_ttNow.getDate()).padStart(2, '0')}`;
+    monthDays.forEach(({ day, dow, dateKey }) => {
+        const isToday = dateKey === _ttTodayKey;
+        html += `<th${isToday ? ' class="tt-today" aria-current="date"' : ''}><span class="tt-date-num">${day}</span><span class="tt-date-dow">${isToday ? 'Bugun' : escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 3))}</span></th>`;
     });
     html += '</tr></thead><tbody>';
 
@@ -7220,6 +7225,7 @@ function renderTimetable() {
         container.innerHTML = `<div class="tt-grid-header"><strong>${escapeHtml(ownTeacher.name)}</strong> · ${escapeHtml(patternLabel)}</div>`
             + renderTimetableTeacherGrid(ownTeacher, ownEntries, filters.pattern);
         wireTimetableCells();
+        scrollTimetableToToday(container);
         return;
     }
 
@@ -7249,6 +7255,18 @@ function renderTimetable() {
 
     container.innerHTML = html;
     wireTimetableCells();
+    scrollTimetableToToday(container);
+}
+
+// Oylik jadvalda bugungi ustunni ko'rinadigan joyga suradi (faqat gorizontal).
+function scrollTimetableToToday(container) {
+    container?.querySelectorAll('th.tt-today').forEach(th => {
+        let box = th.closest('table')?.parentElement;
+        while (box && box !== document.body && !(box.scrollWidth > box.clientWidth && /auto|scroll/.test(getComputedStyle(box).overflowX))) box = box.parentElement;
+        if (!box || box === document.body) return;
+        const left = th.offsetLeft - box.clientWidth / 2 + th.offsetWidth / 2;
+        box.scrollLeft = Math.max(0, left);
+    });
 }
 
 function renderKpiSummary(containerId, kpi, teacherName) {
@@ -7367,7 +7385,7 @@ function initMainAttControls() {
     } else {
         const prev = sel.value;
         sel.innerHTML = teachers.length
-            ? teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+            ? teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('')
             : '<option value="">— Ustoz yo\'q —</option>';
         if (prev && teachers.some(t => t.id === prev)) sel.value = prev;
         else if (teachers.length) sel.value = teachers[0].id;
@@ -8241,9 +8259,9 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
         ${renderRopDashboardBlock(currentUser)}
         ${renderTeacherTodayBlock(currentUser)}
         <div class="dashboard-grid-2">
-            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
+            ${isTeacher ? '' : `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
                 ${rankRows(salesRating.map(item => ({ ...item, value: item.revenue })), maxSalesRevenue, item => `${item.deals} ta · ${formatMoney(item.revenue)}`)}
-            </section>
+            </section>`}
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Ustozlar reytingi</h3><span>Biriktirilgan o'quvchilar</span></div>
                 ${rankRows(teacherRating.map(item => ({ ...item, value: item.students })), maxTeacherStudents, item => `${item.students} ta`)}
             </section>
@@ -8695,6 +8713,17 @@ function renderCompanionAttendanceHtml(students, counterpartField, counterpartSt
     return html;
 }
 
+// Davomat jadvali sarlavhasi: kun raqami, hafta kuni va bugungi kun belgisi.
+const ATT_WD_SHORT = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
+function attDayHeadInner(year, month, d) {
+    const dt = new Date(year, month - 1, d);
+    return `${d}<small>${ATT_WD_SHORT[dt.getDay()]}</small>`;
+}
+function attIsToday(year, month, d) {
+    const n = new Date();
+    return n.getFullYear() === year && n.getMonth() + 1 === month && n.getDate() === d;
+}
+
 function renderMainAttendance() {
     if (getCurrentUser()?.role === 'teacher') return teacherDutyUI.render();
     initMainAttControls();
@@ -8753,7 +8782,7 @@ function renderMainAttendance() {
     html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
     for (let d = 1; d <= days; d++) {
         const isLesson = isAssistantTeacher || isLessonDay(year, month, d, pattern);
-        html += `<th class="att-day ${isLesson ? 'lesson-day-col' : ''}" title="${isAssistantTeacher ? '' : (isLesson ? 'Dars kuni' : '')}">${d}</th>`;
+        html += `<th class="att-day ${isLesson ? 'lesson-day-col' : ''}${attIsToday(year, month, d) ? ' att-today' : ''}" title="${isAssistantTeacher ? '' : (isLesson ? 'Dars kuni' : '')}">${attDayHeadInner(year, month, d)}</th>`;
     }
     html += '</tr></thead><tbody>';
 
@@ -8764,7 +8793,7 @@ function renderMainAttendance() {
     students.forEach((s, i) => {
         const studentAttendance = attendanceForTeacher[s.id] || {};
         const markedCount = isAssistantTeacher ? Object.values(studentAttendance).filter(Boolean).length : 0;
-        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="lesson-count" data-student="${s.id}">0</td>`;
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name || '')}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = studentAttendance[d];
             const isLesson = isAssistantTeacher || isLessonDay(year, month, d, pattern);
@@ -8845,7 +8874,7 @@ function initAsstAttControls() {
 
     const prev = sel.value;
     sel.innerHTML = teachers.length
-        ? teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+        ? teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('')
         : '<option value="">— Ustoz yo\'q —</option>';
     if (prev && teachers.some(t => t.id === prev)) sel.value = prev;
     else if (teachers.length) sel.value = teachers[0].id;
@@ -8888,7 +8917,7 @@ function renderAssistantAttendance() {
     let html = '<table class="table attendance-table"><thead><tr>';
     html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
     for (let d = 1; d <= days; d++) {
-        html += `<th class="att-day lesson-day-col">${d}</th>`;
+        html += `<th class="att-day lesson-day-col${attIsToday(year, month, d) ? ' att-today' : ''}">${attDayHeadInner(year, month, d)}</th>`;
     }
     html += '</tr></thead><tbody>';
 
@@ -8899,7 +8928,7 @@ function renderAssistantAttendance() {
     students.forEach((s, i) => {
         const studentAttendance = attendanceForTeacher[s.id] || {};
         const markedCount = Object.values(studentAttendance).filter(Boolean).length;
-        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="asst-lesson-count" data-student="${s.id}">0</td>`;
+        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name || '')}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="asst-lesson-count" data-student="${s.id}">0</td>`;
         for (let d = 1; d <= days; d++) {
             const marked = studentAttendance[d];
             const disabled = !marked && markedCount >= flexCap;
@@ -9015,7 +9044,7 @@ function renderTeacherCabinet() {
 
     // Admin / boshqa rollar: barcha ustozlar
     if (selWrap) selWrap.style.display = '';
-    sel.innerHTML = teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    sel.innerHTML = teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
     sel.onchange = () => renderTeacherCabinetContent(sel.value);
     if (teachers.length) renderTeacherCabinetContent(sel.value || teachers[0].id);
 }
@@ -9032,7 +9061,7 @@ function renderTeacherCabinetContent(teacherId) {
     const kpi = teacher ? calculateKpiSalary(teacher, monthVal, attStore) : null;
 
     let html = `<div class="grid-2">
-        <div class="mini-card"><strong>Ustoz:</strong> ${teacher?.name || '—'}<br><small>${teacher?.type === 'asosiy' ? 'Asosiy' : 'Yordamchi'}</small></div>
+        <div class="mini-card"><strong>Ustoz:</strong> ${escapeHtml(teacher?.name || '—')}<br><small>${teacher?.type === 'asosiy' ? 'Asosiy' : 'Yordamchi'}</small></div>
         <div class="mini-card"><strong>O'quvchilar:</strong> ${students.length} ta</div>
     </div>`;
 
@@ -9054,7 +9083,7 @@ function renderTeacherCabinetContent(teacherId) {
         todayProbniy.forEach(([key, entry]) => {
             const time = key.split('_')[1];
             const student = allStudents.find(s => s.id === entry.studentId);
-            html += `<tr><td>${time}</td><td>${student?.name || '—'}</td><td>${entry.completed ? '<span class="badge badge-probniy">O\'tdi</span>' : '<span class="badge">Kutilmoqda</span>'}</td></tr>`;
+            html += `<tr><td>${time}</td><td>${escapeHtml(student?.name || '—')}</td><td>${entry.completed ? '<span class="badge badge-probniy">O\'tdi</span>' : '<span class="badge">Kutilmoqda</span>'}</td></tr>`;
         });
         html += '</tbody></table></div>';
     }
@@ -9062,7 +9091,7 @@ function renderTeacherCabinetContent(teacherId) {
     html += `<h4 style="margin:20px 0 10px">Mening o'quvchilarim</h4>
     <div class="table-responsive"><table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Guruh</th></tr></thead><tbody>`;
     students.forEach(s => {
-        html += `<tr><td>${s.name}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td>${s.group || '—'}</td></tr>`;
+        html += `<tr><td>${escapeHtml(s.name || '')}</td><td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td><td>${escapeHtml(s.group || '—')}</td></tr>`;
     });
     if (!students.length) html += '<tr><td colspan="3" class="text-muted">O\'quvchilar yo\'q</td></tr>';
     html += '</tbody></table></div>';
@@ -9148,7 +9177,7 @@ function renderSalary() {
     if (!month.value) month.value = getMonthKey(new Date());
 
     sel.innerHTML = '<option value="all">Barcha ustozlar</option>' +
-        teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
     sel.onchange = renderSalaryContent;
     month.onchange = renderSalaryContent;
     renderSalaryContent();
