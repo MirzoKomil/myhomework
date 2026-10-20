@@ -15188,59 +15188,55 @@ function renderSalesFunnel() {
     const assignedDateFilterHtml = _funnelDateFilterHtml('funnelAssignedDate', "Lid biriktirilgan kun bo'yicha", _salesFunnelAssignedFrom, _salesFunnelAssignedTo);
     const createdDateFilterHtml = _funnelDateFilterHtml('funnelCreatedDate', "Lid CRMga kelib tushgan kun bo'yicha", _salesFunnelCreatedFrom, _salesFunnelCreatedTo);
 
+    const openStages = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida'];
+    const inProgress = filteredLeads.filter(l => openStages.includes(normalizeLeadStatus(l.status))).length;
+    const laterCount = stagesData.find(x => x.id === 'keyin-sotib-olmoqchi')?.count || 0;
+    const failedCount = extraStagesData[0].count;
+    const sifatsizCount = extraStagesData[1].count;
+    const maxCount = Math.max(1, ...stagesData.map(x => x.count));
+    const pctTxt = n => String(n).replace('.', ',');
+    const barRows = stagesData.map(st => `
+        <li class="sfx-row">
+            <span class="sfx-name"><i style="background:${st.color}"></i>${escapeHtml(st.label)}</span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${Math.max(st.count ? 2 : 0, Math.round(st.count / maxCount * 100))}%;background:${st.color}"></span></span>
+            <span class="sfx-val"><b>${st.count}</b> · ${st.share}%</span>
+        </li>`).join('');
+    const tiles = [
+        ['Umumiy konversiya', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
+        ['Sotildi', String(converted), 'Toʻlov yopildi bosqichida'],
+        ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
+        ['Voronkadan chiqqan', String(failedCount + sifatsizCount), `muvaffaqiyatsiz ${failedCount} · sifatsiz ${sifatsizCount}`],
+    ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('');
+
     panel.innerHTML = `
-    <div class="page-title-bar" style="flex-wrap:wrap;gap:12px">
-        <div><h1>Sotuv voronkasi</h1><p>Lidlarning bosqichdan bosqichga o'tish tahlili</p></div>
+    <div class="sfx-head">
+        <div><h1>Sotuv voronkasi</h1><p>${langLabel} yoʻnalishi · lidlar hozir qaysi bosqichda turgani</p></div>
+    </div>
+    <div class="sfx-filters">
         ${mgrFilterHtml}
         ${assignedDateFilterHtml}
         ${createdDateFilterHtml}
     </div>
 
-    <div class="card" style="padding:32px 24px 28px;margin-bottom:16px;flex-shrink:0">
-        <h3 style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 28px;text-align:center">${langLabel} lidlari — jami ${filteredLeads.length} ta · konversiya ${convRate}%</h3>
-        ${buildFunnelSVG(stagesData)}
-    </div>
+    <div class="sfx-tiles">${tiles}</div>
 
-    <div class="card" style="padding:0;overflow:hidden;flex-shrink:0">
-        <div class="table-responsive">
-        <table class="sdp-table" style="min-width:420px">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Bosqich</th>
-                    <th style="text-align:right">Lidlar soni</th>
-                    <th style="text-align:right">Ulush</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${stagesData.map((s, i) => `
-                <tr>
-                    <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
-                    <td>
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
-                        <strong>${escapeHtml(s.label)}</strong>
-                    </td>
-                    <td style="text-align:right;font-weight:700">${s.count}</td>
-                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.share}%</td>
-                </tr>`).join('')}
-                <tr>
-                    <td colspan="4" style="padding:8px 12px;background:var(--bg-secondary,#f8fafc);color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Voronkadan tashqarida</td>
-                </tr>
-                ${extraStagesData.map((s, i) => `
-                <tr>
-                    <td style="color:var(--text-muted);font-size:12px">${stagesData.length + i + 1}</td>
-                    <td>
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color};margin-right:8px;vertical-align:middle"></span>
-                        <strong>${escapeHtml(s.label)}</strong>
-                    </td>
-                    <td style="text-align:right;font-weight:700">${s.count}</td>
-                    <td style="text-align:right;font-weight:600;color:${s.color}">${s.share}%</td>
-                </tr>`).join('')}
-            </tbody>
-        </table>
-        </div>
+    <div class="sfx-grid">
+        <section class="sfx-card" aria-labelledby="sfxFunnelH">
+            <div class="sfx-card-head"><h2 id="sfxFunnelH">Bosqichlar</h2><span>Jami <b>${totalCount}</b> lid · konversiya <b>${pctTxt(convRate)}%</b></span></div>
+            <ol class="sfx-rows">${barRows}</ol>
+        </section>
+        <section class="sfx-card" aria-labelledby="sfxOutH">
+            <div class="sfx-card-head"><h2 id="sfxOutH">Voronkadan chiqqanlar</h2></div>
+            <dl class="sfx-out">
+                <div><dt>Hali jarayonda (ochiq bosqichlarda)</dt><dd>${inProgress}</dd></div>
+                <div><dt>Keyin sotib olmoqchi</dt><dd>${laterCount}</dd></div>
+                ${extraStagesData.map(st => `<div><dt><i style="background:${st.color}"></i>${escapeHtml(st.label)}</dt><dd>${st.count} <small>· ${st.share}%</small></dd></div>`).join('')}
+                <div class="sfx-out-total"><dt>Sotildi (Toʻlov yopildi)</dt><dd>${converted}</dd></div>
+            </dl>
+            <p class="sfx-note">${converted} sotildi + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${converted + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
+        </section>
     </div>
-    ${buildLeadQualityChart(filteredLeads)}
+    <div class="sfx-2col">
     ${buildReasonsChart(failedReasonRows, {
         title: 'Muvaffaqiyatsiz sotuv sabablari',
         emptyText: "Tanlangan filtrlar bo'yicha muvaffaqiyatsiz sotuvlar yo'q.",
@@ -15251,6 +15247,8 @@ function renderSalesFunnel() {
         emptyText: "Tanlangan filtrlar bo'yicha sifatsiz lidlar yo'q.",
         centerLabel: 'sifatsiz lid'
     })}
+    </div>
+    ${buildLeadQualityChart(filteredLeads)}
     ${buildLeadQualityConversionStats(filteredLeads)}
     ${buildLeadDemographicsStats(filteredLeads)}
     ${buildCourseBuyersStats(filteredLeads)}`;
