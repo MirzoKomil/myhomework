@@ -19347,8 +19347,12 @@ function getLeadSlaCardAlerts(lead, lang, user = getCurrentUser()) {
 // 75-vazifa: kartochkadagi qo'ng'iroqcha umumiy bildirishnoma paneli bilan
 // aynan bir xil SLA xabarlarini ko'rsatadi. Shu sabab o'qilgan holat ham bitta
 // joyda saqlanadi va badge faqat hali ochilmagan xabarlarni sanaydi.
+// Kanban chizilayotganda o'qilgan bildirishnomalar ro'yxati BIR marta o'qiladi.
+// Ilgari har bir kartochka uchun localStorage'dagi katta JSON qayta parse
+// qilinardi (1 800 lidda ~2 soniya — sahifa "qotib qolardi").
+let _leadRenderReadIds = null;
 function getUnreadLeadSlaAlerts(lead, lang) {
-    const readIds = new Set(typeof getNotifications === 'function'
+    const readIds = _leadRenderReadIds || new Set(typeof getNotifications === 'function'
         ? getNotifications().filter(item => item.read).map(item => item.id)
         : []);
     return getLeadSlaCardAlerts(lead, lang).filter(alert => !readIds.has(alert.id));
@@ -21110,6 +21114,10 @@ async function deleteLeadsInBulk(targets) {
     }
 }
 
+const LEAD_COLUMN_PAGE = 40;
+const _leadColumnLimits = {};
+function getLeadColumnLimit(colId) { return _leadColumnLimits[colId] || LEAD_COLUMN_PAGE; }
+
 function renderLeads() {
     const board = document.getElementById('leadsKanban');
     if (!board) return;
@@ -21158,12 +21166,24 @@ function renderLeads() {
     }
 
     const _canBulkLeads = typeof FULL_ACCESS_ROLES !== 'undefined' && FULL_ACCESS_ROLES.has(getCurrentUser()?.role);
-    board.innerHTML = visibleColumns.map(col => {
+    try {
+        _leadRenderReadIds = new Set(typeof getNotifications === 'function'
+            ? getNotifications().filter(item => item.read).map(item => item.id) : []);
+    } catch (e) { _leadRenderReadIds = null; }
+    let _boardHtml;
+    try {
+    _boardHtml = visibleColumns.map(col => {
         const columnItems = tagged.filter(l => normalizeLeadStatus(l.status) === col.id);
         const items = columnItems.filter(l => (col.id !== 'sinov-darsida' || trialWorkflow.matchesFilter(l, getTrialAttendanceFilter()))
             && (col.id !== 'boglanishga-urinilmoqda' || leadMatchesContactReasonFilter(l, getLeadContactReasonFilter(lang))));
+        // Ustunda bir vaqtda ko'pi bilan N ta kartochka chiziladi, qolgani
+        // "Yana ... ta lid" tugmasi bilan ochiladi (hisob va filtrlar to'liq ro'yxat bo'yicha).
+        const limit = typeof getLeadColumnLimit === 'function' ? getLeadColumnLimit(col.id) : Infinity;
+        const shown = items.length > limit ? items.slice(0, limit) : items;
+        const rest = items.length - shown.length;
         const cards = items.length
-            ? items.map(l => renderLeadCard(l, l._lang)).join('')
+            ? shown.map(l => renderLeadCard(l, l._lang)).join('')
+                + (rest > 0 ? `<button type="button" class="lead-col-more" data-col-more="${col.id}">Yana ${Math.min(LEAD_COLUMN_PAGE, rest)} ta lid <span>· jami ${rest} ta qoldi</span></button>` : '')
             : '<div class="lead-column-empty">Lidlar yo\'q</div>';
 
         return `<div class="lead-column" data-status="${col.id}" style="background:${col.bg};border-color:${col.border}">
@@ -21177,6 +21197,20 @@ function renderLeads() {
             <div class="lead-column-cards" data-drop-status="${col.id}">${cards}</div>
         </div>`;
     }).join('');
+    } finally { _leadRenderReadIds = null; }
+    board.innerHTML = _boardHtml;
+
+    board.querySelectorAll('[data-col-more]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            _leadColumnLimits[btn.dataset.colMore] = getLeadColumnLimit(btn.dataset.colMore) + LEAD_COLUMN_PAGE;
+            const scroller = btn.closest('.lead-column-cards');
+            const top = scroller ? scroller.scrollTop : 0;
+            renderLeads();
+            const again = document.querySelector(`.lead-column[data-status="${btn.dataset.colMore}"] .lead-column-cards`);
+            if (again) again.scrollTop = top;
+        });
+    });
 
     initLeadDragDrop(board);
     wireLeadContactReasonFilter(board, lang);
@@ -21261,7 +21295,16 @@ function renderLeads() {
         board.querySelectorAll('[data-col-pick-unassigned]').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
-                const col = btn.closest('.lead-column');
+                let col = btn.closest('.lead-column');
+                // Biriktirilmaganlarning bir qismi hali chizilmagan bo'lsa — ustunni to'liq ochamiz.
+                const colId = col?.dataset.status;
+                if (col && col.querySelector('[data-col-more]')) {
+                    _leadColumnLimits[colId] = 100000;
+                    renderLeads();
+                    col = document.querySelector(`.lead-column[data-status="${colId}"]`);
+                    col?.querySelector('[data-col-pick-unassigned]')?.dispatchEvent(new Event('click', { bubbles: false }));
+                    return;
+                }
                 col?.querySelectorAll('.lead-card').forEach(card => {
                     const lead = getLeadById(card.dataset.leadLang, card.dataset.leadId);
                     const cb = card.querySelector('.lead-bulk-checkbox');
