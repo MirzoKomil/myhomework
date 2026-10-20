@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -224,7 +224,11 @@ function ChooseTranslationStep({ word, allWords, lang, onDone }: { word: VocabWo
 
 function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct: boolean) => void }) {
   const { t } = useLang();
-  const letters = useMemo(() => shuffle(word.english.split('')), [word]);
+  // Urg'u belgisi (´) alohida harf bo'lib chiqmasin; bo'shliq ("в университете")
+  // harf kartasi emas — qatorda oraliq bo'lib turadi, o'quvchi uni terishi shart emas.
+  const target = useMemo(() => word.english.replace(/\u0301/g, '').trim().replace(/\s+/g, ' '), [word]);
+  const letters = useMemo(() => shuffle(target.replace(/ /g, '').split('')), [target]);
+  const scrollRef = useRef<ScrollView>(null);
   const [used, setUsed] = useState<boolean[]>(() => letters.map(() => false));
   const [built, setBuilt] = useState<number[]>([]);
 
@@ -251,10 +255,19 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
 
   const builtWord = built.map((i) => letters[i]).join('');
   const isComplete = built.length === letters.length;
-  const isCorrect = builtWord === word.english;
+  const isCorrect = builtWord.toLowerCase() === target.replace(/ /g, '').toLowerCase();
 
   return (
-    <View style={styles.stepContent}>
+    // Uzun so'zda harflar ko'p — "Davom etish" tugmasi ekran (va pastki menyu)
+    // ostida qolib ketmasin: sahifa aylanadi, so'z tugaganda pastga o'zi tushadi.
+    <ScrollView
+      ref={scrollRef}
+      style={{ flex: 1 }}
+      contentContainerStyle={styles.stepScroll}
+      showsVerticalScrollIndicator={false}
+      onContentSizeChange={() => {
+        if (isComplete) scrollRef.current?.scrollToEnd({ animated: true });
+      }}>
       <Text style={styles.instruction}>{t('vp_construct_word')}</Text>
       <View style={styles.wordCard}>
         <Ionicons name={word.icon} size={44} color={theme.colors.purple} />
@@ -262,19 +275,25 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
       </View>
 
       <View style={styles.builtRow}>
-        {letters.map((_, i) => {
-          const isFilled = built[i] !== undefined;
-          const isLastFilled = isFilled && i === built.length - 1;
-          return (
-            <Pressable
-              key={i}
-              style={styles.builtSlot}
-              disabled={!isLastFilled || isComplete}
-              onPress={removeLast}>
-              <Text style={styles.builtSlotText}>{isFilled ? letters[built[i]] : ''}</Text>
-            </Pressable>
-          );
-        })}
+        {(() => {
+          let k = -1;
+          return target.split('').map((ch, pos) => {
+            if (ch === ' ') return <View key={`sp${pos}`} style={styles.builtSpace} />;
+            k += 1;
+            const i = k;
+            const isFilled = built[i] !== undefined;
+            const isLastFilled = isFilled && i === built.length - 1;
+            return (
+              <Pressable
+                key={i}
+                style={styles.builtSlot}
+                disabled={!isLastFilled || isComplete}
+                onPress={removeLast}>
+                <Text style={styles.builtSlotText}>{isFilled ? letters[built[i]] : ''}</Text>
+              </Pressable>
+            );
+          });
+        })()}
       </View>
 
       <View style={styles.lettersGrid}>
@@ -300,7 +319,7 @@ function ConstructWordStep({ word, onDone }: { word: VocabWord; onDone: (correct
           <Text style={styles.resetBtnText}>{t('vp_clear_btn')}</Text>
         </Pressable>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -391,6 +410,7 @@ const styles = StyleSheet.create({
   progressBar: { height: 4, backgroundColor: theme.colors.border, marginHorizontal: 20 },
   progressFill: { height: 4, backgroundColor: theme.colors.purple, borderRadius: 2 },
   stepContent: { flex: 1, padding: 20 },
+  stepScroll: { padding: 20, paddingBottom: 40 },
   instruction: { fontFamily: theme.fonts.regular, fontSize: 14, color: theme.colors.textMuted, marginBottom: 16 },
   wordCard: {
     backgroundColor: theme.colors.surface,
@@ -429,6 +449,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  builtSpace: { width: 14, height: 40 },
   builtSlotText: { fontFamily: theme.fonts.extraBold, fontSize: 20, color: theme.colors.text, textTransform: 'uppercase' },
   lettersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 20 },
   letterTile: {
