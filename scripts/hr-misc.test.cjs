@@ -12,7 +12,8 @@ test('user text is escaped in KPI summary, salary table and debt edit form', () 
 });
 
 test('HR card uses Uzbek status and month names', () => {
-    const body = app.slice(app.indexOf('function renderHrEmployeeCard('), app.indexOf('const TEACHER_ROLES'));
+    const start = app.indexOf('function renderHrEmployeeCard(');
+    const body = app.slice(start, app.indexOf('const TEACHER_ROLES', start));
     assert.ok(body.includes("'Faol' : 'Faol emas'"));
     assert.ok(body.includes('UZ_MONTHS_SHORT'));
 });
