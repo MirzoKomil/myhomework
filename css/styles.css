@@ -8707,3 +8707,10 @@ body.modal-open {
     .lov-step-label, .lov-step.is-now .lov-step-label { display: none; }
     .lov-side { order: -1; }
 }
+
+/* O'quvchi kartasi — Davomat bo'limi */
+.sdp3-mhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.sdp3-mstat{font-size:13px;color:var(--text-muted)}
+.sdp3-mstat b{color:var(--text)}
+.sdp3-legend-row{display:flex;justify-content:flex-end;margin:4px 0 12px}
+.sdp2-legend i.sdp2-day--unk{background:var(--warning-bg);border-color:var(--warning)}
