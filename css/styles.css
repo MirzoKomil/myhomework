@@ -8661,3 +8661,49 @@ body.modal-open {
 .sdp2-kv dd{margin:0;font-weight:600;color:var(--text);overflow-wrap:anywhere}
 .sdp-action-btn--pay{background:var(--purple);color:#fff;border-color:var(--purple)}
 @media (max-width:1000px){.sdp2{grid-template-columns:1fr}.sdp2-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Lid kartasi (umumiy ko'rinish) */
+.lead-card-name-btn { all: unset; cursor: pointer; color: inherit; font: inherit; border-radius: 4px; }
+.lead-card-name-btn:hover { color: var(--primary, #2563EB); text-decoration: underline; text-underline-offset: 2px; }
+.lead-card-name-btn:focus-visible { outline: 2px solid var(--primary, #2563EB); outline-offset: 2px; }
+.lov { display: flex; flex-direction: column; gap: 14px; }
+.lov-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.lov-stage { display: inline-flex; align-items: center; padding: 4px 12px; border: 1px solid; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.lov-sub { color: var(--text-muted, #64748B); font-size: 13px; }
+.lov-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.lov-step { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lov-step-bar { height: 6px; border-radius: 999px; background: var(--border, #E2E8F0); }
+.lov-step.is-done .lov-step-bar { background: #16A34A; }
+.lov-step.is-now .lov-step-bar { background: var(--primary, #2563EB); }
+.lov-step-label { font-size: 11px; line-height: 14px; color: var(--text-muted, #64748B); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lov-step.is-now .lov-step-label { color: var(--text, #0F172A); font-weight: 700; }
+.lov-steps.is-off { opacity: .55; }
+.lov-alerts { display: grid; gap: 8px; }
+.lov-alert { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 1px solid; font-size: 13px; line-height: 1.45; }
+.lov-alert--danger { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+.lov-alert--warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+.lov-alert--info { background: #EFF6FF; border-color: #BFDBFE; color: #1E40AF; }
+.lov-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.lov-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lov-card { border: 1px solid var(--border, #E2E8F0); border-radius: 14px; padding: 14px; background: var(--surface, #fff); min-width: 0; }
+.lov-h { margin: 0 0 10px; font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.lov-h small { font-weight: 500; font-size: 12px; color: var(--text-muted, #64748B); }
+.lov-history { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow-y: auto; }
+.lov-mgr { display: flex; align-items: center; gap: 10px; }
+.lov-mgr > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.lov-mgr small { color: var(--text-muted, #64748B); font-size: 12px; }
+.lov-mgr-av { width: 40px; height: 40px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #EEF2FF; color: #3730A3; font-weight: 700; object-fit: cover; }
+.lov-mgr--none .lov-mgr-av { background: #FEF2F2; color: #B91C1C; }
+.lov-mgr--none strong { color: #B91C1C; }
+.lov-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--divider, #F1F5F9); font-size: 13px; }
+.lov-row:first-of-type { border-top: 0; }
+.lov-row span { color: var(--text-muted, #64748B); }
+.lov-row strong { text-align: right; overflow-wrap: anywhere; }
+.lov-btn { min-height: 40px; padding: 8px 14px; border: 1px solid var(--border, #E2E8F0); border-radius: 10px; background: var(--surface, #fff); color: var(--text, #0F172A); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lov-btn:hover { background: var(--bg, #F8FAFC); }
+@media (max-width: 720px) {
+    .lov-grid { grid-template-columns: 1fr; }
+    .lov-steps { grid-template-columns: repeat(7, minmax(28px, 1fr)); }
+    .lov-step-label, .lov-step.is-now .lov-step-label { display: none; }
+    .lov-side { order: -1; }
+}
