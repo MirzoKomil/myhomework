@@ -24,7 +24,7 @@ import { installPressFeedback } from '@/services/pressFeedback';
 import { primeSfxOnFirstGesture } from '@/services/sfx';
 import { primeVoiceOnFirstGesture } from '@/services/voicePraise';
 
-import { DesktopSidebar, isFocusPath } from '@/components/v2/desktop/Shell';
+import { DesktopSidebar, hasDesktopPage, isFocusPath } from '@/components/v2/desktop/Shell';
 import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { colors, fontFiles } from '@/constants/v2/tokens';
@@ -72,7 +72,7 @@ export default function V2Layout() {
   // Fokus ekranlar (dars qadamlari, o'yinlar, login) — menyusiz, to'liq oyna.
   // Daraxt tuzilishi o'zgarmasligi shart (aks holda Stack qayta yaratilib,
   // navigatsiya tarixi yo'qoladi) — shuning uchun menyu faqat qo'shiladi/olinadi.
-  const sidebar = desktop && !isFocusPath(pathname);
+  const sidebar = desktop && !isFocusPath(pathname) && hasDesktopPage(pathname);
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg }}>
       {sidebar && <DesktopSidebar />}

@@ -11,7 +11,7 @@
  */
 import { router, usePathname, type Href } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ContactSheetPopup } from '@/components/v2/popups/ContactSheet';
 import { levelName } from '@/components/v2/popups/LevelUp';
@@ -81,6 +81,21 @@ export function isFocusPath(path: string): boolean {
   ].some((re) => re.test(p));
 }
 
+/**
+ * Kompyuter versiyasi bosqichma-bosqich chiqadi: menyu faqat kompyuter dizayni
+ * tayyor bo'lgan sahifalarda chiziladi. Qolgan sahifalar hozircha avvalgidek
+ * (telefon ko'rinishi, markazda) ochiladi — menyu ichida mobil ekran chiqmasin.
+ */
+export function hasDesktopPage(path: string): boolean {
+  const p = path.replace(/^\/student/, '').replace(/\/$/, '') || '/';
+  return [
+    /^\/v2$/,
+    /^\/v2\/(bildirishnomalar|darslar|holatlar)$/,
+    /^\/v2\/dars\/[^/]+$/,
+    /^\/v2\/dars\/[^/]+\/(video|soz-royxati|vazifa|vazifa-natija)$/,
+  ].some((re) => re.test(p));
+}
+
 const NAV: { key: NavKey; label: string; href: string; Icon: (p: { color: string; strokeWidth?: number }) => ReactNode }[] = [
   { key: 'home', label: 'Bosh sahifa', href: R.home, Icon: DHomeIcon },
   { key: 'lessons', label: 'Darslar', href: R.path, Icon: DPathIcon },
@@ -101,16 +116,20 @@ export function DesktopSidebar() {
   const { courseLang } = useLang();
   const [contactOpen, setContactOpen] = useState(false);
   const lvlName = levelName(level.index, courseLang);
+  // Qorong'u rejim (D_DarkMain) — menyu ranglari.
+  // Faqat bosh sahifa qorong'u variantga ega (boshqa sahifalar doim yorug').
+  const dark = useColorScheme() === 'dark' && active === 'home' && /\/v2\/?$/.test(pathname);
+  const D = dark ? dk : null;
 
   return (
-    <View accessibilityLabel="Asosiy menyu" style={s.aside}>
+    <View accessibilityLabel="Asosiy menyu" style={[s.aside, D?.aside]}>
       <Pressable accessibilityRole="link" accessibilityLabel="Domwork — bosh sahifa" onPress={() => go(R.home)} style={s.brand}>
-        <View style={s.brandIcon}>
+        <View style={[s.brandIcon, D?.brandIcon]}>
           <Image source={designImages['b924b8ccc546d63f781f9ea1bd9db221']} style={{ width: 42, height: 44, marginTop: 4 }} resizeMode="contain" />
         </View>
         <View>
-          <Text style={s.brandName}>Domwork</Text>
-          <Text style={s.brandSub}>Rus tili · onlayn maktab</Text>
+          <Text style={[s.brandName, D?.text]}>Domwork</Text>
+          <Text style={[s.brandSub, D?.sub]}>Rus tili · onlayn maktab</Text>
         </View>
       </Pressable>
 
@@ -123,19 +142,19 @@ export function DesktopSidebar() {
               accessibilityRole="link"
               accessibilityState={{ selected: on }}
               onPress={() => go(href)}
-              style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.navItem, on ? s.navOn : hovered ? s.navHover : null]}
+              style={({ hovered }: { hovered?: boolean; pressed: boolean }) => [s.navItem, on ? [s.navOn, D?.navOn] : hovered ? [s.navHover, D?.navHover] : null]}
             >
-              <Icon color={on ? '#1E3FD1' : '#34405A'} strokeWidth={on ? 2.4 : 2} />
-              <Text style={[s.navText, on && s.navTextOn]}>{label}</Text>
+              <Icon color={on ? (dark ? '#A9BCFF' : '#1E3FD1') : dark ? '#C3CBDA' : '#34405A'} strokeWidth={on ? 2.4 : 2} />
+              <Text style={[s.navText, D && { color: '#C3CBDA' }, on && s.navTextOn, on && D && { color: '#A9BCFF' }]}>{label}</Text>
               {key === 'league' && info.leagueRank != null && (
-                <View style={s.rankPill}>
-                  <Text style={s.rankText}>{info.leagueRank}-oʻrin</Text>
+                <View style={[s.rankPill, D?.rankPill]}>
+                  <Text style={[s.rankText, D?.sub]}>{info.leagueRank}-oʻrin</Text>
                 </View>
               )}
               {key === 'shop' && (
                 <View style={s.shopCoins}>
                   <DCoinIcon size={14} />
-                  <Text style={s.shopCoinsText}>{fmtNum(coins)}</Text>
+                  <Text style={[s.shopCoinsText, D && { color: '#F4C64E' }]}>{fmtNum(coins)}</Text>
                 </View>
               )}
             </Pressable>
@@ -145,48 +164,48 @@ export function DesktopSidebar() {
 
       <View style={{ flex: 1 }} />
 
-      <View style={s.statsCard}>
+      <View style={[s.statsCard, D?.statsCard]}>
         <View style={{ flexDirection: 'row', gap: 6 }}>
-          <Pressable accessibilityRole="link" accessibilityLabel={`${coins} coin — doʻkon`} onPress={() => go(R.shop)} style={s.stat}>
+          <Pressable accessibilityRole="link" accessibilityLabel={`${coins} coin — doʻkon`} onPress={() => go(R.shop)} style={[s.stat, D?.stat]}>
             <View style={s.statRow}>
               <DCoinIcon />
-              <Text style={s.statNum}>{fmtNum(coins)}</Text>
+              <Text style={[s.statNum, D?.text]}>{fmtNum(coins)}</Text>
             </View>
-            <Text style={s.statLabel}>coin</Text>
+            <Text style={[s.statLabel, D?.sub]}>coin</Text>
           </Pressable>
-          <Pressable accessibilityRole="link" accessibilityLabel={`Seriya ${info.streak} kun`} onPress={() => go(R.streak)} style={s.stat}>
+          <Pressable accessibilityRole="link" accessibilityLabel={`Seriya ${info.streak} kun`} onPress={() => go(R.streak)} style={[s.stat, D?.stat]}>
             <View style={[s.statRow, { gap: 3 }]}>
               <DFlameIcon />
-              <Text style={[s.statNum, { color: '#B34700' }]}>{info.streak}</Text>
+              <Text style={[s.statNum, { color: dark ? '#FF9F5A' : '#B34700' }]}>{info.streak}</Text>
             </View>
-            <Text style={s.statLabel}>kun</Text>
+            <Text style={[s.statLabel, D?.sub]}>kun</Text>
           </Pressable>
           <Pressable
             accessibilityRole="link"
             accessibilityLabel={`${fmtNum(level.lightning)} chaqmoq, ${level.index + 1}-daraja ${lvlName}`}
             onPress={() => go(R.levels)}
-            style={[s.stat, { paddingHorizontal: 2 }]}
+            style={[s.stat, D?.stat, { paddingHorizontal: 2 }]}
           >
             <View style={[s.statRow, { gap: 2 }]}>
               <DBoltIcon />
-              <Text numberOfLines={1} style={[s.statNum, { color: '#6A3CF0' }]}>
+              <Text numberOfLines={1} style={[s.statNum, { color: dark ? '#B9A1FF' : '#6A3CF0' }]}>
                 {fmtNum(level.lightning)}
               </Text>
             </View>
-            <Text style={s.statLabel}>chaqmoq</Text>
+            <Text style={[s.statLabel, D?.sub]}>chaqmoq</Text>
           </Pressable>
         </View>
         <Pressable accessibilityRole="link" onPress={() => go(R.levels)} style={s.levelBox}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={s.levelText}>
+            <Text style={[s.levelText, D?.text]}>
               {level.index + 1} · {lvlName}
             </Text>
-            <Text style={[s.levelText, { color: '#6A3CF0' }]}>{level.progressPercent}%</Text>
+            <Text style={[s.levelText, { color: dark ? '#B9A1FF' : '#6A3CF0' }]}>{level.progressPercent}%</Text>
           </View>
-          <View style={s.levelTrack}>
+          <View style={[s.levelTrack, D?.levelTrack]}>
             <View style={[s.levelFill, { width: `${level.progressPercent}%` }]} />
           </View>
-          <Text style={s.levelHint}>
+          <Text style={[s.levelHint, D?.sub]}>
             {level.next ? `${level.index + 2}-darajagacha yana ${fmtNum(level.remaining)}` : 'Eng yuqori daraja'}
           </Text>
         </Pressable>
@@ -528,4 +547,18 @@ const s = StyleSheet.create({
   kbdDark: { height: 24, paddingHorizontal: 7, borderRadius: 7, backgroundColor: '#1E3FD1', justifyContent: 'center' },
   kbdDarkText: { fontFamily: fonts.bodyHeavy, fontWeight: 'normal', fontSize: 12, color: '#DCE5FF' },
   kbdHint: { marginLeft: 2, fontFamily: fonts.bodyBold, fontWeight: 'normal', fontSize: 13, color: '#4A5468' },
+});
+
+// D_DarkMain menyusi ranglari.
+const dk = StyleSheet.create({
+  aside: { backgroundColor: '#141C2E', borderRightColor: '#232C42' },
+  brandIcon: { backgroundColor: '#1F2D5E' },
+  text: { color: '#EEF2F8' },
+  sub: { color: '#A9B3C6' },
+  navOn: { backgroundColor: '#1F2D5E' },
+  navHover: { backgroundColor: '#1A2338' },
+  rankPill: { backgroundColor: '#222B40' },
+  statsCard: { backgroundColor: '#0B1220' },
+  stat: { backgroundColor: '#141C2E' },
+  levelTrack: { backgroundColor: '#2A3450' },
 });
