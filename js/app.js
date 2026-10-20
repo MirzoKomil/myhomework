@@ -20461,7 +20461,7 @@ function renderLeadCard(lead, langKey) {
         <div class="lead-card-top">
             ${checkboxHtml}
             <div class="lead-card-title-wrap">
-                <h4 class="lead-card-name">${escapeHtml(normalized.name)}</h4>
+                <h4 class="lead-card-name"><button type="button" class="lead-card-name-btn" data-lead-open="${langKey}" data-lead-id="${escapeHtml(normalized.id)}" title="Lid kartasini ochish">${escapeHtml(normalized.name)}</button></h4>
                 ${renderLeadContactReasonBadge(lead)}
                 ${renderLeadTrialStatus(normalized)}
                 <div class="lead-card-meta">
@@ -20671,6 +20671,103 @@ function openLeadNotifyModal(lang, leadId) {
         if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
         renderLeads();
         if (document.getElementById('dashboardRopEsc')) renderDashboard();
+    });
+}
+
+// Lid kartasi — bitta oynada lidning to'liq tarixi. Faqat o'qiydi: hech
+// narsani o'zgartirmaydi, izoh qo'shish/zapis/SMS mavjud oynalarga topshiriladi.
+// Maqsad — dizayn qanday o'zgarmasin, izohlar va lid kimniki ekanligi
+// doim ko'rinib tursin.
+const LEAD_MAIN_PATH = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida', 'tolov-yopildi'];
+
+function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
+    const status = normalizeLeadStatus(lead.status);
+    const col = LEAD_COLUMNS.find(c => c.id === status) || LEAD_COLUMNS[0];
+    const managers = getItem(STORAGE_KEYS.salesManagers, []);
+    const manager = managers.find(m => m.id === lead.managerId);
+    const comments = Array.isArray(lead.comments) ? lead.comments : [];
+    const alerts = getLeadSlaCardAlerts(lead, lang, user);
+    const langLabel = lang === 'russian' ? 'Rus tili' : 'Ingliz tili';
+    const phone = formatPhoneDisplay(lead.phone) || '—';
+    const phone2 = formatPhoneDisplay(lead.phone2) || '';
+
+    const pathIdx = LEAD_MAIN_PATH.indexOf(status === 'keyin-sotib-olmoqchi' ? 'qaror-jarayonida' : status);
+    const offPath = pathIdx === -1;
+    const steps = LEAD_MAIN_PATH.map((id, i) => {
+        const c = LEAD_COLUMNS.find(x => x.id === id);
+        const cls = offPath ? '' : (i < pathIdx ? ' is-done' : (i === pathIdx ? ' is-now' : ''));
+        return `<li class="lov-step${cls}" title="${escapeHtml(c.label)}"><span class="lov-step-bar"></span><span class="lov-step-label">${escapeHtml(c.label)}</span></li>`;
+    }).join('');
+
+    const alertHtml = alerts.length ? `<div class="lov-alerts">${alerts.map(a => `
+        <div class="lov-alert lov-alert--${a.type === 'danger' ? 'danger' : a.type === 'warning' ? 'warn' : 'info'}">
+            <strong>${escapeHtml(a.title)}</strong><span>${escapeHtml(a.message)}</span>
+        </div>`).join('')}</div>` : '';
+
+    const historyHtml = comments.length
+        ? [...comments].reverse().map(renderLeadCommentItem).join('')
+        : '<p class="text-muted lead-empty-hint">Hozircha izoh yoʻq</p>';
+
+    const initials = manager ? manager.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() : '?';
+    const managerHtml = manager
+        ? `<div class="lov-mgr">${manager.avatar ? `<img src="${escapeHtml(manager.avatar)}" alt="" class="lov-mgr-av">` : `<span class="lov-mgr-av">${escapeHtml(initials)}</span>`}
+            <span><strong>${escapeHtml(manager.name)}</strong><small>Masʼul sotuv menejeri</small></span></div>`
+        : `<div class="lov-mgr lov-mgr--none"><span class="lov-mgr-av">?</span><span><strong>Menejer biriktirilmagan</strong><small>Lid hech kimga berilmagan</small></span></div>`;
+
+    const info = [
+        ['Yoʻnalish', langLabel],
+        ['Manba', leadSourceName(lead.source)],
+        ['Lid turi', leadKindLabel(lead)],
+        ['Kelgan vaqti', formatLeadTime(lead)],
+        lead.serialCode ? ['ID', '#' + lead.serialCode] : null,
+        lead.region ? ['Hudud', lead.region] : null,
+    ].filter(Boolean).map(([k, v]) => `<div class="lov-row"><span>${escapeHtml(k)}</span><strong>${escapeHtml(v)}</strong></div>`).join('');
+
+    return `<div class="lov" data-lead-overview="${escapeHtml(lead.id)}">
+        <div class="lov-head">
+            <span class="lov-stage" style="background:${col.headerBg};color:${col.title};border-color:${col.border}">${escapeHtml(col.label)}</span>
+            <span class="lov-sub">${escapeHtml(langLabel)} · ${escapeHtml(leadKindLabel(lead))} · ${comments.length} ta izoh</span>
+        </div>
+        <ol class="lov-steps${offPath ? ' is-off' : ''}" aria-label="Voronka bosqichlari">${steps}</ol>
+        ${alertHtml}
+        <div class="lov-grid">
+            <section class="lov-card" aria-label="Izohlar tarixi">
+                <h3 class="lov-h">Izohlar tarixi <small>eng yangisi tepada</small></h3>
+                <div class="lov-history">${historyHtml}</div>
+            </section>
+            <aside class="lov-side">
+                <section class="lov-card"><h3 class="lov-h">Kimning lidi</h3>${managerHtml}</section>
+                <section class="lov-card"><h3 class="lov-h">Aloqa</h3>
+                    <div class="lov-row"><span>Telefon</span><strong>${escapeHtml(phone)}</strong></div>
+                    ${phone2 ? `<div class="lov-row"><span>2-telefon</span><strong>${escapeHtml(phone2)}</strong></div>` : ''}
+                </section>
+                <section class="lov-card"><h3 class="lov-h">Maʼlumot</h3>${info}</section>
+            </aside>
+        </div>
+    </div>`;
+}
+
+function openLeadOverview(lang, leadId) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const user = getCurrentUser();
+    const readOnly = isLeadsReadOnly(user);
+    const footer = `
+        <button type="button" class="btn-primary-sm" data-lov-act="comments">${readOnly ? 'Izohlar' : 'Izoh qoʻshish'}</button>
+        <button type="button" class="lov-btn" data-lov-act="recording">Zapis</button>
+        ${readOnly ? '' : `<button type="button" class="lov-btn" data-lov-act="sms">SMS</button>
+        <button type="button" class="lov-btn" data-lov-act="telegram">Telegram</button>`}
+        ${getLeadSlaCardAlerts(lead, lang, user).length ? '<button type="button" class="lov-btn" data-lov-act="notify">Bildirishnomalar</button>' : ''}`;
+    openModal(`Lid kartasi — ${lead.name || ''}`, renderLeadOverviewHtml(lead, lang, user), footer, { wide: true });
+    const actions = {
+        comments: () => openLeadCommentsModal(lang, leadId),
+        recording: () => openLeadRecordingModal(lang, leadId),
+        sms: () => openLeadSmsTemplateModal(lang, leadId),
+        telegram: () => openLeadTelegramProfile(lang, leadId),
+        notify: () => openLeadNotifyModal(lang, leadId),
+    };
+    document.querySelectorAll('#modalFooter [data-lov-act]').forEach(btn => {
+        btn.addEventListener('click', () => actions[btn.dataset.lovAct]?.());
     });
 }
 
@@ -21069,6 +21166,13 @@ function renderLeads() {
             if (needsPaymentClosedPrompt(from, toStatus)) { openTolovYopildiFlow(lang, leadId, from); return; }
             if (needsFailedSalePrompt(from, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, from); return; }
             moveLeadToStatus(lang, leadId, toStatus);
+        });
+    });
+
+    board.querySelectorAll('[data-lead-open]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            openLeadOverview(btn.dataset.leadOpen, btn.dataset.leadId);
         });
     });
 
