@@ -324,7 +324,9 @@ function applyRoleBasedAccess(user) {
     if (role === 'sales_manager') {
         setTimeout(() => switchTab(restoreTab || 'sales', restoreCtx), 50);
     } else if (role === 'teacher') {
-        setTimeout(() => switchTab(restoreTab || 'timetable', restoreCtx), 50);
+        // Ustoz yangi sessiyada "Bosh sahifa"dan boshlaydi: bugungi darslar,
+        // davomat tugmasi va oylik taxmini shu yerda (oxirgi bo'lim saqlansa — o'sha).
+        setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else if (role === 'targetolog') {
         setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else {
@@ -8241,9 +8243,9 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
         ${renderRopDashboardBlock(currentUser)}
         ${renderTeacherTodayBlock(currentUser)}
         <div class="dashboard-grid-2">
-            <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
+            ${isTeacher ? '' : `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Sotuv menejerlari reytingi</h3><span>Yopilgan sotuvlar</span></div>
                 ${rankRows(salesRating.map(item => ({ ...item, value: item.revenue })), maxSalesRevenue, item => `${item.deals} ta · ${formatMoney(item.revenue)}`)}
-            </section>
+            </section>`}
             <section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Ustozlar reytingi</h3><span>Biriktirilgan o'quvchilar</span></div>
                 ${rankRows(teacherRating.map(item => ({ ...item, value: item.students })), maxTeacherStudents, item => `${item.students} ta`)}
             </section>
