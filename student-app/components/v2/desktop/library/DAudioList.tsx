@@ -176,7 +176,7 @@ function TrackRow({ t, pos, first, last }: { t: BookTrack; pos?: { t: number; d:
           </T>
         </View>
       )}
-      <T size={16} lines={1} style={{ flex: 1, minWidth: 140 }}>
+      <T size={16} lines={1} style={{ flex: 1, minWidth: 100 }}>
         {bare(t.title)}
       </T>
       <T w={700} size={13} color="#4A5468" lines={1} style={{ width: 160, flexShrink: 1 }}>
