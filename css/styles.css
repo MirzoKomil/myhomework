@@ -8933,3 +8933,18 @@ body.modal-open {
 .dbx-table .stx-sub{white-space:normal}
 .debtors-wrap > .sfx-tiles{margin-bottom:0}
 .dbx-table td.dbx-acts{white-space:nowrap;vertical-align:middle}
+
+/* ===== Moliya · To'lovlar (tushumlar reyestri) ===== */
+.ifx-table{font-size:13px}
+.ifx-table td,.ifx-table th{padding:11px 8px}
+.ifx-table td b{display:block;font-weight:700;color:var(--text)}
+.ifx-table td small{display:block;margin-top:2px;font-size:12px;color:var(--mx-muted)}
+.ifx-table td small .inflow-method{font-size:11px}
+.ifx-n{color:var(--mx-muted)}
+.ifx-num{text-align:right!important;font-variant-numeric:tabular-nums}
+.ifx-table th.ifx-num button{text-align:right}
+.ifx-debt{color:#C62828;font-weight:700}
+[data-theme="dark"] .ifx-debt{color:#FF8A8A}
+.ifx-badge{display:inline-flex;height:22px;align-items:center;padding:0 8px;border-radius:999px;font-size:11px;font-weight:700}
+.ifx-badge--ok{background:#E3F6EE;color:#0F7A55}.ifx-badge--warn{background:#FFF4D6;color:#8A5A00}
+.ifx-table td small .inflow-method{display:inline-flex;width:auto;margin:0 4px 0 0;vertical-align:middle}
