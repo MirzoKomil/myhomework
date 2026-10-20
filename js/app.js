@@ -25087,6 +25087,7 @@ const PRIZE_IMAGES = {
     obed: 'prize-obed.png', obed30: 'prize-obed.png', obed60: 'prize-obed.png',
     kitob: 'prize-book.png', kino: 'prize-cinema.png', restoran: 'prize-restaurant.png',
     iphone: 'prize-phone.png', macbook: 'prize-laptop.png', pul2000: 'prize-cash.png', umra: 'prize-umra.png',
+    rank1: 'medals.png', rank2: 'medals.png', rank3: 'medals.png',
 };
 function _prizeImg(id, size) {
     const file = PRIZE_IMAGES[id];
@@ -25646,42 +25647,78 @@ function renderBonusHistorySection() {
         ...RANK_BONUSES.map(b => ({ ...b, period: 'O\'rinli' })),
     ];
 
+    const canEdit = ['admin', 'rop'].includes(getCurrentUser()?.role);
+    const periodLabel = _ratingPeriod === 'kunlik' ? 'Bugun' : _ratingPeriod === 'haftalik' ? 'Shu hafta' : `${UZ_MONTHS[new Date().getMonth()]} oyi`;
+    const byPeriod = { Kunlik: 0, Haftalik: 0, Oylik: 0, "O'rinli": 0 };
+    const perMgr = new Map();
+    let moneyTotal = 0;
+    filtered.forEach(h => {
+        const bonus = allBonuses.find(b => b.id === h.bonusId);
+        if (bonus) byPeriod[bonus.period] = (byPeriod[bonus.period] || 0) + 1;
+        perMgr.set(h.managerId, (perMgr.get(h.managerId) || 0) + 1);
+        if (Number.isFinite(Number(h.amount))) moneyTotal += Number(h.amount) || 0;
+    });
+    const top = [...perMgr.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topMgr = top ? managers.find(m => m.id === top[0]) : null;
+    const fmtD = d => { const x = new Date(d); return Number.isNaN(x.getTime()) ? escapeHtml(d || '') : `${x.getDate()}-${UZ_MONTHS_SHORT[x.getMonth()]}`; };
+    const hero = topMgr ? `
+        <section class="bhx-hero" aria-label="Eng koʻp bonus olgan menejer">
+            <img src="images/prizes/trophy.png" alt="" width="112" height="112">
+            <div><span class="bhx-eyebrow">${escapeHtml(periodLabel)} · eng koʻp bonus</span>
+            <h2>${escapeHtml(_firstName(topMgr.name))} — ${top[1]} ta bonus</h2>
+            <p>Navbatdagi sovgʻa sizni kutmoqda: reja va obed chegaralari Reyting → Bonuslar roʻyxatida.</p></div>
+        </section>` : `
+        <section class="bhx-hero" aria-label="Bonuslar">
+            <img src="images/prizes/trophy.png" alt="" width="112" height="112">
+            <div><span class="bhx-eyebrow">${escapeHtml(periodLabel)}</span>
+            <h2>Hali hech kim bonus olmagan — birinchi boʻling!</h2>
+            <p>Kunlik 1,8 mln sotuv — bepul obed. Hafta oxirida eng yaxshi uchtalikka sovgʻa.</p></div>
+        </section>`;
+    const tiles = [
+        ['Jami bonuslar', filtered.length, periodLabel.toLowerCase()],
+        ['Obed (kunlik)', byPeriod.Kunlik, '1,8 / 2,5 / 3,0 mln chegaralari'],
+        ['Hafta sovgʻalari', byPeriod.Haftalik, 'kitob · kino · restoran'],
+        ['Oylik va oʻrinli', byPeriod.Oylik + byPeriod["O'rinli"], 'iPhone, MacBook, Umra, $'],
+    ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('')
+        + (moneyTotal ? `<div class="sfx-tile"><small>Pul bonuslari</small><b>${escapeHtml(fmtMoney(moneyTotal))}</b><span>kiritilgan summalar</span></div>` : '');
+
     el.innerHTML = `
     <div class="page-title-bar">
-        <div><h1>Bonus olganlar</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Kim qaysi bonusni oldi</p></div>
+        <div><h1>Bonus olganlar</h1><p class="text-muted" style="font-size:13px;margin:2px 0 0">Kim qaysi bonusni oldi · ${escapeHtml(periodLabel)}</p></div>
     </div>
-
-    <div class="card" style="padding:0;overflow:hidden">
-        ${filtered.length ? `<div class="table-responsive"><table class="sdp-table" style="min-width:520px">
+    ${hero}
+    <div class="sfx-tiles">${tiles}</div>
+    <div class="card bhx-card" style="padding:0;overflow:hidden">
+        ${filtered.length ? `<div class="table-responsive"><table class="sdp-table bhx-tbl" style="min-width:560px">
             <thead><tr>
-                <th>Sana</th>
-                <th>Menejer</th>
                 <th>Bonus</th>
+                <th>Menejer</th>
+                <th>Sana</th>
                 <th>Davr</th>
-                <th style="width:40px"></th>
+                ${canEdit ? '<th style="width:48px"><span class="sr-only">Amallar</span></th>' : ''}
             </tr></thead>
             <tbody>
                 ${filtered.map(h => {
                     const mgr = managers.find(m => m.id === h.managerId);
                     const bonus = allBonuses.find(b => b.id === h.bonusId);
+                    const img = _prizeImg(h.bonusId, 40);
+                    const title = bonus ? (bonus.prize && bonus.period === "O'rinli" ? `${bonus.label} · ${bonus.prize}` : bonus.label) : h.bonusId;
                     return `<tr>
-                        <td style="color:var(--text-muted);font-size:12px">${escapeHtml(h.date || '')}</td>
+                        <td><div class="bhx-prize">${img || `<span class="bhx-ico">${bonus?.icon || '🎁'}</span>`}<span><strong>${escapeHtml(title || '')}</strong>${h.note ? `<small>${escapeHtml(h.note)}</small>` : ''}${Number(h.amount) ? `<small>${escapeHtml(fmtMoney(Number(h.amount)))}</small>` : ''}</span></div></td>
                         <td>
                             <div style="display:flex;align-items:center;gap:8px">
-                                <div class="rating-avatar" style="width:28px;height:28px;font-size:11px">${managerInitials(mgr?.name)}</div>
+                                <div class="rating-avatar" style="width:30px;height:30px;font-size:11px">${managerInitials(mgr?.name)}</div>
                                 <span>${escapeHtml(mgr?.name || h.managerId)}</span>
                             </div>
                         </td>
-                        <td>${bonus ? `<span style="color:${bonus.color}">${bonus.icon} ${bonus.label}</span>` : escapeHtml(h.bonusId)}</td>
-                        <td><span class="badge" style="background:var(--bg-secondary);color:var(--text-muted)">${escapeHtml(bonus?.period || '')}</span></td>
-                        <td>
-                            <button class="icon-btn" title="O'chirish" data-delete-bh="${escapeHtml(h.id)}">🗑️</button>
-                        </td>
+                        <td class="bhx-date">${fmtD(h.date)}</td>
+                        <td><span class="bhx-badge bhx-badge--${({ Kunlik: 'd', Haftalik: 'w', Oylik: 'm' })[bonus?.period] || 'r'}">${escapeHtml(bonus?.period || '—')}</span></td>
+                        ${canEdit ? `<td><button class="icon-btn" title="Oʻchirish" aria-label="Oʻchirish" data-delete-bh="${escapeHtml(h.id)}">🗑️</button></td>` : ''}
                     </tr>`;
                 }).join('')}
             </tbody>
-        </table></div>` : `<div style="text-align:center;padding:60px;color:var(--text-muted)">
-            <div style="font-size:48px;margin-bottom:12px">🎁</div>
+        </table></div>` : `<div class="bhx-empty">
+            <img src="images/prizes/prize-obed.png" alt="" width="96" height="96">
             <p>Bu davrda bonus belgilanmagan</p>
         </div>`}
     </div>`;
