@@ -12596,11 +12596,11 @@ function renderCfTxTable() {
         }
         return `
         <tr>
-            <td>${escapeHtml(t.date)}</td>
+            <td style="white-space:nowrap">${escapeHtml(/^\d{4}-\d{2}-\d{2}$/.test(String(t.date || '')) ? formatDateShort(t.date) : (t.date || '—'))}</td>
             <td><span class="cf-type-badge ${t.type}">${t.type === 'kirim' ? 'Kirim' : 'Chiqim'}</span></td>
             <td>${escapeHtml(CASH_FLOW_CATEGORIES[t.category] || t.category)}</td>
             <td>${escapeHtml(t.purpose || '—')}</td>
-            <td class="${t.type === 'kirim' ? 'sp-pos' : 'sp-neg'}" style="font-weight:700">${t.type === 'kirim' ? '+' : '-'}${fmtMoney(t.amount)}</td>
+            <td class="${t.type === 'kirim' ? 'sp-pos' : 'sp-neg'}" style="font-weight:700;white-space:nowrap">${t.type === 'kirim' ? '+' : '-'}${fmtMoney(t.amount)}</td>
             <td>${escapeHtml(t.paymentMethod)}</td>
             <td>${escapeHtml(person)}</td>
             <td>${escapeHtml(t.notes || '—')}</td>

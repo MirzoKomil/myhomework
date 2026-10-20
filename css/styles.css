@@ -8959,3 +8959,8 @@ body.modal-open {
 .ifx-pay-sum strong,.ifx-pay-sum b{font-size:16px;line-height:20px}
 #modalFooter .btn-secondary-sm,#modalBody .ifx-pay-quick .btn-secondary-sm{min-height:40px;padding:8px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 #modalBody .ifx-pay-quick .btn-secondary-sm{color:#4B33C9}
+
+/* ===== Moliya · Cash Flow ===== */
+#cfKpiGrid .stat-value{font-size:18px!important;line-height:24px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#cfKpiGrid .stat-info{min-width:0}
+#cfKpiGrid .stat-label{color:var(--mx-muted)}
