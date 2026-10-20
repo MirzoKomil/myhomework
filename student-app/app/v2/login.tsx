@@ -21,6 +21,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DLogin } from '@/components/v2/desktop/home/DLogin';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { ChevronRightIcon, EyeIcon, SendOutlineIcon } from '@/components/v2/home/icons';
 import { isOnboarded, supportUrl } from '@/components/v2/home/shared';
 import { designImages } from '@/constants/v2/designImages';
@@ -50,6 +52,10 @@ const TILES = [
 ];
 
 export default function V2Login() {
+  return useIsDesktop() ? <DLogin /> : <V2LoginMobile />;
+}
+
+function V2LoginMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const brand = BRAND[courseLang === 'russian' ? 'russian' : 'english'];

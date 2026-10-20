@@ -27,8 +27,16 @@ import { getResolvedLessonContent, type LessonContent, type VocabWord } from '@/
 import { fetchMobileContent } from '@/services/contentApi';
 import { getCategoryProgress, markDone, useLessonProgress } from '@/services/lessonProgressStore';
 import { saveLastPosition } from '@/services/progressStore';
+import { DVocab } from '@/components/v2/desktop/lessons/DVocab';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng web oyna) — DVocab dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function VocabScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DVocab id={String(lessonId)} /> : <VocabScreenMobile />;
+}
+
+function VocabScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId, w } = useLocalSearchParams<{ lessonId: string; w?: string }>();
   const id = String(lessonId);

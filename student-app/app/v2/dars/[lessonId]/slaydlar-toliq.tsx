@@ -19,8 +19,16 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent } from '@/services/contentApi';
+import { DSlideViewer } from '@/components/v2/desktop/lessons/DSlideViewer';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng web oyna) — DSlideViewer dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function SlideViewerScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DSlideViewer id={String(lessonId)} /> : <SlideViewerScreenMobile />;
+}
+
+function SlideViewerScreenMobile() {
   const insets = useSafeAreaInsets();
   const { width: W, height: H } = useWindowDimensions();
   const { lessonId, i } = useLocalSearchParams<{ lessonId: string; i?: string }>();

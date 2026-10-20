@@ -32,10 +32,18 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchMobileContent, type MobileContent } from '@/services/contentApi';
 import { stripRichText } from '@/services/richText';
+import { DQuickCheck } from '@/components/v2/desktop/lessons/DQuickCheck';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const plainLines = (ls: DialogLine[]) => ls.map((l) => ({ ...l, ru: stripRichText(l.ru), uz: stripRichText(l.uz) }));
 
+// Kompyuterda (keng web oyna) — DQuickCheck dizayni; telefonda mobil ekran o'zgarishsiz.
 export default function QuickCheckScreen() {
+  const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
+  return useIsDesktop() ? <DQuickCheck id={String(lessonId)} /> : <QuickCheckScreenMobile />;
+}
+
+function QuickCheckScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId, d } = useLocalSearchParams<{ lessonId: string; d?: string }>();
   const id = String(lessonId);

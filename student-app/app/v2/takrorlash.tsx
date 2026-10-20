@@ -9,6 +9,8 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
+import { DWordReview } from '@/components/v2/desktop/home/DWordReview';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { v2Back } from '@/services/v2Nav';
 import * as Speech from 'expo-speech';
 import { useEffect, useState } from 'react';
@@ -34,6 +36,10 @@ const LIGHTNING_PER_WORD = 2;
 type Item = { word: VocabWord; record?: ReviewRecord };
 
 export default function V2WordReview() {
+  return useIsDesktop() ? <DWordReview /> : <V2WordReviewMobile />;
+}
+
+function V2WordReviewMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const [items, setItems] = useState<Item[] | null>(null);

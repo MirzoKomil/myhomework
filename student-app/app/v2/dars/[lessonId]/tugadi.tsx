@@ -33,11 +33,17 @@ import { fetchDemoSchedule, fetchLeaderboard, type LeaderboardEntryResponse } fr
 import { useLessonCoins } from '@/services/coinsStore';
 import { AnimatedFill, Bounce, Confetti, CountUp, FadeInUp } from '@/components/v2/motion';
 import { playSfx, playSfxLater } from '@/services/sfx';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
+import { DComplete } from '@/components/v2/desktop/homework/DComplete';
 
 /** Kunlik chaqmoq maqsadi — bosh ekrandagi bilan bir xil (sozlanadigan maqsad hali yo'q). */
 const DAILY_GOAL = 50;
 
 export default function CompleteScreen() {
+  return useIsDesktop() ? <DComplete /> : <CompleteScreenMobile />;
+}
+
+function CompleteScreenMobile() {
   const insets = useSafeAreaInsets();
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
   const id = String(lessonId);
