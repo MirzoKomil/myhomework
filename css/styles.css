@@ -8964,3 +8964,5 @@ body.modal-open {
 #cfKpiGrid .stat-value{font-size:18px!important;line-height:24px;white-space:nowrap;font-variant-numeric:tabular-nums}
 #cfKpiGrid .stat-info{min-width:0}
 #cfKpiGrid .stat-label{color:var(--mx-muted)}
+.ifx-hist-sum{margin:0 0 14px}.ifx-ok{color:#0F7A55}
+.ifx-hist-sum div{background:var(--surface);border:1px solid var(--border)}
