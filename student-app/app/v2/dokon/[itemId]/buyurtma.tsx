@@ -25,6 +25,8 @@ import { useCoins } from '@/services/coinsStore';
 import { fetchDemoStudentProfile } from '@/services/contentApi';
 import { placeOrder } from '@/services/shopStore';
 import { useAuth } from '@/services/studentAuthStore';
+import { DCheckout } from '@/components/v2/desktop/rewards/DCheckout';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const ADDRESS_KEY = 'mh_v2_delivery_address';
 type Address = { region: string; city: string; street: string; landmark: string };
@@ -56,6 +58,10 @@ function Field({ label, value, onChange, flex, optional }: { label: string; valu
 }
 
 export default function V2Checkout() {
+  return useIsDesktop() ? <DCheckout /> : <V2CheckoutMobile />;
+}
+
+function V2CheckoutMobile() {
   const insets = useSafeAreaInsets();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const products = useShopProducts();

@@ -21,8 +21,15 @@ import { fonts } from '@/constants/v2/tokens';
 import { EXAM_PASS_PERCENT, getResolvedExams } from '@/data/exams';
 import { getCourseOverallProgress } from '@/data/lessonContent';
 import { useExamResults } from '@/services/examStore';
+import { DCertificates } from '@/components/v2/desktop/course/DCertificates';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng web oyna) — Certificates kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function V2Certificates() {
+  return useIsDesktop() ? <DCertificates /> : <V2CertificatesMobile />;
+}
+
+function V2CertificatesMobile() {
   const insets = useSafeAreaInsets();
   const examResults = useExamResults();
   const [lessonsDone, setLessonsDone] = useState(0);

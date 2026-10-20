@@ -46,12 +46,19 @@ import {
 } from '@/services/contentApi';
 import { useExamResults } from '@/services/examStore';
 import { useLightning } from '@/services/lightningStore';
+import { DProgress } from '@/components/v2/desktop/course/DProgress';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const R_ = 35;
 const C = 2 * Math.PI * R_;
 const BAR_H = 92;
 
+// Kompyuterda (keng web oyna) — Progress kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function V2Progress() {
+  return useIsDesktop() ? <DProgress /> : <V2ProgressMobile />;
+}
+
+function V2ProgressMobile() {
   const insets = useSafeAreaInsets();
   const lightning = useLightning();
   const coins = useCoins();

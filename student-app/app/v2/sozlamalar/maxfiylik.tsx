@@ -11,6 +11,8 @@ import { CloseIcon } from '@/components/v2/settings/icons';
 import { Column, ScreenHeader, SUPPORT_TELEGRAM_URL, TelegramButton } from '@/components/v2/settings/parts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
+import { DPrivacy } from '@/components/v2/desktop/profile/DPrivacy';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const SECTIONS = [
   {
@@ -39,6 +41,10 @@ const NOT_STORED = [
 ];
 
 export default function V2Privacy() {
+  return useIsDesktop() ? <DPrivacy /> : <V2PrivacyMobile />;
+}
+
+function V2PrivacyMobile() {
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.screen}>

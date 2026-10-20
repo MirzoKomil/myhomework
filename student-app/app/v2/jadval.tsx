@@ -45,6 +45,8 @@ import {
   type LiveGradeEntry,
 } from '@/services/contentApi';
 import { getLessonProgress, loadLessonProgress } from '@/services/lessonProgressStore';
+import { DSchedule } from '@/components/v2/desktop/course/DSchedule';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type VideoState = { watched: boolean; hwDone: boolean; correct: number; total: number };
 
@@ -64,7 +66,12 @@ function weekLabel(mon: Date) {
 
 const gradeOf = (g: LiveGradeEntry) => (g.scores.attendance + g.scores.activity + g.scores.speaking + g.scores.understanding + g.scores.discipline) / 5;
 
+// Kompyuterda (keng web oyna) — Schedule kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function V2Schedule() {
+  return useIsDesktop() ? <DSchedule /> : <V2ScheduleMobile />;
+}
+
+function V2ScheduleMobile() {
   const insets = useSafeAreaInsets();
   const [schedule, setSchedule] = useState<DemoScheduleResponse | null>(null);
   const [grades, setGrades] = useState<LiveGradeEntry[]>([]);

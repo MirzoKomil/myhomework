@@ -28,6 +28,8 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { useLang } from '@/i18n/LanguageContext';
+import { DTranslator } from '@/components/v2/desktop/library/DTranslator';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Direction = 'uz-other' | 'other-uz';
 
@@ -44,7 +46,12 @@ async function translateText(text: string, sl: string, tl: string): Promise<{ te
   return { text: text_, translit };
 }
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function TranslatorScreen() {
+  return useIsDesktop() ? <DTranslator /> : <TranslatorScreenMobile />;
+}
+
+function TranslatorScreenMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const isRu = courseLang === 'russian';

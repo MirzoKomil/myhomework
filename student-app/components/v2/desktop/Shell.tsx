@@ -88,12 +88,9 @@ export function isFocusPath(path: string): boolean {
  */
 export function hasDesktopPage(path: string): boolean {
   const p = path.replace(/^\/student/, '').replace(/\/$/, '') || '/';
-  return [
-    /^\/v2$/,
-    /^\/v2\/(bildirishnomalar|darslar|holatlar)$/,
-    /^\/v2\/dars\/[^/]+$/,
-    /^\/v2\/dars\/[^/]+\/(video|soz-royxati|vazifa|vazifa-natija)$/,
-  ].some((re) => re.test(p));
+  // 2-bosqichdan keyin barcha v2 sahifalarida kompyuter dizayni bor;
+  // faqat ko'rgazma sahifasi (asoslar) chiqarib tashlanadi.
+  return /^\/v2(\/|$)/.test(p) && !/^\/v2\/asoslar$/.test(p);
 }
 
 const NAV: { key: NavKey; label: string; href: string; Icon: (p: { color: string; strokeWidth?: number }) => ReactNode }[] = [

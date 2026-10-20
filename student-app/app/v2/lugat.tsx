@@ -27,6 +27,8 @@ import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type VocabWord } from '@/data/lessonContent';
 import { useLang } from '@/i18n/LanguageContext';
 import { fetchMobileContent } from '@/services/contentApi';
+import { DLugat } from '@/components/v2/desktop/library/DLugat';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Takrorlash jadvali saqlanmaydi — 0 holat.
 const DUE_TODAY = 0;
@@ -54,7 +56,12 @@ async function loadLessonIndex(): Promise<Map<string, LessonWord>> {
 
 type Row = { key: string; word: string; transcript?: string; translation?: string; chip?: 'lesson' | 'translator' | 'story'; lesson?: number; image?: string; icon?: VocabWord['icon'] };
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function V2Lugat() {
+  return useIsDesktop() ? <DLugat /> : <V2LugatMobile />;
+}
+
+function V2LugatMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   // Xatolar soni — uyga vazifa natijalaridan (Mashq plitkasi bilan bir xil manba).

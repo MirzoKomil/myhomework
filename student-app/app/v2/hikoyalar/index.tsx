@@ -18,6 +18,8 @@ import { BackButton, Column, Display, FilterTabs, go, T } from '@/components/v2/
 import { R } from '@/constants/v2/routes';
 import type { BookLevel, BookStory } from '@/data/bookStories';
 import { fetchMobileContent } from '@/services/contentApi';
+import { DStoryList } from '@/components/v2/desktop/library/DStoryList';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Story = BookStory & { coverUrl?: string };
 type Filter = 'all' | BookLevel;
@@ -28,7 +30,12 @@ const TABS: { key: Filter; label: string }[] = [
   { key: 'b1', label: 'Qiyin' },
 ];
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function StoryListScreen() {
+  return useIsDesktop() ? <DStoryList /> : <StoryListScreenMobile />;
+}
+
+function StoryListScreenMobile() {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<Filter>('all');
   const [stories, setStories] = useState<Story[]>([]);

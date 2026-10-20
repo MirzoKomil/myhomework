@@ -14,10 +14,16 @@ import { CloseIcon, MinusIcon, PlusIcon } from '@/components/v2/rewards/icons';
 import { goBack, productImages, useShopProducts } from '@/components/v2/rewards/parts';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
+import { DImageViewer } from '@/components/v2/desktop/rewards/DImageViewer';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const ZOOMS = [1, 1.5, 2, 2.5, 3];
 
 export default function V2ImageViewer() {
+  return useIsDesktop() ? <DImageViewer /> : <V2ImageViewerMobile />;
+}
+
+function V2ImageViewerMobile() {
   const insets = useSafeAreaInsets();
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const products = useShopProducts();

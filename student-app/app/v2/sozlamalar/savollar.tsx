@@ -23,6 +23,8 @@ import { R } from '@/constants/v2/routes';
 import { V2_BATTLE_DAILY_COIN_WINS, V2_BATTLE_WIN_COINS } from '@/constants/v2/battle';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoSchedule, fetchDemoStudentPayments, type DemoPaymentsResponse, type DemoScheduleResponse } from '@/services/contentApi';
+import { DFaq } from '@/components/v2/desktop/profile/DFaq';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 // Ustoz dars kunlari (CRM pattern) — to'liq nomlar bilan.
 const PATTERN_DAYS: Record<'mwf' | 'tts', string> = {
@@ -75,6 +77,10 @@ const FAQ: { q: string; a: string; sample?: boolean }[] = [
 ];
 
 export default function V2Faq() {
+  return useIsDesktop() ? <DFaq /> : <V2FaqMobile />;
+}
+
+function V2FaqMobile() {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState<number | null>(4); // dizayndagi kabi "Seriya uzilsa..." ochiq
   // Dizayndagidek StreakLost namunasi shu ekran ustida ochiladi; ?popup=lost — skrinshot uchun.

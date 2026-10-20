@@ -26,8 +26,15 @@ import {
 import { R } from '@/constants/v2/routes';
 import { loadGrammarRows, type GrammarRow as Row } from '@/components/v2/library/grammar';
 import type { LessonRef } from '@/components/v2/library/shared';
+import { DGrammarList } from '@/components/v2/desktop/library/DGrammarList';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function GrammarListScreen() {
+  return useIsDesktop() ? <DGrammarList /> : <GrammarListScreenMobile />;
+}
+
+function GrammarListScreenMobile() {
   const insets = useSafeAreaInsets();
   const [rows, setRows] = useState<Row[]>([]);
   const [related, setRelated] = useState<Row | null>(null);

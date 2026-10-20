@@ -14,13 +14,15 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { Bounce, Confetti, Pop } from '@/components/v2/motion';
 import { speak, stopVoice } from '@/services/voicePraise';
 
+import { DGameResult } from '@/components/v2/desktop/practice/DGameResult';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 
 export type ResultStat = { value: string; label: string };
 
-type Props = {
+export type GameResultProps = {
   /** O'yin tugadimi (true bo'lgach biroz kutib ochiladi — oxirgi yurish ko'rinsin). */
   show: boolean;
   win: boolean;
@@ -51,7 +53,12 @@ const Close = () => (
   </Svg>
 );
 
-export function GameResult({ show, win, title, subtitle, stats, coins, lightning, newRecord, onAgain }: Props) {
+/** Kompyuterda — markazdagi karta, xira + xiralashtirilgan fon (DGameResult). */
+export function GameResult(props: GameResultProps) {
+  return useIsDesktop() ? <DGameResult {...props} /> : <GameResultMobile {...props} />;
+}
+
+function GameResultMobile({ show, win, title, subtitle, stats, coins, lightning, newRecord, onAgain }: GameResultProps) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!show) {

@@ -20,6 +20,8 @@ import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
 import { V2_LEVELS, V2_TOP_LEVEL } from '@/constants/v2/levels';
 import { useLang } from '@/i18n/LanguageContext';
+import { DLevelUpCard } from '@/components/v2/desktop/rewards/DPopups';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 /** Har bir daraja nishoni — dizayn rasmlari (1..5). */
 export const LEVEL_BADGES = [
@@ -51,12 +53,29 @@ export function LevelUpPopup({ visible, onClose, levelIndex = V2_TOP_LEVEL }: Pr
   const isTop = idx === V2_TOP_LEVEL;
   const name = levelName(idx, courseLang);
   const total = fmt(level.min);
+  const desktop = useIsDesktop();
   useEffect(() => {
     if (!visible) return;
     playSfx('levelup');
     speak('levelup', 2050);
     return () => stopVoice();
   }, [visible]);
+
+  // Kompyuterda — markazdagi karta (D_LevelUp); qiymatlar va ovozlar bir xil.
+  if (desktop) {
+    return (
+      <DLevelUpCard
+        visible={visible}
+        onClose={onClose}
+        badge={LEVEL_BADGES[idx]}
+        title={`${idx + 1} · ${name}`}
+        desc={isTop ? 'Profilingizda oltin nishon paydo boʻladi. Endi har 1 000 chaqmoqda Afsona yulduzi olasiz.' : `${level.description.replace(/'/g, 'ʻ')}.`}
+        total={total}
+        badgeName={isTop ? 'Oltin' : level.name}
+        confetti={visible ? <Confetti /> : null}
+      />
+    );
+  }
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>

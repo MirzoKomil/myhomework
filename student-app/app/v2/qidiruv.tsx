@@ -28,13 +28,20 @@ import { fonts } from '@/constants/v2/tokens';
 import { fetchMobileContent } from '@/services/contentApi';
 import { stripRichText } from '@/services/richText';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
+import { DSearch } from '@/components/v2/desktop/library/DSearch';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Item = { title: string; sub: string; meta: string; href: string; hay: string };
 
 // Admin matnidagi belgilar (**, {qizil}…) qidiruvga xalaqit bermasin.
 const norm = (s: string) => stripRichText(s).toLowerCase().replace(/ё/g, 'е').replace(/[ʻʼ'`‘’]/g, '').trim();
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function SearchScreen() {
+  return useIsDesktop() ? <DSearch /> : <SearchScreenMobile />;
+}
+
+function SearchScreenMobile() {
   const insets = useSafeAreaInsets();
   // ?q= — boshqa ekrandan tayyor so'rov bilan ochish uchun.
   const params = useLocalSearchParams<{ q?: string }>();

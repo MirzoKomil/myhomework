@@ -23,6 +23,8 @@ import { parseDur } from '@/components/v2/library/data';
 import { getAudioTracks } from '@/components/v2/lessons/data';
 import { getResolvedLessonContent } from '@/data/lessonContent';
 import { fetchDemoSchedule, fetchMobileContent, invalidateCache } from '@/services/contentApi';
+import { DOffline } from '@/components/v2/desktop/profile/DOffline';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Item = { key: string; title: string; sub: string; bg: string; img: keyof typeof designImages; href: string };
 
@@ -38,6 +40,10 @@ function liveLabel(d: Date) {
 }
 
 export default function OfflineScreen() {
+  return useIsDesktop() ? <DOffline /> : <OfflineScreenMobile />;
+}
+
+function OfflineScreenMobile() {
   const insets = useSafeAreaInsets();
   const [online, setOnline] = useState(isOnline);
   const [items, setItems] = useState<Item[]>([]);

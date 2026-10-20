@@ -43,6 +43,8 @@ import {
   type DemoScheduleResponse,
   type LiveGradeEntry,
 } from '@/services/contentApi';
+import { DTeacher } from '@/components/v2/desktop/profile/DTeacher';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const VIDEO_TEACHER = TEACHER_PROFILES.find((t) => t.id === 'video-teacher')!;
 
@@ -71,6 +73,10 @@ function TgCircle({ label, url }: { label: string; url: string }) {
 }
 
 export default function V2Teachers() {
+  return useIsDesktop() ? <DTeacher /> : <V2TeachersMobile />;
+}
+
+function V2TeachersMobile() {
   const { courseLang } = useLang();
   const insets = useSafeAreaInsets();
   const support = supportUrl(courseLang);

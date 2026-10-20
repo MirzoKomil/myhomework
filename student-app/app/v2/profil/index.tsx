@@ -57,6 +57,8 @@ import { useLightning } from '@/services/lightningStore';
 import { useV2Level } from '@/constants/v2/levels';
 import { clearAuth, useAuth } from '@/services/studentAuthStore';
 import { useCachedState } from '@/services/v2Cache';
+import { DProfile } from '@/components/v2/desktop/profile/DProfile';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const formatStudentId = (value?: string) => {
   const id = String(value || '').trim();
@@ -76,6 +78,10 @@ function MenuRow({ icon, label, right, onPress, last }: { icon: React.ReactNode;
 }
 
 export default function V2Profile() {
+  return useIsDesktop() ? <DProfile /> : <V2ProfileMobile />;
+}
+
+function V2ProfileMobile() {
   const insets = useSafeAreaInsets();
   const { token, student } = useAuth();
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;

@@ -17,6 +17,8 @@ import { BalanceValue, BottomSheet, InfoRows, PriceValue, RowLabel, SheetTop, sh
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
 import { useCoins } from '@/services/coinsStore';
+import { DOrderSuccessCard } from '@/components/v2/desktop/rewards/DPopups';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Props = { visible: boolean; price: number; onClose: () => void };
 
@@ -24,9 +26,13 @@ export function OrderSuccessPopup({ visible, price, onClose }: Props) {
   const coins = useCoins();
   // Dizayndagi "Doʻkonga qaytish" / "Yopish" — Shop'ga; oyna Shop ustida ochilgani uchun yopish kifoya.
   const back = onClose;
+  const desktop = useIsDesktop();
   useEffect(() => {
     if (visible) playSfx('unlock');
   }, [visible]);
+
+  // Kompyuterda — markazdagi karta (D_OrderSuccess); qiymatlar bir xil.
+  if (desktop) return <DOrderSuccessCard visible={visible} onClose={back} price={price} coins={coins} />;
 
   return (
     <BottomSheet visible={visible} onClose={back} labelledBy="Streak himoyasi sotib olindi">

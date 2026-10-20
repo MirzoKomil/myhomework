@@ -23,10 +23,16 @@ import { useLang } from '@/i18n/LanguageContext';
 import { setAvatarUri, useAvatarUri } from '@/services/avatarStore';
 import { fetchDemoStudentProfile, type DemoProfileResponse } from '@/services/contentApi';
 import { useAuth } from '@/services/studentAuthStore';
+import { DProfileEdit } from '@/components/v2/desktop/profile/DProfileEdit';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Choice = { kind: 'preset'; key: PresetKey } | { kind: 'custom'; uri: string };
 
 export default function V2ProfileEdit() {
+  return useIsDesktop() ? <DProfileEdit /> : <V2ProfileEditMobile />;
+}
+
+function V2ProfileEditMobile() {
   const insets = useSafeAreaInsets();
   const { courseLang } = useLang();
   const { student } = useAuth();

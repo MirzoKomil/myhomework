@@ -21,8 +21,15 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { BONUS_LESSONS, TOTAL, UNLOCKED_COUNT, short, useBonusReminder, whenLabel } from '@/components/v2/homework/bonusData';
 import { getLessonProgress, loadLessonProgress, subscribe } from '@/services/lessonProgressStore';
+import { DBonus } from '@/components/v2/desktop/course/DBonus';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng web oyna) — Bonus kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function BonusScreen() {
+  return useIsDesktop() ? <DBonus /> : <BonusScreenMobile />;
+}
+
+function BonusScreenMobile() {
   const [, setTick] = useState(0);
   const [done, setDone] = useState<number | null>(null);
 

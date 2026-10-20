@@ -24,8 +24,15 @@ import { fonts } from '@/constants/v2/tokens';
 import { getResolvedLessonContent, type LessonContent } from '@/data/lessonContent';
 import { fetchMobileContent, getLessonMaterials } from '@/services/contentApi';
 import { getLessonProgress, loadLessonProgress, markDone, subscribe } from '@/services/lessonProgressStore';
+import { DBonusPlayer } from '@/components/v2/desktop/course/DBonusPlayer';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
+// Kompyuterda (keng web oyna) — BonusPlayer kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function BonusPlayerScreen() {
+  return useIsDesktop() ? <DBonusPlayer /> : <BonusPlayerScreenMobile />;
+}
+
+function BonusPlayerScreenMobile() {
   const insets = useSafeAreaInsets();
   const { bonusId } = useLocalSearchParams<{ bonusId: string }>();
   const id = String(bonusId);

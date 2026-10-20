@@ -21,6 +21,8 @@ import { goBack } from '@/components/v2/rewards/parts';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
+import { DStreakSaved } from '@/components/v2/desktop/rewards/DStreakSaved';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 const SHORT = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
 // Streak kuzatilmaydi — haqiqiy qiymat yo'q.
@@ -30,6 +32,10 @@ const SHIELD_PRICE = 150;
 const SHIELD_USED_ON: string | null = null;
 
 export default function V2Streak() {
+  return useIsDesktop() ? <DStreakSaved /> : <V2StreakMobile />;
+}
+
+function V2StreakMobile() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ popup?: string }>();
   const [lost, setLost] = useState(false);

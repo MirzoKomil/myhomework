@@ -20,6 +20,8 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import type { SpeakingLevel, SpeakingTopic } from '@/data/speakingTopics';
 import { fetchMobileContent } from '@/services/contentApi';
+import { DDialogList } from '@/components/v2/desktop/library/DDialogList';
+import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 
 type Topic = SpeakingTopic & { coverUrl?: string };
 type Filter = 'all' | SpeakingLevel;
@@ -39,7 +41,12 @@ const openTopic = (id: string) => go(R.dialog(id));
 const FIRST = 7;
 type Prog = Record<string, { heard?: boolean; frac?: number }>;
 
+// Kompyuterda (keng oyna) — dizayndagi D_ versiya; telefonda mobil ekran o'zgarmaydi.
 export default function DialogListScreen() {
+  return useIsDesktop() ? <DDialogList /> : <DialogListScreenMobile />;
+}
+
+function DialogListScreenMobile() {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<Filter>('all');
   const [topics, setTopics] = useState<Topic[]>([]);
