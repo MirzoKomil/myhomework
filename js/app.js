@@ -13013,8 +13013,20 @@ function anGetAllLeadsFlat() {
     ];
 }
 
+// Lid sanasi: avval createdAt (ISO, Toshkent vaqti bo'yicha kun), bo'lmasa
+// "date" maydoni. "date" ba'zi brauzerlarda "20/10/2026" ko'rinishida
+// saqlangan — ilgari bunday lidlar analitikada umuman hisoblanmasdi.
+function anLeadDateKey(lead) {
+    const iso = lead?.createdAt ? new Date(lead.createdAt) : null;
+    if (iso && !Number.isNaN(iso.getTime())) {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(iso);
+    }
+    const raw = String(lead?.date || '').trim().replace(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/, (m, d, mo, y) => `${d.padStart(2, '0')}.${mo.padStart(2, '0')}.${y}`);
+    return raw;
+}
+
 function anLeadsInPeriod(period) {
-    return anGetAllLeadsFlat().filter(l => l.date && cfDateInPeriod(l.date, period));
+    return anGetAllLeadsFlat().filter(l => { const key = anLeadDateKey(l); return key && cfDateInPeriod(key, period); });
 }
 
 function anLeadRevenue(lead) {
@@ -13033,7 +13045,8 @@ function renderAnalitikaSotuvMarketing() {
 
     const sources = ['Organik', 'Target'];
     const bySource = sources.map(src => {
-        const leadsForSrc = periodLeads.filter(l => (l.source || 'Organik') === src);
+        // Manba nomlari xilma-xil ("Target (reklama)", "Instagram target"...) — getLeadKind bilan guruhlanadi.
+        const leadsForSrc = periodLeads.filter(l => (getLeadKind(l) === 'target' ? 'Target' : 'Organik') === src);
         const closedForSrc = leadsForSrc.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
         return {
             label: src, total: leadsForSrc.length, closed: closedForSrc.length,
@@ -13067,10 +13080,11 @@ function renderAnalitikaSotuvMarketing() {
         .filter(h => h >= 0);
     const avgSpeedHours = speedHours.length ? speedHours.reduce((a, b) => a + b, 0) / speedHours.length : null;
 
-    const lost = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'muvaffaqiyatsiz-sotuv' && l.failedSaleReason?.label);
+    // Statistika bo'limi bilan bir xil manba: sabab matn, obyekt yoki izohda saqlangan bo'lishi mumkin.
+    const lost = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'muvaffaqiyatsiz-sotuv');
     const lostByReason = {};
     lost.forEach(l => {
-        const label = l.failedSaleReason.label;
+        const label = getFailedSaleReasonLabel(l);
         lostByReason[label] = (lostByReason[label] || 0) + 1;
     });
     const lostReasonsRanked = Object.entries(lostByReason)
@@ -13137,7 +13151,7 @@ function renderAnalitikaSotuvMarketing() {
 
     <div class="card">
         <div class="card-header"><h3>Sotuv voronkasi</h3></div>
-        ${buildFunnelSVG(stagesData)}
+        ${buildFunnelBars(stagesData)}
     </div>`;
 
     document.querySelectorAll('[data-an-mkt-period]').forEach(btn => {
@@ -14425,6 +14439,18 @@ const FUNNEL_STAGES = [
     { id: 'tolov-jarayonida',         label: "To'lov jarayonida",        color: '#D97706' },
     { id: 'tolov-yopildi',            label: "To'lov yopildi",           color: '#059669' },
 ];
+
+// Gorizontal ustunli voronka (Statistika bo'limidagi bilan bir xil ko'rinish).
+function buildFunnelBars(stagesData) {
+    const maxCount = Math.max(1, ...stagesData.map(x => x.count || 0));
+    const total = stagesData.reduce((a, x) => a + (x.count || 0), 0);
+    return `<ol class="sfx-rows">${stagesData.map(st => `
+        <li class="sfx-row">
+            <span class="sfx-name"><i style="background:${st.color}"></i>${escapeHtml(st.label)}</span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${Math.max(st.count ? 2 : 0, Math.round((st.count || 0) / maxCount * 100))}%;background:${st.color}"></span></span>
+            <span class="sfx-val"><b>${st.count || 0}</b> · ${total ? Math.round((st.count || 0) / total * 100) : 0}%</span>
+        </li>`).join('')}</ol>`;
+}
 
 function buildFunnelSVG(stagesData) {
     const VW = 640;       // viewBox width
