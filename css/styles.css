@@ -9025,3 +9025,8 @@ body.modal-open {
 .bsx-row span{flex:1;font-weight:600}
 .bsx-row small{color:var(--mx-muted);font-size:12px}
 .bsx-preview{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:13px}
+.lead-col-more{display:block;width:100%;margin:4px 0 8px;min-height:40px;border:1px dashed rgba(75,51,201,.45);border-radius:12px;background:rgba(255,255,255,.75);color:#4B33C9;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.lead-col-more span{font-weight:500;color:var(--mx-muted)}
+.lead-col-more:hover{background:#fff}
+.lead-column-header:has(.lead-col-pick){flex-wrap:wrap;row-gap:6px}
+.lead-col-pick{order:10;flex-basis:auto}
