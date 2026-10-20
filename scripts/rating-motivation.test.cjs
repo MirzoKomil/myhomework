@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Tashkent';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -99,4 +100,30 @@ test('ROP home: open escalations (unacknowledged only) and team plan', () => {
     assert.match(html, /24 soatdan oshdi/);
     assert.match(html, /86% · /);
     assert.equal(c.rop({ role: 'admin' }), '');
+});
+
+test('teacher home: today lessons by time with attendance state, no phones', () => {
+    const c = ctx('2026-10-20T16:50:00+05:00'); // seshanba
+    Object.assign(c, {
+        STORAGE_KEYS: { students: 'students', mainAttendance: 'att' },
+        getTeacherAssignmentIds: () => new Set(['t1']),
+        expandLessonPatternDays: d => ([1, 3, 5].includes(+d) ? [1, 3, 5] : [2, 4, 6].includes(+d) ? [2, 4, 6] : [+d]),
+        getItem: k => k === 'students' ? [
+            { id: 's2', name: 'Doniyor', phone: '+99890', teacherId: 't1', lessonDayOfWeek: 2, lessonTime: '16:00', lessonDuration: 30 },
+            { id: 's1', name: 'Shohruh', teacherId: 't1', lessonDayOfWeek: 4, lessonTime: '15:30', lessonDuration: 15 },
+            { id: 's3', name: 'Kamila', teacherId: 't1', lessonDayOfWeek: 6, lessonTime: '17:15', lessonDuration: 15 },
+            { id: 's4', name: 'Boshqa', teacherId: 't9', lessonDayOfWeek: 2, lessonTime: '10:00' },
+            { id: 's5', name: 'Juma', teacherId: 't1', lessonDayOfWeek: 1, lessonTime: '10:00' },
+        ] : { '2026-10_t1': { s1: { 20: 1, 15: 1 }, s2: { 15: 1 } } },
+    });
+    vm.runInContext(functionSource('js/app.js', 'renderTeacherTodayBlock') + '\nthis.t = renderTeacherTodayBlock;', c);
+    const html = c.t({ role: 'teacher', linkedTeacherId: 't1' });
+    assert.match(html, /3 ta dars · 1 tasi belgilanmagan/);
+    assert.ok(html.indexOf('Shohruh') < html.indexOf('Doniyor') && html.indexOf('Doniyor') < html.indexOf('Kamila'), 'sorted by time');
+    assert.match(html, /✓ Keldi/);
+    assert.match(html, /Dars tugadi · davomat belgilanmagan/);
+    assert.match(html, /Kutilmoqda/);
+    assert.ok(!html.includes('Boshqa') && !html.includes('Juma') && !html.includes('+99890'));
+    assert.match(html, /<b>3<\/b>/, 'kelgan darslar 3');
+    assert.equal(c.t({ role: 'rop' }), '');
 });
