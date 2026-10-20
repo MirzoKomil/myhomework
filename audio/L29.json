@@ -1,0 +1,325 @@
+{
+ "n": 29,
+ "topic_uz": "Sonlar 100–1000 va narx — Ско́лько сто́ит?",
+ "scene": "In a small clothing shop, a woman holds a handbag and asks the male shop assistant about the price.",
+ "dialogs": [
+  {
+   "id": "L29-d1",
+   "title_ru": "Ско́лько сто́ит су́мка?",
+   "title_uz": "Sumka qancha turadi?",
+   "intro_uz": "Birinchi dialog. Nigora do'konda sumka va ko'zoynak tanlayapti. Ular qancha turadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Продаве́ц",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Извини́те, ско́лько сто́ит э́та су́мка?",
+     "uz": "Kechirasiz, bu sumka qancha turadi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Две́сти пятьдеся́т ты́сяч сумо́в.",
+     "uz": "Ikki yuz ellik ming so'm."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Э́то до́рого! А та су́мка?",
+     "uz": "Bu qimmat! Anavi sumka-chi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Та — сто во́семьдесят ты́сяч.",
+     "uz": "Anavisi — bir yuz sakson ming."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́. А ско́лько сто́ят э́ти очки́?",
+     "uz": "Yaxshi. Bu ko'zoynak qancha turadi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Очки́ сто́ят девяно́сто ты́сяч.",
+     "uz": "Ko'zoynak to'qson ming turadi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Су́мка и очки́ — ско́лько всего́?",
+     "uz": "Sumka va ko'zoynak — hammasi qancha?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Две́сти се́мьдесят ты́сяч. Ка́сса там.",
+     "uz": "Ikki yuz yetmish ming. Kassa u yerda."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Birinchi sumka qancha turadi?",
+     "opts": [
+      "150 ming",
+      "250 ming",
+      "200 ming"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ko'zoynak qancha turadi?",
+     "opts": [
+      "90 ming",
+      "80 ming",
+      "19 ming"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Hammasi qancha bo'ldi?",
+     "opts": [
+      "250 ming",
+      "300 ming",
+      "270 ming"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "су́мка",
+     "alts": [
+      "ку́ртка",
+      "руба́шка",
+      "ша́пка"
+     ]
+    },
+    {
+     "base": "две́сти пятьдеся́т ты́сяч",
+     "alts": [
+      "три́ста ты́сяч",
+      "четы́реста ты́сяч",
+      "пятьсо́т ты́сяч"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: do'kondagi bitta narsaning narxini so'rang va «Bu qimmat!» deng."
+  },
+  {
+   "id": "L29-d2",
+   "title_ru": "Це́ны в Москве́",
+   "title_uz": "Moskvadagi narxlar",
+   "intro_uz": "Ikkinchi dialog. Dilnoza Antondan Moskvadagi narxlarni so'rayapti. Rubl bilan qancha? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, ско́лько сто́ит хлеб в Москве́?",
+     "uz": "Anton, Moskvada non qancha turadi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Хлеб? Пятьдеся́т рубле́й.",
+     "uz": "Nonmi? Ellik rubl."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А ско́лько сто́ит ко́фе?",
+     "uz": "Kofe qancha turadi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Ко́фе — две́сти рубле́й.",
+     "uz": "Kofe — ikki yuz rubl."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Две́сти рубле́й! Э́то до́рого. А метро́?",
+     "uz": "Ikki yuz rubl! Bu qimmat. Metro-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Метро́ сто́ит шестьдеся́т два рубля́.",
+     "uz": "Metro oltmish ikki rubl turadi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Шестьдеся́т два рубля́... А такси́?",
+     "uz": "Oltmish ikki rubl... Taksi-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Такси́ до́рого — пятьсо́т рубле́й.",
+     "uz": "Taksi qimmat — besh yuz rubl."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Moskvada non qancha?",
+     "opts": [
+      "50 rubl",
+      "15 rubl",
+      "500 rubl"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kofe qancha turadi?",
+     "opts": [
+      "100 rubl",
+      "62 rubl",
+      "200 rubl"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Metro qancha turadi?",
+     "opts": [
+      "52 rubl",
+      "62 rubl",
+      "60 rubl"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "хлеб",
+     "alts": [
+      "молоко́",
+      "сыр",
+      "сок"
+     ]
+    },
+    {
+     "base": "пятьдеся́т рубле́й",
+     "alts": [
+      "два рубля́",
+      "три рубля́",
+      "сто рубле́й"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: shahringizda non, kofe va taksi qancha turishini so'mda ayting."
+  },
+  {
+   "id": "L29-d3",
+   "title_ru": "На ка́ссе",
+   "title_uz": "Kassada",
+   "intro_uz": "Uchinchi dialog. Timur supermarket kassasida. U nima oladi va qancha to'laydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Касси́р",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Касси́р",
+     "ru": "Здра́вствуйте! Э́то всё?",
+     "uz": "Assalomu alaykum! Hammasi shumi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да. Извини́те, ско́лько сто́ит э́тот сыр?",
+     "uz": "Ha. Kechirasiz, bu pishloq qancha turadi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Сыр — со́рок пять ты́сяч сумо́в.",
+     "uz": "Pishloq — qirq besh ming so'm."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А ско́лько сто́ит па́чка ча́я?",
+     "uz": "Bir quti choy qancha turadi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Па́чка ча́я — двена́дцать ты́сяч.",
+     "uz": "Bir quti choy — o'n ikki ming."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Хорошо́. Ско́лько всего́?",
+     "uz": "Yaxshi. Hammasi qancha?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Пятьдеся́т семь ты́сяч. Вот сда́ча — три ты́сячи.",
+     "uz": "Ellik yetti ming. Mana qaytim — uch ming."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Спаси́бо! До свида́ния.",
+     "uz": "Rahmat! Xayr."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Pishloq qancha turadi?",
+     "opts": [
+      "54 ming",
+      "45 ming",
+      "40 ming"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bir quti choy qancha?",
+     "opts": [
+      "12 ming",
+      "20 ming",
+      "2 ming"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Qaytim qancha?",
+     "opts": [
+      "7 ming",
+      "5 ming",
+      "3 ming"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "па́чка ча́я",
+     "alts": [
+      "буты́лка воды́",
+      "па́чка ко́фе",
+      "буты́лка молока́"
+     ]
+    },
+    {
+     "base": "со́рок пять ты́сяч",
+     "alts": [
+      "три́дцать ты́сяч",
+      "со́рок две ты́сячи",
+      "пятьдеся́т ты́сяч"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: kassada ikki narsaning narxini so'rang va «Ско́лько всего́?» deng."
+  }
+ ]
+}

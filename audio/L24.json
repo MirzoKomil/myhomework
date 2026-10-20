@@ -1,0 +1,295 @@
+{
+ "n": 24,
+ "topic_uz": "«Сейча́с и́ли обы́чно?» — идти́ / ходи́ть va «как ча́сто?»",
+ "scene": "A young man Timur with a sports bag hurries along a street while talking on his phone with his friend Dilnoza.",
+ "dialogs": [
+  {
+   "id": "L24-d1",
+   "title_ru": "На трениро́вку",
+   "title_uz": "Mashg'ulotga",
+   "intro_uz": "Birinchi dialog. Dilnoza ukasi Timurga qo'ng'iroq qildi. Timur hozir qayerga ketyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, куда́ ты сейча́с идёшь?",
+     "uz": "Timur, hozir qayerga ketyapsan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я иду́ на трениро́вку.",
+     "uz": "Mashg'ulotga ketyapman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Как ча́сто ты хо́дишь на трениро́вку?",
+     "uz": "Mashg'ulotga qanchalik tez-tez borasan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Два ра́за в неде́лю: во вто́рник и в пя́тницу.",
+     "uz": "Haftada ikki marta: seshanba va juma kunlari."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А дома́шнее зада́ние?",
+     "uz": "Uy vazifasi-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ве́чером. Сейча́с я опа́здываю!",
+     "uz": "Kechqurun. Hozir kechikyapman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur hozir qayerga ketyapti?",
+     "opts": [
+      "maktabga",
+      "mashg'ulotga",
+      "uyga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur mashg'ulotga qaysi kunlari boradi?",
+     "opts": [
+      "dushanba va payshanba",
+      "shanba va yakshanba",
+      "seshanba va juma"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timur uy vazifasini qachon qiladi?",
+     "opts": [
+      "kechqurun",
+      "ertalab",
+      "qilmaydi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "на трениро́вку",
+     "alts": [
+      "на уро́к",
+      "в бассе́йн",
+      "в спортза́л"
+     ]
+    },
+    {
+     "base": "во вто́рник и в пя́тницу",
+     "alts": [
+      "в понеде́льник и в сре́ду",
+      "в суббо́ту",
+      "ка́ждый день"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: hozir qayerga ketayotganingizni va u yerga qanchalik tez-tez borishingizni ayting."
+  },
+  {
+   "id": "L24-d2",
+   "title_ru": "Пешко́м на рабо́ту",
+   "title_uz": "Ishga piyoda",
+   "intro_uz": "Ikkinchi dialog. Ertalab ofisda. Anton Nigoradan so'rayapti: ishga qanday kelasiz? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, вы всегда́ здесь во́время!",
+     "uz": "Nigora, siz doim shu yerda o'z vaqtida bo'lasiz!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, потому́ что я хожу́ пешко́м.",
+     "uz": "Ha, chunki piyoda yuraman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Пешко́м? Ка́ждый день?",
+     "uz": "Piyodami? Har kuni-ya?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, ка́ждый день. Э́то недалеко́. А вы?",
+     "uz": "Ha, har kuni. Bu yaqin. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я ре́дко хожу́ пешко́м. Э́то далеко́.",
+     "uz": "Men kamdan-kam piyoda yuraman. Uzoq."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Смо́трите, Бобу́р идёт! Он опа́здывает.",
+     "uz": "Qarang, Bobur kelyapti! U kechikyapti."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora ishga qanday keladi?",
+     "opts": [
+      "avtobusda",
+      "piyoda",
+      "mashinada"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qanchalik tez-tez piyoda yuradi?",
+     "opts": [
+      "kamdan-kam",
+      "haftada bir marta",
+      "har kuni"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Kim kechikyapti?",
+     "opts": [
+      "Bobur",
+      "Anton",
+      "Nigora"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "хожу́ пешко́м",
+     "alts": [
+      "хожу́ на рабо́ту",
+      "хожу́ в спортза́л",
+      "хожу́ в парк"
+     ]
+    },
+    {
+     "base": "Бобу́р идёт",
+     "alts": [
+      "Анто́н идёт",
+      "Дильно́за идёт",
+      "нача́льник идёт"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: ishga yoki o'qishga qanday borishingizni va qanchalik tez-tez piyoda yurishingizni ayting."
+  },
+  {
+   "id": "L24-d3",
+   "title_ru": "Ты идёшь домо́й?",
+   "title_uz": "Uyga ketyapsanmi?",
+   "intro_uz": "Uchinchi dialog. Kechqurun Nigora eriga qo'ng'iroq qildi. Abdulaziz hozir qayerga ketyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Алло́! Ты где? Ты идёшь домо́й?",
+     "uz": "Allo! Qayerdasan? Uyga ketyapsanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет, сейча́с я иду́ в банк.",
+     "uz": "Yo'q, hozir bankka ketyapman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В банк? Ты обы́чно хо́дишь в банк по пя́тницам.",
+     "uz": "Bankkami? Sen odatda bankka juma kunlari borasan-ku."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, но сего́дня ва́жный вопро́с.",
+     "uz": "Ha, lekin bugun muhim masala bor."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Поня́тно. А пото́м ты идёшь домо́й?",
+     "uz": "Tushunarli. Keyin uyga kelasanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, пото́м иду́ домо́й. Ско́ро бу́ду!",
+     "uz": "Ha, keyin uyga boraman. Tez orada yetib boraman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz hozir qayerga ketyapti?",
+     "opts": [
+      "uyga",
+      "ishga",
+      "bankka"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Abdulaziz odatda bankka qachon boradi?",
+     "opts": [
+      "juma kunlari",
+      "seshanba kuni",
+      "har kuni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nega bugun bankka ketyapti?",
+     "opts": [
+      "pul kerak",
+      "muhim masala bor",
+      "do'sti kutyapti"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в банк",
+     "alts": [
+      "в апте́ку",
+      "на ры́нок",
+      "в магази́н"
+     ]
+    },
+    {
+     "base": "по пя́тницам",
+     "alts": [
+      "по вто́рникам",
+      "по суббо́там",
+      "у́тром"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: hozir qayerga ketayotganingizni va odatda u yerga qachon borishingizni ayting."
+  }
+ ]
+}
