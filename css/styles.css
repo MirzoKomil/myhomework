@@ -8634,3 +8634,30 @@ body.modal-open {
 .tch-row--ok{border-left-color:var(--success)}
 .tch-row--warn{border-left-color:var(--warning);background:var(--warning-bg)}
 .tch-row--now{border-left-color:var(--purple)}
+
+/* ── Oʻquvchi kartasi · Umumiy (yangi koʻrinish) ── */
+.sdp2{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:16px;align-items:start}
+.sdp2-main,.sdp2-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sdp2 .sdp-section{margin:0;padding:16px 18px;border-radius:16px;background:var(--surface);border:1px solid var(--border)}
+.sdp2-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.sdp2-stat{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border);min-width:0}
+.sdp2-stat small{font-size:12px;color:var(--text-muted)}
+.sdp2-stat b{font-size:22px;line-height:28px;font-variant-numeric:tabular-nums;color:var(--text)}
+.sdp2-stat span{font-size:12px;color:var(--text-muted)}
+.sdp2-days{display:flex;flex-wrap:wrap;gap:6px}
+.sdp2-day{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;height:50px;border-radius:10px;background:var(--bg);color:var(--text-muted);font-weight:700;font-size:14px;border:1px solid var(--border)}
+.sdp2-day small{font-size:11px;font-weight:600}
+.sdp2-day--ok{background:#0E7C66;color:#fff;border-color:#0E7C66}
+.sdp2-day--no{background:var(--surface);color:#B4232C;border:2px solid #B4232C}
+.sdp2-day--unk{background:var(--warning-bg);color:var(--text);border-color:var(--warning)}
+.sdp2-legend{display:inline-flex;gap:6px 10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
+.sdp2-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--border);background:var(--bg)}
+.sdp2-legend i.sdp2-day--ok{background:#0E7C66;border-color:#0E7C66}
+.sdp2-legend i.sdp2-day--no{background:transparent;border:2px solid #B4232C}
+.sdp2-kvs{margin:0;display:flex;flex-direction:column}
+.sdp2-kv{display:grid;grid-template-columns:minmax(110px,40%) minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.sdp2-kv:last-child{border-bottom:0}
+.sdp2-kv dt{color:var(--text-muted)}
+.sdp2-kv dd{margin:0;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.sdp-action-btn--pay{background:var(--purple);color:#fff;border-color:var(--purple)}
+@media (max-width:1000px){.sdp2{grid-template-columns:1fr}.sdp2-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
