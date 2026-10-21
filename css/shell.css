@@ -888,3 +888,68 @@ html.rd[data-theme="dark"] .ahx-att--info { background: #1C2A48; }
         font-size: 13px;
     }
 }
+
+/* ---------- Sahifa sarlavhasi va foydalanuvchi nomi ---------- */
+html.rd .rd-page-head {
+    margin-bottom: 8px;
+}
+
+html.rd .rd-page-head h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--text);
+}
+
+html.rd .rd-page-head p {
+    margin: 2px 0 0;
+    min-height: 18px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .rd-user {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    margin-left: -4px;
+    max-width: 180px;
+}
+
+html.rd .rd-user[hidden] {
+    display: none;
+}
+
+html.rd .rd-user b {
+    font-size: 14px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+html.rd .rd-user span {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* ROP "Jamoa rejasi" va yordamchi ro'yxatida o'rin raqami yo'q qatorlar:
+   ism 25px ustunga tushib "S…" bo'lib qolardi. */
+html.rd .dashboard-rank-row:not(:has(.dashboard-rank-place)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 900px) {
+    html.rd .rd-user {
+        display: none;
+    }
+
+    html.rd .rd-page-head h1 {
+        font-size: 20px;
+    }
+
+    html.rd .rd-page-head p {
+        display: none;
+    }
+}
