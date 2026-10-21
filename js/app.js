@@ -6701,7 +6701,7 @@ function renderDashboard() {
     const managerLeads = managerId ? allLeads.filter(lead => lead.managerId === managerId) : [];
     const managerStudents = isSalesManager ? filterStudentsForSalesManager(students, { ...currentUser, linkedManagerId: managerId }) : students;
 
-    document.body.classList.toggle('admin-home', isAdminHomeUser(currentUser) || currentUser?.role === 'rop' || (isSalesManager && !!managerId));
+    document.body.classList.toggle('admin-home', isAdminHomeUser(currentUser) || currentUser?.role === 'rop' || (currentUser?.role === 'teacher' && !!currentUser.linkedTeacherId) || (isSalesManager && !!managerId));
     renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads });
     renderCalendarWidget();
     renderHwProgress(students);
@@ -8653,6 +8653,59 @@ function bindRopHome(container, user) {
     }));
 }
 
+// Ustoz bosh sahifasi sarlavhasi va ko'rsatkichlari (dizayn "UstozBosh").
+// Ro'yxat va panellar renderTeacherTodayBlock'dan; telefon/to'lov ko'rsatilmaydi.
+function teacherHomeStats(user, now = new Date()) {
+    const ids = getTeacherAssignmentIds(user.linkedTeacherId);
+    const dow = now.getDay() || 7;
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const day = now.getDate();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo);
+    const students = all.filter(s => ids.has(String(s.teacherId || '')));
+    const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
+    const att = getItem(STORAGE_KEYS.mainAttendance, {});
+    const asAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
+    const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
+    const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
+    const today = students.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow));
+    const unmarked = today.filter(s => { const st = toMin(s.lessonTime); return !present(s.id, day) && st != null && nowMin >= st + (Number(s.lessonDuration) || 15); }).length;
+    const came = students.reduce((sum, s) => sum + [...ids].reduce((a, tid) => a + Object.values(att[`${month}_${tid}`]?.[s.id] || {}).filter(v => v === 1 || v === true).length, 0), 0);
+    const ratings = [];
+    Object.values(getItem(STORAGE_KEYS.liveGrades, {})).forEach(list => (list || []).forEach(g => {
+        if (ids.has(String(g.teacherId || '')) && typeof g.studentRatingOfTeacher?.overall === 'number') ratings.push(g.studentRatingOfTeacher.overall);
+    }));
+    const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(user.linkedTeacherId) : null;
+    const kpi = (teacher, store, list) => { try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; } };
+    const mainKpi = own && own.type !== 'yordamchi' ? kpi(own, att, students) : null;
+    const asKpi = own ? kpi({ ...own, type: 'yordamchi' }, asAtt, helped) : null;
+    return {
+        todayCount: today.length, unmarked, students: students.length, helped: helped.length, came,
+        rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, ratingN: ratings.length,
+        salary: (mainKpi?.total || 0) + (asKpi?.total || 0), mainSalary: mainKpi?.total || 0, asSalary: asKpi?.total || 0, hasSalary: !!(mainKpi || asKpi)
+    };
+}
+
+function renderTeacherHome(user, now = new Date()) {
+    if (user?.role !== 'teacher' || !user.linkedTeacherId) return '';
+    const s = teacherHomeStats(user, now);
+    const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(now));
+    const greet = hour < 11 ? 'Xayrli tong' : hour < 18 ? 'Xayrli kun' : 'Xayrli kech';
+    return `<div class="ahx thx" id="teacherHome">
+        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi${s.helped ? ` · yordamchi sifatida ${s.helped}` : ''}</p></div>
+            <button type="button" class="mhx-btn" data-teacher-open-att>Oylik davomat</button></div>
+        <div class="ahx-kpis">
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Bugun</span><b class="ahx-kpi-v">${s.todayCount} dars</b><div class="ahx-kpi-n">${s.unmarked ? `<span class="ahx-pill ahx-pill--warn">${s.unmarked} tasi belgilanmagan</span>` : '<span>belgilanmagan dars yoʻq</span>'}</div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Kelgan darslar · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${s.came}</b><div class="ahx-kpi-n"><span>davomatda belgilangan</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Oʻquvchilar bahosi</span><b class="ahx-kpi-v">${s.rating != null ? s.rating.toFixed(1).replace('.', ',') + ' / 5' : '—'}</b><div class="ahx-kpi-n"><span>${s.ratingN ? `${s.ratingN} ta baho` : 'hali baho yoʻq'}</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Hisoblangan maosh · taxminiy</span><b class="ahx-kpi-v">${s.hasSalary ? escapeHtml(formatMoney(s.salary)) : '—'}</b><div class="ahx-kpi-n"><span>${s.hasSalary ? `asosiy ${escapeHtml(formatMoney(s.mainSalary))}${s.asSalary ? ` + yordamchi ${escapeHtml(formatMoney(s.asSalary))}` : ''}` : 'KPI sozlanmagan'}</span></div></div>
+        </div>
+        <div class="thx-grid"><div class="thx-main">${renderTeacherTodayBlock(user)}</div>
+        <aside class="thx-side"><section class="card ahx-card thx-guides"><div class="ahx-card-h"><h3>Yoʻriqnomalar</h3><button type="button" class="ahx-link" data-thx-guides>Barchasi →</button></div>
+            <p class="mhx-sub">Sinov darsini oʻtkazish, davomat va mezonlar boʻyicha qoidalar — Yoʻriqnomalar boʻlimida.</p></section></aside></div>
+    </div>`;
+}
+
 function bindAdminHome(container) {
     container.querySelectorAll('[data-ahx-go]').forEach(btn => btn.addEventListener('click', () => {
         const go = btn.dataset.ahxGo;
@@ -8671,6 +8724,12 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
     if (typeof isAdminHomeUser === 'function' && isAdminHomeUser(currentUser)) {
         container.innerHTML = renderAdminHome(currentUser, students, leads);
         bindAdminHome(container);
+        return;
+    }
+    if (currentUser?.role === 'teacher' && currentUser.linkedTeacherId) {
+        container.innerHTML = renderTeacherHome(currentUser);
+        container.querySelectorAll('[data-teacher-open-att]').forEach(btn => btn.addEventListener('click', () => switchTab('teachers-section')));
+        container.querySelector('[data-thx-guides]')?.addEventListener('click', () => switchTab('guides'));
         return;
     }
     if (currentUser?.role === 'rop') {
