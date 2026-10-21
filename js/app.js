@@ -20653,7 +20653,7 @@ function getTrialAttendanceFilter() {
 function renderTrialAttendanceFilter() {
     const selected = getTrialAttendanceFilter();
     return `<div class="trial-attendance-filter" role="group" aria-label="Sinov darsi qatnashuv filtri">
-        ${[['not-attended', 'Hali qatnashmaganlar'], ['all', 'Hamma'], ['attended', 'Qatnashganlar']].map(([id, label]) =>
+        ${[['not-attended', 'Kelmagan'], ['all', 'Hamma'], ['attended', 'Kelgan']].map(([id, label]) =>
             `<button type="button" data-trial-filter="${id}" aria-pressed="${selected === id}" class="${selected === id ? 'active' : ''}">${label}</button>`).join('')}
     </div>`;
 }
@@ -20703,7 +20703,9 @@ function shortPersonName(name) {
 function renderLeadCard(lead, langKey) {
     const normalized = normalizeLeadExtras(lead);
     const phone = formatPhoneDisplay(normalized.phone) || '—';
-    const phone2 = formatPhoneDisplay(normalized.phone2) || '';
+    const phone2Raw = formatPhoneDisplay(normalized.phone2) || '';
+    // Ikkinchi raqam birinchisi bilan bir xil bo'lsa, kartada takrorlanmaydi.
+    const phone2 = phone2Raw && String(normalized.phone2).replace(/\D/g, '').slice(-9) !== String(normalized.phone).replace(/\D/g, '').slice(-9) ? phone2Raw : '';
     const nextFollowUp = getLeadNextFollowUp(normalized);
     const nextStepHtml = nextFollowUp
         ? `<div class="lead-card-next${nextFollowUp.overdue ? ' is-late' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${nextFollowUp.overdue ? "Qo'ng'iroq vaqti o'tdi" : "Qo'ng'iroq"} · ${escapeHtml(formatLeadFollowUpWhen(nextFollowUp.at))}</div>`
@@ -21307,7 +21309,7 @@ function renderLeads() {
                 + (rest > 0 ? `<button type="button" class="lead-col-more" data-col-more="${col.id}">Yana ${Math.min(LEAD_COLUMN_PAGE, rest)} ta lid <span>· jami ${rest} ta qoldi</span></button>` : '')
             : '<div class="lead-column-empty">Lidlar yo\'q</div>';
 
-        return `<div class="lead-column" data-status="${col.id}" style="background:${col.bg};border-color:${col.border}">
+        return `<div class="lead-column" data-status="${col.id}" style="background:${col.bg};border-color:${col.border};--col-accent:${col.count}">
             <div class="lead-column-header${col.id === 'sinov-darsida' ? ' lead-column-header--trial' : ''}${col.id === 'boglanishga-urinilmoqda' ? ' lead-column-header--contact' : ''}" style="background:${col.headerBg}">
                 <h3 class="lead-column-title" style="color:${col.title}">${col.label}</h3>
                 <span class="lead-column-count" style="color:${col.count}">${items.length}</span>
