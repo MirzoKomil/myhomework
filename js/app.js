@@ -6701,7 +6701,7 @@ function renderDashboard() {
     const managerLeads = managerId ? allLeads.filter(lead => lead.managerId === managerId) : [];
     const managerStudents = isSalesManager ? filterStudentsForSalesManager(students, { ...currentUser, linkedManagerId: managerId }) : students;
 
-    document.body.classList.toggle('admin-home', isAdminHomeUser(currentUser) || (isSalesManager && !!managerId));
+    document.body.classList.toggle('admin-home', isAdminHomeUser(currentUser) || currentUser?.role === 'rop' || (isSalesManager && !!managerId));
     renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads });
     renderCalendarWidget();
     renderHwProgress(students);
@@ -8547,6 +8547,112 @@ function bindManagerHome(container) {
     }
 }
 
+// ROP bosh sahifasi (dizayn "RopBosh"): jamoa rejasi va prognoz, ochiq SLA
+// eskalatsiyalari, taqsimlanmagan lidlar, qarzdorlar, voronka, menejerlar jadvali.
+// Faqat ROPning o'z til yo'nalishi.
+function computeRopHome({ user, students, leads, now = new Date() }) {
+    const lang = user?.linkedRopLang || 'english';
+    const list = (leads[lang] || []).map(l => ({ ...l, _lang: lang }));
+    const st = l => normalizeLeadStatus(l.status);
+    const managers = getSalesManagers(lang);
+    let alerts = [];
+    try { alerts = getLeadSlaNotificationsForCurrentUser().filter(a => a.audience === 'rop' && a.leadLang === lang); } catch (e) { alerts = []; }
+    const open = alerts.filter(a => {
+        const lead = list.find(l => l.id === a.leadId);
+        return lead && !parseLeadSlaTime(lead.slaRopAcknowledged?.[a.stageKey]);
+    }).sort((a, b) => a.time - b.time);
+    const lateCount = open.filter(a => now.getTime() - a.time >= 24 * 60 * LEAD_SLA_MINUTE).length;
+    const CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
+    const unassigned = list.filter(l => !l.managerId && !CLOSED.has(st(l))).length;
+    const newCount = list.filter(l => st(l) === 'yangi-lidlar').length;
+    const rows = managers.map(m => {
+        const sales = getManagerSalesForPeriod(m.id, 'oylik');
+        const target = getManagerPeriodTarget(m.id, 'oylik') || 0;
+        return {
+            id: m.id, name: m.name || 'Nomaʼlum', sales, target, pct: target > 0 ? Math.round(sales / target * 100) : null,
+            leads: list.filter(l => l.managerId === m.id).length,
+            deals: getManagerDealsCount(m.id, 'oylik'),
+            sla: open.filter(a => list.find(l => l.id === a.leadId)?.managerId === m.id).length
+        };
+    }).sort((a, b) => b.sales - a.sales);
+    const teamSales = rows.reduce((a, r) => a + r.sales, 0);
+    const teamTarget = rows.reduce((a, r) => a + r.target, 0);
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const forecast = now.getDate() ? Math.round(teamSales / now.getDate() * daysInMonth) : teamSales;
+    const todayStart = new Date(now.toDateString());
+    const overdue = students.filter(s => !s.frozen && !s.isStaffDemo && (s.subject || 'english') === lang && Number(s.debtAmount || 0) > 0)
+        .filter(s => { const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null; return d && !Number.isNaN(d.getTime()) && d < todayStart; });
+    const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: list.filter(l => st(l) === s.id).length }));
+    return {
+        lang, list, managers, open, lateCount, unassigned, newCount, rows, teamSales, teamTarget, forecast,
+        overdueCount: overdue.length, overdueSum: overdue.reduce((a, s) => a + Number(s.debtAmount || 0), 0),
+        funnel, openLeads: funnel.reduce((a, f) => a + f.count, 0)
+    };
+}
+
+function renderRopHome(user, students, leads, now = new Date()) {
+    const d = computeRopHome({ user, students, leads, now });
+    const mln = n => `${(Math.round((Number(n) || 0) / 1e5) / 10).toString().replace('.', ',')} mln`;
+    const teamPct = d.teamTarget > 0 ? Math.round(d.teamSales / d.teamTarget * 100) : null;
+    const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(now));
+    const greet = hour < 11 ? 'Xayrli tong' : hour < 18 ? 'Xayrli kun' : 'Xayrli kech';
+    const maxF = Math.max(1, ...d.funnel.map(f => f.count));
+    const ago = t => {
+        const min = Math.max(0, Math.round((now.getTime() - t) / 60000));
+        return min < 60 ? `${min} daq oldin` : min < 1440 ? `${Math.floor(min / 60)} soat ${min % 60} daq oldin` : `${Math.floor(min / 1440)} kun oldin`;
+    };
+    const esc = d.open.slice(0, 5).map(a => {
+        const lead = d.list.find(l => l.id === a.leadId) || {};
+        const late = now.getTime() - a.time >= 24 * 60 * LEAD_SLA_MINUTE;
+        return `<li class="rpx-esc">
+            <div class="rpx-esc-h"><strong>${escapeHtml(lead.name || 'Lid')}</strong><span class="mhx-sub">${ago(a.time)}</span></div>
+            <p>${escapeHtml(a.message || '')}</p>
+            <span class="mhx-sub">Menejer: ${escapeHtml(getLeadSlaManagerName(lead))}</span>
+            ${late ? '<div class="rpx-alert">24 soatda koʻrilmadi — adminga xabar ketdi</div>' : ''}
+            <div class="rpx-actions">
+                <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrib chiqildi</button>
+                <button type="button" class="mhx-btn" data-rpx-open="${escapeHtml(a.leadId)}">Lidni ochish</button>
+            </div>
+        </li>`;
+    }).join('');
+    const tone = p => p == null ? '' : p >= 90 ? '' : p >= 60 ? ' is-mid' : ' is-low';
+    return `<div class="ahx rpx" id="ropHome">
+        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili · ${d.managers.length} menejer</p></div>
+            <button type="button" class="mhx-btn" data-rpx-go="sales-plan">Individual rejalar</button></div>
+        <div class="ahx-kpis">
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Jamoa rejasi · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${teamPct != null ? `${teamPct}%` : '—'}</b>
+                ${teamPct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, teamPct)}%"></i></span>` : ''}
+                <div class="ahx-kpi-n"><span>${mln(d.teamSales)} / ${d.teamTarget ? mln(d.teamTarget) : 'reja yoʻq'} · prognoz ${mln(d.forecast)}${d.teamTarget ? ` (${Math.round(d.forecast / d.teamTarget * 100)}%)` : ''}</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">SLA eskalatsiyalari</span><b class="ahx-kpi-v${d.open.length ? ' is-bad' : ''}">${d.open.length} ta</b><div class="ahx-kpi-n"><span>${d.lateCount ? `${d.lateCount} tasi 24 soatdan oshgan` : 'kechikkani yoʻq'}</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Taqsimlanmagan lidlar</span><b class="ahx-kpi-v${d.unassigned ? ' is-warn' : ''}">${d.unassigned}</b><div class="ahx-kpi-n"><span>${d.newCount} yangi liddan · menejerga biriktiring</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Qarzdorlar</span><b class="ahx-kpi-v">${d.overdueCount}${d.overdueCount ? ` · ${mln(d.overdueSum)}` : ''}</b><div class="ahx-kpi-n"><span>kelishilgan sana oʻtgan</span></div></div>
+        </div>
+        <div class="ahx-grid">
+            <section class="card ahx-card"><div class="ahx-card-h"><div><h3>Eskalatsiyalar · koʻrib chiqing</h3><span class="mhx-sub">“Koʻrib chiqildi” bosilmasa 24 soatdan keyin admin ogohlantiriladi</span></div></div>
+                ${d.open.length ? `<ul class="rpx-escs">${esc}</ul>${d.open.length > 5 ? `<p class="mhx-sub">Yana ${d.open.length - 5} ta — Sotuv boʻlimida</p>` : ''}` : '<p class="dashboard-empty">Ochiq eskalatsiya yoʻq 👍</p>'}
+            </section>
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Hozirgi voronka <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-rpx-go="leads">Lidlar →</button></div>
+                <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
+            </section>
+        </div>
+        <section class="card ahx-card ahx-card--flush rpx-mgrs"><div class="ahx-card-h"><h3>Menejerlar · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</h3><button type="button" class="ahx-link" data-rpx-go="rating">Reyting</button></div>
+            ${d.rows.length ? `<div class="ahx-tbl-wrap"><table class="ahx-tbl"><thead><tr><th scope="col">Menejer</th><th scope="col">Lidlar</th><th scope="col">Sotuv</th><th scope="col">Tushum</th><th scope="col" class="rpx-plan-h">Reja</th><th scope="col">Ochiq SLA</th></tr></thead>
+            <tbody>${d.rows.map(r => `<tr><th scope="row">${escapeHtml(r.name)}</th><td>${r.leads}</td><td>${r.deals}</td><td>${mln(r.sales)}</td>
+                <td class="rpx-plan">${r.pct != null ? `<span>${r.pct}%</span><span class="mhx-bar${tone(r.pct)}"><i style="width:${Math.min(100, r.pct)}%"></i></span>` : '—'}</td>
+                <td>${r.sla ? `<span class="ahx-pill ahx-pill--danger">${r.sla} ta</span>` : '—'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="dashboard-empty">Menejerlar topilmadi</p>'}
+        </section>
+    </div>`;
+}
+
+function bindRopHome(container, user) {
+    container.querySelectorAll('[data-rop-esc-lead]').forEach(btn => btn.addEventListener('click', () => openLeadNotifyModal(user?.linkedRopLang || 'english', btn.dataset.ropEscLead)));
+    container.querySelectorAll('[data-rpx-open]').forEach(btn => btn.addEventListener('click', () => openLeadOverview(user?.linkedRopLang || 'english', btn.dataset.rpxOpen)));
+    container.querySelectorAll('[data-rpx-go]').forEach(btn => btn.addEventListener('click', () => {
+        switchTab('sales');
+        switchSalesSection(btn.dataset.rpxGo);
+    }));
+}
+
 function bindAdminHome(container) {
     container.querySelectorAll('[data-ahx-go]').forEach(btn => btn.addEventListener('click', () => {
         const go = btn.dataset.ahxGo;
@@ -8565,6 +8671,11 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
     if (typeof isAdminHomeUser === 'function' && isAdminHomeUser(currentUser)) {
         container.innerHTML = renderAdminHome(currentUser, students, leads);
         bindAdminHome(container);
+        return;
+    }
+    if (currentUser?.role === 'rop') {
+        container.innerHTML = renderRopHome(currentUser, students, leads);
+        bindRopHome(container, currentUser);
         return;
     }
     if (currentUser?.role === 'sales_manager' && managerId) {

@@ -66,3 +66,10 @@ test('sotuv menejeri bosh sahifasi: faqat o‘z lidlari, maosh o‘z endpointida
     assert.match(app, /apiFetch\('\/api\/payroll\/me'\)\.then/);
     assert.match(app, /if \(currentUser\?\.role === 'sales_manager' && managerId\) \{\n\s+container\.innerHTML = renderManagerHome/);
 });
+
+test('ROP bosh sahifasi: faqat o‘z til yo‘nalishi', () => {
+    const fn = app.slice(app.indexOf('function computeRopHome('), app.indexOf('function renderRopHome('));
+    assert.match(fn, /const lang = user\?\.linkedRopLang \|\| 'english'/);
+    assert.match(fn, /\(leads\[lang\] \|\| \[\]\)/);
+    assert.match(fn, /\(s\.subject \|\| 'english'\) === lang/);
+});

@@ -1529,3 +1529,90 @@ html.rd .mhx-stats b.is-bad {
         align-items: stretch;
     }
 }
+
+/* ---------- ROP bosh sahifasi ---------- */
+html.rd .ahx-kpi-v.is-bad { color: #C62828; }
+html.rd .ahx-kpi-v.is-warn { color: #8A5A00; }
+html.rd[data-theme="dark"] .ahx-kpi-v.is-bad { color: #FF8A8A; }
+html.rd[data-theme="dark"] .ahx-kpi-v.is-warn { color: #FFC94D; }
+
+html.rd .rpx-escs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .rpx-esc {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+html.rd .rpx-esc:last-child {
+    border-bottom: 0;
+}
+
+html.rd .rpx-esc-h {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+html.rd .rpx-esc-h strong {
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .rpx-esc p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .rpx-alert {
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: #FDECEC;
+    color: #C62828;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+html.rd[data-theme="dark"] .rpx-alert {
+    background: #3D1F24;
+    color: #FF8A8A;
+}
+
+html.rd .rpx-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+html.rd .rpx-actions .btn-primary-sm {
+    min-height: 40px;
+}
+
+html.rd .rpx-mgrs {
+    margin-top: 16px;
+}
+
+html.rd .rpx-plan {
+    min-width: 180px;
+    text-align: left !important;
+}
+
+html.rd .rpx-plan span:first-child {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+html.rd .mhx-bar.is-mid i { background: #8A5A00; }
+html.rd .mhx-bar.is-low i { background: #C62828; }
+
+html.rd .ahx-tbl th.rpx-plan-h {
+    text-align: left;
+}
