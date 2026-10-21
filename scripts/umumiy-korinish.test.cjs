@@ -73,3 +73,9 @@ test('ROP bosh sahifasi: faqat o‘z til yo‘nalishi', () => {
     assert.match(fn, /\(leads\[lang\] \|\| \[\]\)/);
     assert.match(fn, /\(s\.subject \|\| 'english'\) === lang/);
 });
+
+test('ustoz bosh sahifasi: telefon/to‘lov ko‘rsatilmaydi, faqat o‘z o‘quvchilari', () => {
+    const fn = app.slice(app.indexOf('function teacherHomeStats('), app.indexOf('function bindAdminHome('));
+    assert.doesNotMatch(fn, /\.phone|debtAmount|paymentDueDate/);
+    assert.match(fn, /ids\.has\(String\(s\.teacherId \|\| ''\)\)/);
+});

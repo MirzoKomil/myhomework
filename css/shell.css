@@ -1616,3 +1616,67 @@ html.rd .mhx-bar.is-low i { background: #C62828; }
 html.rd .ahx-tbl th.rpx-plan-h {
     text-align: left;
 }
+
+/* ---------- Ustoz bosh sahifasi ---------- */
+html.rd .thx #dashboardTeacherToday {
+    margin-bottom: 16px;
+}
+
+html.rd .tch-list {
+    gap: 0;
+}
+
+html.rd .tch-row {
+    background: transparent;
+    border-radius: 0;
+    border-left-width: 3px;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 12px 12px 14px;
+}
+
+html.rd .tch-row:last-child {
+    border-bottom: 0;
+}
+
+html.rd .tch-row--warn {
+    background: transparent;
+    border-left-color: #B7791F;
+}
+
+html.rd .tch-row--warn .mot-prize-note {
+    color: #8A5A00;
+    font-weight: 600;
+}
+
+html.rd .tch-time {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+html.rd .thx-guides {
+    margin-top: 0;
+}
+
+html.rd .thx-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+html.rd .thx-main #dashboardTeacherToday {
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0;
+}
+
+/* "Shu oy" paneli yuqoridagi ko'rsatkichlarda bor — takrorlanmaydi */
+html.rd .thx-main #dashboardTeacherToday > section:last-child:not(:first-child) {
+    display: none;
+}
+
+@media (max-width: 1100px) {
+    html.rd .thx-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
