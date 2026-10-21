@@ -59,3 +59,10 @@ test('Reyting oylik: Oy liderlari (o‘rin puli sharti) va Bugungi obed, faqat o
     assert.match(app, /const need = monthTarget > 0 \? Math\.round\(monthTarget \* \(Number\(b\.pct\) \|\| 0\) \/ 100\)/);
     assert.match(app, /const monthly = _ratingView === 'normal' && _ratingPeriod === 'oylik';/);
 });
+
+test('sotuv menejeri bosh sahifasi: faqat o‘z lidlari, maosh o‘z endpointidan', () => {
+    const fn = app.slice(app.indexOf('function computeManagerHome('), app.indexOf('function renderManagerHome('));
+    assert.match(fn, /\.filter\(l => l\.managerId === managerId\)/);
+    assert.match(app, /apiFetch\('\/api\/payroll\/me'\)\.then/);
+    assert.match(app, /if \(currentUser\?\.role === 'sales_manager' && managerId\) \{\n\s+container\.innerHTML = renderManagerHome/);
+});
