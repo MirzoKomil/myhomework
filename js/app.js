@@ -18753,6 +18753,17 @@ function saveLeadTeacherSchedule(lang, leadId, scheduleData) {
     }));
 }
 
+// To'lov oqimi qadamlari (dizayn "TolovQoshish"): 1 — ustoz va dars vaqti,
+// 2 — to'lov turi/tarif/summa, 3 — o'quvchi ma'lumotlari. Faqat ko'rinish.
+function paymentStepsHtml(active) {
+    const steps = ['Ustoz va dars vaqti', "Toʻlov", "Oʻquvchi maʼlumotlari"];
+    return `<ol class="pay-steps" aria-label="Toʻlov jarayoni qadamlari">${steps.map((label, i) => {
+        const n = i + 1;
+        const state = n < active ? 'is-done' : n === active ? 'is-now' : '';
+        return `<li class="pay-step ${state}"${n === active ? ' aria-current="step"' : ''}><span class="pay-step-n">${n < active ? '✓' : n}</span><span>${label}</span></li>`;
+    }).join('')}</ol>`;
+}
+
 function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
     const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
@@ -18773,7 +18784,7 @@ function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
 
     openModal(
         `${escapeHtml(lead.name)} — Dars jadvali`,
-        bodyHtml,
+        paymentStepsHtml(1) + bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentTeacherSchedule">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="confirmPaymentTeacherSchedule">Keyingi bosqich</button>`,
         { wide: true }
@@ -19055,7 +19066,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
 
     openModal(
         `${escapeHtml(lead.name)} — O'quvchi ma'lumotlari`,
-        bodyHtml,
+        paymentStepsHtml(3) + bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentOnboarding">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="confirmPaymentOnboarding">${chainTo === 'tolov-yopildi' ? 'Keyingi bosqich' : "Saqlash va ko'chirish"}</button>`,
         { wide: true }
@@ -19184,7 +19195,7 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
 
     openModal(
         `${escapeHtml(lead.name)} — To'lov jarayonida`,
-        bodyHtml,
+        paymentStepsHtml(2) + bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentProcess">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="confirmPaymentProcess">Keyingi bosqich</button>`,
         { wide: true }

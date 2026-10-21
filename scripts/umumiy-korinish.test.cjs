@@ -97,3 +97,9 @@ test('HR Xodimlar: jadval + tanlangan xodim paneli (mavjud karta, amallar o‘sh
     assert.match(app, /let _hrSelectedEmpId = null;/);
     assert.match(app, /<aside class="hrx-side" aria-label="Tanlangan xodim">\$\{selected \? renderHrEmployeeCard\(selected\) : ''\}<\/aside>/);
 });
+
+test('to‘lov oqimi: 3 qadam ko‘rsatkichi, mantiq o‘zgarmagan', () => {
+    assert.match(app, /paymentStepsHtml\(1\) \+ bodyHtml/);
+    assert.match(app, /paymentStepsHtml\(2\) \+ bodyHtml/);
+    assert.match(app, /paymentStepsHtml\(3\) \+ bodyHtml/);
+});
