@@ -92,3 +92,8 @@ test('lid kartasi: izoh karta ichida yoziladi (faqat yozish huquqi bo‘lsa)', (
     assert.match(app, /\$\{canEdit \? `<form class="lov-note" data-lov-note>/);
     assert.match(app, /createLeadComment\(\{ text, author: user\?\.name \|\| 'Admin', type: 'manual' \}\)/);
 });
+
+test('HR Xodimlar: jadval + tanlangan xodim paneli (mavjud karta, amallar o‘sha joyda)', () => {
+    assert.match(app, /let _hrSelectedEmpId = null;/);
+    assert.match(app, /<aside class="hrx-side" aria-label="Tanlangan xodim">\$\{selected \? renderHrEmployeeCard\(selected\) : ''\}<\/aside>/);
+});
