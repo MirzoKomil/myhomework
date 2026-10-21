@@ -110,6 +110,14 @@ function syncHeaderAvatar(user) {
     } else {
         el.textContent = getUserInitials(user.name);
     }
+    const meta = document.getElementById('userMeta');
+    if (meta) {
+        const roles = { admin: 'Administrator', boshliq: 'Rahbar', rop: 'ROP', sales_manager: 'Sotuv menejeri', teacher: 'Ustoz', targetolog: 'Targetolog' };
+        meta.innerHTML = '<b></b><span></span>';
+        meta.querySelector('b').textContent = user.name || '';
+        meta.querySelector('span').textContent = roles[user.role] || '';
+        meta.hidden = !user.name;
+    }
 }
 
 function initUserUI(currentUser) {
@@ -864,7 +872,38 @@ function switchTab(tab, ctx = {}) {
     if (tab === 'profile') _profileEditing = {};
     renderTab(tab);
     persistCurrentTab();
+    updateRdPageHead(tab);
 }
+
+// Dizayndagi sahifa sarlavhasi: bo'lim nomi (H1) + "faol tab · til" izohi.
+// Faqat ichki tablari bor bo'limlarda (.sales-pinned) chiziladi.
+const RD_PAGE_TITLES = {
+    sales: 'Sotuv', marketing: 'Marketing', students: 'Oʻquvchilar', finance: 'Moliya', hr: 'Xodimlar',
+    analitika: 'Analitika', 'teachers-section': 'Akademik boʻlim', settings: 'Sozlamalar', 'student-app': 'Mobil ilova'
+};
+let _rdCurrentTab = null;
+function updateRdPageHead(tab = _rdCurrentTab) {
+    _rdCurrentTab = tab;
+    const title = RD_PAGE_TITLES[tab];
+    const section = document.getElementById(`tab-${tab}`);
+    const pinned = section?.querySelector(':scope > .sales-pinned');
+    if (!title || !pinned) return;
+    let head = pinned.querySelector(':scope > .rd-page-head');
+    if (!head) {
+        head = document.createElement('div');
+        head.className = 'rd-page-head';
+        head.innerHTML = '<h1></h1><p></p>';
+        pinned.prepend(head);
+    }
+    const active = pinned.querySelector('.section-nav-item.active');
+    const lang = pinned.querySelector('.subject-tab.active');
+    const parts = [active && !active.hidden ? active.textContent.trim() : '', lang ? lang.textContent.trim() + ' yoʻnalishi' : ''].filter(Boolean);
+    head.querySelector('h1').textContent = title;
+    head.querySelector('p').textContent = parts.join(' · ');
+}
+document.addEventListener('click', e => {
+    if (e.target.closest?.('.sales-pinned .section-nav-item, .sales-pinned .subject-tab')) requestAnimationFrame(() => updateRdPageHead());
+});
 
 function switchSalesSection(section) {
     _tabContext.salesSection = section;
@@ -8393,6 +8432,7 @@ function bindAdminHome(container) {
         if (go === 'debtors') { _debtorsQuick = 'overdue'; switchSalesSection('debtors'); }
         else if (go === 'rating') switchSalesSection('rating');
         else switchSalesSection('leads');
+        updateRdPageHead('sales');
     }));
 }
 

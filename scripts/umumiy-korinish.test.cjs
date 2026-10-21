@@ -46,3 +46,10 @@ test('admin bosh sahifasi: raqamlar mavjud hisoblardan, soxta vidjetlar olib tas
     assert.match(app, /isAdminHomeUser\(currentUser\)\) \{\n\s+container\.innerHTML = renderAdminHome/);
     assert.match(app, /const ADMIN_HOME_ROLES = new Set\(\['admin', 'boshliq'\]\)/);
 });
+
+test('sahifa sarlavhasi va foydalanuvchi nomi: matn textContent orqali (XSS yo‘q)', () => {
+    const fn = app.slice(app.indexOf('function updateRdPageHead('), app.indexOf("document.addEventListener('click', e => {\n    if (e.target.closest?.('.sales-pinned"));
+    assert.doesNotMatch(fn.replace("head.innerHTML = '<h1></h1><p></p>'", ''), /innerHTML/);
+    assert.match(html, /id="userMeta" hidden/);
+    assert.match(app, /meta\.querySelector\('b'\)\.textContent = user\.name/);
+});
