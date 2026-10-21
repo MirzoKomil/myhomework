@@ -1766,3 +1766,27 @@ html.rd .lov-mgr-change {
         grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
     }
 }
+
+html.rd .lov-note {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+html.rd .lov-note textarea {
+    resize: vertical;
+    min-height: 64px;
+    font-size: 14px;
+}
+
+html.rd .lov-note-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+html.rd .lov-note-actions .btn-primary-sm {
+    min-height: 40px;
+}
