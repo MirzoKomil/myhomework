@@ -87,3 +87,8 @@ test('lid kartasi: bosqich o‘zgartirish kanban bilan bir xil yo‘ldan (so‘r
     const fn = app.slice(app.indexOf('function requestLeadStageChange('), app.indexOf('function openLeadOverview('));
     for (const f of ['needsContactFailPrompt', 'needsSifatsizLidPrompt', 'needsPaymentClosedPrompt', 'needsFailedSalePrompt']) assert.match(fn, new RegExp(f));
 });
+
+test('lid kartasi: izoh karta ichida yoziladi (faqat yozish huquqi bo‘lsa)', () => {
+    assert.match(app, /\$\{canEdit \? `<form class="lov-note" data-lov-note>/);
+    assert.match(app, /createLeadComment\(\{ text, author: user\?\.name \|\| 'Admin', type: 'manual' \}\)/);
+});

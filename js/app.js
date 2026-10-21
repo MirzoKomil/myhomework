@@ -21568,6 +21568,14 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser(), opts = {}) 
         <div class="lov-grid">
             <section class="lov-card" aria-label="Izohlar tarixi">
                 <h3 class="lov-h">Izohlar tarixi <small>eng yangisi tepada</small></h3>
+                ${canEdit ? `<form class="lov-note" data-lov-note>
+                    <label for="lovNoteText" class="sr-only">Yangi izoh</label>
+                    <textarea id="lovNoteText" class="form-control" rows="2" maxlength="2000" placeholder="Qisqacha: nima boʻldi, nima kelishildi…"></textarea>
+                    <div class="lov-note-actions">
+                        <button type="submit" class="btn-primary-sm">Izohni saqlash</button>
+                        <button type="button" class="lov-btn" data-lov-act="followup">Bogʻlanish eslatmasi</button>
+                    </div>
+                </form>` : ''}
                 <div class="lov-history">${historyHtml}</div>
             </section>
             <aside class="lov-side">
@@ -21620,6 +21628,7 @@ function openLeadOverview(lang, leadId) {
     openModal(lead.name || 'Lid kartasi', renderLeadOverviewHtml(lead, lang, user, { actions: true }), footer, { wide: true });
     const actions = {
         manager: () => openAssignManagerModal(lang, leadId),
+        followup: () => openLeadFollowUpReminderModal(lang, leadId, lead.name, user?.name || 'Admin'),
         comments: () => openLeadCommentsModal(lang, leadId),
         recording: () => openLeadRecordingModal(lang, leadId),
         sms: () => openLeadSmsTemplateModal(lang, leadId),
@@ -21628,6 +21637,17 @@ function openLeadOverview(lang, leadId) {
     };
     document.querySelectorAll('#modalFooter [data-lov-act], #modalBody [data-lov-act]').forEach(btn => {
         btn.addEventListener('click', () => actions[btn.dataset.lovAct]?.());
+    });
+    document.querySelector('#modalBody [data-lov-note]')?.addEventListener('submit', e => {
+        e.preventDefault();
+        const text = document.getElementById('lovNoteText')?.value.trim();
+        if (!text) return;
+        updateLeadInStorage(lang, leadId, l => {
+            const base = normalizeLeadExtras(l);
+            return { ...base, comments: [...base.comments, createLeadComment({ text, author: user?.name || 'Admin', type: 'manual' })] };
+        });
+        if (document.getElementById('leadsKanban')) renderLeads();
+        openLeadOverview(lang, leadId);
     });
     document.querySelector('#modalBody [data-lov-stage]')?.addEventListener('change', e => {
         const to = e.target.value;
