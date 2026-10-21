@@ -907,6 +907,7 @@ document.addEventListener('click', e => {
 
 function switchSalesSection(section) {
     _tabContext.salesSection = section;
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => updateRdPageHead('sales'));
     document.querySelectorAll('.section-nav-item').forEach(el => {
         el.classList.toggle('active', el.dataset.salesSection === section);
     });
@@ -25807,7 +25808,7 @@ function _monthDaysLeft() {
 }
 function _firstName(name) { return String(name || '').trim().split(/\s+/)[0] || ''; }
 
-function renderRatingMotivation(ranked, period) {
+function renderRatingMotivation(ranked, period, between = '') {
     if (!ranked.length) return '';
     const leader = ranked[0];
     const second = ranked[1];
@@ -25883,11 +25884,72 @@ function renderRatingMotivation(ranked, period) {
         }).join('');
     }
     const heading = period === 'kunlik' ? 'Kunlik obed bosqichlari' : period === 'haftalik' ? 'Hafta sovgʻalari' : 'Oylik sovgʻalar';
-    return `${hero}
+    return `${hero}${between}
     <section class="mot-prizes-wrap" aria-label="${heading}">
         <h3 class="mot-h">${heading}</h3>
         <ol class="mot-prizes">${cards}</ol>
     </section>`;
+}
+
+// Oylik ko'rinish (dizayn): "Oy liderlari" (o'rin puli sharti bilan) va "Bugungi obed".
+// O'rin puli faqat shaxsiy oylik reja RANK_BONUSES.pct foizga bajarilsa beriladi.
+function renderRatingMonthBlocks(ranked) {
+    if (!ranked.length) return '';
+    const mln = n => `${(Math.round((Number(n) || 0) / 1e4) / 100).toFixed(2).replace('.', ',')} mln`;
+    const ranks = RANK_BONUSES.map(getMergedBonus);
+    const top = ranked.slice(0, 3);
+    const order = [1, 0, 2].filter(i => top[i]);
+    const podium = order.map(i => {
+        const m = top[i];
+        const b = ranks[i] || {};
+        const monthTarget = getManagerPeriodTarget(m.id, 'oylik') || 0;
+        const planPct = monthTarget > 0 ? Math.round(m.sales / monthTarget * 100) : null;
+        const need = monthTarget > 0 ? Math.round(monthTarget * (Number(b.pct) || 0) / 100) : Number(b.threshold) || 0;
+        const ok = need > 0 && m.sales >= need;
+        return `<li class="rtx-pod rtx-pod--${i + 1}">
+            <span class="rtx-place">${i + 1}</span>
+            <span class="rtx-ava">${escapeHtml(managerInitials(m.name))}</span>
+            <strong class="rtx-name">${escapeHtml(m.name)}</strong>
+            <b class="rtx-sum">${mln(m.sales)}</b>
+            <span class="rtx-meta">${m.deals} bitim${planPct != null ? ` · reja ${planPct}%` : ''}</span>
+            ${b.prize ? `<span class="rtx-prize${ok ? ' is-ok' : ''}">${ok ? '✓' : '🔒'} ${escapeHtml(b.prize)}</span>` : ''}
+            ${need ? `<span class="rtx-cond">${ok ? 'Shart bajarildi' : `shart: ${b.pct ? `reja ${b.pct}% (${mln(need)})` : mln(need)} · yana ${mln(need - m.sales)}`}</span>` : ''}
+            <span class="rtx-step" aria-hidden="true"></span>
+        </li>`;
+    }).join('');
+
+    const tiers = DAILY_BONUSES.map(getMergedBonus).filter(b => Number(b.threshold) > 0).sort((a, b) => a.threshold - b.threshold);
+    const today = ranked.map(m => ({ ...m, day: getManagerSalesForPeriod(m.id, 'kunlik') })).sort((a, b) => b.day - a.day);
+    const d = new Date();
+    const obedRows = today.map(m => {
+        const got = tiers.filter(t => m.day >= t.threshold).pop();
+        const next = tiers.find(t => m.day < t.threshold);
+        return `<li><span class="rtx-ava rtx-ava--sm">${escapeHtml(managerInitials(m.name))}</span>
+            <div><strong>${escapeHtml(_firstName(m.name))}</strong><span>${next ? `${escapeHtml(next.label || '')} uchun yana ${escapeHtml(formatMoney(next.threshold - m.day))}` : 'Eng yuqori obed olindi 🎉'}</span></div>
+            <b>${escapeHtml(formatMoney(m.day).replace(" so'm", ''))}</b>
+            <span class="rtx-chip${got ? ' is-ok' : ''}">${got ? `✓ ${escapeHtml(got.label || '')}` : "hali yoʻq"}</span></li>`;
+    }).join('');
+    return `<div class="rtx-grid">
+        <section class="card rtx-card" aria-labelledby="rtxLeadersH">
+            <div class="rtx-card-h">${_prizeImg('rank1', 56)}<div><h3 id="rtxLeadersH">Oy liderlari</h3><p>Oʻrin puli faqat reja sharti bajarilganda beriladi</p></div></div>
+            <ol class="rtx-podium">${podium}</ol>
+        </section>
+        <section class="card rtx-card" aria-labelledby="rtxObedH">
+            <div class="rtx-card-h">${_prizeImg('obed', 72)}<div><h3 id="rtxObedH">Bugungi obed · ${d.getDate()}-${UZ_MONTHS_GEN[d.getMonth()]}</h3><p>Kunlik sotuv boʻyicha</p>
+                <div class="rtx-tiers">${tiers.map(t => `<span><b>${escapeHtml(t.label || '')}</b> ${escapeHtml(formatMoney(t.threshold).replace(" so'm", ''))}+</span>`).join('')}</div></div></div>
+            <ul class="rtx-obed">${obedRows}</ul>
+        </section>
+    </div>`;
+}
+
+function renderRatingWeekRow(managers) {
+    const weekly = managers.map(m => ({ ...m, week: getManagerSalesForPeriod(m.id, 'haftalik') })).sort((a, b) => b.week - a.week);
+    const items = WEEKLY_BONUSES.map(getMergedBonus).map(b => {
+        const holder = weekly[(b.rank || 1) - 1];
+        return `<li>${_prizeImg(b.id, 64)}<div><span class="rtx-eyebrow">${b.rank}-oʻrin</span><strong>${escapeHtml(b.label || '')}</strong>
+            <span>${holder && holder.week > 0 ? `Hozir: <b>${escapeHtml(_firstName(holder.name))}</b> · ${escapeHtml(formatMoney(holder.week))}` : 'Hali hech kim'}</span></div></li>`;
+    }).join('');
+    return `<section class="card rtx-card rtx-week" aria-labelledby="rtxWeekH"><div class="rtx-card-h"><div><h3 id="rtxWeekH">Hafta sovgʻalari</h3><p>Yakshanba kuni yakunlanadi</p></div></div><ol class="rtx-week-list">${items}</ol></section>`;
 }
 
 function renderLeaderboardSection() {
@@ -26063,10 +26125,12 @@ function renderLeaderboardSection() {
         </div>`;
     }
 
+    const monthly = _ratingView === 'normal' && _ratingPeriod === 'oylik';
     el.innerHTML = `
-    ${_ratingView === 'normal' ? renderRatingMotivation(ranked, _ratingPeriod) : ''}
+    ${_ratingView === 'normal' ? renderRatingMotivation(ranked, _ratingPeriod, monthly ? renderRatingMonthBlocks(ranked) : '') : ''}
+    ${monthly ? renderRatingWeekRow(ranked) : ''}
     ${viewToggleHTML}
-    ${_ratingView === 'normal' ? podiumHTML : ''}
+    ${_ratingView === 'normal' && !monthly ? podiumHTML : ''}
     ${mainContent}`;
 
     const viewNormal = el.querySelector('#ratingViewNormal');

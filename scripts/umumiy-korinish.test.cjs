@@ -53,3 +53,9 @@ test('sahifa sarlavhasi va foydalanuvchi nomi: matn textContent orqali (XSS yo�
     assert.match(html, /id="userMeta" hidden/);
     assert.match(app, /meta\.querySelector\('b'\)\.textContent = user\.name/);
 });
+
+test('Reyting oylik: Oy liderlari (o‘rin puli sharti) va Bugungi obed, faqat oylik ko‘rinishda', () => {
+    assert.match(app, /function renderRatingMonthBlocks\(ranked\)/);
+    assert.match(app, /const need = monthTarget > 0 \? Math\.round\(monthTarget \* \(Number\(b\.pct\) \|\| 0\) \/ 100\)/);
+    assert.match(app, /const monthly = _ratingView === 'normal' && _ratingPeriod === 'oylik';/);
+});
