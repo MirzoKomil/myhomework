@@ -13468,18 +13468,19 @@ function renderAnalitikaMoliyaviy() {
         .filter(t => t.type === 'chiqim' && t.purpose === 'Marketing' && cfDateInPeriod(t.date, period))
         .reduce((s, t) => s + (Number(t.amount) || 0), 0);
     const newCustomers = _getClosedLeadsInPeriod('all', period).length;
-    const cac = newCustomers > 0 ? Math.round(marketingSpend / newCustomers) : null;
+    const cac = newCustomers > 0 && marketingSpend > 0 ? Math.round(marketingSpend / newCustomers) : null;
 
     const targetRevenue = _getClosedLeadsInPeriod('all', period)
         .filter(l => (l.source || 'Organik') === 'Target')
         .reduce((s, l) => s + anLeadRevenue(l), 0);
     const romi = marketingSpend > 0 ? ((targetRevenue - marketingSpend) / marketingSpend * 100) : null;
 
-    const salesCount = cfTx.filter(t => t.type === 'kirim' && (t.category === 'sotuv' || t.category === 'ichki-sotuv') && cfDateInPeriod(t.date, period)).length;
     const refundTx = cfTx.filter(t => t.type === 'chiqim' && t.purpose === CASH_FLOW_REFUND_PURPOSE && cfDateInPeriod(t.date, period));
     const refundCount = refundTx.length;
     const refundAmount = refundTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-    const refundRate = salesCount > 0 ? (refundCount / salesCount * 100) : 0;
+    // Qaytarishlar ulushi davrda yopilgan sotuvlarga nisbatan (Cash Flow'da sotuv kirimi
+    // har doim ham yozilmaydi — u bazada 0 bo'lib, foiz "0%" chiqardi).
+    const refundRate = newCustomers > 0 ? (refundCount / newCustomers * 100) : null;
 
     const upsellTotal = firstPurchaseSum + repeatPurchaseSum;
 
@@ -13495,9 +13496,9 @@ function renderAnalitikaMoliyaviy() {
 
     <div class="cf-kpi-grid" style="margin-bottom:16px">
         <div class="stat-card"><div class="stat-icon purple">💎</div><div class="stat-info"><div class="stat-label">LTV (o'rtacha)</div><div class="stat-value" style="font-size:20px">${fmtMoney(ltv)}</div></div></div>
-        <div class="stat-card"><div class="stat-icon blue">🎯</div><div class="stat-info"><div class="stat-label">CAC</div><div class="stat-value" style="font-size:20px">${cac !== null ? fmtMoney(cac) : "Ma'lumot yo'q"}</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue">🎯</div><div class="stat-info"><div class="stat-label">CAC</div><div class="stat-value" style="font-size:20px">${cac !== null ? fmtMoney(cac) : (marketingSpend > 0 ? "Sotuv yo'q" : 'Kiritilmagan')}</div></div></div>
         <div class="stat-card"><div class="stat-icon green">📈</div><div class="stat-info"><div class="stat-label">ROMI</div><div class="stat-value" style="font-size:20px${romi !== null && romi < 0 ? ';color:var(--danger)' : ''}">${romi !== null ? (romi >= 0 ? '+' : '') + romi.toFixed(0) + '%' : "Ma'lumot yo'q"}</div></div></div>
-        <div class="stat-card"><div class="stat-icon yellow">↩️</div><div class="stat-info"><div class="stat-label">Refund Rate</div><div class="stat-value" style="font-size:20px">${refundRate.toFixed(1)}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">↩️</div><div class="stat-info"><div class="stat-label">Refund Rate</div><div class="stat-value" style="font-size:20px">${anPct(refundRate)}</div></div></div>
     </div>
 
     <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
@@ -13637,21 +13638,33 @@ function hbAttendanceStats(period) {
             });
         });
     });
-    return { presentCount, totalMarkable, rate: totalMarkable > 0 ? (presentCount / totalMarkable * 100) : 0 };
+    return { presentCount, totalMarkable, rate: totalMarkable > 0 ? (presentCount / totalMarkable * 100) : null };
+}
+
+// Ma'lumot yo'q bo'lsa "0%" emas, "—" ko'rsatiladi (0% haqiqiy natijaga o'xshab ko'rinardi).
+function anPct(v, digits = 1) {
+    return v === null || v === undefined || !Number.isFinite(Number(v)) ? '—' : `${Number(v).toFixed(digits)}%`;
+}
+
+// Muzlatilgan o'quvchilar ulushi (avval "Churn Rate" deb ko'rsatilardi — bu churn emas:
+// tark etgan o'quvchilar CRMda hali alohida belgilanmaydi).
+function hbFrozenShare() {
+    const students = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo);
+    return students.length ? students.filter(s => s.frozen).length / students.length * 100 : null;
 }
 
 function hbRetentionRate() {
     const students = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo);
     const total = students.length;
     const active = students.filter(s => !s.frozen).length;
-    return total > 0 ? (active / total * 100) : 0;
+    return total > 0 ? (active / total * 100) : null;
 }
 
 function hbStaffTurnover() {
     const emps = getItem(STORAGE_KEYS.hrEmployees, []);
     const total = emps.length;
     const inactive = emps.filter(e => e.status === 'inactive').length;
-    return total > 0 ? (inactive / total * 100) : 0;
+    return total > 0 ? (inactive / total * 100) : null;
 }
 
 function hbHeadcountByRole() {
@@ -13789,17 +13802,17 @@ function hbOqituvchi(period) {
     if (period === 'kunlik') {
         const stats = hbAttendanceStats('kunlik');
         cards += hbCard('📚', 'blue', "O'tilgan (belgilangan) darslar soni", stats.totalMarkable);
-        cards += hbCard('✅', 'green', 'Davomat (Attendance Rate)', stats.rate.toFixed(1) + '%');
+        cards += hbCard('✅', 'green', 'Davomat (Attendance Rate)', anPct(stats.rate));
         cards += hbManualCard('oqituvchi', { key: 'student-rating', label: "O'quvchilar bergan kunlik reyting", unit: 'ball (1-5)', agg: 'avg' }, period, '⭐');
     } else if (period === 'haftalik') {
         const stats = hbAttendanceStats('haftalik');
-        cards += hbCard('📊', 'green', 'Umumiy faollik koeffitsiyenti', stats.rate.toFixed(1) + '%');
+        cards += hbCard('📊', 'green', 'Umumiy faollik koeffitsiyenti', anPct(stats.rate));
         cards += hbManualCard('oqituvchi', { key: 'syllabus-progress', label: "Syllabus bo'yicha ketish", unit: '%', agg: 'avg' }, period, '📘');
         cards += hbManualCard('oqituvchi', { key: 'quiz-score', label: 'Oraliq nazorat (Quiz) natijasi', unit: '%', agg: 'avg' }, period, '📝');
     } else {
         const retention = hbRetentionRate();
         const stats = hbAttendanceStats('oylik');
-        cards += hbCard('🔄', 'purple', "O'quvchilarni saqlab qolish (Retention)", retention.toFixed(1) + '%');
+        cards += hbCard('🔄', 'purple', "Faol (muzlatilmagan) o'quvchilar ulushi", anPct(retention));
         cards += hbCard('⏳', 'blue', "Maosh uchun o'tilgan darslar soni", stats.totalMarkable);
     }
     return `<div class="cf-kpi-grid">${cards}</div>`;
@@ -13825,19 +13838,18 @@ function hbAkademikRahbar(period) {
     let cards = '';
     if (period === 'kunlik') {
         const stats = hbAttendanceStats('kunlik');
-        cards += hbCard('✅', 'green', 'Umumiy davomat', stats.rate.toFixed(1) + '%');
+        cards += hbCard('✅', 'green', 'Umumiy davomat', anPct(stats.rate));
         cards += hbCard('🚫', 'yellow', 'Qolib ketgan darslar', Math.max(0, stats.totalMarkable - stats.presentCount));
         cards += hbManualCard('akademik-rahbar', { key: 'late-hw', label: 'Kechikayotgan uy vazifalari', unit: 'ta', agg: 'sum' }, period, '⏰');
     } else if (period === 'haftalik') {
         const stats = hbAttendanceStats('haftalik');
-        cards += hbCard('📊', 'green', 'Umumiy faollik koeffitsiyenti', stats.rate.toFixed(1) + '%');
+        cards += hbCard('📊', 'green', 'Umumiy faollik koeffitsiyenti', anPct(stats.rate));
         cards += hbManualCard('akademik-rahbar', { key: 'problem-cases', label: 'Akademik muammoli keyslar', unit: 'ta', agg: 'sum' }, period, '🧩');
     } else {
-        const retention = hbRetentionRate();
         const statsM = hbAttendanceStats('oylik');
-        cards += hbCard('📉', 'yellow', 'Churn Rate', (100 - retention).toFixed(1) + '%');
+        cards += hbCard('❄️', 'yellow', 'Muzlatilganlar ulushi', anPct(hbFrozenShare()));
         cards += hbManualCard('akademik-rahbar', { key: 'level-up', label: 'Level Up qilgan talabalar', unit: 'ta', agg: 'sum' }, period, '🚀');
-        cards += hbCard('🏅', 'purple', 'Akademik tarkib KPI (davomat asosida)', statsM.rate.toFixed(1) + '%');
+        cards += hbCard('🏅', 'purple', 'Akademik tarkib KPI (davomat asosida)', anPct(statsM.rate));
     }
     return `<div class="cf-kpi-grid">${cards}</div>`;
 }
@@ -13869,7 +13881,7 @@ function hbHrMenejer(period) {
     } else {
         const turnover = hbStaffTurnover();
         const byRole = hbHeadcountByRole();
-        cards += hbCard('🔄', 'yellow', "Xodimlar qo'nimdorligi (Turnover)", turnover.toFixed(1) + '%');
+        cards += hbCard('🔄', 'yellow', "Ketgan xodimlar ulushi (Turnover)", anPct(turnover));
         cards += `<div class="card" style="grid-column:1/-1"><div class="card-header"><h3>Shtat jadvali</h3></div>` +
             (Object.keys(byRole).length ? Object.entries(byRole).map(([label, count]) =>
                 `<div class="cf-invest-row"><span>${escapeHtml(label)}</span><b>${count} ta</b></div>`).join('')
@@ -13997,8 +14009,6 @@ function renderAnalitikaAkademik() {
 
     const period = _aaPeriod;
     const attStats = hbAttendanceStats(period);
-    const retention = hbRetentionRate();
-    const churnRate = 100 - retention;
     const atRisk = aaAtRiskStudents();
     const churnWeeks = aaChurnByWeek();
     const maxChurn = Math.max(1, ...churnWeeks.map(b => b.count));
@@ -14019,9 +14029,9 @@ function renderAnalitikaAkademik() {
 
     <div class="cf-kpi-grid" style="margin-bottom:16px">
         ${hbManualCard(AA_MANUAL_ROLE, hwDef, period, '📝')}
-        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Jonli darslar davomati (Attendance Rate)</div><div class="stat-value" style="font-size:18px">${attStats.rate.toFixed(1)}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Jonli darslar davomati (Attendance Rate)</div><div class="stat-value" style="font-size:18px">${anPct(attStats.rate)}</div></div></div>
         ${hbManualCard(AA_MANUAL_ROLE, videoDef, period, '🎬')}
-        <div class="stat-card"><div class="stat-icon yellow">📉</div><div class="stat-info"><div class="stat-label">Churn Rate</div><div class="stat-value" style="font-size:18px">${churnRate.toFixed(1)}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">❄️</div><div class="stat-info"><div class="stat-label">Muzlatilganlar ulushi</div><div class="stat-value" style="font-size:18px">${anPct(hbFrozenShare())}</div></div></div>
         ${hbManualCard(AA_MANUAL_ROLE, levelUpDef, period, '🚀')}
     </div>
 
@@ -14097,7 +14107,7 @@ function xaTurnoverByDept() {
     const emps = getItem(STORAGE_KEYS.hrEmployees, []);
     const byDept = {};
     emps.forEach(e => {
-        const dept = e.department || 'Boshqa';
+        const dept = e.department || (typeof HR_ROLE_MAP !== 'undefined' && HR_ROLE_MAP[e.role]) || 'Boshqa';
         if (!byDept[dept]) byDept[dept] = { total: 0, inactive: 0 };
         byDept[dept].total++;
         if (e.status === 'inactive') byDept[dept].inactive++;
@@ -25095,7 +25105,7 @@ function getManagerPeriodTarget(managerId, period) {
 }
 
 function fmtMoney(n) {
-    return new Intl.NumberFormat('uz-UZ').format(n) + " so'm";
+    return formatMoney(n);
 }
 
 function managerInitials(name) {

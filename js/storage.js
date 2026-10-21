@@ -294,8 +294,10 @@ async function migrateSalesManagersHREmployees() {
     } catch (e) { }
 }
 
+// Pul hamma joyda bir xil: "4 500 000 so'm" (bo'linmaydigan bo'shliq bilan).
 function formatMoney(amount) {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + ' so\'m';
+    const n = Math.round(Number(amount) || 0);
+    return `${n < 0 ? '−' : ''}${String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0')} so'm`;
 }
 
 function getMonthKey(date) {

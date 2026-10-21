@@ -2,7 +2,7 @@
     'use strict';
     const L = PaymentLedger, state = { rows: { english: [], russian: [] }, decisions: [], loaded: false, seq: 0, timer: null, issueLists: { english: [], russian: [] }, unscoped: 0 };
     const esc = value => escapeHtml(String(value ?? ''));
-    const money = value => Number(value || 0).toLocaleString('en-US').replaceAll(',', ' ') + ' UZS';
+    const money = value => (typeof formatMoney === 'function' ? formatMoney(value) : Number(value || 0).toLocaleString('en-US').replaceAll(',', ' ') + " so'm");
     const opts = (items, all) => `<option value="">${all}</option>` + items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
     const dateText = value => L.displayDate(value);
     const methodBadge = r => `<span class="inflow-method" title="${esc(L.METHODS[r.method] || 'Aniqlanmagan')}"><span aria-hidden="true">${({cash:'💵',bank:'🏦',card:'💳',uzum:'💳',paylater:'💳',payme:'🏦',click:'🏦',unknown:'?'})[r.method] || '?'}</span> ${esc(r.method==='unknown' ? 'Noma’lum' : L.METHODS[r.method] || 'Aniqlanmagan')}</span>`;
