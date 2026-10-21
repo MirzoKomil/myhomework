@@ -100,7 +100,7 @@ for (const lang of ['english', 'russian']) {
         if (entry === 'drag' && selector === '.lead-column-cards') return [zone];
         return [];
       } };
-      const f = fixture(lang, [entry === 'menu' ? 'renderLeads' : 'initLeadDragDrop'], {
+      const f = fixture(lang, entry === 'menu' ? ['renderLeads', 'requestLeadStageChange'] : ['initLeadDragDrop'], {
         document: { getElementById: id => id === 'leadsKanban' ? board : null, querySelectorAll: () => [] },
         getCurrentUser: () => ({ role: 'admin' }), isLeadsReadOnly: () => false,
         backfillMissingLeadSerials() {}, renderLeadsManagerFilter() {}, renderLeadsColumnsFilter() {},

@@ -1680,3 +1680,89 @@ html.rd .thx-main #dashboardTeacherToday > section:last-child:not(:first-child) 
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* ---------- Lid kartasi: telefonlar, amallar, bosqich tanlash ---------- */
+html.rd .lov-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 4px 0 12px;
+}
+
+html.rd .lov-phones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+html.rd .lov-phones a {
+    color: var(--rd-primary-strong);
+    text-decoration: none;
+}
+
+html.rd .lov-phones a:hover {
+    text-decoration: underline;
+}
+
+html.rd .lov-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+html.rd .lov-stage-pick select {
+    min-height: 40px;
+    padding: 8px 36px 8px 14px;
+    border: 1px solid var(--purple);
+    border-radius: var(--radius-sm);
+    background: var(--purple);
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: auto;
+}
+
+html.rd .lov-stage-pick select option,
+html.rd .lov-stage-pick select optgroup {
+    background: var(--surface);
+    color: var(--text);
+}
+
+html.rd .lov-alerts {
+    position: relative;
+}
+
+html.rd .lov-alert-act {
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+html.rd .lov-mgr-change {
+    margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+    html.rd .lov-actions,
+    html.rd .lov-stage-pick,
+    html.rd .lov-stage-pick select {
+        width: 100%;
+    }
+}
+
+@media (min-width: 901px) {
+    html.rd .modal--wide:has(.lov[data-lead-overview]) {
+        width: min(1080px, calc(100vw - 64px));
+        max-width: none;
+    }
+
+    html.rd .modal--wide:has(.lov[data-lead-overview]) .lov-grid {
+        grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+    }
+}
