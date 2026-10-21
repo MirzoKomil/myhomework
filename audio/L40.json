@@ -1,0 +1,325 @@
+{
+ "n": 40,
+ "topic_uz": "Kun hisoboti — «Что ты сего́дня успе́л сде́лать?»",
+ "scene": "In the evening, a husband and wife sit at the kitchen table with cups of tea, talking about their day.",
+ "dialogs": [
+  {
+   "id": "L40-d1",
+   "title_ru": "Как прошёл день?",
+   "title_uz": "Kun qanday o'tdi?",
+   "intro_uz": "Birinchi dialog. Kechqurun Abdulaziz va Nigora kunlari haqida gaplashishyapti. Kim nimaga ulgurdi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, как прошёл твой день?",
+     "uz": "Nigora, kuning qanday o'tdi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́! Я убрала́ кварти́ру и постира́ла оде́жду.",
+     "uz": "Yaxshi! Kvartirani yig'ishtirdim va kir yuvdim."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Молоде́ц! А в банк ты успе́ла?",
+     "uz": "Barakalla! Bankka ulgurdingmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, не успе́ла. Банк закры́лся в пять.",
+     "uz": "Yo'q, ulgurmadim. Bank beshda yopildi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ничего́, за́втра. А я опозда́л на рабо́ту.",
+     "uz": "Hechqisi yo'q, ertaga. Men esa ishga kechikdim."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Опозда́л? Почему́?",
+     "uz": "Kechikdingmi? Nega?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "До́лго ждал авто́бус. Но я зако́нчил отчёт!",
+     "uz": "Avtobusni uzoq kutdim. Lekin hisobotni tugatdim!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Отли́чно! Зна́чит, день был хоро́ший.",
+     "uz": "Zo'r! Demak, kun yaxshi o'tdi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora bugun nima qildi?",
+     "opts": [
+      "ovqat pishirdi",
+      "uyni yig'ishtirdi va kir yuvdi",
+      "bankka bordi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nega Abdulaziz ishga kechikdi?",
+     "opts": [
+      "avtobusni uzoq kutdi",
+      "uxlab qoldi",
+      "telefonini unutdi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz ishda nimani tugatdi?",
+     "opts": [
+      "xatni",
+      "loyihani",
+      "hisobotni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "убрала́ кварти́ру",
+     "alts": [
+      "пригото́вила обе́д",
+      "купи́ла проду́кты",
+      "прове́рила по́чту"
+     ]
+    },
+    {
+     "base": "в банк",
+     "alts": [
+      "в магази́н",
+      "на по́чту",
+      "в апте́ку"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: bugun nimalarga ulgurganingizni va nimaga ulgurmaganingizni ayting."
+  },
+  {
+   "id": "L40-d2",
+   "title_ru": "Ты отпра́вил письмо́?",
+   "title_uz": "Xatni jo'natdingmi?",
+   "intro_uz": "Ikkinchi dialog. Ishxonada Dilnoza Timurdan so'rayapti. Timur xatni jo'natdimi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, ты отпра́вил письмо́ клие́нту?",
+     "uz": "Timur, mijozga xatni jo'natdingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ой! Я забы́л!",
+     "uz": "Voy! Unutibman!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Забы́л? Клие́нт ждёт с у́тра!",
+     "uz": "Unutdingmi? Mijoz ertalabdan beri kutyapti!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Извини́. Я весь день проверя́л докуме́нты.",
+     "uz": "Kechir. Kun bo'yi hujjatlarni tekshirdim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "И ты их прове́рил?",
+     "uz": "Tekshirib bo'ldingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, всё прове́рил. А письмо́ отпра́влю сейча́с.",
+     "uz": "Ha, hammasini tekshirdim. Xatni hozir jo'nataman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́. А ты успе́л пообе́дать?",
+     "uz": "Yaxshi. Tushlik qilishga ulgurdingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Нет, не успе́л. Я о́чень голо́дный!",
+     "uz": "Yo'q, ulgurmadim. Juda ochman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur nimani unutdi?",
+     "opts": [
+      "tushlikni",
+      "xat jo'natishni",
+      "qo'ng'iroq qilishni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur kun bo'yi nima qildi?",
+     "opts": [
+      "hujjatlarni tekshirdi",
+      "xat yozdi",
+      "uchrashuvda bo'ldi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur tushlik qildimi?",
+     "opts": [
+      "ha",
+      "ertalab qildi",
+      "yo'q, ulgurmadi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "отпра́вил письмо́",
+     "alts": [
+      "позвони́л клие́нту",
+      "сде́лал отчёт",
+      "прове́рил по́чту"
+     ]
+    },
+    {
+     "base": "пообе́дать",
+     "alts": [
+      "поза́втракать",
+      "позвони́ть ма́ме",
+      "зако́нчить рабо́ту"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: bugun nimani unutganingizni va nimani qilib bo'lganingizni ayting."
+  },
+  {
+   "id": "L40-d3",
+   "title_ru": "Что ты успе́л сде́лать?",
+   "title_uz": "Nimaga ulgurding?",
+   "intro_uz": "Uchinchi dialog. Juma kuni kechqurun. Dilnoza va Anton haftaning oxirgi ish kuni haqida gaplashishyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, что ты сего́дня успе́л сде́лать?",
+     "uz": "Anton, bugun nimalarga ulgurding?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Немно́го. У́тром я опозда́л на встре́чу.",
+     "uz": "Ozgina. Ertalab uchrashuvga kechikdim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Опя́ть опозда́л?",
+     "uz": "Yana kechikdingmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да. Но пото́м я зако́нчил презента́цию.",
+     "uz": "Ha. Lekin keyin taqdimotni tugatdim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Отли́чно! А дире́ктору ты позвони́л?",
+     "uz": "Zo'r! Direktorga qo'ng'iroq qildingmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Ещё не позвони́л. Он был за́нят. А ты?",
+     "uz": "Hali qilmadim. U band edi. Sen-chi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А я успе́ла всё! И отчёт, и пи́сьма.",
+     "uz": "Men hammasiga ulgurdim! Hisobotga ham, xatlarga ham."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Ты молоде́ц! А я забы́л пообе́дать.",
+     "uz": "Barakalla! Men esa tushlik qilishni unutibman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton ertalab nima qildi?",
+     "opts": [
+      "uchrashuvga kechikdi",
+      "hisobot yozdi",
+      "direktorga qo'ng'iroq qildi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton nimani tugatdi?",
+     "opts": [
+      "hisobotni",
+      "taqdimotni",
+      "xatlarni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nega Anton direktorga qo'ng'iroq qilmadi?",
+     "opts": [
+      "unutdi",
+      "telefoni yo'q edi",
+      "direktor band edi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "зако́нчил презента́цию",
+     "alts": [
+      "отпра́вил отчёт",
+      "прове́рил докуме́нты",
+      "написа́л письмо́"
+     ]
+    },
+    {
+     "base": "опозда́л на встре́чу",
+     "alts": [
+      "опозда́л на рабо́ту",
+      "опозда́л на авто́бус",
+      "опозда́л на уро́к"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: bugun ishda yoki uyda nimaga ulgurganingizni, nimani unutganingizni ayting."
+  }
+ ]
+}

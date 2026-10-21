@@ -1,0 +1,325 @@
+{
+ "n": 42,
+ "topic_uz": "Yordam so'rash va taklif — «Помоги́те, пожа́луйста!»",
+ "scene": "On a busy street near a metro entrance, a lost young Russian man holds a map while an Uzbek woman points the way.",
+ "dialogs": [
+  {
+   "id": "L42-d1",
+   "title_ru": "Я заблуди́лся",
+   "title_uz": "Adashib qoldim",
+   "intro_uz": "Birinchi dialog. Anton shaharda adashib qoldi. U o'tkinchi ayoldan yordam so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Прохо́жая",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Извини́те, помоги́те, пожа́луйста! Я заблуди́лся.",
+     "uz": "Kechirasiz, iltimos, yordam bering! Adashib qoldim."
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Коне́чно. Куда́ вам ну́жно?",
+     "uz": "Albatta. Sizga qayerga kerak?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Подскажи́те, как пройти́ к метро́?",
+     "uz": "Ayting-chi, metroga qanday borsa bo'ladi?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Иди́те пря́мо до перекрёстка, пото́м нале́во.",
+     "uz": "Chorrahagacha to'g'riga yuring, keyin chapga."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Прости́те, повтори́те, пожа́луйста, ме́дленно.",
+     "uz": "Kechirasiz, iltimos, sekinroq takrorlang."
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Пря́мо... пото́м нале́во. Дава́йте я покажу́ на ка́рте.",
+     "uz": "To'g'riga... keyin chapga. Keling, xaritada ko'rsataman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо! Вы мне о́чень помогли́.",
+     "uz": "Rahmat! Menga juda yordam berdingiz."
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Не за что! Уда́чи!",
+     "uz": "Arzimaydi! Omad!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Antonga qayerga kerak?",
+     "opts": [
+      "bankka",
+      "metroga",
+      "vokzalga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Chorrahadan keyin qayerga burilish kerak?",
+     "opts": [
+      "chapga",
+      "o'ngga",
+      "orqaga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "O'tkinchi ayol yo'lni qayerda ko'rsatadi?",
+     "opts": [
+      "telefonda",
+      "qog'ozda",
+      "xaritada"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "к метро́",
+     "alts": [
+      "к вокза́лу",
+      "к ба́нку",
+      "к остано́вке"
+     ]
+    },
+    {
+     "base": "повтори́те, пожа́луйста",
+     "alts": [
+      "объясни́те, пожа́луйста",
+      "покажи́те, пожа́луйста",
+      "напиши́те, пожа́луйста"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: adashib qolganingizni ayting, yo'l so'rang va sekin takrorlashni iltimos qiling."
+  },
+  {
+   "id": "L42-d2",
+   "title_ru": "Я потеря́ла кошелёк",
+   "title_uz": "Hamyonimni yo'qotdim",
+   "intro_uz": "Ikkinchi dialog. Nigora hamyonini yo'qotdi. U politsiyachidan yordam so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Полице́йский",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Помоги́те, пожа́луйста! Я потеря́ла кошелёк.",
+     "uz": "Iltimos, yordam bering! Hamyonimni yo'qotdim."
+    },
+    {
+     "who": "Полице́йский",
+     "ru": "Успоко́йтесь. Где вы его́ потеря́ли?",
+     "uz": "Xotirjam bo'ling. Uni qayerda yo'qotdingiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Не зна́ю. Наве́рное, в авто́бусе.",
+     "uz": "Bilmayman. Balki avtobusda."
+    },
+    {
+     "who": "Полице́йский",
+     "ru": "Что бы́ло в кошельке́?",
+     "uz": "Hamyonda nima bor edi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Де́ньги и ка́рта. Па́спорт, сла́ва бо́гу, до́ма.",
+     "uz": "Pul va karta. Pasport, xudoga shukur, uyda."
+    },
+    {
+     "who": "Полице́йский",
+     "ru": "Хорошо́. Напиши́те, пожа́луйста, ваш но́мер телефо́на.",
+     "uz": "Yaxshi. Iltimos, telefon raqamingizni yozing."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Вот. Объясни́те, пожа́луйста: что мне де́лать?",
+     "uz": "Mana. Iltimos, tushuntiring: nima qilishim kerak?"
+    },
+    {
+     "who": "Полице́йский",
+     "ru": "Позвони́те в банк и закро́йте ка́рту.",
+     "uz": "Bankka qo'ng'iroq qiling va kartani yoping."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora nimani yo'qotdi?",
+     "opts": [
+      "pasportini",
+      "hamyonini",
+      "telefonini"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora uni qayerda yo'qotgan bo'lishi mumkin?",
+     "opts": [
+      "avtobusda",
+      "do'konda",
+      "parkda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Politsiyachi nima qilishni maslahat beradi?",
+     "opts": [
+      "uyga borishni",
+      "pasportni olishni",
+      "bankka qo'ng'iroq qilishni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "кошелёк",
+     "alts": [
+      "телефо́н",
+      "су́мку",
+      "па́спорт"
+     ]
+    },
+    {
+     "base": "в авто́бусе",
+     "alts": [
+      "в такси́",
+      "в метро́",
+      "в магази́не"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: biror narsani yo'qotganingizni ayting va nima qilish kerakligini so'rang."
+  },
+  {
+   "id": "L42-d3",
+   "title_ru": "Кто после́дний?",
+   "title_uz": "Kim oxirgi?",
+   "intro_uz": "Uchinchi dialog. Bobur pochtada navbatda turibdi. Bir ayolga yordam kerak. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Же́нщина",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Извини́те, кто после́дний?",
+     "uz": "Kechirasiz, kim oxirgi?"
+    },
+    {
+     "who": "Же́нщина",
+     "ru": "Я после́дняя.",
+     "uz": "Men oxirgiman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Хорошо́, я за ва́ми.",
+     "uz": "Yaxshi, men sizdan keyin."
+    },
+    {
+     "who": "Же́нщина",
+     "ru": "Молодо́й челове́к, подскажи́те, э́то о́чередь в ка́ссу?",
+     "uz": "Yigitcha, ayting-chi, bu kassaga navbatmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, в ка́ссу. Вам помо́чь? У вас тяжёлая су́мка.",
+     "uz": "Ha, kassaga. Yordam beraymi? Sumkangiz og'ir."
+    },
+    {
+     "who": "Же́нщина",
+     "ru": "Да, пожа́луйста, помоги́те!",
+     "uz": "Ha, iltimos, yordam bering!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Дава́йте я вам помогу́. Да́йте су́мку.",
+     "uz": "Keling, yordam beraman. Sumkani bering."
+    },
+    {
+     "who": "Же́нщина",
+     "ru": "Спаси́бо, вы о́чень до́брый!",
+     "uz": "Rahmat, siz juda mehribonsiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Navbatda oxirgi kim?",
+     "opts": [
+      "Bobur",
+      "ayol",
+      "hech kim"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bu qayerga navbat?",
+     "opts": [
+      "kassaga",
+      "shifokorga",
+      "avtobusga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bobur ayolga qanday yordam beradi?",
+     "opts": [
+      "yo'l ko'rsatadi",
+      "pul beradi",
+      "sumkasini ko'taradi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в ка́ссу",
+     "alts": [
+      "к врачу́",
+      "к окну́",
+      "на регистра́цию"
+     ]
+    },
+    {
+     "base": "Да́йте су́мку",
+     "alts": [
+      "Да́йте чемода́н",
+      "Да́йте паке́т",
+      "Да́йте коро́бку"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: navbatda «Kim oxirgi?» deb so'rang va bir odamga yordam taklif qiling."
+  }
+ ]
+}
