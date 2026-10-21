@@ -555,3 +555,336 @@ html.rd .trial-attendance-filter button.active {
         flex: 1 1 100%;
     }
 }
+
+/* ---------- Admin bosh sahifasi ---------- */
+html.rd body.admin-home #welcomeBanner,
+html.rd body.admin-home .right-panel {
+    display: none !important;
+}
+
+html.rd .ahx-head h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--text);
+}
+
+html.rd .ahx-head p {
+    margin: 4px 0 20px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+html.rd .ahx-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+html.rd .ahx-kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+html.rd .ahx-kpi-l {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .ahx-kpi-v {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+html.rd .ahx-kpi-n {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .ahx-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+html.rd .ahx-pill--ok { background: #E3F6EE; color: #0F7A55; }
+html.rd .ahx-pill--info { background: #E8F0FF; color: #1E5BD8; }
+html.rd .ahx-pill--warn { background: #FFF4D6; color: #8A5A00; }
+html.rd .ahx-pill--danger { background: #FDECEC; color: #C62828; }
+html.rd .ahx-pill--muted { background: var(--rd-col); color: var(--text-muted); }
+html.rd[data-theme="dark"] .ahx-pill--ok { background: #173A2C; color: #4ADE9B; }
+html.rd[data-theme="dark"] .ahx-pill--info { background: #1C2A48; color: #7EA8FF; }
+html.rd[data-theme="dark"] .ahx-pill--warn { background: #3A3018; color: #FFC94D; }
+html.rd[data-theme="dark"] .ahx-pill--danger { background: #3D1F24; color: #FF8A8A; }
+
+html.rd .ahx-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+html.rd .ahx-card {
+    padding: 20px;
+    margin: 0;
+}
+
+html.rd .ahx-card--flush {
+    padding-bottom: 8px;
+}
+
+html.rd .ahx-card-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+html.rd .ahx-card-h h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+html.rd .ahx-card-h h3 small {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+html.rd .ahx-link {
+    border: 0;
+    background: none;
+    padding: 6px 0;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rd-primary-strong);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+html.rd .ahx-link:hover {
+    text-decoration: underline;
+}
+
+html.rd .ahx-funnel,
+html.rd .ahx-lessons,
+html.rd .ahx-att {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .ahx-funnel li {
+    display: grid;
+    grid-template-columns: minmax(0, 180px) minmax(0, 1fr) 36px;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .ahx-funnel i {
+    display: block;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--rd-col);
+    overflow: hidden;
+}
+
+html.rd .ahx-funnel em {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--purple);
+}
+
+html.rd .ahx-funnel b {
+    text-align: right;
+}
+
+html.rd .ahx-closed {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background: #E3F6EE;
+}
+
+html.rd[data-theme="dark"] .ahx-closed {
+    background: #173A2C;
+}
+
+html.rd .ahx-closed > b {
+    font-size: 26px;
+    color: #0F7A55;
+}
+
+html.rd[data-theme="dark"] .ahx-closed > b {
+    color: #4ADE9B;
+}
+
+html.rd .ahx-closed div,
+html.rd .ahx-lessons li > div,
+html.rd .ahx-att li > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .ahx-closed strong,
+html.rd .ahx-lessons strong,
+html.rd .ahx-att strong {
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .ahx-lessons li {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+html.rd .ahx-lessons li:last-child {
+    border-bottom: 0;
+}
+
+html.rd .ahx-lessons li > b {
+    font-size: 15px;
+    color: var(--text);
+}
+
+html.rd .ahx-tbl-wrap {
+    overflow-x: auto;
+    margin: 0 -20px;
+}
+
+html.rd .ahx-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+html.rd .ahx-tbl th,
+html.rd .ahx-tbl td {
+    padding: 10px 20px;
+    text-align: right;
+    border-top: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+html.rd .ahx-tbl thead th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-2, var(--rd-hover));
+}
+
+html.rd .ahx-tbl th:first-child {
+    text-align: left;
+}
+
+html.rd .ahx-tbl tbody th {
+    font-weight: 600;
+    color: var(--text);
+}
+
+html.rd .ahx-tbl tbody th small {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+html.rd .ahx-att li {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+}
+
+html.rd .ahx-att li > b {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 16px;
+}
+
+html.rd .ahx-att--danger { background: #FDECEC; }
+html.rd .ahx-att--danger > b { color: #C62828; }
+html.rd .ahx-att--warn { background: #FFF4D6; }
+html.rd .ahx-att--warn > b { color: #8A5A00; }
+html.rd .ahx-att--info { background: #E8F0FF; }
+html.rd .ahx-att--info > b { color: #1E5BD8; }
+html.rd[data-theme="dark"] .ahx-att--danger { background: #3D1F24; }
+html.rd[data-theme="dark"] .ahx-att--warn { background: #3A3018; }
+html.rd[data-theme="dark"] .ahx-att--info { background: #1C2A48; }
+
+@media (max-width: 1100px) {
+    html.rd .ahx-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    html.rd .ahx-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    html.rd .ahx-kpis {
+        gap: 10px;
+    }
+
+    html.rd .ahx-kpi {
+        padding: 14px;
+    }
+
+    html.rd .ahx-kpi-v {
+        font-size: 20px;
+        white-space: normal;
+    }
+
+    html.rd .ahx-funnel li {
+        grid-template-columns: minmax(0, 130px) minmax(0, 1fr) 28px;
+        font-size: 13px;
+    }
+}

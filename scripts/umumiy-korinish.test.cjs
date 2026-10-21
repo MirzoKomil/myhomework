@@ -39,3 +39,10 @@ test('lid kartasida takroriy ikkinchi raqam ko‘rsatilmaydi', () => {
 test('kanban ustuni rang nuqtasi uchun --col-accent beriladi', () => {
     assert.match(app, /data-status="\$\{col\.id\}" style="[^"]*--col-accent:\$\{col\.count\}"/);
 });
+
+test('admin bosh sahifasi: raqamlar mavjud hisoblardan, soxta vidjetlar olib tashlangan', () => {
+    assert.doesNotMatch(html, /O'sish ko'rsatkichi|Vazifalar progressi/);
+    assert.match(app, /function computeAdminHome\(/);
+    assert.match(app, /isAdminHomeUser\(currentUser\)\) \{\n\s+container\.innerHTML = renderAdminHome/);
+    assert.match(app, /const ADMIN_HOME_ROLES = new Set\(\['admin', 'boshliq'\]\)/);
+});

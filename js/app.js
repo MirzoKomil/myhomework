@@ -6661,6 +6661,7 @@ function renderDashboard() {
     const managerLeads = managerId ? allLeads.filter(lead => lead.managerId === managerId) : [];
     const managerStudents = isSalesManager ? filterStudentsForSalesManager(students, { ...currentUser, linkedManagerId: managerId }) : students;
 
+    document.body.classList.toggle('admin-home', isAdminHomeUser(currentUser));
     renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads });
     renderCalendarWidget();
     renderHwProgress(students);
@@ -8253,9 +8254,156 @@ function renderTeacherTodayBlock(user) {
     return `<div class="dashboard-grid-2" id="dashboardTeacherToday">${panels.join('')}</div>`;
 }
 
+// Admin bosh sahifasi (2026-10 redizayn): butun maktab bo'yicha bugungi holat.
+// Hamma raqam mavjud hisob funksiyalaridan olinadi (Reyting, Qarzdorlar,
+// Statistika bilan bir xil) — taxminiy yoki "chiroyli" raqam yo'q.
+const ADMIN_HOME_ROLES = new Set(['admin', 'boshliq']);
+const UZ_WEEKDAYS = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+const UZ_MONTHS_GEN = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+
+function isAdminHomeUser(user) {
+    return ADMIN_HOME_ROLES.has(user?.role);
+}
+
+function adminHomeMoneyShort(n) {
+    const v = Number(n) || 0;
+    if (Math.abs(v) >= 1e6) return `${(Math.round(v / 1e5) / 10).toString().replace('.', ',')} mln soʻm`;
+    return fmtMoney(v);
+}
+
+function computeAdminHome({ students, leads, now = new Date() }) {
+    const todayKey = leadTashkentDayKey(now);
+    const yesterdayKey = leadTashkentDayKey(new Date(now.getTime() - 86400000));
+    const monthKey = todayKey.slice(0, 7);
+    const allLeads = [
+        ...(leads.english || []).map(l => ({ ...l, _lang: 'english' })),
+        ...(leads.russian || []).map(l => ({ ...l, _lang: 'russian' }))
+    ];
+    const st = l => normalizeLeadStatus(l.status);
+    const dayOf = l => leadTashkentDayKey(l.createdAt || l.date);
+
+    const active = students.filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+    const newThisMonth = active.filter(s => String(s.startDate || '').slice(0, 7) === monthKey).length;
+
+    const managers = getSalesManagers();
+    const mgrRows = managers.map(m => {
+        const sales = getManagerSalesForPeriod(m.id, 'oylik');
+        const target = getManagerPeriodTarget(m.id, 'oylik') || 0;
+        return { id: m.id, name: m.name || 'Nomaʼlum', lang: m.lang || 'english', deals: getManagerDealsCount(m.id, 'oylik'), sales, target, pct: target > 0 ? Math.round(sales / target * 100) : null };
+    }).sort((a, b) => b.sales - a.sales || b.deals - a.deals);
+    const revenue = mgrRows.reduce((s, m) => s + m.sales, 0);
+    const target = mgrRows.reduce((s, m) => s + (m.target || 0), 0);
+    const dealsMonth = mgrRows.reduce((s, m) => s + m.deals, 0);
+
+    const leadsToday = allLeads.filter(l => dayOf(l) === todayKey).length;
+    const leadsYesterday = allLeads.filter(l => dayOf(l) === yesterdayKey).length;
+    const leadsMonth = allLeads.filter(l => String(dayOf(l) || '').startsWith(monthKey)).length;
+
+    const todayStart = new Date(now.toDateString());
+    const withDebt = active.filter(s => Number(s.debtAmount || 0) > 0);
+    const overdue = withDebt.filter(s => {
+        const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+        return d && !Number.isNaN(d.getTime()) && d < todayStart;
+    });
+
+    const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: allLeads.filter(l => st(l) === s.id).length }));
+    const unanswered = allLeads.filter(l => st(l) === 'yangi-lidlar' && now.getTime() - leadCreatedMs(l) > 24 * 3600000).length;
+    const OPEN = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
+    const unassigned = allLeads.filter(l => !l.managerId && !OPEN.has(st(l))).length;
+
+    const dow = now.getDay() || 7;
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
+    const slots = new Map();
+    active.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow)
+        && !(s.startDate && String(s.startDate) > todayKey)).forEach(s => {
+        const key = `${s.lessonTime}|${s.teacherId || ''}|${s.group || ''}`;
+        const slot = slots.get(key) || { time: s.lessonTime, start: toMin(s.lessonTime), dur: 0, teacherId: s.teacherId || '', group: s.group || '', count: 0 };
+        slot.count += 1; slot.dur = Math.max(slot.dur, Number(s.lessonDuration) || 15);
+        slots.set(key, slot);
+    });
+    const lessons = [...slots.values()].sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999)).map(l => ({
+        ...l,
+        state: l.start == null ? 'wait' : nowMin >= l.start + l.dur ? 'done' : nowMin >= l.start ? 'now' : 'wait'
+    }));
+
+    return {
+        todayKey, active: active.length, newThisMonth, revenue, target, dealsMonth,
+        leadsToday, leadsYesterday, leadsMonth, debtors: withDebt.length,
+        overdueCount: overdue.length, overdueSum: overdue.reduce((s, x) => s + Number(x.debtAmount || 0), 0),
+        funnel, unanswered, unassigned, lessons, mgrRows
+    };
+}
+
+function renderAdminHome(user, students, leads, now = new Date()) {
+    const d = computeAdminHome({ students, leads, now });
+    const date = `${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]} ${now.getFullYear()}`;
+    const monthName = UZ_MONTHS_GEN[now.getMonth()];
+    const planPct = d.target > 0 ? Math.round(d.revenue / d.target * 100) : null;
+    const diff = d.leadsToday - d.leadsYesterday;
+    const maxFunnel = Math.max(1, ...d.funnel.map(f => f.count));
+    const conv = d.leadsMonth ? Math.round(d.dealsMonth / d.leadsMonth * 1000) / 10 : 0;
+    const teacherName = id => {
+        const t = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(id) : null;
+        return t?.name || 'Ustoz biriktirilmagan';
+    };
+    const stateLabel = { done: ['Boʻldi', 'ahx-pill--muted'], now: ['Davom etmoqda', 'ahx-pill--ok'], wait: ['Kutilmoqda', 'ahx-pill--info'] };
+    const upcoming = d.lessons.filter(l => l.state !== 'done');
+    const shownLessons = (upcoming.length >= 5 ? upcoming : [...d.lessons.filter(l => l.state === 'done').slice(-(5 - upcoming.length)), ...upcoming]).slice(0, 6);
+    const kpi = (label, value, chip, chipCls, note) => `<div class="ahx-kpi"><span class="ahx-kpi-l">${label}</span><b class="ahx-kpi-v">${value}</b>
+        <div class="ahx-kpi-n">${chip !== '' ? `<span class="ahx-pill ${chipCls}">${chip}</span>` : ''}<span>${note}</span></div></div>`;
+    const attention = [
+        d.unanswered ? { n: d.unanswered, cls: 'ahx-att--danger', t: 'Javobsiz lidlar', s: '24 soatdan ortiq "Yangi lidlar"da turibdi', go: 'leads' } : null,
+        d.overdueCount ? { n: d.overdueCount, cls: 'ahx-att--warn', t: 'Muddati oʻtgan toʻlovlar', s: `${adminHomeMoneyShort(d.overdueSum)} · kelishilgan sana oʻtgan`, go: 'debtors' } : null,
+        d.unassigned ? { n: d.unassigned, cls: 'ahx-att--info', t: 'Menejer biriktirilmagan lidlar', s: 'Ochiq bosqichlarda turibdi', go: 'leads' } : null
+    ].filter(Boolean);
+
+    return `<div class="ahx" id="adminHome">
+        <div class="ahx-head"><h1>Bosh sahifa</h1><p>${escapeHtml(date)} · Ingliz va rus tili</p></div>
+        <div class="ahx-kpis">
+            ${kpi('Faol oʻquvchilar', d.active.toLocaleString('uz-UZ'), d.newThisMonth ? `+${d.newThisMonth}` : '', 'ahx-pill--ok', d.newThisMonth ? 'bu oy qoʻshildi' : 'bu oy yangi oʻquvchi yoʻq')}
+            ${kpi(`Tushum · ${monthName}`, escapeHtml(adminHomeMoneyShort(d.revenue)), planPct != null ? `${planPct}%` : '', 'ahx-pill--info', planPct != null ? `oylik rejadan (${escapeHtml(adminHomeMoneyShort(d.target))})` : 'oylik reja kiritilmagan')}
+            ${kpi('Yangi lidlar · bugun', d.leadsToday, diff ? (diff > 0 ? `+${diff}` : `−${Math.abs(diff)}`) : '0', diff >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn', 'kechagiga nisbatan')}
+            ${kpi('Qarzdorlar', d.debtors, d.overdueCount ? escapeHtml(adminHomeMoneyShort(d.overdueSum)) : '', 'ahx-pill--danger', d.overdueCount ? `${d.overdueCount} tasi muddati oʻtgan` : 'muddati oʻtgani yoʻq')}
+        </div>
+        <div class="ahx-grid">
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Lidlar bosqichlar boʻyicha <small>· hozir</small></h3><button type="button" class="ahx-link" data-ahx-go="leads">Lidlarga oʻtish</button></div>
+                <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxFunnel * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
+                <div class="ahx-closed"><b>${d.dealsMonth}</b><div><strong>${escapeHtml(monthName[0].toUpperCase() + monthName.slice(1))}da toʻlov yopildi</strong><span>bu oy ${d.leadsMonth} ta yangi lid · nisbat ${String(conv).replace('.', ',')}%</span></div></div>
+            </section>
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi darslar <small>· ${d.lessons.length} ta</small></h3><button type="button" class="ahx-link" data-ahx-go="timetable">Dars jadvali</button></div>
+                ${shownLessons.length ? `<ul class="ahx-lessons">${shownLessons.map(l => `<li><b>${escapeHtml(l.time)}</b><div><strong>${escapeHtml(l.group || 'Guruhsiz')}</strong><span>${escapeHtml(teacherName(l.teacherId))} · ${l.count} oʻquvchi · ${l.dur} daq</span></div><span class="ahx-pill ${stateLabel[l.state][1]}">${stateLabel[l.state][0]}</span></li>`).join('')}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
+            </section>
+            <section class="card ahx-card ahx-card--flush"><div class="ahx-card-h"><h3>Sotuv menejerlari · ${escapeHtml(monthName)}</h3><button type="button" class="ahx-link" data-ahx-go="rating">Reyting</button></div>
+                ${d.mgrRows.length ? `<div class="ahx-tbl-wrap"><table class="ahx-tbl"><thead><tr><th scope="col">Menejer</th><th scope="col">Sotuvlar</th><th scope="col">Summa</th><th scope="col">Reja</th></tr></thead>
+                <tbody>${d.mgrRows.map(m => `<tr><th scope="row">${escapeHtml(m.name)} <small>${m.lang === 'russian' ? 'RU' : 'EN'}</small></th><td>${m.deals}</td><td>${escapeHtml(fmtMoney(m.sales))}</td><td>${m.pct != null ? `<span class="ahx-pill ${m.pct >= 100 ? 'ahx-pill--ok' : m.pct >= 60 ? 'ahx-pill--info' : 'ahx-pill--warn'}">${m.pct}%</span>` : '—'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="dashboard-empty">Menejerlar topilmadi</p>'}
+            </section>
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Diqqat talab qiladi</h3></div>
+                ${attention.length ? `<ul class="ahx-att">${attention.map(a => `<li class="${a.cls}"><b>${a.n}</b><div><strong>${a.t}</strong><span>${escapeHtml(a.s)}</span></div><button type="button" class="ahx-link" data-ahx-go="${a.go}">Koʻrish</button></li>`).join('')}</ul>` : '<p class="dashboard-empty">Hammasi joyida 👍</p>'}
+            </section>
+        </div>
+    </div>`;
+}
+
+function bindAdminHome(container) {
+    container.querySelectorAll('[data-ahx-go]').forEach(btn => btn.addEventListener('click', () => {
+        const go = btn.dataset.ahxGo;
+        if (go === 'timetable') return switchTab('timetable');
+        switchTab('sales');
+        if (go === 'debtors') { _debtorsQuick = 'overdue'; switchSalesSection('debtors'); }
+        else if (go === 'rating') switchSalesSection('rating');
+        else switchSalesSection('leads');
+    }));
+}
+
 function renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads }) {
     const container = document.getElementById('dashboardOverview');
     if (!container) return;
+    if (typeof isAdminHomeUser === 'function' && isAdminHomeUser(currentUser)) {
+        container.innerHTML = renderAdminHome(currentUser, students, leads);
+        bindAdminHome(container);
+        return;
+    }
 
     const isSalesManager = currentUser?.role === 'sales_manager';
     // 27-vazifa: ustoz kabinetining bosh sahifasida umumiy CRM
