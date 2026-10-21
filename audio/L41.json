@@ -1,0 +1,325 @@
+{
+ "n": 41,
+ "topic_uz": "Buyruq mayli — чита́й, скажи́, дай, дава́й",
+ "scene": "In a bright classroom, a female teacher stands by the whiteboard while adult students open their books at their desks.",
+ "dialogs": [
+  {
+   "id": "L41-d1",
+   "title_ru": "На уро́ке",
+   "title_uz": "Darsda",
+   "intro_uz": "Birinchi dialog. Rus tili darsi. O'qituvchi ko'rsatma beradi, Bobur so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Учи́тельница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Учи́тельница",
+     "ru": "Здра́вствуйте! Сади́тесь, пожа́луйста. Откро́йте кни́ги.",
+     "uz": "Assalomu alaykum! O'tiring, iltimos. Kitoblarni oching."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Извини́те, кака́я страни́ца?",
+     "uz": "Kechirasiz, qaysi sahifa?"
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Страни́ца два́дцать. Бобу́р, чита́йте текст.",
+     "uz": "Yigirmanchi sahifa. Bobur, matnni o'qing."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Хорошо́... Повтори́те, пожа́луйста, э́то сло́во.",
+     "uz": "Xo'p... Iltimos, bu so'zni takrorlang."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "«Перекрёсток». Повтори́те!",
+     "uz": "«Perekryostok». Takrorlang!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Перекрёсток. Переведи́те, пожа́луйста, на узбе́кский.",
+     "uz": "Perekryostok. Iltimos, o'zbekchaga tarjima qiling."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "«Chorraha». Тепе́рь напиши́те э́то сло́во.",
+     "uz": "«Chorraha». Endi bu so'zni yozing."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Написа́л! Посмотри́те, пожа́луйста: прави́льно?",
+     "uz": "Yozdim! Iltimos, qarang: to'g'rimi?"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Qaysi sahifani ochish kerak?",
+     "opts": [
+      "o'n ikkinchi",
+      "yigirmanchi",
+      "o'ttizinchi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur o'qituvchidan nima so'raydi?",
+     "opts": [
+      "so'zni takrorlashni",
+      "uyga ketishni",
+      "daftar berishni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "«Perekryostok» o'zbekchada nima?",
+     "opts": [
+      "svetofor",
+      "bekat",
+      "chorraha"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "чита́йте текст",
+     "alts": [
+      "пиши́те",
+      "слу́шайте",
+      "повтори́те"
+     ]
+    },
+    {
+     "base": "Повтори́те, пожа́луйста",
+     "alts": [
+      "Скажи́те, пожа́луйста",
+      "Переведи́те, пожа́луйста",
+      "Покажи́те, пожа́луйста"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: darsda o'qituvchidan iltimos qiling — so'zni takrorlashini, tarjima qilishini va ko'rsatishini so'rang."
+  },
+  {
+   "id": "L41-d2",
+   "title_ru": "Не опа́здывай!",
+   "title_uz": "Kechikma!",
+   "intro_uz": "Ikkinchi dialog. Ertalab. Abdulaziz hali uxlayapti. Nigora uni uyg'otadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, встава́й! Уже́ семь часо́в!",
+     "uz": "Abdulaziz, tur! Soat yetti bo'ldi!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Подожди́, ещё пять мину́т...",
+     "uz": "Shosha, yana besh daqiqa..."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет! Встава́й и иди́ в душ. Не опа́здывай!",
+     "uz": "Yo'q! Tur va dushga bor. Kechikma!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́, хорошо́. Дай, пожа́луйста, мою́ руба́шку.",
+     "uz": "Xo'p, xo'p. Iltimos, ko'ylagimni ber."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Вот. И не забу́дь телефо́н!",
+     "uz": "Mana. Telefoningni ham unutma!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Спаси́бо. Позвони́ мне в обе́д, ла́дно?",
+     "uz": "Rahmat. Tushlikda menga qo'ng'iroq qil, xo'pmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Позвоню́. Дава́й, иди́!",
+     "uz": "Qilaman. Qani, bor!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Пока́! Хоро́шего дня!",
+     "uz": "Xayr! Kuning yaxshi o'tsin!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Hozir soat necha?",
+     "opts": [
+      "sakkiz",
+      "yetti",
+      "olti"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz nimani so'raydi?",
+     "opts": [
+      "ko'ylagini",
+      "choyni",
+      "kalitni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora qachon qo'ng'iroq qiladi?",
+     "opts": [
+      "kechqurun",
+      "ertalab",
+      "tushlikda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Не опа́здывай!",
+     "alts": [
+      "Не забу́дь ключи́!",
+      "Не спи!",
+      "Не кури́!"
+     ]
+    },
+    {
+     "base": "Дай мою́ руба́шку",
+     "alts": [
+      "Дай мой телефо́н",
+      "Дай мою́ су́мку",
+      "Дай мой па́спорт"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: ertalab oila a'zongizga 3 ta buyruq yoki maslahat bering: «Встава́й! Не опа́здывай!…»."
+  },
+  {
+   "id": "L41-d3",
+   "title_ru": "Дава́йте начнём!",
+   "title_uz": "Qani, boshlaymiz!",
+   "intro_uz": "Uchinchi dialog. Ishxonada majlis. Dilnoza majlisni boshlaydi, Anton savol beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Колле́ги, дава́йте начнём! Анто́н, сади́тесь.",
+     "uz": "Hamkasblar, qani, boshlaymiz! Anton, o'tiring."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо. Да́йте, пожа́луйста, план.",
+     "uz": "Rahmat. Iltimos, rejani bering."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вот, пожа́луйста. Посмотри́те пе́рвую страни́цу.",
+     "uz": "Mana, marhamat. Birinchi sahifaga qarang."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Извини́те, я не по́нял. Скажи́те ещё раз, пожа́луйста.",
+     "uz": "Kechirasiz, tushunmadim. Iltimos, yana bir marta ayting."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Пе́рвая страни́ца. Там но́вый прое́кт.",
+     "uz": "Birinchi sahifa. U yerda yangi loyiha."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А, поня́тно! Покажи́те, пожа́луйста, ци́фры.",
+     "uz": "Ha, tushunarli! Iltimos, raqamlarni ko'rsating."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вот они́. Дава́йте сейча́с пообе́даем, а пото́м поговори́м.",
+     "uz": "Mana ular. Keling, hozir tushlik qilamiz, keyin gaplashamiz."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Отли́чная иде́я! Дава́йте!",
+     "uz": "Ajoyib fikr! Qani!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton Dilnozadan nimani so'raydi?",
+     "opts": [
+      "kofeni",
+      "rejani",
+      "telefonni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Birinchi sahifada nima bor?",
+     "opts": [
+      "yangi loyiha",
+      "hisobot",
+      "maosh"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Majlisdan keyin nima qilishadi?",
+     "opts": [
+      "uyga ketishadi",
+      "ishlashadi",
+      "tushlik qilishadi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Да́йте план",
+     "alts": [
+      "Да́йте ру́чку",
+      "Да́йте докуме́нты",
+      "Да́йте отчёт"
+     ]
+    },
+    {
+     "base": "Дава́йте пообе́даем",
+     "alts": [
+      "Дава́йте отдохнём",
+      "Дава́йте поговори́м",
+      "Дава́йте вы́пьем ко́фе"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: hamkasblarga «Дава́йте…» bilan 2 ta taklif va 2 ta iltimos ayting."
+  }
+ ]
+}

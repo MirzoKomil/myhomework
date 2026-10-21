@@ -1,0 +1,320 @@
+{
+ "n": 43,
+ "topic_uz": "Transport: е́хать / е́здить, на чём? — прие́хал / уе́хал",
+ "scene": "An Uzbek couple at their apartment door in the morning: the husband holds car keys, the wife holds a metro card, both dressed for work.",
+ "dialogs": [
+  {
+   "id": "L43-d1",
+   "title_ru": "Как ты е́здишь на рабо́ту?",
+   "title_uz": "Ishga nimada qatnaysan?",
+   "intro_uz": "Birinchi dialog. Abdulaziz va Nigora ertalab uyda. Ular ishga qanday borishadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, ты сего́дня е́дешь на рабо́ту на метро́?",
+     "uz": "Nigora, bugun ishga metroda ketyapsanmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да. Я всегда́ е́зжу на метро́. Э́то бы́стро.",
+     "uz": "Ha. Men doim metroda qatnayman. Bu tez."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А я сего́дня е́ду на маши́не.",
+     "uz": "Men esa bugun mashinada ketyapman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Почему́? Ты обы́чно е́здишь на авто́бусе.",
+     "uz": "Nega? Sen odatda avtobusda qatnaysan-ku."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ве́чером я е́ду к ма́ме. Э́то далеко́.",
+     "uz": "Kechqurun onamnikiga boraman. U uzoq."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Поня́тно. А я домо́й пойду́ пешко́м.",
+     "uz": "Tushunarli. Men esa uyga piyoda boraman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Пешко́м? Ско́лько идти́?",
+     "uz": "Piyodami? Qancha yuriladi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ми́нут два́дцать. Я люблю́ ходи́ть пешко́м.",
+     "uz": "Yigirma daqiqacha. Men piyoda yurishni yaxshi ko'raman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora ishga odatda nimada qatnaydi?",
+     "opts": [
+      "avtobusda",
+      "metroda",
+      "taksida"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz bugun nimada ketyapti?",
+     "opts": [
+      "mashinada",
+      "metroda",
+      "velosipedda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora uyga qanday qaytadi?",
+     "opts": [
+      "avtobusda",
+      "taksida",
+      "piyoda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "на метро́",
+     "alts": [
+      "на авто́бусе",
+      "на такси́",
+      "на велосипе́де"
+     ]
+    },
+    {
+     "base": "к ма́ме",
+     "alts": [
+      "к бра́ту",
+      "к дру́гу",
+      "к ба́бушке"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda gapiring: ishga yoki o'qishga odatda nimada qatnaysiz, bugun nimada ketyapsiz?"
+  },
+  {
+   "id": "L43-d2",
+   "title_ru": "Вы е́дете в центр?",
+   "title_uz": "Markazga borasizmi?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza bekatda. U haydovchidan yo'l so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Води́тель",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Извини́те, вы е́дете в центр?",
+     "uz": "Kechirasiz, markazga borasizmi?"
+    },
+    {
+     "who": "Води́тель",
+     "ru": "Нет, в центр е́дет три́дцать второ́й авто́бус.",
+     "uz": "Yo'q, markazga o'ttiz ikkinchi avtobus boradi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А где его́ остано́вка?",
+     "uz": "Uning bekati qayerda?"
+    },
+    {
+     "who": "Води́тель",
+     "ru": "Вон там, у ба́нка. Но на метро́ бы́стро.",
+     "uz": "Ana u yerda, bank yonida. Lekin metroda tez."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "На метро́? А ско́лько е́хать до це́нтра?",
+     "uz": "Metrodami? Markazgacha qancha yuriladi?"
+    },
+    {
+     "who": "Води́тель",
+     "ru": "Ми́нут пятна́дцать. На авто́бусе — со́рок.",
+     "uz": "O'n besh daqiqacha. Avtobusda — qirq."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А переса́дка есть?",
+     "uz": "O'tib olish bormi?"
+    },
+    {
+     "who": "Води́тель",
+     "ru": "Нет, без переса́дки. Уда́чи!",
+     "uz": "Yo'q, o'tmasdan borasiz. Omad!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Markazga qaysi avtobus boradi?",
+     "opts": [
+      "yigirma ikkinchi",
+      "o'ttiz ikkinchi",
+      "qirqinchi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Avtobus bekati qayerda?",
+     "opts": [
+      "metro yonida",
+      "do'kon yonida",
+      "bank yonida"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Metroda markazgacha qancha yuriladi?",
+     "opts": [
+      "o'n besh daqiqa",
+      "qirq daqiqa",
+      "bir soat"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в центр",
+     "alts": [
+      "на вокза́л",
+      "в аэропо́рт",
+      "на ры́нок"
+     ]
+    },
+    {
+     "base": "у ба́нка",
+     "alts": [
+      "у магази́на",
+      "у шко́лы",
+      "у апте́ки"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: bekatda avtobus qayerga borishini, qancha yurilishini va o'tib olish bor-yo'qligini so'rang."
+  },
+  {
+   "id": "L43-d3",
+   "title_ru": "Брат прие́хал!",
+   "title_uz": "Akam keldi!",
+   "intro_uz": "Uchinchi dialog. Timur ishda Nigora bilan gaplashyapti. Timurning akasi Moskvadan keldi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Нигора́, у меня́ но́вость! Вчера́ прие́хал мой брат.",
+     "uz": "Nigora, yangilik bor! Kecha akam keldi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Как здо́рово! Отку́да он прие́хал?",
+     "uz": "Zo'r-ku! U qayerdan keldi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Из Москвы́. Он лете́л на самолёте четы́ре часа́.",
+     "uz": "Moskvadan. U samolyotda to'rt soat uchdi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А когда́ он уе́дет?",
+     "uz": "U qachon ketadi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Че́рез неде́лю. Снача́ла мы пое́дем в Самарка́нд.",
+     "uz": "Bir haftadan keyin. Avval Samarqandga boramiz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "На по́езде? Я всегда́ е́зжу туда́ на по́езде.",
+     "uz": "Poyezddami? Men u yerga doim poyezdda qatnayman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, на по́езде. Пото́м он улети́т в Москву́.",
+     "uz": "Ha, poyezdda. Keyin u Moskvaga uchib ketadi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timurning akasi qayerdan keldi?",
+     "opts": [
+      "Qozondan",
+      "Moskvadan",
+      "Samarqanddan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "U samolyotda necha soat uchdi?",
+     "opts": [
+      "to'rt soat",
+      "ikki soat",
+      "olti soat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ular Samarqandga nimada borishadi?",
+     "opts": [
+      "samolyotda",
+      "mashinada",
+      "poyezdda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "мой брат",
+     "alts": [
+      "моя́ сестра́",
+      "мой друг",
+      "мой па́па"
+     ]
+    },
+    {
+     "base": "в Самарка́нд",
+     "alts": [
+      "в Бухару́",
+      "в Хиву́",
+      "в Андижа́н"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: kimdir sizga mehmonga keldi — u qayerdan, nimada keldi va qachon ketadi?"
+  }
+ ]
+}
