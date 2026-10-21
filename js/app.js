@@ -6701,7 +6701,7 @@ function renderDashboard() {
     const managerLeads = managerId ? allLeads.filter(lead => lead.managerId === managerId) : [];
     const managerStudents = isSalesManager ? filterStudentsForSalesManager(students, { ...currentUser, linkedManagerId: managerId }) : students;
 
-    document.body.classList.toggle('admin-home', isAdminHomeUser(currentUser));
+    document.body.classList.toggle('admin-home', isAdminHomeUser(currentUser) || (isSalesManager && !!managerId));
     renderDashboardOverview({ students, teachers, leads, currentUser, managerId, managerStudents, managerLeads });
     renderCalendarWidget();
     renderHwProgress(students);
@@ -8425,6 +8425,128 @@ function renderAdminHome(user, students, leads, now = new Date()) {
     </div>`;
 }
 
+// Sotuv menejeri bosh sahifasi (dizayn "MenejerBosh"): oylik reja, bitimlar,
+// konversiya, maosh, sovg'aga yo'l, bugungi ishlar, voronka, o'quvchilar.
+// Faqat menejerning o'z lidlari va o'quvchilari ishlatiladi.
+function computeManagerHome({ user, managerId, leads, students, now = new Date() }) {
+    const lang = user?.linkedManagerLang || getSalesManagers().find(m => m.id === managerId)?.lang || 'english';
+    const own = ['english', 'russian'].flatMap(l => (leads[l] || []).map(x => ({ ...x, _lang: l }))).filter(l => l.managerId === managerId);
+    const st = l => normalizeLeadStatus(l.status);
+    const sales = getManagerSalesForPeriod(managerId, 'oylik');
+    const target = getManagerPeriodTarget(managerId, 'oylik') || 0;
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dueByToday = target > 0 ? Math.round(target * now.getDate() / daysInMonth) : 0;
+    const deals = getManagerDealsCount(managerId, 'oylik');
+    const ranked = getSalesManagers(lang).map(m => ({ id: m.id, sales: getManagerSalesForPeriod(m.id, 'oylik') })).sort((a, b) => b.sales - a.sales);
+    const place = ranked.findIndex(m => m.id === managerId) + 1;
+    const closedAll = own.filter(l => st(l) === 'tolov-yopildi').length;
+    const quality = own.filter(l => st(l) !== 'sifatsiz-lidlar').length;
+    const conv = quality ? closedAll / quality * 100 : null;
+    const pool = getLeadStatsForRankings();
+    const teamQuality = pool.filter(l => (l.language || lang) === lang && normalizeLeadStatus(l.status) !== 'sifatsiz-lidlar');
+    const teamConv = teamQuality.length ? teamQuality.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi').length / teamQuality.length * 100 : null;
+
+    const todayKey = leadTashkentDayKey(now);
+    const tasks = [];
+    own.forEach(l => {
+        const f = getLeadNextFollowUp(l, now.getTime());
+        if (f && leadTashkentDayKey(new Date(f.at)) <= todayKey) {
+            tasks.push({ kind: 'lead', late: f.overdue, at: f.at, lead: l, title: `${l.name || 'Lid'} · qoʻngʻiroq`, sub: `${(LEAD_COLUMNS.find(c => c.id === st(l)) || {}).label || ''} · ${formatLeadFollowUpWhen(f.at, now.getTime())}` });
+        }
+    });
+    const dueOf = s => { const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null; return d && !Number.isNaN(d.getTime()) ? d : null; };
+    const todayStart = new Date(now.toDateString());
+    const myStudents = students.filter(s => !s.frozen && !s.isStaffDemo);
+    const withDebt = myStudents.filter(s => Number(s.debtAmount || 0) > 0);
+    const overdue = withDebt.filter(s => { const d = dueOf(s); return d && d < todayStart; });
+    overdue.forEach(s => tasks.push({ kind: 'debt', late: true, at: dueOf(s).getTime(), student: s, title: `${s.name || "Oʻquvchi"} · toʻlov`, sub: `Kelishilgan sana ${formatDateShort(s.paymentDueDate)} oʻtdi · qoldiq ${formatMoney(s.debtAmount)}` }));
+    tasks.sort((a, b) => (b.late - a.late) || (a.at - b.at));
+    const weekAhead = new Date(todayStart.getTime() + 8 * 86400000);
+    const upcoming = withDebt.filter(s => { const d = dueOf(s); return d && d >= todayStart && d < weekAhead; })
+        .sort((a, b) => dueOf(a) - dueOf(b));
+    const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: own.filter(l => st(l) === s.id).length }));
+    return {
+        lang, sales, target, dueByToday, deals, place, conv, teamConv, quality,
+        tasks, upcoming, funnel, openLeads: funnel.reduce((a, f) => a + f.count, 0),
+        active: myStudents.length, installments: withDebt.length, overdue
+    };
+}
+
+function renderManagerHome(user, managerId, leads, students, now = new Date()) {
+    if (!managerId) return '';
+    const d = computeManagerHome({ user, managerId, leads, students, now });
+    const mln = n => (Math.round((Number(n) || 0) / 1e4) / 100).toFixed(2).replace('.', ',');
+    const pct = d.target > 0 ? Math.round(d.sales / d.target * 100) : null;
+    const ahead = d.sales - d.dueByToday;
+    const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(now));
+    const greet = hour < 11 ? 'Xayrli tong' : hour < 18 ? 'Xayrli kun' : 'Xayrli kech';
+    const date = `${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`;
+    const maxF = Math.max(1, ...d.funnel.map(f => f.count));
+    const pctTxt = v => v == null ? '—' : `${v.toFixed(1).replace('.', ',')}%`;
+    const taskRow = t => `<li class="mhx-task${t.late ? ' is-late' : ''}">
+        <div><strong>${escapeHtml(t.title)}</strong>${t.late ? '<span class="ahx-pill ahx-pill--danger">kechikdi</span>' : ''}<span class="mhx-sub">${escapeHtml(t.sub)}</span></div>
+        ${t.kind === 'lead' ? `<button type="button" class="btn-secondary-sm mhx-btn" data-mhx-lead="${escapeHtml(t.lead._lang)}|${escapeHtml(t.lead.id)}">Lidni ochish</button>`
+            : `<button type="button" class="btn-secondary-sm mhx-btn" data-mhx-student="${escapeHtml(t.student.id)}">Oʻquvchini ochish</button>`}
+    </li>`;
+    const upRow = s => `<li class="mhx-task mhx-task--soon"><div><strong>${escapeHtml(s.name || "Oʻquvchi")} · keyingi toʻlov</strong><span class="mhx-sub">Kelishilgan sana ${escapeHtml(formatDateShort(s.paymentDueDate))} · qoldiq ${escapeHtml(formatMoney(s.debtAmount))}</span></div>
+        <button type="button" class="btn-secondary-sm mhx-btn" data-mhx-student="${escapeHtml(s.id)}">Oʻquvchini ochish</button></li>`;
+    return `<div class="ahx mhx" id="managerHome">
+        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
+            <button type="button" class="btn-primary-sm" data-mhx-add-lead>+ Lid qoʻshish</button></div>
+        <div class="ahx-kpis">
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Oylik rejam</span><b class="ahx-kpi-v">${mln(d.sales)}<small> / ${d.target ? mln(d.target) + ' mln' : 'reja yoʻq'}</small></b>
+                ${pct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, pct)}%"></i></span><div class="ahx-kpi-n"><span>${pct}% · bugungacha kerak edi ${mln(d.dueByToday)}</span><span class="ahx-pill ${ahead >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn'}">${ahead >= 0 ? '+' : '−'}${mln(Math.abs(ahead))}</span></div>` : '<div class="ahx-kpi-n"><span>ROP individual reja kiritmagan</span></div>'}</div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Bitimlar · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${d.deals}</b><div class="ahx-kpi-n"><span>${d.place ? `reytingda ${d.place}-oʻrin` : ''} · ${d.quality} sifatli liddan</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Konversiya</span><b class="ahx-kpi-v">${pctTxt(d.conv)}</b><div class="ahx-kpi-n"><span>sifatli lid → sotuv · jamoa ${pctTxt(d.teamConv)}</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Mening maoshim · taxminiy</span><b class="ahx-kpi-v" id="mhxSalary">…</b><div class="ahx-kpi-n"><span id="mhxSalaryNote">oy yopilganda aniqlanadi</span></div></div>
+        </div>
+        ${renderManagerGoalBlock(managerId, d.lang)}
+        <div class="ahx-grid mhx-grid">
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugun qilish kerak <small>· ${d.tasks.length}</small></h3><span class="mhx-sub">${d.tasks.filter(t => t.late).length} tasi kechikkan</span></div>
+                ${d.tasks.length ? `<ul class="mhx-tasks">${d.tasks.slice(0, 8).map(taskRow).join('')}</ul>${d.tasks.length > 8 ? `<p class="mhx-sub">Yana ${d.tasks.length - 8} ta — Lidlar va Qarzdorlar boʻlimida</p>` : ''}` : '<p class="dashboard-empty">Bugungi ishlar bajarilgan 👍</p>'}
+                ${d.upcoming.length ? `<h4 class="mhx-h4">Yaqinlashayotgan · kelishilgan toʻlov sanalari</h4><ul class="mhx-tasks">${d.upcoming.slice(0, 5).map(upRow).join('')}</ul>` : ''}
+            </section>
+            <div class="mhx-side">
+                <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening voronkam <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-mhx-go="leads">Lidlar →</button></div>
+                    <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
+                </section>
+                <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening oʻquvchilarim</h3></div>
+                    <ul class="mhx-stats"><li><span>Faol</span><b>${d.active}</b></li><li><span>Boʻlib toʻlamoqda</span><b>${d.installments}</b></li><li><span>Qarzdor · kelishilgan sana oʻtgan</span><b class="${d.overdue.length ? 'is-bad' : ''}">${d.overdue.length}</b></li></ul>
+                    ${d.overdue.length ? `<button type="button" class="ahx-link" data-mhx-go="debtors">Qarzdorlarim: ${escapeHtml(d.overdue.slice(0, 3).map(s => shortPersonName(s.name || '')).join(', '))} →</button>` : ''}
+                </section>
+            </div>
+        </div>
+    </div>`;
+}
+
+function bindManagerHome(container) {
+    container.querySelectorAll('[data-mhx-lead]').forEach(btn => btn.addEventListener('click', () => {
+        const [lang, id] = btn.dataset.mhxLead.split('|');
+        openLeadOverview(lang, id);
+    }));
+    container.querySelectorAll('[data-mhx-student]').forEach(btn => btn.addEventListener('click', () => openStudentDetail(btn.dataset.mhxStudent)));
+    container.querySelectorAll('[data-mhx-go]').forEach(btn => btn.addEventListener('click', () => {
+        switchTab('sales');
+        if (btn.dataset.mhxGo === 'debtors') { _debtorsQuick = 'overdue'; switchSalesSection('debtors'); } else switchSalesSection('leads');
+    }));
+    container.querySelector('[data-mhx-add-lead]')?.addEventListener('click', () => {
+        switchTab('sales');
+        switchSalesSection('leads');
+        document.getElementById('addLeadBtn')?.click();
+    });
+    const salEl = container.querySelector('#mhxSalary');
+    if (salEl && typeof apiFetch === 'function') {
+        apiFetch('/api/payroll/me').then(data => {
+            if (!document.body.contains(salEl)) return;
+            if (!data?.linked || !data.current) { salEl.textContent = '—'; return; }
+            salEl.textContent = formatMoney(data.current.total || 0);
+            const c = data.current;
+            const note = container.querySelector('#mhxSalaryNote');
+            if (note) note.textContent = [c.fixed ? `fiksa ${formatMoney(c.fixed)}` : '', c.commission ? `ulush ${formatMoney(c.commission)}` : '', c.bonus ? `bonus ${formatMoney(c.bonus)}` : ''].filter(Boolean).join(' + ') || 'oy yopilganda aniqlanadi';
+        }).catch(() => { salEl.textContent = '—'; });
+    }
+}
+
 function bindAdminHome(container) {
     container.querySelectorAll('[data-ahx-go]').forEach(btn => btn.addEventListener('click', () => {
         const go = btn.dataset.ahxGo;
@@ -8443,6 +8565,11 @@ function renderDashboardOverview({ students, teachers, leads, currentUser, manag
     if (typeof isAdminHomeUser === 'function' && isAdminHomeUser(currentUser)) {
         container.innerHTML = renderAdminHome(currentUser, students, leads);
         bindAdminHome(container);
+        return;
+    }
+    if (currentUser?.role === 'sales_manager' && managerId) {
+        container.innerHTML = renderManagerHome(currentUser, managerId, leads, managerStudents || []);
+        bindManagerHome(container);
         return;
     }
 

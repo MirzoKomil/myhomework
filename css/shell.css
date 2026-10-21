@@ -1367,3 +1367,165 @@ html.rd .rtx-eyebrow {
         justify-self: start;
     }
 }
+
+/* ---------- Sotuv menejeri bosh sahifasi ---------- */
+html.rd .mhx-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+html.rd .mhx-head .btn-primary-sm {
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 14px;
+}
+
+html.rd .ahx-kpi-v small {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+html.rd .mhx-bar {
+    display: block;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--rd-col);
+    overflow: hidden;
+}
+
+html.rd .mhx-bar i {
+    display: block;
+    height: 100%;
+    background: var(--purple);
+    border-radius: 999px;
+}
+
+html.rd .mhx .mot-home {
+    margin-bottom: 16px;
+}
+
+html.rd .mhx-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+html.rd .mhx-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+html.rd .mhx-sub {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .mhx-tasks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .mhx-task {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0 12px 14px;
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid var(--purple);
+    margin-left: 0;
+}
+
+html.rd .mhx-task.is-late {
+    border-left-color: #C62828;
+}
+
+html.rd .mhx-task--soon {
+    border-left-color: #1E5BD8;
+}
+
+html.rd .mhx-task > div {
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+}
+
+html.rd .mhx-task strong {
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .mhx-task .mhx-sub {
+    flex-basis: 100%;
+}
+
+html.rd .mhx-btn {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+html.rd .mhx-btn:hover {
+    border-color: var(--purple);
+}
+
+html.rd .mhx-h4 {
+    margin: 16px 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+html.rd .mhx-stats {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+}
+
+html.rd .mhx-stats li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+html.rd .mhx-stats b {
+    color: var(--text);
+}
+
+html.rd .mhx-stats b.is-bad {
+    color: #C62828;
+}
+
+@media (max-width: 1100px) {
+    html.rd .mhx-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    html.rd .mhx-head {
+        flex-direction: column;
+    }
+
+    html.rd .mhx-task {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
