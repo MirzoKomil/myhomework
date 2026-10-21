@@ -79,3 +79,11 @@ test('ustoz bosh sahifasi: telefon/to‘lov ko‘rsatilmaydi, faqat o‘z o‘qu
     assert.doesNotMatch(fn, /\.phone|debtAmount|paymentDueDate/);
     assert.match(fn, /ids\.has\(String\(s\.teacherId \|\| ''\)\)/);
 });
+
+test('lid kartasi: bosqich o‘zgartirish kanban bilan bir xil yo‘ldan (so‘rovnomalar o‘tkazib yuborilmaydi)', () => {
+    assert.match(app, /function requestLeadStageChange\(lang, leadId, toStatus\)/);
+    assert.match(app, /requestLeadStageChange\(btn\.dataset\.leadMenuMove, btn\.dataset\.leadId, btn\.dataset\.moveTo\)/);
+    assert.match(app, /if \(to\) requestLeadStageChange\(lang, leadId, to\);/);
+    const fn = app.slice(app.indexOf('function requestLeadStageChange('), app.indexOf('function openLeadOverview('));
+    for (const f of ['needsContactFailPrompt', 'needsSifatsizLidPrompt', 'needsPaymentClosedPrompt', 'needsFailedSalePrompt']) assert.match(fn, new RegExp(f));
+});

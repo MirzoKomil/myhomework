@@ -21494,7 +21494,7 @@ function openLeadNotifyModal(lang, leadId) {
 // doim ko'rinib tursin.
 const LEAD_MAIN_PATH = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida', 'tolov-yopildi'];
 
-function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
+function renderLeadOverviewHtml(lead, lang, user = getCurrentUser(), opts = {}) {
     const status = normalizeLeadStatus(lead.status);
     const col = LEAD_COLUMNS.find(c => c.id === status) || LEAD_COLUMNS[0];
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
@@ -21517,7 +21517,26 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
     const alertHtml = alerts.length ? `<div class="lov-alerts">${alerts.map(a => `
         <div class="lov-alert lov-alert--${a.type === 'danger' ? 'danger' : a.type === 'warning' ? 'warn' : 'info'}">
             <strong>${escapeHtml(a.title)}</strong><span>${escapeHtml(a.message)}</span>
-        </div>`).join('')}</div>` : '';
+        </div>`).join('')}${opts.actions ? '<button type="button" class="lov-btn lov-alert-act" data-lov-act="notify">Koʻrib chiqish</button>' : ''}</div>` : '';
+    const telHref = v => String(v || '').replace(/[^\d+]/g, '');
+    const canEdit = opts.actions && !isLeadsReadOnly(user);
+    const stageSelect = canEdit ? `<label class="lov-stage-pick"><span class="sr-only">Bosqichni oʻzgartirish</span>
+            <select data-lov-stage aria-label="Bosqichni oʻzgartirish">
+                <option value="">Bosqichni oʻzgartirish…</option>
+                <optgroup label="Voronka">${LEAD_COLUMNS.filter(c => !['muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar'].includes(c.id)).map(c => `<option value="${escapeHtml(c.id)}"${c.id === status ? ' disabled' : ''}>${escapeHtml(c.label)}${c.id === status ? ' · joriy' : ''}</option>`).join('')}</optgroup>
+                <optgroup label="Yopish">${LEAD_COLUMNS.filter(c => ['muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar'].includes(c.id)).map(c => `<option value="${escapeHtml(c.id)}"${c.id === status ? ' disabled' : ''}>${escapeHtml(c.label)}</option>`).join('')}</optgroup>
+            </select></label>` : '';
+    const topHtml = opts.actions ? `<div class="lov-top">
+            <div class="lov-phones">
+                ${lead.phone ? `<a href="tel:${escapeHtml(telHref(lead.phone))}">${escapeHtml(phone)}</a>` : '<span>—</span>'}
+                ${phone2 && telHref(lead.phone2).slice(-9) !== telHref(lead.phone).slice(-9) ? `<a href="tel:${escapeHtml(telHref(lead.phone2))}">2-tel: ${escapeHtml(phone2)}</a>` : ''}
+            </div>
+            ${canEdit ? `<div class="lov-actions">
+                <button type="button" class="lov-btn" data-lov-act="sms">SMS</button>
+                <button type="button" class="lov-btn" data-lov-act="telegram">Telegram</button>
+                ${stageSelect}
+            </div>` : ''}
+        </div>` : '';
 
     const historyHtml = comments.length
         ? [...comments].reverse().map(renderLeadCommentItem).join('')
@@ -21543,6 +21562,7 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
             <span class="lov-stage" style="background:${col.headerBg};color:${col.title};border-color:${col.border}">${escapeHtml(col.label)}</span>
             <span class="lov-sub">${escapeHtml(langLabel)} · ${escapeHtml(leadKindLabel(lead))} · ${comments.length} ta izoh</span>
         </div>
+        ${topHtml}
         <ol class="lov-steps${offPath ? ' is-off' : ''}" aria-label="Voronka bosqichlari">${steps}</ol>
         ${alertHtml}
         <div class="lov-grid">
@@ -21551,7 +21571,7 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
                 <div class="lov-history">${historyHtml}</div>
             </section>
             <aside class="lov-side">
-                <section class="lov-card"><h3 class="lov-h">Kimning lidi</h3>${managerHtml}</section>
+                <section class="lov-card"><h3 class="lov-h">Kimning lidi</h3>${managerHtml}${canEdit && user?.role !== 'sales_manager' ? '<button type="button" class="lov-btn lov-mgr-change" data-lov-act="manager">Menejerni almashtirish</button>' : ''}</section>
                 <section class="lov-card"><h3 class="lov-h">Aloqa</h3>
                     <div class="lov-row"><span>Telefon</span><strong>${escapeHtml(phone)}</strong></div>
                     ${phone2 ? `<div class="lov-row"><span>2-telefon</span><strong>${escapeHtml(phone2)}</strong></div>` : ''}
@@ -21562,6 +21582,33 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser()) {
     </div>`;
 }
 
+// Lidni boshqa bosqichga o'tkazish: kanban menyusi va lid kartasi bir xil yo'ldan
+// o'tadi (kerakli so'rovnoma/oyna ochiladi, keyin moveLeadToStatus).
+function requestLeadStageChange(lang, leadId, toStatus) {
+    const lead = getLeadById(lang, leadId);
+    if (!lead) return;
+    const from = normalizeLeadStatus(lead.status);
+    if (from === toStatus) return;
+
+    if (toStatus === leadWorkflow.DEFERRED_STATUS) { openDeferredPurchaseModal(lang, leadId); return; }
+
+    if (needsContactFailPrompt(from, toStatus)) { openContactFailModal(lang, leadId, toStatus); return; }
+    // Sifatsiz lid cascade'dan oldin tekshiriladi — cascade survey ko'rsatilmasin
+    if (needsSifatsizLidPrompt(from, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
+    if (SURVEY_CASCADE_TARGETS.has(toStatus)) {
+        const _sk = getSkippedSurveySteps(from, toStatus, lead);
+        if (_sk.length) { startMvCascade(lang, leadId, from, toStatus); return; }
+    }
+    if (needsTrialLessonPrompt(from, toStatus)) { openTrialLessonFlow(lang, leadId, from); return; }
+    if (needsConnectedSurveyPrompt(toStatus)) { openConnectedSurveyModal(lang, leadId, toStatus); return; }
+    if (needsInfoProvidedPrompt(from, toStatus)) { openMalumotBerildiFlow(lang, leadId, from); return; }
+    if (needsDecisionPrompt(from, toStatus)) { openQarorJarayonidaFlow(lang, leadId, from); return; }
+    if (needsPaymentPrompt(from, toStatus)) { openTolovJarayonidaFlow(lang, leadId, from); return; }
+    if (needsPaymentClosedPrompt(from, toStatus)) { openTolovYopildiFlow(lang, leadId, from); return; }
+    if (needsFailedSalePrompt(from, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, from); return; }
+    moveLeadToStatus(lang, leadId, toStatus);
+}
+
 function openLeadOverview(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
@@ -21569,20 +21616,22 @@ function openLeadOverview(lang, leadId) {
     const readOnly = isLeadsReadOnly(user);
     const footer = `
         <button type="button" class="btn-primary-sm" data-lov-act="comments">${readOnly ? 'Izohlar' : 'Izoh qoʻshish'}</button>
-        <button type="button" class="lov-btn" data-lov-act="recording">Zapis</button>
-        ${readOnly ? '' : `<button type="button" class="lov-btn" data-lov-act="sms">SMS</button>
-        <button type="button" class="lov-btn" data-lov-act="telegram">Telegram</button>`}
-        ${getLeadSlaCardAlerts(lead, lang, user).length ? '<button type="button" class="lov-btn" data-lov-act="notify">Bildirishnomalar</button>' : ''}`;
-    openModal(`Lid kartasi — ${lead.name || ''}`, renderLeadOverviewHtml(lead, lang, user), footer, { wide: true });
+        <button type="button" class="lov-btn" data-lov-act="recording">Zapis</button>`;
+    openModal(lead.name || 'Lid kartasi', renderLeadOverviewHtml(lead, lang, user, { actions: true }), footer, { wide: true });
     const actions = {
+        manager: () => openAssignManagerModal(lang, leadId),
         comments: () => openLeadCommentsModal(lang, leadId),
         recording: () => openLeadRecordingModal(lang, leadId),
         sms: () => openLeadSmsTemplateModal(lang, leadId),
         telegram: () => openLeadTelegramProfile(lang, leadId),
         notify: () => openLeadNotifyModal(lang, leadId),
     };
-    document.querySelectorAll('#modalFooter [data-lov-act]').forEach(btn => {
+    document.querySelectorAll('#modalFooter [data-lov-act], #modalBody [data-lov-act]').forEach(btn => {
         btn.addEventListener('click', () => actions[btn.dataset.lovAct]?.());
+    });
+    document.querySelector('#modalBody [data-lov-stage]')?.addEventListener('change', e => {
+        const to = e.target.value;
+        if (to) requestLeadStageChange(lang, leadId, to);
     });
 }
 
@@ -22006,31 +22055,7 @@ function renderLeads() {
         btn.addEventListener('click', e => {
             e.stopPropagation();
             closeLeadCardMenus();
-            const lang = btn.dataset.leadMenuMove;
-            const leadId = btn.dataset.leadId;
-            const toStatus = btn.dataset.moveTo;
-            const lead = getLeadById(lang, leadId);
-            if (!lead) return;
-            const from = normalizeLeadStatus(lead.status);
-            if (from === toStatus) return;
-
-            if (toStatus === leadWorkflow.DEFERRED_STATUS) { openDeferredPurchaseModal(lang, leadId); return; }
-
-            if (needsContactFailPrompt(from, toStatus)) { openContactFailModal(lang, leadId, toStatus); return; }
-            // Sifatsiz lid cascade'dan oldin tekshiriladi — cascade survey ko'rsatilmasin
-            if (needsSifatsizLidPrompt(from, toStatus)) { openSifatsizLidFlow(lang, leadId); return; }
-            if (SURVEY_CASCADE_TARGETS.has(toStatus)) {
-                const _sk = getSkippedSurveySteps(from, toStatus, lead);
-                if (_sk.length) { startMvCascade(lang, leadId, from, toStatus); return; }
-            }
-            if (needsTrialLessonPrompt(from, toStatus)) { openTrialLessonFlow(lang, leadId, from); return; }
-            if (needsConnectedSurveyPrompt(toStatus)) { openConnectedSurveyModal(lang, leadId, toStatus); return; }
-            if (needsInfoProvidedPrompt(from, toStatus)) { openMalumotBerildiFlow(lang, leadId, from); return; }
-            if (needsDecisionPrompt(from, toStatus)) { openQarorJarayonidaFlow(lang, leadId, from); return; }
-            if (needsPaymentPrompt(from, toStatus)) { openTolovJarayonidaFlow(lang, leadId, from); return; }
-            if (needsPaymentClosedPrompt(from, toStatus)) { openTolovYopildiFlow(lang, leadId, from); return; }
-            if (needsFailedSalePrompt(from, toStatus)) { openMuvaffaqiyatsizSotuvFlow(lang, leadId, from); return; }
-            moveLeadToStatus(lang, leadId, toStatus);
+            requestLeadStageChange(btn.dataset.leadMenuMove, btn.dataset.leadId, btn.dataset.moveTo);
         });
     });
 
