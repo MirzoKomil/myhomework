@@ -130,13 +130,18 @@ test('Domwork recognition, assistant ownership and Russian advertising; no real 
         await t.test('milestones require opt-in, a new receipt crossing net turnover, and current accounting month',async()=>{
             const payment={id:'new',language:'russian',manager_id:'m',paid_date:today};
             assert.deepEqual(await recognition.milestones(db,payment),[]);
-            await settings(enabled);assert.deepEqual(await recognition.milestones(db,payment),[20000000]);
+            await settings(enabled);assert.deepEqual(await recognition.milestones(db,payment),[],'20 mln CRM sovg‘a pog‘onasi emas (iPhone 120 mln dan)');
+            await db.query("INSERT INTO json_data VALUES('bonusData',$1)",[JSON.stringify({iphone:{threshold:20000000,label:'iPhone (test)'},macbook:{threshold:'bad'}})]);
+            assert.deepEqual((await recognition.tiers(db)).map(t=>t.threshold),[20000000,160000000,220000000,300000000]);
+            assert.deepEqual(await recognition.milestones(db,payment),[20000000]);
             assert.deepEqual(await recognition.milestones(db,{...payment,paid_date:'2000-01-01'}),[]);
             await db.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by,title) VALUES('sales-group','sales','','-100111111',true,'admin','Sales'),('family','family','','-100222222',true,'admin','Family'),('teachers','teachers','','-100333333',true,'admin','Teachers')");
             await write(d=>events.payment(d,'new'));await write(d=>events.processOne(d));
             await write(d=>events.capture(d,'payment','new',{month,milestones:[20000000]},'duplicate-payment'));await write(d=>events.processOne(d));
             assert.equal((await db.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE unique_key LIKE 'milestone:%'")).rows[0].count,'1');
             assert.equal((await db.query("SELECT COUNT(*) FROM domwork_bot_jobs WHERE key LIKE 'milestone:%'")).rows[0].count,'1');
+            assert.match((await db.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key LIKE 'milestone:%'")).rows[0].payload.text,/iPhone \(test\)/);
+            await db.query("DELETE FROM json_data WHERE key='bonusData'");
         });
         await t.test('daily/weekly/monthly winners are opt-in, criterion-required, idempotent and tied winners explicit',async()=>{
             assert.throws(()=>controls.settingsInput({weeklyAwardsEnabled:true},{}),e=>e.status===400);

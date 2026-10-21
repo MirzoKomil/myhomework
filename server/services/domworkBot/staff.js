@@ -6,6 +6,9 @@ const reports = require('./reports');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g,' ') + ' UZS';
 const safe = value => String(value ?? '').slice(0,200);
 const none = 'Hozircha ma’lumot yo‘q.';
+const STATUS_LABELS = {'yangi-lidlar':'Yangi lidlar','boglanishga-urinilmoqda':'Bog‘lanishga urinilmoqda','boglanildi':'Bog‘lanildi',
+    'sinov-darsida':'Sinov darsida','qaror-jarayonida':'Qaror jarayonida','keyin-sotib-olmoqchi':'Keyin sotib olmoqchi',
+    'tolov-jarayonida':'To‘lov jarayonida','tolov-yopildi':'To‘lov yopildi','muvaffaqiyatsiz-sotuv':'Muvaffaqiyatsiz sotuv','sifatsiz-lidlar':'Sifatsiz lidlar'};
 function salary(row) {
     if (!row) return 'Xodim uchun KPI hisob-kitobi topilmadi. HRdagi KPI biriktirishni tekshiring.';
     return `Fiksa: ${money(row.fixed)}\nAylanma: ${money(row.turnover)}\n`
@@ -64,10 +67,11 @@ async function action(db, identity, actionId, options={}) {
         if (teaching) {
             if (!identity.employeeId) return none;
             const assistant = actionId === 'assistant-duty' || identity.role === 'assistant';
-            const rows = (await db.query(`SELECT s.id,s.name,s.phone,s.group_name,s.lesson_time,h.name AS main_teacher
+            // Ustoz/yordamchi o'quvchi telefonini ko'rmaydi (CRM rol qoidasi).
+            const rows = (await db.query(`SELECT s.id,s.name,s.group_name,s.lesson_time,h.name AS main_teacher
                 FROM students s LEFT JOIN hr_employees h ON h.id=s.teacher_id
                 WHERE s.subject='russian' AND ${assistant ? 's.assistant_teacher_id' : 's.teacher_id'}=$1 ORDER BY s.name LIMIT 100`, [identity.employeeId])).rows;
-            let output=rows.map(r => `${safe(r.name)} · ${safe(r.phone)}\n${safe(r.group_name)} · ${safe(r.lesson_time)}${assistant ? '\nAsosiy ustoz: '+safe(r.main_teacher) : ''}`).join('\n\n') || none;
+            let output=rows.map(r => `${safe(r.name)}\n${safe(r.group_name)} · ${safe(r.lesson_time)}${assistant ? '\nAsosiy ustoz: '+safe(r.main_teacher) : ''}`).join('\n\n') || none;
             if(actionId==='assistant-duty') {
                 const period=policy.monthPeriod(options.now), calculation=await payroll.calculate(db,period,'russian');
                 const own=calculation.rows.find(r=>r.employeeId===identity.employeeId);
@@ -104,7 +108,11 @@ async function action(db, identity, actionId, options={}) {
         const totals = (await db.query(`SELECT COUNT(*) AS count,COALESCE(SUM(amount),0) AS amount FROM payment_records
             WHERE language='russian' AND paid_date BETWEEN $1 AND $2`, [start,end])).rows[0];
         const counts = (await db.query("SELECT status,COUNT(*) AS count FROM leads WHERE language='russian' AND deleted_at IS NULL GROUP BY status ORDER BY status")).rows;
-        let output=`Davr: ${start} — ${end}\nKirim: ${money(totals.amount)}\nTranzaksiyalar: ${totals.count}\n`+counts.map(r => `${safe(r.status)}: ${r.count}`).join('\n');
+        const arrived=(await db.query(`SELECT COUNT(*) AS count FROM leads WHERE language='russian' AND deleted_at IS NULL
+            AND (created_at AT TIME ZONE 'Asia/Tashkent')::date BETWEEN $1::date AND $2::date`,[start,end])).rows[0].count;
+        // Bosqichlar soni sanaga bog'liq emas — bu "hozirgi holat", davr hisobi emas.
+        let output=`Davr: ${start} — ${end}\nKirim: ${money(totals.amount)}\nTranzaksiyalar: ${totals.count}\nShu davrda kelgan lidlar: ${arrived}\n\nLidlar hozir qaysi bosqichda (barchasi):\n`
+            +counts.map(r => `${safe(STATUS_LABELS[r.status] || r.status)}: ${r.count}`).join('\n');
         const debt=(await db.query("SELECT extra_data FROM students WHERE subject='russian'")).rows.reduce((sum,r)=>sum+Math.max(0,Number(r.extra_data?.debtAmount)||0),0);
         output+=`\nQoldiq qarz: ${money(debt)}`;
         if(identity.role==='admin' && actionId==='digest') {

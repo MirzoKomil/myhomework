@@ -4,7 +4,24 @@ const policy=require('./policy');
 const reports=require('./reports');
 const store=require('./store');
 const money=n=>new Intl.NumberFormat('uz-UZ').format(n).replace(/[\u00a0\u202f]/g,' ')+' UZS';
-const MILESTONES=[20000000,40000000,60000000];
+// Oylik sovg'a pog'onalari CRM "Reyting"dagi bilan bir xil (js/app.js MONTHLY_BONUSES);
+// admin Reytingda o'zgartirgan summa/nom (json_data.bonusData) shu yerda ham amal qiladi.
+const PRIZE_TIERS=[
+    {id:'iphone',label:'iPhone 17 Pro',threshold:120000000},
+    {id:'macbook',label:'MacBook',threshold:160000000},
+    {id:'pul2000',label:'$2,000 Pul mukofoti',threshold:220000000},
+    {id:'umra',label:'2 kishilik Umra + $500',threshold:300000000}
+];
+async function tiers(db) {
+    const stored=(await db.query("SELECT data FROM json_data WHERE key='bonusData'")).rows[0]?.data;
+    const overrides=stored && typeof stored==='object' && !Array.isArray(stored)?stored:{};
+    return PRIZE_TIERS.map(base=>{
+        const own=overrides[base.id] && typeof overrides[base.id]==='object'?overrides[base.id]:{};
+        const threshold=Number(own.threshold);
+        return {id:base.id,label:typeof own.label==='string' && own.label.trim()?own.label.trim().slice(0,80):base.label,
+            threshold:Number.isSafeInteger(threshold) && threshold>0?threshold:base.threshold};
+    }).sort((a,b)=>a.threshold-b.threshold);
+}
 const RELEASE={id:'domwork-bot-insights-2026-10',text:'CRM yangilandi: bot menyulari erkin almashadi; sotuv pog‘onalari va g‘oliblar xabarlari uchun alohida sozlamalar, yordamchi ustoz baholarining aniq tarixi va rus tili reklama sarfi kiritish imkoniyati qo‘shildi.'};
 async function sales(db,start,end,excludeId=null) {
     const records=(await db.query(`SELECT id,lead_id,manager_id,language,amount,TO_CHAR(paid_date,'YYYY-MM-DD') AS date
@@ -29,7 +46,7 @@ async function milestones(db,payment,now=new Date()) {
     if(after.warnings.length || before.warnings.length)return [];
     const value=after.rows.find(r=>r.id===payment.manager_id)?.value || 0;
     const prior=before.rows.find(r=>r.id===payment.manager_id)?.value || 0;
-    return MILESTONES.filter(n=>prior<n && value>=n);
+    return (await tiers(db)).map(t=>t.threshold).filter(n=>prior<n && value>=n);
 }
 async function teachers(db,start,end) {
     const marks=(await db.query(`SELECT a.att_key,a.student_id,a.day,a.present FROM main_attendance a
@@ -104,4 +121,4 @@ async function release(db) {
     if(inserted.rows.length && settings.releaseNotesEnabled && settings.eventsEnabled && settings.groupNotificationsEnabled)
         await require('./events').capture(db,'release',RELEASE.id,{},'release:'+RELEASE.id);
 }
-module.exports={MILESTONES,RELEASE,sales,teachers,winners,milestones,summary,run,release};
+module.exports={PRIZE_TIERS,tiers,RELEASE,sales,teachers,winners,milestones,summary,run,release};
