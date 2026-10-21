@@ -953,3 +953,116 @@ html.rd .dashboard-rank-row:not(:has(.dashboard-rank-place)) {
         display: none;
     }
 }
+
+/* ---------- Bildirishnomalar paneli ---------- */
+html.rd .notif-panel {
+    width: 400px;
+    max-height: min(560px, calc(100dvh - 96px));
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
+}
+
+html.rd .notif-list {
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+html.rd .notif-group {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 8px 18px 6px;
+    background: var(--surface);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+html.rd .notif-item {
+    padding: 12px 18px;
+    gap: 12px;
+}
+
+html.rd .notif-item:not(.read) {
+    background: color-mix(in srgb, var(--purple-light) 45%, transparent);
+}
+
+html.rd .notif-item.read {
+    opacity: 1;
+}
+
+html.rd .notif-item.read .notif-content strong,
+html.rd .notif-item.read .notif-content p {
+    color: var(--text-muted);
+}
+
+html.rd .notif-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+}
+
+html.rd .notif-icon.notif-danger { background: #FDECEC; }
+html.rd .notif-icon.notif-warning { background: #FFF4D6; }
+html.rd .notif-icon.notif-info { background: #E8F0FF; }
+html.rd[data-theme="dark"] .notif-icon.notif-danger { background: #3D1F24; }
+html.rd[data-theme="dark"] .notif-icon.notif-warning { background: #3A3018; }
+html.rd[data-theme="dark"] .notif-icon.notif-info { background: #1C2A48; }
+
+html.rd .notif-content {
+    min-width: 0;
+    flex: 1;
+}
+
+html.rd .notif-content strong {
+    font-size: 14px;
+}
+
+html.rd .notif-content p {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+html.rd .notif-time {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .notif-empty {
+    padding: 32px 18px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* Telefonda: ekran kengligida, yuqori panel ostida, chetdan chiqmaydi */
+@media (max-width: 900px) {
+    html.rd .notif-panel {
+        position: fixed;
+        top: calc(64px + env(safe-area-inset-top, 0px));
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-height: calc(100dvh - 80px - env(safe-area-inset-top, 0px));
+        border-radius: var(--radius);
+        z-index: 500;
+    }
+
+    html.rd .notif-item {
+        padding: 14px 16px;
+    }
+
+    html.rd .notif-mark-all {
+        font-size: 13px;
+        padding: 8px 0;
+    }
+}
