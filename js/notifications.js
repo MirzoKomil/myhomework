@@ -14,116 +14,98 @@ function saveNotifications(list) {
     localStorage.setItem(NOTIF_KEY, JSON.stringify(list));
 }
 
+// Bildirishnomalar rol bo'yicha quriladi va har biri haqiqiy, harakat talab
+// qiladigan holat. Ilgari: har bir eski to'lov yozuvi uchun alohida
+// "Qarzdorlik" (hammaga, ustozga ham), har kuni bir xil davomat eslatmasi,
+// jami lidlar soni va hammasida "Hozirgina" vaqti chiqardi.
+function notifTashkentDay(date = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
+function notifAt(dayKey, hhmm) {
+    return Date.parse(`${dayKey}T${hhmm}:00+05:00`);
+}
+
+function buildRoleNotifications(user, now = new Date()) {
+    const out = [];
+    const role = user?.role || '';
+    const todayKey = notifTashkentDay(now);
+    const money = n => (typeof formatMoney === 'function' ? formatMoney(n) : `${Number(n || 0).toLocaleString('uz-UZ')} so'm`);
+    let students = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo);
+
+    // Qarzdorlar — faqat pul bilan ishlaydigan rollarga; menejerga o'z o'quvchilari, ROPga o'z tili.
+    if (['admin', 'boshliq', 'rop', 'sales_manager'].includes(role)) {
+        let own = students;
+        if (role === 'sales_manager' && typeof filterStudentsForSalesManager === 'function') own = filterStudentsForSalesManager(students, user);
+        if (role === 'rop' && user.linkedRopLang) own = own.filter(s => (s.subject || 'english') === user.linkedRopLang);
+        const dueKey = s => {
+            const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
+            return d && !Number.isNaN(d.getTime()) ? notifTashkentDay(d) : null;
+        };
+        const withDebt = own.filter(s => Number(s.debtAmount || 0) > 0);
+        const overdue = withDebt.filter(s => { const k = dueKey(s); return k && k < todayKey; })
+            .sort((a, b) => Number(b.debtAmount || 0) - Number(a.debtAmount || 0));
+        const dueToday = withDebt.filter(s => dueKey(s) === todayKey);
+        if (overdue.length) {
+            const sum = overdue.reduce((a, s) => a + Number(s.debtAmount || 0), 0);
+            out.push({
+                id: `debt-overdue-${todayKey}-${overdue.length}`, type: 'danger', title: "Muddati o'tgan to'lovlar",
+                message: `${overdue.length} ta o'quvchi · ${money(sum)}. Eng kattasi: ${overdue[0].name || "O'quvchi"} — ${money(overdue[0].debtAmount)}`,
+                tab: 'sales', section: 'debtors', debtQuick: 'overdue', time: notifAt(todayKey, '09:00')
+            });
+        }
+        if (dueToday.length) {
+            out.push({
+                id: `debt-today-${todayKey}-${dueToday.length}`, type: 'warning', title: "Bugun to'lov kuni",
+                message: `${dueToday.length} ta o'quvchi: ${dueToday.slice(0, 3).map(s => s.name || "O'quvchi").join(', ')}${dueToday.length > 3 ? ` va yana ${dueToday.length - 3} ta` : ''}`,
+                tab: 'sales', section: 'debtors', debtQuick: 'all', time: notifAt(todayKey, '09:00')
+            });
+        }
+    }
+
+    // Ustozga — faqat bugun o'z darsi bo'lsa, nechta ekanini aytadi.
+    if (role === 'teacher' && user.linkedTeacherId && typeof expandLessonPatternDays === 'function') {
+        const ids = typeof getTeacherAssignmentIds === 'function' ? getTeacherAssignmentIds(user.linkedTeacherId) : new Set([String(user.linkedTeacherId)]);
+        const dow = now.getDay() || 7;
+        const mine = students.filter(s => ids.has(String(s.teacherId || '')) && s.lessonDayOfWeek != null && s.lessonTime
+            && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow) && !(s.startDate && String(s.startDate) > todayKey));
+        if (mine.length) {
+            const first = mine.map(s => s.lessonTime).sort()[0];
+            out.push({
+                id: `lessons-${todayKey}`, type: 'info', title: 'Bugungi darslar',
+                message: `Bugun ${mine.length} ta darsingiz bor, birinchisi ${first} da. Har dars tugagach davomatni belgilang.`,
+                tab: 'teachers-section', time: notifAt(todayKey, '08:00')
+            });
+        }
+    }
+
+    // Past KPI — faqat admin uchun, bitta umumiy xabar.
+    if (['admin', 'boshliq'].includes(role) && typeof calculateKpiSalary === 'function') {
+        const monthVal = getMonthKey(now);
+        const low = getItem(STORAGE_KEYS.teachers, []).filter(t => {
+            try {
+                const store = t.type === 'yordamchi' ? getItem(STORAGE_KEYS.assistantAttendance, {}) : getItem(STORAGE_KEYS.mainAttendance, {});
+                const kpi = calculateKpiSalary(t, monthVal, store);
+                return kpi.expected > 0 && kpi.kpiPercent < 50 && kpi.completed < kpi.expected;
+            } catch (e) { return false; }
+        });
+        if (low.length) {
+            out.push({
+                id: `kpi-low-${monthVal}-${low.length}`, type: 'warning', title: 'Past KPI',
+                message: `${low.length} ta ustozda bu oy KPI 50% dan past: ${low.slice(0, 3).map(t => t.name).join(', ')}${low.length > 3 ? '…' : ''}`,
+                tab: 'finance', time: notifAt(todayKey, '09:00')
+            });
+        }
+    }
+    return out;
+}
+
 function syncNotifications() {
     const existing = getNotifications();
     const readIds = new Set(existing.filter(n => n.read).map(n => n.id));
-    const fresh = [];
-
-    const students = getItem(STORAGE_KEYS.students, []);
-    const payments = getItem(STORAGE_KEYS.payments, []);
-    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
-    const monthVal = getMonthKey(new Date());
-    const today = new Date();
-    const dayNum = today.getDate();
-
-    payments.filter(p => p.debt > 0).forEach(p => {
-        const st = students.find(s => s.id === p.studentId);
-        fresh.push({
-            id: `debt_${p.id}`,
-            type: 'warning',
-            title: 'Qarzdorlik',
-            message: `${st?.name || 'O\'quvchi'} — ${formatMoney(p.debt)} qarzi bor`,
-            tab: 'payments',
-            time: Date.now()
-        });
-    });
-
-    const todayDow = today.getDay();
-    const isLessonDay = teachers.some(t => {
-        const pattern = SCHEDULE_PATTERNS[t.schedulePattern || 'mwf'];
-        return pattern.days.includes(todayDow);
-    });
-    if (isLessonDay) {
-        fresh.push({
-            id: `att_${monthVal}_${dayNum}`,
-            type: 'info',
-            title: 'Davomat eslatmasi',
-            message: 'Bugun dars kuni — davomatni belgilashni unutmang',
-            tab: 'teachers-section',
-            time: Date.now()
-        });
-    }
-
-    const timetable = getItem(STORAGE_KEYS.timetable, {});
-    const todayStr = today.toISOString().split('T')[0];
-    const probniyToday = Object.entries(timetable).filter(([k, v]) => k.startsWith(todayStr) && v.studentId);
-    if (probniyToday.length) {
-        fresh.push({
-            id: `probniy_${todayStr}`,
-            type: 'info',
-            title: 'Probniy darslar',
-            message: `Bugun ${probniyToday.length} ta probniy dars rejalashtirilgan`,
-            tab: 'timetable',
-            time: Date.now()
-        });
-    }
-
-    const totalLeads = leads.english.length + leads.russian.length;
-    const externalLeads = [...leads.english, ...leads.russian].filter(l => {
-        const s = (l.source || '').toLowerCase();
-        return s.includes('domwork') || s.includes('homework');
-    });
-    const domworkCount = externalLeads.filter(l => (l.source || '').toLowerCase().includes('domwork')).length;
-    const homeworkCount = externalLeads.filter(l => (l.source || '').toLowerCase().includes('homework')).length;
-
-    if (domworkCount > 0) {
-        fresh.push({
-            id: 'leads_domwork',
-            type: 'success',
-            title: 'Domwork lidlar',
-            message: `${domworkCount} ta lid Domwork saytidan`,
-            tab: 'sales',
-            time: Date.now()
-        });
-    }
-    if (homeworkCount > 0) {
-        fresh.push({
-            id: 'leads_homework',
-            type: 'success',
-            title: 'Homework lidlar',
-            message: `${homeworkCount} ta lid Homework saytidan`,
-            tab: 'sales',
-            time: Date.now()
-        });
-    }
-    if (totalLeads > 0 && externalLeads.length === 0) {
-        fresh.push({
-            id: 'leads_summary',
-            type: 'success',
-            title: 'Organik lidlar',
-            message: `Jami ${totalLeads} ta lid (${leads.english.length} ingliz, ${leads.russian.length} rus)`,
-            tab: 'sales',
-            time: Date.now()
-        });
-    }
-
-    teachers.forEach(t => {
-        const attStore = t.type === 'yordamchi'
-            ? getItem(STORAGE_KEYS.assistantAttendance, {})
-            : getItem(STORAGE_KEYS.mainAttendance, {});
-        const kpi = calculateKpiSalary(t, monthVal, attStore);
-        if (kpi.expected > 0 && kpi.kpiPercent < 50 && kpi.completed < kpi.expected) {
-            fresh.push({
-                id: `kpi_${t.id}_${monthVal}`,
-                type: 'warning',
-                title: 'Past KPI',
-                message: `${t.name}: ${kpi.completed}/${kpi.expected} dars (${kpi.kpiPercent}%)`,
-                tab: 'salary',
-                time: Date.now()
-            });
-        }
-    });
+    const seenAt = new Map(existing.map(n => [n.id, n.time]));
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const fresh = buildRoleNotifications(user);
 
     // CRM SLA eslatmalari app.js ichida rol va til bo'yicha filtrlanadi:
     // menejerga buyruqlar, ROPga faqat kechikishlar, adminga yakuniy eskalatsiya.
@@ -133,8 +115,9 @@ function syncNotifications() {
 
     const merged = fresh.map(n => ({
         ...n,
+        time: Number(n.time) || seenAt.get(n.id) || Date.now(),
         read: readIds.has(n.id)
-    }));
+    })).sort((a, b) => (a.read - b.read) || (b.time - a.time));
 
     saveNotifications(merged);
     return merged;
@@ -173,26 +156,40 @@ function renderNotificationPanel() {
     renderNotifListInto('settingsNotifList', list);
 }
 
+function notifDayLabel(ts) {
+    const key = notifTashkentDay(new Date(ts));
+    const today = notifTashkentDay();
+    const yesterday = notifTashkentDay(new Date(Date.now() - 86400000));
+    if (key === today) return 'Bugun';
+    if (key === yesterday) return 'Kecha';
+    return 'Oldinroq';
+}
+
 function renderNotifListInto(targetId, list) {
     const body = document.getElementById(targetId);
     if (!body) return;
 
     if (!list.length) {
-        body.innerHTML = '<div class="notif-empty">Bildirishnomalar yo\'q</div>';
+        body.innerHTML = '<div class="notif-empty">Hozircha yangi bildirishnoma yoʻq 👍</div>';
         return;
     }
 
-    body.innerHTML = list.map(n => `
-        <button type="button" class="notif-item ${n.read ? 'read' : ''}" data-notif-id="${notifEsc(n.id)}" data-notif-tab="${notifEsc(n.tab || '')}">
-            <div class="notif-icon notif-${n.type}">${notifIcon(n.type)}</div>
+    let lastGroup = null;
+    body.innerHTML = list.map(n => {
+        const group = n.read ? "O'qilgan" : notifDayLabel(n.time);
+        const head = group !== lastGroup ? `<div class="notif-group">${notifEsc(group)}</div>` : '';
+        lastGroup = group;
+        return `${head}
+        <button type="button" class="notif-item notif-item--${notifEsc(n.type || 'info')} ${n.read ? 'read' : ''}" data-notif-id="${notifEsc(n.id)}" data-notif-tab="${notifEsc(n.tab || '')}">
+            <div class="notif-icon notif-${notifEsc(n.type)}">${notifIcon(n.type)}</div>
             <div class="notif-content">
                 <strong>${notifEsc(n.title)}</strong>
                 <p>${notifEsc(n.message)}</p>
                 <span class="notif-time">${formatNotifTime(n.time)}</span>
             </div>
             ${!n.read ? '<span class="notif-dot"></span>' : ''}
-        </button>
-    `).join('');
+        </button>`;
+    }).join('');
 
     body.querySelectorAll('.notif-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -201,9 +198,11 @@ function renderNotifListInto(targetId, list) {
             const tab = item.dataset.notifTab;
             if (tab && typeof switchTab === 'function') {
                 let ctx = {};
-                if (tab === 'sales') ctx = { salesSection: 'leads' };
+                if (tab === 'sales') ctx = { salesSection: notif?.section || 'leads' };
                 else if (tab === 'teachers-section') ctx = { teachersSection: 'attendance' };
+                if (notif?.debtQuick && typeof _debtorsQuick !== 'undefined') _debtorsQuick = notif.debtQuick;
                 switchTab(tab, ctx);
+                if (notif?.section && typeof switchSalesSection === 'function') switchSalesSection(notif.section);
                 closeNotificationPanel();
                 if (notif?.leadId && typeof openLeadNotifyModal === 'function') {
                     window.setTimeout(() => openLeadNotifyModal(notif.leadLang, notif.leadId), 0);
@@ -219,16 +218,18 @@ function notifEsc(value) {
 }
 
 function notifIcon(type) {
-    const icons = { warning: '⚠️', info: 'ℹ️', success: '✅', danger: '🔴' };
+    const icons = { warning: '⏰', info: '📅', success: '✅', danger: '❗' };
     return icons[type] || '🔔';
 }
 
 function formatNotifTime(ts) {
     const diff = Date.now() - ts;
+    if (diff < 0) return new Date(ts).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
     if (diff < 60000) return 'Hozirgina';
     if (diff < 3600000) return Math.floor(diff / 60000) + ' daq oldin';
     if (diff < 86400000) return Math.floor(diff / 3600000) + ' soat oldin';
-    return new Date(ts).toLocaleDateString('uz-UZ');
+    const d = new Date(ts);
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
 }
 
 function openNotificationPanel() {
