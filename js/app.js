@@ -13152,9 +13152,9 @@ function renderAnalitikaSotuvMarketing() {
         return { ...s, count, share: total > 0 ? Math.round((count / total) * 100) : 0 };
     });
 
-    const withContact = periodLeads.filter(l => l.firstContactAt && l.date);
+    const withContact = periodLeads.filter(l => l.firstContactAt && leadCreatedMs(l));
     const speedHours = withContact
-        .map(l => (l.firstContactAt - new Date(l.date).getTime()) / 3600000)
+        .map(l => (Number(l.firstContactAt) - leadCreatedMs(l)) / 3600000)
         .filter(h => h >= 0);
     const avgSpeedHours = speedHours.length ? speedHours.reduce((a, b) => a + b, 0) / speedHours.length : null;
 
@@ -13484,8 +13484,8 @@ function hbSotuvMenejeri(period) {
 
     let cards = '';
     if (period === 'kunlik') {
-        const withContact = periodLeads.filter(l => l.firstContactAt && l.date);
-        const speedHours = withContact.map(l => (l.firstContactAt - new Date(l.date).getTime()) / 3600000).filter(h => h >= 0);
+        const withContact = periodLeads.filter(l => l.firstContactAt && leadCreatedMs(l));
+        const speedHours = withContact.map(l => (Number(l.firstContactAt) - leadCreatedMs(l)) / 3600000).filter(h => h >= 0);
         const avgSpeed = speedHours.length ? (speedHours.reduce((a, b) => a + b, 0) / speedHours.length) : null;
         cards += hbCard('💰', 'blue', 'Kunlik yopilgan sotuv summasi', fmtMoney(revenue));
         cards += hbManualCard('sotuv-menejeri', { key: 'calls', label: "Bajarilgan qo'ng'iroqlar soni", unit: 'ta', agg: 'sum' }, period, '📞');
@@ -14638,13 +14638,29 @@ function getSifatsizLidReasonLabel(lead) {
 function getLeadCrmDateKey(lead) {
     const raw = lead?.createdAt || lead?.date;
     if (!raw) return null;
+    return leadTashkentDayKey(raw);
+}
+
+// Lid sanasini Toshkent kuni (YYYY-MM-DD) sifatida beradi. ISO vaqt (createdAt,
+// UTC'da saqlanadi) Toshkent vaqtiga o'giriladi — ilgari 00:00–05:00 orasida
+// kelgan lidlar oldingi kunga yozilib qolardi. "20.10.2026" / "20/10/2026" ham tushuniladi.
+// Lid CRMga tushgan vaqt (ms). createdAt bo'lmasa — "date" (kun boshi).
+function leadCreatedMs(lead) {
+    const iso = lead?.createdAt ? Date.parse(lead.createdAt) : NaN;
+    if (Number.isFinite(iso)) return iso;
+    const key = leadTashkentDayKey(lead?.date);
+    return key ? Date.parse(key + 'T00:00:00+05:00') : 0;
+}
+
+function leadTashkentDayKey(raw) {
+    if (raw === null || raw === undefined || raw === '') return null;
     const rawText = String(raw).trim();
-    // YYYY-MM-DD bilan boshlanadigan saqlangan qiymatni vaqt zonasi sabab
-    // oldingi/kelgusi kunga siljitmasdan ishlatamiz.
-    if (/^\d{4}-\d{2}-\d{2}/.test(rawText)) return rawText.slice(0, 10);
-    const date = new Date(raw);
-    if (Number.isNaN(date.getTime())) return null;
-    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(rawText)) return rawText;
+    const dm = rawText.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+    if (dm) return `${dm[3]}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`;
+    const parsed = new Date(typeof raw === 'number' ? raw : rawText);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(parsed);
 }
 
 function getLeadSurveyAge(lead) {
@@ -14803,8 +14819,8 @@ function buildLeadQualityConversionStats(leads) {
         { label: 'Sifatsiz lidlar soni', value: `${lowQuality} ta`, detail: `Jami ${total} ta liddan`, color: '#DC2626', bg: '#FEF2F2' },
         { label: 'Sifatli lidlar foizi', value: formatQualityPercent(quality, total), detail: `${quality} ta lid`, color: '#16A34A', bg: '#F0FDF4' },
         { label: 'Sifatli lidlar soni', value: `${quality} ta`, detail: `Jami ${total} ta liddan`, color: '#16A34A', bg: '#F0FDF4' },
-        { label: 'Sifatli lidlardan konversiya', value: formatQualityPercent(sales, quality), detail: `${sales} ta sotuv / ${quality} ta sifatli lid`, color: '#2563EB', bg: '#EFF6FF' },
-        { label: 'Umumiy lidlardan konversiya', value: formatQualityPercent(sales, total), detail: `${sales} ta sotuv / ${total} ta jami lid`, color: '#7C3AED', bg: '#F5F3FF' }
+        { label: 'Sifatli liddan toʻlovga yetgan', value: formatQualityPercent(sales, quality), detail: `${sales} ta (toʻlov jarayonida + yopildi) / ${quality} ta sifatli lid`, color: '#2563EB', bg: '#EFF6FF' },
+        { label: 'Jami liddan toʻlovga yetgan', value: formatQualityPercent(sales, total), detail: `${sales} ta (toʻlov jarayonida + yopildi) / ${total} ta jami lid`, color: '#7C3AED', bg: '#F5F3FF' }
     ];
     return `
     <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
@@ -15076,6 +15092,114 @@ function buildCourseBuyersStats(leads) {
     </div>`;
 }
 
+// ===== Sotuv statistikasi: menejerlar samaradorligi va haqiqiy voronka =====
+const SALES_MAIN_PATH = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida', 'tolov-yopildi'];
+function salesPathIndex(status) {
+    const st = normalizeLeadStatus(status);
+    if (st === 'keyin-sotib-olmoqchi') return SALES_MAIN_PATH.indexOf('qaror-jarayonida');
+    return SALES_MAIN_PATH.indexOf(st);
+}
+// Lid qaysi bosqichgacha yetgani: server yozgan stageHistory + hozirgi bosqich.
+function leadReachedStage(lead) {
+    const hist = Array.isArray(lead?.stageHistory) ? lead.stageHistory : [];
+    let idx = salesPathIndex(lead?.status);
+    hist.forEach(h => { idx = Math.max(idx, salesPathIndex(h?.to)); });
+    // Har bir lid kamida "Yangi lidlar"dan o'tgan (muvaffaqiyatsiz/sifatsizga tushganlari ham).
+    return { idx: Math.max(idx, 0), hasHistory: hist.length > 0 };
+}
+
+function medianOf(nums) {
+    const a = nums.filter(n => Number.isFinite(n)).sort((x, y) => x - y);
+    if (!a.length) return null;
+    const m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+function formatContactSpeed(minutes) {
+    if (minutes === null) return '—';
+    if (minutes < 60) return `${Math.round(minutes)} daq`;
+    if (minutes < 48 * 60) return `${(minutes / 60).toFixed(1).replace('.', ',')} soat`;
+    return `${Math.round(minutes / 1440)} kun`;
+}
+
+function computeManagerPerformance(leads, managers) {
+    const names = Object.fromEntries((managers || []).map(m => [m.id, m.name]));
+    const groups = new Map();
+    leads.forEach(l => {
+        const key = l.managerId || '';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(l);
+    });
+    const revenueOf = l => Number(l.paymentClosedSurvey?.actualAmount || l.paymentClosedSurvey?.totalAmount || l.paymentSurvey?.totalAmount || 0);
+    return [...groups.entries()].map(([id, list]) => {
+        const st = l => normalizeLeadStatus(l.status);
+        const closed = list.filter(l => st(l) === 'tolov-yopildi');
+        const paying = list.filter(l => st(l) === 'tolov-jarayonida');
+        const failed = list.filter(l => st(l) === 'muvaffaqiyatsiz-sotuv');
+        const lowq = list.filter(l => st(l) === 'sifatsiz-lidlar');
+        const revenue = closed.reduce((a, l) => a + revenueOf(l), 0);
+        const speeds = list.filter(l => l.firstContactAt).map(l => (Number(l.firstContactAt) - leadCreatedMs(l)) / 60000).filter(m => m >= 0);
+        const noReason = failed.filter(l => getFailedSaleReasonLabel(l) === "Sabab ko'rsatilmagan").length;
+        return {
+            id, name: id ? (names[id] || 'Nomaʼlum menejer') : 'Biriktirilmagan',
+            total: list.length, closed: closed.length, paying: paying.length,
+            conv: list.length ? closed.length / list.length * 100 : 0,
+            revenue, avgCheck: closed.length ? Math.round(revenue / closed.length) : 0,
+            speed: medianOf(speeds), speedN: speeds.length,
+            waitingNew: list.filter(l => st(l) === 'yangi-lidlar').length,
+            failed: failed.length, lowq: lowq.length, noReason,
+        };
+    }).sort((a, b) => (a.id === '') - (b.id === '') || b.closed - a.closed || b.conv - a.conv);
+}
+
+function buildManagerPerformanceTable(leads, managers) {
+    const rows = computeManagerPerformance(leads, managers);
+    if (!rows.length) return '';
+    const pct = n => `${n.toFixed(1).replace('.', ',')}%`;
+    const money = n => n ? Number(n).toLocaleString('uz-UZ') : '—';
+    const bestConv = Math.max(...rows.filter(r => r.id && r.total >= 10).map(r => r.conv), 0);
+    return `
+    <section class="sfx-card sfx-mgr-card" aria-labelledby="sfxMgrH">
+        <div class="sfx-card-head"><h2 id="sfxMgrH">Menejerlar samaradorligi</h2><span>tanlangan filtrlar boʻyicha · konversiya = Toʻlov yopildi ÷ lidlar</span></div>
+        <div class="sfx-mgr-wrap"><table class="sfx-mgr">
+            <thead><tr><th scope="col">Menejer</th><th scope="col">Lidlar</th><th scope="col">Sotildi</th><th scope="col">Konversiya</th><th scope="col">Toʻlovda</th><th scope="col">Tushum, soʻm</th><th scope="col">Oʻrtacha chek</th><th scope="col">1-aloqa (mediana)</th><th scope="col">Yangi, javobsiz</th><th scope="col">Yoʻqotilgan</th><th scope="col">Sifatsiz</th></tr></thead>
+            <tbody>${rows.map(r => `<tr${r.id ? '' : ' class="is-unassigned"'}>
+                <th scope="row">${escapeHtml(r.name)}</th>
+                <td>${r.total}</td>
+                <td><b>${r.closed}</b></td>
+                <td class="${r.id && r.total >= 10 && r.conv === bestConv && bestConv > 0 ? 'sfx-best' : ''}">${pct(r.conv)}</td>
+                <td>${r.paying}</td>
+                <td>${money(r.revenue)}</td>
+                <td>${money(r.avgCheck)}</td>
+                <td title="${r.speedN} ta lid boʻyicha">${formatContactSpeed(r.speed)}</td>
+                <td class="${r.waitingNew ? 'sfx-warn' : ''}">${r.waitingNew}</td>
+                <td>${r.failed}${r.noReason ? ` <small class="sfx-warn" title="Sababi yozilmagan">(${r.noReason} sababsiz)</small>` : ''}</td>
+                <td>${r.lowq}</td>
+            </tr>`).join('')}</tbody>
+        </table></div>
+        <p class="sfx-note">1-aloqa — lid CRMga tushgandan menejer uni "Yangi lidlar"dan birinchi marta oʻtkazgangacha boʻlgan vaqt. Yashil — 10+ lidli menejerlar orasida eng yuqori konversiya.</p>
+    </section>`;
+}
+
+function buildReachedFunnel(leads) {
+    const reached = leads.map(leadReachedStage);
+    const withHistory = reached.filter(r => r.hasHistory).length;
+    const labels = SALES_MAIN_PATH.map(id => (FUNNEL_STAGES.find(f => f.id === id) || {}).label || id);
+    const counts = SALES_MAIN_PATH.map((_, i) => reached.filter(r => r.idx >= i).length);
+    const rows = counts.map((n, i) => {
+        const prev = i ? counts[i - 1] : n;
+        const step = i && prev ? Math.round(n / prev * 1000) / 10 : 100;
+        return `<li class="sfx-row"><span class="sfx-name">${escapeHtml(labels[i])}</span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:#6A4DF4"></span></span>
+            <span class="sfx-val"><b>${n}</b>${i ? ` · ${String(step).replace('.', ',')}% oldingidan` : ''}</span></li>`;
+    }).join('');
+    return `
+    <section class="sfx-card" aria-labelledby="sfxReachH">
+        <div class="sfx-card-head"><h2 id="sfxReachH">Qaysi bosqichgacha yetgan</h2><span>har bosqich — shu yerga yoki undan keyingiga yetgan lidlar</span></div>
+        <ol class="sfx-rows sfx-rows--wide">${rows}</ol>
+        <p class="sfx-note">Bosqichlar tarixi ${withHistory} / ${leads.length} ta lidda bor (server 21-oktabrdan yozmoqda). Tarixi yoʻq lidlar hozirgi bosqichi boʻyicha hisoblanadi — muvaffaqiyatsiz/sifatsizga oʻtganlarining oldingi bosqichlari hali koʻrinmaydi, shuning uchun bu raqamlar vaqt oʻtishi bilan aniqlashadi.</p>
+    </section>`;
+}
+
 function buildReasonsChart(reasonRows, { title, emptyText, centerLabel }) {
     const total = reasonRows.reduce((sum, row) => sum + row.count, 0);
     if (!total) {
@@ -15177,11 +15301,8 @@ function renderSalesFunnel() {
     const assignedFilteredLeads = !_assignedFrom
         ? mgrFilteredLeads
         : mgrFilteredLeads.filter(l => {
-            const raw = l.managerAssignedAt || l.createdAt || l.date;
-            if (!raw) return false;
-            const assigned = new Date(raw);
-            if (Number.isNaN(assigned.getTime())) return false;
-            const assignedDate = assigned.toISOString().slice(0, 10);
+            const assignedDate = leadTashkentDayKey(l.managerAssignedAt || l.createdAt || l.date);
+            if (!assignedDate) return false;
             return assignedDate >= _assignedFrom && assignedDate <= _assignedTo;
         });
 
@@ -15195,11 +15316,8 @@ function renderSalesFunnel() {
     const filteredLeads = !_createdFrom
         ? assignedFilteredLeads
         : assignedFilteredLeads.filter(l => {
-            const raw = l.createdAt || l.date;
-            if (!raw) return false;
-            const created = new Date(raw);
-            if (Number.isNaN(created.getTime())) return false;
-            const createdDate = created.toISOString().slice(0, 10);
+            const createdDate = leadTashkentDayKey(l.createdAt || l.date);
+            if (!createdDate) return false;
             return createdDate >= _createdFrom && createdDate <= _createdTo;
         });
 
@@ -15339,7 +15457,7 @@ function renderSalesFunnel() {
             <span class="sfx-val"><b>${st.count}</b> · ${st.share}%</span>
         </li>`).join('');
     const tiles = [
-        ['Umumiy konversiya', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
+        ['Konversiya (toʻlov yopildi)', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
         ['Sotildi', String(converted), 'Toʻlov yopildi bosqichida'],
         ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
         ['Voronkadan chiqqan', String(failedCount + sifatsizCount), `muvaffaqiyatsiz ${failedCount} · sifatsiz ${sifatsizCount}`],
@@ -15373,6 +15491,9 @@ function renderSalesFunnel() {
             <p class="sfx-note">${converted} sotildi + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${converted + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
         </section>
     </div>
+    ${isSalesManagerFunnel ? '' : buildManagerPerformanceTable(filteredLeads, getItem(STORAGE_KEYS.salesManagers, []))}
+    ${buildReachedFunnel(filteredLeads)}
+
     <div class="sfx-2col">
     ${buildReasonsChart(failedReasonRows, {
         title: 'Muvaffaqiyatsiz sotuv sabablari',

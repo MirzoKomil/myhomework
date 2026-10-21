@@ -9030,3 +9030,17 @@ body.modal-open {
 .lead-col-more:hover{background:#fff}
 .lead-column-header:has(.lead-col-pick){flex-wrap:wrap;row-gap:6px}
 .lead-col-pick{order:10;flex-basis:auto}
+
+/* ===== Statistika · menejerlar samaradorligi ===== */
+.sfx-mgr-card{margin-bottom:16px}
+.sfx-mgr-wrap{overflow-x:auto}
+.sfx-mgr{width:100%;min-width:900px;border-collapse:collapse;font-size:13px}
+.sfx-mgr th,.sfx-mgr td{padding:10px 8px;border-top:1px solid var(--border);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sfx-mgr thead th{border-top:0;font-size:12px;font-weight:600;color:var(--mx-muted)}
+.sfx-mgr th[scope=row],.sfx-mgr thead th:first-child{text-align:left}
+.sfx-mgr th[scope=row]{font-weight:700;color:var(--text)}
+.sfx-mgr tr.is-unassigned th,.sfx-mgr tr.is-unassigned td{color:var(--mx-muted);font-style:italic}
+.sfx-best{color:#0F7A55;font-weight:800}
+.sfx-warn{color:#B45309;font-weight:700}
+#tab-sales .sfx-card + .sfx-card,#tab-sales .sfx-mgr-card + .sfx-card{margin-bottom:16px}
+.sfx-rows--wide .sfx-row{grid-template-columns:minmax(150px,210px) minmax(0,1fr) 170px}

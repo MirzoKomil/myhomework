@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const leadStageHistory = require('./services/leadStageHistory');
 const { randomUUID } = require('crypto');
 const path = require('path');
 const fs = require('fs');
@@ -1472,6 +1473,13 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
         merged.managerAssignedAt = merged.managerId ? new Date().toISOString() : null;
     } else if (!existingRow && merged.managerId && !merged.managerAssignedAt) {
         merged.managerAssignedAt = new Date().toISOString();
+    }
+
+    // Bosqichlar tarixi (voronka konversiyasi uchun) — faqat server yozadi.
+    if (typeof leadStageHistory !== 'undefined') {
+        merged.stageHistory = leadStageHistory.nextStageHistory(before, merged, {
+            isNew: !existingRow, at: new Date().toISOString(), actor: options.actor
+        });
     }
 
     // Telegram/CSV kabi tarixiy manbadan tiklangan lidlar eski sanasi bilan
