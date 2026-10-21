@@ -1066,3 +1066,304 @@ html.rd .notif-empty {
         padding: 8px 0;
     }
 }
+
+/* ---------- Reyting: Oy liderlari, Bugungi obed, Hafta sovg'alari ---------- */
+html.rd .rtx-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: start;
+}
+
+html.rd .rtx-card {
+    padding: 20px;
+    margin: 0;
+}
+
+html.rd .rtx-card-h {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+html.rd .rtx-card-h h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+html.rd .rtx-card-h p {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .rtx-tiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+html.rd .rtx-tiers span {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #FFF4D6;
+    color: #8A5A00;
+    font-size: 12px;
+}
+
+html.rd[data-theme="dark"] .rtx-tiers span {
+    background: #3A3018;
+    color: #FFC94D;
+}
+
+html.rd .rtx-podium {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+html.rd .rtx-pod {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 8px 0;
+    border-radius: 14px;
+    text-align: center;
+    min-width: 0;
+}
+
+html.rd .rtx-pod--1 {
+    background: linear-gradient(180deg, #FFF4D6 0%, transparent 100%);
+    padding-top: 16px;
+}
+
+html.rd[data-theme="dark"] .rtx-pod--1 {
+    background: linear-gradient(180deg, #3A3018 0%, transparent 100%);
+}
+
+html.rd .rtx-place {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: #E6E8EF;
+    color: #3A3F55;
+}
+
+html.rd .rtx-pod--1 .rtx-place { background: #FFC94D; color: #5A3A00; }
+html.rd .rtx-pod--3 .rtx-place { background: #F3C9A0; color: #6B3A10; }
+
+html.rd .rtx-ava {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+    font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+html.rd .rtx-ava--sm {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+}
+
+html.rd .rtx-name {
+    font-size: 14px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+html.rd .rtx-sum {
+    font-size: 22px;
+    letter-spacing: -0.4px;
+    color: var(--text);
+}
+
+html.rd .rtx-meta,
+html.rd .rtx-cond {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .rtx-prize {
+    margin-top: 4px;
+    padding: 3px 10px;
+    border: 1.5px dashed var(--purple);
+    border-radius: 999px;
+    color: var(--rd-primary-strong);
+    font-weight: 700;
+    font-size: 15px;
+}
+
+html.rd .rtx-prize.is-ok {
+    border-style: solid;
+    border-color: #0F7A55;
+    color: #0F7A55;
+    background: #E3F6EE;
+}
+
+html.rd .rtx-step {
+    display: block;
+    width: 100%;
+    height: 24px;
+    margin-top: 8px;
+    border-radius: 10px 10px 0 0;
+    background: var(--purple-light);
+}
+
+html.rd .rtx-pod--1 .rtx-step {
+    height: 44px;
+    background: linear-gradient(180deg, #FFC94D, #F5A623);
+}
+
+html.rd .rtx-obed {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .rtx-obed li {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+html.rd .rtx-obed li:last-child {
+    border-bottom: 0;
+}
+
+html.rd .rtx-obed li > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .rtx-obed strong {
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .rtx-obed b {
+    font-size: 16px;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+html.rd .rtx-chip {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--rd-col);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+html.rd .rtx-chip.is-ok {
+    background: #E3F6EE;
+    color: #0F7A55;
+}
+
+html.rd[data-theme="dark"] .rtx-chip.is-ok,
+html.rd[data-theme="dark"] .rtx-prize.is-ok {
+    background: #173A2C;
+    color: #4ADE9B;
+    border-color: #4ADE9B;
+}
+
+html.rd .rtx-week {
+    margin: 16px 0;
+}
+
+html.rd .rtx-week-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+html.rd .rtx-week-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--purple-light);
+    min-width: 0;
+}
+
+html.rd .rtx-week-list li > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text);
+}
+
+html.rd .rtx-week-list strong {
+    font-size: 16px;
+}
+
+html.rd .rtx-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--rd-primary-strong);
+}
+
+@media (max-width: 1100px) {
+    html.rd .rtx-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    html.rd .rtx-week-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    html.rd .rtx-sum {
+        font-size: 17px;
+    }
+
+    html.rd .rtx-ava {
+        width: 40px;
+        height: 40px;
+    }
+
+    html.rd .rtx-obed li {
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+    }
+
+    html.rd .rtx-obed .rtx-chip {
+        grid-column: 2 / -1;
+        justify-self: start;
+    }
+}
