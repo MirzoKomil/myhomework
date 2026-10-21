@@ -107,11 +107,13 @@ async function processOne(db) {
                 await groupMessage(db,key+':sales','sales',summary);
                 await privateMessage(db,key+':manager',await employee(db,payment.manager_id),summary);
                 if(payment.student_id) await privateMessage(db,key+':student',await linked(db,'student',payment.student_id),`To‘lovingiz qabul qilindi: ${money(payment.amount)}.`,{_studentId:payment.student_id});
+                const prizeTiers=settings.milestonesEnabled?await require('./recognition').tiers(db):[];
                 if(settings.milestonesEnabled && row.data.month===policy.today().slice(0,7)) for(const threshold of row.data.milestones || []) {
-                    if(!require('./recognition').MILESTONES.includes(threshold))continue;
+                    const tier=prizeTiers.find(t=>t.threshold===threshold);
+                    if(!tier)continue;
                     const month=policy.today().slice(0,7), milestoneKey=`milestone:${payment.manager_id}:${month}:${threshold}`;
                     await require('./scheduler').once(db,milestoneKey,()=>groupMessage(db,milestoneKey,'sales',
-                        `🎉 ${payment.snapshot.managerName} oylik sof tushumda ${money(threshold)} pog‘onasiga chiqdi! Tabriklaymiz!`,
+                        `🎉 ${payment.snapshot.managerName} oylik sotuvda ${money(threshold)} dan oshdi — “${tier.label}” sovg‘asi pog‘onasiga chiqdi! Tabriklaymiz!`,
                         {_setting:'milestonesEnabled',_settings:['eventsEnabled'],_milestone:{managerId:payment.manager_id,month,threshold},_expiresAt:new Date(Date.now()+3600000).toISOString()}));
                 }
             }

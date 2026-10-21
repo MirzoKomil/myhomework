@@ -237,8 +237,9 @@ function createHandler({ crm }) {
                     const row = (await db.query("SELECT phone,extra_data FROM students WHERE id=$1 AND subject='russian'", [identity.id])).rows[0];
                     const last4 = policy.phone(row?.phone).slice(-4);
                     const original = last4.length === 4 && row?.extra_data?.passwordHash && await bcrypt.compare(last4, row.extra_data.passwordHash);
+                    // Parolning o'zi chatga yozilmaydi: Telegram tarixi va bildirishnomalarda qolib ketadi.
                     return await reply(`Platforma: https://myhomework.uz/student/\nLogin: ${text(row?.extra_data?.login || '+' + policy.phone(row?.phone))}\n`
-                        + (original ? `Parol: ${last4}` : 'Parol o‘zgartirilgan. Uni ko‘rsatish yoki tiklash uchun administratorga murojaat qiling.'));
+                        + (original ? 'Parol: boshlang‘ich parol — telefon raqamingizning oxirgi 4 raqami. Kirgach, uni o‘zgartirishingizni tavsiya qilamiz.' : 'Parol o‘zgartirilgan. Unutgan bo‘lsangiz, tiklash uchun administratorga murojaat qiling.'));
                 }
                 if (action === 'grades') {
                     const result = await crm.getDemoStudentGrades(identity.id);

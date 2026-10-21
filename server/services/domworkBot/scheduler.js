@@ -48,6 +48,12 @@ async function run(db,now=new Date()) {
         for(const student of students) {
             const at=scheduledToday(student,now);
             if(!at) continue;
+            // Har 30 soniyada barcha o'quvchilar uchun bazaga so'rov yubormaslik:
+            // aloqa va guruh faqat biror eslatma vaqti kelganda o'qiladi.
+            const lessonEnd=new Date(at.getTime()+(Number(student.lesson_duration)||15)*60000);
+            const due=[30,5].some(minute=>checkpoint(at,minute,now)) || checkpoint(lessonEnd,-15,now)
+                || (student.assistant_teacher_id && clock.hour===21 && clock.minute<2);
+            if(!due) continue;
             const atText=at.toISOString(), identity=await events.linked(db,'student',student.id);
             const group=await groups.forStudent(db,student.id,{delivery:true});
             for(const minute of [30,5]) if(checkpoint(at,minute,now)) await once(db,`class:${student.id}:${atText}:${minute}`,async()=>{
