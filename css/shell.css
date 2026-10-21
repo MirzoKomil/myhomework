@@ -1979,3 +1979,61 @@ html.rd .hrx-side .employee-card {
         grid-row: 1;
     }
 }
+
+/* ---------- To'lov jarayoni: qadamlar va tanlov kartalari ---------- */
+html.rd .pay-steps {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+html.rd .pay-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 3px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    min-width: 0;
+}
+
+html.rd .pay-step-n {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--rd-col);
+    font-size: 12px;
+}
+
+html.rd .pay-step.is-now {
+    border-top-color: var(--purple);
+    color: var(--rd-primary-strong);
+}
+
+html.rd .pay-step.is-now .pay-step-n {
+    background: var(--purple);
+    color: #fff;
+}
+
+html.rd .pay-step.is-done {
+    border-top-color: #0F7A55;
+    color: #0F7A55;
+}
+
+html.rd .pay-step.is-done .pay-step-n {
+    background: #E3F6EE;
+}
+
+@media (max-width: 520px) {
+    html.rd .pay-step span:last-child {
+        font-size: 11px;
+    }
+}
