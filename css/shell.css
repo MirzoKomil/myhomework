@@ -383,3 +383,175 @@ html.rd .trial-attendance-filter button.active {
     background: var(--purple-light);
     color: var(--rd-primary-strong);
 }
+
+/* ---------- Telefon: Sotuv sarlavhasi ixcham (2 qator) ---------- */
+@media (max-width: 900px) {
+    html.rd .sales-header-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: auto auto auto;
+        gap: 8px;
+    }
+
+    html.rd .sales-header-nav {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    html.rd .sales-header-lang {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    html.rd .leads-add-btn {
+        grid-column: 2;
+        grid-row: 2;
+        width: auto;
+        min-height: 40px;
+        padding: 8px 14px;
+    }
+
+    html.rd .leads-filters-bar {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    html.rd .leads-filter-box,
+    html.rd .leads-columns-filter-wrap {
+        flex: 1 1 0;
+        width: auto;
+    }
+
+    html.rd .sales-header-lang .leads-lang-tabs {
+        flex-wrap: nowrap;
+        gap: 4px;
+    }
+
+    html.rd .sales-header-lang .subject-tab {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    html.rd .section-nav {
+        gap: 20px;
+    }
+
+    html.rd .section-nav-item {
+        font-size: 14px;
+        padding: 12px 0;
+    }
+
+    html.rd .lead-column {
+        padding-top: 0;
+    }
+
+    html.rd .lead-column-header {
+        margin: 0 -12px 8px;
+        padding: 12px 14px 8px;
+    }
+}
+
+/* ---------- Telefon: O'quvchilar jadvali kartaga aylanadi ---------- */
+@media (max-width: 700px) {
+    html.rd .students-table:has(tr[data-student-row]) thead {
+        display: none;
+    }
+
+    html.rd .students-table:has(tr[data-student-row]),
+    html.rd .students-table:has(tr[data-student-row]) tbody {
+        display: block;
+        min-width: 0;
+        width: 100%;
+    }
+
+    html.rd .students-table tr[data-student-row] {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) 36px;
+        column-gap: 8px;
+        row-gap: 4px;
+        padding: 12px 4px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    html.rd .students-table tr[data-student-row] > td {
+        display: block;
+        padding: 0;
+        border: 0;
+        text-align: left !important;
+        white-space: normal !important;
+        grid-column: 2;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1;
+        padding-top: 10px;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(2) {
+        grid-row: 1;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(8) {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(4) {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(4)::before {
+        content: 'Menejer: ';
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(5) .stx-main,
+    html.rd .students-table tr[data-student-row] > td:nth-child(6) .stx-main {
+        display: inline;
+        margin-right: 6px;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(5) > div,
+    html.rd .students-table tr[data-student-row] > td:nth-child(6) > div {
+        display: inline;
+        margin-right: 6px;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(6)::before {
+        content: 'Darslar: ';
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    html.rd .students-table tr[data-student-row] .stx-who {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 700px) {
+    html.rd .students-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    html.rd .students-toolbar-left {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    html.rd .students-search-wrap {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    html.rd .students-search-input {
+        width: 100%;
+    }
+
+    html.rd .students-toolbar > .btn-primary-sm {
+        flex: 1 1 100%;
+    }
+}
