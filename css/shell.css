@@ -1790,3 +1790,192 @@ html.rd .lov-note-actions {
 html.rd .lov-note-actions .btn-primary-sm {
     min-height: 40px;
 }
+
+/* ---------- HR: Xodimlar jadval + tanlangan xodim paneli ---------- */
+html.rd #hrEmployeesGrid {
+    display: block;
+}
+
+html.rd .hrx {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+html.rd .hrx-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+
+html.rd .hrx-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+html.rd .hrx-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--rd-hover);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+html.rd .hrx-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+}
+
+html.rd .hrx-table tbody tr {
+    cursor: pointer;
+}
+
+html.rd .hrx-table tbody tr:hover {
+    background: var(--rd-hover);
+}
+
+html.rd .hrx-table tbody tr.is-selected {
+    background: var(--purple-light);
+}
+
+html.rd .hrx-table tbody tr:focus-visible {
+    outline: 2px solid var(--purple);
+    outline-offset: -2px;
+}
+
+html.rd .hrx-who {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+}
+
+html.rd .hrx-who > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .hrx-who strong {
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .hrx-ava {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+html.rd .hrx-role {
+    font-weight: 600;
+}
+
+html.rd .hrx-sub {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .hrx-chip {
+    margin-left: 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #E8F0FF;
+    color: #1E5BD8;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+html.rd .hrx-status {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #E3F6EE;
+    color: #0F7A55;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+html.rd .hrx-status.is-off {
+    background: var(--rd-col);
+    color: var(--text-muted);
+}
+
+html.rd[data-theme="dark"] .hrx-chip { background: #1C2A48; color: #7EA8FF; }
+html.rd[data-theme="dark"] .hrx-status:not(.is-off) { background: #173A2C; color: #4ADE9B; }
+
+html.rd .hrx-side {
+    position: sticky;
+    top: 0;
+}
+
+html.rd .hrx-side .employee-card {
+    margin: 0;
+    width: 100%;
+}
+
+@media (max-width: 1100px) {
+    html.rd .hrx {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    html.rd .hrx-side {
+        position: static;
+        order: -1;
+    }
+}
+
+@media (max-width: 640px) {
+    html.rd .hrx-table thead {
+        display: none;
+    }
+
+    html.rd .hrx-table,
+    html.rd .hrx-table tbody {
+        display: block;
+    }
+
+    html.rd .hrx-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 4px 12px;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    html.rd .hrx-table td {
+        padding: 0;
+        border: 0;
+    }
+
+    html.rd .hrx-table td:nth-child(2) {
+        grid-column: 1;
+        padding-left: 46px;
+    }
+
+    html.rd .hrx-table td:nth-child(3) {
+        display: none;
+    }
+
+    html.rd .hrx-table td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1;
+    }
+}

@@ -23039,6 +23039,7 @@ function getHrFiltered(employees) {
     return employees.filter(e => e.role === _hrRoleFilter);
 }
 
+let _hrSelectedEmpId = null;
 function renderHrEmployees() {
     const employees = seedHrEmployees();
     migrateHrCredentials();
@@ -23058,7 +23059,28 @@ function renderHrEmployees() {
             <p class="text-muted">Tanlangan filtr bo'yicha xodimlar mavjud emas.</p>
         </div>`;
     } else {
-        grid.innerHTML = filtered.map(e => renderHrEmployeeCard(e)).join('');
+        if (!filtered.some(e => e.id === _hrSelectedEmpId)) _hrSelectedEmpId = filtered[0].id;
+        const selected = filtered.find(e => e.id === _hrSelectedEmpId);
+        const langChip = e => e.lang === 'russian' || e.role === 'rus-oqituvchi' ? '<span class="hrx-chip">Rus</span>'
+            : (e.lang === 'english' || e.role === 'ingliz-oqituvchi') ? '<span class="hrx-chip">Ingliz</span>' : '';
+        const fmtJoin = v => { const d = v ? new Date(v) : null; return d && !Number.isNaN(d.getTime()) ? `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}` : '—'; };
+        grid.innerHTML = `<div class="hrx">
+            <div class="hrx-table-wrap"><table class="hrx-table">
+                <thead><tr><th scope="col">Xodim</th><th scope="col">Lavozim · boʻlim · til</th><th scope="col">Boshlagan</th><th scope="col">Holat</th></tr></thead>
+                <tbody>${filtered.map(e => `<tr class="${e.id === _hrSelectedEmpId ? 'is-selected' : ''}" data-hrx-row="${escapeHtml(e.id)}" tabindex="0" aria-selected="${e.id === _hrSelectedEmpId}">
+                    <td><div class="hrx-who"><span class="hrx-ava">${escapeHtml(getUserInitials(e.name))}</span><div><strong>${escapeHtml(e.name)}</strong><span>${escapeHtml(formatPhoneDisplay(e.phone) || '—')}</span><span>${escapeHtml(e.email || 'email kiritilmagan')}</span></div></div></td>
+                    <td><strong class="hrx-role">${escapeHtml(HR_ROLE_MAP[e.role] || e.role || '—')}</strong><div class="hrx-sub">${escapeHtml(e.department || '—')} ${langChip(e)}</div></td>
+                    <td>${fmtJoin(e.joinDate)}</td>
+                    <td><span class="hrx-status${e.status === 'active' ? '' : ' is-off'}">${e.status === 'active' ? 'Faol' : 'Faol emas'}</span></td>
+                </tr>`).join('')}</tbody>
+            </table></div>
+            <aside class="hrx-side" aria-label="Tanlangan xodim">${selected ? renderHrEmployeeCard(selected) : ''}</aside>
+        </div>`;
+        grid.querySelectorAll('[data-hrx-row]').forEach(row => {
+            const pick = () => { _hrSelectedEmpId = row.dataset.hrxRow; renderHrEmployees(); if (window.innerWidth <= 900) document.querySelector('.hrx-side')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+            row.addEventListener('click', pick);
+            row.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pick(); } });
+        });
         filtered.forEach(e => {
             if (!e.avatar) return;
             const img = grid.querySelector(`[data-emp-avatar="${CSS.escape(e.id)}"] img.employee-avatar-img`);
