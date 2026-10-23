@@ -16532,8 +16532,15 @@ function renderSalesFunnel() {
     const failedCount = extraStagesData[0].count;
     const sifatsizCount = extraStagesData[1].count;
     // Sotuvlar: yarim toʻlov (tolov-jarayonida) + toʻliq toʻlov (tolov-yopildi)
-    const partialCount = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-jarayonida').length;
+    const partialLeads = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-jarayonida');
+    const fullLeads = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
+    const partialCount = partialLeads.length;
     const totalSold = converted + partialCount; // converted = tolov-yopildi
+    // Summa hisoblash
+    const partialRevenue = partialLeads.reduce((s, l) => s + Number(l?.paymentSurvey?.paidAmount || 0), 0);
+    const fullRevenue = fullLeads.reduce((s, l) => s + Number(l?.paymentClosedSurvey?.actualAmount || l?.paymentClosedSurvey?.totalAmount || l?.paymentSurvey?.totalAmount || 0), 0);
+    const totalRevenue = partialRevenue + fullRevenue;
+    const fmtSum = n => n > 0 ? Number(n).toLocaleString('uz-UZ') + ' so'm' : '—';
     const maxCount = Math.max(1, ...stagesData.map(x => x.count));
     const pctTxt = n => String(n).replace('.', ',');
     const barRows = stagesData.map(st => `
@@ -16544,7 +16551,7 @@ function renderSalesFunnel() {
         </li>`).join('');
     const tiles = [
         ['Konversiya (toʻlov yopildi)', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
-        ['Sotildi', String(totalSold), `Yarim toʻlov: ${partialCount} · Toʻliq: ${converted}`],
+        ['Sotildi', String(totalSold), `Yarim toʻlov: ${partialCount} · Toʻliq: ${converted} · ${fmtSum(totalRevenue)}`],
         ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
         ['Voronkadan chiqqan', String(failedCount + sifatsizCount), `muvaffaqiyatsiz ${failedCount} · sifatsiz ${sifatsizCount}`],
     ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('');
@@ -16572,9 +16579,9 @@ function renderSalesFunnel() {
                 <div><dt>Hali jarayonda (ochiq bosqichlarda)</dt><dd>${inProgress}</dd></div>
                 <div><dt>Keyin sotib olmoqchi</dt><dd>${laterCount}</dd></div>
                 ${extraStagesData.map(st => `<div><dt><i style="background:${st.color}"></i>${escapeHtml(st.label)}</dt><dd>${st.count} <small>· ${st.share}%</small></dd></div>`).join('')}
-                <div class="sfx-out-total"><dt>Sotildi (jami)</dt><dd>${totalSold}</dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yarim toʻlov (Toʻlov jarayonida)</dt><dd style="font-size:13px">${partialCount}</dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʻliq toʻlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted}</dd></div>
+                <div class="sfx-out-total"><dt>Sotildi (jami)</dt><dd>${totalSold} <small style="font-weight:400;color:var(--text-muted)">${fmtSum(totalRevenue)}</small></dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yarim toʻlov (Toʻlov jarayonida)</dt><dd style="font-size:13px">${partialCount} <small style="color:var(--text-muted)">${fmtSum(partialRevenue)}</small></dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʻliq toʻlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted} <small style="color:var(--text-muted)">${fmtSum(fullRevenue)}</small></dd></div>
             </dl>
             <p class="sfx-note">${totalSold} sotildi (${partialCount} yarim + ${converted} toʻliq) + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${totalSold + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
         </section>
