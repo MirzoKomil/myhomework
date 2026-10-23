@@ -124,6 +124,8 @@ test('actual state router blocks teacher bulk writes, scopes reads and ignores f
   const context = vm.createContext({ module: route, console, require: name => {
     if (name === 'express') return require('express');
     if (name === '../services/stateScope') return require('../server/services/stateScope');
+    if (name === '../services/teacherDuties') return require('../server/services/teacherDuties');
+    if (name === '../services/teacherRating') return require('../server/services/teacherRating');
     if (name === '../middleware/auth') return { studentAuthOptional: (_req, _res, next) => next(),
       authRequired: (req, res, next) => req.user ? next() : res.status(401).json({ error: 'Auth' }) };
     if (name === '../db') return { findUserById: async () => actor,
