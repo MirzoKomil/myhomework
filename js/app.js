@@ -16540,6 +16540,7 @@ function renderSalesFunnel() {
     const partialRevenue = partialLeads.reduce((s, l) => s + Number(l?.paymentSurvey?.paidAmount || 0), 0);
     const fullRevenue = fullLeads.reduce((s, l) => s + Number(l?.paymentClosedSurvey?.actualAmount || l?.paymentClosedSurvey?.totalAmount || l?.paymentSurvey?.totalAmount || 0), 0);
     const totalRevenue = partialRevenue + fullRevenue;
+    const avgCheck = totalSold > 0 && totalRevenue > 0 ? Math.round(totalRevenue / totalSold) : 0;
     const fmtSum = n => n > 0 ? Number(n).toLocaleString('uz-UZ') + " so’m" : '—';
     const maxCount = Math.max(1, ...stagesData.map(x => x.count));
     const pctTxt = n => String(n).replace('.', ',');
@@ -16551,9 +16552,9 @@ function renderSalesFunnel() {
         </li>`).join('');
     const tiles = [
         ['Konversiya (toʻlov yopildi)', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
-        ['Sotildi', String(totalSold), `Yarim toʻlov: ${partialCount} · Toʻliq: ${converted} · ${fmtSum(totalRevenue)}`],
+        ['Sotildi (jami tushum)', fmtSum(totalRevenue), `${partialCount} yarim + ${converted} toʻliq = ${totalSold} ta`],
         ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
-        ['Voronkadan chiqqan', String(failedCount + sifatsizCount), `muvaffaqiyatsiz ${failedCount} · sifatsiz ${sifatsizCount}`],
+        ['Oʻrtacha chek', fmtSum(avgCheck), totalSold > 0 ? `${totalSold} ta sotuvga asosan` : 'maʼlumot yoʻq'],
     ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('');
 
     panel.innerHTML = `
@@ -16579,9 +16580,10 @@ function renderSalesFunnel() {
                 <div><dt>Hali jarayonda (ochiq bosqichlarda)</dt><dd>${inProgress}</dd></div>
                 <div><dt>Keyin sotib olmoqchi</dt><dd>${laterCount}</dd></div>
                 ${extraStagesData.map(st => `<div><dt><i style="background:${st.color}"></i>${escapeHtml(st.label)}</dt><dd>${st.count} <small>· ${st.share}%</small></dd></div>`).join('')}
-                <div class="sfx-out-total"><dt>Sotildi (jami)</dt><dd>${totalSold} <small style="font-weight:400;color:var(--text-muted)">${fmtSum(totalRevenue)}</small></dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yarim toʻlov (Toʻlov jarayonida)</dt><dd style="font-size:13px">${partialCount} <small style="color:var(--text-muted)">${fmtSum(partialRevenue)}</small></dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʻliq toʻlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted} <small style="color:var(--text-muted)">${fmtSum(fullRevenue)}</small></dd></div>
+                <div class="sfx-out-total"><dt>Sotildi (jami tushum)</dt><dd>${totalSold} ta · <b>${fmtSum(totalRevenue)}</b></dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yarim toʿlov (Toʻlov jarayonida)</dt><dd style="font-size:13px">${partialCount} ta · <span style="color:var(--text-muted)">${fmtSum(partialRevenue)}</span></dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʿlio toʿlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted} ta · <span style="color:var(--text-muted)">${fmtSum(fullRevenue)}</span></dd></div>
+                ${avgCheck > 0 ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">Oʻrtacha chek</dt><dd style="font-size:14px;font-weight:600">${fmtSum(avgCheck)}</dd></div>` : ''}
             </dl>
             <p class="sfx-note">${totalSold} sotildi (${partialCount} yarim + ${converted} toʻliq) + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${totalSold + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
         </section>
