@@ -16526,11 +16526,14 @@ function renderSalesFunnel() {
     const assignedDateFilterHtml = _funnelDateFilterHtml('funnelAssignedDate', "Lid biriktirilgan kun bo'yicha", _salesFunnelAssignedFrom, _salesFunnelAssignedTo);
     const createdDateFilterHtml = _funnelDateFilterHtml('funnelCreatedDate', "Lid CRMga kelib tushgan kun bo'yicha", _salesFunnelCreatedFrom, _salesFunnelCreatedTo);
 
-    const openStages = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida'];
+    const openStages = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida'];
     const inProgress = filteredLeads.filter(l => openStages.includes(normalizeLeadStatus(l.status))).length;
     const laterCount = stagesData.find(x => x.id === 'keyin-sotib-olmoqchi')?.count || 0;
     const failedCount = extraStagesData[0].count;
     const sifatsizCount = extraStagesData[1].count;
+    // Sotuvlar: yarim toʻlov (tolov-jarayonida) + toʻliq toʻlov (tolov-yopildi)
+    const partialCount = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-jarayonida').length;
+    const totalSold = converted + partialCount; // converted = tolov-yopildi
     const maxCount = Math.max(1, ...stagesData.map(x => x.count));
     const pctTxt = n => String(n).replace('.', ',');
     const barRows = stagesData.map(st => `
@@ -16541,7 +16544,7 @@ function renderSalesFunnel() {
         </li>`).join('');
     const tiles = [
         ['Konversiya (toʻlov yopildi)', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
-        ['Sotildi', String(converted), 'Toʻlov yopildi bosqichida'],
+        ['Sotildi', String(totalSold), `Yarim toʻlov: ${partialCount} · Toʻliq: ${converted}`],
         ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
         ['Voronkadan chiqqan', String(failedCount + sifatsizCount), `muvaffaqiyatsiz ${failedCount} · sifatsiz ${sifatsizCount}`],
     ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('');
@@ -16569,9 +16572,11 @@ function renderSalesFunnel() {
                 <div><dt>Hali jarayonda (ochiq bosqichlarda)</dt><dd>${inProgress}</dd></div>
                 <div><dt>Keyin sotib olmoqchi</dt><dd>${laterCount}</dd></div>
                 ${extraStagesData.map(st => `<div><dt><i style="background:${st.color}"></i>${escapeHtml(st.label)}</dt><dd>${st.count} <small>· ${st.share}%</small></dd></div>`).join('')}
-                <div class="sfx-out-total"><dt>Sotildi (Toʻlov yopildi)</dt><dd>${converted}</dd></div>
+                <div class="sfx-out-total"><dt>Sotildi (jami)</dt><dd>${totalSold}</dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yarim toʻlov (Toʻlov jarayonida)</dt><dd style="font-size:13px">${partialCount}</dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʻliq toʻlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted}</dd></div>
             </dl>
-            <p class="sfx-note">${converted} sotildi + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${converted + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
+            <p class="sfx-note">${totalSold} sotildi (${partialCount} yarim + ${converted} toʻliq) + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${totalSold + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
         </section>
     </div>
     ${isSalesManagerFunnel ? '' : buildManagerPerformanceTable(filteredLeads, getItem(STORAGE_KEYS.salesManagers, []))}
