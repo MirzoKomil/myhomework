@@ -12,7 +12,7 @@ const {
     listCandidates, getCandidateById, updateCandidate, deleteCandidate,
     getMedia, insertCandidate, addMedia, MAX_MEDIA_BYTES,
 } = require('../services/hrCandidates');
-const { HR_STAGES, normalizeHrStage, VACANCIES, VACANCY_BY_ID } = require('../services/hrStages');
+const { HR_STAGES, HR_STAGE_LABEL_BY_ID, normalizeHrStage, VACANCIES, VACANCY_BY_ID } = require('../services/hrStages');
 const { VACANCY_QUESTIONS } = require('../services/hrQuestions');
 const hrBot = require('../services/hrBot');
 
@@ -104,15 +104,58 @@ router.get('/candidates/:id', authRequired, hrAccess, async (req, res) => {
     }
 });
 
+// 127-ish: "Izohlar va tarix" — qo'lda yozilgan izohlardan tashqari,
+// bosqich/suhbat o'zgarganda tizim o'zi bitta qator qo'shadi (lead
+// voronkasidagi createLeadComment bilan bir xil g'oya, lekin bu yerda
+// server tomonda — nomzod sahifasida bir nechta joydan PATCH kelishi
+// mumkin, shu sabab tarix bitta manbada, aralashmaydi).
+function systemComment(text, author) {
+    return {
+        id: require('crypto').randomUUID(),
+        text,
+        author: author || 'Tizim',
+        type: 'system',
+        createdAt: new Date().toISOString(),
+    };
+}
+
 router.patch('/candidates/:id', authRequired, hrAccess, async (req, res) => {
     try {
-        const body = req.body || {};
+        const body = { ...(req.body || {}) };
         if (body.stage !== undefined && normalizeHrStage(body.stage) !== body.stage) {
             return res.status(400).json({ error: 'Bosqich noto\'g\'ri' });
         }
         if (body.comments !== undefined && !Array.isArray(body.comments)) {
             return res.status(400).json({ error: 'Izohlar massiv bo\'lishi kerak' });
         }
+
+        const existing = await getCandidateById(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Nomzod topilmadi' });
+
+        const authorName = req.user?.name || 'Admin';
+        // Agar frontend o'zi yangi izoh(lar) qo'shib yuborgan bo'lsa (masalan
+        // qo'lda yozilgan izoh), o'shani asos qilib olamiz — aks holda bazadagi
+        // joriy ro'yxatdan boshlaymiz. Ikkala holatda ham avtomatik qatorlar
+        // oxiriga qo'shiladi.
+        let comments = Array.isArray(body.comments) ? body.comments : existing.comments;
+
+        if (body.stage !== undefined && normalizeHrStage(body.stage) !== existing.stage) {
+            const fromLabel = HR_STAGE_LABEL_BY_ID.get(existing.stage) || existing.stage;
+            const toLabel = HR_STAGE_LABEL_BY_ID.get(normalizeHrStage(body.stage)) || body.stage;
+            comments = [...comments, systemComment(`Bosqich o'zgardi: ${fromLabel} → ${toLabel}`, authorName)];
+        }
+        if (body.interviewAt !== undefined && String(body.interviewAt || '') !== String(existing.interviewAt || '')) {
+            if (body.interviewAt) {
+                const when = new Date(body.interviewAt);
+                const whenStr = Number.isNaN(when.getTime()) ? String(body.interviewAt) : when.toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const loc = body.interviewLocation !== undefined ? body.interviewLocation : existing.interviewLocation;
+                comments = [...comments, systemComment(`Suhbat vaqti belgilandi: ${whenStr}${loc ? ' · ' + loc : ''}`, authorName)];
+            } else {
+                comments = [...comments, systemComment('Suhbat vaqti bekor qilindi', authorName)];
+            }
+        }
+        if (comments !== existing.comments) body.comments = comments;
+
         const candidate = await updateCandidate(req.params.id, body);
         if (!candidate) return res.status(404).json({ error: 'Nomzod topilmadi' });
         res.json({ ok: true, candidate });

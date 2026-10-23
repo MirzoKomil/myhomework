@@ -2364,3 +2364,188 @@ html.rd .rd-tt-day-table-wrap {
         justify-content: center;
     }
 }
+
+/* 127-ish: Nomzod (HR kandidat) to'liq sahifasi — Vakansiya ro'yxatidan
+   kartaga bosilganda kanban o'rnini egallaydi (guidesListView/
+   guideArticleView bilan bir xil almashtirish naqshi). */
+html.rd .rd-nomzod-view {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+html.rd .rd-nomzod-view.active {
+    display: flex;
+}
+
+html.rd .rd-nomzod-crumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .rd-nomzod-crumb-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+html.rd .rd-nomzod-crumb-sep {
+    color: var(--text-light);
+}
+
+html.rd .rd-nomzod-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+html.rd .rd-nomzod-head-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+html.rd .rd-nomzod-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+html.rd .rd-nomzod-head-left h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+html.rd .rd-nomzod-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .rd-nomzod-tag {
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+html.rd .rd-nomzod-head-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+html.rd .rd-nomzod-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+    align-items: start;
+}
+
+html.rd .rd-nomzod-col-main,
+html.rd .rd-nomzod-col-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+html.rd .rd-nomzod-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 16px);
+    padding: 18px;
+    box-shadow: var(--shadow-card);
+}
+
+html.rd .rd-nomzod-card h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+html.rd .rd-nomzod-media {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+html.rd .rd-nomzod-media img,
+html.rd .rd-nomzod-media video {
+    max-width: 220px;
+    border-radius: 10px;
+    display: block;
+}
+
+html.rd .rd-nomzod-media audio {
+    width: 100%;
+}
+
+html.rd .rd-nomzod-phone {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-weight: 700;
+}
+
+html.rd .rd-nomzod-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+html.rd .rd-nomzod-timeline-empty {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+html.rd .rd-nomzod-timeline-item {
+    border-left: 2px solid var(--border);
+    padding-left: 12px;
+}
+
+html.rd .rd-nomzod-timeline-item--system {
+    border-left-color: var(--primary);
+}
+
+html.rd .rd-nomzod-timeline-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+html.rd .rd-nomzod-timeline-text {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+@media (max-width: 860px) {
+    html.rd .rd-nomzod-grid {
+        grid-template-columns: 1fr;
+    }
+}
