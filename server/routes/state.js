@@ -4,8 +4,10 @@ getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudent
 const { authRequired, studentAuthOptional } = require('../middleware/auth');
 
 const router = express.Router();
-const { getTeacherScopedState, findUserById } = require('../db');
+const { getTeacherScopedState, findUserById, pool } = require('../db');
 const { scopeState } = require('../services/stateScope');
+const teacherDuties = require('../services/teacherDuties');
+const { computeTeacherRating } = require('../services/teacherRating');
 
 // Public endpoint — student app uchun, auth talab qilmaydi
 router.get('/mobile-content', studentAuthOptional, async (req, res) => {
@@ -1025,6 +1027,27 @@ router.post('/teacher-attendance', authRequired, crmStateIdentity, async (req, r
     } catch (err) {
         console.error('POST /api/state/teacher-attendance', err);
         res.status(400).json({ error: err.message || 'Davomatni saqlab bo\'lmadi' });
+    }
+});
+
+// Ustoz Bosh sahifasidagi "Ustozlar reytingi" kartochkasi uchun. Ustozning
+// o'z kabinet state'i (getTeacherScopedState) boshqa ustozlarning xom
+// davomat/baho ma'lumotini umuman o'z ichiga olmaydi (maxfiylik), shu
+// sabab reyting alohida, faqat serverda getFullState() orqali hisoblanadi
+// va mijozga FAQAT yakuniy (ism, ball, o'rin) ro'yxati qaytariladi.
+router.get('/teacher-rating', authRequired, async (req, res) => {
+    try {
+        if (req.user?.role !== 'teacher') {
+            return res.status(403).json({ error: 'Faqat ustoz kabineti uchun' });
+        }
+        const own = await teacherDuties.teacherForActor(pool, req.user);
+        const state = await getFullState();
+        const ownType = own.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
+        const rows = computeTeacherRating(state, ownType);
+        res.json({ month: new Date().toISOString().slice(0, 7), ownType, selfId: own.id, rows });
+    } catch (err) {
+        console.error('GET /api/state/teacher-rating', err);
+        res.status(err.status || 500).json({ error: err.status ? err.message : 'Reytingni yuklashda xatolik' });
     }
 });
 

@@ -104,6 +104,13 @@ async function apiSaveTeacherAttendance(payload) {
     });
 }
 
+// Ustoz Bosh sahifasidagi "Ustozlar reytingi" kartochkasi uchun - faqat
+// yakuniy (ism, ball, o'rin) ro'yxatini qaytaradi, boshqa ustozlarning
+// xom ma'lumoti bu javobda umuman bo'lmaydi.
+async function apiFetchTeacherRating() {
+    return apiFetch('/api/state/teacher-rating');
+}
+
 async function apiFetchLeads() {
     return apiFetch('/api/leads');
 }

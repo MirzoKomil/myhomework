@@ -129,7 +129,7 @@ test('teacher home: today lessons by time with attendance state, no phones', () 
     assert.ok(!html.includes('Boshqa') && !html.includes('Juma') && !html.includes('+99890'));
     assert.match(html, /<b>3<\/b>/, 'kelgan darslar 3');
     assert.match(html, /Hisoblangan maosh \(taxminiy\)<\/small><b>278571 so'm/);
-    assert.ok(!html.includes('Yordamchi mashgʻulotlarim'));
+    assert.ok(!html.includes('Yordamchi ustozlik'));
     assert.equal(c.t({ role: 'rop' }), '');
 });
 
@@ -150,7 +150,7 @@ test('assistant home: own assisted students, monthly count vs limit, estimate', 
     });
     vm.runInContext(functionSource('js/app.js', 'renderTeacherTodayBlock') + '\nthis.t = renderTeacherTodayBlock;', c);
     const html = c.t({ role: 'teacher', linkedTeacherId: 'y1' });
-    assert.match(html, /Yordamchi mashgʻulotlarim/);
+    assert.match(html, /Yordamchi ustozlik/);
     assert.match(html, /oyiga 13 tagacha/);
     assert.match(html, /Abbos[\s\S]*3 \/ 13 mashgʻulot/);
     assert.match(html, /Ilyos[\s\S]*2 \/ 13 mashgʻulot/);

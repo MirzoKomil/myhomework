@@ -1681,6 +1681,126 @@ html.rd .thx-main #dashboardTeacherToday > section:last-child:not(:first-child) 
     }
 }
 
+html.rd .rd-thx-rolebanner {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+html.rd .rd-thx-list.tch-list {
+    gap: 8px;
+}
+
+html.rd .rd-thx-list .tch-row {
+    grid-template-columns: 56px minmax(0, 1fr);
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+html.rd .tch-row-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    padding-left: 68px;
+}
+
+html.rd .tch-row-btn {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+html.rd .tch-row-btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+html.rd .tch-row-btn--ok {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+html.rd .tch-row-btn--no {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+html.rd .rd-thx-help-row {
+    display: block;
+}
+
+html.rd .rd-thx-help-row .dashboard-rank-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+html.rd .rd-thx-rank-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+html.rd .rd-thx-rank-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+html.rd .rd-thx-rank-row:last-of-type {
+    border-bottom: 0;
+}
+
+html.rd .rd-thx-rank-row--self {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 7px 8px;
+    font-weight: 700;
+}
+
+html.rd .rd-thx-rank-n {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #F0ECFF;
+    color: var(--purple);
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+html.rd .rd-thx-rank-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+html.rd .rd-thx-guides-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 /* ---------- Lid kartasi: telefonlar, amallar, bosqich tanlash ---------- */
 html.rd .lov-top {
     display: flex;
