@@ -9,7 +9,7 @@
     <script src="js/theme.js"></script>
     <link rel="stylesheet" href="css/styles.css?v=20261021i">
     <link rel="stylesheet" href="css/domworkGroups.css?v=20261011b">
-    <link rel="stylesheet" href="css/shell.css?v=20261023b">
+    <link rel="stylesheet" href="css/shell.css?v=20261023c">
 </head>
 
 <body>
@@ -1133,17 +1133,86 @@
                         </div>
 
                         <div class="hr-panel" data-hr-panel="vakansiya" id="hrPanel-vakansiya">
-                            <div class="hr-vac-toolbar">
-                                <div class="leads-filter-box leads-filter-box--select">
-                                    <span class="leads-filter-display" id="hrVacFilterDisplay">Barcha vakansiyalar</span>
-                                    <select id="hrVacFilter" class="leads-filter-select-overlay" aria-label="Vakansiya">
-                                        <option value="all">Barcha vakansiyalar</option>
-                                    </select>
+                            <div id="hrVacBoardView">
+                                <div class="hr-vac-toolbar">
+                                    <div class="leads-filter-box leads-filter-box--select">
+                                        <span class="leads-filter-display" id="hrVacFilterDisplay">Barcha vakansiyalar</span>
+                                        <select id="hrVacFilter" class="leads-filter-select-overlay" aria-label="Vakansiya">
+                                            <option value="all">Barcha vakansiyalar</option>
+                                        </select>
+                                    </div>
+                                    <span class="hr-vac-total" id="hrVacTotal"></span>
+                                    <button type="button" class="btn-outline-sm" id="hrVacRefresh">Yangilash</button>
                                 </div>
-                                <span class="hr-vac-total" id="hrVacTotal"></span>
-                                <button type="button" class="btn-outline-sm" id="hrVacRefresh">Yangilash</button>
+                                <div class="leads-kanban" id="hrVacBoard"></div>
                             </div>
-                            <div class="leads-kanban" id="hrVacBoard"></div>
+                            <div id="hrVacDetailView" class="rd-nomzod-view">
+                                <div class="rd-nomzod-crumb">
+                                    <button type="button" id="hrVacDetailBack" class="rd-nomzod-crumb-link">Vakansiya</button>
+                                    <span class="rd-nomzod-crumb-sep">/</span>
+                                    <span id="hrVacDetailCrumbName"></span>
+                                </div>
+                                <div class="rd-nomzod-head">
+                                    <div class="rd-nomzod-head-left">
+                                        <div class="rd-nomzod-avatar" id="hrVacDetailAvatar"></div>
+                                        <div>
+                                            <h1 id="hrVacDetailName"></h1>
+                                            <div class="rd-nomzod-tags" id="hrVacDetailTags"></div>
+                                        </div>
+                                    </div>
+                                    <div class="rd-nomzod-head-actions">
+                                        <button type="button" class="btn-outline-sm" id="hrVacRejectBtn">Rad etish…</button>
+                                        <button type="button" class="btn-primary-sm" id="hrVacNextStageBtn"></button>
+                                    </div>
+                                </div>
+                                <div class="rd-nomzod-grid">
+                                    <div class="rd-nomzod-col-main">
+                                        <div class="rd-nomzod-card">
+                                            <h3>Bot savollariga javoblar</h3>
+                                            <dl class="hr-vac-detail-grid" id="hrVacDetailAnswers"></dl>
+                                        </div>
+                                        <div class="rd-nomzod-card" id="hrVacDetailMediaCard" style="display:none">
+                                            <h3>Media</h3>
+                                            <div class="rd-nomzod-media" id="hrVacDetailMedia"></div>
+                                        </div>
+                                    </div>
+                                    <div class="rd-nomzod-col-side">
+                                        <div class="rd-nomzod-card">
+                                            <h3>Bosqich va suhbat</h3>
+                                            <div class="form-group">
+                                                <label>Bosqich</label>
+                                                <select id="hrVacDetailStage" class="form-control"></select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Suhbat vaqti</label>
+                                                <input type="datetime-local" id="hrVacDetailInterviewAt" class="form-control">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Suhbat joyi / havolasi</label>
+                                                <input type="text" id="hrVacDetailInterviewLoc" class="form-control" placeholder="Masalan: Google Meet havolasi yoki ofis manzili">
+                                            </div>
+                                            <button type="button" class="btn-primary-sm" id="hrVacDetailInterviewSave" style="width:100%">Suhbatni saqlash</button>
+                                            <p class="text-muted" style="font-size:12px;margin:8px 0 0">Nomzodga suhbat vaqti haqida eslatma yuborish hali avtomatlashtirilmagan.</p>
+                                        </div>
+                                        <div class="rd-nomzod-card">
+                                            <h3>Aloqa</h3>
+                                            <div class="rd-nomzod-phone">
+                                                <span id="hrVacDetailPhoneMasked"></span>
+                                                <button type="button" class="btn-outline-sm" id="hrVacDetailPhoneReveal">Ko'rsatish</button>
+                                            </div>
+                                            <p class="text-muted" style="font-size:12px;margin:8px 0 0">Raqamni ochish jurnalga yoziladi.</p>
+                                        </div>
+                                        <div class="rd-nomzod-card">
+                                            <h3>Izohlar va tarix</h3>
+                                            <div class="rd-nomzod-timeline" id="hrVacDetailTimeline"></div>
+                                            <div class="form-group" style="margin-top:12px">
+                                                <textarea id="hrVacDetailNewComment" class="form-control" rows="2" placeholder="Izoh yozing…"></textarea>
+                                            </div>
+                                            <button type="button" class="btn-primary-sm" id="hrVacDetailAddComment" style="width:100%">Izoh qo'shish</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="hr-panel" data-hr-panel="davomat" id="hrPanel-davomat">
@@ -1492,7 +1561,7 @@
     <script src="js/domworkGroupsUI.js?v=20261011b"></script>
     <script src="js/richText.js?v=20261019a"></script>
     <script src="js/audioDialogs.js?v=20261019a"></script>
-    <script src="js/app.js?v=20261023b"></script>
+    <script src="js/app.js?v=20261023c"></script>
 </body>
 
 </html>

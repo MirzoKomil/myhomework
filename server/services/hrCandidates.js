@@ -62,6 +62,10 @@ async function initHrSchema() {
             updated_at TIMESTAMPTZ DEFAULT NOW()
         );
     `);
+    // 127-ish: Nomzod sahifasi (suhbat vaqti/joyi) — mavjud productionda
+    // jadval allaqachon bor, shu sabab ALTER ... ADD COLUMN IF NOT EXISTS.
+    await pool.query(`ALTER TABLE hr_candidates ADD COLUMN IF NOT EXISTS interview_at TIMESTAMPTZ`).catch(() => {});
+    await pool.query(`ALTER TABLE hr_candidates ADD COLUMN IF NOT EXISTS interview_location TEXT DEFAULT ''`).catch(() => {});
     await pool.query(
         `CREATE INDEX IF NOT EXISTS idx_hr_candidates_stage_created
          ON hr_candidates(stage, created_at DESC)`
@@ -101,6 +105,8 @@ function rowToCandidate(r) {
         stage: normalizeHrStage(r.stage),
         comments: parseJson(r.comments, []),
         media: r.media_kinds ? String(r.media_kinds).split(',').filter(Boolean) : [],
+        interviewAt: r.interview_at || null,
+        interviewLocation: r.interview_location || '',
         createdAt: r.created_at || null,
         updatedAt: r.updated_at || null,
     };
@@ -166,6 +172,9 @@ const UPDATABLE = {
     contactPhone: (v) => ['contact_phone', String(v || '')],
     fullName: (v) => ['full_name', String(v || '').trim() || 'Nomzod'],
     address: (v) => ['address', String(v || '')],
+    // 127-ish: suhbat vaqti/joyi — bo'sh string/null kelsa tozalanadi.
+    interviewAt: (v) => ['interview_at', v ? new Date(v) : null],
+    interviewLocation: (v) => ['interview_location', String(v || '')],
 };
 
 async function updateCandidate(id, fields) {

@@ -28116,18 +28116,24 @@ async function hrVacMove(id, stage) {
     const candidate = _hrVacCandidates.find(c => c.id === id);
     if (!candidate || candidate.stage === stage) return;
     const oldStage = candidate.stage;
+    const onBoard = document.getElementById('hrVacBoardView')?.style.display !== 'none';
     // Avval ekranda ko'chiramiz (harakat tez his qilinsin), server rad
     // etsa eski holatga qaytariladi — nomzod noto'g'ri ustunda qolmaydi.
     candidate.stage = stage;
-    hrVacRenderBoard();
+    if (onBoard) hrVacRenderBoard();
     try {
-        await apiFetch('/api/hr/candidates/' + encodeURIComponent(id), {
+        const data = await apiFetch('/api/hr/candidates/' + encodeURIComponent(id), {
             method: 'PATCH',
             body: JSON.stringify({ stage }),
         });
+        // Server "Bosqich o'zgardi: ..." tizim izohini ham qo'shib qaytaradi —
+        // nomzod sahifasidagi tarix shu yerdan yangilanadi.
+        const idx = _hrVacCandidates.findIndex(c => c.id === id);
+        if (idx >= 0) _hrVacCandidates[idx] = data.candidate;
+        if (onBoard) hrVacRenderBoard();
     } catch (err) {
         candidate.stage = oldStage;
-        hrVacRenderBoard();
+        if (onBoard) hrVacRenderBoard();
         alert('Bosqichni saqlab bo\'lmadi: ' + (err.message || 'xatolik'));
     }
 }
@@ -28137,9 +28143,51 @@ function hrVacRow(label, value) {
     return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value))}</dd>`;
 }
 
-async function openHrVacDetail(id) {
+// 127-ish: nomzod kartasi bosilganda endi modal o'rniga alohida sahifa
+// ochiladi (guidesListView/guideArticleView bilan bir xil almashtirish
+// naqshi) — dizayn maketidagi kabi suhbat vaqti, telefon ko'rsatish va
+// izohlar+avtomatik tarix shu yerda.
+let _hrVacDetailId = null;
+let _hrVacPhoneRevealed = false;
+
+function hrVacInitials(name) {
+    return String(name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
+}
+
+// Telefon raqamini qisman yashiradi: +998 90 111 22 33 -> +998 90 ••• •• 33
+function hrVacMaskPhone(phone) {
+    const digits = String(phone || '').replace(/[^\d+]/g, '');
+    if (digits.length < 7) return phone || '';
+    const head = digits.slice(0, -6);
+    const tail = digits.slice(-2);
+    return `${head} ••• •• ${tail}`;
+}
+
+function openHrVacDetail(id) {
     const c = _hrVacCandidates.find(x => x.id === id);
     if (!c) return;
+    _hrVacDetailId = id;
+    _hrVacPhoneRevealed = false;
+
+    document.getElementById('hrVacBoardView').style.display = 'none';
+    const view = document.getElementById('hrVacDetailView');
+    view.classList.add('active');
+
+    const back = document.getElementById('hrVacDetailBack');
+    if (back) back.onclick = closeHrVacDetail;
+
+    renderHrVacDetail();
+}
+
+function closeHrVacDetail() {
+    document.getElementById('hrVacDetailView')?.classList.remove('active');
+    document.getElementById('hrVacBoardView').style.display = '';
+    _hrVacDetailId = null;
+}
+
+function renderHrVacDetail() {
+    const c = _hrVacCandidates.find(x => x.id === _hrVacDetailId);
+    if (!c) { closeHrVacDetail(); return; }
 
     const bool = v => v === true ? 'Ha' : v === false ? 'Yo\'q' : '';
     const stageLabel = (_hrVacStages.find(s => s.id === c.stage) || {}).label || c.stage;
@@ -28147,57 +28195,179 @@ async function openHrVacDetail(id) {
         ? `<a href="https://t.me/${encodeURIComponent(c.telegramUsername)}" target="_blank" rel="noopener">@${escapeHtml(c.telegramUsername)}</a>`
         : '';
 
+    document.getElementById('hrVacDetailCrumbName').textContent = c.fullName;
+    document.getElementById('hrVacDetailName').textContent = c.fullName;
+    document.getElementById('hrVacDetailAvatar').textContent = hrVacInitials(c.fullName);
+
+    const createdAt = c.createdAt ? String(c.createdAt).slice(0, 10) : '';
+    document.getElementById('hrVacDetailTags').innerHTML = [
+        c.vacancyName ? `<span class="rd-nomzod-tag">${escapeHtml(c.vacancyName)}</span>` : '',
+        `<span class="rd-nomzod-tag">${escapeHtml(stageLabel)}</span>`,
+        createdAt ? `ariza ${escapeHtml(createdAt)}` : '',
+        tgLink ? tgLink : '',
+    ].filter(Boolean).join(' · ');
+
     // Vakansiyaga xos javoblar — savol matni bilan (server bergan lug'atdan).
-    // Media javoblari ("yuborildi") bu yerda ko'rsatilmaydi, ular yuqorida
+    // Media javoblari ("yuborildi") bu yerda ko'rsatilmaydi, ular pastda
     // haqiqiy rasm/ovoz/video sifatida chiqadi.
     const answerRows = Object.entries(c.answers || {})
         .filter(([, v]) => v !== 'yuborildi')
         .map(([k, v]) => hrVacRow(_hrVacQuestionLabels[k] || k, v)).join('');
+    document.getElementById('hrVacDetailAnswers').innerHTML = `
+        ${hrVacRow('Manzil', c.address)}
+        ${hrVacRow('Tug\'ilgan yil', c.birthYear)}
+        ${hrVacRow('Shaxsiy noutbuk', bool(c.hasLaptop))}
+        ${hrVacRow('Ofisga tayyor', bool(c.readyForOffice))}
+        ${hrVacRow('Manba (utm)', c.utmSource)}
+        ${answerRows}`;
 
     const media = [];
     if (c.media.includes('photo')) {
         media.push(`<img class="hr-vac-photo" src="${hrVacMediaUrl(c.id, 'photo')}" alt="Nomzod rasmi">`);
     }
     if (c.media.includes('voice')) {
-        media.push(`<audio controls preload="none" style="width:100%;margin-bottom:10px" src="${hrVacMediaUrl(c.id, 'voice')}"></audio>`);
+        media.push(`<audio controls preload="none" src="${hrVacMediaUrl(c.id, 'voice')}"></audio>`);
     }
     if (c.media.includes('video')) {
-        media.push(`<video controls preload="none" style="width:100%;max-width:320px;border-radius:10px" src="${hrVacMediaUrl(c.id, 'video')}"></video>`);
+        media.push(`<video controls preload="none" src="${hrVacMediaUrl(c.id, 'video')}"></video>`);
     }
+    const mediaCard = document.getElementById('hrVacDetailMediaCard');
+    mediaCard.style.display = media.length ? '' : 'none';
+    document.getElementById('hrVacDetailMedia').innerHTML = media.join('');
 
-    const stageOptions = _hrVacStages.map(s =>
+    // Bosqich va suhbat
+    const stageSelect = document.getElementById('hrVacDetailStage');
+    stageSelect.innerHTML = _hrVacStages.map(s =>
         `<option value="${escapeHtml(s.id)}"${s.id === c.stage ? ' selected' : ''}>${escapeHtml(s.label)}</option>`
     ).join('');
-
-    const createdAt = c.createdAt ? String(c.createdAt).slice(0, 16).replace('T', ' ') : '';
-
-    openModal(c.fullName, `
-        ${media.join('')}
-        <dl class="hr-vac-detail-grid">
-            ${hrVacRow('Vakansiya', c.vacancyName)}
-            ${hrVacRow('Bosqich', stageLabel)}
-            ${hrVacRow('Telegram raqami', c.telegramPhone)}
-            ${hrVacRow('Qo\'shimcha raqam', c.contactPhone)}
-            ${tgLink ? `<dt>Telegram</dt><dd>${tgLink}</dd>` : ''}
-            ${hrVacRow('Manzil', c.address)}
-            ${hrVacRow('Tug\'ilgan yil', c.birthYear)}
-            ${hrVacRow('Shaxsiy noutbuk', bool(c.hasLaptop))}
-            ${hrVacRow('Ofisga tayyor', bool(c.readyForOffice))}
-            ${hrVacRow('Manba (utm)', c.utmSource)}
-            ${hrVacRow('Ariza sanasi', createdAt)}
-            ${answerRows}
-        </dl>
-        <div class="form-group" style="margin-top:16px">
-            <label>Bosqichni o'zgartirish</label>
-            <select id="hrVacStageSelect" class="form-control">${stageOptions}</select>
-        </div>
-    `, '<button class="btn-ghost" id="hrVacClose">Yopish</button>', { wide: true });
-
-    document.getElementById('hrVacClose').onclick = closeModal;
-    document.getElementById('hrVacStageSelect').onchange = async (e) => {
+    stageSelect.onchange = async (e) => {
         await hrVacMove(c.id, e.target.value);
-        closeModal();
+        renderHrVacDetail();
     };
+
+    const interviewAtInput = document.getElementById('hrVacDetailInterviewAt');
+    interviewAtInput.value = c.interviewAt ? String(c.interviewAt).slice(0, 16) : '';
+    document.getElementById('hrVacDetailInterviewLoc').value = c.interviewLocation || '';
+    document.getElementById('hrVacDetailInterviewSave').onclick = () => hrVacSaveInterview(c.id);
+
+    // Rad etish / keyingi bosqich tugmalari — voronkadagi joriy o'rindan
+    // keyingisiga (filtrlanmagan/rad etilgan kabi yakuniy bosqichlar bundan
+    // mustasno, ular qo'lda select orqali tanlanadi).
+    const idx = _hrVacStages.findIndex(s => s.id === c.stage);
+    const next = idx >= 0 ? _hrVacStages[idx + 1] : null;
+    const nextBtn = document.getElementById('hrVacNextStageBtn');
+    const rejectBtn = document.getElementById('hrVacRejectBtn');
+    const isRejected = c.stage === 'rad-javobi';
+    if (next && !isRejected) {
+        nextBtn.style.display = '';
+        nextBtn.textContent = `Keyingi bosqich: ${next.label}`;
+        nextBtn.onclick = async () => { await hrVacMove(c.id, next.id); renderHrVacDetail(); };
+    } else {
+        nextBtn.style.display = 'none';
+    }
+    rejectBtn.style.display = isRejected ? 'none' : '';
+    rejectBtn.onclick = async () => {
+        if (!confirm(`${c.fullName} rad etilsinmi?`)) return;
+        await hrVacMove(c.id, 'rad-javobi');
+        renderHrVacDetail();
+    };
+
+    // Aloqa — telefon qisman yashirilgan, "Ko'rsatish" bosilgandagina
+    // to'liq ko'rsatiladi va bu jurnalga (izohlar tarixiga) yoziladi.
+    const phone = c.contactPhone || c.telegramPhone || '';
+    const phoneMaskedEl = document.getElementById('hrVacDetailPhoneMasked');
+    const revealBtn = document.getElementById('hrVacDetailPhoneReveal');
+    if (!phone) {
+        phoneMaskedEl.textContent = 'Telefon kiritilmagan';
+        revealBtn.style.display = 'none';
+    } else {
+        phoneMaskedEl.textContent = _hrVacPhoneRevealed ? phone : hrVacMaskPhone(phone);
+        revealBtn.style.display = _hrVacPhoneRevealed ? 'none' : '';
+        revealBtn.onclick = () => hrVacRevealPhone(c.id);
+    }
+
+    // Izohlar va tarix — qo'lda yozilgan + serverda avtomatik qo'shilgan
+    // (bosqich/suhbat o'zgarishi) qatorlar bitta vaqt chizig'ida.
+    const timeline = document.getElementById('hrVacDetailTimeline');
+    const comments = [...(c.comments || [])].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    timeline.innerHTML = comments.length
+        ? comments.map(cm => `
+            <div class="rd-nomzod-timeline-item${cm.type === 'system' ? ' rd-nomzod-timeline-item--system' : ''}">
+                <div class="rd-nomzod-timeline-meta">${escapeHtml(formatCommentTime(cm.createdAt))} · ${escapeHtml(cm.author || '')}</div>
+                <div class="rd-nomzod-timeline-text">${escapeHtml(cm.text || '')}</div>
+            </div>`).join('')
+        : '<p class="rd-nomzod-timeline-empty">Hozircha izoh yo\'q</p>';
+
+    document.getElementById('hrVacDetailAddComment').onclick = () => hrVacAddComment(c.id);
+}
+
+async function hrVacSaveInterview(id) {
+    const atInput = document.getElementById('hrVacDetailInterviewAt').value;
+    const loc = document.getElementById('hrVacDetailInterviewLoc').value.trim();
+    try {
+        const data = await apiFetch('/api/hr/candidates/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            body: JSON.stringify({
+                interviewAt: atInput ? new Date(atInput).toISOString() : null,
+                interviewLocation: loc,
+            }),
+        });
+        const idx = _hrVacCandidates.findIndex(x => x.id === id);
+        if (idx >= 0) _hrVacCandidates[idx] = data.candidate;
+        showMiniToast('Suhbat ma\'lumotlari saqlandi');
+        renderHrVacDetail();
+    } catch (err) {
+        alert('Saqlab bo\'lmadi: ' + (err.message || 'xatolik'));
+    }
+}
+
+async function hrVacRevealPhone(id) {
+    const c = _hrVacCandidates.find(x => x.id === id);
+    if (!c) return;
+    const author = getCurrentUser()?.name || 'Admin';
+    const comments = [...(c.comments || []), {
+        id: 'c' + Date.now(),
+        text: 'Telefon raqami ko\'rsatildi',
+        author,
+        type: 'system',
+        createdAt: new Date().toISOString(),
+    }];
+    try {
+        const data = await apiFetch('/api/hr/candidates/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            body: JSON.stringify({ comments }),
+        });
+        const idx = _hrVacCandidates.findIndex(x => x.id === id);
+        if (idx >= 0) _hrVacCandidates[idx] = data.candidate;
+        _hrVacPhoneRevealed = true;
+        renderHrVacDetail();
+    } catch (err) {
+        alert('Raqamni ochib bo\'lmadi: ' + (err.message || 'xatolik'));
+    }
+}
+
+async function hrVacAddComment(id) {
+    const textarea = document.getElementById('hrVacDetailNewComment');
+    const text = textarea.value.trim();
+    if (!text) return;
+    const c = _hrVacCandidates.find(x => x.id === id);
+    if (!c) return;
+    const author = getCurrentUser()?.name || 'Admin';
+    const comments = [...(c.comments || []), {
+        id: 'c' + Date.now(), text, author, type: 'manual', createdAt: new Date().toISOString(),
+    }];
+    try {
+        const data = await apiFetch('/api/hr/candidates/' + encodeURIComponent(id), {
+            method: 'PATCH',
+            body: JSON.stringify({ comments }),
+        });
+        const idx = _hrVacCandidates.findIndex(x => x.id === id);
+        if (idx >= 0) _hrVacCandidates[idx] = data.candidate;
+        textarea.value = '';
+        renderHrVacDetail();
+    } catch (err) {
+        alert('Izohni saqlab bo\'lmadi: ' + (err.message || 'xatolik'));
+    }
 }
 
 async function renderHrVacancy() {
