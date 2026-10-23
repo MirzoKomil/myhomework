@@ -2279,6 +2279,34 @@ html.rd .rd-tt-aside-note {
     line-height: 1.5;
 }
 
+/* ===== Profil sahifasi: Tizim guruhi (Arxiv/Bildirishnomalar/Telegram) ===== */
+html.rd .profile-system-panel {
+    display: none;
+}
+
+html.rd .profile-system-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
+html.rd .profile-nav-static {
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+html.rd .profile-nav-static:hover {
+    background: transparent;
+}
+
+html.rd .profile-nav-static-value {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
 html.rd .tt-cell--selected {
     outline: 2px solid var(--text, #111) !important;
     outline-offset: -2px;
