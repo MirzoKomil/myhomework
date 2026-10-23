@@ -2037,3 +2037,302 @@ html.rd .pay-step.is-done .pay-step-n {
         font-size: 11px;
     }
 }
+
+/* ===== Dars jadvali — hafta ko'rinishi (dizayn bo'yicha) ===== */
+html.rd .btn-outline-sm {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface, #fff);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+html.rd .btn-outline-sm:hover {
+    background: var(--rd-hover);
+}
+
+html.rd .btn-danger-outline-sm {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid #FCA5A5;
+    background: transparent;
+    color: #DC2626;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+html.rd .btn-danger-outline-sm:hover {
+    background: #FEF2F2;
+}
+
+html.rd .rd-tt-toolbar2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+html.rd .rd-tt-toolbar2 #ttTeacher {
+    min-width: 170px;
+}
+
+html.rd .rd-tt-weeknav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px;
+    background: var(--surface, #fff);
+}
+
+html.rd .rd-tt-weeknav-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+html.rd .rd-tt-weeknav-btn:hover {
+    background: var(--rd-hover);
+    color: var(--text);
+}
+
+html.rd .rd-tt-weeknav-label {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 6px;
+    white-space: nowrap;
+}
+
+html.rd .rd-tt-today-btn {
+    white-space: nowrap;
+}
+
+html.rd .rd-tt-viewtoggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+html.rd .rd-tt-view-btn {
+    border: none;
+    background: var(--surface, #fff);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    cursor: pointer;
+}
+
+html.rd .rd-tt-view-btn.active {
+    background: var(--purple);
+    color: #fff;
+}
+
+html.rd .rd-tt-edit-label {
+    display: none;
+}
+
+html.rd .tt-legend-off::before {
+    background: repeating-linear-gradient(45deg, var(--rd-col), var(--rd-col) 3px, var(--border) 3px, var(--border) 5px);
+}
+
+html.rd .rd-tt-day-tabs {
+    display: none;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0 24px 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+html.rd .rd-tt-day-tab {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface, #fff);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+html.rd .rd-tt-day-tab.active {
+    border-color: var(--purple);
+    color: var(--purple);
+    background: var(--purple-light);
+}
+
+html.rd .rd-tt-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 16px;
+    padding: 0 24px 24px;
+    align-items: start;
+}
+
+html.rd .rd-tt-layout.rd-tt-layout--month {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+html.rd .rd-tt-layout .tt-grid-wrap {
+    padding: 0;
+    margin: 0;
+}
+
+html.rd .rd-tt-aside {
+    position: sticky;
+    top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+html.rd .rd-tt-aside-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 16px);
+    padding: 18px;
+    box-shadow: var(--shadow-card);
+}
+
+html.rd .rd-tt-aside-card h4 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+html.rd .rd-tt-aside-sub {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+html.rd .rd-tt-aside-card--empty .rd-tt-aside-sub,
+html.rd .rd-tt-aside-card--hint .rd-tt-aside-sub {
+    margin-bottom: 12px;
+}
+
+html.rd .rd-tt-req {
+    color: #DC2626;
+}
+
+html.rd .rd-tt-dur-pick {
+    display: flex;
+    gap: 6px;
+}
+
+html.rd .rd-tt-dur-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface, #fff);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+html.rd .rd-tt-dur-btn.active {
+    border-color: var(--purple);
+    color: var(--purple);
+    background: var(--purple-light);
+}
+
+html.rd .rd-tt-aside-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+html.rd .rd-tt-aside-actions--col {
+    flex-direction: column;
+}
+
+html.rd .rd-tt-aside-actions .btn-primary-sm,
+html.rd .rd-tt-aside-actions .btn-outline-sm,
+html.rd .rd-tt-aside-actions .btn-danger-outline-sm {
+    flex: 1;
+}
+
+html.rd .rd-tt-aside-note {
+    margin: 12px 0 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+html.rd .tt-cell--selected {
+    outline: 2px solid var(--text, #111) !important;
+    outline-offset: -2px;
+}
+
+html.rd .rd-tt-day-table-wrap {
+    display: none;
+}
+
+@media (max-width: 860px) {
+    html.rd .rd-tt-layout {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0 12px 20px;
+    }
+
+    html.rd .rd-tt-aside {
+        position: static;
+    }
+
+    html.rd .rd-tt-day-tabs {
+        display: flex;
+    }
+
+    html.rd .rd-tt-week-table-wrap {
+        display: none;
+    }
+
+    html.rd .rd-tt-day-table-wrap {
+        display: block;
+    }
+
+    html.rd .rd-tt-toolbar2 {
+        gap: 8px;
+    }
+
+    html.rd .rd-tt-toolbar2 #ttTeacher {
+        min-width: 0;
+        flex: 1 1 100%;
+        order: -1;
+    }
+
+    html.rd .tt-legend {
+        padding: 0 12px 10px;
+    }
+
+    html.rd .rd-tt-edit-label {
+        display: inline;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 4px;
+    }
+
+    html.rd .tt-edit-btn {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+}

@@ -6818,6 +6818,14 @@ function renderHwProgress(students) {
 
 // --- Timetable (haftalik jadval) ---
 let _ttFilters = { lang: 'english', pattern: 'mwf', teacherId: 'all', dayOfWeek: null };
+// Dars jadvali — dizayn bo'yicha: "Hafta" (standart, bitta ustoz + yon panel
+// orqali band qilish/ko'chirish/olib tashlash) va "Oy" (eski, barcha
+// ustozlarni oylik ko'rinishda ko'rsatadigan, o'zgarmagan jadval).
+let _ttViewMode = 'week';
+let _ttWeekAnchor = new Date();
+let _ttSelectedCell = null; // {mode:'free'|'lesson', teacherId, dow, dateKey, time, studentId?, studentName?, source?}
+let _ttMoveStudentId = null;
+let _ttMobileDayKey = null;
 
 function getLessonSlotSpan(duration) {
     const d = Number(duration) || 15;
@@ -6985,6 +6993,9 @@ function initTimetableControls() {
         [patternEl, teacherEl, dayEl].filter(Boolean).forEach(el => {
             el.addEventListener('change', () => {
                 _ttFilters = getTimetableFilters();
+                _ttSelectedCell = null;
+                _ttMoveStudentId = null;
+                _ttMobileDayKey = null;
                 if (el === patternEl || el === teacherEl) initTimetableControls();
                 renderTimetable();
             });
@@ -6995,6 +7006,53 @@ function initTimetableControls() {
                 openTeacherWorkScheduleModal(teacherEl.value === 'all' ? null : teacherEl.value, liveFilters.lang || 'english');
             });
         }
+    }
+
+    const prevBtn = document.getElementById('ttWeekPrev');
+    const nextBtn = document.getElementById('ttWeekNext');
+    const todayBtn = document.getElementById('ttTodayBtn');
+    const viewToggle = document.getElementById('ttViewToggle');
+    if (prevBtn && !prevBtn.dataset.bound) {
+        prevBtn.dataset.bound = '1';
+        prevBtn.addEventListener('click', () => {
+            _ttWeekAnchor = addDaysToDate(_ttWeekAnchor, -7);
+            _ttSelectedCell = null;
+            _ttMoveStudentId = null;
+            _ttMobileDayKey = null;
+            renderTimetable();
+        });
+    }
+    if (nextBtn && !nextBtn.dataset.bound) {
+        nextBtn.dataset.bound = '1';
+        nextBtn.addEventListener('click', () => {
+            _ttWeekAnchor = addDaysToDate(_ttWeekAnchor, 7);
+            _ttSelectedCell = null;
+            _ttMoveStudentId = null;
+            _ttMobileDayKey = null;
+            renderTimetable();
+        });
+    }
+    if (todayBtn && !todayBtn.dataset.bound) {
+        todayBtn.dataset.bound = '1';
+        todayBtn.addEventListener('click', () => {
+            _ttWeekAnchor = new Date();
+            _ttSelectedCell = null;
+            _ttMoveStudentId = null;
+            _ttMobileDayKey = null;
+            renderTimetable();
+        });
+    }
+    if (viewToggle && !viewToggle.dataset.bound) {
+        viewToggle.dataset.bound = '1';
+        viewToggle.addEventListener('click', e => {
+            const btn = e.target.closest('[data-tt-view]');
+            if (!btn) return;
+            _ttViewMode = btn.dataset.ttView;
+            viewToggle.querySelectorAll('[data-tt-view]').forEach(b => b.classList.toggle('active', b === btn));
+            _ttSelectedCell = null;
+            _ttMoveStudentId = null;
+            renderTimetable();
+        });
     }
 }
 
@@ -7139,6 +7197,332 @@ function getTimetableMonthDays() {
         days.push({ day: d, dow: jsDow, dateKey: dateKeyOf(date) }); // JS getDay() 1..6 DAYS_UZ'dagi 1..6 (Dush..Shan) bilan bir xil
     }
     return { year, month, days };
+}
+
+function addDaysToDate(date, days) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+}
+
+// Dars jadvali — "Hafta" ko'rinishi uchun joriy anchor-sana atrofidagi
+// Dushanba..Shanba (6 kun, Yakshanba bonus kuni sifatida jadvalga kirmaydi,
+// xuddi oylik ko'rinishdagi kabi) kunlarini qaytaradi.
+function getTimetableWeekDays(anchor) {
+    const ref = anchor ? new Date(anchor) : new Date();
+    const jsDow = ref.getDay();
+    const diffToMonday = jsDow === 0 ? -6 : 1 - jsDow;
+    const monday = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() + diffToMonday);
+    const days = [];
+    for (let i = 0; i < 6; i++) {
+        const dt = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+        days.push({ day: dt.getDate(), dow: dt.getDay(), dateKey: dateKeyOf(dt), monthIdx: dt.getMonth(), year: dt.getFullYear() });
+    }
+    return days;
+}
+
+const TT_MONTH_NAMES_FULL = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktabr', 'noyabr', 'dekabr'];
+
+function formatTimetableWeekLabel(weekDays) {
+    const first = weekDays[0], last = weekDays[weekDays.length - 1];
+    if (first.monthIdx === last.monthIdx) {
+        return `${first.day}–${last.day} ${TT_MONTH_NAMES_FULL[first.monthIdx]} ${last.year}`;
+    }
+    return `${first.day} ${TT_MONTH_NAMES_FULL[first.monthIdx]} – ${last.day} ${TT_MONTH_NAMES_FULL[last.monthIdx]} ${last.year}`;
+}
+
+// Bitta ustozning berilgan kunlar ro'yxati (hafta yoki bitta kun) bo'yicha
+// jadval jadvalini chizadi. Band bo'sh katakchalar bosilganda yon panel
+// (ttAside) orqali boshqariladi — eski modal oyna bu yerda ishlatilmaydi.
+function renderTimetableWeekGrid(teacher, entries, days) {
+    const times = generateTimeSlots();
+    const { map, covered } = buildScheduleCellMap(entries.filter(e => e.teacherId === teacher.id));
+    const workSlots = teacher.workSlots ? new Set(teacher.workSlots) : null;
+    const todayKey = dateKeyOf(new Date());
+    const sel = _ttSelectedCell;
+
+    let html = `<table class="table tt-week-table"><thead><tr><th class="tt-time-col">Vaqt</th>`;
+    days.forEach(({ day, dow, dateKey }) => {
+        const isToday = dateKey === todayKey;
+        html += `<th data-date="${dateKey}"${isToday ? ' class="tt-today" aria-current="date"' : ''}><span class="tt-date-dow">${escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 2))}</span><span class="tt-date-num">${day}</span></th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    times.forEach(time => {
+        html += `<tr><td class="tt-time-col">${time}</td>`;
+        days.forEach(({ dow, dateKey }) => {
+            const cellKey = `${teacher.id}_${dateKey}_${time}`;
+            if (covered.has(cellKey)) return;
+            const entry = map.get(cellKey);
+            const isSel = sel && sel.dateKey === dateKey && sel.time === time;
+            if (entry) {
+                const span = getLessonSlotSpan(entry.duration);
+                const cls = getTimetableCellClass(entry) + (isSel ? ' tt-cell--selected' : '');
+                html += `<td class="${cls}" rowspan="${span}" data-tt-cell data-mode="lesson" data-teacher="${teacher.id}" data-dow="${dow}" data-date="${dateKey}" data-time="${time}" data-student="${escapeHtml(entry.studentId)}" data-source="${entry.source}" title="${escapeHtml(entry.studentName)}">
+                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
+                    <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
+                </td>`;
+            } else {
+                const key = `${dow}_${time}`;
+                const isOff = workSlots && !workSlots.has(key);
+                const cls = `tt-cell ${isOff ? 'tt-cell--off' : 'tt-cell--free'}${isSel ? ' tt-cell--selected' : ''}`;
+                html += `<td class="${cls}" data-tt-cell data-mode="${isOff ? 'off' : 'free'}" data-teacher="${teacher.id}" data-dow="${dow}" data-date="${dateKey}" data-time="${time}" title="${isOff ? "Ishlashi belgilanmagan" : "Bo'sh — bosing"}"></td>`;
+            }
+        });
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    return html;
+}
+
+function renderTtDayTabs(weekDays, teacher) {
+    const todayKey = dateKeyOf(new Date());
+    const workSlots = teacher?.workSlots ? new Set(teacher.workSlots) : null;
+    const activeKey = _ttMobileDayKey || todayKey;
+    return weekDays.map(({ day, dow, dateKey }) => {
+        const isOffDay = workSlots && ![...workSlots].some(k => k.startsWith(`${dow}_`));
+        const isActive = activeKey === dateKey;
+        const label = `${escapeHtml((DAYS_UZ[dow - 1] || '').slice(0, 2))} ${day}${isOffDay ? ' · dam' : ''}`;
+        return `<button type="button" class="rd-tt-day-tab${isActive ? ' active' : ''}" data-tt-day="${dateKey}">${label}</button>`;
+    }).join('');
+}
+
+function renderTtAssignPanelHtml(sel, teacher) {
+    const students = getStudentsForTeacher(teacher).filter(s => s.id);
+    const dayLabel = DAYS_UZ[sel.dow - 1] || '';
+    const defaultDur = teacher.lessonDuration || 30;
+    return `<div class="rd-tt-aside-card">
+        <h4>Darsga o'quvchi biriktirish</h4>
+        <p class="rd-tt-aside-sub">${escapeHtml(dayLabel)} · ${escapeHtml(sel.time)} · ${escapeHtml(teacher.name)}</p>
+        <div class="form-group">
+            <label>O'quvchi <span class="rd-tt-req">*</span></label>
+            <select id="ttAsideStudent" class="form-select">
+                <option value="">— Tanlang —</option>
+                ${students.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)} · ${escapeHtml(s.id)}${s.lessonTime ? ' (jadvalda)' : ''}</option>`).join('')}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Dars davomiyligi</label>
+            <div class="rd-tt-dur-pick">
+                <button type="button" class="rd-tt-dur-btn${defaultDur === 15 ? ' active' : ''}" data-dur="15">15 daq</button>
+                <button type="button" class="rd-tt-dur-btn${defaultDur !== 15 && defaultDur !== 60 ? ' active' : ''}" data-dur="30">30 daq</button>
+                <button type="button" class="rd-tt-dur-btn${defaultDur === 60 ? ' active' : ''}" data-dur="60">60 daq</button>
+            </div>
+        </div>
+        <div class="rd-tt-aside-actions">
+            <button type="button" class="btn-outline-sm" id="ttAsideCancel">Bekor qilish</button>
+            <button type="button" class="btn-primary-sm" id="ttAsideSave">Saqlash</button>
+        </div>
+    </div>`;
+}
+
+function renderTtSelectedPanelHtml(sel, teacher) {
+    const students = getItem(STORAGE_KEYS.students, []);
+    const student = students.find(s => s.id === sel.studentId);
+    const dayLabel = DAYS_UZ[sel.dow - 1] || '';
+    return `<div class="rd-tt-aside-card">
+        <h4>Tanlangan dars</h4>
+        <p class="rd-tt-aside-sub">${escapeHtml(sel.studentName || student?.name || sel.studentId)} · ${escapeHtml(sel.studentId)}<br>${escapeHtml(dayLabel)} · ${escapeHtml(sel.time)}</p>
+        ${student ? `<div class="rd-tt-aside-actions rd-tt-aside-actions--col">
+            <button type="button" class="btn-outline-sm" id="ttAsideCard">O'quvchi kartasi</button>
+            <button type="button" class="btn-outline-sm" id="ttAsideMove">Vaqtini ko'chirish</button>
+            <button type="button" class="btn-danger-outline-sm" id="ttAsideRemove">Slotdan olib tashlash</button>
+        </div>
+        <p class="rd-tt-aside-note">Tasdiqlash so'raladi. To'lov va davomat tarixi o'chmaydi, slot bo'shaydi.</p>`
+        : `<p class="text-muted" style="font-size:12px">Bu — lid yoki sinov darsi, "Lidlar" bo'limidan boshqariladi.</p>`}
+    </div>`;
+}
+
+function renderTtAside(teacher) {
+    const aside = document.getElementById('ttAside');
+    if (!aside) return;
+    const t = teacher || filterTeachersByTypeAndSubject('asosiy', _ttFilters.lang || 'english').find(tt => tt.id === (_ttSelectedCell?.teacherId || _ttFilters.teacherId)) || resolveTeacherWithVirtual(_ttFilters.teacherId);
+
+    if (_ttMoveStudentId) {
+        const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === _ttMoveStudentId);
+        aside.innerHTML = `<div class="rd-tt-aside-card rd-tt-aside-card--hint">
+            <h4>Vaqtini ko'chirish</h4>
+            <p class="rd-tt-aside-sub">${escapeHtml(student?.name || _ttMoveStudentId)} uchun jadvaldan yangi bo'sh vaqtni tanlang.</p>
+            <button type="button" class="btn-outline-sm" id="ttAsideMoveCancel">Bekor qilish</button>
+        </div>`;
+        const cancelBtn = document.getElementById('ttAsideMoveCancel');
+        if (cancelBtn) cancelBtn.onclick = () => { _ttMoveStudentId = null; renderTtAside(t); };
+        return;
+    }
+
+    if (!_ttSelectedCell || !t) {
+        aside.innerHTML = `<div class="rd-tt-aside-card rd-tt-aside-card--empty">
+            <h4>Darsga o'quvchi biriktirish</h4>
+            <p class="rd-tt-aside-sub">Band qilish uchun jadvaldan bo'sh katakchani bosing.</p>
+        </div>`;
+        return;
+    }
+
+    if (_ttSelectedCell.mode === 'free') {
+        aside.innerHTML = renderTtAssignPanelHtml(_ttSelectedCell, t);
+        wireTtAssignPanel(t);
+    } else {
+        aside.innerHTML = renderTtSelectedPanelHtml(_ttSelectedCell, t);
+        wireTtSelectedPanel(t);
+    }
+}
+
+function wireTtAssignPanel(teacher) {
+    const cancelBtn = document.getElementById('ttAsideCancel');
+    const saveBtn = document.getElementById('ttAsideSave');
+    document.querySelectorAll('.rd-tt-dur-btn').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('.rd-tt-dur-btn').forEach(x => x.classList.remove('active'));
+            b.classList.add('active');
+        });
+    });
+    if (cancelBtn) cancelBtn.onclick = () => { _ttSelectedCell = null; renderTtAside(teacher); };
+    if (saveBtn) saveBtn.onclick = () => {
+        const sel = _ttSelectedCell;
+        if (!sel) return;
+        const studentId = document.getElementById('ttAsideStudent')?.value;
+        const durBtn = document.querySelector('.rd-tt-dur-btn.active');
+        const dur = parseInt(durBtn?.dataset.dur || '30', 10);
+        if (!studentId) { alert("O'quvchini tanlang"); return; }
+        if (!canFitWeeklyLesson(getTeacherBusyWeeklySlots(teacher.id, studentId), sel.dow, sel.time, dur)) {
+            alert("Tanlangan davomiylik uchun yetarli bo'sh vaqt yo'q");
+            return;
+        }
+        updateStudent(studentId, { lessonDayOfWeek: sel.dow, lessonTime: sel.time, lessonDuration: dur });
+        _ttSelectedCell = null;
+        renderTimetable();
+    };
+}
+
+function wireTtSelectedPanel(teacher) {
+    const sel = _ttSelectedCell;
+    if (!sel) return;
+    const cardBtn = document.getElementById('ttAsideCard');
+    const moveBtn = document.getElementById('ttAsideMove');
+    const removeBtn = document.getElementById('ttAsideRemove');
+    if (cardBtn) cardBtn.onclick = () => openStudentDetail(sel.studentId);
+    if (moveBtn) moveBtn.onclick = () => { _ttMoveStudentId = sel.studentId; _ttSelectedCell = null; renderTtAside(teacher); };
+    if (removeBtn) removeBtn.onclick = () => {
+        if (!confirm("Bu o'quvchini shu slotdan olib tashlaymizmi? To'lov va davomat tarixi o'chmaydi.")) return;
+        updateStudent(sel.studentId, { lessonDayOfWeek: null, lessonTime: '', lessonDuration: 15 });
+        _ttSelectedCell = null;
+        renderTimetable();
+    };
+}
+
+function performTtMove(teacher, dow, time) {
+    const studentId = _ttMoveStudentId;
+    const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === studentId);
+    if (!student) { _ttMoveStudentId = null; renderTtAside(teacher); return; }
+    const duration = student.lessonDuration || teacher.lessonDuration || 15;
+    if (!canFitWeeklyLesson(getTeacherBusyWeeklySlots(teacher.id, studentId), dow, time, duration)) {
+        alert("Tanlangan vaqtda yetarli joy yo'q");
+        return;
+    }
+    updateStudent(studentId, { lessonDayOfWeek: dow, lessonTime: time });
+    _ttMoveStudentId = null;
+    _ttSelectedCell = null;
+    renderTimetable();
+}
+
+function wireTtGridCells(container, teacher) {
+    container.querySelectorAll('[data-tt-cell]').forEach(cell => {
+        cell.addEventListener('click', () => {
+            const mode = cell.dataset.mode;
+            if (mode === 'off') return;
+            const dow = parseInt(cell.dataset.dow, 10);
+            const time = cell.dataset.time;
+            const dateKey = cell.dataset.date;
+            if (_ttMoveStudentId) {
+                if (mode !== 'free') { alert("Bu vaqt band. Bo'sh katakchani tanlang."); return; }
+                performTtMove(teacher, dow, time);
+                return;
+            }
+            if (mode === 'free') {
+                _ttSelectedCell = { mode: 'free', teacherId: teacher.id, dow, dateKey, time };
+            } else {
+                _ttSelectedCell = {
+                    mode: 'lesson', teacherId: teacher.id, dow, dateKey, time,
+                    studentId: cell.dataset.student,
+                    source: cell.dataset.source,
+                    studentName: cell.querySelector('.tt-cell-name')?.textContent || cell.dataset.student
+                };
+            }
+            container.querySelectorAll('[data-tt-cell].tt-cell--selected').forEach(c => c.classList.remove('tt-cell--selected'));
+            container.querySelectorAll(`[data-tt-cell][data-date="${CSS.escape(dateKey)}"][data-time="${CSS.escape(time)}"]`).forEach(c => c.classList.add('tt-cell--selected'));
+            renderTtAside(teacher);
+        });
+    });
+}
+
+function toggleTtChrome(showWeekChrome) {
+    document.querySelectorAll('.rd-tt-weeknav, #ttTodayBtn').forEach(el => { el.style.display = showWeekChrome ? '' : 'none'; });
+    const dayTabs = document.getElementById('ttDayTabs');
+    if (dayTabs) dayTabs.style.display = showWeekChrome ? '' : 'none';
+    const aside = document.getElementById('ttAside');
+    if (aside) aside.style.display = showWeekChrome ? '' : 'none';
+    const layout = document.querySelector('.rd-tt-layout');
+    if (layout) layout.classList.toggle('rd-tt-layout--month', !showWeekChrome);
+}
+
+// Bitta ustozning hafta/oy ko'rinishini chizadi — "Oy" tanlangan bo'lsa eski
+// (o'zgarmagan) oylik jadval, "Hafta" tanlangan bo'lsa yangi dizayn bo'yicha
+// haftalik jadval + o'ng tomondagi yon panel orqali boshqariladi.
+function renderTtForTeacher(teacher, filters, container) {
+    if (_ttViewMode === 'month') {
+        toggleTtChrome(false);
+        const { year: ttYear, month: ttMonth, days: ttMonthDays } = getTimetableMonthDays();
+        const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+        const entries = collectWeeklyScheduleEntries(filters, ttMonthDays);
+        container.innerHTML = `<div class="tt-grid-header"><strong>${escapeHtml(teacher.name)}</strong> · ${monthNames[ttMonth]} ${ttYear}</div>`
+            + renderTimetableTeacherGrid(teacher, entries);
+        wireTimetableCells();
+        scrollTimetableToToday(container);
+        return;
+    }
+
+    toggleTtChrome(true);
+    const weekDays = getTimetableWeekDays(_ttWeekAnchor);
+    const entries = collectWeeklyScheduleEntries(filters, weekDays);
+
+    const labelEl = document.getElementById('ttWeekLabel');
+    if (labelEl) labelEl.textContent = formatTimetableWeekLabel(weekDays);
+
+    const subEl = document.getElementById('timetableSubtitle');
+    if (subEl) {
+        const patKey = teacher.schedulePattern || 'mwf';
+        const patLabel = patKey === 'tts' ? 'Se · Pay · Sha' : 'Du · Chor · Ju';
+        subEl.textContent = `${teacher.name} · ish kunlari ${patLabel}${teacher.workStart ? `, ${teacher.workStart}–${teacher.workEnd || ''}` : ''}`;
+    }
+
+    const dayTabsEl = document.getElementById('ttDayTabs');
+    if (dayTabsEl) {
+        dayTabsEl.innerHTML = renderTtDayTabs(weekDays, teacher);
+        if (!dayTabsEl.dataset.bound) {
+            dayTabsEl.dataset.bound = '1';
+            dayTabsEl.addEventListener('click', e => {
+                const btn = e.target.closest('[data-tt-day]');
+                if (!btn) return;
+                _ttMobileDayKey = btn.dataset.ttDay;
+                renderTimetable();
+            });
+        }
+    }
+
+    const todayKey = dateKeyOf(new Date());
+    if (!_ttMobileDayKey || !weekDays.some(d => d.dateKey === _ttMobileDayKey)) {
+        _ttMobileDayKey = weekDays.some(d => d.dateKey === todayKey) ? todayKey : weekDays[0].dateKey;
+    }
+    const mobileDay = weekDays.find(d => d.dateKey === _ttMobileDayKey) || weekDays[0];
+
+    container.innerHTML = `
+        <div class="rd-tt-week-table-wrap">${renderTimetableWeekGrid(teacher, entries, weekDays)}</div>
+        <div class="rd-tt-day-table-wrap">${renderTimetableWeekGrid(teacher, entries, [mobileDay])}</div>
+    `;
+    wireTtGridCells(container, teacher);
+    scrollTimetableToToday(container);
+    renderTtAside(teacher);
 }
 
 function renderTimetableTeacherGrid(teacher, entries) {
@@ -7307,17 +7691,8 @@ function renderTimetable() {
     _ttFilters = filters;
 
     const titleEl = document.getElementById('timetablePageTitle');
-    const patternLabel = SCHEDULE_PATTERNS[filters.pattern]?.label || '';
     if (titleEl) {
         titleEl.textContent = `Dars jadvali — ${SUBJECTS[filters.lang]?.label || filters.lang || 'Ingliz tili'}`;
-    }
-    // 17-vazifa: kartochka sarlavhasiga joriy oy va yilni chiqarish - jadval
-    // shu oyning haqiqiy kunlarini ko'rsatadi va oy almashganda o'zi yangilanadi.
-    const { year: ttYear, month: ttMonth, days: ttMonthDays } = getTimetableMonthDays();
-    const cardTitleEl = document.getElementById('timetableCardTitle');
-    if (cardTitleEl) {
-        const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
-        cardTitleEl.textContent = `Oylik jadval — ${monthNames[ttMonth]} ${ttYear}`;
     }
 
     const container = document.getElementById('timetableContainer');
@@ -7338,43 +7713,56 @@ function renderTimetable() {
         const ownTeacher = _cuTimetable.linkedTeacherId ? resolveTeacherWithVirtual(_cuTimetable.linkedTeacherId) : null;
         if (!ownTeacher) {
             container.innerHTML = '<p class="text-muted" style="padding:24px">Sizning hisobingiz hali biror ustoz yozuviga ulanmagan — bu texnik muammo, iltimos administratorga murojaat qiling.</p>';
+            toggleTtChrome(false);
             return;
         }
-        const ownEntries = collectWeeklyScheduleEntries({ ...filters, teacherId: ownTeacher.id, lang: null }, ttMonthDays);
-        container.innerHTML = `<div class="tt-grid-header"><strong>${escapeHtml(ownTeacher.name)}</strong> · ${escapeHtml(patternLabel)}</div>`
-            + renderTimetableTeacherGrid(ownTeacher, ownEntries, filters.pattern);
-        wireTimetableCells();
-        scrollTimetableToToday(container);
+        renderTtForTeacher(ownTeacher, { ...filters, teacherId: ownTeacher.id, lang: null }, container);
         return;
     }
 
     // 5-ish: HR xodimlar bilan integratsiya + til filtri
     const teachers = filterTeachersByTypeAndSubject('asosiy', filters.lang || 'english');
 
-    const entries = collectWeeklyScheduleEntries(filters, ttMonthDays);
-
     if (!teachers.length) {
         container.innerHTML = '<p class="text-muted" style="padding:24px">Tanlangan filtrlarga mos ustoz topilmadi.</p>';
+        toggleTtChrome(false);
         return;
     }
 
-    let html = '';
-    if (filters.teacherId !== 'all') {
-        const teacher = teachers.find(t => t.id === filters.teacherId);
-        if (!teacher) {
-            container.innerHTML = '<p class="text-muted" style="padding:24px">Ustoz topilmadi.</p>';
-            return;
+    if (_ttViewMode === 'month') {
+        toggleTtChrome(false);
+        // 17-vazifa: kartochka sarlavhasiga joriy oy va yilni chiqarish — jadval
+        // shu oyning haqiqiy kunlarini ko'rsatadi va oy almashganda o'zi yangilanadi.
+        const { year: ttYear, month: ttMonth, days: ttMonthDays } = getTimetableMonthDays();
+        const monthNames = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+        const entries = collectWeeklyScheduleEntries(filters, ttMonthDays);
+        let html = '';
+        if (filters.teacherId !== 'all') {
+            const teacher = teachers.find(t => t.id === filters.teacherId);
+            if (!teacher) {
+                container.innerHTML = '<p class="text-muted" style="padding:24px">Ustoz topilmadi.</p>';
+                return;
+            }
+            html = `<div class="tt-grid-header"><strong>${escapeHtml(teacher.name)}</strong> · ${monthNames[ttMonth]} ${ttYear}</div>`;
+            html += renderTimetableTeacherGrid(teacher, entries);
+        } else {
+            html = `<div class="tt-grid-header"><strong>Barcha ustozlar</strong> · ${monthNames[ttMonth]} ${ttYear}</div>`;
+            html += renderTimetableAllTeachersWeek(teachers, entries);
         }
-        html = `<div class="tt-grid-header"><strong>${escapeHtml(teacher.name)}</strong> · ${escapeHtml(patternLabel)}</div>`;
-        html += renderTimetableTeacherGrid(teacher, entries, filters.pattern);
-    } else {
-        html = `<div class="tt-grid-header"><strong>Barcha ustozlar</strong> · ${escapeHtml(patternLabel)}</div>`;
-        html += renderTimetableAllTeachersWeek(teachers, entries, filters.pattern);
+        container.innerHTML = html;
+        wireTimetableCells();
+        scrollTimetableToToday(container);
+        return;
     }
 
-    container.innerHTML = html;
-    wireTimetableCells();
-    scrollTimetableToToday(container);
+    // "Hafta" ko'rinishi dizayn bo'yicha har doim BITTA ustozni ko'rsatadi —
+    // "Barcha ustozlar" tanlangan bo'lsa, birinchi ustoz avtomatik tanlanadi.
+    let teacherId = filters.teacherId;
+    if (teacherId === 'all' || !teachers.some(t => t.id === teacherId)) teacherId = teachers[0].id;
+    const teacher = teachers.find(t => t.id === teacherId) || teachers[0];
+    const teacherSel = document.getElementById('ttTeacher');
+    if (teacherSel && teacherSel.value !== teacher.id) teacherSel.value = teacher.id;
+    renderTtForTeacher(teacher, { ...filters, teacherId: teacher.id }, container);
 }
 
 // Oylik jadvalda bugungi ustunni ko'rinadigan joyga suradi (faqat gorizontal).

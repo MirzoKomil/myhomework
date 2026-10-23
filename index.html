@@ -9,7 +9,7 @@
     <script src="js/theme.js"></script>
     <link rel="stylesheet" href="css/styles.css?v=20261021i">
     <link rel="stylesheet" href="css/domworkGroups.css?v=20261011b">
-    <link rel="stylesheet" href="css/shell.css?v=20261021m">
+    <link rel="stylesheet" href="css/shell.css?v=20261023a">
 </head>
 
 <body>
@@ -251,7 +251,7 @@
                             style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
                             <div>
                                 <h1 id="timetablePageTitle">Dars jadvali</h1>
-                                <p>Oylik dars jadvali — o'qituvchilar va o'quvchi ID lari. Sotuv bo'limidagi vaqt
+                                <p id="timetableSubtitle">Oylik dars jadvali — o'qituvchilar va o'quvchi ID lari. Sotuv bo'limidagi vaqt
                                     tanlash shu jadval asosida ishlaydi.</p>
                             </div>
                             <div class="subject-tabs tt-subject-tabs" id="ttSubjectTabs"
@@ -264,32 +264,47 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="card">
-                            <div class="card-header tt-card-header">
-                                <h3 id="timetableCardTitle">Oylik jadval</h3>
-                                <div class="toolbar tt-toolbar" style="display:flex; gap:8px;">
+                        <div class="card tt-toolbar-card">
+                            <div class="card-header tt-card-header rd-tt-toolbar2">
+                                <span class="rd-tt-teacher-wrap">
                                     <select id="ttTeacher" class="form-control-sm" title="Ustoz">
                                         <option value="all">Barcha ustozlar</option>
                                     </select>
-                                    <button class="btn-icon tt-edit-btn" id="btnEditTeacherSchedule"
-                                        title="Ustoz ish jadvalini sozlash">
-                                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="#FFD700" stroke="#B8860B" stroke-width="1.5"/>
-                                            <path d="M15 5l4 4" stroke="#B8860B" stroke-width="1.2"/>
-                                            <path d="M16.5 3.5L20.5 7.5" stroke="#C0C0C0" stroke-width="2"/>
-                                        </svg>
-                                    </button>
-                                    <select id="ttDay" class="form-control-sm" title="Kun" hidden></select>
+                                </span>
+                                <div class="rd-tt-weeknav">
+                                    <button type="button" class="rd-tt-weeknav-btn" id="ttWeekPrev" aria-label="Oldingi hafta">‹</button>
+                                    <span class="rd-tt-weeknav-label" id="ttWeekLabel"></span>
+                                    <button type="button" class="rd-tt-weeknav-btn" id="ttWeekNext" aria-label="Keyingi hafta">›</button>
                                 </div>
+                                <button type="button" class="btn-outline-sm rd-tt-today-btn" id="ttTodayBtn">Bugun</button>
+                                <div class="rd-tt-viewtoggle" id="ttViewToggle">
+                                    <button type="button" class="rd-tt-view-btn active" data-tt-view="week">Hafta</button>
+                                    <button type="button" class="rd-tt-view-btn" data-tt-view="month">Oy</button>
+                                </div>
+                                <button class="btn-icon tt-edit-btn" id="btnEditTeacherSchedule"
+                                    title="Ish jadvalini sozlash">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="#FFD700" stroke="#B8860B" stroke-width="1.5"/>
+                                        <path d="M15 5l4 4" stroke="#B8860B" stroke-width="1.2"/>
+                                        <path d="M16.5 3.5L20.5 7.5" stroke="#C0C0C0" stroke-width="2"/>
+                                    </svg>
+                                    <span class="rd-tt-edit-label">Ish jadvalini sozlash</span>
+                                </button>
+                                <select id="ttDay" class="form-control-sm" title="Kun" hidden></select>
                             </div>
                             <div class="tt-legend">
-                                <span class="tt-legend-item tt-legend-free">Bo'sh</span>
-                                <span class="tt-legend-item tt-legend-lead">Lid (sotuv)</span>
                                 <span class="tt-legend-item tt-legend-d15">15 daqiqa</span>
                                 <span class="tt-legend-item tt-legend-d30">30 daqiqa</span>
                                 <span class="tt-legend-item tt-legend-d60">60 daqiqa</span>
+                                <span class="tt-legend-item tt-legend-lead">Lid · sinov darsi</span>
+                                <span class="tt-legend-item tt-legend-free">Bo'sh vaqt</span>
+                                <span class="tt-legend-item tt-legend-off">Ish vaqti emas</span>
                             </div>
-                            <div class="table-responsive tt-grid-wrap" id="timetableContainer"></div>
+                            <div class="rd-tt-day-tabs" id="ttDayTabs"></div>
+                            <div class="rd-tt-layout">
+                                <div class="table-responsive tt-grid-wrap" id="timetableContainer"></div>
+                                <aside class="rd-tt-aside" id="ttAside"></aside>
+                            </div>
                         </div>
                     </section>
 
@@ -1453,7 +1468,7 @@
     <script src="js/domworkGroupsUI.js?v=20261011b"></script>
     <script src="js/richText.js?v=20261019a"></script>
     <script src="js/audioDialogs.js?v=20261019a"></script>
-    <script src="js/app.js?v=20261021u"></script>
+    <script src="js/app.js?v=20261023a"></script>
 </body>
 
 </html>
