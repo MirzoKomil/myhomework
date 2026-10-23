@@ -16540,7 +16540,7 @@ function renderSalesFunnel() {
     const partialRevenue = partialLeads.reduce((s, l) => s + Number(l?.paymentSurvey?.paidAmount || 0), 0);
     const fullRevenue = fullLeads.reduce((s, l) => s + Number(l?.paymentClosedSurvey?.actualAmount || l?.paymentClosedSurvey?.totalAmount || l?.paymentSurvey?.totalAmount || 0), 0);
     const totalRevenue = partialRevenue + fullRevenue;
-    const fmtSum = n => n > 0 ? Number(n).toLocaleString('uz-UZ') + ' so'm' : '—';
+    const fmtSum = n => n > 0 ? Number(n).toLocaleString('uz-UZ') + " so’m" : '—';
     const maxCount = Math.max(1, ...stagesData.map(x => x.count));
     const pctTxt = n => String(n).replace('.', ',');
     const barRows = stagesData.map(st => `
