@@ -863,7 +863,10 @@ function switchTab(tab, ctx = {}) {
     };
 
     updateSidebarActiveState(tab, _tabContext);
-    document.getElementById('settingsToggle')?.classList.toggle('active', tab === 'settings');
+    // 126-ish: "Sozlamalar" endi alohida tab emas — Profil sahifasining
+    // "Tizim" guruhiga olib boradi, shu sababli profil ochiq bo'lsa ham
+    // sidebar'dagi Sozlamalar tugmasi faol ko'rinadi.
+    document.getElementById('settingsToggle')?.classList.toggle('active', tab === 'profile');
 
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     const el = document.getElementById(`tab-${tab}`);
@@ -6541,11 +6544,35 @@ async function handleProfilePasswordChange() {
     }
 }
 
+// 126-ish: avval alohida "Sozlamalar" sahifasida (Arxiv/Bildirishnomalar/
+// Telegram guruhlari) turgan bo'limlar endi shu — Profil sahifasining
+// "Tizim" guruhi ostida. Render funksiyalarining o'zi (renderSettingsArchivePanel,
+// renderNotificationPanel, domworkGroupsUI.render) o'zgarmagan — faqat qaysi
+// panel ko'rinishini shu yerda boshqaramiz.
+const PROFILE_SYSTEM_SECTIONS = new Set(['archive', 'notif-list', 'telegram-groups']);
+
+function renderProfileSystemPanel(section) {
+    document.querySelectorAll('.profile-system-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.settingsPanel === (section === 'notif-list' ? 'notifications' : section));
+    });
+    if (section === 'archive') renderSettingsArchivePanel();
+    else if (section === 'notif-list' && typeof renderNotificationPanel === 'function') renderNotificationPanel();
+    else if (section === 'telegram-groups' && typeof domworkGroupsUI !== 'undefined') domworkGroupsUI.render();
+}
+
 function renderProfileBody() {
     const body = document.getElementById('profileBody');
     if (!body) return;
     const user = _profileUser || getCurrentUser();
     if (!user) return;
+
+    if (PROFILE_SYSTEM_SECTIONS.has(_profileSection)) {
+        body.hidden = true;
+        renderProfileSystemPanel(_profileSection);
+        return;
+    }
+    body.hidden = false;
+    document.querySelectorAll('.profile-system-panel').forEach(panel => panel.classList.remove('active'));
 
     let html = '';
     switch (_profileSection) {
@@ -6632,6 +6659,14 @@ async function renderProfile() {
         const isFullAccess = FULL_ACCESS_ROLES.has(_profileUser?.role);
         activityNavBtn.style.display = isFullAccess ? '' : 'none';
         if (!isFullAccess && _profileSection === 'activity') _profileSection = 'edit';
+    }
+    // 126-ish: "Telegram guruhlari" — avvalgi Sozlamalar sahifasidagi kabi
+    // faqat admin uchun.
+    const telegramNavBtn = document.getElementById('profileNavTelegramGroups');
+    if (telegramNavBtn) {
+        const isAdmin = _profileUser?.role === 'admin';
+        telegramNavBtn.style.display = isAdmin ? '' : 'none';
+        if (!isAdmin && _profileSection === 'telegram-groups') _profileSection = 'edit';
     }
     switchProfileSection(_profileSection);
 }

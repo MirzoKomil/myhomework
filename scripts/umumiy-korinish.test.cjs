@@ -123,3 +123,29 @@ test('Dars jadvali: hafta ko‘rinishi bitta ustoz uchun, yon panel orqali band 
     assert.match(html, /<div class="rd-tt-day-tabs" id="ttDayTabs">/);
     assert.match(html, /<aside class="rd-tt-aside" id="ttAside">/);
 });
+
+test('Sozlamalar: Arxiv/Bildirishnomalar/Telegram guruhlari Profil sahifasining "Tizim" guruhiga ko‘chirildi', () => {
+    // Alohida "Sozlamalar" tabi olib tashlangan, Sozlamalar tugmasi Profilga ochadi
+    assert.doesNotMatch(html, /<section id="tab-settings"/);
+    assert.match(html, /id="settingsToggle"[^>]*data-open-tab="profile"/);
+    assert.match(app, /document\.getElementById\('settingsToggle'\)\?\.classList\.toggle\('active', tab === 'profile'\)/);
+    // Uchala panel endi profil sahifasi ichida, alohida .profile-system-panel sifatida
+    assert.match(html, /<div class="profile-body profile-system-panel" data-settings-panel="archive" id="settingsPanel-archive">/);
+    assert.match(html, /<div class="profile-body profile-system-panel" data-settings-panel="telegram-groups" id="settingsPanel-telegram-groups">/);
+    assert.match(html, /<div class="profile-body profile-system-panel" data-settings-panel="notifications" id="settingsPanel-notifications">/);
+    // "Tizim" nav guruhi va uchta tugma
+    assert.match(html, /<div class="profile-nav-group" id="profileNavSystemGroup">/);
+    assert.match(html, /data-profile-section="archive"/);
+    assert.match(html, /data-profile-section="notif-list"/);
+    assert.match(html, /data-profile-section="telegram-groups"[^>]*id="profileNavTelegramGroups"/);
+    // renderProfileBody uchta yangi bo'limni eski panel funksiyalariga (o'zgarmagan) yo'naltiradi
+    assert.match(app, /const PROFILE_SYSTEM_SECTIONS = new Set\(\['archive', 'notif-list', 'telegram-groups'\]\);/);
+    const panelFn = app.slice(app.indexOf('function renderProfileSystemPanel('), app.indexOf('function renderProfileBody('));
+    assert.match(panelFn, /if \(section === 'archive'\) renderSettingsArchivePanel\(\);/);
+    assert.match(panelFn, /renderNotificationPanel\(\);/);
+    assert.match(panelFn, /domworkGroupsUI\.render\(\);/);
+    // Telegram guruhlari faqat admin uchun ko'rinadi (avvalgi Sozlamalar sahifasidagi kabi)
+    const navFn = app.slice(app.indexOf("const telegramNavBtn = document.getElementById('profileNavTelegramGroups');"), app.indexOf('switchProfileSection(_profileSection);'));
+    assert.match(navFn, /const isAdmin = _profileUser\?\.role === 'admin';/);
+    assert.match(navFn, /telegramNavBtn\.style\.display = isAdmin \? '' : 'none';/);
+});
