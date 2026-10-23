@@ -103,3 +103,23 @@ test('to‘lov oqimi: 3 qadam ko‘rsatkichi, mantiq o‘zgarmagan', () => {
     assert.match(app, /paymentStepsHtml\(2\) \+ bodyHtml/);
     assert.match(app, /paymentStepsHtml\(3\) \+ bodyHtml/);
 });
+
+test('Dars jadvali: hafta ko‘rinishi bitta ustoz uchun, yon panel orqali band qilish/ko‘chirish/olib tashlash', () => {
+    assert.match(app, /function getTimetableWeekDays\(anchor\)/);
+    assert.match(app, /function renderTimetableWeekGrid\(teacher, entries, days\)/);
+    assert.match(app, /function renderTtAside\(teacher\)/);
+    // "Barcha ustozlar" hafta ko'rinishida tanlanmaydi - birinchi ustoz avtomatik tanlanadi
+    assert.match(app, /if \(teacherId === 'all' \|\| !teachers\.some\(t => t\.id === teacherId\)\) teacherId = teachers\[0\]\.id;/);
+    // Band qilish/ko'chirish eski funksiyalar bilan BIR XIL tekshiruvdan o'tadi
+    const assignFn = app.slice(app.indexOf('function wireTtAssignPanel('), app.indexOf('function wireTtSelectedPanel('));
+    assert.match(assignFn, /canFitWeeklyLesson\(getTeacherBusyWeeklySlots\(teacher\.id, studentId\), sel\.dow, sel\.time, dur\)/);
+    assert.match(assignFn, /updateStudent\(studentId, \{ lessonDayOfWeek: sel\.dow, lessonTime: sel\.time, lessonDuration: dur \}\)/);
+    const moveFn = app.slice(app.indexOf('function performTtMove('), app.indexOf('function wireTtGridCells('));
+    assert.match(moveFn, /canFitWeeklyLesson\(getTeacherBusyWeeklySlots\(teacher\.id, studentId\), dow, time, duration\)/);
+    // "Oy" rejimi eski (o'zgarmagan) oylik jadvalga tayanadi
+    assert.match(app, /if \(_ttViewMode === 'month'\) \{\n\s+toggleTtChrome\(false\);/);
+    // Mobil: kun tablari + bitta kunlik jadval
+    assert.match(app, /function renderTtDayTabs\(weekDays, teacher\)/);
+    assert.match(html, /<div class="rd-tt-day-tabs" id="ttDayTabs">/);
+    assert.match(html, /<aside class="rd-tt-aside" id="ttAside">/);
+});
