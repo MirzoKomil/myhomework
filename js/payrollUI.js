@@ -165,7 +165,7 @@
         return config[role].tiers.map((t, i, all) => `<div class="payroll-tier" data-tier="${i}">
             ${numberInput(role === 'sales' ? 'Aylanma ≥ (so‘m)' : 'Reja ≤ (%)', 'tier-bound', role === 'sales' ? t.from : (t.upTo ?? ''), role === 'rop' && i === all.length - 1 ? 'disabled placeholder="Cheksiz"' : '')}
             ${numberInput(role === 'sales' ? 'Fiksa (so‘m)' : 'Ulush (%)', 'tier-value', role === 'sales' ? t.fixed : t.rate)}
-            <button type="button" class="btn-danger-sm" data-remove-tier="${role}:${i}" ${all.length <= 1 || (role === 'rop' && i === all.length - 1) ? 'disabled' : ''}>O‘chirish</button></div>`).join('');
+            <button type="button" class="btn-danger-sm payroll-tier-del" data-remove-tier="${role}:${i}" aria-label="Pog‘onani o‘chirish" title="O‘chirish" ${all.length <= 1 || (role === 'rop' && i === all.length - 1) ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg></button></div>`).join('');
     }
     function renderSettings(root, config) {
         const result = state.result, c = config.data, body = root.querySelector('[data-payroll-body]');

@@ -881,7 +881,7 @@ function switchTab(tab, ctx = {}) {
 // Dizayndagi sahifa sarlavhasi: bo'lim nomi (H1) + "faol tab · til" izohi.
 // Faqat ichki tablari bor bo'limlarda (.sales-pinned) chiziladi.
 const RD_PAGE_TITLES = {
-    sales: 'Sotuv', marketing: 'Marketing', students: 'Oʻquvchilar', finance: 'Moliya', hr: 'Xodimlar',
+    sales: 'Sotuv', marketing: 'Marketing', students: 'Oʻquvchilar', finance: 'Moliya', hr: 'HR boʻlimi',
     analitika: 'Analitika', 'teachers-section': 'Akademik boʻlim', settings: 'Sozlamalar', 'student-app': 'Mobil ilova'
 };
 let _rdCurrentTab = null;
@@ -10803,7 +10803,7 @@ function renderStudents() {
             </td>
             <td>
                 <div class="stx-main">${escapeHtml(s.group || '—')}</div>
-                <div class="stx-sub stx-wrap">${escapeHtml(teacher?.name || 'ustoz yoʻq')}</div>${asst ? `<div class="stx-sub stx-wrap">yord. ${escapeHtml(asst.name)}</div>` : ''}
+                <div class="stx-sub stx-wrap stx-teacher">${escapeHtml(teacher?.name || 'ustoz yoʻq')}</div>${asst ? `<div class="stx-sub stx-wrap">yord. ${escapeHtml(asst.name)}</div>` : ''}
             </td>
             <td style="white-space:nowrap">${escapeHtml(manager?.name || '—')}</td>
             <td style="white-space:nowrap"><div class="stx-main">${startDate ? formatDateShort(startDate) : '—'}</div><div class="stx-sub">tugash ${escapeHtml(endDate)}</div>${s.lessonTime ? `<div class="stx-sub">${escapeHtml(s.lessonTime)}${s.lessonDuration ? ` · ${escapeHtml(String(s.lessonDuration))} daq` : ''}</div>` : ''}</td>
@@ -11710,7 +11710,7 @@ function renderTeacherTrialRows(lessons) {
         <p class="text-muted">Faqat sizga biriktirilgan sinov darslari. Vaqt Toshkent bo‘yicha.</p>
         ${rows ? `<div class="card table-responsive trial-table-wrap"><table class="table trial-table"><thead><tr><th>Lid</th><th>Til</th><th>Vaqt</th><th>Holat</th><th>Amal</th></tr></thead>
         <tbody>${rows}</tbody></table></div>` : `<div class="card team-empty-state"><img class="team-ill" src="images/empty/calendar.webp" alt="" width="120" height="120" loading="lazy">
-            <strong>Hozircha sinov darsi yoʻq</strong><span>Sotuv boʻlimi sizga sinov darsini biriktirsa, shu yerda vaqti bilan chiqadi va bildirishnoma keladi.</span></div>`}`;
+            <strong>Hozircha sinov darsi yoʻq</strong><span>Sotuv boʻlimi sizga sinov darsini biriktirsa, shu yerda vaqti bilan chiqadi va bildirishnoma keladi.</span><button type="button" class="btn-secondary-sm team-empty-action" data-trial-refresh-inline>Yangilash</button></div>`}`;
 }
 
 async function renderTeacherTrialLessons(refresh = false) {
@@ -11724,6 +11724,7 @@ async function renderTeacherTrialLessons(refresh = false) {
         _teacherTrialLessons = result.lessons || [];
         container.innerHTML = renderTeacherTrialRows(_teacherTrialLessons);
         container.querySelector('#refreshTeacherTrials').onclick = () => renderTeacherTrialLessons(true);
+        container.querySelector('[data-trial-refresh-inline]')?.addEventListener('click', () => renderTeacherTrialLessons(true));
         container.querySelectorAll('[data-trial-accept]').forEach(button => {
             button.onclick = () => saveTeacherTrialAction(button.dataset.trialAccept, { action: 'accept' }, button);
         });
@@ -12000,7 +12001,7 @@ function renderTpTextbookSection(secId, { readOnly = false } = {}) {
                 <button type="button" class="btn-danger-sm" data-tp-del-doc="${escapeHtml(d.id)}">O'chirish</button>
             </div>`}
         </div>`;
-    }).join('') : `<div class="mac-empty">${sec.icon} ${sec.label} uchun hali material qo'shilmagan</div>`;
+    }).join('') : `<div class="team-empty-state team-empty-state--flat"><img class="team-ill" src="images/empty/board.webp" alt="" width="120" height="120" loading="lazy"><strong>${sec.label}: hozircha material yoʻq</strong><span>${readOnly ? 'Akademik boʻlim material qoʻshganda shu yerda chiqadi.' : 'Yuqoridagi tugmalar orqali fayl yoki havola qoʻshing.'}</span></div>`;
 
     body.innerHTML = `
     <div style="padding:20px;overflow-y:auto;flex:1">
@@ -12955,7 +12956,7 @@ async function renderMarketingTargetPanel() {
         return 'color:#ef4444';
     }
 
-    function fmtPct(v) { return v ? (v * 1).toFixed(1) + '%' : '—'; }
+    function fmtPct(v) { return v ? (v * 1).toFixed(1).replace('.', ',') + '%' : '—'; }
     function fmtNum(v) { return (v || v === 0) && v !== null ? v : '—'; }
     function fmtUSD(v) { return v === 0 && domworkAds ? '$0.00' : v ? '$' + (+v).toFixed(2) : '—'; }
     function fmtMln(v) { return v ? v + ' M' : '—'; }
@@ -13000,7 +13001,7 @@ async function renderMarketingTargetPanel() {
         { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(lidNarxiFakt), pct: (planLidNarxi && lidNarxiFakt) ? (lidNarxiFakt / planLidNarxi * 100) : null, icon: '💵' },
         { label: 'Sifatli lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: kvalLidSoniFakt || '—', pct: (planKvalLidSoni && kvalLidSoniFakt) ? (kvalLidSoniFakt / planKvalLidSoni * 100) : null, icon: '✅' },
         { label: 'Sifatli lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(kvalLidNarxiFakt), pct: (planKvalNarxi && kvalLidNarxiFakt) ? (kvalLidNarxiFakt / planKvalNarxi * 100) : null, icon: '🏷️' },
-        { label: 'Lid → Sifatli lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: lidKvalPctFakt != null ? lidKvalPctFakt.toFixed(1) + '%' : '—', pct: (lidKvalPctFakt && planKvalPct) ? (lidKvalPctFakt / planKvalPct * 100) : null, icon: '📊' },
+        { label: 'Lid → Sifatli lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: lidKvalPctFakt != null ? lidKvalPctFakt.toFixed(1).replace('.', ',') + '%' : '—', pct: (lidKvalPctFakt && planKvalPct) ? (lidKvalPctFakt / planKvalPct * 100) : null, icon: '📊' },
     ].map(c => {
         const pc = c.pct ? c.pct.toFixed(1) : null;
         const barHtml = c.pct ? progressBar(c.pct) : '';
@@ -13080,7 +13081,7 @@ async function renderMarketingTargetPanel() {
                             <td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
                             <td class="tm-td-plan">${x.planSotuv != null ? x.planSotuv : '—'}</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
                             <td class="tm-td-plan">${x.planSummaM != null ? x.planSummaM : '—'}</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
-                            <td class="tm-td-plan">${x.planKvalPct != null ? x.planKvalPct + '%' : '—'}</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1)+'%':'—'}</td>
+                            <td class="tm-td-plan">${x.planKvalPct != null ? x.planKvalPct + '%' : '—'}</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1).replace('.', ',')+'%':'—'}</td>
                             <td class="tm-td-plan">${x.planAvgChekM != null ? x.planAvgChekM : '—'}</td><td class="tm-td-fakt${x.avgChekM>0?' tm-td-has':''}"> ${x.avgChekM||'—'}</td>
                         </tr>`;
                     }).join('')}
@@ -13156,7 +13157,7 @@ async function renderMarketingTargetPanel() {
                             <td class="tm-td-fakt${lidNarxi != null ? ' tm-td-has' : ''}"> ${lidNarxi != null ? '$' + lidNarxi.toFixed(2) : '—'}</td>
                             <td class="tm-td-fakt${d.kval>0?' tm-td-has':''}"> ${d.kval || '—'}</td>
                             <td class="tm-td-fakt${sifatliLidNarxi != null ? ' tm-td-has' : ''}"> ${sifatliLidNarxi != null ? '$' + sifatliLidNarxi.toFixed(2) : '—'}</td>
-                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct ? d.kvalPct.toFixed(1) + '%' : '—'}</td>
+                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct ? d.kvalPct.toFixed(1).replace('.', ',') + '%' : '—'}</td>
                         </tr>`;
                     }).join('')}
                 </tbody>
@@ -13186,7 +13187,7 @@ async function renderMarketingTargetPanel() {
                             <td class="tm-td-fakt${d.sinov>0?' tm-td-has':''}"> ${d.sinov||'—'}</td>
                             <td class="tm-td-fakt tm-td-sotuv${d.sotuv>0?' tm-td-sotuv-pos':''}"> ${d.sotuv||'—'}</td>
                             <td class="tm-td-fakt${d.summaM>0?' tm-td-has':''}"> ${d.summaM||'—'}</td>
-                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct?d.kvalPct.toFixed(1)+'%':'—'}</td>
+                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct?d.kvalPct.toFixed(1).replace('.', ',')+'%':'—'}</td>
                             <td class="tm-td-fakt${d.avgChekM>0?' tm-td-has':''}"> ${d.avgChekM||'—'}</td>
                         </tr>`;
                     }).join('')}
@@ -14285,7 +14286,7 @@ function renderAnalitikaSotuvMarketing() {
 
     <div class="cf-kpi-grid" style="margin-bottom:16px">
         <div class="stat-card"><div class="stat-icon purple">📥</div><div class="stat-info"><div class="stat-label">Jami lidlar</div><div class="stat-value" style="font-size:20px">${total}</div></div></div>
-        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Konversiya</div><div class="stat-value" style="font-size:20px">${convRate.toFixed(1)}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Konversiya</div><div class="stat-value" style="font-size:20px">${convRate.toFixed(1).replace(".", ",")}%</div></div></div>
         <div class="stat-card"><div class="stat-icon blue">💰</div><div class="stat-info"><div class="stat-label">Yopilgan savdo summasi</div><div class="stat-value" style="font-size:20px">${fmtMoney(totalRevenue)}</div></div></div>
         <div class="stat-card"><div class="stat-icon yellow">⏱️</div><div class="stat-info"><div class="stat-label">Aloqaga chiqish tezligi</div><div class="stat-value" style="font-size:18px">${avgSpeedHours !== null ? avgSpeedHours.toFixed(1) + ' soat' : "To'planmoqda"}</div></div></div>
     </div>
@@ -14297,7 +14298,7 @@ function renderAnalitikaSotuvMarketing() {
                 <div class="cf-mgr-row">
                     <div class="cf-mgr-name">${escapeHtml(s.label)}</div>
                     <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${Math.min(100, s.rate)}%"></div></div>
-                    <div class="cf-mgr-value">${s.rate.toFixed(1)}% (${s.closed}/${s.total})</div>
+                    <div class="cf-mgr-value">${s.rate.toFixed(1).replace(".", ",")}% (${s.closed}/${s.total})</div>
                 </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Bu davrda lid yo'q</div></div>`}
         </div>
         <div class="card">
@@ -14315,14 +14316,14 @@ function renderAnalitikaSotuvMarketing() {
         <div class="card-header"><h3>Menejerlar samaradorligi</h3></div>
         <div class="cf-tx-table-wrap">
             <table class="table">
-                <thead><tr><th>Menejer</th><th>Lidlar</th><th>Yopilgan</th><th>Close rate</th><th>Daromad</th><th>O'rtacha chek</th></tr></thead>
+                <thead><tr><th>Menejer</th><th>Lidlar</th><th>Yopilgan</th><th>Yopilish ulushi</th><th>Daromad</th><th>O'rtacha chek</th></tr></thead>
                 <tbody>
                     ${mgrPerf.length ? mgrPerf.map(m => `
                         <tr>
                             <td>${escapeHtml(m.name)}</td>
                             <td>${m.total}</td>
                             <td>${m.closed}</td>
-                            <td>${m.closeRate.toFixed(1)}%</td>
+                            <td>${m.closeRate.toFixed(1).replace(".", ",")}%</td>
                             <td>${fmtMoney(m.revenue)}</td>
                             <td>${fmtMoney(m.avgCheck)}</td>
                         </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Bu davrda ma'lumot yo'q</td></tr>`}
@@ -14435,7 +14436,7 @@ function renderAnalitikaMoliyaviy() {
             <div class="card-header"><h3>Pul qaytarish (Refund) tafsiloti</h3></div>
             <div class="cf-invest-row"><span>Qaytarilgan operatsiyalar</span><b>${refundCount} ta</b></div>
             <div class="cf-invest-row"><span>Qaytarilgan summa</span><b class="sp-neg">${fmtMoney(refundAmount)}</b></div>
-            <div class="cf-invest-row cf-invest-row-total"><span>Sotuvlarga nisbatan (shu davr)</span><b>${refundRate.toFixed(1)}%</b></div>
+            <div class="cf-invest-row cf-invest-row-total"><span>Sotuvlarga nisbatan (shu davr)</span><b>${refundRate.toFixed(1).replace(".", ",")}%</b></div>
         </div>
     </div>`;
 
@@ -14613,7 +14614,7 @@ function hbSotuvMenejeri(period) {
         const planPct = target > 0 ? (revenue / target * 100) : 0;
         const convRate = periodLeads.length ? (closed.length / periodLeads.length * 100) : 0;
         cards += hbCard('📈', 'green', 'Shaxsiy rejaning bajarilishi', planPct.toFixed(0) + '%');
-        cards += hbCard('🔻', 'purple', 'Voronka konversiyasi', convRate.toFixed(1) + '%');
+        cards += hbCard('🔻', 'purple', 'Voronka konversiyasi', convRate.toFixed(1).replace('.', ',') + '%');
     } else {
         const target = getPeriodTarget(period) * (managers.length || 1);
         const planPct = target > 0 ? (revenue / target * 100) : 0;
@@ -14699,7 +14700,7 @@ function hbMarketolog(period) {
         const targetLeads = periodLeads.filter(l => (l.source || 'Organik') === 'Target').length;
         const qualityRate = periodLeads.length ? (targetLeads / periodLeads.length * 100) : 0;
         cards += hbCard('📋', 'purple', 'Jami lidlar (davr fakti)', periodLeads.length);
-        cards += hbCard('✅', 'green', '"Maqsadli" deb tasdiqlangan arizalar foizi', qualityRate.toFixed(1) + '%');
+        cards += hbCard('✅', 'green', '"Maqsadli" deb tasdiqlangan arizalar foizi', qualityRate.toFixed(1).replace('.', ',') + '%');
     } else {
         const newCustomers = _getClosedLeadsInPeriod('all', period).length;
         const cac = newCustomers > 0 ? Math.round(spend / newCustomers) : null;
@@ -15097,7 +15098,7 @@ function renderAnalitikaXodimlar() {
     </div>
 
     <div class="cf-kpi-grid" style="margin-bottom:16px">
-        <div class="stat-card"><div class="stat-icon yellow">🔄</div><div class="stat-info"><div class="stat-label">Xodimlar qo'nimdorligi (Turnover)</div><div class="stat-value" style="font-size:18px">${overallTurnover.toFixed(1)}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">🔄</div><div class="stat-info"><div class="stat-label">Xodimlar qo'nimdorligi (Turnover)</div><div class="stat-value" style="font-size:18px">${overallTurnover.toFixed(1).replace(".", ",")}%</div></div></div>
         <div class="stat-card"><div class="stat-icon purple">📅</div><div class="stat-info"><div class="stat-label">O'rtacha ish staji (faol xodimlar)</div><div class="stat-value" style="font-size:18px">${avgTenure !== null ? avgTenure.toFixed(1) + ' oy' : "Ma'lumot yo'q"}</div></div></div>
     </div>
 
@@ -15829,7 +15830,7 @@ function isSifatsizLeadForQualityStats(lead, today = new Date()) {
 function formatQualityPercent(value, total) {
     if (!total) return '0%';
     const percent = (value / total) * 100;
-    return `${percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(1)}%`;
+    return `${percent % 1 === 0 ? percent.toFixed(0) : percent.toFixed(1).replace(".", ",")}%`;
 }
 
 function buildLeadQualityChart(leads) {
@@ -16347,7 +16348,7 @@ function buildReasonsChart(reasonRows, { title, emptyText, centerLabel }) {
 
     const legend = reasonRows.map((row, index) => {
         const share = (row.count / total) * 100;
-        const shareText = `${share % 1 === 0 ? share.toFixed(0) : share.toFixed(1)}%`;
+        const shareText = `${share % 1 === 0 ? share.toFixed(0) : share.toFixed(1).replace(".", ",")}%`;
         return `
             <div style="display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border,#e2e8f0)">
                 <span style="width:10px;height:10px;border-radius:50%;background:${palette[index % palette.length]}"></span>

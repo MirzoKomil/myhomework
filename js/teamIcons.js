@@ -64,12 +64,12 @@
         '📣': 'megaphone', '💻': 'laptop', '💵': 'money', '🔍': 'search', '🏆': 'trophy', '🏅': 'medal', '🥇': 'medal', '🥈': 'medal', '🥉': 'medal',
         '🍽️': 'food', '🍽': 'food', '📁': 'folder', '🚫': 'ban', '🪙': 'money', '📥': 'download', '⬇️': 'download', '⬆️': 'upload',
         '🖨️': 'printer', '🖨': 'printer', '💾': 'save', '👨‍🏫': 'user', '👩‍🏫': 'user', '🧑‍🏫': 'user', '👩': 'user', '👨': 'user', '🧑': 'user',
-        '📍': 'pin', '🏷️': 'tag', '🏷': 'tag', '🏢': 'school', '💼': 'bag', '⏱️': 'clock', '⏰': 'clock', '🕒': 'clock', '🎨': 'image', '📦': 'folder', '📌': 'pin', '❤️': 'heart'
+        '📍': 'pin', '🏷️': 'tag', '🏷': 'tag', '🏢': 'school', '💼': 'bag', '🧑‍💼': 'bag', '👨‍💼': 'bag', '👩‍💼': 'bag', '⏱️': 'clock', '⏰': 'clock', '🕒': 'clock', '🎨': 'image', '📦': 'folder', '📌': 'pin', '❤️': 'heart'
     };
     const keys = Object.keys(MAP).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const RX = new RegExp(`^\\s*(${keys.join('|')})\\uFE0F?\\s*`);
     // Faqat shu UI elementlari ichida (foydalanuvchi matni emas).
-    const SCOPE = 'button, h1, h2, h3, h4, h5, th, label, summary, .stat-icon, .stat-label, .kpi-lbl, .mac-tab-btn, .section-nav-item, .chip, .badge, [class*="kpi"] > span, [class*="-ic"], [class*="icon"], .card-header, .tm-kpi, .hb-card, .tp-tb-tab, .mac-empty, .dashboard-empty, .text-muted, .empty-state';
+    const SCOPE = 'button, h1, h2, h3, h4, h5, th, label, summary, .stat-icon, .stat-label, .kpi-lbl, .mac-tab-btn, .section-nav-item, .chip, .badge, [class*="kpi"] > span, [class*="-ic"], [class*="icon"], .card-header, .tm-kpi, .hb-card, .tp-tb-tab, .mac-empty, .dashboard-empty, .text-muted, .empty-state, [class*="section-title"], .hb-role-btn, .hb-tab';
     const SKIP = 'textarea, input, [contenteditable], .chat, [class*="chat-"], .lead-card-comment, .guide-body, .guide-content, .rich-text, .msg, .message';
     const svg = name => `<svg class="team-ico" viewBox="0 0 24 24" aria-hidden="true">${P[name]}</svg>`;
 

@@ -4135,3 +4135,481 @@ html.rd body[data-role="boshliq"] #tpAttendance .card > .subject-tabs {
         width: 40px !important;
     }
 }
+
+/* ==========================================================================
+   R4: bir xil oraliqlar, tekis kartalar, kesilmaydigan boshqaruvlar
+   ========================================================================== */
+/* Til tanlovi tablar qatori bilan bir chiziqda */
+@media (min-width: 901px) {
+    html.rd .sales-header-lang {
+        transform: translateY(-6px);
+    }
+}
+
+/* Akademik bo'lim panellari: tablar ostida bir xil oraliq, ichma-ich karta yo'q */
+html.rd #tpAttendance > div {
+    padding: 0 0 24px;
+}
+
+html.rd #tpWhiteboard > .card,
+html.rd #tpCabinet > .card {
+    margin: 0 !important;
+}
+
+html.rd #tpCabinet > .card {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+}
+
+html.rd #tpCabinet > .card > .card-header:has(select[style*="display: none"]),
+html.rd body[data-role="teacher"] #tpCabinet > .card > .card-header {
+    display: none;
+}
+
+html.rd .team-demo-body {
+    padding: 0 20px 18px;
+}
+
+/* Ustoz bosh sahifasi: yon ustunda oddiy 16px oraliq */
+html.rd .thx-side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+html.rd .thx-side > .card {
+    margin: 0;
+}
+
+/* Lid kartasi (web): qo'ng'iroq menejer bilan bir qatorda, ism 2 qatorgacha */
+@media (min-width: 901px) {
+    html.rd .lead-card .lead-card-actions {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 6px;
+    }
+
+    html.rd .lead-card .lead-card-call {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-left: auto;
+        padding: 0;
+        font-size: 0;
+        gap: 0;
+        border-radius: 10px;
+        background: #E3F6EE;
+        color: #0F7A55;
+        flex: 0 0 32px;
+    }
+
+    html.rd .lead-card .lead-card-call svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+    }
+
+    html.rd .lead-card .lead-card-action.is-zero {
+        opacity: 0;
+        transition: opacity .15s;
+    }
+
+    html.rd .lead-card:hover .lead-card-action.is-zero,
+    html.rd .lead-card:focus-within .lead-card-action.is-zero {
+        opacity: .8;
+    }
+
+    html.rd #leadsKanban .lead-card-name {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.25;
+    }
+}
+
+/* Ma'lumot banneri: "i" haqiqiy ikonka */
+html.rd .info-banner::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    background: var(--rd-primary-strong);
+    border-radius: 0;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4M12 8h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Davomat ko'rsatkichlari: 6 ustunli to'r, summalar bir qatorda */
+@media (min-width: 901px) {
+    html.rd #mainAttSummary:not(:empty),
+    html.rd #asstAttSummary:not(:empty) {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    html.rd #mainAttSummary > .kpi-breakdown,
+    html.rd #asstAttSummary > .kpi-breakdown,
+    html.rd .kpi-summary > :not(.kpi-stat) {
+        grid-column: 1 / -1;
+    }
+}
+
+html.rd .kpi-summary .kpi-num {
+    white-space: nowrap;
+}
+
+/* Telefonda davomat filtrlari bittadan qatorda — matn kesilmaydi */
+@media (max-width: 600px) {
+    html.rd #tab-teachers-section .card-header .toolbar {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+
+    html.rd #tab-teachers-section .card-header .toolbar > #mainAttTeacher,
+    html.rd #tab-teachers-section .card-header .toolbar > #asstAttTeacher {
+        grid-column: 1 / -1;
+    }
+
+    html.rd #tab-teachers-section .card-header .toolbar > * {
+        width: 100% !important;
+        min-width: 0;
+    }
+
+    html.rd .kpi-summary .kpi-num {
+        font-size: 15px;
+    }
+}
+
+/* Statistika: davr tanlovi telefonda to'liq sig'adi */
+@media (max-width: 600px) {
+    html.rd .sfx-presets {
+        display: grid !important;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        overflow: visible;
+    }
+
+    html.rd .sfx-presets .sfx-chip {
+        padding-left: 4px;
+        padding-right: 4px;
+        min-width: 0;
+        text-align: center;
+        font-size: 13px;
+    }
+}
+
+/* O'quvchilar (telefon): qidiruv to'liq, son ostida, har o'quvchi alohida karta */
+@media (max-width: 700px) {
+    html.rd .students-toolbar-left {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    html.rd .students-toolbar-left .students-search-wrap {
+        flex: 1 1 100%;
+    }
+
+    html.rd .students-total-label {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    html.rd #studentsFiltersBar {
+        flex-wrap: wrap;
+    }
+
+    html.rd #studentsFiltersBar .leads-filter-box {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 0;
+    }
+
+    html.rd .students-table tr[data-student-row] {
+        background: var(--surface);
+        border: 1px solid var(--border) !important;
+        border-radius: 14px;
+        margin: 0 0 10px;
+        padding: 12px 10px !important;
+    }
+
+    html.rd .students-table tbody {
+        padding: 12px 0;
+    }
+
+    html.rd .students-table tr[data-student-row] .stx-teacher::before {
+        content: 'Ustoz: ';
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(3) .stx-main.team-empty,
+    html.rd .students-table tr[data-student-row] > td:nth-child(3) .stx-main:empty {
+        display: none;
+    }
+}
+
+/* Ustoz o'z o'quvchilarida "Guruh · ustoz" ustuni keraksiz */
+html.rd body[data-role="teacher"] .students-table th:nth-child(3),
+html.rd body[data-role="teacher"] .students-table td:nth-child(3) {
+    display: none;
+}
+
+/* Darslik: oddiy karta, 14px matn, bo'sh holat rasmli */
+@media (min-width: 901px) {
+    html.rd #tpTextbook.active {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        min-height: 420px;
+    }
+}
+
+html.rd #tpTextbook .tp-tb-tab {
+    font-size: 14px;
+}
+
+html.rd .team-empty-state--flat {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+html.rd .team-empty-action {
+    margin-top: 12px;
+}
+
+/* Dars jadvali */
+html.rd .tt-cell-name {
+    font-size: 12px;
+    line-height: 1.25;
+}
+
+html.rd .tt-cell-id {
+    font-size: 11px;
+}
+
+@media (min-width: 901px) {
+    html.rd .rd-tt-layout {
+        grid-template-columns: minmax(0, 1fr) 260px;
+    }
+}
+
+@media (max-width: 900px) {
+    html.rd .tt-week-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    html.rd .tt-week-table .tt-time-col,
+    html.rd .tt-week-table thead th:first-child {
+        width: 56px !important;
+        min-width: 56px !important;
+        padding-left: 4px;
+        padding-right: 4px;
+        font-size: 13px;
+    }
+
+    html.rd .rd-tt-day-tabs ~ .rd-tt-layout .tt-week-table thead,
+    html.rd .tt-week-table:has(td.tt-time-col) thead {
+        display: none;
+    }
+
+    /* Sinov darslari: sarlavha yuqori panelda, yolg'iz tugma ko'rsatilmaydi */
+    html.rd .page-title-bar:has(> h2.team-dup) {
+        display: none;
+    }
+}
+
+/* Moliya */
+html.rd .inflow-toolbar > h2 {
+    display: none;
+}
+
+html.rd .inflow-toolbar {
+    justify-content: flex-end;
+}
+
+html.rd .ifx-pay {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+html.rd .inflow-table th,
+html.rd #inflowRoot th {
+    white-space: nowrap;
+}
+
+html.rd #payrollKpiRoot .payroll-toolbar,
+html.rd #payrollKpiRoot .payroll-toolbar + .payroll-note {
+    display: none;
+}
+
+html.rd .payroll-toolbar {
+    align-items: flex-end;
+}
+
+html.rd .payroll-toolbar > label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+}
+
+html.rd .payroll-tier-del {
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px;
+}
+
+html.rd .payroll-tier-del:hover:not(:disabled) {
+    color: #DC2626 !important;
+    border-color: #FCA5A5 !important;
+}
+
+html.rd .payroll-tier-del svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+html.rd [data-payroll-paid]:not(:disabled) {
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+    border-color: transparent;
+    font-weight: 600;
+}
+
+/* Jadval sarlavhalari — bitta uslub */
+html.rd .main-area table th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Marketing: davr tanlovi o'ngda, ichki ortiqcha padding yo'q */
+html.rd .tm-section-title .team-ico-wrap {
+    margin-right: 6px;
+}
+
+/* Marketing jadvali: nom katagi oddiy katak — qator chiziqlari bir tekis */
+html.rd .tm-table td.tm-td-name {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+html.rd .tm-wrap {
+    padding: 0 0 20px;
+}
+
+/* Tablar ostidagi oraliq hamma sahifada bir xil (24px) */
+html.rd #tpAttendance > div {
+    padding: 0 0 24px !important;
+}
+
+html.rd .sales-content-area > .sales-panel.active > :first-child,
+html.rd .sales-content-area > .sales-panel.active > :first-child > :first-child:not(.card-header),
+html.rd .finance-panel.active > :first-child,
+html.rd .finance-panel.active > :first-child > :first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+html.rd .sfx-presets {
+    margin-top: 0;
+}
+
+html.rd .debtors-wrap {
+    padding-top: 0 !important;
+}
+
+html.rd .cf-wrap > p:empty,
+html.rd .cf-wrap > div:empty {
+    display: none;
+}
+
+html.rd #spJamoaviyViewToggle {
+    margin-bottom: 0 !important;
+}
+
+html.rd #spPlanView > .card:first-child,
+html.rd #spFaktView > .card:first-child {
+    margin-top: 0 !important;
+}
+
+/* R4 tuzatish: lid kartasi tugmalari karta ichida qoladi */
+@media (min-width: 901px) {
+    html.rd .lead-card .lead-card-action.is-zero {
+        display: none;
+    }
+
+    html.rd .lead-card:hover .lead-card-action.is-zero,
+    html.rd .lead-card:focus-within .lead-card-action.is-zero {
+        display: inline-flex;
+    }
+
+    html.rd .lead-card .lead-card-actions {
+        min-width: 0;
+    }
+
+    html.rd .lead-card .lead-card-actions > :not(.lead-card-call) {
+        min-width: 0;
+        flex-shrink: 1;
+    }
+}
+
+@media (max-width: 700px) {
+    html.rd #studentsFiltersBar {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        overflow: visible !important;
+    }
+
+    html.rd #studentsFiltersBar .leads-filter-box {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    html.rd #studentsFiltersBar .leads-filter-display {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 600px) {
+    html.rd #tab-teachers-section .card-header .toolbar > :last-child {
+        grid-column: 1 / -1;
+    }
+
+    html.rd .kpi-summary .kpi-num {
+        white-space: normal;
+        font-size: 14px;
+    }
+}

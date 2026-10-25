@@ -194,7 +194,7 @@
 
     // Telefonda yuqori panel chap tomonida: logo (Bosh sahifa) yoki bo'lim nomi.
     const TITLES = {
-        sales: 'Sotuv', marketing: 'Marketing', students: 'Oʻquvchilar', finance: 'Moliya', hr: 'Xodimlar',
+        sales: 'Sotuv', marketing: 'Marketing', students: 'Oʻquvchilar', finance: 'Moliya', hr: 'HR boʻlimi',
         analitika: 'Analitika', 'teachers-section': 'Akademik boʻlim', timetable: 'Dars jadvali',
         'trial-lessons': 'Sinov darslari', guides: 'Yoʻriqnomalar', 'student-app': 'Mobil ilova', profile: 'Profil'
     };
