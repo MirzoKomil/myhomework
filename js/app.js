@@ -9003,7 +9003,7 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
         <button type="button" class="btn-secondary-sm mhx-btn" data-mhx-student="${escapeHtml(s.id)}">Oʻquvchini ochish</button></li>`;
     return `<div class="ahx mhx" id="managerHome">
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
-            <button type="button" class="btn-primary-sm" data-mhx-add-lead>+ Lid qoʻshish</button></div>
+</div>
         <div class="ahx-kpis">
             <div class="ahx-kpi"><span class="ahx-kpi-l">Oylik rejam</span><b class="ahx-kpi-v">${mln(d.sales)}<small> / ${d.target ? mln(d.target) + ' mln' : 'reja yoʻq'}</small></b>
                 ${pct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, pct)}%"></i></span><div class="ahx-kpi-n"><span>${pct}% · bugungacha kerak edi ${mln(d.dueByToday)}</span><span class="ahx-pill ${ahead >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn'}">${ahead >= 0 ? '+' : '−'}${mln(Math.abs(ahead))}</span></div>` : '<div class="ahx-kpi-n"><span>ROP individual reja kiritmagan</span></div>'}</div>
