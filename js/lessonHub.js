@@ -13,7 +13,7 @@
     const toast = m => (typeof showMiniToast === 'function' ? showMiniToast(m, 2600) : alert(m));
     const plain = s => String(s ?? '').replace(/́/g, '');
     const LANG_LABEL = { english: 'Ingliz tili', russian: 'Rus tili' };
-    const RULES = window.AcademicRules || { PASS_PERCENT: 65, UNLOCK_PERCENT: 50, LIVE_AUTO_UNLOCK: 60, EXAM_INTERVAL: 12, EXAM_PASS_PERCENT: 70, LESSONS_PER_WEEK: 6, SECTIONS: {} };
+    const RULES = window.AcademicRules || { allocateMinutes: null, PASS_PERCENT: 65, UNLOCK_PERCENT: 50, LIVE_AUTO_UNLOCK: 60, EXAM_INTERVAL: 12, EXAM_PASS_PERCENT: 70, LESSONS_PER_WEEK: 6, SECTIONS: {} };
     const CACHE_MS = 3 * 60000;
     // Faqat o'z serverimizdagi yoki https havolalar href/src'ga tushadi.
     const safeUrl = u => (/^(https:\/\/|\/(?!\/))/i.test(String(u || '').trim()) ? String(u).trim() : '');
@@ -273,7 +273,7 @@
                 <button type="button" class="lh-btn" data-act="board">✏️ Doska</button>
                 ${book ? `<button type="button" class="lh-btn" data-act="book">📖 Kitobda ochish${book.page ? ` · ${book.page}-bet` : ''}</button>` : ''}
                 <button type="button" class="lh-btn" data-act="print">🖨 Rejani chop etish</button>
-                ${L.type === 'live' && typeof window.switchTeachersSection === 'function' ? '<button type="button" class="lh-btn" data-act="attendance">✓ Davomat</button>' : ''}
+                ${L.type === 'live' && typeof S.ctx.onAttendance === 'function' ? '<button type="button" class="lh-btn" data-act="attendance">✓ Davomat</button>' : ''}
             </div>
         </header>
         <div class="lh-tabs" role="tablist" aria-label="Dars bo'limlari">
@@ -290,7 +290,7 @@
         box.querySelector('[data-act="present"]').addEventListener('click', () => present(data));
         box.querySelector('[data-act="board"]').addEventListener('click', () => present(data, { blank: true }));
         box.querySelector('[data-act="print"]').addEventListener('click', () => printPlan(data));
-        box.querySelector('[data-act="attendance"]')?.addEventListener('click', () => window.switchTeachersSection('attendance'));
+        box.querySelector('[data-act="attendance"]')?.addEventListener('click', () => S.ctx.onAttendance());
         bindTablistKeys(box.querySelector('.lh-tabs'));
         box.querySelector('[data-act="book"]')?.addEventListener('click', () => {
             S.bookState[S.lang] = { id: book.id, page: book.page || 1 };
@@ -382,34 +382,10 @@
     }
 
     // ── Dars rejasi (Teacher's book) ────────────────────────────────────────
-    // Server bilan bir xil (academicHub.allocateMinutes): eng katta qoldiq usuli,
-    // har blok minimumidan kam emas, jami aynan dars davomiyligi.
-    function largestRemainder(raw, total) {
-        const floors = raw.map(Math.floor);
-        let left = total - floors.reduce((a, b) => a + b, 0);
-        const order = raw.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]);
-        for (let k = 0; left > 0 && k < order.length; k++, left--) floors[order[k][1]]++;
-        return floors;
-    }
-    function allocateMinutes(blocks, duration) {
-        const total = Math.max(1, Math.round(duration));
-        const mins = blocks.map(b => Math.max(1, b.min || 1));
-        const minSum = mins.reduce((a, b) => a + b, 0);
-        if (minSum >= total) return largestRemainder(mins.map(m => (m / minSum) * total), total);
-        const shares = blocks.map(b => b.share || 1);
-        const shareSum = shares.reduce((a, b) => a + b, 0);
-        let out = shares.map(sh => (sh / shareSum) * total);
-        const fixed = new Set();
-        for (let g = 0; g < blocks.length; g++) {
-            const low = out.findIndex((v, i) => !fixed.has(i) && v < mins[i]);
-            if (low < 0) break;
-            fixed.add(low);
-            const rest = total - [...fixed].reduce((a, i) => a + mins[i], 0);
-            const freeShare = shares.reduce((a, sh, i) => a + (fixed.has(i) ? 0 : sh), 0);
-            out = out.map((_, i) => (fixed.has(i) ? mins[i] : (shares[i] / freeShare) * rest));
-        }
-        return largestRemainder(out, total);
-    }
+    // Umumiy algoritm (js/academicRules.js) — server bilan aynan bir xil.
+    const allocateMinutes = (blocks, duration) => (RULES.allocateMinutes
+        ? RULES.allocateMinutes(blocks, duration)
+        : blocks.map(b => Math.max(1, Math.round((b.share / 100) * duration))));
     function planMinutes(blocks, duration) {
         const mins = allocateMinutes(blocks, duration);
         let used = 0;
@@ -865,7 +841,7 @@
                 <div class="lh-kpi"><span>Tugatgan darslar</span><b>${s.completed}</b><small>72 dan</small></div>
                 <div class="lh-kpi"><span>Uy vazifasi</span><b>${s.homeworkAvg === null ? '—' : s.homeworkAvg + '%'}</b><small>${s.firstTryAvg === null ? '' : `1-urinish ${s.firstTryAvg}% · ${s.avgAttempts} urinish`}</small></div>
                 <div class="lh-kpi"><span>Faol vaqt</span><b>${dur(s.time.total)}</b><small>bugun ${dur(s.time.today)} · 7 kun ${dur(s.time.week)}</small></div>
-                <div class="lh-kpi"><span>Jonli darsga keldi</span><b>${att.present}${att.expected ? `/${att.expected}` : ''}</b><small>${att.expected ? `jadval bo'yicha · ${Math.round((att.present / att.expected) * 100)}%` : 'marta (jadval kiritilmagan)'}</small></div>
+                <div class="lh-kpi"><span>Jonli darsga keldi</span><b>${att.present}${att.expected ? `/${att.expected}` : ''}</b><small>${att.expected ? `jadval bo'yicha · ${att.rate}%` : 'marta (jadval kiritilmagan)'}${att.assistantPresent ? ` · yordamchi: ${att.assistantPresent}` : ''}</small></div>
             </div>
             <div class="lh-card"><div class="lh-card-h"><b>72 dars xaritasi</b><span class="lh-muted">katakni bosing</span></div>
                 <div class="lh-heat">${d.lessons.map(l => `<button type="button" class="lh-cell ${heatClass(l)}${l.grades.length ? ' has-grade' : ''}" data-cell="${l.no}" aria-label="${l.no}-dars: ${l.percent}%${l.grades.length ? ', jonli darsda baholangan' : ''}">${l.no}</button>`).join('')}</div>

@@ -85,7 +85,9 @@ test('dars daqiqalari: jami aynan davomiylik, har blok minimumidan kam emas', ()
 
 test('jadval bo\'yicha kutilgan jonli darslar (1/3/5)', () => {
     const now = new Date('2026-10-26T09:00:00Z'); // dushanba
-    assert.equal(hub.expectedLiveLessons({ lessonDayOfWeek: 1, lessonTime: '18:00', startDate: '2026-10-19' }, now), 4, 'du, chor, ju, du');
+    assert.equal(hub.expectedLiveLessons({ lessonDayOfWeek: 1, lessonTime: '18:00', startDate: '2026-10-19' }, now), 3, 'bugungi dars (18:00) hali bo\'lmagan');
+    assert.equal(hub.expectedLiveLessons({ lessonDayOfWeek: 1, lessonTime: '10:00', startDate: '2026-10-19' }, now), 4, 'du, chor, ju, du (14:00 da)');
+    assert.equal(hub.expectedLiveLessons({ lessonDayOfWeek: 1, lessonTime: '10:00', startDate: '2025-01-01' }, now), 36, '36 jonli darsdan oshmaydi');
     assert.equal(hub.expectedLiveLessons({ lessonDayOfWeek: 1, lessonTime: '', startDate: '2026-10-19' }, now), null);
     assert.equal(hub.expectedLiveLessons({ lessonDayOfWeek: 2, lessonTime: '18:00', startDate: '2026-11-01' }, now), null);
 });

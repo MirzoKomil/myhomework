@@ -11906,7 +11906,7 @@ function renderTpTextbook(target) {
     // o'quvchilar progressi. Eski bo'limlar uning "Qo'shimcha materiallar"
     // yorlig'ida shu funksiyaning o'zi orqali (target bilan) chiziladi.
     if (!target && window.LessonHub) {
-        window.LessonHub.mount(container, { lang: _teachersLang, renderLegacy: el => renderTpTextbook(el) });
+        window.LessonHub.mount(container, { lang: _teachersLang, renderLegacy: el => renderTpTextbook(el), onAttendance: () => switchTeachersSection('attendance') });
         return;
     }
     // 9-vazifa: ustoz uchun Darslik faqat KO'RISH rejimida — material

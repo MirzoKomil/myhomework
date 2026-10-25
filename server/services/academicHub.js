@@ -647,40 +647,8 @@ function buildTeacherPlan(lesson, ctx = {}) {
     };
 }
 
-// Daqiqalarni taqsimlash: eng katta qoldiq usuli, har blok o'z minimumidan kam
-// bo'lmaydi va jami aynan dars davomiyligiga teng (mijoz ham shu algoritmni ishlatadi).
-function allocateMinutes(blocks, duration) {
-    const total = Math.max(1, Math.round(duration));
-    const mins = blocks.map(b => Math.max(1, b.min || 1));
-    const minSum = mins.reduce((a, b) => a + b, 0);
-    if (minSum >= total) {
-        // Juda qisqa dars — minimumlarni proporsional kamaytiramiz.
-        const raw = mins.map(m => (m / minSum) * total);
-        return largestRemainder(raw, total).map(m => Math.max(0, m));
-    }
-    const shares = blocks.map(b => b.share || 1);
-    const shareSum = shares.reduce((a, b) => a + b, 0);
-    let out = shares.map(sh => (sh / shareSum) * total);
-    // Minimumdan pastlarini minimumga ko'tarib, qolganini qayta taqsimlash.
-    const fixed = new Set();
-    for (let guard = 0; guard < blocks.length; guard++) {
-        const low = out.findIndex((v, i) => !fixed.has(i) && v < mins[i]);
-        if (low < 0) break;
-        fixed.add(low);
-        const rest = total - [...fixed].reduce((a, i) => a + mins[i], 0);
-        const freeShare = shares.reduce((a, sh, i) => a + (fixed.has(i) ? 0 : sh), 0);
-        out = out.map((_, i) => (fixed.has(i) ? mins[i] : (shares[i] / freeShare) * rest));
-    }
-    return largestRemainder(out, total);
-}
-
-function largestRemainder(raw, total) {
-    const floors = raw.map(Math.floor);
-    let left = total - floors.reduce((a, b) => a + b, 0);
-    const order = raw.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]);
-    for (let k = 0; left > 0 && k < order.length; k++, left--) floors[order[k][1]]++;
-    return floors;
-}
+// Daqiqalarni taqsimlash — umumiy algoritm js/academicRules.js'da (mijoz bilan bir xil).
+const allocateMinutes = RULES.allocateMinutes;
 
 // ─── O'quvchi progressi ─────────────────────────────────────────────────────
 async function loadProgress(pool, ids) {
@@ -819,11 +787,19 @@ function expectedLiveLessons(student, now = new Date()) {
     const d = Number(student.lessonDayOfWeek);
     const days = [1, 3, 5].includes(d) ? [1, 3, 5] : [2, 4, 6].includes(d) ? [2, 4, 6] : [d];
     const start = new Date(`${String(student.startDate).slice(0, 10)}T12:00:00Z`);
-    const end = new Date(`${tzDay(now)}T12:00:00Z`);
+    const todayKey = tzDay(now);
+    // Bugungi dars hali vaqti kelmagan bo'lsa hisobga kirmaydi (Toshkent vaqti).
+    const nowHm = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+    const lessonHm = String(student.lessonTime).slice(0, 5);
+    const end = new Date(`${todayKey}T12:00:00Z`);
     if (Number.isNaN(start.getTime()) || start > end) return null;
     let n = 0;
-    for (const c = new Date(start); c <= end && n < 4000; c.setUTCDate(c.getUTCDate() + 1)) if (days.includes(c.getUTCDay())) n++;
-    return n;
+    for (const c = new Date(start); c <= end && n < 4000; c.setUTCDate(c.getUTCDate() + 1)) {
+        if (!days.includes(c.getUTCDay())) continue;
+        if (c.toISOString().slice(0, 10) === todayKey && nowHm < lessonHm) continue;
+        n++;
+    }
+    return Math.min(n, Math.ceil(TOTAL_LESSONS / 2));
 }
 
 async function loadAttendance(pool, studentId) {
@@ -887,7 +863,10 @@ async function studentDetail(pool, actor, studentId) {
     });
     delete summary.perLesson;
     const acts = activity.slice(-50).reverse().map(a => ({ ...a, lessonNo: idToNo[String(a.label || '').split(' - ')[0]] || null }));
-    const present = attendance.filter(a => a.present).length;
+    // Nisbat faqat asosiy ustoz darslari bo'yicha (alohida sanalar) — maxraj ham
+    // asosiy jadvaldan. Yordamchi ustoz mashg'ulotlari alohida sanaladi.
+    const present = new Set(attendance.filter(a => a.present && a.kind === 'main').map(a => a.date)).size;
+    const assistantPresent = new Set(attendance.filter(a => a.present && a.kind === 'assistant').map(a => a.date)).size;
     const expectedLive = student.frozen ? null : expectedLiveLessons(student);
     const examRows = await pool.query('SELECT exam_id, last_percent, best_percent, attempts, passed, mistakes, updated_at FROM student_exam_results WHERE student_id=$1 ORDER BY exam_id', [student.id]).then(r => r.rows);
     const days30 = Array.from({ length: 30 }, (_, i) => shiftDay(tzDay(), i - 29));
@@ -898,7 +877,8 @@ async function studentDetail(pool, actor, studentId) {
         activity: acts,
         exams: examRows.length ? examRows.map(e => ({ examId: e.exam_id, label: examLabel(e.exam_id), scorePercent: e.last_percent, bestPercent: e.best_percent,
             attempts: e.attempts, passed: e.passed, mistakes: (e.mistakes || []).slice(0, 40), time: iso(e.updated_at) })) : acts.filter(a => a.type === 'exam'),
-        attendance: { rows: attendance, present, expected: expectedLive },
+        attendance: { rows: attendance, present, assistantPresent, expected: expectedLive,
+            rate: expectedLive ? Math.min(100, Math.round((present / expectedLive) * 100)) : null },
         days30,
         grades: grades.slice(-30).reverse().map(g => ({ ...gradeRow(g), lessonNo: idToNo[g.lessonId] || null })),
     };
@@ -974,6 +954,8 @@ async function lessonClassStats(pool, mc, students, n) {
 // Faqat o'quvchi tokeni bilan. Dars va qism ID'lari o'quvchining o'z kursidan
 // tekshiriladi, savollar soni serverdagi kontentdan olinadi, vaqt bitta
 // yuborishda va kunlik (8 soat) chegaralanadi, so'rovlar soni cheklanadi.
+// Xotirada saqlanadi: server qayta ishga tushsa nolga qaytadi (bitta Railway
+// nusxasi uchun yetarli; bir nechta nusxa bo'lsa — Redis'ga ko'chirish kerak).
 const trackState = new Map(); // studentId → { windowStart, count, creditedUntil }
 const RATE_PER_MIN = 20;
 
@@ -1025,10 +1007,13 @@ function homeworkPartFor(mc, lessonId, partId, lang) {
     return byId(lessonId);
 }
 
+const EXAM_IDS = new Set([...Array.from({ length: TOTAL_LESSONS / RULES.EXAM_INTERVAL }, (_, i) => `interval-${i + 1}`), 'final']);
 function examExists(mc, examId, lang) {
-    if (!/^interval-\d{1,2}$|^final$/.test(examId)) return false;
+    if (!EXAM_IDS.has(examId)) return false;
     const store = mc.examContents || {};
-    return !!(lang === 'russian' ? store[`${examId}-russian`] || store[examId] : store[examId]) || Object.keys(store).length === 0;
+    // Kontent kiritilmagan bo'lsa ilova standart savollarni ko'rsatadi — ID ro'yxati yetarli.
+    if (!Object.keys(store).length) return true;
+    return !!(lang === 'russian' ? store[`${examId}-russian`] || store[examId] : store[examId]);
 }
 
 async function recordTracking(pool, studentId, body = {}, now = new Date()) {
@@ -1075,17 +1060,20 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
         for (const r of rows) used[r.day] = Number(r.s) || 0;
     }
     const left = Object.fromEntries(days.map(d => [d, Math.max(0, DAILY_CAP_SECONDS - (used[d] || 0))]));
+    // Oflayn navbat: bitta so'rovda o'tgan kunlar uchun jami 4 soatdan oshmaydi.
+    let backfillBudget = 4 * 3600;
     const values = [], params = [studentId];
     let creditedToday = 0;
     for (const [key, secs] of buckets) {
         const [day, lessonId, section] = key.split('|');
         let allowed = Math.min(secs, left[day]);
         if (day === today) allowed = Math.min(allowed, todayBudget);
+        else allowed = Math.min(allowed, backfillBudget);
         allowed = Math.floor(allowed);
         skippedSeconds += secs - Math.max(0, allowed);
         if (allowed <= 0) continue;
         left[day] -= allowed;
-        if (day === today) { todayBudget -= allowed; creditedToday += allowed; }
+        if (day === today) { todayBudget -= allowed; creditedToday += allowed; } else backfillBudget -= allowed;
         params.push(day, lessonId, section, allowed);
         const b = params.length;
         values.push(`($1, $${b - 3}::date, $${b - 2}, $${b - 1}, $${b}::int)`);
@@ -1112,13 +1100,16 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
             .filter(m => m.question && !seen.has(m.question) && seen.add(m.question))
             .map(m => ({ ...m, correctAnswer: m.correctAnswer || answers.get(m.question) || '' }));
         await withClient(pool, async (db, lock) => {
-            const { rows: prev } = await db.query(`SELECT mistakes FROM student_part_results WHERE student_id=$1 AND lesson_id=$2 AND part_id=$3${lock}`, [studentId, lessonId, partId]);
+            // Avval bo'sh qator (bo'lmasa), keyin qulflab o'qish — birinchi urinishda ham poyga bo'lmasin.
+            if (lock) await db.query(`INSERT INTO student_part_results (student_id, lesson_id, part_id, attempts) VALUES ($1,$2,$3,0) ON CONFLICT DO NOTHING`, [studentId, lessonId, partId]);
+            const { rows: prev } = await db.query(`SELECT mistakes, attempts FROM student_part_results WHERE student_id=$1 AND lesson_id=$2 AND part_id=$3${lock}`, [studentId, lessonId, partId]);
             const merged = mergeMistakes(prev[0]?.mistakes, mistakes, now.toISOString());
             await db.query(`INSERT INTO student_part_results (student_id, lesson_id, part_id, kind, title, correct, total,
                 first_percent, last_percent, best_percent, attempts, passed, mistakes)
                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$8,1,$9,$10)
                 ON CONFLICT (student_id, lesson_id, part_id) DO UPDATE SET kind=EXCLUDED.kind, title=EXCLUDED.title,
                   correct=EXCLUDED.correct, total=EXCLUDED.total, last_percent=EXCLUDED.last_percent,
+                  first_percent=CASE WHEN student_part_results.attempts = 0 THEN EXCLUDED.first_percent ELSE student_part_results.first_percent END,
                   best_percent=GREATEST(student_part_results.best_percent, EXCLUDED.best_percent),
                   attempts=student_part_results.attempts + 1,
                   passed=student_part_results.passed OR EXCLUDED.passed, mistakes=EXCLUDED.mistakes, updated_at=NOW()`,
@@ -1135,6 +1126,7 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
         if (!examExists(mc, examId, lang) || !Number.isFinite(percent) || percent < 0 || percent > 100) { skipped++; continue; }
         const mistakes = (Array.isArray(e.mistakes) ? e.mistakes : []).slice(0, 40).map(normalizeMistake).filter(m => m.question);
         await withClient(pool, async (db, lock) => {
+            if (lock) await db.query(`INSERT INTO student_exam_results (student_id, exam_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [studentId, examId]);
             const { rows: prev } = await db.query(`SELECT mistakes FROM student_exam_results WHERE student_id=$1 AND exam_id=$2${lock}`, [studentId, examId]);
             const merged = mergeMistakes(prev[0]?.mistakes, mistakes, now.toISOString());
             await db.query(`INSERT INTO student_exam_results (student_id, exam_id, last_percent, best_percent, attempts, passed, mistakes)

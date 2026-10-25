@@ -11,7 +11,35 @@
     else root.AcademicRules = api;
 })(typeof self !== 'undefined' ? self : this, function () {
     'use strict';
+    // Dars daqiqalarini taqsimlash: eng katta qoldiq usuli, har blok o'z
+    // minimumidan (min) kam bo'lmaydi, jami aynan dars davomiyligiga teng.
+    function largestRemainder(raw, total) {
+        const floors = raw.map(Math.floor);
+        let left = total - floors.reduce((a, b) => a + b, 0);
+        const order = raw.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]);
+        for (let k = 0; left > 0 && k < order.length; k++, left--) floors[order[k][1]]++;
+        return floors;
+    }
+    function allocateMinutes(blocks, duration) {
+        const total = Math.max(1, Math.round(duration));
+        const mins = blocks.map(b => Math.max(1, b.min || 1));
+        const minSum = mins.reduce((a, b) => a + b, 0);
+        if (minSum >= total) return largestRemainder(mins.map(m => (m / minSum) * total), total);
+        const shares = blocks.map(b => b.share || 1);
+        let out = shares.map(sh => (sh / shares.reduce((a, b) => a + b, 0)) * total);
+        const fixed = new Set();
+        for (let g = 0; g < blocks.length; g++) {
+            const low = out.findIndex((v, i) => !fixed.has(i) && v < mins[i]);
+            if (low < 0) break;
+            fixed.add(low);
+            const rest = total - [...fixed].reduce((a, i) => a + mins[i], 0);
+            const freeShare = shares.reduce((a, sh, i) => a + (fixed.has(i) ? 0 : sh), 0);
+            out = out.map((_, i) => (fixed.has(i) ? mins[i] : (shares[i] / freeShare) * rest));
+        }
+        return largestRemainder(out, total);
+    }
     return Object.freeze({
+        allocateMinutes,
         TOTAL_LESSONS: 72,
         MONTH_SIZE: 24,
         EXAM_INTERVAL: 12,
