@@ -8999,7 +8999,7 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     const date = `${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`;
     const maxF = Math.max(1, ...d.funnel.map(f => f.count));
     const pctTxt = v => v == null ? '—' : `${v.toFixed(1).replace('.', ',')}%`;
-    const stageColor = id => (typeof LEAD_COLUMNS !== 'undefined' && LEAD_COLUMNS.find(c => c.id === id)?.count) || 'var(--primary)';
+    const stageColor = id => funnelRampColor(id);
     const newLeads = d.funnel.find(f => f.id === 'yangi-lidlar')?.count || 0;
     const taskRow = t => `<li class="mhx-task${t.late ? ' is-late' : ''}">
         <div><strong>${escapeHtml(t.title)}</strong>${t.late ? '<span class="ahx-pill ahx-pill--danger">kechikdi</span>' : ''}<span class="mhx-sub">${escapeHtml(t.sub)}</span></div>
@@ -9010,7 +9010,7 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
         <button type="button" class="btn-secondary-sm mhx-btn" data-mhx-student="${escapeHtml(s.id)}">Oʻquvchini ochish</button></li>`;
     const emptyTasks = `<div class="mhx-empty">
         <span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
-        <div><strong>Kechikkan ish yoʻq</strong><span class="mhx-sub">${newLeads ? `${newLeads} ta yangi lid qoʻngʻiroq kutyapti` : 'Yangi lidlar kelishi bilan shu yerda chiqadi'}</span></div>
+        <div><strong>Muddati oʻtgan qoʻngʻiroq yoʻq</strong><span class="mhx-sub">${newLeads ? `${newLeads} ta yangi lid qoʻngʻiroq kutyapti` : 'Yangi lidlar kelishi bilan shu yerda chiqadi'}</span></div>
         ${newLeads ? `<button type="button" class="btn-primary-sm" data-mhx-go="leads">Qoʻngʻiroq qilish</button>` : ''}</div>`;
     return `<div class="ahx mhx" id="managerHome">
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
@@ -15639,6 +15639,15 @@ const FUNNEL_STAGES = [
     { id: 'tolov-yopildi',            label: "To'lov yopildi",           color: '#059669' },
 ];
 
+// Voronka ustunlari uchun bitta brend rangi: bosqich oldinga siljigan sari to'qlashadi,
+// faqat "To'lov yopildi" yashil. (Kanban ustunlari o'z ranglarida qoladi.)
+const FUNNEL_RAMP = ['#C9BEFF', '#B3A4FB', '#9C88F7', '#8A72F5', '#7A5FF2', '#6A4DF4', '#5A3EE0'];
+function funnelRampColor(id) {
+    if (id === 'tolov-yopildi') return '#0F9D6B';
+    const i = FUNNEL_STAGES.findIndex(s => s.id === id);
+    return FUNNEL_RAMP[Math.max(0, Math.min(FUNNEL_RAMP.length - 1, i))];
+}
+
 // Gorizontal ustunli voronka (Statistika bo'limidagi bilan bir xil ko'rinish).
 function buildFunnelBars(stagesData) {
     const maxCount = Math.max(1, ...stagesData.map(x => x.count || 0));
@@ -16604,8 +16613,8 @@ function renderSalesFunnel() {
     const pctTxt = n => String(n).replace('.', ',');
     const barRows = stagesData.map(st => `
         <li class="sfx-row">
-            <span class="sfx-name"><i style="background:${st.color}"></i>${escapeHtml(st.label)}</span>
-            <span class="sfx-track" aria-hidden="true"><span style="width:${Math.max(st.count ? 2 : 0, Math.round(st.count / maxCount * 100))}%;background:${st.color}"></span></span>
+            <span class="sfx-name"><i style="background:${funnelRampColor(st.id)}"></i>${escapeHtml(st.label)}</span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${Math.max(st.count ? 2 : 0, Math.round(st.count / maxCount * 100))}%;background:${funnelRampColor(st.id)}"></span></span>
             <span class="sfx-val"><b>${st.count}</b> · ${st.share}%</span>
         </li>`).join('');
     const tiles = [
@@ -26758,7 +26767,7 @@ function renderSalesPlanIndividualPlanCard() {
     const cmpRow = (label, planV, factV, fmt) => {
         const p = planV > 0 ? Math.round(factV / planV * 100) : 0;
         return `<tr><th scope="row">${label}</th><td>${fmt(planV)}</td><td>${fmt(factV)}</td>
-            <td><span class="sp-cmp-bar" aria-hidden="true"><i style="width:${Math.min(100, p)}%"></i></span><b>${planV > 0 ? p + '%' : '—'}</b></td></tr>`;
+            <td><span class="sp-cmp-bar" aria-hidden="true"><i style="width:${Math.min(100, p)}%;background:${p >= 100 ? '#0F9D6B' : p >= 60 ? 'var(--purple)' : '#E5484D'}"></i></span><b class="${p >= 100 ? 'is-ok' : p < 60 && planV > 0 ? 'is-bad' : ''}">${planV > 0 ? p + '%' : '—'}</b></td></tr>`;
     };
     const num = n => Number(n || 0).toLocaleString('uz-UZ');
     el.innerHTML = header + paceHtml + `
@@ -26766,7 +26775,8 @@ function renderSalesPlanIndividualPlanCard() {
         ${plan.carriedOverFrom ? `<div class="sp-notice sp-notice--info">Bu reja ${escapeHtml(monthKeyLabel(plan.carriedOverFrom))} oyidan avtomatik ko'chirilgan. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun alohida biriktiriladi.</div>` : ''}
         <div class="sp-progress">
             <div class="sp-progress-h"><span>Oy rejasi</span><b>${pctRaw}% bajarildi</b></div>
-            <span class="sp-progress-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></span>
+            <span class="sp-progress-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i>${oy === joriy ? `<em class="sp-today" style="left:${Math.round(new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() * 100)}%" title="Bugungacha shu yerda boʻlish kerak"></em>` : ''}</span>
+            ${oy === joriy ? '<div class="sp-progress-legend"><span><i class="sp-dot"></i>bajarildi</span><span><i class="sp-dot sp-dot--today"></i>bugungacha kerak</span></div>' : ''}
         </div>
         <div class="sp-cmp-wrap"><table class="sp-cmp">
             <thead><tr><th></th><th>Reja</th><th>Fakt</th><th>Bajarildi</th></tr></thead>

@@ -1831,3 +1831,157 @@ html.rd .rating-main-tabs {
         white-space: nowrap;
     }
 }
+
+/* ==========================================================================
+   5-bosqich
+   ========================================================================== */
+html.rd .sp-progress-bar {
+    position: relative;
+    overflow: visible;
+}
+
+html.rd .sp-progress-bar i {
+    overflow: hidden;
+}
+
+html.rd .sp-today {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    margin-left: -1px;
+    border-radius: 2px;
+    background: var(--text);
+}
+
+html.rd .sp-progress-legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .sp-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 5px;
+    border-radius: 3px;
+    background: var(--purple);
+    vertical-align: -1px;
+}
+
+html.rd .sp-dot--today {
+    width: 3px;
+    background: var(--text);
+}
+
+html.rd .sp-cmp b.is-ok { color: #0F7A55; }
+html.rd .sp-cmp b.is-bad { color: #C62828; }
+
+/* Lid yoshi: 1–3 kun neytral, 3+ sariq (qizil faqat SLA bildirishnomasi uchun) */
+html.rd .lead-age--warn { background: var(--rd-col); color: var(--text-muted); }
+html.rd .lead-age--late { background: #FFF4D6; color: #8A5A00; }
+html.rd[data-theme="dark"] .lead-age--warn { background: var(--rd-col); color: var(--text-muted); }
+html.rd[data-theme="dark"] .lead-age--late { background: #3A3018; color: #FFC94D; }
+
+/* Kompyuterda: qo'ng'iroq tugmasi matnli, sana ham ko'rinadi */
+@media (min-width: 901px) {
+    html.rd #leadsKanban .lead-card-meta .lead-card-time:has(+ .lead-age) {
+        display: inline;
+    }
+
+    html.rd .lead-card-call {
+        width: auto;
+        padding: 0 12px;
+        gap: 6px;
+        display: inline-flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 700;
+    }
+}
+
+@media (max-width: 900px) {
+    /* Telefonda Sotuvning yuqori tablari umuman yo'q: pastki panel + Menyu */
+    html.rd body.has-team-nav #salesSectionNav {
+        display: none;
+    }
+
+    html.rd body.has-team-nav .sales-header-layout:not(:has(> :not(#salesSectionNav):not([hidden]):not([style*="display: none"]))) {
+        display: none;
+    }
+
+    /* Sarlavha takrorlanmasin (yuqori panel nomni ko'rsatadi) */
+    html.rd .page-title-bar h1,
+    html.rd .sfx-head {
+        display: none;
+    }
+
+    /* Bosh sahifa: reja/bitim/konversiya qatori bannerdan keyin */
+    html.rd #managerHome > .mhx-kpis { order: 1; }
+    html.rd #managerHome > .mot-home { order: 1; }
+    html.rd #managerHome > .mhx-kpis { order: 2; margin-bottom: 12px; }
+    html.rd #managerHome > .mhx-grid { order: 3; }
+
+    html.rd .mhx-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi {
+        padding: 10px;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi:last-child {
+        display: none;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi-v {
+        font-size: 18px;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi-v small {
+        display: block;
+        font-size: 11px;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi-l {
+        font-size: 11px;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi-n {
+        font-size: 11px;
+        line-height: 1.3;
+    }
+
+    html.rd #managerHome {
+        padding-bottom: 110px;
+    }
+
+    /* Sotuv rejasi: uchala tile bir xil tuzilishda */
+    html.rd .sp-pace-i--hero {
+        display: grid;
+    }
+
+    html.rd .sp-pace-i--hero b {
+        font-size: 24px;
+    }
+
+    /* Reyting: tablar suriladi, kesilmaydi */
+    html.rd .rating-main-tab span {
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 900px) {
+    html.rd .mhx-kpis .ahx-kpi-n {
+        display: none;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi {
+        justify-content: space-between;
+        min-height: 84px;
+    }
+}
