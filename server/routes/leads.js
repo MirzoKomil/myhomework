@@ -149,9 +149,9 @@ async function leadOwnershipRequired(req, res, next) {
                 return res.status(403).json({ error: 'Sotuv menejeri lid tilini o\'zgartira olmaydi' });
             }
         } else if (req.method === 'PATCH') {
-            if (String(req.body?.lead?.managerId || '') !== managerId) {
-                return res.status(403).json({ error: 'Yangi lid faqat o\'zingizga biriktirilishi mumkin' });
-            }
+            // Sotuv menejeri yangi lid yarata olmaydi: lidlarni ROP taqsimlaydi.
+            // Aks holda menejer istalgan odamni qo'shib, statistikani soxtalashtirishi mumkin edi.
+            return res.status(403).json({ error: 'Yangi lidni faqat ROP yoki admin qoʻsha oladi' });
         } else {
             return res.status(404).json({ error: 'Lid topilmadi' });
         }
