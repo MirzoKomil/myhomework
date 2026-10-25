@@ -71,6 +71,7 @@ function scopeState(state, user, { managerId, financeEmployee = false } = {}) {
     } else if (role === 'targetolog') {
         state.students = (state.students || []).map(stripStudentContacts);
         state.payments = [];
+        state.cashFlow = [];
     }
     return state;
 }

@@ -21,6 +21,9 @@
 }
 
 #tpTextbook.lh-host.sales-panel.active { flex-direction: column; overflow-y: auto; height: auto; }
+/* Kabinetlar redizayni (teamApp.css) Darslik panelini bitta karta qiladi —
+   markazning o'z kartalari bor, shuning uchun qobiq shaffof va scroll ochiq. */
+html.rd #tpTextbook.lh-host.sales-panel.active { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow-y: auto; min-height: 0; padding: 0; }
 .lh { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 24px; color: var(--text); min-width: 0; }
 .lh-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .lh-views { display: flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; max-width: 100%; }
