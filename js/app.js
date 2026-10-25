@@ -9161,7 +9161,7 @@ function renderRopHome(user, students, leads, now = new Date()) {
         return `<li class="rpx-esc rpx-esc--row${late ? ' is-late' : ''}" title="${escapeHtml(a.message || '')}">
             <span class="rpx-esc-dot" aria-hidden="true"></span>
             <div class="rpx-esc-main"><strong>${escapeHtml(lead.name || 'Lid')}</strong>
-                <span class="mhx-sub">${escapeHtml(shortPersonName(getLeadSlaManagerName(lead) || '—'))} · ${ago(a.time)}${late ? ' · <b class="rpx-late">adminga ketdi</b>' : ''}</span></div>
+                <span class="mhx-sub">${escapeHtml(shortPersonName(getLeadSlaManagerName(lead) || '—'))} · ${ago(a.time)}</span></div>
             <div class="rpx-actions">
                 <button type="button" class="mhx-btn rpx-icon" data-rpx-open="${escapeHtml(a.leadId)}" title="Lidni ochish" aria-label="Lidni ochish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>
                 <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrildi</button>
@@ -9181,7 +9181,7 @@ function renderRopHome(user, students, leads, now = new Date()) {
             <div class="ahx-kpi"><span class="ahx-kpi-l">Qarzdorlar</span><b class="ahx-kpi-v">${d.overdueCount}${d.overdueCount ? ` · ${mln(d.overdueSum)}` : ''}</b><div class="ahx-kpi-n"><span>kelishilgan sana oʻtgan</span></div></div>
         </div>
         <div class="ahx-grid">
-            <section class="card ahx-card"><div class="ahx-card-h"><div><h3>Eskalatsiyalar${d.open.length ? ` <small>· ${d.open.length}</small>` : ''}</h3><span class="mhx-sub">24 soatda koʻrilmasa — adminga xabar ketadi</span></div></div>
+            <section class="card ahx-card"><div class="ahx-card-h"><div><h3>Eskalatsiyalar${d.open.length ? ` <small>· ${d.open.length}</small>` : ''}</h3><span class="mhx-sub">${d.lateCount ? `<b class="rpx-late">${d.lateCount} tasi adminga ketdi</b> · ` : ''}24 soatda koʻrilmasa — adminga xabar ketadi</span></div></div>
                 ${d.open.length ? `<ul class="rpx-escs">${esc}</ul>${d.open.length > 6 ? `<button type="button" class="ahx-link" data-rpx-go="leads">Yana ${d.open.length - 6} ta — Lidlarda →</button>` : ''}` : '<div class="mhx-empty"><span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span><div><strong>Ochiq eskalatsiya yoʻq</strong><span class="mhx-sub">Barcha menejerlar oʻz vaqtida ishlayapti</span></div></div>'}
             </section>
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Hozirgi voronka <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-rpx-go="leads">Lidlar →</button></div>
@@ -28397,7 +28397,7 @@ function hrVacRenderBoard() {
     const list = hrVacVisibleCandidates();
 
     if (!_hrVacStages.length) {
-        board.innerHTML = teamEmptyState('Hozircha nomzod yoʻq', 'Vakansiyaga ariza tushganda nomzodlar bosqichlar boʻyicha shu yerda chiqadi.', 'students');
+        board.innerHTML = teamEmptyState('Hozircha nomzod yoʻq', 'Vakansiyaga ariza tushganda nomzodlar bosqichlar boʻyicha shu yerda chiqadi.', 'board');
         const t = document.getElementById('hrVacTotal');
         if (t) t.textContent = 'Jami: 0 ta nomzod';
         return;

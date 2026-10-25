@@ -5197,3 +5197,181 @@ html.rd .stat-note {
 html.rd #tab-analitika .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
 }
+
+/* ==========================================================================
+   R7: yagona til tanlovi, ixcham bo'sh holat, teng kartalar
+   ========================================================================== */
+/* Til tanlovi — hamma joyda bitta segment (bayroq + nom) */
+html.rd .leads-lang-tabs,
+html.rd .subject-tabs:not(.role-filters):not(.tt-subject-tabs) {
+    display: inline-flex !important;
+    flex-wrap: nowrap;
+    gap: 2px;
+    width: max-content;
+    max-width: 100%;
+    padding: 3px !important;
+    border: 0 !important;
+    border-radius: 11px;
+    background: var(--bg-secondary, #EEF0F5) !important;
+    box-shadow: none !important;
+}
+
+html.rd .leads-lang-tabs .subject-tab,
+html.rd .subject-tabs:not(.role-filters):not(.tt-subject-tabs) .subject-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0 12px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: none !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+}
+
+html.rd .leads-lang-tabs .subject-tab.active,
+html.rd .subject-tabs:not(.role-filters):not(.tt-subject-tabs) .subject-tab.active {
+    background: var(--surface) !important;
+    color: var(--rd-primary-strong) !important;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12) !important;
+}
+
+html.rd .leads-lang-tabs .subject-flag,
+html.rd .subject-tabs .subject-flag {
+    display: inline-block !important;
+    width: 16px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+[data-theme="dark"] html.rd .leads-lang-tabs,
+html.rd[data-theme="dark"] .leads-lang-tabs,
+html.rd[data-theme="dark"] .subject-tabs:not(.role-filters):not(.tt-subject-tabs) {
+    background: rgba(255, 255, 255, .06) !important;
+}
+
+/* Ixcham bo'sh holat (karta ichida) */
+html.rd .card .dashboard-empty,
+html.rd .ahx-card .dashboard-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 8px 12px;
+}
+
+html.rd .card .dashboard-empty::before,
+html.rd .ahx-card .dashboard-empty::before {
+    content: "";
+    width: 44px;
+    height: 44px;
+    background: url(../images/empty/board.webp) center / contain no-repeat;
+    opacity: .9;
+}
+
+/* Bo'lim ichidagi sarlavhalar sahifa nomidan kichik */
+html.rd .tab-content .page-title-bar h1,
+html.rd .tab-content .page-title-bar h2,
+html.rd .tab-content .cf-title {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    line-height: 1.3;
+}
+
+/* Yonma-yon kartalar bir xil balandlikda */
+html.rd .ahx-grid,
+html.rd .thx-grid,
+html.rd .sfx-grid,
+html.rd .rtx-grid {
+    align-items: stretch !important;
+}
+
+html.rd .ahx-grid > .card,
+html.rd .sfx-grid > .card,
+html.rd .rtx-grid > .card {
+    height: auto;
+    margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+    /* Lidlar: FAB oxirgi kartani yopmaydi */
+    html.rd #tab-sales .sales-panel.active,
+    html.rd #leadsKanban {
+        padding-bottom: 96px;
+    }
+
+    /* Davomat filtrlari: bittadan qatorda */
+    html.rd #tab-teachers-section .card-header .toolbar {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Davomat ko'rsatkichlari 2 ustun */
+    html.rd .kpi-summary:not(:empty) {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    html.rd .kpi-summary .kpi-num {
+        white-space: nowrap;
+        font-size: 17px;
+    }
+
+    /* Qarzdorlar: 2x2, ixcham summa */
+    html.rd .debtors-wrap .sfx-tiles {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    html.rd .debtors-wrap .sfx-tile {
+        padding: 12px;
+    }
+
+    html.rd .debtors-wrap .sfx-tile b {
+        font-size: 15px !important;
+        white-space: nowrap;
+    }
+
+    html.rd .debtors-wrap .sfx-tile small {
+        min-height: 32px;
+        display: block;
+    }
+}
+
+/* To'lovlar: Bugun / Kecha / Joriy oy — segment */
+html.rd .inflow-quick {
+    display: inline-flex !important;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 11px;
+    background: var(--bg-secondary, #EEF0F5);
+    align-self: end;
+}
+
+html.rd .inflow-quick button {
+    min-height: 34px !important;
+    padding: 0 12px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    font-weight: 600;
+    box-shadow: none !important;
+}
+
+html.rd .inflow-quick button:hover,
+html.rd .inflow-quick button.active,
+html.rd .inflow-quick button[aria-pressed="true"] {
+    background: var(--surface) !important;
+    color: var(--rd-primary-strong) !important;
+}
+
+@media (max-width: 700px) {
+    html.rd .inflow-quick {
+        display: flex !important;
+        width: 100%;
+    }
+}
