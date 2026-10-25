@@ -87,6 +87,19 @@ CREATE TABLE IF NOT EXISTS student_part_results (
  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  PRIMARY KEY (student_id, lesson_id, part_id)
 );
+ALTER TABLE student_part_results ADD COLUMN IF NOT EXISTS first_percent INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS student_exam_results (
+ student_id TEXT NOT NULL,
+ exam_id TEXT NOT NULL,
+ last_percent INTEGER NOT NULL DEFAULT 0,
+ best_percent INTEGER NOT NULL DEFAULT 0,
+ attempts INTEGER NOT NULL DEFAULT 0,
+ passed BOOLEAN NOT NULL DEFAULT FALSE,
+ mistakes JSONB NOT NULL DEFAULT '[]',
+ first_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY (student_id, exam_id)
+);
 `;
 
 const error = (status, message) => Object.assign(new Error(message), { status });
@@ -132,12 +145,14 @@ async function accessibleStudents(pool, access, lang) {
         where += ' AND (s.teacher_id = $2 OR s.assistant_teacher_id = $2)';
     }
     const { rows } = await pool.query(`SELECT s.id, s.name, s.group_name, s.subject, s.teacher_id,
-        s.assistant_teacher_id, s.lesson_duration, COALESCE(s.extra_data,'{}'::jsonb) AS extra
+        s.assistant_teacher_id, s.lesson_duration, s.lesson_day_of_week, s.lesson_time, COALESCE(s.extra_data,'{}'::jsonb) AS extra
         FROM students s WHERE ${where} ORDER BY s.name`, params);
     return rows.map(r => ({
         id: r.id, name: r.name, group: r.group_name || '', subject: r.subject || 'english',
         teacherId: r.teacher_id || '', assistantTeacherId: r.assistant_teacher_id || '',
         lessonDuration: Number(r.lesson_duration) || null,
+        lessonDayOfWeek: r.lesson_day_of_week === null || r.lesson_day_of_week === undefined ? null : Number(r.lesson_day_of_week),
+        lessonTime: r.lesson_time || '',
         startDate: r.extra?.startDate || r.extra?.joinDate || '',
         status: String(r.extra?.status || '').toLowerCase(), frozen: r.extra?.frozen === true,
         staffDemo: r.extra?.isStaffDemo === true,
@@ -519,6 +534,17 @@ const ANTICIPATED = {
     ],
 };
 
+const DIFFERENTIATION = {
+    russian: [
+        "Tez o'quvchi: rolli o'yinda qo'shimcha shart bering (masalan, 2 ta savolni o'zi qo'shsin)",
+        "Qiynalayotgan o'quvchi: tayyor gap qoliplari bering (Я живу́ в… / Я люблю́…) va avval yozib, keyin aytsin",
+    ],
+    english: [
+        "Tez o'quvchi: rolli o'yinda qo'shimcha shart bering (masalan, 2 ta savolni o'zi qo'shsin)",
+        "Qiynalayotgan o'quvchi: tayyor gap qoliplari bering (I live in… / I like…) va avval yozib, keyin aytsin",
+    ],
+};
+
 function konspektRules(konspekt) {
     const lines = String(konspekt || '').split('\n').map(s => s.trim()).filter(s => s && s !== '---');
     const isTitle = s => /^\d+\s*-\s*DARS\b/i.test(s) || /^bu darsdan keyin/i.test(s) || /^bugun\b/i.test(s);
@@ -570,44 +596,90 @@ function buildTeacherPlan(lesson, ctx = {}) {
         mode: 'live', goal,
         summary: `Jonli dars. Maqsad: ${goal}`,
         blocks: [
-            { key: 'warmup', title: "Salomlashish va o'tgan darsni takrorlash", share: 8, items: reviewItems,
+            { key: 'warmup', title: "Salomlashish va o'tgan darsni takrorlash", share: 8, min: 3, items: reviewItems,
                 tip: "Har o'quvchiga kamida bitta savol. Oldingi darsni bajarmaganlar ro'yxati sahifaning yuqorisida." },
-            { key: 'vocab', title: "Yangi so'zlar", share: 12, items: short(words, 12),
+            { key: 'vocab', title: "Yangi so'zlar", share: 12, min: 3, items: short(words, 12),
                 tip: "Kartochka rejimi: ko'rsatish → xor bilan takrorlash → tarjimasini so'rash (T tugmasi) → gapda ishlatish." },
-            { key: 'dialog', title: dialogTitle ? `Kirish: ${dialogTitle}` : 'Kirish: dialog yoki matn', share: 15,
+            { key: 'dialog', title: dialogTitle ? `Kirish: ${dialogTitle}` : 'Kirish: dialog yoki matn', share: 15, min: 3,
                 items: [lesson.audioDialogs.length ? `${lesson.audioDialogs.length} ta audio dialog` : '',
                     lesson.dialog ? `Kitob dialogi — ${lesson.dialog.lines.length} replika` : '', lesson.text ? "O'qish matni va savollar" : ''].filter(Boolean),
                 tip: "1) matnsiz tinglash va umumiy savol, 2) matn bilan tinglash, 3) rollarga bo'lib o'qish." },
-            { key: 'grammar', title: 'Grammatika (qoidani kashf qilish)', share: 15,
+            { key: 'grammar', title: 'Grammatika (qoidani kashf qilish)', share: 15, min: 3,
                 items: [...(rules.length ? rules : ["Konspektdagi qoidani dialogdagi misollar orqali chiqarib oling"]), ...ccq],
                 tip: "Qoidani o'zingiz aytmang — dialogdan 2–3 misol yozing va o'quvchidan naqshni topishni so'rang." },
-            { key: 'controlled', title: 'Nazoratli mashq', share: 15,
+            { key: 'controlled', title: 'Nazoratli mashq', share: 15, min: 3,
                 items: [...autoParts.slice(0, 2).map(h => `${h.title || h.kind} turidagi 3–4 savolni og'zaki`), 'Doskada: bo\'sh joyni to\'ldirish / gap tuzish'],
                 tip: "Har bir to'g'ri javobdan keyin «Nega?» deb so'rang — taxmin emas, qoida ishlatilsin." },
-            { key: 'speaking', title: 'Erkin gapirish (rolli o\'yin)', share: 25,
+            { key: 'speaking', title: 'Erkin gapirish (rolli o\'yin)', share: 25, min: 4,
                 items: speaking.length ? speaking : ["Mavzu bo'yicha savol-javob va rolli o'yin"],
                 tip: "O'quvchi kamida 70% vaqt gapirsin. Xatolarni to'xtatmasdan yozib boring — keyingi blokda tuzatasiz." },
-            { key: 'wrapup', title: 'Xatolar ustida ishlash va yakun', share: 10,
+            { key: 'wrapup', title: 'Xatolar ustida ishlash va yakun', share: 10, min: 4,
                 items: ["Yozib olingan 3–5 xatoni doskada birga tuzatish", `Maqsadni tekshirish: «${goal}»`, ...lesson.homework.slice(0, 3).map(h => `Ilovada: ${h.title || h.kind}`)],
                 tip: "Darsdan keyin darhol «Davomat» yorlig'ida belgilang — davomat keyingi darsni ilovada ochadi." },
         ],
+        mediumBlocks: [
+            { key: 'warmup', title: "Takrorlash va uy vazifasini tekshirish", share: 12, min: 3, items: reviewItems.slice(0, 4),
+                tip: "Har o'quvchiga bitta savol; ilovadagi xatolaridan 1 tasini so'rang." },
+            { key: 'vocab', title: "Yangi so'zlar", share: 15, min: 3, items: short(words, 10),
+                tip: "Kartochka rejimi: ko'rsatish → takrorlash → tarjima (T)." },
+            { key: 'input', title: dialogTitle ? `Dialog va qoida: ${dialogTitle}` : 'Dialog va qoida', share: 28, min: 6,
+                items: [...(rules.length ? rules.slice(0, 3) : ['Konspektdagi qoidani dialog misollari bilan']), ...ccq],
+                tip: "Dialogni tinglang, undan qoidani o'quvchi topsin, so'ng 2–3 ta og'zaki mashq." },
+            { key: 'speaking', title: "Gapirish (rolli o'yin)", share: 30, min: 6, items: speaking.length ? speaking.slice(0, 6) : ["Mavzu bo'yicha savol-javob"],
+                tip: "Xatolarni to'xtatmasdan yozib boring." },
+            { key: 'wrapup', title: 'Xatolar ustida ishlash va yakun', share: 15, min: 4,
+                items: ["Yozib olingan 2–3 xatoni birga tuzatish", ...lesson.homework.slice(0, 2).map(h => `Ilovada: ${h.title || h.kind}`)],
+                tip: "Darsdan keyin darhol «Davomat» yorlig'ida belgilang." },
+        ],
         shortBlocks: [
-            { key: 'warmup', title: "Takrorlash va uy vazifasini tekshirish", share: 20, items: reviewItems.slice(0, 3),
+            { key: 'warmup', title: "Takrorlash va uy vazifasini tekshirish", share: 20, min: 3, items: reviewItems.slice(0, 3),
                 tip: "Ilovadagi xatolaridan 1–2 tasini so'rang (O'quvchilar yorlig'ida)." },
-            { key: 'speaking', title: "Asosiy qism: gapirish amaliyoti", share: 60,
+            { key: 'speaking', title: "Asosiy qism: gapirish amaliyoti", share: 60, min: 6,
                 items: [...(speaking.length ? speaking.slice(0, 5) : ["Mavzu bo'yicha savol-javob"]), ...(rules.length ? [`Qoida: ${rules[0]}`] : [])],
                 tip: "Individual darsda o'quvchi 80% gapirsin. Yangi so'zlarni savollar ichida ishlating." },
-            { key: 'wrapup', title: 'Xatolar va uy vazifasi', share: 20,
+            { key: 'wrapup', title: 'Xatolar va uy vazifasi', share: 20, min: 3,
                 items: ['2–3 asosiy xatoni tuzatish', ...lesson.homework.slice(0, 2).map(h => `Ilovada: ${h.title || h.kind}`)],
                 tip: "Darsdan keyin darhol «Davomat» yorlig'ida belgilang." },
         ],
         anticipated,
-        differentiation: [
-            "Tez o'quvchi: rolli o'yinda qo'shimcha shart bering (masalan, 2 ta savolni o'zi qo'shsin)",
-            "Qiynalayotgan o'quvchi: tayyor gap qoliplari bering (Я живу́ в… / Я люблю́…) va avval yozib, keyin aytsin",
-        ],
+        differentiation: DIFFERENTIATION[ctx.lang === 'russian' ? 'russian' : 'english'],
         checklist: ['Slaydlar va doskani oldindan ochib qo\'yish', 'Audio dialogni tekshirish (ovoz)', "Oldingi darsni bajarmaganlar ro'yxatini ko'rish", 'Darsdan keyin davomatni belgilash'],
     };
+}
+
+// Daqiqalarni taqsimlash: eng katta qoldiq usuli, har blok o'z minimumidan kam
+// bo'lmaydi va jami aynan dars davomiyligiga teng (mijoz ham shu algoritmni ishlatadi).
+function allocateMinutes(blocks, duration) {
+    const total = Math.max(1, Math.round(duration));
+    const mins = blocks.map(b => Math.max(1, b.min || 1));
+    const minSum = mins.reduce((a, b) => a + b, 0);
+    if (minSum >= total) {
+        // Juda qisqa dars — minimumlarni proporsional kamaytiramiz.
+        const raw = mins.map(m => (m / minSum) * total);
+        return largestRemainder(raw, total).map(m => Math.max(0, m));
+    }
+    const shares = blocks.map(b => b.share || 1);
+    const shareSum = shares.reduce((a, b) => a + b, 0);
+    let out = shares.map(sh => (sh / shareSum) * total);
+    // Minimumdan pastlarini minimumga ko'tarib, qolganini qayta taqsimlash.
+    const fixed = new Set();
+    for (let guard = 0; guard < blocks.length; guard++) {
+        const low = out.findIndex((v, i) => !fixed.has(i) && v < mins[i]);
+        if (low < 0) break;
+        fixed.add(low);
+        const rest = total - [...fixed].reduce((a, i) => a + mins[i], 0);
+        const freeShare = shares.reduce((a, sh, i) => a + (fixed.has(i) ? 0 : sh), 0);
+        out = out.map((_, i) => (fixed.has(i) ? mins[i] : (shares[i] / freeShare) * rest));
+    }
+    return largestRemainder(out, total);
+}
+
+function largestRemainder(raw, total) {
+    const floors = raw.map(Math.floor);
+    let left = total - floors.reduce((a, b) => a + b, 0);
+    const order = raw.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]);
+    for (let k = 0; left > 0 && k < order.length; k++, left--) floors[order[k][1]]++;
+    return floors;
 }
 
 // ─── O'quvchi progressi ─────────────────────────────────────────────────────
@@ -740,6 +812,20 @@ async function studentsOverview(pool, actor, { lang: requested } = {}) {
     return { lang, students: list, trackingSince, generatedAt: new Date().toISOString() };
 }
 
+// Jadval bo'yicha kutilgan jonli darslar soni (db.getDemoStudentAttendanceStats
+// bilan bir xil qoida: 1/3/5 yoki 2/4/6 kunlar; startDate'dan bugungacha).
+function expectedLiveLessons(student, now = new Date()) {
+    if (student.lessonDayOfWeek === null || student.lessonDayOfWeek === undefined || !student.lessonTime || !student.startDate) return null;
+    const d = Number(student.lessonDayOfWeek);
+    const days = [1, 3, 5].includes(d) ? [1, 3, 5] : [2, 4, 6].includes(d) ? [2, 4, 6] : [d];
+    const start = new Date(`${String(student.startDate).slice(0, 10)}T12:00:00Z`);
+    const end = new Date(`${tzDay(now)}T12:00:00Z`);
+    if (Number.isNaN(start.getTime()) || start > end) return null;
+    let n = 0;
+    for (const c = new Date(start); c <= end && n < 4000; c.setUTCDate(c.getUTCDate() + 1)) if (days.includes(c.getUTCDay())) n++;
+    return n;
+}
+
 async function loadAttendance(pool, studentId) {
     const q = table => pool.query(`SELECT att_key, day, present FROM ${table} WHERE student_id=$1`, [studentId])
         .then(r => r.rows).catch(() => []);
@@ -802,15 +888,24 @@ async function studentDetail(pool, actor, studentId) {
     delete summary.perLesson;
     const acts = activity.slice(-50).reverse().map(a => ({ ...a, lessonNo: idToNo[String(a.label || '').split(' - ')[0]] || null }));
     const present = attendance.filter(a => a.present).length;
+    const expectedLive = student.frozen ? null : expectedLiveLessons(student);
+    const examRows = await pool.query('SELECT exam_id, last_percent, best_percent, attempts, passed, mistakes, updated_at FROM student_exam_results WHERE student_id=$1 ORDER BY exam_id', [student.id]).then(r => r.rows);
+    const days30 = Array.from({ length: 30 }, (_, i) => shiftDay(tzDay(), i - 29));
     return {
         student: { ...summary, startDate: student.startDate || null },
         lessons: perLesson,
         timeByDay, timeBySection, sectionPeriodDays: 60,
         activity: acts,
-        exams: acts.filter(a => a.type === 'exam'),
-        attendance: { rows: attendance, present, absent: attendance.length - present },
+        exams: examRows.length ? examRows.map(e => ({ examId: e.exam_id, label: examLabel(e.exam_id), scorePercent: e.last_percent, bestPercent: e.best_percent,
+            attempts: e.attempts, passed: e.passed, mistakes: (e.mistakes || []).slice(0, 40), time: iso(e.updated_at) })) : acts.filter(a => a.type === 'exam'),
+        attendance: { rows: attendance, present, expected: expectedLive },
+        days30,
         grades: grades.slice(-30).reverse().map(g => ({ ...gradeRow(g), lessonNo: idToNo[g.lessonId] || null })),
     };
+}
+
+function examLabel(id) {
+    return id === 'final' ? 'Yakuniy imtihon' : /^interval-(\d+)$/.test(id) ? `${id.split('-')[1]}-oraliq imtihon` : id;
 }
 
 function gradeRow(g) {
@@ -879,11 +974,11 @@ async function lessonClassStats(pool, mc, students, n) {
 // Faqat o'quvchi tokeni bilan. Dars va qism ID'lari o'quvchining o'z kursidan
 // tekshiriladi, savollar soni serverdagi kontentdan olinadi, vaqt bitta
 // yuborishda va kunlik (8 soat) chegaralanadi, so'rovlar soni cheklanadi.
-const trackState = new Map(); // studentId → { windowStart, count, lastAt }
+const trackState = new Map(); // studentId → { windowStart, count, creditedUntil }
 const RATE_PER_MIN = 20;
 
 function rateCheck(studentId, now) {
-    const st = trackState.get(studentId) || { windowStart: now, count: 0, lastAt: 0 };
+    const st = trackState.get(studentId) || { windowStart: now, count: 0, creditedUntil: now - MAX_FLUSH_SECONDS * 1000 };
     if (now - st.windowStart > 60000) { st.windowStart = now; st.count = 0; }
     st.count++;
     trackState.set(studentId, st);
@@ -907,20 +1002,51 @@ function mergeMistakes(previous, incoming, at) {
     return [...map.values()].sort((a, b) => String(b.lastAt || '').localeCompare(String(a.lastAt || ''))).slice(0, 40);
 }
 
+// Bitta tranzaksiya (haqiqiy pg.Pool'da) — xatolar tarixini o'qib-yozishda
+// parallel so'rovlar bir-birining natijasini yo'qotmasin.
+async function withClient(pool, fn) {
+    if (typeof pool.connect !== 'function') return fn(pool, '');
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const out = await fn(client, ' FOR UPDATE');
+        await client.query('COMMIT');
+        return out;
+    } catch (e) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw e;
+    } finally { client.release(); }
+}
+
+function homeworkPartFor(mc, lessonId, partId, lang) {
+    const byId = id => (mc.lessonContents[id]?.homeworkParts || []).find(x => x.id === partId);
+    // Rus tilidagi bonus darslar "<id>-russian" kaliti ostida saqlanadi (db.resolveLangScopedContent).
+    if (/^bonus-\d{1,3}$/.test(lessonId) && lang === 'russian') return byId(`${lessonId}-russian`);
+    return byId(lessonId);
+}
+
+function examExists(mc, examId, lang) {
+    if (!/^interval-\d{1,2}$|^final$/.test(examId)) return false;
+    const store = mc.examContents || {};
+    return !!(lang === 'russian' ? store[`${examId}-russian`] || store[examId] : store[examId]) || Object.keys(store).length === 0;
+}
+
 async function recordTracking(pool, studentId, body = {}, now = new Date()) {
     if (!studentId) throw error(401, "O'quvchi avtorizatsiyasi talab qilinadi");
     const st = rateCheck(studentId, now.getTime());
     const time = Array.isArray(body.time) ? body.time.slice(0, 40) : [];
     const parts = Array.isArray(body.parts) ? body.parts.slice(0, 20) : [];
+    const exams = Array.isArray(body.exams) ? body.exams.slice(0, 10) : [];
     const { rows: srows } = await pool.query("SELECT id, COALESCE(subject,'english') AS subject, COALESCE(extra_data,'{}'::jsonb) AS extra FROM students WHERE id=$1", [studentId]);
     if (!srows[0]) throw error(404, "O'quvchi topilmadi");
+    const lang = srows[0].subject === 'russian' ? 'russian' : 'english';
     const mc = await loadMobileContent(pool);
-    const lessons = studentCourseLessons(mc, { subject: srows[0].subject, platformCourseId: srows[0].extra?.platformCourseId || '' });
+    const lessons = studentCourseLessons(mc, { subject: lang, platformCourseId: srows[0].extra?.platformCourseId || '' });
     const lessonIds = new Set(lessons.map(l => l.id));
     const validLesson = id => lessonIds.has(id) || /^bonus-\d{1,3}$/.test(id);
     const today = tzDay(now);
     const earliest = shiftDay(today, -3);
-    let skipped = 0;
+    let skipped = 0, skippedSeconds = 0;
 
     // Vaqt: bir xil kalitlar jamlanadi, keyin bitta so'rov bilan yoziladi.
     const buckets = new Map();
@@ -934,22 +1060,32 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
         if (!RULES.SECTIONS[section]) section = 'boshqa';
         const d = day > today ? today : day;
         const key = `${d}|${lessonId}|${section}`;
-        buckets.set(key, (buckets.get(key) || 0) + seconds);
+        buckets.set(key, (buckets.get(key) || 0) + Math.min(seconds, 86400));
     }
-    // Bitta yuborishda oldingi yuborishdan beri o'tgan vaqtdan (+90 s) ko'p bo'lmaydi.
-    const elapsed = st.lastAt ? (now.getTime() - st.lastAt) / 1000 + 90 : MAX_FLUSH_SECONDS;
-    let budget = Math.min(MAX_FLUSH_SECONDS, Math.max(0, elapsed));
-    const { rows: todayRows } = await pool.query('SELECT COALESCE(SUM(seconds),0)::bigint AS s FROM student_learning_time WHERE student_id=$1 AND day=$2::date', [studentId, today]);
-    let todayLeft = Math.max(0, DAILY_CAP_SECONDS - (Number(todayRows[0]?.s) || 0));
+    // Bugungi vaqt: haqiqatda o'tgan vaqtdan oshmaydi (creditedUntil — shu
+    // o'quvchiga oxirgi hisoblangan lahza). Oldingi kunlar (oflayn navbat) —
+    // faqat kunlik 8 soat chegarasi bilan.
+    const nowMs = now.getTime();
+    let todayBudget = Math.max(0, Math.min((nowMs - st.creditedUntil) / 1000, 86400));
+    const days = [...new Set([...buckets.keys()].map(k => k.split('|')[0]))];
+    const used = {};
+    if (days.length) {
+        const { rows } = await pool.query(`SELECT day::text AS day, COALESCE(SUM(seconds),0)::bigint AS s FROM student_learning_time
+            WHERE student_id=$1 AND day = ANY($2::date[]) GROUP BY day`, [studentId, days]);
+        for (const r of rows) used[r.day] = Number(r.s) || 0;
+    }
+    const left = Object.fromEntries(days.map(d => [d, Math.max(0, DAILY_CAP_SECONDS - (used[d] || 0))]));
     const values = [], params = [studentId];
+    let creditedToday = 0;
     for (const [key, secs] of buckets) {
         const [day, lessonId, section] = key.split('|');
-        let allowed = Math.min(secs, budget);
-        if (day === today) allowed = Math.min(allowed, todayLeft);
-        allowed = Math.round(allowed);
+        let allowed = Math.min(secs, left[day]);
+        if (day === today) allowed = Math.min(allowed, todayBudget);
+        allowed = Math.floor(allowed);
+        skippedSeconds += secs - Math.max(0, allowed);
         if (allowed <= 0) continue;
-        budget -= allowed;
-        if (day === today) todayLeft -= allowed;
+        left[day] -= allowed;
+        if (day === today) { todayBudget -= allowed; creditedToday += allowed; }
         params.push(day, lessonId, section, allowed);
         const b = params.length;
         values.push(`($1, $${b - 3}::date, $${b - 2}, $${b - 1}, $${b}::int)`);
@@ -959,15 +1095,15 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
             ON CONFLICT (student_id, day, lesson_id, section)
             DO UPDATE SET seconds = LEAST(student_learning_time.seconds + EXCLUDED.seconds, 86400), updated_at = NOW()`, params);
     }
-    if (time.length) st.lastAt = now.getTime();
+    st.creditedUntil = Math.min(nowMs, st.creditedUntil + creditedToday * 1000);
 
     let savedParts = 0;
     for (const p of parts) {
         const lessonId = String(p?.lessonId || '').slice(0, 160);
         const partId = String(p?.partId || '').slice(0, 160);
-        const part = validLesson(lessonId) ? (mc.lessonContents[lessonId]?.homeworkParts || []).find(x => x.id === partId) : null;
+        const part = validLesson(lessonId) ? homeworkPartFor(mc, lessonId, partId, lang) : null;
         if (!part) { skipped++; continue; }
-        const total = partQuestionCount(part) || Math.max(1, Math.min(Math.round(Number(p.total) || 0), 500));
+        const total = partQuestionCount(part) || 1;
         const correct = Math.max(0, Math.min(Math.round(Number(p?.correct) || 0), total));
         const percent = Math.round((correct / total) * 100);
         const answers = new Map(partPreview(part).map(x => [x.q, x.a]));
@@ -975,21 +1111,43 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
         const mistakes = (Array.isArray(p.mistakes) ? p.mistakes : []).slice(0, 40).map(normalizeMistake)
             .filter(m => m.question && !seen.has(m.question) && seen.add(m.question))
             .map(m => ({ ...m, correctAnswer: m.correctAnswer || answers.get(m.question) || '' }));
-        const { rows: prev } = await pool.query('SELECT mistakes FROM student_part_results WHERE student_id=$1 AND lesson_id=$2 AND part_id=$3', [studentId, lessonId, partId]);
-        const merged = mergeMistakes(prev[0]?.mistakes, mistakes, now.toISOString());
-        await pool.query(`INSERT INTO student_part_results (student_id, lesson_id, part_id, kind, title, correct, total,
-            first_percent, last_percent, best_percent, attempts, passed, mistakes)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$8,1,$9,$10)
-            ON CONFLICT (student_id, lesson_id, part_id) DO UPDATE SET kind=EXCLUDED.kind, title=EXCLUDED.title,
-              correct=EXCLUDED.correct, total=EXCLUDED.total, last_percent=EXCLUDED.last_percent,
-              best_percent=GREATEST(student_part_results.best_percent, EXCLUDED.best_percent),
-              attempts=student_part_results.attempts + 1,
-              passed=student_part_results.passed OR EXCLUDED.passed, mistakes=EXCLUDED.mistakes, updated_at=NOW()`,
-        [studentId, lessonId, partId, String(part.kind || '').slice(0, 40), String(part.title || '').slice(0, 160),
-            correct, total, percent, percent >= PASS_PERCENT, JSON.stringify(merged)]);
+        await withClient(pool, async (db, lock) => {
+            const { rows: prev } = await db.query(`SELECT mistakes FROM student_part_results WHERE student_id=$1 AND lesson_id=$2 AND part_id=$3${lock}`, [studentId, lessonId, partId]);
+            const merged = mergeMistakes(prev[0]?.mistakes, mistakes, now.toISOString());
+            await db.query(`INSERT INTO student_part_results (student_id, lesson_id, part_id, kind, title, correct, total,
+                first_percent, last_percent, best_percent, attempts, passed, mistakes)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$8,1,$9,$10)
+                ON CONFLICT (student_id, lesson_id, part_id) DO UPDATE SET kind=EXCLUDED.kind, title=EXCLUDED.title,
+                  correct=EXCLUDED.correct, total=EXCLUDED.total, last_percent=EXCLUDED.last_percent,
+                  best_percent=GREATEST(student_part_results.best_percent, EXCLUDED.best_percent),
+                  attempts=student_part_results.attempts + 1,
+                  passed=student_part_results.passed OR EXCLUDED.passed, mistakes=EXCLUDED.mistakes, updated_at=NOW()`,
+            [studentId, lessonId, partId, String(part.kind || '').slice(0, 40), String(part.title || '').slice(0, 160),
+                correct, total, percent, percent >= PASS_PERCENT, JSON.stringify(merged)]);
+        });
         savedParts++;
     }
-    return { ok: true, time: values.length, parts: savedParts, skipped };
+
+    let savedExams = 0;
+    for (const e of exams) {
+        const examId = String(e?.examId || '').slice(0, 40);
+        const percent = Math.round(Number(e?.scorePercent));
+        if (!examExists(mc, examId, lang) || !Number.isFinite(percent) || percent < 0 || percent > 100) { skipped++; continue; }
+        const mistakes = (Array.isArray(e.mistakes) ? e.mistakes : []).slice(0, 40).map(normalizeMistake).filter(m => m.question);
+        await withClient(pool, async (db, lock) => {
+            const { rows: prev } = await db.query(`SELECT mistakes FROM student_exam_results WHERE student_id=$1 AND exam_id=$2${lock}`, [studentId, examId]);
+            const merged = mergeMistakes(prev[0]?.mistakes, mistakes, now.toISOString());
+            await db.query(`INSERT INTO student_exam_results (student_id, exam_id, last_percent, best_percent, attempts, passed, mistakes)
+                VALUES ($1,$2,$3,$3,1,$4,$5)
+                ON CONFLICT (student_id, exam_id) DO UPDATE SET last_percent=EXCLUDED.last_percent,
+                  best_percent=GREATEST(student_exam_results.best_percent, EXCLUDED.best_percent),
+                  attempts=student_exam_results.attempts + 1, passed=student_exam_results.passed OR EXCLUDED.passed,
+                  mistakes=EXCLUDED.mistakes, updated_at=NOW()`,
+            [studentId, examId, percent, e.passed === true && percent >= RULES.EXAM_PASS_PERCENT, JSON.stringify(merged)]);
+        });
+        savedExams++;
+    }
+    return { ok: true, time: values.length, parts: savedParts, exams: savedExams, skipped, skippedSeconds: Math.max(0, Math.round(skippedSeconds)) };
 }
 
 module.exports = {
@@ -997,6 +1155,6 @@ module.exports = {
     initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials,
     studentsOverview, studentDetail, recordTracking,
     // test uchun
-    buildTeacherPlan, konspektRules, lessonPercent, cleanPageMap, cleanMaterial, expectedLesson, summarizeStudent, mergeMistakes, tzDay,
+    buildTeacherPlan, konspektRules, allocateMinutes, expectedLiveLessons, lessonPercent, cleanPageMap, cleanMaterial, expectedLesson, summarizeStudent, mergeMistakes, tzDay,
     _resetCache: () => { ruSourceCache = null; contentCache = { at: 0, mc: null }; trackState.clear(); oralCache = undefined; },
 };

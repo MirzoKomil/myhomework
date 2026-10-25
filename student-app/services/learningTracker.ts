@@ -50,6 +50,11 @@ let mediaPlaying = false;
 let started = false;
 let buffer: Record<string, TimeEntry> = {};
 let parts: PartEntry[] = [];
+type ExamEntry = { examId: string; scorePercent: number; passed: boolean; mistakes: { question: string; yourAnswer?: string; correctAnswer?: string }[] };
+let exams: ExamEntry[] = [];
+// Server bitta so'rovda shuncha yozuvni qabul qiladi (academicHub.recordTracking).
+const MAX_TIME_ROWS = 40;
+const MAX_PARTS = 20;
 let flushing = false;
 
 const localDay = (d = new Date()) => {
@@ -103,13 +108,29 @@ export function reportPartResult(entry: PartEntry) {
   void flush();
 }
 
+/** Imtihon topshirilganda (o'tgan yoki o'tmagan). */
+export function reportExamResult(entry: ExamEntry) {
+  exams.push({
+    examId: String(entry.examId).slice(0, 40),
+    scorePercent: Math.round(Number(entry.scorePercent) || 0),
+    passed: !!entry.passed,
+    mistakes: (entry.mistakes ?? []).slice(0, 40).map((m) => ({
+      question: String(m.question ?? '').slice(0, 300),
+      yourAnswer: String(m.yourAnswer ?? '').slice(0, 200),
+      correctAnswer: String(m.correctAnswer ?? '').slice(0, 200),
+    })),
+  });
+  void flush();
+}
+
 function isActive() {
   if (!foreground) return false;
   if (mediaPlaying) return true;
-  // Web: fokus iframe ichida (YouTube pleyer bosilgan) — video ko'rilyapti.
-  if (Platform.OS === 'web' && typeof document !== 'undefined' && document.activeElement?.tagName === 'IFRAME') return true;
+  const idle = Date.now() - lastActivity;
+  // Web: fokus YouTube pleyerda — video ko'rilyapti, lekin 25 daqiqadan oshmaydi.
+  if (Platform.OS === 'web' && typeof document !== 'undefined' && document.activeElement?.tagName === 'IFRAME') return idle < MEDIA_IDLE_MS;
   const limit = MEDIA_SECTIONS.has(context.section) ? MEDIA_IDLE_MS : IDLE_MS;
-  return Date.now() - lastActivity < limit;
+  return idle < limit;
 }
 
 function tick() {
@@ -125,7 +146,8 @@ async function loadQueue() {
   try {
     const raw = await AsyncStorage.getItem(QUEUE_KEY);
     if (!raw) return;
-    const saved = JSON.parse(raw) as { time?: TimeEntry[]; parts?: PartEntry[] };
+    const saved = JSON.parse(raw) as { time?: TimeEntry[]; parts?: PartEntry[]; exams?: ExamEntry[] };
+    exams = [...(saved.exams ?? []), ...exams];
     for (const t of saved.time ?? []) {
       const key = `${t.day}|${t.lessonId}|${t.section}`;
       const cur = buffer[key];
@@ -137,10 +159,10 @@ async function loadQueue() {
   }
 }
 
-async function saveQueue(time: TimeEntry[], pending: PartEntry[]) {
+async function saveQueue(time: TimeEntry[], pending: PartEntry[], pendingExams: ExamEntry[] = []) {
   try {
-    if (!time.length && !pending.length) await AsyncStorage.removeItem(QUEUE_KEY);
-    else await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify({ time, parts: pending.slice(-30) }));
+    if (!time.length && !pending.length && !pendingExams.length) await AsyncStorage.removeItem(QUEUE_KEY);
+    else await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify({ time: time.slice(-200), parts: pending.slice(-60), exams: pendingExams.slice(-20) }));
   } catch {
     // maxfiy rejim
   }
@@ -148,23 +170,29 @@ async function saveQueue(time: TimeEntry[], pending: PartEntry[]) {
 
 export async function flush(keepalive = false) {
   if (flushing) return;
-  const time = Object.values(buffer).filter((t) => t.seconds > 0);
-  const pending = parts;
-  if (!time.length && !pending.length) return;
+  const all = Object.values(buffer).filter((t) => t.seconds > 0);
+  if (!all.length && !parts.length && !exams.length) return;
   await authReady();
   if (!getStudent()) return;
   flushing = true;
+  // Server chegarasidan oshganlari keyingi yuborishga qoladi (tashlab yuborilmaydi).
+  const time = all.slice(0, MAX_TIME_ROWS);
+  const restTime = all.slice(MAX_TIME_ROWS);
+  const pending = parts.slice(0, MAX_PARTS);
+  const pendingExams = exams.slice(0, 10);
   buffer = {};
-  parts = [];
+  for (const t of restTime) buffer[`${t.day}|${t.lessonId}|${t.section}`] = t;
+  parts = parts.slice(MAX_PARTS);
+  exams = exams.slice(10);
   try {
     const res = await authedFetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ time: time.slice(0, 60), parts: pending.slice(0, 30) }),
+      body: JSON.stringify({ time, parts: pending, exams: pendingExams }),
       ...(keepalive ? { keepalive: true } : null),
     });
     if (!res.ok && (res.status >= 500 || res.status === 429)) throw new Error(String(res.status));
-    await saveQueue([], []);
+    await saveQueue(Object.values(buffer), parts, exams);
   } catch {
     // Tarmoq yo'q — keyingi safar yuboriladi.
     for (const t of time) {
@@ -173,7 +201,8 @@ export async function flush(keepalive = false) {
       buffer[key] = cur ? { ...cur, seconds: cur.seconds + t.seconds } : t;
     }
     parts = [...pending, ...parts];
-    await saveQueue(Object.values(buffer), parts);
+    exams = [...pendingExams, ...exams];
+    await saveQueue(Object.values(buffer), parts, exams);
   } finally {
     flushing = false;
   }

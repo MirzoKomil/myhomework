@@ -382,23 +382,49 @@
     }
 
     // ── Dars rejasi (Teacher's book) ────────────────────────────────────────
+    // Server bilan bir xil (academicHub.allocateMinutes): eng katta qoldiq usuli,
+    // har blok minimumidan kam emas, jami aynan dars davomiyligi.
+    function largestRemainder(raw, total) {
+        const floors = raw.map(Math.floor);
+        let left = total - floors.reduce((a, b) => a + b, 0);
+        const order = raw.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0]);
+        for (let k = 0; left > 0 && k < order.length; k++, left--) floors[order[k][1]]++;
+        return floors;
+    }
+    function allocateMinutes(blocks, duration) {
+        const total = Math.max(1, Math.round(duration));
+        const mins = blocks.map(b => Math.max(1, b.min || 1));
+        const minSum = mins.reduce((a, b) => a + b, 0);
+        if (minSum >= total) return largestRemainder(mins.map(m => (m / minSum) * total), total);
+        const shares = blocks.map(b => b.share || 1);
+        const shareSum = shares.reduce((a, b) => a + b, 0);
+        let out = shares.map(sh => (sh / shareSum) * total);
+        const fixed = new Set();
+        for (let g = 0; g < blocks.length; g++) {
+            const low = out.findIndex((v, i) => !fixed.has(i) && v < mins[i]);
+            if (low < 0) break;
+            fixed.add(low);
+            const rest = total - [...fixed].reduce((a, i) => a + mins[i], 0);
+            const freeShare = shares.reduce((a, sh, i) => a + (fixed.has(i) ? 0 : sh), 0);
+            out = out.map((_, i) => (fixed.has(i) ? mins[i] : (shares[i] / freeShare) * rest));
+        }
+        return largestRemainder(out, total);
+    }
     function planMinutes(blocks, duration) {
+        const mins = allocateMinutes(blocks, duration);
         let used = 0;
-        return blocks.map((b, i) => {
-            const m = i === blocks.length - 1 ? Math.max(1, duration - used) : Math.max(1, Math.round(b.share / 100 * duration));
-            const from = used;
-            used += m;
-            return { ...b, minutes: m, from, to: used };
-        });
+        return blocks.map((b, i) => { const from = used; used += mins[i]; return { ...b, minutes: mins[i], from, to: used }; });
     }
     const mmss = m => `${String(Math.floor(m)).padStart(2, '0')}:00`;
 
     function checklistKey(L) { return `mh_lh_check:${S.lang}:${L.no}`; }
 
     const isShort = d => d <= 20;
+    const isMedium = d => d > 20 && d <= 35;
     function planBlocks(plan, duration) {
         if (plan.mode !== 'live') return plan.blocks;
-        return planMinutes(isShort(duration) && plan.shortBlocks ? plan.shortBlocks : plan.blocks, duration);
+        const set = isShort(duration) && plan.shortBlocks ? plan.shortBlocks : isMedium(duration) && plan.mediumBlocks ? plan.mediumBlocks : plan.blocks;
+        return planMinutes(set, duration);
     }
     const blockList = items => (items.length ? `<ul class="${items.some(i => String(i).length > 40) ? 'is-long' : ''}">${items.map(i => `<li>${esc(plain(i))}</li>`).join('')}</ul>` : '');
 
@@ -417,7 +443,7 @@
             <div class="lh-card-h"><b>${plan.mode === 'live' ? 'Jonli dars rejasi' : "Videodars — ustoz uchun yo'riqnoma"}</b>
                 ${plan.mode === 'live' ? `<label class="lh-dur">Dars davomiyligi <select>${durations.map(d => `<option value="${d}"${d === duration ? ' selected' : ''}>${d} daqiqa</option>`).join('')}</select></label>` : ''}
             </div>
-            <p class="lh-muted lh-summary">${esc(plan.summary)}${plan.mode === 'live' && isShort(duration) ? " · Qisqa (individual) dars shabloni." : ''}</p>
+            <p class="lh-muted lh-summary">${esc(plan.summary)}${plan.mode === 'live' && isShort(duration) ? ' · Qisqa (individual) dars shabloni.' : plan.mode === 'live' && isMedium(duration) ? " · O'rta (30 daqiqalik) dars shabloni: dialog va qoida birlashtirilgan." : ''}</p>
             <ol class="lh-timeline">${blocks.map(b => `
                 <li class="lh-block">
                     <div class="lh-block-time">${plan.mode === 'live' ? `<b>${b.minutes} daq</b><span>${mmss(b.from)}–${mmss(b.to)}</span>` : `<b class="lh-when">${esc(b.when || '')}</b>`}</div>
@@ -784,7 +810,8 @@
 
     function exportCsv(list) {
         const head = ["O'quvchi", 'Guruh', 'Joriy dars', 'Reja', "O'rtacha %", 'Tugatgan', '1-urinish %', 'Eng yaxshi %', 'Xatolar', 'Faol vaqt 7 kun (daq)', 'Faol vaqt jami (daq)', 'Faol kunlar (7)', 'Oxirgi faollik', 'Holat'];
-        const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        // Excel formulasi bo'lib ketmasin (=, +, -, @ bilan boshlanadigan matnlar).
+        const q = v => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replace(/"/g, '""')}"`; };
         const rows = list.map(s => [s.name, s.group, s.reached, s.expected ?? '', s.avgPercent, s.completed, s.firstTryAvg ?? '', s.homeworkAvg ?? '',
             s.mistakes, Math.round(s.time.week / 60), Math.round(s.time.total / 60), s.activeDays7, s.lastActive ? s.lastActive.slice(0, 10) : '', s.flags.map(f => f.label).join('; ')]);
         const csv = '﻿' + [head, ...rows].map(r => r.map(q).join(';')).join('\n');
@@ -838,24 +865,25 @@
                 <div class="lh-kpi"><span>Tugatgan darslar</span><b>${s.completed}</b><small>72 dan</small></div>
                 <div class="lh-kpi"><span>Uy vazifasi</span><b>${s.homeworkAvg === null ? '—' : s.homeworkAvg + '%'}</b><small>${s.firstTryAvg === null ? '' : `1-urinish ${s.firstTryAvg}% · ${s.avgAttempts} urinish`}</small></div>
                 <div class="lh-kpi"><span>Faol vaqt</span><b>${dur(s.time.total)}</b><small>bugun ${dur(s.time.today)} · 7 kun ${dur(s.time.week)}</small></div>
-                <div class="lh-kpi"><span>Davomat</span><b>${att.present}/${att.present + att.absent}</b><small>jonli darslar</small></div>
+                <div class="lh-kpi"><span>Jonli darsga keldi</span><b>${att.present}${att.expected ? `/${att.expected}` : ''}</b><small>${att.expected ? `jadval bo'yicha · ${Math.round((att.present / att.expected) * 100)}%` : 'marta (jadval kiritilmagan)'}</small></div>
             </div>
             <div class="lh-card"><div class="lh-card-h"><b>72 dars xaritasi</b><span class="lh-muted">katakni bosing</span></div>
                 <div class="lh-heat">${d.lessons.map(l => `<button type="button" class="lh-cell ${heatClass(l)}${l.grades.length ? ' has-grade' : ''}" data-cell="${l.no}" aria-label="${l.no}-dars: ${l.percent}%${l.grades.length ? ', jonli darsda baholangan' : ''}">${l.no}</button>`).join('')}</div>
                 <div class="lh-legend"><span class="lh-cell c0"></span>boshlanmagan <span class="lh-cell c1"></span>1–49% <span class="lh-cell c2"></span>50–99% <span class="lh-cell c3"></span>100% <span class="lh-cell c0 has-grade"></span>jonli darsda baho bor</div>
             </div>
             <div class="lh-card" id="lhCellDetail" aria-live="polite"></div>
-            <div class="lh-card"><div class="lh-card-h"><b>Faol vaqt — oxirgi 30 kun</b></div>${timeChart(d.timeByDay)}
+            <div class="lh-card"><div class="lh-card-h"><b>Faol vaqt — oxirgi 30 kun</b></div>${timeChart(d.timeByDay, d.days30)}
                 ${Object.keys(d.timeBySection).length ? `<div class="lh-muted">Bo'limlar bo'yicha (oxirgi ${d.sectionPeriodDays || 60} kun):</div><div class="lh-sections">${Object.entries(d.timeBySection).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span><b>${esc(SECTION_LABEL[k] || k)}</b> ${dur(v)}</span>`).join('')}</div>` : ''}
             </div>
             <div class="lh-two-cards">
                 <div class="lh-card"><div class="lh-card-h"><b>Jonli dars davomati</b></div>
-                    ${att.rows.length ? `<ul class="lh-att">${att.rows.slice(0, 20).map(a => `<li><span>${esc(fmtDate(a.date))}</span>${a.present ? '<span class="lh-flag ok">keldi</span>' : '<span class="lh-flag struggling">kelmadi</span>'}${a.kind === 'assistant' ? '<span class="lh-tag">yordamchi</span>' : ''}</li>`).join('')}</ul>` : '<div class="lh-muted">Davomat hali belgilanmagan</div>'}</div>
+                    ${att.rows.length ? `<ul class="lh-att">${att.rows.slice(0, 20).map(a => `<li><span>${esc(fmtDate(a.date))}</span>${a.present ? '<span class="lh-flag ok">keldi</span>' : '<span class="lh-flag struggling">kelmadi</span>'}${a.kind === 'assistant' ? '<span class="lh-tag">yordamchi</span>' : ''}</li>`).join('')}</ul>` : '<div class="lh-muted">Davomat hali belgilanmagan</div>'}
+                    <div class="lh-muted">Ro'yxatda faqat belgilangan kunlar. ${att.expected ? `Jadval bo'yicha ${att.expected} ta jonli dars bo'lishi kerak edi.` : ''}</div></div>
                 <div class="lh-card"><div class="lh-card-h"><b>Jonli dars baholari</b></div>
                     ${d.grades?.length ? `<ul class="lh-att">${d.grades.slice(0, 15).map(g => `<li><span>${esc(fmtDate(g.date))}${g.lessonNo ? ` · ${g.lessonNo}-dars` : ''}</span>${g.average !== null ? `<b>${g.average}</b>` : ''}${g.comment ? `<span class="lh-muted">${esc(g.comment)}</span>` : ''}</li>`).join('')}</ul>` : '<div class="lh-muted">Baho qo\'yilmagan</div>'}</div>
             </div>
             ${d.exams?.length ? `<div class="lh-card"><div class="lh-card-h"><b>Imtihonlar</b></div>
-                <ul class="lh-activity">${d.exams.map(a => `<li><span>${esc(a.label)}</span>${typeof a.scorePercent === 'number' ? pct(a.scorePercent) : ''}${a.passed === true ? '<span class="lh-flag ok">o\'tdi</span>' : a.passed === false ? '<span class="lh-flag struggling">o\'tmadi</span>' : ''}<span class="lh-muted">${esc(ago(a.time))}</span>
+                <ul class="lh-activity">${d.exams.map(a => `<li><span>${esc(a.label)}</span>${typeof a.scorePercent === 'number' ? pct(a.scorePercent) : ''}${a.bestPercent !== undefined ? `<span class="lh-muted">eng yaxshi ${a.bestPercent}% · ${a.attempts} urinish</span>` : ''}${a.passed === true ? '<span class="lh-flag ok">o\'tdi</span>' : a.passed === false ? '<span class="lh-flag struggling">o\'tmadi</span>' : ''}<span class="lh-muted">${esc(ago(a.time))}</span>
                     ${(a.mistakes || []).length ? `<details><summary>${a.mistakes.length} ta xato</summary><ol class="lh-qa">${a.mistakes.map(mistakeLi).join('')}</ol></details>` : ''}</li>`).join('')}</ul></div>` : ''}
             ${d.activity.filter(a => a.type !== 'exam').length ? `<div class="lh-card"><div class="lh-card-h"><b>Faoliyat tarixi</b></div>
                 <ul class="lh-activity">${d.activity.filter(a => a.type !== 'exam').slice(0, 20).map(a => `<li><span>${esc(a.label)}</span>${typeof a.scorePercent === 'number' ? pct(a.scorePercent) : ''}<span class="lh-muted">${esc(ago(a.time))}</span>
@@ -893,14 +921,14 @@
         return 'c1';
     }
 
-    function timeChart(byDay) {
-        const days = [];
+    function timeChart(byDay, keys) {
+        // Kunlar serverdan (Toshkent vaqti) keladi; bo'lmasa brauzer sanasi.
         const now = new Date();
-        for (let i = 29; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-            const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            days.push({ k, v: byDay[k] || 0, label: d.getDate() });
-        }
+        const list = keys?.length ? keys : Array.from({ length: 30 }, (_, i) => {
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29 + i);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        });
+        const days = list.map(k => ({ k, v: byDay[k] || 0, label: Number(k.slice(8)) }));
         const max = Math.max(...days.map(d => d.v), 600);
         const total = days.reduce((a, d) => a + d.v, 0);
         if (!total) return '<div class="lh-muted">Oxirgi 30 kunda vaqt qayd etilmagan.</div>';
