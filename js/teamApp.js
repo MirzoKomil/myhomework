@@ -181,7 +181,8 @@
             header.querySelector('.lead-search-box')?.before(el);
         }
         const SALES_TITLES = { leads: 'Lidlar', 'book-roadmap': 'Kitob yetkazish', rating: 'Reyting', 'sales-stats': 'Statistika', scripts: 'Skriptlar', 'sales-plan': 'Sotuv rejasi', debtors: 'Qarzdorlar' };
-        const title = (_activeTab === 'sales' && SALES_TITLES[activeSales()]) || TITLES[_activeTab] || (_activeTab === 'dashboard' ? 'Bosh sahifa' : '');
+        // Bosh sahifada salomlashuv bor — yuqorida logo turadi.
+        const title = (_activeTab === 'sales' && SALES_TITLES[activeSales()]) || TITLES[_activeTab] || '';
         const html = title ? `<h1>${title}</h1>` : '<img src="images/myhomework-logo.png" alt="Homework">';
         if (el._sig !== html) { el._sig = html; el.innerHTML = html; }
     }

@@ -15629,14 +15629,14 @@ let _salesFunnelDemographicFilters = {
 };
 
 const FUNNEL_STAGES = [
-    { id: 'yangi-lidlar',             label: 'Yangi lidlar',             color: '#3B82F6' },
-    { id: 'boglanishga-urinilmoqda',  label: "Bog'lanishga urinilmoqda", color: '#7C3AED' },
-    { id: 'boglanildi',               label: "Bog'lanildi",              color: '#0891B2' },
-    { id: 'sinov-darsida',            label: 'Sinov darsida',            color: '#16A34A' },
-    { id: 'qaror-jarayonida',         label: 'Qaror jarayonida',         color: '#EA580C' },
-    { id: 'keyin-sotib-olmoqchi',     label: 'Keyin sotib olmoqchi',     color: '#4F46E5' },
-    { id: 'tolov-jarayonida',         label: "To'lov jarayonida",        color: '#D97706' },
-    { id: 'tolov-yopildi',            label: "To'lov yopildi",           color: '#059669' },
+    { id: 'yangi-lidlar',             label: "Yangi lidlar",             color: '#3B82F6' },
+    { id: 'boglanishga-urinilmoqda',  label: "Bogʻlanishga urinilmoqda", color: '#7C3AED' },
+    { id: 'boglanildi',               label: "Bogʻlanildi",              color: '#0891B2' },
+    { id: 'sinov-darsida',            label: "Sinov darsida",            color: '#16A34A' },
+    { id: 'qaror-jarayonida',         label: "Qaror jarayonida",         color: '#EA580C' },
+    { id: 'keyin-sotib-olmoqchi',     label: "Keyin sotib olmoqchi",     color: '#4F46E5' },
+    { id: 'tolov-jarayonida',         label: "Toʻlov jarayonida",        color: '#D97706' },
+    { id: 'tolov-yopildi',            label: "Toʻlov yopildi",           color: '#059669' },
 ];
 
 // Voronka ustunlari uchun bitta brend rangi: bosqich oldinga siljigan sari to'qlashadi,
@@ -20460,16 +20460,16 @@ function formatEnhancedPaymentClosedComment(closedSurvey, scheduleData) {
 }
 
 const LEAD_COLUMNS = [
-    { id: 'yangi-lidlar', label: 'Yangi lidlar', bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
-    { id: 'boglanishga-urinilmoqda', label: "Bog'lanishga urinilmoqda", bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
-    { id: 'boglanildi', label: "Bog'lanildi", bg: '#ECFEFF', border: '#67E8F9', headerBg: 'rgba(6,182,212,0.12)', title: '#0E7490', count: '#0891B2' },
-    { id: 'sinov-darsida', label: 'Sinov darsida', bg: '#F0FDF4', border: '#86EFAC', headerBg: 'rgba(22,163,74,0.12)', title: '#166534', count: '#16A34A' },
-    { id: 'qaror-jarayonida', label: 'Qaror jarayonida', bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)', title: '#C2410C', count: '#EA580C' },
-    { id: 'keyin-sotib-olmoqchi', label: 'Keyin sotib olmoqchi', bg: '#EEF2FF', border: '#A5B4FC', headerBg: 'rgba(79,70,229,0.12)', title: '#3730A3', count: '#4F46E5' },
-    { id: 'tolov-jarayonida', label: "To'lov jarayonida", bg: '#FFFBEB', border: '#FCD34D', headerBg: 'rgba(217,119,6,0.12)', title: '#B45309', count: '#D97706' },
-    { id: 'tolov-yopildi', label: "To'lov yopildi", bg: '#ECFDF5', border: '#6EE7B7', headerBg: 'rgba(5,150,105,0.12)', title: '#047857', count: '#059669' },
-    { id: 'muvaffaqiyatsiz-sotuv', label: 'Muvaffaqiyatsiz sotuv', bg: '#FEF2F2', border: '#FCA5A5', headerBg: 'rgba(220,38,38,0.12)', title: '#B91C1C', count: '#DC2626' },
-    { id: 'sifatsiz-lidlar', label: 'Sifatsiz lidlar', bg: '#F8FAFC', border: '#CBD5E1', headerBg: 'rgba(100,116,139,0.12)', title: '#475569', count: '#64748B' }
+    { id: 'yangi-lidlar', label: "Yangi lidlar", bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
+    { id: 'boglanishga-urinilmoqda', label: "Bogʻlanishga urinilmoqda", bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
+    { id: 'boglanildi', label: "Bogʻlanildi", bg: '#ECFEFF', border: '#67E8F9', headerBg: 'rgba(6,182,212,0.12)', title: '#0E7490', count: '#0891B2' },
+    { id: 'sinov-darsida', label: "Sinov darsida", bg: '#F0FDF4', border: '#86EFAC', headerBg: 'rgba(22,163,74,0.12)', title: '#166534', count: '#16A34A' },
+    { id: 'qaror-jarayonida', label: "Qaror jarayonida", bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)', title: '#C2410C', count: '#EA580C' },
+    { id: 'keyin-sotib-olmoqchi', label: "Keyin sotib olmoqchi", bg: '#EEF2FF', border: '#A5B4FC', headerBg: 'rgba(79,70,229,0.12)', title: '#3730A3', count: '#4F46E5' },
+    { id: 'tolov-jarayonida', label: "Toʻlov jarayonida", bg: '#FFFBEB', border: '#FCD34D', headerBg: 'rgba(217,119,6,0.12)', title: '#B45309', count: '#D97706' },
+    { id: 'tolov-yopildi', label: "Toʻlov yopildi", bg: '#ECFDF5', border: '#6EE7B7', headerBg: 'rgba(5,150,105,0.12)', title: '#047857', count: '#059669' },
+    { id: 'muvaffaqiyatsiz-sotuv', label: "Muvaffaqiyatsiz sotuv", bg: '#FEF2F2', border: '#FCA5A5', headerBg: 'rgba(220,38,38,0.12)', title: '#B91C1C', count: '#DC2626' },
+    { id: 'sifatsiz-lidlar', label: "Sifatsiz lidlar", bg: '#F8FAFC', border: '#CBD5E1', headerBg: 'rgba(100,116,139,0.12)', title: '#475569', count: '#64748B' }
 ];
 
 const LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));

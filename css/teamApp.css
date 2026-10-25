@@ -1985,3 +1985,221 @@ html.rd[data-theme="dark"] .lead-age--late { background: #3A3018; color: #FFC94D
         min-height: 84px;
     }
 }
+
+/* ==========================================================================
+   6-bosqich: bir xil segment, ixcham Reyting banneri, qobiq
+   ========================================================================== */
+
+/* Bitta segment uslubi: Statistika davri, Reyting tablari, Sotuv rejasi */
+html.rd .sfx-presets,
+html.rd .rating-main-tabs-left {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--rd-col);
+    border: 0;
+    flex-wrap: nowrap;
+    width: auto;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+html.rd .sfx-presets .sfx-chip,
+html.rd .rating-main-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 6px 14px;
+    border: 0 !important;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-muted);
+    font: 600 13px/1 inherit;
+    white-space: nowrap;
+    box-shadow: none;
+    margin: 0;
+}
+
+html.rd .sfx-presets .sfx-chip.active,
+html.rd .rating-main-tab.active {
+    background: var(--surface);
+    color: var(--rd-primary-strong);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+}
+
+html.rd .rating-main-tabs {
+    border-bottom: 0;
+    align-items: center;
+}
+
+html.rd #ratingPeriodFilter .lang-btn,
+html.rd #spMainNav .section-nav-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Reyting banneri ixcham — podium birinchi ekranda */
+@media (min-width: 901px) {
+    html.rd .mot-hero {
+        min-height: 150px;
+    }
+
+    html.rd .mot-hero-txt {
+        padding: 18px 26px;
+        max-width: 640px;
+    }
+
+    html.rd .mot-title {
+        font-size: 22px;
+        line-height: 28px;
+    }
+
+    /* Lidlar: yumshoq qo'ng'iroq ikonkasi, sarlavha bir qatorda */
+    html.rd .lead-card-call {
+        background: #E3F6EE;
+        color: #0F7A55;
+        width: 34px;
+        padding: 0;
+        justify-content: center;
+        font-size: 0;
+        gap: 0;
+    }
+
+    html.rd .lead-card-call:hover {
+        background: #0F9D6B;
+        color: #fff;
+    }
+
+    html.rd .lead-column-title {
+        white-space: nowrap;
+    }
+}
+
+html.rd .lead-card-action.is-zero {
+    opacity: .8;
+}
+
+html.rd details.sfx-note summary {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rd-primary-strong);
+}
+
+@media (max-width: 900px) {
+    /* Yuqori panel ikonkalari — Android uslubida chegarasiz */
+    html.rd .top-header .icon-btn {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        width: 40px;
+        height: 40px;
+    }
+
+    html.rd .top-header .notif-badge {
+        top: 2px;
+        right: 2px;
+    }
+
+    /* "+ Lid" telefonda dumaloq ikonka */
+    html.rd .mhx-head .mhx-add {
+        width: 56px;
+        height: 56px;
+        min-height: 56px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    html.rd .mhx-head .mhx-add span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    html.rd .mhx-head .mhx-add svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* KPI tilelar bir xil chiziqda */
+    html.rd .mhx-kpis .ahx-kpi {
+        justify-content: flex-start;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi-v {
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+        line-height: 1.1;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi-v small {
+        display: inline;
+        font-size: 11px;
+    }
+
+    html.rd .mhx-kpis .mhx-bar {
+        margin-top: auto;
+    }
+
+    /* Sotuv rejasi: ichki karta yo'q, kenglik to'liq */
+    html.rd #spIndPlanCard {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    html.rd #spIndPlanCard .sp-card-h,
+    html.rd #spIndPlanCard .sp-pace,
+    html.rd #spIndPlanCard .sp-progress,
+    html.rd #spIndPlanCard .sp-cmp-wrap {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    html.rd #spIndPlanCard .sp-prize {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    html.rd .sp-cmp-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 4px 12px !important;
+    }
+
+    html.rd .sp-cmp .sp-cmp-bar {
+        display: block;
+        width: 36px;
+    }
+
+    /* Reyting: tablar to'liq kenglikda segment */
+    html.rd .rating-main-tabs-left {
+        display: flex;
+        width: 100%;
+    }
+
+    html.rd .rating-main-tab {
+        flex: 1 0 auto;
+        padding: 6px 10px;
+    }
+
+    html.rd .rating-main-tab:not(.active) .rmt-ic + span {
+        display: none;
+    }
+
+    html.rd .mot-hero-txt .mot-sub {
+        display: none;
+    }
+}
