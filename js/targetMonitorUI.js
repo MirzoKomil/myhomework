@@ -83,7 +83,7 @@
         const card = (label, fakt, plan, gr, sub) => `<div class="tsx-kpi${cls(gr)}">
             <span class="tsx-kpi-label">${label}</span>
             <b class="tsx-kpi-val">${fakt}</b>
-            <span class="tsx-kpi-sub">Reja: ${plan}${sub ? ' · ' + sub : ''}</span></div>`;
+            <span class="tsx-kpi-sub">${plan != null ? 'Reja: ' + plan + (sub ? ' · ' : '') : ''}${sub || ''}</span></div>`;
         return `<div class="tsx-kpis">
             ${card('Reklama sarfi', usd(t.budget), usd(p.budget), g.budget, sh.paceDays && p.budget ? 'kutilgan ' + usd(p.budget * sh.pace) : '')}
             ${card('Lid soni · CRM', int(t.crm.leads), int(p.lidSoni), g.crmLeads, 'kabinetda ' + int(t.adLeads))}
@@ -91,8 +91,8 @@
             ${card('Sifatli lid · CRM', int(t.crm.qualified), int(p.kvalLidSoni), g.crmKval, t.crm.pending ? int(t.crm.pending) + ' ta hali ishlanmagan' : 'hammasi ishlangan')}
             ${card('Sifatli lid narxi · CRM', usd(t.crmKvalCpl), usd(p.kvalNarxi), g.crmKvalCpl, '')}
             ${card('Lid → Sifatli % · CRM', pct(t.crmKvalPct), pct(p.kvalPct), g.crmKvalPct, t.crmKvalPctWorked != null ? 'ishlanganlar ichida ' + pct(t.crmKvalPctWorked) : '')}
-            ${card('Sotuv narxi · CRM', usd(t.saleCost), '—', '', int(t.crm.sold) + ' ta sotuv')}
-            ${card('ROAS', times(t.roas), '—', t.roas == null ? '' : t.roas >= 1 ? 'good' : t.roas >= 0.7 ? 'warn' : 'bad', t.usdRate ? 'tushum ÷ (sarf + fixed)' : 'reja’da $ kursi kiritilmagan')}
+            ${card('Sotuv narxi · CRM', usd(t.saleCost), null, '', int(t.crm.sold) + ' ta sotuv shu oy lidlaridan')}
+            ${card('ROAS · kiritilgan kunlar', times(t.roas), null, t.roas == null ? '' : t.roas >= 1 ? 'good' : t.roas >= 0.7 ? 'warn' : 'bad', t.usdRate ? 'tushum ÷ (sarf + fixed) · lidlar toʻlagan sari oshadi' : 'oylik rejada $ kursi kiritilmagan')}
         </div>`;
     }
 
@@ -133,7 +133,7 @@
                 ${row('Reklama sarfi', owner, usd(p.budget), usd(t.budget), ratio(t.budget, p.budget, g.budget), d => d.entry?.note
                     ? `<td class="tsx-num" title="${esc(d.entry.note)}">${usd(d.budget)} <span class="tsx-note" aria-label="Izoh: ${esc(d.entry.note)}">📝</span></td>`
                     : cell(d.budget, usd, d.missing ? ' tsx-missing' : ''))}
-                ${row('Fixed (doimiy)', 'Admin', usd(p.fixed || null), usd(t.fixed), '<td class="tsx-pct">—</td>', d => cell(d.fixed || null, usd))}
+                ${row('Fixed (doimiy, oy boshidan)', 'Admin', usd(p.fixed || null), usd(t.fixed), '<td class="tsx-pct">—</td>', d => cell(d.fixed || null, usd))}
                 ${row('Lid soni (kabinet)', owner, int(p.lidSoni), int(t.adLeads), ratio(t.adLeads, p.lidSoni, g.adLeads), d => cell(d.adLeads, int, d.missing ? ' tsx-missing' : ''))}
                 ${row('Lid narxi (kabinet)', owner, usd(p.lidNarxi), usd(t.adCpl), ratio(t.adCpl, p.lidNarxi, g.adCpl), d => cell(d.adCpl, usd))}
                 ${row('Sifatli lid (targetolog)', owner, int(p.kvalLidSoni), int(t.adKval), ratio(t.adKval, p.kvalLidSoni, g.adKval), d => cell(d.adKval, int))}
@@ -155,10 +155,10 @@
                 ${row('Sinov narxi', lock, '—', usd(t.trialCost), '<td class="tsx-pct">—</td>', d => cell(d.trialCost, usd), { cls: 'tsx-crm' })}
                 ${row('Sotuv', lock, '—', int(t.crm.sold), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.sold, int), { cls: 'tsx-crm' })}
                 ${row('Sotuv narxi (CPA)', lock, '—', usd(t.saleCost), '<td class="tsx-pct">—</td>', d => cell(d.saleCost, usd), { cls: 'tsx-crm' })}
-                ${row('Tushum (shu lidlardan)', lock, '—', som(t.revenue), '<td class="tsx-pct">—</td>', d => cell(d.isFuture || !d.crm.revenue ? null : d.crm.revenue, som), { cls: 'tsx-crm' })}
-                ${row('Toʻliq xarajat (sarf + fixed)', lock, usd(p.budget != null ? p.budget + (p.fixed || 0) : null), usd(t.totalCost), '<td class="tsx-pct">—</td>', d => cell(d.entry ? d.budget + (d.fixed || 0) : null, usd), { cls: 'tsx-crm' })}
+                ${row('Tushum (shu oy lidlaridan)', lock, '—', som(t.revenue), '<td class="tsx-pct">—</td>', d => cell(d.isFuture || !d.crm.revenue ? null : d.crm.revenue, som), { cls: 'tsx-crm' })}
+                ${row('Toʻliq xarajat (kiritilgan kunlar)', lock, usd(p.budget != null ? p.budget + (p.fixed || 0) : null), usd(t.totalCost), '<td class="tsx-pct">—</td>', d => cell(d.entry ? d.budget + (d.fixed || 0) : null, usd), { cls: 'tsx-crm' })}
                 ${row('Toʻliq lid narxi', lock, '—', usd(t.fullCpl), '<td class="tsx-pct">—</td>', d => cell(d.entry ? (d.crm.leads ? (d.budget + (d.fixed || 0)) / d.crm.leads : null) : null, usd), { cls: 'tsx-crm' })}
-                ${row('ROAS (tushum ÷ toʻliq xarajat)', lock, '—', times(t.roas), '<td class="tsx-pct">—</td>',
+                ${row('ROAS (kiritilgan kunlar)', lock, '—', times(t.roas), '<td class="tsx-pct">—</td>',
                     d => cell(t.usdRate && d.entry && (d.budget + (d.fixed || 0)) > 0 ? (d.crm.revenue / t.usdRate) / (d.budget + (d.fixed || 0)) : null, times), { cls: 'tsx-crm' })}
             </tbody>
         </table></div>`;
@@ -205,7 +205,7 @@
             <li><b>Sifatli lid (CRM)</b> — “Bogʻlanildi” va undan keyingi bosqichdagi lidlar (sinov, qaror, toʻlov, muvaffaqiyatsiz sotuv ham). <b>Sifatsiz</b> — “Sifatsiz lidlar” ustuni. <b>Hali ishlanmagan</b> — “Yangi lidlar” va “Bogʻlanishga urinilmoqda”; ular ishlanganda sifat raqamlari oʻzgaradi.</li>
             <li><b>Lid narxi</b> = reklama sarfi ÷ lid soni. CRM narxida faqat sarfi kiritilgan kunlarning lidlari olinadi. <b>Toʻliq lid narxi</b> va <b>ROAS</b>da fixed ham hisobga olinadi (oylik fixed ÷ oy kunlari, har kunga).</li>
             <li><b>Lid → Sifatli %</b> = sifatli ÷ barcha target lidlar (rejadagi foiz bilan bir xil). <b>Ishlanganlar ichida</b> — hali ishlanmaganlarsiz, maʼlumot uchun.</li>
-            <li><b>Natija</b> qatorlari shu kuni kelgan target lidlar keyinchalik sinovga, sotuvga va toʻlovga yetganini koʻrsatadi (kogorta). Tushum — Moliya reyestri qoidalari bilan shu lidlardan haqiqatda kelgan pul. <b>ROAS</b> = tushum ($, oylik rejadagi kurs boʻyicha) ÷ toʻliq xarajat; 1× dan yuqori — reklama oʻzini qoplagan.</li>
+            <li><b>Natija</b> qatorlari shu kuni kelgan target lidlar keyinchalik sinovga, sotuvga va toʻlovga yetganini koʻrsatadi (kogorta). Tushum — Moliya reyestri qoidalari bilan shu lidlardan haqiqatda kelgan pul. <b>ROAS</b> = tushum ($, oylik rejadagi kurs boʻyicha) ÷ toʻliq xarajat; 1× dan yuqori — reklama oʻzini qoplagan. ROAS va toʻliq xarajat faqat sarfi kiritilgan kunlar boʻyicha (bir xil asos); “Fixed” qatori esa oy boshidan oʻtgan barcha kunlar ulushini koʻrsatadi. ROAS yakuniy emas: yaqinda kelgan lidlar keyinroq toʻlaydi, shuning uchun soʻnggi kunlar vaqt oʻtishi bilan yaxshilanadi.</li>
             <li><b>Rang</b>: sarf va soni — oyning <i>kechagacha</i> oʻtgan qismiga nisbatan kutilgan temp (yashil ≥100%, sariq ≥80%; sarfda ±10% yashil, ±25% sariq); narx — rejadan past/teng yashil, 15% gacha qimmat sariq; foiz — rejaga nisbatan.</li>
             <li><b>Farq</b> = kabinetdagi lid soni − CRM'dagi target lid soni. 2 tadan va 10% dan ortiq farq qizil.</li>
         </ul></details>`;

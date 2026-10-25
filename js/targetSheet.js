@@ -182,7 +182,8 @@
             saleCost: div(budget, crmSoldEntered),
             totalCost: costEntered,
             fullCpl: div(costEntered, crmLeadsEntered),
-            revenue: revenueEntered,
+            revenue: crmTotals.revenue,            // shu oy kelgan barcha target lidlardan
+            revenueEntered,                        // faqat sarfi kiritilgan kunlar lidlaridan (ROAS uchun)
             revenueUsd: usdRate ? revenueEntered / usdRate : null,
             roas: usdRate && costEntered ? (revenueEntered / usdRate) / costEntered : null,
             usdRate,

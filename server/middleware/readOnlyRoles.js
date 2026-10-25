@@ -24,8 +24,9 @@ function readOnlyRoles({ findUserById }) {
         let payload;
         try { payload = jwt.verify(header.slice(7), JWT_SECRET); } catch { return next(); } // yaroqsiz token — authRequired 401 qaytaradi
         if (!payload?.id || payload.studentId) return next();
-        let role = payload.role;
-        try { role = (await findUserById(payload.id))?.role || role; } catch { /* bazadagi rol o'qilmasa tokendagisi */ }
+        let role;
+        try { role = (await findUserById(payload.id))?.role || payload.role; }
+        catch { return res.status(503).json({ error: 'Ruxsatni tekshirib boʻlmadi, birozdan keyin qayta urinib koʻring' }); } // tokendagi eski rolga ishonilmaydi
         if (!READ_ONLY_ROLES.has(role)) return next();
         const path = (req.baseUrl || '') + (req.path || '');
         const full = req.originalUrl.split('?')[0];

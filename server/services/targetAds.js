@@ -64,7 +64,13 @@ async function accessFor(db, actor) {
     const row = (await db.query(`SELECT u.id, u.role, h.lang, h.status FROM users u
         LEFT JOIN hr_employees h ON LOWER(TRIM(h.login)) = LOWER(TRIM(u.email)) WHERE u.id = $1`, [actor.id])).rows;
     if (row.length !== 1) throw error(403, 'Akkaunt topilmadi');
-    const { role, lang, status } = row[0];
+    let { role, lang, status } = row[0];
+    // ROP'ning HR yozuvi login bilan bog'lanmagan bo'lsa, brauzerdagidek ism bo'yicha topiladi
+    if (role === 'rop' && lang == null) {
+        const byName = (await db.query(`SELECT h.lang, h.status FROM hr_employees h JOIN users u ON LOWER(TRIM(u.name)) = LOWER(TRIM(h.name))
+            WHERE u.id = $1 AND h.role = 'rop' LIMIT 1`, [actor.id])).rows[0];
+        if (byName) ({ lang, status } = byName);
+    }
     if (['admin', 'boshliq'].includes(role)) return { role, read: [...LANGS], writeDay: [...LANGS], writePlan: true, editAnyDay: true };
     // HR yozuvi bo'lmasa yoki faol bo'lmasa — hech qanday til ochilmaydi (standart "ingliz" emas).
     if (lang == null || status === 'inactive') throw error(403, 'HR’da faol xodim yozuvi topilmadi — admin kabinetni tekshirsin');
