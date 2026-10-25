@@ -179,6 +179,7 @@
                     if (!pending) {
                         const amount = L.money(body.querySelector('#inflowAmount').value), paidDate = body.querySelector('#inflowDate').value;
                         if (!amount || amount > Number(s.debtAmount)) throw Error('Summa musbat bo‘lishi va qarzdan oshmasligi kerak');
+                        if (typeof confirmSuspiciousPaymentAmount === 'function' && !confirmSuspiciousPaymentAmount(amount)) throw Error('Summani tekshiring');
                         if (!L.date(paidDate) || paidDate > L.today()) throw Error('Tushum sanasini to‘g‘ri tanlang');
                         const proof = await collectProof(body, 'debtInflow');
                         pending = { studentId: id, requestKey, amount, paidDate, paidTime: body.querySelector('#inflowTime').value, method: proof.paymentMethod, receiptUrl: proof.receiptUrl, expectedDebt: Number(s.debtAmount) };
