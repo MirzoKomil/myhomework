@@ -6,6 +6,7 @@ const {
 const { authRequired } = require('../middleware/auth');
 const { webhookSecretRequired } = require('../middleware/webhook');
 const { sendLeadToCapi } = require('../services/capiWebhook');
+const { notifyLeadChannel } = require('../services/leadChannelNotify');
 
 const router = express.Router();
 
@@ -96,6 +97,14 @@ router.post('/', webhookSecretRequired, async (req, res) => {
         // Javobdan keyin — CAPI.uz sekin ishlasa ham landing page/webhook
         // javobi kechikmaydi (CRM'ning asosiy oqimiga bog'liq emas).
         if (result.lead) sendLeadToCapi(result.lead);
+        // domwork.uz saytidan kelgan lid Telegram kanalga ham nusxa sifatida
+        // tushadi (sozlanmagan bo'lsa hech narsa qilmaydi).
+        if (sourceResult.value === 'Domwork') {
+            notifyLeadChannel({
+                id: result.id, name: name.trim(), phone: String(phone).trim(),
+                contactTime, utmSource, utmCampaign, utmContent,
+            }).catch(() => {});
+        }
     } catch (err) {
         console.error('POST /api/leads', err);
         res.status(500).json({ error: 'Lidni saqlashda xatolik' });
@@ -140,9 +149,9 @@ async function leadOwnershipRequired(req, res, next) {
                 return res.status(403).json({ error: 'Sotuv menejeri lid tilini o\'zgartira olmaydi' });
             }
         } else if (req.method === 'PATCH') {
-            if (String(req.body?.lead?.managerId || '') !== managerId) {
-                return res.status(403).json({ error: 'Yangi lid faqat o\'zingizga biriktirilishi mumkin' });
-            }
+            // Sotuv menejeri yangi lid yarata olmaydi: lidlarni ROP taqsimlaydi.
+            // Aks holda menejer istalgan odamni qo'shib, statistikani soxtalashtirishi mumkin edi.
+            return res.status(403).json({ error: 'Yangi lidni faqat ROP yoki admin qoʻsha oladi' });
         } else {
             return res.status(404).json({ error: 'Lid topilmadi' });
         }

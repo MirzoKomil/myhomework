@@ -52,14 +52,34 @@ function normalizeLeadPhone(raw) {
 // Format qat'iy pozitsiyaga (masalan "har doim 3-qator telefon") emas,
 // LABEL'larga qarab o'qiladi — shu sabab maydonlar tartibi yoki soni
 // o'zgarsa ham (masalan familiya maydoni qo'shilsa) ishlashda davom etadi.
+//
+// 2-format ("Domwork leadlar" guruhi, Bobur's Lead manager boti):
+// 🔔 Yangi lid — LOGIKA - FORMA LEAD VES SROK
+//
+// • Rus tilini o'rganishni xohlaydimi: ha
+// • Yoshi: 21_–_30_yosh
+// • Ismi: Atxam
+// • Telefon raqamingiz: +79201542803
+// • 2-Telefon raqami: +998953430377
+//
+// 🎯 Lead - cbo - winers interes - 20$ - 25.10.2026 (br) - RUS 18
+// 🕒 25/10/2026, 21:37 · Instagram
+//
+// Bu formatda "Telefon raqamingiz" asosiy, "2-Telefon raqami" ikkinchi
+// raqam hisoblanadi; ism/telefondan boshqa javoblar (yoshi va h.k.) hamda
+// reklama nomi izohga yoziladi.
 function parseTelegramLeadMessage(text) {
     if (!text || typeof text !== 'string') return null;
     const lines = text.split(/\r?\n/);
     let formName = '';
     let sourceLabel = '';
+    let adName = '';
     let name = '';
     let primaryPhone = '';
     let secondaryPhone = '';
+    let bulletPhone1 = '';
+    let bulletPhone2 = '';
+    const extras = [];
 
     for (const rawLine of lines) {
         const line = rawLine.trim();
@@ -67,6 +87,14 @@ function parseTelegramLeadMessage(text) {
         let m;
         if ((m = /^🧾\s*Nomi:\s*(.+)$/u.exec(line))) { formName = m[1].trim(); continue; }
         if ((m = /^ℹ️\s*Manba:\s*(.+)$/u.exec(line))) { sourceLabel = m[1].trim(); continue; }
+        if ((m = /Yangi lid\s*[—–-]\s*(.+)$/u.exec(line))) { if (!formName) formName = m[1].trim(); continue; }
+        if ((m = /^🎯\s*(.+)$/u.exec(line))) { adName = m[1].trim(); continue; }
+        if ((m = /\d{1,2}[/.]\d{1,2}[/.]\d{4}[^·]*·\s*(.+)$/u.exec(line))) {
+            if (!sourceLabel) sourceLabel = m[1].trim();
+            continue;
+        }
+
+        // 1-format: "1. Ismingiz:: Manzura"
         if ((m = /^\d+\.\s*(.+?):+\s*(.*)$/.exec(line))) {
             const label = m[1].trim().toLowerCase();
             const value = m[2].trim();
@@ -80,8 +108,32 @@ function parseTelegramLeadMessage(text) {
                 if (!secondaryPhone) secondaryPhone = normalizeLeadPhone(value);
                 continue;
             }
+            continue;
+        }
+
+        // 2-format: "• Ismi: Atxam"
+        if ((m = /^[•●▪◦·*-]\s*(.+?):+\s*(.*)$/u.exec(line))) {
+            const rawLabel = m[1].trim();
+            const label = rawLabel.toLowerCase();
+            const value = m[2].trim();
+            if (!value) continue;
+            if (label.includes('telefon') || label.includes('phone') || label.includes('raqam')) {
+                const phone = normalizeLeadPhone(value);
+                if (/^2\s*[-–.]?/.test(label)) { if (!bulletPhone2) bulletPhone2 = phone; }
+                else if (!bulletPhone1) bulletPhone1 = phone;
+                else if (!bulletPhone2) bulletPhone2 = phone;
+                continue;
+            }
+            if (!name && /^(ism|name)/.test(label)) { name = value; continue; }
+            extras.push(`${rawLabel}: ${value.replace(/_/g, ' ')}`);
         }
     }
+
+    if (bulletPhone1 || bulletPhone2) {
+        if (!primaryPhone) primaryPhone = bulletPhone1 || bulletPhone2;
+        if (!secondaryPhone) secondaryPhone = bulletPhone1 ? bulletPhone2 : '';
+    }
+    if (secondaryPhone && secondaryPhone === primaryPhone) secondaryPhone = '';
 
     // "Phone number" maydoni (Meta avtomatik aniqlagan, E.164 formatidagi)
     // asosiy hisoblanadi, chunki bu qo'lda kiritilgandan ko'ra ishonchliroq.
@@ -100,6 +152,8 @@ function parseTelegramLeadMessage(text) {
         phone2: secondaryPhone,
         formName,
         sourceLabel,
+        adName,
+        extras,
     };
 }
 
@@ -154,6 +208,8 @@ router.post('/lead-webhook', async (req, res) => {
         const noteParts = [];
         if (parsed.sourceLabel) noteParts.push(`Manba: ${parsed.sourceLabel}`);
         if (parsed.formName) noteParts.push(`Forma: ${parsed.formName}`);
+        if (parsed.adName) noteParts.push(`Reklama: ${parsed.adName}`);
+        for (const extra of parsed.extras || []) noteParts.push(extra);
 
         const result = await insertLead({
             name: parsed.name,
@@ -189,3 +245,4 @@ router.post('/lead-webhook', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.parseTelegramLeadMessage = parseTelegramLeadMessage;
