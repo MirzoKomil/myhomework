@@ -73,11 +73,19 @@
     // Rang bilan birga belgi ham (rangni ajrata olmaydiganlar uchun)
     const MARK = { good: ['✓', 'yaxshi'], warn: ['!', 'eʼtibor'], bad: ['✕', 'yomon'] };
     // O'tgan oyga nisbatan o'zgarish: narxda pasayish — yaxshi, ROAS/soni o'sishi — yaxshi
-    function mom(cur, prev, fmt, lowerIsBetter) {
+    function mom(cur, prev, fmt, lowerIsBetter, label = '') {
         if (cur == null || prev == null || !prev) return prev != null ? `<span class="tsx-mom">o‘tgan oy: ${fmt(prev)}</span>` : '';
         const ch = (cur - prev) / prev * 100;
         const good = lowerIsBetter ? ch <= 0 : ch >= 0;
-        return `<span class="tsx-mom ${Math.abs(ch) < 0.5 ? '' : good ? 'tsx-good' : 'tsx-bad'}">o‘tgan oy: ${fmt(prev)} · ${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(0)}%</span>`;
+        return `<span class="tsx-mom ${Math.abs(ch) < 0.5 ? '' : good ? 'tsx-good' : 'tsx-bad'}">o‘tgan oy${label ? ' ' + label : ''}: ${fmt(prev)} · ${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(0)}%</span>`;
+    }
+
+    // Joriy oy hali tugamagan bo'lsa, o'tgan oyning SHU KUNGACHA bo'lgan lidlari bilan solishtiriladi
+    function prevLeadsSameDay(sh, prev) {
+        if (!prev) return null;
+        const curMonth = sh.today.slice(0, 7) === sh.monthKey;
+        const upTo = curMonth ? Number(sh.today.slice(8, 10)) : 31;
+        return prev.days.filter(d => d.day <= upTo).reduce((a, d) => a + d.crm.leads, 0);
     }
 
     function kpis(sh, prev) {
@@ -88,7 +96,7 @@
             <span class="tsx-kpi-sub">${plan != null ? 'Reja: ' + plan + (sub ? ' · ' : '') : ''}${sub || ''}</span>${momHtml}</div>`;
         return `<div class="tsx-kpis">
             ${card('Reklama sarfi', usd(t.budget), usd(p.budget), g.budget, sh.paceDays && p.budget ? 'kutilgan ' + usd(p.budget * sh.pace) : '')}
-            ${card('Lid soni · CRM', int(t.crm.leads), int(p.lidSoni), g.crmLeads, 'kabinetda ' + int(t.adLeads), mom(t.crm.leads, pt?.crm.leads, int, false))}
+            ${card('Lid soni · CRM', int(t.crm.leads), int(p.lidSoni), g.crmLeads, 'kabinetda ' + int(t.adLeads), mom(t.crm.leads, prevLeadsSameDay(sh, prev), int, false, sh.today.slice(0, 7) === sh.monthKey ? `(${Number(sh.today.slice(8, 10))}-kungacha)` : ''))}
             ${card('Lid narxi · CRM', usd(t.crmCpl), usd(p.lidNarxi), g.crmCpl, 'kabinetda ' + usd(t.adCpl), mom(t.crmCpl, pt?.crmCpl, usd, true))}
             ${card('Sifatli lid · CRM', int(t.crm.qualified), int(p.kvalLidSoni), g.crmKval, t.crm.pending ? int(t.crm.pending) + ' ta hali ishlanmagan' : 'hammasi ishlangan')}
             ${card('Sifatli lid narxi · CRM', usd(t.crmKvalCpl), usd(p.kvalNarxi), g.crmKvalCpl, '', mom(t.crmKvalCpl, pt?.crmKvalCpl, usd, true))}
