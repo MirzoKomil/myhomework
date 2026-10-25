@@ -4613,3 +4613,290 @@ html.rd #spFaktView > .card:first-child {
         font-size: 14px;
     }
 }
+
+/* ==========================================================================
+   R5: bo'sh holatlar, tugmalar, telefon toshib ketishlari
+   ========================================================================== */
+html.rd [data-students-section="tark-etgan"],
+html.rd [data-students-section="tamomlaganlar"] {
+    display: none !important;
+}
+
+/* Umumiy ikkinchi darajali tugma */
+html.rd .btn-secondary-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--rd-primary-strong);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+html.rd .btn-secondary-sm:hover:not(:disabled) {
+    border-color: var(--rd-primary-strong);
+}
+
+html.rd .btn-secondary-sm:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+/* Bo'sh holat kartasi — har joyda bir xil o'lcham */
+html.rd .team-empty-state {
+    min-height: 300px;
+    justify-content: center;
+}
+
+/* Telefonda ichki tablar suriladi — o'ngda xira chegara */
+@media (max-width: 900px) {
+    html.rd .section-nav.team-scrolls {
+        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+        mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    }
+
+    html.rd .section-nav.team-nav-end {
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    /* KPI summalari bir qatorda, ko'pi bilan 2 ustun */
+    html.rd .dbx-kpis,
+    html.rd .inflow-summary,
+    html.rd .payroll-summary,
+    html.rd .tcx-kpis {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    html.rd .dbx-kpis b,
+    html.rd .dbx-kpis strong,
+    html.rd .inflow-summary strong,
+    html.rd .payroll-summary strong,
+    html.rd .tcx-kpis b,
+    html.rd .ahx-kpi-v {
+        white-space: nowrap;
+    }
+
+    /* Lidlar ro'yxati: FAB oxirgi kartani yopmaydi */
+    html.rd #leadsKanban .lead-column-cards {
+        padding-bottom: 88px;
+    }
+}
+
+/* Lid kartasida qo'ng'iroqcha faqat eslatma muddati kelganda qizil nuqtali */
+@media (min-width: 901px) {
+    html.rd .lead-card-notify:not(.has-unread) {
+        display: none;
+    }
+
+    html.rd .lead-card:hover .lead-card-notify:not(.has-unread) {
+        display: inline-flex;
+    }
+}
+
+/* Faol tab nomini takrorlovchi sarlavha */
+html.rd .team-dup-tab {
+    display: none !important;
+}
+
+/* Pul oqimi: emoji o'rniga toza tugmalar */
+html.rd .cf-toolbar-actions .btn-ghost {
+    white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+    /* HR: rol filtrlari to'liq qatorda suriladi, tugma alohida qatorda */
+    html.rd .hr-employees-header {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    html.rd .hr-employees-header > * {
+        flex: 0 0 auto;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    html.rd .hr-employees-header > div > .role-filters {
+        flex: 1 1 100% !important;
+        min-width: 0;
+    }
+
+    html.rd .hr-employees-header .role-filters {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+        max-width: 100%;
+    }
+
+    html.rd .hr-employees-header .btn-primary-sm {
+        width: 100%;
+    }
+
+    /* Qarzdorlar va statistikadagi summa kartalari */
+    html.rd .sfx-tile b {
+        font-size: 19px;
+        white-space: nowrap;
+    }
+
+    html.rd .debtors-filters {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    html.rd .debtors-filters > *,
+    html.rd .debtors-filters select,
+    html.rd .debtors-filters input {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    html.rd .debtors-filters .dbx-segs {
+        grid-column: 1 / -1;
+    }
+
+    /* To'lovlar: 2 ustunli summalar, belgi maydon ustida */
+    html.rd .inflow-kpis {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    html.rd .inflow-kpis .inflow-stat:first-child {
+        grid-column: 1 / -1;
+    }
+
+    html.rd .inflow-stat strong {
+        font-size: 18px;
+        white-space: nowrap;
+        overflow-wrap: normal;
+    }
+
+    html.rd .inflow-stat span {
+        min-height: 0;
+        font-size: 12px;
+    }
+
+    html.rd #inflowRoot label {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+
+    /* Analitika davr tanlovi — to'liq kenglikdagi 3 bo'lak */
+    html.rd .page-title-bar .sp-period-tabs {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        width: 100%;
+    }
+
+    html.rd .page-title-bar {
+        flex-wrap: wrap;
+    }
+
+    /* Pul oqimi: Excel/PDF tugmalari ixcham, bir qatorda */
+    html.rd .cf-toolbar-actions {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        width: 100%;
+    }
+
+    html.rd .cf-toolbar-actions .btn-ghost {
+        font-size: 12px;
+        padding: 8px 6px;
+        min-height: 40px;
+    }
+
+    html.rd .cf-toolbar-actions .btn-primary-sm {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 701px) {
+    html.rd .page-title-bar > .sp-period-tabs {
+        margin-left: auto;
+    }
+}
+
+/* Dars jadvali (web): boshqaruvlar guruhlangan, qatorlar ixcham */
+@media (min-width: 901px) {
+    html.rd .rd-tt-toolbar2 {
+        display: flex !important;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start !important;
+        gap: 8px;
+    }
+
+    html.rd .rd-tt-toolbar2 > * {
+        margin: 0 !important;
+    }
+
+    html.rd .rd-tt-toolbar2 .rd-tt-viewtoggle {
+        margin-left: auto !important;
+    }
+
+    html.rd .tt-subject-tabs {
+        display: inline-flex !important;
+        width: max-content !important;
+        max-width: max-content;
+        margin-left: auto;
+        justify-self: end;
+        align-self: center;
+        flex: 0 0 auto !important;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+    }
+
+    html.rd .tt-subject-tabs .subject-tab {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 6px 14px !important;
+        border: 0 !important;
+        border-radius: 8px;
+        background: transparent;
+    }
+
+    html.rd .tt-subject-tabs .subject-tab.active {
+        background: var(--purple-light) !important;
+        color: var(--rd-primary-strong);
+    }
+
+    html.rd .tt-week-table td,
+    html.rd .tt-week-table .tt-time-col {
+        height: 34px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+
+    html.rd .tt-week-table .tt-cell--free {
+        height: 34px;
+    }
+}
+
+@media (min-width: 901px) {
+    html.rd #leadsKanban .lead-column-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+    }
+
+    html.rd #leadsKanban .lead-column-header {
+        min-height: 44px;
+    }
+}

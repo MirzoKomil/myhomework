@@ -972,7 +972,7 @@ function renderFrozenStudents() {
     ];
 
     if (!frozen.length) {
-        container.innerHTML = `<div class="mac-empty" style="padding:80px 0;text-align:center;color:var(--text-muted)">Muzlatilgan o'quvchilar yo'q</div>`;
+        container.innerHTML = `<div style="padding:0 0 24px">${teamEmptyState('Muzlatilgan oʻquvchi yoʻq', 'Oʻquvchi kursini vaqtincha toʻxtatsa, shu roʻyxatga tushadi.', 'students')}</div>`;
         return;
     }
 
@@ -7295,7 +7295,7 @@ function renderTimetableWeekGrid(teacher, entries, days) {
                 const cls = getTimetableCellClass(entry) + (isSel ? ' tt-cell--selected' : '');
                 html += `<td class="${cls}" rowspan="${span}" data-tt-cell data-mode="lesson" data-teacher="${teacher.id}" data-dow="${dow}" data-date="${dateKey}" data-time="${time}" data-student="${escapeHtml(entry.studentId)}" data-source="${entry.source}" title="${escapeHtml(entry.studentName)}">
                     <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
-                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
+                    <span class="tt-cell-id">${entry.duration ? escapeHtml(String(entry.duration)) + ' daq' : ''}</span>
                 </td>`;
             } else {
                 const key = `${dow}_${time}`;
@@ -7586,7 +7586,7 @@ function renderTimetableTeacherGrid(teacher, entries) {
                 const cls = getTimetableCellClass(entry);
                 html += `<td class="${cls}" rowspan="${span}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" data-student="${escapeHtml(entry.studentId)}" title="${escapeHtml(entry.studentName)}">
                     <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
-                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
+                    <span class="tt-cell-id">${entry.duration ? escapeHtml(String(entry.duration)) + ' daq' : ''}</span>
                 </td>`;
             } else {
                 const key = `${dow}_${time}`;
@@ -7759,7 +7759,7 @@ function renderTimetable() {
     const teachers = filterTeachersByTypeAndSubject('asosiy', filters.lang || 'english');
 
     if (!teachers.length) {
-        container.innerHTML = '<p class="text-muted" style="padding:24px">Tanlangan filtrlarga mos ustoz topilmadi.</p>';
+        container.innerHTML = `<div style="padding:16px">${teamEmptyState('Bu yoʻnalishda ustoz topilmadi', 'Yuqoridan boshqa tilni tanlang yoki HR boʻlimida ustoz qoʻshing.', 'calendar')}</div>`;
         toggleTtChrome(false);
         return;
     }
@@ -8735,7 +8735,7 @@ function renderTeacherTodayBlock(user) {
     const perLessonAmount = asKpi?.perLesson || 0;
     const mainPanel = (students.length || helped.length) ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi darslar</h3><span>${today.length} ta dars${unmarked ? ` · ${unmarked} tasi belgilanmagan` : ''}</span></div>
             ${today.length ? `<ul class="tch-list rd-thx-list">${rows}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
-            <button type="button" class="btn-primary-sm" data-teacher-open-att>Davomatni oyilik koʻrinishda ochish</button>
+            <button type="button" class="btn-primary-sm" data-teacher-open-att>Oylik davomatni ochish</button>
         </section>` : '';
     const helpPanel = helped.length ? `<section class="card dashboard-panel rd-thx-help"><div class="dashboard-panel-head"><h3>Yordamchi ustozlik</h3><span>${helped.length} oʻquvchi${limit ? ` · oyiga ${limit} tagacha` : ''}</span></div>
             ${helpRows}
@@ -8870,8 +8870,8 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     active.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow)
         && !(s.startDate && String(s.startDate) > todayKey)).forEach(s => {
         const key = `${s.lessonTime}|${s.teacherId || ''}|${s.group || ''}`;
-        const slot = slots.get(key) || { time: s.lessonTime, start: toMin(s.lessonTime), dur: 0, teacherId: s.teacherId || '', group: s.group || '', count: 0 };
-        slot.count += 1; slot.dur = Math.max(slot.dur, Number(s.lessonDuration) || 15);
+        const slot = slots.get(key) || { time: s.lessonTime, start: toMin(s.lessonTime), dur: 0, teacherId: s.teacherId || '', group: s.group || '', count: 0, names: [] };
+        slot.count += 1; slot.names.push(s.name || ''); slot.dur = Math.max(slot.dur, Number(s.lessonDuration) || 15);
         slots.set(key, slot);
     });
     const lessons = [...slots.values()].sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999)).map(l => ({
@@ -8923,8 +8923,8 @@ function renderAdminHome(user, students, leads, now = new Date()) {
                 <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxFunnel * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
                 <div class="ahx-closed"><b>${d.dealsMonth}</b><div><strong>${escapeHtml(monthName[0].toUpperCase() + monthName.slice(1))}da toʻlov yopildi</strong><span>bu oy ${d.leadsMonth} ta yangi lid · nisbat ${String(conv).replace('.', ',')}%</span></div></div>
             </section>
-            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi darslar <small>· ${d.lessons.length} ta</small></h3><button type="button" class="ahx-link" data-ahx-go="timetable">Dars jadvali</button></div>
-                ${shownLessons.length ? `<ul class="ahx-lessons">${shownLessons.map(l => `<li><b>${escapeHtml(l.time)}</b><div><strong>${escapeHtml(l.group || 'Guruhsiz')}</strong><span>${escapeHtml(teacherName(l.teacherId))} · ${l.count} oʻquvchi · ${l.dur} daq</span></div><span class="ahx-pill ${stateLabel[l.state][1]}">${stateLabel[l.state][0]}</span></li>`).join('')}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi darslar <small>· ${shownLessons.length < d.lessons.length ? `${shownLessons.length} / ${d.lessons.length}` : d.lessons.length} ta</small></h3><button type="button" class="ahx-link" data-ahx-go="timetable">Dars jadvali</button></div>
+                ${shownLessons.length ? `<ul class="ahx-lessons">${shownLessons.map(l => `<li><b>${escapeHtml(l.time)}</b><div><strong>${escapeHtml(l.group || (l.count === 1 ? l.names[0] : `${l.names[0]} va yana ${l.count - 1} ta`) || 'Dars')}</strong><span>${escapeHtml(teacherName(l.teacherId))}${l.group ? ` · ${l.count} oʻquvchi` : ''} · ${l.dur} daq</span></div><span class="ahx-pill ${stateLabel[l.state][1]}">${stateLabel[l.state][0]}</span></li>`).join('')}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
             </section>
             <section class="card ahx-card ahx-card--flush"><div class="ahx-card-h"><h3>Sotuv menejerlari · ${escapeHtml(monthName)}</h3><button type="button" class="ahx-link" data-ahx-go="rating">Reyting</button></div>
                 ${d.mgrRows.length ? `<div class="ahx-tbl-wrap"><table class="ahx-tbl"><thead><tr><th scope="col">Menejer</th><th scope="col">Sotuvlar</th><th scope="col">Summa</th><th scope="col">Reja</th></tr></thead>
@@ -9307,23 +9307,24 @@ function renderTeacherHome(user, now = new Date()) {
         : `<b class="ahx-kpi-v">—</b><div class="ahx-kpi-n"><span>jadval sozlanmagan</span></div>`;
     return `<div class="ahx thx" id="teacherHome">
         <div class="rd-thx-rolebanner">Rol kabineti: faqat oʻz oʻquvchilaringiz koʻrinadi — boshqa ustozlarning telefon, toʻlov va qarz maʻlumotlari bu yerda koʻrsatilmaydi.</div>
-        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi${s.helped ? ` · yordamchi sifatida ${s.helped}` : ''}</p></div>
-            <button type="button" class="mhx-btn" data-teacher-open-att>Oylik davomat</button></div>
+        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi${s.helped ? ` · yordamchi sifatida ${s.helped}` : ''}</p></div></div>
         <div class="ahx-kpis">
             <div class="ahx-kpi"><span class="ahx-kpi-l">Bugun</span><b class="ahx-kpi-v">${s.todayCount} dars</b><div class="ahx-kpi-n">${s.unmarked ? `<span class="ahx-pill ahx-pill--warn">${s.unmarked} tasi belgilanmagan</span>` : '<span>belgilanmagan dars yoʻq</span>'}</div></div>
             <div class="ahx-kpi"><span class="ahx-kpi-l">Davomat · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span>${attLine}</div>
             <div class="ahx-kpi" data-thx-rating-kpi><span class="ahx-kpi-l">Reyting</span><b class="ahx-kpi-v">…</b><div class="ahx-kpi-n"><span>yuklanmoqda</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Hisoblangan maosh · taxminiy</span><b class="ahx-kpi-v">${s.hasSalary ? escapeHtml(formatMoney(s.salary)) : '—'}</b><div class="ahx-kpi-n"><span>${s.hasSalary ? `asosiy ${escapeHtml(formatMoney(s.mainSalary))}${s.asSalary ? ` + yordamchi ${escapeHtml(formatMoney(s.asSalary))}` : ''}` : 'KPI sozlanmagan'}</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Hisoblangan maosh · taxminiy</span><b class="ahx-kpi-v">${s.hasSalary ? escapeHtml(formatMoney(s.salary)) : '—'}</b><div class="ahx-kpi-n"><span>${s.hasSalary ? (s.asSalary ? `asosiy ${escapeHtml(formatMoney(s.mainSalary))} + yordamchi ${escapeHtml(formatMoney(s.asSalary))}` : 'tasdiqlangan davomat boʻyicha') : 'KPI sozlanmagan'}</span></div></div>
         </div>
         <div class="thx-grid"><div class="thx-main">${renderTeacherTodayBlock(user)}</div>
         <aside class="thx-side">
             <section class="card ahx-card rd-thx-rank-card" data-thx-rating-card><div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div><p class="dashboard-empty">Yuklanmoqda…</p></section>
             <section class="card ahx-card thx-guides"><div class="ahx-card-h"><h3>Yoʻriqnomalar</h3><button type="button" class="ahx-link" data-thx-guides>Barchasi →</button></div>
-            <ul class="rd-thx-guides-list">
-                <li><button type="button" class="ahx-link" data-thx-guide="trial">Sinov darsini oʻtkazish</button></li>
-                <li><button type="button" class="ahx-link" data-thx-guide="attendance">Davomat belgilash qoidalari</button></li>
-                <li><button type="button" class="ahx-link" data-thx-guide="grading">Mezonlar boʻyicha baholash</button></li>
-            </ul></section>
+            ${(() => {
+                const tags = resolveGuideAudienceTags(user);
+                const myGuides = getItem(STORAGE_KEYS.guides, []).filter(g => (g.targetRoles || []).some(t => tags.includes(t))).slice(0, 3);
+                return myGuides.length
+                    ? `<ul class="rd-thx-guides-list">${myGuides.map(g => `<li><button type="button" class="ahx-link" data-thx-guide="${escapeHtml(g.id)}">${escapeHtml(g.title || 'Yoʻriqnoma')}</button></li>`).join('')}</ul>`
+                    : '<p class="dashboard-empty">Sizga yoʻriqnoma biriktirilganda shu yerda chiqadi.</p>';
+            })()}</section>
         </aside></div>
     </div>`;
 }
@@ -9356,7 +9357,7 @@ function renderDashboardOverview(args) {
         container.innerHTML = renderTeacherHome(currentUser);
         container.querySelectorAll('[data-teacher-open-att]').forEach(btn => btn.addEventListener('click', () => switchTab('teachers-section')));
         container.querySelector('[data-thx-guides]')?.addEventListener('click', () => switchTab('guides'));
-        container.querySelectorAll('[data-thx-guide]').forEach(btn => btn.addEventListener('click', () => switchTab('guides')));
+        container.querySelectorAll('[data-thx-guide]').forEach(btn => btn.addEventListener('click', () => { switchTab('guides'); setTimeout(() => { try { openMyGuideArticle(btn.dataset.thxGuide); } catch (e) { /* ro'yxat ochiq qoladi */ } }, 50); }));
         bindTeacherHomeToday(container, currentUser);
         _loadTeacherHomeRating(container);
         return;
@@ -10259,7 +10260,7 @@ function renderTeacherCabinetContent(teacherId) {
     let html = `<div class="tcx">
         <div class="ahx-kpis tcx-kpis">
             <div class="ahx-kpi"><span class="ahx-kpi-l">Oʻquvchilar</span><b class="ahx-kpi-v">${students.length}</b><div class="ahx-kpi-n"><span>${escapeHtml(teacher?.name || '')} · ${isAsosiy ? 'asosiy' : 'yordamchi'}</span></div></div>
-            ${kpi ? `<div class="ahx-kpi"><span class="ahx-kpi-l">Darslar · shu oy</span><b class="ahx-kpi-v">${kpi.completed}<small> / ${kpi.expected}</small></b><span class="mhx-bar"><i style="width:${Math.min(100, kpi.kpiPercent || 0)}%"></i></span></div>
+            ${kpi ? `<div class="ahx-kpi"><span class="ahx-kpi-l">Darslar · shu oy</span><b class="ahx-kpi-v">${kpi.completed}<small> / ${kpi.expected * (kpi.studentCount || 1)}</small></b><span class="mhx-bar"><i style="width:${Math.min(100, kpi.kpiPercent || 0)}%"></i></span></div>
             <div class="ahx-kpi"><span class="ahx-kpi-l">Shu oy maoshi · taxminiy</span><b class="ahx-kpi-v">${escapeHtml(formatMoney(kpi.total))}</b><div class="ahx-kpi-n"><span>davomat asosida</span></div></div>` : ''}
         </div>`;
 
@@ -14415,7 +14416,7 @@ function renderAnalitikaMoliyaviy() {
         <div class="stat-card"><div class="stat-icon purple">💎</div><div class="stat-info"><div class="stat-label">LTV (o'rtacha)</div><div class="stat-value" style="font-size:20px">${fmtMoney(ltv)}</div></div></div>
         <div class="stat-card"><div class="stat-icon blue">🎯</div><div class="stat-info"><div class="stat-label">CAC</div><div class="stat-value" style="font-size:20px">${cac !== null ? fmtMoney(cac) : (marketingSpend > 0 ? "Sotuv yo'q" : 'Kiritilmagan')}</div></div></div>
         <div class="stat-card"><div class="stat-icon green">📈</div><div class="stat-info"><div class="stat-label">ROMI</div><div class="stat-value" style="font-size:20px${romi !== null && romi < 0 ? ';color:var(--danger)' : ''}">${romi !== null ? (romi >= 0 ? '+' : '') + romi.toFixed(0) + '%' : "Ma'lumot yo'q"}</div></div></div>
-        <div class="stat-card"><div class="stat-icon yellow">↩️</div><div class="stat-info"><div class="stat-label">Refund Rate</div><div class="stat-value" style="font-size:20px">${anPct(refundRate)}</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">↩️</div><div class="stat-info"><div class="stat-label">Qaytarilgan toʻlovlar ulushi</div><div class="stat-value" style="font-size:20px">${anPct(refundRate)}</div></div></div>
     </div>
 
     <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
@@ -14560,7 +14561,7 @@ function hbAttendanceStats(period) {
 
 // Ma'lumot yo'q bo'lsa "0%" emas, "—" ko'rsatiladi (0% haqiqiy natijaga o'xshab ko'rinardi).
 function anPct(v, digits = 1) {
-    return v === null || v === undefined || !Number.isFinite(Number(v)) ? '—' : `${Number(v).toFixed(digits)}%`;
+    return v === null || v === undefined || !Number.isFinite(Number(v)) ? '—' : `${Number(v).toFixed(digits).replace(".", ",")}%`;
 }
 
 // Muzlatilgan o'quvchilar ulushi (avval "Churn Rate" deb ko'rsatilardi — bu churn emas:
@@ -14798,7 +14799,7 @@ function hbHrMenejer(period) {
     } else {
         const turnover = hbStaffTurnover();
         const byRole = hbHeadcountByRole();
-        cards += hbCard('🔄', 'yellow', "Ketgan xodimlar ulushi (Turnover)", anPct(turnover));
+        cards += hbCard('🔄', 'yellow', "Ketgan xodimlar ulushi", anPct(turnover));
         cards += `<div class="card" style="grid-column:1/-1"><div class="card-header"><h3>Shtat jadvali</h3></div>` +
             (Object.keys(byRole).length ? Object.entries(byRole).map(([label, count]) =>
                 `<div class="cf-invest-row"><span>${escapeHtml(label)}</span><b>${count} ta</b></div>`).join('')
@@ -15098,13 +15099,13 @@ function renderAnalitikaXodimlar() {
     </div>
 
     <div class="cf-kpi-grid" style="margin-bottom:16px">
-        <div class="stat-card"><div class="stat-icon yellow">🔄</div><div class="stat-info"><div class="stat-label">Xodimlar qo'nimdorligi (Turnover)</div><div class="stat-value" style="font-size:18px">${overallTurnover.toFixed(1).replace(".", ",")}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon yellow">🔄</div><div class="stat-info"><div class="stat-label">Xodimlar almashinuvi</div><div class="stat-value" style="font-size:18px">${overallTurnover.toFixed(1).replace(".", ",")}%</div></div></div>
         <div class="stat-card"><div class="stat-icon purple">📅</div><div class="stat-info"><div class="stat-label">O'rtacha ish staji (faol xodimlar)</div><div class="stat-value" style="font-size:18px">${avgTenure !== null ? avgTenure.toFixed(1) + ' oy' : "Ma'lumot yo'q"}</div></div></div>
     </div>
 
     <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch;margin-bottom:16px">
         <div class="card">
-            <div class="card-header"><h3>Turnover — bo'limlar kesimida</h3></div>
+            <div class="card-header"><h3>Xodimlar almashinuvi — boʻlimlar kesimida</h3></div>
             ${turnoverByDept.length ? turnoverByDept.map(d => `
                 <div class="cf-mgr-row">
                     <div class="cf-mgr-name">${escapeHtml(d.dept)}</div>
@@ -15113,7 +15114,7 @@ function renderAnalitikaXodimlar() {
                 </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Xodim topilmadi</div></div>`}
         </div>
         <div class="card">
-            <div class="card-header"><h3>Teacher Retention Rate</h3></div>
+            <div class="card-header"><h3>Ustozlarda oʻquvchi saqlanishi</h3></div>
             ${teacherRetention.length ? teacherRetention.map(t => `
                 <div class="cf-mgr-row">
                     <div class="cf-mgr-name">${escapeHtml(t.name)}</div>
@@ -25640,14 +25641,14 @@ function deleteScript(id) {
 //    imkonisiz o'qish rejimi (renderMyGuides).
 let _currentGuideId = null;
 
+// Bir xil bo'sh holat: rasm, sarlavha, izoh, ixtiyoriy tugma (teamApp.css: .team-empty-state)
+function teamEmptyState(title, text = '', img = 'board', actionHtml = '') {
+    return `<div class="card team-empty-state"><img class="team-ill" src="images/empty/${img}.webp" alt="" width="120" height="120" loading="lazy"><strong>${title}</strong>${text ? `<span>${text}</span>` : ''}${actionHtml}</div>`;
+}
+
 function renderGuideCards(guides, editable) {
     if (!guides.length) {
-        return `
-        <div style="grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--text-muted)">
-            <div style="font-size:56px;margin-bottom:16px">📋</div>
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px">Hozircha yo'riqnoma yo'q</h3>
-            <p style="font-size:14px;margin:0">${editable ? "Birinchi yo'riqnoma qo'shish uchun \"Yo'riqnoma qo'shish\" tugmasini bosing" : "Sizga tegishli yo'riqnoma hali kiritilmagan"}</p>
-        </div>`;
+        return `<div style="grid-column:1/-1">${teamEmptyState("Hozircha yoʻriqnoma yoʻq", editable ? "Birinchi yoʻriqnomani «Yoʻriqnoma qoʻshish» tugmasi orqali qoʻshing." : "Sizga tegishli yoʻriqnoma kiritilganda shu yerda chiqadi.", 'board')}</div>`;
     }
 
     return guides.map(g => {
@@ -27051,7 +27052,7 @@ function renderRatingMonthBlocks(ranked) {
             <strong class="rtx-name">${escapeHtml(m.name)}</strong>
             <b class="rtx-sum">${mln(m.sales)}</b>
             <span class="rtx-meta">${m.deals} bitim${planPct != null ? ` · reja ${planPct}%` : ''}</span>
-            ${b.prize ? `<span class="rtx-prize${ok ? ' is-ok' : ''}">${ok ? '✓' : '🔒'} ${escapeHtml(b.prize)}</span>` : ''}
+            ${b.prize ? `<span class="rtx-prize${ok ? ' is-ok' : ''}">${ok ? '✓ ' : ''}${escapeHtml(b.prize)}</span>` : ''}
             ${need ? `<span class="rtx-cond" title="${ok ? '' : escapeHtml(`Shart: ${b.pct ? `reja ${b.pct}% (${mln(need)})` : mln(need)} · yana ${mln(need - m.sales)}`)}">${ok ? 'Shart bajarildi' : `Shart: ${b.pct ? `${b.pct}%` : mln(need)}`}</span>` : ''}
             <span class="rtx-step" aria-hidden="true"></span>
         </li>`;
@@ -28195,12 +28196,7 @@ function renderOrgStruktura() {
     const nodes = getOrgChart();
     if (!nodes.length) {
         wrap.innerHTML = `
-        <div class="mac-empty" style="padding:80px 0">
-            <div style="font-size:40px;margin-bottom:12px">🏢</div>
-            <div style="font-size:16px;font-weight:600;margin-bottom:6px">Tashkiliy tuzilma hali yaratilmagan</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Eng yuqori lavozimdan (masalan, Bosh direktor) boshlang</div>
-            <button class="btn-primary-sm" id="orgAddFirstBtn">+ Asosiy rahbar qo'shish</button>
-        </div>`;
+        ${teamEmptyState('Tashkiliy tuzilma hali yaratilmagan', 'Eng yuqori lavozimdan (masalan, Bosh direktor) boshlang.', 'board', '<button class="btn-primary-sm team-empty-action" id="orgAddFirstBtn">+ Asosiy rahbar qoʻshish</button>')}`;
         document.getElementById('orgAddFirstBtn').onclick = () => openOrgNodeModal(null);
         return;
     }
@@ -28404,6 +28400,12 @@ function hrVacRenderBoard() {
     if (!board) return;
     const list = hrVacVisibleCandidates();
 
+    if (!_hrVacStages.length) {
+        board.innerHTML = teamEmptyState('Hozircha nomzod yoʻq', 'Vakansiyaga ariza tushganda nomzodlar bosqichlar boʻyicha shu yerda chiqadi.', 'students');
+        const t = document.getElementById('hrVacTotal');
+        if (t) t.textContent = 'Jami: 0 ta nomzod';
+        return;
+    }
     board.innerHTML = _hrVacStages.map(stage => {
         const cards = list.filter(c => c.stage === stage.id);
         const cardsHtml = cards.length

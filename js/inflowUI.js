@@ -5,7 +5,7 @@
     const money = value => (typeof formatMoney === 'function' ? formatMoney(value) : Number(value || 0).toLocaleString('en-US').replaceAll(',', ' ') + " so'm");
     const opts = (items, all) => `<option value="">${all}</option>` + items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
     const dateText = value => L.displayDate(value);
-    const methodBadge = r => `<span class="inflow-method" title="${esc(L.METHODS[r.method] || 'Aniqlanmagan')}"><span aria-hidden="true">${({cash:'💵',bank:'🏦',card:'💳',uzum:'💳',paylater:'💳',payme:'🏦',click:'🏦',unknown:'?'})[r.method] || '?'}</span> ${esc(r.method==='unknown' ? 'Noma’lum' : L.METHODS[r.method] || 'Aniqlanmagan')}</span>`;
+    const methodBadge = r => `<span class="inflow-method" title="${esc(L.METHODS[r.method] || 'Aniqlanmagan')}">${esc(r.method==='unknown' ? 'Noma’lum' : L.METHODS[r.method] || 'Aniqlanmagan')}</span>`;
     function monthDates(month) {
         if (!/^\d{4}-\d{2}$/.test(month)) return null;
         const [y, m] = month.split('-').map(Number);

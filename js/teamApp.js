@@ -432,6 +432,14 @@
             const dup = h.textContent.trim().toLowerCase() === title && !h.closest('.rd-page-head, .card, .modal');
             if (h.classList.contains('team-dup') !== dup) h.classList.toggle('team-dup', dup);
         });
+        // Har qanday o'lchamda: faol ichki tab nomini takrorlovchi sarlavha yashiriladi.
+        const norm = t => t.replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+        const tab = [...page.querySelectorAll('.section-nav-item.active')].find(b => b.offsetParent);
+        const tabText = tab ? norm(tab.textContent) : '';
+        page.querySelectorAll('h1, h2').forEach(h => {
+            const dup = !!tabText && norm(h.textContent) === tabText && !h.closest('.rd-page-head, .modal, .card-header');
+            if (h.classList.contains('team-dup-tab') !== dup) h.classList.toggle('team-dup-tab', dup);
+        });
     }
 
     // Sotuv rejasi (jamoa): telefonda parametrlar yig'iladi, natijalar birinchi ko'rinadi.
@@ -489,6 +497,9 @@
         root.querySelectorAll('.section-nav').forEach(nav => {
             const a = nav.querySelector('.section-nav-item.active');
             nav.classList.toggle('team-scrolls', nav.scrollWidth > nav.clientWidth + 4);
+            const atEnd = () => nav.classList.toggle('team-nav-end', nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 4);
+            if (!nav._teamEnd) { nav._teamEnd = true; nav.addEventListener('scroll', atEnd, { passive: true }); }
+            atEnd();
             // Aktiv tab ko'rinmay qolgan bo'lsagina suriladi, chapda 16px joy qoldirib.
             if (a && nav.scrollWidth > nav.clientWidth && nav._teamFor !== a) {
                 nav._teamFor = a;

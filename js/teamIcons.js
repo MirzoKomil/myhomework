@@ -4,6 +4,12 @@
 (function () {
     'use strict';
     const P = {
+        bank: '<path d="M3 21h18M4 10h16M5 10v8M9.5 10v8M14.5 10v8M19 10v8M12 3l9 5H3z"/>',
+        zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+        gem: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21L8 9l4-6 4 6z"/>',
+        undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/>',
+        globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>',
+        cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
         doc: '<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
         clip: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>',
         check: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
@@ -64,12 +70,12 @@
         '📣': 'megaphone', '💻': 'laptop', '💵': 'money', '🔍': 'search', '🏆': 'trophy', '🏅': 'medal', '🥇': 'medal', '🥈': 'medal', '🥉': 'medal',
         '🍽️': 'food', '🍽': 'food', '📁': 'folder', '🚫': 'ban', '🪙': 'money', '📥': 'download', '⬇️': 'download', '⬆️': 'upload',
         '🖨️': 'printer', '🖨': 'printer', '💾': 'save', '👨‍🏫': 'user', '👩‍🏫': 'user', '🧑‍🏫': 'user', '👩': 'user', '👨': 'user', '🧑': 'user',
-        '📍': 'pin', '🏷️': 'tag', '🏷': 'tag', '🏢': 'school', '💼': 'bag', '🧑‍💼': 'bag', '👨‍💼': 'bag', '👩‍💼': 'bag', '⏱️': 'clock', '⏰': 'clock', '🕒': 'clock', '🎨': 'image', '📦': 'folder', '📌': 'pin', '❤️': 'heart'
+        '📍': 'pin', '🏷️': 'tag', '🏷': 'tag', '🏢': 'school', '💼': 'bag', '🧑‍💼': 'bag', '👨‍💼': 'bag', '👩‍💼': 'bag', '⏱️': 'clock', '⏰': 'clock', '🕒': 'clock', '🎨': 'image', '📦': 'folder', '📌': 'pin', '❤️': 'heart', '🏦': 'bank', '⚡': 'zap', '💎': 'gem', '↩️': 'undo', '↩': 'undo', '🔒': 'lock', '🇬🇧': 'globe', '🇷🇺': 'globe', '💸': 'cash', '🗓️': 'calendar', '🗓': 'calendar', '🔄': 'refresh', '✅': 'check'
     };
     const keys = Object.keys(MAP).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const RX = new RegExp(`^\\s*(${keys.join('|')})\\uFE0F?\\s*`);
     // Faqat shu UI elementlari ichida (foydalanuvchi matni emas).
-    const SCOPE = 'button, h1, h2, h3, h4, h5, th, label, summary, .stat-icon, .stat-label, .kpi-lbl, .mac-tab-btn, .section-nav-item, .chip, .badge, [class*="kpi"] > span, [class*="-ic"], [class*="icon"], .card-header, .tm-kpi, .hb-card, .tp-tb-tab, .mac-empty, .dashboard-empty, .text-muted, .empty-state, [class*="section-title"], .hb-role-btn, .hb-tab';
+    const SCOPE = 'button, h1, h2, h3, h4, h5, th, label, summary, .stat-icon, .stat-label, .kpi-lbl, .mac-tab-btn, .section-nav-item, .chip, .badge, [class*="kpi"] > span, [class*="-ic"], [class*="icon"], .card-header, .tm-kpi, .hb-card, .tp-tb-tab, .mac-empty, .dashboard-empty, .text-muted, .empty-state, [class*="section-title"], .hb-role-btn, .hb-tab, [class*="pill"], [class*="badge"], [class*="tag"], .cf-kpi-label, [class*="-label"], [class*="-title"], .cf-kpi-icon, p.text-muted, .card-header > div';
     const SKIP = 'textarea, input, [contenteditable], .chat, [class*="chat-"], .lead-card-comment, .guide-body, .guide-content, .rich-text, .msg, .message';
     const svg = name => `<svg class="team-ico" viewBox="0 0 24 24" aria-hidden="true">${P[name]}</svg>`;
 
