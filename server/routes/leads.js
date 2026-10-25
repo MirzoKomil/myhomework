@@ -6,6 +6,7 @@ const {
 const { authRequired } = require('../middleware/auth');
 const { webhookSecretRequired } = require('../middleware/webhook');
 const { sendLeadToCapi } = require('../services/capiWebhook');
+const { notifyLeadChannel } = require('../services/leadChannelNotify');
 
 const router = express.Router();
 
@@ -96,6 +97,14 @@ router.post('/', webhookSecretRequired, async (req, res) => {
         // Javobdan keyin — CAPI.uz sekin ishlasa ham landing page/webhook
         // javobi kechikmaydi (CRM'ning asosiy oqimiga bog'liq emas).
         if (result.lead) sendLeadToCapi(result.lead);
+        // domwork.uz saytidan kelgan lid Telegram kanalga ham nusxa sifatida
+        // tushadi (sozlanmagan bo'lsa hech narsa qilmaydi).
+        if (sourceResult.value === 'Domwork') {
+            notifyLeadChannel({
+                id: result.id, name: name.trim(), phone: String(phone).trim(),
+                contactTime, utmSource, utmCampaign, utmContent,
+            }).catch(() => {});
+        }
     } catch (err) {
         console.error('POST /api/leads', err);
         res.status(500).json({ error: 'Lidni saqlashda xatolik' });
