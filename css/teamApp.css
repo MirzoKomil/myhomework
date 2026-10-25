@@ -2515,3 +2515,138 @@ html.rd .mot-goal-gap {
         margin-top: 4px;
     }
 }
+
+/* ==========================================================================
+   10-bosqich
+   ========================================================================== */
+html.rd .team-scroll-btn {
+    display: none;
+}
+
+@media (min-width: 901px) {
+    html.rd .team-more-right::after {
+        width: 72px;
+        background: linear-gradient(90deg, rgba(244, 245, 249, 0), var(--bg) 85%);
+    }
+
+    html.rd .team-more-right > .team-scroll-btn--next,
+    html.rd .team-more-left > .team-scroll-btn--prev {
+        display: grid;
+        place-items: center;
+        position: absolute;
+        top: 8px;
+        z-index: 3;
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 4px 12px rgba(16, 24, 40, .12);
+        cursor: pointer;
+    }
+
+    html.rd .team-scroll-btn--next { right: 8px; }
+    html.rd .team-scroll-btn--prev { left: -12px; }
+
+    html.rd .team-scroll-btn svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    /* Bosh sahifa: ustunlar bir xil balandlikda tugaydi */
+    html.rd .mhx-grid {
+        align-items: stretch;
+    }
+
+    /* Oy reytingi — pastda to'liq kenglikdagi qator (TOP-3 + siz yonma-yon) */
+    html.rd #managerHome > .mhx-board {
+        margin-top: 16px;
+    }
+
+    html.rd .mhx-board .mhx-board-list {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    html.rd .mhx-board .mhx-board-list li {
+        margin: 0;
+        padding: 12px;
+        border: 1px solid var(--border);
+    }
+
+    html.rd .mhx-board .mhx-board-list li.is-gap {
+        margin-top: 0;
+    }
+
+    html.rd .mhx-board .mhx-board-list li.is-gap::before {
+        display: none;
+    }
+
+    /* Reyting banneri pastroq — podium birinchi ekranda */
+    html.rd .mot-hero {
+        min-height: 132px;
+    }
+
+    html.rd .mot-hero-txt {
+        padding: 16px 24px;
+        gap: 6px;
+    }
+
+    html.rd .mot-title {
+        font-size: 20px;
+        line-height: 26px;
+    }
+}
+
+@media (max-width: 900px) {
+    /* Bosh sahifa: kartalar orasida bir xil 12px, ichki kulrang karta yo'q */
+    html.rd #managerHome > * {
+        margin-top: 0 !important;
+        margin-bottom: 12px !important;
+    }
+
+    html.rd .mhx .mot-home {
+        gap: 12px;
+    }
+
+    html.rd .mhx-empty {
+        padding: 0;
+        background: transparent;
+    }
+
+    /* Reyting: davr — o'ng tomonda kichik pill guruhi */
+    html.rd .rating-main-tabs #ratingPeriodFilter {
+        display: inline-flex;
+        align-self: flex-end;
+        width: auto;
+        padding: 2px;
+        border-radius: 999px;
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter .lang-btn {
+        min-height: 30px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+    }
+
+    /* Statistika: oxirgi chip kesilmaydi */
+    html.rd .sfx-presets {
+        max-width: 100%;
+        padding-right: 16px;
+        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+        mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+    }
+}
+
+@media (max-width: 900px) {
+    html.rd #managerHome > .mhx-board { order: 4; }
+}

@@ -9041,9 +9041,9 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening voronkam <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-mhx-go="leads">Lidlar →</button></div>
                 <ul class="ahx-funnel mhx-funnel">${d.funnel.map(f => `<li><button type="button" data-mhx-stage="${escapeHtml(f.id || '')}"><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%;background:${stageColor(f.id)}"></em></i><b>${f.count}</b></button></li>`).join('')}</ul>
             </section>
-            ${renderManagerMiniBoard(managerId, d.lang, n => (Number(n) ? mln(n) + ' mln' : '0'))}
             </div>
         </div>
+        ${renderManagerMiniBoard(managerId, d.lang, n => (Number(n) ? mln(n) + ' mln' : '0'))}
     </div>`;
 }
 

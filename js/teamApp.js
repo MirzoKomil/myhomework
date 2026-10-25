@@ -212,7 +212,21 @@
     function markOverflow(board) {
         if (!board) return;
         const more = board.scrollWidth - board.clientWidth - board.scrollLeft > 8;
-        board.parentElement.classList.toggle('team-more-right', more);
+        const less = board.scrollLeft > 8;
+        const host = board.parentElement;
+        if (host.classList.contains('team-more-right') !== more) host.classList.toggle('team-more-right', more);
+        if (host.classList.contains('team-more-left') !== less) host.classList.toggle('team-more-left', less);
+        if (!host.querySelector(':scope > .team-scroll-btn')) {
+            [['prev', -1, 'M15 18l-6-6 6-6', 'Oldingi ustunlar'], ['next', 1, 'M9 18l6-6-6-6', 'Keyingi ustunlar']].forEach(([cls, dir, d, label]) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `team-scroll-btn team-scroll-btn--${cls}`;
+                btn.setAttribute('aria-label', label);
+                btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+                btn.addEventListener('click', () => board.scrollBy({ left: dir * 280, behavior: 'smooth' }));
+                host.appendChild(btn);
+            });
+        }
         if (!board._teamOv) {
             board._teamOv = true;
             board.addEventListener('scroll', () => markOverflow(board), { passive: true });
