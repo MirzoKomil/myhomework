@@ -49,13 +49,13 @@ const TABLE_TYPES = {
 const JSON_TYPES = {
     scripts: { type: 'script', label: 'Sotuv skripti', title: i => i.title || i.name },
     guides: { type: 'guide', label: "Yo'riqnoma", title: i => i.title || i.name },
-    bonusHistory: { type: 'bonus', label: 'Bonus tarixi', title: i => [i.managerName || i.managerId, i.amount].filter(Boolean).join(' · ') },
+    bonusHistory: { type: 'bonus', label: 'Bonus tarixi', title: i => [i.managerName || i.managerId, som(i.amount)].filter(Boolean).join(' · ') },
     shopOrders: { type: 'shopOrder', label: "Do'kon buyurtmasi", title: i => i.studentName || i.name || i.title },
     manualNotifications: { type: 'notification', label: 'Bildirishnoma', title: i => i.title || i.text },
     contentComments: { type: 'contentComment', label: 'Dars izohi', title: i => i.text || i.body },
     communityPosts: { type: 'communityPost', label: 'Hamjamiyat posti', title: i => i.text || i.title || i.body },
     callRecordings: { type: 'callRecording', label: "Qo'ng'iroq yozuvi", title: i => i.title || i.name || i.fileName || i.phone },
-    cashFlow: { type: 'cashTx', label: 'Pul oqimi yozuvi', title: i => [i.category || i.type, i.amount].filter(v => v !== undefined && v !== '').join(' · ') },
+    cashFlow: { type: 'cashTx', label: 'Pul oqimi yozuvi', title: i => [i.category || i.type, som(i.amount), i.date].filter(Boolean).join(' · ') },
     orgChart: { type: 'orgNode', label: 'Tashkiliy tuzilma', title: i => i.title || i.name }
 };
 
@@ -73,6 +73,7 @@ const FULL_ROLES = new Set(['admin', 'boshliq']);
 const ROP_TYPES = new Set(['lead', 'student', 'bookRoadmap', 'script', 'bonus']);
 
 function err(status, message, code) { return Object.assign(new Error(message), { status, code }); }
+const som = v => (Number.isFinite(Number(v)) && v !== '' && v !== null ? String(Math.round(Number(v))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' so‘m' : '');
 
 function canView(actor, type) {
     if (FULL_ROLES.has(actor?.role)) return true;
