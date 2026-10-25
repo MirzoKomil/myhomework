@@ -11899,9 +11899,16 @@ const TB_SECTIONS = [
 
 let _tpTextbookSection = 'kurs-rejasi';
 
-function renderTpTextbook() {
-    const container = document.getElementById('tpTextbook');
+function renderTpTextbook(target) {
+    const container = target || document.getElementById('tpTextbook');
     if (!container) return;
+    // Darslik markazi (js/lessonHub.js): 72 dars, slaydlar, Teacher's book,
+    // o'quvchilar progressi. Eski bo'limlar uning "Qo'shimcha materiallar"
+    // yorlig'ida shu funksiyaning o'zi orqali (target bilan) chiziladi.
+    if (!target && window.LessonHub) {
+        window.LessonHub.mount(container, { lang: _teachersLang, renderLegacy: el => renderTpTextbook(el) });
+        return;
+    }
     // 9-vazifa: ustoz uchun Darslik faqat KO'RISH rejimida — material
     // qo'shish/o'chirish tugmalari umuman render qilinmaydi, va materiallar
     // ustozning o'z kursiga (_teachersLang, renderTeachersSection'da uning

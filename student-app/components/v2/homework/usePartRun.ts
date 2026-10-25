@@ -14,6 +14,7 @@ import { resetPraiseRun, speak, stopVoice } from '@/services/voicePraise';
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
 import { reportActivity } from '@/services/activitySync';
+import { reportPartResult } from '@/services/learningTracker';
 import { addCoins } from '@/services/coinsStore';
 import { getLessonProgress, loadLessonProgress, markHomeworkPartDone } from '@/services/lessonProgressStore';
 import { addLightning } from '@/services/lightningStore';
@@ -117,6 +118,8 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
       router.replace(R.homework(lessonId) as Href);
       return;
     }
+    // Ustoz kabineti: har urinish natijasi va xato qilingan savollar (o'tmagan bo'lsa ham).
+    reportPartResult({ lessonId, partId: part.id, kind: part.kind, title: part.title ?? '', correct: finalCorrect, total, mistakes: score.current.mistakes });
     if (accuracy < PASS_THRESHOLD) {
       playSfx('lose');
       speak('retry', 1000);
