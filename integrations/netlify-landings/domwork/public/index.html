@@ -620,9 +620,9 @@ footer{border-top:1px solid var(--line);padding-block:32px;font-size:14px;color:
         <div class="success" id="success" hidden>
           <span class="ok-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg></span>
           <h3>Rahmat, <span id="okName"></span>! Arizangiz qabul qilindi</h3>
-          <p>Menejerimiz siz tanlagan vaqtda bog'lanadi. Sovg'angiz tayyor — hoziroq yuklab oling.</p>
+          <p>Menejerimiz siz tanlagan vaqtda bog'lanadi. Sovg'angizni Telegram botimiz hozir yuboradi — botga o'tib «Start»ni bosing.</p>
           <div class="btns">
-            <a class="btn btn-primary" id="pdfBtn" href="#" target="_blank" rel="noopener">40 ta gap — PDF'ni olish</a>
+            <a class="btn btn-primary" id="pdfBtn" href="https://t.me/Domworkru_bot" target="_blank" rel="noopener">🎁 Sovg'ani Telegram botda olish</a>
             <a class="btn btn-ghost" id="tgBtn" href="https://t.me/domwork_admin" target="_blank" rel="noopener">Telegram'da yozish: @domwork_admin</a>
           </div>
         </div>
@@ -691,7 +691,9 @@ footer{border-top:1px solid var(--line);padding-block:32px;font-size:14px;color:
 /* ===== SOZLAMALAR (saytni joylashda shu yerni to'ldiring) ===== */
 const CONFIG = {
   // 40 ta gap PDF fayli havolasi (domwork.uz'dagi hozirgi fayl manzili)
-  PDF_URL: "",  // ⚠️ to'ldiring
+  PDF_URL: "",  // bo'sh bo'lsa sovg'a @Domworkru_bot orqali beriladi
+  // Ariza qoldirgan odam sovg'ani olish uchun shu botga o'tadi
+  BOT_URL: "https://t.me/Domworkru_bot",
   TELEGRAM_ADMIN: "https://t.me/domwork_admin"
 };
 /* ============================================================== */

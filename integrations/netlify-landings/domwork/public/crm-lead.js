@@ -77,11 +77,16 @@
         document.getElementById('okName').textContent = name.split(' ')[0];
         const gift = document.getElementById(source === 'domwork' ? 'pdfBtn' : 'giftBtn');
         const url = source === 'domwork' ? config.PDF_URL : config.GIFT_URL;
-        gift.href = url || config.TELEGRAM_ADMIN;
-        if (!url) gift.textContent = source === 'domwork' ? 'PDF Telegram orqali yuboriladi' : "🎁 Sovg'ani Telegram'da olish";
+        // Sovg'a fayli bo'lmasa — admin profiliga emas, sovg'ani beradigan botga.
+        const target = url || config.BOT_URL || config.TELEGRAM_ADMIN;
+        gift.href = target;
+        if (!url) gift.textContent = config.BOT_URL ? "🎁 Sovg'ani Telegram botda olish" : (source === 'domwork' ? 'PDF Telegram orqali yuboriladi' : "🎁 Sovg'ani Telegram'da olish");
         form.hidden = true;
         document.getElementById('success').hidden = false;
         document.getElementById('success').scrollIntoView({behavior:'smooth',block:'center'});
+        // Bot sozlangan bo'lsa odam 2 soniyadan keyin avtomatik botga o'tadi
+        // (tugma ham turadi — o'tish bloklansa qo'lda bosadi).
+        if (!url && config.BOT_URL) setTimeout(() => { global.location.href = config.BOT_URL; }, 2000);
       } catch (failure) {
         error.textContent = failure.name === 'AbortError' ? 'So‘rov vaqti tugadi. Qayta yuboring; forma tozalanmagan.' : failure.message;
         error.hidden = false;
