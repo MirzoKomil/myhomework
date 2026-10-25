@@ -20613,6 +20613,170 @@ let _leadsLangFilter = (() => {
 let _leadsManagerFilter = 'all';
 let _leadSearchQuery = '';
 
+// Lidlar: Sana va Manba filtrlari. Ataylab saqlanmaydi — sahifa har ochilganda
+// sana = joriy oy, manba = Hammasi (Target + Organik) holatida boshlanadi.
+function _leadDateKeyLocal(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function _leadsMonthRange(offset = 0) {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const last = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+    return { from: _leadDateKeyLocal(first), to: _leadDateKeyLocal(last) };
+}
+let _leadsDateFilter = { preset: 'month', ..._leadsMonthRange(0) };
+let _leadsSourceFilter = 'all';
+
+function getLeadDateKey(lead) {
+    const raw = lead?.createdAt || lead?.date;
+    if (!raw) return null;
+    const s = String(raw).trim();
+    // "25.10.2026" / "25/10/2026" (uz-UZ toLocaleDateString)
+    const m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : _leadDateKeyLocal(d);
+}
+
+function filterLeadsByDateAndSource(leads) {
+    const { from, to } = _leadsDateFilter;
+    return leads.filter(l => {
+        if (_leadsSourceFilter !== 'all' && getLeadKind(l) !== _leadsSourceFilter) return false;
+        // Qidiruv (ism/telefon) barcha sanalar bo'yicha ishlaydi, aks holda eski lid topilmay qoladi
+        if (_leadSearchQuery || (!from && !to)) return true;
+        const key = getLeadDateKey(l);
+        if (!key) return false;
+        if (from && key < from) return false;
+        if (to && key > to) return false;
+        return true;
+    });
+}
+
+function _formatLeadFilterDate(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    const months = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+    const sameYear = y === new Date().getFullYear();
+    return `${d} ${months[m - 1]}${sameYear ? '' : ' ' + y}`;
+}
+
+function updateLeadsDateFilterLabel() {
+    const el = document.getElementById('leadsDateFilterValue');
+    if (!el) return;
+    const { preset, from, to } = _leadsDateFilter;
+    const names = { today: 'Bugun', yesterday: 'Kecha', week: 'Shu hafta', month: 'Joriy oy', 'prev-month': "O'tgan oy", all: 'Barcha vaqt' };
+    let text = names[preset];
+    if (!text) {
+        if (from && to && from === to) text = _formatLeadFilterDate(from);
+        else if (from && to) text = `${_formatLeadFilterDate(from)} – ${_formatLeadFilterDate(to)}`;
+        else if (from) text = `${_formatLeadFilterDate(from)} dan`;
+        else if (to) text = `${_formatLeadFilterDate(to)} gacha`;
+        else text = 'Barcha vaqt';
+    }
+    el.textContent = text;
+    document.querySelectorAll('[data-lead-date-preset]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.leadDatePreset === preset);
+    });
+}
+
+function getLeadsDatePresetRange(preset) {
+    const now = new Date();
+    const today = _leadDateKeyLocal(now);
+    if (preset === 'today') return { from: today, to: today };
+    if (preset === 'yesterday') {
+        const y = _leadDateKeyLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+        return { from: y, to: y };
+    }
+    if (preset === 'week') {
+        const dow = now.getDay() === 0 ? 7 : now.getDay(); // Dushanba = 1
+        return { from: _leadDateKeyLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow + 1)), to: today };
+    }
+    if (preset === 'month') return _leadsMonthRange(0);
+    if (preset === 'prev-month') return _leadsMonthRange(-1);
+    return { from: '', to: '' };
+}
+
+function syncLeadsDateInputs() {
+    const fromEl = document.getElementById('leadsDateFrom');
+    const toEl = document.getElementById('leadsDateTo');
+    const single = _leadsDateFilter.from && _leadsDateFilter.from === _leadsDateFilter.to
+        && !['month', 'prev-month', 'week', 'all'].includes(_leadsDateFilter.preset);
+    const modeInput = document.querySelector(`input[name="leadsDateMode"][value="${single ? 'single' : 'range'}"]`);
+    if (modeInput) modeInput.checked = true;
+    if (fromEl) fromEl.value = _leadsDateFilter.from || '';
+    if (toEl) toEl.value = _leadsDateFilter.to || '';
+    applyLeadsDateModeUi();
+}
+
+function applyLeadsDateModeUi() {
+    const single = document.querySelector('input[name="leadsDateMode"]:checked')?.value === 'single';
+    const toField = document.getElementById('leadsDateToField');
+    const fromLabel = document.getElementById('leadsDateFromLabel');
+    if (toField) toField.hidden = single;
+    if (fromLabel) fromLabel.textContent = single ? 'Sana' : 'Dan';
+}
+
+function closeLeadsDateDropdown() {
+    const dd = document.getElementById('leadsDateDropdown');
+    const btn = document.getElementById('leadsDateFilterBtn');
+    if (dd) dd.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function initLeadsDateSourceFilters() {
+    const btn = document.getElementById('leadsDateFilterBtn');
+    const dd = document.getElementById('leadsDateDropdown');
+    if (btn && dd && !btn.dataset.bound) {
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const open = dd.hidden;
+            dd.hidden = !open;
+            btn.setAttribute('aria-expanded', String(open));
+            if (open) syncLeadsDateInputs();
+        });
+        dd.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('click', closeLeadsDateDropdown);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLeadsDateDropdown(); });
+
+        dd.querySelectorAll('[data-lead-date-preset]').forEach(p => {
+            p.addEventListener('click', () => {
+                const preset = p.dataset.leadDatePreset;
+                _leadsDateFilter = { preset, ...getLeadsDatePresetRange(preset) };
+                updateLeadsDateFilterLabel();
+                closeLeadsDateDropdown();
+                renderLeads();
+            });
+        });
+        dd.querySelectorAll('input[name="leadsDateMode"]').forEach(r => r.addEventListener('change', applyLeadsDateModeUi));
+
+        document.getElementById('leadsDateApplyBtn')?.addEventListener('click', () => {
+            const single = document.querySelector('input[name="leadsDateMode"]:checked')?.value === 'single';
+            let from = document.getElementById('leadsDateFrom')?.value || '';
+            let to = single ? from : (document.getElementById('leadsDateTo')?.value || '');
+            if (single && !from) { if (typeof showMiniToast === 'function') showMiniToast('Sanani tanlang'); return; }
+            if (from && to && from > to) [from, to] = [to, from];
+            _leadsDateFilter = { preset: (!from && !to) ? 'all' : 'custom', from, to };
+            updateLeadsDateFilterLabel();
+            closeLeadsDateDropdown();
+            renderLeads();
+        });
+    }
+
+    const src = document.getElementById('leadsSourceFilter');
+    if (src && !src.dataset.bound) {
+        src.dataset.bound = '1';
+        src.value = _leadsSourceFilter;
+        src.addEventListener('change', () => {
+            _leadsSourceFilter = src.value;
+            const labels = { all: 'Manba: Hammasi', target: 'Manba: Target', organic: 'Manba: Organik' };
+            const disp = document.getElementById('leadsSourceFilterDisplay');
+            if (disp) disp.textContent = labels[_leadsSourceFilter] || labels.all;
+            renderLeads();
+        });
+    }
+    updateLeadsDateFilterLabel();
+}
+
 function normalizeLeadSearchText(value) {
     return String(value ?? '').normalize('NFKC').toLowerCase()
         .replace(/['‘’ʻʼ`]/g, '').replace(/\s+/g, ' ').trim();
@@ -22445,12 +22609,13 @@ function renderLeads() {
 
     renderLeadsManagerFilter();
     renderLeadsColumnsFilter();
+    initLeadsDateSourceFilters();
 
     const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    const tagged = filterLeadsByManager(
+    const tagged = filterLeadsByDateAndSource(filterLeadsByManager(
         (leadsData[lang] || []).map(l => ({ ...l, _lang: lang }))
-    ).filter(l => leadMatchesSearch(l));
+    )).filter(l => leadMatchesSearch(l));
 
     // Search may temporarily reveal a matching hidden column; never overwrite saved visibility.
     const visibleColumns = _leadSearchQuery

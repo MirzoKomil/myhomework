@@ -688,6 +688,50 @@
                                             <div class="leads-columns-dropdown" id="leadsColumnsDropdown" hidden></div>
                                         </div>
                                     </div>
+                                    <div class="leads-filter-box leads-columns-filter-wrap leads-date-filter-wrap">
+                                        <div class="leads-columns-filter">
+                                            <button type="button" class="leads-filter-trigger"
+                                                id="leadsDateFilterBtn" aria-haspopup="true" aria-expanded="false">
+                                                <svg class="leads-date-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <rect x="3" y="5" width="18" height="16" rx="2" />
+                                                    <path d="M3 10h18M8 3v4M16 3v4" />
+                                                </svg>
+                                                <span class="leads-filter-display is-selected" id="leadsDateFilterValue">Joriy oy</span>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M6 9l6 6 6-6" />
+                                                </svg>
+                                            </button>
+                                            <div class="leads-columns-dropdown leads-date-dropdown" id="leadsDateDropdown" hidden>
+                                                <div class="leads-date-presets">
+                                                    <button type="button" data-lead-date-preset="today">Bugun</button>
+                                                    <button type="button" data-lead-date-preset="yesterday">Kecha</button>
+                                                    <button type="button" data-lead-date-preset="week">Shu hafta</button>
+                                                    <button type="button" data-lead-date-preset="month">Joriy oy</button>
+                                                    <button type="button" data-lead-date-preset="prev-month">O'tgan oy</button>
+                                                    <button type="button" data-lead-date-preset="all">Barcha vaqt</button>
+                                                </div>
+                                                <div class="leads-date-mode">
+                                                    <label><input type="radio" name="leadsDateMode" value="range" checked> Sanadan sanagacha</label>
+                                                    <label><input type="radio" name="leadsDateMode" value="single"> Bitta sana</label>
+                                                </div>
+                                                <div class="leads-date-inputs">
+                                                    <label class="leads-date-field"><span id="leadsDateFromLabel">Dan</span>
+                                                        <input type="date" id="leadsDateFrom"></label>
+                                                    <label class="leads-date-field" id="leadsDateToField"><span>Gacha</span>
+                                                        <input type="date" id="leadsDateTo"></label>
+                                                </div>
+                                                <button type="button" class="btn-primary-sm leads-date-apply" id="leadsDateApplyBtn">Qo'llash</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="leads-filter-box leads-filter-box--select leads-source-filter-box">
+                                        <span class="leads-filter-display is-selected" id="leadsSourceFilterDisplay">Manba: Hammasi</span>
+                                        <select id="leadsSourceFilter" class="leads-filter-select-overlay" aria-label="Lid manbasi">
+                                            <option value="all" selected>Hammasi (Target + Organik)</option>
+                                            <option value="target">Faqat Target</option>
+                                            <option value="organic">Faqat Organik</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="leads-filters-bar" id="bookRoadmapFiltersBar" hidden>
                                     <div class="leads-filter-box leads-filter-box--select">
