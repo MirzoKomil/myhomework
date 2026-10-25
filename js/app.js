@@ -9036,12 +9036,12 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
                 <ul class="mhx-stats mhx-stats--row"><li><b>${d.active}</b><span>Faol</span></li><li><b>${d.installments}</b><span>Boʻlib toʻlamoqda</span></li><li><b class="${d.overdue.length ? 'is-bad' : ''}">${d.overdue.length}</b><span>Qarzdor</span></li></ul>
                 ${d.overdue.length ? `<button type="button" class="ahx-link" data-mhx-go="debtors">Qarzdorlarim: ${escapeHtml(d.overdue.slice(0, 3).map(s => shortPersonName(s.name || '')).join(', '))} →</button>` : ''}
             </section>
-            ${renderManagerMiniBoard(managerId, d.lang, n => (Number(n) ? mln(n) + ' mln' : '0'))}
             </div>
             <div class="mhx-side">
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening voronkam <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-mhx-go="leads">Lidlar →</button></div>
                 <ul class="ahx-funnel mhx-funnel">${d.funnel.map(f => `<li><button type="button" data-mhx-stage="${escapeHtml(f.id || '')}"><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%;background:${stageColor(f.id)}"></em></i><b>${f.count}</b></button></li>`).join('')}</ul>
             </section>
+            ${renderManagerMiniBoard(managerId, d.lang, n => (Number(n) ? mln(n) + ' mln' : '0'))}
             </div>
         </div>
     </div>`;
@@ -16634,7 +16634,7 @@ function renderSalesFunnel() {
     </div>
     <div class="sfx-presets" role="group" aria-label="Davr">
         ${_sfxPresetChips()}
-        <button type="button" class="sfx-chip${_sfxShowDates ? ' active' : ''}" data-sfx-dates aria-expanded="${_sfxShowDates}">Sana tanlash</button>
+        <button type="button" class="sfx-chip${_sfxShowDates ? ' active' : ''}" data-sfx-dates aria-expanded="${_sfxShowDates}">Sana</button>
     </div>
     <div class="sfx-filters"${_sfxShowDates || mgrFilterHtml ? '' : ' hidden'}>
         ${mgrFilterHtml}
@@ -26933,6 +26933,7 @@ function renderRatingMotivation(ranked, period, between = '') {
     const byThreshold = list => list.map(getMergedBonus).filter(b => Number(b.threshold) > 0).sort((a, b) => a.threshold - b.threshold);
 
     let eyebrow = '', title = '', sub = '';
+    let heroMePct = null;
     if (period === 'oylik') {
         const next = byThreshold(MONTHLY_BONUSES).find(b => leader.sales < b.threshold);
         eyebrow = `Oy poygasi · ${daysLeft} kun qoldi`;
@@ -26942,6 +26943,7 @@ function renderRatingMotivation(ranked, period, between = '') {
         if (meRow && meNext) {
             const gap = meNext.threshold - meRow.sales;
             title = `Sizga ${escapeHtml(meNext.label)} sovgʻasigacha ${fmtMln(gap)} qoldi`;
+            heroMePct = Math.min(100, Math.round(meRow.sales / meNext.threshold * 100));
             sub = `Sovgʻa uchun kuniga ${fmtMln(Math.ceil(gap / daysLeft))}. Lider — ${escapeHtml(_firstName(leader.name))}.`;
         } else if (next) {
             const gap = next.threshold - leader.sales;
@@ -26973,7 +26975,9 @@ function renderRatingMotivation(ranked, period, between = '') {
             <span class="mot-eyebrow">${eyebrow}</span>
             <h2 class="mot-title">${title}</h2>
             ${sub ? `<p class="mot-sub">${sub}</p>` : ''}
-            ${teamTarget > 0 ? `<div class="mot-team"><span>Jamoa rejasi <strong>${teamPct}%</strong></span>
+            ${heroMePct != null ? `<div class="mot-team"><span>Sizning yoʻlingiz <strong>${heroMePct}%</strong></span>
+                <span class="mot-bar" role="progressbar" aria-label="Sovgʻagacha" aria-valuenow="${heroMePct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${heroMePct}%"></span></span>
+                <span>Jamoa rejasi ${teamPct}%</span></div>` : teamTarget > 0 ? `<div class="mot-team"><span>Jamoa rejasi <strong>${teamPct}%</strong></span>
                 <span class="mot-bar" role="progressbar" aria-label="Jamoa rejasi" aria-valuenow="${teamPct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${teamPct}%"></span></span>
                 <span>${fmtMln(teamSales)} / ${fmtMln(teamTarget)}</span></div>` : ''}
         </div>
@@ -27069,8 +27073,8 @@ function renderRatingMonthBlocks(ranked) {
         const got = tiers.filter(t => m.day >= t.threshold).pop();
         const next = tiers.find(t => m.day < t.threshold);
         return `<li><span class="rtx-ava rtx-ava--sm">${escapeHtml(managerInitials(m.name))}</span>
-            <div><strong>${escapeHtml(_firstName(m.name))}</strong><span>${next ? `${escapeHtml(next.label || '')} uchun yana ${escapeHtml(formatMoney(next.threshold - m.day))}` : 'Eng yuqori obed olindi 🎉'}</span></div>
-            <b>${escapeHtml(formatMoney(m.day).replace(" so'm", ''))}</b>
+            <div><strong>${escapeHtml(_firstName(m.name))}</strong><span>${next ? `${escapeHtml(next.label || '')} uchun yana ${escapeHtml(fmtMln(next.threshold - m.day))}` : 'Eng yuqori obed olindi'}</span></div>
+            <b>${escapeHtml(fmtMln(m.day))}</b>
             <span class="rtx-chip${got ? ' is-ok' : ''}">${got ? `✓ ${escapeHtml(got.label || '')}` : "hali yoʻq"}</span></li>`;
     }).join('');
     return `<div class="rtx-grid">

@@ -87,7 +87,7 @@
             if (on) matched = true;
         });
         const more = bar.querySelector('[data-tn-more]');
-        if (more) more.classList.toggle('active', sidebarOpen || !matched);
+        if (more) more.classList.toggle('active', sidebarOpen);
     }
     function buildBottomNav() {
         if (document.getElementById('teamBottomNav')) return;
@@ -203,7 +203,7 @@
         }
         const SALES_TITLES = { leads: 'Lidlar', 'book-roadmap': 'Kitob yetkazish', rating: 'Reyting', 'sales-stats': 'Statistika', scripts: 'Skriptlar', 'sales-plan': 'Sotuv rejasi', debtors: 'Qarzdorlar' };
         // Bosh sahifada salomlashuv bor — yuqorida logo turadi.
-        const title = (_activeTab === 'sales' && SALES_TITLES[activeSales()]) || TITLES[_activeTab] || '';
+        const title = (_activeTab === 'sales' && SALES_TITLES[activeSales()]) || TITLES[_activeTab] || (_activeTab === 'dashboard' ? 'Bosh sahifa' : '');
         const html = title ? `<h1>${title}</h1>` : '<img src="images/myhomework-logo.png" alt="Homework">';
         if (el._sig !== html) { el._sig = html; el.innerHTML = html; }
     }

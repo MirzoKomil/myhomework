@@ -2358,3 +2358,68 @@ html.rd .team-drawer-profile {
         padding-bottom: 120px;
     }
 }
+
+/* ==========================================================================
+   8-bosqich
+   ========================================================================== */
+html.rd .mhx .mot-home {
+    align-items: stretch;
+}
+
+html.rd .sfx-head p {
+    display: none;
+}
+
+html.rd .lead-column-header {
+    align-items: center;
+    height: 44px;
+}
+
+html.rd .lead-contact-filter-toggle {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+}
+
+@media (max-width: 900px) {
+    html.rd .rating-main-tabs #ratingPeriodFilter {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2px;
+        padding: 3px;
+        border-radius: 12px;
+        background: var(--rd-col);
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter .lang-btn {
+        min-height: 40px;
+        border-radius: 9px;
+        font-size: 13px;
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter .lang-btn--active {
+        background: var(--surface);
+        box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+    }
+
+    html.rd .rtx-pod .rtx-step {
+        display: none;
+    }
+
+    /* Bosh sahifa: har tile bitta qisqa izoh bilan */
+    html.rd .mhx-kpis .ahx-kpi-n {
+        display: flex;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi-n > span:not(:first-child):not(.ahx-pill) {
+        display: none;
+    }
+
+    html.rd .mhx-kpis .mhx-kpi--plan .ahx-pill {
+        display: inline-flex;
+    }
+
+    html.rd #managerHome {
+        padding-bottom: 128px;
+    }
+}
