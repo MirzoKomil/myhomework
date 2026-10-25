@@ -16618,7 +16618,7 @@ function renderSalesFunnel() {
     const barRows = stagesData.map(st => `
         <li class="sfx-row">
             <span class="sfx-name"><i style="background:${funnelRampColor(st.id)}"></i>${escapeHtml(st.label)}</span>
-            <span class="sfx-track" aria-hidden="true"><span style="width:${Math.max(st.count ? 2 : 0, Math.round(st.count / maxCount * 100))}%;background:${funnelRampColor(st.id)}"></span></span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${Math.max(st.count ? 2 : 0, st.share)}%;background:${funnelRampColor(st.id)}"></span></span>
             <span class="sfx-val"><b>${st.count}</b> · ${st.share}%</span>
         </li>`).join('');
     const tiles = [
@@ -27061,7 +27061,7 @@ function renderRatingMonthBlocks(ranked) {
             <b class="rtx-sum">${mln(m.sales)}</b>
             <span class="rtx-meta">${m.deals} bitim${planPct != null ? ` · reja ${planPct}%` : ''}</span>
             ${b.prize ? `<span class="rtx-prize${ok ? ' is-ok' : ''}">${ok ? '✓' : '🔒'} ${escapeHtml(b.prize)}</span>` : ''}
-            ${need ? `<span class="rtx-cond">${ok ? 'Shart bajarildi' : `shart: ${b.pct ? `reja ${b.pct}% (${mln(need)})` : mln(need)} · yana ${mln(need - m.sales)}`}</span>` : ''}
+            ${need ? `<span class="rtx-cond" title="${ok ? '' : escapeHtml(`Shart: ${b.pct ? `reja ${b.pct}% (${mln(need)})` : mln(need)} · yana ${mln(need - m.sales)}`)}">${ok ? 'Shart bajarildi' : `Shart: ${b.pct ? `${b.pct}%` : mln(need)}`}</span>` : ''}
             <span class="rtx-step" aria-hidden="true"></span>
         </li>`;
     }).join('');

@@ -2650,3 +2650,84 @@ html.rd .team-scroll-btn {
 @media (max-width: 900px) {
     html.rd #managerHome > .mhx-board { order: 4; }
 }
+
+/* ==========================================================================
+   11-bosqich (aniq kamchiliklar)
+   ========================================================================== */
+@media (min-width: 901px) {
+    /* 1440px'da 4 ta ustun to'liq sig'adi, strelka sarlavhani yopmaydi */
+    html.rd #leadsKanban > .lead-column {
+        flex: 0 0 262px;
+        width: 262px;
+        min-width: 262px;
+    }
+
+    html.rd .lead-column-title {
+        white-space: normal;
+        line-height: 1.2;
+    }
+
+    html.rd .team-scroll-btn--next {
+        top: auto;
+        bottom: 24px;
+        right: 12px;
+    }
+
+    html.rd .team-scroll-btn--prev {
+        top: auto;
+        bottom: 24px;
+        left: 12px;
+    }
+
+    /* Bosh sahifa: banner va obed bir xil balandlikda, KPI ixcham */
+    html.rd .mhx .mot-home > * {
+        height: 100%;
+        box-sizing: border-box;
+    }
+
+    html.rd .mhx-kpis .ahx-kpi {
+        padding: 16px 18px;
+        min-height: 0;
+    }
+
+    /* Reyting: medal rasmi kichikroq */
+    html.rd .rtx-card-h .mot-prize-img {
+        width: 44px !important;
+        height: 44px !important;
+    }
+}
+
+@media (max-width: 900px) {
+    /* Bosh sahifa: obed va reja orasida ham 12px */
+    html.rd .mhx .mot-home {
+        margin-bottom: 12px !important;
+    }
+
+    html.rd #managerHome > .mhx-kpis {
+        margin-top: 0 !important;
+    }
+
+    /* ROP/admin: suzuvchi "+ Lid" ro'yxat oxirini yopmasin */
+    html.rd body:not([data-role="sales_manager"]) .leads-kanban > .lead-column > .lead-column-cards {
+        padding-bottom: 140px;
+    }
+}
+
+/* Ustoz: rol izohi telefonda ko'rinmaydi (ma'lumot cheklovi o'zgarmaydi) */
+@media (max-width: 900px) {
+    html.rd .rd-thx-rolebanner {
+        display: none;
+    }
+}
+
+@media (min-width: 901px) {
+    html.rd #leadsKanban .lead-card-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    html.rd #leadsKanban .lead-card-title-wrap {
+        min-width: 0;
+    }
+}
