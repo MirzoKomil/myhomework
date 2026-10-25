@@ -41,7 +41,7 @@
         ],
         teacher: [
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'dashboard' },
-            { id: 'academic', label: 'Davomat', icon: 'check', tab: 'teachers-section' },
+            { id: 'academic', label: 'Akademik', icon: 'check', tab: 'teachers-section' },
             { id: 'students', label: 'Oʻquvchilar', icon: 'students', tab: 'students' },
             { id: 'timetable', label: 'Jadval', icon: 'calendar', tab: 'timetable' }
         ],
@@ -167,6 +167,12 @@
 
     // Qidiruv: telefonda faqat ikonka, bosilganda header ichida ochiladi.
     function buildSearchToggle() {
+        // Lid qidiruvi faqat Sotuv bo'limiga kirishi bor rollarda.
+        const salesItem = document.querySelector('#sidebarMenu .menu-item[data-tab="sales"]');
+        if (salesItem && salesItem.style.display === 'none') {
+            document.body.classList.add('team-no-lead-search');
+            return;
+        }
         const header = document.querySelector('.top-header');
         const actions = header?.querySelector('.header-actions');
         if (!header || !actions || document.getElementById('teamSearchToggle')) return;
@@ -346,6 +352,108 @@
         });
     }
 
+    // Oy tanlagich (type=month): "Oktabr 2026" — brauzer tilidan qat'i nazar.
+    const UZ_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+    function enhanceMonths(root) {
+        root.querySelectorAll('input[type="month"]:not([data-team-date])').forEach(input => {
+            input.dataset.teamDate = '1';
+            const wrap = document.createElement('span');
+            wrap.className = 'team-date team-month';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.appendChild(input);
+            const face = document.createElement('span');
+            face.className = 'team-date-face';
+            face.setAttribute('aria-hidden', 'true');
+            wrap.appendChild(face);
+            const paint = () => {
+                const m = /^(\d{4})-(\d{2})$/.exec(input.value || '');
+                face.textContent = m ? `${UZ_MONTHS[Number(m[2]) - 1]} ${m[1]}` : 'Oyni tanlang';
+                wrap.classList.toggle('is-empty', !m);
+            };
+            input.addEventListener('input', paint);
+            input.addEventListener('change', paint);
+            wrap.addEventListener('click', () => { try { input.showPicker?.(); } catch { /* ruxsat yo'q */ } });
+            // Dastur qiymatni JS orqali o'zgartirsa ham yuz yangilansin
+            const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            Object.defineProperty(input, 'value', { get() { return desc.get.call(this); }, set(v) { desc.set.call(this, v); paint(); } });
+            paint();
+        });
+    }
+
+    // Texnik xato matni o'rniga tushunarli holat + "Qayta urinish".
+    function enhanceErrors(root) {
+        root.querySelectorAll('.tab-content.active div, .tab-content.active p, .tab-content.active span').forEach(el => {
+            if (el.dataset.teamErr || el.children.length) return;
+            const t = el.textContent.trim();
+            if (!/^Yuklashda xatolik/i.test(t)) return;
+            el.dataset.teamErr = '1';
+            el.title = t;
+            el.classList.add('team-err');
+            el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><span><b>Maʼlumot yuklanmadi</b><small>Internet yoki server bilan bogʻliq. Birozdan soʻng qayta urinib koʻring.</small></span><button type="button" class="mhx-btn">Qayta urinish</button>';
+            el.querySelector('button').addEventListener('click', () => { if (typeof switchTab === 'function') switchTab(_activeTab); });
+        });
+    }
+
+    // Telefonda jadval qatorlari kartaga aylanadi: har katakka ustun nomi yoziladi.
+    const CARD_TABLES = '.trial-table, .dbx-table, .sdp-table, .cf-tx-table, .ahx-tbl, .hrx-table, #tab-teachers-section table.table, #tab-analitika table.table';
+    function enhanceTables(root) {
+        root.querySelectorAll(CARD_TABLES).forEach(table => {
+            const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim().replace(/\s+/g, ' '));
+            if (!heads.length) return;
+            const sig = heads.join('|') + ':' + table.tBodies[0]?.rows.length;
+            if (table._teamSig === sig) return;
+            table._teamSig = sig;
+            table.classList.add('team-cards');
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                [...tr.children].forEach((cell, i) => {
+                    if (cell.colSpan > 1) { tr.classList.add('team-row-full'); return; }
+                    if (heads[i] && !cell.dataset.label) cell.dataset.label = heads[i];
+                });
+            });
+        });
+    }
+
+    // O'quvchi kartochkasi telefonda: bo'sh ("—") qatorlar yashiriladi.
+    function enhanceStudentRows(root) {
+        root.querySelectorAll('.students-table tr[data-student-row] > td, .students-table tr[data-student-row] > td *').forEach(el => {
+            if (el.children.length && el.tagName !== 'TD') return;
+            const t = el.textContent.replace(/\s+/g, ' ').trim();
+            const empty = !t || /^[—–-]+$/.test(t) || /^(ustoz yoʻq|ustoz yo'q)$/i.test(t) || /^Darslar: ?—/.test(t);
+            if (el.classList.contains('team-empty') !== empty) el.classList.toggle('team-empty', empty);
+        });
+    }
+
+    // Telefonda sahifa ichidagi sarlavha yuqori paneldagi bilan bir xil bo'lsa — yashiriladi.
+    function hideDuplicateHeading() {
+        const title = document.querySelector('.team-title h1')?.textContent.trim().toLowerCase();
+        const page = document.querySelector('.tab-content.active');
+        if (!title || !page) return;
+        page.querySelectorAll('h1, h2').forEach(h => {
+            const dup = h.textContent.trim().toLowerCase() === title && !h.closest('.rd-page-head, .card, .modal');
+            if (h.classList.contains('team-dup') !== dup) h.classList.toggle('team-dup', dup);
+        });
+    }
+
+    // Sotuv rejasi (jamoa): telefonda parametrlar yig'iladi, natijalar birinchi ko'rinadi.
+    function enhancePlanParams(root) {
+        root.querySelectorAll('.sp-params-card:not([data-team-coll])').forEach(card => {
+            card.dataset.teamColl = '1';
+            const head = card.querySelector('.card-header');
+            if (!head) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'team-coll-btn';
+            btn.setAttribute('aria-expanded', 'false');
+            btn.innerHTML = '<span>Parametrlarni oʻzgartirish</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+            head.appendChild(btn);
+            btn.addEventListener('click', () => {
+                const open = !card.classList.contains('is-open');
+                card.classList.toggle('is-open', open);
+                btn.setAttribute('aria-expanded', String(open));
+            });
+        });
+    }
+
     // Aktiv ichki tab gorizontal panelda ko'rinmay qolmasin.
     function revealActiveSubtab(root) {
         root.querySelectorAll('.section-nav').forEach(nav => {
@@ -374,6 +482,12 @@
             syncTitle();
             enhanceCards(document);
             enhanceDates(document);
+            enhanceMonths(document);
+            enhanceErrors(document);
+            enhanceTables(document);
+            enhanceStudentRows(document);
+            enhancePlanParams(document);
+            hideDuplicateHeading();
             revealActiveSubtab(document);
             syncBottomNav();
         });
@@ -382,12 +496,11 @@
     function init() {
         const user = currentUser();
         if (user?.role) document.body.dataset.role = user.role;
-        buildSearchToggle();
         buildDrawerProfile();
         // Sidebar ruxsatlari applyRoleBasedAccess'dan keyin aniq bo'ladi.
         const tryNav = (n = 0) => {
             const ready = document.querySelector('#sidebarMenu .menu-item[style*="display: none"]') || n > 20;
-            if (ready || ['admin', 'boshliq'].includes(user?.role)) buildBottomNav();
+            if (ready || ['admin', 'boshliq'].includes(user?.role)) { buildSearchToggle(); buildBottomNav(); }
             else setTimeout(() => tryNav(n + 1), 150);
         };
         tryNav();

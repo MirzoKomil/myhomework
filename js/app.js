@@ -9154,17 +9154,17 @@ function renderRopHome(user, students, leads, now = new Date()) {
         const min = Math.max(0, Math.round((now.getTime() - t) / 60000));
         return min < 60 ? `${min} daq oldin` : min < 1440 ? `${Math.floor(min / 60)} soat ${min % 60} daq oldin` : `${Math.floor(min / 1440)} kun oldin`;
     };
-    const esc = d.open.slice(0, 5).map(a => {
+    // Eskalatsiyalar: ixcham qator — lid · menejer · qancha kutyapti · ikki amal.
+    const esc = d.open.slice(0, 6).map(a => {
         const lead = d.list.find(l => l.id === a.leadId) || {};
         const late = now.getTime() - a.time >= 24 * 60 * LEAD_SLA_MINUTE;
-        return `<li class="rpx-esc">
-            <div class="rpx-esc-h"><strong>${escapeHtml(lead.name || 'Lid')}</strong><span class="mhx-sub">${ago(a.time)}</span></div>
-            <p>${escapeHtml(a.message || '')}</p>
-            <span class="mhx-sub">Menejer: ${escapeHtml(getLeadSlaManagerName(lead))}</span>
-            ${late ? '<div class="rpx-alert">24 soatda koʻrilmadi — adminga xabar ketdi</div>' : ''}
+        return `<li class="rpx-esc rpx-esc--row${late ? ' is-late' : ''}" title="${escapeHtml(a.message || '')}">
+            <span class="rpx-esc-dot" aria-hidden="true"></span>
+            <div class="rpx-esc-main"><strong>${escapeHtml(lead.name || 'Lid')}</strong>
+                <span class="mhx-sub">${escapeHtml(shortPersonName(getLeadSlaManagerName(lead) || '—'))} · ${ago(a.time)}${late ? ' · <b class="rpx-late">adminga ketdi</b>' : ''}</span></div>
             <div class="rpx-actions">
-                <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrib chiqildi</button>
-                <button type="button" class="mhx-btn" data-rpx-open="${escapeHtml(a.leadId)}">Lidni ochish</button>
+                <button type="button" class="mhx-btn rpx-icon" data-rpx-open="${escapeHtml(a.leadId)}" title="Lidni ochish" aria-label="Lidni ochish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>
+                <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrildi</button>
             </div>
         </li>`;
     }).join('');
@@ -9181,8 +9181,8 @@ function renderRopHome(user, students, leads, now = new Date()) {
             <div class="ahx-kpi"><span class="ahx-kpi-l">Qarzdorlar</span><b class="ahx-kpi-v">${d.overdueCount}${d.overdueCount ? ` · ${mln(d.overdueSum)}` : ''}</b><div class="ahx-kpi-n"><span>kelishilgan sana oʻtgan</span></div></div>
         </div>
         <div class="ahx-grid">
-            <section class="card ahx-card"><div class="ahx-card-h"><div><h3>Eskalatsiyalar · koʻrib chiqing</h3><span class="mhx-sub">“Koʻrib chiqildi” bosilmasa 24 soatdan keyin admin ogohlantiriladi</span></div></div>
-                ${d.open.length ? `<ul class="rpx-escs">${esc}</ul>${d.open.length > 5 ? `<p class="mhx-sub">Yana ${d.open.length - 5} ta — Sotuv boʻlimida</p>` : ''}` : '<p class="dashboard-empty">Ochiq eskalatsiya yoʻq 👍</p>'}
+            <section class="card ahx-card"><div class="ahx-card-h"><div><h3>Eskalatsiyalar${d.open.length ? ` <small>· ${d.open.length}</small>` : ''}</h3><span class="mhx-sub">24 soatda koʻrilmasa — adminga xabar ketadi</span></div></div>
+                ${d.open.length ? `<ul class="rpx-escs">${esc}</ul>${d.open.length > 6 ? `<button type="button" class="ahx-link" data-rpx-go="leads">Yana ${d.open.length - 6} ta — Lidlarda →</button>` : ''}` : '<div class="mhx-empty"><span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span><div><strong>Ochiq eskalatsiya yoʻq</strong><span class="mhx-sub">Barcha menejerlar oʻz vaqtida ishlayapti</span></div></div>'}
             </section>
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Hozirgi voronka <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-rpx-go="leads">Lidlar →</button></div>
                 <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
@@ -10446,10 +10446,18 @@ function getStudentsSelectedSubject() {
     return getSelectedSubject('studentsSubjectTabs') || _tabContext.subject || 'english';
 }
 
+// Foydalanuvchining o'z yo'nalishi (ROP/menejer/ustoz) — til tanlovi shundan boshlanadi.
+function getUserOwnLang(user = getCurrentUser()) {
+    const v = user?.linkedRopLang || user?.linkedManagerLang || user?.linkedTeacherLang || user?.subject || user?.language;
+    return v === 'russian' || v === 'english' ? v : null;
+}
+
 function initStudentsSubjectTabs() {
     const tabsEl = document.getElementById('studentsSubjectTabs');
     if (!tabsEl || tabsEl.dataset.bound) return;
     tabsEl.dataset.bound = '1';
+    const own = getUserOwnLang();
+    if (own) tabsEl.querySelectorAll('.subject-tab').forEach(b => b.classList.toggle('active', b.dataset.subject === own));
     initSubjectTabs('studentsSubjectTabs', renderStudents);
 }
 
@@ -11606,8 +11614,10 @@ function openSdpChangeSchedule(s) {
 // ===== O'qituvchilar bo'limi =====
 
 let _teachersLang = 'english';
+let _teachersLangInit = false;
 
 function renderTeachersSection() {
+    if (!_teachersLangInit) { _teachersLangInit = true; _teachersLang = getUserOwnLang() || _teachersLang; }
     // Til filtri tugmalarini bir marta bog'lash
     document.querySelectorAll('[data-teachers-lang]').forEach(btn => {
         if (btn.dataset.tlBound) return;
@@ -11718,10 +11728,11 @@ function renderTeacherTrialRows(lessons) {
                 <details class="trial-history"><summary>Sinov darsi izohlari</summary>${history || 'Izohlar yo‘q'}</details></td>
             <td>${actions}</td></tr>`;
     }).join('');
-    return `<div class="page-title-bar"><h2>Sinov darslari</h2><button type="button" class="btn-primary-sm" id="refreshTeacherTrials">Yangilash</button></div>
+    return `<div class="page-title-bar"><h2>Sinov darslari</h2><button type="button" class="wb-tool-btn trial-refresh" id="refreshTeacherTrials" title="Yangilash" aria-label="Yangilash"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button></div>
         <p class="text-muted">Faqat sizga biriktirilgan sinov darslari. Vaqt Toshkent bo‘yicha.</p>
-        <div class="card table-responsive trial-table-wrap"><table class="table trial-table"><thead><tr><th>Lid</th><th>Til</th><th>Vaqt</th><th>Holat</th><th>Amal</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="5">Sizga biriktirilgan sinov darslari yo‘q</td></tr>'}</tbody></table></div>`;
+        ${rows ? `<div class="card table-responsive trial-table-wrap"><table class="table trial-table"><thead><tr><th>Lid</th><th>Til</th><th>Vaqt</th><th>Holat</th><th>Amal</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>` : `<div class="card team-empty-state"><span class="team-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l2 2 4-4"/></svg></span>
+            <strong>Hozircha sinov darsi yoʻq</strong><span>Sotuv boʻlimi sizga sinov darsini biriktirsa, shu yerda vaqti bilan chiqadi va bildirishnoma keladi.</span></div>`}`;
 }
 
 async function renderTeacherTrialLessons(refresh = false) {
@@ -11932,11 +11943,11 @@ function renderTpRating() {
 // --- Darslik ---
 // Darslik sub-tab ro'yxati
 const TB_SECTIONS = [
-    { id: 'kurs-rejasi',   label: 'Kurs rejasi',                 icon: '📋' },
-    { id: 'sinov-darsi',   label: 'Sinov darsi materiallari',    icon: '🎯' },
-    { id: 'platforma',     label: 'Platformadagi dars materiallari', icon: '📱' },
-    { id: 'jonli-dars',    label: 'Jonli dars materiallari',     icon: '🎥' },
-    { id: 'qoshimcha',     label: "Qo'shimcha materiallar",      icon: '📎' },
+    { id: 'kurs-rejasi',   label: 'Kurs rejasi',                 icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>' },
+    { id: 'sinov-darsi',   label: 'Sinov darsi materiallari',    icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>' },
+    { id: 'platforma',     label: 'Platformadagi dars materiallari', icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>' },
+    { id: 'jonli-dars',    label: 'Jonli dars materiallari',     icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>' },
+    { id: 'qoshimcha',     label: "Qoʻshimcha materiallar",      icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.1l-9.2 9.2a6 6 0 01-8.5-8.5l9.2-9.2a4 4 0 015.7 5.7l-9.2 9.2a2 2 0 01-2.8-2.8l8.5-8.5"/></svg>' },
 ];
 
 let _tpTextbookSection = 'kurs-rejasi';
@@ -12129,11 +12140,11 @@ function renderTpWhiteboard() {
         <div class="page-title-bar" style="margin-bottom:16px"><h2>Elektron doska</h2></div>
         <div class="card" style="padding:20px">
             <div id="wbToolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-                <button type="button" class="wb-tool-btn active" data-wb-tool="pen" title="Qalam">✏️</button>
-                <button type="button" class="wb-tool-btn" data-wb-tool="eraser" title="O'chirish">🧹</button>
-                <button type="button" class="wb-tool-btn" data-wb-tool="line" title="Chiziq">📏</button>
-                <button type="button" class="wb-tool-btn" data-wb-tool="rect" title="To'rtburchak">⬜</button>
-                <button type="button" class="wb-tool-btn" data-wb-tool="circle" title="Doira">⭕</button>
+                <button type="button" class="wb-tool-btn active" data-wb-tool="pen" title="Qalam" aria-label="Qalam"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="eraser" title="Oʻchirgich" aria-label="Oʻchirgich"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H9L4 15a2 2 0 010-2.8L13.2 3a2 2 0 012.8 0L21 8a2 2 0 010 2.8L12 20"/><path d="M6 11l7 7"/></svg></button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="line" title="Chiziq" aria-label="Chiziq"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"/></svg></button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="rect" title="Toʻrtburchak" aria-label="Toʻrtburchak"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="1"/></svg></button>
+                <button type="button" class="wb-tool-btn" data-wb-tool="circle" title="Doira" aria-label="Doira"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg></button>
                 <div style="width:1px;height:28px;background:var(--border)"></div>
                 <input type="color" id="wbColor" value="#1e293b" title="Rang" style="width:32px;height:32px;border:none;cursor:pointer;border-radius:4px">
                 <select id="wbSize" title="Qalinlik" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
@@ -12143,9 +12154,9 @@ function renderTpWhiteboard() {
                     <option value="14">Juda qalin</option>
                 </select>
                 <div style="width:1px;height:28px;background:var(--border)"></div>
-                <button type="button" class="btn-secondary-sm" id="wbUndo">↩ Orqaga</button>
-                <button type="button" class="btn-secondary-sm" id="wbClear">🗑 Tozalash</button>
-                <button type="button" class="btn-primary-sm" id="wbSave">💾 Saqlash (PNG)</button>
+                <button type="button" class="wb-tool-btn" id="wbUndo" title="Orqaga" aria-label="Orqaga"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/></svg></button>
+                <button type="button" class="wb-tool-btn" id="wbClear" title="Tozalash" aria-label="Tozalash"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+                <button type="button" class="btn-primary-sm wb-save" id="wbSave"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg><span>Saqlash</span></button>
             </div>
             <canvas id="wbCanvas" style="border:1px solid var(--border);border-radius:10px;cursor:crosshair;display:block;width:100%;touch-action:none" height="500"></canvas>
         </div>
@@ -23387,6 +23398,7 @@ let _hrLangFilter = 'all'; // 'all' | 'ingliz' | 'rus'
 const HR_ROLE_MAP = {
     'rop': 'ROP',
     'sotuv-menejeri': 'Sotuv menejeri',
+    'sotuv_menejeri': 'Sotuv menejeri',
     'oqituvchi': "O'qituvchi",
     'ingliz-oqituvchi': "Ingliz tili o'qituvchi",
     'rus-oqituvchi': "Rus tili o'qituvchi",
@@ -23779,7 +23791,7 @@ function renderHrEmployees() {
             <div class="hrx-table-wrap"><table class="hrx-table">
                 <thead><tr><th scope="col">Xodim</th><th scope="col">Lavozim · boʻlim · til</th><th scope="col">Boshlagan</th><th scope="col">Holat</th></tr></thead>
                 <tbody>${filtered.map(e => `<tr class="${e.id === _hrSelectedEmpId ? 'is-selected' : ''}" data-hrx-row="${escapeHtml(e.id)}" tabindex="0" aria-selected="${e.id === _hrSelectedEmpId}">
-                    <td><div class="hrx-who"><span class="hrx-ava">${escapeHtml(getUserInitials(e.name))}</span><div><strong>${escapeHtml(e.name)}</strong><span>${escapeHtml(formatPhoneDisplay(e.phone) || '—')}</span><span>${escapeHtml(e.email || 'email kiritilmagan')}</span></div></div></td>
+                    <td><div class="hrx-who"><span class="hrx-ava">${escapeHtml(getUserInitials(e.name))}</span><div><strong>${escapeHtml(e.name)}</strong><span>${escapeHtml(formatPhoneDisplay(e.phone) || '—')}</span>${e.email ? `<span>${escapeHtml(e.email)}</span>` : ''}</div></div></td>
                     <td><strong class="hrx-role">${escapeHtml(HR_ROLE_MAP[e.role] || e.role || '—')}</strong><div class="hrx-sub">${escapeHtml(e.department || '—')} ${langChip(e)}</div></td>
                     <td>${fmtJoin(e.joinDate)}</td>
                     <td><span class="hrx-status${e.status === 'active' ? '' : ' is-off'}">${e.status === 'active' ? 'Faol' : 'Faol emas'}</span></td>

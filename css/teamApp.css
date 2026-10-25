@@ -1701,7 +1701,8 @@ html.rd .rating-main-tabs {
     }
 
     /* Bitta ustunli telefonda "Ustunlar filtri" kerak emas */
-    html.rd .leads-columns-filter-wrap {
+    html.rd #leadsFiltersBar .leads-columns-filter-wrap,
+    html.rd #bookRoadmapFiltersBar .leads-columns-filter-wrap {
         display: none !important;
     }
 
@@ -2729,5 +2730,672 @@ html.rd .team-scroll-btn {
 
     html.rd #leadsKanban .lead-card-title-wrap {
         min-width: 0;
+    }
+}
+
+/* ==========================================================================
+   Umumiy (barcha rollar): R1
+   ========================================================================== */
+
+/* Eski sahifalardagi ortiqcha ichki chekka (ikki marta padding) */
+html.rd .sales-panel > div:not([class])[style*="padding"] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Brend uslubidagi select (brauzer standarti o'rniga) */
+html.rd .main-area select:not([multiple]):not(.team-native) {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 40px;
+    padding: 8px 34px 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background-color: var(--surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6076' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+html.rd .main-area select:not([multiple]):focus {
+    outline: none;
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px var(--purple-light);
+}
+
+html.rd .main-area details > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--rd-primary-strong);
+    list-style: none;
+}
+
+html.rd .main-area details > summary::-webkit-details-marker {
+    display: none;
+}
+
+html.rd .main-area details > summary::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform .15s;
+    vertical-align: 1px;
+}
+
+html.rd .main-area details[open] > summary::before {
+    transform: rotate(45deg);
+}
+
+/* Oy tanlagich */
+html.rd .team-month > input[type="month"] {
+    color: transparent;
+    min-width: 150px;
+}
+
+html.rd .team-month > input[type="month"]::-webkit-datetime-edit {
+    opacity: 0;
+}
+
+html.rd .team-month .team-date-face {
+    font-weight: 600;
+}
+
+/* Xato holati */
+html.rd .team-err {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+    padding: 14px 16px;
+    border: 1px solid #F5C2C2;
+    border-radius: 14px;
+    background: #FFF7F7;
+    color: var(--text) !important;
+    text-align: left !important;
+    font-size: 14px;
+}
+
+html.rd[data-theme="dark"] .team-err {
+    background: #2A1A1E;
+    border-color: #5A2A30;
+}
+
+html.rd .team-err > svg {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: #C62828;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+html.rd .team-err > span {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+html.rd .team-err small {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* "Tez orada" bo'limlari menyuda ko'rinmaydi (kontent tayyor bo'lganda qaytadi) */
+html.rd [data-finance-section="moliyaviy-reja"],
+html.rd [data-finance-section="xarajatlar"],
+html.rd [data-hr-section="shartnomalar"],
+html.rd [data-hr-section="davomat"],
+html.rd [data-hr-section="academy"],
+html.rd [data-marketing-section="content-plan"],
+html.rd [data-marketing-section="competitors"],
+html.rd [data-marketing-section="marketing-stats"] {
+    display: none !important;
+}
+
+/* Lid qidiruvi faqat Sotuvga kirishi bor rollarda */
+html.rd body.team-no-lead-search .top-header .lead-search-box {
+    visibility: hidden;
+}
+
+@media (max-width: 900px) {
+    html.rd .team-dup {
+        display: none !important;
+    }
+
+    /* Til tanlovi telefonda ixcham */
+    html.rd .main-area .leads-lang-tabs,
+    html.rd .main-area .subject-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 12px;
+        background: var(--rd-col);
+        width: auto;
+    }
+
+    html.rd .main-area .leads-lang-tabs > *,
+    html.rd .main-area .subject-tabs > * {
+        min-height: 32px;
+        padding: 4px 12px;
+        border: 0 !important;
+        border-radius: 9px;
+        background: transparent;
+        font-size: 13px;
+        box-shadow: none;
+        flex: 0 0 auto;
+        width: auto;
+    }
+
+    html.rd .main-area .leads-lang-tabs > .active,
+    html.rd .main-area .subject-tabs > .active {
+        background: var(--surface);
+        color: var(--rd-primary-strong);
+        box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+    }
+
+    html.rd .main-area .leads-lang-tabs img,
+    html.rd .main-area .subject-tabs img,
+    html.rd .main-area .leads-lang-tabs .flag,
+    html.rd .main-area .subject-tabs .flag {
+        display: none;
+    }
+}
+
+/* Telefonda jadval → kartalar */
+@media (max-width: 700px) {
+    html.rd table.team-cards,
+    html.rd table.team-cards tbody {
+        display: block;
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    html.rd table.team-cards thead {
+        display: none;
+    }
+
+    html.rd table.team-cards tbody tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 6px 12px;
+        margin: 0 0 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+    }
+
+    html.rd table.team-cards tbody tr > td,
+    html.rd table.team-cards tbody tr > th {
+        display: block;
+        padding: 0 !important;
+        border: 0 !important;
+        text-align: left !important;
+        white-space: normal !important;
+        min-width: 0;
+        font-size: 13px;
+    }
+
+    html.rd table.team-cards tbody tr > :first-child {
+        grid-column: 1 / -1;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    html.rd table.team-cards tbody tr > [data-label]:not(:first-child)::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 1px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-light);
+    }
+
+    html.rd table.team-cards tbody tr.team-row-full {
+        display: block;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    html.rd table.team-cards tfoot {
+        display: none;
+    }
+
+    /* O'quvchi kartasi: bo'sh qatorlar yo'q */
+    html.rd .students-table tr[data-student-row] .team-empty {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   Ustoz kabineti: R1
+   ========================================================================== */
+
+/* Ustozda moliyaviy ustunlar yo'q (server ham bu maʼlumotni bermaydi) */
+html.rd body[data-role="teacher"] [data-students-section="qarzdorlar"] {
+    display: none !important;
+}
+
+html.rd body[data-role="teacher"] .students-table th:nth-child(1),
+html.rd body[data-role="teacher"] .students-table td:nth-child(1),
+html.rd body[data-role="teacher"] .students-table th:nth-child(4),
+html.rd body[data-role="teacher"] .students-table td:nth-child(4),
+html.rd body[data-role="teacher"] .students-table th:nth-child(7),
+html.rd body[data-role="teacher"] .students-table td:nth-child(7) {
+    display: none !important;
+}
+
+/* Bo'sh holat (umumiy) */
+html.rd .team-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+html.rd .team-empty-state strong {
+    font-size: 16px;
+    color: var(--text);
+}
+
+html.rd .team-empty-state > span:not(.team-empty-ic) {
+    max-width: 380px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .team-empty-ic {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+}
+
+html.rd .team-empty-ic svg {
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+html.rd .page-title-bar:has(.trial-refresh) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Elektron doska: ikonkali asboblar paneli */
+html.rd .wb-tool-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+}
+
+html.rd .wb-tool-btn.active {
+    background: var(--purple);
+    border-color: var(--purple);
+    color: #fff;
+}
+
+html.rd .wb-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    min-height: 38px;
+}
+
+html.rd #wbColor {
+    width: 38px !important;
+    height: 38px !important;
+    padding: 3px;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    background: var(--surface);
+}
+
+/* Davomat: bugungi darslar, bitta tab bo'lsa — yashirin */
+html.rd .teacher-duty-tabs.is-single {
+    display: none;
+}
+
+html.rd .teacher-duty-today {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+html.rd .teacher-duty-today h4 {
+    margin: 0 0 8px;
+    font-size: 15px;
+}
+
+html.rd .teacher-duty-today ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .teacher-duty-today li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+}
+
+html.rd .teacher-duty-today li > span:first-child {
+    display: flex;
+    flex-direction: column;
+}
+
+html.rd .teacher-duty-today small {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+html.rd .teacher-duty-done {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0F7A55;
+}
+
+html.rd .teacher-duty-miss {
+    font-size: 13px;
+    font-weight: 700;
+    color: #C62828;
+}
+
+html.rd .teacher-duty-count b {
+    color: var(--text);
+}
+
+@media (max-width: 900px) {
+    /* Darslik: bo'limlar yuqorida gorizontal, mazmun to'liq kenglikda */
+    html.rd .tp-tb-sidebar {
+        display: flex;
+        flex-direction: row !important;
+        width: 100% !important;
+        max-width: 100%;
+        height: auto !important;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        border: 0;
+        padding: 0 0 8px;
+        width: auto;
+        min-width: 0;
+    }
+
+    html.rd .tp-tb-sidebar-title {
+        display: none;
+    }
+
+    html.rd .tp-tb-sidebar > button.tp-tb-tab {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        height: auto !important;
+        min-height: 36px;
+        white-space: nowrap;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        padding: 6px 12px !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    html.rd .tp-tb-sidebar > button.active {
+        border-color: var(--purple);
+    }
+
+    html.rd #tpTextbook.active {
+        display: flex !important;
+        flex-direction: column;
+        grid-template-columns: 1fr !important;
+        min-width: 0;
+    }
+
+    html.rd .tp-tb-body {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        padding: 8px 0 0;
+    }
+
+    /* Elektron doska: asboblar bir qatorda suriladi */
+    html.rd #wbToolbar {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    html.rd #wbToolbar > * {
+        flex: 0 0 auto;
+    }
+
+    html.rd .wb-save span {
+        display: none;
+    }
+
+    /* Dars jadvali: boshqaruvlar bitta qatorda */
+    html.rd .rd-tt-toolbar2 {
+        display: flex !important;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+
+    html.rd .rd-tt-toolbar2 > * {
+        margin: 0 !important;
+    }
+
+    html.rd .rd-tt-edit-label {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   ROP kabineti: R1
+   ========================================================================== */
+html.rd .rpx-escs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+html.rd .rpx-esc.rpx-esc--row {
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    margin: 0;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+}
+
+html.rd .rpx-esc-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #F5A524;
+}
+
+html.rd .rpx-esc.is-late .rpx-esc-dot {
+    background: #E5484D;
+    box-shadow: 0 0 0 4px #FDECEC;
+}
+
+html.rd .rpx-esc-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+html.rd .rpx-esc-main strong {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html.rd .rpx-late {
+    color: #C62828;
+}
+
+html.rd .rpx-esc .rpx-actions {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+}
+
+html.rd .rpx-esc .rpx-actions .btn-primary-sm {
+    min-height: 36px;
+}
+
+html.rd .rpx-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    min-height: 36px;
+    padding: 0;
+}
+
+html.rd .rpx-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+}
+
+/* ROP bosh sahifasida "Individual rejalar" — kichik link ko'rinishida */
+@media (max-width: 900px) {
+    html.rd #ropHome .mhx-head > .mhx-btn {
+        display: none;
+    }
+
+    html.rd #ropHome .ahx-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    html.rd #ropHome .ahx-kpi {
+        padding: 12px;
+    }
+
+    html.rd #ropHome .ahx-kpi-v {
+        font-size: 22px;
+    }
+}
+
+/* Statistika: davr va menejer filtri bitta asboblar qatorida */
+html.rd .sfx-filters:not([hidden]) {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    vertical-align: top;
+}
+
+html.rd .sfx-filters .leads-filter-box {
+    min-width: 200px;
+}
+
+@media (max-width: 900px) {
+    html.rd .sfx-filters:not([hidden]) {
+        display: flex;
+        margin-left: 0;
+    }
+
+    html.rd .sfx-filters .leads-filter-box {
+        flex: 1 1 100%;
+    }
+}
+
+html.rd .team-coll-btn {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    html.rd .sp-params-card .team-coll-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--rd-primary-strong);
+        font: 600 14px/1.2 inherit;
+        cursor: pointer;
+    }
+
+    html.rd .team-coll-btn svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.4;
+        transition: transform .15s;
+    }
+
+    html.rd .sp-params-card.is-open .team-coll-btn svg {
+        transform: rotate(180deg);
+    }
+
+    html.rd .sp-params-card:not(.is-open) .sp-params-grid,
+    html.rd .sp-params-card:not(.is-open) .spx-formula {
+        display: none;
+    }
+
+    html.rd .sp-params-card .sp-params-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
     }
 }
