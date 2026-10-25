@@ -144,6 +144,27 @@
         });
     }
 
+    // Menyu (sidebar) tepasida profil qatori — telefonda yuqori panelda avatar yo'q.
+    function buildDrawerProfile() {
+        const side = document.getElementById('sidebar');
+        const brand = side?.querySelector('.sidebar-brand');
+        if (!brand || document.getElementById('teamDrawerProfile')) return;
+        const u = currentUser() || {};
+        const roles = { admin: 'Administrator', boshliq: 'Rahbar', rop: 'ROP', sales_manager: 'Sotuv menejeri', teacher: 'Ustoz', targetolog: 'Targetolog' };
+        const initials = String(u.name || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.id = 'teamDrawerProfile';
+        el.className = 'team-drawer-profile';
+        el.innerHTML = `<span class="team-drawer-ava">${initials}</span><span><b></b><small>${roles[u.role] || ''} · Profil</small></span>`;
+        el.querySelector('b').textContent = u.name || '';
+        brand.after(el);
+        el.addEventListener('click', () => {
+            document.getElementById('sidebarToggle')?.click();
+            document.getElementById('userAvatar')?.click();
+        });
+    }
+
     // Qidiruv: telefonda faqat ikonka, bosilganda header ichida ochiladi.
     function buildSearchToggle() {
         const header = document.querySelector('.top-header');
@@ -348,6 +369,7 @@
         const user = currentUser();
         if (user?.role) document.body.dataset.role = user.role;
         buildSearchToggle();
+        buildDrawerProfile();
         // Sidebar ruxsatlari applyRoleBasedAccess'dan keyin aniq bo'ladi.
         const tryNav = (n = 0) => {
             const ready = document.querySelector('#sidebarMenu .menu-item[style*="display: none"]') || n > 20;

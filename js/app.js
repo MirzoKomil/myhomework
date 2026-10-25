@@ -9008,10 +9008,14 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     </li>`;
     const upRow = s => `<li class="mhx-task mhx-task--soon"><div><strong>${escapeHtml(s.name || "Oʻquvchi")} · keyingi toʻlov</strong><span class="mhx-sub">Kelishilgan sana ${escapeHtml(formatDateShort(s.paymentDueDate))} · qoldiq ${escapeHtml(formatMoney(s.debtAmount))}</span></div>
         <button type="button" class="btn-secondary-sm mhx-btn" data-mhx-student="${escapeHtml(s.id)}">Oʻquvchini ochish</button></li>`;
-    const emptyTasks = `<div class="mhx-empty">
-        <span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
-        <div><strong>Muddati oʻtgan qoʻngʻiroq yoʻq</strong><span class="mhx-sub">${newLeads ? `${newLeads} ta yangi lid qoʻngʻiroq kutyapti` : 'Yangi lidlar kelishi bilan shu yerda chiqadi'}</span></div>
-        ${newLeads ? `<button type="button" class="btn-primary-sm" data-mhx-go="leads">Qoʻngʻiroq qilish</button>` : ''}</div>`;
+    const emptyTasks = newLeads
+        ? `<div class="mhx-empty mhx-empty--go">
+            <span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></span>
+            <div><strong>${newLeads} ta yangi lid qoʻngʻiroq kutyapti</strong><span class="mhx-sub">Muddati oʻtgan ish yoʻq — yangilardan boshlang</span></div>
+            <button type="button" class="btn-primary-sm" data-mhx-go="leads">Qoʻngʻiroq qilish</button></div>`
+        : `<div class="mhx-empty">
+            <span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
+            <div><strong>Bugungi ishlar bajarilgan</strong><span class="mhx-sub">Yangi lidlar kelishi bilan shu yerda chiqadi</span></div></div>`;
     return `<div class="ahx mhx" id="managerHome">
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
             <button type="button" class="btn-primary-sm mhx-add" data-mhx-add-lead aria-label="Lid qoʻshish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Lid qoʻshish</span></button></div>
@@ -26767,7 +26771,7 @@ function renderSalesPlanIndividualPlanCard() {
     const cmpRow = (label, planV, factV, fmt) => {
         const p = planV > 0 ? Math.round(factV / planV * 100) : 0;
         return `<tr><th scope="row">${label}</th><td>${fmt(planV)}</td><td>${fmt(factV)}</td>
-            <td><span class="sp-cmp-bar" aria-hidden="true"><i style="width:${Math.min(100, p)}%;background:${p >= 100 ? '#0F9D6B' : p >= 60 ? 'var(--purple)' : '#E5484D'}"></i></span><b class="${p >= 100 ? 'is-ok' : p < 60 && planV > 0 ? 'is-bad' : ''}">${planV > 0 ? p + '%' : '—'}</b></td></tr>`;
+            <td><div class="sp-cmp-cell"><span class="sp-cmp-bar" aria-hidden="true"><i style="width:${Math.min(100, p)}%;background:${p >= 100 ? '#0F9D6B' : p >= 60 ? 'var(--purple)' : '#E5484D'}"></i></span><b class="${p >= 100 ? 'is-ok' : p < 60 && planV > 0 ? 'is-bad' : ''}">${planV > 0 ? p + '%' : '—'}</b></div></td></tr>`;
     };
     const num = n => Number(n || 0).toLocaleString('uz-UZ');
     el.innerHTML = header + paceHtml + `

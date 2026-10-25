@@ -2203,3 +2203,158 @@ html.rd details.sfx-note summary {
         display: none;
     }
 }
+
+/* ==========================================================================
+   7-bosqich
+   ========================================================================== */
+html.rd .sfx-presets {
+    display: inline-flex;
+    width: fit-content;
+    overflow: visible;
+    margin-bottom: 14px;
+}
+
+html.rd .sp-cmp td:last-child {
+    display: table-cell;
+}
+
+html.rd .sp-cmp-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+html.rd .sp-pace-i small.sp-gap {
+    justify-self: start;
+    width: fit-content;
+}
+
+html.rd #spIndPlanMonthSelect {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236A4DF4' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px;
+    cursor: pointer;
+}
+
+html.rd .lead-card-action {
+    color: var(--text-muted);
+}
+
+html.rd .lead-card-action.is-zero {
+    opacity: 1;
+}
+
+html.rd .lead-card-action svg {
+    stroke: currentColor;
+}
+
+html.rd .mhx-empty--go .mhx-empty-ic {
+    background: #E3F6EE;
+    color: #0F7A55;
+}
+
+html.rd .team-drawer-profile {
+    display: none;
+}
+
+@media (min-width: 901px) {
+    html.rd .mot-hero {
+        min-height: 200px;
+    }
+
+    html.rd .lead-card-action {
+        min-width: 32px;
+        min-height: 32px;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 900px) {
+    /* Bosh sahifa: reja tilesi to'liq kenglikda, qolgan ikkitasi yonma-yon */
+    html.rd .mhx-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    html.rd .mhx-kpis .mhx-kpi--plan {
+        grid-column: 1 / -1;
+        min-height: 0;
+    }
+
+    html.rd .mhx-kpis .mhx-kpi--plan .ahx-kpi-v small {
+        font-size: 13px;
+    }
+
+    /* Reyting: davr tanlovi kichik, matnli */
+    html.rd .rating-main-tab .rmt-ic + span,
+    html.rd .rating-main-tab:not(.active) .rmt-ic + span {
+        display: inline;
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
+        padding: 0;
+        background: transparent;
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter .lang-btn {
+        flex: 0 0 auto;
+        min-height: 28px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter .lang-btn--active {
+        background: var(--purple-light);
+        box-shadow: none;
+    }
+
+    /* Menyu tepasida profil */
+    html.rd .team-drawer-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: calc(100% - 24px);
+        margin: 4px 12px 10px;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    html.rd .team-drawer-ava {
+        display: grid;
+        place-items: center;
+        flex: 0 0 40px;
+        height: 40px;
+        border-radius: 999px;
+        background: var(--purple);
+        color: #fff;
+        font-weight: 700;
+    }
+
+    html.rd .team-drawer-profile b {
+        display: block;
+        font-size: 14px;
+        color: var(--text);
+    }
+
+    html.rd .team-drawer-profile small {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    /* Ro'yxat ostida suzuvchi tugma uchun joy */
+    html.rd .leads-kanban > .lead-column > .lead-column-cards {
+        padding-bottom: 120px;
+    }
+}
