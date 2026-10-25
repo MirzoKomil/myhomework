@@ -392,7 +392,7 @@ async function recordSalaryPayment(pool, actor, salaryId, body) {
         if (Number(s.amount) <= 0) throw error(400, 'Nol yoki manfiy maosh uchun chiqim yozilmaydi');
         const prior = (await db.query('SELECT id FROM fin_transactions WHERE salary_id=$1 AND reverses_id IS NULL AND id NOT IN (SELECT reverses_id FROM fin_transactions WHERE reverses_id IS NOT NULL)', [salaryId])).rows[0];
         if (prior) return { id: prior.id, duplicate: true };
-        const day = dateOf(body.date || (s.paid_at ? new Date(s.paid_at).toISOString().slice(0, 10) : F.today()));
+        const day = dateOf(body.date || (s.paid_at ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent' }).format(new Date(s.paid_at)) : F.today()));
         await assertOpen(db, day);
         const account = await accountRow(db, body.accountId);
         const r = String(s.role || '').toLowerCase();
@@ -401,7 +401,7 @@ async function recordSalaryPayment(pool, actor, salaryId, body) {
         const id = randomUUID();
         await db.query(`INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,description,salary_id,actor_id,actor_name)
             VALUES($1,$2,$3,'expense',$4,$5,$6,$7,$8,$9,$10,$11)`, [id, s.language, day, category, account.id, Number(s.amount), s.name || s.employee_id,
-            `Maosh ${new Date(s.period_start).toISOString().slice(0, 10)} — ${new Date(s.period_end).toISOString().slice(0, 10)}`, salaryId, user.id, user.name]);
+            `Maosh ${toKey(s.period_start)} — ${toKey(s.period_end)}`, salaryId, user.id, user.name]);
         await db.query('UPDATE salary_transactions SET cash_expense_id=$2 WHERE id=$1', [salaryId, id]).catch(() => {});
         await audit(db, user, 'salary-cash-out', id, null, { salaryId, amount: Number(s.amount), date: day, account: account.id });
         return { id, duplicate: false };

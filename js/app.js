@@ -44,7 +44,7 @@ const PLACEHOLDER_TITLES = {
     settings: 'Sozlamalar'
 };
 
-let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar', analitikaSection: 'hisobotlar', settingsSection: 'archive' };
+let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'umumiy', analitikaSection: 'hisobotlar', settingsSection: 'archive' };
 let _marketingLang = 'english';
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
@@ -871,7 +871,7 @@ function switchTab(tab, ctx = {}) {
         teachersSection: ctx.teachersSection || null,
         studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol'),
         hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
-        financeSection: tab === 'finance' ? (ctx.financeSection || 'tolovlar') : (_tabContext.financeSection || 'tolovlar'),
+        financeSection: tab === 'finance' ? (ctx.financeSection || 'umumiy') : (_tabContext.financeSection || 'umumiy'),
         analitikaSection: tab === 'analitika' ? (ctx.analitikaSection || 'hisobotlar') : (_tabContext.analitikaSection || 'hisobotlar'),
         marketingSection: _tabContext.marketingSection || 'target',
         settingsSection: _tabContext.settingsSection || 'archive'
@@ -12833,7 +12833,10 @@ function applyFinanceLang() {
     });
 }
 
+// Eski bo'limlar (Cash Flow, Moliyaviy reja, Xarajatlar) yangi Moliya bo'limlariga ko'chdi.
+const FINANCE_SECTION_ALIASES = { cashflow: 'hisobotlar', 'moliyaviy-reja': 'umumiy', xarajatlar: 'operatsiyalar' };
 function switchFinanceSection(section) {
+    section = FINANCE_SECTION_ALIASES[section] || section;
     _tabContext.financeSection = section;
     document.querySelectorAll('[data-finance-section]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.financeSection === section);
@@ -12845,6 +12848,7 @@ function switchFinanceSection(section) {
     if (section === 'cashflow') { renderCashFlow(); inflowUI.refreshCash(); }
     if (section === 'tolovlar') inflowUI.render();
     if (section === 'maoshlar' || section === 'kpi') payrollUI.render(section);
+    if (window.financeUI?.handles(section)) financeUI.render(section);
     persistCurrentTab();
 }
 
@@ -12865,12 +12869,13 @@ function renderFinance() {
             applyFinanceLang();
             if (_tabContext.financeSection === 'tolovlar') inflowUI.render();
             if (['maoshlar', 'kpi'].includes(_tabContext.financeSection)) payrollUI.render(_tabContext.financeSection);
+            if (window.financeUI?.handles(_tabContext.financeSection)) financeUI.onLangChange();
         });
     });
     document.querySelectorAll('[data-finance-lang]').forEach(b =>
         b.classList.toggle('active', b.dataset.financeLang === _financeLang)
     );
-    switchFinanceSection(_tabContext.financeSection || 'tolovlar');
+    switchFinanceSection(_tabContext.financeSection || 'umumiy');
 }
 
 // --- Cash Flow ---
