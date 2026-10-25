@@ -16338,6 +16338,71 @@ function buildReasonsChart(reasonRows, { title, emptyText, centerLabel }) {
     </div>`;
 }
 
+// ===== Voronka: "Sotildi (jami tushum)" endi TO'LANGAN SANA bo'yicha =====
+// Avval bu kartochka lidning CRM'ga kelgan sanasi va hozirgi statusiga qarab
+// hisoblanardi (yarim to'lovda faqat zaklad, yopilganda butun shartnoma summasi)
+// — bu kassa tushumiga to'g'ri kelmasdi. Endi manba: Moliya to'lovlar reyestri
+// (/api/inflow). Reyestrni o'qishga ruxsati yo'q rollar (ROP, sotuv menejeri)
+// uchun xuddi o'sha qoidalar bilan lid ma'lumotidan (PaymentLedger.leadEvents)
+// hisoblanadi. Sifatsiz (test) lidlar va lidi o'chirilgan + menejersiz
+// yozuvlar tushumga qo'shilmaydi.
+const _funnelLedger = { english: null, russian: null, loading: {}, denied: false };
+
+function loadFunnelLedger(lang) {
+    if (_funnelLedger.denied || _funnelLedger[lang] || _funnelLedger.loading[lang]) return;
+    if (typeof apiFetch !== 'function') { _funnelLedger.denied = true; return; }
+    _funnelLedger.loading[lang] = true;
+    apiFetch('/api/inflow?language=' + lang)
+        .then(data => { _funnelLedger[lang] = Array.isArray(data?.records) ? data.records : []; })
+        .catch(err => { if (err?.status === 403) _funnelLedger.denied = true; })
+        .finally(() => {
+            _funnelLedger.loading[lang] = false;
+            if (document.querySelector('[data-sales-panel="sales-stats"].active')) renderSalesFunnel();
+        });
+}
+
+function computeFunnelRevenue(lang, langLeads, { from, to, mgrIds }) {
+    const leadById = new Map(langLeads.map(l => [String(l.id), l]));
+    let source = 'ledger';
+    let records = _funnelLedger[lang];
+    if (!records) {
+        source = 'leads';
+        records = [];
+        if (typeof PaymentLedger !== 'undefined') {
+            langLeads.forEach(l => {
+                PaymentLedger.leadEvents(l).events.forEach((e, i) => records.push({
+                    id: l.id + ':' + i, leadId: l.id, managerId: l.managerId, amount: e.amount,
+                    paidDate: e.paidDate, total: e.total, form: e.kind === 'closing' ? 'full' : 'partial'
+                }));
+            });
+        }
+    }
+    const isExcluded = r => {
+        const lead = r.leadId ? leadById.get(String(r.leadId)) : null;
+        if (lead) return normalizeLeadStatus(lead.status) === 'sifatsiz-lidlar';
+        return !r.managerId; // lid o'chirilgan va menejeri yo'q — sinov yozuvi
+    };
+    // Har bir o'quvchining BIRINCHI to'lovi = yangi sotuv, qolganlari = qarz to'lovi
+    const firstPaymentId = new Map();
+    [...records].sort((a, b) => String(a.paidDate).localeCompare(String(b.paidDate)) || String(a.id).localeCompare(String(b.id)))
+        .forEach(r => { const key = r.studentId || r.leadId || r.id; if (!firstPaymentId.has(key)) firstPaymentId.set(key, r.id); });
+
+    let revenue = 0, excludedAmount = 0, newSales = 0, repayments = 0, contractSum = 0;
+    records.forEach(r => {
+        if (from && r.paidDate < from) return;
+        if (to && r.paidDate > to) return;
+        if (mgrIds && !mgrIds.has(r.managerId)) return;
+        const amount = Number(r.amount) || 0;
+        if (isExcluded(r)) { excludedAmount += amount; return; }
+        revenue += amount;
+        if (firstPaymentId.get(r.studentId || r.leadId || r.id) === r.id) {
+            newSales++;
+            contractSum += Number(r.total) || amount;
+        } else repayments++;
+    });
+    return { revenue, excludedAmount, newSales, repayments, avgCheck: newSales ? Math.round(contractSum / newSales) : 0, source };
+}
+
 function renderSalesFunnel() {
     const panel = document.querySelector('[data-sales-panel="sales-stats"]');
     if (!panel) return;
@@ -16533,14 +16598,20 @@ function renderSalesFunnel() {
     const sifatsizCount = extraStagesData[1].count;
     // Sotuvlar: yarim toʻlov (tolov-jarayonida) + toʻliq toʻlov (tolov-yopildi)
     const partialLeads = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-jarayonida');
-    const fullLeads = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
     const partialCount = partialLeads.length;
     const totalSold = converted + partialCount; // converted = tolov-yopildi
-    // Summa hisoblash
-    const partialRevenue = partialLeads.reduce((s, l) => s + Number(l?.paymentSurvey?.paidAmount || 0), 0);
-    const fullRevenue = fullLeads.reduce((s, l) => s + Number(l?.paymentClosedSurvey?.actualAmount || l?.paymentClosedSurvey?.totalAmount || l?.paymentSurvey?.totalAmount || 0), 0);
-    const totalRevenue = partialRevenue + fullRevenue;
-    const avgCheck = totalSold > 0 && totalRevenue > 0 ? Math.round(totalRevenue / totalSold) : 0;
+    // Summa: to'langan sana bo'yicha (Moliya reyestri). Davr — tanlangan sana
+    // filtri (avval "CRMga kelib tushgan", bo'lmasa "biriktirilgan" oralig'i).
+    if (!isSalesManagerFunnel && !['rop'].includes(_cuFunnel?.role)) loadFunnelLedger(lang);
+    const revFrom = _createdFrom || _assignedFrom || '';
+    const revTo = _createdFrom ? _createdTo : (_assignedFrom ? _assignedTo : '');
+    const rev = computeFunnelRevenue(lang, langLeads, { from: revFrom, to: revTo, mgrIds: _salesFunnelMgrIds });
+    const totalRevenue = rev.revenue;
+    const avgCheck = rev.avgCheck;
+    const _dm = k => k ? `${k.slice(8)}.${k.slice(5, 7)}` : '';
+    const revPeriodTxt = revFrom ? (revFrom === revTo ? _dm(revFrom) : `${_dm(revFrom)}–${_dm(revTo)}`) : 'barcha vaqt';
+    const revSub = `toʻlangan sana: ${revPeriodTxt} · ${rev.newSales} yangi sotuv + ${rev.repayments} qarz toʻlovi`
+        + (rev.excludedAmount > 0 ? ` · test/sifatsiz ${Number(rev.excludedAmount).toLocaleString('uz-UZ')} chiqarildi` : '');
     const fmtSum = n => n > 0 ? Number(n).toLocaleString('uz-UZ') + " so’m" : '—';
     const maxCount = Math.max(1, ...stagesData.map(x => x.count));
     const pctTxt = n => String(n).replace('.', ',');
@@ -16552,9 +16623,9 @@ function renderSalesFunnel() {
         </li>`).join('');
     const tiles = [
         ['Konversiya (toʻlov yopildi)', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
-        ['Sotildi (jami tushum)', fmtSum(totalRevenue), `${partialCount} yarim + ${converted} toʻliq = ${totalSold} ta`],
+        ['Tushum (kassa)', fmtSum(totalRevenue), revSub],
         ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
-        ['Oʻrtacha chek', fmtSum(avgCheck), totalSold > 0 ? `${totalSold} ta sotuvga asosan` : 'maʼlumot yoʻq'],
+        ['Oʻrtacha chek', fmtSum(avgCheck), rev.newSales > 0 ? `${rev.newSales} ta yangi sotuv shartnomasi boʻyicha` : 'maʼlumot yoʻq'],
     ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('');
 
     panel.innerHTML = `
@@ -16580,10 +16651,11 @@ function renderSalesFunnel() {
                 <div><dt>Hali jarayonda (ochiq bosqichlarda)</dt><dd>${inProgress}</dd></div>
                 <div><dt>Keyin sotib olmoqchi</dt><dd>${laterCount}</dd></div>
                 ${extraStagesData.map(st => `<div><dt><i style="background:${st.color}"></i>${escapeHtml(st.label)}</dt><dd>${st.count} <small>· ${st.share}%</small></dd></div>`).join('')}
-                <div class="sfx-out-total"><dt>Sotildi (jami tushum)</dt><dd>${totalSold} ta · <b>${fmtSum(totalRevenue)}</b></dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yarim toʿlov (Toʻlov jarayonida)</dt><dd style="font-size:13px">${partialCount} ta · <span style="color:var(--text-muted)">${fmtSum(partialRevenue)}</span></dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʿlio toʿlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted} ta · <span style="color:var(--text-muted)">${fmtSum(fullRevenue)}</span></dd></div>
-                ${avgCheck > 0 ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">Oʻrtacha chek</dt><dd style="font-size:14px;font-weight:600">${fmtSum(avgCheck)}</dd></div>` : ''}
+                <div class="sfx-out-total"><dt>Sotildi (lidlar)</dt><dd>${totalSold} ta <small>· ${partialCount} yarim + ${converted} toʻliq</small></dd></div>
+                <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">Tushum (kassa, ${revPeriodTxt})</dt><dd style="font-size:14px;font-weight:600">${fmtSum(totalRevenue)}</dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yangi sotuvlar</dt><dd style="font-size:13px">${rev.newSales} ta</dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Qarz toʻlovlari</dt><dd style="font-size:13px">${rev.repayments} ta</dd></div>
+                ${rev.source === 'leads' ? `<div><dt style="font-size:12px;color:var(--text-muted)">Moliya reyestri ochilmadi — lid maʼlumotidan hisoblandi</dt><dd></dd></div>` : ''}
             </dl>
             <p class="sfx-note">${totalSold} sotildi (${partialCount} yarim + ${converted} toʻliq) + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${totalSold + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
         </section>
@@ -18579,6 +18651,15 @@ function getSelectedPaymentTotal(modalBody) {
     return parsePaymentAmountNumber(amount.value);
 }
 
+// 10 000 so'mdan kam to'lov deyarli har doim kiritishdagi xato (masalan,
+// 300 000 o'rniga 300). Saqlashdan oldin tasdiq so'raladi.
+const SUSPICIOUS_PAYMENT_MIN = 10000;
+function confirmSuspiciousPaymentAmount(amount) {
+    const n = Number(amount);
+    if (!(n > 0 && n < SUSPICIOUS_PAYMENT_MIN)) return true;
+    return window.confirm(`Summa: ${n.toLocaleString('uz-UZ')} so'm — bu juda kichik.\n\nNollar tushib qolmaganmi (masalan, 300 o'rniga 300 000)?\n\n"OK" — summa to'g'ri, saqlash.\n"Cancel" — orqaga qaytib tuzatish.`);
+}
+
 function collectPaymentSurveyData(modalBody) {
     const getRadio = name => modalBody.querySelector(`[data-payment-field="${name}"]:checked`);
 
@@ -18610,6 +18691,7 @@ function collectPaymentSurveyData(modalBody) {
         if (!customRaw || !Number.isFinite(customVal) || customVal <= 0) {
             return { error: 'Boshqa summani kiriting', target: '#paymentCustomAmount' };
         }
+        if (!confirmSuspiciousPaymentAmount(customVal)) return { error: 'Summani tekshiring', target: '#paymentCustomAmount' };
         totalAmount = customVal;
         amountLabel = formatUzMoney(customVal);
     } else {
@@ -18634,6 +18716,7 @@ function collectPaymentSurveyData(modalBody) {
         if (paid > totalAmount) {
             return { error: 'To\'langan summa umumiy summadan katta bo\'lmasligi kerak', target: '#paymentPaidAmount' };
         }
+        if (!confirmSuspiciousPaymentAmount(paid)) return { error: 'To\'langan summani tekshiring', target: '#paymentPaidAmount' };
         paidAmount = paid;
         paidAmountLabel = formatUzMoney(paid);
 
@@ -20199,6 +20282,7 @@ function collectEnhancedPaymentClosedData(modalBody, ps, flags = {}) {
     const actualAmount = actualAmountRaw ? Number(actualAmountRaw.replace(/[\s,]/g, '')) : null;
     if (!actualAmountRaw) return { error: "To'lov qilingan summani kiriting" };
     if (!Number.isSafeInteger(actualAmount) || actualAmount < 0) return { error: 'To‘lov summasi noto‘g‘ri' };
+    if (!confirmSuspiciousPaymentAmount(actualAmount)) return { error: 'To‘lov summasini tekshiring' };
     const noDebtConfirmed = modalBody.querySelector('#pcNoDebtConfirm')?.checked;
     if (!noDebtConfirmed) return { error: "O'quvchi qarzdor emasligini tasdiqlang" };
 
