@@ -8564,6 +8564,7 @@ function renderManagerGoalBlock(managerId, lang) {
     const daily = tiers(DAILY_BONUSES);
     const next = monthly.find(b => month < b.threshold);
     const daysLeft = _monthDaysLeft();
+    const mln = n => { const v = (Number(n) || 0) / 1e6; return v ? `${String(Math.round(v * 10) / 10).replace('.', ',')} mln soʻm` : '0 soʻm'; };
     const ranked = getSalesManagers(lang).map(m => ({ id: m.id, name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik') }))
         .sort((a, b) => b.sales - a.sales);
     const place = ranked.findIndex(m => m.id === managerId) + 1;
@@ -8574,9 +8575,9 @@ function renderManagerGoalBlock(managerId, lang) {
         const pct = Math.min(100, Math.round(month / next.threshold * 100));
         goal = `<section class="mot-goal" aria-label="Sovgʻaga yoʻl">${_prizeImg(next.id, 96)}
             <div class="mot-goal-txt"><span class="mot-eyebrow">Sovgʻaga yoʻl · ${daysLeft} kun qoldi</span>
-            <h3 class="mot-goal-title">${escapeHtml(next.label || '')} uchun yana ${fmtMoney(gap)}</h3>
-            <div class="mot-team"><span><strong>${pct}%</strong></span><span class="mot-bar" role="progressbar" aria-label="${escapeHtml(next.label || '')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></span><span>${fmtMoney(month)} / ${fmtMoney(next.threshold)}</span></div>
-            <span class="mot-sub">Kuniga ${fmtMoney(Math.ceil(gap / daysLeft))}${place ? ` · reytingda ${place}-oʻrin` : ''}${ahead ? `, ${escapeHtml(_firstName(ahead.name))}dan ${fmtMoney(Math.max(0, ahead.sales - month))} orqada` : ''}</span></div></section>`;
+            <h3 class="mot-goal-title">${escapeHtml(next.label || '')} uchun yana ${mln(gap)}</h3>
+            <div class="mot-team"><span><strong>${pct}%</strong></span><span class="mot-bar" role="progressbar" aria-label="${escapeHtml(next.label || '')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></span><span class="mot-goal-frac">${mln(month)} / ${mln(next.threshold)}</span></div>
+            <span class="mot-sub">Kuniga ${mln(Math.ceil(gap / daysLeft))}${place ? ` · ${place}-oʻrin` : ''}${ahead ? `<span class="mot-sub-x">, ${escapeHtml(_firstName(ahead.name))}dan ${mln(Math.max(0, ahead.sales - month))} orqada</span>` : ''}</span></div></section>`;
     } else {
         goal = `<section class="mot-goal" aria-label="Sovgʻaga yoʻl"><div class="mot-goal-txt"><span class="mot-eyebrow">Sovgʻaga yoʻl</span><h3 class="mot-goal-title">Bu oy barcha oylik sovgʻalar olindi!</h3></div></section>`;
     }
@@ -8584,9 +8585,9 @@ function renderManagerGoalBlock(managerId, lang) {
     const nextDaily = daily.find(b => today < b.threshold);
     const obed = `<section class="card mot-obed" aria-label="Bugungi obed">${_prizeImg('obed', 80)}
         <div style="display:flex;flex-direction:column;gap:4px;min-width:0"><h3 style="margin:0;font-size:16px">Bugungi obed</h3>
-        <b style="font-size:20px">${fmtMoney(today)}</b>
+        <b style="font-size:20px">${mln(today)}</b>
         ${got ? `<span class="mot-chip mot-chip--ok">✓ ${escapeHtml(got.label || '')}</span>` : ''}
-        <span class="mot-prize-note">${nextDaily ? `“${escapeHtml(nextDaily.label || '')}” uchun yana ${fmtMoney(nextDaily.threshold - today)}` : 'Eng yuqori obed olindi 🎉'}</span></div></section>`;
+        <span class="mot-prize-note">${nextDaily ? `“${escapeHtml(nextDaily.label || '')}” uchun yana ${mln(nextDaily.threshold - today)}` : 'Eng yuqori obed olindi 🎉'}</span></div></section>`;
     return `<div class="mot-home">${goal}${obed}</div>`;
 }
 
@@ -9024,18 +9025,40 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
             <div class="ahx-kpi"><span class="ahx-kpi-l">Maoshim · taxminiy</span><b class="ahx-kpi-v" id="mhxSalary">…</b><div class="ahx-kpi-n"><span id="mhxSalaryNote">oy yopilganda aniqlanadi</span></div></div>
         </div>
         <div class="ahx-grid mhx-grid">
-            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugun qilish kerak <small>· ${d.tasks.length}</small></h3>${d.tasks.some(t => t.late) ? `<span class="ahx-pill ahx-pill--danger">${d.tasks.filter(t => t.late).length} tasi kechikkan</span>` : ''}</div>
+            <div class="mhx-side">
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugun qilish kerak${d.tasks.length ? ` <small>· ${d.tasks.length}</small>` : ''}</h3>${d.tasks.some(t => t.late) ? `<span class="ahx-pill ahx-pill--danger">${d.tasks.filter(t => t.late).length} tasi kechikkan</span>` : ''}</div>
                 ${d.tasks.length ? `<ul class="mhx-tasks">${d.tasks.slice(0, 8).map(taskRow).join('')}</ul>${d.tasks.length > 8 ? `<p class="mhx-sub">Yana ${d.tasks.length - 8} ta — Lidlar va Qarzdorlar boʻlimida</p>` : ''}` : emptyTasks}
                 ${d.upcoming.length ? `<h4 class="mhx-h4">Yaqinlashayotgan · kelishilgan toʻlov sanalari</h4><ul class="mhx-tasks">${d.upcoming.slice(0, 5).map(upRow).join('')}</ul>` : ''}
                 <h4 class="mhx-h4">Mening oʻquvchilarim</h4>
                 <ul class="mhx-stats mhx-stats--row"><li><b>${d.active}</b><span>Faol</span></li><li><b>${d.installments}</b><span>Boʻlib toʻlamoqda</span></li><li><b class="${d.overdue.length ? 'is-bad' : ''}">${d.overdue.length}</b><span>Qarzdor</span></li></ul>
                 ${d.overdue.length ? `<button type="button" class="ahx-link" data-mhx-go="debtors">Qarzdorlarim: ${escapeHtml(d.overdue.slice(0, 3).map(s => shortPersonName(s.name || '')).join(', '))} →</button>` : ''}
             </section>
+            ${renderManagerMiniBoard(managerId, d.lang, n => (Number(n) ? mln(n) + ' mln' : '0'))}
+            </div>
+            <div class="mhx-side">
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening voronkam <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-mhx-go="leads">Lidlar →</button></div>
                 <ul class="ahx-funnel mhx-funnel">${d.funnel.map(f => `<li><button type="button" data-mhx-stage="${escapeHtml(f.id || '')}"><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%;background:${stageColor(f.id)}"></em></i><b>${f.count}</b></button></li>`).join('')}</ul>
             </section>
+            </div>
         </div>
     </div>`;
+}
+
+// Bosh sahifadagi kichik reyting: TOP-3 + o'zim (agar TOP-3 da bo'lmasam).
+function renderManagerMiniBoard(managerId, lang, mln) {
+    if (typeof getSalesManagers !== 'function' || typeof getManagerSalesForPeriod !== 'function') return '';
+    const ranked = getSalesManagers(lang).map(m => ({ id: m.id, name: m.name || '', sales: getManagerSalesForPeriod(m.id, 'oylik') }))
+        .sort((a, b) => b.sales - a.sales);
+    if (ranked.length < 2) return '';
+    const meIdx = ranked.findIndex(m => m.id === managerId);
+    const rows = ranked.slice(0, 3).map((m, i) => ({ ...m, i }));
+    if (meIdx > 2) rows.push({ ...ranked[meIdx], i: meIdx, gapAbove: true });
+    const medal = ['#F5B300', '#A7B0C0', '#D4885A'];
+    return `<section class="card ahx-card mhx-board"><div class="ahx-card-h"><h3>Oy reytingi</h3><button type="button" class="ahx-link" data-mhx-go="rating">Reyting →</button></div>
+        <ol class="mhx-board-list">${rows.map(m => `<li class="${m.id === managerId ? 'is-me' : ''}${m.gapAbove ? ' is-gap' : ''}">
+            <span class="mhx-board-rank" style="${m.i < 3 ? `background:${medal[m.i]};color:#fff` : ''}">${m.i + 1}</span>
+            <span class="mhx-board-name">${escapeHtml(m.id === managerId ? 'Siz' : shortPersonName(m.name))}</span>
+            <b>${mln(m.sales)}</b></li>`).join('')}</ol></section>`;
 }
 
 function bindManagerHome(container) {
@@ -9046,7 +9069,9 @@ function bindManagerHome(container) {
     container.querySelectorAll('[data-mhx-student]').forEach(btn => btn.addEventListener('click', () => openStudentDetail(btn.dataset.mhxStudent)));
     container.querySelectorAll('[data-mhx-go]').forEach(btn => btn.addEventListener('click', () => {
         switchTab('sales');
-        if (btn.dataset.mhxGo === 'debtors') { _debtorsQuick = 'overdue'; switchSalesSection('debtors'); } else switchSalesSection('leads');
+        if (btn.dataset.mhxGo === 'debtors') { _debtorsQuick = 'overdue'; switchSalesSection('debtors'); }
+        else if (btn.dataset.mhxGo === 'rating') switchSalesSection('rating');
+        else switchSalesSection('leads');
     }));
     container.querySelectorAll('[data-mhx-stage]').forEach(btn => btn.addEventListener('click', () => {
         switchTab('sales');
@@ -16352,6 +16377,26 @@ function buildReasonsChart(reasonRows, { title, emptyText, centerLabel }) {
     </div>`;
 }
 
+// Statistika: tez davr tanlash (biriktirilgan kun bo'yicha). "Sana tanlash" to'liq filtrlarni ochadi.
+let _sfxShowDates = false;
+function _sfxIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function _sfxPresetRange(id) {
+    const now = new Date();
+    const today = _sfxIso(now);
+    if (id === 'today') return [today, today];
+    if (id === 'week') { const d = new Date(now); d.setDate(d.getDate() - 6); return [_sfxIso(d), today]; }
+    if (id === 'month') return [_sfxIso(new Date(now.getFullYear(), now.getMonth(), 1)), today];
+    return ['', ''];
+}
+function _sfxPresetChips() {
+    const cur = [_salesFunnelAssignedFrom || '', _salesFunnelAssignedTo || ''].join('|');
+    const noCreated = !_salesFunnelCreatedFrom && !_salesFunnelCreatedTo;
+    return [['all', 'Hammasi'], ['today', 'Bugun'], ['week', '7 kun'], ['month', 'Shu oy']].map(([id, label]) => {
+        const on = noCreated && _sfxPresetRange(id).join('|') === cur;
+        return `<button type="button" class="sfx-chip${on ? ' active' : ''}" data-sfx-preset="${id}" aria-pressed="${on}">${label}</button>`;
+    }).join('');
+}
+
 function renderSalesFunnel() {
     const panel = document.querySelector('[data-sales-panel="sales-stats"]');
     if (!panel) return;
@@ -16555,7 +16600,7 @@ function renderSalesFunnel() {
     const fullRevenue = fullLeads.reduce((s, l) => s + Number(l?.paymentClosedSurvey?.actualAmount || l?.paymentClosedSurvey?.totalAmount || l?.paymentSurvey?.totalAmount || 0), 0);
     const totalRevenue = partialRevenue + fullRevenue;
     const avgCheck = totalSold > 0 && totalRevenue > 0 ? Math.round(totalRevenue / totalSold) : 0;
-    const fmtSum = n => n > 0 ? Number(n).toLocaleString('uz-UZ') + " so’m" : '—';
+    const fmtSum = n => Number(n || 0).toLocaleString('uz-UZ') + " soʻm";
     const maxCount = Math.max(1, ...stagesData.map(x => x.count));
     const pctTxt = n => String(n).replace('.', ',');
     const barRows = stagesData.map(st => `
@@ -16575,10 +16620,13 @@ function renderSalesFunnel() {
     <div class="sfx-head">
         <div><h1>Sotuv voronkasi</h1><p>${langLabel} yoʻnalishi · lidlar hozir qaysi bosqichda turgani</p></div>
     </div>
-    <div class="sfx-filters">
+    <div class="sfx-presets" role="group" aria-label="Davr">
+        ${_sfxPresetChips()}
+        <button type="button" class="sfx-chip${_sfxShowDates ? ' active' : ''}" data-sfx-dates aria-expanded="${_sfxShowDates}">Sana tanlash</button>
+    </div>
+    <div class="sfx-filters"${_sfxShowDates || mgrFilterHtml ? '' : ' hidden'}>
         ${mgrFilterHtml}
-        ${assignedDateFilterHtml}
-        ${createdDateFilterHtml}
+        ${_sfxShowDates ? assignedDateFilterHtml + createdDateFilterHtml : ''}
     </div>
 
     <div class="sfx-tiles">${tiles}</div>
@@ -16599,7 +16647,7 @@ function renderSalesFunnel() {
                 <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʿlio toʿlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted} ta · <span style="color:var(--text-muted)">${fmtSum(fullRevenue)}</span></dd></div>
                 ${avgCheck > 0 ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">Oʻrtacha chek</dt><dd style="font-size:14px;font-weight:600">${fmtSum(avgCheck)}</dd></div>` : ''}
             </dl>
-            <p class="sfx-note">${totalSold} sotildi (${partialCount} yarim + ${converted} toʻliq) + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${totalSold + failedCount + sifatsizCount + inProgress + laterCount} lid.</p>
+            <details class="sfx-note"><summary>Qanday hisoblandi?</summary>${totalSold} sotildi (${partialCount} yarim + ${converted} toʻliq) + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${totalSold + failedCount + sifatsizCount + inProgress + laterCount} lid.</details>
         </section>
     </div>
     ${isSalesManagerFunnel ? '' : buildManagerPerformanceTable(filteredLeads, getItem(STORAGE_KEYS.salesManagers, []))}
@@ -16686,6 +16734,18 @@ function renderSalesFunnel() {
     document.getElementById('funnelCreatedDateClear')?.addEventListener('click', () => {
         _salesFunnelCreatedFrom = '';
         _salesFunnelCreatedTo = '';
+        renderSalesFunnel();
+    });
+    panel.querySelectorAll('[data-sfx-preset]').forEach(btn => btn.addEventListener('click', () => {
+        const [from, to] = _sfxPresetRange(btn.dataset.sfxPreset);
+        _salesFunnelAssignedFrom = from;
+        _salesFunnelAssignedTo = to;
+        _salesFunnelCreatedFrom = '';
+        _salesFunnelCreatedTo = '';
+        renderSalesFunnel();
+    }));
+    panel.querySelector('[data-sfx-dates]')?.addEventListener('click', () => {
+        _sfxShowDates = !_sfxShowDates;
         renderSalesFunnel();
     });
     const demographicFilterBindings = [
@@ -26634,8 +26694,8 @@ function renderSalesPlanIndividualPlanCard() {
     const actualAvgCheck = actualDeals > 0 ? Math.round(actualAmount / actualDeals) : 0;
 
     const header = `
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-            <h3 style="margin:0">Oylik reja</h3>
+        <div class="card-header sp-card-h">
+            <h3>Oylik reja</h3>
             <div style="display:flex;align-items:center;gap:8px">${oySelect}
                 ${hasIndividualSalesPlan(plan) && getCurrentUser()?.role !== 'sales_manager' ? '<button class="btn-ghost sp-edit-btn" id="spIndEditPlanBtn" title="Rejani tahrirlash" aria-label="Rejani tahrirlash"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>' : ''}
             </div>
@@ -26666,37 +26726,44 @@ function renderSalesPlanIndividualPlanCard() {
         const diff = actualAmount - due;
         const today = typeof getManagerSalesForPeriod === 'function' ? getManagerSalesForPeriod(_spIndManagerId, 'kunlik') : 0;
         const perDay = Math.ceil(left / daysLeft);
-        const mln = n => { const v = (Number(n) || 0) / 1e6; return `${String(Math.abs(v) >= 10 ? Math.round(v) : Math.round(v * 10) / 10).replace('.', ',')} mln soʻm`; };
+        const mlnN = n => { const v = (Number(n) || 0) / 1e6; return String(Math.abs(v) >= 10 ? Math.round(v) : Math.round(v * 10) / 10).replace('.', ','); };
+        const mln = n => Number(n) ? `${mlnN(n)} mln soʻm` : '0 soʻm';
+        const big = n => `${mlnN(n)}<small> mln soʻm</small>`;
+        let prizeLine = '';
+        try {
+            const monthSales = getManagerSalesForPeriod(_spIndManagerId, 'oylik');
+            const nextPrize = MONTHLY_BONUSES.map(getMergedBonus).filter(x => Number(x.threshold) > 0).sort((x, y) => x.threshold - y.threshold).find(x => monthSales < x.threshold);
+            if (nextPrize) prizeLine = `<div class="sp-prize">${_prizeImg(nextPrize.id, 40)}<span><b>${escapeHtml(nextPrize.label || '')}</b> sovgʻasigacha ${mln(nextPrize.threshold - monthSales)} · kuniga ${mln(Math.ceil((nextPrize.threshold - monthSales) / daysLeft))}</span></div>`;
+        } catch (e) { prizeLine = ''; }
         paceHtml = `<div class="sp-pace">
-            <div class="sp-pace-i sp-pace-i--hero"><span>Bugungi maqsad</span><b title="${escapeHtml(fmtMoney(perDay))}">${mln(perDay)}</b><small>${today ? `bugun ${mln(today)} sotildi` : 'bugun hali sotuv yoʻq'}</small></div>
-            <div class="sp-pace-i"><span>Rejagacha qoldi</span><b title="${escapeHtml(fmtMoney(left))}">${mln(left)}</b><small>${daysLeft} kun qoldi</small></div>
-            <div class="sp-pace-i"><span>Bugungacha kerak edi</span><b title="${escapeHtml(fmtMoney(due))}">${mln(due)}</b><small class="${diff >= 0 ? 'is-ok' : 'is-bad'}">${diff >= 0 ? 'oldindasiz' : 'orqadasiz'} ${mln(Math.abs(diff))}</small></div>
-        </div>`;
+            <div class="sp-pace-i sp-pace-i--hero"><span>Bugungi maqsad</span><b title="${escapeHtml(fmtMoney(perDay))}">${big(perDay)}</b><small>${today ? `bugun ${mln(today)} sotildi` : 'bugun hali sotuv yoʻq'}</small></div>
+            <div class="sp-pace-i"><span>Rejagacha qoldi</span><b title="${escapeHtml(fmtMoney(left))}">${big(left)}</b><small>${daysLeft} kun qoldi</small></div>
+            <div class="sp-pace-i"><span>Bugungacha kerak edi</span><b title="${escapeHtml(fmtMoney(due))}">${big(due)}</b><small class="sp-gap ${diff >= 0 ? 'is-ok' : 'is-bad'}">${diff >= 0 ? '+' : '−'}${mln(Math.abs(diff))} ${diff >= 0 ? 'oldindasiz' : 'orqadasiz'}</small></div>
+        </div>${prizeLine}`;
     }
 
+    const pctRaw = plan.totalAmount > 0 ? Math.round(actualAmount / plan.totalAmount * 100) : 0;
+    const cmpRow = (label, planV, factV, fmt) => {
+        const p = planV > 0 ? Math.round(factV / planV * 100) : 0;
+        return `<tr><th scope="row">${label}</th><td>${fmt(planV)}</td><td>${fmt(factV)}</td>
+            <td><span class="sp-cmp-bar" aria-hidden="true"><i style="width:${Math.min(100, p)}%"></i></span><b>${planV > 0 ? p + '%' : '—'}</b></td></tr>`;
+    };
+    const num = n => Number(n || 0).toLocaleString('uz-UZ');
     el.innerHTML = header + paceHtml + `
-        ${plan.legacy ? `<div style="margin:0 16px;padding:8px 10px;border-radius:6px;background:rgba(217,119,6,.1);color:#b45309;font-size:12px">Bu reja oyi ko'rsatilmagan eski yozuv. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun biriktiriladi.</div>` : ''}
-        ${plan.carriedOverFrom ? `<div style="margin:0 16px;padding:8px 10px;border-radius:6px;background:rgba(79,140,255,.1);color:var(--purple,#7c3aed);font-size:12px">Bu reja ${escapeHtml(monthKeyLabel(plan.carriedOverFrom))} oyidan avtomatik ko'chirilgan. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun alohida biriktiriladi.</div>` : ''}
-        <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
-            <div>
-                <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">REJA</div>
-                <div class="sp-row"><span>Jami sotuv summasi</span><b>${fmtMoney(plan.totalAmount)}</b></div>
-                <div class="sp-row"><span>Sotuvlar soni</span><b>${plan.dealsCount.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(plan.avgCheck)}</b></div>
-            </div>
-            <div>
-                <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px">FAKT (${escapeHtml(monthKeyLabel(oy))})</div>
-                <div class="sp-row"><span>Jami sotuv summasi</span><b>${fmtMoney(actualAmount)}</b></div>
-                <div class="sp-row"><span>Sotuvlar soni</span><b>${actualDeals.toLocaleString('uz-UZ')}</b></div>
-                <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(actualAvgCheck)}</b></div>
-            </div>
+        ${plan.legacy ? `<div class="sp-notice">Bu reja oyi ko'rsatilmagan eski yozuv. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun biriktiriladi.</div>` : ''}
+        ${plan.carriedOverFrom ? `<div class="sp-notice sp-notice--info">Bu reja ${escapeHtml(monthKeyLabel(plan.carriedOverFrom))} oyidan avtomatik ko'chirilgan. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun alohida biriktiriladi.</div>` : ''}
+        <div class="sp-progress">
+            <div class="sp-progress-h"><span>Oy rejasi</span><b>${pctRaw}% bajarildi</b></div>
+            <span class="sp-progress-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></span>
         </div>
-        <div style="padding:0 16px 16px">
-            <div style="height:10px;border-radius:6px;background:var(--border);overflow:hidden">
-                <div style="height:100%;width:${pct}%;background:${color}"></div>
-            </div>
-            <div style="text-align:right;margin-top:6px;font-size:13px;font-weight:700;color:${color}">${pct}% bajarildi</div>
-        </div>`;
+        <div class="sp-cmp-wrap"><table class="sp-cmp">
+            <thead><tr><th></th><th>Reja</th><th>Fakt</th><th>Bajarildi</th></tr></thead>
+            <tbody>
+                ${cmpRow('Sotuv summasi', plan.totalAmount, actualAmount, n => { const v = (Number(n) || 0) / 1e6; return v ? `${String(Math.round(v * 10) / 10).replace('.', ',')} mln` : '0'; })}
+                ${cmpRow('Sotuvlar soni', plan.dealsCount, actualDeals, num)}
+                ${cmpRow('Oʻrtacha chek', plan.avgCheck, actualAvgCheck, n => { const v = (Number(n) || 0) / 1e6; return v ? `${String(Math.round(v * 100) / 100).replace('.', ',')} mln` : '0'; })}
+            </tbody>
+        </table></div>`;
     wireMonth();
 }
 

@@ -110,6 +110,8 @@
         });
         document.body.appendChild(bar);
         document.body.classList.add('has-team-nav');
+        // Pastki panelda bor bo'limlar Sotuvning yuqori tablarida takrorlanmasin.
+        items.filter(i => i.sales && i.id !== 'sales').forEach(i => document.body.classList.add('team-nav-' + i.sales));
         syncBottomNav();
     }
 
@@ -149,7 +151,7 @@
             el.className = 'team-title';
             header.querySelector('.lead-search-box')?.before(el);
         }
-        const title = TITLES[_activeTab] || '';
+        const title = TITLES[_activeTab] || (_activeTab === 'dashboard' ? 'Bosh sahifa' : '');
         const html = title ? `<h1>${title}</h1>` : '<img src="images/myhomework-logo.png" alt="Homework">';
         if (el._sig !== html) { el._sig = html; el.innerHTML = html; }
     }
@@ -227,6 +229,17 @@
             a.textContent = span.textContent;
             a.addEventListener('click', e => e.stopPropagation());
             span.replaceWith(a);
+            // Telefonda kartaning pastida aniq "Qo'ng'iroq" tugmasi (birinchi raqamga).
+            const card = wrap.closest('.lead-card');
+            const actions = card?.querySelector('.lead-card-actions');
+            if (actions && !actions.querySelector('.lead-card-call')) {
+                const call = document.createElement('a');
+                call.href = 'tel:' + digits;
+                call.className = 'lead-card-call';
+                call.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Qoʻngʻiroq';
+                call.addEventListener('click', e => e.stopPropagation());
+                actions.appendChild(call);
+            }
         });
         root.querySelectorAll('.lead-card-action[data-lead-comments], .lead-card-action--rec').forEach(btn => {
             const s = btn.querySelector('span');
@@ -272,9 +285,13 @@
         root.querySelectorAll('.section-nav').forEach(nav => {
             const a = nav.querySelector('.section-nav-item.active');
             nav.classList.toggle('team-scrolls', nav.scrollWidth > nav.clientWidth + 4);
-            if (a && nav.scrollWidth > nav.clientWidth) {
-                const left = nav.scrollLeft + a.getBoundingClientRect().left - nav.getBoundingClientRect().left - (nav.clientWidth - a.clientWidth) / 2;
-                if (nav._teamFor !== a) { nav._teamFor = a; nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); }
+            // Aktiv tab ko'rinmay qolgan bo'lsagina suriladi, chapda 16px joy qoldirib.
+            if (a && nav.scrollWidth > nav.clientWidth && nav._teamFor !== a) {
+                nav._teamFor = a;
+                const nr = nav.getBoundingClientRect(), ar = a.getBoundingClientRect();
+                if (ar.left < nr.left || ar.right > nr.right - 28) {
+                    nav.scrollTo({ left: Math.max(0, nav.scrollLeft + ar.left - nr.left - 16), behavior: 'smooth' });
+                }
             }
         });
     }

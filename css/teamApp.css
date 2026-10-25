@@ -873,3 +873,544 @@ html.rd .sp-empty-s {
         color: var(--text-muted);
     }
 }
+
+/* ==========================================================================
+   2-bosqich: baho natijasidagi tuzatishlar
+   ========================================================================== */
+
+/* Reyting ichki tablari — chiziqli ikonkalar, davr — segment */
+html.rd .rating-main-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+html.rd .rmt-ic {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+html.rd #ratingPeriodFilter {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--rd-col);
+}
+
+html.rd #ratingPeriodFilter .lang-btn {
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 600;
+    box-shadow: none;
+    min-height: 34px;
+}
+
+html.rd #ratingPeriodFilter .lang-btn--active {
+    background: var(--surface);
+    color: var(--rd-primary-strong);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+}
+
+/* Bosh sahifa: kichik reyting */
+html.rd .mhx-board-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .mhx-board-list li {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 8px;
+    margin: 0 -8px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+html.rd .mhx-board-list li.is-me {
+    background: var(--purple-light);
+    font-weight: 700;
+}
+
+html.rd .mhx-board-list li.is-gap {
+    margin-top: 10px;
+    position: relative;
+}
+
+html.rd .mhx-board-list li.is-gap::before {
+    content: "···";
+    position: absolute;
+    top: -14px;
+    left: 16px;
+    color: var(--text-light);
+    letter-spacing: 2px;
+    font-size: 12px;
+}
+
+html.rd .mhx-board-rank {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--rd-col);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+html.rd .mhx-board-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html.rd .mot-goal-frac {
+    white-space: nowrap;
+}
+
+/* Sotuv rejasi */
+html.rd [data-sales-panel="sales-plan"] > .page-title-bar,
+html.rd [data-sales-panel="sales-plan"] .page-title-bar {
+    display: none;
+}
+
+html.rd #spMainNav {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--rd-col);
+    border: 0;
+    width: auto;
+    max-width: 100%;
+}
+
+html.rd #spMainNav .section-nav-item {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+html.rd #spMainNav .section-nav-item::after {
+    display: none;
+}
+
+html.rd #spMainNav .section-nav-item.active {
+    background: var(--surface);
+    color: var(--rd-primary-strong);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+}
+
+html.rd .sp-card-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+html.rd .sp-card-h h3 {
+    margin: 0;
+    font-size: 17px;
+}
+
+html.rd #spIndPlanMonthSelect {
+    min-width: 0 !important;
+    height: 36px;
+    padding: 0 30px 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background-color: var(--surface);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+}
+
+html.rd .sp-pace-i b small {
+    font-size: 13px;
+    font-weight: 600;
+    opacity: .75;
+}
+
+html.rd .sp-pace-i small.sp-gap {
+    align-self: flex-start;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+html.rd .sp-pace-i small.sp-gap.is-bad { background: #FDECEC; }
+html.rd .sp-pace-i small.sp-gap.is-ok { background: #E3F6EE; }
+html.rd[data-theme="dark"] .sp-pace-i small.sp-gap.is-bad { background: #3D1F24; }
+html.rd[data-theme="dark"] .sp-pace-i small.sp-gap.is-ok { background: #173A2C; }
+
+html.rd .sp-prize {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 16px 4px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #FFF8E1;
+    font-size: 13px;
+    color: #6B4A00;
+}
+
+html.rd[data-theme="dark"] .sp-prize {
+    background: #3A3018;
+    color: #FFC94D;
+}
+
+html.rd .sp-prize .mot-prize-img {
+    width: 40px;
+    height: 40px;
+}
+
+html.rd .sp-progress {
+    padding: 12px 16px 4px;
+}
+
+html.rd .sp-progress-h {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .sp-progress-h b {
+    color: var(--rd-primary-strong);
+}
+
+html.rd .sp-progress-bar,
+html.rd .sp-cmp-bar {
+    display: block;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--rd-col);
+    overflow: hidden;
+}
+
+html.rd .sp-progress-bar i,
+html.rd .sp-cmp-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--purple);
+}
+
+html.rd .sp-cmp-wrap {
+    padding: 8px 16px 16px;
+    overflow-x: auto;
+}
+
+html.rd .sp-cmp {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+html.rd .sp-cmp th,
+html.rd .sp-cmp td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+}
+
+html.rd .sp-cmp thead th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+html.rd .sp-cmp tbody th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+html.rd .sp-cmp td:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+html.rd .sp-cmp .sp-cmp-bar {
+    width: 64px;
+    height: 6px;
+}
+
+html.rd .sp-notice {
+    margin: 8px 16px 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(217, 119, 6, .1);
+    color: #b45309;
+    font-size: 12px;
+}
+
+html.rd .sp-notice--info {
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+}
+
+/* Statistika: tez davr chiplari */
+html.rd .sfx-presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 0 0 12px;
+}
+
+html.rd .sfx-chip {
+    min-height: 36px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font: 600 13px/1 inherit;
+    cursor: pointer;
+}
+
+html.rd .sfx-chip.active {
+    border-color: var(--purple);
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+}
+
+html.rd .sfx-filters[hidden] {
+    display: none;
+}
+
+html.rd details.sfx-note summary {
+    cursor: pointer;
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+/* Lidlar: barcha ustun sarlavhalari bir xil balandlikda; bildirishnoma — nuqta */
+html.rd .lead-column-header {
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+html.rd .lead-card-notify-badge {
+    min-width: 8px;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    font-size: 0;
+    top: 4px;
+    right: 4px;
+}
+
+@media (min-width: 901px) {
+    /* 1440px ekranda 4 ta ustun to'liq sig'adi */
+    html.rd #leadsKanban > .lead-column {
+        flex: 0 0 264px;
+        width: 264px;
+        min-width: 264px;
+    }
+}
+
+/* Header badge "9+" tugma ichida qolsin */
+html.rd .notif-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 18px;
+    top: -4px;
+    right: -4px;
+}
+
+@media (max-width: 900px) {
+    html.rd #themeToggle,
+    html.rd .top-header .live-badge {
+        display: none;
+    }
+
+    /* Lidlar: kulrang konteyner yo'q, kartochkalar orasida 12px */
+    html.rd .leads-kanban > .lead-column {
+        background: transparent !important;
+        border: 0 !important;
+        padding: 0;
+    }
+
+    html.rd .leads-kanban > .lead-column > .lead-column-cards {
+        gap: 12px;
+        padding: 0 0 90px;
+    }
+
+    html.rd .leads-kanban > .lead-column > .lead-column-header {
+        margin: 0 0 8px;
+        padding: 0;
+        background: transparent !important;
+        min-height: 0;
+    }
+
+    /* Lidlar: "+ Lid" suzuvchi tugma */
+    html.rd #addLeadBtn:not([hidden]) {
+        position: fixed;
+        right: 16px;
+        bottom: calc(var(--team-nav-h) + var(--team-safe-b) + 16px);
+        z-index: 55;
+        min-height: 52px;
+        padding: 0 20px;
+        border-radius: 999px;
+        box-shadow: 0 8px 24px rgba(74, 47, 214, .35);
+    }
+
+    html.rd .sales-header-layout:has(> #addLeadBtn:not([hidden])) > .sales-header-lang {
+        grid-column: 1 / -1;
+    }
+
+    /* Bosh sahifa: KPI 2×2 teng, banner ixcham */
+    html.rd .mhx-kpis .mhx-kpi--plan {
+        grid-column: auto;
+    }
+
+    html.rd .mhx-kpis .mhx-kpi--plan .ahx-pill {
+        display: none;
+    }
+
+    html.rd .mhx .mot-sub-x,
+    html.rd .mhx .mot-goal-frac {
+        display: none;
+    }
+
+    /* Sotuv rejasi */
+    html.rd #spMainNav {
+        display: flex;
+        width: 100%;
+    }
+
+    html.rd #spMainNav .section-nav-item {
+        flex: 1;
+        text-align: center;
+    }
+
+    html.rd .sp-pace-i b {
+        font-size: 22px;
+    }
+
+    html.rd .sp-cmp {
+        font-size: 13px;
+    }
+
+    html.rd .sp-cmp .sp-cmp-bar {
+        display: none;
+    }
+
+    html.rd .sp-cmp th,
+    html.rd .sp-cmp td {
+        padding: 9px 4px;
+    }
+
+    /* Reyting podiumi ixcham */
+    html.rd .rtx-podium {
+        gap: 6px;
+    }
+
+    html.rd .rtx-pod {
+        padding: 10px 4px 0;
+    }
+
+    html.rd .rtx-pod .rtx-cond,
+    html.rd .rtx-pod .rtx-meta {
+        display: none;
+    }
+
+    html.rd .rtx-pod .rtx-name {
+        font-size: 12px;
+    }
+
+    html.rd .rtx-pod .rtx-sum {
+        font-size: 16px;
+    }
+
+    html.rd .rtx-pod .rtx-step {
+        height: 12px !important;
+    }
+}
+
+@media (max-width: 900px) {
+    html.rd body.team-nav-leads #salesSectionNav [data-sales-section="leads"],
+    html.rd body.team-nav-rating #salesSectionNav [data-sales-section="rating"] {
+        display: none;
+    }
+}
+
+html.rd .sp-card-h {
+    flex-direction: row !important;
+    text-align: left;
+}
+
+@media (max-width: 900px) {
+    html.rd .sp-cmp td:last-child b {
+        font-size: 12px;
+    }
+}
+
+html.rd .lead-card-call {
+    display: none;
+}
+
+html.rd .sfx-presets {
+    margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+    html.rd .lead-card-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+    }
+
+    html.rd .lead-card-call {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        min-height: 38px;
+        padding: 0 14px;
+        border-radius: 10px;
+        background: #0F9D6B;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    html.rd .lead-card-call svg {
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+    }
+
+    html.rd .lead-card-tel {
+        color: var(--text);
+    }
+
+    html.rd .sfx-head p {
+        margin-bottom: 0;
+    }
+}
