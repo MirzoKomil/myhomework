@@ -8986,7 +8986,12 @@ function computeManagerHome({ user, managerId, leads, students, now = new Date()
 function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     if (!managerId) return '';
     const d = computeManagerHome({ user, managerId, leads, students, now });
-    const mln = n => (Math.round((Number(n) || 0) / 1e4) / 100).toFixed(2).replace('.', ',');
+    // Pul: "1,5 mln" (10 mln dan kichikda 1 xona, kattasida butun).
+    const mln = n => {
+        const v = (Number(n) || 0) / 1e6;
+        const r = Math.abs(v) >= 10 ? Math.round(v) : Math.round(v * 10) / 10;
+        return String(r).replace('.', ',');
+    };
     const pct = d.target > 0 ? Math.round(d.sales / d.target * 100) : null;
     const ahead = d.sales - d.dueByToday;
     const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(now));
@@ -8994,6 +8999,8 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     const date = `${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`;
     const maxF = Math.max(1, ...d.funnel.map(f => f.count));
     const pctTxt = v => v == null ? '—' : `${v.toFixed(1).replace('.', ',')}%`;
+    const stageColor = id => (typeof LEAD_COLUMNS !== 'undefined' && LEAD_COLUMNS.find(c => c.id === id)?.count) || 'var(--primary)';
+    const newLeads = d.funnel.find(f => f.id === 'yangi-lidlar')?.count || 0;
     const taskRow = t => `<li class="mhx-task${t.late ? ' is-late' : ''}">
         <div><strong>${escapeHtml(t.title)}</strong>${t.late ? '<span class="ahx-pill ahx-pill--danger">kechikdi</span>' : ''}<span class="mhx-sub">${escapeHtml(t.sub)}</span></div>
         ${t.kind === 'lead' ? `<button type="button" class="btn-secondary-sm mhx-btn" data-mhx-lead="${escapeHtml(t.lead._lang)}|${escapeHtml(t.lead.id)}">Lidni ochish</button>`
@@ -9001,31 +9008,32 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     </li>`;
     const upRow = s => `<li class="mhx-task mhx-task--soon"><div><strong>${escapeHtml(s.name || "Oʻquvchi")} · keyingi toʻlov</strong><span class="mhx-sub">Kelishilgan sana ${escapeHtml(formatDateShort(s.paymentDueDate))} · qoldiq ${escapeHtml(formatMoney(s.debtAmount))}</span></div>
         <button type="button" class="btn-secondary-sm mhx-btn" data-mhx-student="${escapeHtml(s.id)}">Oʻquvchini ochish</button></li>`;
+    const emptyTasks = `<div class="mhx-empty">
+        <span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
+        <div><strong>Kechikkan ish yoʻq</strong><span class="mhx-sub">${newLeads ? `${newLeads} ta yangi lid qoʻngʻiroq kutyapti` : 'Yangi lidlar kelishi bilan shu yerda chiqadi'}</span></div>
+        ${newLeads ? `<button type="button" class="btn-primary-sm" data-mhx-go="leads">Qoʻngʻiroq qilish</button>` : ''}</div>`;
     return `<div class="ahx mhx" id="managerHome">
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
-            <button type="button" class="btn-primary-sm" data-mhx-add-lead>+ Lid qoʻshish</button></div>
-        <div class="ahx-kpis">
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Oylik rejam</span><b class="ahx-kpi-v">${mln(d.sales)}<small> / ${d.target ? mln(d.target) + ' mln' : 'reja yoʻq'}</small></b>
-                ${pct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, pct)}%"></i></span><div class="ahx-kpi-n"><span>${pct}% · bugungacha kerak edi ${mln(d.dueByToday)}</span><span class="ahx-pill ${ahead >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn'}">${ahead >= 0 ? '+' : '−'}${mln(Math.abs(ahead))}</span></div>` : '<div class="ahx-kpi-n"><span>ROP individual reja kiritmagan</span></div>'}</div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Bitimlar · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${d.deals}</b><div class="ahx-kpi-n"><span>${d.place ? `reytingda ${d.place}-oʻrin` : ''} · ${d.quality} sifatli liddan</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Konversiya</span><b class="ahx-kpi-v">${pctTxt(d.conv)}</b><div class="ahx-kpi-n"><span>sifatli lid → sotuv · jamoa ${pctTxt(d.teamConv)}</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Mening maoshim · taxminiy</span><b class="ahx-kpi-v" id="mhxSalary">…</b><div class="ahx-kpi-n"><span id="mhxSalaryNote">oy yopilganda aniqlanadi</span></div></div>
-        </div>
+            <button type="button" class="btn-primary-sm mhx-add" data-mhx-add-lead aria-label="Lid qoʻshish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Lid qoʻshish</span></button></div>
         ${renderManagerGoalBlock(managerId, d.lang)}
+        <div class="ahx-kpis mhx-kpis">
+            <div class="ahx-kpi mhx-kpi--plan"><span class="ahx-kpi-l">Oylik rejam</span><b class="ahx-kpi-v">${mln(d.sales)}<small> / ${d.target ? mln(d.target) + ' mln soʻm' : 'reja yoʻq'}</small></b>
+                ${pct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, pct)}%"></i></span><div class="ahx-kpi-n"><span>${pct}% · bugungacha ${mln(d.dueByToday)} mln kerak edi</span><span class="ahx-pill ${ahead >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn'}">${ahead >= 0 ? '+' : '−'}${mln(Math.abs(ahead))} mln</span></div>` : '<div class="ahx-kpi-n"><span>ROP individual reja kiritmagan</span></div>'}</div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Bitimlar · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${d.deals}</b><div class="ahx-kpi-n"><span>${[d.place ? `${d.place}-oʻrin` : '', `${d.quality} sifatli liddan`].filter(Boolean).join(' · ')}</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Konversiya</span><b class="ahx-kpi-v">${pctTxt(d.conv)}</b><div class="ahx-kpi-n"><span>jamoa ${pctTxt(d.teamConv)}</span></div></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Maoshim · taxminiy</span><b class="ahx-kpi-v" id="mhxSalary">…</b><div class="ahx-kpi-n"><span id="mhxSalaryNote">oy yopilganda aniqlanadi</span></div></div>
+        </div>
         <div class="ahx-grid mhx-grid">
-            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugun qilish kerak <small>· ${d.tasks.length}</small></h3><span class="mhx-sub">${d.tasks.filter(t => t.late).length} tasi kechikkan</span></div>
-                ${d.tasks.length ? `<ul class="mhx-tasks">${d.tasks.slice(0, 8).map(taskRow).join('')}</ul>${d.tasks.length > 8 ? `<p class="mhx-sub">Yana ${d.tasks.length - 8} ta — Lidlar va Qarzdorlar boʻlimida</p>` : ''}` : '<p class="dashboard-empty">Bugungi ishlar bajarilgan 👍</p>'}
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugun qilish kerak <small>· ${d.tasks.length}</small></h3>${d.tasks.some(t => t.late) ? `<span class="ahx-pill ahx-pill--danger">${d.tasks.filter(t => t.late).length} tasi kechikkan</span>` : ''}</div>
+                ${d.tasks.length ? `<ul class="mhx-tasks">${d.tasks.slice(0, 8).map(taskRow).join('')}</ul>${d.tasks.length > 8 ? `<p class="mhx-sub">Yana ${d.tasks.length - 8} ta — Lidlar va Qarzdorlar boʻlimida</p>` : ''}` : emptyTasks}
                 ${d.upcoming.length ? `<h4 class="mhx-h4">Yaqinlashayotgan · kelishilgan toʻlov sanalari</h4><ul class="mhx-tasks">${d.upcoming.slice(0, 5).map(upRow).join('')}</ul>` : ''}
+                <h4 class="mhx-h4">Mening oʻquvchilarim</h4>
+                <ul class="mhx-stats mhx-stats--row"><li><b>${d.active}</b><span>Faol</span></li><li><b>${d.installments}</b><span>Boʻlib toʻlamoqda</span></li><li><b class="${d.overdue.length ? 'is-bad' : ''}">${d.overdue.length}</b><span>Qarzdor</span></li></ul>
+                ${d.overdue.length ? `<button type="button" class="ahx-link" data-mhx-go="debtors">Qarzdorlarim: ${escapeHtml(d.overdue.slice(0, 3).map(s => shortPersonName(s.name || '')).join(', '))} →</button>` : ''}
             </section>
-            <div class="mhx-side">
-                <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening voronkam <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-mhx-go="leads">Lidlar →</button></div>
-                    <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
-                </section>
-                <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening oʻquvchilarim</h3></div>
-                    <ul class="mhx-stats"><li><span>Faol</span><b>${d.active}</b></li><li><span>Boʻlib toʻlamoqda</span><b>${d.installments}</b></li><li><span>Qarzdor · kelishilgan sana oʻtgan</span><b class="${d.overdue.length ? 'is-bad' : ''}">${d.overdue.length}</b></li></ul>
-                    ${d.overdue.length ? `<button type="button" class="ahx-link" data-mhx-go="debtors">Qarzdorlarim: ${escapeHtml(d.overdue.slice(0, 3).map(s => shortPersonName(s.name || '')).join(', '))} →</button>` : ''}
-                </section>
-            </div>
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Mening voronkam <small>· ${d.openLeads} ochiq lid</small></h3><button type="button" class="ahx-link" data-mhx-go="leads">Lidlar →</button></div>
+                <ul class="ahx-funnel mhx-funnel">${d.funnel.map(f => `<li><button type="button" data-mhx-stage="${escapeHtml(f.id || '')}"><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxF * 100) : 0}%;background:${stageColor(f.id)}"></em></i><b>${f.count}</b></button></li>`).join('')}</ul>
+            </section>
         </div>
     </div>`;
 }
@@ -9039,6 +9047,12 @@ function bindManagerHome(container) {
     container.querySelectorAll('[data-mhx-go]').forEach(btn => btn.addEventListener('click', () => {
         switchTab('sales');
         if (btn.dataset.mhxGo === 'debtors') { _debtorsQuick = 'overdue'; switchSalesSection('debtors'); } else switchSalesSection('leads');
+    }));
+    container.querySelectorAll('[data-mhx-stage]').forEach(btn => btn.addEventListener('click', () => {
+        switchTab('sales');
+        switchSalesSection('leads');
+        requestAnimationFrame(() => document.querySelector(`.team-stage-strip [data-status="${btn.dataset.mhxStage}"]`)?.click()
+            || document.querySelector(`#leadsKanban .lead-column[data-status="${btn.dataset.mhxStage}"]`)?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' }));
     }));
     container.querySelector('[data-mhx-add-lead]')?.addEventListener('click', () => {
         switchTab('sales');
@@ -26260,6 +26274,7 @@ function fmtSignedPct(n) {
 }
 
 let _spMainSection = 'jamoaviy';
+let _spMainChosen = false; // foydalanuvchi o'zi tab tanladimi
 let _spIndManagerId = null;
 // 41-vazifa: individual reja kartochkasida ko'rilayotgan oy ("YYYY-MM")
 let _spIndPlanMonth = null;
@@ -26356,10 +26371,15 @@ function renderSalesPlan() {
         langTabsEl.style.display = '';
     }
     syncLeadsLangTabs();
+    // Sotuv menejeri avval o'zining shaxsiy rejasini ko'radi (jamoa kalkulyatori ikkinchi tabda).
+    if (_isSalesManagerSp && !_spMainChosen) _spMainSection = 'individual';
 
     panel.querySelectorAll('[data-sp-main]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.spMain === _spMainSection);
+        if (_isSalesManagerSp && btn.dataset.spMain === 'individual') btn.textContent = 'Mening rejam';
+        if (_isSalesManagerSp) btn.style.order = btn.dataset.spMain === 'individual' ? '-1' : '';
         btn.onclick = () => {
+            _spMainChosen = true;
             _spMainSection = btn.dataset.spMain;
             renderSalesPlan();
         };
@@ -26617,16 +26637,17 @@ function renderSalesPlanIndividualPlanCard() {
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
             <h3 style="margin:0">Oylik reja</h3>
             <div style="display:flex;align-items:center;gap:8px">${oySelect}
-                ${hasIndividualSalesPlan(plan) ? '<button class="btn-ghost" id="spIndEditPlanBtn" title="Rejani tahrirlash">✏️</button>' : ''}
+                ${hasIndividualSalesPlan(plan) && getCurrentUser()?.role !== 'sales_manager' ? '<button class="btn-ghost sp-edit-btn" id="spIndEditPlanBtn" title="Rejani tahrirlash" aria-label="Rejani tahrirlash"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>' : ''}
             </div>
         </div>`;
 
+    const _spIsManager = getCurrentUser()?.role === 'sales_manager';
     if (!hasIndividualSalesPlan(plan)) {
         el.innerHTML = header + `
-        <div style="padding:40px 20px;text-align:center">
-            <div style="font-size:36px;margin-bottom:10px">🎯</div>
-            <div style="font-size:14px;color:var(--text-muted);margin-bottom:14px">${escapeHtml(monthKeyLabel(oy))} uchun reja belgilanmagan</div>
-            <button class="btn-primary-sm" id="spIndSetPlanBtn">+ Reja belgilash</button>
+        <div class="sp-empty">
+            <span class="sp-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span>
+            <div class="sp-empty-t">${escapeHtml(monthKeyLabel(oy))} uchun reja belgilanmagan</div>
+            ${_spIsManager ? '<div class="sp-empty-s">Rejani ROP belgilaydi — belgilangach shu yerda kunlik maqsadingiz chiqadi.</div>' : '<button class="btn-primary-sm" id="spIndSetPlanBtn">+ Reja belgilash</button>'}
         </div>`;
         wireMonth();
         return;
@@ -26634,8 +26655,26 @@ function renderSalesPlanIndividualPlanCard() {
 
     const pct = plan.totalAmount > 0 ? Math.min(100, Math.round(actualAmount / plan.totalAmount * 100)) : 0;
     const color = pctToPlanColor(pct);
+    // Joriy oy uchun: qolgan summa, kunlik temp va bugungi maqsad.
+    let paceHtml = '';
+    if (oy === joriy && plan.totalAmount > 0) {
+        const now = new Date();
+        const daysIn = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const daysLeft = Math.max(1, daysIn - now.getDate() + 1);
+        const left = Math.max(0, plan.totalAmount - actualAmount);
+        const due = Math.round(plan.totalAmount * now.getDate() / daysIn);
+        const diff = actualAmount - due;
+        const today = typeof getManagerSalesForPeriod === 'function' ? getManagerSalesForPeriod(_spIndManagerId, 'kunlik') : 0;
+        const perDay = Math.ceil(left / daysLeft);
+        const mln = n => { const v = (Number(n) || 0) / 1e6; return `${String(Math.abs(v) >= 10 ? Math.round(v) : Math.round(v * 10) / 10).replace('.', ',')} mln soʻm`; };
+        paceHtml = `<div class="sp-pace">
+            <div class="sp-pace-i sp-pace-i--hero"><span>Bugungi maqsad</span><b title="${escapeHtml(fmtMoney(perDay))}">${mln(perDay)}</b><small>${today ? `bugun ${mln(today)} sotildi` : 'bugun hali sotuv yoʻq'}</small></div>
+            <div class="sp-pace-i"><span>Rejagacha qoldi</span><b title="${escapeHtml(fmtMoney(left))}">${mln(left)}</b><small>${daysLeft} kun qoldi</small></div>
+            <div class="sp-pace-i"><span>Bugungacha kerak edi</span><b title="${escapeHtml(fmtMoney(due))}">${mln(due)}</b><small class="${diff >= 0 ? 'is-ok' : 'is-bad'}">${diff >= 0 ? 'oldindasiz' : 'orqadasiz'} ${mln(Math.abs(diff))}</small></div>
+        </div>`;
+    }
 
-    el.innerHTML = header + `
+    el.innerHTML = header + paceHtml + `
         ${plan.legacy ? `<div style="margin:0 16px;padding:8px 10px;border-radius:6px;background:rgba(217,119,6,.1);color:#b45309;font-size:12px">Bu reja oyi ko'rsatilmagan eski yozuv. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun biriktiriladi.</div>` : ''}
         ${plan.carriedOverFrom ? `<div style="margin:0 16px;padding:8px 10px;border-radius:6px;background:rgba(79,140,255,.1);color:var(--purple,#7c3aed);font-size:12px">Bu reja ${escapeHtml(monthKeyLabel(plan.carriedOverFrom))} oyidan avtomatik ko'chirilgan. Tahrirlab saqlasangiz, ${escapeHtml(monthKeyLabel(oy))} uchun alohida biriktiriladi.</div>` : ''}
         <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
@@ -26860,7 +26899,26 @@ function renderRatingMotivation(ranked, period, between = '') {
         }).join('');
     }
     const heading = period === 'kunlik' ? 'Kunlik obed bosqichlari' : period === 'haftalik' ? 'Hafta sovgʻalari' : 'Oylik sovgʻalar';
-    return `${hero}${between}
+    // Sotuv menejeri: o'z o'rni va oldingi o'ringacha farq — banner ostida darhol.
+    let meCard = '';
+    const _cuMe = getCurrentUser();
+    if (_cuMe?.role === 'sales_manager' && _cuMe.linkedManagerId) {
+        const idx = ranked.findIndex(m => m.id === _cuMe.linkedManagerId);
+        if (idx >= 0) {
+            const me = ranked[idx];
+            const up = idx > 0 ? ranked[idx - 1] : null;
+            const per = period === 'kunlik' ? 'bugun' : period === 'haftalik' ? 'shu hafta' : 'shu oy';
+            const gap = up ? Math.max(0, up.sales - me.sales) : 0;
+            const pct = up && up.sales > 0 ? Math.min(100, Math.round(me.sales / up.sales * 100)) : 100;
+            meCard = `<section class="mot-me${idx === 0 ? ' is-first' : ''}" aria-label="Mening oʻrnim">
+                <span class="mot-me-rank"><b>${idx + 1}</b><small>oʻrin</small></span>
+                <div class="mot-me-txt"><strong>${idx === 0 ? `Siz ${per} birinchisiz!` : `${escapeHtml(_firstName(up.name))}ni quvib oʻtish uchun yana ${fmtMoney(gap + 1)}`}</strong>
+                    <span class="mot-bar mot-bar--light"><span style="width:${pct}%"></span></span>
+                    <small>${per} ${fmtMoney(me.sales)} · ${ranked.length} menejer ichida</small></div>
+            </section>`;
+        }
+    }
+    return `${hero}${meCard}${between}
     <section class="mot-prizes-wrap" aria-label="${heading}">
         <h3 class="mot-h">${heading}</h3>
         <ol class="mot-prizes">${cards}</ol>
