@@ -9157,7 +9157,25 @@ body.modal-open {
     background: var(--surface); border: 1px solid var(--border); font-size: 13px; color: var(--text); }
 .tsx-alert.is-warn { background: var(--warning-bg); border-color: #FCD34D; }
 .tsx-alert.is-bad { background: var(--danger-bg); border-color: #FCA5A5; }
-.tsx-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.tsx-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tsx-mom { font-size: 11px; color: var(--text-muted); }
+.tsx-hint { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.tsx-subrow th.tsx-c1 { font-weight: 500; padding-left: 22px; }
+.tsx-sub { color: var(--purple); font-size: 12px; }
+.tsx-toggle { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--text); cursor: pointer; text-transform: uppercase; letter-spacing: .02em; }
+.tsx-toggle:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.tsx-daycards { display: none; }
+.tsx-daycard { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+.tsx-daycard.is-missing { border-color: #FCD34D; }
+.tsx-daycard header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tsx-daycard header span { color: var(--text-muted); font-size: 12px; flex: 1; }
+.tsx-daycard header .btn-ghost { padding: 4px 10px; font-size: 12px; }
+.tsx-daycard dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+.tsx-daycard dl div { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; }
+.tsx-daycard dt { color: var(--text-muted); }
+.tsx-daycard dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.tsx-daycard-note { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); }
+@media (max-width: 1100px) { .tsx-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .tsx-kpi { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 14px;
     padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .tsx-kpi.tsx-good { border-left-color: #10B981; }
@@ -9248,6 +9266,9 @@ td.tsx-pct.tsx-bad { background: #FEE2E2 !important; }
 [data-theme="dark"] .tsx-alert.is-bad { border-color: #7F1D1D; }
 
 @media (max-width: 760px) {
+    /* Telefonda keng jadval o'rniga kunlik kartochkalar */
+    .tsx-main-wrap { display: none; }
+    .tsx-daycards { display: flex; flex-direction: column; gap: 10px; }
     .tsx-modal { grid-template-columns: 1fr; }
     /* Telefonda faqat ko'rsatkich nomi qotib turadi, qolgani yonlama suriladi */
     .tsx-c1 { width: 140px; min-width: 140px; max-width: 140px; box-shadow: 4px 0 6px -4px rgba(26, 29, 46, 0.18); }

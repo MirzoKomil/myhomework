@@ -4,7 +4,7 @@
 (function () {
     'use strict';
     const S = () => window.TargetSheet;
-    const state = { month: null, lang: 'english', data: null, gen: 0, view: 'days' };
+    const state = { month: null, lang: 'english', data: null, gen: 0, showDetail: false };
     const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
 
     const esc = v => (typeof escapeHtml === 'function' ? escapeHtml(String(v ?? '')) : String(v ?? ''));
@@ -72,98 +72,165 @@
     const cls = g => (g ? ` tsx-${g}` : '');
     // Rang bilan birga belgi ham (rangni ajrata olmaydiganlar uchun)
     const MARK = { good: ['✓', 'yaxshi'], warn: ['!', 'eʼtibor'], bad: ['✕', 'yomon'] };
-    function ratio(fakt, plan, g) {
-        if (fakt == null || !plan) return `<td class="tsx-pct">—</td>`;
-        const m = MARK[g];
-        return `<td class="tsx-pct${cls(g)}"${m ? ` aria-label="${pct(fakt / plan * 100)} — ${m[1]}"` : ''}>${m ? `<span aria-hidden="true">${m[0]}</span> ` : ''}${pct(fakt / plan * 100)}</td>`;
+    // O'tgan oyga nisbatan o'zgarish: narxda pasayish — yaxshi, ROAS/soni o'sishi — yaxshi
+    function mom(cur, prev, fmt, lowerIsBetter) {
+        if (cur == null || prev == null || !prev) return prev != null ? `<span class="tsx-mom">o‘tgan oy: ${fmt(prev)}</span>` : '';
+        const ch = (cur - prev) / prev * 100;
+        const good = lowerIsBetter ? ch <= 0 : ch >= 0;
+        return `<span class="tsx-mom ${Math.abs(ch) < 0.5 ? '' : good ? 'tsx-good' : 'tsx-bad'}">o‘tgan oy: ${fmt(prev)} · ${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(0)}%</span>`;
     }
 
-    function kpis(sh) {
-        const t = sh.totals, p = sh.plan || {}, g = sh.grades;
-        const card = (label, fakt, plan, gr, sub) => `<div class="tsx-kpi${cls(gr)}">
+    function kpis(sh, prev) {
+        const t = sh.totals, p = sh.plan || {}, g = sh.grades, pt = prev?.totals || null;
+        const card = (label, fakt, plan, gr, sub, momHtml = '') => `<div class="tsx-kpi${cls(gr)}">
             <span class="tsx-kpi-label">${label}</span>
             <b class="tsx-kpi-val">${fakt}</b>
-            <span class="tsx-kpi-sub">${plan != null ? 'Reja: ' + plan + (sub ? ' · ' : '') : ''}${sub || ''}</span></div>`;
+            <span class="tsx-kpi-sub">${plan != null ? 'Reja: ' + plan + (sub ? ' · ' : '') : ''}${sub || ''}</span>${momHtml}</div>`;
         return `<div class="tsx-kpis">
             ${card('Reklama sarfi', usd(t.budget), usd(p.budget), g.budget, sh.paceDays && p.budget ? 'kutilgan ' + usd(p.budget * sh.pace) : '')}
-            ${card('Lid soni · CRM', int(t.crm.leads), int(p.lidSoni), g.crmLeads, 'kabinetda ' + int(t.adLeads))}
-            ${card('Lid narxi · CRM', usd(t.crmCpl), usd(p.lidNarxi), g.crmCpl, 'kabinetda ' + usd(t.adCpl))}
+            ${card('Lid soni · CRM', int(t.crm.leads), int(p.lidSoni), g.crmLeads, 'kabinetda ' + int(t.adLeads), mom(t.crm.leads, pt?.crm.leads, int, false))}
+            ${card('Lid narxi · CRM', usd(t.crmCpl), usd(p.lidNarxi), g.crmCpl, 'kabinetda ' + usd(t.adCpl), mom(t.crmCpl, pt?.crmCpl, usd, true))}
             ${card('Sifatli lid · CRM', int(t.crm.qualified), int(p.kvalLidSoni), g.crmKval, t.crm.pending ? int(t.crm.pending) + ' ta hali ishlanmagan' : 'hammasi ishlangan')}
-            ${card('Sifatli lid narxi · CRM', usd(t.crmKvalCpl), usd(p.kvalNarxi), g.crmKvalCpl, '')}
+            ${card('Sifatli lid narxi · CRM', usd(t.crmKvalCpl), usd(p.kvalNarxi), g.crmKvalCpl, '', mom(t.crmKvalCpl, pt?.crmKvalCpl, usd, true))}
             ${card('Lid → Sifatli % · CRM', pct(t.crmKvalPct), pct(p.kvalPct), g.crmKvalPct, t.crmKvalPctWorked != null ? 'ishlanganlar ichida ' + pct(t.crmKvalPctWorked) : '')}
-            ${card('Sotuv narxi · CRM', usd(t.saleCost), p.targetCpa ? usd(p.targetCpa) : null, g.saleCost, int(t.crm.sold) + ' ta sotuv shu oy lidlaridan')}
+            ${card('Sotuv narxi · CRM', usd(t.saleCost), p.targetCpa ? usd(p.targetCpa) : null, g.saleCost, int(t.crm.sold) + ' ta sotuv shu oy lidlaridan', mom(t.saleCost, pt?.saleCost, usd, true))}
             ${card('ROAS · kiritilgan kunlar', times(t.roas), p.targetRoas ? times(p.targetRoas) : null,
                 p.targetRoas ? g.roas : (t.roas == null ? '' : t.roas >= 1 ? 'good' : t.roas >= 0.7 ? 'warn' : 'bad'),
-                t.usdRate ? 'tushum ÷ (sarf + fixed) · lidlar toʻlagan sari oshadi' : 'oylik rejada $ kursi kiritilmagan')}
+                t.usdRate ? 'tushum ÷ (sarf + fixed) · lidlar toʻlagan sari oshadi' : 'oylik rejada $ kursi kiritilmagan', mom(t.roas, pt?.roas, times, false))}
         </div>`;
     }
 
-    function sheetTable(sh) {
+    // Jadval modeli — HTML jadval, telefon kartochkalari va Excel eksporti shu bitta ro'yxatdan quriladi.
+    // Qator nomlari va tartibi Google Sheet'dagidek; har bir ko'rsatkich ostida 🔒 CRM qiymati.
+    function sheetModel(sh) {
         const t = sh.totals, p = sh.plan || {}, g = sh.grades;
-        const owner = esc(responsibleName(state.lang));
-        const days = sh.days;
+        const owner = responsibleName(state.lang);
+        const V = (v, f) => ({ v: v == null || (typeof v === 'number' && !Number.isFinite(v)) ? null : v, f });
+        const P = (fakt, plan, gr) => (fakt == null || !plan ? null : { v: fakt / plan * 100, g: gr });
+        const future = (d, v) => (d.isFuture ? null : v);
+        const cost = d => (d.entry ? d.budget + (d.fixed || 0) : null);
+        const signed = v => (v > 0 ? '+' : '') + v;
+        const rows = [
+            { label: 'Budget', hint: 'reklama sarfi', who: owner, plan: V(p.budget, usd), fakt: V(t.budget, usd), pct: P(t.budget, p.budget, g.budget),
+                day: d => ({ v: d.budget, f: usd, cls: d.missing ? 'tsx-missing' : '', note: d.entry?.note }) },
+            { label: 'Fixed', hint: 'doimiy, oy boshidan', who: 'Admin', plan: V(p.fixed || null, usd), fakt: V(t.fixed, usd), day: d => ({ v: d.fixed || null, f: usd }) },
+            { label: 'Lid soni', hint: 'reklama kabineti', who: owner, plan: V(p.lidSoni, int), fakt: V(t.adLeads, int), pct: P(t.adLeads, p.lidSoni, g.adLeads),
+                day: d => ({ v: d.adLeads, f: int, cls: d.missing ? 'tsx-missing' : '' }) },
+            { sub: true, crm: true, label: 'CRM', plan: V(p.lidSoni, int), fakt: V(t.crm.leads, int), pct: P(t.crm.leads, p.lidSoni, g.crmLeads), day: d => ({ v: future(d, d.crm.leads), f: int }) },
+            { sub: true, crm: true, label: 'Farq: kabinet − CRM', fakt: V(t.diff, signed),
+                day: d => { const lv = S().diffLevel(d.diff, d.crm.leads); return { v: d.diff, f: signed, cls: lv ? 'tsx-' + lv : '' }; } },
+            { label: 'Lid narxi', who: owner, plan: V(p.lidNarxi, usd), fakt: V(t.adCpl, usd), pct: P(t.adCpl, p.lidNarxi, g.adCpl), day: d => ({ v: d.adCpl, f: usd }) },
+            { sub: true, crm: true, label: 'CRM', plan: V(p.lidNarxi, usd), fakt: V(t.crmCpl, usd), pct: P(t.crmCpl, p.lidNarxi, g.crmCpl), day: d => ({ v: d.crmCpl, f: usd }) },
+            { label: 'Kval lid soni', hint: 'sifatli', who: owner, plan: V(p.kvalLidSoni, int), fakt: V(t.adKval, int), pct: P(t.adKval, p.kvalLidSoni, g.adKval), day: d => ({ v: d.adKval, f: int }) },
+            { sub: true, crm: true, label: 'CRM', plan: V(p.kvalLidSoni, int), fakt: V(t.crm.qualified, int), pct: P(t.crm.qualified, p.kvalLidSoni, g.crmKval), day: d => ({ v: future(d, d.crm.qualified), f: int }) },
+            { label: 'Kval lid narxi', who: owner, plan: V(p.kvalNarxi, usd), fakt: V(t.adKvalCpl, usd), pct: P(t.adKvalCpl, p.kvalNarxi, g.adKvalCpl), day: d => ({ v: d.adKvalCpl, f: usd }) },
+            { sub: true, crm: true, label: 'CRM', plan: V(p.kvalNarxi, usd), fakt: V(t.crmKvalCpl, usd), pct: P(t.crmKvalCpl, p.kvalNarxi, g.crmKvalCpl), day: d => ({ v: d.crmKvalCpl, f: usd }) },
+            { label: 'Lid → Maqsadli lid %', who: owner, plan: V(p.kvalPct, pct), fakt: V(t.adKvalPct, pct), pct: P(t.adKvalPct, p.kvalPct, g.adKvalPct), day: d => ({ v: d.adKvalPct, f: pct }) },
+            { sub: true, crm: true, label: 'CRM', plan: V(p.kvalPct, pct), fakt: V(t.crmKvalPct, pct), pct: P(t.crmKvalPct, p.kvalPct, g.crmKvalPct), day: d => ({ v: d.crmKvalPct, f: pct }) },
+            { crm: true, label: 'Sotuv narxi (CPA)', who: 'CRM', plan: V(p.targetCpa || null, usd), fakt: V(t.saleCost, usd), pct: P(t.saleCost, p.targetCpa, g.saleCost), day: d => ({ v: d.saleCost, f: usd }) },
+            { crm: true, label: 'ROAS', hint: 'kiritilgan kunlar', who: 'CRM', plan: V(p.targetRoas || null, times), fakt: V(t.roas, times), pct: P(t.roas, p.targetRoas, g.roas),
+                day: d => ({ v: t.usdRate && cost(d) > 0 ? (d.crm.revenue / t.usdRate) / cost(d) : null, f: times }) },
+            { group: true, title: 'Batafsil: sifat taqsimoti va sotuvgacha', note: 'shu kuni kelgan target lidlar keyin qayergacha yetgani · 🔒 CRM' },
+            { detail: true, crm: true, label: 'Sifatsiz', who: 'CRM', fakt: V(t.crm.unqualified, int), day: d => ({ v: future(d, d.crm.unqualified), f: int }) },
+            { detail: true, crm: true, label: 'Hali ishlanmagan', who: 'CRM', fakt: V(t.crm.pending, int), day: d => ({ v: future(d, d.crm.pending), f: int, cls: d.crm.pending ? 'tsx-warn' : '' }) },
+            { detail: true, crm: true, label: 'Sifat % ishlanganlar ichida', who: 'CRM', fakt: V(t.crmKvalPctWorked, pct), day: d => ({ v: d.crmKvalPctWorked, f: pct }) },
+            { detail: true, crm: true, label: 'Sinovga yozilgan', who: 'CRM', fakt: V(t.crm.trial, int), day: d => ({ v: future(d, d.crm.trial), f: int }) },
+            { detail: true, crm: true, label: 'Sinov narxi', who: 'CRM', fakt: V(t.trialCost, usd), day: d => ({ v: d.trialCost, f: usd }) },
+            { detail: true, crm: true, label: 'Sotuv', who: 'CRM', fakt: V(t.crm.sold, int), day: d => ({ v: future(d, d.crm.sold), f: int }) },
+            { detail: true, crm: true, label: 'Tushum', hint: 'shu oy lidlaridan, soʻm', who: 'CRM', fakt: V(t.revenue || null, som), day: d => ({ v: d.isFuture || !d.crm.revenue ? null : d.crm.revenue, f: som }) },
+            { detail: true, crm: true, label: 'Toʻliq xarajat', hint: 'sarf + fixed, kiritilgan kunlar', who: 'CRM', plan: V(p.budget != null ? p.budget + (p.fixed || 0) : null, usd), fakt: V(t.totalCost, usd), day: d => ({ v: cost(d), f: usd }) },
+            { detail: true, crm: true, label: 'Toʻliq lid narxi', who: 'CRM', fakt: V(t.fullCpl, usd), day: d => ({ v: d.entry && d.crm.leads ? cost(d) / d.crm.leads : null, f: usd }) }
+        ];
+        return rows;
+    }
+
+    const lockHtml = '<span class="tsx-lock" title="CRM avtomatik hisoblaydi — oʻzgartirib boʻlmaydi">🔒 CRM</span>';
+    function pctCell(pc) {
+        if (!pc) return '<td class="tsx-pct">—</td>';
+        const m = MARK[pc.g];
+        return `<td class="tsx-pct${cls(pc.g)}"${m ? ` aria-label="${pct(pc.v)} — ${m[1]}"` : ''}>${m ? `<span aria-hidden="true">${m[0]}</span> ` : ''}${pct(pc.v)}</td>`;
+    }
+
+    function sheetTable(sh) {
+        const days = sh.days, rows = sheetModel(sh);
         const head = days.map(d => {
             const edit = canEditDay(d.key);
-            const mark = d.missing ? ' tsx-missing' : '';
-            return `<th class="tsx-day${d.isToday ? ' tsx-today' : ''}${d.isFuture ? ' tsx-future' : ''}${mark}" scope="col">
+            return `<th class="tsx-day${d.isToday ? ' tsx-today' : ''}${d.isFuture ? ' tsx-future' : ''}${d.missing ? ' tsx-missing' : ''}" scope="col">
                 ${edit ? `<button type="button" class="tsx-day-btn" data-tsx-day="${d.key}" title="${esc(dayLabel(d.key))} — kiritish/tahrirlash">` : '<span class="tsx-day-btn is-static">'}
                 <span>${String(d.day).padStart(2, '0')}.${d.key.slice(5, 7)}</span><small>${d.weekday}${d.missing ? ' · ⚠' : ''}</small>
                 ${edit ? '</button>' : '</span>'}</th>`;
         }).join('');
-        const cell = (v, fmt, extra = '') => `<td class="tsx-num${extra}">${v == null ? '<span class="tsx-dash">—</span>' : fmt(v)}</td>`;
-        const row = (label, who, plan, fakt, pctCell, perDay, opts = {}) => `<tr class="${opts.cls || ''}">
-            <th scope="row" class="tsx-sticky tsx-c1">${label}</th>
-            <td class="tsx-sticky tsx-c2">${who}</td>
-            <td class="tsx-sticky tsx-c3 tsx-num">${plan}</td>
-            <td class="tsx-sticky tsx-c4 tsx-num tsx-fakt">${fakt}</td>
-            ${pctCell}
-            ${days.map(perDay).join('')}</tr>`;
-        const lock = '<span class="tsx-lock" title="CRM avtomatik hisoblaydi — o‘zgartirib bo‘lmaydi">🔒 CRM</span>';
-        const group = (title, note) => `<tr class="tsx-group"><th colspan="5" class="tsx-sticky tsx-group-cell">${title}<small>${note}</small></th>${days.map(() => '<td></td>').join('')}</tr>`;
-        return `<div class="tsx-table-wrap" tabindex="0" aria-label="Target lidlar kunlik jadvali">
+        const dayCell = c => {
+            const body = c.v == null ? '<span class="tsx-dash">—</span>' : c.f(c.v);
+            return c.note ? `<td class="tsx-num" title="${esc(c.note)}">${body} <span class="tsx-note" aria-label="Izoh: ${esc(c.note)}">📝</span></td>`
+                : `<td class="tsx-num${c.cls ? ' ' + c.cls : ''}">${body}</td>`;
+        };
+        const body = rows.map(r => {
+            if (r.group) return `<tr class="tsx-group"><th colspan="5" class="tsx-sticky tsx-group-cell">
+                <button type="button" class="tsx-toggle" data-tsx-toggle aria-expanded="${state.showDetail ? 'true' : 'false'}">${state.showDetail ? '▾' : '▸'} ${r.title}</button><small>${r.note}</small></th>${days.map(() => '<td></td>').join('')}</tr>`;
+            const label = r.sub ? `<span class="tsx-sub">↳ ${r.label}</span>` : `${r.label}${r.hint ? `<small class="tsx-hint">${r.hint}</small>` : ''}`;
+            const who = r.crm ? lockHtml : esc(r.who || '');
+            const fmt = x => (x && x.v != null ? x.f(x.v) : '—');
+            return `<tr class="${r.crm ? 'tsx-crm' : ''}${r.sub ? ' tsx-subrow' : ''}${r.detail ? ' tsx-detail' : ''}"${r.detail && !state.showDetail ? ' hidden' : ''}>
+                <th scope="row" class="tsx-sticky tsx-c1">${label}</th>
+                <td class="tsx-sticky tsx-c2">${who}</td>
+                <td class="tsx-sticky tsx-c3 tsx-num">${fmt(r.plan)}</td>
+                <td class="tsx-sticky tsx-c4 tsx-num tsx-fakt">${fmt(r.fakt)}</td>
+                ${pctCell(r.pct)}
+                ${days.map(d => dayCell(r.day(d))).join('')}</tr>`;
+        }).join('');
+        return `<div class="tsx-table-wrap tsx-main-wrap" tabindex="0" aria-label="Target lidlar kunlik jadvali">
         <table class="tsx-table">
             <thead><tr>
                 <th class="tsx-sticky tsx-c1" scope="col">Koʻrsatkich</th>
                 <th class="tsx-sticky tsx-c2" scope="col">Masʼul</th>
                 <th class="tsx-sticky tsx-c3" scope="col">Reja (oylik)</th>
-                <th class="tsx-sticky tsx-c4" scope="col">Fakt</th>
+                <th class="tsx-sticky tsx-c4" scope="col">Fakt (oylik)</th>
                 <th class="tsx-sticky tsx-c5" scope="col">%</th>
                 ${head}
             </tr></thead>
-            <tbody>
-                ${group('Targetolog kiritadi', 'reklama kabinetidagi maʼlumot')}
-                ${row('Reklama sarfi', owner, usd(p.budget), usd(t.budget), ratio(t.budget, p.budget, g.budget), d => d.entry?.note
-                    ? `<td class="tsx-num" title="${esc(d.entry.note)}">${usd(d.budget)} <span class="tsx-note" aria-label="Izoh: ${esc(d.entry.note)}">📝</span></td>`
-                    : cell(d.budget, usd, d.missing ? ' tsx-missing' : ''))}
-                ${row('Fixed (doimiy, oy boshidan)', 'Admin', usd(p.fixed || null), usd(t.fixed), '<td class="tsx-pct">—</td>', d => cell(d.fixed || null, usd))}
-                ${row('Lid soni (kabinet)', owner, int(p.lidSoni), int(t.adLeads), ratio(t.adLeads, p.lidSoni, g.adLeads), d => cell(d.adLeads, int, d.missing ? ' tsx-missing' : ''))}
-                ${row('Lid narxi (kabinet)', owner, usd(p.lidNarxi), usd(t.adCpl), ratio(t.adCpl, p.lidNarxi, g.adCpl), d => cell(d.adCpl, usd))}
-                ${row('Sifatli lid (targetolog)', owner, int(p.kvalLidSoni), int(t.adKval), ratio(t.adKval, p.kvalLidSoni, g.adKval), d => cell(d.adKval, int))}
-                ${row('Sifatli lid narxi (targetolog)', owner, usd(p.kvalNarxi), usd(t.adKvalCpl), ratio(t.adKvalCpl, p.kvalNarxi, g.adKvalCpl), d => cell(d.adKvalCpl, usd))}
-                ${row('Lid → Sifatli % (targetolog)', owner, pct(p.kvalPct), pct(t.adKvalPct), ratio(t.adKvalPct, p.kvalPct, g.adKvalPct), d => cell(d.adKvalPct, pct))}
-                ${group('CRM avtomatik hisoblaydi', 'Sotuv boʻlimidagi “Target” lidlar · oʻzgartirib boʻlmaydi')}
-                ${row('Lid soni (CRM)', lock, int(p.lidSoni), int(t.crm.leads), ratio(t.crm.leads, p.lidSoni, g.crmLeads), d => cell(d.isFuture ? null : d.crm.leads, int), { cls: 'tsx-crm' })}
-                ${row('Farq: kabinet − CRM', lock, '—', t.diff == null ? '—' : (t.diff > 0 ? '+' : '') + t.diff, '<td class="tsx-pct">—</td>',
-                    d => { const lv = S().diffLevel(d.diff, d.crm.leads); return cell(d.diff, v => (v > 0 ? '+' : '') + v, lv ? ' tsx-' + lv : ''); }, { cls: 'tsx-crm' })}
-                ${row('Sifatli lid (CRM)', lock, int(p.kvalLidSoni), int(t.crm.qualified), ratio(t.crm.qualified, p.kvalLidSoni, g.crmKval), d => cell(d.isFuture ? null : d.crm.qualified, int), { cls: 'tsx-crm' })}
-                ${row('Sifatsiz (CRM)', lock, '—', int(t.crm.unqualified), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.unqualified, int), { cls: 'tsx-crm' })}
-                ${row('Hali ishlanmagan (CRM)', lock, '—', int(t.crm.pending), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.pending, int, d.crm.pending ? ' tsx-warn' : ''), { cls: 'tsx-crm' })}
-                ${row('Lid narxi (CRM)', lock, usd(p.lidNarxi), usd(t.crmCpl), ratio(t.crmCpl, p.lidNarxi, g.crmCpl), d => cell(d.crmCpl, usd), { cls: 'tsx-crm' })}
-                ${row('Sifatli lid narxi (CRM)', lock, usd(p.kvalNarxi), usd(t.crmKvalCpl), ratio(t.crmKvalCpl, p.kvalNarxi, g.crmKvalCpl), d => cell(d.crmKvalCpl, usd), { cls: 'tsx-crm' })}
-                ${row('Lid → Sifatli % (CRM)', lock, pct(p.kvalPct), pct(t.crmKvalPct), ratio(t.crmKvalPct, p.kvalPct, g.crmKvalPct), d => cell(d.crmKvalPct, pct), { cls: 'tsx-crm' })}
-                ${row('Sifat % ishlanganlar ichida (CRM)', lock, '—', pct(t.crmKvalPctWorked), '<td class="tsx-pct">—</td>', d => cell(d.crmKvalPctWorked, pct), { cls: 'tsx-crm' })}
-                ${group('Natija: sotuvgacha', 'shu kuni kelgan target lidlar keyinchalik qayergacha yetgani · 🔒 CRM')}
-                ${row('Sinovga yozilgan', lock, '—', int(t.crm.trial), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.trial, int), { cls: 'tsx-crm' })}
-                ${row('Sinov narxi', lock, '—', usd(t.trialCost), '<td class="tsx-pct">—</td>', d => cell(d.trialCost, usd), { cls: 'tsx-crm' })}
-                ${row('Sotuv', lock, '—', int(t.crm.sold), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.sold, int), { cls: 'tsx-crm' })}
-                ${row('Sotuv narxi (CPA)', lock, usd(p.targetCpa || null), usd(t.saleCost), ratio(t.saleCost, p.targetCpa, g.saleCost), d => cell(d.saleCost, usd), { cls: 'tsx-crm' })}
-                ${row('Tushum (shu oy lidlaridan)', lock, '—', som(t.revenue), '<td class="tsx-pct">—</td>', d => cell(d.isFuture || !d.crm.revenue ? null : d.crm.revenue, som), { cls: 'tsx-crm' })}
-                ${row('Toʻliq xarajat (kiritilgan kunlar)', lock, usd(p.budget != null ? p.budget + (p.fixed || 0) : null), usd(t.totalCost), '<td class="tsx-pct">—</td>', d => cell(d.entry ? d.budget + (d.fixed || 0) : null, usd), { cls: 'tsx-crm' })}
-                ${row('Toʻliq lid narxi', lock, '—', usd(t.fullCpl), '<td class="tsx-pct">—</td>', d => cell(d.entry ? (d.crm.leads ? (d.budget + (d.fixed || 0)) / d.crm.leads : null) : null, usd), { cls: 'tsx-crm' })}
-                ${row('ROAS (kiritilgan kunlar)', lock, p.targetRoas ? times(p.targetRoas) : '—', times(t.roas), ratio(t.roas, p.targetRoas, g.roas),
-                    d => cell(t.usdRate && d.entry && (d.budget + (d.fixed || 0)) > 0 ? (d.crm.revenue / t.usdRate) / (d.budget + (d.fixed || 0)) : null, times), { cls: 'tsx-crm' })}
-            </tbody>
+            <tbody>${body}</tbody>
         </table></div>`;
+    }
+
+    // Telefon uchun: keng jadval o'rniga kunlik kartochkalar (yangi kun yuqorida)
+    function dayCards(sh) {
+        const list = sh.days.filter(d => !d.isFuture).reverse();
+        return `<div class="tsx-daycards" aria-label="Kunlik maʼlumot">${list.map(d => {
+            const lv = S().diffLevel(d.diff, d.crm.leads);
+            const edit = canEditDay(d.key);
+            return `<article class="tsx-daycard${d.missing ? ' is-missing' : ''}">
+                <header><b>${esc(dayLabel(d.key))}</b><span>${d.weekday}${d.missing ? ' · ⚠ kiritilmagan' : ''}</span>
+                    ${edit ? `<button type="button" class="btn-ghost" data-tsx-day="${d.key}">${d.entry ? 'Tahrirlash' : 'Kiritish'}</button>` : ''}</header>
+                <dl>
+                    <div><dt>Budget</dt><dd>${usd(d.budget)}</dd></div>
+                    <div><dt>Lid (kabinet)</dt><dd>${int(d.adLeads)}</dd></div>
+                    <div><dt>Lid (🔒 CRM)</dt><dd>${int(d.crm.leads)}</dd></div>
+                    <div><dt>Farq</dt><dd class="${lv ? 'tsx-' + lv : ''}">${d.diff == null ? '—' : (d.diff > 0 ? '+' : '') + d.diff}</dd></div>
+                    <div><dt>Kval (🔒 CRM)</dt><dd>${int(d.crm.qualified)}</dd></div>
+                    <div><dt>Lid narxi (CRM)</dt><dd>${usd(d.crmCpl)}</dd></div>
+                </dl>${d.entry?.note ? `<p class="tsx-daycard-note">📝 ${esc(d.entry.note)}</p>` : ''}</article>`;
+        }).join('')}</div>`;
+    }
+
+    // Excel (CSV, ";" ajratgich, UTF-8 BOM) — Google Sheet bilan katakma-katak solishtirish uchun
+    function exportCsv(sh) {
+        const rows = sheetModel(sh).filter(r => !r.group);
+        const num = v => (v == null || !Number.isFinite(Number(v)) ? '' : String(Math.round(Number(v) * 100) / 100).replace('.', ','));
+        const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const lines = [['Koʻrsatkich', 'Masʼul', 'Reja (oylik)', 'Fakt (oylik)', '%', ...sh.days.map(d => d.key.slice(8) + '.' + d.key.slice(5, 7) + '.' + d.key.slice(0, 4))].map(q).join(';')];
+        let parent = '';
+        for (const r of rows) {
+            if (!r.sub) parent = r.label;
+            lines.push([q(r.sub ? `${parent} — ${r.label}` : r.label + (r.hint ? ` (${r.hint})` : '')), q(r.crm ? 'CRM (avtomatik)' : r.who || ''),
+                num(r.plan?.v), num(r.fakt?.v), num(r.pct?.v), ...sh.days.map(d => num(r.day(d).v))].join(';'));
+        }
+        const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `target-lidlar-${state.lang === 'russian' ? 'rus' : 'ingliz'}-${sh.monthKey}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
 
     function managersTable(lang, monthKey) {
@@ -184,6 +251,18 @@
             <tbody>${rows}</tbody></table></div></details>`;
     }
 
+    // [1,2,3,5,7,8] → "1–3, 5, 7–8"
+    function ranges(nums) {
+        const out = [];
+        for (let i = 0; i < nums.length; i++) {
+            let j = i;
+            while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+            out.push(j > i ? `${nums[i]}–${nums[j]}` : String(nums[i]));
+            i = j;
+        }
+        return out.join(', ');
+    }
+
     function alerts(sh) {
         const out = [];
         const p = state.data?.permissions || {};
@@ -193,7 +272,7 @@
                 ${p.canEditDays && canEditDay(y) ? `<button type="button" class="btn-primary-sm" data-tsx-day="${y}">Hozir kiritish</button>` : ''}</div>`);
         }
         const missing = sh.totals.missingDays.filter(k => k !== y);
-        if (missing.length) out.push(`<div class="tsx-alert">Kiritilmagan kunlar: ${missing.map(k => Number(k.slice(8))).join(', ')}. Bu kunlarning CRM lidlari narx hisobiga qoʻshilmaydi.</div>`);
+        if (missing.length) out.push(`<div class="tsx-alert">Kiritilmagan kunlar: ${ranges(missing.map(k => Number(k.slice(8))))} (${missing.length} kun). Bu kunlarning CRM lidlari narx hisobiga qoʻshilmaydi.</div>`);
         if (!sh.plan) out.push(`<div class="tsx-alert">Bu oy uchun reja kiritilmagan — % ustuni boʻsh qoladi.${p.canEditPlan ? ' <button type="button" class="btn-ghost" data-tsx-plan>Rejani kiritish</button>' : ''}</div>`);
         const bigDiff = sh.days.filter(d => S().diffLevel(d.diff, d.crm.leads) === 'bad');
         if (bigDiff.length) out.push(`<div class="tsx-alert is-bad">Kabinet va CRM lid soni sezilarli farq qilgan kunlar: ${bigDiff.map(d => `${d.day} (${d.diff > 0 ? '+' : ''}${d.diff})`).join(', ')}. Lidlar CRM'ga yetib kelmayotgan yoki ikki marta sanalgan boʻlishi mumkin.</div>`);
@@ -221,12 +300,17 @@
         if (!MONTH_KEY_RE.test(String(state.month || ''))) state.month = currentMonthKey();
         const gen = ++state.gen, month = state.month, selLang = state.lang;
         if (!state.data || state.data.month !== month || state.data.language !== selLang) el.innerHTML = '<div class="tsx-empty">Yuklanmoqda…</div>';
-        let data;
-        try { data = await load(month, selLang); }
+        const [py, pm] = month.split('-').map(Number);
+        const prevMonth = new Date(Date.UTC(py, pm - 2, 1)).toISOString().slice(0, 7);
+        let data, prevData = null;
+        try { [data, prevData] = await Promise.all([load(month, selLang), load(prevMonth, selLang).catch(() => null)]); }
         catch (e) { if (gen === state.gen) el.innerHTML = `<div class="tsx-empty is-bad">${esc(e.message || 'Maʼlumotni yuklab boʻlmadi')}</div>`; return; }
         if (gen !== state.gen) return;
         state.data = data;
-        const sh = S().buildSheet({ monthKey: month, today: data.today || tashkentToday(), entries: data.days || {}, plan: data.plan, leads: crmLeads(selLang) });
+        const leads = crmLeads(selLang);
+        const today = data.today || tashkentToday();
+        const sh = S().buildSheet({ monthKey: month, today, entries: data.days || {}, plan: data.plan, leads });
+        const prev = prevData ? S().buildSheet({ monthKey: prevMonth, today, entries: prevData.days || {}, plan: prevData.plan, leads }) : null;
         const p = data.permissions || {};
         const y = sh.yesterday;
         el.innerHTML = `<div class="tsx-wrap">
@@ -238,17 +322,26 @@
                 <div class="tsx-toolbar-right">
                     ${p.canEditDays && y.slice(0, 7) === month && canEditDay(y) ? `<button type="button" class="btn-primary-sm" data-tsx-day="${y}">${data.days[y] ? 'Kechagini tahrirlash' : '+ Kechagi kunni kiritish'}</button>` : ''}
                     ${p.canEditPlan ? '<button type="button" class="btn-ghost" data-tsx-plan>Oylik reja</button>' : ''}
+                    <button type="button" class="btn-ghost" data-tsx-export title="Google Sheet bilan bir xil tartibda, Excel'da ochiladi">⬇ Excel</button>
                 </div>
             </div>
             ${alerts(sh)}
-            ${kpis(sh)}
+            ${kpis(sh, prev)}
             ${sheetTable(sh)}
+            ${dayCards(sh)}
             ${legend()}
             ${managersTable(selLang, month)}
         </div>`;
         el.querySelector('#tsxMonth')?.addEventListener('change', e => { state.month = e.target.value; render(el, state.lang); });
         el.querySelectorAll('[data-tsx-day]').forEach(b => b.addEventListener('click', () => openDay(el, b.dataset.tsxDay, sh)));
         el.querySelectorAll('[data-tsx-plan]').forEach(b => b.addEventListener('click', () => openPlan(el)));
+        el.querySelector('[data-tsx-export]')?.addEventListener('click', () => exportCsv(sh));
+        el.querySelector('[data-tsx-toggle]')?.addEventListener('click', e => {
+            state.showDetail = !state.showDetail;
+            e.currentTarget.setAttribute('aria-expanded', String(state.showDetail));
+            e.currentTarget.textContent = (state.showDetail ? '▾ ' : '▸ ') + e.currentTarget.textContent.replace(/^[▾▸]\s*/, '');
+            el.querySelectorAll('.tsx-detail').forEach(r => { r.hidden = !state.showDetail; });
+        });
         // Bugungi kun ustuniga avtomatik surish
         const wrap = el.querySelector('.tsx-table-wrap');
         const todayTh = el.querySelector('.tsx-today') || el.querySelector(`[data-tsx-day="${y}"]`)?.closest('th');
