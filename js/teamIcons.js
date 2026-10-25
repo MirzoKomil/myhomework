@@ -52,6 +52,7 @@
         food: '<path d="M3 11h18a9 9 0 01-18 0zM12 2v4M8 4v2M16 4v2"/>',
         pin: '<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>',
         clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        tag: '<path d="M20.6 13.4L13.4 20.6a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
         heart: '<path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z"/>'
     };
     const MAP = {
@@ -63,7 +64,7 @@
         '📣': 'megaphone', '💻': 'laptop', '💵': 'money', '🔍': 'search', '🏆': 'trophy', '🏅': 'medal', '🥇': 'medal', '🥈': 'medal', '🥉': 'medal',
         '🍽️': 'food', '🍽': 'food', '📁': 'folder', '🚫': 'ban', '🪙': 'money', '📥': 'download', '⬇️': 'download', '⬆️': 'upload',
         '🖨️': 'printer', '🖨': 'printer', '💾': 'save', '👨‍🏫': 'user', '👩‍🏫': 'user', '🧑‍🏫': 'user', '👩': 'user', '👨': 'user', '🧑': 'user',
-        '📍': 'pin', '⏱️': 'clock', '⏰': 'clock', '🕒': 'clock', '🎨': 'image', '📦': 'folder', '📌': 'pin', '❤️': 'heart'
+        '📍': 'pin', '🏷️': 'tag', '🏷': 'tag', '🏢': 'school', '💼': 'bag', '⏱️': 'clock', '⏰': 'clock', '🕒': 'clock', '🎨': 'image', '📦': 'folder', '📌': 'pin', '❤️': 'heart'
     };
     const keys = Object.keys(MAP).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const RX = new RegExp(`^\\s*(${keys.join('|')})\\uFE0F?\\s*`);

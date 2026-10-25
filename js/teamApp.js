@@ -395,7 +395,7 @@
     }
 
     // Telefonda jadval qatorlari kartaga aylanadi: har katakka ustun nomi yoziladi.
-    const CARD_TABLES = '.trial-table, .dbx-table, .sdp-table, .cf-tx-table, .ahx-tbl, .hrx-table, #tab-teachers-section table.table, #tab-analitika table.table';
+    const CARD_TABLES = '.trial-table, .dbx-table, .sdp-table, .cf-tx-table, .ahx-tbl, #tab-teachers-section table.table, #tab-analitika table.table';
     function enhanceTables(root) {
         root.querySelectorAll(CARD_TABLES).forEach(table => {
             const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim().replace(/\s+/g, ' '));
@@ -459,10 +459,28 @@
         const own = typeof getUserOwnLang === 'function' ? getUserOwnLang() : null;
         if (!own) return;
         root.querySelectorAll('#mainAttSubjectTabs, #asstAttSubjectTabs, #ttSubjectTabs').forEach(box => {
-            if (box.dataset.teamOwn || !box.offsetParent) return;
-            box.dataset.teamOwn = '1';
+            if (box.dataset.teamUserPicked) return;
+            if (!box.dataset.teamWatch) {
+                box.dataset.teamWatch = '1';
+                box.addEventListener('click', e => { if (e.isTrusted) box.dataset.teamUserPicked = '1'; });
+            }
+            // Tugma bog'langandan keyingina bosamiz (aks holda bosish behuda ketadi)
             const btn = box.querySelector(`.subject-tab[data-subject="${own}"]:not(.active)`);
-            if (btn) btn.click();
+            if (btn && btn.dataset.bound) btn.click();
+        });
+    }
+
+    // O'zbekcha tutuq belgilari bir xil ko'rinsin: o' g' → oʻ gʻ, boshqa ' → ʼ (faqat ko'rinadigan matn).
+    const APOS_SKIP = 'input, textarea, script, style, [contenteditable], .chat, [class*="chat-"], code, pre';
+    function normalizeApostrophes(root) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode: n => (/[A-Za-zʻʼ][’'‘`]/.test(n.nodeValue) && !n.parentElement?.closest(APOS_SKIP)) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+        });
+        const list = [];
+        while (walker.nextNode()) list.push(walker.currentNode);
+        list.forEach(n => {
+            const v = n.nodeValue.replace(/([oOgG])['’‘`]/g, '$1ʻ').replace(/([A-Za-zʻ])['’`](?=[A-Za-z])/g, '$1ʼ');
+            if (v !== n.nodeValue) n.nodeValue = v;
         });
     }
 
@@ -500,6 +518,10 @@
             enhanceStudentRows(document);
             enhancePlanParams(document);
             syncOwnLangTabs(document);
+            const area = document.querySelector('.main-area');
+            if (area) normalizeApostrophes(area);
+            const sb = document.getElementById('sidebar');
+            if (sb) normalizeApostrophes(sb);
             hideDuplicateHeading();
             revealActiveSubtab(document);
             syncBottomNav();
@@ -532,6 +554,16 @@
         new MutationObserver(schedule).observe(document.querySelector('.main-area') || document.body, { childList: true, subtree: true });
         new MutationObserver(syncBottomNav).observe(document.body, { attributes: true, attributeFilter: ['class'] });
         document.addEventListener('click', e => { if (e.target.closest('.section-nav-item')) schedule(); });
+        // Akademik: sahifa darajasidagi til tanlovi ichki davomat tanlovini ham boshqaradi (bitta joy).
+        document.addEventListener('click', e => {
+            const pageLang = e.target.closest('[data-teachers-lang]');
+            if (!pageLang) return;
+            setTimeout(() => {
+                document.querySelectorAll('#mainAttSubjectTabs, #asstAttSubjectTabs').forEach(box => {
+                    box.querySelector(`.subject-tab[data-subject="${pageLang.dataset.teachersLang}"]:not(.active)`)?.click();
+                });
+            }, 0);
+        });
         schedule();
     }
 

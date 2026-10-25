@@ -7294,8 +7294,8 @@ function renderTimetableWeekGrid(teacher, entries, days) {
                 const span = getLessonSlotSpan(entry.duration);
                 const cls = getTimetableCellClass(entry) + (isSel ? ' tt-cell--selected' : '');
                 html += `<td class="${cls}" rowspan="${span}" data-tt-cell data-mode="lesson" data-teacher="${teacher.id}" data-dow="${dow}" data-date="${dateKey}" data-time="${time}" data-student="${escapeHtml(entry.studentId)}" data-source="${entry.source}" title="${escapeHtml(entry.studentName)}">
-                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
                     <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
+                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
                 </td>`;
             } else {
                 const key = `${dow}_${time}`;
@@ -7585,8 +7585,8 @@ function renderTimetableTeacherGrid(teacher, entries) {
                 const span = getLessonSlotSpan(entry.duration);
                 const cls = getTimetableCellClass(entry);
                 html += `<td class="${cls}" rowspan="${span}" data-tt-cell data-teacher="${teacher.id}" data-dow="${dow}" data-time="${time}" data-student="${escapeHtml(entry.studentId)}" title="${escapeHtml(entry.studentName)}">
-                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
                     <span class="tt-cell-name">${escapeHtml(entry.studentName)}</span>
+                    <span class="tt-cell-id">${escapeHtml(entry.studentId)}</span>
                 </td>`;
             } else {
                 const key = `${dow}_${time}`;

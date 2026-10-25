@@ -3907,3 +3907,231 @@ html.rd .leads-kanban > .lead-column > .lead-column-cards > .lead-column-empty:o
     background: url(../images/empty/board.webp) center / contain no-repeat;
     opacity: .9;
 }
+
+/* ==========================================================================
+   R3: banner, jadval, davomat, HR, doska
+   ========================================================================== */
+/* Ma'lumot banneri — oddiy matn bloki (flex emas), ikonka chapda */
+html.rd .info-banner {
+    display: block;
+    position: relative;
+    padding-left: 42px;
+}
+
+html.rd .info-banner::before {
+    position: absolute;
+    left: 14px;
+    top: 11px;
+}
+
+/* Dars jadvali: ism birinchi, ID kichik */
+html.rd .tt-cell-name {
+    display: block;
+    font-weight: 700;
+    color: var(--text);
+}
+
+html.rd .tt-cell-id {
+    display: block;
+    font-size: 10px;
+    opacity: .6;
+}
+
+html.rd .tt-edit-btn {
+    color: var(--rd-primary-strong);
+}
+
+@media (max-width: 900px) {
+    /* Jadval boshqaruvlari bitta qatorda, izoh (legend) yashirin */
+    html.rd .rd-tt-toolbar2 {
+        flex-wrap: nowrap !important;
+        justify-content: space-between;
+        gap: 6px !important;
+    }
+
+    html.rd .rd-tt-weeknav {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: space-between;
+    }
+
+    html.rd .rd-tt-weeknav-label {
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    html.rd .rd-tt-today-btn {
+        padding: 6px 10px !important;
+    }
+
+    html.rd .tt-legend {
+        display: none !important;
+    }
+
+    html.rd .tt-toolbar-card {
+        padding: 10px !important;
+    }
+
+    /* Davomat: tekis, ichma-ich chekka yo'q */
+    html.rd .teacher-duty-students {
+        max-width: none;
+        margin-top: 8px;
+    }
+
+    /* Elektron doska: asboblar o'raladi */
+    html.rd #wbToolbar {
+        flex-wrap: wrap !important;
+        overflow: visible;
+    }
+
+    /* O'quvchini tekshirish: KPI 3 ta bir qatorda */
+    html.rd .tcx-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px;
+    }
+
+    html.rd .tcx-kpis .ahx-kpi {
+        padding: 10px;
+    }
+
+    html.rd .tcx-kpis .ahx-kpi-v {
+        font-size: 16px;
+        white-space: normal;
+    }
+
+    html.rd .tcx-kpis .ahx-kpi-n {
+        display: none;
+    }
+
+    /* HR: ichma-ich kartalar yo'q, ro'yxat to'liq kenglikda */
+    html.rd #tab-hr .card,
+    html.rd #tab-hr [class*="hrx-wrap"],
+    html.rd #tab-hr .hrx-table-wrap {
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    html.rd #tab-hr :has(> .hrx-table-wrap) {
+        display: flex !important;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    html.rd #tab-hr .hrx-table-wrap {
+        width: 100% !important;
+    }
+
+    html.rd .hrx-table tr {
+        background: var(--surface);
+        border: 1px solid var(--border) !important;
+        border-radius: 14px;
+        margin-bottom: 8px;
+    }
+
+    html.rd .hrx-table td::before {
+        display: none !important;
+    }
+
+    html.rd #tab-hr .hrx-chips,
+    html.rd #tab-hr [class*="filter"] {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    html.rd #tab-hr [class*="filter"] > * {
+        flex: 0 0 auto;
+    }
+}
+
+/* Davomat: talaba kartalari to'liq kenglikda (kompyuterda ham) */
+html.rd .teacher-duty-students {
+    max-width: none;
+}
+
+html.rd .teacher-duty-calendar {
+    max-width: 560px;
+}
+
+@media (max-width: 900px) {
+    html.rd .tt-toolbar-card .rd-tt-toolbar2 {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+    }
+
+    html.rd .tt-toolbar-card .rd-tt-toolbar2 > .rd-tt-weeknav {
+        flex: 1 1 100% !important;
+        order: -1;
+    }
+
+    html.rd .tt-toolbar-card .rd-tt-toolbar2 > .rd-tt-viewtoggle {
+        margin-left: auto !important;
+    }
+
+    html.rd .rd-tt-weeknav-btn {
+        min-width: 32px;
+    }
+
+    /* Davomat KPI xulosasi — 3 ustunli ixcham kartalar */
+    html.rd .kpi-summary:not(:empty) {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        padding: 10px !important;
+    }
+
+    html.rd .kpi-summary .kpi-num {
+        font-size: 17px !important;
+        word-break: break-word;
+    }
+
+    html.rd .kpi-summary .kpi-lbl {
+        font-size: 11px;
+    }
+
+    /* Davomat filtrlari: 2 ustun */
+    html.rd #tpAttendance .card-header > div:has(> select) {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    html.rd #tpAttendance .card-header > div:has(> select) > * {
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+    }
+
+    html.rd #tpAttendance .card-header-unused {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    html.rd #tpAttendance .card-header > h3 {
+        grid-column: 1 / -1;
+    }
+
+    html.rd #tpAttendance .card-header > * {
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+    }
+}
+
+/* Akademik: til tanlovi faqat sahifa tepasida (ichki takror yashirin) */
+html.rd body[data-role="admin"] #tpAttendance .card > .subject-tabs,
+html.rd body[data-role="boshliq"] #tpAttendance .card > .subject-tabs {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    html.rd .tt-toolbar-card .rd-tt-toolbar2 > .tt-edit-btn {
+        flex: 0 0 auto !important;
+        width: 40px !important;
+    }
+}
