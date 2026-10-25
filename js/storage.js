@@ -215,6 +215,15 @@ async function refreshLeadsFromApi() {
     return leads;
 }
 
+// Serverda arxivdan tiklash yoki xodimni ishdan bo'shatish kabi bir nechta
+// jadvalga tegadigan amal tugagach — keshni serverdagi holat bilan yangilash.
+// PATCH yubormaydi (eski keshdan qayta yozib, tiklangan yozuvni o'chirmaslik uchun).
+async function reloadStateFromApi() {
+    const state = await apiLoadState();
+    _cache = { ..._cache, ...state };
+    return state;
+}
+
 async function initStorage() {
     try {
         const state = await apiLoadState();
