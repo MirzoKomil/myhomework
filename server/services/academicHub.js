@@ -790,7 +790,8 @@ function expectedLiveLessons(student, now = new Date()) {
     const todayKey = tzDay(now);
     // Bugungi dars hali vaqti kelmagan bo'lsa hisobga kirmaydi (Toshkent vaqti).
     const nowHm = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
-    const lessonHm = String(student.lessonTime).slice(0, 5);
+    const m = String(student.lessonTime).match(/(\d{1,2})[:.](\d{2})/);
+    const lessonHm = m ? `${m[1].padStart(2, '0')}:${m[2]}` : '00:00';
     const end = new Date(`${todayKey}T12:00:00Z`);
     if (Number.isNaN(start.getTime()) || start > end) return null;
     let n = 0;

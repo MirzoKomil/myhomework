@@ -841,7 +841,7 @@
                 <div class="lh-kpi"><span>Tugatgan darslar</span><b>${s.completed}</b><small>72 dan</small></div>
                 <div class="lh-kpi"><span>Uy vazifasi</span><b>${s.homeworkAvg === null ? '—' : s.homeworkAvg + '%'}</b><small>${s.firstTryAvg === null ? '' : `1-urinish ${s.firstTryAvg}% · ${s.avgAttempts} urinish`}</small></div>
                 <div class="lh-kpi"><span>Faol vaqt</span><b>${dur(s.time.total)}</b><small>bugun ${dur(s.time.today)} · 7 kun ${dur(s.time.week)}</small></div>
-                <div class="lh-kpi"><span>Jonli darsga keldi</span><b>${att.present}${att.expected ? `/${att.expected}` : ''}</b><small>${att.expected ? `jadval bo'yicha · ${att.rate}%` : 'marta (jadval kiritilmagan)'}${att.assistantPresent ? ` · yordamchi: ${att.assistantPresent}` : ''}</small></div>
+                <div class="lh-kpi"><span>Jonli darsga keldi</span><b>${att.expected ? `${Math.min(att.present, att.expected)}/${att.expected}` : att.present}</b><small>${att.expected ? `jadval bo'yicha · ${att.rate}%` : 'marta (jadval kiritilmagan)'}${att.expected && att.present > att.expected ? ` · +${att.present - att.expected} qo'shimcha` : ''}${att.assistantPresent ? ` · yordamchi: ${att.assistantPresent}` : ''}</small></div>
             </div>
             <div class="lh-card"><div class="lh-card-h"><b>72 dars xaritasi</b><span class="lh-muted">katakni bosing</span></div>
                 <div class="lh-heat">${d.lessons.map(l => `<button type="button" class="lh-cell ${heatClass(l)}${l.grades.length ? ' has-grade' : ''}" data-cell="${l.no}" aria-label="${l.no}-dars: ${l.percent}%${l.grades.length ? ', jonli darsda baholangan' : ''}">${l.no}</button>`).join('')}</div>
