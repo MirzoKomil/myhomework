@@ -20,7 +20,11 @@ function trustedOrigins(source, env) {
       if (url.protocol === 'https:' && /(^|\.)netlify\.app$/.test(url.hostname)) origins.add(url.origin);
     } catch { /* unset URL */ }
   }
+  // Railway'ning o'z test manzili (*.up.railway.app) — Railway beradi, so'rovdan olinmaydi.
+  const railwayDomain = String(env.RAILWAY_PUBLIC_DOMAIN || '').trim();
+  if (/^[a-z0-9-]+\.up\.railway\.app$/i.test(railwayDomain)) origins.add('https://' + railwayDomain);
   if (env.NETLIFY_DEV === 'true') origins.add('http://localhost:8888');
+  if (env.LOCAL_DEV_ORIGIN) origins.add(env.LOCAL_DEV_ORIGIN);
   return origins;
 }
 export function createHandler(source, { env = process.env, fetcher = (...args) => fetch(...args) } = {}) {

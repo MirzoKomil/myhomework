@@ -133,3 +133,23 @@ bergan ariza bilan kuzatish mumkin.
 Homework ingliz tili bo'limiga `organic` va `yangi-lidlar` sifatida tushdi.
 Tekshiruvdan keyin faqat shu ikki test lid CRMning odatiy o'chirish amali bilan
 arxivga o'tkazildi. Qolgan 4 210 ta faol lid o'zgarmagani solishtirib tekshirildi.
+
+## Railway'ga ko'chirish (domwork) — Netlify o'rniga
+
+`domwork` papkasida `server.mjs` + `package.json` bor: bu kichik Node server
+`public/` papkani beradi va `/.netlify/functions/lead` manziliga kelgan formani
+avvalgidek `lead-handler.mjs` orqali CRM'ga uzatadi. Qo'shimcha paket kerak emas.
+
+1. Railway → comfortable-balance → **+ Create → GitHub Repo → MirzoKomil/myhomework**.
+2. Yangi servis → Settings → **Root Directory**: `integrations/netlify-landings/domwork`.
+3. Variables: `LEADS_WEBHOOK_SECRET` = myhomework servisidagi ro'yxatdan BITTA faol kalit.
+4. Settings → Networking → **Generate Domain** → `*.up.railway.app` manzilida sinab ko'ring
+   (bu manzildan ham forma ishlaydi).
+5. Settings → Networking → **Custom Domain** → `domwork.uz` (va `www.domwork.uz`).
+   Railway ko'rsatgan CNAME/TXT yozuvlarini domen DNS'iga qo'shing.
+   Ildiz domen (`domwork.uz`) uchun DNS provayder CNAME flattening/ALIAS'ni
+   qo'llashi kerak (masalan Cloudflare). DNS almashguncha Netlify'dagi sayt
+   ishlab turadi — uzilish bo'lmaydi.
+6. `www.domwork.uz` → `domwork.uz`ga avtomatik yo'naltiriladi.
+
+Mahalliy sinov: `PORT=8799 LOCAL_DEV_ORIGIN=http://localhost:8799 node server.mjs`
