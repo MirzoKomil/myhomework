@@ -196,6 +196,8 @@ app.use('/api/hr/bot-webhook', hrBotLimit);
 app.use('/api/public', publicApiLimit);
 app.use('/api', apiLimit);
 
+// Targetolog kabi "faqat ko'rish" rollari uchun barcha /api o'zgartirishlari bitta joyda yopiladi.
+app.use('/api', require('./middleware/readOnlyRoles').readOnlyRoles({ findUserById: crmDb.findUserById }));
 app.use('/api/auth', authRoutes);
 app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);
@@ -212,6 +214,7 @@ app.use('/api/payroll', payrollRoutes);
 app.use('/api/inflow', inflowRoutes);
 app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require('./middleware/auth').authRequired));
 app.use('/api/domwork/marketing', require('./routes/domworkMarketing')({pool:crmDb.pool,authRequired:require('./middleware/auth').authRequired}));
+app.use('/api/target-ads', require('./routes/targetAds'));
 app.use('/api/domwork/student-telegram', require('./routes/studentTelegram')({pool:crmDb.pool,runtime:domworkBot,
     authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domworkBot,

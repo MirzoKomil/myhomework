@@ -14,7 +14,8 @@ const MAX_RECIPIENTS_PER_REQUEST = 500;
 // SMS maktab hisobidan (Eskiz) pul yechadi — faqat SMS bilan ishlaydigan
 // xodimlar yubora oladi. Ilgari har qanday tokenli foydalanuvchi (ustoz,
 // oddiy xodim, hatto o'quvchi tokeni) ham yubora olardi.
-const SMS_ROLES = ['admin', 'rop', 'boshliq', 'sales_manager', 'targetolog'];
+// Targetolog SMS rassilkani ko'rmaydi va yubora olmaydi.
+const SMS_ROLES = ['admin', 'rop', 'boshliq', 'sales_manager'];
 const smsAccess = requireRoles(SMS_ROLES);
 
 router.get('/balance', authRequired, smsAccess, async (req, res) => {
