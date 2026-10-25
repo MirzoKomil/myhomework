@@ -95,7 +95,10 @@ async function access(db, actor, mode = 'finance') {
 }
 async function sources(db, p) {
     const ledgerReady = (await db.query("SELECT to_regclass('public.payment_records') AS ledger")).rows[0]?.ledger;
-    const paymentRecords = ledgerReady ? (await db.query(`SELECT id,lead_id,manager_id,language,amount,TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date FROM payment_records ORDER BY id`)).rows
+    // Moliya bekor qilgan (test, dublikat yoki xato) tushumlar KPI/bonusga kirmaydi.
+    const voidsReady = ledgerReady && (await db.query("SELECT to_regclass('public.payment_record_voids') AS t")).rows[0]?.t;
+    const paymentRecords = ledgerReady ? (await db.query(`SELECT id,lead_id,manager_id,language,amount,TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date FROM payment_records r
+        ${voidsReady ? 'WHERE NOT EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id=r.id)' : ''} ORDER BY id`)).rows
         .map(r => ({ id: r.id, leadId: r.lead_id, managerId: r.manager_id, language: r.language, amount: Number(r.amount), paidDate: r.paid_date })) : undefined;
     const employees = (await db.query(`SELECT he.*, COALESCE(u.avatar,'') AS avatar FROM hr_employees he
         LEFT JOIN users u ON LOWER(TRIM(u.email))=LOWER(TRIM(he.login)) ORDER BY he.name`)).rows;

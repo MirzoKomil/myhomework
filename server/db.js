@@ -19,6 +19,7 @@ const payroll = require('./services/payroll');
 const inflow = require('./services/inflow');
 const paymentHistory = require('./services/paymentHistory');
 const paymentCash = require('./services/paymentCash');
+const finance = require('./services/finance');
 const teacherDuties = require('./services/teacherDuties');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
@@ -371,6 +372,7 @@ async function initSchema() {
 
     await inflow.initSchema(pool);
     await paymentCash.initSchema(pool);
+    await finance.initSchema(pool);
 
     // Boshlang'ich mobile_content qatori
     await pool.query(

@@ -6,8 +6,8 @@ async function forStudent(db, student) {
     const receipts = (await db.query(`SELECT id,source_key,amount,method,receipt_url,tariff,debt_snapshot,legacy_review,
         TO_CHAR(paid_date,'YYYY-MM-DD') AS date,
         TO_CHAR(paid_at AT TIME ZONE 'Asia/Tashkent','HH24:MI') AS time
-        FROM payment_records WHERE student_id=$1 OR
-        (student_id IS NULL AND lead_id=$2 AND language=$3)
+        FROM payment_records WHERE (student_id=$1 OR
+        (student_id IS NULL AND lead_id=$2 AND language=$3)) AND NOT EXISTS (SELECT 1 FROM payment_record_voids pv WHERE pv.record_id=payment_records.id)
         ORDER BY paid_date DESC,created_at DESC,id`, [student.id, student.leadRef?.id || null, student.subject || 'english'])).rows;
     const migrated = new Set(receipts.map(r => r.source_key));
     const old = (await db.query('SELECT * FROM payments WHERE student_id=$1 ORDER BY date DESC,id', [student.id])).rows;
