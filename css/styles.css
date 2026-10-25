@@ -9145,3 +9145,105 @@ body.modal-open {
         min-width: 0;
     }
 }
+
+/* ===== Marketing → Target lidlar (targetMonitorUI) ===== */
+.tsx-wrap { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; min-width: 0; }
+.tsx-empty { padding: 48px 16px; text-align: center; color: var(--text-muted); }
+.tsx-empty.is-bad { color: #DC2626; }
+.tsx-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tsx-toolbar-left, .tsx-toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tsx-meta { font-size: 13px; color: var(--text-muted); }
+.tsx-alert { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--border); font-size: 13px; color: var(--text); }
+.tsx-alert.is-warn { background: var(--warning-bg); border-color: #FCD34D; }
+.tsx-alert.is-bad { background: var(--danger-bg); border-color: #FCA5A5; }
+.tsx-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.tsx-kpi { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 14px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tsx-kpi.tsx-good { border-left-color: #10B981; }
+.tsx-kpi.tsx-warn { border-left-color: #F59E0B; }
+.tsx-kpi.tsx-bad { border-left-color: #EF4444; }
+.tsx-kpi-label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.tsx-kpi-val { font-size: 22px; line-height: 1.15; color: var(--text); font-variant-numeric: tabular-nums; }
+.tsx-kpi-sub { font-size: 12px; color: var(--text-muted); }
+
+.tsx-table-wrap { overflow: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+    -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.tsx-table { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: max-content; }
+.tsx-table th, .tsx-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--surface); color: var(--text); }
+.tsx-table thead th { position: sticky; top: 0; z-index: 3; font-size: 12px; color: var(--text-muted); font-weight: 700; text-align: center; background: var(--bg); }
+.tsx-table tbody th { text-align: left; font-weight: 600; }
+.tsx-sticky { position: sticky; z-index: 2; }
+.tsx-table thead .tsx-sticky { z-index: 4; }
+.tsx-c1 { left: 0; min-width: 210px; max-width: 210px; white-space: normal !important; }
+.tsx-c2 { left: 210px; min-width: 120px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted) !important; font-size: 12px; }
+.tsx-c3 { left: 330px; min-width: 86px; }
+.tsx-c4 { left: 416px; min-width: 86px; }
+.tsx-c5, .tsx-pct { left: 502px; min-width: 64px; text-align: center; font-weight: 700; box-shadow: 4px 0 6px -4px rgba(26, 29, 46, 0.18); }
+.tsx-table td.tsx-pct { position: sticky; z-index: 2; }
+.tsx-num { text-align: right; font-variant-numeric: tabular-nums; }
+.tsx-fakt { font-weight: 700; }
+.tsx-dash { color: var(--text-light); }
+.tsx-group th, .tsx-group td { background: var(--bg) !important; }
+.tsx-group-cell { left: 0; text-align: left !important; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; color: var(--text) !important; }
+.tsx-group-cell small { margin-left: 8px; text-transform: none; letter-spacing: 0; color: var(--text-muted); font-weight: 500; }
+.tsx-crm td:not(.tsx-sticky):not(.tsx-pct) { background: color-mix(in srgb, var(--surface) 92%, var(--purple) 8%); }
+.tsx-lock { font-size: 11px; font-weight: 700; color: var(--purple); }
+.tsx-day { padding: 0 !important; min-width: 62px; }
+.tsx-day-btn { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 100%; padding: 6px 4px; border: 0; background: transparent;
+    font: inherit; color: inherit; cursor: pointer; border-radius: 0; }
+.tsx-day-btn.is-static { cursor: default; }
+button.tsx-day-btn:hover, button.tsx-day-btn:focus-visible { background: var(--purple-light); color: var(--purple); outline: none; }
+.tsx-day-btn small { font-size: 10px; font-weight: 500; }
+.tsx-today { box-shadow: inset 0 -3px 0 var(--purple); color: var(--purple) !important; }
+.tsx-future { opacity: .55; }
+th.tsx-missing { color: #B45309 !important; }
+td.tsx-missing { background: var(--warning-bg) !important; }
+.tsx-good { color: #059669 !important; }
+.tsx-warn { color: #B45309 !important; }
+.tsx-bad { color: #DC2626 !important; }
+td.tsx-pct.tsx-good { background: #D1FAE5 !important; }
+td.tsx-pct.tsx-warn { background: #FEF3C7 !important; }
+td.tsx-pct.tsx-bad { background: #FEE2E2 !important; }
+
+.tsx-legend, .tsx-managers { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; }
+.tsx-legend summary, .tsx-managers summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--text); }
+.tsx-legend ul { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text); }
+.tsx-managers .tsx-table-wrap { margin-top: 10px; border: 0; }
+.tsx-mini { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tsx-mini th, .tsx-mini td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; color: var(--text); }
+.tsx-mini th:first-child { text-align: left; }
+.tsx-mini thead th { color: var(--text-muted); font-size: 12px; }
+
+.tsx-modal { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 16px; }
+.tsx-modal-form { display: flex; flex-direction: column; gap: 10px; }
+.tsx-modal-form .form-group { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.tsx-modal-form .form-group > span { font-size: 13px; font-weight: 600; color: var(--text); }
+.tsx-modal-form small { color: var(--text-muted); font-weight: 400; }
+.tsx-preview { font-size: 13px; color: var(--text); min-height: 18px; }
+.tsx-modal-note { font-size: 12px; color: var(--text-muted); margin: 0; }
+.tsx-crm-box { background: var(--bg); border: 1px dashed var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text); align-self: start; }
+.tsx-crm-box dl { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.tsx-crm-box dl div { display: flex; justify-content: space-between; gap: 8px; }
+.tsx-crm-box dt { color: var(--text-muted); }
+.tsx-crm-box dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tsx-crm-box small { color: var(--text-muted); }
+
+[data-theme="dark"] td.tsx-pct.tsx-good { background: #134E3A !important; color: #6EE7B7 !important; }
+[data-theme="dark"] td.tsx-pct.tsx-warn { background: #4A3F0A !important; color: #FCD34D !important; }
+[data-theme="dark"] td.tsx-pct.tsx-bad { background: #4C1D1D !important; color: #FCA5A5 !important; }
+[data-theme="dark"] .tsx-good { color: #6EE7B7 !important; }
+[data-theme="dark"] .tsx-warn { color: #FCD34D !important; }
+[data-theme="dark"] .tsx-bad { color: #FCA5A5 !important; }
+[data-theme="dark"] .tsx-alert.is-warn { border-color: #6B5520; }
+[data-theme="dark"] .tsx-alert.is-bad { border-color: #7F1D1D; }
+
+@media (max-width: 760px) {
+    .tsx-modal { grid-template-columns: 1fr; }
+    /* Telefonda faqat ko'rsatkich nomi qotib turadi, qolgani yonlama suriladi */
+    .tsx-c1 { min-width: 140px; max-width: 140px; box-shadow: 4px 0 6px -4px rgba(26, 29, 46, 0.18); }
+    .tsx-c2, .tsx-c3, .tsx-c4, .tsx-c5, .tsx-table td.tsx-pct { position: static; box-shadow: none; }
+    .tsx-group-cell { position: sticky; left: 0; }
+    .tsx-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tsx-kpi-val { font-size: 18px; }
+}

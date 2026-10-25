@@ -902,9 +902,9 @@ function crmStateMutationRequired(req, res, next) {
     // ("Umumiy CRM snapshotini faqat admin yoki ROP..."). Endi ustozga
     // FAQAT o'ziga tegishli uch kalit (davomat, baholar) uchun kirish
     // beriladi - pastda, handlerning o'zida yana ham torroq cheklanadi.
-    if (!['admin', 'rop', 'boshliq', 'targetolog', 'teacher'].includes(req.user?.role)) {
+    if (!['admin', 'rop', 'boshliq', 'teacher'].includes(req.user?.role)) {
         return res.status(403).json({
-            error: 'Umumiy CRM snapshotini faqat admin, ROP yoki Targetolog (faqat Marketing ma\'lumotlari) yangilashi mumkin'
+            error: 'Umumiy CRM snapshotini faqat admin yoki ROP yangilashi mumkin'
         });
     }
     next();
@@ -938,11 +938,11 @@ async function getStateForUser(user) {
         state.leads = managerId ? await getLeads({ managerId }) : { english: [], russian: [] };
         state.archive = [];
     } else if (user.role === 'targetolog') {
-        // 8-vazifa: Targetolog Sotuv bo'limini TO'LIQ ko'rishi kerak (barcha
-        // menejerlar, barcha ustunlar, izohlar) - state.leads cheklanmaydi.
-        // Faqat mutatsiya endi ham blokланадi: bu rol leadMutationRequired/
-        // crmStateMutationRequired ro'yxatlarida yo'q, shu sabab har qanday
-        // yozish/o'chirish so'rovi serverda 403 bilan rad etiladi.
+        // Targetolog Sotuv bo'limini faqat KO'RADI (barcha menejerlar, barcha
+        // ustunlar) — lekin faqat HR'da ruxsat berilgan til yo'nalish(lar)ida.
+        // Har qanday lid mutatsiyasi serverda 403 bilan rad etiladi.
+        const langs = await require('../services/targetAds').targetologLangs(require('../db').pool, user);
+        state.leads = Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (state.leads?.[l] || []) : []]));
         state.archive = [];
     } else if (!['admin', 'rop', 'boshliq'].includes(user.role)) {
         // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas.
@@ -995,7 +995,9 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
             'individualSalesPlans', 'targetMonitoringPlan', 'targetDailyAdSpend'
         ] : req.user.role === 'teacher'
             ? ['mainAttendance', 'assistantAttendance', 'liveGrades']
-            : ['targetMonitoringPlan', 'targetDailyAdSpend'];
+            // Targetolog umumiy state'ga hech narsa yozmaydi: target ma'lumotlari
+            // endi alohida /api/target-ads orqali, til va sana ruxsati bilan saqlanadi.
+            : [];
         if (isFullAccess) allowed.push('archive');
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

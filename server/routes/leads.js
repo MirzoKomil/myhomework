@@ -242,6 +242,11 @@ router.get('/', authRequired, leadReadRequired, async (req, res) => {
             if (!managerId) return res.json({ english: [], russian: [] });
             return res.json(await getLeads({ managerId }));
         }
+        if (req.user.role === 'targetolog') {
+            const langs = await require('../services/targetAds').targetologLangs(require('../db').pool, req.user);
+            const all = await getLeads();
+            return res.json(Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (all[l] || []) : []])));
+        }
         res.json(await getLeads());
     } catch (err) {
         console.error('GET /api/leads', err);

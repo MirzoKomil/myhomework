@@ -323,6 +323,7 @@ async function initSchema() {
     await teacherDuties.initSchema(pool);
     await payroll.initSchema(pool);
     await require('./services/domworkBot/insights').init(pool);
+    await require('./services/targetAds').init(pool);
 
     // Migration: leads va students jadvallariga extra_data qo'shish
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
