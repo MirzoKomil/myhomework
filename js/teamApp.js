@@ -74,6 +74,8 @@
         const bar = document.getElementById('teamBottomNav');
         if (!bar) return;
         const sales = activeSales();
+        const navSales = navItems().some(i => i.sales === sales && i.id !== 'sales');
+        if (document.body.classList.contains('team-on-navpage') !== navSales) document.body.classList.toggle('team-on-navpage', navSales);
         const sidebarOpen = document.body.classList.contains('sidebar-open');
         let matched = false;
         bar.querySelectorAll('[data-tn]').forEach(btn => {
@@ -113,7 +115,33 @@
         document.body.classList.add('has-team-nav');
         // Pastki panelda bor bo'limlar Sotuvning yuqori tablarida takrorlanmasin.
         items.filter(i => i.sales && i.id !== 'sales').forEach(i => document.body.classList.add('team-nav-' + i.sales));
+        buildSalesSubLinks(items);
         syncBottomNav();
+    }
+
+    // Telefonda: Sotuvning pastki panelda yo'q bo'limlari Menyu (sidebar) ichida ro'yxat bo'lib turadi.
+    function buildSalesSubLinks(items) {
+        const salesItem = document.querySelector('#sidebarMenu .menu-item[data-tab="sales"]');
+        if (!salesItem || document.getElementById('teamSalesSub')) return;
+        if (salesItem.style.display === 'none') return;
+        const inNav = new Set(items.filter(i => i.sales).map(i => i.sales));
+        const subs = [...document.querySelectorAll('#salesSectionNav .section-nav-item')]
+            .filter(b => !inNav.has(b.dataset.salesSection) && b.style.display !== 'none' && !b.hidden);
+        if (!subs.length) return;
+        const box = document.createElement('div');
+        box.id = 'teamSalesSub';
+        box.className = 'team-sales-sub';
+        box.innerHTML = subs.map(b => `<a href="#" data-team-sales="${b.dataset.salesSection}">${b.textContent.trim()}</a>`).join('');
+        salesItem.after(box);
+        box.addEventListener('click', e => {
+            const a = e.target.closest('[data-team-sales]');
+            if (!a) return;
+            e.preventDefault();
+            document.getElementById('sidebarToggle')?.click();
+            switchTab('sales', { salesSection: a.dataset.teamSales });
+            switchSalesSection(a.dataset.teamSales);
+            schedule();
+        });
     }
 
     // Qidiruv: telefonda faqat ikonka, bosilganda header ichida ochiladi.

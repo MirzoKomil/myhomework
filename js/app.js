@@ -26745,12 +26745,12 @@ function renderSalesPlanIndividualPlanCard() {
         try {
             const monthSales = getManagerSalesForPeriod(_spIndManagerId, 'oylik');
             const nextPrize = MONTHLY_BONUSES.map(getMergedBonus).filter(x => Number(x.threshold) > 0).sort((x, y) => x.threshold - y.threshold).find(x => monthSales < x.threshold);
-            if (nextPrize) prizeLine = `<div class="sp-prize">${_prizeImg(nextPrize.id, 40)}<span><b>${escapeHtml(nextPrize.label || '')}</b> sovgʻasigacha ${mln(nextPrize.threshold - monthSales)} · sovgʻa uchun kuniga ${mln(Math.ceil((nextPrize.threshold - monthSales) / daysLeft))}</span></div>`;
+            if (nextPrize) prizeLine = `<div class="sp-prize">${_prizeImg(nextPrize.id, 40)}<span><small>Qoʻshimcha maqsad</small><b>${escapeHtml(nextPrize.label || '')}</b> sovgʻasigacha ${mln(nextPrize.threshold - monthSales)}</span></div>`;
         } catch (e) { prizeLine = ''; }
         paceHtml = `<div class="sp-pace">
             <div class="sp-pace-i sp-pace-i--hero"><span>Bugungi maqsad · reja uchun</span><b title="${escapeHtml(fmtMoney(perDay))}">${big(perDay)}</b><small>Har kuni shuncha sotsangiz — rejaga yetasiz${today ? ` · bugun ${mln(today)}` : ''}</small></div>
             <div class="sp-pace-i"><span>Rejagacha qoldi</span><b title="${escapeHtml(fmtMoney(left))}">${big(left)}</b><small>${daysLeft} kun qoldi</small></div>
-            <div class="sp-pace-i"><span>Bugungacha kerak edi</span><b title="${escapeHtml(fmtMoney(due))}">${big(due)}</b><small class="sp-gap ${diff >= 0 ? 'is-ok' : 'is-bad'}">${diff >= 0 ? '+' : '−'}${mln(Math.abs(diff))} ${diff >= 0 ? 'oldindasiz' : 'orqadasiz'}</small></div>
+            <div class="sp-pace-i"><span>Bugungacha kerak edi</span><b title="${escapeHtml(fmtMoney(due))}">${big(due)}</b><small class="sp-gap ${diff >= 0 ? 'is-ok' : 'is-bad'}">${diff >= 0 ? '+' : '−'}${mln(Math.abs(diff)).replace(' soʻm', '')} ${diff >= 0 ? 'oldinda' : 'orqada'}</small></div>
         </div>${prizeLine}`;
     }
 
@@ -26922,7 +26922,14 @@ function renderRatingMotivation(ranked, period, between = '') {
     if (period === 'oylik') {
         const next = byThreshold(MONTHLY_BONUSES).find(b => leader.sales < b.threshold);
         eyebrow = `Oy poygasi · ${daysLeft} kun qoldi`;
-        if (next) {
+        const _meH = getCurrentUser();
+        const meRow = _meH?.role === 'sales_manager' ? ranked.find(m => m.id === _meH.linkedManagerId) : null;
+        const meNext = meRow ? byThreshold(MONTHLY_BONUSES).find(b => meRow.sales < b.threshold) : null;
+        if (meRow && meNext) {
+            const gap = meNext.threshold - meRow.sales;
+            title = `Sizga ${escapeHtml(meNext.label)} sovgʻasigacha ${fmtMln(gap)} qoldi`;
+            sub = `Sovgʻa uchun kuniga ${fmtMln(Math.ceil(gap / daysLeft))}. Lider — ${escapeHtml(_firstName(leader.name))}.`;
+        } else if (next) {
             const gap = next.threshold - leader.sales;
             title = `${escapeHtml(_firstName(leader.name))} ${escapeHtml(next.label)} sovgʻasiga ${fmtMln(gap)} qoldi`;
             sub = `Sovgʻa uchun kuniga ${fmtMln(Math.ceil(gap / daysLeft))}.`;
@@ -26940,7 +26947,8 @@ function renderRatingMotivation(ranked, period, between = '') {
         title = `Hafta lideri — ${escapeHtml(_firstName(leader.name))}`;
         sub = 'Hafta yakunida 1–3-oʻrinlar sovgʻa oladi.';
     }
-    if (second) {
+    const _skipLeaderGap = getCurrentUser()?.role === 'sales_manager' && period === 'oylik';
+    if (second && !_skipLeaderGap) {
         const lead2 = Math.max(0, leader.sales - second.sales);
         sub += lead2 > 0 ? ` ${escapeHtml(_firstName(second.name))} 2-oʻrinda, farq ${fmtMln(lead2)}.` : ` ${escapeHtml(_firstName(second.name))} bilan teng.`;
     }
