@@ -46,8 +46,6 @@ const PLACEHOLDER_TITLES = {
 
 let _tabContext = { subject: null, placeholder: null, salesSection: 'leads', studentsSection: 'faol', marketingSection: 'target', hrSection: 'xodimlar', financeSection: 'tolovlar', analitikaSection: 'hisobotlar', settingsSection: 'archive' };
 let _marketingLang = 'english';
-let _targetMonth = null; // renderMarketingTargetPanel har safar joriy oyga o'rnatadi
-let _tmXodimView = 'jami'; // 'jami' | 'kunlar' — 22-vazifa
 let _studentsTeacherFilter = 'all';
 let _studentsManagerFilter = 'all';
 let _studentsDurationFilter = 'all';
@@ -336,7 +334,7 @@ function applyRoleBasedAccess(user) {
         // davomat tugmasi va oylik taxmini shu yerda (oxirgi bo'lim saqlansa — o'sha).
         setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else if (role === 'targetolog') {
-        setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
+        setTimeout(() => switchTab(restoreTab || 'marketing', restoreCtx), 50);
     } else {
         // employee yoki noma'lum rol — mobil ilovaga o'tkazish
         setTimeout(() => switchTab(restoreTab || 'student-app', restoreCtx), 50);
@@ -656,6 +654,23 @@ async function bootApp() {
         }
     }
 
+    // Targetolog: HR'da berilgan til yo'nalish(lar)i — 'english' | 'russian' | 'both'.
+    // Server ham xuddi shu yozuvdan mustaqil tekshiradi (lidlar va /api/target-ads).
+    if (currentUser.role === 'targetolog') {
+        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+        const login = String(currentUser.email || '').trim().toLowerCase();
+        // Server bilan bir xil: faqat login bo'yicha moslanadi; topilmasa yoki faol bo'lmasa — hech qaysi til.
+        const linked = hrEmployees.find(e => login && String(e.login || '').trim().toLowerCase() === login);
+        const active = linked && linked.status !== 'inactive';
+        const langs = !active ? [] : linked.lang === 'both' ? ['english', 'russian'] : linked.lang === 'russian' ? ['russian'] : linked.lang === 'english' ? ['english'] : [];
+        if (JSON.stringify(currentUser.linkedTargetLangs) !== JSON.stringify(langs)) {
+            currentUser.linkedTargetLangs = langs;
+            setCurrentUser(currentUser);
+        }
+        if (langs.length && !langs.includes(_leadsLangFilter)) _leadsLangFilter = langs[0];
+        if (langs.length && !langs.includes(_marketingLang)) _marketingLang = langs[0];
+    }
+
     // 6-vazifa: Ustoz (asosiy va yordamchi) uchun ham til yo'nalishini
     // aniqlash — Mobil ilova bo'limida faqat o'z tiliga tegishli ilovani
     // ko'rishi uchun (ROP/Sotuv menejeriga o'xshab). Asosiy ustozda til
@@ -908,7 +923,19 @@ document.addEventListener('click', e => {
     if (e.target.closest?.('.sales-pinned .section-nav-item, .sales-pinned .subject-tab')) requestAnimationFrame(() => updateRdPageHead());
 });
 
+// Targetolog Sotuv bo'limida faqat ko'radi: lidlar, reyting va statistika.
+// Pul/to'lov va tahrirlash talab qiladigan bo'limlar unga ko'rinmaydi.
+const TARGETOLOG_SALES_SECTIONS = new Set(['leads', 'rating', 'sales-stats']);
+function applyTargetologSalesNav() {
+    const isTargetolog = getCurrentUser()?.role === 'targetolog';
+    document.querySelectorAll('[data-sales-section]').forEach(btn => {
+        if (isTargetolog) btn.style.display = TARGETOLOG_SALES_SECTIONS.has(btn.dataset.salesSection) ? '' : 'none';
+    });
+    return isTargetolog;
+}
+
 function switchSalesSection(section) {
+    if (applyTargetologSalesNav() && !TARGETOLOG_SALES_SECTIONS.has(section)) section = 'leads';
     _tabContext.salesSection = section;
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => updateRdPageHead('sales'));
     document.querySelectorAll('.section-nav-item').forEach(el => {
@@ -12721,73 +12748,7 @@ document.getElementById('addPaymentBtn').addEventListener('click', () => {
     inflowUI.openStudentPayment();
 });
 
-// --- Marketing: Target Monitoringi ---
-// 9-vazifa: oldin faqat 5 ta qattiq belgilangan oy (feb..jun) tanlanardi va
-// har safar sahifa ochilganda doim Fevral bilan boshlanardi. Endi oy
-// kalitlari standart "YYYY-MM" formatida (Individual sotuv rejasidagi bilan
-// bir xil), tanlagich joriy oy + oldingi/keyingi 6 oy + haqiqiy ma'lumoti
-// bor barcha oylarni ko'rsatadi, va _targetMonth har safar panel ochilganda
-// joriy oyga qaytariladi (pastda renderMarketingTargetPanel'da).
-const TARGET_DATA = {
-    '2026-02': {
-        reklama: {
-            budget:    { plan: null, fakt: 1251.30 },
-            lidSoni:   { plan: 3600, fakt: 1265,  pct: 35.1 },
-            lidNarxi:  { plan: null, fakt: 0.99 },
-            kvalLid:   { plan: 2340, fakt: 0,     pct: 0 },
-            kvalNarxi: { plan: null, fakt: 0 },
-            lidKval:   { plan: 65,   fakt: 0 },
-        },
-        xodimlar: [
-            { name: 'Vazira Gafurova',       kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Nilufar Xaitboyeva',    kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Rayhona Abduhalilova',  kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Muyassar Shodmonaliyeva',kval:0,sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Saida Rustamaliyeva',   kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Oydinoy Isaqova',       kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Sardor Boboqulov',      kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Xusniddin Xusanov',     kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Nurillo Hakimov',       kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: 'Mohizoda Bahodirova',   kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-            { name: "Ra'no Xusnitdinova",    kval:0, sinov:0, sotuv:0, summa:0, kvalPct:0, avgChek:0 },
-        ],
-    },
-    '2026-03': {
-        reklama: {
-            budget:    { plan: null, fakt: 306.67 },
-            lidSoni:   { plan: 3600, fakt: 271,  pct: 7.5 },
-            lidNarxi:  { plan: null, fakt: 1.13 },
-            kvalLid:   { plan: 2340, fakt: 99,   pct: 4.2 },
-            kvalNarxi: { plan: null, fakt: 3.10 },
-            lidKval:   { plan: 65,   fakt: 36.5 },
-        },
-        xodimlar: [
-            { name: 'Mohizoda Bahodirova',   kval:12, sinov:2, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-            { name: 'Oydinoy Isaqova',       kval:15, sinov:3, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-            { name: 'Saida Rustamaliyeva',   kval:25, sinov:6, sotuv:2, summa:98.2, kvalPct:8.0, avgChek:49.1 },
-            { name: 'Nurillo Hakimov',       kval:29, sinov:5, sotuv:2, summa:61,   kvalPct:6.9, avgChek:30.5 },
-            { name: 'Mohlaroy Musayeva',     kval:18, sinov:5, sotuv:1, summa:40.8, kvalPct:5.6, avgChek:40.8 },
-            { name: 'Xojiakbar Mamasodiqov', kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-            { name: 'Ruslan Halimov',        kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-            { name: 'Sardor Boboqulov',      kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-            { name: 'Xusniddin Xusanov',     kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-            { name: "Ra'no Xusnitdinova",    kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-            { name: 'Vazira Gafurova',       kval:0,  sinov:0, sotuv:0, summa:0,    kvalPct:0,   avgChek:0 },
-        ],
-    },
-};
-
-// Haqiqiy ma'lumoti bo'lmagan oy uchun bo'sh shablon (TARGET_DATA'da yozuvi
-// bo'lmagan har qanday oy uchun ishlatiladi).
-const EMPTY_TARGET_MONTH_DATA = {
-    reklama: {
-        budget: { plan: null, fakt: 0 }, lidSoni: { plan: 3600, fakt: 0, pct: 0 },
-        lidNarxi: { plan: null, fakt: 0 }, kvalLid: { plan: 2340, fakt: 0, pct: 0 },
-        kvalNarxi: { plan: null, fakt: 0 }, lidKval: { plan: 65, fakt: 0 },
-    },
-    xodimlar: [],
-};
-
+// --- Marketing: target lidlar — menejerlar natijasi (targetMonitorUI ishlatadi) ---
 // 12-vazifa: "Xodimlar natijalari" jadvali endi Sotuv bo'limidagi HAQIQIY
 // lidlar bilan to'g'ridan-to'g'ri integratsiya qilingan (qattiq yozilgan
 // TARGET_DATA.xodimlar endi o'qilmaydi). Faqat O'QISH - hech qanday lid
@@ -12853,534 +12814,12 @@ function computeTargetManagerStats(managerId, langLeads, monthKey) {
     };
 }
 
-// 22-vazifa: "Kunlar" ko'rinishi — tanlangan oyning har bir sanasi uchun
-// (barcha menejerlar bo'yicha birlashtirilgan) shu kunga to'g'ri keladigan
-// natijalar. Har bir ko'rsatkich xuddi "Jami" ko'rinishidagi bilan bir xil
-// mantiqda hisoblanadi (Target manbali, tegishli sana bo'yicha), faqat oy
-// bo'yicha emas, kun bo'yicha guruhlangan — shu sabab kunlar yig'indisi
-// "Jami" ko'rinishidagi umumiy songa teng chiqadi.
-function _tmDateKey(dateInput) {
-    if (!dateInput) return null;
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return null;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function _tmMonthDayList(monthKey) {
-    const [y, m] = monthKey.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const list = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-        const date = new Date(y, m - 1, d);
-        const jsDow = date.getDay(); // 0=Yakshanba..6=Shanba
-        const uzDow = jsDow === 0 ? 7 : jsDow; // 1=Dushanba..7=Yakshanba
-        list.push({ day: d, dateKey: `${monthKey}-${String(d).padStart(2, '0')}`, weekday: DAYS_UZ[uzDow - 1] });
-    }
-    return list;
-}
-
-// 25-vazifa: "Kunlar" ko'rinishidagi HAR BIR ko'rsatkich faqat o'sha kuni
-// sotuv menejeri qabul qilib olgan (yaratilgan) lidlardan kelib chiqib
-// hisoblanadi — "Sinov darsi" ham shu qatorga kiradi (sinov darsi qaysi
-// kunga belgilanganidan qat'i nazar, lid o'sha kuni qabul qilingan bo'lsa
-// hisobga olinadi).
-function computeTargetDailyBreakdown(langLeads, monthKey) {
-    const targetLeads = langLeads.filter(l => getLeadKind(l) === 'target');
-    return _tmMonthDayList(monthKey).map(dayInfo => {
-        const createdThisDay = targetLeads.filter(l => _tmDateKey(l.createdAt || l.date) === dayInfo.dateKey);
-        const kval = createdThisDay.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
-        const sinov = createdThisDay.filter(l => Boolean(l.trialLessonAt)).length;
-        const soldThisDay = createdThisDay.filter(l => {
-            const st = normalizeLeadStatus(l.status);
-            return st === 'tolov-jarayonida' || st === 'tolov-yopildi';
-        });
-        const sotuv = soldThisDay.length;
-        const summa = soldThisDay.reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
-        return {
-            ...dayInfo, kval, sinov, sotuv,
-            summaM: +(summa / 1_000_000).toFixed(1),
-            kvalPct: kval > 0 ? +(sotuv / kval * 100).toFixed(1) : 0,
-            avgChekM: sotuv > 0 ? +(summa / sotuv / 1_000_000).toFixed(1) : 0,
-        };
-    });
-}
-
-let _domworkAdsMonth = null;
-let _targetRenderGeneration = 0;
-async function renderMarketingTargetPanel() {
+// Marketing → "Target lidlar" oynasi endi js/targetMonitorUI.js'da:
+// targetolog kunlik reklama ma'lumotini kiritadi (/api/target-ads), yonida
+// CRM'ning o'zi hisoblagan, o'zgartirib bo'lmaydigan raqamlar ko'rinadi.
+function renderMarketingTargetPanel() {
     const el = document.getElementById('marketingPanel-target');
-    if (!el) return;
-
-    // 9-vazifa: panel har safar (yangi sahifa ochilganda) joriy oy bilan
-    // boshlanishi kerak — _targetMonth hali belgilanmagan (yoki eskirgan
-    // formatda) bo'lsa, joriy oyga o'rnatiladi.
-    const joriyTm = currentMonthKey();
-    if (!MONTH_KEY_RE.test(String(_targetMonth || ''))) _targetMonth = joriyTm;
-    const generation = ++_targetRenderGeneration, selectedMonth = _targetMonth, selectedLang = _marketingLang;
-    let domworkAds = null;
-    if (selectedLang === 'russian') {
-        try { domworkAds = await apiFetch('/api/domwork/marketing?month=' + encodeURIComponent(selectedMonth)); }
-        catch (error) { if (generation === _targetRenderGeneration) el.textContent = error.message; return; }
-        if (generation !== _targetRenderGeneration || selectedLang !== _marketingLang || selectedMonth !== _targetMonth) return;
-        _domworkAdsMonth = { month: selectedMonth, ...domworkAds };
-    }
-
-    const data = TARGET_DATA[_targetMonth] || EMPTY_TARGET_MONTH_DATA;
-    const r = data.reklama;
-    const langKey = _marketingLang === 'russian' ? 'russian' : 'english';
-
-    // 26-vazifa: yuqoridagi "Reklama ko'rsatkichlari" kartochkalarining Fakt
-    // qismlari endi qattiq yozilgan TARGET_DATA'dan emas, balki haqiqiy
-    // ma'lumotlardan hisoblanadi: Budget — Targetolog kun-ma-kun kiritgan
-    // (23-vazifa) summalarning shu oydagi yig'indisi; Lid soni — shu oyda
-    // qabul qilingan BARCHA Target manbali lidlar (til, sifat va
-    // menejerdan qat'i nazar); Sifatli lid soni — shu oydagi barcha
-    // menejarlarning "sifatli" lidlari yig'indisi (Xodimlar natijalari
-    // jadvalidagi bilan bir xil mantiq). Qolganlari shulardan hosila.
-    const allLeadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const langLeads = allLeadsData[langKey] || [];
-    const dailyAdSpendAll = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
-    const dailyAdSpendMonth = domworkAds ? domworkAds.days : dailyAdSpendAll[_targetMonth] || {};
-
-    const budgetFaktUSD = domworkAds && !Object.keys(dailyAdSpendMonth).length ? null : Object.values(dailyAdSpendMonth).reduce((sum, e) => sum + (Number(e?.budget) || 0), 0);
-    const allTargetMonthLeads = langLeads.filter(l => getLeadKind(l) === 'target' && _tmLeadCreatedInMonth(l, _targetMonth));
-    const lidSoniFakt = allTargetMonthLeads.length;
-    const kvalLidSoniFakt = allTargetMonthLeads.filter(l => !TM_UNQUALIFIED_STATUSES.has(normalizeLeadStatus(l.status))).length;
-    const lidNarxiFakt = (budgetFaktUSD && lidSoniFakt) ? budgetFaktUSD / lidSoniFakt : null;
-    const kvalLidNarxiFakt = (budgetFaktUSD && kvalLidSoniFakt) ? budgetFaktUSD / kvalLidSoniFakt : null;
-    const lidKvalPctFakt = (lidSoniFakt > 0) ? +(kvalLidSoniFakt / lidSoniFakt * 100).toFixed(1) : null;
-
-    function pctColor(pct) {
-        if (!pct) return '';
-        if (pct >= 90) return 'color:#10b981';
-        if (pct >= 60) return 'color:#f59e0b';
-        return 'color:#ef4444';
-    }
-
-    function fmtPct(v) { return v ? (v * 1).toFixed(1).replace('.', ',') + '%' : '—'; }
-    function fmtNum(v) { return (v || v === 0) && v !== null ? v : '—'; }
-    function fmtUSD(v) { return v === 0 && domworkAds ? '$0.00' : v ? '$' + (+v).toFixed(2) : '—'; }
-    function fmtMln(v) { return v ? v + ' M' : '—'; }
-
-    const progressBar = (pct) => {
-        const p = Math.min(pct || 0, 100);
-        const color = p >= 90 ? '#10b981' : p >= 60 ? '#f59e0b' : '#ef4444';
-        return `<div class="tm-progress"><div class="tm-progress-fill" style="width:${p}%;background:${color}"></div></div>`;
-    };
-
-    // 9-vazifa: oy tanlagich — joriy oy + oldingi/keyingi 6 oy + haqiqiy
-    // ma'lumoti bor barcha oylar (individual sotuv rejasidagi bilan bir xil
-    // naqsh), doim istalgan oyni tanlash imkonini beradi.
-    const tmOylar = new Set([joriyTm, _targetMonth, ...Object.keys(TARGET_DATA)]);
-    for (let i = -6; i <= 6; i++) {
-        const d = new Date();
-        d.setDate(1);
-        d.setMonth(d.getMonth() + i);
-        tmOylar.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-    const tabsHtml = `<select id="tmMonthSelect" class="form-control-sm" style="min-width:170px">
-        ${[...tmOylar].sort().reverse().map(k =>
-            `<option value="${k}" ${k === _targetMonth ? 'selected' : ''}>${monthKeyLabel(k)}${k === joriyTm ? ' (joriy)' : ''}</option>`
-        ).join('')}
-    </select>`;
-
-    // 10-vazifa: "Rejani kiritish" orqali saqlangan reja (bu oy uchun) —
-    // lid narxi/kval. lid narxi budjetdan avtomatik hisoblanadi, qattiq
-    // yozilgan eski TARGET_DATA rejasi endi ishlatilmaydi.
-    const _tmPlan = domworkAds ? domworkAds.plan?.data || null : getItem(STORAGE_KEYS.targetMonitoringPlan, {})[_targetMonth] || null;
-    const planBudget = _tmPlan?.budget || null;
-    const planLidSoni = _tmPlan?.lidSoni || null;
-    const planKvalLidSoni = _tmPlan?.kvalLidSoni || null;
-    const planKvalPct = (_tmPlan && Number.isFinite(_tmPlan.kvalLidPct)) ? _tmPlan.kvalLidPct : null;
-    const planLidNarxi = (planBudget && planLidSoni) ? planBudget / planLidSoni : null;
-    const planKvalNarxi = (planBudget && planKvalLidSoni) ? planBudget / planKvalLidSoni : null;
-
-    // Reklama KPI cards
-    const reklamaCards = [
-        { label: 'Byudjet (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(budgetFaktUSD), pct: (planBudget && budgetFaktUSD) ? (budgetFaktUSD / planBudget * 100) : null, icon: '💰' },
-        { label: 'Lid soni', plan: planLidSoni ? planLidSoni.toLocaleString('uz-UZ') : '—', fakt: lidSoniFakt || '—', pct: (planLidSoni && lidSoniFakt) ? (lidSoniFakt / planLidSoni * 100) : null, icon: '📋' },
-        { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(lidNarxiFakt), pct: (planLidNarxi && lidNarxiFakt) ? (lidNarxiFakt / planLidNarxi * 100) : null, icon: '💵' },
-        { label: 'Sifatli lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: kvalLidSoniFakt || '—', pct: (planKvalLidSoni && kvalLidSoniFakt) ? (kvalLidSoniFakt / planKvalLidSoni * 100) : null, icon: '✅' },
-        { label: 'Sifatli lid narxi', plan: planKvalNarxi ? fmtUSD(planKvalNarxi) : '—', fakt: fmtUSD(kvalLidNarxiFakt), pct: (planKvalNarxi && kvalLidNarxiFakt) ? (kvalLidNarxiFakt / planKvalNarxi * 100) : null, icon: '🏷️' },
-        { label: 'Lid → Sifatli lid %', plan: planKvalPct != null ? planKvalPct + '%' : '—', fakt: lidKvalPctFakt != null ? lidKvalPctFakt.toFixed(1).replace('.', ',') + '%' : '—', pct: (lidKvalPctFakt && planKvalPct) ? (lidKvalPctFakt / planKvalPct * 100) : null, icon: '📊' },
-    ].map(c => {
-        const pc = c.pct ? c.pct.toFixed(1) : null;
-        const barHtml = c.pct ? progressBar(c.pct) : '';
-        const pctHtml = pc ? `<span class="tm-kpi-pct" style="${pctColor(c.pct)}">${pc}%</span>` : '';
-        return `<div class="tm-kpi-card">
-            <div class="tm-kpi-icon">${c.icon}</div>
-            <div class="tm-kpi-label">${c.label}</div>
-            <div class="tm-kpi-row">
-                <div class="tm-kpi-val"><span class="tm-kpi-sublabel">Plan</span><span class="tm-kpi-num">${c.plan}</span></div>
-                <div class="tm-kpi-val"><span class="tm-kpi-sublabel">Fakt</span><span class="tm-kpi-num tm-kpi-num--fakt">${c.fakt}</span></div>
-                ${pctHtml}
-            </div>
-            ${barHtml}
-        </div>`;
-    }).join('');
-
-    // 12-vazifa: Sotuv bo'limi bilan jonli integratsiya - joriy til
-    // yo'nalishidagi HAQIQIY sotuv menejerlari, ism-familiya tartibida
-    // (raqamlanmasdan), har birining shu oydagi haqiqiy natijalari bilan.
-    // (allLeadsData/langLeads yuqorida, 26-vazifa KPI hisobi uchun ham
-    // ishlatilgani sababli, endi shu funksiya boshida bir marta olinadi.)
-    // 15-vazifa: faqat login/kabineti bor, ya'ni haqiqatan ishlayotgan
-    // sotuv menejerlari ro'yxatga kiritiladi.
-    const tmManagers = getSalesManagers(langKey)
-        .filter(m => m.login)
-        .slice()
-        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uz'));
-    // 17-vazifa: "Sifatli lid soni" Plan qiymati — yuqorida kiritilgan
-    // umumiy reja shu ro'yxatdagi menejerlar soniga teng bo'linadi.
-    const perManagerPlanKval = (planKvalLidSoni && tmManagers.length > 0)
-        ? +(planKvalLidSoni / tmManagers.length).toFixed(1)
-        : null;
-    const xodimlarLive = tmManagers.map(m => {
-        const stats = computeTargetManagerStats(m.id, langLeads, _targetMonth);
-        // 20-vazifa: "Sifatli→Sotuv %" Plan qismi — shu menejerning
-        // Individual rejadagi sotuv soni, teng bo'lingan sifatli lid
-        // rejasiga nisbatan foiz sifatida (Fakt qismidagi kvalPct bilan
-        // bir xil mantiq: sotuv/sifatli lid * 100).
-        const planKvalPct = (perManagerPlanKval > 0 && stats.planSotuv != null)
-            ? +(stats.planSotuv / perManagerPlanKval * 100).toFixed(1)
-            : null;
-        return { name: m.name, avatar: m.avatar || '', ...stats, planKvalPct };
-    });
-
-    const hasData = xodimlarLive.length > 0;
-    const jamiTableHtml = hasData ? `
-        <div class="tm-table-wrap">
-            <table class="tm-table">
-                <thead>
-                    <tr>
-                        <th rowspan="2" class="tm-th-name">Xodim</th>
-                        <th colspan="2">Sifatli lid soni</th>
-                        <th rowspan="2">Sinov darsi</th>
-                        <th colspan="2">Sotuvlar soni</th>
-                        <th colspan="2">Sotuvlar summasi (M)</th>
-                        <th colspan="2">Sifatli→Sotuv %</th>
-                        <th colspan="2">O'rtacha chek (M)</th>
-                    </tr>
-                    <tr>
-                        <th>Plan</th><th>Fakt</th>
-                        <th>Plan</th><th>Fakt</th>
-                        <th>Plan</th><th>Fakt</th>
-                        <th>Plan</th><th>Fakt</th>
-                        <th>Plan</th><th>Fakt</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${xodimlarLive.map(x => {
-                        const highlight = x.sotuv > 0 ? 'tm-tr-active' : '';
-                        const initials = managerInitials(x.name);
-                        const avatarHtml = x.avatar
-                            ? `<img src="${escapeHtml(x.avatar)}" alt="" class="tm-avatar-img">`
-                            : `<span class="tm-avatar-initials">${escapeHtml(initials)}</span>`;
-                        return `<tr class="${highlight}">
-                            <td class="tm-td-name"><span class="tm-avatar">${avatarHtml}</span>${escapeHtml(x.name)}</td>
-                            <td class="tm-td-plan">${perManagerPlanKval != null ? perManagerPlanKval : '—'}</td><td class="tm-td-fakt${x.kval>0?' tm-td-has':''}"> ${x.kval||'—'}</td>
-                            <td class="tm-td-fakt${x.sinov>0?' tm-td-has':''}"> ${x.sinov||'—'}</td>
-                            <td class="tm-td-plan">${x.planSotuv != null ? x.planSotuv : '—'}</td><td class="tm-td-fakt tm-td-sotuv${x.sotuv>0?' tm-td-sotuv-pos':''}"> ${x.sotuv||'—'}</td>
-                            <td class="tm-td-plan">${x.planSummaM != null ? x.planSummaM : '—'}</td><td class="tm-td-fakt${x.summaM>0?' tm-td-has':''}"> ${x.summaM||'—'}</td>
-                            <td class="tm-td-plan">${x.planKvalPct != null ? x.planKvalPct + '%' : '—'}</td><td class="tm-td-fakt${x.kvalPct>0?' tm-td-has':''}">${x.kvalPct?x.kvalPct.toFixed(1).replace('.', ',')+'%':'—'}</td>
-                            <td class="tm-td-plan">${x.planAvgChekM != null ? x.planAvgChekM : '—'}</td><td class="tm-td-fakt${x.avgChekM>0?' tm-td-has':''}"> ${x.avgChekM||'—'}</td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>` : `<div class="mac-empty" style="padding:40px 0"><div style="font-size:32px;margin-bottom:10px">📭</div><div style="font-size:14px;color:var(--text-muted)">Bu til yo'nalishida sotuv menejeri topilmadi</div></div>`;
-
-    // 22/24-vazifa: tanlangan oyning har bir sanasi uchun (barcha
-    // menejerlar bo'yicha birlashtirilgan) Sotuv bo'limidan hisoblangan
-    // kunlik natija — 24-vazifadagi "Sifatli lid soni"/"Sifatli lid →
-    // Sotuv %" qatorlari ham shu bir xil hisoblashdan (d.kval/d.kvalPct)
-    // foydalanadi.
-    const dailyStats = computeTargetDailyBreakdown(langLeads, _targetMonth);
-
-    // 23-vazifa: Reklamaga sarflangan kunlik byudjet ($) va shu kuni kelgan
-    // lidlar soni — Targetolog tomonidan qo'lda, kun-ma-kun kiritiladi
-    // (qalam belgisi orqali), doimiy saqlanadi. (dailyAdSpendAll/Month
-    // yuqorida, 26-vazifa Budget Fakt hisobi uchun ham kerak bo'lgani
-    // sabab, endi shu funksiya boshida bir marta olinadi.)
-    const dailyAdSpendHtml = `
-        <div class="tm-table-wrap">
-            <table class="tm-table">
-                <thead>
-                    <tr>
-                        <th class="tm-th-name">Sana</th>
-                        <th>Reklamaga sarflangan ($ USD)</th>
-                        <th>Kelgan lidlar soni</th>
-                        <th style="width:44px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${_tmMonthDayList(_targetMonth).map(d => {
-                        const entry = dailyAdSpendMonth[d.dateKey];
-                        return `<tr>
-                            <td class="tm-td-name">${d.day}-sana, ${escapeHtml(d.weekday)}</td>
-                            <td class="tm-td-fakt${entry?.budget ? ' tm-td-has' : ''}"> ${entry?.budget ? '$' + Number(entry.budget).toLocaleString('uz-UZ') : '—'}</td>
-                            <td class="tm-td-fakt${entry?.leadCount ? ' tm-td-has' : ''}"> ${entry?.leadCount || '—'}</td>
-                            <td style="text-align:center">
-                                <button type="button" class="btn-ghost" data-tm-adspend-edit="${d.dateKey}" title="Kiritish/tahrirlash" aria-label="Kiritish/tahrirlash" style="padding:4px 8px">✏️</button>
-                            </td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>`;
-
-    // 24-vazifa: kunlik reklama ma'lumotidan (byudjet, lid soni) va Sotuv
-    // bo'limidan hisoblangan kunlik natijadan (dailyStats) hosila
-    // ko'rsatkichlar — "Lid narxi" (byudjet/lid soni), "Sifatli lid soni"
-    // (dailyStats'dan, o'zgarishsiz), "Sifatli lid narxi" (byudjet/sifatli
-    // lid soni), "Sifatli lid → Sotuv %" (dailyStats'dan, o'zgarishsiz).
-    const derivedDailyHtml = `
-        <div class="tm-table-wrap">
-            <table class="tm-table">
-                <thead>
-                    <tr>
-                        <th class="tm-th-name">Sana</th>
-                        <th>Lid narxi</th>
-                        <th>Sifatli lid soni</th>
-                        <th>Sifatli lid narxi</th>
-                        <th>Sifatli lid → Sotuv %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${dailyStats.map(d => {
-                        const entry = dailyAdSpendMonth[d.dateKey];
-                        const budget = entry?.budget || 0;
-                        const leadCount = entry?.leadCount || 0;
-                        const lidNarxi = (budget && leadCount) ? budget / leadCount : null;
-                        const sifatliLidNarxi = (budget && d.kval) ? budget / d.kval : null;
-                        return `<tr class="${d.sotuv > 0 ? 'tm-tr-active' : ''}">
-                            <td class="tm-td-name">${d.day}-sana, ${escapeHtml(d.weekday)}</td>
-                            <td class="tm-td-fakt${lidNarxi != null ? ' tm-td-has' : ''}"> ${lidNarxi != null ? '$' + lidNarxi.toFixed(2) : '—'}</td>
-                            <td class="tm-td-fakt${d.kval>0?' tm-td-has':''}"> ${d.kval || '—'}</td>
-                            <td class="tm-td-fakt${sifatliLidNarxi != null ? ' tm-td-has' : ''}"> ${sifatliLidNarxi != null ? '$' + sifatliLidNarxi.toFixed(2) : '—'}</td>
-                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct ? d.kvalPct.toFixed(1).replace('.', ',') + '%' : '—'}</td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>`;
-
-    const kunlarTableHtml = `
-        <div class="tm-table-wrap">
-            <table class="tm-table">
-                <thead>
-                    <tr>
-                        <th class="tm-th-name">Sana</th>
-                        <th>Sifatli lid soni</th>
-                        <th>Sinov darsi</th>
-                        <th>Sotuvlar soni</th>
-                        <th>Sotuvlar summasi (M)</th>
-                        <th>Sifatli→Sotuv %</th>
-                        <th>O'rtacha chek (M)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${dailyStats.map(d => {
-                        const highlight = d.sotuv > 0 ? 'tm-tr-active' : '';
-                        return `<tr class="${highlight}">
-                            <td class="tm-td-name">${d.day}-sana, ${escapeHtml(d.weekday)}</td>
-                            <td class="tm-td-fakt${d.kval>0?' tm-td-has':''}"> ${d.kval||'—'}</td>
-                            <td class="tm-td-fakt${d.sinov>0?' tm-td-has':''}"> ${d.sinov||'—'}</td>
-                            <td class="tm-td-fakt tm-td-sotuv${d.sotuv>0?' tm-td-sotuv-pos':''}"> ${d.sotuv||'—'}</td>
-                            <td class="tm-td-fakt${d.summaM>0?' tm-td-has':''}"> ${d.summaM||'—'}</td>
-                            <td class="tm-td-fakt${d.kvalPct>0?' tm-td-has':''}">${d.kvalPct?d.kvalPct.toFixed(1).replace('.', ',')+'%':'—'}</td>
-                            <td class="tm-td-fakt${d.avgChekM>0?' tm-td-has':''}"> ${d.avgChekM||'—'}</td>
-                        </tr>`;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>`;
-
-    el.innerHTML = `
-        <div class="tm-wrap">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-                <div class="tm-months">${tabsHtml}</div>
-                <button type="button" class="btn-primary-sm" id="tmEnterPlanBtn">+ Rejani kiritish</button>
-            </div>
-
-            <div class="tm-section-title">📣 Reklama ko'rsatkichlari</div>
-            <div class="tm-kpi-grid">${reklamaCards}</div>
-
-            <div class="tm-section-title" style="margin-top:8px">📅 Kunlik reklama ma'lumotlari</div>
-            ${dailyAdSpendHtml}
-
-            <div class="tm-section-title" style="margin-top:8px">📈 Kunlik hosila ko'rsatkichlar</div>
-            ${derivedDailyHtml}
-
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px">
-                <div class="tm-section-title" style="margin:0">👥 Xodimlar natijalari</div>
-                <div class="mac-tabs" style="display:flex;gap:0">
-                    <button type="button" class="mac-tab-btn ${_tmXodimView === 'jami' ? 'mac-tab-active' : ''}" data-tm-xodim-view="jami">Jami</button>
-                    <button type="button" class="mac-tab-btn ${_tmXodimView === 'kunlar' ? 'mac-tab-active' : ''}" data-tm-xodim-view="kunlar">Kunlar</button>
-                </div>
-            </div>
-            ${_tmXodimView === 'kunlar' ? kunlarTableHtml : jamiTableHtml}
-        </div>`;
-
-    document.getElementById('tmEnterPlanBtn')?.addEventListener('click', () => openTargetPlanModal(_targetMonth));
-
-    document.getElementById('tmMonthSelect')?.addEventListener('change', e => {
-        _targetMonth = e.target.value;
-        renderMarketingTargetPanel();
-    });
-
-    el.querySelectorAll('[data-tm-xodim-view]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            _tmXodimView = btn.dataset.tmXodimView;
-            renderMarketingTargetPanel();
-        });
-    });
-
-    el.querySelectorAll('[data-tm-adspend-edit]').forEach(btn => {
-        btn.addEventListener('click', () => openTargetDailyAdSpendModal(btn.dataset.tmAdspendEdit));
-    });
-}
-
-// 23-vazifa: bitta sanaga reklama byudjeti ($) va kelgan lidlar sonini
-// kiritish/tahrirlash oynasi.
-function openTargetDailyAdSpendModal(dateKey) {
-    const monthKey = dateKey.slice(0, 7);
-    const russian = _marketingLang === 'russian';
-    const all = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
-    if (russian && _domworkAdsMonth?.month !== monthKey) { showMiniToast('Oynani yangilang'); return; }
-    const existing = russian ? _domworkAdsMonth.days[dateKey] || {} : (all[monthKey] || {})[dateKey] || {};
-    const [y, m, d] = dateKey.split('-').map(Number);
-    const dateLabel = `${d}-${['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'][m - 1]} ${y}`;
-
-    const body = `
-    <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="form-group">
-            <label>Reklamaga sarflangan summa ($ USD)</label>
-            <input type="number" id="tmAdSpendBudget" class="form-control" min="0" step="0.01" value="${existing.budget ?? ''}">
-        </div>
-        <div class="form-group">
-            <label>Shu kuni kelgan lidlar soni</label>
-            <input type="number" id="tmAdSpendLeadCount" class="form-control" min="0" step="1" value="${existing.leadCount ?? ''}">
-        </div>
-    </div>`;
-    const footer = `
-        <button type="button" class="btn-ghost" id="tmAdSpendCancel">Bekor qilish</button>
-        <button type="button" class="btn-primary-sm" id="tmAdSpendSave">Saqlash</button>`;
-
-    openModal(`Kunlik reklama ma'lumoti — ${dateLabel}`, body, footer);
-
-    document.getElementById('tmAdSpendCancel').onclick = closeModal;
-    document.getElementById('tmAdSpendSave').onclick = async () => {
-        if (russian && ['tmAdSpendBudget','tmAdSpendLeadCount'].some(id => document.getElementById(id).value.trim() === '')) {
-            alert('Rus tili sarfi va lidlar sonini aniq kiriting. Nol bo‘lsa 0 yozing.'); return;
-        }
-        const budget = Number(document.getElementById('tmAdSpendBudget').value) || 0;
-        const leadCount = Number(document.getElementById('tmAdSpendLeadCount').value) || 0;
-        if (russian) {
-            const button = document.getElementById('tmAdSpendSave'); button.disabled = true;
-            try {
-                await apiFetch('/api/domwork/marketing', {method:'PUT',body:JSON.stringify({kind:'day',date:dateKey,revision:existing.revision || 0,data:{budget,leadCount}})});
-                closeModal(); await renderMarketingTargetPanel(); showMiniToast('Rus tili sarfi serverga saqlandi');
-            } catch (error) { alert(error.message); if (button.isConnected) button.disabled = false; }
-            return;
-        }
-
-        const current = getItem(STORAGE_KEYS.targetDailyAdSpend, {});
-        const monthEntries = { ...(current[monthKey] || {}) };
-        monthEntries[dateKey] = { budget, leadCount };
-        setItem(STORAGE_KEYS.targetDailyAdSpend, { ...current, [monthKey]: monthEntries });
-
-        closeModal();
-        renderMarketingTargetPanel();
-        showMiniToast('Saqlandi');
-    };
-}
-
-// 10-vazifa: "Rejani kiritish" oynasi — Target Monitoringi uchun oylik
-// reja. Lid narxi / Kval. lid narxi qo'lda kiritilmaydi, byudjet va soni
-// asosida avtomatik (jonli, kiritish paytida) hisoblanadi.
-function openTargetPlanModal(monthKey) {
-    const russian = _marketingLang === 'russian';
-    if (russian && _domworkAdsMonth?.month !== monthKey) { showMiniToast('Oynani yangilang'); return; }
-    const existing = russian ? _domworkAdsMonth.plan?.data || {} : getItem(STORAGE_KEYS.targetMonitoringPlan, {})[monthKey] || {};
-    const revision = russian ? _domworkAdsMonth.plan?.revision || 0 : 0;
-    const body = `
-    <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="form-group">
-            <label>Lid byudjeti ($)</label>
-            <input type="number" id="tmPlanBudget" class="form-control" min="0" step="0.01" value="${existing.budget || ''}">
-        </div>
-        <div class="form-group">
-            <label>Lid soni</label>
-            <input type="number" id="tmPlanLidSoni" class="form-control" min="0" step="1" value="${existing.lidSoni || ''}">
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-            <label>Lid narxi</label>
-            <div id="tmPlanLidNarxiPreview" style="padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-secondary,#f8fafc);color:var(--text-muted);font-weight:600">—</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:5px">Avtomatik hisoblanadi: byudjet ÷ lid soni</div>
-        </div>
-        <div class="form-group">
-            <label>Sifatli lid soni</label>
-            <input type="number" id="tmPlanKvalSoni" class="form-control" min="0" step="1" value="${existing.kvalLidSoni || ''}">
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-            <label>Sifatli lid narxi</label>
-            <div id="tmPlanKvalNarxiPreview" style="padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-secondary,#f8fafc);color:var(--text-muted);font-weight:600">—</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:5px">Avtomatik hisoblanadi: byudjet ÷ sifatli lid soni</div>
-        </div>
-        <div class="form-group">
-            <label>Lidlarning necha foizi sifatli bo'lishi kerak (%)</label>
-            <input type="number" id="tmPlanKvalPct" class="form-control" min="0" max="100" step="0.1" value="${existing.kvalLidPct ?? ''}">
-        </div>
-    </div>`;
-    const footer = `
-        <button type="button" class="btn-ghost" id="tmPlanCancel">Bekor qilish</button>
-        <button type="button" class="btn-primary-sm" id="tmPlanSave">Saqlash</button>`;
-
-    openModal(`Reja kiritish — ${monthKeyLabel(monthKey)}`, body, footer);
-
-    const updatePreviews = () => {
-        const budget = Number(document.getElementById('tmPlanBudget').value) || 0;
-        const lidSoni = Number(document.getElementById('tmPlanLidSoni').value) || 0;
-        const kvalSoni = Number(document.getElementById('tmPlanKvalSoni').value) || 0;
-        document.getElementById('tmPlanLidNarxiPreview').textContent =
-            (budget && lidSoni) ? '$' + (budget / lidSoni).toFixed(2) : '—';
-        document.getElementById('tmPlanKvalNarxiPreview').textContent =
-            (budget && kvalSoni) ? '$' + (budget / kvalSoni).toFixed(2) : '—';
-    };
-    ['tmPlanBudget', 'tmPlanLidSoni', 'tmPlanKvalSoni'].forEach(id => {
-        document.getElementById(id).addEventListener('input', updatePreviews);
-    });
-    updatePreviews();
-
-    document.getElementById('tmPlanCancel').onclick = closeModal;
-    document.getElementById('tmPlanSave').onclick = async () => {
-        if (russian && ['tmPlanBudget','tmPlanLidSoni','tmPlanKvalSoni'].some(id => document.getElementById(id).value.trim() === '')) {
-            alert('Rus tili rejasi summasi va sonlarini aniq kiriting. Nol bo‘lsa 0 yozing.'); return;
-        }
-        const budget = Number(document.getElementById('tmPlanBudget').value) || 0;
-        const lidSoni = Number(document.getElementById('tmPlanLidSoni').value) || 0;
-        const kvalLidSoni = Number(document.getElementById('tmPlanKvalSoni').value) || 0;
-        const kvalLidPctRaw = document.getElementById('tmPlanKvalPct').value;
-        const kvalLidPct = kvalLidPctRaw === '' ? null : Number(kvalLidPctRaw);
-        if (russian) {
-            const button = document.getElementById('tmPlanSave'); button.disabled = true;
-            try {
-                await apiFetch('/api/domwork/marketing', {method:'PUT',body:JSON.stringify({kind:'plan',date:monthKey,revision,data:{budget,lidSoni,kvalLidSoni,kvalLidPct}})});
-                closeModal(); await renderMarketingTargetPanel(); showMiniToast('Rus tili rejasi serverga saqlandi');
-            } catch (error) { alert(error.message); if (button.isConnected) button.disabled = false; }
-            return;
-        }
-
-        const all = getItem(STORAGE_KEYS.targetMonitoringPlan, {});
-        setItem(STORAGE_KEYS.targetMonitoringPlan, {
-            ...all,
-            [monthKey]: { budget, lidSoni, kvalLidSoni, kvalLidPct }
-        });
-        closeModal();
-        renderMarketingTargetPanel();
-        showMiniToast('Reja saqlandi');
-    };
+    if (el && window.targetMonitorUI) return window.targetMonitorUI.render(el, _marketingLang);
 }
 
 // --- Moliya Bo'limi ---
@@ -15174,6 +14613,7 @@ function renderMarketing() {
             document.querySelectorAll('[data-marketing-lang]').forEach(b =>
                 b.classList.toggle('active', b.dataset.marketingLang === _marketingLang)
             );
+            if ((_tabContext.marketingSection || 'target') === 'target') renderMarketingTargetPanel();
         });
     });
     document.querySelectorAll('[data-marketing-lang]').forEach(b =>
@@ -15187,13 +14627,24 @@ function renderMarketing() {
     // rol uchun faqat "SMS rassilka"ga cheklanadi.
     const cu = getCurrentUser();
     const restrictedToSms = cu?.role === 'sales_manager';
+    // Targetolog: faqat "Target lidlar" (SMS rassilka ko'rinmaydi) va faqat
+    // HR'da ruxsat berilgan til yo'nalish(lar)i.
+    const isTargetolog = cu?.role === 'targetolog';
+    const visibleSections = restrictedToSms ? ['sms'] : isTargetolog ? ['target'] : ['target', 'sms'];
     document.querySelectorAll('[data-marketing-section]').forEach(btn => {
-        btn.style.display = (!restrictedToSms || btn.dataset.marketingSection === 'sms') ? '' : 'none';
+        btn.style.display = visibleSections.includes(btn.dataset.marketingSection) ? '' : 'none';
+    });
+    const langs = window.targetMonitorUI ? window.targetMonitorUI.allowedLangs(cu) : ['english', 'russian'];
+    if (!restrictedToSms && langs.length && !langs.includes(_marketingLang)) _marketingLang = langs[0];
+    document.querySelectorAll('[data-marketing-lang]').forEach(b => {
+        b.style.display = restrictedToSms || langs.includes(b.dataset.marketingLang) ? '' : 'none';
+        b.classList.toggle('active', b.dataset.marketingLang === _marketingLang);
     });
     const marketingLangActionsEl = document.getElementById('marketingLangActions');
     if (marketingLangActionsEl) marketingLangActionsEl.style.display = restrictedToSms ? 'none' : '';
 
-    const sec = restrictedToSms ? 'sms' : (_tabContext.marketingSection || 'target');
+    const wanted = _tabContext.marketingSection || 'target';
+    const sec = visibleSections.includes(wanted) ? wanted : visibleSections[0];
     switchMarketingSection(sec);
     if (sec !== 'sms') renderMarketingTargetPanel();
 }
@@ -16400,6 +15851,71 @@ function _sfxPresetChips() {
     }).join('');
 }
 
+// ===== Voronka: "Sotildi (jami tushum)" endi TO'LANGAN SANA bo'yicha =====
+// Avval bu kartochka lidning CRM'ga kelgan sanasi va hozirgi statusiga qarab
+// hisoblanardi (yarim to'lovda faqat zaklad, yopilganda butun shartnoma summasi)
+// — bu kassa tushumiga to'g'ri kelmasdi. Endi manba: Moliya to'lovlar reyestri
+// (/api/inflow). Reyestrni o'qishga ruxsati yo'q rollar (ROP, sotuv menejeri)
+// uchun xuddi o'sha qoidalar bilan lid ma'lumotidan (PaymentLedger.leadEvents)
+// hisoblanadi. Sifatsiz (test) lidlar va lidi o'chirilgan + menejersiz
+// yozuvlar tushumga qo'shilmaydi.
+const _funnelLedger = { english: null, russian: null, loading: {}, denied: false };
+
+function loadFunnelLedger(lang) {
+    if (_funnelLedger.denied || _funnelLedger[lang] || _funnelLedger.loading[lang]) return;
+    if (typeof apiFetch !== 'function') { _funnelLedger.denied = true; return; }
+    _funnelLedger.loading[lang] = true;
+    apiFetch('/api/inflow?language=' + lang)
+        .then(data => { _funnelLedger[lang] = Array.isArray(data?.records) ? data.records : []; })
+        .catch(err => { if (err?.status === 403) _funnelLedger.denied = true; })
+        .finally(() => {
+            _funnelLedger.loading[lang] = false;
+            if (document.querySelector('[data-sales-panel="sales-stats"].active')) renderSalesFunnel();
+        });
+}
+
+function computeFunnelRevenue(lang, langLeads, { from, to, mgrIds }) {
+    const leadById = new Map(langLeads.map(l => [String(l.id), l]));
+    let source = 'ledger';
+    let records = _funnelLedger[lang];
+    if (!records) {
+        source = 'leads';
+        records = [];
+        if (typeof PaymentLedger !== 'undefined') {
+            langLeads.forEach(l => {
+                PaymentLedger.leadEvents(l).events.forEach((e, i) => records.push({
+                    id: l.id + ':' + i, leadId: l.id, managerId: l.managerId, amount: e.amount,
+                    paidDate: e.paidDate, total: e.total, form: e.kind === 'closing' ? 'full' : 'partial'
+                }));
+            });
+        }
+    }
+    const isExcluded = r => {
+        const lead = r.leadId ? leadById.get(String(r.leadId)) : null;
+        if (lead) return normalizeLeadStatus(lead.status) === 'sifatsiz-lidlar';
+        return !r.managerId; // lid o'chirilgan va menejeri yo'q — sinov yozuvi
+    };
+    // Har bir o'quvchining BIRINCHI to'lovi = yangi sotuv, qolganlari = qarz to'lovi
+    const firstPaymentId = new Map();
+    [...records].sort((a, b) => String(a.paidDate).localeCompare(String(b.paidDate)) || String(a.id).localeCompare(String(b.id)))
+        .forEach(r => { const key = r.studentId || r.leadId || r.id; if (!firstPaymentId.has(key)) firstPaymentId.set(key, r.id); });
+
+    let revenue = 0, excludedAmount = 0, newSales = 0, repayments = 0, contractSum = 0;
+    records.forEach(r => {
+        if (from && r.paidDate < from) return;
+        if (to && r.paidDate > to) return;
+        if (mgrIds && !mgrIds.has(r.managerId)) return;
+        const amount = Number(r.amount) || 0;
+        if (isExcluded(r)) { excludedAmount += amount; return; }
+        revenue += amount;
+        if (firstPaymentId.get(r.studentId || r.leadId || r.id) === r.id) {
+            newSales++;
+            contractSum += Number(r.total) || amount;
+        } else repayments++;
+    });
+    return { revenue, excludedAmount, newSales, repayments, avgCheck: newSales ? Math.round(contractSum / newSales) : 0, source };
+}
+
 function renderSalesFunnel() {
     const panel = document.querySelector('[data-sales-panel="sales-stats"]');
     if (!panel) return;
@@ -16595,15 +16111,21 @@ function renderSalesFunnel() {
     const sifatsizCount = extraStagesData[1].count;
     // Sotuvlar: yarim toʻlov (tolov-jarayonida) + toʻliq toʻlov (tolov-yopildi)
     const partialLeads = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-jarayonida');
-    const fullLeads = filteredLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
     const partialCount = partialLeads.length;
     const totalSold = converted + partialCount; // converted = tolov-yopildi
-    // Summa hisoblash
-    const partialRevenue = partialLeads.reduce((s, l) => s + Number(l?.paymentSurvey?.paidAmount || 0), 0);
-    const fullRevenue = fullLeads.reduce((s, l) => s + Number(l?.paymentClosedSurvey?.actualAmount || l?.paymentClosedSurvey?.totalAmount || l?.paymentSurvey?.totalAmount || 0), 0);
-    const totalRevenue = partialRevenue + fullRevenue;
-    const avgCheck = totalSold > 0 && totalRevenue > 0 ? Math.round(totalRevenue / totalSold) : 0;
-    const fmtSum = n => Number(n || 0).toLocaleString('uz-UZ') + " soʻm";
+    // Summa: to'langan sana bo'yicha (Moliya reyestri). Davr — tanlangan sana
+    // filtri (avval "CRMga kelib tushgan", bo'lmasa "biriktirilgan" oralig'i).
+    if (!isSalesManagerFunnel && !['rop'].includes(_cuFunnel?.role)) loadFunnelLedger(lang);
+    const revFrom = _createdFrom || _assignedFrom || '';
+    const revTo = _createdFrom ? _createdTo : (_assignedFrom ? _assignedTo : '');
+    const rev = computeFunnelRevenue(lang, langLeads, { from: revFrom, to: revTo, mgrIds: _salesFunnelMgrIds });
+    const totalRevenue = rev.revenue;
+    const avgCheck = rev.avgCheck;
+    const _dm = k => k ? `${k.slice(8)}.${k.slice(5, 7)}` : '';
+    const revPeriodTxt = revFrom ? (revFrom === revTo ? _dm(revFrom) : `${_dm(revFrom)}–${_dm(revTo)}`) : 'barcha vaqt';
+    const revSub = `toʻlangan sana: ${revPeriodTxt} · ${rev.newSales} yangi sotuv + ${rev.repayments} qarz toʻlovi`
+        + (rev.excludedAmount > 0 ? ` · test/sifatsiz ${Number(rev.excludedAmount).toLocaleString('uz-UZ')} chiqarildi` : '');
+    const fmtSum = n => n > 0 ? Number(n).toLocaleString('uz-UZ') + " soʻm" : '—';
     const maxCount = Math.max(1, ...stagesData.map(x => x.count));
     const pctTxt = n => String(n).replace('.', ',');
     const barRows = stagesData.map(st => `
@@ -16613,10 +16135,10 @@ function renderSalesFunnel() {
             <span class="sfx-val"><b>${st.count}</b> · ${st.share}%</span>
         </li>`).join('');
     const tiles = [
-        ['Konversiya', pctTxt(convRate) + '%', `toʻlov yopildi · ${converted} / ${totalCount} lid`],
-        ['Sotildi (jami tushum)', fmtSum(totalRevenue), `${partialCount} yarim + ${converted} toʻliq = ${totalSold} ta`],
+        ['Konversiya (toʻlov yopildi)', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
+        ['Tushum (kassa)', fmtSum(totalRevenue), revSub],
         ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
-        ['Oʻrtacha chek', fmtSum(avgCheck), totalSold > 0 ? `${totalSold} ta sotuvga asosan` : 'maʼlumot yoʻq'],
+        ['Oʻrtacha chek', fmtSum(avgCheck), rev.newSales > 0 ? `${rev.newSales} ta yangi sotuv shartnomasi boʻyicha` : 'maʼlumot yoʻq'],
     ].map(([k, v, sub]) => `<div class="sfx-tile"><small>${k}</small><b>${v}</b><span>${sub}</span></div>`).join('');
 
     panel.innerHTML = `
@@ -16645,10 +16167,11 @@ function renderSalesFunnel() {
                 <div><dt>Hali jarayonda (ochiq bosqichlarda)</dt><dd>${inProgress}</dd></div>
                 <div><dt>Keyin sotib olmoqchi</dt><dd>${laterCount}</dd></div>
                 ${extraStagesData.map(st => `<div><dt><i style="background:${st.color}"></i>${escapeHtml(st.label)}</dt><dd>${st.count} <small>· ${st.share}%</small></dd></div>`).join('')}
-                <div class="sfx-out-total"><dt>Sotildi (jami tushum)</dt><dd>${totalSold} ta · <b>${fmtSum(totalRevenue)}</b></dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yarim toʿlov (Toʻlov jarayonida)</dt><dd style="font-size:13px">${partialCount} ta · <span style="color:var(--text-muted)">${fmtSum(partialRevenue)}</span></dd></div>
-                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Toʿlio toʿlov (Toʻlov yopildi)</dt><dd style="font-size:13px">${converted} ta · <span style="color:var(--text-muted)">${fmtSum(fullRevenue)}</span></dd></div>
-                ${avgCheck > 0 ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">Oʻrtacha chek</dt><dd style="font-size:14px;font-weight:600">${fmtSum(avgCheck)}</dd></div>` : ''}
+                <div class="sfx-out-total"><dt>Sotildi (lidlar)</dt><dd>${totalSold} ta <small>· ${partialCount} yarim + ${converted} toʻliq</small></dd></div>
+                <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">Tushum (kassa, ${revPeriodTxt})</dt><dd style="font-size:14px;font-weight:600">${fmtSum(totalRevenue)}</dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Yangi sotuvlar</dt><dd style="font-size:13px">${rev.newSales} ta</dd></div>
+                <div style="padding-left:12px;border-left:2px solid var(--border)"><dt style="font-size:12px;color:var(--text-muted)">— Qarz toʻlovlari</dt><dd style="font-size:13px">${rev.repayments} ta</dd></div>
+                ${rev.source === 'leads' ? `<div><dt style="font-size:12px;color:var(--text-muted)">Moliya reyestri ochilmadi — lid maʼlumotidan hisoblandi</dt><dd></dd></div>` : ''}
             </dl>
             <details class="sfx-note"><summary>Qanday hisoblandi?</summary>${totalSold} sotildi (${partialCount} yarim + ${converted} toʻliq) + ${failedCount + sifatsizCount} chiqdi + ${inProgress + laterCount} jarayonda = ${totalSold + failedCount + sifatsizCount + inProgress + laterCount} lid.</details>
         </section>
@@ -18656,6 +18179,15 @@ function getSelectedPaymentTotal(modalBody) {
     return parsePaymentAmountNumber(amount.value);
 }
 
+// 10 000 so'mdan kam to'lov deyarli har doim kiritishdagi xato (masalan,
+// 300 000 o'rniga 300). Saqlashdan oldin tasdiq so'raladi.
+const SUSPICIOUS_PAYMENT_MIN = 10000;
+function confirmSuspiciousPaymentAmount(amount) {
+    const n = Number(amount);
+    if (!(n > 0 && n < SUSPICIOUS_PAYMENT_MIN)) return true;
+    return window.confirm(`Summa: ${n.toLocaleString('uz-UZ')} so'm — bu juda kichik.\n\nNollar tushib qolmaganmi (masalan, 300 o'rniga 300 000)?\n\n"OK" — summa to'g'ri, saqlash.\n"Cancel" — orqaga qaytib tuzatish.`);
+}
+
 function collectPaymentSurveyData(modalBody) {
     const getRadio = name => modalBody.querySelector(`[data-payment-field="${name}"]:checked`);
 
@@ -18687,6 +18219,7 @@ function collectPaymentSurveyData(modalBody) {
         if (!customRaw || !Number.isFinite(customVal) || customVal <= 0) {
             return { error: 'Boshqa summani kiriting', target: '#paymentCustomAmount' };
         }
+        if (!confirmSuspiciousPaymentAmount(customVal)) return { error: 'Summani tekshiring', target: '#paymentCustomAmount' };
         totalAmount = customVal;
         amountLabel = formatUzMoney(customVal);
     } else {
@@ -18711,6 +18244,7 @@ function collectPaymentSurveyData(modalBody) {
         if (paid > totalAmount) {
             return { error: 'To\'langan summa umumiy summadan katta bo\'lmasligi kerak', target: '#paymentPaidAmount' };
         }
+        if (!confirmSuspiciousPaymentAmount(paid)) return { error: 'To\'langan summani tekshiring', target: '#paymentPaidAmount' };
         paidAmount = paid;
         paidAmountLabel = formatUzMoney(paid);
 
@@ -20276,6 +19810,7 @@ function collectEnhancedPaymentClosedData(modalBody, ps, flags = {}) {
     const actualAmount = actualAmountRaw ? Number(actualAmountRaw.replace(/[\s,]/g, '')) : null;
     if (!actualAmountRaw) return { error: "To'lov qilingan summani kiriting" };
     if (!Number.isSafeInteger(actualAmount) || actualAmount < 0) return { error: 'To‘lov summasi noto‘g‘ri' };
+    if (!confirmSuspiciousPaymentAmount(actualAmount)) return { error: 'To‘lov summasini tekshiring' };
     const noDebtConfirmed = modalBody.querySelector('#pcNoDebtConfirm')?.checked;
     if (!noDebtConfirmed) return { error: "O'quvchi qarzdor emasligini tasdiqlang" };
 
@@ -20689,6 +20224,170 @@ let _leadsLangFilter = (() => {
 })();
 let _leadsManagerFilter = 'all';
 let _leadSearchQuery = '';
+
+// Lidlar: Sana va Manba filtrlari. Ataylab saqlanmaydi — sahifa har ochilganda
+// sana = joriy oy, manba = Hammasi (Target + Organik) holatida boshlanadi.
+function _leadDateKeyLocal(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function _leadsMonthRange(offset = 0) {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const last = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+    return { from: _leadDateKeyLocal(first), to: _leadDateKeyLocal(last) };
+}
+let _leadsDateFilter = { preset: 'month', ..._leadsMonthRange(0) };
+let _leadsSourceFilter = 'all';
+
+function getLeadDateKey(lead) {
+    const raw = lead?.createdAt || lead?.date;
+    if (!raw) return null;
+    const s = String(raw).trim();
+    // "25.10.2026" / "25/10/2026" (uz-UZ toLocaleDateString)
+    const m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : _leadDateKeyLocal(d);
+}
+
+function filterLeadsByDateAndSource(leads) {
+    const { from, to } = _leadsDateFilter;
+    return leads.filter(l => {
+        if (_leadsSourceFilter !== 'all' && getLeadKind(l) !== _leadsSourceFilter) return false;
+        // Qidiruv (ism/telefon) barcha sanalar bo'yicha ishlaydi, aks holda eski lid topilmay qoladi
+        if (_leadSearchQuery || (!from && !to)) return true;
+        const key = getLeadDateKey(l);
+        if (!key) return false;
+        if (from && key < from) return false;
+        if (to && key > to) return false;
+        return true;
+    });
+}
+
+function _formatLeadFilterDate(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    const months = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+    const sameYear = y === new Date().getFullYear();
+    return `${d} ${months[m - 1]}${sameYear ? '' : ' ' + y}`;
+}
+
+function updateLeadsDateFilterLabel() {
+    const el = document.getElementById('leadsDateFilterValue');
+    if (!el) return;
+    const { preset, from, to } = _leadsDateFilter;
+    const names = { today: 'Bugun', yesterday: 'Kecha', week: 'Shu hafta', month: 'Joriy oy', 'prev-month': "O'tgan oy", all: 'Barcha vaqt' };
+    let text = names[preset];
+    if (!text) {
+        if (from && to && from === to) text = _formatLeadFilterDate(from);
+        else if (from && to) text = `${_formatLeadFilterDate(from)} – ${_formatLeadFilterDate(to)}`;
+        else if (from) text = `${_formatLeadFilterDate(from)} dan`;
+        else if (to) text = `${_formatLeadFilterDate(to)} gacha`;
+        else text = 'Barcha vaqt';
+    }
+    el.textContent = text;
+    document.querySelectorAll('[data-lead-date-preset]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.leadDatePreset === preset);
+    });
+}
+
+function getLeadsDatePresetRange(preset) {
+    const now = new Date();
+    const today = _leadDateKeyLocal(now);
+    if (preset === 'today') return { from: today, to: today };
+    if (preset === 'yesterday') {
+        const y = _leadDateKeyLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+        return { from: y, to: y };
+    }
+    if (preset === 'week') {
+        const dow = now.getDay() === 0 ? 7 : now.getDay(); // Dushanba = 1
+        return { from: _leadDateKeyLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow + 1)), to: today };
+    }
+    if (preset === 'month') return _leadsMonthRange(0);
+    if (preset === 'prev-month') return _leadsMonthRange(-1);
+    return { from: '', to: '' };
+}
+
+function syncLeadsDateInputs() {
+    const fromEl = document.getElementById('leadsDateFrom');
+    const toEl = document.getElementById('leadsDateTo');
+    const single = _leadsDateFilter.from && _leadsDateFilter.from === _leadsDateFilter.to
+        && !['month', 'prev-month', 'week', 'all'].includes(_leadsDateFilter.preset);
+    const modeInput = document.querySelector(`input[name="leadsDateMode"][value="${single ? 'single' : 'range'}"]`);
+    if (modeInput) modeInput.checked = true;
+    if (fromEl) fromEl.value = _leadsDateFilter.from || '';
+    if (toEl) toEl.value = _leadsDateFilter.to || '';
+    applyLeadsDateModeUi();
+}
+
+function applyLeadsDateModeUi() {
+    const single = document.querySelector('input[name="leadsDateMode"]:checked')?.value === 'single';
+    const toField = document.getElementById('leadsDateToField');
+    const fromLabel = document.getElementById('leadsDateFromLabel');
+    if (toField) toField.hidden = single;
+    if (fromLabel) fromLabel.textContent = single ? 'Sana' : 'Dan';
+}
+
+function closeLeadsDateDropdown() {
+    const dd = document.getElementById('leadsDateDropdown');
+    const btn = document.getElementById('leadsDateFilterBtn');
+    if (dd) dd.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function initLeadsDateSourceFilters() {
+    const btn = document.getElementById('leadsDateFilterBtn');
+    const dd = document.getElementById('leadsDateDropdown');
+    if (btn && dd && !btn.dataset.bound) {
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const open = dd.hidden;
+            dd.hidden = !open;
+            btn.setAttribute('aria-expanded', String(open));
+            if (open) syncLeadsDateInputs();
+        });
+        dd.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('click', closeLeadsDateDropdown);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLeadsDateDropdown(); });
+
+        dd.querySelectorAll('[data-lead-date-preset]').forEach(p => {
+            p.addEventListener('click', () => {
+                const preset = p.dataset.leadDatePreset;
+                _leadsDateFilter = { preset, ...getLeadsDatePresetRange(preset) };
+                updateLeadsDateFilterLabel();
+                closeLeadsDateDropdown();
+                renderLeads();
+            });
+        });
+        dd.querySelectorAll('input[name="leadsDateMode"]').forEach(r => r.addEventListener('change', applyLeadsDateModeUi));
+
+        document.getElementById('leadsDateApplyBtn')?.addEventListener('click', () => {
+            const single = document.querySelector('input[name="leadsDateMode"]:checked')?.value === 'single';
+            let from = document.getElementById('leadsDateFrom')?.value || '';
+            let to = single ? from : (document.getElementById('leadsDateTo')?.value || '');
+            if (single && !from) { if (typeof showMiniToast === 'function') showMiniToast('Sanani tanlang'); return; }
+            if (from && to && from > to) [from, to] = [to, from];
+            _leadsDateFilter = { preset: (!from && !to) ? 'all' : 'custom', from, to };
+            updateLeadsDateFilterLabel();
+            closeLeadsDateDropdown();
+            renderLeads();
+        });
+    }
+
+    const src = document.getElementById('leadsSourceFilter');
+    if (src && !src.dataset.bound) {
+        src.dataset.bound = '1';
+        src.value = _leadsSourceFilter;
+        src.addEventListener('change', () => {
+            _leadsSourceFilter = src.value;
+            const labels = { all: 'Manba: Hammasi', target: 'Manba: Target', organic: 'Manba: Organik' };
+            const disp = document.getElementById('leadsSourceFilterDisplay');
+            if (disp) disp.textContent = labels[_leadsSourceFilter] || labels.all;
+            renderLeads();
+        });
+    }
+    updateLeadsDateFilterLabel();
+}
 
 function normalizeLeadSearchText(value) {
     return String(value ?? '').normalize('NFKC').toLowerCase()
@@ -21370,6 +21069,8 @@ function updateCachedLeadVersion(lang, leadId, updatedAt) {
 
 function persistLeadChange(lang, lead, onSaved) {
     if (!lead?.id) return Promise.reject(new Error('Lid ID topilmadi'));
+    // Targetolog kabi "faqat ko'rish" rollari serverga hech qanday lid o'zgarishini yubormaydi
+    if (isLeadsReadOnly(getCurrentUser())) return Promise.resolve(null);
     const leadId = String(lead.id);
     const snapshot = typeof structuredClone === 'function'
         ? structuredClone(lead)
@@ -21520,6 +21221,8 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess)
 }
 
 function updateLeadInStorage(lang, leadId, updater) {
+    // "Faqat ko'rish" rollari (targetolog) lidni lokal ham o'zgartirmaydi
+    if (isLeadsReadOnly(getCurrentUser())) return null;
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const list = leads[lang] || [];
     const idx = list.findIndex(l => l.id === leadId);
@@ -22524,6 +22227,14 @@ function renderLeads() {
         if (langTabsEl) langTabsEl.style.display = 'none';
         const bulkBarEl = document.getElementById('bulkActionsBar');
         if (bulkBarEl) bulkBarEl.style.display = 'none';
+    } else if (_cuRender?.role === 'targetolog') {
+        // Targetolog faqat ruxsat berilgan til(lar)ni ko'radi; bitta bo'lsa tablar yashiriladi.
+        const langs = _cuRender.linkedTargetLangs || [];
+        if (langs.length && !langs.includes(_leadsLangFilter)) _leadsLangFilter = langs[0];
+        const langTabsEl = document.getElementById('leadsLangTabs');
+        if (langTabsEl) langTabsEl.style.display = langs.length > 1 ? '' : 'none';
+        const bulkBarEl = document.getElementById('bulkActionsBar');
+        if (bulkBarEl) bulkBarEl.style.display = 'none';
     } else {
         const langTabsEl = document.getElementById('leadsLangTabs');
         if (langTabsEl) langTabsEl.style.display = '';
@@ -22535,12 +22246,13 @@ function renderLeads() {
 
     renderLeadsManagerFilter();
     renderLeadsColumnsFilter();
+    initLeadsDateSourceFilters();
 
     const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    const tagged = filterLeadsByManager(
+    const tagged = filterLeadsByDateAndSource(filterLeadsByManager(
         (leadsData[lang] || []).map(l => ({ ...l, _lang: lang }))
-    ).filter(l => leadMatchesSearch(l));
+    )).filter(l => leadMatchesSearch(l));
 
     // Search may temporarily reveal a matching hidden column; never overwrite saved visibility.
     const visibleColumns = _leadSearchQuery
@@ -23553,6 +23265,27 @@ function managerLangHtml(selected = 'english') {
     </div>`;
 }
 
+function targetLangHtml(selected = 'english') {
+    const opt = (v, label) => `<label><input type="radio" name="empTargetLang" value="${v}" ${selected === v ? 'checked' : ''}> ${label}</label>`;
+    return `<div class="form-group" id="empTargetLangWrap" style="display:none">
+        <label>Til yo'nalishi (targetolog kabineti)</label>
+        <div class="emp-lang-sub">${opt('english', 'Ingliz tili')}${opt('russian', 'Rus tili')}${opt('both', 'Ikkalasi')}</div>
+        <small style="color:var(--text-muted)">Targetolog faqat shu yo'nalish(lar)ning Sotuv bo'limini ko'radi va Marketing → Target lidlar'ga maʼlumot kiritadi.</small>
+    </div>`;
+}
+function bindTargetLangToggle(roleSelectId) {
+    const roleEl = document.getElementById(roleSelectId);
+    const wrap = document.getElementById('empTargetLangWrap');
+    if (!roleEl || !wrap) return;
+    const toggle = () => { wrap.style.display = roleEl.value === 'targetolog' ? '' : 'none'; };
+    roleEl.addEventListener('change', toggle);
+    toggle();
+}
+function resolveTargetLang() {
+    const v = document.querySelector('input[name="empTargetLang"]:checked')?.value;
+    return ['english', 'russian', 'both'].includes(v) ? v : 'english';
+}
+
 function ropLangHtml(selected = 'english') {
     return `<div class="form-group" id="empRopLangWrap" style="display:none">
         <label>Til yo'nalishi (ROP)</label>
@@ -23764,7 +23497,8 @@ function renderHrEmployees() {
     } else {
         if (!filtered.some(e => e.id === _hrSelectedEmpId)) _hrSelectedEmpId = filtered[0].id;
         const selected = filtered.find(e => e.id === _hrSelectedEmpId);
-        const langChip = e => e.lang === 'russian' || e.role === 'rus-oqituvchi' ? '<span class="hrx-chip">Rus</span>'
+        const langChip = e => e.lang === 'both' ? '<span class="hrx-chip">Ingliz + Rus</span>'
+            : e.lang === 'russian' || e.role === 'rus-oqituvchi' ? '<span class="hrx-chip">Rus</span>'
             : (e.lang === 'english' || e.role === 'ingliz-oqituvchi') ? '<span class="hrx-chip">Ingliz</span>' : '';
         const fmtJoin = v => { const d = v ? new Date(v) : null; return d && !Number.isNaN(d.getTime()) ? `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}` : '—'; };
         grid.innerHTML = `<div class="hrx">
@@ -23942,6 +23676,7 @@ function openEditEmployeeModal(empId) {
         ${trialGroupLinkHtml(emp.trialGroupLink || '')}
         ${managerLangHtml(emp.lang || 'english')}
         ${ropLangHtml(emp.lang || 'english')}
+        ${targetLangHtml(emp.role === 'targetolog' ? (emp.lang || 'english') : 'english')}
         <div class="form-group">
             <label>Telefon raqam</label>
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
@@ -24009,6 +23744,7 @@ function openEditEmployeeModal(empId) {
     bindTrialGroupToggle('editEmpRole');
     bindManagerLangToggle('editEmpRole');
     bindRopLangToggle('editEmpRole');
+    bindTargetLangToggle('editEmpRole');
     payrollUI.bindEmployee('editEmpRole');
     teacherDutyUI.bindEmployee('editEmpRole');
 
@@ -24078,7 +23814,7 @@ function openEditEmployeeModal(empId) {
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
-            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : (emp.lang || 'english'),
+            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : resolvedRole === 'targetolog' ? resolveTargetLang() : (emp.lang || 'english'),
             cardNumber: document.getElementById('editEmpCardNumber').value.trim(),
             passportSeries: document.getElementById('editEmpPassportSeries').value.trim(),
             address: document.getElementById('editEmpAddress').value.trim(),
@@ -24207,6 +23943,7 @@ function openAddEmployeeModal() {
         ${trialGroupLinkHtml()}
         ${managerLangHtml()}
         ${ropLangHtml()}
+        ${targetLangHtml()}
         <div class="form-group">
             <label>Telefon raqam <span style="color:var(--danger)">*</span></label>
             <input type="tel" id="empPhone" class="form-control" placeholder="+998 90 123 45 67">
@@ -24281,6 +24018,7 @@ function openAddEmployeeModal() {
     bindTrialGroupToggle('empRole');
     bindManagerLangToggle('empRole');
     bindRopLangToggle('empRole');
+    bindTargetLangToggle('empRole');
     payrollUI.bindEmployee('empRole');
     teacherDutyUI.bindEmployee('empRole');
     document.getElementById('empRole').dispatchEvent(new Event('change'));
@@ -24334,7 +24072,7 @@ function openAddEmployeeModal() {
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
-            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : 'english'
+            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : role === 'targetolog' ? resolveTargetLang() : 'english'
         };
         const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'

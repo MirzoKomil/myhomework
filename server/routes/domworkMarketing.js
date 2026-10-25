@@ -1,10 +1,10 @@
 'use strict';
+// Eski (faqat rus tili) marketing endpointi. Endi ikkala til uchun yagona
+// /api/target-ads ishlatiladi; bu yerga kelgan so'rov eski ochiq qolgan
+// sahifadan — ma'lumot eski jadvalga yozilib yo'qolmasligi uchun rad etiladi.
 const express=require('express');
-const insights=require('../services/domworkBot/insights');
-const queue=require('../services/domworkBot/queue');
-module.exports=({pool,authRequired})=>{
-    const router=express.Router();router.use(authRequired);router.use((req,res,next)=>{res.set('Cache-Control','no-store');next();});
-    router.get('/',async(req,res)=>{try{res.json(await insights.marketingMonth(pool,req.user,req.query.month));}catch(e){res.status(e.status||500).json({error:e.status?e.message:'Marketing ma’lumotlarini yuklashda xatolik'});}});
-    router.put('/',async(req,res)=>{try{res.json(await queue.transaction(pool,db=>insights.saveMarketing(db,req.user,req.body||{})));}catch(e){res.status(e.status||500).json({error:e.status?e.message:'Marketing ma’lumotlarini saqlashda xatolik'});}});
+module.exports=({authRequired})=>{
+    const router=express.Router();router.use(authRequired);
+    router.all('/',(req,res)=>res.status(410).json({error:'Sahifani yangilang (Ctrl + F5): Target monitoringi yangilandi'}));
     return router;
 };

@@ -172,7 +172,7 @@ async function comparison(db,now) {
         +'\nAudit tarixi yoki to‘lov vaqti yo‘q bo‘lgan eski yozuvlar 24 soatlik hisobotga taxminan qo‘shilmaydi.';
 }
 async function marketing(db,start,end) {
-    const {total,known,plan}=await require('./insights').advertising(db,start,end);
+    const {total,known,plan}=await require('../targetAds').advertising(db,'russian',start,end);
     const leads=Number((await db.query(`SELECT COUNT(*) AS count FROM leads WHERE language='russian' AND lead_type='target' AND deleted_at IS NULL
         AND (created_at AT TIME ZONE 'Asia/Tashkent')::date BETWEEN $1::date AND $2::date`,[start,end])).rows[0].count);
     return `Target lidlar: ${leads}\nRus tili reklama sarfi: ${known?total.toFixed(2)+' USD':'Kiritilmagan'}\n`

@@ -7,10 +7,10 @@
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <script src="js/theme.js"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20261021i">
+    <link rel="stylesheet" href="css/styles.css?v=20261026b">
     <link rel="stylesheet" href="css/domworkGroups.css?v=20261011b">
     <link rel="stylesheet" href="css/shell.css?v=20261023d">
-    <link rel="stylesheet" href="css/teamApp.css?v=20261025a">
+    <link rel="stylesheet" href="css/teamApp.css?v=20261026r7">
 </head>
 
 <body>
@@ -466,10 +466,7 @@
                         <div class="sales-pinned">
                             <div class="sales-header-layout">
                                 <nav class="section-nav sales-header-nav" id="marketingSectionNav" aria-label="Marketing bo'limi">
-                                    <button type="button" class="section-nav-item active" data-marketing-section="target">Target Monitoringi</button>
-                                    <button type="button" class="section-nav-item" data-marketing-section="content-plan">Kontent reja</button>
-                                    <button type="button" class="section-nav-item" data-marketing-section="competitors">Raqobatchilar tahlili</button>
-                                    <button type="button" class="section-nav-item" data-marketing-section="marketing-stats">Statistika</button>
+                                    <button type="button" class="section-nav-item active" data-marketing-section="target">Target lidlar</button>
                                     <button type="button" class="section-nav-item" data-marketing-section="sms">SMS rassilka</button>
                                 </nav>
                                 <div class="sales-header-lang" id="marketingLangActions">
@@ -485,34 +482,7 @@
                             </div>
                         </div>
 
-                        <div class="marketing-panel active" data-marketing-panel="target" id="marketingPanel-target">
-                            <div class="mac-empty" style="padding:60px 0">
-                                <div style="font-size:40px;margin-bottom:12px">🎯</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Target Monitoringi</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu boʻlim tez orada toʻldiriladi</div>
-                            </div>
-                        </div>
-                        <div class="marketing-panel" data-marketing-panel="content-plan" id="marketingPanel-content-plan">
-                            <div class="mac-empty" style="padding:60px 0">
-                                <div style="font-size:40px;margin-bottom:12px">📅</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Kontent reja</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu boʻlim tez orada toʻldiriladi</div>
-                            </div>
-                        </div>
-                        <div class="marketing-panel" data-marketing-panel="competitors" id="marketingPanel-competitors">
-                            <div class="mac-empty" style="padding:60px 0">
-                                <div style="font-size:40px;margin-bottom:12px">🔍</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Raqobatchilar tahlili</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu boʻlim tez orada toʻldiriladi</div>
-                            </div>
-                        </div>
-                        <div class="marketing-panel" data-marketing-panel="marketing-stats" id="marketingPanel-marketing-stats">
-                            <div class="mac-empty" style="padding:60px 0">
-                                <div style="font-size:40px;margin-bottom:12px">📊</div>
-                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Statistika</div>
-                                <div style="font-size:13px;color:var(--text-muted)">Bu boʻlim tez orada toʻldiriladi</div>
-                            </div>
-                        </div>
+                        <div class="marketing-panel active" data-marketing-panel="target" id="marketingPanel-target"></div>
                         <div class="marketing-panel" data-marketing-panel="sms" id="marketingPanel-sms"></div>
                     </section>
 
@@ -684,6 +654,50 @@
                                             </button>
                                             <div class="leads-columns-dropdown" id="leadsColumnsDropdown" hidden></div>
                                         </div>
+                                    </div>
+                                    <div class="leads-filter-box leads-columns-filter-wrap leads-date-filter-wrap">
+                                        <div class="leads-columns-filter">
+                                            <button type="button" class="leads-filter-trigger"
+                                                id="leadsDateFilterBtn" aria-haspopup="true" aria-expanded="false">
+                                                <svg class="leads-date-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <rect x="3" y="5" width="18" height="16" rx="2" />
+                                                    <path d="M3 10h18M8 3v4M16 3v4" />
+                                                </svg>
+                                                <span class="leads-filter-display is-selected" id="leadsDateFilterValue">Joriy oy</span>
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M6 9l6 6 6-6" />
+                                                </svg>
+                                            </button>
+                                            <div class="leads-columns-dropdown leads-date-dropdown" id="leadsDateDropdown" hidden>
+                                                <div class="leads-date-presets">
+                                                    <button type="button" data-lead-date-preset="today">Bugun</button>
+                                                    <button type="button" data-lead-date-preset="yesterday">Kecha</button>
+                                                    <button type="button" data-lead-date-preset="week">Shu hafta</button>
+                                                    <button type="button" data-lead-date-preset="month">Joriy oy</button>
+                                                    <button type="button" data-lead-date-preset="prev-month">O'tgan oy</button>
+                                                    <button type="button" data-lead-date-preset="all">Barcha vaqt</button>
+                                                </div>
+                                                <div class="leads-date-mode">
+                                                    <label><input type="radio" name="leadsDateMode" value="range" checked> Sanadan sanagacha</label>
+                                                    <label><input type="radio" name="leadsDateMode" value="single"> Bitta sana</label>
+                                                </div>
+                                                <div class="leads-date-inputs">
+                                                    <label class="leads-date-field"><span id="leadsDateFromLabel">Dan</span>
+                                                        <input type="date" id="leadsDateFrom"></label>
+                                                    <label class="leads-date-field" id="leadsDateToField"><span>Gacha</span>
+                                                        <input type="date" id="leadsDateTo"></label>
+                                                </div>
+                                                <button type="button" class="btn-primary-sm leads-date-apply" id="leadsDateApplyBtn">Qo'llash</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="leads-filter-box leads-filter-box--select leads-source-filter-box">
+                                        <span class="leads-filter-display is-selected" id="leadsSourceFilterDisplay">Manba: Hammasi</span>
+                                        <select id="leadsSourceFilter" class="leads-filter-select-overlay" aria-label="Lid manbasi">
+                                            <option value="all" selected>Hammasi (Target + Organik)</option>
+                                            <option value="target">Faqat Target</option>
+                                            <option value="organic">Faqat Organik</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="leads-filters-bar" id="bookRoadmapFiltersBar" hidden>
@@ -1548,19 +1562,21 @@
     <script src="js/mobileContentPolicy.js?v=20261001"></script>
     <script src="js/lessonDefaults.js?v=20261001"></script>
     <script src="js/paymentLedger.js?v=20261005l"></script>
-    <script src="js/inflowUI.js?v=20261021b"></script>
+    <script src="js/inflowUI.js?v=20261026r7"></script>
     <script src="js/payrollEngine.js?v=20261008a"></script>
-    <script src="js/payrollUI.js?v=20261021a"></script>
+    <script src="js/payrollUI.js?v=20261026r7"></script>
     <script src="js/teacherAttendanceCalendar.js?v=20261008a"></script>
-    <script src="js/teacherDutyUI.js?v=20261008a"></script>
+    <script src="js/teacherDutyUI.js?v=20261026r7"></script>
     <script src="js/domworkBotUI.js?v=20261013a"></script>
     <script src="js/domworkDiscoveryUI.js?v=20261011b"></script>
     <script src="js/domworkGroupsUI.js?v=20261011b"></script>
     <script src="js/richText.js?v=20261019a"></script>
     <script src="js/audioDialogs.js?v=20261019a"></script>
-    <script src="js/app.js?v=20261023d"></script>
-    <script src="js/teamApp.js?v=20261025a"></script>
-    <script src="js/teamIcons.js?v=20261026a"></script>
+    <script src="js/targetSheet.js?v=20261026a"></script>
+    <script src="js/targetMonitorUI.js?v=20261026a"></script>
+    <script src="js/app.js?v=20261026r7"></script>
+    <script src="js/teamApp.js?v=20261026r7"></script>
+    <script src="js/teamIcons.js?v=20261026r7"></script>
 </body>
 
 </html>
