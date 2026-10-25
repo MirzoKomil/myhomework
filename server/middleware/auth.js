@@ -23,6 +23,7 @@ async function authRequired(req, res, next) {
     } catch {
         return res.status(401).json({ error: 'Token yaroqsiz yoki muddati tugagan' });
     }
+    require('../services/archiveContext').setActor(req.user);
 
     if (req.user.jti) {
         try {

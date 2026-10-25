@@ -20,6 +20,8 @@ const inflow = require('./services/inflow');
 const paymentHistory = require('./services/paymentHistory');
 const paymentCash = require('./services/paymentCash');
 const teacherDuties = require('./services/teacherDuties');
+const archive = require('./services/archive');
+const staffLifecycle = require('./services/staffLifecycle');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -333,6 +335,9 @@ async function initSchema() {
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`).catch(() => {});
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS deleted_by TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
+    // Arxiv va xodim hayot sikli (ishdan bo'shatish) jadvallari/ustunlari.
+    await archive.init(pool);
+    await staffLifecycle.init(pool);
 
     // Mavjud sotuv-menejeri loginlarini bir marta barqaror manager ID bilan
     // bog'laymiz. Keyingi profil nomi o'zgarishi authorization'ga ta'sir
@@ -777,6 +782,16 @@ function rowToLead(r) {
     } catch {}
     return {
         ...extra,
+        // Sotuvni kim qilgani: server muhrlagan `saleManagerId`; eski yozuvda —
+        // bosqichlar tarixida sotuv bosqichiga birinchi kirgan menejer; u ham
+        // bo'lmasa hozirgi menejer. Sotuv bosqichida bo'lmagan lidda — null.
+        saleManagerId: (() => {
+            const sale = new Set(['tolov-jarayonida', 'tolov-yopildi']);
+            if (!sale.has(r.status)) return null;
+            if (extra.saleManagerId) return String(extra.saleManagerId);
+            const first = (Array.isArray(extra.stageHistory) ? extra.stageHistory : []).find(e => e && sale.has(e.to) && e.managerId);
+            return first ? String(first.managerId) : (r.manager_id || null);
+        })(),
         id: r.id, name: r.name, phone: r.phone || '', phone2: r.phone2 || '',
         email: r.email || '', managerId: r.manager_id || '',
         source: r.source || 'Organik', date: r.date || '',
@@ -882,7 +897,8 @@ async function getHrEmployeesData() {
         pinfl: r.pinfl || '', address: r.address || '',
         lang: r.lang || 'english',
         trialGroupLink: r.trial_group_link || '',
-        kpiTemplateId: r.kpi_template_id || '', dualRole: r.dual_role === true
+        kpiTemplateId: r.kpi_template_id || '', dualRole: r.dual_role === true,
+        endDate: r.end_date || '', offboardedAt: r.offboarded_at || null, offboardReason: r.offboard_reason || ''
     }));
 }
 
@@ -1198,6 +1214,9 @@ async function guardBulkDelete(client, table, label, incoming) {
         err.code = 'BULK_DELETE_BLOCKED';
         throw err;
     }
+    // Arxiv: o'chib ketadigan qatorlar shu tranzaksiyaning o'zida arxivga
+    // tushadi. Arxivga yozib bo'lmasa — o'chirish ham bekor bo'ladi.
+    if (removed.length) await archive.archiveMissingRows(client, table, incoming);
 }
 
 async function saveTeachers(client, teachers) {
@@ -1483,6 +1502,9 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
         });
     }
 
+    // Sotuv egasi — faqat server muhrlaydi (lid boshqaga berilsa ham o'zgarmaydi).
+    if (typeof staffLifecycle !== 'undefined') Object.assign(merged, staffLifecycle.nextSaleCredit(before, merged));
+
     // Telegram/CSV kabi tarixiy manbadan tiklangan lidlar eski sanasi bilan
     // import qilinadi. Avvalgi menejer va etap noma'lum paytda ularga SLA
     // yuborilmaydi (`recoveryPending=true`). Foydalanuvchi menejer biriktirsa
@@ -1636,7 +1658,7 @@ async function restoreLead(id, actor = {}) {
 async function saveHrEmployeesData(client, employees, actor = {}) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
     await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
-    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date FROM hr_employees')).rows;
+    const oldEmployees = (await client.query('SELECT id,role,status,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date,end_date,offboarded_at,offboarded_by,offboard_reason FROM hr_employees')).rows;
     // Toʻliq HR huquqi boʻlmagan rol (masalan ROP) maxfiy maydonlarni koʻrmaydi —
     // saqlaganda ular boʻsh qiymat bilan ustidan yozilib ketmasin.
     employees = require('./services/stateScope').preserveHrPrivateFields(employees, oldEmployees, actor);
@@ -1653,18 +1675,24 @@ async function saveHrEmployeesData(client, employees, actor = {}) {
     }
     await client.query('DELETE FROM hr_employees');
     for (const e of (employees || [])) {
+        // Ishdan bo'shatish maydonlari faqat serverda boshqariladi: eski tab
+        // yuborgan "active" holati bo'shatilgan xodimni qayta ochib yubormaydi.
+        const life = staffLifecycle.preserveLifecycle(e, oldEmployees.find(r => r.id === e.id));
+        e.status = life.status;
         await client.query(
             `INSERT INTO hr_employees
                 (id, name, first_name, last_name, role, login, phone, email,
                  department, status, join_date, gender, birth_date, start_date,
-                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id, dual_role)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
+                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id, dual_role,
+                 end_date, offboarded_at, offboarded_by, offboard_reason)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)`,
             [e.id, e.name, e.firstName || '', e.lastName || '',
              e.role || 'employee', e.login || '', e.phone || '', e.email || '',
-             e.department || '', e.status || 'active', e.joinDate || '',
+             e.department || '', life.status, e.joinDate || '',
              e.gender || '', e.birthDate || '', e.startDate || '',
              e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '',
-             e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '', e.dualRole === true]
+             e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '', e.dualRole === true,
+             life.endDate, life.offboardedAt, life.offboardedBy, life.offboardReason]
         );
         if (!oldEmployees.some(old => old.id === e.id) && require('../js/teacherRoles').language(e) === 'russian' && e.status !== 'inactive') {
             await require('./services/domworkBot/events').capture(client, 'employee', e.id, {}, 'employee:' + e.id);
@@ -3818,6 +3846,10 @@ async function gradeDemoCreativeSubmission(lessonId, { scorePercent, feedback } 
 }
 
 async function saveJsonData(client, key, data) {
+    if (archive.JSON_TYPES[key] && Array.isArray(data)) {
+        const previous = (await client.query('SELECT data FROM json_data WHERE key = $1 FOR UPDATE', [key])).rows[0]?.data;
+        await archive.archiveJsonDiff(client, key, previous, data);
+    }
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
         [key, JSON.stringify(data)]
@@ -3893,7 +3925,12 @@ async function patchState(partial, actor = {}) {
         if (partial.bonusHistory !== undefined) await saveJsonData(client, 'bonusHistory', partial.bonusHistory);
         if (partial.bonusData !== undefined)   await saveJsonData(client, 'bonusData', partial.bonusData);
         if (partial.salesPlan !== undefined)   await saveJsonData(client, 'salesPlan', partial.salesPlan);
-        if (partial.cashFlow !== undefined)    await paymentCash.saveCash(client, partial.cashFlow);
+        if (partial.cashFlow !== undefined) {
+            const previousCash = (await client.query("SELECT data FROM json_data WHERE key='cashFlow' FOR UPDATE")).rows[0]?.data || [];
+            await paymentCash.saveCash(client, partial.cashFlow);
+            const nextCash = (await client.query("SELECT data FROM json_data WHERE key='cashFlow'")).rows[0]?.data || [];
+            await archive.archiveJsonDiff(client, 'cashFlow', previousCash, nextCash);
+        }
         if (partial.orgChart !== undefined)    await saveJsonData(client, 'orgChart', partial.orgChart);
         if (partial.manualMetrics !== undefined) await saveJsonData(client, 'manualMetrics', partial.manualMetrics);
         if (partial.liveGrades !== undefined)    await saveJsonData(client, 'liveGrades', partial.liveGrades);
@@ -4219,7 +4256,7 @@ async function findUserById(id) {
 async function listUsersByRoles(roles = []) {
     const allowed = Array.isArray(roles) ? roles.filter(Boolean) : [];
     if (!allowed.length) return [];
-    return q('SELECT id, name, email, role, phone, bio, location, avatar, created_at FROM users WHERE role = ANY($1::text[]) ORDER BY name', [allowed]);
+    return q('SELECT id, name, email, role, phone, bio, location, avatar, created_at FROM users WHERE role = ANY($1::text[]) AND disabled_at IS NULL ORDER BY name', [allowed]);
 }
 
 async function createUser({ name, email, passwordHash, role }) {
@@ -4367,7 +4404,9 @@ async function createSession({ userId, jti, userAgent, ip }) {
 
 async function findSessionByJti(jti) {
     if (!jti) return null;
-    return q1('SELECT * FROM sessions WHERE jti = $1', [jti]);
+    // Bloklangan (ishdan bo'shatilgan) akkauntning sessiyasi yaroqsiz.
+    return q1(`SELECT s.* FROM sessions s LEFT JOIN users u ON u.id = s.user_id
+               WHERE s.jti = $1 AND u.disabled_at IS NULL`, [jti]);
 }
 
 async function getSessionById(id) {
@@ -4581,7 +4620,7 @@ setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 module.exports = {
     pool, DATA_DIR,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
-    insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
+    insertLead, upsertLead, upsertLeadWithClient, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, saveTeacherTrialLesson,
     botTrialAction: (client,actor,leadId,payload) => trialLessons.updateTrialLesson(client,actor,leadId,payload,rowToLead,appendLeadAudit),
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
