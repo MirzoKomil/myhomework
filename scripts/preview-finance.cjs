@@ -46,14 +46,16 @@ async function seed() {
     for (const [id, name, phone, debt, due] of students) await pool.query(`INSERT INTO students VALUES($1,$2,$3,'russian','g',NULL,30,$4)`, [id, name, '+998' + phone, JSON.stringify({ debtAmount: debt, paymentDueDate: due })]);
     await pool.query(`INSERT INTO salary_transactions VALUES('sal-sep-t1','t1','russian','2026-09-01','2026-09-30',3200000,'paid',NOW(),NULL),('sal-sep-m1','m1','russian','2026-09-01','2026-09-30',2600000,'paid',NOW(),NULL),
         ('sal-oct-t1','t1','russian','2026-10-01','2026-10-15',1700000,'unpaid',NULL,NULL)`);
-    fs.writeFileSync(path.join(process.env.DATA_DIR, 'uploads', 'receipt-demo.png'), 'demo');
+    // Demo hujjat moliyaning yopiq omboriga yuklanadi (PNG imzosi bilan 1x1 rasm).
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const { url: proof } = await finance.storeEvidence(pool, actor, { originalname: 'chek-demo.png', mimetype: 'image/png', buffer: png });
     let k = 0;
     const tx = (o) => finance.createTransaction(pool, actor, { requestKey: 'preview-seed-key-' + String(++k).padStart(4, '0'), entity: 'russian', accountId: 'acc-card', ...o });
-    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 4200000, date: '2026-09-05', counterparty: 'Meta Ads', description: 'Sentyabr target', receiptUrl: '/uploads/receipt-demo.png' });
-    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 3800000, date: '2026-10-04', counterparty: 'Meta Ads', description: 'Oktyabr target', receiptUrl: '/uploads/receipt-demo.png' });
-    await tx({ type: 'expense', categoryCode: 'RENT', amount: 2500000, date: '2026-10-01', entity: 'common', counterparty: 'Ofis ijarasi', receiptUrl: '/uploads/receipt-demo.png' });
+    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 4200000, date: '2026-09-05', counterparty: 'Meta Ads', description: 'Sentyabr target', receiptUrl: proof });
+    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 3800000, date: '2026-10-04', counterparty: 'Meta Ads', description: 'Oktyabr target', receiptUrl: proof });
+    await tx({ type: 'expense', categoryCode: 'RENT', amount: 2500000, date: '2026-10-01', entity: 'common', counterparty: 'Ofis ijarasi', receiptUrl: proof });
     await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 650000, date: '2026-10-02', entity: 'common', counterparty: 'Railway, Eskiz SMS' });
-    await tx({ type: 'refund', categoryCode: 'REFUND', amount: 300000, date: '2026-10-09', paymentRecordId: 'p40', counterparty: 'Qaytarish', description: 'Kurs boshlanmasdan voz kechdi' });
+    await tx({ type: 'refund', categoryCode: 'REFUND', amount: 300000, date: '2026-10-09', paymentRecordId: 'p40', counterparty: 'Qaytarish', description: 'Kurs boshlanmasdan voz kechdi', receiptUrl: proof });
     await tx({ type: 'capital', categoryCode: 'OWNER_IN', amount: 5000000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'Ta’sischi' });
     await finance.recordSalaryPayment(pool, actor, 'sal-sep-t1', { accountId: 'acc-card', date: '2026-10-03' });
     await finance.createPayable(pool, actor, { requestKey: 'preview-payable-0001', kind: 'bill', entity: 'russian', counterparty: 'Bloger reklama', categoryCode: 'MKT_OTHER', amount: 1500000, issueDate: '2026-10-10', dueDate: '2026-10-20' });
@@ -75,6 +77,9 @@ const routes = [
     ['POST', /^\/api\/finance\/salaries\/([^/]+)\/cash-out$/, (q, b, m) => finance.recordSalaryPayment(pool, actor, m[1], b)],
     ['POST', /^\/api\/finance\/receipts\/void$/, (q, b) => finance.voidReceipts(pool, actor, b)],
     ['POST', /^\/api\/finance\/receipts\/manual$/, (q, b) => finance.manualReceipt(pool, actor, b)],
+    ['GET', /^\/api\/finance\/people/, (q) => finance.people(pool, actor, q)],
+    ['GET', /^\/api\/finance\/close-status/, (q) => finance.closeStatus(pool, actor, q)],
+    ['POST', /^\/api\/finance\/receipts\/batch$/, (q, b) => finance.batchCorrections(pool, actor, b)],
     ['POST', /^\/api\/finance\/reconcile$/, (q, b) => finance.reconcile(pool, actor, b)],
     ['POST', /^\/api\/finance\/accounts$/, (q, b) => finance.saveAccount(pool, actor, b)],
     ['POST', /^\/api\/finance\/accounts\/([^/]+)\/checks$/, (q, b, m) => finance.addAccountCheck(pool, actor, m[1], b)],
@@ -86,10 +91,21 @@ const routes = [
 http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x');
     if (u.pathname.startsWith('/api/')) {
-        if (req.method === 'POST' && u.pathname === '/api/upload') {
-            const name = 'upload-' + Date.now() + '.pdf'; let n = 0; for await (const c of req) n += c.length;
-            fs.writeFileSync(path.join(process.env.DATA_DIR, 'uploads', name), 'preview upload ' + n);
-            return res.end(JSON.stringify({ url: '/uploads/' + name }));
+        if (req.method === 'POST' && u.pathname === '/api/finance/evidence') {
+            // Oddiy multipart o'quvchi (faqat preview uchun): bitta "file" qismi.
+            const chunks = []; for await (const c of req) chunks.push(c);
+            const raw = Buffer.concat(chunks), boundary = '--' + /boundary=(.+)$/.exec(req.headers['content-type'] || '')[1];
+            const start = raw.indexOf('\r\n\r\n') + 4, end = raw.indexOf('\r\n' + boundary, start);
+            const headerText = raw.slice(0, start).toString();
+            const file = { originalname: (/filename="([^"]*)"/.exec(headerText) || [])[1] || 'file', mimetype: (/Content-Type: ([^\r\n]+)/i.exec(headerText) || [])[1] || '', buffer: raw.slice(start, end) };
+            res.setHeader('Content-Type', 'application/json');
+            try { return res.end(JSON.stringify(await finance.storeEvidence(pool, actor, file))); }
+            catch (e) { res.statusCode = e.status || 500; return res.end(JSON.stringify({ error: e.message })); }
+        }
+        const ev = /^\/api\/finance\/evidence\/([^/]+)$/.exec(u.pathname);
+        if (req.method === 'GET' && ev) {
+            try { const f = await finance.readEvidence(pool, actor, ev[1]); res.setHeader('Content-Type', f.mime); return fs.createReadStream(f.path).pipe(res); }
+            catch (e) { res.statusCode = e.status || 500; return res.end(JSON.stringify({ error: e.message })); }
         }
         const r = routes.find(([m, re]) => m === req.method && re.test(u.pathname + (u.search ? '?' : '')));
         res.setHeader('Content-Type', 'application/json');

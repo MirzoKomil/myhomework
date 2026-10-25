@@ -749,6 +749,7 @@ async function addAccountCheck(pool, actor, accountId, body) {
 }
 // Oy yopishdan oldingi majburiy nazorat: har bir pul hisobi oy oxirida (oxirgi 3 kun) haqiqiy qoldiq bilan
 // solishtirilgan va farqi nol bo'lishi kerak. Aks holda rahbar sababini yozib, ongli ravishda yopadi.
+const fmt = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 function closeReadiness(data, month) {
     const end = F.monthEnd(month), issues = [], mv = F.movements(data);
     for (const a of data.accounts) {
@@ -759,10 +760,11 @@ function closeReadiness(data, month) {
         const last = checks.at(-1);
         if (!last) { issues.push(`${a.name}: oy oxirida haqiqiy qoldiq kiritilmagan`); continue; }
         const book = F.accountBalances(data, last.date).find(x => x.id === a.id).balance;
-        if (book !== last.actualBalance) issues.push(`${a.name}: kitobda ${book}, haqiqiy ${last.actualBalance} (farq ${last.actualBalance - book})`);
+        const actual = Number(last.actualBalance);
+        if (book !== actual) issues.push(`${a.name}: kitobda ${fmt(book)} so‘m, haqiqiy ${fmt(actual)} so‘m (farq ${fmt(actual - book)} so‘m)`);
     }
     const suspense = F.accountBalances(data, end).find(a => a.kind === 'suspense');
-    if (suspense && suspense.balance) issues.push(`To‘lov usuli aniqlanmagan ${suspense.balance} so‘m tekshirilmagan`);
+    if (suspense && suspense.balance) issues.push(`To‘lov usuli aniqlanmagan ${fmt(suspense.balance)} so‘m “Aniqlanmagan” hisobida turibdi`);
     return issues;
 }
 async function closeStatus(pool, actor, q) {

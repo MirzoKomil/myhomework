@@ -102,6 +102,10 @@
 .fin-pnl-grand td { font-size: 14px; border-top: 2px solid var(--text); }
 .fin-pnl-section td { font-weight: 700; color: var(--purple); padding-top: 16px; border-bottom: 0; }
 .fin-pnl-memo td { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; padding-top: 18px; }
+.fin-table tbody th { position: static; background: none; color: var(--text); font-size: 12.5px; font-weight: 500; z-index: auto; }
+.fin-report tbody th { font-size: 13px; }
+.fin-pnl-total th, .fin-pnl-subtotal th { font-weight: 700; background: var(--bg); }
+.fin-pnl-grand th { font-size: 14px; border-top: 2px solid var(--text); }
 .fin-report-head { align-items: flex-start !important; }
 .fin-report-head p { margin: 4px 0 0; }
 .fin-report-foot { margin-top: 12px; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
@@ -168,6 +172,28 @@
 .fin-methods label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .fin-methods input { accent-color: var(--purple); }
 
+/* Holat belgisi: rang + shakl (rangni ajrata olmaydiganlar uchun ham) */
+.fin-ico { flex: none; width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 800; line-height: 1; color: #fff; }
+.fin-ico--ok { background: #059669; } .fin-ico--ok::before { content: "✓"; }
+.fin-ico--warn { background: #D97706; border-radius: 4px; } .fin-ico--warn::before { content: "!"; }
+.fin-ico--danger { background: #DC2626; border-radius: 4px; transform: rotate(45deg); } .fin-ico--danger::before { content: "!"; transform: rotate(-45deg); }
+.fin-hint { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border); font-size: 10px; color: var(--text-muted); cursor: help; vertical-align: 1px; }
+.fin-hint:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+.fin-chip--primary { background: var(--purple); border-color: var(--purple); color: #fff; }
+.fin-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.fin-details { margin-top: 8px; font-size: 12.5px; }
+.fin-details summary { cursor: pointer; color: var(--purple); font-weight: 600; }
+.fin-details .fin-table-wrap { margin-top: 8px; }
+.fin-preview { margin: 12px 0 0; padding: 12px 14px; border: 1px solid var(--purple); border-radius: 12px; background: var(--purple-light); font-size: 13px; }
+.fin-preview ol { margin: 6px 0 0; padding-left: 20px; }
+.fin-close-check { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: var(--bg); font-size: 13px; }
+.fin-close-check ul { margin: 6px 0 0; padding-left: 18px; }
+.fin-close-check p { margin: 6px 0 0; }
+.fin-people { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; padding: 8px; border: 1px solid var(--border); border-radius: 12px; }
+.fin-expand { display: inline-flex; gap: 6px; align-items: center; color: var(--text); font: inherit; font-size: 12.5px; }
+.fin-expand span { color: var(--purple); }
+.fin-expand:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
 @media (max-width: 900px) {
     .fin-grid { grid-template-columns: minmax(0, 1fr); }
     .fin-aging { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -187,6 +213,10 @@
     .fin-form-row { grid-template-columns: minmax(0, 1fr); }
     .fin-seg { width: 100%; }
     .fin-seg button { flex: 1 1 auto; }
+    .fin-seg--tabs { flex-wrap: nowrap; overflow-x: auto; }
+    .fin-seg--tabs button { flex: 0 0 auto; }
+    .fin-quick, .fin-filter-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+    .fin-filters .form-control { max-width: none; flex: 1 1 140px; }
 }
 
 /* Chop etish / PDF: faqat hisobot qismi */
@@ -198,3 +228,7 @@
     body.fin-printing .fin-table th { position: static; background: #f3f4f6 !important; color: #111 !important; }
     body.fin-printing .fin-table td, body.fin-printing .fin-table th { font-size: 11px; padding: 5px 8px; color: #000; }
 }
+.fin-alert > .fin-ico { flex: none; }
+.fin-dates { display: flex; gap: 10px; flex-wrap: wrap; }
+.fin-methods .fin-narrow { width: 84px; min-height: 34px; }
+.fin-methods label { flex: 0 0 auto; }
