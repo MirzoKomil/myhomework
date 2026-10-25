@@ -23644,10 +23644,13 @@ function openEditEmployeeModal(empId) {
         </div>
         <div class="form-group">
             <label>Holati</label>
-            <select id="editEmpStatus" class="form-control">
+            <select id="editEmpStatus" class="form-control"${emp.offboardedAt ? ' disabled' : ''}>
                 <option value="active"${emp.status === 'active' ? ' selected' : ''}>Active</option>
                 <option value="inactive"${emp.status !== 'active' ? ' selected' : ''}>Inactive</option>
             </select>
+            <small class="text-muted" style="display:block;margin-top:4px;font-size:12px">${emp.offboardedAt
+                ? 'Xodim ishdan bo‘shatilgan. Faollashtirish — kartadagi ⋮ menyu → “Qayta ishga olish”.'
+                : 'Inactive — vaqtincha ro‘yxat va reytingdan chiqaradi. Ishdan ketgan bo‘lsa ⋮ menyu → “Ishdan bo‘shatish” (lidlar beriladi, akkaunt bloklanadi).'}</small>
         </div>
         <hr style="margin:12px 0;border-color:var(--border)">
         <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Shaxsiy hujjatlar</p>
