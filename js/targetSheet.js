@@ -67,14 +67,17 @@
         const days = {};
         for (const l of leads) {
             if (l.kind !== 'target' || !l.dayKey || l.dayKey.slice(0, 7) !== monthKey) continue;
-            const d = days[l.dayKey] || (days[l.dayKey] = { leads: 0, qualified: 0, unqualified: 0, pending: 0, trial: 0, sold: 0 });
+            const d = days[l.dayKey] || (days[l.dayKey] = emptyCrm());
             d.leads++;
             d[quality(l.status)]++;
             if (l.trial) d.trial++;
             if (SOLD.has(l.status)) d.sold++;
+            d.revenue += Number(l.paid) || 0; // shu lidlardan haqiqatda tushgan pul (so'm)
         }
         return days;
     }
+
+    function emptyCrm() { return { leads: 0, qualified: 0, unqualified: 0, pending: 0, trial: 0, sold: 0, revenue: 0 }; }
 
     function sum(list, key) { return list.reduce((s, x) => s + (Number(x?.[key]) || 0), 0); }
 
@@ -106,42 +109,56 @@
 
         const perDay = days.map(d => {
             const e = entries[d.key] || null;
-            const c = crm[d.key] || { leads: 0, qualified: 0, unqualified: 0, pending: 0, trial: 0, sold: 0 };
+            const c = crm[d.key] || emptyCrm();
             const isFuture = d.key > today;
             const budget = e ? Number(e.budget) || 0 : null;
+            const hasLeads = e && e.leadCount != null; // eski yozuvlarda lid soni bo'lmasligi mumkin
             return {
                 ...d, isFuture, isToday: d.key === today,
                 entry: e,
                 missing: !e && !isFuture && d.key < today,
                 budget,
                 fixed: !isFuture && d.key < today ? fixedPerDay : null,
-                adLeads: e ? e.leadCount : null,
+                adLeads: hasLeads ? e.leadCount : null,
                 adKval: e && e.kvalLeadCount != null ? e.kvalLeadCount : null,
-                adCpl: e ? div(budget, e.leadCount) : null,
+                adCpl: hasLeads ? div(budget, e.leadCount) : null,
                 adKvalCpl: e && e.kvalLeadCount != null ? div(budget, e.kvalLeadCount) : null,
                 adKvalPct: e && e.kvalLeadCount != null && e.leadCount ? e.kvalLeadCount / e.leadCount * 100 : null,
                 crm: c,
                 crmCpl: e ? div(budget, c.leads) : null,
                 crmKvalCpl: e ? div(budget, c.qualified) : null,
-                crmKvalPct: (c.qualified + c.unqualified) ? c.qualified / (c.qualified + c.unqualified) * 100 : null,
-                // Farq faqat ikkala manba ham bor kunda (kiritilgan kun) hisoblanadi
-                diff: e ? e.leadCount - c.leads : null
+                // Rejadagi foiz bilan bir xil: sifatli ÷ BARCHA target lidlar
+                crmKvalPct: c.leads ? c.qualified / c.leads * 100 : null,
+                // Qo'shimcha: faqat ishlangan (sifatli/sifatsiz aniqlangan) lidlar ichida
+                crmKvalPctWorked: (c.qualified + c.unqualified) ? c.qualified / (c.qualified + c.unqualified) * 100 : null,
+                trialCost: e ? div(budget, c.trial) : null,
+                saleCost: e ? div(budget, c.sold) : null,
+                // Farq faqat ikkala manba ham bor kunda hisoblanadi
+                diff: hasLeads ? e.leadCount - c.leads : null
             };
         });
 
         const entered = perDay.filter(d => d.entry);
         const budget = entered.length ? sum(entered, 'budget') : null;
-        const adLeads = entered.length ? sum(entered, 'adLeads') : null;
+        const leadDays = entered.filter(d => d.adLeads != null);
+        const adLeads = leadDays.length ? sum(leadDays, 'adLeads') : null;
         const kvalDays = entered.filter(d => d.adKval != null);
         const adKval = kvalDays.length ? sum(kvalDays, 'adKval') : null;
         const crmTotals = perDay.reduce((t, d) => {
             for (const k of Object.keys(t)) t[k] += d.crm[k];
             return t;
-        }, { leads: 0, qualified: 0, unqualified: 0, pending: 0, trial: 0, sold: 0 });
+        }, emptyCrm());
         // Narx hisobida faqat sarfi kiritilgan kunlardagi CRM lidlari olinadi —
         // aks holda kiritilmagan kunlarning lidlari narxni sun'iy arzonlashtiradi.
-        const crmLeadsEntered = sum(entered.map(d => d.crm), 'leads');
-        const crmKvalEntered = sum(entered.map(d => d.crm), 'qualified');
+        const enteredCrm = entered.map(d => d.crm);
+        const crmLeadsEntered = sum(enteredCrm, 'leads');
+        const crmKvalEntered = sum(enteredCrm, 'qualified');
+        const crmTrialEntered = sum(enteredCrm, 'trial');
+        const crmSoldEntered = sum(enteredCrm, 'sold');
+        const revenueEntered = sum(enteredCrm, 'revenue');
+        // To'liq xarajat = reklama sarfi + o'sha kunlarga to'g'ri keladigan fixed ulushi
+        const costEntered = budget != null ? budget + fixedPerDay * entered.length : null;
+        const usdRate = plan?.usdRate > 0 ? plan.usdRate : null;
         const adKvalBudget = sum(kvalDays, 'budget');
         const decided = crmTotals.qualified + crmTotals.unqualified;
         const diffs = entered.map(d => d.diff);
@@ -153,13 +170,22 @@
         const totals = {
             budget, fixed: fixedPerDay ? fixedPerDay * pDays : (plan ? 0 : null),
             adLeads, adKval,
-            adCpl: div(budget, adLeads),
+            adCpl: div(leadDays.length ? sum(leadDays, 'budget') : null, adLeads),
             adKvalCpl: div(adKvalBudget, adKval),
             adKvalPct: adKval != null ? div(adKval * 100, sum(kvalDays, 'adLeads')) : null,
             crm: crmTotals,
             crmCpl: div(budget, crmLeadsEntered),
             crmKvalCpl: div(budget, crmKvalEntered),
-            crmKvalPct: decided ? crmTotals.qualified / decided * 100 : null,
+            crmKvalPct: crmTotals.leads ? crmTotals.qualified / crmTotals.leads * 100 : null,
+            crmKvalPctWorked: decided ? crmTotals.qualified / decided * 100 : null,
+            trialCost: div(budget, crmTrialEntered),
+            saleCost: div(budget, crmSoldEntered),
+            totalCost: costEntered,
+            fullCpl: div(costEntered, crmLeadsEntered),
+            revenue: revenueEntered,
+            revenueUsd: usdRate ? revenueEntered / usdRate : null,
+            roas: usdRate && costEntered ? (revenueEntered / usdRate) / costEntered : null,
+            usdRate,
             diff: diffs.length ? diffs.reduce((a, b) => a + b, 0) : null,
             enteredDays: entered.length,
             missingDays: perDay.filter(d => d.missing).map(d => d.key)

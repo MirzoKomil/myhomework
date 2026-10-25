@@ -196,6 +196,8 @@ app.use('/api/hr/bot-webhook', hrBotLimit);
 app.use('/api/public', publicApiLimit);
 app.use('/api', apiLimit);
 
+// Targetolog kabi "faqat ko'rish" rollari uchun barcha /api o'zgartirishlari bitta joyda yopiladi.
+app.use('/api', require('./middleware/readOnlyRoles').readOnlyRoles({ findUserById: crmDb.findUserById }));
 app.use('/api/auth', authRoutes);
 app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);

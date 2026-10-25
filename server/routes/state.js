@@ -447,9 +447,13 @@ router.delete('/content-comments/:id', authRequired, async (req, res) => {
 
 // 45-vazifa: bitta lidga tegishli qo'ng'iroq yozuvlari ("Zapis"). Faqat CRM
 // admin ko'radi va qo'lda yuklaydi (Beeline hali ulanmagan).
-router.get('/call-recordings/counts', authRequired, async (_req, res) => {
+router.get('/call-recordings/counts', authRequired, async (req, res) => {
     try {
-        res.json(await getCallRecordingCounts());
+        const counts = await getCallRecordingCounts();
+        // Targetolog faqat ruxsat berilgan til yo'nalish(lar)i bo'yicha ko'radi
+        const langs = await require('../services/targetAds').targetologLangs(require('../db').pool, req.user);
+        if (!langs) return res.json(counts);
+        res.json(Object.fromEntries(Object.entries(counts).filter(([key]) => langs.includes(key.split(':')[0]))));
     } catch (err) {
         console.error('GET /api/state/call-recordings/counts', err);
         res.status(500).json({ error: 'Xatolik' });
@@ -459,6 +463,8 @@ router.get('/call-recordings/counts', authRequired, async (_req, res) => {
 router.get('/call-recordings', authRequired, async (req, res) => {
     try {
         const { lang, leadId } = req.query;
+        const langs = await require('../services/targetAds').targetologLangs(require('../db').pool, req.user);
+        if (langs && !langs.includes(lang === 'russian' ? 'russian' : 'english')) return res.status(403).json({ error: 'Bu til yo‘nalishiga ruxsat yo‘q' });
         const data = await getCallRecordings(lang, leadId);
         res.json(data);
     } catch (err) {

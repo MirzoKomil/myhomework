@@ -9175,11 +9175,13 @@ body.modal-open {
 .tsx-table tbody th { text-align: left; font-weight: 600; }
 .tsx-sticky { position: sticky; z-index: 2; }
 .tsx-table thead .tsx-sticky { z-index: 4; }
-.tsx-c1 { left: 0; min-width: 210px; max-width: 210px; white-space: normal !important; }
-.tsx-c2 { left: 210px; min-width: 120px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted) !important; font-size: 12px; }
-.tsx-c3 { left: 330px; min-width: 86px; }
-.tsx-c4 { left: 416px; min-width: 86px; }
-.tsx-c5, .tsx-pct { left: 502px; min-width: 64px; text-align: center; font-weight: 700; box-shadow: 4px 0 6px -4px rgba(26, 29, 46, 0.18); }
+/* Qotib turadigan ustunlar — kengligi qat'iy, aks holda keng qiymat qo'shni ustun ostida qoladi */
+.tsx-table .tsx-c1, .tsx-table .tsx-c2, .tsx-table .tsx-c3, .tsx-table .tsx-c4, .tsx-table .tsx-c5, .tsx-table td.tsx-pct { box-sizing: border-box; }
+.tsx-c1 { left: 0; width: 210px; min-width: 210px; max-width: 210px; white-space: normal !important; }
+.tsx-c2 { left: 210px; width: 124px; min-width: 124px; max-width: 124px; overflow: hidden; text-overflow: ellipsis; color: var(--text-muted) !important; font-size: 12px; }
+.tsx-c3 { left: 334px; width: 100px; min-width: 100px; max-width: 100px; }
+.tsx-c4 { left: 434px; width: 104px; min-width: 104px; max-width: 104px; }
+.tsx-c5, .tsx-pct { left: 538px; width: 92px; min-width: 92px; max-width: 92px; text-align: center; font-weight: 700; box-shadow: 4px 0 6px -4px rgba(26, 29, 46, 0.18); }
 .tsx-table td.tsx-pct { position: sticky; z-index: 2; }
 .tsx-num { text-align: right; font-variant-numeric: tabular-nums; }
 .tsx-fakt { font-weight: 700; }
@@ -9229,6 +9231,13 @@ td.tsx-pct.tsx-bad { background: #FEE2E2 !important; }
 .tsx-crm-box dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tsx-crm-box small { color: var(--text-muted); }
 
+.tsx-note { font-size: 11px; cursor: help; }
+.tsx-form-error { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--danger-bg); color: #B91C1C; font-size: 13px; }
+.tsx-form-error[hidden] { display: none; }
+.tsx-history-btn { align-self: flex-start; font-size: 12px; padding: 4px 10px; }
+.tsx-history { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text); max-height: 180px; overflow: auto; }
+.tsx-history span { color: var(--text-muted); }
+[data-theme="dark"] .tsx-form-error { color: #FCA5A5; }
 [data-theme="dark"] td.tsx-pct.tsx-good { background: #134E3A !important; color: #6EE7B7 !important; }
 [data-theme="dark"] td.tsx-pct.tsx-warn { background: #4A3F0A !important; color: #FCD34D !important; }
 [data-theme="dark"] td.tsx-pct.tsx-bad { background: #4C1D1D !important; color: #FCA5A5 !important; }
@@ -9241,8 +9250,10 @@ td.tsx-pct.tsx-bad { background: #FEE2E2 !important; }
 @media (max-width: 760px) {
     .tsx-modal { grid-template-columns: 1fr; }
     /* Telefonda faqat ko'rsatkich nomi qotib turadi, qolgani yonlama suriladi */
-    .tsx-c1 { min-width: 140px; max-width: 140px; box-shadow: 4px 0 6px -4px rgba(26, 29, 46, 0.18); }
-    .tsx-c2, .tsx-c3, .tsx-c4, .tsx-c5, .tsx-table td.tsx-pct { position: static; box-shadow: none; }
+    .tsx-c1 { width: 140px; min-width: 140px; max-width: 140px; box-shadow: 4px 0 6px -4px rgba(26, 29, 46, 0.18); }
+    .tsx-c2, .tsx-c3, .tsx-c4, .tsx-c5, .tsx-table td.tsx-pct,
+    .tsx-table thead th.tsx-c2, .tsx-table thead th.tsx-c3, .tsx-table thead th.tsx-c4, .tsx-table thead th.tsx-c5 { position: static; box-shadow: none; }
+    /* Sarlavha qatori yuqorida qotib turishi uchun static ustunlarda ham top:0 kerak emas — ular oddiy oqimda */
     .tsx-group-cell { position: sticky; left: 0; }
     .tsx-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tsx-kpi-val { font-size: 18px; }

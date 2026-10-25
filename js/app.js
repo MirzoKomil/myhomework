@@ -659,15 +659,16 @@ async function bootApp() {
     if (currentUser.role === 'targetolog') {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
         const login = String(currentUser.email || '').trim().toLowerCase();
-        const linked = hrEmployees.find(e => login && String(e.login || '').trim().toLowerCase() === login)
-            || hrEmployees.find(e => e.role === 'targetolog' && e.name?.trim().toLowerCase() === currentUser.name?.trim().toLowerCase());
-        const langs = linked?.lang === 'both' ? ['english', 'russian'] : [linked?.lang === 'russian' ? 'russian' : 'english'];
+        // Server bilan bir xil: faqat login bo'yicha moslanadi; topilmasa yoki faol bo'lmasa — hech qaysi til.
+        const linked = hrEmployees.find(e => login && String(e.login || '').trim().toLowerCase() === login);
+        const active = linked && linked.status !== 'inactive';
+        const langs = !active ? [] : linked.lang === 'both' ? ['english', 'russian'] : linked.lang === 'russian' ? ['russian'] : linked.lang === 'english' ? ['english'] : [];
         if (JSON.stringify(currentUser.linkedTargetLangs) !== JSON.stringify(langs)) {
             currentUser.linkedTargetLangs = langs;
             setCurrentUser(currentUser);
         }
-        if (!langs.includes(_leadsLangFilter)) _leadsLangFilter = langs[0];
-        if (!langs.includes(_marketingLang)) _marketingLang = langs[0];
+        if (langs.length && !langs.includes(_leadsLangFilter)) _leadsLangFilter = langs[0];
+        if (langs.length && !langs.includes(_marketingLang)) _marketingLang = langs[0];
     }
 
     // 6-vazifa: Ustoz (asosiy va yordamchi) uchun ham til yo'nalishini
@@ -20991,6 +20992,8 @@ function updateCachedLeadVersion(lang, leadId, updatedAt) {
 
 function persistLeadChange(lang, lead, onSaved) {
     if (!lead?.id) return Promise.reject(new Error('Lid ID topilmadi'));
+    // Targetolog kabi "faqat ko'rish" rollari serverga hech qanday lid o'zgarishini yubormaydi
+    if (isLeadsReadOnly(getCurrentUser())) return Promise.resolve(null);
     const leadId = String(lead.id);
     const snapshot = typeof structuredClone === 'function'
         ? structuredClone(lead)
@@ -21141,6 +21144,8 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess)
 }
 
 function updateLeadInStorage(lang, leadId, updater) {
+    // "Faqat ko'rish" rollari (targetolog) lidni lokal ham o'zgartirmaydi
+    if (isLeadsReadOnly(getCurrentUser())) return null;
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const list = leads[lang] || [];
     const idx = list.findIndex(l => l.id === leadId);
@@ -22134,8 +22139,8 @@ function renderLeads() {
         if (bulkBarEl) bulkBarEl.style.display = 'none';
     } else if (_cuRender?.role === 'targetolog') {
         // Targetolog faqat ruxsat berilgan til(lar)ni ko'radi; bitta bo'lsa tablar yashiriladi.
-        const langs = _cuRender.linkedTargetLangs?.length ? _cuRender.linkedTargetLangs : ['english'];
-        if (!langs.includes(_leadsLangFilter)) _leadsLangFilter = langs[0];
+        const langs = _cuRender.linkedTargetLangs || [];
+        if (langs.length && !langs.includes(_leadsLangFilter)) _leadsLangFilter = langs[0];
         const langTabsEl = document.getElementById('leadsLangTabs');
         if (langTabsEl) langTabsEl.style.display = langs.length > 1 ? '' : 'none';
         const bulkBarEl = document.getElementById('bulkActionsBar');

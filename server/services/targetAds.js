@@ -56,7 +56,7 @@ function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new
 // HR yozuvidagi "lang" maydoni: 'english' | 'russian' | 'both'
 function langsFromHr(lang) {
     if (lang === 'both') return [...LANGS];
-    return LANGS.includes(lang) ? [lang] : ['english'];
+    return LANGS.includes(lang) ? [lang] : [];
 }
 
 // Foydalanuvchi qaysi til yo'nalishlarini ko'ra oladi va qaysilariga yoza oladi.
@@ -66,17 +66,20 @@ async function accessFor(db, actor) {
     if (row.length !== 1) throw error(403, 'Akkaunt topilmadi');
     const { role, lang, status } = row[0];
     if (['admin', 'boshliq'].includes(role)) return { role, read: [...LANGS], writeDay: [...LANGS], writePlan: true, editAnyDay: true };
-    if (status === 'inactive') throw error(403, 'Xodim faol emas');
+    // HR yozuvi bo'lmasa yoki faol bo'lmasa — hech qanday til ochilmaydi (standart "ingliz" emas).
+    if (lang == null || status === 'inactive') throw error(403, 'HR’da faol xodim yozuvi topilmadi — admin kabinetni tekshirsin');
     if (role === 'targetolog') { const l = langsFromHr(lang); return { role, read: l, writeDay: l, writePlan: false, editAnyDay: false }; }
-    if (role === 'rop') return { role, read: langsFromHr(lang === 'both' ? 'english' : lang), writeDay: [], writePlan: false, editAnyDay: false };
+    if (role === 'rop') return { role, read: [lang === 'russian' ? 'russian' : 'english'], writeDay: [], writePlan: false, editAnyDay: false };
     throw error(403, 'Target monitoringiga ruxsat yo‘q');
 }
 
 // Targetolog uchun sotuv lidlari ham faqat ruxsat etilgan tillar bo'yicha.
 async function targetologLangs(db, user) {
     if (user?.role !== 'targetolog') return null;
-    const row = (await db.query('SELECT lang FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1', [user.email || ''])).rows[0];
-    return langsFromHr(row?.lang);
+    // HR yozuvi yo'q yoki xodim faol emas — hech qaysi til ochilmaydi.
+    const row = (await db.query('SELECT lang, status FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1', [user.email || ''])).rows[0];
+    if (!row || row.status === 'inactive') return [];
+    return langsFromHr(row.lang);
 }
 
 function num(value, { integer = false, max = 1e9, allowNull = false } = {}) {
@@ -99,8 +102,9 @@ function cleanData(kind, data) {
     }
     const lidSoni = num(data?.lidSoni, { integer: true, max: 1e6 });
     const kvalLidSoni = num(data?.kvalLidSoni, { integer: true, max: 1e6 });
-    if (kvalLidSoni > lidSoni && lidSoni > 0) throw error(400, 'Sifatli lid rejasi jami lid rejasidan oshmasligi kerak');
-    return { budget: num(data?.budget, { max: 1e8 }), fixed: num(data?.fixed, { max: 1e8, allowNull: true }) ?? 0, lidSoni, kvalLidSoni };
+    if (kvalLidSoni > lidSoni) throw error(400, 'Sifatli lid rejasi jami lid rejasidan oshmasligi kerak');
+    const usdRate = num(data?.usdRate, { max: 1e6, allowNull: true });
+    return { budget: num(data?.budget, { max: 1e8 }), fixed: num(data?.fixed, { max: 1e8, allowNull: true }) ?? 0, lidSoni, kvalLidSoni, usdRate: usdRate || null };
 }
 
 // Eski joylardan (domwork_ad_entries — rus tili; json_data — ikkala til)
@@ -113,7 +117,7 @@ async function migrateLegacy(db) {
             SELECT 'russian', kind, date,
                 CASE WHEN kind='plan' THEN jsonb_build_object('budget',COALESCE((data->>'budget')::numeric,0),'fixed',0,
                     'lidSoni',COALESCE((data->>'lidSoni')::int,0),'kvalLidSoni',COALESCE((data->>'kvalLidSoni')::int,0))
-                ELSE jsonb_build_object('budget',COALESCE((data->>'budget')::numeric,0),'leadCount',COALESCE((data->>'leadCount')::int,0),'kvalLeadCount',NULL,'note','') END,
+                ELSE jsonb_build_object('budget',COALESCE((data->>'budget')::numeric,0),'leadCount',(data->>'leadCount')::int,'kvalLeadCount',NULL,'note','') END,
                 revision, updated_by, updated_at
             FROM domwork_ad_entries ON CONFLICT DO NOTHING`);
     }
@@ -134,7 +138,8 @@ async function migrateLegacy(db) {
             for (const [key, v] of Object.entries(entries || {})) {
                 const date = validDay(key) ? key : month + '-' + String(key).padStart(2, '0');
                 if (!validDay(date) || typeof v?.budget !== 'number' || !Number.isFinite(v.budget) || v.budget < 0) continue;
-                const data = { budget: v.budget, leadCount: Number.isInteger(v.leadCount) && v.leadCount >= 0 ? v.leadCount : 0, kvalLeadCount: null, note: '' };
+                // Eski yozuvda lid soni bo'lmasa null qoladi (0 emas) — aks holda "kabinet − CRM" farqi soxta chiqadi.
+                const data = { budget: v.budget, leadCount: Number.isInteger(v.leadCount) && v.leadCount >= 0 ? v.leadCount : null, kvalLeadCount: null, note: '' };
                 await db.query(`INSERT INTO target_ad_entries(language,kind,date,data,updated_by) VALUES($1,'day',$2,$3,'legacy') ON CONFLICT DO NOTHING`, [language, date, JSON.stringify(data)]);
             }
         }
@@ -170,7 +175,7 @@ async function month(db, actor, { language, month: monthKey }) {
             canEditDays: access.writeDay.includes(language),
             canEditPlan: access.writePlan,
             editFrom: access.editAnyDay ? null : new Date(Date.parse(today + 'T00:00:00Z') - TARGETOLOG_EDIT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10),
-            editTo: today,
+            editTo: access.editAnyDay ? today : new Date(Date.parse(today + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10),
             langs: access.read
         }
     };
@@ -188,6 +193,7 @@ async function save(db, actor, body) {
         if (!validDay(date)) throw error(400, 'Sana noto‘g‘ri');
         const today = tashkentToday();
         if (date > today) throw error(400, 'Kelajak sanaga ma’lumot kiritib bo‘lmaydi');
+        if (!access.editAnyDay && date >= today) throw error(400, 'Kunlik maʼlumot kun tugagach kiritiladi — bugungi kunni ertaga kiriting');
         if (!access.editAnyDay && daysBetween(date, today) > TARGETOLOG_EDIT_WINDOW_DAYS)
             throw error(403, `Targetolog faqat oxirgi ${TARGETOLOG_EDIT_WINDOW_DAYS} kun ma’lumotini kirita oladi. Eski sanani admin tuzatadi`);
     } else throw error(400, 'Noto‘g‘ri tur');
@@ -204,6 +210,17 @@ async function save(db, actor, body) {
     return { ok: true };
 }
 
+// Bitta kun yoki oy rejasi o'zgarishlar tarixi (kim, qachon, oldin → keyin)
+async function history(db, actor, { language, kind, date }) {
+    const access = await accessFor(db, actor);
+    if (!LANGS.includes(language) || !access.read.includes(language)) throw error(403, 'Bu til yo‘nalishiga ruxsat yo‘q');
+    if (!['day', 'plan'].includes(kind) || !(kind === 'day' ? validDay(date) : validMonth(date))) throw error(400, 'Sana noto‘g‘ri');
+    const rows = (await db.query(`SELECT h.before_data, h.after_data, h.created_at, COALESCE(u.name, h.actor_id) AS actor
+        FROM target_ad_history h LEFT JOIN users u ON u.id = h.actor_id
+        WHERE h.language=$1 AND h.kind=$2 AND h.date=$3 ORDER BY h.created_at DESC LIMIT 50`, [language, kind, date])).rows;
+    return { history: rows.map(r => ({ before: r.before_data, after: r.after_data, at: r.created_at, by: r.actor })) };
+}
+
 // Domwork bot hisobotlari uchun (rus tili): davr bo'yicha reklama sarfi va reja.
 async function advertising(db, language, start, end) {
     const rows = (await db.query(`SELECT kind,date,data FROM target_ad_entries WHERE language=$1
@@ -214,4 +231,4 @@ async function advertising(db, language, start, end) {
         plan: plan ? { ...plan, kvalLidPct: plan.lidSoni ? Math.round(plan.kvalLidSoni / plan.lidSoni * 1000) / 10 : null } : null };
 }
 
-module.exports = { SCHEMA, init, month, save, advertising, accessFor, targetologLangs, langsFromHr, cleanData, TARGETOLOG_EDIT_WINDOW_DAYS };
+module.exports = { SCHEMA, init, month, save, history, advertising, accessFor, targetologLangs, langsFromHr, cleanData, TARGETOLOG_EDIT_WINDOW_DAYS };

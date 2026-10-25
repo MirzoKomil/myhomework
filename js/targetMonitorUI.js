@@ -8,7 +8,13 @@
     const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
 
     const esc = v => (typeof escapeHtml === 'function' ? escapeHtml(String(v ?? '')) : String(v ?? ''));
-    const usd = v => (v == null || !Number.isFinite(v) ? '—' : '$' + v.toLocaleString('en-US', { minimumFractionDigits: v >= 100 ? 0 : 2, maximumFractionDigits: 2 }));
+    const usd = v => {
+        if (v == null || !Number.isFinite(v)) return '—';
+        const d = Math.abs(v) >= 1000 ? 0 : 2; // katta summalar butun, kichiklari sentgacha
+        return '$' + v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    };
+    const som = v => (v == null || !Number.isFinite(v) || !v ? '—' : Math.round(v).toLocaleString('uz-UZ') + ' soʻm');
+    const times = v => (v == null || !Number.isFinite(v) ? '—' : v.toFixed(2).replace('.', ',') + '×');
     const int = v => (v == null ? '—' : Number(v).toLocaleString('uz-UZ'));
     const pct = v => (v == null || !Number.isFinite(v) ? '—' : v.toFixed(1).replace('.', ',') + '%');
     const dayLabel = key => `${Number(key.slice(8))}-${MONTHS[Number(key.slice(5, 7)) - 1]}`;
@@ -22,7 +28,7 @@
         if (!user) return [];
         if (['admin', 'boshliq'].includes(user.role)) return ['english', 'russian'];
         if (user.role === 'rop') return [user.linkedRopLang === 'russian' ? 'russian' : 'english'];
-        if (user.role === 'targetolog') return user.linkedTargetLangs?.length ? user.linkedTargetLangs : ['english'];
+        if (user.role === 'targetolog') return user.linkedTargetLangs || [];
         return [];
     }
 
@@ -39,7 +45,9 @@
             kind: getLeadKind(l),
             status: normalizeLeadStatus(l.status),
             dayKey: leadTashkentDayKey(l.createdAt || l.date),
-            trial: !!l.trialLessonAt
+            trial: !!l.trialLessonAt,
+            // Shu liddan haqiqatda tushgan pul (Moliya reyestri qoidalari bilan)
+            paid: typeof PaymentLedger !== 'undefined' ? PaymentLedger.leadEvents(l).events.reduce((a, e) => a + (Number(e.amount) || 0), 0) : 0
         }));
     }
 
@@ -48,10 +56,11 @@
     }
 
     function monthOptions(selected) {
-        const set = new Set([selected, currentMonthKey()]);
-        const d = new Date(); d.setDate(1);
-        for (let i = -12; i <= 1; i++) { const x = new Date(d); x.setMonth(d.getMonth() + i); set.add(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`); }
-        return [...set].sort().reverse().map(k => `<option value="${k}" ${k === selected ? 'selected' : ''}>${esc(monthKeyLabel(k))}${k === currentMonthKey() ? ' (joriy)' : ''}</option>`).join('');
+        const cur = tashkentToday().slice(0, 7);
+        const set = new Set([selected, cur]);
+        const [y, m] = cur.split('-').map(Number);
+        for (let i = -12; i <= 1; i++) { const x = new Date(Date.UTC(y, m - 1 + i, 1)); set.add(x.toISOString().slice(0, 7)); }
+        return [...set].sort().reverse().map(k => `<option value="${k}" ${k === selected ? 'selected' : ''}>${esc(monthKeyLabel(k))}${k === cur ? ' (joriy)' : ''}</option>`).join('');
     }
 
     function canEditDay(key) {
@@ -61,9 +70,12 @@
     }
 
     const cls = g => (g ? ` tsx-${g}` : '');
+    // Rang bilan birga belgi ham (rangni ajrata olmaydiganlar uchun)
+    const MARK = { good: ['✓', 'yaxshi'], warn: ['!', 'eʼtibor'], bad: ['✕', 'yomon'] };
     function ratio(fakt, plan, g) {
         if (fakt == null || !plan) return `<td class="tsx-pct">—</td>`;
-        return `<td class="tsx-pct${cls(g)}">${pct(fakt / plan * 100)}</td>`;
+        const m = MARK[g];
+        return `<td class="tsx-pct${cls(g)}"${m ? ` aria-label="${pct(fakt / plan * 100)} — ${m[1]}"` : ''}>${m ? `<span aria-hidden="true">${m[0]}</span> ` : ''}${pct(fakt / plan * 100)}</td>`;
     }
 
     function kpis(sh) {
@@ -78,7 +90,9 @@
             ${card('Lid narxi · CRM', usd(t.crmCpl), usd(p.lidNarxi), g.crmCpl, 'kabinetda ' + usd(t.adCpl))}
             ${card('Sifatli lid · CRM', int(t.crm.qualified), int(p.kvalLidSoni), g.crmKval, t.crm.pending ? int(t.crm.pending) + ' ta hali ishlanmagan' : 'hammasi ishlangan')}
             ${card('Sifatli lid narxi · CRM', usd(t.crmKvalCpl), usd(p.kvalNarxi), g.crmKvalCpl, '')}
-            ${card('Sifat % · CRM', pct(t.crmKvalPct), pct(p.kvalPct), g.crmKvalPct, 'ishlangan lidlar ichida')}
+            ${card('Lid → Sifatli % · CRM', pct(t.crmKvalPct), pct(p.kvalPct), g.crmKvalPct, t.crmKvalPctWorked != null ? 'ishlanganlar ichida ' + pct(t.crmKvalPctWorked) : '')}
+            ${card('Sotuv narxi · CRM', usd(t.saleCost), '—', '', int(t.crm.sold) + ' ta sotuv')}
+            ${card('ROAS', times(t.roas), '—', t.roas == null ? '' : t.roas >= 1 ? 'good' : t.roas >= 0.7 ? 'warn' : 'bad', t.usdRate ? 'tushum ÷ (sarf + fixed)' : 'reja’da $ kursi kiritilmagan')}
         </div>`;
     }
 
@@ -116,7 +130,9 @@
             </tr></thead>
             <tbody>
                 ${group('Targetolog kiritadi', 'reklama kabinetidagi maʼlumot')}
-                ${row('Reklama sarfi', owner, usd(p.budget), usd(t.budget), ratio(t.budget, p.budget, g.budget), d => cell(d.budget, usd, d.missing ? ' tsx-missing' : ''))}
+                ${row('Reklama sarfi', owner, usd(p.budget), usd(t.budget), ratio(t.budget, p.budget, g.budget), d => d.entry?.note
+                    ? `<td class="tsx-num" title="${esc(d.entry.note)}">${usd(d.budget)} <span class="tsx-note" aria-label="Izoh: ${esc(d.entry.note)}">📝</span></td>`
+                    : cell(d.budget, usd, d.missing ? ' tsx-missing' : ''))}
                 ${row('Fixed (doimiy)', 'Admin', usd(p.fixed || null), usd(t.fixed), '<td class="tsx-pct">—</td>', d => cell(d.fixed || null, usd))}
                 ${row('Lid soni (kabinet)', owner, int(p.lidSoni), int(t.adLeads), ratio(t.adLeads, p.lidSoni, g.adLeads), d => cell(d.adLeads, int, d.missing ? ' tsx-missing' : ''))}
                 ${row('Lid narxi (kabinet)', owner, usd(p.lidNarxi), usd(t.adCpl), ratio(t.adCpl, p.lidNarxi, g.adCpl), d => cell(d.adCpl, usd))}
@@ -132,9 +148,18 @@
                 ${row('Hali ishlanmagan (CRM)', lock, '—', int(t.crm.pending), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.pending, int, d.crm.pending ? ' tsx-warn' : ''), { cls: 'tsx-crm' })}
                 ${row('Lid narxi (CRM)', lock, usd(p.lidNarxi), usd(t.crmCpl), ratio(t.crmCpl, p.lidNarxi, g.crmCpl), d => cell(d.crmCpl, usd), { cls: 'tsx-crm' })}
                 ${row('Sifatli lid narxi (CRM)', lock, usd(p.kvalNarxi), usd(t.crmKvalCpl), ratio(t.crmKvalCpl, p.kvalNarxi, g.crmKvalCpl), d => cell(d.crmKvalCpl, usd), { cls: 'tsx-crm' })}
-                ${row('Sifat % (CRM, ishlanganlar ichida)', lock, pct(p.kvalPct), pct(t.crmKvalPct), ratio(t.crmKvalPct, p.kvalPct, g.crmKvalPct), d => cell(d.crmKvalPct, pct), { cls: 'tsx-crm' })}
-                ${row('Sinovga yozilgan (CRM)', lock, '—', int(t.crm.trial), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.trial, int), { cls: 'tsx-crm' })}
-                ${row('Sotuv (CRM)', lock, '—', int(t.crm.sold), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.sold, int), { cls: 'tsx-crm' })}
+                ${row('Lid → Sifatli % (CRM)', lock, pct(p.kvalPct), pct(t.crmKvalPct), ratio(t.crmKvalPct, p.kvalPct, g.crmKvalPct), d => cell(d.crmKvalPct, pct), { cls: 'tsx-crm' })}
+                ${row('Sifat % ishlanganlar ichida (CRM)', lock, '—', pct(t.crmKvalPctWorked), '<td class="tsx-pct">—</td>', d => cell(d.crmKvalPctWorked, pct), { cls: 'tsx-crm' })}
+                ${group('Natija: sotuvgacha', 'shu kuni kelgan target lidlar keyinchalik qayergacha yetgani · 🔒 CRM')}
+                ${row('Sinovga yozilgan', lock, '—', int(t.crm.trial), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.trial, int), { cls: 'tsx-crm' })}
+                ${row('Sinov narxi', lock, '—', usd(t.trialCost), '<td class="tsx-pct">—</td>', d => cell(d.trialCost, usd), { cls: 'tsx-crm' })}
+                ${row('Sotuv', lock, '—', int(t.crm.sold), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.sold, int), { cls: 'tsx-crm' })}
+                ${row('Sotuv narxi (CPA)', lock, '—', usd(t.saleCost), '<td class="tsx-pct">—</td>', d => cell(d.saleCost, usd), { cls: 'tsx-crm' })}
+                ${row('Tushum (shu lidlardan)', lock, '—', som(t.revenue), '<td class="tsx-pct">—</td>', d => cell(d.isFuture || !d.crm.revenue ? null : d.crm.revenue, som), { cls: 'tsx-crm' })}
+                ${row('Toʻliq xarajat (sarf + fixed)', lock, usd(p.budget != null ? p.budget + (p.fixed || 0) : null), usd(t.totalCost), '<td class="tsx-pct">—</td>', d => cell(d.entry ? d.budget + (d.fixed || 0) : null, usd), { cls: 'tsx-crm' })}
+                ${row('Toʻliq lid narxi', lock, '—', usd(t.fullCpl), '<td class="tsx-pct">—</td>', d => cell(d.entry ? (d.crm.leads ? (d.budget + (d.fixed || 0)) / d.crm.leads : null) : null, usd), { cls: 'tsx-crm' })}
+                ${row('ROAS (tushum ÷ toʻliq xarajat)', lock, '—', times(t.roas), '<td class="tsx-pct">—</td>',
+                    d => cell(t.usdRate && d.entry && (d.budget + (d.fixed || 0)) > 0 ? (d.crm.revenue / t.usdRate) / (d.budget + (d.fixed || 0)) : null, times), { cls: 'tsx-crm' })}
             </tbody>
         </table></div>`;
     }
@@ -175,10 +200,12 @@
 
     function legend() {
         return `<details class="tsx-legend"><summary>Qanday hisoblanadi?</summary><ul>
-            <li><b>Targetolog kiritadi</b> — har kuni kechagi kun uchun: reklama sarfi ($), reklama kabinetidagi lid soni, oʻzi sanagan sifatli lid soni. Targetolog faqat oxirgi 7 kunni kirita/tuzata oladi, eski kunlarni admin tuzatadi. Har bir oʻzgarish tarixga yoziladi.</li>
+            <li><b>Targetolog kiritadi</b> — har kuni kechagi kun uchun (bugungi kun tugagach): reklama sarfi ($), reklama kabinetidagi lid soni, oʻzi sanagan sifatli lid soni. Targetolog faqat oxirgi 7 kunni kirita/tuzata oladi, eski kunlarni admin tuzatadi. Har bir oʻzgarish kim/qachon bilan tarixga yoziladi.</li>
             <li><b>🔒 CRM</b> — shu kuni CRM'ga tushgan “Target” manbali lidlar (Tashkent vaqti bilan). Organik lidlar kirmaydi. Bu qatorlarni hech kim qoʻlda oʻzgartira olmaydi.</li>
             <li><b>Sifatli lid (CRM)</b> — “Bogʻlanildi” va undan keyingi bosqichdagi lidlar (sinov, qaror, toʻlov, muvaffaqiyatsiz sotuv ham). <b>Sifatsiz</b> — “Sifatsiz lidlar” ustuni. <b>Hali ishlanmagan</b> — “Yangi lidlar” va “Bogʻlanishga urinilmoqda”; ular ishlanganda sifat raqamlari oʻzgaradi.</li>
-            <li><b>Lid narxi</b> = reklama sarfi ÷ lid soni. CRM narxida faqat sarfi kiritilgan kunlarning lidlari olinadi. Fixed narxga qoʻshilmaydi.</li>
+            <li><b>Lid narxi</b> = reklama sarfi ÷ lid soni. CRM narxida faqat sarfi kiritilgan kunlarning lidlari olinadi. <b>Toʻliq lid narxi</b> va <b>ROAS</b>da fixed ham hisobga olinadi (oylik fixed ÷ oy kunlari, har kunga).</li>
+            <li><b>Lid → Sifatli %</b> = sifatli ÷ barcha target lidlar (rejadagi foiz bilan bir xil). <b>Ishlanganlar ichida</b> — hali ishlanmaganlarsiz, maʼlumot uchun.</li>
+            <li><b>Natija</b> qatorlari shu kuni kelgan target lidlar keyinchalik sinovga, sotuvga va toʻlovga yetganini koʻrsatadi (kogorta). Tushum — Moliya reyestri qoidalari bilan shu lidlardan haqiqatda kelgan pul. <b>ROAS</b> = tushum ($, oylik rejadagi kurs boʻyicha) ÷ toʻliq xarajat; 1× dan yuqori — reklama oʻzini qoplagan.</li>
             <li><b>Rang</b>: sarf va soni — oyning <i>kechagacha</i> oʻtgan qismiga nisbatan kutilgan temp (yashil ≥100%, sariq ≥80%; sarfda ±10% yashil, ±25% sariq); narx — rejadan past/teng yashil, 15% gacha qimmat sariq; foiz — rejaga nisbatan.</li>
             <li><b>Farq</b> = kabinetdagi lid soni − CRM'dagi target lid soni. 2 tadan va 10% dan ortiq farq qizil.</li>
         </ul></details>`;
@@ -187,7 +214,7 @@
     async function render(el, lang) {
         if (!el || !window.TargetSheet) return;
         const langs = allowedLangs();
-        if (!langs.length) { el.innerHTML = '<div class="tsx-empty">Bu boʻlimga ruxsat yoʻq</div>'; return; }
+        if (!langs.length) { el.innerHTML = '<div class="tsx-empty">Sizga hali til yoʻnalishi biriktirilmagan. Admin HR boʻlimida targetolog uchun Ingliz / Rus / Ikkalasini tanlashi kerak.</div>'; return; }
         state.lang = langs.includes(lang) ? lang : langs[0];
         if (!MONTH_KEY_RE.test(String(state.month || ''))) state.month = currentMonthKey();
         const gen = ++state.gen, month = state.month, selLang = state.lang;
@@ -239,7 +266,9 @@
                     <label class="form-group"><span>Siz sanagan sifatli lid soni <small>(ixtiyoriy)</small></span><input type="number" id="tsxKval" class="form-control" min="0" step="1" inputmode="numeric" value="${e.kvalLeadCount ?? ''}"></label>
                     <label class="form-group"><span>Izoh <small>(ixtiyoriy)</small></span><input type="text" id="tsxNote" class="form-control" maxlength="300" value="${esc(e.note || '')}" placeholder="masalan: yangi kreativ ishga tushdi"></label>
                     <div class="tsx-preview" id="tsxPreview"></div>
+                    <p class="tsx-form-error" id="tsxError" role="alert" hidden></p>
                     ${changed}
+                    ${e.revision ? '<button type="button" class="btn-ghost tsx-history-btn" id="tsxHistoryBtn">Oʻzgarishlar tarixi</button><div id="tsxHistory"></div>' : ''}
                 </div>
                 <aside class="tsx-crm-box" aria-label="CRM maʼlumoti">
                     <b>🔒 CRM shu kuni</b>
@@ -271,16 +300,33 @@
         preview();
         document.getElementById('tsxBudget').focus();
         document.getElementById('tsxCancel').onclick = closeModal;
+        const showError = msg => { const el2 = document.getElementById('tsxError'); el2.textContent = msg; el2.hidden = !msg; };
+        document.getElementById('tsxHistoryBtn')?.addEventListener('click', () => loadHistory('day', key, 'tsxHistory'));
         document.getElementById('tsxSave').onclick = async () => {
-            if (val('tsxBudget') === '' || val('tsxLeads') === '') { alert('Reklama sarfi va lid sonini kiriting. Nol boʻlsa 0 yozing.'); return; }
+            showError('');
+            if (val('tsxBudget') === '' || val('tsxLeads') === '') { showError('Reklama sarfi va lid sonini kiriting. Nol boʻlsa 0 yozing.'); return; }
+            if (val('tsxKval') !== '' && Number(val('tsxKval')) > Number(val('tsxLeads'))) { showError('Sifatli lid soni jami lid sonidan oshmasligi kerak.'); return; }
             const body = { language: state.lang, kind: 'day', date: key, revision: e.revision || 0,
                 data: { budget: Number(val('tsxBudget')), leadCount: Number(val('tsxLeads')), kvalLeadCount: val('tsxKval') === '' ? null : Number(val('tsxKval')), note: val('tsxNote') } };
             const btn = document.getElementById('tsxSave'); btn.disabled = true;
             try {
                 await apiFetch('/api/target-ads', { method: 'PUT', body: JSON.stringify(body) });
                 closeModal(); showMiniToast('Saqlandi'); render(el, state.lang);
-            } catch (err) { alert(err.message); if (btn.isConnected) btn.disabled = false; }
+            } catch (err) { showError(err.message); if (btn.isConnected) btn.disabled = false; }
         };
+    }
+
+    async function loadHistory(kind, date, targetId) {
+        const box = document.getElementById(targetId);
+        if (!box) return;
+        box.innerHTML = '<p class="tsx-modal-note">Yuklanmoqda…</p>';
+        const f = d => !d ? '—' : kind === 'day'
+            ? `${usd(Number(d.budget))} · ${d.leadCount == null ? '—' : int(d.leadCount)} lid${d.kvalLeadCount != null ? ' · ' + int(d.kvalLeadCount) + ' sifatli' : ''}${d.note ? ' · “' + esc(d.note) + '”' : ''}`
+            : `${usd(Number(d.budget))} · fixed ${usd(Number(d.fixed || 0))} · ${int(d.lidSoni)} lid · ${int(d.kvalLidSoni)} sifatli${d.usdRate ? ' · kurs ' + int(d.usdRate) : ''}`;
+        try {
+            const r = await apiFetch(`/api/target-ads/history?language=${state.lang}&kind=${kind}&date=${encodeURIComponent(date)}`);
+            box.innerHTML = r.history.length ? `<ol class="tsx-history">${r.history.map(h => `<li><b>${esc(h.by || '—')}</b>, ${esc(new Date(h.at).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' }))}<br><span>${h.before ? f(h.before) + ' → ' : ''}${f(h.after)}</span></li>`).join('')}</ol>` : '<p class="tsx-modal-note">Tarix yoʻq (eski tizimdan koʻchirilgan).</p>';
+        } catch (e) { box.innerHTML = `<p class="tsx-form-error">${esc(e.message)}</p>`; }
     }
 
     function openPlan(el) {
@@ -291,8 +337,11 @@
                 <label class="form-group"><span>Fixed — doimiy oylik xarajat ($) <small>(masalan, targetolog xizmati)</small></span><input type="number" id="tsxPFixed" class="form-control" min="0" step="0.01" value="${p.fixed ?? ''}"></label>
                 <label class="form-group"><span>Lid soni</span><input type="number" id="tsxPLeads" class="form-control" min="0" step="1" value="${p.lidSoni ?? ''}"></label>
                 <label class="form-group"><span>Sifatli lid soni</span><input type="number" id="tsxPKval" class="form-control" min="0" step="1" value="${p.kvalLidSoni ?? ''}"></label>
+                <label class="form-group"><span>1 $ kursi (soʻm) <small>(ROAS — tushumni dollarga oʻtkazish uchun)</small></span><input type="number" id="tsxPRate" class="form-control" min="0" step="1" value="${p.usdRate ?? ''}" placeholder="masalan, 12800"></label>
                 <div class="tsx-preview" id="tsxPPreview"></div>
+                <p class="tsx-form-error" id="tsxPError" role="alert" hidden></p>
                 ${p.updatedAt ? `<p class="tsx-modal-note">Oxirgi oʻzgartirgan: ${esc(p.updatedBy || '—')}, ${esc(new Date(p.updatedAt).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' }))}</p>` : ''}
+                ${p.revision ? '<button type="button" class="btn-ghost tsx-history-btn" id="tsxPHistoryBtn">Oʻzgarishlar tarixi</button><div id="tsxPHistory"></div>' : ''}
             </div>`,
             `<button type="button" class="btn-ghost" id="tsxPCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="tsxPSave">Saqlash</button>`);
         const v = id => document.getElementById(id).value.trim();
@@ -305,15 +354,19 @@
         ['tsxPBudget', 'tsxPLeads', 'tsxPKval'].forEach(id => document.getElementById(id).addEventListener('input', preview));
         preview();
         document.getElementById('tsxPCancel').onclick = closeModal;
+        const showError = msg => { const e2 = document.getElementById('tsxPError'); e2.textContent = msg; e2.hidden = !msg; };
+        document.getElementById('tsxPHistoryBtn')?.addEventListener('click', () => loadHistory('plan', state.month, 'tsxPHistory'));
         document.getElementById('tsxPSave').onclick = async () => {
-            if (['tsxPBudget', 'tsxPLeads', 'tsxPKval'].some(id => v(id) === '')) { alert('Byudjet, lid soni va sifatli lid sonini kiriting. Nol boʻlsa 0 yozing.'); return; }
+            showError('');
+            if (['tsxPBudget', 'tsxPLeads', 'tsxPKval'].some(id => v(id) === '')) { showError('Byudjet, lid soni va sifatli lid sonini kiriting. Nol boʻlsa 0 yozing.'); return; }
+            if (Number(v('tsxPKval')) > Number(v('tsxPLeads'))) { showError('Sifatli lid rejasi jami lid rejasidan oshmasligi kerak.'); return; }
             const body = { language: state.lang, kind: 'plan', date: state.month, revision: p.revision || 0,
-                data: { budget: Number(v('tsxPBudget')), fixed: v('tsxPFixed') === '' ? 0 : Number(v('tsxPFixed')), lidSoni: Number(v('tsxPLeads')), kvalLidSoni: Number(v('tsxPKval')) } };
+                data: { budget: Number(v('tsxPBudget')), fixed: v('tsxPFixed') === '' ? 0 : Number(v('tsxPFixed')), lidSoni: Number(v('tsxPLeads')), kvalLidSoni: Number(v('tsxPKval')), usdRate: v('tsxPRate') === '' ? null : Number(v('tsxPRate')) } };
             const btn = document.getElementById('tsxPSave'); btn.disabled = true;
             try {
                 await apiFetch('/api/target-ads', { method: 'PUT', body: JSON.stringify(body) });
                 closeModal(); showMiniToast('Reja saqlandi'); render(el, state.lang);
-            } catch (err) { alert(err.message); if (btn.isConnected) btn.disabled = false; }
+            } catch (err) { showError(err.message); if (btn.isConnected) btn.disabled = false; }
         };
     }
 

@@ -21,6 +21,7 @@ async function tx(fn) {
 }
 
 router.get('/', authRequired, handle(req => service.month(pool, req.user, req.query)));
+router.get('/history', authRequired, handle(req => service.history(pool, req.user, req.query)));
 router.put('/', authRequired, handle(req => tx(db => service.save(db, req.user, req.body || {}))));
 
 module.exports = router;
