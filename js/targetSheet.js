@@ -204,7 +204,9 @@
             crmKval: grade('count', crmTotals.qualified, p.kvalLidSoni, pace),
             crmCpl: grade('cost', totals.crmCpl, planLidNarxi),
             crmKvalCpl: grade('cost', totals.crmKvalCpl, planKvalNarxi),
-            crmKvalPct: grade('rate', totals.crmKvalPct, planKvalPct)
+            crmKvalPct: grade('rate', totals.crmKvalPct, planKvalPct),
+            saleCost: grade('cost', totals.saleCost, p.targetCpa),
+            roas: grade('rate', totals.roas, p.targetRoas)
         };
 
         return {

@@ -67,9 +67,10 @@ async function accessFor(db, actor) {
     let { role, lang, status } = row[0];
     // ROP'ning HR yozuvi login bilan bog'lanmagan bo'lsa, brauzerdagidek ism bo'yicha topiladi
     if (role === 'rop' && lang == null) {
+        // Faqat bitta aniq moslik bo'lsa — ikki xil "Ali Valiyev" bo'lsa taxmin qilinmaydi
         const byName = (await db.query(`SELECT h.lang, h.status FROM hr_employees h JOIN users u ON LOWER(TRIM(u.name)) = LOWER(TRIM(h.name))
-            WHERE u.id = $1 AND h.role = 'rop' LIMIT 1`, [actor.id])).rows[0];
-        if (byName) ({ lang, status } = byName);
+            WHERE u.id = $1 AND h.role = 'rop' LIMIT 2`, [actor.id])).rows;
+        if (byName.length === 1) ({ lang, status } = byName[0]);
     }
     if (['admin', 'boshliq'].includes(role)) return { role, read: [...LANGS], writeDay: [...LANGS], writePlan: true, editAnyDay: true };
     // HR yozuvi bo'lmasa yoki faol bo'lmasa — hech qanday til ochilmaydi (standart "ingliz" emas).
@@ -110,7 +111,10 @@ function cleanData(kind, data) {
     const kvalLidSoni = num(data?.kvalLidSoni, { integer: true, max: 1e6 });
     if (kvalLidSoni > lidSoni) throw error(400, 'Sifatli lid rejasi jami lid rejasidan oshmasligi kerak');
     const usdRate = num(data?.usdRate, { max: 1e6, allowNull: true });
-    return { budget: num(data?.budget, { max: 1e8 }), fixed: num(data?.fixed, { max: 1e8, allowNull: true }) ?? 0, lidSoni, kvalLidSoni, usdRate: usdRate || null };
+    const targetCpa = num(data?.targetCpa, { max: 1e6, allowNull: true });   // maqsadli sotuv narxi ($)
+    const targetRoas = num(data?.targetRoas, { max: 1000, allowNull: true }); // maqsadli ROAS (×)
+    return { budget: num(data?.budget, { max: 1e8 }), fixed: num(data?.fixed, { max: 1e8, allowNull: true }) ?? 0, lidSoni, kvalLidSoni,
+        usdRate: usdRate || null, targetCpa: targetCpa || null, targetRoas: targetRoas || null };
 }
 
 // Eski joylardan (domwork_ad_entries — rus tili; json_data — ikkala til)

@@ -91,8 +91,10 @@
             ${card('Sifatli lid · CRM', int(t.crm.qualified), int(p.kvalLidSoni), g.crmKval, t.crm.pending ? int(t.crm.pending) + ' ta hali ishlanmagan' : 'hammasi ishlangan')}
             ${card('Sifatli lid narxi · CRM', usd(t.crmKvalCpl), usd(p.kvalNarxi), g.crmKvalCpl, '')}
             ${card('Lid → Sifatli % · CRM', pct(t.crmKvalPct), pct(p.kvalPct), g.crmKvalPct, t.crmKvalPctWorked != null ? 'ishlanganlar ichida ' + pct(t.crmKvalPctWorked) : '')}
-            ${card('Sotuv narxi · CRM', usd(t.saleCost), null, '', int(t.crm.sold) + ' ta sotuv shu oy lidlaridan')}
-            ${card('ROAS · kiritilgan kunlar', times(t.roas), null, t.roas == null ? '' : t.roas >= 1 ? 'good' : t.roas >= 0.7 ? 'warn' : 'bad', t.usdRate ? 'tushum ÷ (sarf + fixed) · lidlar toʻlagan sari oshadi' : 'oylik rejada $ kursi kiritilmagan')}
+            ${card('Sotuv narxi · CRM', usd(t.saleCost), p.targetCpa ? usd(p.targetCpa) : null, g.saleCost, int(t.crm.sold) + ' ta sotuv shu oy lidlaridan')}
+            ${card('ROAS · kiritilgan kunlar', times(t.roas), p.targetRoas ? times(p.targetRoas) : null,
+                p.targetRoas ? g.roas : (t.roas == null ? '' : t.roas >= 1 ? 'good' : t.roas >= 0.7 ? 'warn' : 'bad'),
+                t.usdRate ? 'tushum ÷ (sarf + fixed) · lidlar toʻlagan sari oshadi' : 'oylik rejada $ kursi kiritilmagan')}
         </div>`;
     }
 
@@ -154,11 +156,11 @@
                 ${row('Sinovga yozilgan', lock, '—', int(t.crm.trial), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.trial, int), { cls: 'tsx-crm' })}
                 ${row('Sinov narxi', lock, '—', usd(t.trialCost), '<td class="tsx-pct">—</td>', d => cell(d.trialCost, usd), { cls: 'tsx-crm' })}
                 ${row('Sotuv', lock, '—', int(t.crm.sold), '<td class="tsx-pct">—</td>', d => cell(d.isFuture ? null : d.crm.sold, int), { cls: 'tsx-crm' })}
-                ${row('Sotuv narxi (CPA)', lock, '—', usd(t.saleCost), '<td class="tsx-pct">—</td>', d => cell(d.saleCost, usd), { cls: 'tsx-crm' })}
+                ${row('Sotuv narxi (CPA)', lock, usd(p.targetCpa || null), usd(t.saleCost), ratio(t.saleCost, p.targetCpa, g.saleCost), d => cell(d.saleCost, usd), { cls: 'tsx-crm' })}
                 ${row('Tushum (shu oy lidlaridan)', lock, '—', som(t.revenue), '<td class="tsx-pct">—</td>', d => cell(d.isFuture || !d.crm.revenue ? null : d.crm.revenue, som), { cls: 'tsx-crm' })}
                 ${row('Toʻliq xarajat (kiritilgan kunlar)', lock, usd(p.budget != null ? p.budget + (p.fixed || 0) : null), usd(t.totalCost), '<td class="tsx-pct">—</td>', d => cell(d.entry ? d.budget + (d.fixed || 0) : null, usd), { cls: 'tsx-crm' })}
                 ${row('Toʻliq lid narxi', lock, '—', usd(t.fullCpl), '<td class="tsx-pct">—</td>', d => cell(d.entry ? (d.crm.leads ? (d.budget + (d.fixed || 0)) / d.crm.leads : null) : null, usd), { cls: 'tsx-crm' })}
-                ${row('ROAS (kiritilgan kunlar)', lock, '—', times(t.roas), '<td class="tsx-pct">—</td>',
+                ${row('ROAS (kiritilgan kunlar)', lock, p.targetRoas ? times(p.targetRoas) : '—', times(t.roas), ratio(t.roas, p.targetRoas, g.roas),
                     d => cell(t.usdRate && d.entry && (d.budget + (d.fixed || 0)) > 0 ? (d.crm.revenue / t.usdRate) / (d.budget + (d.fixed || 0)) : null, times), { cls: 'tsx-crm' })}
             </tbody>
         </table></div>`;
@@ -322,7 +324,7 @@
         box.innerHTML = '<p class="tsx-modal-note">Yuklanmoqda…</p>';
         const f = d => !d ? '—' : kind === 'day'
             ? `${usd(Number(d.budget))} · ${d.leadCount == null ? '—' : int(d.leadCount)} lid${d.kvalLeadCount != null ? ' · ' + int(d.kvalLeadCount) + ' sifatli' : ''}${d.note ? ' · “' + esc(d.note) + '”' : ''}`
-            : `${usd(Number(d.budget))} · fixed ${usd(Number(d.fixed || 0))} · ${int(d.lidSoni)} lid · ${int(d.kvalLidSoni)} sifatli${d.usdRate ? ' · kurs ' + int(d.usdRate) : ''}`;
+            : `${usd(Number(d.budget))} · fixed ${usd(Number(d.fixed || 0))} · ${int(d.lidSoni)} lid · ${int(d.kvalLidSoni)} sifatli${d.usdRate ? ' · kurs ' + int(d.usdRate) : ''}${d.targetCpa ? ' · CPA ' + usd(Number(d.targetCpa)) : ''}${d.targetRoas ? ' · ROAS ' + times(Number(d.targetRoas)) : ''}`;
         try {
             const r = await apiFetch(`/api/target-ads/history?language=${state.lang}&kind=${kind}&date=${encodeURIComponent(date)}`);
             box.innerHTML = r.history.length ? `<ol class="tsx-history">${r.history.map(h => `<li><b>${esc(h.by || '—')}</b>, ${esc(new Date(h.at).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' }))}<br><span>${h.before ? f(h.before) + ' → ' : ''}${f(h.after)}</span></li>`).join('')}</ol>` : '<p class="tsx-modal-note">Tarix yoʻq (eski tizimdan koʻchirilgan).</p>';
@@ -338,6 +340,10 @@
                 <label class="form-group"><span>Lid soni</span><input type="number" id="tsxPLeads" class="form-control" min="0" step="1" value="${p.lidSoni ?? ''}"></label>
                 <label class="form-group"><span>Sifatli lid soni</span><input type="number" id="tsxPKval" class="form-control" min="0" step="1" value="${p.kvalLidSoni ?? ''}"></label>
                 <label class="form-group"><span>1 $ kursi (soʻm) <small>(ROAS — tushumni dollarga oʻtkazish uchun)</small></span><input type="number" id="tsxPRate" class="form-control" min="0" step="1" value="${p.usdRate ?? ''}" placeholder="masalan, 12800"></label>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <label class="form-group" style="flex:1;min-width:140px"><span>Maqsadli sotuv narxi, $ <small>(ixtiyoriy)</small></span><input type="number" id="tsxPCpa" class="form-control" min="0" step="0.01" value="${p.targetCpa ?? ''}"></label>
+                    <label class="form-group" style="flex:1;min-width:140px"><span>Maqsadli ROAS, × <small>(ixtiyoriy)</small></span><input type="number" id="tsxPRoas" class="form-control" min="0" step="0.1" value="${p.targetRoas ?? ''}" placeholder="masalan, 3"></label>
+                </div>
                 <div class="tsx-preview" id="tsxPPreview"></div>
                 <p class="tsx-form-error" id="tsxPError" role="alert" hidden></p>
                 ${p.updatedAt ? `<p class="tsx-modal-note">Oxirgi oʻzgartirgan: ${esc(p.updatedBy || '—')}, ${esc(new Date(p.updatedAt).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' }))}</p>` : ''}
@@ -361,7 +367,8 @@
             if (['tsxPBudget', 'tsxPLeads', 'tsxPKval'].some(id => v(id) === '')) { showError('Byudjet, lid soni va sifatli lid sonini kiriting. Nol boʻlsa 0 yozing.'); return; }
             if (Number(v('tsxPKval')) > Number(v('tsxPLeads'))) { showError('Sifatli lid rejasi jami lid rejasidan oshmasligi kerak.'); return; }
             const body = { language: state.lang, kind: 'plan', date: state.month, revision: p.revision || 0,
-                data: { budget: Number(v('tsxPBudget')), fixed: v('tsxPFixed') === '' ? 0 : Number(v('tsxPFixed')), lidSoni: Number(v('tsxPLeads')), kvalLidSoni: Number(v('tsxPKval')), usdRate: v('tsxPRate') === '' ? null : Number(v('tsxPRate')) } };
+                data: { budget: Number(v('tsxPBudget')), fixed: v('tsxPFixed') === '' ? 0 : Number(v('tsxPFixed')), lidSoni: Number(v('tsxPLeads')), kvalLidSoni: Number(v('tsxPKval')), usdRate: v('tsxPRate') === '' ? null : Number(v('tsxPRate')),
+                    targetCpa: v('tsxPCpa') === '' ? null : Number(v('tsxPCpa')), targetRoas: v('tsxPRoas') === '' ? null : Number(v('tsxPRoas')) } };
             const btn = document.getElementById('tsxPSave'); btn.disabled = true;
             try {
                 await apiFetch('/api/target-ads', { method: 'PUT', body: JSON.stringify(body) });
