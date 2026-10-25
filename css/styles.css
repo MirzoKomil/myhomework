@@ -9124,3 +9124,24 @@ body.modal-open {
     .leads-source-filter-box { flex: 1 1 100%; max-width: none; }
     .leads-date-dropdown { min-width: 0; left: 0; right: 0; }
 }
+
+/* ===== Lidlar kanbani: ustun sarlavhasi doim tepada qotib tursin =====
+   Avval qisqa (lidi kam/yo'q) ustun o'z balandligicha qolardi, shuning uchun
+   board pastga scroll qilinganda uning sarlavhasi ham tepaga chiqib yo'qolardi.
+   Desktopda kanban grid'ga o'tkazildi: barcha ustunlar eng uzun ustun
+   balandligiga cho'ziladi va sticky sarlavhalar butun scroll davomida ko'rinadi.
+   Mobil (<=900px) o'zgarmaydi — u yerda har ustun o'zi scroll qiladi. */
+@media (min-width: 901px) {
+    .leads-kanban {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 280px;
+        align-items: stretch;
+        align-content: start;
+    }
+    html.rd .leads-kanban { grid-auto-columns: 288px; }
+    .leads-kanban > .lead-column {
+        align-self: stretch;
+        min-width: 0;
+    }
+}
