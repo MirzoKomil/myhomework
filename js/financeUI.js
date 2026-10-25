@@ -213,7 +213,7 @@
                 ${stat('Korxona qarzlari', money(o.payables.total), `maosh: ${money(o.payables.salaries)} · qarz: ${money(o.payables.loans)}`, o.payables.overdue ? 'warning' : '')}
                 ${stat('Yangi o‘quvchilar', `${k.newClients} ta`, `kursni uzaytirgan: ${k.renewals} ta`, '', 'Davrda birinchi shartnomasi boshlangan o‘quvchilar va keyingi shartnomaga o‘tganlar')}
                 ${stat('O‘rtacha shartnoma', k.averageContract ? money(k.averageContract) : '—', `o‘rtacha birinchi to‘lov: ${k.averageFirstPayment ? money(k.averageFirstPayment) : '—'}`, '', 'Yangi shartnomaning to‘liq qiymati (kurs narxi). Birinchi to‘lov alohida ko‘rsatilgan')}
-                ${stat('Qarz undirildi', money(k.collections), `jami ${k.receiptCount} ta to‘lov`, '', 'Davr ichida boshlangan shartnomalarning birinchi to‘lovidan tashqari barcha kurs to‘lovlari')}
+                ${stat('Keyingi to‘lovlar', money(k.collections), `jami ${k.receiptCount} ta to‘lov`, '', 'Yangi shartnomalarning birinchi to‘lovidan tashqari barcha kurs to‘lovlari: bo‘lib to‘lash, qarzni yopish va hokazo')}
                 ${stat('CAC', k.cac ? money(k.cac) : '—', k.fullCac ? 'sotuv maoshi bilan: ' + money(k.fullCac) : 'marketing xarajati kiritilmagan', '', 'Bitta yangi o‘quvchini jalb qilish narxi = marketing (umumiy reklama ulushi bilan) / yangi o‘quvchilar. Kassa usuli')}
                 ${stat('Runway', k.runwayMonths != null ? k.runwayMonths + ' oy' : '—', k.averageMonthlyOperatingCashFlow < 0 ? 'o‘rtacha oylik operatsion oqim: ' + money(k.averageMonthlyOperatingCashFlow) : 'operatsion pul oqimi musbat', k.runwayMonths != null && k.runwayMonths < 3 ? 'danger' : '', 'Erkin pul oxirgi 3 to‘liq oydagi o‘rtacha manfiy operatsion oqimga necha oy yetadi')}
             </div>
@@ -314,7 +314,7 @@
                             const v = (isIn(r) ? 1 : -1) * signed(r), reversed = reversedIds.has(r.id) || r.reversed;
                             return `<tr class="${r.reversesId ? 'fin-reversal' : reversed ? 'fin-reversed' : ''}">
                                 <td>${dateText(r.date)}</td>
-                                <td><b>${esc(F.TYPES[r.type])}</b><small>${esc(catName(r.categoryCode))}${r.usefulLifeMonths ? ` · ${r.usefulLifeMonths} oyda amortizatsiya` : ''}</small>${r.legacy ? '<span class="fin-badge fin-badge--warning" title="Eski Cash Flow bo‘limidan ko‘chirilgan — tekshiring">eski</span>' : ''}${r.reversesId ? '<span class="fin-badge fin-badge--muted">storno</span>' : ''}${reversed ? '<span class="fin-badge fin-badge--muted">bekor qilingan</span>' : ''}${r.salaryId ? '<span class="fin-badge fin-badge--muted">maosh</span>' : ''}${r.nonSalary ? '<span class="fin-badge fin-badge--muted">maosh tizimidan tashqari</span>' : ''}</td>
+                                <td><b>${esc(F.TYPES[r.type])}</b><small>${esc(catName(r.categoryCode))}${r.usefulLifeMonths ? ` · ${r.usefulLifeMonths} oyda amortizatsiya` : ''}</small>${r.legacy ? '<span class="fin-badge fin-badge--warning" title="Eski Cash Flow bo‘limidan ko‘chirilgan — tekshiring">eski</span>' : ''}${r.reversesId ? '<span class="fin-badge fin-badge--muted">storno</span>' : ''}${reversed ? '<span class="fin-badge fin-badge--muted">bekor qilingan</span>' : ''}${r.salaryId ? '<span class="fin-badge fin-badge--muted">maosh</span>' : ''}${r.nonSalary ? '<span class="fin-badge fin-badge--muted">maosh tizimidan tashqari</span>' : ''}${r.type === 'refund' && !r.reversesId ? (r.terminates ? '<span class="fin-badge fin-badge--warning">shartnoma tugatildi</span>' : '<span class="fin-badge fin-badge--muted">kurs davom etadi</span>') : ''}</td>
                                 <td>${esc(r.counterparty)}<small>${esc(r.description)}</small>${r.receiptUrl ? `<a href="${esc(r.receiptUrl)}" class="fin-link">hujjat</a>` : ''}</td>
                                 <td>${esc(accountName(r.accountId))}${r.toAccountId ? ' → ' + esc(accountName(r.toAccountId)) : ''}</td>
                                 <td>${esc(F.ENTITIES[r.entity])}</td>
@@ -382,16 +382,16 @@
             const ol = other.lines.find(x => x.key === l.key);
             const margin = { gross_profit: p.margins.gross, ebitda: p.margins.ebitda, net_profit: p.margins.net }[l.key];
             const share = margin != null ? pctText(margin) : l.key !== 'revenue' && l.amount ? pctText(F.pct(l.amount, p.net_revenue)) : '';
-            return `<tr class="fin-pnl-${l.kind}"><th scope="row">${esc(l.label)}${l.key === 'allocated_common' && p.allocation ? ` <small>(${p.allocation.share}%)</small>` : ''}</th><td class="num">${show(l.key, l.amount)}</td><td class="num fin-muted">${share}</td><td class="num fin-muted">${show(l.key, ol?.amount || 0)}</td></tr>`;
+            return `<tr class="fin-pnl-${l.kind}"><th scope="row">${esc(l.label)}${l.key === 'allocated_common' && p.allocation ? ` <small>(${pctText(p.allocation.share)})</small>` : ''}</th><td class="num">${show(l.key, l.amount)}</td><td class="num fin-muted">${share}</td><td class="num fin-muted">${show(l.key, ol?.amount || 0)}</td></tr>`;
         });
         const btl = p.belowTheLine, memo = (label, v, neg) => `<tr><th scope="row" class="fin-indent">${label}</th><td class="num">${v ? (neg ? '(' + num(v) + ')' : num(v)) : '—'}</td><td></td><td></td></tr>`;
         return `<div class="fin-table-wrap" role="region" aria-label="Foyda va zarar" tabindex="0"><table class="fin-table fin-report"><caption class="sr-only">Foyda va zarar hisoboti</caption><thead><tr><th scope="col">Ko‘rsatkich</th><th scope="col" class="num">${p.basis === 'cash' ? 'Kassa usuli' : 'Hisoblash usuli'}</th><th scope="col" class="num">Sof tushumga %</th><th scope="col" class="num">${other.basis === 'cash' ? 'Kassa usuli' : 'Hisoblash usuli'}</th></tr></thead><tbody>${rows.join('')}
             <tr class="fin-pnl-section"><td colspan="4">Foyda-zararga kirmaydigan pul harakatlari</td></tr>
             ${memo('Kapital xarajatlar (uskuna, aktivlar)', btl.capex, true)}${memo('Ta’sischiga to‘langan mablag‘', btl.ownerDrawings, true)}${memo('Ta’sischi kiritgan mablag‘', btl.ownerContributions)}${memo('Olingan qarzlar', btl.loansReceived)}${memo('Qaytarilgan qarzlar (asosiy qarz)', btl.loansRepaid, true)}
         </tbody></table></div>
-        ${p.priorDetail?.length ? `<p class="fin-note">O‘tgan davr tuzatishi: ${p.priorDetail.map(d => `${monthName(d.month)}: ${money(d.amount)}`).join(', ')}. Yopilgan oy raqamlari o‘zgarmagan, farq shu davrga kiritildi.</p>` : ''}
+        ${p.priorDetail?.length ? `<p class="fin-note">O‘tgan davr tuzatishi: ${p.priorDetail.map(d => `${monthName(d.month)}: ${money(d.amount)}`).join(', ')}. Yopilgan oylarning muzlatilgan hisoboti o‘zgarmaydi; farq birinchi ochiq oyda bir marta ko‘rsatiladi va o‘sha oy yopilganda uning hisobotiga muzlatiladi.</p>` : ''}
         ${p.partialClosed ? '<p class="fin-note">Diqqat: tanlangan davr yopilgan oyning bir qismini o‘z ichiga oladi — u qism joriy ma’lumotdan hisoblandi. Muzlatilgan raqam uchun to‘liq oyni tanlang.</p>' : ''}
-        ${p.allocation ? `<p class="fin-note">Umumiy xarajatlar (ijara, CRM, umumiy reklama va h.k.) maktablar o‘rtasida sof tushum ulushiga ko‘ra taqsimlandi: shu maktab ulushi ${p.allocation.share}%, umumiy natija ${money(p.allocation.commonResult)}.</p>` : ''}`;
+        ${p.allocation ? `<p class="fin-note">Umumiy moddalar (ijara, CRM, umumiy reklama, amortizatsiya, foiz) maktablar o‘rtasida har oy yalpi kurs tushumi ulushiga ko‘ra taqsimlandi. Operatsion xarajatlar “Umumiy xarajatlar ulushi” qatorida, amortizatsiya va foiz o‘z qatorlarida. Oylik ulush: ${(p.allocation.months || []).map(m => `${monthName(m.start.slice(0, 7))} ${pctText(m.share)}`).join(', ')}; davr bo‘yicha samarali ulush ${pctText(p.allocation.share)}, umumiy natija ${money(p.allocation.commonResult)}.</p>` : ''}`;
     }
     function cashflowTable(cf) {
         const section = (title, lines, net) => `<tr class="fin-pnl-section"><td colspan="2">${title}</td></tr>${lines.map(l => `<tr><th scope="row" class="fin-indent">${esc(l.label)}</th><td class="num">${l.amount ? acc(l.amount) : '—'}</td></tr>`).join('')}<tr class="fin-pnl-subtotal"><th scope="row">${title} — sof pul oqimi</th><td class="num">${acc(net)}</td></tr>`;
@@ -413,8 +413,8 @@
         const r = (label, v, cls = '', indent) => `<tr class="${cls}"><th scope="row" ${indent ? 'class="fin-indent"' : ''}>${label}</th><td class="num">${acc(v)}</td></tr>`;
         return `<div class="fin-table-wrap" role="region" aria-label="Balans" tabindex="0"><table class="fin-table fin-report"><caption class="sr-only">Boshqaruv balansi</caption><thead><tr><th scope="col">${dateText(b.asOf)} holatiga ${b.fromSnapshot ? '<span class="fin-badge fin-badge--muted">muzlatilgan</span>' : ''}</th><th scope="col" class="num">so‘m</th></tr></thead><tbody>
             <tr class="fin-pnl-section"><td colspan="2">Aktivlar</td></tr>
-            ${r('Pul mablag‘lari (naqd, karta, bank)', b.cashEquivalents, '', true)}
-            ${b.suspense ? r('Aniqlanmagan hisobdagi pul (tekshiruvda)', b.suspense, '', true) : ''}
+            ${r('Pul mablag‘lari', b.cashTotal ?? b.cashEquivalents + b.suspense, '', true)}
+            ${b.suspense ? `<tr><th scope="row" class="fin-indent">— shundan naqd, karta, bank</th><td class="num fin-muted">${acc(b.cashEquivalents)}</td></tr><tr><th scope="row" class="fin-indent">— shundan “Aniqlanmagan” hisobda (tekshiruvda)</th><td class="num fin-muted">${acc(b.suspense)}</td></tr>` : ''}
             ${r('Uzum Nasiya’dan olinadigan summa', b.uzumReceivable, '', true)}
             ${r('O‘tilgan darslar uchun to‘lanmagan summa (shartnoma aktivi)', b.contractAssets, '', true)}
             ${b.ecl ? r('(−) Kutilayotgan kredit zarari zaxirasi (ECL)', -b.ecl, '', true) : ''}
@@ -435,7 +435,7 @@
             ${b.equity.preOpening ? r('(−) Hisob ochilishidan oldingi harakatlar (boshlang‘ich qoldiq ichida)', -b.equity.preOpening, '', true) : ''}
             <tr class="fin-pnl-total"><th scope="row">Kapital jami ${b.balanced ? '<span class="fin-badge fin-badge--ok">Sof aktivlarga teng</span>' : `<span class="fin-badge fin-badge--danger">farq ${num(b.imbalance)}</span>`}</th><td class="num">${acc(b.equity.total)}</td></tr>
         </tbody></table></div>
-        <p class="fin-note">Shartnoma aktivi va majburiyati IFRS 15 bo‘yicha har bir o‘qish davri uchun sof holda: o‘tilgan dars qiymati minus olingan pul. Kelgusi oylar uchun hali kelmagan to‘lov aktiv sifatida ko‘rsatilmaydi. Balans tenglamasi har safar avtomatik tekshiriladi.</p>`;
+        <p class="fin-note">Pul mablag‘lari ta’rifi pul oqimi hisoboti bilan bir xil (naqd, karta, bank va aniqlanmagan hisob). Shartnoma aktivi va majburiyati IFRS 15 bo‘yicha har bir o‘qish davri uchun sof holda: o‘tilgan dars qiymati minus olingan pul. Kelgusi oylar uchun hali kelmagan to‘lov aktiv sifatida ko‘rsatilmaydi. Balans tenglamasi har safar avtomatik tekshiriladi.</p>`;
     }
     function monthlyTable(rows) {
         const metrics = [['revenue', 'Kurs to‘lovlari'], ['refunds', 'Qaytarishlar'], ['net_revenue', 'Sof tushum'], ['cost_of_services', 'Xizmat tannarxi'], ['gross_profit', 'Yalpi foyda'], ['opex', 'Operatsion xarajatlar'], ['ebitda', 'EBITDA'], ['net_profit', 'Sof foyda']];
@@ -455,7 +455,7 @@
             <section class="fin-card fin-print-area" role="tabpanel" id="fin-panel-report" aria-labelledby="fin-tab-report-${r}">
                 <header class="fin-report-head"><div><h3>${items.find(t => t[0] === r)[1]}</h3><p class="fin-muted">${esc(r === 'balance' ? 'Butun korxona' : scopeLabel())} · ${r === 'balance' ? dateText(o.period.end) + ' holatiga' : dateText(o.period.start) + ' — ' + dateText(o.period.end)} · so‘mda</p></div></header>
                 ${body}
-                <footer class="fin-report-foot">Tayyorlandi: ${new Date().toLocaleString('uz-UZ')} · Manba: Myhomework CRM moliya reyestri · Storno va bekor qilingan yozuvlar hisobga olingan. ${o.closedThrough ? `${esc(o.closedThrough)} gacha bo‘lgan oylar yopilgan va muzlatilgan.` : 'Hali yopilgan oy yo‘q — raqamlar tuzatishlar bilan o‘zgarishi mumkin.'} Audit jurnali: ${o.auditChain.ok ? 'butun' : 'uzilgan!'} (${o.auditChain.count} ta yozuv).</footer>
+                <footer class="fin-report-foot">Tayyorlandi: ${new Date().toLocaleString('uz-UZ')} · Manba: Myhomework CRM moliya reyestri · Storno va bekor qilingan yozuvlar hisobga olingan. ${o.closedThrough ? `${esc(o.closedThrough)} gacha bo‘lgan oylar yopilgan va muzlatilgan.` : 'Hali yopilgan oy yo‘q — raqamlar tuzatishlar bilan o‘zgarishi mumkin.'} Audit jurnali: ${o.auditChain.ok ? 'butun' : 'uzilgan!'} (${o.auditChain.count} ta yozuv${o.auditChain.head?.hash ? `, oxirgi #${o.auditChain.head.id} xesh ${esc(o.auditChain.head.hash.slice(0, 16))}…` : ''}).</footer>
             </section></div>`;
         bindToolbar(root, () => render('hisobotlar'));
         bindTabs(root, 'report', (v, focus) => { state.report = v; render('hisobotlar'); if (focus) panelRoot('hisobotlar').querySelector(`[data-fin-tab-report="${v}"]`)?.focus(); });
@@ -476,7 +476,7 @@
                 ['Moliyaviy faoliyat'], ...cf.financing.map(l => ['  ' + l.label, l.amount]), ['Sof moliyaviy oqim', cf.net.financing], [],
                 ['Sof o‘zgarish', cf.netChange], ['Davr boshida', cf.openingCash], ['Ochilgan hisoblarning boshlang‘ich qoldig‘i', cf.openingInjection], ['Davr oxirida', cf.closingCash], ['Hisob qoldiqlariga teng', cf.reconciled ? 'Ha' : 'Yo‘q: ' + cf.difference]];
             const b = o.balance;
-            const bs = [[`Boshqaruv balansi ${dateText(b.asOf)} (butun korxona)${b.fromSnapshot ? ' — muzlatilgan' : ''}`], [], ['Modda', 'so‘m'], ['Pul mablag‘lari', b.cashEquivalents], ['Aniqlanmagan hisobda', b.suspense], ['Uzum’dan olinadigan', b.uzumReceivable], ['Shartnoma aktivi', b.contractAssets], ['ECL zaxirasi', -b.ecl],
+            const bs = [[`Boshqaruv balansi ${dateText(b.asOf)} (butun korxona)${b.fromSnapshot ? ' — muzlatilgan' : ''}`], [], ['Modda', 'so‘m'], ['Pul mablag‘lari', b.cashTotal ?? b.cashEquivalents + b.suspense], ['  shundan aniqlanmagan hisobda', b.suspense], ['Uzum’dan olinadigan', b.uzumReceivable], ['Shartnoma aktivi', b.contractAssets], ['ECL zaxirasi', -b.ecl],
                 ['Asosiy vositalar (sof)', b.ppeNet], ['Aktivlar jami', b.totalAssets], [], ['Oldindan olingan to‘lov', b.contractLiabilities], ['To‘lanmagan maosh', b.payables.salaries], ['Hisob-fakturalar', b.payables.bills + b.payables.other],
                 ['Olingan qarzlar', b.loans], ['Majburiyatlar jami', b.totalLiabilities], [], ['Sof aktivlar', b.netAssets], [], ['Boshlang‘ich qoldiqlar', b.equity.opening], ['Ta’sischi kiritgan', b.equity.contributions],
                 ['Ta’sischi olgan', -b.equity.drawings], ['Jamg‘arilgan foyda', b.equity.retained], ['Hisob ochilishidan oldingi harakatlar', -b.equity.preOpening], ['Kapital jami', b.equity.total], ['Tenglama', b.balanced ? 'Mos' : 'Farq: ' + b.imbalance]];
@@ -516,6 +516,8 @@
     const STATUS = { match: ['Mos', 'ok'], split: ['Bo‘lib kiritilgan', 'ok'], date_diff: ['Sana farqi', 'warning'], amount_diff: ['Summa farqi', 'danger'], missing_in_crm: ['CRM’da yo‘q', 'danger'], extra_in_crm: ['Ro‘yxatda yo‘q', 'warning'] };
     function proposal(r, id) {
         const x = r.result.results[id], e = x.external, l = x.ledger, link = r.links[id];
+        // Faqat ism bo'yicha topilgan juftlik (telefon mos emas) avtomatik tuzatilmaydi — qo'lda tekshiriladi.
+        if (x.nameOnly && ['amount_diff', 'date_diff'].includes(x.status)) return null;
         if (x.status === 'amount_diff' && x.ledgers.length === 1) return { kind: 'replace', replacesId: l.id, date: l.date, amount: e.amount, text: `Summani ${num(l.amount)} → ${num(e.amount)}` };
         if (x.status === 'date_diff') return { kind: 'replace', replacesId: l.id, date: e.date, amount: l.amount, text: `Sanani ${dateText(l.date)} → ${dateText(e.date)}` };
         if (x.status === 'extra_in_crm') return { kind: 'void', recordId: l.id, text: 'Bekor qilish (ro‘yxatda yo‘q)' };
@@ -548,7 +550,8 @@
                     const x = res.results[id], e = x.external, done = r.done[id], p = proposal(r, id);
                     const action = done ? `<span class="fin-badge fin-badge--ok">${esc(done)}</span>`
                         : x.status === 'missing_in_crm' ? `<button type="button" class="btn-ghost btn-sm" data-fin-link="${id}">${r.links[id] ? 'O‘zgartirish' : 'O‘quvchini tanlash'}</button>${p ? `<small>${esc(p.text)}</small>` : ''}`
-                            : x.status === 'amount_diff' && !p ? '<small>Bir nechta yozuv — qo‘lda tekshiring</small>' : p ? `<small>${esc(p.text)}</small>` : '';
+                            : x.nameOnly && ['amount_diff', 'date_diff'].includes(x.status) ? '<span class="fin-badge fin-badge--warning">faqat ism mos — qo‘lda tekshiring</span>'
+                                : x.status === 'amount_diff' && !p ? '<small>Bir nechta yozuv — qo‘lda tekshiring</small>' : p ? `<small>${esc(p.text)}</small>` : '';
                     return `<tr><td>${p && !done ? `<input type="checkbox" data-fin-recon-pick="${id}" ${r.picked.has(id) ? 'checked' : ''} aria-label="Tuzatish uchun tanlash">` : ''}</td>
                         <td><span class="fin-badge fin-badge--${STATUS[x.status][1]}">${STATUS[x.status][0]}</span>${x.phoneMismatch ? '<small>telefon boshqacha — to‘liq ism va summa bo‘yicha</small>' : ''}</td>
                         <td>${e ? `${dateText(e.date)} · <b>${num(e.amount)}</b><small>${esc(e.name)} ${esc(e.phone || '')}</small>` : '—'}</td>
@@ -561,7 +564,7 @@
             ${picked.length ? `<div class="fin-preview" aria-live="polite"><b>Saqlanadigan tuzatishlar (${picked.length}):</b><ol>${picked.map(x => `<li>${esc(x.p.text)} — ${esc((res.results[x.i].external || res.results[x.i].ledger).name)}</li>`).join('')}</ol></div>` : ''}
             <div class="fin-actions"><button type="button" class="btn-primary-sm" data-fin-fix-picked ${picked.length ? '' : 'disabled'}>Tanlanganlarni bitta tranzaksiyada saqlash (${picked.length})</button>
                 <button type="button" class="btn-ghost" data-fin-recon-reset>Yangi solishtirish</button></div>
-            <p class="fin-note">Farq sifatida faqat telefon raqami yoki to‘liq ism-familiyasi mos kelgan yozuvlar juftlanadi; faqat ism mos kelsa — bu boshqa odam bo‘lishi mumkin, shuning uchun “CRM’da yo‘q” va “Ro‘yxatda yo‘q” deb alohida ko‘rsatiladi. Tuzatishlar hammasi birga saqlanadi yoki birortasi ham saqlanmaydi. Xato yozuv “bekor qilingan” deb belgilanadi, to‘g‘risi hujjat va sabab bilan qo‘shiladi.</p></section>`;
+            <p class="fin-note">Farq sifatida faqat telefon raqami yoki to‘liq ism-familiyasi mos kelgan yozuvlar juftlanadi; telefon mos kelmagan juftlik avtomatik tuzatilmaydi; faqat ism mos kelsa — bu boshqa odam bo‘lishi mumkin, shuning uchun “CRM’da yo‘q” va “Ro‘yxatda yo‘q” deb alohida ko‘rsatiladi. Tuzatishlar hammasi birga saqlanadi yoki birortasi ham saqlanmaydi. Xato yozuv “bekor qilingan” deb belgilanadi, to‘g‘risi hujjat va sabab bilan qo‘shiladi.</p></section>`;
     }
     const AUDIT_LABELS = { 'transaction-create': 'Operatsiya kiritildi', 'transaction-reverse': 'Storno', 'payable-create': 'Hisob-faktura', 'payable-void': 'Hisob-faktura bekor qilindi',
         'salary-cash-out': 'Maosh kassadan to‘landi', 'receipt-void': 'Tushum bekor qilindi', 'receipt-manual': 'Tushum hujjat asosida kiritildi', 'receipt-batch': 'Tuzatishlar to‘plami',
@@ -667,7 +670,9 @@
         root.querySelector('[data-fin-audit-filter]')?.addEventListener('change', e => { state.auditFilter = e.target.value; state.auditRows = null; render('solishtirish'); });
         root.querySelector('[data-fin-audit-export]')?.addEventListener('click', () => {
             const rows = [['Vaqt', 'Kim', 'Amal', 'Obyekt', 'Oldin', 'Keyin'], ...(state.auditRows || []).map(a => [new Date(a.created_at).toISOString(), a.actor_name, a.action, a.entity_id, JSON.stringify(a.before_data || ''), JSON.stringify(a.after_data || '')])];
-            const csv = '﻿' + rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+            // Formula in'ektsiyasidan himoya: = + - @ bilan boshlangan katakka apostrof qo'shiladi.
+            const cell = c => { let v = String(c ?? ''); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+            const csv = '﻿' + rows.map(r => r.map(cell).join(',')).join('\n');
             const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); link.download = 'moliya-audit-jurnali.csv'; link.click();
             setTimeout(() => URL.revokeObjectURL(link.href), 10000);
         });
@@ -701,7 +706,7 @@
                         <fieldset class="fin-methods"><legend>Kutilayotgan kredit zarari (ECL) stavkalari, %</legend>${F.AGING.map(([k, l]) => `<label>${l} <input type="number" min="0" max="100" class="form-control fin-narrow" name="ecl_${k}" value="${s.eclRates[k]}" ${lock}></label>`).join('')}</fieldset>
                         ${dir ? '<button type="submit" class="btn-primary-sm">Saqlash</button>' : ''}
                     </form>
-                    <p class="fin-note">Bu taxminlar faqat hisoblash usuli, balans va ECL uchun ishlatiladi. Kassa usuli raqamlariga ta’sir qilmaydi. Yopilgan oylar o‘zgarmaydi — farq birinchi ochiq oyda “o‘tgan davr tuzatishi” bo‘lib ko‘rinadi.</p></section>
+                    <p class="fin-note">Bu taxminlar faqat hisoblash usuli, balans va ECL uchun ishlatiladi, kassa usuli raqamlariga ta’sir qilmaydi. O‘zgarish <b>saqlangan kundan boshlab</b> kuchga kiradi (IAS 8): avval boshlangan kurslar va o‘tgan sanalar eski sozlama bilan hisoblanadi.</p></section>
             </div>
             <section class="fin-card" aria-labelledby="finCoaH"><header><h3 id="finCoaH">Hisoblar rejasi (toifalar)</h3><span class="fin-muted">qaysi toifa qaysi hisobotga tushadi</span></header>
                 ${table(['Kod', 'Toifa', 'Pul oqimi bo‘limi (IAS 7)', 'Foyda-zarar qatori'], F.CATEGORIES.map(c => `<tr><td><code>${c.code}</code></td><td>${esc(c.name)}</td><td>${{ operating: 'Operatsion', investing: 'Investitsion', financing: 'Moliyaviy' }[c.cf] || '— (ichki o‘tkazma)'}</td><td>${c.pnl ? esc((F.PNL_LINES.find(l => l[0] === c.pnl) || [0, c.pnl])[1]) : '— (foyda-zararga kirmaydi)'}</td></tr>`), { label: 'Hisoblar rejasi' })}</section>
@@ -752,8 +757,9 @@
         const cats = F.CATEGORIES.filter(c => c.type === type);
         const loans = (o.payables.rows || []).filter(p => p.kind === 'loan');
         let receipts = [];
+        const refundLang = ent === 'common' ? 'russian' : ent;
         if (type === 'refund') {
-            try { const l = ent === 'common' ? 'russian' : ent; receipts = (await apiFetch('/api/inflow?language=' + l)).records.slice(0, 500); } catch { receipts = []; }
+            try { receipts = (await apiFetch('/api/inflow?language=' + refundLang)).records.slice(0, 500); } catch { receipts = []; }
         }
         const isIn = ['income', 'capital', 'loan_in'].includes(type);
         const fromAccounts = type === 'transfer' ? o.accountsList.filter(a => a.active !== false) : accounts;
@@ -761,6 +767,10 @@
             ${field('Operatsiya turi', `<select class="form-control" name="type">${Object.entries(F.TYPES).map(([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
             <div class="fin-form-row">${field('Sana', `<input type="date" lang="en-GB" class="form-control" name="date" value="${F.today()}" max="${F.today()}">`)}
                 ${field(preset.settlement ? 'Uzum o‘tkazgan summa (so‘m)' : 'Summa (so‘m)', moneyInput('amount', preset.amount))}</div>
+            ${type === 'refund' ? field('Maktab', `<select class="form-control" name="refundEntity">${['english', 'russian'].map(k => `<option value="${k}" ${k === refundLang ? 'selected' : ''}>${esc(F.ENTITIES[k])}</option>`).join('')}</select>`) : ''}
+            ${type === 'refund' ? `<fieldset class="fin-methods" data-fin-terminates><legend>Qaytarish turi (majburiy)</legend>
+                <label><input type="radio" name="terminates" value="false"> Ortiqcha to‘lov yoki chegirma — kurs davom etadi (shartnoma narxi kamayadi)</label>
+                <label><input type="radio" name="terminates" value="true"> O‘quvchi o‘qishni to‘xtatdi — shartnoma tugatiladi (qolgan pul tushum bo‘ladi)</label></fieldset>` : ''}
             ${type === 'refund' ? field('Qaysi tushum qaytarilmoqda (majburiy)', `<input type="search" class="form-control" placeholder="Ism yoki telefon bo‘yicha qidirish" data-fin-receipt-search aria-label="Tushumni qidirish"><select class="form-control" name="paymentRecordId" size="6" aria-label="Tushum">${receipts.map(r => `<option value="${esc(r.id)}" data-search="${esc(((r.name || '') + ' ' + String(r.phone || '').replace(/\D/g, '')).toLowerCase())}">${dateText(r.paidDate)} · ${esc(r.name)} · ${num(r.amount)}</option>`).join('')}</select>`, 'Qaytarish tanlangan tushum summasidan oshmaydi; o‘quvchi shartnomasi shu kundan tugatiladi') : ''}
             ${type === 'loan_repay' ? field('Qaysi qarz', `<select class="form-control" name="payableId">${loans.map(p => `<option value="${esc(p.id)}" ${p.id === preset.payableId ? 'selected' : ''}>${esc(p.counterparty)} · qoldiq ${num(p.outstanding)}</option>`).join('')}</select>`, 'Foiz alohida “Qarz bo‘yicha foizlar” xarajati sifatida kiritiladi') : ''}
             ${!['refund', 'transfer'].includes(type) ? field('Yo‘nalish', `<select class="form-control" name="entity">${Object.entries(F.ENTITIES).map(([k, l]) => `<option value="${k}" ${k === ent ? 'selected' : ''}>${l}</option>`).join('')}</select>`, 'Ikkala maktabga tegishli xarajat (ijara, CRM) — “Umumiy”; hisobotda sof tushum ulushiga ko‘ra taqsimlanadi') : ''}
@@ -783,17 +793,20 @@
         const syncCat = () => { const c = F.CATEGORY[catSel?.value]; root.querySelector('[data-fin-payroll-flag]').hidden = !c?.payroll; root.querySelector('[data-fin-capex]').hidden = c?.code !== 'CAPEX'; };
         catSel?.addEventListener('change', syncCat); syncCat();
         root.querySelector('[name="type"]').addEventListener('change', e => { closeModal(); openTxnModal({ ...preset, type: e.target.value, settlement: false }); });
+        root.querySelector('[name="refundEntity"]')?.addEventListener('change', e => { closeModal(); openTxnModal({ ...preset, type, entity: e.target.value }); });
         const rs = root.querySelector('[data-fin-receipt-search]');
         rs?.addEventListener('input', () => { const q = rs.value.trim().toLowerCase(), d = q.replace(/\D/g, ''); root.querySelectorAll('[name="paymentRecordId"] option').forEach(op => { op.hidden = !!q && !op.dataset.search.includes(q) && !(d.length >= 3 && op.dataset.search.includes(d)); }); });
         const key = reqKey();
         submitModal(async b => {
             const v = n => b.querySelector(`[name="${n}"]`)?.value || '';
             if (type === 'refund' && !v('paymentRecordId')) throw new Error('Qaytarilayotgan tushumni tanlang');
+            const term = b.querySelector('[name="terminates"]:checked')?.value;
+            if (type === 'refund' && !term) throw new Error('Qaytarish turini tanlang: kurs davom etadimi yoki shartnoma tugatiladimi');
             const receiptUrl = await upload(b.querySelector('[name="receipt"]'));
             await api('/transactions', { requestKey: key, type, date: v('date'), amount: v('amount').replace(/\D/g, ''), entity: v('entity') || ent, categoryCode: v('categoryCode'),
                 accountId: v('accountId'), toAccountId: v('toAccountId'), counterparty: v('counterparty'), description: v('description'), receiptUrl, feeAmount: v('feeAmount').replace(/\D/g, ''),
                 paymentRecordId: v('paymentRecordId'), payableId: v('payableId') || preset.payableId || '', dueDate: v('dueDate'), nonSalary: !!b.querySelector('[name="nonSalary"]')?.checked,
-                usefulLifeMonths: v('usefulLifeMonths') });
+                usefulLifeMonths: v('usefulLifeMonths'), terminates: type === 'refund' ? term === 'true' : undefined });
         });
     }
     function openPayableModal() {
@@ -818,7 +831,7 @@
     function openReverseModal(id) {
         const t = state.txns.rows.find(r => r.id === id);
         openReasonModal(`Storno: ${F.TYPES[t.type]} · ${num(t.amount)} so‘m`, 'Storno qilish', async (reason, _e, date) => { await api('/transactions/' + encodeURIComponent(id) + '/reverse', { reason, date }); },
-            { date: true, note: 'Asl yozuv o‘chirilmaydi: teskari (storno) yozuv qo‘shiladi. Asl sana yopilgan oyda bo‘lsa, storno bugungi sana bilan yoziladi.' });
+            { date: true, note: 'Asl yozuv o‘chirilmaydi: teskari (storno) yozuv qo‘shiladi. Asl sana yopilgan oyda bo‘lsa, storno bugungi sana bilan yoziladi.' + (t.categoryCode === 'CAPEX' ? ' Uskuna xaridi storno qilinsa, aktiv shu sanadan balansdan chiqariladi va amortizatsiya to‘xtaydi.' : '') + (t.amount > (state.overview?.settings?.approvalLimit ?? Infinity) ? ' Bu summa tasdiqlash chegarasidan katta — faqat rahbar storno qila oladi.' : '') });
     }
     function openReasonModal(title, action, onSubmit, opts = {}) {
         openModal(title, `<div class="fin-form">

@@ -103,7 +103,16 @@
     function scopeMatch(entity, scope) { return scope === 'all' || !scope || entity === scope; }
     function phone9(value) { const d = String(value || '').replace(/\D/g, ''); return d.length >= 9 ? d.slice(-9) : d; }
 
-    function settingsOf(data) { const s = data.settings || {}; return { ...DEFAULT_SETTINGS, ...s, courseMonths: { ...DEFAULT_SETTINGS.courseMonths, ...(s.courseMonths || {}) }, eclRates: { ...DEFAULT_SETTINGS.eclRates, ...(s.eclRates || {}) } }; }
+    function normalizeSettings(s = {}) { return { ...DEFAULT_SETTINGS, ...s, courseMonths: { ...DEFAULT_SETTINGS.courseMonths, ...(s.courseMonths || {}) }, eclRates: { ...DEFAULT_SETTINGS.eclRates, ...(s.eclRates || {}) } }; }
+    function settingsOf(data) { return normalizeSettings(data.settings || {}); }
+    // Taxmin o'zgarishi (IAS 8) faqat kuchga kirgan sanadan keyin qo'llanadi: tarix o'sha paytdagi sozlama bilan hisoblanadi.
+    function settingsAt(data, day) {
+        const hist = data.settingsHistory || [];
+        if (!hist.length) return settingsOf(data);
+        let pick = hist[0];
+        for (const h of hist) if (h.from <= day) pick = h;
+        return normalizeSettings(pick.data);
+    }
     function memo(cache, data, fn) { if (cache.has(data)) return cache.get(data); const v = fn(); cache.set(data, v); return v; }
     const MV = new WeakMap(), CT = new WeakMap(), AS = new WeakMap(), FIRST = new WeakMap();
 
@@ -238,7 +247,7 @@
     // ---------- Shartnomalar (IFRS 15): har bir o'qish davri alohida ----------
     function contracts(data) {
         return memo(CT, data, () => {
-            const settings = settingsOf(data), groups = new Map();
+            const groups = new Map();
             for (const r of data.receipts || []) {
                 if (!date(r.date)) continue;
                 const g = r.entity + ':' + (r.leadId || r.studentId || 'r:' + r.id);
@@ -248,8 +257,11 @@
             const refundsByReceipt = new Map();
             for (const t of data.transactions || []) if (t.type === 'refund' && t.paymentRecordId) {
                 if (!refundsByReceipt.has(t.paymentRecordId)) refundsByReceipt.set(t.paymentRecordId, []);
-                refundsByReceipt.get(t.paymentRecordId).push({ date: t.date, amount: (t.reversesId ? -1 : 1) * t.amount });
+                refundsByReceipt.get(t.paymentRecordId).push({ id: t.reversesId || t.id, date: t.date, amount: (t.reversesId ? -1 : 1) * t.amount, terminates: !!t.terminates, reversal: !!t.reversesId });
             }
+            // O'quvchi holati: muzlatilgan sanadan keyin tushum tan olinmaydi; tashlab ketgan bo'lsa — to'xtatiladi yoki zarar zaxirasi.
+            const status = new Map();
+            for (const s of data.studentStatus || []) { if (s.studentId) status.set('s:' + s.studentId, s); if (s.leadId) status.set('l:' + s.leadId, s); }
             const out = [];
             for (const [g, list] of groups) {
                 list.sort((a, b) => a.date.localeCompare(b.date));
@@ -260,7 +272,7 @@
                     // Yangi o'qish davri: oldingi davr tugagan VA uning qiymati to'liq to'langan bo'lsa.
                     // Kech to'langan qarz (davr tugagach) eski shartnomaga yoziladi, yangi kurs ochmaydi.
                     if (!current || (r.date > current.end && liveSum >= current.threshold)) {
-                        const months = Math.max(1, Number(settings.courseMonths[r.entity]) || 3);
+                        const months = Math.max(1, Number(settingsAt(data, r.date).courseMonths[r.entity]) || 3);
                         current = { key: g + '#' + (++n), group: g, index: n, entity: r.entity, name: r.name, leadId: r.leadId, studentId: r.studentId, start: r.date, months,
                             end: addDays(addMonths(r.date, months), -1), receipts: [], refunds: [], threshold: n === 1 ? leadValue : 0 };
                         out.push(current);
@@ -274,9 +286,21 @@
                 c.value = live.length ? Math.max(c.index === 1 ? c.threshold : 0, sum(live)) : 0;
                 c.firstReceipt = live[0] || null;
                 c.startLive = live[0]?.date || null;
-                const refunds = c.refunds.slice().sort((a, b) => a.date.localeCompare(b.date));
-                let acc = 0; c.terminatedAt = null;
-                for (const f of refunds) { acc += f.amount; if (acc > 0 && !c.terminatedAt) c.terminatedAt = f.date; if (acc <= 0) c.terminatedAt = null; }
+                // Qisman qaytarish (ortiqcha to'lov, chegirma) — shartnoma narxini kamaytiradi, kurs davom etadi.
+                // Shartnoma faqat "tugatish" belgilangan yoki to'liq qaytarilgan (pul qolmagan) bo'lsa tugaydi.
+                const refunds = c.refunds.slice().sort((a, b) => a.date.localeCompare(b.date) || (a.reversal - b.reversal));
+                const active = new Set();
+                c.terminatedAt = null;
+                for (const f of refunds) {
+                    if (f.reversal) active.delete(f.id); else if (f.terminates) active.add(f.id);
+                    const full = contractCash(c, f.date) <= 0 && sum(c.refunds.filter(x => x.date <= f.date), x => x.amount) > 0;
+                    if ((active.size || full) && !c.terminatedAt) c.terminatedAt = f.date;
+                    if (!active.size && !full) c.terminatedAt = null;
+                }
+                const st = status.get('s:' + c.studentId) || status.get('l:' + c.leadId) || null;
+                c.frozenAt = st?.frozenAt && st.frozenAt >= c.start ? st.frozenAt : null;
+                c.inactive = !!st?.inactive;
+                c.inactiveAt = st?.inactiveAt && st.inactiveAt >= c.start ? st.inactiveAt : null;
             }
             return out;
         });
@@ -286,34 +310,52 @@
             - sum(c.refunds.filter(f => f.date <= asOf));
     }
     function contractLive(c, asOf) { return c.receipts.some(r => r.date <= asOf && !(r.voidDate && r.voidDate <= asOf)); }
-    function straightLine(c, asOf) {
-        if (!c.value || !c.start || asOf < c.start) return 0;
+    function straightLine(c, asOf, value = c.value) {
+        if (value <= 0 || !c.start || asOf < c.start) return 0;
         const total = dayDiff(c.start, c.end) + 1, done = Math.min(total, dayDiff(c.start, asOf) + 1);
-        return Math.floor(c.value * done / total);
+        return Math.floor(value * done / total);
     }
-    // Tushum (qaytarishdan oldingi) va yakuniy tan olingan tushum.
+    // Xizmat ko'rsatish to'xtagan sana: shartnoma tugatilgan, o'quvchi muzlatilgan yoki o'qishni tashlagan.
+    function stopDate(c) { return [c.terminatedAt, c.frozenAt, c.inactiveAt].filter(Boolean).sort()[0] || null; }
+    function serviceDate(c, asOf) { const s = stopDate(c); return s && asOf >= s ? s : asOf; }
+    function refundsTo(c, asOf) { return sum(c.refunds.filter(f => f.date <= asOf), f => f.amount); }
+    // Tushum (qaytarishdan oldingi asosiy narx bo'yicha).
     function revenueBase(c, asOf) {
         if (!contractLive(c, asOf)) return 0;
-        return straightLine(c, c.terminatedAt && asOf >= c.terminatedAt ? c.terminatedAt : asOf);
+        return straightLine(c, serviceDate(c, asOf));
     }
+    // Yakuniy tan olingan tushum (IFRS 15).
     function earned(c, asOf) {
-        const base = revenueBase(c, asOf);
-        // Qaytarish shartnomani tugatadi: o'qitilgan qismdan ko'p, qolgan puldan ko'p tan olinmaydi.
-        return c.terminatedAt && asOf >= c.terminatedAt ? Math.min(base, Math.max(0, contractCash(c, asOf))) : base;
+        if (!contractLive(c, asOf)) return 0;
+        // Tugatilgan shartnoma: majburiyat qolmaydi — o'quvchida qolgan (qaytarilmagan) pul tushum bo'ladi.
+        if (c.terminatedAt && asOf >= c.terminatedAt) return Math.max(0, contractCash(c, asOf));
+        // Qisman qaytarish narxni kamaytiradi: jami tan olingan summa yangi narx bo'yicha qayta hisoblanadi (cumulative catch-up).
+        return straightLine(c, serviceDate(c, asOf), c.value - refundsTo(c, asOf));
     }
+    // Hisobotdagi "tushum" qatori: asosiy narx bo'yicha tushum yoki (tugatishda) undan katta qolgan pul.
+    function grossRevenue(c, asOf) { return Math.max(revenueBase(c, asOf), earned(c, asOf)); }
     function contractPosition(c, asOf) { return earned(c, asOf) - contractCash(c, asOf); }
 
     // ---------- Asosiy vositalar va amortizatsiya ----------
+    // Storno qilingan xarid — aktivni chiqarish (IAS 16.67): amortizatsiya shu kungacha, keyin tannarx va
+    // jamg'arilgan amortizatsiya balansdan chiqadi, qaytgan pul − qoldiq qiymat = chiqarish natijasi.
     function fixedAssets(data) {
-        const life = settingsOf(data).usefulLifeMonths;
-        return movements(data).filter(m => m.category === 'CAPEX').map(m => ({ id: m.id, date: m.date, entity: m.entity, cost: -m.sign * m.amount,
-            end: addDays(addMonths(m.date, Number(m.usefulLifeMonths) || life), -1), description: m.counterparty || m.description }));
+        const mv = movements(data).filter(m => m.category === 'CAPEX');
+        const disposals = new Map(mv.filter(m => m.isReversal).map(m => [m.reversesId, m.date]));
+        return mv.filter(m => !m.isReversal).map(m => {
+            const life = Number(m.usefulLifeMonths) || settingsAt(data, m.date).usefulLifeMonths;
+            return { id: m.id, transactionId: m.transactionId, date: m.date, entity: m.entity, cost: -m.sign * m.amount, life,
+                end: addDays(addMonths(m.date, life), -1), disposedAt: disposals.get(m.transactionId) || null, description: m.counterparty || m.description };
+        });
     }
     function depreciationAt(asset, asOf) {
         if (asOf < asset.date) return 0;
-        const total = dayDiff(asset.date, asset.end) + 1, done = Math.min(total, dayDiff(asset.date, asOf) + 1);
+        const stop = asset.disposedAt && asOf >= asset.disposedAt ? addDays(asset.disposedAt, -1) : asOf;
+        if (stop < asset.date) return 0;
+        const total = dayDiff(asset.date, asset.end) + 1, done = Math.min(total, dayDiff(asset.date, stop) + 1);
         return Math.trunc(asset.cost * done / total);
     }
+    function assetOnBooks(asset, asOf) { return asset.date <= asOf && !(asset.disposedAt && asset.disposedAt <= asOf); }
 
     // ---------- Kutilayotgan kredit zarari (IFRS 9, soddalashtirilgan matritsa) ----------
     function agingBucket(dueDate, asOf) {
@@ -323,7 +365,7 @@
         return overdue <= 0 ? 'not_due' : overdue <= 30 ? 'd1_30' : overdue <= 60 ? 'd31_60' : overdue <= 90 ? 'd61_90' : 'd90';
     }
     function eclAt(data, asOf, scope = 'all') {
-        const rates = settingsOf(data).eclRates, byKey = new Map();
+        const rates = settingsAt(data, asOf).eclRates, byKey = new Map();
         for (const r of data.receivables || []) { if (r.leadId) byKey.set('l:' + r.leadId, r); if (r.studentId) byKey.set('s:' + r.studentId, r); }
         let total = 0;
         for (const c of contracts(data)) {
@@ -331,7 +373,9 @@
             const pos = contractPosition(c, asOf);
             if (pos <= 0) continue;
             const r = byKey.get('l:' + c.leadId) || byKey.get('s:' + c.studentId);
-            total += Math.floor(pos * (Number(rates[agingBucket(r?.dueDate, asOf)]) || 0) / 100);
+            // O'qishni tashlagan o'quvchining to'lanmagan qismi to'liq zaxiralanadi.
+            const rate = c.inactive ? 100 : Number(rates[agingBucket(r?.dueDate, asOf)]) || 0;
+            total += Math.floor(pos * rate / 100);
         }
         return total;
     }
@@ -376,8 +420,8 @@
         const b = {}, before = addDays(start, -1);
         for (const c of contracts(data)) {
             if (!scopeMatch(c.entity, scope)) continue;
-            const base = revenueBase(c, end) - revenueBase(c, before);
-            const term = (revenueBase(c, end) - earned(c, end)) - (revenueBase(c, before) - earned(c, before));
+            const base = grossRevenue(c, end) - grossRevenue(c, before);
+            const term = (grossRevenue(c, end) - earned(c, end)) - (grossRevenue(c, before) - earned(c, before));
             addTo(b, 'revenue', base); addTo(b, 'refunds', term);
         }
         for (const m of movements(data)) {
@@ -394,7 +438,12 @@
         for (const p of data.payables || []) {
             if (p.kind !== 'loan' && !p.voided && scopeMatch(p.entity, scope) && inRange(p.issueDate, start, end)) addTo(b, (CATEGORY[p.categoryCode] || CATEGORY.OTHER_EXP).pnl, p.amount);
         }
-        for (const a of fixedAssets(data)) if (scopeMatch(a.entity, scope)) addTo(b, 'depreciation', depreciationAt(a, end) - depreciationAt(a, before));
+        for (const a of fixedAssets(data)) {
+            if (!scopeMatch(a.entity, scope)) continue;
+            addTo(b, 'depreciation', depreciationAt(a, end) - depreciationAt(a, before));
+            // Storno (xarid bekor qilindi): to'liq tannarx qaytdi, qoldiq qiymat chiqarildi — farq chiqarish natijasi.
+            if (a.disposedAt && inRange(a.disposedAt, start, end)) addTo(b, 'other_income', depreciationAt(a, a.disposedAt));
+        }
         addTo(b, 'credit_losses', eclAt(data, end, scope) - eclAt(data, before, scope));
         return b;
     }
@@ -402,20 +451,42 @@
         const fn = basis === 'accrual' ? accrualBuckets : cashBuckets;
         const b = fn(data, start, end, scope);
         if (scope === 'english' || scope === 'russian') {
-            // Umumiy (ikkala maktabga tegishli) natija sof tushum ulushiga ko'ra taqsimlanadi.
-            const common = pnlFromBuckets(fn(data, start, end, 'common'));
-            const nr = s => pnlFromBuckets(fn(data, start, end, s)).net_revenue;
-            const mine = nr(scope), other = nr(scope === 'english' ? 'russian' : 'english'), total = mine + other;
-            const share = total > 0 ? Math.max(0, mine) / total : 0.5;
-            const allocated = Math.round(-common.net_profit * share);
-            if (allocated) b.allocated_common = allocated;
-            b._allocation = { share: Math.round(share * 1000) / 10, commonResult: common.net_profit, marketing: Math.round((common.marketing || 0) * share) };
+            // Umumiy (ikkala maktabga tegishli) moddalar har oy yalpi kurs tushumi ulushiga ko'ra taqsimlanadi.
+            // Ulush [0;1] oralig'ida, ikki maktab ulushlari yig'indisi aniq 100% (yaxlitlash qoldig'i rus tiliga).
+            // Operatsion xarajatlar bitta "umumiy xarajatlar ulushi" qatorida, amortizatsiya, foiz, boshqa daromad
+            // va soliq esa o'z qatorlarida — EBITDA va EBIT buzilmaydi.
+            const cb = fn(data, start, end, 'common');
+            const gross = s => Math.max(0, fn(data, start, end, s).revenue || 0);
+            const en = gross('english'), ru = gross('russian');
+            const shareEn = en + ru > 0 ? en / (en + ru) : 0.5;
+            const part = x => { const e = Math.round(x * shareEn); return scope === 'english' ? e : x - e; };
+            const share = scope === 'english' ? shareEn : 1 - shareEn;
+            const OP = new Set(['cost_of_services', ...OPEX_KEYS]);
+            let opex = 0;
+            for (const [k, v] of Object.entries(cb)) {
+                if (typeof v !== 'number' || !v) continue;
+                if (OP.has(k)) opex += part(v);
+                else if (k === 'revenue') opex -= part(v);
+                else if (k === 'refunds') opex += part(v);
+                else addTo(b, k, part(v));
+            }
+            if (opex) b.allocated_common = (b.allocated_common || 0) + opex;
+            const common = pnlFromBuckets(cb);
+            b._allocation = { share: Math.round(share * 1000) / 10, commonResult: common.net_profit, allocated: -part(common.net_profit),
+                marketing: part(cb.marketing || 0), months: [{ start, end, share: Math.round(share * 1000) / 10 }] };
         }
         return b;
     }
     function mergeBuckets(target, src) {
         for (const [k, v] of Object.entries(src || {})) {
-            if (k === '_allocation') { target._allocation = target._allocation || { share: v.share, commonResult: 0, marketing: 0 }; target._allocation.commonResult += v.commonResult; target._allocation.marketing += v.marketing; continue; }
+            if (k === '_allocation') {
+                const t = target._allocation ||= { share: 0, commonResult: 0, allocated: 0, marketing: 0, months: [] };
+                t.commonResult += v.commonResult; t.allocated += v.allocated || 0; t.marketing += v.marketing; t.months.push(...(v.months || []));
+                // Davr uchun samarali ulush: taqsimlangan natija / umumiy natija (oylik ulushlar alohida ko'rsatiladi).
+                t.share = t.commonResult ? Math.round(-t.allocated / t.commonResult * 1000) / 10 : (t.months[0]?.share ?? v.share);
+                continue;
+            }
+            if (k === '_prior') { const t = target._prior ||= {}; for (const [m, a] of Object.entries(v)) t[m] = (t[m] || 0) + a; continue; }
             if (typeof v === 'number') target[k] = (target[k] || 0) + v;
         }
         return target;
@@ -423,6 +494,22 @@
     function snapshotOf(data, month, scope, basis) {
         const closed = data.closedThrough || '';
         return closed && month <= closed ? data.snapshots?.[month]?.pnl?.[scope]?.[basis] || null : null;
+    }
+    // Yopilgan oylar keyinchalik o'zgargan bo'lsa (masalan, kech kiritilgan maosh), farq birinchi ochiq oyga
+    // "o'tgan davr tuzatishi" bo'lib tushadi. Bu tuzatish o'sha oy yopilganda uning nusxasiga muzlatiladi va
+    // keyingi oylarda qayta ko'rsatilmaydi: farq = joriy hisob − muzlatilgan o'z natijasi − keyin muzlatilgan tuzatishlar.
+    function priorAdjustments(data, closed, scope, basis) {
+        const months = Object.keys(data.snapshots || {}).filter(m => m <= closed).sort(), out = {};
+        const booked = {};
+        for (const y of months) for (const [x, a] of Object.entries(snapshotOf(data, y, scope, basis)?._prior || {})) booked[x] = (booked[x] || 0) + a;
+        for (const x of months) {
+            const snap = snapshotOf(data, x, scope, basis);
+            if (!snap) continue;
+            const own = pnlFromBuckets(snap).net_profit - (snap.prior_adjustments || 0);
+            const diff = pnlFromBuckets(rawBuckets(data, x + '-01', monthEnd(x), scope, basis)).net_profit - own - (booked[x] || 0);
+            if (diff) out[x] = diff;
+        }
+        return out;
     }
     function profitAndLoss(data, { start, end, scope = 'all', basis = 'cash' }) {
         const closed = data.closedThrough || '';
@@ -440,13 +527,10 @@
         let priorDetail = [];
         if (closed) {
             const firstOpen = monthOf(addMonths(closed + '-01', 1));
-            if (segments.includes(firstOpen)) {
-                for (const month of Object.keys(data.snapshots || {}).filter(m => m <= closed).sort()) {
-                    const snap = snapshotOf(data, month, scope, basis);
-                    if (!snap) continue;
-                    const diff = pnlFromBuckets(rawBuckets(data, month + '-01', monthEnd(month), scope, basis)).net_profit - pnlFromBuckets(snap).net_profit;
-                    if (diff) { b.prior_adjustments = (b.prior_adjustments || 0) + diff; priorDetail.push({ month, amount: diff }); }
-                }
+            if (segments.includes(firstOpen) && end >= firstOpen + '-01') {
+                const prior = priorAdjustments(data, closed, scope, basis);
+                for (const [month, amount] of Object.entries(prior)) { b.prior_adjustments = (b.prior_adjustments || 0) + amount; priorDetail.push({ month, amount }); }
+                if (Object.keys(prior).length) mergeBuckets(b, { _prior: prior });
             }
         }
         const result = pnlFromBuckets(b);
@@ -532,7 +616,7 @@
             if (pos > 0) contractAssets += pos; else contractLiabilities -= pos;
         }
         const ecl = eclAt(data, asOf, scope);
-        const assets = fixedAssets(data).filter(a => scopeMatch(a.entity, scope) && a.date <= asOf);
+        const assets = fixedAssets(data).filter(a => scopeMatch(a.entity, scope) && assetOnBooks(a, asOf));
         const ppeCost = sum(assets, a => a.cost), ppeDep = sum(assets, a => depreciationAt(a, asOf));
         const ap = payablesSummary(data, asOf, scope);
         const totalAssets = cs.equivalents + cs.suspense + cs.clearing + contractAssets - ecl + ppeCost - ppeDep;
@@ -544,11 +628,12 @@
             + sum((data.accounts || []).filter(a => (scope === 'all' || a.entity === scope) && !date(a.openingDate)), a => Number(a.openingBalance) || 0);
         const contributions = sum(mv.filter(x => x.category === 'OWNER_IN'), x => x.sign * x.amount);
         const drawings = -sum(mv.filter(x => x.category === 'OWNER_OUT'), x => x.sign * x.amount);
-        const retained = pnlFromBuckets(rawBuckets(data, firstDate(data) < asOf ? firstDate(data) : asOf, asOf, scope, 'accrual')).net_profit - (scope === 'all' ? 0 : 0);
+        const retained = pnlFromBuckets(rawBuckets(data, firstDate(data) < asOf ? firstDate(data) : asOf, asOf, scope, 'accrual')).net_profit;
         // Hisob ochilish sanasidan oldingi pul harakatlari boshlang'ich qoldiq ichida deb qabul qilinadi.
         const preOpening = sum(mv.filter(x => x.date < openingDateOf(data, x.account)), x => x.sign * x.amount);
         const equityRollForward = openingEquity + contributions - drawings + retained - preOpening;
-        return { asOf, scope, accounts, cashEquivalents: cs.equivalents, suspense: cs.suspense, uzumReceivable: cs.clearing, cash: cs.cash,
+        // Pul mablag'lari ta'rifi pul oqimi hisoboti bilan bir xil: naqd + karta + bank + aniqlanmagan (suspense alohida ko'rsatiladi).
+        return { asOf, scope, accounts, cashTotal: cs.equivalents + cs.suspense, cashEquivalents: cs.equivalents, suspense: cs.suspense, uzumReceivable: cs.clearing, cash: cs.cash,
             contractAssets, ecl, contractAssetsNet: contractAssets - ecl, ppeCost, ppeDepreciation: ppeDep, ppeNet: ppeCost - ppeDep,
             totalAssets, contractLiabilities, payables: { salaries: ap.salaries, bills: ap.bills, other: ap.other, unreconciledSalaries: ap.unreconciledSalaries }, loans: ap.loans,
             totalLiabilities, netAssets, equity: { opening: openingEquity, contributions, drawings, retained, preOpening, total: equityRollForward },
@@ -625,7 +710,17 @@
         const s = month + '-01', e = monthEnd(month), pnl = {};
         for (const scope of ['all', 'english', 'russian']) {
             pnl[scope] = {};
-            for (const basis of ['cash', 'accrual']) { const b = rawBuckets(data, s, e, scope, basis); pnl[scope][basis] = b; }
+            for (const basis of ['cash', 'accrual']) {
+                const b = rawBuckets(data, s, e, scope, basis);
+                // Oy yopilganda unda ko'rsatilgan o'tgan davr tuzatishlari ham muzlatiladi.
+                const closed = data.closedThrough || '';
+                if (closed && month === monthOf(addMonths(closed + '-01', 1))) {
+                    const prior = priorAdjustments(data, closed, scope, basis);
+                    for (const a of Object.values(prior)) b.prior_adjustments = (b.prior_adjustments || 0) + a;
+                    if (Object.keys(prior).length) b._prior = prior;
+                }
+                pnl[scope][basis] = b;
+            }
         }
         const balance = balanceSheetRaw(data, e, 'all');
         return { month, pnl, balance: { ...balance, accounts: balance.accounts.map(a => ({ id: a.id, name: a.name, kind: a.kind, entity: a.entity, balance: a.balance })) }, createdAt: new Date().toISOString() };
@@ -635,9 +730,27 @@
     const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'j', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'x', ц: 's', ч: 'ch', ш: 'sh', щ: 'sh', ъ: '', ы: 'i', ь: '', э: 'e', ю: 'yu', я: 'ya', қ: 'q', ғ: 'g', ў: 'o', ҳ: 'h' };
     function nameTokens(value) {
         const latin = String(value || '').toLowerCase().replace(/[а-яёқғўҳ]/g, ch => CYR[ch] ?? ch).replace(/[ʻ‘’'`ʼ]/g, '').replace(/h/g, 'x').replace(/w/g, 'v');
-        return [...new Set(latin.split(/[^a-z]+/).filter(t => t.length >= 3).map(t => t.replace(/(ovna|evna|ova|eva|yeva|yev|ov|ev|xon|jon|bek|oy|a)$/, '') || t))];
+        // Jinsni bildiruvchi qo'shimchalar (-a, -ova, -eva) olib tashlanmaydi: "Aziza Karimova" ≠ "Aziz Karimov".
+        // Faqat hurmat qo'shimchalari (-xon, -jon) olinadi: "Gulhayoxon" = "Gulhayo".
+        return [...new Set(latin.replace(/yo/g, 'o').replace(/yu/g, 'u').replace(/ya/g, 'a').split(/[^a-z]+/).filter(t => t.length >= 3).map(t => t.replace(/(xon|jon)$/, '') || t))];
     }
-    function tokenEq(x, y) { return x === y || (x.length >= 4 && y.length >= 4 && (x.startsWith(y) || y.startsWith(x))); }
+    function editDistance1(x, y) {
+        if (Math.abs(x.length - y.length) > 1) return false;
+        let i = 0, j = 0, diff = 0;
+        while (i < x.length && j < y.length) {
+            if (x[i] === y[j]) { i++; j++; continue; }
+            if (++diff > 1) return false;
+            if (x.length > y.length) i++; else if (y.length > x.length) j++; else { i++; j++; }
+        }
+        return diff + (x.length - i) + (y.length - j) <= 1;
+    }
+    // Bir harfli imlo farqi faqat uzun so'zlarda va jins farqi bo'lmasa (oxirida "a" qo'shilishi emas) mos deb olinadi.
+    function tokenEq(x, y) {
+        if (x === y) return true;
+        if (x.length < 6 || y.length < 6) return false;
+        if (x === y + 'a' || y === x + 'a') return false;
+        return editDistance1(x, y);
+    }
     // strong: ikkala tomonda kamida 2 ta so'z va kamida 2 tasi mos (ism + familiya).
     // weak: bir tomonda bitta so'z (masalan, faqat ism) va u mos — faqat summa ham teng bo'lsa ishlatiladi.
     function nameMatch(a, b) {

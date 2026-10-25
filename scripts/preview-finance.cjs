@@ -32,6 +32,7 @@ async function seed() {
       ('t1','Hoshimova Gulhayoxon','rus-oqituvchi','russian','t1','active'),('t2','Azimova Mohinur','rus-oqituvchi','russian','t2','active') ON CONFLICT DO NOTHING;`);
     await inflow.initSchema(pool); await cash.initSchema(pool); await finance.initSchema(pool);
     if ((await pool.query('SELECT COUNT(*) AS n FROM payment_records')).rows[0].n !== '0') return;
+    await finance.saveAccount(pool, actor, { id: 'acc-card', name: 'Karta (P2P / terminal)', kind: 'card', entity: 'common', methods: ['card', 'payme', 'click', 'paylater'], openingBalance: 2000000, openingDate: '2026-08-01' });
     const csv = fs.readFileSync(path.join(__dirname, 'fixtures/finance-preview.csv'), 'utf8').trim().split('\n').slice(1);
     let i = 0;
     for (const line of csv) {
@@ -55,11 +56,10 @@ async function seed() {
     await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 3800000, date: '2026-10-04', counterparty: 'Meta Ads', description: 'Oktyabr target', receiptUrl: proof });
     await tx({ type: 'expense', categoryCode: 'RENT', amount: 2500000, date: '2026-10-01', entity: 'common', counterparty: 'Ofis ijarasi', receiptUrl: proof });
     await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 650000, date: '2026-10-02', entity: 'common', counterparty: 'Railway, Eskiz SMS' });
-    await tx({ type: 'refund', categoryCode: 'REFUND', amount: 300000, date: '2026-10-09', paymentRecordId: 'p40', counterparty: 'Qaytarish', description: 'Kurs boshlanmasdan voz kechdi', receiptUrl: proof });
+    await tx({ type: 'refund', categoryCode: 'REFUND', amount: 300000, date: '2026-10-09', paymentRecordId: 'p40', counterparty: 'Qaytarish', description: 'Kurs boshlanmasdan voz kechdi', receiptUrl: proof, terminates: true });
     await tx({ type: 'capital', categoryCode: 'OWNER_IN', amount: 5000000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'Ta’sischi' });
     await finance.recordSalaryPayment(pool, actor, 'sal-sep-t1', { accountId: 'acc-card', date: '2026-10-03' });
     await finance.createPayable(pool, actor, { requestKey: 'preview-payable-0001', kind: 'bill', entity: 'russian', counterparty: 'Bloger reklama', categoryCode: 'MKT_OTHER', amount: 1500000, issueDate: '2026-10-10', dueDate: '2026-10-20' });
-    await finance.saveAccount(pool, actor, { id: 'acc-card', name: 'Karta (P2P / terminal)', kind: 'card', entity: 'common', methods: ['card', 'payme', 'click', 'paylater'], openingBalance: 2000000, openingDate: '2026-08-01' });
     await finance.addAccountCheck(pool, actor, 'acc-card', { date: '2026-10-20', actualBalance: 21000000, note: 'Bank ilovasi' });
 }
 

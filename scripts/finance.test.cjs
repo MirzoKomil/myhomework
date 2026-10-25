@@ -100,7 +100,7 @@ test('accrual: a full refund the next day releases the liability and leaves no p
 test('accrual: a partial refund after two months keeps earned revenue and ends recognition', () => {
     const d = data({
         receipts: [rc('a', '2026-07-01', 3000000, { leadId: 'L', contractValue: 3000000 })],
-        transactions: [tx('r', '2026-08-31', 'refund', 'REFUND', 1000000, { paymentRecordId: 'a' })]
+        transactions: [tx('r', '2026-08-31', 'refund', 'REFUND', 1000000, { paymentRecordId: 'a', terminates: true })]
     });
     const c = F.contracts(d)[0];
     const at = F.earned(c, '2026-08-31');
@@ -282,4 +282,136 @@ test('performance: 20k receipts and 3k transactions compute an overview in reaso
     F.cashFlowStatement(d, { start: '2026-05-01', end: '2026-05-31' });
     F.balanceSheet(d, '2026-05-31');
     assert.ok(Date.now() - t0 < 8000, 'took ' + (Date.now() - t0) + 'ms');
+});
+
+// ---------- Auditor regressiyalari (2-bosqich) ----------
+test('C1: a small non-terminating refund lowers the price; course continues and the liability fully clears', () => {
+    const d = data({
+        accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01' })),
+        receipts: [rc('a', '2026-01-10', 3000000, { leadId: 'L', contractValue: 3000000 })],
+        transactions: [tx('r', '2026-01-20', 'refund', 'REFUND', 200000, { paymentRecordId: 'a', terminates: false })]
+    });
+    const c = F.contracts(d)[0];
+    assert.equal(c.terminatedAt, null);
+    assert.equal(F.earned(c, '2026-04-30'), 2800000);
+    assert.equal(F.contractPosition(c, '2026-04-30'), 0);
+    assert.equal(F.contractPosition(c, '2027-12-31'), 0);
+    const p = F.profitAndLoss(d, { start: '2026-01-01', end: '2026-12-31', basis: 'accrual' });
+    assert.equal(p.net_revenue, 2800000);
+    assert.equal(F.balanceSheet(d, '2026-04-30').balanced, true);
+});
+
+test('C1: a terminating refund releases the remaining liability (retained cash becomes revenue); storno of the refund reopens', () => {
+    const base = { accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01' })), receipts: [rc('a', '2026-01-01', 3000000, { leadId: 'L', contractValue: 3000000 })] };
+    const d = data({ ...base, transactions: [tx('r', '2026-01-31', 'refund', 'REFUND', 1500000, { paymentRecordId: 'a', terminates: true })] });
+    const c = F.contracts(d)[0];
+    assert.equal(c.terminatedAt, '2026-01-31');
+    assert.equal(F.contractPosition(c, '2026-12-31'), 0);
+    assert.equal(F.earned(c, '2026-12-31'), 1500000);
+    const back = data({ ...base, transactions: [tx('r', '2026-01-31', 'refund', 'REFUND', 1500000, { paymentRecordId: 'a', terminates: true }),
+        tx('rr', '2026-02-01', 'refund', 'REFUND', 1500000, { paymentRecordId: 'a', terminates: true, reversesId: 'r' })] });
+    assert.equal(F.contracts(back)[0].terminatedAt, null);
+    assert.equal(F.earned(F.contracts(back)[0], '2026-12-31'), 3000000);
+});
+
+test('C2: storno of an equipment purchase disposes the asset — no negative PP&E, depreciation stops, books balance', () => {
+    const d = data({
+        accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01', openingBalance: a.id === 'acc-bank' ? 10000000 : 0 })),
+        transactions: [tx('cap', '2026-01-01', 'expense', 'CAPEX', 3600000, { entity: 'common', accountId: 'acc-bank', usefulLifeMonths: 36 }),
+            tx('capr', '2026-07-01', 'expense', 'CAPEX', 3600000, { entity: 'common', accountId: 'acc-bank', usefulLifeMonths: 36, reversesId: 'cap' })]
+    });
+    for (const day of ['2026-07-01', '2026-12-31', '2028-06-30']) {
+        const b = F.balanceSheet(d, day);
+        assert.equal(b.ppeCost, 0); assert.equal(b.ppeNet, 0); assert.equal(b.balanced, true);
+    }
+    const before = F.balanceSheet(d, '2026-06-30');
+    assert.ok(before.ppeNet > 0 && before.ppeNet < 3600000);
+    const h2 = F.profitAndLoss(d, { start: '2026-07-01', end: '2026-12-31', basis: 'accrual' });
+    assert.equal(h2.depreciation || 0, 0);
+    const year = F.profitAndLoss(d, { start: '2026-01-01', end: '2026-12-31', basis: 'accrual' });
+    assert.equal(year.depreciation, year.other_income); // amortizatsiya chiqarish natijasi bilan yopiladi: sof 0
+    assert.equal(year.net_profit, 0);
+});
+
+test('C3: allocation shares stay within 0–100% and add up exactly, even when one school has negative net revenue', () => {
+    const d = data({
+        receipts: [rc('e', '2026-03-02', 1000000, { entity: 'english', leadId: 'E' }), rc('r', '2026-02-10', 900000, { leadId: 'R' })],
+        transactions: [tx('ref', '2026-03-05', 'refund', 'REFUND', 900000, { paymentRecordId: 'r', terminates: true }),
+            tx('rent', '2026-03-01', 'expense', 'RENT', 1000001, { entity: 'common' }), tx('dep', '2026-03-01', 'expense', 'OTHER_EXP', 333, { entity: 'common' })],
+        accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01' }))
+    });
+    const q = { start: '2026-03-01', end: '2026-03-31' };
+    const en = F.profitAndLoss(d, { ...q, scope: 'english' }), ru = F.profitAndLoss(d, { ...q, scope: 'russian' }), all = F.profitAndLoss(d, { ...q, scope: 'all' });
+    assert.ok(en.allocation.share >= 0 && en.allocation.share <= 100);
+    assert.equal(en.allocation.share + ru.allocation.share, 100);
+    assert.equal(en.net_profit + ru.net_profit, all.net_profit);
+});
+
+test('C3/M1: common depreciation and interest are allocated into their own lines, not into operating costs', () => {
+    const d = data({
+        accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01', openingBalance: 50000000 })),
+        receipts: [rc('e', '2026-03-02', 1000000, { entity: 'english', leadId: 'E' }), rc('r', '2026-03-02', 3000000, { leadId: 'R' })],
+        transactions: [tx('cap', '2026-03-01', 'expense', 'CAPEX', 3100000, { entity: 'common', usefulLifeMonths: 31 }), tx('int', '2026-03-10', 'expense', 'INTEREST', 400000, { entity: 'common' })]
+    });
+    const q = { start: '2026-03-01', end: '2026-03-31', basis: 'accrual' };
+    const ru = F.profitAndLoss(d, { ...q, scope: 'russian' }), en = F.profitAndLoss(d, { ...q, scope: 'english' }), all = F.profitAndLoss(d, { ...q, scope: 'all' });
+    assert.equal(ru.allocated_common || 0, 0);
+    assert.equal(ru.depreciation + en.depreciation, all.depreciation);
+    assert.equal(ru.finance_cost + en.finance_cost, all.finance_cost);
+    assert.equal(ru.allocation.share, 75);
+    assert.equal(ru.ebitda, ru.gross_profit);
+});
+
+test('C4: a late change to a closed month is shown once and frozen when the next month closes', () => {
+    const base = data({ accounts: ACC.map(a => ({ ...a, openingDate: '2026-07-01' })), receipts: [rc('a', '2026-08-05', 1000000, { leadId: 'A', contractValue: 1000000 })] });
+    const aug = F.snapshotMonth(base, '2026-08');
+    const late = { ...base, salaries: [{ id: 'S', entity: 'russian', employeeName: 'U', amount: 500, status: 'unpaid', periodStart: '2026-08-01', periodEnd: '2026-08-31', accrualDate: '2026-08-31', categoryCode: 'PAY_ADMIN' }] };
+    const c1 = { ...late, closedThrough: '2026-08', snapshots: { '2026-08': aug } };
+    const sep = F.profitAndLoss(c1, { start: '2026-09-01', end: '2026-09-30', basis: 'accrual' });
+    assert.equal(sep.prior_adjustments, -500);
+    const sepSnap = F.snapshotMonth(c1, '2026-09');
+    const c2 = { ...late, closedThrough: '2026-09', snapshots: { '2026-08': aug, '2026-09': JSON.parse(JSON.stringify(sepSnap)) } };
+    assert.equal(F.profitAndLoss(c2, { start: '2026-09-01', end: '2026-09-30', basis: 'accrual' }).prior_adjustments, -500);
+    assert.equal(F.profitAndLoss(c2, { start: '2026-10-01', end: '2026-10-31', basis: 'accrual' }).prior_adjustments || 0, 0);
+    // jami davr bo'yicha tuzatish bir marta hisoblanadi
+    assert.equal(F.profitAndLoss(c2, { start: '2026-08-01', end: '2026-10-31', basis: 'accrual' }).prior_adjustments, -500);
+});
+
+test('M2: a settings change applies only from its effective date (IAS 8), history keeps the old estimate', () => {
+    const d = data({
+        accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01' })),
+        receipts: [rc('a', '2026-01-01', 3000000, { leadId: 'A', contractValue: 3000000 }), rc('b', '2026-06-01', 3000000, { leadId: 'B', contractValue: 3000000 })],
+        settingsHistory: [{ from: '1900-01-01', data: { courseMonths: { english: 3, russian: 3 } } }, { from: '2026-05-01', data: { courseMonths: { english: 3, russian: 6 } } }]
+    });
+    const [a, b] = F.contracts(d);
+    assert.equal(a.months, 3); assert.equal(b.months, 6);
+});
+
+test('M3: a frozen student stops revenue at the freeze date; a dropped-out student\'s unpaid earned part is fully impaired', () => {
+    const base = { accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01' })), receipts: [rc('a', '2026-01-01', 900000, { leadId: 'A', studentId: 'S', contractValue: 3000000 })] };
+    const frozen = data({ ...base, studentStatus: [{ studentId: 'S', frozenAt: '2026-01-31' }] });
+    const c = F.contracts(frozen)[0];
+    assert.equal(F.earned(c, '2026-03-31'), F.earned(c, '2026-01-31'));
+    const left = data({ ...base, studentStatus: [{ studentId: 'S', inactive: true }] });
+    const pos = F.contractPosition(F.contracts(left)[0], '2026-03-31');
+    assert.ok(pos > 0);
+    assert.equal(F.eclAt(left, '2026-03-31'), pos);
+    assert.equal(F.balanceSheet(left, '2026-03-31').balanced, true);
+});
+
+test('M4: one definition of cash — balance sheet cash total equals the cash-flow closing figure', () => {
+    const d = data({ receipts: [rc('a', '2026-09-10', 400000, { method: 'unknown' }), rc('b', '2026-09-11', 600000)] });
+    const b = F.balanceSheet(d, '2026-09-30'), cf = F.cashFlowStatement(d, { start: '2026-09-01', end: '2026-09-30' });
+    assert.equal(b.cashTotal, cf.closingCash);
+    assert.equal(b.suspense, cf.closingSuspense);
+});
+
+test('reconcile: gender endings are not stripped — Aziza Karimova is not Aziz Karimov', () => {
+    assert.equal(F.nameMatch('Aziza Karimova', 'Aziz Karimov'), 'none');
+    assert.equal(F.nameMatch('Gulhayoxon Hoshimova', 'Hoshimova Gulhayo'), 'strong');
+    assert.equal(F.nameMatch('Abdurahmonov Jasur', 'Abdurahmanov Jasur'), 'strong');
+    const r = F.reconcile([{ date: '2026-09-10', name: 'Aziz Karimov', amount: 1800000 }],
+        [{ id: 'x', date: '2026-09-10', name: 'Aziza Karimova', amount: 1800000 }, { id: 'y', date: '2026-09-11', name: 'Aziz Karimov', amount: 1800000 }]);
+    const m = r.results.find(x => x.external);
+    assert.equal(m.ledger.id, 'y');
 });

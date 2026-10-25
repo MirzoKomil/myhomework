@@ -22,8 +22,12 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     const rejects = async (promise, status, re) => {
         await assert.rejects(promise, e => ((status ? e.status === status : true) && (!re || re.test(e.message))) || assert.fail(`${e.status} ${e.message}`));
     };
-    const evidence = async (name = 'audit.pdf') => (await finance.storeEvidence(pool, accountant, { originalname: name, mimetype: name.endsWith('.png') ? 'image/png' : 'application/pdf', buffer: Buffer.from('evidence ' + name + seq++) })).url;
+    const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const body = name => name.endsWith('.png') ? Buffer.concat([PNG, Buffer.from('evidence ' + name + seq++)]) : Buffer.from('%PDF-1.4\nevidence ' + name + seq++);
+    const evidence = async (name = 'audit.pdf') => (await finance.storeEvidence(pool, accountant, { originalname: name, mimetype: name.endsWith('.png') ? 'image/png' : 'application/pdf', buffer: body(name) })).url;
     try {
+        // Har ishga tushirishda toza baza: testni bir xil bazada qayta-qayta ishlatish mumkin.
+        await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
         await pool.query(`CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT,email TEXT,role TEXT,avatar TEXT);
         CREATE TABLE hr_employees(id TEXT PRIMARY KEY,name TEXT,role TEXT,lang TEXT,login TEXT,department TEXT,status TEXT,start_date TEXT,join_date TEXT);
         CREATE TABLE user_sales_manager_links(user_id TEXT PRIMARY KEY,manager_id TEXT);
@@ -80,9 +84,15 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
 
         await t.test('evidence: authenticated store only; arbitrary /uploads files are rejected', async () => {
             await rejects(finance.storeEvidence(pool, accountant, { originalname: 'x.exe', mimetype: 'application/octet-stream', buffer: Buffer.from('x') }), 400);
+            await rejects(finance.storeEvidence(pool, accountant, { originalname: 'fake.pdf', mimetype: 'application/pdf', buffer: Buffer.from('<html>not a pdf') }), 400, /mazmuni/);
             const url = await evidence('rent.png');
             const f = await finance.readEvidence(pool, accountant, url.split('/').pop());
             assert.ok(fs.existsSync(f.path) && !f.path.includes(path.sep + 'uploads' + path.sep));
+            assert.equal(fs.readdirSync(path.dirname(f.path)).some(n => n.endsWith('.tmp')), false);
+            // Diskda almashtirilgan fayl berilmaydi (xesh tekshiruvi).
+            const tampered = await evidence('tamper.pdf'), tf = await finance.readEvidence(pool, accountant, tampered.split('/').pop());
+            fs.writeFileSync(tf.path, '%PDF-1.4 boshqa fayl');
+            await rejects(finance.readEvidence(pool, accountant, tampered.split('/').pop()), 409, /xesh/);
             await rejects(finance.readEvidence(pool, manager, url.split('/').pop()), 403);
             await rejects(finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'russian', type: 'expense', categoryCode: 'RENT', accountId: 'acc-card', amount: 1200000, date: '2026-10-03', counterparty: 'Ijara', receiptUrl: '/uploads/late.pdf' }), 400, /moliya bo.limi orqali/);
         });
@@ -105,8 +115,10 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             const base = { entity: 'russian', type: 'refund', categoryCode: 'REFUND', accountId: 'acc-card', date: '2026-10-04', counterparty: 'Vali' };
             await rejects(finance.createTransaction(pool, accountant, { ...base, requestKey: key(), amount: 300000, receiptUrl: await evidence() }), 400, /tushum/);
             await rejects(finance.createTransaction(pool, accountant, { ...base, requestKey: key(), amount: 300000, paymentRecordId: 'r2' }), 400, /yuklang/);
-            await rejects(finance.createTransaction(pool, accountant, { ...base, requestKey: key(), amount: 1900000, paymentRecordId: 'r2', receiptUrl: await evidence() }), 409);
-            const r = await finance.createTransaction(pool, accountant, { ...base, requestKey: key(), amount: 300000, paymentRecordId: 'r2', receiptUrl: await evidence() });
+            await rejects(finance.createTransaction(pool, accountant, { ...base, requestKey: key(), amount: 1900000, paymentRecordId: 'r2', receiptUrl: await evidence(), terminates: true }), 409);
+            await rejects(finance.createTransaction(pool, accountant, { ...base, requestKey: key(), amount: 300000, paymentRecordId: 'r2', receiptUrl: await evidence() }), 400, /tugatiladimi/);
+            const r = await finance.createTransaction(pool, accountant, { ...base, requestKey: key(), amount: 300000, paymentRecordId: 'r2', receiptUrl: await evidence(), terminates: false });
+            assert.equal((await pool.query('SELECT terminates FROM fin_transactions WHERE id=$1', [r.id])).rows[0].terminates, false);
             assert.equal((await pool.query('SELECT entity FROM fin_transactions WHERE id=$1', [r.id])).rows[0].entity, 'russian');
             await rejects(finance.voidReceipts(pool, accountant, { recordIds: ['r2'], reason: 'Dublikat yozuv', evidenceUrl: await evidence() }), 409, /qaytarish/);
         });
@@ -170,13 +182,39 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             assert.equal(list.records.some(r => r.id === 'r1' || r.id === 'rt'), false);
             assert.equal(list.records.find(r => r.id === ok.results[0].id).amount, 1000000);
             assert.equal(list.records.find(r => r.id === ok.results[1].id).name, 'Yangi O‘quvchi');
+            // O'quvchi kartasi ham tuzatiladi: +1 000 000 qo'shildi, 100 000 bekor qilindi.
+            const s1 = (await pool.query("SELECT extra_data FROM students WHERE id='s1'")).rows[0].extra_data;
+            assert.equal(s1.paidAmount, 900000); assert.equal(s1.debtAmount, 200000);
             await rejects(pool.query("DELETE FROM payment_record_voids WHERE record_id='rt'"), null, /o.chirib/);
         });
 
-        await t.test('large voids need a director', async () => {
+        await t.test('large voids, replacements, manual adds and stornos need a director (no bypass)', async () => {
             await insertReceipt('big', '2026-10-08', 7000000, { name: 'Katta Summa' });
             await rejects(finance.voidReceipts(pool, accountant, { recordIds: ['big'], reason: 'Xato kiritilgan', evidenceUrl: await evidence() }), 403);
+            // "Almashtirish" orqali chetlab o'tish yo'q
+            await rejects(finance.batchCorrections(pool, accountant, { requestKey: key(), entity: 'russian', reason: 'Summani tuzatish', evidenceUrl: await evidence(),
+                operations: [{ kind: 'replace', replacesId: 'big', date: '2026-10-08', amount: 1 }] }), 403);
+            await rejects(finance.batchCorrections(pool, accountant, { requestKey: key(), entity: 'russian', reason: 'Katta tushum qo‘shish', evidenceUrl: await evidence(),
+                operations: [{ kind: 'add', date: '2026-10-08', amount: 6000000, method: 'bank', leadId: 'l9' }] }), 403);
             await finance.voidReceipts(pool, admin, { recordIds: ['big'], reason: 'Xato kiritilgan', evidenceUrl: await evidence() });
+            const big = await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 6000000, date: '2026-10-08', counterparty: 'Ijara', receiptUrl: await evidence() });
+            await rejects(finance.reverseTransaction(pool, accountant, big.id, { reason: 'Xato kiritilgan' }), 403);
+            await finance.reverseTransaction(pool, admin, big.id, { reason: 'Xato kiritilgan' });
+            // Qaytarish limiti tushum bo'yicha jami: bo'laklab chetlab o'tib bo'lmaydi
+            await insertReceipt('big3', '2026-10-09', 9000000, { name: 'Uch Bo‘lak' });
+            const rf = { entity: 'russian', type: 'refund', categoryCode: 'REFUND', accountId: 'acc-bank', date: '2026-10-09', counterparty: 'Uch', paymentRecordId: 'big3', terminates: false };
+            await finance.createTransaction(pool, accountant, { ...rf, requestKey: key(), amount: 4000000, receiptUrl: await evidence() });
+            await rejects(finance.createTransaction(pool, accountant, { ...rf, requestKey: key(), amount: 4000000, receiptUrl: await evidence() }), 403, /jami/);
+        });
+
+        await t.test('contract value is frozen in finance at the first receipt; lead edits do not rewrite history', async () => {
+            const before = (await pool.query("SELECT value FROM fin_contract_values WHERE record_id='r1'")).rows[0].value;
+            assert.equal(Number(before), 2100000);
+            await pool.query(`UPDATE leads SET extra_data=jsonb_set(extra_data,'{paymentSurvey,totalAmount}','9000000') WHERE id='l1'`);
+            assert.equal(Number((await pool.query("SELECT value FROM fin_contract_values WHERE record_id='r1'")).rows[0].value), 2100000);
+            await rejects(pool.query("UPDATE fin_contract_values SET value=1 WHERE record_id='r1'"), null, /o.zgartirib/);
+            await rejects(pool.query('UPDATE fin_accounts SET opening_balance=5 WHERE id=$1', ['acc-card']), null, /boshlang/);
+            await rejects(pool.query('TRUNCATE fin_audit'), null, /o.zgartirib/);
         });
 
         await t.test('salary cash-out requires a paid payroll row, is recorded once and clears the liability', async () => {
@@ -208,11 +246,24 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             const rv = await finance.reverseTransaction(pool, accountant, legacy, { reason: 'Eski test yozuvi' });
             assert.equal((await pool.query("SELECT TO_CHAR(txn_date,'YYYY-MM-DD') AS d FROM fin_transactions WHERE id=$1", [rv.id])).rows[0].d, F.today());
             const s = await finance.overview(pool, admin, {});
-            await finance.saveSettings(pool, admin, { revision: s.settingsRevision, data: { courseMonths: { english: 3, russian: 6 } } });
+            const saved = await finance.saveSettings(pool, admin, { revision: s.settingsRevision, data: { courseMonths: { english: 3, russian: 6 } } });
+            assert.equal(saved.effectiveFrom, F.today());
+            // Kech aniqlangan holat: o'quvchi sentyabrda muzlatilgan edi (yopilgan oyning hisoblash usuli natijasi o'zgaradi).
+            await pool.query(`UPDATE students SET extra_data=extra_data || '{"frozen":true,"frozenAt":"2026-09-20T10:00:00Z"}'::jsonb WHERE id='s1'`);
             assert.equal(await sep('cash'), cashBefore);
             assert.equal(await sep('accrual'), accBefore);
             const oct = await finance.overview(pool, accountant, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' });
             assert.ok(oct.pnl.prior_adjustments !== 0);
+            // Maosh jadvali ham yopilgan davrga yozilmaydi; summasi o'zgarmaydi, holati (to'landi) o'zgarishi mumkin.
+            await rejects(pool.query("UPDATE salary_transactions SET amount=1 WHERE id='sal1'"), null, /yopilgan/);
+            await rejects(pool.query("INSERT INTO salary_transactions VALUES('sal9','t1','russian','2026-09-01','2026-09-15',100,'unpaid',NULL,NULL)"), null, /yopilgan/);
+            await pool.query("UPDATE salary_transactions SET paid_at=NOW() WHERE id='sal1'");
+            // Muzlatilgan nusxa o'zgarmaydi va xeshi audit jurnalida
+            await rejects(pool.query("UPDATE fin_period_snapshots SET data='{}' WHERE month='2026-09'"), null, /nusxa/);
+            await rejects(pool.query("DELETE FROM fin_period_snapshots WHERE month='2026-09'"), null, /nusxa/);
+            const lockAudit = (await pool.query("SELECT after_data FROM fin_audit WHERE action='period-lock' ORDER BY id DESC LIMIT 1")).rows[0].after_data;
+            const row = (await pool.query("SELECT sha256 FROM fin_period_snapshots WHERE month='2026-09'")).rows[0];
+            assert.equal(lockAudit.snapshotSha256['2026-09'], row.sha256);
             assert.equal(oct.balance.balanced, true, String(oct.balance.imbalance));
             await rejects(finance.lockMonth(pool, accountant, { month: '2026-09', locked: false, note: 'Tuzatish kerak' }), 403);
             await finance.lockMonth(pool, admin, { month: '2026-09', locked: false, note: 'Auditor so‘rovi bilan' });
