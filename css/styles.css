@@ -9044,3 +9044,83 @@ body.modal-open {
 .sfx-warn{color:#B45309;font-weight:700}
 #tab-sales .sfx-card + .sfx-card,#tab-sales .sfx-mgr-card + .sfx-card{margin-bottom:16px}
 .sfx-rows--wide .sfx-row{grid-template-columns:minmax(150px,210px) minmax(0,1fr) 170px}
+
+/* ===== Lidlar: Sana va Manba filtrlari ===== */
+.leads-date-filter-wrap { min-width: 190px; flex: 0 1 220px; }
+.leads-source-filter-box { min-width: 180px; flex: 0 1 200px; }
+.leads-filter-trigger .leads-date-icon {
+    margin-left: 0;
+    stroke: var(--purple);
+}
+.leads-date-dropdown {
+    min-width: 300px;
+    max-height: none;
+    overflow: visible;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.leads-date-dropdown[hidden] { display: none; }
+.leads-date-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.leads-date-presets button {
+    padding: 7px 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    font-family: inherit;
+    cursor: pointer;
+}
+.leads-date-presets button:hover { border-color: var(--purple); }
+.leads-date-presets button.active {
+    background: var(--purple);
+    border-color: var(--purple);
+    color: #fff;
+}
+.leads-date-mode {
+    display: flex;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--text);
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+.leads-date-mode label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.leads-date-mode input { accent-color: var(--purple); }
+.leads-date-inputs { display: flex; gap: 8px; }
+.leads-date-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.leads-date-field[hidden] { display: none; }
+.leads-date-field input {
+    width: 100%;
+    min-height: 36px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+}
+.leads-date-apply { align-self: stretch; min-height: 36px; }
+[data-theme="dark"] .leads-date-field input { color-scheme: dark; }
+
+@media (max-width: 640px) {
+    .leads-date-filter-wrap,
+    .leads-source-filter-box { flex: 1 1 100%; max-width: none; }
+    .leads-date-dropdown { min-width: 0; left: 0; right: 0; }
+}
