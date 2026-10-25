@@ -13,7 +13,7 @@
             pdfCache.set(url, (async () => {
                 if (typeof _ensurePdfJsLoaded === 'function') await _ensurePdfJsLoaded();
                 if (!window.pdfjsLib) throw new Error("PDF kutubxonasi yuklanmadi");
-                return window.pdfjsLib.getDocument(url).promise;
+                return window.pdfjsLib.getDocument({ url, isEvalSupported: false }).promise;
             })());
         }
         try { return await pdfCache.get(url); }

@@ -195,6 +195,7 @@ audio { width: 100%; }
 .lh-kpi b { font-size: 22px; }
 .lh-kpi small { font-size: 12px; color: var(--lh-muted); }
 .lh-kpi.is-warn b { color: var(--lh-low); }
+.lh-kpis.is-small { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .lh-kpis.is-small .lh-kpi { padding: 10px; }
 .lh-kpis.is-small .lh-kpi b { font-size: 18px; }
 
@@ -248,6 +249,24 @@ audio { width: 100%; }
 .lh-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .lh-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .lh-progress { font-size: 13px; color: var(--lh-muted); }
+
+/* Qo'shimchalar: ikki ustunli kartalar, belgilar, davomat, og'zaki imtihon */
+.lh-two-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.lh-yes { color: var(--lh-ok); font-weight: 800; }
+.lh-no { color: var(--lh-muted); }
+.lh-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--lh-muted); cursor: pointer; }
+.lh-toggle input { width: 16px; height: 16px; accent-color: var(--purple); }
+.lh-att { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.lh-att li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lh-cell.has-grade { box-shadow: inset 0 -3px 0 var(--purple); }
+.lh-when { font-size: 13px !important; line-height: 1.3; }
+.lh-icon { width: 34px; min-height: 30px; padding: 0; margin-left: 8px; font-size: 16px; }
+.lh-meta { display: flex; align-items: center; }
+.lh-flag.frozen { background: var(--lh-video-bg); color: var(--lh-video); }
+.lh-pre { white-space: pre-line; }
+.lh-oral { display: grid; gap: 10px; margin-top: 8px; }
+.lh-oral-task { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; display: grid; gap: 4px; font-size: 14px; }
+.lh-oral-task .lh-rules { gap: 2px; }
 
 /* Telefon va planshet */
 @media (max-width: 1100px) {

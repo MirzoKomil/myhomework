@@ -13,6 +13,11 @@
     const toast = m => (typeof showMiniToast === 'function' ? showMiniToast(m, 2600) : alert(m));
     const plain = s => String(s ?? '').replace(/́/g, '');
     const LANG_LABEL = { english: 'Ingliz tili', russian: 'Rus tili' };
+    const RULES = window.AcademicRules || { PASS_PERCENT: 65, UNLOCK_PERCENT: 50, LIVE_AUTO_UNLOCK: 60, EXAM_INTERVAL: 12, EXAM_PASS_PERCENT: 70, LESSONS_PER_WEEK: 6, SECTIONS: {} };
+    const CACHE_MS = 3 * 60000;
+    // Faqat o'z serverimizdagi yoki https havolalar href/src'ga tushadi.
+    const safeUrl = u => (/^(https:\/\/|\/(?!\/))/i.test(String(u || '').trim()) ? String(u).trim() : '');
+    const isLocalFile = u => /^\/uploads\//.test(String(u || ''));
 
     const VIEWS = [
         { id: 'lessons', label: '72 dars' },
@@ -34,13 +39,19 @@
     const KIND_ICON = { live_slides: '🎥', video_slides: '▶️', grammar_slides: '📐', lesson_plan: '🗒', teacher_guide: '🧑‍🏫', extra: '📎', book: '📖', teacher_book: '📘', methodology: '🧭' };
     const DOT_KINDS = [['live_slides', 'Jonli dars slaydlari'], ['video_slides', 'Videodars slaydlari'], ['grammar_slides', 'Grammatika slaydlari'], ['teacher_guide', "Ustoz qo'llanmasi"]];
     const HW_KIND = { matching: 'Moslashtirish', fillBlank: "Bo'sh joy", multipleChoice: 'Test', sentenceBuild: 'Gap tuzish', reading: "O'qish va tarjima", creative: 'Ijodiy', record: 'Ovoz yozish', roleplay: 'Rolli o\'yin' };
-    const SECTION_LABEL = { dars: 'Dars sahifasi', video: 'Videodars', slaydlar: 'Slaydlar', sozlar: "So'zlar", audio: 'Audio dialog', vazifa: 'Uy vazifasi', tekshiruv: 'Tekshiruv', xatolar: 'Xatolar ustida', bosh: 'Bosh sahifa', mashq: "O'yin mashqlar", lugat: "Lug'at", grammatika: 'Grammatika', imtihonlar: 'Imtihonlar', takrorlash: 'Takrorlash' };
+    const SECTION_LABEL = RULES.SECTIONS || {};
 
     const S = {
         el: null, ctx: null, lang: 'english', view: 'lessons', hub: {}, lessonCache: {}, selected: {},
         tab: 'plan', search: '', filter: 'all', students: {}, studentDetail: {}, openStudent: null,
-        studentSort: 'attention', duration: null, bookState: {}, reader: null,
+        studentSort: 'attention', duration: null, bookState: {}, reader: null, group: '', nearOnly: true, loadedAt: {},
     };
+    const fresh = key => S.loadedAt[key] && Date.now() - S.loadedAt[key] < CACHE_MS;
+    const stamp = key => { S.loadedAt[key] = Date.now(); };
+    function refreshAll() {
+        S.hub = {}; S.lessonCache = {}; S.students = {}; S.studentDetail = {}; S.loadedAt = {};
+        ensureHub().then(render).catch(renderError);
+    }
 
     function loadPrefs() {
         try {
@@ -49,10 +60,12 @@
             if (p.tab) S.tab = p.tab;
             if (p.selected) S.selected = p.selected;
             if (p.duration) S.duration = p.duration;
+            if (typeof p.group === 'string') S.group = p.group;
+            if (typeof p.nearOnly === 'boolean') S.nearOnly = p.nearOnly;
         } catch { /* maxfiy rejim */ }
     }
     function savePrefs() {
-        try { localStorage.setItem('mh_lesson_hub', JSON.stringify({ view: S.view, tab: S.tab, selected: S.selected, duration: S.duration })); } catch { /* */ }
+        try { localStorage.setItem('mh_lesson_hub', JSON.stringify({ view: S.view, tab: S.tab, selected: S.selected, duration: S.duration, group: S.group, nearOnly: S.nearOnly })); } catch { /* */ }
     }
 
     // ── Kirish nuqtasi ──────────────────────────────────────────────────────
@@ -67,8 +80,9 @@
     }
 
     async function ensureHub(force) {
-        if (S.hub[S.lang] && !force) return S.hub[S.lang];
+        if (S.hub[S.lang] && !force && fresh('hub:' + S.lang)) return S.hub[S.lang];
         const data = await api(`/api/academic/hub?lang=${S.lang}`);
+        stamp('hub:' + data.lang);
         if (data.lang !== S.lang) S.lang = data.lang; // ustoz — o'z tiliga majburlanadi
         S.hub[S.lang] = data;
         if (!S.selected[S.lang]) {
@@ -94,15 +108,18 @@
         <div class="lh">
             <div class="lh-top">
                 <div class="lh-views" role="tablist" aria-label="Darslik bo'limlari">
-                    ${VIEWS.map(v => `<button type="button" role="tab" class="lh-view${S.view === v.id ? ' is-on' : ''}" aria-selected="${S.view === v.id}" data-view="${v.id}">${esc(v.label)}</button>`).join('')}
+                    ${VIEWS.map(v => `<button type="button" role="tab" tabindex="${S.view === v.id ? 0 : -1}" class="lh-view${S.view === v.id ? ' is-on' : ''}" aria-selected="${S.view === v.id}" data-view="${v.id}">${esc(v.label)}</button>`).join('')}
                 </div>
-                <div class="lh-meta">${hub ? `${esc(LANG_LABEL[hub.lang])} · ${esc(hub.course?.name || 'kurs')} · 72 dars · ${hub.studentCount} o'quvchi` : 'Yuklanmoqda…'}</div>
+                <div class="lh-meta">${hub ? `${esc(LANG_LABEL[hub.lang])} · ${esc(hub.course?.name || 'kurs')} · 72 dars · ${hub.studentCount} o'quvchi` : 'Yuklanmoqda…'}
+                    <button type="button" class="lh-btn lh-icon" data-lh-refresh title="Ma'lumotlarni yangilash" aria-label="Ma'lumotlarni yangilash">⟳</button></div>
             </div>
             <div class="lh-main" id="lhMain">${hub ? '' : skeleton()}</div>
         </div>`;
         el.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
             S.view = b.dataset.view; savePrefs(); render();
         }));
+        bindTablistKeys(el.querySelector('.lh-views'));
+        el.querySelector('[data-lh-refresh]')?.addEventListener('click', refreshAll);
         if (!hub) return;
         const main = el.querySelector('#lhMain');
         if (S.view === 'lessons') renderLessonsView(main);
@@ -110,6 +127,23 @@
         else if (S.view === 'book') renderBookView(main);
         else if (S.view === 'guide') renderGuideView(main);
         else renderExtraView(main);
+    }
+
+    // Yorliqlar: ←/→, Home/End bilan o'tish (WAI-ARIA tabs).
+    function bindTablistKeys(list) {
+        if (!list || list.dataset.keys) return;
+        list.dataset.keys = '1';
+        list.addEventListener('keydown', e => {
+            const tabs = [...list.querySelectorAll('[role="tab"]')];
+            const i = tabs.indexOf(document.activeElement);
+            if (i < 0) return;
+            const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+            if (next === undefined) return;
+            e.preventDefault();
+            const t = tabs[(next + tabs.length) % tabs.length];
+            t.focus();
+            t.click();
+        });
     }
 
     const skeleton = () => `<div class="lh-skel"><div></div><div></div><div></div></div>`;
@@ -198,9 +232,9 @@
         const box = document.getElementById('lhLesson');
         if (!box) return;
         const key = `${S.lang}:${no}`;
-        if (!S.lessonCache[key]) {
+        if (!S.lessonCache[key] || !fresh('lesson:' + key)) {
             box.innerHTML = skeleton();
-            try { S.lessonCache[key] = await api(`/api/academic/lessons/${no}?lang=${S.lang}`); }
+            try { S.lessonCache[key] = await api(`/api/academic/lessons/${no}?lang=${S.lang}`); stamp('lesson:' + key); }
             catch (err) { box.innerHTML = `<div class="lh-error"><b>Darsni yuklab bo'lmadi</b><span>${esc(err.message)}</span></div>`; return; }
             if (S.selected[S.lang] !== no) return;
         }
@@ -239,21 +273,25 @@
                 <button type="button" class="lh-btn" data-act="board">✏️ Doska</button>
                 ${book ? `<button type="button" class="lh-btn" data-act="book">📖 Kitobda ochish${book.page ? ` · ${book.page}-bet` : ''}</button>` : ''}
                 <button type="button" class="lh-btn" data-act="print">🖨 Rejani chop etish</button>
+                ${L.type === 'live' && typeof window.switchTeachersSection === 'function' ? '<button type="button" class="lh-btn" data-act="attendance">✓ Davomat</button>' : ''}
             </div>
         </header>
         <div class="lh-tabs" role="tablist" aria-label="Dars bo'limlari">
-            ${TABS.map(t => `<button type="button" role="tab" class="lh-tab${S.tab === t.id ? ' is-on' : ''}" aria-selected="${S.tab === t.id}" data-tab="${t.id}">${esc(t.label)}${tabCount[t.id] ? ` <span class="lh-count">${tabCount[t.id]}</span>` : ''}</button>`).join('')}
+            ${TABS.map(t => `<button type="button" role="tab" id="lhTab-${t.id}" aria-controls="lhPanel" tabindex="${S.tab === t.id ? 0 : -1}" class="lh-tab${S.tab === t.id ? ' is-on' : ''}" aria-selected="${S.tab === t.id}" data-tab="${t.id}">${esc(t.label)}${tabCount[t.id] ? ` <span class="lh-count">${tabCount[t.id]}</span>` : ''}</button>`).join('')}
         </div>
-        <div class="lh-panel" role="tabpanel"></div>`;
+        <div class="lh-panel" role="tabpanel" id="lhPanel" aria-labelledby="lhTab-${S.tab}"></div>`;
         box.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
             S.tab = b.dataset.tab; savePrefs();
-            box.querySelectorAll('[data-tab]').forEach(x => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-selected', x === b); });
+            box.querySelectorAll('[data-tab]').forEach(x => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-selected', x === b); x.tabIndex = x === b ? 0 : -1; });
+            box.querySelector('.lh-panel').setAttribute('aria-labelledby', b.id);
             renderTab(box.querySelector('.lh-panel'), data);
         }));
         box.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => openLesson(L.no + Number(b.dataset.go), { scroll: true })));
         box.querySelector('[data-act="present"]').addEventListener('click', () => present(data));
         box.querySelector('[data-act="board"]').addEventListener('click', () => present(data, { blank: true }));
         box.querySelector('[data-act="print"]').addEventListener('click', () => printPlan(data));
+        box.querySelector('[data-act="attendance"]')?.addEventListener('click', () => window.switchTeachersSection('attendance'));
+        bindTablistKeys(box.querySelector('.lh-tabs'));
         box.querySelector('[data-act="book"]')?.addEventListener('click', () => {
             S.bookState[S.lang] = { id: book.id, page: book.page || 1 };
             S.view = 'book'; savePrefs(); render();
@@ -270,11 +308,11 @@
                 L.type === 'live' ? "Darsda ko'rsatiladigan slaydlar. PDF formatda yuklang — prezentatsiya rejimida ustiga chizish mumkin." : "Bu videodars. Jonli dars slaydlari odatda keyingi (jonli) darsda bo'ladi.");
         } else if (t === 'video') {
             panel.innerHTML = `
-                ${L.videoUrl ? `<div class="lh-card"><div class="lh-card-h"><b>Videodars</b><a class="lh-btn" href="${esc(L.videoUrl)}" target="_blank" rel="noopener">Ochish</a></div>${videoEmbed(L.videoUrl)}</div>` : ''}
+                ${safeUrl(L.videoUrl) ? `<div class="lh-card"><div class="lh-card-h"><b>Videodars</b><a class="lh-btn" href="${esc(safeUrl(L.videoUrl))}" target="_blank" rel="noopener">Ochish</a></div>${videoEmbed(safeUrl(L.videoUrl))}</div>` : ''}
                 ${L.slides.length ? `<div class="lh-card"><div class="lh-card-h"><b>Ilovadagi slaydlar</b> <span class="lh-muted">${L.slides.length} ta · o'quvchi ilovada ko'radi</span>
                     <button type="button" class="lh-btn" data-present-src="app-slides">▶ Ko'rsatish</button></div>
-                    <div class="lh-thumbs">${L.slides.map((s, i) => s.imageUrl ? `<button type="button" class="lh-thumb" data-slide="${i}" title="${esc(s.title)}"><img loading="lazy" src="${esc(s.imageUrl)}" alt="${esc(s.title || `${i + 1}-slayd`)}"><span>${i + 1}</span></button>`
-                        : `<div class="lh-thumb is-text"><b>${esc(s.title)}</b><span>${esc(s.body).slice(0, 120)}</span></div>`).join('')}</div></div>` : ''}
+                    <div class="lh-thumbs">${L.slides.map((s, i) => s.imageUrl ? `<button type="button" class="lh-thumb" data-slide="${i}" title="${esc(s.title)}"><img loading="lazy" src="${esc(safeUrl(s.imageUrl))}" alt="${esc(s.title || `${i + 1}-slayd`)}"><span>${i + 1}</span></button>`
+                        : `<div class="lh-thumb is-text"><b>${esc(s.title)}</b><span>${esc(String(s.body).slice(0, 120))}</span></div>`).join('')}</div></div>` : ''}
                 ${materialSection(data, 'video_slides', 'Videodars slaydlari (fayllar)', "Video darsning PDF slaydlari — o'quvchi videoni ko'rmagan bo'lsa jonli darsda tez o'tib ketish uchun.")}
                 ${!L.videoUrl && !L.slides.length ? `<div class="lh-note">Bu dars uchun ilovada video yo'q — o'quvchi konspekt va slaydlar orqali o'rganadi.</div>` : ''}`;
             panel.querySelector('[data-present-src="app-slides"]')?.addEventListener('click', () => present(data, { prefer: 'app-slides' }));
@@ -289,7 +327,7 @@
                     <button type="button" class="lh-btn" data-present-src="words">▶ Kartochkalarda ko'rsatish</button></div>
                 <div class="lh-words">${L.vocabulary.map(w => `
                     <div class="lh-word">
-                        ${w.imageUrl ? `<img loading="lazy" src="${esc(w.imageUrl)}" alt="">` : `<div class="lh-word-ic">${esc(w.icon || '🔤')}</div>`}
+                        ${safeUrl(w.imageUrl) ? `<img loading="lazy" src="${esc(safeUrl(w.imageUrl))}" alt="">` : `<div class="lh-word-ic">${esc(w.icon || '🔤')}</div>`}
                         <div><b>${esc(w.word)}</b>${w.transcript ? ` <span class="lh-muted">${esc(w.transcript)}</span>` : ''}
                         <div>${esc(w.translation)}</div>${w.example ? `<div class="lh-ex">${esc(w.example)}</div>` : ''}</div>
                     </div>`).join('')}</div></div>` : '<div class="lh-note">Bu darsda so\'zlar kiritilmagan.</div>';
@@ -297,7 +335,7 @@
         } else if (t === 'dialogs') {
             const blocks = L.audioDialogs.map(d => `
                 <div class="lh-card"><div class="lh-card-h"><b>🎧 ${esc(d.title)}</b>${d.bookPart ? `<span class="lh-muted">Kitob ${d.bookPart}-qism${d.trackNo ? `, ${d.trackNo}-trek` : ''}</span>` : ''}</div>
-                ${d.audioUrl ? `<audio controls preload="none" src="${esc(d.audioUrl)}"></audio>` : ''}
+                ${safeUrl(d.audioUrl) ? `<audio controls preload="none" src="${esc(safeUrl(d.audioUrl))}"></audio>` : ''}
                 ${linesTable(d.lines)}</div>`);
             if (L.dialog) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>💬 Kitobdagi dialog${L.dialog.title ? `: ${esc(L.dialog.title)}` : ''}</b></div>${linesTable(L.dialog.lines)}</div>`);
             if (L.text) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>📄 O'qish matni${L.text.title ? `: ${esc(L.text.title)}` : ''}</b></div>
@@ -357,31 +395,43 @@
 
     function checklistKey(L) { return `mh_lh_check:${S.lang}:${L.no}`; }
 
+    const isShort = d => d <= 20;
+    function planBlocks(plan, duration) {
+        if (plan.mode !== 'live') return plan.blocks;
+        return planMinutes(isShort(duration) && plan.shortBlocks ? plan.shortBlocks : plan.blocks, duration);
+    }
+    const blockList = items => (items.length ? `<ul class="${items.some(i => String(i).length > 40) ? 'is-long' : ''}">${items.map(i => `<li>${esc(plain(i))}</li>`).join('')}</ul>` : '');
+
     function renderPlan(panel, data) {
         const L = data.lesson, plan = L.plan;
         const duration = S.duration || 60;
-        const blocks = planMinutes(plan.blocks, duration);
+        const blocks = planBlocks(plan, duration);
+        const durations = [...new Set([15, 20, 30, 45, 60, 80, 90, S.hub[S.lang]?.defaultDuration, duration].filter(Boolean))].sort((a, b) => a - b);
         let checks = {};
         try { checks = JSON.parse(localStorage.getItem(checklistKey(L)) || '{}'); } catch { /* */ }
         const missing = data.classStats.prevHomeworkMissing || [];
         const files = [...lessonMaterials(data, 'lesson_plan'), ...lessonMaterials(data, 'teacher_guide')];
         panel.innerHTML = `
-        ${plan.mode === 'live' && missing.length ? `<div class="lh-alert"><b>Darsdan oldin:</b> oldingi darsni 50% dan kam bajarganlar (${missing.length}): ${missing.map(s => esc(s.name)).join(', ')}</div>` : ''}
+        ${plan.mode === 'live' && missing.length ? `<div class="lh-alert" role="status"><b>Darsdan oldin:</b> shu darsga kelayotgan, lekin oldingi darsni ${RULES.UNLOCK_PERCENT}% dan kam bajarganlar (${missing.length}): ${missing.map(s => esc(s.name)).join(', ')}</div>` : ''}
         <div class="lh-card">
-            <div class="lh-card-h"><b>${plan.mode === 'live' ? 'Jonli dars rejasi' : 'Videodars — ustoz uchun yo\'riqnoma'}</b>
-                ${plan.mode === 'live' ? `<label class="lh-dur">Dars davomiyligi <select aria-label="Dars davomiyligi">${[15, 20, 30, 45, 60, 80, 90].map(d => `<option value="${d}"${d === duration ? ' selected' : ''}>${d} daqiqa</option>`).join('')}</select></label>` : ''}
+            <div class="lh-card-h"><b>${plan.mode === 'live' ? 'Jonli dars rejasi' : "Videodars — ustoz uchun yo'riqnoma"}</b>
+                ${plan.mode === 'live' ? `<label class="lh-dur">Dars davomiyligi <select>${durations.map(d => `<option value="${d}"${d === duration ? ' selected' : ''}>${d} daqiqa</option>`).join('')}</select></label>` : ''}
             </div>
-            <p class="lh-muted lh-summary">${esc(plan.summary)}</p>
+            <p class="lh-muted lh-summary">${esc(plan.summary)}${plan.mode === 'live' && isShort(duration) ? " · Qisqa (individual) dars shabloni." : ''}</p>
             <ol class="lh-timeline">${blocks.map(b => `
                 <li class="lh-block">
-                    <div class="lh-block-time">${plan.mode === 'live' ? `<b>${b.minutes} daq</b><span>${mmss(b.from)}–${mmss(b.to)}</span>` : `<b>${b.share}%</b><span>ulush</span>`}</div>
+                    <div class="lh-block-time">${plan.mode === 'live' ? `<b>${b.minutes} daq</b><span>${mmss(b.from)}–${mmss(b.to)}</span>` : `<b class="lh-when">${esc(b.when || '')}</b>`}</div>
                     <div class="lh-block-body">
                         <div class="lh-block-title">${esc(b.title)}</div>
-                        ${b.items.length ? `<ul class="${b.items.some(i => String(i).length > 40) ? 'is-long' : ''}">${b.items.map(i => `<li>${esc(plain(i))}</li>`).join('')}</ul>` : ''}
+                        ${blockList(b.items)}
                         ${b.tip ? `<div class="lh-tip">💡 ${esc(b.tip)}</div>` : ''}
                     </div>
                 </li>`).join('')}</ol>
         </div>
+        ${plan.anticipated?.length ? `<div class="lh-two-cards">
+            <div class="lh-card"><div class="lh-card-h"><b>Kutiladigan qiyinchiliklar</b></div><ul class="lh-rules">${plan.anticipated.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
+            <div class="lh-card"><div class="lh-card-h"><b>Turli darajadagi o'quvchilar</b></div><ul class="lh-rules">${(plan.differentiation || []).map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
+        </div>` : ''}
         ${L.review.length ? `<div class="lh-card"><div class="lh-card-h"><b>O'tgan darsni eslash savollari</b><span class="lh-muted">videodars boshida o'quvchi ham ko'radi</span></div>
             <ol class="lh-qa">${L.review.map(r => `<li>${esc(r.q)}${r.a ? ` <span class="lh-ans">→ ${esc(r.a)}</span>` : ''}</li>`).join('')}</ol></div>` : ''}
         <div class="lh-card"><div class="lh-card-h"><b>Tayyorgarlik ro'yxati</b><span class="lh-muted">belgilar shu qurilmada saqlanadi</span></div>
@@ -399,19 +449,21 @@
 
     function printPlan(data) {
         const L = data.lesson, plan = L.plan;
-        const blocks = planMinutes(plan.blocks, S.duration || 60);
+        const duration = S.duration || 60;
+        const blocks = planBlocks(plan, duration);
         const w = window.open('', '_blank');
         if (!w) return toast("Brauzer yangi oynani bloklab qo'ydi");
         w.document.write(`<!doctype html><html lang="uz"><head><meta charset="utf-8"><title>${L.no}-dars rejasi</title>
             <style>body{font:14px/1.5 system-ui,sans-serif;margin:32px;color:#111}h1{font-size:20px;margin:0 0 4px}.m{color:#555}
             table{width:100%;border-collapse:collapse;margin-top:16px}td,th{border:1px solid #ccc;padding:8px;vertical-align:top;text-align:left}
-            th{background:#f3f3f7;width:110px}ul{margin:4px 0 0 18px;padding:0}.tip{color:#555;font-size:12px;margin-top:4px}
+            th{background:#f3f3f7;width:120px}ul{margin:4px 0 0 18px;padding:0}.tip{color:#555;font-size:12px;margin-top:4px}
             .words{columns:3;margin-top:8px}</style></head><body>
             <h1>${L.no}-dars · ${esc(plain(L.name))}</h1>
-            <div class="m">${L.type === 'live' ? `Jonli dars · ${S.duration || 60} daqiqa` : 'Videodars'} · ${esc(LANG_LABEL[S.lang])}</div>
+            <div class="m">${L.type === 'live' ? `Jonli dars · ${duration} daqiqa` : 'Videodars'} · ${esc(LANG_LABEL[S.lang])}</div>
             ${L.cando ? `<p><b>Maqsad:</b> ${esc(L.cando)}</p>` : ''}
-            <table>${blocks.map(b => `<tr><th>${L.type === 'live' ? `${mmss(b.from)}–${mmss(b.to)}<br>${b.minutes} daq` : `${b.share}%`}</th><td><b>${esc(b.title)}</b>
+            <table>${blocks.map(b => `<tr><th>${L.type === 'live' ? `${mmss(b.from)}–${mmss(b.to)}<br>${b.minutes} daq` : esc(b.when || '')}</th><td><b>${esc(b.title)}</b>
                 ${b.items.length ? `<ul>${b.items.map(i => `<li>${esc(plain(i))}</li>`).join('')}</ul>` : ''}${b.tip ? `<div class="tip">${esc(b.tip)}</div>` : ''}</td></tr>`).join('')}</table>
+            ${plan.anticipated?.length ? `<h3>Kutiladigan qiyinchiliklar</h3><ul>${plan.anticipated.map(a => `<li>${esc(a)}</li>`).join('')}</ul>` : ''}
             ${L.vocabulary.length ? `<h3>So'zlar</h3><div class="words">${L.vocabulary.map(v => `<div><b>${esc(v.word)}</b> — ${esc(v.translation)}</div>`).join('')}</div>` : ''}
             <script>window.onload=()=>window.print()<\/script></body></html>`);
         w.document.close();
@@ -430,26 +482,40 @@
                     <span class="lh-muted">${h.questions} ta savol${h.teacherGraded ? ' · ustoz baholaydi' : ' · avtomatik tekshiriladi'}</span></summary>
                 ${h.preview.length ? `<ol class="lh-qa">${h.preview.map(p => `<li>${esc(p.q)}${p.options?.length ? ` <span class="lh-muted">(${p.options.map(esc).join(' / ')})</span>` : ''}${p.a ? ` <span class="lh-ans">→ ${esc(p.a)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="lh-muted">Savollar ro\'yxati yo\'q</div>'}
             </details>`).join('') : '<div class="lh-note">Bu darsda uy vazifasi yo\'q.</div>'}
-        <div class="lh-muted lh-foot">Qism ${65}% dan yuqori bajarilganda o'tgan hisoblanadi. O'quvchilar natijasi — "O'quvchilar" yorlig'ida.</div>`;
+        <div class="lh-muted lh-foot">Qism ${RULES.PASS_PERCENT}% dan yuqori bajarilganda o'tgan hisoblanadi. O'quvchilar natijasi — "O'quvchilar" yorlig'ida.</div>`;
     }
 
     // ── Shu dars bo'yicha o'quvchilar ───────────────────────────────────────
+    const groupSelect = groups => (groups.length ? `<select class="lh-input lh-small" data-group aria-label="Guruh">
+        <option value="">Barcha guruhlar</option>${groups.map(g => `<option value="${esc(g)}"${S.group === g ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>` : '');
+    const yesNo = (v, label) => (v ? `<span class="lh-yes" aria-label="${esc(label)}: bajarilgan" title="Bajarilgan">✓</span>` : `<span class="lh-no" aria-label="${esc(label)}: bajarilmagan" title="Bajarilmagan">—</span>`);
+
     function renderClass(panel, data) {
-        const rows = data.classStats.students;
-        if (!rows.length) {
+        const all = data.classStats.students;
+        const no = data.lesson.no;
+        if (!all.length) {
             panel.innerHTML = `<div class="lh-note">${S.hub[S.lang]?.role === 'teacher' ? "Sizga hali o'quvchi biriktirilmagan." : "Bu yo'nalishda o'quvchi yo'q."}</div>`;
             return;
         }
-        panel.innerHTML = `<div class="lh-card lh-table-wrap"><table class="lh-table">
-            <thead><tr><th>O'quvchi</th><th>Bajarilgan</th><th>${data.lesson.type === 'live' ? 'Slaydlar' : 'Video'}</th><th>So'zlar</th><th>Uy vazifasi</th><th>Natija</th><th>Xatolar</th><th>Vaqt</th></tr></thead>
+        const groups = [...new Set(all.map(r => r.group).filter(Boolean))].sort();
+        const rows = all.filter(r => (!S.group || r.group === S.group) && (!S.nearOnly || (r.reached >= no - 2 && r.reached <= no + 2)));
+        panel.innerHTML = `<div class="lh-card lh-table-wrap">
+            <div class="lh-card-h"><b>${no}-dars bo'yicha holat</b><span class="lh-gap"></span>${groupSelect(groups)}
+                <label class="lh-toggle"><input type="checkbox" data-near${S.nearOnly ? ' checked' : ''}> Faqat shu darsga yaqinlar (${no - 2 > 0 ? no - 2 : 0}–${Math.min(72, no + 2)})</label></div>
+            ${rows.length ? `<table class="lh-table">
+            <thead><tr><th>O'quvchi</th><th>Hozirgi dars</th><th>Bajarilgan</th><th>${data.lesson.type === 'live' ? 'Slaydlar' : 'Video'}</th><th>So'zlar</th><th>Uy vazifasi</th><th>1-urinish / eng yaxshi</th><th>Xatolar</th><th>Faol vaqt</th></tr></thead>
             <tbody>${rows.map(r => `<tr data-student="${esc(r.id)}" tabindex="0">
-                <td><b>${esc(r.name)}</b></td>
+                <td><b>${esc(r.name)}</b>${r.group ? `<div class="lh-muted">${esc(r.group)}</div>` : ''}${r.frozen ? '<span class="lh-flag frozen">Muzlatilgan</span>' : ''}</td>
+                <td>${r.reached || '—'}</td>
                 <td>${bar(r.percent)}</td>
-                <td>${r.watch ? '✅' : '—'}</td><td>${r.vocab ? '✅' : '—'}</td>
+                <td>${yesNo(r.watch, data.lesson.type === 'live' ? 'Slaydlar' : 'Video')}</td><td>${yesNo(r.vocab, "So'zlar")}</td>
                 <td>${r.homeworkTotal ? `${r.homeworkDone}/${r.homeworkTotal}` : '—'}</td>
-                <td>${r.bestPercent === null ? '—' : pct(r.bestPercent)}</td>
-                <td>${r.mistakes || '—'}</td><td>${dur(r.seconds)}</td></tr>`).join('')}</tbody></table></div>
-            <div class="lh-muted lh-foot">Qatorni bosing — o'quvchining to'liq kartasi ochiladi.</div>`;
+                <td>${r.bestPercent === null ? '—' : `${pct(r.firstPercent)} / ${pct(r.bestPercent)}`}</td>
+                <td>${r.mistakes || '—'}</td><td>${dur(r.seconds)}</td></tr>`).join('')}</tbody></table>`
+            : `<div class="lh-empty-sm">Tanlangan filtr bo'yicha o'quvchi yo'q. ${S.nearOnly ? "«Faqat shu darsga yaqinlar»ni o'chirib ko'ring." : ''}</div>`}</div>
+            <div class="lh-muted lh-foot">Qatorni bosing — o'quvchining to'liq kartasi ochiladi. Faol vaqt — ilova ochiq va o'quvchi ishlayotgan vaqt.</div>`;
+        panel.querySelector('[data-group]')?.addEventListener('change', e => { S.group = e.target.value; savePrefs(); renderClass(panel, data); });
+        panel.querySelector('[data-near]').addEventListener('change', e => { S.nearOnly = e.target.checked; savePrefs(); renderClass(panel, data); });
         panel.querySelectorAll('[data-student]').forEach(tr => {
             const open = () => { S.view = 'students'; S.openStudent = tr.dataset.student; savePrefs(); render(); };
             tr.addEventListener('click', open);
@@ -458,7 +524,7 @@
     }
 
     const bar = p => `<span class="lh-bar" title="${p}%"><i style="width:${Math.max(0, Math.min(100, p))}%" class="${p >= 100 ? 'ok' : p >= 50 ? 'mid' : 'low'}"></i></span><span class="lh-pct">${p}%</span>`;
-    const pct = p => `<span class="lh-score ${p >= 85 ? 'ok' : p >= 65 ? 'mid' : 'low'}">${p}%</span>`;
+    const pct = p => (p === null || p === undefined ? '—' : `<span class="lh-score ${p >= 85 ? 'ok' : p >= RULES.PASS_PERCENT ? 'mid' : 'low'}">${p}%</span>`);
     function dur(sec) {
         sec = Number(sec) || 0;
         if (!sec) return '—';
@@ -487,25 +553,36 @@
     }
 
     const isPdf = m => /\.pdf(\?|$)/i.test(m.url) || m.mime === 'application/pdf';
+    // pdf.js faqat o'z serverimizdagi faylni ocha oladi (tashqi saytlar CORS bilan to'sadi).
+    const canPresent = m => isPdf(m) && isLocalFile(m.url);
     function fileRow(m) {
         const canEdit = S.hub[S.lang]?.canEdit;
         const size = m.fileSize ? ` · ${(m.fileSize / 1048576).toFixed(1)} MB` : '';
+        const range = m.kind === 'book' ? ` · ${m.meta.lessonFrom || 1}–${m.meta.lessonTo || 72}-darslar` : '';
         return `<div class="lh-file">
-            <span class="lh-file-ic">${KIND_ICON[m.kind] || '📄'}</span>
-            <span class="lh-file-body"><b>${esc(m.title)}</b><span class="lh-muted">${esc(m.fileName || m.url)}${size}${m.note ? ` · ${esc(m.note)}` : ''}</span></span>
-            ${isPdf(m) ? `<button type="button" class="lh-btn" data-present-file="${esc(m.id)}">▶ Ko'rsatish</button>` : ''}
-            <a class="lh-btn" href="${esc(m.url)}" target="_blank" rel="noopener">Ochish</a>
-            ${canEdit ? `<button type="button" class="lh-btn lh-danger" data-del="${esc(m.id)}" aria-label="O'chirish">🗑</button>` : ''}
+            <span class="lh-file-ic" aria-hidden="true">${KIND_ICON[m.kind] || '📄'}</span>
+            <span class="lh-file-body"><b>${esc(m.title)}</b><span class="lh-muted">${esc(m.fileName || m.url)}${size}${range}${m.note ? ` · ${esc(m.note)}` : ''}</span></span>
+            ${canPresent(m) ? `<button type="button" class="lh-btn" data-present-file="${esc(m.id)}">▶ Ko'rsatish</button>` : ''}
+            ${safeUrl(m.url) ? `<a class="lh-btn" href="${esc(safeUrl(m.url))}" target="_blank" rel="noopener">Ochish</a>` : ''}
+            ${canEdit ? `<button type="button" class="lh-btn" data-edit="${esc(m.id)}" aria-label="Tahrirlash: ${esc(m.title)}">✎</button>
+                <button type="button" class="lh-btn lh-danger" data-del="${esc(m.id)}" aria-label="O'chirish: ${esc(m.title)}">🗑</button>` : ''}
         </div>`;
+    }
+
+    function allMaterials(data) {
+        return [...(data?.materials || []), ...(S.hub[S.lang]?.courseMaterials || [])];
     }
 
     function bindMaterialActions(panel, data) {
         panel.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () =>
             openMaterialForm({ kind: b.dataset.add, mode: b.dataset.mode, lessonNo: data?.lesson?.no ?? null })));
         panel.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteMaterial(b.dataset.del)));
+        panel.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => {
+            const m = allMaterials(data).find(x => x.id === b.dataset.edit);
+            if (m) openMaterialForm({ kind: m.kind, mode: 'edit', lessonNo: m.lessonNo, existing: m });
+        }));
         panel.querySelectorAll('[data-present-file]').forEach(b => b.addEventListener('click', () => {
-            const all = [...(data?.materials || []), ...(S.hub[S.lang]?.courseMaterials || [])];
-            const m = all.find(x => x.id === b.dataset.presentFile);
+            const m = allMaterials(data).find(x => x.id === b.dataset.presentFile);
             if (!m) return;
             if (data?.lesson) present(data, { fileId: m.id });
             else LessonPresenter.open({ title: m.title, sources: [{ type: 'pdf', url: m.url, title: m.title }] });
@@ -529,27 +606,48 @@
         } catch (e) { toast(e.message); }
     }
 
+    // Modal: Esc yopadi, Tab fokus ichida aylanadi, yopilganda fokus qaytadi.
+    function trapModal(wrap, onClose, { keep = false } = {}) {
+        const back = document.activeElement;
+        const close = () => { document.removeEventListener('keydown', onKey, true); if (!keep) wrap.remove(); onClose?.(); back?.focus?.(); };
+        const onKey = e => {
+            if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+            if (e.key !== 'Tab') return;
+            const f = [...wrap.querySelectorAll('button,input,select,textarea,a[href],[tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent !== null);
+            if (!f.length) return;
+            const first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        };
+        document.addEventListener('keydown', onKey, true);
+        return close;
+    }
+
+    const LARGE_KINDS = new Set(['book', 'teacher_book', 'methodology']);
     function openMaterialForm({ kind, mode, lessonNo, existing }) {
         const hub = S.hub[S.lang];
         const label = hub.kinds.lesson[kind] || hub.kinds.course[kind] || kind;
         const isBook = kind === 'book';
+        const large = LARGE_KINDS.has(kind);
+        const editing = mode === 'edit';
+        const pm = existing?.meta?.pageMap ? Object.entries(existing.meta.pageMap).map(([k, v]) => `${k}:${v}`).join(', ') : '';
         const wrap = document.createElement('div');
         wrap.className = 'lh-modal';
-        wrap.innerHTML = `<form class="lh-dialog" role="dialog" aria-modal="true" aria-label="${esc(label)}">
-            <h3>${esc(label)}${lessonNo ? ` · ${lessonNo}-dars` : ''}</h3>
-            <label>Nomi<input name="title" required maxlength="200" class="lh-input" value="${esc(existing?.title || '')}" placeholder="${isBook ? "Masalan: Darslik 1-qism (1–24-darslar)" : 'Masalan: 12-dars slaydlari'}"></label>
-            ${mode === 'file' ? `<label>Fayl (PDF tavsiya etiladi, 50 MB gacha)<input name="file" type="file" required accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.webp,.mp4,.mp3"></label>`
-                : `<label>Havola (https://…, YouTube, Google Drive)<input name="url" type="url" required class="lh-input" placeholder="https://"></label>`}
-            ${isBook ? `<div class="lh-row"><label>Qaysi darsdan<input name="lessonFrom" type="number" min="1" max="72" class="lh-input" value="1"></label>
-                <label>Qaysi darsgacha<input name="lessonTo" type="number" min="1" max="72" class="lh-input" value="24"></label></div>
-                <label>Darslar boshlanadigan sahifalar <span class="lh-muted">(ixtiyoriy: "1:5, 2:9, 3:14")</span><textarea name="pageMap" rows="3" class="lh-input" placeholder="1:5, 2:9, 3:14"></textarea></label>` : ''}
-            <label>Izoh <span class="lh-muted">(ixtiyoriy)</span><input name="note" maxlength="300" class="lh-input"></label>
+        wrap.innerHTML = `<form class="lh-dialog" role="dialog" aria-modal="true" aria-labelledby="lhDlgTitle">
+            <h3 id="lhDlgTitle">${editing ? 'Tahrirlash: ' : ''}${esc(label)}${lessonNo ? ` · ${lessonNo}-dars` : ''}</h3>
+            <label>Nomi<input name="title" required maxlength="200" class="lh-input" value="${esc(existing?.title || '')}" placeholder="${isBook ? 'Masalan: Darslik 1-qism (1–24-darslar)' : 'Masalan: 12-dars slaydlari'}"></label>
+            ${mode === 'file' ? `<label>Fayl (${large ? 'PDF, 300 MB gacha' : 'PDF tavsiya etiladi — prezentatsiyada ochiladi; 50 MB gacha'})<input name="file" type="file" required accept="${large ? '.pdf' : '.pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.webp,.mp4,.mp3'}"></label>`
+                : mode === 'link' ? `<label>Havola (https://…)<input name="url" type="url" required class="lh-input" placeholder="https://"><span class="lh-muted">Havola yangi oynada ochiladi. Prezentatsiyada ko'rsatish uchun PDF faylni yuklang.</span></label>` : ''}
+            ${isBook ? `<div class="lh-row"><label>Qaysi darsdan<input name="lessonFrom" type="number" min="1" max="72" class="lh-input" value="${existing?.meta?.lessonFrom || 1}"></label>
+                <label>Qaysi darsgacha<input name="lessonTo" type="number" min="1" max="72" class="lh-input" value="${existing?.meta?.lessonTo || 24}"></label></div>
+                <label>Darslar boshlanadigan sahifalar <span class="lh-muted">(ixtiyoriy: "1:5, 2:9, 3:14")</span><textarea name="pageMap" rows="3" class="lh-input" placeholder="1:5, 2:9, 3:14">${esc(pm)}</textarea></label>` : ''}
+            <label>Izoh <span class="lh-muted">(ixtiyoriy)</span><input name="note" maxlength="300" class="lh-input" value="${esc(existing?.note || '')}"></label>
             <div class="lh-dialog-actions"><button type="button" class="lh-btn" data-cancel>Bekor qilish</button><button type="submit" class="lh-btn lh-primary">Saqlash</button></div>
-            <div class="lh-progress" hidden>Yuklanmoqda…</div>
+            <div class="lh-progress" role="status" hidden>Yuklanmoqda…</div>
         </form>`;
         document.body.appendChild(wrap);
         const form = wrap.querySelector('form');
-        const closeForm = () => wrap.remove();
+        const closeForm = trapModal(wrap);
         wrap.addEventListener('click', e => { if (e.target === wrap) closeForm(); });
         wrap.querySelector('[data-cancel]').onclick = closeForm;
         form.querySelector('input[name="title"]').focus();
@@ -560,19 +658,19 @@
             btn.disabled = true;
             form.querySelector('.lh-progress').hidden = false;
             try {
-                let url = String(fd.get('url') || '').trim(), fileName = '', fileSize = 0, mime = '';
-                const file = fd.get('file');
+                const body = { language: S.lang, lessonNo, kind, title: String(fd.get('title') || '').trim(), note: String(fd.get('note') || '') };
+                if (isBook) body.meta = { lessonFrom: fd.get('lessonFrom'), lessonTo: fd.get('lessonTo'), pageMap: String(fd.get('pageMap') || '') };
+                if (mode === 'link') body.url = String(fd.get('url') || '').trim();
                 if (mode === 'file') {
+                    const file = fd.get('file');
                     if (!file || !file.size) throw new Error('Fayl tanlang');
-                    if (file.size > 50 * 1048576) throw new Error('Fayl 50 MB dan katta');
-                    const up = await apiUploadFile(file);
-                    url = up.url; fileName = up.fileName || file.name; fileSize = up.fileSize || file.size; mime = up.mimeType || file.type;
+                    const limit = large ? 300 : 50;
+                    if (file.size > limit * 1048576) throw new Error(`Fayl ${limit} MB dan katta`);
+                    const up = large ? await uploadLargePdf(file) : await apiUploadFile(file);
+                    Object.assign(body, { url: up.url, fileName: up.fileName || file.name, fileSize: up.fileSize || file.size, mime: up.mimeType || file.type });
                 }
-                const meta = isBook ? { lessonFrom: fd.get('lessonFrom'), lessonTo: fd.get('lessonTo'), pageMap: String(fd.get('pageMap') || '') } : {};
-                await api('/api/academic/materials', { method: 'POST', body: JSON.stringify({
-                    language: S.lang, lessonNo, kind, title: String(fd.get('title') || '').trim(), url, fileName, fileSize, mime,
-                    note: String(fd.get('note') || ''), meta,
-                }) });
+                if (editing) await api(`/api/academic/materials/${encodeURIComponent(existing.id)}`, { method: 'PUT', body: JSON.stringify(body) });
+                else await api('/api/academic/materials', { method: 'POST', body: JSON.stringify(body) });
                 closeForm();
                 invalidate(lessonNo);
                 await ensureHub(true);
@@ -586,21 +684,32 @@
         });
     }
 
+    async function uploadLargePdf(file) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const token = typeof getToken === 'function' ? getToken() : null;
+        const res = await fetch('/api/upload/large-pdf', { method: 'POST', headers: token ? { Authorization: 'Bearer ' + token } : {}, body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Yuklash xatoligi');
+        return data;
+    }
+
     // ── Prezentatsiya manbalari ─────────────────────────────────────────────
     function present(data, opts = {}) {
         const L = data.lesson;
         const pdf = m => ({ type: 'pdf', url: m.url, title: `${m.kindLabel}: ${m.title}`, id: m.id });
         const sources = [];
-        const live = lessonMaterials(data, 'live_slides').filter(isPdf).map(pdf);
-        const vids = lessonMaterials(data, 'video_slides').filter(isPdf).map(pdf);
-        const gram = lessonMaterials(data, 'grammar_slides').filter(isPdf).map(pdf);
-        const appSlides = L.slides.filter(s => s.imageUrl).length
-            ? { type: 'images', title: `Ilovadagi slaydlar (${L.slides.filter(s => s.imageUrl).length})`, key: 'app-slides', items: L.slides.filter(s => s.imageUrl).map(s => ({ url: s.imageUrl, caption: s.title })) } : null;
-        const words = L.vocabulary.length ? { type: 'words', title: `So'z kartochkalari (${L.vocabulary.length})`, key: 'words', items: L.vocabulary } : null;
-        const video = L.videoUrl ? { type: 'video', url: L.videoUrl, title: 'Videodars' } : null;
+        const live = lessonMaterials(data, 'live_slides').filter(canPresent).map(pdf);
+        const vids = lessonMaterials(data, 'video_slides').filter(canPresent).map(pdf);
+        const gram = lessonMaterials(data, 'grammar_slides').filter(canPresent).map(pdf);
+        const imgs = L.slides.filter(s => safeUrl(s.imageUrl));
+        const appSlides = imgs.length
+            ? { type: 'images', title: `Ilovadagi slaydlar (${imgs.length})`, key: 'app-slides', items: imgs.map(s => ({ url: safeUrl(s.imageUrl), caption: s.title })) } : null;
+        const words = L.vocabulary.length ? { type: 'words', title: `So'z kartochkalari (${L.vocabulary.length})`, key: 'words', items: L.vocabulary.map(w => ({ ...w, imageUrl: safeUrl(w.imageUrl) })) } : null;
+        const video = safeUrl(L.videoUrl) ? { type: 'video', url: safeUrl(L.videoUrl), title: 'Videodars' } : null;
         if (L.type === 'live') sources.push(...live, words, ...gram, ...vids, appSlides, video);
         else sources.push(...vids, appSlides, video, words, ...gram, ...live);
-        if (data.book) sources.push({ type: 'pdf', url: data.book.url, title: `Kitob: ${data.book.title}`, key: 'book' });
+        if (data.book && isLocalFile(data.book.url)) sources.push({ type: 'pdf', url: data.book.url, title: `Kitob: ${data.book.title}`, key: 'book' });
         const list = sources.filter(Boolean);
         list.push({ type: 'blank', title: "Bo'sh doska", key: 'blank' });
         let start = 0, startPage = opts.page || 1;
@@ -616,38 +725,42 @@
     async function renderStudentsView(main) {
         main.innerHTML = skeleton();
         let data = S.students[S.lang];
-        if (!data) {
-            try { data = S.students[S.lang] = await api(`/api/academic/students?lang=${S.lang}`); }
+        if (!data || !fresh('students:' + S.lang)) {
+            try { data = S.students[S.lang] = await api(`/api/academic/students?lang=${S.lang}`); stamp('students:' + S.lang); }
             catch (e) { main.innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span></div>`; return; }
         }
         if (S.view !== 'students') return;
-        const list = sortStudents(data.students);
-        const idle = data.students.filter(s => s.flags.some(f => f.key === 'idle')).length;
-        const struggling = data.students.filter(s => s.flags.some(f => f.key === 'struggling')).length;
-        const behind = data.students.filter(s => s.flags.some(f => f.key === 'behind')).length;
-        const weekTotal = data.students.reduce((a, s) => a + s.time.week, 0);
-        const avgReached = data.students.length ? Math.round(data.students.reduce((a, s) => a + s.reached, 0) / data.students.length) : 0;
+        const groups = [...new Set(data.students.map(s => s.group).filter(Boolean))].sort();
+        if (S.group && !groups.includes(S.group)) S.group = '';
+        const scoped = data.students.filter(s => !S.group || s.group === S.group);
+        const active = scoped.filter(s => !s.frozen);
+        const list = sortStudents(scoped);
+        const count = key => active.filter(s => s.flags.some(f => f.key === key)).length;
+        const weekTotal = active.reduce((a, s) => a + s.time.week, 0);
+        const avgReached = active.length ? Math.round(active.reduce((a, s) => a + s.reached, 0) / active.length) : 0;
         main.innerHTML = `
         <div class="lh-kpis">
-            <div class="lh-kpi"><span>O'quvchilar</span><b>${data.students.length}</b></div>
-            <div class="lh-kpi"><span>O'rtacha dars</span><b>${avgReached || '—'}</b><small>72 dan</small></div>
-            <div class="lh-kpi"><span>7 kunda ilovada</span><b>${dur(weekTotal)}</b><small>jami</small></div>
-            <div class="lh-kpi ${idle ? 'is-warn' : ''}"><span>Faol emas (3+ kun)</span><b>${idle}</b></div>
-            <div class="lh-kpi ${struggling ? 'is-warn' : ''}"><span>Uy vazifasida qiynalyapti</span><b>${struggling}</b></div>
-            <div class="lh-kpi ${behind ? 'is-warn' : ''}"><span>Rejadan orqada</span><b>${behind}</b></div>
+            <div class="lh-kpi"><span>O'quvchilar</span><b>${active.length}</b>${scoped.length > active.length ? `<small>+${scoped.length - active.length} muzlatilgan</small>` : ''}</div>
+            <div class="lh-kpi"><span>O'rtacha joriy dars</span><b>${avgReached || '—'}</b><small>72 dan</small></div>
+            <div class="lh-kpi"><span>7 kunda faol vaqt</span><b>${dur(weekTotal)}</b><small>hammasi bo'lib</small></div>
+            <div class="lh-kpi ${count('idle') ? 'is-warn' : ''}"><span>Faol emas (3+ kun)</span><b>${count('idle')}</b></div>
+            <div class="lh-kpi ${count('struggling') ? 'is-warn' : ''}"><span>Uy vazifasida qiynalyapti</span><b>${count('struggling')}</b></div>
+            <div class="lh-kpi ${count('behind') ? 'is-warn' : ''}"><span>Rejadan orqada</span><b>${count('behind')}</b></div>
         </div>
-        <div class="lh-note">Vaqt va xatolar yangi ilovadan ${data.trackingSince ? `${esc(fmtDate(data.trackingSince))} dan` : 'yangi versiya chiqqandan'} boshlab yig'iladi. Dars bosqichlari (video, so'zlar, uy vazifasi) — avvaldan saqlangan.</div>
+        <div class="lh-note">Faol vaqt — ilova ochiq va o'quvchi ishlayotgan vaqt (2 daqiqa harakatsizlikdan keyin to'xtaydi; video va audio ko'rishda — 25 daqiqa). Vaqt va xatolar yangi ilovadan ${data.trackingSince ? `${esc(fmtDate(data.trackingSince))} dan` : 'yangi versiya chiqqandan'} boshlab yig'iladi; dars bosqichlari — avvaldan. "Qiynalyapti" — uy vazifasini birinchi urinishda ${RULES.PASS_PERCENT}% dan past bajarsa yoki o'rtacha 2,5+ urinish qilsa. "Rejadan orqada" — haftasiga ${RULES.LESSONS_PER_WEEK || 6} dars hisobidan 1 haftadan ko'p orqada.</div>
         <div class="lh-card lh-table-wrap">
-            <div class="lh-card-h"><b>Barcha o'quvchilar</b><span class="lh-gap"></span>
+            <div class="lh-card-h"><b>O'quvchilar</b><span class="lh-gap"></span>
+                ${groupSelect(groups)}
                 <input type="search" class="lh-input lh-small" placeholder="Ism bo'yicha" aria-label="O'quvchini qidirish">
-                <select class="lh-input lh-small" aria-label="Saralash">${[['attention', 'Avval e\'tibor kerak'], ['reached', 'Dars bo\'yicha'], ['time', 'Vaqt (7 kun)'], ['homework', 'Uy vazifasi natijasi'], ['name', 'Ism']].map(([k, l]) => `<option value="${k}"${S.studentSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+                <select class="lh-input lh-small" data-sort aria-label="Saralash">${[['attention', "Avval e'tibor kerak"], ['reached', "Dars bo'yicha"], ['time', 'Faol vaqt (7 kun)'], ['homework', 'Uy vazifasi natijasi'], ['name', 'Ism']].map(([k, l]) => `<option value="${k}"${S.studentSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+                <button type="button" class="lh-btn" data-csv>⬇ CSV</button>
             </div>
-            ${list.length ? `<table class="lh-table"><thead><tr><th>O'quvchi</th><th>Dars</th><th>O'rtacha bajarilish</th><th>Tugatgan</th><th>Uy vazifasi</th><th>Xatolar</th><th>Ilovada (7 kun / jami)</th><th>Faol kunlar</th><th>Oxirgi faollik</th><th>Holat</th></tr></thead>
+            ${list.length ? `<table class="lh-table"><thead><tr><th>O'quvchi</th><th>Joriy dars</th><th>O'rtacha bajarilish</th><th>Tugatgan</th><th>Uy vazifasi<br><span class="lh-muted">1-urinish / eng yaxshi</span></th><th>Xatolar</th><th>Faol vaqt<br><span class="lh-muted">7 kun / jami</span></th><th>Faol kunlar</th><th>Oxirgi faollik</th><th>Holat</th></tr></thead>
             <tbody>${list.map(s => `<tr data-student="${esc(s.id)}" tabindex="0">
                 <td><b>${esc(s.name)}</b>${s.group ? `<div class="lh-muted">${esc(s.group)}</div>` : ''}${s.role === 'assistant' ? '<div class="lh-tag">yordamchi</div>' : ''}</td>
                 <td><b>${s.reached || '—'}</b>${s.expected ? `<div class="lh-muted">reja: ${s.expected}</div>` : ''}</td>
                 <td>${bar(s.avgPercent)}</td><td>${s.completed}/72</td>
-                <td>${s.homeworkAvg === null ? '—' : pct(s.homeworkAvg)}</td><td>${s.mistakes || '—'}</td>
+                <td>${s.homeworkAvg === null ? '—' : `${pct(s.firstTryAvg)} / ${pct(s.homeworkAvg)}`}</td><td>${s.mistakes || '—'}</td>
                 <td>${dur(s.time.week)} <span class="lh-muted">/ ${dur(s.time.total)}</span></td>
                 <td>${s.activeDays7}/7</td><td>${esc(ago(s.lastActive))}</td>
                 <td>${s.flags.length ? s.flags.map(f => `<span class="lh-flag ${f.key}">${esc(f.label)}</span>`).join('') : '<span class="lh-flag ok">Yaxshi</span>'}</td></tr>`).join('')}</tbody></table>`
@@ -659,7 +772,9 @@
             const q = e.target.value.toLowerCase();
             tbody?.querySelectorAll('tr').forEach(tr => { tr.hidden = !tr.textContent.toLowerCase().includes(q); });
         });
-        main.querySelector('select').addEventListener('change', e => { S.studentSort = e.target.value; renderStudentsView(main); });
+        main.querySelector('[data-sort]').addEventListener('change', e => { S.studentSort = e.target.value; renderStudentsView(main); });
+        main.querySelector('[data-group]')?.addEventListener('change', e => { S.group = e.target.value; savePrefs(); renderStudentsView(main); });
+        main.querySelector('[data-csv]').addEventListener('click', () => exportCsv(list));
         tbody?.querySelectorAll('[data-student]').forEach(tr => {
             tr.addEventListener('click', () => openStudent(tr.dataset.student));
             tr.addEventListener('keydown', e => { if (e.key === 'Enter') openStudent(tr.dataset.student); });
@@ -667,78 +782,104 @@
         if (S.openStudent) openStudent(S.openStudent);
     }
 
+    function exportCsv(list) {
+        const head = ["O'quvchi", 'Guruh', 'Joriy dars', 'Reja', "O'rtacha %", 'Tugatgan', '1-urinish %', 'Eng yaxshi %', 'Xatolar', 'Faol vaqt 7 kun (daq)', 'Faol vaqt jami (daq)', 'Faol kunlar (7)', 'Oxirgi faollik', 'Holat'];
+        const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const rows = list.map(s => [s.name, s.group, s.reached, s.expected ?? '', s.avgPercent, s.completed, s.firstTryAvg ?? '', s.homeworkAvg ?? '',
+            s.mistakes, Math.round(s.time.week / 60), Math.round(s.time.total / 60), s.activeDays7, s.lastActive ? s.lastActive.slice(0, 10) : '', s.flags.map(f => f.label).join('; ')]);
+        const csv = '﻿' + [head, ...rows].map(r => r.map(q).join(';')).join('\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        a.download = `oquvchilar-progressi-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+
     function sortStudents(list) {
         const arr = [...list];
         const by = {
-            attention: (a, b) => b.flags.length - a.flags.length || (b.daysIdle ?? 999) - (a.daysIdle ?? 999),
+            attention: (a, b) => (a.frozen - b.frozen) || b.flags.length - a.flags.length || (b.daysIdle ?? 999) - (a.daysIdle ?? 999),
             reached: (a, b) => b.reached - a.reached,
             time: (a, b) => b.time.week - a.time.week,
-            homework: (a, b) => (a.homeworkAvg ?? 101) - (b.homeworkAvg ?? 101),
+            homework: (a, b) => (a.firstTryAvg ?? 101) - (b.firstTryAvg ?? 101),
             name: (a, b) => a.name.localeCompare(b.name),
         }[S.studentSort] || (() => 0);
         return arr.sort(by);
     }
     const UZ_MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
     const fmtDate = d => { const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${Number(m[3])}-${UZ_MONTHS[Number(m[2]) - 1]}` : String(d); };
+    const mistakeLi = m => `<li>${esc(m.question)}${m.yourAnswer ? ` <span class="lh-bad" title="O'quvchi javobi">${esc(m.yourAnswer)}</span>` : ''}${m.correctAnswer ? ` <span class="lh-ans">→ ${esc(m.correctAnswer)}</span>` : ''}${m.count > 1 ? ` <span class="lh-tag">${m.count} marta</span>` : ''}</li>`;
 
     async function openStudent(id) {
         S.openStudent = id;
         const host = document.getElementById('lhStudent');
         if (!host) return;
-        host.innerHTML = `<div class="lh-drawer-bg"></div><aside class="lh-drawer" role="dialog" aria-modal="true" aria-label="O'quvchi kartasi">${skeleton()}</aside>`;
-        const closeD = () => { S.openStudent = null; host.innerHTML = ''; document.removeEventListener('keydown', esc1); };
-        const esc1 = e => { if (e.key === 'Escape') closeD(); };
-        document.addEventListener('keydown', esc1);
+        const back = document.activeElement;
+        host.innerHTML = `<div class="lh-drawer-bg"></div><aside class="lh-drawer" role="dialog" aria-modal="true" aria-label="O'quvchi kartasi" tabindex="-1">${skeleton()}</aside>`;
+        const drawer = host.querySelector('.lh-drawer');
+        const closeD = trapModal(drawer, () => { S.openStudent = null; host.innerHTML = ''; back?.focus?.(); }, { keep: true });
         host.querySelector('.lh-drawer-bg').onclick = closeD;
+        drawer.focus();
         let d = S.studentDetail[id];
-        if (!d) {
-            try { d = S.studentDetail[id] = await api(`/api/academic/students/${encodeURIComponent(id)}`); }
-            catch (e) { host.querySelector('.lh-drawer').innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span><button type="button" class="lh-btn" data-x>Yopish</button></div>`; host.querySelector('[data-x]').onclick = closeD; return; }
+        if (!d || !fresh('student:' + id)) {
+            try { d = S.studentDetail[id] = await api(`/api/academic/students/${encodeURIComponent(id)}`); stamp('student:' + id); }
+            catch (e) { drawer.innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span><button type="button" class="lh-btn" data-x>Yopish</button></div>`; drawer.querySelector('[data-x]').onclick = closeD; return; }
         }
         if (S.openStudent !== id) return;
         const s = d.student;
         const sel = { no: Math.max(1, s.reached || 1) };
-        const drawer = host.querySelector('.lh-drawer');
+        const att = d.attendance || { rows: [], present: 0, absent: 0 };
         drawer.innerHTML = `
-            <div class="lh-drawer-h"><div><h3>${esc(s.name)}</h3><div class="lh-muted">${s.group ? esc(s.group) + ' · ' : ''}oxirgi faollik: ${esc(ago(s.lastActive))}</div></div>
+            <div class="lh-drawer-h"><div><h3>${esc(s.name)}</h3><div class="lh-muted">${s.group ? esc(s.group) + ' · ' : ''}oxirgi faollik: ${esc(ago(s.lastActive))}${s.startDate ? ` · boshlagan: ${esc(fmtDate(s.startDate))}` : ''}</div></div>
                 <button type="button" class="lh-btn" data-x aria-label="Yopish">✕</button></div>
             ${s.flags.length ? `<div class="lh-flags">${s.flags.map(f => `<span class="lh-flag ${f.key}">${esc(f.label)}</span>`).join('')}</div>` : ''}
             <div class="lh-kpis is-small">
-                <div class="lh-kpi"><span>Hozirgi dars</span><b>${s.reached || '—'}</b>${s.expected ? `<small>reja: ${s.expected}</small>` : ''}</div>
+                <div class="lh-kpi"><span>Joriy dars</span><b>${s.reached || '—'}</b>${s.expected ? `<small>reja: ${s.expected}</small>` : ''}</div>
                 <div class="lh-kpi"><span>Tugatgan darslar</span><b>${s.completed}</b><small>72 dan</small></div>
-                <div class="lh-kpi"><span>Uy vazifasi o'rtacha</span><b>${s.homeworkAvg === null ? '—' : s.homeworkAvg + '%'}</b></div>
-                <div class="lh-kpi"><span>Ilovada</span><b>${dur(s.time.total)}</b><small>bugun ${dur(s.time.today)} · 7 kun ${dur(s.time.week)}</small></div>
+                <div class="lh-kpi"><span>Uy vazifasi</span><b>${s.homeworkAvg === null ? '—' : s.homeworkAvg + '%'}</b><small>${s.firstTryAvg === null ? '' : `1-urinish ${s.firstTryAvg}% · ${s.avgAttempts} urinish`}</small></div>
+                <div class="lh-kpi"><span>Faol vaqt</span><b>${dur(s.time.total)}</b><small>bugun ${dur(s.time.today)} · 7 kun ${dur(s.time.week)}</small></div>
+                <div class="lh-kpi"><span>Davomat</span><b>${att.present}/${att.present + att.absent}</b><small>jonli darslar</small></div>
             </div>
             <div class="lh-card"><div class="lh-card-h"><b>72 dars xaritasi</b><span class="lh-muted">katakni bosing</span></div>
-                <div class="lh-heat">${d.lessons.map(l => `<button type="button" class="lh-cell ${heatClass(l)}" data-cell="${l.no}" title="${l.no}-dars: ${l.percent}%">${l.no}</button>`).join('')}</div>
-                <div class="lh-legend"><span class="lh-cell c0"></span>boshlanmagan <span class="lh-cell c1"></span>1–49% <span class="lh-cell c2"></span>50–99% <span class="lh-cell c3"></span>100%</div>
+                <div class="lh-heat">${d.lessons.map(l => `<button type="button" class="lh-cell ${heatClass(l)}${l.grades.length ? ' has-grade' : ''}" data-cell="${l.no}" aria-label="${l.no}-dars: ${l.percent}%${l.grades.length ? ', jonli darsda baholangan' : ''}">${l.no}</button>`).join('')}</div>
+                <div class="lh-legend"><span class="lh-cell c0"></span>boshlanmagan <span class="lh-cell c1"></span>1–49% <span class="lh-cell c2"></span>50–99% <span class="lh-cell c3"></span>100% <span class="lh-cell c0 has-grade"></span>jonli darsda baho bor</div>
             </div>
-            <div class="lh-card" id="lhCellDetail"></div>
-            <div class="lh-card"><div class="lh-card-h"><b>Ilovadagi vaqt — oxirgi 30 kun</b></div>${timeChart(d.timeByDay)}
-                ${Object.keys(d.timeBySection).length ? `<div class="lh-sections">${Object.entries(d.timeBySection).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span><b>${esc(SECTION_LABEL[k] || k)}</b> ${dur(v)}</span>`).join('')}</div>` : ''}
+            <div class="lh-card" id="lhCellDetail" aria-live="polite"></div>
+            <div class="lh-card"><div class="lh-card-h"><b>Faol vaqt — oxirgi 30 kun</b></div>${timeChart(d.timeByDay)}
+                ${Object.keys(d.timeBySection).length ? `<div class="lh-muted">Bo'limlar bo'yicha (oxirgi ${d.sectionPeriodDays || 60} kun):</div><div class="lh-sections">${Object.entries(d.timeBySection).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span><b>${esc(SECTION_LABEL[k] || k)}</b> ${dur(v)}</span>`).join('')}</div>` : ''}
             </div>
-            ${d.activity.length ? `<div class="lh-card"><div class="lh-card-h"><b>Faoliyat tarixi</b><span class="lh-muted">imtihon va mashqlar</span></div>
-                <ul class="lh-activity">${d.activity.slice(0, 25).map(a => `<li><span>${esc(a.label)}</span>${typeof a.scorePercent === 'number' ? pct(a.scorePercent) : ''}<span class="lh-muted">${esc(ago(a.time))}</span>
-                    ${(a.mistakes || []).length ? `<details><summary>${a.mistakes.length} ta xato</summary><ol class="lh-qa">${a.mistakes.map(m => `<li>${esc(m.question)} <span class="lh-bad">${esc(m.yourAnswer || '')}</span> <span class="lh-ans">→ ${esc(m.correctAnswer || '')}</span></li>`).join('')}</ol></details>` : ''}</li>`).join('')}</ul></div>` : ''}`;
+            <div class="lh-two-cards">
+                <div class="lh-card"><div class="lh-card-h"><b>Jonli dars davomati</b></div>
+                    ${att.rows.length ? `<ul class="lh-att">${att.rows.slice(0, 20).map(a => `<li><span>${esc(fmtDate(a.date))}</span>${a.present ? '<span class="lh-flag ok">keldi</span>' : '<span class="lh-flag struggling">kelmadi</span>'}${a.kind === 'assistant' ? '<span class="lh-tag">yordamchi</span>' : ''}</li>`).join('')}</ul>` : '<div class="lh-muted">Davomat hali belgilanmagan</div>'}</div>
+                <div class="lh-card"><div class="lh-card-h"><b>Jonli dars baholari</b></div>
+                    ${d.grades?.length ? `<ul class="lh-att">${d.grades.slice(0, 15).map(g => `<li><span>${esc(fmtDate(g.date))}${g.lessonNo ? ` · ${g.lessonNo}-dars` : ''}</span>${g.average !== null ? `<b>${g.average}</b>` : ''}${g.comment ? `<span class="lh-muted">${esc(g.comment)}</span>` : ''}</li>`).join('')}</ul>` : '<div class="lh-muted">Baho qo\'yilmagan</div>'}</div>
+            </div>
+            ${d.exams?.length ? `<div class="lh-card"><div class="lh-card-h"><b>Imtihonlar</b></div>
+                <ul class="lh-activity">${d.exams.map(a => `<li><span>${esc(a.label)}</span>${typeof a.scorePercent === 'number' ? pct(a.scorePercent) : ''}${a.passed === true ? '<span class="lh-flag ok">o\'tdi</span>' : a.passed === false ? '<span class="lh-flag struggling">o\'tmadi</span>' : ''}<span class="lh-muted">${esc(ago(a.time))}</span>
+                    ${(a.mistakes || []).length ? `<details><summary>${a.mistakes.length} ta xato</summary><ol class="lh-qa">${a.mistakes.map(mistakeLi).join('')}</ol></details>` : ''}</li>`).join('')}</ul></div>` : ''}
+            ${d.activity.filter(a => a.type !== 'exam').length ? `<div class="lh-card"><div class="lh-card-h"><b>Faoliyat tarixi</b></div>
+                <ul class="lh-activity">${d.activity.filter(a => a.type !== 'exam').slice(0, 20).map(a => `<li><span>${esc(a.label)}</span>${typeof a.scorePercent === 'number' ? pct(a.scorePercent) : ''}<span class="lh-muted">${esc(ago(a.time))}</span>
+                    ${(a.mistakes || []).length ? `<details><summary>${a.mistakes.length} ta xato</summary><ol class="lh-qa">${a.mistakes.map(mistakeLi).join('')}</ol></details>` : ''}</li>`).join('')}</ul></div>` : ''}`;
         drawer.querySelector('[data-x]').onclick = closeD;
         const showCell = no => {
             sel.no = no;
-            drawer.querySelectorAll('[data-cell]').forEach(c => c.classList.toggle('is-sel', Number(c.dataset.cell) === no));
+            drawer.querySelectorAll('[data-cell]').forEach(c => { const on = Number(c.dataset.cell) === no; c.classList.toggle('is-sel', on); c.setAttribute('aria-pressed', on); });
             const l = d.lessons.find(x => x.no === no);
             const box = drawer.querySelector('#lhCellDetail');
             if (!l) { box.innerHTML = '<div class="lh-muted">Bu dars kursda yo\'q</div>'; return; }
             box.innerHTML = `<div class="lh-card-h"><b>${l.no}-dars · ${esc(plain(l.name))}</b><span class="lh-type ${l.type}">${l.type === 'live' ? 'Jonli' : 'Video'}</span><span class="lh-gap"></span>${bar(l.percent)}</div>
                 <div class="lh-steps">
-                    <span class="${l.steps.watch ? 'ok' : ''}">${l.steps.watch ? '✅' : '⬜'} ${l.type === 'live' ? 'Slaydlar' : 'Video'}</span>
-                    <span class="${l.steps.vocabList ? 'ok' : ''}">${l.steps.vocabList ? '✅' : '⬜'} So'zlar ro'yxati</span>
-                    <span class="${l.steps.vocabPractice ? 'ok' : ''}">${l.steps.vocabPractice ? '✅' : '⬜'} So'z mashqi</span>
-                    <span>📝 Uy vazifasi ${l.steps.homeworkDone}/${l.steps.homeworkTotal}</span>
-                    <span>⏱ ${dur(l.seconds)}</span>
+                    <span class="${l.steps.watch ? 'ok' : ''}">${l.steps.watch ? '✓' : '○'} ${l.type === 'live' ? 'Slaydlar' : 'Video'}</span>
+                    <span class="${l.steps.vocabList ? 'ok' : ''}">${l.steps.vocabList ? '✓' : '○'} So'zlar ro'yxati</span>
+                    <span class="${l.steps.vocabPractice ? 'ok' : ''}">${l.steps.vocabPractice ? '✓' : '○'} So'z mashqi</span>
+                    <span>Uy vazifasi ${l.steps.homeworkDone}/${l.steps.homeworkTotal}</span>
+                    <span>Faol vaqt: ${dur(l.seconds)}</span>
+                    ${l.grades.map(g => `<span>Jonli dars bahosi: <b>${g.average ?? '—'}</b></span>`).join('')}
                 </div>
-                ${l.results.length ? `<table class="lh-table is-compact"><thead><tr><th>Qism</th><th>Oxirgi</th><th>Eng yaxshi</th><th>Urinish</th><th>Xatolar</th></tr></thead><tbody>
-                    ${l.results.map(r => `<tr><td>${esc(r.title || HW_KIND[r.kind] || r.kind)}</td><td>${r.correct}/${r.total}</td><td>${pct(r.bestPercent)}</td><td>${r.attempts}</td>
-                    <td>${r.mistakes.length ? `<details><summary>${r.mistakes.length} ta</summary><ol class="lh-qa">${r.mistakes.map(m => `<li>${esc(m.question)}${m.yourAnswer ? ` <span class="lh-bad">${esc(m.yourAnswer)}</span>` : ''}${m.correctAnswer ? ` <span class="lh-ans">→ ${esc(m.correctAnswer)}</span>` : ''}</li>`).join('')}</ol></details>` : '—'}</td></tr>`).join('')}</tbody></table>`
-                    : `<div class="lh-muted">${l.started ? "Uy vazifasi natijalari yangi ilovada yig'iladi." : 'Bu dars hali boshlanmagan.'}</div>`}`;
+                ${l.results.length ? `<table class="lh-table is-compact"><thead><tr><th>Qism</th><th>Oxirgi</th><th>1-urinish</th><th>Eng yaxshi</th><th>Urinish</th><th>Xatolar</th></tr></thead><tbody>
+                    ${l.results.map(r => `<tr><td>${esc(r.title || HW_KIND[r.kind] || r.kind)}</td><td>${r.correct}/${r.total}</td><td>${pct(r.firstPercent)}</td><td>${pct(r.bestPercent)}</td><td>${r.attempts}</td>
+                    <td>${r.mistakes.length ? `<details><summary>${r.mistakes.length} ta</summary><ol class="lh-qa">${r.mistakes.map(mistakeLi).join('')}</ol></details>` : '—'}</td></tr>`).join('')}</tbody></table>`
+                    : `<div class="lh-muted">${l.started ? "Uy vazifasi natijalari yangi ilovadan yig'iladi." : 'Bu dars hali boshlanmagan.'}</div>`}`;
         };
         drawer.querySelectorAll('[data-cell]').forEach(c => c.addEventListener('click', () => showCell(Number(c.dataset.cell))));
         showCell(sel.no);
@@ -781,16 +922,21 @@
                 <div class="lh-card-h"><b>Darslik kitoblari</b>${hub.canEdit ? `<span class="lh-gap"></span><button type="button" class="lh-btn" data-add="book" data-mode="file">＋ Kitob</button>` : ''}</div>
                 ${books.length ? books.map(b => `<div class="lh-file${current && b.id === current.id ? ' is-on' : ''}">
                     <button type="button" class="lh-file-body lh-linkish" data-book="${esc(b.id)}"><b>📖 ${esc(b.title)}</b><span class="lh-muted">${b.meta.lessonFrom || 1}–${b.meta.lessonTo || 72}-darslar${Object.keys(b.meta.pageMap || {}).length ? ' · sahifalar belgilangan' : ''}</span></button>
-                    ${hub.canEdit ? `<button type="button" class="lh-btn lh-danger" data-del="${esc(b.id)}" aria-label="O'chirish">🗑</button>` : ''}
+                    ${hub.canEdit ? `<button type="button" class="lh-btn" data-edit="${esc(b.id)}" aria-label="Tahrirlash: ${esc(b.title)}">✎</button><button type="button" class="lh-btn lh-danger" data-del="${esc(b.id)}" aria-label="O'chirish: ${esc(b.title)}">🗑</button>` : ''}
                 </div>`).join('') : `<div class="lh-muted">Kitob PDF hali yuklanmagan.${hub.canEdit ? " «＋ Kitob» orqali 1, 2, 3-qismlarni yuklang va har biri qaysi darslarni qamrashini belgilang." : ''}</div>`}
                 ${current ? `<label class="lh-jump">Darsga o'tish <select aria-label="Darsga o'tish"><option value="">—</option>${hub.syllabus.filter(l => l.no >= (current.meta.lessonFrom || 1) && l.no <= (current.meta.lessonTo || 72)).map(l => `<option value="${l.no}"${current.meta.pageMap?.[l.no] ? '' : ' disabled'}>${l.no}-dars${current.meta.pageMap?.[l.no] ? ` · ${current.meta.pageMap[l.no]}-bet` : ''}</option>`).join('')}</select></label>
-                    <button type="button" class="lh-btn lh-primary" data-book-present>▶ Prezentatsiyada ochish</button>` : ''}
+                    ${isLocalFile(current.url) ? '<button type="button" class="lh-btn lh-primary" data-book-present>▶ Prezentatsiyada ochish</button>' : ''}
+                    ${hub.canEdit && !Object.keys(current.meta.pageMap || {}).length ? '<div class="lh-muted">Darslar sahifasini belgilash uchun ✎ tugmasini bosing ("1:5, 2:9").</div>' : ''}` : ''}
             </aside>
             <section class="lh-card lh-book-view" id="lhBookView">${current ? '' : '<div class="lh-empty-sm">Kitob tanlanmagan</div>'}</section>
         </div>`;
         bindMaterialActions(main, null);
         main.querySelectorAll('[data-book]').forEach(b => b.addEventListener('click', () => { S.bookState[S.lang] = { id: b.dataset.book, page: 1 }; renderBookView(main); }));
         if (!current) return;
+        if (!isLocalFile(current.url)) {
+            main.querySelector('#lhBookView').innerHTML = `<div class="lh-empty-sm">Bu kitob tashqi havola — saytda ochib bo'lmaydi. ${safeUrl(current.url) ? `<a class="lh-btn" href="${esc(safeUrl(current.url))}" target="_blank" rel="noopener">Yangi oynada ochish</a>` : ''}</div>`;
+            return;
+        }
         const page = st.id === current.id ? (st.page || 1) : 1;
         LessonPresenter.mountPdfReader(main.querySelector('#lhBookView'), {
             url: current.url, page,
@@ -802,7 +948,7 @@
                 if (p && reader) reader.goTo(p);
             });
         });
-        main.querySelector('[data-book-present]').addEventListener('click', () => LessonPresenter.open({
+        main.querySelector('[data-book-present]')?.addEventListener('click', () => LessonPresenter.open({
             title: current.title, sources: [{ type: 'pdf', url: current.url, title: current.title }],
             startPage: S.bookState[S.lang]?.page || 1,
         }));
@@ -811,41 +957,48 @@
     // ── Teacher's book ──────────────────────────────────────────────────────
     function renderGuideView(main) {
         const hub = S.hub[S.lang];
+        const R = { ...RULES, ...(hub.rules ? { PASS_PERCENT: hub.rules.passPercent, UNLOCK_PERCENT: hub.rules.unlockPercent, LIVE_AUTO_UNLOCK: hub.rules.liveAutoUnlock, EXAM_INTERVAL: hub.rules.examInterval, EXAM_PASS_PERCENT: hub.rules.examPassPercent } : {}) };
         const files = hub.courseMaterials.filter(m => m.kind === 'teacher_book' || m.kind === 'methodology');
         const fake = { materials: files, lesson: null };
+        const oral = hub.oralExams;
+        const oralKeys = oral ? Object.keys(oral).filter(k => /^interval-\d+$|^final$/.test(k)) : [];
         main.innerHTML = `
         <div class="lh-guide">
-            <div class="lh-card"><div class="lh-card-h"><b>Kurs tuzilmasi</b></div>
-                <ul class="lh-rules">
-                    <li><b>72 dars · 3 oy</b> — har oy 24 dars. Toq raqamli darslar <span class="lh-type video">Video</span> (o'quvchi ilovada mustaqil), juft raqamlilar <span class="lh-type live">Jonli</span> (ustoz bilan).</li>
-                    <li><b>Dars ochilishi:</b> videodars oldingi dars 50% bajarilganda ochiladi. Jonli dars — ustoz davomatni belgilaganda yoki oldingi dars 60% bajarilganda.</li>
-                    <li><b>Dars bajarilishi</b> = (video yoki slaydlar + so'zlar + uy vazifasi) ÷ 3.</li>
-                    <li><b>Uy vazifasi:</b> har qism ${65}% dan yuqori bo'lsa o'tadi. Ijodiy va o'qish vazifalarini ustoz baholaydi.</li>
-                    <li><b>Imtihonlar:</b> har 12 darsdan keyin oraliq imtihon va kurs oxirida yakuniy imtihon (o'tish — 70%).</li>
-                    <li><b>Davomat</b> darsdan keyin darhol belgilanadi — u jonli darsni ilovada ochadi va oylik hisobiga kiradi.</li>
-                </ul></div>
-            <div class="lh-card"><div class="lh-card-h"><b>Jonli darsni qanday o'tkazamiz</b></div>
-                <ol class="lh-rules">
-                    <li>Darsdan oldin: shu sahifada <b>Dars rejasi</b>ni oching, oldingi darsni bajarmaganlar ro'yxatiga qarang.</li>
-                    <li><b>▶ Darsni boshlash</b> — slaydlar, so'z kartochkalari, kitob va bo'sh doska bitta oynada. Slayd ustiga chizish mumkin (P — qalam, M — marker, L — lazer, B — yangi doska).</li>
-                    <li>O'quvchi ko'proq gapirsin: ustoz nutqi 30% dan oshmasin.</li>
-                    <li>Darsdan keyin: davomat, ijodiy vazifalarni baholash, faol bo'lmaganlarga xabar.</li>
-                    <li>Haftada bir marta: <b>O'quvchilar progressi</b>dagi "e'tibor kerak" ro'yxatini ko'rib chiqing.</li>
-                </ol></div>
-            ${materialSection(fake, 'teacher_book', "Teacher's book (to'liq qo'llanma)", 'Kurs bo\'yicha ustoz kitobi — PDF.', files.filter(f => f.kind === 'teacher_book'))}
+            <div class="lh-two-cards">
+                <div class="lh-card"><div class="lh-card-h"><b>Kurs tuzilmasi va qoidalar</b></div>
+                    <ul class="lh-rules">
+                        <li><b>72 dars · 3 oy</b> — har oy 24 dars. Toq raqamli darslar <span class="lh-type video">Video</span> (o'quvchi ilovada mustaqil), juft raqamlilar <span class="lh-type live">Jonli</span> (ustoz bilan).</li>
+                        <li><b>Dars ochilishi:</b> videodars oldingi dars ${R.UNLOCK_PERCENT}% bajarilganda ochiladi. Jonli dars — ustoz davomatni belgilaganda (oldingi dars ${R.UNLOCK_PERCENT}%) yoki oldingi dars ${R.LIVE_AUTO_UNLOCK}% bajarilganda. Admin ayrim darsga boshqa chegara qo'yishi mumkin.</li>
+                        <li><b>Dars bajarilishi</b> = (video yoki slaydlar + so'zlar + uy vazifasi) ÷ 3. Uy vazifasi bo'lmagan dars 100% ga yetmaydi — bu ilovada ham shunday.</li>
+                        <li><b>Uy vazifasi:</b> har qism ${R.PASS_PERCENT}% dan yuqori bo'lsa o'tadi. Ijodiy vazifani ustoz baholaydi, qolganlari avtomatik tekshiriladi.</li>
+                        <li><b>Imtihonlar:</b> har ${R.EXAM_INTERVAL} darsdan keyin oraliq imtihon va kurs oxirida yakuniy imtihon (o'tish — ${R.EXAM_PASS_PERCENT}%).</li>
+                        <li><b>Davomat</b> darsdan keyin darhol belgilanadi — u jonli darsni ilovada ochadi va oylik hisobiga kiradi.</li>
+                    </ul></div>
+                <div class="lh-card"><div class="lh-card-h"><b>Jonli darsni qanday o'tkazamiz</b></div>
+                    <ol class="lh-rules">
+                        <li>Darsdan oldin: <b>Dars rejasi</b>ni oching, "Darsdan oldin" ro'yxatiga va eng ko'p xato qilingan savollarga qarang.</li>
+                        <li><b>▶ Darsni boshlash</b> — slaydlar, so'z kartochkalari, kitob va bo'sh doska bitta oynada. Klavishlar: ←/→ slayd, P qalam, M marker, E o'chirg'ich, L lazer, B yangi doska, T tarjima, F to'liq ekran.</li>
+                        <li>Qoidani o'zingiz aytmang — misollardan o'quvchi topsin; keyin 2 ta tekshiruv savoli (CCQ).</li>
+                        <li>O'quvchi kamida 70% vaqt gapirsin. Xatolarni yozib boring va dars oxirida birga tuzating.</li>
+                        <li>Darsdan keyin: davomat, ijodiy vazifalarni baholash, faol bo'lmaganlarga xabar.</li>
+                        <li>Haftada bir marta: <b>O'quvchilar progressi</b>dagi "e'tibor kerak" ro'yxati.</li>
+                    </ol></div>
+            </div>
+            ${materialSection(fake, 'teacher_book', "Teacher's book (to'liq qo'llanma)", "Kurs bo'yicha ustoz kitobi — PDF (300 MB gacha).", files.filter(f => f.kind === 'teacher_book'))}
             ${materialSection(fake, 'methodology', 'Metodika va standartlar', 'Baholash mezonlari, dars kuzatuv varaqasi va boshqa hujjatlar.', files.filter(f => f.kind === 'methodology'))}
+            ${oralKeys.length ? `<div class="lh-card"><div class="lh-card-h"><b>Og'zaki imtihonlar (ustoz uchun)</b><span class="lh-muted">ilova testi bilan birga o'tkaziladi</span></div>
+                ${oral.grading_uz ? `<div class="lh-note lh-pre">${esc(oral.grading_uz)}</div>` : ''}
+                ${oralKeys.map(k => oralExamHtml(k, oral[k])).join('')}
+                ${oral.rubric?.criteria?.length ? `<details class="lh-hw"><summary><b>Baholash mezonlari (rubrika)</b><span class="lh-muted">${esc(oral.rubric.scale || '')}</span></summary>
+                    <div class="lh-table-wrap"><table class="lh-table is-compact"><thead><tr><th>Mezon</th>${[5, 4, 3, 2, 1, 0].map(n => `<th>${n}</th>`).join('')}</tr></thead>
+                    <tbody>${oral.rubric.criteria.map(c => `<tr><td><b>${esc(c.name_uz || c.id)}</b></td>${[5, 4, 3, 2, 1, 0].map(n => `<td class="lh-muted">${esc(c.levels?.[n] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : ''}
+            </div>` : ''}
             <div class="lh-card lh-table-wrap"><div class="lh-card-h"><b>72 darslik reja</b><span class="lh-gap"></span><button type="button" class="lh-btn" data-print-syllabus>🖨 Chop etish</button></div>
                 <table class="lh-table is-compact"><thead><tr><th>№</th><th>Turi</th><th>Dars</th><th>Maqsad</th><th>So'z</th><th>Vazifa</th></tr></thead>
                 <tbody>${hub.syllabus.map(l => `<tr data-open-lesson="${l.no}" tabindex="0"><td>${l.no}</td><td><span class="lh-type ${l.type}">${l.type === 'live' ? 'Jonli' : 'Video'}</span></td>
                     <td><b>${esc(plain(l.name))}</b>${l.topic ? `<div class="lh-muted">${esc(plain(l.topic))}</div>` : ''}</td><td class="lh-muted">${esc(l.cando)}</td><td>${l.counts.vocab || '—'}</td><td>${l.counts.homework ? `${l.counts.homework} qism` : '—'}</td></tr>`).join('')}</tbody></table></div>
         </div>`;
-        // Kurs darajasidagi materiallar (lessonNo = null)
-        main.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => openMaterialForm({ kind: b.dataset.add, mode: b.dataset.mode, lessonNo: null })));
-        main.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteMaterial(b.dataset.del)));
-        main.querySelectorAll('[data-present-file]').forEach(b => b.addEventListener('click', () => {
-            const m = files.find(x => x.id === b.dataset.presentFile);
-            if (m) LessonPresenter.open({ title: m.title, sources: [{ type: 'pdf', url: m.url, title: m.title }] });
-        }));
+        bindMaterialActions(main, fake);
         main.querySelectorAll('[data-open-lesson]').forEach(tr => {
             const go = () => { S.view = 'lessons'; S.selected[S.lang] = Number(tr.dataset.openLesson); savePrefs(); render(); };
             tr.addEventListener('click', go);
@@ -860,6 +1013,22 @@
                 <script>window.onload=()=>window.print()<\/script></body></html>`);
             w.document.close();
         });
+    }
+
+    function oralExamHtml(key, x) {
+        if (!x) return '';
+        const title = key === 'final' ? 'Yakuniy imtihon' : `${key.split('-')[1]}-oraliq imtihon`;
+        const list = (arr, cls = 'lh-rules') => (arr?.length ? `<ul class="${cls}">${arr.map(i => `<li>${esc(typeof i === 'string' ? i : (i.ru ? `${i.ru}${i.uz ? ` — ${i.uz}` : ''}` : i.q ? `${i.q}${i.a ? ` → ${i.a}` : ''}` : ''))}</li>`).join('')}</ul>` : '');
+        const sp = (x.speaking || []).map(t => `<div class="lh-oral-task"><b>${esc(t.title_uz || t.type)}</b>${t.time_min ? ` <span class="lh-tag">${esc(t.time_min)} daq</span>` : ''}
+            ${t.task_uz ? `<div>${esc(t.task_uz)}</div>` : ''}${t.situation_uz ? `<div>${esc(t.situation_uz)}</div>` : ''}
+            ${t.teacher_card_uz ? `<div class="lh-muted"><b>Ustoz kartasi:</b> ${esc(t.teacher_card_uz)}</div>` : ''}
+            ${t.student_must_uz ? `<div class="lh-muted"><b>O'quvchi bajarishi kerak:</b></div>${list(t.student_must_uz)}` : ''}
+            ${t.plan_uz ? list(t.plan_uz) : ''}${t.teacher_lines_ru ? `<div class="lh-muted"><b>Ustoz replikalari:</b></div>${list(t.teacher_lines_ru)}` : ''}
+            ${t.questions ? list(t.questions) : ''}${t.useful_ru ? `<div class="lh-muted">Foydali iboralar: ${esc(t.useful_ru.join(' · '))}</div>` : ''}</div>`).join('');
+        const w = x.writing ? `<div class="lh-oral-task"><b>Yozish</b>${x.writing.time_min ? ` <span class="lh-tag">${esc(x.writing.time_min)} daq</span>` : ''}<div>${esc(x.writing.task_uz || '')}</div>${list(x.writing.plan_uz)}
+            ${x.writing.model_ru ? `<div class="lh-muted"><b>Namuna:</b> ${esc(x.writing.model_ru)}</div>` : ''}</div>` : '';
+        const l = (x.listening || []).map((t, i) => `<div class="lh-oral-task"><b>Tinglash ${i + 1}</b> <span class="lh-tag">${esc(t.dialog || '')} · ${t.plays || 2} marta</span>${list(t.questions)}</div>`).join('');
+        return `<details class="lh-hw"><summary><b>${esc(title)}</b><span class="lh-muted">${esc(x.covers || '')}</span></summary><div class="lh-oral">${sp}${w}${l}</div></details>`;
     }
 
     // ── Eski "Qo'shimcha materiallar" (mobileContent.documents) ─────────────

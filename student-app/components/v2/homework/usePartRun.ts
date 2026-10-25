@@ -119,7 +119,15 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
       return;
     }
     // Ustoz kabineti: har urinish natijasi va xato qilingan savollar (o'tmagan bo'lsa ham).
-    reportPartResult({ lessonId, partId: part.id, kind: part.kind, title: part.title ?? '', correct: finalCorrect, total, mistakes: score.current.mistakes });
+    // Xato savol ↔ o'quvchi javobi: xatolar ro'yxati noto'g'ri javoblar tartibida
+    // yoziladi, shuning uchun results[i] === false bo'lgan indekslar bilan juftlanadi.
+    const sc = score.current;
+    const wrongAt = (sc.results ?? []).map((ok, i) => (ok ? -1 : i)).filter((i) => i >= 0);
+    const paired = wrongAt.length === sc.mistakes.length;
+    reportPartResult({
+      lessonId, partId: part.id, kind: part.kind, title: part.title ?? '', correct: finalCorrect, total,
+      mistakes: sc.mistakes.map((question, k) => ({ question, yourAnswer: paired ? (sc.picks?.[wrongAt[k]] ?? '') : '' })),
+    });
     if (accuracy < PASS_THRESHOLD) {
       playSfx('lose');
       speak('retry', 1000);

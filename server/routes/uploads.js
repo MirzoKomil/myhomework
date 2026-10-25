@@ -92,6 +92,24 @@ router.post('/creative-submission', creativeSubmissionUpload.single('file'), (re
     res.json({ url: `/uploads/${req.file.filename}` });
 });
 
+// Darslik markazi: kitob va Teacher's book PDF'lari odatda 50 MB dan katta —
+// faqat admin/boshliq uchun, faqat PDF, 300 MB gacha.
+const largePdfUpload = multer({
+    storage,
+    limits: { fileSize: 300 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf' && path.extname(file.originalname).toLowerCase() === '.pdf') return cb(null, true);
+        cb(new Error('Faqat PDF fayl yuklash mumkin'));
+    }
+});
+router.post('/large-pdf', authRequired, require('../middleware/roles').requireRoles('admin', 'boshliq'), (req, res) => {
+    largePdfUpload.single('file')(req, res, err => {
+        if (err) return res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Fayl 300 MB dan katta' : err.message });
+        if (!req.file) return res.status(400).json({ error: 'Fayl yuklanmadi' });
+        res.json({ url: `/uploads/${req.file.filename}`, fileName: req.file.originalname, fileSize: req.file.size, mimeType: req.file.mimetype });
+    });
+});
+
 router.delete('/:filename', authRequired, async (req, res) => {
     const filename = path.basename(req.params.filename);
     const filePath = path.join(UPLOADS_DIR, filename);

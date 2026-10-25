@@ -4,9 +4,10 @@
  * uy vazifasi qismlarining natijasi (to'g'ri/jami, xato qilingan savollar).
  *
  * Qoidalar:
- * - Vaqt faqat ilova ochiq (oldingi planda) va o'quvchi faol bo'lganda
+ * - "Faol vaqt": ilova ochiq (oldingi planda) va o'quvchi faol bo'lganda
  *   hisoblanadi: 2 daqiqa (web) / 10 daqiqa (telefon) hech narsaga
- *   tegilmasa, hisob to'xtaydi. Video/audio ijro etilayotgan bo'lsa — faol.
+ *   tegilmasa, hisob to'xtaydi. Video, audio va slayd bo'limlarida — 25 daqiqa;
+ *   video/audio ijro etilayotgan bo'lsa yoki YouTube pleyer fokusda bo'lsa — faol.
  * - Har 60 soniyada va ilova fonga o'tganda serverga yuboriladi; tarmoq
  *   bo'lmasa navbatda qoladi va keyingi safar ketadi.
  * - O'quvchi tajribasiga hech qachon ta'sir qilmaydi (xatolar jim o'tadi).
@@ -25,8 +26,13 @@ const QUEUE_KEY = 'mh_v2_learning_queue';
 const TICK_MS = 5000;
 const FLUSH_MS = 60000;
 const IDLE_MS = Platform.OS === 'web' ? 2 * 60000 : 10 * 60000;
+// Video/audio/slayd ko'rishda o'quvchi ekranga tegmasligi mumkin (YouTube
+// iframe'dagi ijroni sahifa sezmaydi) — shu bo'limlarda kutish uzunroq.
+const MEDIA_SECTIONS = new Set(['video', 'audio', 'slaydlar']);
+const MEDIA_IDLE_MS = 25 * 60000;
 
 type TimeEntry = { day: string; lessonId: string; section: string; seconds: number };
+type Mistake = { question: string; yourAnswer?: string };
 type PartEntry = {
   lessonId: string;
   partId: string;
@@ -34,7 +40,7 @@ type PartEntry = {
   title: string;
   correct: number;
   total: number;
-  mistakes: string[];
+  mistakes: (string | Mistake)[];
 };
 
 let context = { lessonId: '', section: 'bosh' };
@@ -90,13 +96,20 @@ export function trackPath(pathname: string) {
 export function reportPartResult(entry: PartEntry) {
   parts.push({
     ...entry,
-    mistakes: (entry.mistakes ?? []).map((m) => String(m).slice(0, 300)).slice(0, 30),
+    mistakes: (entry.mistakes ?? []).slice(0, 30).map((m) =>
+      typeof m === 'string' ? m.slice(0, 300) : { question: String(m.question).slice(0, 300), yourAnswer: String(m.yourAnswer ?? '').slice(0, 200) },
+    ),
   });
   void flush();
 }
 
 function isActive() {
-  return foreground && (mediaPlaying || Date.now() - lastActivity < IDLE_MS);
+  if (!foreground) return false;
+  if (mediaPlaying) return true;
+  // Web: fokus iframe ichida (YouTube pleyer bosilgan) — video ko'rilyapti.
+  if (Platform.OS === 'web' && typeof document !== 'undefined' && document.activeElement?.tagName === 'IFRAME') return true;
+  const limit = MEDIA_SECTIONS.has(context.section) ? MEDIA_IDLE_MS : IDLE_MS;
+  return Date.now() - lastActivity < limit;
 }
 
 function tick() {
@@ -150,7 +163,7 @@ export async function flush(keepalive = false) {
       body: JSON.stringify({ time: time.slice(0, 60), parts: pending.slice(0, 30) }),
       ...(keepalive ? { keepalive: true } : null),
     });
-    if (!res.ok && res.status >= 500) throw new Error(String(res.status));
+    if (!res.ok && (res.status >= 500 || res.status === 429)) throw new Error(String(res.status));
     await saveQueue([], []);
   } catch {
     // Tarmoq yo'q — keyingi safar yuboriladi.
