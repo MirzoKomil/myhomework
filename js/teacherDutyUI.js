@@ -51,9 +51,25 @@
         const attendance = store[`${month}_${id}`] || {};
         const ownTeacher = resolveTeacherWithVirtual(id) || {};
         const calendar = teacherAttendanceCalendar;
-        if (!students.some(s => s.id === expanded)) expanded = students[0]?.id || '';
+        // Ro'yxat yig'ilgan holda ochiladi; tepada "Bugungi darslar" — bir bosishda belgilash.
+        if (!students.some(s => s.id === expanded)) expanded = '';
+        const nowT = new Date();
+        const thisMonth = `${nowT.getFullYear()}-${String(nowT.getMonth() + 1).padStart(2, '0')}`;
+        const todayDow = nowT.getDay() || 7;
+        const todayList = month === thisMonth ? students.filter(s => calendar.weekdays(s, ownTeacher, selected).includes(todayDow))
+            .sort((a, b) => String(a.lessonTime || '').localeCompare(String(b.lessonTime || ''))) : [];
+        const expectedFor = s => calendar.cells(month, calendar.weekdays(s, ownTeacher, selected))
+            .filter(c => c && c.scheduled && (month < thisMonth || (month === thisMonth && c.day <= nowT.getDate()))).length;
+        const dutyTabs = (isMain ? 1 : 0) + ((!isMain || hasAssistant) ? 1 : 0);
         const teachers = getItem(STORAGE_KEYS.teachers, []);
-        root.innerHTML = `<div class="teacher-duty-tabs" role="tablist" aria-label="Ustozlik davomati">
+        const todayHtml = todayList.length ? `<section class="teacher-duty-today" aria-label="Bugungi darslar"><h4>Bugungi darslar <small>· ${todayList.length}</small></h4>
+            <ul>${todayList.map(s => {
+                const st = calendar.status((attendance[s.id] || {})[nowT.getDate()]);
+                return `<li><span><strong>${esc(s.name)}</strong><small>${esc(s.lessonTime || '')}</small></span>
+                    ${st === 'present' ? '<span class="teacher-duty-done">✓ Qatnashdi</span>' : st === 'absent' ? '<span class="teacher-duty-miss">Kelmadi</span>'
+                    : `<button type="button" class="btn-primary-sm" data-duty-today="${esc(s.id)}">Belgilash</button>`}</li>`;
+            }).join('')}</ul></section>` : '';
+        root.innerHTML = `${todayHtml}<div class="teacher-duty-tabs${dutyTabs < 2 ? ' is-single' : ''}" role="tablist" aria-label="Ustozlik davomati">
             ${isMain ? `<button role="tab" data-duty="main" aria-selected="${selected === 'main'}">Asosiy ustozlik davomati</button>` : ''}
             ${(!isMain || hasAssistant) ? `<button role="tab" data-duty="assistant" aria-selected="${selected === 'assistant'}">Yordamchi ustozlik davomati</button>` : ''}
         </div><div class="teacher-duty-help"><p>Istalgan kunni bosib davomat qo‘ying. Belgilangan kunni qayta bosib o‘zgartiring yoki olib tashlang.</p>
@@ -64,7 +80,7 @@
             return `<article class="teacher-duty-card">
             <button type="button" class="teacher-duty-student" data-duty-expand="${esc(s.id)}" aria-expanded="${expanded === s.id}" aria-controls="${panelId}">
                 <span><strong>${esc(s.name)}</strong><small>${esc(formatPhoneDisplay(s.phone))}</small></span>
-                <span class="teacher-duty-count">${count} dars <span aria-hidden="true">${expanded === s.id ? '⌃' : '⌄'}</span></span>
+                <span class="teacher-duty-count"><b>${count}</b>/${expectedFor(s)} dars <span aria-hidden="true">${expanded === s.id ? '⌃' : '⌄'}</span></span>
             </button><div id="${panelId}" class="teacher-duty-calendar" ${expanded !== s.id ? 'hidden' : ''}>
             ${selected === 'assistant' ? `<p class="teacher-duty-primary">Asosiy ustoz: ${esc(teachers.find(t => t.id === s.teacherId)?.name || '—')}</p>` : ''}
             <div class="teacher-duty-weekdays" aria-hidden="true">${['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'].map(day => `<span>${day}</span>`).join('')}</div>
@@ -75,6 +91,9 @@
                 return `<button type="button" class="teacher-duty-day${cell.scheduled ? ' duty-scheduled' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" aria-label="${cell.date}: ${label}${cell.scheduled ? ', rejadagi kun' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time><span aria-hidden="true">${state === 'present' ? '✓' : state === 'absent' ? '−' : ''}</span></button>`;
             }).join('')}</div></div></article>`;
         }).join('') || '<p class="teacher-duty-empty">Bu rolda faol o‘quvchilar biriktirilmagan.</p>'}</div><p data-duty-error role="alert">${esc(lastError)}</p>`;
+        root.querySelectorAll('[data-duty-today]').forEach(button => { button.onclick = () => {
+            root.querySelector(`[data-duty-student="${CSS.escape(button.dataset.dutyToday)}"][data-duty-day="${nowT.getDate()}"]`)?.click();
+        }; });
         root.querySelectorAll('[data-duty]').forEach(button => { button.onclick = () => { if (!busy) { selected = button.dataset.duty; lastError = ''; render(); } }; });
         root.querySelectorAll('[data-duty-expand]').forEach(button => { button.onclick = () => {
             if (busy) return;

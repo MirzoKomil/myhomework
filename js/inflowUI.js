@@ -5,7 +5,7 @@
     const money = value => (typeof formatMoney === 'function' ? formatMoney(value) : Number(value || 0).toLocaleString('en-US').replaceAll(',', ' ') + " so'm");
     const opts = (items, all) => `<option value="">${all}</option>` + items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
     const dateText = value => L.displayDate(value);
-    const methodBadge = r => `<span class="inflow-method" title="${esc(L.METHODS[r.method] || 'Aniqlanmagan')}"><span aria-hidden="true">${({cash:'💵',bank:'🏦',card:'💳',uzum:'💳',paylater:'💳',payme:'🏦',click:'🏦',unknown:'?'})[r.method] || '?'}</span> ${esc(r.method==='unknown' ? 'Noma’lum' : L.METHODS[r.method] || 'Aniqlanmagan')}</span>`;
+    const methodBadge = r => `<span class="inflow-method" title="${esc(L.METHODS[r.method] || 'Aniqlanmagan')}">${esc(r.method==='unknown' ? 'Noma’lum' : L.METHODS[r.method] || 'Aniqlanmagan')}</span>`;
     function monthDates(month) {
         if (!/^\d{4}-\d{2}$/.test(month)) return null;
         const [y, m] = month.split('-').map(Number);
@@ -44,7 +44,7 @@
         };
         const phoneText = p => esc(typeof formatPhoneDisplay === 'function' ? (formatPhoneDisplay(p) || p) : p);
         const formBadge = r => r.form === 'full' ? '<span class="ifx-badge ifx-badge--ok">To‘liq</span>' : '<span class="ifx-badge ifx-badge--warn">Yarim (Zaklad)</span>';
-        const tr = list.map((r, i) => `<tr><td class="ifx-n">${i + 1}</td><td><b>${dateText(r.paidDate)}</b><small>${esc(r.paidTime || 'Vaqt noma’lum')}</small></td><td><b>${esc(r.name)}</b><small>${phoneText(r.phone)}</small></td><td>${formBadge(r)}<small>${methodBadge(r)} ${esc(L.TARIFFS[r.tariff] || 'Tarif aniqlanmagan')}</small></td><td class="ifx-num inflow-amount">${money(r.amount)}</td><td class="ifx-num${r.debt > 0 ? ' ifx-debt' : ''}">${money(r.debt)}</td><td>${dateText(L.nextDate(r.debt,r.nextPaymentDate))}</td><td><b>${esc(r.managerName || 'Biriktirilmagan')}</b><small>${esc(r.teacherName || 'Ustoz aniqlanmagan')}</small></td><td>${cell(r,true)}</td></tr>`).join('');
+        const tr = list.map((r, i) => `<tr><td class="ifx-n">${i + 1}</td><td><b>${dateText(r.paidDate)}</b><small>${esc(r.paidTime || 'Vaqt noma’lum')}</small></td><td><b>${esc(r.name)}</b><small>${phoneText(r.phone)}</small></td><td><span class="ifx-pay">${formBadge(r)}${methodBadge(r)}</span><small>${esc(L.TARIFFS[r.tariff] || 'Tarif aniqlanmagan')}</small></td><td class="ifx-num inflow-amount">${money(r.amount)}</td><td class="ifx-num${r.debt > 0 ? ' ifx-debt' : ''}">${money(r.debt)}</td><td>${dateText(L.nextDate(r.debt,r.nextPaymentDate))}</td><td><b>${esc(r.managerName || 'Biriktirilmagan')}</b><small>${esc(r.teacherName || 'Ustoz aniqlanmagan')}</small></td><td>${cell(r,true)}</td></tr>`).join('');
         const headings = ['№','Sana / vaqt','O‘quvchi','To‘lov','Summa','Qoldiq qarz','Keyingi to‘lov','Menejer · ustoz','Chek'];
         const focusFilters={2:'search',3:'form',7:'manager',8:'review'};
         const sortCols = {1:'date',4:'amount'};

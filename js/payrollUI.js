@@ -84,13 +84,13 @@
                     root.dataset.payrollFingerprint = fingerprint;
                 }
             }
-            message(root, result.warnings.length ? result.warnings.join(' · ') : 'Server ma’lumotlari yangilandi');
+            message(root, result.warnings.length ? result.warnings.join(' · ') : '');
         } catch (e) { if (request === state.seq) message(root, e.message, true); }
     }
     function renderPayroll(root, result) {
         root.dataset.manualDirty = '';
         const body = root.querySelector('[data-payroll-body]');
-        body.innerHTML = `<div class="payroll-heading"><h3>Maoshlar — ${esc(result.period.start)} – ${esc(result.period.end)}</h3>
+        body.innerHTML = `<div class="payroll-heading"><h3>Maoshlar <small>· ${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.start) : result.period.start)} – ${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.end) : result.period.end)}</small></h3>
             <button class="btn-primary-sm" data-payroll-accrue>Maoshlarni shakllantirish</button></div>
             ${(() => { const rows = result.rows || [], paid = rows.filter(r => r.status === 'paid'), unpaid = rows.filter(r => r.status !== 'paid'), sum = list => list.reduce((a, r) => a + Number(r.total || 0), 0);
                 return `<div class="pfx-tiles"><div class="pfx-tile"><small>Jami hisoblangan</small><b>${money(result.total)}</b><span>${rows.length} xodim</span></div><div class="pfx-tile"><small>Berildi</small><b class="pfx-ok">${money(sum(paid))}</b><span>${paid.length} xodim</span></div><div class="pfx-tile"><small>Berilmagan</small><b>${money(sum(unpaid))}</b><span>${unpaid.length} xodim</span></div>${(result.corrections || []).filter(c => c.status !== 'approved' && c.status !== 'dismissed').length ? `<div class="pfx-tile"><small>Tuzatishlar</small><b class="pfx-warn">${(result.corrections || []).filter(c => c.status !== 'approved' && c.status !== 'dismissed').length} ta kutmoqda</b><span>pastda koʻrib chiqing</span></div>` : ''}</div>`; })()}
@@ -98,7 +98,7 @@
             <div class="payroll-table-wrap"><table class="payroll-table"><thead><tr><th>Xodim</th><th>Davr</th><th>Asosiy parametrlar</th><th>Bonus / qo‘shimcha</th><th>Jami</th><th>Holat</th></tr></thead><tbody>
             ${result.rows.map(row => `<tr>
                 <td data-label="Xodim"><div class="payroll-person">${row.avatar ? `<img src="${esc(row.avatar)}" alt="">` : `<span class="payroll-avatar">${esc(String(row.name || '?').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase())}</span>`}<div><strong>${esc(row.name)}</strong><small>${esc(row.roleLabel)}</small></div></div></td>
-                <td data-label="Davr">${esc(result.period.start)}<br>${esc(result.period.end)}</td>
+                <td data-label="Davr">${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.start) : result.period.start)}<br>${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.end) : result.period.end)}</td>
                 <td data-label="Parametrlar">Fiksa: ${money(row.fixed)}<br>${row.role === 'sales' || row.role === 'rop' ? `Aylanma: ${money(row.turnover)}<br>Ulush: ${money(row.commission)}` : `${row.studentCount || 0} o‘quvchi · ${row.lessons || 0} dars`}
                     ${row.role === 'rop' ? `<br>Toza aylanma: ${money(row.cleanTurnover)}<br>Reja: ${Number(row.completion).toFixed(1)}% · ulush ${row.rate}%${row.blocked ? '<p class="payroll-alert">Reja tasdiqlanmagan</p>' : ''}` : ''}
                     ${row.mainTotal !== undefined ? `<p>Asosiy: ${money(row.mainTotal)} · ${row.mainLessons} dars<br>Yordamchi: ${money(row.assistantTotal)} · ${row.assistantLessons} dars</p>` : ''}
@@ -165,7 +165,7 @@
         return config[role].tiers.map((t, i, all) => `<div class="payroll-tier" data-tier="${i}">
             ${numberInput(role === 'sales' ? 'Aylanma ≥ (so‘m)' : 'Reja ≤ (%)', 'tier-bound', role === 'sales' ? t.from : (t.upTo ?? ''), role === 'rop' && i === all.length - 1 ? 'disabled placeholder="Cheksiz"' : '')}
             ${numberInput(role === 'sales' ? 'Fiksa (so‘m)' : 'Ulush (%)', 'tier-value', role === 'sales' ? t.fixed : t.rate)}
-            <button type="button" class="btn-danger-sm" data-remove-tier="${role}:${i}" ${all.length <= 1 || (role === 'rop' && i === all.length - 1) ? 'disabled' : ''}>O‘chirish</button></div>`).join('');
+            <button type="button" class="btn-danger-sm payroll-tier-del" data-remove-tier="${role}:${i}" aria-label="Pog‘onani o‘chirish" title="O‘chirish" ${all.length <= 1 || (role === 'rop' && i === all.length - 1) ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg></button></div>`).join('');
     }
     function renderSettings(root, config) {
         const result = state.result, c = config.data, body = root.querySelector('[data-payroll-body]');
