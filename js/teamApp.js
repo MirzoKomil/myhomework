@@ -19,6 +19,7 @@
         check: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
         sales: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
         menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+        target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
         search: '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>',
         close: '<path d="M18 6L6 18M6 6l12 12"/>'
     };
@@ -30,7 +31,7 @@
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'dashboard' },
             { id: 'leads', label: 'Lidlar', icon: 'leads', tab: 'sales', sales: 'leads' },
             { id: 'rating', label: 'Reyting', icon: 'trophy', tab: 'sales', sales: 'rating' },
-            { id: 'students', label: 'Oʻquvchilar', icon: 'students', tab: 'students' }
+            { id: 'plan', label: 'Rejam', icon: 'target', tab: 'sales', sales: 'sales-plan' }
         ],
         rop: [
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'dashboard' },
@@ -151,7 +152,8 @@
             el.className = 'team-title';
             header.querySelector('.lead-search-box')?.before(el);
         }
-        const title = TITLES[_activeTab] || (_activeTab === 'dashboard' ? 'Bosh sahifa' : '');
+        const SALES_TITLES = { leads: 'Lidlar', 'book-roadmap': 'Kitob yetkazish', rating: 'Reyting', 'sales-stats': 'Statistika', scripts: 'Skriptlar', 'sales-plan': 'Sotuv rejasi', debtors: 'Qarzdorlar' };
+        const title = (_activeTab === 'sales' && SALES_TITLES[activeSales()]) || TITLES[_activeTab] || (_activeTab === 'dashboard' ? 'Bosh sahifa' : '');
         const html = title ? `<h1>${title}</h1>` : '<img src="images/myhomework-logo.png" alt="Homework">';
         if (el._sig !== html) { el._sig = html; el.innerHTML = html; }
     }

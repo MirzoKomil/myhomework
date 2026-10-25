@@ -8564,7 +8564,7 @@ function renderManagerGoalBlock(managerId, lang) {
     const daily = tiers(DAILY_BONUSES);
     const next = monthly.find(b => month < b.threshold);
     const daysLeft = _monthDaysLeft();
-    const mln = n => { const v = (Number(n) || 0) / 1e6; return v ? `${String(Math.round(v * 10) / 10).replace('.', ',')} mln soʻm` : '0 soʻm'; };
+    const mln = fmtMln;
     const ranked = getSalesManagers(lang).map(m => ({ id: m.id, name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik') }))
         .sort((a, b) => b.sales - a.sales);
     const place = ranked.findIndex(m => m.id === managerId) + 1;
@@ -8577,7 +8577,7 @@ function renderManagerGoalBlock(managerId, lang) {
             <div class="mot-goal-txt"><span class="mot-eyebrow">Sovgʻaga yoʻl · ${daysLeft} kun qoldi</span>
             <h3 class="mot-goal-title">${escapeHtml(next.label || '')} uchun yana ${mln(gap)}</h3>
             <div class="mot-team"><span><strong>${pct}%</strong></span><span class="mot-bar" role="progressbar" aria-label="${escapeHtml(next.label || '')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></span><span class="mot-goal-frac">${mln(month)} / ${mln(next.threshold)}</span></div>
-            <span class="mot-sub">Kuniga ${mln(Math.ceil(gap / daysLeft))}${place ? ` · ${place}-oʻrin` : ''}${ahead ? `<span class="mot-sub-x">, ${escapeHtml(_firstName(ahead.name))}dan ${mln(Math.max(0, ahead.sales - month))} orqada</span>` : ''}</span></div></section>`;
+            <span class="mot-sub">Sovgʻa uchun kuniga ${mln(Math.ceil(gap / daysLeft))}${place ? ` · ${place}-oʻrin` : ''}${ahead ? `<span class="mot-sub-x">, ${escapeHtml(_firstName(ahead.name))}dan ${mln(Math.max(0, ahead.sales - month))} orqada</span>` : ''}</span></div></section>`;
     } else {
         goal = `<section class="mot-goal" aria-label="Sovgʻaga yoʻl"><div class="mot-goal-txt"><span class="mot-eyebrow">Sovgʻaga yoʻl</span><h3 class="mot-goal-title">Bu oy barcha oylik sovgʻalar olindi!</h3></div></section>`;
     }
@@ -8990,8 +8990,7 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     // Pul: "1,5 mln" (10 mln dan kichikda 1 xona, kattasida butun).
     const mln = n => {
         const v = (Number(n) || 0) / 1e6;
-        const r = Math.abs(v) >= 10 ? Math.round(v) : Math.round(v * 10) / 10;
-        return String(r).replace('.', ',');
+        return String(Math.round(v * 10) / 10).replace('.', ',');
     };
     const pct = d.target > 0 ? Math.round(d.sales / d.target * 100) : null;
     const ahead = d.sales - d.dueByToday;
@@ -21882,6 +21881,18 @@ function shortPersonName(name) {
     return parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : parts[0];
 }
 
+// Ochiq bosqichdagi lid shu bosqichda qancha kutayotgani: <1 kun yashil, 1–3 kun sariq, 3+ qizil.
+const LEAD_AGE_OPEN = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida']);
+function _leadAgeChip(lead) {
+    if (!LEAD_AGE_OPEN.has(normalizeLeadStatus(lead.status))) return '';
+    const t = new Date(lead.statusChangedAt || lead.updatedAt || lead.createdAt || '').getTime();
+    if (!Number.isFinite(t)) return '';
+    const h = Math.max(0, (Date.now() - t) / 36e5);
+    const label = h < 1 ? `${Math.max(1, Math.round(h * 60))} daq` : h < 24 ? `${Math.round(h)} soat` : `${Math.floor(h / 24)} kun`;
+    const cls = h < 24 ? 'ok' : h < 72 ? 'warn' : 'late';
+    return `<span class="lead-age lead-age--${cls}" title="Shu bosqichda kutmoqda">${label}</span>`;
+}
+
 function renderLeadCard(lead, langKey) {
     const normalized = normalizeLeadExtras(lead);
     const phone = formatPhoneDisplay(normalized.phone) || '—';
@@ -21965,6 +21976,7 @@ function renderLeadCard(lead, langKey) {
                 ${renderLeadTrialStatus(normalized)}
                 <div class="lead-card-meta">
                     <span class="lead-card-time">${escapeHtml(formatLeadTime(normalized))}</span>
+                    ${_leadAgeChip(normalized)}
                     <span class="lead-card-kind lead-card-kind--meta">${escapeHtml(leadKindLabel(normalized))}</span>
                     ${serialHtml}
                 </div>
@@ -26726,17 +26738,17 @@ function renderSalesPlanIndividualPlanCard() {
         const diff = actualAmount - due;
         const today = typeof getManagerSalesForPeriod === 'function' ? getManagerSalesForPeriod(_spIndManagerId, 'kunlik') : 0;
         const perDay = Math.ceil(left / daysLeft);
-        const mlnN = n => { const v = (Number(n) || 0) / 1e6; return String(Math.abs(v) >= 10 ? Math.round(v) : Math.round(v * 10) / 10).replace('.', ','); };
-        const mln = n => Number(n) ? `${mlnN(n)} mln soʻm` : '0 soʻm';
+        const mlnN = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+        const mln = fmtMln;
         const big = n => `${mlnN(n)}<small> mln soʻm</small>`;
         let prizeLine = '';
         try {
             const monthSales = getManagerSalesForPeriod(_spIndManagerId, 'oylik');
             const nextPrize = MONTHLY_BONUSES.map(getMergedBonus).filter(x => Number(x.threshold) > 0).sort((x, y) => x.threshold - y.threshold).find(x => monthSales < x.threshold);
-            if (nextPrize) prizeLine = `<div class="sp-prize">${_prizeImg(nextPrize.id, 40)}<span><b>${escapeHtml(nextPrize.label || '')}</b> sovgʻasigacha ${mln(nextPrize.threshold - monthSales)} · kuniga ${mln(Math.ceil((nextPrize.threshold - monthSales) / daysLeft))}</span></div>`;
+            if (nextPrize) prizeLine = `<div class="sp-prize">${_prizeImg(nextPrize.id, 40)}<span><b>${escapeHtml(nextPrize.label || '')}</b> sovgʻasigacha ${mln(nextPrize.threshold - monthSales)} · sovgʻa uchun kuniga ${mln(Math.ceil((nextPrize.threshold - monthSales) / daysLeft))}</span></div>`;
         } catch (e) { prizeLine = ''; }
         paceHtml = `<div class="sp-pace">
-            <div class="sp-pace-i sp-pace-i--hero"><span>Bugungi maqsad</span><b title="${escapeHtml(fmtMoney(perDay))}">${big(perDay)}</b><small>${today ? `bugun ${mln(today)} sotildi` : 'bugun hali sotuv yoʻq'}</small></div>
+            <div class="sp-pace-i sp-pace-i--hero"><span>Bugungi maqsad · reja uchun</span><b title="${escapeHtml(fmtMoney(perDay))}">${big(perDay)}</b><small>Har kuni shuncha sotsangiz — rejaga yetasiz${today ? ` · bugun ${mln(today)}` : ''}</small></div>
             <div class="sp-pace-i"><span>Rejagacha qoldi</span><b title="${escapeHtml(fmtMoney(left))}">${big(left)}</b><small>${daysLeft} kun qoldi</small></div>
             <div class="sp-pace-i"><span>Bugungacha kerak edi</span><b title="${escapeHtml(fmtMoney(due))}">${big(due)}</b><small class="sp-gap ${diff >= 0 ? 'is-ok' : 'is-bad'}">${diff >= 0 ? '+' : '−'}${mln(Math.abs(diff))} ${diff >= 0 ? 'oldindasiz' : 'orqadasiz'}</small></div>
         </div>${prizeLine}`;
@@ -26888,6 +26900,12 @@ function _monthDaysLeft() {
     const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     return Math.max(1, last - now.getDate() + 1);
 }
+// Pul ixcham: "118,5 mln soʻm" (butun CRM bo'ylab bir xil yaxlitlash).
+function fmtMln(n) {
+    const v = (Number(n) || 0) / 1e6;
+    if (!v) return '0 soʻm';
+    return `${String(Math.round(v * 10) / 10).replace('.', ',')} mln soʻm`;
+}
 function _firstName(name) { return String(name || '').trim().split(/\s+/)[0] || ''; }
 
 function renderRatingMotivation(ranked, period, between = '') {
@@ -26906,8 +26924,8 @@ function renderRatingMotivation(ranked, period, between = '') {
         eyebrow = `Oy poygasi · ${daysLeft} kun qoldi`;
         if (next) {
             const gap = next.threshold - leader.sales;
-            title = `${escapeHtml(_firstName(leader.name))} ${escapeHtml(next.label)} sovgʻasiga ${fmtMoney(gap)} qoldi`;
-            sub = `Kuniga ${fmtMoney(Math.ceil(gap / daysLeft))} sotsa — sovgʻa uniki.`;
+            title = `${escapeHtml(_firstName(leader.name))} ${escapeHtml(next.label)} sovgʻasiga ${fmtMln(gap)} qoldi`;
+            sub = `Sovgʻa uchun kuniga ${fmtMln(Math.ceil(gap / daysLeft))}.`;
         } else {
             title = `${escapeHtml(_firstName(leader.name))} barcha oylik sovgʻalarni oldi!`;
         }
@@ -26922,7 +26940,10 @@ function renderRatingMotivation(ranked, period, between = '') {
         title = `Hafta lideri — ${escapeHtml(_firstName(leader.name))}`;
         sub = 'Hafta yakunida 1–3-oʻrinlar sovgʻa oladi.';
     }
-    if (second) sub += ` ${escapeHtml(_firstName(second.name))} 2-oʻrinda, farq ${fmtMoney(Math.max(0, leader.sales - second.sales))}.`;
+    if (second) {
+        const lead2 = Math.max(0, leader.sales - second.sales);
+        sub += lead2 > 0 ? ` ${escapeHtml(_firstName(second.name))} 2-oʻrinda, farq ${fmtMln(lead2)}.` : ` ${escapeHtml(_firstName(second.name))} bilan teng.`;
+    }
 
     const hero = `
     <section class="mot-hero" aria-label="Motivatsiya">
@@ -26932,7 +26953,7 @@ function renderRatingMotivation(ranked, period, between = '') {
             ${sub ? `<p class="mot-sub">${sub}</p>` : ''}
             ${teamTarget > 0 ? `<div class="mot-team"><span>Jamoa rejasi <strong>${teamPct}%</strong></span>
                 <span class="mot-bar" role="progressbar" aria-label="Jamoa rejasi" aria-valuenow="${teamPct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${teamPct}%"></span></span>
-                <span>${fmtMoney(teamSales)} / ${fmtMoney(teamTarget)}</span></div>` : ''}
+                <span>${fmtMln(teamSales)} / ${fmtMln(teamTarget)}</span></div>` : ''}
         </div>
     </section>`;
 
@@ -26979,9 +27000,9 @@ function renderRatingMotivation(ranked, period, between = '') {
             const pct = up && up.sales > 0 ? Math.min(100, Math.round(me.sales / up.sales * 100)) : 100;
             meCard = `<section class="mot-me${idx === 0 ? ' is-first' : ''}" aria-label="Mening oʻrnim">
                 <span class="mot-me-rank"><b>${idx + 1}</b><small>oʻrin</small></span>
-                <div class="mot-me-txt"><strong>${idx === 0 ? `Siz ${per} birinchisiz!` : `${escapeHtml(_firstName(up.name))}ni quvib oʻtish uchun yana ${fmtMoney(gap + 1)}`}</strong>
+                <div class="mot-me-txt"><strong>${idx === 0 ? `Siz ${per} birinchisiz!` : `${escapeHtml(_firstName(up.name))}ni quvib oʻtish uchun yana ${fmtMln(gap + 1)}`}</strong>
                     <span class="mot-bar mot-bar--light"><span style="width:${pct}%"></span></span>
-                    <small>${per} ${fmtMoney(me.sales)} · ${ranked.length} menejer ichida</small></div>
+                    <small>${per} ${fmtMln(me.sales)} · ${ranked.length} menejer ichida</small></div>
             </section>`;
         }
     }

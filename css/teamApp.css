@@ -1414,3 +1414,217 @@ html.rd .sfx-presets {
         margin-bottom: 0;
     }
 }
+
+/* ==========================================================================
+   3-bosqich
+   ========================================================================== */
+
+/* Lid yoshi chipi */
+html.rd .lead-age {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+html.rd .lead-age--ok { background: #E3F6EE; color: #0F7A55; }
+html.rd .lead-age--warn { background: #FFF4D6; color: #8A5A00; }
+html.rd .lead-age--late { background: #FDECEC; color: #C62828; }
+html.rd[data-theme="dark"] .lead-age--ok { background: #173A2C; color: #4ADE9B; }
+html.rd[data-theme="dark"] .lead-age--warn { background: #3A3018; color: #FFC94D; }
+html.rd[data-theme="dark"] .lead-age--late { background: #3D1F24; color: #FF8A8A; }
+
+/* Menejer o'z kanbanida: o'z avatari kerak emas */
+html.rd body[data-role="sales_manager"] .lead-card-action--mgr {
+    display: none;
+}
+
+/* Ustun sarlavhasi bir qatorda */
+html.rd .lead-column-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Kompyuterda ham qo'ng'iroq — ikonka */
+@media (min-width: 901px) {
+    html.rd .lead-card-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+    }
+
+    html.rd .lead-card-call {
+        display: inline-grid;
+        place-items: center;
+        margin-left: auto;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #E3F6EE;
+        color: #0F7A55;
+        font-size: 0;
+        text-decoration: none;
+    }
+
+    html.rd .lead-card-call svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+    }
+
+    html.rd .lead-card-call:hover {
+        background: #0F9D6B;
+        color: #fff;
+    }
+}
+
+/* Sotuv rejasi: segment o'z kengligida, jadval tor */
+@media (min-width: 901px) {
+    html.rd #spMainNav {
+        display: inline-flex;
+        width: auto;
+        align-self: flex-start;
+    }
+
+    html.rd .sp-cmp-wrap {
+        max-width: 760px;
+    }
+}
+
+/* Statistika: ikkinchi sarlavha kerak emas */
+html.rd .sfx-head h1 {
+    display: none;
+}
+
+/* Telefonda yashirin sidebar soyasi chetdan ko'rinmasin */
+@media (max-width: 900px) {
+    html.rd .sidebar:not(.open) {
+        box-shadow: none;
+    }
+
+    /* Bosh sahifa tartibi: banner → bugungi ishlar → raqamlar */
+    html.rd #managerHome {
+        display: flex;
+        flex-direction: column;
+    }
+
+    html.rd #managerHome > .mhx-head { order: 0; }
+    html.rd #managerHome > .mot-home { order: 1; }
+    html.rd #managerHome > .mhx-grid { order: 2; margin-bottom: 12px; }
+    html.rd #managerHome > .mhx-kpis { order: 3; }
+
+    html.rd .mhx-empty {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    html.rd .mhx-empty .btn-primary-sm {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    /* Kartochka ixcham: amallar telefon raqami qatorida */
+    html.rd .lead-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 8px;
+    }
+
+    html.rd .lead-card > .lead-card-top {
+        grid-column: 1 / -1;
+    }
+
+    html.rd .lead-card > .lead-card-contacts {
+        grid-column: 1;
+        align-self: center;
+    }
+
+    html.rd .lead-card > .lead-card-footer {
+        grid-column: 2;
+        grid-row: 2;
+        align-self: center;
+        border: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    html.rd .lead-card > .lead-card-next,
+    html.rd .lead-card > :not(.lead-card-top):not(.lead-card-contacts):not(.lead-card-footer) {
+        grid-column: 1 / -1;
+    }
+
+    html.rd .lead-card .lead-card-actions {
+        width: auto;
+    }
+
+    /* Reyting: ichki tablar va davr bitta qatorda */
+    html.rd .rating-main-tabs {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
+        border-bottom: 0;
+    }
+
+    html.rd .rating-main-tabs-left {
+        flex: 1;
+        min-width: 0;
+    }
+
+    html.rd .rating-main-tab {
+        padding: 8px 10px;
+    }
+
+    html.rd .rating-main-tab:not(.active) .rmt-ic + span {
+        display: none;
+    }
+
+    html.rd .rating-main-tabs > div:last-child {
+        width: auto;
+        flex: 0 0 auto;
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter {
+        display: inline-flex;
+        width: auto;
+    }
+
+    html.rd .rating-main-tabs #ratingPeriodFilter .lang-btn {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    html.rd .content-layout {
+        padding-top: 8px;
+    }
+}
+
+@media (max-width: 900px) {
+    html.rd .lead-card .lead-card-action.is-zero {
+        display: none;
+    }
+
+    html.rd .lead-card .lead-card-tel {
+        white-space: nowrap;
+        font-size: 14px;
+    }
+
+    html.rd .mhx-empty {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px 12px;
+    }
+
+    html.rd .mhx-empty .btn-primary-sm {
+        grid-column: 1 / -1;
+    }
+}
