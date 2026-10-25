@@ -1,0 +1,12 @@
+{
+  "name": "domwork-site",
+  "private": true,
+  "type": "module",
+  "description": "domwork.uz landing — Railway uchun kichik Node server",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
