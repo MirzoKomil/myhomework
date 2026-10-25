@@ -490,6 +490,13 @@
             const v = n.nodeValue.replace(/([oOgG])['’‘`]/g, '$1ʻ').replace(/([A-Za-zʻ])['’`](?=[A-Za-z])/g, '$1ʼ');
             if (v !== n.nodeValue) n.nodeValue = v;
         });
+        // Qidiruv maydonlaridagi izoh matni (placeholder) ham bir xil yoziladi.
+        root.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+            const p = el.getAttribute('placeholder');
+            if (!/[A-Za-z][’'‘`]/.test(p)) return;
+            const v = p.replace(/([oOgG])['’‘`]/g, '$1ʻ').replace(/([A-Za-zʻ])['’`](?=[A-Za-z])/g, '$1ʼ');
+            if (v !== p) el.setAttribute('placeholder', v);
+        });
     }
 
     // Aktiv ichki tab gorizontal panelda ko'rinmay qolmasin.

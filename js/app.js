@@ -11905,7 +11905,7 @@ function renderTpRating() {
 
     container.innerHTML = `
     <div style="padding:20px">
-        <div class="page-title-bar" style="margin-bottom:16px"><h2>O'qituvchilar reytingi — ${monthVal}</h2></div>
+        <div class="page-title-bar" style="margin-bottom:16px"><h2>Oʻqituvchilar reytingi — ${(() => { const [y, m] = String(monthVal).split('-').map(Number); return m ? `${['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'][m - 1]} ${y}` : monthVal; })()}</h2></div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Reyting davomat % va o'quvchilarning "Siz ustozni baholang" bahosi (o'rtachasi) asosida hisoblanadi.</div>
         <div class="card">
             <div class="table-responsive">
@@ -14509,7 +14509,7 @@ function openManualMetricModal(roleKey, metricDef, period, onSaved, employeeId) 
 }
 
 function hbCard(icon, color, label, value) {
-    return `<div class="stat-card"><div class="stat-icon ${color}">${icon}</div><div class="stat-info"><div class="stat-label">${escapeHtml(label)}</div><div class="stat-value" style="font-size:18px">${value}</div></div></div>`;
+    return `<div class="stat-card"><div class="stat-icon ${color}">${icon}</div><div class="stat-info"><div class="stat-label">${escapeHtml(label)}</div><div class="stat-value${/\d/.test(String(value)) ? '' : ' is-missing'}" style="font-size:18px">${/\d/.test(String(value)) ? value : '—'}</div>${/\d/.test(String(value)) ? '' : `<div class="stat-note">${value}</div>`}</div></div>`;
 }
 
 function hbManualCard(roleKey, metricDef, period, icon) {
@@ -14521,7 +14521,7 @@ function hbManualCard(roleKey, metricDef, period, icon) {
             <div class="stat-label">${escapeHtml(metricDef.label)}
                 <button type="button" class="an-manual-add-btn" data-mm-add="${escapeHtml(JSON.stringify(metricDef))}" title="Qo'lda kiritish">+</button>
             </div>
-            <div class="stat-value" style="font-size:16px">${display}</div>
+            <div class="stat-value${agg === null ? ' is-missing' : ''}" style="font-size:16px">${agg === null ? '—' : display}</div>${agg === null ? '<div class="stat-note">Kiritilmagan</div>' : ''}
         </div>
     </div>`;
 }
@@ -25332,11 +25332,7 @@ function renderScripts() {
 
     if (!all.length) {
         grid.innerHTML = `
-        <div class="scr-empty">
-            <div style="font-size:48px;margin-bottom:12px">📚</div>
-            <h3>Hozircha skript yoʻq</h3>
-            <p>Birinchi maqolani qoʻshish uchun "Maqola qoʻshish" tugmasini bosing</p>
-        </div>`;
+        ${teamEmptyState('Hozircha skript yoʻq', 'Birinchi maqolani «Maqola qoʻshish» tugmasi orqali qoʻshing.', 'board')}`;
         return;
     }
 

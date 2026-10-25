@@ -1350,8 +1350,8 @@ html.rd .notif-badge {
 }
 
 @media (max-width: 900px) {
-    html.rd body.team-nav-leads #salesSectionNav [data-sales-section="leads"],
-    html.rd body.team-nav-rating #salesSectionNav [data-sales-section="rating"] {
+    html.rd body[data-role="sales_manager"].team-nav-leads #salesSectionNav [data-sales-section="leads"],
+    html.rd body[data-role="sales_manager"].team-nav-rating #salesSectionNav [data-sales-section="rating"] {
         display: none;
     }
 }
@@ -1678,7 +1678,7 @@ html.rd .rating-main-tabs {
 
 @media (max-width: 900px) {
     /* Pastki panelda bor sahifada yuqori tablar kerak emas — qolganlari Menyu ichida */
-    html.rd body.team-on-navpage #salesSectionNav {
+    html.rd body[data-role="sales_manager"].team-on-navpage #salesSectionNav {
         display: none;
     }
 
@@ -1906,11 +1906,11 @@ html.rd[data-theme="dark"] .lead-age--late { background: #3A3018; color: #FFC94D
 
 @media (max-width: 900px) {
     /* Telefonda Sotuvning yuqori tablari umuman yo'q: pastki panel + Menyu */
-    html.rd body.has-team-nav #salesSectionNav {
+    html.rd body.has-team-nav[data-role="sales_manager"] #salesSectionNav {
         display: none;
     }
 
-    html.rd body.has-team-nav .sales-header-layout:not(:has(> :not(#salesSectionNav):not([hidden]):not([style*="display: none"]))) {
+    html.rd body.has-team-nav[data-role="sales_manager"] .sales-header-layout:not(:has(> :not(#salesSectionNav):not([hidden]):not([style*="display: none"]))) {
         display: none;
     }
 
@@ -4747,23 +4747,6 @@ html.rd .cf-toolbar-actions .btn-ghost {
         white-space: nowrap;
     }
 
-    html.rd .debtors-filters {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-
-    html.rd .debtors-filters > *,
-    html.rd .debtors-filters select,
-    html.rd .debtors-filters input {
-        width: 100% !important;
-        min-width: 0 !important;
-    }
-
-    html.rd .debtors-filters .dbx-segs {
-        grid-column: 1 / -1;
-    }
-
     /* To'lovlar: 2 ustunli summalar, belgi maydon ustida */
     html.rd .inflow-kpis {
         grid-template-columns: 1fr 1fr !important;
@@ -4899,4 +4882,318 @@ html.rd .cf-toolbar-actions .btn-ghost {
     html.rd #leadsKanban .lead-column-header {
         min-height: 44px;
     }
+}
+
+
+/* ==========================================================================
+   R6
+   ========================================================================== */
+/* O'quvchilar → Qarzdorlar: tashqi filtr qatori takrorlanmaydi */
+html.rd #tab-students:has([data-students-section="qarzdorlar"].active) #studentsFiltersBar {
+    display: none !important;
+}
+
+html.rd .debtors-wrap {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+html.rd .debtors-filters select,
+html.rd .debtors-filters input[type="date"] {
+    height: 40px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+@media (max-width: 700px) {
+    html.rd .debtors-filters {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    html.rd .debtors-filters > select:not([hidden]) {
+        grid-column: 1 / -1;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    html.rd .debtors-filters > span {
+        display: none;
+    }
+
+    html.rd .debtors-filters .dbx-date {
+        display: block;
+        font-size: 0;
+    }
+
+    html.rd .debtors-filters input[type="date"],
+    html.rd .debtors-filters .team-date {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    html.rd .dbx-segs {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    html.rd .dbx-seg {
+        white-space: nowrap;
+        font-size: 12px;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+}
+
+/* Telefonda summa kartalari: 2 ustun, sig'masa 1 ustun */
+@media (max-width: 420px) {
+    html.rd .debtors-wrap .sfx-tiles {
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+    }
+
+    html.rd .debtors-wrap .sfx-tile {
+        padding: 12px 14px;
+    }
+
+    html.rd .debtors-wrap .sfx-tile b {
+        font-size: 20px;
+    }
+}
+
+/* Kanban: ustun nomi uzun bo'lsa "…", o'ng tugma sarlavhani yopmaydi */
+@media (min-width: 901px) {
+    html.rd #leadsKanban .lead-column-title,
+    html.rd .lead-column-title {
+        display: block;
+        flex: 1 1 auto;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    html.rd .team-more-right > .team-scroll-btn--next,
+    html.rd .team-more-left > .team-scroll-btn--prev {
+        top: 160px;
+    }
+}
+
+/* SMS rassilka: sahifa chetlari bilan bir chiziqda */
+html.rd #marketingPanel-sms > div:not(.sales-pinned):not(.card) {
+    padding: 0 0 16px !important;
+}
+
+/* Kunlik / Haftalik / Oylik — hamma joyda bitta segment ko'rinishi */
+html.rd .sp-period-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--bg-secondary, #EEF0F5);
+    border: 0;
+}
+
+html.rd .sp-period-tabs .sp-period-tab {
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: none;
+    white-space: nowrap;
+}
+
+html.rd .sp-period-tabs .sp-period-tab.active {
+    background: var(--surface) !important;
+    color: var(--rd-primary-strong) !important;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+}
+
+html.rd .page-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+@media (max-width: 700px) {
+    html.rd .sp-period-tabs {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        width: 100%;
+    }
+
+    html.rd .sp-period-tabs .sp-period-tab {
+        padding: 7px 4px;
+        text-align: center;
+    }
+
+    /* Til tanlovi ostida yetarli joy */
+    html.rd .sales-header-lang,
+    html.rd .card > .subject-tabs {
+        margin-bottom: 12px !important;
+    }
+
+    html.rd .section-nav {
+        scroll-padding-inline: 22px;
+    }
+}
+
+/* Kanban ustunidagi bo'sh holat — faqat matn */
+html.rd .lead-column-empty {
+    background-image: none !important;
+    padding: 20px 8px !important;
+    min-height: 0 !important;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+html.rd .lead-column-empty::before {
+    display: none !important;
+}
+
+/* Vakansiya bo'sh holati — to'liq kenglikda */
+html.rd #hrVacBoard > .team-empty-state,
+html.rd [id*="hrVac"] > .team-empty-state {
+    width: 100%;
+    grid-column: 1 / -1;
+}
+
+/* Sinov darslari: web'da tepadagi yangilash tugmasi yetarli */
+@media (min-width: 901px) {
+    html.rd [data-trial-refresh-inline] {
+        display: none;
+    }
+}
+
+/* Davomat qatoridagi "Belgilash" tugmalari — ikkinchi darajali */
+html.rd .teacher-duty-today .btn-primary-sm,
+html.rd [data-duty-today] {
+    background: transparent !important;
+    color: var(--rd-primary-strong) !important;
+    border: 1px solid var(--rd-primary-strong) !important;
+    min-height: 32px;
+    padding: 5px 12px;
+    box-shadow: none !important;
+}
+
+/* Maoshlar: filtr boshqaruvlari bir xil balandlikda */
+html.rd .payroll-toolbar select,
+html.rd .payroll-toolbar input,
+html.rd .payroll-toolbar .btn-secondary-sm {
+    height: 40px;
+    box-sizing: border-box;
+}
+
+html.rd .payroll-toolbar {
+    align-items: flex-end;
+}
+
+html.rd .payroll-toolbar > label {
+    justify-content: flex-start;
+}
+
+/* Telefonda statistik kartalar 2x2, toq oxirgisi to'liq */
+@media (max-width: 700px) {
+    html.rd .cf-kpi-grid,
+    html.rd .tcx-kpis,
+    html.rd .payroll-summary,
+    html.rd .ahx-kpis {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+
+    html.rd .cf-kpi-grid > :last-child:nth-child(odd),
+    html.rd .tcx-kpis > :last-child:nth-child(odd),
+    html.rd .payroll-summary > :last-child:nth-child(odd),
+    html.rd .ahx-kpis > :last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    html.rd .cf-kpi-grid .stat-value,
+    html.rd .cf-kpi-grid [class*="value"] {
+        font-size: 17px !important;
+        white-space: nowrap;
+    }
+
+    html.rd .cf-kpi-grid .stat-icon,
+    html.rd .cf-kpi-grid [class*="icon"] {
+        display: none;
+    }
+}
+
+html.rd .team-empty-state {
+    grid-column: 1 / -1;
+}
+
+/* Org tuzilma bo'sh bo'lsa — faqat bo'sh holatdagi tugma */
+html.rd #tab-hr:has(#orgAddFirstBtn) #orgAddRootBtn {
+    display: none;
+}
+
+/* Yo'riqnomalar kartasi bo'sh bo'lsa "Barchasi" havolasi kerak emas */
+html.rd .thx-guides:has(.dashboard-empty) [data-thx-guides] {
+    display: none;
+}
+
+/* HR xodimlar: filtrlar sahifa fonida, ichma-ich karta yo'q */
+html.rd #hrPanel-xodimlar > .card {
+    padding: 0 !important;
+}
+
+html.rd #hrPanel-xodimlar .hr-employees-header {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 16px !important;
+}
+
+/* Davomat (telefon): ichki karta chetlari ixcham */
+@media (max-width: 700px) {
+    html.rd #tpAttendance .card {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    html.rd #tpAttendance .card .card-header {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    html.rd .team-demo-body {
+        padding: 0 0 14px;
+    }
+
+    html.rd .team-demo-card .card-header {
+        padding-left: 0;
+    }
+}
+
+html.rd .stat-value.is-missing {
+    color: var(--text-muted);
+}
+
+html.rd .stat-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+@media (min-width: 701px) {
+    html.rd .sp-period-tabs {
+        width: max-content !important;
+        max-width: max-content;
+    }
+}
+
+/* Analitika: kartalar avtomatik to'r, yolg'iz qolgan karta yo'q */
+html.rd #tab-analitika .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
 }
