@@ -3399,3 +3399,511 @@ html.rd .team-coll-btn {
         gap: 10px;
     }
 }
+
+/* ==========================================================================
+   O'quvchini tekshirish (ustoz/ROP/admin): ro'yxat + tanlangan o'quvchi
+   ========================================================================== */
+html.rd .tcx-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+html.rd .tcx-work {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+    margin-top: 16px;
+}
+
+html.rd .tcx-list {
+    padding: 8px;
+    position: sticky;
+    top: 0;
+    max-height: 70vh;
+    overflow: auto;
+}
+
+html.rd .tcx-list-h {
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+html.rd .tcx-list ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .tcx-st {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+
+html.rd .tcx-st:hover {
+    background: var(--rd-hover);
+}
+
+html.rd .tcx-st.active {
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+    font-weight: 700;
+}
+
+html.rd .tcx-ava {
+    display: grid;
+    place-items: center;
+    flex: 0 0 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--rd-col);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+html.rd .tcx-st-name {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+html.rd .tcx-st-name small {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+html.rd .tcx-detail {
+    padding: 18px 20px;
+    min-height: 320px;
+}
+
+html.rd .tcx-detail-h {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+html.rd .tcx-detail-h h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+html.rd .tcx-seg {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--rd-col);
+}
+
+html.rd .tcx-seg button {
+    min-height: 34px;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-muted);
+    font: 600 13px/1 inherit;
+    cursor: pointer;
+}
+
+html.rd .tcx-seg button.active {
+    background: var(--surface);
+    color: var(--rd-primary-strong);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+}
+
+html.rd .tcx-sub {
+    margin: 12px 0 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+html.rd .tcx-trials {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+html.rd .tcx-trials li {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+}
+
+@media (max-width: 900px) {
+    html.rd .tcx-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    html.rd .tcx-work {
+        grid-template-columns: 1fr;
+    }
+
+    html.rd .tcx-list {
+        position: static;
+        max-height: none;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    html.rd .tcx-list-h {
+        display: none;
+    }
+
+    html.rd .tcx-list ul {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding-bottom: 4px;
+    }
+
+    html.rd .tcx-list li {
+        flex: 0 0 auto;
+    }
+
+    html.rd .tcx-st {
+        width: auto;
+        padding: 6px 12px 6px 6px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        white-space: nowrap;
+    }
+
+    html.rd .tcx-st.active {
+        border-color: var(--purple);
+    }
+
+    html.rd .tcx-st-name small {
+        display: none;
+    }
+
+    html.rd .tcx-ava {
+        flex-basis: 28px;
+        height: 28px;
+    }
+
+    html.rd .tcx-detail {
+        padding: 14px;
+    }
+
+    html.rd .tcx-seg {
+        width: 100%;
+    }
+
+    html.rd .tcx-seg button {
+        flex: 1;
+    }
+}
+
+/* ==========================================================================
+   R2: Akademik davomat (ROP/admin), umumiy
+   ========================================================================== */
+/* Namuna o'quvchi — faqat admin sozlamasi */
+html.rd body[data-role="rop"] .team-demo-card,
+html.rd body[data-role="sales_manager"] .team-demo-card {
+    display: none;
+}
+
+/* Ma'lumot banneri — neytral, ixcham */
+html.rd .info-banner {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+html.rd .info-banner::before {
+    content: "i";
+    flex: 0 0 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--purple-light);
+    color: var(--rd-primary-strong);
+    font: 700 12px/20px Georgia, serif;
+    text-align: center;
+}
+
+html.rd .info-banner strong {
+    color: var(--text);
+}
+
+/* Karta ichidagi til tanlovi — ixcham segment, sarlavha bilan bir qatorda */
+html.rd .card > .subject-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    margin: 0 0 12px;
+    border-radius: 12px;
+    background: var(--rd-col);
+    width: auto;
+}
+
+html.rd .card > .subject-tabs > .subject-tab {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 32px;
+    padding: 4px 14px;
+    border: 0 !important;
+    border-radius: 9px;
+    background: transparent;
+    box-shadow: none;
+    font-size: 13px;
+}
+
+html.rd .card > .subject-tabs > .subject-tab.active {
+    background: var(--surface);
+    color: var(--rd-primary-strong);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+}
+
+/* Bo'sh xulosa paneli ko'rinmaydi */
+html.rd .kpi-summary:empty {
+    display: none;
+}
+
+/* Chiziqli ikonkalar (emoji o'rniga) — js/teamIcons.js */
+html.rd .team-ico-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: -3px;
+    margin-right: 6px;
+}
+
+html.rd .team-ico {
+    width: 1.1em;
+    height: 1.1em;
+    min-width: 16px;
+    min-height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+html.rd .stat-icon .team-ico-wrap,
+html.rd [class*="-ic"] > .team-ico-wrap {
+    margin: 0;
+}
+
+html.rd .stat-icon .team-ico {
+    width: 22px;
+    height: 22px;
+}
+
+/* ==========================================================================
+   R2: O'quvchilar (telefon), Lidlar, Moliya, HR, Ustoz
+   ========================================================================== */
+@media (max-width: 700px) {
+    /* O'quvchi kartasi: belgilash katakchasi telefonda yo'q, chap bo'shliq yo'q */
+    html.rd .students-table tr[data-student-row] {
+        grid-template-columns: minmax(0, 1fr) 36px;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(1) {
+        display: none !important;
+    }
+
+    html.rd .students-table tr[data-student-row] > td {
+        grid-column: 1;
+    }
+
+    html.rd .students-table tr[data-student-row] > td:nth-child(8) {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    html.rd .students-table:has(tr[data-student-row]) thead th:first-child {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    /* Filtrlar bir qatorda suriladi, kesilmaydi */
+    html.rd #studentsFiltersBar,
+    html.rd .leads-filters-bar {
+        display: flex;
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        scrollbar-width: none;
+        gap: 6px;
+    }
+
+    html.rd #studentsFiltersBar > *,
+    html.rd .leads-filters-bar > * {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none;
+    }
+
+    html.rd #studentsFiltersBar .leads-filter-display,
+    html.rd .leads-filters-bar .leads-filter-display {
+        max-width: none;
+        overflow: visible;
+    }
+
+    /* ROP/admin Lidlar ro'yxati oxiri suzuvchi tugma ostida qolmaydi */
+    html.rd .leads-kanban > .lead-column > .lead-column-cards {
+        padding-bottom: 140px;
+    }
+
+    /* Moliya: KPI 2 ustun + 1 to'liq; takroriy sarlavha yo'q */
+    html.rd #tab-finance .kpi-cards,
+    html.rd #tab-finance .pfx-tiles,
+    html.rd #tab-finance [class*="tiles"] {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
+    }
+
+    html.rd #tab-finance [class*="tiles"] > :last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    /* HR: telefonda avval ro'yxat, xodim kartasi pastda */
+    html.rd #tab-hr .hrx-layout,
+    html.rd #tab-hr [class*="hrx-grid"] {
+        display: flex !important;
+        flex-direction: column;
+    }
+
+    html.rd #tab-hr .hrx-side,
+    html.rd #tab-hr .hrx-detail {
+        order: 2;
+    }
+}
+
+/* Lid nomi uzun bo'lsa — uch nuqta (barcha rollar) */
+html.rd .lead-card-name-btn {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Elektron doska: sahifa ichidagi takroriy sarlavha yo'q */
+html.rd .page-title-bar:has(+ .card #wbToolbar) {
+    display: none;
+}
+
+/* Sinov darslari: izoh va karta orasida joy */
+html.rd .page-title-bar:has(.trial-refresh) + .text-muted {
+    margin: 4px 0 14px;
+}
+
+/* Ustoz bosh sahifasi: rol izohi hech qayerda; bo'sh reyting kartasi yashirin */
+html.rd .rd-thx-rolebanner {
+    display: none;
+}
+
+html.rd .hrx-sub::first-letter {
+    text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+    html.rd :has(> .hrx-side) {
+        display: flex !important;
+        flex-direction: column;
+    }
+
+    html.rd .hrx-side {
+        order: 2;
+    }
+}
+
+/* Marketing: KPI kartalari 3×2, katta fakt raqami */
+html.rd .tm-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+html.rd .tm-section-title {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+@media (max-width: 900px) {
+    html.rd .tm-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+/* ==========================================================================
+   Bo'sh holat illyustratsiyalari (images/empty/*.webp)
+   ========================================================================== */
+html.rd .team-ill {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    margin-bottom: 4px;
+}
+
+html.rd[data-theme="dark"] .team-ill {
+    padding: 10px;
+    border-radius: 50%;
+    background: #EDE9FF;
+    box-sizing: border-box;
+}
+
+/* Xato holati — uzilgan bulut rasmi */
+html.rd .team-err > svg {
+    display: none;
+}
+
+html.rd .team-err::before {
+    content: "";
+    flex: 0 0 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: #F4F2FF url(../images/empty/offline.webp) center / 48px no-repeat;
+}
+
+/* Bo'sh kanban ustuni */
+html.rd .leads-kanban > .lead-column > .lead-column-cards > .lead-column-empty:only-child {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+html.rd .leads-kanban > .lead-column > .lead-column-cards > .lead-column-empty:only-child::before {
+    content: "";
+    width: 72px;
+    height: 72px;
+    background: url(../images/empty/board.webp) center / contain no-repeat;
+    opacity: .9;
+}

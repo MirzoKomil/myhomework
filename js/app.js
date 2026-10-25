@@ -10253,78 +10253,53 @@ function renderTeacherCabinetContent(teacherId) {
     const attStore = isAsosiy ? getItem(STORAGE_KEYS.mainAttendance, {}) : getItem(STORAGE_KEYS.assistantAttendance, {});
     const kpi = teacher ? calculateKpiSalary(teacher, monthVal, attStore) : null;
 
-    let html = `<div class="grid-2">
-        <div class="mini-card"><strong>Ustoz:</strong> ${escapeHtml(teacher?.name || '—')}<br><small>${teacher?.type === 'asosiy' ? 'Asosiy' : 'Yordamchi'}</small></div>
-        <div class="mini-card"><strong>O'quvchilar:</strong> ${students.length} ta</div>
-    </div>`;
+    const initials = n => String(n || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
+    // Yuqorida: ixcham ko'rsatkichlar. Keyin: chapda o'quvchilar ro'yxati, o'ngda tanlangan
+    // o'quvchi bilan ishlash (Yozishma / Faoliyat / Ijodiy vazifalar) — bitta ekranda.
+    let html = `<div class="tcx">
+        <div class="ahx-kpis tcx-kpis">
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Oʻquvchilar</span><b class="ahx-kpi-v">${students.length}</b><div class="ahx-kpi-n"><span>${escapeHtml(teacher?.name || '')} · ${isAsosiy ? 'asosiy' : 'yordamchi'}</span></div></div>
+            ${kpi ? `<div class="ahx-kpi"><span class="ahx-kpi-l">Darslar · shu oy</span><b class="ahx-kpi-v">${kpi.completed}<small> / ${kpi.expected}</small></b><span class="mhx-bar"><i style="width:${Math.min(100, kpi.kpiPercent || 0)}%"></i></span></div>
+            <div class="ahx-kpi"><span class="ahx-kpi-l">Shu oy maoshi · taxminiy</span><b class="ahx-kpi-v">${escapeHtml(formatMoney(kpi.total))}</b><div class="ahx-kpi-n"><span>davomat asosida</span></div></div>` : ''}
+        </div>`;
 
-    if (kpi) {
-        html += `<div class="kpi-summary" style="margin-top:16px">
-            <div class="kpi-stat"><div class="kpi-num">${kpi.expected}</div><div class="kpi-lbl">Oy rejasi</div></div>
-            <div class="kpi-stat"><div class="kpi-num">${kpi.completed}</div><div class="kpi-lbl">O'tilgan</div></div>
-            <div class="kpi-stat"><div class="kpi-num">${formatMoney(kpi.total)}</div><div class="kpi-lbl">Bu oy maoshi</div></div>
-        </div>
-        <div class="kpi-progress-wrap"><div class="kpi-progress-bar" style="width:${kpi.kpiPercent}%"></div></div>`;
-    }
-
-    html += `<h4 style="margin:20px 0 10px">Bugungi probniy darslar <span class="badge badge-probniy">bepul</span></h4>`;
-    if (todayProbniy.length === 0) {
-        html += '<p class="text-muted">Bugun probniy darslar yo\'q.</p>';
-    } else {
-        html += '<div class="table-responsive"><table class="table"><thead><tr><th>Vaqt</th><th>O\'quvchi</th><th>Status</th></tr></thead><tbody>';
+    if (todayProbniy.length) {
         const allStudents = getItem(STORAGE_KEYS.students, []);
-        todayProbniy.forEach(([key, entry]) => {
-            const time = key.split('_')[1];
-            const student = allStudents.find(s => s.id === entry.studentId);
-            html += `<tr><td>${time}</td><td>${escapeHtml(student?.name || '—')}</td><td>${entry.completed ? '<span class="badge badge-probniy">O\'tdi</span>' : '<span class="badge">Kutilmoqda</span>'}</td></tr>`;
-        });
-        html += '</tbody></table></div>';
+        html += `<section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi sinov darslari <small>· ${todayProbniy.length}</small></h3></div><ul class="tcx-trials">
+            ${todayProbniy.map(([key, entry]) => `<li><b>${escapeHtml(key.split('_')[1] || '')}</b><span>${escapeHtml(allStudents.find(st => st.id === entry.studentId)?.name || '—')}</span>
+                <span class="ahx-pill ${entry.completed ? 'ahx-pill--ok' : 'ahx-pill--muted'}">${entry.completed ? 'Oʻtdi' : 'Kutilmoqda'}</span></li>`).join('')}</ul></section>`;
     }
 
-    html += `<h4 style="margin:20px 0 10px">Mening o'quvchilarim</h4>
-    <div class="table-responsive"><table class="table"><thead><tr><th>Ism</th><th>Telefon</th><th>Guruh</th></tr></thead><tbody>`;
-    students.forEach(s => {
-        html += `<tr><td>${escapeHtml(s.name || '')}</td><td>${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</td><td>${escapeHtml(s.group || '—')}</td></tr>`;
-    });
-    if (!students.length) html += '<tr><td colspan="3" class="text-muted">O\'quvchilar yo\'q</td></tr>';
-    html += '</tbody></table></div>';
-
-    // 4-vazifa: appdagi "Muloqot" yozishmasi, ilovadagi haqiqiy faoliyat
-    // va "Ijodiy vazifa"lar endi FAQAT "Namuna o'quvchi" uchun emas, ustozga
-    // biriktirilgan HAR BIR haqiqiy o'quvchi uchun ko'rinadi — pastda
-    // tanlangan o'quvchiga qarab qayta chiziladi.
-    if (students.length) {
-        const selectedId = (_teacherCabinetSelectedStudent && students.some(s => s.id === _teacherCabinetSelectedStudent))
-            ? _teacherCabinetSelectedStudent
-            : students[0].id;
-        _teacherCabinetSelectedStudent = selectedId;
-        html += `<h4 style="margin:20px 0 10px">O'quvchi bilan ishlash</h4>
-        <div class="form-group" style="max-width:320px">
-            <select id="teacherCabinetStudentSelect" class="form-select">
-                ${students.map(s => `<option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
-            </select>
-        </div>
-        <div id="teacherStudentDetailPanels"></div>`;
+    if (!students.length) {
+        html += `<div class="card team-empty-state"><img class="team-ill" src="images/empty/students.webp" alt="" width="120" height="120" loading="lazy">
+            <strong>Hozircha oʻquvchi biriktirilmagan</strong><span>Oʻquvchi biriktirilgach, u bilan yozishma, ilovadagi faoliyati va ijodiy vazifalari shu yerda chiqadi.</span></div></div>`;
+        document.getElementById('teacherCabinetContent').innerHTML = html;
+        return;
     }
+    const selectedId = (_teacherCabinetSelectedStudent && students.some(st => st.id === _teacherCabinetSelectedStudent))
+        ? _teacherCabinetSelectedStudent : students[0].id;
+    _teacherCabinetSelectedStudent = selectedId;
+    html += `<div class="tcx-work">
+        <aside class="card tcx-list" aria-label="Oʻquvchilar"><div class="tcx-list-h">Oʻquvchilar <small>${students.length}</small></div>
+            <ul>${students.map(st => `<li><button type="button" class="tcx-st${st.id === selectedId ? ' active' : ''}" data-tcx-student="${escapeHtml(st.id)}" aria-pressed="${st.id === selectedId}">
+                <span class="tcx-ava">${escapeHtml(initials(st.name))}</span><span class="tcx-st-name">${escapeHtml(st.name || '')}${st.assistantTeacherId === teacherId && st.teacherId !== teacherId ? '<small>yordamchi sifatida</small>' : ''}</span></button></li>`).join('')}</ul>
+        </aside>
+        <section class="card tcx-detail" id="teacherStudentDetailPanels"></section>
+    </div></div>`;
 
     document.getElementById('teacherCabinetContent').innerHTML = html;
-
-    if (students.length) {
-        const selectEl = document.getElementById('teacherCabinetStudentSelect');
-        selectEl.addEventListener('change', () => {
-            _teacherCabinetSelectedStudent = selectEl.value;
-            renderTeacherStudentDetailPanels(teacherId, selectEl.value);
-        });
-        renderTeacherStudentDetailPanels(teacherId, selectEl.value);
-    }
+    const root = document.getElementById('teacherCabinetContent');
+    root.querySelectorAll('[data-tcx-student]').forEach(btn => btn.addEventListener('click', () => {
+        _teacherCabinetSelectedStudent = btn.dataset.tcxStudent;
+        root.querySelectorAll('[data-tcx-student]').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
+        renderTeacherStudentDetailPanels(teacherId, btn.dataset.tcxStudent);
+        document.getElementById('teacherStudentDetailPanels')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+    renderTeacherStudentDetailPanels(teacherId, selectedId);
 }
 
+let _tcxPane = 'chat';
 let _teacherCabinetSelectedStudent = null;
-
-// 4-vazifa: tanlangan (ixtiyoriy haqiqiy) o'quvchi bo'yicha yozishma,
-// ilovadagi faoliyat va ijodiy vazifalar panellarini chizadi — bitta
-// o'quvchi shu ustozga ham asosiy, ham yordamchi sifatida biriktirilgan
-// bo'lishi mumkin, shu sabab ikkalasi ham (mavjud bo'lsa) ko'rsatiladi.
 function renderTeacherStudentDetailPanels(teacherId, studentId) {
     const wrap = document.getElementById('teacherStudentDetailPanels');
     if (!wrap) return;
@@ -10336,16 +10311,19 @@ function renderTeacherStudentDetailPanels(teacherId, studentId) {
     if (student.teacherId === teacherId) chatSlots.push({ threadId: 'main-teacher', label: 'Asosiy ustoz' });
     if (student.assistantTeacherId === teacherId) chatSlots.push({ threadId: 'assistant-teacher', label: 'Yordamchi ustoz' });
 
-    let html = '';
-    chatSlots.forEach(slot => {
-        html += `<h4 style="margin:20px 0 10px">💬 ${escapeHtml(student.name)} bilan yozishma (${slot.label})</h4>
-        <div id="teacherChat_${slot.threadId}"></div>`;
-    });
-    html += `<h4 style="margin:20px 0 10px">📊 ${escapeHtml(student.name)} — ilovadagi faoliyati</h4>
-    <div id="teacherActivityPanel"></div>
-    <h4 style="margin:20px 0 10px">🎨 ${escapeHtml(student.name)} — Ijodiy vazifalar</h4>
-    <div id="teacherCreativePanel"></div>`;
+    if (!chatSlots.length && _tcxPane === 'chat') _tcxPane = 'activity';
+    const panes = [...(chatSlots.length ? [['chat', 'Yozishma']] : []), ['activity', 'Faoliyat'], ['creative', 'Ijodiy vazifalar']];
+    let html = `<div class="tcx-detail-h"><div><h3>${escapeHtml(student.name)}</h3><span class="mhx-sub">${escapeHtml(formatPhoneDisplay(student.phone) || '')}</span></div>
+        <div class="tcx-seg" role="tablist">${panes.map(([id, label]) => `<button type="button" role="tab" data-tcx-pane="${id}" aria-selected="${_tcxPane === id}" class="${_tcxPane === id ? 'active' : ''}">${label}</button>`).join('')}</div></div>`;
+    html += `<div class="tcx-pane" data-pane="chat"${_tcxPane === 'chat' ? '' : ' hidden'}>${chatSlots.map(slot => `${chatSlots.length > 1 ? `<h4 class="tcx-sub">${slot.label}</h4>` : ''}<div id="teacherChat_${slot.threadId}"></div>`).join('')}</div>
+        <div class="tcx-pane" data-pane="activity"${_tcxPane === 'activity' ? '' : ' hidden'}><div id="teacherActivityPanel"></div></div>
+        <div class="tcx-pane" data-pane="creative"${_tcxPane === 'creative' ? '' : ' hidden'}><div id="teacherCreativePanel"></div></div>`;
     wrap.innerHTML = html;
+    wrap.querySelectorAll('[data-tcx-pane]').forEach(btn => btn.addEventListener('click', () => {
+        _tcxPane = btn.dataset.tcxPane;
+        wrap.querySelectorAll('[data-tcx-pane]').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
+        wrap.querySelectorAll('.tcx-pane').forEach(p => { p.hidden = p.dataset.pane !== _tcxPane; });
+    }));
 
     chatSlots.forEach(slot => {
         renderCrmChatThread(document.getElementById(`teacherChat_${slot.threadId}`), {
@@ -11731,7 +11709,7 @@ function renderTeacherTrialRows(lessons) {
     return `<div class="page-title-bar"><h2>Sinov darslari</h2><button type="button" class="wb-tool-btn trial-refresh" id="refreshTeacherTrials" title="Yangilash" aria-label="Yangilash"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button></div>
         <p class="text-muted">Faqat sizga biriktirilgan sinov darslari. Vaqt Toshkent bo‘yicha.</p>
         ${rows ? `<div class="card table-responsive trial-table-wrap"><table class="table trial-table"><thead><tr><th>Lid</th><th>Til</th><th>Vaqt</th><th>Holat</th><th>Amal</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>` : `<div class="card team-empty-state"><span class="team-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l2 2 4-4"/></svg></span>
+        <tbody>${rows}</tbody></table></div>` : `<div class="card team-empty-state"><img class="team-ill" src="images/empty/calendar.webp" alt="" width="120" height="120" loading="lazy">
             <strong>Hozircha sinov darsi yoʻq</strong><span>Sotuv boʻlimi sizga sinov darsini biriktirsa, shu yerda vaqti bilan chiqadi va bildirishnoma keladi.</span></div>`}`;
 }
 
@@ -13017,7 +12995,7 @@ async function renderMarketingTargetPanel() {
 
     // Reklama KPI cards
     const reklamaCards = [
-        { label: 'Budget (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(budgetFaktUSD), pct: (planBudget && budgetFaktUSD) ? (budgetFaktUSD / planBudget * 100) : null, icon: '💰' },
+        { label: 'Byudjet (USD)', plan: planBudget ? '$' + planBudget.toLocaleString('uz-UZ') : '—', fakt: fmtUSD(budgetFaktUSD), pct: (planBudget && budgetFaktUSD) ? (budgetFaktUSD / planBudget * 100) : null, icon: '💰' },
         { label: 'Lid soni', plan: planLidSoni ? planLidSoni.toLocaleString('uz-UZ') : '—', fakt: lidSoniFakt || '—', pct: (planLidSoni && lidSoniFakt) ? (lidSoniFakt / planLidSoni * 100) : null, icon: '📋' },
         { label: 'Lid narxi', plan: planLidNarxi ? fmtUSD(planLidNarxi) : '—', fakt: fmtUSD(lidNarxiFakt), pct: (planLidNarxi && lidNarxiFakt) ? (lidNarxiFakt / planLidNarxi * 100) : null, icon: '💵' },
         { label: 'Sifatli lid soni', plan: planKvalLidSoni ? planKvalLidSoni.toLocaleString('uz-UZ') : '—', fakt: kvalLidSoniFakt || '—', pct: (planKvalLidSoni && kvalLidSoniFakt) ? (kvalLidSoniFakt / planKvalLidSoni * 100) : null, icon: '✅' },

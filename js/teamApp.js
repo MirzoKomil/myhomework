@@ -454,6 +454,18 @@
         });
     }
 
+    // Til tanlovi (davomat, jadval) foydalanuvchining o'z yo'nalishidan boshlanadi — bir marta.
+    function syncOwnLangTabs(root) {
+        const own = typeof getUserOwnLang === 'function' ? getUserOwnLang() : null;
+        if (!own) return;
+        root.querySelectorAll('#mainAttSubjectTabs, #asstAttSubjectTabs, #ttSubjectTabs').forEach(box => {
+            if (box.dataset.teamOwn || !box.offsetParent) return;
+            box.dataset.teamOwn = '1';
+            const btn = box.querySelector(`.subject-tab[data-subject="${own}"]:not(.active)`);
+            if (btn) btn.click();
+        });
+    }
+
     // Aktiv ichki tab gorizontal panelda ko'rinmay qolmasin.
     function revealActiveSubtab(root) {
         root.querySelectorAll('.section-nav').forEach(nav => {
@@ -487,6 +499,7 @@
             enhanceTables(document);
             enhanceStudentRows(document);
             enhancePlanParams(document);
+            syncOwnLangTabs(document);
             hideDuplicateHeading();
             revealActiveSubtab(document);
             syncBottomNav();
