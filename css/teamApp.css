@@ -2423,3 +2423,94 @@ html.rd .lead-contact-filter-toggle {
         padding-bottom: 128px;
     }
 }
+
+/* ==========================================================================
+   9-bosqich
+   ========================================================================== */
+
+/* Reyting banneri: rasm chap chetidan banner rangiga silliq o'tadi (chok yo'q) */
+@media (min-width: 901px) {
+    html.rd .mot-hero {
+        background: linear-gradient(100deg, #4B2FD6 0%, #4B2FD6 55%, #5A36E6 100%) !important;
+    }
+
+    html.rd .mot-hero::before {
+        display: none;
+    }
+
+    html.rd .mot-hero::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 62%;
+        background: url(../images/prizes/hero-reyting.jpg) right center / auto 100% no-repeat;
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .35) 25%, #000 55%);
+        mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .35) 25%, #000 55%);
+        pointer-events: none;
+    }
+
+    html.rd .mot-hero-txt {
+        position: relative;
+        z-index: 1;
+    }
+}
+
+/* Ustun sarlavhasi: balandlik qat'iy emas (Sinov darsida filtri sig'adi) */
+html.rd .lead-column-header {
+    height: auto;
+    min-height: 44px;
+}
+
+/* Obed chegaralari bir qatorda */
+html.rd .rtx-card .rtx-chips,
+html.rd .rtx-card-h + .rtx-chips {
+    flex-wrap: nowrap;
+}
+
+html.rd .mot-goal-gap {
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    /* Yuqori panel va birinchi element orasida ortiqcha joy yo'q */
+    html.rd .content-layout {
+        padding-top: 4px;
+    }
+
+    html.rd .tab-content {
+        padding-top: 4px;
+    }
+
+    html.rd .mhx-head h1 {
+        margin-top: 4px;
+    }
+
+    html.rd .mhx .mot-goal-sep {
+        display: inline;
+    }
+
+    /* ROP/admin: menejer chipi bilan karta — amallar alohida qatorda, raqam kesilmaydi */
+    html.rd body:not([data-role="sales_manager"]) .lead-card > .lead-card-contacts {
+        grid-column: 1 / -1;
+    }
+
+    html.rd body:not([data-role="sales_manager"]) .lead-card > .lead-card-footer {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        margin-top: 6px;
+    }
+}
+
+@media (max-width: 900px) {
+    html.rd .sfx-presets {
+        margin-top: 4px;
+    }
+
+    html.rd .tab-content > .sales-pinned + .sales-body > .sales-panel > :first-child,
+    html.rd #spMainNav,
+    html.rd .rating-main-tabs {
+        margin-top: 4px;
+    }
+}

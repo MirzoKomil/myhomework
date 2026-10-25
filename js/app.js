@@ -8575,7 +8575,7 @@ function renderManagerGoalBlock(managerId, lang) {
         const pct = Math.min(100, Math.round(month / next.threshold * 100));
         goal = `<section class="mot-goal" aria-label="Sovgʻaga yoʻl">${_prizeImg(next.id, 96)}
             <div class="mot-goal-txt"><span class="mot-eyebrow">Sovgʻaga yoʻl · ${daysLeft} kun qoldi</span>
-            <h3 class="mot-goal-title">${escapeHtml(next.label || '')} uchun yana ${mln(gap)}</h3>
+            <h3 class="mot-goal-title">${escapeHtml(next.label || '')}<span class="mot-goal-sep">:</span> <span class="mot-goal-gap">yana ${mln(gap)}</span></h3>
             <div class="mot-team"><span><strong>${pct}%</strong></span><span class="mot-bar" role="progressbar" aria-label="${escapeHtml(next.label || '')}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></span><span class="mot-goal-frac">${mln(month)} / ${mln(next.threshold)}</span></div>
             <span class="mot-sub">Sovgʻa uchun kuniga ${mln(Math.ceil(gap / daysLeft))}${place ? ` · ${place}-oʻrin` : ''}${ahead ? `<span class="mot-sub-x">, ${escapeHtml(_firstName(ahead.name))}dan ${mln(Math.max(0, ahead.sales - month))} orqada</span>` : ''}</span></div></section>`;
     } else {
@@ -9018,7 +9018,7 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
             <div><strong>Bugungi ishlar bajarilgan</strong><span class="mhx-sub">Yangi lidlar kelishi bilan shu yerda chiqadi</span></div></div>`;
     return `<div class="ahx mhx" id="managerHome">
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
-            <button type="button" class="btn-primary-sm mhx-add" data-mhx-add-lead aria-label="Lid qoʻshish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Lid qoʻshish</span></button></div>
+</div>
         ${renderManagerGoalBlock(managerId, d.lang)}
         <div class="ahx-kpis mhx-kpis">
             <div class="ahx-kpi mhx-kpi--plan"><span class="ahx-kpi-l">Oylik rejam</span><b class="ahx-kpi-v">${mln(d.sales)}<small> / ${d.target ? mln(d.target) + ' mln soʻm' : 'reja yoʻq'}</small></b>
@@ -16622,7 +16622,7 @@ function renderSalesFunnel() {
             <span class="sfx-val"><b>${st.count}</b> · ${st.share}%</span>
         </li>`).join('');
     const tiles = [
-        ['Konversiya (toʻlov yopildi)', pctTxt(convRate) + '%', `${converted} / ${totalCount} lid`],
+        ['Konversiya', pctTxt(convRate) + '%', `toʻlov yopildi · ${converted} / ${totalCount} lid`],
         ['Sotildi (jami tushum)', fmtSum(totalRevenue), `${partialCount} yarim + ${converted} toʻliq = ${totalSold} ta`],
         ['Hali jarayonda', String(inProgress), 'ochiq bosqichlarda'],
         ['Oʻrtacha chek', fmtSum(avgCheck), totalSold > 0 ? `${totalSold} ta sotuvga asosan` : 'maʼlumot yoʻq'],
