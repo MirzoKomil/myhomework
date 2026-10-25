@@ -2444,10 +2444,11 @@ html.rd .lead-contact-filter-toggle {
         top: 0;
         right: 0;
         bottom: 0;
-        width: 62%;
-        background: url(../images/prizes/hero-reyting.jpg) right center / auto 100% no-repeat;
-        -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .35) 25%, #000 55%);
-        mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .35) 25%, #000 55%);
+        height: 100%;
+        aspect-ratio: 1344 / 576;
+        background: url(../images/prizes/hero-reyting.jpg) right center / cover no-repeat;
+        -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .4) 22%, #000 45%);
+        mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .4) 22%, #000 45%);
         pointer-events: none;
     }
 
