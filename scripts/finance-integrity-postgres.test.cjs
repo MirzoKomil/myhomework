@@ -545,6 +545,29 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             await finance.saveAccount(pool, admin, { id: 'acc-bank', name: 'Bank', kind: 'bank', entity: 'common', methods: ['bank'], openingBalance: 0, openingDate: '2026-10-25' });
             await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r14-pre-0000000001', entity: 'common', type: 'transfer', categoryCode: 'TRANSFER', accountId: 'acc-card', toAccountId: 'acc-bank', amount: 700000, date: '2026-10-20' }), e => e.status === 400 && /ochilgan/.test(e.message));
         });
+        await t.test('round 15: user-defined function overloads, casts, collations and rules anywhere are detected and block app writes', async () => {
+            for (const [sql, undo] of [
+                [`CREATE FUNCTION public.to_char(date, text) RETURNS text AS $$ SELECT pg_catalog.to_char($1::timestamp - interval '40 days', $2) $$ LANGUAGE sql;`, 'DROP FUNCTION public.to_char(date, text)'],
+                [`CREATE FUNCTION evil_int(text) RETURNS bigint AS $$ SELECT 1000000::bigint $$ LANGUAGE sql; CREATE CAST (text AS bigint) WITH FUNCTION evil_int(text);`, 'DROP CAST (text AS bigint); DROP FUNCTION evil_int(text)'],
+                [`CREATE COLLATION evil_coll (provider = icu, locale = 'und', deterministic = false);`, 'DROP COLLATION evil_coll'],
+                [`CREATE RULE evil_rule AS ON INSERT TO json_data DO ALSO UPDATE students SET name = name;`, 'DROP RULE evil_rule ON json_data']]) {
+                await fresh(pool);
+                plainSql(sql);
+                const v = await finance.verifySeals(pool);
+                assert.equal(v.ok, false, sql.slice(0, 40)); 
+                await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r15-' + Math.random().toString(36).slice(2, 12) + '-k', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 1000, date: '2026-10-20', counterparty: 'x' }), /FIN_TAMPER/);
+                plainSql(undo);
+            }
+        });
+        await t.test('round 15: an early-morning receipt time written by the app is not a false alarm when the database runs in UTC', async () => {
+            await fresh(pool);
+            await appTx('inflow', async db => {
+                await db.query("SET LOCAL timezone = 'UTC'");
+                await db.query(`INSERT INTO payment_records(id,source_key,lead_id,student_id,language,manager_id,paid_date,paid_at,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`, ['rtz', 'ktz', 'l1', 's1', 'russian', 'm', '2026-10-20', '2026-10-20T01:30:00+05:00', 500000, 'card', '', 'partial', 0, JSON.stringify({ name: 'Ali' }), false, 'system']);
+            });
+            assert.equal((await finance.verifySeals(pool)).ok, true);
+        });
         await t.test('segment cash flow: english + russian + common equals consolidated, line by line', async () => {
             await fresh(pool);
             const o = await finance.overview(pool, admin, { start: '2026-09-01', end: '2026-10-31', scope: 'all' });

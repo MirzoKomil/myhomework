@@ -734,6 +734,8 @@ async function txSignatures(db) {
 // Baza tuzilmasi yaxlitligi: moliya jadvallaridagi triggerlar aynan kod yaratganlari (nomi, jadvali, funksiyasi, yoqilgan),
 // qo'shimcha qoida (RULE), siyosat yoki hodisa triggeri yo'q, moliya funksiyalari matni imzolangan izga teng.
 // Kalitsiz, lekin baza egasi huquqi bilan qo'shilgan "yashirin" trigger (ilova yozuvi bilan birga soxta yozuv qo'shadigan) shu yerda ushlanadi.
+// Ilovaning boshqa modullari yaratadigan (moliyaga aloqasi yo'q) funksiyalar.
+const APP_FUNCTIONS = ['domwork_phone'];
 const MONITORED = t => t.startsWith('fin_') || ['students', 'payment_records', 'payment_record_voids', 'salary_transactions'].includes(t);
 const EXPECTED_TRIGGERS = (() => {
     const out = new Set(), re = /CREATE\s+(?:CONSTRAINT\s+)?TRIGGER\s+(\w+)\s+[\s\S]*?\s+ON\s+(\w+)[\s\S]*?EXECUTE\s+FUNCTION\s+(\w+)/gi;
@@ -747,7 +749,7 @@ async function functionHash(db) {
     const trg = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, pg_get_triggerdef(tg.oid) AS def FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
         JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname = current_schema() ORDER BY 1, 2`)).rows;
     // Moliya jadvallari ustunlari (turi, standart qiymati, NOT NULL) va cheklovlari: DEFAULT almashtirilsa ham aniqlanadi.
-    const cols = (await db.query(`SELECT c.relname AS t, a.attname AS col, pg_catalog.format_type(a.atttypid, a.atttypmod) AS typ, a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
+    const cols = (await db.query(`SELECT c.relname AS t, a.attname AS col, pg_catalog.format_type(a.atttypid, a.atttypmod) || COALESCE(' COLLATE ' || (SELECT collname FROM pg_collation WHERE oid = a.attcollation AND a.attcollation <> 100), '') AS typ, a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
         FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
         WHERE n.nspname = current_schema() AND c.relkind='r' AND a.attnum > 0 AND NOT a.attisdropped ORDER BY 1, a.attnum`)).rows.filter(r => MONITORED(r.t) && r.t !== 'students');
     const cons = (await db.query(`SELECT c.relname AS t, k.conname AS name, pg_get_constraintdef(k.oid) AS def FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid
@@ -765,7 +767,7 @@ finCtx.setStructureCheck(async db => {
 const canonJson = v => v === null || typeof v !== 'object' ? JSON.stringify(v ?? null) : Array.isArray(v) ? '[' + v.map(canonJson).join(',') + ']' : '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonJson(v[k])).join(',') + '}';
 const fpMacInput = (fnHash, codeHash, snapshot) => fnHash + '|' + (codeHash || '') + (snapshot ? '|' + createHash('sha256').update(canonJson(snapshot)).digest('hex') : '');
 async function structSnapshot(db) {
-    const cols = (await db.query(`SELECT c.relname AS t, a.attname AS col, pg_catalog.format_type(a.atttypid, a.atttypmod) AS typ, a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
+    const cols = (await db.query(`SELECT c.relname AS t, a.attname AS col, pg_catalog.format_type(a.atttypid, a.atttypmod) || COALESCE(' COLLATE ' || (SELECT collname FROM pg_collation WHERE oid = a.attcollation AND a.attcollation <> 100), '') AS typ, a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
         FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
         WHERE n.nspname = current_schema() AND c.relkind='r' AND a.attnum > 0 AND NOT a.attisdropped`)).rows.filter(r => MONITORED(r.t) && r.t !== 'students');
     const cons = (await db.query(`SELECT c.relname AS t, k.conname AS name, pg_get_constraintdef(k.oid) AS def FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid
@@ -789,13 +791,27 @@ async function schemaIntegrity(db) {
     const shadow = (await db.query(`SELECT n.nspname AS s, c.relname AS t FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname <> current_schema() AND n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%' AND n.nspname NOT LIKE 'pg_temp%' AND c.relkind IN ('r','v','m','f','p')`)).rows.find(r => MONITORED(r.t) || ['leads', 'hr_employees', 'payment_audit', 'users'].includes(r.t));
     if (shadow) return { ok: false, table: shadow.t, rowId: shadow.s, reason: `“${shadow.s}.${shadow.t}” — moliya jadvalining soyasi boshqa sxemada (yozuvlarni chetga burishi mumkin)` };
-    const curDb = (await db.query('SELECT current_database() AS d')).rows[0].d;
+    const curDb = (await db.query('SELECT current_database() AS d')).rows[0].d, me = (await db.query('SELECT current_user AS u, session_user AS s')).rows[0];
     const sp = (await db.query(`SELECT d.datname, r.rolname, s.setconfig FROM pg_db_role_setting s LEFT JOIN pg_database d ON d.oid=s.setdatabase LEFT JOIN pg_roles r ON r.oid=s.setrole`)).rows
-        .find(r => (r.setconfig || []).some(c => /^search_path=/i.test(c)) && (!r.datname || r.datname === curDb));
-    if (sp) return { ok: false, table: 'pg_db_role_setting', rowId: sp.rolname || sp.datname || '', reason: 'rol yoki baza darajasida search_path o‘zgartirilgan — yozuvlarni soya jadvalga burish mumkin' };
-    const rule = (await db.query(`SELECT c.relname AS t, r.rulename FROM pg_rewrite r JOIN pg_class c ON c.oid=r.ev_class JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND r.rulename <> '_RETURN'`)).rows.find(r => MONITORED(r.t));
+        .find(r => (r.setconfig || []).some(c => /^(search_path|session_replication_role|default_transaction_read_only)=/i.test(c)) && (!r.datname || r.datname === curDb)
+            && (!r.rolname || r.rolname === me.u || r.rolname === me.s));
+    if (sp) return { ok: false, table: 'pg_db_role_setting', rowId: sp.rolname || sp.datname || '', reason: 'ilova roli yoki baza darajasida search_path / session_replication_role o‘zgartirilgan — yozuvlarni chetga burish yoki triggerlarni o‘chirish mumkin' };
+    const rule = (await db.query(`SELECT c.relname AS t, r.rulename FROM pg_rewrite r JOIN pg_class c ON c.oid=r.ev_class JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND r.rulename <> '_RETURN'`)).rows[0];
     if (rule) return { ok: false, table: rule.t, rowId: rule.rulename, reason: 'moliya jadvalida qayta yozish qoidasi (RULE) bor' };
-    const pol = (await db.query(`SELECT c.relname AS t, p.polname FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid`)).rows.find(r => MONITORED(r.t));
+    const pol = (await db.query(`SELECT c.relname AS t, p.polname FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid`)).rows[0];
+    // Foydalanuvchi yaratgan katalog obyektlari (ilova faqat o'zining fin_* funksiyalarini yaratadi): bir xil nomli funksiya (to_char),
+    // operator, CAST, collation, domen — ilova SQL'i natijasini yashirincha o'zgartirishi mumkin. Kengaytma (extension) obyektlari bundan mustasno.
+    const userObj = (await db.query(`
+        SELECT 'funksiya' AS kind, p.oid::regprocedure::text AS name FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+          WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND NOT (n.nspname = current_schema() AND (p.proname LIKE 'fin\\_%' OR p.proname = ANY($1)))
+            AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.deptype='e')
+        UNION ALL SELECT 'operator', o.oprname FROM pg_operator o WHERE o.oid >= 16384 AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_operator'::regclass AND d.objid=o.oid AND d.deptype='e')
+        UNION ALL SELECT 'cast', c.castsource::regtype || '->' || c.casttarget::regtype FROM pg_cast c WHERE c.oid >= 16384 AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_cast'::regclass AND d.objid=c.oid AND d.deptype='e')
+        UNION ALL SELECT 'collation', c.collname FROM pg_collation c WHERE c.oid >= 16384 AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_collation'::regclass AND d.objid=c.oid AND d.deptype='e')
+        UNION ALL SELECT 'domen', t.typname FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE t.typtype='d' AND n.nspname NOT IN ('pg_catalog','information_schema')
+            AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_type'::regclass AND d.objid=t.oid AND d.deptype='e')
+        LIMIT 1`, [APP_FUNCTIONS])).rows[0];
+    if (userObj) return { ok: false, table: 'pg_catalog', rowId: userObj.name, reason: `bazada ilovaga tegishli bo‘lmagan ${userObj.kind} bor (“${userObj.name}”) — hisobot va qulf natijasini o‘zgartirishi mumkin` };
     if (pol) return { ok: false, table: pol.t, rowId: pol.polname, reason: 'moliya jadvalida qator siyosati (POLICY) bor' };
     const evt = (await db.query('SELECT evtname FROM pg_event_trigger')).rows[0];
     if (evt) return { ok: false, table: 'pg_event_trigger', rowId: evt.evtname, reason: 'bazada hodisa triggeri (EVENT TRIGGER) bor' };

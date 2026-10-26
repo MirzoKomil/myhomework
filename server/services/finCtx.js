@@ -199,7 +199,11 @@ function sameValue(intended, stored) {
     if (a === b) return true;
     if (a == null || b == null) return a === b || (a === '' && b == null) || (b === '' && a == null);
     if (/^-?\d+(\.\d+)?$/.test(a) && /^-?\d+(\.\d+)?$/.test(b)) return Number(a) === Number(b);
-    if (/^\d{4}-\d{2}-\d{2}/.test(a) && /^\d{4}-\d{2}-\d{2}/.test(b)) return a.slice(0, 10) === b.slice(0, 10) && (a.length <= 10 || b.length <= 10 || Date.parse(a) === Date.parse(b));
+    // Vaqt belgisi (timestamptz): bir xil lahza turli vaqt mintaqasida yozilishi mumkin (baza UTC, ilova +05:00) — lahza bo'yicha solishtiriladi.
+    if (/^\d{4}-\d{2}-\d{2}/.test(a) && /^\d{4}-\d{2}-\d{2}/.test(b)) {
+        if (a.length > 10 && b.length > 10) return Date.parse(a) === Date.parse(b);
+        return a.slice(0, 10) === b.slice(0, 10);
+    }
     return false;
 }
 async function verifyIntents(db, xid) {
