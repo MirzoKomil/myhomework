@@ -89,7 +89,8 @@ async function tx(fn, actor = null) {
     try {
         await client.query('BEGIN');
         // Moliya jurnali uchun: o'zgarish qaysi ilova tranzaksiyasidan va kim tomonidan (o'quvchi holati jurnali shu belgilarni yozadi).
-        await client.query("SELECT set_config('fin.ctx', $1, true), set_config('app.user_id', $2, true)", [require('./services/finCtx').token('crm'), String(actor?.id || '')]);
+        // search_path qat'iy: boshqa sxemadagi bir xil nomli (soya) jadval yozuvlarni chetga bura olmaydi.
+        await client.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public, pg_temp', true), set_config('app.user_id', $2, true)", [require('./services/finCtx').token('crm'), String(actor?.id || '')]);
         // Natija qaytariladi: Yuzma-yuz (battle) funksiyalari `return tx(...)`
         // qiladi — ilgari undefined qaytib, haqiqiy juftlash umuman ishlamas edi.
         const result = await fn(client);
@@ -2456,8 +2457,8 @@ async function setDemoStudentAvatarUrl(studentId, avatarUrl) {
     try {
         extra = typeof row.extra_data === 'object' ? row.extra_data : JSON.parse(row.extra_data || '{}');
     } catch { extra = {}; }
-    extra = { ...extra, avatarUrl: String(avatarUrl || '').slice(0, 500) };
-    await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), realId]);
+    // Faqat shu kalit atomik birlashtiriladi: eski nusxa bilan boshqa maydonlar (muzlatish, holat, qarz) ustidan yozilmaydi.
+    await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ avatarUrl: String(avatarUrl || '').slice(0, 500) }), realId]);
 }
 
 function isCanonicalStudentSerial(value) {
@@ -2484,11 +2485,7 @@ async function getStudentPublicId(student) {
 
     const publicId = linkedSerial || String(student?.id || '').slice(-6);
     if (publicId && student?.id && student.serialCode !== publicId) {
-        const extra = { ...student, serialCode: publicId };
-        delete extra.id; delete extra.name; delete extra.phone; delete extra.group;
-        delete extra.subject; delete extra.teacherId; delete extra.assistantTeacherId;
-        delete extra.lessonDayOfWeek; delete extra.lessonTime; delete extra.lessonDuration;
-        await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), student.id]);
+        await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ serialCode: publicId }), student.id]);
     }
     return publicId;
 }
@@ -2534,8 +2531,7 @@ async function getOrCreateStudentContract(studentId) {
         };
     }
     const contract = { number: await getNextContractNumber(), date: new Date().toISOString().slice(0, 10) };
-    extra = { ...extra, contract };
-    await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), realId]);
+    await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ contract }), realId]);
     return {
         number: contract.number, date: contract.date, studentName: row.name,
         phone: student.phone, lessonDuration: student.lessonDuration,

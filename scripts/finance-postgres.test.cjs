@@ -28,7 +28,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     // Superuser sifatida alohida sessiyada "yashirin" o'zgartirish (triggerlarni o'chirib) — buzilishni aniqlash testlari uchun.
     const accN3 = () => ({ id: 'acc3' });
     // Ataylab qilingan buzilish tiklangach: qotirilgan ogohlantirishni rahbar yopadi (haqiqiy jarayondagidek).
-    const ack = () => finance.acknowledgeIntegrityAlarm(pool, admin, { note: 'Test: ataylab qilingan buzilish tiklandi va tekshirildi' }).catch(() => {});
+    const ack = async () => { for (const u of [admin, accountant]) await finance.acknowledgeIntegrityAlarm(pool, u, { note: 'Test: ataylab qilingan buzilish tiklandi va tekshirildi' }).catch(() => {}); };
     // Ilova nomidan (imzolangan belgi bilan) alohida psql sessiyasida; tranzaksiya ilova kaliti bilan imzolanadi (ilova COMMIT oldidan qiladigan ish).
     const appSql = async (app, sql) => {
         const out = execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token(app)}', true); ${sql}; SET CONSTRAINTS ALL IMMEDIATE; SELECT 'XID:' || pg_current_xact_id(); COMMIT;`], { encoding: 'utf8' });

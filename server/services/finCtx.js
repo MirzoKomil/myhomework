@@ -35,7 +35,8 @@ function valid(ctx) {
 // yozuvlari xeshlarini (Postgres tranzaksiya raqami bilan) kalit bilan imzolaydi. Imzosiz yoki imzosi mos kelmagan
 // tranzaksiya — ilovadan tashqari yozuv (belgi nusxalangan bo'lsa ham, triggerlar o'chirilgan bo'lsa ham).
 const txMac = (xid, seals, audits) => createHmac('sha256', KEY).update('fin-tx|' + xid + '|' + seals.join(',') + '|' + audits.join(',')).digest('hex');
-let ready = false;
+let ready = false, structureCheck = null;
+const setStructureCheck = fn => { structureCheck = fn; };
 async function hashesOf(db, xid) {
     const r = (await db.query(`SELECT (SELECT COALESCE(array_agg(row_hash ORDER BY seq), '{}') FROM fin_row_seals WHERE xid=$1) AS s,
         (SELECT COALESCE(array_agg(hash ORDER BY id), '{}') FROM fin_audit WHERE xid=$1) AS a`, [xid])).rows[0];
@@ -94,6 +95,7 @@ function parseInsert(sql, values) {
         const cm = vm[2] && /^ON\s+CONFLICT\s*\(([^)]*)\)\s*DO\s+UPDATE\s+SET\s+([\s\S]*?)(?:\s+WHERE\s+[\s\S]*)?$/i.exec(vm[2].trim());
         if (cm) out.conflict = { cols: cm[1].split(',').map(c => c.trim()), set: splitTop(cm[2]).map(a => a.split('=')[0].trim()) };
         else if (vm[2] && /DO\s+UPDATE/i.test(vm[2])) out.conflict = { cols: null, set: null };
+        if (vm[2] && /DO\s+NOTHING/i.test(vm[2])) out.optional = true;
     }
     return out;
 }
@@ -102,7 +104,13 @@ function parseChange(sql, values) {
     let m = /^\s*UPDATE\s+(\w+)(?:\s+(?:AS\s+)?(?!SET\b)(\w+))?\s+SET\s+([\s\S]*?)(?:\s+WHERE\s+([\s\S]*?))?(?:\s+RETURNING\s+[\s\S]*)?$/i.exec(sql);
     if (m && TRACKED.has(m[1])) {
         const set = {}; const cols = [];
-        for (const a of splitTop(m[3])) { const i = a.indexOf('='); const c = a.slice(0, i).trim(); cols.push(c); const v = resolve(a.slice(i + 1), values); if (v !== SKIP) set[c] = v; }
+        for (const a of splitTop(m[3])) {
+            const i = a.indexOf('='); const c = a.slice(0, i).trim(); const expr = a.slice(i + 1).trim(); cols.push(c);
+            // jsonb birlashtirish: col = col || $n::jsonb — kutilgan natija = oldingi qiymat + parametr.
+            const mm = new RegExp('^' + c + '\\s*\\|\\|\\s*\\$(\\d+)(?:::jsonb)?$', 'i').exec(expr);
+            if (mm) { const v = values?.[Number(mm[1]) - 1]; try { set[c] = { __merge: typeof v === 'string' ? JSON.parse(v) : v }; } catch {} continue; }
+            const v = resolve(expr, values); if (v !== SKIP) set[c] = v;
+        }
         return { op: 'U', table: m[1], alias: m[2] || null, where: m[4] || null, cols, set };
     }
     m = /^\s*DELETE\s+FROM\s+(\w+)(?:\s+(?:AS\s+)?(?!WHERE\b)(\w+))?(?:\s+WHERE\s+([\s\S]*?))?(?:\s+RETURNING\s+[\s\S]*)?$/i.exec(sql);
@@ -116,7 +124,7 @@ async function probe(client, orig, table, alias, where, values) {
     const ref = alias || table;
     await orig.call(client, 'SAVEPOINT fin_probe');
     try {
-        const r = await orig.call(client, `SELECT ${ref}.${keyOf(table)}::text AS k, pg_catalog.to_jsonb(${ref}) AS r FROM ${table} ${alias || ''} WHERE ${w}`, params);
+        const r = await orig.call(client, `SELECT ${ref}.${keyOf(table)}::text AS k, pg_catalog.to_jsonb(${ref}) AS r FROM ${table} ${alias || ''} WHERE ${w} FOR UPDATE`, params);
         await orig.call(client, 'RELEASE SAVEPOINT fin_probe');
         return r.rows;
     } catch (e) { await orig.call(client, 'ROLLBACK TO SAVEPOINT fin_probe'); return null; }
@@ -140,7 +148,7 @@ async function capture(client, orig, sql, values) {
             for (const r of rows) addChange(st, ins.table, r.k, r.r, ins.conflict.set, Object.fromEntries(ins.conflict.set.filter(c => c in ins.row).map(c => [c, ins.row[c]])));
             if (rows.length) return; // qo'shilmaydi, yangilanadi
         }
-        const list = st.inserts.get(ins.table) || []; list.push({ key: k == null ? null : String(k), row: ins.row }); st.inserts.set(ins.table, list);
+        const list = st.inserts.get(ins.table) || []; list.push({ key: k == null ? null : String(k), row: ins.row, optional: !!ins.optional }); st.inserts.set(ins.table, list);
         return;
     }
     const ch = parseChange(sql, values);
@@ -221,7 +229,7 @@ async function verifyIntents(db, xid) {
             const now = await read(t, k); if (!now) continue;
             for (const col of Object.keys(now)) {
                 if (!ch.allowed.has(col) && ch.before && !sameValue(ch.before[col], now[col])) fail(t, k, `“${col}” ustuni ilova o‘zgartirmagan holda o‘zgargan`);
-                if (col in ch.set && !sameValue(ch.set[col], now[col])) fail(t, k, `“${col}” ustuni ilova yozganidan farq qiladi`);
+                if (col in ch.set && !sameValue(expectedSet(ch, col), now[col])) fail(t, k, `“${col}” ustuni ilova yozganidan farq qiladi`);
             }
             continue;
         }
@@ -234,6 +242,41 @@ async function verifyIntents(db, xid) {
         const later = ch ? ch.allowed : new Set();
         for (const [col, v] of Object.entries(it.row)) if (!later.has(col) && Object.prototype.hasOwnProperty.call(now, col) && !sameValue(v, now[col])) fail(t, k, `“${col}” ustuni ilova yozganidan farq qiladi`);
     }
+    // Teskari yo'nalish (to'liqlik): ilova yozgan har bir moliyaviy qator muhrlangan bo'lishi, o'zgartirgan/o'chirgan qatorlari
+    // aynan ilova yozgandek bo'lishi shart (BEFORE trigger qatorni "yutib" yuborsa yoki o'quvchi holatini almashtirsa — ushlanadi).
+    for (const [t, list] of st.inserts) for (const it of list) {
+        if (used.has(it) || it.optional) continue;
+        if (SEALED_TABLES[t]) fail(t, it.key || '?', 'ilova yozgan qator bazada yo‘q (muhrlanmagan)');
+        if (t === 'students' && it.key != null) {
+            const now = await read(t, it.key);
+            if (!now) { if (!st.deletes.has(t + '|' + it.key) || true) fail(t, it.key, 'ilova yozgan o‘quvchi qatori bazada yo‘q'); }
+            const ch = st.changes.get(t + '|' + it.key), later = ch ? ch.allowed : new Set();
+            for (const [col, v] of Object.entries(it.row)) if (!later.has(col) && Object.prototype.hasOwnProperty.call(now, col) && !sameValue(v, now[col])) fail(t, it.key, `“${col}” ustuni ilova yozganidan farq qiladi`);
+        }
+    }
+    for (const [id, ch] of st.changes) {
+        const [t, k] = [id.slice(0, id.indexOf('|')), id.slice(id.indexOf('|') + 1)];
+        if (st.deletes.has(id)) continue;
+        const now = await read(t, k);
+        if (!now) { if ((st.inserts.get(t) || []).some(i => i.key === k)) continue; fail(t, k, 'ilova o‘zgartirgan qator yo‘qolgan'); }
+        for (const col of Object.keys(now)) {
+            if (!ch.allowed.has(col) && ch.before && !sameValue(ch.before[col], now[col]) && !(st.inserts.get(t) || []).some(i => i.key === k)) fail(t, k, `“${col}” ustuni ilova o‘zgartirmagan holda o‘zgargan`);
+            if (col in ch.set && !sameValue(expectedSet(ch, col), now[col])) fail(t, k, `“${col}” ustuni ilova yozganidan farq qiladi`);
+        }
+    }
+    for (const id of st.deletes) {
+        const [t, k] = [id.slice(0, id.indexOf('|')), id.slice(id.indexOf('|') + 1)];
+        if ((st.inserts.get(t) || []).some(i => i.key === k)) continue;
+        if (await read(t, k)) fail(t, k, 'ilova o‘chirgan qator hali ham bor');
+    }
+}
+function expectedSet(ch, col) {
+    const v = ch.set[col];
+    if (v && typeof v === 'object' && '__merge' in v) {
+        const base = ch.before?.[col] && typeof ch.before[col] === 'object' ? ch.before[col] : {};
+        return { ...base, ...(v.__merge || {}) };
+    }
+    return v;
 }
 // Faqat ilova kodi chaqiradi (COMMIT dan oldin). Kechiktirilgan triggerlar (o'quvchi o'chirilishi) avval ishga tushiriladi.
 async function signTx(db) {
@@ -241,6 +284,8 @@ async function signTx(db) {
     if (!ready) return;
     await db.query('SET CONSTRAINTS ALL IMMEDIATE');
     const xid = (await db.query('SELECT pg_current_xact_id_if_assigned()::text AS x')).rows[0].x;
+    const st = db.__finState, wrote = !!xid || (st && (st.inserts.size || st.changes.size || st.deletes.size));
+    if (wrote && structureCheck && !db.__finSkipIntents) await structureCheck(db);
     if (!xid) return;
     await verifyIntents(db, xid);
     // Diskdagi oldingi zanjir boshi bazada bo'lishi shart: oxirgi yozuvlar o'chirilgan bo'lsa, ogohlantirish ko'tariladi va bosh oldinga surilmaydi.
@@ -268,6 +313,14 @@ function commitHead(db) {
 const readHead = () => readJson(headFile());
 const readAlarm = () => readJson(alarmFile());
 function raiseAlarm(r) { try { if (!fs.existsSync(alarmFile())) writeJson(alarmFile(), { at: new Date().toISOString(), table: r.table || '', rowId: r.rowId || '', reason: r.reason || '' }); } catch {} }
+function stageAck(ack) { const a = readAlarm(); if (a) writeJson(alarmFile(), { ...a, ack1: ack }); }
+// Ikki kishi tasdiqlagandan keyin: zanjir boshi bazaning joriy holatidan qayta yoziladi (oldingisi tarixda qoladi).
+async function rebaseline(pool) {
+    const h = (await pool.query(`SELECT (SELECT seq FROM fin_row_seals ORDER BY seq DESC LIMIT 1) AS seq, (SELECT row_hash FROM fin_row_seals ORDER BY seq DESC LIMIT 1) AS hash,
+        (SELECT id FROM fin_audit WHERE hash IS NOT NULL ORDER BY id DESC LIMIT 1) AS aid, (SELECT hash FROM fin_audit WHERE hash IS NOT NULL ORDER BY id DESC LIMIT 1) AS ahash`)).rows[0];
+    try { const old = readHead(); if (old) fs.appendFileSync(path.join(guardDir(), 'alarm-history.log'), JSON.stringify({ rebaselinedFrom: old, at: new Date().toISOString() }) + '\n'); } catch {}
+    writeJson(headFile(), { sealSeq: Number(h.seq || 0), sealHash: h.hash || '', auditId: Number(h.aid || 0), auditHash: h.ahash || '', at: new Date().toISOString(), rebaselined: true });
+}
 function clearAlarm(note, by) { const a = readAlarm(); if (!a) return null; try { fs.appendFileSync(path.join(guardDir(), 'alarm-history.log'), JSON.stringify({ ...a, clearedAt: new Date().toISOString(), clearedBy: by, note }) + '\n'); fs.unlinkSync(alarmFile()); } catch {} return a; }
 async function signXid(db, xid) {
     const { seals, audits } = await hashesOf(db, xid);
@@ -279,4 +332,4 @@ const validSchemaMac = (h, mac) => { const a = Buffer.from(schemaMac(h)), b = Bu
 const checkpointMac = c => createHmac('sha256', KEY).update(['fin-checkpoint', c.sealSeq, c.sealHash, c.auditId, c.auditHash, c.prev, c.issuedAt || ''].join('|')).digest('hex');
 // Kalit sozlanmagan (ochiq dev kaliti) bo'lsa imzo himoya bermaydi — moliya bo'limida ogohlantiriladi.
 const keyConfigured = () => KEY !== DEV_KEY;
-module.exports = { SEALED_TABLES, track, commitHead, readHead, readAlarm, raiseAlarm, clearAlarm, verifyIntents, token, valid, keyConfigured, signTx, signXid, txMac, schemaMac, validSchemaMac, checkpointMac };
+module.exports = { stageAck, rebaseline, setStructureCheck, SEALED_TABLES, track, commitHead, readHead, readAlarm, raiseAlarm, clearAlarm, verifyIntents, token, valid, keyConfigured, signTx, signXid, txMac, schemaMac, validSchemaMac, checkpointMac };

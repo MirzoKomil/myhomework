@@ -45,6 +45,7 @@ async function initSchema(db) { await db.query(SCHEMA); }
 // Moliya muhrlari o'zgarishni qaysi ilova tranzaksiyasi qilganini bilishi uchun belgi (mavjud bo'lsa saqlanadi).
 async function markContext(db) {
     // Moliya yoki tushum tranzaksiyasi ichida bo'lsa o'sha belgi qoladi; CRM tranzaksiyasi ichida — tushum belgisiga almashadi.
+    await db.query("SELECT set_config('search_path', 'public, pg_temp', true)");
     await db.query(`SELECT set_config('fin.ctx', CASE WHEN current_setting('fin.ctx', true) ~ '^(fin|inflow):' THEN current_setting('fin.ctx', true) ELSE $1 END, true)`, [require('./finCtx').token('inflow')]);
 }
 async function transaction(pool, fn) {

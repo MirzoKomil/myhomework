@@ -806,8 +806,10 @@
                 issueDate: p.issueDate, dueDate: p.dueDate, amount: p.amount, paid, outstanding, overdueDays: p.dueDate && p.dueDate < asOf ? dayDiff(p.dueDate, asOf) : 0 });
         }
         for (const s of data.salaries || []) {
-            if (s.amount <= 0 || !scopeMatch(s.entity, scope) || s.accrualDate > asOf) continue;
+            if (s.amount <= 0 || !scopeMatch(s.entity, scope)) continue;
             const cashOut = sum(tx.filter(t => t.salaryId === s.id && t.date <= asOf), t => (t.reversesId ? -1 : 1) * t.amount);
+            // Hisoblash sanasidan oldin to'langan maosh (davr oxiridan oldin to'lash) — xodimga berilgan bo'nak (aktiv).
+            if (s.accrualDate > asOf) { if (cashOut > 0) overpaid += cashOut; continue; }
             if (cashOut > s.amount) overpaid += cashOut - s.amount; // ortiqcha to'langan maosh — xodimdan olinadigan summa
             const outstanding = Math.max(0, s.amount - cashOut);
             if (!outstanding) continue;

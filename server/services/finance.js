@@ -139,6 +139,7 @@ CREATE INDEX IF NOT EXISTS fin_audit_xid ON fin_audit(xid);
 -- Moliya funksiyalari matnining (ilova kaliti bilan imzolangan) izi: bazada funksiya yashirincha almashtirilsa aniqlanadi.
 CREATE TABLE IF NOT EXISTS fin_schema_fingerprints (id BIGSERIAL PRIMARY KEY, fn_hash TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS code_hash TEXT;
+ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS snapshot JSONB;
 CREATE TABLE IF NOT EXISTS fin_checkpoints (id BIGSERIAL PRIMARY KEY, seal_seq BIGINT NOT NULL, seal_hash TEXT NOT NULL, audit_id BIGINT NOT NULL, audit_hash TEXT NOT NULL,
  prev_mac TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS fin_tx_signatures (xid TEXT PRIMARY KEY, seals INTEGER NOT NULL, audits INTEGER NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -160,6 +161,8 @@ CREATE TABLE IF NOT EXISTS fin_contract_events (
 -- Maosh qaysi lavozim uchun hisoblangani hisoblash paytida muzlatiladi: xodim lavozimi keyin o'zgarsa ham
 -- o'tgan davr xarajat toifasi (sotuv / ma'muriy / o'qituvchi) o'zgarmaydi.
 CREATE TABLE IF NOT EXISTS fin_salary_roles (salary_id TEXT PRIMARY KEY, role TEXT, source TEXT NOT NULL, captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS fin_input_log (id BIGSERIAL PRIMARY KEY, source TEXT NOT NULL, row_id TEXT NOT NULL, field TEXT NOT NULL, old_value TEXT, new_value TEXT,
+ recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), ctx TEXT DEFAULT NULLIF(current_setting('fin.ctx', true), ''), app_user TEXT DEFAULT NULLIF(current_setting('app.user_id', true), ''));
 -- Takroriy deb belgilangan tushum haqiqiy ekani tekshirilib tasdiqlangan (aka-uka bir telefon, teng bo'lib to'lash va h.k.).
 CREATE TABLE IF NOT EXISTS fin_receipt_reviews (
  record_id TEXT PRIMARY KEY REFERENCES payment_records(id), kind TEXT NOT NULL CHECK(kind IN ('not_duplicate')), reason TEXT NOT NULL,
@@ -317,7 +320,7 @@ DO $$ BEGIN
     CREATE TRIGGER fin_guard_salary BEFORE INSERT OR UPDATE OR DELETE ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_guard_salary();
   END IF;
 END $$;
-${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles', 'fin_receipt_reviews', 'fin_student_corrections', 'fin_tx_signatures', 'fin_schema_fingerprints', 'fin_checkpoints']
+${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles', 'fin_receipt_reviews', 'fin_student_corrections', 'fin_tx_signatures', 'fin_schema_fingerprints', 'fin_checkpoints', 'fin_input_log']
     .map(t => `DROP TRIGGER IF EXISTS fin_no_truncate_${t} ON ${t};\nCREATE TRIGGER fin_no_truncate_${t} BEFORE TRUNCATE ON ${t} FOR EACH STATEMENT EXECUTE FUNCTION fin_reject_change();`).join('\n')}
 -- Yopilgan oy qulfi o'zgartirilmaydi; faqat ilova (rahbar, oxirgi oy) ochishi mumkin — fin.unlock belgisi bilan.
 CREATE OR REPLACE FUNCTION fin_lock_guard() RETURNS trigger AS $$
@@ -361,6 +364,30 @@ DO $do$ BEGIN IF to_regclass('students') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_log_student_delete ON students;
   CREATE CONSTRAINT TRIGGER fin_log_student_delete AFTER DELETE ON students DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fin_log_student_delete();
 END IF; END $do$;
+-- Moliyaga kiradigan CRM ma'lumotlari jurnali (o'zgarmas): lid narxi (shartnoma qiymati birinchi to'lovda shundan olinadi)
+-- va xodim lavozimi (maosh toifasi). Kim/qaysi ilova tranzaksiyasidan o'zgartirgani bilan.
+CREATE OR REPLACE FUNCTION fin_log_input() RETURNS trigger AS $$
+DECLARE o TEXT; n TEXT;
+BEGIN
+  IF TG_TABLE_NAME = 'leads' THEN
+    o := CASE WHEN TG_OP = 'UPDATE' THEN OLD.extra_data->'paymentSurvey'->>'totalAmount' END; n := NEW.extra_data->'paymentSurvey'->>'totalAmount';
+    IF o IS DISTINCT FROM n THEN INSERT INTO fin_input_log(source,row_id,field,old_value,new_value) VALUES ('leads', NEW.id, 'paymentSurvey.totalAmount', o, n); END IF;
+  ELSE
+    o := CASE WHEN TG_OP = 'UPDATE' THEN OLD.role END; n := NEW.role;
+    IF o IS DISTINCT FROM n THEN INSERT INTO fin_input_log(source,row_id,field,old_value,new_value) VALUES ('hr_employees', NEW.id, 'role', o, n); END IF;
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
+DO $do$ BEGIN
+  IF to_regclass('leads') IS NOT NULL THEN
+    DROP TRIGGER IF EXISTS fin_log_input_leads ON leads;
+    CREATE TRIGGER fin_log_input_leads AFTER INSERT OR UPDATE ON leads FOR EACH ROW EXECUTE FUNCTION fin_log_input();
+  END IF;
+  IF to_regclass('hr_employees') IS NOT NULL THEN
+    DROP TRIGGER IF EXISTS fin_log_input_hr ON hr_employees;
+    CREATE TRIGGER fin_log_input_hr AFTER INSERT OR UPDATE ON hr_employees FOR EACH ROW EXECUTE FUNCTION fin_log_input();
+  END IF;
+END $do$;
 CREATE OR REPLACE FUNCTION fin_capture_salary_role() RETURNS trigger AS $$
 BEGIN
   INSERT INTO fin_salary_roles(salary_id, role, source) VALUES (NEW.id, (SELECT role FROM hr_employees WHERE id = NEW.employee_id), 'insert') ON CONFLICT DO NOTHING;
@@ -384,6 +411,7 @@ ${immutableSql('fin_contract_events')}
 ${immutableSql('fin_receipt_reviews')}
 ${immutableSql('fin_tx_signatures')}
 ${immutableSql('fin_schema_fingerprints')}
+${immutableSql('fin_input_log')}
 ${immutableSql('fin_checkpoints')}
 ${immutableSql('fin_student_corrections')}
 ${immutableSql('fin_salary_roles')}
@@ -415,9 +443,16 @@ async function initSchema(pool) {
             if ((await db.query("SELECT to_regclass('fin_schema_fingerprints') AS t")).rows[0].t) {
                 await db.query('SAVEPOINT fin_boot');
                 try {
-                    const last = (await db.query('SELECT fn_hash, mac, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
-                    if (last && last.code_hash === codeHash && finCtx.validSchemaMac(last.fn_hash + '|' + codeHash, last.mac) && last.fn_hash !== await functionHash(db))
+                    const last = (await db.query("SELECT fn_hash, mac, code_hash, snapshot FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1")).rows[0];
+                    if (last && last.code_hash === codeHash && finCtx.validSchemaMac(fpMacInput(last.fn_hash, codeHash, last.snapshot), last.mac) && last.fn_hash !== await functionHash(db))
                         finCtx.raiseAlarm({ table: 'pg_proc', rowId: '', reason: 'server qayta ishga tushishidan oldin baza tuzilmasi (funksiya, trigger, standart qiymat yoki cheklov) ilovadan tashqarida o‘zgartirilgan' });
+                    // Yangi kod versiyasi: yangi ustun/cheklov qo'shilishi mumkin, lekin oldin bor bo'lganlari (turi, DEFAULT, NOT NULL, ta'rifi) o'zgarmasligi kerak.
+                    if (last && last.code_hash !== codeHash && last.snapshot && finCtx.validSchemaMac(fpMacInput(last.fn_hash, last.code_hash, last.snapshot), last.mac)) {
+                        const now = await structSnapshot(db), was = last.snapshot;
+                        const diff = [...Object.keys(was.cols || {}).filter(k => k in now.cols && JSON.stringify(now.cols[k]) !== JSON.stringify(was.cols[k])),
+                            ...Object.keys(was.cons || {}).filter(k => !(k in now.cons) || now.cons[k] !== was.cons[k])];
+                        if (diff.length) finCtx.raiseAlarm({ table: diff[0].split('.')[0], rowId: diff[0], reason: `yangi versiya o‘rnatilishidan oldin mavjud ustun yoki cheklov ilovadan tashqarida o‘zgartirilgan (${diff.slice(0, 3).join(', ')})` });
+                    }
                     await db.query('RELEASE SAVEPOINT fin_boot');
                 } catch { await db.query('ROLLBACK TO SAVEPOINT fin_boot'); }
             }
@@ -450,8 +485,8 @@ async function initSchema(pool) {
             await backfillSeals(db);
             // Kod yaratgan funksiyalar shu yerda (CREATE OR REPLACE dan keyin) aynan koddagidek — izi imzolanadi.
             const fh = await functionHash(db);
-            const lastFp = (await db.query('SELECT fn_hash, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
-            if (lastFp?.fn_hash !== fh || lastFp?.code_hash !== codeHash) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac,code_hash) VALUES($1,$2,$3)', [fh, finCtx.schemaMac(fh + '|' + codeHash), codeHash]);
+            const lastFp = (await db.query('SELECT fn_hash, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0], snap = await structSnapshot(db);
+            if (lastFp?.fn_hash !== fh || lastFp?.code_hash !== codeHash) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac,code_hash,snapshot) VALUES($1,$2,$3,$4)', [fh, finCtx.schemaMac(fpMacInput(fh, codeHash, snap)), codeHash, JSON.stringify(snap)]);
             await finCtx.signTx(db);
             await db.query('COMMIT'); finCtx.commitHead(db);
         } catch (e) { await db.query('ROLLBACK').catch(() => {}); throw e; }
@@ -472,7 +507,9 @@ async function transaction(pool, fn) {
         const result = await fn(db);
         await writeCheckpoint(db);
         await finCtx.signTx(db);
-        await db.query('COMMIT'); finCtx.commitHead(db); return result;
+        await db.query('COMMIT');
+        if (db.__finRebaseline) { delete db.__finRebaseline; await finCtx.rebaseline(pool); } else finCtx.commitHead(db);
+        return result;
     } catch (e) {
         await db.query('ROLLBACK');
         if (/FIN_PERIOD_CLOSED|FIN_IMMUTABLE/.test(e.message || '')) throw error(409, e.message.replace(/^.*?(FIN_PERIOD_CLOSED|FIN_IMMUTABLE):\s*/, ''));
@@ -718,6 +755,23 @@ async function functionHash(db) {
     return createHash('sha256').update(rows.map(r => r.sig + '\n' + r.def).join('\n--\n') + '\n==\n' + trg.map(r => r.t + ':' + r.def).join('\n')
         + '\n==\n' + cols.map(r => [r.t, r.col, r.typ, r.nn, r.def].join('|')).join('\n') + '\n==\n' + cons.map(r => r.t + ':' + r.name + ':' + r.def).join('\n')).digest('hex');
 }
+// Ilova tranzaksiyasi imzolanishidan oldin (o'sha tranzaksiya ichida) tuzilma tekshiriladi: yashirin trigger/qoida/soya jadval
+// bo'lsa — yozuv imzolanmaydi va bekor qilinadi. DROP TRIGGER bu paytda kutadi (jadval qulfi), shuning uchun poyga yo'q.
+finCtx.setStructureCheck(async db => {
+    const r = await schemaIntegrity(db);
+    if (!r.ok) throw Object.assign(new Error(`FIN_TAMPER: ${r.table}/${r.rowId}: ${r.reason} — yozuv bekor qilindi`), { status: 409 });
+});
+// Ustun va cheklovlar ro'yxati (yangi kod versiyasida ham saqlanib qolgan obyektlar o'zgarmaganini tekshirish uchun).
+const canonJson = v => v === null || typeof v !== 'object' ? JSON.stringify(v ?? null) : Array.isArray(v) ? '[' + v.map(canonJson).join(',') + ']' : '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonJson(v[k])).join(',') + '}';
+const fpMacInput = (fnHash, codeHash, snapshot) => fnHash + '|' + (codeHash || '') + (snapshot ? '|' + createHash('sha256').update(canonJson(snapshot)).digest('hex') : '');
+async function structSnapshot(db) {
+    const cols = (await db.query(`SELECT c.relname AS t, a.attname AS col, pg_catalog.format_type(a.atttypid, a.atttypmod) AS typ, a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
+        FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
+        WHERE n.nspname = current_schema() AND c.relkind='r' AND a.attnum > 0 AND NOT a.attisdropped`)).rows.filter(r => MONITORED(r.t) && r.t !== 'students');
+    const cons = (await db.query(`SELECT c.relname AS t, k.conname AS name, pg_get_constraintdef(k.oid) AS def FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid
+        JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname = current_schema()`)).rows.filter(r => MONITORED(r.t) && r.t !== 'students');
+    return { cols: Object.fromEntries(cols.map(r => [r.t + '.' + r.col, [r.typ, r.nn, r.def]])), cons: Object.fromEntries(cons.map(r => [r.t + '.' + r.name, r.def])) };
+}
 async function schemaIntegrity(db) {
     // Butun bazadagi barcha triggerlar (har qanday jadval, har qanday sxema): ilova faqat koddagi triggerlarni ishlatadi.
     const trig = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, p.proname AS fn, tg.tgenabled AS en, (p.pronamespace = c.relnamespace) AS same_ns, (n.nspname = current_schema()) AS own FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
@@ -730,14 +784,23 @@ async function schemaIntegrity(db) {
     }
     const present = new Set(trig.map(r => `${r.t}|${r.name}|${r.fn}`)), tables = new Set((await db.query(`SELECT relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND relkind='r'`)).rows.map(r => r.relname));
     for (const e of EXPECTED_TRIGGERS) { const [t, name] = e.split('|'); if (tables.has(t) && !present.has(e)) return { ok: false, table: t, rowId: name, reason: `“${name}” himoya triggeri yo‘q (o‘chirib tashlangan)` }; }
+    // Soya jadval: moliya jadvali nomi bilan boshqa sxemada (search_path oldida turib yozuvlarni "yutib" yuboradi) va
+    // rol/baza darajasidagi search_path sozlamasi — ikkalasi ham ilovadan tashqari o'zgartirish belgisi.
+    const shadow = (await db.query(`SELECT n.nspname AS s, c.relname AS t FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname <> current_schema() AND n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%' AND n.nspname NOT LIKE 'pg_temp%' AND c.relkind IN ('r','v','m','f','p')`)).rows.find(r => MONITORED(r.t) || ['leads', 'hr_employees', 'payment_audit', 'users'].includes(r.t));
+    if (shadow) return { ok: false, table: shadow.t, rowId: shadow.s, reason: `“${shadow.s}.${shadow.t}” — moliya jadvalining soyasi boshqa sxemada (yozuvlarni chetga burishi mumkin)` };
+    const curDb = (await db.query('SELECT current_database() AS d')).rows[0].d;
+    const sp = (await db.query(`SELECT d.datname, r.rolname, s.setconfig FROM pg_db_role_setting s LEFT JOIN pg_database d ON d.oid=s.setdatabase LEFT JOIN pg_roles r ON r.oid=s.setrole`)).rows
+        .find(r => (r.setconfig || []).some(c => /^search_path=/i.test(c)) && (!r.datname || r.datname === curDb));
+    if (sp) return { ok: false, table: 'pg_db_role_setting', rowId: sp.rolname || sp.datname || '', reason: 'rol yoki baza darajasida search_path o‘zgartirilgan — yozuvlarni soya jadvalga burish mumkin' };
     const rule = (await db.query(`SELECT c.relname AS t, r.rulename FROM pg_rewrite r JOIN pg_class c ON c.oid=r.ev_class JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND r.rulename <> '_RETURN'`)).rows.find(r => MONITORED(r.t));
     if (rule) return { ok: false, table: rule.t, rowId: rule.rulename, reason: 'moliya jadvalida qayta yozish qoidasi (RULE) bor' };
     const pol = (await db.query(`SELECT c.relname AS t, p.polname FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid`)).rows.find(r => MONITORED(r.t));
     if (pol) return { ok: false, table: pol.t, rowId: pol.polname, reason: 'moliya jadvalida qator siyosati (POLICY) bor' };
     const evt = (await db.query('SELECT evtname FROM pg_event_trigger')).rows[0];
     if (evt) return { ok: false, table: 'pg_event_trigger', rowId: evt.evtname, reason: 'bazada hodisa triggeri (EVENT TRIGGER) bor' };
-    const fp = (await db.query('SELECT fn_hash, mac, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
-    if (!fp || !finCtx.validSchemaMac(fp.fn_hash + '|' + (fp.code_hash || ''), fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya funksiyalari izi imzosiz' };
+    const fp = (await db.query('SELECT fn_hash, mac, code_hash, snapshot FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
+    if (!fp || !finCtx.validSchemaMac(fpMacInput(fp.fn_hash, fp.code_hash, fp.snapshot), fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya funksiyalari izi imzosiz' };
     if (fp.fn_hash !== await functionHash(db)) return { ok: false, table: 'pg_proc', rowId: '', reason: 'moliya funksiyalari yoki triggerlari bazada o‘zgartirilgan (imzolangan izga mos emas)' };
     return { ok: true };
 }
@@ -792,15 +855,24 @@ async function diskHeadIntegrity(db, r) {
         return { ...r, ok: false, table: 'fin_audit', rowId: String(h.auditId), reason: 'server diskidagi audit boshi bazada yo‘q — oxirgi audit yozuvlari o‘chirilgan' };
     return r;
 }
-// Rahbar buzilishni ko'rib chiqib (sababi va nima qilingani bilan) ogohlantirishni yopadi; tarix server diskida qoladi.
+// Ogohlantirishni yopish — ikki kishi: avval rahbar sababi va ko'rilgan chorani yozadi, keyin boshqa moliya xodimi tasdiqlaydi.
+// Yopilganda zanjir boshi (server diskida) bazaning joriy holatiga qayta bog'lanadi; tarix server diskida va audit jurnalida qoladi.
 async function acknowledgeIntegrityAlarm(pool, actor, body) {
     return transaction(pool, async db => {
-        const user = await access(db, actor, { director: true });
+        const user = await access(db, actor);
         const note = text(body.note, 1000); if (note.length < 10) throw error(400, 'Nima aniqlangani va nima qilinganini yozing (kamida 10 belgi)');
         const a = finCtx.readAlarm(); if (!a) throw error(409, 'Ochiq ogohlantirish yo‘q');
-        await audit(db, user, 'integrity-alarm-ack', a.table || 'integrity', a, { note });
+        if (!a.ack1) {
+            if (!user.director) throw error(403, 'Ogohlantirishni avval rahbar ko‘rib chiqadi');
+            finCtx.stageAck({ by: user.id, name: user.name || user.id, note, at: new Date().toISOString() });
+            await audit(db, user, 'integrity-alarm-review', a.table || 'integrity', a, { note, step: 1 });
+            return { ok: true, pending: true, message: 'Rahbar ko‘rib chiqdi. Endi boshqa moliya xodimi tasdiqlashi kerak' };
+        }
+        if (a.ack1.by === user.id) throw error(403, 'Ikkinchi tasdiq boshqa xodimdan bo‘lishi kerak');
+        await audit(db, user, 'integrity-alarm-ack', a.table || 'integrity', a, { note, step: 2, firstReviewer: a.ack1.name });
+        db.__finRebaseline = true;
         finCtx.clearAlarm(note, user.name || user.id);
-        return { ok: true };
+        return { ok: true, pending: false };
     });
 }
 async function integrityInner(db, { full = false } = {}) {
@@ -869,6 +941,11 @@ async function isClosed(db, day) { const m = await closedThrough(db); return !!m
 async function assertOpen(db, day, label = 'Bu sana') {
     const m = await closedThrough(db);
     if (m && F.monthOf(day) <= m) throw error(409, `${label} yopilgan davrga (${m} gacha yopilgan) tushadi. Tuzatishni ochiq oy sanasi bilan kiriting`);
+}
+// Hisob ochilishidan oldingi sanadagi harakat pul oqimi solishtiruvini buzadi (IAS 7): rad etiladi.
+function assertOpened(account, day) {
+    const od = account?.opening_date ? toKey(account.opening_date) : null;
+    if (od && day < od) throw error(400, `${account.name} hisobi ${od} da ochilgan — undan oldingi sana bilan harakat yozilmaydi`);
 }
 async function accountRow(db, id, label = 'Hisob raqam') {
     const row = (await db.query('SELECT * FROM fin_accounts WHERE id=$1', [id])).rows[0];
@@ -1118,6 +1195,7 @@ async function overview(pool, actor, q) {
             settings: data.settings, settingsRevision: data.settingsRevision, locks: data.locks, closedThrough: data.closedThrough, firstDate,
             closeCandidate: { month: nextMonth, issues: F.monthEnd(nextMonth) < F.today() ? closeReadiness(data, nextMonth) : null },
             contractDebtMismatches: F.contractDebtMismatches(data, p.end).slice(0, 200),
+            inputChanges: (await db.query(`SELECT source, row_id, field, old_value, new_value, recorded_at, app_user, split_part(COALESCE(ctx,''), ':', 1) AS via FROM fin_input_log ORDER BY id DESC LIMIT 100`)).rows,
             studentChanges: (await db.query(`SELECT l.student_id, s.name, l.state, l.recorded_at, l.app_user, l.backfill, split_part(COALESCE(l.ctx,''), ':', 1) AS source FROM fin_student_log l LEFT JOIN students s ON s.id=l.student_id
                 ORDER BY l.id DESC LIMIT 100`)).rows,
             assets: F.fixedAssets(data).filter(a => p.scope === 'all' || a.entity === p.scope || a.entity === 'common').map(a => ({ ...a, depreciation: F.depreciationAt(a, p.end), impairmentLoss: F.impairmentAt(a, p.end),
@@ -1228,6 +1306,7 @@ async function createTransaction(pool, actor, body) {
         const account = await accountRow(db, body.accountId);
         let toAccount = null;
         if (type === 'transfer') toAccount = await accountRow(db, body.toAccountId, 'Qabul qiluvchi hisob');
+        assertOpened(account, day); if (toAccount) assertOpened(toAccount, day);
         const counterparty = text(body.counterparty, 200), description = text(body.description, 1000);
         if (type !== 'transfer' && !counterparty) throw error(400, 'Kimga / kimdan ekanini yozing');
         const needEvidence = ['refund', 'drawing'].includes(type) || (['expense', 'loan_repay'].includes(type) && amount >= (Number(settings.evidenceMin) || 1000000));
@@ -1426,6 +1505,7 @@ async function recordSalaryPayment(pool, actor, salaryId, body) {
         await assertOpen(db, day);
         const account = await accountRow(db, body.accountId);
         if (!F.EQUIVALENT_KINDS.has(account.kind)) throw error(400, 'Maosh naqd, karta yoki bank hisobidan to‘lanadi');
+        assertOpened(account, day);
         // Ikki kishi nazorati: maoshni "to'landi" deb tasdiqlagan xodim kassadan chiqimni o'zi yozmaydi.
         const hasAudit = (await db.query("SELECT to_regclass('salary_audit') AS t")).rows[0].t;
         const accruedBy = hasAudit ? (await db.query("SELECT 1 FROM salary_audit WHERE action='accrue' AND entity_id=$1 AND actor_id=$2 LIMIT 1", [salaryId, user.id])).rows.length > 0 : false;
@@ -1774,6 +1854,7 @@ async function disposeAsset(pool, actor, id, body) {
         let txnId = null;
         if (proceeds) {
             const account = await accountRow(db, body.accountId);
+            assertOpened(account, day);
             txnId = randomUUID();
             await db.query(`INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,description,receipt_url,asset_id,actor_id,actor_name)
                 VALUES($1,$2,$3,'income','ASSET_SALE',$4,$5,$6,$7,$8,$9,$10,$11)`, [txnId, t.entity, day, account.id, proceeds, text(body.counterparty, 200) || 'Xaridor', 'Sotildi: ' + (t.counterparty || t.description), evidenceUrl, t.id, user.id, user.name]);

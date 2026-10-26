@@ -28,7 +28,7 @@ const appSql = async (app, sql, user = '') => {
 async function fresh(pool) {
     signPool = pool;
     process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-int-'));
-    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+    await pool.query('DROP SCHEMA IF EXISTS evil CASCADE; DROP SCHEMA IF EXISTS shadow CASCADE; DROP SCHEMA IF EXISTS postgres CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
     await pool.query(`CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT,email TEXT,role TEXT,avatar TEXT);
         CREATE TABLE hr_employees(id TEXT PRIMARY KEY,name TEXT,role TEXT,lang TEXT,login TEXT,department TEXT,status TEXT,start_date TEXT,join_date TEXT);
         CREATE TABLE user_sales_manager_links(user_id TEXT PRIMARY KEY,manager_id TEXT);
@@ -336,7 +336,10 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             plainSql('DROP TRIGGER zz_audit_hook ON fin_audit; DROP FUNCTION evil();');
             v = await finance.verifySeals(pool); assert.equal(v.ok, false, 'ogohlantirish qotirilgan'); assert.equal(v.latched, true);
             await assert.rejects(finance.acknowledgeIntegrityAlarm(pool, acc, { note: 'Buxgalter yopa olmaydi, faqat rahbar' }), e => e.status === 403);
-            await finance.acknowledgeIntegrityAlarm(pool, admin, { note: 'Trigger olib tashlandi, server paroli almashtirildi' });
+            const r1 = await finance.acknowledgeIntegrityAlarm(pool, admin, { note: 'Trigger olib tashlandi, server paroli almashtirildi' });
+            assert.equal(r1.pending, true); assert.equal((await finance.verifySeals(pool)).ok, false, 'bitta kishi yopa olmaydi');
+            await assert.rejects(finance.acknowledgeIntegrityAlarm(pool, admin, { note: 'Yana o‘sha rahbar tasdiqlashga urinadi' }), e => e.status === 403);
+            await finance.acknowledgeIntegrityAlarm(pool, acc, { note: 'Ikkinchi xodim: tekshirildi, tasdiqlayman' });
             v = await finance.verifySeals(pool); assert.equal(v.ok, true, v.reason);
             await fresh(pool);
             plainSql(`CREATE OR REPLACE FUNCTION fin_reject_change() RETURNS trigger AS $$ BEGIN RETURN COALESCE(NEW, OLD); END $$ LANGUAGE plpgsql;`);
@@ -363,11 +366,12 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
         });
         await t.test('round 12: a trigger on an unmonitored table (payment_audit) adding a ghost receipt makes the app refuse to commit', async () => {
             await fresh(pool);
+            const ev = (await finance.storeEvidence(pool, admin, pdf())).url;
             plainSql(`CREATE FUNCTION ghost() RETURNS trigger AS $$ BEGIN INSERT INTO payment_records(id,source_key,language,paid_date,amount,method,form,snapshot,actor_id)
                 VALUES('ghost-' || NEW.record_id,'ghost-' || NEW.record_id,'russian','2026-10-20',5000000,'card','full','{}','system'); RETURN NEW; END $$ LANGUAGE plpgsql;
                 CREATE TRIGGER zz_ghost AFTER INSERT ON payment_audit FOR EACH ROW EXECUTE FUNCTION ghost();`);
             await assert.rejects(finance.manualReceipt(pool, admin, { requestKey: 'r12-ghost-000000001', entity: 'russian', date: '2026-10-20', amount: 300000, method: 'cash', studentId: 's1',
-                reason: 'Hujjat asosida kiritildi', evidenceUrl: (await finance.storeEvidence(pool, admin, pdf())).url }), /FIN_TAMPER/);
+                reason: 'Hujjat asosida kiritildi', evidenceUrl: ev }), /FIN_TAMPER/);
             assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM payment_records WHERE id LIKE 'ghost-%'")).rows[0].n, 0);
         });
         await t.test('round 12: an expected trigger name pointing to a same-named function in another schema is detected and its value change is refused', async () => {
@@ -377,7 +381,7 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
                 CREATE TRIGGER fin_guard_fin_transactions BEFORE INSERT ON fin_transactions FOR EACH ROW EXECUTE FUNCTION evil.fin_guard_fin_transactions();`);
             let v = await finance.verifySeals(pool);
             assert.equal(v.ok, false); assert.match(v.reason, /boshqa sxema|o‘zgartirilgan/);
-            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r12-schema-00000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 50000, date: '2026-10-20', counterparty: 'Ofis' }), /FIN_TAMPER.*amount/);
+            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r12-schema-00000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 50000, date: '2026-10-20', counterparty: 'Ofis' }), /FIN_TAMPER/);
             plainSql('DROP SCHEMA evil CASCADE');
         });
         await t.test('round 12: a re-created guard trigger with different events is detected by the signed trigger fingerprint', async () => {
@@ -490,6 +494,56 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
                     await db.query('ROLLBACK');
                 } finally { untrack(); }
             } finally { await db.query('DROP TABLE IF EXISTS pg_temp.fin_period_locks').catch(() => {}); db.release(); }
+        });
+        await t.test('round 14: any trigger present during an app write (BEFORE UPDATE/INSERT rewrite, earlier-firing override, row-swallowing) blocks the commit', async () => {
+            const cases = [
+                `CREATE FUNCTION t1() RETURNS trigger AS $$ BEGIN NEW.extra_data := NEW.extra_data || '{"status":"inactive","debtAmount":50000000}'::jsonb; RETURN NEW; END $$ LANGUAGE plpgsql;
+                 CREATE TRIGGER a_rewrite BEFORE UPDATE ON students FOR EACH ROW EXECUTE FUNCTION t1();`,
+                `CREATE FUNCTION t2() RETURNS trigger AS $$ BEGIN RETURN NULL; END $$ LANGUAGE plpgsql;
+                 CREATE TRIGGER a_swallow BEFORE INSERT ON fin_transactions FOR EACH ROW EXECUTE FUNCTION t2();`,
+                `CREATE FUNCTION t3() RETURNS trigger AS $$ BEGIN NEW.account_id := 'acc-cash'; RETURN NEW; END $$ LANGUAGE plpgsql;
+                 CREATE TRIGGER a_zz BEFORE INSERT ON payment_records FOR EACH ROW EXECUTE FUNCTION t3();`];
+            for (const sql of cases) {
+                await fresh(pool);
+                plainSql(sql);
+                await assert.rejects(appTx('crm', async db => { await db.query("UPDATE students SET extra_data=extra_data || $2::jsonb WHERE id=$1", ['s1', JSON.stringify({ debtAmount: 1500000 })]); }), /FIN_TAMPER/);
+                await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r14-' + Math.random().toString(36).slice(2, 12) + '-k', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 1000, date: '2026-10-20', counterparty: 'x' }), /FIN_TAMPER/);
+            }
+        });
+        await t.test('round 14: without any trigger, a legitimate jsonb-merge update and a bulk student save pass the intent check', async () => {
+            await fresh(pool);
+            await appTx('crm', async db => { await db.query("UPDATE students SET extra_data=extra_data || $2::jsonb WHERE id=$1", ['s1', JSON.stringify({ debtAmount: 0, paymentDueDate: '2026-11-01' })]); });
+            await appTx('crm', async db => {
+                const rows = (await db.query('SELECT * FROM students')).rows;
+                await db.query('DELETE FROM students');
+                for (const r of rows) await db.query('INSERT INTO students (id,name,phone,subject,group_name,teacher_id,lesson_duration,extra_data) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [r.id, r.name, r.phone, r.subject, r.group_name, r.teacher_id, r.lesson_duration, JSON.stringify({ ...r.extra_data, frozen: r.id === 's1' })]);
+            });
+            assert.equal((await finance.verifySeals(pool)).ok, true);
+            assert.equal((await finance.load(pool)).studentFreezes.length, 1);
+        });
+        await t.test('round 14: a shadow table in another schema or a role-level search_path is flagged, and app writes still land in the real table', async () => {
+            await fresh(pool);
+            plainSql('CREATE SCHEMA postgres; CREATE TABLE postgres.payment_records (LIKE public.payment_records INCLUDING ALL);');
+            let v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.match(v.reason, /soya/);
+            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r14-shadow-00000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 1000, date: '2026-10-20', counterparty: 'x' }), /FIN_TAMPER/);
+            plainSql('DROP SCHEMA postgres CASCADE');
+            await fresh(pool);
+            plainSql('ALTER ROLE postgres SET search_path = shadow, public');
+            try { v = await finance.verifySeals(pool); } finally { plainSql('ALTER ROLE postgres RESET search_path'); }
+            assert.equal(v.ok, false); assert.match(v.reason, /search_path/);
+        });
+        await t.test('round 14: salary paid before its accrual date is an advance (balance sheet balances); no movement before an account opens', async () => {
+            await fresh(pool);
+            plainSql("CREATE UNIQUE INDEX IF NOT EXISTS sal_period ON salary_transactions(employee_id,period_start,period_end)");
+            await appTx('payroll', async db => { await db.query("INSERT INTO salary_transactions(id,employee_id,language,period_start,period_end,amount,status,paid_at) VALUES($1,$2,$3,$4,$5,$6,'paid',NOW())", ['jul', 't1', 'russian', '2026-10-01', '2026-10-31', 900000]); });
+            await finance.createTransaction(pool, admin, { requestKey: 'r14-cap-0000000001', entity: 'common', type: 'capital', categoryCode: 'OWNER_IN', accountId: 'acc-card', amount: 5000000, date: '2026-10-01', counterparty: 'Ta’sischi' });
+            await finance.recordSalaryPayment(pool, admin, 'jul', { accountId: 'acc-card', date: '2026-10-24', receiptUrl: (await finance.storeEvidence(pool, admin, pdf())).url });
+            for (const end of ['2026-10-24', '2026-10-25', '2026-10-31']) {
+                const b = (await finance.overview(pool, admin, { start: '2026-10-01', end, scope: 'all', basis: 'accrual' })).balance;
+                assert.equal(b.balanced, true, end + ' ' + b.imbalance);
+            }
+            await finance.saveAccount(pool, admin, { id: 'acc-bank', name: 'Bank', kind: 'bank', entity: 'common', methods: ['bank'], openingBalance: 0, openingDate: '2026-10-25' });
+            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r14-pre-0000000001', entity: 'common', type: 'transfer', categoryCode: 'TRANSFER', accountId: 'acc-card', toAccountId: 'acc-bank', amount: 700000, date: '2026-10-20' }), e => e.status === 400 && /ochilgan/.test(e.message));
         });
         await t.test('segment cash flow: english + russian + common equals consolidated, line by line', async () => {
             await fresh(pool);
