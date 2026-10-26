@@ -1,0 +1,305 @@
+{
+ "n": 18,
+ "topic_uz": "«Опиши́ предме́т!» — uy, narsa va odamni tasvirlash",
+ "scene": "A young man Bobur looks around a bright apartment with wide windows, a large mirror and new furniture, while the woman owner shows him the room.",
+ "dialogs": [
+  {
+   "id": "L18-d1",
+   "title_ru": "Кварти́ра",
+   "title_uz": "Kvartira",
+   "intro_uz": "Birinchi dialog. Bobur ijaraga kvartira qidiryapti. Uy egasi kvartirani ko'rsatyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Хозя́йка",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Кака́я у вас кварти́ра?",
+     "uz": "Kvartirangiz qanaqa?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Кварти́ра больша́я и све́тлая.",
+     "uz": "Kvartira katta va yorug'."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А ко́мната кака́я?",
+     "uz": "Xona-chi, qanaqa?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Ко́мната небольша́я, но удо́бная.",
+     "uz": "Xona kichikroq, lekin qulay."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А ме́бель но́вая?",
+     "uz": "Mebel yangimi?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Да, ме́бель но́вая. И зе́ркало большо́е.",
+     "uz": "Ha, mebel yangi. Ko'zgu ham katta."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А о́кна каки́е?",
+     "uz": "Derazalar-chi, qanaqa?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "О́кна широ́кие. Здесь о́чень светло́!",
+     "uz": "Derazalar keng. Bu yer juda yorug'!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kvartira qanaqa?",
+     "opts": [
+      "kichik va qorong'i",
+      "katta va yorug'",
+      "eski"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Xona qanaqa?",
+     "opts": [
+      "kichikroq, lekin qulay",
+      "juda katta",
+      "noqulay"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Derazalar qanaqa?",
+     "opts": [
+      "tor",
+      "kichkina",
+      "keng"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "больша́я и све́тлая",
+     "alts": [
+      "ма́ленькая и тёмная",
+      "но́вая и удо́бная",
+      "краси́вая и све́тлая"
+     ]
+    },
+    {
+     "base": "О́кна широ́кие",
+     "alts": [
+      "О́кна больши́е",
+      "О́кна у́зкие",
+      "О́кна но́вые"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz uy egasi o'rniga gapiring: o'z uyingiz yoki kvartirangizni 3–4 sifat bilan tasvirlang."
+  },
+  {
+   "id": "L18-d2",
+   "title_ru": "На ры́нке",
+   "title_uz": "Bozorda",
+   "intro_uz": "Ikkinchi dialog. Nigora bozorda. U yangi va mazali mahsulot so'rayapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Продаве́ц",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Како́й у вас хлеб? Све́жий?",
+     "uz": "Noningiz qanaqa? Yangimi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Да, све́жий и о́чень вку́сный.",
+     "uz": "Ha, yangi va juda mazali."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А я́блоки каки́е? Сла́дкие?",
+     "uz": "Olmalar-chi? Shirinmi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "О́чень сла́дкие! И недороги́е.",
+     "uz": "Juda shirin! Qimmat ham emas."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А молоко́ свеже́е?",
+     "uz": "Sut yangimi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Коне́чно, свеже́е!",
+     "uz": "Albatta, yangi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Non qanaqa?",
+     "opts": [
+      "eski",
+      "qimmat",
+      "yangi va mazali"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Olmalar qanaqa?",
+     "opts": [
+      "juda shirin va arzon",
+      "nordon",
+      "qimmat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora yana nimani so'radi?",
+     "opts": [
+      "choyni",
+      "sutni",
+      "go'shtni"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "све́жий хлеб",
+     "alts": [
+      "вку́сный хлеб",
+      "горя́чий хлеб",
+      "бе́лый хлеб"
+     ]
+    },
+    {
+     "base": "сла́дкие",
+     "alts": [
+      "кра́сные",
+      "вку́сные",
+      "больши́е"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: bozorda non, meva va sut qanaqa ekanini so'rang."
+  },
+  {
+   "id": "L18-d3",
+   "title_ru": "Краси́вый и́ли краси́во?",
+   "title_uz": "Chiroyli (sifat) yoki chiroyli (ravish)?",
+   "intro_uz": "Uchinchi dialog. Timur darsda. Ustoz uni maqtayapti. Sifat va ravishni farqlang. Tinglang.",
+   "speakers": [
+    {
+     "name": "Учи́тельница",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Учи́тельница",
+     "ru": "Тиму́р, уро́к тру́дный?",
+     "uz": "Timur, dars qiyinmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Нет, уро́к лёгкий. Я понима́ю.",
+     "uz": "Yo'q, dars oson. Tushunyapman."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Молоде́ц! Ты пи́шешь краси́во.",
+     "uz": "Barakalla! Chiroyli yozasan."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Спаси́бо! У меня́ краси́вая ру́чка.",
+     "uz": "Rahmat! Mening chiroyli ruchkam bor."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "А как ты чита́ешь?",
+     "uz": "Qanday o'qiysan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Чита́ю бы́стро, но говорю́ ме́дленно.",
+     "uz": "Tez o'qiyman, lekin sekin gapiraman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur uchun dars qanaqa?",
+     "opts": [
+      "oson",
+      "qiyin",
+      "zerikarli"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ustoz Timurni nima uchun maqtadi?",
+     "opts": [
+      "tez gapirgani uchun",
+      "chiroyli yozgani uchun",
+      "erta kelgani uchun"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur qanday gapiradi?",
+     "opts": [
+      "tez",
+      "yaxshi",
+      "sekin"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "уро́к лёгкий",
+     "alts": [
+      "уро́к тру́дный",
+      "уро́к интере́сный",
+      "уро́к дли́нный"
+     ]
+    },
+    {
+     "base": "пи́шешь краси́во",
+     "alts": [
+      "пи́шешь бы́стро",
+      "пи́шешь хорошо́",
+      "чита́ешь гро́мко"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: darsingiz qanaqa va siz qanday o'qiysiz, yozasiz, gapirasiz — ayting."
+  }
+ ]
+}

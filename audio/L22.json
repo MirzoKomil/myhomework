@@ -1,0 +1,295 @@
+{
+ "n": 22,
+ "topic_uz": "«Куда́ ты идёшь и кого́ ты ви́дишь?» — vinitelniy padejni mashq qilish",
+ "scene": "At a city bus stop, a woman Dilnoza waits for a bus and greets a man Anton who is walking past on the sidewalk.",
+ "dialogs": [
+  {
+   "id": "L22-d1",
+   "title_ru": "На остано́вке",
+   "title_uz": "Bekatda",
+   "intro_uz": "Birinchi dialog. Anton bekatda Dilnozani ko'rib qoldi. U kimni kutyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, приве́т! Кого́ вы ждёте?",
+     "uz": "Dilnoza, salom! Kimni kutyapsiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я жду подру́гу. Мы е́дем в теа́тр.",
+     "uz": "Dugonamni kutyapman. Teatrga ketyapmiz."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "В теа́тр? Отли́чно!",
+     "uz": "Teatrgami? Zo'r!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А вы куда́ идёте?",
+     "uz": "Siz qayerga ketyapsiz?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я иду́ на вы́ставку. Пешко́м.",
+     "uz": "Ko'rgazmaga ketyapman. Piyoda."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А вот и наш авто́бус! Пока́!",
+     "uz": "Mana, avtobusimiz ham keldi! Xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza kimni kutyapti?",
+     "opts": [
+      "opasini",
+      "onasini",
+      "dugonasini"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza qayerga ketyapti?",
+     "opts": [
+      "ko'rgazmaga",
+      "kinoga",
+      "teatrga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton qayerga qanday ketyapti?",
+     "opts": [
+      "teatrga, avtobusda",
+      "ko'rgazmaga, piyoda",
+      "ishga, mashinada"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "жду сестру́",
+     "alts": [
+      "жду подру́гу",
+      "жду ма́му",
+      "жду бра́та"
+     ]
+    },
+    {
+     "base": "на вы́ставку",
+     "alts": [
+      "на конце́рт",
+      "на рабо́ту",
+      "в музе́й"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: kimni kutayotganingizni va qayerga ketayotganingizni ayting."
+  },
+  {
+   "id": "L22-d2",
+   "title_ru": "Ой, я ви́жу Анто́на!",
+   "title_uz": "Voy, Antonni ko'ryapman!",
+   "intro_uz": "Ikkinchi dialog. Nigora eriga qo'ng'iroq qildi. Abdulaziz qayerga ketyapti va kimni ko'rdi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Алло́! Куда́ ты идёшь?",
+     "uz": "Allo! Qayerga ketyapsan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я иду́ в апте́ку, а пото́м домо́й.",
+     "uz": "Dorixonaga ketyapman, keyin uyga."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Купи́, пожа́луйста, хлеб и молоко́.",
+     "uz": "Iltimos, non va sut olib kel."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́. Ой, я ви́жу Анто́на!",
+     "uz": "Mayli. Voy, Antonni ko'ryapman!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Анто́на? Где?",
+     "uz": "Antonnimi? Qayerda?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Здесь, о́коло апте́ки. Он то́же идёт в апте́ку.",
+     "uz": "Shu yerda, dorixona yonida. U ham dorixonaga ketyapti."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz qayerga ketyapti?",
+     "opts": [
+      "bankka",
+      "dorixonaga",
+      "ishga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora nima olib kelishni so'radi?",
+     "opts": [
+      "non va sut",
+      "choy va shakar",
+      "dori"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz kimni ko'rdi?",
+     "opts": [
+      "Boburni",
+      "Timurni",
+      "Antonni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в апте́ку",
+     "alts": [
+      "в магази́н",
+      "в банк",
+      "на ры́нок"
+     ]
+    },
+    {
+     "base": "ви́жу Анто́на",
+     "alts": [
+      "ви́жу Бобу́ра",
+      "ви́жу сосе́да",
+      "ви́жу учи́теля"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: qayerga ketayotganingizni va yo'lda kimni ko'rganingizni ayting."
+  },
+  {
+   "id": "L22-d3",
+   "title_ru": "Что ты чита́ешь?",
+   "title_uz": "Nima o'qiyapsan?",
+   "intro_uz": "Uchinchi dialog. Timur va Dilnoza bog'da. Dilnoza kitob o'qiyapti, Timur kimnidir kutyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, что ты чита́ешь?",
+     "uz": "Dilnoza, nima o'qiyapsan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я чита́ю но́вую кни́гу.",
+     "uz": "Yangi kitob o'qiyapman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Интере́сную?",
+     "uz": "Qiziqmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "О́чень! А ты кого́ ждёшь?",
+     "uz": "Juda! Sen kimni kutyapsan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я жду дру́га. Мы идём на стадио́н.",
+     "uz": "Do'stimni kutyapman. Stadionga boramiz."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "На футбо́л? Я то́же люблю́ футбо́л!",
+     "uz": "Futbolgami? Men ham futbolni yaxshi ko'raman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza nima o'qiyapti?",
+     "opts": [
+      "yangi kitob",
+      "gazeta",
+      "jurnal"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur kimni kutyapti?",
+     "opts": [
+      "opasini",
+      "do'stini",
+      "dadasini"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur qayerga boradi?",
+     "opts": [
+      "kinoga",
+      "teatrga",
+      "stadionga"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "но́вую кни́гу",
+     "alts": [
+      "све́жую газе́ту",
+      "интере́сную кни́гу",
+      "ру́сскую ска́зку"
+     ]
+    },
+    {
+     "base": "жду дру́га",
+     "alts": [
+      "жду бра́та",
+      "жду па́пу",
+      "жду учи́теля"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: kimni kutayotganingizni va qayerga borayotganingizni ayting."
+  }
+ ]
+}

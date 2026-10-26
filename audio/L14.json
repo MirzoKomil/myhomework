@@ -1,0 +1,300 @@
+{
+ "n": 14,
+ "topic_uz": "«Кото́рый час?» va kun tartibi",
+ "scene": "In the morning kitchen of an Uzbek home, a woman Nigora eats breakfast and looks at a wall clock showing seven, while a man Anton talks with her by video call.",
+ "dialogs": [
+  {
+   "id": "L14-d1",
+   "title_ru": "Мой день",
+   "title_uz": "Mening kunim",
+   "intro_uz": "Birinchi dialog. Anton Nigoradan kun tartibi haqida so'rayapti. Nigora soat nechada turadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, во ско́лько вы встаёте?",
+     "uz": "Nigora, soat nechada turasiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я встаю́ в шесть часо́в. Ра́но!",
+     "uz": "Soat oltida turaman. Erta!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А во ско́лько вы за́втракаете?",
+     "uz": "Soat nechada nonushta qilasiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В семь. А в во́семь я уже́ на рабо́те.",
+     "uz": "Yettida. Sakkizda esa allaqachon ishdaman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Вы рабо́таете с восьми́ до пяти́?",
+     "uz": "Sakkizdan beshgacha ishlaysizmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да. А переры́в у нас в час.",
+     "uz": "Ha. Tanaffusimiz esa soat birda."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora soat nechada turadi?",
+     "opts": [
+      "yettida",
+      "oltida",
+      "sakkizda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora soat nechada ishda bo'ladi?",
+     "opts": [
+      "sakkizda",
+      "to'qqizda",
+      "yettida"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Tanaffus soat nechada?",
+     "opts": [
+      "o'n ikkida",
+      "ikkida",
+      "birda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в шесть часо́в",
+     "alts": [
+      "в семь часо́в",
+      "в пять часо́в",
+      "в во́семь часо́в"
+     ]
+    },
+    {
+     "base": "с восьми́ до пяти́",
+     "alts": [
+      "с девяти́ до шести́",
+      "с восьми́ до четырёх",
+      "с десяти́ до семи́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: soat nechada turishingiz, nonushta qilishingiz va ishlashingizni ayting."
+  },
+  {
+   "id": "L14-d2",
+   "title_ru": "Ты встаёшь ра́но?",
+   "title_uz": "Erta turasanmi?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza Boburdan so'rayapti: erta turasanmi? Boburning kuni qanday? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, ты встаёшь ра́но?",
+     "uz": "Bobur, erta turasanmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Нет, я встаю́ по́здно. В де́сять часо́в.",
+     "uz": "Yo'q, kech turaman. Soat o'nda."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "В де́сять? А рабо́та?",
+     "uz": "O'nda? Ish-chi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Я рабо́таю с двена́дцати до восьми́.",
+     "uz": "O'n ikkidan sakkizgacha ishlayman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А во ско́лько ты у́жинаешь?",
+     "uz": "Soat nechada kechki ovqat qilasan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "По́здно, в де́вять. Пото́м смотрю́ телеви́зор.",
+     "uz": "Kech, to'qqizda. Keyin televizor ko'raman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А я в де́сять уже́ сплю!",
+     "uz": "Men esa o'nda allaqachon uxlayman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur soat nechada turadi?",
+     "opts": [
+      "o'nda",
+      "oltida",
+      "sakkizda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bobur soat nechadan nechagacha ishlaydi?",
+     "opts": [
+      "9 dan 6 gacha",
+      "8 dan 5 gacha",
+      "12 dan 8 gacha"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnoza soat o'nda nima qiladi?",
+     "opts": [
+      "kechki ovqat qiladi",
+      "uxlaydi",
+      "televizor ko'radi"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в де́сять часо́в",
+     "alts": [
+      "в де́вять часо́в",
+      "в оди́ннадцать часо́в",
+      "в во́семь часо́в"
+     ]
+    },
+    {
+     "base": "в де́вять",
+     "alts": [
+      "в во́семь",
+      "в де́сять",
+      "в семь"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: erta yoki kech turishingizni va ish vaqtingizni ayting."
+  },
+  {
+   "id": "L14-d3",
+   "title_ru": "Переры́в",
+   "title_uz": "Tanaffus",
+   "intro_uz": "Uchinchi dialog. Abdulaziz idoraga keldi. Administratorning tanaffusi qachon? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Администра́тор",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Извини́те, во ско́лько у вас переры́в?",
+     "uz": "Kechirasiz, tanaffusingiz soat nechada?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Переры́в с ча́су до двух.",
+     "uz": "Tanaffus birdan ikkigacha."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А сейча́с кото́рый час?",
+     "uz": "Hozir soat necha?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Сейча́с ро́вно час. Переры́в!",
+     "uz": "Hozir roppa-rosa bir. Tanaffus!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ой! А до скольки вы рабо́таете?",
+     "uz": "Voy! Soat nechagacha ishlaysiz?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "До шести́. В два часа́ я уже́ здесь.",
+     "uz": "Oltigacha. Soat ikkida allaqachon shu yerdaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Tanaffus qachon?",
+     "opts": [
+      "12 dan 1 gacha",
+      "1 dan 2 gacha",
+      "2 dan 3 gacha"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Hozir soat necha?",
+     "opts": [
+      "ikki",
+      "o'n ikki",
+      "roppa-rosa bir"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Administrator soat nechagacha ishlaydi?",
+     "opts": [
+      "oltigacha",
+      "beshgacha",
+      "yettigacha"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "с ча́су до двух",
+     "alts": [
+      "с двена́дцати до ча́су",
+      "с двух до трёх",
+      "с ча́су до трёх"
+     ]
+    },
+    {
+     "base": "До шести́",
+     "alts": [
+      "До пяти́",
+      "До семи́",
+      "До восьми́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: tanaffus va ish vaqti haqida so'rang."
+  }
+ ]
+}

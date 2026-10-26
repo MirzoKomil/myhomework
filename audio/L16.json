@@ -1,0 +1,295 @@
+{
+ "n": 16,
+ "topic_uz": "«Как ты э́то де́лаешь?» — ravishlar va antonimlar",
+ "scene": "On a city street, a man Anton asks a friendly woman for directions; she points to a pharmacy next to a bank on the right.",
+ "dialogs": [
+  {
+   "id": "L16-d1",
+   "title_ru": "Где апте́ка?",
+   "title_uz": "Dorixona qayerda?",
+   "intro_uz": "Birinchi dialog. Anton ko'chada. U dorixonani qidiryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Же́нщина",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Извини́те, где здесь апте́ка?",
+     "uz": "Kechirasiz, bu yerda dorixona qayerda?"
+    },
+    {
+     "who": "Же́нщина",
+     "ru": "Апте́ка недалеко́. Спра́ва, о́коло ба́нка.",
+     "uz": "Dorixona yaqin. O'ng tomonda, bank yonida."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо! А магази́н то́же бли́зко?",
+     "uz": "Rahmat! Do'kon ham yaqinmi?"
+    },
+    {
+     "who": "Же́нщина",
+     "ru": "Нет, магази́н далеко́, к сожале́нию.",
+     "uz": "Yo'q, afsuski, do'kon uzoqda."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А где здесь кафе́?",
+     "uz": "Bu yerda kafe qayerda?"
+    },
+    {
+     "who": "Же́нщина",
+     "ru": "Кафе́ там, сле́ва.",
+     "uz": "Kafe u yerda, chap tomonda."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dorixona qayerda?",
+     "opts": [
+      "chapda, kafe yonida",
+      "o'ngda, bank yonida",
+      "uzoqda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Do'kon yaqinmi?",
+     "opts": [
+      "yo'q, uzoqda",
+      "ha, juda yaqin",
+      "bilmaydi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kafe qayerda?",
+     "opts": [
+      "o'ngda",
+      "bank yonida",
+      "chapda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "апте́ка",
+     "alts": [
+      "банк",
+      "остано́вка",
+      "шко́ла"
+     ]
+    },
+    {
+     "base": "недалеко́",
+     "alts": [
+      "бли́зко",
+      "далеко́",
+      "здесь"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: ko'chada dorixona, bank va kafe qayerda ekanini so'rang."
+  },
+  {
+   "id": "L16-d2",
+   "title_ru": "Почему́ так гро́мко?",
+   "title_uz": "Nega bunchalik shovqin?",
+   "intro_uz": "Ikkinchi dialog. Uyda juda shovqin. Nigora Sardordan so'rayapti: nega? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Сардо́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Сардо́р, почему́ так гро́мко?",
+     "uz": "Sardor, nega bunchalik shovqin?"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Мы игра́ем, ма́ма.",
+     "uz": "O'ynayapmiz, oyi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ти́хо, пожа́луйста! Де́душка спит.",
+     "uz": "Sekinroq, iltimos! Bobong uxlayapti."
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Почему́? Сейча́с день.",
+     "uz": "Nega? Hozir kunduz-ku."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он рабо́тает но́чью, а днём спит.",
+     "uz": "U kechasi ishlaydi, kunduzi esa uxlaydi."
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Поня́тно. Мы игра́ем ти́хо!",
+     "uz": "Tushunarli. Sekin o'ynaymiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nega uyda shovqin?",
+     "opts": [
+      "bolalar o'ynayapti",
+      "televizor baland",
+      "mehmonlar keldi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dadasi nima qilyapti?",
+     "opts": [
+      "ishlayapti",
+      "ovqat qilyapti",
+      "uxlayapti"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Oxirida Sardor qanday o'ynaydi?",
+     "opts": [
+      "baland ovozda",
+      "sekin",
+      "tez"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "гро́мко",
+     "alts": [
+      "бы́стро",
+      "мно́го",
+      "по́здно"
+     ]
+    },
+    {
+     "base": "ти́хо",
+     "alts": [
+      "ме́дленно",
+      "хорошо́",
+      "споко́йно"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: «Почему́ так…?» deb so'rang va sekinroq o'ynashni so'rang."
+  },
+  {
+   "id": "L16-d3",
+   "title_ru": "Как ча́сто?",
+   "title_uz": "Qanchalik tez-tez?",
+   "intro_uz": "Uchinchi dialog. Anton va Dilnoza kitob haqida gaplashyapti. Kim tez-tez o'qiydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, вы ча́сто чита́ете?",
+     "uz": "Dilnoza, tez-tez kitob o'qiysizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, ча́сто. Я чита́ю бы́стро. А вы?",
+     "uz": "Ha, tez-tez. Tez o'qiyman. Siz-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я чита́ю ре́дко и ме́дленно.",
+     "uz": "Men kamdan-kam va sekin o'qiyman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Почему́?",
+     "uz": "Nega?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я мно́го рабо́таю. А ве́чером смотрю́ футбо́л!",
+     "uz": "Ko'p ishlayman. Kechqurun esa futbol ko'raman!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Поня́тно. А я никогда́ не смотрю́ футбо́л.",
+     "uz": "Tushunarli. Men esa hech qachon futbol ko'rmayman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qanday o'qiydi?",
+     "opts": [
+      "sekin",
+      "kamdan-kam",
+      "tez-tez va tez"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton nega kam o'qiydi?",
+     "opts": [
+      "ko'p ishlaydi",
+      "kitob yoqmaydi",
+      "ko'zi og'riydi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza futbol ko'radimi?",
+     "opts": [
+      "ha, tez-tez",
+      "hech qachon",
+      "ba'zan"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "ча́сто",
+     "alts": [
+      "ре́дко",
+      "иногда́",
+      "всегда́"
+     ]
+    },
+    {
+     "base": "бы́стро",
+     "alts": [
+      "ме́дленно",
+      "мно́го",
+      "хорошо́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: nimani tez-tez, nimani kamdan-kam qilishingizni ayting."
+  }
+ ]
+}

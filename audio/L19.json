@@ -1,0 +1,310 @@
+{
+ "n": 19,
+ "topic_uz": "O'tgan zamon: чита́л, чита́ла, чита́ли; был, была́",
+ "scene": "On Monday morning in a cafe, a woman Nigora tells a man Anton about her weekend; a thought bubble shows her cooking plov and watching a film at home.",
+ "dialogs": [
+  {
+   "id": "L19-d1",
+   "title_ru": "Где вы бы́ли вчера́?",
+   "title_uz": "Kecha qayerda edingiz?",
+   "intro_uz": "Birinchi dialog. Dushanba kuni ishda. Anton Nigoradan kecha nima qilganini so'rayapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, где вы бы́ли вчера́?",
+     "uz": "Nigora, kecha qayerda edingiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Вчера́ я была́ до́ма. Я отдыха́ла.",
+     "uz": "Kecha uyda edim. Dam oldim."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А что вы де́лали?",
+     "uz": "Nima qildingiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я гото́вила плов и смотре́ла фильм.",
+     "uz": "Palov pishirdim va film ko'rdim."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А я рабо́тал весь день.",
+     "uz": "Men esa kun bo'yi ishladim."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Весь день? Вы до́лго рабо́тали!",
+     "uz": "Kun bo'yi? Uzoq ishlabsiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora kecha qayerda edi?",
+     "opts": [
+      "ishda",
+      "uyda",
+      "parkda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora nima pishirdi?",
+     "opts": [
+      "somsa",
+      "sho'rva",
+      "palov"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton kecha nima qildi?",
+     "opts": [
+      "kun bo'yi ishladi",
+      "dam oldi",
+      "film ko'rdi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "была́ до́ма",
+     "alts": [
+      "была́ в па́рке",
+      "была́ на рабо́те",
+      "была́ в гостя́х"
+     ]
+    },
+    {
+     "base": "гото́вила плов",
+     "alts": [
+      "чита́ла кни́гу",
+      "слу́шала му́зыку",
+      "гуля́ла в па́рке"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: kecha qayerda bo'lganingizni va nima qilganingizni ayting."
+  },
+  {
+   "id": "L19-d2",
+   "title_ru": "Ра́ньше",
+   "title_uz": "Ilgari",
+   "intro_uz": "Ikkinchi dialog. Dilnoza Boburdan so'rayapti: ilgari qayerda yashagan, qayerda ishlagan? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, где ты жил ра́ньше?",
+     "uz": "Bobur, ilgari qayerda yashagansan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ра́ньше я жил в Москве́.",
+     "uz": "Ilgari Moskvada yashaganman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А где ты рабо́тал?",
+     "uz": "Qayerda ishlagansan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Я рабо́тал в магази́не. А ты?",
+     "uz": "Do'konda ishlaganman. Sen-chi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А я учи́лась в университе́те.",
+     "uz": "Men esa universitetda o'qiganman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Где? В Ташке́нте?",
+     "uz": "Qayerda? Toshkentdami?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, мы жи́ли в Ташке́нте.",
+     "uz": "Ha, biz Toshkentda yashaganmiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur ilgari qayerda yashagan?",
+     "opts": [
+      "Andijonda",
+      "Toshkentda",
+      "Farg'onada"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bobur qayerda ishlagan?",
+     "opts": [
+      "bankda",
+      "maktabda",
+      "do'konda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnoza ilgari nima qilgan?",
+     "opts": [
+      "ishlagan",
+      "universitetda o'qigan",
+      "Moskvada yashagan"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "жил в Андижа́не",
+     "alts": [
+      "жил в Самарка́нде",
+      "жил в Москве́",
+      "жил в Ферга́не"
+     ]
+    },
+    {
+     "base": "рабо́тал в магази́не",
+     "alts": [
+      "рабо́тал в ба́нке",
+      "рабо́тал в шко́ле",
+      "учи́лся в колле́дже"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: ilgari qayerda yashaganingiz va ishlaganingiz (o'qiganingiz) haqida ayting."
+  },
+  {
+   "id": "L19-d3",
+   "title_ru": "Что де́лали де́ти?",
+   "title_uz": "Bolalar nima qildi?",
+   "intro_uz": "Uchinchi dialog. Abdulaziz ishdan kech keldi. Nigora unga kechqurun nima bo'lganini aytyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Что де́лали де́ти ве́чером?",
+     "uz": "Bolalar kechqurun nima qilishdi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Сардо́р игра́л в футбо́л.",
+     "uz": "Sardor futbol o'ynadi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А Маржона́?",
+     "uz": "Marjona-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Она́ чита́ла и писа́ла.",
+     "uz": "U o'qidi va yozdi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А ты что де́лала?",
+     "uz": "Sen nima qilding?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я была́ в магази́не. Я купи́ла пла́тье!",
+     "uz": "Do'konda edim. Ko'ylak sotib oldim!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Но́вое пла́тье? Краси́вое?",
+     "uz": "Yangi ko'ylakmi? Chiroylimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "О́чень краси́вое!",
+     "uz": "Juda chiroyli!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Sardor nima qildi?",
+     "opts": [
+      "kitob o'qidi",
+      "futbol o'ynadi",
+      "uxladi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Marjona nima qildi?",
+     "opts": [
+      "o'qidi va yozdi",
+      "televizor ko'rdi",
+      "sayr qildi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora do'konda nima oldi?",
+     "opts": [
+      "sumka",
+      "telefon",
+      "ko'ylak"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "игра́л в футбо́л",
+     "alts": [
+      "смотре́л телеви́зор",
+      "гуля́л на у́лице",
+      "учи́л слова́"
+     ]
+    },
+    {
+     "base": "купи́ла пла́тье",
+     "alts": [
+      "купи́ла хлеб",
+      "была́ в па́рке",
+      "смотре́ла фильм"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: kecha oilangizda kim nima qilganini ayting."
+  }
+ ]
+}

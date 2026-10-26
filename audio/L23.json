@@ -1,0 +1,295 @@
+{
+ "n": 23,
+ "topic_uz": "Harakat fe'llari: идти́ (hozir) va ходи́ть (odatda)",
+ "scene": "On a sunny street, a young man Bobur carrying a sports bag walks toward a gym and greets a woman Nigora who holds library books.",
+ "dialogs": [
+  {
+   "id": "L23-d1",
+   "title_ru": "Куда́ ты идёшь?",
+   "title_uz": "Qayerga ketyapsan?",
+   "intro_uz": "Birinchi dialog. Nigora ko'chada Boburni uchratdi. Bobur hozir qayerga ketyapti va odatda qayerga boradi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Бобу́р, приве́т! Куда́ ты идёшь?",
+     "uz": "Bobur, salom! Qayerga ketyapsan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Сейча́с я иду́ в спортза́л.",
+     "uz": "Hozir sport zaliga ketyapman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ты ча́сто хо́дишь в спортза́л?",
+     "uz": "Sport zaliga tez-tez borasanmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, три ра́за в неде́лю. А ты куда́ идёшь?",
+     "uz": "Ha, haftada uch marta. Sen qayerga ketyapsan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я иду́ в библиоте́ку. Я хожу́ туда́ по суббо́там.",
+     "uz": "Kutubxonaga ketyapman. U yerga shanba kunlari boraman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Молоде́ц! Ну, пока́!",
+     "uz": "Barakalla! Xo'p, xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur hozir qayerga ketyapti?",
+     "opts": [
+      "kutubxonaga",
+      "sport zaliga",
+      "ishga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur sport zaliga qanchalik tez-tez boradi?",
+     "opts": [
+      "haftada uch marta",
+      "har kuni",
+      "kamdan-kam"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora kutubxonaga qachon boradi?",
+     "opts": [
+      "har kuni",
+      "yakshanba kunlari",
+      "shanba kunlari"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в спортза́л",
+     "alts": [
+      "в бассе́йн",
+      "в парк",
+      "на рабо́ту"
+     ]
+    },
+    {
+     "base": "три ра́за в неде́лю",
+     "alts": [
+      "два ра́за в неде́лю",
+      "ка́ждый день",
+      "иногда́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: hozir qayerga ketayotganingizni va odatda qayerga, qanchalik tez-tez borishingizni ayting."
+  },
+  {
+   "id": "L23-d2",
+   "title_ru": "Смотри́!",
+   "title_uz": "Qara!",
+   "intro_uz": "Ikkinchi dialog. Nigora va Abdulaziz derazadan qarayapti. Sardor qayerga ketyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Смотри́! Куда́ идёт Сардо́р?",
+     "uz": "Qara! Sardor qayerga ketyapti?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Он идёт в бассе́йн.",
+     "uz": "U basseynga ketyapti."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он ча́сто хо́дит в бассе́йн?",
+     "uz": "U basseynga tez-tez boradimi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, ка́ждый день. Он лю́бит спорт.",
+     "uz": "Ha, har kuni. U sportni yaxshi ko'radi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А ты? Ты хо́дишь в бассе́йн?",
+     "uz": "Sen-chi? Sen basseynga borasanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет, я ре́дко хожу́. Я мно́го рабо́таю.",
+     "uz": "Yo'q, kamdan-kam boraman. Ko'p ishlayman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Sardor hozir qayerga ketyapti?",
+     "opts": [
+      "maktabga",
+      "basseynga",
+      "stadionga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Sardor basseynga qanchalik tez-tez boradi?",
+     "opts": [
+      "har kuni",
+      "haftada bir marta",
+      "kamdan-kam"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz nega basseynga kam boradi?",
+     "opts": [
+      "suzishni bilmaydi",
+      "basseyn uzoq",
+      "ko'p ishlaydi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в бассе́йн",
+     "alts": [
+      "в шко́лу",
+      "на трениро́вку",
+      "в спортза́л"
+     ]
+    },
+    {
+     "base": "ка́ждый день",
+     "alts": [
+      "ча́сто",
+      "по суббо́там",
+      "два ра́за в неде́лю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: oilangizda kim hozir qayerga ketayotganini va odatda qayerga borishini ayting."
+  },
+  {
+   "id": "L23-d3",
+   "title_ru": "В выходно́й",
+   "title_uz": "Dam olish kunida",
+   "intro_uz": "Uchinchi dialog. Anton Dilnozadan dam olish kuni haqida so'rayapti. Dilnoza hozir qayerga shoshyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, что вы де́лаете в выходно́й?",
+     "uz": "Dilnoza, dam olish kunida nima qilasiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Обы́чно я хожу́ в музе́й и́ли в парк.",
+     "uz": "Odatda muzeyga yoki parkka boraman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А в теа́тр вы хо́дите?",
+     "uz": "Teatrga borasizmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ре́дко. А сейча́с я иду́ на ле́кцию. Я опа́здываю!",
+     "uz": "Kamdan-kam. Hozir esa ma'ruzaga ketyapman. Kechikyapman!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Ле́кция ско́ро?",
+     "uz": "Ma'ruza tez orada boshlanadimi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, в три часа́. Пока́!",
+     "uz": "Ha, soat uchda. Xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza odatda dam olish kuni qayerga boradi?",
+     "opts": [
+      "teatrga",
+      "muzeyga yoki parkka",
+      "bozorga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza teatrga qanchalik tez-tez boradi?",
+     "opts": [
+      "kamdan-kam",
+      "har hafta",
+      "har kuni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza hozir qayerga ketyapti?",
+     "opts": [
+      "muzeyga",
+      "uyga",
+      "ma'ruzaga"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в музе́й и́ли в парк",
+     "alts": [
+      "в кино́ и́ли в теа́тр",
+      "в библиоте́ку",
+      "в бассе́йн"
+     ]
+    },
+    {
+     "base": "на ле́кцию",
+     "alts": [
+      "на уро́к",
+      "на рабо́ту",
+      "на заня́тия"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: dam olish kunida odatda qayerga borishingizni va hozir qayerga ketayotganingizni ayting."
+  }
+ ]
+}
