@@ -55,6 +55,7 @@
 .fin-muted { color: var(--text-muted); font-size: 12px; }
 .fin-note { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-muted); }
 .fin-subhead { margin: 18px 0 8px; font-size: 14px; font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fin-file-btn { cursor: pointer; display: inline-flex; align-items: center; }
 .fin-empty { padding: 24px 12px !important; text-align: center; color: var(--text-muted); font-size: 13px; }
 .fin-error { margin: 4px 0 0; color: #DC2626; font-size: 13px; min-height: 1em; }
 .fin-link { padding: 0; border: 0; background: none; color: var(--purple); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: none; margin-left: 6px; }

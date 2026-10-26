@@ -269,7 +269,7 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
                 const tok = (await pool.query(table === 'fin_transactions' ? "SELECT ctx FROM fin_row_seals WHERE ctx LIKE 'fin:%' LIMIT 1" : "SELECT ctx FROM fin_row_seals WHERE ctx LIKE 'inflow:%' LIMIT 1")).rows[0].ctx;
                 plainSql(sql(tok));
                 const v = await finance.verifySeals(pool);
-                assert.equal(v.ok, false, table); assert.match(v.reason, /imzo/);
+                assert.equal(v.ok, false, table); assert.match(v.reason, /imzo|auditida/);
             }
         });
         await t.test('round 10: a hand-inserted seal under a signed transaction id breaks that transaction signature', async () => {
@@ -322,6 +322,39 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             await crmSql(`UPDATE students SET extra_data=extra_data - 'status' WHERE id='s1'`);
             const o = await finance.overview(pool, admin, {});
             assert.ok(o.restoredStudents.some(r => r.studentId === 's1' && r.reactivated));
+        });
+        await t.test('round 11: a hidden trigger that piggybacks on app writes, a modified finance function or a disabled guard is detected', async () => {
+            await fresh(pool);
+            plainSql(`CREATE FUNCTION evil() RETURNS trigger AS $$ BEGIN INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,actor_id,actor_name)
+                VALUES('evil-' || NEW.id,'common','2026-10-20','expense','ADMIN','acc-card',7777777,'Ghost LLC','admin','Admin'); RETURN NEW; END $$ LANGUAGE plpgsql;
+                CREATE TRIGGER zz_audit_hook AFTER INSERT ON fin_audit FOR EACH ROW EXECUTE FUNCTION evil();`);
+            await finance.createTransaction(pool, admin, { requestKey: 'r11-evil-0000000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 10000, date: '2026-10-20', counterparty: 'Ofis' });
+            let v = await finance.verifySeals(pool);
+            assert.equal(v.ok, false); assert.match(v.reason, /kutilmagan trigger|auditida/);
+            plainSql('DROP TRIGGER zz_audit_hook ON fin_audit; DROP FUNCTION evil();');
+            v = await finance.verifySeals(pool); assert.equal(v.ok, false, 'soxta qator auditda yo‘q'); assert.match(v.reason, /auditida/);
+            await fresh(pool);
+            plainSql(`CREATE OR REPLACE FUNCTION fin_reject_change() RETURNS trigger AS $$ BEGIN RETURN COALESCE(NEW, OLD); END $$ LANGUAGE plpgsql;`);
+            v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.match(v.reason, /funksiya/);
+            await fresh(pool);
+            plainSql('ALTER TABLE fin_transactions DISABLE TRIGGER fin_immutable_fin_transactions');
+            v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.match(v.reason, /o‘chirilgan/);
+        });
+        await t.test('round 11: cutting off the newest entries is detected (server cache and offline certificate)', async () => {
+            await fresh(pool);
+            const cert = await finance.integrityCertificate(pool, admin);
+            assert.equal(cert.integrity, true);
+            assert.equal((await finance.verifyCertificate(pool, admin, cert)).ok, true);
+            assert.equal((await finance.verifyCertificate(pool, admin, { ...cert, sealSeq: cert.sealSeq + 1 })).ok, false, 'soxta sertifikat');
+            const drop = () => plainSql(`SET session_replication_role = replica;
+                DELETE FROM fin_transactions WHERE request_key='int-test-key-0000001';
+                DELETE FROM fin_row_seals WHERE seq >= (SELECT MIN(seq) FROM fin_row_seals WHERE row_id IN (SELECT entity_id FROM fin_audit WHERE action='transaction-create'));
+                DELETE FROM fin_tx_signatures WHERE xid IN (SELECT xid FROM fin_audit WHERE action='transaction-create');
+                DELETE FROM fin_checkpoints; DELETE FROM fin_audit WHERE action='transaction-create';`);
+            drop();
+            const v = await finance.verifySeals(pool);
+            assert.equal(v.ok, false); assert.match(v.reason, /yo‘qolgan|o‘chirilgan/);
+            assert.equal((await finance.verifyCertificate(pool, admin, cert)).ok, false);
         });
         await t.test('segment cash flow: english + russian + common equals consolidated, line by line', async () => {
             await fresh(pool);

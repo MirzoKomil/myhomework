@@ -925,9 +925,9 @@
         }
         // CRM qarzi shartnoma narxidan oshirib yozilgan (narx cheklandi) — sotuv menejeri qarzni ko'paytirgan bo'lishi mumkin.
         // Narxlar ro'yxati (sozlamada) bilan solishtirish: belgilangan narxdan farqli shartnoma — chegirma yoki oshirilgan narx, tekshiriladi.
-        const list = settingsAt(data, asOf).listPrices || {};
         for (const c of contracts(data)) {
-            const lp = Number(list[c.entity]) || 0, captured = Number(c.firstReceipt?.contractValue) || 0;
+            // Shartnoma tuzilgan (birinchi to'lov) kundagi narxlar ro'yxati bilan — keyingi narx o'zgarishi o'tganini qayta baholamaydi.
+            const lp = Number((settingsAt(data, c.startLive || asOf).listPrices || {})[c.entity]) || 0, captured = Number(c.firstReceipt?.contractValue) || 0;
             if (lp > 0 && captured > 0 && captured !== lp) out.push({ name: c.name, entity: c.entity, contractAsset: captured, crmDebt: lp, difference: captured - lp, kind: captured > lp ? 'above_list' : 'discount' });
         }
         for (const c of contracts(data)) if (c.debtInflation > 0) out.push({ name: c.name, entity: c.entity, contractAsset: contractPosition(c, asOf), crmDebt: c.debtInflation, difference: c.debtInflation, kind: c.noCapturedPrice ? 'no_contract_price' : 'debt_over_price' });

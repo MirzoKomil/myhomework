@@ -40,6 +40,9 @@ async function signXid(db, xid) {
     if (!seals.length && !audits.length) return;
     await db.query('INSERT INTO fin_tx_signatures(xid,seals,audits,mac) VALUES($1,$2,$3,$4)', [xid, seals.length, audits.length, txMac(xid, seals, audits)]);
 }
+const schemaMac = h => createHmac('sha256', KEY).update('fin-schema|' + h).digest('hex');
+const validSchemaMac = (h, mac) => { const a = Buffer.from(schemaMac(h)), b = Buffer.from(String(mac || '')); return a.length === b.length && timingSafeEqual(a, b); };
+const checkpointMac = c => createHmac('sha256', KEY).update(['fin-checkpoint', c.sealSeq, c.sealHash, c.auditId, c.auditHash, c.prev, c.issuedAt || ''].join('|')).digest('hex');
 // Kalit sozlanmagan (ochiq dev kaliti) bo'lsa imzo himoya bermaydi — moliya bo'limida ogohlantiriladi.
 const keyConfigured = () => KEY !== DEV_KEY;
-module.exports = { token, valid, keyConfigured, signTx, signXid, txMac };
+module.exports = { token, valid, keyConfigured, signTx, signXid, txMac, schemaMac, validSchemaMac, checkpointMac };

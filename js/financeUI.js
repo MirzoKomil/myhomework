@@ -724,9 +724,11 @@
                 ${table(['Tushum sanasi', 'Bekor qilingan', 'Ism', { label: 'Summa', num: true }, 'Sabab'], q.voidedList.map(r => `<tr class="fin-reversed"><td>${dateText(r.date)}</td><td>${dateText(r.voidDate)}</td><td>${esc(r.name)}<small>${esc(r.phone)}</small></td><td class="num">${num(r.amount)}</td><td>${esc(r.voidReason)}</td></tr>`), { empty: 'Yo‘q' })}</section>
             <section class="fin-card" aria-labelledby="finAuditH"><header><h3 id="finAuditH">Audit jurnali</h3>
                 <div class="fin-filters"><label class="sr-only" for="finAuditFilter">Amal</label><select id="finAuditFilter" class="form-control" data-fin-audit-filter><option value="">Barcha amallar</option>${Object.entries(AUDIT_LABELS).map(([k, l]) => `<option value="${k}" ${state.auditFilter === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-                <button type="button" class="btn-ghost" data-fin-audit-export>CSV</button></div></header>
+                <button type="button" class="btn-ghost" data-fin-audit-export>CSV</button>
+                ${isDirector() ? '<button type="button" class="btn-ghost" data-fin-cert>Yaxlitlik sertifikati</button>' : ''}
+                <label class="btn-ghost fin-file-btn">Sertifikatni tekshirish<input type="file" accept=".json" data-fin-cert-verify hidden></label></div></header>
                 ${table(['Vaqt', 'Kim', 'Amal', 'Tafsilot'], (state.auditRows || []).map(a => `<tr><td>${new Date(a.created_at).toLocaleString('uz-UZ')}</td><td>${esc(a.actor_name)}</td><td>${esc(AUDIT_LABELS[a.action] || a.action)}</td><td><small>${esc(auditSummary(a))}</small></td></tr>`), { empty: 'Hali amal bajarilmagan', label: 'Audit jurnali' })}
-                <p class="fin-note">Har bir yozuv oldingisining SHA-256 xeshiga bog‘langan: jurnal bazada o‘zgartirilsa, zanjir uziladi va bu yerda ko‘rinadi.</p></section>
+                <p class="fin-note">Har bir yozuv oldingisining SHA-256 xeshiga bog‘langan va har bir tranzaksiya server kaliti bilan imzolanadi: jurnal bazada o‘zgartirilsa, zanjir uziladi va bu yerda ko‘rinadi. Rahbar haftasiga bir marta “Yaxlitlik sertifikati”ni yuklab, bazadan tashqarida saqlasin — keyin uni tekshirib, o‘sha kundan beri hech narsa o‘chirilmaganini isbotlash mumkin.</p></section>
         </div>`;
         bindToolbar(root, () => render('solishtirish'));
         bindAudit(root, entity);
@@ -788,6 +790,19 @@
             openReasonModal(`${ids.length} ta tushumni bekor qilish`, 'Bekor qilish', async (reason, evidenceUrl) => { await api('/receipts/void', { recordIds: ids, reason, evidenceUrl }); }, { evidence: true, evidenceRequired: true, placeholder: 'Masalan: test yozuvi, takroriy kiritilgan, haqiqiy to‘lov emas' });
         }));
         root.querySelectorAll('[data-fin-salary]').forEach(b => b.addEventListener('click', () => openSalaryModal(b.dataset.finSalary)));
+        root.querySelector('[data-fin-cert]')?.addEventListener('click', async () => {
+            try {
+                const c = await api('/integrity/certificate');
+                const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(c, null, 2)], { type: 'application/json' }));
+                link.download = `moliya-sertifikat-${c.issuedAt.slice(0, 10)}.json`; link.click();
+                toast('Sertifikat yuklab olindi — uni bazadan tashqarida (pochta, telefon) saqlang');
+            } catch (e) { toast(e.message); }
+        });
+        root.querySelector('[data-fin-cert-verify]')?.addEventListener('change', async e => {
+            const file = e.target.files?.[0]; if (!file) return;
+            try { const r = await api('/integrity/verify', JSON.parse(await file.text())); toast((r.ok ? '✓ ' : '✗ ') + r.reason); }
+            catch (err) { toast('Sertifikat o‘qilmadi: ' + err.message); } finally { e.target.value = ''; }
+        });
         root.querySelectorAll('[data-fin-notdup]').forEach(b => b.addEventListener('click', () => openReasonModal('Takror emasligini tasdiqlash', 'Tasdiqlash', async reason => { await api('/receipts/' + encodeURIComponent(b.dataset.finNotdup) + '/not-duplicate', { reason }); }, { placeholder: 'Masalan: kurs narxi ikki teng qismda to‘langan (shartnoma bo‘yicha)' })));
         root.querySelectorAll('[data-fin-correct]').forEach(b => b.addEventListener('click', () => openCorrectionModal(b.dataset.finCorrect, b.dataset.finName, b.dataset.finKind, b.dataset.finFrom || '')));
         root.querySelectorAll('[data-fin-forfeit]').forEach(b => b.addEventListener('click', () => openForfeitModal(b.dataset.finForfeit, b.dataset.finName, Number(b.dataset.finAmount))));
