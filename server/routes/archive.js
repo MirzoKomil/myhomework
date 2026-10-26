@@ -10,7 +10,13 @@ const router = express.Router();
 async function actorFrom(req) {
     const user = await db.findUserById(req.user.id);
     if (!user || user.disabled_at) throw Object.assign(new Error('Akkaunt topilmadi yoki bloklangan'), { status: 401 });
-    return { id: user.id, role: user.role, email: user.email, name: user.name };
+    // ROP arxivda faqat o'z til yo'nalishini ko'radi — HR yozuvidagi tili.
+    let langs = [];
+    if (user.role === 'rop') {
+        const hr = (await db.pool.query('SELECT lang FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1', [user.email || ''])).rows[0];
+        langs = hr?.lang === 'both' ? ['english', 'russian'] : [hr?.lang === 'russian' ? 'russian' : 'english'];
+    }
+    return { id: user.id, role: user.role, email: user.email, name: user.name, langs };
 }
 
 const handle = fn => async (req, res) => {
@@ -32,6 +38,10 @@ async function tx(fn) {
 router.get('/', authRequired, handle((req, actor) => archive.list(db.pool, actor, req.query)));
 router.get('/:id', authRequired, handle((req, actor) => archive.get(db.pool, actor, req.params.id)));
 router.post('/:id/restore', authRequired, handle((req, actor) =>
-    tx(client => archive.restore(client, actor, req.params.id, { restoreLead: db.restoreLead }))));
+    tx(client => archive.restore(client, actor, req.params.id, {
+        restoreLead: db.restoreLead,
+        insertLead: (c, lead, lang) => db.insertRestoredLead(c, lead, lang, actor),
+        validateStudent: (c, student) => require('../services/teacherDuties').validateAssignment(c, student, {})
+    }))));
 
 module.exports = router;

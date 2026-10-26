@@ -201,14 +201,142 @@ test('arxiv + ishdan bo‘shatish (PostgreSQL)', { skip: !url }, async t => {
         assert.equal(p.teacherStudents.main.length, 1);
     });
 
-    await t.test('o‘chirilgan xodim arxivga tushadi, maxfiy parol ko‘rsatilmaydi', async () => {
+    await t.test('ochiq lidi bor xodimni oddiy o‘chirib bo‘lmaydi; toza xodim arxivga o‘chadi', async () => {
         const s = await state();
-        await asAdmin(async () => db.patchState({ hrEmployees: s.hrEmployees.filter(e => e.id !== 'm-gani') }, actor));
-        const rec = (await archive.list(pool, actor, { type: 'employee' })).items.find(i => i.entityId === 'm-gani');
+        await assert.rejects(asAdmin(async () => db.patchState({ hrEmployees: s.hrEmployees.filter(e => e.id !== 'm-gani'), removedIds: { hrEmployees: ['m-gani'] } }, actor)),
+            e => e.code === 'OFFBOARD_FIRST');
+        assert.ok((await state()).hrEmployees.some(e => e.id === 'm-gani'), 'xodim joyida qoldi');
+        await asAdmin(async () => db.patchState({ hrEmployees: [...(await state()).hrEmployees, { id: 'e-clean', name: 'Toza Xodim', role: 'boshqaruvchi', status: 'active' }] }, actor));
+        const s2 = await state();
+        await asAdmin(async () => db.patchState({ hrEmployees: s2.hrEmployees.filter(e => e.id !== 'e-clean'), removedIds: { hrEmployees: ['e-clean'] } }, actor));
+        const rec = (await archive.list(pool, actor, { type: 'employee' })).items.find(i => i.entityId === 'e-clean');
         assert.ok(rec);
         const full = await archive.get(pool, actor, rec.id);
-        assert.equal(full.snapshot.row.name, 'Gani Menejer');
+        assert.equal(full.snapshot.row.name, 'Toza Xodim');
         await assert.rejects(archive.get(pool, rop, rec.id), e => e.status === 403);
+    });
+
+    await t.test('eski tab tiklangan yozuvni qayta o‘chira olmaydi', async () => {
+        await asAdmin(async () => db.patchState({ students: [...(await state()).students, { id: 'st-stale', name: 'Eski Tab Talaba', subject: 'english' }] }, actor));
+        await asAdmin(async () => db.patchState({ students: (await state()).students.filter(x => x.id !== 'st-stale'), removedIds: { students: ['st-stale'] } }, actor));
+        const staleStudents = (await state()).students; // eski tab: unda st-stale yo'q
+        const rec = (await archive.list(pool, actor, { type: 'student', q: 'eski tab' })).items[0];
+        await tx(c => archive.restore(c, actor, rec.id, {}));
+        await asAdmin(async () => db.patchState({ students: staleStudents, removedIds: { students: [] } }, actor));
+        assert.ok((await state()).students.some(x => x.id === 'st-stale'), 'eski tab yuborgan ro‘yxatda yo‘q bo‘lsa ham o‘chmadi');
+        // removedIds yubormaydigan eski kod ham hech kimni o'chirmaydi
+        await asAdmin(async () => db.patchState({ hrEmployees: (await state()).hrEmployees.filter(e => e.id !== 'm-vali') }, actor));
+        assert.ok((await state()).hrEmployees.some(e => e.id === 'm-vali'));
+    });
+
+    await t.test('tushum yozuvi sotuvni qilgan menejerga yoziladi', async () => {
+        const inflow = require('../server/services/inflow');
+        const lead = await db.getLeadById('L4');
+        assert.notEqual(lead.managerId, 'm-ali');
+        const c = await inflow.context(pool, lead, null);
+        assert.equal(c.creditManagerId, 'm-ali');
+        assert.equal(c.managerId, lead.managerId, 'to‘lovni hozirgi egasi qabul qila oladi');
+        const engine = require('../js/payrollEngine');
+        assert.equal(typeof engine, 'object');
+    });
+
+    await t.test('ishdan bo‘shatishda o‘quvchilar topshiriladi, SLA soati yangilanadi', async () => {
+        const s = await state();
+        await asAdmin(async () => db.patchState({ hrEmployees: [...s.hrEmployees, { id: 'm-bek', name: 'Bek Menejer', role: 'sotuv-menejeri', login: '901000009', lang: 'english', status: 'active' }] }, actor));
+        await pool.query(`INSERT INTO students (id, name, subject, extra_data) VALUES ('st-bek1','Bek talabasi','english','{"managerId":"m-bek","paidAmount":100}') ON CONFLICT DO NOTHING`);
+        const save = (lead, lang) => tx(c => db.upsertLeadWithClient(c, lead, lang, { actor }));
+        await save({ id: 'LB1', name: 'Bek lidi', phone: '998931234567', managerId: 'm-bek', status: 'yangi-lidlar' }, 'english');
+        const p = await lifecycle.preview(pool, actor, 'm-bek');
+        assert.equal(p.managedStudents.total, 1);
+        const r = await tx(c => lifecycle.offboard(c, actor, { employeeId: 'm-bek', reason: 'Ketdi', mode: 'one', targetId: 'm-vali' }));
+        assert.equal(r.studentsMoved, 1);
+        const st = (await pool.query("SELECT extra_data FROM students WHERE id='st-bek1'")).rows[0].extra_data;
+        assert.equal(st.managerId, 'm-vali');
+        assert.equal(st.paidAmount, 100, 'boshqa maydonlar saqlanadi');
+        assert.equal(st.managerHistory.at(-1).from, 'm-bek');
+        const lb = await db.getLeadById('LB1');
+        assert.equal(lb.managerId, 'm-vali');
+        assert.ok(lb.slaStageEnteredAt && Date.now() - Date.parse(lb.slaStageEnteredAt) < 60000);
+    });
+
+    await t.test('qo‘lda Inactive login’ni yopadi, Active qayta ochadi', async () => {
+        await pool.query(`INSERT INTO users (id,name,email,password_hash,role) VALUES ('u-vali','Vali Menejer','901000002','x','sales_manager') ON CONFLICT DO NOTHING`);
+        await pool.query(`INSERT INTO sessions (id,user_id,jti) VALUES ('s-vali','u-vali','jti-vali') ON CONFLICT DO NOTHING`);
+        const s = await state();
+        await asAdmin(async () => db.patchState({ hrEmployees: s.hrEmployees.map(e => e.id === 'm-vali' ? { ...e, status: 'inactive' } : e) }, actor));
+        assert.ok((await db.findUserById('u-vali')).disabled_at);
+        assert.equal(await db.findSessionByJti('jti-vali'), null);
+        const s2 = await state();
+        await asAdmin(async () => db.patchState({ hrEmployees: s2.hrEmployees.map(e => e.id === 'm-vali' ? { ...e, status: 'active' } : e) }, actor));
+        assert.equal((await db.findUserById('u-vali')).disabled_at, null);
+    });
+
+    await t.test('ROP faqat o‘z tilidagi arxivni ko‘radi', async () => {
+        await tx(c => db.upsertLeadWithClient(c, { id: 'LRU9', name: 'Rus lidi', phone: '998935550099', managerId: 'm-rus', status: 'yangi-lidlar' }, 'russian', { actor }));
+        await db.softDeleteLead('LRU9', actor);
+        const en = await archive.list(pool, { ...rop, langs: ['english'] }, { type: 'lead' });
+        assert.ok(!en.items.some(i => i.entityId === 'LRU9'));
+        const ru = await archive.list(pool, { ...rop, langs: ['russian'] }, { type: 'lead' });
+        assert.ok(ru.items.some(i => i.entityId === 'LRU9'));
+        await assert.rejects(tx(c => archive.restore(c, { ...rop, langs: ['english'] }, 'lead:LRU9', { restoreLead: db.restoreLead })), e => e.status === 403);
+        await tx(c => archive.restore(c, { ...rop, langs: ['russian'] }, 'lead:LRU9', { restoreLead: db.restoreLead }));
+        const restored = await archive.list(pool, actor, { type: 'lead', status: 'restored' });
+        assert.ok(restored.items.some(i => i.entityId === 'LRU9'), 'tiklangan lid “Tiklanganlar”da ko‘rinadi');
+    });
+
+    await t.test('sana filtri Toshkent kuni bo‘yicha', async () => {
+        await pool.query(`UPDATE archive_records SET deleted_at = '2026-10-19T19:30:00Z' WHERE entity_id = 'cf1'`); // 20-okt 00:30 Toshkent
+        const d20 = await archive.list(pool, actor, { type: 'cashTx', from: '2026-10-20', to: '2026-10-20' });
+        assert.ok(d20.items.some(i => i.entityId === 'cf1'));
+        const d19 = await archive.list(pool, actor, { type: 'cashTx', from: '2026-10-19', to: '2026-10-19' });
+        assert.ok(!d19.items.some(i => i.entityId === 'cf1'));
+    });
+
+    await t.test('butunlay o‘chgan eski lid (brauzer arxivi) tiklanadi', async () => {
+        await pool.query(`INSERT INTO json_data (key, data) VALUES ('archive', $1) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
+            [JSON.stringify([{ id: 'archive_lead_OLD1_1', type: 'lead', item: { id: 'OLD1', name: 'Eski Lid', phone: '998937770011', status: 'boglanildi', managerId: 'm-vali' }, meta: { lang: 'english' }, deletedAt: '2026-08-01T10:00:00Z', deletedBy: 'Admin' }])]);
+        assert.equal(await archive.migrateLegacyBlob(pool), 1);
+        assert.equal(await archive.migrateLegacyBlob(pool), 0, 'takrorlanmaydi');
+        const rec = (await archive.list(pool, actor, { type: 'lead', q: 'eski lid' })).items[0];
+        assert.ok(rec && rec.restorable);
+        await tx(c => archive.restore(c, actor, rec.id, { insertLead: (cl, lead, lang) => db.insertRestoredLead(cl, lead, lang, actor) }));
+        assert.equal((await db.getLeadById('OLD1')).name, 'Eski Lid');
+    });
+
+    await t.test('mobil kontent va yuklangan fayl arxivga tushadi va tiklanadi', async () => {
+        const fs = require('fs'), path = require('path'), os = require('os');
+        const mc = (await pool.query('SELECT data FROM mobile_content WHERE singleton=1')).rows[0].data;
+        await asAdmin(async () => db.patchState({ mobileContent: { ...mc, videos: [...(mc.videos || []), { id: 'vid-x', title: 'Test video' }] } }, actor));
+        const mc2 = (await pool.query('SELECT data FROM mobile_content WHERE singleton=1')).rows[0].data;
+        await asAdmin(async () => db.patchState({ mobileContent: { ...mc2, videos: mc2.videos.filter(v => v.id !== 'vid-x') } }, actor));
+        const vr = (await archive.list(pool, actor, { type: 'mobileItem', q: 'test video' })).items[0];
+        assert.ok(vr);
+        await tx(c => archive.restore(c, actor, vr.id, {}));
+        assert.ok((await pool.query('SELECT data FROM mobile_content WHERE singleton=1')).rows[0].data.videos.some(v => v.id === 'vid-x'));
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arx-up-'));
+        fs.writeFileSync(path.join(dir, 'chek.png'), 'png');
+        await archive.archiveUpload(pool, dir, 'chek.png', actor);
+        assert.ok(!fs.existsSync(path.join(dir, 'chek.png')));
+        const ur = (await archive.list(pool, actor, { type: 'upload' })).items.find(i => i.title === 'chek.png');
+        await tx(c => archive.restore(c, actor, ur.id, {}));
+        assert.equal(fs.readFileSync(path.join(dir, 'chek.png'), 'utf8'), 'png');
+    });
+
+    await t.test('arxivdan tiklangan o‘quvchi ketgan ustozga qaytmaydi', async () => {
+        await pool.query(`UPDATE hr_employees SET status='inactive', offboarded_at=NOW() WHERE id='t-1'`);
+        const s = await state();
+        await asAdmin(async () => db.patchState({ students: s.students.filter(x => x.id !== 'st-t1'), removedStudentIds: ['st-t1'] }, actor));
+        const rec = (await archive.list(pool, actor, { type: 'student', q: 'ustozli' })).items[0];
+        const res = await tx(c => archive.restore(c, actor, rec.id, { validateStudent: (cl, st) => require('../server/services/teacherDuties').validateAssignment(cl, st, {}) }));
+        assert.ok(res.warnings.some(w => /Ustoz/.test(w)));
+        assert.equal((await pool.query("SELECT teacher_id FROM students WHERE id='st-t1'")).rows[0].teacher_id, null);
+    });
+
+    await t.test('HR nomzod fayli arxivda alohida saqlanadi (ro‘yxatda baytlar yo‘q)', async () => {
+        const rec = (await archive.list(pool, actor, { type: 'candidate', status: 'all' })).items[0];
+        const full = await archive.get(pool, actor, rec.id);
+        assert.ok(Array.isArray(full.snapshot.media) && full.snapshot.media[0].size === 5);
+        assert.ok(!JSON.stringify(full.snapshot).includes('68656c6c6f'));
     });
 
     await t.test('lidlar arxiv ro‘yxatida ko‘rinadi va tiklanadi', async () => {

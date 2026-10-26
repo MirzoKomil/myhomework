@@ -8551,8 +8551,12 @@ function renderRopDashboardBlock(user) {
             <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrib chiqish</button>
         </li>`;
     }).join('');
-    const managers = getActiveSalesManagers(lang).map(m => ({
-        name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik'), target: getManagerPeriodTarget(m.id, 'oylik'),
+    // Jamoa jami: shu oy sotuv qilib, keyin ishdan ketgan menejer ham hisobga
+    // kiradi (aks holda oy o'rtasida jamoa summasi kamayib qolardi); uning
+    // rejasi esa jamoa rejasiga qo'shilmaydi.
+    const managers = getReportSalesManagers(lang).map(m => ({
+        name: staffStatus.label(m), sales: getManagerSalesForPeriod(m.id, 'oylik'),
+        target: staffStatus.isActive(m) ? getManagerPeriodTarget(m.id, 'oylik') : 0,
     })).sort((a, b) => b.sales - a.sales);
     const teamSales = managers.reduce((s, m) => s + m.sales, 0);
     const teamTarget = managers.reduce((s, m) => s + (m.target || 0), 0);
@@ -9328,10 +9332,9 @@ function renderDashboardOverview(args) {
 
     const ratingLeadPool = getLeadStatsForRankings(allLeads);
     const salesRating = managers.map(manager => {
-        const managerLeads = ratingLeadPool.filter(lead => lead.managerId === manager.id);
-        const closed = managerLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
+        const closed = ratingLeadPool.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi' && staffStatus.saleOwner(lead) === manager.id);
         return {
-            name: manager.name || 'Noma\'lum menejer',
+            name: staffStatus.label(manager) || 'Noma\'lum menejer',
             deals: closed.length,
             revenue: closed.reduce((sum, lead) => sum + leadRevenue(lead), 0)
         };
@@ -13989,9 +13992,9 @@ function hbRop(period) {
         cards += hbCard('⚖️', 'green', 'Lidlar taqsimlanishi (max/min)', `${maxLeads} / ${minLeads}`);
         cards += hbCard('❌', 'yellow', "Eng ko'p uchragan rad sababi", topReason ? `${escapeHtml(topReason[0])} (${topReason[1]})` : "Yo'q");
     } else if (period === 'haftalik') {
-        const mgrPerf = managers.map(m => {
-            const mgrClosed = periodLeads.filter(l => l.managerId === m.id && normalizeLeadStatus(l.status) === 'tolov-yopildi');
-            return { name: m.name, revenue: mgrClosed.reduce((s, l) => s + anLeadRevenue(l), 0) };
+        const mgrPerf = getSalesManagers().filter(m => staffStatus.isActive(m) || periodLeads.some(l => staffStatus.saleOwner(l) === m.id)).map(m => {
+            const mgrClosed = periodLeads.filter(l => staffStatus.saleOwner(l) === m.id && normalizeLeadStatus(l.status) === 'tolov-yopildi');
+            return { name: staffStatus.label(m), revenue: mgrClosed.reduce((s, l) => s + anLeadRevenue(l), 0) };
         }).sort((a, b) => b.revenue - a.revenue);
         const stageCounts = FUNNEL_STAGES.map(s => ({ ...s, count: periodLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length }));
         const cum = new Array(FUNNEL_STAGES.length).fill(0);
@@ -23505,12 +23508,22 @@ function closeEmpMenus() {
     document.querySelectorAll('.emp-menu-dropdown').forEach(d => { d.hidden = true; });
 }
 
-function deleteHrEmployee(id) {
-    let employees = getHrEmployees() || [];
-    archiveRecord('employee', employees.find(e => e.id === id));
-    employees = employees.filter(e => e.id !== id);
-    saveHrEmployees(employees);
+// Server o'chirishdan oldin tekshiradi: faol login, ochiq lid yoki o'quvchisi
+// bor xodim o'chirilmaydi ("Ishdan bo'shatish" kerak). Shuning uchun kesh
+// faqat server tasdiqlagandan keyin yangilanadi.
+async function deleteHrEmployee(id) {
+    const next = (getHrEmployees() || []).filter(e => e.id !== id).map(({ password, ...rest }) => rest);
+    try {
+        await apiPatchState({ hrEmployees: next, removedIds: { hrEmployees: [id] } });
+    } catch (err) {
+        if (typeof showNotification === 'function') showNotification("Xodim o'chirilmadi", err.message, 'error');
+        else showSaveError(err.message);
+        return false;
+    }
+    setCachedItem(STORAGE_KEYS.hrEmployees, next);
+    localStorage.setItem(HR_EMPLOYEES_KEY, JSON.stringify(next));
     renderHrEmployees();
+    return true;
 }
 
 function confirmDeleteEmployee(empId) {
@@ -23536,10 +23549,11 @@ function confirmDeleteEmployee(empId) {
     document.getElementById('cancelEmpDelete').onclick = () => closeModal();
     const offBtn = document.getElementById('offInsteadOfDelete');
     if (offBtn) offBtn.onclick = () => { closeModal(); window.staffOffboardingUI.open(empId); };
-    document.getElementById('confirmEmpDelete').onclick = () => {
-        deleteHrEmployee(empId);
+    document.getElementById('confirmEmpDelete').onclick = async ev => {
+        ev.target.disabled = true;
+        const ok = await deleteHrEmployee(empId);
         closeModal();
-        showMiniToast(`${emp.name} arxivga o'tkazildi`);
+        if (ok) showMiniToast(`${emp.name} arxivga o'tkazildi`);
     };
 }
 
@@ -25700,6 +25714,11 @@ function getSalesManagers(lang) {
 // pul oqimi) getSalesManagers()/getItem(salesManagers) bilan qoladi.
 function getActiveSalesManagers(lang) {
     return getSalesManagers(lang).filter(staffStatus.isActive);
+}
+
+// Hisobotlar uchun: faollar + shu oy sotuvi bo'lgan ishdan ketganlar.
+function getReportSalesManagers(lang) {
+    return getSalesManagers(lang).filter(m => staffStatus.isActive(m) || getManagerSalesForPeriod(m.id, 'oylik') > 0);
 }
 
 function getLeadStatsForRankings(fallback = null) {

@@ -48,6 +48,20 @@
         </div>`;
     }
 
+    function studentsBlock(p) {
+        const S = p.managedStudents;
+        if (!S || !S.total) return '';
+        const targets = p.targets || [];
+        const byLang = Object.entries(S.byLanguage || {}).map(([k, n]) => `${langLabel(k)}: ${n}`).join(' · ');
+        return `<div class="off-box"><b>Kuzatayotgan o'quvchilari: ${S.total} ta</b> <span class="off-muted">${esc(byLang)}</span>
+            <p class="off-muted">Qarz, keyingi to'lov va aloqa uchun mas'ul menejer almashadi. Sotuv krediti o'zgarmaydi.</p>
+            <label class="off-select"><span>Kimga beriladi</span>
+                <select class="form-control" id="offStudentsTarget">
+                    <option value="">Avtomatik — lid olgan menejerlarga, til bo'yicha teng</option>
+                    ${targets.map(t => `<option value="${esc(t.id)}">${esc(t.name)} · ${esc(langLabel(t.lang))}</option>`).join('')}
+                </select></label></div>`;
+    }
+
     function teacherBlock(p) {
         const T = p.teacherStudents;
         if (!T || (!T.main.length && !T.assistant.length)) return '';
@@ -70,6 +84,7 @@
             </div>
             <div class="off-chips">${REASONS.map(r => `<button type="button" class="arx-chip" data-off-reason="${esc(r)}">${esc(r)}</button>`).join('')}</div>
             ${leadsBlock(p)}
+            ${studentsBlock(p)}
             ${teacherBlock(p)}
             <div class="off-box"><b>Akkaunt</b>
                 <p>${acc.length ? `Login (${acc.map(a => esc(a.login)).join(', ')}) bloklanadi va ${acc.reduce((n, a) => n + (a.sessions || 0), 0)} ta ochiq sessiya darhol yopiladi.` : 'Bog‘langan login akkaunt topilmadi.'}
@@ -96,6 +111,8 @@
         const endDate = document.getElementById('offEndDate').value;
         if (!reason) { toast('Sababni yozing'); document.getElementById('offReason').focus(); return; }
         const body = { employeeId: p.employee.id, reason, endDate };
+        const stTarget = document.getElementById('offStudentsTarget')?.value;
+        if (stTarget) body.studentsTargetId = stTarget;
         if (p.isSalesManager) {
             const mode = document.querySelector('input[name="offMode"]:checked')?.value || 'unassigned';
             body.mode = (p.leads && p.leads.open) ? mode : 'unassigned';
@@ -113,6 +130,7 @@
                 <ul>
                     ${p.isSalesManager ? `<li>${r.reassigned} ta ochiq lid berildi${r.unassigned ? `, ${r.unassigned} tasi taqsimlanmaganlarga qaytdi` : ''}${(r.byTarget || []).length ? `: ${r.byTarget.map(t => `${esc(t.name)} — ${t.leads}`).join(', ')}` : ''}.</li>` : ''}
                     ${r.bookRoadmap ? `<li>${r.bookRoadmap} ta yetkazilmagan kitob yangi menejerga o'tdi.</li>` : ''}
+                    ${r.studentsMoved ? `<li>${r.studentsMoved} ta o'quvchining mas'ul menejeri almashtirildi.</li>` : ''}
                     <li>${r.accountsBlocked} ta akkaunt bloklandi, ${r.sessionsClosed} ta sessiya yopildi.</li>
                     <li>Qilingan sotuvlar uning nomida qoldi.</li>
                 </ul></div>`;

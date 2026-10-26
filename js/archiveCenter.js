@@ -6,7 +6,8 @@
     'use strict';
 
     const TYPE_ORDER = ['lead', 'student', 'employee', 'offboarding', 'bookRoadmap', 'candidate', 'cashTx', 'bonus',
-        'script', 'guide', 'shopOrder', 'notification', 'communityPost', 'communityComment', 'contentComment', 'callRecording', 'orgNode', 'teacher'];
+        'script', 'guide', 'shopOrder', 'notification', 'communityPost', 'communityComment', 'contentComment', 'callRecording',
+        'mobileItem', 'upload', 'orgNode', 'teacher'];
     const TYPE_META = {
         lead: { label: 'Lidlar', icon: '🎯' },
         student: { label: "O'quvchilar", icon: '🎓' },
@@ -25,6 +26,8 @@
         contentComment: { label: 'Dars izohlari', icon: '📝' },
         callRecording: { label: "Qo'ng'iroq yozuvlari", icon: '🎧' },
         orgNode: { label: 'Tashkiliy tuzilma', icon: '🏢' },
+        mobileItem: { label: 'Mobil ilova kontenti', icon: '📱' },
+        upload: { label: 'Yuklangan fayllar', icon: '📎' },
         teacher: { label: 'Ustozlar (eski)', icon: '🧑‍🏫' }
     };
     const FIELD_LABELS = {
@@ -39,7 +42,7 @@
     const HIDDEN_FIELDS = new Set(['password', 'password_hash', 'passwordHash', 'bytes', 'stageHistory', 'comments',
         'attachments', 'trialHistory', 'card_number', 'cardNumber', 'passport_series', 'passportSeries', 'pinfl',
         'dual_role', 'dualRole', 'kpi_template_id', 'kpiTemplateId', 'trial_group_link', 'offboarded_by', 'deleted_by',
-        'leadPaymentSyncKey', 'autoProvisionedFromLead', 'paymentLedgerManaged', 'external_id', 'lead_type']);
+        'leadPaymentSyncKey', 'autoProvisionedFromLead', 'paymentLedgerManaged', 'external_id', 'lead_type', 'dir', 'stored', 'managerHistory']);
     const STATUS_LABELS = { active: 'Faol', inactive: 'Faol emas' };
     function prettyValue(key, value) {
         const v = String(value);
@@ -212,10 +215,12 @@
         document.getElementById('arxOk').onclick = async ev => {
             ev.target.disabled = true;
             try {
-                await apiFetch('/api/archive/' + encodeURIComponent(id) + '/restore', { method: 'POST', body: '{}' });
+                const res = await apiFetch('/api/archive/' + encodeURIComponent(id) + '/restore', { method: 'POST', body: '{}' });
                 closeModal();
                 await refreshAfterChange();
-                toast(`${it.title || 'Yozuv'} tiklandi`);
+                const warn = (res && res.warnings) || [];
+                if (warn.length && typeof showNotification === 'function') showNotification(`${it.title || 'Yozuv'} tiklandi`, warn.join('. '), 'warning');
+                else toast(`${it.title || 'Yozuv'} tiklandi`);
                 load();
             } catch (err) {
                 ev.target.disabled = false;

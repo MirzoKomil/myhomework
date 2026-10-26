@@ -136,6 +136,11 @@ async function preview(db, actor, employeeId) {
         out.targets = (await activeSalesManagers(db, emp.id)).map(m => ({ ...m, openLeads: load[m.id] || 0 }));
         if (out.leads.open && !out.targets.length) out.warnings.push('Boshqa faol sotuv menejeri yo‘q — ochiq lidlar taqsimlanmaganlarga qaytadi.');
     }
+    const managed = await studentsOf(db, emp.id);
+    out.managedStudents = {
+        total: managed.length,
+        byLanguage: managed.reduce((m, r) => { const l = r.subject === 'russian' ? 'russian' : 'english'; m[l] = (m[l] || 0) + 1; return m; }, {})
+    };
     if (roles.isMain(mapEmployee(emp)) || emp.role === 'yordamchi' || emp.dual_role === true) {
         const { rows } = await db.query(
             `SELECT id, name, teacher_id, assistant_teacher_id FROM students WHERE teacher_id = $1 OR assistant_teacher_id = $1 ORDER BY name`, [emp.id]);
@@ -220,6 +225,9 @@ async function offboard(db, actor, body = {}) {
             }
             Object.assign(extra, {
                 managerAssignedAt: to ? now : null,
+                // Yangi menejerga SLA soati shu paytdan boshlanadi — meros
+                // olgan lidlari uchun darhol "kechikdi" ogohlantirishi kelmaydi.
+                slaStageEnteredAt: now,
                 reassignedFrom: emp.id, reassignedAt: now, reassignReason: 'offboarding'
             });
             await db.query(`UPDATE leads SET manager_id=$2, extra_data=$3, updated_at=NOW() WHERE id=$1`, [lead.id, to, JSON.stringify(extra)]);
@@ -245,6 +253,12 @@ async function offboard(db, actor, body = {}) {
         }
     }
 
+    // O'quvchilar (qarz, keyingi to'lov, aloqa) ham kuzatuvchisiz qolmasin:
+    // ularning mas'ul menejeri almashtiriladi. Sotuv krediti (saleManagerId)
+    // lidda qoladi — bu faqat kim kuzatishini o'zgartiradi.
+    const studentsMoved = await handOverStudents(db, emp, body, now);
+    summary.students = studentsMoved;
+
     await db.query(
         `UPDATE hr_employees SET status='inactive', end_date=$2, offboarded_at=NOW(), offboarded_by=$3, offboard_reason=$4 WHERE id=$1`,
         [emp.id, endDate, String(actor.id || ''), reason]);
@@ -258,6 +272,7 @@ async function offboard(db, actor, body = {}) {
     const result = {
         employeeId: emp.id, name: emp.name, endDate, reason,
         reassigned: summary.reassigned, unassigned: summary.unassigned, bookRoadmap: summary.bookRoadmap,
+        studentsMoved: (summary.students || []).length,
         byTarget: Object.entries(summary.byTarget).map(([id, n]) => ({ id, name: names[id] || id, leads: n })),
         accountsBlocked: accounts.length, sessionsClosed
     };
@@ -268,6 +283,100 @@ async function offboard(db, actor, body = {}) {
         actor: { id: actor.id, role: actor.role, email: actor.email }
     });
     return result;
+}
+
+async function studentsOf(db, empId, lock = false) {
+    const { rows } = await db.query(
+        `SELECT id, name, subject, extra_data FROM students WHERE extra_data->>'managerId' = $1 ORDER BY name ${lock ? 'FOR UPDATE' : ''}`, [empId]);
+    return rows;
+}
+
+async function handOverStudents(db, emp, body, now) {
+    const list = await studentsOf(db, emp.id, true);
+    if (!list.length) return [];
+    const pool = await activeSalesManagers(db, emp.id);
+    const explicit = body.studentsTargetId ? pool.find(m => m.id === String(body.studentsTargetId)) : null;
+    if (body.studentsTargetId && !explicit) throw err(400, 'O‘quvchilar beriladigan menejer faol sotuv menejeri bo‘lishi kerak');
+    const { rows: loadRows } = await db.query(
+        `SELECT extra_data->>'managerId' AS m, COUNT(*)::int AS n FROM students WHERE COALESCE(extra_data->>'managerId','')<>'' GROUP BY 1`);
+    const load = Object.fromEntries(loadRows.map(r => [r.m, r.n]));
+    const preferred = ['one', 'split'].includes(body.mode)
+        ? (body.mode === 'one' ? [body.targetId] : (body.targetIds || [])).map(String) : [];
+    const moved = [];
+    for (const st of list) {
+        const lang = st.subject === 'russian' ? 'russian' : 'english';
+        let to = explicit && (explicit.lang || 'english') === lang ? explicit : null;
+        if (!to) {
+            const cands = pool.filter(m => (m.lang || 'english') === lang && (!preferred.length || preferred.includes(m.id)));
+            const any = cands.length ? cands : pool.filter(m => (m.lang || 'english') === lang);
+            to = any.reduce((b, m) => (!b || (load[m.id] || 0) < (load[b.id] || 0) ? m : b), null);
+        }
+        const extra = { ...(st.extra_data || {}) };
+        const history = Array.isArray(extra.managerHistory) ? extra.managerHistory.slice(-49) : [];
+        history.push({ from: emp.id, to: to ? to.id : '', at: now, reason: 'offboarding' });
+        extra.managerHistory = history;
+        extra.managerId = to ? to.id : '';
+        await db.query('UPDATE students SET extra_data=$2 WHERE id=$1', [st.id, JSON.stringify(extra)]);
+        if (to) load[to.id] = (load[to.id] || 0) + 1;
+        moved.push({ id: st.id, to: to ? to.id : '' });
+    }
+    return moved;
+}
+
+// ── HR snapshot saqlash qoidalari ───────────────────────────────────────────
+
+// Oddiy "O'chirish" ishdan ketgan xodim muammosini hal qilmaydi (login ochiq,
+// lidlari egasiz qoladi). Shuning uchun faol akkaunti, ochiq lidlari yoki
+// biriktirilgan o'quvchilari bor xodimni server o'chirmaydi — avval "Ishdan
+// bo'shatish" kerak. Ishdan bo'shatilgan (yoki hech narsasi yo'q) xodim arxivga
+// o'chiriladi.
+async function assertDeletable(db, incoming, removedIds) {
+    const keep = new Set((incoming || []).map(e => e && String(e.id)));
+    const ids = [...new Set((Array.isArray(removedIds) ? removedIds : []).map(String))].filter(id => !keep.has(id));
+    if (!ids.length) return;
+    const { rows } = await db.query('SELECT * FROM hr_employees WHERE id = ANY($1)', [ids]);
+    for (const emp of rows) {
+        if (emp.offboarded_at) continue;
+        const why = [];
+        const { rows: l } = await db.query(
+            `SELECT COUNT(*)::int AS n FROM leads WHERE manager_id=$1 AND deleted_at IS NULL AND status = ANY($2)`, [emp.id, OPEN_STATUSES]);
+        if (l[0].n) why.push(`${l[0].n} ta ochiq lid`);
+        const { rows: st } = await db.query(
+            `SELECT COUNT(*)::int AS n FROM students WHERE teacher_id=$1 OR assistant_teacher_id=$1 OR extra_data->>'managerId'=$1`, [emp.id]);
+        if (st[0].n) why.push(`${st[0].n} ta o‘quvchi`);
+        const acc = (await findAccount(db, emp)).filter(a => !a.disabled_at);
+        if (acc.length) why.push('faol login akkaunt');
+        if (why.length) {
+            throw err(409, `${emp.name}: ${why.join(', ')} bor. Ishdan ketgan bo‘lsa, “Ishdan bo‘shatish”dan foydalaning — lidlar va o‘quvchilar boshqaga beriladi, akkaunt bloklanadi. Keyin o‘chirish mumkin.`, 'OFFBOARD_FIRST');
+        }
+    }
+}
+
+// Qo'lda "Inactive" qilish ham login'ni yopadi (va "Active" qayta ochadi).
+// Ishdan bo'shatilgan xodim faqat "Qayta ishga olish" bilan ochiladi.
+// Amalni bajarayotgan odam o'z akkauntini bu yo'l bilan bloklay olmaydi.
+async function syncAccountsWithStatus(db, before, after, actor = {}) {
+    const old = new Map((before || []).map(r => [String(r.id), r]));
+    const changed = [];
+    for (const e of after || []) {
+        const prev = old.get(String(e.id));
+        if (!prev || prev.offboarded_at) continue;
+        const was = String(prev.status || 'active').toLowerCase() !== 'inactive';
+        const now = String(e.status || 'active').toLowerCase() !== 'inactive';
+        if (was === now) continue;
+        const accounts = await findAccount(db, { id: e.id, login: e.login || prev.login });
+        for (const a of accounts) {
+            if (a.id === actor.id) continue;
+            if (!now) {
+                await db.query('UPDATE users SET disabled_at = COALESCE(disabled_at, NOW()) WHERE id=$1', [a.id]);
+                await db.query('DELETE FROM sessions WHERE user_id=$1', [a.id]);
+            } else {
+                await db.query('UPDATE users SET disabled_at = NULL WHERE id=$1', [a.id]);
+            }
+            changed.push(a.id);
+        }
+    }
+    return changed;
 }
 
 // ── Qayta ishga olish ──────────────────────────────────────────────────────
@@ -305,6 +414,6 @@ function preserveLifecycle(employee, oldRow) {
 }
 
 module.exports = {
-    init, backfillSaleManagers, nextSaleCredit, preview, offboard, reinstate, preserveLifecycle,
+    init, backfillSaleManagers, nextSaleCredit, preview, offboard, reinstate, preserveLifecycle, assertDeletable, syncAccountsWithStatus,
     SALE_STATUSES, OPEN_STATUSES, isSalesRole, isActiveRow, randomUUID
 };

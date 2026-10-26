@@ -854,10 +854,9 @@ async function getBookRoadmap() {
     return rows.map(rowToBookRoadmap);
 }
 
-async function saveBookRoadmap(client, items) {
+async function saveBookRoadmap(client, items, removedIds = []) {
     if (!isUsableList(items, 'saveBookRoadmap')) return;
-    await guardBulkDelete(client, 'book_roadmap', 'Kitob yetkazish', items);
-    await client.query('DELETE FROM book_roadmap');
+    await replaceSnapshotRows(client, 'book_roadmap', 'Kitob yetkazish', items, removedIds);
     for (const r of items) {
         await client.query(
             `INSERT INTO book_roadmap (id, name, student_id, phone, region, manager_id, kind, status, date, lang, lead_ref, comments, address, dispatched_at, delivered_at)
@@ -1118,6 +1117,8 @@ async function getMobileContentData(studentId, { crmMode = false, previewLang } 
 
 async function saveMobileContentData(client, data) {
     sanitizeMobileContent(data);
+    const previous = (await client.query('SELECT data FROM mobile_content WHERE singleton = 1 FOR UPDATE')).rows[0]?.data;
+    await archive.archiveMobileDiff(client, previous, data);
     await client.query(
         `INSERT INTO mobile_content (singleton, data) VALUES (1, $1)
          ON CONFLICT (singleton) DO UPDATE SET data = EXCLUDED.data`,
@@ -1214,15 +1215,41 @@ async function guardBulkDelete(client, table, label, incoming) {
         err.code = 'BULK_DELETE_BLOCKED';
         throw err;
     }
-    // Arxiv: o'chib ketadigan qatorlar shu tranzaksiyaning o'zida arxivga
-    // tushadi. Arxivga yozib bo'lmasa — o'chirish ham bekor bo'ladi.
-    if (removed.length) await archive.archiveMissingRows(client, table, incoming);
 }
 
-async function saveTeachers(client, teachers) {
+// Snapshot jadvallarini (o'quvchilar, xodimlar, ustozlar, kitob yetkazish)
+// saqlash: faqat kelgan qatorlar yangilanadi va faqat brauzer ANIQ o'chirgan
+// (removedIds) qatorlar o'chiriladi. Ro'yxatda yo'q, lekin o'chirilmagan
+// qatorlar — boshqa oynada qo'shilgan yoki arxivdan tiklangan — tegilmaydi,
+// shuning uchun eski tab ularni hech qachon o'chirib yubormaydi. O'chgan har
+// bir qator shu tranzaksiyaning o'zida arxivga tushadi.
+async function replaceSnapshotRows(client, table, label, incoming, removedIds) {
+    const incomingIds = [...new Set((incoming || []).map(i => i && i.id).filter(Boolean).map(String))];
+    const keep = new Set(incomingIds);
+    const wanted = [...new Set((Array.isArray(removedIds) ? removedIds : []).map(String))].filter(id => !keep.has(id));
+    const { rows: present } = wanted.length
+        ? await client.query(`SELECT id FROM ${table} WHERE id = ANY($1)`, [wanted]) : { rows: [] };
+    const removed = present.map(r => String(r.id));
+    if (removed.length > MAX_BULK_DELETIONS_PER_PATCH) {
+        const err = new Error(
+            `Xavfsizlik to'sig'i: bitta so'rovda "${label}" bo'limidan ${removed.length} ta yozuv ` +
+            `o'chib ketishi mumkin edi — amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
+        );
+        err.code = 'BULK_DELETE_BLOCKED';
+        throw err;
+    }
+    if (removed.length) {
+        const { rows } = await client.query(`SELECT * FROM ${table} WHERE id = ANY($1)`, [removed]);
+        for (const row of rows) await archive.archiveRow(client, table, row);
+    }
+    const replace = [...incomingIds, ...removed];
+    if (replace.length) await client.query(`DELETE FROM ${table} WHERE id = ANY($1)`, [replace]);
+    return removed;
+}
+
+async function saveTeachers(client, teachers, removedIds = []) {
     if (!isUsableList(teachers, 'saveTeachers')) return;
-    await guardBulkDelete(client, 'teachers', 'Ustozlar', teachers);
-    await client.query('DELETE FROM teachers');
+    await replaceSnapshotRows(client, 'teachers', 'Ustozlar', teachers, removedIds);
     for (const t of teachers) {
         await client.query(
             'INSERT INTO teachers (id, name, type, subject, phone, schedule_pattern, lesson_duration) VALUES ($1,$2,$3,$4,$5,$6,$7)',
@@ -1244,8 +1271,7 @@ async function saveStudents(client, students, removedStudentIds = []) {
     // a sales manager's lead transaction. Explicit CRM deletions remain possible.
     students = [...students, ...existingRows.map(rowToStudent).filter(s =>
         s.autoProvisionedFromLead && !ids.has(s.id) && !removed.has(s.id))];
-    await guardBulkDelete(client, 'students', "O'quvchilar", students);
-    await client.query('DELETE FROM students');
+    await replaceSnapshotRows(client, 'students', "O'quvchilar", students, [...removed]);
     for (const s of students) {
         await teacherDuties.validateAssignment(client, s, existingById.get(s.id));
         const { id, name, phone, group, subject, teacherId, assistantTeacherId,
@@ -1569,6 +1595,25 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
     return saved;
 }
 
+// Arxivdan (eski brauzer arxividan) butunlay o'chib ketgan lidni aynan
+// o'chirilgan paytdagi holatida qaytarish. Bosqich anketalari tekshirilmaydi —
+// bu yangi harakat emas, tarixiy yozuvni joyiga qo'yish. Audit'ga yoziladi.
+async function insertRestoredLead(client, lead, language, actor = {}) {
+    const p = leadDbPayload(lead, language, null);
+    if (!p.id || !p.name.trim()) throw Object.assign(new Error('Lid nusxasi to‘liq emas'), { status: 400 });
+    const { rows } = await client.query(
+        `INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type,
+             comments, attachments, extra_data, created_at, updated_at, deleted_at, deleted_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),NULL,'')
+         ON CONFLICT (id) DO NOTHING RETURNING *`,
+        [p.id, p.name, p.phone, p.phone2, p.email, p.managerId, p.source, p.language, p.date, p.externalId, p.status, p.leadType,
+         JSON.stringify(p.comments), JSON.stringify(p.attachments), JSON.stringify(p.extra), p.createdAt]);
+    if (!rows[0]) throw Object.assign(new Error('Bu ID bilan lid allaqachon bor'), { status: 409, code: 'ALREADY_EXISTS' });
+    const saved = rowToLead(rows[0]);
+    await appendLeadAudit(client, p.id, 'restored', actor, { before: null, after: saved, source: 'legacy-archive' });
+    return saved;
+}
+
 // Legacy brauzerlar hali ham /api/state orqali butun snapshot yuborishi
 // mumkin. Muhim qoida: payload ichida yo'q lidlar HECH QACHON o'chirilmaydi.
 // Shu tariqa eski/yarim yuklangan tab 200+ lidni yana yo'q qila olmaydi.
@@ -1655,9 +1700,9 @@ async function restoreLead(id, actor = {}) {
     return restored;
 }
 
-async function saveHrEmployeesData(client, employees, actor = {}) {
+async function saveHrEmployeesData(client, employees, actor = {}, removedIds = []) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
-    await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
+    await staffLifecycle.assertDeletable(client, employees, removedIds);
     const oldEmployees = (await client.query('SELECT id,role,status,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date,end_date,offboarded_at,offboarded_by,offboard_reason FROM hr_employees')).rows;
     // Toʻliq HR huquqi boʻlmagan rol (masalan ROP) maxfiy maydonlarni koʻrmaydi —
     // saqlaganda ular boʻsh qiymat bilan ustidan yozilib ketmasin.
@@ -1673,7 +1718,7 @@ async function saveHrEmployeesData(client, employees, actor = {}) {
         const after = { role: e.role, startDate: e.startDate || e.joinDate || '', kpiTemplateId: e.kpiTemplateId || '', dualRole: e.dualRole === true };
         if (JSON.stringify(before) !== JSON.stringify(after)) await payroll.audit(client, actor, 'employee-kpi', e.id, before, after);
     }
-    await client.query('DELETE FROM hr_employees');
+    await replaceSnapshotRows(client, 'hr_employees', 'Xodimlar', employees, removedIds);
     for (const e of (employees || [])) {
         // Ishdan bo'shatish maydonlari faqat serverda boshqariladi: eski tab
         // yuborgan "active" holati bo'shatilgan xodimni qayta ochib yubormaydi.
@@ -1698,6 +1743,7 @@ async function saveHrEmployeesData(client, employees, actor = {}) {
             await require('./services/domworkBot/events').capture(client, 'employee', e.id, {}, 'employee:' + e.id);
         }
     }
+    await staffLifecycle.syncAccountsWithStatus(client, oldEmployees, employees, actor);
 }
 
 async function getJsonData(key) {
@@ -3911,15 +3957,16 @@ async function patchState(partial, actor = {}) {
             const previous = (await client.query('SELECT data FROM json_data WHERE key=$1', [key])).rows[0]?.data;
             if (JSON.stringify(previous) !== JSON.stringify(partial[key])) await payroll.audit(client, actor, key, key, previous, partial[key]);
         }
-        if (partial.teachers)           await saveTeachers(client, partial.teachers);
-        if (partial.students)           await saveStudents(client, partial.students, partial.removedStudentIds);
+        const removedIds = partial.removedIds && typeof partial.removedIds === 'object' ? partial.removedIds : {};
+        if (partial.teachers)           await saveTeachers(client, partial.teachers, removedIds.teachers);
+        if (partial.students)           await saveStudents(client, partial.students, [...(partial.removedStudentIds || []), ...(removedIds.students || [])]);
         if (partial.salesManagers)      await saveSalesManagers(client, partial.salesManagers);
         if (partial.timetable)          await saveTimetable(client, partial.timetable);
         if (partial.mainAttendance)     await saveAttendanceTable(client, 'main_attendance', partial.mainAttendance);
         if (partial.assistantAttendance) await saveAttendanceTable(client, 'assistant_attendance', partial.assistantAttendance);
         if (partial.leads)              await saveLeads(client, partial.leads);
-        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor);
-        if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap);
+        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor, removedIds.hrEmployees);
+        if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap, removedIds.bookRoadmap);
         if (partial.mobileContent)      await saveMobileContentData(client, partial.mobileContent);
         if (partial.scripts !== undefined)     await saveJsonData(client, 'scripts', partial.scripts);
         if (partial.bonusHistory !== undefined) await saveJsonData(client, 'bonusHistory', partial.bonusHistory);
@@ -4620,7 +4667,7 @@ setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 module.exports = {
     pool, DATA_DIR,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
-    insertLead, upsertLead, upsertLeadWithClient, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
+    insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, saveTeacherTrialLesson,
     botTrialAction: (client,actor,leadId,payload) => trialLessons.updateTrialLesson(client,actor,leadId,payload,rowToLead,appendLeadAudit),
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,

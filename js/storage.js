@@ -128,11 +128,18 @@ function getItem(key, fallback) {
     return fallback;
 }
 
+const SNAPSHOT_TABLE_KEYS = new Set(['students', 'hrEmployees', 'teachers', 'bookRoadmap']);
+
 function setItem(key, value) {
     const cacheKey = CACHE_KEY_MAP[key];
     if (cacheKey) {
         const removedStudentIds = key === STORAGE_KEYS.students && Array.isArray(value)
             ? (_cache.students || []).filter(s => !value.some(next => next.id === s.id)).map(s => s.id) : [];
+        // Server faqat SHU yerda aniq o'chirilgan qatorlarni o'chiradi. Ro'yxatda
+        // ko'rinmagan boshqa qatorlar (boshqa oynada qo'shilgan yoki arxivdan
+        // tiklangan) eski tab tufayli o'chib ketmaydi.
+        const removedIds = SNAPSHOT_TABLE_KEYS.has(cacheKey) && Array.isArray(value) && Array.isArray(_cache[cacheKey])
+            ? _cache[cacheKey].filter(old => old && old.id != null && !value.some(next => next && next.id === old.id)).map(old => old.id) : [];
         // Lidlar serverda "hammasini o'chirib, qaytadan yozish" tamoyili
         // bo'yicha saqlanadi — shu sabab noto'g'ri shakldagi qiymat butun
         // bazani yo'q qilishi mumkin. Bunday yozuvni umuman yo'ldan qaytaramiz.
@@ -154,7 +161,8 @@ function setItem(key, value) {
             // "poyga" qilib, oxirgisi emas, tasodifan tezroq kelgani
             // g'olib chiqishi (eski qiymat yangisini bosib qo'yishi) mumkin
             // edi.
-            return apiPatchState({ [cacheKey]: value, ...(key === STORAGE_KEYS.students ? { removedStudentIds } : {}) }).catch(err => {
+            return apiPatchState({ [cacheKey]: value, ...(key === STORAGE_KEYS.students ? { removedStudentIds } : {}),
+                ...(SNAPSHOT_TABLE_KEYS.has(cacheKey) ? { removedIds: { [cacheKey]: removedIds } } : {}) }).catch(err => {
                 console.error('Saqlash xatoligi:', err.message);
                 showSaveError(err.message);
             });

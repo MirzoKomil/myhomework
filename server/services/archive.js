@@ -63,6 +63,8 @@ const TYPE_LABELS = {
     lead: 'Lid',
     communityComment: 'Hamjamiyat izohi',
     offboarding: 'Ishdan bo‘shatish',
+    upload: 'Yuklangan fayl',
+    mobileItem: 'Mobil ilova kontenti',
     ...Object.fromEntries(Object.values(TABLE_TYPES).map(t => [t.type, t.label])),
     ...Object.fromEntries(Object.values(JSON_TYPES).map(t => [t.type, t.label]))
 };
@@ -74,6 +76,17 @@ const ROP_TYPES = new Set(['lead', 'student', 'bookRoadmap', 'script', 'bonus'])
 
 function err(status, message, code) { return Object.assign(new Error(message), { status, code }); }
 const som = v => (Number.isFinite(Number(v)) && v !== '' && v !== null ? String(Math.round(Number(v))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' so‘m' : '');
+
+// ROP faqat o'z til yo'nalishi(lari)ni ko'radi (HR'dagi lang: english/russian/both).
+function ropLangs(actor) {
+    if (actor?.role !== 'rop') return null;
+    const l = Array.isArray(actor.langs) && actor.langs.length ? actor.langs : ['english'];
+    return l.filter(x => x === 'english' || x === 'russian');
+}
+function canSeeLang(actor, lang) {
+    const langs = ropLangs(actor);
+    return !langs || !lang || langs.includes(lang);
+}
 
 function canView(actor, type) {
     if (FULL_ROLES.has(actor?.role)) return true;
@@ -108,7 +121,14 @@ CREATE TABLE IF NOT EXISTS archive_records (
 );
 CREATE INDEX IF NOT EXISTS archive_records_type_idx ON archive_records (entity_type, deleted_at DESC);
 CREATE INDEX IF NOT EXISTS archive_records_entity_idx ON archive_records (entity_id);
-CREATE INDEX IF NOT EXISTS archive_records_deleted_idx ON archive_records (deleted_at DESC);`;
+CREATE INDEX IF NOT EXISTS archive_records_deleted_idx ON archive_records (deleted_at DESC);
+CREATE TABLE IF NOT EXISTS archive_media (
+    id TEXT PRIMARY KEY,
+    record_id TEXT NOT NULL REFERENCES archive_records(id) ON DELETE CASCADE,
+    meta JSONB NOT NULL,
+    bytes BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS archive_media_record_idx ON archive_media (record_id);`;
 
 async function init(pool) {
     await pool.query(SCHEMA);
@@ -155,16 +175,92 @@ async function archiveRow(client, table, row, { reason = '', extra = null } = {}
     });
 }
 
-// HR nomzodi media fayllari (BYTEA) bilan birga arxivlanadi — fayl base64
-// ko'rinishida nusxada saqlanadi va tiklashda baytlarga qaytariladi.
+// HR nomzodi media fayllari bilan arxivlanadi. Fayl baytlari JSON nusxaga
+// emas, alohida `archive_media` jadvaliga (BYTEA) to'g'ridan-to'g'ri SQL bilan
+// ko'chiriladi — katta video ham brauzerga yuborilmaydi, faqat ro'yxati.
 async function archiveCandidate(db, id) {
     const { rows } = await db.query('SELECT * FROM hr_candidates WHERE id=$1 FOR UPDATE', [id]);
     if (!rows[0]) return null;
-    const { rows: media } = await db.query('SELECT * FROM hr_candidate_media WHERE candidate_id=$1', [id]).catch(() => ({ rows: [] }));
-    const toB64 = b => Buffer.isBuffer(b) ? b.toString('base64')
-        : (typeof b === 'string' && b.startsWith('\\x') ? Buffer.from(b.slice(2), 'hex').toString('base64') : b);
-    const encoded = media.map(m => ({ ...m, bytes: toB64(m.bytes) }));
-    return archiveRow(db, 'hr_candidates', rows[0], { extra: { media: encoded } });
+    const { rows: media } = await db.query(
+        `SELECT id, kind, mime, file_name, octet_length(bytes)::int AS size FROM hr_candidate_media WHERE candidate_id=$1`, [id]);
+    const recId = await archiveRow(db, 'hr_candidates', rows[0], { extra: { media } });
+    if (media.length) {
+        await db.query(
+            `INSERT INTO archive_media (id, record_id, meta, bytes)
+             SELECT $1 || ':' || m.id, $1, to_jsonb(m) - 'bytes', m.bytes FROM hr_candidate_media m WHERE m.candidate_id = $2`,
+            [recId, id]);
+    }
+    return recId;
+}
+
+// Mobil ilova kontenti (kurs, modul, dars, video, hujjat, modul tarkibi):
+// o'chgan element to'plam nomi bilan arxivlanadi.
+const MOBILE_COLLECTIONS = { courses: 'Kurs', modules: 'Modul', lessons: 'Dars', videos: 'Video', documents: 'Hujjat', moduleContents: 'Modul tarkibi' };
+async function archiveMobileDiff(db, previous, next) {
+    if (!previous || !next || typeof previous !== 'object' || typeof next !== 'object') return 0;
+    let n = 0;
+    for (const [col, label] of Object.entries(MOBILE_COLLECTIONS)) {
+        const before = Array.isArray(previous[col]) ? previous[col] : [];
+        if (!Array.isArray(next[col])) continue;
+        const left = new Set(next[col].filter(i => i && i.id != null).map(i => String(i.id)));
+        for (const item of before) {
+            if (!item || item.id == null || left.has(String(item.id))) continue;
+            await insertRecord(db, {
+                type: 'mobileItem', entityId: item.id, sourceKey: 'mobileContent',
+                title: `${label}: ${item.title || item.name || item.id}`, lang: item.lang || '',
+                snapshot: { item, collection: col }
+            });
+            n++;
+        }
+    }
+    return n;
+}
+
+async function restoreMobileItem(db, item, col) {
+    if (!MOBILE_COLLECTIONS[col]) throw err(400, 'Kontent turi noma’lum');
+    const data = (await db.query('SELECT data FROM mobile_content WHERE singleton = 1 FOR UPDATE')).rows[0]?.data || {};
+    const list = Array.isArray(data[col]) ? data[col] : [];
+    if (list.some(i => i && String(i.id) === String(item.id))) throw err(409, 'Bu kontent allaqachon joyida', 'ALREADY_EXISTS');
+    for (const [field, parent] of [['courseId', 'courses'], ['moduleId', 'modules'], ['lessonId', 'lessons']]) {
+        if (item[field] && Array.isArray(data[parent]) && !data[parent].some(p => p && String(p.id) === String(item[field]))) {
+            throw err(409, `Avval tegishli ${MOBILE_COLLECTIONS[parent].toLowerCase()}ni tiklang`, 'PARENT_MISSING');
+        }
+    }
+    data[col] = [...list, item];
+    await db.query('UPDATE mobile_content SET data=$1 WHERE singleton = 1', [JSON.stringify(data)]);
+}
+
+// Yuklangan fayl (rasm, audio): diskdan o'chirilmaydi, `.arxiv` papkasiga
+// ko'chiriladi va arxiv yozuvi qo'shiladi.
+const ARCHIVE_DIR = '.arxiv';
+async function archiveUpload(db, uploadsDir, filename, actor) {
+    const fs = require('fs'), path = require('path');
+    const safe = path.basename(filename);
+    const dir = path.join(uploadsDir, ARCHIVE_DIR);
+    fs.mkdirSync(dir, { recursive: true });
+    const stored = `${randomUUID()}-${safe}`;
+    const size = fs.statSync(path.join(uploadsDir, safe)).size;
+    fs.renameSync(path.join(uploadsDir, safe), path.join(dir, stored));
+    try {
+        return await insertRecord(db, {
+            type: 'upload', entityId: safe, sourceKey: 'upload', title: safe, subtitle: `${Math.round(size / 1024)} KB`,
+            snapshot: { item: { id: safe, url: '/uploads/' + safe, stored, size, dir: uploadsDir } },
+            actor: actor ? { id: actor.id, role: actor.role, email: actor.email } : undefined
+        });
+    } catch (e) {
+        fs.renameSync(path.join(dir, stored), path.join(uploadsDir, safe)); // yozuv tushmasa fayl joyiga qaytadi
+        throw e;
+    }
+}
+
+function restoreUpload(item) {
+    const fs = require('fs'), path = require('path');
+    const dir = item.dir || path.join(require('../db').DATA_DIR, 'uploads');
+    const target = path.join(dir, path.basename(item.id));
+    const source = path.join(dir, ARCHIVE_DIR, path.basename(item.stored || ''));
+    if (fs.existsSync(target)) throw err(409, 'Shu nomdagi fayl allaqachon bor', 'ALREADY_EXISTS');
+    if (!item.stored || !fs.existsSync(source)) throw err(404, 'Arxivdagi fayl diskda topilmadi');
+    fs.renameSync(source, target);
 }
 
 // json_data massivlarida o'chgan elementlarni arxivlash.
@@ -214,8 +310,27 @@ async function migrateLegacyBlob(db) {
     for (const rec of blob) {
         if (!rec || !rec.item) continue;
         const type = ['lead', 'student', 'employee'].includes(rec.type) ? rec.type : null;
-        if (!type || type === 'lead') continue; // lidlar leads jadvalida o'zi bor
+        if (!type) continue;
         const legacyId = `blob:${rec.id || rec.item.id}:${rec.deletedAt || ''}`;
+        if (type === 'lead') {
+            // Lidlar odatda leads jadvalida (yumshoq o'chirilgan) bor. Faqat
+            // soft-delete'dan oldingi davrda butunlay o'chib ketganlari —
+            // jadvalda umuman yo'q bo'lganlari — alohida arxiv yozuvi bo'ladi.
+            const exists = (await db.query('SELECT 1 FROM leads WHERE id=$1', [String(rec.item.id || '')])).rows.length;
+            if (exists || !rec.item.id) continue;
+            const lang = rec.item.language === 'russian' || rec.meta?.lang === 'russian' ? 'russian' : 'english';
+            const res = await db.query(
+                `INSERT INTO archive_records (id, entity_type, entity_id, source_key, title, subtitle, lang, snapshot, reason,
+                     deleted_by_email, deleted_at, legacy_id)
+                 VALUES ($1,'lead',$2,'legacyLead',$3,$4,$5,$6,$7,$8,COALESCE($9::timestamptz, NOW()),$10)
+                 ON CONFLICT (legacy_id) DO NOTHING`,
+                [randomUUID(), String(rec.item.id), short(rec.item.name || rec.item.id, 200),
+                 short([rec.item.phone, rec.item.status].filter(Boolean).join(' · '), 200), lang,
+                 JSON.stringify({ legacyItem: rec.item, lang }), 'Eski arxivdan ko‘chirildi (butunlay o‘chgan lid)',
+                 String(rec.deletedBy || ''), safeDate(rec.deletedAt), legacyId]);
+            n += res.rowCount;
+            continue;
+        }
         const res = await db.query(
             `INSERT INTO archive_records (id, entity_type, entity_id, source_table, title, subtitle, lang, snapshot, reason,
                  deleted_by_email, deleted_at, legacy_id)
@@ -266,19 +381,21 @@ async function list(db, actor, query = {}) {
     const from = /^\d{4}-\d{2}-\d{2}$/.test(query.from || '') ? query.from : null;
     const to = /^\d{4}-\d{2}-\d{2}$/.test(query.to || '') ? query.to : null;
     const lang = ['english', 'russian'].includes(query.lang) ? query.lang : null;
+    const scope = ropLangs(actor);
 
     const params = [];
     const p = v => { params.push(v); return '$' + params.length; };
-    const recordTypes = wanted.filter(t => t !== 'lead');
+    const recordTypes = wanted;
     const parts = [];
     if (recordTypes.length) {
         const w = [`a.entity_type = ANY(${p(recordTypes)})`];
         if (status === 'deleted') w.push('a.restored_at IS NULL');
         if (status === 'restored') w.push('a.restored_at IS NOT NULL');
         if (q) w.push(`(LOWER(a.title) LIKE ${p('%' + q + '%')} OR LOWER(a.subtitle) LIKE $${params.length} OR a.entity_id = ${p(q)})`);
-        if (from) w.push(`a.deleted_at >= (${p(from)}::date AT TIME ZONE 'Asia/Tashkent')`);
-        if (to) w.push(`a.deleted_at < ((${p(to)}::date + 1) AT TIME ZONE 'Asia/Tashkent')`);
+        if (from) w.push(`a.deleted_at >= ((${p(from)}::date)::timestamp AT TIME ZONE 'Asia/Tashkent')`);
+        if (to) w.push(`a.deleted_at < ((${p(to)}::date + 1)::timestamp AT TIME ZONE 'Asia/Tashkent')`);
         if (lang) w.push(`a.lang IN (${p(lang)}, '')`);
+        if (scope) w.push(`(a.lang = '' OR a.lang = ANY(${p(scope)}))`);
         parts.push(`SELECT a.id, a.entity_type, a.entity_id, a.title, a.subtitle, a.lang, a.reason, a.deleted_at,
                 a.deleted_by_id, a.deleted_by_email, du.name AS deleted_by_name, a.restored_at, a.restored_by_id, ru.name AS restored_by_name
             FROM archive_records a
@@ -289,9 +406,10 @@ async function list(db, actor, query = {}) {
     if (wanted.includes('lead') && status !== 'restored') {
         const w = ['l.deleted_at IS NOT NULL'];
         if (q) w.push(`(LOWER(l.name) LIKE ${p('%' + q + '%')} OR l.phone LIKE $${params.length} OR l.id = ${p(q)})`);
-        if (from) w.push(`l.deleted_at >= (${p(from)}::date AT TIME ZONE 'Asia/Tashkent')`);
-        if (to) w.push(`l.deleted_at < ((${p(to)}::date + 1) AT TIME ZONE 'Asia/Tashkent')`);
+        if (from) w.push(`l.deleted_at >= ((${p(from)}::date)::timestamp AT TIME ZONE 'Asia/Tashkent')`);
+        if (to) w.push(`l.deleted_at < ((${p(to)}::date + 1)::timestamp AT TIME ZONE 'Asia/Tashkent')`);
         if (lang) w.push(`l.language = ${p(lang)}`);
+        if (scope) w.push(`l.language = ANY(${p(scope)})`);
         parts.push(`SELECT '${LEAD_PREFIX}' || l.id AS id, 'lead' AS entity_type, l.id AS entity_id, l.name AS title,
                 CONCAT_WS(' · ', NULLIF(l.phone,''), NULLIF(l.status,'')) AS subtitle, l.language AS lang, '' AS reason,
                 l.deleted_at, '' AS deleted_by_id, '' AS deleted_by_email, NULLIF(l.deleted_by,'') AS deleted_by_name,
@@ -303,18 +421,21 @@ async function list(db, actor, query = {}) {
     const [{ rows }, { rows: totalRows }, counts] = await Promise.all([
         db.query(`SELECT * FROM (${union}) x ORDER BY deleted_at DESC NULLS LAST, id LIMIT ${limit} OFFSET ${offset}`, params),
         db.query(`SELECT COUNT(*)::int AS n FROM (${union}) x`, params),
-        countsByType(db, actor)
+        countsByType(db, actor, scope)
     ]);
     return { items: rows.map(mapRecord), total: totalRows[0].n, counts, limit, offset };
 }
 
-async function countsByType(db, actor) {
+async function countsByType(db, actor, scope = null) {
     const out = {};
-    const { rows } = await db.query(`SELECT entity_type, COUNT(*)::int AS n FROM archive_records WHERE restored_at IS NULL GROUP BY entity_type`);
+    const { rows } = await db.query(
+        `SELECT entity_type, COUNT(*)::int AS n FROM archive_records
+         WHERE restored_at IS NULL ${scope ? "AND (lang = '' OR lang = ANY($1))" : ''} GROUP BY entity_type`, scope ? [scope] : []);
     for (const r of rows) if (canView(actor, r.entity_type)) out[r.entity_type] = r.n;
     if (canView(actor, 'lead')) {
-        const { rows: l } = await db.query('SELECT COUNT(*)::int AS n FROM leads WHERE deleted_at IS NOT NULL');
-        out.lead = l[0].n;
+        const { rows: l } = await db.query(
+            `SELECT COUNT(*)::int AS n FROM leads WHERE deleted_at IS NOT NULL ${scope ? 'AND language = ANY($1)' : ''}`, scope ? [scope] : []);
+        out.lead = (out.lead || 0) + l[0].n;
     }
     return out;
 }
@@ -324,14 +445,16 @@ async function get(db, actor, id) {
         if (!canView(actor, 'lead')) throw err(403, 'Ruxsat yo‘q');
         const { rows } = await db.query('SELECT * FROM leads WHERE id=$1', [String(id).slice(LEAD_PREFIX.length)]);
         if (!rows[0]) throw err(404, 'Yozuv topilmadi');
-        return { id, type: 'lead', typeLabel: 'Lid', snapshot: { row: rows[0] } };
+        if (!canSeeLang(actor, rows[0].language)) throw err(403, 'Ruxsat yo‘q');
+        return { id, type: 'lead', typeLabel: 'Lid', title: rows[0].name, deletedAt: rows[0].deleted_at, deletedBy: rows[0].deleted_by || '',
+            restorable: !!rows[0].deleted_at, snapshot: redact('lead', { row: rows[0] }) };
     }
     const { rows } = await db.query(
         `SELECT a.*, du.name AS deleted_by_name, ru.name AS restored_by_name FROM archive_records a
          LEFT JOIN users du ON du.id=a.deleted_by_id LEFT JOIN users ru ON ru.id=a.restored_by_id WHERE a.id=$1`, [id]);
     const r = rows[0];
     if (!r) throw err(404, 'Yozuv topilmadi');
-    if (!canView(actor, r.entity_type)) throw err(403, 'Ruxsat yo‘q');
+    if (!canView(actor, r.entity_type) || !canSeeLang(actor, r.lang)) throw err(403, 'Ruxsat yo‘q');
     return { ...mapRecord(r), snapshot: redact(r.entity_type, r.snapshot) };
 }
 
@@ -363,7 +486,6 @@ async function insertRawRow(db, table, row) {
     const values = keys.map(k => {
         const v = row[k];
         if ((cols.get(k) === 'jsonb' || cols.get(k) === 'json') && v !== null && v !== undefined) return JSON.stringify(v);
-        if (cols.get(k) === 'bytea' && typeof v === 'string') return Buffer.from(v, 'base64');
         return v;
     });
     const res = await db.query(
@@ -414,28 +536,65 @@ async function restoreJsonItem(db, key, item, parentId) {
 }
 
 // db — tranzaksiya ichidagi client. restoreLead — db.js'dagi mavjud funksiya.
-async function restore(db, actor, id, { restoreLead } = {}) {
+async function restore(db, actor, id, { restoreLead, insertLead, validateStudent } = {}) {
     if (String(id).startsWith(LEAD_PREFIX)) {
         if (!canView(actor, 'lead') || !['admin', 'boshliq', 'rop'].includes(actor?.role)) throw err(403, 'Lidni tiklashga ruxsat yo‘q');
         const leadId = String(id).slice(LEAD_PREFIX.length);
+        const { rows: lr } = await db.query('SELECT id, name, phone, language, deleted_at FROM leads WHERE id=$1', [leadId]);
+        if (!lr[0]) throw err(404, 'Lid topilmadi');
+        if (!canSeeLang(actor, lr[0].language)) throw err(403, 'Lidni tiklashga ruxsat yo‘q');
+        if (!lr[0].deleted_at) throw err(409, 'Bu lid allaqachon joyida', 'ALREADY_RESTORED');
         const restored = restoreLead ? await restoreLead(leadId, actor) : null;
         if (!restored) throw err(404, 'Lid topilmadi');
+        // "Tiklanganlar" ro'yxatida iz qolishi uchun.
+        const recId = await insertRecord(db, { type: 'lead', entityId: leadId, title: lr[0].name, subtitle: lr[0].phone || '',
+            lang: lr[0].language === 'russian' ? 'russian' : 'english', snapshot: { restoredLead: true }, reason: 'Lid tiklandi',
+            deletedAt: lr[0].deleted_at, actor });
+        await db.query('UPDATE archive_records SET restored_at=NOW(), restored_by_id=$2 WHERE id=$1', [recId, String(actor?.id || '')]);
         return { type: 'lead', entityId: leadId };
     }
     const { rows } = await db.query('SELECT * FROM archive_records WHERE id=$1 FOR UPDATE', [id]);
     const r = rows[0];
     if (!r) throw err(404, 'Arxiv yozuvi topilmadi');
-    if (!canView(actor, r.entity_type)) throw err(403, 'Bu yozuvni tiklashga ruxsat yo‘q');
+    if (!canView(actor, r.entity_type) || !canSeeLang(actor, r.lang)) throw err(403, 'Bu yozuvni tiklashga ruxsat yo‘q');
     if (r.restored_at) throw err(409, 'Bu yozuv allaqachon tiklangan', 'ALREADY_RESTORED');
     if (!isRestorableType(r.entity_type)) throw err(400, 'Bu yozuv turi tiklanmaydi');
     const snap = r.snapshot || {};
-    if (r.source_table) {
-        const row = snap.row || (snap.legacyItem ? legacyToRow(r.entity_type, snap.legacyItem) : null);
-        if (!row) throw err(400, 'Nusxa bo‘sh, tiklab bo‘lmaydi');
+    const warnings = [];
+    if (r.source_key === 'legacyLead') {
+        const item = snap.legacyItem;
+        if (!item || !insertLead) throw err(400, 'Bu lidni tiklab bo‘lmaydi');
+        const exists = (await db.query('SELECT 1 FROM leads WHERE id=$1', [String(item.id)])).rows.length;
+        if (exists) throw err(409, 'Bu ID bilan lid allaqachon bor', 'ALREADY_EXISTS');
+        const { deletedAt, deletedBy, updatedAt, ...clean } = item;
+        await insertLead(db, clean, snap.lang === 'russian' ? 'russian' : 'english');
+    } else if (r.source_table) {
+        const row = { ...(snap.row || (snap.legacyItem ? legacyToRow(r.entity_type, snap.legacyItem) : null) || {}) };
+        if (!row.id) throw err(400, 'Nusxa bo‘sh, tiklab bo‘lmaydi');
+        if (r.source_table === 'students') warnings.push(...await reviewRestoredStudent(db, row, validateStudent));
         await insertRawRow(db, r.source_table, row);
-        if (r.source_table === 'hr_candidates' && Array.isArray(snap.media)) {
-            for (const m of snap.media) await insertRawRow(db, 'hr_candidate_media', m).catch(() => {});
+        if (r.source_table === 'hr_candidates') {
+            const { rows: m } = await db.query('SELECT COUNT(*)::int AS n FROM archive_media WHERE record_id=$1', [id]);
+            if (m[0].n) {
+                const cols = [...(await tableColumns(db, 'hr_candidate_media')).keys()].filter(c => c !== 'bytes');
+                const res = await db.query(
+                    `INSERT INTO hr_candidate_media (${cols.map(c => `"${c}"`).join(',')}, bytes)
+                     SELECT ${cols.map(c => `(x.r)."${c}"`).join(',')}, x.bytes
+                     FROM (SELECT jsonb_populate_record(NULL::hr_candidate_media, meta) AS r, bytes FROM archive_media WHERE record_id=$1) x
+                     ON CONFLICT (id) DO NOTHING`, [id]);
+                if (res.rowCount !== m[0].n) throw err(409, 'Nomzodning ayrim fayllari allaqachon mavjud — tiklash bekor qilindi', 'ALREADY_EXISTS');
+            }
         }
+    } else if (r.source_key === 'mobileContent') {
+        if (!snap.item) throw err(400, 'Nusxa bo‘sh, tiklab bo‘lmaydi');
+        await restoreMobileItem(db, snap.item, snap.collection);
+    } else if (r.source_key === 'upload') {
+        if (!snap.item) throw err(400, 'Nusxa bo‘sh, tiklab bo‘lmaydi');
+        // Avval yozuv "tiklangan" bo'ladi, keyin fayl ko'chiriladi: fayl ko'chmasa
+        // xato tranzaksiyani bekor qiladi va yozuv o'zgarmaydi.
+        await db.query('UPDATE archive_records SET restored_at=NOW(), restored_by_id=$2 WHERE id=$1', [id, String(actor?.id || '')]);
+        restoreUpload(snap.item);
+        return { type: r.entity_type, entityId: r.entity_id, warnings };
     } else if (r.source_key) {
         if (!snap.item) throw err(400, 'Nusxa bo‘sh, tiklab bo‘lmaydi');
         if (r.source_key === 'cashFlow' && snap.item.inflowRecordId) throw err(400, 'Bu yozuv To‘lovlar reyestridan avtomatik yaratiladi');
@@ -444,11 +603,30 @@ async function restore(db, actor, id, { restoreLead } = {}) {
         throw err(400, 'Bu yozuvni tiklash yo‘li noma’lum');
     }
     await db.query('UPDATE archive_records SET restored_at=NOW(), restored_by_id=$2 WHERE id=$1', [id, String(actor?.id || '')]);
-    return { type: r.entity_type, entityId: r.entity_id };
+    return { type: r.entity_type, entityId: r.entity_id, warnings };
+}
+
+// O'quvchi tiklanganda: ishdan ketgan (yoki o'chirilgan) ustoz/menejerga
+// qaytib biriktirilmaydi — u maydon bo'shatiladi va ogohlantirish qaytadi.
+// Qolgan qoidalarni odatiy saqlash tekshiruvi (validateStudent) tekshiradi.
+async function reviewRestoredStudent(db, row, validateStudent) {
+    const warnings = [];
+    const extra = row.extra_data && typeof row.extra_data === 'object' ? { ...row.extra_data } : {};
+    const ids = [row.teacher_id, row.assistant_teacher_id, extra.managerId].filter(Boolean).map(String);
+    const { rows } = ids.length ? await db.query('SELECT id, name, status, offboarded_at FROM hr_employees WHERE id = ANY($1)', [ids]) : { rows: [] };
+    const gone = new Map(rows.filter(e => e.offboarded_at || String(e.status || '').toLowerCase() === 'inactive').map(e => [String(e.id), e.name]));
+    if (row.teacher_id && gone.has(String(row.teacher_id))) { warnings.push(`Ustoz ${gone.get(String(row.teacher_id))} ishda emas — ustozni qayta tanlang`); row.teacher_id = null; }
+    if (row.assistant_teacher_id && gone.has(String(row.assistant_teacher_id))) { warnings.push(`Yordamchi ustoz ${gone.get(String(row.assistant_teacher_id))} ishda emas — qayta tanlang`); row.assistant_teacher_id = null; }
+    if (extra.managerId && gone.has(String(extra.managerId))) { warnings.push(`Menejer ${gone.get(String(extra.managerId))} ishda emas — o‘quvchiga menejer biriktiring`); extra.managerId = ''; }
+    row.extra_data = extra;
+    if (validateStudent) {
+        await validateStudent(db, { teacherId: row.teacher_id, assistantTeacherId: row.assistant_teacher_id, subject: row.subject || 'english' });
+    }
+    return warnings;
 }
 
 module.exports = {
     init, SCHEMA, TABLE_TYPES, JSON_TYPES, TYPE_LABELS,
-    insertRecord, archiveMissingRows, archiveRow, archiveCandidate, archiveJsonDiff, migrateLegacyBlob,
+    insertRecord, archiveMissingRows, archiveRow, archiveCandidate, archiveUpload, archiveMobileDiff, archiveJsonDiff, migrateLegacyBlob,
     list, get, restore, canView, legacyToRow, redact
 };

@@ -85,6 +85,7 @@
 .off-target input { margin-top: 3px; }
 .off-danger { background: #DC2626 !important; border-color: #DC2626 !important; color: #fff !important; }
 .off-danger:disabled { opacity: .5; cursor: not-allowed; }
+.off-select { display: grid; gap: 4px; font-size: 12.5px; color: var(--text); max-width: 420px; }
 .off-done ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; color: var(--text); }
 
 @media (max-width: 900px) {

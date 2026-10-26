@@ -89,6 +89,8 @@ test('ROP home: open escalations (unacknowledged only) and team plan', () => {
         STORAGE_KEYS: { leads: 'leads' },
         getSalesManagers: () => [{ id: 'a', name: 'Aziza' }, { id: 'b', name: 'Bobur' }],
         getActiveSalesManagers: () => [{ id: 'a', name: 'Aziza' }, { id: 'b', name: 'Bobur' }],
+        getReportSalesManagers: () => [{ id: 'a', name: 'Aziza' }, { id: 'b', name: 'Bobur' }],
+        staffStatus: require('../js/staffStatus'),
         getManagerSalesForPeriod: id => ({ a: 72_800_000, b: 55_250_000 })[id],
         getManagerPeriodTarget: () => 74_534_850,
         pctToPlanColor: () => '#000',
