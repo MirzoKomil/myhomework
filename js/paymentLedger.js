@@ -25,7 +25,7 @@
         const v = String(value || '').toLowerCase();
         return /uzum/.test(v) ? 'uzum' : /paylater/.test(v) ? 'paylater' : /payme/.test(v) ? 'payme' : /click/.test(v) ? 'click' : /karta|card/.test(v) ? 'card' : /naqd|cash/.test(v) ? 'cash' : /bank|hisob/.test(v) ? 'bank' : 'unknown';
     }
-    function receipt(value) { return /^\/uploads\/[a-zA-Z0-9_-]+\.(?:png|jpe?g|webp|pdf)$/i.test(String(value || '')) ? value : ''; }
+    function receipt(value) { return /^\/uploads\/[a-zA-Z0-9_-]+\.(?:png|jpe?g|webp|pdf)$/i.test(String(value || '')) || /^\/api\/finance\/evidence\/[0-9a-f-]{36}$/.test(String(value || '')) ? value : ''; }
     function leadEvents(lead) {
         const ps = lead.paymentSurvey || {}, pc = lead.paymentClosedSurvey || {}, events = [], issues = [];
         const add = (kind, value, when, meta) => {

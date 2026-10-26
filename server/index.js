@@ -19,6 +19,7 @@ const hrRoutes = require('./routes/hr');
 const trialLessonsRoutes = require('./routes/trialLessons');
 const payrollRoutes = require('./routes/payroll');
 const inflowRoutes = require('./routes/inflow');
+const financeRoutes = require('./routes/finance');
 const domworkGroups = require('./services/domworkGroups');
 const domworkGroupsRouter = require('./routes/domworkGroups');
 const { createRuntime: createDomworkBot } = require('./services/domworkBot/runtime');
@@ -215,6 +216,7 @@ app.use('/api/hr', hrRoutes);
 app.use('/api/trial-lessons', trialLessonsRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/inflow', inflowRoutes);
+app.use('/api/finance', financeRoutes);
 app.use('/api/academic', require('./routes/academicHub')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired, studentAuthOptional: require('./middleware/auth').studentAuthOptional }));
 app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require('./middleware/auth').authRequired));
