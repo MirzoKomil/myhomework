@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="css/domworkGroups.css?v=20261011b">
     <link rel="stylesheet" href="css/shell.css?v=20261023d">
     <link rel="stylesheet" href="css/teamApp.css?v=20261026r7">
-    <link rel="stylesheet" href="css/finance.css?v=20261026d">
     <link rel="stylesheet" href="css/archive.css?v=20261026arx1">
     <link rel="stylesheet" href="css/lessonHub.css?v=20261026f">
     <link rel="stylesheet" href="css/staffAttendance.css?v=20261026a">
@@ -902,16 +901,12 @@
                         <div class="sales-pinned">
                             <div class="sales-header-layout">
                                 <nav class="section-nav sales-header-nav" id="financeSectionNav" aria-label="Moliya Bo'limi">
-                                    <button type="button" class="section-nav-item active" data-finance-section="umumiy">Umumiy</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="tolovlar">Toʻlovlar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="kassa">Kassa</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="operatsiyalar">Operatsiyalar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="qarzlar">Qarzlar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="hisobotlar">Hisobotlar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="solishtirish">Solishtirish va audit</button>
+                                    <button type="button" class="section-nav-item active" data-finance-section="tolovlar">Toʻlovlar</button>
                                     <button type="button" class="section-nav-item" data-finance-section="maoshlar">Maoshlar</button>
                                     <button type="button" class="section-nav-item" data-finance-section="kpi">KPI</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="moliya-sozlamalar">Sozlamalar</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="cashflow">Pul oqimi</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="moliyaviy-reja">Moliyaviy reja</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="xarajatlar">Xarajatlar</button>
                                 </nav>
                                 <div class="sales-header-lang" id="financeLangFilter">
                                     <div class="leads-lang-tabs">
@@ -927,18 +922,10 @@
                         </div>
 
                         <!-- To'lovlar -->
-                        <div class="finance-panel" data-finance-panel="tolovlar" id="financePanel-tolovlar">
+                        <div class="finance-panel active" data-finance-panel="tolovlar" id="financePanel-tolovlar">
                             <div id="inflowRoot"></div>
                         </div>
 
-                        <!-- Moliya: yangi bo'limlar (js/financeUI.js) -->
-                        <div class="finance-panel active" data-finance-panel="umumiy" id="financePanel-umumiy"><div id="finRoot-umumiy" class="fin-root"></div></div>
-                        <div class="finance-panel" data-finance-panel="kassa" id="financePanel-kassa"><div id="finRoot-kassa" class="fin-root"></div></div>
-                        <div class="finance-panel" data-finance-panel="operatsiyalar" id="financePanel-operatsiyalar"><div id="finRoot-operatsiyalar" class="fin-root"></div></div>
-                        <div class="finance-panel" data-finance-panel="qarzlar" id="financePanel-qarzlar"><div id="finRoot-qarzlar" class="fin-root"></div></div>
-                        <div class="finance-panel" data-finance-panel="hisobotlar" id="financePanel-hisobotlar"><div id="finRoot-hisobotlar" class="fin-root"></div></div>
-                        <div class="finance-panel" data-finance-panel="solishtirish" id="financePanel-solishtirish"><div id="finRoot-solishtirish" class="fin-root"></div></div>
-                        <div class="finance-panel" data-finance-panel="moliya-sozlamalar" id="financePanel-moliya-sozlamalar"><div id="finRoot-moliya-sozlamalar" class="fin-root"></div></div>
                         <!-- Maoshlar / KPI: server-side payroll -->
                         <div class="finance-panel" data-finance-panel="maoshlar" id="financePanel-maoshlar"><div id="payrollRoot"></div></div>
                         <div class="finance-panel" data-finance-panel="kpi" id="financePanel-kpi"><div id="payrollKpiRoot"></div></div>
@@ -1047,7 +1034,23 @@
                             </div>
                         </div>
 
+                        <!-- Moliyaviy reja -->
+                        <div class="finance-panel" data-finance-panel="moliyaviy-reja" id="financePanel-moliyaviy-reja">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">📋</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Moliyaviy reja</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu boʻlim tez orada toʻldiriladi</div>
+                            </div>
+                        </div>
 
+                        <!-- Xarajatlar -->
+                        <div class="finance-panel" data-finance-panel="xarajatlar" id="financePanel-xarajatlar">
+                            <div class="mac-empty" style="padding:80px 0">
+                                <div style="font-size:40px;margin-bottom:12px">💸</div>
+                                <div style="font-size:16px;font-weight:600;margin-bottom:6px">Xarajatlar</div>
+                                <div style="font-size:13px;color:var(--text-muted)">Bu boʻlim tez orada toʻldiriladi</div>
+                            </div>
+                        </div>
                     </section>
 
                     <section id="tab-hr" class="tab-content">
@@ -1559,8 +1562,6 @@
     <script src="js/lessonDefaults.js?v=20261001"></script>
     <script src="js/paymentLedger.js?v=20261005l"></script>
     <script src="js/inflowUI.js?v=20261026r7"></script>
-    <script src="js/financeEngine.js?v=20261026m"></script>
-    <script src="js/financeUI.js?v=20261026m"></script>
     <script src="js/payrollEngine.js?v=20261008a"></script>
     <script src="js/payrollUI.js?v=20261026r7"></script>
     <script src="js/teacherAttendanceCalendar.js?v=20261008a"></script>

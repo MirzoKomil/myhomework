@@ -19,7 +19,6 @@ const payroll = require('./services/payroll');
 const inflow = require('./services/inflow');
 const paymentHistory = require('./services/paymentHistory');
 const paymentCash = require('./services/paymentCash');
-const finance = require('./services/finance');
 const teacherDuties = require('./services/teacherDuties');
 const archive = require('./services/archive');
 const staffLifecycle = require('./services/staffLifecycle');
@@ -85,26 +84,19 @@ async function q1(text, params = []) {
     return rows[0] || null;
 }
 
-async function tx(fn, actor = null) {
+async function tx(fn) {
     const client = await pool.connect();
-    const untrack = require('./services/finCtx').track(client);
     try {
         await client.query('BEGIN');
-        // Moliya jurnali uchun: o'zgarish qaysi ilova tranzaksiyasidan va kim tomonidan (o'quvchi holati jurnali shu belgilarni yozadi).
-        // search_path qat'iy: boshqa sxemadagi bir xil nomli (soya) jadval yozuvlarni chetga bura olmaydi.
-        await client.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public, pg_temp', true), set_config('app.user_id', $2, true)", [require('./services/finCtx').token('crm'), String(actor?.id || '')]);
         // Natija qaytariladi: Yuzma-yuz (battle) funksiyalari `return tx(...)`
         // qiladi — ilgari undefined qaytib, haqiqiy juftlash umuman ishlamas edi.
         const result = await fn(client);
-        await require('./services/finCtx').signTx(client);
         await client.query('COMMIT');
-        require('./services/finCtx').commitHead(client);
         return result;
     } catch (e) {
         await client.query('ROLLBACK');
         throw e;
     } finally {
-        untrack();
         client.release();
     }
 }
@@ -384,7 +376,6 @@ async function initSchema() {
 
     await inflow.initSchema(pool);
     await paymentCash.initSchema(pool);
-    await finance.initSchema(pool);
 
     // Boshlang'ich mobile_content qatori
     await pool.query(
@@ -1652,7 +1643,7 @@ async function upsertLead(lead, language, actor = {}) {
         platformAccess = await provisionLeadStudent(client, saved);
         await inflow.syncLead(client, saved, platformAccess, actor, false, options.priorLead);
         await require('./services/domworkBot/events').afterLead(client,options.priorLead,saved);
-    }, actor);
+    });
     return { lead: saved, platformAccess };
 }
 
@@ -1712,7 +1703,7 @@ async function restoreLead(id, actor = {}) {
 async function saveHrEmployeesData(client, employees, actor = {}, removedIds = [], changedStatusIds = null) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
     await staffLifecycle.assertDeletable(client, employees, removedIds);
-    const oldEmployees = (await client.query('SELECT id,role,status,start_date,join_date,kpi_template_id,dual_role,login,department,card_number,passport_series,pinfl,address,birth_date,end_date,offboarded_at,offboarded_by,offboard_reason FROM hr_employees')).rows;
+    const oldEmployees = (await client.query('SELECT id,role,status,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date,end_date,offboarded_at,offboarded_by,offboard_reason FROM hr_employees')).rows;
     // Toʻliq HR huquqi boʻlmagan rol (masalan ROP) maxfiy maydonlarni koʻrmaydi —
     // saqlaganda ular boʻsh qiymat bilan ustidan yozilib ketmasin.
     employees = require('./services/stateScope').preserveHrPrivateFields(employees, oldEmployees, actor);
@@ -2533,8 +2524,8 @@ async function setDemoStudentAvatarUrl(studentId, avatarUrl) {
     try {
         extra = typeof row.extra_data === 'object' ? row.extra_data : JSON.parse(row.extra_data || '{}');
     } catch { extra = {}; }
-    // Faqat shu kalit atomik birlashtiriladi: eski nusxa bilan boshqa maydonlar (muzlatish, holat, qarz) ustidan yozilmaydi.
-    await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ avatarUrl: String(avatarUrl || '').slice(0, 500) }), realId]);
+    extra = { ...extra, avatarUrl: String(avatarUrl || '').slice(0, 500) };
+    await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), realId]);
 }
 
 function isCanonicalStudentSerial(value) {
@@ -2561,7 +2552,11 @@ async function getStudentPublicId(student) {
 
     const publicId = linkedSerial || String(student?.id || '').slice(-6);
     if (publicId && student?.id && student.serialCode !== publicId) {
-        await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ serialCode: publicId }), student.id]);
+        const extra = { ...student, serialCode: publicId };
+        delete extra.id; delete extra.name; delete extra.phone; delete extra.group;
+        delete extra.subject; delete extra.teacherId; delete extra.assistantTeacherId;
+        delete extra.lessonDayOfWeek; delete extra.lessonTime; delete extra.lessonDuration;
+        await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), student.id]);
     }
     return publicId;
 }
@@ -2607,7 +2602,8 @@ async function getOrCreateStudentContract(studentId) {
         };
     }
     const contract = { number: await getNextContractNumber(), date: new Date().toISOString().slice(0, 10) };
-    await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ contract }), realId]);
+    extra = { ...extra, contract };
+    await q1('UPDATE students SET extra_data = $1 WHERE id = $2', [JSON.stringify(extra), realId]);
     return {
         number: contract.number, date: contract.date, studentName: row.name,
         phone: student.phone, lessonDuration: student.lessonDuration,
@@ -3999,7 +3995,7 @@ async function patchState(partial, actor = {}) {
         if (partial.targetMonitoringPlan !== undefined) await saveJsonData(client, 'targetMonitoringPlan', partial.targetMonitoringPlan);
         if (partial.targetDailyAdSpend !== undefined) await saveJsonData(client, 'targetDailyAdSpend', partial.targetDailyAdSpend);
         if (partial.archive !== undefined) await saveJsonData(client, 'archive', partial.archive);
-    }, actor);
+    });
 }
 
 // Ustozning bitta o'quvchi/bitta jonli dars uchun davomatini saqlash.

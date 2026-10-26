@@ -11,7 +11,7 @@ async function initSchema(db) {
 }
 async function facts(db) {
     const rows = (await db.query(`SELECT id,lead_id,student_id,language,amount,method,
-        TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date,snapshot FROM payment_records WHERE NOT EXISTS (SELECT 1 FROM payment_record_voids pv WHERE pv.record_id=payment_records.id) ORDER BY id`)).rows;
+        TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date,snapshot FROM payment_records ORDER BY id`)).rows;
     const records = rows.map(r => ({ ...r.snapshot, id: r.id, leadId: r.lead_id, studentId: r.student_id, language: r.language,
         amount: Number(r.amount), method: r.method, paidDate: r.paid_date }));
     const decisions = (await db.query('SELECT * FROM payment_cash_decisions ORDER BY cash_id')).rows.map(r => ({
