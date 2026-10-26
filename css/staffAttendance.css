@@ -1,0 +1,219 @@
+/* Xodimlar davomati (Face ID + lokatsiya) — js/staffAttendanceUI.js */
+
+/* Header tugmasi */
+.satt-header-btn {
+    display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px 0 11px;
+    border-radius: 999px; border: 1.5px solid var(--purple); background: var(--surface); color: var(--purple);
+    font-family: inherit; font-weight: 700; font-size: 13px; line-height: 1; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.satt-header-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.satt-header-btn[data-state="todo"] { background: var(--purple); color: #fff; box-shadow: 0 6px 18px rgba(123, 97, 255, .28); }
+.satt-header-btn[data-state="in"] { border-color: var(--success); color: #047857; }
+.satt-header-btn[data-state="done"] { border-color: var(--border); color: var(--text-muted); }
+.satt-header-btn:focus-visible { outline: 3px solid var(--purple-light); outline-offset: 2px; }
+[data-theme="dark"] .satt-header-btn[data-state="in"] { color: var(--success); }
+@media (max-width: 600px) { .satt-header-btn { height: 34px; padding: 0 10px 0 8px; font-size: 12px; } }
+
+/* Oyna */
+.satt-overlay {
+    position: fixed; inset: 0; z-index: 1300; display: flex; align-items: center; justify-content: center;
+    background: rgba(26, 29, 46, .55); backdrop-filter: blur(4px); padding: 16px;
+}
+.satt-sheet {
+    width: min(440px, 100%); max-height: calc(100dvh - 32px); overflow: auto; background: var(--surface); color: var(--text);
+    border-radius: var(--radius); box-shadow: var(--shadow-card);
+}
+.satt-sheet.satt-wide { width: min(760px, 100%); }
+.satt-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 8px; }
+.satt-sheet-head h3 { margin: 0; font-size: 17px; }
+.satt-close { border: 0; background: transparent; color: var(--text-muted); font-size: 26px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 8px; }
+.satt-close:focus-visible { outline: 2px solid var(--purple); }
+.satt-sheet-body { padding: 8px 20px 20px; }
+@media (max-width: 600px) {
+    .satt-overlay { align-items: flex-end; padding: 0; }
+    .satt-sheet, .satt-sheet.satt-wide { width: 100%; border-radius: 22px 22px 0 0; max-height: 94dvh; }
+}
+
+/* Bugungi holat */
+.satt-today { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; margin: 4px 0 10px; }
+.satt-today > div { background: var(--bg); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.satt-today b { font-size: 16px; }
+.satt-today-status { margin-bottom: 14px; }
+.satt-num { font-variant-numeric: tabular-nums; }
+.satt-muted { color: var(--text-muted); }
+.satt-small { font-size: 12px; }
+.satt-note { background: var(--purple-light); color: var(--text); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; margin: 0 0 14px; }
+.satt-steps { margin: 0 0 16px; padding-left: 20px; font-size: 13.5px; line-height: 1.7; color: var(--text); }
+.satt-cta {
+    width: 100%; height: 50px; border: 0; border-radius: 14px; background: var(--purple); color: #fff;
+    font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer;
+}
+.satt-cta:hover { background: var(--purple-dark); }
+.satt-cta:focus-visible { outline: 3px solid var(--purple-light); outline-offset: 2px; }
+.satt-cta-quiet { background: var(--bg); color: var(--text); }
+.satt-cta-quiet:hover { background: var(--border); }
+.satt-sheet-body > .satt-small { text-align: center; margin: 10px 0 0; }
+
+/* Kamera sahnasi — pasport rasmi ramkasi (3x4) */
+.satt-stage {
+    position: relative; width: min(300px, 78vw); aspect-ratio: 3 / 4; margin: 4px auto 0; border-radius: 18px; overflow: hidden;
+    background: #15131f; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+.satt-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.satt-guide { position: absolute; inset: 0; width: 100%; height: 100%; }
+.satt-oval { stroke: rgba(255, 255, 255, .9); stroke-dasharray: 6 7; transition: stroke .2s; }
+.satt-count {
+    position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: #fff;
+    font-family: inherit; font-weight: 800; font-size: 46px; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0, 0, 0, .5);
+}
+.satt-count:not(:empty) ~ .satt-turn { opacity: 1; }
+.satt-stage:has(.satt-count:not(:empty)) .satt-oval { stroke: #A996FF; stroke-dasharray: none; }
+.satt-tick { animation: satt-tick 1s ease-out; }
+@keyframes satt-tick { from { transform: scale(1.35); opacity: .3; } 25% { transform: scale(1); opacity: 1; } }
+.satt-turn { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: #fff; font-size: 30px; opacity: .85; pointer-events: none; }
+.satt-turn[hidden] { display: none; }
+.satt-turn span { animation: satt-nudge 1.2s ease-in-out infinite; }
+.satt-turn span + span { animation-direction: reverse; }
+@keyframes satt-nudge { 50% { transform: translateX(-6px); } }
+.satt-flash::after { content: ''; position: absolute; inset: 0; background: #fff; animation: satt-flash .25s ease-out forwards; }
+@keyframes satt-flash { from { opacity: .8; } to { opacity: 0; } }
+.satt-prompt { text-align: center; font-weight: 700; font-size: 15px; margin: 14px 0 4px; min-height: 22px; }
+@media (prefers-reduced-motion: reduce) { .satt-tick, .satt-turn span, .satt-flash::after { animation: none; } }
+
+.satt-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 36px 8px; color: var(--text-muted); text-align: center; font-size: 14px; }
+.satt-spinner { width: 20px; height: 20px; flex: none; border-radius: 50%; border: 2.5px solid var(--purple-light); border-top-color: var(--purple); animation: satt-spin .8s linear infinite; }
+@keyframes satt-spin { to { transform: rotate(360deg); } }
+
+.satt-result { text-align: center; padding: 8px 0 0; }
+.satt-result h4 { margin: 10px 0 4px; font-size: 18px; }
+.satt-result p { margin: 0 0 14px; line-height: 1.5; }
+.satt-big-check { width: 64px; height: 64px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; font-family: inherit; font-weight: 800; font-size: 30px; }
+.satt-result-ok .satt-big-check { background: var(--success-bg); color: #047857; }
+.satt-result-bad .satt-big-check { background: var(--danger-bg); color: #B91C1C; }
+.satt-clock { font-size: 34px; font-weight: 800; margin: 0 0 10px !important; letter-spacing: -.5px; }
+
+/* Holat belgilari: rangli nuqta + matn */
+.satt-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.satt-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.satt-ok { color: #059669; } .satt-warn { color: #B45309; } .satt-bad { color: #DC2626; } .satt-info { color: #4F6BED; } .satt-idle, .satt-off { color: var(--text-muted); }
+[data-theme="dark"] .satt-ok { color: var(--success); } [data-theme="dark"] .satt-warn { color: var(--warning); }
+[data-theme="dark"] .satt-bad { color: var(--danger); } [data-theme="dark"] .satt-info { color: var(--blue); }
+.satt-ok-text { color: #059669; font-weight: 600; } .satt-bad-text { color: #DC2626; font-weight: 600; } .satt-warn-text { color: #B45309; font-size: 12.5px; font-weight: 600; }
+[data-theme="dark"] .satt-ok-text { color: var(--success); } [data-theme="dark"] .satt-bad-text { color: var(--danger); } [data-theme="dark"] .satt-warn-text { color: var(--warning); }
+
+/* HR → Davomat */
+.satt-hr { padding: 4px 20px 24px; }
+.satt-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); margin-bottom: 16px; scrollbar-width: none; }
+.satt-tabs button {
+    border: 0; background: none; padding: 10px 12px; font-family: inherit; font-weight: 600; font-size: 13.5px; color: var(--text-muted); cursor: pointer; white-space: nowrap;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.satt-tabs button.active { color: var(--purple); border-bottom-color: var(--purple); }
+.satt-tabs button:focus-visible { outline: 2px solid var(--purple); outline-offset: -2px; border-radius: 6px; }
+.satt-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; }
+.satt-toolbar label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.satt-toolbar p { margin: 0; flex: 1 1 320px; }
+.satt-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.satt-stat { background: var(--surface); border-radius: 14px; padding: 10px 16px; display: flex; align-items: baseline; gap: 8px; box-shadow: var(--shadow); }
+.satt-stat b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.satt-stat span { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.satt-table-wrap { overflow-x: auto; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); }
+.satt-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.satt-table th { text-align: left; font-size: 12px; color: var(--text-muted); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.satt-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.satt-table tr:last-child td { border-bottom: 0; }
+.satt-actions { text-align: right; white-space: nowrap; }
+.satt-actions button + button { margin-left: 6px; }
+.satt-empty { background: var(--surface); border-radius: 16px; padding: 32px 24px; text-align: center; box-shadow: var(--shadow); }
+.satt-empty h4 { margin: 0 0 6px; } .satt-empty p { margin: 0 auto 14px; color: var(--text-muted); max-width: 52ch; line-height: 1.5; }
+.satt-error { background: var(--danger-bg); color: #991B1B; border-radius: 12px; padding: 14px 16px; }
+
+/* Batafsil */
+.satt-detail-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 14px; }
+.satt-attempts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.satt-attempt { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; background: var(--bg); border-radius: 14px; padding: 10px; font-size: 13px; line-height: 1.55; }
+.satt-attempt img, .satt-nophoto { width: 96px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; background: var(--border); }
+.satt-nophoto { display: grid; place-items: center; text-align: center; font-size: 11px; color: var(--text-muted); padding: 6px; }
+.satt-attempt-bad { box-shadow: inset 3px 0 0 var(--danger); }
+.satt-attempt a { color: var(--purple); font-weight: 600; }
+.satt-override { border-top: 1px solid var(--border); padding-top: 14px; }
+.satt-override h4 { margin: 0 0 10px; font-size: 14px; }
+.satt-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.satt-row > input { flex: 1 1 180px; }
+.satt-end { justify-content: flex-end; margin-top: 12px; }
+.satt-form-msg { min-height: 18px; font-size: 13px; color: #B91C1C; margin: 8px 0 0; }
+
+/* Oylik jadval */
+.satt-legend { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--text-muted); align-items: center; }
+.satt-legend i { font-style: normal; font-weight: 800; margin-right: 2px; }
+.satt-month { border-collapse: collapse; font-size: 12.5px; }
+.satt-month th, .satt-month td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; }
+.satt-month thead th { font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
+.satt-month .satt-sun { color: #DC2626; }
+.satt-month .satt-sticky { position: sticky; left: 0; background: var(--surface); text-align: left; padding: 8px 12px; z-index: 1; font-weight: 600; min-width: 150px; }
+.satt-cell { font-weight: 800; min-width: 26px; }
+.satt-cell.satt-off { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--bg) 4px 6px); }
+
+/* Ustozlar darsi */
+.satt-lessons { display: grid; gap: 12px; }
+.satt-teacher { background: var(--surface); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); }
+.satt-teacher header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 8px; font-size: 13px; }
+.satt-teacher h4 { margin: 0; font-size: 15px; }
+.satt-source { font-size: 12px; font-weight: 600; color: var(--purple); background: var(--purple-light); border-radius: 999px; padding: 2px 10px; }
+.satt-blocks { list-style: none; margin: 0; padding: 0; }
+.satt-blocks > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 9px 0; border-top: 1px solid var(--border); }
+.satt-block-time { font-weight: 800; min-width: 96px; }
+.satt-students { flex-basis: 100%; padding-left: 110px; }
+.satt-blocks details { flex-basis: 100%; padding-left: 110px; font-size: 13px; }
+.satt-blocks details ul { margin: 6px 0 0; padding-left: 16px; line-height: 1.9; }
+@media (max-width: 600px) { .satt-students, .satt-blocks details { padding-left: 0; } }
+
+/* Xodimlar va grafik */
+.satt-teachers-fold { margin-top: 14px; }
+.satt-teachers-fold summary { cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--text-muted); padding: 8px 2px; }
+.satt-switch { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; margin: 4px 0 12px; }
+.satt-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.satt-days { display: grid; gap: 6px; }
+.satt-day { display: grid; grid-template-columns: 64px 1fr auto 1fr; gap: 8px; align-items: center; }
+.satt-day label { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13.5px; }
+.satt-day input:disabled { opacity: .4; }
+.satt-review img { display: block; width: 180px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 14px; margin: 0 auto 12px; background: var(--bg); }
+.satt-review p { line-height: 1.5; font-size: 13.5px; }
+
+/* Sozlamalar */
+.satt-settings { max-width: 760px; }
+.satt-settings fieldset { border: 0; background: var(--surface); border-radius: 16px; padding: 16px 18px; margin: 0 0 14px; box-shadow: var(--shadow); }
+.satt-settings legend { font-weight: 700; font-size: 14px; padding: 0; float: left; width: 100%; margin-bottom: 10px; }
+.satt-settings label:not(.satt-switch) { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; clear: both; }
+.satt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0 14px; clear: both; }
+.satt-settings a { color: var(--purple); font-weight: 600; font-size: 13px; }
+
+/* Ikkinchi darajali tugma (umumiy CSS'da faqat bo'lim ichida aniqlangan) */
+:is(.satt-hr, .satt-sheet) .btn-secondary-sm {
+    padding: 7px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--purple);
+    font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+:is(.satt-hr, .satt-sheet) .btn-secondary-sm:hover { border-color: var(--purple); }
+:is(.satt-hr, .satt-sheet) :is(.btn-secondary-sm, .btn-primary-sm, .btn-danger-sm):focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+/* Telefon: jadval qatorlari kartochkaga aylanadi */
+@media (max-width: 600px) {
+    .satt-hr { padding: 4px 12px 20px; }
+    .satt-stats { gap: 6px; }
+    .satt-stat { padding: 8px 12px; border-radius: 12px; }
+    .satt-stat b { font-size: 18px; }
+    .satt-table thead { display: none; }
+    .satt-table, .satt-table tbody, .satt-table tr, .satt-table td { display: block; }
+    .satt-table tr { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .satt-table tr:last-child { border-bottom: 0; }
+    .satt-table td { border: 0; padding: 3px 0; }
+    .satt-table td[data-label] { display: flex; justify-content: space-between; gap: 12px; text-align: right; }
+    .satt-table td[data-label]::before { content: attr(data-label); color: var(--text-muted); font-size: 12.5px; text-align: left; }
+    .satt-table td.satt-name { padding-bottom: 6px; }
+    .satt-actions { text-align: left; padding-top: 8px !important; white-space: normal; }
+    .satt-actions button { margin: 4px 6px 0 0 !important; }
+}
+@media (max-width: 400px) {
+    .satt-header-btn:is([data-state="in"], [data-state="done"]) span { display: none; }
+    .satt-header-btn:is([data-state="in"], [data-state="done"]) { padding: 0 8px; }
+}

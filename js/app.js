@@ -138,6 +138,8 @@ function initUserUI(currentUser) {
     document.getElementById('communicationToggle')?.addEventListener('click', openCommunicationHub);
 
     applyRoleBasedAccess(currentUser);
+    // Xodimlar davomati: grafik yoqilgan xodimga header'da "Keldim" tugmasi chiqadi.
+    window.staffAttendanceUI?.init(currentUser);
 }
 
 // 30-vazifa: Bosh sahifadagi xush kelibsiz banneri 3 ta rangli slayddan
@@ -13562,6 +13564,7 @@ function switchHrSection(section) {
     if (section === 'org-struktura') renderOrgStruktura();
     if (section === 'yoriqnomalar') renderGuides();
     if (section === 'vakansiya') renderHrVacancy();
+    if (section === 'davomat') window.staffAttendanceUI?.renderHr();
     persistCurrentTab();
 }
 
