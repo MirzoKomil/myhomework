@@ -35,7 +35,7 @@ test('real PostgreSQL inflow integration', { skip: !url }, async t => {
         INSERT INTO user_sales_manager_links VALUES('manager','m'),('other','m2'); INSERT INTO teachers VALUES('t','Teacher','mwf',30);`);
         await service.initSchema(pool); await cash.initSchema(pool); await payroll.initSchema(pool);
         const reset = async () => {
-            await pool.query('TRUNCATE payment_cash_decisions,payment_record_voids,payment_records,payment_audit,payment_migration_issues,payment_migrations,leads,students,payments,salary_adjustment_applications,salary_adjustments,salary_transactions,salary_audit,salary_plan_confirmations');
+            await pool.query('TRUNCATE payment_cash_decisions,payment_records,payment_audit,payment_migration_issues,payment_migrations,leads,students,payments,salary_adjustment_applications,salary_adjustments,salary_transactions,salary_audit,salary_plan_confirmations');
             await pool.query("DELETE FROM json_data WHERE key='cashFlow'");
             await pool.query(`INSERT INTO leads(id,name,phone,manager_id,status,language,extra_data) VALUES('l','Student','+998901234567','m','tolov-jarayonida','english',$1)`, [JSON.stringify({ paymentSurvey: lead.paymentSurvey })]);
             await pool.query(`INSERT INTO students VALUES('s','Student','+998901234567','english','G','t',NULL,30,$1)`, [JSON.stringify({ managerId: 'm', leadRef: { id: 'l', lang: 'english' }, paidAmount: 600000, debtAmount: 1400000, paymentCount: 1, frozen: true, status: 'paused', passwordHash: 'never-return' })]);
@@ -157,7 +157,7 @@ test('real PostgreSQL inflow integration', { skip: !url }, async t => {
             await assert.rejects(service.receive(pool, manager, receipt('missing-proof', { receiptUrl: '/uploads/not-found.pdf' })), { status: 400 });
             const s = service.student((await pool.query("SELECT * FROM students WHERE id='s'")).rows[0]);
             s.paidAmount = 2000000; s.debtAmount = 0;
-            await pool.query('TRUNCATE payment_cash_decisions,payment_record_voids,payment_records,payment_audit');
+            await pool.query('TRUNCATE payment_cash_decisions,payment_records,payment_audit');
             const pa = { student: s, credentialsCreated: true };
             await service.transaction(pool, db => service.syncLead(db, { ...lead, paymentSurvey: { paymentType: 'full', totalAmount: 2000000 } }, pa, admin));
             assert.equal(pa.student.paidAmount, 0); assert.equal(pa.student.debtAmount, 2000000);

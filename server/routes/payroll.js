@@ -8,13 +8,7 @@ router.use(authRequired);
 router.use((_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
 const handle = fn => async (req, res) => {
     try { res.json(await fn(req)); }
-    catch (e) {
-        console.error('[payroll]', e.message);
-        // Moliya bo'limi yopgan davrga maosh yozilmaydi (bazadagi trigger).
-        const closed = /FIN_PERIOD_CLOSED:\s*(.*)$/.exec(e.message || '');
-        if (closed) return res.status(409).json({ error: closed[1] + '. Moliya bo‘limi bu oyni yopgan' });
-        res.status(e.status || (e.code === '40001' ? 409 : 500)).json({ error: e.status ? e.message : 'Maosh hisobini bajarib bo‘lmadi. Qayta urinib ko‘ring' });
-    }
+    catch (e) { console.error('[payroll]', e.message); res.status(e.status || (e.code === '40001' ? 409 : 500)).json({ error: e.status ? e.message : 'Maosh hisobini bajarib bo‘lmadi. Qayta urinib ko‘ring' }); }
 };
 // Har bir xodim faqat o'z maoshini ko'radi (rol cheklovi yo'q, lekin ma'lumot faqat o'ziniki).
 router.get('/me', handle(req => service.mySalary(pool, req.user)));
