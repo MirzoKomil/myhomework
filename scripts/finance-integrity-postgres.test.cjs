@@ -449,16 +449,19 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             assert.equal((await pool.query("SELECT amount FROM salary_transactions WHERE id='oct1'")).rows[0].amount, '2100000');
             plainSql(`CREATE TABLE side_log(x TEXT); CREATE FUNCTION bump() RETURNS trigger AS $$ BEGIN UPDATE salary_transactions SET amount=amount*5 WHERE id='oct2'; RETURN NEW; END $$ LANGUAGE plpgsql;
                 CREATE TRIGGER zz_bump AFTER INSERT ON side_log FOR EACH ROW EXECUTE FUNCTION bump();`);
-            await assert.rejects(appTx('payroll', async db => { await db.query("INSERT INTO side_log VALUES('x')"); await db.query("UPDATE salary_transactions SET status='paid',paid_at=NOW() WHERE id=$1", ['oct1']); }), /FIN_TAMPER/);
-            assert.equal((await pool.query("SELECT amount FROM salary_transactions WHERE id='oct2'")).rows[0].amount, '2000000');
-            const v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.match(v.reason, /kutilmagan trigger/);
+            // Maosh bo'limi ishi to'xtatilmaydi, lekin tranzaksiya imzolanmaydi va qotiriladigan ogohlantirish chiqadi.
+            await appTx('payroll', async db => { await db.query("INSERT INTO side_log VALUES('x')"); await db.query("UPDATE salary_transactions SET status='paid',paid_at=NOW() WHERE id=$1", ['oct1']); });
+            const v = await finance.verifySeals(pool); assert.equal(v.ok, false);
+            assert.match(require('../server/services/finCtx').readAlarm().reason, /trigger|o‘zgartirmagan/);
+            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r13-fin-0000000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 1000, date: '2026-10-20', counterparty: 'x' }), /FIN_TAMPER/, 'moliya amali qat’iy');
         });
         await t.test('round 13: a hidden trigger marking a different student inactive during a CRM save is refused', async () => {
             await fresh(pool);
             plainSql(`INSERT INTO students VALUES('s2','Vali','+998907770000','russian','g',NULL,30,'{"debtAmount":0}');
                 CREATE TABLE side_log(x TEXT); CREATE FUNCTION drop1() RETURNS trigger AS $$ BEGIN UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'; RETURN NEW; END $$ LANGUAGE plpgsql;
                 CREATE TRIGGER zz_drop AFTER INSERT ON side_log FOR EACH ROW EXECUTE FUNCTION drop1();`);
-            await assert.rejects(appTx('crm', async db => { await db.query("INSERT INTO side_log VALUES('x')"); await db.query("UPDATE students SET extra_data=extra_data || '{\"frozen\":true}'::jsonb WHERE id=$1", ['s2']); }), /FIN_TAMPER/);
+            await appTx('crm', async db => { await db.query("INSERT INTO side_log VALUES('x')"); await db.query("UPDATE students SET extra_data=extra_data || '{\"frozen\":true}'::jsonb WHERE id=$1", ['s2']); });
+            assert.equal((await finance.verifySeals(pool)).ok, false); assert.ok(require('../server/services/finCtx').readAlarm(), 'ogohlantirish qotirildi');
         });
         await t.test('round 13: a changed column default is caught by the signed fingerprint', async () => {
             await fresh(pool);
@@ -506,7 +509,8 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             for (const sql of cases) {
                 await fresh(pool);
                 plainSql(sql);
-                await assert.rejects(appTx('crm', async db => { await db.query("UPDATE students SET extra_data=extra_data || $2::jsonb WHERE id=$1", ['s1', JSON.stringify({ debtAmount: 1500000 })]); }), /FIN_TAMPER/);
+                await appTx('crm', async db => { await db.query("UPDATE students SET extra_data=extra_data || $2::jsonb WHERE id=$1", ['s1', JSON.stringify({ debtAmount: 1500000 })]); });
+                assert.ok(require('../server/services/finCtx').readAlarm(), 'CRM amali bajarildi, ogohlantirish qotirildi');
                 await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r14-' + Math.random().toString(36).slice(2, 12) + '-k', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 1000, date: '2026-10-20', counterparty: 'x' }), /FIN_TAMPER/);
             }
         });

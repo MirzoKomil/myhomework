@@ -288,10 +288,23 @@ async function signTx(db) {
     if (!ready) return;
     await db.query('SET CONSTRAINTS ALL IMMEDIATE');
     const xid = (await db.query('SELECT pg_current_xact_id_if_assigned()::text AS x')).rows[0].x;
-    const st = db.__finState, wrote = !!xid || (st && (st.inserts.size || st.changes.size || st.deletes.size));
-    if (wrote && structureCheck && !db.__finSkipIntents) await structureCheck(db);
+    const st = db.__finState, wrote = !!(st && (st.inserts.size || st.changes.size || st.deletes.size));
+    // Moliya bo'limining o'z amali (fin:) — buzilish aniqlansa bekor qilinadi. CRM, tushum va maosh amallari esa
+    // to'xtatilmaydi (kundalik ish to'xtab qolmasin): yozuv imzolanmaydi, qotiriladigan ogohlantirish ko'tariladi —
+    // moliya bo'limida darhol ko'rinadi va oy yopish bloklanadi.
+    const ctx = (await db.query("SELECT current_setting('fin.ctx', true) AS c")).rows[0].c || '';
+    const strict = ctx.startsWith('fin:');
+    try {
+        if (wrote && structureCheck && !db.__finSkipIntents) await structureCheck(db);
+        if (!xid) return;
+        await verifyIntents(db, xid);
+    } catch (e) {
+        if (strict || !/FIN_TAMPER/.test(e.message || '')) throw e;
+        console.error('[moliya] ' + e.message);
+        raiseAlarm({ table: 'fin_tx_signatures', rowId: xid || '', reason: String(e.message).replace(/^FIN_TAMPER:\s*/, '').replace(/ — yozuv bekor qilindi$/, '') + ' (amal bajarildi, lekin imzolanmadi)' });
+        return;
+    }
     if (!xid) return;
-    await verifyIntents(db, xid);
     // Diskdagi oldingi zanjir boshi bazada bo'lishi shart: oxirgi yozuvlar o'chirilgan bo'lsa, ogohlantirish ko'tariladi va bosh oldinga surilmaydi.
     const prev = readHead();
     if (prev) {

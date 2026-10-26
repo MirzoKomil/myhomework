@@ -384,7 +384,8 @@ async function initSchema() {
 
     await inflow.initSchema(pool);
     await paymentCash.initSchema(pool);
-    await finance.initSchema(pool);
+    // Moliya bo'limini tayyorlashdagi xato butun CRM'ni to'xtatmasligi kerak: xato yoziladi, qolgan bo'limlar ishlayveradi.
+    await finance.initSchema(pool).catch(err => console.error('[moliya] Ishga tushirishda xato (CRM ishlayveradi):', err.message));
 
     // Boshlang'ich mobile_content qatori
     await pool.query(

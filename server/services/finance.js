@@ -140,6 +140,7 @@ CREATE INDEX IF NOT EXISTS fin_audit_xid ON fin_audit(xid);
 CREATE TABLE IF NOT EXISTS fin_schema_fingerprints (id BIGSERIAL PRIMARY KEY, fn_hash TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS code_hash TEXT;
 ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS snapshot JSONB;
+ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS snap_hash TEXT;
 CREATE TABLE IF NOT EXISTS fin_checkpoints (id BIGSERIAL PRIMARY KEY, seal_seq BIGINT NOT NULL, seal_hash TEXT NOT NULL, audit_id BIGINT NOT NULL, audit_hash TEXT NOT NULL,
  prev_mac TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS fin_tx_signatures (xid TEXT PRIMARY KEY, seals INTEGER NOT NULL, audits INTEGER NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -443,11 +444,11 @@ async function initSchema(pool) {
             if ((await db.query("SELECT to_regclass('fin_schema_fingerprints') AS t")).rows[0].t) {
                 await db.query('SAVEPOINT fin_boot');
                 try {
-                    const last = (await db.query("SELECT fn_hash, mac, code_hash, snapshot FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1")).rows[0];
-                    if (last && last.code_hash === codeHash && finCtx.validSchemaMac(fpMacInput(last.fn_hash, codeHash, last.snapshot), last.mac) && last.fn_hash !== await functionHash(db))
+                    const last = (await db.query("SELECT fn_hash, mac, code_hash, snapshot, snap_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1")).rows[0];
+                    if (last && last.code_hash === codeHash && finCtx.validSchemaMac(fpMacInput(last.fn_hash, codeHash, last.snap_hash), last.mac) && last.fn_hash !== await functionHash(db))
                         finCtx.raiseAlarm({ table: 'pg_proc', rowId: '', reason: 'server qayta ishga tushishidan oldin baza tuzilmasi (funksiya, trigger, standart qiymat yoki cheklov) ilovadan tashqarida o‘zgartirilgan' });
                     // Yangi kod versiyasi: yangi ustun/cheklov qo'shilishi mumkin, lekin oldin bor bo'lganlari (turi, DEFAULT, NOT NULL, ta'rifi) o'zgarmasligi kerak.
-                    if (last && last.code_hash !== codeHash && last.snapshot && finCtx.validSchemaMac(fpMacInput(last.fn_hash, last.code_hash, last.snapshot), last.mac)) {
+                    if (last && last.code_hash !== codeHash && last.snapshot && last.snap_hash === snapHashOf(last.snapshot) && finCtx.validSchemaMac(fpMacInput(last.fn_hash, last.code_hash, last.snap_hash), last.mac)) {
                         const now = await structSnapshot(db), was = last.snapshot;
                         const diff = [...Object.keys(was.cols || {}).filter(k => k in now.cols && JSON.stringify(now.cols[k]) !== JSON.stringify(was.cols[k])),
                             ...Object.keys(was.cons || {}).filter(k => !(k in now.cons) || now.cons[k] !== was.cons[k])];
@@ -486,7 +487,8 @@ async function initSchema(pool) {
             // Kod yaratgan funksiyalar shu yerda (CREATE OR REPLACE dan keyin) aynan koddagidek — izi imzolanadi.
             const fh = await functionHash(db);
             const lastFp = (await db.query('SELECT fn_hash, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0], snap = await structSnapshot(db);
-            if (lastFp?.fn_hash !== fh || lastFp?.code_hash !== codeHash) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac,code_hash,snapshot) VALUES($1,$2,$3,$4)', [fh, finCtx.schemaMac(fpMacInput(fh, codeHash, snap)), codeHash, JSON.stringify(snap)]);
+            const snapHash = snapHashOf(snap);
+            if (lastFp?.fn_hash !== fh || lastFp?.code_hash !== codeHash) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac,code_hash,snapshot,snap_hash) VALUES($1,$2,$3,$4,$5)', [fh, finCtx.schemaMac(fpMacInput(fh, codeHash, snapHash)), codeHash, JSON.stringify(snap), snapHash]);
             await finCtx.signTx(db);
             await db.query('COMMIT'); finCtx.commitHead(db);
         } catch (e) { await db.query('ROLLBACK').catch(() => {}); throw e; }
@@ -765,7 +767,9 @@ finCtx.setStructureCheck(async db => {
 });
 // Ustun va cheklovlar ro'yxati (yangi kod versiyasida ham saqlanib qolgan obyektlar o'zgarmaganini tekshirish uchun).
 const canonJson = v => v === null || typeof v !== 'object' ? JSON.stringify(v ?? null) : Array.isArray(v) ? '[' + v.map(canonJson).join(',') + ']' : '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canonJson(v[k])).join(',') + '}';
-const fpMacInput = (fnHash, codeHash, snapshot) => fnHash + '|' + (codeHash || '') + (snapshot ? '|' + createHash('sha256').update(canonJson(snapshot)).digest('hex') : '');
+const snapHashOf = snapshot => snapshot ? createHash('sha256').update(canonJson(snapshot)).digest('hex') : '';
+// Imzo saqlangan snap_hash bo'yicha (bazadan qaytgan JSON qayta kanonlashtirilmaydi).
+const fpMacInput = (fnHash, codeHash, snapHash) => fnHash + '|' + (codeHash || '') + (snapHash ? '|' + snapHash : '');
 async function structSnapshot(db) {
     const cols = (await db.query(`SELECT c.relname AS t, a.attname AS col, pg_catalog.format_type(a.atttypid, a.atttypmod) || COALESCE(' COLLATE ' || (SELECT collname FROM pg_collation WHERE oid = a.attcollation AND a.attcollation <> 100), '') AS typ, a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
         FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
@@ -815,8 +819,9 @@ async function schemaIntegrity(db) {
     if (pol) return { ok: false, table: pol.t, rowId: pol.polname, reason: 'moliya jadvalida qator siyosati (POLICY) bor' };
     const evt = (await db.query('SELECT evtname FROM pg_event_trigger')).rows[0];
     if (evt) return { ok: false, table: 'pg_event_trigger', rowId: evt.evtname, reason: 'bazada hodisa triggeri (EVENT TRIGGER) bor' };
-    const fp = (await db.query('SELECT fn_hash, mac, code_hash, snapshot FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
-    if (!fp || !finCtx.validSchemaMac(fpMacInput(fp.fn_hash, fp.code_hash, fp.snapshot), fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya funksiyalari izi imzosiz' };
+    const fp = (await db.query('SELECT fn_hash, mac, code_hash, snap_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
+    if (!fp) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya tuzilmasi izi topilmadi (ishga tushish to‘liq bajarilmagan)' };
+    if (!finCtx.validSchemaMac(fpMacInput(fp.fn_hash, fp.code_hash, fp.snap_hash), fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya tuzilmasi izining imzosi mos emas (kalit o‘zgargan yoki iz bazada o‘zgartirilgan)' };
     if (fp.fn_hash !== await functionHash(db)) return { ok: false, table: 'pg_proc', rowId: '', reason: 'moliya funksiyalari yoki triggerlari bazada o‘zgartirilgan (imzolangan izga mos emas)' };
     return { ok: true };
 }
