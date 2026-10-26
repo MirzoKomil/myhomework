@@ -1,0 +1,325 @@
+{
+ "n": 38,
+ "topic_uz": "Dam olish rejalari va taklif — «Что ты бу́дешь де́лать в выходны́е?»",
+ "scene": "A young man and a young woman chat on a bench in a park, the man showing mountains on his phone screen.",
+ "dialogs": [
+  {
+   "id": "L38-d1",
+   "title_ru": "На пикни́к",
+   "title_uz": "Piknikka",
+   "intro_uz": "Birinchi dialog. Bobur Dilnozani dam olish kuni piknikka taklif qiladi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Дильно́за, что ты бу́дешь де́лать в выходны́е?",
+     "uz": "Dilnoza, dam olish kunlari nima qilasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ещё не зна́ю. Наве́рное, бу́ду до́ма. А что?",
+     "uz": "Hali bilmayman. Balki uyda bo'laman. Nima edi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В воскресе́нье мы пое́дем на пикни́к. Пое́дешь с на́ми?",
+     "uz": "Yakshanba kuni piknikka boramiz. Biz bilan borasanmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "С удово́льствием! А куда́ вы пое́дете?",
+     "uz": "Bajonidil! Qayerga borasizlar?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В го́ры. Анто́н то́же пое́дет.",
+     "uz": "Tog'ga. Anton ham boradi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Отли́чно! А что ну́жно купи́ть?",
+     "uz": "Zo'r! Nima sotib olish kerak?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ты ку́пишь фру́кты? А мы ку́пим мя́со.",
+     "uz": "Sen meva olasanmi? Biz go'sht olamiz."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́, куплю́. Договори́лись!",
+     "uz": "Xo'p, olaman. Kelishdik!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Piknik qachon?",
+     "opts": [
+      "shanba kuni",
+      "yakshanba kuni",
+      "juma kuni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ular qayerga boradi?",
+     "opts": [
+      "tog'ga",
+      "dengizga",
+      "dachaga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza nima oladi?",
+     "opts": [
+      "go'sht",
+      "non",
+      "meva"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "на пикни́к",
+     "alts": [
+      "на да́чу",
+      "в го́ры",
+      "на мо́ре"
+     ]
+    },
+    {
+     "base": "фру́кты",
+     "alts": [
+      "хлеб",
+      "во́ду",
+      "о́вощи"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: do'stingizni dam olish kuni biror joyga taklif qiling."
+  },
+  {
+   "id": "L38-d2",
+   "title_ru": "Дава́й пойдём в кино́!",
+   "title_uz": "Kel, kinoga boramiz!",
+   "intro_uz": "Ikkinchi dialog. Abdulaziz Nigorani kinoga taklif qiladi. Nigora qachon bora oladi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, дава́й пойдём в кино́ в суббо́ту!",
+     "uz": "Nigora, kel, shanba kuni kinoga boramiz!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В суббо́ту? Извини́, не могу́. Я бу́ду у ма́мы.",
+     "uz": "Shanba kunimi? Kechir, qila olmayman. Onamnikida bo'laman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А в воскресе́нье?",
+     "uz": "Yakshanba kuni-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В воскресе́нье могу́. А како́й фильм?",
+     "uz": "Yakshanba kuni bo'laman. Qanday film?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Но́вая коме́дия. На́чало в семь.",
+     "uz": "Yangi komediya. Soat yettida boshlanadi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Отли́чно! А пото́м пойдём в кафе́?",
+     "uz": "Zo'r! Keyin kafega boramizmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "С удово́льствием! Я приглаша́ю!",
+     "uz": "Bajonidil! Men taklif qilaman!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Договори́лись!",
+     "uz": "Kelishdik!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora shanba kuni qayerda bo'ladi?",
+     "opts": [
+      "ishda",
+      "onasinikida",
+      "kinoda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Film soat nechada boshlanadi?",
+     "opts": [
+      "oltida",
+      "sakkizda",
+      "yettida"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Kinodan keyin qayerga borishadi?",
+     "opts": [
+      "kafega",
+      "uyga",
+      "parkka"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в кино́",
+     "alts": [
+      "в теа́тр",
+      "в парк",
+      "на конце́рт"
+     ]
+    },
+    {
+     "base": "Я бу́ду у ма́мы",
+     "alts": [
+      "Я бу́ду рабо́тать",
+      "Я бу́ду у сестры́",
+      "Я бу́ду занята́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: do'stingizni kinoga taklif qiling; u «qila olmayman» desa, boshqa kunni taklif qiling."
+  },
+  {
+   "id": "L38-d3",
+   "title_ru": "Пла́ны на ле́то",
+   "title_uz": "Yozgi rejalar",
+   "intro_uz": "Uchinchi dialog. Anton va Dilnoza yozgi ta'til haqida gaplashishyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, каки́е у тебя́ пла́ны на ле́то?",
+     "uz": "Anton, yozga qanday rejalaring bor?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Ле́том я пое́ду на мо́ре, в Ту́рцию.",
+     "uz": "Yozda dengizga, Turkiyaga boraman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "На мо́ре! Здо́рово. С кем?",
+     "uz": "Dengizga! Zo'r. Kim bilan?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "С друзья́ми. А ты куда́ пое́дешь в о́тпуск?",
+     "uz": "Do'stlarim bilan. Sen ta'tilda qayerga borasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я пое́ду на да́чу, к ба́бушке.",
+     "uz": "Dachaga, buvimning oldiga boraman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А пото́м? Я приглаша́ю тебя́ в го́сти, в Москву́!",
+     "uz": "Keyin-chi? Seni Moskvaga mehmonga taklif qilaman!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо! Мо́жет быть, в сле́дующем году́.",
+     "uz": "Rahmat! Balki keyingi yili."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Договори́лись! Бу́ду ждать!",
+     "uz": "Kelishdik! Kutaman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton yozda qayerga boradi?",
+     "opts": [
+      "dachaga",
+      "Moskvaga",
+      "Turkiyaga, dengizga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton kim bilan boradi?",
+     "opts": [
+      "do'stlari bilan",
+      "oilasi bilan",
+      "Dilnoza bilan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza ta'tilda qayerga boradi?",
+     "opts": [
+      "dengizga",
+      "dachaga, buvisinikiga",
+      "Moskvaga"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "на мо́ре",
+     "alts": [
+      "в го́ры",
+      "на да́чу",
+      "в Самарка́нд"
+     ]
+    },
+    {
+     "base": "с друзья́ми",
+     "alts": [
+      "с семьёй",
+      "с бра́том",
+      "с жено́й"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: yozgi rejalaringiz haqida 3 ta gap ayting va do'stingizni mehmonga taklif qiling."
+  }
+ ]
+}

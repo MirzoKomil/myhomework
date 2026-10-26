@@ -1,0 +1,325 @@
+{
+ "n": 31,
+ "topic_uz": "хоте́ть, мочь, уме́ть; ну́жно / на́до / мо́жно / нельзя́",
+ "scene": "By a swimming pool, a young man in a T-shirt talks with a young woman holding a swimming cap.",
+ "dialogs": [
+  {
+   "id": "L31-d1",
+   "title_ru": "Ты уме́ешь пла́вать?",
+   "title_uz": "Suzishni bilasanmi?",
+   "intro_uz": "Birinchi dialog. Timur suzishni bilmaydi, lekin o'rganmoqchi. Dilnoza unga yordam bera oladimi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, ты уме́ешь пла́вать?",
+     "uz": "Dilnoza, suzishni bilasanmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, уме́ю. А ты?",
+     "uz": "Ha, bilaman. Sen-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Нет, не уме́ю. Но о́чень хочу́.",
+     "uz": "Yo'q, bilmayman. Lekin juda xohlayman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я могу́ помо́чь! Я свобо́дна в суббо́ту.",
+     "uz": "Men yordam bera olaman! Shanba kuni bo'shman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Пра́вда? Ты мо́жешь в суббо́ту у́тром?",
+     "uz": "Rostdanmi? Shanba ertalab qila olasanmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "У́тром не могу́, мне ну́жно рабо́тать. Ве́чером мо́жно.",
+     "uz": "Ertalab qila olmayman, ishlashim kerak. Kechqurun mumkin."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Хорошо́, ве́чером. А что мне на́до купи́ть?",
+     "uz": "Yaxshi, kechqurun. Menga nima sotib olish kerak?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Тебе́ на́до купи́ть очки́ и ша́почку.",
+     "uz": "Senga ko'zoynak va shapka olish kerak."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur suzishni biladimi?",
+     "opts": [
+      "ha, biladi",
+      "yo'q, bilmaydi",
+      "ozgina biladi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza shanba kuni ertalab nima qiladi?",
+     "opts": [
+      "ishlaydi",
+      "suzadi",
+      "dam oladi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ular qachon suzishga boradi?",
+     "opts": [
+      "yakshanba kuni",
+      "shanba ertalab",
+      "shanba kechqurun"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "пла́вать",
+     "alts": [
+      "води́ть маши́ну",
+      "игра́ть на гита́ре",
+      "рисова́ть"
+     ]
+    },
+    {
+     "base": "мне ну́жно рабо́тать",
+     "alts": [
+      "мне ну́жно учи́ться",
+      "мне на́до спать",
+      "мне на́до гото́вить"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: nimani qila olishingizni, nimani bilmasligingizni va nimani o'rganmoqchi ekaningizni ayting."
+  },
+  {
+   "id": "L31-d2",
+   "title_ru": "В музе́е",
+   "title_uz": "Muzeyda",
+   "intro_uz": "Ikkinchi dialog. Anton muzeyga keldi. Bu yerda nima mumkin, nima mumkin emas? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Администра́тор",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Здра́вствуйте! Мо́жно войти́?",
+     "uz": "Assalomu alaykum! Kirsam bo'ladimi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Да, мо́жно. Но снача́ла ну́жно купи́ть биле́т.",
+     "uz": "Ha, mumkin. Lekin avval chipta olish kerak."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А где мо́жно купи́ть биле́т?",
+     "uz": "Chiptani qayerdan olsa bo'ladi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Вон там, в ка́ссе.",
+     "uz": "Anavi yerda, kassada."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо. А здесь мо́жно фотографи́ровать?",
+     "uz": "Rahmat. Bu yerda suratga olish mumkinmi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Да, мо́жно. Но здесь нельзя́ есть и пить.",
+     "uz": "Ha, mumkin. Lekin bu yerda ovqat yeyish va ichish mumkin emas."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Поня́тно. А кури́ть мо́жно?",
+     "uz": "Tushunarli. Chekish mumkinmi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Нет, кури́ть нельзя́! То́лько на у́лице.",
+     "uz": "Yo'q, chekish mumkin emas! Faqat ko'chada."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Muzeyga kirish uchun avval nima kerak?",
+     "opts": [
+      "pasport",
+      "chipta",
+      "telefon"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Muzeyda suratga olish mumkinmi?",
+     "opts": [
+      "ha, mumkin",
+      "yo'q, mumkin emas",
+      "faqat kechqurun"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Qayerda chekish mumkin?",
+     "opts": [
+      "kassada",
+      "zalda",
+      "faqat ko'chada"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "фотографи́ровать",
+     "alts": [
+      "говори́ть по телефо́ну",
+      "сиде́ть",
+      "смотре́ть"
+     ]
+    },
+    {
+     "base": "нельзя́ есть и пить",
+     "alts": [
+      "нельзя́ кури́ть",
+      "нельзя́ гро́мко говори́ть",
+      "нельзя́ бе́гать"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: uyingizda yoki ishingizda nima mumkin va nima mumkin emasligini 3 ta gap bilan ayting."
+  },
+  {
+   "id": "L31-d3",
+   "title_ru": "Я о́чень уста́л",
+   "title_uz": "Juda charchadim",
+   "intro_uz": "Uchinchi dialog. Kechqurun. Abdulaziz ishdan charchab keldi. Nigora undan yordam so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, ты хо́чешь есть?",
+     "uz": "Abdulaziz, ovqat yeysanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет, спаси́бо. Я о́чень уста́л. Я хочу́ спать.",
+     "uz": "Yo'q, rahmat. Juda charchadim. Uxlagim kelyapti."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Спать? Сейча́с то́лько во́семь часо́в!",
+     "uz": "Uxlashmi? Hozir endi soat sakkiz!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я зна́ю. Но у́тром мне на́до ра́но встать.",
+     "uz": "Bilaman. Lekin ertalab barvaqt turishim kerak."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А ты мо́жешь мне помо́чь? Мне ну́жно убра́ть ку́хню.",
+     "uz": "Menga yordam bera olasanmi? Oshxonani yig'ishtirishim kerak."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Извини́, сего́дня не могу́. О́чень уста́л.",
+     "uz": "Kechir, bugun qila olmayman. Juda charchadim."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ла́дно. Тогда́ я сама́.",
+     "uz": "Mayli. Unda o'zim qilaman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Спаси́бо, дорога́я!",
+     "uz": "Rahmat, azizim!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz nimani xohlaydi?",
+     "opts": [
+      "ovqat yeyishni",
+      "uxlashni",
+      "televizor ko'rishni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Hozir soat necha?",
+     "opts": [
+      "sakkiz",
+      "to'qqiz",
+      "yetti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigoraga nima qilish kerak?",
+     "opts": [
+      "non olish",
+      "kir yuvish",
+      "oshxonani yig'ishtirish"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Я хочу́ спать",
+     "alts": [
+      "Я хочу́ пить",
+      "Я хочу́ отдыха́ть",
+      "Я хочу́ есть"
+     ]
+    },
+    {
+     "base": "убра́ть ку́хню",
+     "alts": [
+      "пригото́вить у́жин",
+      "купи́ть хлеб",
+      "помы́ть посу́ду"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: hozir nima xohlashingizni, nima qilishingiz kerakligini va nimani qila olmasligingizni ayting."
+  }
+ ]
+}

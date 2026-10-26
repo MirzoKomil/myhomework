@@ -1,0 +1,325 @@
+{
+ "n": 36,
+ "topic_uz": "Kasb va ish — «Кем вы рабо́таете?»",
+ "scene": "In a modern office, a man and a woman shake hands next to a desk with a laptop on their first day as colleagues.",
+ "dialogs": [
+  {
+   "id": "L36-d1",
+   "title_ru": "Но́вая колле́га",
+   "title_uz": "Yangi hamkasb",
+   "intro_uz": "Birinchi dialog. Ishxonaga yangi hamkasb keldi. Abdulaziz u bilan tanishadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Здра́вствуйте! Вы на́ша но́вая колле́га?",
+     "uz": "Assalomu alaykum! Siz yangi hamkasbimizmisiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, меня́ зову́т Дильно́за. Я рабо́таю бухга́лтером.",
+     "uz": "Ha, ismim Dilnoza. Men buxgalter bo'lib ishlayman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "О́чень прия́тно. Я Абдулази́з, рабо́таю ме́неджером. Я здесь то́же неда́вно — из Андижа́на.",
+     "uz": "Juda xursandman. Men Abdulaziz, menejer bo'lib ishlayman. Men ham bu yerda yangiman — Andijondan keldim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А кто наш нача́льник?",
+     "uz": "Boshlig'imiz kim?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Шавка́т Ахме́дович. Он рабо́тает дире́ктором три го́да. Он до́брый.",
+     "uz": "Shavkat Axmedovich. U uch yildan beri direktor bo'lib ishlaydi. U mehribon."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́! Рабо́чий день начина́ется в де́вять?",
+     "uz": "Yaxshi! Ish kuni soat to'qqizda boshlanadimi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, в де́вять, и конча́ется в шесть.",
+     "uz": "Ha, to'qqizda, oltida tugaydi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Отли́чно. Мне нра́вится рабо́тать с людьми́.",
+     "uz": "Ajoyib. Menga odamlar bilan ishlash yoqadi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza kim bo'lib ishlaydi?",
+     "opts": [
+      "menejer",
+      "buxgalter",
+      "direktor"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Boshliq kim?",
+     "opts": [
+      "Timur",
+      "Abdulaziz",
+      "Anton"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ish kuni soat nechada tugaydi?",
+     "opts": [
+      "beshda",
+      "yettida",
+      "oltida"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "бухга́лтером",
+     "alts": [
+      "ме́неджером",
+      "программи́стом",
+      "секретарём"
+     ]
+    },
+    {
+     "base": "в де́вять",
+     "alts": [
+      "в во́семь",
+      "в де́сять",
+      "в полдевя́того"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: o'zingizni tanishtiring — kim bo'lib ishlashingizni va ish kuningiz qachon boshlanishini ayting."
+  },
+  {
+   "id": "L36-d2",
+   "title_ru": "Кем ты хо́чешь стать?",
+   "title_uz": "Kim bo'lmoqchisan?",
+   "intro_uz": "Ikkinchi dialog. O'qituvchi Sanjardan so'rayapti: kelajakda kim bo'lmoqchisan? Tinglang.",
+   "speakers": [
+    {
+     "name": "Санжа́р",
+     "gender": "m"
+    },
+    {
+     "name": "Учи́тельница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Учи́тельница",
+     "ru": "Санжа́р, кем ты хо́чешь стать?",
+     "uz": "Sanjar, kim bo'lmoqchisan?"
+    },
+    {
+     "who": "Санжа́р",
+     "ru": "Я хочу́ стать врачо́м.",
+     "uz": "Men shifokor bo'lmoqchiman."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Врачо́м? Почему́?",
+     "uz": "Shifokormi? Nega?"
+    },
+    {
+     "who": "Санжа́р",
+     "ru": "Мой па́па рабо́тает врачо́м. Мне нра́вится его́ рабо́та.",
+     "uz": "Dadam shifokor bo'lib ishlaydi. Menga uning ishi yoqadi."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "А где он рабо́тает?",
+     "uz": "U qayerda ishlaydi?"
+    },
+    {
+     "who": "Санжа́р",
+     "ru": "В больни́це, в це́нтре. А вы всегда́ рабо́тали учи́телем?",
+     "uz": "Markazdagi kasalxonada. Siz doim o'qituvchi bo'lib ishlaganmisiz?"
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Нет, ра́ньше я рабо́тала журнали́стом.",
+     "uz": "Yo'q, oldin jurnalist bo'lib ishlaganman."
+    },
+    {
+     "who": "Санжа́р",
+     "ru": "Журнали́стом? Интере́сно!",
+     "uz": "Jurnalistmi? Qiziq!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Sanjar kim bo'lmoqchi?",
+     "opts": [
+      "o'qituvchi",
+      "shifokor",
+      "jurnalist"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Sanjarning dadasi qayerda ishlaydi?",
+     "opts": [
+      "maktabda",
+      "bankda",
+      "kasalxonada"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "O'qituvchi oldin kim bo'lib ishlagan?",
+     "opts": [
+      "jurnalist",
+      "shifokor",
+      "sotuvchi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "врачо́м",
+     "alts": [
+      "учи́телем",
+      "инжене́ром",
+      "по́варом"
+     ]
+    },
+    {
+     "base": "в больни́це",
+     "alts": [
+      "в шко́ле",
+      "в ба́нке",
+      "в компа́нии"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: bolaligingizda kim bo'lishni xohlaganingizni va hozir kim bo'lib ishlashingizni ayting."
+  },
+  {
+   "id": "L36-d3",
+   "title_ru": "Вам нра́вится ва́ша рабо́та?",
+   "title_uz": "Ishingiz yoqadimi?",
+   "intro_uz": "Uchinchi dialog. Madina va Anton ish va orzular haqida gaplashishyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Мади́на",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Мади́на",
+     "ru": "Анто́н, кем вы рабо́таете?",
+     "uz": "Anton, kim bo'lib ishlaysiz?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я рабо́таю инжене́ром в компа́нии.",
+     "uz": "Kompaniyada muhandis bo'lib ishlayman."
+    },
+    {
+     "who": "Мади́на",
+     "ru": "Вам нра́вится ва́ша рабо́та?",
+     "uz": "Ishingiz yoqadimi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да, нра́вится. Но зарпла́та ма́ленькая.",
+     "uz": "Ha, yoqadi. Lekin maosh kichkina."
+    },
+    {
+     "who": "Мади́на",
+     "ru": "А о чём вы мечта́ете?",
+     "uz": "Nima haqida orzu qilasiz?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я мечта́ю о свое́й фи́рме. А вы кем рабо́таете?",
+     "uz": "O'z firmam haqida orzu qilaman. Siz kim bo'lib ishlaysiz?"
+    },
+    {
+     "who": "Мади́на",
+     "ru": "Я рабо́таю учи́телем. Но хочу́ стать дире́ктором шко́лы.",
+     "uz": "O'qituvchi bo'lib ishlayman. Lekin maktab direktori bo'lmoqchiman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Отли́чная мечта́! Уда́чи вам!",
+     "uz": "Ajoyib orzu! Sizga omad!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton kim bo'lib ishlaydi?",
+     "opts": [
+      "o'qituvchi",
+      "muhandis",
+      "direktor"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Antonga ishida nima yoqmaydi?",
+     "opts": [
+      "maosh",
+      "boshliq",
+      "hamkasblar"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Madina kim bo'lmoqchi?",
+     "opts": [
+      "muhandis",
+      "jurnalist",
+      "maktab direktori"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "инжене́ром",
+     "alts": [
+      "ме́неджером",
+      "води́телем",
+      "продавцо́м"
+     ]
+    },
+    {
+     "base": "о свое́й фи́рме",
+     "alts": [
+      "о но́вой рабо́те",
+      "о большо́м до́ме",
+      "о путеше́ствии"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: kim bo'lib ishlashingizni, ishingiz yoqishini va nima haqida orzu qilishingizni ayting."
+  }
+ ]
+}

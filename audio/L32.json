@@ -1,0 +1,325 @@
+{
+ "n": 32,
+ "topic_uz": "Kafe va restoranda buyurtma — «Мо́жно меню́?»",
+ "scene": "In a cozy Uzbek cafe, a man sits at a table by the window while a waitress hands him a menu.",
+ "dialogs": [
+  {
+   "id": "L32-d1",
+   "title_ru": "Свобо́дный стол",
+   "title_uz": "Bo'sh stol",
+   "intro_uz": "Birinchi dialog. Abdulaziz kafega kirdi. U joy so'raydi va buyurtma beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Официа́нтка",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "До́брый ве́чер! У вас есть свобо́дный стол?",
+     "uz": "Xayrli kech! Bo'sh stol bormi?"
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Да, есть. Вот, у окна́.",
+     "uz": "Ha, bor. Mana, deraza yonida."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Спаси́бо. Мо́жно меню́, пожа́луйста?",
+     "uz": "Rahmat. Menyu bersangiz?"
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Вот меню́. Что бу́дете пить?",
+     "uz": "Mana menyu. Nima ichasiz?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Мне, пожа́луйста, зелёный чай.",
+     "uz": "Menga ko'k choy, iltimos."
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Хорошо́. А что бу́дете есть?",
+     "uz": "Xo'p. Nima yeysiz?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я хочу́ суп и сала́т.",
+     "uz": "Sho'rva va salat xohlayman."
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Отли́чно. Мину́ту!",
+     "uz": "Ajoyib. Bir daqiqa!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Stol qayerda?",
+     "opts": [
+      "eshik yonida",
+      "deraza yonida",
+      "oshxona yonida"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz nima ichadi?",
+     "opts": [
+      "qora choy",
+      "kofe",
+      "ko'k choy"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Abdulaziz nima yeydi?",
+     "opts": [
+      "sho'rva va salat",
+      "palov",
+      "shashlik"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "зелёный чай",
+     "alts": [
+      "чёрный чай",
+      "ко́фе",
+      "сок"
+     ]
+    },
+    {
+     "base": "суп и сала́т",
+     "alts": [
+      "плов",
+      "шашлы́к",
+      "лагма́н"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: bo'sh stol so'rang, menyu so'rang va ovqat buyurtma qiling."
+  },
+  {
+   "id": "L32-d2",
+   "title_ru": "Что вы посове́туете?",
+   "title_uz": "Nimani tavsiya qilasiz?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza restoranda. U ofitsiantdan maslahat so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Официа́нт",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Официа́нт",
+     "ru": "Здра́вствуйте! Вы гото́вы заказа́ть?",
+     "uz": "Assalomu alaykum! Buyurtma berishga tayyormisiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да. Что вы посове́туете?",
+     "uz": "Ha. Nimani tavsiya qilasiz?"
+    },
+    {
+     "who": "Официа́нт",
+     "ru": "Сего́дня у нас о́чень вку́сный плов.",
+     "uz": "Bugun bizda juda mazali palov bor."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́, мне, пожа́луйста, плов.",
+     "uz": "Yaxshi, menga palov, iltimos."
+    },
+    {
+     "who": "Официа́нт",
+     "ru": "А что вы бу́дете пить?",
+     "uz": "Nima ichasiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Мне во́ду без га́за, пожа́луйста.",
+     "uz": "Menga gazsiz suv, iltimos."
+    },
+    {
+     "who": "Официа́нт",
+     "ru": "А десе́рт хоти́те? Есть торт и моро́женое.",
+     "uz": "Desert xohlaysizmi? Tort va muzqaymoq bor."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, я хочу́ моро́женое.",
+     "uz": "Ha, muzqaymoq xohlayman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Ofitsiant nimani tavsiya qiladi?",
+     "opts": [
+      "lag'mon",
+      "palov",
+      "sho'rva"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza nima ichadi?",
+     "opts": [
+      "gazsiz suv",
+      "gazli suv",
+      "choy"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Desertga nima oladi?",
+     "opts": [
+      "tort",
+      "meva",
+      "muzqaymoq"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "во́ду без га́за",
+     "alts": [
+      "во́ду с га́зом",
+      "сок",
+      "ко́фе"
+     ]
+    },
+    {
+     "base": "моро́женое",
+     "alts": [
+      "торт",
+      "десе́рт",
+      "фру́кты"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: ofitsiantdan maslahat so'rang, bitta taom, ichimlik va desert buyurtma qiling."
+  },
+  {
+   "id": "L32-d3",
+   "title_ru": "Счёт, пожа́луйста!",
+   "title_uz": "Hisobni bering!",
+   "intro_uz": "Uchinchi dialog. Timur ovqatlanib bo'ldi. U hisobni so'raydi. Karta bilan to'lash mumkinmi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Официа́нтка",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Де́вушка! Счёт, пожа́луйста!",
+     "uz": "Singlim! Hisobni bering!"
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Сейча́с. Бы́ло вку́сно?",
+     "uz": "Hozir. Mazali bo'ldimi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, о́чень вку́сно! Спаси́бо.",
+     "uz": "Ha, juda mazali! Rahmat."
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Вот ваш счёт. Сто два́дцать ты́сяч.",
+     "uz": "Mana hisobingiz. Bir yuz yigirma ming."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Мо́жно ка́ртой?",
+     "uz": "Karta bilan mumkinmi?"
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Извини́те, сего́дня ка́ртой нельзя́.",
+     "uz": "Kechirasiz, bugun karta bilan mumkin emas."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ничего́. Вот де́ньги. Мо́жно чек?",
+     "uz": "Hechqisi yo'q. Mana pul. Chek bersangiz?"
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Коне́чно. Вот ваш чек и сда́ча.",
+     "uz": "Albatta. Mana chekingiz va qaytim."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Hisob qancha?",
+     "opts": [
+      "102 ming",
+      "120 ming",
+      "200 ming"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bugun karta bilan to'lash mumkinmi?",
+     "opts": [
+      "ha",
+      "faqat kechqurun",
+      "yo'q"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timur oxirida nima so'raydi?",
+     "opts": [
+      "chek",
+      "menyu",
+      "choy"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "Мо́жно ка́ртой?",
+     "alts": [
+      "Мо́жно чек?",
+      "Мо́жно во́ду?",
+      "Мо́жно меню́?"
+     ]
+    },
+    {
+     "base": "сто два́дцать ты́сяч",
+     "alts": [
+      "девяно́сто ты́сяч",
+      "сто пятьдеся́т ты́сяч",
+      "две́сти ты́сяч"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: hisobni so'rang, karta bilan to'lash mumkinmi so'rang va rahmat ayting."
+  }
+ ]
+}

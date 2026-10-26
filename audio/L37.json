@@ -1,0 +1,325 @@
+{
+ "n": 37,
+ "topic_uz": "Kelasi zamon — бу́ду + fe'l; сде́лаю",
+ "scene": "In a home kitchen in the evening, a wife holds a shopping list and talks with her husband who is putting on his jacket.",
+ "dialogs": [
+  {
+   "id": "L37-d1",
+   "title_ru": "Что ты бу́дешь де́лать за́втра?",
+   "title_uz": "Ertaga nima qilasan?",
+   "intro_uz": "Birinchi dialog. Nigora va Abdulaziz ertangi kunni rejalashtirishyapti. Kim nima qiladi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, что ты бу́дешь де́лать за́втра?",
+     "uz": "Abdulaziz, ertaga nima qilasan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "У́тром я бу́ду рабо́тать. А по́сле обе́да я свобо́ден.",
+     "uz": "Ertalab ishlayman. Tushdan keyin bo'shman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́. Тогда́ ты ку́пишь проду́кты?",
+     "uz": "Yaxshi. Unda oziq-ovqat olasanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Коне́чно, куплю́. Что купи́ть?",
+     "uz": "Albatta, olaman. Nima olay?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Мя́со, рис и морко́вь. Ве́чером я бу́ду гото́вить плов.",
+     "uz": "Go'sht, guruch va sabzi. Kechqurun palov pishiraman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Плов! Отли́чно. А ма́ма придёт?",
+     "uz": "Palov! Zo'r. Oyim keladimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да. Я позвоню́ ей сего́дня ве́чером.",
+     "uz": "Ha. Bugun kechqurun unga qo'ng'iroq qilaman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́. Я обяза́тельно всё куплю́.",
+     "uz": "Yaxshi. Men albatta hammasini olaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz ertaga ertalab nima qiladi?",
+     "opts": [
+      "dam oladi",
+      "ishlaydi",
+      "bozorga boradi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora kechqurun nima pishiradi?",
+     "opts": [
+      "sho'rva",
+      "manti",
+      "palov"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora kimga qo'ng'iroq qiladi?",
+     "opts": [
+      "onasiga",
+      "Boburga",
+      "do'stiga"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "бу́ду рабо́тать",
+     "alts": [
+      "бу́ду отдыха́ть",
+      "бу́ду учи́ться",
+      "бу́ду до́ма"
+     ]
+    },
+    {
+     "base": "куплю́",
+     "alts": [
+      "сде́лаю",
+      "позвоню́",
+      "пригото́влю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: ertaga ertalab, tushdan keyin va kechqurun nima qilishingizni ayting."
+  },
+  {
+   "id": "L37-d2",
+   "title_ru": "Ле́том",
+   "title_uz": "Yozda",
+   "intro_uz": "Ikkinchi dialog. Timur va Dilnoza yozgi rejalar haqida gaplashishyapti. Kim qayerga boradi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, куда́ ты пое́дешь ле́том?",
+     "uz": "Timur, yozda qayerga borasan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ле́том я пое́ду в Москву́, к бра́ту.",
+     "uz": "Yozda Moskvaga, akamning oldiga boraman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Здо́рово! Что ты бу́дешь там де́лать?",
+     "uz": "Zo'r! U yerda nima qilasan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Бу́ду гуля́ть и смотре́ть го́род. А ты?",
+     "uz": "Sayr qilaman, shaharni tomosha qilaman. Sen-chi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я бу́ду учи́ть англи́йский. В сентябре́ у меня́ экза́мен.",
+     "uz": "Ingliz tilini o'rganaman. Sentyabrda imtihonim bor."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ты обяза́тельно всё вы́учишь!",
+     "uz": "Sen albatta hammasini o'rganib olasan!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Наве́рное. А че́рез год я пое́ду в Ло́ндон.",
+     "uz": "Balki. Bir yildan keyin esa Londonga boraman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Отли́чно! Встре́тимся в Ло́ндоне!",
+     "uz": "Zo'r! Londonda ko'rishamiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur yozda qayerga boradi?",
+     "opts": [
+      "Londonga",
+      "Moskvaga",
+      "Samarqandga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza yozda nima qiladi?",
+     "opts": [
+      "ingliz tilini o'rganadi",
+      "ishlaydi",
+      "dengizga boradi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza qachon Londonga boradi?",
+     "opts": [
+      "yozda",
+      "sentyabrda",
+      "bir yildan keyin"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Москву́",
+     "alts": [
+      "в Самарка́нд",
+      "в Ташке́нт",
+      "в Каза́нь"
+     ]
+    },
+    {
+     "base": "бу́ду учи́ть англи́йский",
+     "alts": [
+      "бу́ду рабо́тать",
+      "бу́ду отдыха́ть на да́че",
+      "бу́ду чита́ть кни́ги"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: yozda qayerga borishingizni va u yerda nima qilishingizni ayting."
+  },
+  {
+   "id": "L37-d3",
+   "title_ru": "Когда́ ты сде́лаешь отчёт?",
+   "title_uz": "Hisobotni qachon qilasan?",
+   "intro_uz": "Uchinchi dialog. Dilnoza va Anton ishxonada. Anton ishlarni qachon qiladi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, когда́ ты сде́лаешь отчёт?",
+     "uz": "Anton, hisobotni qachon qilasan?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я сде́лаю его́ за́втра. Обяза́тельно.",
+     "uz": "Ertaga qilaman. Albatta."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "За́втра? А клие́нту ты позвони́шь?",
+     "uz": "Ertagami? Mijozga qo'ng'iroq qilasanmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да, позвоню́ сего́дня ве́чером.",
+     "uz": "Ha, bugun kechqurun qo'ng'iroq qilaman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́. А когда́ мы встре́тимся с дире́ктором?",
+     "uz": "Yaxshi. Direktor bilan qachon uchrashamiz?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "В пя́тницу. Я бу́ду в о́фисе весь день.",
+     "uz": "Juma kuni. Men kun bo'yi ofisda bo'laman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Отли́чно. Я то́же бу́ду в о́фисе.",
+     "uz": "Ajoyib. Men ham ofisda bo'laman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Договори́лись! До пя́тницы!",
+     "uz": "Kelishdik! Jumagacha!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton hisobotni qachon qiladi?",
+     "opts": [
+      "bugun",
+      "ertaga",
+      "juma kuni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Anton mijozga qachon qo'ng'iroq qiladi?",
+     "opts": [
+      "ertaga ertalab",
+      "juma kuni",
+      "bugun kechqurun"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Ular direktor bilan qachon uchrashadi?",
+     "opts": [
+      "juma kuni",
+      "shanba kuni",
+      "ertaga"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "сде́лаю",
+     "alts": [
+      "напишу́",
+      "зако́нчу",
+      "прове́рю"
+     ]
+    },
+    {
+     "base": "в пя́тницу",
+     "alts": [
+      "в понеде́льник",
+      "послеза́втра",
+      "че́рез неде́лю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: ertaga va juma kuni ishda nima qilishingizni ayting."
+  }
+ ]
+}

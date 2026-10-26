@@ -1,0 +1,325 @@
+{
+ "n": 34,
+ "topic_uz": "Bayram, tabrik va sovg'a — «Поздравля́ю!»",
+ "scene": "At a home birthday party, a young man gives a bouquet of flowers and a wrapped gift to a smiling young woman.",
+ "dialogs": [
+  {
+   "id": "L34-d1",
+   "title_ru": "С днём рожде́ния!",
+   "title_uz": "Tug'ilgan kuning bilan!",
+   "intro_uz": "Birinchi dialog. Bugun Dilnozaning tug'ilgan kuni. Timur uni tabriklaydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, поздравля́ю тебя́ с днём рожде́ния!",
+     "uz": "Dilnoza, tug'ilgan kuning bilan tabriklayman!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо, Тиму́р! Как прия́тно!",
+     "uz": "Rahmat, Timur! Qanday yoqimli!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Жела́ю тебе́ здоро́вья, сча́стья и любви́!",
+     "uz": "Senga sog'lik, baxt va muhabbat tilayman!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо большо́е!",
+     "uz": "Katta rahmat!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Э́то пода́рок для тебя́. И цветы́.",
+     "uz": "Bu sen uchun sovg'a. Va gullar."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Каки́е краси́вые цветы́! Мне о́чень нра́вятся ро́зы.",
+     "uz": "Qanday chiroyli gullar! Menga atirgullar juda yoqadi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А пода́рок тебе́ нра́вится?",
+     "uz": "Sovg'a senga yoqdimi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Кни́га! Да, мне о́чень нра́вится. Спаси́бо!",
+     "uz": "Kitob! Ha, menga juda yoqdi. Rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bugun qanday kun?",
+     "opts": [
+      "Navro'z",
+      "Dilnozaning tug'ilgan kuni",
+      "Yangi yil"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur nima tilaydi?",
+     "opts": [
+      "sog'lik, baxt va muhabbat",
+      "pul va mashina",
+      "omad va ish"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Sovg'a nima ekan?",
+     "opts": [
+      "soat",
+      "telefon",
+      "kitob"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "здоро́вья, сча́стья и любви́",
+     "alts": [
+      "успе́хов и ра́дости",
+      "здоро́вья и уда́чи",
+      "сча́стья и успе́хов"
+     ]
+    },
+    {
+     "base": "ро́зы",
+     "alts": [
+      "цветы́",
+      "тюльпа́ны",
+      "кни́ги"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: do'stingizni tug'ilgan kuni bilan tabriklang va unga tilak bildiring."
+  },
+  {
+   "id": "L34-d2",
+   "title_ru": "С Навру́зом!",
+   "title_uz": "Navro'z bilan!",
+   "intro_uz": "Ikkinchi dialog. Bugun Navro'z. Anton Nigorani bayram bilan tabriklaydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, с пра́здником! С Навру́зом!",
+     "uz": "Nigora, bayramingiz bilan! Navro'z muborak!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Спаси́бо, Анто́н! И тебя́ с пра́здником!",
+     "uz": "Rahmat, Anton! Seni ham bayram bilan!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Тебе́ нра́вится Навру́з?",
+     "uz": "Senga Navro'z yoqadimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "О́чень! Э́то мой люби́мый пра́здник.",
+     "uz": "Juda! Bu mening sevimli bayramim."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А что вы де́лаете на Навру́з?",
+     "uz": "Navro'zda nima qilasizlar?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Гото́вим сумаля́к. Вот, э́то тебе́. Пода́рок!",
+     "uz": "Sumalak pishiramiz. Mana, bu senga. Sovg'a!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо! Жела́ю тебе́ и семье́ сча́стья!",
+     "uz": "Rahmat! Senga va oilangga baxt tilayman!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Спаси́бо! И тебе́ всего́ хоро́шего!",
+     "uz": "Rahmat! Senga ham hamma yaxshiliklar!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Qaysi bayram?",
+     "opts": [
+      "Yangi yil",
+      "Navro'z",
+      "tug'ilgan kun"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Navro'z Nigoraga yoqadimi?",
+     "opts": [
+      "yo'q",
+      "ozgina",
+      "juda yoqadi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora Antonga nima beradi?",
+     "opts": [
+      "sumalak",
+      "gul",
+      "kitob"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "С Навру́зом",
+     "alts": [
+      "С Но́вым го́дом",
+      "С днём рожде́ния",
+      "С пра́здником"
+     ]
+    },
+    {
+     "base": "сча́стья",
+     "alts": [
+      "здоро́вья",
+      "успе́хов",
+      "любви́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: do'stingizni Navro'z bilan tabriklang va unga ikki narsa tilang."
+  },
+  {
+   "id": "L34-d3",
+   "title_ru": "Что подари́ть ма́ме?",
+   "title_uz": "Onamga nima sovg'a qilsam?",
+   "intro_uz": "Uchinchi dialog. Bobur onasi va singlisiga sovg'a tanlayapti. Dilnoza maslahat beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Дильно́за, ско́ро Восьмо́е ма́рта. Что подари́ть ма́ме?",
+     "uz": "Dilnoza, yaqinda 8-mart. Onamga nima sovg'a qilsam?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ма́ме? Ей нра́вятся цветы́.",
+     "uz": "Onanggami? Unga gullar yoqadi."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Цветы́ я дарю́ ма́ме ка́ждый год.",
+     "uz": "Gulni onamga har yili sovg'a qilaman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А что ей ещё нра́вится?",
+     "uz": "Unga yana nima yoqadi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ей нра́вится гото́вить.",
+     "uz": "Unga ovqat pishirish yoqadi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Тогда́ мо́жно подари́ть ей кни́гу реце́птов!",
+     "uz": "Unda unga retseptlar kitobini sovg'a qilsa bo'ladi!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Отли́чная иде́я! А что подари́ть сестре́?",
+     "uz": "Zo'r g'oya! Singlimga nima sovg'a qilsam?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Сестре́ — откры́тку и цветы́. Де́вушкам нра́вятся цветы́!",
+     "uz": "Singlingga — otkritka va gul. Qizlarga gul yoqadi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Qaysi bayram yaqinlashyapti?",
+     "opts": [
+      "Navro'z",
+      "8-mart",
+      "Yangi yil"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Boburning onasiga nima yoqadi?",
+     "opts": [
+      "sport",
+      "musiqa",
+      "ovqat pishirish"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Singlisiga nima sovg'a qilishadi?",
+     "opts": [
+      "otkritka va gul",
+      "kitob",
+      "shokolad"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "ма́ме",
+     "alts": [
+      "ба́бушке",
+      "жене́",
+      "сестре́"
+     ]
+    },
+    {
+     "base": "кни́гу реце́птов",
+     "alts": [
+      "цветы́",
+      "часы́",
+      "откры́тку"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: oilangizdagi bir kishiga qanday sovg'a qilishingizni va unga nima yoqishini ayting."
+  }
+ ]
+}
