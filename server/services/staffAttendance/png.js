@@ -25,7 +25,9 @@ function decodePng(buf) {
         const len = buf.readUInt32BE(off);
         const type = buf.toString('ascii', off + 4, off + 8);
         const data = buf.subarray(off + 8, off + 8 + len);
+        if (off + 12 + len > buf.length) throw new Error('PNG buzilgan');
         if (type === 'IHDR') {
+            if (len < 13) throw new Error('PNG buzilgan');
             width = data.readUInt32BE(0); height = data.readUInt32BE(4);
             bitDepth = data[8]; colorType = data[9]; interlace = data[12];
         } else if (type === 'IDAT') idat.push(data);
@@ -37,8 +39,11 @@ function decodePng(buf) {
     const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[colorType];
     if (!channels) throw new Error('PNG rang turi qo\'llab-quvvatlanmaydi');
 
-    const raw = zlib.inflateSync(Buffer.concat(idat));
     const stride = width * channels;
+    // Siqilgan "bomba" xotirani to'ldirmasligi uchun chiqish hajmi aniq cheklanadi.
+    let raw;
+    try { raw = zlib.inflateSync(Buffer.concat(idat), { maxOutputLength: (stride + 1) * height }); }
+    catch { throw new Error('PNG buzilgan'); }
     if (raw.length < (stride + 1) * height) throw new Error('PNG buzilgan');
     const px = new Uint8Array(stride * height);
     for (let y = 0; y < height; y++) {
@@ -70,10 +75,41 @@ function decodePng(buf) {
     return { width, height, rgb };
 }
 
+// CRC32 (PNG bo'laklari uchun)
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(buf) { let c = 0xffffffff; for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+
+// RGB piksellar → PNG (dalil rasmi sifatida saqlash uchun).
+function encodePng({ width, height, rgb }) {
+    const raw = Buffer.alloc((width * 3 + 1) * height);
+    for (let y = 0; y < height; y++) {
+        raw[y * (width * 3 + 1)] = 0;
+        Buffer.from(rgb.buffer, rgb.byteOffset + y * width * 3, width * 3).copy(raw, y * (width * 3 + 1) + 1);
+    }
+    const chunk = (type, data) => {
+        const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+        const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+        const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body));
+        return Buffer.concat([len, body, crc]);
+    };
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 2;
+    return Buffer.concat([SIG, chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
+}
+
+// Ikki baravar kichraytirish (2x2 o'rtacha).
+function halve({ width, height, rgb }) {
+    const w = Math.floor(width / 2), h = Math.floor(height / 2), out = new Uint8Array(w * h * 3);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) {
+        const i = (yy, xx) => rgb[((yy) * width + xx) * 3 + c];
+        out[(y * w + x) * 3 + c] = (i(2 * y, 2 * x) + i(2 * y, 2 * x + 1) + i(2 * y + 1, 2 * x) + i(2 * y + 1, 2 * x + 1) + 2) >> 2;
+    }
+    return { width: w, height: h, rgb: out };
+}
+
 function dataUrlToBuffer(dataUrl) {
     const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
     if (!m) throw new Error('Rasm PNG data-URL ko\'rinishida bo\'lishi kerak');
     return Buffer.from(m[1], 'base64');
 }
 
-module.exports = { decodePng, dataUrlToBuffer };
+module.exports = { decodePng, encodePng, halve, dataUrlToBuffer };

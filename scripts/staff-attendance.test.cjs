@@ -36,6 +36,10 @@ test('tiriklik: bosh burilmasa yoki boshqa odam bo‘lsa rad etiladi', () => {
     assert.equal(rules.checkLiveness(front, { faces: 1, yaw: 0.05, box: { width: 150 } }).reason, 'liveness');
     assert.equal(rules.checkLiveness(front, { faces: 1, yaw: 0.3, box: { width: 40 } }).reason, 'liveness');
     assert.equal(rules.checkLiveness(front, { faces: 2, yaw: 0.3, box: { width: 150 } }).reason, 'many_faces');
+    // Odam o'z chap tomoniga burilsa (ko'zgulanmagan kadrda) yaw ortadi.
+    assert.equal(rules.checkLiveness(front, { faces: 1, yaw: 0.25, box: { width: 140 } }, 'left').ok, true);
+    assert.equal(rules.checkLiveness(front, { faces: 1, yaw: 0.25, box: { width: 140 } }, 'right').reason, 'wrong_direction');
+    assert.equal(rules.checkLiveness(front, { faces: 1, yaw: -0.2, box: { width: 140 } }, 'right').ok, true);
 });
 
 test('grafik: noto‘g‘ri vaqt va tugash boshlanishdan oldin bo‘lsa xato', () => {

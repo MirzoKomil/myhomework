@@ -5,14 +5,20 @@ const { randomUUID } = require('crypto');
 const rules = require('./rules');
 const t = require('./time');
 const notify = require('./notify');
-const { dataUrlToBuffer } = require('./png');
+const png = require('./png');
 
 const MANAGE_ROLES = new Set(['admin', 'boshliq', 'hr']);
-const VIEW_ROLES = new Set(['admin', 'boshliq', 'hr', 'rop']);
+// ROP uchun HR bo'limi CRM'da ataylab yopiq (js/app.js applyRoleBasedAccess) — u Telegram xabarlarini oladi.
+const VIEW_ROLES = new Set(['admin', 'boshliq', 'hr']);
 const TEACHER_HR_ROLES = new Set(['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi', 'asosiy', 'yordamchi']);
 const MAX_ATTEMPTS_PER_DAY = 12;
-const MAX_JPEG_BYTES = 400 * 1024;
-const MAX_PNG_BYTES = 2 * 1024 * 1024;
+const MAX_FACE_SUBMITS_PER_DAY = 5;
+const FRAME_W = 360, FRAME_H = 480;    // brauzer har doim shu o'lchamda (3x4) yuboradi
+const MAX_PNG_BYTES = 1.5 * 1024 * 1024;
+const CHALLENGE_TTL_SECONDS = 120;
+const REPLAY_DISTANCE = 0.06;           // oldingi rasm bilan deyarli bir xil — qayta yuborilgan rasm
+const TURNED_MATCH_THRESHOLD = 0.6;     // burilgan yuz to'g'ri yuzdan biroz farq qiladi
+const inFlight = new Set();             // bir xodimdan bir vaqtda bitta tekshiruv
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS staff_att_settings (
@@ -36,55 +42,98 @@ CREATE TABLE IF NOT EXISTS staff_att_schedules (
  tracked_since DATE NOT NULL DEFAULT CURRENT_DATE,
  updated_by TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE staff_att_faces ADD COLUMN IF NOT EXISTS first_approved_at TIMESTAMPTZ;
-ALTER TABLE staff_att_schedules ADD COLUMN IF NOT EXISTS tracked_since DATE NOT NULL DEFAULT CURRENT_DATE;
 CREATE TABLE IF NOT EXISTS staff_att_events (
  id TEXT PRIMARY KEY, employee_id TEXT NOT NULL, user_id TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('in','out')),
  work_date DATE NOT NULL, occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  ok BOOLEAN NOT NULL, reason TEXT NOT NULL DEFAULT '',
- lat DOUBLE PRECISION, lng DOUBLE PRECISION, accuracy INTEGER, distance_m INTEGER,
- face_distance REAL, yaw_delta REAL, photo_id TEXT, ip TEXT NOT NULL DEFAULT '', user_agent TEXT NOT NULL DEFAULT ''
+ lat DOUBLE PRECISION, lng DOUBLE PRECISION, accuracy INTEGER, distance_m INTEGER, location_method TEXT NOT NULL DEFAULT '',
+ face_distance REAL, yaw_delta REAL, descriptor JSONB, photo_id TEXT, ip TEXT NOT NULL DEFAULT '', user_agent TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS staff_att_events_day ON staff_att_events(work_date,employee_id);
+CREATE INDEX IF NOT EXISTS staff_att_events_emp ON staff_att_events(employee_id,occurred_at DESC);
+CREATE TABLE IF NOT EXISTS staff_att_challenges (
+ id TEXT PRIMARY KEY, employee_id TEXT NOT NULL, direction TEXT NOT NULL CHECK(direction IN ('left','right')),
+ expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ
+);
 CREATE TABLE IF NOT EXISTS staff_att_overrides (
  employee_id TEXT NOT NULL, work_date DATE NOT NULL, status TEXT NOT NULL CHECK(status IN ('excused','present','absent','leave')),
  note TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY(employee_id,work_date)
+);
+-- Tugagan kunlar natijasi muzlatiladi: keyin grafik yoki sozlama o'zgarsa ham o'tgan oy raqamlari o'zgarmaydi.
+CREATE TABLE IF NOT EXISTS staff_att_day_results (
+ employee_id TEXT NOT NULL, work_date DATE NOT NULL, data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  PRIMARY KEY(employee_id,work_date)
 );
 CREATE TABLE IF NOT EXISTS staff_att_audit (
  id BIGSERIAL PRIMARY KEY, actor_id TEXT NOT NULL, action TEXT NOT NULL, entity_id TEXT NOT NULL,
  data JSONB NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS staff_att_audit_entity ON staff_att_audit(entity_id,created_at);
 `;
 
 function error(status, message) { return Object.assign(new Error(message), { status }); }
 
-async function initSchema(db) {
-    await db.query(SCHEMA);
-    await require('./lessons').initSchema(db);
+// Bir nechta server nusxasi bir vaqtda ko'tarilsa ham jadvallar to'qnashmasligi uchun qulf ostida.
+async function initSchema(pool) {
+    const client = typeof pool.connect === 'function' ? await pool.connect() : pool;
+    try {
+        await client.query("SELECT pg_advisory_lock(hashtext('staff_att_schema'))");
+        try {
+            await client.query(SCHEMA);
+            await require('./lessons').initSchema(client);
+        } finally {
+            await client.query("SELECT pg_advisory_unlock(hashtext('staff_att_schema'))");
+        }
+    } finally {
+        if (client !== pool) client.release();
+    }
 }
 
 async function tableExists(db, name) {
     return !!(await db.query('SELECT to_regclass($1) AS t', ['public.' + name])).rows[0]?.t;
 }
 
-// Login akkaunti → xodim (hr_employees). Sotuv menejerlari uchun maxsus bog'lanish ham hisobga olinadi.
+async function transaction(pool, fn) {
+    if (typeof pool.connect !== 'function') return fn(pool);
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const result = await fn(client);
+        await client.query('COMMIT');
+        return result;
+    } catch (e) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw e;
+    } finally {
+        client.release();
+    }
+}
+
+// Login akkaunti → xodim (hr_employees). Bir login ikki xodimga biriktirilgan bo'lsa — xavfsiz tomonga, xodim topilmaydi.
 async function actor(db, user) {
-    const linkTable = await tableExists(db, 'user_sales_manager_links');
-    const { rows } = await db.query(`SELECT u.id,u.name,u.email,u.role,he.id AS employee_id,he.name AS employee_name,
-        he.role AS employee_role,he.status AS employee_status
-        FROM users u LEFT JOIN hr_employees he ON ${linkTable
-        ? `he.id=COALESCE((SELECT manager_id FROM user_sales_manager_links l WHERE l.user_id=u.id LIMIT 1),
-            (SELECT id FROM hr_employees x WHERE LOWER(TRIM(x.login))=LOWER(TRIM(u.email)) LIMIT 1))`
-        : 'LOWER(TRIM(he.login))=LOWER(TRIM(u.email))'}
-        WHERE u.id=$1 LIMIT 1`, [user?.id]);
-    const row = rows[0];
+    const row = (await db.query('SELECT id,name,email,role FROM users WHERE id=$1', [user?.id])).rows[0];
     if (!row) throw error(401, 'Akkaunt topilmadi');
-    return { ...row, canManage: MANAGE_ROLES.has(row.role), canView: VIEW_ROLES.has(row.role) };
+    let employees = [];
+    if (await tableExists(db, 'user_sales_manager_links')) {
+        employees = (await db.query(`SELECT he.id,he.name,he.role FROM user_sales_manager_links l JOIN hr_employees he ON he.id=l.manager_id
+            WHERE l.user_id=$1`, [row.id])).rows;
+    }
+    if (!employees.length && String(row.email || '').trim()) {
+        employees = (await db.query(`SELECT id,name,role FROM hr_employees WHERE COALESCE(TRIM(login),'')<>''
+            AND LOWER(TRIM(login))=LOWER(TRIM($1)) AND COALESCE(status,'active')<>'inactive'`, [row.email])).rows;
+    }
+    const emp = employees.length === 1 ? employees[0] : null;
+    return { ...row, employee_id: emp?.id || null, employee_name: emp?.name || null, employee_role: emp?.role || null,
+        ambiguous: employees.length > 1, canManage: MANAGE_ROLES.has(row.role), canView: VIEW_ROLES.has(row.role) };
 }
 
 function requireView(a) { if (!a.canView) throw error(403, 'Davomat bo‘limiga ruxsat yo‘q'); }
 function requireManage(a) { if (!a.canManage) throw error(403, 'Faqat HR yoki rahbar o‘zgartira oladi'); }
+function requireEmployee(a) {
+    if (a.ambiguous) throw error(409, 'Loginingiz HR ro‘yxatida bir nechta xodimga biriktirilgan. HR bilan bog‘laning');
+    if (!a.employee_id) throw error(403, 'Siz HR ro‘yxatida xodim sifatida topilmadingiz');
+}
 
 async function audit(db, actorId, action, entityId, data = {}) {
     await db.query('INSERT INTO staff_att_audit(actor_id,action,entity_id,data) VALUES($1,$2,$3,$4)',
@@ -104,30 +153,26 @@ async function saveSettings(db, user, raw) {
     return s;
 }
 
-function jpegBuffer(dataUrl) {
-    const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
-    if (!m) throw error(400, 'Rasm (JPEG) yuborilmadi');
-    const buf = Buffer.from(m[1], 'base64');
-    if (buf.length < 1000 || buf.length > MAX_JPEG_BYTES || buf[0] !== 0xff || buf[1] !== 0xd8) throw error(400, 'Rasm hajmi yoki formati noto‘g‘ri');
-    return buf;
-}
-
-function pngBuffer(dataUrl) {
-    let buf;
-    try { buf = dataUrlToBuffer(dataUrl); } catch (e) { throw error(400, e.message); }
+// Kadr: aniq 360x480 PNG. Dekodlangan piksellar dalil rasmini yasash uchun ham ishlatiladi —
+// HR ko'radigan rasm aynan yuz tekshirilgan rasmning o'zi (alohida rasm qabul qilinmaydi).
+function frame(dataUrl) {
+    let buf, img;
+    try { buf = png.dataUrlToBuffer(dataUrl); } catch (e) { throw error(400, 'Rasm yuborilmadi'); }
     if (buf.length > MAX_PNG_BYTES) throw error(400, 'Rasm juda katta');
-    return buf;
+    try { img = png.decodePng(buf); } catch { throw error(400, 'Rasm formati noto‘g‘ri'); }
+    if (img.width !== FRAME_W || img.height !== FRAME_H) throw error(400, 'Rasm o‘lchami noto‘g‘ri. Sahifani yangilab qayta urinib ko‘ring');
+    return { buf, img };
 }
 
-async function savePhoto(db, employeeId, purpose, jpeg) {
+async function savePhoto(db, employeeId, purpose, data) {
     const id = randomUUID();
     await db.query('INSERT INTO staff_att_photos(id,employee_id,purpose,mime,data) VALUES($1,$2,$3,$4,$5)',
-        [id, employeeId, purpose, 'image/jpeg', jpeg]);
+        [id, employeeId, purpose, 'image/png', data]);
     return id;
 }
 
-async function analyzeSafe(analyzer, png, opts) {
-    try { return await analyzer.analyze(png, opts); }
+async function analyzeSafe(analyzer, buf, opts) {
+    try { return await analyzer.analyze(buf, opts); }
     catch (e) {
         if (e.status) throw e;
         if (/PNG/.test(e.message)) throw error(400, 'Rasm formati noto‘g‘ri');
@@ -136,12 +181,27 @@ async function analyzeSafe(analyzer, png, opts) {
     }
 }
 
-// Namuna: 2-3 ta to'g'ri qaragan kadr. Hammasida bitta yuz va bir-biriga mos bo'lishi shart.
-async function buildDescriptors(db, analyzer, employeeId, frames, revealName = false) {
+function withLock(key, fn) {
+    if (inFlight.has(key)) return Promise.reject(error(429, 'Oldingi urinish hali tekshirilmoqda. Biroz kuting'));
+    inFlight.add(key);
+    return Promise.resolve().then(fn).finally(() => inFlight.delete(key));
+}
+
+// ── Yuz namunasi ─────────────────────────────────────────────────────────────
+
+async function otherApprovedMatch(db, analyzer, employeeId, descriptor) {
+    const others = (await db.query(`SELECT f.employee_id,f.descriptors,he.name FROM staff_att_faces f LEFT JOIN hr_employees he ON he.id=f.employee_id
+        WHERE f.state='approved' AND f.employee_id<>$1`, [employeeId])).rows;
+    return others.find(o => analyzer.bestDistance(descriptor, o.descriptors) <= analyzer.MATCH_THRESHOLD) || null;
+}
+
+// 2-3 ta to'g'ri qaragan kadr: hammasida bitta yuz va bir-biriga mos bo'lishi shart.
+async function buildDescriptors(db, analyzer, employeeId, frames, revealName) {
     if (!Array.isArray(frames) || frames.length < 2 || frames.length > 3) throw error(400, '2 yoki 3 ta rasm kerak');
+    const parsed = frames.map(frame);
     const descriptors = [];
-    for (const f of frames) {
-        const r = await analyzeSafe(analyzer, pngBuffer(f));
+    for (const f of parsed) {
+        const r = await analyzeSafe(analyzer, f.buf);
         if (r.faces !== 1) throw error(422, rules.reasonText(r.faces > 1 ? 'many_faces' : 'no_face'));
         descriptors.push(r.descriptor);
     }
@@ -150,97 +210,148 @@ async function buildDescriptors(db, analyzer, employeeId, frames, revealName = f
             throw error(422, 'Rasmlar bir-biriga mos kelmadi. Yorug‘ joyda, to‘g‘ri qarab qayta oling');
         }
     }
-    // Bitta odam ikki xodim nomidan belgilay olmasligi uchun.
-    const others = (await db.query("SELECT f.employee_id,f.descriptors,he.name FROM staff_att_faces f LEFT JOIN hr_employees he ON he.id=f.employee_id WHERE f.state='approved' AND f.employee_id<>$1", [employeeId])).rows;
-    for (const o of others) {
-        if (analyzer.bestDistance(descriptors[0], o.descriptors) <= analyzer.MATCH_THRESHOLD) {
-            // Xodimning o'ziga boshqa xodim ismi ko'rsatilmaydi — faqat HR'ga.
-            throw error(409, revealName ? `Bu yuz boshqa xodimga (${o.name || o.employee_id}) biriktirilgan`
-                : 'Bu yuz boshqa xodimga biriktirilgan. HR bilan bog‘laning');
-        }
+    const other = await otherApprovedMatch(db, analyzer, employeeId, descriptors[0]);
+    if (other) {
+        // Xodimning o'ziga boshqa xodim ismi ko'rsatilmaydi — faqat HR'ga.
+        throw error(409, revealName ? `Bu yuz boshqa xodimga (${other.name || other.employee_id}) biriktirilgan`
+            : 'Bu yuz boshqa xodimga biriktirilgan. HR bilan bog‘laning');
     }
-    return descriptors;
+    return { descriptors, evidence: parsed[0].buf };
 }
 
-async function storeFace(db, analyzer, { employeeId, frames, photo, state, by }) {
-    const descriptors = await buildDescriptors(db, analyzer, employeeId, frames, state === 'approved');
-    const photoId = await savePhoto(db, employeeId, 'enroll', jpegBuffer(photo));
-    const approved = state === 'approved';
-    await db.query(`INSERT INTO staff_att_faces(employee_id,descriptors,photo_id,state,submitted_by,reviewed_by,reviewed_at,first_approved_at)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$7) ON CONFLICT(employee_id) DO UPDATE SET descriptors=EXCLUDED.descriptors,photo_id=EXCLUDED.photo_id,
-        state=EXCLUDED.state,submitted_by=EXCLUDED.submitted_by,reviewed_by=EXCLUDED.reviewed_by,reviewed_at=EXCLUDED.reviewed_at,updated_at=NOW(),
-        first_approved_at=COALESCE(staff_att_faces.first_approved_at,EXCLUDED.first_approved_at)`,
-        [employeeId, JSON.stringify(descriptors), photoId, state, by, approved ? by : null, approved ? new Date() : null]);
-    await audit(db, by, 'face:' + state, employeeId, { photoId });
-    return { state, photoId };
+async function storeFace(pool, analyzer, { employeeId, frames, state, by }) {
+    const { descriptors, evidence } = await buildDescriptors(pool, analyzer, employeeId, frames, state === 'approved');
+    return transaction(pool, async db => {
+        const old = (await db.query('SELECT photo_id FROM staff_att_faces WHERE employee_id=$1 FOR UPDATE', [employeeId])).rows[0];
+        const photoId = await savePhoto(db, employeeId, 'enroll', evidence);
+        const approved = state === 'approved';
+        await db.query(`INSERT INTO staff_att_faces(employee_id,descriptors,photo_id,state,submitted_by,reviewed_by,reviewed_at,first_approved_at)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$7) ON CONFLICT(employee_id) DO UPDATE SET descriptors=EXCLUDED.descriptors,photo_id=EXCLUDED.photo_id,
+            state=EXCLUDED.state,submitted_by=EXCLUDED.submitted_by,reviewed_by=EXCLUDED.reviewed_by,reviewed_at=EXCLUDED.reviewed_at,updated_at=NOW(),
+            first_approved_at=COALESCE(staff_att_faces.first_approved_at,EXCLUDED.first_approved_at)`,
+            [employeeId, JSON.stringify(descriptors), photoId, state, by, approved ? by : null, approved ? new Date() : null]);
+        if (old?.photo_id) await db.query("DELETE FROM staff_att_photos WHERE id=$1 AND purpose='enroll'", [old.photo_id]);
+        await audit(db, by, 'face:' + state, employeeId, { photoId });
+        return { state, photoId };
+    });
 }
 
-async function scheduleFor(db, employeeId) {
-    const row = (await db.query("SELECT tracked,days,TO_CHAR(tracked_since,'YYYY-MM-DD') AS since FROM staff_att_schedules WHERE employee_id=$1", [employeeId])).rows[0];
-    return row ? { tracked: row.tracked, days: row.days || {}, since: row.since } : null;
+async function submitOwnFace(pool, analyzer, user, body) {
+    const a = await actor(pool, user); requireEmployee(a);
+    const current = (await pool.query('SELECT state FROM staff_att_faces WHERE employee_id=$1', [a.employee_id])).rows[0];
+    if (current?.state === 'approved') throw error(409, 'Yuz namunangiz allaqachon tasdiqlangan. O‘zgartirish uchun HR’ga murojaat qiling');
+    const recent = (await pool.query(`SELECT COUNT(*)::int AS n FROM staff_att_audit WHERE entity_id=$1 AND action='face:pending'
+        AND created_at > NOW() - INTERVAL '1 day'`, [a.employee_id])).rows[0].n;
+    if (recent >= MAX_FACE_SUBMITS_PER_DAY) throw error(429, 'Bugun yuz namunasi juda ko‘p yuborildi. Ertaga qayta urinib ko‘ring yoki HR’ga murojaat qiling');
+    const result = await withLock('face:' + a.employee_id, () =>
+        storeFace(pool, analyzer, { employeeId: a.employee_id, frames: body?.frames, state: 'pending', by: a.id }));
+    await notify.facePending(pool, { employeeId: a.employee_id, name: a.employee_name || a.name }).catch(() => {});
+    return result;
 }
 
-async function leaveOn(db, employeeId, date) {
-    if (!(await tableExists(db, 'domwork_bot_leave_requests'))) return false;
-    return !!(await db.query(`SELECT 1 FROM domwork_bot_leave_requests WHERE employee_id=$1 AND state='approved'
-        AND start_date<=$2::date AND end_date>=$2::date LIMIT 1`, [employeeId, date])).rows[0];
+// ── Kun holati (bir nechta xodim/kun uchun bir martada yuklanadi) ────────────
+
+async function loadContext(db, employeeIds, from, to) {
+    const ids = employeeIds.map(String);
+    const q = (sql, params) => db.query(sql, params).then(r => r.rows);
+    const [schedules, faces, events, overrides, snapshots] = await Promise.all([
+        q("SELECT employee_id,tracked,days,TO_CHAR(tracked_since,'YYYY-MM-DD') AS since FROM staff_att_schedules WHERE employee_id=ANY($1::text[])", [ids]),
+        q('SELECT employee_id,state,first_approved_at FROM staff_att_faces WHERE employee_id=ANY($1::text[])', [ids]),
+        q(`SELECT employee_id,TO_CHAR(work_date,'YYYY-MM-DD') AS d,kind,occurred_at FROM staff_att_events
+            WHERE ok AND employee_id=ANY($1::text[]) AND work_date BETWEEN $2 AND $3 ORDER BY occurred_at`, [ids, from, to]),
+        q(`SELECT employee_id,TO_CHAR(work_date,'YYYY-MM-DD') AS d,status,note FROM staff_att_overrides
+            WHERE employee_id=ANY($1::text[]) AND work_date BETWEEN $2 AND $3`, [ids, from, to]),
+        q(`SELECT employee_id,TO_CHAR(work_date,'YYYY-MM-DD') AS d,data FROM staff_att_day_results
+            WHERE employee_id=ANY($1::text[]) AND work_date BETWEEN $2 AND $3`, [ids, from, to]),
+    ]);
+    const leaves = await tableExists(db, 'domwork_bot_leave_requests')
+        ? await q(`SELECT employee_id,TO_CHAR(start_date,'YYYY-MM-DD') AS s,TO_CHAR(end_date,'YYYY-MM-DD') AS e FROM domwork_bot_leave_requests
+            WHERE state='approved' AND employee_id=ANY($1::text[]) AND end_date>=$2 AND start_date<=$3`, [ids, from, to]) : [];
+    const key = (e, d) => e + '|' + d;
+    const ev = new Map();
+    for (const r of events) { const k = key(r.employee_id, r.d); if (!ev.has(k)) ev.set(k, []); ev.get(k).push(r); }
+    return {
+        schedules: new Map(schedules.map(r => [r.employee_id, r])),
+        faces: new Map(faces.map(r => [r.employee_id, r])),
+        events: ev,
+        overrides: new Map(overrides.map(r => [key(r.employee_id, r.d), r])),
+        snapshots: new Map(snapshots.map(r => [key(r.employee_id, r.d), r.data])),
+        leaves, key, fresh: [],
+    };
+}
+
+function statusFor(ctx, employeeId, date, settings, now) {
+    const today = t.tashkentDate(now);
+    const k = ctx.key(employeeId, date);
+    let base = date < today ? ctx.snapshots.get(k) : null;
+    if (!base) {
+        const schedule = ctx.schedules.get(employeeId);
+        const face = ctx.faces.get(employeeId);
+        const day = schedule?.tracked ? (schedule.days || {})[String(t.weekday(date))] || null : null;
+        // Hisob grafik yoqilgan va yuz namunasi BIRINCHI marta tasdiqlangan kundan boshlanadi.
+        const approvedOn = face?.first_approved_at ? t.tashkentDate(face.first_approved_at) : null;
+        const countFrom = approvedOn ? [approvedOn, schedule?.since || approvedOn].sort().pop() : null;
+        base = rules.dayStatus({ date, today, nowMinutes: t.tashkentMinutes(now), day, settings,
+            events: ctx.events.get(k) || [], leave: false, override: null, countFrom });
+        if (date < today) { ctx.snapshots.set(k, base); ctx.fresh.push([employeeId, date, base]); }
+    }
+    const override = ctx.overrides.get(k);
+    if (override) return { ...base, status: override.status, note: override.note || '', overridden: true };
+    if (ctx.leaves.some(l => l.employee_id === employeeId && l.s <= date && l.e >= date)) return { ...base, status: 'leave' };
+    return base;
+}
+
+async function freeze(db, ctx) {
+    if (!ctx.fresh.length) return;
+    const rows = ctx.fresh.splice(0);
+    await db.query(`INSERT INTO staff_att_day_results(employee_id,work_date,data)
+        SELECT * FROM UNNEST($1::text[],$2::date[],$3::jsonb[]) ON CONFLICT DO NOTHING`,
+        [rows.map(r => r[0]), rows.map(r => r[1]), rows.map(r => JSON.stringify(r[2]))]);
 }
 
 async function computeDay(db, employeeId, date, settings, now = new Date()) {
-    const schedule = await scheduleFor(db, employeeId);
-    const events = (await db.query('SELECT kind,occurred_at FROM staff_att_events WHERE employee_id=$1 AND work_date=$2 AND ok ORDER BY occurred_at', [employeeId, date])).rows;
-    const override = (await db.query('SELECT status,note FROM staff_att_overrides WHERE employee_id=$1 AND work_date=$2', [employeeId, date])).rows[0] || null;
-    const day = schedule?.tracked ? schedule.days[String(t.weekday(date))] || null : null;
-    const face = (await db.query("SELECT state,first_approved_at FROM staff_att_faces WHERE employee_id=$1", [employeeId])).rows[0];
-    const approvedOn = face?.state === 'approved' && face.first_approved_at ? t.tashkentDate(face.first_approved_at) : null;
-    const countFrom = approvedOn ? [approvedOn, schedule?.since || approvedOn].sort().pop() : null;
-    return rules.dayStatus({ date, today: t.tashkentDate(now), nowMinutes: t.tashkentMinutes(now), day, settings,
-        events, leave: await leaveOn(db, employeeId, date), override, countFrom });
+    const ctx = await loadContext(db, [employeeId], date, date);
+    const result = statusFor(ctx, employeeId, date, settings, now);
+    await freeze(db, ctx);
+    return result;
 }
 
 // ── Xodimning o'z kabineti ────────────────────────────────────────────────────
 
+async function scheduleFor(db, employeeId) {
+    const row = (await db.query('SELECT tracked,days FROM staff_att_schedules WHERE employee_id=$1', [employeeId])).rows[0];
+    return row ? { tracked: row.tracked, days: row.days || {} } : null;
+}
+
 async function me(db, user, now = new Date()) {
     const a = await actor(db, user);
     const base = { name: a.name, employeeId: a.employee_id || null };
+    if (a.ambiguous) return { ...base, tracked: false, reason: 'ambiguous' };
     if (!a.employee_id) return { ...base, tracked: false, reason: 'no_employee' };
     const schedule = await scheduleFor(db, a.employee_id);
     if (!schedule?.tracked) return { ...base, tracked: false, reason: 'not_tracked' };
     const settings = await getSettings(db);
-    const face = (await db.query('SELECT state,updated_at FROM staff_att_faces WHERE employee_id=$1', [a.employee_id])).rows[0];
+    const face = (await db.query('SELECT state FROM staff_att_faces WHERE employee_id=$1', [a.employee_id])).rows[0];
     const date = t.tashkentDate(now);
     const today = await computeDay(db, a.employee_id, date, settings, now);
     const attemptsLeft = Math.max(0, MAX_ATTEMPTS_PER_DAY - Number((await db.query(
         'SELECT COUNT(*)::int AS n FROM staff_att_events WHERE employee_id=$1 AND work_date=$2', [a.employee_id, date])).rows[0].n));
     return { ...base, tracked: true, face: face ? face.state : 'none', today, days: schedule.days,
-        office: { name: settings.office.name, radius: settings.office.radius }, attemptsLeft,
+        office: { name: settings.office.name, radius: settings.office.radius }, attemptsLeft, photoDays: settings.photoRetentionDays,
         nextAction: today.inAt ? 'out' : 'in' };
 }
 
-async function submitOwnFace(db, analyzer, user, body) {
-    const a = await actor(db, user);
-    if (!a.employee_id) throw error(403, 'Siz HR ro‘yxatida xodim sifatida topilmadingiz');
-    const current = (await db.query('SELECT state FROM staff_att_faces WHERE employee_id=$1', [a.employee_id])).rows[0];
-    if (current?.state === 'approved') throw error(409, 'Yuz namunangiz allaqachon tasdiqlangan. O‘zgartirish uchun HR’ga murojaat qiling');
-    const result = await storeFace(db, analyzer, { employeeId: a.employee_id, frames: body?.frames, photo: body?.photo, state: 'pending', by: a.id });
-    await notify.facePending(db, { employeeId: a.employee_id, name: a.employee_name || a.name });
-    return result;
-}
-
-async function transaction(pool, fn) {
-    if (typeof pool.connect !== 'function') return fn(pool); // testlarda tayyor client berilishi mumkin
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        const result = await fn(client);
-        await client.query('COMMIT');
-        return result;
-    } catch (e) {
-        await client.query('ROLLBACK').catch(() => {});
-        throw e;
-    } finally {
-        client.release();
-    }
+// Har urinishdan oldin server tasodifiy yo'nalish beradi (chapga/o'ngga) — bir martalik, 2 daqiqa.
+async function challenge(db, user, now = new Date()) {
+    const a = await actor(db, user); requireEmployee(a);
+    const schedule = await scheduleFor(db, a.employee_id);
+    if (!schedule?.tracked) throw error(403, 'Sizga davomat belgilash yoqilmagan');
+    await db.query('DELETE FROM staff_att_challenges WHERE expires_at < NOW() - INTERVAL \'1 day\'');
+    const id = randomUUID();
+    const direction = require('crypto').randomInt(2) ? 'left' : 'right';
+    await db.query('INSERT INTO staff_att_challenges(id,employee_id,direction,expires_at) VALUES($1,$2,$3,$4)',
+        [id, a.employee_id, direction, new Date(now.getTime() + CHALLENGE_TTL_SECONDS * 1000)]);
+    return { id, direction, expiresIn: CHALLENGE_TTL_SECONDS };
 }
 
 function guardOrder(prior, kind) {
@@ -254,60 +365,95 @@ async function priorEvents(db, employeeId, date) {
     return (await db.query('SELECT kind,ok,occurred_at FROM staff_att_events WHERE employee_id=$1 AND work_date=$2 ORDER BY occurred_at', [employeeId, date])).rows;
 }
 
-// Yuz tahlili (bir necha soniya) tranzaksiyadan TASHQARIDA bajariladi, yozish esa
-// xodim bo'yicha qulf ostida qayta tekshirib amalga oshiriladi.
+function ipAllowed(ip, list) {
+    const v4 = String(ip || '').replace(/^::ffff:/, '');
+    const toInt = s => s.split('.').reduce((n, p) => (n << 8) + Number(p), 0) >>> 0;
+    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(v4)) return false;
+    return (list || []).some(entry => {
+        const [base, bits] = entry.split('/');
+        if (!bits) return base === v4;
+        const mask = Number(bits) === 0 ? 0 : (~0 << (32 - Number(bits))) >>> 0;
+        return (toInt(base) & mask) === (toInt(v4) & mask);
+    });
+}
+
+// Yuz tahlili (bir necha soniya, alohida oqimda) tranzaksiyadan TASHQARIDA bajariladi;
+// yozish xodim bo'yicha qulf ostida qayta tekshirib amalga oshiriladi.
 async function check(pool, analyzer, user, body, meta = {}) {
-    const a = await actor(pool, user);
-    if (!a.employee_id) throw error(403, 'Siz HR ro‘yxatida xodim sifatida topilmadingiz');
+    const a = await actor(pool, user); requireEmployee(a);
     const schedule = await scheduleFor(pool, a.employee_id);
     if (!schedule?.tracked) throw error(403, 'Sizga davomat belgilash yoqilmagan');
     const kind = body?.kind === 'out' ? 'out' : body?.kind === 'in' ? 'in' : null;
     if (!kind) throw error(400, 'Amal turi noto‘g‘ri');
+    return withLock('check:' + a.employee_id, () => checkLocked(pool, analyzer, a, kind, body, meta));
+}
+
+async function checkLocked(pool, analyzer, a, kind, body, meta) {
     const now = meta.now || new Date();
     const date = t.tashkentDate(now);
     const settings = await getSettings(pool);
     guardOrder(await priorEvents(pool, a.employee_id, date), kind);
-
     const face = (await pool.query("SELECT descriptors FROM staff_att_faces WHERE employee_id=$1 AND state='approved'", [a.employee_id])).rows[0];
     if (!face) throw error(409, rules.reasonText('no_face_profile'));
+    const ch = (await pool.query('SELECT direction,expires_at,used_at FROM staff_att_challenges WHERE id=$1 AND employee_id=$2',
+        [String(body?.challenge || ''), a.employee_id])).rows[0];
+    if (!ch || ch.used_at || new Date(ch.expires_at) < now) throw error(409, 'Urinish vaqti tugadi. Qaytadan boshlang');
+    const front = frame(body?.frame), turnedFrame = frame(body?.turned);
 
-    const loc = rules.checkLocation(settings, body?.location);
+    // Joylashuv: GPS ofis radiusida, yoki so'rov ofis internetidan (IP ro'yxati) kelgan.
+    const gps = rules.checkLocation(settings, body?.location);
+    const viaIp = ipAllowed(meta.ip, settings.officeIps);
+    const locOk = gps.ok || viaIp;
     const lat = Number(body?.location?.lat), lng = Number(body?.location?.lng);
-    const record = { lat: Number.isFinite(lat) ? lat : null, lng: Number.isFinite(lng) ? lng : null,
-        accuracy: loc.accuracy ?? null, distance: loc.distance ?? null, faceDistance: null, yawDelta: null };
-    const frontPng = pngBuffer(body?.frame), turnedPng = pngBuffer(body?.turned);
-    const jpeg = jpegBuffer(body?.photo);
+    // Ofisdan tashqaridagi urinishda aniq koordinata saqlanmaydi (bu ko'pincha uy manzili) — faqat masofa.
+    const record = { lat: locOk && Number.isFinite(lat) ? lat : null, lng: locOk && Number.isFinite(lng) ? lng : null,
+        accuracy: gps.accuracy ?? null, distance: gps.distance ?? null, method: gps.ok ? 'gps' : viaIp ? 'ip' : '',
+        faceDistance: null, yawDelta: null, descriptor: null };
 
-    let reason = loc.ok ? '' : loc.reason;
-    let front = null;
+    let reason = locOk ? '' : (gps.reason === 'low_accuracy' && !settings.officeIps.length ? 'low_accuracy_phone' : gps.reason);
+    let frontResult = null;
     if (!reason) {
-        front = await analyzeSafe(analyzer, frontPng);
-        if (front.faces !== 1) reason = front.faces > 1 ? 'many_faces' : 'no_face';
+        frontResult = await analyzeSafe(analyzer, front.buf);
+        if (frontResult.faces !== 1) reason = frontResult.faces > 1 ? 'many_faces' : 'no_face';
     }
     if (!reason) {
-        record.faceDistance = analyzer.bestDistance(front.descriptor, face.descriptors);
+        record.descriptor = frontResult.descriptor;
+        record.faceDistance = analyzer.bestDistance(frontResult.descriptor, face.descriptors);
         if (!(record.faceDistance <= analyzer.MATCH_THRESHOLD)) reason = 'mismatch';
     }
     if (!reason) {
-        const turned = await analyzeSafe(analyzer, turnedPng, { descriptor: false });
-        const live = rules.checkLiveness(front, turned);
+        // Avval yuborilgan rasmni qayta jo'natish (masalan, uydan skript bilan) — rad etiladi.
+        const recent = (await pool.query(`SELECT descriptor FROM staff_att_events WHERE employee_id=$1 AND descriptor IS NOT NULL
+            ORDER BY occurred_at DESC LIMIT 120`, [a.employee_id])).rows;
+        if (recent.some(r => analyzer.distance(frontResult.descriptor, r.descriptor) < REPLAY_DISTANCE)) reason = 'replay';
+    }
+    if (!reason) {
+        const turned = await analyzeSafe(analyzer, turnedFrame.buf);
+        const live = rules.checkLiveness(frontResult, turned, settings.checkTurnDirection ? ch.direction : null);
         record.yawDelta = Number.isFinite(live.yawDelta) ? live.yawDelta : null;
         if (!live.ok) reason = live.reason;
+        else if (!(analyzer.bestDistance(turned.descriptor, face.descriptors) <= TURNED_MATCH_THRESHOLD)) reason = 'mismatch';
     }
 
     const id = randomUUID();
+    const after = [];
     const status = await transaction(pool, async db => {
         await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['staff_att:' + a.employee_id]);
-        if (!reason) guardOrder(await priorEvents(db, a.employee_id, date), kind); // parallel so'rov himoyasi
-        // Rasm faqat ofis hududidagi urinishlarda saqlanadi.
-        const photoId = loc.ok ? await savePhoto(db, a.employee_id, 'check', jpeg) : null;
-        await db.query(`INSERT INTO staff_att_events(id,employee_id,user_id,kind,work_date,occurred_at,ok,reason,lat,lng,accuracy,distance_m,face_distance,yaw_delta,photo_id,ip,user_agent)
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-            [id, a.employee_id, a.id, kind, date, now, !reason, reason, record.lat, record.lng, record.accuracy, record.distance,
-                Number.isFinite(record.faceDistance) ? record.faceDistance : null, record.yawDelta, photoId,
+        // Qulf ostida qayta tekshiruv: parallel so'rovlar kunlik chegarani yoki tartibni buzmasin.
+        guardOrder(await priorEvents(db, a.employee_id, date), reason ? null : kind);
+        const used = await db.query('UPDATE staff_att_challenges SET used_at=NOW() WHERE id=$1 AND used_at IS NULL', [String(body.challenge)]);
+        if (!used.rowCount) throw error(409, 'Urinish vaqti tugadi. Qaytadan boshlang');
+        // Dalil rasmi — tekshirilgan kadrning o'zi (2 barobar kichraytirilgan). Ofisdan tashqarida rasm saqlanmaydi.
+        const photoId = locOk ? await savePhoto(db, a.employee_id, 'check', png.encodePng(png.halve(front.img))) : null;
+        await db.query(`INSERT INTO staff_att_events(id,employee_id,user_id,kind,work_date,occurred_at,ok,reason,lat,lng,accuracy,distance_m,location_method,
+            face_distance,yaw_delta,descriptor,photo_id,ip,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+            [id, a.employee_id, a.id, kind, date, now, !reason, reason, record.lat, record.lng, record.accuracy, record.distance, record.method,
+                Number.isFinite(record.faceDistance) ? record.faceDistance : null, record.yawDelta,
+                record.descriptor ? JSON.stringify(record.descriptor) : null, photoId,
                 String(meta.ip || '').slice(0, 64), String(meta.userAgent || '').slice(0, 300)]);
+        const who = { employeeId: a.employee_id, name: a.employee_name || a.name, date, at: now, settings };
         if (reason) {
-            if (reason === 'mismatch') await notify.mismatch(db, { employeeId: a.employee_id, name: a.employee_name || a.name, date, at: now, settings });
+            if (reason === 'mismatch' || reason === 'replay') after.push(() => notify.mismatch(pool, who));
             return null;
         }
         // Telegram botdagi "Ish jadvali / Face ID" menyusi shu jadvalni o'qiydi.
@@ -316,11 +462,11 @@ async function check(pool, analyzer, user, body, meta = {}) {
                 [id, a.employee_id, kind, now]);
         }
         const day = await computeDay(db, a.employee_id, date, settings, now);
-        const who = { employeeId: a.employee_id, name: a.employee_name || a.name, date, status: day, settings };
-        if (kind === 'in' && day.status === 'late') await notify.late(db, who);
-        if (kind === 'out' && day.earlyMinutes) await notify.earlyLeave(db, who);
+        if (kind === 'in' && day.status === 'late') after.push(() => notify.late(pool, { ...who, status: day }));
         return day;
     });
+    // Xabarlar faqat yozuv saqlangandan keyin; xato bo'lsa ham belgilash bekor bo'lmaydi.
+    for (const fn of after) await fn().catch(e => console.error('[staff-attendance] xabar xatosi:', e.message));
     if (reason) return { ok: false, reason, message: rules.reasonText(reason), distance: record.distance };
     return { ok: true, kind, at: now, clock: t.tashkentClock(now), today: status };
 }
@@ -358,54 +504,64 @@ async function saveSchedule(db, user, employeeId, body) {
     return { tracked, days };
 }
 
-async function enrollFor(db, analyzer, user, employeeId, body) {
-    const a = await actor(db, user); requireManage(a);
-    await employeeExists(db, employeeId);
-    return storeFace(db, analyzer, { employeeId, frames: body?.frames, photo: body?.photo, state: 'approved', by: a.id });
+async function enrollFor(pool, analyzer, user, employeeId, body) {
+    const a = await actor(pool, user); requireManage(a);
+    await employeeExists(pool, employeeId);
+    return withLock('face:' + employeeId, () => storeFace(pool, analyzer, { employeeId, frames: body?.frames, state: 'approved', by: a.id }));
 }
 
-async function reviewFace(db, analyzer, user, employeeId, decision) {
+// HR qaysi rasmni ko'rib tasdiqlagan bo'lsa, faqat o'sha namuna tasdiqlanadi (oraliqda almashtirilgan bo'lsa — 409).
+async function reviewFace(db, analyzer, user, employeeId, decision, photoId) {
     const a = await actor(db, user); requireManage(a);
-    const face = (await db.query('SELECT state,descriptors FROM staff_att_faces WHERE employee_id=$1 FOR UPDATE', [employeeId])).rows[0];
+    const face = (await db.query('SELECT state,descriptors,photo_id FROM staff_att_faces WHERE employee_id=$1 FOR UPDATE', [employeeId])).rows[0];
     if (!face) throw error(404, 'Yuz namunasi topilmadi');
+    if (face.state !== 'pending' || !photoId || face.photo_id !== photoId) throw error(409, 'Namuna o‘zgargan. Oynani yangilab qayta ko‘ring');
     if (decision === 'approve') {
-        const others = (await db.query("SELECT f.employee_id,f.descriptors,he.name FROM staff_att_faces f LEFT JOIN hr_employees he ON he.id=f.employee_id WHERE f.state='approved' AND f.employee_id<>$1", [employeeId])).rows;
-        for (const o of others) if (analyzer.bestDistance(face.descriptors[0], o.descriptors) <= analyzer.MATCH_THRESHOLD) {
-            throw error(409, `Bu yuz boshqa xodimga (${o.name || o.employee_id}) biriktirilgan`);
-        }
+        const other = await otherApprovedMatch(db, analyzer, employeeId, face.descriptors[0]);
+        if (other) throw error(409, `Bu yuz boshqa xodimga (${other.name || other.employee_id}) biriktirilgan`);
     }
     const state = decision === 'approve' ? 'approved' : 'rejected';
     await db.query(`UPDATE staff_att_faces SET state=$2,reviewed_by=$3,reviewed_at=NOW(),updated_at=NOW(),
         first_approved_at=CASE WHEN $2='approved' THEN COALESCE(first_approved_at,NOW()) ELSE first_approved_at END WHERE employee_id=$1`, [employeeId, state, a.id]);
-    await audit(db, a.id, 'face:' + state, employeeId);
+    await audit(db, a.id, 'face:' + state, employeeId, { photoId });
     return { state };
 }
 
-async function deleteFace(db, user, employeeId) {
-    const a = await actor(db, user); requireManage(a);
-    await db.query('DELETE FROM staff_att_faces WHERE employee_id=$1', [employeeId]);
-    await audit(db, a.id, 'face:delete', employeeId);
+// Namuna o'chiriladi (rasmlar ham), lekin tarix saqlanadi — o'tgan kunlar holati o'zgarmaydi.
+async function deleteFace(pool, user, employeeId) {
+    const a = await actor(pool, user); requireManage(a);
+    await transaction(pool, async db => {
+        await db.query(`UPDATE staff_att_faces SET state='rejected',descriptors='[]',photo_id=NULL,reviewed_by=$2,reviewed_at=NOW(),updated_at=NOW()
+            WHERE employee_id=$1`, [employeeId, a.id]);
+        await db.query("DELETE FROM staff_att_photos WHERE employee_id=$1 AND purpose='enroll'", [employeeId]);
+        await audit(db, a.id, 'face:delete', employeeId);
+    });
     return { deleted: true };
+}
+
+async function trackedList(db) {
+    return (await db.query(`SELECT he.id,he.name,he.role FROM staff_att_schedules s JOIN hr_employees he ON he.id=s.employee_id
+        WHERE s.tracked AND COALESCE(he.status,'active')<>'inactive' ORDER BY he.name`)).rows;
 }
 
 async function daily(db, user, date, now = new Date()) {
     const a = await actor(db, user); requireView(a);
     if (!t.isDate(date)) throw error(400, 'Sana noto‘g‘ri');
     const settings = await getSettings(db);
-    const list = (await db.query(`SELECT he.id,he.name,he.role FROM staff_att_schedules s JOIN hr_employees he ON he.id=s.employee_id
-        WHERE s.tracked AND COALESCE(he.status,'active')<>'inactive' ORDER BY he.name`)).rows;
-    const attempts = (await db.query(`SELECT id,employee_id,kind,occurred_at,ok,reason,distance_m,accuracy,face_distance,photo_id,lat,lng
+    const list = await trackedList(db);
+    const ctx = await loadContext(db, list.map(e => e.id), date, date);
+    const attempts = (await db.query(`SELECT id,employee_id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,lat,lng
         FROM staff_att_events WHERE work_date=$1 ORDER BY occurred_at`, [date])).rows;
-    const rows = [];
-    for (const e of list) {
-        const day = await computeDay(db, e.id, date, settings, now);
+    const rows = list.map(e => {
+        const day = statusFor(ctx, e.id, date, settings, now);
         const mine = attempts.filter(x => x.employee_id === e.id);
-        rows.push({ employeeId: e.id, name: e.name, role: e.role, ...day,
+        return { employeeId: e.id, name: e.name, role: e.role, ...day,
             attempts: mine.map(x => ({ id: x.id, kind: x.kind, at: x.occurred_at, clock: t.tashkentClock(x.occurred_at), ok: x.ok,
                 reason: x.reason, message: x.ok ? '' : rules.reasonText(x.reason), distance: x.distance_m, accuracy: x.accuracy,
-                faceDistance: x.face_distance, photoId: x.photo_id, lat: x.lat, lng: x.lng })),
-            rejected: mine.filter(x => !x.ok).length });
-    }
+                method: x.location_method, faceDistance: x.face_distance, photoId: x.photo_id, lat: x.lat, lng: x.lng })),
+            rejected: mine.filter(x => !x.ok).length };
+    });
+    await freeze(db, ctx);
     const summary = {};
     for (const r of rows) summary[r.status] = (summary[r.status] || 0) + 1;
     return { date, office: settings.office, rows, summary };
@@ -416,21 +572,20 @@ async function monthly(db, user, month, now = new Date()) {
     if (!t.isMonth(month)) throw error(400, 'Oy noto‘g‘ri');
     const settings = await getSettings(db);
     const dates = t.monthDates(month);
-    const list = (await db.query(`SELECT he.id,he.name,he.role FROM staff_att_schedules s JOIN hr_employees he ON he.id=s.employee_id
-        WHERE s.tracked AND COALESCE(he.status,'active')<>'inactive' ORDER BY he.name`)).rows;
-    const out = [];
-    for (const e of list) {
-        const days = [];
+    const list = await trackedList(db);
+    const ctx = await loadContext(db, list.map(e => e.id), dates[0], dates[dates.length - 1]);
+    const out = list.map(e => {
         const totals = { on_time: 0, late: 0, absent: 0, leave: 0, excused: 0, lateMinutes: 0, earlyMinutes: 0, workedMinutes: 0 };
-        for (const date of dates) {
-            const d = await computeDay(db, e.id, date, settings, now);
-            days.push({ date, status: d.status, lateMinutes: d.lateMinutes, earlyMinutes: d.earlyMinutes, inClock: d.inClock, outClock: d.outClock });
+        const days = dates.map(date => {
+            const d = statusFor(ctx, e.id, date, settings, now);
             if (totals[d.status] != null) totals[d.status]++;
             if (d.status === 'present') totals.on_time++;
             totals.lateMinutes += d.lateMinutes; totals.earlyMinutes += d.earlyMinutes; totals.workedMinutes += d.workedMinutes;
-        }
-        out.push({ employeeId: e.id, name: e.name, role: e.role, days, totals });
-    }
+            return { date, status: d.status, lateMinutes: d.lateMinutes, earlyMinutes: d.earlyMinutes, inClock: d.inClock, outClock: d.outClock };
+        });
+        return { employeeId: e.id, name: e.name, role: e.role, days, totals };
+    });
+    await freeze(db, ctx);
     return { month, dates, rows: out };
 }
 
@@ -457,7 +612,7 @@ async function photo(db, user, id) {
     const a = await actor(db, user);
     const row = (await db.query('SELECT employee_id,mime,data FROM staff_att_photos WHERE id=$1', [String(id || '')])).rows[0];
     if (!row) throw error(404, 'Rasm topilmadi');
-    if (!a.canView && row.employee_id !== a.employee_id) throw error(403, 'Ruxsat yo‘q');
+    if (!a.canView && (!a.employee_id || row.employee_id !== a.employee_id)) throw error(403, 'Ruxsat yo‘q');
     return row;
 }
 
@@ -466,22 +621,34 @@ async function lessonReport(db, user, date, now = new Date()) {
     return require('./lessons').report(db, date, now);
 }
 
-// Har 5 daqiqada: "kelmadi" xabarlari va eski rasmlarni tozalash.
+// Har 5 daqiqada: "kelmadi" va "erta ketdi" xabarlari, tugagan kunlarni muzlatish, eski rasmlarni tozalash.
 async function tick(db, now = new Date()) {
     const settings = await getSettings(db);
     const date = t.tashkentDate(now);
-    const list = (await db.query(`SELECT he.id,he.name FROM staff_att_schedules s JOIN hr_employees he ON he.id=s.employee_id
-        WHERE s.tracked AND COALESCE(he.status,'active')<>'inactive'`)).rows;
+    const nowMin = t.tashkentMinutes(now);
+    const list = await trackedList(db);
+    const yesterday = t.tashkentDate(new Date(now.getTime() - 86400000));
+    const ctx = await loadContext(db, list.map(e => e.id), yesterday, date);
     let absent = 0;
     for (const e of list) {
-        const d = await computeDay(db, e.id, date, settings, now);
-        if (d.status === 'absent') { absent++; await notify.absent(db, { employeeId: e.id, name: e.name, date, status: d, settings }); }
+        statusFor(ctx, e.id, yesterday, settings, now); // kechagi kun muzlatiladi
+        const d = statusFor(ctx, e.id, date, settings, now);
+        const who = { employeeId: e.id, name: e.name, date, status: d, settings };
+        if (d.status === 'absent') { absent++; await notify.absent(db, who).catch(() => {}); }
+        // Erta ketish xabari kun oxirida (ish tugagandan 1 soat keyin), oxirgi "ketdim" bo'yicha.
+        const end = t.parseClock(d.end);
+        if (d.earlyMinutes && end != null && nowMin >= end + 60) await notify.earlyLeave(db, who).catch(() => {});
     }
+    await freeze(db, ctx);
     const purged = (await db.query(`DELETE FROM staff_att_photos WHERE purpose='check' AND created_at < NOW() - ($1::int * INTERVAL '1 day')`,
         [settings.photoRetentionDays])).rowCount;
+    // Ishdan ketgan (nofaol) xodimlarning yuz namunasi va rasmlari o'chiriladi.
+    await db.query(`DELETE FROM staff_att_photos p USING hr_employees he WHERE he.id=p.employee_id AND he.status='inactive'`);
+    await db.query(`UPDATE staff_att_faces f SET descriptors='[]',state='rejected',photo_id=NULL FROM hr_employees he
+        WHERE he.id=f.employee_id AND he.status='inactive' AND f.descriptors<>'[]'::jsonb`);
     return { absent, purged };
 }
 
-module.exports = { initSchema, actor, getSettings, saveSettings, me, submitOwnFace, check, employees, saveSchedule,
-    enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, photo, tick, computeDay, lessonReport, transaction,
-    MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES };
+module.exports = { initSchema, actor, getSettings, saveSettings, me, challenge, submitOwnFace, check, employees, saveSchedule,
+    enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, photo, tick, computeDay, lessonReport, transaction, ipAllowed,
+    MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES, FRAME_W, FRAME_H };

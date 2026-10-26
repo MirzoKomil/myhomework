@@ -81,7 +81,7 @@
             <rect width="300" height="400" fill="rgba(12,10,24,.55)" mask="url(#sattMask)"/>
             <ellipse class="satt-oval" cx="150" cy="185" rx="104" ry="138" fill="none" stroke-width="3"/></svg>
             <div class="satt-count" aria-live="assertive"></div>
-            <div class="satt-turn" hidden aria-hidden="true"><span>⟵</span><span>⟶</span></div>
+            <div class="satt-turn" hidden aria-hidden="true"></div>
         </div><p class="satt-prompt" aria-live="polite">${esc(note)}</p>`;
     }
     async function startCamera(root) {
@@ -108,7 +108,7 @@
         if (vw / vh > ratio) { sw = vh * ratio; sx = (vw - sw) / 2; } else { sh = vw / ratio; sy = (vh - sh) / 2; }
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, sx, sy, sw, sh, 0, 0, CAPTURE_W, CAPTURE_H);
-        return { png: canvas.toDataURL('image/png'), jpeg: canvas.toDataURL('image/jpeg', 0.82) };
+        return canvas.toDataURL('image/png');
     }
     const wait = ms => new Promise(r => setTimeout(r, ms));
     async function countdown(root, seconds, prompt) {
@@ -185,28 +185,43 @@
             <ul class="satt-steps"><li>Ofis hududida bo‘ling (${esc(data.office?.name || 'ofis')}, ${data.office?.radius || ''} m)</li>
             <li>Yuzingizni ramkaga joylang — 3 soniyada rasm olinadi</li><li>So‘ng boshingizni sekin yonga buring</li></ul>
             <button type="button" class="satt-cta" data-kind="${kind}">${kind === 'in' ? 'Kelishni belgilash' : done ? 'Ketishni qayta belgilash' : 'Ketishni belgilash'}</button>
-            <p class="satt-muted satt-small">Bugun yana ${data.attemptsLeft} ta urinish qoldi. Rasm va joylashuv faqat davomat uchun saqlanadi.</p>`;
+            <p class="satt-muted satt-small">Bugun yana ${data.attemptsLeft} ta urinish qoldi. Rasm faqat davomat uchun, ${data.photoDays || 90} kun saqlanadi; ofisdan tashqaridagi joylashuvingiz saqlanmaydi.</p>`;
         body.querySelector('.satt-cta').onclick = () => checkFlow(body, kind);
     }
 
+    // Bekor qilish: oyna yopilsa jarayon to'xtaydi, kamera o'chadi va serverga hech narsa yuborilmaydi.
+    function session() {
+        const state = { cancelled: false, cam: null };
+        onCloseHook = () => { state.cancelled = true; state.cam?.stop(); };
+        state.alive = () => { if (state.cancelled || !overlay) { state.cam?.stop(); throw Object.assign(new Error('cancelled'), { cancelled: true }); } };
+        return state;
+    }
+
     async function checkFlow(body, kind) {
-        body.innerHTML = cameraStage('Yuzingizni ramka ichiga joylang');
-        const geo = locate();
-        let cam = null;
-        onCloseHook = () => cam?.stop();
+        body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Tayyorlanmoqda…</div>';
+        const st = session();
         try {
-            cam = await startCamera(body);
+            const ch = await api('/me/challenge', {});
+            st.alive();
+            body.innerHTML = cameraStage('Yuzingizni ramka ichiga joylang');
+            const geo = locate();
+            st.cam = await startCamera(body);
+            st.alive();
             await countdown(body, 3, 'Kameraga to‘g‘ri qarang');
-            const front = grab(cam.video);
-            body.querySelector('.satt-turn').hidden = false;
-            await countdown(body, 2, 'Endi boshingizni sekin chapga yoki o‘ngga buring');
-            const turned = grab(cam.video);
-            cam.stop(); cam = null;
+            st.alive();
+            const front = grab(st.cam.video);
+            // Ekrandagi ko'rinish ko'zgudek: xodimning chap tomoni ekranning chap tomonida.
+            const turn = body.querySelector('.satt-turn');
+            turn.hidden = false; turn.dataset.dir = ch.direction; turn.textContent = ch.direction === 'left' ? '⟵' : '⟶';
+            await countdown(body, 2, ch.direction === 'left' ? 'Endi boshingizni sekin CHAPGA buring' : 'Endi boshingizni sekin O‘NGGA buring');
+            st.alive();
+            const turned = grab(st.cam.video);
+            st.cam.stop(); st.cam = null;
             body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Joylashuv aniqlanmoqda…</div>';
             const location = await geo;
-            if (location.error) throw new Error(location.error);
-            body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Yuz tekshirilmoqda — bu 5–15 soniya olishi mumkin</div>';
-            const res = await api('/me/check', { kind, frame: front.png, turned: turned.png, photo: front.jpeg, location });
+            st.alive();
+            body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Yuz tekshirilmoqda — bu 10–20 soniya olishi mumkin</div>';
+            const res = await api('/me/check', { kind, challenge: ch.id, frame: front, turned, location: location.error ? null : location });
             if (!overlay) return;
             if (res.ok) {
                 const t = res.today || {};
@@ -218,11 +233,14 @@
                 body.querySelector('button').onclick = closeSheet;
                 refreshMe();
             } else {
-                failView(body, res.message + (res.reason === 'outside' && res.distance ? ` Ofisgacha taxminan ${res.distance} m.` : ''), kind);
+                const extra = res.reason === 'outside' && res.distance ? ` Ofisgacha taxminan ${res.distance} m.`
+                    : res.reason === 'no_location' && location.error ? ' ' + location.error : '';
+                failView(body, res.message + extra, kind);
             }
         } catch (e) {
-            cam?.stop();
-            if (overlay) failView(body, e.message, kind);
+            st.cam?.stop();
+            if (e.cancelled || !overlay) return;
+            failView(body, e.message, kind);
         }
     }
     function failView(body, message, kind) {
@@ -243,17 +261,19 @@
             <button type="button" class="satt-cta">Rasmga olish</button>`;
         body.querySelector('.satt-cta').onclick = async () => {
             body.innerHTML = cameraStage('Yuzingizni ramka ichiga joylang');
-            let cam = null;
-            onCloseHook = () => cam?.stop();
+            const st = session();
             try {
-                cam = await startCamera(body);
+                st.cam = await startCamera(body);
+                st.alive();
                 await countdown(body, 3, 'Kameraga to‘g‘ri qarang');
-                const a = grab(cam.video);
+                st.alive();
+                const a = grab(st.cam.video);
                 await countdown(body, 2, 'Yana bir marta, qimirlamang');
-                const b = grab(cam.video);
-                cam.stop(); cam = null;
+                st.alive();
+                const b = grab(st.cam.video);
+                st.cam.stop(); st.cam = null;
                 body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Rasmlar tekshirilmoqda…</div>';
-                const res = await api(self ? '/me/face' : `/employees/${encodeURIComponent(target.id)}/face`, { frames: [a.png, b.png], photo: a.jpeg });
+                const res = await api(self ? '/me/face' : `/employees/${encodeURIComponent(target.id)}/face`, { frames: [a, b] });
                 if (!overlay) return;
                 body.innerHTML = `<div class="satt-result satt-result-ok"><div class="satt-big-check" aria-hidden="true">✓</div>
                     <h4>${res.state === 'approved' ? 'Namuna saqlandi va tasdiqlandi' : 'Namuna HR’ga yuborildi'}</h4>
@@ -262,8 +282,8 @@
                 body.querySelector('button').onclick = closeSheet;
                 if (self) refreshMe(); else if (hrState.section === 'xodimlar') renderHrSection();
             } catch (e) {
-                cam?.stop();
-                if (!overlay) return;
+                st.cam?.stop();
+                if (e.cancelled || !overlay) return;
                 body.innerHTML = `<div class="satt-result satt-result-bad"><div class="satt-big-check" aria-hidden="true">!</div><h4>Saqlanmadi</h4><p>${esc(e.message)}</p>
                     <button type="button" class="satt-cta">Qayta urinish</button></div>`;
                 body.querySelector('button').onclick = () => enrollView(body, data, target);
@@ -343,7 +363,7 @@
                 ${a.photoId ? `<img data-satt-photo="${esc(a.photoId)}" alt="${esc(row.name)} — ${esc(a.clock)}">` : '<div class="satt-nophoto">Rasm saqlanmagan<br><span class="satt-small">ofis hududidan tashqarida</span></div>'}
                 <div><b class="satt-num">${esc(a.clock)}</b> · ${a.kind === 'in' ? 'kelish' : 'ketish'}<br>
                 ${a.ok ? '<span class="satt-ok-text">Tasdiqlandi</span>' : `<span class="satt-bad-text">${esc(a.message)}</span>`}<br>
-                <span class="satt-muted satt-small">${a.distance != null ? `Ofisdan ${a.distance} m` : 'Lokatsiya yo‘q'}${a.accuracy ? ` (±${a.accuracy} m)` : ''}${a.faceDistance != null ? ` · yuz farqi ${Number(a.faceDistance).toFixed(2)}` : ''}</span>
+                <span class="satt-muted satt-small">${a.method === 'ip' ? 'Ofis interneti orqali' : a.distance != null ? `Ofisdan ${a.distance} m` : 'Lokatsiya yo‘q'}${a.method !== 'ip' && a.accuracy ? ` (±${a.accuracy} m)` : ''}${a.faceDistance != null ? ` · yuz farqi ${Number(a.faceDistance).toFixed(2)}` : ''}</span>
                 ${a.lat != null ? `<br><a href="https://yandex.uz/maps/?pt=${a.lng},${a.lat}&z=17&l=map" target="_blank" rel="noopener">Xaritada ko‘rish</a>` : ''}</div></article>`).join('')}</div>`
             : '<p class="satt-muted">Bu kuni belgilash urinishlari yo‘q.</p>'}
             ${canManage() ? `<form class="satt-override" data-satt-override><h4>Holatni qo‘lda belgilash</h4>
@@ -376,7 +396,7 @@
         const dayNo = d => Number(d.slice(8));
         const wd = d => new Date(d + 'T00:00:00Z').getUTCDay() || 7;
         body.innerHTML = `<div class="satt-toolbar"><label>Oy <input type="month" class="form-control-sm" value="${hrState.month}" data-satt-month></label>
-            ${data.rows.length && window.XLSX ? '<button type="button" class="btn-secondary-sm" data-satt-xlsx>Excel’ga yuklab olish</button>' : ''}
+            ${data.rows.length ? '<button type="button" class="btn-secondary-sm" data-satt-xlsx>Excel’ga yuklab olish</button>' : ''}
             <span class="satt-legend"><i class="satt-ok">✓</i> vaqtida <i class="satt-warn">K</i> kechikdi <i class="satt-bad">✗</i> kelmadi <i class="satt-info">T</i> ta’til <i class="satt-info">S</i> sababli</span></div>
             ${data.rows.length ? `<div class="satt-table-wrap"><table class="satt-month"><thead><tr><th class="satt-sticky">Xodim</th>
             ${data.dates.map(d => `<th class="${wd(d) === 7 ? 'satt-sun' : ''}">${dayNo(d)}</th>`).join('')}
@@ -387,7 +407,9 @@
             </tbody></table></div>` : emptyState('Hisobot uchun ma’lumot yo‘q', 'Davomat yoqilgan xodimlar bo‘lganda oylik jadval shu yerda chiqadi.', 'xodimlar')}`;
         body.querySelector('[data-satt-month]').onchange = e => { hrState.month = e.target.value || tashkentToday().slice(0, 7); renderHrSection(); };
         const x = body.querySelector('[data-satt-xlsx]');
-        if (x) x.onclick = () => {
+        if (x) x.onclick = async () => {
+            try { if (!window.XLSX && typeof loadXlsxLib === 'function') await loadXlsxLib(); } catch { /* pastda tekshiriladi */ }
+            if (!window.XLSX) { x.textContent = 'Excel kutubxonasi yuklanmadi'; return; }
             const rows = data.rows.map(r => {
                 const o = { Xodim: r.name };
                 r.days.forEach(d => { o[d.date.slice(8)] = (STATUS[d.status] || [d.status])[0] + (d.lateMinutes ? ` (${d.lateMinutes})` : ''); });
@@ -482,7 +504,7 @@
             <div class="satt-row satt-end"><button type="button" class="btn-danger-sm" data-decision="reject">Rad etish</button><button type="button" class="btn-primary-sm" data-decision="approve">Tasdiqlash</button></div></div>`);
         hydratePhotos(body);
         body.querySelectorAll('[data-decision]').forEach(b => { b.onclick = async () => {
-            try { await api(`/employees/${encodeURIComponent(emp.id)}/face/review`, { decision: b.dataset.decision }); closeSheet(); renderHrSection(); }
+            try { await api(`/employees/${encodeURIComponent(emp.id)}/face/review`, { decision: b.dataset.decision, photoId: emp.facePhotoId }); closeSheet(); renderHrSection(); }
             catch (err) { body.querySelector('.satt-form-msg').textContent = err.message; }
         }; });
     }
@@ -496,13 +518,17 @@
             <label>Uzunlik (lng)<input class="form-control-sm" name="lng" inputmode="decimal" value="${s.office.lng}"></label>
             <label>Radius, metr<input class="form-control-sm" type="number" name="radius" min="30" max="2000" value="${s.office.radius}"></label></div>
             <div class="satt-row"><button type="button" class="btn-secondary-sm" data-satt-here>Hozirgi joylashuvimni olish</button>
-            <a href="https://yandex.uz/maps/?pt=${s.office.lng},${s.office.lat}&z=17&l=map" target="_blank" rel="noopener" data-satt-map>Xaritada tekshirish</a></div></fieldset>
+            <a href="https://yandex.uz/maps/?pt=${s.office.lng},${s.office.lat}&z=17&l=map" target="_blank" rel="noopener" data-satt-map>Xaritada tekshirish</a></div>
+            <label>Ofis internetining IP manzillari (kompyuterdan belgilash uchun, vergul bilan)
+            <input class="form-control-sm" name="officeIps" value="${esc((s.officeIps || []).join(', '))}" placeholder="masalan: 213.230.100.10"></label>
+            <p class="satt-muted satt-small">Kompyuterlarda GPS yo‘q. Ofis Wi-Fi’sining tashqi IP manzili kiritilsa, shu internetdan kelgan belgilash ofisda deb hisoblanadi.${s.yourIp ? ` Hozirgi IP manzilingiz: <b>${esc(s.yourIp)}</b> — ofisda bo‘lsangiz shuni kiriting.` : ''}</p></fieldset>
             <fieldset><legend>Qoidalar</legend><div class="satt-grid">
             <label>Kechikishga imtiyoz, daq<input class="form-control-sm" type="number" name="graceMinutes" min="0" max="120" value="${s.graceMinutes}"></label>
             <label>“Kelmadi” deb hisoblash, ish boshlanib necha daq o‘tgach<input class="form-control-sm" type="number" name="absentAfterMinutes" min="15" max="720" value="${s.absentAfterMinutes}"></label>
             <label>Erta ketishga imtiyoz, daq<input class="form-control-sm" type="number" name="earlyLeaveGraceMinutes" min="0" max="120" value="${s.earlyLeaveGraceMinutes}"></label>
             <label>GPS aniqligi chegarasi, m<input class="form-control-sm" type="number" name="maxAccuracyMeters" min="20" max="2000" value="${s.maxAccuracyMeters}"></label>
             <label>Belgilash rasmlarini saqlash, kun<input class="form-control-sm" type="number" name="photoRetentionDays" min="7" max="365" value="${s.photoRetentionDays}"></label></div>
+            <label class="satt-switch"><input type="checkbox" name="checkTurnDirection" ${s.checkTurnDirection ? 'checked' : ''}> Bosh aynan ko‘rsatilgan tomonga (chap/o‘ng) burilishini tekshirish</label>
             <label class="satt-switch"><input type="checkbox" name="notifyTelegram" ${s.notifyTelegram ? 'checked' : ''}> Kechikish va kelmaslik haqida Telegram’da xabar berish (direktor va ROP)</label>
             <p class="satt-muted satt-small">Xabar @Domworkuz_bot orqali keladi — buning uchun direktor va ROP botga o‘z Telegram akkauntini ulagan bo‘lishi kerak.</p></fieldset>
             <p class="satt-form-msg" role="status"></p><div class="satt-row satt-end"><button type="submit" class="btn-primary-sm">Saqlash</button></div></form>`;
@@ -522,7 +548,9 @@
             try {
                 const saved = await api('/settings', { office: { name: form.name.value, lat: n('lat'), lng: n('lng'), radius: n('radius') },
                     graceMinutes: n('graceMinutes'), absentAfterMinutes: n('absentAfterMinutes'), earlyLeaveGraceMinutes: n('earlyLeaveGraceMinutes'),
-                    maxAccuracyMeters: n('maxAccuracyMeters'), photoRetentionDays: n('photoRetentionDays'), notifyTelegram: form.notifyTelegram.checked }, 'PUT');
+                    maxAccuracyMeters: n('maxAccuracyMeters'), photoRetentionDays: n('photoRetentionDays'), notifyTelegram: form.notifyTelegram.checked,
+                    officeIps: form.officeIps.value, checkTurnDirection: form.checkTurnDirection.checked }, 'PUT');
+                form.officeIps.value = saved.officeIps.join(', ');
                 msg.textContent = 'Saqlandi.';
                 form.querySelector('[data-satt-map]').href = `https://yandex.uz/maps/?pt=${saved.office.lng},${saved.office.lat}&z=17&l=map`;
             } catch (err) { msg.textContent = err.message; }

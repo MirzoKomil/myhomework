@@ -18,17 +18,18 @@ module.exports = function staffAttendanceRouter({ pool, authRequired, analyzer =
 
     // Xodimning o'zi
     router.get('/me', handle(req => service.me(pool, req.user)));
+    router.post('/me/challenge', handle(req => service.challenge(pool, req.user)));
     router.post('/me/face', handle(req => service.submitOwnFace(pool, analyzer, req.user, req.body)));
     router.post('/me/check', handle(req => service.check(pool, analyzer, req.user, req.body, meta(req))));
 
     // HR / rahbar
-    router.get('/settings', handle(async req => { const a = await service.actor(pool, req.user); if (!a.canView) throw Object.assign(new Error('Ruxsat yo‘q'), { status: 403 }); return service.getSettings(pool); }));
+    router.get('/settings', handle(async req => { const a = await service.actor(pool, req.user); if (!a.canView) throw Object.assign(new Error('Ruxsat yo‘q'), { status: 403 }); return { ...(await service.getSettings(pool)), yourIp: String(req.ip || '').replace(/^::ffff:/, '') }; }));
     router.put('/settings', handle(req => service.saveSettings(pool, req.user, req.body)));
     router.get('/employees', handle(req => service.employees(pool, req.user)));
     router.put('/employees/:id/schedule', handle(req => service.saveSchedule(pool, req.user, req.params.id, req.body)));
     router.post('/employees/:id/face', handle(req => service.enrollFor(pool, analyzer, req.user, req.params.id, req.body)));
     router.post('/employees/:id/face/review', handle(req => service.transaction(pool, db =>
-        service.reviewFace(db, analyzer, req.user, req.params.id, req.body?.decision === 'approve' ? 'approve' : 'reject'))));
+        service.reviewFace(db, analyzer, req.user, req.params.id, req.body?.decision === 'approve' ? 'approve' : 'reject', String(req.body?.photoId || '')))));
     router.delete('/employees/:id/face', handle(req => service.deleteFace(pool, req.user, req.params.id)));
     router.get('/daily', handle(req => service.daily(pool, req.user, String(req.query.date || ''))));
     router.get('/monthly', handle(req => service.monthly(pool, req.user, String(req.query.month || ''))));
@@ -39,7 +40,7 @@ module.exports = function staffAttendanceRouter({ pool, authRequired, analyzer =
         try {
             const row = await service.photo(pool, req.user, req.params.id);
             res.set('Content-Type', row.mime);
-            res.set('Cache-Control', 'private, max-age=86400');
+            res.set('Cache-Control', 'private, no-store'); // biometrik rasm umumiy kompyuter keshida qolmasin
             res.send(row.data);
         } catch (e) {
             res.status(e.status || 500).json({ error: e.status ? e.message : 'Rasmni ochib bo‘lmadi' });

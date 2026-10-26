@@ -34,8 +34,14 @@ async function send(db, key, text, settings) {
     return sent;
 }
 
-const late = (db, { employeeId, name, date, status, settings }) => send(db, `att:late:${employeeId}:${date}`,
-    `⏰ <b>${esc(name)}</b> kechikdi\nKeldi: ${status.inClock} (ish ${status.start} da boshlanadi)\nKechikish: <b>${status.lateMinutes} daqiqa</b>`, settings);
+async function late(db, { employeeId, name, date, status, settings }) {
+    // "Kelmadi" xabari allaqachon ketgan bo'lsa — buni tuzatish sifatida yozamiz.
+    const prior = (await db.query("SELECT to_regclass('public.domwork_bot_outbox') AS t")).rows[0]?.t
+        && (await db.query('SELECT 1 FROM domwork_bot_outbox WHERE unique_key LIKE $1 LIMIT 1', [`att:absent:${employeeId}:${date}:%`])).rows[0];
+    const head = prior ? `✅ <b>${esc(name)}</b> keldi (avval “kelmadi” deb xabar berilgan edi)` : `⏰ <b>${esc(name)}</b> kechikdi`;
+    return send(db, `att:late:${employeeId}:${date}`,
+        `${head}\nKeldi: ${status.inClock} (ish ${status.start} da boshlanadi)\nKechikish: <b>${status.lateMinutes} daqiqa</b>`, settings);
+}
 
 const absent = (db, { employeeId, name, date, status, settings }) => send(db, `att:absent:${employeeId}:${date}`,
     `❌ <b>${esc(name)}</b> bugun ishga kelganini belgilamadi\nIsh boshlanishi: ${status.start}\nSana: ${date}`, settings);

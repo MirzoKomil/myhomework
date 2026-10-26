@@ -10,7 +10,15 @@ const DEFAULT_SETTINGS = Object.freeze({
     maxAccuracyMeters: 200,    // GPS aniqligi bundan yomon bo'lsa — rad
     photoRetentionDays: 90,
     notifyTelegram: true,
+    officeIps: [],             // ofis internetining tashqi IP manzillari (kompyuterdan belgilash uchun)
+    checkTurnDirection: true,  // bosh aynan ko'rsatilgan tomonga burilishi shart
 });
+
+function normalizeIps(raw) {
+    const list = Array.isArray(raw) ? raw : String(raw || '').split(/[\s,;]+/);
+    const ok = v => /^(\d{1,3})(\.\d{1,3}){3}(\/([0-9]|[12]\d|3[0-2]))?$/.test(v) && v.split('/')[0].split('.').every(n => Number(n) <= 255);
+    return [...new Set(list.map(v => String(v).trim()).filter(Boolean))].filter(ok).slice(0, 20);
+}
 
 const DAY_KEYS = ['1', '2', '3', '4', '5', '6', '7'];
 
@@ -31,6 +39,8 @@ function normalizeSettings(raw) {
         maxAccuracyMeters: Math.round(num(s.maxAccuracyMeters, 20, 2000, DEFAULT_SETTINGS.maxAccuracyMeters)),
         photoRetentionDays: Math.round(num(s.photoRetentionDays, 7, 365, DEFAULT_SETTINGS.photoRetentionDays)),
         notifyTelegram: s.notifyTelegram !== false,
+        officeIps: normalizeIps(s.officeIps),
+        checkTurnDirection: s.checkTurnDirection !== false,
     };
 }
 
@@ -69,20 +79,27 @@ function checkLocation(settings, loc) {
 }
 
 // Tiriklik: ikkinchi kadrda bosh sezilarli burilgan va yuz o'lchami mos.
+// direction: 'left' | 'right' — xodimning o'ziga nisbatan. Kamera ko'rgan (ko'zgulanmagan) rasmda odam o'z
+// chap tomoniga burilsa burun uchi rasmning o'ng tomoniga siljiydi → yaw ortadi.
 const MIN_YAW_DELTA = 0.12;
-function checkLiveness(front, turned) {
+function checkLiveness(front, turned, direction = null) {
     if (!front || front.faces !== 1) return { ok: false, reason: front?.faces > 1 ? 'many_faces' : 'no_face' };
     if (!turned || turned.faces !== 1) return { ok: false, reason: turned?.faces > 1 ? 'many_faces' : 'no_face_turned' };
     const ratio = turned.box.width / front.box.width;
     if (!(ratio > 0.6 && ratio < 1.6)) return { ok: false, reason: 'liveness' };
-    const delta = Math.abs(turned.yaw - front.yaw);
+    const signed = turned.yaw - front.yaw;
+    const delta = Math.abs(signed);
     if (!(delta >= MIN_YAW_DELTA)) return { ok: false, reason: 'liveness', yawDelta: delta };
+    if (direction && (direction === 'left' ? signed < 0 : signed > 0)) return { ok: false, reason: 'wrong_direction', yawDelta: delta };
     return { ok: true, yawDelta: delta };
 }
 
 const REASONS = {
     no_location: 'Lokatsiya olinmadi. Telefon sozlamalarida joylashuvga ruxsat bering.',
     low_accuracy: 'GPS aniqligi past. Derazaga yaqinroq turib qayta urinib ko‘ring.',
+    low_accuracy_phone: 'Joylashuv aniq emas. Kompyuterda GPS bo‘lmaydi — davomatni telefoningizdan belgilang.',
+    replay: 'Bu rasm avval yuborilgan. Kamerani qayta ochib, yangidan urinib ko‘ring.',
+    wrong_direction: 'Boshingizni ko‘rsatilgan tomonga buring.',
     outside: 'Siz ofis hududidan tashqaridasiz.',
     no_face: 'Rasmda yuz topilmadi. Yuzingiz ramka ichida va yorug‘ joyda bo‘lsin.',
     no_face_turned: 'Ikkinchi rasmda yuz topilmadi. Boshingizni sekin buring, yuz ramkadan chiqmasin.',

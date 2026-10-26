@@ -35,8 +35,11 @@ async function recordVideoChat(db, message) {
     if (!started && !ended) return false;
     const at = new Date(Number(message.date) * 1000);
     if (Number.isNaN(at.getTime())) return false;
-    if (!(await db.query("SELECT to_regclass('public.staff_att_video_chats') AS t")).rows[0]?.t) return false;
+    const ready = (await db.query("SELECT to_regclass('public.staff_att_video_chats') AS a, to_regclass('public.domwork_learning_groups') AS b")).rows[0];
+    if (!ready?.a || !ready?.b) return false;
     const chatId = String(message.chat.id);
+    // Faqat CRM'da ustozga bog'langan dars guruhlari yoziladi.
+    if (!(await db.query("SELECT 1 FROM domwork_learning_groups WHERE chat_id=$1 AND type='classroom' AND NOT archived LIMIT 1", [chatId])).rows[0]) return false;
     const kind = started ? 'started' : 'ended';
     const duration = ended && Number.isFinite(Number(ended.duration)) ? Math.max(0, Math.round(Number(ended.duration))) : null;
     await db.query(`INSERT INTO staff_att_video_chats(chat_id,kind,at,duration_seconds,update_key) VALUES($1,$2,$3,$4,$5)
@@ -81,7 +84,8 @@ function blocksFrom(slots) {
 // Telegram video chat bo'yicha blok holati.
 function judgeByVideo(block, date, chats, now, nowDate) {
     const bStart = t.atTashkent(date, block.start), bEnd = t.atTashkent(date, block.end);
-    const window = chats.filter(c => c.end > new Date(bStart.getTime() - 30 * 60000) && c.start < bEnd);
+    // Faqat shu blok bilan kesishgan efirlar (oldingi blokning efiri hisobga olinmaydi).
+    const window = chats.filter(c => c.end > bStart && c.start < bEnd && c.start >= new Date(bStart.getTime() - 60 * 60000));
     if (!window.length) {
         const pending = date > nowDate || (date === nowDate && now < new Date(bEnd.getTime() + 15 * 60000));
         return { status: pending ? 'pending' : 'not_held' };
@@ -150,8 +154,14 @@ async function report(db, date, now = new Date()) {
         for (const id of chatIds) chats.push(...intervals(videoRows.filter(v => v.chat_id === id), now));
         const marks = new Map(markRows.filter(m => m.teacher_id === teacher.id).map(m => [m.student_id, m.first_marked_at]));
         const blocks = blocksFrom(slots).map(b => {
-            const judged = source === 'telegram' ? judgeByVideo(b, date, chats, now, nowDate) : judgeByMarks(b, date, marks, now, nowDate);
-            return { start: t.clock(b.start), end: t.clock(b.end), lessons: b.slots.length,
+            let judged = source === 'telegram' ? judgeByVideo(b, date, chats, now, nowDate) : judgeByMarks(b, date, marks, now, nowDate);
+            let blockSource = source;
+            // Telegram'da efir bo'lmagan blok (dars boshqa joyda o'tgan bo'lishi mumkin) — davomat vaqti bilan tekshiriladi.
+            if (source === 'telegram' && judged.status === 'not_held') {
+                const byMarks = judgeByMarks(b, date, marks, now, nowDate);
+                if (byMarks.slots.some(x => x.markedClock)) { judged = byMarks; blockSource = 'davomat'; }
+            }
+            return { start: t.clock(b.start), end: t.clock(b.end), lessons: b.slots.length, source: blockSource,
                 students: b.slots.map(s => s.studentName), ...judged,
                 slots: judged.slots ? judged.slots.map(s => ({ student: s.studentName, start: t.clock(s.start), end: t.clock(s.end), status: s.status, markedClock: s.markedClock || '' })) : undefined };
         });

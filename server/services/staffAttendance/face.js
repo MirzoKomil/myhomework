@@ -151,6 +151,7 @@ function touchIdle() {
 // PNG buffer → { faces, descriptor?, yaw, score, box }. STAFF_FACE_INLINE=1 — worker'siz (testlar uchun).
 function analyze(pngBuffer, opts = {}) {
     if (process.env.STAFF_FACE_INLINE === '1') return analyzeLocal(pngBuffer, opts);
+    if (pending.size >= 8) return Promise.reject(Object.assign(new Error('Hozir tekshiruv navbati band. Bir daqiqadan keyin qayta urinib ko‘ring'), { status: 503 }));
     return new Promise((resolve, reject) => {
         const id = ++seq;
         const timer = setTimeout(() => {
