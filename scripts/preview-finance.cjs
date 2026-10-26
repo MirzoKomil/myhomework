@@ -49,17 +49,19 @@ async function seed() {
         ('sal-oct-t1','t1','russian','2026-10-01','2026-10-15',1700000,'unpaid',NULL,NULL)`);
     // Demo hujjat moliyaning yopiq omboriga yuklanadi (PNG imzosi bilan 1x1 rasm).
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-    const { url: proof } = await finance.storeEvidence(pool, actor, { originalname: 'chek-demo.png', mimetype: 'image/png', buffer: png });
+    let pn = 0;
+    // Har bir chiqim uchun alohida hujjat (bitta chek bilan ikki marta pul chiqarib bo'lmaydi).
+    const newProof = async () => (await finance.storeEvidence(pool, actor, { originalname: 'chek-demo-' + (++pn) + '.png', mimetype: 'image/png', buffer: Buffer.concat([png, Buffer.from(String(pn))]) })).url;
     let k = 0;
     const tx = (o) => finance.createTransaction(pool, actor, { requestKey: 'preview-seed-key-' + String(++k).padStart(4, '0'), entity: 'russian', accountId: 'acc-card', ...o });
-    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 4200000, date: '2026-09-05', counterparty: 'Meta Ads', description: 'Sentyabr target', receiptUrl: proof });
-    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 3800000, date: '2026-10-04', counterparty: 'Meta Ads', description: 'Oktyabr target', receiptUrl: proof });
-    await tx({ type: 'expense', categoryCode: 'RENT', amount: 2500000, date: '2026-10-01', entity: 'common', counterparty: 'Ofis ijarasi', receiptUrl: proof });
+    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 4200000, date: '2026-09-05', counterparty: 'Meta Ads', description: 'Sentyabr target', receiptUrl: await newProof() });
+    await tx({ type: 'expense', categoryCode: 'MKT_ADS', amount: 3800000, date: '2026-10-04', counterparty: 'Meta Ads', description: 'Oktyabr target', receiptUrl: await newProof() });
+    await tx({ type: 'expense', categoryCode: 'RENT', amount: 2500000, date: '2026-10-01', entity: 'common', counterparty: 'Ofis ijarasi', receiptUrl: await newProof() });
     await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 650000, date: '2026-10-02', entity: 'common', counterparty: 'Railway, Eskiz SMS' });
-    await tx({ type: 'refund', categoryCode: 'REFUND', amount: 300000, date: '2026-10-09', paymentRecordId: 'p40', counterparty: 'Qaytarish', description: 'Kurs boshlanmasdan voz kechdi', receiptUrl: proof, terminates: true });
+    await tx({ type: 'refund', categoryCode: 'REFUND', amount: 300000, date: '2026-10-09', paymentRecordId: 'p40', counterparty: 'Qaytarish', description: 'Kurs boshlanmasdan voz kechdi', receiptUrl: await newProof(), terminates: true });
     await tx({ type: 'capital', categoryCode: 'OWNER_IN', amount: 5000000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'Ta’sischi' });
-    await tx({ type: 'expense', categoryCode: 'CAPEX', amount: 7200000, date: '2026-08-20', entity: 'common', accountId: 'acc-bank', counterparty: 'Noutbuk va proyektor', usefulLifeMonths: 36, receiptUrl: proof });
-    await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 2400000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'CRM yillik obuna', serviceStart: '2026-09-01', serviceEnd: '2027-08-31', receiptUrl: proof });
+    await tx({ type: 'expense', categoryCode: 'CAPEX', amount: 7200000, date: '2026-08-20', entity: 'common', accountId: 'acc-bank', counterparty: 'Noutbuk va proyektor', usefulLifeMonths: 36, receiptUrl: await newProof() });
+    await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 2400000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'CRM yillik obuna', serviceStart: '2026-09-01', serviceEnd: '2027-08-31', receiptUrl: await newProof() });
     await finance.recordSalaryPayment(pool, actor, 'sal-sep-t1', { accountId: 'acc-card', date: '2026-10-03' });
     await finance.createPayable(pool, actor, { requestKey: 'preview-payable-0001', kind: 'bill', entity: 'russian', counterparty: 'Bloger reklama', categoryCode: 'MKT_OTHER', amount: 1500000, issueDate: '2026-10-10', dueDate: '2026-10-20' });
     await finance.addAccountCheck(pool, actor, 'acc-card', { date: '2026-10-20', actualBalance: 21000000, note: 'Bank ilovasi' });
