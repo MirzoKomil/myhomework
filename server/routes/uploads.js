@@ -93,6 +93,7 @@ router.post('/creative-submission', creativeSubmissionUpload.single('file'), (re
 });
 
 router.delete('/:filename', authRequired, async (req, res) => {
+    if (req.user?.role === 'student' || req.user?.studentId) return res.status(403).json({ error: 'Faylni o‘chirishga ruxsat yo‘q' });
     const filename = path.basename(req.params.filename);
     const filePath = path.join(UPLOADS_DIR, filename);
     try {
@@ -100,7 +101,14 @@ router.delete('/:filename', authRequired, async (req, res) => {
         if (used) return res.status(409).json({ error: 'Bu fayl to‘lov cheki sifatida saqlangan; o‘chirib bo‘lmaydi' });
     } catch { return res.status(503).json({ error: 'Faylni tekshirib bo‘lmadi. Qayta urinib ko‘ring' }); }
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fayl topilmadi' });
-    fs.unlinkSync(filePath);
+    // Fayl o'chirilmaydi — yashirin arxiv papkasiga ko'chiriladi (u yerdan
+    // static orqali ochilmaydi) va Arxiv bo'limidan tiklanadi.
+    try {
+        await require('../services/archive').archiveUpload(pool, UPLOADS_DIR, filename, req.user);
+    } catch (e) {
+        console.error('[upload-archive]', e.message);
+        return res.status(503).json({ error: 'Faylni arxivga o‘tkazib bo‘lmadi. Qayta urinib ko‘ring' });
+    }
     res.json({ ok: true });
 });
 

@@ -153,6 +153,8 @@ router.post('/login', async (req, res) => {
         const user = await findUserByEmail(email.trim());
         if (!user || !bcrypt.compareSync(password, user.password_hash))
             return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri' });
+        if (user.disabled_at)
+            return res.status(403).json({ error: 'Bu akkaunt bloklangan (xodim ishdan bo‘shatilgan). Rahbariyatga murojaat qiling.' });
         const { token, jti } = signToken(user);
         const userAgent = req.headers['user-agent'] || '';
         const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';

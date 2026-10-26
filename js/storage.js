@@ -128,11 +128,22 @@ function getItem(key, fallback) {
     return fallback;
 }
 
+const SNAPSHOT_TABLE_KEYS = new Set(['students', 'hrEmployees', 'teachers', 'bookRoadmap']);
+
 function setItem(key, value) {
     const cacheKey = CACHE_KEY_MAP[key];
     if (cacheKey) {
         const removedStudentIds = key === STORAGE_KEYS.students && Array.isArray(value)
             ? (_cache.students || []).filter(s => !value.some(next => next.id === s.id)).map(s => s.id) : [];
+        // Server faqat SHU yerda aniq o'chirilgan qatorlarni o'chiradi. Ro'yxatda
+        // ko'rinmagan boshqa qatorlar (boshqa oynada qo'shilgan yoki arxivdan
+        // tiklangan) eski tab tufayli o'chib ketmaydi.
+        // Faqat shu yerda holati (Active/Inactive) o'zgargan xodimlar — server boshqa
+        // qatorlarning holatini eski keshdan qayta yozmaydi.
+        const changedStatusIds = cacheKey === 'hrEmployees' && Array.isArray(value) && Array.isArray(_cache.hrEmployees)
+            ? value.filter(n => { const o = _cache.hrEmployees.find(x => x && n && x.id === n.id); return o && String(o.status || 'active') !== String(n.status || 'active'); }).map(n => n.id) : [];
+        const removedIds = SNAPSHOT_TABLE_KEYS.has(cacheKey) && Array.isArray(value) && Array.isArray(_cache[cacheKey])
+            ? _cache[cacheKey].filter(old => old && old.id != null && !value.some(next => next && next.id === old.id)).map(old => old.id) : [];
         // Lidlar serverda "hammasini o'chirib, qaytadan yozish" tamoyili
         // bo'yicha saqlanadi — shu sabab noto'g'ri shakldagi qiymat butun
         // bazani yo'q qilishi mumkin. Bunday yozuvni umuman yo'ldan qaytaramiz.
@@ -154,7 +165,9 @@ function setItem(key, value) {
             // "poyga" qilib, oxirgisi emas, tasodifan tezroq kelgani
             // g'olib chiqishi (eski qiymat yangisini bosib qo'yishi) mumkin
             // edi.
-            return apiPatchState({ [cacheKey]: value, ...(key === STORAGE_KEYS.students ? { removedStudentIds } : {}) }).catch(err => {
+            return apiPatchState({ [cacheKey]: value, ...(key === STORAGE_KEYS.students ? { removedStudentIds } : {}),
+                ...(SNAPSHOT_TABLE_KEYS.has(cacheKey) ? { removedIds: { [cacheKey]: removedIds } } : {}),
+                ...(cacheKey === 'hrEmployees' ? { changedStatusIds: { hrEmployees: changedStatusIds } } : {}) }).catch(err => {
                 console.error('Saqlash xatoligi:', err.message);
                 showSaveError(err.message);
             });
@@ -213,6 +226,15 @@ async function refreshLeadsFromApi() {
     }
     _cache.leads = leads;
     return leads;
+}
+
+// Serverda arxivdan tiklash yoki xodimni ishdan bo'shatish kabi bir nechta
+// jadvalga tegadigan amal tugagach — keshni serverdagi holat bilan yangilash.
+// PATCH yubormaydi (eski keshdan qayta yozib, tiklangan yozuvni o'chirmaslik uchun).
+async function reloadStateFromApi() {
+    const state = await apiLoadState();
+    _cache = { ..._cache, ...state };
+    return state;
 }
 
 async function initStorage() {

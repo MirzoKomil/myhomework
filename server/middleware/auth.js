@@ -23,6 +23,7 @@ async function authRequired(req, res, next) {
     } catch {
         return res.status(401).json({ error: 'Token yaroqsiz yoki muddati tugagan' });
     }
+    require('../services/archiveContext').setActor(req.user);
 
     if (req.user.jti) {
         try {
@@ -32,7 +33,18 @@ async function authRequired(req, res, next) {
             const age = Date.now() - new Date(session.last_seen).getTime();
             if (age > 5 * 60 * 1000) await touchSession(req.user.jti);
         } catch (err) {
+            // Bloklangan akkauntni tekshira olmasak — kirishni ochib yubormaymiz.
             console.error('[auth] Session check xatoligi:', err.message);
+            return res.status(503).json({ error: 'Sessiyani tekshirib boʻlmadi, birozdan keyin qayta urinib koʻring' });
+        }
+    } else if (!req.user.studentId && req.user.role !== 'student') {
+        // Eski (jti'siz) xodim tokeni: bloklangan akkaunt bilan ishlay olmasin.
+        try {
+            const { findUserById } = require('../db');
+            const u = await findUserById(req.user.id);
+            if (!u || u.disabled_at) return res.status(401).json({ error: 'Akkaunt bloklangan yoki topilmadi' });
+        } catch (err) {
+            return res.status(503).json({ error: 'Akkauntni tekshirib boʻlmadi, birozdan keyin qayta urinib koʻring' });
         }
     }
 
