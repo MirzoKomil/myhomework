@@ -138,6 +138,8 @@ function initUserUI(currentUser) {
     document.getElementById('communicationToggle')?.addEventListener('click', openCommunicationHub);
 
     applyRoleBasedAccess(currentUser);
+    // Xodimlar davomati: grafik yoqilgan xodimga header'da "Keldim" tugmasi chiqadi.
+    window.staffAttendanceUI?.init(currentUser);
 }
 
 // 30-vazifa: Bosh sahifadagi xush kelibsiz banneri 3 ta rangli slayddan
@@ -8340,6 +8342,10 @@ function getArchiveRecords() {
 
 function archiveRecord(type, item, meta = {}) {
     if (!item?.id) return;
+    // Endi arxivni server o'zi yuritadi: o'quvchi, xodim yoki lid o'chirilganda
+    // nusxa shu tranzaksiyaning o'zida server arxiviga tushadi (Sozlamalar →
+    // Arxiv). Brauzerdagi eski JSON arxivga yozish to'xtatildi.
+    if (['lead', 'student', 'employee'].includes(type)) return;
     // Sotuv menejeri lidni soft-delete qilganda serverning canonical arxivi
     // yetarli; global localStorage arxivini to'liq PATCH qilish huquqi yo'q.
     if (type === 'lead' && getCurrentUser()?.role === 'sales_manager') return;
@@ -8356,62 +8362,6 @@ function archiveRecord(type, item, meta = {}) {
     setItem(STORAGE_KEYS.archive, records);
 }
 
-function archiveTypeLabel(type, item) {
-    if (type === 'lead') return 'Lid';
-    if (type === 'student') return "O'quvchi";
-    return HR_ROLE_MAP?.[item?.role] || item?.role || 'Xodim';
-}
-
-function archiveRecordDetails(record) {
-    const item = record.item || {};
-    if (record.type === 'lead') return [item.phone, item.status, record.meta?.lang === 'russian' ? 'Rus tili' : 'Ingliz tili'].filter(Boolean).join(' · ');
-    if (record.type === 'student') return [item.studentId || item.serialCode || item.id, item.phone, item.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'].filter(Boolean).join(' · ');
-    return [archiveTypeLabel('employee', item), item.department, item.phone || item.login].filter(Boolean).join(' · ');
-}
-
-async function restoreArchiveRecord(recordId, providedRecord = null) {
-    const localRecords = getArchiveRecords();
-    const record = providedRecord || localRecords.find(item => item.id === recordId);
-    if (!record) return;
-    const item = record.item;
-    if (record.type === 'lead') {
-        const lang = item.language === 'russian' || record.meta?.lang === 'russian' ? 'russian' : 'english';
-        try {
-            const result = await runExclusiveLeadMutation(async () => {
-                await waitForLeadPersistence(item.id);
-                try {
-                    return await apiRestoreLead(item.id);
-                } catch (err) {
-                    // Eski hard-delete davridan qolgan local arxivlarda server row
-                    // bo'lmasligi mumkin; bunday yozuv xavfsiz row-level INSERT bo'ladi.
-                    if (err.status !== 404) throw err;
-                    return apiSaveLead(lang, item);
-                }
-            });
-            const restored = result.lead || item;
-            if (restored.updatedAt) _leadServerVersions.set(String(item.id), restored.updatedAt);
-            const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-            leads[lang] = [...(leads[lang] || []).filter(lead => lead.id !== item.id), restored];
-            setItem(STORAGE_KEYS.leads, leads);
-        } catch (err) {
-            showSaveError(err.message);
-            return false;
-        }
-    } else if (record.type === 'student') {
-        const students = getItem(STORAGE_KEYS.students, []);
-        if (!students.some(student => student.id === item.id)) setItem(STORAGE_KEYS.students, [...students, item]);
-    } else if (record.type === 'employee') {
-        const employees = getHrEmployees() || [];
-        if (!employees.some(employee => employee.id === item.id)) saveHrEmployees([...employees, item]);
-    }
-    setItem(STORAGE_KEYS.archive, localRecords.filter(item => item.id !== recordId));
-    renderLeads();
-    renderStudents();
-    renderHrEmployees();
-    showMiniToast(`${item.name || 'Yozuv'} tiklandi`);
-    return true;
-}
-
 // 35-vazifa: avval bu "Arxiv" oynasi modal ko'rinishida ochilardi
 // (Sozlamalar akkordeonidagi tugma orqali). Endi "Sozlamalar" sahifasining
 // o'z sub-bo'limi, shu sabab modal o'rniga to'g'ridan-to'g'ri
@@ -8419,46 +8369,7 @@ async function restoreArchiveRecord(recordId, providedRecord = null) {
 async function renderSettingsArchivePanel() {
     const container = document.getElementById('settingsPanel-archive');
     if (!container) return;
-    let records = getArchiveRecords();
     const canRecoverMeta = ['admin', 'rop', 'boshliq'].includes(getCurrentUser()?.role);
-    if (canRecoverMeta) {
-        try {
-            const serverArchive = await apiFetchDeletedLeads();
-            const knownLeadIds = new Set(records.filter(record => record.type === 'lead').map(record => String(record.item?.id || '')));
-            const canonical = (serverArchive.leads || [])
-                .filter(lead => lead?.id && !knownLeadIds.has(String(lead.id)))
-                .map(lead => ({
-                    id: `server-lead-${lead.id}`,
-                    type: 'lead',
-                    item: lead,
-                    meta: { lang: lead.language === 'russian' ? 'russian' : 'english' },
-                    deletedAt: lead.deletedAt || new Date().toISOString(),
-                    deletedBy: lead.deletedBy || 'Server'
-                }));
-            records = [...canonical, ...records];
-        } catch (err) {
-            console.warn('Server lidlar arxivi olinmadi:', err.message);
-        }
-    }
-    const groups = [
-        { type: 'lead', title: 'Lidlar' },
-        { type: 'student', title: "O'quvchilar" },
-        { type: 'employee', title: 'Xodimlar (lavozimlar bo\'yicha)' }
-    ];
-    const renderGroup = group => {
-        const items = records.filter(record => record.type === group.type);
-        if (!items.length) return `<section class="archive-group"><h4>${group.title}<span>0</span></h4><p class="archive-empty">O'chirilgan yozuv yo'q</p></section>`;
-        const grouped = group.type === 'employee'
-            ? Object.entries(items.reduce((out, record) => {
-                const key = archiveTypeLabel('employee', record.item);
-                (out[key] = out[key] || []).push(record);
-                return out;
-            }, {})).map(([role, roleItems]) => `<div class="archive-role-group"><b>${escapeHtml(role)}</b>${roleItems.map(renderArchiveItem).join('')}</div>`).join('')
-            : items.map(renderArchiveItem).join('');
-        return `<section class="archive-group"><h4>${group.title}<span>${items.length}</span></h4>${grouped}</section>`;
-    };
-    const renderArchiveItem = record => `<article class="archive-item"><div><b>${escapeHtml(record.item?.name || 'Nomsiz yozuv')}</b><small>${escapeHtml(archiveRecordDetails(record) || "Qo'shimcha ma'lumot yo'q")}</small><small>${escapeHtml(record.deletedBy || "Noma'lum foydalanuvchi")} tomonidan o'chirilgan</small><time>${new Date(record.deletedAt).toLocaleString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div><button type="button" class="btn-primary archive-restore-btn" data-archive-restore="${escapeHtml(record.id)}">Tiklash</button></article>`;
-
     const metaRecovery = canRecoverMeta ? `
         <section class="archive-group" style="margin-bottom:18px">
             <h4>Favqulodda tiklash <span>Meta</span></h4>
@@ -8469,16 +8380,9 @@ async function renderSettingsArchivePanel() {
             <button type="button" class="btn-primary archive-restore-btn" id="previewMetaLeadRecovery">Tekshirish va tiklash</button>
             <div id="metaLeadRecoveryStatus" class="text-muted" style="margin:10px 0 0"></div>
         </section>` : '';
-    container.innerHTML = `<div class="archive-modal" style="padding:20px"><div class="archive-intro"><b>O'chirib yuborilgan ma'lumotlar</b><span>Kerakli yozuvni tanlab, istalgan payt qayta tiklashingiz mumkin.</span></div>${metaRecovery}${groups.map(renderGroup).join('')}</div>`;
-    container.querySelectorAll('[data-archive-restore]').forEach(btn => {
-        btn.onclick = async () => {
-            btn.disabled = true;
-            const record = records.find(item => item.id === btn.dataset.archiveRestore);
-            const restored = await restoreArchiveRecord(btn.dataset.archiveRestore, record);
-            if (restored !== false) renderSettingsArchivePanel();
-            else btn.disabled = false;
-        };
-    });
+    // Server arxivi (o'chirilgan barcha turlar, kim/qachon, tiklash) — js/archiveCenter.js.
+    container.innerHTML = `<div class="archive-modal arx-panel"><div id="archiveCenterMount"></div>${metaRecovery}</div>`;
+    if (window.archiveCenter) window.archiveCenter.mount(container.querySelector('#archiveCenterMount'));
     const metaBtn = container.querySelector('#previewMetaLeadRecovery');
     if (metaBtn) metaBtn.onclick = async () => {
         const status = container.querySelector('#metaLeadRecoveryStatus');
@@ -8592,7 +8496,7 @@ function renderManagerGoalBlock(managerId, lang, opts = {}) {
     const next = monthly.find(b => month < b.threshold);
     const daysLeft = _monthDaysLeft();
     const mln = fmtMln;
-    const ranked = getSalesManagers(lang).map(m => ({ id: m.id, name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik') }))
+    const ranked = getActiveSalesManagers(lang).map(m => ({ id: m.id, name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik') }))
         .sort((a, b) => b.sales - a.sales);
     const place = ranked.findIndex(m => m.id === managerId) + 1;
     const ahead = place > 1 ? ranked[place - 2] : null;
@@ -8649,8 +8553,12 @@ function renderRopDashboardBlock(user) {
             <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrib chiqish</button>
         </li>`;
     }).join('');
-    const managers = getSalesManagers(lang).map(m => ({
-        name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik'), target: getManagerPeriodTarget(m.id, 'oylik'),
+    // Jamoa jami: shu oy sotuv qilib, keyin ishdan ketgan menejer ham hisobga
+    // kiradi (aks holda oy o'rtasida jamoa summasi kamayib qolardi); uning
+    // rejasi esa jamoa rejasiga qo'shilmaydi.
+    const managers = getReportSalesManagers(lang).map(m => ({
+        name: staffStatus.label(m), sales: getManagerSalesForPeriod(m.id, 'oylik'),
+        target: staffStatus.isActive(m) ? getManagerPeriodTarget(m.id, 'oylik') : 0,
     })).sort((a, b) => b.sales - a.sales);
     const teamSales = managers.reduce((s, m) => s + m.sales, 0);
     const teamTarget = managers.reduce((s, m) => s + (m.target || 0), 0);
@@ -8864,7 +8772,7 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     const active = students.filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
     const newThisMonth = active.filter(s => String(s.startDate || '').slice(0, 7) === monthKey).length;
 
-    const managers = getSalesManagers();
+    const managers = getSalesManagers().filter(m => staffStatus.isActive(m) || getManagerSalesForPeriod(m.id, 'oylik') > 0);
     const mgrRows = managers.map(m => {
         const sales = getManagerSalesForPeriod(m.id, 'oylik');
         const target = getManagerPeriodTarget(m.id, 'oylik') || 0;
@@ -8976,7 +8884,7 @@ function computeManagerHome({ user, managerId, leads, students, now = new Date()
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const dueByToday = target > 0 ? Math.round(target * now.getDate() / daysInMonth) : 0;
     const deals = getManagerDealsCount(managerId, 'oylik');
-    const ranked = getSalesManagers(lang).map(m => ({ id: m.id, sales: getManagerSalesForPeriod(m.id, 'oylik') })).sort((a, b) => b.sales - a.sales);
+    const ranked = getActiveSalesManagers(lang).map(m => ({ id: m.id, sales: getManagerSalesForPeriod(m.id, 'oylik') })).sort((a, b) => b.sales - a.sales);
     const place = ranked.findIndex(m => m.id === managerId) + 1;
     const closedAll = own.filter(l => st(l) === 'tolov-yopildi').length;
     const quality = own.filter(l => st(l) !== 'sifatsiz-lidlar').length;
@@ -9147,7 +9055,7 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
 // Bosh sahifadagi kichik reyting: TOP-3 + o'zim (agar TOP-3 da bo'lmasam).
 function renderManagerMiniBoard(managerId, lang, mln) {
     if (typeof getSalesManagers !== 'function' || typeof getManagerSalesForPeriod !== 'function') return '';
-    const ranked = getSalesManagers(lang).map(m => ({ id: m.id, name: m.name || '', sales: getManagerSalesForPeriod(m.id, 'oylik') }))
+    const ranked = getActiveSalesManagers(lang).map(m => ({ id: m.id, name: m.name || '', sales: getManagerSalesForPeriod(m.id, 'oylik') }))
         .sort((a, b) => b.sales - a.sales);
     if (ranked.length < 2) return '';
     const meIdx = ranked.findIndex(m => m.id === managerId);
@@ -9204,7 +9112,7 @@ function computeRopHome({ user, students, leads, now = new Date() }) {
     const lang = user?.linkedRopLang || 'english';
     const list = (leads[lang] || []).map(l => ({ ...l, _lang: lang }));
     const st = l => normalizeLeadStatus(l.status);
-    const managers = getSalesManagers(lang);
+    const managers = getActiveSalesManagers(lang);
     let alerts = [];
     try { alerts = getLeadSlaNotificationsForCurrentUser().filter(a => a.audience === 'rop' && a.leadLang === lang); } catch (e) { alerts = []; }
     const open = alerts.filter(a => {
@@ -9496,10 +9404,9 @@ function renderDashboardOverview(args) {
 
     const ratingLeadPool = getLeadStatsForRankings(allLeads);
     const salesRating = managers.map(manager => {
-        const managerLeads = ratingLeadPool.filter(lead => lead.managerId === manager.id);
-        const closed = managerLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
+        const closed = ratingLeadPool.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi' && staffStatus.saleOwner(lead) === manager.id);
         return {
-            name: manager.name || 'Noma\'lum menejer',
+            name: staffStatus.label(manager) || 'Noma\'lum menejer',
             deals: closed.length,
             revenue: closed.reduce((sum, lead) => sum + leadRevenue(lead), 0)
         };
@@ -12029,9 +11936,16 @@ const TB_SECTIONS = [
 
 let _tpTextbookSection = 'kurs-rejasi';
 
-function renderTpTextbook() {
-    const container = document.getElementById('tpTextbook');
+function renderTpTextbook(target) {
+    const container = target || document.getElementById('tpTextbook');
     if (!container) return;
+    // Darslik markazi (js/lessonHub.js): 72 dars, slaydlar, Teacher's book,
+    // o'quvchilar progressi. Eski bo'limlar uning "Qo'shimcha materiallar"
+    // yorlig'ida shu funksiyaning o'zi orqali (target bilan) chiziladi.
+    if (!target && window.LessonHub) {
+        window.LessonHub.mount(container, { lang: _teachersLang, renderLegacy: el => renderTpTextbook(el), onAttendance: () => switchTeachersSection('attendance') });
+        return;
+    }
     // 9-vazifa: ustoz uchun Darslik faqat KO'RISH rejimida — material
     // qo'shish/o'chirish tugmalari umuman render qilinmaydi, va materiallar
     // ustozning o'z kursiga (_teachersLang, renderTeachersSection'da uning
@@ -13379,7 +13293,7 @@ function openCashFlowModal(editId) {
             <label>Sotuv menejeri</label>
             <select id="cfTxManager" class="form-control">
                 <option value="">— Tanlanmagan —</option>
-                ${getSalesManagers().map(m => `<option value="${m.id}" ${existing?.managerId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                ${staffStatus.activeOnly(getSalesManagers(), existing?.managerId).map(m => `<option value="${m.id}" ${existing?.managerId === m.id ? 'selected' : ''}>${escapeHtml(staffStatus.label(m))}</option>`).join('')}
             </select>
         </div>
         <div class="form-group" id="cfTxEmployeeWrap" style="display:none">
@@ -13632,6 +13546,7 @@ function switchHrSection(section) {
     if (section === 'org-struktura') renderOrgStruktura();
     if (section === 'yoriqnomalar') renderGuides();
     if (section === 'vakansiya') renderHrVacancy();
+    if (section === 'davomat') window.staffAttendanceUI?.renderHr();
     persistCurrentTab();
 }
 
@@ -13747,13 +13662,15 @@ function renderAnalitikaSotuvMarketing() {
         };
     });
 
-    const managers = getSalesManagers();
+    const ownerOf = l => (normalizeLeadStatus(l.status) === 'tolov-yopildi' || normalizeLeadStatus(l.status) === 'tolov-jarayonida') ? staffStatus.saleOwner(l) : l.managerId;
+    // Ishdan ketgan menejer shu davrda lid/sotuvi bo'lsagina ko'rinadi.
+    const managers = getSalesManagers().filter(m => staffStatus.isActive(m) || periodLeads.some(l => ownerOf(l) === m.id));
     const mgrPerf = managers.map(m => {
-        const mgrLeads = periodLeads.filter(l => l.managerId === m.id);
+        const mgrLeads = periodLeads.filter(l => ownerOf(l) === m.id);
         const mgrClosed = mgrLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
         const revenue = mgrClosed.reduce((sum, l) => sum + anLeadRevenue(l), 0);
         return {
-            name: m.name, total: mgrLeads.length, closed: mgrClosed.length,
+            name: staffStatus.label(m), total: mgrLeads.length, closed: mgrClosed.length,
             closeRate: mgrLeads.length ? (mgrClosed.length / mgrLeads.length * 100) : 0,
             revenue, avgCheck: mgrClosed.length ? Math.round(revenue / mgrClosed.length) : 0
         };
@@ -14108,7 +14025,7 @@ function hbSotuvMenejeri(period) {
     const periodLeads = anLeadsInPeriod(period);
     const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
     const revenue = closed.reduce((s, l) => s + anLeadRevenue(l), 0);
-    const managers = getSalesManagers();
+    const managers = getActiveSalesManagers();
 
     let cards = '';
     if (period === 'kunlik') {
@@ -14138,7 +14055,7 @@ function hbRop(period) {
     const periodLeads = anLeadsInPeriod(period);
     const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
     const revenue = closed.reduce((s, l) => s + anLeadRevenue(l), 0);
-    const managers = getSalesManagers();
+    const managers = getActiveSalesManagers();
     const target = getPeriodTarget(period) * (managers.length || 1);
 
     let cards = '';
@@ -14155,9 +14072,9 @@ function hbRop(period) {
         cards += hbCard('⚖️', 'green', 'Lidlar taqsimlanishi (max/min)', `${maxLeads} / ${minLeads}`);
         cards += hbCard('❌', 'yellow', "Eng ko'p uchragan rad sababi", topReason ? `${escapeHtml(topReason[0])} (${topReason[1]})` : "Yo'q");
     } else if (period === 'haftalik') {
-        const mgrPerf = managers.map(m => {
-            const mgrClosed = periodLeads.filter(l => l.managerId === m.id && normalizeLeadStatus(l.status) === 'tolov-yopildi');
-            return { name: m.name, revenue: mgrClosed.reduce((s, l) => s + anLeadRevenue(l), 0) };
+        const mgrPerf = getSalesManagers().filter(m => staffStatus.isActive(m) || periodLeads.some(l => staffStatus.saleOwner(l) === m.id)).map(m => {
+            const mgrClosed = periodLeads.filter(l => staffStatus.saleOwner(l) === m.id && normalizeLeadStatus(l.status) === 'tolov-yopildi');
+            return { name: staffStatus.label(m), revenue: mgrClosed.reduce((s, l) => s + anLeadRevenue(l), 0) };
         }).sort((a, b) => b.revenue - a.revenue);
         const stageCounts = FUNNEL_STAGES.map(s => ({ ...s, count: periodLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length }));
         const cum = new Array(FUNNEL_STAGES.length).fill(0);
@@ -15768,10 +15685,16 @@ function formatContactSpeed(minutes) {
 }
 
 function computeManagerPerformance(leads, managers) {
-    const names = Object.fromEntries((managers || []).map(m => [m.id, m.name]));
+    // Ism: ishdan ketgan menejer ham tarixda ismi bilan (belgisi bilan) ko'rinadi.
+    const everyone = [...(managers || []), ...getItem(STORAGE_KEYS.hrEmployees, [])];
+    const names = {};
+    everyone.forEach(m => { if (m?.id && !names[m.id]) names[m.id] = staffStatus.label(m); });
     const groups = new Map();
     leads.forEach(l => {
-        const key = l.managerId || '';
+        // Sotuv bosqichidagi lid sotuvni qilgan menejerga yoziladi — lid
+        // keyin boshqaga berilgan bo'lsa ham.
+        const st = normalizeLeadStatus(l.status);
+        const key = (st === 'tolov-yopildi' || st === 'tolov-jarayonida') ? staffStatus.saleOwner(l) : (l.managerId || '');
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(l);
     });
@@ -22844,7 +22767,7 @@ function openTeacherWorkScheduleModal(initialTeacherId, subject) {
 // ===== Lidlarni ommaviy biriktirish =====
 // getItem(salesManagers) aslida HR ro'yxatidagi sotuv menejerlari (til bilan).
 function getBulkLeadManagers(lang) {
-    return getItem(STORAGE_KEYS.salesManagers, []).filter(m => (m.lang || 'english') === lang);
+    return getItem(STORAGE_KEYS.salesManagers, []).filter(m => (m.lang || 'english') === lang && staffStatus.isActive(m));
 }
 
 const LEAD_OPEN_FOR_LOAD = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida']);
@@ -22923,9 +22846,9 @@ function openAssignManagerModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
     const allManagers = getItem(STORAGE_KEYS.salesManagers, []);
-    const managers = allManagers.filter(m => (m.lang || 'english') === lang);
+    const managers = staffStatus.activeOnly(allManagers.filter(m => (m.lang || 'english') === lang), lead.managerId);
     const options = `<option value="">— Biriktirilmagan —</option>
-        ${managers.map(m => `<option value="${escapeHtml(m.id)}"${lead.managerId === m.id ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}`;
+        ${managers.map(m => `<option value="${escapeHtml(m.id)}"${lead.managerId === m.id ? ' selected' : ''}${staffStatus.isActive(m) ? '' : ' disabled'}>${escapeHtml(staffStatus.label(m))}</option>`).join('')}`;
 
     openModal(`${escapeHtml(lead.name)} — menejer`,
         `<div class="form-group" style="margin-bottom:0">
@@ -22982,7 +22905,7 @@ function findLeadPhoneDuplicates(phone) {
 }
 
 function getLeadModalManagers(lang) {
-    const byLang = getSalesManagers(lang);
+    const byLang = getActiveSalesManagers(lang);
     const known = getItem(STORAGE_KEYS.salesManagers, []);
     // HR ro'yxatida umuman sotuv menejeri bo'lmasa — eski ro'yxat; bor bo'lsa faqat shu til.
     if (!byLang.length) return getSalesManagers().length ? [] : known;
@@ -23478,28 +23401,38 @@ function migrateHrCredentials() {
 function renderHrEmployeeCard(emp) {
     const initials = getUserInitials(emp.name);
     const roleLabel = HR_ROLE_MAP[emp.role] || emp.role;
-    const isActive = emp.status === 'active';
-    const statusLabel = isActive ? 'Faol' : 'Faol emas';
+    const isActive = staffStatus.isActive(emp);
+    const statusLabel = emp.offboardedAt ? `Ishdan ketgan${emp.endDate ? ' · ' + emp.endDate.split('-').reverse().join('.') : ''}` : (isActive ? 'Faol' : 'Faol emas');
     const statusClass = isActive ? '' : ' inactive';
+    const canOffboard = window.staffOffboardingUI?.canManage();
     // uz-UZ lokali qisqa oy nomini "M10" deb chiqaradi — o'z oy nomlarimiz ishlatiladi.
     const _jd = emp.joinDate ? new Date(emp.joinDate) : null;
     const joinFormatted = _jd && !Number.isNaN(_jd.getTime()) ? `${_jd.getDate()}-${UZ_MONTHS_SHORT[_jd.getMonth()]} ${_jd.getFullYear()}` : '—';
     const isAdmin = getCurrentUser()?.role === 'admin';
 
     return `<div class="employee-card" data-emp-id="${emp.id}">
-        ${isAdmin ? `<div class="emp-menu-wrap">
+        ${isAdmin || canOffboard ? `<div class="emp-menu-wrap">
             <button class="employee-card-actions" title="Amallar" data-emp-menu="${emp.id}">
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
             </button>
             <div class="emp-menu-dropdown" id="empMenu_${emp.id}" hidden>
-                <button class="emp-menu-item" data-emp-edit="${emp.id}">
+                ${isAdmin ? `<button class="emp-menu-item" data-emp-edit="${emp.id}">
                     <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Tahrirlash
-                </button>
-                <button class="emp-menu-item emp-menu-item--danger" data-emp-delete="${emp.id}">
+                </button>` : ''}
+                ${canOffboard ? (emp.offboardedAt || !isActive
+                    ? `<button class="emp-menu-item" data-emp-reinstate="${emp.id}">
+                    <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9"/><polyline points="3 4 3 10 9 10"/></svg>
+                    Qayta ishga olish
+                </button>`
+                    : `<button class="emp-menu-item emp-menu-item--danger" data-emp-offboard="${emp.id}">
+                    <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Ishdan bo'shatish
+                </button>`) : ''}
+                ${isAdmin ? `<button class="emp-menu-item emp-menu-item--danger" data-emp-delete="${emp.id}">
                     <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                    O'chirish
-                </button>
+                    O'chirish (arxivga)
+                </button>` : ''}
             </div>
         </div>` : ''}
         <div class="employee-avatar-placeholder" ${emp.avatar ? `data-emp-avatar="${escapeHtml(emp.id)}"` : ''}>
@@ -23546,10 +23479,15 @@ function getHrFiltered(employees) {
 }
 
 let _hrSelectedEmpId = null;
+// Ishdan ketganlar sukut bo'yicha yashiriladi (ro'yxat toza qoladi), bitta
+// tugma bilan ko'rsatiladi — qayta ishga olish yoki tarixni ko'rish uchun.
+let _hrShowFormer = false;
 function renderHrEmployees() {
     const employees = seedHrEmployees();
     migrateHrCredentials();
-    const filtered = getHrFiltered(employees);
+    const formerCount = employees.filter(e => e.offboardedAt).length;
+    const filtered = getHrFiltered(employees).filter(e => _hrShowFormer ? true : !e.offboardedAt);
+    const formerToggle = formerCount ? `<button type="button" class="arx-chip hrx-former-toggle${_hrShowFormer ? ' is-on' : ''}" data-hr-former>${_hrShowFormer ? 'Ishdan ketganlarni yashirish' : `Ishdan ketganlar (${formerCount})`}</button>` : '';
     const grid = document.getElementById('hrEmployeesGrid');
     if (!grid) return;
 
@@ -23563,6 +23501,7 @@ function renderHrEmployees() {
             <div class="placeholder-icon">👤</div>
             <h3>Xodim topilmadi</h3>
             <p class="text-muted">Tanlangan filtr bo'yicha xodimlar mavjud emas.</p>
+            ${formerToggle}
         </div>`;
     } else {
         if (!filtered.some(e => e.id === _hrSelectedEmpId)) _hrSelectedEmpId = filtered[0].id;
@@ -23571,14 +23510,14 @@ function renderHrEmployees() {
             : e.lang === 'russian' || e.role === 'rus-oqituvchi' ? '<span class="hrx-chip">Rus</span>'
             : (e.lang === 'english' || e.role === 'ingliz-oqituvchi') ? '<span class="hrx-chip">Ingliz</span>' : '';
         const fmtJoin = v => { const d = v ? new Date(v) : null; return d && !Number.isNaN(d.getTime()) ? `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}` : '—'; };
-        grid.innerHTML = `<div class="hrx">
+        grid.innerHTML = `${formerToggle ? `<div class="hrx-toolbar">${formerToggle}</div>` : ''}<div class="hrx">
             <div class="hrx-table-wrap"><table class="hrx-table">
                 <thead><tr><th scope="col">Xodim</th><th scope="col">Lavozim · boʻlim · til</th><th scope="col">Boshlagan</th><th scope="col">Holat</th></tr></thead>
-                <tbody>${filtered.map(e => `<tr class="${e.id === _hrSelectedEmpId ? 'is-selected' : ''}" data-hrx-row="${escapeHtml(e.id)}" tabindex="0" aria-selected="${e.id === _hrSelectedEmpId}">
+                <tbody>${filtered.map(e => `<tr class="${e.id === _hrSelectedEmpId ? 'is-selected' : ''}${e.offboardedAt ? ' is-former' : ''}" data-hrx-row="${escapeHtml(e.id)}" tabindex="0" aria-selected="${e.id === _hrSelectedEmpId}">
                     <td><div class="hrx-who"><span class="hrx-ava">${escapeHtml(getUserInitials(e.name))}</span><div><strong>${escapeHtml(e.name)}</strong><span>${escapeHtml(formatPhoneDisplay(e.phone) || '—')}</span>${e.email ? `<span>${escapeHtml(e.email)}</span>` : ''}</div></div></td>
                     <td><strong class="hrx-role">${escapeHtml(HR_ROLE_MAP[e.role] || e.role || '—')}</strong><div class="hrx-sub">${escapeHtml(e.department || '—')} ${langChip(e)}</div></td>
                     <td>${fmtJoin(e.joinDate)}</td>
-                    <td><span class="hrx-status${e.status === 'active' ? '' : ' is-off'}">${e.status === 'active' ? 'Faol' : 'Faol emas'}</span></td>
+                    <td><span class="hrx-status${staffStatus.isActive(e) ? '' : ' is-off'}">${e.offboardedAt ? `Ishdan ketgan${e.endDate ? ' · ' + e.endDate.split('-').reverse().join('.') : ''}` : (staffStatus.isActive(e) ? 'Faol' : 'Faol emas')}</span></td>
                 </tr>`).join('')}</tbody>
             </table></div>
             <aside class="hrx-side" aria-label="Tanlangan xodim">${selected ? renderHrEmployeeCard(selected) : ''}</aside>
@@ -23615,6 +23554,23 @@ function renderHrEmployees() {
         });
     });
 
+    grid.querySelector('[data-hr-former]')?.addEventListener('click', () => { _hrShowFormer = !_hrShowFormer; renderHrEmployees(); });
+    grid.querySelectorAll('[data-emp-offboard]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeEmpMenus();
+            window.staffOffboardingUI?.open(btn.dataset.empOffboard);
+        });
+    });
+    grid.querySelectorAll('[data-emp-reinstate]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeEmpMenus();
+            const emp = (getHrEmployees() || []).find(x => x.id === btn.dataset.empReinstate);
+            window.staffOffboardingUI?.reinstate(btn.dataset.empReinstate, emp?.name);
+        });
+    });
+
     // Delete
     grid.querySelectorAll('[data-emp-delete]').forEach(btn => {
         btn.addEventListener('click', e => {
@@ -23632,12 +23588,22 @@ function closeEmpMenus() {
     document.querySelectorAll('.emp-menu-dropdown').forEach(d => { d.hidden = true; });
 }
 
-function deleteHrEmployee(id) {
-    let employees = getHrEmployees() || [];
-    archiveRecord('employee', employees.find(e => e.id === id));
-    employees = employees.filter(e => e.id !== id);
-    saveHrEmployees(employees);
+// Server o'chirishdan oldin tekshiradi: faol login, ochiq lid yoki o'quvchisi
+// bor xodim o'chirilmaydi ("Ishdan bo'shatish" kerak). Shuning uchun kesh
+// faqat server tasdiqlagandan keyin yangilanadi.
+async function deleteHrEmployee(id) {
+    const next = (getHrEmployees() || []).filter(e => e.id !== id).map(({ password, ...rest }) => rest);
+    try {
+        await apiPatchState({ hrEmployees: next, removedIds: { hrEmployees: [id] } });
+    } catch (err) {
+        if (typeof showNotification === 'function') showNotification("Xodim o'chirilmadi", err.message, 'error');
+        else showSaveError(err.message);
+        return false;
+    }
+    setCachedItem(STORAGE_KEYS.hrEmployees, next);
+    localStorage.setItem(HR_EMPLOYEES_KEY, JSON.stringify(next));
     renderHrEmployees();
+    return true;
 }
 
 function confirmDeleteEmployee(empId) {
@@ -23651,17 +23617,23 @@ function confirmDeleteEmployee(empId) {
             <p style="font-size:15px;color:var(--text);margin-bottom:6px">
                 <strong>${escapeHtml(emp.name)}</strong> ni o'chirasizmi?
             </p>
-            <p style="font-size:13px;color:var(--text-muted)">Bu amalni ortga qaytarib bo'lmaydi.</p>
+            <p style="font-size:13px;color:var(--text-muted)">Yozuv Arxivga o'tadi va u yerdan tiklash mumkin.</p>
+            ${staffStatus.isActive(emp) && window.staffOffboardingUI?.canManage() ? `<p style="font-size:13px;color:var(--text);margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--warning-bg)">
+                Xodim ishdan ketgan bo'lsa, <b>“Ishdan bo'shatish”</b>dan foydalaning: lidlari boshqalarga beriladi, sotuvlari o'zida qoladi va akkaunti bloklanadi. Oddiy o'chirishda bular qilinmaydi.</p>` : ''}
         </div>`,
         `<button type="button" class="btn-ghost" id="cancelEmpDelete">Bekor qilish</button>
+         ${staffStatus.isActive(emp) && window.staffOffboardingUI?.canManage() ? `<button type="button" class="btn-primary-sm" id="offInsteadOfDelete">Ishdan bo'shatish</button>` : ''}
          <button type="button" class="btn-danger-sm" id="confirmEmpDelete" style="background:#dc2626;color:#fff;padding:8px 18px;font-size:13px">Ha, o'chirish</button>`,
         { wide: false }
     );
     document.getElementById('cancelEmpDelete').onclick = () => closeModal();
-    document.getElementById('confirmEmpDelete').onclick = () => {
-        deleteHrEmployee(empId);
+    const offBtn = document.getElementById('offInsteadOfDelete');
+    if (offBtn) offBtn.onclick = () => { closeModal(); window.staffOffboardingUI.open(empId); };
+    document.getElementById('confirmEmpDelete').onclick = async ev => {
+        ev.target.disabled = true;
+        const ok = await deleteHrEmployee(empId);
         closeModal();
-        showMiniToast(`${emp.name} o'chirildi`);
+        if (ok) showMiniToast(`${emp.name} arxivga o'tkazildi`);
     };
 }
 
@@ -23766,10 +23738,13 @@ function openEditEmployeeModal(empId) {
         </div>
         <div class="form-group">
             <label>Holati</label>
-            <select id="editEmpStatus" class="form-control">
+            <select id="editEmpStatus" class="form-control"${emp.offboardedAt ? ' disabled' : ''}>
                 <option value="active"${emp.status === 'active' ? ' selected' : ''}>Active</option>
                 <option value="inactive"${emp.status !== 'active' ? ' selected' : ''}>Inactive</option>
             </select>
+            <small class="text-muted" style="display:block;margin-top:4px;font-size:12px">${emp.offboardedAt
+                ? 'Xodim ishdan bo‘shatilgan. Faollashtirish — kartadagi ⋮ menyu → “Qayta ishga olish”.'
+                : 'Inactive — vaqtincha ro‘yxat va reytingdan chiqaradi. Ishdan ketgan bo‘lsa ⋮ menyu → “Ishdan bo‘shatish” (lidlar beriladi, akkaunt bloklanadi).'}</small>
         </div>
         <hr style="margin:12px 0;border-color:var(--border)">
         <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Shaxsiy hujjatlar</p>
@@ -24727,7 +24702,7 @@ function openBookRoadmapModal(existing = null) {
     const isEdit = !!existing;
     const defaultLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const d = existing || { name: '', studentId: '', phone: '', region: '', managerId: '', kind: 'organik', date: new Date().toLocaleDateString('uz-UZ'), status: 'yangi-oquvchi', lang: defaultLang };
-    const managers = allManagers.filter(m => (m.lang || 'english') === defaultLang);
+    const managers = staffStatus.activeOnly(allManagers.filter(m => (m.lang || 'english') === defaultLang), d.managerId);
     const _cuBr = getCurrentUser();
     const _isSmBr = _cuBr && _cuBr.role === 'sales_manager';
     const brAutoManagerId = _isSmBr ? (_cuBr.linkedManagerId || '') : d.managerId;
@@ -25814,6 +25789,18 @@ function getSalesManagers(lang) {
     return all.filter(m => (m.lang || 'english') === lang);
 }
 
+// Ishdan bo'shatilgan menejerlarsiz: lid taqsimoti, reyting, rejalar va
+// tanlov ro'yxatlari uchun. Tarixiy ism kerak bo'lgan joylar (lid kartasi,
+// pul oqimi) getSalesManagers()/getItem(salesManagers) bilan qoladi.
+function getActiveSalesManagers(lang) {
+    return getSalesManagers(lang).filter(staffStatus.isActive);
+}
+
+// Hisobotlar uchun: faollar + shu oy sotuvi bo'lgan ishdan ketganlar.
+function getReportSalesManagers(lang) {
+    return getSalesManagers(lang).filter(m => staffStatus.isActive(m) || getManagerSalesForPeriod(m.id, 'oylik') > 0);
+}
+
 function getLeadStatsForRankings(fallback = null) {
     if (getCurrentUser()?.role === 'sales_manager') {
         const stats = getItem(STORAGE_KEYS.salesLeadStats, null);
@@ -25829,7 +25816,7 @@ function _getClosedLeadsInPeriod(managerId, period) {
     const allLeads = getLeadStatsForRankings();
     return allLeads.filter(l => {
         if (normalizeLeadStatus(l.status) !== 'tolov-yopildi') return false;
-        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        if (managerId !== 'all' && staffStatus.saleOwner(l) !== managerId) return false;
         const dateStr = l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt;
         if (!dateStr) return false;
         const d = new Date(dateStr);
@@ -25880,7 +25867,7 @@ function _getRankingLeadsInPeriod(managerId, period) {
     return allLeads.filter(l => {
         const status = normalizeLeadStatus(l.status);
         if (status !== 'tolov-yopildi' && !_isPartialInProgressLead(l)) return false;
-        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        if (managerId !== 'all' && staffStatus.saleOwner(l) !== managerId) return false;
         const dateStr = _getLeadRankingDate(l);
         if (!dateStr) return false;
         const d = new Date(dateStr);
@@ -25914,7 +25901,7 @@ function _getClosedLeadsInMonth(managerId, monthKey) {
     const [yil, oy] = monthKey.split('-').map(Number);
     return getLeadStatsForRankings().filter(l => {
         if (normalizeLeadStatus(l.status) !== 'tolov-yopildi') return false;
-        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        if (managerId !== 'all' && staffStatus.saleOwner(l) !== managerId) return false;
         const dateStr = l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt;
         if (!dateStr) return false;
         const d = new Date(dateStr);
@@ -25929,7 +25916,7 @@ function _getRankingLeadsInMonth(managerId, monthKey) {
     return getLeadStatsForRankings().filter(l => {
         const status = normalizeLeadStatus(l.status);
         if (status !== 'tolov-yopildi' && !_isPartialInProgressLead(l)) return false;
-        if (managerId !== 'all' && l.managerId !== managerId) return false;
+        if (managerId !== 'all' && staffStatus.saleOwner(l) !== managerId) return false;
         const dateStr = _getLeadRankingDate(l);
         if (!dateStr) return false;
         const d = new Date(dateStr);
@@ -26438,7 +26425,7 @@ function renderSalesPlanIndividual() {
     const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const cu = getCurrentUser();
     const isSalesManager = cu?.role === 'sales_manager';
-    const managers = getSalesManagers(lang);
+    const managers = getActiveSalesManagers(lang);
 
     const pickerWrap = document.getElementById('spIndManagerPickerWrap');
     if (isSalesManager) {
@@ -26907,7 +26894,7 @@ function renderLeaderboardSection() {
     // Reyting bo'limida butunlay e'tiborga olinmasdi.
     const _cuRating = getCurrentUser();
     const _ratingLangFilter = _leadsLangFilter === 'russian' ? 'russian' : 'english';
-    const allSalesManagers = getSalesManagers(_ratingLangFilter);
+    const allSalesManagers = getActiveSalesManagers(_ratingLangFilter);
     const payrollIncome = payrollUI.leaderboardIncome(_ratingLangFilter, _ratingPeriod);
     const managers = _cuRating && _cuRating.role === 'rop'
         ? allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english'))
@@ -27458,7 +27445,7 @@ function openAddBonusHistoryModal() {
 
     // 11-vazifa: bonus belgilashda ham faqat joriy til yo'nalishidagi
     // menejerlar ro'yxatda chiqadi.
-    const managers = getSalesManagers(_leadsLangFilter === 'russian' ? 'russian' : 'english');
+    const managers = getActiveSalesManagers(_leadsLangFilter === 'russian' ? 'russian' : 'english');
     const mgrOptions = managers.map(m =>
         `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`
     ).join('');

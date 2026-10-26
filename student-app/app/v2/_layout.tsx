@@ -29,6 +29,7 @@ import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
 import { WEB_FONT_BASE } from '@/constants/webFonts';
 import { colors, fontFiles } from '@/constants/v2/tokens';
 import { recordV2Path } from '@/services/v2Nav';
+import { noteActivity, trackPath } from '@/services/learningTracker';
 
 const nativeFonts = {
   BricolageGrotesque_600SemiBold,
@@ -52,6 +53,8 @@ export default function V2Layout() {
   // "‹" tugmalari eski ilovaga chiqib ketmasligi uchun v2 tarixini yozamiz.
   useEffect(() => {
     recordV2Path(pathname);
+    // Ustoz kabineti uchun: qaysi dars/bo'limda qancha vaqt (learningTracker).
+    trackPath(pathname);
   }, [pathname]);
   // Safari/iOS: ovoz effektlari bosishlar ichida "ochiladi" (audioUnlock.ts); tugmalarga bosish effekti.
   useEffect(() => {
@@ -74,7 +77,7 @@ export default function V2Layout() {
   // navigatsiya tarixi yo'qoladi) — shuning uchun menyu faqat qo'shiladi/olinadi.
   const sidebar = desktop && !isFocusPath(pathname) && hasDesktopPage(pathname);
   return (
-    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.bg }} onTouchStart={noteActivity}>
       {sidebar && <DesktopSidebar />}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>

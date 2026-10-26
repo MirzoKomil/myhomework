@@ -48,7 +48,7 @@ async function access(db, actor, write = false, subject = null) {
     const finance = ['admin', 'boshliq', 'finance', 'accountant'].includes(u.role)
         || (u.role === 'employee' && ['finance', 'moliya'].includes(String(u.department).toLowerCase()));
     if (!finance && (!write || !['sales_manager', 'rop'].includes(u.role))) throw error(403, 'To‘lovlarga ruxsat yo‘q');
-    if (!finance && subject && (u.lang !== subject.language || (u.role === 'sales_manager' && u.manager_id !== subject.managerId))) throw error(403, 'Bu o‘quvchining to‘loviga ruxsat yo‘q');
+    if (!finance && subject && (u.lang !== subject.language || (u.role === 'sales_manager' && u.manager_id !== subject.managerId && !(subject.accessManagerIds || []).includes(u.manager_id)))) throw error(403, 'Bu o‘quvchining to‘loviga ruxsat yo‘q');
     return { ...u, finance };
 }
 function student(row) {
@@ -76,7 +76,7 @@ async function insert(db, event, context, actor, legacy = false) {
     await db.query(`INSERT INTO payment_records(id,source_key,lead_id,student_id,language,manager_id,teacher_id,paid_date,paid_at,
         amount,method,receipt_url,tariff,form,debt_snapshot,snapshot,legacy_review,actor_id)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
-        [id, event.sourceKey, context.leadId || null, context.studentId || null, context.language, context.managerId || '', context.teacherId || '', event.paidDate,
+        [id, event.sourceKey, context.leadId || null, context.studentId || null, context.language, context.creditManagerId || context.managerId || '', context.teacherId || '', event.paidDate,
             event.paidAt || null, event.amount, event.method, event.receiptUrl || '', event.tariff || null, event.form || 'partial', event.debt || 0,
             JSON.stringify(snapshot), review, actor.id || 'system']);
     await db.query('INSERT INTO payment_audit(record_id,action,actor_id,actor_name,data) VALUES($1,$2,$3,$4,$5)',
@@ -86,11 +86,17 @@ async function insert(db, event, context, actor, legacy = false) {
 }
 async function context(db, lead, s) {
     const managerId = lead?.managerId || s?.managerId || '', teacherId = s?.teacherId || lead?.paymentOnboarding?.teacherId || '';
-    const managerName = (await db.query('SELECT name FROM hr_employees WHERE id=$1', [managerId])).rows[0]?.name || '';
+    // Tushum sotuvni QILGAN menejerga yoziladi (lid keyin boshqaga berilgan
+    // bo'lsa ham). managerId esa — kim to'lov qabul qila olishi (hozirgi egasi).
+    const creditManagerId = lead?.saleManagerId || managerId;
+    const managerName = (await db.query('SELECT name FROM hr_employees WHERE id=$1', [creditManagerId])).rows[0]?.name || '';
     const teacherName = (await db.query('SELECT name FROM teachers WHERE id=$1', [teacherId])).rows[0]?.name
         || (await db.query('SELECT name FROM hr_employees WHERE id=$1', [teacherId])).rows[0]?.name || '';
     return { leadId: lead?.id || s?.leadRef?.id, studentId: s?.id, language: lead?.language || s?.subject || 'english',
-        managerId, teacherId, managerName, teacherName, name: s?.name || lead?.name, phone: s?.phone || lead?.phone,
+        managerId, creditManagerId, teacherId, managerName, teacherName,
+        // To'lovni lid egasi ham, o'quvchining kuzatuvchi menejeri ham qabul qila oladi
+        // (xodim ketganda o'quvchi topshiriladi, yopilgan lid esa tarix uchun eski egasida qoladi).
+        accessManagerIds: [lead?.managerId, s?.managerId].filter(Boolean), name: s?.name || lead?.name, phone: s?.phone || lead?.phone,
         nextPaymentDate: s?.paymentDueDate || lead?.paymentSurvey?.nextPaymentDate || '' };
 }
 async function issue(db, key, reason) {
@@ -268,4 +274,4 @@ async function previewStudent(db, actor, id) {
     await access(db, actor, true, { managerId: linked?.manager_id || s.managerId, language: linked?.language || s.subject });
     return { student: safeStudent(s) };
 }
-module.exports = { SCHEMA, initSchema, transaction, access, insert, syncLead, migrate, list, receive, previewStudent, student };
+module.exports = { SCHEMA, initSchema, transaction, access, insert, context, syncLead, migrate, list, receive, previewStudent, student };

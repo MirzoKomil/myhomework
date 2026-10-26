@@ -63,6 +63,7 @@ test('manager home: gap to the next monthly prize, rank and today obed', () => {
     const sales = { a: { oylik: 72_800_000, kunlik: 3_150_000 }, b: { oylik: 55_250_000, kunlik: 1_950_000 } };
     c.getManagerSalesForPeriod = (id, p) => sales[id][p];
     c.getSalesManagers = () => [{ id: 'a', name: 'Aziza Tursunova' }, { id: 'b', name: 'Bobur Aliyev' }];
+    c.getActiveSalesManagers = c.getSalesManagers;
     vm.runInContext(functionSource('js/app.js', 'renderManagerGoalBlock') + '\nthis.goal = renderManagerGoalBlock;', c);
     const html = c.goal('b', 'english');
     assert.match(html, /iPhone 17 Pro uchun yana 64\s750\s000/);
@@ -87,6 +88,9 @@ test('ROP home: open escalations (unacknowledged only) and team plan', () => {
         getItem: () => ({ english: [{ id: 'l1', name: 'Islom V', managerName: 'Bobur' }, { id: 'l2', name: 'Madina', slaRopAcknowledged: { s1: '2026-10-20T12:00:00Z' } }], russian: [] }),
         STORAGE_KEYS: { leads: 'leads' },
         getSalesManagers: () => [{ id: 'a', name: 'Aziza' }, { id: 'b', name: 'Bobur' }],
+        getActiveSalesManagers: () => [{ id: 'a', name: 'Aziza' }, { id: 'b', name: 'Bobur' }],
+        getReportSalesManagers: () => [{ id: 'a', name: 'Aziza' }, { id: 'b', name: 'Bobur' }],
+        staffStatus: require('../js/staffStatus'),
         getManagerSalesForPeriod: id => ({ a: 72_800_000, b: 55_250_000 })[id],
         getManagerPeriodTarget: () => 74_534_850,
         pctToPlanColor: () => '#000',
