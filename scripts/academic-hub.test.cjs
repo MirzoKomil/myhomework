@@ -149,3 +149,10 @@ test('/track: tekshiruvlar va chegaralar', async () => {
     await assert.rejects(hub.recordTracking(fakePool(), 's1', {}, now), /juda ko'p/);
     hub._resetCache();
 });
+
+test("Teacher's book va qo'llanmada ham dars sahifalari saqlanadi", () => {
+    const tb = hub.cleanMaterial({ language: 'russian', lessonNo: null, kind: 'teacher_book', title: 'TB', url: '/uploads/tb.pdf', meta: { pageMap: { 1: 6, 2: 11 } } });
+    assert.deepEqual(tb.meta.pageMap, { 1: 6, 2: 11 });
+    const sl = hub.cleanMaterial({ language: 'russian', lessonNo: 2, kind: 'live_slides', title: 'S', url: '/uploads/s.pdf', meta: { pageMap: { 1: 6 } } });
+    assert.equal(sl.meta.pageMap, undefined);
+});

@@ -313,7 +313,8 @@ function cleanMaterial(body, existing = {}) {
     const rawMeta = { ...(existing.meta || {}), ...(body.meta && typeof body.meta === 'object' ? body.meta : {}) };
     const meta = {};
     for (const key of META_KEYS) if (rawMeta[key] !== undefined) meta[key] = rawMeta[key];
-    if (kind === 'book') meta.pageMap = cleanPageMap(meta.pageMap);
+    // Kitob va ustoz qo'llanmalarida — har dars boshlanadigan sahifa.
+    if (COURSE_KINDS[kind]) meta.pageMap = cleanPageMap(meta.pageMap);
     else delete meta.pageMap;
     for (const key of ['lessonFrom', 'lessonTo', 'part']) {
         if (meta[key] === undefined || meta[key] === '' || meta[key] === null) { delete meta[key]; continue; }
@@ -483,7 +484,10 @@ async function getLesson(pool, actor, { lang: requested, no, courseId } = {}) {
     const book = bookPageFor(all.filter(m => m.kind === 'book'), n);
     const students = await accessibleStudents(pool, access, lang);
     const classStats = await lessonClassStats(pool, mc, students, n);
-    return { lang, canEdit: access.canEdit, lesson, materials, book, classStats };
+    // Teacher's book va boshqa qo'llanmalarning shu darsga tegishli sahifasi.
+    const guides = all.filter(m => (m.kind === 'teacher_book' || m.kind === 'methodology') && m.meta.pageMap?.[n])
+        .map(m => ({ id: m.id, title: m.title, url: m.url, kind: m.kind, page: m.meta.pageMap[n] }));
+    return { lang, canEdit: access.canEdit, lesson, materials, book, guides, classStats };
 }
 
 function partPreview(p) {

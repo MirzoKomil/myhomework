@@ -331,3 +331,14 @@ body.lp-open { overflow: hidden; }
     .lp-sep { display: none; }
     .lp-source { max-width: 160px; }
 }
+
+/* Ommaviy yuklash */
+.lh-import { width: min(1000px, 100%); }
+.li-pick { cursor: pointer; }
+.li-table { max-height: 55vh; overflow: auto; }
+.li-table .lh-input.lh-small { min-width: 0; width: 100%; }
+.li-table td:nth-child(5) { min-width: 180px; }
+.li-bad td { background: var(--lh-low-bg); }
+.li-table table { min-width: 860px; }
+.li-table td:nth-child(3) select { min-width: 120px; }
+.li-table td:nth-child(4) select { min-width: 190px; }
