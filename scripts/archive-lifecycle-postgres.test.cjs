@@ -236,6 +236,9 @@ test('arxiv + ishdan bo‘shatish (PostgreSQL)', { skip: !url }, async t => {
         const c = await inflow.context(pool, lead, null);
         assert.equal(c.creditManagerId, 'm-ali');
         assert.equal(c.managerId, lead.managerId, 'to‘lovni hozirgi egasi qabul qila oladi');
+        // Topshirilgan o'quvchi: yopilgan lid eski menejerda, o'quvchi yangisida — yangi menejer to'lov qabul qila oladi.
+        const ctx2 = await inflow.context(pool, { id: 'Lx', managerId: 'm-old', language: 'english' }, { id: 'sx', managerId: 'm-vali', subject: 'english' });
+        assert.ok(ctx2.accessManagerIds.includes('m-vali'));
         const engine = require('../js/payrollEngine');
         assert.equal(typeof engine, 'object');
     });
@@ -263,11 +266,20 @@ test('arxiv + ishdan bo‘shatish (PostgreSQL)', { skip: !url }, async t => {
         await pool.query(`INSERT INTO users (id,name,email,password_hash,role) VALUES ('u-vali','Vali Menejer','901000002','x','sales_manager') ON CONFLICT DO NOTHING`);
         await pool.query(`INSERT INTO sessions (id,user_id,jti) VALUES ('s-vali','u-vali','jti-vali') ON CONFLICT DO NOTHING`);
         const s = await state();
-        await asAdmin(async () => db.patchState({ hrEmployees: s.hrEmployees.map(e => e.id === 'm-vali' ? { ...e, status: 'inactive' } : e) }, actor));
+        const staleTab = (await state()).hrEmployees; // hammasi active ko'ringan eski tab
+        // ROP holatni o'zgartira olmaydi
+        await asAdmin(async () => db.patchState({ hrEmployees: s.hrEmployees.map(e => e.id === 'm-vali' ? { ...e, status: 'inactive' } : e), changedStatusIds: { hrEmployees: ['m-vali'] } }, rop));
+        assert.equal((await db.findUserById('u-vali')).disabled_at, null, 'ROP login’ni bloklay olmaydi');
+        // admin aniq o'zgartirsa — bloklanadi
+        await asAdmin(async () => db.patchState({ hrEmployees: s.hrEmployees.map(e => e.id === 'm-vali' ? { ...e, status: 'inactive' } : e), changedStatusIds: { hrEmployees: ['m-vali'] } }, actor));
         assert.ok((await db.findUserById('u-vali')).disabled_at);
         assert.equal(await db.findSessionByJti('jti-vali'), null);
+        // eski tab boshqa xodimni tahrirlab "active" yuborsa ham holat qaytmaydi
+        await asAdmin(async () => db.patchState({ hrEmployees: staleTab.map(e => e.id === 'm-rus' ? { ...e, phone: '901112233' } : e), changedStatusIds: { hrEmployees: [] } }, actor));
+        assert.equal((await pool.query("SELECT status FROM hr_employees WHERE id='m-vali'")).rows[0].status, 'inactive');
+        assert.ok((await db.findUserById('u-vali')).disabled_at, 'eski tab login’ni qayta ochmadi');
         const s2 = await state();
-        await asAdmin(async () => db.patchState({ hrEmployees: s2.hrEmployees.map(e => e.id === 'm-vali' ? { ...e, status: 'active' } : e) }, actor));
+        await asAdmin(async () => db.patchState({ hrEmployees: s2.hrEmployees.map(e => e.id === 'm-vali' ? { ...e, status: 'active' } : e), changedStatusIds: { hrEmployees: ['m-vali'] } }, actor));
         assert.equal((await db.findUserById('u-vali')).disabled_at, null);
     });
 

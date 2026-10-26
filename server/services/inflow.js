@@ -48,7 +48,7 @@ async function access(db, actor, write = false, subject = null) {
     const finance = ['admin', 'boshliq', 'finance', 'accountant'].includes(u.role)
         || (u.role === 'employee' && ['finance', 'moliya'].includes(String(u.department).toLowerCase()));
     if (!finance && (!write || !['sales_manager', 'rop'].includes(u.role))) throw error(403, 'To‘lovlarga ruxsat yo‘q');
-    if (!finance && subject && (u.lang !== subject.language || (u.role === 'sales_manager' && u.manager_id !== subject.managerId))) throw error(403, 'Bu o‘quvchining to‘loviga ruxsat yo‘q');
+    if (!finance && subject && (u.lang !== subject.language || (u.role === 'sales_manager' && u.manager_id !== subject.managerId && !(subject.accessManagerIds || []).includes(u.manager_id)))) throw error(403, 'Bu o‘quvchining to‘loviga ruxsat yo‘q');
     return { ...u, finance };
 }
 function student(row) {
@@ -93,7 +93,10 @@ async function context(db, lead, s) {
     const teacherName = (await db.query('SELECT name FROM teachers WHERE id=$1', [teacherId])).rows[0]?.name
         || (await db.query('SELECT name FROM hr_employees WHERE id=$1', [teacherId])).rows[0]?.name || '';
     return { leadId: lead?.id || s?.leadRef?.id, studentId: s?.id, language: lead?.language || s?.subject || 'english',
-        managerId, creditManagerId, teacherId, managerName, teacherName, name: s?.name || lead?.name, phone: s?.phone || lead?.phone,
+        managerId, creditManagerId, teacherId, managerName, teacherName,
+        // To'lovni lid egasi ham, o'quvchining kuzatuvchi menejeri ham qabul qila oladi
+        // (xodim ketganda o'quvchi topshiriladi, yopilgan lid esa tarix uchun eski egasida qoladi).
+        accessManagerIds: [lead?.managerId, s?.managerId].filter(Boolean), name: s?.name || lead?.name, phone: s?.phone || lead?.phone,
         nextPaymentDate: s?.paymentDueDate || lead?.paymentSurvey?.nextPaymentDate || '' };
 }
 async function issue(db, key, reason) {

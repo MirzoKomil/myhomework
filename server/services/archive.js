@@ -227,7 +227,8 @@ async function restoreMobileItem(db, item, col) {
         }
     }
     data[col] = [...list, item];
-    await db.query('UPDATE mobile_content SET data=$1 WHERE singleton = 1', [JSON.stringify(data)]);
+    await db.query(`INSERT INTO mobile_content (singleton, data) VALUES (1, $1)
+                    ON CONFLICT (singleton) DO UPDATE SET data = EXCLUDED.data`, [JSON.stringify(data)]);
 }
 
 // Yuklangan fayl (rasm, audio): diskdan o'chirilmaydi, `.arxiv` papkasiga
@@ -258,6 +259,8 @@ function restoreUpload(item) {
     const dir = item.dir || path.join(require('../db').DATA_DIR, 'uploads');
     const target = path.join(dir, path.basename(item.id));
     const source = path.join(dir, ARCHIVE_DIR, path.basename(item.stored || ''));
+    // Oldingi urinishda fayl ko'chib, yozuv saqlanmay qolgan bo'lsa — qayta urinish muvaffaqiyatli.
+    if (fs.existsSync(target) && item.stored && !fs.existsSync(source) && fs.statSync(target).size === item.size) return;
     if (fs.existsSync(target)) throw err(409, 'Shu nomdagi fayl allaqachon bor', 'ALREADY_EXISTS');
     if (!item.stored || !fs.existsSync(source)) throw err(404, 'Arxivdagi fayl diskda topilmadi');
     fs.renameSync(source, target);

@@ -1700,7 +1700,7 @@ async function restoreLead(id, actor = {}) {
     return restored;
 }
 
-async function saveHrEmployeesData(client, employees, actor = {}, removedIds = []) {
+async function saveHrEmployeesData(client, employees, actor = {}, removedIds = [], changedStatusIds = null) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
     await staffLifecycle.assertDeletable(client, employees, removedIds);
     const oldEmployees = (await client.query('SELECT id,role,status,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date,end_date,offboarded_at,offboarded_by,offboard_reason FROM hr_employees')).rows;
@@ -1722,7 +1722,9 @@ async function saveHrEmployeesData(client, employees, actor = {}, removedIds = [
     for (const e of (employees || [])) {
         // Ishdan bo'shatish maydonlari faqat serverda boshqariladi: eski tab
         // yuborgan "active" holati bo'shatilgan xodimni qayta ochib yubormaydi.
-        const life = staffLifecycle.preserveLifecycle(e, oldEmployees.find(r => r.id === e.id));
+        const oldRow = oldEmployees.find(r => r.id === e.id);
+        e.status = staffLifecycle.resolveStatus(e, oldRow, actor, changedStatusIds);
+        const life = staffLifecycle.preserveLifecycle(e, oldRow);
         e.status = life.status;
         await client.query(
             `INSERT INTO hr_employees
@@ -3965,7 +3967,7 @@ async function patchState(partial, actor = {}) {
         if (partial.mainAttendance)     await saveAttendanceTable(client, 'main_attendance', partial.mainAttendance);
         if (partial.assistantAttendance) await saveAttendanceTable(client, 'assistant_attendance', partial.assistantAttendance);
         if (partial.leads)              await saveLeads(client, partial.leads);
-        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor, removedIds.hrEmployees);
+        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor, removedIds.hrEmployees, partial.changedStatusIds?.hrEmployees || null);
         if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap, removedIds.bookRoadmap);
         if (partial.mobileContent)      await saveMobileContentData(client, partial.mobileContent);
         if (partial.scripts !== undefined)     await saveJsonData(client, 'scripts', partial.scripts);

@@ -93,6 +93,7 @@ router.post('/creative-submission', creativeSubmissionUpload.single('file'), (re
 });
 
 router.delete('/:filename', authRequired, async (req, res) => {
+    if (req.user?.role === 'student' || req.user?.studentId) return res.status(403).json({ error: 'Faylni o‘chirishga ruxsat yo‘q' });
     const filename = path.basename(req.params.filename);
     const filePath = path.join(UPLOADS_DIR, filename);
     try {

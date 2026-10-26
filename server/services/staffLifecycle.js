@@ -336,7 +336,12 @@ async function assertDeletable(db, incoming, removedIds) {
     if (!ids.length) return;
     const { rows } = await db.query('SELECT * FROM hr_employees WHERE id = ANY($1)', [ids]);
     for (const emp of rows) {
-        if (emp.offboarded_at) continue;
+        if (emp.offboarded_at) {
+            const { rows: h } = await db.query(
+                `SELECT 1 FROM leads WHERE manager_id=$1 OR extra_data->>'saleManagerId'=$1 LIMIT 1`, [emp.id]);
+            if (h.length) throw err(409, `${emp.name} sotuvlari tarixda turibdi — reyting va hisobotlarda ismi saqlanishi uchun yozuv o‘chirilmaydi. U HR ro‘yxatida allaqachon yashirin (“Ishdan ketganlar”).`, 'KEEP_FOR_HISTORY');
+            continue;
+        }
         const why = [];
         const { rows: l } = await db.query(
             `SELECT COUNT(*)::int AS n FROM leads WHERE manager_id=$1 AND deleted_at IS NULL AND status = ANY($2)`, [emp.id, OPEN_STATUSES]);
@@ -356,6 +361,7 @@ async function assertDeletable(db, incoming, removedIds) {
 // Ishdan bo'shatilgan xodim faqat "Qayta ishga olish" bilan ochiladi.
 // Amalni bajarayotgan odam o'z akkauntini bu yo'l bilan bloklay olmaydi.
 async function syncAccountsWithStatus(db, before, after, actor = {}) {
+    if (!MANAGE_ROLES.has(actor?.role)) return [];
     const old = new Map((before || []).map(r => [String(r.id), r]));
     const changed = [];
     for (const e of after || []) {
@@ -366,7 +372,7 @@ async function syncAccountsWithStatus(db, before, after, actor = {}) {
         if (was === now) continue;
         const accounts = await findAccount(db, { id: e.id, login: e.login || prev.login });
         for (const a of accounts) {
-            if (a.id === actor.id) continue;
+            if (a.id === actor.id || ['admin', 'boshliq'].includes(a.role)) continue;
             if (!now) {
                 await db.query('UPDATE users SET disabled_at = COALESCE(disabled_at, NOW()) WHERE id=$1', [a.id]);
                 await db.query('DELETE FROM sessions WHERE user_id=$1', [a.id]);
@@ -401,6 +407,16 @@ async function reinstate(db, actor, body = {}) {
 // Snapshot-save (saveHrEmployeesData) brauzerdan kelgan ma'lumot bilan
 // offboarding holatini bekor qilib yubormasligi uchun: bu maydonlar faqat
 // server tomonidan boshqariladi.
+// HR holatini (Active/Inactive) faqat admin/boshliq o'zgartiradi va faqat
+// brauzer shu xodim holatini ANIQ o'zgartirganini bildirsa (changedStatusIds).
+// Eski tab yuborgan eski "active" qiymati bazadagi holatni bosib ketmaydi.
+function resolveStatus(employee, oldRow, actor = {}, changedStatusIds = null) {
+    if (!oldRow) return employee.status || 'active';
+    const explicit = Array.isArray(changedStatusIds) && changedStatusIds.map(String).includes(String(employee.id));
+    if (MANAGE_ROLES.has(actor?.role) && explicit) return employee.status || 'active';
+    return oldRow.status || 'active';
+}
+
 function preserveLifecycle(employee, oldRow) {
     if (!oldRow) return { endDate: '', offboardedAt: null, offboardedBy: '', offboardReason: '', status: employee.status || 'active' };
     const off = !!oldRow.offboarded_at;
@@ -414,6 +430,6 @@ function preserveLifecycle(employee, oldRow) {
 }
 
 module.exports = {
-    init, backfillSaleManagers, nextSaleCredit, preview, offboard, reinstate, preserveLifecycle, assertDeletable, syncAccountsWithStatus,
+    init, backfillSaleManagers, nextSaleCredit, preview, offboard, reinstate, preserveLifecycle, resolveStatus, assertDeletable, syncAccountsWithStatus,
     SALE_STATUSES, OPEN_STATUSES, isSalesRole, isActiveRow, randomUUID
 };

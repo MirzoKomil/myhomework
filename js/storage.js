@@ -138,6 +138,10 @@ function setItem(key, value) {
         // Server faqat SHU yerda aniq o'chirilgan qatorlarni o'chiradi. Ro'yxatda
         // ko'rinmagan boshqa qatorlar (boshqa oynada qo'shilgan yoki arxivdan
         // tiklangan) eski tab tufayli o'chib ketmaydi.
+        // Faqat shu yerda holati (Active/Inactive) o'zgargan xodimlar — server boshqa
+        // qatorlarning holatini eski keshdan qayta yozmaydi.
+        const changedStatusIds = cacheKey === 'hrEmployees' && Array.isArray(value) && Array.isArray(_cache.hrEmployees)
+            ? value.filter(n => { const o = _cache.hrEmployees.find(x => x && n && x.id === n.id); return o && String(o.status || 'active') !== String(n.status || 'active'); }).map(n => n.id) : [];
         const removedIds = SNAPSHOT_TABLE_KEYS.has(cacheKey) && Array.isArray(value) && Array.isArray(_cache[cacheKey])
             ? _cache[cacheKey].filter(old => old && old.id != null && !value.some(next => next && next.id === old.id)).map(old => old.id) : [];
         // Lidlar serverda "hammasini o'chirib, qaytadan yozish" tamoyili
@@ -162,7 +166,8 @@ function setItem(key, value) {
             // g'olib chiqishi (eski qiymat yangisini bosib qo'yishi) mumkin
             // edi.
             return apiPatchState({ [cacheKey]: value, ...(key === STORAGE_KEYS.students ? { removedStudentIds } : {}),
-                ...(SNAPSHOT_TABLE_KEYS.has(cacheKey) ? { removedIds: { [cacheKey]: removedIds } } : {}) }).catch(err => {
+                ...(SNAPSHOT_TABLE_KEYS.has(cacheKey) ? { removedIds: { [cacheKey]: removedIds } } : {}),
+                ...(cacheKey === 'hrEmployees' ? { changedStatusIds: { hrEmployees: changedStatusIds } } : {}) }).catch(err => {
                 console.error('Saqlash xatoligi:', err.message);
                 showSaveError(err.message);
             });
