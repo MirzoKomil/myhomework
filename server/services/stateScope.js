@@ -85,6 +85,13 @@ function preserveHrPrivateFields(employees, oldRows, actor) {
     const byId = new Map((oldRows || []).map(r => [r.id, r]));
     return employees.map(e => {
         const old = byId.get(e.id);
+        // Moliya bo'limiga kirish huquqi bo'lim/login orqali beriladi — buni faqat admin/boshliq o'zgartiradi.
+        const financeDept = d => ['moliya', 'finance'].includes(String(d || '').trim().toLowerCase());
+        if (!old && financeDept(e.department)) throw Object.assign(new Error('Moliya bo‘limiga xodim qo‘shishni faqat admin bajaradi'), { status: 403 });
+        if (old && (String(e.department ?? '') !== String(old.department ?? '') && (financeDept(e.department) || financeDept(old.department))))
+            throw Object.assign(new Error('Xodimni moliya bo‘limiga o‘tkazish yoki undan chiqarishni faqat admin bajaradi'), { status: 403 });
+        if (old && financeDept(old.department) && String(e.login ?? '').trim().toLowerCase() !== String(old.login ?? '').trim().toLowerCase())
+            throw Object.assign(new Error('Moliya xodimining loginini faqat admin o‘zgartiradi'), { status: 403 });
         if (!old || sameLogin(old.login, actor?.email)) return e;
         const merged = { ...e };
         for (const [field, col] of Object.entries(COLS)) {

@@ -32,12 +32,27 @@ CREATE TABLE IF NOT EXISTS payment_migration_issues (
  source_key TEXT PRIMARY KEY, reason TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TABLE IF NOT EXISTS payment_migrations (id TEXT PRIMARY KEY, completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS payment_record_voids (
+ record_id TEXT PRIMARY KEY REFERENCES payment_records(id), void_date DATE NOT NULL, reason TEXT NOT NULL,
+ evidence_url TEXT NOT NULL DEFAULT '', replaced_by TEXT, actor_id TEXT NOT NULL, actor_name TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS fin_period_locks (
+ month TEXT PRIMARY KEY CHECK(month ~ '^[0-9]{4}-[0-9]{2}$'), locked_by TEXT NOT NULL, locked_by_name TEXT NOT NULL, note TEXT NOT NULL DEFAULT '',
+ locked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 `;
 async function initSchema(db) { await db.query(SCHEMA); }
+// Moliya muhrlari o'zgarishni qaysi ilova tranzaksiyasi qilganini bilishi uchun belgi (mavjud bo'lsa saqlanadi).
+async function markContext(db) {
+    // Moliya yoki tushum tranzaksiyasi ichida bo'lsa o'sha belgi qoladi; CRM tranzaksiyasi ichida — tushum belgisiga almashadi.
+    await db.query("SELECT set_config('search_path', 'public, pg_temp', true)");
+    await db.query(`SELECT set_config('fin.ctx', CASE WHEN current_setting('fin.ctx', true) ~ '^(fin|inflow):' THEN current_setting('fin.ctx', true) ELSE $1 END, true)`, [require('./finCtx').token('inflow')]);
+}
 async function transaction(pool, fn) {
     const db = await pool.connect();
-    try { await db.query('BEGIN'); const result = await fn(db); await db.query('COMMIT'); return result; }
-    catch (e) { await db.query('ROLLBACK'); throw e; } finally { db.release(); }
+    const untrack = require('./finCtx').track(db);
+    try { await db.query('BEGIN'); await markContext(db); const result = await fn(db); await require('./finCtx').signTx(db); await db.query('COMMIT'); require('./finCtx').commitHead(db); return result; }
+    catch (e) { await db.query('ROLLBACK'); throw e; } finally { untrack(); db.release(); }
 }
 async function access(db, actor, write = false, subject = null) {
     // Never trust a role, language, credited manager or identity sent in the request/JWT alone.
@@ -57,6 +72,7 @@ function student(row) {
 }
 function safeStudent(s) { const { password, passwordHash, ...out } = s; return { ...out, hasPassword: !!passwordHash }; }
 async function insert(db, event, context, actor, legacy = false) {
+    await markContext(db);
     // Concurrent receipts must not miss a crossed milestone. No locking/writing of legacy imports.
     if (!legacy && context.language === 'russian') await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-new-receipts'))");
     const existing = (await db.query('SELECT * FROM payment_records WHERE source_key=$1', [event.sourceKey])).rows[0];
@@ -69,6 +85,9 @@ async function insert(db, event, context, actor, legacy = false) {
         if (!ledger.receipt(event.receiptUrl)) throw error(400, 'To‘lov chekini yuklang');
         if (!proofExists(event.receiptUrl)) throw error(400, 'Chek fayli serverda topilmadi. Qayta yuklang');
         if (event.paidDate > ledger.today()) throw error(400, 'Tushum sanasi kelajakda bo‘lishi mumkin emas');
+        // Moliya oyni yopgan bo'lsa, o'sha davrga yangi tushum yozilmaydi (hisobotlar o'zgarmasligi uchun).
+        const closed = (await db.query('SELECT MAX(month) AS m FROM fin_period_locks')).rows[0]?.m;
+        if (closed && event.paidDate.slice(0, 7) <= closed) throw error(409, `${event.paidDate} sanasi yopilgan moliyaviy davrga tushadi (${closed} gacha yopilgan). Moliya bo‘limiga murojaat qiling`);
     }
     const id = randomUUID(), review = legacy && (event.method === 'unknown' || !proofExists(event.receiptUrl));
     const snapshot = { name: context.name || '', phone: context.phone || '', managerName: context.managerName || '', teacherName: context.teacherName || '',
@@ -111,7 +130,7 @@ async function syncLead(db, lead, platformAccess, actor, legacy = false, priorLe
     if (!legacy && !['tolov-jarayonida', 'tolov-yopildi'].includes(lead.status)) return;
     const s = platformAccess?.student, inferred = ledger.leadEvents(lead);
     if (!legacy && actor.id && !actor.name) actor = { ...actor, name: (await db.query('SELECT name FROM users WHERE id=$1', [actor.id])).rows[0]?.name || actor.email };
-    if (s) await db.query('UPDATE payment_records SET student_id=$2 WHERE lead_id=$1 AND student_id IS NULL', [lead.id, s.id]);
+    if (s) { await markContext(db); await db.query('UPDATE payment_records SET student_id=$2 WHERE lead_id=$1 AND student_id IS NULL', [lead.id, s.id]); }
     const ctx = await context(db, lead, s);
     if (!legacy && paymentIdentity(lead) !== paymentIdentity(priorLead) && lead.status === 'tolov-yopildi'
         && ledger.money(lead.paymentClosedSurvey?.actualAmount) === 0 && ledger.money(lead.paymentSurvey?.totalAmount) > 0
@@ -125,7 +144,7 @@ async function syncLead(db, lead, platformAccess, actor, legacy = false, priorLe
         let amount = e.amount;
         if (e.kind === 'closing') {
             // actualAmount is cumulative, including deposits and receipts accepted through Debtors.
-            const total = Number((await db.query('SELECT COALESCE(SUM(amount),0) AS amount FROM payment_records WHERE lead_id=$1', [lead.id])).rows[0].amount) + (ledger.money(s?.paymentLedgerOpeningPaid) || 0);
+            const total = Number((await db.query('SELECT COALESCE(SUM(amount),0) AS amount FROM payment_records WHERE lead_id=$1 AND NOT EXISTS (SELECT 1 FROM payment_record_voids pv WHERE pv.record_id=payment_records.id)', [lead.id])).rows[0].amount) + (ledger.money(s?.paymentLedgerOpeningPaid) || 0);
             const cumulative = ledger.money(lead.paymentClosedSurvey?.actualAmount);
             if (existing) {
                 if (cumulative !== total) throw error(409, 'Saqlangan yakuniy tushum summasi o‘zgartirilmasligi kerak');
@@ -143,7 +162,7 @@ async function syncLead(db, lead, platformAccess, actor, legacy = false, priorLe
         changed ||= result.inserted;
     }
     if (!legacy && s) {
-        const records = (await db.query('SELECT amount,TO_CHAR(paid_date,\'YYYY-MM-DD\') AS date FROM payment_records WHERE student_id=$1 OR lead_id=$2 ORDER BY paid_date,id', [s.id, lead.id])).rows;
+        const records = (await db.query('SELECT amount,TO_CHAR(paid_date,\'YYYY-MM-DD\') AS date FROM payment_records WHERE (student_id=$1 OR lead_id=$2) AND NOT EXISTS (SELECT 1 FROM payment_record_voids pv WHERE pv.record_id=payment_records.id) ORDER BY paid_date,id', [s.id, lead.id])).rows;
         if (records.length || platformAccess.credentialsCreated) {
             const paid = records.reduce((a, r) => a + Number(r.amount), ledger.money(s.paymentLedgerOpeningPaid) || 0), total = ledger.money(lead.paymentSurvey?.totalAmount);
             const ps = lead.paymentSurvey || {};
@@ -190,7 +209,9 @@ async function list(db, actor, params) {
     if (ledger.rangeError(params)) throw error(400, 'Sana oralig‘i noto‘g‘ri');
     const rows = (await db.query(`SELECT r.*,TO_CHAR(r.paid_date,'YYYY-MM-DD') AS date_key,
         TO_CHAR(r.paid_at AT TIME ZONE 'Asia/Tashkent','HH24:MI') AS time_key, s.extra_data AS current_student
-        FROM payment_records r LEFT JOIN students s ON s.id=r.student_id WHERE r.language=$1 ORDER BY r.paid_date DESC,r.created_at DESC,r.id`, [params.language])).rows;
+        FROM payment_records r LEFT JOIN students s ON s.id=r.student_id
+        WHERE r.language=$1 AND NOT EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id=r.id)
+        ORDER BY r.paid_date DESC,r.created_at DESC,r.id`, [params.language])).rows;
     const lastBalance = new Map();
     for (const r of [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))) { const key = r.student_id || r.lead_id || r.id; if (!lastBalance.has(key)) lastBalance.set(key, Number(r.debt_snapshot)); }
     const records = rows.map(r => ({ id: r.id, leadId: r.lead_id, studentId: r.student_id, language: r.language, managerId: r.manager_id, teacherId: r.teacher_id,
@@ -248,7 +269,7 @@ async function receive(pool, actor, body) {
         if (debt == null || amount > debt) throw error(409, 'To‘lov joriy qarzdan oshmasligi kerak. Sahifani yangilang');
         if (ledger.money(body.expectedDebt) !== debt) throw error(409, 'Qarz o‘zgargan. Sahifani yangilang');
         const paid = ledger.money(s.paidAmount) || 0;
-        const recorded = Number((await db.query('SELECT COALESCE(SUM(amount),0) AS amount FROM payment_records WHERE student_id=$1', [s.id])).rows[0].amount);
+        const recorded = Number((await db.query('SELECT COALESCE(SUM(amount),0) AS amount FROM payment_records WHERE student_id=$1 AND NOT EXISTS (SELECT 1 FROM payment_record_voids pv WHERE pv.record_id=payment_records.id)', [s.id])).rows[0].amount);
         // A cumulative legacy balance is not a dated receipt and must not be invented as income.
         const openingPaid = s.paymentLedgerManaged ? (ledger.money(s.paymentLedgerOpeningPaid) || 0) : Math.max(0, paid - recorded);
         if (!Number.isSafeInteger(paid + amount)) throw error(400, 'Summa chegaradan oshdi');
