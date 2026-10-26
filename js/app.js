@@ -8582,7 +8582,7 @@ function formatDashboardSessionDuration(user) {
 
 // Sotuv menejeri bosh sahifasi: "Sovgʻaga yoʻl" va "Bugungi obed".
 // Hisob Reyting bilan bir xil: getManagerSalesForPeriod + getMergedBonus.
-function renderManagerGoalBlock(managerId, lang) {
+function renderManagerGoalBlock(managerId, lang, opts = {}) {
     if (!managerId || typeof getManagerSalesForPeriod !== 'function') return '';
     const month = getManagerSalesForPeriod(managerId, 'oylik');
     const today = getManagerSalesForPeriod(managerId, 'kunlik');
@@ -8615,7 +8615,7 @@ function renderManagerGoalBlock(managerId, lang) {
         <b style="font-size:20px">${mln(today)}</b>
         ${got ? `<span class="mot-chip mot-chip--ok">✓ ${escapeHtml(got.label || '')}</span>` : ''}
         <span class="mot-prize-note">${nextDaily ? `“${escapeHtml(nextDaily.label || '')}” uchun yana ${mln(nextDaily.threshold - today)}` : 'Eng yuqori obed olindi 🎉'}</span></div></section>`;
-    return `<div class="mot-home">${goal}${obed}</div>`;
+    return `<div class="mot-home${opts.noGoal ? ' mot-home--solo' : ''}">${opts.noGoal ? '' : goal}${obed}</div>`;
 }
 
 // ROP bosh sahifasi: koʻrib chiqilmagan SLA eskalatsiyalari va jamoa rejasi.
@@ -9004,11 +9004,87 @@ function computeManagerHome({ user, managerId, leads, students, now = new Date()
     const upcoming = withDebt.filter(s => { const d = dueOf(s); return d && d >= todayStart && d < weekAhead; })
         .sort((a, b) => dueOf(a) - dueOf(b));
     const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: own.filter(l => st(l) === s.id).length }));
+    // Kobalt: qoʻngʻiroq navbati — avval SLA (24 soat) oʻtgan yangi lidlar,
+    // keyin muddati oʻtgan va bugungi eslatmalar, boʻlmasa eng eski yangi lid.
+    const DAY = 86400000;
+    const fresh = own.filter(l => st(l) === 'yangi-lidlar')
+        .map(l => ({ lead: l, t: Date.parse(l.managerAssignedAt || l.createdAt || l.date || '') }))
+        .filter(x => Number.isFinite(x.t)).sort((a, b) => a.t - b.t);
+    const slaLate = fresh.filter(x => now.getTime() - x.t >= DAY);
+    const leadTasks = tasks.filter(t => t.kind === 'lead');
+    let next = null;
+    if (slaLate[0]) next = { lead: slaLate[0].lead, reason: 'sla', ms: now.getTime() - slaLate[0].t - DAY };
+    else if (leadTasks[0]) next = { lead: leadTasks[0].lead, reason: leadTasks[0].late ? 'late' : 'today', at: leadTasks[0].at };
+    else if (fresh[0]) next = { lead: fresh[0].lead, reason: 'new', ms: DAY - (now.getTime() - fresh[0].t) };
+    const queue = [...slaLate.map(x => x.lead), ...leadTasks.map(t => t.lead)].filter((l, i, a) => a.findIndex(x => x.id === l.id) === i);
+    const queueCount = queue.length || fresh.length;
     return {
-        lang, sales, target, dueByToday, deals, place, conv, teamConv, quality,
+        lang, sales, target, dueByToday, deals, place, conv, teamConv, quality, daysInMonth,
+        next, queue, queueCount, slaLateCount: slaLate.length,
         tasks, upcoming, funnel, openLeads: funnel.reduce((a, f) => a + f.count, 0),
         active: myStudents.length, installments: withDebt.length, overdue
     };
+}
+
+// Kobalt bosh sahifa: chapda oylik reja (bonus rasmi bilan), oʻngda keyingi qoʻngʻiroq.
+function renderKobaltTop(d, managerId, now = new Date()) {
+    const mln = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+    const daysLeft = Math.max(1, d.daysInMonth - now.getDate() + 1);
+    const pct = d.target > 0 ? Math.round(d.sales / d.target * 100) : null;
+    const duePct = d.target > 0 ? Math.min(100, Math.round(d.dueByToday / d.target * 100)) : 0;
+    const gap = d.sales - d.dueByToday;
+    const forecast = now.getDate() ? Math.round(d.sales / now.getDate() * d.daysInMonth) : d.sales;
+    const perDay = d.target > d.sales ? Math.ceil((d.target - d.sales) / daysLeft) : 0;
+    const month = UZ_MONTHS_GEN[now.getMonth()];
+    let nextGift = null;
+    try {
+        const month$ = getManagerSalesForPeriod(managerId, 'oylik');
+        nextGift = MONTHLY_BONUSES.map(getMergedBonus).filter(b => Number(b.threshold) > 0)
+            .sort((a, b) => a.threshold - b.threshold).find(b => month$ < b.threshold) || null;
+    } catch (e) { nextGift = null; }
+    const gift = `<div class="kbx-gift"><img src="images/kobalt-money.webp" alt="" width="92" height="82">
+        <div><span>${nextGift ? 'Keyingi sovgʻa' : 'Oylik sovgʻalar'}</span><b>${escapeHtml(nextGift ? (nextGift.label || '') : 'Hammasi olindi')}</b><small>${nextGift ? `yana ${mln(nextGift.threshold - d.sales)} mln` : 'Barakalla!'}</small></div></div>`;
+    const plan = d.target > 0 ? `<section class="card kbx-plan" aria-labelledby="kbxPlanH">
+        <div class="kbx-plan-top"><div class="kbx-plan-main">
+            <div class="kbx-plan-h"><h2 id="kbxPlanH">${escapeHtml(month.charAt(0).toUpperCase() + month.slice(1))} rejasi</h2>
+                <span class="kbx-pill ${gap >= 0 ? 'kbx-pill--ok' : 'kbx-pill--warn'}">${gap >= 0 ? `Rejadan ${mln(gap)} mln oldinda` : `${mln(-gap)} mln ortda`}</span></div>
+            <div class="kbx-plan-num"><b>${mln(d.sales)} mln</b><span>/ ${mln(d.target)} mln soʻm</span></div>
+            <span class="kbx-sub">${daysLeft} kun qoldi · bugungacha ${mln(d.dueByToday)} mln boʻlishi kerak edi · ${d.deals} ta bitim</span>
+        </div>${gift}</div>
+        <div class="kbx-bar${gap >= 0 ? ' is-ok' : ''}" role="img" aria-label="${pct}% bajarildi, bugungacha ${duePct}% kerak"><i style="width:${Math.min(100, pct)}%"></i><b style="left:${duePct}%"></b></div>
+        <div class="kbx-bar-foot"><span><strong>${pct}%</strong> bajarildi</span><span>Shu tempda <strong>${mln(forecast)} mln</strong>${forecast < d.target ? ` — rejaga <strong>${mln(d.target - forecast)} mln</strong> yetmaydi` : ''}</span></div>
+        <div class="kbx-tiles">
+            <div><span>Kunlik kerak</span><b>${perDay ? `${mln(perDay)} mln` : 'Bajarildi'}</b></div>
+            <div><span>Konversiya</span><b>${d.conv == null ? '—' : `${d.conv.toFixed(1).replace('.', ',')}%`}</b></div>
+            <div><span>Maoshim · taxminiy</span><b id="mhxSalary">…</b><small id="mhxSalaryNote">oy yopilganda aniqlanadi</small></div>
+        </div></section>`
+        : `<section class="card kbx-plan"><div class="kbx-plan-top"><div class="kbx-plan-main"><div class="kbx-plan-h"><h2>Oylik reja</h2></div><span class="kbx-sub">ROP individual reja kiritmagan. ${d.deals} ta bitim · ${d.place ? `${d.place}-oʻrin` : ''}</span></div>${gift}</div><div class="kbx-tiles"><div><span>Maoshim · taxminiy</span><b id="mhxSalary">…</b><small id="mhxSalaryNote">oy yopilganda aniqlanadi</small></div></div></section>`;
+    const dur = ms => { const m = Math.max(1, Math.round(ms / 60000)); return m < 60 ? `${m} daq` : m < 1440 ? `${Math.floor(m / 60)} soat` : `${Math.floor(m / 1440)} kun`; };
+    let next;
+    if (d.next) {
+        const l = d.next.lead;
+        const tel = String(l.phone || '').replace(/[^\d+]/g, '');
+        const stage = (LEAD_COLUMNS.find(c => c.id === normalizeLeadStatus(l.status)) || {}).label || '';
+        const note = Array.isArray(l.comments) ? [...l.comments].reverse().find(c => c && c.text) : null;
+        const chip = d.next.reason === 'sla' ? `<span class="kbx-dchip is-red">SLA ${dur(d.next.ms)} oʻtdi</span>`
+            : d.next.reason === 'late' ? `<span class="kbx-dchip is-amber">${escapeHtml(formatLeadFollowUpWhen(d.next.at, now.getTime()))}</span>`
+            : d.next.reason === 'new' ? `<span class="kbx-dchip">SLA ${dur(d.next.ms)} qoldi</span>`
+            : `<span class="kbx-dchip">${escapeHtml(formatLeadFollowUpWhen(d.next.at, now.getTime()))}</span>`;
+        next = `<section class="kbx-next" aria-labelledby="kbxNextH">
+            <span class="kbx-eyebrow">KEYINGI QOʻNGʻIROQ${d.queueCount > 1 ? ` · 1 / ${d.queueCount}` : ''}</span>
+            <h2 id="kbxNextH">${escapeHtml(l.name || 'Lid')}</h2>
+            <span class="kbx-dsub">${escapeHtml([l.phone, stage].filter(Boolean).join(' · '))}</span>
+            <div class="kbx-dchips">${chip}${l.source ? `<span class="kbx-dchip">${escapeHtml(l.source)}</span>` : ''}</div>
+            ${note ? `<p class="kbx-note">Oxirgi izoh: «${escapeHtml(String(note.text).slice(0, 120))}»</p>` : ''}
+            ${(() => { const rest = (d.queue || []).filter(x => x.id !== l.id).slice(0, 3); return rest.length ? `<p class="kbx-note kbx-queue">Keyin: ${rest.map(x => escapeHtml(shortPersonName(x.name || 'Lid'))).join(' · ')}${d.queueCount > rest.length + 1 ? ` va yana ${d.queueCount - rest.length - 1} ta` : ''}</p>` : ''; })()}
+            <div class="kbx-next-actions">
+                ${tel ? `<a class="kbx-call" href="tel:${escapeHtml(tel)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Qoʻngʻiroq</a>` : ''}
+                <button type="button" class="kbx-ghost" data-mhx-lead="${escapeHtml(l._lang)}|${escapeHtml(l.id)}">Lidni ochish</button>
+            </div></section>`;
+    } else {
+        next = `<section class="kbx-next kbx-next--empty"><span class="kbx-eyebrow">NAVBAT BOʻSH</span><h2>Bugungi qoʻngʻiroqlar tugadi</h2><p class="kbx-note">Yangi lid biriktirilishi bilan shu yerda chiqadi.</p></section>`;
+    }
+    return `<div class="kbx-top">${plan}${next}</div>`;
 }
 
 function renderManagerHome(user, managerId, leads, students, now = new Date()) {
@@ -9046,14 +9122,8 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     return `<div class="ahx mhx" id="managerHome">
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
 </div>
-        ${renderManagerGoalBlock(managerId, d.lang)}
-        <div class="ahx-kpis mhx-kpis">
-            <div class="ahx-kpi mhx-kpi--plan"><span class="ahx-kpi-l">Oylik rejam</span><b class="ahx-kpi-v">${mln(d.sales)}<small> / ${d.target ? mln(d.target) + ' mln soʻm' : 'reja yoʻq'}</small></b>
-                ${pct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, pct)}%"></i></span><div class="ahx-kpi-n"><span>${pct}% · bugungacha ${mln(d.dueByToday)} mln kerak edi</span><span class="ahx-pill ${ahead >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn'}">${ahead >= 0 ? '+' : '−'}${mln(Math.abs(ahead))} mln</span></div>` : '<div class="ahx-kpi-n"><span>ROP individual reja kiritmagan</span></div>'}</div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Bitimlar · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${d.deals}</b><div class="ahx-kpi-n"><span>${[d.place ? `${d.place}-oʻrin` : '', `${d.quality} sifatli liddan`].filter(Boolean).join(' · ')}</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Konversiya</span><b class="ahx-kpi-v">${pctTxt(d.conv)}</b><div class="ahx-kpi-n"><span>jamoa ${pctTxt(d.teamConv)}</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Maoshim · taxminiy</span><b class="ahx-kpi-v" id="mhxSalary">…</b><div class="ahx-kpi-n"><span id="mhxSalaryNote">oy yopilganda aniqlanadi</span></div></div>
-        </div>
+        ${renderKobaltTop(d, managerId, now)}
+        ${renderManagerGoalBlock(managerId, d.lang, { noGoal: true })}
         <div class="ahx-grid mhx-grid">
             <div class="mhx-side">
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugun qilish kerak${d.tasks.length ? ` <small>· ${d.tasks.length}</small>` : ''}</h3>${d.tasks.some(t => t.late) ? `<span class="ahx-pill ahx-pill--danger">${d.tasks.filter(t => t.late).length} tasi kechikkan</span>` : ''}</div>
@@ -15087,7 +15157,7 @@ const FUNNEL_STAGES = [
 
 // Voronka ustunlari uchun bitta brend rangi: bosqich oldinga siljigan sari to'qlashadi,
 // faqat "To'lov yopildi" yashil. (Kanban ustunlari o'z ranglarida qoladi.)
-const FUNNEL_RAMP = ['#C9BEFF', '#B3A4FB', '#9C88F7', '#8A72F5', '#7A5FF2', '#6A4DF4', '#5A3EE0'];
+const FUNNEL_RAMP = ['#9DC4F5', '#7DB2F2', '#5B9EF0', '#3B8BEE', '#1F7AE8', '#0065D6', '#0050AA'];
 function funnelRampColor(id) {
     if (id === 'tolov-yopildi') return '#0F9D6B';
     const i = FUNNEL_STAGES.findIndex(s => s.id === id);
