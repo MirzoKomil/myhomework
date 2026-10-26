@@ -71,16 +71,19 @@ async function audit(db, actor, action, entity, before, after) {
 async function transaction(pool, fn) {
     for (let attempt = 0; attempt < 3; attempt++) {
         const db = await pool.connect();
+        const untrack = require('./finCtx').track(db);
         try {
             await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
             // One lock for accrual/confirmation/payment/settings prevents overlapping pay runs and races.
             await db.query("SELECT pg_advisory_xact_lock(hashtext('myhomework-payroll-v1'))");
+            await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public, pg_temp', true)", [require('./finCtx').token('payroll')]);
             const result = await fn(db);
-            await db.query('COMMIT'); return result;
+            await require('./finCtx').signTx(db);
+            await db.query('COMMIT'); require('./finCtx').commitHead(db); return result;
         } catch (e) {
             await db.query('ROLLBACK');
             if (!['40001', '40P01'].includes(e.code) || attempt === 2) throw e;
-        } finally { db.release(); }
+        } finally { untrack(); db.release(); }
     }
 }
 async function access(db, actor, mode = 'finance') {
@@ -91,11 +94,14 @@ async function access(db, actor, mode = 'finance') {
     const finance = ['admin', 'boshliq', 'finance', 'accountant'].includes(user.role)
         || (user.role === 'employee' && ['moliya', 'finance'].includes(String(user.department).toLowerCase()));
     if (!finance && !(mode === 'leaderboard' && ['rop', 'sales_manager'].includes(user.role))) throw error(403, 'Moliya bo‘limiga ruxsat yo‘q');
-    return { ...actor, ...user, finance };
+    return { ...actor, ...user, finance, director: ['admin', 'boshliq'].includes(user.role) };
 }
 async function sources(db, p) {
     const ledgerReady = (await db.query("SELECT to_regclass('public.payment_records') AS ledger")).rows[0]?.ledger;
-    const paymentRecords = ledgerReady ? (await db.query(`SELECT id,lead_id,manager_id,language,amount,TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date FROM payment_records ORDER BY id`)).rows
+    // Moliya bekor qilgan (test, dublikat yoki xato) tushumlar KPI/bonusga kirmaydi.
+    const voidsReady = ledgerReady && (await db.query("SELECT to_regclass('public.payment_record_voids') AS t")).rows[0]?.t;
+    const paymentRecords = ledgerReady ? (await db.query(`SELECT id,lead_id,manager_id,language,amount,TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date FROM payment_records r
+        ${voidsReady ? 'WHERE NOT EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id=r.id)' : ''} ORDER BY id`)).rows
         .map(r => ({ id: r.id, leadId: r.lead_id, managerId: r.manager_id, language: r.language, amount: Number(r.amount), paidDate: r.paid_date })) : undefined;
     const employees = (await db.query(`SELECT he.*, COALESCE(u.avatar,'') AS avatar FROM hr_employees he
         LEFT JOIN users u ON LOWER(TRIM(u.email))=LOWER(TRIM(he.login)) ORDER BY he.name`)).rows;
@@ -300,6 +306,8 @@ async function saveSettings(pool, actor, lang, value, revision) {
     language(lang); const data = engine.validateSettings(value);
     return transaction(pool, async db => {
         const user = await access(db, actor), before = await settings(db, lang);
+        // Vazifalar ajratilishi: KPI/bonus formulasi maoshni belgilaydi — faqat rahbar o'zgartiradi.
+        if (!user.director) throw error(403, 'Maosh sozlamalarini faqat rahbar (admin/boshliq) o‘zgartiradi');
         if (before.revision !== revision) throw error(409, 'Sozlamalar boshqa xodim tomonidan yangilangan. Sahifani yangilang');
         await db.query('UPDATE salary_kpi_settings SET data=$2,revision=revision+1,updated_at=NOW() WHERE language=$1', [lang, JSON.stringify(data)]);
         await audit(db, user, 'settings', lang, before.data, data);
@@ -351,6 +359,10 @@ async function markPaid(pool, actor, id) {
         const row = (await db.query("SELECT *,TO_CHAR(period_start,'YYYY-MM-DD') AS start_key,TO_CHAR(period_end,'YYYY-MM-DD') AS end_key FROM salary_transactions WHERE id=$1 FOR UPDATE", [id])).rows[0];
         if (!row) throw error(404, 'Maosh hisobi topilmadi');
         if (row.status === 'paid') return { ok: true, alreadyPaid: true };
+        // Hisoblagan xodim o'zi "to'landi" deb tasdiqlay olmaydi (ikki kishi nazorati), rahbar bundan mustasno.
+        // Bu hisobni qachondir hisoblagan har qanday xodim (faqat oxirgisi emas) uni tasdiqlay olmaydi.
+        const accruedBy = (await db.query("SELECT 1 FROM salary_audit WHERE action='accrue' AND entity_id=$1 AND actor_id=$2 LIMIT 1", [id, user.id])).rows.length ? user.id : null;
+        if (!user.director && accruedBy && accruedBy === user.id) throw error(403, 'Maoshni hisoblagan xodim uni o‘zi tasdiqlay olmaydi — boshqa moliya xodimi yoki rahbar tasdiqlaydi');
         if (Number(row.amount) < 0) throw error(400, 'Manfiy hisobni to‘langan deb belgilab bo‘lmaydi');
         const p = engine.period(row.start_key, row.end_key);
         const current = await calculate(db, p, row.language);
