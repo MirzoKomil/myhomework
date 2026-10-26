@@ -1,0 +1,325 @@
+{
+ "n": 63,
+ "topic_uz": "Ish va sanalar: tug'ilgan sana, ta'lim, tajriba",
+ "scene": "In a bright HR office, a female HR employee types on a computer while a young Uzbek man in a shirt sits across the desk with a folder of documents.",
+ "dialogs": [
+  {
+   "id": "L63-d1",
+   "title_ru": "Анке́та",
+   "title_uz": "Anketa",
+   "intro_uz": "Birinchi dialog. Bobur kompaniyada anketa to'ldiryapti. Xodim savollar beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Сотру́дница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Сотру́дница",
+     "ru": "Ва́ша фами́лия и и́мя?",
+     "uz": "Familiyangiz va ismingiz?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Турсу́нов Фарру́х.",
+     "uz": "Rahimov Farrux."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Когда́ вы родили́сь?",
+     "uz": "Qachon tug'ilgansiz?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Двена́дцатого ма́рта ты́сяча девятьсо́т девяно́сто восьмо́го го́да.",
+     "uz": "Ming to'qqiz yuz to'qson sakkizinchi yil o'n ikkinchi martda."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Где вы учи́лись?",
+     "uz": "Qayerda o'qigansiz?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В две ты́сячи двадца́том году́ я око́нчил университе́т в Ташке́нте.",
+     "uz": "Ikki ming yigirmanchi yilda Toshkentda universitetni tugatganman."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Ваш о́пыт рабо́ты?",
+     "uz": "Ish tajribangiz?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "С два́дцать пе́рвого по два́дцать четвёртый год я рабо́тал в ба́нке.",
+     "uz": "Yigirma birinchi yildan yigirma to'rtinchi yilgacha bankda ishlaganman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur qachon tug'ilgan?",
+     "opts": [
+      "1998-yil 12-mart",
+      "1995-yil 5-may",
+      "2000-yil 7-iyul"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "U universitetni qachon tugatgan?",
+     "opts": [
+      "2018-yilda",
+      "2020-yilda",
+      "2022-yilda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "U bankda qachon ishlagan?",
+     "opts": [
+      "2018–2020",
+      "2019–2022",
+      "2021–2024"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "двена́дцатого ма́рта",
+     "alts": [
+      "пе́рвого апре́ля",
+      "пя́того ма́я",
+      "тре́тьего января́"
+     ]
+    },
+    {
+     "base": "в ба́нке",
+     "alts": [
+      "в шко́ле",
+      "в компа́нии",
+      "в магази́не"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: to'liq tug'ilgan sanangizni, o'qishingiz va ishingizni sanalar bilan ayting."
+  },
+  {
+   "id": "L63-d2",
+   "title_ru": "Когда́ у тебя́ день рожде́ния?",
+   "title_uz": "Tug'ilgan kuning qachon?",
+   "intro_uz": "Ikkinchi dialog. Timur va Nigora tug'ilgan kunlar haqida gaplashyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Нигора́, когда́ у тебя́ день рожде́ния?",
+     "uz": "Nigora, tug'ilgan kuning qachon?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Двадца́того октября́. А у тебя́?",
+     "uz": "Yigirmanchi oktyabrda. Seniki-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Двена́дцатого ма́рта. Я роди́лся в девяно́сто восьмо́м году́.",
+     "uz": "O'n ikkinchi martda. Men to'qson sakkizinchi yilda tug'ilganman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Зна́чит, тебе́ два́дцать во́семь лет?",
+     "uz": "Demak, yigirma sakkiz yoshdasanmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да. А како́е сего́дня число́?",
+     "uz": "Ha. Bugun nechanchi sana?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Сего́дня восемна́дцатое октября́.",
+     "uz": "Bugun o'n sakkizinchi oktyabr."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "О́го, твой день рожде́ния че́рез два дня!",
+     "uz": "Voy, tug'ilgan kuning ikki kundan keyin ekan!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да! Приходи́ в го́сти двадца́того ве́чером.",
+     "uz": "Ha! Yigirmanchi kuni kechqurun mehmonga kel."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigoraning tug'ilgan kuni qachon?",
+     "opts": [
+      "18-oktyabr",
+      "20-oktyabr",
+      "3-yanvar"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur qaysi yilda tug'ilgan?",
+     "opts": [
+      "2000-yilda",
+      "1998-yilda",
+      "2002-yilda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bugun nechanchi sana?",
+     "opts": [
+      "20-oktyabr",
+      "3-yanvar",
+      "18-oktyabr"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "двадца́того октября́",
+     "alts": [
+      "седьмо́го ию́ля",
+      "пе́рвого ма́я",
+      "тридца́того декабря́"
+     ]
+    },
+    {
+     "base": "в двухты́сячном году́",
+     "alts": [
+      "в девяно́сто девя́том году́",
+      "в две ты́сячи пе́рвом году́",
+      "в девяно́сто пя́том году́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda ayting: tug'ilgan kuningiz qachon, qaysi yilda tug'ilgansiz va bugun nechanchi sana?"
+  },
+  {
+   "id": "L63-d3",
+   "title_ru": "Где ты рабо́тала ра́ньше?",
+   "title_uz": "Oldin qayerda ishlagansan?",
+   "intro_uz": "Uchinchi dialog. Anton Dilnozadan uning ta'limi va ish tajribasi haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, где ты рабо́тала ра́ньше?",
+     "uz": "Dilnoza, oldin qayerda ishlagansan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "С два́дцать второ́го по два́дцать шесто́й год я рабо́тала в шко́ле.",
+     "uz": "Yigirma ikkinchi yildan yigirma oltinchi yilgacha maktabda ishlaganman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Кем?",
+     "uz": "Kim bo'lib?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Бухга́лтером. Пото́м уво́лилась и устро́илась сюда́, в банк.",
+     "uz": "Buxgalter bo'lib. Keyin ishdan bo'shab, bu yerga, bankka ishga kirdim."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А како́е у тебя́ образова́ние?",
+     "uz": "Ma'lumoting qanday?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вы́сшее. Я око́нчила университе́т в две ты́сячи два́дцать второ́м году́.",
+     "uz": "Oliy. Ikki ming yigirma ikkinchi yilda universitetni tugatganman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А ско́лько лет ты рабо́таешь здесь?",
+     "uz": "Bu yerda necha yildan beri ishlaysan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "То́лько полго́да. Мне здесь нра́вится!",
+     "uz": "Yarim yil bo'ldi. Menga bu yer yoqadi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza oldin qayerda ishlagan?",
+     "opts": [
+      "bankda",
+      "maktabda",
+      "do'konda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "U universitetni qachon tugatgan?",
+     "opts": [
+      "2019-yilda",
+      "2020-yilda",
+      "2023-yilda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "U bu yerda necha yildan beri ishlaydi?",
+     "opts": [
+      "bir yil",
+      "besh yil",
+      "uch yil"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "учи́тельницей англи́йского",
+     "alts": [
+      "ме́неджером",
+      "бухга́лтером",
+      "секретарём"
+     ]
+    },
+    {
+     "base": "в шко́ле",
+     "alts": [
+      "в ба́нке",
+      "в магази́не",
+      "в больни́це"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda gapiring: qayerda o'qigansiz, qayerda va qachondan qachongacha ishlagansiz?"
+  }
+ ]
+}

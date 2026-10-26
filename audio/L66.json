@@ -1,0 +1,325 @@
+{
+ "n": 66,
+ "topic_uz": "Kvartira ijarasi: Я по объявле́нию",
+ "scene": "A young Uzbek man sits on a sofa holding a phone to his ear and looking at an apartment rental listing on a laptop screen, a notepad and pen next to him.",
+ "dialogs": [
+  {
+   "id": "L66-d1",
+   "title_ru": "Я звоню́ по объявле́нию",
+   "title_uz": "E'lon bo'yicha qo'ng'iroq qilyapman",
+   "intro_uz": "Birinchi dialog. Timur e'lon bo'yicha kvartira egasiga qo'ng'iroq qiladi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Хозя́йка",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Здра́вствуйте! Я звоню́ по объявле́нию. Кварти́ра ещё свобо́дна?",
+     "uz": "Assalomu alaykum! E'lon bo'yicha qo'ng'iroq qilyapman. Kvartira hali bo'shmi?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Да, свобо́дна.",
+     "uz": "Ha, bo'sh."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ско́лько ко́мнат и на како́м этаже́?",
+     "uz": "Necha xona va nechanchi qavatda?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Две ко́мнаты, четвёртый эта́ж, есть лифт.",
+     "uz": "Ikki xona, to'rtinchi qavat, lift bor."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ско́лько сто́ит в ме́сяц? Коммуна́льные услу́ги вхо́дят в це́ну?",
+     "uz": "Oyiga qancha? Kommunal xizmatlar narxga kiradimi?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Четы́ре миллио́на, коммуна́льные отде́льно. И ну́жен зало́г за ме́сяц.",
+     "uz": "To'rt million, kommunal alohida. Bir oylik zalog ham kerak."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Поня́тно. Когда́ мо́жно посмотре́ть кварти́ру?",
+     "uz": "Tushunarli. Kvartirani qachon ko'rsa bo'ladi?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Приходи́те за́втра в шесть ве́чера.",
+     "uz": "Ertaga kechqurun soat oltida keling."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kvartirada nechta xona bor?",
+     "opts": [
+      "bitta",
+      "ikkita",
+      "uchta"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kommunal xizmatlar narxga kiradimi?",
+     "opts": [
+      "ha, kiradi",
+      "yarmi kiradi",
+      "yo'q, alohida"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timur kvartirani qachon ko'radi?",
+     "opts": [
+      "ertaga soat oltida",
+      "bugun kechqurun",
+      "shanba kuni"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "четвёртый эта́ж",
+     "alts": [
+      "второ́й эта́ж",
+      "седьмо́й эта́ж",
+      "пе́рвый эта́ж"
+     ]
+    },
+    {
+     "base": "за́втра в шесть",
+     "alts": [
+      "сего́дня в семь",
+      "в суббо́ту у́тром",
+      "в пя́тницу в пять"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: e'lon bo'yicha qo'ng'iroq qilib, narx, qavat va zalog haqida so'rang."
+  },
+  {
+   "id": "L66-d2",
+   "title_ru": "Смо́трим кварти́ру",
+   "title_uz": "Kvartirani ko'ryapmiz",
+   "intro_uz": "Ikkinchi dialog. Nigora rieltor bilan kvartirani ko'rgani keldi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Риэ́лтор",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Риэ́лтор",
+     "ru": "Проходи́те! Вот гости́ная.",
+     "uz": "Kiring! Mana mehmonxona."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Здесь о́чень светло́ и ую́тно! А ку́хня?",
+     "uz": "Bu yer juda yorug' va shinam! Oshxona-chi?"
+    },
+    {
+     "who": "Риэ́лтор",
+     "ru": "Ку́хня больша́я, и есть стира́льная маши́на.",
+     "uz": "Oshxona katta, kir yuvish mashinasi ham bor."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Кварти́ра с ме́белью? Интерне́т есть?",
+     "uz": "Kvartira mebelli? Internet bormi?"
+    },
+    {
+     "who": "Риэ́лтор",
+     "ru": "Да, вся ме́бель остаётся. Интерне́т то́же есть.",
+     "uz": "Ha, hamma mebel qoladi. Internet ham bor."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А каки́е здесь сосе́ди? Ти́хо?",
+     "uz": "Qo'shnilar qanaqa? Tinchmi?"
+    },
+    {
+     "who": "Риэ́лтор",
+     "ru": "О́чень ти́хо. Сосе́ди — пожила́я па́ра.",
+     "uz": "Juda tinch. Qo'shnilar — keksa er-xotin."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Отли́чно! Мне здесь нра́вится. Я позвоню́ му́жу.",
+     "uz": "Zo'r! Menga bu yer yoqdi. Erimga qo'ng'iroq qilaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Mehmonxona qanday?",
+     "opts": [
+      "qorong'i va kichik",
+      "yorug' va shinam",
+      "katta va sovuq"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Oshxona qanday?",
+     "opts": [
+      "biroz kichik",
+      "juda katta",
+      "mebelsiz"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Qo'shnilar kimlar?",
+     "opts": [
+      "yosh oila",
+      "talabalar",
+      "keksa er-xotin"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "стира́льная маши́на",
+     "alts": [
+      "посудомо́ечная маши́на",
+      "кондиционе́р",
+      "но́вый холоди́льник"
+     ]
+    },
+    {
+     "base": "пожила́я па́ра",
+     "alts": [
+      "молода́я семья́",
+      "студе́нты",
+      "врач с жено́й"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: kvartirani ko'rayotganda mebel, internet va qo'shnilar haqida so'rang."
+  },
+  {
+   "id": "L66-d3",
+   "title_ru": "Дава́йте подпи́шем догово́р",
+   "title_uz": "Shartnoma imzolaylik",
+   "intro_uz": "Uchinchi dialog. Abdulaziz kvartirani yoqtirdi. U uy egasi bilan kelishadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Хозя́йка",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нам нра́вится кварти́ра. Мы согла́сны. Дава́йте подпи́шем догово́р.",
+     "uz": "Kvartira bizga yoqdi. Roziz. Shartnoma imzolaylik."
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Хорошо́. На како́й срок вы хоти́те снять?",
+     "uz": "Yaxshi. Qancha muddatga ijaraga olmoqchisiz?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "На год. Когда́ мо́жно перее́хать?",
+     "uz": "Bir yilga. Qachon ko'chib kelsa bo'ladi?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Хоть в суббо́ту. Зало́г — за оди́н ме́сяц.",
+     "uz": "Shanba kuniyoq. Zalog — bir oylik."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́, вот зало́г. Коммуна́льные плати́ть вам?",
+     "uz": "Yaxshi, mana zalog. Kommunalni sizga to'laymizmi?"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Нет, вы са́ми пла́тите ка́ждый ме́сяц.",
+     "uz": "Yo'q, har oy o'zingiz to'laysiz."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Поня́тно. Спаси́бо!",
+     "uz": "Tushunarli. Rahmat!"
+    },
+    {
+     "who": "Хозя́йка",
+     "ru": "Вот ва́ши ключи́! До́бро пожа́ловать!",
+     "uz": "Mana kalitlaringiz! Xush kelibsiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz qancha muddatga ijaraga oladi?",
+     "opts": [
+      "olti oyga",
+      "bir yilga",
+      "ikki yilga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Qachon ko'chib kelsa bo'ladi?",
+     "opts": [
+      "shanba kuni",
+      "ertaga",
+      "bir oydan keyin"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kommunalni kim to'laydi?",
+     "opts": [
+      "uy egasi",
+      "rieltor",
+      "Abdulaziz o'zi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "На год",
+     "alts": [
+      "На полго́да",
+      "На два го́да",
+      "На шесть ме́сяцев"
+     ]
+    },
+    {
+     "base": "в суббо́ту",
+     "alts": [
+      "за́втра",
+      "в понеде́льник",
+      "пе́рвого чи́сла"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: uy egasi bilan muddat, zalog va ko'chish kunini kelishing."
+  }
+ ]
+}

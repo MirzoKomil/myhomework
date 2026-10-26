@@ -1,0 +1,325 @@
+{
+ "n": 65,
+ "topic_uz": "Uy-joy: снима́ть кварти́ру, поста́вить/положи́ть",
+ "scene": "A young Uzbek couple moves into a bright two-room apartment: the man carries a box of books while the woman points to where a sofa should stand by the window; a painting leans against the wall.",
+ "dialogs": [
+  {
+   "id": "L65-d1",
+   "title_ru": "Мы сня́ли кварти́ру!",
+   "title_uz": "Kvartira ijaraga oldik!",
+   "intro_uz": "Birinchi dialog. Nigora yangi kvartira ijaraga oldi. Anton u haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, вы уже́ сня́ли кварти́ру?",
+     "uz": "Nigora, kvartira ijaraga oldinglarmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да! Двухко́мнатную кварти́ру в це́нтре, на пя́том этаже́.",
+     "uz": "Ha! Markazda, beshinchi qavatda ikki xonali kvartira."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А лифт в до́ме есть?",
+     "uz": "Uyda lift bormi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Есть. Кварти́ра све́тлая, есть балко́н и больша́я ку́хня.",
+     "uz": "Bor. Kvartira yorug', balkon va katta oshxona bor."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Она́ с ме́белью?",
+     "uz": "Mebeli bormi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, но ме́бели ма́ло: то́лько дива́н и шкаф.",
+     "uz": "Ha, lekin mebel kam: faqat divan va shkaf."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А ско́лько она́ сто́ит в ме́сяц?",
+     "uz": "Oyiga qancha turadi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Пять миллио́нов сумо́в. Хозя́ин хоро́ший челове́к.",
+     "uz": "Besh million so'm. Uy egasi yaxshi odam."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kvartira nechanchi qavatda?",
+     "opts": [
+      "uchinchi",
+      "beshinchi",
+      "to'qqizinchi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kvartirada qanday mebel bor?",
+     "opts": [
+      "divan va shkaf",
+      "stol va stullar",
+      "karavot"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kvartira oyiga qancha turadi?",
+     "opts": [
+      "uch million",
+      "to'rt million",
+      "besh million"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Двухко́мнатную",
+     "alts": [
+      "Одноко́мнатную",
+      "Трёхкомнатную",
+      "Большу́ю"
+     ]
+    },
+    {
+     "base": "на пя́том этаже́",
+     "alts": [
+      "на пе́рвом этаже́",
+      "на тре́тьем этаже́",
+      "на девя́том этаже́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'z uyingiz yoki kvartirangizni tasvirlang: necha xonali, nechanchi qavatda, unda nima bor?"
+  },
+  {
+   "id": "L65-d2",
+   "title_ru": "Куда́ положи́ть кни́ги?",
+   "title_uz": "Kitoblarni qayerga qo'yay?",
+   "intro_uz": "Ikkinchi dialog. Timur va Dilnoza yangi kvartirada narsalarni joylashtiryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, куда́ положи́ть кни́ги?",
+     "uz": "Timur, kitoblarni qayerga qo'yay?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Положи́ их на по́лку в гости́ной.",
+     "uz": "Ularni mehmonxonadagi tokchaga qo'y."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А куда́ поста́вить телеви́зор?",
+     "uz": "Televizorni qayerga qo'yaylik?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Поста́вь его́ у сте́ны, напро́тив дива́на.",
+     "uz": "Uni devor yoniga, divanning qarshisiga qo'y."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А карти́ну куда́?",
+     "uz": "Rasmni-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Пове́сь её на сте́ну в спа́льне.",
+     "uz": "Uni yotoqxonadagi devorga os."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А где ключи́? Они́ лежа́ли на столе́.",
+     "uz": "Kalitlar qayerda? Ular stol ustida yotgan edi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я их пове́сил у две́ри. Они́ вися́т там.",
+     "uz": "Ularni eshik yoniga osib qo'ydim. O'sha yerda osilib turibdi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kitoblarni qayerga qo'yishadi?",
+     "opts": [
+      "yotoqxonaga",
+      "mehmonxonadagi tokchaga",
+      "stol ustiga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Televizor qayerda turadi?",
+     "opts": [
+      "devor yonida, divan qarshisida",
+      "deraza yonida",
+      "oshxonada"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kalitlar hozir qayerda?",
+     "opts": [
+      "stol ustida",
+      "sumkada",
+      "eshik yonida"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "кни́ги",
+     "alts": [
+      "таре́лки",
+      "докуме́нты",
+      "игру́шки"
+     ]
+    },
+    {
+     "base": "телеви́зор",
+     "alts": [
+      "шкаф",
+      "стол",
+      "холоди́льник"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: xonangizdagi narsalarni qayerga qo'yish yoki osishni ayting."
+  },
+  {
+   "id": "L65-d3",
+   "title_ru": "Где мои́ докуме́нты?",
+   "title_uz": "Hujjatlarim qayerda?",
+   "intro_uz": "Uchinchi dialog. Abdulaziz o'z narsalarini topa olmayapti. Nigora yordam beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, где лежа́т мои́ докуме́нты?",
+     "uz": "Nigora, hujjatlarim qayerda yotibdi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Они́ лежа́т в шкафу́, в спа́льне.",
+     "uz": "Ular yotoqxonadagi shkafda yotibdi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А почему́ не на столе́?",
+     "uz": "Nega stol ustida emas?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я их положи́ла в шкаф, потому́ что на столе́ стои́т компью́тер.",
+     "uz": "Ularni shkafga qo'ydim, chunki stol ustida kompyuter turibdi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А где моя́ ку́ртка?",
+     "uz": "Kurtkam qayerda?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я пове́сила её в коридо́ре.",
+     "uz": "Uni koridorga osib qo'ydim."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А куда́ ты поста́вила мои́ боти́нки?",
+     "uz": "Botinkalarimni qayerga qo'yding?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Они́ стоя́т у две́ри. Ты всё вре́мя всё теря́ешь!",
+     "uz": "Ular eshik yonida turibdi. Sen doim hamma narsani yo'qotasan!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Hujjatlar qayerda?",
+     "opts": [
+      "stol ustida",
+      "shkafda",
+      "sumkada"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Stol ustida nima turibdi?",
+     "opts": [
+      "kompyuter",
+      "televizor",
+      "gul"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kurtka qayerda?",
+     "opts": [
+      "shkafda",
+      "balkonda",
+      "koridorda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "докуме́нты",
+     "alts": [
+      "ключи́",
+      "кни́ги",
+      "очки́"
+     ]
+    },
+    {
+     "base": "в коридо́ре",
+     "alts": [
+      "в шкафу́",
+      "в спа́льне",
+      "на балко́не"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: uyingizdagi narsalar qayerda turgani, yotgani yoki osilib turganini ayting."
+  }
+ ]
+}

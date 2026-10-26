@@ -1,0 +1,325 @@
+{
+ "n": 64,
+ "topic_uz": "Ish suhbati: Расскажи́те о себе́",
+ "scene": "In a modern company office, a young Uzbek man in a suit sits confidently across a table from a female HR manager who holds his resume during a job interview.",
+ "dialogs": [
+  {
+   "id": "L64-d1",
+   "title_ru": "Расскажи́те о себе́",
+   "title_uz": "O'zingiz haqingizda gapirib bering",
+   "intro_uz": "Birinchi dialog. Timur ish suhbatida. Menejer savol beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Ме́неджер",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Ме́неджер",
+     "ru": "Здра́вствуйте! Расскажи́те, пожа́луйста, о себе́.",
+     "uz": "Assalomu alaykum! O'zingiz haqingizda gapirib bering, iltimos."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Меня́ зову́т Тиму́р, мне два́дцать во́семь лет. Я око́нчил университе́т в девятна́дцатом году́.",
+     "uz": "Ismim Timur, yigirma sakkiz yoshdaman. Universitetni o'n to'qqizinchi yilda tugatganman."
+    },
+    {
+     "who": "Ме́неджер",
+     "ru": "Како́й у вас о́пыт рабо́ты?",
+     "uz": "Ish tajribangiz qanday?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Три го́да я рабо́тал ме́неджером в ба́нке. Там я отвеча́л за клие́нтов.",
+     "uz": "Uch yil bankda menejer bo'lib ishladim. U yerda mijozlar uchun javob berardim."
+    },
+    {
+     "who": "Ме́неджер",
+     "ru": "Каки́е у вас си́льные сто́роны?",
+     "uz": "Kuchli tomonlaringiz qanday?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я отве́тственный и уме́ю рабо́тать в кома́нде.",
+     "uz": "Men mas'uliyatliman va jamoada ishlay olaman."
+    },
+    {
+     "who": "Ме́неджер",
+     "ru": "Почему́ вы хоти́те рабо́тать у нас?",
+     "uz": "Nega bizda ishlamoqchisiz?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Потому́ что у вас больша́я компа́ния и есть возмо́жность ро́ста.",
+     "uz": "Chunki kompaniyangiz katta va o'sish imkoniyati bor."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur necha yoshda?",
+     "opts": [
+      "yigirma ikki",
+      "yigirma sakkiz",
+      "o'ttiz"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur bankda kim bo'lib ishlagan?",
+     "opts": [
+      "menejer",
+      "kassir",
+      "buxgalter"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur nega shu kompaniyada ishlamoqchi?",
+     "opts": [
+      "maosh yaxshi",
+      "uyiga yaqin",
+      "o'sish imkoniyati bor"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "ме́неджером в ба́нке",
+     "alts": [
+      "учи́телем в шко́ле",
+      "продавцо́м в магази́не",
+      "бухга́лтером в компа́нии"
+     ]
+    },
+    {
+     "base": "отве́тственный",
+     "alts": [
+      "пунктуа́льный",
+      "акти́вный",
+      "споко́йный"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: o'zingizni tanishtiring — ta'limingiz, tajribangiz va kuchli tomonlaringiz."
+  },
+  {
+   "id": "L64-d2",
+   "title_ru": "У меня́ есть вопро́сы",
+   "title_uz": "Savollarim bor",
+   "intro_uz": "Ikkinchi dialog. Suhbat oxirida Dilnoza direktorga savollar beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Дире́ктор",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дире́ктор",
+     "ru": "У вас есть вопро́сы?",
+     "uz": "Savollaringiz bormi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да. Како́й гра́фик рабо́ты?",
+     "uz": "Ha. Ish tartibi qanday?"
+    },
+    {
+     "who": "Дире́ктор",
+     "ru": "С девяти́ до шести́, пять дней в неде́лю.",
+     "uz": "To'qqizdan oltigacha, haftada besh kun."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А кака́я зарпла́та?",
+     "uz": "Maosh qancha?"
+    },
+    {
+     "who": "Дире́ктор",
+     "ru": "А каку́ю зарпла́ту вы ожида́ете?",
+     "uz": "Siz qancha maosh kutyapsiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я ду́маю, во́семь миллио́нов сумо́в. Есть ли возмо́жность обуче́ния?",
+     "uz": "Menimcha, sakkiz million so'm. O'qish imkoniyati bormi?"
+    },
+    {
+     "who": "Дире́ктор",
+     "ru": "Коне́чно, у нас есть ку́рсы для сотру́дников.",
+     "uz": "Albatta, bizda xodimlar uchun kurslar bor."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо за вре́мя! Когда́ я узна́ю результа́т?",
+     "uz": "Vaqtingiz uchun rahmat! Natijani qachon bilaman?"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Ish haftada necha kun?",
+     "opts": [
+      "olti",
+      "besh",
+      "to'rt"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza qancha maosh kutyapti?",
+     "opts": [
+      "besh million",
+      "o'n million",
+      "sakkiz million"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Kompaniyada xodimlar uchun nima bor?",
+     "opts": [
+      "kurslar",
+      "sport zal",
+      "oshxona"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "С девяти́ до шести́",
+     "alts": [
+      "С восьми́ до пяти́",
+      "С десяти́ до семи́",
+      "С девяти́ до пяти́"
+     ]
+    },
+    {
+     "base": "возмо́жность обуче́ния",
+     "alts": [
+      "возмо́жность ро́ста",
+      "медици́нская страхо́вка",
+      "удалённая рабо́та"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: ish suhbatida ish tartibi, maosh va o'qish imkoniyati haqida so'rang."
+  },
+  {
+   "id": "L64-d3",
+   "title_ru": "Как про́шло собесе́дование?",
+   "title_uz": "Suhbat qanday o'tdi?",
+   "intro_uz": "Uchinchi dialog. Abdulaziz ish suhbatidan qaytdi. Nigora so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Ну как собесе́дование?",
+     "uz": "Xo'sh, suhbat qanday o'tdi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́! Снача́ла меня́ попроси́ли рассказа́ть о себе́.",
+     "uz": "Yaxshi! Avval o'zim haqimda gapirib berishimni so'rashdi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А каки́е ещё бы́ли вопро́сы?",
+     "uz": "Yana qanday savollar bo'ldi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Был вопро́с: «Каки́е у вас сла́бые сто́роны?»",
+     "uz": "Savol bo'ldi: «Zaif tomonlaringiz qanday?»"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "И что ты отве́тил?",
+     "uz": "Nima deb javob berding?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я отве́тил: «Я сли́шком мно́го рабо́таю!»",
+     "uz": "Javob berdim: «Men haddan tashqari ko'p ishlayman!»"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ха-ха, хоро́ший отве́т! А зарпла́та и гра́фик?",
+     "uz": "Ha-ha, yaxshi javob! Maosh va ish tartibi-chi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Зарпла́та хоро́шая, гра́фик удо́бный. Результа́т узна́ю в пя́тницу.",
+     "uz": "Maosh yaxshi, ish tartibi qulay. Natijani juma kuni bilaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Avval Abdulazizdan nima so'rashdi?",
+     "opts": [
+      "maosh haqida",
+      "o'zi haqida gapirishni",
+      "oilasi haqida"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz zaif tomoni haqida nima dedi?",
+     "opts": [
+      "ko'p ishlayman",
+      "kech qolaman",
+      "ingliz tilini bilmayman"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "U natijani qachon biladi?",
+     "opts": [
+      "ertaga",
+      "dushanba kuni",
+      "juma kuni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "сла́бые сто́роны",
+     "alts": [
+      "си́льные сто́роны",
+      "пла́ны на бу́дущее",
+      "це́ли"
+     ]
+    },
+    {
+     "base": "в пя́тницу",
+     "alts": [
+      "в понеде́льник",
+      "за́втра",
+      "че́рез неде́лю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: ish suhbati qanday o'tganini, qanday savollar bo'lganini aytib bering."
+  }
+ ]
+}
