@@ -142,3 +142,109 @@ html.rd .modal-close:hover { background: var(--rd-col); color: var(--text); }
 
 /* ---------- Progress chiziqlari ---------- */
 html.rd .mhx-bar, html.rd .mot-bar { background: var(--kb-track); }
+
+/* ==========================================================================
+   Kobalt 3/3: audit tuzatishlari
+   ========================================================================== */
+
+/* Yuqori sarlavhasi (rd-page-head) bo'lmagan bo'limlar: o'z sarlavhasi sahifa nomi */
+html.rd .tab-content:not(:has(.rd-page-head)) .page-title-bar:first-of-type h1 {
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em;
+}
+@media (max-width: 640px) {
+    html.rd .tab-content:not(:has(.rd-page-head)) .page-title-bar:first-of-type h1 { font-size: 20px !important; }
+}
+
+/* Ikkinchi darajali tugma: hamma joyda ko'k chegara */
+html.rd .btn-ghost {
+    border: 1.5px solid var(--kb-primary);
+    color: var(--kb-primary);
+    background: var(--surface);
+    font-weight: 700;
+    border-radius: 12px;
+}
+html.rd .btn-ghost:hover { background: var(--kb-info-bg); color: var(--kb-primary); }
+
+/* Segment tanlagichlar (til, davr): bitta ko'rinish */
+html.rd :is(.leads-lang-tabs, .subject-tabs, .sales-header-lang) {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--rd-col);
+    border: 0;
+}
+html.rd :is(.leads-lang-tabs, .subject-tabs, .sales-header-lang) :is(.subject-tab, .lang-btn) {
+    min-height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 600;
+    box-shadow: none;
+}
+html.rd :is(.leads-lang-tabs, .subject-tabs, .sales-header-lang) :is(.subject-tab.active, .lang-btn--active) {
+    background: var(--surface);
+    color: var(--kb-info-fg);
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(11, 18, 32, .08);
+}
+
+/* Telefonda ichki tablar: o'ng chetda xira o'tish — yana tab borligini bildiradi */
+@media (max-width: 900px) {
+    html.rd .section-nav:not(.team-nav-end) {
+        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+        mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+    }
+}
+
+/* Statistika plitkalari: katta summalar telefonda sig'sin */
+html.rd .sfx-tile b { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+    html.rd .sfx-tile b { font-size: clamp(15px, 4.4vw, 19px); }
+}
+
+/* Analitika: "+" qo'lda kiritish tugmasi va ikonka plitkalari */
+html.rd .an-manual-add-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 14px;
+    line-height: 1;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+html.rd .stat-label { color: var(--text-muted); }
+html.rd .cf-kpi-grid .stat-icon { background: var(--kb-info-bg) !important; color: var(--kb-primary) !important; }
+
+/* Marketing KPI: chap rangli chiziq o'rniga yuqori nuqta */
+html.rd .tsx-kpi { border-left: 1px solid var(--border); border-radius: 20px; position: relative; }
+html.rd .tsx-kpi:is(.tsx-good, .tsx-warn, .tsx-bad)::before {
+    content: "";
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16A34A;
+}
+html.rd .tsx-kpi.tsx-warn::before { background: #F59E0B; }
+html.rd .tsx-kpi.tsx-bad::before { background: #D92D20; }
+
+/* Karta ichidagi karta: bo'sh holat chegarasiz */
+html.rd .card .card.team-empty-state,
+html.rd .tt-grid-wrap .team-empty-state { border: 0; background: transparent; box-shadow: none; }
+
+/* Mayda kulrang matn: kontrast */
+html.rd :is(.mhx-sub, .lead-card-date, .tsx-kpi-sub, .sfx-tile small) { color: var(--text-muted); }
+
+/* Bosh sahifa qora kartasi: bo'sh o'rta qism qisqarsin */
+html.rd .kbx-next { justify-content: flex-start; }
