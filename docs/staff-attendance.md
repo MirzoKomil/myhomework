@@ -1,34 +1,49 @@
-# Xodimlar davomati (Face ID + lokatsiya) — reja va holat
+# Xodimlar davomati (Face ID + lokatsiya) va ustozlar dars nazorati
 
-## Qarorlar (direktor bilan kelishilgan)
-- Barcha ofis xodimlari ofisga keladi; ofis bitta: Mavr School, Andijon — 40.789035, 72.346787, radius 150 m (HR sozlamasida o'zgaradi).
-- Ish vaqti har xodimga alohida (HR'da hafta kunlari bo'yicha grafik).
-- Kechikish/kelmaslik haqida Telegram: direktor (admin/boshliq) + ROP.
-- Telefon kamerasi orqali (alohida Face ID qurilma yo'q).
-- USTOZLAR kamera bilan belgilamaydi. Ular uchun avtomatik nazorat (variant "c"):
-  Telegram guruhdagi video chat boshlanish/tugash vaqti (bot guruhlarda admin) + boshqa platformada
-  o'tadiganlar uchun dars vaqtida o'quvchi davomati belgilangan vaqt. Ustoz hech narsa bosmaydi.
+## Qanday ishlaydi
+**Ofis xodimi** (sotuv menejeri, administrator, marketolog…):
+1. HR → Davomat → "Xodimlar va grafik" da xodimga ish vaqti kiritiladi (har kunga alohida).
+2. Xodim kabinetida header'da **"Davomat"** tugmasi chiqadi → birinchi marta yuz namunasini yuboradi
+   (2 ta rasm) → HR "Tekshirish" orqali tasdiqlaydi. HR o'zi ham "Yuzni olish" bilan olishi mumkin.
+3. Har kuni **"Keldim"/"Ketdim"**: kamera 3x4 ramkada to'g'ri qaragan rasm, keyin bosh burilgan rasm
+   oladi, GPS joylashuv bilan serverga yuboriladi.
+4. Server tekshiradi: ofis radiusi ichidami → yuz namunaga mosmi → bosh haqiqatan burildimi (tirik odam).
+   Vaqt — server vaqti (Toshkent).
+5. Holat: vaqtida / kechikdi (X daq) / kelmadi / erta ketdi / ta'til / sababli (HR qo'lda).
 
-## Texnik yechim
-- Yuz tekshiruvi SERVERDA: `vendor/face-api` (vladmandic/face-api 1.7.15, MIT) brauzer to'plami Node'da
-  tfjs cpu backend bilan, npm paketsiz. `server/services/staffAttendance/face.js`, PNG dekoder `png.js`.
-  O'lchov: 360x480 kadr ~4-5 s (yuz+descriptor), faqat burilish kadri ~3 s. Bir xil odam masofasi ~0.2, boshqa ~0.6+; chegara 0.5.
-- Tiriklik: 2 kadr — to'g'ri va bosh burilgan; |yaw farqi| >= 0.12, ikkinchi kadrdagi yuz o'lchami mos bo'lishi kerak.
-- Lokatsiya: haversine, masofa <= radius + min(aniqlik, 50 m); aniqlik > 200 m bo'lsa rad.
-- Vaqt — server vaqti (Asia/Tashkent, UTC+5).
-- Rasmlar Postgres'da (bytea, JPEG ~25 KB), 90 kundan keyin o'chiriladi (namuna rasmlar qoladi) — Railway diskiga bog'liq emas.
-- Mavjud `domwork_bot_face_logs` ga ham yoziladi (botdagi "Ish jadvali / Face ID" menyusi shuni ko'rsatadi).
+**Ustozlar** kamera bilan belgilamaydi va hech narsa bosmaydi:
+- Telegram guruhi CRM'ga bog'langan ustoz — guruhdagi **video chat** boshlangan/tugagan vaqt dars
+  jadvali bilan solishtiriladi: vaqtida / kech boshladi / erta tugatdi / dars bo'lmadi.
+- Guruhi bog'lanmagan ustoz — dars vaqtida o'quvchi davomati **qachon belgilangani** bo'yicha.
+- Ketma-ket darslar (tanaffus ≤10 daq) bitta blok sifatida baholanadi.
 
-## Standart qiymatlar (o'zim tanladim, keyin o'zgartirsa bo'ladi)
-- Kechikish imtiyozi 10 daq; boshlanishdan 2 soat o'tib belgilamasa — "kelmadi".
-- Yuz namunasi: xodim o'zi yuboradi -> HR tasdiqlaydi (yoki HR o'zi oladi).
-- Kirish: admin/boshliq/hr — hammasi; rop — kunlik/oylik jadval faqat ko'rish.
+**Telegram xabarlari** (@Domworkuz_bot orqali, direktor va ROP'ga): kechikdi, kelmadi, erta ketdi,
+yuz mos kelmadi, yangi yuz namunasi. Buning uchun ular botga o'z akkauntini ulagan bo'lishi kerak.
 
-## Qolgan ishlar
-1. Jadvallar: staff_att_settings, staff_att_faces, staff_att_schedules, staff_att_events, staff_att_overrides.
-2. API `/api/staff-attendance` (me, check, enroll, admin: settings, schedules, daily, monthly, photo, override).
-3. Xodim kabineti: header'da "Davomat" tugmasi + modal (kamera 3x4 ramka, burilish, GPS), teamApp'da ham.
-4. HR > Davomat paneli (hozir bo'sh joy): kunlik/oylik jadval, grafik, namuna tasdiqlash, sozlamalar.
-5. Telegram xabarlar (kechikdi, kelmadi, yuz mos emas) + har 5 daqiqalik tekshiruv.
-6. Ustozlar: video chat hodisalari (handlers.js message update: video_chat_started/ended) + davomat vaqti.
-7. Testlar (node --test), mahalliy Postgres 16 bilan integratsiya, mustaqil agent baholashi, bitta PR.
+## Qarorlar
+- Ofis: Mavr School, Andijon — 40.789035, 72.346787, radius 150 m (HR → Davomat → Sozlamalar).
+- Kechikishga imtiyoz 10 daq; ish boshlanib 2 soat o'tib belgilamasa — "kelmadi"; erta ketish imtiyozi 10 daq.
+- Hisob grafik yoqilgan va yuz namunasi birinchi tasdiqlangan kundan boshlanadi; o'sha birinchi kuni
+  belgilamasa "kelmadi" hisoblanmaydi (o'tgan kunlar orqaga qarab jarimalanmaydi).
+- Kirish: admin/boshliq/hr — hammasi; rop — faqat ko'radi; xodim — faqat o'zini.
+- Belgilash rasmlari 90 kun saqlanadi (Postgres'da, Railway diskiga bog'liq emas), keyin o'chiriladi.
+  Ofis hududidan tashqaridagi urinishda rasm saqlanmaydi.
+- Kuniga 12 ta urinish chegarasi.
+
+## Texnik
+- Yuz tekshiruvi serverda: `vendor/face-api` (vladmandic/face-api 1.7.15, MIT) Node'da tfjs cpu bilan,
+  npm paketsiz, **alohida worker oqimida** (CRM sekinlashmaydi). Kadr ~3-5 s.
+  Bir odam masofasi ~0.2, boshqa odam 0.6+; chegara 0.5 (`STAFF_FACE_THRESHOLD`).
+- Fayllar: `server/services/staffAttendance/` (index, rules, time, face, png, notify, lessons),
+  `server/routes/staffAttendance.js` (`/api/staff-attendance`), `js/staffAttendanceUI.js`, `css/staffAttendance.css`.
+- Jadvallar: `staff_att_*` (server ishga tushganda o'zi yaratadi). Botdagi "Ish jadvali / Face ID"
+  menyusi uchun `domwork_bot_face_logs` ga ham yoziladi.
+- Testlar: `node --test scripts/staff-attendance.test.cjs`; Postgres bilan:
+  `scripts/staff-attendance-postgres.test.cjs` (`scripts/run-payroll-postgres.cjs` orqali).
+
+## Cheklovlar (halol)
+- Android'dagi "soxta GPS" ilovalarini 100% ushlab bo'lmaydi; GPS aniqligi va har urinish rasmi
+  HR'ga ko'rinadi.
+- Tiriklik tekshiruvi qog'ozdagi/ekrandagi suratni ushlaydi, lekin oldindan yozilgan videoni emas.
+- Ustozlar uchun video chat nazorati faqat bot admin bo'lgan (CRM'ga bog'langan) Telegram guruhlarda ishlaydi.
+- Yuz rasmi biometrik ma'lumot — xodimlardan yozma rozilik olinishi kerak.

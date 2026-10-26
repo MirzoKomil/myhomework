@@ -2,8 +2,10 @@
 // Serverda yuz tekshiruvi — tashqi npm paketsiz.
 // vendor/face-api/face-api.js (vladmandic/face-api 1.7.15, MIT) brauzer to'plami
 // Node'da tfjs "cpu" backend bilan ishga tushiriladi; modellar diskdan o'qiladi.
-// Sekin (1 rasm ~1-3 s), lekin kuniga bir necha o'nlab belgilash uchun yetarli.
+// Sekin (1 rasm ~2-5 s) — shuning uchun hisob ALOHIDA worker oqimida bajariladi,
+// aks holda shu vaqt ichida butun CRM serveri javob bermay qolardi.
 const fs = require('fs');
+const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const path = require('path');
 const vm = require('vm');
 const { decodePng } = require('./png');
@@ -85,7 +87,7 @@ function yawOf(landmarks) {
 
 // PNG buffer → { faces, descriptor?: number[128], yaw, score, box }.
 // opts.descriptor=false — faqat yuz va bosh burilishi (tirik ekanini tekshirish kadri uchun, tezroq).
-async function analyze(pngBuffer, opts = {}) {
+async function analyzeLocal(pngBuffer, opts = {}) {
     const faceapi = await loadFaceApi();
     const withDescriptor = opts.descriptor !== false;
     const run = queue.then(async () => {
@@ -113,6 +115,63 @@ async function analyze(pngBuffer, opts = {}) {
     return run;
 }
 
+// ── Worker oqimi ─────────────────────────────────────────────────────────────
+const WORKER_TIMEOUT_MS = 90 * 1000;
+const WORKER_IDLE_MS = 15 * 60 * 1000;
+let worker = null, seq = 0, idleTimer = null;
+const pending = new Map();
+
+function failAll(err) {
+    for (const p of pending.values()) { clearTimeout(p.timer); p.reject(err); }
+    pending.clear();
+}
+function getWorker() {
+    if (worker) return worker;
+    worker = new Worker(__filename, { workerData: { staffFaceWorker: true } });
+    worker.on('message', ({ id, result, error }) => {
+        const p = pending.get(id);
+        if (!p) return;
+        pending.delete(id); clearTimeout(p.timer);
+        if (error) p.reject(new Error(error)); else p.resolve(result);
+    });
+    const reset = err => { worker = null; failAll(err); };
+    worker.on('error', err => reset(err));
+    worker.on('exit', code => { if (worker) reset(new Error('Yuz tekshiruvi oqimi to‘xtadi (' + code + ')')); });
+    worker.unref();
+    return worker;
+}
+function touchIdle() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+        if (!pending.size && worker) { const w = worker; worker = null; w.terminate().catch(() => {}); }
+    }, WORKER_IDLE_MS);
+    idleTimer.unref?.();
+}
+
+// PNG buffer → { faces, descriptor?, yaw, score, box }. STAFF_FACE_INLINE=1 — worker'siz (testlar uchun).
+function analyze(pngBuffer, opts = {}) {
+    if (process.env.STAFF_FACE_INLINE === '1') return analyzeLocal(pngBuffer, opts);
+    return new Promise((resolve, reject) => {
+        const id = ++seq;
+        const timer = setTimeout(() => {
+            pending.delete(id);
+            reject(new Error('Yuz tekshiruvi juda uzoq davom etdi'));
+            if (worker) { const w = worker; worker = null; w.terminate().catch(() => {}); }
+        }, WORKER_TIMEOUT_MS);
+        pending.set(id, { resolve, reject, timer });
+        const buf = Buffer.from(pngBuffer);
+        getWorker().postMessage({ id, png: buf, opts: { descriptor: opts.descriptor } });
+        touchIdle();
+    });
+}
+
+if (!isMainThread && workerData && workerData.staffFaceWorker) {
+    parentPort.on('message', async ({ id, png, opts }) => {
+        try { parentPort.postMessage({ id, result: await analyzeLocal(Buffer.from(png), opts || {}) }); }
+        catch (e) { parentPort.postMessage({ id, error: String(e && e.message || e) }); }
+    });
+}
+
 function distance(a, b) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return Infinity;
     let s = 0;
@@ -127,4 +186,4 @@ function bestDistance(descriptor, references) {
     return best;
 }
 
-module.exports = { analyze, distance, bestDistance, yawOf, loadFaceApi, MATCH_THRESHOLD };
+module.exports = { analyze, analyzeLocal, distance, bestDistance, yawOf, loadFaceApi, MATCH_THRESHOLD };
