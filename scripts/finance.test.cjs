@@ -541,3 +541,43 @@ test('R4: Ц/Щ/kh spellings match across scripts', () => {
     assert.equal(F.nameMatch('Евгений Щербаков', 'Yevgeniy Shcherbakov'), 'strong');
     assert.equal(F.nameMatch('Рахимов Илёс', 'Rakhimov Ilyos'), 'strong');
 });
+
+// ---------- Auditor regressiyalari (5-bosqich) ----------
+test('R5: a payment after the course is fully paid (CRM debt 0) is an advance for the next course, even mid-course', () => {
+    const d = data({ accounts: ACC.map(a => ({ ...a, openingDate: '2026-07-01' })), receipts: [
+        rc('a', '2026-08-01', 3000000, { leadId: 'L', contractValue: 3000000, debtAfter: 0 }),
+        rc('b', '2026-08-20', 3000000, { leadId: 'L', contractValue: 3000000, debtAfter: 0 })] });
+    const cs = F.contracts(d);
+    assert.equal(cs.length, 2); assert.equal(cs[1].start, '2026-11-01');
+    assert.equal(F.profitAndLoss(d, { start: '2026-08-01', end: '2026-10-31', basis: 'accrual' }).net_revenue, 3000000);
+    assert.equal(F.balanceSheet(d, '2026-10-31').contractLiabilities, 3000000);
+});
+
+test('R5: course price = paid + CRM remaining debt, for first courses and renewals alike; write-downs re-measure', () => {
+    const first = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 1000000, { leadId: 'L', studentId: 'S', contractValue: 3000000 })], studentDebts: [{ studentId: 'S', debt: 0 }] });
+    assert.equal(F.contracts(first)[0].value, 1000000);
+    assert.equal(F.balanceSheet(first, '2026-02-15').contractAssets, 0);
+    const renewal = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 3000000, { leadId: 'L', studentId: 'S', contractValue: 3000000, debtAfter: 0 }),
+        rc('b', '2026-04-01', 1000000, { leadId: 'L', studentId: 'S', contractValue: 3000000, debtAfter: 1500000 })], studentDebts: [{ studentId: 'S', debt: 1500000 }] });
+    assert.equal(F.contracts(renewal)[1].value, 2500000);
+    assert.ok(F.balanceSheet(renewal, '2026-06-30').contractAssets > 0);
+    assert.deepEqual(F.contractDebtMismatches(renewal, '2026-06-30'), []);
+});
+
+test('R5: a tax-rate change applies from its exact effective date, not the next month', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-09-01', 3000000, { leadId: 'A', contractValue: 3000000 })],
+        settingsHistory: [{ from: '1900-01-01', data: { courseMonths: { english: 3, russian: 3 } } }, { from: '2026-09-16', data: { courseMonths: { english: 3, russian: 3 }, turnoverTaxRate: 4 } }] });
+    const sep = F.profitAndLoss(d, { start: '2026-09-01', end: '2026-09-30', basis: 'accrual' });
+    const c = F.contracts(d)[0];
+    assert.equal(sep.turnover_tax, Math.round((F.earned(c, '2026-09-30') - F.earned(c, '2026-09-15')) * 4 / 100));
+});
+
+test('R5: a freeze back-dated into a closed month takes effect from the first open day (closed months stay as reported)', () => {
+    const base = { accounts: ACC26, receipts: [rc('a', '2026-07-01', 3000000, { leadId: 'A', studentId: 'S', contractValue: 3000000 })] };
+    const snapJul = F.snapshotMonth(data(base), '2026-07'), snapAug = F.snapshotMonth({ ...data(base), closedThrough: '2026-07', snapshots: { '2026-07': snapJul } }, '2026-08');
+    const closed = data({ ...base, closedThrough: '2026-08', snapshots: { '2026-07': snapJul, '2026-08': snapAug },
+        studentStatus: [{ studentId: 'S', frozen: true, frozenAt: '2026-07-10', recordedAt: '2026-09-05' }] });
+    const c = F.contracts(closed)[0];
+    assert.equal(c.frozenAt, '2026-09-01');
+    assert.equal(F.profitAndLoss(closed, { start: '2026-09-01', end: '2026-09-30', basis: 'accrual' }).prior_adjustments || 0, 0);
+});

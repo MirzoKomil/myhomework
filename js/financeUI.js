@@ -162,7 +162,8 @@
     // ---------- Umumiy ko'rinish ----------
     function qualityAlerts(o) {
         const q = o.quality, items = [];
-        if (o.seals?.unsealed) items.push(['danger', `${o.seals.unsealed} ta moliyaviy qator muhrsiz — baza triggerlari chetlab o‘tilgan. “Solishtirish va audit”da to‘liq tekshiring`, 'solishtirish']);
+        if (o.seals && !o.seals.ok && !o.seals.badSnapshots?.length) items.push(['danger', `Ma’lumot yaxlitligi buzilgan: ${esc(o.seals.table || '')} — ${esc(o.seals.reason || '')}. Bazada yashirin o‘zgartirish bo‘lgan, oy yopish bloklangan`, 'solishtirish']);
+        if (o.contractDebtMismatches?.length) items.push(['warning', `${o.contractDebtMismatches.length} ta o‘quvchida shartnoma aktivi CRM’dagi qarzdan katta — tekshirish kerak`, 'solishtirish']);
         if (o.seals?.badSnapshots?.length) items.push(['danger', `Yopilgan oy nusxasi bazada o‘zgartirilgan (${o.seals.badSnapshots.join(', ')}) — u ishlatilmayapti, hisobot joriy ma’lumotdan tuzildi. Oy yopish bloklangan`, 'solishtirish']);
         if (!o.auditChain.ok) items.push(['danger', `Audit jurnali zanjiri ${o.auditChain.brokenAt}-yozuvda uzilgan — jurnal bazada to‘g‘ridan-to‘g‘ri o‘zgartirilgan`, 'solishtirish']);
         if (!o.balance.balanced) items.push(['danger', `Balans tenglamasi ${money(o.balance.imbalance)} ga mos kelmayapti`, 'hisobotlar', 'balance']);
@@ -497,7 +498,7 @@
             <section class="fin-card fin-print-area" role="tabpanel" id="fin-panel-report" aria-labelledby="fin-tab-report-${r}">
                 <header class="fin-report-head"><div><h3>${items.find(t => t[0] === r)[1]}</h3><p class="fin-muted">${esc(r === 'balance' ? 'Butun korxona' : scopeLabel())} · ${r === 'balance' ? dateText(o.period.end) + ' holatiga' : dateText(o.period.start) + ' — ' + dateText(o.period.end)} · so‘mda</p></div></header>
                 ${body}
-                <footer class="fin-report-foot">Tayyorlandi: ${new Date().toLocaleString('uz-UZ')} · Manba: Myhomework CRM moliya reyestri · Storno va bekor qilingan yozuvlar hisobga olingan. ${o.closedThrough ? `${esc(o.closedThrough)} gacha bo‘lgan oylar yopilgan va muzlatilgan.` : 'Hali yopilgan oy yo‘q — raqamlar tuzatishlar bilan o‘zgarishi mumkin.'} Audit jurnali: ${o.auditChain.ok ? 'butun' : 'uzilgan!'} (${o.auditChain.count} ta yozuv${o.auditChain.head?.hash ? `, oxirgi #${o.auditChain.head.id} xesh ${esc(o.auditChain.head.hash.slice(0, 16))}…` : ''}).</footer>
+                <footer class="fin-report-foot">Tayyorlandi: ${new Date().toLocaleString('uz-UZ')} · Manba: Myhomework CRM moliya reyestri · Storno va bekor qilingan yozuvlar hisobga olingan. ${o.closedThrough ? `${esc(o.closedThrough)} gacha bo‘lgan oylar yopilgan va muzlatilgan.` : 'Hali yopilgan oy yo‘q — raqamlar tuzatishlar bilan o‘zgarishi mumkin.'} Audit jurnali: ${o.auditChain.ok ? 'butun' : 'uzilgan!'} (${o.auditChain.count} ta yozuv${o.auditChain.head?.hash ? `, oxirgi #${o.auditChain.head.id} xesh ${esc(o.auditChain.head.hash.slice(0, 16))}…` : ''}). Moliyaviy qatorlar muhri: ${o.seals?.ok ? `butun (${o.seals.count || 0} ta muhr${o.seals.head ? ', bosh xesh ' + esc(o.seals.head.slice(0, 16)) + '…' : ''})` : '<b>BUZILGAN — ' + esc(o.seals?.reason || '') + '</b>'}.</footer>
             </section></div>`;
         bindToolbar(root, () => render('hisobotlar'));
         bindTabs(root, 'report', (v, focus) => { state.report = v; render('hisobotlar'); if (focus) panelRoot('hisobotlar').querySelector(`[data-fin-tab-report="${v}"]`)?.focus(); });
@@ -646,6 +647,12 @@
                         <li><span>Audit jurnali zanjiri</span><strong class="${state.auditChain?.ok === false ? 'neg' : 'pos'}">${state.auditChain?.ok === false ? 'uzilgan (' + state.auditChain.brokenAt + ')' : 'butun · ' + (state.auditChain?.count || 0) + ' yozuv'}</strong></li>
                     </ul></section>
             </div>
+            ${o.contractDebtMismatches?.length ? `<section class="fin-card" aria-labelledby="finCdH"><header><h3 id="finCdH">Shartnoma aktivi va CRM qarzi mos emas</h3></header>
+                ${table(['O‘quvchi', 'Yo‘nalish', { label: 'Shartnoma aktivi', num: true }, { label: 'CRM qarzi', num: true }, { label: 'Farq', num: true }], o.contractDebtMismatches.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(F.ENTITIES[r.entity])}</td><td class="num">${num(r.contractAsset)}</td><td class="num">${num(r.crmDebt)}</td><td class="num neg">${num(r.difference)}</td></tr>`))}</section>` : ''}
+            <section class="fin-card" aria-labelledby="finStH"><header><h3 id="finStH">O‘quvchi holati o‘zgarishlari (moliyaga ta’sir qiladigan)</h3><span class="fin-muted">muzlatish, tashlash, qarz, to‘lov sanasi — baza avtomatik yozadi</span></header>
+                ${table(['Vaqt', 'O‘quvchi', 'Holat', { label: 'Qarz', num: true }, 'To‘lov sanasi'], (o.studentChanges || []).map(c => `<tr><td>${new Date(c.recorded_at).toLocaleString('uz-UZ')}</td><td>${esc(c.name || c.student_id)}</td>
+                    <td>${c.state.frozen ? `muzlatilgan${c.state.frozenAt ? ' (' + esc(String(c.state.frozenAt).slice(0, 10)) + ')' : ''}` : esc(c.state.status || 'faol')}</td><td class="num">${c.state.debtAmount != null ? num(c.state.debtAmount) : '—'}</td><td>${esc(c.state.paymentDueDate || '—')}</td></tr>`), { empty: 'O‘zgarish yo‘q', label: 'O‘quvchi holati o‘zgarishlari' })}
+                <p class="fin-note">Yopilgan oyga orqaga sanalangan muzlatish yoki tashlash yopilgan hisobotni o‘zgartirmaydi — birinchi ochiq kundan kuchga kiradi.</p></section>
             <section class="fin-card" aria-labelledby="finVoidH"><header><h3 id="finVoidH">Bekor qilingan tushumlar</h3></header>
                 ${table(['Tushum sanasi', 'Bekor qilingan', 'Ism', { label: 'Summa', num: true }, 'Sabab'], q.voidedList.map(r => `<tr class="fin-reversed"><td>${dateText(r.date)}</td><td>${dateText(r.voidDate)}</td><td>${esc(r.name)}<small>${esc(r.phone)}</small></td><td class="num">${num(r.amount)}</td><td>${esc(r.voidReason)}</td></tr>`), { empty: 'Yo‘q' })}</section>
             <section class="fin-card" aria-labelledby="finAuditH"><header><h3 id="finAuditH">Audit jurnali</h3>

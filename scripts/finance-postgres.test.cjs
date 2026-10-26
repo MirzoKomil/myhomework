@@ -26,6 +26,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     const body = name => name.endsWith('.png') ? Buffer.concat([PNG, Buffer.from('evidence ' + name + seq++)]) : Buffer.from('%PDF-1.4\nevidence ' + name + seq++);
     // Superuser sifatida alohida sessiyada "yashirin" o'zgartirish (triggerlarni o'chirib) — buzilishni aniqlash testlari uchun.
+    const accN3 = () => ({ id: 'acc3' });
     const superSql = (table, sql) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `ALTER TABLE ${table} DISABLE TRIGGER USER; ${sql}; ALTER TABLE ${table} ENABLE TRIGGER USER;`], { encoding: 'utf8' });
     const evidence = async (name = 'audit.pdf') => (await finance.storeEvidence(pool, accountant, { originalname: name, mimetype: name.endsWith('.png') ? 'image/png' : 'application/pdf', buffer: body(name) })).url;
     try {
@@ -414,6 +415,39 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
                 superSql('fin_period_locks', `INSERT INTO fin_period_locks(month,locked_by,locked_by_name,note,locked_at) VALUES('2026-08','${lk.locked_by}','${lk.locked_by_name}','${lk.note.replace(/'/g, "''")}',NOW())`);
                 assert.equal((await finance.verifySeals(pool)).ok, true);
             }
+        });
+
+        await t.test('round 5: number-driving columns are sealed; clearing, reversal, void and bill controls; student log', async () => {
+            // To'lanmagan hisob-faktura voided_at orqali "yashirincha bekor" qilinmaydi: holat void_date'dan, voided_at esa ta'sir qilmaydi
+            const bill = await finance.createPayable(pool, admin, { requestKey: key(), kind: 'bill', entity: 'common', counterparty: 'Ijara', categoryCode: 'RENT', amount: 4000000, issueDate: '2026-10-03', documentUrl: await evidence() });
+            const before = (await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' })).payables.total;
+            superSql('fin_payables', `UPDATE fin_payables SET voided_at=NOW() WHERE id='${bill.id}'`);
+            assert.equal((await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' })).payables.total, before);
+            superSql('fin_payables', `UPDATE fin_payables SET void_date='2026-10-04' WHERE id='${bill.id}'`);
+            const o = await finance.overview(pool, admin, {});
+            assert.equal(o.seals.ok, false); assert.equal(o.seals.table, 'fin_payables');
+            superSql('fin_payables', `UPDATE fin_payables SET void_date=NULL, voided_at=NULL WHERE id='${bill.id}'`);
+            assert.equal((await finance.overview(pool, admin, {})).seals.ok, true);
+            // student_id ham muhrlangan
+            superSql('payment_records', "UPDATE payment_records SET student_id='hacked' WHERE id='r2'");
+            assert.equal((await finance.overview(pool, admin, {})).seals.ok, false);
+            superSql('payment_records', "UPDATE payment_records SET student_id=NULL WHERE id='r2'");
+            assert.equal((await finance.overview(pool, admin, {})).seals.ok, true);
+            // Kliring hisobiga o'tkazma yo'q, Uzum qarzidan ortiq hisob-kitob yo'q
+            await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'russian', type: 'transfer', categoryCode: 'TRANSFER', accountId: 'acc-bank', toAccountId: 'acc-uzum', amount: 5000000, date: '2026-10-10' }), 400, /kliring/);
+            await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'russian', type: 'transfer', categoryCode: 'TRANSFER', accountId: 'acc-uzum', toAccountId: 'acc-bank', amount: 4000000, date: '2026-10-10' }), 409, /qarzdor/);
+            // Katta hisob-faktura — rahbar; 1 mln dan katta — hujjat bilan
+            await rejects(finance.createPayable(pool, accountant, { requestKey: key(), kind: 'bill', entity: 'common', counterparty: 'X', categoryCode: 'RENT', amount: 90000000, issueDate: '2026-10-03' }), 403);
+            await rejects(finance.createPayable(pool, accountant, { requestKey: key(), kind: 'bill', entity: 'common', counterparty: 'X', categoryCode: 'RENT', amount: 2000000, issueDate: '2026-10-03' }), 400, /hujjat/i);
+            // Tushumni bekor qilish qoldiqni manfiyga tushirsa — rahbar
+            await insertReceipt('cashR', '2026-10-10', 4000000, { method: 'cash', name: 'Naqd O‘quvchi' });
+            await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-cash', amount: 3900000, date: '2026-10-10', counterparty: 'Ofis', receiptUrl: await evidence() });
+            await rejects(finance.voidReceipts(pool, accN3(), { recordIds: ['cashR'], reason: 'Xato kiritilgan', evidenceUrl: await evidence() }), 403, /manfiy/);
+            // O'quvchi holati o'zgarishi jurnalga yoziladi
+            await pool.query(`UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
+            const log = (await pool.query("SELECT state FROM fin_student_log WHERE student_id='s1' ORDER BY id DESC LIMIT 1")).rows[0];
+            assert.equal(log.state.status, 'inactive');
+            await rejects(pool.query("UPDATE fin_student_log SET state='{}' WHERE student_id='s1'"), null, /o.zgartirib/);
         });
 
         await t.test('row seals detect edits and unsealed inserts made with triggers disabled', async () => {

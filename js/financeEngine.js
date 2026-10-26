@@ -281,8 +281,10 @@
                     const lastLive = current ? current.receipts.filter(x => !x.voidDate).at(-1) : null;
                     const debtKnown = lastLive && lastLive.debtAfter != null && lastLive.debtAfter !== '';
                     const paidUp = current && (debtKnown ? Number(lastLive.debtAfter) <= 0 : liveSum >= current.threshold);
-                    const early = paidUp && current.threshold > 0 && r.date <= current.end
-                        && r.date >= addDays(current.end, -Math.floor((dayDiff(current.start, current.end) + 1) / 3));
+                    // CRM kurs to'liq to'langanini ko'rsatsa — keyingi har qanday to'lov keyingi kurs uchun avans.
+                    // CRM qarzi noma'lum bo'lsa — faqat kursning oxirgi uchdan birida kelgan to'lov.
+                    const early = paidUp && r.date <= current.end && (debtKnown
+                        || (current.threshold > 0 && r.date >= addDays(current.end, -Math.floor((dayDiff(current.start, current.end) + 1) / 3))));
                     if (!current || (r.date > current.end && paidUp) || early) {
                         const start = early ? addDays(current.end, 1) : r.date;
                         const months = Math.max(1, Number(settingsAt(data, start).courseMonths[r.entity]) || 3);
@@ -297,9 +299,18 @@
                     for (const f of refundsByReceipt.get(r.id) || []) current.refunds.push(f);
                 }
             }
+            // Kurs narxi = to'langan + CRM'dagi qolgan qarz (ma'lum bo'lsa). Oxirgi kurs — o'quvchining joriy qarzi bilan
+            // (CRM'da qarz kamaytirilsa, narx qayta o'lchanadi); oldingilari — oxirgi tushumdagi qolgan qarz bilan.
+            const debts = new Map();
+            for (const d of data.studentDebts || []) { if (d.studentId) debts.set('s:' + d.studentId, d.debt); if (d.leadId) debts.set('l:' + d.leadId, d.debt); }
+            const latest = new Map();
+            for (const c of out) latest.set(c.group, c);
             for (const c of out) {
-                const live = c.receipts.filter(r => !r.voidDate);
-                c.value = live.length ? Math.max(c.index === 1 ? c.threshold : 0, sum(live)) : 0;
+                const live = c.receipts.filter(r => !r.voidDate), last = live.at(-1);
+                const current = latest.get(c.group) === c ? (debts.get('s:' + c.studentId) ?? debts.get('l:' + c.leadId)) : undefined;
+                const crmDebt = current != null ? Number(current) : last && last.debtAfter != null && last.debtAfter !== '' ? Number(last.debtAfter) : null;
+                c.priceSource = crmDebt != null ? 'crm' : c.index === 1 && c.threshold ? 'lead' : 'cash';
+                c.value = !live.length ? 0 : crmDebt != null ? sum(live) + Math.max(0, crmDebt) : Math.max(c.index === 1 ? c.threshold : 0, sum(live));
                 c.firstReceipt = live[0] || null;
                 c.startLive = live[0]?.date || null;
                 // Qisman qaytarish (ortiqcha to'lov, chegirma) — shartnoma narxini kamaytiradi, kurs davom etadi.
@@ -314,9 +325,13 @@
                     if (!active.size && !full) c.terminatedAt = null;
                 }
                 const st = status.get('s:' + c.studentId) || status.get('l:' + c.leadId) || null;
-                c.frozenAt = st?.frozenAt && st.frozenAt >= c.start ? st.frozenAt : null;
+                // Yopilgan oyga orqaga sanalangan holat (muzlatish/tashlash) yopilgan davrni o'zgartirmaydi — birinchi ochiq kundan kuchga kiradi.
+                const openFrom = data.closedThrough ? addDays(monthEnd(data.closedThrough), 1) : null;
+                const clamp = d => (d && openFrom && d < openFrom && (!st?.recordedAt || st.recordedAt >= openFrom) ? openFrom : d);
+                const fz = clamp(st?.frozenAt || null), ia = clamp(st?.inactiveAt || null);
+                c.frozenAt = fz && fz >= c.start ? fz : null;
                 c.inactive = !!st?.inactive;
-                c.inactiveAt = st?.inactiveAt && st.inactiveAt >= c.start ? st.inactiveAt : null;
+                c.inactiveAt = ia && ia >= c.start ? ia : null;
             }
             return out;
         });
@@ -429,18 +444,18 @@
         const cache = memo(TX, data, () => new Map()), k = scope + '|' + asOf;
         if (cache.has(k)) return cache.get(k);
         const from = firstDate(data);
-        // Stavka o'zgarmagan oylar bitta segment: yaxlitlash har segmentda bir marta (oyma-oy yig'ilib ketmaydi).
-        let total = 0, segRate = null, segStart = null;
         // Soliq bazasi: kurs tushumi (IFRS 15) + boshqa daromadlar.
         const other = movements(data).filter(m => m.category === 'REV_OTHER' && scopeMatch(m.entity, scope));
         const revTo = d => { let r = sum(other.filter(m => m.date <= d), m => m.sign * m.amount); for (const c of contracts(data)) if (scopeMatch(c.entity, scope)) r += earned(c, d); return r; };
-        const close = endDay => { if (segRate) total += Math.round((revTo(endDay) - revTo(addDays(segStart, -1))) * segRate / 100); };
+        // Stavka kuchga kirgan aniq sanalardan segmentlarga bo'linadi (oy o'rtasida o'zgarsa ham); yaxlitlash har segmentda bir marta.
+        let total = 0;
         if (from <= asOf) {
-            for (const m of monthsBetween(from, asOf)) {
-                const rate = Number(settingsAt(data, m + '-01').turnoverTaxRate) || 0;
-                if (rate !== segRate) { close(addDays(m + '-01', -1)); segRate = rate; segStart = m + '-01' < from ? from : m + '-01'; }
-            }
-            close(asOf);
+            const bounds = [...new Set([from, ...(data.settingsHistory || []).map(h => h.from).filter(d => d > from && d <= asOf)])].sort();
+            bounds.forEach((b, i) => {
+                const rate = Number(settingsAt(data, b).turnoverTaxRate) || 0;
+                const e0 = i + 1 < bounds.length ? addDays(bounds[i + 1], -1) : asOf;
+                if (rate) total += Math.round((revTo(e0) - revTo(addDays(b, -1))) * rate / 100);
+            });
         }
         cache.set(k, total);
         return total;
@@ -803,6 +818,19 @@
         };
     }
 
+    // Shartnoma aktivi CRM'dagi qarzdan katta bo'lmasligi kerak (aks holda — hech narsa bilan ta'minlanmagan aktiv).
+    function contractDebtMismatches(data, asOf) {
+        const debts = new Map();
+        for (const d of data.studentDebts || []) { if (d.studentId) debts.set('s:' + d.studentId, d.debt); if (d.leadId) debts.set('l:' + d.leadId, d.debt); }
+        const byGroup = new Map();
+        for (const c of contracts(data)) { const pos = contractPosition(c, asOf); if (pos > 0) byGroup.set(c.group, { c, pos: (byGroup.get(c.group)?.pos || 0) + pos }); }
+        const out = [];
+        for (const { c, pos } of byGroup.values()) {
+            const debt = debts.get('s:' + c.studentId) ?? debts.get('l:' + c.leadId);
+            if (debt != null && pos > Number(debt)) out.push({ name: c.name, entity: c.entity, contractAsset: pos, crmDebt: Number(debt), difference: pos - Number(debt) });
+        }
+        return out;
+    }
     // ---------- Ma'lumot sifati va shubhali yozuvlar ----------
     // Klaviaturada tasodifiy bosilgan "ism"larni aniqlash: undoshlar zanjiri yoki unli juda kam.
     function gibberish(name) {
@@ -975,7 +1003,7 @@
         money, date, today, addDays, addMonths, dayDiff, monthOf, monthEnd, monthsBetween, inRange, phone9, pct, settingsOf,
         accountForMethod, movements, accountBalances, cashSummary, cashbook, cashFlowStatement, profitAndLoss, monthlyPnl,
         contracts, contractCash, earned, revenueBase, contractPosition, fixedAssets, depreciationAt, eclAt, agingBucket,
-        receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, impairmentAt, settingsAt, turnoverTaxAccrued,
+        receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued,
         suspiciousReasons, dataQuality, reconcile, parseStatementText, nameSimilar, nameMatch
     };
 });

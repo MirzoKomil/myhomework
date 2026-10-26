@@ -63,7 +63,7 @@ async function seed() {
     await tx({ type: 'expense', categoryCode: 'CAPEX', amount: 7200000, date: '2026-08-20', entity: 'common', accountId: 'acc-bank', counterparty: 'Noutbuk va proyektor', usefulLifeMonths: 36, receiptUrl: await newProof() });
     await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 2400000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'CRM yillik obuna', serviceStart: '2026-09-01', serviceEnd: '2027-08-31', receiptUrl: await newProof() });
     await finance.recordSalaryPayment(pool, actor, 'sal-sep-t1', { accountId: 'acc-card', date: '2026-10-03' });
-    await finance.createPayable(pool, actor, { requestKey: 'preview-payable-0001', kind: 'bill', entity: 'russian', counterparty: 'Bloger reklama', categoryCode: 'MKT_OTHER', amount: 1500000, issueDate: '2026-10-10', dueDate: '2026-10-20' });
+    await finance.createPayable(pool, actor, { requestKey: 'preview-payable-0001', kind: 'bill', entity: 'russian', counterparty: 'Bloger reklama', categoryCode: 'MKT_OTHER', amount: 1500000, issueDate: '2026-10-10', dueDate: '2026-10-20', documentUrl: await newProof() });
     await finance.addAccountCheck(pool, actor, 'acc-card', { date: '2026-10-20', actualBalance: 21000000, note: 'Bank ilovasi' });
 }
 

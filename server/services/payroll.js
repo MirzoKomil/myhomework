@@ -91,7 +91,7 @@ async function access(db, actor, mode = 'finance') {
     const finance = ['admin', 'boshliq', 'finance', 'accountant'].includes(user.role)
         || (user.role === 'employee' && ['moliya', 'finance'].includes(String(user.department).toLowerCase()));
     if (!finance && !(mode === 'leaderboard' && ['rop', 'sales_manager'].includes(user.role))) throw error(403, 'Moliya bo‘limiga ruxsat yo‘q');
-    return { ...actor, ...user, finance };
+    return { ...actor, ...user, finance, director: ['admin', 'boshliq'].includes(user.role) };
 }
 async function sources(db, p) {
     const ledgerReady = (await db.query("SELECT to_regclass('public.payment_records') AS ledger")).rows[0]?.ledger;
@@ -303,6 +303,8 @@ async function saveSettings(pool, actor, lang, value, revision) {
     language(lang); const data = engine.validateSettings(value);
     return transaction(pool, async db => {
         const user = await access(db, actor), before = await settings(db, lang);
+        // Vazifalar ajratilishi: KPI/bonus formulasi maoshni belgilaydi — faqat rahbar o'zgartiradi.
+        if (!user.director) throw error(403, 'Maosh sozlamalarini faqat rahbar (admin/boshliq) o‘zgartiradi');
         if (before.revision !== revision) throw error(409, 'Sozlamalar boshqa xodim tomonidan yangilangan. Sahifani yangilang');
         await db.query('UPDATE salary_kpi_settings SET data=$2,revision=revision+1,updated_at=NOW() WHERE language=$1', [lang, JSON.stringify(data)]);
         await audit(db, user, 'settings', lang, before.data, data);
@@ -354,6 +356,9 @@ async function markPaid(pool, actor, id) {
         const row = (await db.query("SELECT *,TO_CHAR(period_start,'YYYY-MM-DD') AS start_key,TO_CHAR(period_end,'YYYY-MM-DD') AS end_key FROM salary_transactions WHERE id=$1 FOR UPDATE", [id])).rows[0];
         if (!row) throw error(404, 'Maosh hisobi topilmadi');
         if (row.status === 'paid') return { ok: true, alreadyPaid: true };
+        // Hisoblagan xodim o'zi "to'landi" deb tasdiqlay olmaydi (ikki kishi nazorati), rahbar bundan mustasno.
+        const accruedBy = (await db.query("SELECT actor_id FROM salary_audit WHERE action='accrue' AND entity_id=$1 ORDER BY id DESC LIMIT 1", [id])).rows[0]?.actor_id;
+        if (!user.director && accruedBy && accruedBy === user.id) throw error(403, 'Maoshni hisoblagan xodim uni o‘zi tasdiqlay olmaydi — boshqa moliya xodimi yoki rahbar tasdiqlaydi');
         if (Number(row.amount) < 0) throw error(400, 'Manfiy hisobni to‘langan deb belgilab bo‘lmaydi');
         const p = engine.period(row.start_key, row.end_key);
         const current = await calculate(db, p, row.language);
