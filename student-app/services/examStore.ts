@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
+import { reportExamResult } from '@/services/learningTracker';
+
 const KEY = 'mh_exam_results';
 
 export type ExamMistake = { question: string; yourAnswer: string; correctAnswer: string };
@@ -65,6 +67,8 @@ export async function loadExamResults(): Promise<void> {
 }
 
 export async function saveExamResult(examId: string, result: ExamResult) {
+  // Ustoz kabineti: har urinish (o'tgan/o'tmagan) serverga ham yuboriladi.
+  reportExamResult({ examId, scorePercent: result.scorePercent, passed: result.passed, mistakes: result.mistakes });
   await ensureLoaded();
   const prev = cache[examId];
   // Faqat yaxshiroq natija bo'lsa yoki hali umuman urinilmagan bo'lsa saqlanadi.

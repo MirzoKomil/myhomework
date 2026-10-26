@@ -63,6 +63,12 @@ function createHandler({ crm }) {
             return;
         }
         const message = update.message;
+        // Ustoz dars nazorati: guruhdagi video chat boshlandi/tugadi xizmat xabarlari (javob yuborilmaydi).
+        if (message && ['group','supergroup'].includes(message.chat?.type)
+            && (message.video_chat_started || message.video_chat_ended || message.voice_chat_started || message.voice_chat_ended)) {
+            await require('../staffAttendance/lessons').recordVideoChat(db, message);
+            return;
+        }
         const callback = update.callback_query;
         const sender = policy.telegramId(message?.from?.id || callback?.from?.id);
         if (!sender) return;
