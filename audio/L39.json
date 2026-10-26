@@ -1,0 +1,325 @@
+{
+ "n": 39,
+ "topic_uz": "Fe'l turlari — чита́л / прочита́л, уже́ / ещё не",
+ "scene": "In a small library, a young woman hands a thick book to a young man sitting at a table.",
+ "dialogs": [
+  {
+   "id": "L39-d1",
+   "title_ru": "Ты уже́ прочита́л?",
+   "title_uz": "O'qib bo'ldingmi?",
+   "intro_uz": "Birinchi dialog. Dilnoza Timurga kitob bergan edi. Timur uni o'qib bo'ldimi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, ты уже́ прочита́л мою́ кни́гу?",
+     "uz": "Timur, kitobimni o'qib bo'ldingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ещё нет. Я чита́л её вчера́ весь ве́чер.",
+     "uz": "Hali yo'q. Kecha kechqurun bo'yi o'qidim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Весь ве́чер? И ещё не прочита́л?",
+     "uz": "Kechqurun bo'yi? Va hali o'qib bo'lmadingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Кни́га больша́я! Я прочита́л то́лько полови́ну.",
+     "uz": "Kitob katta! Faqat yarmini o'qib chiqdim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ничего́. А фильм ты уже́ посмотре́л?",
+     "uz": "Hechqisi yo'q. Filmni ko'rib bo'ldingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, посмотре́л. Я смотре́л его́ в суббо́ту.",
+     "uz": "Ha, ko'rdim. Shanba kuni ko'rdim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ну и как?",
+     "uz": "Xo'sh, qanday?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Хоро́ший. Но снача́ла я прочита́ю кни́гу.",
+     "uz": "Yaxshi. Lekin avval kitobni o'qib chiqaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur kitobni o'qib bo'ldimi?",
+     "opts": [
+      "ha",
+      "yo'q, faqat yarmini",
+      "hali boshlamadi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur kecha qancha o'qidi?",
+     "opts": [
+      "kechqurun bo'yi",
+      "bir soat",
+      "kun bo'yi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur filmni qachon ko'rdi?",
+     "opts": [
+      "kecha",
+      "yakshanba kuni",
+      "shanba kuni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "прочита́л кни́гу",
+     "alts": [
+      "посмотре́л фильм",
+      "написа́л письмо́",
+      "вы́учил слова́"
+     ]
+    },
+    {
+     "base": "Я чита́л её весь ве́чер",
+     "alts": [
+      "Я чита́л её два часа́",
+      "Я чита́л её до́лго",
+      "Я чита́л её всю ночь"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: oxirgi marta qanday kitob o'qiganingizni va uni o'qib bo'lganingiz yoki yo'qligini ayting."
+  },
+  {
+   "id": "L39-d2",
+   "title_ru": "У́жин гото́в?",
+   "title_uz": "Kechki ovqat tayyormi?",
+   "intro_uz": "Ikkinchi dialog. Kechqurun. Abdulaziz uyga keldi. Nigora nima qilib bo'ldi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, ты уже́ пригото́вила у́жин?",
+     "uz": "Nigora, kechki ovqatni tayyorlab bo'ldingmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ещё нет. Я весь день гото́вила торт.",
+     "uz": "Hali yo'q. Kun bo'yi tort tayyorladim."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Торт? И он уже́ гото́в?",
+     "uz": "Tortmi? U tayyor bo'ldimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, торт я уже́ пригото́вила. А ты купи́л хлеб?",
+     "uz": "Ha, tortni tayyorlab bo'ldim. Sen non oldingmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ой, ещё не купи́л. Сейча́с куплю́.",
+     "uz": "Voy, hali olmadim. Hozir olaman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А ма́ме ты позвони́л?",
+     "uz": "Oyimga qo'ng'iroq qildingmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, позвони́л. Она́ придёт в семь.",
+     "uz": "Ha, qildim. U soat yettida keladi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́. Тогда́ я бы́стро сде́лаю сала́т.",
+     "uz": "Yaxshi. Unda tezda salat qilaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora kun bo'yi nima tayyorladi?",
+     "opts": [
+      "palov",
+      "tort",
+      "salat"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz nimani hali olmadi?",
+     "opts": [
+      "sut",
+      "go'sht",
+      "non"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Ona soat nechada keladi?",
+     "opts": [
+      "yettida",
+      "oltida",
+      "sakkizda"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "пригото́вила у́жин",
+     "alts": [
+      "убрала́ кварти́ру",
+      "купи́ла проду́кты",
+      "сде́лала сала́т"
+     ]
+    },
+    {
+     "base": "купи́л хлеб",
+     "alts": [
+      "купи́л молоко́",
+      "позвони́л ма́ме",
+      "закры́л дверь"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: bugun nimani qilib bo'lganingizni (уже́…) va nimani hali qilmaganingizni (ещё не…) ayting."
+  },
+  {
+   "id": "L39-d3",
+   "title_ru": "На рабо́те",
+   "title_uz": "Ishda",
+   "intro_uz": "Uchinchi dialog. Boshliq Boburdan ishlar haqida so'rayapti. Bobur nimani qilib bo'ldi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нача́льница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нача́льница",
+     "ru": "Бобу́р, вы уже́ написа́ли письмо́ клие́нту?",
+     "uz": "Bobur, mijozga xatni yozib bo'ldingizmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, я написа́л его́ у́тром.",
+     "uz": "Ha, ertalab yozdim."
+    },
+    {
+     "who": "Нача́льница",
+     "ru": "Хорошо́. А отчёт вы уже́ сде́лали?",
+     "uz": "Yaxshi. Hisobotni qilib bo'ldingizmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ещё нет. Я де́лал его́ два часа́, но не зако́нчил.",
+     "uz": "Hali yo'q. Ikki soat qildim, lekin tugatmadim."
+    },
+    {
+     "who": "Нача́льница",
+     "ru": "Поня́тно. Когда́ вы его́ зако́нчите?",
+     "uz": "Tushunarli. Uni qachon tugatasiz?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Сего́дня зако́нчу. Я напишу́ вам.",
+     "uz": "Bugun tugataman. Sizga yozaman."
+    },
+    {
+     "who": "Нача́льница",
+     "ru": "Отли́чно. А но́вую програ́мму вы вы́учили?",
+     "uz": "Ajoyib. Yangi dasturni o'rganib oldingizmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ещё учу́. Я бу́ду учи́ть её всю неде́лю.",
+     "uz": "Hali o'rganyapman. Butun hafta o'rganaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur xatni qachon yozdi?",
+     "opts": [
+      "kecha",
+      "ertalab",
+      "kechqurun"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur hisobotni qancha vaqt qildi?",
+     "opts": [
+      "ikki soat",
+      "bir soat",
+      "kun bo'yi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bobur hisobotni qachon tugatadi?",
+     "opts": [
+      "ertaga",
+      "juma kuni",
+      "bugun"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "написа́ли письмо́",
+     "alts": [
+      "сде́лали отчёт",
+      "позвони́ли клие́нту",
+      "прочита́ли догово́р"
+     ]
+    },
+    {
+     "base": "зако́нчу",
+     "alts": [
+      "сде́лаю",
+      "прове́рю",
+      "отпра́влю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: bugun ishda nimani qilib bo'lganingizni va nimani hali tugatmaganingizni ayting."
+  }
+ ]
+}

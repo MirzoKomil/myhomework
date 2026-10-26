@@ -1,0 +1,325 @@
+{
+ "n": 33,
+ "topic_uz": "Да́тельный паде́ж — кому́? мне нра́вится",
+ "scene": "In a living room, a man talks on his phone while his wife sits next to him smiling and waving at the phone.",
+ "dialogs": [
+  {
+   "id": "L33-d1",
+   "title_ru": "Кому́ ты звони́шь?",
+   "title_uz": "Kimga qo'ng'iroq qilyapsan?",
+   "intro_uz": "Birinchi dialog. Abdulaziz telefonda. Nigora so'raydi: kimga qo'ng'iroq qilyapsan? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, кому́ ты звони́шь?",
+     "uz": "Abdulaziz, kimga qo'ng'iroq qilyapsan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ма́ме. Я звоню́ ма́ме ка́ждый день.",
+     "uz": "Onamga. Men onamga har kuni qo'ng'iroq qilaman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Молоде́ц! А бра́ту ты звони́шь?",
+     "uz": "Barakalla! Akangga qo'ng'iroq qilasanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Бра́ту я пишу́. Он не лю́бит говори́ть по телефо́ну.",
+     "uz": "Akamga yozaman. U telefonda gaplashishni yoqtirmaydi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А мне ты пи́шешь ре́дко!",
+     "uz": "Menga esa kam yozasan!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Тебе́? Я пишу́ тебе́ ка́ждый час!",
+     "uz": "Sengami? Senga har soatda yozaman!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ха-ха. Приве́т ма́ме!",
+     "uz": "Ha-ha. Onangga salom ayt!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ма́ма, тебе́ приве́т от Нигоры́!",
+     "uz": "Oyi, sizga Nigoradan salom!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz hozir kimga qo'ng'iroq qilyapti?",
+     "opts": [
+      "akasiga",
+      "onasiga",
+      "Nigoraga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz akasiga nima qiladi?",
+     "opts": [
+      "yozadi",
+      "qo'ng'iroq qiladi",
+      "sovg'a beradi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz Nigoraga qancha yozadi?",
+     "opts": [
+      "kam",
+      "haftada bir",
+      "har soatda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "ма́ме",
+     "alts": [
+      "па́пе",
+      "сестре́",
+      "дру́гу"
+     ]
+    },
+    {
+     "base": "бра́ту",
+     "alts": [
+      "ба́бушке",
+      "де́душке",
+      "сы́ну"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: har kuni kimga qo'ng'iroq qilishingizni va kimga yozishingizni ayting."
+  },
+  {
+   "id": "L33-d2",
+   "title_ru": "Тебе́ нра́вится?",
+   "title_uz": "Senga yoqadimi?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza va Anton do'konda sovg'a tanlashyapti. Kimga va nima yoqadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, тебе́ нра́вится э́та руба́шка?",
+     "uz": "Anton, senga bu ko'ylak yoqadimi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да, нра́вится. Э́то мне?",
+     "uz": "Ha, yoqadi. Bu mengami?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет, э́то бра́ту. У него́ день рожде́ния.",
+     "uz": "Yo'q, bu akamga. Uning tug'ilgan kuni."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Бра́ту? А ему́ нра́вится си́ний цвет?",
+     "uz": "Akanggami? Unga ko'k rang yoqadimi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, о́чень. А мне нра́вится зелёный.",
+     "uz": "Ha, juda. Menga esa yashil yoqadi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Тогда́ э́то хоро́ший пода́рок.",
+     "uz": "Unda bu yaxshi sovg'a."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А что ты да́ришь сестре́ на Но́вый год?",
+     "uz": "Sen singlingga Yangi yilda nima sovg'a qilasan?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Сестре́ я дарю́ кни́ги. Ей нра́вятся кни́ги.",
+     "uz": "Singlimga kitob sovg'a qilaman. Unga kitoblar yoqadi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Ko'ylak kimga?",
+     "opts": [
+      "Antonga",
+      "Dilnozaning akasiga",
+      "Dilnozaning otasiga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnozaga qaysi rang yoqadi?",
+     "opts": [
+      "ko'k",
+      "qizil",
+      "yashil"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton singlisiga nima sovg'a qiladi?",
+     "opts": [
+      "kitob",
+      "gul",
+      "ko'ylak"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "бра́ту",
+     "alts": [
+      "па́пе",
+      "му́жу",
+      "дру́гу"
+     ]
+    },
+    {
+     "base": "Ей нра́вятся кни́ги",
+     "alts": [
+      "Ей нра́вятся цветы́",
+      "Ей нра́вится му́зыка",
+      "Ей нра́вится шокола́д"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: oilangizda kimga nima yoqishini ayting: «Ма́ме нра́вится…, бра́ту нра́вится…»."
+  },
+  {
+   "id": "L33-d3",
+   "title_ru": "Кто тебе́ помога́ет?",
+   "title_uz": "Senga kim yordam beradi?",
+   "intro_uz": "Uchinchi dialog. Timur va Nigora uydagi yordam haqida gaplashishyapti. Kim kimga yordam beradi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Нигора́, кто тебе́ помога́ет до́ма?",
+     "uz": "Nigora, uyda senga kim yordam beradi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Мне помога́ет муж. Он помога́ет мне ка́ждый день.",
+     "uz": "Menga erim yordam beradi. U menga har kuni yordam beradi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А сы́ну кто помога́ет де́лать уро́ки?",
+     "uz": "O'g'lingga darslarini qilishga kim yordam beradi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Сы́ну помога́ет ба́бушка. Ей нра́вится матема́тика!",
+     "uz": "O'g'limga buvisi yordam beradi. Unga matematika yoqadi!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А ты кому́ помога́ешь?",
+     "uz": "Sen kimga yordam berasan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я помога́ю ма́ме. Я ча́сто покупа́ю ей проду́кты.",
+     "uz": "Onamga yordam beraman. Unga tez-tez oziq-ovqat olib beraman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Молоде́ц! Мне то́же ну́жно позвони́ть ма́ме.",
+     "uz": "Barakalla! Menga ham onamga qo'ng'iroq qilish kerak."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да! Ма́мам э́то о́чень нра́вится.",
+     "uz": "Ha! Onalarga bu juda yoqadi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Uyda Nigoraga kim yordam beradi?",
+     "opts": [
+      "onasi",
+      "eri",
+      "o'g'li"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "O'g'liga darsda kim yordam beradi?",
+     "opts": [
+      "buvisi",
+      "otasi",
+      "Timur"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora onasiga qanday yordam beradi?",
+     "opts": [
+      "ovqat pishiradi",
+      "uyni yig'ishtiradi",
+      "oziq-ovqat oladi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "помога́ет муж",
+     "alts": [
+      "помога́ет сестра́",
+      "помога́ет ма́ма",
+      "помога́ет сын"
+     ]
+    },
+    {
+     "base": "ма́ме",
+     "alts": [
+      "па́пе",
+      "ба́бушке",
+      "сосе́дке"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: uyda sizga kim yordam berishini va siz kimga yordam berishingizni ayting."
+  }
+ ]
+}

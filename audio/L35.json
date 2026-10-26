@@ -1,0 +1,325 @@
+{
+ "n": 35,
+ "topic_uz": "Твори́тельный паде́ж — с кем? кем? чем?",
+ "scene": "In a small kitchen, an Uzbek woman pours tea for a Russian male guest; a plate of samsa is on the table.",
+ "dialogs": [
+  {
+   "id": "L35-d1",
+   "title_ru": "Чай с молоко́м",
+   "title_uz": "Sutli choy",
+   "intro_uz": "Birinchi dialog. Anton Nigoranikida mehmonda. U choyni qanday ichadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Анто́н, чай и́ли ко́фе?",
+     "uz": "Anton, choymi yoki kofe?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Чай, пожа́луйста.",
+     "uz": "Choy, iltimos."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "С са́харом?",
+     "uz": "Shakar bilanmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Нет, без са́хара. Но с молоко́м, е́сли мо́жно.",
+     "uz": "Yo'q, shakarsiz. Lekin mumkin bo'lsa, sut bilan."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "С молоко́м? А мы пьём чай с лимо́ном.",
+     "uz": "Sut bilanmi? Biz esa choyni limon bilan ichamiz."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "С лимо́ном то́же вку́сно. А что э́то?",
+     "uz": "Limon bilan ham mazali. Bu nima?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Э́то самса́ с мя́сом. Её едя́т рука́ми.",
+     "uz": "Bu go'shtli somsa. Uni qo'l bilan yeyishadi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Рука́ми? Отли́чно! Без ви́лки и ножа́!",
+     "uz": "Qo'l bilanmi? Zo'r! Sanchqi va pichoqsiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton choyni qanday ichadi?",
+     "opts": [
+      "shakar bilan",
+      "sut bilan",
+      "limon bilan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigoraning oilasi choyni nima bilan ichadi?",
+     "opts": [
+      "limon bilan",
+      "sut bilan",
+      "asal bilan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Somsa nima bilan?",
+     "opts": [
+      "kartoshka bilan",
+      "qovoq bilan",
+      "go'sht bilan"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "с молоко́м",
+     "alts": [
+      "с лимо́ном",
+      "с са́харом",
+      "с мёдом"
+     ]
+    },
+    {
+     "base": "самса́ с мя́сом",
+     "alts": [
+      "самса́ с ты́квой",
+      "пирожо́к с карто́шкой",
+      "бутербро́д с сы́ром"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: choy yoki kofeni nima bilan ichishingizni ayting: «Я пью чай с…»."
+  },
+  {
+   "id": "L35-d2",
+   "title_ru": "Чем ты занима́ешься?",
+   "title_uz": "Nima bilan shug'ullanasan?",
+   "intro_uz": "Ikkinchi dialog. Timur va Dilnoza bo'sh vaqt haqida gaplashishyapti. Kim nima bilan shug'ullanadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, чем ты занима́ешься ве́чером?",
+     "uz": "Dilnoza, kechqurun nima bilan shug'ullanasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я занима́юсь спо́ртом. Йо́гой.",
+     "uz": "Sport bilan shug'ullanaman. Yoga bilan."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Йо́гой? Интере́сно!",
+     "uz": "Yoga bilanmi? Qiziq!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А ты чем интересу́ешься?",
+     "uz": "Sen nimaga qiziqasan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я интересу́юсь му́зыкой. Я игра́ю на гита́ре.",
+     "uz": "Men musiqaga qiziqaman. Gitara chalaman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Здо́рово! Ты рабо́таешь музыка́нтом?",
+     "uz": "Zo'r! Musiqachi bo'lib ishlaysanmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Нет, я рабо́таю программи́стом. Му́зыка — э́то хо́бби.",
+     "uz": "Yo'q, dasturchi bo'lib ishlayman. Musiqa — bu xobbi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я то́же хочу́ игра́ть на гита́ре. Мо́жно с тобо́й?",
+     "uz": "Men ham gitara chalishni xohlayman. Sen bilan bo'ladimi?"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza nima bilan shug'ullanadi?",
+     "opts": [
+      "raqs bilan",
+      "yoga bilan",
+      "suzish bilan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur nimaga qiziqadi?",
+     "opts": [
+      "sportga",
+      "rasmga",
+      "musiqaga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timur kim bo'lib ishlaydi?",
+     "opts": [
+      "muhandis",
+      "musiqachi",
+      "o'qituvchi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "спо́ртом",
+     "alts": [
+      "му́зыкой",
+      "футбо́лом",
+      "англи́йским"
+     ]
+    },
+    {
+     "base": "инжене́ром",
+     "alts": [
+      "врачо́м",
+      "учи́телем",
+      "программи́стом"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: bo'sh vaqtda nima bilan shug'ullanishingizni va nimaga qiziqishingizni ayting."
+  },
+  {
+   "id": "L35-d3",
+   "title_ru": "С кем ты живёшь?",
+   "title_uz": "Kim bilan yashaysan?",
+   "intro_uz": "Uchinchi dialog. Nigora Boburdan so'rayapti: kim bilan yashaysan? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Бобу́р, ты живёшь оди́н?",
+     "uz": "Bobur, yolg'iz yashaysanmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Нет, в Ташке́нте я живу́ с бра́том.",
+     "uz": "Yo'q, Toshkentda akam bilan yashayman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "С бра́том? А роди́тели?",
+     "uz": "Akang bilanmi? Ota-onang-chi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Роди́тели живу́т в Андижа́не, с ба́бушкой.",
+     "uz": "Ota-onam Andijonda, buvim bilan yashaydi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А с кем ты хо́дишь в спортза́л?",
+     "uz": "Sport zalga kim bilan borasan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "С дру́гом, с Анто́ном. А ты?",
+     "uz": "Do'stim bilan, Anton bilan. Sen-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А я хожу́ с му́жем.",
+     "uz": "Men esa erim bilan boraman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "С Абдулази́зом? Молодцы́!",
+     "uz": "Abdulaziz bilanmi? Barakalla!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur kim bilan yashaydi?",
+     "opts": [
+      "yolg'iz",
+      "akasi bilan",
+      "ota-onasi bilan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Boburning ota-onasi kim bilan yashaydi?",
+     "opts": [
+      "buvisi bilan",
+      "akasi bilan",
+      "Anton bilan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora sport zalga kim bilan boradi?",
+     "opts": [
+      "Bobur bilan",
+      "dugonasi bilan",
+      "eri bilan"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "с бра́том",
+     "alts": [
+      "с сестро́й",
+      "с дру́гом",
+      "с семьёй"
+     ]
+    },
+    {
+     "base": "с му́жем",
+     "alts": [
+      "с подру́гой",
+      "с сы́ном",
+      "с ма́мой"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz gapiring: kim bilan yashashingizni va kim bilan sportga yoki parkka borishingizni ayting."
+  }
+ ]
+}
