@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS fin_period_locks (
 async function initSchema(db) { await db.query(SCHEMA); }
 // Moliya muhrlari o'zgarishni qaysi ilova tranzaksiyasi qilganini bilishi uchun belgi (mavjud bo'lsa saqlanadi).
 async function markContext(db) {
-    await db.query("SELECT set_config('fin.ctx', COALESCE(NULLIF(current_setting('fin.ctx', true), ''), $1), true)", ['inflow:' + randomUUID()]);
+    // Moliya yoki tushum tranzaksiyasi ichida bo'lsa o'sha belgi qoladi; CRM tranzaksiyasi ichida — tushum belgisiga almashadi.
+    await db.query(`SELECT set_config('fin.ctx', CASE WHEN current_setting('fin.ctx', true) ~ '^(fin|inflow):' THEN current_setting('fin.ctx', true) ELSE $1 END, true)`, ['inflow:' + randomUUID()]);
 }
 async function transaction(pool, fn) {
     const db = await pool.connect();

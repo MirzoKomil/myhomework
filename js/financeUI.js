@@ -175,6 +175,9 @@
         if (unchecked.length) items.push(['warning', `${unchecked.length} ta hisob qoldig‘i haqiqiy bank/karta/kassa qoldig‘i bilan hali solishtirilmagan`, 'kassa']);
         if (o.balance.suspense) items.push(['warning', `${money(o.balance.suspense)} to‘lov usuli aniqlanmagan tushum “Aniqlanmagan” hisobida turibdi — qaysi hisobga tushganini aniqlash kerak`, 'kassa']);
         if (o.balance.uzumReceivable) items.push(['warning', `Uzum Nasiya’dan ${money(o.balance.uzumReceivable)} hali olinmagan — bu pul emas, olinadigan summa`, 'kassa']);
+        if (q.duplicates?.length) items.push(['warning', `${q.duplicates.length} ta tushum takroriy bo‘lishi mumkin (bir xil summa yoki bitta chek)`, 'solishtirish']);
+        if (o.dropouts?.length) items.push(['warning', `${o.dropouts.length} ta ketgan o‘quvchida ${money(o.dropouts.reduce((n, d) => n + d.liability, 0))} majburiyat qolgan — qaytaring yoki pulsiz tugating`, 'solishtirish']);
+        if (o.cashflowSegments && !o.cashflowSegments.reconciled) items.push(['danger', 'Segmentlar bo‘yicha pul oqimi konsolidatsiyaga teng emas', 'hisobotlar', 'cashflow']);
         if (q.paidSalaryWithoutCash.length) items.push(['warning', `${q.paidSalaryWithoutCash.length} ta “to‘landi” deb belgilangan maosh kassadan chiqim sifatida yozilmagan`, 'solishtirish']);
         const noExpenses = !['cost_of_services', 'marketing', 'sales_payroll', 'admin_payroll', 'rent', 'software', 'admin'].some(k => o.pnl[k]);
         if (noExpenses && o.pnl.net_revenue > 0) items.push(['warning', 'Bu davr uchun birorta ham xarajat kiritilmagan — foyda tushumga teng ko‘rinadi va haqiqatni aks ettirmaydi', 'operatsiyalar']);
@@ -377,6 +380,20 @@
         });
     }
 
+    const SOURCE_LABELS = { crm: 'CRM', inflow: 'to‘lov reyestri', fin: 'moliya', init: 'tizim', payroll: 'maosh' };
+    function openForfeitModal(recordId, name, amount) {
+        openModal('Shartnomani pulsiz tugatish', `<div class="fin-form"><p><b>${esc(name)}</b> · qolgan majburiyat <b>${money(amount)}</b> shu sanada tushumga o‘tadi. Bu amal qaytarilmaydi.</p>
+            ${field('Tugatish sanasi', `<input type="date" lang="en-GB" class="form-control" name="date" value="${F.today()}" max="${F.today()}">`)}
+            ${field('Sabab', '<textarea class="form-control" name="reason" rows="2" maxlength="500" placeholder="Masalan: o‘quvchi ketdi, shartnoma 5.2-band bo‘yicha pul qaytarilmaydi"></textarea>')}
+            ${field('Ariza / bayonnoma (majburiy)', '<input type="file" class="form-control" name="evidence" accept=".pdf,.png,.jpg,.jpeg,.webp">')}
+            <p class="fin-error" data-fin-error role="alert"></p></div>`, footerButtons('Tugatish'));
+        submitModal(async b => {
+            const v = n => b.querySelector(`[name="${n}"]`)?.value || '';
+            const evidenceUrl = await upload(b.querySelector('[name="evidence"]'));
+            await api('/contracts/forfeit', { paymentRecordId: recordId, date: v('date'), reason: v('reason'), evidenceUrl });
+        });
+    }
+
     // ---------- Qarzlar ----------
     function renderDebts(root) {
         const o = state.overview, ar = o.receivables, ap = o.payables, tab = state.debtTab;
@@ -441,6 +458,7 @@
             <tr class="fin-pnl-total"><th scope="row">Davr oxiridagi pul mablag‘lari ${cf.reconciled ? '<span class="fin-badge fin-badge--ok">hisob qoldiqlariga teng</span>' : `<span class="fin-badge fin-badge--danger">farq ${num(cf.difference)}</span>`}</th><td class="num">${acc(cf.closingCash)}</td></tr>
             ${cf.closingSuspense ? `<tr><th scope="row" class="fin-indent">shundan “Aniqlanmagan” hisobda</th><td class="num">${acc(cf.closingSuspense)}</td></tr>` : ''}
         </tbody></table></div>
+        ${segmentTable(state.overview.cashflowSegments)}
         <p class="fin-note">Pul mablag‘lari — naqd, karta, bank va “Aniqlanmagan” hisob. Uzum Nasiya orqali sotuv Uzum pulni o‘tkazgan kuni “o‘quvchilardan olingan to‘lov” bo‘lib kiradi; Uzum komissiyasi pul oqimi emas (pul hech qachon kelmagan), lekin foyda-zararda xarajat.</p>`;
     }
     function balanceTable(b) {
@@ -609,10 +627,19 @@
                 <button type="button" class="btn-ghost" data-fin-recon-reset>Yangi solishtirish</button></div>
             <p class="fin-note">Farq sifatida faqat telefon raqami yoki to‘liq ism-familiyasi mos kelgan yozuvlar juftlanadi; telefon mos kelmagan juftlik avtomatik tuzatilmaydi; faqat ism mos kelsa — bu boshqa odam bo‘lishi mumkin, shuning uchun “CRM’da yo‘q” va “Ro‘yxatda yo‘q” deb alohida ko‘rsatiladi. Tuzatishlar hammasi birga saqlanadi yoki birortasi ham saqlanmaydi. Xato yozuv “bekor qilingan” deb belgilanadi, to‘g‘risi hujjat va sabab bilan qo‘shiladi.</p></section>`;
     }
+    function segmentTable(sg) {
+        if (!sg) return '';
+        const rows = sg.rows.filter(r => r.total || r.english || r.russian || r.common);
+        return `<h4 class="fin-subhead">Segmentlar bo‘yicha (IFRS 8) ${sg.reconciled ? '<span class="fin-badge fin-badge--ok">yig‘indi = konsolidatsiya</span>' : '<span class="fin-badge fin-badge--danger">mos emas</span>'}</h4>
+        ${table(['Modda', { label: 'Ingliz tili', num: true }, { label: 'Rus tili', num: true }, { label: 'Umumiy (taqsimlanmagan)', num: true }, { label: 'Jami', num: true }],
+            [...rows.map(r => `<tr><td>${esc(r.label)}</td><td class="num">${acc(r.english)}</td><td class="num">${acc(r.russian)}</td><td class="num">${acc(r.common)}</td><td class="num"><b>${acc(r.total)}</b></td></tr>`),
+             `<tr class="fin-pnl-total"><td>Sof o‘zgarish</td><td class="num">${acc(sg.totals.english)}</td><td class="num">${acc(sg.totals.russian)}</td><td class="num">${acc(sg.totals.common)}</td><td class="num">${acc(sg.totals.total)}</td></tr>`], { label: 'Segmentlar bo‘yicha pul oqimi' })}
+        <p class="fin-note">“Umumiy” ustun — ikki maktabga tegishli (ijara, dasturiy ta’minot, ta’sischi mablag‘i) pul harakatlari; pul oqimida taqsimlanmaydi, foyda-zararda esa tushum ulushi bo‘yicha taqsimlanadi.</p>`;
+    }
     const AUDIT_LABELS = { 'transaction-create': 'Operatsiya kiritildi', 'transaction-reverse': 'Storno', 'payable-create': 'Hisob-faktura', 'payable-void': 'Hisob-faktura bekor qilindi',
         'salary-cash-out': 'Maosh kassadan to‘landi', 'receipt-void': 'Tushum bekor qilindi', 'receipt-manual': 'Tushum hujjat asosida kiritildi', 'receipt-batch': 'Tuzatishlar to‘plami',
         'account-create': 'Hisob ochildi', 'account-update': 'Hisob o‘zgartirildi', 'account-check': 'Qoldiq tekshiruvi', 'period-lock': 'Oy yopildi', 'period-unlock': 'Oy qayta ochildi',
-        'settings-update': 'Sozlamalar', 'evidence-upload': 'Hujjat yuklandi' };
+        'settings-update': 'Sozlamalar', 'evidence-upload': 'Hujjat yuklandi', 'contract-forfeit': 'Shartnoma pulsiz tugatildi', 'asset-dispose': 'Aktiv chiqarildi', 'asset-impair': 'Aktiv qadrsizlandi' };
     function auditSummary(a) {
         const d = a.after_data || {};
         return [d.amount != null ? num(d.amount) + ' so‘m' : '', d.date || d.voidDate || '', d.reason || d.note || '', d.name || d.counterparty || '', d.type ? F.TYPES[d.type] || d.type : '', d.closedThrough ? 'gacha: ' + d.closedThrough : '', d.count ? d.count + ' ta' : ''].filter(Boolean).join(' · ');
@@ -643,16 +670,27 @@
                         <li><span>To‘lov usuli noma’lum</span><strong class="${q.unknownMethod ? 'neg' : ''}">${q.unknownMethod}</strong></li>
                         <li><span>Eski ko‘chirilgan, tekshiruv kerak</span><strong>${q.legacyReview}</strong></li>
                         <li><span>Bekor qilingan</span><strong>${q.voided}</strong></li>
+                        <li><span>Hujjatsiz pul chiqimlari (davr)</span><strong class="${q.outflowsWithoutProof ? 'neg' : 'pos'}">${q.outflowsWithoutProof} ta · ${money(q.outflowsWithoutProofAmount || 0)}${q.outflowsTotal ? ' (' + pctText((q.outflowsWithoutProofAmount || 0) / q.outflowsTotal) + ')' : ''}</strong></li>
                         <li><span>Moliyaviy qatorlar muhri</span><strong class="${state.auditSeals?.ok === false ? 'neg' : 'pos'}">${state.auditSeals ? (state.auditSeals.ok ? 'butun · ' + state.auditSeals.count + ' qator' : esc(state.auditSeals.table + ': ' + state.auditSeals.reason)) : '—'}</strong></li>
                         <li><span>Audit jurnali zanjiri</span><strong class="${state.auditChain?.ok === false ? 'neg' : 'pos'}">${state.auditChain?.ok === false ? 'uzilgan (' + state.auditChain.brokenAt + ')' : 'butun · ' + (state.auditChain?.count || 0) + ' yozuv'}</strong></li>
                     </ul></section>
             </div>
+            ${q.duplicates?.length ? `<section class="fin-card" aria-labelledby="finDupH"><header><h3 id="finDupH">Takroriy bo‘lishi mumkin bo‘lgan tushumlar</h3><span class="fin-muted">bir xil o‘quvchi va summa ${esc(String(o.settings?.duplicateDays ?? 3))} kun ichida yoki bitta chek</span></header>
+                ${table(['', 'Birinchi', 'Takroriy', 'Ism', { label: 'Summa', num: true }, 'Sabab'], q.duplicates.map(d => `<tr><td><input type="checkbox" data-fin-susp="${esc(d.second.id)}" aria-label="Tanlash: ${esc(d.second.name)}"></td><td>${dateText(d.first.date)}</td><td>${dateText(d.second.date)}</td><td>${esc(d.second.name)}<small>${esc(d.second.phone || '')}</small></td><td class="num">${num(d.second.amount)}</td><td><span class="fin-badge fin-badge--warning">${esc(d.reason)}</span></td></tr>`), { label: 'Takroriy tushumlar' })}
+                <div class="fin-actions"><button type="button" class="btn-primary-sm" data-fin-void-susp disabled>Tanlanganlarni bekor qilish</button><span class="fin-muted">Haqiqatan ikki marta to‘langan bo‘lsa — bekor qilmang (oy yopishda izoh bilan tasdiqlanadi).</span></div></section>` : ''}
+            ${o.dropouts?.length ? `<section class="fin-card" aria-labelledby="finDropH"><header><h3 id="finDropH">Ketgan o‘quvchilarda qolgan majburiyat</h3><span class="fin-muted">xizmat to‘xtagan, pul hali qaytarilmagan</span></header>
+                ${table(['O‘quvchi', 'Yo‘nalish', 'Ketgan sana', { label: 'Qolgan majburiyat', num: true }, ''], o.dropouts.map(d => `<tr><td>${esc(d.name)}${d.deleted ? ' <span class="fin-badge fin-badge--muted">CRM’dan o‘chirilgan</span>' : ''}</td><td>${esc(F.ENTITIES[d.entity])}</td><td>${dateText(d.inactiveAt)}</td><td class="num">${num(d.liability)}</td>
+                    <td>${isDirector() && d.paymentRecordId ? `<button type="button" class="fin-link" data-fin-forfeit="${esc(d.paymentRecordId)}" data-fin-name="${esc(d.name)}" data-fin-amount="${d.liability}">Pulsiz tugatish</button>` : ''}</td></tr>`), { label: 'Ketgan o‘quvchilar majburiyati' })}
+                <p class="fin-note">Pul qaytarilsa — “Qaytarish” (tugatish belgisi bilan). Qaytarilmasa (shartnoma sharti yoki o‘quvchi talab qilmadi) — rahbar ariza/bayonnoma bilan pulsiz tugatadi: qolgan majburiyat shu kuni tushumga o‘tadi (IFRS 15 B46).</p></section>` : ''}
+            ${o.backdatedStatus?.length ? `<section class="fin-card" aria-labelledby="finBdH"><header><h3 id="finBdH">Orqaga sanalangan holatlar</h3><span class="fin-muted">CRM’da kiritilgan sana jurnal sanasidan oldin — jurnal sanasi qo‘llandi</span></header>
+                ${table(['O‘quvchi', 'Maydon', 'CRM sanasi', 'Qo‘llangan sana'], o.backdatedStatus.map(b => `<tr><td>${esc(b.studentId)}</td><td>${b.field === 'frozenAt' ? 'muzlatish' : 'tashlab ketish'}</td><td>${dateText(b.claimed)}</td><td>${dateText(b.recorded)}</td></tr>`), { label: 'Orqaga sanalangan holatlar' })}</section>` : ''}
             ${o.contractDebtMismatches?.length ? `<section class="fin-card" aria-labelledby="finCdH"><header><h3 id="finCdH">Shartnoma aktivi va CRM qarzi mos emas</h3></header>
                 ${table(['O‘quvchi', 'Yo‘nalish', { label: 'Shartnoma aktivi', num: true }, { label: 'CRM qarzi', num: true }, { label: 'Farq', num: true }], o.contractDebtMismatches.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(F.ENTITIES[r.entity])}</td><td class="num">${num(r.contractAsset)}</td><td class="num">${num(r.crmDebt)}</td><td class="num neg">${num(r.difference)}</td></tr>`))}</section>` : ''}
             <section class="fin-card" aria-labelledby="finStH"><header><h3 id="finStH">O‘quvchi holati o‘zgarishlari (moliyaga ta’sir qiladigan)</h3><span class="fin-muted">muzlatish, tashlash, qarz, to‘lov sanasi — baza avtomatik yozadi</span></header>
-                ${table(['Vaqt', 'O‘quvchi', 'Holat', { label: 'Qarz', num: true }, 'To‘lov sanasi'], (o.studentChanges || []).map(c => `<tr><td>${new Date(c.recorded_at).toLocaleString('uz-UZ')}</td><td>${esc(c.name || c.student_id)}</td>
-                    <td>${c.state.frozen ? `muzlatilgan${c.state.frozenAt ? ' (' + esc(String(c.state.frozenAt).slice(0, 10)) + ')' : ''}` : esc(c.state.status || 'faol')}</td><td class="num">${c.state.debtAmount != null ? num(c.state.debtAmount) : '—'}</td><td>${esc(c.state.paymentDueDate || '—')}</td></tr>`), { empty: 'O‘zgarish yo‘q', label: 'O‘quvchi holati o‘zgarishlari' })}
-                <p class="fin-note">Yopilgan oyga orqaga sanalangan muzlatish yoki tashlash yopilgan hisobotni o‘zgartirmaydi — birinchi ochiq kundan kuchga kiradi.</p></section>
+                ${table(['Vaqt', 'O‘quvchi', 'Holat', { label: 'Qarz', num: true }, 'To‘lov sanasi', 'Kim / qayerdan'], (o.studentChanges || []).map(c => `<tr><td>${new Date(c.recorded_at).toLocaleString('uz-UZ')}</td><td>${esc(c.name || c.state.name || c.student_id)}</td>
+                    <td>${c.state.deleted ? '<span class="fin-badge fin-badge--danger">o‘chirildi</span>' : c.state.frozen ? `muzlatilgan${c.state.frozenAt ? ' (' + esc(String(c.state.frozenAt).slice(0, 10)) + ')' : ''}` : esc(c.state.status || 'faol')}</td><td class="num">${c.state.debtAmount != null ? num(c.state.debtAmount) : '—'}</td><td>${esc(c.state.paymentDueDate || '—')}</td>
+                    <td>${c.backfill ? '<span class="fin-muted">boshlang‘ich holat</span>' : `${esc(c.app_user || '')} <span class="fin-muted">${esc(SOURCE_LABELS[c.source] || c.source || 'noma’lum')}</span>`}${!c.backfill && !c.app_user && c.source === 'crm' ? ' <span class="fin-badge fin-badge--warning">foydalanuvchi aniqlanmagan</span>' : ''}</td></tr>`), { empty: 'O‘zgarish yo‘q', label: 'O‘quvchi holati o‘zgarishlari' })}
+                <p class="fin-note">Muzlatish va tashlab ketish jurnalga yozilgan kundan kuchga kiradi (CRM’da orqaga sana kiritilsa ham). O‘quvchi CRM’dan o‘chirilsa — o‘chirilgan kundan xizmat to‘xtaydi.</p></section>
             <section class="fin-card" aria-labelledby="finVoidH"><header><h3 id="finVoidH">Bekor qilingan tushumlar</h3></header>
                 ${table(['Tushum sanasi', 'Bekor qilingan', 'Ism', { label: 'Summa', num: true }, 'Sabab'], q.voidedList.map(r => `<tr class="fin-reversed"><td>${dateText(r.date)}</td><td>${dateText(r.voidDate)}</td><td>${esc(r.name)}<small>${esc(r.phone)}</small></td><td class="num">${num(r.amount)}</td><td>${esc(r.voidReason)}</td></tr>`), { empty: 'Yo‘q' })}</section>
             <section class="fin-card" aria-labelledby="finAuditH"><header><h3 id="finAuditH">Audit jurnali</h3>
@@ -711,12 +749,17 @@
             } catch (err) { toast(err.message); } finally { state.busy = false; render('solishtirish'); }
         });
         const susp = () => [...root.querySelectorAll('[data-fin-susp]:checked')].map(c => c.dataset.finSusp);
-        root.querySelectorAll('[data-fin-susp]').forEach(c => c.addEventListener('change', () => { root.querySelector('[data-fin-void-susp]').disabled = !susp().length; }));
-        root.querySelector('[data-fin-void-susp]')?.addEventListener('click', () => {
-            const ids = susp();
-            openReasonModal(`${ids.length} ta tushumni bekor qilish`, 'Bekor qilish', async (reason, evidenceUrl) => { await api('/receipts/void', { recordIds: ids, reason, evidenceUrl }); }, { evidence: true, evidenceRequired: true, placeholder: 'Masalan: test yozuvi, haqiqiy to‘lov emas' });
-        });
+        // Shubhali va takroriy ro'yxatlardagi belgilar bitta tanlov: bir xil tushum ikkala ro'yxatda bo'lsa ham bir marta.
+        root.querySelectorAll('[data-fin-susp]').forEach(c => c.addEventListener('change', () => {
+            root.querySelectorAll(`[data-fin-susp="${CSS.escape(c.dataset.finSusp)}"]`).forEach(x => { x.checked = c.checked; });
+            root.querySelectorAll('[data-fin-void-susp]').forEach(b => { b.disabled = !susp().length; });
+        }));
+        root.querySelectorAll('[data-fin-void-susp]').forEach(btn => btn.addEventListener('click', () => {
+            const ids = [...new Set(susp())];
+            openReasonModal(`${ids.length} ta tushumni bekor qilish`, 'Bekor qilish', async (reason, evidenceUrl) => { await api('/receipts/void', { recordIds: ids, reason, evidenceUrl }); }, { evidence: true, evidenceRequired: true, placeholder: 'Masalan: test yozuvi, takroriy kiritilgan, haqiqiy to‘lov emas' });
+        }));
         root.querySelectorAll('[data-fin-salary]').forEach(b => b.addEventListener('click', () => openSalaryModal(b.dataset.finSalary)));
+        root.querySelectorAll('[data-fin-forfeit]').forEach(b => b.addEventListener('click', () => openForfeitModal(b.dataset.finForfeit, b.dataset.finName, Number(b.dataset.finAmount))));
         root.querySelector('[data-fin-audit-filter]')?.addEventListener('change', e => { state.auditFilter = e.target.value; state.auditRows = null; render('solishtirish'); });
         root.querySelector('[data-fin-audit-export]')?.addEventListener('click', () => {
             const rows = [['Vaqt', 'Kim', 'Amal', 'Obyekt', 'Oldin', 'Keyin'], ...(state.auditRows || []).map(a => [new Date(a.created_at).toISOString(), a.actor_name, a.action, a.entity_id, JSON.stringify(a.before_data || ''), JSON.stringify(a.after_data || '')])];
@@ -752,7 +795,7 @@
                     <form data-fin-settings class="fin-form">
                         <div class="fin-form-row">${field('Ingliz tili kursi (oy)', `<input type="number" min="1" max="24" class="form-control" name="english" value="${s.courseMonths.english}" ${lock}>`)}${field('Rus tili kursi (oy)', `<input type="number" min="1" max="24" class="form-control" name="russian" value="${s.courseMonths.russian}" ${lock}>`)}</div>
                         <div class="fin-form-row">${field('Maosh to‘lash muddati (kun)', `<input type="number" min="0" max="60" class="form-control" name="salaryDueDays" value="${s.salaryDueDays}" ${lock}>`)}${field('Uskunaning foydalanish muddati (oy)', `<input type="number" min="1" max="240" class="form-control" name="usefulLifeMonths" value="${s.usefulLifeMonths}" ${lock}>`)}</div>
-                        <div class="fin-form-row">${field('Rahbar tasdig‘i kerak bo‘lgan summa (so‘m)', `<input type="number" min="0" class="form-control" name="approvalLimit" value="${s.approvalLimit}" ${lock}>`, 'Bundan katta har qanday chiqim, qarz, o‘tkazma va storno — faqat rahbar. Qaytarish, tushumni bekor qilish/qo‘shish va ta’sischiga to‘lov uchun bu xodimning bir kunlik jami chegarasi ham')}${field('Xodimning kunlik chiqim chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="dailyLimit" value="${s.dailyLimit ?? s.approvalLimit * 3}" ${lock}>`, 'Rahbar bo‘lmagan xodimning bir kundagi barcha chiqimlari jami (xarajat, qaytarish, maosh, storno)')}</div><div class="fin-form-row">${field('Shubhali summa chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="suspiciousMin" value="${s.suspiciousMin}" ${lock}>`)}</div>
+                        <div class="fin-form-row">${field('Rahbar tasdig‘i kerak bo‘lgan summa (so‘m)', `<input type="number" min="0" class="form-control" name="approvalLimit" value="${s.approvalLimit}" ${lock}>`, 'Bundan katta har qanday chiqim, qarz, o‘tkazma va storno — faqat rahbar. Qaytarish, tushumni bekor qilish/qo‘shish va ta’sischiga to‘lov uchun bu xodimning bir kunlik jami chegarasi ham')}${field('Xodimning kunlik chiqim chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="dailyLimit" value="${s.dailyLimit ?? s.approvalLimit * 3}" ${lock}>`, 'Rahbar bo‘lmagan xodimning bir kundagi barcha chiqimlari jami (xarajat, qaytarish, maosh, storno)')}</div><div class="fin-form-row">${field('Barcha xodimlar kunlik chiqim chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="teamDailyLimit" value="${s.teamDailyLimit ?? (s.dailyLimit ?? s.approvalLimit * 3) * 2}" ${lock}>`, 'Rahbar bo‘lmagan barcha xodimlarning bir kundagi chiqimlari jami — limitni bo‘lib chetlab o‘tishga qarshi')}${field('Hujjat majburiy bo‘lgan chiqim (so‘m)', `<input type="number" min="0" class="form-control" name="evidenceMin" value="${s.evidenceMin ?? 1000000}" ${lock}>`, 'Bundan katta xarajat va qarz to‘lovi chek/hujjatsiz kiritilmaydi')}</div><div class="fin-form-row">${field('Shubhali summa chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="suspiciousMin" value="${s.suspiciousMin}" ${lock}>`)}${field('Takroriy tushum oynasi (kun)', `<input type="number" min="0" max="31" class="form-control" name="duplicateDays" value="${s.duplicateDays ?? 3}" ${lock}>`)}</div>
                         <div class="fin-form-row">${field('Aylanmadan soliq stavkasi, %', `<input type="number" min="0" max="30" step="0.01" class="form-control" name="turnoverTaxRate" value="${s.turnoverTaxRate || 0}" ${lock}>`, 'Hisoblash usulida soliq tushumdan hisoblanadi va to‘languncha majburiyat bo‘ladi. 0 — soliq faqat to‘langanda xarajat')}</div>
                         <fieldset class="fin-methods"><legend>Kutilayotgan kredit zarari (ECL) stavkalari, %</legend>${F.AGING.map(([k, l]) => `<label>${l} <input type="number" min="0" max="100" class="form-control fin-narrow" name="ecl_${k}" value="${s.eclRates[k]}" ${lock}></label>`).join('')}</fieldset>
                         ${dir ? '<button type="submit" class="btn-primary-sm">Saqlash</button>' : ''}
@@ -776,7 +819,7 @@
             const f = new FormData(e.target), n = k => Number(f.get(k));
             try {
                 await api('/settings', { revision: o.settingsRevision, data: { courseMonths: { english: n('english'), russian: n('russian') }, suspiciousMin: n('suspiciousMin'), salaryDueDays: n('salaryDueDays'),
-                    usefulLifeMonths: n('usefulLifeMonths'), approvalLimit: n('approvalLimit'), dailyLimit: n('dailyLimit'), turnoverTaxRate: n('turnoverTaxRate'), eclRates: Object.fromEntries(F.AGING.map(([k]) => [k, n('ecl_' + k)])) } }, 'PUT');
+                    usefulLifeMonths: n('usefulLifeMonths'), approvalLimit: n('approvalLimit'), dailyLimit: n('dailyLimit'), teamDailyLimit: n('teamDailyLimit'), evidenceMin: n('evidenceMin'), duplicateDays: n('duplicateDays'), turnoverTaxRate: n('turnoverTaxRate'), eclRates: Object.fromEntries(F.AGING.map(([k]) => [k, n('ecl_' + k)])) } }, 'PUT');
                 invalidate(); toast('Sozlamalar saqlandi'); render('moliya-sozlamalar');
             } catch (err) { toast(err.message); }
         });

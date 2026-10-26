@@ -152,8 +152,8 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
         await t.test('loans: payable created, repayment capped, interest is a finance cost', async () => {
             const loan = await finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'loan_in', categoryCode: 'LOAN_IN', accountId: 'acc-bank', amount: 3000000, date: '2026-10-06', counterparty: 'Bank', dueDate: '2026-12-31' });
             const payable = (await pool.query('SELECT payable_id FROM fin_transactions WHERE id=$1', [loan.id])).rows[0].payable_id;
-            await rejects(finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'loan_repay', categoryCode: 'LOAN_REPAY', accountId: 'acc-bank', amount: 3500000, date: '2026-10-07', payableId: payable, counterparty: 'Bank' }), 409);
-            await finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'loan_repay', categoryCode: 'LOAN_REPAY', accountId: 'acc-bank', amount: 1000000, date: '2026-10-07', payableId: payable, counterparty: 'Bank' });
+            await rejects(finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'loan_repay', categoryCode: 'LOAN_REPAY', accountId: 'acc-bank', amount: 3500000, date: '2026-10-07', payableId: payable, counterparty: 'Bank', receiptUrl: await evidence() }), 409);
+            await finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'loan_repay', categoryCode: 'LOAN_REPAY', accountId: 'acc-bank', amount: 1000000, date: '2026-10-07', payableId: payable, counterparty: 'Bank', receiptUrl: await evidence() });
             await finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'INTEREST', accountId: 'acc-bank', amount: 45000, date: '2026-10-07', counterparty: 'Bank' });
             const o = await finance.overview(pool, accountant, { start: '2026-10-01', end: '2026-10-31', scope: 'all' });
             assert.equal(o.payables.loans, 2000000);
@@ -317,11 +317,13 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             const saved = await finance.saveSettings(pool, admin, { revision: s.settingsRevision, data: { courseMonths: { english: 3, russian: 6 } } });
             assert.equal(saved.effectiveFrom, F.today());
             // Kech aniqlangan holat: o'quvchi sentyabrda muzlatilgan edi (yopilgan oyning hisoblash usuli natijasi o'zgaradi).
-            await pool.query(`UPDATE students SET extra_data=extra_data || '{"frozen":true,"frozenAt":"2026-09-20T10:00:00Z"}'::jsonb WHERE id='s1'`);
+            // CRM ilovasi orqali (crm: belgisi bilan); orqaga sanalangan muzlatish jurnal sanasidan kuchga kiradi va tekshiruvga chiqadi.
+            appSql('crm', `UPDATE students SET extra_data=extra_data || '{"frozen":true,"frozenAt":"2026-09-20T10:00:00Z"}'::jsonb WHERE id='s1'`);
             assert.equal(await sep('cash'), cashBefore);
             assert.equal(await sep('accrual'), accBefore);
             const oct = await finance.overview(pool, accountant, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' });
-            assert.ok(oct.pnl.prior_adjustments !== 0);
+            assert.ok(oct.backdatedStatus.some(b => b.studentId === 's1' && b.claimed === '2026-09-20' && b.recorded === F.today()), 'orqaga sanalash aniqlandi');
+            assert.equal(oct.pnl.prior_adjustments || 0, 0, 'orqaga sanalangan muzlatish yopilgan oyni o‘zgartirmaydi');
             // Maosh jadvali ham yopilgan davrga yozilmaydi; summasi o'zgarmaydi, holati (to'landi) o'zgarishi mumkin.
             await rejects(pool.query("UPDATE salary_transactions SET amount=1 WHERE id='sal1'"), null, /yopilgan/);
             await rejects(pool.query("INSERT INTO salary_transactions VALUES('sal9','t1','russian','2026-09-01','2026-09-15',100,'unpaid',NULL,NULL)"), null, /yopilgan/);
@@ -448,7 +450,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-cash', amount: 3900000, date: '2026-10-10', counterparty: 'Ofis', receiptUrl: await evidence() });
             await rejects(finance.voidReceipts(pool, accN3(), { recordIds: ['cashR'], reason: 'Xato kiritilgan', evidenceUrl: await evidence() }), 403, /manfiy/);
             // O'quvchi holati o'zgarishi jurnalga yoziladi
-            await pool.query(`UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
+            appSql('crm', `UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
             const log = (await pool.query("SELECT state FROM fin_student_log WHERE student_id='s1' ORDER BY id DESC LIMIT 1")).rows[0];
             assert.equal(log.state.status, 'inactive');
             await rejects(pool.query("UPDATE fin_student_log SET state='{}' WHERE student_id='s1'"), null, /o.zgartirib/);

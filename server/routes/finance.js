@@ -34,6 +34,7 @@ router.post('/accounts', handle(req => service.saveAccount(pool, req.user, req.b
 router.post('/accounts/:id/checks', handle(req => service.addAccountCheck(pool, req.user, req.params.id, req.body || {})));
 router.post('/assets/:id/dispose', handle(req => service.disposeAsset(pool, req.user, req.params.id, req.body || {})));
 router.post('/assets/:id/impair', handle(req => service.impairAsset(pool, req.user, req.params.id, req.body || {})));
+router.post('/contracts/forfeit', handle(req => service.forfeitContract(pool, req.user, req.body || {})));
 router.post('/periods', handle(req => service.lockMonth(pool, req.user, req.body || {})));
 router.put('/settings', handle(req => service.saveSettings(pool, req.user, req.body || {})));
 router.get('/audit', handle(req => service.auditLog(pool, req.user, req.query)));

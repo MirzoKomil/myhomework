@@ -83,10 +83,12 @@ async function q1(text, params = []) {
     return rows[0] || null;
 }
 
-async function tx(fn) {
+async function tx(fn, actor = null) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+        // Moliya jurnali uchun: o'zgarish qaysi ilova tranzaksiyasidan va kim tomonidan (o'quvchi holati jurnali shu belgilarni yozadi).
+        await client.query("SELECT set_config('fin.ctx', $1, true), set_config('app.user_id', $2, true)", ['crm:' + require('crypto').randomUUID(), String(actor?.id || '')]);
         // Natija qaytariladi: Yuzma-yuz (battle) funksiyalari `return tx(...)`
         // qiladi — ilgari undefined qaytib, haqiqiy juftlash umuman ishlamas edi.
         const result = await fn(client);
@@ -1578,7 +1580,7 @@ async function upsertLead(lead, language, actor = {}) {
         platformAccess = await provisionLeadStudent(client, saved);
         await inflow.syncLead(client, saved, platformAccess, actor, false, options.priorLead);
         await require('./services/domworkBot/events').afterLead(client,options.priorLead,saved);
-    });
+    }, actor);
     return { lead: saved, platformAccess };
 }
 
@@ -3911,7 +3913,7 @@ async function patchState(partial, actor = {}) {
         if (partial.targetMonitoringPlan !== undefined) await saveJsonData(client, 'targetMonitoringPlan', partial.targetMonitoringPlan);
         if (partial.targetDailyAdSpend !== undefined) await saveJsonData(client, 'targetDailyAdSpend', partial.targetDailyAdSpend);
         if (partial.archive !== undefined) await saveJsonData(client, 'archive', partial.archive);
-    });
+    }, actor);
 }
 
 // Ustozning bitta o'quvchi/bitta jonli dars uchun davomatini saqlash.

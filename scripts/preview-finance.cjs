@@ -52,7 +52,14 @@ async function seed() {
     execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', 'inflow:preview-seed', true); ${inserts.join('\n')} COMMIT;`]);
     const students = [['s1', 'Mamatov Kamoliddin', '332800826', 1900000, '2026-10-08'], ['s2', 'Sultonova Xafiza', '883139309', 1600000, '2026-10-15'], ['s3', 'Bobojonova Xosila', '902443056', 1500000, '2026-10-23'],
         ['s4', 'Raximov Abdumo‘min', '977039102', 1600000, '2026-08-17'], ['s5', 'Qosimjonov Sherzod', '978161313', 1400000, '2026-11-19'], ['s6', 'Akramov Ibrohim', '932200141', 900000, '2026-10-31']];
-    for (const [id, name, phone, debt, due] of students) await pool.query(`INSERT INTO students VALUES($1,$2,$3,'russian','g',NULL,30,$4)`, [id, name, '+998' + phone, JSON.stringify({ debtAmount: debt, paymentDueDate: due })]);
+    // O'quvchilar CRM nomidan (crm: belgisi, foydalanuvchi bilan) — holat jurnaliga kim yozgani tushadi.
+    const sq = v => "'" + String(v).replace(/'/g, "''") + "'";
+    const crm = sql => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', 'crm:preview-' || md5(random()::text), true), set_config('app.user_id', 'admin', true); ${sql} COMMIT;`]);
+    crm(students.map(([id, name, phone, debt, due]) => `INSERT INTO students VALUES(${sq(id)},${sq(name)},${sq('+998' + phone)},'russian','g',NULL,30,${sq(JSON.stringify({ debtAmount: debt, paymentDueDate: due }))});`).join('\n'));
+    // Demo: bitta o'quvchi to'lab, keyin CRM'dan o'chirilgan — "ketgan o'quvchida qolgan majburiyat" ro'yxatida ko'rinadi.
+    const [, gName, gPhone] = csv[0].split(',');
+    crm(`INSERT INTO students VALUES('s7',${sq(gName)},${sq('+998' + gPhone)},'russian','g',NULL,30,${sq(JSON.stringify({ debtAmount: 0, leadRef: { id: 'lead-' + gPhone } }))});`);
+    crm(`DELETE FROM students WHERE id='s7';`);
     // Demo hujjat moliyaning yopiq omboriga yuklanadi (PNG imzosi bilan 1x1 rasm).
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     let pn = 0;

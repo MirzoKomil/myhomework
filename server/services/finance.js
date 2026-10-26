@@ -47,7 +47,7 @@ CREATE TRIGGER fin_immutable_${table} BEFORE UPDATE OR DELETE ON ${table} FOR EA
 }
 // Muhr bilan himoyalangan jadvallar va ularning kalit ustuni.
 const SEALED_TABLES = { payment_records: 'id', fin_transactions: 'id', payment_record_voids: 'record_id', fin_account_checks: 'id', fin_asset_events: 'id',
-    fin_accounts: 'id', fin_payables: 'id', fin_contract_values: 'record_id', fin_settings_history: 'id', fin_period_locks: 'month', fin_period_snapshots: 'month', salary_transactions: 'id', fin_student_log: 'id', fin_settings: 'id' };
+    fin_accounts: 'id', fin_payables: 'id', fin_contract_values: 'record_id', fin_settings_history: 'id', fin_period_locks: 'month', fin_period_snapshots: 'month', salary_transactions: 'id', fin_student_log: 'id', fin_settings: 'id', fin_contract_events: 'id', fin_salary_roles: 'salary_id' };
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS fin_accounts (
  id TEXT PRIMARY KEY, entity TEXT NOT NULL CHECK(entity IN ('english','russian','common')), name TEXT NOT NULL,
@@ -135,6 +135,18 @@ CREATE TABLE IF NOT EXISTS fin_student_log (
  id BIGSERIAL PRIMARY KEY, student_id TEXT NOT NULL, state JSONB NOT NULL, recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), db_user TEXT NOT NULL DEFAULT current_user, app_user TEXT
 );
 CREATE INDEX IF NOT EXISTS fin_student_log_student ON fin_student_log(student_id, id);
+ALTER TABLE fin_student_log ADD COLUMN IF NOT EXISTS backfill BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE fin_student_log ADD COLUMN IF NOT EXISTS ctx TEXT DEFAULT NULLIF(current_setting('fin.ctx', true), '');
+-- Shartnoma hodisalari: pul qaytarilmasdan shartnomani tugatish (o'quvchi ketdi, qaytarish talab qilinmadi / shartnoma bo'yicha qaytarilmaydi).
+-- Qolgan majburiyat shu sanada tushumga o'tadi (IFRS 15 B46: breakage). Faqat rahbar, hujjat bilan; o'zgarmas.
+CREATE TABLE IF NOT EXISTS fin_contract_events (
+ id TEXT PRIMARY KEY, payment_record_id TEXT NOT NULL REFERENCES payment_records(id), kind TEXT NOT NULL CHECK(kind IN ('forfeit')),
+ event_date DATE NOT NULL, reason TEXT NOT NULL, evidence_url TEXT NOT NULL DEFAULT '', actor_id TEXT NOT NULL, actor_name TEXT NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(payment_record_id, kind)
+);
+-- Maosh qaysi lavozim uchun hisoblangani hisoblash paytida muzlatiladi: xodim lavozimi keyin o'zgarsa ham
+-- o'tgan davr xarajat toifasi (sotuv / ma'muriy / o'qituvchi) o'zgarmaydi.
+CREATE TABLE IF NOT EXISTS fin_salary_roles (salary_id TEXT PRIMARY KEY, role TEXT, source TEXT NOT NULL, captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 ALTER TABLE fin_period_locks ADD COLUMN IF NOT EXISTS snapshot_hashes JSONB;
 ALTER TABLE fin_period_snapshots ADD COLUMN IF NOT EXISTS sha256 TEXT;
 -- Sozlamalar tarixi: har bir o'zgarish kuchga kirgan sanasi bilan (o'zgarmas).
@@ -190,6 +202,7 @@ ${lockGuardSql('fin_payables', 'issue_date')}
 ${lockGuardSql('payment_record_voids', 'void_date')}
 ${lockGuardSql('fin_account_checks', 'check_date')}
 ${lockGuardSql('fin_asset_events', 'event_date')}
+${lockGuardSql('fin_contract_events', 'event_date')}
 -- Muhr matni: NULL maydonlar olib tashlanadi (keyin qo'shiladigan bo'sh ustun eski muhrlarni buzmaydi; yangi ustunlar
 -- NULL standart qiymat bilan qo'shilishi shart). Vaqt zonasiga bog'liq va keyin bog'lanadigan (student_id) maydonlar kirmaydi.
 CREATE OR REPLACE FUNCTION fin_row_text(t TEXT, j JSONB) RETURNS TEXT AS $$
@@ -279,7 +292,7 @@ DO $$ BEGIN
     CREATE TRIGGER fin_guard_salary BEFORE INSERT OR UPDATE OR DELETE ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_guard_salary();
   END IF;
 END $$;
-${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log']
+${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles']
     .map(t => `DROP TRIGGER IF EXISTS fin_no_truncate_${t} ON ${t};\nCREATE TRIGGER fin_no_truncate_${t} BEFORE TRUNCATE ON ${t} FOR EACH STATEMENT EXECUTE FUNCTION fin_reject_change();`).join('\n')}
 -- Yopilgan oy qulfi o'zgartirilmaydi; faqat ilova (rahbar, oxirgi oy) ochishi mumkin — fin.unlock belgisi bilan.
 CREATE OR REPLACE FUNCTION fin_lock_guard() RETURNS trigger AS $$
@@ -304,11 +317,37 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$ LANGUAGE plpgsql;
+-- O'quvchi o'chirilsa (CRM ro'yxatni to'liq qayta yozadi: DELETE + INSERT) — tranzaksiya oxirida haqiqatan yo'q bo'lsa,
+-- jurnalga sanasi bilan "o'chirildi" yozuvi qo'shiladi: shu sanadan xizmat to'xtaydi (tushum to'xtaydi).
+CREATE OR REPLACE FUNCTION fin_log_student_delete() RETURNS trigger AS $$
+DECLARE last JSONB;
+BEGIN
+  IF EXISTS (SELECT 1 FROM students WHERE id = OLD.id) THEN RETURN NULL; END IF;
+  SELECT state INTO last FROM fin_student_log WHERE student_id = OLD.id ORDER BY id DESC LIMIT 1;
+  IF COALESCE((last->>'deleted')::boolean, false) THEN RETURN NULL; END IF;
+  INSERT INTO fin_student_log(student_id, state, app_user) VALUES (OLD.id, fin_student_state(COALESCE(OLD.extra_data,'{}'::jsonb))
+    || jsonb_build_object('deleted', true, 'name', OLD.name, 'leadId', OLD.extra_data->'leadRef'->>'id', 'subject', OLD.subject, 'staffDemo', COALESCE((OLD.extra_data->>'isStaffDemo')::boolean, false)),
+    NULLIF(current_setting('app.user_id', true), ''));
+  RETURN NULL;
+END $$ LANGUAGE plpgsql;
 DO $do$ BEGIN IF to_regclass('students') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_log_student ON students;
   CREATE TRIGGER fin_log_student AFTER INSERT OR UPDATE ON students FOR EACH ROW EXECUTE FUNCTION fin_log_student();
+  DROP TRIGGER IF EXISTS fin_log_student_delete ON students;
+  CREATE CONSTRAINT TRIGGER fin_log_student_delete AFTER DELETE ON students DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fin_log_student_delete();
+END IF; END $do$;
+CREATE OR REPLACE FUNCTION fin_capture_salary_role() RETURNS trigger AS $$
+BEGIN
+  INSERT INTO fin_salary_roles(salary_id, role, source) VALUES (NEW.id, (SELECT role FROM hr_employees WHERE id = NEW.employee_id), 'insert') ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DO $do$ BEGIN IF to_regclass('salary_transactions') IS NOT NULL THEN
+  DROP TRIGGER IF EXISTS fin_capture_salary_role ON salary_transactions;
+  CREATE TRIGGER fin_capture_salary_role AFTER INSERT ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_capture_salary_role();
 END IF; END $do$;
 ${immutableSql('fin_student_log')}
+${immutableSql('fin_contract_events')}
+${immutableSql('fin_salary_roles')}
 ${immutableSql('fin_settings_history')}
 ${immutableSql('fin_asset_events')}
 ${immutableSql('fin_row_seals')}
@@ -347,8 +386,10 @@ async function initSchema(pool) {
                 await db.query("INSERT INTO fin_settings_history(effective_from,data,actor_id,actor_name) VALUES('1900-01-01',$1,'system','Boshlang‘ich sozlama')", [JSON.stringify(cur)]);
             }
             await migrateLegacyCash(db);
+            if ((await db.query("SELECT to_regclass('salary_transactions') AS s, to_regclass('hr_employees') AS h")).rows.every(r => r.s && r.h))
+                await db.query(`INSERT INTO fin_salary_roles(salary_id,role,source) SELECT s.id, he.role, 'backfill' FROM salary_transactions s LEFT JOIN hr_employees he ON he.id=s.employee_id ON CONFLICT DO NOTHING`);
             if (!(await db.query("SELECT 1 FROM fin_migrations WHERE id='student-log-v1'")).rows.length) {
-                await db.query("INSERT INTO fin_student_log(student_id,state) SELECT id, fin_student_state(COALESCE(extra_data,'{}'::jsonb)) FROM students s WHERE NOT EXISTS (SELECT 1 FROM fin_student_log l WHERE l.student_id=s.id)");
+                await db.query("INSERT INTO fin_student_log(student_id,state,backfill) SELECT id, fin_student_state(COALESCE(extra_data,'{}'::jsonb)), TRUE FROM students s WHERE NOT EXISTS (SELECT 1 FROM fin_student_log l WHERE l.student_id=s.id)");
                 await db.query("INSERT INTO fin_migrations(id) VALUES('student-log-v1') ON CONFLICT DO NOTHING");
             }
             await backfillSeals(db);
@@ -465,8 +506,8 @@ async function chainIntegrity(db, full) {
 // Har bir o'zgarish (va boshqaruv jadvallariga kiritish) ilova tranzaksiyasidan bo'lishi va moliya o'zgarishlari
 // audit jurnalidagi yozuv bilan bog'lanishi shart. Oddiy SQL bilan (triggerlar yoqilgan holda ham) qilingan o'zgarish shu yerda ushlanadi.
 const CONTROL_INSERT = ['payment_records', 'fin_transactions', 'fin_payables', 'fin_accounts', 'fin_account_checks', 'fin_asset_events', 'fin_period_locks', 'fin_period_snapshots',
-    'fin_settings', 'fin_settings_history', 'payment_record_voids', 'salary_transactions'];
-const CTX_TABLES = { payroll: ['salary_transactions'], inflow: ['payment_records', 'fin_contract_values', 'fin_student_log'] };
+    'fin_settings', 'fin_settings_history', 'payment_record_voids', 'salary_transactions', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles'];
+const CTX_TABLES = { payroll: ['salary_transactions', 'fin_salary_roles'], inflow: ['payment_records', 'fin_contract_values', 'fin_student_log'], crm: ['fin_student_log'] };
 async function ctxIntegrity(db) {
     const bad = (await db.query(`SELECT s.seq, s.table_name, s.row_id, s.op, s.ctx FROM fin_row_seals s
         WHERE (s.op IN ('U','D') OR s.table_name = ANY($1)) AND (
@@ -474,8 +515,9 @@ async function ctxIntegrity(db) {
             OR (s.ctx LIKE 'fin:%' AND NOT EXISTS (SELECT 1 FROM fin_audit a WHERE a.txn_ctx = s.ctx))
             OR (s.ctx LIKE 'payroll:%' AND s.table_name <> ALL($2))
             OR (s.ctx LIKE 'inflow:%' AND s.table_name <> ALL($3))
-            OR (s.ctx NOT LIKE 'fin:%' AND s.ctx NOT LIKE 'payroll:%' AND s.ctx NOT LIKE 'inflow:%' AND s.ctx NOT LIKE 'init:%' AND s.ctx <> 'backfill'))
-        ORDER BY s.seq LIMIT 1`, [CONTROL_INSERT, CTX_TABLES.payroll, CTX_TABLES.inflow])).rows[0];
+            OR (s.ctx LIKE 'crm:%' AND s.table_name <> ALL($4))
+            OR (s.ctx NOT LIKE 'fin:%' AND s.ctx NOT LIKE 'payroll:%' AND s.ctx NOT LIKE 'inflow:%' AND s.ctx NOT LIKE 'crm:%' AND s.ctx NOT LIKE 'init:%' AND s.ctx <> 'backfill'))
+        ORDER BY s.seq LIMIT 1`, [CONTROL_INSERT, CTX_TABLES.payroll, CTX_TABLES.inflow, CTX_TABLES.crm])).rows[0];
     if (!bad) return { ok: true };
     return { ok: false, table: bad.table_name, rowId: bad.row_id, brokenAt: Number(bad.seq),
         reason: bad.ctx ? 'o‘zgarish audit jurnalida yo‘q' : `ilovadan tashqari (to‘g‘ridan-to‘g‘ri SQL) ${bad.op === 'D' ? 'o‘chirish' : bad.op === 'U' ? 'o‘zgartirish' : 'kiritish'}` };
@@ -488,7 +530,9 @@ async function studentStateIntegrity(db) {
         LEFT JOIN LATERAL (SELECT state FROM fin_student_log l WHERE l.student_id=s.id ORDER BY id DESC LIMIT 1) l ON TRUE
         WHERE l.state IS DISTINCT FROM fin_student_state(COALESCE(s.extra_data,'{}'::jsonb)) LIMIT 1`)).rows[0];
     if (bad) return { ok: false, table: 'fin_student_log', rowId: bad.id, reason: 'o‘quvchi holati jurnaldagi oxirgi yozuvga mos emas (jurnal yoki holat ilovadan tashqari o‘zgargan)' };
-    const orphan = (await db.query(`SELECT l.student_id FROM fin_student_log l WHERE NOT EXISTS (SELECT 1 FROM students s WHERE s.id=l.student_id) LIMIT 1`)).rows[0];
+    // O'chirilgan o'quvchi: jurnalning oxirgi yozuvi "o'chirildi" bo'lishi shart (aks holda o'chirish triggerni chetlab o'tgan).
+    const orphan = (await db.query(`SELECT student_id FROM (SELECT DISTINCT ON (student_id) student_id, state FROM fin_student_log ORDER BY student_id, id DESC) l
+        WHERE NOT EXISTS (SELECT 1 FROM students s WHERE s.id=l.student_id) AND NOT COALESCE((l.state->>'deleted')::boolean, false) LIMIT 1`)).rows[0];
     if (orphan) return { ok: false, table: 'fin_student_log', rowId: orphan.student_id, reason: 'jurnalda mavjud bo‘lmagan o‘quvchi' };
     return { ok: true };
 }
@@ -597,9 +641,10 @@ async function requireApproval(db, user, settings, amount, what) {
     if (today + amount > limit) throw error(403, `${what}: bugungi jami (${fmt(today + amount)} so‘m) ${fmt(limit)} so‘mlik kunlik chegaradan oshadi — rahbar tasdig‘i kerak`);
 }
 // Barcha chiqimlar (xarajat, qaytarish, maosh, qarz qaytarish, kirimni storno qilish) bo'yicha xodimning kunlik jami.
+// userId = null — barcha (rahbar bo'lmagan) xodimlar bo'yicha jami: bir necha xodim kelishib limitni bo'lib chetlab o'tmasligi uchun.
 async function dailyOutflow(db, userId) {
     return Number((await db.query(`SELECT COALESCE(SUM((after_data->>'outflowAmount')::BIGINT),0) AS n FROM fin_audit
-        WHERE actor_id=$1 AND after_data ? 'outflowAmount' AND (created_at AT TIME ZONE 'Asia/Tashkent')::date = (NOW() AT TIME ZONE 'Asia/Tashkent')::date`, [userId])).rows[0].n);
+        WHERE ($1::text IS NULL OR actor_id=$1) AND after_data ? 'outflowAmount' AND (created_at AT TIME ZONE 'Asia/Tashkent')::date = (NOW() AT TIME ZONE 'Asia/Tashkent')::date`, [userId])).rows[0].n);
 }
 async function requireOutflowApproval(db, user, settings, amount, what) {
     if (user.director) return;
@@ -607,6 +652,8 @@ async function requireOutflowApproval(db, user, settings, amount, what) {
     if (amount > limit) throw error(403, `${what}: ${fmt(amount)} so‘m — ${fmt(limit)} so‘mdan katta, faqat rahbar tomonidan`);
     const today = await dailyOutflow(db, user.id);
     if (today + amount > daily) throw error(403, `${what}: bugungi chiqimlaringiz jami ${fmt(today + amount)} so‘m — ${fmt(daily)} so‘mlik kunlik chegaradan oshadi, rahbar tasdig‘i kerak`);
+    const team = Number(settings.teamDailyLimit) || daily * 2, all = await dailyOutflow(db, null);
+    if (all + amount > team) throw error(403, `${what}: bugun barcha xodimlar chiqimi jami ${fmt(all + amount)} so‘m — ${fmt(team)} so‘mlik umumiy kunlik chegaradan oshadi, rahbar tasdig‘i kerak`);
 }
 // Pul hisobi (naqd, karta, bank) manfiyga tushmasligi kerak: chiqim sanasida ham, bugun ham.
 async function assertNoOverdraft(db, user, accountId, day, amount) {
@@ -670,38 +717,67 @@ async function load(db) {
     const assetEvents = (await db.query("SELECT id,asset_id,kind,TO_CHAR(event_date,'YYYY-MM-DD') AS d,amount,reason,actor_name FROM fin_asset_events ORDER BY event_date")).rows
         .map(e => ({ id: e.id, assetId: e.asset_id, kind: e.kind, date: e.d, amount: Number(e.amount), reason: e.reason, actorName: e.actor_name }));
     const salaryRows = (await db.query(`SELECT s.id,s.employee_id,s.language,s.amount,s.status,TO_CHAR(s.period_start,'YYYY-MM-DD') AS ps,TO_CHAR(s.period_end,'YYYY-MM-DD') AS pe,
-        s.paid_at,he.name,he.role FROM salary_transactions s LEFT JOIN hr_employees he ON he.id=s.employee_id ORDER BY s.period_end`).catch(() => ({ rows: [] }))).rows;
+        s.paid_at,he.name,COALESCE(sr.role,he.role) AS role FROM salary_transactions s LEFT JOIN hr_employees he ON he.id=s.employee_id LEFT JOIN fin_salary_roles sr ON sr.salary_id=s.id ORDER BY s.period_end`).catch(() => ({ rows: [] }))).rows;
     const salaries = salaryRows.map(s => ({ id: s.id, entity: s.language, employeeId: s.employee_id, employeeName: s.name || s.employee_id, role: s.role || '',
         amount: Number(s.amount), status: s.status, periodStart: s.ps, periodEnd: s.pe, accrualDate: s.pe, categoryCode: salaryCategory(s.role),
         paidAt: s.paid_at ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent' }).format(new Date(s.paid_at)) : '' }));
     const receivables = [], studentStatus = [], studentDebts = [], studentFreezes = [];
-    // Muzlatish oraliqlari holat jurnalidan: muzlatilgan → (qayta faollashtirilgan sana).
-    const logRows = (await db.query(`SELECT student_id, state, TO_CHAR((recorded_at AT TIME ZONE 'Asia/Tashkent')::date,'YYYY-MM-DD') AS d FROM fin_student_log ORDER BY student_id, id`).catch(() => ({ rows: [] }))).rows;
+    // Holat jurnalidan (baza triggeri yozadi, CRM brauzeri emas): muzlatish oraliqlari, tashlab ketish va o'chirish sanalari.
+    // Sana — jurnalga yozilgan kun. CRM'da kiritilgan "muzlatilgan sana" undan oldin bo'lsa (orqaga sanalash), qabul qilinmaydi:
+    // jurnal sanasi ishlatiladi va farq tekshiruvga chiqadi. Kelajakdagi sana (rejalashtirilgan muzlatish) qabul qilinadi.
+    // Faqat tizim joriy etilgandagi boshlang'ich yozuv (backfill) uchun CRM sanasi olinadi (undan oldingi tarix jurnalda yo'q).
+    const logRows = (await db.query(`SELECT student_id, state, backfill, TO_CHAR((recorded_at AT TIME ZONE 'Asia/Tashkent')::date,'YYYY-MM-DD') AS d FROM fin_student_log ORDER BY student_id, id`).catch(() => ({ rows: [] }))).rows;
     const leadOf = new Map((await db.query("SELECT id, extra_data->'leadRef'->>'id' AS lead FROM students")).rows.map(r => [r.id, r.lead]));
-    let curFreeze = null, curStudent = null;
-    for (const r of logRows) {
-        if (r.student_id !== curStudent) { curStudent = r.student_id; curFreeze = null; }
-        const frozen = !!r.state?.frozen;
-        if (frozen && !curFreeze) {
-            curFreeze = { studentId: r.student_id, leadId: leadOf.get(r.student_id) || '', from: F.date(String(r.state.frozenAt || '').slice(0, 10)) || r.d, to: null, recordedAt: r.d };
-            studentFreezes.push(curFreeze);
-        } else if (!frozen && curFreeze) { curFreeze.to = r.d > curFreeze.from ? r.d : F.addDays(curFreeze.from, 1); curFreeze = null; }
+    const backdated = [];
+    const claimed = (r, field) => {
+        const c = F.date(String(r.state?.[field] || '').slice(0, 10));
+        if (r.backfill) return c || r.d;
+        if (c && c < r.d) { backdated.push({ studentId: r.student_id, field, claimed: c, recorded: r.d }); return r.d; }
+        return c && c > r.d ? c : r.d;
+    };
+    const byStudent = new Map();
+    for (const r of logRows) { if (!byStudent.has(r.student_id)) byStudent.set(r.student_id, []); byStudent.get(r.student_id).push(r); }
+    const lastState = new Map();
+    for (const [sid, rows] of byStudent) {
+        let curFreeze = null, inactiveSince = null, prevInactive = false;
+        const last = rows.at(-1);
+        const leadId = leadOf.get(sid) || last.state?.leadId || '';
+        for (const r of rows) {
+            const frozen = !!r.state?.frozen && !r.state?.deleted;
+            if (frozen && !curFreeze) {
+                curFreeze = { studentId: sid, leadId, from: claimed(r, 'frozenAt'), to: null, recordedAt: r.d };
+                studentFreezes.push(curFreeze);
+            } else if (!frozen && curFreeze) { curFreeze.to = r.d > curFreeze.from ? r.d : F.addDays(curFreeze.from, 1); curFreeze = null; }
+            const inactive = r.state?.status === 'inactive' || !!r.state?.deleted;
+            if (inactive && !prevInactive) inactiveSince = { at: r.state?.deleted ? r.d : claimed(r, 'inactiveAt'), recordedAt: r.d };
+            if (!inactive) inactiveSince = null;
+            prevInactive = inactive;
+        }
+        lastState.set(sid, { state: last.state, leadId, inactiveSince, firstRecorded: rows.find(r => r.state?.frozen || r.state?.status === 'inactive' || r.state?.deleted)?.d || null });
     }
-    // Holat birinchi marta qachon yozilgan (orqaga sanalashni aniqlash uchun).
-    const recorded = new Map((await db.query(`SELECT student_id, MIN(TO_CHAR((recorded_at AT TIME ZONE 'Asia/Tashkent')::date,'YYYY-MM-DD')) FILTER (WHERE (state->>'frozen')::boolean OR state->>'status'='inactive') AS d
-        FROM fin_student_log GROUP BY student_id`).catch(() => ({ rows: [] }))).rows.map(r => [r.student_id, r.d]));
+    const pushStatus = (sid, leadId, x) => {
+        const ls = lastState.get(sid);
+        const frozen = !!x.frozen && !x.deleted, inactive = x.status === 'inactive' || !!x.deleted;
+        if (!frozen && !inactive) return;
+        studentStatus.push({ studentId: sid, leadId, recordedAt: ls?.firstRecorded || null, deleted: !!x.deleted,
+            frozenAt: frozen ? (studentFreezes.find(f => f.studentId === sid && !f.to)?.from || null) : null,
+            inactive, inactiveAt: inactive ? (ls?.inactiveSince?.at || null) : null });
+    };
     for (const s of (await db.query(`SELECT id,name,phone,subject,extra_data FROM students`)).rows) {
         const x = s.extra_data || {};
+        lastState.delete(s.id);
         if (x.isStaffDemo || !['english', 'russian'].includes(s.subject)) continue;
         if (x.paymentLedgerManaged && F.money(x.debtAmount) != null) studentDebts.push({ studentId: s.id, leadId: x.leadRef?.id || '', debt: F.money(x.debtAmount) });
-        if (x.frozen || x.status === 'inactive')
-            studentStatus.push({ studentId: s.id, leadId: x.leadRef?.id || '', recordedAt: recorded.get(s.id) || null, frozenAt: x.frozen ? F.date(String(x.frozenAt || '').slice(0, 10)) : null,
-                inactive: x.status === 'inactive', inactiveAt: x.status === 'inactive' ? F.date(String(x.inactiveAt || x.leftAt || '').slice(0, 10)) : null });
+        pushStatus(s.id, x.leadRef?.id || '', { frozen: x.frozen, status: x.status, deleted: false });
         const debt = F.money(x.debtAmount) || 0;
         if (debt <= 0) continue;
         receivables.push({ studentId: s.id, entity: s.subject, name: s.name, phone: s.phone, debt, dueDate: x.paymentDueDate || '', status: x.status || '', frozen: !!x.frozen,
             managerName: x.managerName || '', leadId: x.leadRef?.id || '' });
     }
+    // O'chirilgan o'quvchilar (jurnalda oxirgi yozuv "o'chirildi"): o'chirilgan kundan xizmat to'xtagan.
+    for (const [sid, ls] of lastState) if (ls.state?.deleted && !ls.state.staffDemo) pushStatus(sid, ls.leadId, ls.state);
+    const contractEvents = (await db.query(`SELECT id,payment_record_id,kind,TO_CHAR(event_date,'YYYY-MM-DD') AS d,reason,actor_name FROM fin_contract_events ORDER BY event_date,created_at`)).rows
+        .map(e => ({ id: e.id, paymentRecordId: e.payment_record_id, kind: e.kind, date: e.d, reason: e.reason, actorName: e.actor_name }));
     const accountChecks = (await db.query(`SELECT account_id,TO_CHAR(check_date,'YYYY-MM-DD') AS d,actual_balance,note,actor_name,created_at FROM fin_account_checks ORDER BY check_date,created_at`)).rows
         .map(c => ({ accountId: c.account_id, date: c.d, actualBalance: Number(c.actual_balance), note: c.note, actorName: c.actor_name, createdAt: c.created_at }));
     const s = await settingsRow(db);
@@ -712,7 +788,7 @@ async function load(db) {
     const snapshots = Object.fromEntries(snapRows.filter(r => r.intact).map(r => [r.month, r.data]));
     const snapshotIssues = snapRows.filter(r => !r.intact).map(r => r.month);
     const settingsHistory = (await db.query("SELECT TO_CHAR(effective_from,'YYYY-MM-DD') AS f,data FROM fin_settings_history ORDER BY effective_from,id")).rows.map(r => ({ from: r.f, data: r.data }));
-    return { accounts, receipts, transactions, payables, salaries, receivables, studentStatus, studentDebts, studentFreezes, settingsHistory, assetEvents, accountChecks, settings: s.data, settingsRevision: s.revision, locks,
+    return { accounts, receipts, transactions, payables, salaries, receivables, studentStatus, studentDebts, studentFreezes, backdatedStatus: backdated, contractEvents, settingsHistory, assetEvents, accountChecks, settings: s.data, settingsRevision: s.revision, locks,
         closedThrough: locks.map(l => l.month).sort().at(-1) || '', snapshots, snapshotIssues };
 }
 function period(q) {
@@ -728,7 +804,7 @@ async function overview(pool, actor, q) {
         const user = await access(db, actor);
         const data = await load(db), p = period(q);
         const monthsStart = F.monthOf(F.addMonths(p.end, -5)) + '-01';
-        const quality = F.dataQuality(data.receipts, data.settings);
+        const quality = F.dataQuality(data.receipts, data.settings, data.transactions.filter(t => t.date >= p.start && t.date <= p.end && (p.scope === 'all' || t.entity === p.scope)));
         const scoped = r => p.scope === 'all' || r.entity === p.scope;
         const paidSalaryWithoutCash = data.salaries.filter(s => s.status === 'paid' && s.amount > 0
             && data.transactions.filter(t => t.salaryId === s.id).reduce((n, t) => n + (t.reversesId ? -1 : 1) * t.amount, 0) < s.amount);
@@ -745,11 +821,14 @@ async function overview(pool, actor, q) {
             receivables: F.receivablesAging(data.receivables, F.today(), p.scope),
             payables: F.payablesSummary(data, p.end, p.scope),
             kpis: F.kpis(data, p),
-            quality: { ...quality, suspicious: quality.suspicious.filter(scoped), paidSalaryWithoutCash: paidSalaryWithoutCash.filter(scoped), voidedList: data.receipts.filter(r => r.voidDate && scoped(r)) },
+            cashflowSegments: F.segmentCashFlow(data, p),
+            dropouts: F.dropoutLiabilities(data, p.end).filter(scoped),
+            backdatedStatus: data.backdatedStatus.slice(-200), contractEvents: data.contractEvents,
+            quality: { ...quality, duplicates: quality.duplicates.filter(d => scoped(d.second)), suspicious: quality.suspicious.filter(scoped), paidSalaryWithoutCash: paidSalaryWithoutCash.filter(scoped), voidedList: data.receipts.filter(r => r.voidDate && scoped(r)) },
             settings: data.settings, settingsRevision: data.settingsRevision, locks: data.locks, closedThrough: data.closedThrough, firstDate,
             closeCandidate: { month: nextMonth, issues: F.monthEnd(nextMonth) < F.today() ? closeReadiness(data, nextMonth) : null },
             contractDebtMismatches: F.contractDebtMismatches(data, p.end).slice(0, 200),
-            studentChanges: (await db.query(`SELECT l.student_id, s.name, l.state, l.recorded_at, l.app_user FROM fin_student_log l LEFT JOIN students s ON s.id=l.student_id
+            studentChanges: (await db.query(`SELECT l.student_id, s.name, l.state, l.recorded_at, l.app_user, l.backfill, split_part(COALESCE(l.ctx,''), ':', 1) AS source FROM fin_student_log l LEFT JOIN students s ON s.id=l.student_id
                 ORDER BY l.id DESC LIMIT 100`)).rows,
             assets: F.fixedAssets(data).filter(a => p.scope === 'all' || a.entity === p.scope || a.entity === 'common').map(a => ({ ...a, depreciation: F.depreciationAt(a, p.end), impairmentLoss: F.impairmentAt(a, p.end),
                 nbv: a.disposedAt && a.disposedAt <= p.end ? 0 : F.netBookValue(a, p.end) })),
@@ -861,7 +940,7 @@ async function createTransaction(pool, actor, body) {
         if (type === 'transfer') toAccount = await accountRow(db, body.toAccountId, 'Qabul qiluvchi hisob');
         const counterparty = text(body.counterparty, 200), description = text(body.description, 1000);
         if (type !== 'transfer' && !counterparty) throw error(400, 'Kimga / kimdan ekanini yozing');
-        const needEvidence = ['refund', 'drawing'].includes(type) || (type === 'expense' && amount >= 1000000);
+        const needEvidence = ['refund', 'drawing'].includes(type) || (['expense', 'loan_repay'].includes(type) && amount >= (Number(settings.evidenceMin) || 1000000));
         const receiptUrl = await requireEvidence(db, body.receiptUrl, { required: needEvidence, label: 'Chek yoki hujjat' });
         // Qaytarish va ta'sischiga to'lov hujjati bir marta ishlatiladi (bitta chek bilan ikki marta pul chiqarib bo'lmaydi).
         // Bitta hujjat bilan bir necha marta pul chiqarib bo'lmaydi (bitta hisob-fakturani bo'lib to'lash bundan mustasno).
@@ -1310,6 +1389,10 @@ function closeReadiness(data, month) {
     }
     const suspense = F.accountBalances(data, end).find(a => a.kind === 'suspense');
     if (suspense && suspense.balance) issues.push(`To‘lov usuli aniqlanmagan ${fmt(suspense.balance)} so‘m “Aniqlanmagan” hisobida turibdi`);
+    const dups = F.duplicateReceipts(data.receipts, Number(data.settings?.duplicateDays) || 3).filter(d => F.monthOf(d.second.date) <= month);
+    if (dups.length) issues.push(`Takroriy bo‘lishi mumkin bo‘lgan ${dups.length} ta tushum tekshirilmagan (bekor qiling yoki izoh bilan tasdiqlang)`);
+    const stale = F.dropoutLiabilities(data, end).filter(x => x.inactiveAt <= F.addDays(end, -30));
+    if (stale.length) issues.push(`${stale.length} ta ketgan o‘quvchida ${fmt(stale.reduce((n, x) => n + x.liability, 0))} so‘m majburiyat 30 kundan ortiq turibdi — pulni qaytaring yoki shartnomani pulsiz tugating`);
     return issues;
 }
 async function closeStatus(pool, actor, q) {
@@ -1401,6 +1484,31 @@ async function disposeAsset(pool, actor, id, body) {
         return { id: eid, transactionId: txnId };
     });
 }
+// Pulsiz tugatish: o'quvchi ketgan, pul qaytarilmaydi (shartnoma shartiga ko'ra yoki o'quvchi talab qilmadi).
+// Qolgan majburiyat tugatish sanasida tushumga o'tadi; to'lanmagan qism — kredit zarari. Faqat rahbar, hujjat va sabab bilan.
+async function forfeitContract(pool, actor, body) {
+    return transaction(pool, async db => {
+        const user = await access(db, actor, { director: true });
+        const rec = (await db.query(`SELECT r.*,TO_CHAR(r.paid_date,'YYYY-MM-DD') AS d,v.record_id AS voided FROM payment_records r LEFT JOIN payment_record_voids v ON v.record_id=r.id WHERE r.id=$1`, [text(body.paymentRecordId, 80)])).rows[0];
+        if (!rec || rec.voided) throw error(400, 'Tushum topilmadi');
+        const day = dateOf(body.date, 'Tugatish sanasi');
+        if (day < rec.d) throw error(400, 'Tugatish sanasi tushumdan oldin bo‘lmaydi');
+        await assertOpen(db, day, 'Tugatish sanasi');
+        const reason = text(body.reason, 500); if (reason.length < 10) throw error(400, 'Tugatish sababini batafsil yozing (kamida 10 belgi)');
+        const evidenceUrl = await requireEvidence(db, body.evidenceUrl, { required: true, label: 'Ariza / bayonnoma' });
+        if ((await db.query("SELECT 1 FROM fin_contract_events WHERE evidence_url=$1", [evidenceUrl])).rows.length) throw error(409, 'Bu hujjat boshqa tugatish uchun ishlatilgan');
+        const data = await load(db), c = F.contracts(data).find(x => x.receipts.some(r => r.id === rec.id));
+        if (!c) throw error(400, 'Shartnoma topilmadi');
+        if (c.terminatedAt && c.terminatedAt <= day) throw error(409, 'Bu shartnoma allaqachon tugatilgan');
+        if ((await db.query("SELECT 1 FROM fin_contract_events WHERE payment_record_id=ANY($1)", [c.receipts.map(r => r.id)])).rows.length) throw error(409, 'Bu shartnoma bo‘yicha tugatish allaqachon yozilgan');
+        const released = Math.max(0, -F.contractPosition(c, day));
+        const id = randomUUID();
+        await db.query('INSERT INTO fin_contract_events(id,payment_record_id,kind,event_date,reason,evidence_url,actor_id,actor_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+            [id, rec.id, 'forfeit', day, reason, evidenceUrl, user.id, user.name]);
+        await audit(db, user, 'contract-forfeit', rec.id, { contract: c.group, start: c.start, end: c.end, value: c.value }, { date: day, reason, evidenceUrl, released });
+        return { id };
+    });
+}
 async function impairAsset(pool, actor, id, body) {
     return transaction(pool, async db => {
         const user = await access(db, actor, { director: true });
@@ -1437,6 +1545,9 @@ async function saveSettings(pool, actor, body) {
             suspiciousMin: int(d.suspiciousMin ?? cur.suspiciousMin, 0, 1000000, 'Shubhali summa'), salaryDueDays: int(d.salaryDueDays ?? cur.salaryDueDays, 0, 60, 'Maosh to‘lash muddati'),
             usefulLifeMonths: int(d.usefulLifeMonths ?? cur.usefulLifeMonths, 1, 240, 'Foydalanish muddati'), approvalLimit: int(d.approvalLimit ?? cur.approvalLimit, 0, 1e12, 'Tasdiqlash chegarasi'), eclRates: rates,
             dailyLimit: int(d.dailyLimit ?? cur.dailyLimit ?? (Number(d.approvalLimit ?? cur.approvalLimit) * 3), 0, 1e13, 'Kunlik chiqim chegarasi'),
+            teamDailyLimit: int(d.teamDailyLimit ?? cur.teamDailyLimit ?? (Number(d.dailyLimit ?? cur.dailyLimit ?? 0) * 2), 0, 1e13, 'Umumiy kunlik chiqim chegarasi'),
+            evidenceMin: int(d.evidenceMin ?? cur.evidenceMin ?? 1000000, 0, 1e12, 'Hujjat talab qilinadigan summa'),
+            duplicateDays: int(d.duplicateDays ?? cur.duplicateDays ?? 3, 0, 31, 'Takroriy tushum oynasi (kun)'),
             turnoverTaxRate: (() => { const v = Number(d.turnoverTaxRate ?? cur.turnoverTaxRate ?? 0); if (!(v >= 0 && v <= 30) || Math.round(v * 100) !== v * 100) throw error(400, 'Aylanma soliq stavkasi 0–30% (ko‘pi bilan 2 kasr)'); return v; })() };
         // Taxmin o'zgarishi faqat bugundan kuchga kiradi (IAS 8): tarixiy hisoblar eski sozlama bilan qoladi.
         const from = F.today();
@@ -1477,4 +1588,4 @@ async function migrateLegacyCash(db) {
 
 module.exports = { SCHEMA, initSchema, load, overview, cashbook, listTransactions, auditLog, people, storeEvidence, readEvidence, createTransaction, reverseTransaction,
     createPayable, voidPayable, recordSalaryPayment, voidReceipts, manualReceipt, batchCorrections, reconcile, saveAccount, addAccountCheck, closeStatus, lockMonth,
-    saveSettings, assertOpen, verifyAuditChain, verifySeals, closeReadiness, disposeAsset, impairAsset };
+    saveSettings, assertOpen, verifyAuditChain, verifySeals, closeReadiness, disposeAsset, impairAsset, forfeitContract };

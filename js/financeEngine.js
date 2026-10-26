@@ -63,7 +63,7 @@
     const ACCOUNT_KINDS = { cash: 'Naqd', card: 'Karta', bank: 'Bank', wallet: 'Elektron hamyon', clearing: 'Kliring (olinadigan)', suspense: 'Tekshiruvdagi' };
     const EQUIVALENT_KINDS = new Set(['cash', 'card', 'bank', 'wallet']);
     const DEFAULT_SETTINGS = {
-        courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, dailyLimit: 15000000, turnoverTaxRate: 0,
+        courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, dailyLimit: 15000000, teamDailyLimit: 30000000, evidenceMin: 1000000, duplicateDays: 3, turnoverTaxRate: 0,
         eclRates: { not_due: 0, d1_30: 5, d31_60: 20, d61_90: 50, d90: 100, no_date: 25 }
     };
 
@@ -248,6 +248,22 @@
             reconciled: expected === closingCash, difference: closingCash - expected };
     }
 
+    // Segmentlar bo'yicha pul oqimi: ingliz + rus + umumiy (taqsimlanmagan) = konsolidatsiya. Har bir qator yig'indisi tekshiriladi.
+    function segmentCashFlow(data, { start, end }) {
+        const cols = ['english', 'russian', 'common'];
+        const mv = cashFlowMovements(data, start, end, 'all');
+        const lineOf = m => m.category === 'TRANSFER' ? 'receipts' : (CATEGORY[m.category] || {}).cfLine;
+        const rows = [];
+        for (const section of ['operating', 'investing', 'financing']) for (const [key, label] of CF_LINES[section]) {
+            const by = Object.fromEntries(cols.map(c => [c, sum(mv.filter(m => lineOf(m) === key && m.entity === c), m => m.sign * m.amount)]));
+            const total = sum(mv.filter(m => lineOf(m) === key), m => m.sign * m.amount);
+            rows.push({ section, key, label, ...by, total, other: total - by.english - by.russian - by.common });
+        }
+        const totals = Object.fromEntries([...cols, 'total'].map(c => [c, sum(rows, r => r[c])]));
+        const consolidated = cashFlowStatement(data, { start, end, scope: 'all' }).netChange;
+        return { start, end, rows, totals, reconciled: rows.every(r => r.other === 0) && totals.total === consolidated, consolidated };
+    }
+
     // ---------- Shartnomalar (IFRS 15): har bir o'qish davri alohida ----------
     function contracts(data) {
         return memo(CT, data, () => {
@@ -262,6 +278,11 @@
             for (const t of data.transactions || []) if (t.type === 'refund' && t.paymentRecordId) {
                 if (!refundsByReceipt.has(t.paymentRecordId)) refundsByReceipt.set(t.paymentRecordId, []);
                 refundsByReceipt.get(t.paymentRecordId).push({ id: t.reversesId || t.id, date: t.date, amount: (t.reversesId ? -1 : 1) * t.amount, terminates: !!t.terminates, reversal: !!t.reversesId });
+            }
+            // Pulsiz tugatish (forfeit): qaytarish yo'q, shartnoma shu sanada tugaydi — qolgan majburiyat tushumga o'tadi.
+            for (const e of data.contractEvents || []) if (e.kind === 'forfeit' && e.paymentRecordId) {
+                if (!refundsByReceipt.has(e.paymentRecordId)) refundsByReceipt.set(e.paymentRecordId, []);
+                refundsByReceipt.get(e.paymentRecordId).push({ id: 'forfeit:' + e.id, date: e.date, amount: 0, terminates: true, reversal: false, forfeit: true });
             }
             // O'quvchi holati: muzlatilgan sanadan keyin tushum tan olinmaydi; tashlab ketgan bo'lsa — to'xtatiladi yoki zarar zaxirasi.
             const status = new Map(), freezes = new Map();
@@ -372,7 +393,7 @@
                 const openFrom = data.closedThrough ? addDays(monthEnd(data.closedThrough), 1) : null;
                 const clamp = d => (d && openFrom && d < openFrom && (!st?.recordedAt || st.recordedAt >= openFrom) ? openFrom : d);
                 const ia = clamp(st?.inactiveAt || null);
-                c.inactive = !!st?.inactive;
+                c.inactive = !!st?.inactive; c.deleted = !!st?.deleted;
                 c.inactiveAt = ia && ia >= c.start ? ia : null;
                 // Muzlatish oraliqlari (holat jurnalidan): bu kunlarda xizmat yo'q — tushum to'xtaydi, kurs shuncha kunga uzayadi.
                 const ivs = freezes.get('s:' + c.studentId) || freezes.get('l:' + c.leadId) || (st?.frozenAt ? [{ from: st.frozenAt, to: null, recordedAt: st.recordedAt }] : []);
@@ -900,6 +921,26 @@
         for (const c of contracts(data)) if (c.debtInflation > 0) out.push({ name: c.name, entity: c.entity, contractAsset: contractPosition(c, asOf), crmDebt: c.debtInflation, difference: c.debtInflation, kind: c.noCapturedPrice ? 'no_contract_price' : 'debt_over_price' });
         return out;
     }
+    // O'qishni tashlagan / o'chirilgan o'quvchida qolgan majburiyat: pul qaytarilishi yoki (qaytarilmasa) rahbar qarori bilan tushumga o'tkazilishi kerak.
+    function dropoutLiabilities(data, asOf) {
+        return contracts(data).filter(c => c.inactiveAt && c.inactiveAt <= asOf && !(c.terminatedAt && c.terminatedAt <= asOf))
+            .map(c => ({ group: c.group, name: c.name, entity: c.entity, studentId: c.studentId, leadId: c.leadId, inactiveAt: c.inactiveAt, deleted: !!c.deleted,
+                liability: -contractPosition(c, asOf), paymentRecordId: (c.receipts.filter(r => !r.voidDate).at(-1) || {}).id || null }))
+            .filter(x => x.liability > 0);
+    }
+    // Takroriy tushum: bitta o'quvchi (yoki telefon) bo'yicha bir xil summa N kun ichida, yoki bitta chek ikki tushumda.
+    function duplicateReceipts(receipts, days = 3) {
+        const live = (receipts || []).filter(r => !r.voidDate && date(r.date)).sort((a, b) => a.date.localeCompare(b.date));
+        const out = [], seen = new Set();
+        const key = r => r.leadId ? 'l:' + r.leadId : r.studentId ? 's:' + r.studentId : phone9(r.phone) ? 'p:' + phone9(r.phone) : null;
+        for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length && dayDiff(live[i].date, live[j].date) <= days; j++) {
+            const a = live[i], b = live[j];
+            if (a.amount === b.amount && key(a) && key(a) === key(b) && !seen.has(b.id)) { seen.add(b.id); out.push({ first: a, second: b, reason: 'Bir xil summa ' + days + ' kun ichida' }); }
+        }
+        const byProof = new Map();
+        for (const r of live) if (r.receiptUrl) { if (byProof.has(r.receiptUrl) && !seen.has(r.id)) { seen.add(r.id); out.push({ first: byProof.get(r.receiptUrl), second: r, reason: 'Bitta chek ikki tushumda' }); } else byProof.set(r.receiptUrl, r); }
+        return out;
+    }
     // ---------- Ma'lumot sifati va shubhali yozuvlar ----------
     // Klaviaturada tasodifiy bosilgan "ism"larni aniqlash: undoshlar zanjiri yoki unli juda kam.
     function gibberish(name) {
@@ -927,10 +968,16 @@
         if (!r.managerId && !r.managerName) reasons.push('Menejer biriktirilmagan');
         return reasons;
     }
-    function dataQuality(receipts, settings) {
+    function dataQuality(receipts, settings, transactions = []) {
         const live = (receipts || []).filter(r => !r.voidDate);
         const suspicious = live.map(r => ({ ...r, reasons: suspiciousReasons(r, settings) })).filter(r => r.reasons.length);
-        return { total: live.length, withoutProof: live.filter(r => !r.receiptUrl).length, unknownMethod: live.filter(r => r.method === 'unknown').length,
+        // Hujjatsiz pul chiqimlari (storno qilinmagan): soni va summasi — investor uchun hujjatlashtirilganlik ulushi.
+        const reversed = new Set(transactions.filter(t => t.reversesId).map(t => t.reversesId));
+        const outflows = transactions.filter(t => ['expense', 'refund', 'drawing', 'loan_repay'].includes(t.type) && !t.reversesId && !reversed.has(t.id) && !t.salaryId);
+        const noProof = outflows.filter(t => !t.receiptUrl);
+        return { duplicates: duplicateReceipts(receipts, settings?.duplicateDays || 3), outflowsTotal: sum(outflows, t => t.amount), outflowsWithoutProof: noProof.length,
+            outflowsWithoutProofAmount: sum(noProof, t => t.amount), outflowsWithoutProofList: noProof.slice(-200),
+            total: live.length, withoutProof: live.filter(r => !r.receiptUrl).length, unknownMethod: live.filter(r => r.method === 'unknown').length,
             legacyReview: live.filter(r => r.legacyReview).length, voided: (receipts || []).filter(r => r.voidDate).length, suspicious, suspiciousAmount: sum(suspicious) };
     }
 
@@ -1075,7 +1122,7 @@
         money, date, today, addDays, addMonths, dayDiff, monthOf, monthEnd, monthsBetween, inRange, phone9, pct, settingsOf,
         accountForMethod, movements, accountBalances, cashSummary, cashbook, cashFlowStatement, profitAndLoss, monthlyPnl,
         contracts, contractCash, earned, revenueBase, contractPosition, fixedAssets, depreciationAt, eclAt, agingBucket,
-        serviceAllowed, receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued,
+        serviceAllowed, receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued, segmentCashFlow, dropoutLiabilities, duplicateReceipts,
         suspiciousReasons, dataQuality, reconcile, parseStatementText, nameSimilar, nameMatch
     };
 });
