@@ -1,0 +1,325 @@
+{
+ "n": 52,
+ "topic_uz": "Shahrim va mahallam: Что есть в ва́шем го́роде?",
+ "scene": "A Russian man and a young Uzbek woman stroll through a green Tashkent residential district with a park, a fountain, a small post office and a few shops.",
+ "dialogs": [
+  {
+   "id": "L52-d1",
+   "title_ru": "В како́м райо́не ты живёшь?",
+   "title_uz": "Qaysi tumanda yashaysan?",
+   "intro_uz": "Birinchi dialog. Anton Toshkentga yaqinda kelgan. U Nigoradan uning tumani haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, в како́м райо́не ты живёшь?",
+     "uz": "Nigora, qaysi tumanda yashaysan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В Юнусаба́де. Э́то большо́й зелёный райо́н.",
+     "uz": "Yunusobodda. Bu katta, yashil tuman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А что есть в ва́шем райо́не?",
+     "uz": "Tumaningizda nima bor?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Есть шко́ла, по́чта, ры́нок и не́сколько магази́нов.",
+     "uz": "Maktab, pochta, bozor va bir nechta do'kon bor."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А па́рки есть?",
+     "uz": "Bog'lar bormi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, у нас мно́го па́рков и фонта́нов.",
+     "uz": "Ha, bizda bog' va favvoralar ko'p."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Здо́рово! А в моём райо́не ма́ло дере́вьев.",
+     "uz": "Zo'r! Mening tumanimda esa daraxt kam."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Тогда́ приходи́ к нам гуля́ть!",
+     "uz": "Unda bizga sayrga kel!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora qaysi tumanda yashaydi?",
+     "opts": [
+      "Chilonzorda",
+      "Yunusobodda",
+      "Mirzo Ulug'bekda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigoraning tumanida nima ko'p?",
+     "opts": [
+      "bog' va favvoralar",
+      "muzeylar",
+      "teatrlar"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Antonning tumanida nima kam?",
+     "opts": [
+      "do'konlar",
+      "mashinalar",
+      "daraxtlar"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "па́рков и фонта́нов",
+     "alts": [
+      "магази́нов и кафе́",
+      "школ и де́тских садо́в",
+      "дере́вьев и цвето́в"
+     ]
+    },
+    {
+     "base": "ма́ло дере́вьев",
+     "alts": [
+      "ма́ло магази́нов",
+      "ма́ло па́рков",
+      "мно́го маши́н"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'z tumaningiz haqida gapiring: unda nima bor, nima ko'p va nima kam?"
+  },
+  {
+   "id": "L52-d2",
+   "title_ru": "Что посмотре́ть в Самарка́нде?",
+   "title_uz": "Samarqandda nimani ko'rish kerak?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza mayda Samarqandga boradi. Bobur samarqandlik. U maslahat beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, ты был в Самарка́нде? Я е́ду туда́ в ма́е.",
+     "uz": "Bobur, sen Samarqandda bo'lganmisan? Mayda u yerga boraman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Отли́чно! Обяза́тельно посмотри́ Региста́н.",
+     "uz": "Zo'r! Albatta Registonni ko'r."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А что ещё мо́жно посмотре́ть?",
+     "uz": "Yana nimani ko'rish mumkin?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В Самарка́нде мно́го музе́ев и па́мятников. Сходи́ в Ша́хи-Зинду.",
+     "uz": "Samarqandda muzey va yodgorliklar ko'p. Shohi Zindaga bor."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А где лу́чше жить?",
+     "uz": "Qayerda turgan yaxshi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В це́нтре мно́го гости́ниц. Ве́чером погуля́й по ста́рому го́роду.",
+     "uz": "Markazda mehmonxonalar ko'p. Kechqurun eski shaharni aylan."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо! Самарка́нд ста́рше, чем Ташке́нт?",
+     "uz": "Rahmat! Samarqand Toshkentdan qadimiyroqmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, намно́го ста́рше. Ему́ бо́льше двух ты́сяч лет!",
+     "uz": "Ha, ancha qadimiy. Uning yoshi ikki ming yildan ortiq!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza Samarqandga qachon boradi?",
+     "opts": [
+      "aprelda",
+      "iyunda",
+      "mayda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Markazda nima ko'p?",
+     "opts": [
+      "mehmonxonalar",
+      "bozorlar",
+      "bog'lar"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Samarqandning yoshi qancha?",
+     "opts": [
+      "ming yil",
+      "ikki ming yildan ortiq",
+      "besh yuz yil"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "Региста́н",
+     "alts": [
+      "Ша́хи-Зинду",
+      "Гур-Эми́р",
+      "Сиаб-база́р"
+     ]
+    },
+    {
+     "base": "музе́ев и па́мятников",
+     "alts": [
+      "гости́ниц и кафе́",
+      "па́рков и фонта́нов",
+      "ры́нков и магази́нов"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: mehmonga o'z shahringizda nimani ko'rish kerakligini maslahat bering."
+  },
+  {
+   "id": "L52-d3",
+   "title_ru": "Како́й твой го́род?",
+   "title_uz": "Shahring qanaqa?",
+   "intro_uz": "Uchinchi dialog. Anton Abdulazizdan uning shahri — Andijon haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Абдулази́з, ты из Андижа́на? Како́й э́то го́род?",
+     "uz": "Abdulaziz, sen Andijondanmisan? U qanday shahar?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Небольшо́й, но о́чень краси́вый и зелёный.",
+     "uz": "Unchalik katta emas, lekin juda chiroyli va yashil."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Что есть в ва́шем го́роде?",
+     "uz": "Shahringizda nima bor?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Есть теа́тр, не́сколько музе́ев и большо́й ры́нок.",
+     "uz": "Teatr, bir nechta muzey va katta bozor bor."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А каки́е там достопримеча́тельности?",
+     "uz": "U yerda qanday diqqatga sazovor joylar bor?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Бабу́р-парк и дом-музе́й Бобу́ра. Обяза́тельно сходи́!",
+     "uz": "Bobur bog'i va Boburning uy-muzeyi. Albatta bor!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А на ры́нках там деше́вле, чем в Ташке́нте?",
+     "uz": "U yerdagi bozorlarda Toshkentdagidan arzonroqmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, и фру́кты там са́мые вку́сные!",
+     "uz": "Ha, mevalar ham eng mazali!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Andijon qanday shahar?",
+     "opts": [
+      "juda katta",
+      "kichikroq va yashil",
+      "eski va kulrang"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Andijonda nima bor?",
+     "opts": [
+      "dengiz",
+      "metro",
+      "teatr va katta bozor"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Abdulaziz qayerni ko'rishni maslahat beradi?",
+     "opts": [
+      "Bobur bog'i va uy-muzeyini",
+      "Registonni",
+      "bozorni"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "теа́тр",
+     "alts": [
+      "цирк",
+      "стадио́н",
+      "университе́т"
+     ]
+    },
+    {
+     "base": "са́мые вку́сные",
+     "alts": [
+      "са́мые дешёвые",
+      "са́мые све́жие",
+      "са́мые сла́дкие"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'z shahringiz haqida gapiring: u qanday, unda nima bor va mehmon qayerga borishi kerak?"
+  }
+ ]
+}

@@ -1,0 +1,325 @@
+{
+ "n": 53,
+ "topic_uz": "Prefiksli harakat fe'llari: пришёл, вы́шел, перейди́те, дойти́",
+ "scene": "On a busy Tashkent street near a pedestrian crossing with a traffic light, a young Uzbek man asks a woman passer-by for directions; she points across the road toward a metro entrance.",
+ "dialogs": [
+  {
+   "id": "L53-d1",
+   "title_ru": "Как дойти́ до метро́?",
+   "title_uz": "Metroga qanday borsa bo'ladi?",
+   "intro_uz": "Birinchi dialog. Timur ko'chada. U metroga yo'lni so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Прохо́жая",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Извини́те, как дойти́ до метро́?",
+     "uz": "Kechirasiz, metroga qanday borsa bo'ladi?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Иди́те пря́мо, пото́м перейди́те у́лицу.",
+     "uz": "To'g'riga yuring, keyin ko'chani kesib o'ting."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А где лу́чше перейти́ у́лицу?",
+     "uz": "Ko'chani qayerdan o'tgan yaxshi?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Вот там, у светофо́ра. Подойди́те к светофо́ру.",
+     "uz": "Ana u yerda, svetofor yonida. Svetoforga yaqinlashing."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А пото́м?",
+     "uz": "Keyin-chi?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Пото́м пройди́те две́сти метро́в. Метро́ бу́дет спра́ва.",
+     "uz": "Keyin ikki yuz metr yuring. Metro o'ng tomonda bo'ladi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я дойду́ за де́сять мину́т?",
+     "uz": "O'n daqiqada yetib boramanmi?"
+    },
+    {
+     "who": "Прохо́жая",
+     "ru": "Да, мину́т за пять-де́сять дойдёте.",
+     "uz": "Ha, besh-o'n daqiqada yetib borasiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur qayerga bormoqchi?",
+     "opts": [
+      "bozorga",
+      "metroga",
+      "bankka"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ko'chani qayerdan kesib o'tish kerak?",
+     "opts": [
+      "svetofor yonidan",
+      "ko'prikdan",
+      "bank oldidan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Metro qaysi tomonda?",
+     "opts": [
+      "chap tomonda",
+      "to'g'rida",
+      "o'ng tomonda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "до метро́",
+     "alts": [
+      "до вокза́ла",
+      "до ры́нка",
+      "до ба́нка"
+     ]
+    },
+    {
+     "base": "перейди́те у́лицу",
+     "alts": [
+      "перейди́те мост",
+      "перейди́те пло́щадь",
+      "перейди́те доро́гу"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: ko'chada yo'l so'rang — bankka yoki bozorga qanday borsa bo'ladi?"
+  },
+  {
+   "id": "L53-d2",
+   "title_ru": "Го́сти уже́ пришли́?",
+   "title_uz": "Mehmonlar keldimi?",
+   "intro_uz": "Ikkinchi dialog. Abdulaziz ishdan uyga keldi. Uyda mehmonlar bor. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, я пришёл! Го́сти уже́ пришли́?",
+     "uz": "Nigora, keldim! Mehmonlar keldimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Тиму́р пришёл, а Дильно́за ещё не прие́хала.",
+     "uz": "Timur keldi, Dilnoza hali yetib kelmadi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А где Тиму́р?",
+     "uz": "Timur qayerda?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он вы́шел на балко́н. Зайди́ на ку́хню, принеси́ сту́лья.",
+     "uz": "U balkonga chiqdi. Oshxonaga kirib, stullarni olib kel."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́. А ма́ма уе́хала к сестре́?",
+     "uz": "Xo'p. Onam opamnikiga ketdilarmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, она́ уе́хала у́тром и вернётся в воскресе́нье.",
+     "uz": "Ha, ertalab ketdilar, yakshanba kuni qaytadilar."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Смотри́, Дильно́за подъе́хала! Я вы́йду её встре́тить.",
+     "uz": "Qara, Dilnoza yetib keldi! Chiqib kutib olaman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Отли́чно! А я сде́лаю чай.",
+     "uz": "Zo'r! Men choy damlayman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kim hali kelmagan edi?",
+     "opts": [
+      "Timur",
+      "Dilnoza",
+      "onasi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur qayerga chiqdi?",
+     "opts": [
+      "ko'chaga",
+      "do'konga",
+      "balkonga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Onasi qachon qaytadi?",
+     "opts": [
+      "yakshanba kuni",
+      "ertaga",
+      "kechqurun"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "на балко́н",
+     "alts": [
+      "во двор",
+      "на у́лицу",
+      "в магази́н"
+     ]
+    },
+    {
+     "base": "к сестре́",
+     "alts": [
+      "к бра́ту",
+      "к ба́бушке",
+      "к подру́ге"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: uyga keldingiz — kim keldi, kim ketdi, kim chiqdi, so'rang."
+  },
+  {
+   "id": "L53-d3",
+   "title_ru": "Он уже́ пришёл?",
+   "title_uz": "U keldimi?",
+   "intro_uz": "Uchinchi dialog. Bobur ofisga keldi. U Anton Petrovichni ko'rmoqchi. Kotiba nima deydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Секрета́рь",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Здра́вствуйте! Мо́жно войти́?",
+     "uz": "Assalomu alaykum! Kirsam bo'ladimi?"
+    },
+    {
+     "who": "Секрета́рь",
+     "ru": "Да, входи́те. Вы к кому́?",
+     "uz": "Ha, kiring. Kimning oldiga keldingiz?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "К Ви́ктору Петро́вичу. Он уже́ пришёл?",
+     "uz": "Viktor Petrovichning oldiga. U keldimi?"
+    },
+    {
+     "who": "Секрета́рь",
+     "ru": "Пришёл, но сейча́с вы́шел на обе́д.",
+     "uz": "Kelgan, lekin hozir tushlikka chiqib ketdi."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А когда́ он вернётся?",
+     "uz": "Qachon qaytadi?"
+    },
+    {
+     "who": "Секрета́рь",
+     "ru": "Че́рез полчаса́. Подожди́те и́ли зайди́те по́зже.",
+     "uz": "Yarim soatdan keyin. Kuting yoki keyinroq kiring."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Хорошо́, я зайду́ в кафе́ и приду́ че́рез полчаса́.",
+     "uz": "Yaxshi, kafega kirib, yarim soatdan keyin kelaman."
+    },
+    {
+     "who": "Секрета́рь",
+     "ru": "Договори́лись. Я ему́ скажу́.",
+     "uz": "Kelishdik. Unga aytib qo'yaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton Petrovich qayerga chiqdi?",
+     "opts": [
+      "uyiga",
+      "tushlikka",
+      "bankka"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "U qachon qaytadi?",
+     "opts": [
+      "bir soatdan keyin",
+      "ertaga",
+      "yarim soatdan keyin"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bobur kutayotganda qayerga kiradi?",
+     "opts": [
+      "kafega",
+      "do'konga",
+      "bankka"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "на обе́д",
+     "alts": [
+      "на встре́чу",
+      "в банк",
+      "на совеща́ние"
+     ]
+    },
+    {
+     "base": "в кафе́",
+     "alts": [
+      "в магази́н",
+      "в апте́ку",
+      "на по́чту"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: ofisga kelib, kerakli odam kelgan-kelmaganini va qachon qaytishini so'rang."
+  }
+ ]
+}

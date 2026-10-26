@@ -1,0 +1,320 @@
+{
+ "n": 51,
+ "topic_uz": "Ko'plikdagi kelishiklar: мно́го друзе́й, нет де́нег",
+ "scene": "At a colorful Uzbek bazaar stall piled with tomatoes, cucumbers and apples, a young woman with a shopping bag talks to a friendly middle-aged male seller.",
+ "dialogs": [
+  {
+   "id": "L51-d1",
+   "title_ru": "На ры́нке",
+   "title_uz": "Bozorda",
+   "intro_uz": "Birinchi dialog. Nigora bozorda sabzavot va meva oladi. Tinglang: u nimani qancha oladi?",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Продаве́ц",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте! Ско́лько сто́ят помидо́ры?",
+     "uz": "Assalomu alaykum! Pomidor necha pul?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Двена́дцать ты́сяч за килогра́мм. Ско́лько вам?",
+     "uz": "Kilosi o'n ikki ming. Sizga qancha?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Два килогра́мма помидо́ров и килогра́мм огурцо́в.",
+     "uz": "Ikki kilo pomidor va bir kilo bodring."
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Пожа́луйста. Что-нибудь ещё? Я́блоки, гру́ши?",
+     "uz": "Marhamat. Yana biror narsa? Olma, nok?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Пять я́блок, пожа́луйста. А лимо́нов у вас нет?",
+     "uz": "Beshta olma, iltimos. Limoningiz yo'qmi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Лимо́нов сего́дня нет, извини́те.",
+     "uz": "Bugun limon yo'q, kechirasiz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ничего́. Ско́лько с меня́?",
+     "uz": "Hechqisi yo'q. Qancha beraman?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Соро́к ты́сяч сумо́в.",
+     "uz": "Qirq ming so'm."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora necha kilo pomidor oldi?",
+     "opts": [
+      "bir",
+      "ikki",
+      "uch"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bugun nima yo'q?",
+     "opts": [
+      "olma",
+      "bodring",
+      "limon"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Hammasi qancha turadi?",
+     "opts": [
+      "qirq ming so'm",
+      "o'ttiz ming so'm",
+      "ellik ming so'm"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "помидо́ров",
+     "alts": [
+      "огурцо́в",
+      "я́блок",
+      "бана́нов"
+     ]
+    },
+    {
+     "base": "лимо́нов",
+     "alts": [
+      "груш",
+      "апельси́нов",
+      "арбу́зов"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: bozorda ikki-uch xil meva yoki sabzavot so'rang va narxini bilib oling."
+  },
+  {
+   "id": "L51-d2",
+   "title_ru": "Ско́лько бу́дет госте́й?",
+   "title_uz": "Nechta mehmon keladi?",
+   "intro_uz": "Ikkinchi dialog. Nigora va Abdulaziz shanba kunidagi mehmondorchilikni rejalashtiryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, ско́лько госте́й бу́дет в суббо́ту?",
+     "uz": "Abdulaziz, shanba kuni nechta mehmon bo'ladi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Челове́к пятна́дцать. Мно́го друзе́й с рабо́ты.",
+     "uz": "O'n besh kishicha. Ishdan do'stlar ko'p."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "О́го! А у нас ма́ло сту́льев и таре́лок.",
+     "uz": "Voy! Bizda stul va likopcha kam-ku."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ничего́, я позвоню́ друзья́м. У них мно́го сту́льев.",
+     "uz": "Hechqisi yo'q, do'stlarga qo'ng'iroq qilaman. Ularda stul ko'p."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А де́ти бу́дут?",
+     "uz": "Bolalar ham bo'ladimi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, Тиму́р придёт с жено́й и детьми́.",
+     "uz": "Ha, Timur xotini va bolalari bilan keladi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́. Тогда́ я куплю́ со́ки для дете́й.",
+     "uz": "Yaxshi. Unda bolalar uchun sharbat olaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Shanba kuni nechta mehmon keladi?",
+     "opts": [
+      "o'n besh",
+      "besh",
+      "o'n"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Uyda nima kam?",
+     "opts": [
+      "choynaklar",
+      "stul va likopchalar",
+      "stakanlar"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur kim bilan keladi?",
+     "opts": [
+      "ota-onasi bilan",
+      "do'stlari bilan",
+      "xotini va bolalari bilan"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "друзе́й с рабо́ты",
+     "alts": [
+      "ро́дственников",
+      "сосе́дей",
+      "студе́нтов"
+     ]
+    },
+    {
+     "base": "с жено́й и детьми́",
+     "alts": [
+      "с бра́тьями",
+      "с друзья́ми",
+      "с сёстрами"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: uyingizga nechta mehmon kelishini va kimlar kelishini ayting."
+  },
+  {
+   "id": "L51-d3",
+   "title_ru": "В магази́нах до́рого",
+   "title_uz": "Do'konlarda qimmat",
+   "intro_uz": "Uchinchi dialog. Anton Dilnozadan mahsulotlarni qayerdan olishni so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, где ты покупа́ешь проду́кты?",
+     "uz": "Anton, oziq-ovqatni qayerdan olasan?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Обы́чно в магази́нах о́коло до́ма.",
+     "uz": "Odatda uy yonidagi do'konlardan."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А я покупа́ю на ры́нках. В магази́нах до́рого.",
+     "uz": "Men esa bozorlardan olaman. Do'konlarda qimmat."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Пра́вда? А на ры́нках мно́го фрукто́в?",
+     "uz": "Rostdanmi? Bozorlarda meva ko'pmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Коне́чно! Мно́го фрукто́в и овоще́й, всё свеже́е.",
+     "uz": "Albatta! Meva-sabzavot ko'p, hammasi yangi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А люде́й там мно́го?",
+     "uz": "U yerda odam ko'pmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "В выходны́е о́чень мно́го люде́й. Лу́чше ходи́ть у́тром.",
+     "uz": "Dam olish kunlari odam juda ko'p. Ertalab borgan yaxshi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо! Пойду́ в суббо́ту у́тром с друзья́ми.",
+     "uz": "Rahmat! Shanba kuni ertalab do'stlarim bilan boraman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton odatda qayerdan xarid qiladi?",
+     "opts": [
+      "bozorlardan",
+      "uy yonidagi do'konlardan",
+      "internetdan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza nima deydi: do'konlarda qanday?",
+     "opts": [
+      "qimmat",
+      "arzon",
+      "odam ko'p"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bozorga qachon borgan yaxshi?",
+     "opts": [
+      "kechqurun",
+      "tushda",
+      "ertalab"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "на ры́нках",
+     "alts": [
+      "в суперма́ркетах",
+      "в магази́нах",
+      "в интерне́те"
+     ]
+    },
+    {
+     "base": "фрукто́в и овоще́й",
+     "alts": [
+      "мя́са и ры́бы",
+      "хле́ба и молока́",
+      "сла́достей"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda gapiring: mahsulotlarni qayerdan olasiz va u yerda nima ko'p?"
+  }
+ ]
+}

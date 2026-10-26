@@ -1,0 +1,325 @@
+{
+ "n": 54,
+ "topic_uz": "Sayohat hikoyasi: Как я е́здил в…",
+ "scene": "Two young Uzbek friends sit in a cafe; the man shows the woman photos on his phone of the blue-tiled Registan in Samarkand, a small souvenir plate on the table.",
+ "dialogs": [
+  {
+   "id": "L54-d1",
+   "title_ru": "Как ты съе́здил в Самарка́нд?",
+   "title_uz": "Samarqandga qanday borib kelding?",
+   "intro_uz": "Birinchi dialog. Timur Samarqanddan qaytdi. Dilnoza safar haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, приве́т! Как ты съе́здил в Самарка́нд?",
+     "uz": "Timur, salom! Samarqandga qanday borib kelding?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Отли́чно! Мы е́хали на по́езде «Афросиа́б» два часа́.",
+     "uz": "Zo'r! «Afrosiyob» poyezdida ikki soat yo'l yurdik."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А что вы де́лали в пе́рвый день?",
+     "uz": "Birinchi kuni nima qildinglar?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Снача́ла зашли́ в гости́ницу, пото́м пошли́ на Региста́н.",
+     "uz": "Avval mehmonxonaga kirdik, keyin Registonga bordik."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Была́ экску́рсия?",
+     "uz": "Ekskursiya bo'ldimi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, гид расска́зывал об исто́рии. Пото́м мы попро́бовали плов.",
+     "uz": "Ha, gid tarix haqida gapirib berdi. Keyin palov tatib ko'rdik."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А в после́дний день?",
+     "uz": "Oxirgi kuni-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Купи́ли сувени́ры и наконе́ц верну́лись домо́й. Незабыва́емо!",
+     "uz": "Suvenir oldik va nihoyat uyga qaytdik. Unutilmas bo'ldi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur nimada bordi?",
+     "opts": [
+      "samolyotda",
+      "poyezdda",
+      "avtobusda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Birinchi kuni avval qayerga kirdilar?",
+     "opts": [
+      "mehmonxonaga",
+      "restoranga",
+      "muzeyga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Oxirgi kuni nima qildilar?",
+     "opts": [
+      "ekskursiyaga bordilar",
+      "palov yedilar",
+      "suvenir oldilar"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Самарка́нд",
+     "alts": [
+      "в Бухару́",
+      "в Хиву́",
+      "в Ташке́нт"
+     ]
+    },
+    {
+     "base": "на по́езде",
+     "alts": [
+      "на маши́не",
+      "на авто́бусе",
+      "на самолёте"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: bir safaringiz haqida aytib bering — avval, keyin va nihoyat nima qildingiz?"
+  },
+  {
+   "id": "L54-d2",
+   "title_ru": "Как впечатле́ния?",
+   "title_uz": "Taassurotlar qanday?",
+   "intro_uz": "Ikkinchi dialog. Nigora Moskvaga borib keldi. Anton taassurotlari haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, ты е́здила в Москву́? Как впечатле́ния?",
+     "uz": "Nigora, Moskvaga borib keldingmi? Taassurotlar qanday?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "О́чень понра́вилось! Мы прилете́ли ра́но у́тром.",
+     "uz": "Juda yoqdi! Erta tongda uchib keldik."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Что вы посмотре́ли?",
+     "uz": "Nimalarni ko'rdinglar?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Снача́ла пошли́ на Кра́сную пло́щадь, пото́м в музе́й.",
+     "uz": "Avval Qizil maydonga, keyin muzeyga bordik."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А кака́я была́ пого́да?",
+     "uz": "Ob-havo qanday edi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Бы́ло хо́лодно, но я купи́ла тёплую ша́пку!",
+     "uz": "Sovuq edi, lekin men issiq shapka sotib oldim!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А ве́чером куда́ ходи́ли?",
+     "uz": "Kechqurun qayerga bordinglar?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В теа́тр. А в после́дний день про́сто гуля́ли по го́роду.",
+     "uz": "Teatrga. Oxirgi kuni esa shunchaki shaharni aylandik."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora Moskvaga qachon yetib keldi?",
+     "opts": [
+      "kechqurun",
+      "tushda",
+      "erta tongda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Avval qayerga bordilar?",
+     "opts": [
+      "Qizil maydonga",
+      "muzeyga",
+      "teatrga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora nima sotib oldi?",
+     "opts": [
+      "suvenir",
+      "issiq shapka",
+      "kitob"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в теа́тр",
+     "alts": [
+      "в цирк",
+      "в кино́",
+      "на конце́рт"
+     ]
+    },
+    {
+     "base": "тёплую ша́пку",
+     "alts": [
+      "тёплую ку́ртку",
+      "сувени́ры",
+      "краси́вый шарф"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: boshqa shaharga borgan safaringiz va taassurotlaringiz haqida ayting."
+  },
+  {
+   "id": "L54-d3",
+   "title_ru": "Пое́здка в го́ры",
+   "title_uz": "Tog'ga sayohat",
+   "intro_uz": "Uchinchi dialog. Bobur dam olish kunlari do'stlari bilan tog'ga borgan. Dilnoza so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, где ты был в выходны́е?",
+     "uz": "Bobur, dam olish kunlari qayerda bo'lding?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Мы с друзья́ми е́здили в Чимга́н.",
+     "uz": "Do'stlarim bilan Chimyonga bordik."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Как вы дое́хали?",
+     "uz": "Qanday yetib bordinglar?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Снача́ла дое́хали на маши́не до Чарва́ка, пото́м пое́хали в го́ры.",
+     "uz": "Avval mashinada Chorvoqqacha bordik, keyin tog'ga yo'l oldik."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А что вы там де́лали?",
+     "uz": "U yerda nima qildinglar?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ката́лись на лошадя́х и мно́го фотографи́ровали.",
+     "uz": "Otda sayr qildik va ko'p suratga oldik."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Когда́ вы верну́лись?",
+     "uz": "Qachon qaytdinglar?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В воскресе́нье ве́чером. Покажу́ тебе́ фотогра́фии!",
+     "uz": "Yakshanba kuni kechqurun. Senga suratlarni ko'rsataman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur kim bilan bordi?",
+     "opts": [
+      "oilasi bilan",
+      "do'stlari bilan",
+      "yolg'iz"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Avval qayergacha mashinada bordilar?",
+     "opts": [
+      "Chimyongacha",
+      "Toshkentgacha",
+      "Chorvoqqacha"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Ular qachon qaytdi?",
+     "opts": [
+      "yakshanba kechqurun",
+      "shanba ertalab",
+      "dushanba kuni"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Чимга́н",
+     "alts": [
+      "в Бухару́",
+      "в го́ры",
+      "на Чарва́к"
+     ]
+    },
+    {
+     "base": "на лошадя́х",
+     "alts": [
+      "на велосипе́дах",
+      "на лы́жах",
+      "на ло́дке"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: dam olish kunlari qayerga borganingiz va u yerda nima qilganingizni ayting."
+  }
+ ]
+}

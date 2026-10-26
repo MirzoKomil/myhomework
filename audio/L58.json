@@ -1,0 +1,320 @@
+{
+ "n": 58,
+ "topic_uz": "Odamni tasvirlash: Како́й он?",
+ "scene": "In an airport arrival hall, a young Uzbek woman holds a phone while a Russian colleague describes someone, as a tall thin man with light hair and glasses walks out with a suitcase in the background.",
+ "dialogs": [
+  {
+   "id": "L58-d1",
+   "title_ru": "Как он вы́глядит?",
+   "title_uz": "U qanday ko'rinishda?",
+   "intro_uz": "Birinchi dialog. Antonning akasi ertaga keladi. Nigora uni aeroportda kutib oladi. U qanday ko'rinishda? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, мой брат прилета́ет за́втра. Ты мо́жешь его́ встре́тить?",
+     "uz": "Nigora, akam ertaga uchib keladi. Uni kutib ololasanmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Коне́чно. А как он вы́глядит?",
+     "uz": "Albatta. U qanday ko'rinishda?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Он высо́кий, худо́й, у него́ све́тлые во́лосы.",
+     "uz": "U baland bo'yli, ozg'in, sochi och rangli."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А глаза́ каки́е?",
+     "uz": "Ko'zlari qanaqa?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Голубы́е. И он но́сит очки́.",
+     "uz": "Moviy. Yana u ko'zoynak taqadi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он похо́ж на тебя́?",
+     "uz": "U senga o'xshaydimi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "О́чень! Все говоря́т, что мы похо́жи.",
+     "uz": "Juda! Hamma bizni o'xshash deydi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Тогда́ я его́ то́чно узна́ю!",
+     "uz": "Unda uni albatta taniyman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Antonning akasi qanday?",
+     "opts": [
+      "past bo'yli va to'la",
+      "baland bo'yli va ozg'in",
+      "o'rta bo'yli"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Uning ko'zlari qanday rangda?",
+     "opts": [
+      "jigarrang",
+      "yashil",
+      "moviy"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "U nima taqadi?",
+     "opts": [
+      "ko'zoynak",
+      "shlyapa",
+      "soat"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "све́тлые во́лосы",
+     "alts": [
+      "тёмные во́лосы",
+      "кудря́вые во́лосы",
+      "коро́ткие во́лосы"
+     ]
+    },
+    {
+     "base": "но́сит очки́",
+     "alts": [
+      "у него́ борода́",
+      "у него́ усы́",
+      "у него́ дли́нные во́лосы"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: oilangizdan bir kishini tasvirlang — bo'yi, sochi, ko'zlari qanday?"
+  },
+  {
+   "id": "L58-d2",
+   "title_ru": "Како́й у неё хара́ктер?",
+   "title_uz": "Uning fe'li qanday?",
+   "intro_uz": "Ikkinchi dialog. Timur Dilnozadan yangi o'qituvchisi haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, кака́я у вас но́вая учи́тельница?",
+     "uz": "Dilnoza, yangi o'qituvchingiz qanaqa?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Она́ о́чень до́брая и весёлая.",
+     "uz": "U juda mehribon va quvnoq."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А как она́ вы́глядит?",
+     "uz": "U qanday ko'rinishda?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Невысо́кая, у неё дли́нные тёмные во́лосы и ка́рие глаза́.",
+     "uz": "Past bo'yli, sochlari uzun va qora, ko'zlari jigarrang."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А она́ серьёзная?",
+     "uz": "U jiddiymi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "На уро́ке — да. Но она́ всегда́ помога́ет.",
+     "uz": "Darsda — ha. Lekin doim yordam beradi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Повезло́! А наш учи́тель споко́йный, но о́чень серьёзный.",
+     "uz": "Omading bor ekan! Bizning o'qituvchimiz esa vazmin, lekin juda jiddiy."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ну, у ка́ждого свой хара́ктер!",
+     "uz": "Mayli, har kimning o'z fe'li bor!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Yangi o'qituvchining fe'li qanday?",
+     "opts": [
+      "mehribon va quvnoq",
+      "jiddiy va qattiqqo'l",
+      "dangasa"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Uning ko'zlari qanday?",
+     "opts": [
+      "moviy",
+      "yashil",
+      "jigarrang"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timurning o'qituvchisi qanday?",
+     "opts": [
+      "quvnoq",
+      "vazmin, lekin jiddiy",
+      "mehribon"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "до́брая и весёлая",
+     "alts": [
+      "у́мная и споко́йная",
+      "акти́вная и весёлая",
+      "серьёзная и у́мная"
+     ]
+    },
+    {
+     "base": "дли́нные тёмные во́лосы",
+     "alts": [
+      "коро́ткие све́тлые во́лосы",
+      "кудря́вые во́лосы",
+      "краси́вые дли́нные во́лосы"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: o'qituvchingiz yoki hamkasbingizning tashqi ko'rinishi va fe'lini tasvirlang."
+  },
+  {
+   "id": "L58-d3",
+   "title_ru": "На кого́ похо́ж сын?",
+   "title_uz": "O'g'il kimga o'xshaydi?",
+   "intro_uz": "Uchinchi dialog. Nigora va Abdulaziz o'g'lining suratini ko'ryapti. U kimga o'xshaydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Посмотри́ на фо́то! Наш сын похо́ж на тебя́.",
+     "uz": "Suratga qara! O'g'limiz senga o'xshaydi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет, он похо́ж на тебя́! У него́ твои́ глаза́.",
+     "uz": "Yo'q, u senga o'xshaydi! Ko'zlari seniki."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Но во́лосы у него́ тёмные и кудря́вые, как у тебя́.",
+     "uz": "Lekin sochlari qora va jingalak, xuddi seniki kabi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А хара́ктер?",
+     "uz": "Fe'li-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хара́ктер мой: он споко́йный и до́брый.",
+     "uz": "Fe'li meniki: u vazmin va mehribon."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А мне ка́жется, он весёлый и акти́вный, как я!",
+     "uz": "Menga esa u quvnoq va faol, xuddi mendek tuyuladi!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ла́дно, он похо́ж на нас обо́их!",
+     "uz": "Mayli, u ikkalamizga ham o'xshaydi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulazizning fikricha, o'g'lining ko'zlari kimniki?",
+     "opts": [
+      "o'ziniki",
+      "Nigoraniki",
+      "buvisiniki"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "O'g'lining sochi qanday?",
+     "opts": [
+      "qora va jingalak",
+      "och rangli va to'g'ri",
+      "qisqa"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Oxirida ular nima deyishadi?",
+     "opts": [
+      "otasiga o'xshaydi",
+      "onasiga o'xshaydi",
+      "ikkalasiga ham o'xshaydi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "похо́ж на тебя́",
+     "alts": [
+      "похо́ж на па́пу",
+      "похо́ж на ма́му",
+      "похо́ж на де́душку"
+     ]
+    },
+    {
+     "base": "споко́йный и до́брый",
+     "alts": [
+      "у́мный и серьёзный",
+      "весёлый и акти́вный",
+      "до́брый и ще́дрый"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda ayting: siz kimga o'xshaysiz — tashqi ko'rinishda va fe'lda?"
+  }
+ ]
+}

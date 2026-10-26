@@ -1,0 +1,325 @@
+{
+ "n": 46,
+ "topic_uz": "Shifokorda va dorixonada — «Что вас беспоко́ит?»",
+ "scene": "In a bright clinic office, a friendly female doctor in a white coat listens to a young Uzbek man who holds his throat; a prescription pad lies on the desk.",
+ "dialogs": [
+  {
+   "id": "L46-d1",
+   "title_ru": "Мо́жно записа́ться к врачу́?",
+   "title_uz": "Shifokorga yozilsa bo'ladimi?",
+   "intro_uz": "Birinchi dialog. Nigora poliklinikaga qo'ng'iroq qilyapti. U shifokorga yozilmoqchi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Администра́тор",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте! Мо́жно записа́ться к врачу́ на за́втра?",
+     "uz": "Assalomu alaykum! Ertaga shifokorga yozilsa bo'ladimi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Здра́вствуйте. Что вас беспоко́ит?",
+     "uz": "Assalomu alaykum. Sizni nima bezovta qilyapti?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "У меня́ боли́т у́хо и голова́.",
+     "uz": "Qulog'im va boshim og'riyapti."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Поня́тно. На како́е вре́мя вам удо́бно?",
+     "uz": "Tushunarli. Sizga soat nechaga qulay?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Мо́жно у́тром? На де́вять часо́в?",
+     "uz": "Ertalab bo'ladimi? Soat to'qqizga?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "На де́вять нет. Есть на де́сять часо́в.",
+     "uz": "To'qqizga yo'q. O'nga bor."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́, на де́сять. Моя́ фами́лия — Кари́мова.",
+     "uz": "Yaxshi, o'nga. Familiyam — Karimova."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Записа́л. Ждём вас за́втра в де́сять.",
+     "uz": "Yozib qo'ydim. Ertaga o'nda kutamiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora qachonga yozilmoqchi?",
+     "opts": [
+      "bugunga",
+      "ertaga",
+      "dushanbaga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigoraning nimasi og'riyapti?",
+     "opts": [
+      "qulog'i va boshi",
+      "tishi",
+      "beli"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora soat nechaga yozildi?",
+     "opts": [
+      "to'qqizga",
+      "o'n birga",
+      "o'nga"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "у́хо",
+     "alts": [
+      "го́рло",
+      "живо́т",
+      "спина́"
+     ]
+    },
+    {
+     "base": "на де́сять часо́в",
+     "alts": [
+      "на оди́ннадцать часо́в",
+      "на два часа́",
+      "на четы́ре часа́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: shifokorga qo'ng'iroq qilib qabulga yoziling, nimangiz og'riyotganini va qulay vaqtni ayting."
+  },
+  {
+   "id": "L46-d2",
+   "title_ru": "Что вас беспоко́ит?",
+   "title_uz": "Sizni nima bezovta qilyapti?",
+   "intro_uz": "Ikkinchi dialog. Timur shifokor qabulida. Shifokor uni ko'rib, maslahat beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Врач",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Врач",
+     "ru": "Проходи́те, сади́тесь. Что вас беспоко́ит?",
+     "uz": "Kiring, o'tiring. Sizni nima bezovta qilyapti?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "У меня́ боли́т го́рло. И температу́ра.",
+     "uz": "Tomog'im og'riyapti. Isitmam ham bor."
+    },
+    {
+     "who": "Врач",
+     "ru": "Как давно́?",
+     "uz": "Qachondan beri?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Три дня. Ещё у меня́ ка́шель.",
+     "uz": "Uch kundan beri. Yana yo'talim ham bor."
+    },
+    {
+     "who": "Врач",
+     "ru": "Откро́йте рот. Скажи́те «а-а»... У вас просту́да.",
+     "uz": "Og'zingizni oching. «A-a» deng... Sizda shamollash."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Э́то опа́сно? Что мне де́лать?",
+     "uz": "Bu xavflimi? Nima qilishim kerak?"
+    },
+    {
+     "who": "Врач",
+     "ru": "Нет. Вот реце́пт. Принима́йте лека́рство три ра́за в день.",
+     "uz": "Yo'q. Mana retsept. Dorini kuniga uch marta iching."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Спаси́бо, до́ктор!",
+     "uz": "Rahmat, doktor!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timurda qachondan beri isitma bor?",
+     "opts": [
+      "bir kundan",
+      "uch kundan",
+      "bir haftadan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Shifokor qanday tashxis qo'ydi?",
+     "opts": [
+      "gripp",
+      "tish og'rig'i",
+      "shamollash"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dorini kuniga necha marta ichish kerak?",
+     "opts": [
+      "uch marta",
+      "bir marta",
+      "ikki marta"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "го́рло",
+     "alts": [
+      "голова́",
+      "у́хо",
+      "живо́т"
+     ]
+    },
+    {
+     "base": "три ра́за в день",
+     "alts": [
+      "два ра́за в день",
+      "у́тром и ве́чером",
+      "по́сле е́ды"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: shifokorga nimangiz og'riyotganini va qachondan beri ekanini ayting, keyin nima qilish kerakligini so'rang."
+  },
+  {
+   "id": "L46-d3",
+   "title_ru": "В апте́ке",
+   "title_uz": "Dorixonada",
+   "intro_uz": "Uchinchi dialog. Abdulaziz dorixonada. U yo'talga dori so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Фармаце́вт",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Здра́вствуйте! Да́йте, пожа́луйста, что-нибудь от ка́шля.",
+     "uz": "Assalomu alaykum! Iltimos, yo'talga biror narsa bering."
+    },
+    {
+     "who": "Фармаце́вт",
+     "ru": "У вас есть реце́пт?",
+     "uz": "Retseptingiz bormi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, вот реце́пт. Врач сказа́л: сиро́п и табле́тки.",
+     "uz": "Ha, mana retsept. Shifokor sirop va tabletka dedi."
+    },
+    {
+     "who": "Фармаце́вт",
+     "ru": "Вот сиро́п и табле́тки.",
+     "uz": "Mana sirop va tabletkalar."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Как принима́ть э́то лека́рство?",
+     "uz": "Bu dorini qanday ichish kerak?"
+    },
+    {
+     "who": "Фармаце́вт",
+     "ru": "Сиро́п — три ра́за в день. Табле́тки — у́тром и ве́чером.",
+     "uz": "Siropni kuniga uch marta. Tabletkani ertalab va kechqurun."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Поня́тно. Ско́лько сто́ит?",
+     "uz": "Tushunarli. Qancha turadi?"
+    },
+    {
+     "who": "Фармаце́вт",
+     "ru": "Соро́к пять ты́сяч. Бу́дьте здоро́вы!",
+     "uz": "Qirq besh ming. Sog' bo'ling!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz nimaga dori so'radi?",
+     "opts": [
+      "bosh og'rig'iga",
+      "isitmaga",
+      "yo'talga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Tabletkani qachon ichish kerak?",
+     "opts": [
+      "ertalab va kechqurun",
+      "faqat ertalab",
+      "kuniga uch marta"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dorilar qancha turadi?",
+     "opts": [
+      "o'ttiz ming",
+      "qirq besh ming",
+      "ellik ming"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "от ка́шля",
+     "alts": [
+      "от на́сморка",
+      "от головно́й бо́ли",
+      "от температу́ры"
+     ]
+    },
+    {
+     "base": "у́тром и ве́чером",
+     "alts": [
+      "два ра́за в день",
+      "по́сле е́ды",
+      "пе́ред сном"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: dorixonada biror kasallikka dori so'rang va uni qanday ichishni bilib oling."
+  }
+ ]
+}

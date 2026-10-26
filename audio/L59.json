@@ -1,0 +1,315 @@
+{
+ "n": 59,
+ "topic_uz": "Shart mayli: е́сли бы…, хоте́л бы, на твоём ме́сте",
+ "scene": "In a cozy Uzbek restaurant in the evening, a young man reads the menu while a smiling waitress with a notepad stands beside the table with a teapot on it.",
+ "dialogs": [
+  {
+   "id": "L59-d1",
+   "title_ru": "Я хоте́л бы заказа́ть",
+   "title_uz": "Buyurtma bermoqchi edim",
+   "intro_uz": "Birinchi dialog. Abdulaziz restoranda. U ofitsiantga muloyim gapiradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Официа́нтка",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Официа́нтка",
+     "ru": "До́брый ве́чер! Что бы вы хоте́ли?",
+     "uz": "Xayrli kech! Nima xohlardingiz?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я хоте́л бы заказа́ть плов и сала́т.",
+     "uz": "Palov va salat buyurtma qilmoqchi edim."
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Что бу́дете пить?",
+     "uz": "Nima ichasiz?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я бы вы́пил зелёный чай.",
+     "uz": "Ko'k choy ichardim."
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "Хорошо́. Мо́жет быть, десе́рт?",
+     "uz": "Yaxshi. Balki shirinlik?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет, спаси́бо. Е́сли бы я не был на дие́те, я бы взял торт!",
+     "uz": "Yo'q, rahmat. Parhezda bo'lmaganimda, tort olardim!"
+    },
+    {
+     "who": "Официа́нтка",
+     "ru": "На ва́шем ме́сте я бы попро́бовала наш медови́к. Он лёгкий!",
+     "uz": "Sizning o'rningizda men medovikimizni tatib ko'rardim. U yengil!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ну ла́дно, дава́йте ма́ленький кусо́чек!",
+     "uz": "Mayli, kichkina bo'lagini bering!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz nima buyurtma qildi?",
+     "opts": [
+      "shashlik va non",
+      "palov va salat",
+      "sho'rva"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "U nima ichadi?",
+     "opts": [
+      "ko'k choy",
+      "qahva",
+      "sharbat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ofitsiant nimani maslahat beradi?",
+     "opts": [
+      "salatni",
+      "choyni",
+      "medovikni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "плов и сала́т",
+     "alts": [
+      "шашлы́к и хлеб",
+      "суп и сала́т",
+      "ма́нты"
+     ]
+    },
+    {
+     "base": "зелёный чай",
+     "alts": [
+      "чёрный чай",
+      "ко́фе",
+      "сок"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: restoranda «Я хоте́л бы…» va «Я бы…» bilan muloyim buyurtma bering."
+  },
+  {
+   "id": "L59-d2",
+   "title_ru": "Что мне де́лать?",
+   "title_uz": "Nima qilay?",
+   "intro_uz": "Ikkinchi dialog. Bobur Nigoradan maslahat so'raydi. Nigora nima deydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Нигора́, мне нра́вится одна́ де́вушка, но я бою́сь с ней говори́ть.",
+     "uz": "Nigora, menga bir qiz yoqadi, lekin u bilan gaplashishdan qo'rqaman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "На твоём ме́сте я бы пригласи́ла её в кафе́.",
+     "uz": "Sening o'rningda men uni kafega taklif qilardim."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А е́сли она́ ска́жет «нет»?",
+     "uz": "Agar u «yo'q» desa-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "На её ме́сте я бы согласи́лась! Ты хоро́ший па́рень.",
+     "uz": "Uning o'rnida men rozi bo'lardim! Sen yaxshi yigitsan."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Пра́вда? А что бы ты ей подари́ла?",
+     "uz": "Rostdanmi? Sen unga nima sovg'a qilarding?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я бы подари́ла цветы́. Де́вушки лю́бят цветы́.",
+     "uz": "Gul sovg'a qilardim. Qizlar gulni yaxshi ko'radi."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Хорошо́, я так и сде́лаю. Спаси́бо за сове́т!",
+     "uz": "Yaxshi, shunday qilaman. Maslahat uchun rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Boburning muammosi nima?",
+     "opts": [
+      "ishi yo'q",
+      "qiz bilan gaplashishdan qo'rqadi",
+      "puli yo'q"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qizni qayerga taklif qilishni maslahat beradi?",
+     "opts": [
+      "kafega",
+      "kinoga",
+      "bog'ga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora nima sovg'a qilishni maslahat beradi?",
+     "opts": [
+      "shokolad",
+      "kitob",
+      "gul"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в кафе́",
+     "alts": [
+      "в кино́",
+      "в теа́тр",
+      "в парк"
+     ]
+    },
+    {
+     "base": "цветы́",
+     "alts": [
+      "шокола́д",
+      "кни́гу",
+      "духи́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: do'stingizga «На твоём ме́сте я бы…» bilan ikki maslahat bering."
+  },
+  {
+   "id": "L59-d3",
+   "title_ru": "Е́сли бы я знал…",
+   "title_uz": "Bilganimda edi…",
+   "intro_uz": "Uchinchi dialog. Kecha konsert bo'ldi, lekin Timur bormadi. Nega? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, вчера́ был конце́рт. Почему́ ты не пришёл?",
+     "uz": "Timur, kecha konsert bo'ldi. Nega kelmading?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я не знал! Е́сли бы я знал, я бы обяза́тельно пришёл.",
+     "uz": "Bilmagan edim! Bilganimda, albatta kelardim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Жаль! Бы́ло о́чень ве́село.",
+     "uz": "Attang! Juda qiziqarli bo'ldi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Е́сли бы ты мне позвони́ла, я бы пришёл.",
+     "uz": "Menga qo'ng'iroq qilganingda, kelardim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Извини́, я ду́мала, ты зна́ешь. Лу́чше бы я позвони́ла.",
+     "uz": "Kechir, bilasan deb o'ylabman. Qo'ng'iroq qilganim yaxshi bo'lardi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ничего́. Я хоте́л бы пойти́ на сле́дующий конце́рт.",
+     "uz": "Hechqisi yo'q. Keyingi konsertga borishni istardim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́, в сле́дующий раз обяза́тельно скажу́!",
+     "uz": "Xo'p, keyingi safar albatta aytaman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Kecha nima bo'ldi?",
+     "opts": [
+      "futbol",
+      "konsert",
+      "to'y"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur nega kelmadi?",
+     "opts": [
+      "bilmagan edi",
+      "kasal edi",
+      "ishda edi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur nimani istaydi?",
+     "opts": [
+      "Dilnoza uzr so'rashini",
+      "uyda qolishni",
+      "keyingi konsertga borishni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "конце́рт",
+     "alts": [
+      "футбо́л",
+      "пра́здник",
+      "день рожде́ния у Бобу́ра"
+     ]
+    },
+    {
+     "base": "позвони́ла",
+     "alts": [
+      "написа́ла",
+      "сказа́ла",
+      "напо́мнила"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda ayting: nimani bilmaganingizdan afsuslanasiz? «Е́сли бы я знал(а), я бы…» deb gapiring."
+  }
+ ]
+}

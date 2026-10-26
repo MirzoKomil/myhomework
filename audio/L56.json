@@ -1,0 +1,320 @@
+{
+ "n": 56,
+ "topic_uz": "Fikr bildirish: Я ду́маю, что…",
+ "scene": "A Russian man and a young Uzbek woman sit at a cafe table having a friendly debate; behind them a window shows city high-rises on one side and a green village landscape painted on a wall poster on the other.",
+ "dialogs": [
+  {
+   "id": "L56-d1",
+   "title_ru": "Где лу́чше жить?",
+   "title_uz": "Qayerda yashash yaxshiroq?",
+   "intro_uz": "Birinchi dialog. Anton va Nigora bahslashyapti: shaharda yashash yaxshimi yoki qishloqda? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, как ты ду́маешь, где лу́чше жить — в го́роде и́ли в дере́вне?",
+     "uz": "Nigora, sen qanday o'ylaysan, qayerda yashash yaxshi — shahardami yoki qishloqdami?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я ду́маю, что в дере́вне, потому́ что там ти́хо.",
+     "uz": "Menimcha, qishloqda, chunki u yer tinch."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я не совсе́м согла́сен. В го́роде бо́льше рабо́ты.",
+     "uz": "Unchalik rozi emasman. Shaharda ish ko'proq."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "С одно́й стороны́, ты прав. С друго́й стороны́, в го́роде мно́го маши́н.",
+     "uz": "Bir tomondan, haqsan. Ikkinchi tomondan, shaharda mashina ko'p."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "По-моему́, в го́роде интере́снее: теа́тры, музе́и…",
+     "uz": "Menimcha, shaharda qiziqroq: teatrlar, muzeylar…"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А мне ка́жется, что для дете́й лу́чше дере́вня.",
+     "uz": "Menga esa bolalar uchun qishloq yaxshiroqdek tuyuladi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Ну, не бу́дем спо́рить! У ка́ждого своё мне́ние.",
+     "uz": "Mayli, bahslashmaylik! Har kimning o'z fikri bor."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora qayerda yashashni yaxshi deydi?",
+     "opts": [
+      "shaharda",
+      "qishloqda",
+      "tog'da"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Anton nima deydi: shaharda nima ko'proq?",
+     "opts": [
+      "ish",
+      "daraxt",
+      "odam"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigoraning fikricha, qishloq kim uchun yaxshiroq?",
+     "opts": [
+      "qariyalar uchun",
+      "talabalar uchun",
+      "bolalar uchun"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в дере́вне",
+     "alts": [
+      "в гора́х",
+      "у мо́ря",
+      "в ма́леньком го́роде"
+     ]
+    },
+    {
+     "base": "там ти́хо",
+     "alts": [
+      "там чи́стый во́здух",
+      "там мно́го места́",
+      "там дёшево"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'z fikringizni ayting: qayerda yashash yaxshiroq va nega? «Я ду́маю, что…, потому́ что…» bilan gapiring."
+  },
+  {
+   "id": "L56-d2",
+   "title_ru": "Хоро́ший фильм?",
+   "title_uz": "Yaxshi filmmi?",
+   "intro_uz": "Ikkinchi dialog. Timur va Dilnoza qaysi filmni ko'rishni muhokama qilyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, како́е твоё мне́ние? Э́тот фильм хоро́ший?",
+     "uz": "Timur, sening fikring qanday? Bu film yaxshimi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "По-моему́, о́чень хоро́ший. Актёры отли́чные.",
+     "uz": "Menimcha, juda yaxshi. Aktyorlar zo'r."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А я ду́маю, что он ску́чный.",
+     "uz": "Men esa uni zerikarli deb o'ylayman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Почему́ ты так счита́ешь?",
+     "uz": "Nega bunday hisoblaysan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Потому́ что он о́чень дли́нный — три часа́!",
+     "uz": "Chunki u juda uzun — uch soat!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ты права́, он дли́нный. Но исто́рия интере́сная.",
+     "uz": "Haqsan, uzun. Lekin voqea qiziq."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ла́дно, я согла́сна. Но с попко́рном!",
+     "uz": "Mayli, roziman. Lekin popkorn bilan!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Абсолю́тно согла́сен!",
+     "uz": "Mutlaqo roziman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timurning fikricha film qanday?",
+     "opts": [
+      "zerikarli",
+      "juda yaxshi",
+      "qisqa"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Film necha soat davom etadi?",
+     "opts": [
+      "ikki soat",
+      "bir yarim soat",
+      "uch soat"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Oxirida Dilnoza nima deydi?",
+     "opts": [
+      "roziman",
+      "rozi emasman",
+      "ko'rmayman"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "ску́чный",
+     "alts": [
+      "гру́стный",
+      "глу́пый",
+      "сли́шком стра́шный"
+     ]
+    },
+    {
+     "base": "Актёры отли́чные",
+     "alts": [
+      "Му́зыка отли́чная",
+      "Сюже́т интере́сный",
+      "Режиссёр изве́стный"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: bir film yoki kitob haqida fikringizni ayting va uni asoslang."
+  },
+  {
+   "id": "L56-d3",
+   "title_ru": "Ру́сский язы́к ну́жен?",
+   "title_uz": "Rus tili kerakmi?",
+   "intro_uz": "Uchinchi dialog. Bobur va Nigora tillar haqida fikr almashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Бобу́р, ты счита́ешь, что ру́сский язы́к ну́жен?",
+     "uz": "Bobur, rus tili kerak deb hisoblaysanmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Коне́чно! Я ду́маю, что он о́чень ну́жен для рабо́ты.",
+     "uz": "Albatta! Menimcha, u ish uchun juda kerak."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я согла́сна. Наприме́р, в би́знесе ча́сто говоря́т по-ру́сски.",
+     "uz": "Roziman. Masalan, biznesda ko'pincha ruscha gapirishadi."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А англи́йский? По-моему́, он то́же ва́жный.",
+     "uz": "Ingliz tili-chi? Menimcha, u ham muhim."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Абсолю́тно! Но мне ка́жется, что снача́ла лу́чше ру́сский.",
+     "uz": "Mutlaqo! Lekin menimcha, avval rus tili yaxshiroq."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Почему́ ты так ду́маешь?",
+     "uz": "Nega bunday o'ylaysan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Потому́ что здесь мно́го ру́сских компа́ний и клие́нтов.",
+     "uz": "Chunki bu yerda rus kompaniyalari va mijozlar ko'p."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ты права́! Хорошо́, что мы у́чим ру́сский.",
+     "uz": "Haqsan! Rus tilini o'rganayotganimiz yaxshi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Boburning fikricha rus tili nima uchun kerak?",
+     "opts": [
+      "sayohat uchun",
+      "ish uchun",
+      "o'qish uchun"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigoraning fikricha, avval qaysi til yaxshiroq?",
+     "opts": [
+      "ingliz tili",
+      "xitoy tili",
+      "rus tili"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora nega shunday o'ylaydi?",
+     "opts": [
+      "bu yerda rus kompaniyalari ko'p",
+      "rus tili oson",
+      "u Rossiyaga boradi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "для рабо́ты",
+     "alts": [
+      "для учёбы",
+      "для путеше́ствий",
+      "для би́знеса"
+     ]
+    },
+    {
+     "base": "англи́йский",
+     "alts": [
+      "кита́йский",
+      "коре́йский",
+      "туре́цкий"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'z fikringizni ayting: sizga rus tili nima uchun kerak? «По-моему́…» va «потому́ что…» bilan gapiring."
+  }
+ ]
+}
