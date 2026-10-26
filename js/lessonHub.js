@@ -111,6 +111,7 @@
                     ${VIEWS.map(v => `<button type="button" role="tab" tabindex="${S.view === v.id ? 0 : -1}" class="lh-view${S.view === v.id ? ' is-on' : ''}" aria-selected="${S.view === v.id}" data-view="${v.id}">${esc(v.label)}</button>`).join('')}
                 </div>
                 <div class="lh-meta">${hub ? `${esc(LANG_LABEL[hub.lang])} · ${esc(hub.course?.name || 'kurs')} · 72 dars · ${hub.studentCount} o'quvchi` : 'Yuklanmoqda…'}
+                    ${hub?.canEdit && window.LessonImport ? '<button type="button" class="lh-btn" data-lh-import>📥 Ommaviy yuklash</button>' : ''}
                     <button type="button" class="lh-btn lh-icon" data-lh-refresh title="Ma'lumotlarni yangilash" aria-label="Ma'lumotlarni yangilash">⟳</button></div>
             </div>
             <div class="lh-main" id="lhMain">${hub ? '' : skeleton()}</div>
@@ -120,6 +121,11 @@
         }));
         bindTablistKeys(el.querySelector('.lh-views'));
         el.querySelector('[data-lh-refresh]')?.addEventListener('click', refreshAll);
+        el.querySelector('[data-lh-import]')?.addEventListener('click', async () => {
+            let existing = [];
+            try { existing = (await api(`/api/academic/materials?lang=${S.lang}`)).materials || []; } catch { /* takrorni tekshirmasdan davom */ }
+            window.LessonImport.open({ lang: S.lang, existing, onDone: refreshAll });
+        });
         if (!hub) return;
         const main = el.querySelector('#lhMain');
         if (S.view === 'lessons') renderLessonsView(main);
@@ -272,6 +278,7 @@
                 <button type="button" class="lh-btn lh-primary" data-act="present">▶ Darsni boshlash</button>
                 <button type="button" class="lh-btn" data-act="board">✏️ Doska</button>
                 ${book ? `<button type="button" class="lh-btn" data-act="book">📖 Kitobda ochish${book.page ? ` · ${book.page}-bet` : ''}</button>` : ''}
+                ${(data.guides || []).map(g => `<button type="button" class="lh-btn" data-guide="${esc(g.id)}">🧑‍🏫 ${esc(g.title)} · ${g.page}-bet</button>`).join('')}
                 <button type="button" class="lh-btn" data-act="print">🖨 Rejani chop etish</button>
                 ${L.type === 'live' && typeof S.ctx.onAttendance === 'function' ? '<button type="button" class="lh-btn" data-act="attendance">✓ Davomat</button>' : ''}
             </div>
@@ -291,6 +298,7 @@
         box.querySelector('[data-act="board"]').addEventListener('click', () => present(data, { blank: true }));
         box.querySelector('[data-act="print"]').addEventListener('click', () => printPlan(data));
         box.querySelector('[data-act="attendance"]')?.addEventListener('click', () => S.ctx.onAttendance());
+        box.querySelectorAll('[data-guide]').forEach(b => b.addEventListener('click', () => openGuide(data, b.dataset.guide)));
         bindTablistKeys(box.querySelector('.lh-tabs'));
         box.querySelector('[data-act="book"]')?.addEventListener('click', () => {
             S.bookState[S.lang] = { id: book.id, page: book.page || 1 };
@@ -438,11 +446,16 @@
             <ol class="lh-qa">${L.review.map(r => `<li>${esc(r.q)}${r.a ? ` <span class="lh-ans">→ ${esc(r.a)}</span>` : ''}</li>`).join('')}</ol></div>` : ''}
         <div class="lh-card"><div class="lh-card-h"><b>Tayyorgarlik ro'yxati</b><span class="lh-muted">belgilar shu qurilmada saqlanadi</span></div>
             <ul class="lh-check">${plan.checklist.map((c, i) => `<li><label><input type="checkbox" data-check="${i}"${checks[i] ? ' checked' : ''}> ${esc(c)}</label></li>`).join('')}</ul></div>
+        ${(data.guides || []).length ? `<div class="lh-card"><div class="lh-card-h"><b>Ustoz kitobidan — shu dars</b><span class="lh-muted">ssenariy, slaydlar bo'yicha tushuntirish, tipik xatolar</span></div>
+            <div class="lh-files">${data.guides.map(g => `<div class="lh-file"><span class="lh-file-ic" aria-hidden="true">${g.kind === 'teacher_book' ? '📘' : '🧭'}</span>
+                <span class="lh-file-body"><b>${esc(g.title)}</b><span class="lh-muted">${g.page}-betdan</span></span>
+                <button type="button" class="lh-btn" data-guide="${esc(g.id)}">▶ Ochish</button></div>`).join('')}</div></div>` : ''}
         ${materialSection(data, 'lesson_plan', "Dars rejasi fayllari", "Metodist tayyorlagan rasmiy reja (PDF/Word) — bo'lsa, yuqoridagi avtomatik rejadan ustun turadi.", files.filter(f => f.kind === 'lesson_plan'))}
         ${materialSection(data, 'teacher_guide', "Ustoz qo'llanmasi (shu dars)", "Teacher's book'ning shu darsga tegishli sahifalari.", files.filter(f => f.kind === 'teacher_guide'))}`;
         panel.querySelector('.lh-dur select')?.addEventListener('change', e => {
             S.duration = Number(e.target.value); savePrefs(); renderPlan(panel, data); bindMaterialActions(panel, data);
         });
+        panel.querySelectorAll('[data-guide]').forEach(b => b.addEventListener('click', () => openGuide(data, b.dataset.guide)));
         panel.querySelectorAll('[data-check]').forEach(cb => cb.addEventListener('change', () => {
             checks[cb.dataset.check] = cb.checked;
             try { localStorage.setItem(checklistKey(L), JSON.stringify(checks)); } catch { /* */ }
@@ -631,6 +644,7 @@
         const label = hub.kinds.lesson[kind] || hub.kinds.course[kind] || kind;
         const isBook = kind === 'book';
         const large = LARGE_KINDS.has(kind);
+        const hasPages = large;
         const editing = mode === 'edit';
         const pm = existing?.meta?.pageMap ? Object.entries(existing.meta.pageMap).map(([k, v]) => `${k}:${v}`).join(', ') : '';
         const wrap = document.createElement('div');
@@ -641,8 +655,8 @@
             ${mode === 'file' ? `<label>Fayl (${large ? 'PDF, 300 MB gacha' : 'PDF tavsiya etiladi — prezentatsiyada ochiladi; 50 MB gacha'})<input name="file" type="file" required accept="${large ? '.pdf' : '.pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.webp,.mp4,.mp3'}"></label>`
                 : mode === 'link' ? `<label>Havola (https://…)<input name="url" type="url" required class="lh-input" placeholder="https://"><span class="lh-muted">Havola yangi oynada ochiladi. Prezentatsiyada ko'rsatish uchun PDF faylni yuklang.</span></label>` : ''}
             ${isBook ? `<div class="lh-row"><label>Qaysi darsdan<input name="lessonFrom" type="number" min="1" max="72" class="lh-input" value="${existing?.meta?.lessonFrom || 1}"></label>
-                <label>Qaysi darsgacha<input name="lessonTo" type="number" min="1" max="72" class="lh-input" value="${existing?.meta?.lessonTo || 24}"></label></div>
-                <label>Darslar boshlanadigan sahifalar <span class="lh-muted">(ixtiyoriy: "1:5, 2:9, 3:14")</span><textarea name="pageMap" rows="3" class="lh-input" placeholder="1:5, 2:9, 3:14">${esc(pm)}</textarea></label>` : ''}
+                <label>Qaysi darsgacha<input name="lessonTo" type="number" min="1" max="72" class="lh-input" value="${existing?.meta?.lessonTo || 24}"></label></div>` : ''}
+            ${hasPages ? `<label>Darslar boshlanadigan sahifalar <span class="lh-muted">(ixtiyoriy: "1:5, 2:9, 3:14")</span><textarea name="pageMap" rows="3" class="lh-input" placeholder="1:5, 2:9, 3:14">${esc(pm)}</textarea></label>` : ''}
             <label>Izoh <span class="lh-muted">(ixtiyoriy)</span><input name="note" maxlength="300" class="lh-input" value="${esc(existing?.note || '')}"></label>
             <div class="lh-dialog-actions"><button type="button" class="lh-btn" data-cancel>Bekor qilish</button><button type="submit" class="lh-btn lh-primary">Saqlash</button></div>
             <div class="lh-progress" role="status" hidden>Yuklanmoqda…</div>
@@ -662,6 +676,7 @@
             try {
                 const body = { language: S.lang, lessonNo, kind, title: String(fd.get('title') || '').trim(), note: String(fd.get('note') || '') };
                 if (isBook) body.meta = { lessonFrom: fd.get('lessonFrom'), lessonTo: fd.get('lessonTo'), pageMap: String(fd.get('pageMap') || '') };
+                else if (hasPages) body.meta = { pageMap: String(fd.get('pageMap') || '') };
                 if (mode === 'link') body.url = String(fd.get('url') || '').trim();
                 if (mode === 'file') {
                     const file = fd.get('file');
@@ -694,6 +709,14 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Yuklash xatoligi');
         return data;
+    }
+
+    // Teacher's book / qo'llanmani shu darsning sahifasida ochish (o'qish rejimi).
+    function openGuide(data, id) {
+        const g = (data.guides || []).find(x => x.id === id);
+        if (!g) return;
+        if (!isLocalFile(g.url)) { const u = safeUrl(g.url); if (u) window.open(u, '_blank', 'noopener'); return; }
+        LessonPresenter.open({ title: `${data.lesson.no}-dars · ${g.title}`, sources: [{ type: 'pdf', url: g.url, title: g.title }], startPage: g.page });
     }
 
     // ── Prezentatsiya manbalari ─────────────────────────────────────────────
