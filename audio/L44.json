@@ -1,0 +1,325 @@
+{
+ "n": 44,
+ "topic_uz": "Sayohat: vokzal, aeroport, taksi — «Оди́н биле́т до Самарка́нда»",
+ "scene": "At a railway station ticket window, a young Uzbek man talks to a smiling female cashier behind the glass; a big station clock hangs on the wall.",
+ "dialogs": [
+  {
+   "id": "L44-d1",
+   "title_ru": "Оди́н биле́т до Самарка́нда",
+   "title_uz": "Samarqandgacha bitta chipta",
+   "intro_uz": "Birinchi dialog. Timur vokzalda, kassada. U Samarqandga chipta oladi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Касси́р",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Здра́вствуйте! Оди́н биле́т до Самарка́нда, пожа́луйста.",
+     "uz": "Assalomu alaykum! Samarqandgacha bitta chipta, iltimos."
+    },
+    {
+     "who": "Касси́р",
+     "ru": "На како́е число́?",
+     "uz": "Qaysi kunga?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "На за́втра. Туда́ и обра́тно.",
+     "uz": "Ertaga. Borish-qaytish."
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Есть по́езд в во́семь у́тра. Он прибыва́ет в Самарка́нд в де́сять.",
+     "uz": "Ertalab sakkizda poyezd bor. U Samarqandga o'nda yetib boradi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Отли́чно. Мо́жно ме́сто у окна́?",
+     "uz": "Zo'r. Deraza yonidagi joy bo'ladimi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Да, есть. Деся́тое ме́сто.",
+     "uz": "Ha, bor. O'ninchi joy."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Ско́лько сто́ит биле́т?",
+     "uz": "Chipta qancha turadi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Туда́ и обра́тно — две́сти ты́сяч сумо́в.",
+     "uz": "Borish-qaytish — ikki yuz ming so'm."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur qachon jo'naydi?",
+     "opts": [
+      "bugun",
+      "ertaga",
+      "shanba kuni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Poyezd Samarqandga soat nechada yetib boradi?",
+     "opts": [
+      "sakkizda",
+      "to'qqizda",
+      "o'nda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timur qanday joy so'radi?",
+     "opts": [
+      "deraza yonidagi",
+      "eshik yonidagi",
+      "oxirgi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "до Самарка́нда",
+     "alts": [
+      "до Бухары́",
+      "до Ташке́нта",
+      "до Хивы́"
+     ]
+    },
+    {
+     "base": "Туда́ и обра́тно",
+     "alts": [
+      "То́лько туда́",
+      "Два биле́та",
+      "На ве́чер"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: kassada biror shaharga chipta oling, vaqt va joyni so'rang."
+  },
+  {
+   "id": "L44-d2",
+   "title_ru": "Где регистра́ция?",
+   "title_uz": "Ro'yxatdan o'tish qayerda?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza aeroportda. U Moskvaga uchadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Сотру́дник",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Извини́те, где регистра́ция на рейс в Москву́?",
+     "uz": "Kechirasiz, Moskva reysiga ro'yxatdan o'tish qayerda?"
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Здесь. Ваш па́спорт и биле́т, пожа́луйста.",
+     "uz": "Shu yerda. Pasport va chiptangiz, iltimos."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вот мой па́спорт и биле́т.",
+     "uz": "Mana pasportim va chiptam."
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Ско́лько у вас чемода́нов?",
+     "uz": "Nechta chamadoningiz bor?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "У меня́ оди́н чемода́н и су́мка.",
+     "uz": "Bitta chamadonim va sumkam bor."
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Хорошо́. Ва́ше ме́сто у окна́, двена́дцать А.",
+     "uz": "Yaxshi. Joyingiz deraza yonida, o'n ikki A."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо. А когда́ поса́дка?",
+     "uz": "Rahmat. Chiqish qachon?"
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "В де́вять со́рок. Вы́ход но́мер пять.",
+     "uz": "To'qqiz qirqda. Besh raqamli chiqish."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qayerga uchadi?",
+     "opts": [
+      "Qozonga",
+      "Samarqandga",
+      "Moskvaga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnozaning nechta chamadoni bor?",
+     "opts": [
+      "bitta",
+      "ikkita",
+      "uchta"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Chiqish soat nechada?",
+     "opts": [
+      "to'qqizda",
+      "to'qqiz qirqda",
+      "o'nda"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Москву́",
+     "alts": [
+      "в Каза́нь",
+      "в Стамбу́л",
+      "в Сеу́л"
+     ]
+    },
+    {
+     "base": "оди́н чемода́н",
+     "alts": [
+      "два чемода́на",
+      "одна́ су́мка",
+      "то́лько рюкза́к"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: aeroportda ro'yxatdan o'tish joyini va chiqish vaqtini so'rang."
+  },
+  {
+   "id": "L44-d3",
+   "title_ru": "До вокза́ла, пожа́луйста",
+   "title_uz": "Vokzalgacha, iltimos",
+   "intro_uz": "Uchinchi dialog. Nigora taksiga o'tirdi. U vokzalga shoshyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Такси́ст",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте! До вокза́ла, пожа́луйста.",
+     "uz": "Assalomu alaykum! Vokzalgacha, iltimos."
+    },
+    {
+     "who": "Такси́ст",
+     "ru": "Хорошо́. Сади́тесь.",
+     "uz": "Yaxshi. O'tiring."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ско́лько е́хать до вокза́ла?",
+     "uz": "Vokzalgacha qancha yuriladi?"
+    },
+    {
+     "who": "Такси́ст",
+     "ru": "Ми́нут два́дцать. Вы куда́ е́дете?",
+     "uz": "Yigirma daqiqacha. Qayerga ketyapsiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В Бухару́. Мой по́езд в шесть.",
+     "uz": "Buxoroga. Poyezdim oltida."
+    },
+    {
+     "who": "Такси́ст",
+     "ru": "Не волну́йтесь, вре́мя есть... Вот вокза́л.",
+     "uz": "Xavotir olmang, vaqt bor... Mana vokzal."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Останови́те здесь, пожа́луйста. Ско́лько с меня́?",
+     "uz": "Shu yerda to'xtating, iltimos. Qancha bo'ldi?"
+    },
+    {
+     "who": "Такси́ст",
+     "ru": "Три́дцать ты́сяч. Счастли́вого пути́!",
+     "uz": "O'ttiz ming. Oq yo'l!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Vokzalgacha qancha yuriladi?",
+     "opts": [
+      "o'n daqiqa",
+      "yigirma daqiqa",
+      "bir soat"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qayerga ketyapti?",
+     "opts": [
+      "Buxoroga",
+      "Samarqandga",
+      "Toshkentga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Taksi qancha turdi?",
+     "opts": [
+      "yigirma ming",
+      "qirq ming",
+      "o'ttiz ming"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "До вокза́ла",
+     "alts": [
+      "До аэропо́рта",
+      "До це́нтра",
+      "До гости́ницы"
+     ]
+    },
+    {
+     "base": "В Бухару́",
+     "alts": [
+      "В Самарка́нд",
+      "В Ташке́нт",
+      "В Ферга́ну"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: taksiga o'tiring, manzilni ayting, qancha yurilishini va narxini so'rang."
+  }
+ ]
+}

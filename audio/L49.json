@@ -1,0 +1,320 @@
+{
+ "n": 49,
+ "topic_uz": "Qaytuvchi fe'llar -ся: kun tartibi",
+ "scene": "A young Uzbek couple in their kitchen early in the morning: the wife, dressed and ready, holds a cup of tea, while the sleepy husband in pajamas stands by an alarm clock showing six o'clock.",
+ "dialogs": [
+  {
+   "id": "L49-d1",
+   "title_ru": "Во ско́лько ты просыпа́ешься?",
+   "title_uz": "Soat nechada uyg'onasan?",
+   "intro_uz": "Birinchi dialog. Abdulaziz va Nigora uyda. Nigora ertaga erta turadi. Nega? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, во ско́лько ты за́втра просыпа́ешься?",
+     "uz": "Nigora, ertaga soat nechada uyg'onasan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В шесть. Пото́м бы́стро умыва́юсь и одева́юсь.",
+     "uz": "Oltida. Keyin tezda yuvinib, kiyinaman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Так ра́но? Почему́?",
+     "uz": "Shunaqa ertami? Nega?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Мои́ ку́рсы начина́ются в во́семь.",
+     "uz": "Kurslarim sakkizda boshlanadi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А когда́ они́ зака́нчиваются?",
+     "uz": "Qachon tugaydi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "В двена́дцать. Пото́м я возвраща́юсь домо́й.",
+     "uz": "O'n ikkida. Keyin uyga qaytaman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Поня́тно. А я сего́дня ра́но ложу́сь спать!",
+     "uz": "Tushunarli. Men esa bugun erta yotaman!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Прави́льно! Ты всегда́ по́здно ложи́шься.",
+     "uz": "To'g'ri! Sen doim kech yotasan."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora soat nechada uyg'onadi?",
+     "opts": [
+      "beshda",
+      "oltida",
+      "yettida"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kurslar soat nechada boshlanadi?",
+     "opts": [
+      "sakkizda",
+      "to'qqizda",
+      "o'n ikkida"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kurslar qachon tugaydi?",
+     "opts": [
+      "o'nda",
+      "o'n birda",
+      "o'n ikkida"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в шесть",
+     "alts": [
+      "в пять",
+      "в семь",
+      "в во́семь"
+     ]
+    },
+    {
+     "base": "Мои́ ку́рсы",
+     "alts": [
+      "Мои́ уро́ки",
+      "Мои́ заня́тия",
+      "Мои́ ле́кции"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda gapiring: soat nechada uyg'onasiz, yuvinasiz, kiyinasiz va qachon yotasiz?"
+  },
+  {
+   "id": "L49-d2",
+   "title_ru": "Фильм начина́ется в во́семь",
+   "title_uz": "Film sakkizda boshlanadi",
+   "intro_uz": "Ikkinchi dialog. Timur Dilnozaga qo'ng'iroq qilyapti. U Dilnozani kinoga taklif qiladi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, приве́т! Ты сего́дня ве́чером занима́ешься?",
+     "uz": "Dilnoza, salom! Bugun kechqurun dars qilasanmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет, сего́дня я не учу́сь. Я свобо́дна.",
+     "uz": "Yo'q, bugun o'qimayman. Bo'shman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Пойдём в кино́? Фильм начина́ется в во́семь.",
+     "uz": "Kinoga boramizmi? Film sakkizda boshlanadi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Отли́чно! А во ско́лько он зака́нчивается?",
+     "uz": "Zo'r! U soat nechada tugaydi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "В де́сять. Где встреча́емся?",
+     "uz": "O'nda. Qayerda uchrashamiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Дава́й встре́тимся у метро́ в семь.",
+     "uz": "Kel, yettida metro yonida uchrashamiz."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Договори́лись! Я о́чень рад.",
+     "uz": "Kelishdik! Juda xursandman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Film soat nechada boshlanadi?",
+     "opts": [
+      "yettida",
+      "sakkizda",
+      "o'nda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ular qayerda uchrashadi?",
+     "opts": [
+      "kinoteatrda",
+      "metro yonida",
+      "uyda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Film soat nechada tugaydi?",
+     "opts": [
+      "o'nda",
+      "to'qqizda",
+      "sakkizda"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в кино́",
+     "alts": [
+      "в теа́тр",
+      "в парк",
+      "в кафе́"
+     ]
+    },
+    {
+     "base": "у метро́",
+     "alts": [
+      "у кинотеа́тра",
+      "у кафе́",
+      "у ба́нка"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: do'stingizni kinoga taklif qiling va qayerda uchrashishni kelishing."
+  },
+  {
+   "id": "L49-d3",
+   "title_ru": "Чем занима́ется твой сын?",
+   "title_uz": "O'g'ling nima bilan shug'ullanadi?",
+   "intro_uz": "Uchinchi dialog. Anton va Nigora ishda gaplashyapti. Anton Nigoraning o'g'li haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, где у́чится твой сын?",
+     "uz": "Nigora, o'g'ling qayerda o'qiydi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он у́чится в шко́ле, в пе́рвом кла́ссе.",
+     "uz": "Maktabda, birinchi sinfda o'qiydi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А чем он занима́ется по́сле шко́лы?",
+     "uz": "Maktabdan keyin nima bilan shug'ullanadi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он занима́ется футбо́лом. Ему́ о́чень нра́вится!",
+     "uz": "Futbol bilan shug'ullanadi. Unga juda yoqadi!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Трениро́вка начина́ется по́сле обе́да?",
+     "uz": "Mashg'ulot tushlikdan keyin boshlanadimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, в четы́ре. И зака́нчивается в шесть.",
+     "uz": "Ha, to'rtda. Oltida tugaydi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Он, наве́рное, всегда́ возвраща́ется весёлый.",
+     "uz": "U, ehtimol, doim xursand qaytsa kerak."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, он всё вре́мя улыба́ется и смеётся!",
+     "uz": "Ha, u doim jilmayadi va kuladi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigoraning o'g'li nechanchi sinfda o'qiydi?",
+     "opts": [
+      "ikkinchi",
+      "to'rtinchi",
+      "uchinchi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "U nima bilan shug'ullanadi?",
+     "opts": [
+      "futbol",
+      "suzish",
+      "shaxmat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Mashg'ulot soat nechada tugaydi?",
+     "opts": [
+      "to'rtda",
+      "oltida",
+      "beshda"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "футбо́лом",
+     "alts": [
+      "пла́ванием",
+      "му́зыкой",
+      "англи́йским"
+     ]
+    },
+    {
+     "base": "в четы́ре",
+     "alts": [
+      "в три",
+      "в пять",
+      "в два"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: farzandingiz yoki ukangiz qayerda o'qiydi va nima bilan shug'ullanadi?"
+  }
+ ]
+}

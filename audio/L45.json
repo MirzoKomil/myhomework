@@ -1,0 +1,325 @@
+{
+ "n": 45,
+ "topic_uz": "Sog'liq: у меня́ боли́т…, мне пло́хо / лу́чше",
+ "scene": "In a cozy living room, an Uzbek man sits on the sofa holding his cheek in pain while his wife brings him a cup of tea.",
+ "dialogs": [
+  {
+   "id": "L45-d1",
+   "title_ru": "У меня́ боли́т зуб",
+   "title_uz": "Tishim og'riyapti",
+   "intro_uz": "Birinchi dialog. Abdulaziz uyda. Uning ahvoli yaxshi emas. Nigora so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, что с тобо́й? Ты пло́хо вы́глядишь.",
+     "uz": "Abdulaziz, senga nima bo'ldi? Ko'rinishing yaxshi emas."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "У меня́ боли́т зуб. О́чень боли́т!",
+     "uz": "Tishim og'riyapti. Juda og'riyapti!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Давно́ боли́т?",
+     "uz": "Ancha bo'ldimi og'riganiga?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Со вчера́шнего дня. И голова́ то́же боли́т.",
+     "uz": "Kechadan beri. Boshim ham og'riyapti."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А температу́ра есть?",
+     "uz": "Isitma bormi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет, температу́ры нет. Но мне пло́хо.",
+     "uz": "Yo'q, isitma yo'q. Lekin ahvolim yomon."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "За́втра иди́ к врачу́. А сейча́с пей чай.",
+     "uz": "Ertaga shifokorga bor. Hozir esa choy ich."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Спаси́бо, дорога́я. Ты о́чень до́брая.",
+     "uz": "Rahmat, azizim. Sen juda mehribonsan."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulazizning nimasi og'riyapti?",
+     "opts": [
+      "tomog'i",
+      "tishi",
+      "qorni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Qachondan beri og'riyapti?",
+     "opts": [
+      "kechadan beri",
+      "bir haftadan beri",
+      "ertalabdan beri"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulazizda isitma bormi?",
+     "opts": [
+      "ha, yuqori",
+      "ha, ozgina",
+      "yo'q"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "зуб",
+     "alts": [
+      "живо́т",
+      "у́хо",
+      "спина́"
+     ]
+    },
+    {
+     "base": "голова́",
+     "alts": [
+      "го́рло",
+      "нога́",
+      "рука́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: qayeringiz og'riyotganini va qachondan beri og'riyotganini ayting."
+  },
+  {
+   "id": "L45-d2",
+   "title_ru": "Я заболе́л",
+   "title_uz": "Kasal bo'lib qoldim",
+   "intro_uz": "Ikkinchi dialog. Bobur ertalab boshlig'iga qo'ng'iroq qilyapti. U bugun ishga bora olmaydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нача́льница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Алло́, Ири́на Петро́вна? Э́то Бобу́р.",
+     "uz": "Allo, Irina Petrovna? Bu Bobur."
+    },
+    {
+     "who": "Нача́льница",
+     "ru": "Здра́вствуй, Бобу́р! Почему́ ты не на рабо́те?",
+     "uz": "Salom, Bobur! Nega ishda emassan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Извини́те, я заболе́л. Мне о́чень пло́хо.",
+     "uz": "Kechirasiz, kasal bo'lib qoldim. Ahvolim juda yomon."
+    },
+    {
+     "who": "Нача́льница",
+     "ru": "Что у тебя́ боли́т?",
+     "uz": "Nimang og'riyapti?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Го́рло боли́т. И у меня́ высо́кая температу́ра.",
+     "uz": "Tomog'im og'riyapti. Isitmam ham baland."
+    },
+    {
+     "who": "Нача́льница",
+     "ru": "Ой! Сиди́ до́ма и обяза́тельно иди́ к врачу́.",
+     "uz": "Voy! Uyda o'tir va albatta shifokorga bor."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Спаси́бо. За́втра, наве́рное, бу́дет лу́чше.",
+     "uz": "Rahmat. Ertaga, ehtimol, yaxshiroq bo'ladi."
+    },
+    {
+     "who": "Нача́льница",
+     "ru": "Выздора́вливай, Бобу́р!",
+     "uz": "Tezroq tuzal, Bobur!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur kimga qo'ng'iroq qildi?",
+     "opts": [
+      "shifokorga",
+      "boshlig'iga",
+      "onasiga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Boburning nimasi og'riyapti?",
+     "opts": [
+      "boshi",
+      "beli",
+      "tomog'i"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Boshliq unga nima maslahat berdi?",
+     "opts": [
+      "uyda o'tirishni",
+      "ishga kelishni",
+      "dorixonaga borishni"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "Го́рло боли́т",
+     "alts": [
+      "Голова́ боли́т",
+      "Живо́т боли́т",
+      "Спина́ боли́т"
+     ]
+    },
+    {
+     "base": "высо́кая температу́ра",
+     "alts": [
+      "ка́шель",
+      "на́сморк",
+      "ка́шель и на́сморк"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: ishxonaga qo'ng'iroq qilib, kasal bo'lib qolganingizni va nimangiz og'riyotganini ayting."
+  },
+  {
+   "id": "L45-d3",
+   "title_ru": "Как ты себя́ чу́вствуешь?",
+   "title_uz": "O'zingni qanday his qilyapsan?",
+   "intro_uz": "Uchinchi dialog. Dilnoza Antonga qo'ng'iroq qilyapti. Anton kecha kasal edi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Анто́н, приве́т! Как ты себя́ чу́вствуешь?",
+     "uz": "Anton, salom! O'zingni qanday his qilyapsan?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Спаси́бо, мне уже́ лу́чше.",
+     "uz": "Rahmat, allaqachon yaxshiroqman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А вчера́ что у тебя́ боле́ло?",
+     "uz": "Kecha nimang og'rigan edi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Вчера́ боле́ла голова́ и был си́льный ка́шель.",
+     "uz": "Kecha boshim og'rigan edi va qattiq yo'tal bor edi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А сего́дня? Голова́ боли́т?",
+     "uz": "Bugun-chi? Boshing og'riyaptimi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Нет, не боли́т. То́лько на́сморк.",
+     "uz": "Yo'q, og'rimayapti. Faqat tumov."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́. Пей мно́го воды́ и горя́чий чай!",
+     "uz": "Yaxshi. Ko'p suv va issiq choy ich!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Обяза́тельно. Спаси́бо, что позвони́ла!",
+     "uz": "Albatta. Qo'ng'iroq qilganing uchun rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton bugun o'zini qanday his qilyapti?",
+     "opts": [
+      "yomonroq",
+      "yaxshiroq",
+      "o'zgarishsiz"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kecha Antonning nimasi og'rigan edi?",
+     "opts": [
+      "boshi",
+      "tishi",
+      "oyog'i"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bugun Antonda nima qoldi?",
+     "opts": [
+      "isitma",
+      "yo'tal",
+      "tumov"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "боле́ла голова́",
+     "alts": [
+      "боле́ло го́рло",
+      "боле́л живо́т",
+      "боле́ла спина́"
+     ]
+    },
+    {
+     "base": "горя́чий чай",
+     "alts": [
+      "тёплое молоко́",
+      "горя́чую во́ду",
+      "чай с лимо́ном"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: kasal do'stingizga qo'ng'iroq qilib, ahvolini so'rang va maslahat bering."
+  }
+ ]
+}

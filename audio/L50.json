@@ -1,0 +1,320 @@
+{
+ "n": 50,
+ "topic_uz": "Sport va hobbi: Чем ты занима́ешься?",
+ "scene": "Inside a bright gym, a young Uzbek man and a young Uzbek woman in sportswear talk next to a treadmill, she holds a tennis racket.",
+ "dialogs": [
+  {
+   "id": "L50-d1",
+   "title_ru": "В спортза́ле",
+   "title_uz": "Sport zalida",
+   "intro_uz": "Birinchi dialog. Bobur sport zalida Dilnozani uchratdi. Ular sport haqida gaplashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Дильно́за, приве́т! Ты то́же здесь занима́ешься?",
+     "uz": "Dilnoza, salom! Sen ham shu yerda shug'ullanasanmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, я хожу́ в спортза́л три ра́за в неде́лю.",
+     "uz": "Ha, sport zaliga haftada uch marta boraman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А чем ещё ты занима́ешься?",
+     "uz": "Yana nima bilan shug'ullanasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Пла́ванием. А ты давно́ занима́ешься спо́ртом?",
+     "uz": "Suzish bilan. Sen sport bilan qachondan beri shug'ullanasan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Два го́да. Ещё я игра́ю в те́ннис по суббо́там.",
+     "uz": "Ikki yildan beri. Yana shanba kunlari tennis o'ynayman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Пра́вда? Я то́же люблю́ те́ннис!",
+     "uz": "Rostdanmi? Men ham tennisni yaxshi ko'raman!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Дава́й поигра́ем в те́ннис в суббо́ту!",
+     "uz": "Kel, shanba kuni tennis o'ynaymiz!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "С удово́льствием!",
+     "uz": "Jon deb!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza sport zaliga haftada necha marta boradi?",
+     "opts": [
+      "ikki",
+      "uch",
+      "besh"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza yana nima bilan shug'ullanadi?",
+     "opts": [
+      "suzish",
+      "boks",
+      "shaxmat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Shanba kuni ular nima o'ynaydi?",
+     "opts": [
+      "futbol",
+      "shaxmat",
+      "tennis"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Пла́ванием",
+     "alts": [
+      "Йо́гой",
+      "Бе́гом",
+      "Бо́ксом"
+     ]
+    },
+    {
+     "base": "в те́ннис",
+     "alts": [
+      "в футбо́л",
+      "в ша́хматы",
+      "в волейбо́л"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: qanday sport bilan shug'ullanishingizni ayting va birga o'ynashni taklif qiling."
+  },
+  {
+   "id": "L50-d2",
+   "title_ru": "За кого́ ты боле́ешь?",
+   "title_uz": "Qaysi jamoaga muxlislik qilasan?",
+   "intro_uz": "Ikkinchi dialog. Anton va Nigora futbol, shaxmat va musiqa haqida gaplashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Анто́н, ты лю́бишь футбо́л?",
+     "uz": "Anton, futbolni yaxshi ko'rasanmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "О́чень! Я боле́ю за «Спарта́к». А ты?",
+     "uz": "Juda! «Spartak»ga muxlislik qilaman. Sen-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я боле́ю за «Пахтако́р». И мой муж то́же.",
+     "uz": "Men «Paxtakor»ga muxlisman. Erim ham."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А сама́ ты игра́ешь в футбо́л?",
+     "uz": "O'zing futbol o'ynaysanmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, я игра́ю в ша́хматы и на пиани́но.",
+     "uz": "Yo'q, men shaxmat o'ynayman va pianino chalaman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "О́го! А я игра́ю на гита́ре.",
+     "uz": "Voy! Men esa gitara chalaman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Дава́й как-нибудь поигра́ем вме́сте!",
+     "uz": "Kel, bir kun birga chalamiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton qaysi jamoaga muxlislik qiladi?",
+     "opts": [
+      "«Paxtakor»",
+      "«Spartak»",
+      "«Neftchi»"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qaysi o'yinni o'ynaydi?",
+     "opts": [
+      "shaxmat",
+      "tennis",
+      "futbol"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton qaysi cholg'uni chaladi?",
+     "opts": [
+      "pianino",
+      "dutor",
+      "gitara"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в ша́хматы",
+     "alts": [
+      "в те́ннис",
+      "в волейбо́л",
+      "в футбо́л"
+     ]
+    },
+    {
+     "base": "на гита́ре",
+     "alts": [
+      "на пиани́но",
+      "на скри́пке",
+      "на дута́ре"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda ayting: qaysi jamoaga muxlislik qilasiz, nima o'ynaysiz yoki chalasiz?"
+  },
+  {
+   "id": "L50-d3",
+   "title_ru": "Како́е у тебя́ хо́бби?",
+   "title_uz": "Hobbing nima?",
+   "intro_uz": "Uchinchi dialog. Abdulaziz va Dilnoza bo'sh vaqt haqida gaplashyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Абдулази́з, чем ты занима́ешься в свобо́дное вре́мя?",
+     "uz": "Abdulaziz, bo'sh vaqtingda nima bilan shug'ullanasan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я бе́гаю по утра́м. А по выходны́м игра́ю в волейбо́л.",
+     "uz": "Ertalablari yuguraman. Dam olish kunlari voleybol o'ynayman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ты занима́ешься спо́ртом ка́ждый день?",
+     "uz": "Har kuni sport bilan shug'ullanasanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Почти́. А како́е у тебя́ хо́бби?",
+     "uz": "Deyarli. Sening hobbing nima?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я рису́ю и игра́ю на гита́ре.",
+     "uz": "Rasm chizaman va gitara chalaman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Здо́рово! Э́то интере́сное хо́бби.",
+     "uz": "Zo'r! Bu qiziqarli hobbi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Пойдём в воскресе́нье в парк!",
+     "uz": "Yakshanba kuni bog'ga boraylik!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Дава́й! Я бу́ду бе́гать, а ты — рисова́ть.",
+     "uz": "Kelishdik! Men yuguraman, sen esa rasm chizasan."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz ertalablari nima qiladi?",
+     "opts": [
+      "suzadi",
+      "yuguradi",
+      "rasm chizadi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnozaning hobbisi nima?",
+     "opts": [
+      "rasm va gitara",
+      "voleybol",
+      "shaxmat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ular qachon bog'ga boradi?",
+     "opts": [
+      "shanba kuni",
+      "juma kuni",
+      "yakshanba kuni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в волейбо́л",
+     "alts": [
+      "в футбо́л",
+      "в баскетбо́л",
+      "в те́ннис"
+     ]
+    },
+    {
+     "base": "рису́ю",
+     "alts": [
+      "пою́",
+      "танцу́ю",
+      "чита́ю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: hobbingiz haqida ayting va do'stingizni birga vaqt o'tkazishga taklif qiling."
+  }
+ ]
+}

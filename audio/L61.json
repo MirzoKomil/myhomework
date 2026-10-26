@@ -1,0 +1,315 @@
+{
+ "n": 61,
+ "topic_uz": "Telefonda gaplashish: Алло́, мо́жно…? Перезвони́те",
+ "scene": "A young Uzbek man in a shirt talks on his mobile phone at his office desk, while across the city a female secretary at a reception desk answers a landline phone.",
+ "dialogs": [
+  {
+   "id": "L61-d1",
+   "title_ru": "Вас беспоко́ит…",
+   "title_uz": "Sizni … bezovta qilyapti",
+   "intro_uz": "Birinchi dialog. Abdulaziz kompaniyaga qo'ng'iroq qiladi. U Anton Petrovni so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Секрета́рь",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Секрета́рь",
+     "ru": "Компа́ния «Восто́к», здра́вствуйте!",
+     "uz": "«Vostok» kompaniyasi, assalomu alaykum!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Здра́вствуйте! Вас беспоко́ит Абдулази́з Кари́мов. Мо́жно Ви́ктора Петро́ва?",
+     "uz": "Assalomu alaykum! Sizni Abdulaziz Karimov bezovta qilyapti. Viktor Petrovni chaqirsangiz bo'ladimi?"
+    },
+    {
+     "who": "Секрета́рь",
+     "ru": "Мину́точку… Извини́те, его́ сейча́с нет. Он вы́шел.",
+     "uz": "Bir daqiqa… Kechirasiz, u hozir yo'q. Chiqib ketdi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А когда́ он бу́дет?",
+     "uz": "Qachon bo'ladi?"
+    },
+    {
+     "who": "Секрета́рь",
+     "ru": "Че́рез час. Что ему́ переда́ть?",
+     "uz": "Bir soatdan keyin. Unga nima yetkazay?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Переда́йте, пожа́луйста, что звони́л Кари́мов. Попроси́те его́ перезвони́ть мне.",
+     "uz": "Iltimos, Karimov qo'ng'iroq qildi deb ayting. Menga qayta qo'ng'iroq qilishini so'rang."
+    },
+    {
+     "who": "Секрета́рь",
+     "ru": "Хорошо́. Скажи́те, пожа́луйста, ваш но́мер телефо́на.",
+     "uz": "Yaxshi. Telefon raqamingizni ayting, iltimos."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Девяно́сто, сто два́дцать три, со́рок пять, шестьдеся́т семь. Всего́ до́брого!",
+     "uz": "To'qson, bir yuz yigirma uch, qirq besh, oltmish yetti. Xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz kimni so'raydi?",
+     "opts": [
+      "Timurni",
+      "Anton Petrovni",
+      "direktorni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Anton Petrov qachon bo'ladi?",
+     "opts": [
+      "bir soatdan keyin",
+      "ertaga",
+      "yarim soatdan keyin"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz nimani so'raydi?",
+     "opts": [
+      "xat yuborishni",
+      "uchrashuvni",
+      "qayta qo'ng'iroq qilishni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Че́рез час",
+     "alts": [
+      "Че́рез полчаса́",
+      "По́сле обе́да",
+      "За́втра у́тром"
+     ]
+    },
+    {
+     "base": "Он вы́шел",
+     "alts": [
+      "Он на встре́че",
+      "Он в о́тпуске",
+      "Он на обе́де"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: kompaniyaga qo'ng'iroq qiling, odamni so'rang va xabar qoldiring."
+  },
+  {
+   "id": "L61-d2",
+   "title_ru": "Пло́хо слы́шно!",
+   "title_uz": "Yaxshi eshitilmayapti!",
+   "intro_uz": "Ikkinchi dialog. Dilnoza metrodan Timurga qo'ng'iroq qilyapti. Aloqa yomon. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Алло́, Тиму́р? Э́то Дильно́за.",
+     "uz": "Allo, Timur? Bu Dilnoza."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Алло́! Пло́хо слы́шно. Говори́ гро́мче!",
+     "uz": "Allo! Yaxshi eshitilmayapti. Balandroq gapir!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А сейча́с слы́шно? Я в метро́.",
+     "uz": "Hozir eshitilyaptimi? Men metrodaman."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Сейча́с лу́чше. Что случи́лось?",
+     "uz": "Hozir yaxshiroq. Nima bo'ldi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я опа́здываю на встре́чу. Переда́й, пожа́луйста, Анто́ну.",
+     "uz": "Uchrashuvga kechikyapman. Iltimos, Antonga aytib qo'y."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Хорошо́, переда́м. Когда́ ты бу́дешь?",
+     "uz": "Xo'p, aytaman. Qachon kelasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Че́рез два́дцать мину́т. Ой, нет свя́зи… Я перезвоню́!",
+     "uz": "Yigirma daqiqadan keyin. Voy, aloqa yo'q… Qayta qo'ng'iroq qilaman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qayerda?",
+     "opts": [
+      "avtobusda",
+      "metroda",
+      "ofisda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur kimga xabar yetkazadi?",
+     "opts": [
+      "Antonga",
+      "Boburga",
+      "direktorga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza qachon keladi?",
+     "opts": [
+      "o'n daqiqadan keyin",
+      "bir soatdan keyin",
+      "yigirma daqiqadan keyin"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в метро́",
+     "alts": [
+      "в авто́бусе",
+      "в такси́",
+      "на у́лице"
+     ]
+    },
+    {
+     "base": "Анто́ну",
+     "alts": [
+      "Бобу́ру",
+      "нача́льнику",
+      "Нигоре́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: kechikayotganingizni ayting va hamkasbingizga xabar yetkazishni so'rang."
+  },
+  {
+   "id": "L61-d3",
+   "title_ru": "Вы оши́блись но́мером",
+   "title_uz": "Raqamni adashtirdingiz",
+   "intro_uz": "Uchinchi dialog. Nigora dorixonaga qo'ng'iroq qilmoqchi. Lekin kim javob beradi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Мужчи́на",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Мужчи́на",
+     "ru": "Алло́! Слу́шаю.",
+     "uz": "Allo! Eshitaman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте! Э́то апте́ка?",
+     "uz": "Assalomu alaykum! Bu dorixonami?"
+    },
+    {
+     "who": "Мужчи́на",
+     "ru": "Нет, э́то кварти́ра. Вы оши́блись но́мером.",
+     "uz": "Yo'q, bu xonadon. Raqamni adashtirdingiz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ой, извини́те! Э́то но́мер две́сти три́дцать, со́рок пять, ноль оди́н?",
+     "uz": "Voy, kechirasiz! Bu ikki yuz o'ttiz, qirq besh, nol bir raqamimi?"
+    },
+    {
+     "who": "Мужчи́на",
+     "ru": "Нет, у нас ноль два в конце́.",
+     "uz": "Yo'q, bizda oxiri nol ikki."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Извини́те, пожа́луйста, за беспоко́йство.",
+     "uz": "Bezovta qilganim uchun kechirasiz."
+    },
+    {
+     "who": "Мужчи́на",
+     "ru": "Ничего́. Всего́ до́брого!",
+     "uz": "Hechqisi yo'q. Xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora qayerga qo'ng'iroq qilmoqchi edi?",
+     "opts": [
+      "bankka",
+      "dorixonaga",
+      "maktabga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qayerga tushib qoldi?",
+     "opts": [
+      "xonadonga",
+      "do'konga",
+      "shifoxonaga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Erkakning raqami oxiri qanday?",
+     "opts": [
+      "nol bir",
+      "qirq besh",
+      "nol ikki"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "апте́ка",
+     "alts": [
+      "поликли́ника",
+      "магази́н",
+      "банк"
+     ]
+    },
+    {
+     "base": "ноль оди́н",
+     "alts": [
+      "ноль три",
+      "пятна́дцать",
+      "два́дцать"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: noto'g'ri raqamga tushdingiz — muloyim uzr so'rang va xayrlashing."
+  }
+ ]
+}

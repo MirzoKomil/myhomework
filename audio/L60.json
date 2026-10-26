@@ -1,0 +1,325 @@
+{
+ "n": 60,
+ "topic_uz": "Orzular: Е́сли бы у меня́ бы́ло три жела́ния…",
+ "scene": "A young Uzbek man and woman sit on a park bench at sunset, dreaming; above them a thought-bubble-like sky shows a house by the sea, a small island and a rocket.",
+ "dialogs": [
+  {
+   "id": "L60-d1",
+   "title_ru": "Три жела́ния",
+   "title_uz": "Uchta istak",
+   "intro_uz": "Birinchi dialog. Dilnoza Timurdan so'raydi: sehrli tayoqchang bo'lsa, nima qilarding? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, е́сли бы у тебя́ была́ волше́бная па́лочка, что бы ты сде́лал?",
+     "uz": "Timur, sehrli tayoqchang bo'lganida, nima qilarding?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Снача́ла я бы купи́л дом у мо́ря.",
+     "uz": "Avval dengiz bo'yida uy olardim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А второ́е жела́ние?",
+     "uz": "Ikkinchi istak-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я бы путеше́ствовал по ми́ру с семьёй. А ты?",
+     "uz": "Oilam bilan dunyo bo'ylab sayohat qilardim. Sen-chi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Е́сли бы я могла́, я бы измени́ла мир: никто́ бы не боле́л.",
+     "uz": "Qo'limdan kelganida, dunyoni o'zgartirardim: hech kim kasal bo'lmasdi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Краси́вая мечта́! А тре́тье жела́ние?",
+     "uz": "Chiroyli orzu! Uchinchi istak-chi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я бы хоте́ла жить на о́строве.",
+     "uz": "Orolda yashashni istardim."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Тогда́ мы бу́дем сосе́дями!",
+     "uz": "Unda qo'shni bo'lamiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timurning birinchi istagi nima?",
+     "opts": [
+      "mashina olish",
+      "dengiz bo'yida uy olish",
+      "kosmosga uchish"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur kim bilan sayohat qilardi?",
+     "opts": [
+      "oilasi bilan",
+      "do'stlari bilan",
+      "yolg'iz"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza qayerda yashashni istaydi?",
+     "opts": [
+      "tog'da",
+      "shaharda",
+      "orolda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "дом у мо́ря",
+     "alts": [
+      "большу́ю маши́ну",
+      "кварти́ру в це́нтре",
+      "дом в гора́х"
+     ]
+    },
+    {
+     "base": "на о́строве",
+     "alts": [
+      "у мо́ря",
+      "в гора́х",
+      "в Пари́же"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga javob bering: sehrli tayoqchangiz bo'lganida, qanday uchta istagingizni bajarardingiz?"
+  },
+  {
+   "id": "L60-d2",
+   "title_ru": "Кем бы ты хоте́л быть?",
+   "title_uz": "Kim bo'lishni istarding?",
+   "intro_uz": "Ikkinchi dialog. Nigora va Anton kasblar va orzular haqida gaplashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Анто́н, кем бы ты хоте́л быть, е́сли бы не был инжене́ром?",
+     "uz": "Anton, muhandis bo'lmaganingda, kim bo'lishni istarding?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Я бы хоте́л быть пило́том.",
+     "uz": "Uchuvchi bo'lishni istardim."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Почему́?",
+     "uz": "Nega?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Е́сли бы я мог лета́ть, я бы полете́л в ко́смос!",
+     "uz": "Ucha olganimda, kosmosga uchardim!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А я бы хоте́ла быть знамени́той певи́цей.",
+     "uz": "Men esa mashhur qo'shiqchi bo'lishni istardim."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Что бы ты де́лала, е́сли бы была́ знамени́той?",
+     "uz": "Mashhur bo'lganingda nima qilarding?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я бы помога́ла лю́дям и де́тям.",
+     "uz": "Odamlarga va bolalarga yordam berardim."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Э́то прекра́сная мечта́!",
+     "uz": "Bu ajoyib orzu!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Antonning hozirgi kasbi nima?",
+     "opts": [
+      "uchuvchi",
+      "o'qituvchi",
+      "muhandis"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton qayerga uchardi?",
+     "opts": [
+      "kosmosga",
+      "Moskvaga",
+      "dengizga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora kim bo'lishni istaydi?",
+     "opts": [
+      "shifokor",
+      "mashhur qo'shiqchi",
+      "aktrisa"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "пило́том",
+     "alts": [
+      "врачо́м",
+      "актёром",
+      "футболи́стом"
+     ]
+    },
+    {
+     "base": "певи́цей",
+     "alts": [
+      "актри́сой",
+      "писа́тельницей",
+      "спортсме́нкой"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda ayting: boshqa kasbda bo'lganingizda, kim bo'lishni istardingiz va nega?"
+  },
+  {
+   "id": "L60-d3",
+   "title_ru": "Мечта́ и реа́льный план",
+   "title_uz": "Orzu va haqiqiy reja",
+   "intro_uz": "Uchinchi dialog. Abdulaziz va Nigora orzular va haqiqiy rejalar haqida gaplashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, где бы ты хоте́ла жить?",
+     "uz": "Nigora, qayerda yashashni istarding?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я бы хоте́ла жить в гора́х. А ты?",
+     "uz": "Tog'da yashashni istardim. Sen-chi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я бы жил у мо́ря. Но э́то мечта́.",
+     "uz": "Men dengiz bo'yida yashardim. Lekin bu orzu."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А е́сли мы нако́пим де́ньги, пое́дем ле́том на мо́ре?",
+     "uz": "Agar pul yig'sak, yozda dengizga boramizmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Коне́чно! Е́сли нако́пим, пое́дем в Ту́рцию.",
+     "uz": "Albatta! Yig'sak, Turkiyaga boramiz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А е́сли бы ты мог верну́ться в про́шлое?",
+     "uz": "Agar o'tmishga qayta olganingda-chi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Я бы встре́тил тебя́ ра́ньше!",
+     "uz": "Seni ertaroq uchratgan bo'lardim!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Како́й ты рома́нтик!",
+     "uz": "Qanday romantiksan!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora qayerda yashashni istaydi?",
+     "opts": [
+      "dengiz bo'yida",
+      "tog'da",
+      "shaharda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Pul yig'ishsa, qayerga borishadi?",
+     "opts": [
+      "Rossiyaga",
+      "Samarqandga",
+      "Turkiyaga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Abdulaziz o'tmishga qaytsa, nima qilardi?",
+     "opts": [
+      "Nigorani ertaroq uchratardi",
+      "boshqa kasb tanlardi",
+      "ko'proq o'qirdi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в гора́х",
+     "alts": [
+      "у мо́ря",
+      "в дере́вне",
+      "в большо́м го́роде"
+     ]
+    },
+    {
+     "base": "в Ту́рцию",
+     "alts": [
+      "в Еги́пет",
+      "в Дуба́й",
+      "в Гру́зию"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda ayting: bitta orzuingiz («Я бы…») va bitta haqiqiy rejangiz («Е́сли я…, я…») qanday?"
+  }
+ ]
+}

@@ -1,0 +1,325 @@
+{
+ "n": 48,
+ "topic_uz": "Jonli dars: «Кака́я сего́дня пого́да? Где лу́чше?» — ob-havo, fasllar, qiyoslash",
+ "scene": "An Uzbek couple at the front door on a rainy morning: the wife hands her husband an umbrella and a jacket while he looks at the weather forecast on his phone.",
+ "dialogs": [
+  {
+   "id": "L48-d1",
+   "title_ru": "Возьми́ зонт!",
+   "title_uz": "Soyabon ol!",
+   "intro_uz": "Birinchi dialog. Abdulaziz ishga ketyapti. Nigora ob-havo prognozini ko'rdi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, ты ви́дел прогно́з пого́ды?",
+     "uz": "Abdulaziz, ob-havo prognozini ko'rdingmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Нет. Кака́я сего́дня пого́да?",
+     "uz": "Yo'q. Bugun havo qanday?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "По прогно́зу днём бу́дет дождь и ве́тер. Плюс во́семь.",
+     "uz": "Prognozga ko'ra kunduzi yomg'ir va shamol bo'ladi. Plyus sakkiz."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Плюс во́семь? Вчера́ бы́ло тепле́е.",
+     "uz": "Plyus sakkizmi? Kecha iliqroq edi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да. Возьми́ зонт и наде́нь ку́ртку!",
+     "uz": "Ha. Soyabon ol va kurtka kiy!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А за́втра кака́я бу́дет пого́да?",
+     "uz": "Ertaga havo qanday bo'ladi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "За́втра бу́дет лу́чше: со́лнечно, плюс пятна́дцать.",
+     "uz": "Ertaga yaxshiroq: quyoshli, plyus o'n besh."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Отли́чно! Тогда́ за́втра пое́дем в парк.",
+     "uz": "Zo'r! Unda ertaga parkka boramiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bugun kunduzi havo qanday bo'ladi?",
+     "opts": [
+      "quyoshli",
+      "yomg'ir va shamol",
+      "qor"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora Abdulazizga nima olishni aytdi?",
+     "opts": [
+      "soyabon va kurtka",
+      "shapka",
+      "sumka"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ertaga necha daraja bo'ladi?",
+     "opts": [
+      "plyus sakkiz",
+      "plyus yigirma",
+      "plyus o'n besh"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Возьми́ зонт",
+     "alts": [
+      "Возьми́ ша́пку",
+      "Возьми́ шарф",
+      "Возьми́ ку́ртку"
+     ]
+    },
+    {
+     "base": "в парк",
+     "alts": [
+      "в го́ры",
+      "на да́чу",
+      "за го́род"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: ertangi ob-havo prognozini ayting va nima kiyish, nima olish kerakligini maslahat bering."
+  },
+  {
+   "id": "L48-d2",
+   "title_ru": "Го́ры и́ли мо́ре?",
+   "title_uz": "Tog'mi yoki dengiz?",
+   "intro_uz": "Ikkinchi dialog. Timur va Dilnoza ta'tilni rejalashtiryapti. Qayerda dam olish yaxshiroq? Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, где лу́чше отдыха́ть ле́том: в гора́х и́ли на мо́ре?",
+     "uz": "Dilnoza, yozda qayerda dam olgan yaxshiroq: tog'dami yoki dengizdami?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "По-моему́, в гора́х. Там прохла́днее, чем в го́роде.",
+     "uz": "Menimcha, tog'da. U yer shahardan salqinroq."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Но на мо́ре интере́снее! Мо́жно пла́вать.",
+     "uz": "Lekin dengizda qiziqroq! Suzish mumkin."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, но мо́ре да́льше и биле́ты доро́же.",
+     "uz": "Ha, lekin dengiz uzoqroq va chiptalar qimmatroq."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Э́то пра́вда. А го́ры бли́же — два часа́ на маши́не.",
+     "uz": "Bu rost. Tog' esa yaqinroq — mashinada ikki soat."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вот! И в гора́х са́мый чи́стый во́здух.",
+     "uz": "Mana! Tog'da havo eng toza."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Хорошо́, дава́й пое́дем в го́ры!",
+     "uz": "Mayli, kel, tog'ga boramiz!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Договори́лись! А в сле́дующем году́ — на мо́ре.",
+     "uz": "Kelishdik! Kelasi yili esa — dengizga."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnozaning fikricha, qayerda dam olish yaxshiroq?",
+     "opts": [
+      "dengizda",
+      "shaharda",
+      "tog'da"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Tog'ga mashinada qancha yuriladi?",
+     "opts": [
+      "ikki soat",
+      "to'rt soat",
+      "bir kun"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ular oxirida qayerga borishga kelishdi?",
+     "opts": [
+      "dengizga",
+      "tog'ga",
+      "hech qayerga"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в гора́х",
+     "alts": [
+      "на да́че",
+      "в дере́вне",
+      "у озе́ра"
+     ]
+    },
+    {
+     "base": "биле́ты доро́же",
+     "alts": [
+      "гости́ница доро́же",
+      "доро́га трудне́е",
+      "самолёт доро́же"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'z fikringizni ayting: yozda qayerda dam olish yaxshiroq va nega? «По-моему́…» deb boshlang."
+  },
+  {
+   "id": "L48-d3",
+   "title_ru": "Когда́ лу́чше е́хать в Самарка́нд?",
+   "title_uz": "Samarqandga qachon borgan yaxshi?",
+   "intro_uz": "Uchinchi dialog. Anton Samarqandga bormoqchi. U Nigoradan maslahat so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, когда́ лу́чше е́хать в Самарка́нд?",
+     "uz": "Nigora, Samarqandga qachon borgan yaxshi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Весно́й и́ли о́сенью. Э́то са́мое лу́чшее вре́мя.",
+     "uz": "Bahorda yoki kuzda. Bu eng yaxshi vaqt."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А ле́том? У меня́ о́тпуск в ию́ле.",
+     "uz": "Yozda-chi? Ta'tilim iyulda."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ой, ию́ль — са́мый жа́ркий ме́сяц! Плюс со́рок.",
+     "uz": "Voy, iyul — eng issiq oy! Plyus qirq."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Поня́тно. А как лу́чше е́хать: на по́езде и́ли на самолёте?",
+     "uz": "Tushunarli. Qanday borgan yaxshi: poyezddami yoki samolyotdami?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "По́езд деше́вле, чем самолёт, и о́чень удо́бный.",
+     "uz": "Poyezd samolyotdan arzon va juda qulay."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А самолёт быстре́е?",
+     "uz": "Samolyot tezroqmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, но по́езд из Ташке́нта идёт всего́ два часа́.",
+     "uz": "Ha, lekin poyezd Toshkentdan bor-yo'g'i ikki soat yuradi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigoraning fikricha, Samarqandga qachon borgan yaxshi?",
+     "opts": [
+      "yozda",
+      "bahor yoki kuzda",
+      "qishda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Eng issiq oy qaysi?",
+     "opts": [
+      "iyun",
+      "avgust",
+      "iyul"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Poyezd Toshkentdan Samarqandgacha qancha yuradi?",
+     "opts": [
+      "ikki soat",
+      "to'rt soat",
+      "bir soat"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Самарка́нд",
+     "alts": [
+      "в Бухару́",
+      "в Хиву́",
+      "в Ферга́ну"
+     ]
+    },
+    {
+     "base": "в ию́ле",
+     "alts": [
+      "в а́вгусте",
+      "в ма́е",
+      "в октябре́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: chet ellik do'stingizga shahringizga qachon kelgan yaxshi ekanini va nimada kelishni maslahat bering."
+  }
+ ]
+}

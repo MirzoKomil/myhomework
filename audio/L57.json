@@ -1,0 +1,320 @@
+{
+ "n": 57,
+ "topic_uz": "кото́рый va что́бы",
+ "scene": "In an open-plan office, a young Uzbek woman discreetly points out a male colleague sitting by the window to a Russian coworker holding a stack of documents.",
+ "dialogs": [
+  {
+   "id": "L57-d1",
+   "title_ru": "Кто э́то?",
+   "title_uz": "Bu kim?",
+   "intro_uz": "Birinchi dialog. Anton ofisda. U Dilnozadan hamkasblar haqida so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, кто тот мужчи́на, кото́рый сиди́т у окна́?",
+     "uz": "Dilnoza, deraza yonida o'tirgan erkak kim?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Э́то Жасу́р, ме́неджер, кото́рый пришёл к нам в ма́е.",
+     "uz": "Bu Jasur — bizga mayda kelgan menejer."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А же́нщина, с кото́рой он говори́т?",
+     "uz": "U gaplashayotgan ayol-chi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Э́то наш бухга́лтер. Она́ рабо́тает здесь пять лет.",
+     "uz": "Bu bizning buxgalterimiz. U bu yerda besh yildan beri ishlaydi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Поня́тно. А где кабине́т, в кото́ром бу́дет встре́ча?",
+     "uz": "Tushunarli. Uchrashuv bo'ladigan xona qayerda?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вон там. Пойдём быстре́е, что́бы не опозда́ть!",
+     "uz": "Ana u yerda. Kechikmaslik uchun tezroq yuraylik!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Подожди́, я возьму́ докуме́нты, кото́рые лежа́т на столе́.",
+     "uz": "To'xta, stol ustidagi hujjatlarni olay."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́, то́лько бы́стро!",
+     "uz": "Xo'p, faqat tez!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Jasur bu kompaniyaga qachon kelgan?",
+     "opts": [
+      "mayda",
+      "iyunda",
+      "aprelda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Buxgalter bu yerda necha yil ishlaydi?",
+     "opts": [
+      "uch",
+      "besh",
+      "o'n"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Anton stol ustidan nimani oladi?",
+     "opts": [
+      "kompyuterni",
+      "kitobni",
+      "hujjatlarni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "сиди́т у окна́",
+     "alts": [
+      "стои́т у две́ри",
+      "говори́т по телефо́ну",
+      "пьёт ко́фе"
+     ]
+    },
+    {
+     "base": "докуме́нты",
+     "alts": [
+      "ноутбу́к",
+      "ру́чку",
+      "телефо́н"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: hamkasbingizni «кото́рый» bilan tanishtiring — u kim, nima qiladi?"
+  },
+  {
+   "id": "L57-d2",
+   "title_ru": "Заче́м ты у́чишь ру́сский?",
+   "title_uz": "Nega rus tilini o'rganyapsan?",
+   "intro_uz": "Ikkinchi dialog. Nigora va Timur maqsadlari haqida gaplashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Тиму́р, заче́м ты у́чишь ру́сский язы́к?",
+     "uz": "Timur, rus tilini nima uchun o'rganyapsan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я учу́ ру́сский, что́бы рабо́тать в Москве́.",
+     "uz": "Moskvada ishlash uchun rus tilini o'rganyapman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А заче́м ты ко́пишь де́ньги?",
+     "uz": "Pulni nima uchun yig'yapsan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Что́бы купи́ть кварти́ру. А ты заче́м у́чишь?",
+     "uz": "Kvartira olish uchun. Sen-chi, nimaga o'rganyapsan?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Что́бы поступи́ть в университе́т в Каза́ни.",
+     "uz": "Qozondagi universitetga kirish uchun."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Здо́рово! А роди́тели хотя́т, что́бы ты учи́лась там?",
+     "uz": "Zo'r! Ota-onang u yerda o'qishingni xohlaydimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, ма́ма хо́чет, что́бы я получи́ла хоро́шее образова́ние.",
+     "uz": "Ha, onam yaxshi ta'lim olishimni xohlaydi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Молоде́ц! Уда́чи тебе́!",
+     "uz": "Barakalla! Omad senga!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur nima uchun rus tilini o'rganyapti?",
+     "opts": [
+      "Qozonda o'qish uchun",
+      "Moskvada ishlash uchun",
+      "sayohat uchun"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur pulni nima uchun yig'yapti?",
+     "opts": [
+      "mashina uchun",
+      "to'y uchun",
+      "kvartira uchun"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigoraning onasi nimani xohlaydi?",
+     "opts": [
+      "yaxshi ta'lim olishini",
+      "uyda qolishini",
+      "ishlashini"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "рабо́тать в Москве́",
+     "alts": [
+      "учи́ться в Москве́",
+      "найти́ хоро́шую рабо́ту",
+      "говори́ть с клие́нтами"
+     ]
+    },
+    {
+     "base": "купи́ть кварти́ру",
+     "alts": [
+      "купи́ть маши́ну",
+      "откры́ть би́знес",
+      "пое́хать в Росси́ю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda ayting: rus tilini nima uchun o'rganyapsiz? «Я учу́ ру́сский, что́бы…» bilan uch gap ayting."
+  },
+  {
+   "id": "L57-d3",
+   "title_ru": "Но́вый сосе́д",
+   "title_uz": "Yangi qo'shni",
+   "intro_uz": "Uchinchi dialog. Nigora va Abdulaziz yangi qo'shni haqida gaplashyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Ты ви́дел но́вого сосе́да, кото́рый живёт ря́дом?",
+     "uz": "Yonimizda yashaydigan yangi qo'shnini ko'rdingmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да! Э́то челове́к, с кото́рым я игра́ю в футбо́л.",
+     "uz": "Ha! Bu men bilan futbol o'ynaydigan odam."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Пра́вда? А его́ жена́ — же́нщина, кото́рая рабо́тает в апте́ке?",
+     "uz": "Rostdanmi? Uning xotini dorixonada ishlaydigan ayolmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да. Они́ про́сят, что́бы мы пришли́ к ним в го́сти.",
+     "uz": "Ha. Ular bizni mehmonga kelishimizni so'rashyapti."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́! Я пригото́влю торт, кото́рый ты лю́бишь.",
+     "uz": "Yaxshi! Sen yaxshi ko'radigan tortni tayyorlayman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Отли́чно! И купи́ цветы́, что́бы подари́ть его́ жене́.",
+     "uz": "Zo'r! Uning xotiniga sovg'a qilish uchun gul ham ol."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хоро́шая иде́я!",
+     "uz": "Yaxshi fikr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz qo'shni bilan nima o'ynaydi?",
+     "opts": [
+      "shaxmat",
+      "futbol",
+      "tennis"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Qo'shnining xotini qayerda ishlaydi?",
+     "opts": [
+      "dorixonada",
+      "maktabda",
+      "bankda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Gulni kimga sovg'a qilishadi?",
+     "opts": [
+      "qo'shniga",
+      "onasiga",
+      "qo'shnining xotiniga"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "рабо́тает в апте́ке",
+     "alts": [
+      "рабо́тает в шко́ле",
+      "у́чится в университе́те",
+      "рабо́тает в ба́нке"
+     ]
+    },
+    {
+     "base": "торт",
+     "alts": [
+      "плов",
+      "самсу́",
+      "сала́т"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: qo'shningiz yoki do'stingiz haqida «кото́рый» bilan ikki gap ayting."
+  }
+ ]
+}

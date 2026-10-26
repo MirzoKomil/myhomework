@@ -1,0 +1,325 @@
+{
+ "n": 55,
+ "topic_uz": "Bog'lovchilar: потому́ что, поэ́тому, е́сли, когда́, хотя́",
+ "scene": "In a modern office meeting room, a young Uzbek woman with a folder looks at her watch while a slightly out-of-breath young man in a jacket hurries in through the door.",
+ "dialogs": [
+  {
+   "id": "L55-d1",
+   "title_ru": "Почему́ ты опозда́л?",
+   "title_uz": "Nega kechikding?",
+   "intro_uz": "Birinchi dialog. Bobur uchrashuvga kechikdi. Dilnoza sababini so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, почему́ ты опозда́л на встре́чу?",
+     "uz": "Bobur, nega uchrashuvga kechikding?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Потому́ что была́ больша́я про́бка.",
+     "uz": "Chunki katta tirbandlik bo'ldi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Е́сли бу́дет про́бка, выходи́ ра́ньше!",
+     "uz": "Agar tirbandlik bo'lsa, ertaroq chiq!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ты права́. За́втра вы́йду в семь.",
+     "uz": "Haqsan. Ertaga yettida chiqaman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хотя́ ты опозда́л, презента́ция была́ отли́чная.",
+     "uz": "Kechikkan bo'lsang ham, taqdimot a'lo bo'ldi."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Спаси́бо! Я мно́го рабо́тал, поэ́тому всё получи́лось.",
+     "uz": "Rahmat! Ko'p ishladim, shuning uchun hammasi chiqdi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Когда́ бу́дет сле́дующая встре́ча?",
+     "uz": "Keyingi uchrashuv qachon bo'ladi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В пя́тницу. Е́сли хо́чешь, приходи́.",
+     "uz": "Juma kuni. Xohlasang, kel."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur nega kechikdi?",
+     "opts": [
+      "kasal bo'ldi",
+      "tirbandlik bo'ldi",
+      "uxlab qoldi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ertaga Bobur soat nechada chiqadi?",
+     "opts": [
+      "yettida",
+      "sakkizda",
+      "oltida"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Keyingi uchrashuv qachon?",
+     "opts": [
+      "dushanba kuni",
+      "ertaga",
+      "juma kuni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "была́ больша́я про́бка",
+     "alts": [
+      "не бы́ло авто́буса",
+      "я проспа́л",
+      "у меня́ слома́лась маши́на"
+     ]
+    },
+    {
+     "base": "в пя́тницу",
+     "alts": [
+      "в понеде́льник",
+      "за́втра",
+      "в сре́ду"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: kechikkaningiz sababini «потому́ что» bilan tushuntiring."
+  },
+  {
+   "id": "L55-d2",
+   "title_ru": "Возьми́ зонт!",
+   "title_uz": "Soyabon ol!",
+   "intro_uz": "Ikkinchi dialog. Abdulaziz ishga ketyapti. Nigora unga maslahat beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, возьми́ зонт!",
+     "uz": "Abdulaziz, soyabon ol!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Заче́м? Сейча́с со́лнце.",
+     "uz": "Nimaga? Hozir quyosh chiqib turibdi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Е́сли пойдёт дождь, зонт бу́дет ну́жен.",
+     "uz": "Agar yomg'ir yog'sa, soyabon kerak bo'ladi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́, возьму́. Хотя́ я не люблю́ зонты́.",
+     "uz": "Xo'p, olaman. Garchi soyabonni yoqtirmasam ham."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А когда́ ты вернёшься?",
+     "uz": "Qachon qaytasan?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Когда́ зако́нчу рабо́ту, сра́зу приду́ домо́й.",
+     "uz": "Ishni tugatganimda, darhol uyga kelaman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Позвони́ мне, потому́ что я бу́ду гото́вить у́жин.",
+     "uz": "Menga qo'ng'iroq qil, chunki kechki ovqat tayyorlayman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́. Е́сли опозда́ю, обяза́тельно позвоню́.",
+     "uz": "Xo'p. Agar kechiksam, albatta qo'ng'iroq qilaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Hozir havo qanday?",
+     "opts": [
+      "yomg'ir yog'yapti",
+      "quyosh chiqib turibdi",
+      "qor yog'yapti"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Abdulaziz nimani yoqtirmaydi?",
+     "opts": [
+      "soyabonni",
+      "yomg'irni",
+      "ishni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora nega qo'ng'iroq qilishni so'raydi?",
+     "opts": [
+      "xavotir oladi",
+      "bozorga boradi",
+      "kechki ovqat tayyorlaydi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "зонт",
+     "alts": [
+      "ку́ртку",
+      "ша́пку",
+      "тёплый шарф"
+     ]
+    },
+    {
+     "base": "пойдёт дождь",
+     "alts": [
+      "бу́дет хо́лодно",
+      "пойдёт снег",
+      "бу́дет ве́тер"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: yaqiningizga «е́сли» bilan maslahat bering — nima olishi kerak va nega."
+  },
+  {
+   "id": "L55-d3",
+   "title_ru": "Ты сдал экза́мен?",
+   "title_uz": "Imtihondan o'tdingmi?",
+   "intro_uz": "Uchinchi dialog. Timur bugun imtihon topshirdi. Dilnoza so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, ты сдал экза́мен?",
+     "uz": "Timur, imtihondan o'tdingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, сдал! Хотя́ он был о́чень тру́дный.",
+     "uz": "Ha, o'tdim! Garchi u juda qiyin bo'lsa ham."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Молоде́ц! А почему́ ты тако́й уста́вший?",
+     "uz": "Barakalla! Nega bunchalik charchagansan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Потому́ что я не спал всю ночь.",
+     "uz": "Chunki tun bo'yi uxlamadim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Что ты бу́дешь де́лать сейча́с?",
+     "uz": "Hozir nima qilasan?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Е́сли бу́дет свобо́дное вре́мя, пойду́ спать!",
+     "uz": "Agar bo'sh vaqtim bo'lsa, uxlagani boraman!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А ве́чером пойдём в кафе́? Я угоща́ю!",
+     "uz": "Kechqurun kafega boramizmi? Mendan!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Отли́чно! Когда́ про́снусь, позвоню́ тебе́.",
+     "uz": "Zo'r! Uyg'onganimda senga qo'ng'iroq qilaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Imtihon qanday edi?",
+     "opts": [
+      "oson",
+      "juda qiyin",
+      "qisqa"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur nega charchagan?",
+     "opts": [
+      "tun bo'yi uxlamagan",
+      "ko'p ishlagan",
+      "sport qilgan"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur uyg'onganda nima qiladi?",
+     "opts": [
+      "kafega boradi",
+      "yana o'qiydi",
+      "Dilnozaga qo'ng'iroq qiladi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в кафе́",
+     "alts": [
+      "в кино́",
+      "в парк",
+      "в рестора́н"
+     ]
+    },
+    {
+     "base": "пойду́ спать",
+     "alts": [
+      "пойду́ гуля́ть",
+      "посмотрю́ фильм",
+      "поигра́ю в футбо́л"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: bugun nima qilasiz? «е́сли» va «когда́» bilan ikki gap ayting."
+  }
+ ]
+}

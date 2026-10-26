@@ -1,0 +1,325 @@
+{
+ "n": 47,
+ "topic_uz": "Ob-havo, fasllar va qiyoslash: тепле́е, лу́чше, чем",
+ "scene": "Split scene of a phone call: on one side a Russian man in a snowy Moscow street wearing a warm hat, on the other an Uzbek woman on a sunny Tashkent balcony.",
+ "dialogs": [
+  {
+   "id": "L47-d1",
+   "title_ru": "Кака́я у вас пого́да?",
+   "title_uz": "Sizlarda havo qanday?",
+   "intro_uz": "Birinchi dialog. Anton Moskvada. U Nigoraga qo'ng'iroq qilyapti. Ular ob-havo haqida gaplashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, приве́т! Кака́я сего́дня пого́да в Ташке́нте?",
+     "uz": "Nigora, salom! Bugun Toshkentda havo qanday?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Со́лнечно и тепло́. Плюс де́сять гра́дусов.",
+     "uz": "Quyoshli va iliq. Plyus o'n daraja."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Плюс де́сять? А у нас ми́нус пять и идёт снег.",
+     "uz": "Plyus o'nmi? Bizda minus besh, qor yog'yapti."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ой, у нас намно́го тепле́е, чем у вас!",
+     "uz": "Voy, bizda sizlarnikidan ancha iliq!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да. Зимо́й в Москве́ всегда́ хо́лодно.",
+     "uz": "Ha. Qishda Moskvada doim sovuq."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А ле́том? Ле́том у вас жа́рко?",
+     "uz": "Yozda-chi? Yozda sizlarda issiqmi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Тепло́, плюс два́дцать пять. Но не так жа́рко, как у вас.",
+     "uz": "Iliq, plyus yigirma besh. Lekin sizlardagidek issiq emas."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Коне́чно! Ле́том у нас плюс со́рок!",
+     "uz": "Albatta! Yozda bizda plyus qirq!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bugun Toshkentda havo qanday?",
+     "opts": [
+      "quyoshli va iliq",
+      "bulutli",
+      "qor yog'yapti"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Moskvada bugun necha daraja?",
+     "opts": [
+      "plyus o'n",
+      "minus o'n",
+      "minus besh"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Yozda Moskvada necha daraja bo'ladi?",
+     "opts": [
+      "plyus qirq",
+      "plyus yigirma besh",
+      "plyus o'n"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Ташке́нте",
+     "alts": [
+      "в Самарка́нде",
+      "в Андижа́не",
+      "в Бухаре́"
+     ]
+    },
+    {
+     "base": "идёт снег",
+     "alts": [
+      "идёт дождь",
+      "ве́трено",
+      "о́блачно"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: bugun shahringizda havo qanday, necha daraja va u Moskvadan iliqroqmi?"
+  },
+  {
+   "id": "L47-d2",
+   "title_ru": "Твоё люби́мое вре́мя го́да",
+   "title_uz": "Sevimli fasling",
+   "intro_uz": "Ikkinchi dialog. Dilnoza va Bobur choyxonada. Ular fasllar haqida gaplashyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, како́е твоё люби́мое вре́мя го́да?",
+     "uz": "Bobur, sevimli fasling qaysi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Ле́то! Ле́том жа́рко, но мо́жно пла́вать.",
+     "uz": "Yoz! Yozda issiq, lekin suzish mumkin."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А я бо́льше люблю́ весну́.",
+     "uz": "Men esa ko'proq bahorni yaxshi ko'raman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Почему́? Весно́й ча́сто идёт дождь.",
+     "uz": "Nega? Bahorda tez-tez yomg'ir yog'adi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, но весно́й цвету́т абрико́сы. Э́то о́чень краси́во!",
+     "uz": "Ha, lekin bahorda o'riklar gullaydi. Bu juda chiroyli!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А зимо́й? Ты лю́бишь зи́му?",
+     "uz": "Qish-chi? Qishni yaxshi ko'rasanmi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Нет, зимо́й хо́лодно. О́сень лу́чше, чем зима́.",
+     "uz": "Yo'q, qishda sovuq. Kuz qishdan yaxshiroq."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Согла́сен! О́сенью мно́го фрукто́в.",
+     "uz": "Qo'shilaman! Kuzda meva ko'p."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Boburning sevimli fasli qaysi?",
+     "opts": [
+      "bahor",
+      "kuz",
+      "yoz"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnoza nega bahorni yaxshi ko'radi?",
+     "opts": [
+      "o'riklar gullaydi",
+      "issiq bo'ladi",
+      "meva ko'p"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnozaning fikricha, qaysi fasl qishdan yaxshiroq?",
+     "opts": [
+      "yoz",
+      "kuz",
+      "bahor"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "весну́",
+     "alts": [
+      "ле́то",
+      "о́сень",
+      "зи́му"
+     ]
+    },
+    {
+     "base": "О́сень лу́чше, чем зима́",
+     "alts": [
+      "Весна́ лу́чше, чем о́сень",
+      "Ле́то лу́чше, чем зима́",
+      "Зима́ лу́чше, чем ле́то"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz haqingizda gapiring: sevimli faslingiz qaysi va nega u boshqa fasldan yaxshiroq?"
+  },
+  {
+   "id": "L47-d3",
+   "title_ru": "Како́й телефо́н лу́чше?",
+   "title_uz": "Qaysi telefon yaxshiroq?",
+   "intro_uz": "Uchinchi dialog. Timur do'konda telefon tanlayapti. Sotuvchi ikki telefonni qiyoslaydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Продавщи́ца",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Скажи́те, како́й телефо́н лу́чше: э́тот и́ли тот?",
+     "uz": "Ayting-chi, qaysi telefon yaxshiroq: bumi yoki ana umi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Э́тот лу́чше. Он быстре́е, и ка́мера лу́чше.",
+     "uz": "Bunisi yaxshiroq. U tezroq, kamerasi ham yaxshiroq."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А ско́лько он сто́ит?",
+     "uz": "U qancha turadi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Три миллио́на. Он доро́же, чем тот.",
+     "uz": "Uch million. U ana undan qimmatroq."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А тот деше́вле?",
+     "uz": "Unisi arzonroqmi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Да, два миллио́на. Но он ме́ньше и ме́дленнее.",
+     "uz": "Ha, ikki million. Lekin u kichikroq va sekinroq."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Мне ну́жен большо́й экра́н. Я возьму́ э́тот.",
+     "uz": "Menga katta ekran kerak. Bunisini olaman."
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Отли́чный вы́бор! Он бо́льше и лу́чше.",
+     "uz": "Ajoyib tanlov! U kattaroq va yaxshiroq."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Sotuvchining fikricha, qaysi telefon yaxshiroq?",
+     "opts": [
+      "unisi",
+      "bunisi",
+      "ikkalasi bir xil"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Arzon telefon qancha turadi?",
+     "opts": [
+      "ikki million",
+      "uch million",
+      "bir million"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur qaysi telefonni oladi?",
+     "opts": [
+      "arzonini",
+      "hech qaysini",
+      "kattasini"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "телефо́н",
+     "alts": [
+      "компью́тер",
+      "планше́т",
+      "холоди́льник"
+     ]
+    },
+    {
+     "base": "доро́же",
+     "alts": [
+      "деше́вле",
+      "бо́льше",
+      "лу́чше"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: do'konda ikki narsani qiyoslang — qaysi biri yaxshiroq, arzonroq yoki kattaroq?"
+  }
+ ]
+}
