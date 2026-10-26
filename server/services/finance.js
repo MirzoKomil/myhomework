@@ -141,11 +141,13 @@ CREATE TABLE IF NOT EXISTS fin_schema_fingerprints (id BIGSERIAL PRIMARY KEY, fn
 ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS code_hash TEXT;
 ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS snapshot JSONB;
 ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS snap_hash TEXT;
+ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS key_id TEXT;
 CREATE TABLE IF NOT EXISTS fin_checkpoints (id BIGSERIAL PRIMARY KEY, seal_seq BIGINT NOT NULL, seal_hash TEXT NOT NULL, audit_id BIGINT NOT NULL, audit_hash TEXT NOT NULL,
  prev_mac TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 -- Bir martalik qabul: moliya bo'limi hali ishlatilmagan paytda (audit bo'sh) oldingi ilova versiyasi yozgan, imzosiz qolgan
 -- muhrlar shu chegaragacha (seq) qabul qilinadi. Yozuv kalit bilan imzolangan va o'zgarmas.
 CREATE TABLE IF NOT EXISTS fin_adoptions (id BIGSERIAL PRIMARY KEY, upto_seq BIGINT NOT NULL, note TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+ALTER TABLE fin_adoptions ADD COLUMN IF NOT EXISTS key_id TEXT;
 CREATE TABLE IF NOT EXISTS fin_tx_signatures (xid TEXT PRIMARY KEY, seals INTEGER NOT NULL, audits INTEGER NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 -- O'quvchi holatining moliyaga ta'sir qiluvchi o'zgarishlari (muzlatish, tashlash, qarz, to'lov sanasi) jurnali:
 -- CRM qayerdan o'zgartirmasin, baza triggeri yozib qo'yadi; jurnal o'zgarmas va muhrlangan.
@@ -444,6 +446,7 @@ async function initSchema(pool) {
             // Ishga tushishdan oldin: kod o'zgarmagan bo'lsa, baza tuzilmasi oxirgi imzolangan izga teng bo'lishi shart
             // (aks holda kimdir server o'chiq paytda funksiya/trigger/DEFAULT o'zgartirgan — qayta yaratishdan oldin qayd etiladi).
             // Kod versiyasi: moliya, tushum va maosh modullari manbasi — yangi versiya o'rnatilganda tuzilma o'zgarishi kutiladi.
+            console.log('[moliya] Server kaliti izi: ' + finCtx.keyId() + (finCtx.keyConfigured() ? '' : ' (FIN_SEAL_KEY o‘rnatilmagan!)'));
             const codeHash = createHash('sha256').update(['finance.js', 'finCtx.js', 'inflow.js', 'payroll.js', 'paymentCash.js'].map(f => { try { return fs.readFileSync(path.join(__dirname, f), 'utf8'); } catch { return ''; } }).join('\n')).digest('hex');
             if ((await db.query("SELECT to_regclass('fin_schema_fingerprints') AS t")).rows[0].t) {
                 await db.query('SAVEPOINT fin_boot');
@@ -489,11 +492,12 @@ async function initSchema(pool) {
             }
             await backfillSeals(db);
             await adoptLegacySeals(db);
+            const rekeyed = await adoptAfterKeyChange(db, codeHash);
             // Kod yaratgan funksiyalar shu yerda (CREATE OR REPLACE dan keyin) aynan koddagidek — izi imzolanadi.
             const fh = await functionHash(db);
             const lastFp = (await db.query('SELECT fn_hash, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0], snap = await structSnapshot(db);
             const snapHash = snapHashOf(snap);
-            if (lastFp?.fn_hash !== fh || lastFp?.code_hash !== codeHash) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac,code_hash,snapshot,snap_hash) VALUES($1,$2,$3,$4,$5)', [fh, finCtx.schemaMac(fpMacInput(fh, codeHash, snapHash)), codeHash, JSON.stringify(snap), snapHash]);
+            if (rekeyed || lastFp?.fn_hash !== fh || lastFp?.code_hash !== codeHash) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac,code_hash,snapshot,snap_hash,key_id) VALUES($1,$2,$3,$4,$5,$6)', [fh, finCtx.schemaMac(fpMacInput(fh, codeHash, snapHash)), codeHash, JSON.stringify(snap), snapHash, finCtx.keyId()]);
             await finCtx.signTx(db);
             await db.query('COMMIT'); finCtx.commitHead(db);
         } catch (e) { await db.query('ROLLBACK').catch(() => {}); throw e; }
@@ -637,6 +641,23 @@ async function adoptLegacySeals(db) {
     await db.query('INSERT INTO fin_adoptions(upto_seq,note,mac) VALUES($1,$2,$3)', [upto, note, finCtx.schemaMac('adopt|' + upto)]);
     await db.query("INSERT INTO fin_migrations(id) VALUES('adopt-legacy-v1')");
 }
+// Server kaliti (FIN_SEAL_KEY) o'zgargan bo'lsa, eski kalit bilan qo'yilgan imzolarni tekshirib bo'lmaydi. Moliya hali
+// ishlatilmagan bo'lsa (audit va nazorat nuqtalari yo'q) — shu paytgacha bo'lgan muhrlar yangi kalit bilan bir marta qabul
+// qilinadi (yozuv qoladi, logga chiqadi). Moliya ishlatilgan bo'lsa — avtomatik qabul yo'q, ogohlantirish turadi.
+async function adoptAfterKeyChange(db, codeHash) {
+    const fp = (await db.query('SELECT fn_hash, mac, code_hash, snap_hash, key_id FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
+    if (!fp || finCtx.validSchemaMac(fpMacInput(fp.fn_hash, fp.code_hash, fp.snap_hash), fp.mac)) return false;
+    if ((await db.query('SELECT 1 FROM fin_audit LIMIT 1')).rows.length || (await db.query('SELECT 1 FROM fin_checkpoints LIMIT 1')).rows.length) {
+        console.error(`[moliya] Server kaliti o‘zgargan (iz kaliti ${fp.key_id || 'noma’lum'}, hozirgi ${finCtx.keyId()}) — moliya ishlatilgan, avtomatik qabul qilinmadi`);
+        return false;
+    }
+    const upto = Number((await db.query("SELECT COALESCE(MAX(seq),0) AS m FROM fin_row_seals WHERE xid IS DISTINCT FROM pg_current_xact_id()::text")).rows[0].m);
+    const note = `Server kaliti o‘zgargan (oldingi ${fp.key_id || 'noma’lum'}, yangi ${finCtx.keyId()}); moliya ishlatilmagan — ${upto}-muhrgacha qabul qilindi`;
+    await db.query('INSERT INTO fin_adoptions(upto_seq,note,mac,key_id) VALUES($1,$2,$3,$4)', [upto, note, finCtx.schemaMac('adopt|' + upto), finCtx.keyId()]);
+    finCtx.clearAlarm(note, 'system');
+    console.log('[moliya] ' + note);
+    return true;
+}
 async function adoptedUpto(db) {
     const r = (await db.query('SELECT upto_seq, mac FROM fin_adoptions ORDER BY id DESC LIMIT 1').catch(() => ({ rows: [] }))).rows[0];
     return r && finCtx.validSchemaMac('adopt|' + Number(r.upto_seq), r.mac) ? Number(r.upto_seq) : 0;
@@ -671,7 +692,8 @@ async function ctxIntegrity(db) {
 const ctxCache = { seq: 0, sealHash: null, auditId: 0, auditHash: null };
 async function ctxSignatures(db) {
     if (ctxCache.seq) { const a = (await db.query('SELECT row_hash FROM fin_row_seals WHERE seq=$1', [ctxCache.seq])).rows[0]; if (!a || a.row_hash !== ctxCache.sealHash) ctxCache.seq = 0; }
-    for (const r of (await db.query('SELECT seq, table_name, row_id, ctx, row_hash FROM fin_row_seals WHERE seq>$1 ORDER BY seq', [ctxCache.seq])).rows) {
+    const adopted = await adoptedUpto(db);
+    for (const r of (await db.query('SELECT seq, table_name, row_id, ctx, row_hash FROM fin_row_seals WHERE seq>$1 ORDER BY seq', [Math.max(ctxCache.seq, adopted)])).rows) {
         if (r.ctx && !finCtx.valid(r.ctx)) { ctxCache.seq = 0; return { ok: false, table: r.table_name, rowId: r.row_id, brokenAt: Number(r.seq), reason: 'ilova belgisi imzosiz — yozuv ilovadan tashqarida soxtalashtirilgan' }; }
         ctxCache.seq = Number(r.seq); ctxCache.sealHash = r.row_hash;
     }
@@ -740,7 +762,7 @@ async function txSignatures(db) {
     const fail = (x, reason) => { sigCache.seq = 0; sigCache.auditId = 0; return { ok: false, table: x.table_name || 'fin_audit', rowId: x.row_id || String(x.id), brokenAt: x.seq ? Number(x.seq) : undefined, reason }; };
     const adopted = await adoptedUpto(db);
     for (const x of [...seals, ...audits]) if (!x.xid && !(x.seq && Number(x.seq) <= adopted)) return fail(x, 'tranzaksiya raqami yo‘q — yozuv ilovadan tashqarida qo‘shilgan');
-    const xids = [...new Set([...seals, ...audits].map(x => x.xid).filter(Boolean))];
+    const xids = [...new Set([...seals.filter(x => Number(x.seq) > adopted), ...audits].map(x => x.xid).filter(Boolean))];
     if (xids.length) {
         const sigs = new Map((await db.query('SELECT xid, mac FROM fin_tx_signatures WHERE xid = ANY($1)', [xids])).rows.map(r => [r.xid, r.mac]));
         const sh = new Map((await db.query('SELECT xid, array_agg(row_hash ORDER BY seq) AS h FROM fin_row_seals WHERE xid = ANY($1) GROUP BY xid', [xids])).rows.map(r => [r.xid, r.h]));
@@ -841,9 +863,10 @@ async function schemaIntegrity(db) {
     if (pol) return { ok: false, table: pol.t, rowId: pol.polname, reason: 'moliya jadvalida qator siyosati (POLICY) bor' };
     const evt = (await db.query('SELECT evtname FROM pg_event_trigger')).rows[0];
     if (evt) return { ok: false, table: 'pg_event_trigger', rowId: evt.evtname, reason: 'bazada hodisa triggeri (EVENT TRIGGER) bor' };
-    const fp = (await db.query('SELECT fn_hash, mac, code_hash, snap_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
+    const fp = (await db.query('SELECT fn_hash, mac, code_hash, snap_hash, key_id FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
     if (!fp) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya tuzilmasi izi topilmadi (ishga tushish to‘liq bajarilmagan)' };
-    if (!finCtx.validSchemaMac(fpMacInput(fp.fn_hash, fp.code_hash, fp.snap_hash), fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya tuzilmasi izining imzosi mos emas (kalit o‘zgargan yoki iz bazada o‘zgartirilgan)' };
+    if (!finCtx.validSchemaMac(fpMacInput(fp.fn_hash, fp.code_hash, fp.snap_hash), fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: fp.key_id && fp.key_id !== finCtx.keyId()
+        ? `server kaliti (FIN_SEAL_KEY) o‘zgargan: iz ${fp.key_id} kaliti bilan imzolangan, hozirgi kalit ${finCtx.keyId()}` : 'moliya tuzilmasi izining imzosi mos emas (kalit o‘zgargan yoki iz bazada o‘zgartirilgan)' };
     if (fp.fn_hash !== await functionHash(db)) return { ok: false, table: 'pg_proc', rowId: '', reason: 'moliya funksiyalari yoki triggerlari bazada o‘zgartirilgan (imzolangan izga mos emas)' };
     return { ok: true };
 }
@@ -919,6 +942,10 @@ async function acknowledgeIntegrityAlarm(pool, actor, body) {
     });
 }
 async function integrityInner(db, { full = false } = {}) {
+    // Kalit almashgan bo'lsa, boshqa imzo xatolari shundan kelib chiqadi — sababni birinchi aytamiz.
+    const kfp = (await db.query('SELECT key_id FROM fin_schema_fingerprints WHERE key_id IS NOT NULL ORDER BY id DESC LIMIT 1').catch(() => ({ rows: [] }))).rows[0];
+    if (kfp && kfp.key_id !== finCtx.keyId()) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', badSnapshots: [],
+        reason: `server kaliti (FIN_SEAL_KEY) o‘zgargan: oxirgi iz ${kfp.key_id} kaliti bilan imzolangan, hozirgi kalit ${finCtx.keyId()}` };
     const tables = await sealedTables(db);
     const chain = await chainIntegrity(db, full);
     if (!chain.ok) return { ...chain, badSnapshots: [] };
