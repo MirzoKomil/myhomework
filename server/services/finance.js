@@ -143,6 +143,9 @@ ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS snapshot JSONB;
 ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS snap_hash TEXT;
 CREATE TABLE IF NOT EXISTS fin_checkpoints (id BIGSERIAL PRIMARY KEY, seal_seq BIGINT NOT NULL, seal_hash TEXT NOT NULL, audit_id BIGINT NOT NULL, audit_hash TEXT NOT NULL,
  prev_mac TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+-- Bir martalik qabul: moliya bo'limi hali ishlatilmagan paytda (audit bo'sh) oldingi ilova versiyasi yozgan, imzosiz qolgan
+-- muhrlar shu chegaragacha (seq) qabul qilinadi. Yozuv kalit bilan imzolangan va o'zgarmas.
+CREATE TABLE IF NOT EXISTS fin_adoptions (id BIGSERIAL PRIMARY KEY, upto_seq BIGINT NOT NULL, note TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS fin_tx_signatures (xid TEXT PRIMARY KEY, seals INTEGER NOT NULL, audits INTEGER NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 -- O'quvchi holatining moliyaga ta'sir qiluvchi o'zgarishlari (muzlatish, tashlash, qarz, to'lov sanasi) jurnali:
 -- CRM qayerdan o'zgartirmasin, baza triggeri yozib qo'yadi; jurnal o'zgarmas va muhrlangan.
@@ -321,7 +324,7 @@ DO $$ BEGIN
     CREATE TRIGGER fin_guard_salary BEFORE INSERT OR UPDATE OR DELETE ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_guard_salary();
   END IF;
 END $$;
-${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles', 'fin_receipt_reviews', 'fin_student_corrections', 'fin_tx_signatures', 'fin_schema_fingerprints', 'fin_checkpoints', 'fin_input_log']
+${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles', 'fin_receipt_reviews', 'fin_student_corrections', 'fin_tx_signatures', 'fin_schema_fingerprints', 'fin_checkpoints', 'fin_input_log', 'fin_adoptions']
     .map(t => `DROP TRIGGER IF EXISTS fin_no_truncate_${t} ON ${t};\nCREATE TRIGGER fin_no_truncate_${t} BEFORE TRUNCATE ON ${t} FOR EACH STATEMENT EXECUTE FUNCTION fin_reject_change();`).join('\n')}
 -- Yopilgan oy qulfi o'zgartirilmaydi; faqat ilova (rahbar, oxirgi oy) ochishi mumkin — fin.unlock belgisi bilan.
 CREATE OR REPLACE FUNCTION fin_lock_guard() RETURNS trigger AS $$
@@ -413,6 +416,7 @@ ${immutableSql('fin_receipt_reviews')}
 ${immutableSql('fin_tx_signatures')}
 ${immutableSql('fin_schema_fingerprints')}
 ${immutableSql('fin_input_log')}
+${immutableSql('fin_adoptions')}
 ${immutableSql('fin_checkpoints')}
 ${immutableSql('fin_student_corrections')}
 ${immutableSql('fin_salary_roles')}
@@ -484,6 +488,7 @@ async function initSchema(pool) {
                 await db.query("INSERT INTO fin_migrations(id) VALUES('student-log-v1') ON CONFLICT DO NOTHING");
             }
             await backfillSeals(db);
+            await adoptLegacySeals(db);
             // Kod yaratgan funksiyalar shu yerda (CREATE OR REPLACE dan keyin) aynan koddagidek — izi imzolanadi.
             const fh = await functionHash(db);
             const lastFp = (await db.query('SELECT fn_hash, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0], snap = await structSnapshot(db);
@@ -621,9 +626,25 @@ const CONTROL_INSERT = ['payment_records', 'fin_transactions', 'fin_payables', '
     'fin_settings', 'fin_settings_history', 'payment_record_voids', 'salary_transactions', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles', 'fin_receipt_reviews', 'fin_student_corrections'];
 const AUDITED_INSERTS = ['fin_transactions', 'fin_payables', 'fin_asset_events', 'fin_contract_events', 'fin_student_corrections', 'fin_receipt_reviews', 'payment_record_voids', 'payment_records', 'fin_accounts', 'fin_period_locks', 'fin_period_snapshots'];
 const CTX_TABLES = { payroll: ['salary_transactions', 'fin_salary_roles'], inflow: ['payment_records', 'fin_contract_values', 'fin_student_log'], crm: ['fin_student_log'] };
+// Moliya bo'limi hali ishlatilmagan (birorta moliya amali yo'q) bo'lsa — oldingi versiya qoldirgan imzosiz muhrlar bir marta qabul qilinadi.
+async function adoptLegacySeals(db) {
+    if ((await db.query("SELECT 1 FROM fin_migrations WHERE id='adopt-legacy-v1'")).rows.length) return;
+    if ((await db.query('SELECT 1 FROM fin_audit LIMIT 1')).rows.length) return; // moliya ishlatilgan — avtomatik qabul yo'q
+    const upto = Number((await db.query("SELECT COALESCE(MAX(seq),0) AS m FROM fin_row_seals WHERE xid IS DISTINCT FROM pg_current_xact_id()::text")).rows[0].m);
+    for (const r of (await db.query('SELECT DISTINCT s.xid FROM fin_row_seals s WHERE s.xid IS NOT NULL AND s.xid <> pg_current_xact_id()::text AND NOT EXISTS (SELECT 1 FROM fin_tx_signatures t WHERE t.xid=s.xid)')).rows)
+        await finCtx.signXid(db, r.xid);
+    const note = 'Oldingi ilova versiyasi yozgan imzosiz muhrlar (moliya ishlatilishidan oldin) qabul qilindi';
+    await db.query('INSERT INTO fin_adoptions(upto_seq,note,mac) VALUES($1,$2,$3)', [upto, note, finCtx.schemaMac('adopt|' + upto)]);
+    await db.query("INSERT INTO fin_migrations(id) VALUES('adopt-legacy-v1')");
+}
+async function adoptedUpto(db) {
+    const r = (await db.query('SELECT upto_seq, mac FROM fin_adoptions ORDER BY id DESC LIMIT 1').catch(() => ({ rows: [] }))).rows[0];
+    return r && finCtx.validSchemaMac('adopt|' + Number(r.upto_seq), r.mac) ? Number(r.upto_seq) : 0;
+}
 async function ctxIntegrity(db) {
+    const adopted = await adoptedUpto(db);
     const bad = (await db.query(`SELECT s.seq, s.table_name, s.row_id, s.op, s.ctx FROM fin_row_seals s
-        WHERE (s.op IN ('U','D') OR s.table_name = ANY($1)) AND (
+        WHERE s.seq > ${adopted} AND (s.op IN ('U','D') OR s.table_name = ANY($1)) AND (
             s.ctx IS NULL
             OR (s.ctx LIKE 'fin:%' AND NOT EXISTS (SELECT 1 FROM fin_audit a WHERE a.txn_ctx = s.ctx))
             OR (s.ctx LIKE 'payroll:%' AND s.table_name <> ALL($2))
@@ -635,7 +656,7 @@ async function ctxIntegrity(db) {
         // Moliya tranzaksiyasida qo'shilgan har bir yozuv shu tranzaksiyaning audit yozuvida nomi bilan tilga olinishi shart:
         // ilova yozuvi "orqasida" (yashirin trigger va h.k. bilan) qo'shilgan begona qator auditda bo'lmaydi.
         const orphan = (await db.query(`SELECT s.seq, s.table_name, s.row_id FROM fin_row_seals s
-            WHERE s.op = 'I' AND s.ctx LIKE 'fin:%' AND s.table_name = ANY($1)
+            WHERE s.seq > ${adopted} AND s.op = 'I' AND s.ctx LIKE 'fin:%' AND s.table_name = ANY($1)
               AND NOT EXISTS (SELECT 1 FROM fin_audit a WHERE a.xid = s.xid AND (a.entity_id = s.row_id
                   OR strpos(COALESCE(a.after_data::text, ''), '"' || s.row_id || '"') > 0 OR strpos(COALESCE(a.before_data::text, ''), '"' || s.row_id || '"') > 0))
             ORDER BY s.seq LIMIT 1`, [AUDITED_INSERTS])).rows[0];
@@ -717,8 +738,9 @@ async function txSignatures(db) {
     const seals = (await db.query('SELECT seq, xid, table_name, row_id, row_hash FROM fin_row_seals WHERE seq>$1 ORDER BY seq', [sigCache.seq])).rows;
     const audits = (await db.query('SELECT id, xid, hash FROM fin_audit WHERE id>$1 ORDER BY id', [sigCache.auditId])).rows;
     const fail = (x, reason) => { sigCache.seq = 0; sigCache.auditId = 0; return { ok: false, table: x.table_name || 'fin_audit', rowId: x.row_id || String(x.id), brokenAt: x.seq ? Number(x.seq) : undefined, reason }; };
-    for (const x of [...seals, ...audits]) if (!x.xid) return fail(x, 'tranzaksiya raqami yo‘q — yozuv ilovadan tashqarida qo‘shilgan');
-    const xids = [...new Set([...seals, ...audits].map(x => x.xid))];
+    const adopted = await adoptedUpto(db);
+    for (const x of [...seals, ...audits]) if (!x.xid && !(x.seq && Number(x.seq) <= adopted)) return fail(x, 'tranzaksiya raqami yo‘q — yozuv ilovadan tashqarida qo‘shilgan');
+    const xids = [...new Set([...seals, ...audits].map(x => x.xid).filter(Boolean))];
     if (xids.length) {
         const sigs = new Map((await db.query('SELECT xid, mac FROM fin_tx_signatures WHERE xid = ANY($1)', [xids])).rows.map(r => [r.xid, r.mac]));
         const sh = new Map((await db.query('SELECT xid, array_agg(row_hash ORDER BY seq) AS h FROM fin_row_seals WHERE xid = ANY($1) GROUP BY xid', [xids])).rows.map(r => [r.xid, r.h]));
