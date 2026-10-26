@@ -1,0 +1,325 @@
+{
+ "n": 62,
+ "topic_uz": "Telefonda bron qilish: Я хоте́л бы забронирова́ть…",
+ "scene": "A female restaurant administrator in a neat uniform takes a phone reservation at a desk with a booking book, while a young Uzbek man calls from his living room.",
+ "dialogs": [
+  {
+   "id": "L62-d1",
+   "title_ru": "Сто́лик на четверы́х",
+   "title_uz": "To'rt kishilik stol",
+   "intro_uz": "Birinchi dialog. Timur restoranga qo'ng'iroq qilib, stol band qiladi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Администра́тор",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Администра́тор",
+     "ru": "Рестора́н «Самарка́нд», здра́вствуйте!",
+     "uz": "«Samarqand» restorani, assalomu alaykum!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Здра́вствуйте! Я хоте́л бы забронирова́ть сто́лик.",
+     "uz": "Assalomu alaykum! Stol band qilmoqchi edim."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "На како́е число́ и на ско́лько челове́к?",
+     "uz": "Qaysi sanaga va necha kishiga?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "На суббо́ту, на семь часо́в. Сто́лик на четверы́х.",
+     "uz": "Shanbaga, soat yettiga. To'rt kishilik stol."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Хорошо́. Есть свобо́дный сто́лик.",
+     "uz": "Yaxshi. Bo'sh stol bor."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А мо́жно сто́лик у окна́?",
+     "uz": "Deraza yonidagi stol bo'ladimi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Да, мо́жно. На чьё и́мя?",
+     "uz": "Ha, bo'ladi. Kimning nomiga?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "На и́мя Тиму́ра Рахи́мова. Спаси́бо!",
+     "uz": "Timur Rahimov nomiga. Rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur qaysi kunga band qildi?",
+     "opts": [
+      "jumaga",
+      "shanbaga",
+      "yakshanbaga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Necha kishilik stol?",
+     "opts": [
+      "ikki",
+      "olti",
+      "to'rt"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Timur qayerdagi stolni so'raydi?",
+     "opts": [
+      "deraza yonidagi",
+      "eshik yonidagi",
+      "zaldagi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "на четверы́х",
+     "alts": [
+      "на двои́х",
+      "на шестеры́х",
+      "на трои́х"
+     ]
+    },
+    {
+     "base": "у окна́",
+     "alts": [
+      "на терра́се",
+      "в углу́",
+      "у сте́ны"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: restoranga qo'ng'iroq qiling va sizga qulay kun va vaqtga stol band qiling."
+  },
+  {
+   "id": "L62-d2",
+   "title_ru": "Свобо́дные номера́",
+   "title_uz": "Bo'sh xonalar",
+   "intro_uz": "Ikkinchi dialog. Nigora Moskvadagi mehmonxonaga qo'ng'iroq qiladi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Администра́тор",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте! У вас есть свобо́дные номера́ на пя́тое ма́я?",
+     "uz": "Assalomu alaykum! Beshinchi mayga bo'sh xonalaringiz bormi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "На ско́лько ноче́й?",
+     "uz": "Necha kechaga?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "На три но́чи, с пя́того по восьмо́е ма́я. Но́мер на двои́х.",
+     "uz": "Uch kechaga, beshinchidan sakkizinchi maygacha. Ikki kishilik xona."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Да, есть. Пять ты́сяч рубле́й в су́тки.",
+     "uz": "Ha, bor. Sutkasiga besh ming rubl."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А за́втрак включён?",
+     "uz": "Nonushta kiradimi?"
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Да, включён. Подтверди́те, пожа́луйста, на чьё и́мя?",
+     "uz": "Ha, kiradi. Tasdiqlang, iltimos, kimning nomiga?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "На и́мя Нигоры́ Кари́мовой.",
+     "uz": "Nigora Karimova nomiga."
+    },
+    {
+     "who": "Администра́тор",
+     "ru": "Спаси́бо, ваш но́мер заброни́рован.",
+     "uz": "Rahmat, xonangiz band qilindi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora necha kechaga band qildi?",
+     "opts": [
+      "ikki",
+      "uch",
+      "besh"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Xona sutkasiga qancha turadi?",
+     "opts": [
+      "besh ming rubl",
+      "uch ming rubl",
+      "sakkiz ming rubl"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Narxga nima kiradi?",
+     "opts": [
+      "kechki ovqat",
+      "taksi",
+      "nonushta"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "на три но́чи",
+     "alts": [
+      "на две но́чи",
+      "на неде́лю",
+      "на одну́ ночь"
+     ]
+    },
+    {
+     "base": "на двои́х",
+     "alts": [
+      "на одного́",
+      "на трои́х",
+      "на семью́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: mehmonxonaga qo'ng'iroq qilib, kerakli sanalarga xona band qiling."
+  },
+  {
+   "id": "L62-d3",
+   "title_ru": "Записа́ться на приём",
+   "title_uz": "Qabulga yozilish",
+   "intro_uz": "Uchinchi dialog. Abdulaziz poliklinikaga qo'ng'iroq qiladi. U shifokor qabuliga yoziladi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Регистра́тор",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Регистра́тор",
+     "ru": "Поликли́ника, слу́шаю вас.",
+     "uz": "Poliklinika, eshitaman."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Здра́вствуйте! Мо́жно записа́ться на приём к терапе́вту?",
+     "uz": "Assalomu alaykum! Terapevt qabuliga yozilsa bo'ladimi?"
+    },
+    {
+     "who": "Регистра́тор",
+     "ru": "На како́й день?",
+     "uz": "Qaysi kunga?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "На сре́ду, е́сли мо́жно.",
+     "uz": "Mumkin bo'lsa, chorshanbaga."
+    },
+    {
+     "who": "Регистра́тор",
+     "ru": "На сре́ду всё за́нято. Мо́жет быть, в четве́рг в де́сять?",
+     "uz": "Chorshanba band. Balki payshanba soat o'nda?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Хорошо́. И я хочу́ отмени́ть приём к стомато́логу во вто́рник.",
+     "uz": "Yaxshi. Yana seshanbadagi stomatolog qabulini bekor qilmoqchiman."
+    },
+    {
+     "who": "Регистра́тор",
+     "ru": "На чьё и́мя?",
+     "uz": "Kimning nomiga?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "На и́мя Абдулази́за Кари́мова. Спаси́бо!",
+     "uz": "Abdulaziz Karimov nomiga. Rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz qaysi shifokorga yoziladi?",
+     "opts": [
+      "stomatologga",
+      "terapevtga",
+      "ko'z shifokoriga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Qabul qachon bo'ladi?",
+     "opts": [
+      "payshanba soat o'nda",
+      "chorshanba soat o'nda",
+      "seshanba ertalab"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "U nimani bekor qiladi?",
+     "opts": [
+      "terapevt qabulini",
+      "payshanbadagi qabulni",
+      "seshanbadagi stomatolog qabulini"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "к терапе́вту",
+     "alts": [
+      "к стомато́логу",
+      "к окули́сту",
+      "к педиа́тру"
+     ]
+    },
+    {
+     "base": "в четве́рг в де́сять",
+     "alts": [
+      "в пя́тницу в де́вять",
+      "в понеде́льник в три",
+      "за́втра в оди́ннадцать"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: poliklinikaga qo'ng'iroq qilib, shifokor qabuliga yoziling."
+  }
+ ]
+}

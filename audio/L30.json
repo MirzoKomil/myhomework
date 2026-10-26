@@ -1,0 +1,325 @@
+{
+ "n": 30,
+ "topic_uz": "Do'kon va bozorda xarid — «Ско́лько сто́ит?»",
+ "scene": "At a sunny Uzbek bazaar, a woman buys grapes from a smiling male vendor at a fruit stall.",
+ "dialogs": [
+  {
+   "id": "L30-d1",
+   "title_ru": "На база́ре",
+   "title_uz": "Bozorda",
+   "intro_uz": "Birinchi dialog. Nigora bozorda uzum olyapti. U savdolashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Продаве́ц",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Продаве́ц",
+     "ru": "Здра́вствуйте! Что вам?",
+     "uz": "Assalomu alaykum! Sizga nima kerak?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ско́лько сто́ит килогра́мм виногра́да?",
+     "uz": "Bir kilo uzum qancha turadi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Два́дцать ты́сяч. О́чень сла́дкий!",
+     "uz": "Yigirma ming. Juda shirin!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Э́то до́рого. Мо́жно деше́вле?",
+     "uz": "Bu qimmat. Arzonroq bo'ladimi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Ну хорошо́. Восемна́дцать ты́сяч.",
+     "uz": "Mayli. O'n sakkiz ming."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да́йте, пожа́луйста, два килогра́мма.",
+     "uz": "Iltimos, ikki kilo bering."
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "С вас три́дцать шесть ты́сяч. Ещё что-нибудь?",
+     "uz": "Sizdan o'ttiz olti ming. Yana biror narsa?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, спаси́бо. Вот де́ньги.",
+     "uz": "Yo'q, rahmat. Mana pul."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora nima oldi?",
+     "opts": [
+      "olma",
+      "uzum",
+      "pomidor"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Savdolashgandan keyin bir kilo qancha bo'ldi?",
+     "opts": [
+      "18 ming",
+      "20 ming",
+      "16 ming"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora necha kilo oldi?",
+     "opts": [
+      "bir kilo",
+      "uch kilo",
+      "ikki kilo"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "виногра́да",
+     "alts": [
+      "я́блок",
+      "помидо́ров",
+      "карто́шки"
+     ]
+    },
+    {
+     "base": "два килогра́мма",
+     "alts": [
+      "килогра́мм",
+      "три килогра́мма",
+      "пять килогра́ммов"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: bozorda meva narxini so'rang, savdolashing va ikki kilo oling."
+  },
+  {
+   "id": "L30-d2",
+   "title_ru": "Све́жий хлеб",
+   "title_uz": "Yangi non",
+   "intro_uz": "Ikkinchi dialog. Timur mahalladagi do'konda non, sut va pishloq olyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Продавщи́ца",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Здра́вствуйте! У вас есть све́жий хлеб?",
+     "uz": "Assalomu alaykum! Yangi non bormi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Да, есть. Что ещё?",
+     "uz": "Ha, bor. Yana nima?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да́йте, пожа́луйста, хлеб и буты́лку молока́.",
+     "uz": "Iltimos, non va bir shisha sut bering."
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Вот. Ещё что-нибудь?",
+     "uz": "Mana. Yana biror narsa?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, две́сти гра́ммов сы́ра, пожа́луйста.",
+     "uz": "Ha, iltimos, ikki yuz gramm pishloq."
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Пожа́луйста. С вас два́дцать во́семь ты́сяч.",
+     "uz": "Marhamat. Sizdan yigirma sakkiz ming."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Мо́жно ка́ртой?",
+     "uz": "Karta bilan mumkinmi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Да, коне́чно, мо́жно.",
+     "uz": "Ha, albatta, mumkin."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur qanday sut oldi?",
+     "opts": [
+      "bir paket",
+      "bir shisha",
+      "bir litr"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Necha gramm pishloq oldi?",
+     "opts": [
+      "200 gramm",
+      "300 gramm",
+      "500 gramm"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Timur qanday to'laydi?",
+     "opts": [
+      "naqd",
+      "qarzga",
+      "karta bilan"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "буты́лку молока́",
+     "alts": [
+      "па́чку ча́я",
+      "буты́лку воды́",
+      "па́чку со́ли"
+     ]
+    },
+    {
+     "base": "две́сти гра́ммов сы́ра",
+     "alts": [
+      "килогра́мм мя́са",
+      "три́ста гра́ммов ма́сла",
+      "два килогра́мма ри́са"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: do'kondan uch xil mahsulot so'rang va karta bilan to'lash mumkinmi, so'rang."
+  },
+  {
+   "id": "L30-d3",
+   "title_ru": "Мя́со и ры́ба",
+   "title_uz": "Go'sht va baliq",
+   "intro_uz": "Uchinchi dialog. Abdulaziz do'konda go'sht va baliq olyapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Продавщи́ца",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Здра́вствуйте! Ско́лько сто́ит килогра́мм мя́са?",
+     "uz": "Assalomu alaykum! Bir kilo go'sht qancha turadi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Мя́со — сто де́сять ты́сяч.",
+     "uz": "Go'sht — bir yuz o'n ming."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А ры́ба? Ско́лько сто́ит ры́ба?",
+     "uz": "Baliq-chi? Baliq qancha turadi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Ры́ба — шестьдеся́т ты́сяч за килогра́мм.",
+     "uz": "Baliq — kilosi oltmish ming."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да́йте, пожа́луйста, килогра́мм мя́са и килогра́мм ры́бы.",
+     "uz": "Iltimos, bir kilo go'sht va bir kilo baliq bering."
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Хорошо́. С вас сто се́мьдесят ты́сяч.",
+     "uz": "Xo'p. Sizdan bir yuz yetmish ming."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Мо́жно ка́ртой?",
+     "uz": "Karta bilan bo'ladimi?"
+    },
+    {
+     "who": "Продавщи́ца",
+     "ru": "Коне́чно. Спаси́бо за поку́пку!",
+     "uz": "Albatta. Xaridingiz uchun rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bir kilo go'sht qancha?",
+     "opts": [
+      "100 ming",
+      "110 ming",
+      "170 ming"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bir kilo baliq qancha?",
+     "opts": [
+      "70 ming",
+      "50 ming",
+      "60 ming"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Abdulaziz hammasiga qancha to'laydi?",
+     "opts": [
+      "170 ming",
+      "160 ming",
+      "180 ming"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "килогра́мм мя́са",
+     "alts": [
+      "килогра́мм ры́бы",
+      "буты́лку ма́сла",
+      "па́чку ча́я"
+     ]
+    },
+    {
+     "base": "сто де́сять ты́сяч",
+     "alts": [
+      "девяно́сто ты́сяч",
+      "сто два́дцать ты́сяч",
+      "сто пятьдеся́т ты́сяч"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: go'sht narxini so'rang, bir kilo oling va «Ско́лько с меня́?» deng."
+  }
+ ]
+}
