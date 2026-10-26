@@ -132,6 +132,12 @@ CREATE INDEX IF NOT EXISTS fin_row_seals_row ON fin_row_seals(table_name, row_id
 -- ctx — o'zgarishni qilgan ilova tranzaksiyasi (fin:/inflow:/payroll:/init:). Oddiy SQL bilan qilingan o'zgarishda bo'sh bo'ladi.
 ALTER TABLE fin_row_seals ADD COLUMN IF NOT EXISTS ctx TEXT;
 ALTER TABLE fin_audit ADD COLUMN IF NOT EXISTS txn_ctx TEXT;
+-- Postgres tranzaksiya raqami: ilova tranzaksiya oxirida shu raqam bo'yicha yozuvlarni kalit bilan imzolaydi.
+ALTER TABLE fin_row_seals ADD COLUMN IF NOT EXISTS xid TEXT DEFAULT pg_current_xact_id()::text;
+ALTER TABLE fin_audit ADD COLUMN IF NOT EXISTS xid TEXT DEFAULT pg_current_xact_id()::text;
+CREATE INDEX IF NOT EXISTS fin_row_seals_xid ON fin_row_seals(xid);
+CREATE INDEX IF NOT EXISTS fin_audit_xid ON fin_audit(xid);
+CREATE TABLE IF NOT EXISTS fin_tx_signatures (xid TEXT PRIMARY KEY, seals INTEGER NOT NULL, audits INTEGER NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 -- O'quvchi holatining moliyaga ta'sir qiluvchi o'zgarishlari (muzlatish, tashlash, qarz, to'lov sanasi) jurnali:
 -- CRM qayerdan o'zgartirmasin, baza triggeri yozib qo'yadi; jurnal o'zgarmas va muhrlangan.
 CREATE TABLE IF NOT EXISTS fin_student_log (
@@ -307,7 +313,7 @@ DO $$ BEGIN
     CREATE TRIGGER fin_guard_salary BEFORE INSERT OR UPDATE OR DELETE ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_guard_salary();
   END IF;
 END $$;
-${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles', 'fin_receipt_reviews', 'fin_student_corrections']
+${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_row_seals', 'fin_accounts', 'fin_student_log', 'fin_contract_events', 'fin_salary_roles', 'fin_receipt_reviews', 'fin_student_corrections', 'fin_tx_signatures']
     .map(t => `DROP TRIGGER IF EXISTS fin_no_truncate_${t} ON ${t};\nCREATE TRIGGER fin_no_truncate_${t} BEFORE TRUNCATE ON ${t} FOR EACH STATEMENT EXECUTE FUNCTION fin_reject_change();`).join('\n')}
 -- Yopilgan oy qulfi o'zgartirilmaydi; faqat ilova (rahbar, oxirgi oy) ochishi mumkin — fin.unlock belgisi bilan.
 CREATE OR REPLACE FUNCTION fin_lock_guard() RETURNS trigger AS $$
@@ -372,6 +378,7 @@ DROP TRIGGER IF EXISTS fin_student_log_stamp ON fin_student_log;
 CREATE TRIGGER fin_student_log_stamp BEFORE INSERT ON fin_student_log FOR EACH ROW EXECUTE FUNCTION fin_student_log_stamp();
 ${immutableSql('fin_contract_events')}
 ${immutableSql('fin_receipt_reviews')}
+${immutableSql('fin_tx_signatures')}
 ${immutableSql('fin_student_corrections')}
 ${immutableSql('fin_salary_roles')}
 ${immutableSql('fin_settings_history')}
@@ -390,8 +397,9 @@ async function initSchema(pool) {
     const db = typeof pool.connect === 'function' && !pool.release ? await pool.connect() : pool;
     try {
         await db.query("SELECT pg_advisory_lock(hashtext('fin-init'))");
-        await db.query("SELECT set_config('fin.ctx', $1, false)", [finCtx.token('init')]);
         try {
+            await db.query('BEGIN');
+            await db.query("SELECT set_config('fin.ctx', $1, true)", [finCtx.token('init')]);
             await db.query(SCHEMA);
             for (const [i, a] of F.DEFAULT_ACCOUNTS.entries()) {
                 await db.query(`INSERT INTO fin_accounts(id,entity,name,kind,methods,sort) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING`, [a.id, a.entity, a.name, a.kind, a.methods, i]);
@@ -419,7 +427,10 @@ async function initSchema(pool) {
                 await db.query("INSERT INTO fin_migrations(id) VALUES('student-log-v1') ON CONFLICT DO NOTHING");
             }
             await backfillSeals(db);
-        } finally { await db.query("SELECT set_config('fin.ctx', '', false)"); await db.query("SELECT pg_advisory_unlock(hashtext('fin-init'))"); }
+            await finCtx.signTx(db);
+            await db.query('COMMIT');
+        } catch (e) { await db.query('ROLLBACK').catch(() => {}); throw e; }
+        finally { await db.query("SELECT pg_advisory_unlock(hashtext('fin-init'))"); }
     } finally { if (db !== pool) db.release(); }
 }
 
@@ -432,6 +443,7 @@ async function transaction(pool, fn) {
         // Tranzaksiya belgisi: muhrlar va audit yozuvi shu belgi bilan bog'lanadi (ilovadan tashqari o'zgarish aniqlanadi).
         await db.query("SELECT set_config('fin.ctx', $1, true)", [finCtx.token('fin')]);
         const result = await fn(db);
+        await finCtx.signTx(db);
         await db.query('COMMIT'); return result;
     } catch (e) {
         await db.query('ROLLBACK');
@@ -564,6 +576,31 @@ async function ctxSignatures(db) {
     }
     return { ok: true };
 }
+// Har bir tranzaksiyaning muhr va audit yozuvlari ilova kaliti bilan imzolangan bo'lishi shart. Nusxalangan belgi bilan
+// (triggerlar yoqilgan holda) yozilgan yoki muhr qo'lda qo'shilgan bo'lsa — tranzaksiya imzosiz yoki imzo mos emas.
+const sigCache = { seq: 0, sealHash: null, auditId: 0, auditHash: null };
+async function txSignatures(db) {
+    if (sigCache.seq) { const a = (await db.query('SELECT row_hash FROM fin_row_seals WHERE seq=$1', [sigCache.seq])).rows[0]; if (!a || a.row_hash !== sigCache.sealHash) { sigCache.seq = 0; sigCache.auditId = 0; } }
+    if (sigCache.auditId) { const a = (await db.query('SELECT hash FROM fin_audit WHERE id=$1', [sigCache.auditId])).rows[0]; if (!a || a.hash !== sigCache.auditHash) { sigCache.seq = 0; sigCache.auditId = 0; } }
+    const seals = (await db.query('SELECT seq, xid, table_name, row_id, row_hash FROM fin_row_seals WHERE seq>$1 ORDER BY seq', [sigCache.seq])).rows;
+    const audits = (await db.query('SELECT id, xid, hash FROM fin_audit WHERE id>$1 ORDER BY id', [sigCache.auditId])).rows;
+    const fail = (x, reason) => { sigCache.seq = 0; sigCache.auditId = 0; return { ok: false, table: x.table_name || 'fin_audit', rowId: x.row_id || String(x.id), brokenAt: x.seq ? Number(x.seq) : undefined, reason }; };
+    for (const x of [...seals, ...audits]) if (!x.xid) return fail(x, 'tranzaksiya raqami yo‘q — yozuv ilovadan tashqarida qo‘shilgan');
+    const xids = [...new Set([...seals, ...audits].map(x => x.xid))];
+    if (xids.length) {
+        const sigs = new Map((await db.query('SELECT xid, mac FROM fin_tx_signatures WHERE xid = ANY($1)', [xids])).rows.map(r => [r.xid, r.mac]));
+        const sh = new Map((await db.query('SELECT xid, array_agg(row_hash ORDER BY seq) AS h FROM fin_row_seals WHERE xid = ANY($1) GROUP BY xid', [xids])).rows.map(r => [r.xid, r.h]));
+        const ah = new Map((await db.query('SELECT xid, array_agg(hash ORDER BY id) AS h FROM fin_audit WHERE xid = ANY($1) GROUP BY xid', [xids])).rows.map(r => [r.xid, r.h]));
+        for (const xid of xids) {
+            const first = seals.find(x => x.xid === xid) || audits.find(x => x.xid === xid);
+            if (!sigs.has(xid)) return fail(first, 'tranzaksiya ilova kaliti bilan imzolanmagan — ilovadan tashqari yozuv');
+            if (sigs.get(xid) !== finCtx.txMac(xid, sh.get(xid) || [], ah.get(xid) || [])) return fail(first, 'tranzaksiya imzosi mos emas — yozuv qo‘shilgan yoki o‘zgartirilgan');
+        }
+    }
+    if (seals.length) { sigCache.seq = Number(seals.at(-1).seq); sigCache.sealHash = seals.at(-1).row_hash; }
+    if (audits.length) { sigCache.auditId = Number(audits.at(-1).id); sigCache.auditHash = audits.at(-1).hash; }
+    return { ok: true };
+}
 // O'quvchining moliyaga ta'sir qiluvchi joriy holati jurnaldagi oxirgi yozuvga teng bo'lishi shart: jurnal soxta
 // yozuv bilan to'ldirilsa yoki holat triggerni chetlab o'zgartirilsa — farq chiqadi.
 async function studentStateIntegrity(db) {
@@ -593,7 +630,7 @@ async function integrity(db, { full = false } = {}) {
     const tables = await sealedTables(db);
     const chain = await chainIntegrity(db, full);
     if (!chain.ok) return { ...chain, badSnapshots: [] };
-    for (const check of [ctxIntegrity, studentStateIntegrity, lockIntegrity]) {
+    for (const check of [ctxIntegrity, txSignatures, studentStateIntegrity, lockIntegrity]) {
         const r = await check(db);
         if (!r.ok) return { ...r, badSnapshots: [], head: chain.head, count: chain.count };
     }
@@ -785,7 +822,7 @@ async function load(db) {
     for (const r of logRows) { if (!byStudent.has(r.student_id)) byStudent.set(r.student_id, []); byStudent.get(r.student_id).push(r); }
     const lastState = new Map();
     for (const [sid, rows] of byStudent) {
-        let curFreeze = null, inactiveSince = null, prevInactive = false, prevDeleted = null;
+        let curFreeze = null, inactiveSince = null, prevInactive = false, prevDeleted = null, prevDeletedFlag = false;
         const last = rows.at(-1);
         const leadId = leadOf.get(sid) || last.state?.leadId || '';
         for (const r of rows) {
@@ -797,6 +834,8 @@ async function load(db) {
             const inactive = r.state?.status === 'inactive' || !!r.state?.deleted;
             if (r.state?.deleted === undefined && prevDeleted) restored.push({ studentId: sid, deletedOn: prevDeleted, restoredOn: r.d });
             prevDeleted = r.state?.deleted ? r.d : null;
+            if (!inactive && prevInactive && !r.state?.deleted && !prevDeletedFlag) restored.push({ studentId: sid, name: r.state?.name || '', deletedOn: inactiveSince?.recordedAt || null, restoredOn: r.d, reactivated: true });
+            prevDeletedFlag = !!r.state?.deleted;
             if (inactive && !prevInactive) inactiveSince = { at: r.state?.deleted ? r.d : claimed(r, 'inactiveAt'), recordedAt: r.d };
             if (!inactive) inactiveSince = null;
             prevInactive = inactive;
@@ -807,7 +846,7 @@ async function load(db) {
     const overlaps = (sid, a, b) => studentFreezes.some(f => f.studentId === sid && a < (f.to || '9999-12-31') && f.from < b);
     for (const c of (await db.query(`SELECT student_id, kind, TO_CHAR(effective_date,'YYYY-MM-DD') AS f, TO_CHAR(end_date,'YYYY-MM-DD') AS t FROM fin_student_corrections ORDER BY created_at`)).rows) {
         const ls = lastState.get(c.student_id);
-        if (c.kind === 'inactive' && ls?.inactiveSince && c.f < ls.inactiveSince.at) ls.inactiveSince = { at: c.f, recordedAt: ls.inactiveSince.recordedAt, approved: true };
+        if (c.kind === 'inactive' && ls?.inactiveSince && c.f <= ls.inactiveSince.at) ls.inactiveSince = { at: c.f, recordedAt: ls.inactiveSince.recordedAt, approved: true };
         if (c.kind === 'freeze' && c.t && !overlaps(c.student_id, c.f, c.t)) studentFreezes.push({ studentId: c.student_id, leadId: ls?.leadId || '', from: c.f, to: c.t, recordedAt: null, approved: true });
     }
     const liveStudents = new Set(), liveLeads = new Set();
@@ -821,7 +860,7 @@ async function load(db) {
     };
     for (const s of (await db.query(`SELECT id,name,phone,subject,extra_data FROM students`)).rows) {
         const x = s.extra_data || {};
-        liveStudents.add(s.id); if (x.leadRef?.id) liveLeads.add(x.leadRef.id);
+        liveStudents.add(s.id); if (x.leadRef?.id) liveLeads.add(x.leadRef.id + '|' + s.subject);
         if (x.isStaffDemo || !['english', 'russian'].includes(s.subject)) continue;
         if (x.paymentLedgerManaged && F.money(x.debtAmount) != null) studentDebts.push({ studentId: s.id, leadId: x.leadRef?.id || '', debt: F.money(x.debtAmount) });
         pushStatus(s.id, x.leadRef?.id || '', { frozen: x.frozen, status: x.status, deleted: false });
@@ -833,7 +872,13 @@ async function load(db) {
     // O'chirilgan o'quvchilar (jurnalda oxirgi yozuv "o'chirildi"): o'chirilgan kundan xizmat to'xtagan.
     // Shu lid bo'yicha yangi o'quvchi yozuvi bor bo'lsa — mijoz ketmagan (CRM yozuvni qayta yaratgan): chiqish emas, tekshiruvga chiqadi.
     for (const [sid, ls] of lastState) if (!liveStudents.has(sid) && ls.state?.deleted && !ls.state.staffDemo) {
-        if (ls.leadId && liveLeads.has(ls.leadId)) { restored.push({ studentId: sid, deletedOn: ls.inactiveSince?.recordedAt || null, restoredOn: ls.inactiveSince?.recordedAt || null, recreated: true }); continue; }
+        // Faqat shu lid va shu yo'nalish (fan) bo'yicha yangi yozuv — o'sha kursning davomi. Boshqa fan yoki aka-uka — haqiqiy chiqish.
+        if (ls.leadId && liveLeads.has(ls.leadId + '|' + ls.state.subject)) {
+            restored.push({ studentId: sid, name: ls.state.name || '', deletedOn: ls.inactiveSince?.recordedAt || null, restoredOn: ls.inactiveSince?.recordedAt || null, recreated: true });
+            // Rahbar hujjat bilan "haqiqatan ketgan" deb tuzatgan bo'lsa — chiqish shu o'quvchining o'z shartnomalariga qo'llanadi (lidga emas).
+            if (ls.inactiveSince?.approved) pushStatus(sid, '', ls.state);
+            continue;
+        }
         pushStatus(sid, ls.leadId, ls.state);
     }
     const contractEvents = (await db.query(`SELECT id,payment_record_id,kind,TO_CHAR(event_date,'YYYY-MM-DD') AS d,reason,actor_name FROM fin_contract_events ORDER BY event_date,created_at`)).rows
@@ -885,6 +930,13 @@ async function overview(pool, actor, q) {
             dropouts: F.dropoutLiabilities(data, p.end).filter(scoped),
             backdatedStatus: data.backdatedStatus.slice(-200), contractEvents: data.contractEvents, restoredStudents: data.restoredStudents.slice(-200),
             sealKeyConfigured: finCtx.keyConfigured(),
+            forfeitedButActive: F.forfeitedButActive(data).filter(scoped),
+            confirmedNotDuplicates: (await db.query(`SELECT v.record_id, v.reason, v.actor_name, v.created_at, r.amount, TO_CHAR(r.paid_date,'YYYY-MM-DD') AS d, r.snapshot->>'name' AS name
+                FROM fin_receipt_reviews v JOIN payment_records r ON r.id=v.record_id ORDER BY v.created_at DESC LIMIT 200`)).rows,
+            // Rahbar (limitsiz) chiqimlari — investor uchun alohida oshkor qilinadi.
+            directorOutflows: (await db.query(`SELECT t.actor_name, COUNT(*)::int AS n, COALESCE(SUM(t.amount),0)::bigint AS amount, COUNT(*) FILTER (WHERE COALESCE(t.receipt_url,'')='')::int AS without_proof
+                FROM fin_transactions t JOIN users u ON u.id=t.actor_id WHERE u.role = ANY($1) AND t.type IN ('expense','refund','drawing','loan_repay','transfer') AND t.reverses_id IS NULL
+                AND t.txn_date BETWEEN $2 AND $3 AND ($4='all' OR t.entity=$4) GROUP BY t.actor_name`, [DIRECTOR_ROLES, p.start, p.end, p.scope])).rows,
             quality: { ...quality, duplicates: quality.duplicates.filter(d => scoped(d.second)), suspicious: quality.suspicious.filter(scoped), paidSalaryWithoutCash: paidSalaryWithoutCash.filter(scoped), voidedList: data.receipts.filter(r => r.voidDate && scoped(r)) },
             settings: data.settings, settingsRevision: data.settingsRevision, locks: data.locks, closedThrough: data.closedThrough, firstDate,
             closeCandidate: { month: nextMonth, issues: F.monthEnd(nextMonth) < F.today() ? closeReadiness(data, nextMonth) : null },
@@ -1605,9 +1657,11 @@ async function correctStudentStatus(pool, actor, body) {
         if (from > F.today() || (to && (to <= from || to > F.today()))) throw error(400, 'Tuzatish faqat o‘tgan sana va oraliq uchun');
         const reason = text(body.reason, 500); if (reason.length < 10) throw error(400, 'Sababini batafsil yozing (kamida 10 belgi)');
         const evidenceUrl = await requireEvidence(db, body.evidenceUrl, { required: true, label: 'Davomat jurnali yoki ariza' });
+        if (!(await db.query('SELECT 1 FROM fin_student_log WHERE student_id=$1 LIMIT 1', [studentId])).rows.length) throw error(404, 'O‘quvchi topilmadi');
         const data = await load(db);
         if (kind === 'inactive') {
-            const st = data.studentStatus.find(x => x.studentId === studentId && x.inactive);
+            const st = data.studentStatus.find(x => x.studentId === studentId && x.inactive)
+                || (() => { const r = data.restoredStudents.find(x => x.studentId === studentId && x.recreated); return r ? { inactiveAt: r.deletedOn ? F.addDays(r.deletedOn, 1) : null } : null; })();
             if (!st) throw error(409, 'O‘quvchi CRM’da “ketgan” yoki o‘chirilgan deb belgilanmagan — avval CRM’da belgilang');
             if (st.inactiveAt && from >= st.inactiveAt) throw error(400, `Tuzatilgan sana hozirgi sanadan (${st.inactiveAt}) oldin bo‘lishi kerak`);
         } else if (data.studentFreezes.some(f => f.studentId === studentId && from < (f.to || '9999-12-31') && f.from < to)) throw error(409, 'Bu oraliq mavjud muzlatish bilan kesishadi');
@@ -1654,6 +1708,7 @@ async function saveSettings(pool, actor, body) {
             courseMonths: { english: int(d.courseMonths?.english ?? cur.courseMonths.english, 1, 24, 'Kurs davomiyligi'), russian: int(d.courseMonths?.russian ?? cur.courseMonths.russian, 1, 24, 'Kurs davomiyligi') },
             suspiciousMin: int(d.suspiciousMin ?? cur.suspiciousMin, 0, 1000000, 'Shubhali summa'), salaryDueDays: int(d.salaryDueDays ?? cur.salaryDueDays, 0, 60, 'Maosh to‘lash muddati'),
             usefulLifeMonths: int(d.usefulLifeMonths ?? cur.usefulLifeMonths, 1, 240, 'Foydalanish muddati'), approvalLimit: int(d.approvalLimit ?? cur.approvalLimit, 0, 1e12, 'Tasdiqlash chegarasi'), eclRates: rates,
+            listPrices: { english: int(d.listPrices?.english ?? cur.listPrices?.english ?? 0, 0, 1e11, 'Narx (ingliz)'), russian: int(d.listPrices?.russian ?? cur.listPrices?.russian ?? 0, 0, 1e11, 'Narx (rus)') },
             dailyLimit: int(d.dailyLimit ?? cur.dailyLimit ?? (Number(d.approvalLimit ?? cur.approvalLimit) * 3), 0, 1e13, 'Kunlik chiqim chegarasi'),
             teamDailyLimit: int(d.teamDailyLimit ?? cur.teamDailyLimit ?? (Number(d.dailyLimit ?? cur.dailyLimit ?? 0) * 2), 0, 1e13, 'Umumiy kunlik chiqim chegarasi'),
             evidenceMin: int(d.evidenceMin ?? cur.evidenceMin ?? 1000000, 0, 1e12, 'Hujjat talab qilinadigan summa'),

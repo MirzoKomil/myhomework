@@ -27,7 +27,11 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     const body = name => name.endsWith('.png') ? Buffer.concat([PNG, Buffer.from('evidence ' + name + seq++)]) : Buffer.from('%PDF-1.4\nevidence ' + name + seq++);
     // Superuser sifatida alohida sessiyada "yashirin" o'zgartirish (triggerlarni o'chirib) — buzilishni aniqlash testlari uchun.
     const accN3 = () => ({ id: 'acc3' });
-    const appSql = (app, sql) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token(app)}', true); ${sql}; COMMIT;`], { encoding: 'utf8' });
+    // Ilova nomidan (imzolangan belgi bilan) alohida psql sessiyasida; tranzaksiya ilova kaliti bilan imzolanadi (ilova COMMIT oldidan qiladigan ish).
+    const appSql = async (app, sql) => {
+        const out = execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token(app)}', true); ${sql}; SET CONSTRAINTS ALL IMMEDIATE; SELECT 'XID:' || pg_current_xact_id(); COMMIT;`], { encoding: 'utf8' });
+        await require('../server/services/finCtx').signXid(pool, /XID:(\d+)/.exec(out)[1]);
+    };
     const superSql = (table, sql) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `ALTER TABLE ${table} DISABLE TRIGGER USER; ${sql}; ALTER TABLE ${table} ENABLE TRIGGER USER;`], { encoding: 'utf8' });
     const evidence = async (name = 'audit.pdf') => (await finance.storeEvidence(pool, accountant, { originalname: name, mimetype: name.endsWith('.png') ? 'image/png' : 'application/pdf', buffer: body(name) })).url;
     try {
@@ -318,7 +322,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             assert.equal(saved.effectiveFrom, F.today());
             // Kech aniqlangan holat: o'quvchi sentyabrda muzlatilgan edi (yopilgan oyning hisoblash usuli natijasi o'zgaradi).
             // CRM ilovasi orqali (crm: belgisi bilan); orqaga sanalangan muzlatish jurnal sanasidan kuchga kiradi va tekshiruvga chiqadi.
-            appSql('crm', `UPDATE students SET extra_data=extra_data || '{"frozen":true,"frozenAt":"2026-09-20T10:00:00Z"}'::jsonb WHERE id='s1'`);
+            await appSql('crm', `UPDATE students SET extra_data=extra_data || '{"frozen":true,"frozenAt":"2026-09-20T10:00:00Z"}'::jsonb WHERE id='s1'`);
             assert.equal(await sep('cash'), cashBefore);
             assert.equal(await sep('accrual'), accBefore);
             const oct = await finance.overview(pool, accountant, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' });
@@ -393,7 +397,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'russian', type: 'refund', categoryCode: 'REFUND', accountId: 'acc-uzum', amount: 1000, date: '2026-10-09', counterparty: 'U', paymentRecordId: 'ru', terminates: false, receiptUrl: await evidence() }), 400, /Uzum/);
             // Katta maosh to'lovi — rahbar; qoldiqdan katta — rad
             // Maosh bo'limi (payroll) tranzaksiyasi nomidan kiritiladi — ilova belgisi bilan
-            appSql('payroll', "INSERT INTO salary_transactions VALUES('salBig','t1','russian','2026-10-01','2026-10-15',60000000,'paid',NOW(),NULL)");
+            await appSql('payroll', "INSERT INTO salary_transactions VALUES('salBig','t1','russian','2026-10-01','2026-10-15',60000000,'paid',NOW(),NULL)");
             await rejects(finance.recordSalaryPayment(pool, accountant, 'salBig', { accountId: 'acc-cash', date: '2026-10-16' }), 403, /rahbar/);
         });
 
@@ -450,7 +454,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-cash', amount: 3900000, date: '2026-10-10', counterparty: 'Ofis', receiptUrl: await evidence() });
             await rejects(finance.voidReceipts(pool, accN3(), { recordIds: ['cashR'], reason: 'Xato kiritilgan', evidenceUrl: await evidence() }), 403, /manfiy/);
             // O'quvchi holati o'zgarishi jurnalga yoziladi
-            appSql('crm', `UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
+            await appSql('crm', `UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
             const log = (await pool.query("SELECT state FROM fin_student_log WHERE student_id='s1' ORDER BY id DESC LIMIT 1")).rows[0];
             assert.equal(log.state.status, 'inactive');
             await rejects(pool.query("UPDATE fin_student_log SET state='{}' WHERE student_id='s1'"), null, /o.zgartirib/);

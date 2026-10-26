@@ -49,7 +49,7 @@ async function markContext(db) {
 }
 async function transaction(pool, fn) {
     const db = await pool.connect();
-    try { await db.query('BEGIN'); await markContext(db); const result = await fn(db); await db.query('COMMIT'); return result; }
+    try { await db.query('BEGIN'); await markContext(db); const result = await fn(db); await require('./finCtx').signTx(db); await db.query('COMMIT'); return result; }
     catch (e) { await db.query('ROLLBACK'); throw e; } finally { db.release(); }
 }
 async function access(db, actor, write = false, subject = null) {

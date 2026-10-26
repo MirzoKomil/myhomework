@@ -77,6 +77,7 @@ async function transaction(pool, fn) {
             await db.query("SELECT pg_advisory_xact_lock(hashtext('myhomework-payroll-v1'))");
             await db.query("SELECT set_config('fin.ctx', $1, true)", [require('./finCtx').token('payroll')]);
             const result = await fn(db);
+            await require('./finCtx').signTx(db);
             await db.query('COMMIT'); return result;
         } catch (e) {
             await db.query('ROLLBACK');

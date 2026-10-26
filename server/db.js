@@ -92,6 +92,7 @@ async function tx(fn, actor = null) {
         // Natija qaytariladi: Yuzma-yuz (battle) funksiyalari `return tx(...)`
         // qiladi — ilgari undefined qaytib, haqiqiy juftlash umuman ishlamas edi.
         const result = await fn(client);
+        await require('./services/finCtx').signTx(client);
         await client.query('COMMIT');
         return result;
     } catch (e) {

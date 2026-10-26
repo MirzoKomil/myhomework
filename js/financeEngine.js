@@ -63,7 +63,7 @@
     const ACCOUNT_KINDS = { cash: 'Naqd', card: 'Karta', bank: 'Bank', wallet: 'Elektron hamyon', clearing: 'Kliring (olinadigan)', suspense: 'Tekshiruvdagi' };
     const EQUIVALENT_KINDS = new Set(['cash', 'card', 'bank', 'wallet']);
     const DEFAULT_SETTINGS = {
-        courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, dailyLimit: 15000000, teamDailyLimit: 30000000, evidenceMin: 1000000, duplicateDays: 3, turnoverTaxRate: 0,
+        listPrices: { english: 0, russian: 0 }, courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, dailyLimit: 15000000, teamDailyLimit: 30000000, evidenceMin: 1000000, duplicateDays: 3, turnoverTaxRate: 0,
         eclRates: { not_due: 0, d1_30: 5, d31_60: 20, d61_90: 50, d90: 100, no_date: 25 }
     };
 
@@ -396,7 +396,8 @@
                 // Rahbar tasdiqlagan tuzatish yopilgan oyga ham tushadi: oy nusxasi o'zgarmaydi, farq ochiq oyda o'tgan davr tuzatishi bo'ladi (IAS 8).
                 const ia = st?.approvedExit ? (st.inactiveAt || null) : clamp(st?.inactiveAt || null);
                 c.inactive = !!st?.inactive; c.deleted = !!st?.deleted;
-                c.inactiveAt = ia && ia >= c.start ? ia : null;
+                // Kurs boshlanishidan oldin ketgan (masalan, erta uzaytirib keyin ketgan, yoki to'lab umuman kelmagan): xizmat yo'q — butun summa majburiyat bo'lib qoladi.
+                c.inactiveAt = ia ? (ia >= c.start ? ia : addDays(c.start, -1)) : null;
                 // Muzlatish oraliqlari (holat jurnalidan): bu kunlarda xizmat yo'q — tushum to'xtaydi, kurs shuncha kunga uzayadi.
                 const ivs = freezes.get('s:' + c.studentId) || freezes.get('l:' + c.leadId) || (st?.frozenAt ? [{ from: st.frozenAt, to: null, recordedAt: st.recordedAt }] : []);
                 c.freezes = ivs.map(f => {
@@ -923,6 +924,12 @@
             if (debt != null && pos > Number(debt)) out.push({ name: c.name, entity: c.entity, contractAsset: pos, crmDebt: Number(debt), difference: pos - Number(debt), kind: 'asset_over_debt' });
         }
         // CRM qarzi shartnoma narxidan oshirib yozilgan (narx cheklandi) — sotuv menejeri qarzni ko'paytirgan bo'lishi mumkin.
+        // Narxlar ro'yxati (sozlamada) bilan solishtirish: belgilangan narxdan farqli shartnoma — chegirma yoki oshirilgan narx, tekshiriladi.
+        const list = settingsAt(data, asOf).listPrices || {};
+        for (const c of contracts(data)) {
+            const lp = Number(list[c.entity]) || 0, captured = Number(c.firstReceipt?.contractValue) || 0;
+            if (lp > 0 && captured > 0 && captured !== lp) out.push({ name: c.name, entity: c.entity, contractAsset: captured, crmDebt: lp, difference: captured - lp, kind: captured > lp ? 'above_list' : 'discount' });
+        }
         for (const c of contracts(data)) if (c.debtInflation > 0) out.push({ name: c.name, entity: c.entity, contractAsset: contractPosition(c, asOf), crmDebt: c.debtInflation, difference: c.debtInflation, kind: c.noCapturedPrice ? 'no_contract_price' : 'debt_over_price' });
         return out;
     }
@@ -932,6 +939,10 @@
             .map(c => ({ group: c.group, name: c.name, entity: c.entity, studentId: c.studentId, leadId: c.leadId, inactiveAt: c.inactiveAt, deleted: !!c.deleted,
                 liability: -contractPosition(c, asOf), paymentRecordId: (c.receipts.filter(r => !r.voidDate).at(-1) || {}).id || null }))
             .filter(x => x.liability > 0);
+    }
+    // Pulsiz tugatilgan, lekin o'quvchi hozir yana faol — tugatish noto'g'ri bo'lishi mumkin (qayta ko'rib chiqish).
+    function forfeitedButActive(data) {
+        return contracts(data).filter(c => c.forfeitedAt && !c.inactive).map(c => ({ name: c.name, entity: c.entity, studentId: c.studentId, forfeitedAt: c.forfeitedAt }));
     }
     // Takroriy tushum: bitta o'quvchi (yoki telefon) bo'yicha bir xil summa N kun ichida, yoki bitta chek ikki tushumda.
     function duplicateReceipts(receipts, days = 3) {
@@ -1128,7 +1139,7 @@
         money, date, today, addDays, addMonths, dayDiff, monthOf, monthEnd, monthsBetween, inRange, phone9, pct, settingsOf,
         accountForMethod, movements, accountBalances, cashSummary, cashbook, cashFlowStatement, profitAndLoss, monthlyPnl,
         contracts, contractCash, earned, revenueBase, contractPosition, fixedAssets, depreciationAt, eclAt, agingBucket,
-        serviceAllowed, receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued, segmentCashFlow, dropoutLiabilities, duplicateReceipts,
+        serviceAllowed, receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued, segmentCashFlow, dropoutLiabilities, duplicateReceipts, forfeitedButActive,
         suspiciousReasons, dataQuality, reconcile, parseStatementText, nameSimilar, nameMatch
     };
 });

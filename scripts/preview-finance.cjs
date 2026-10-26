@@ -49,17 +49,22 @@ async function seed() {
         inserts.push(`INSERT INTO payment_records(id,source_key,lead_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
             VALUES(${q('p' + i)},${q('preview:' + i)},${q('lead-' + phone)},'russian',${q(manager)},${q(date)},${Number(amount)},${q(method)},'',${q(form)},0,${q(JSON.stringify({ name, phone: '+998' + phone, managerName: manager === 'm1' ? 'Hamidaxon Boymirzayeva' : manager === 'm2' ? 'Kamola Shahobiddinova' : '' }))},${method === 'unknown'},'system');`);
     }
-    execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token('inflow')}', true); ${inserts.join('\n')} COMMIT;`]);
+    // Demo yozuvlar ilova nomidan: imzolangan belgi va tranzaksiya imzosi bilan (ilova COMMIT oldidan qiladigan ish).
+    const signed = async (app, sql, user = '') => {
+        const out = execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token(app)}', true), set_config('app.user_id', '${user}', true); ${sql} SET CONSTRAINTS ALL IMMEDIATE; SELECT 'XID:' || pg_current_xact_id(); COMMIT;`], { encoding: 'utf8' });
+        await require('../server/services/finCtx').signXid(pool, /XID:(\d+)/.exec(out)[1]);
+    };
+    await signed('inflow', inserts.join('\n'));
     const students = [['s1', 'Mamatov Kamoliddin', '332800826', 1900000, '2026-10-08'], ['s2', 'Sultonova Xafiza', '883139309', 1600000, '2026-10-15'], ['s3', 'Bobojonova Xosila', '902443056', 1500000, '2026-10-23'],
         ['s4', 'Raximov Abdumo‘min', '977039102', 1600000, '2026-08-17'], ['s5', 'Qosimjonov Sherzod', '978161313', 1400000, '2026-11-19'], ['s6', 'Akramov Ibrohim', '932200141', 900000, '2026-10-31']];
     // O'quvchilar CRM nomidan (crm: belgisi, foydalanuvchi bilan) — holat jurnaliga kim yozgani tushadi.
     const sq = v => "'" + String(v).replace(/'/g, "''") + "'";
-    const crm = sql => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token('crm')}', true), set_config('app.user_id', 'admin', true); ${sql} COMMIT;`]);
-    crm(students.map(([id, name, phone, debt, due]) => `INSERT INTO students VALUES(${sq(id)},${sq(name)},${sq('+998' + phone)},'russian','g',NULL,30,${sq(JSON.stringify({ debtAmount: debt, paymentDueDate: due }))});`).join('\n'));
+    const crm = sql => signed('crm', sql, 'admin');
+    await crm(students.map(([id, name, phone, debt, due]) => `INSERT INTO students VALUES(${sq(id)},${sq(name)},${sq('+998' + phone)},'russian','g',NULL,30,${sq(JSON.stringify({ debtAmount: debt, paymentDueDate: due }))});`).join('\n'));
     // Demo: bitta o'quvchi to'lab, keyin CRM'dan o'chirilgan — "ketgan o'quvchida qolgan majburiyat" ro'yxatida ko'rinadi.
     const [, gName, gPhone] = csv[0].split(',');
-    crm(`INSERT INTO students VALUES('s7',${sq(gName)},${sq('+998' + gPhone)},'russian','g',NULL,30,${sq(JSON.stringify({ debtAmount: 0, leadRef: { id: 'lead-' + gPhone } }))});`);
-    crm(`DELETE FROM students WHERE id='s7';`);
+    await crm(`INSERT INTO students VALUES('s7',${sq(gName)},${sq('+998' + gPhone)},'russian','g',NULL,30,${sq(JSON.stringify({ debtAmount: 0, leadRef: { id: 'lead-' + gPhone } }))});`);
+    await crm(`DELETE FROM students WHERE id='s7';`);
     // Demo hujjat moliyaning yopiq omboriga yuklanadi (PNG imzosi bilan 1x1 rasm).
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     let pn = 0;
